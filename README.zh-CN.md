@@ -7,6 +7,8 @@
 [![Renderer](https://img.shields.io/badge/Render-DirectX%20%7C%20Vulkan-lightblue)]()
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](./CONTRIBUTING.md)
 
+**语言:** [English](./README.md) | 中文
+
 > [!IMPORTANT]  
 > **Nova_A 完全开源，并将永久免费。**  
 > 项目致力于从零开始构建一个完整的 2D 物理引擎、渲染器和图形化编辑器。
