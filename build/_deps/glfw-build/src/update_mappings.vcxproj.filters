@@ -1,0 +1,24 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="18.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <CustomBuild Include="D:\Program Files\Nova_A\build\CMakeFiles\e31ca7af70485a57003e1cb966688dd4\update_mappings.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="D:\Program Files\Nova_A\build\_deps\glfw-src\src\CMakeLists.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="D:\Program Files\Nova_A\build\_deps\glfw-src\src\mappings.h.in">
+      <Filter>Header Files</Filter>
+    </None>
+    <None Include="D:\Program Files\Nova_A\build\_deps\glfw-src\CMake\GenerateMappings.cmake" />
+    <None Include="D:\Program Files\Nova_A\build\_deps\glfw-build\src\CMakeFiles\update_mappings" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="CMake Rules">
+      <UniqueIdentifier>{61BFD375-68C9-3574-84C4-07F29404A0C0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{696F741B-B8A0-3630-8CAF-EA94452C8DC5}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

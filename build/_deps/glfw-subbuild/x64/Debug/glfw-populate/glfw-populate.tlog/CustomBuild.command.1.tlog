@@ -1,0 +1,150 @@
+^D:\PROGRAM FILES\NOVA_A\BUILD\_DEPS\GLFW-SUBBUILD\CMAKEFILES\912D17DC227F51BF9B6A2EA1FBE6DEEF\GLFW-POPULATE-MKDIR.RULE
+setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -Dcfgdir=/Debug -P "D:/Program Files/Nova_A/build/_deps/glfw-subbuild/glfw-populate-prefix/tmp/glfw-populate-mkdirs.cmake"
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E touch "D:/Program Files/Nova_A/build/_deps/glfw-subbuild/glfw-populate-prefix/src/glfw-populate-stamp/Debug/glfw-populate-mkdir"
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+^D:\PROGRAM FILES\NOVA_A\BUILD\_DEPS\GLFW-SUBBUILD\CMAKEFILES\912D17DC227F51BF9B6A2EA1FBE6DEEF\GLFW-POPULATE-DOWNLOAD.RULE
+setlocal
+cd "D:\Program Files\Nova_A\build\_deps"
+if %errorlevel% neq 0 goto :cmEnd
+D:
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -DCMAKE_MESSAGE_LOG_LEVEL=VERBOSE -P "D:/Program Files/Nova_A/build/_deps/glfw-subbuild/glfw-populate-prefix/tmp/glfw-populate-gitclone.cmake"
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E touch "D:/Program Files/Nova_A/build/_deps/glfw-subbuild/glfw-populate-prefix/src/glfw-populate-stamp/Debug/glfw-populate-download"
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+^D:\PROGRAM FILES\NOVA_A\BUILD\_DEPS\GLFW-SUBBUILD\CMAKEFILES\912D17DC227F51BF9B6A2EA1FBE6DEEF\GLFW-POPULATE-UPDATE.RULE
+setlocal
+cd "D:\Program Files\Nova_A\build\_deps\glfw-src"
+if %errorlevel% neq 0 goto :cmEnd
+D:
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -Dcan_fetch=YES -DCMAKE_MESSAGE_LOG_LEVEL=VERBOSE -P "D:/Program Files/Nova_A/build/_deps/glfw-subbuild/glfw-populate-prefix/tmp/glfw-populate-gitupdate.cmake"
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+^D:\PROGRAM FILES\NOVA_A\BUILD\_DEPS\GLFW-SUBBUILD\CMAKEFILES\912D17DC227F51BF9B6A2EA1FBE6DEEF\GLFW-POPULATE-PATCH.RULE
+setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -E echo_append
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E touch "D:/Program Files/Nova_A/build/_deps/glfw-subbuild/glfw-populate-prefix/src/glfw-populate-stamp/Debug/glfw-populate-patch"
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+^D:\PROGRAM FILES\NOVA_A\BUILD\_DEPS\GLFW-SUBBUILD\CMAKEFILES\912D17DC227F51BF9B6A2EA1FBE6DEEF\GLFW-POPULATE-CONFIGURE.RULE
+setlocal
+cd "D:\Program Files\Nova_A\build\_deps\glfw-build"
+if %errorlevel% neq 0 goto :cmEnd
+D:
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E echo_append
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E touch "D:/Program Files/Nova_A/build/_deps/glfw-subbuild/glfw-populate-prefix/src/glfw-populate-stamp/Debug/glfw-populate-configure"
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+^D:\PROGRAM FILES\NOVA_A\BUILD\_DEPS\GLFW-SUBBUILD\CMAKEFILES\912D17DC227F51BF9B6A2EA1FBE6DEEF\GLFW-POPULATE-BUILD.RULE
+setlocal
+cd "D:\Program Files\Nova_A\build\_deps\glfw-build"
+if %errorlevel% neq 0 goto :cmEnd
+D:
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E echo_append
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E touch "D:/Program Files/Nova_A/build/_deps/glfw-subbuild/glfw-populate-prefix/src/glfw-populate-stamp/Debug/glfw-populate-build"
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+^D:\PROGRAM FILES\NOVA_A\BUILD\_DEPS\GLFW-SUBBUILD\CMAKEFILES\912D17DC227F51BF9B6A2EA1FBE6DEEF\GLFW-POPULATE-INSTALL.RULE
+setlocal
+cd "D:\Program Files\Nova_A\build\_deps\glfw-build"
+if %errorlevel% neq 0 goto :cmEnd
+D:
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E echo_append
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E touch "D:/Program Files/Nova_A/build/_deps/glfw-subbuild/glfw-populate-prefix/src/glfw-populate-stamp/Debug/glfw-populate-install"
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+^D:\PROGRAM FILES\NOVA_A\BUILD\_DEPS\GLFW-SUBBUILD\CMAKEFILES\912D17DC227F51BF9B6A2EA1FBE6DEEF\GLFW-POPULATE-TEST.RULE
+setlocal
+cd "D:\Program Files\Nova_A\build\_deps\glfw-build"
+if %errorlevel% neq 0 goto :cmEnd
+D:
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E echo_append
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E touch "D:/Program Files/Nova_A/build/_deps/glfw-subbuild/glfw-populate-prefix/src/glfw-populate-stamp/Debug/glfw-populate-test"
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+^D:\PROGRAM FILES\NOVA_A\BUILD\_DEPS\GLFW-SUBBUILD\CMAKEFILES\872DAFB7F6791665DFF11D41F4047811\GLFW-POPULATE-COMPLETE.RULE
+setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -E make_directory "D:/Program Files/Nova_A/build/_deps/glfw-subbuild/CMakeFiles/Debug"
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E touch "D:/Program Files/Nova_A/build/_deps/glfw-subbuild/CMakeFiles/Debug/glfw-populate-complete"
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E touch "D:/Program Files/Nova_A/build/_deps/glfw-subbuild/glfw-populate-prefix/src/glfw-populate-stamp/Debug/glfw-populate-done"
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+^D:\PROGRAM FILES\NOVA_A\BUILD\_DEPS\GLFW-SUBBUILD\CMAKEFILES\FE65C92C8E0F9C22354EB6AEA3C7494F\GLFW-POPULATE.RULE
+setlocal
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+^D:\PROGRAM FILES\NOVA_A\BUILD\_DEPS\GLFW-SUBBUILD\CMAKELISTS.TXT
+setlocal
+"C:\Program Files\CMake\bin\cmake.exe" "-SD:/Program Files/Nova_A/build/_deps/glfw-subbuild" "-BD:/Program Files/Nova_A/build/_deps/glfw-subbuild" --check-stamp-file "D:/Program Files/Nova_A/build/_deps/glfw-subbuild/CMakeFiles/generate.stamp"
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd

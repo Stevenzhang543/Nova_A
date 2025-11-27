@@ -1,0 +1,13 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="18.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <CustomBuild Include="D:\Program Files\Nova_A\build\CMakeFiles\9264e4d75fcd27a8abcb960ce8b9ae48\INSTALL_force.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="CMake Rules">
+      <UniqueIdentifier>{61BFD375-68C9-3574-84C4-07F29404A0C0}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

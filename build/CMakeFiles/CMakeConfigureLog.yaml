@@ -1,0 +1,2224 @@
+
+---
+events:
+  -
+    kind: "message-v1"
+    backtrace:
+      - "C:/Program Files/CMake/share/cmake-4.2/Modules/CMakeDetermineSystem.cmake:212 (message)"
+      - "CMakeLists.txt:2 (project)"
+    message: |
+      The system is: Windows - 10.0.26200 - AMD64
+  -
+    kind: "find-v1"
+    backtrace:
+      - "C:/Program Files/CMake/share/cmake-4.2/Modules/CMakeDetermineCompilerId.cmake:462 (find_file)"
+      - "C:/Program Files/CMake/share/cmake-4.2/Modules/CMakeDetermineCompilerId.cmake:500 (CMAKE_DETERMINE_COMPILER_ID_WRITE)"
+      - "C:/Program Files/CMake/share/cmake-4.2/Modules/CMakeDetermineCompilerId.cmake:8 (CMAKE_DETERMINE_COMPILER_ID_BUILD)"
+      - "C:/Program Files/CMake/share/cmake-4.2/Modules/CMakeDetermineCompilerId.cmake:64 (__determine_compiler_id_test)"
+      - "C:/Program Files/CMake/share/cmake-4.2/Modules/CMakeDetermineCCompiler.cmake:122 (CMAKE_DETERMINE_COMPILER_ID)"
+      - "CMakeLists.txt:2 (project)"
+    mode: "file"
+    variable: "src_in"
+    description: "Path to a file."
+    settings:
+      SearchFramework: "NEVER"
+      SearchAppBundle: "NEVER"
+      CMAKE_FIND_USE_CMAKE_PATH: true
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "CMakeCCompilerId.c.in"
+    candidate_directories:
+      - "C:/Program Files/CMake/share/cmake-4.2/Modules/"
+    found: "C:/Program Files/CMake/share/cmake-4.2/Modules/CMakeCCompilerId.c.in"
+    search_context:
+      ENV{PATH}:
+        - "C:\\VulkanSDK\\1.4.328.1\\Bin"
+        - "C:\\Program Files (x86)\\VMware\\VMware Workstation\\bin\\"
+        - "C:\\WINDOWS\\system32"
+        - "C:\\WINDOWS"
+        - "C:\\WINDOWS\\System32\\Wbem"
+        - "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\"
+        - "C:\\WINDOWS\\System32\\OpenSSH\\"
+        - "C:\\Program Files\\dotnet\\"
+        - "\"C:\\Program Files\\Java\\jdk-25\\bin"
+        - "C:\\Program Files\\Java\\jdk-25\\jre\\bin"
+        - "\""
+        - "C:\\Program Files\\NVIDIA Corporation\\NVIDIA App\\NvDLISR"
+        - "C:\\Program Files (x86)\\NVIDIA Corporation\\PhysX\\Common"
+        - "D:\\Program Files\\Mingw\\"
+        - "D:\\Program Files\\Mingw\\bin\\"
+        - "C:\\php"
+        - "C:\\Program Files\\Bandizip\\"
+        - "C:\\Program Files (x86)\\Windows Kits\\10\\Windows Performance Toolkit\\"
+        - "C:\\Program Files (x86)\\Windows Kits\\10\\Microsoft Application Virtualization\\Sequencer\\"
+        - "C:\\Program Files (x86)\\Windows Kits\\10\\Assessment and Deployment Kit\\Deployment Tools\\amd64\\Oscdimg"
+        - "C:\\Program Files\\Git\\cmd"
+        - "C:\\Program Files\\CMake\\bin"
+        - "C:\\Program Files (x86)\\dxc_2025_07_14"
+        - "C:\\Program Files (x86)\\dxc_2025_07_14\\bin\\x86"
+        - "C:\\Users\\steve\\vcpkg"
+        - "C:\\Users\\steve\\AppData\\Local\\Programs\\Python\\Python310\\Scripts\\"
+        - "C:\\Users\\steve\\AppData\\Local\\Programs\\Python\\Python310\\"
+        - "C:\\Users\\steve\\AppData\\Local\\Microsoft\\WindowsApps"
+        - "D:\\Program Files\\Microsoft VS Code\\bin"
+        - "C:\\Users\\steve\\AppData\\Local\\Programs\\Ollama"
+        - "C:\\Users\\steve\\AppData\\Local\\GitHubDesktop\\bin"
+        - "C:\\Users\\steve\\AppData\\Local\\Microsoft\\WinGet\\Links"
+  -
+    kind: "message-v1"
+    backtrace:
+      - "C:/Program Files/CMake/share/cmake-4.2/Modules/CMakeDetermineCompilerId.cmake:17 (message)"
+      - "C:/Program Files/CMake/share/cmake-4.2/Modules/CMakeDetermineCompilerId.cmake:64 (__determine_compiler_id_test)"
+      - "C:/Program Files/CMake/share/cmake-4.2/Modules/CMakeDetermineCCompiler.cmake:122 (CMAKE_DETERMINE_COMPILER_ID)"
+      - "CMakeLists.txt:2 (project)"
+    message: |
+      Compiling the C compiler identification source file "CMakeCCompilerId.c" succeeded.
+      Compiler:  
+      Build flags: 
+      Id flags:  
+      
+      The output was:
+      0
+      MSBuild version 18.0.5+e22287bf1 for .NET Framework
+      Build started 11/27/2025 6:05:12 PM.
+      
+      Project "D:\\Program Files\\Nova_A\\build\\CMakeFiles\\4.2.0\\CompilerIdC\\CompilerIdC.vcxproj" on node 1 (default targets).
+      PrepareForBuild:
+        Creating directory "Debug\\".
+        Structured output is enabled. The formatting of compiler diagnostics will reflect the error hierarchy. See https://aka.ms/cpp/structured-output for more details.
+        Creating directory "Debug\\CompilerIdC.tlog\\".
+      InitializeBuildStatus:
+        Creating "Debug\\CompilerIdC.tlog\\unsuccessfulbuild" because "AlwaysCreate" was specified.
+        Touching "Debug\\CompilerIdC.tlog\\unsuccessfulbuild".
+      ClCompile:
+        E:\\Visual Studio\\VC\\Tools\\MSVC\\14.50.35717\\bin\\HostX64\\x64\\CL.exe /c /nologo /W0 /WX- /diagnostics:column /Od /D _MBCS /Gm- /EHsc /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /Fo"Debug\\\\" /Fd"Debug\\vc145.pdb" /external:W0 /Gd /TC /FC /errorReport:queue CMakeCCompilerId.c
+        CMakeCCompilerId.c
+      Link:
+        E:\\Visual Studio\\VC\\Tools\\MSVC\\14.50.35717\\bin\\HostX64\\x64\\link.exe /ERRORREPORT:QUEUE /OUT:".\\CompilerIdC.exe" /INCREMENTAL:NO /NOLOGO kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /MANIFEST /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /manifest:embed /PDB:".\\CompilerIdC.pdb" /SUBSYSTEM:CONSOLE /TLBID:1 /DYNAMICBASE /NXCOMPAT /IMPLIB:".\\CompilerIdC.lib" /MACHINE:X64 Debug\\CMakeCCompilerId.obj
+        CompilerIdC.vcxproj -> D:\\Program Files\\Nova_A\\build\\CMakeFiles\\4.2.0\\CompilerIdC\\CompilerIdC.exe
+      PostBuildEvent:
+        for %%i in (cl.exe) do @echo CMAKE_C_COMPILER=%%~$PATH:i
+        :VCEnd
+        CMAKE_C_COMPILER=E:\\Visual Studio\\VC\\Tools\\MSVC\\14.50.35717\\bin\\Hostx64\\x64\\cl.exe
+      FinalizeBuildStatus:
+        Deleting file "Debug\\CompilerIdC.tlog\\unsuccessfulbuild".
+        Touching "Debug\\CompilerIdC.tlog\\CompilerIdC.lastbuildstate".
+      Done Building Project "D:\\Program Files\\Nova_A\\build\\CMakeFiles\\4.2.0\\CompilerIdC\\CompilerIdC.vcxproj" (default targets).
+      
+      Build succeeded.
+          0 Warning(s)
+          0 Error(s)
+      
+      Time Elapsed 00:00:00.40
+      
+      
+      Compilation of the C compiler identification source "CMakeCCompilerId.c" produced "CompilerIdC.exe"
+      
+      Compilation of the C compiler identification source "CMakeCCompilerId.c" produced "CompilerIdC.vcxproj"
+      
+      The C compiler identification is MSVC, found in:
+        D:/Program Files/Nova_A/build/CMakeFiles/4.2.0/CompilerIdC/CompilerIdC.exe
+      
+  -
+    kind: "find-v1"
+    backtrace:
+      - "C:/Program Files/CMake/share/cmake-4.2/Modules/CMakeFindBinUtils.cmake:37 (find_program)"
+      - "C:/Program Files/CMake/share/cmake-4.2/Modules/CMakeFindBinUtils.cmake:65 (__resolve_tool_path)"
+      - "C:/Program Files/CMake/share/cmake-4.2/Modules/CMakeFindBinUtils.cmake:103 (__resolve_linker_path)"
+      - "C:/Program Files/CMake/share/cmake-4.2/Modules/CMakeDetermineCCompiler.cmake:200 (include)"
+      - "CMakeLists.txt:2 (project)"
+    mode: "program"
+    variable: "_CMAKE_TOOL_WITH_PATH"
+    description: "Path to a program."
+    settings:
+      SearchFramework: "NEVER"
+      SearchAppBundle: "NEVER"
+      CMAKE_FIND_USE_CMAKE_PATH: false
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: false
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "link"
+    candidate_directories:
+      - "E:/Visual Studio/VC/Tools/MSVC/14.50.35717/bin/Hostx64/x64/"
+      - "C:/VulkanSDK/1.4.328.1/Bin/"
+      - "C:/Program Files (x86)/VMware/VMware Workstation/bin/"
+      - "C:/Windows/System32/"
+      - "C:/Windows/"
+      - "C:/Windows/System32/wbem/"
+      - "C:/Windows/System32/WindowsPowerShell/v1.0/"
+      - "C:/Windows/System32/OpenSSH/"
+      - "C:/Program Files/dotnet/"
+      - "D:/Program Files/Nova_A/build/\"C:/Program Files/Java/jdk-25/bin/"
+      - "C:/Program Files/Java/jdk-25/jre/bin/"
+      - "D:/Program Files/Nova_A/build/\"/"
+      - "C:/Program Files/NVIDIA Corporation/NVIDIA App/NvDLISR/"
+      - "C:/Program Files (x86)/NVIDIA Corporation/PhysX/Common/"
+      - "D:/Program Files/Mingw/"
+      - "D:/Program Files/Mingw/bin/"
+      - "C:/php/"
+      - "C:/Program Files/Bandizip/"
+      - "C:/Program Files (x86)/Windows Kits/10/Windows Performance Toolkit/"
+      - "C:/Program Files (x86)/Windows Kits/10/Microsoft Application Virtualization/Sequencer/"
+      - "C:/Program Files (x86)/Windows Kits/10/Assessment and Deployment Kit/Deployment Tools/amd64/Oscdimg/"
+      - "C:/Program Files/Git/cmd/"
+      - "C:/Program Files/CMake/bin/"
+      - "C:/Program Files (x86)/dxc_2025_07_14/"
+      - "C:/Program Files (x86)/dxc_2025_07_14/bin/x86/"
+      - "C:/Users/steve/vcpkg/"
+      - "C:/Users/steve/AppData/Local/Programs/Python/Python310/Scripts/"
+      - "C:/Users/steve/AppData/Local/Programs/Python/Python310/"
+      - "C:/Users/steve/AppData/Local/Microsoft/WindowsApps/"
+      - "D:/Program Files/Microsoft VS Code/bin/"
+      - "C:/Users/steve/AppData/Local/Programs/Ollama/"
+      - "C:/Users/steve/AppData/Local/GitHubDesktop/bin/"
+      - "C:/Users/steve/AppData/Local/Microsoft/WinGet/Links/"
+    searched_directories:
+      - "E:/Visual Studio/VC/Tools/MSVC/14.50.35717/bin/Hostx64/x64/link.com"
+    found: "E:/Visual Studio/VC/Tools/MSVC/14.50.35717/bin/Hostx64/x64/link.exe"
+    search_context:
+      ENV{PATH}:
+        - "C:\\VulkanSDK\\1.4.328.1\\Bin"
+        - "C:\\Program Files (x86)\\VMware\\VMware Workstation\\bin\\"
+        - "C:\\WINDOWS\\system32"
+        - "C:\\WINDOWS"
+        - "C:\\WINDOWS\\System32\\Wbem"
+        - "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\"
+        - "C:\\WINDOWS\\System32\\OpenSSH\\"
+        - "C:\\Program Files\\dotnet\\"
+        - "\"C:\\Program Files\\Java\\jdk-25\\bin"
+        - "C:\\Program Files\\Java\\jdk-25\\jre\\bin"
+        - "\""
+        - "C:\\Program Files\\NVIDIA Corporation\\NVIDIA App\\NvDLISR"
+        - "C:\\Program Files (x86)\\NVIDIA Corporation\\PhysX\\Common"
+        - "D:\\Program Files\\Mingw\\"
+        - "D:\\Program Files\\Mingw\\bin\\"
+        - "C:\\php"
+        - "C:\\Program Files\\Bandizip\\"
+        - "C:\\Program Files (x86)\\Windows Kits\\10\\Windows Performance Toolkit\\"
+        - "C:\\Program Files (x86)\\Windows Kits\\10\\Microsoft Application Virtualization\\Sequencer\\"
+        - "C:\\Program Files (x86)\\Windows Kits\\10\\Assessment and Deployment Kit\\Deployment Tools\\amd64\\Oscdimg"
+        - "C:\\Program Files\\Git\\cmd"
+        - "C:\\Program Files\\CMake\\bin"
+        - "C:\\Program Files (x86)\\dxc_2025_07_14"
+        - "C:\\Program Files (x86)\\dxc_2025_07_14\\bin\\x86"
+        - "C:\\Users\\steve\\vcpkg"
+        - "C:\\Users\\steve\\AppData\\Local\\Programs\\Python\\Python310\\Scripts\\"
+        - "C:\\Users\\steve\\AppData\\Local\\Programs\\Python\\Python310\\"
+        - "C:\\Users\\steve\\AppData\\Local\\Microsoft\\WindowsApps"
+        - "D:\\Program Files\\Microsoft VS Code\\bin"
+        - "C:\\Users\\steve\\AppData\\Local\\Programs\\Ollama"
+        - "C:\\Users\\steve\\AppData\\Local\\GitHubDesktop\\bin"
+        - "C:\\Users\\steve\\AppData\\Local\\Microsoft\\WinGet\\Links"
+  -
+    kind: "find-v1"
+    backtrace:
+      - "C:/Program Files/CMake/share/cmake-4.2/Modules/CMakeFindBinUtils.cmake:37 (find_program)"
+      - "C:/Program Files/CMake/share/cmake-4.2/Modules/CMakeFindBinUtils.cmake:65 (__resolve_tool_path)"
+      - "C:/Program Files/CMake/share/cmake-4.2/Modules/CMakeFindBinUtils.cmake:104 (__resolve_linker_path)"
+      - "C:/Program Files/CMake/share/cmake-4.2/Modules/CMakeDetermineCCompiler.cmake:200 (include)"
+      - "CMakeLists.txt:2 (project)"
+    mode: "program"
+    variable: "_CMAKE_TOOL_WITH_PATH"
+    description: "Path to a program."
+    settings:
+      SearchFramework: "NEVER"
+      SearchAppBundle: "NEVER"
+      CMAKE_FIND_USE_CMAKE_PATH: false
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: false
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "lld-link"
+    candidate_directories:
+      - "E:/Visual Studio/VC/Tools/MSVC/14.50.35717/bin/Hostx64/x64/"
+      - "C:/VulkanSDK/1.4.328.1/Bin/"
+      - "C:/Program Files (x86)/VMware/VMware Workstation/bin/"
+      - "C:/Windows/System32/"
+      - "C:/Windows/"
+      - "C:/Windows/System32/wbem/"
+      - "C:/Windows/System32/WindowsPowerShell/v1.0/"
+      - "C:/Windows/System32/OpenSSH/"
+      - "C:/Program Files/dotnet/"
+      - "D:/Program Files/Nova_A/build/\"C:/Program Files/Java/jdk-25/bin/"
+      - "C:/Program Files/Java/jdk-25/jre/bin/"
+      - "D:/Program Files/Nova_A/build/\"/"
+      - "C:/Program Files/NVIDIA Corporation/NVIDIA App/NvDLISR/"
+      - "C:/Program Files (x86)/NVIDIA Corporation/PhysX/Common/"
+      - "D:/Program Files/Mingw/"
+      - "D:/Program Files/Mingw/bin/"
+      - "C:/php/"
+      - "C:/Program Files/Bandizip/"
+      - "C:/Program Files (x86)/Windows Kits/10/Windows Performance Toolkit/"
+      - "C:/Program Files (x86)/Windows Kits/10/Microsoft Application Virtualization/Sequencer/"
+      - "C:/Program Files (x86)/Windows Kits/10/Assessment and Deployment Kit/Deployment Tools/amd64/Oscdimg/"
+      - "C:/Program Files/Git/cmd/"
+      - "C:/Program Files/CMake/bin/"
+      - "C:/Program Files (x86)/dxc_2025_07_14/"
+      - "C:/Program Files (x86)/dxc_2025_07_14/bin/x86/"
+      - "C:/Users/steve/vcpkg/"
+      - "C:/Users/steve/AppData/Local/Programs/Python/Python310/Scripts/"
+      - "C:/Users/steve/AppData/Local/Programs/Python/Python310/"
+      - "C:/Users/steve/AppData/Local/Microsoft/WindowsApps/"
+      - "D:/Program Files/Microsoft VS Code/bin/"
+      - "C:/Users/steve/AppData/Local/Programs/Ollama/"
+      - "C:/Users/steve/AppData/Local/GitHubDesktop/bin/"
+      - "C:/Users/steve/AppData/Local/Microsoft/WinGet/Links/"
+    searched_directories:
+      - "E:/Visual Studio/VC/Tools/MSVC/14.50.35717/bin/Hostx64/x64/lld-link.com"
+      - "E:/Visual Studio/VC/Tools/MSVC/14.50.35717/bin/Hostx64/x64/lld-link.exe"
+      - "E:/Visual Studio/VC/Tools/MSVC/14.50.35717/bin/Hostx64/x64/lld-link"
+      - "C:/VulkanSDK/1.4.328.1/Bin/lld-link.com"
+      - "C:/VulkanSDK/1.4.328.1/Bin/lld-link.exe"
+      - "C:/VulkanSDK/1.4.328.1/Bin/lld-link"
+      - "C:/Program Files (x86)/VMware/VMware Workstation/bin/lld-link.com"
+      - "C:/Program Files (x86)/VMware/VMware Workstation/bin/lld-link.exe"
+      - "C:/Program Files (x86)/VMware/VMware Workstation/bin/lld-link"
+      - "C:/Windows/System32/lld-link.com"
+      - "C:/Windows/System32/lld-link.exe"
+      - "C:/Windows/System32/lld-link"
+      - "C:/Windows/lld-link.com"
+      - "C:/Windows/lld-link.exe"
+      - "C:/Windows/lld-link"
+      - "C:/Windows/System32/wbem/lld-link.com"
+      - "C:/Windows/System32/wbem/lld-link.exe"
+      - "C:/Windows/System32/wbem/lld-link"
+      - "C:/Windows/System32/WindowsPowerShell/v1.0/lld-link.com"
+      - "C:/Windows/System32/WindowsPowerShell/v1.0/lld-link.exe"
+      - "C:/Windows/System32/WindowsPowerShell/v1.0/lld-link"
+      - "C:/Windows/System32/OpenSSH/lld-link.com"
+      - "C:/Windows/System32/OpenSSH/lld-link.exe"
+      - "C:/Windows/System32/OpenSSH/lld-link"
+      - "C:/Program Files/dotnet/lld-link.com"
+      - "C:/Program Files/dotnet/lld-link.exe"
+      - "C:/Program Files/dotnet/lld-link"
+      - "D:/Program Files/Nova_A/build/\"C:/Program Files/Java/jdk-25/bin/lld-link.com"
+      - "D:/Program Files/Nova_A/build/\"C:/Program Files/Java/jdk-25/bin/lld-link.exe"
+      - "D:/Program Files/Nova_A/build/\"C:/Program Files/Java/jdk-25/bin/lld-link"
+      - "C:/Program Files/Java/jdk-25/jre/bin/lld-link.com"
+      - "C:/Program Files/Java/jdk-25/jre/bin/lld-link.exe"
+      - "C:/Program Files/Java/jdk-25/jre/bin/lld-link"
+      - "D:/Program Files/Nova_A/build/\"/lld-link.com"
+      - "D:/Program Files/Nova_A/build/\"/lld-link.exe"
+      - "D:/Program Files/Nova_A/build/\"/lld-link"
+      - "C:/Program Files/NVIDIA Corporation/NVIDIA App/NvDLISR/lld-link.com"
+      - "C:/Program Files/NVIDIA Corporation/NVIDIA App/NvDLISR/lld-link.exe"
+      - "C:/Program Files/NVIDIA Corporation/NVIDIA App/NvDLISR/lld-link"
+      - "C:/Program Files (x86)/NVIDIA Corporation/PhysX/Common/lld-link.com"
+      - "C:/Program Files (x86)/NVIDIA Corporation/PhysX/Common/lld-link.exe"
+      - "C:/Program Files (x86)/NVIDIA Corporation/PhysX/Common/lld-link"
+      - "D:/Program Files/Mingw/lld-link.com"
+      - "D:/Program Files/Mingw/lld-link.exe"
+      - "D:/Program Files/Mingw/lld-link"
+      - "D:/Program Files/Mingw/bin/lld-link.com"
+      - "D:/Program Files/Mingw/bin/lld-link.exe"
+      - "D:/Program Files/Mingw/bin/lld-link"
+      - "C:/php/lld-link.com"
+      - "C:/php/lld-link.exe"
+      - "C:/php/lld-link"
+      - "C:/Program Files/Bandizip/lld-link.com"
+      - "C:/Program Files/Bandizip/lld-link.exe"
+      - "C:/Program Files/Bandizip/lld-link"
+      - "C:/Program Files (x86)/Windows Kits/10/Windows Performance Toolkit/lld-link.com"
+      - "C:/Program Files (x86)/Windows Kits/10/Windows Performance Toolkit/lld-link.exe"
+      - "C:/Program Files (x86)/Windows Kits/10/Windows Performance Toolkit/lld-link"
+      - "C:/Program Files (x86)/Windows Kits/10/Microsoft Application Virtualization/Sequencer/lld-link.com"
+      - "C:/Program Files (x86)/Windows Kits/10/Microsoft Application Virtualization/Sequencer/lld-link.exe"
+      - "C:/Program Files (x86)/Windows Kits/10/Microsoft Application Virtualization/Sequencer/lld-link"
+      - "C:/Program Files (x86)/Windows Kits/10/Assessment and Deployment Kit/Deployment Tools/amd64/Oscdimg/lld-link.com"
+      - "C:/Program Files (x86)/Windows Kits/10/Assessment and Deployment Kit/Deployment Tools/amd64/Oscdimg/lld-link.exe"
+      - "C:/Program Files (x86)/Windows Kits/10/Assessment and Deployment Kit/Deployment Tools/amd64/Oscdimg/lld-link"
+      - "C:/Program Files/Git/cmd/lld-link.com"
+      - "C:/Program Files/Git/cmd/lld-link.exe"
+      - "C:/Program Files/Git/cmd/lld-link"
+      - "C:/Program Files/CMake/bin/lld-link.com"
+      - "C:/Program Files/CMake/bin/lld-link.exe"
+      - "C:/Program Files/CMake/bin/lld-link"
+      - "C:/Program Files (x86)/dxc_2025_07_14/lld-link.com"
+      - "C:/Program Files (x86)/dxc_2025_07_14/lld-link.exe"
+      - "C:/Program Files (x86)/dxc_2025_07_14/lld-link"
+      - "C:/Program Files (x86)/dxc_2025_07_14/bin/x86/lld-link.com"
+      - "C:/Program Files (x86)/dxc_2025_07_14/bin/x86/lld-link.exe"
+      - "C:/Program Files (x86)/dxc_2025_07_14/bin/x86/lld-link"
+      - "C:/Users/steve/vcpkg/lld-link.com"
+      - "C:/Users/steve/vcpkg/lld-link.exe"
+      - "C:/Users/steve/vcpkg/lld-link"
+      - "C:/Users/steve/AppData/Local/Programs/Python/Python310/Scripts/lld-link.com"
+      - "C:/Users/steve/AppData/Local/Programs/Python/Python310/Scripts/lld-link.exe"
+      - "C:/Users/steve/AppData/Local/Programs/Python/Python310/Scripts/lld-link"
+      - "C:/Users/steve/AppData/Local/Programs/Python/Python310/lld-link.com"
+      - "C:/Users/steve/AppData/Local/Programs/Python/Python310/lld-link.exe"
+      - "C:/Users/steve/AppData/Local/Programs/Python/Python310/lld-link"
+      - "C:/Users/steve/AppData/Local/Microsoft/WindowsApps/lld-link.com"
+      - "C:/Users/steve/AppData/Local/Microsoft/WindowsApps/lld-link.exe"
+      - "C:/Users/steve/AppData/Local/Microsoft/WindowsApps/lld-link"
+      - "D:/Program Files/Microsoft VS Code/bin/lld-link.com"
+      - "D:/Program Files/Microsoft VS Code/bin/lld-link.exe"
+      - "D:/Program Files/Microsoft VS Code/bin/lld-link"
+      - "C:/Users/steve/AppData/Local/Programs/Ollama/lld-link.com"
+      - "C:/Users/steve/AppData/Local/Programs/Ollama/lld-link.exe"
+      - "C:/Users/steve/AppData/Local/Programs/Ollama/lld-link"
+      - "C:/Users/steve/AppData/Local/GitHubDesktop/bin/lld-link.com"
+      - "C:/Users/steve/AppData/Local/GitHubDesktop/bin/lld-link.exe"
+      - "C:/Users/steve/AppData/Local/GitHubDesktop/bin/lld-link"
+      - "C:/Users/steve/AppData/Local/Microsoft/WinGet/Links/lld-link.com"
+      - "C:/Users/steve/AppData/Local/Microsoft/WinGet/Links/lld-link.exe"
+      - "C:/Users/steve/AppData/Local/Microsoft/WinGet/Links/lld-link"
+    found: false
+    search_context:
+      ENV{PATH}:
+        - "C:\\VulkanSDK\\1.4.328.1\\Bin"
+        - "C:\\Program Files (x86)\\VMware\\VMware Workstation\\bin\\"
+        - "C:\\WINDOWS\\system32"
+        - "C:\\WINDOWS"
+        - "C:\\WINDOWS\\System32\\Wbem"
+        - "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\"
+        - "C:\\WINDOWS\\System32\\OpenSSH\\"
+        - "C:\\Program Files\\dotnet\\"
+        - "\"C:\\Program Files\\Java\\jdk-25\\bin"
+        - "C:\\Program Files\\Java\\jdk-25\\jre\\bin"
+        - "\""
+        - "C:\\Program Files\\NVIDIA Corporation\\NVIDIA App\\NvDLISR"
+        - "C:\\Program Files (x86)\\NVIDIA Corporation\\PhysX\\Common"
+        - "D:\\Program Files\\Mingw\\"
+        - "D:\\Program Files\\Mingw\\bin\\"
+        - "C:\\php"
+        - "C:\\Program Files\\Bandizip\\"
+        - "C:\\Program Files (x86)\\Windows Kits\\10\\Windows Performance Toolkit\\"
+        - "C:\\Program Files (x86)\\Windows Kits\\10\\Microsoft Application Virtualization\\Sequencer\\"
+        - "C:\\Program Files (x86)\\Windows Kits\\10\\Assessment and Deployment Kit\\Deployment Tools\\amd64\\Oscdimg"
+        - "C:\\Program Files\\Git\\cmd"
+        - "C:\\Program Files\\CMake\\bin"
+        - "C:\\Program Files (x86)\\dxc_2025_07_14"
+        - "C:\\Program Files (x86)\\dxc_2025_07_14\\bin\\x86"
+        - "C:\\Users\\steve\\vcpkg"
+        - "C:\\Users\\steve\\AppData\\Local\\Programs\\Python\\Python310\\Scripts\\"
+        - "C:\\Users\\steve\\AppData\\Local\\Programs\\Python\\Python310\\"
+        - "C:\\Users\\steve\\AppData\\Local\\Microsoft\\WindowsApps"
+        - "D:\\Program Files\\Microsoft VS Code\\bin"
+        - "C:\\Users\\steve\\AppData\\Local\\Programs\\Ollama"
+        - "C:\\Users\\steve\\AppData\\Local\\GitHubDesktop\\bin"
+        - "C:\\Users\\steve\\AppData\\Local\\Microsoft\\WinGet\\Links"
+  -
+    kind: "find-v1"
+    backtrace:
+      - "C:/Program Files/CMake/share/cmake-4.2/Modules/CMakeFindBinUtils.cmake:243 (find_program)"
+      - "C:/Program Files/CMake/share/cmake-4.2/Modules/CMakeDetermineCCompiler.cmake:200 (include)"
+      - "CMakeLists.txt:2 (project)"
+    mode: "program"
+    variable: "CMAKE_LINKER"
+    description: "Path to a program."
+    settings:
+      SearchFramework: "NEVER"
+      SearchAppBundle: "NEVER"
+      CMAKE_FIND_USE_CMAKE_PATH: false
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: false
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "link"
+    candidate_directories:
+      - "E:/Visual Studio/VC/Tools/MSVC/14.50.35717/bin/Hostx64/x64/"
+      - "C:/VulkanSDK/1.4.328.1/Bin/"
+      - "C:/Program Files (x86)/VMware/VMware Workstation/bin/"
+      - "C:/Windows/System32/"
+      - "C:/Windows/"
+      - "C:/Windows/System32/wbem/"
+      - "C:/Windows/System32/WindowsPowerShell/v1.0/"
+      - "C:/Windows/System32/OpenSSH/"
+      - "C:/Program Files/dotnet/"
+      - "D:/Program Files/Nova_A/build/\"C:/Program Files/Java/jdk-25/bin/"
+      - "C:/Program Files/Java/jdk-25/jre/bin/"
+      - "D:/Program Files/Nova_A/build/\"/"
+      - "C:/Program Files/NVIDIA Corporation/NVIDIA App/NvDLISR/"
+      - "C:/Program Files (x86)/NVIDIA Corporation/PhysX/Common/"
+      - "D:/Program Files/Mingw/"
+      - "D:/Program Files/Mingw/bin/"
+      - "C:/php/"
+      - "C:/Program Files/Bandizip/"
+      - "C:/Program Files (x86)/Windows Kits/10/Windows Performance Toolkit/"
+      - "C:/Program Files (x86)/Windows Kits/10/Microsoft Application Virtualization/Sequencer/"
+      - "C:/Program Files (x86)/Windows Kits/10/Assessment and Deployment Kit/Deployment Tools/amd64/Oscdimg/"
+      - "C:/Program Files/Git/cmd/"
+      - "C:/Program Files/CMake/bin/"
+      - "C:/Program Files (x86)/dxc_2025_07_14/"
+      - "C:/Program Files (x86)/dxc_2025_07_14/bin/x86/"
+      - "C:/Users/steve/vcpkg/"
+      - "C:/Users/steve/AppData/Local/Programs/Python/Python310/Scripts/"
+      - "C:/Users/steve/AppData/Local/Programs/Python/Python310/"
+      - "C:/Users/steve/AppData/Local/Microsoft/WindowsApps/"
+      - "D:/Program Files/Microsoft VS Code/bin/"
+      - "C:/Users/steve/AppData/Local/Programs/Ollama/"
+      - "C:/Users/steve/AppData/Local/GitHubDesktop/bin/"
+      - "C:/Users/steve/AppData/Local/Microsoft/WinGet/Links/"
+    searched_directories:
+      - "E:/Visual Studio/VC/Tools/MSVC/14.50.35717/bin/Hostx64/x64/link.com"
+    found: "E:/Visual Studio/VC/Tools/MSVC/14.50.35717/bin/Hostx64/x64/link.exe"
+    search_context:
+      ENV{PATH}:
+        - "C:\\VulkanSDK\\1.4.328.1\\Bin"
+        - "C:\\Program Files (x86)\\VMware\\VMware Workstation\\bin\\"
+        - "C:\\WINDOWS\\system32"
+        - "C:\\WINDOWS"
+        - "C:\\WINDOWS\\System32\\Wbem"
+        - "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\"
+        - "C:\\WINDOWS\\System32\\OpenSSH\\"
+        - "C:\\Program Files\\dotnet\\"
+        - "\"C:\\Program Files\\Java\\jdk-25\\bin"
+        - "C:\\Program Files\\Java\\jdk-25\\jre\\bin"
+        - "\""
+        - "C:\\Program Files\\NVIDIA Corporation\\NVIDIA App\\NvDLISR"
+        - "C:\\Program Files (x86)\\NVIDIA Corporation\\PhysX\\Common"
+        - "D:\\Program Files\\Mingw\\"
+        - "D:\\Program Files\\Mingw\\bin\\"
+        - "C:\\php"
+        - "C:\\Program Files\\Bandizip\\"
+        - "C:\\Program Files (x86)\\Windows Kits\\10\\Windows Performance Toolkit\\"
+        - "C:\\Program Files (x86)\\Windows Kits\\10\\Microsoft Application Virtualization\\Sequencer\\"
+        - "C:\\Program Files (x86)\\Windows Kits\\10\\Assessment and Deployment Kit\\Deployment Tools\\amd64\\Oscdimg"
+        - "C:\\Program Files\\Git\\cmd"
+        - "C:\\Program Files\\CMake\\bin"
+        - "C:\\Program Files (x86)\\dxc_2025_07_14"
+        - "C:\\Program Files (x86)\\dxc_2025_07_14\\bin\\x86"
+        - "C:\\Users\\steve\\vcpkg"
+        - "C:\\Users\\steve\\AppData\\Local\\Programs\\Python\\Python310\\Scripts\\"
+        - "C:\\Users\\steve\\AppData\\Local\\Programs\\Python\\Python310\\"
+        - "C:\\Users\\steve\\AppData\\Local\\Microsoft\\WindowsApps"
+        - "D:\\Program Files\\Microsoft VS Code\\bin"
+        - "C:\\Users\\steve\\AppData\\Local\\Programs\\Ollama"
+        - "C:\\Users\\steve\\AppData\\Local\\GitHubDesktop\\bin"
+        - "C:\\Users\\steve\\AppData\\Local\\Microsoft\\WinGet\\Links"
+  -
+    kind: "find-v1"
+    backtrace:
+      - "C:/Program Files/CMake/share/cmake-4.2/Modules/CMakeFindBinUtils.cmake:243 (find_program)"
+      - "C:/Program Files/CMake/share/cmake-4.2/Modules/CMakeDetermineCCompiler.cmake:200 (include)"
+      - "CMakeLists.txt:2 (project)"
+    mode: "program"
+    variable: "CMAKE_MT"
+    description: "Path to a program."
+    settings:
+      SearchFramework: "NEVER"
+      SearchAppBundle: "NEVER"
+      CMAKE_FIND_USE_CMAKE_PATH: false
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: false
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "mt"
+    candidate_directories:
+      - "E:/Visual Studio/VC/Tools/MSVC/14.50.35717/bin/Hostx64/x64/"
+      - "C:/VulkanSDK/1.4.328.1/Bin/"
+      - "C:/Program Files (x86)/VMware/VMware Workstation/bin/"
+      - "C:/Windows/System32/"
+      - "C:/Windows/"
+      - "C:/Windows/System32/wbem/"
+      - "C:/Windows/System32/WindowsPowerShell/v1.0/"
+      - "C:/Windows/System32/OpenSSH/"
+      - "C:/Program Files/dotnet/"
+      - "D:/Program Files/Nova_A/build/\"C:/Program Files/Java/jdk-25/bin/"
+      - "C:/Program Files/Java/jdk-25/jre/bin/"
+      - "D:/Program Files/Nova_A/build/\"/"
+      - "C:/Program Files/NVIDIA Corporation/NVIDIA App/NvDLISR/"
+      - "C:/Program Files (x86)/NVIDIA Corporation/PhysX/Common/"
+      - "D:/Program Files/Mingw/"
+      - "D:/Program Files/Mingw/bin/"
+      - "C:/php/"
+      - "C:/Program Files/Bandizip/"
+      - "C:/Program Files (x86)/Windows Kits/10/Windows Performance Toolkit/"
+      - "C:/Program Files (x86)/Windows Kits/10/Microsoft Application Virtualization/Sequencer/"
+      - "C:/Program Files (x86)/Windows Kits/10/Assessment and Deployment Kit/Deployment Tools/amd64/Oscdimg/"
+      - "C:/Program Files/Git/cmd/"
+      - "C:/Program Files/CMake/bin/"
+      - "C:/Program Files (x86)/dxc_2025_07_14/"
+      - "C:/Program Files (x86)/dxc_2025_07_14/bin/x86/"
+      - "C:/Users/steve/vcpkg/"
+      - "C:/Users/steve/AppData/Local/Programs/Python/Python310/Scripts/"
+      - "C:/Users/steve/AppData/Local/Programs/Python/Python310/"
+      - "C:/Users/steve/AppData/Local/Microsoft/WindowsApps/"
+      - "D:/Program Files/Microsoft VS Code/bin/"
+      - "C:/Users/steve/AppData/Local/Programs/Ollama/"
+      - "C:/Users/steve/AppData/Local/GitHubDesktop/bin/"
+      - "C:/Users/steve/AppData/Local/Microsoft/WinGet/Links/"
+    searched_directories:
+      - "E:/Visual Studio/VC/Tools/MSVC/14.50.35717/bin/Hostx64/x64/mt.com"
+      - "E:/Visual Studio/VC/Tools/MSVC/14.50.35717/bin/Hostx64/x64/mt.exe"
+      - "E:/Visual Studio/VC/Tools/MSVC/14.50.35717/bin/Hostx64/x64/mt"
+      - "C:/VulkanSDK/1.4.328.1/Bin/mt.com"
+      - "C:/VulkanSDK/1.4.328.1/Bin/mt.exe"
+      - "C:/VulkanSDK/1.4.328.1/Bin/mt"
+      - "C:/Program Files (x86)/VMware/VMware Workstation/bin/mt.com"
+      - "C:/Program Files (x86)/VMware/VMware Workstation/bin/mt.exe"
+      - "C:/Program Files (x86)/VMware/VMware Workstation/bin/mt"
+      - "C:/Windows/System32/mt.com"
+      - "C:/Windows/System32/mt.exe"
+      - "C:/Windows/System32/mt"
+      - "C:/Windows/mt.com"
+      - "C:/Windows/mt.exe"
+      - "C:/Windows/mt"
+      - "C:/Windows/System32/wbem/mt.com"
+      - "C:/Windows/System32/wbem/mt.exe"
+      - "C:/Windows/System32/wbem/mt"
+      - "C:/Windows/System32/WindowsPowerShell/v1.0/mt.com"
+      - "C:/Windows/System32/WindowsPowerShell/v1.0/mt.exe"
+      - "C:/Windows/System32/WindowsPowerShell/v1.0/mt"
+      - "C:/Windows/System32/OpenSSH/mt.com"
+      - "C:/Windows/System32/OpenSSH/mt.exe"
+      - "C:/Windows/System32/OpenSSH/mt"
+      - "C:/Program Files/dotnet/mt.com"
+      - "C:/Program Files/dotnet/mt.exe"
+      - "C:/Program Files/dotnet/mt"
+      - "D:/Program Files/Nova_A/build/\"C:/Program Files/Java/jdk-25/bin/mt.com"
+      - "D:/Program Files/Nova_A/build/\"C:/Program Files/Java/jdk-25/bin/mt.exe"
+      - "D:/Program Files/Nova_A/build/\"C:/Program Files/Java/jdk-25/bin/mt"
+      - "C:/Program Files/Java/jdk-25/jre/bin/mt.com"
+      - "C:/Program Files/Java/jdk-25/jre/bin/mt.exe"
+      - "C:/Program Files/Java/jdk-25/jre/bin/mt"
+      - "D:/Program Files/Nova_A/build/\"/mt.com"
+      - "D:/Program Files/Nova_A/build/\"/mt.exe"
+      - "D:/Program Files/Nova_A/build/\"/mt"
+      - "C:/Program Files/NVIDIA Corporation/NVIDIA App/NvDLISR/mt.com"
+      - "C:/Program Files/NVIDIA Corporation/NVIDIA App/NvDLISR/mt.exe"
+      - "C:/Program Files/NVIDIA Corporation/NVIDIA App/NvDLISR/mt"
+      - "C:/Program Files (x86)/NVIDIA Corporation/PhysX/Common/mt.com"
+      - "C:/Program Files (x86)/NVIDIA Corporation/PhysX/Common/mt.exe"
+      - "C:/Program Files (x86)/NVIDIA Corporation/PhysX/Common/mt"
+      - "D:/Program Files/Mingw/mt.com"
+      - "D:/Program Files/Mingw/mt.exe"
+      - "D:/Program Files/Mingw/mt"
+      - "D:/Program Files/Mingw/bin/mt.com"
+      - "D:/Program Files/Mingw/bin/mt.exe"
+      - "D:/Program Files/Mingw/bin/mt"
+      - "C:/php/mt.com"
+      - "C:/php/mt.exe"
+      - "C:/php/mt"
+      - "C:/Program Files/Bandizip/mt.com"
+      - "C:/Program Files/Bandizip/mt.exe"
+      - "C:/Program Files/Bandizip/mt"
+      - "C:/Program Files (x86)/Windows Kits/10/Windows Performance Toolkit/mt.com"
+      - "C:/Program Files (x86)/Windows Kits/10/Windows Performance Toolkit/mt.exe"
+      - "C:/Program Files (x86)/Windows Kits/10/Windows Performance Toolkit/mt"
+      - "C:/Program Files (x86)/Windows Kits/10/Microsoft Application Virtualization/Sequencer/mt.com"
+      - "C:/Program Files (x86)/Windows Kits/10/Microsoft Application Virtualization/Sequencer/mt.exe"
+      - "C:/Program Files (x86)/Windows Kits/10/Microsoft Application Virtualization/Sequencer/mt"
+      - "C:/Program Files (x86)/Windows Kits/10/Assessment and Deployment Kit/Deployment Tools/amd64/Oscdimg/mt.com"
+      - "C:/Program Files (x86)/Windows Kits/10/Assessment and Deployment Kit/Deployment Tools/amd64/Oscdimg/mt.exe"
+      - "C:/Program Files (x86)/Windows Kits/10/Assessment and Deployment Kit/Deployment Tools/amd64/Oscdimg/mt"
+      - "C:/Program Files/Git/cmd/mt.com"
+      - "C:/Program Files/Git/cmd/mt.exe"
+      - "C:/Program Files/Git/cmd/mt"
+      - "C:/Program Files/CMake/bin/mt.com"
+      - "C:/Program Files/CMake/bin/mt.exe"
+      - "C:/Program Files/CMake/bin/mt"
+      - "C:/Program Files (x86)/dxc_2025_07_14/mt.com"
+      - "C:/Program Files (x86)/dxc_2025_07_14/mt.exe"
+      - "C:/Program Files (x86)/dxc_2025_07_14/mt"
+      - "C:/Program Files (x86)/dxc_2025_07_14/bin/x86/mt.com"
+      - "C:/Program Files (x86)/dxc_2025_07_14/bin/x86/mt.exe"
+      - "C:/Program Files (x86)/dxc_2025_07_14/bin/x86/mt"
+      - "C:/Users/steve/vcpkg/mt.com"
+      - "C:/Users/steve/vcpkg/mt.exe"
+      - "C:/Users/steve/vcpkg/mt"
+      - "C:/Users/steve/AppData/Local/Programs/Python/Python310/Scripts/mt.com"
+      - "C:/Users/steve/AppData/Local/Programs/Python/Python310/Scripts/mt.exe"
+      - "C:/Users/steve/AppData/Local/Programs/Python/Python310/Scripts/mt"
+      - "C:/Users/steve/AppData/Local/Programs/Python/Python310/mt.com"
+      - "C:/Users/steve/AppData/Local/Programs/Python/Python310/mt.exe"
+      - "C:/Users/steve/AppData/Local/Programs/Python/Python310/mt"
+      - "C:/Users/steve/AppData/Local/Microsoft/WindowsApps/mt.com"
+      - "C:/Users/steve/AppData/Local/Microsoft/WindowsApps/mt.exe"
+      - "C:/Users/steve/AppData/Local/Microsoft/WindowsApps/mt"
+      - "D:/Program Files/Microsoft VS Code/bin/mt.com"
+      - "D:/Program Files/Microsoft VS Code/bin/mt.exe"
+      - "D:/Program Files/Microsoft VS Code/bin/mt"
+      - "C:/Users/steve/AppData/Local/Programs/Ollama/mt.com"
+      - "C:/Users/steve/AppData/Local/Programs/Ollama/mt.exe"
+      - "C:/Users/steve/AppData/Local/Programs/Ollama/mt"
+      - "C:/Users/steve/AppData/Local/GitHubDesktop/bin/mt.com"
+      - "C:/Users/steve/AppData/Local/GitHubDesktop/bin/mt.exe"
+      - "C:/Users/steve/AppData/Local/GitHubDesktop/bin/mt"
+      - "C:/Users/steve/AppData/Local/Microsoft/WinGet/Links/mt.com"
+      - "C:/Users/steve/AppData/Local/Microsoft/WinGet/Links/mt.exe"
+      - "C:/Users/steve/AppData/Local/Microsoft/WinGet/Links/mt"
+    found: false
+    search_context:
+      ENV{PATH}:
+        - "C:\\VulkanSDK\\1.4.328.1\\Bin"
+        - "C:\\Program Files (x86)\\VMware\\VMware Workstation\\bin\\"
+        - "C:\\WINDOWS\\system32"
+        - "C:\\WINDOWS"
+        - "C:\\WINDOWS\\System32\\Wbem"
+        - "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\"
+        - "C:\\WINDOWS\\System32\\OpenSSH\\"
+        - "C:\\Program Files\\dotnet\\"
+        - "\"C:\\Program Files\\Java\\jdk-25\\bin"
+        - "C:\\Program Files\\Java\\jdk-25\\jre\\bin"
+        - "\""
+        - "C:\\Program Files\\NVIDIA Corporation\\NVIDIA App\\NvDLISR"
+        - "C:\\Program Files (x86)\\NVIDIA Corporation\\PhysX\\Common"
+        - "D:\\Program Files\\Mingw\\"
+        - "D:\\Program Files\\Mingw\\bin\\"
+        - "C:\\php"
+        - "C:\\Program Files\\Bandizip\\"
+        - "C:\\Program Files (x86)\\Windows Kits\\10\\Windows Performance Toolkit\\"
+        - "C:\\Program Files (x86)\\Windows Kits\\10\\Microsoft Application Virtualization\\Sequencer\\"
+        - "C:\\Program Files (x86)\\Windows Kits\\10\\Assessment and Deployment Kit\\Deployment Tools\\amd64\\Oscdimg"
+        - "C:\\Program Files\\Git\\cmd"
+        - "C:\\Program Files\\CMake\\bin"
+        - "C:\\Program Files (x86)\\dxc_2025_07_14"
+        - "C:\\Program Files (x86)\\dxc_2025_07_14\\bin\\x86"
+        - "C:\\Users\\steve\\vcpkg"
+        - "C:\\Users\\steve\\AppData\\Local\\Programs\\Python\\Python310\\Scripts\\"
+        - "C:\\Users\\steve\\AppData\\Local\\Programs\\Python\\Python310\\"
+        - "C:\\Users\\steve\\AppData\\Local\\Microsoft\\WindowsApps"
+        - "D:\\Program Files\\Microsoft VS Code\\bin"
+        - "C:\\Users\\steve\\AppData\\Local\\Programs\\Ollama"
+        - "C:\\Users\\steve\\AppData\\Local\\GitHubDesktop\\bin"
+        - "C:\\Users\\steve\\AppData\\Local\\Microsoft\\WinGet\\Links"
+  -
+    kind: "find-v1"
+    backtrace:
+      - "C:/Program Files/CMake/share/cmake-4.2/Modules/CMakeFindBinUtils.cmake:243 (find_program)"
+      - "C:/Program Files/CMake/share/cmake-4.2/Modules/CMakeDetermineCCompiler.cmake:200 (include)"
+      - "CMakeLists.txt:2 (project)"
+    mode: "program"
+    variable: "CMAKE_AR"
+    description: "Path to a program."
+    settings:
+      SearchFramework: "NEVER"
+      SearchAppBundle: "NEVER"
+      CMAKE_FIND_USE_CMAKE_PATH: false
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: false
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "lib"
+    candidate_directories:
+      - "E:/Visual Studio/VC/Tools/MSVC/14.50.35717/bin/Hostx64/x64/"
+      - "C:/VulkanSDK/1.4.328.1/Bin/"
+      - "C:/Program Files (x86)/VMware/VMware Workstation/bin/"
+      - "C:/Windows/System32/"
+      - "C:/Windows/"
+      - "C:/Windows/System32/wbem/"
+      - "C:/Windows/System32/WindowsPowerShell/v1.0/"
+      - "C:/Windows/System32/OpenSSH/"
+      - "C:/Program Files/dotnet/"
+      - "D:/Program Files/Nova_A/build/\"C:/Program Files/Java/jdk-25/bin/"
+      - "C:/Program Files/Java/jdk-25/jre/bin/"
+      - "D:/Program Files/Nova_A/build/\"/"
+      - "C:/Program Files/NVIDIA Corporation/NVIDIA App/NvDLISR/"
+      - "C:/Program Files (x86)/NVIDIA Corporation/PhysX/Common/"
+      - "D:/Program Files/Mingw/"
+      - "D:/Program Files/Mingw/bin/"
+      - "C:/php/"
+      - "C:/Program Files/Bandizip/"
+      - "C:/Program Files (x86)/Windows Kits/10/Windows Performance Toolkit/"
+      - "C:/Program Files (x86)/Windows Kits/10/Microsoft Application Virtualization/Sequencer/"
+      - "C:/Program Files (x86)/Windows Kits/10/Assessment and Deployment Kit/Deployment Tools/amd64/Oscdimg/"
+      - "C:/Program Files/Git/cmd/"
+      - "C:/Program Files/CMake/bin/"
+      - "C:/Program Files (x86)/dxc_2025_07_14/"
+      - "C:/Program Files (x86)/dxc_2025_07_14/bin/x86/"
+      - "C:/Users/steve/vcpkg/"
+      - "C:/Users/steve/AppData/Local/Programs/Python/Python310/Scripts/"
+      - "C:/Users/steve/AppData/Local/Programs/Python/Python310/"
+      - "C:/Users/steve/AppData/Local/Microsoft/WindowsApps/"
+      - "D:/Program Files/Microsoft VS Code/bin/"
+      - "C:/Users/steve/AppData/Local/Programs/Ollama/"
+      - "C:/Users/steve/AppData/Local/GitHubDesktop/bin/"
+      - "C:/Users/steve/AppData/Local/Microsoft/WinGet/Links/"
+    searched_directories:
+      - "E:/Visual Studio/VC/Tools/MSVC/14.50.35717/bin/Hostx64/x64/lib.com"
+    found: "E:/Visual Studio/VC/Tools/MSVC/14.50.35717/bin/Hostx64/x64/lib.exe"
+    search_context:
+      ENV{PATH}:
+        - "C:\\VulkanSDK\\1.4.328.1\\Bin"
+        - "C:\\Program Files (x86)\\VMware\\VMware Workstation\\bin\\"
+        - "C:\\WINDOWS\\system32"
+        - "C:\\WINDOWS"
+        - "C:\\WINDOWS\\System32\\Wbem"
+        - "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\"
+        - "C:\\WINDOWS\\System32\\OpenSSH\\"
+        - "C:\\Program Files\\dotnet\\"
+        - "\"C:\\Program Files\\Java\\jdk-25\\bin"
+        - "C:\\Program Files\\Java\\jdk-25\\jre\\bin"
+        - "\""
+        - "C:\\Program Files\\NVIDIA Corporation\\NVIDIA App\\NvDLISR"
+        - "C:\\Program Files (x86)\\NVIDIA Corporation\\PhysX\\Common"
+        - "D:\\Program Files\\Mingw\\"
+        - "D:\\Program Files\\Mingw\\bin\\"
+        - "C:\\php"
+        - "C:\\Program Files\\Bandizip\\"
+        - "C:\\Program Files (x86)\\Windows Kits\\10\\Windows Performance Toolkit\\"
+        - "C:\\Program Files (x86)\\Windows Kits\\10\\Microsoft Application Virtualization\\Sequencer\\"
+        - "C:\\Program Files (x86)\\Windows Kits\\10\\Assessment and Deployment Kit\\Deployment Tools\\amd64\\Oscdimg"
+        - "C:\\Program Files\\Git\\cmd"
+        - "C:\\Program Files\\CMake\\bin"
+        - "C:\\Program Files (x86)\\dxc_2025_07_14"
+        - "C:\\Program Files (x86)\\dxc_2025_07_14\\bin\\x86"
+        - "C:\\Users\\steve\\vcpkg"
+        - "C:\\Users\\steve\\AppData\\Local\\Programs\\Python\\Python310\\Scripts\\"
+        - "C:\\Users\\steve\\AppData\\Local\\Programs\\Python\\Python310\\"
+        - "C:\\Users\\steve\\AppData\\Local\\Microsoft\\WindowsApps"
+        - "D:\\Program Files\\Microsoft VS Code\\bin"
+        - "C:\\Users\\steve\\AppData\\Local\\Programs\\Ollama"
+        - "C:\\Users\\steve\\AppData\\Local\\GitHubDesktop\\bin"
+        - "C:\\Users\\steve\\AppData\\Local\\Microsoft\\WinGet\\Links"
+  -
+    kind: "find-v1"
+    backtrace:
+      - "C:/Program Files/CMake/share/cmake-4.2/Modules/CMakeDetermineCompilerId.cmake:462 (find_file)"
+      - "C:/Program Files/CMake/share/cmake-4.2/Modules/CMakeDetermineCompilerId.cmake:500 (CMAKE_DETERMINE_COMPILER_ID_WRITE)"
+      - "C:/Program Files/CMake/share/cmake-4.2/Modules/CMakeDetermineCompilerId.cmake:8 (CMAKE_DETERMINE_COMPILER_ID_BUILD)"
+      - "C:/Program Files/CMake/share/cmake-4.2/Modules/CMakeDetermineCompilerId.cmake:64 (__determine_compiler_id_test)"
+      - "C:/Program Files/CMake/share/cmake-4.2/Modules/CMakeDetermineCXXCompiler.cmake:125 (CMAKE_DETERMINE_COMPILER_ID)"
+      - "CMakeLists.txt:2 (project)"
+    mode: "file"
+    variable: "src_in"
+    description: "Path to a file."
+    settings:
+      SearchFramework: "NEVER"
+      SearchAppBundle: "NEVER"
+      CMAKE_FIND_USE_CMAKE_PATH: true
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "CMakeCXXCompilerId.cpp.in"
+    candidate_directories:
+      - "C:/Program Files/CMake/share/cmake-4.2/Modules/"
+    found: "C:/Program Files/CMake/share/cmake-4.2/Modules/CMakeCXXCompilerId.cpp.in"
+    search_context:
+      ENV{PATH}:
+        - "C:\\VulkanSDK\\1.4.328.1\\Bin"
+        - "C:\\Program Files (x86)\\VMware\\VMware Workstation\\bin\\"
+        - "C:\\WINDOWS\\system32"
+        - "C:\\WINDOWS"
+        - "C:\\WINDOWS\\System32\\Wbem"
+        - "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\"
+        - "C:\\WINDOWS\\System32\\OpenSSH\\"
+        - "C:\\Program Files\\dotnet\\"
+        - "\"C:\\Program Files\\Java\\jdk-25\\bin"
+        - "C:\\Program Files\\Java\\jdk-25\\jre\\bin"
+        - "\""
+        - "C:\\Program Files\\NVIDIA Corporation\\NVIDIA App\\NvDLISR"
+        - "C:\\Program Files (x86)\\NVIDIA Corporation\\PhysX\\Common"
+        - "D:\\Program Files\\Mingw\\"
+        - "D:\\Program Files\\Mingw\\bin\\"
+        - "C:\\php"
+        - "C:\\Program Files\\Bandizip\\"
+        - "C:\\Program Files (x86)\\Windows Kits\\10\\Windows Performance Toolkit\\"
+        - "C:\\Program Files (x86)\\Windows Kits\\10\\Microsoft Application Virtualization\\Sequencer\\"
+        - "C:\\Program Files (x86)\\Windows Kits\\10\\Assessment and Deployment Kit\\Deployment Tools\\amd64\\Oscdimg"
+        - "C:\\Program Files\\Git\\cmd"
+        - "C:\\Program Files\\CMake\\bin"
+        - "C:\\Program Files (x86)\\dxc_2025_07_14"
+        - "C:\\Program Files (x86)\\dxc_2025_07_14\\bin\\x86"
+        - "C:\\Users\\steve\\vcpkg"
+        - "C:\\Users\\steve\\AppData\\Local\\Programs\\Python\\Python310\\Scripts\\"
+        - "C:\\Users\\steve\\AppData\\Local\\Programs\\Python\\Python310\\"
+        - "C:\\Users\\steve\\AppData\\Local\\Microsoft\\WindowsApps"
+        - "D:\\Program Files\\Microsoft VS Code\\bin"
+        - "C:\\Users\\steve\\AppData\\Local\\Programs\\Ollama"
+        - "C:\\Users\\steve\\AppData\\Local\\GitHubDesktop\\bin"
+        - "C:\\Users\\steve\\AppData\\Local\\Microsoft\\WinGet\\Links"
+  -
+    kind: "message-v1"
+    backtrace:
+      - "C:/Program Files/CMake/share/cmake-4.2/Modules/CMakeDetermineCompilerId.cmake:17 (message)"
+      - "C:/Program Files/CMake/share/cmake-4.2/Modules/CMakeDetermineCompilerId.cmake:64 (__determine_compiler_id_test)"
+      - "C:/Program Files/CMake/share/cmake-4.2/Modules/CMakeDetermineCXXCompiler.cmake:125 (CMAKE_DETERMINE_COMPILER_ID)"
+      - "CMakeLists.txt:2 (project)"
+    message: |
+      Compiling the CXX compiler identification source file "CMakeCXXCompilerId.cpp" succeeded.
+      Compiler:  
+      Build flags: 
+      Id flags:  
+      
+      The output was:
+      0
+      MSBuild version 18.0.5+e22287bf1 for .NET Framework
+      Build started 11/27/2025 6:05:13 PM.
+      
+      Project "D:\\Program Files\\Nova_A\\build\\CMakeFiles\\4.2.0\\CompilerIdCXX\\CompilerIdCXX.vcxproj" on node 1 (default targets).
+      PrepareForBuild:
+        Creating directory "Debug\\".
+        Structured output is enabled. The formatting of compiler diagnostics will reflect the error hierarchy. See https://aka.ms/cpp/structured-output for more details.
+        Creating directory "Debug\\CompilerIdCXX.tlog\\".
+      InitializeBuildStatus:
+        Creating "Debug\\CompilerIdCXX.tlog\\unsuccessfulbuild" because "AlwaysCreate" was specified.
+        Touching "Debug\\CompilerIdCXX.tlog\\unsuccessfulbuild".
+      ClCompile:
+        E:\\Visual Studio\\VC\\Tools\\MSVC\\14.50.35717\\bin\\HostX64\\x64\\CL.exe /c /nologo /W0 /WX- /diagnostics:column /Od /D _MBCS /Gm- /EHsc /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /Fo"Debug\\\\" /Fd"Debug\\vc145.pdb" /external:W0 /Gd /TP /FC /errorReport:queue CMakeCXXCompilerId.cpp
+        CMakeCXXCompilerId.cpp
+      Link:
+        E:\\Visual Studio\\VC\\Tools\\MSVC\\14.50.35717\\bin\\HostX64\\x64\\link.exe /ERRORREPORT:QUEUE /OUT:".\\CompilerIdCXX.exe" /INCREMENTAL:NO /NOLOGO kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /MANIFEST /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /manifest:embed /PDB:".\\CompilerIdCXX.pdb" /SUBSYSTEM:CONSOLE /TLBID:1 /DYNAMICBASE /NXCOMPAT /IMPLIB:".\\CompilerIdCXX.lib" /MACHINE:X64 Debug\\CMakeCXXCompilerId.obj
+        CompilerIdCXX.vcxproj -> D:\\Program Files\\Nova_A\\build\\CMakeFiles\\4.2.0\\CompilerIdCXX\\CompilerIdCXX.exe
+      PostBuildEvent:
+        for %%i in (cl.exe) do @echo CMAKE_CXX_COMPILER=%%~$PATH:i
+        :VCEnd
+        CMAKE_CXX_COMPILER=E:\\Visual Studio\\VC\\Tools\\MSVC\\14.50.35717\\bin\\Hostx64\\x64\\cl.exe
+      FinalizeBuildStatus:
+        Deleting file "Debug\\CompilerIdCXX.tlog\\unsuccessfulbuild".
+        Touching "Debug\\CompilerIdCXX.tlog\\CompilerIdCXX.lastbuildstate".
+      Done Building Project "D:\\Program Files\\Nova_A\\build\\CMakeFiles\\4.2.0\\CompilerIdCXX\\CompilerIdCXX.vcxproj" (default targets).
+      
+      Build succeeded.
+          0 Warning(s)
+          0 Error(s)
+      
+      Time Elapsed 00:00:00.37
+      
+      
+      Compilation of the CXX compiler identification source "CMakeCXXCompilerId.cpp" produced "CompilerIdCXX.exe"
+      
+      Compilation of the CXX compiler identification source "CMakeCXXCompilerId.cpp" produced "CompilerIdCXX.vcxproj"
+      
+      The CXX compiler identification is MSVC, found in:
+        D:/Program Files/Nova_A/build/CMakeFiles/4.2.0/CompilerIdCXX/CompilerIdCXX.exe
+      
+  -
+    kind: "find-v1"
+    backtrace:
+      - "C:/Program Files/CMake/share/cmake-4.2/Modules/CMakeFindBinUtils.cmake:37 (find_program)"
+      - "C:/Program Files/CMake/share/cmake-4.2/Modules/CMakeFindBinUtils.cmake:65 (__resolve_tool_path)"
+      - "C:/Program Files/CMake/share/cmake-4.2/Modules/CMakeFindBinUtils.cmake:104 (__resolve_linker_path)"
+      - "C:/Program Files/CMake/share/cmake-4.2/Modules/CMakeDetermineCXXCompiler.cmake:206 (include)"
+      - "CMakeLists.txt:2 (project)"
+    mode: "program"
+    variable: "_CMAKE_TOOL_WITH_PATH"
+    description: "Path to a program."
+    settings:
+      SearchFramework: "NEVER"
+      SearchAppBundle: "NEVER"
+      CMAKE_FIND_USE_CMAKE_PATH: false
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: false
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "lld-link"
+    candidate_directories:
+      - "E:/Visual Studio/VC/Tools/MSVC/14.50.35717/bin/Hostx64/x64/"
+      - "C:/VulkanSDK/1.4.328.1/Bin/"
+      - "C:/Program Files (x86)/VMware/VMware Workstation/bin/"
+      - "C:/Windows/System32/"
+      - "C:/Windows/"
+      - "C:/Windows/System32/wbem/"
+      - "C:/Windows/System32/WindowsPowerShell/v1.0/"
+      - "C:/Windows/System32/OpenSSH/"
+      - "C:/Program Files/dotnet/"
+      - "D:/Program Files/Nova_A/build/\"C:/Program Files/Java/jdk-25/bin/"
+      - "C:/Program Files/Java/jdk-25/jre/bin/"
+      - "D:/Program Files/Nova_A/build/\"/"
+      - "C:/Program Files/NVIDIA Corporation/NVIDIA App/NvDLISR/"
+      - "C:/Program Files (x86)/NVIDIA Corporation/PhysX/Common/"
+      - "D:/Program Files/Mingw/"
+      - "D:/Program Files/Mingw/bin/"
+      - "C:/php/"
+      - "C:/Program Files/Bandizip/"
+      - "C:/Program Files (x86)/Windows Kits/10/Windows Performance Toolkit/"
+      - "C:/Program Files (x86)/Windows Kits/10/Microsoft Application Virtualization/Sequencer/"
+      - "C:/Program Files (x86)/Windows Kits/10/Assessment and Deployment Kit/Deployment Tools/amd64/Oscdimg/"
+      - "C:/Program Files/Git/cmd/"
+      - "C:/Program Files/CMake/bin/"
+      - "C:/Program Files (x86)/dxc_2025_07_14/"
+      - "C:/Program Files (x86)/dxc_2025_07_14/bin/x86/"
+      - "C:/Users/steve/vcpkg/"
+      - "C:/Users/steve/AppData/Local/Programs/Python/Python310/Scripts/"
+      - "C:/Users/steve/AppData/Local/Programs/Python/Python310/"
+      - "C:/Users/steve/AppData/Local/Microsoft/WindowsApps/"
+      - "D:/Program Files/Microsoft VS Code/bin/"
+      - "C:/Users/steve/AppData/Local/Programs/Ollama/"
+      - "C:/Users/steve/AppData/Local/GitHubDesktop/bin/"
+      - "C:/Users/steve/AppData/Local/Microsoft/WinGet/Links/"
+    searched_directories:
+      - "E:/Visual Studio/VC/Tools/MSVC/14.50.35717/bin/Hostx64/x64/lld-link.com"
+      - "E:/Visual Studio/VC/Tools/MSVC/14.50.35717/bin/Hostx64/x64/lld-link.exe"
+      - "E:/Visual Studio/VC/Tools/MSVC/14.50.35717/bin/Hostx64/x64/lld-link"
+      - "C:/VulkanSDK/1.4.328.1/Bin/lld-link.com"
+      - "C:/VulkanSDK/1.4.328.1/Bin/lld-link.exe"
+      - "C:/VulkanSDK/1.4.328.1/Bin/lld-link"
+      - "C:/Program Files (x86)/VMware/VMware Workstation/bin/lld-link.com"
+      - "C:/Program Files (x86)/VMware/VMware Workstation/bin/lld-link.exe"
+      - "C:/Program Files (x86)/VMware/VMware Workstation/bin/lld-link"
+      - "C:/Windows/System32/lld-link.com"
+      - "C:/Windows/System32/lld-link.exe"
+      - "C:/Windows/System32/lld-link"
+      - "C:/Windows/lld-link.com"
+      - "C:/Windows/lld-link.exe"
+      - "C:/Windows/lld-link"
+      - "C:/Windows/System32/wbem/lld-link.com"
+      - "C:/Windows/System32/wbem/lld-link.exe"
+      - "C:/Windows/System32/wbem/lld-link"
+      - "C:/Windows/System32/WindowsPowerShell/v1.0/lld-link.com"
+      - "C:/Windows/System32/WindowsPowerShell/v1.0/lld-link.exe"
+      - "C:/Windows/System32/WindowsPowerShell/v1.0/lld-link"
+      - "C:/Windows/System32/OpenSSH/lld-link.com"
+      - "C:/Windows/System32/OpenSSH/lld-link.exe"
+      - "C:/Windows/System32/OpenSSH/lld-link"
+      - "C:/Program Files/dotnet/lld-link.com"
+      - "C:/Program Files/dotnet/lld-link.exe"
+      - "C:/Program Files/dotnet/lld-link"
+      - "D:/Program Files/Nova_A/build/\"C:/Program Files/Java/jdk-25/bin/lld-link.com"
+      - "D:/Program Files/Nova_A/build/\"C:/Program Files/Java/jdk-25/bin/lld-link.exe"
+      - "D:/Program Files/Nova_A/build/\"C:/Program Files/Java/jdk-25/bin/lld-link"
+      - "C:/Program Files/Java/jdk-25/jre/bin/lld-link.com"
+      - "C:/Program Files/Java/jdk-25/jre/bin/lld-link.exe"
+      - "C:/Program Files/Java/jdk-25/jre/bin/lld-link"
+      - "D:/Program Files/Nova_A/build/\"/lld-link.com"
+      - "D:/Program Files/Nova_A/build/\"/lld-link.exe"
+      - "D:/Program Files/Nova_A/build/\"/lld-link"
+      - "C:/Program Files/NVIDIA Corporation/NVIDIA App/NvDLISR/lld-link.com"
+      - "C:/Program Files/NVIDIA Corporation/NVIDIA App/NvDLISR/lld-link.exe"
+      - "C:/Program Files/NVIDIA Corporation/NVIDIA App/NvDLISR/lld-link"
+      - "C:/Program Files (x86)/NVIDIA Corporation/PhysX/Common/lld-link.com"
+      - "C:/Program Files (x86)/NVIDIA Corporation/PhysX/Common/lld-link.exe"
+      - "C:/Program Files (x86)/NVIDIA Corporation/PhysX/Common/lld-link"
+      - "D:/Program Files/Mingw/lld-link.com"
+      - "D:/Program Files/Mingw/lld-link.exe"
+      - "D:/Program Files/Mingw/lld-link"
+      - "D:/Program Files/Mingw/bin/lld-link.com"
+      - "D:/Program Files/Mingw/bin/lld-link.exe"
+      - "D:/Program Files/Mingw/bin/lld-link"
+      - "C:/php/lld-link.com"
+      - "C:/php/lld-link.exe"
+      - "C:/php/lld-link"
+      - "C:/Program Files/Bandizip/lld-link.com"
+      - "C:/Program Files/Bandizip/lld-link.exe"
+      - "C:/Program Files/Bandizip/lld-link"
+      - "C:/Program Files (x86)/Windows Kits/10/Windows Performance Toolkit/lld-link.com"
+      - "C:/Program Files (x86)/Windows Kits/10/Windows Performance Toolkit/lld-link.exe"
+      - "C:/Program Files (x86)/Windows Kits/10/Windows Performance Toolkit/lld-link"
+      - "C:/Program Files (x86)/Windows Kits/10/Microsoft Application Virtualization/Sequencer/lld-link.com"
+      - "C:/Program Files (x86)/Windows Kits/10/Microsoft Application Virtualization/Sequencer/lld-link.exe"
+      - "C:/Program Files (x86)/Windows Kits/10/Microsoft Application Virtualization/Sequencer/lld-link"
+      - "C:/Program Files (x86)/Windows Kits/10/Assessment and Deployment Kit/Deployment Tools/amd64/Oscdimg/lld-link.com"
+      - "C:/Program Files (x86)/Windows Kits/10/Assessment and Deployment Kit/Deployment Tools/amd64/Oscdimg/lld-link.exe"
+      - "C:/Program Files (x86)/Windows Kits/10/Assessment and Deployment Kit/Deployment Tools/amd64/Oscdimg/lld-link"
+      - "C:/Program Files/Git/cmd/lld-link.com"
+      - "C:/Program Files/Git/cmd/lld-link.exe"
+      - "C:/Program Files/Git/cmd/lld-link"
+      - "C:/Program Files/CMake/bin/lld-link.com"
+      - "C:/Program Files/CMake/bin/lld-link.exe"
+      - "C:/Program Files/CMake/bin/lld-link"
+      - "C:/Program Files (x86)/dxc_2025_07_14/lld-link.com"
+      - "C:/Program Files (x86)/dxc_2025_07_14/lld-link.exe"
+      - "C:/Program Files (x86)/dxc_2025_07_14/lld-link"
+      - "C:/Program Files (x86)/dxc_2025_07_14/bin/x86/lld-link.com"
+      - "C:/Program Files (x86)/dxc_2025_07_14/bin/x86/lld-link.exe"
+      - "C:/Program Files (x86)/dxc_2025_07_14/bin/x86/lld-link"
+      - "C:/Users/steve/vcpkg/lld-link.com"
+      - "C:/Users/steve/vcpkg/lld-link.exe"
+      - "C:/Users/steve/vcpkg/lld-link"
+      - "C:/Users/steve/AppData/Local/Programs/Python/Python310/Scripts/lld-link.com"
+      - "C:/Users/steve/AppData/Local/Programs/Python/Python310/Scripts/lld-link.exe"
+      - "C:/Users/steve/AppData/Local/Programs/Python/Python310/Scripts/lld-link"
+      - "C:/Users/steve/AppData/Local/Programs/Python/Python310/lld-link.com"
+      - "C:/Users/steve/AppData/Local/Programs/Python/Python310/lld-link.exe"
+      - "C:/Users/steve/AppData/Local/Programs/Python/Python310/lld-link"
+      - "C:/Users/steve/AppData/Local/Microsoft/WindowsApps/lld-link.com"
+      - "C:/Users/steve/AppData/Local/Microsoft/WindowsApps/lld-link.exe"
+      - "C:/Users/steve/AppData/Local/Microsoft/WindowsApps/lld-link"
+      - "D:/Program Files/Microsoft VS Code/bin/lld-link.com"
+      - "D:/Program Files/Microsoft VS Code/bin/lld-link.exe"
+      - "D:/Program Files/Microsoft VS Code/bin/lld-link"
+      - "C:/Users/steve/AppData/Local/Programs/Ollama/lld-link.com"
+      - "C:/Users/steve/AppData/Local/Programs/Ollama/lld-link.exe"
+      - "C:/Users/steve/AppData/Local/Programs/Ollama/lld-link"
+      - "C:/Users/steve/AppData/Local/GitHubDesktop/bin/lld-link.com"
+      - "C:/Users/steve/AppData/Local/GitHubDesktop/bin/lld-link.exe"
+      - "C:/Users/steve/AppData/Local/GitHubDesktop/bin/lld-link"
+      - "C:/Users/steve/AppData/Local/Microsoft/WinGet/Links/lld-link.com"
+      - "C:/Users/steve/AppData/Local/Microsoft/WinGet/Links/lld-link.exe"
+      - "C:/Users/steve/AppData/Local/Microsoft/WinGet/Links/lld-link"
+    found: false
+    search_context:
+      ENV{PATH}:
+        - "C:\\VulkanSDK\\1.4.328.1\\Bin"
+        - "C:\\Program Files (x86)\\VMware\\VMware Workstation\\bin\\"
+        - "C:\\WINDOWS\\system32"
+        - "C:\\WINDOWS"
+        - "C:\\WINDOWS\\System32\\Wbem"
+        - "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\"
+        - "C:\\WINDOWS\\System32\\OpenSSH\\"
+        - "C:\\Program Files\\dotnet\\"
+        - "\"C:\\Program Files\\Java\\jdk-25\\bin"
+        - "C:\\Program Files\\Java\\jdk-25\\jre\\bin"
+        - "\""
+        - "C:\\Program Files\\NVIDIA Corporation\\NVIDIA App\\NvDLISR"
+        - "C:\\Program Files (x86)\\NVIDIA Corporation\\PhysX\\Common"
+        - "D:\\Program Files\\Mingw\\"
+        - "D:\\Program Files\\Mingw\\bin\\"
+        - "C:\\php"
+        - "C:\\Program Files\\Bandizip\\"
+        - "C:\\Program Files (x86)\\Windows Kits\\10\\Windows Performance Toolkit\\"
+        - "C:\\Program Files (x86)\\Windows Kits\\10\\Microsoft Application Virtualization\\Sequencer\\"
+        - "C:\\Program Files (x86)\\Windows Kits\\10\\Assessment and Deployment Kit\\Deployment Tools\\amd64\\Oscdimg"
+        - "C:\\Program Files\\Git\\cmd"
+        - "C:\\Program Files\\CMake\\bin"
+        - "C:\\Program Files (x86)\\dxc_2025_07_14"
+        - "C:\\Program Files (x86)\\dxc_2025_07_14\\bin\\x86"
+        - "C:\\Users\\steve\\vcpkg"
+        - "C:\\Users\\steve\\AppData\\Local\\Programs\\Python\\Python310\\Scripts\\"
+        - "C:\\Users\\steve\\AppData\\Local\\Programs\\Python\\Python310\\"
+        - "C:\\Users\\steve\\AppData\\Local\\Microsoft\\WindowsApps"
+        - "D:\\Program Files\\Microsoft VS Code\\bin"
+        - "C:\\Users\\steve\\AppData\\Local\\Programs\\Ollama"
+        - "C:\\Users\\steve\\AppData\\Local\\GitHubDesktop\\bin"
+        - "C:\\Users\\steve\\AppData\\Local\\Microsoft\\WinGet\\Links"
+  -
+    kind: "find-v1"
+    backtrace:
+      - "C:/Program Files/CMake/share/cmake-4.2/Modules/CMakeDetermineRCCompiler.cmake:40 (find_program)"
+      - "C:/Program Files/CMake/share/cmake-4.2/Modules/Platform/Windows-MSVC.cmake:580 (enable_language)"
+      - "C:/Program Files/CMake/share/cmake-4.2/Modules/Platform/Windows-MSVC.cmake:553 (__windows_compiler_msvc_enable_rc)"
+      - "C:/Program Files/CMake/share/cmake-4.2/Modules/Platform/Windows-MSVC-C.cmake:5 (__windows_compiler_msvc)"
+      - "C:/Program Files/CMake/share/cmake-4.2/Modules/CMakeCInformation.cmake:48 (include)"
+      - "CMakeLists.txt:2 (project)"
+    mode: "program"
+    variable: "CMAKE_RC_COMPILER"
+    description: "RC compiler"
+    settings:
+      SearchFramework: "NEVER"
+      SearchAppBundle: "NEVER"
+      CMAKE_FIND_USE_CMAKE_PATH: true
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "rc"
+    candidate_directories:
+      - "C:/VulkanSDK/1.4.328.1/Bin/"
+      - "C:/Program Files (x86)/VMware/VMware Workstation/bin/"
+      - "C:/Windows/System32/"
+      - "C:/Windows/"
+      - "C:/Windows/System32/wbem/"
+      - "C:/Windows/System32/WindowsPowerShell/v1.0/"
+      - "C:/Windows/System32/OpenSSH/"
+      - "C:/Program Files/dotnet/"
+      - "D:/Program Files/Nova_A/build/\"C:/Program Files/Java/jdk-25/bin/"
+      - "C:/Program Files/Java/jdk-25/jre/bin/"
+      - "D:/Program Files/Nova_A/build/\"/"
+      - "C:/Program Files/NVIDIA Corporation/NVIDIA App/NvDLISR/"
+      - "C:/Program Files (x86)/NVIDIA Corporation/PhysX/Common/"
+      - "D:/Program Files/Mingw/"
+      - "D:/Program Files/Mingw/bin/"
+      - "C:/php/"
+      - "C:/Program Files/Bandizip/"
+      - "C:/Program Files (x86)/Windows Kits/10/Windows Performance Toolkit/"
+      - "C:/Program Files (x86)/Windows Kits/10/Microsoft Application Virtualization/Sequencer/"
+      - "C:/Program Files (x86)/Windows Kits/10/Assessment and Deployment Kit/Deployment Tools/amd64/Oscdimg/"
+      - "C:/Program Files/Git/cmd/"
+      - "C:/Program Files/CMake/bin/"
+      - "C:/Program Files (x86)/dxc_2025_07_14/"
+      - "C:/Program Files (x86)/dxc_2025_07_14/bin/x86/"
+      - "C:/Users/steve/vcpkg/"
+      - "C:/Users/steve/AppData/Local/Programs/Python/Python310/Scripts/"
+      - "C:/Users/steve/AppData/Local/Programs/Python/Python310/"
+      - "C:/Users/steve/AppData/Local/Microsoft/WindowsApps/"
+      - "D:/Program Files/Microsoft VS Code/bin/"
+      - "C:/Users/steve/AppData/Local/Programs/Ollama/"
+      - "C:/Users/steve/AppData/Local/GitHubDesktop/bin/"
+      - "C:/Users/steve/AppData/Local/Microsoft/WinGet/Links/"
+      - "C:/Program Files/bin/"
+      - "C:/Program Files/sbin/"
+      - "C:/Program Files/"
+      - "C:/Program Files (x86)/bin/"
+      - "C:/Program Files (x86)/sbin/"
+      - "C:/Program Files (x86)/"
+      - "C:/Program Files/CMake/bin/"
+      - "C:/Program Files/CMake/sbin/"
+      - "C:/Program Files/CMake/"
+      - "C:/Program Files (x86)/Nova_A/bin/"
+      - "C:/Program Files (x86)/Nova_A/sbin/"
+      - "C:/Program Files (x86)/Nova_A/"
+    searched_directories:
+      - "C:/VulkanSDK/1.4.328.1/Bin/rc.com"
+      - "C:/VulkanSDK/1.4.328.1/Bin/rc.exe"
+      - "C:/VulkanSDK/1.4.328.1/Bin/rc"
+      - "C:/Program Files (x86)/VMware/VMware Workstation/bin/rc.com"
+      - "C:/Program Files (x86)/VMware/VMware Workstation/bin/rc.exe"
+      - "C:/Program Files (x86)/VMware/VMware Workstation/bin/rc"
+      - "C:/Windows/System32/rc.com"
+      - "C:/Windows/System32/rc.exe"
+      - "C:/Windows/System32/rc"
+      - "C:/Windows/rc.com"
+      - "C:/Windows/rc.exe"
+      - "C:/Windows/rc"
+      - "C:/Windows/System32/wbem/rc.com"
+      - "C:/Windows/System32/wbem/rc.exe"
+      - "C:/Windows/System32/wbem/rc"
+      - "C:/Windows/System32/WindowsPowerShell/v1.0/rc.com"
+      - "C:/Windows/System32/WindowsPowerShell/v1.0/rc.exe"
+      - "C:/Windows/System32/WindowsPowerShell/v1.0/rc"
+      - "C:/Windows/System32/OpenSSH/rc.com"
+      - "C:/Windows/System32/OpenSSH/rc.exe"
+      - "C:/Windows/System32/OpenSSH/rc"
+      - "C:/Program Files/dotnet/rc.com"
+      - "C:/Program Files/dotnet/rc.exe"
+      - "C:/Program Files/dotnet/rc"
+      - "D:/Program Files/Nova_A/build/\"C:/Program Files/Java/jdk-25/bin/rc.com"
+      - "D:/Program Files/Nova_A/build/\"C:/Program Files/Java/jdk-25/bin/rc.exe"
+      - "D:/Program Files/Nova_A/build/\"C:/Program Files/Java/jdk-25/bin/rc"
+      - "C:/Program Files/Java/jdk-25/jre/bin/rc.com"
+      - "C:/Program Files/Java/jdk-25/jre/bin/rc.exe"
+      - "C:/Program Files/Java/jdk-25/jre/bin/rc"
+      - "D:/Program Files/Nova_A/build/\"/rc.com"
+      - "D:/Program Files/Nova_A/build/\"/rc.exe"
+      - "D:/Program Files/Nova_A/build/\"/rc"
+      - "C:/Program Files/NVIDIA Corporation/NVIDIA App/NvDLISR/rc.com"
+      - "C:/Program Files/NVIDIA Corporation/NVIDIA App/NvDLISR/rc.exe"
+      - "C:/Program Files/NVIDIA Corporation/NVIDIA App/NvDLISR/rc"
+      - "C:/Program Files (x86)/NVIDIA Corporation/PhysX/Common/rc.com"
+      - "C:/Program Files (x86)/NVIDIA Corporation/PhysX/Common/rc.exe"
+      - "C:/Program Files (x86)/NVIDIA Corporation/PhysX/Common/rc"
+      - "D:/Program Files/Mingw/rc.com"
+      - "D:/Program Files/Mingw/rc.exe"
+      - "D:/Program Files/Mingw/rc"
+      - "D:/Program Files/Mingw/bin/rc.com"
+      - "D:/Program Files/Mingw/bin/rc.exe"
+      - "D:/Program Files/Mingw/bin/rc"
+      - "C:/php/rc.com"
+      - "C:/php/rc.exe"
+      - "C:/php/rc"
+      - "C:/Program Files/Bandizip/rc.com"
+      - "C:/Program Files/Bandizip/rc.exe"
+      - "C:/Program Files/Bandizip/rc"
+      - "C:/Program Files (x86)/Windows Kits/10/Windows Performance Toolkit/rc.com"
+      - "C:/Program Files (x86)/Windows Kits/10/Windows Performance Toolkit/rc.exe"
+      - "C:/Program Files (x86)/Windows Kits/10/Windows Performance Toolkit/rc"
+      - "C:/Program Files (x86)/Windows Kits/10/Microsoft Application Virtualization/Sequencer/rc.com"
+      - "C:/Program Files (x86)/Windows Kits/10/Microsoft Application Virtualization/Sequencer/rc.exe"
+      - "C:/Program Files (x86)/Windows Kits/10/Microsoft Application Virtualization/Sequencer/rc"
+      - "C:/Program Files (x86)/Windows Kits/10/Assessment and Deployment Kit/Deployment Tools/amd64/Oscdimg/rc.com"
+      - "C:/Program Files (x86)/Windows Kits/10/Assessment and Deployment Kit/Deployment Tools/amd64/Oscdimg/rc.exe"
+      - "C:/Program Files (x86)/Windows Kits/10/Assessment and Deployment Kit/Deployment Tools/amd64/Oscdimg/rc"
+      - "C:/Program Files/Git/cmd/rc.com"
+      - "C:/Program Files/Git/cmd/rc.exe"
+      - "C:/Program Files/Git/cmd/rc"
+      - "C:/Program Files/CMake/bin/rc.com"
+      - "C:/Program Files/CMake/bin/rc.exe"
+      - "C:/Program Files/CMake/bin/rc"
+      - "C:/Program Files (x86)/dxc_2025_07_14/rc.com"
+      - "C:/Program Files (x86)/dxc_2025_07_14/rc.exe"
+      - "C:/Program Files (x86)/dxc_2025_07_14/rc"
+      - "C:/Program Files (x86)/dxc_2025_07_14/bin/x86/rc.com"
+      - "C:/Program Files (x86)/dxc_2025_07_14/bin/x86/rc.exe"
+      - "C:/Program Files (x86)/dxc_2025_07_14/bin/x86/rc"
+      - "C:/Users/steve/vcpkg/rc.com"
+      - "C:/Users/steve/vcpkg/rc.exe"
+      - "C:/Users/steve/vcpkg/rc"
+      - "C:/Users/steve/AppData/Local/Programs/Python/Python310/Scripts/rc.com"
+      - "C:/Users/steve/AppData/Local/Programs/Python/Python310/Scripts/rc.exe"
+      - "C:/Users/steve/AppData/Local/Programs/Python/Python310/Scripts/rc"
+      - "C:/Users/steve/AppData/Local/Programs/Python/Python310/rc.com"
+      - "C:/Users/steve/AppData/Local/Programs/Python/Python310/rc.exe"
+      - "C:/Users/steve/AppData/Local/Programs/Python/Python310/rc"
+      - "C:/Users/steve/AppData/Local/Microsoft/WindowsApps/rc.com"
+      - "C:/Users/steve/AppData/Local/Microsoft/WindowsApps/rc.exe"
+      - "C:/Users/steve/AppData/Local/Microsoft/WindowsApps/rc"
+      - "D:/Program Files/Microsoft VS Code/bin/rc.com"
+      - "D:/Program Files/Microsoft VS Code/bin/rc.exe"
+      - "D:/Program Files/Microsoft VS Code/bin/rc"
+      - "C:/Users/steve/AppData/Local/Programs/Ollama/rc.com"
+      - "C:/Users/steve/AppData/Local/Programs/Ollama/rc.exe"
+      - "C:/Users/steve/AppData/Local/Programs/Ollama/rc"
+      - "C:/Users/steve/AppData/Local/GitHubDesktop/bin/rc.com"
+      - "C:/Users/steve/AppData/Local/GitHubDesktop/bin/rc.exe"
+      - "C:/Users/steve/AppData/Local/GitHubDesktop/bin/rc"
+      - "C:/Users/steve/AppData/Local/Microsoft/WinGet/Links/rc.com"
+      - "C:/Users/steve/AppData/Local/Microsoft/WinGet/Links/rc.exe"
+      - "C:/Users/steve/AppData/Local/Microsoft/WinGet/Links/rc"
+      - "C:/Program Files/bin/rc.com"
+      - "C:/Program Files/bin/rc.exe"
+      - "C:/Program Files/bin/rc"
+      - "C:/Program Files/sbin/rc.com"
+      - "C:/Program Files/sbin/rc.exe"
+      - "C:/Program Files/sbin/rc"
+      - "C:/Program Files/rc.com"
+      - "C:/Program Files/rc.exe"
+      - "C:/Program Files/rc"
+      - "C:/Program Files (x86)/bin/rc.com"
+      - "C:/Program Files (x86)/bin/rc.exe"
+      - "C:/Program Files (x86)/bin/rc"
+      - "C:/Program Files (x86)/sbin/rc.com"
+      - "C:/Program Files (x86)/sbin/rc.exe"
+      - "C:/Program Files (x86)/sbin/rc"
+      - "C:/Program Files (x86)/rc.com"
+      - "C:/Program Files (x86)/rc.exe"
+      - "C:/Program Files (x86)/rc"
+      - "C:/Program Files/CMake/bin/rc.com"
+      - "C:/Program Files/CMake/bin/rc.exe"
+      - "C:/Program Files/CMake/bin/rc"
+      - "C:/Program Files/CMake/sbin/rc.com"
+      - "C:/Program Files/CMake/sbin/rc.exe"
+      - "C:/Program Files/CMake/sbin/rc"
+      - "C:/Program Files/CMake/rc.com"
+      - "C:/Program Files/CMake/rc.exe"
+      - "C:/Program Files/CMake/rc"
+      - "C:/Program Files (x86)/Nova_A/bin/rc.com"
+      - "C:/Program Files (x86)/Nova_A/bin/rc.exe"
+      - "C:/Program Files (x86)/Nova_A/bin/rc"
+      - "C:/Program Files (x86)/Nova_A/sbin/rc.com"
+      - "C:/Program Files (x86)/Nova_A/sbin/rc.exe"
+      - "C:/Program Files (x86)/Nova_A/sbin/rc"
+      - "C:/Program Files (x86)/Nova_A/rc.com"
+      - "C:/Program Files (x86)/Nova_A/rc.exe"
+      - "C:/Program Files (x86)/Nova_A/rc"
+    found: false
+    search_context:
+      ENV{PATH}:
+        - "C:\\VulkanSDK\\1.4.328.1\\Bin"
+        - "C:\\Program Files (x86)\\VMware\\VMware Workstation\\bin\\"
+        - "C:\\WINDOWS\\system32"
+        - "C:\\WINDOWS"
+        - "C:\\WINDOWS\\System32\\Wbem"
+        - "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\"
+        - "C:\\WINDOWS\\System32\\OpenSSH\\"
+        - "C:\\Program Files\\dotnet\\"
+        - "\"C:\\Program Files\\Java\\jdk-25\\bin"
+        - "C:\\Program Files\\Java\\jdk-25\\jre\\bin"
+        - "\""
+        - "C:\\Program Files\\NVIDIA Corporation\\NVIDIA App\\NvDLISR"
+        - "C:\\Program Files (x86)\\NVIDIA Corporation\\PhysX\\Common"
+        - "D:\\Program Files\\Mingw\\"
+        - "D:\\Program Files\\Mingw\\bin\\"
+        - "C:\\php"
+        - "C:\\Program Files\\Bandizip\\"
+        - "C:\\Program Files (x86)\\Windows Kits\\10\\Windows Performance Toolkit\\"
+        - "C:\\Program Files (x86)\\Windows Kits\\10\\Microsoft Application Virtualization\\Sequencer\\"
+        - "C:\\Program Files (x86)\\Windows Kits\\10\\Assessment and Deployment Kit\\Deployment Tools\\amd64\\Oscdimg"
+        - "C:\\Program Files\\Git\\cmd"
+        - "C:\\Program Files\\CMake\\bin"
+        - "C:\\Program Files (x86)\\dxc_2025_07_14"
+        - "C:\\Program Files (x86)\\dxc_2025_07_14\\bin\\x86"
+        - "C:\\Users\\steve\\vcpkg"
+        - "C:\\Users\\steve\\AppData\\Local\\Programs\\Python\\Python310\\Scripts\\"
+        - "C:\\Users\\steve\\AppData\\Local\\Programs\\Python\\Python310\\"
+        - "C:\\Users\\steve\\AppData\\Local\\Microsoft\\WindowsApps"
+        - "D:\\Program Files\\Microsoft VS Code\\bin"
+        - "C:\\Users\\steve\\AppData\\Local\\Programs\\Ollama"
+        - "C:\\Users\\steve\\AppData\\Local\\GitHubDesktop\\bin"
+        - "C:\\Users\\steve\\AppData\\Local\\Microsoft\\WinGet\\Links"
+      CMAKE_INSTALL_PREFIX: "C:/Program Files (x86)/Nova_A"
+      CMAKE_SYSTEM_PREFIX_PATH:
+        - "C:/Program Files"
+        - "C:/Program Files (x86)"
+        - "C:/Program Files/CMake"
+        - "C:/Program Files (x86)/Nova_A"
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "C:/Program Files/CMake/share/cmake-4.2/Modules/CMakeDetermineCompilerABI.cmake:83 (try_compile)"
+      - "C:/Program Files/CMake/share/cmake-4.2/Modules/CMakeTestCCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:2 (project)"
+    checks:
+      - "Detecting C compiler ABI info"
+    directories:
+      source: "D:/Program Files/Nova_A/build/CMakeFiles/CMakeScratch/TryCompile-7r33i5"
+      binary: "D:/Program Files/Nova_A/build/CMakeFiles/CMakeScratch/TryCompile-7r33i5"
+    cmakeVariables:
+      CMAKE_C_FLAGS: "/DWIN32 /D_WINDOWS"
+      CMAKE_C_FLAGS_DEBUG: "/Zi /Ob0 /Od /RTC1"
+      CMAKE_EXE_LINKER_FLAGS: "/machine:x64"
+    buildResult:
+      variable: "CMAKE_C_ABI_COMPILED"
+      cached: true
+      stdout: |
+        Change Dir: 'D:/Program Files/Nova_A/build/CMakeFiles/CMakeScratch/TryCompile-7r33i5'
+        
+        Run Build Command(s): "E:/Visual Studio/MSBuild/Current/Bin/amd64/MSBuild.exe" cmTC_acda6.vcxproj /p:Configuration=Debug /p:Platform=x64 /p:VisualStudioVersion=18.0 /v:n
+        MSBuild version 18.0.5+e22287bf1 for .NET Framework
+        Build started 11/27/2025 6:05:13 PM.
+        
+        Project "D:\\Program Files\\Nova_A\\build\\CMakeFiles\\CMakeScratch\\TryCompile-7r33i5\\cmTC_acda6.vcxproj" on node 1 (default targets).
+        PrepareForBuild:
+          Structured output is enabled. The formatting of compiler diagnostics will reflect the error hierarchy. See https://aka.ms/cpp/structured-output for more details.
+          Creating directory "D:\\Program Files\\Nova_A\\build\\CMakeFiles\\CMakeScratch\\TryCompile-7r33i5\\Debug\\".
+          Creating directory "cmTC_acda6.dir\\Debug\\cmTC_acda6.tlog\\".
+        InitializeBuildStatus:
+          Creating "cmTC_acda6.dir\\Debug\\cmTC_acda6.tlog\\unsuccessfulbuild" because "AlwaysCreate" was specified.
+          Touching "cmTC_acda6.dir\\Debug\\cmTC_acda6.tlog\\unsuccessfulbuild".
+        ClCompile:
+          E:\\Visual Studio\\VC\\Tools\\MSVC\\14.50.35717\\bin\\HostX64\\x64\\CL.exe /c /Zi /W1 /WX- /diagnostics:column /Od /Ob0 /D _MBCS /D WIN32 /D _WINDOWS /D _MBCS /D "CMAKE_INTDIR=\\"Debug\\"" /RTC1 /MDd /Fo"cmTC_acda6.dir\\Debug\\\\" /Fd"cmTC_acda6.dir\\Debug\\vc145.pdb" /external:W1 /TC /errorReport:queue "C:\\Program Files\\CMake\\share\\cmake-4.2\\Modules\\CMakeCCompilerABI.c"
+          Microsoft (R) C/C++ Optimizing Compiler Version 19.50.35719 for x64
+          Copyright (C) Microsoft Corporation.  All rights reserved.
+          cl /c /Zi /W1 /WX- /diagnostics:column /Od /Ob0 /D _MBCS /D WIN32 /D _WINDOWS /D _MBCS /D "CMAKE_INTDIR=\\"Debug\\"" /RTC1 /MDd /Fo"cmTC_acda6.dir\\Debug\\\\" /Fd"cmTC_acda6.dir\\Debug\\vc145.pdb" /external:W1 /TC /errorReport:queue "C:\\Program Files\\CMake\\share\\cmake-4.2\\Modules\\CMakeCCompilerABI.c"
+          CMakeCCompilerABI.c
+        Link:
+          E:\\Visual Studio\\VC\\Tools\\MSVC\\14.50.35717\\bin\\HostX64\\x64\\link.exe /OUT:"D:\\Program Files\\Nova_A\\build\\CMakeFiles\\CMakeScratch\\TryCompile-7r33i5\\Debug\\cmTC_acda6.exe" /INCREMENTAL /ILK:"cmTC_acda6.dir\\Debug\\cmTC_acda6.ilk" /NOLOGO kernel32.lib user32.lib gdi32.lib winspool.lib shell32.lib ole32.lib oleaut32.lib uuid.lib comdlg32.lib advapi32.lib /MANIFEST /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /manifest:embed /DEBUG /PDB:"D:/Program Files/Nova_A/build/CMakeFiles/CMakeScratch/TryCompile-7r33i5/Debug/cmTC_acda6.pdb" /SUBSYSTEM:CONSOLE /TLBID:1 /IMPLIB:"D:/Program Files/Nova_A/build/CMakeFiles/CMakeScratch/TryCompile-7r33i5/Debug/cmTC_acda6.lib" /MACHINE:X64  /machine:x64 cmTC_acda6.dir\\Debug\\CMakeCCompilerABI.obj
+          cmTC_acda6.vcxproj -> D:\\Program Files\\Nova_A\\build\\CMakeFiles\\CMakeScratch\\TryCompile-7r33i5\\Debug\\cmTC_acda6.exe
+        FinalizeBuildStatus:
+          Deleting file "cmTC_acda6.dir\\Debug\\cmTC_acda6.tlog\\unsuccessfulbuild".
+          Touching "cmTC_acda6.dir\\Debug\\cmTC_acda6.tlog\\cmTC_acda6.lastbuildstate".
+        Done Building Project "D:\\Program Files\\Nova_A\\build\\CMakeFiles\\CMakeScratch\\TryCompile-7r33i5\\cmTC_acda6.vcxproj" (default targets).
+        
+        Build succeeded.
+            0 Warning(s)
+            0 Error(s)
+        
+        Time Elapsed 00:00:00.39
+        
+      exitCode: 0
+  -
+    kind: "message-v1"
+    backtrace:
+      - "C:/Program Files/CMake/share/cmake-4.2/Modules/CMakeDetermineCompilerABI.cmake:253 (message)"
+      - "C:/Program Files/CMake/share/cmake-4.2/Modules/CMakeTestCCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:2 (project)"
+    message: |
+      Parsed C implicit link information:
+        link line regex: [^( *|.*[/\\])(ld[0-9]*(|\\.[a-rt-z][a-z]*|\\.s[a-np-z][a-z]*|\\.so[a-z]+)|link\\.exe|lld-link(\\.exe)?|CMAKE_LINK_STARTFILE-NOTFOUND|([^/\\]+-)?ld|collect2)[^/\\]*( |$)]
+        linker tool regex: [^[ 	]*(->|"|[0-9]+>[ 	-]*Build:[ 	0-9]+ ms[ 	]*)?[ 	]*(([^"]*[/\\])?(ld[0-9]*(|\\.[a-rt-z][a-z]*|\\.s[a-np-z][a-z]*|\\.so[a-z]+)|link\\.exe|lld-link(\\.exe)?))("|,| |$)]
+        linker tool for 'C': E:/Visual Studio/VC/Tools/MSVC/14.50.35717/bin/HostX64/x64/link.exe
+        implicit libs: []
+        implicit objs: []
+        implicit dirs: []
+        implicit fwks: []
+      
+      
+  -
+    kind: "message-v1"
+    backtrace:
+      - "C:/Program Files/CMake/share/cmake-4.2/Modules/Internal/CMakeDetermineLinkerId.cmake:38 (message)"
+      - "C:/Program Files/CMake/share/cmake-4.2/Modules/CMakeDetermineCompilerABI.cmake:299 (cmake_determine_linker_id)"
+      - "C:/Program Files/CMake/share/cmake-4.2/Modules/CMakeTestCCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:2 (project)"
+    message: |
+      Running the C compiler's linker: "E:/Visual Studio/VC/Tools/MSVC/14.50.35717/bin/HostX64/x64/link.exe" "-v"
+      Microsoft (R) Incremental Linker Version 14.50.35719.0
+      Copyright (C) Microsoft Corporation.  All rights reserved.
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "C:/Program Files/CMake/share/cmake-4.2/Modules/CMakeDetermineCompilerABI.cmake:83 (try_compile)"
+      - "C:/Program Files/CMake/share/cmake-4.2/Modules/CMakeTestCXXCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:2 (project)"
+    checks:
+      - "Detecting CXX compiler ABI info"
+    directories:
+      source: "D:/Program Files/Nova_A/build/CMakeFiles/CMakeScratch/TryCompile-6ip370"
+      binary: "D:/Program Files/Nova_A/build/CMakeFiles/CMakeScratch/TryCompile-6ip370"
+    cmakeVariables:
+      CMAKE_CXX_FLAGS: "/DWIN32 /D_WINDOWS /EHsc"
+      CMAKE_CXX_FLAGS_DEBUG: "/Zi /Ob0 /Od /RTC1"
+      CMAKE_CXX_SCAN_FOR_MODULES: "OFF"
+      CMAKE_EXE_LINKER_FLAGS: "/machine:x64"
+    buildResult:
+      variable: "CMAKE_CXX_ABI_COMPILED"
+      cached: true
+      stdout: |
+        Change Dir: 'D:/Program Files/Nova_A/build/CMakeFiles/CMakeScratch/TryCompile-6ip370'
+        
+        Run Build Command(s): "E:/Visual Studio/MSBuild/Current/Bin/amd64/MSBuild.exe" cmTC_8ddb3.vcxproj /p:Configuration=Debug /p:Platform=x64 /p:VisualStudioVersion=18.0 /v:n
+        MSBuild version 18.0.5+e22287bf1 for .NET Framework
+        Build started 11/27/2025 6:05:14 PM.
+        
+        Project "D:\\Program Files\\Nova_A\\build\\CMakeFiles\\CMakeScratch\\TryCompile-6ip370\\cmTC_8ddb3.vcxproj" on node 1 (default targets).
+        PrepareForBuild:
+          Structured output is enabled. The formatting of compiler diagnostics will reflect the error hierarchy. See https://aka.ms/cpp/structured-output for more details.
+          Creating directory "D:\\Program Files\\Nova_A\\build\\CMakeFiles\\CMakeScratch\\TryCompile-6ip370\\Debug\\".
+          Creating directory "cmTC_8ddb3.dir\\Debug\\cmTC_8ddb3.tlog\\".
+        InitializeBuildStatus:
+          Creating "cmTC_8ddb3.dir\\Debug\\cmTC_8ddb3.tlog\\unsuccessfulbuild" because "AlwaysCreate" was specified.
+          Touching "cmTC_8ddb3.dir\\Debug\\cmTC_8ddb3.tlog\\unsuccessfulbuild".
+        ClCompile:
+          E:\\Visual Studio\\VC\\Tools\\MSVC\\14.50.35717\\bin\\HostX64\\x64\\CL.exe /c /Zi /W1 /WX- /diagnostics:column /Od /Ob0 /D _MBCS /D WIN32 /D _WINDOWS /D _MBCS /D "CMAKE_INTDIR=\\"Debug\\"" /EHsc /RTC1 /MDd /Fo"cmTC_8ddb3.dir\\Debug\\\\" /Fd"cmTC_8ddb3.dir\\Debug\\vc145.pdb" /external:W1 /TP /errorReport:queue "C:\\Program Files\\CMake\\share\\cmake-4.2\\Modules\\CMakeCXXCompilerABI.cpp"
+          Microsoft (R) C/C++ Optimizing Compiler Version 19.50.35719 for x64
+          Copyright (C) Microsoft Corporation.  All rights reserved.
+          cl /c /Zi /W1 /WX- /diagnostics:column /Od /Ob0 /D _MBCS /D WIN32 /D _WINDOWS /D _MBCS /D "CMAKE_INTDIR=\\"Debug\\"" /EHsc /RTC1 /MDd /Fo"cmTC_8ddb3.dir\\Debug\\\\" /Fd"cmTC_8ddb3.dir\\Debug\\vc145.pdb" /external:W1 /TP /errorReport:queue "C:\\Program Files\\CMake\\share\\cmake-4.2\\Modules\\CMakeCXXCompilerABI.cpp"
+          CMakeCXXCompilerABI.cpp
+        Link:
+          E:\\Visual Studio\\VC\\Tools\\MSVC\\14.50.35717\\bin\\HostX64\\x64\\link.exe /OUT:"D:\\Program Files\\Nova_A\\build\\CMakeFiles\\CMakeScratch\\TryCompile-6ip370\\Debug\\cmTC_8ddb3.exe" /INCREMENTAL /ILK:"cmTC_8ddb3.dir\\Debug\\cmTC_8ddb3.ilk" /NOLOGO kernel32.lib user32.lib gdi32.lib winspool.lib shell32.lib ole32.lib oleaut32.lib uuid.lib comdlg32.lib advapi32.lib /MANIFEST /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /manifest:embed /DEBUG /PDB:"D:/Program Files/Nova_A/build/CMakeFiles/CMakeScratch/TryCompile-6ip370/Debug/cmTC_8ddb3.pdb" /SUBSYSTEM:CONSOLE /TLBID:1 /IMPLIB:"D:/Program Files/Nova_A/build/CMakeFiles/CMakeScratch/TryCompile-6ip370/Debug/cmTC_8ddb3.lib" /MACHINE:X64  /machine:x64 cmTC_8ddb3.dir\\Debug\\CMakeCXXCompilerABI.obj
+          cmTC_8ddb3.vcxproj -> D:\\Program Files\\Nova_A\\build\\CMakeFiles\\CMakeScratch\\TryCompile-6ip370\\Debug\\cmTC_8ddb3.exe
+        FinalizeBuildStatus:
+          Deleting file "cmTC_8ddb3.dir\\Debug\\cmTC_8ddb3.tlog\\unsuccessfulbuild".
+          Touching "cmTC_8ddb3.dir\\Debug\\cmTC_8ddb3.tlog\\cmTC_8ddb3.lastbuildstate".
+        Done Building Project "D:\\Program Files\\Nova_A\\build\\CMakeFiles\\CMakeScratch\\TryCompile-6ip370\\cmTC_8ddb3.vcxproj" (default targets).
+        
+        Build succeeded.
+            0 Warning(s)
+            0 Error(s)
+        
+        Time Elapsed 00:00:00.40
+        
+      exitCode: 0
+  -
+    kind: "message-v1"
+    backtrace:
+      - "C:/Program Files/CMake/share/cmake-4.2/Modules/CMakeDetermineCompilerABI.cmake:253 (message)"
+      - "C:/Program Files/CMake/share/cmake-4.2/Modules/CMakeTestCXXCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:2 (project)"
+    message: |
+      Parsed CXX implicit link information:
+        link line regex: [^( *|.*[/\\])(ld[0-9]*(|\\.[a-rt-z][a-z]*|\\.s[a-np-z][a-z]*|\\.so[a-z]+)|link\\.exe|lld-link(\\.exe)?|CMAKE_LINK_STARTFILE-NOTFOUND|([^/\\]+-)?ld|collect2)[^/\\]*( |$)]
+        linker tool regex: [^[ 	]*(->|"|[0-9]+>[ 	-]*Build:[ 	0-9]+ ms[ 	]*)?[ 	]*(([^"]*[/\\])?(ld[0-9]*(|\\.[a-rt-z][a-z]*|\\.s[a-np-z][a-z]*|\\.so[a-z]+)|link\\.exe|lld-link(\\.exe)?))("|,| |$)]
+        linker tool for 'CXX': E:/Visual Studio/VC/Tools/MSVC/14.50.35717/bin/HostX64/x64/link.exe
+        implicit libs: []
+        implicit objs: []
+        implicit dirs: []
+        implicit fwks: []
+      
+      
+  -
+    kind: "message-v1"
+    backtrace:
+      - "C:/Program Files/CMake/share/cmake-4.2/Modules/Internal/CMakeDetermineLinkerId.cmake:38 (message)"
+      - "C:/Program Files/CMake/share/cmake-4.2/Modules/CMakeDetermineCompilerABI.cmake:299 (cmake_determine_linker_id)"
+      - "C:/Program Files/CMake/share/cmake-4.2/Modules/CMakeTestCXXCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:2 (project)"
+    message: |
+      Running the CXX compiler's linker: "E:/Visual Studio/VC/Tools/MSVC/14.50.35717/bin/HostX64/x64/link.exe" "-v"
+      Microsoft (R) Incremental Linker Version 14.50.35719.0
+      Copyright (C) Microsoft Corporation.  All rights reserved.
+  -
+    kind: "find-v1"
+    backtrace:
+      - "C:/Program Files/CMake/share/cmake-4.2/Modules/FindGit.cmake:111 (find_program)"
+      - "C:/Program Files/CMake/share/cmake-4.2/Modules/FetchContent.cmake:1884 (find_package)"
+      - "C:/Program Files/CMake/share/cmake-4.2/Modules/FetchContent.cmake:1619 (__FetchContent_populateSubbuild)"
+      - "C:/Program Files/CMake/share/cmake-4.2/Modules/FetchContent.cmake:2155:EVAL:2 (__FetchContent_doPopulation)"
+      - "C:/Program Files/CMake/share/cmake-4.2/Modules/FetchContent.cmake:2155 (cmake_language)"
+      - "C:/Program Files/CMake/share/cmake-4.2/Modules/FetchContent.cmake:2394 (__FetchContent_Populate)"
+      - "CMakeLists.txt:14 (FetchContent_MakeAvailable)"
+    mode: "program"
+    variable: "GIT_EXECUTABLE"
+    description: "Git command line client"
+    settings:
+      SearchFramework: "NEVER"
+      SearchAppBundle: "NEVER"
+      CMAKE_FIND_USE_CMAKE_PATH: true
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "git.cmd"
+      - "git"
+    candidate_directories:
+      - "C:/VulkanSDK/1.4.328.1/Bin/"
+      - "C:/Program Files (x86)/VMware/VMware Workstation/bin/"
+      - "C:/Windows/System32/"
+      - "C:/Windows/"
+      - "C:/Windows/System32/wbem/"
+      - "C:/Windows/System32/WindowsPowerShell/v1.0/"
+      - "C:/Windows/System32/OpenSSH/"
+      - "C:/Program Files/dotnet/"
+      - "D:/Program Files/Nova_A/build/\"C:/Program Files/Java/jdk-25/bin/"
+      - "C:/Program Files/Java/jdk-25/jre/bin/"
+      - "D:/Program Files/Nova_A/build/\"/"
+      - "C:/Program Files/NVIDIA Corporation/NVIDIA App/NvDLISR/"
+      - "C:/Program Files (x86)/NVIDIA Corporation/PhysX/Common/"
+      - "D:/Program Files/Mingw/"
+      - "D:/Program Files/Mingw/bin/"
+      - "C:/php/"
+      - "C:/Program Files/Bandizip/"
+      - "C:/Program Files (x86)/Windows Kits/10/Windows Performance Toolkit/"
+      - "C:/Program Files (x86)/Windows Kits/10/Microsoft Application Virtualization/Sequencer/"
+      - "C:/Program Files (x86)/Windows Kits/10/Assessment and Deployment Kit/Deployment Tools/amd64/Oscdimg/"
+      - "C:/Program Files/Git/cmd/"
+      - "C:/Program Files/CMake/bin/"
+      - "C:/Program Files (x86)/dxc_2025_07_14/"
+      - "C:/Program Files (x86)/dxc_2025_07_14/bin/x86/"
+      - "C:/Users/steve/vcpkg/"
+      - "C:/Users/steve/AppData/Local/Programs/Python/Python310/Scripts/"
+      - "C:/Users/steve/AppData/Local/Programs/Python/Python310/"
+      - "C:/Users/steve/AppData/Local/Microsoft/WindowsApps/"
+      - "D:/Program Files/Microsoft VS Code/bin/"
+      - "C:/Users/steve/AppData/Local/Programs/Ollama/"
+      - "C:/Users/steve/AppData/Local/GitHubDesktop/bin/"
+      - "C:/Users/steve/AppData/Local/Microsoft/WinGet/Links/"
+      - "C:/Program Files/bin/"
+      - "C:/Program Files/sbin/"
+      - "C:/Program Files/"
+      - "C:/Program Files (x86)/bin/"
+      - "C:/Program Files (x86)/sbin/"
+      - "C:/Program Files (x86)/"
+      - "C:/Program Files/CMake/bin/"
+      - "C:/Program Files/CMake/sbin/"
+      - "C:/Program Files/CMake/"
+      - "C:/Program Files (x86)/Nova_A/bin/"
+      - "C:/Program Files (x86)/Nova_A/sbin/"
+      - "C:/Program Files (x86)/Nova_A/"
+      - "C:/Users/steve/AppData/Local/Atlassian/SourceTree/git_local/bin/"
+    searched_directories:
+      - "C:/VulkanSDK/1.4.328.1/Bin/git.cmd.com"
+      - "C:/VulkanSDK/1.4.328.1/Bin/git.cmd.exe"
+      - "C:/VulkanSDK/1.4.328.1/Bin/git.cmd"
+      - "C:/Program Files (x86)/VMware/VMware Workstation/bin/git.cmd.com"
+      - "C:/Program Files (x86)/VMware/VMware Workstation/bin/git.cmd.exe"
+      - "C:/Program Files (x86)/VMware/VMware Workstation/bin/git.cmd"
+      - "C:/Windows/System32/git.cmd.com"
+      - "C:/Windows/System32/git.cmd.exe"
+      - "C:/Windows/System32/git.cmd"
+      - "C:/Windows/git.cmd.com"
+      - "C:/Windows/git.cmd.exe"
+      - "C:/Windows/git.cmd"
+      - "C:/Windows/System32/wbem/git.cmd.com"
+      - "C:/Windows/System32/wbem/git.cmd.exe"
+      - "C:/Windows/System32/wbem/git.cmd"
+      - "C:/Windows/System32/WindowsPowerShell/v1.0/git.cmd.com"
+      - "C:/Windows/System32/WindowsPowerShell/v1.0/git.cmd.exe"
+      - "C:/Windows/System32/WindowsPowerShell/v1.0/git.cmd"
+      - "C:/Windows/System32/OpenSSH/git.cmd.com"
+      - "C:/Windows/System32/OpenSSH/git.cmd.exe"
+      - "C:/Windows/System32/OpenSSH/git.cmd"
+      - "C:/Program Files/dotnet/git.cmd.com"
+      - "C:/Program Files/dotnet/git.cmd.exe"
+      - "C:/Program Files/dotnet/git.cmd"
+      - "D:/Program Files/Nova_A/build/\"C:/Program Files/Java/jdk-25/bin/git.cmd.com"
+      - "D:/Program Files/Nova_A/build/\"C:/Program Files/Java/jdk-25/bin/git.cmd.exe"
+      - "D:/Program Files/Nova_A/build/\"C:/Program Files/Java/jdk-25/bin/git.cmd"
+      - "C:/Program Files/Java/jdk-25/jre/bin/git.cmd.com"
+      - "C:/Program Files/Java/jdk-25/jre/bin/git.cmd.exe"
+      - "C:/Program Files/Java/jdk-25/jre/bin/git.cmd"
+      - "D:/Program Files/Nova_A/build/\"/git.cmd.com"
+      - "D:/Program Files/Nova_A/build/\"/git.cmd.exe"
+      - "D:/Program Files/Nova_A/build/\"/git.cmd"
+      - "C:/Program Files/NVIDIA Corporation/NVIDIA App/NvDLISR/git.cmd.com"
+      - "C:/Program Files/NVIDIA Corporation/NVIDIA App/NvDLISR/git.cmd.exe"
+      - "C:/Program Files/NVIDIA Corporation/NVIDIA App/NvDLISR/git.cmd"
+      - "C:/Program Files (x86)/NVIDIA Corporation/PhysX/Common/git.cmd.com"
+      - "C:/Program Files (x86)/NVIDIA Corporation/PhysX/Common/git.cmd.exe"
+      - "C:/Program Files (x86)/NVIDIA Corporation/PhysX/Common/git.cmd"
+      - "D:/Program Files/Mingw/git.cmd.com"
+      - "D:/Program Files/Mingw/git.cmd.exe"
+      - "D:/Program Files/Mingw/git.cmd"
+      - "D:/Program Files/Mingw/bin/git.cmd.com"
+      - "D:/Program Files/Mingw/bin/git.cmd.exe"
+      - "D:/Program Files/Mingw/bin/git.cmd"
+      - "C:/php/git.cmd.com"
+      - "C:/php/git.cmd.exe"
+      - "C:/php/git.cmd"
+      - "C:/Program Files/Bandizip/git.cmd.com"
+      - "C:/Program Files/Bandizip/git.cmd.exe"
+      - "C:/Program Files/Bandizip/git.cmd"
+      - "C:/Program Files (x86)/Windows Kits/10/Windows Performance Toolkit/git.cmd.com"
+      - "C:/Program Files (x86)/Windows Kits/10/Windows Performance Toolkit/git.cmd.exe"
+      - "C:/Program Files (x86)/Windows Kits/10/Windows Performance Toolkit/git.cmd"
+      - "C:/Program Files (x86)/Windows Kits/10/Microsoft Application Virtualization/Sequencer/git.cmd.com"
+      - "C:/Program Files (x86)/Windows Kits/10/Microsoft Application Virtualization/Sequencer/git.cmd.exe"
+      - "C:/Program Files (x86)/Windows Kits/10/Microsoft Application Virtualization/Sequencer/git.cmd"
+      - "C:/Program Files (x86)/Windows Kits/10/Assessment and Deployment Kit/Deployment Tools/amd64/Oscdimg/git.cmd.com"
+      - "C:/Program Files (x86)/Windows Kits/10/Assessment and Deployment Kit/Deployment Tools/amd64/Oscdimg/git.cmd.exe"
+      - "C:/Program Files (x86)/Windows Kits/10/Assessment and Deployment Kit/Deployment Tools/amd64/Oscdimg/git.cmd"
+      - "C:/Program Files/Git/cmd/git.cmd.com"
+      - "C:/Program Files/Git/cmd/git.cmd.exe"
+      - "C:/Program Files/Git/cmd/git.cmd"
+      - "C:/Program Files/CMake/bin/git.cmd.com"
+      - "C:/Program Files/CMake/bin/git.cmd.exe"
+      - "C:/Program Files/CMake/bin/git.cmd"
+      - "C:/Program Files (x86)/dxc_2025_07_14/git.cmd.com"
+      - "C:/Program Files (x86)/dxc_2025_07_14/git.cmd.exe"
+      - "C:/Program Files (x86)/dxc_2025_07_14/git.cmd"
+      - "C:/Program Files (x86)/dxc_2025_07_14/bin/x86/git.cmd.com"
+      - "C:/Program Files (x86)/dxc_2025_07_14/bin/x86/git.cmd.exe"
+      - "C:/Program Files (x86)/dxc_2025_07_14/bin/x86/git.cmd"
+      - "C:/Users/steve/vcpkg/git.cmd.com"
+      - "C:/Users/steve/vcpkg/git.cmd.exe"
+      - "C:/Users/steve/vcpkg/git.cmd"
+      - "C:/Users/steve/AppData/Local/Programs/Python/Python310/Scripts/git.cmd.com"
+      - "C:/Users/steve/AppData/Local/Programs/Python/Python310/Scripts/git.cmd.exe"
+      - "C:/Users/steve/AppData/Local/Programs/Python/Python310/Scripts/git.cmd"
+      - "C:/Users/steve/AppData/Local/Programs/Python/Python310/git.cmd.com"
+      - "C:/Users/steve/AppData/Local/Programs/Python/Python310/git.cmd.exe"
+      - "C:/Users/steve/AppData/Local/Programs/Python/Python310/git.cmd"
+      - "C:/Users/steve/AppData/Local/Microsoft/WindowsApps/git.cmd.com"
+      - "C:/Users/steve/AppData/Local/Microsoft/WindowsApps/git.cmd.exe"
+      - "C:/Users/steve/AppData/Local/Microsoft/WindowsApps/git.cmd"
+      - "D:/Program Files/Microsoft VS Code/bin/git.cmd.com"
+      - "D:/Program Files/Microsoft VS Code/bin/git.cmd.exe"
+      - "D:/Program Files/Microsoft VS Code/bin/git.cmd"
+      - "C:/Users/steve/AppData/Local/Programs/Ollama/git.cmd.com"
+      - "C:/Users/steve/AppData/Local/Programs/Ollama/git.cmd.exe"
+      - "C:/Users/steve/AppData/Local/Programs/Ollama/git.cmd"
+      - "C:/Users/steve/AppData/Local/GitHubDesktop/bin/git.cmd.com"
+      - "C:/Users/steve/AppData/Local/GitHubDesktop/bin/git.cmd.exe"
+      - "C:/Users/steve/AppData/Local/GitHubDesktop/bin/git.cmd"
+      - "C:/Users/steve/AppData/Local/Microsoft/WinGet/Links/git.cmd.com"
+      - "C:/Users/steve/AppData/Local/Microsoft/WinGet/Links/git.cmd.exe"
+      - "C:/Users/steve/AppData/Local/Microsoft/WinGet/Links/git.cmd"
+      - "C:/Program Files/bin/git.cmd.com"
+      - "C:/Program Files/bin/git.cmd.exe"
+      - "C:/Program Files/bin/git.cmd"
+      - "C:/Program Files/sbin/git.cmd.com"
+      - "C:/Program Files/sbin/git.cmd.exe"
+      - "C:/Program Files/sbin/git.cmd"
+      - "C:/Program Files/git.cmd.com"
+      - "C:/Program Files/git.cmd.exe"
+      - "C:/Program Files/git.cmd"
+      - "C:/Program Files (x86)/bin/git.cmd.com"
+      - "C:/Program Files (x86)/bin/git.cmd.exe"
+      - "C:/Program Files (x86)/bin/git.cmd"
+      - "C:/Program Files (x86)/sbin/git.cmd.com"
+      - "C:/Program Files (x86)/sbin/git.cmd.exe"
+      - "C:/Program Files (x86)/sbin/git.cmd"
+      - "C:/Program Files (x86)/git.cmd.com"
+      - "C:/Program Files (x86)/git.cmd.exe"
+      - "C:/Program Files (x86)/git.cmd"
+      - "C:/Program Files/CMake/bin/git.cmd.com"
+      - "C:/Program Files/CMake/bin/git.cmd.exe"
+      - "C:/Program Files/CMake/bin/git.cmd"
+      - "C:/Program Files/CMake/sbin/git.cmd.com"
+      - "C:/Program Files/CMake/sbin/git.cmd.exe"
+      - "C:/Program Files/CMake/sbin/git.cmd"
+      - "C:/Program Files/CMake/git.cmd.com"
+      - "C:/Program Files/CMake/git.cmd.exe"
+      - "C:/Program Files/CMake/git.cmd"
+      - "C:/Program Files (x86)/Nova_A/bin/git.cmd.com"
+      - "C:/Program Files (x86)/Nova_A/bin/git.cmd.exe"
+      - "C:/Program Files (x86)/Nova_A/bin/git.cmd"
+      - "C:/Program Files (x86)/Nova_A/sbin/git.cmd.com"
+      - "C:/Program Files (x86)/Nova_A/sbin/git.cmd.exe"
+      - "C:/Program Files (x86)/Nova_A/sbin/git.cmd"
+      - "C:/Program Files (x86)/Nova_A/git.cmd.com"
+      - "C:/Program Files (x86)/Nova_A/git.cmd.exe"
+      - "C:/Program Files (x86)/Nova_A/git.cmd"
+      - "C:/Users/steve/AppData/Local/Atlassian/SourceTree/git_local/bin/git.cmd.com"
+      - "C:/Users/steve/AppData/Local/Atlassian/SourceTree/git_local/bin/git.cmd.exe"
+      - "C:/Users/steve/AppData/Local/Atlassian/SourceTree/git_local/bin/git.cmd"
+      - "C:/VulkanSDK/1.4.328.1/Bin/git.com"
+      - "C:/VulkanSDK/1.4.328.1/Bin/git.exe"
+      - "C:/VulkanSDK/1.4.328.1/Bin/git"
+      - "C:/Program Files (x86)/VMware/VMware Workstation/bin/git.com"
+      - "C:/Program Files (x86)/VMware/VMware Workstation/bin/git.exe"
+      - "C:/Program Files (x86)/VMware/VMware Workstation/bin/git"
+      - "C:/Windows/System32/git.com"
+      - "C:/Windows/System32/git.exe"
+      - "C:/Windows/System32/git"
+      - "C:/Windows/git.com"
+      - "C:/Windows/git.exe"
+      - "C:/Windows/git"
+      - "C:/Windows/System32/wbem/git.com"
+      - "C:/Windows/System32/wbem/git.exe"
+      - "C:/Windows/System32/wbem/git"
+      - "C:/Windows/System32/WindowsPowerShell/v1.0/git.com"
+      - "C:/Windows/System32/WindowsPowerShell/v1.0/git.exe"
+      - "C:/Windows/System32/WindowsPowerShell/v1.0/git"
+      - "C:/Windows/System32/OpenSSH/git.com"
+      - "C:/Windows/System32/OpenSSH/git.exe"
+      - "C:/Windows/System32/OpenSSH/git"
+      - "C:/Program Files/dotnet/git.com"
+      - "C:/Program Files/dotnet/git.exe"
+      - "C:/Program Files/dotnet/git"
+      - "D:/Program Files/Nova_A/build/\"C:/Program Files/Java/jdk-25/bin/git.com"
+      - "D:/Program Files/Nova_A/build/\"C:/Program Files/Java/jdk-25/bin/git.exe"
+      - "D:/Program Files/Nova_A/build/\"C:/Program Files/Java/jdk-25/bin/git"
+      - "C:/Program Files/Java/jdk-25/jre/bin/git.com"
+      - "C:/Program Files/Java/jdk-25/jre/bin/git.exe"
+      - "C:/Program Files/Java/jdk-25/jre/bin/git"
+      - "D:/Program Files/Nova_A/build/\"/git.com"
+      - "D:/Program Files/Nova_A/build/\"/git.exe"
+      - "D:/Program Files/Nova_A/build/\"/git"
+      - "C:/Program Files/NVIDIA Corporation/NVIDIA App/NvDLISR/git.com"
+      - "C:/Program Files/NVIDIA Corporation/NVIDIA App/NvDLISR/git.exe"
+      - "C:/Program Files/NVIDIA Corporation/NVIDIA App/NvDLISR/git"
+      - "C:/Program Files (x86)/NVIDIA Corporation/PhysX/Common/git.com"
+      - "C:/Program Files (x86)/NVIDIA Corporation/PhysX/Common/git.exe"
+      - "C:/Program Files (x86)/NVIDIA Corporation/PhysX/Common/git"
+      - "D:/Program Files/Mingw/git.com"
+      - "D:/Program Files/Mingw/git.exe"
+      - "D:/Program Files/Mingw/git"
+      - "D:/Program Files/Mingw/bin/git.com"
+      - "D:/Program Files/Mingw/bin/git.exe"
+      - "D:/Program Files/Mingw/bin/git"
+      - "C:/php/git.com"
+      - "C:/php/git.exe"
+      - "C:/php/git"
+      - "C:/Program Files/Bandizip/git.com"
+      - "C:/Program Files/Bandizip/git.exe"
+      - "C:/Program Files/Bandizip/git"
+      - "C:/Program Files (x86)/Windows Kits/10/Windows Performance Toolkit/git.com"
+      - "C:/Program Files (x86)/Windows Kits/10/Windows Performance Toolkit/git.exe"
+      - "C:/Program Files (x86)/Windows Kits/10/Windows Performance Toolkit/git"
+      - "C:/Program Files (x86)/Windows Kits/10/Microsoft Application Virtualization/Sequencer/git.com"
+      - "C:/Program Files (x86)/Windows Kits/10/Microsoft Application Virtualization/Sequencer/git.exe"
+      - "C:/Program Files (x86)/Windows Kits/10/Microsoft Application Virtualization/Sequencer/git"
+      - "C:/Program Files (x86)/Windows Kits/10/Assessment and Deployment Kit/Deployment Tools/amd64/Oscdimg/git.com"
+      - "C:/Program Files (x86)/Windows Kits/10/Assessment and Deployment Kit/Deployment Tools/amd64/Oscdimg/git.exe"
+      - "C:/Program Files (x86)/Windows Kits/10/Assessment and Deployment Kit/Deployment Tools/amd64/Oscdimg/git"
+      - "C:/Program Files/Git/cmd/git.com"
+    found: "C:/Program Files/Git/cmd/git.exe"
+    search_context:
+      ENV{PATH}:
+        - "C:\\VulkanSDK\\1.4.328.1\\Bin"
+        - "C:\\Program Files (x86)\\VMware\\VMware Workstation\\bin\\"
+        - "C:\\WINDOWS\\system32"
+        - "C:\\WINDOWS"
+        - "C:\\WINDOWS\\System32\\Wbem"
+        - "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\"
+        - "C:\\WINDOWS\\System32\\OpenSSH\\"
+        - "C:\\Program Files\\dotnet\\"
+        - "\"C:\\Program Files\\Java\\jdk-25\\bin"
+        - "C:\\Program Files\\Java\\jdk-25\\jre\\bin"
+        - "\""
+        - "C:\\Program Files\\NVIDIA Corporation\\NVIDIA App\\NvDLISR"
+        - "C:\\Program Files (x86)\\NVIDIA Corporation\\PhysX\\Common"
+        - "D:\\Program Files\\Mingw\\"
+        - "D:\\Program Files\\Mingw\\bin\\"
+        - "C:\\php"
+        - "C:\\Program Files\\Bandizip\\"
+        - "C:\\Program Files (x86)\\Windows Kits\\10\\Windows Performance Toolkit\\"
+        - "C:\\Program Files (x86)\\Windows Kits\\10\\Microsoft Application Virtualization\\Sequencer\\"
+        - "C:\\Program Files (x86)\\Windows Kits\\10\\Assessment and Deployment Kit\\Deployment Tools\\amd64\\Oscdimg"
+        - "C:\\Program Files\\Git\\cmd"
+        - "C:\\Program Files\\CMake\\bin"
+        - "C:\\Program Files (x86)\\dxc_2025_07_14"
+        - "C:\\Program Files (x86)\\dxc_2025_07_14\\bin\\x86"
+        - "C:\\Users\\steve\\vcpkg"
+        - "C:\\Users\\steve\\AppData\\Local\\Programs\\Python\\Python310\\Scripts\\"
+        - "C:\\Users\\steve\\AppData\\Local\\Programs\\Python\\Python310\\"
+        - "C:\\Users\\steve\\AppData\\Local\\Microsoft\\WindowsApps"
+        - "D:\\Program Files\\Microsoft VS Code\\bin"
+        - "C:\\Users\\steve\\AppData\\Local\\Programs\\Ollama"
+        - "C:\\Users\\steve\\AppData\\Local\\GitHubDesktop\\bin"
+        - "C:\\Users\\steve\\AppData\\Local\\Microsoft\\WinGet\\Links"
+      CMAKE_INSTALL_PREFIX: "C:/Program Files (x86)/Nova_A"
+      CMAKE_SYSTEM_PREFIX_PATH:
+        - "C:/Program Files"
+        - "C:/Program Files (x86)"
+        - "C:/Program Files/CMake"
+        - "C:/Program Files (x86)/Nova_A"
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "C:/Program Files/CMake/share/cmake-4.2/Modules/Internal/CheckSourceCompiles.cmake:104 (try_compile)"
+      - "C:/Program Files/CMake/share/cmake-4.2/Modules/CheckCSourceCompiles.cmake:103 (cmake_check_source_compiles)"
+      - "C:/Program Files/CMake/share/cmake-4.2/Modules/FindThreads.cmake:160 (check_c_source_compiles)"
+      - "C:/Program Files/CMake/share/cmake-4.2/Modules/FindThreads.cmake:226 (_threads_check_libc)"
+      - "build/_deps/glfw-src/CMakeLists.txt:62 (find_package)"
+    checks:
+      - "Performing Test CMAKE_HAVE_LIBC_PTHREAD"
+    directories:
+      source: "D:/Program Files/Nova_A/build/CMakeFiles/CMakeScratch/TryCompile-nsdv1a"
+      binary: "D:/Program Files/Nova_A/build/CMakeFiles/CMakeScratch/TryCompile-nsdv1a"
+    cmakeVariables:
+      CMAKE_C_FLAGS: "/DWIN32 /D_WINDOWS"
+      CMAKE_C_FLAGS_DEBUG: "/Zi /Ob0 /Od /RTC1"
+      CMAKE_EXE_LINKER_FLAGS: "/machine:x64"
+      CMAKE_MODULE_PATH: "D:/Program Files/Nova_A/build/_deps/glfw-src/CMake/modules"
+    buildResult:
+      variable: "CMAKE_HAVE_LIBC_PTHREAD"
+      cached: true
+      stdout: |
+        Change Dir: 'D:/Program Files/Nova_A/build/CMakeFiles/CMakeScratch/TryCompile-nsdv1a'
+        
+        Run Build Command(s): "E:/Visual Studio/MSBuild/Current/Bin/amd64/MSBuild.exe" cmTC_c6f95.vcxproj /p:Configuration=Debug /p:Platform=x64 /p:VisualStudioVersion=18.0 /v:n
+        MSBuild version 18.0.5+e22287bf1 for .NET Framework
+        Build started 11/27/2025 6:05:26 PM.
+        
+        Project "D:\\Program Files\\Nova_A\\build\\CMakeFiles\\CMakeScratch\\TryCompile-nsdv1a\\cmTC_c6f95.vcxproj" on node 1 (default targets).
+        PrepareForBuild:
+          Structured output is enabled. The formatting of compiler diagnostics will reflect the error hierarchy. See https://aka.ms/cpp/structured-output for more details.
+          Creating directory "D:\\Program Files\\Nova_A\\build\\CMakeFiles\\CMakeScratch\\TryCompile-nsdv1a\\Debug\\".
+          Creating directory "cmTC_c6f95.dir\\Debug\\cmTC_c6f95.tlog\\".
+        InitializeBuildStatus:
+          Creating "cmTC_c6f95.dir\\Debug\\cmTC_c6f95.tlog\\unsuccessfulbuild" because "AlwaysCreate" was specified.
+          Touching "cmTC_c6f95.dir\\Debug\\cmTC_c6f95.tlog\\unsuccessfulbuild".
+        ClCompile:
+          E:\\Visual Studio\\VC\\Tools\\MSVC\\14.50.35717\\bin\\HostX64\\x64\\CL.exe /c /Zi /W1 /WX- /diagnostics:column /Od /Ob0 /D _MBCS /D WIN32 /D _WINDOWS /D CMAKE_HAVE_LIBC_PTHREAD /D _MBCS /D "CMAKE_INTDIR=\\"Debug\\"" /RTC1 /MDd /Fo"cmTC_c6f95.dir\\Debug\\\\" /Fd"cmTC_c6f95.dir\\Debug\\vc145.pdb" /external:W1 /TC /errorReport:queue "D:\\Program Files\\Nova_A\\build\\CMakeFiles\\CMakeScratch\\TryCompile-nsdv1a\\src.c"
+          Microsoft (R) C/C++ Optimizing Compiler Version 19.50.35719 for x64
+          Copyright (C) Microsoft Corporation.  All rights reserved.
+          cl /c /Zi /W1 /WX- /diagnostics:column /Od /Ob0 /D _MBCS /D WIN32 /D _WINDOWS /D CMAKE_HAVE_LIBC_PTHREAD /D _MBCS /D "CMAKE_INTDIR=\\"Debug\\"" /RTC1 /MDd /Fo"cmTC_c6f95.dir\\Debug\\\\" /Fd"cmTC_c6f95.dir\\Debug\\vc145.pdb" /external:W1 /TC /errorReport:queue "D:\\Program Files\\Nova_A\\build\\CMakeFiles\\CMakeScratch\\TryCompile-nsdv1a\\src.c"
+          src.c
+        D:\\Program Files\\Nova_A\\build\\CMakeFiles\\CMakeScratch\\TryCompile-nsdv1a\\src.c(1,10): error C1083: Cannot open include file: 'pthread.h': No such file or directory [D:\\Program Files\\Nova_A\\build\\CMakeFiles\\CMakeScratch\\TryCompile-nsdv1a\\cmTC_c6f95.vcxproj]
+        Done Building Project "D:\\Program Files\\Nova_A\\build\\CMakeFiles\\CMakeScratch\\TryCompile-nsdv1a\\cmTC_c6f95.vcxproj" (default targets) -- FAILED.
+        
+        Build FAILED.
+        
+        "D:\\Program Files\\Nova_A\\build\\CMakeFiles\\CMakeScratch\\TryCompile-nsdv1a\\cmTC_c6f95.vcxproj" (default target) (1) ->
+        (ClCompile target) -> 
+          D:\\Program Files\\Nova_A\\build\\CMakeFiles\\CMakeScratch\\TryCompile-nsdv1a\\src.c(1,10): error C1083: Cannot open include file: 'pthread.h': No such file or directory [D:\\Program Files\\Nova_A\\build\\CMakeFiles\\CMakeScratch\\TryCompile-nsdv1a\\cmTC_c6f95.vcxproj]
+        
+            0 Warning(s)
+            1 Error(s)
+        
+        Time Elapsed 00:00:00.22
+        
+      exitCode: 1
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "C:/Program Files/CMake/share/cmake-4.2/Modules/CheckLibraryExists.cmake:154 (try_compile)"
+      - "C:/Program Files/CMake/share/cmake-4.2/Modules/FindThreads.cmake:175 (check_library_exists)"
+      - "C:/Program Files/CMake/share/cmake-4.2/Modules/FindThreads.cmake:238 (_threads_check_lib)"
+      - "build/_deps/glfw-src/CMakeLists.txt:62 (find_package)"
+    checks:
+      - "Looking for pthread_create in pthreads"
+    directories:
+      source: "D:/Program Files/Nova_A/build/CMakeFiles/CMakeScratch/TryCompile-vuujwz"
+      binary: "D:/Program Files/Nova_A/build/CMakeFiles/CMakeScratch/TryCompile-vuujwz"
+    cmakeVariables:
+      CMAKE_C_FLAGS: "/DWIN32 /D_WINDOWS"
+      CMAKE_C_FLAGS_DEBUG: "/Zi /Ob0 /Od /RTC1"
+      CMAKE_EXE_LINKER_FLAGS: "/machine:x64"
+      CMAKE_MODULE_PATH: "D:/Program Files/Nova_A/build/_deps/glfw-src/CMake/modules"
+    buildResult:
+      variable: "CMAKE_HAVE_PTHREADS_CREATE"
+      cached: true
+      stdout: |
+        Change Dir: 'D:/Program Files/Nova_A/build/CMakeFiles/CMakeScratch/TryCompile-vuujwz'
+        
+        Run Build Command(s): "E:/Visual Studio/MSBuild/Current/Bin/amd64/MSBuild.exe" cmTC_8cba8.vcxproj /p:Configuration=Debug /p:Platform=x64 /p:VisualStudioVersion=18.0 /v:n
+        MSBuild version 18.0.5+e22287bf1 for .NET Framework
+        Build started 11/27/2025 6:05:26 PM.
+        
+        Project "D:\\Program Files\\Nova_A\\build\\CMakeFiles\\CMakeScratch\\TryCompile-vuujwz\\cmTC_8cba8.vcxproj" on node 1 (default targets).
+        PrepareForBuild:
+          Structured output is enabled. The formatting of compiler diagnostics will reflect the error hierarchy. See https://aka.ms/cpp/structured-output for more details.
+          Creating directory "D:\\Program Files\\Nova_A\\build\\CMakeFiles\\CMakeScratch\\TryCompile-vuujwz\\Debug\\".
+          Creating directory "cmTC_8cba8.dir\\Debug\\cmTC_8cba8.tlog\\".
+        InitializeBuildStatus:
+          Creating "cmTC_8cba8.dir\\Debug\\cmTC_8cba8.tlog\\unsuccessfulbuild" because "AlwaysCreate" was specified.
+          Touching "cmTC_8cba8.dir\\Debug\\cmTC_8cba8.tlog\\unsuccessfulbuild".
+        ClCompile:
+          E:\\Visual Studio\\VC\\Tools\\MSVC\\14.50.35717\\bin\\HostX64\\x64\\CL.exe /c /Zi /W1 /WX- /diagnostics:column /Od /Ob0 /D _MBCS /D WIN32 /D _WINDOWS /D CHECK_FUNCTION_EXISTS=pthread_create /D _MBCS /D "CMAKE_INTDIR=\\"Debug\\"" /RTC1 /MDd /Fo"cmTC_8cba8.dir\\Debug\\\\" /Fd"cmTC_8cba8.dir\\Debug\\vc145.pdb" /external:W1 /TC /errorReport:queue "D:\\Program Files\\Nova_A\\build\\CMakeFiles\\CMakeScratch\\TryCompile-vuujwz\\CheckFunctionExists.c"
+          Microsoft (R) C/C++ Optimizing Compiler Version 19.50.35719 for x64
+          Copyright (C) Microsoft Corporation.  All rights reserved.
+          cl /c /Zi /W1 /WX- /diagnostics:column /Od /Ob0 /D _MBCS /D WIN32 /D _WINDOWS /D CHECK_FUNCTION_EXISTS=pthread_create /D _MBCS /D "CMAKE_INTDIR=\\"Debug\\"" /RTC1 /MDd /Fo"cmTC_8cba8.dir\\Debug\\\\" /Fd"cmTC_8cba8.dir\\Debug\\vc145.pdb" /external:W1 /TC /errorReport:queue "D:\\Program Files\\Nova_A\\build\\CMakeFiles\\CMakeScratch\\TryCompile-vuujwz\\CheckFunctionExists.c"
+          CheckFunctionExists.c
+        Link:
+          E:\\Visual Studio\\VC\\Tools\\MSVC\\14.50.35717\\bin\\HostX64\\x64\\link.exe /OUT:"D:\\Program Files\\Nova_A\\build\\CMakeFiles\\CMakeScratch\\TryCompile-vuujwz\\Debug\\cmTC_8cba8.exe" /INCREMENTAL /ILK:"cmTC_8cba8.dir\\Debug\\cmTC_8cba8.ilk" /NOLOGO pthreads.lib kernel32.lib user32.lib gdi32.lib winspool.lib shell32.lib ole32.lib oleaut32.lib uuid.lib comdlg32.lib advapi32.lib /MANIFEST /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /manifest:embed /DEBUG /PDB:"D:/Program Files/Nova_A/build/CMakeFiles/CMakeScratch/TryCompile-vuujwz/Debug/cmTC_8cba8.pdb" /SUBSYSTEM:CONSOLE /TLBID:1 /IMPLIB:"D:/Program Files/Nova_A/build/CMakeFiles/CMakeScratch/TryCompile-vuujwz/Debug/cmTC_8cba8.lib" /MACHINE:X64  /machine:x64 cmTC_8cba8.dir\\Debug\\CheckFunctionExists.obj
+        LINK : fatal error LNK1104: cannot open file 'pthreads.lib' [D:\\Program Files\\Nova_A\\build\\CMakeFiles\\CMakeScratch\\TryCompile-vuujwz\\cmTC_8cba8.vcxproj]
+        Done Building Project "D:\\Program Files\\Nova_A\\build\\CMakeFiles\\CMakeScratch\\TryCompile-vuujwz\\cmTC_8cba8.vcxproj" (default targets) -- FAILED.
+        
+        Build FAILED.
+        
+        "D:\\Program Files\\Nova_A\\build\\CMakeFiles\\CMakeScratch\\TryCompile-vuujwz\\cmTC_8cba8.vcxproj" (default target) (1) ->
+        (Link target) -> 
+          LINK : fatal error LNK1104: cannot open file 'pthreads.lib' [D:\\Program Files\\Nova_A\\build\\CMakeFiles\\CMakeScratch\\TryCompile-vuujwz\\cmTC_8cba8.vcxproj]
+        
+            0 Warning(s)
+            1 Error(s)
+        
+        Time Elapsed 00:00:00.31
+        
+      exitCode: 1
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "C:/Program Files/CMake/share/cmake-4.2/Modules/CheckLibraryExists.cmake:154 (try_compile)"
+      - "C:/Program Files/CMake/share/cmake-4.2/Modules/FindThreads.cmake:175 (check_library_exists)"
+      - "C:/Program Files/CMake/share/cmake-4.2/Modules/FindThreads.cmake:239 (_threads_check_lib)"
+      - "build/_deps/glfw-src/CMakeLists.txt:62 (find_package)"
+    checks:
+      - "Looking for pthread_create in pthread"
+    directories:
+      source: "D:/Program Files/Nova_A/build/CMakeFiles/CMakeScratch/TryCompile-xdo42i"
+      binary: "D:/Program Files/Nova_A/build/CMakeFiles/CMakeScratch/TryCompile-xdo42i"
+    cmakeVariables:
+      CMAKE_C_FLAGS: "/DWIN32 /D_WINDOWS"
+      CMAKE_C_FLAGS_DEBUG: "/Zi /Ob0 /Od /RTC1"
+      CMAKE_EXE_LINKER_FLAGS: "/machine:x64"
+      CMAKE_MODULE_PATH: "D:/Program Files/Nova_A/build/_deps/glfw-src/CMake/modules"
+    buildResult:
+      variable: "CMAKE_HAVE_PTHREAD_CREATE"
+      cached: true
+      stdout: |
+        Change Dir: 'D:/Program Files/Nova_A/build/CMakeFiles/CMakeScratch/TryCompile-xdo42i'
+        
+        Run Build Command(s): "E:/Visual Studio/MSBuild/Current/Bin/amd64/MSBuild.exe" cmTC_bf9d7.vcxproj /p:Configuration=Debug /p:Platform=x64 /p:VisualStudioVersion=18.0 /v:n
+        MSBuild version 18.0.5+e22287bf1 for .NET Framework
+        Build started 11/27/2025 6:05:27 PM.
+        
+        Project "D:\\Program Files\\Nova_A\\build\\CMakeFiles\\CMakeScratch\\TryCompile-xdo42i\\cmTC_bf9d7.vcxproj" on node 1 (default targets).
+        PrepareForBuild:
+          Structured output is enabled. The formatting of compiler diagnostics will reflect the error hierarchy. See https://aka.ms/cpp/structured-output for more details.
+          Creating directory "D:\\Program Files\\Nova_A\\build\\CMakeFiles\\CMakeScratch\\TryCompile-xdo42i\\Debug\\".
+          Creating directory "cmTC_bf9d7.dir\\Debug\\cmTC_bf9d7.tlog\\".
+        InitializeBuildStatus:
+          Creating "cmTC_bf9d7.dir\\Debug\\cmTC_bf9d7.tlog\\unsuccessfulbuild" because "AlwaysCreate" was specified.
+          Touching "cmTC_bf9d7.dir\\Debug\\cmTC_bf9d7.tlog\\unsuccessfulbuild".
+        ClCompile:
+          E:\\Visual Studio\\VC\\Tools\\MSVC\\14.50.35717\\bin\\HostX64\\x64\\CL.exe /c /Zi /W1 /WX- /diagnostics:column /Od /Ob0 /D _MBCS /D WIN32 /D _WINDOWS /D CHECK_FUNCTION_EXISTS=pthread_create /D _MBCS /D "CMAKE_INTDIR=\\"Debug\\"" /RTC1 /MDd /Fo"cmTC_bf9d7.dir\\Debug\\\\" /Fd"cmTC_bf9d7.dir\\Debug\\vc145.pdb" /external:W1 /TC /errorReport:queue "D:\\Program Files\\Nova_A\\build\\CMakeFiles\\CMakeScratch\\TryCompile-xdo42i\\CheckFunctionExists.c"
+          Microsoft (R) C/C++ Optimizing Compiler Version 19.50.35719 for x64
+          Copyright (C) Microsoft Corporation.  All rights reserved.
+          cl /c /Zi /W1 /WX- /diagnostics:column /Od /Ob0 /D _MBCS /D WIN32 /D _WINDOWS /D CHECK_FUNCTION_EXISTS=pthread_create /D _MBCS /D "CMAKE_INTDIR=\\"Debug\\"" /RTC1 /MDd /Fo"cmTC_bf9d7.dir\\Debug\\\\" /Fd"cmTC_bf9d7.dir\\Debug\\vc145.pdb" /external:W1 /TC /errorReport:queue "D:\\Program Files\\Nova_A\\build\\CMakeFiles\\CMakeScratch\\TryCompile-xdo42i\\CheckFunctionExists.c"
+          CheckFunctionExists.c
+        Link:
+          E:\\Visual Studio\\VC\\Tools\\MSVC\\14.50.35717\\bin\\HostX64\\x64\\link.exe /OUT:"D:\\Program Files\\Nova_A\\build\\CMakeFiles\\CMakeScratch\\TryCompile-xdo42i\\Debug\\cmTC_bf9d7.exe" /INCREMENTAL /ILK:"cmTC_bf9d7.dir\\Debug\\cmTC_bf9d7.ilk" /NOLOGO pthread.lib kernel32.lib user32.lib gdi32.lib winspool.lib shell32.lib ole32.lib oleaut32.lib uuid.lib comdlg32.lib advapi32.lib /MANIFEST /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /manifest:embed /DEBUG /PDB:"D:/Program Files/Nova_A/build/CMakeFiles/CMakeScratch/TryCompile-xdo42i/Debug/cmTC_bf9d7.pdb" /SUBSYSTEM:CONSOLE /TLBID:1 /IMPLIB:"D:/Program Files/Nova_A/build/CMakeFiles/CMakeScratch/TryCompile-xdo42i/Debug/cmTC_bf9d7.lib" /MACHINE:X64  /machine:x64 cmTC_bf9d7.dir\\Debug\\CheckFunctionExists.obj
+        LINK : fatal error LNK1104: cannot open file 'pthread.lib' [D:\\Program Files\\Nova_A\\build\\CMakeFiles\\CMakeScratch\\TryCompile-xdo42i\\cmTC_bf9d7.vcxproj]
+        Done Building Project "D:\\Program Files\\Nova_A\\build\\CMakeFiles\\CMakeScratch\\TryCompile-xdo42i\\cmTC_bf9d7.vcxproj" (default targets) -- FAILED.
+        
+        Build FAILED.
+        
+        "D:\\Program Files\\Nova_A\\build\\CMakeFiles\\CMakeScratch\\TryCompile-xdo42i\\cmTC_bf9d7.vcxproj" (default target) (1) ->
+        (Link target) -> 
+          LINK : fatal error LNK1104: cannot open file 'pthread.lib' [D:\\Program Files\\Nova_A\\build\\CMakeFiles\\CMakeScratch\\TryCompile-xdo42i\\cmTC_bf9d7.vcxproj]
+        
+            0 Warning(s)
+            1 Error(s)
+        
+        Time Elapsed 00:00:00.28
+        
+      exitCode: 1
+  -
+    kind: "find-v1"
+    backtrace:
+      - "C:/Program Files/CMake/share/cmake-4.2/Modules/FindDoxygen.cmake:770 (find_program)"
+      - "C:/Program Files/CMake/share/cmake-4.2/Modules/FindDoxygen.cmake:955 (_Doxygen_find_doxygen)"
+      - "build/_deps/glfw-src/CMakeLists.txt:66 (find_package)"
+    mode: "program"
+    variable: "DOXYGEN_EXECUTABLE"
+    description: "Doxygen documentation generation tool (https://www.doxygen.nl)"
+    settings:
+      SearchFramework: "NEVER"
+      SearchAppBundle: "NEVER"
+      CMAKE_FIND_USE_CMAKE_PATH: true
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "doxygen"
+    candidate_directories:
+      - "C:/VulkanSDK/1.4.328.1/Bin/"
+      - "C:/Program Files (x86)/VMware/VMware Workstation/bin/"
+      - "C:/Windows/System32/"
+      - "C:/Windows/"
+      - "C:/Windows/System32/wbem/"
+      - "C:/Windows/System32/WindowsPowerShell/v1.0/"
+      - "C:/Windows/System32/OpenSSH/"
+      - "C:/Program Files/dotnet/"
+      - "D:/Program Files/Nova_A/build/\"C:/Program Files/Java/jdk-25/bin/"
+      - "C:/Program Files/Java/jdk-25/jre/bin/"
+      - "D:/Program Files/Nova_A/build/\"/"
+      - "C:/Program Files/NVIDIA Corporation/NVIDIA App/NvDLISR/"
+      - "C:/Program Files (x86)/NVIDIA Corporation/PhysX/Common/"
+      - "D:/Program Files/Mingw/"
+      - "D:/Program Files/Mingw/bin/"
+      - "C:/php/"
+      - "C:/Program Files/Bandizip/"
+      - "C:/Program Files (x86)/Windows Kits/10/Windows Performance Toolkit/"
+      - "C:/Program Files (x86)/Windows Kits/10/Microsoft Application Virtualization/Sequencer/"
+      - "C:/Program Files (x86)/Windows Kits/10/Assessment and Deployment Kit/Deployment Tools/amd64/Oscdimg/"
+      - "C:/Program Files/Git/cmd/"
+      - "C:/Program Files/CMake/bin/"
+      - "C:/Program Files (x86)/dxc_2025_07_14/"
+      - "C:/Program Files (x86)/dxc_2025_07_14/bin/x86/"
+      - "C:/Users/steve/vcpkg/"
+      - "C:/Users/steve/AppData/Local/Programs/Python/Python310/Scripts/"
+      - "C:/Users/steve/AppData/Local/Programs/Python/Python310/"
+      - "C:/Users/steve/AppData/Local/Microsoft/WindowsApps/"
+      - "D:/Program Files/Microsoft VS Code/bin/"
+      - "C:/Users/steve/AppData/Local/Programs/Ollama/"
+      - "C:/Users/steve/AppData/Local/GitHubDesktop/bin/"
+      - "C:/Users/steve/AppData/Local/Microsoft/WinGet/Links/"
+      - "C:/Program Files/bin/"
+      - "C:/Program Files/sbin/"
+      - "C:/Program Files/"
+      - "C:/Program Files (x86)/bin/"
+      - "C:/Program Files (x86)/sbin/"
+      - "C:/Program Files (x86)/"
+      - "C:/Program Files/CMake/bin/"
+      - "C:/Program Files/CMake/sbin/"
+      - "C:/Program Files/CMake/"
+      - "C:/Program Files (x86)/Nova_A/bin/"
+      - "C:/Program Files (x86)/Nova_A/sbin/"
+      - "C:/Program Files (x86)/Nova_A/"
+      - "/REGISTRY-NOTFOUND/bin/"
+      - "/Applications/Doxygen.app/Contents/Resources/"
+      - "/Applications/Doxygen.app/Contents/MacOS/"
+      - "/Applications/Utilities/Doxygen.app/Contents/Resources/"
+      - "/Applications/Utilities/Doxygen.app/Contents/MacOS/"
+    searched_directories:
+      - "C:/VulkanSDK/1.4.328.1/Bin/doxygen.com"
+      - "C:/VulkanSDK/1.4.328.1/Bin/doxygen.exe"
+      - "C:/VulkanSDK/1.4.328.1/Bin/doxygen"
+      - "C:/Program Files (x86)/VMware/VMware Workstation/bin/doxygen.com"
+      - "C:/Program Files (x86)/VMware/VMware Workstation/bin/doxygen.exe"
+      - "C:/Program Files (x86)/VMware/VMware Workstation/bin/doxygen"
+      - "C:/Windows/System32/doxygen.com"
+      - "C:/Windows/System32/doxygen.exe"
+      - "C:/Windows/System32/doxygen"
+      - "C:/Windows/doxygen.com"
+      - "C:/Windows/doxygen.exe"
+      - "C:/Windows/doxygen"
+      - "C:/Windows/System32/wbem/doxygen.com"
+      - "C:/Windows/System32/wbem/doxygen.exe"
+      - "C:/Windows/System32/wbem/doxygen"
+      - "C:/Windows/System32/WindowsPowerShell/v1.0/doxygen.com"
+      - "C:/Windows/System32/WindowsPowerShell/v1.0/doxygen.exe"
+      - "C:/Windows/System32/WindowsPowerShell/v1.0/doxygen"
+      - "C:/Windows/System32/OpenSSH/doxygen.com"
+      - "C:/Windows/System32/OpenSSH/doxygen.exe"
+      - "C:/Windows/System32/OpenSSH/doxygen"
+      - "C:/Program Files/dotnet/doxygen.com"
+      - "C:/Program Files/dotnet/doxygen.exe"
+      - "C:/Program Files/dotnet/doxygen"
+      - "D:/Program Files/Nova_A/build/\"C:/Program Files/Java/jdk-25/bin/doxygen.com"
+      - "D:/Program Files/Nova_A/build/\"C:/Program Files/Java/jdk-25/bin/doxygen.exe"
+      - "D:/Program Files/Nova_A/build/\"C:/Program Files/Java/jdk-25/bin/doxygen"
+      - "C:/Program Files/Java/jdk-25/jre/bin/doxygen.com"
+      - "C:/Program Files/Java/jdk-25/jre/bin/doxygen.exe"
+      - "C:/Program Files/Java/jdk-25/jre/bin/doxygen"
+      - "D:/Program Files/Nova_A/build/\"/doxygen.com"
+      - "D:/Program Files/Nova_A/build/\"/doxygen.exe"
+      - "D:/Program Files/Nova_A/build/\"/doxygen"
+      - "C:/Program Files/NVIDIA Corporation/NVIDIA App/NvDLISR/doxygen.com"
+      - "C:/Program Files/NVIDIA Corporation/NVIDIA App/NvDLISR/doxygen.exe"
+      - "C:/Program Files/NVIDIA Corporation/NVIDIA App/NvDLISR/doxygen"
+      - "C:/Program Files (x86)/NVIDIA Corporation/PhysX/Common/doxygen.com"
+      - "C:/Program Files (x86)/NVIDIA Corporation/PhysX/Common/doxygen.exe"
+      - "C:/Program Files (x86)/NVIDIA Corporation/PhysX/Common/doxygen"
+      - "D:/Program Files/Mingw/doxygen.com"
+      - "D:/Program Files/Mingw/doxygen.exe"
+      - "D:/Program Files/Mingw/doxygen"
+      - "D:/Program Files/Mingw/bin/doxygen.com"
+      - "D:/Program Files/Mingw/bin/doxygen.exe"
+      - "D:/Program Files/Mingw/bin/doxygen"
+      - "C:/php/doxygen.com"
+      - "C:/php/doxygen.exe"
+      - "C:/php/doxygen"
+      - "C:/Program Files/Bandizip/doxygen.com"
+      - "C:/Program Files/Bandizip/doxygen.exe"
+      - "C:/Program Files/Bandizip/doxygen"
+      - "C:/Program Files (x86)/Windows Kits/10/Windows Performance Toolkit/doxygen.com"
+      - "C:/Program Files (x86)/Windows Kits/10/Windows Performance Toolkit/doxygen.exe"
+      - "C:/Program Files (x86)/Windows Kits/10/Windows Performance Toolkit/doxygen"
+      - "C:/Program Files (x86)/Windows Kits/10/Microsoft Application Virtualization/Sequencer/doxygen.com"
+      - "C:/Program Files (x86)/Windows Kits/10/Microsoft Application Virtualization/Sequencer/doxygen.exe"
+      - "C:/Program Files (x86)/Windows Kits/10/Microsoft Application Virtualization/Sequencer/doxygen"
+      - "C:/Program Files (x86)/Windows Kits/10/Assessment and Deployment Kit/Deployment Tools/amd64/Oscdimg/doxygen.com"
+      - "C:/Program Files (x86)/Windows Kits/10/Assessment and Deployment Kit/Deployment Tools/amd64/Oscdimg/doxygen.exe"
+      - "C:/Program Files (x86)/Windows Kits/10/Assessment and Deployment Kit/Deployment Tools/amd64/Oscdimg/doxygen"
+      - "C:/Program Files/Git/cmd/doxygen.com"
+      - "C:/Program Files/Git/cmd/doxygen.exe"
+      - "C:/Program Files/Git/cmd/doxygen"
+      - "C:/Program Files/CMake/bin/doxygen.com"
+      - "C:/Program Files/CMake/bin/doxygen.exe"
+      - "C:/Program Files/CMake/bin/doxygen"
+      - "C:/Program Files (x86)/dxc_2025_07_14/doxygen.com"
+      - "C:/Program Files (x86)/dxc_2025_07_14/doxygen.exe"
+      - "C:/Program Files (x86)/dxc_2025_07_14/doxygen"
+      - "C:/Program Files (x86)/dxc_2025_07_14/bin/x86/doxygen.com"
+      - "C:/Program Files (x86)/dxc_2025_07_14/bin/x86/doxygen.exe"
+      - "C:/Program Files (x86)/dxc_2025_07_14/bin/x86/doxygen"
+      - "C:/Users/steve/vcpkg/doxygen.com"
+      - "C:/Users/steve/vcpkg/doxygen.exe"
+      - "C:/Users/steve/vcpkg/doxygen"
+      - "C:/Users/steve/AppData/Local/Programs/Python/Python310/Scripts/doxygen.com"
+      - "C:/Users/steve/AppData/Local/Programs/Python/Python310/Scripts/doxygen.exe"
+      - "C:/Users/steve/AppData/Local/Programs/Python/Python310/Scripts/doxygen"
+      - "C:/Users/steve/AppData/Local/Programs/Python/Python310/doxygen.com"
+      - "C:/Users/steve/AppData/Local/Programs/Python/Python310/doxygen.exe"
+      - "C:/Users/steve/AppData/Local/Programs/Python/Python310/doxygen"
+      - "C:/Users/steve/AppData/Local/Microsoft/WindowsApps/doxygen.com"
+      - "C:/Users/steve/AppData/Local/Microsoft/WindowsApps/doxygen.exe"
+      - "C:/Users/steve/AppData/Local/Microsoft/WindowsApps/doxygen"
+      - "D:/Program Files/Microsoft VS Code/bin/doxygen.com"
+      - "D:/Program Files/Microsoft VS Code/bin/doxygen.exe"
+      - "D:/Program Files/Microsoft VS Code/bin/doxygen"
+      - "C:/Users/steve/AppData/Local/Programs/Ollama/doxygen.com"
+      - "C:/Users/steve/AppData/Local/Programs/Ollama/doxygen.exe"
+      - "C:/Users/steve/AppData/Local/Programs/Ollama/doxygen"
+      - "C:/Users/steve/AppData/Local/GitHubDesktop/bin/doxygen.com"
+      - "C:/Users/steve/AppData/Local/GitHubDesktop/bin/doxygen.exe"
+      - "C:/Users/steve/AppData/Local/GitHubDesktop/bin/doxygen"
+      - "C:/Users/steve/AppData/Local/Microsoft/WinGet/Links/doxygen.com"
+      - "C:/Users/steve/AppData/Local/Microsoft/WinGet/Links/doxygen.exe"
+      - "C:/Users/steve/AppData/Local/Microsoft/WinGet/Links/doxygen"
+      - "C:/Program Files/bin/doxygen.com"
+      - "C:/Program Files/bin/doxygen.exe"
+      - "C:/Program Files/bin/doxygen"
+      - "C:/Program Files/sbin/doxygen.com"
+      - "C:/Program Files/sbin/doxygen.exe"
+      - "C:/Program Files/sbin/doxygen"
+      - "C:/Program Files/doxygen.com"
+      - "C:/Program Files/doxygen.exe"
+      - "C:/Program Files/doxygen"
+      - "C:/Program Files (x86)/bin/doxygen.com"
+      - "C:/Program Files (x86)/bin/doxygen.exe"
+      - "C:/Program Files (x86)/bin/doxygen"
+      - "C:/Program Files (x86)/sbin/doxygen.com"
+      - "C:/Program Files (x86)/sbin/doxygen.exe"
+      - "C:/Program Files (x86)/sbin/doxygen"
+      - "C:/Program Files (x86)/doxygen.com"
+      - "C:/Program Files (x86)/doxygen.exe"
+      - "C:/Program Files (x86)/doxygen"
+      - "C:/Program Files/CMake/bin/doxygen.com"
+      - "C:/Program Files/CMake/bin/doxygen.exe"
+      - "C:/Program Files/CMake/bin/doxygen"
+      - "C:/Program Files/CMake/sbin/doxygen.com"
+      - "C:/Program Files/CMake/sbin/doxygen.exe"
+      - "C:/Program Files/CMake/sbin/doxygen"
+      - "C:/Program Files/CMake/doxygen.com"
+      - "C:/Program Files/CMake/doxygen.exe"
+      - "C:/Program Files/CMake/doxygen"
+      - "C:/Program Files (x86)/Nova_A/bin/doxygen.com"
+      - "C:/Program Files (x86)/Nova_A/bin/doxygen.exe"
+      - "C:/Program Files (x86)/Nova_A/bin/doxygen"
+      - "C:/Program Files (x86)/Nova_A/sbin/doxygen.com"
+      - "C:/Program Files (x86)/Nova_A/sbin/doxygen.exe"
+      - "C:/Program Files (x86)/Nova_A/sbin/doxygen"
+      - "C:/Program Files (x86)/Nova_A/doxygen.com"
+      - "C:/Program Files (x86)/Nova_A/doxygen.exe"
+      - "C:/Program Files (x86)/Nova_A/doxygen"
+      - "/REGISTRY-NOTFOUND/bin/doxygen.com"
+      - "/REGISTRY-NOTFOUND/bin/doxygen.exe"
+      - "/REGISTRY-NOTFOUND/bin/doxygen"
+      - "/Applications/Doxygen.app/Contents/Resources/doxygen.com"
+      - "/Applications/Doxygen.app/Contents/Resources/doxygen.exe"
+      - "/Applications/Doxygen.app/Contents/Resources/doxygen"
+      - "/Applications/Doxygen.app/Contents/MacOS/doxygen.com"
+      - "/Applications/Doxygen.app/Contents/MacOS/doxygen.exe"
+      - "/Applications/Doxygen.app/Contents/MacOS/doxygen"
+      - "/Applications/Utilities/Doxygen.app/Contents/Resources/doxygen.com"
+      - "/Applications/Utilities/Doxygen.app/Contents/Resources/doxygen.exe"
+      - "/Applications/Utilities/Doxygen.app/Contents/Resources/doxygen"
+      - "/Applications/Utilities/Doxygen.app/Contents/MacOS/doxygen.com"
+      - "/Applications/Utilities/Doxygen.app/Contents/MacOS/doxygen.exe"
+      - "/Applications/Utilities/Doxygen.app/Contents/MacOS/doxygen"
+    found: false
+    search_context:
+      ENV{PATH}:
+        - "C:\\VulkanSDK\\1.4.328.1\\Bin"
+        - "C:\\Program Files (x86)\\VMware\\VMware Workstation\\bin\\"
+        - "C:\\WINDOWS\\system32"
+        - "C:\\WINDOWS"
+        - "C:\\WINDOWS\\System32\\Wbem"
+        - "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\"
+        - "C:\\WINDOWS\\System32\\OpenSSH\\"
+        - "C:\\Program Files\\dotnet\\"
+        - "\"C:\\Program Files\\Java\\jdk-25\\bin"
+        - "C:\\Program Files\\Java\\jdk-25\\jre\\bin"
+        - "\""
+        - "C:\\Program Files\\NVIDIA Corporation\\NVIDIA App\\NvDLISR"
+        - "C:\\Program Files (x86)\\NVIDIA Corporation\\PhysX\\Common"
+        - "D:\\Program Files\\Mingw\\"
+        - "D:\\Program Files\\Mingw\\bin\\"
+        - "C:\\php"
+        - "C:\\Program Files\\Bandizip\\"
+        - "C:\\Program Files (x86)\\Windows Kits\\10\\Windows Performance Toolkit\\"
+        - "C:\\Program Files (x86)\\Windows Kits\\10\\Microsoft Application Virtualization\\Sequencer\\"
+        - "C:\\Program Files (x86)\\Windows Kits\\10\\Assessment and Deployment Kit\\Deployment Tools\\amd64\\Oscdimg"
+        - "C:\\Program Files\\Git\\cmd"
+        - "C:\\Program Files\\CMake\\bin"
+        - "C:\\Program Files (x86)\\dxc_2025_07_14"
+        - "C:\\Program Files (x86)\\dxc_2025_07_14\\bin\\x86"
+        - "C:\\Users\\steve\\vcpkg"
+        - "C:\\Users\\steve\\AppData\\Local\\Programs\\Python\\Python310\\Scripts\\"
+        - "C:\\Users\\steve\\AppData\\Local\\Programs\\Python\\Python310\\"
+        - "C:\\Users\\steve\\AppData\\Local\\Microsoft\\WindowsApps"
+        - "D:\\Program Files\\Microsoft VS Code\\bin"
+        - "C:\\Users\\steve\\AppData\\Local\\Programs\\Ollama"
+        - "C:\\Users\\steve\\AppData\\Local\\GitHubDesktop\\bin"
+        - "C:\\Users\\steve\\AppData\\Local\\Microsoft\\WinGet\\Links"
+      CMAKE_INSTALL_PREFIX: "C:/Program Files (x86)/Nova_A"
+      CMAKE_SYSTEM_PREFIX_PATH:
+        - "C:/Program Files"
+        - "C:/Program Files (x86)"
+        - "C:/Program Files/CMake"
+        - "C:/Program Files (x86)/Nova_A"
+...

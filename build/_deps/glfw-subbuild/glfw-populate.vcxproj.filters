@@ -1,0 +1,44 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="18.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <CustomBuild Include="D:\Program Files\Nova_A\build\_deps\glfw-subbuild\CMakeFiles\912d17dc227f51bf9b6a2ea1fbe6deef\glfw-populate-mkdir.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="D:\Program Files\Nova_A\build\_deps\glfw-subbuild\CMakeFiles\912d17dc227f51bf9b6a2ea1fbe6deef\glfw-populate-download.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="D:\Program Files\Nova_A\build\_deps\glfw-subbuild\CMakeFiles\912d17dc227f51bf9b6a2ea1fbe6deef\glfw-populate-update.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="D:\Program Files\Nova_A\build\_deps\glfw-subbuild\CMakeFiles\912d17dc227f51bf9b6a2ea1fbe6deef\glfw-populate-patch.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="D:\Program Files\Nova_A\build\_deps\glfw-subbuild\CMakeFiles\912d17dc227f51bf9b6a2ea1fbe6deef\glfw-populate-configure.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="D:\Program Files\Nova_A\build\_deps\glfw-subbuild\CMakeFiles\912d17dc227f51bf9b6a2ea1fbe6deef\glfw-populate-build.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="D:\Program Files\Nova_A\build\_deps\glfw-subbuild\CMakeFiles\912d17dc227f51bf9b6a2ea1fbe6deef\glfw-populate-install.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="D:\Program Files\Nova_A\build\_deps\glfw-subbuild\CMakeFiles\912d17dc227f51bf9b6a2ea1fbe6deef\glfw-populate-test.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="D:\Program Files\Nova_A\build\_deps\glfw-subbuild\CMakeFiles\872dafb7f6791665dff11d41f4047811\glfw-populate-complete.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="D:\Program Files\Nova_A\build\_deps\glfw-subbuild\CMakeFiles\fe65c92c8e0f9c22354eb6aea3c7494f\glfw-populate.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="D:\Program Files\Nova_A\build\_deps\glfw-subbuild\CMakeLists.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="D:\Program Files\Nova_A\build\_deps\glfw-subbuild\CMakeFiles\glfw-populate" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="CMake Rules">
+      <UniqueIdentifier>{73C7918B-B4F1-3F58-B928-2DAF7379BC62}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

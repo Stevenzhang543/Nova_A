@@ -1,0 +1,10 @@
+^D:\PROGRAM FILES\NOVA_A\EDITOR\CMAKELISTS.TXT
+setlocal
+"C:\Program Files\CMake\bin\cmake.exe" "-SD:/Program Files/Nova_A" "-BD:/Program Files/Nova_A/build" --check-stamp-file "D:/Program Files/Nova_A/build/Editor/CMakeFiles/generate.stamp"
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd

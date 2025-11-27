@@ -1,0 +1,46 @@
+{
+	"sources" : 
+	[
+		{
+			"file" : "D:/Program Files/Nova_A/build/_deps/glfw-subbuild/CMakeFiles/glfw-populate"
+		},
+		{
+			"file" : "D:/Program Files/Nova_A/build/_deps/glfw-subbuild/CMakeFiles/fe65c92c8e0f9c22354eb6aea3c7494f/glfw-populate.rule"
+		},
+		{
+			"file" : "D:/Program Files/Nova_A/build/_deps/glfw-subbuild/CMakeFiles/872dafb7f6791665dff11d41f4047811/glfw-populate-complete.rule"
+		},
+		{
+			"file" : "D:/Program Files/Nova_A/build/_deps/glfw-subbuild/CMakeFiles/912d17dc227f51bf9b6a2ea1fbe6deef/glfw-populate-build.rule"
+		},
+		{
+			"file" : "D:/Program Files/Nova_A/build/_deps/glfw-subbuild/CMakeFiles/912d17dc227f51bf9b6a2ea1fbe6deef/glfw-populate-configure.rule"
+		},
+		{
+			"file" : "D:/Program Files/Nova_A/build/_deps/glfw-subbuild/CMakeFiles/912d17dc227f51bf9b6a2ea1fbe6deef/glfw-populate-download.rule"
+		},
+		{
+			"file" : "D:/Program Files/Nova_A/build/_deps/glfw-subbuild/CMakeFiles/912d17dc227f51bf9b6a2ea1fbe6deef/glfw-populate-install.rule"
+		},
+		{
+			"file" : "D:/Program Files/Nova_A/build/_deps/glfw-subbuild/CMakeFiles/912d17dc227f51bf9b6a2ea1fbe6deef/glfw-populate-mkdir.rule"
+		},
+		{
+			"file" : "D:/Program Files/Nova_A/build/_deps/glfw-subbuild/CMakeFiles/912d17dc227f51bf9b6a2ea1fbe6deef/glfw-populate-patch.rule"
+		},
+		{
+			"file" : "D:/Program Files/Nova_A/build/_deps/glfw-subbuild/CMakeFiles/912d17dc227f51bf9b6a2ea1fbe6deef/glfw-populate-test.rule"
+		},
+		{
+			"file" : "D:/Program Files/Nova_A/build/_deps/glfw-subbuild/CMakeFiles/912d17dc227f51bf9b6a2ea1fbe6deef/glfw-populate-update.rule"
+		}
+	],
+	"target" : 
+	{
+		"labels" : 
+		[
+			"glfw-populate"
+		],
+		"name" : "glfw-populate"
+	}
+}
