@@ -6,9 +6,9 @@
 [![C++](https://img.shields.io/badge/C++-20-blue?logo=c%2B%2B)]()
 
 > **Nova_A is a fully open-source 2D physics engine, renderer, and GUI editor project built from scratch using C++20.**  
-> Version: **0.0.1.2** — OpenGL + GLFW + ImGui integrated; basic editor loop.
+> Version: **0.0.1.4** — OpenGL + GLFW + ImGui integrated; basic editor loop.
 
-## What’s new in v0.0.1.2
+## What’s new in v0.0.1.4
 
 - OpenGL (via GLAD) initialization and context creation.
 - GLFW window creation and robust main loop.
