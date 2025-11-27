@@ -1,3 +1,0 @@
-D:/Program Files/Nova_A/out/build/x64-Debug/CMakeFiles/CMakeScratch/TryCompile-e370pa/CMakeFiles/cmTC_e6a69.dir
-D:/Program Files/Nova_A/out/build/x64-Debug/CMakeFiles/CMakeScratch/TryCompile-e370pa/CMakeFiles/edit_cache.dir
-D:/Program Files/Nova_A/out/build/x64-Debug/CMakeFiles/CMakeScratch/TryCompile-e370pa/CMakeFiles/rebuild_cache.dir

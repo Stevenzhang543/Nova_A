@@ -1,0 +1,13 @@
+{
+	"InstallScripts" : 
+	[
+		"D:/NovaA1/out/build/x64-Debug/cmake_install.cmake",
+		"D:/NovaA1/out/build/x64-Debug/_deps/glfw-build/cmake_install.cmake",
+		"D:/NovaA1/out/build/x64-Debug/_deps/glfw-build/src/cmake_install.cmake",
+		"D:/NovaA1/out/build/x64-Debug/_deps/glfw-build/examples/cmake_install.cmake",
+		"D:/NovaA1/out/build/x64-Debug/_deps/glfw-build/tests/cmake_install.cmake",
+		"D:/NovaA1/out/build/x64-Debug/Engine/cmake_install.cmake",
+		"D:/NovaA1/out/build/x64-Debug/Editor/cmake_install.cmake"
+	],
+	"Parallel" : false
+}

@@ -6,6 +6,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 include(FetchContent)
 
+# Fetch GLFW
 FetchContent_Declare(
     glfw
     GIT_REPOSITORY https://github.com/glfw/glfw.git
@@ -13,5 +14,14 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(glfw)
 
+# Fetch ImGui (docking branch recommended for editor)
+FetchContent_Declare(
+    imgui
+    GIT_REPOSITORY https://github.com/ocornut/imgui.git
+    GIT_TAG docking
+)
+FetchContent_MakeAvailable(imgui)
+
+# Add engine and editor directories
 add_subdirectory(Engine)
 add_subdirectory(Editor)

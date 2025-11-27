@@ -1,0 +1,21 @@
+# ninja log v6
+2	112	7859640142543449	glfw-populate-prefix/src/glfw-populate-stamp/glfw-populate-mkdir	eab30e6b9ece84b5
+2	112	7859640142543449	D:/NovaA1/out/build/x64-Debug/_deps/glfw-subbuild/glfw-populate-prefix/src/glfw-populate-stamp/glfw-populate-mkdir	eab30e6b9ece84b5
+113	11614	7859640257553492	glfw-populate-prefix/src/glfw-populate-stamp/glfw-populate-download	5c8b5360a1db74e8
+113	11614	7859640257553492	D:/NovaA1/out/build/x64-Debug/_deps/glfw-subbuild/glfw-populate-prefix/src/glfw-populate-stamp/glfw-populate-download	5c8b5360a1db74e8
+11614	11783	7859640257628066	glfw-populate-prefix/src/glfw-populate-stamp/glfw-populate-update	9b98862979774d22
+11614	11783	7859640257628066	D:/NovaA1/out/build/x64-Debug/_deps/glfw-subbuild/glfw-populate-prefix/src/glfw-populate-stamp/glfw-populate-update	9b98862979774d22
+11783	11892	7859640260363279	glfw-populate-prefix/src/glfw-populate-stamp/glfw-populate-patch	43f5862beac42fcb
+11783	11892	7859640260363279	D:/NovaA1/out/build/x64-Debug/_deps/glfw-subbuild/glfw-populate-prefix/src/glfw-populate-stamp/glfw-populate-patch	43f5862beac42fcb
+11892	12004	7859640261483522	glfw-populate-prefix/src/glfw-populate-stamp/glfw-populate-configure	e9ffa27abee1d77d
+11892	12004	7859640261483522	D:/NovaA1/out/build/x64-Debug/_deps/glfw-subbuild/glfw-populate-prefix/src/glfw-populate-stamp/glfw-populate-configure	e9ffa27abee1d77d
+12004	12113	7859640262579291	glfw-populate-prefix/src/glfw-populate-stamp/glfw-populate-build	6115fa48ea7e91d7
+12004	12113	7859640262579291	D:/NovaA1/out/build/x64-Debug/_deps/glfw-subbuild/glfw-populate-prefix/src/glfw-populate-stamp/glfw-populate-build	6115fa48ea7e91d7
+12113	12225	7859640263664109	glfw-populate-prefix/src/glfw-populate-stamp/glfw-populate-install	dcd07d422e86fae5
+12113	12225	7859640263664109	D:/NovaA1/out/build/x64-Debug/_deps/glfw-subbuild/glfw-populate-prefix/src/glfw-populate-stamp/glfw-populate-install	dcd07d422e86fae5
+12226	12336	7859640264807556	glfw-populate-prefix/src/glfw-populate-stamp/glfw-populate-test	f05873779a1abbba
+12226	12336	7859640264807556	D:/NovaA1/out/build/x64-Debug/_deps/glfw-subbuild/glfw-populate-prefix/src/glfw-populate-stamp/glfw-populate-test	f05873779a1abbba
+12336	12496	7859640266407807	CMakeFiles/glfw-populate-complete	d2cde823b872ed7b
+12336	12496	7859640266407807	glfw-populate-prefix/src/glfw-populate-stamp/glfw-populate-done	d2cde823b872ed7b
+12336	12496	7859640266407807	D:/NovaA1/out/build/x64-Debug/_deps/glfw-subbuild/CMakeFiles/glfw-populate-complete	d2cde823b872ed7b
+12336	12496	7859640266407807	D:/NovaA1/out/build/x64-Debug/_deps/glfw-subbuild/glfw-populate-prefix/src/glfw-populate-stamp/glfw-populate-done	d2cde823b872ed7b

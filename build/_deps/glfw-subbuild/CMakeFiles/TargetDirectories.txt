@@ -1,3 +1,0 @@
-D:/Program Files/Nova_A/build/_deps/glfw-subbuild/CMakeFiles/glfw-populate.dir
-D:/Program Files/Nova_A/build/_deps/glfw-subbuild/CMakeFiles/ALL_BUILD.dir
-D:/Program Files/Nova_A/build/_deps/glfw-subbuild/CMakeFiles/ZERO_CHECK.dir

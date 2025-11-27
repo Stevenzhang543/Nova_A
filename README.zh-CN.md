@@ -1,127 +1,82 @@
+### README.zh-CN.md （中文）
+
+**File:** `README.zh-CN.md`
+
+```md
 # Nova_A 物理与渲染引擎
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE.md)
 [![Platforms](https://img.shields.io/badge/platform-Windows11-lightgrey)]()
-[![Status](https://img.shields.io/badge/status-pre--alpha-red)]()
+[![Status](https://img.shields.io/badge/status-pre--alpha-orange)]()
 [![C++](https://img.shields.io/badge/C++-20-blue?logo=c%2B%2B)]()
-[![Renderer](https://img.shields.io/badge/Render-DirectX%20%7C%20Vulkan-lightblue)]()
-[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](./CONTRIBUTING.md)
 
-**语言:** [English](./README.md) | 中文
+> **Nova_A 是一个完全开源的 2D 物理引擎、渲染器与图形化编辑器项目，使用 C++20 从零构建。**  
+> 版本：**0.0.1.2** — 已集成 OpenGL、GLFW、ImGui；实现基础编辑器主循环。
 
-> [!IMPORTANT]  
-> **Nova_A 完全开源，并将永久免费。**  
-> 项目致力于从零开始构建一个完整的 2D 物理引擎、渲染器和图形化编辑器。
+## v0.0.1.2 新增内容
 
----
+- 使用 GLAD 初始化 OpenGL 上下文。  
+- 使用 GLFW 创建窗口并实现主循环。  
+- 集成 ImGui（GLFW + OpenGL3 后端）用于编辑器 UI。  
+- 添加基础渲染抽象 `Renderer`（清屏、混合等）。  
+- 简单事件/输入帮助 (`Input`)，以及 `Application` 生命周期 Hook。
 
-## 🌌 项目简介
+## 快速构建
 
-**Nova_A** 是一个原生 Windows 的 2D 物理引擎与实时渲染器，并包含未来的图形化编辑器。  
-其长期目标是构建：
+前置条件：
+- Windows 11
+- Visual Studio 2026（或 MSVC 工具链）
+- CMake 3.20+
+- （可选）Ninja
 
-- 图形化可视化编辑器  
-- 高性能 2D 物理仿真系统  
-- 可扩展 2D 渲染器  
-- 自定义资源文件格式（NovaAsset）  
-- 完整的底层运行库（C++20）
+构建命令：
+```bash
+mkdir build
+cd build
+cmake ..
+cmake --build . --config Release
+运行：
 
----
+./Editor/Release/Editor.exe（或在 Visual Studio 中直接运行）
 
-## 🔧 当前版本 — *0.0.0.1 (Nova_A)*
-
-> **预览版（Pre-Alpha） | 基础阶段**
-
-已完成：
-
-- 项目结构与规划  
-- C++20 工程初始化  
-- 基本模块设计（Core / Math / Platform / Renderer / Physics / Editor）  
-- 本 README 文件  
-
-未来将实现：
-
-- 窗口系统  
-- 输入管理  
-- DX11/12 或 Vulkan 渲染器  
-- 基础物理系统  
-- GUI 编辑器  
-- NovaAsset 管线
-
----
-
-## 🛠 核心目标
-
-### Physics Engine  
-- 刚体  
-- AABB/Circle/Polygon 碰撞  
-- 碰撞响应  
-- 力/力矩系统  
-
-### Rendering Engine  
-- 硬件加速绘制  
-- 光影  
-- 贴图与材质  
-- 粒子系统  
-- 视频导出  
-
-### GUI Editor  
-- 物体编辑、拖拽、旋转、缩放  
-- 场景预览  
-- 属性面板  
-- 粒子/动画编辑  
-
----
-
-## 📁 目录结构（规划中）
+项目目录概览
 
 Nova_A/
-Core/
-Math/
-Physics/
-Renderer/
+Engine/
 Editor/
-Assets/
-Scripts/
-Docs/
+CMakeLists.txt
 README.md
 
----
+后续计划
+Shader 管线与三角形渲染（v0.0.2.x）
 
-## 🚀 Roadmap
+Sprite 批处理与纹理加载
 
-### **0.x：基础建设阶段**
-- 0.0.x — 工程基础、窗口系统  
-- 0.1.x — 数学库、输入系统  
-- 0.2.x — 基础渲染  
-- 0.3.x — 基础物理  
-- 0.4.x — 碰撞系统  
-- 0.5.x — GUI 初版  
-- 0.9.x — Demo 成品  
+物理核心（v0.1.x）
 
-### **1.x：完善阶段**
-- 粒子、贴图、光影  
-- 视频导出  
-- 资源系统  
+编辑器变换控件、场景图、资源系统
 
-### **2.x+：专业级功能**
-- Lua 脚本  
-- 编辑器插件  
+欢迎贡献 — 参见 CONTRIBUTING.md。
 
 ---
 
-## 📖 文档
+## 最后：如何立即运行（步骤汇总）
 
-所有文档将放在 `/Docs/`。
+1. 把上面的文件放到对应路径（注意大小写、路径准确）  
+2. 确保 `Engine/External/glad/include` 和 `Engine/External/glad/src/glad.c` 存在（你之前已经配置）。  
+3. 在仓库根目录运行：
 
----
+```bash
+mkdir build
+cd build
+cmake ..            # 如果你想用 Ninja: cmake -G Ninja ..
+cmake --build . --config Debug
+或在 Visual Studio 打开根目录（CMakeTargets）并选择 Editor 运行目标。
 
-## 🤝 贡献指南
+运行 Editor.exe，你应该会看到：
 
-欢迎任何 PR！
+一个窗口弹出
 
----
+ImGui demo/示例窗口（以及主 UI 窗口 “Nova_A - v0.0.1.2”）
 
-## 📜 License
-
-Nova_A 使用 **MIT License**。
+顶部显示 OpenGL 版本（Console 输出）

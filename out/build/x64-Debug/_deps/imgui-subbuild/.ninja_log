@@ -1,0 +1,21 @@
+# ninja log v6
+3	117	7859640276568593	imgui-populate-prefix/src/imgui-populate-stamp/imgui-populate-mkdir	786ba967425bccb7
+3	117	7859640276568593	D:/NovaA1/out/build/x64-Debug/_deps/imgui-subbuild/imgui-populate-prefix/src/imgui-populate-stamp/imgui-populate-mkdir	786ba967425bccb7
+117	54968	7859640825124173	imgui-populate-prefix/src/imgui-populate-stamp/imgui-populate-download	3ee8eca24bb777c7
+117	54968	7859640825124173	D:/NovaA1/out/build/x64-Debug/_deps/imgui-subbuild/imgui-populate-prefix/src/imgui-populate-stamp/imgui-populate-download	3ee8eca24bb777c7
+54968	56909	7859640825150175	imgui-populate-prefix/src/imgui-populate-stamp/imgui-populate-update	77b6ce0d299c563a
+54968	56909	7859640825150175	D:/NovaA1/out/build/x64-Debug/_deps/imgui-subbuild/imgui-populate-prefix/src/imgui-populate-stamp/imgui-populate-update	77b6ce0d299c563a
+56909	57023	7859640845634186	imgui-populate-prefix/src/imgui-populate-stamp/imgui-populate-patch	4e99c06581ae7fb7
+56909	57023	7859640845634186	D:/NovaA1/out/build/x64-Debug/_deps/imgui-subbuild/imgui-populate-prefix/src/imgui-populate-stamp/imgui-populate-patch	4e99c06581ae7fb7
+57023	57139	7859640846826386	imgui-populate-prefix/src/imgui-populate-stamp/imgui-populate-configure	ea41d20dd8e10737
+57023	57139	7859640846826386	D:/NovaA1/out/build/x64-Debug/_deps/imgui-subbuild/imgui-populate-prefix/src/imgui-populate-stamp/imgui-populate-configure	ea41d20dd8e10737
+57139	57244	7859640847852841	imgui-populate-prefix/src/imgui-populate-stamp/imgui-populate-build	b330ae5626661107
+57139	57244	7859640847852841	D:/NovaA1/out/build/x64-Debug/_deps/imgui-subbuild/imgui-populate-prefix/src/imgui-populate-stamp/imgui-populate-build	b330ae5626661107
+57245	57351	7859640848945520	imgui-populate-prefix/src/imgui-populate-stamp/imgui-populate-install	b2e1a650cafc0a7b
+57245	57351	7859640848945520	D:/NovaA1/out/build/x64-Debug/_deps/imgui-subbuild/imgui-populate-prefix/src/imgui-populate-stamp/imgui-populate-install	b2e1a650cafc0a7b
+57351	57460	7859640850048780	imgui-populate-prefix/src/imgui-populate-stamp/imgui-populate-test	bccb07e2cf471e00
+57351	57460	7859640850048780	D:/NovaA1/out/build/x64-Debug/_deps/imgui-subbuild/imgui-populate-prefix/src/imgui-populate-stamp/imgui-populate-test	bccb07e2cf471e00
+57460	57616	7859640851584743	CMakeFiles/imgui-populate-complete	f266bdc10f839713
+57460	57616	7859640851584743	imgui-populate-prefix/src/imgui-populate-stamp/imgui-populate-done	f266bdc10f839713
+57460	57616	7859640851584743	D:/NovaA1/out/build/x64-Debug/_deps/imgui-subbuild/CMakeFiles/imgui-populate-complete	f266bdc10f839713
+57460	57616	7859640851584743	D:/NovaA1/out/build/x64-Debug/_deps/imgui-subbuild/imgui-populate-prefix/src/imgui-populate-stamp/imgui-populate-done	f266bdc10f839713
