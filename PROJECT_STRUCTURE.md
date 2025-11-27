@@ -1,7 +1,5 @@
 # Nova_A Project Structure
 
-Nova_A/
-
 Core/ # Base runtime, logging, config
 
 Math/ # Vec2, Mat3, transforms, etc.
