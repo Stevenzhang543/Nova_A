@@ -1,4 +1,4 @@
-##**Languages:** [中文](./README.zh-CN.md) | English
+**Languages:** [中文](./README.zh-CN.md) | English
 
 # Nova_A Physics & Rendering Engine
 
