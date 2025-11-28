@@ -1,3 +1,5 @@
+##**Languages:** [中文](./README.zh-CN.md) | English
+
 # Nova_A Physics & Rendering Engine
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE.md)
@@ -5,7 +7,6 @@
 [![Status](https://img.shields.io/badge/status-pre--alpha-orange)]()
 [![C++](https://img.shields.io/badge/C++-20-blue?logo=c%2B%2B)]()
 
-./readme.zh-cn
 
 > **Nova_A is a fully open-source 2D physics engine, renderer, and GUI editor project built from scratch using C++20.**  
 > Version: **0.0.1.4** — OpenGL + GLFW + ImGui integrated; basic editor loop.
