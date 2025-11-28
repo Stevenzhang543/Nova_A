@@ -1,6 +1,5 @@
 **语言:** [English](./README.md) | 中文
 
-```md
 # Nova_A 物理与渲染引擎
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE.md)
@@ -9,16 +8,14 @@
 [![C++](https://img.shields.io/badge/C++-20-blue?logo=c%2B%2B)]()
 
 > **Nova_A 是一个完全开源的 2D 物理引擎、渲染器与图形化编辑器项目，使用 C++20 从零构建。**  
-> 版本：**0.0.1.2** — 已集成 OpenGL、GLFW、ImGui；实现基础编辑器主循环。
+> 版本：**0.0.2.4** — 已集成 OpenGL、GLFW、ImGui；实现基础编辑器GUI。
 
 ## v0.0.1.2 新增内容
 
 - 使用 GLAD 初始化 OpenGL 上下文。  
 - 使用 GLFW 创建窗口并实现主循环。  
-- 集成 ImGui（GLFW + OpenGL3 后端）用于编辑器 UI。  
+- 集成 ImGui（GLFW + OpenGL3 后端）用于编辑器 GUI。  
 - 添加基础渲染抽象 `Renderer`（清屏、混合等）。  
-- 简单事件/输入帮助 (`Input`)，以及 `Application` 生命周期 Hook。
-
 ## 快速构建
 
 前置条件：
@@ -28,7 +25,7 @@
 - （可选）Ninja
 
 构建命令：
-```bash
+
 mkdir build
 cd build
 cmake ..
