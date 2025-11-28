@@ -1,10 +1,7 @@
-// Engine/Core/Window.cpp
 #include "Window.h"
 #include <stdexcept> 
-
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
-
 #include <iostream>
 
 namespace Nova {

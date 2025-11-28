@@ -1,4 +1,3 @@
-// Engine/Graphics/Renderer.h
 #pragma once
 
 namespace Nova {

@@ -1,7 +1,6 @@
-// Engine/Core/Window.h
 #pragma once
-
 #include <string>
+
 struct GLFWwindow;
 
 namespace Nova {

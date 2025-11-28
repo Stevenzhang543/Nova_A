@@ -1,12 +1,10 @@
-// Editor/main.cpp
 #include <iostream>
-#include "Core/Application.h" // Includes Nova::Application
+#include "EditorApplication.h"
 
 int main()
 {
     try {
-        // FIX: Must use the Nova namespace now
-        Nova::Application app("Nova_A Editor v0.0.1.4", 1280, 720);
+        EditorApplication app("Nova_A Editor v0.0.2", 1600, 900);
         app.Run();
     }
     catch (const std::exception& ex) {

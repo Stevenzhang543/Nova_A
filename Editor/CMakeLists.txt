@@ -1,7 +1,13 @@
+#CMake configuration for Editor application
 cmake_minimum_required(VERSION 3.20)
 project(EditorApp LANGUAGES C CXX)
 
-add_executable(Editor main.cpp)
+# create executable
+add_executable(Editor 
+    main.cpp
+    EditorApplication.h
+    EditorApplication.cpp
+)
 
 # include engine headers
 target_include_directories(Editor PRIVATE

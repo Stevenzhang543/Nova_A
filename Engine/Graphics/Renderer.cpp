@@ -1,4 +1,3 @@
-// Engine/Graphics/Renderer.cpp
 #include "Renderer.h"
 #include <glad/glad.h>
 
