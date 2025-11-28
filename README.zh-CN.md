@@ -1,6 +1,4 @@
-### README.zh-CN.md （中文）
-
-**File:** `README.zh-CN.md`
+**语言:** [English](./README.md) | 中文
 
 ```md
 # Nova_A 物理与渲染引擎
