@@ -9,15 +9,14 @@
 
 
 > **Nova_A is a fully open-source 2D physics engine, renderer, and GUI editor project built from scratch using C++20.**  
-> Version: **0.0.1.4** — OpenGL + GLFW + ImGui integrated; basic editor loop.
+> Version: **0.0.2.4** — OpenGL + GLFW + ImGui integrated; Setup GUI.
 
-## What’s new in v0.0.1.4
+## What’s new in v0.0.2.4
 
 - OpenGL (via GLAD) initialization and context creation.
 - GLFW window creation and robust main loop.
-- ImGui integration (GLFW + OpenGL3 backend) for editor UI.
+- ImGui integration (GLFW + OpenGL3 backend) for editor GUI.
 - Simple rendering abstraction (Renderer) with clear function and GL state.
-- Light-weight Input helpers and application lifecycle with `OnInit/OnUpdate/OnRender` hooks.
 
 ## Quick Start (build)
 
