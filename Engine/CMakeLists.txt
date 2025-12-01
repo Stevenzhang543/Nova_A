@@ -1,7 +1,6 @@
 cmake_minimum_required(VERSION 3.20)
 project(MyEngine LANGUAGES C CXX)
 
-# Core engine sources
 set(ENGINE_SRC
     Core/Application.cpp
     Core/Window.cpp
@@ -9,8 +8,7 @@ set(ENGINE_SRC
     External/glad/src/glad.c
 )
 
-# Add imgui sources into engine so Editor does NOT need to link imgui.lib
-# imgui source dir comes from FetchContent in root CMakeLists.txt
+# add imgui sources to engine lib
 list(APPEND ENGINE_SRC
     ${imgui_SOURCE_DIR}/imgui.cpp
     ${imgui_SOURCE_DIR}/imgui_draw.cpp
@@ -32,13 +30,11 @@ target_include_directories(MyEngine PUBLIC
     ${imgui_SOURCE_DIR}/backends
 )
 
-# Link dependencies required by engine (glfw and opengl)
 target_link_libraries(MyEngine PUBLIC
     glfw
     opengl32
 )
 
-# Ensure C++ standard
 set_target_properties(MyEngine PROPERTIES
     CXX_STANDARD 20
     CXX_STANDARD_REQUIRED ON
