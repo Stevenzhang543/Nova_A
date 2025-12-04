@@ -2,11 +2,9 @@
 #include "Window.h"
 #include "Graphics/Renderer.h"
 #include "Input/Input.h"
-
 #include <stdexcept>
 #include <chrono>
 #include <iostream>
-
 #include <imgui.h>
 #include <backends/imgui_impl_glfw.h>
 #include <backends/imgui_impl_opengl3.h>

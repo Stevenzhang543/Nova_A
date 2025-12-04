@@ -55,20 +55,20 @@ void EditorApplication::RenderMenuBar()
 {
     if (ImGui::BeginMainMenuBar())
     {
-        if (ImGui::BeginMenu("文件 (File)"))
+        if (ImGui::BeginMenu("File"))
         {
-            if (ImGui::MenuItem("新建场景 (New Scene)", "Ctrl+N")) m_StatusText = "Action: New Scene";
-            if (ImGui::MenuItem("打开场景... (Open Scene...)", "Ctrl+O")) m_StatusText = "Action: Open Scene";
-            if (ImGui::MenuItem("保存 (Save)", "Ctrl+S")) m_StatusText = "Action: Save";
-            if (ImGui::MenuItem("另存为... (Save As...)", "Ctrl+Shift+S")) m_StatusText = "Action: Save As";
+            if (ImGui::MenuItem("New Scene", "Ctrl+N")) m_StatusText = "Action: New Scene";
+            if (ImGui::MenuItem("Open Scene...", "Ctrl+O")) m_StatusText = "Action: Open Scene";
+            if (ImGui::MenuItem("Save", "Ctrl+S")) m_StatusText = "Action: Save";
+            if (ImGui::MenuItem("Save As...", "Ctrl+Shift+S")) m_StatusText = "Action: Save As";
             ImGui::Separator();
-            if (ImGui::MenuItem("退出 (Exit)")) m_StatusText = "Action: Exit";
+            if (ImGui::MenuItem("Exit")) m_StatusText = "Action: Exit";
             ImGui::EndMenu();
         }
-        if (ImGui::BeginMenu("编辑 (Edit)"))
+        if (ImGui::BeginMenu("Edit"))
         {
-            if (ImGui::MenuItem("撤销 (Undo)", "Ctrl+Z")) m_StatusText = "Action: Undo";
-            if (ImGui::MenuItem("重做 (Redo)", "Ctrl+Y")) m_StatusText = "Action: Redo";
+            if (ImGui::MenuItem("Undo", "Ctrl+Z")) m_StatusText = "Action: Undo";
+            if (ImGui::MenuItem("Redo", "Ctrl+Y")) m_StatusText = "Action: Redo";
             ImGui::EndMenu();
         }
         ImGui::EndMainMenuBar();
