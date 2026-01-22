@@ -5,7 +5,6 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE.md)
 [![Platforms](https://img.shields.io/badge/platform-Windows11-lightgrey)]()
 [![Status](https://img.shields.io/badge/status-pre--alpha-orange)]()
-[![C++](https://img.shields.io/badge/C++-20-blue?logo=c%2B%2B)]()
 
 
 > **Nova_A is a fully open-source 2D physics engine, renderer, and GUI editor project built from scratch using Rust + Vue 3.**  
