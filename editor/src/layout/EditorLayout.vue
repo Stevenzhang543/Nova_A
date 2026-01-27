@@ -2,10 +2,9 @@
   <div class="editor-root">
     <TopBar />
     <div class="editor-main">
-      <SideBar />
+      <SideBars />
       <div class="editor-content">
-        <PhysicsPanel v-if="state.currentPage === 'physics'" />
-        <RendererPanel v-if="state.currentPage === 'renderer'" />
+        <WorldCanvas />
       </div>
     </div>
     <StatusBar />
@@ -13,12 +12,10 @@
 </template>
 
 <script setup lang="ts">
-import TopBar from "./TopBar.vue";
-import SideBar from "./SideBar.vue";
-import StatusBar from "./StatusBar.vue";
-import PhysicsPanel from "../panels/PhysicsPanel.vue";
-import RendererPanel from "../panels/RendererPanel.vue";
-import { editorState as state } from "../store/editor";
+import TopBar from './TopBar.vue'
+import SideBars from './SideBars.vue'
+import StatusBar from './StatusBar.vue'
+import WorldCanvas from '../components/WorldCanvas.vue'
 </script>
 
 <style scoped>
@@ -37,7 +34,7 @@ import { editorState as state } from "../store/editor";
 
 .editor-content {
   flex: 1;
-  padding: 16px;
-  background: #2a2a2a;
+  position: relative;
+  display: flex;
 }
 </style>

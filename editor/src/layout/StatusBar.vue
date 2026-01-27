@@ -1,18 +1,18 @@
+<script setup lang="ts">
+import { editorState } from '../store/editor'
+</script>
+
 <template>
   <div class="status-bar">
-    Ready
+    {{ editorState.statusText }}
   </div>
 </template>
-
-<script setup lang="ts">
-// StatusBar placeholder
-</script>
 
 <style scoped>
 .status-bar {
   height: 24px;
   background: #252526;
-  color: #cccccc;
+  color: #ccc;
   display: flex;
   align-items: center;
   padding: 0 10px;
