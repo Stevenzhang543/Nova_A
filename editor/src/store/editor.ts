@@ -1,8 +1,8 @@
-import { reactive } from 'vue'
+import { reactive } from "vue"
 
-export type EditorPage = 'renderer'
+export type EditorPage = "scene" | "render" | "settings"
 
 export const editorState = reactive({
-  showGrid: true,
-  statusText: 'Ready'
+  currentPage: "scene" as EditorPage,
+  statusText: "Ready"
 })

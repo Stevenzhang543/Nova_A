@@ -5,3 +5,5 @@
 <script setup lang="ts">
 import EditorLayout from './layout/EditorLayout.vue'
 </script>
+
+<style></style>

@@ -1,14 +1,9 @@
 <template>
   <div class="panel">
-    <h2>Renderer View</h2>
-    <p>Render output will appear here.</p>
+    <h2>Renderer</h2>
   </div>
 </template>
 
 <style scoped>
-.panel {
-  height: 100%;
-  border: 1px dashed #555;
-  padding: 12px;
-}
+.panel { width:100%; height:100%; display:flex; align-items:center; justify-content:center; color:#ccc; }
 </style>

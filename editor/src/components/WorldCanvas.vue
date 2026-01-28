@@ -1,216 +1,186 @@
 <script setup lang="ts">
-import { ref, reactive, onMounted, watch } from 'vue'
+import { ref, shallowReactive, onMounted, watch } from 'vue'
 import { World } from '../world/World'
 import { Camera } from '../world/Camera'
 import type { Vec2 } from '../world/types'
 
-// ===== Refs =====
-const canvasRef = ref<HTMLCanvasElement>()
-const world = reactive(new World())
-const camera = reactive(new Camera())
+const canvasRef = ref<HTMLCanvasElement | null>(null)
+const ctxRef = ref<CanvasRenderingContext2D | null>(null)
 
-// ===== Drawing state =====
-let dragging = false
-let dragStartWorld: Vec2 | null = null
-let dragCurrentWorld: Vec2 | null = null
-
-// ===== Panning state =====
-let panning = false
-let lastMouse: Vec2 = { x: 0, y: 0 }
-
-// ===== Grid toggle =====
+const world = shallowReactive(new World())
+const camera = shallowReactive(new Camera())
 const showGrid = ref(true)
 
-// ===== Helpers =====
-function getMousePos(e: MouseEvent): Vec2 {
+let isDrawing = false
+let isPanning = false
+let drawStartWorld: Vec2 | null = null
+let drawCurrentWorld: Vec2 | null = null
+let lastMouseScreen: Vec2 | null = null
+
+function resizeCanvas() {
+  const canvas = canvasRef.value!
+  const dpr = window.devicePixelRatio || 1
+  const rect = canvas.getBoundingClientRect()
+  canvas.width = rect.width * dpr
+  canvas.height = rect.height * dpr
+  const ctx = canvas.getContext('2d')!
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+  ctxRef.value = ctx
+  render()
+}
+
+onMounted(() => {
+  resizeCanvas()
+  window.addEventListener('resize', resizeCanvas)
+})
+
+function getMouseScreen(e: MouseEvent): Vec2 {
   const rect = canvasRef.value!.getBoundingClientRect()
   return { x: e.clientX - rect.left, y: e.clientY - rect.top }
 }
 
-// ===== Zoom =====
 function onWheel(e: WheelEvent) {
   e.preventDefault()
-  const mouse = getMousePos(e)
-  const zoomFactor = e.deltaY < 0 ? 1.1 : 0.9
-  zoomAtMouse(mouse, zoomFactor)
-  drawCanvas()
+  camera.zoomAt(getMouseScreen(e), e.deltaY < 0 ? 1.1 : 0.9)
+  render()
 }
 
-// Zoom at mouse
-function zoomAtMouse(mouse: Vec2, factor: number) {
-  const worldBefore = camera.screenToWorld(mouse)
-  camera.scale *= factor
-  camera.scale = Math.min(Math.max(camera.scale, 0.1), 10)
-  const worldAfter = camera.screenToWorld(mouse)
-  camera.offset.x += (worldAfter.x - worldBefore.x) * camera.scale
-  camera.offset.y += (worldAfter.y - worldBefore.y) * camera.scale
-}
-
-// ===== Mouse events =====
 function onMouseDown(e: MouseEvent) {
+  const mouse = getMouseScreen(e)
   if (e.button === 0) {
-    // Left click: draw
-    dragging = true
-    dragStartWorld = camera.screenToWorld(getMousePos(e))
-    dragCurrentWorld = dragStartWorld
-    drawCanvas()
-  } else if (e.button === 2) {
-    // Right click: pan
-    panning = true
-    lastMouse = { x: e.clientX, y: e.clientY }
+    isDrawing = true
+    drawStartWorld = camera.screenToWorld(mouse)
+    drawCurrentWorld = drawStartWorld
+  }
+  if (e.button === 2) {
+    isPanning = true
+    lastMouseScreen = mouse
   }
 }
 
 function onMouseMove(e: MouseEvent) {
-  if (dragging) {
-    dragCurrentWorld = camera.screenToWorld(getMousePos(e))
-    drawCanvas()
-  } else if (panning) {
-    const dx = e.clientX - lastMouse.x
-    const dy = e.clientY - lastMouse.y
-    camera.offset.x += dx
-    camera.offset.y += dy
-    lastMouse = { x: e.clientX, y: e.clientY }
-    drawCanvas()
+  const mouse = getMouseScreen(e)
+  if (isDrawing && drawStartWorld) {
+    drawCurrentWorld = camera.screenToWorld(mouse)
+    render()
+  }
+  if (isPanning && lastMouseScreen) {
+    camera.offset.x += mouse.x - lastMouseScreen.x
+    camera.offset.y += mouse.y - lastMouseScreen.y
+    lastMouseScreen = mouse
+    render()
   }
 }
 
 function onMouseUp(e: MouseEvent) {
-  if (e.button === 0 && dragging) {
-    // Finish drawing box
-    if (!dragStartWorld || !dragCurrentWorld) return
-    const x = Math.min(dragStartWorld.x, dragCurrentWorld.x)
-    const y = Math.min(dragStartWorld.y, dragCurrentWorld.y)
-    const w = Math.abs(dragStartWorld.x - dragCurrentWorld.x)
-    const h = Math.abs(dragStartWorld.y - dragCurrentWorld.y)
+  if (e.button === 0 && isDrawing && drawStartWorld && drawCurrentWorld) {
+    const x = Math.min(drawStartWorld.x, drawCurrentWorld.x)
+    const y = Math.min(drawStartWorld.y, drawCurrentWorld.y)
+    const w = Math.abs(drawStartWorld.x - drawCurrentWorld.x)
+    const h = Math.abs(drawStartWorld.y - drawCurrentWorld.y)
     if (w > 0.01 && h > 0.01) world.addBox({ x, y }, { x: w, y: h })
-    dragging = false
-    dragStartWorld = null
-    dragCurrentWorld = null
-    drawCanvas()
-  } else if (e.button === 2 && panning) {
-    panning = false
+    isDrawing = false
+    drawStartWorld = null
+    drawCurrentWorld = null
+    render()
+  }
+  if (e.button === 2) {
+    isPanning = false
+    lastMouseScreen = null
   }
 }
 
-// ===== Draw everything =====
-function drawCanvas() {
-  if (!canvasRef.value) return
-  const ctx = canvasRef.value.getContext('2d')
-  if (!ctx) return
+function onContextMenu(e: MouseEvent) { e.preventDefault() }
 
+function render() {
+  const ctx = ctxRef.value
   const canvas = canvasRef.value
+  if (!ctx || !canvas) return
+
   ctx.clearRect(0, 0, canvas.width, canvas.height)
+  ctx.save()
+  ctx.translate(camera.offset.x, camera.offset.y)
+  ctx.scale(camera.scale, camera.scale)
 
-  // ===== Grid =====
-  if (showGrid.value) {
-    ctx.save()
-    ctx.translate(camera.offset.x, camera.offset.y)
-    ctx.scale(camera.scale, camera.scale)
-    const step = 50
-    ctx.strokeStyle = 'rgba(100,100,100,0.3)'
-    ctx.lineWidth = 0.5 / camera.scale
+  if (showGrid.value) drawGrid(ctx)
+  drawBoxes(ctx)
+  drawPreview(ctx)
 
-    const startX = -camera.offset.x / camera.scale - step * 2
-    const startY = -camera.offset.y / camera.scale - step * 2
-    const width = canvas.width / camera.scale + step * 4
-    const height = canvas.height / camera.scale + step * 4
+  ctx.restore()
+}
 
-    for (let x = Math.floor(startX / step) * step; x < startX + width; x += step) {
-      ctx.beginPath()
-      ctx.moveTo(x, startY)
-      ctx.lineTo(x, startY + height)
-      ctx.stroke()
-    }
-    for (let y = Math.floor(startY / step) * step; y < startY + height; y += step) {
-      ctx.beginPath()
-      ctx.moveTo(startX, y)
-      ctx.lineTo(startX + width, y)
-      ctx.stroke()
-    }
-    ctx.restore()
+function drawGrid(ctx: CanvasRenderingContext2D) {
+  const step = 50
+  const w = canvasRef.value!.width / camera.scale
+  const h = canvasRef.value!.height / camera.scale
+  const startX = Math.floor(-camera.offset.x / camera.scale / step) * step - step
+  const startY = Math.floor(-camera.offset.y / camera.scale / step) * step - step
+
+  ctx.strokeStyle = 'rgba(120,120,120,0.3)'
+  ctx.lineWidth = 1 / camera.scale
+
+  for (let x = startX; x < startX + w + step*2; x += step) {
+    ctx.beginPath()
+    ctx.moveTo(x, startY)
+    ctx.lineTo(x, startY + h + step*2)
+    ctx.stroke()
   }
-
-  // ===== Boxes =====
-  world.boxes.forEach(box => {
-    const pos = camera.worldToScreen(box.pos)
-    ctx.fillStyle = 'rgba(0,180,255,0.5)'
-    ctx.fillRect(pos.x, pos.y, box.size.x * camera.scale, box.size.y * camera.scale)
-    ctx.strokeStyle = '#4cc9ff'
-    ctx.strokeRect(pos.x, pos.y, box.size.x * camera.scale, box.size.y * camera.scale)
-  })
-
-  // ===== Drag preview =====
-  if (dragging && dragStartWorld && dragCurrentWorld) {
-    const x = Math.min(dragStartWorld.x, dragCurrentWorld.x)
-    const y = Math.min(dragStartWorld.y, dragCurrentWorld.y)
-    const w = Math.abs(dragStartWorld.x - dragCurrentWorld.x)
-    const h = Math.abs(dragStartWorld.y - dragCurrentWorld.y)
-    const pos = camera.worldToScreen({ x, y })
-
-    ctx.fillStyle = 'rgba(255,255,255,0.2)'
-    ctx.fillRect(pos.x, pos.y, w * camera.scale, h * camera.scale)
-    ctx.strokeStyle = 'white'
-    ctx.setLineDash([4, 4])
-    ctx.strokeRect(pos.x, pos.y, w * camera.scale, h * camera.scale)
-    ctx.setLineDash([])
+  for (let y = startY; y < startY + h + step*2; y += step) {
+    ctx.beginPath()
+    ctx.moveTo(startX, y)
+    ctx.lineTo(startX + w + step*2, y)
+    ctx.stroke()
   }
 }
 
-// ===== Mounted =====
-onMounted(() => {
-  if (!canvasRef.value) return
-  const canvas = canvasRef.value
-  canvas.width = canvas.clientWidth
-  canvas.height = canvas.clientHeight
+function drawBoxes(ctx: CanvasRenderingContext2D) {
+  for (const box of world.boxes) {
+    ctx.fillStyle = 'rgba(0,180,255,0.5)'
+    ctx.strokeStyle = '#4cc9ff'
+    ctx.lineWidth = 1 / camera.scale
+    ctx.fillRect(box.pos.x, box.pos.y, box.size.x, box.size.y)
+    ctx.strokeRect(box.pos.x, box.pos.y, box.size.x, box.size.y)
+  }
+}
 
-  // disable right-click menu
-  canvas.addEventListener('contextmenu', e => e.preventDefault())
+function drawPreview(ctx: CanvasRenderingContext2D) {
+  if (!drawStartWorld || !drawCurrentWorld) return
+  const x = Math.min(drawStartWorld.x, drawCurrentWorld.x)
+  const y = Math.min(drawStartWorld.y, drawCurrentWorld.y)
+  const w = Math.abs(drawStartWorld.x - drawCurrentWorld.x)
+  const h = Math.abs(drawStartWorld.y - drawCurrentWorld.y)
+  ctx.setLineDash([6 / camera.scale])
+  ctx.fillStyle = 'rgba(255,255,255,0.15)'
+  ctx.strokeStyle = '#fff'
+  ctx.lineWidth = 1 / camera.scale
+  ctx.fillRect(x, y, w, h)
+  ctx.strokeRect(x, y, w, h)
+  ctx.setLineDash([])
+}
 
-  drawCanvas()
-})
-
-// ===== Watch =====
-watch(() => camera.scale, drawCanvas)
-watch(() => [camera.offset.x, camera.offset.y], drawCanvas)
-watch(showGrid, drawCanvas) // <-- FIX: watch grid toggle
+watch(showGrid, render)
 </script>
 
 <template>
-  <canvas
-    ref="canvasRef"
-    class="world-canvas"
-    @mousedown="onMouseDown"
-    @mousemove="onMouseMove"
-    @mouseup="onMouseUp"
-    @mouseleave="onMouseUp"
-    @wheel="onWheel"
-  />
-  <button class="grid-toggle" @click="showGrid = !showGrid">
-    {{ showGrid ? 'Hide' : 'Show' }} Grid
-  </button>
+  <div class="scene-root">
+    <canvas
+      ref="canvasRef"
+      class="world-canvas"
+      @wheel="onWheel"
+      @mousedown="onMouseDown"
+      @mousemove="onMouseMove"
+      @mouseup="onMouseUp"
+      @contextmenu="onContextMenu"
+    ></canvas>
+
+    <button class="grid-toggle" @click="showGrid = !showGrid">
+      {{ showGrid ? 'Hide' : 'Show' }} Grid
+    </button>
+  </div>
 </template>
 
 <style scoped>
-.world-canvas {
-  width: 100%;
-  height: 100%;
-  position: absolute;
-  top: 0;
-  left: 0;
-  background: #1e1e1e;
-  display: block;
-}
-
-.grid-toggle {
-  position: absolute;
-  top: 12px;
-  right: 12px;
-  z-index: 10;
-  padding: 6px 10px;
-  background: #252526;
-  color: white;
-  border: none;
-  cursor: pointer;
-}
+.scene-root { position: relative; width: 100%; height: 100%; }
+.world-canvas { width: 100%; height: 100%; display: block; background: #1e1e1e; }
+.grid-toggle { position: absolute; top: 12px; right: 12px; z-index: 10; }
 </style>
