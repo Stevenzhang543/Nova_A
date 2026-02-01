@@ -2,7 +2,6 @@
 import { reactive, markRaw } from 'vue'
 import { World } from '../world/World'
 import { Camera } from '../world/Camera'
-import type { Entity } from '../world/Entity'
 
 interface PhysicsState {
   world: World
