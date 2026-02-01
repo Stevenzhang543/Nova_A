@@ -1,31 +1,23 @@
-import { reactive } from "vue";
+// Nova_A/editor/src/store/physics.ts
+import { reactive, markRaw } from 'vue'
+import { World } from '../world/World'
+import { Camera } from '../world/Camera'
+import type { Entity } from '../world/Entity'
 
-export interface Vec2 {
-  x: number;
-  y: number;
+interface PhysicsState {
+  world: World
+  camera: Camera
+  selectedEntityId: number | null
+  activeTool: 'rectangle' | 'circle' | 'triangle'
 }
 
-export interface RigidBody {
-  id: number;
-  position: Vec2;
-  width: number;
-  height: number;
-  color: string;
-}
+export const physicsState = reactive<PhysicsState>({
+  world: markRaw(new World()),
+  camera: markRaw(new Camera()),
+  selectedEntityId: null,
+  activeTool: 'rectangle'
+})
 
-export interface World {
-  gravity: Vec2;
-  bodies: RigidBody[];
-  scale: number;
-  offset: Vec2;
+export function selectEntity(id: number | null) {
+  physicsState.selectedEntityId = id
 }
-
-export const physicsState = reactive<World>({
-  gravity: { x: 0, y: 9.8 },
-  bodies: [
-    { id: 1, position: { x: 100, y: 100 }, width: 50, height: 50, color: '#f00' },
-    { id: 2, position: { x: 200, y: 150 }, width: 60, height: 60, color: '#0f0' }
-  ],
-  scale: 1,
-  offset: { x: 0, y: 0 }
-});

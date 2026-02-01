@@ -12,6 +12,7 @@ import { editorState as state } from "../store/editor"
 <style scoped>
 .status-bar {
   height: 24px;
+  min-height: 24px;
   background: #252526;
   color: #cccccc;
   display: flex;
@@ -20,7 +21,9 @@ import { editorState as state } from "../store/editor"
   padding: 0 10px;
   font-size: 12px;
   border-top: 1px solid #2a2a2a;
+  flex-shrink: 0;
 }
+
 
 .tag {
   opacity: 0.6;

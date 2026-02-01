@@ -53,7 +53,9 @@ function switchPage(page: "scene" | "render" | "settings") {
   flex-direction: column;
   justify-content: space-between;
   border-right: 1px solid #2a2a2a;
+  min-height: 0;
 }
+
 
 .top,
 .bottom {
