@@ -1,6 +1,7 @@
+// Nova_A/editor/src/world/Entity.ts
 import { Transform } from './Transform'
 
-export class Entity {
+export abstract class Entity {
   readonly id: number
   name: string
   transform = new Transform()

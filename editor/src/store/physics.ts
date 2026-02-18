@@ -10,9 +10,20 @@ interface PhysicsState {
   activeTool: 'rectangle' | 'circle' | 'triangle'
 }
 
+// 1. Create the engine instances
+const rawWorld = new World()
+const rawCamera = new Camera()
+
+// 2. CRITICAL FIX: Make the entities array reactive, but keep the logic raw.
+// We replace the native array in World with a Vue reactive array.
+// This allows the SceneSideBar to update automatically when entities are added.
+rawWorld.entities = reactive([]) 
+
 export const physicsState = reactive<PhysicsState>({
-  world: markRaw(new World()),
-  camera: markRaw(new Camera()),
+  // We still mark the class instances as raw to prevent Vue from proxying 
+  // complex methods/calculations, which saves performance.
+  world: markRaw(rawWorld),
+  camera: markRaw(rawCamera),
   selectedEntityId: null,
   activeTool: 'rectangle'
 })
