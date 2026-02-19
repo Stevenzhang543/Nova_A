@@ -6,10 +6,10 @@ export class CircleEntity extends Entity {
   radiusX: number
   radiusY: number
 
-  constructor(id: number, pos: Vec2, radiusX: number, radiusY: number) {
+  constructor(id: number, pos: Vec2, rx: number, ry?: number) {
     super(id, 'Circle')
     this.transform.position = { ...pos }
-    this.radiusX = radiusX
-    this.radiusY = radiusY
+    this.radiusX = rx
+    this.radiusY = ry ?? rx
   }
 }

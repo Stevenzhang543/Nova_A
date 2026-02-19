@@ -8,11 +8,10 @@
 
 
 > **Nova_A is a fully open-source 2D physics engine, renderer, and GUI editor project built from scratch using Rust + Vue 3.**  
-> Version: **0.5.0** — Initialize editor panel.
+> Version: **0.6.0** — Initialize editor panel.
 
-## What’s new in v0.5.0
+## What’s new in v0.6.0
 
-Huge update 0.5!
-In this version, I have added the drawing of rectangles, triangles and circles.
-Meanwhile, there's a new bar for changing the shapes and listing the shapes.
-Additionally, the shapes could move. I haven't added reshaping though...
+Huge update 0.6!
+In this version, I have added the resizing of all shapes, together with zooming.
+Meanwhile, bug fixes.

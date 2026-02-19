@@ -18,6 +18,7 @@ const showGrid = ref(true)
 let isDragging = false
 let isPanning = false
 let isVertexDragging = false
+let dragButton = 0 // Track which button: 0 for Left, 2 for Right
 
 let dragStart: Vec2 | null = null
 let dragNow: Vec2 | null = null
@@ -27,10 +28,14 @@ let raf = 0
 // Vertex Manipulation State
 let hoveredVertex: { entityId: number, index: number, virtualPos?: Vec2 } | null = null
 
-// Specialized drag state for circles to maintain relative ratios
-let circleDragInfo: { 
+// Specialized drag state for relative ratios and proportional scaling
+let dragMeta: { 
+  initialRx?: number, 
+  initialRy?: number,
+  initialVertices?: Vec2[],
   ratioX: number, 
-  ratioY: number 
+  ratioY: number,
+  initialDist?: number
 } | null = null
 
 /* ---------------- CORE ---------------- */
@@ -81,53 +86,70 @@ function onWheel(e: WheelEvent) {
 function onMouseDown(e: MouseEvent) {
   const sPos = screenPos(e)
   const wPos = camera.screenToWorld(sPos)
+  dragButton = e.button
 
-  if (e.button === 1 || e.button === 2) {
+  // 1. Prioritize Hover Check for Vertices
+  checkHoverVertex(wPos) 
+
+  // Middle click ALWAYS pans. Right click pans ONLY IF no vertex is hovered.
+  if (e.button === 1 || (e.button === 2 && !hoveredVertex)) {
     isPanning = true
     lastMouseScreen = sPos
     return
   }
 
-  if (e.button === 0) {
-    // 1. Check Vertex Hit
-    checkHoverVertex(wPos) 
+  // Left or Right Click on a Vertex, or Left Click to select/create
+  if (e.button === 0 || e.button === 2) {
+    
+    // Hit a Vertex? Start Reshaping/Scaling
     if (hoveredVertex) {
       selectEntity(hoveredVertex.entityId)
       isVertexDragging = true
       dragStart = wPos
       
-      // Initialize Circle Drag Math
       const ent = world.entities.find(e => e.id === hoveredVertex!.entityId)
-      if (ent instanceof CircleEntity) {
-        // Calculate the ratio of the click position relative to the radius.
-        // e.g. if I clicked at x=50 and radius is 100, ratio is 0.5.
-        // We lock this ratio so dragging to x=200 sets radius to 400.
-        const dx = wPos.x - ent.transform.position.x
-        const dy = wPos.y - ent.transform.position.y
-        
-        // Handle nearly-zero cases to prevent division by zero or infinite sensitivity
-        const rx = ent.radiusX < 1 ? 1 : ent.radiusX
-        const ry = ent.radiusY < 1 ? 1 : ent.radiusY
-        
-        circleDragInfo = {
-          ratioX: dx / rx,
-          ratioY: dy / ry
+      if (ent) {
+        if (ent instanceof CircleEntity) {
+          const dx = wPos.x - ent.transform.position.x
+          const dy = wPos.y - ent.transform.position.y
+          const rx = Math.max(0.1, ent.radiusX)
+          const ry = Math.max(0.1, ent.radiusY)
+          
+          dragMeta = {
+            initialRx: ent.radiusX,
+            initialRy: ent.radiusY,
+            ratioX: dx / rx,
+            ratioY: dy / ry,
+            initialDist: Math.sqrt(dx*dx + dy*dy)
+          }
+        } 
+        else if (ent instanceof BoxEntity || ent instanceof TriangleEntity) {
+          const v = ent.vertices[hoveredVertex.index]
+          dragMeta = {
+            // Deep copy vertices for proportional scaling
+            initialVertices: ent.vertices.map(vert => ({ ...vert })),
+            ratioX: v.x,
+            ratioY: v.y,
+            initialDist: Math.sqrt(v.x*v.x + v.y*v.y)
+          }
         }
       }
       return
     }
 
-    // 2. Check Entity Hit
-    const hitId = hitTest(wPos)
-    if (hitId !== null) {
-      selectEntity(hitId)
-      isDragging = true
-      dragStart = wPos
-    } else {
-      selectEntity(null)
-      isDragging = true 
-      dragStart = wPos
-      dragNow = wPos
+    // Hit Entity or Empty Space (Left Click Only)
+    if (e.button === 0) {
+      const hitId = hitTest(wPos)
+      if (hitId !== null) {
+        selectEntity(hitId)
+        isDragging = true
+        dragStart = wPos
+      } else {
+        selectEntity(null)
+        isDragging = true 
+        dragStart = wPos
+        dragNow = wPos
+      }
     }
   }
 }
@@ -149,36 +171,47 @@ function onMouseMove(e: MouseEvent) {
   }
 
   // Vertex Dragging
-  if (isVertexDragging && hoveredVertex) {
+  if (isVertexDragging && hoveredVertex && dragMeta) {
     const ent = world.entities.find(e => e.id === hoveredVertex!.entityId)
-    if (ent) {
-      if (ent instanceof BoxEntity || ent instanceof TriangleEntity) {
-        // Standard Vertex Drag
+    if (!ent) return
+
+    const dx = wPos.x - ent.transform.position.x
+    const dy = wPos.y - ent.transform.position.y
+
+    if (dragButton === 2) {
+      // --- RIGHT CLICK: Proportional Scaling ---
+      const distNow = Math.sqrt(dx*dx + dy*dy)
+      const scale = distNow / Math.max(0.1, dragMeta.initialDist || 1)
+
+      if (ent instanceof CircleEntity && dragMeta.initialRx !== undefined && dragMeta.initialRy !== undefined) {
+        ent.radiusX = Math.max(5, dragMeta.initialRx * scale)
+        ent.radiusY = Math.max(5, dragMeta.initialRy * scale)
+      } 
+      else if ((ent instanceof BoxEntity || ent instanceof TriangleEntity) && dragMeta.initialVertices) {
+        // Scale all vertices relative to their center
+        for (let i = 0; i < ent.vertices.length; i++) {
+          ent.vertices[i].x = dragMeta.initialVertices[i].x * scale
+          ent.vertices[i].y = dragMeta.initialVertices[i].y * scale
+        }
+      }
+    } 
+    else {
+      // --- LEFT CLICK: Standard Stretch/Squeeze ---
+      if (ent instanceof CircleEntity) {
+        const axisThreshold = 0.2
+        if (Math.abs(dragMeta.ratioX) > axisThreshold) {
+          ent.radiusX = Math.max(5, Math.abs(dx / dragMeta.ratioX))
+        }
+        if (Math.abs(dragMeta.ratioY) > axisThreshold) {
+          ent.radiusY = Math.max(5, Math.abs(dy / dragMeta.ratioY))
+        }
+      } 
+      else if (ent instanceof BoxEntity || ent instanceof TriangleEntity) {
         const v = ent.vertices[hoveredVertex.index]
         if (dragStart) {
           v.x += wPos.x - dragStart.x
           v.y += wPos.y - dragStart.y
           dragStart = wPos
-        }
-      } 
-      else if (ent instanceof CircleEntity && circleDragInfo) {
-        // FIX 2: Stable Ellipse Resizing
-        const dx = wPos.x - ent.transform.position.x
-        const dy = wPos.y - ent.transform.position.y
-        
-        // Only resize the axis if the user originally grabbed that axis (ratio > threshold).
-        // If I grabbed the Top (ratioX ~ 0), dragging sideways shouldn't snap radiusX to infinity.
-        const axisThreshold = 0.15 
-
-        if (Math.abs(circleDragInfo.ratioX) > axisThreshold) {
-          // New Radius = Current Mouse Dist / Original Ratio
-          const newRx = Math.abs(dx / circleDragInfo.ratioX)
-          ent.radiusX = Math.max(5, newRx) // Clamp to min size
-        }
-
-        if (Math.abs(circleDragInfo.ratioY) > axisThreshold) {
-          const newRy = Math.abs(dy / circleDragInfo.ratioY)
-          ent.radiusY = Math.max(5, newRy)
         }
       }
     }
@@ -215,7 +248,7 @@ function onMouseUp() {
   }
   isDragging = isPanning = isVertexDragging = false
   dragStart = dragNow = lastMouseScreen = null
-  circleDragInfo = null
+  dragMeta = null
 }
 
 /* ---------------- HELPER: Vertex Detection ---------------- */
@@ -229,7 +262,7 @@ function checkHoverVertex(p: Vec2) {
   const ent = world.entities.find(e => e.id === state.selectedEntityId)
   if (!ent) return
 
-  const threshold = 12 / camera.scale // Slightly larger threshold for ease of use
+  const threshold = 12 / camera.scale 
   
   if (ent instanceof BoxEntity || ent instanceof TriangleEntity) {
     let minDist = threshold
@@ -253,33 +286,36 @@ function checkHoverVertex(p: Vec2) {
     }
   } 
   else if (ent instanceof CircleEntity) {
-    // FIX 2.3 & 2.4: Robust Radial Detection
     const dx = p.x - ent.transform.position.x
     const dy = p.y - ent.transform.position.y
     
-    // Safety check for degenerate circles
     if (ent.radiusX < 1 || ent.radiusY < 1) return
 
-    const angle = Math.atan2(dy, dx)
-    
-    // Project angle onto ellipse surface
-    const ex = Math.cos(angle) * ent.radiusX
-    const ey = Math.sin(angle) * ent.radiusY
-    
-    // World space vertex position
-    const wx = ent.transform.position.x + ex
-    const wy = ent.transform.position.y + ey
-    
-    const dist = Math.sqrt((p.x - wx)**2 + (p.y - wy)**2)
-    
-    if (dist < threshold) {
-      hoveredVertex = { 
-        entityId: ent.id, 
-        index: -1, 
-        virtualPos: { x: ex, y: ey } 
+    // FIX 1: Normalized Projection
+    // This perfectly calculates the nearest edge of the ellipse regardless of how stretched it is
+    const nx = dx / ent.radiusX
+    const ny = dy / ent.radiusY
+    const mag = Math.sqrt(nx * nx + ny * ny)
+
+    if (mag > 0) {
+      // Find the actual point on the ellipse
+      const ex = (nx / mag) * ent.radiusX
+      const ey = (ny / mag) * ent.radiusY
+      
+      const wx = ent.transform.position.x + ex
+      const wy = ent.transform.position.y + ey
+      
+      const dist = Math.sqrt((p.x - wx)**2 + (p.y - wy)**2)
+      
+      if (dist < threshold) {
+        hoveredVertex = { 
+          entityId: ent.id, 
+          index: -1, 
+          virtualPos: { x: ex, y: ey } 
+        }
+        document.body.style.cursor = 'crosshair'
+        return
       }
-      document.body.style.cursor = 'crosshair'
-      return
     }
   }
 
@@ -375,7 +411,6 @@ function render() {
     ctx.stroke()
 
     // Render Vertex Highlight
-    // FIX 1: Hide red dot when dragging
     if (isSelected && !isVertexDragging && !isDragging && hoveredVertex && hoveredVertex.entityId === e.id) {
       let vx = 0, vy = 0
       
