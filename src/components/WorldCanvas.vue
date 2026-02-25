@@ -24,6 +24,7 @@ let dragStart: Vec2 | null = null
 let dragNow: Vec2 | null = null
 let lastMouseScreen: Vec2 | null = null
 let raf = 0
+let lastTime = performance.now() // OPTIMIZATION: Track real time
 
 // Vertex Manipulation State
 let hoveredVertex: { entityId: number, index: number, virtualPos?: Vec2 } | null = null
@@ -46,12 +47,21 @@ function resize() {
   const r = canvas.getBoundingClientRect()
   canvas.width = r.width * dpr
   canvas.height = r.height * dpr
-  ctx = canvas.getContext('2d', { alpha: false })!
+  
+  // OPTIMIZATION: Only fetch context if it doesn't exist
+  if (!ctx) ctx = canvas.getContext('2d', { alpha: false })!
+  
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
 }
 
-function loop() {
-  world.update(1 / 60)
+function loop(time?: number) {
+  // OPTIMIZATION: Dynamic Delta Time (dt)
+  const now = time || performance.now()
+  const dt = (now - lastTime) / 1000
+  lastTime = now
+  
+  // Cap dt at 0.1s to prevent huge physics jumps if the user tabs out
+  world.update(Math.min(dt, 0.1)) 
   render()
   raf = requestAnimationFrame(loop)
 }
@@ -63,6 +73,7 @@ onMounted(() => {
     camera.offset.x = r.width / 2
     camera.offset.y = r.height / 2
   }
+  lastTime = performance.now()
   loop()
   window.addEventListener('resize', resize)
 })
@@ -88,20 +99,15 @@ function onMouseDown(e: MouseEvent) {
   const wPos = camera.screenToWorld(sPos)
   dragButton = e.button
 
-  // 1. Prioritize Hover Check for Vertices
   checkHoverVertex(wPos) 
 
-  // Middle click ALWAYS pans. Right click pans ONLY IF no vertex is hovered.
   if (e.button === 1 || (e.button === 2 && !hoveredVertex)) {
     isPanning = true
     lastMouseScreen = sPos
     return
   }
 
-  // Left or Right Click on a Vertex, or Left Click to select/create
   if (e.button === 0 || e.button === 2) {
-    
-    // Hit a Vertex? Start Reshaping/Scaling
     if (hoveredVertex) {
       selectEntity(hoveredVertex.entityId)
       isVertexDragging = true
@@ -126,7 +132,6 @@ function onMouseDown(e: MouseEvent) {
         else if (ent instanceof BoxEntity || ent instanceof TriangleEntity) {
           const v = ent.vertices[hoveredVertex.index]
           dragMeta = {
-            // Deep copy vertices for proportional scaling
             initialVertices: ent.vertices.map(vert => ({ ...vert })),
             ratioX: v.x,
             ratioY: v.y,
@@ -137,7 +142,6 @@ function onMouseDown(e: MouseEvent) {
       return
     }
 
-    // Hit Entity or Empty Space (Left Click Only)
     if (e.button === 0) {
       const hitId = hitTest(wPos)
       if (hitId !== null) {
@@ -165,12 +169,10 @@ function onMouseMove(e: MouseEvent) {
     return
   }
 
-  // Update hover only if not dragging
   if (!isDragging && !isVertexDragging) {
     checkHoverVertex(wPos)
   }
 
-  // Vertex Dragging
   if (isVertexDragging && hoveredVertex && dragMeta) {
     const ent = world.entities.find(e => e.id === hoveredVertex!.entityId)
     if (!ent) return
@@ -179,7 +181,6 @@ function onMouseMove(e: MouseEvent) {
     const dy = wPos.y - ent.transform.position.y
 
     if (dragButton === 2) {
-      // --- RIGHT CLICK: Proportional Scaling ---
       const distNow = Math.sqrt(dx*dx + dy*dy)
       const scale = distNow / Math.max(0.1, dragMeta.initialDist || 1)
 
@@ -188,7 +189,6 @@ function onMouseMove(e: MouseEvent) {
         ent.radiusY = Math.max(5, dragMeta.initialRy * scale)
       } 
       else if ((ent instanceof BoxEntity || ent instanceof TriangleEntity) && dragMeta.initialVertices) {
-        // Scale all vertices relative to their center
         for (let i = 0; i < ent.vertices.length; i++) {
           ent.vertices[i].x = dragMeta.initialVertices[i].x * scale
           ent.vertices[i].y = dragMeta.initialVertices[i].y * scale
@@ -196,7 +196,6 @@ function onMouseMove(e: MouseEvent) {
       }
     } 
     else {
-      // --- LEFT CLICK: Standard Stretch/Squeeze ---
       if (ent instanceof CircleEntity) {
         const axisThreshold = 0.2
         if (Math.abs(dragMeta.ratioX) > axisThreshold) {
@@ -218,7 +217,6 @@ function onMouseMove(e: MouseEvent) {
     return
   }
 
-  // Entity Dragging
   if (isDragging && dragStart) {
     if (state.selectedEntityId) {
       const entity = world.entities.find(ent => ent.id === state.selectedEntityId)
@@ -291,14 +289,11 @@ function checkHoverVertex(p: Vec2) {
     
     if (ent.radiusX < 1 || ent.radiusY < 1) return
 
-    // FIX 1: Normalized Projection
-    // This perfectly calculates the nearest edge of the ellipse regardless of how stretched it is
     const nx = dx / ent.radiusX
     const ny = dy / ent.radiusY
     const mag = Math.sqrt(nx * nx + ny * ny)
 
     if (mag > 0) {
-      // Find the actual point on the ellipse
       const ex = (nx / mag) * ent.radiusX
       const ey = (ny / mag) * ent.radiusY
       
@@ -330,6 +325,20 @@ function hitTest(p: Vec2): number | null {
     const pos = e.transform.position
 
     if (e instanceof BoxEntity || e instanceof TriangleEntity) {
+      // OPTIMIZATION: AABB Pre-check
+      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity
+      for (const v of e.vertices) {
+        if (v.x < minX) minX = v.x
+        if (v.y < minY) minY = v.y
+        if (v.x > maxX) maxX = v.x
+        if (v.y > maxY) maxY = v.y
+      }
+      // Skip if mouse is outside the bounding box
+      if (p.x < pos.x + minX || p.x > pos.x + maxX || p.y < pos.y + minY || p.y > pos.y + maxY) {
+        continue 
+      }
+
+      // Complex Polygon Check
       let inside = false
       const vs = e.vertices
       for (let j = 0, k = vs.length - 1; j < vs.length; k = j++) {
@@ -341,6 +350,11 @@ function hitTest(p: Vec2): number | null {
       if (inside) return e.id
     } 
     else if (e instanceof CircleEntity) {
+      // OPTIMIZATION: AABB Pre-check for circles/ellipses
+      if (p.x < pos.x - e.radiusX || p.x > pos.x + e.radiusX || p.y < pos.y - e.radiusY || p.y > pos.y + e.radiusY) {
+        continue 
+      }
+
       const dx = p.x - pos.x
       const dy = p.y - pos.y
       if (e.radiusX > 0 && e.radiusY > 0) {
@@ -424,7 +438,7 @@ function render() {
       }
       
       ctx.beginPath()
-      ctx.fillStyle = '#ff4500' // OrangeRed
+      ctx.fillStyle = '#ff4500' 
       ctx.arc(vx, vy, 6 / camera.scale, 0, Math.PI * 2)
       ctx.fill()
     }
