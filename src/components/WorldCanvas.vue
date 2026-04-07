@@ -5,6 +5,7 @@ import { BoxEntity } from '../world/BoxEntity'
 import { CircleEntity } from '../world/CircleEntity'
 import { TriangleEntity } from '../world/TriangleEntity'
 import type { Vec2 } from '../world/types'
+import { editorState } from '../store/editor'
 
 const canvasRef = ref<HTMLCanvasElement | null>(null)
 let ctx: CanvasRenderingContext2D | null = null
@@ -12,7 +13,6 @@ let ctx: CanvasRenderingContext2D | null = null
 const state = physicsState
 const world = physicsState.world
 const camera = physicsState.camera
-const showGrid = ref(true)
 
 // Interaction State
 let isDragging = false
@@ -25,6 +25,7 @@ let dragNow: Vec2 | null = null
 let lastMouseScreen: Vec2 | null = null
 let raf = 0
 let lastTime = performance.now() // OPTIMIZATION: Track real time
+let resizeObserver: ResizeObserver | null = null // NEW: For detecting panel resize
 
 // Vertex Manipulation State
 let hoveredVertex: { entityId: number, index: number, virtualPos?: Vec2 } | null = null
@@ -45,13 +46,28 @@ function resize() {
   if (!canvas) return
   const dpr = window.devicePixelRatio || 1
   const r = canvas.getBoundingClientRect()
+  
+  // Keep track of old dimensions to keep camera dynamically centered
+  const oldWidth = canvas.width / dpr
+  const oldHeight = canvas.height / dpr
+
   canvas.width = r.width * dpr
   canvas.height = r.height * dpr
+  
+  // Shift the camera offset by half the size difference so the grid stays centered
+  if (oldWidth > 0 && oldHeight > 0 && (oldWidth !== r.width || oldHeight !== r.height)) {
+    camera.offset.x += (r.width - oldWidth) / 2
+    camera.offset.y += (r.height - oldHeight) / 2
+  }
   
   // OPTIMIZATION: Only fetch context if it doesn't exist
   if (!ctx) ctx = canvas.getContext('2d', { alpha: false })!
   
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+  
+  // NEW: Force an immediate render in the exact same synchronous execution block!
+  // This completely eliminates blinking and black frames when the browser clears the buffer.
+  render()
 }
 
 function loop(time?: number) {
@@ -72,10 +88,22 @@ onMounted(() => {
     const r = canvasRef.value.getBoundingClientRect()
     camera.offset.x = r.width / 2
     camera.offset.y = r.height / 2
+    
+    // NEW: Setup ResizeObserver to catch flexbox changes when the sidebar drags
+    resizeObserver = new ResizeObserver(() => {
+      resize()
+    })
+    resizeObserver.observe(canvasRef.value.parentElement!)
   }
   lastTime = performance.now()
   loop()
   window.addEventListener('resize', resize)
+})
+
+onBeforeUnmount(() => {
+  cancelAnimationFrame(raf)
+  window.removeEventListener('resize', resize)
+  if (resizeObserver) resizeObserver.disconnect() // NEW: Cleanup observer
 })
 
 onBeforeUnmount(() => {
@@ -385,7 +413,7 @@ function render() {
   const viewB = viewT + height / camera.scale
 
   // Grid
-  if (showGrid.value) {
+  if (editorState.showGrid) {
     ctx.beginPath(); ctx.strokeStyle = '#2a2a2a'; ctx.lineWidth = 1 / camera.scale
     const step = 50
     const startX = Math.floor(viewL / step) * step
@@ -403,6 +431,32 @@ function render() {
     const pos = e.transform.position
     const isSelected = e.id === state.selectedEntityId
     
+    // --- NEW: VIEWPORT CULLING OPTIMIZATION ---
+    // Calculate bounding box for the entity to check if it's on screen
+    let eMinX = pos.x, eMinY = pos.y, eMaxX = pos.x, eMaxY = pos.y;
+    
+    if (e instanceof BoxEntity || e instanceof TriangleEntity) {
+      if (e.vertices.length > 0) {
+        eMinX = pos.x + e.vertices[0].x; eMaxX = eMinX;
+        eMinY = pos.y + e.vertices[0].y; eMaxY = eMinY;
+        for (let i = 1; i < e.vertices.length; i++) {
+          const vx = pos.x + e.vertices[i].x;
+          const vy = pos.y + e.vertices[i].y;
+          if (vx < eMinX) eMinX = vx; if (vx > eMaxX) eMaxX = vx;
+          if (vy < eMinY) eMinY = vy; if (vy > eMaxY) eMaxY = vy;
+        }
+      }
+    } else if (e instanceof CircleEntity) {
+      eMinX = pos.x - e.radiusX; eMaxX = pos.x + e.radiusX;
+      eMinY = pos.y - e.radiusY; eMaxY = pos.y + e.radiusY;
+    }
+
+    // If the entity's bounding box is completely outside the camera view, skip rendering it!
+    if (eMaxX < viewL || eMinX > viewR || eMaxY < viewT || eMinY > viewB) {
+      continue; 
+    }
+    // --- END VIEWPORT CULLING ---
+
     ctx.lineWidth = isSelected ? lwSelected : lwNormal
     ctx.fillStyle = isSelected ? 'rgba(255, 200, 0, 0.3)' : 'rgba(0, 180, 255, 0.4)'
     ctx.strokeStyle = isSelected ? '#ffee00' : '#4cc9ff'
@@ -418,13 +472,16 @@ function render() {
       }
     } 
     else if (e instanceof CircleEntity) {
-      ctx.ellipse(pos.x, pos.y, e.radiusX, e.radiusY, 0, 0, Math.PI * 2)
+      // FIX: Prevent IndexSizeError crash if radius somehow hits 0 or negative during math rounding
+      const safeRx = Math.max(0.1, e.radiusX)
+      const safeRy = Math.max(0.1, e.radiusY)
+      ctx.ellipse(pos.x, pos.y, safeRx, safeRy, 0, 0, Math.PI * 2)
     }
     
     ctx.fill()
     ctx.stroke()
 
-    // Render Vertex Highlight
+    // Render Vertex Highlight (Logic remains identical)
     if (isSelected && !isVertexDragging && !isDragging && hoveredVertex && hoveredVertex.entityId === e.id) {
       let vx = 0, vy = 0
       
@@ -443,6 +500,7 @@ function render() {
       ctx.fill()
     }
   }
+    ctx.stroke()
 
   // Axes
   ctx.lineWidth = 2 / camera.scale

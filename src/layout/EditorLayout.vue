@@ -1,8 +1,7 @@
 <template>
   <div class="editor-root" :key="state.layoutVersion">
     <TopBar />
-
-    <div class="editor-main">
+    <ToolBar /> <div class="editor-main">
       <SideBar />
 
       <div class="editor-content">
@@ -21,6 +20,7 @@ import { onMounted, onBeforeUnmount } from "vue"
 import TopBar from "./TopBar.vue"
 import SideBar from "./SideBar.vue"
 import StatusBar from "./StatusBar.vue"
+import ToolBar from "../components/ToolBar.vue" // NEW
 
 // EDITED: Import Panel instead of Component
 import ScenePanel from "../panels/ScenePanel.vue"
