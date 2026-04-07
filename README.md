@@ -8,14 +8,12 @@
 
 
 > **Nova_A is a fully open-source 2D physics engine, renderer, and GUI editor project built from scratch using Rust + Vue 3.**  
-> Version: **0.7.0** — Initialize editor panel.
+> Version: **0.7.3** — Refine editor panel.
 
-## What’s new in v0.7.0
+## What’s new in v0.7.3
 
-Huge update 0.7!
-In this version, the project structure has been completely revised.
-All files have been moved to the root directory. 
-At the same time, some vulnerabilities have been fixed.
+Huge update!
+In this version, users are free to resize all panels, with animation included.
 
 ## Build Requirements
 
