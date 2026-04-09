@@ -9,11 +9,13 @@ export class TriangleEntity extends Entity {
     super(id, 'Triangle')
     this.transform.position = { ...pos }
     
-    // Initialize as Isosceles Triangle
+    // FIX: Centered Isosceles Triangle
+    const hx = size.x / 2
+    const hy = size.y / 2
     this.vertices = [
-      { x: size.x / 2, y: 0 },
-      { x: size.x, y: size.y },
-      { x: 0, y: size.y }
+      { x: 0, y: hy },
+      { x: hx, y: -hy },
+      { x: -hx, y: -hy }
     ]
   }
 }

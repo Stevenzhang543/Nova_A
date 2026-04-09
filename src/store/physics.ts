@@ -10,11 +10,15 @@ interface PhysicsState {
   camera: Camera
   selectedEntityId: number | null
   activeTool: 'rectangle' | 'circle' | 'triangle'
+  globalSettings: { gravity: number; airFriction: number; timeScale: number }
+  simulationRunning: boolean // NEW: Tracks Start/Stop state
 }
 
 // 1. Create the engine instances
 const rawWorld = new World()
 const rawCamera = new Camera()
+
+let simulationSnapshot: string | null = null
 
 // 2. CRITICAL FIX: Make the entities array reactive, but keep the logic raw.
 // We replace the native array in World with a Vue reactive array.
@@ -22,25 +26,129 @@ const rawCamera = new Camera()
 rawWorld.entities = reactive([]) 
 
 export const physicsState = reactive<PhysicsState>({
-  // We still mark the class instances as raw to prevent Vue from proxying 
-  // complex methods/calculations, which saves performance.
   world: markRaw(rawWorld),
   camera: markRaw(rawCamera),
   selectedEntityId: null,
-  activeTool: 'rectangle'
+  activeTool: 'rectangle',
+  globalSettings: { gravity: 9.8, airFriction: 0.01, timeScale: 1.0 },
+  simulationRunning: false // NEW
 })
+
+// NEW Action
+export function getSceneJSON() {
+  return JSON.stringify(physicsState.world.entities.map(e => {
+    // FIX: Explicitly pack every property to guarantee nothing is lost
+    const eData: any = {
+      id: e.id,
+      name: e.name,
+      shapeType: e.shapeType,
+      transparency: e.transparency,
+      angularVelocity: e.angularVelocity,
+      linearDamping: e.linearDamping,
+      angularDamping: e.angularDamping,
+      mass: e.mass,
+      autoInertia: e.autoInertia,
+      inertia: e.inertia,
+      gravityScale: e.gravityScale,
+      torque: e.torque,
+      gravity: e.gravity,
+      restitution: e.restitution,
+      staticFriction: e.staticFriction,
+      dynamicFriction: e.dynamicFriction,
+      isStatic: e.isStatic,
+      isKinematic: e.isKinematic
+    }
+    
+    // Deep clone nested objects
+    eData.transform = { 
+      position: { ...e.transform.position }, 
+      scale: { ...e.transform.scale }, 
+      rotation: e.transform.rotation 
+    }
+    eData.velocity = { ...e.velocity }
+    eData.acceleration = { ...e.acceleration }
+    eData.force = { ...e.force }
+    eData.color = { ...e.color }
+    
+    // Specific geometry properties
+    if (e.shapeType === 'Box' || e.shapeType === 'Triangle') {
+      eData.vertices = (e as any).vertices.map((v: any) => ({...v}))
+    } else if (e.shapeType === 'Circle') {
+      eData.radiusX = (e as any).radiusX
+      eData.radiusY = (e as any).radiusY
+    }
+    return eData
+  }))
+}
+
+export function loadProject(jsonString: string) {
+  try {
+    const data = JSON.parse(jsonString)
+    physicsState.world.entities.splice(0, physicsState.world.entities.length)
+    let maxId = 0
+    data.forEach((item: any) => {
+      if (item.id > maxId) maxId = item.id
+      
+      let e: any;
+      if (item.shapeType === 'Box' || item.name === 'Box') {
+        e = new BoxEntity(item.id, item.transform.position, {x: 1, y: 1})
+        e.vertices = item.vertices
+      } else if (item.shapeType === 'Triangle' || item.name === 'Triangle') {
+        e = new TriangleEntity(item.id, item.transform.position, {x: 1, y: 1})
+        e.vertices = item.vertices
+      } else if (item.shapeType === 'Circle' || item.name === 'Circle') {
+        e = new CircleEntity(item.id, item.transform.position, item.radiusX, item.radiusY)
+      }
+
+      if (e) {
+        // FIX: Explicitly assign all primitive values
+        const propsToAssign = [
+          'transparency', 'angularVelocity', 'linearDamping', 'angularDamping', 
+          'mass', 'autoInertia', 'inertia', 'gravityScale', 'torque', 'gravity', 
+          'restitution', 'staticFriction', 'dynamicFriction', 'isStatic', 'isKinematic', 'name'
+        ]
+        for (const prop of propsToAssign) {
+          if (item[prop] !== undefined) e[prop] = item[prop]
+        }
+        
+        // Explicitly map nested objects safely
+        if (item.transform) e.transform = { position: { ...item.transform.position }, scale: { ...item.transform.scale }, rotation: item.transform.rotation }
+        if (item.velocity) e.velocity = { ...item.velocity }
+        if (item.acceleration) e.acceleration = { ...item.acceleration }
+        if (item.force) e.force = { ...item.force }
+        if (item.color) e.color = { ...item.color }
+        
+        physicsState.world.entities.push(e)
+      }
+    })
+    ;(physicsState.world as any).nextId = maxId + 1
+    physicsState.selectedEntityId = null
+  } catch (e) {
+    console.error("Failed to load project", e)
+  }
+}
+
+export function toggleSimulation(state: boolean) {
+  // If we are turning it ON and it wasn't already running, take a snapshot!
+  if (state && !physicsState.simulationRunning) {
+    simulationSnapshot = getSceneJSON()
+  }
+  physicsState.simulationRunning = state
+}
+
+export function resetSimulation() {
+  physicsState.simulationRunning = false
+  if (simulationSnapshot) {
+    loadProject(simulationSnapshot) // Restore from snapshot
+  }
+}
 
 export function selectEntity(id: number | null) {
   physicsState.selectedEntityId = id
 }
 
 export async function saveProject() {
-  const data = physicsState.world.entities.map(e => {
-    const base = { id: e.id, name: e.name, transform: e.transform }
-    if (e.name === 'Circle') return { ...base, radiusX: (e as any).radiusX, radiusY: (e as any).radiusY }
-    return { ...base, vertices: (e as any).vertices }
-  })
-  const jsonString = JSON.stringify(data, null, 2)
+  const jsonString = getSceneJSON() // Uses the new helper instead of manually mapping
 
   try {
     // Modern Browser API: Let the user pick where to save
@@ -67,34 +175,6 @@ export async function saveProject() {
   a.download = 'nova_scene.json'
   a.click()
   URL.revokeObjectURL(url)
-}
-
-export function loadProject(jsonString: string) {
-  try {
-    const data = JSON.parse(jsonString)
-    physicsState.world.entities.splice(0, physicsState.world.entities.length)
-    let maxId = 0
-    data.forEach((item: any) => {
-      if (item.id > maxId) maxId = item.id
-      if (item.name === 'Box') {
-        const e = new BoxEntity(item.id, item.transform.position, {x: 1, y: 1})
-        e.transform = item.transform; e.vertices = item.vertices
-        physicsState.world.entities.push(e)
-      } else if (item.name === 'Triangle') {
-        const e = new TriangleEntity(item.id, item.transform.position, {x: 1, y: 1})
-        e.transform = item.transform; e.vertices = item.vertices
-        physicsState.world.entities.push(e)
-      } else if (item.name === 'Circle') {
-        const e = new CircleEntity(item.id, item.transform.position, item.radiusX, item.radiusY)
-        e.transform = item.transform
-        physicsState.world.entities.push(e)
-      }
-    })
-    ;(physicsState.world as any).nextId = maxId + 1
-    physicsState.selectedEntityId = null
-  } catch (e) {
-    console.error("Failed to load project", e)
-  }
 }
 
 export function clearScene() {

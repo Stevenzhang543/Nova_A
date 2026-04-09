@@ -71,13 +71,13 @@ function resize() {
 }
 
 function loop(time?: number) {
-  // OPTIMIZATION: Dynamic Delta Time (dt)
   const now = time || performance.now()
   const dt = (now - lastTime) / 1000
   lastTime = now
   
-  // Cap dt at 0.1s to prevent huge physics jumps if the user tabs out
-  world.update(Math.min(dt, 0.1)) 
+  // FIX: Pass the simulation state and global settings into the physics engine!
+  world.update(Math.min(dt, 0.1), state.simulationRunning, state.globalSettings) 
+  
   render()
   raf = requestAnimationFrame(loop)
 }
@@ -98,11 +98,13 @@ onMounted(() => {
   lastTime = performance.now()
   loop()
   window.addEventListener('resize', resize)
+  window.addEventListener('keydown', onKeyDown)
 })
 
 onBeforeUnmount(() => {
   cancelAnimationFrame(raf)
   window.removeEventListener('resize', resize)
+  window.removeEventListener('keydown', onKeyDown)
   if (resizeObserver) resizeObserver.disconnect() // NEW: Cleanup observer
 })
 
@@ -128,6 +130,14 @@ function onMouseDown(e: MouseEvent) {
   dragButton = e.button
 
   checkHoverVertex(wPos) 
+
+  if (editorState.currentPage === 'render') {
+    // FIX: In Render mode, ANY mouse down behaves as a Camera Pan. 
+    // It skips all vertex dragging and object selection.
+    isPanning = true
+    lastMouseScreen = sPos
+    return
+  }
 
   if (e.button === 1 || (e.button === 2 && !hoveredVertex)) {
     isPanning = true
@@ -261,20 +271,31 @@ function onMouseMove(e: MouseEvent) {
 
 function onMouseUp() {
   if (isDragging && !state.selectedEntityId && dragStart && dragNow) {
-    const w = Math.abs(dragStart.x - dragNow.x)
-    const h = Math.abs(dragStart.y - dragNow.y)
-    const cx = Math.min(dragStart.x, dragNow.x)
-    const cy = Math.min(dragStart.y, dragNow.y)
+    // FIX: Changed from 10 to 0.1 for precise drawing
+    const w = Math.max(Math.abs(dragStart.x - dragNow.x), 0.1)
+    const h = Math.max(Math.abs(dragStart.y - dragNow.y), 0.1)
+    
+    const cx = Math.min(dragStart.x, dragNow.x) + w / 2
+    const cy = Math.min(dragStart.y, dragNow.y) + h / 2
 
-    if (w > 5 || h > 5) { 
-      if (state.activeTool === 'rectangle') world.addBox({ x: cx, y: cy }, { x: w, y: h })
-      else if (state.activeTool === 'circle') world.addCircle({ x: cx + w / 2, y: cy + h / 2 }, w / 2, h / 2)
-      else if (state.activeTool === 'triangle') world.addTriangle({ x: cx, y: cy }, { x: w, y: h })
-    }
+    if (state.activeTool === 'rectangle') world.addBox({ x: cx, y: cy }, { x: w, y: h })
+    else if (state.activeTool === 'circle') world.addCircle({ x: cx, y: cy }, w / 2, h / 2)
+    else if (state.activeTool === 'triangle') world.addTriangle({ x: cx, y: cy }, { x: w, y: h })
   }
   isDragging = isPanning = isVertexDragging = false
   dragStart = dragNow = lastMouseScreen = null
   dragMeta = null
+}
+
+function onKeyDown(e: KeyboardEvent) {
+  // ✅ ADD THIS LINE (the advice you received)
+  if (document.activeElement?.tagName === 'INPUT') return;
+
+  // your delete logic
+  if (e.key === 'Backspace' || e.key === 'Delete') {
+    // TODO: delete selected entity
+    console.log("Delete pressed")
+  }
 }
 
 /* ---------------- HELPER: Vertex Detection ---------------- */
@@ -405,22 +426,36 @@ function render() {
 
   ctx.save()
   ctx.translate(camera.offset.x, camera.offset.y)
-  ctx.scale(camera.scale, camera.scale)
+  ctx.scale(camera.scale, -camera.scale) // FIX: Flips canvas so +Y is UP
 
   const viewL = -camera.offset.x / camera.scale
-  const viewT = -camera.offset.y / camera.scale
   const viewR = viewL + width / camera.scale
-  const viewB = viewT + height / camera.scale
+  const viewT = camera.offset.y / camera.scale  // Top is +Y
+  const viewB = viewT - height / camera.scale   // Bottom is -Y
 
   // Grid
   if (editorState.showGrid) {
-    ctx.beginPath(); ctx.strokeStyle = '#2a2a2a'; ctx.lineWidth = 1 / camera.scale
-    const step = 50
+    const step = 10 // FIX: Base 10 blocks
     const startX = Math.floor(viewL / step) * step
-    const startY = Math.floor(viewT / step) * step
-    for (let x = startX; x < viewR; x += step) { ctx.moveTo(x, viewT); ctx.lineTo(x, viewB) }
-    for (let y = startY; y < viewB; y += step) { ctx.moveTo(viewL, y); ctx.lineTo(viewR, y) }
+    const startY = Math.floor(viewB / step) * step
+
+    ctx.beginPath(); ctx.strokeStyle = '#2a2a2a'; ctx.lineWidth = 1 / camera.scale
+    for (let x = startX; x < viewR; x += step) { ctx.moveTo(x, viewB); ctx.lineTo(x, viewT) }
+    for (let y = startY; y < viewT; y += step) { ctx.moveTo(viewL, y); ctx.lineTo(viewR, y) }
     ctx.stroke()
+
+    // FIX: Axis Indicators (100, 200, 300...)
+    ctx.save()
+    ctx.scale(1, -1) // Flip context back just for text so it isn't upside down
+    ctx.fillStyle = '#666'
+    ctx.font = `${10 / camera.scale}px sans-serif`
+    for (let x = startX; x < viewR; x += step) {
+      if (x % 100 === 0 && x !== 0) ctx.fillText(x.toString(), x + 2, 12 / camera.scale)
+    }
+    for (let y = startY; y < viewT; y += step) {
+      if (y % 100 === 0 && y !== 0) ctx.fillText(y.toString(), 4 / camera.scale, -y + 4 / camera.scale)
+    }
+    ctx.restore()
   }
 
   // Entities
@@ -431,67 +466,70 @@ function render() {
     const pos = e.transform.position
     const isSelected = e.id === state.selectedEntityId
     
-    // --- NEW: VIEWPORT CULLING OPTIMIZATION ---
-    // Calculate bounding box for the entity to check if it's on screen
-    let eMinX = pos.x, eMinY = pos.y, eMaxX = pos.x, eMaxY = pos.y;
+    // SAFE CULLING: Use radius approximation to avoid breaking Canvas paths
+    const maxRadius = Math.max(e.transform.scale.x, e.transform.scale.y) * (e instanceof CircleEntity ? Math.max(e.radiusX, e.radiusY) : 200); 
     
-    if (e instanceof BoxEntity || e instanceof TriangleEntity) {
-      if (e.vertices.length > 0) {
-        eMinX = pos.x + e.vertices[0].x; eMaxX = eMinX;
-        eMinY = pos.y + e.vertices[0].y; eMaxY = eMinY;
-        for (let i = 1; i < e.vertices.length; i++) {
-          const vx = pos.x + e.vertices[i].x;
-          const vy = pos.y + e.vertices[i].y;
-          if (vx < eMinX) eMinX = vx; if (vx > eMaxX) eMaxX = vx;
-          if (vy < eMinY) eMinY = vy; if (vy > eMaxY) eMaxY = vy;
-        }
-      }
-    } else if (e instanceof CircleEntity) {
-      eMinX = pos.x - e.radiusX; eMaxX = pos.x + e.radiusX;
-      eMinY = pos.y - e.radiusY; eMaxY = pos.y + e.radiusY;
-    }
-
-    // If the entity's bounding box is completely outside the camera view, skip rendering it!
-    if (eMaxX < viewL || eMinX > viewR || eMaxY < viewT || eMinY > viewB) {
+    if (pos.x + maxRadius < viewL || pos.x - maxRadius > viewR || 
+        pos.y + maxRadius < viewB || pos.y - maxRadius > viewT) {
       continue; 
     }
-    // --- END VIEWPORT CULLING ---
 
     ctx.lineWidth = isSelected ? lwSelected : lwNormal
-    ctx.fillStyle = isSelected ? 'rgba(255, 200, 0, 0.3)' : 'rgba(0, 180, 255, 0.4)'
-    ctx.strokeStyle = isSelected ? '#ffee00' : '#4cc9ff'
+    const alpha = (e.transparency !== undefined ? e.transparency : 100) / 100
+    
+    ctx.fillStyle = isSelected 
+      ? `rgba(255, 200, 0, ${alpha * 0.5})` 
+      : `rgba(${e.color.r}, ${e.color.g}, ${e.color.b}, ${alpha})`
+      
+    ctx.strokeStyle = isSelected 
+      ? `rgba(255, 238, 0, ${alpha})` 
+      : `rgba(${Math.max(0, e.color.r - 50)}, ${Math.max(0, e.color.g - 50)}, ${Math.max(0, e.color.b - 50)}, ${alpha})`
+
+    // FIX: Apply proper Transformation Matrix (Position -> Rotation -> Scale)
+    ctx.save()
+    ctx.translate(pos.x, pos.y)
+    ctx.rotate(e.transform.rotation)
+    ctx.scale(e.transform.scale.x, e.transform.scale.y)
 
     ctx.beginPath()
 
     if (e instanceof BoxEntity || e instanceof TriangleEntity) {
       const v = e.vertices
       if (v.length > 0) {
-        ctx.moveTo(pos.x + v[0].x, pos.y + v[0].y)
-        for (let i = 1; i < v.length; i++) ctx.lineTo(pos.x + v[i].x, pos.y + v[i].y)
+        ctx.moveTo(v[0].x, v[0].y) // Draw relative to center (0,0)
+        for (let i = 1; i < v.length; i++) ctx.lineTo(v[i].x, v[i].y)
         ctx.closePath()
       }
     } 
     else if (e instanceof CircleEntity) {
-      // FIX: Prevent IndexSizeError crash if radius somehow hits 0 or negative during math rounding
       const safeRx = Math.max(0.1, e.radiusX)
       const safeRy = Math.max(0.1, e.radiusY)
-      ctx.ellipse(pos.x, pos.y, safeRx, safeRy, 0, 0, Math.PI * 2)
+      ctx.ellipse(0, 0, safeRx, safeRy, 0, 0, Math.PI * 2)
     }
     
     ctx.fill()
     ctx.stroke()
+    ctx.restore() // Undo the matrix so Vertex Highlights draw in world-space correctly
 
-    // Render Vertex Highlight (Logic remains identical)
+    // Render Vertex Highlight
     if (isSelected && !isVertexDragging && !isDragging && hoveredVertex && hoveredVertex.entityId === e.id) {
       let vx = 0, vy = 0
       
+      const cosR = Math.cos(e.transform.rotation)
+      const sinR = Math.sin(e.transform.rotation)
+
       if (e instanceof CircleEntity && hoveredVertex.virtualPos) {
-        vx = pos.x + hoveredVertex.virtualPos.x
-        vy = pos.y + hoveredVertex.virtualPos.y
+        // Account for rotation and scale in highlight
+        const localX = hoveredVertex.virtualPos.x * e.transform.scale.x
+        const localY = hoveredVertex.virtualPos.y * e.transform.scale.y
+        vx = pos.x + (localX * cosR - localY * sinR)
+        vy = pos.y + (localX * sinR + localY * cosR)
       } else if ('vertices' in e) {
         const v = (e as any).vertices[hoveredVertex.index]
-        vx = pos.x + v.x
-        vy = pos.y + v.y
+        const localX = v.x * e.transform.scale.x
+        const localY = v.y * e.transform.scale.y
+        vx = pos.x + (localX * cosR - localY * sinR)
+        vy = pos.y + (localX * sinR + localY * cosR)
       }
       
       ctx.beginPath()
@@ -500,7 +538,6 @@ function render() {
       ctx.fill()
     }
   }
-    ctx.stroke()
 
   // Axes
   ctx.lineWidth = 2 / camera.scale

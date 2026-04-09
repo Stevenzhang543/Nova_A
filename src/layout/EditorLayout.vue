@@ -1,7 +1,13 @@
 <template>
   <div class="editor-root" :key="state.layoutVersion">
     <TopBar />
-    <ToolBar /> <div class="editor-main">
+    
+    <ToolBar v-if="state.currentPage === 'scene'" /> 
+    <ConfigPanel v-if="state.currentPage === 'scene'" /> 
+    
+    <ActionBar v-if="state.currentPage === 'render'" />
+
+    <div class="editor-main">
       <SideBar />
 
       <div class="editor-content">
@@ -20,7 +26,9 @@ import { onMounted, onBeforeUnmount } from "vue"
 import TopBar from "./TopBar.vue"
 import SideBar from "./SideBar.vue"
 import StatusBar from "./StatusBar.vue"
-import ToolBar from "../components/ToolBar.vue" // NEW
+import ToolBar from "../components/ToolBar.vue" 
+import ConfigPanel from "../components/ConfigPanel.vue" // NEW
+import ActionBar from "../components/ActionBar.vue"
 
 // EDITED: Import Panel instead of Component
 import ScenePanel from "../panels/ScenePanel.vue"

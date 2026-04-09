@@ -1,8 +1,8 @@
 <template>
   <div 
     class="toolbar-wrapper" 
-    @mouseenter="isHovered = true" 
-    @mouseleave="isHovered = false"
+    @mouseenter="onMouseEnter" 
+    @mouseleave="onMouseLeave"
   >
     <div class="hover-zone"></div>
     
@@ -33,6 +33,17 @@ import { ref } from 'vue'
 import { physicsState as state } from '../store/physics'
 
 const isHovered = ref(false)
+let hoverTimeout: number | null = null
+
+function onMouseEnter() {
+  if (hoverTimeout) clearTimeout(hoverTimeout)
+  hoverTimeout = setTimeout(() => { isHovered.value = true }, 100) // Fast open
+}
+
+function onMouseLeave() {
+  if (hoverTimeout) clearTimeout(hoverTimeout)
+  hoverTimeout = setTimeout(() => { isHovered.value = false }, 350) // Slow, forgiving close
+}
 </script>
 
 <style scoped>
@@ -90,8 +101,9 @@ const isHovered = ref(false)
 }
 
 .tools button.active {
-  background: #0078d4;
-  border-color: #0078d4;
-  color: white;
+  background: #e0e0e0;
+  border-color: #e0e0e0;
+  color: #1e1e1e; /* Dark text for contrast */
+  font-weight: bold;
 }
 </style>

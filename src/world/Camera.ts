@@ -7,18 +7,16 @@ export class Camera {
   screenToWorld(p: Vec2): Vec2 {
     return {
       x: (p.x - this.offset.x) / this.scale,
-      y: (p.y - this.offset.y) / this.scale
+      y: -(p.y - this.offset.y) / this.scale // FIX: Negative flips Y-axis so +Y is UP
     }
   }
 
   zoomAt(screen: Vec2, factor: number) {
     const before = this.screenToWorld(screen)
-
     this.scale = Math.min(Math.max(this.scale * factor, 0.1), 10)
-
     const after = this.screenToWorld(screen)
 
     this.offset.x += (after.x - before.x) * this.scale
-    this.offset.y += (after.y - before.y) * this.scale
+    this.offset.y -= (after.y - before.y) * this.scale // FIX: Negative preserves flipped Y
   }
 }

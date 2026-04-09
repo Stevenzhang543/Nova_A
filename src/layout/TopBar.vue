@@ -1,7 +1,6 @@
 <template>
   <div class="top-bar">
-    <div class="menu-container" @mouseleave="activeMenu = null">
-      
+    <div class="menu-container" @mouseleave="onMenuLeave" @mouseenter="onMenuEnter">
       <div class="menu-item">
         <button @click="toggleMenu('file')" :class="{ active: activeMenu === 'file' }">File</button>
         <div class="dropdown" v-if="activeMenu === 'file'">
@@ -45,10 +44,8 @@ import { saveProject, loadProject, clearScene, deleteSelected, selectEntity, res
 
 const activeMenu = ref<string | null>(null)
 const fileInput = ref<HTMLInputElement | null>(null)
+let menuTimeout: number | null = null
 
-function toggleMenu(menu: string) {
-  activeMenu.value = activeMenu.value === menu ? null : menu
-}
 // Actions
 const handleSave = () => { saveProject(); activeMenu.value = null }
 const triggerLoad = () => { fileInput.value?.click(); activeMenu.value = null }
@@ -58,6 +55,19 @@ const handleDeleteAll = () => { clearScene(); activeMenu.value = null } // Reuse
 const handleDeselect = () => { selectEntity(null); activeMenu.value = null }
 const handleToggleGrid = () => { editorState.showGrid = !editorState.showGrid; activeMenu.value = null }
 const handleResetCamera = () => { resetCamera(); activeMenu.value = null }
+
+function toggleMenu(menu: string) {
+  activeMenu.value = activeMenu.value === menu ? null : menu
+}
+
+function onMenuEnter() {
+  if (menuTimeout) clearTimeout(menuTimeout)
+}
+
+function onMenuLeave() {
+  if (menuTimeout) clearTimeout(menuTimeout)
+  menuTimeout = setTimeout(() => { activeMenu.value = null }, 350) // Forgiving close
+}
 
 // File Loading Logic
 function handleFileSelected(event: Event) {
@@ -78,6 +88,10 @@ function handleFileSelected(event: Event) {
 
 // Keyboard Shortcuts
 function handleKeyDown(e: KeyboardEvent) {
+  // NEW: Prevent action if user is typing in ANY input or textarea
+  const tag = document.activeElement?.tagName
+  if (tag === 'INPUT' || tag === 'TEXTAREA') return
+
   if (e.ctrlKey && e.key === 's') {
     e.preventDefault()
     handleSave()

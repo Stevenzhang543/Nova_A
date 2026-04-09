@@ -18,8 +18,23 @@
           :class="{ selected: state.selectedEntityId === entity.id }"
           @click="selectEntity(entity.id)"
         >
-          <span class="icon">{{ getIcon(entity.name) }}</span>
-          <span class="name">{{ entity.name }}_{{ entity.id }}</span>
+          <span class="icon">{{ getIcon(entity.shapeType) }}</span>
+          
+          <span 
+            v-if="editingId !== entity.id" 
+            class="name" 
+            @dblclick="startEdit(entity)"
+            title="Double-click to rename"
+          >{{ entity.name }}_{{ entity.id }}</span>
+          
+          <input 
+            v-else 
+            v-model="editName" 
+            @blur="finishEdit(entity)" 
+            @keyup.enter="finishEdit(entity)" 
+            class="edit-input" 
+            v-focus
+          />
         </div>
       </div>
     </div>
@@ -34,9 +49,33 @@ import { ref, onUnmounted } from 'vue'
 import { physicsState as state, selectEntity } from '../store/physics'
 
 // Drag & Collapse State
-const panelWidth = ref(200)
+const panelWidth = ref(120)
 const isCollapsed = ref(false)
 const isDragging = ref(false)
+
+// NEW: Rename State
+const editingId = ref<number | null>(null)
+const editName = ref("")
+
+// NEW: Custom Directive to auto-focus the input box
+const vFocus = {
+  mounted: (el: HTMLInputElement) => el.focus()
+}
+
+function startEdit(entity: any) {
+  editingId.value = entity.id
+  // Strip the "_{id}" part when editing so the user just types the actual name
+  editName.value = entity.name 
+}
+
+function finishEdit(entity: any) {
+  if (editingId.value === entity.id) {
+    if (editName.value.trim() !== "") {
+      entity.name = editName.value.trim()
+    }
+    editingId.value = null
+  }
+}
 const collapseThreshold = 80 // If width goes below 80px, it snaps shut
 let startX = 0
 let startWidth = 0
@@ -86,7 +125,7 @@ function stopDrag() {
 
 function expandPanel() {
   isCollapsed.value = false
-  panelWidth.value = 200 // Default restore width
+  panelWidth.value = 120 // Default restore width
 }
 
 onUnmounted(() => {
@@ -177,4 +216,16 @@ onUnmounted(() => {
 .entity-item:hover { background: #2a2d2e; }
 .entity-item.selected { background: #37373d; color: white; }
 .icon { font-size: 10px; color: #0078d4; }
+
+/* NEW: Rename Input Styling */
+.edit-input {
+  flex: 1;
+  background: #1e1e1e;
+  border: 1px solid #0078d4;
+  color: white;
+  font-size: 13px;
+  padding: 2px 4px;
+  outline: none;
+  width: 100%;
+}
 </style>

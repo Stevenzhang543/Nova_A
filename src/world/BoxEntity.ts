@@ -10,12 +10,14 @@ export class BoxEntity extends Entity {
     super(id, 'Box')
     this.transform.position = { ...pos }
     
-    // Initialize as a rectangle
+    // FIX: Centered vertices (0,0 is the middle)
+    const hx = size.x / 2
+    const hy = size.y / 2
     this.vertices = [
-      { x: 0, y: 0 },
-      { x: size.x, y: 0 },
-      { x: size.x, y: size.y },
-      { x: 0, y: size.y }
+      { x: -hx, y: -hy },
+      { x: hx, y: -hy },
+      { x: hx, y: hy },
+      { x: -hx, y: hy }
     ]
   }
 }

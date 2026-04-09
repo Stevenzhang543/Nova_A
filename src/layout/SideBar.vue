@@ -32,14 +32,21 @@
   </div>
 </template>
 
+// Replace your entire script setup with this:
 <script setup lang="ts">
 import { editorState as state } from "../store/editor"
+import { resetSimulation } from "../store/physics" // NEW: Import reset function
 
 import sceneIcon from "../assets/icons/scene.svg"
 import renderIcon from "../assets/icons/render.svg"
 import settingsIcon from "../assets/icons/settings.svg"
 
 function switchPage(page: "scene" | "render" | "settings") {
+  // FIX: Automatically reset simulation when leaving the Renderer Panel
+  if (state.currentPage === 'render' && page === 'scene') {
+    resetSimulation()
+  }
+  
   state.currentPage = page
   state.statusText = `Switched to ${page}`
 }
@@ -77,14 +84,16 @@ button img {
   width: 24px;
   height: 24px;
   opacity: 0.7;
+  transition: opacity 0.2s, filter 0.2s; /* Smooth visual transition */
 }
 
 button.active {
-  background: #0078d4;
+  background: #e0e0e0;
 }
 
 button.active img {
   opacity: 1;
+  filter: invert(1); /* NEW: Inverts white SVG to black so it shows on white bg */
 }
 
 button:hover img {
