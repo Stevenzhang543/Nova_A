@@ -372,9 +372,24 @@ function hitTest(p: Vec2): number | null {
   for (let i = world.entities.length - 1; i >= 0; i--) {
     const e = world.entities[i]
     const pos = e.transform.position
+    
+    // ALGORITHM FIX: Transform mouse coordinates into the entity's LOCAL space
+    // This perfectly accounts for Rotation and Scaling without modifying the vertices!
+    const dx = p.x - pos.x
+    const dy = p.y - pos.y
+    const cosR = Math.cos(-e.transform.rotation)
+    const sinR = Math.sin(-e.transform.rotation)
+    
+    // Rotate mouse point back
+    const localRotX = dx * cosR - dy * sinR
+    const localRotY = dx * sinR + dy * cosR
+    
+    // Un-scale mouse point
+    const localX = localRotX / e.transform.scale.x
+    const localY = localRotY / e.transform.scale.y
 
     if (e instanceof BoxEntity || e instanceof TriangleEntity) {
-      // OPTIMIZATION: AABB Pre-check
+      // Local Space AABB Pre-check
       let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity
       for (const v of e.vertices) {
         if (v.x < minX) minX = v.x
@@ -382,32 +397,28 @@ function hitTest(p: Vec2): number | null {
         if (v.x > maxX) maxX = v.x
         if (v.y > maxY) maxY = v.y
       }
-      // Skip if mouse is outside the bounding box
-      if (p.x < pos.x + minX || p.x > pos.x + maxX || p.y < pos.y + minY || p.y > pos.y + maxY) {
+      
+      if (localX < minX || localX > maxX || localY < minY || localY > maxY) {
         continue 
       }
 
-      // Complex Polygon Check
+      // Complex Polygon Check (in Local Space)
       let inside = false
       const vs = e.vertices
       for (let j = 0, k = vs.length - 1; j < vs.length; k = j++) {
-        const xi = vs[j].x + pos.x, yi = vs[j].y + pos.y
-        const xj = vs[k].x + pos.x, yj = vs[k].y + pos.y
-        const intersect = ((yi > p.y) !== (yj > p.y)) && (p.x < (xj - xi) * (p.y - yi) / (yj - yi) + xi)
+        const intersect = ((vs[j].y > localY) !== (vs[k].y > localY)) && 
+                          (localX < (vs[k].x - vs[j].x) * (localY - vs[j].y) / (vs[k].y - vs[j].y) + vs[j].x)
         if (intersect) inside = !inside
       }
       if (inside) return e.id
+      
     } 
     else if (e instanceof CircleEntity) {
-      // OPTIMIZATION: AABB Pre-check for circles/ellipses
-      if (p.x < pos.x - e.radiusX || p.x > pos.x + e.radiusX || p.y < pos.y - e.radiusY || p.y > pos.y + e.radiusY) {
-        continue 
-      }
-
-      const dx = p.x - pos.x
-      const dy = p.y - pos.y
+      // Circle test using un-scaled Local coordinates
       if (e.radiusX > 0 && e.radiusY > 0) {
-        if ((dx*dx)/(e.radiusX*e.radiusX) + (dy*dy)/(e.radiusY*e.radiusY) <= 1) return e.id
+        if ((localX * localX) / (e.radiusX * e.radiusX) + (localY * localY) / (e.radiusY * e.radiusY) <= 1) {
+          return e.id
+        }
       }
     } 
   }
