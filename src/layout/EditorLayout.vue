@@ -1,21 +1,20 @@
 <template>
-  <div class="editor-root" :key="state.layoutVersion">
+  <div class="editor-root" :key="state.layoutVersion" @contextmenu.prevent @click="closeContextMenu">
     <TopBar />
-    
     <ToolBar v-if="state.currentPage === 'scene'" /> 
     <ConfigPanel v-if="state.currentPage === 'scene'" /> 
-    
     <ActionBar v-if="state.currentPage === 'render'" />
 
     <div class="editor-main">
       <SideBar />
-
       <div class="editor-content">
         <ScenePanel v-if="state.currentPage === 'scene'" />
         <RendererPanel v-if="state.currentPage === 'render'" />
         <SettingsPanel v-if="state.currentPage === 'settings'" />
       </div>
     </div>
+    
+    <ContextMenu />
 
     <StatusBar />
   </div>
@@ -27,54 +26,30 @@ import TopBar from "./TopBar.vue"
 import SideBar from "./SideBar.vue"
 import StatusBar from "./StatusBar.vue"
 import ToolBar from "../components/ToolBar.vue" 
-import ConfigPanel from "../components/ConfigPanel.vue" // NEW
+import ConfigPanel from "../components/ConfigPanel.vue" 
 import ActionBar from "../components/ActionBar.vue"
+import ContextMenu from "../components/ContextMenu.vue" // NEW
 
-// EDITED: Import Panel instead of Component
 import ScenePanel from "../panels/ScenePanel.vue"
 import RendererPanel from "../panels/RendererPanel.vue"
 import SettingsPanel from "../panels/SettingsPanel.vue"
 
-import { editorState as state, reconfigureLayout } from "../store/editor"
+import { editorState as state, reconfigureLayout, closeContextMenu } from "../store/editor"
 
-function handleLayoutChange() {
-  reconfigureLayout()
-}
+function handleLayoutChange() { reconfigureLayout() }
 
 onMounted(() => {
   handleLayoutChange()
   window.addEventListener("resize", handleLayoutChange)
-  document.addEventListener("fullscreenchange", handleLayoutChange)
-  document.addEventListener("visibilitychange", handleLayoutChange)
 })
 
 onBeforeUnmount(() => {
   window.removeEventListener("resize", handleLayoutChange)
-  document.removeEventListener("fullscreenchange", handleLayoutChange)
-  document.removeEventListener("visibilitychange", handleLayoutChange)
 })
 </script>
 
 <style scoped>
-.editor-root {
-  display: flex;
-  flex-direction: column;
-  height: 100vh;
-  min-height: 0;
-  background: #1e1e1e;
-  color: #ddd;
-}
-
-.editor-main {
-  flex: 1;
-  display: flex;
-  min-height: 0;
-}
-
-.editor-content {
-  flex: 1;
-  position: relative;
-  overflow: hidden;
-  background: #2a2a2a;
-}
+.editor-root { display: flex; flex-direction: column; height: 100vh; min-height: 0; background: #1e1e1e; color: #ddd; }
+.editor-main { flex: 1; display: flex; min-height: 0; }
+.editor-content { flex: 1; position: relative; overflow: hidden; background: #2a2a2a; }
 </style>

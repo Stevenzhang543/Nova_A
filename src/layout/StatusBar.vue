@@ -1,7 +1,7 @@
 <template>
   <div class="status-bar">
     <span>{{ state.statusText }}</span>
-    <span class="tag">Nova_A alpha v0.7.3</span>
+    <span class="tag">Nova_A alpha v0.10.6</span>
   </div>
 </template>
 

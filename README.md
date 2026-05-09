@@ -9,9 +9,9 @@ README.md:
 
 
 > **Nova_A is a fully open-source 2D physics engine, renderer, and GUI editor project built from scratch using Rust + Vue 3.**  
-> Version: **0.10.0** — TRUE **physics**.
+> Version: **0.10.6** — TRUE **physics**.
 
-# What’s new in v0.10.0
+# What’s new in v0.10.6
 
 Engine core update.
 This version introduces **physics checks** and **calculation checks**, significantly improving simulation stability and correctness.

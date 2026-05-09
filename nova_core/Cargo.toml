@@ -1,6 +1,6 @@
 [package]
 name = "nova_core"
-version = "0.9.6"
+version = "0.10.5"
 edition = "2021"
 
 [lib]

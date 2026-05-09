@@ -17,6 +17,7 @@
           class="entity-item"
           :class="{ selected: state.selectedEntityId === entity.id }"
           @click="selectEntity(entity.id)"
+          @contextmenu.prevent="openContextMenu($event, 'sidebar-entity', entity.id)"
         >
           <span class="icon">{{ getIcon(entity.shapeType) }}</span>
           
@@ -47,6 +48,7 @@
 //import { ref, onMounted, onUnmounted } from 'vue'
 import { ref, onUnmounted } from 'vue'
 import { physicsState as state, selectEntity } from '../store/physics'
+import { openContextMenu } from '../store/editor'
 
 // Drag & Collapse State
 const panelWidth = ref(120)

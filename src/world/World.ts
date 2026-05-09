@@ -3,8 +3,6 @@ import { BoxEntity } from './BoxEntity'
 import { CircleEntity } from './CircleEntity'
 import { TriangleEntity } from './TriangleEntity'
 import type { Vec2 } from './types'
-
-// Import the Rust WASM module
 import init, { step_physics } from '../../nova_core/pkg/nova_core.js'
 
 export class World {
@@ -13,36 +11,29 @@ export class World {
   private wasmLoaded = false
 
   constructor() {
-    // Initialize WASM asynchronously when the world is created
     init().then(() => {
       this.wasmLoaded = true
       console.log("Rust Physics Engine Initialized!")
     })
   }
 
+  resetId() { this.nextId = 1 }
+
   addBox(pos: Vec2, size: Vec2) {
-    const box = new BoxEntity(this.nextId++, pos, size)
-    this.entities.push(box)
-    return box
+    const box = new BoxEntity(this.nextId++, pos, size); this.entities.push(box); return box
   }
-
   addCircle(pos: Vec2, rx: number, ry?: number) {
-    const circle = new CircleEntity(this.nextId++, pos, rx, ry)
-    this.entities.push(circle)
-    return circle
+    const circle = new CircleEntity(this.nextId++, pos, rx, ry); this.entities.push(circle); return circle
   }
-
   addTriangle(pos: Vec2, size: Vec2) {
-    const triangle = new TriangleEntity(this.nextId++, pos, size)
-    this.entities.push(triangle)
-    return triangle
+    const triangle = new TriangleEntity(this.nextId++, pos, size); this.entities.push(triangle); return triangle
   }
 
   update(dt: number, isRunning: boolean, globalSettings: any) {
     if (!isRunning || !this.wasmLoaded || this.entities.length === 0) return
 
     const scaledDt = dt * globalSettings.timeScale
-    const stride = 27 // UPGRADED: Full Rigid Body Stride
+    const stride = 34 // UPGRADED STRIDE FOR LAYERS
     const data = new Float32Array(this.entities.length * stride)
 
     for (let i = 0; i < this.entities.length; i++) {
@@ -90,6 +81,13 @@ export class World {
       data[idx + 24] = e.isKinematic ? 1.0 : 0.0
       data[idx + 25] = e.autoInertia ? 1.0 : 0.0
       data[idx + 26] = e.inertia
+      data[idx + 27] = e.restitutionThreshold
+      data[idx + 28] = e.isSensor ? 1.0 : 0.0
+      data[idx + 29] = 0 // Reset Contact Count
+      data[idx + 30] = 0 // Normal X
+      data[idx + 31] = 0 // Normal Y
+      data[idx + 32] = 0 // Penetration
+      data[idx + 33] = e.layer // NEW: Pass the collision layer to Rust!
     }
 
     const newData = step_physics(data, scaledDt, globalSettings.gravity, globalSettings.airFriction)
@@ -103,6 +101,12 @@ export class World {
       e.velocity.y = newData[idx + 5]
       e.transform.rotation = newData[idx + 14]
       e.angularVelocity = newData[idx + 15]
+      
+      // Update from Broadphase output
+      e.contactCount = newData[idx + 29]
+      e.contactNormal.x = newData[idx + 30]
+      e.contactNormal.y = newData[idx + 31]
+      e.penetrationDepth = newData[idx + 32]
     }
   }
 }

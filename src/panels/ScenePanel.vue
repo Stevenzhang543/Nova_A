@@ -2,7 +2,7 @@
   <div class="scene-panel">
     <SceneSidebar />
     <div class="content">
-      <WorldCanvas />
+      <LayerBar /> <WorldCanvas />
     </div>
   </div>
 </template>
@@ -10,6 +10,7 @@
 <script setup lang="ts">
 import WorldCanvas from "../components/WorldCanvas.vue"
 import SceneSidebar from "../components/SceneSideBar.vue"
+import LayerBar from "../components/LayerBar.vue" // NEW
 </script>
 
 <style scoped>

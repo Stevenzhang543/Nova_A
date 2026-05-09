@@ -5,7 +5,7 @@ import { BoxEntity } from '../world/BoxEntity'
 import { CircleEntity } from '../world/CircleEntity'
 import { TriangleEntity } from '../world/TriangleEntity'
 import type { Vec2 } from '../world/types'
-import { editorState } from '../store/editor'
+import { editorState, openContextMenu } from '../store/editor'
 
 const canvasRef = ref<HTMLCanvasElement | null>(null)
 let ctx: CanvasRenderingContext2D | null = null
@@ -131,12 +131,26 @@ function onMouseDown(e: MouseEvent) {
 
   checkHoverVertex(wPos) 
 
+  // Renderer mode handles pan differently
   if (editorState.currentPage === 'render') {
-    // FIX: In Render mode, ANY mouse down behaves as a Camera Pan. 
-    // It skips all vertex dragging and object selection.
     isPanning = true
     lastMouseScreen = sPos
     return
+  }
+
+  // Right-click logic: Try to hit an object first
+  if (e.button === 2) {
+    const hitId = hitTest(wPos)
+    if (hitId !== null) {
+      selectEntity(hitId) // Select it
+      openContextMenu(e, 'grid-entity', hitId) // Open context menu
+      return // Abort panning!
+    } else {
+      // If we clicked empty space, do camera pan
+      isPanning = true
+      lastMouseScreen = sPos
+      return
+    }
   }
 
   if (e.button === 1 || (e.button === 2 && !hoveredVertex)) {
@@ -271,17 +285,26 @@ function onMouseMove(e: MouseEvent) {
 
 function onMouseUp() {
   if (isDragging && !state.selectedEntityId && dragStart && dragNow) {
-    // FIX: Changed from 10 to 0.1 for precise drawing
-    const w = Math.max(Math.abs(dragStart.x - dragNow.x), 0.1)
-    const h = Math.max(Math.abs(dragStart.y - dragNow.y), 0.1)
     
-    const cx = Math.min(dragStart.x, dragNow.x) + w / 2
-    const cy = Math.min(dragStart.y, dragNow.y) + h / 2
+    // BUGFIX: Calculate how far the mouse actually dragged
+    const dragDistX = Math.abs(dragStart.x - dragNow.x)
+    const dragDistY = Math.abs(dragStart.y - dragNow.y)
+    
+    // BUGFIX: Only draw a shape if they dragged more than 0.5 units. 
+    // Otherwise, they were just clicking to deselect!
+    if (dragDistX > 0.5 || dragDistY > 0.5) {
+      const w = Math.max(dragDistX, 0.1)
+      const h = Math.max(dragDistY, 0.1)
+      
+      const cx = Math.min(dragStart.x, dragNow.x) + w / 2
+      const cy = Math.min(dragStart.y, dragNow.y) + h / 2
 
-    if (state.activeTool === 'rectangle') world.addBox({ x: cx, y: cy }, { x: w, y: h })
-    else if (state.activeTool === 'circle') world.addCircle({ x: cx, y: cy }, w / 2, h / 2)
-    else if (state.activeTool === 'triangle') world.addTriangle({ x: cx, y: cy }, { x: w, y: h })
+      if (state.activeTool === 'rectangle') world.addBox({ x: cx, y: cy }, { x: w, y: h })
+      else if (state.activeTool === 'circle') world.addCircle({ x: cx, y: cy }, w / 2, h / 2)
+      else if (state.activeTool === 'triangle') world.addTriangle({ x: cx, y: cy }, { x: w, y: h })
+    }
   }
+  
   isDragging = isPanning = isVertexDragging = false
   dragStart = dragNow = lastMouseScreen = null
   dragMeta = null
@@ -373,6 +396,11 @@ function hitTest(p: Vec2): number | null {
     const e = world.entities[i]
     const pos = e.transform.position
     
+    // NEW: Skip objects not on the active/rendered layer
+    if (editorState.currentPage === 'scene' && e.layer !== editorState.activeLayer) continue;
+    if (editorState.currentPage === 'render' && editorState.renderLayer !== 'all' && e.layer !== editorState.renderLayer) continue;
+    
+    
     // ALGORITHM FIX: Transform mouse coordinates into the entity's LOCAL space
     // This perfectly accounts for Rotation and Scaling without modifying the vertices!
     const dx = p.x - pos.x
@@ -445,8 +473,9 @@ function render() {
   const viewB = viewT - height / camera.scale   // Bottom is -Y
 
   // Grid
+  // Grid
   if (editorState.showGrid) {
-    const step = 10 // FIX: Base 10 blocks
+    const step = 10 
     const startX = Math.floor(viewL / step) * step
     const startY = Math.floor(viewB / step) * step
 
@@ -455,16 +484,20 @@ function render() {
     for (let y = startY; y < viewT; y += step) { ctx.moveTo(viewL, y); ctx.lineTo(viewR, y) }
     ctx.stroke()
 
-    // FIX: Axis Indicators (100, 200, 300...)
+    // FEATURE: Dynamic Zoom Indicator Scaling
+    let textStep = 100
+    if (camera.scale < 0.3) textStep = 500
+    if (camera.scale < 0.1) textStep = 1000
+
     ctx.save()
-    ctx.scale(1, -1) // Flip context back just for text so it isn't upside down
+    ctx.scale(1, -1) 
     ctx.fillStyle = '#666'
     ctx.font = `${10 / camera.scale}px sans-serif`
     for (let x = startX; x < viewR; x += step) {
-      if (x % 100 === 0 && x !== 0) ctx.fillText(x.toString(), x + 2, 12 / camera.scale)
+      if (x % textStep === 0 && x !== 0) ctx.fillText(x.toString(), x + 2, 12 / camera.scale)
     }
     for (let y = startY; y < viewT; y += step) {
-      if (y % 100 === 0 && y !== 0) ctx.fillText(y.toString(), 4 / camera.scale, -y + 4 / camera.scale)
+      if (y % textStep === 0 && y !== 0) ctx.fillText(y.toString(), 4 / camera.scale, -y + 4 / camera.scale)
     }
     ctx.restore()
   }
@@ -474,6 +507,10 @@ function render() {
   const lwSelected = 3 / camera.scale
 
   for (const e of world.entities) {
+    // NEW: Skip rendering objects not on the active/rendered layer
+    if (editorState.currentPage === 'scene' && e.layer !== editorState.activeLayer) continue;
+    if (editorState.currentPage === 'render' && editorState.renderLayer !== 'all' && e.layer !== editorState.renderLayer) continue;
+    
     const pos = e.transform.position
     const isSelected = e.id === state.selectedEntityId
     

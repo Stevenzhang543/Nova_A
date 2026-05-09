@@ -7,36 +7,39 @@ export abstract class Entity {
   readonly shapeType: string
   transform = new Transform()
   
-  // Appearance
+  layer = 1 // NEW: Layer System Property
+  
   color = { r: 0, g: 180, b: 255 }
   transparency = 100
   
-  // Motion
   velocity: Vec2 = { x: 0, y: 0 }
   angularVelocity = 0
   linearDamping = 0.0
   angularDamping = 0.0
   
-  // Mass & Behavior
+  density = 1.0
   mass = 1.0
   autoInertia = true
   inertia = 100.0
   gravityScale = 1.0
   
-  // Forces
   force: Vec2 = { x: 0, y: 0 }
   torque = 0
-  gravity = 0.0 // FIX: Default 0.0
+  gravity = 0.0 
   acceleration: Vec2 = { x: 0, y: 0 } 
   
-  // Materials
-  restitution = 0.0 // FIX: Default 0.00
-  staticFriction = 0.0 // FIX: Default 0.00
-  dynamicFriction = 0.0 // FIX: Default 0.00
+  restitution = 0.0 
+  restitutionThreshold = 1.0 
+  staticFriction = 0.0 
+  dynamicFriction = 0.0 
+  isSensor = false 
   
-  // States
   isStatic = false
   isKinematic = false
+
+  contactCount = 0
+  contactNormal: Vec2 = { x: 0, y: 0 }
+  penetrationDepth = 0
 
   constructor(id: number, name = 'Entity') {
     this.id = id
