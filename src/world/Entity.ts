@@ -7,10 +7,14 @@ export abstract class Entity {
   readonly shapeType: string
   transform = new Transform()
   
-  layer = 1 // NEW: Layer System Property
+  layer = 1 
   
   color = { r: 0, g: 180, b: 255 }
   transparency = 100
+  
+  // NEW: Image Textures
+  texture: string | null = null
+  textureImage?: HTMLImageElement // Non-serialized cache for Canvas rendering
   
   velocity: Vec2 = { x: 0, y: 0 }
   angularVelocity = 0

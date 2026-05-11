@@ -26,7 +26,7 @@
 
 <script setup lang="ts">
 import { editorState as state, closeContextMenu, setActiveLayer, deleteLayer, duplicateLayer, moveLayerToFront, moveLayerToBack } from '../store/editor'
-import { physicsState, selectEntity, duplicateEntity, moveToFront, moveToBack } from '../store/physics'
+import { physicsState, enterEditMode, duplicateEntity, moveToFront, moveToBack } from '../store/physics'
 
 function handleEntity(action: string) {
   const id = state.contextMenu.targetId
@@ -35,7 +35,7 @@ function handleEntity(action: string) {
   if (action === 'delete') {
     const idx = physicsState.world.entities.findIndex(e => e.id === id)
     if (idx !== -1) physicsState.world.entities.splice(idx, 1)
-    if (physicsState.selectedEntityId === id) selectEntity(null)
+    if (physicsState.selectedEntityId === id) enterEditMode(null) // FIX: Uses correct clear call
   }
   else if (action === 'duplicate') duplicateEntity(id)
   else if (action === 'front') moveToFront(id)
@@ -72,18 +72,8 @@ function handleLayer(action: string) {
   padding: 4px 0;
 }
 
-.context-menu button {
-  background: transparent;
-  border: none;
-  color: #ccc;
-  padding: 8px 12px;
-  text-align: left;
-  cursor: pointer;
-  font-size: 13px;
-}
-
+.context-menu button { background: transparent; border: none; color: #ccc; padding: 8px 12px; text-align: left; cursor: pointer; font-size: 13px; }
 .context-menu button:hover { background: #007acc; color: white; }
 .context-menu button.danger:hover { background: #d32f2f; }
-
 hr { border: none; border-top: 1px solid #444; margin: 4px 0; }
 </style>

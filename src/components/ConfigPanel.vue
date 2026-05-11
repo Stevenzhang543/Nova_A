@@ -1,7 +1,6 @@
 <template>
-  <div class="config-wrapper" @mouseenter="onMouseEnter" @mouseleave="onMouseLeave" @focusin="lockPanel" @focusout="unlockPanel">
-    <div class="hover-zone"></div>
-    <div class="config-panel" :class="{ 'is-visible': isHovered }">
+  <div class="config-wrapper">
+    <div class="config-panel" :class="{ 'is-visible': selectedEntity !== null }">
       
       <div v-if="selectedEntity" class="settings-content">
         <h3 class="panel-title">Entity Settings</h3>
@@ -78,31 +77,30 @@
           <label>Angular Velocity</label>
           <input type="number" v-model.number="selectedEntity.angularVelocity" step="0.01" />
         </div>
-
         <hr /><div class="category-title">Damping & Friction</div>
-        <div class="prop-group">
-          <label>Linear Damping</label>
-          <div class="row-inputs"><input type="range" v-model.number="selectedEntity.linearDamping" min="0" max="1" step="0.01" /><input type="number" v-model.number="selectedEntity.linearDamping" step="0.01" /></div>
+      <div class="prop-group">
+        <label>Linear Damping</label>
+          <div class="row-inputs"><input type="range" v-model.number="selectedEntity.linearDamping" min="0" max="1" step="0.01" @change="onConfigChange" /><input type="number" v-model.number="selectedEntity.linearDamping" step="0.01" @change="onConfigChange" /></div>
         </div>
         <div class="prop-group">
           <label>Angular Damping</label>
-          <div class="row-inputs"><input type="range" v-model.number="selectedEntity.angularDamping" min="0" max="1" step="0.01" /><input type="number" v-model.number="selectedEntity.angularDamping" step="0.01" /></div>
+          <div class="row-inputs"><input type="range" v-model.number="selectedEntity!.angularDamping" min="0" max="1" step="0.01" @change="onConfigChange" /><input type="number" v-model.number="selectedEntity!.angularDamping" step="0.01" @change="onConfigChange" /></div>
         </div>
         <div class="prop-group">
           <label>Static Friction</label>
-          <div class="row-inputs"><input type="range" v-model.number="selectedEntity.staticFriction" min="0" max="1" step="0.01" /><input type="number" v-model.number="selectedEntity.staticFriction" step="0.01" /></div>
+          <div class="row-inputs"><input type="range" v-model.number="selectedEntity!.staticFriction" min="0" max="1" step="0.01" @change="onConfigChange" /><input type="number" v-model.number="selectedEntity!.staticFriction" step="0.01" @change="onConfigChange" /></div>
         </div>
         <div class="prop-group">
           <label>Dynamic Friction</label>
-          <div class="row-inputs"><input type="range" v-model.number="selectedEntity.dynamicFriction" min="0" max="1" step="0.01" /><input type="number" v-model.number="selectedEntity.dynamicFriction" step="0.01" /></div>
+          <div class="row-inputs"><input type="range" v-model.number="selectedEntity!.dynamicFriction" min="0" max="1" step="0.01" @change="onConfigChange" /><input type="number" v-model.number="selectedEntity!.dynamicFriction" step="0.01" @change="onConfigChange" /></div>
         </div>
 
         <hr /><div class="category-title">Mass Properties</div>
         <div class="prop-group text-display">
-          <span>Inv Mass:</span> <span>{{ (selectedEntity.mass > 0 && bodyType === 'Dynamic') ? (1/selectedEntity.mass).toFixed(4) : '0 (Infinite)' }}</span>
+          <span>Inv Mass:</span> <span>{{ (selectedEntity!.mass > 0 && bodyType === 'Dynamic') ? (1/selectedEntity!.mass).toFixed(4) : '0 (Infinite)' }}</span>
         </div>
         <div class="prop-group text-display">
-          <span>Inv Inertia:</span> <span>{{ (selectedEntity.inertia > 0 && bodyType === 'Dynamic') ? (1/selectedEntity.inertia).toFixed(4) : '0 (Infinite)' }}</span>
+          <span>Inv Inertia:</span> <span>{{ (selectedEntity!.inertia > 0 && bodyType === 'Dynamic') ? (1/selectedEntity!.inertia).toFixed(4) : '0 (Infinite)' }}</span>
         </div>
         <div class="prop-group text-display">
           <span>Surface Area (m²):</span> <span>{{ entityArea.toFixed(2) }}</span>
@@ -111,30 +109,30 @@
         <div class="prop-group">
           <label>Density (kg/m²)</label>
           <div class="row-inputs">
-            <input type="range" v-model.number="selectedEntity.density" min="0.1" max="10" step="0.1" @input="onDensityChange" />
-            <input type="number" v-model.number="selectedEntity.density" step="0.1" @change="onDensityChange" />
+            <input type="range" v-model.number="selectedEntity!.density" min="0.1" max="10" step="0.1" @input="onDensityChange" />
+            <input type="number" v-model.number="selectedEntity!.density" step="0.1" @change="onDensityChange" />
           </div>
         </div>
         <div class="prop-group">
           <label>Mass (kg)</label>
           <div class="row-inputs">
-            <input type="range" v-model.number="selectedEntity.mass" min="0.1" max="100" step="0.1" @input="onMassChange" />
-            <input type="number" v-model.number="selectedEntity.mass" step="0.1" @change="onMassChange" />
+            <input type="range" v-model.number="selectedEntity!.mass" min="0.1" max="100" step="0.1" @input="onMassChange" />
+            <input type="number" v-model.number="selectedEntity!.mass" step="0.1" @change="onMassChange" />
           </div>
         </div>
         
         <div class="prop-group">
           <label>Gravity Scale</label>
-          <div class="row-inputs"><input type="range" v-model.number="selectedEntity.gravityScale" min="0" max="5" step="0.1" /><input type="number" v-model.number="selectedEntity.gravityScale" step="0.1" /></div>
+          <div class="row-inputs"><input type="range" v-model.number="selectedEntity!.gravityScale" min="0" max="5" step="0.1" /><input type="number" v-model.number="selectedEntity!.gravityScale" step="0.1" /></div>
         </div>
-        <div class="prop-group"><label>Local Gravity Pull</label><input type="number" v-model.number="selectedEntity.gravity" step="0.1" /></div>
+        <div class="prop-group"><label>Local Gravity Pull</label><input type="number" v-model.number="selectedEntity!.gravity" step="0.1" /></div>
 
         <hr /><div class="category-title">Continuous Forces</div>
         <div class="prop-group">
           <label>Force (X, Y)</label>
-          <div class="row-inputs"><input type="number" v-model.number="selectedEntity.force.x" step="0.01" /><input type="number" v-model.number="selectedEntity.force.y" step="0.01" /></div>
+          <div class="row-inputs"><input type="number" v-model.number="selectedEntity!.force.x" step="0.01" /><input type="number" v-model.number="selectedEntity!.force.y" step="0.01" /></div>
         </div>
-        <div class="prop-group"><label>Torque</label><input type="number" v-model.number="selectedEntity.torque" step="0.01" /></div>
+        <div class="prop-group"><label>Torque</label><input type="number" v-model.number="selectedEntity!.torque" step="0.01" /></div>
 
         <hr /><div class="category-title">Interactive Impulses</div>
         <div class="impulse-form">
@@ -148,20 +146,20 @@
         <hr /><div class="category-title">Material Response</div>
         <div class="prop-group switch-group">
           <label>Is Sensor</label>
-          <label class="switch"><input type="checkbox" v-model="selectedEntity.isSensor"><span class="slider round"></span></label>
+          <label class="switch"><input type="checkbox" v-model="selectedEntity!.isSensor"><span class="slider round"></span></label>
         </div>
         <div class="prop-group">
           <label>Restitution (Bounciness)</label>
-          <div class="row-inputs"><input type="range" v-model.number="selectedEntity.restitution" min="0" max="1" step="0.01" /><input type="number" v-model.number="selectedEntity.restitution" step="0.01" /></div>
+          <div class="row-inputs"><input type="range" v-model.number="selectedEntity!.restitution" min="0" max="1" step="0.01" /><input type="number" v-model.number="selectedEntity!.restitution" step="0.01" /></div>
         </div>
-        <div class="prop-group"><label>Restitution Threshold (m/s)</label><input type="number" v-model.number="selectedEntity.restitutionThreshold" step="0.1" /></div>
+        <div class="prop-group"><label>Restitution Threshold (m/s)</label><input type="number" v-model.number="selectedEntity!.restitutionThreshold" step="0.1" /></div>
 
         <hr /><div class="category-title">Collision Diagnostics</div>
         <div class="prop-group text-display">
-          <span>Contacts:</span> <span :class="{'active-contact': selectedEntity.contactCount > 0}">{{ selectedEntity.contactCount }}</span>
+          <span>Contacts:</span> <span :class="{'active-contact': selectedEntity!.contactCount > 0}">{{ selectedEntity!.contactCount }}</span>
         </div>
-        <div class="prop-group text-display" v-if="selectedEntity.contactCount > 0"><span>Normal:</span> <span>[{{ selectedEntity.contactNormal.x.toFixed(2) }}, {{ selectedEntity.contactNormal.y.toFixed(2) }}]</span></div>
-        <div class="prop-group text-display" v-if="selectedEntity.contactCount > 0"><span>Penetration:</span> <span>{{ selectedEntity.penetrationDepth.toFixed(3) }} m</span></div>
+        <div class="prop-group text-display" v-if="selectedEntity!.contactCount > 0"><span>Normal:</span> <span>[{{ selectedEntity!.contactNormal.x.toFixed(2) }}, {{ selectedEntity!.contactNormal.y.toFixed(2) }}]</span></div>
+        <div class="prop-group text-display" v-if="selectedEntity!.contactCount > 0"><span>Penetration:</span> <span>{{ selectedEntity!.penetrationDepth.toFixed(3) }} m</span></div>
 
       </div>
     </div>
@@ -176,47 +174,20 @@
         </div>
       </div>
     </div>
-  </div>
+   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
-import { physicsState as state } from '../store/physics'
+import { physicsState as state, pushHistory } from '../store/physics'
 import { editorState as estate } from '../store/editor'
-
-const isHovered = ref(false)
-const isInputFocused = ref(false) // BUGFIX: Lock sliding panel when typing
-let hoverTimeout: number | null = null
 
 const selectedEntity = computed(() => {
   if (state.selectedEntityId === null) return null
   return state.world.entities.find(e => e.id === state.selectedEntityId) || null
 })
 
-watch(selectedEntity, (newVal) => { if (!newVal) { isHovered.value = false; isInputFocused.value = false; } })
-
-function onMouseEnter() {
-  if (!selectedEntity.value) return 
-  if (hoverTimeout) clearTimeout(hoverTimeout)
-  hoverTimeout = setTimeout(() => { isHovered.value = true }, 100)
-}
-
-function onMouseLeave() {
-  if (isInputFocused.value) return; // Prevent closing if the user is typing!
-  if (hoverTimeout) clearTimeout(hoverTimeout)
-  hoverTimeout = setTimeout(() => { isHovered.value = false }, 350)
-}
-
-function lockPanel() {
-  isInputFocused.value = true;
-  isHovered.value = true;
-  if (hoverTimeout) clearTimeout(hoverTimeout);
-}
-
-function unlockPanel() {
-  isInputFocused.value = false;
-  onMouseLeave();
-}
+function onConfigChange() { pushHistory() }
 
 const bodyType = computed({
   get() {
@@ -233,7 +204,6 @@ const bodyType = computed({
   }
 })
 
-// FEATURE: Calculate Area Dynamically
 const entityArea = computed(() => {
   const e = selectedEntity.value;
   if (!e) return 0;
@@ -243,7 +213,6 @@ const entityArea = computed(() => {
   return a;
 });
 
-// FEATURE: 3-Way Link for Area, Density, and Mass
 function onDensityChange() {
   if (selectedEntity.value) selectedEntity.value.mass = selectedEntity.value.density * entityArea.value;
 }
@@ -254,19 +223,13 @@ function onMassChange() {
   }
 }
 
-// Watch area so if they scale the object, mass increases organically while density stays same
 watch(entityArea, (newArea) => {
   if (selectedEntity.value && !selectedEntity.value.isStatic && newArea > 0) {
     selectedEntity.value.mass = selectedEntity.value.density * newArea;
   }
 })
 
-
-const impulseX = ref(0)
-const impulseY = ref(0)
-const offsetX = ref(0)
-const offsetY = ref(0)
-const angularImpulse = ref(0)
+const impulseX = ref(0); const impulseY = ref(0); const offsetX = ref(0); const offsetY = ref(0); const angularImpulse = ref(0)
 
 function applyImpulse() {
   if (!selectedEntity.value || bodyType.value !== 'Dynamic') return
@@ -296,9 +259,7 @@ function applyColor() {
   if (selectedEntity.value) {
     const hex = tempColor.value.replace(/^#/, '')
     const bigint = parseInt(hex, 16)
-    selectedEntity.value.color.r = (bigint >> 16) & 255
-    selectedEntity.value.color.g = (bigint >> 8) & 255
-    selectedEntity.value.color.b = bigint & 255
+    selectedEntity.value.color.r = (bigint >> 16) & 255; selectedEntity.value.color.g = (bigint >> 8) & 255; selectedEntity.value.color.b = bigint & 255
   }
   showColorPicker.value = false
 }
@@ -356,12 +317,11 @@ const absoluteSizeY = computed({
 
 <style scoped>
 .config-wrapper { position: absolute; top: 32px; bottom: 24px; right: 0; width: 25%; max-width: 300px; min-width: 220px; z-index: 100; pointer-events: none; }
-.hover-zone { position: absolute; top: 0; bottom: 0; right: 0; width: 40px; pointer-events: auto; }
 .config-panel { 
   position: absolute; top: 0; bottom: 0; right: -60px; width: calc(100% + 60px); 
   background: rgba(37, 37, 38, 0.95); backdrop-filter: blur(8px); 
   padding: 16px 76px 16px 16px; transform: translateX(100%); 
-  transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); 
+  transition: transform 0.2s ease-out; /* Smooth instant slide */
   pointer-events: auto; display: flex; flex-direction: column; 
   overflow-y: auto; overflow-x: hidden; box-shadow: -4px 0 12px rgba(0,0,0,0.3); color: #ccc;
 }
@@ -406,17 +366,10 @@ input:checked + .slider:before { transform: translateX(14px); }
 
 .full-select { width: 100%; background: #1e1e1e; color: white; border: 1px solid #444; padding: 4px; border-radius: 4px; }
 
-/* BUGFIX: Clean up browser native styling for dropdowns to remove `< - >` */
 .clean-dropdown {
-  appearance: none;
-  -webkit-appearance: none;
-  -moz-appearance: none;
-  outline: none;
+  appearance: none; -webkit-appearance: none; -moz-appearance: none; outline: none;
   background-image: url("data:image/svg+xml;utf8,<svg fill='white' height='24' viewBox='0 0 24 24' width='24' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/><path d='M0 0h24v24H0z' fill='none'/></svg>");
-  background-repeat: no-repeat;
-  background-position-x: 98%;
-  background-position-y: 50%;
-  padding-right: 20px;
+  background-repeat: no-repeat; background-position-x: 98%; background-position-y: 50%; padding-right: 20px;
 }
 .clean-dropdown:focus { border-color: #0078d4; }
 

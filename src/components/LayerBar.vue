@@ -47,14 +47,40 @@ import { editorState as state, addLayer, setActiveLayer, setRenderLayer, openCon
   pointer-events: auto; box-shadow: 0 4px 12px rgba(0,0,0,0.5);
 }
 .layer-header { font-size: 10px; font-weight: bold; color: #888; text-align: center; letter-spacing: 1px; }
-.layer-list { display: flex; flex-direction: column; gap: 4px; max-height: 300px; overflow-y: auto; }
+.layer-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 300px;
 
-/* FIX: Outline bug removal */
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
 .layer-btn {
-  background: transparent; border: 1px solid transparent; color: #ccc;
-  display: flex; align-items: center; gap: 6px; padding: 6px;
-  border-radius: 4px; cursor: pointer; transition: all 0.2s;
-  outline: none; -webkit-tap-highlight-color: transparent;
+  background: transparent;
+  border: 1px solid transparent;
+  color: #ccc;
+
+  display: flex;
+  align-items: center;
+  gap: 6px;
+
+  padding: 6px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  outline: none;
+  min-width: 0;
+
+  -webkit-tap-highlight-color: transparent;
+}
+
+.layer-btn span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .layer-btn:focus, .layer-btn:active { outline: none; }
 

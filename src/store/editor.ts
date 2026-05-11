@@ -8,15 +8,15 @@ export const editorState = reactive({
   statusText: "Ready",
   layoutVersion: 0,
   showGrid: true,
+  showXAxis: true, // NEW
+  showYAxis: true, // NEW
   layers: [1], 
   activeLayer: 1, 
-  renderLayer: 'all' as number | 'all', // NEW: Renderer specific layer
+  renderLayer: 'all' as number | 'all',
   
-  // NEW: Context Menu State
   contextMenu: {
     visible: false,
-    x: 0,
-    y: 0,
+    x: 0, y: 0,
     type: 'none' as 'sidebar-entity' | 'layer' | 'grid-entity' | 'none',
     targetId: null as number | null
   }
@@ -41,7 +41,6 @@ export function setRenderLayer(layer: number | 'all') {
   editorState.statusText = layer === 'all' ? `Rendering All Layers` : `Rendering Layer ${layer}`
 }
 
-// --- CONTEXT MENU ACTIONS ---
 export function openContextMenu(e: MouseEvent, type: string, targetId: number | null = null) {
   e.preventDefault()
   editorState.contextMenu.visible = true
@@ -55,9 +54,8 @@ export function closeContextMenu() {
   editorState.contextMenu.visible = false
 }
 
-// --- LAYER MANIPULATION ---
 export function deleteLayer(layerId: number) {
-  if (editorState.layers.length <= 1) return // Prevent deleting last layer
+  if (editorState.layers.length <= 1) return 
   editorState.layers = editorState.layers.filter(l => l !== layerId)
   if (editorState.activeLayer === layerId) editorState.activeLayer = editorState.layers[0]
   if (editorState.renderLayer === layerId) editorState.renderLayer = 'all'
@@ -67,15 +65,11 @@ export function deleteLayer(layerId: number) {
 export function duplicateLayer(layerId: number) {
   const newLayerId = Math.max(...editorState.layers, 0) + 1
   editorState.layers.push(newLayerId)
-  
-  // Get entities on this layer
   const toClone = physicsState.world.entities.filter(e => e.layer === layerId)
   toClone.forEach(original => {
     const cloneData = JSON.parse(JSON.stringify(original))
     cloneData.id = (physicsState.world as any).nextId++
     cloneData.layer = newLayerId
-    // Push raw clone, Vue reactivity maps it via the physics store loaders conceptually, 
-    // but a direct push works for pure data cloning.
     physicsState.world.entities.push(cloneData)
   })
   editorState.activeLayer = newLayerId
@@ -84,11 +78,11 @@ export function duplicateLayer(layerId: number) {
 export function moveLayerToFront(layerId: number) {
   const layerEntities = physicsState.world.entities.filter(e => e.layer === layerId)
   physicsState.world.entities = physicsState.world.entities.filter(e => e.layer !== layerId)
-  physicsState.world.entities.push(...layerEntities) // Draw last = front
+  physicsState.world.entities.push(...layerEntities) 
 }
 
 export function moveLayerToBack(layerId: number) {
   const layerEntities = physicsState.world.entities.filter(e => e.layer === layerId)
   physicsState.world.entities = physicsState.world.entities.filter(e => e.layer !== layerId)
-  physicsState.world.entities.unshift(...layerEntities) // Draw first = back
+  physicsState.world.entities.unshift(...layerEntities) 
 }

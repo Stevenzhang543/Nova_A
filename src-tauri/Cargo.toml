@@ -1,6 +1,6 @@
 [package]
 name = "nova_a"
-version = "0.10.5"
+version = "0.11.2"
 description = "Nova_A 2D physics engine editor built by a middleschooler."
 authors = ["you"]
 edition = "2021"
