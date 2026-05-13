@@ -1,7 +1,6 @@
 {
-  "$schema": "https://schema.tauri.app/config/2",
   "productName": "nova_a",
-  "version": "0.1.0",
+  "version": "0.11.2",
   "identifier": "whitelist",
   "build": {
     "beforeDevCommand": "pnpm dev",
@@ -13,8 +12,12 @@
     "windows": [
       {
         "title": "nova_a",
-        "width": 800,
-        "height": 600
+        "width": 1280,
+        "height": 720,
+        "center": true,
+        "resizable": true,
+        "minWidth": 900,
+        "minHeight": 600
       }
     ],
     "security": {
