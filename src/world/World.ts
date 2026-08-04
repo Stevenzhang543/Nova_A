@@ -198,6 +198,10 @@ export class World {
         : 0
       connectionData[index + 15] = connection.style === 'curved' ? Math.abs(connection.curvature) : manualBend
       connectionData[index + 16] = 1
+      connectionData[index + 20] = connection.binding ? 1 : 0
+      connectionData[index + 21] = connection.bindAngle
+      connectionData[index + 22] = connection.bindOffset.x
+      connectionData[index + 23] = connection.bindOffset.y
     }
 
     const output = step_physics_with_connections(

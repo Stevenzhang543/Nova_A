@@ -1,7 +1,7 @@
 use wasm_bindgen::prelude::*;
 
 const STRIDE: usize = 42;
-const CONNECTION_STRIDE: usize = 20;
+const CONNECTION_STRIDE: usize = 24;
 const EPSILON: f64 = 1.0e-14;
 const MAX_MAGNITUDE: f64 = 1.0e50;
 const MIN_DIMENSION: f64 = 1.0e-6;
@@ -1008,6 +1008,9 @@ struct ConnectionConstraint {
     bending_tolerance_mass: f64,
     stretching_tolerance_mass: f64,
     bend_amount: f64,
+    binding: bool,
+    bind_angle: f64,
+    bind_offset: Vec2,
     active: bool,
     broken_code: u8,
     tension: f64,
@@ -1042,6 +1045,12 @@ impl ConnectionConstraint {
             bending_tolerance_mass: non_negative(data[data_index + 13], 1.0e12),
             stretching_tolerance_mass: non_negative(data[data_index + 14], 1.0e12),
             bend_amount: non_negative(data[data_index + 15], 0.0),
+            binding: data[data_index + 20] > 0.5,
+            bind_angle: normalize_angle(data[data_index + 21]),
+            bind_offset: Vec2::new(
+                finite_or(data[data_index + 22], 0.0),
+                finite_or(data[data_index + 23], 0.0),
+            ),
             active: data[data_index + 16] > 0.5,
             broken_code: 0,
             tension: 0.0,
@@ -1063,7 +1072,7 @@ impl ConnectionConstraint {
     }
 
     fn evaluate_failure(&mut self, bodies: &[Body]) {
-        if !self.active || self.broken_code != 0 {
+        if !self.active || self.broken_code != 0 || self.binding {
             return;
         }
         let (_, _, _, length, _) = self.geometry(bodies);
@@ -1081,8 +1090,124 @@ impl ConnectionConstraint {
     }
 }
 
+fn solve_symmetric_2x2(k11: f64, k12: f64, k22: f64, rhs: Vec2) -> Vec2 {
+    let determinant = k11 * k22 - k12 * k12;
+    if determinant.abs() <= EPSILON {
+        return Vec2::ZERO;
+    }
+    Vec2::new(
+        (k22 * rhs.x - k12 * rhs.y) / determinant,
+        (-k12 * rhs.x + k11 * rhs.y) / determinant,
+    )
+}
+
+fn binding_mass_matrix(a: &Body, b: &Body, radius_a: Vec2, radius_b: Vec2) -> (f64, f64, f64) {
+    let inverse_mass = a.inv_mass + b.inv_mass;
+    (
+        inverse_mass
+            + radius_a.y * radius_a.y * a.inv_inertia
+            + radius_b.y * radius_b.y * b.inv_inertia,
+        -radius_a.x * radius_a.y * a.inv_inertia - radius_b.x * radius_b.y * b.inv_inertia,
+        inverse_mass
+            + radius_a.x * radius_a.x * a.inv_inertia
+            + radius_b.x * radius_b.x * b.inv_inertia,
+    )
+}
+
+fn solve_binding_velocity(bodies: &mut [Body], constraint: &mut ConnectionConstraint, dt: f64) {
+    if dt <= 0.0 {
+        return;
+    }
+    let (radius_a, radius_b, error, relative_velocity, k11, k12, k22) = {
+        let a = &bodies[constraint.body_a];
+        let b = &bodies[constraint.body_b];
+        let radius_a = rotate(constraint.bind_offset, a.angle);
+        let radius_b = Vec2::ZERO;
+        let error = b.position.add(radius_b).sub(a.position.add(radius_a));
+        let relative_velocity = b.point_velocity(radius_b).sub(a.point_velocity(radius_a));
+        let (k11, k12, k22) = binding_mass_matrix(a, b, radius_a, radius_b);
+        (radius_a, radius_b, error, relative_velocity, k11, k12, k22)
+    };
+
+    let bias = error.mul(0.2 / dt);
+    let impulse = solve_symmetric_2x2(k11, k12, k22, relative_velocity.add(bias).neg());
+    if impulse.length_squared() > 0.0 {
+        apply_pair_impulse(
+            bodies,
+            constraint.body_a,
+            constraint.body_b,
+            impulse,
+            radius_a,
+            radius_b,
+        );
+        constraint.tension = constraint.tension.max(impulse.length() / dt);
+    }
+
+    let (inverse_inertia, relative_angular_velocity, angle_error) = {
+        let a = &bodies[constraint.body_a];
+        let b = &bodies[constraint.body_b];
+        (
+            a.inv_inertia + b.inv_inertia,
+            b.angular_velocity - a.angular_velocity,
+            normalize_angle((b.angle - a.angle) - constraint.bind_angle),
+        )
+    };
+    if inverse_inertia > 0.0 {
+        let angular_impulse =
+            -(relative_angular_velocity + 0.2 * angle_error / dt) / inverse_inertia;
+        let (a, b) = two_bodies_mut(bodies, constraint.body_a, constraint.body_b);
+        a.angular_velocity -= angular_impulse * a.inv_inertia;
+        b.angular_velocity += angular_impulse * b.inv_inertia;
+    }
+}
+
+fn correct_binding_position(bodies: &mut [Body], constraint: &ConnectionConstraint) {
+    for _ in 0..8 {
+        let (angle_error, inverse_inertia) = {
+            let a = &bodies[constraint.body_a];
+            let b = &bodies[constraint.body_b];
+            (
+                normalize_angle((b.angle - a.angle) - constraint.bind_angle),
+                a.inv_inertia + b.inv_inertia,
+            )
+        };
+        if inverse_inertia > 0.0 {
+            let angular_impulse = -angle_error * 0.75 / inverse_inertia;
+            let (a, b) = two_bodies_mut(bodies, constraint.body_a, constraint.body_b);
+            a.angle = normalize_angle(a.angle - angular_impulse * a.inv_inertia);
+            b.angle = normalize_angle(b.angle + angular_impulse * b.inv_inertia);
+        }
+
+        let (radius_a, radius_b, error, k11, k12, k22) = {
+            let a = &bodies[constraint.body_a];
+            let b = &bodies[constraint.body_b];
+            let radius_a = rotate(constraint.bind_offset, a.angle);
+            let radius_b = Vec2::ZERO;
+            let error = b.position.add(radius_b).sub(a.position.add(radius_a));
+            let (k11, k12, k22) = binding_mass_matrix(a, b, radius_a, radius_b);
+            (radius_a, radius_b, error, k11, k12, k22)
+        };
+        let impulse = solve_symmetric_2x2(k11, k12, k22, error.mul(-0.75));
+        let (a, b) = two_bodies_mut(bodies, constraint.body_a, constraint.body_b);
+        a.position = a
+            .position
+            .sub(impulse.mul(a.inv_mass))
+            .finite_or(a.position);
+        a.angle = normalize_angle(a.angle - radius_a.cross(impulse) * a.inv_inertia);
+        b.position = b
+            .position
+            .add(impulse.mul(b.inv_mass))
+            .finite_or(b.position);
+        b.angle = normalize_angle(b.angle + radius_b.cross(impulse) * b.inv_inertia);
+    }
+}
+
 fn solve_connection_velocity(bodies: &mut [Body], constraint: &mut ConnectionConstraint, dt: f64) {
     if !constraint.active || constraint.broken_code != 0 || dt <= 0.0 {
+        return;
+    }
+    if constraint.binding {
+        solve_binding_velocity(bodies, constraint, dt);
         return;
     }
     let (radius_a, radius_b, normal, length, _) = constraint.geometry(bodies);
@@ -1140,6 +1265,10 @@ fn solve_connection_velocity(bodies: &mut [Body], constraint: &mut ConnectionCon
 
 fn correct_connection_position(bodies: &mut [Body], constraint: &ConnectionConstraint) {
     if !constraint.active || constraint.broken_code != 0 {
+        return;
+    }
+    if constraint.binding {
+        correct_binding_position(bodies, constraint);
         return;
     }
     let (radius_a, radius_b, normal, length, _) = constraint.geometry(bodies);
@@ -1240,6 +1369,16 @@ pub fn step_physics_with_connections(
             )
         })
         .collect();
+    let bound_pairs: Vec<(usize, usize)> = constraints
+        .iter()
+        .filter(|constraint| constraint.binding && constraint.active)
+        .map(|constraint| {
+            (
+                constraint.body_a.min(constraint.body_b),
+                constraint.body_a.max(constraint.body_b),
+            )
+        })
+        .collect();
     let sub_steps = determine_sub_steps(&bodies, dt, global_gravity);
     let sub_dt = dt / sub_steps as f64;
 
@@ -1268,6 +1407,13 @@ pub fn step_physics_with_connections(
                     break;
                 }
                 if !aabb_a.overlaps(aabb_b) {
+                    continue;
+                }
+                let ordered_pair = (
+                    body_a_index.min(body_b_index),
+                    body_a_index.max(body_b_index),
+                );
+                if bound_pairs.contains(&ordered_pair) {
                     continue;
                 }
 
@@ -1753,5 +1899,49 @@ mod tests {
         assert!(all_finite(&output));
         assert_eq!(output.len(), bodies.len() + connection.len());
         assert_eq!(output[2], 0.0);
+    }
+
+    #[test]
+    fn bound_overlapping_bodies_preserve_relative_transform() {
+        let mut bodies = box_record(1.0, 0.0, 0.0, 1.0, 1.0);
+        let mut second = box_record(2.0, 0.25, 0.0, 1.0, 1.0);
+        second[21] = 100.0;
+        second[16] = 20.0;
+        bodies.extend(second);
+        let mut binding = connection_record(0, 1, 0.25);
+        binding[20] = 1.0;
+        binding[22] = 0.25;
+
+        let output = step_physics_with_connections(&bodies, &binding, 0.1, 0.0, 0.0);
+        let relative = inverse_rotate(
+            Vec2::new(
+                output[STRIDE + 2] - output[2],
+                output[STRIDE + 3] - output[3],
+            ),
+            output[14],
+        );
+        let relative_angle = normalize_angle(output[STRIDE + 14] - output[14]);
+        assert!(
+            (relative.x - 0.25).abs() < 1.0e-5,
+            "relative_x={}",
+            relative.x
+        );
+        assert!(relative.y.abs() < 1.0e-5, "relative_y={}", relative.y);
+        assert!(
+            relative_angle.abs() < 1.0e-5,
+            "relative_angle={relative_angle}"
+        );
+        assert!(all_finite(&output));
+    }
+
+    #[test]
+    fn one_world_unit_remains_one_configured_unit() {
+        let mut body = box_record(1.0, 3.0, -4.0, 1.0, 1.0);
+        body[4] = 10.0;
+        body[5] = -6.0;
+        body[24] = 1.0;
+        let output = step_physics(&body, 0.25, 0.0, 0.0);
+        assert!((output[2] - 5.5).abs() < 1.0e-10, "x={}", output[2]);
+        assert!((output[3] + 5.5).abs() < 1.0e-10, "y={}", output[3]);
     }
 }

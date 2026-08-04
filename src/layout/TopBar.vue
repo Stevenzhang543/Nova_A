@@ -33,14 +33,18 @@
           <hr><button @click="handleResetCamera"><span>{{ t('resetCamera') }}</span></button>
         </div></Transition>
       </div>
+      <div class="menu-item">
+        <button @click="handleAbout">{{ t('about') }}</button>
+      </div>
     </nav>
     <div class="top-spacer"></div>
-    <span class="release-pill">0.12.0</span>
+    <span class="release-pill">1.0.0</span>
     <input ref="fileInput" type="file" hidden accept="application/json,.json" @change="handleFileSelected">
   </header>
 </template>
 
 <script setup lang="ts">
+import { openUrl } from '@tauri-apps/plugin-opener'
 import { onMounted, onUnmounted, ref } from 'vue'
 import { t } from '../i18n'
 import { editorState } from '../store/editor'
@@ -50,6 +54,7 @@ import { preferencesState } from '../store/preferences'
 const activeMenu = ref<string | null>(null)
 const fileInput = ref<HTMLInputElement | null>(null)
 let menuTimeout: number | null = null
+const projectUrl = 'https://github.com/Stevenzhang543/Nova_A/'
 
 function confirmDestructive(message: string): boolean {
   return !preferencesState.confirmDestructiveActions || window.confirm(message)
@@ -78,6 +83,11 @@ function handleToggleAllAxes() {
   editorState.showXAxis = visible; editorState.showYAxis = visible; activeMenu.value = null
 }
 function handleResetCamera() { resetCamera(); activeMenu.value = null }
+async function handleAbout() {
+  activeMenu.value = null
+  if ('__TAURI_INTERNALS__' in window) await openUrl(projectUrl)
+  else window.open(projectUrl, '_blank', 'noopener,noreferrer')
+}
 function handleUndo() { undo(); activeMenu.value = null }
 function handleRedo() { redo(); activeMenu.value = null }
 function toggleMenu(menu: string) { activeMenu.value = activeMenu.value === menu ? null : menu }

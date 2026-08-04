@@ -12,8 +12,8 @@
         <InspectorSection :title="t('connections')" open>
           <div v-if="selectedConnections.length" class="connection-list">
             <article v-for="connection in selectedConnections" :key="connection.id" class="connection-item" :class="connection.breakState">
-              <button class="connection-main" @click="openConnection(connection.id)"><span class="connection-dot"></span><span><strong>{{ connection.name }}</strong><small>{{ t(connection.breakState) }} · {{ connection.anchors.length }} {{ t('entities').toLowerCase() }}</small></span></button>
-              <button v-if="connection.breakState !== 'intact'" class="mini-button" :title="t('repairConnection')" @click="repair(connection.id)">↻</button>
+              <button class="connection-main" @click="openConnection(connection.id)"><span class="connection-dot"></span><span><strong>{{ connection.name }}</strong><small>{{ connection.binding ? t('bind') : t(connection.breakState) }} · {{ connection.anchors.length }} {{ t('entities').toLowerCase() }}</small></span></button>
+              <button v-if="!connection.binding && connection.breakState !== 'intact'" class="mini-button" :title="t('repairConnection')" @click="repair(connection.id)">↻</button>
               <button class="mini-button danger" :title="t('deleteConnection')" @click="removeConnection(connection.id)">×</button>
             </article>
           </div>
@@ -36,6 +36,7 @@
           <PropertyRow :label="t('position')"><div class="pair"><input v-model.number="selectedEntity.transform.position.x" type="number" step="0.01"><input v-model.number="selectedEntity.transform.position.y" type="number" step="0.01"></div></PropertyRow>
           <PropertyRow :label="t('rotationDegrees')"><NumberRange v-model="rotationDegrees" :min="-180" :max="180" :step="1" /></PropertyRow>
           <PropertyRow :label="t('linearVelocity')"><div class="pair"><input v-model.number="selectedEntity.velocity.x" type="number" step="0.01"><input v-model.number="selectedEntity.velocity.y" type="number" step="0.01"></div></PropertyRow>
+          <PropertyRow :label="t('accelerationXY')"><div class="pair"><input v-model.number="selectedEntity.acceleration.x" type="number" step="0.01"><input v-model.number="selectedEntity.acceleration.y" type="number" step="0.01"></div></PropertyRow>
           <PropertyRow :label="t('angularVelocity')"><input v-model.number="selectedEntity.angularVelocity" type="number" step="0.01"></PropertyRow>
         </InspectorSection>
 

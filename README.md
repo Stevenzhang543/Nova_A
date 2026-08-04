@@ -4,19 +4,20 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE.md)
 [![Platforms](https://img.shields.io/badge/platform-Windows11-lightgrey)]()
-[![Release](https://img.shields.io/badge/release-0.12.0-6ea8fe)]()
+[![Release](https://img.shields.io/badge/release-1.0.0-6ea8fe)]()
 
 
 > **Nova_A is a fully open-source 2D physics engine, renderer, and GUI editor project built from scratch using Rust + Vue 3.**  
-> Version: **0.12.0** — modern editor, localized workflow, and physical connections.
+> Version: **1.0.0** — the first official release of the Nova_A editor and physics engine.
 
-# What’s new in v0.12.0
+# What’s new in v1.0.0
 
-* New adaptive dark and light palettes, modern layered controls, responsive animation, compact/high-contrast/reduced-motion options, and renderer quality controls.
-* Complete editor localization in English, German, and Simplified Chinese.
-* Multi-object physical strings/links with surface, vertex, side, or center anchors; straight, curved, and manually drawn routes; elastic/rigid behavior; damping; and deterministic bend/stretch overload failure.
-* Local autosave, grid snapping, zoom sensitivity, configurable new-object defaults, and safer destructive actions.
-* Project format v2 persists connection data while remaining compatible with older entity-only scene files.
+* Rebalanced dark and light palettes: standard contrast now matches the former high-contrast treatment, while the optional high-contrast mode is stronger. The UI uses a softer system font stack and clearer control outlines.
+* Added an About action that opens the official Nova_A GitHub repository in the system browser, with a URL-scoped desktop permission.
+* Fixed axis visibility so hiding X, Y, or all axes never removes the independent grid; fixed shape-tool alignment and guarded canvas deselection against accidental drawing.
+* Rebuilt connections as a guided two-object workflow with exact center/surface anchors, straight or automatically smoothed freehand paths, real-layout preview, and editable physical parameters.
+* Overlapping objects can be bound into a rigid assembly that preserves relative position and rotation while continuing to collide with other objects.
+* Project format v3 persists rigid bindings while remaining compatible with v2 and older entity-only scene files.
 
 
 ## Build Requirements
@@ -124,7 +125,9 @@ pnpm build
 ### CONNECTIONS
 
   **Strings and links**
-    Two or more objects can be connected at their center, surface, polygon vertex, or a point along a polygon side. A connection is solved at the actual rotating anchor points, so its linear and angular impulses affect both bodies.
+    Exactly two objects can be connected at their center, surface, polygon vertex, or a point along a polygon side. A connection is solved at the actual rotating anchor points, so its linear and angular impulses affect both bodies.
+  **Rigid binding**
+    Overlapping objects can be bound into one rigid assembly. The fixed constraint preserves their initial local offset and relative rotation and suppresses collision only between the bound pair.
   **Stretch and bend behavior**
     A non-stretching bendable string is a unilateral distance constraint: it resists separation but can go slack. A non-bendable link behaves as a rod and also resists compression. Stretchable links use damped Hooke tension. Bend and stretch overload thresholds use the maximum attached body mass and persist a snapped/torn state in the project.
 

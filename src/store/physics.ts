@@ -127,7 +127,7 @@ function serializeEntity(entity: Entity): Record<string, unknown> {
 export function getSceneJSON(): string {
   normalizeGlobalSettings()
   return JSON.stringify({
-    formatVersion: 2,
+    formatVersion: 3,
     layers: [...editorState.layers],
     activeLayer: editorState.activeLayer,
     renderLayer: editorState.renderLayer,

@@ -36,6 +36,8 @@ let dragEntityId: number | null = null;
 
 let savedCameraState: { scale: number, offset: Vec2 } | null = null;
 let hasMovedEntity = false;
+const DRAW_GUARD_MS = 260
+let drawingBlockedUntil = 0
 
 watch(() => state.focusEntityID, (newId) => {
   if (editorState.currentPage !== 'scene') return;
@@ -192,7 +194,12 @@ function onMouseDown(e: MouseEvent) {
       const hitId = hitTest(wPos)
       if (hitId !== null) { dragEntityId = hitId; isDragging = true; dragStart = wPos } 
       else { 
-        enterEditMode(null); // Clicked empty space: Deselect and return camera
+        if (state.selectedEntityId !== null) {
+          enterEditMode(null)
+          drawingBlockedUntil = performance.now() + DRAW_GUARD_MS
+          return
+        }
+        if (performance.now() < drawingBlockedUntil) return
         isDragging = true; dragStart = wPos; dragNow = wPos; dragEntityId = null 
       }
     }
@@ -377,13 +384,13 @@ function render() {
   if (editorState.showGrid) {
     const step = Math.max(0.000001, prefs.gridSize); const startX = Math.floor(viewL / step) * step; const startY = Math.floor(viewB / step) * step
     ctx.beginPath(); ctx.strokeStyle = palette.grid; ctx.lineWidth = 1 / camera.scale
-    if (editorState.showYAxis) for (let x = startX; x < viewR; x += step) { ctx.moveTo(x, viewB); ctx.lineTo(x, viewT) }
-    if (editorState.showXAxis) for (let y = startY; y < viewT; y += step) { ctx.moveTo(viewL, y); ctx.lineTo(viewR, y) }
+    for (let x = startX; x < viewR; x += step) { ctx.moveTo(x, viewB); ctx.lineTo(x, viewT) }
+    for (let y = startY; y < viewT; y += step) { ctx.moveTo(viewL, y); ctx.lineTo(viewR, y) }
     ctx.stroke()
     let textStep = step * 10; if (camera.scale * step < 3) textStep = step * 50; if (camera.scale * step < 1) textStep = step * 100
     ctx.save(); ctx.scale(1, -1); ctx.fillStyle = palette.label; ctx.font = `${10 / camera.scale}px sans-serif`
-    if (editorState.showYAxis) { for (let x = startX; x < viewR; x += step) { if (x % textStep === 0 && x !== 0) ctx.fillText(x.toString(), x + 2, 12 / camera.scale) } }
-    if (editorState.showXAxis) { for (let y = startY; y < viewT; y += step) { if (y % textStep === 0 && y !== 0) ctx.fillText(y.toString(), 4 / camera.scale, -y + 4 / camera.scale) } }
+    for (let x = startX; x < viewR; x += step) { if (editorState.showXAxis && x % textStep === 0 && x !== 0) ctx.fillText(x.toString(), x + 2, 12 / camera.scale) }
+    for (let y = startY; y < viewT; y += step) { if (editorState.showYAxis && y % textStep === 0 && y !== 0) ctx.fillText(y.toString(), 4 / camera.scale, -y + 4 / camera.scale) }
     ctx.restore()
   }
 

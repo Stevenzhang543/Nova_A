@@ -1,9 +1,10 @@
 [package]
 name = "nova_core"
-version = "0.12.0"
+version = "1.0.0"
 edition = "2021"
 rust-version = "1.77"
 description = "Nova_A 2D physics solver compiled to WebAssembly"
+repository = "https://github.com/Stevenzhang543/Nova_A"
 license = "MIT"
 
 [lib]

@@ -1,4 +1,4 @@
-<template><footer class="status-bar"><span class="status"><i></i>{{ state.statusText }}</span><span class="tag">{{ t('version') }} · Whitelist</span></footer></template>
+<template><footer class="status-bar"><span class="status"><i></i>{{ state.statusText }}</span><span class="tag">{{ t('releaseLabel') }} &middot; Whitelist</span></footer></template>
 <script setup lang="ts">
 import { t } from '../i18n'
 import { editorState as state } from '../store/editor'
