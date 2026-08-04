@@ -12,6 +12,6 @@ import LayerBar from "../components/LayerBar.vue"
 </script>
 
 <style scoped>
-.renderer-panel { display: flex; flex-direction: column; width: 100%; height: 100%; background: #1e1e1e; position: relative;}
+.renderer-panel { display: flex; flex-direction: column; width: 100%; height: 100%; background: var(--bg-canvas); position: relative;}
 .viewport-wrapper { flex: 1; position: relative; overflow: hidden; }
 </style>

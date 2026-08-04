@@ -5,58 +5,71 @@ README.zh-CN.md:
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE.md)
 [![Platforms](https://img.shields.io/badge/platform-Windows11-lightgrey)]()
-[![Status](https://img.shields.io/badge/status-alpha-orange)]()
+[![Release](https://img.shields.io/badge/release-0.12.0-6ea8fe)]()
 
 
 > **Nova_A 是一个完全开源的 2D 物理引擎、渲染器和 GUI 编辑器项目，使用 Rust + Vue 3 从零构建。**  
-> 版本：**0.11.2** — 真正的**物理**。
+> 版本：**0.12.0** — 现代化编辑器、多语言工作流与物理连接系统。
 
-# v0.11.2 更新内容
+# v0.12.0 更新内容
 
-引擎核心更新。
-该版本引入了**物理检查机制**和**计算检查机制**，显著提升了模拟的稳定性与正确性。
-后端已被**完全重构**，带来了更清晰的架构和更可靠的执行流程。
-这些改动为未来更高级功能和更高精度的物理行为奠定了基础。
+* 新增自适应深色／浅色主题、现代分层控件、响应动画，以及紧凑、高对比度、减少动态效果和渲染质量设置。
+* 编辑器界面完整支持英语、德语和简体中文。
+* 新增多对象物理绳索／连接：支持表面、顶点、边上点或中心锚点，直线、曲线和手绘路径，弹性／刚性、阻尼及弯曲／拉伸超载断裂。
+* 新增本地自动保存、网格吸附、缩放灵敏度、新对象默认值和删除确认。
+* 项目格式升级为 v2，可保存连接数据，并兼容旧版仅含对象的场景文件。
 
 
 ## 构建要求
 
   要构建并运行此项目，请确保已安装以下环境：
-* **Node.js**：`v18.0.0` 或更高（现代 Vite/Vue 3 环境所需）
-* **npm**：`v9.0.0` 或更高（或者使用 `yarn v1.22+` 或 `pnpm v8+`）
-* **Vue**：`^3.3.0`（通过 package.json 自动解析）
-* **TypeScript**：`~5.0.0` 或更高（通过 package.json 自动解析）
-* **Cargo**：`1.71.0` 或更高。Cargo edition 2021。
-* **WASM-pack**：`1.71.0` 或更高（随 cargo 自动安装）
+* **Node.js**：`v18.0.0` 或更高（`.node-version` 记录为 `22.22.2`）
+* **pnpm**：`v9.0.0` 或更高（`package.json` 记录为 `10.30.0`）
+* **Rust/Cargo**：当前稳定版工具链和 `wasm32-unknown-unknown` 目标（记录在 `rust-toolchain.toml`）
+* **wasm-pack**：`0.14.0` 或更高（需单独安装，并不随 Cargo 自动提供）
+* **Windows 桌面构建**：Microsoft C++ Build Tools 和 WebView2
 
 ## 构建指南
 
 ### 1. 初始化（安装依赖）
   在首次运行引擎之前，你需要安装所有所需的 node 模块。进入 `Nova_A` 根目录并运行：
 
-* **npm install pnpm**
-* **pnpm install**
-* **pnpm install tauri**
+```powershell
+corepack enable
+corepack prepare pnpm@10.30.0 --activate
+pnpm install --frozen-lockfile
+cargo install wasm-pack --version 0.14.0 --locked
+```
 
-### 2. 初始化（构建后端引擎）
-  进入 Nova_A\nova_core 目录并运行：
+如果已经安装 `wasm-pack`，可以跳过对应的安装命令。
 
-* **wasm-pack build --target web**
-
-### 3. 开发构建（本地服务器）
+### 2. 开发构建（本地服务器）
   启动一个带有热模块替换（HMR）的本地开发服务器，以便快速迭代测试：
 
-* **pnpm tauri dev**
+```powershell
+pnpm tauri dev
+```
 
-（这通常会在 http://localhost:1420 启动编辑器）。
+开发命令会先从 Rust 源码重新生成 `nova_core/pkg`，避免浏览器误用旧的 WASM 构建。
+（使用 Vite 时通常会在 http://localhost:1420 启动编辑器。）
 
-### 4. 生产发布（构建）
+### 3. 生产发布（构建）
   为生产部署编译、打包并压缩应用：
 
-* **pnpm tauri build**
+```powershell
+pnpm tauri build
+```
 
-（这将生成一个 dist/ 文件夹，其中包含静态 HTML、CSS 和优化后的 JS 资源）。
+生产命令会重新构建发布版 WASM、检查 Vue/TypeScript 类型，然后打包前端和 Tauri 应用。
+（这将生成一个 `dist/` 文件夹，其中包含静态 HTML、CSS 和优化后的 JS 资源。）
 
+### 4. 验证
+
+```powershell
+pnpm test:core
+pnpm check
+pnpm build
+```
 
 ## 物理属性
 

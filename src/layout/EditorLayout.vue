@@ -1,5 +1,5 @@
 <template>
-  <div class="editor-root" :key="state.layoutVersion" @contextmenu.prevent @click="closeContextMenu">
+  <div class="editor-root" @contextmenu.prevent @click="closeContextMenu">
     <TopBar />
     <ToolBar v-if="state.currentPage === 'scene'" /> 
     <ConfigPanel v-if="state.currentPage === 'scene'" /> 
@@ -8,9 +8,11 @@
     <div class="editor-main">
       <SideBar />
       <div class="editor-content">
-        <ScenePanel v-if="state.currentPage === 'scene'" />
-        <RendererPanel v-if="state.currentPage === 'render'" />
-        <SettingsPanel v-if="state.currentPage === 'settings'" />
+        <Transition name="page" mode="out-in">
+          <ScenePanel v-if="state.currentPage === 'scene'" key="scene" />
+          <RendererPanel v-else-if="state.currentPage === 'render'" key="render" />
+          <SettingsPanel v-else key="settings" />
+        </Transition>
       </div>
     </div>
     
@@ -21,7 +23,6 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, onBeforeUnmount } from "vue"
 import TopBar from "./TopBar.vue"
 import SideBar from "./SideBar.vue"
 import StatusBar from "./StatusBar.vue"
@@ -34,22 +35,14 @@ import ScenePanel from "../panels/ScenePanel.vue"
 import RendererPanel from "../panels/RendererPanel.vue"
 import SettingsPanel from "../panels/SettingsPanel.vue"
 
-import { editorState as state, reconfigureLayout, closeContextMenu } from "../store/editor"
-
-function handleLayoutChange() { reconfigureLayout() }
-
-onMounted(() => {
-  handleLayoutChange()
-  window.addEventListener("resize", handleLayoutChange)
-})
-
-onBeforeUnmount(() => {
-  window.removeEventListener("resize", handleLayoutChange)
-})
+import { editorState as state, closeContextMenu } from "../store/editor"
 </script>
 
 <style scoped>
-.editor-root { display: flex; flex-direction: column; height: 100vh; min-height: 0; background: #1e1e1e; color: #ddd; }
+.editor-root { display: flex; flex-direction: column; height: 100vh; min-height: 0; background: var(--bg-base); color: var(--text-primary); }
 .editor-main { flex: 1; display: flex; min-height: 0; }
-.editor-content { flex: 1; position: relative; overflow: hidden; background: #2a2a2a; }
+.editor-content { flex: 1; position: relative; overflow: hidden; background: var(--bg-canvas); }
+.page-enter-active, .page-leave-active { transition: opacity 150ms ease, transform 180ms cubic-bezier(.2,.8,.2,1); }
+.page-enter-from { opacity: 0; transform: translateY(5px); }
+.page-leave-to { opacity: 0; transform: translateY(-3px); }
 </style>

@@ -4,11 +4,23 @@ import { physicsState, enterEditMode, pushHistory } from '../store/physics'
 import { BoxEntity } from '../world/BoxEntity'
 import { CircleEntity } from '../world/CircleEntity'
 import { TriangleEntity } from '../world/TriangleEntity'
+import type { Entity } from '../world/Entity'
 import type { Vec2 } from '../world/types'
 import { editorState, openContextMenu } from '../store/editor'
+import { isValidConvexPolygon, MIN_SIZE, normalizeEntity, syncMassFromDensity } from '../world/geometry'
+import { preferencesState as prefs } from '../store/preferences'
+import { routePoints, setManualRoute } from '../world/Connection'
+import { t } from '../i18n'
 
 const canvasRef = ref<HTMLCanvasElement | null>(null)
 let ctx: CanvasRenderingContext2D | null = null
+let canvasPixelRatio = 1
+let isManualDrawing = false
+const knownBrokenConnections = new Set<number>()
+let palette = {
+  canvas: '#11151b', grid: '#202630', label: '#626c7c', xAxis: '#a9505b', yAxis: '#4e946d',
+  selection: '#ffd166', selectionFill: 'rgba(255,209,102,.24)', handle: '#ff7a59', connection: '#8bb8ff', broken: '#ff6b6b'
+}
 
 const state = physicsState
 const world = physicsState.world
@@ -61,11 +73,25 @@ watch(() => state.focusEntityID, (newId) => {
   }
 });
 
+function readPalette() {
+  const styles = getComputedStyle(document.documentElement)
+  const value = (name: string, fallback: string) => styles.getPropertyValue(name).trim() || fallback
+  palette = {
+    canvas: value('--bg-canvas', palette.canvas), grid: value('--canvas-grid', palette.grid), label: value('--canvas-grid-label', palette.label),
+    xAxis: value('--canvas-x-axis', palette.xAxis), yAxis: value('--canvas-y-axis', palette.yAxis), selection: value('--canvas-selection', palette.selection),
+    selectionFill: value('--canvas-selection-fill', palette.selectionFill), handle: value('--canvas-handle', palette.handle),
+    connection: value('--connection', palette.connection), broken: value('--connection-broken', palette.broken)
+  }
+}
+
+watch(() => [prefs.theme, prefs.highContrast, prefs.maxPixelRatio], () => { readPalette(); resize() })
+
 function resize() {
   const canvas = canvasRef.value; if (!canvas) return
-  const dpr = window.devicePixelRatio || 1; const r = canvas.getBoundingClientRect()
+  canvasPixelRatio = Math.min(window.devicePixelRatio || 1, prefs.maxPixelRatio)
+  const dpr = canvasPixelRatio; const r = canvas.getBoundingClientRect()
   const oldWidth = canvas.width / dpr; const oldHeight = canvas.height / dpr
-  canvas.width = r.width * dpr; canvas.height = r.height * dpr
+  canvas.width = Math.max(1, Math.round(r.width * dpr)); canvas.height = Math.max(1, Math.round(r.height * dpr))
   if (oldWidth > 0 && oldHeight > 0 && (oldWidth !== r.width || oldHeight !== r.height)) {
     camera.offset.x += (r.width - oldWidth) / 2; camera.offset.y += (r.height - oldHeight) / 2
   }
@@ -76,37 +102,65 @@ function resize() {
 function loop(time?: number) {
   const now = time || performance.now(); const dt = (now - lastTime) / 1000; lastTime = now
 
-  if (camera.targetScale !== null) {
-    camera.scale += (camera.targetScale - camera.scale) * 8 * dt;
+  if (camera.targetScale !== null && !prefs.reduceMotion) {
+    camera.scale += (camera.targetScale - camera.scale) * (1 - Math.exp(-8 * dt));
     if (Math.abs(camera.scale - camera.targetScale) < 0.005) { camera.scale = camera.targetScale; camera.targetScale = null; }
   }
-  if (camera.targetOffset !== null) {
-    camera.offset.x += (camera.targetOffset.x - camera.offset.x) * 8 * dt;
-    camera.offset.y += (camera.targetOffset.y - camera.offset.y) * 8 * dt;
+  if (camera.targetScale !== null && prefs.reduceMotion) { camera.scale = camera.targetScale; camera.targetScale = null }
+  if (camera.targetOffset !== null && !prefs.reduceMotion) {
+    const blend = 1 - Math.exp(-8 * dt)
+    camera.offset.x += (camera.targetOffset.x - camera.offset.x) * blend;
+    camera.offset.y += (camera.targetOffset.y - camera.offset.y) * blend;
     if (Math.abs(camera.offset.x - camera.targetOffset.x) < 0.5 && Math.abs(camera.offset.y - camera.targetOffset.y) < 0.5) {
       camera.offset.x = camera.targetOffset.x; camera.offset.y = camera.targetOffset.y; camera.targetOffset = null;
     }
   }
+  if (camera.targetOffset !== null && prefs.reduceMotion) { camera.offset = { ...camera.targetOffset }; camera.targetOffset = null }
 
   world.update(Math.min(dt, 0.1), state.simulationRunning, state.globalSettings) 
+  for (const connection of world.connections) {
+    if (connection.breakState !== 'intact' && !knownBrokenConnections.has(connection.id)) {
+      knownBrokenConnections.add(connection.id)
+      editorState.statusText = t('connectionBroken', { name: connection.name })
+    }
+  }
   render(); raf = requestAnimationFrame(loop)
 }
 
 onMounted(() => {
+  readPalette()
+  world.connections.filter(connection => connection.breakState !== 'intact').forEach(connection => knownBrokenConnections.add(connection.id))
   resize()
   if (canvasRef.value) {
     const r = canvasRef.value.getBoundingClientRect(); camera.offset.x = r.width / 2; camera.offset.y = r.height / 2
     resizeObserver = new ResizeObserver(() => resize()); resizeObserver.observe(canvasRef.value.parentElement!)
   }
-  lastTime = performance.now(); loop(); window.addEventListener('resize', resize)
+  lastTime = performance.now(); loop(); window.addEventListener('resize', resize); window.addEventListener('mouseup', onMouseUp); window.addEventListener('keydown', onKeyDown)
+  void world.wasmReady.then(() => {
+    if (world.wasmError) editorState.statusText = t('physicsUnavailable', { message: world.wasmError.message })
+  })
 })
-onBeforeUnmount(() => { if (raf) cancelAnimationFrame(raf); window.removeEventListener('resize', resize); if (resizeObserver) resizeObserver.disconnect() })
+onBeforeUnmount(() => { if (raf) cancelAnimationFrame(raf); window.removeEventListener('resize', resize); window.removeEventListener('mouseup', onMouseUp); window.removeEventListener('keydown', onKeyDown); if (resizeObserver) resizeObserver.disconnect() })
 
 function screenPos(e: MouseEvent): Vec2 { const r = canvasRef.value!.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top } }
-function onWheel(e: WheelEvent) { e.preventDefault(); camera.zoomAt(screenPos(e), e.deltaY < 0 ? 1.1 : 0.9) }
+function onWheel(e: WheelEvent) { e.preventDefault(); const factor = Math.pow(1.1, prefs.zoomSensitivity); camera.zoomAt(screenPos(e), e.deltaY < 0 ? factor : 1 / factor) }
+function snapPoint(point: Vec2): Vec2 { if (!prefs.snapToGrid) return point; const step = Math.max(0.000001, prefs.gridSize); return { x: Math.round(point.x / step) * step, y: Math.round(point.y / step) * step } }
+
+function onKeyDown(event: KeyboardEvent) {
+  if (event.key !== 'Escape' || editorState.manualConnectionId === null) return
+  editorState.manualConnectionId = null
+  editorState.manualConnectionPoints.splice(0)
+  isManualDrawing = false
+  editorState.statusText = t('ready')
+}
 
 function onMouseDown(e: MouseEvent) {
   const sPos = screenPos(e); const wPos = camera.screenToWorld(sPos); dragButton = e.button
+  if (editorState.manualConnectionId !== null && e.button === 0) {
+    isManualDrawing = true
+    editorState.manualConnectionPoints.splice(0, editorState.manualConnectionPoints.length, wPos)
+    return
+  }
   checkHoverVertex(wPos); hasMovedEntity = false; 
 
   if (editorState.currentPage === 'render') { isPanning = true; lastMouseScreen = sPos; return }
@@ -147,6 +201,12 @@ function onMouseDown(e: MouseEvent) {
 
 function onMouseMove(e: MouseEvent) {
   const sPos = screenPos(e); const wPos = camera.screenToWorld(sPos)
+  if (isManualDrawing) {
+    const points = editorState.manualConnectionPoints
+    const previous = points[points.length - 1]
+    if (!previous || Math.hypot(previous.x - wPos.x, previous.y - wPos.y) > 3 / camera.scale) points.push(wPos)
+    return
+  }
   
   if (isPanning && lastMouseScreen) {
     camera.targetScale = null; camera.targetOffset = null; 
@@ -163,7 +223,7 @@ function onMouseMove(e: MouseEvent) {
     if (dragButton === 2) {
       const dx = wPos.x - ent.transform.position.x; const dy = wPos.y - ent.transform.position.y
       const distNow = Math.sqrt(dx*dx + dy*dy); const scaleFactor = distNow / dragMeta.initialDist
-      ent.transform.scale.x = dragMeta.initialScaleX * scaleFactor; ent.transform.scale.y = dragMeta.initialScaleY * scaleFactor
+      ent.transform.scale.x = Math.max(MIN_SIZE, dragMeta.initialScaleX * scaleFactor); ent.transform.scale.y = Math.max(MIN_SIZE, dragMeta.initialScaleY * scaleFactor)
     } 
     else if (dragButton === 0) {
       const dx = wPos.x - ent.transform.position.x; const dy = wPos.y - ent.transform.position.y
@@ -171,7 +231,9 @@ function onMouseMove(e: MouseEvent) {
       const localX = (dx * cosR - dy * sinR) / ent.transform.scale.x; const localY = (dx * sinR + dy * cosR) / ent.transform.scale.y
 
       if (ent instanceof BoxEntity || ent instanceof TriangleEntity) {
-        const v = ent.vertices[hoveredVertex.index]; v.x = localX; v.y = localY
+        const candidate = ent.vertices.map(vertex => ({ ...vertex }))
+        candidate[hoveredVertex.index] = { x: localX, y: localY }
+        if (isValidConvexPolygon(candidate)) ent.vertices = candidate
       } else if (ent instanceof CircleEntity) {
         ent.radiusX = Math.max(0.1, Math.abs(localX)); ent.radiusY = Math.max(0.1, Math.abs(localY))
       }
@@ -184,7 +246,8 @@ function onMouseMove(e: MouseEvent) {
       hasMovedEntity = true; 
       const entity = world.entities.find(ent => ent.id === dragEntityId)
       if (entity) {
-        entity.transform.position.x += wPos.x - dragStart.x; entity.transform.position.y += wPos.y - dragStart.y
+        const next = snapPoint({ x: entity.transform.position.x + wPos.x - dragStart.x, y: entity.transform.position.y + wPos.y - dragStart.y })
+        entity.transform.position.x = next.x; entity.transform.position.y = next.y
         dragStart = wPos
       }
     } else { dragNow = wPos }
@@ -192,19 +255,45 @@ function onMouseMove(e: MouseEvent) {
 }
 
 function onMouseUp() {
+  if (isManualDrawing) {
+    const connection = world.connections.find(candidate => candidate.id === editorState.manualConnectionId)
+    if (connection && editorState.manualConnectionPoints.length >= 2) {
+      setManualRoute(connection, editorState.manualConnectionPoints, world.entities)
+      pushHistory()
+      editorState.statusText = t('connectionUpdated')
+    }
+    editorState.manualConnectionId = null
+    editorState.manualConnectionPoints.splice(0)
+    isManualDrawing = false
+    return
+  }
   if (isDragging && dragEntityId === null && dragStart && dragNow) {
     const dragDistX = Math.abs(dragStart.x - dragNow.x); const dragDistY = Math.abs(dragStart.y - dragNow.y)
     if (dragDistX > 0.5 || dragDistY > 0.5) {
       const w = Math.max(dragDistX, 0.1); const h = Math.max(dragDistY, 0.1)
-      const cx = Math.min(dragStart.x, dragNow.x) + w / 2; const cy = Math.min(dragStart.y, dragNow.y) + h / 2
-      if (state.activeTool === 'rectangle') world.addBox({ x: cx, y: cy }, { x: w, y: h })
-      else if (state.activeTool === 'circle') world.addCircle({ x: cx, y: cy }, w / 2, h / 2)
-      else if (state.activeTool === 'triangle') world.addTriangle({ x: cx, y: cy }, { x: w, y: h })
+      const center = snapPoint({ x: Math.min(dragStart.x, dragNow.x) + w / 2, y: Math.min(dragStart.y, dragNow.y) + h / 2 }); const cx = center.x; const cy = center.y
+      let created: Entity | null = null
+      if (state.activeTool === 'rectangle') created = world.addBox({ x: cx, y: cy }, { x: w, y: h })
+      else if (state.activeTool === 'circle') created = world.addCircle({ x: cx, y: cy }, w / 2, h / 2)
+      else if (state.activeTool === 'triangle') created = world.addTriangle({ x: cx, y: cy }, { x: w, y: h })
+      if (created) {
+        created.layer = editorState.activeLayer
+        created.density = prefs.defaultDensity
+        created.restitution = prefs.defaultRestitution
+        created.staticFriction = prefs.defaultFriction
+        created.dynamicFriction = prefs.defaultFriction
+        syncMassFromDensity(created)
+      }
     }
   }
 
   // BUGFIX: Resizing prevents camera zoom-out desync.
   if (dragEntityId !== null) {
+      const changedEntity = world.entities.find(entity => entity.id === dragEntityId)
+      if (changedEntity && hasMovedEntity) {
+        normalizeEntity(changedEntity)
+        syncMassFromDensity(changedEntity)
+      }
       if (hasMovedEntity && state.selectedEntityId !== dragEntityId) {
           // Dragged unselected object: Don't enter edit mode
       } else if (!hasMovedEntity && !isVertexDragging) {
@@ -239,7 +328,6 @@ function checkHoverVertex(p: Vec2) {
     const dx = p.x - ent.transform.position.x; const dy = p.y - ent.transform.position.y
     const cosR = Math.cos(-ent.transform.rotation); const sinR = Math.sin(-ent.transform.rotation)
     const localX = (dx * cosR - dy * sinR) / ent.transform.scale.x; const localY = (dx * sinR + dy * cosR) / ent.transform.scale.y
-    if (ent.radiusX < 1 || ent.radiusY < 1) return
     const nx = localX / ent.radiusX; const ny = localY / ent.radiusY; const mag = Math.sqrt(nx * nx + ny * ny)
     if (mag > 0) {
       const ex = (nx / mag) * ent.radiusX; const ey = (ny / mag) * ent.radiusY
@@ -280,23 +368,46 @@ function hitTest(p: Vec2): number | null {
 
 function render() {
   if (!ctx || !canvasRef.value) return
-  const cvs = canvasRef.value; const width = cvs.width / window.devicePixelRatio; const height = cvs.height / window.devicePixelRatio
-  ctx.fillStyle = '#1e1e1e'; ctx.fillRect(0, 0, width, height)
+  const cvs = canvasRef.value; const width = cvs.width / canvasPixelRatio; const height = cvs.height / canvasPixelRatio
+  ctx.fillStyle = palette.canvas; ctx.fillRect(0, 0, width, height)
   ctx.save(); ctx.translate(camera.offset.x, camera.offset.y); ctx.scale(camera.scale, -camera.scale) 
   const viewL = -camera.offset.x / camera.scale; const viewR = viewL + width / camera.scale
   const viewT = camera.offset.y / camera.scale; const viewB = viewT - height / camera.scale   
 
   if (editorState.showGrid) {
-    const step = 10; const startX = Math.floor(viewL / step) * step; const startY = Math.floor(viewB / step) * step
-    ctx.beginPath(); ctx.strokeStyle = '#2a2a2a'; ctx.lineWidth = 1 / camera.scale
+    const step = Math.max(0.000001, prefs.gridSize); const startX = Math.floor(viewL / step) * step; const startY = Math.floor(viewB / step) * step
+    ctx.beginPath(); ctx.strokeStyle = palette.grid; ctx.lineWidth = 1 / camera.scale
     if (editorState.showYAxis) for (let x = startX; x < viewR; x += step) { ctx.moveTo(x, viewB); ctx.lineTo(x, viewT) }
     if (editorState.showXAxis) for (let y = startY; y < viewT; y += step) { ctx.moveTo(viewL, y); ctx.lineTo(viewR, y) }
     ctx.stroke()
-    let textStep = 100; if (camera.scale < 0.3) textStep = 500; if (camera.scale < 0.1) textStep = 1000
-    ctx.save(); ctx.scale(1, -1); ctx.fillStyle = '#666'; ctx.font = `${10 / camera.scale}px sans-serif`
+    let textStep = step * 10; if (camera.scale * step < 3) textStep = step * 50; if (camera.scale * step < 1) textStep = step * 100
+    ctx.save(); ctx.scale(1, -1); ctx.fillStyle = palette.label; ctx.font = `${10 / camera.scale}px sans-serif`
     if (editorState.showYAxis) { for (let x = startX; x < viewR; x += step) { if (x % textStep === 0 && x !== 0) ctx.fillText(x.toString(), x + 2, 12 / camera.scale) } }
     if (editorState.showXAxis) { for (let y = startY; y < viewT; y += step) { if (y % textStep === 0 && y !== 0) ctx.fillText(y.toString(), 4 / camera.scale, -y + 4 / camera.scale) } }
     ctx.restore()
+  }
+
+  if (prefs.showConnections) {
+    for (const connection of world.connections) {
+      const visible = connection.anchors.some(anchor => {
+        const entity = world.entities.find(candidate => candidate.id === anchor.entityId)
+        return entity && (editorState.currentPage === 'render' ? editorState.renderLayer === 'all' || entity.layer === editorState.renderLayer : entity.layer === editorState.activeLayer)
+      })
+      if (!visible) continue
+      ctx.save()
+      ctx.strokeStyle = connection.breakState === 'intact' ? palette.connection : palette.broken
+      ctx.lineWidth = prefs.connectionThickness / camera.scale
+      ctx.lineCap = 'round'; ctx.lineJoin = 'round'
+      if (connection.breakState !== 'intact') ctx.setLineDash([8 / camera.scale, 6 / camera.scale])
+      for (const points of routePoints(connection, world.entities)) {
+        if (points.length < 2) continue
+        ctx.beginPath(); ctx.moveTo(points[0].x, points[0].y)
+        if (connection.style === 'curved' && points.length === 3) ctx.quadraticCurveTo(points[1].x, points[1].y, points[2].x, points[2].y)
+        else for (let index = 1; index < points.length; index++) ctx.lineTo(points[index].x, points[index].y)
+        ctx.stroke()
+      }
+      ctx.restore()
+    }
   }
 
   const lwNormal = 1 / camera.scale; const lwSelected = 3 / camera.scale
@@ -304,13 +415,20 @@ function render() {
     if (editorState.currentPage === 'scene' && e.layer !== editorState.activeLayer) continue;
     if (editorState.currentPage === 'render' && editorState.renderLayer !== 'all' && e.layer !== editorState.renderLayer) continue;
     const pos = e.transform.position; const isSelected = e.id === state.selectedEntityId
-    const maxRadius = Math.max(e.transform.scale.x, e.transform.scale.y) * (e instanceof CircleEntity ? Math.max(e.radiusX, e.radiusY) : 200); 
+    const maxRadius = e instanceof CircleEntity
+      ? Math.max(e.radiusX * e.transform.scale.x, e.radiusY * e.transform.scale.y)
+      : e instanceof BoxEntity || e instanceof TriangleEntity
+        ? Math.max(...e.vertices.map(vertex => Math.hypot(
+          vertex.x * e.transform.scale.x,
+          vertex.y * e.transform.scale.y
+        )), MIN_SIZE)
+        : MIN_SIZE
     if (pos.x + maxRadius < viewL || pos.x - maxRadius > viewR || pos.y + maxRadius < viewB || pos.y - maxRadius > viewT) continue; 
     
     ctx.lineWidth = isSelected ? lwSelected : lwNormal
     const alpha = (e.transparency !== undefined ? e.transparency : 100) / 100
-    ctx.fillStyle = isSelected ? `rgba(255, 200, 0, ${alpha * 0.5})` : `rgba(${e.color.r}, ${e.color.g}, ${e.color.b}, ${alpha})`
-    ctx.strokeStyle = isSelected ? `rgba(255, 238, 0, ${alpha})` : `rgba(${Math.max(0, e.color.r - 50)}, ${Math.max(0, e.color.g - 50)}, ${Math.max(0, e.color.b - 50)}, ${alpha})`
+    ctx.fillStyle = isSelected ? palette.selectionFill : `rgba(${e.color.r}, ${e.color.g}, ${e.color.b}, ${alpha})`
+    ctx.strokeStyle = isSelected ? palette.selection : `rgba(${Math.max(0, e.color.r - 50)}, ${Math.max(0, e.color.g - 50)}, ${Math.max(0, e.color.b - 50)}, ${alpha})`
     
     ctx.save(); ctx.translate(pos.x, pos.y); ctx.rotate(e.transform.rotation)
     ctx.beginPath()
@@ -339,7 +457,7 @@ function render() {
 
     if (e.texture) {
       if (!e.textureImage) { e.textureImage = new Image(); e.textureImage.src = e.texture; }
-      if (e.textureImage.complete) {
+      if (e.textureImage.complete && e.textureImage.naturalWidth > 0) {
           ctx.save(); ctx.clip(); ctx.scale(1, -1); 
           minX *= e.transform.scale.x; maxX *= e.transform.scale.x;
           minY *= e.transform.scale.y; maxY *= e.transform.scale.y;
@@ -349,25 +467,25 @@ function render() {
     }
     ctx.restore() 
 
-    if (isSelected && !isVertexDragging && !isDragging && hoveredVertex && hoveredVertex.entityId === e.id) {
+    if (prefs.showDiagnostics && isSelected && !isVertexDragging && !isDragging && hoveredVertex && hoveredVertex.entityId === e.id) {
       let vx = 0, vy = 0; const cosR = Math.cos(e.transform.rotation); const sinR = Math.sin(e.transform.rotation)
       if (e instanceof CircleEntity && hoveredVertex.virtualPos) {
         const localX = hoveredVertex.virtualPos.x * e.transform.scale.x; const localY = hoveredVertex.virtualPos.y * e.transform.scale.y
         vx = pos.x + (localX * cosR - localY * sinR); vy = pos.y + (localX * sinR + localY * cosR)
-      } else if ('vertices' in e) {
-        const v = (e as any).vertices[hoveredVertex.index]
+      } else if (e instanceof BoxEntity || e instanceof TriangleEntity) {
+        const v = e.vertices[hoveredVertex.index]
         const localX = v.x * e.transform.scale.x; const localY = v.y * e.transform.scale.y
         vx = pos.x + (localX * cosR - localY * sinR); vy = pos.y + (localX * sinR + localY * cosR)
       }
-      ctx.beginPath(); ctx.fillStyle = '#ff4500'; ctx.arc(vx, vy, 6 / camera.scale, 0, Math.PI * 2); ctx.fill()
+      ctx.beginPath(); ctx.fillStyle = palette.handle; ctx.arc(vx, vy, 6 / camera.scale, 0, Math.PI * 2); ctx.fill()
     }
   }
 
   ctx.lineWidth = 2 / camera.scale
-  if (editorState.showXAxis) { ctx.beginPath(); ctx.strokeStyle = '#772222'; ctx.moveTo(viewL, 0); ctx.lineTo(viewR, 0); ctx.stroke() }
-  if (editorState.showYAxis) { ctx.beginPath(); ctx.strokeStyle = '#227722'; ctx.moveTo(0, viewT); ctx.lineTo(0, viewB); ctx.stroke() }
+  if (editorState.showXAxis) { ctx.beginPath(); ctx.strokeStyle = palette.xAxis; ctx.moveTo(viewL, 0); ctx.lineTo(viewR, 0); ctx.stroke() }
+  if (editorState.showYAxis) { ctx.beginPath(); ctx.strokeStyle = palette.yAxis; ctx.moveTo(0, viewT); ctx.lineTo(0, viewB); ctx.stroke() }
   if (isDragging && dragEntityId === null && dragStart && dragNow) {
-    ctx.strokeStyle = '#fff'; ctx.lineWidth = 1 / camera.scale; ctx.setLineDash([5/camera.scale, 5/camera.scale])
+    ctx.strokeStyle = palette.selection; ctx.lineWidth = 1 / camera.scale; ctx.setLineDash([5/camera.scale, 5/camera.scale])
     const x = Math.min(dragStart.x, dragNow.x), y = Math.min(dragStart.y, dragNow.y)
     const w = Math.abs(dragStart.x - dragNow.x), h = Math.abs(dragStart.y - dragNow.y)
     ctx.beginPath()
@@ -379,6 +497,11 @@ function render() {
     }
     if (state.activeTool !== 'triangle') ctx.stroke()
     ctx.setLineDash([])
+  }
+  if (editorState.manualConnectionId !== null && editorState.manualConnectionPoints.length > 1) {
+    ctx.beginPath(); ctx.moveTo(editorState.manualConnectionPoints[0].x, editorState.manualConnectionPoints[0].y)
+    for (let index = 1; index < editorState.manualConnectionPoints.length; index++) ctx.lineTo(editorState.manualConnectionPoints[index].x, editorState.manualConnectionPoints[index].y)
+    ctx.strokeStyle = palette.connection; ctx.lineWidth = prefs.connectionThickness / camera.scale; ctx.lineCap = 'round'; ctx.stroke()
   }
   ctx.restore()
 }

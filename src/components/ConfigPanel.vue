@@ -1,382 +1,172 @@
 <template>
   <div class="config-wrapper">
-    <div class="config-panel" :class="{ 'is-visible': selectedEntity !== null }">
-      
-      <div v-if="selectedEntity" class="settings-content">
-        <h3 class="panel-title">Entity Settings</h3>
-        <div class="entity-name">{{ selectedEntity.name }}_{{ selectedEntity.id }}</div>
-        
-        <hr /><div class="category-title">Body Type</div>
-        <div class="prop-group">
-          <select v-model="bodyType" class="full-select clean-dropdown">
-            <option value="Dynamic">Dynamic</option>
-            <option value="Kinematic">Kinematic</option>
-            <option value="Static">Static</option>
-          </select>
-        </div>
+    <aside class="config-panel" :class="{ visible: selectedEntity !== null }">
+      <div v-if="selectedEntity" class="settings-content" @change="onConfigChange">
+        <header class="inspector-header"><span class="eyebrow">{{ t('entitySettings') }}</span><h3>{{ selectedEntity.name }}_<small>{{ selectedEntity.id }}</small></h3></header>
 
-        <div class="prop-group" style="margin-top: 8px;">
-          <label>Collision Layer</label>
-          <select v-model.number="selectedEntity.layer" class="full-select clean-dropdown">
-            <option v-for="l in estate.layers" :key="l" :value="l">Layer {{ l }}</option>
-          </select>
-        </div>
+        <InspectorSection :title="t('bodyType')" open>
+          <select v-model="bodyType"><option value="Dynamic">{{ t('dynamic') }}</option><option value="Kinematic">{{ t('kinematic') }}</option><option value="Static">{{ t('static') }}</option></select>
+          <PropertyRow :label="t('collisionLayer')"><select v-model.number="selectedEntity.layer" @change="onLayerChange"><option v-for="layer in estate.layers" :key="layer" :value="layer">{{ t('layer') }} {{ layer }}</option></select></PropertyRow>
+        </InspectorSection>
 
-        <hr /><div class="category-title">Appearance</div>
-        <div class="prop-group" title="color">
-          <div class="color-header">
-            <label>Color (RGB)</label>
-            <button class="color-btn" @click="openColorPicker">
-              <img src="../assets/icons/color.svg" alt="Pick Color" />
-            </button>
+        <InspectorSection :title="t('connections')" open>
+          <div v-if="selectedConnections.length" class="connection-list">
+            <article v-for="connection in selectedConnections" :key="connection.id" class="connection-item" :class="connection.breakState">
+              <button class="connection-main" @click="openConnection(connection.id)"><span class="connection-dot"></span><span><strong>{{ connection.name }}</strong><small>{{ t(connection.breakState) }} · {{ connection.anchors.length }} {{ t('entities').toLowerCase() }}</small></span></button>
+              <button v-if="connection.breakState !== 'intact'" class="mini-button" :title="t('repairConnection')" @click="repair(connection.id)">↻</button>
+              <button class="mini-button danger" :title="t('deleteConnection')" @click="removeConnection(connection.id)">×</button>
+            </article>
           </div>
-          <input type="range" v-model.number="selectedEntity.color.r" min="0" max="255" />
-          <input type="range" v-model.number="selectedEntity.color.g" min="0" max="255" />
-          <input type="range" v-model.number="selectedEntity.color.b" min="0" max="255" />
-        </div>
-        <div class="prop-group">
-          <label>Transparency (%)</label>
-          <div class="row-inputs">
-            <input type="range" v-model.number="selectedEntity.transparency" min="0" max="100" step="1" />
-            <input type="number" v-model.number="selectedEntity.transparency" min="0" max="100" step="1" />
-          </div>
-        </div>
+          <p v-else class="empty-state">{{ t('noConnections') }}</p>
+          <button class="primary-action" @click="openConnection(null)"><span>＋</span>{{ t('addConnection') }}</button>
+        </InspectorSection>
 
-        <hr /><div class="category-title">Shape & Size</div>
-        <div class="prop-group">
-          <label>Absolute Size (X, Y)</label>
-          <div class="row-inputs">
-            <input type="number" v-model.number="absoluteSizeX" min="0.1" step="0.1" />
-            <input type="number" v-model.number="absoluteSizeY" min="0.1" step="0.1" />
-          </div>
-        </div>
+        <InspectorSection :title="t('appearance')">
+          <PropertyRow :label="t('colorRgb')"><button class="color-well" :style="{ background: entityColor }" :aria-label="t('pickColor')" @click="openColorPicker"></button></PropertyRow>
+          <PropertyRow :label="t('transparency')"><NumberRange v-model="selectedEntity.transparency" :min="0" :max="100" :step="1" /></PropertyRow>
+          <label class="stacked-field"><span>{{ t('imageTexture') }}</span><input ref="textureInput" type="file" accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml" @change="applyTexture"></label>
+          <button v-if="selectedEntity.texture" class="secondary-action" @click="clearTexture">{{ t('removeTexture') }}</button>
+        </InspectorSection>
 
-        <hr /><div class="category-title">Transform & Motion</div>
-        <div class="prop-group">
-          <label>Position (X, Y)</label>
-          <div class="row-inputs">
-            <input type="number" v-model.number="selectedEntity.transform.position.x" step="0.01" />
-            <input type="number" v-model.number="selectedEntity.transform.position.y" step="0.01" />
-          </div>
-        </div>
-        <div class="prop-group">
-          <label>Rotation (Degrees)</label>
-          <div class="row-inputs">
-            <input type="range" v-model.number="rotationDegrees" min="-180" max="180" step="1" />
-            <input type="number" v-model.number="rotationDegrees" step="1" />
-          </div>
-        </div>
-        <div class="prop-group">
-          <label>Linear Velocity (X, Y)</label>
-          <div class="row-inputs">
-            <input type="number" v-model.number="selectedEntity.velocity.x" step="0.01" />
-            <input type="number" v-model.number="selectedEntity.velocity.y" step="0.01" />
-          </div>
-        </div>
-        <div class="prop-group">
-          <label>Angular Velocity</label>
-          <input type="number" v-model.number="selectedEntity.angularVelocity" step="0.01" />
-        </div>
-        <hr /><div class="category-title">Damping & Friction</div>
-      <div class="prop-group">
-        <label>Linear Damping</label>
-          <div class="row-inputs"><input type="range" v-model.number="selectedEntity.linearDamping" min="0" max="1" step="0.01" @change="onConfigChange" /><input type="number" v-model.number="selectedEntity.linearDamping" step="0.01" @change="onConfigChange" /></div>
-        </div>
-        <div class="prop-group">
-          <label>Angular Damping</label>
-          <div class="row-inputs"><input type="range" v-model.number="selectedEntity!.angularDamping" min="0" max="1" step="0.01" @change="onConfigChange" /><input type="number" v-model.number="selectedEntity!.angularDamping" step="0.01" @change="onConfigChange" /></div>
-        </div>
-        <div class="prop-group">
-          <label>Static Friction</label>
-          <div class="row-inputs"><input type="range" v-model.number="selectedEntity!.staticFriction" min="0" max="1" step="0.01" @change="onConfigChange" /><input type="number" v-model.number="selectedEntity!.staticFriction" step="0.01" @change="onConfigChange" /></div>
-        </div>
-        <div class="prop-group">
-          <label>Dynamic Friction</label>
-          <div class="row-inputs"><input type="range" v-model.number="selectedEntity!.dynamicFriction" min="0" max="1" step="0.01" @change="onConfigChange" /><input type="number" v-model.number="selectedEntity!.dynamicFriction" step="0.01" @change="onConfigChange" /></div>
-        </div>
+        <InspectorSection :title="t('shapeSize')">
+          <PropertyRow :label="t('absoluteSize')"><div class="pair"><input v-model.number="absoluteSizeX" type="number" min="0.000001" step="0.1"><input v-model.number="absoluteSizeY" type="number" min="0.000001" step="0.1"></div></PropertyRow>
+        </InspectorSection>
 
-        <hr /><div class="category-title">Mass Properties</div>
-        <div class="prop-group text-display">
-          <span>Inv Mass:</span> <span>{{ (selectedEntity!.mass > 0 && bodyType === 'Dynamic') ? (1/selectedEntity!.mass).toFixed(4) : '0 (Infinite)' }}</span>
-        </div>
-        <div class="prop-group text-display">
-          <span>Inv Inertia:</span> <span>{{ (selectedEntity!.inertia > 0 && bodyType === 'Dynamic') ? (1/selectedEntity!.inertia).toFixed(4) : '0 (Infinite)' }}</span>
-        </div>
-        <div class="prop-group text-display">
-          <span>Surface Area (m²):</span> <span>{{ entityArea.toFixed(2) }}</span>
-        </div>
-        
-        <div class="prop-group">
-          <label>Density (kg/m²)</label>
-          <div class="row-inputs">
-            <input type="range" v-model.number="selectedEntity!.density" min="0.1" max="10" step="0.1" @input="onDensityChange" />
-            <input type="number" v-model.number="selectedEntity!.density" step="0.1" @change="onDensityChange" />
-          </div>
-        </div>
-        <div class="prop-group">
-          <label>Mass (kg)</label>
-          <div class="row-inputs">
-            <input type="range" v-model.number="selectedEntity!.mass" min="0.1" max="100" step="0.1" @input="onMassChange" />
-            <input type="number" v-model.number="selectedEntity!.mass" step="0.1" @change="onMassChange" />
-          </div>
-        </div>
-        
-        <div class="prop-group">
-          <label>Gravity Scale</label>
-          <div class="row-inputs"><input type="range" v-model.number="selectedEntity!.gravityScale" min="0" max="5" step="0.1" /><input type="number" v-model.number="selectedEntity!.gravityScale" step="0.1" /></div>
-        </div>
-        <div class="prop-group"><label>Local Gravity Pull</label><input type="number" v-model.number="selectedEntity!.gravity" step="0.1" /></div>
+        <InspectorSection :title="t('transformMotion')" open>
+          <PropertyRow :label="t('position')"><div class="pair"><input v-model.number="selectedEntity.transform.position.x" type="number" step="0.01"><input v-model.number="selectedEntity.transform.position.y" type="number" step="0.01"></div></PropertyRow>
+          <PropertyRow :label="t('rotationDegrees')"><NumberRange v-model="rotationDegrees" :min="-180" :max="180" :step="1" /></PropertyRow>
+          <PropertyRow :label="t('linearVelocity')"><div class="pair"><input v-model.number="selectedEntity.velocity.x" type="number" step="0.01"><input v-model.number="selectedEntity.velocity.y" type="number" step="0.01"></div></PropertyRow>
+          <PropertyRow :label="t('angularVelocity')"><input v-model.number="selectedEntity.angularVelocity" type="number" step="0.01"></PropertyRow>
+        </InspectorSection>
 
-        <hr /><div class="category-title">Continuous Forces</div>
-        <div class="prop-group">
-          <label>Force (X, Y)</label>
-          <div class="row-inputs"><input type="number" v-model.number="selectedEntity!.force.x" step="0.01" /><input type="number" v-model.number="selectedEntity!.force.y" step="0.01" /></div>
-        </div>
-        <div class="prop-group"><label>Torque</label><input type="number" v-model.number="selectedEntity!.torque" step="0.01" /></div>
+        <InspectorSection :title="t('dampingFriction')">
+          <PropertyRow :label="t('linearDamping')"><NumberRange v-model="selectedEntity.linearDamping" :min="0" :max="Math.max(1, selectedEntity.linearDamping)" :step="0.01" /></PropertyRow>
+          <PropertyRow :label="t('angularDamping')"><NumberRange v-model="selectedEntity.angularDamping" :min="0" :max="Math.max(1, selectedEntity.angularDamping)" :step="0.01" /></PropertyRow>
+          <PropertyRow :label="t('staticFriction')"><NumberRange v-model="selectedEntity.staticFriction" :min="0" :max="Math.max(1, selectedEntity.staticFriction)" :step="0.01" /></PropertyRow>
+          <PropertyRow :label="t('dynamicFriction')"><NumberRange v-model="selectedEntity.dynamicFriction" :min="0" :max="Math.max(1, selectedEntity.dynamicFriction)" :step="0.01" /></PropertyRow>
+        </InspectorSection>
 
-        <hr /><div class="category-title">Interactive Impulses</div>
-        <div class="impulse-form">
-          <div class="row-inputs"><input type="number" v-model.number="impulseX" placeholder="Force X" /><input type="number" v-model.number="impulseY" placeholder="Force Y" /></div>
-          <div class="row-inputs"><input type="number" v-model.number="offsetX" placeholder="Offset X" /><input type="number" v-model.number="offsetY" placeholder="Offset Y" /></div>
-          <button class="action-btn" @click="applyImpulse">Apply Linear Impulse</button>
-          <div class="row-inputs"><input type="number" v-model.number="angularImpulse" placeholder="Torque (N·m·s)" style="width:100%" /></div>
-          <button class="action-btn" @click="applyAngularImpulse">Apply Angular Impulse</button>
-        </div>
+        <InspectorSection :title="t('massProperties')">
+          <DiagnosticRow :label="t('invMass')" :value="selectedEntity.mass > 0 && bodyType === 'Dynamic' ? (1 / selectedEntity.mass).toPrecision(6) : `0 (${t('infinite')})`" />
+          <DiagnosticRow :label="t('invInertia')" :value="effectiveEntityInertia > 0 && bodyType === 'Dynamic' ? (1 / effectiveEntityInertia).toPrecision(6) : `0 (${t('infinite')})`" />
+          <DiagnosticRow :label="t('surfaceArea')" :value="selectedEntityArea.toPrecision(7)" />
+          <PropertyRow :label="t('density')"><NumberRange v-model="selectedEntity.density" :min="0.000001" :max="Math.max(10, selectedEntity.density)" :step="0.000001" @update:model-value="onDensityChange" /></PropertyRow>
+          <PropertyRow :label="t('mass')"><NumberRange v-model="selectedEntity.mass" :min="0.000001" :max="Math.max(100, selectedEntity.mass)" :step="0.000001" @update:model-value="onMassChange" /></PropertyRow>
+          <PropertyRow :label="t('automaticInertia')"><ToggleSwitch v-model="selectedEntity.autoInertia" /></PropertyRow>
+          <PropertyRow v-if="!selectedEntity.autoInertia" :label="t('momentInertia')"><input v-model.number="selectedEntity.inertia" type="number" min="1e-24" step="0.1"></PropertyRow>
+          <PropertyRow :label="t('gravityScale')"><NumberRange v-model="selectedEntity.gravityScale" :min="Math.min(0, selectedEntity.gravityScale)" :max="Math.max(5, selectedEntity.gravityScale)" :step="0.1" /></PropertyRow>
+          <PropertyRow :label="t('localGravity')"><input v-model.number="selectedEntity.gravity" type="number" step="0.1"></PropertyRow>
+        </InspectorSection>
 
-        <hr /><div class="category-title">Material Response</div>
-        <div class="prop-group switch-group">
-          <label>Is Sensor</label>
-          <label class="switch"><input type="checkbox" v-model="selectedEntity!.isSensor"><span class="slider round"></span></label>
-        </div>
-        <div class="prop-group">
-          <label>Restitution (Bounciness)</label>
-          <div class="row-inputs"><input type="range" v-model.number="selectedEntity!.restitution" min="0" max="1" step="0.01" /><input type="number" v-model.number="selectedEntity!.restitution" step="0.01" /></div>
-        </div>
-        <div class="prop-group"><label>Restitution Threshold (m/s)</label><input type="number" v-model.number="selectedEntity!.restitutionThreshold" step="0.1" /></div>
+        <InspectorSection :title="t('continuousForces')">
+          <PropertyRow :label="t('forceXY')"><div class="pair"><input v-model.number="selectedEntity.force.x" type="number" step="0.01"><input v-model.number="selectedEntity.force.y" type="number" step="0.01"></div></PropertyRow>
+          <PropertyRow :label="t('torque')"><input v-model.number="selectedEntity.torque" type="number" step="0.01"></PropertyRow>
+        </InspectorSection>
 
-        <hr /><div class="category-title">Collision Diagnostics</div>
-        <div class="prop-group text-display">
-          <span>Contacts:</span> <span :class="{'active-contact': selectedEntity!.contactCount > 0}">{{ selectedEntity!.contactCount }}</span>
-        </div>
-        <div class="prop-group text-display" v-if="selectedEntity!.contactCount > 0"><span>Normal:</span> <span>[{{ selectedEntity!.contactNormal.x.toFixed(2) }}, {{ selectedEntity!.contactNormal.y.toFixed(2) }}]</span></div>
-        <div class="prop-group text-display" v-if="selectedEntity!.contactCount > 0"><span>Penetration:</span> <span>{{ selectedEntity!.penetrationDepth.toFixed(3) }} m</span></div>
+        <InspectorSection :title="t('interactiveImpulses')">
+          <div class="pair"><input v-model.number="impulseX" type="number" :placeholder="t('impulseX')"><input v-model.number="impulseY" type="number" :placeholder="t('impulseY')"></div>
+          <div class="pair"><input v-model.number="offsetX" type="number" :placeholder="t('offsetX')"><input v-model.number="offsetY" type="number" :placeholder="t('offsetY')"></div>
+          <button class="primary-action" :disabled="bodyType !== 'Dynamic'" @click="applyImpulse">{{ t('applyLinearImpulse') }}</button>
+          <input v-model.number="angularImpulse" type="number" :placeholder="t('angularImpulse')">
+          <button class="primary-action" :disabled="bodyType !== 'Dynamic'" @click="applyAngularImpulse">{{ t('applyAngularImpulse') }}</button>
+        </InspectorSection>
 
+        <InspectorSection :title="t('materialResponse')">
+          <PropertyRow :label="t('isSensor')"><ToggleSwitch v-model="selectedEntity.isSensor" /></PropertyRow>
+          <PropertyRow :label="t('restitution')"><NumberRange v-model="selectedEntity.restitution" :min="0" :max="1" :step="0.01" /></PropertyRow>
+          <PropertyRow :label="t('restitutionThreshold')"><input v-model.number="selectedEntity.restitutionThreshold" type="number" min="0" step="0.1"></PropertyRow>
+        </InspectorSection>
+
+        <InspectorSection v-if="prefs.showDiagnostics" :title="t('collisionDiagnostics')">
+          <DiagnosticRow :label="t('contacts')" :value="String(selectedEntity.contactCount)" :active="selectedEntity.contactCount > 0" />
+          <DiagnosticRow v-if="selectedEntity.contactCount > 0" :label="t('normal')" :value="`[${selectedEntity.contactNormal.x.toFixed(3)}, ${selectedEntity.contactNormal.y.toFixed(3)}]`" />
+          <DiagnosticRow v-if="selectedEntity.contactCount > 0" :label="t('penetration')" :value="`${selectedEntity.penetrationDepth.toPrecision(5)} m`" />
+        </InspectorSection>
       </div>
-    </div>
+    </aside>
 
-    <div v-if="showColorPicker" class="color-modal-overlay">
-      <div class="color-modal">
-        <h4>Select Color</h4>
-        <input type="color" v-model="tempColor" class="native-color-picker" />
-        <div class="modal-actions">
-          <button @click="cancelColor">Cancel</button>
-          <button @click="applyColor" class="primary">Next</button>
-        </div>
-      </div>
-    </div>
-   </div>
+    <div v-if="showColorPicker" class="modal-scrim" @mousedown.self="showColorPicker = false"><div class="color-modal"><h4>{{ t('selectColor') }}</h4><input v-model="tempColor" type="color"><div><button @click="showColorPicker = false">{{ t('cancel') }}</button><button class="primary" @click="applyColor">{{ t('apply') }}</button></div></div></div>
+    <ConnectionBuilder v-if="selectedEntity && builderOpen" :selected-id="selectedEntity.id" :connection-id="editingConnectionId" @close="builderOpen = false" />
+  </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
-import { physicsState as state, pushHistory } from '../store/physics'
+import { computed, defineComponent, h, ref, watch } from 'vue'
+import { t } from '../i18n'
 import { editorState as estate } from '../store/editor'
+import { deleteConnection, physicsState as state, pushHistory, repairConnection } from '../store/physics'
+import { preferencesState as prefs } from '../store/preferences'
+import { BoxEntity } from '../world/BoxEntity'
+import { CircleEntity } from '../world/CircleEntity'
+import { TriangleEntity } from '../world/TriangleEntity'
+import { effectiveInertia, entityArea, finiteNumber, MIN_AREA, MIN_SIZE, normalizeEntity, syncDensityFromMass, syncMassFromDensity } from '../world/geometry'
+import ConnectionBuilder from './ConnectionBuilder.vue'
 
-const selectedEntity = computed(() => {
-  if (state.selectedEntityId === null) return null
-  return state.world.entities.find(e => e.id === state.selectedEntityId) || null
-})
+const InspectorSection = defineComponent({ props: { title: { type: String, required: true }, open: Boolean }, setup(props, { slots }) { return () => h('details', { class: 'inspector-section', open: props.open }, [h('summary', [h('span', props.title), h('i', '⌄')]), h('div', { class: 'section-body' }, slots.default?.())]) } })
+const PropertyRow = defineComponent({ props: { label: { type: String, required: true } }, setup(props, { slots }) { return () => h('label', { class: 'property-row' }, [h('span', props.label), h('div', { class: 'property-control' }, slots.default?.())]) } })
+const DiagnosticRow = defineComponent({ props: { label: { type: String, required: true }, value: { type: String, required: true }, active: Boolean }, setup(props) { return () => h('div', { class: ['diagnostic-row', { active: props.active }] }, [h('span', props.label), h('code', props.value)]) } })
+const ToggleSwitch = defineComponent({ props: { modelValue: { type: Boolean, required: true } }, emits: ['update:modelValue'], setup(props, { emit }) { return () => h('button', { class: ['toggle', { active: props.modelValue }], role: 'switch', 'aria-checked': props.modelValue, onClick: () => emit('update:modelValue', !props.modelValue) }, h('i')) } })
+const NumberRange = defineComponent({ props: { modelValue: { type: Number, required: true }, min: { type: Number, required: true }, max: { type: Number, required: true }, step: { type: Number, required: true } }, emits: ['update:modelValue'], setup(props, { emit }) { const update = (event: Event) => emit('update:modelValue', Number((event.target as HTMLInputElement).value)); return () => h('div', { class: 'number-range' }, [h('input', { type: 'range', value: props.modelValue, min: props.min, max: props.max, step: props.step, onInput: update }), h('input', { type: 'number', value: props.modelValue, step: props.step, onChange: update })]) } })
 
-function onConfigChange() { pushHistory() }
+const selectedEntity = computed(() => state.selectedEntityId === null ? null : state.world.entities.find(entity => entity.id === state.selectedEntityId) ?? null)
+const selectedConnections = computed(() => selectedEntity.value ? state.world.connections.filter(connection => connection.anchors.some(anchor => anchor.entityId === selectedEntity.value!.id)) : [])
+const entityColor = computed(() => selectedEntity.value ? `rgb(${selectedEntity.value.color.r}, ${selectedEntity.value.color.g}, ${selectedEntity.value.color.b})` : 'transparent')
+const selectedEntityArea = computed(() => selectedEntity.value ? entityArea(selectedEntity.value) : 0)
+const effectiveEntityInertia = computed(() => selectedEntity.value ? effectiveInertia(selectedEntity.value) : 0)
 
-const bodyType = computed({
-  get() {
-    if (!selectedEntity.value) return 'Dynamic'
-    if (selectedEntity.value.isStatic) return 'Static'
-    if (selectedEntity.value.isKinematic) return 'Kinematic'
-    return 'Dynamic'
-  },
-  set(val: string) {
-    if (selectedEntity.value) {
-      selectedEntity.value.isStatic = val === 'Static'
-      selectedEntity.value.isKinematic = val === 'Kinematic'
-    }
-  }
-})
+const builderOpen = ref(false)
+const editingConnectionId = ref<number | null>(null)
+function openConnection(id: number | null) { editingConnectionId.value = id; builderOpen.value = true }
+function removeConnection(id: number) { if (prefs.confirmDestructiveActions && !window.confirm(t('confirmConnectionDelete'))) return; deleteConnection(id); pushHistory(); estate.statusText = t('connectionDeleted') }
+function repair(id: number) { repairConnection(id); pushHistory() }
 
-const entityArea = computed(() => {
-  const e = selectedEntity.value;
-  if (!e) return 0;
-  let a = absoluteSizeX.value * absoluteSizeY.value;
-  if (e.shapeType === 'Circle') a = Math.PI * (absoluteSizeX.value / 2) * (absoluteSizeY.value / 2);
-  if (e.shapeType === 'Triangle') a = a / 2;
-  return a;
-});
+function onConfigChange() { if (!selectedEntity.value) return; if (selectedEntity.value.isStatic) selectedEntity.value.isKinematic = false; normalizeEntity(selectedEntity.value); pushHistory() }
+function onLayerChange() { if (selectedEntity.value) estate.activeLayer = selectedEntity.value.layer }
+const bodyType = computed({ get: () => !selectedEntity.value ? 'Dynamic' : selectedEntity.value.isStatic ? 'Static' : selectedEntity.value.isKinematic ? 'Kinematic' : 'Dynamic', set: value => { if (!selectedEntity.value) return; selectedEntity.value.isStatic = value === 'Static'; selectedEntity.value.isKinematic = value === 'Kinematic'; normalizeEntity(selectedEntity.value) } })
+function onDensityChange() { if (selectedEntity.value) syncMassFromDensity(selectedEntity.value) }
+function onMassChange() { if (selectedEntity.value) syncDensityFromMass(selectedEntity.value) }
+watch(selectedEntityArea, area => { if (selectedEntity.value && area > MIN_AREA) syncMassFromDensity(selectedEntity.value) })
 
-function onDensityChange() {
-  if (selectedEntity.value) selectedEntity.value.mass = selectedEntity.value.density * entityArea.value;
-}
+const textureInput = ref<HTMLInputElement | null>(null)
+function applyTexture(event: Event) { const entity = selectedEntity.value; const file = (event.target as HTMLInputElement).files?.[0]; if (!entity || !file) return; const reader = new FileReader(); reader.onload = () => { if (typeof reader.result !== 'string') return; entity.texture = reader.result; entity.textureImage = undefined; pushHistory() }; reader.onerror = () => { estate.statusText = t('textureFailed') }; reader.readAsDataURL(file) }
+function clearTexture() { if (!selectedEntity.value) return; selectedEntity.value.texture = null; selectedEntity.value.textureImage = undefined; if (textureInput.value) textureInput.value.value = ''; pushHistory() }
 
-function onMassChange() {
-  if (selectedEntity.value && entityArea.value > 0) {
-    selectedEntity.value.density = selectedEntity.value.mass / entityArea.value;
-  }
-}
+const impulseX = ref(0), impulseY = ref(0), offsetX = ref(0), offsetY = ref(0), angularImpulse = ref(0)
+function applyImpulse() { const entity = selectedEntity.value; if (!entity || bodyType.value !== 'Dynamic') return; normalizeEntity(entity); const x = finiteNumber(impulseX.value), y = finiteNumber(impulseY.value); entity.velocity.x += x / entity.mass; entity.velocity.y += y / entity.mass; entity.angularVelocity += (finiteNumber(offsetX.value) * y - finiteNumber(offsetY.value) * x) / effectiveInertia(entity); normalizeEntity(entity); pushHistory() }
+function applyAngularImpulse() { const entity = selectedEntity.value; if (!entity || bodyType.value !== 'Dynamic') return; entity.angularVelocity += finiteNumber(angularImpulse.value) / effectiveInertia(entity); normalizeEntity(entity); pushHistory() }
 
-watch(entityArea, (newArea) => {
-  if (selectedEntity.value && !selectedEntity.value.isStatic && newArea > 0) {
-    selectedEntity.value.mass = selectedEntity.value.density * newArea;
-  }
-})
+const showColorPicker = ref(false), tempColor = ref('#ffffff')
+function openColorPicker() { if (!selectedEntity.value) return; const { r, g, b } = selectedEntity.value.color; tempColor.value = `#${[r, g, b].map(value => Math.round(value).toString(16).padStart(2, '0')).join('')}`; showColorPicker.value = true }
+function applyColor() { if (selectedEntity.value) { const value = Number.parseInt(tempColor.value.slice(1), 16); selectedEntity.value.color = { r: value >> 16 & 255, g: value >> 8 & 255, b: value & 255 }; pushHistory() } showColorPicker.value = false }
 
-const impulseX = ref(0); const impulseY = ref(0); const offsetX = ref(0); const offsetY = ref(0); const angularImpulse = ref(0)
-
-function applyImpulse() {
-  if (!selectedEntity.value || bodyType.value !== 'Dynamic') return
-  const e = selectedEntity.value
-  e.velocity.x += impulseX.value / e.mass
-  e.velocity.y += impulseY.value / e.mass
-  const cross = (offsetX.value * impulseY.value) - (offsetY.value * impulseX.value)
-  e.angularVelocity += cross / e.inertia
-}
-
-function applyAngularImpulse() {
-  if (!selectedEntity.value || bodyType.value !== 'Dynamic') return
-  selectedEntity.value.angularVelocity += angularImpulse.value / selectedEntity.value.inertia
-}
-
-const showColorPicker = ref(false)
-const tempColor = ref('#ffffff')
-
-function openColorPicker() {
-  if (!selectedEntity.value) return
-  const { r, g, b } = selectedEntity.value.color
-  tempColor.value = "#" + (1 << 24 | r << 16 | g << 8 | b).toString(16).slice(1)
-  showColorPicker.value = true
-}
-
-function applyColor() {
-  if (selectedEntity.value) {
-    const hex = tempColor.value.replace(/^#/, '')
-    const bigint = parseInt(hex, 16)
-    selectedEntity.value.color.r = (bigint >> 16) & 255; selectedEntity.value.color.g = (bigint >> 8) & 255; selectedEntity.value.color.b = bigint & 255
-  }
-  showColorPicker.value = false
-}
-
-function cancelColor() { showColorPicker.value = false }
-
-const rotationDegrees = computed({
-  get() {
-    if (!selectedEntity.value) return 0
-    return parseFloat((selectedEntity.value.transform.rotation * (-180 / Math.PI)).toFixed(1))
-  },
-  set(val: number) {
-    if (selectedEntity.value) { selectedEntity.value.transform.rotation = val * (-Math.PI / 180) }
-  }
-})
-
-const absoluteSizeX = computed({
-  get() {
-    const e = selectedEntity.value; if (!e) return 0;
-    if (e.shapeType === 'Circle') return parseFloat(((e as any).radiusX * 2 * e.transform.scale.x).toFixed(1));
-    let minX = Infinity, mxX = -Infinity;
-    for (const v of (e as any).vertices) { if (v.x < minX) minX = v.x; if (v.x > mxX) mxX = v.x; }
-    return parseFloat(((mxX - minX) * e.transform.scale.x).toFixed(1));
-  },
-  set(val: number) {
-    const e = selectedEntity.value; if (!e || val <= 0.1) return;
-    if (e.shapeType === 'Circle') e.transform.scale.x = val / ((e as any).radiusX * 2);
-    else {
-      let minX = Infinity, mxX = -Infinity;
-      for (const v of (e as any).vertices) { if (v.x < minX) minX = v.x; if (v.x > mxX) mxX = v.x; }
-      e.transform.scale.x = val / (mxX - minX);
-    }
-  }
-})
-
-const absoluteSizeY = computed({
-  get() {
-    const e = selectedEntity.value; if (!e) return 0;
-    if (e.shapeType === 'Circle') return parseFloat(((e as any).radiusY * 2 * e.transform.scale.y).toFixed(1));
-    let minY = Infinity, mxY = -Infinity;
-    for (const v of (e as any).vertices) { if (v.y < minY) minY = v.y; if (v.y > mxY) mxY = v.y; }
-    return parseFloat(((mxY - minY) * e.transform.scale.y).toFixed(1));
-  },
-  set(val: number) {
-    const e = selectedEntity.value; if (!e || val <= 0.1) return;
-    if (e.shapeType === 'Circle') e.transform.scale.y = val / ((e as any).radiusY * 2);
-    else {
-      let minY = Infinity, mxY = -Infinity;
-      for (const v of (e as any).vertices) { if (v.y < minY) minY = v.y; if (v.y > mxY) mxY = v.y; }
-      e.transform.scale.y = val / (mxY - minY);
-    }
-  }
-})
+const rotationDegrees = computed({ get: () => selectedEntity.value ? Number((-selectedEntity.value.transform.rotation * 180 / Math.PI).toFixed(4)) : 0, set: value => { if (selectedEntity.value && Number.isFinite(value)) selectedEntity.value.transform.rotation = -value * Math.PI / 180 } })
+function entityDimension(axis: 'x' | 'y'): number { const entity = selectedEntity.value; if (!entity) return 0; if (entity instanceof CircleEntity) return (axis === 'x' ? entity.radiusX * entity.transform.scale.x : entity.radiusY * entity.transform.scale.y) * 2; if (!(entity instanceof BoxEntity || entity instanceof TriangleEntity)) return 0; const values = entity.vertices.map(vertex => vertex[axis]); return (Math.max(...values) - Math.min(...values)) * entity.transform.scale[axis] }
+function setEntityDimension(axis: 'x' | 'y', value: number) { const entity = selectedEntity.value; if (!entity || !Number.isFinite(value) || value < MIN_SIZE) return; if (entity instanceof CircleEntity) entity.transform.scale[axis] = value / ((axis === 'x' ? entity.radiusX : entity.radiusY) * 2); else if (entity instanceof BoxEntity || entity instanceof TriangleEntity) { const values = entity.vertices.map(vertex => vertex[axis]); entity.transform.scale[axis] = value / (Math.max(...values) - Math.min(...values)) } }
+const absoluteSizeX = computed({ get: () => entityDimension('x'), set: value => setEntityDimension('x', value) })
+const absoluteSizeY = computed({ get: () => entityDimension('y'), set: value => setEntityDimension('y', value) })
 </script>
 
 <style scoped>
-.config-wrapper { position: absolute; top: 32px; bottom: 24px; right: 0; width: 25%; max-width: 300px; min-width: 220px; z-index: 100; pointer-events: none; }
-.config-panel { 
-  position: absolute; top: 0; bottom: 0; right: -60px; width: calc(100% + 60px); 
-  background: rgba(37, 37, 38, 0.95); backdrop-filter: blur(8px); 
-  padding: 16px 76px 16px 16px; transform: translateX(100%); 
-  transition: transform 0.2s ease-out; /* Smooth instant slide */
-  pointer-events: auto; display: flex; flex-direction: column; 
-  overflow-y: auto; overflow-x: hidden; box-shadow: -4px 0 12px rgba(0,0,0,0.3); color: #ccc;
-}
-.config-panel.is-visible { transform: translateX(0); }
-.settings-content { display: flex; flex-direction: column; gap: 12px; }
-.panel-title { text-align: center; margin: 0; font-size: 16px; color: #fff; }
-.entity-name { text-align: center; font-size: 12px; color: #0078d4; }
-.category-title { color: #888; font-size: 10px; font-weight: bold; text-transform: uppercase; margin-top: 4px; }
-hr { border: none; border-top: 1px solid #444; margin: 4px 0; }
-.prop-group { display: flex; flex-direction: column; gap: 4px; font-size: 12px; }
-.prop-group label { color: #aaa; font-weight: bold; }
-.row-inputs { display: flex; gap: 8px; align-items: center; width: 100%; }
-.row-inputs input[type="range"] { flex: 1; }
-.row-inputs input[type="number"], .settings-content input[type="number"] { width: 60px; background: #1e1e1e; border: 1px solid #444; color: white; padding: 2px 4px; border-radius: 2px; }
-.settings-content input[type="number"] { width: 100%; box-sizing: border-box; }
-.row-inputs input[type="number"] { width: 60px; }
-.switch-group { flex-direction: row; justify-content: space-between; align-items: center; }
-input[type="range"] { appearance: none; -webkit-appearance: none; width: 100%; background: transparent; margin: 4px 0; }
-input[type="range"]::-webkit-slider-runnable-track { width: 100%; height: 4px; background: #444; border-radius: 2px; }
-input[type="range"]::-webkit-slider-thumb { appearance: none; -webkit-appearance: none; height: 12px; width: 12px; border-radius: 50%; background: #0078d4; margin-top: -4px; cursor: pointer; transition: transform 0.2s; }
-.switch { position: relative; display: inline-block; width: 34px; height: 20px; margin: 0; }
-.switch input { opacity: 0; width: 0; height: 0; }
-.slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #555; transition: .4s; }
-.slider:before { position: absolute; content: ""; height: 14px; width: 14px; left: 3px; bottom: 3px; background-color: white; transition: .4s; }
-input:checked + .slider { background-color: #0078d4; }
-input:checked + .slider:before { transform: translateX(14px); }
-.slider.round { border-radius: 34px; }
-.slider.round:before { border-radius: 50%; }
-.color-header { display: flex; justify-content: space-between; align-items: center; }
-.color-btn { background: transparent; border: none; cursor: pointer; padding: 2px; display: flex; }
-.color-btn img { width: 16px; height: 16px; filter: invert(1); opacity: 0.8; }
-.color-btn:hover img { opacity: 1; }
-.color-modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; z-index: 1000; pointer-events: auto; }
-.color-modal { background: #252526; border: 1px solid #444; padding: 16px; border-radius: 8px; display: flex; flex-direction: column; align-items: center; gap: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.5); }
-.color-modal h4 { margin: 0; color: #fff; font-size: 14px; }
-.native-color-picker { width: 64px; height: 64px; padding: 0; border: none; border-radius: 4px; cursor: pointer; background: transparent; }
-.modal-actions { display: flex; gap: 8px; width: 100%; }
-.modal-actions button { flex: 1; padding: 6px; background: #333; color: #ccc; border: 1px solid #555; border-radius: 4px; }
-.modal-actions button:hover { background: #444; }
-.modal-actions button.primary { background: #0078d4; color: white; border-color: #0078d4; }
-.modal-actions button.primary:hover { background: #0086eb; }
-
-.full-select { width: 100%; background: #1e1e1e; color: white; border: 1px solid #444; padding: 4px; border-radius: 4px; }
-
-.clean-dropdown {
-  appearance: none; -webkit-appearance: none; -moz-appearance: none; outline: none;
-  background-image: url("data:image/svg+xml;utf8,<svg fill='white' height='24' viewBox='0 0 24 24' width='24' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/><path d='M0 0h24v24H0z' fill='none'/></svg>");
-  background-repeat: no-repeat; background-position-x: 98%; background-position-y: 50%; padding-right: 20px;
-}
-.clean-dropdown:focus { border-color: #0078d4; }
-
-.text-display { flex-direction: row; justify-content: space-between; font-size: 11px; }
-.text-display span:last-child { color: #0078d4; font-family: monospace; }
-.active-contact { color: #ff4500 !important; font-weight: bold; }
-.impulse-form { display: flex; flex-direction: column; gap: 8px; }
-.action-btn { background: #0078d4; color: white; border: none; padding: 4px; cursor: pointer; border-radius: 4px; }
-.action-btn:hover { background: #0086eb; }
+.config-wrapper { position: absolute; inset: 42px 0 27px auto; width: min(340px, 38vw); z-index: 180; pointer-events: none; }
+.config-panel { position: absolute; inset: 0; transform: translateX(calc(100% + 20px)); pointer-events: auto; overflow: auto; color: var(--text-secondary); background: var(--surface-1); border-left: 1px solid var(--border-subtle); backdrop-filter: var(--glass-blur); box-shadow: -14px 0 40px rgba(0,0,0,.16); transition: transform 260ms cubic-bezier(.2,.8,.2,1); }
+.config-panel.visible { transform: translateX(0); }
+.settings-content { min-height: 100%; padding: 16px 14px 28px; display: flex; flex-direction: column; gap: 8px; }
+.inspector-header { padding: 4px 4px 10px; }.eyebrow { color: var(--accent); font-size: 9px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }h3 { margin: 4px 0 0; color: var(--text-primary); font-size: 18px; font-weight: 610; overflow: hidden; text-overflow: ellipsis; }h3 small { color: var(--text-muted); font-size: .7em; font-weight: 500; }
+:deep(.inspector-section) { border: 1px solid var(--border-subtle); border-radius: 12px; background: color-mix(in srgb, var(--surface-2) 72%, transparent); overflow: hidden; }
+:deep(.inspector-section summary) { min-height: 38px; padding: 0 11px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; list-style: none; color: var(--text-secondary); font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+:deep(.inspector-section summary::-webkit-details-marker) { display: none; }:deep(.inspector-section summary i) { font-style: normal; transition: transform 160ms ease; }:deep(.inspector-section[open] summary i) { transform: rotate(180deg); }
+:deep(.section-body) { padding: 4px 11px 12px; display: flex; flex-direction: column; gap: 9px; border-top: 1px solid var(--border-subtle); }
+:deep(.section-body > select), :deep(.section-body > input) { width: 100%; }
+:deep(.property-row) { min-height: 39px; display: flex; align-items: center; justify-content: space-between; gap: 10px; border-bottom: 1px solid var(--border-subtle); color: var(--text-secondary); font-size: 11.5px; }
+:deep(.property-row:last-child) { border-bottom: 0; }:deep(.property-control) { width: 58%; display: flex; justify-content: flex-end; }:deep(.property-control > input), :deep(.property-control > select) { width: 100%; min-width: 0; }
+.pair { width: 100%; display: flex; gap: 6px; }.pair input { width: 50%; min-width: 0; }
+:deep(.number-range) { width: 100%; display: flex; align-items: center; gap: 7px; }:deep(.number-range input[type='range']) { min-width: 0; flex: 1; accent-color: var(--accent); }:deep(.number-range input[type='number']) { width: 72px; min-width: 60px; }
+:deep(.toggle) { width: 38px; height: 22px; padding: 3px; border: 0; border-radius: 99px; background: var(--surface-3); }:deep(.toggle i) { display: block; width: 16px; height: 16px; border-radius: 50%; background: var(--text-muted); transition: transform 180ms ease; }:deep(.toggle.active) { background: var(--accent); }:deep(.toggle.active i) { transform: translateX(16px); background: var(--accent-contrast); }
+:deep(.diagnostic-row) { min-height: 30px; display: flex; align-items: center; justify-content: space-between; gap: 8px; color: var(--text-muted); font-size: 10.5px; }:deep(.diagnostic-row code) { color: var(--accent); font-family: ui-monospace, SFMono-Regular, Consolas, monospace; }:deep(.diagnostic-row.active code) { color: var(--warning); }
+.stacked-field { display: flex; flex-direction: column; gap: 6px; color: var(--text-secondary); font-size: 11.5px; }.stacked-field input { width: 100%; color: var(--text-muted); font-size: 10px; }
+.color-well { width: 48px; height: 25px; border: 3px solid var(--surface-3); border-radius: 8px; box-shadow: 0 0 0 1px var(--border-strong); }
+.primary-action, .secondary-action { min-height: 33px; width: 100%; display: flex; align-items: center; justify-content: center; gap: 6px; border-radius: 8px; border: 1px solid var(--accent); color: var(--accent-contrast); background: var(--accent); font-size: 11px; }.secondary-action { border-color: var(--border-subtle); color: var(--text-secondary); background: var(--surface-3); }
+.empty-state { margin: 5px 0; color: var(--text-muted); font-size: 11px; text-align: center; }.connection-list { display: flex; flex-direction: column; gap: 6px; }.connection-item { display: flex; align-items: center; border: 1px solid var(--border-subtle); border-radius: 9px; background: var(--surface-1); }.connection-main { min-width: 0; flex: 1; padding: 7px; display: flex; align-items: center; gap: 8px; border: 0; background: transparent; text-align: left; }.connection-main > span:last-child { min-width: 0; display: flex; flex-direction: column; }.connection-main strong, .connection-main small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }.connection-main strong { color: var(--text-primary); font-size: 11px; }.connection-main small { color: var(--text-muted); font-size: 9.5px; }.connection-dot { width: 8px; height: 8px; flex: 0 0 8px; border-radius: 50%; background: var(--connection); box-shadow: 0 0 7px var(--connection); }.connection-item.snapped .connection-dot, .connection-item.torn .connection-dot { background: var(--connection-broken); box-shadow: 0 0 7px var(--connection-broken); }.mini-button { width: 26px; height: 28px; border: 0; background: transparent; color: var(--text-muted); }.mini-button:hover { color: var(--accent); }.mini-button.danger:hover { color: var(--danger); }
+.modal-scrim { position: fixed; inset: 0; z-index: 1300; display: grid; place-items: center; background: var(--scrim); pointer-events: auto; backdrop-filter: blur(6px); }.color-modal { width: 250px; padding: 18px; display: flex; flex-direction: column; align-items: center; gap: 14px; border: 1px solid var(--border-subtle); border-radius: 16px; background: var(--surface-2); box-shadow: var(--shadow-lg); }.color-modal h4 { margin: 0; }.color-modal input { width: 100px; height: 76px; border: 0; background: transparent; }.color-modal > div { width: 100%; display: flex; gap: 8px; }.color-modal button { flex: 1; min-height: 34px; border: 1px solid var(--border-subtle); border-radius: 8px; background: var(--surface-3); }.color-modal button.primary { color: var(--accent-contrast); border-color: var(--accent); background: var(--accent); }
+@media (max-width: 760px) { .config-wrapper { width: min(330px, calc(100vw - 68px)); } }
 </style>

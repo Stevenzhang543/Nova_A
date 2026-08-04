@@ -3,86 +3,243 @@ import { BoxEntity } from './BoxEntity'
 import { CircleEntity } from './CircleEntity'
 import { TriangleEntity } from './TriangleEntity'
 import type { Vec2 } from './types'
-import init, { step_physics } from '../../nova_core/pkg/nova_core.js'
+import { finiteNumber, normalizeEntity, syncMassFromDensity } from './geometry'
+import {
+  CONNECTION_STRIDE,
+  normalizeConnection,
+  scaledLocalAnchor,
+  type Connection
+} from './Connection'
+import init, { step_physics_with_connections } from '../../nova_core/pkg/nova_core.js'
+
+export const PHYSICS_STRIDE = 42
+
+export interface GlobalPhysicsSettings {
+  gravity: number
+  airFriction: number
+  timeScale: number
+}
 
 export class World {
   private nextId = 1
+  private nextConnectionId = 1
   entities: Entity[] = []
+  connections: Connection[] = []
   private wasmLoaded = false
+  wasmError: Error | null = null
+  readonly wasmReady: Promise<void>
 
-  constructor() { init().then(() => { this.wasmLoaded = true }) }
+  constructor() {
+    this.wasmReady = init()
+      .then(() => { this.wasmLoaded = true })
+      .catch((error: unknown) => {
+        this.wasmError = error instanceof Error ? error : new Error(String(error))
+        console.error('Failed to initialize Nova_A physics WASM', this.wasmError)
+      })
+  }
 
-  resetId() { this.nextId = 1 }
+  allocateId(): number {
+    if (this.nextId > Number.MAX_SAFE_INTEGER) throw new Error('Entity ID space is exhausted')
+    return this.nextId++
+  }
 
-  addBox(pos: Vec2, size: Vec2) { const b = new BoxEntity(this.nextId++, pos, size); this.entities.push(b); return b }
-  addCircle(pos: Vec2, rx: number, ry?: number) { const c = new CircleEntity(this.nextId++, pos, rx, ry); this.entities.push(c); return c }
-  addTriangle(pos: Vec2, size: Vec2) { const t = new TriangleEntity(this.nextId++, pos, size); this.entities.push(t); return t }
+  setNextId(nextId: number): void {
+    this.nextId = Math.min(Number.MAX_SAFE_INTEGER + 1, Math.max(1, Math.round(finiteNumber(nextId, 1))))
+  }
 
-  update(dt: number, isRunning: boolean, globalSettings: any) {
+  resetId(): void {
+    this.nextId = 1
+  }
+
+  allocateConnectionId(): number {
+    if (this.nextConnectionId > Number.MAX_SAFE_INTEGER) throw new Error('Connection ID space is exhausted')
+    return this.nextConnectionId++
+  }
+
+  setNextConnectionId(nextId: number): void {
+    this.nextConnectionId = Math.min(Number.MAX_SAFE_INTEGER + 1, Math.max(1, Math.round(finiteNumber(nextId, 1))))
+  }
+
+  resetConnectionId(): void {
+    this.nextConnectionId = 1
+  }
+
+  addBox(pos: Vec2, size: Vec2): BoxEntity {
+    const entity = new BoxEntity(this.allocateId(), pos, size)
+    normalizeEntity(entity)
+    syncMassFromDensity(entity)
+    this.entities.push(entity)
+    return entity
+  }
+
+  addCircle(pos: Vec2, radiusX: number, radiusY?: number): CircleEntity {
+    const entity = new CircleEntity(this.allocateId(), pos, radiusX, radiusY)
+    normalizeEntity(entity)
+    syncMassFromDensity(entity)
+    this.entities.push(entity)
+    return entity
+  }
+
+  addTriangle(pos: Vec2, size: Vec2): TriangleEntity {
+    const entity = new TriangleEntity(this.allocateId(), pos, size)
+    normalizeEntity(entity)
+    syncMassFromDensity(entity)
+    this.entities.push(entity)
+    return entity
+  }
+
+  update(dt: number, isRunning: boolean, globalSettings: GlobalPhysicsSettings): void {
     if (!isRunning || !this.wasmLoaded || this.entities.length === 0) return
 
-    const scaledDt = dt * globalSettings.timeScale
-    const stride = 42 // UPGRADED: 8 extra floats for 4 (x,y) vertices!
-    const data = new Float32Array(this.entities.length * stride)
+    const timeScale = Math.max(0, finiteNumber(globalSettings.timeScale, 1))
+    const scaledDt = Math.min(Math.max(finiteNumber(dt, 0) * timeScale, 0), 0.25)
+    if (scaledDt <= 0) return
 
-    for (let i = 0; i < this.entities.length; i++) {
-      const e = this.entities[i]
-      const idx = i * stride
-      data[idx] = e.id
-      data[idx + 1] = e.shapeType === 'Circle' ? 1 : 0 
-      data[idx + 2] = e.transform.position.x; data[idx + 3] = e.transform.position.y
-      data[idx + 4] = e.velocity.x; data[idx + 5] = e.velocity.y
-      data[idx + 6] = e.acceleration.x; data[idx + 7] = e.acceleration.y
-      data[idx + 8] = e.mass; data[idx + 9] = e.isStatic ? 1.0 : 0.0
-      data[idx + 10] = e.restitution; data[idx + 11] = e.dynamicFriction
-      
-      if (e.shapeType === 'Circle') {
-        data[idx + 12] = (e as any).radiusX * e.transform.scale.x; data[idx + 13] = (e as any).radiusY * e.transform.scale.y
-      } else {
-        const vs = (e as any).vertices
-        let minX = Infinity, minY = Infinity, mxX = -Infinity, mxY = -Infinity
-        for (const v of vs) {
-            if (v.x < minX) minX = v.x; if (v.y < minY) minY = v.y
-            if (v.x > mxX) mxX = v.x; if (v.y > mxY) mxY = v.y
-        }
-        data[idx + 12] = (mxX - minX) * e.transform.scale.x; data[idx + 13] = (mxY - minY) * e.transform.scale.y 
+    const data = new Float64Array(this.entities.length * PHYSICS_STRIDE)
+
+    for (let entityIndex = 0; entityIndex < this.entities.length; entityIndex++) {
+      const entity = this.entities[entityIndex]
+      normalizeEntity(entity)
+      const index = entityIndex * PHYSICS_STRIDE
+      data[index] = entity.id
+      data[index + 1] = entity.shapeType === 'Circle' ? 1 : 0
+      data[index + 2] = entity.transform.position.x
+      data[index + 3] = entity.transform.position.y
+      data[index + 4] = entity.velocity.x
+      data[index + 5] = entity.velocity.y
+      data[index + 6] = entity.acceleration.x
+      data[index + 7] = entity.acceleration.y
+      data[index + 8] = entity.mass
+      data[index + 9] = entity.isStatic ? 1 : 0
+      data[index + 10] = entity.restitution
+      data[index + 11] = entity.dynamicFriction
+
+      if (entity instanceof CircleEntity) {
+        data[index + 12] = entity.radiusX * entity.transform.scale.x
+        data[index + 13] = entity.radiusY * entity.transform.scale.y
+      } else if (entity instanceof BoxEntity || entity instanceof TriangleEntity) {
+        const xs = entity.vertices.map(vertex => vertex.x * entity.transform.scale.x)
+        const ys = entity.vertices.map(vertex => vertex.y * entity.transform.scale.y)
+        data[index + 12] = Math.max(...xs) - Math.min(...xs)
+        data[index + 13] = Math.max(...ys) - Math.min(...ys)
       }
 
-      data[idx + 14] = e.transform.rotation; data[idx + 15] = e.angularVelocity
-      data[idx + 16] = e.torque; data[idx + 17] = e.gravityScale
-      data[idx + 18] = e.linearDamping; data[idx + 19] = e.angularDamping
-      data[idx + 20] = e.staticFriction; data[idx + 21] = e.force.x; data[idx + 22] = e.force.y
-      data[idx + 23] = e.gravity; data[idx + 24] = e.isKinematic ? 1.0 : 0.0
-      data[idx + 25] = e.autoInertia ? 1.0 : 0.0; data[idx + 26] = e.inertia
-      data[idx + 27] = e.restitutionThreshold; data[idx + 28] = e.isSensor ? 1.0 : 0.0
-      data[idx + 29] = 0; data[idx + 30] = 0; data[idx + 31] = 0; data[idx + 32] = 0; 
-      data[idx + 33] = e.layer 
+      data[index + 14] = entity.transform.rotation
+      data[index + 15] = entity.angularVelocity
+      data[index + 16] = entity.torque
+      data[index + 17] = entity.gravityScale
+      data[index + 18] = entity.linearDamping
+      data[index + 19] = entity.angularDamping
+      data[index + 20] = entity.staticFriction
+      data[index + 21] = entity.force.x
+      data[index + 22] = entity.force.y
+      data[index + 23] = entity.gravity
+      data[index + 24] = entity.isKinematic ? 1 : 0
+      data[index + 25] = entity.autoInertia ? 1 : 0
+      data[index + 26] = entity.inertia
+      data[index + 27] = entity.restitutionThreshold
+      data[index + 28] = entity.isSensor ? 1 : 0
+      data[index + 33] = entity.layer
 
-      // NEW: Send Exact Vertices to Rust!
-      for (let k = 34; k < 42; k++) data[idx + k] = 0;
-      if (e.shapeType === 'Box' || e.shapeType === 'Triangle') {
-          const vs = (e as any).vertices;
-          for (let v = 0; v < vs.length && v < 4; v++) {
-              data[idx + 34 + v * 2] = vs[v].x * e.transform.scale.x;
-              data[idx + 35 + v * 2] = vs[v].y * e.transform.scale.y;
-          }
-          if (vs.length === 3) { // Pad Triangles to 4 points for the WASM Loop
-              data[idx + 40] = vs[2].x * e.transform.scale.x;
-              data[idx + 41] = vs[2].y * e.transform.scale.y;
-          }
+      if (entity instanceof BoxEntity || entity instanceof TriangleEntity) {
+        for (let vertexIndex = 0; vertexIndex < entity.vertices.length && vertexIndex < 4; vertexIndex++) {
+          const vertex = entity.vertices[vertexIndex]
+          data[index + 34 + vertexIndex * 2] = vertex.x * entity.transform.scale.x
+          data[index + 35 + vertexIndex * 2] = vertex.y * entity.transform.scale.y
+        }
+        if (entity.vertices.length === 3) {
+          data[index + 40] = entity.vertices[2].x * entity.transform.scale.x
+          data[index + 41] = entity.vertices[2].y * entity.transform.scale.y
+        }
       }
     }
 
-    const newData = step_physics(data, scaledDt, globalSettings.gravity, globalSettings.airFriction)
+    const entityIndexes = new Map(this.entities.map((entity, index) => [entity.id, index]))
+    const activeConnections = this.connections.filter(connection => {
+      return normalizeConnection(connection, this.entities) && connection.breakState === 'intact'
+    })
+    activeConnections.forEach(connection => { connection.tension = 0; connection.strain = 0 })
+    const segmentRecords: Array<{ connection: Connection; segment: number }> = []
+    for (const connection of activeConnections) {
+      for (let segment = 0; segment < connection.anchors.length - 1; segment++) {
+        const bodyA = entityIndexes.get(connection.anchors[segment].entityId)
+        const bodyB = entityIndexes.get(connection.anchors[segment + 1].entityId)
+        if (bodyA === undefined || bodyB === undefined || bodyA === bodyB) continue
+        segmentRecords.push({ connection, segment })
+      }
+    }
+    const connectionData = new Float64Array(segmentRecords.length * CONNECTION_STRIDE)
+    for (let recordIndex = 0; recordIndex < segmentRecords.length; recordIndex++) {
+      const { connection, segment } = segmentRecords[recordIndex]
+      const anchorA = connection.anchors[segment]
+      const anchorB = connection.anchors[segment + 1]
+      const entityA = this.entities[entityIndexes.get(anchorA.entityId)!]
+      const entityB = this.entities[entityIndexes.get(anchorB.entityId)!]
+      const localA = scaledLocalAnchor(anchorA, entityA)
+      const localB = scaledLocalAnchor(anchorB, entityB)
+      const index = recordIndex * CONNECTION_STRIDE
+      connectionData[index] = connection.id
+      connectionData[index + 1] = entityIndexes.get(anchorA.entityId)!
+      connectionData[index + 2] = entityIndexes.get(anchorB.entityId)!
+      connectionData[index + 3] = localA.x
+      connectionData[index + 4] = localA.y
+      connectionData[index + 5] = localB.x
+      connectionData[index + 6] = localB.y
+      connectionData[index + 7] = connection.restLengths[segment]
+      connectionData[index + 8] = connection.stretchable ? 1 : 0
+      connectionData[index + 9] = connection.bendable ? 1 : 0
+      connectionData[index + 10] = connection.stiffness
+      connectionData[index + 11] = connection.damping
+      connectionData[index + 12] = connection.maxStretchRatio
+      connectionData[index + 13] = connection.bendingToleranceMass
+      connectionData[index + 14] = connection.stretchingToleranceMass
+      const manualBend = connection.style === 'manual'
+        ? Math.max(0, ...(connection.manualSegments[segment] ?? []).map(point => Math.abs(point.y)))
+        : 0
+      connectionData[index + 15] = connection.style === 'curved' ? Math.abs(connection.curvature) : manualBend
+      connectionData[index + 16] = 1
+    }
 
-    for (let i = 0; i < this.entities.length; i++) {
-      const e = this.entities[i]
-      const idx = i * stride
-      e.transform.position.x = newData[idx + 2]; e.transform.position.y = newData[idx + 3]
-      e.velocity.x = newData[idx + 4]; e.velocity.y = newData[idx + 5]
-      e.transform.rotation = newData[idx + 14]; e.angularVelocity = newData[idx + 15]
-      e.contactCount = newData[idx + 29]; e.contactNormal.x = newData[idx + 30]
-      e.contactNormal.y = newData[idx + 31]; e.penetrationDepth = newData[idx + 32]
+    const output = step_physics_with_connections(
+      data,
+      connectionData,
+      scaledDt,
+      finiteNumber(globalSettings.gravity, 9.8),
+      Math.max(0, finiteNumber(globalSettings.airFriction, 0.01))
+    )
+    const expectedLength = data.length + connectionData.length
+    if (output.length !== expectedLength) {
+      this.wasmError = new Error(`Physics output length ${output.length} did not match expected length ${expectedLength}`)
+      console.error(this.wasmError)
+      return
+    }
+
+    for (let entityIndex = 0; entityIndex < this.entities.length; entityIndex++) {
+      const entity = this.entities[entityIndex]
+      const index = entityIndex * PHYSICS_STRIDE
+      entity.transform.position.x = finiteNumber(output[index + 2], entity.transform.position.x)
+      entity.transform.position.y = finiteNumber(output[index + 3], entity.transform.position.y)
+      entity.velocity.x = finiteNumber(output[index + 4], entity.velocity.x)
+      entity.velocity.y = finiteNumber(output[index + 5], entity.velocity.y)
+      entity.mass = finiteNumber(output[index + 8], entity.mass)
+      entity.transform.rotation = finiteNumber(output[index + 14], entity.transform.rotation)
+      entity.angularVelocity = finiteNumber(output[index + 15], entity.angularVelocity)
+      entity.inertia = finiteNumber(output[index + 26], entity.inertia)
+      entity.contactCount = Math.max(0, Math.round(finiteNumber(output[index + 29], 0)))
+      entity.contactNormal.x = finiteNumber(output[index + 30], 0)
+      entity.contactNormal.y = finiteNumber(output[index + 31], 0)
+      entity.penetrationDepth = Math.max(0, finiteNumber(output[index + 32], 0))
+    }
+
+    const connectionOffset = data.length
+    for (let recordIndex = 0; recordIndex < segmentRecords.length; recordIndex++) {
+      const { connection } = segmentRecords[recordIndex]
+      const index = connectionOffset + recordIndex * CONNECTION_STRIDE
+      const breakCode = Math.round(finiteNumber(output[index + 17]))
+      connection.tension = Math.max(connection.tension, finiteNumber(output[index + 18]))
+      connection.strain = Math.max(connection.strain, finiteNumber(output[index + 19]))
+      if (breakCode === 1) connection.breakState = 'snapped'
+      if (breakCode === 2) connection.breakState = 'torn'
     }
   }
 }
