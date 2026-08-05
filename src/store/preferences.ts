@@ -26,6 +26,7 @@ export interface Preferences {
 }
 
 const STORAGE_KEY = 'nova_a.preferences.v1'
+const LIGHT_CONTRAST_MIGRATION_KEY = 'nova_a.light-contrast-default.v1.1'
 
 const defaults: Preferences = {
   theme: 'dark',
@@ -55,34 +56,51 @@ function finiteRange(value: unknown, fallback: number, minimum: number, maximum:
     : fallback
 }
 
+function storedBoolean(value: unknown, fallback: boolean): boolean {
+  return typeof value === 'boolean' ? value : fallback
+}
+
+function normalizedTheme(value: unknown): ThemeMode {
+  return value === 'light' ? 'light' : 'dark'
+}
+
+function normalizedLocale(value: unknown): Locale {
+  return value === 'de' || value === 'zh' ? value : 'en'
+}
+
+function normalizedPreferences(parsed: Partial<Preferences>, resetLegacyLightContrast: boolean): Preferences {
+  return {
+    ...defaults,
+    theme: normalizedTheme(parsed.theme),
+    locale: normalizedLocale(parsed.locale),
+    uiScale: finiteRange(parsed.uiScale, defaults.uiScale, 0.85, 1.25),
+    compactMode: storedBoolean(parsed.compactMode, defaults.compactMode),
+    reduceMotion: storedBoolean(parsed.reduceMotion, defaults.reduceMotion),
+    highContrast: resetLegacyLightContrast ? false : storedBoolean(parsed.highContrast, defaults.highContrast),
+    gridSize: finiteRange(parsed.gridSize, defaults.gridSize, 0.000001, 1e12),
+    snapToGrid: storedBoolean(parsed.snapToGrid, defaults.snapToGrid),
+    zoomSensitivity: finiteRange(parsed.zoomSensitivity, defaults.zoomSensitivity, 0.2, 3),
+    showConnections: storedBoolean(parsed.showConnections, defaults.showConnections),
+    connectionThickness: finiteRange(parsed.connectionThickness, defaults.connectionThickness, 0.5, 8),
+    showDiagnostics: storedBoolean(parsed.showDiagnostics, defaults.showDiagnostics),
+    maxPixelRatio: finiteRange(parsed.maxPixelRatio, defaults.maxPixelRatio, 1, 3),
+    autosave: storedBoolean(parsed.autosave, defaults.autosave),
+    autosaveInterval: finiteRange(parsed.autosaveInterval, defaults.autosaveInterval, 5, 600),
+    confirmDestructiveActions: storedBoolean(parsed.confirmDestructiveActions, defaults.confirmDestructiveActions),
+    defaultDensity: finiteRange(parsed.defaultDensity, defaults.defaultDensity, 0.000001, 1e50),
+    defaultRestitution: finiteRange(parsed.defaultRestitution, defaults.defaultRestitution, 0, 1),
+    defaultFriction: finiteRange(parsed.defaultFriction, defaults.defaultFriction, 0, 1e6)
+  }
+}
+
 function loadPreferences(): Preferences {
   if (typeof localStorage === 'undefined') return { ...defaults }
   try {
     const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '{}') as Partial<Preferences>
-    return {
-      ...defaults,
-      theme: parsed.theme === 'light' ? 'light' : 'dark',
-      locale: parsed.locale === 'de' || parsed.locale === 'zh' ? parsed.locale : 'en',
-      uiScale: finiteRange(parsed.uiScale, defaults.uiScale, 0.85, 1.25),
-      compactMode: typeof parsed.compactMode === 'boolean' ? parsed.compactMode : defaults.compactMode,
-      reduceMotion: typeof parsed.reduceMotion === 'boolean' ? parsed.reduceMotion : defaults.reduceMotion,
-      highContrast: typeof parsed.highContrast === 'boolean' ? parsed.highContrast : defaults.highContrast,
-      gridSize: finiteRange(parsed.gridSize, defaults.gridSize, 0.000001, 1e12),
-      snapToGrid: typeof parsed.snapToGrid === 'boolean' ? parsed.snapToGrid : defaults.snapToGrid,
-      zoomSensitivity: finiteRange(parsed.zoomSensitivity, defaults.zoomSensitivity, 0.2, 3),
-      showConnections: typeof parsed.showConnections === 'boolean' ? parsed.showConnections : defaults.showConnections,
-      connectionThickness: finiteRange(parsed.connectionThickness, defaults.connectionThickness, 0.5, 8),
-      showDiagnostics: typeof parsed.showDiagnostics === 'boolean' ? parsed.showDiagnostics : defaults.showDiagnostics,
-      maxPixelRatio: finiteRange(parsed.maxPixelRatio, defaults.maxPixelRatio, 1, 3),
-      autosave: typeof parsed.autosave === 'boolean' ? parsed.autosave : defaults.autosave,
-      autosaveInterval: finiteRange(parsed.autosaveInterval, defaults.autosaveInterval, 5, 600),
-      confirmDestructiveActions: typeof parsed.confirmDestructiveActions === 'boolean'
-        ? parsed.confirmDestructiveActions
-        : defaults.confirmDestructiveActions,
-      defaultDensity: finiteRange(parsed.defaultDensity, defaults.defaultDensity, 0.000001, 1e50),
-      defaultRestitution: finiteRange(parsed.defaultRestitution, defaults.defaultRestitution, 0, 1),
-      defaultFriction: finiteRange(parsed.defaultFriction, defaults.defaultFriction, 0, 1e6)
-    }
+    const resetLegacyLightContrast = parsed.theme === 'light'
+      && localStorage.getItem(LIGHT_CONTRAST_MIGRATION_KEY) !== 'done'
+    if (resetLegacyLightContrast) localStorage.setItem(LIGHT_CONTRAST_MIGRATION_KEY, 'done')
+    return normalizedPreferences(parsed, resetLegacyLightContrast)
   } catch {
     return { ...defaults }
   }

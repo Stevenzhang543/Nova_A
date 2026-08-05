@@ -72,6 +72,9 @@
             <details v-if="drawingComplete" class="advanced-physics">
               <summary>{{ t('connectionPhysics') }}</summary>
               <div class="physics-grid">
+                <label class="collision-toggle"><span><strong>{{ t('stringCollisions') }}</strong><small>{{ t('stringCollisionsDescription') }}</small></span><input v-model="collisionEnabled" type="checkbox"></label>
+                <label v-if="collisionEnabled"><span>{{ t('stringRadius') }}</span><input v-model.number="collisionRadius" type="number" min="0.000001" max="1000000" step="0.01"></label>
+                <label v-if="collisionEnabled"><span>{{ t('stringDensity') }}</span><input v-model.number="linearDensity" type="number" min="0.000001" max="1e50" step="0.01"></label>
                 <label><span>{{ t('stretchable') }}</span><input v-model="stretchable" type="checkbox"></label>
                 <label><span>{{ t('bendable') }}</span><input v-model="bendable" type="checkbox"></label>
                 <label><span>{{ t('stiffness') }}</span><input v-model.number="stiffness" type="number" min="0" max="1000000000000" step="1"></label>
@@ -108,7 +111,9 @@ import {
   deriveAnchor,
   entitiesOverlap,
   entityBoundaryPoints,
+  initializeRopeNodes,
   normalizeConnection,
+  polylineLength,
   resolveAnchor,
   routePoints,
   setManualRoute,
@@ -128,7 +133,7 @@ const selectedEntity = computed(() => world.entities.find(entity => entity.id ==
 const existingPartner = existing?.anchors.find(anchor => anchor.entityId !== props.selectedId)?.entityId ?? null
 const partnerId = ref<number | null>(existingPartner)
 const stage = ref<Stage>(existingPartner === null ? 'objects' : 'path')
-const selectedStyle = ref<VisiblePath>(existing?.style === 'straight' ? 'straight' : 'manual')
+const selectedStyle = ref<VisiblePath>(existing?.style === 'manual' ? 'manual' : 'straight')
 const displayCenters = ref(true)
 const previewCanvas = ref<HTMLCanvasElement | null>(null)
 const drawnAnchors = ref<[ConnectionAnchor, ConnectionAnchor] | null>(null)
@@ -142,7 +147,10 @@ const connectionDamping = ref(existing?.damping ?? 35)
 const maxStretchPercent = ref(Math.max(0, ((existing?.maxStretchRatio ?? 1.25) - 1) * 100))
 const bendingToleranceMass = ref(existing?.bendingToleranceMass ?? 1e12)
 const stretchingToleranceMass = ref(existing?.stretchingToleranceMass ?? 1e12)
-const availableEntities = computed(() => world.entities.filter(entity => entity.id !== props.selectedId))
+const collisionEnabled = ref(existing?.collisionEnabled ?? true)
+const collisionRadius = ref(existing?.collisionRadius ?? 0.2)
+const linearDensity = ref(existing?.linearDensity ?? 0.08)
+const availableEntities = computed(() => world.entities.filter(entity => entity.id !== props.selectedId && entity.layer === selectedEntity.value?.layer))
 const partnerEntity = computed(() => partnerId.value === null ? null : world.entities.find(entity => entity.id === partnerId.value) ?? null)
 const overlapping = computed(() => Boolean(selectedEntity.value && partnerEntity.value && entitiesOverlap(selectedEntity.value, partnerEntity.value)))
 const drawingComplete = computed(() => drawnAnchors.value !== null && drawnPoints.value.length >= 2)
@@ -189,6 +197,9 @@ function copyHiddenPhysics(target: Connection): void {
   target.maxStretchRatio = 1 + maxStretchPercent.value / 100
   target.bendingToleranceMass = bendingToleranceMass.value
   target.stretchingToleranceMass = stretchingToleranceMass.value
+  target.collisionEnabled = collisionEnabled.value
+  target.collisionRadius = collisionRadius.value
+  target.linearDensity = linearDensity.value
 }
 
 function createDraftConnection(): Connection | null {
@@ -229,9 +240,15 @@ function saveConnection() {
   connection.restLengths = [Math.max(1e-6, Math.hypot(end.x - start.x, end.y - start.y))]
   connection.manualSegments = [[{ x: 0, y: 0 }, { x: 1, y: 0 }]]
   connection.breakState = 'intact'
+  connection.breakLink = -1
   connection.tension = 0
   connection.strain = 0
-  if (selectedStyle.value === 'manual') setManualRoute(connection, drawnPoints.value, world.entities)
+  if (selectedStyle.value === 'manual') {
+    setManualRoute(connection, drawnPoints.value, world.entities)
+    const route = routePoints(connection, world.entities)[0]
+    if (route?.length >= 2) connection.restLengths = [Math.max(1e-6, polylineLength(route))]
+  }
+  if (connection.collisionEnabled) initializeRopeNodes(connection, world.entities)
   if (!normalizeConnection(connection, world.entities)) return
   commitConnection(connection, existing ? 'connectionUpdated' : 'connectionCreated')
 }
@@ -303,11 +320,11 @@ function drawAnchor(context: CanvasRenderingContext2D, point: Vec2) {
   context.fillStyle = '#2f80ff'; context.fill()
 }
 
-function drawPath(context: CanvasRenderingContext2D, points: Vec2[], manual: boolean) {
+function drawPath(context: CanvasRenderingContext2D, points: Vec2[], style: VisiblePath) {
   if (points.length < 2) return
   const screen = points.map(worldToPreview)
   context.beginPath(); context.moveTo(screen[0].x, screen[0].y)
-  if (manual && screen.length > 2) {
+  if (style === 'manual' && screen.length > 2) {
     for (let index = 1; index < screen.length - 1; index++) {
       const midpoint = { x: (screen[index].x + screen[index + 1].x) / 2, y: (screen[index].y + screen[index + 1].y) / 2 }
       context.quadraticCurveTo(screen[index].x, screen[index].y, midpoint.x, midpoint.y)
@@ -333,7 +350,7 @@ function renderPreview() {
   const previewPoints = isDrawing.value
     ? (selectedStyle.value === 'manual' ? smoothManualPath(rawPoints, 1) : rawPoints)
     : drawnPoints.value
-  if (previewPoints.length >= 2) drawPath(context, previewPoints, selectedStyle.value === 'manual')
+  if (previewPoints.length >= 2) drawPath(context, previewPoints, selectedStyle.value)
   if (displayCenters.value) {
     if (selectedEntity.value) drawAnchor(context, selectedEntity.value.transform.position)
     if (partnerEntity.value) drawAnchor(context, partnerEntity.value.transform.position)
@@ -392,7 +409,7 @@ function onPreviewPointerDown(event: PointerEvent) {
 function onPreviewPointerMove(event: PointerEvent) {
   if (!isDrawing.value || event.pointerId !== activePointerId) return
   const point = previewToWorld(canvasPoint(event))
-  if (selectedStyle.value === 'straight') rawPoints.splice(1, rawPoints.length - 1, point)
+  if (selectedStyle.value !== 'manual') rawPoints.splice(1, rawPoints.length - 1, point)
   else {
     const previous = rawPoints[rawPoints.length - 1]
     if (!previous || Math.hypot(point.x - previous.x, point.y - previous.y) * previewTransform.scale >= 3) rawPoints.push(point)
@@ -489,11 +506,11 @@ h2 { margin: 2px 0 0; font-size: 18px; letter-spacing: -.02em; }
 .object-picker { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; }.object-picker button:hover, .object-picker button.selected { border-color: var(--accent); background: var(--accent-soft); }.empty-state { margin: auto; color: var(--text-muted); font-size: 12px; text-align: center; }
 .pair-summary { display: flex; align-items: center; justify-content: center; gap: 13px; padding: 12px; border: 1px solid var(--border-subtle); border-radius: 13px; background: var(--surface-1); color: var(--text-primary); font-size: 12px; font-weight: 650; }.pair-summary i { color: var(--accent); font-style: normal; }
 .overlap-notice { padding: 11px 13px; display: flex; align-items: center; gap: 10px; border: 1px solid color-mix(in srgb, var(--accent) 48%, var(--border-subtle)); border-radius: 12px; background: var(--accent-soft); }.overlap-notice > span { color: var(--accent); font-size: 22px; }.overlap-notice div { display: flex; flex-direction: column; }.overlap-notice strong { font-size: 11px; }.overlap-notice small { color: var(--text-muted); font-size: 9.5px; }
-.path-picker { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }.path-picker button { min-height: 142px; padding: 16px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; border: 1px solid var(--border-subtle); border-radius: 15px; background: var(--surface-1); }.path-picker button:hover { transform: translateY(-2px); border-color: var(--accent); background: var(--accent-soft); }.path-picker strong { font-size: 12px; }.path-picker small { min-height: 30px; color: var(--text-muted); font-size: 9.5px; line-height: 1.45; text-align: center; }.path-preview { width: 76px; height: 42px; position: relative; display: block; }.straight-preview::after { content: ''; position: absolute; inset: 20px 4px auto; height: 3px; border-radius: 99px; background: var(--accent); transform: rotate(-12deg); }.straight-preview::before, .manual-preview::before { content: ''; position: absolute; inset: 14px auto auto 1px; width: 9px; height: 9px; border: 3px solid var(--accent); border-radius: 50%; background: white; box-shadow: 65px 14px 0 -3px white, 65px 14px 0 0 var(--accent); z-index: 1; }.manual-preview::after { content: ''; position: absolute; inset: 9px 5px; border-bottom: 3px solid var(--accent); border-radius: 50%; transform: rotate(10deg); }.bind-preview { display: grid; place-items: center; color: var(--accent); font-size: 38px; }.bind-option { border-color: color-mix(in srgb, var(--accent) 38%, var(--border-subtle)) !important; }
+.path-picker { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; }.path-picker button { min-height: 142px; padding: 16px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; border: 1px solid var(--border-subtle); border-radius: 15px; background: var(--surface-1); }.path-picker button:hover { transform: translateY(-2px); border-color: var(--accent); background: var(--accent-soft); }.path-picker strong { font-size: 12px; }.path-picker small { min-height: 30px; color: var(--text-muted); font-size: 9.5px; line-height: 1.45; text-align: center; }.path-preview { width: 76px; height: 42px; position: relative; display: block; }.straight-preview::after { content: ''; position: absolute; inset: 20px 4px auto; height: 3px; border-radius: 99px; background: var(--accent); transform: rotate(-12deg); }.straight-preview::before, .manual-preview::before { content: ''; position: absolute; inset: 14px auto auto 1px; width: 9px; height: 9px; border: 3px solid var(--accent); border-radius: 50%; background: white; box-shadow: 65px 14px 0 -3px white, 65px 14px 0 0 var(--accent); z-index: 1; }.manual-preview::after { content: ''; position: absolute; inset: 9px 5px; border-bottom: 3px solid var(--accent); border-radius: 50%; transform: rotate(10deg); }.bind-preview { display: grid; place-items: center; color: var(--accent); font-size: 38px; }.bind-option { border-color: color-mix(in srgb, var(--accent) 38%, var(--border-subtle)) !important; }
 .center-toggle { flex: 0 0 auto; padding: 7px 10px; display: flex; align-items: center; gap: 7px; border: 1px solid var(--border-subtle); border-radius: 10px; background: var(--surface-1); color: var(--text-secondary); font-size: 10.5px; }.center-toggle input { accent-color: var(--accent); }
 .preview-shell { min-height: 320px; position: relative; flex: 1; overflow: hidden; border: 1px solid var(--border-strong); border-radius: 15px; background: var(--bg-canvas); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--surface-1) 40%, transparent); }.preview-shell.complete { border-color: color-mix(in srgb, var(--accent) 60%, var(--border-strong)); }.preview-shell canvas { display: block; width: 100%; height: 100%; min-height: 320px; touch-action: none; cursor: crosshair; }.preview-instruction, .preview-success { position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); padding: 7px 11px; display: flex; align-items: center; gap: 6px; border: 1px solid var(--border-strong); border-radius: 999px; background: var(--surface-1); color: var(--text-secondary); box-shadow: var(--shadow-sm); font-size: 10px; pointer-events: none; white-space: nowrap; }.preview-instruction span { color: var(--accent); }.preview-success { color: var(--success); }.preview-success span { width: 16px; height: 16px; display: grid; place-items: center; border-radius: 50%; color: var(--accent-contrast); background: var(--success); }
 .preview-footer { min-height: 30px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }.preview-footer p { margin: 0; color: var(--text-muted); font-size: 10px; }.preview-footer p.error { color: var(--danger); }.redraw-button { padding: 6px 10px; border: 1px solid var(--border-subtle); border-radius: 8px; color: var(--text-secondary); background: var(--surface-3); font-size: 10px; }
-.advanced-physics { border: 1px solid var(--border-subtle); border-radius: 12px; background: var(--surface-1); overflow: hidden; }.advanced-physics summary { padding: 10px 12px; color: var(--text-secondary); cursor: pointer; font-size: 10.5px; font-weight: 700; }.physics-grid { padding: 2px 12px 12px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 12px; }.physics-grid label { min-width: 0; display: flex; align-items: center; justify-content: space-between; gap: 8px; color: var(--text-muted); font-size: 9.5px; }.physics-grid input[type='number'] { width: 92px; min-width: 0; }.physics-grid input[type='checkbox'] { accent-color: var(--accent); }
+.advanced-physics { border: 1px solid var(--border-subtle); border-radius: 12px; background: var(--surface-1); overflow: hidden; }.advanced-physics summary { padding: 10px 12px; color: var(--text-secondary); cursor: pointer; font-size: 10.5px; font-weight: 700; }.physics-grid { padding: 2px 12px 12px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 12px; }.physics-grid label { min-width: 0; display: flex; align-items: center; justify-content: space-between; gap: 8px; color: var(--text-muted); font-size: 9.5px; }.physics-grid label.collision-toggle { grid-column: 1 / -1; padding: 8px 0; border-bottom: 1px solid var(--border-subtle); }.collision-toggle > span { display: flex; flex-direction: column; gap: 2px; }.collision-toggle strong { color: var(--text-secondary); font-size: 10px; }.collision-toggle small { max-width: 470px; font-size: 9px; font-weight: 400; line-height: 1.4; }.physics-grid input[type='number'] { width: 92px; min-width: 0; }.physics-grid input[type='checkbox'] { accent-color: var(--accent); }
 footer button { min-height: 35px; padding: 0 14px; border: 1px solid var(--border-subtle); border-radius: 9px; background: var(--surface-3); color: var(--text-secondary); font-size: 11px; }footer button.primary { min-width: 140px; color: var(--accent-contrast); border-color: var(--accent); background: var(--accent); }
 .step-enter-active, .step-leave-active { transition: opacity 180ms ease, transform 220ms cubic-bezier(.2,.8,.2,1); }.step-enter-from { opacity: 0; transform: translateX(24px); }.step-leave-to { opacity: 0; transform: translateX(-18px); }
 @media (max-width: 680px) { .path-picker, .object-picker { grid-template-columns: 1fr; }.path-picker button { min-height: 108px; }.step-indicator { display: none; }.center-toggle { align-self: flex-start; }.compact-copy { flex-wrap: wrap; }.preview-shell, .preview-shell canvas { min-height: 280px; } }

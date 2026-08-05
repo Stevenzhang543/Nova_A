@@ -34,7 +34,7 @@
   --canvas-selection: #ffd166;
   --canvas-selection-fill: rgba(255, 209, 102, 0.24);
   --canvas-handle: #ff7a59;
-  --connection: #8bb8ff;
+  --connection: #63c6ff;
   --connection-broken: #ff6b6b;
   --radius-sm: 7px;
   --radius-md: 12px;
@@ -75,7 +75,7 @@
   --canvas-selection: #c98200;
   --canvas-selection-fill: rgba(241, 168, 0, 0.18);
   --canvas-handle: #d94f32;
-  --connection: #2563eb;
+  --connection: #176bb2;
   --connection-broken: #c93944;
 }
 

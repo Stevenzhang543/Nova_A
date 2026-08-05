@@ -97,22 +97,21 @@ export function duplicateLayer(layerId: number) {
   pushHistory()
 }
 
-export function moveLayerToFront(layerId: number) {
+function moveLayer(layerId: number, destination: 'front' | 'back') {
   const layerEntities = physicsState.world.entities.filter(entity => entity.layer === layerId)
   for (let index = physicsState.world.entities.length - 1; index >= 0; index--) {
     if (physicsState.world.entities[index].layer === layerId) physicsState.world.entities.splice(index, 1)
   }
-  physicsState.world.entities.push(...layerEntities) 
-  editorState.statusText = t('movedLayerFront', { layer: layerId })
+  if (destination === 'front') physicsState.world.entities.push(...layerEntities)
+  else physicsState.world.entities.unshift(...layerEntities)
+  editorState.statusText = t(destination === 'front' ? 'movedLayerFront' : 'movedLayerBack', { layer: layerId })
   pushHistory()
 }
 
+export function moveLayerToFront(layerId: number) {
+  moveLayer(layerId, 'front')
+}
+
 export function moveLayerToBack(layerId: number) {
-  const layerEntities = physicsState.world.entities.filter(entity => entity.layer === layerId)
-  for (let index = physicsState.world.entities.length - 1; index >= 0; index--) {
-    if (physicsState.world.entities[index].layer === layerId) physicsState.world.entities.splice(index, 1)
-  }
-  physicsState.world.entities.unshift(...layerEntities) 
-  editorState.statusText = t('movedLayerBack', { layer: layerId })
-  pushHistory()
+  moveLayer(layerId, 'back')
 }

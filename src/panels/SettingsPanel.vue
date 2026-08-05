@@ -2,12 +2,12 @@
   <div class="settings-page">
     <header class="page-header">
       <div>
-        <span class="eyebrow">Nova_A 1.0</span>
+        <span class="eyebrow">Nova_A 1.1.2</span>
         <h1>{{ t('settings') }}</h1>
       </div>
       <div class="theme-switch" :aria-label="t('theme')">
-        <button :class="{ active: prefs.theme === 'dark' }" @click="prefs.theme = 'dark'">☾ {{ t('dark') }}</button>
-        <button :class="{ active: prefs.theme === 'light' }" @click="prefs.theme = 'light'">☀ {{ t('light') }}</button>
+        <button :class="{ active: prefs.theme === 'dark' }" @click="setTheme('dark')">☾ {{ t('dark') }}</button>
+        <button :class="{ active: prefs.theme === 'light' }" @click="setTheme('light')">☀ {{ t('light') }}</button>
       </div>
     </header>
 
@@ -79,6 +79,12 @@ import { t } from '../i18n'
 import { editorState } from '../store/editor'
 import { autosaveState, normalizeGlobalSettings, physicsState as physics, pushHistory, restoreAutosave } from '../store/physics'
 import { preferencesState as prefs, resetPreferences } from '../store/preferences'
+import type { ThemeMode } from '../store/preferences'
+
+function setTheme(theme: ThemeMode) {
+  prefs.theme = theme
+  if (theme === 'light') prefs.highContrast = false
+}
 
 const SettingRow = defineComponent({
   props: { label: { type: String, required: true } },

@@ -12,6 +12,7 @@ import {
 } from '../world/geometry'
 import {
   createConnection as createConnectionModel,
+  initializeRopeNodes,
   normalizeConnection,
   type AnchorMode,
   type Connection
@@ -127,7 +128,7 @@ function serializeEntity(entity: Entity): Record<string, unknown> {
 export function getSceneJSON(): string {
   normalizeGlobalSettings()
   return JSON.stringify({
-    formatVersion: 3,
+    formatVersion: 5,
     layers: [...editorState.layers],
     activeLayer: editorState.activeLayer,
     renderLayer: editorState.renderLayer,
@@ -137,7 +138,8 @@ export function getSceneJSON(): string {
       ...connection,
       anchors: connection.anchors.map(anchor => ({ ...anchor, localPoint: { ...anchor.localPoint } })),
       restLengths: [...connection.restLengths],
-      manualSegments: connection.manualSegments.map(segment => segment.map(point => ({ ...point })))
+      manualSegments: connection.manualSegments.map(segment => segment.map(point => ({ ...point }))),
+      ropeNodes: connection.ropeNodes.map(node => ({ position: { ...node.position }, velocity: { ...node.velocity } }))
     }))
   })
 }
@@ -153,69 +155,62 @@ function normalizeIdentifier(value: unknown, fallback = 1): number {
   return Math.min(Number.MAX_SAFE_INTEGER, Math.max(1, Math.round(finiteNumber(value, fallback))))
 }
 
-function createEntityFromData(item: SceneEntityData, forcedId?: number): Entity {
-  if (!item || typeof item !== 'object') throw new Error(t('invalidEntityRecord'))
+const SCALAR_ENTITY_PROPERTIES = [
+  'layer', 'density', 'restitutionThreshold', 'transparency', 'angularVelocity',
+  'linearDamping', 'angularDamping', 'mass', 'inertia', 'gravityScale', 'torque',
+  'gravity', 'restitution', 'staticFriction', 'dynamicFriction'
+] as const
+
+const BOOLEAN_ENTITY_PROPERTIES = ['autoInertia', 'isSensor', 'isStatic', 'isKinematic'] as const
+
+function normalizedVertices(vertices: SceneEntityData['vertices']): Array<{ x: number; y: number }> | null {
+  if (!Array.isArray(vertices) || vertices.length < 3) return null
+  return vertices.map(vertex => ({ x: finiteNumber(vertex.x, 0), y: finiteNumber(vertex.y, 0) }))
+}
+
+function createShapeEntity(item: SceneEntityData, id: number, position: { x: number; y: number }): Entity {
   const shapeType = item.shapeType ?? item.name
-  const id = normalizeIdentifier(forcedId ?? item.id)
-  const position = {
-    x: finiteNumber(item.transform?.position?.x, 0),
-    y: finiteNumber(item.transform?.position?.y, 0)
+  if (shapeType === 'Circle') {
+    const radiusX = finiteNumber(item.radiusX, 1)
+    return new CircleEntity(id, position, radiusX, finiteNumber(item.radiusY, radiusX))
   }
-
-  let entity: Entity
+  const vertices = normalizedVertices(item.vertices)
   if (shapeType === 'Box') {
-    const box = new BoxEntity(id, position, { x: 1, y: 1 })
-    if (Array.isArray(item.vertices) && item.vertices.length >= 3) {
-      box.vertices = item.vertices.map(vertex => ({
-        x: finiteNumber(vertex.x, 0),
-        y: finiteNumber(vertex.y, 0)
-      }))
-    }
-    entity = box
-  } else if (shapeType === 'Triangle') {
-    const triangle = new TriangleEntity(id, position, { x: 1, y: 1 })
-    if (Array.isArray(item.vertices) && item.vertices.length >= 3) {
-      triangle.vertices = item.vertices.map(vertex => ({
-        x: finiteNumber(vertex.x, 0),
-        y: finiteNumber(vertex.y, 0)
-      }))
-    }
-    entity = triangle
-  } else if (shapeType === 'Circle') {
-    entity = new CircleEntity(
-      id,
-      position,
-      finiteNumber(item.radiusX, 1),
-      finiteNumber(item.radiusY, finiteNumber(item.radiusX, 1))
-    )
-  } else {
-    throw new Error(t('unsupportedShape', { shape: String(shapeType) }))
+    const entity = new BoxEntity(id, position, { x: 1, y: 1 })
+    if (vertices) entity.vertices = vertices
+    return entity
   }
+  if (shapeType === 'Triangle') {
+    const entity = new TriangleEntity(id, position, { x: 1, y: 1 })
+    if (vertices) entity.vertices = vertices
+    return entity
+  }
+  throw new Error(t('unsupportedShape', { shape: String(shapeType) }))
+}
 
-  const source = item as Record<string, unknown>
-  const scalarProperties = [
-    'layer', 'density', 'restitutionThreshold', 'transparency', 'angularVelocity',
-    'linearDamping', 'angularDamping', 'mass', 'inertia', 'gravityScale', 'torque',
-    'gravity', 'restitution', 'staticFriction', 'dynamicFriction'
-  ] as const
+function applyStoredProperties(entity: Entity, source: Record<string, unknown>): void {
   const mutableEntity = entity as unknown as Record<string, unknown>
-  for (const property of scalarProperties) {
+  for (const property of SCALAR_ENTITY_PROPERTIES) {
     if (source[property] !== undefined) {
       mutableEntity[property] = finiteNumber(source[property], mutableEntity[property] as number)
     }
   }
-
-  const booleanProperties = [
-    'autoInertia', 'isSensor', 'isStatic', 'isKinematic'
-  ] as const
-  for (const property of booleanProperties) {
-    if (typeof source[property] === 'boolean') {
-      mutableEntity[property] = source[property]
-    }
+  for (const property of BOOLEAN_ENTITY_PROPERTIES) {
+    if (typeof source[property] === 'boolean') mutableEntity[property] = source[property]
   }
+}
 
+function applyStoredAppearance(entity: Entity, source: Record<string, unknown>): void {
   if (typeof source.name === 'string' && source.name.trim()) entity.name = source.name.trim()
   if (typeof source.texture === 'string' || source.texture === null) entity.texture = source.texture
+  if (!source.color || typeof source.color !== 'object') return
+  const color = source.color as { r?: unknown; g?: unknown; b?: unknown }
+  entity.color.r = finiteNumber(color.r, entity.color.r)
+  entity.color.g = finiteNumber(color.g, entity.color.g)
+  entity.color.b = finiteNumber(color.b, entity.color.b)
+}
+
+function applyStoredTransform(entity: Entity, item: SceneEntityData, source: Record<string, unknown>): void {
   if (item.transform) {
     copyVector(entity.transform.position, item.transform.position)
     copyVector(entity.transform.scale, item.transform.scale)
@@ -224,12 +219,20 @@ function createEntityFromData(item: SceneEntityData, forcedId?: number): Entity 
   copyVector(entity.velocity, source.velocity)
   copyVector(entity.acceleration, source.acceleration)
   copyVector(entity.force, source.force)
-  if (source.color && typeof source.color === 'object') {
-    const color = source.color as { r?: unknown; g?: unknown; b?: unknown }
-    entity.color.r = finiteNumber(color.r, entity.color.r)
-    entity.color.g = finiteNumber(color.g, entity.color.g)
-    entity.color.b = finiteNumber(color.b, entity.color.b)
+}
+
+function createEntityFromData(item: SceneEntityData, forcedId?: number): Entity {
+  if (!item || typeof item !== 'object') throw new Error(t('invalidEntityRecord'))
+  const id = normalizeIdentifier(forcedId ?? item.id)
+  const position = {
+    x: finiteNumber(item.transform?.position?.x, 0),
+    y: finiteNumber(item.transform?.position?.y, 0)
   }
+  const source = item as Record<string, unknown>
+  const entity = createShapeEntity(item, id, position)
+  applyStoredProperties(entity, source)
+  applyStoredAppearance(entity, source)
+  applyStoredTransform(entity, item, source)
 
   if (entity.isStatic) entity.isKinematic = false
   normalizeEntity(entity)
@@ -267,8 +270,10 @@ export function repairConnection(connectionId: number): void {
   const connection = physicsState.world.connections.find(candidate => candidate.id === connectionId)
   if (!connection) return
   connection.breakState = 'intact'
+  connection.breakLink = -1
   connection.tension = 0
   connection.strain = 0
+  if (connection.collisionEnabled) initializeRopeNodes(connection, physicsState.world.entities)
 }
 
 export function detachEntityFromConnections(entityId: number): void {
@@ -296,6 +301,57 @@ export function duplicateConnections(entityIdMap: Map<number, number>): void {
   }
 }
 
+function claimIdentifier(value: unknown, fallback: number, used: Set<number>): number | null {
+  let id = normalizeIdentifier(value, fallback)
+  while (used.has(id) && id < Number.MAX_SAFE_INTEGER) id++
+  if (used.has(id)) {
+    id = 1
+    while (used.has(id) && id < Number.MAX_SAFE_INTEGER) id++
+  }
+  if (used.has(id)) return null
+  used.add(id)
+  return id
+}
+
+function loadEntities(records: SceneEntityData[]): { entities: Entity[]; maximumId: number } {
+  const usedIds = new Set<number>()
+  let maximumId = 0
+  const entities = records.map(item => {
+    const id = claimIdentifier(item.id, maximumId + 1, usedIds)
+    if (id === null) throw new Error('Entity ID space is exhausted')
+    maximumId = Math.max(maximumId, id)
+    return createEntityFromData(item, id)
+  })
+  return { entities, maximumId }
+}
+
+function loadConnections(records: unknown[], entities: Entity[]): { connections: Connection[]; maximumId: number } {
+  const usedIds = new Set<number>()
+  let maximumId = 0
+  const connections: Connection[] = []
+  for (const raw of records) {
+    const item = raw as SceneConnectionData
+    if (!item || typeof item !== 'object' || !Array.isArray(item.anchors)) continue
+    const id = claimIdentifier(item.id, maximumId + 1, usedIds)
+    if (id === null) continue
+    const connection = structuredClone(item) as Connection
+    connection.id = id
+    if (!normalizeConnection(connection, entities)) continue
+    maximumId = Math.max(maximumId, id)
+    connections.push(connection)
+  }
+  return { connections, maximumId }
+}
+
+function loadGlobalSettings(scene: Record<string, unknown>): void {
+  if (!scene.globalSettings || typeof scene.globalSettings !== 'object') return
+  const settings = scene.globalSettings as Record<string, unknown>
+  physicsState.globalSettings.gravity = finiteNumber(settings.gravity, physicsState.globalSettings.gravity)
+  physicsState.globalSettings.airFriction = finiteNumber(settings.airFriction, physicsState.globalSettings.airFriction)
+  physicsState.globalSettings.timeScale = finiteNumber(settings.timeScale, physicsState.globalSettings.timeScale)
+  normalizeGlobalSettings()
+}
+
 export function loadProject(jsonString: string): boolean {
   try {
     const parsed: unknown = JSON.parse(jsonString)
@@ -304,35 +360,11 @@ export function loadProject(jsonString: string): boolean {
     const scene = root as Record<string, unknown>
     if (!Array.isArray(scene.entities)) throw new Error(t('missingEntitiesArray'))
 
-    const usedIds = new Set<number>()
-    let maximumId = 0
-    const entities = (scene.entities as SceneEntityData[]).map(item => {
-      let id = normalizeIdentifier(item.id, maximumId + 1)
-      while (usedIds.has(id) && id < Number.MAX_SAFE_INTEGER) id++
-      if (usedIds.has(id)) {
-        id = 1
-        while (usedIds.has(id)) id++
-      }
-      usedIds.add(id)
-      maximumId = Math.max(maximumId, id)
-      return createEntityFromData(item, id)
-    })
-
-    const usedConnectionIds = new Set<number>()
-    let maximumConnectionId = 0
-    const connections = (Array.isArray(scene.connections) ? scene.connections : [])
-      .map((item: SceneConnectionData) => {
-        if (!item || typeof item !== 'object' || !Array.isArray(item.anchors)) return null
-        let id = normalizeIdentifier(item.id, maximumConnectionId + 1)
-        while (usedConnectionIds.has(id) && id < Number.MAX_SAFE_INTEGER) id++
-        if (usedConnectionIds.has(id)) return null
-        usedConnectionIds.add(id)
-        maximumConnectionId = Math.max(maximumConnectionId, id)
-        const connection = structuredClone(item) as Connection
-        connection.id = id
-        return normalizeConnection(connection, entities) ? connection : null
-      })
-      .filter((connection): connection is Connection => connection !== null)
+    const { entities, maximumId } = loadEntities(scene.entities as SceneEntityData[])
+    const { connections, maximumId: maximumConnectionId } = loadConnections(
+      Array.isArray(scene.connections) ? scene.connections : [],
+      entities
+    )
 
     const parsedLayers = Array.isArray(scene.layers)
       ? scene.layers.map(layer => normalizeIdentifier(layer))
@@ -347,13 +379,7 @@ export function loadProject(jsonString: string): boolean {
     physicsState.world.setNextId(maximumId + 1)
     physicsState.world.setNextConnectionId(maximumConnectionId + 1)
 
-    if (scene.globalSettings && typeof scene.globalSettings === 'object') {
-      const settings = scene.globalSettings as Record<string, unknown>
-      physicsState.globalSettings.gravity = finiteNumber(settings.gravity, physicsState.globalSettings.gravity)
-      physicsState.globalSettings.airFriction = finiteNumber(settings.airFriction, physicsState.globalSettings.airFriction)
-      physicsState.globalSettings.timeScale = finiteNumber(settings.timeScale, physicsState.globalSettings.timeScale)
-      normalizeGlobalSettings()
-    }
+    loadGlobalSettings(scene)
 
     const requestedActiveLayer = normalizeIdentifier(scene.activeLayer, layers[0])
     editorState.activeLayer = layers.includes(requestedActiveLayer) ? requestedActiveLayer : layers[0]

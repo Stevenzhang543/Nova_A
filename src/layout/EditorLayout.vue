@@ -17,6 +17,7 @@
     </div>
     
     <ContextMenu />
+    <ConfirmDialog />
 
     <StatusBar />
   </div>
@@ -30,6 +31,7 @@ import ToolBar from "../components/ToolBar.vue"
 import ConfigPanel from "../components/ConfigPanel.vue" 
 import ActionBar from "../components/ActionBar.vue"
 import ContextMenu from "../components/ContextMenu.vue" // NEW
+import ConfirmDialog from "../components/ConfirmDialog.vue"
 
 import ScenePanel from "../panels/ScenePanel.vue"
 import RendererPanel from "../panels/RendererPanel.vue"

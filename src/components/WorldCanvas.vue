@@ -9,14 +9,16 @@ import type { Vec2 } from '../world/types'
 import { editorState, openContextMenu } from '../store/editor'
 import { isValidConvexPolygon, MIN_SIZE, normalizeEntity, syncMassFromDensity } from '../world/geometry'
 import { preferencesState as prefs } from '../store/preferences'
-import { routePoints, setManualRoute } from '../world/Connection'
+import { connectionGeometrySignature, connectionSharesLayer, repatchConnection, resolveAnchor, routePoints, setManualRoute } from '../world/Connection'
 import { t } from '../i18n'
+import { defaultColorForLayer } from '../world/layers'
 
 const canvasRef = ref<HTMLCanvasElement | null>(null)
 let ctx: CanvasRenderingContext2D | null = null
 let canvasPixelRatio = 1
 let isManualDrawing = false
 const knownBrokenConnections = new Set<number>()
+const connectionGeometrySignatures = new Map<number, string>()
 let palette = {
   canvas: '#11151b', grid: '#202630', label: '#626c7c', xAxis: '#a9505b', yAxis: '#4e946d',
   selection: '#ffd166', selectionFill: 'rgba(255,209,102,.24)', handle: '#ff7a59', connection: '#8bb8ff', broken: '#ff6b6b'
@@ -119,7 +121,9 @@ function loop(time?: number) {
   }
   if (camera.targetOffset !== null && prefs.reduceMotion) { camera.offset = { ...camera.targetOffset }; camera.targetOffset = null }
 
-  world.update(Math.min(dt, 0.1), state.simulationRunning, state.globalSettings) 
+  if (editorState.currentPage === 'scene' && !state.simulationRunning) syncEditableConnections(true)
+  world.update(Math.min(dt, 0.1), state.simulationRunning, state.globalSettings)
+  if (editorState.currentPage === 'scene' && state.simulationRunning) syncEditableConnections(false)
   for (const connection of world.connections) {
     if (connection.breakState !== 'intact' && !knownBrokenConnections.has(connection.id)) {
       knownBrokenConnections.add(connection.id)
@@ -154,6 +158,40 @@ function onKeyDown(event: KeyboardEvent) {
   editorState.manualConnectionPoints.splice(0)
   isManualDrawing = false
   editorState.statusText = t('ready')
+}
+
+function syncEditableConnections(repatchChanged: boolean) {
+  const currentIds = new Set<number>()
+  for (const connection of world.connections) {
+    currentIds.add(connection.id)
+    const signature = connectionGeometrySignature(connection, world.entities)
+    const previous = connectionGeometrySignatures.get(connection.id)
+    if (repatchChanged && previous !== undefined && previous !== signature) repatchConnection(connection, world.entities)
+    connectionGeometrySignatures.set(connection.id, connectionGeometrySignature(connection, world.entities))
+  }
+  for (const id of connectionGeometrySignatures.keys()) {
+    if (!currentIds.has(id)) connectionGeometrySignatures.delete(id)
+  }
+}
+
+function strokeSmoothPath(context: CanvasRenderingContext2D, points: Vec2[]) {
+  context.beginPath()
+  context.moveTo(points[0].x, points[0].y)
+  if (points.length === 2) {
+    context.lineTo(points[1].x, points[1].y)
+  } else {
+    for (let index = 1; index < points.length - 1; index++) {
+      const midpoint = {
+        x: (points[index].x + points[index + 1].x) * 0.5,
+        y: (points[index].y + points[index + 1].y) * 0.5
+      }
+      context.quadraticCurveTo(points[index].x, points[index].y, midpoint.x, midpoint.y)
+    }
+    const penultimate = points[points.length - 2]
+    const last = points[points.length - 1]
+    context.quadraticCurveTo(penultimate.x, penultimate.y, last.x, last.y)
+  }
+  context.stroke()
 }
 
 function onMouseDown(e: MouseEvent) {
@@ -285,6 +323,7 @@ function onMouseUp() {
       else if (state.activeTool === 'triangle') created = world.addTriangle({ x: cx, y: cy }, { x: w, y: h })
       if (created) {
         created.layer = editorState.activeLayer
+        created.color = defaultColorForLayer(created.layer)
         created.density = prefs.defaultDensity
         created.restitution = prefs.defaultRestitution
         created.staticFriction = prefs.defaultFriction
@@ -394,29 +433,6 @@ function render() {
     ctx.restore()
   }
 
-  if (prefs.showConnections) {
-    for (const connection of world.connections) {
-      const visible = connection.anchors.some(anchor => {
-        const entity = world.entities.find(candidate => candidate.id === anchor.entityId)
-        return entity && (editorState.currentPage === 'render' ? editorState.renderLayer === 'all' || entity.layer === editorState.renderLayer : entity.layer === editorState.activeLayer)
-      })
-      if (!visible) continue
-      ctx.save()
-      ctx.strokeStyle = connection.breakState === 'intact' ? palette.connection : palette.broken
-      ctx.lineWidth = prefs.connectionThickness / camera.scale
-      ctx.lineCap = 'round'; ctx.lineJoin = 'round'
-      if (connection.breakState !== 'intact') ctx.setLineDash([8 / camera.scale, 6 / camera.scale])
-      for (const points of routePoints(connection, world.entities)) {
-        if (points.length < 2) continue
-        ctx.beginPath(); ctx.moveTo(points[0].x, points[0].y)
-        if (connection.style === 'curved' && points.length === 3) ctx.quadraticCurveTo(points[1].x, points[1].y, points[2].x, points[2].y)
-        else for (let index = 1; index < points.length; index++) ctx.lineTo(points[index].x, points[index].y)
-        ctx.stroke()
-      }
-      ctx.restore()
-    }
-  }
-
   const lwNormal = 1 / camera.scale; const lwSelected = 3 / camera.scale
   for (const e of world.entities) {
     if (editorState.currentPage === 'scene' && e.layer !== editorState.activeLayer) continue;
@@ -491,6 +507,48 @@ function render() {
   ctx.lineWidth = 2 / camera.scale
   if (editorState.showXAxis) { ctx.beginPath(); ctx.strokeStyle = palette.xAxis; ctx.moveTo(viewL, 0); ctx.lineTo(viewR, 0); ctx.stroke() }
   if (editorState.showYAxis) { ctx.beginPath(); ctx.strokeStyle = palette.yAxis; ctx.moveTo(0, viewT); ctx.lineTo(0, viewB); ctx.stroke() }
+  if (prefs.showConnections) {
+    for (const connection of world.connections) {
+      if (connection.binding || !connectionSharesLayer(connection, world.entities)) continue
+      const connectedLayer = world.entities.find(entity => entity.id === connection.anchors[0]?.entityId)?.layer
+      const visible = connectedLayer !== undefined && (editorState.currentPage === 'render'
+        ? editorState.renderLayer === 'all' || connectedLayer === editorState.renderLayer
+        : connectedLayer === editorState.activeLayer)
+      if (!visible) continue
+      ctx.save()
+      ctx.strokeStyle = connection.breakState === 'intact' ? palette.connection : palette.broken
+      // A physical string is rendered at its collision diameter, so the grid and
+      // canvas communicate the same real-world size used by the solver.
+      ctx.lineWidth = connection.collisionEnabled
+        ? Math.max(Math.max(2.5, prefs.connectionThickness) / camera.scale, connection.collisionRadius * 2)
+        : Math.max(2.5, prefs.connectionThickness) / camera.scale
+      ctx.lineCap = 'round'; ctx.lineJoin = 'round'
+      ctx.shadowColor = connection.breakState === 'intact' ? palette.connection : palette.broken
+      ctx.shadowBlur = 5 / camera.scale
+      if (connection.breakState !== 'intact') ctx.setLineDash([8 / camera.scale, 6 / camera.scale])
+      for (const points of routePoints(connection, world.entities)) {
+        if (points.length < 2) continue
+        if (connection.collisionEnabled) strokeSmoothPath(ctx, points)
+        else {
+          ctx.beginPath(); ctx.moveTo(points[0].x, points[0].y)
+          if (connection.style === 'curved' && points.length === 3) ctx.quadraticCurveTo(points[1].x, points[1].y, points[2].x, points[2].y)
+          else for (let index = 1; index < points.length; index++) ctx.lineTo(points[index].x, points[index].y)
+          ctx.stroke()
+        }
+      }
+      ctx.setLineDash([]); ctx.shadowBlur = 0
+      for (const anchor of connection.anchors) {
+        const point = resolveAnchor(anchor, world.entities)
+        if (!point) continue
+        ctx.beginPath(); ctx.arc(point.x, point.y, 6 / camera.scale, 0, Math.PI * 2)
+        ctx.fillStyle = '#ffffff'; ctx.fill()
+        ctx.lineWidth = 2.5 / camera.scale; ctx.strokeStyle = palette.connection; ctx.stroke()
+        ctx.beginPath(); ctx.arc(point.x, point.y, 1.8 / camera.scale, 0, Math.PI * 2)
+        ctx.fillStyle = palette.connection; ctx.fill()
+      }
+      ctx.restore()
+    }
+  }
   if (isDragging && dragEntityId === null && dragStart && dragNow) {
     ctx.strokeStyle = palette.selection; ctx.lineWidth = 1 / camera.scale; ctx.setLineDash([5/camera.scale, 5/camera.scale])
     const x = Math.min(dragStart.x, dragNow.x), y = Math.min(dragStart.y, dragNow.y)

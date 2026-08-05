@@ -1,7 +1,10 @@
+use std::collections::HashSet;
 use wasm_bindgen::prelude::*;
 
 const STRIDE: usize = 42;
-const CONNECTION_STRIDE: usize = 24;
+const ROPE_NODE_CAPACITY: usize = 32;
+const ROPE_NODE_DATA_OFFSET: usize = 29;
+const CONNECTION_STRIDE: usize = ROPE_NODE_DATA_OFFSET + ROPE_NODE_CAPACITY * 4;
 const EPSILON: f64 = 1.0e-14;
 const MAX_MAGNITUDE: f64 = 1.0e50;
 const MIN_DIMENSION: f64 = 1.0e-6;
@@ -12,6 +15,7 @@ const MAX_SUB_STEPS: usize = 128;
 const SOLVER_ITERATIONS: usize = 20;
 const POSITION_SLOP: f64 = 1.0e-12;
 const POSITION_CORRECTION: f64 = 0.75;
+const STANDARD_GRAVITY: f64 = 9.80665;
 
 #[derive(Clone, Copy, Debug, Default)]
 struct Vec2 {
@@ -1008,6 +1012,12 @@ struct ConnectionConstraint {
     bending_tolerance_mass: f64,
     stretching_tolerance_mass: f64,
     bend_amount: f64,
+    collision_enabled: bool,
+    collision_radius: f64,
+    linear_density: f64,
+    rope_nodes: Vec<RopeNode>,
+    break_link: Option<usize>,
+    link_tensions: Vec<f64>,
     binding: bool,
     bind_angle: f64,
     bind_offset: Vec2,
@@ -1017,6 +1027,12 @@ struct ConnectionConstraint {
     strain: f64,
 }
 
+#[derive(Clone, Copy, Debug)]
+struct RopeNode {
+    position: Vec2,
+    velocity: Vec2,
+}
+
 impl ConnectionConstraint {
     fn from_data(data: &[f64], data_index: usize, body_count: usize) -> Option<Self> {
         let body_a = non_negative(data[data_index + 1], 0.0).round() as usize;
@@ -1024,6 +1040,35 @@ impl ConnectionConstraint {
         if body_a >= body_count || body_b >= body_count || body_a == body_b {
             return None;
         }
+        let rope_node_count = non_negative(data[data_index + 27], 0.0)
+            .round()
+            .min(ROPE_NODE_CAPACITY as f64) as usize;
+        let rope_nodes = (0..rope_node_count)
+            .map(|node_index| {
+                let offset = data_index + ROPE_NODE_DATA_OFFSET + node_index * 4;
+                RopeNode {
+                    position: Vec2::new(
+                        finite_or(data[offset], 0.0),
+                        finite_or(data[offset + 1], 0.0),
+                    ),
+                    velocity: Vec2::new(
+                        finite_or(data[offset + 2], 0.0),
+                        finite_or(data[offset + 3], 0.0),
+                    ),
+                }
+            })
+            .collect();
+        let link_count = rope_node_count + 1;
+        let broken_code = non_negative(data[data_index + 17], 0.0)
+            .round()
+            .clamp(0.0, 2.0) as u8;
+        let raw_break_link = finite_or(data[data_index + 28], -1.0).round() as isize;
+        let break_link =
+            if broken_code != 0 && raw_break_link >= 0 && (raw_break_link as usize) < link_count {
+                Some(raw_break_link as usize)
+            } else {
+                None
+            };
         Some(Self {
             data_index,
             body_a,
@@ -1045,6 +1090,12 @@ impl ConnectionConstraint {
             bending_tolerance_mass: non_negative(data[data_index + 13], 1.0e12),
             stretching_tolerance_mass: non_negative(data[data_index + 14], 1.0e12),
             bend_amount: non_negative(data[data_index + 15], 0.0),
+            collision_enabled: data[data_index + 24] > 0.5 && rope_node_count > 0,
+            collision_radius: positive(data[data_index + 25], 0.2).min(1.0e6),
+            linear_density: positive(data[data_index + 26], 0.08),
+            rope_nodes,
+            break_link,
+            link_tensions: vec![0.0; link_count],
             binding: data[data_index + 20] > 0.5,
             bind_angle: normalize_angle(data[data_index + 21]),
             bind_offset: Vec2::new(
@@ -1052,7 +1103,7 @@ impl ConnectionConstraint {
                 finite_or(data[data_index + 23], 0.0),
             ),
             active: data[data_index + 16] > 0.5,
-            broken_code: 0,
+            broken_code,
             tension: 0.0,
             strain: 0.0,
         })
@@ -1071,21 +1122,653 @@ impl ConnectionConstraint {
         (radius_a, radius_b, normal, length, delta)
     }
 
+    fn link_lengths(&self, bodies: &[Body], physical_rope: bool) -> Vec<f64> {
+        if !physical_rope {
+            return vec![self.geometry(bodies).3];
+        }
+        (0..rope_point_count(self) - 1)
+            .map(|point| {
+                rope_point_position(self, bodies, point + 1)
+                    .sub(rope_point_position(self, bodies, point))
+                    .length()
+            })
+            .collect()
+    }
+
+    fn strongest_stretch(&self) -> (usize, f64) {
+        self.link_tensions
+            .iter()
+            .copied()
+            .enumerate()
+            .max_by(|a, b| a.1.total_cmp(&b.1))
+            .unwrap_or((0, self.tension))
+    }
+
+    fn strongest_bend(&self, bodies: &[Body], physical_rope: bool) -> (usize, f64) {
+        if !physical_rope {
+            return (0, self.tension * self.bend_amount);
+        }
+        let positions: Vec<Vec2> = (0..rope_point_count(self))
+            .map(|point| rope_point_position(self, bodies, point))
+            .collect();
+        let mut strongest = (0, 0.0);
+        for point in 1..positions.len() - 1 {
+            let incoming = positions[point]
+                .sub(positions[point - 1])
+                .normalized_or(Vec2::new(1.0, 0.0));
+            let outgoing = positions[point + 1]
+                .sub(positions[point])
+                .normalized_or(incoming);
+            let turn_sine_half = ((1.0 - incoming.dot(outgoing)).max(0.0) * 0.5).sqrt();
+            let left_tension = self.link_tensions.get(point - 1).copied().unwrap_or(0.0);
+            let right_tension = self.link_tensions.get(point).copied().unwrap_or(0.0);
+            let force = 2.0 * left_tension.min(right_tension) * turn_sine_half;
+            if force > strongest.1 {
+                strongest = (
+                    if left_tension >= right_tension {
+                        point - 1
+                    } else {
+                        point
+                    },
+                    force,
+                );
+            }
+        }
+        strongest
+    }
+
+    fn break_at_stretch(
+        &mut self,
+        physical_rope: bool,
+        link_lengths: &[f64],
+        stretch_link: usize,
+        stretch_force: f64,
+    ) {
+        self.broken_code = 2;
+        let longest_link = link_lengths
+            .iter()
+            .copied()
+            .enumerate()
+            .max_by(|a, b| a.1.total_cmp(&b.1))
+            .map(|entry| entry.0)
+            .unwrap_or(stretch_link);
+        self.break_link = physical_rope.then_some(if stretch_force > 0.0 {
+            stretch_link
+        } else {
+            longest_link
+        });
+    }
+
     fn evaluate_failure(&mut self, bodies: &[Body]) {
         if !self.active || self.broken_code != 0 || self.binding {
             return;
         }
-        let (_, _, _, length, _) = self.geometry(bodies);
+        let physical_rope = self.collision_enabled && !self.rope_nodes.is_empty();
+        let link_lengths = self.link_lengths(bodies, physical_rope);
+        let length: f64 = link_lengths.iter().sum();
         self.strain = ((length / self.rest_length) - 1.0).max(0.0);
-        let supported_mass = bodies[self.body_a].mass.max(bodies[self.body_b].mass);
-        if self.bend_amount > 0.01 && supported_mass > self.bending_tolerance_mass {
-            self.broken_code = 1;
-            self.active = false;
-        } else if length / self.rest_length > self.max_stretch_ratio
-            && supported_mass > self.stretching_tolerance_mass
+        let (stretch_link, stretch_force) = self.strongest_stretch();
+        let stretch_load_ratio = load_ratio(stretch_force, self.stretching_tolerance_mass);
+        let stretch_geometry_ratio = length / self.rest_length / self.max_stretch_ratio;
+        let (bend_link, bend_force) = self.strongest_bend(bodies, physical_rope);
+        let bend_load_ratio = load_ratio(bend_force, self.bending_tolerance_mass);
+
+        let should_tear = stretch_geometry_ratio > 1.0 || stretch_load_ratio > 1.0;
+        let should_snap = bend_load_ratio > 1.0;
+        if should_snap
+            && (!should_tear || bend_load_ratio >= stretch_load_ratio.max(stretch_geometry_ratio))
         {
-            self.broken_code = 2;
+            self.broken_code = 1;
+            self.break_link = physical_rope.then_some(bend_link);
+        } else if should_tear {
+            self.break_at_stretch(physical_rope, &link_lengths, stretch_link, stretch_force);
+        }
+        if self.broken_code != 0 && !physical_rope {
             self.active = false;
+        }
+    }
+}
+
+fn load_ratio(force: f64, tolerance_mass: f64) -> f64 {
+    if tolerance_mass > 0.0 {
+        force / STANDARD_GRAVITY / tolerance_mass
+    } else if force > 0.0 {
+        f64::INFINITY
+    } else {
+        0.0
+    }
+}
+
+fn rope_point_count(constraint: &ConnectionConstraint) -> usize {
+    constraint.rope_nodes.len() + 2
+}
+
+fn rope_node_inverse_mass(constraint: &ConnectionConstraint) -> f64 {
+    let node_count = constraint.rope_nodes.len().max(1) as f64;
+    let node_mass =
+        (constraint.linear_density * constraint.rest_length / node_count).max(MIN_DIMENSION);
+    1.0 / node_mass
+}
+
+fn rope_point_position(constraint: &ConnectionConstraint, bodies: &[Body], point: usize) -> Vec2 {
+    if point == 0 {
+        let body = &bodies[constraint.body_a];
+        body.position
+            .add(rotate(constraint.local_anchor_a, body.angle))
+    } else if point + 1 == rope_point_count(constraint) {
+        let body = &bodies[constraint.body_b];
+        body.position
+            .add(rotate(constraint.local_anchor_b, body.angle))
+    } else {
+        constraint.rope_nodes[point - 1].position
+    }
+}
+
+fn rope_point_velocity(constraint: &ConnectionConstraint, bodies: &[Body], point: usize) -> Vec2 {
+    if point == 0 {
+        let body = &bodies[constraint.body_a];
+        body.point_velocity(rotate(constraint.local_anchor_a, body.angle))
+    } else if point + 1 == rope_point_count(constraint) {
+        let body = &bodies[constraint.body_b];
+        body.point_velocity(rotate(constraint.local_anchor_b, body.angle))
+    } else {
+        constraint.rope_nodes[point - 1].velocity
+    }
+}
+
+fn rope_point_effective_inverse(
+    constraint: &ConnectionConstraint,
+    bodies: &[Body],
+    point: usize,
+    direction: Vec2,
+) -> f64 {
+    if point == 0 {
+        let body = &bodies[constraint.body_a];
+        let radius = rotate(constraint.local_anchor_a, body.angle);
+        body.inv_mass + radius.cross(direction).powi(2) * body.inv_inertia
+    } else if point + 1 == rope_point_count(constraint) {
+        let body = &bodies[constraint.body_b];
+        let radius = rotate(constraint.local_anchor_b, body.angle);
+        body.inv_mass + radius.cross(direction).powi(2) * body.inv_inertia
+    } else {
+        rope_node_inverse_mass(constraint)
+    }
+}
+
+fn apply_rope_point_impulse(
+    constraint: &mut ConnectionConstraint,
+    bodies: &mut [Body],
+    point: usize,
+    impulse: Vec2,
+) {
+    if point == 0 {
+        let body = &mut bodies[constraint.body_a];
+        let radius = rotate(constraint.local_anchor_a, body.angle);
+        body.apply_impulse(impulse, radius);
+    } else if point + 1 == rope_point_count(constraint) {
+        let body = &mut bodies[constraint.body_b];
+        let radius = rotate(constraint.local_anchor_b, body.angle);
+        body.apply_impulse(impulse, radius);
+    } else {
+        let inverse_mass = rope_node_inverse_mass(constraint);
+        let node = &mut constraint.rope_nodes[point - 1];
+        node.velocity = node
+            .velocity
+            .add(impulse.mul(inverse_mass))
+            .finite_or(node.velocity);
+    }
+}
+
+fn apply_rope_point_correction(
+    constraint: &mut ConnectionConstraint,
+    bodies: &mut [Body],
+    point: usize,
+    correction: Vec2,
+) {
+    if point == 0 {
+        let body = &mut bodies[constraint.body_a];
+        let radius = rotate(constraint.local_anchor_a, body.angle);
+        body.position = body
+            .position
+            .add(correction.mul(body.inv_mass))
+            .finite_or(body.position);
+        body.angle = normalize_angle(body.angle + radius.cross(correction) * body.inv_inertia);
+    } else if point + 1 == rope_point_count(constraint) {
+        let body = &mut bodies[constraint.body_b];
+        let radius = rotate(constraint.local_anchor_b, body.angle);
+        body.position = body
+            .position
+            .add(correction.mul(body.inv_mass))
+            .finite_or(body.position);
+        body.angle = normalize_angle(body.angle + radius.cross(correction) * body.inv_inertia);
+    } else {
+        let inverse_mass = rope_node_inverse_mass(constraint);
+        let node = &mut constraint.rope_nodes[point - 1];
+        node.position = node
+            .position
+            .add(correction.mul(inverse_mass))
+            .finite_or(node.position);
+    }
+}
+
+fn integrate_rope_nodes(
+    constraint: &mut ConnectionConstraint,
+    dt: f64,
+    global_gravity: f64,
+    air_friction: f64,
+) {
+    if !constraint.active || !constraint.collision_enabled || constraint.binding {
+        return;
+    }
+    let decay = (-air_friction * dt).exp();
+    for node in &mut constraint.rope_nodes {
+        node.velocity.y -= global_gravity * dt;
+        node.velocity = node.velocity.mul(decay).finite_or(Vec2::ZERO);
+        node.position = node
+            .position
+            .add(node.velocity.mul(dt))
+            .finite_or(node.position);
+    }
+}
+
+fn solve_rope_velocity(bodies: &mut [Body], constraint: &mut ConnectionConstraint, dt: f64) {
+    if dt <= 0.0 || constraint.rope_nodes.is_empty() {
+        return;
+    }
+    let point_count = rope_point_count(constraint);
+    let link_rest_length = constraint.rest_length / (point_count - 1) as f64;
+    for point_a in 0..point_count - 1 {
+        if constraint.break_link == Some(point_a) {
+            continue;
+        }
+        let point_b = point_a + 1;
+        let position_a = rope_point_position(constraint, bodies, point_a);
+        let position_b = rope_point_position(constraint, bodies, point_b);
+        let delta = position_b.sub(position_a);
+        let length = delta.length();
+        let normal = delta.normalized_or(Vec2::new(1.0, 0.0));
+        let error = length - link_rest_length;
+        if constraint.bendable && error <= 0.0 {
+            continue;
+        }
+        let velocity_a = rope_point_velocity(constraint, bodies, point_a);
+        let velocity_b = rope_point_velocity(constraint, bodies, point_b);
+        let relative_speed = velocity_b.sub(velocity_a).dot(normal);
+        let denominator = rope_point_effective_inverse(constraint, bodies, point_a, normal)
+            + rope_point_effective_inverse(constraint, bodies, point_b, normal);
+        if denominator <= 0.0 {
+            continue;
+        }
+        let scalar_impulse = if constraint.stretchable {
+            let links = (point_count - 1) as f64;
+            let link_stiffness = constraint.stiffness * links;
+            let link_damping = constraint.damping * links;
+            let raw_force = link_stiffness * error + link_damping * relative_speed;
+            let force = if constraint.bendable {
+                raw_force.max(0.0)
+            } else {
+                raw_force
+            };
+            constraint.tension = constraint.tension.max(force.abs());
+            constraint.link_tensions[point_a] = constraint.link_tensions[point_a].max(force.abs());
+            -force * dt / SOLVER_ITERATIONS as f64
+        } else {
+            let bias = 0.25 * error / dt;
+            let impulse = -(relative_speed + bias) / denominator;
+            let force = (impulse / dt).abs();
+            constraint.tension = constraint.tension.max(force);
+            constraint.link_tensions[point_a] = constraint.link_tensions[point_a].max(force);
+            impulse
+        };
+        let impulse = normal.mul(scalar_impulse);
+        apply_rope_point_impulse(constraint, bodies, point_a, impulse.neg());
+        apply_rope_point_impulse(constraint, bodies, point_b, impulse);
+    }
+}
+
+fn correct_rope_position(bodies: &mut [Body], constraint: &mut ConnectionConstraint) {
+    if constraint.rope_nodes.is_empty() {
+        return;
+    }
+    let point_count = rope_point_count(constraint);
+    if !constraint.stretchable {
+        let link_rest_length = constraint.rest_length / (point_count - 1) as f64;
+        for point_a in 0..point_count - 1 {
+            if constraint.break_link == Some(point_a) {
+                continue;
+            }
+            let point_b = point_a + 1;
+            let position_a = rope_point_position(constraint, bodies, point_a);
+            let position_b = rope_point_position(constraint, bodies, point_b);
+            let delta = position_b.sub(position_a);
+            let length = delta.length();
+            let normal = delta.normalized_or(Vec2::new(1.0, 0.0));
+            let error = length - link_rest_length;
+            if constraint.bendable && error <= POSITION_SLOP {
+                continue;
+            }
+            let denominator = rope_point_effective_inverse(constraint, bodies, point_a, normal)
+                + rope_point_effective_inverse(constraint, bodies, point_b, normal);
+            if denominator <= 0.0 {
+                continue;
+            }
+            let correction = normal.mul(error * 0.75 / denominator);
+            apply_rope_point_correction(constraint, bodies, point_a, correction);
+            apply_rope_point_correction(constraint, bodies, point_b, correction.neg());
+        }
+    }
+    if !constraint.bendable && constraint.rope_nodes.len() > 1 {
+        let positions: Vec<Vec2> = (0..point_count)
+            .map(|point| rope_point_position(constraint, bodies, point))
+            .collect();
+        let inverse_mass = rope_node_inverse_mass(constraint);
+        for node_index in 0..constraint.rope_nodes.len() {
+            if constraint.break_link == Some(node_index)
+                || constraint.break_link == Some(node_index + 1)
+            {
+                continue;
+            }
+            let target = positions[node_index]
+                .add(positions[node_index + 2])
+                .mul(0.5);
+            let correction = target
+                .sub(positions[node_index + 1])
+                .mul(0.22 / inverse_mass);
+            apply_rope_point_correction(constraint, bodies, node_index + 1, correction);
+        }
+    }
+}
+
+fn rope_collision_body(node: RopeNode, radius: f64, mass: f64, layer: i64) -> Body {
+    Body {
+        data_index: usize::MAX,
+        shape: Shape::Ellipse {
+            radius_x: radius,
+            radius_y: radius,
+        },
+        position: node.position,
+        velocity: node.velocity,
+        acceleration: Vec2::ZERO,
+        angle: 0.0,
+        angular_velocity: 0.0,
+        force: Vec2::ZERO,
+        torque: 0.0,
+        mass,
+        inv_mass: 1.0 / mass,
+        inertia: 0.5 * mass * radius * radius,
+        inv_inertia: 0.0,
+        gravity_scale: 1.0,
+        local_gravity: 0.0,
+        linear_damping: 0.0,
+        angular_damping: 0.0,
+        restitution: 0.0,
+        restitution_threshold: 0.0,
+        static_friction: 0.4,
+        dynamic_friction: 0.25,
+        is_static: false,
+        is_kinematic: false,
+        is_sensor: false,
+        layer,
+    }
+}
+
+fn rope_sample_position(
+    constraint: &ConnectionConstraint,
+    bodies: &[Body],
+    link: usize,
+    ratio: f64,
+) -> Vec2 {
+    rope_point_position(constraint, bodies, link)
+        .mul(1.0 - ratio)
+        .add(rope_point_position(constraint, bodies, link + 1).mul(ratio))
+}
+
+fn rope_sample_velocity(
+    constraint: &ConnectionConstraint,
+    bodies: &[Body],
+    link: usize,
+    ratio: f64,
+) -> Vec2 {
+    rope_point_velocity(constraint, bodies, link)
+        .mul(1.0 - ratio)
+        .add(rope_point_velocity(constraint, bodies, link + 1).mul(ratio))
+}
+
+fn rope_sample_effective_inverse(
+    constraint: &ConnectionConstraint,
+    bodies: &[Body],
+    link: usize,
+    ratio: f64,
+    direction: Vec2,
+) -> f64 {
+    let weight_a = 1.0 - ratio;
+    let weight_b = ratio;
+    weight_a * weight_a * rope_point_effective_inverse(constraint, bodies, link, direction)
+        + weight_b
+            * weight_b
+            * rope_point_effective_inverse(constraint, bodies, link + 1, direction)
+}
+
+fn apply_rope_sample_impulse(
+    constraint: &mut ConnectionConstraint,
+    bodies: &mut [Body],
+    link: usize,
+    ratio: f64,
+    impulse: Vec2,
+) {
+    apply_rope_point_impulse(constraint, bodies, link, impulse.mul(1.0 - ratio));
+    apply_rope_point_impulse(constraint, bodies, link + 1, impulse.mul(ratio));
+}
+
+fn apply_rope_sample_correction(
+    constraint: &mut ConnectionConstraint,
+    bodies: &mut [Body],
+    link: usize,
+    ratio: f64,
+    correction: Vec2,
+) {
+    apply_rope_point_correction(constraint, bodies, link, correction.mul(1.0 - ratio));
+    apply_rope_point_correction(constraint, bodies, link + 1, correction.mul(ratio));
+}
+
+#[derive(Clone, Copy)]
+struct RopeSample {
+    link: usize,
+    ratio: f64,
+    layer: i64,
+}
+
+#[derive(Clone, Copy)]
+struct RopeContactKinematics {
+    normal: Vec2,
+    radius_body: Vec2,
+    relative_velocity: Vec2,
+    normal_scalar: f64,
+}
+
+fn rope_can_collide_with_body(
+    constraint: &ConnectionConstraint,
+    body: &Body,
+    body_index: usize,
+    layer: i64,
+) -> bool {
+    body_index != constraint.body_a
+        && body_index != constraint.body_b
+        && body.layer == layer
+        && !body.is_sensor
+}
+
+fn apply_rope_friction(
+    bodies: &mut [Body],
+    constraint: &mut ConnectionConstraint,
+    sample: RopeSample,
+    body_index: usize,
+    contact: RopeContactKinematics,
+) {
+    let tangent = contact.normal.perp();
+    let tangent_cross = contact.radius_body.cross(tangent);
+    let tangent_denominator =
+        rope_sample_effective_inverse(constraint, bodies, sample.link, sample.ratio, tangent)
+            + bodies[body_index].inv_mass
+            + tangent_cross * tangent_cross * bodies[body_index].inv_inertia;
+    if tangent_denominator <= 0.0 {
+        return;
+    }
+    let tangent_speed = contact.relative_velocity.dot(tangent);
+    let static_limit = (bodies[body_index].static_friction * 0.4).sqrt() * contact.normal_scalar;
+    let dynamic_limit = (bodies[body_index].dynamic_friction * 0.25).sqrt() * contact.normal_scalar;
+    let unconstrained = -tangent_speed / tangent_denominator;
+    let tangent_scalar = if unconstrained.abs() <= static_limit {
+        unconstrained
+    } else {
+        unconstrained.clamp(-dynamic_limit, dynamic_limit)
+    };
+    let friction_impulse = tangent.mul(tangent_scalar);
+    apply_rope_sample_impulse(
+        constraint,
+        bodies,
+        sample.link,
+        sample.ratio,
+        friction_impulse.neg(),
+    );
+    bodies[body_index].apply_impulse(friction_impulse, contact.radius_body);
+}
+
+fn resolve_rope_manifold(
+    bodies: &mut [Body],
+    constraint: &mut ConnectionConstraint,
+    sample: RopeSample,
+    body_index: usize,
+    manifold: Manifold,
+) {
+    let radius_body = manifold.point.sub(bodies[body_index].position);
+    let body_velocity = bodies[body_index].point_velocity(radius_body);
+    let relative_velocity = body_velocity.sub(rope_sample_velocity(
+        constraint,
+        bodies,
+        sample.link,
+        sample.ratio,
+    ));
+    let cross_body = radius_body.cross(manifold.normal);
+    let rope_normal_inverse = rope_sample_effective_inverse(
+        constraint,
+        bodies,
+        sample.link,
+        sample.ratio,
+        manifold.normal,
+    );
+    let denominator = rope_normal_inverse
+        + bodies[body_index].inv_mass
+        + cross_body * cross_body * bodies[body_index].inv_inertia;
+    if denominator <= 0.0 {
+        return;
+    }
+    let normal_speed = relative_velocity.dot(manifold.normal);
+    let normal_scalar = if normal_speed < 0.0 {
+        let restitution = if -normal_speed > bodies[body_index].restitution_threshold {
+            bodies[body_index].restitution
+        } else {
+            0.0
+        };
+        -(1.0 + restitution) * normal_speed / denominator
+    } else {
+        0.0
+    };
+    if normal_scalar > 0.0 {
+        let impulse = manifold.normal.mul(normal_scalar);
+        apply_rope_sample_impulse(constraint, bodies, sample.link, sample.ratio, impulse.neg());
+        bodies[body_index].apply_impulse(impulse, radius_body);
+        apply_rope_friction(
+            bodies,
+            constraint,
+            sample,
+            body_index,
+            RopeContactKinematics {
+                normal: manifold.normal,
+                radius_body,
+                relative_velocity,
+                normal_scalar,
+            },
+        );
+    }
+
+    let correction = manifold
+        .normal
+        .mul((manifold.depth - POSITION_SLOP).max(0.0) * POSITION_CORRECTION / denominator);
+    apply_rope_sample_correction(
+        constraint,
+        bodies,
+        sample.link,
+        sample.ratio,
+        correction.neg(),
+    );
+    let body = &mut bodies[body_index];
+    body.position = body
+        .position
+        .add(correction.mul(body.inv_mass))
+        .finite_or(body.position);
+    body.angle = normalize_angle(body.angle + radius_body.cross(correction) * body.inv_inertia);
+}
+
+fn resolve_rope_sample_body(
+    bodies: &mut [Body],
+    constraint: &mut ConnectionConstraint,
+    sample: RopeSample,
+    body_index: usize,
+) {
+    let sample_position = rope_sample_position(constraint, bodies, sample.link, sample.ratio);
+    let sample_velocity = rope_sample_velocity(constraint, bodies, sample.link, sample.ratio);
+    let sample_inverse = rope_sample_effective_inverse(
+        constraint,
+        bodies,
+        sample.link,
+        sample.ratio,
+        Vec2::new(1.0, 0.0),
+    )
+    .max(MIN_DIMENSION);
+    let sample_body = rope_collision_body(
+        RopeNode {
+            position: sample_position,
+            velocity: sample_velocity,
+        },
+        constraint.collision_radius,
+        1.0 / sample_inverse,
+        sample.layer,
+    );
+    for manifold in collide(&sample_body, &bodies[body_index]) {
+        resolve_rope_manifold(bodies, constraint, sample, body_index, manifold);
+    }
+}
+
+fn resolve_rope_collisions(bodies: &mut [Body], constraint: &mut ConnectionConstraint) {
+    if !constraint.active || !constraint.collision_enabled || constraint.rope_nodes.is_empty() {
+        return;
+    }
+    let layer = bodies[constraint.body_a].layer;
+    let point_count = rope_point_count(constraint);
+    for link in 0..point_count - 1 {
+        if constraint.break_link == Some(link) {
+            continue;
+        }
+        let link_length = rope_point_position(constraint, bodies, link + 1)
+            .sub(rope_point_position(constraint, bodies, link))
+            .length();
+        let sample_count = ((link_length / constraint.collision_radius.max(MIN_DIMENSION)).ceil()
+            as usize)
+            .clamp(1, 32);
+        for sample_index in 0..sample_count {
+            let ratio = (sample_index as f64 + 0.5) / sample_count as f64;
+            for body_index in 0..bodies.len() {
+                if !rope_can_collide_with_body(constraint, &bodies[body_index], body_index, layer) {
+                    continue;
+                }
+                resolve_rope_sample_body(
+                    bodies,
+                    constraint,
+                    RopeSample { link, ratio, layer },
+                    body_index,
+                );
+            }
         }
     }
 }
@@ -1202,12 +1885,87 @@ fn correct_binding_position(bodies: &mut [Body], constraint: &ConnectionConstrai
     }
 }
 
+fn synchronize_binding_motion(bodies: &mut [Body], constraint: &ConnectionConstraint) {
+    if !constraint.binding || !constraint.active {
+        return;
+    }
+    let (a_index, b_index) = (constraint.body_a, constraint.body_b);
+    if bodies[a_index].inv_mass <= 0.0 {
+        let angular_velocity = bodies[a_index].angular_velocity;
+        let radius = rotate(constraint.bind_offset, bodies[a_index].angle);
+        let velocity = bodies[a_index].point_velocity(radius);
+        bodies[b_index].velocity = velocity;
+        bodies[b_index].angular_velocity = angular_velocity;
+        return;
+    }
+    if bodies[b_index].inv_mass <= 0.0 {
+        let angular_velocity = bodies[b_index].angular_velocity;
+        let radius = rotate(constraint.bind_offset, bodies[a_index].angle);
+        bodies[a_index].velocity = bodies[b_index].velocity.sub(Vec2::new(
+            -angular_velocity * radius.y,
+            angular_velocity * radius.x,
+        ));
+        bodies[a_index].angular_velocity = angular_velocity;
+        return;
+    }
+
+    let a = &bodies[a_index];
+    let b = &bodies[b_index];
+    let total_mass = a.mass + b.mass;
+    if total_mass <= 0.0 {
+        return;
+    }
+    let center = a
+        .position
+        .mul(a.mass)
+        .add(b.position.mul(b.mass))
+        .mul(1.0 / total_mass);
+    let radius_a = a.position.sub(center);
+    let radius_b = b.position.sub(center);
+    let linear_velocity = a
+        .velocity
+        .mul(a.mass)
+        .add(b.velocity.mul(b.mass))
+        .mul(1.0 / total_mass);
+    let compound_inertia = a.inertia
+        + a.mass * radius_a.length_squared()
+        + b.inertia
+        + b.mass * radius_b.length_squared();
+    let angular_momentum = a.inertia * a.angular_velocity
+        + radius_a.cross(a.velocity.mul(a.mass))
+        + b.inertia * b.angular_velocity
+        + radius_b.cross(b.velocity.mul(b.mass));
+    let angular_velocity = if compound_inertia > MIN_INERTIA {
+        angular_momentum / compound_inertia
+    } else {
+        0.0
+    };
+    let velocity_a = linear_velocity.add(Vec2::new(
+        -angular_velocity * radius_a.y,
+        angular_velocity * radius_a.x,
+    ));
+    let velocity_b = linear_velocity.add(Vec2::new(
+        -angular_velocity * radius_b.y,
+        angular_velocity * radius_b.x,
+    ));
+    let (a, b) = two_bodies_mut(bodies, a_index, b_index);
+    a.velocity = velocity_a.finite_or(a.velocity);
+    b.velocity = velocity_b.finite_or(b.velocity);
+    a.angular_velocity = finite_or(angular_velocity, 0.0);
+    b.angular_velocity = finite_or(angular_velocity, 0.0);
+}
+
 fn solve_connection_velocity(bodies: &mut [Body], constraint: &mut ConnectionConstraint, dt: f64) {
-    if !constraint.active || constraint.broken_code != 0 || dt <= 0.0 {
+    let simulating_fragments = constraint.collision_enabled && constraint.break_link.is_some();
+    if !constraint.active || (constraint.broken_code != 0 && !simulating_fragments) || dt <= 0.0 {
         return;
     }
     if constraint.binding {
         solve_binding_velocity(bodies, constraint, dt);
+        return;
+    }
+    if constraint.collision_enabled {
+        solve_rope_velocity(bodies, constraint, dt);
         return;
     }
     let (radius_a, radius_b, normal, length, _) = constraint.geometry(bodies);
@@ -1263,12 +2021,17 @@ fn solve_connection_velocity(bodies: &mut [Body], constraint: &mut ConnectionCon
     }
 }
 
-fn correct_connection_position(bodies: &mut [Body], constraint: &ConnectionConstraint) {
-    if !constraint.active || constraint.broken_code != 0 {
+fn correct_connection_position(bodies: &mut [Body], constraint: &mut ConnectionConstraint) {
+    let simulating_fragments = constraint.collision_enabled && constraint.break_link.is_some();
+    if !constraint.active || (constraint.broken_code != 0 && !simulating_fragments) {
         return;
     }
     if constraint.binding {
         correct_binding_position(bodies, constraint);
+        return;
+    }
+    if constraint.collision_enabled {
+        correct_rope_position(bodies, constraint);
         return;
     }
     let (radius_a, radius_b, normal, length, _) = constraint.geometry(bodies);
@@ -1323,6 +2086,261 @@ fn determine_sub_steps(bodies: &[Body], dt: f64, global_gravity: f64) -> usize {
     required.clamp(BASE_SUB_STEPS, MAX_SUB_STEPS)
 }
 
+fn reset_contact_diagnostics(data: &mut [f64], body_count: usize) {
+    for body_index in 0..body_count {
+        let index = body_index * STRIDE;
+        data[index + 29..index + 33].fill(0.0);
+    }
+}
+
+fn read_bodies(data: &[f64], body_count: usize) -> Vec<Body> {
+    (0..body_count)
+        .map(|body_index| Body::from_data(data, body_index * STRIDE))
+        .collect()
+}
+
+fn read_constraints(
+    connection_data: &[f64],
+    body_count: usize,
+    bodies: &[Body],
+) -> Vec<ConnectionConstraint> {
+    let connection_count = connection_data.len() / CONNECTION_STRIDE;
+    (0..connection_count)
+        .filter_map(|connection_index| {
+            ConnectionConstraint::from_data(
+                connection_data,
+                connection_index * CONNECTION_STRIDE,
+                body_count,
+            )
+        })
+        .filter(|constraint| bodies[constraint.body_a].layer == bodies[constraint.body_b].layer)
+        .collect()
+}
+
+fn active_bound_pairs(constraints: &[ConnectionConstraint]) -> HashSet<(usize, usize)> {
+    constraints
+        .iter()
+        .filter(|constraint| constraint.binding && constraint.active)
+        .map(|constraint| {
+            (
+                constraint.body_a.min(constraint.body_b),
+                constraint.body_a.max(constraint.body_b),
+            )
+        })
+        .collect()
+}
+
+fn record_contact_diagnostics(data: &mut [f64], body_a: &Body, body_b: &Body, manifold: &Manifold) {
+    let data_a = body_a.data_index;
+    let data_b = body_b.data_index;
+    data[data_a + 29] += 1.0;
+    data[data_b + 29] += 1.0;
+    if manifold.depth >= data[data_a + 32] {
+        data[data_a + 30] = manifold.normal.x;
+        data[data_a + 31] = manifold.normal.y;
+        data[data_a + 32] = manifold.depth;
+    }
+    if manifold.depth >= data[data_b + 32] {
+        data[data_b + 30] = -manifold.normal.x;
+        data[data_b + 31] = -manifold.normal.y;
+        data[data_b + 32] = manifold.depth;
+    }
+}
+
+fn contact_from_manifold(
+    bodies: &[Body],
+    body_a_index: usize,
+    body_b_index: usize,
+    manifold: Manifold,
+    position_weight: f64,
+) -> Contact {
+    let body_a = &bodies[body_a_index];
+    let body_b = &bodies[body_b_index];
+    let radius_a = manifold.point.sub(body_a.position);
+    let radius_b = manifold.point.sub(body_b.position);
+    let initial_relative_velocity = body_b
+        .point_velocity(radius_b)
+        .sub(body_a.point_velocity(radius_a));
+    let initial_normal_velocity = initial_relative_velocity.dot(manifold.normal);
+    let threshold = body_a
+        .restitution_threshold
+        .max(body_b.restitution_threshold);
+    let restitution_bias = if initial_normal_velocity < -threshold {
+        -body_a.restitution.max(body_b.restitution) * initial_normal_velocity
+    } else {
+        0.0
+    };
+    let dynamic_friction = (body_a.dynamic_friction * body_b.dynamic_friction).sqrt();
+    let static_friction = (body_a.static_friction * body_b.static_friction)
+        .sqrt()
+        .max(dynamic_friction);
+    Contact {
+        body_a: body_a_index,
+        body_b: body_b_index,
+        normal: manifold.normal,
+        tangent: manifold.normal.perp(),
+        depth: manifold.depth,
+        radius_a,
+        radius_b,
+        restitution_bias,
+        static_friction,
+        dynamic_friction,
+        normal_impulse: 0.0,
+        tangent_impulse: 0.0,
+        is_sensor: body_a.is_sensor || body_b.is_sensor,
+        position_weight,
+    }
+}
+
+fn collect_contacts(
+    bodies: &[Body],
+    bound_pairs: &HashSet<(usize, usize)>,
+    data: &mut [f64],
+    record_diagnostics: bool,
+) -> Vec<Contact> {
+    let mut broad_phase: Vec<(usize, Aabb)> = bodies
+        .iter()
+        .enumerate()
+        .map(|(index, body)| (index, body.shape.aabb(body.position, body.angle)))
+        .collect();
+    broad_phase.sort_by(|a, b| a.1.min_x.total_cmp(&b.1.min_x));
+
+    let mut contacts = Vec::new();
+    for sorted_a in 0..broad_phase.len() {
+        for sorted_b in (sorted_a + 1)..broad_phase.len() {
+            let (body_a_index, aabb_a) = broad_phase[sorted_a];
+            let (body_b_index, aabb_b) = broad_phase[sorted_b];
+            if aabb_b.min_x > aabb_a.max_x {
+                break;
+            }
+            if !aabb_a.overlaps(aabb_b) {
+                continue;
+            }
+            let ordered_pair = (
+                body_a_index.min(body_b_index),
+                body_a_index.max(body_b_index),
+            );
+            if bound_pairs.contains(&ordered_pair) {
+                continue;
+            }
+            let body_a = &bodies[body_a_index];
+            let body_b = &bodies[body_b_index];
+            if body_a.layer != body_b.layer {
+                continue;
+            }
+            let manifolds = collide(body_a, body_b);
+            let position_weight = 1.0 / manifolds.len().max(1) as f64;
+            for manifold in manifolds {
+                if record_diagnostics {
+                    record_contact_diagnostics(data, body_a, body_b, &manifold);
+                }
+                contacts.push(contact_from_manifold(
+                    bodies,
+                    body_a_index,
+                    body_b_index,
+                    manifold,
+                    position_weight,
+                ));
+            }
+        }
+    }
+    contacts
+}
+
+#[derive(Clone, Copy)]
+struct SubStepContext {
+    dt: f64,
+    global_gravity: f64,
+    air_friction: f64,
+    record_diagnostics: bool,
+}
+
+fn simulate_sub_step(
+    bodies: &mut [Body],
+    constraints: &mut [ConnectionConstraint],
+    bound_pairs: &HashSet<(usize, usize)>,
+    data: &mut [f64],
+    context: SubStepContext,
+) {
+    for body in bodies.iter_mut() {
+        body.integrate(context.dt, context.global_gravity, context.air_friction);
+    }
+    for constraint in constraints.iter_mut() {
+        integrate_rope_nodes(
+            constraint,
+            context.dt,
+            context.global_gravity,
+            context.air_friction,
+        );
+    }
+
+    let mut contacts = collect_contacts(bodies, bound_pairs, data, context.record_diagnostics);
+    for constraint in constraints.iter_mut() {
+        resolve_rope_collisions(bodies, constraint);
+    }
+    for _ in 0..SOLVER_ITERATIONS {
+        for constraint in constraints.iter_mut() {
+            solve_connection_velocity(bodies, constraint, context.dt);
+        }
+        for contact in &mut contacts {
+            solve_contact_velocity(bodies, contact);
+        }
+    }
+    for constraint in constraints.iter_mut() {
+        correct_connection_position(bodies, constraint);
+    }
+    for contact in &contacts {
+        correct_contact_position(bodies, contact);
+    }
+    for constraint in constraints.iter_mut() {
+        constraint.evaluate_failure(bodies);
+    }
+    for constraint in constraints.iter() {
+        if constraint.binding {
+            correct_binding_position(bodies, constraint);
+        }
+        synchronize_binding_motion(bodies, constraint);
+    }
+}
+
+fn write_bodies(data: &mut [f64], bodies: &[Body]) {
+    for body in bodies {
+        let index = body.data_index;
+        data[index + 2] = finite_or(body.position.x, 0.0);
+        data[index + 3] = finite_or(body.position.y, 0.0);
+        data[index + 4] = finite_or(body.velocity.x, 0.0);
+        data[index + 5] = finite_or(body.velocity.y, 0.0);
+        data[index + 8] = body.mass;
+        data[index + 14] = normalize_angle(body.angle);
+        data[index + 15] = finite_or(body.angular_velocity, 0.0);
+        data[index + 26] = body.inertia;
+    }
+}
+
+fn write_constraints(connection_data: &mut [f64], constraints: &[ConnectionConstraint]) {
+    for constraint in constraints {
+        let index = constraint.data_index;
+        connection_data[index + 16] = if constraint.active { 1.0 } else { 0.0 };
+        connection_data[index + 17] = constraint.broken_code as f64;
+        connection_data[index + 18] = finite_or(constraint.tension, 0.0).max(0.0);
+        connection_data[index + 19] = finite_or(constraint.strain, 0.0).max(0.0);
+        connection_data[index + 27] = constraint.rope_nodes.len() as f64;
+        connection_data[index + 28] = constraint.break_link.map_or(-1.0, |link| link as f64);
+        for (node_index, node) in constraint
+            .rope_nodes
+            .iter()
+            .enumerate()
+            .take(ROPE_NODE_CAPACITY)
+        {
+            let offset = index + ROPE_NODE_DATA_OFFSET + node_index * 4;
+            connection_data[offset] = finite_or(node.position.x, 0.0);
+            connection_data[offset + 1] = finite_or(node.position.y, 0.0);
+            connection_data[offset + 2] = finite_or(node.velocity.x, 0.0);
+            connection_data[offset + 3] = finite_or(node.velocity.y, 0.0);
+        }
+    }
+}
+
 #[wasm_bindgen]
 pub fn step_physics(input: &[f64], dt: f64, global_gravity: f64, air_friction: f64) -> Vec<f64> {
     step_physics_with_connections(input, &[], dt, global_gravity, air_friction)
@@ -1338,188 +2356,40 @@ pub fn step_physics_with_connections(
 ) -> Vec<f64> {
     let mut data = input.to_vec();
     let mut connection_data = connection_input.to_vec();
-    let count = data.len() / STRIDE;
-
-    for body_index in 0..count {
-        let index = body_index * STRIDE;
-        data[index + 29] = 0.0;
-        data[index + 30] = 0.0;
-        data[index + 31] = 0.0;
-        data[index + 32] = 0.0;
-    }
+    let body_count = data.len() / STRIDE;
+    reset_contact_diagnostics(&mut data, body_count);
 
     let dt = finite_or(dt, 0.0).clamp(0.0, 0.25);
-    if count == 0 || dt <= 0.0 {
+    if body_count == 0 || dt <= 0.0 {
         data.extend(connection_data);
         return data;
     }
 
     let global_gravity = finite_or(global_gravity, 0.0);
     let air_friction = non_negative(air_friction, 0.0);
-    let mut bodies: Vec<Body> = (0..count)
-        .map(|body_index| Body::from_data(&data, body_index * STRIDE))
-        .collect();
-    let connection_count = connection_data.len() / CONNECTION_STRIDE;
-    let mut constraints: Vec<ConnectionConstraint> = (0..connection_count)
-        .filter_map(|connection_index| {
-            ConnectionConstraint::from_data(
-                &connection_data,
-                connection_index * CONNECTION_STRIDE,
-                count,
-            )
-        })
-        .collect();
-    let bound_pairs: Vec<(usize, usize)> = constraints
-        .iter()
-        .filter(|constraint| constraint.binding && constraint.active)
-        .map(|constraint| {
-            (
-                constraint.body_a.min(constraint.body_b),
-                constraint.body_a.max(constraint.body_b),
-            )
-        })
-        .collect();
+    let mut bodies = read_bodies(&data, body_count);
+    let mut constraints = read_constraints(&connection_data, body_count, &bodies);
+    let bound_pairs = active_bound_pairs(&constraints);
     let sub_steps = determine_sub_steps(&bodies, dt, global_gravity);
     let sub_dt = dt / sub_steps as f64;
 
     for sub_step in 0..sub_steps {
-        for body in &mut bodies {
-            body.integrate(sub_dt, global_gravity, air_friction);
-        }
-
-        for constraint in &mut constraints {
-            constraint.evaluate_failure(&bodies);
-        }
-
-        let mut broad_phase: Vec<(usize, Aabb)> = bodies
-            .iter()
-            .enumerate()
-            .map(|(index, body)| (index, body.shape.aabb(body.position, body.angle)))
-            .collect();
-        broad_phase.sort_by(|a, b| a.1.min_x.total_cmp(&b.1.min_x));
-
-        let mut contacts: Vec<Contact> = Vec::new();
-        for sorted_a in 0..broad_phase.len() {
-            for sorted_b in (sorted_a + 1)..broad_phase.len() {
-                let (body_a_index, aabb_a) = broad_phase[sorted_a];
-                let (body_b_index, aabb_b) = broad_phase[sorted_b];
-                if aabb_b.min_x > aabb_a.max_x {
-                    break;
-                }
-                if !aabb_a.overlaps(aabb_b) {
-                    continue;
-                }
-                let ordered_pair = (
-                    body_a_index.min(body_b_index),
-                    body_a_index.max(body_b_index),
-                );
-                if bound_pairs.contains(&ordered_pair) {
-                    continue;
-                }
-
-                let body_a = &bodies[body_a_index];
-                let body_b = &bodies[body_b_index];
-                if body_a.layer != body_b.layer {
-                    continue;
-                }
-                let manifolds = collide(body_a, body_b);
-                if manifolds.is_empty() {
-                    continue;
-                }
-                let static_friction = (body_a.static_friction * body_b.static_friction).sqrt();
-                let dynamic_friction = (body_a.dynamic_friction * body_b.dynamic_friction).sqrt();
-                let position_weight = 1.0 / manifolds.len() as f64;
-
-                for manifold in manifolds {
-                    if sub_step == sub_steps - 1 {
-                        let data_a = body_a.data_index;
-                        let data_b = body_b.data_index;
-                        data[data_a + 29] += 1.0;
-                        data[data_b + 29] += 1.0;
-                        if manifold.depth >= data[data_a + 32] {
-                            data[data_a + 30] = manifold.normal.x;
-                            data[data_a + 31] = manifold.normal.y;
-                            data[data_a + 32] = manifold.depth;
-                        }
-                        if manifold.depth >= data[data_b + 32] {
-                            data[data_b + 30] = -manifold.normal.x;
-                            data[data_b + 31] = -manifold.normal.y;
-                            data[data_b + 32] = manifold.depth;
-                        }
-                    }
-
-                    let radius_a = manifold.point.sub(body_a.position);
-                    let radius_b = manifold.point.sub(body_b.position);
-                    let initial_relative_velocity = body_b
-                        .point_velocity(radius_b)
-                        .sub(body_a.point_velocity(radius_a));
-                    let initial_normal_velocity = initial_relative_velocity.dot(manifold.normal);
-                    let threshold = body_a
-                        .restitution_threshold
-                        .max(body_b.restitution_threshold);
-                    let restitution = body_a.restitution.max(body_b.restitution);
-                    let restitution_bias = if initial_normal_velocity < -threshold {
-                        -restitution * initial_normal_velocity
-                    } else {
-                        0.0
-                    };
-
-                    contacts.push(Contact {
-                        body_a: body_a_index,
-                        body_b: body_b_index,
-                        normal: manifold.normal,
-                        tangent: manifold.normal.perp(),
-                        depth: manifold.depth,
-                        radius_a,
-                        radius_b,
-                        restitution_bias,
-                        static_friction: static_friction.max(dynamic_friction),
-                        dynamic_friction,
-                        normal_impulse: 0.0,
-                        tangent_impulse: 0.0,
-                        is_sensor: body_a.is_sensor || body_b.is_sensor,
-                        position_weight,
-                    });
-                }
-            }
-        }
-
-        for _ in 0..SOLVER_ITERATIONS {
-            for constraint in &mut constraints {
-                solve_connection_velocity(&mut bodies, constraint, sub_dt);
-            }
-            for contact in &mut contacts {
-                solve_contact_velocity(&mut bodies, contact);
-            }
-        }
-        for constraint in &constraints {
-            correct_connection_position(&mut bodies, constraint);
-        }
-        for contact in &contacts {
-            correct_contact_position(&mut bodies, contact);
-        }
+        simulate_sub_step(
+            &mut bodies,
+            &mut constraints,
+            &bound_pairs,
+            &mut data,
+            SubStepContext {
+                dt: sub_dt,
+                global_gravity,
+                air_friction,
+                record_diagnostics: sub_step + 1 == sub_steps,
+            },
+        );
     }
 
-    for body in &bodies {
-        let index = body.data_index;
-        data[index + 2] = finite_or(body.position.x, 0.0);
-        data[index + 3] = finite_or(body.position.y, 0.0);
-        data[index + 4] = finite_or(body.velocity.x, 0.0);
-        data[index + 5] = finite_or(body.velocity.y, 0.0);
-        data[index + 8] = body.mass;
-        data[index + 14] = normalize_angle(body.angle);
-        data[index + 15] = finite_or(body.angular_velocity, 0.0);
-        data[index + 26] = body.inertia;
-    }
-
-    for constraint in &constraints {
-        let index = constraint.data_index;
-        connection_data[index + 16] = if constraint.active { 1.0 } else { 0.0 };
-        connection_data[index + 17] = constraint.broken_code as f64;
-        connection_data[index + 18] = finite_or(constraint.tension, 0.0).max(0.0);
-        connection_data[index + 19] = finite_or(constraint.strain, 0.0).max(0.0);
-    }
-
+    write_bodies(&mut data, &bodies);
+    write_constraints(&mut connection_data, &constraints);
     data.extend(connection_data);
     data
 }
@@ -1708,6 +2578,23 @@ mod tests {
     }
 
     #[test]
+    fn restitution_threshold_suppresses_low_speed_bounce() {
+        let mut input = ellipse_record(1.0, -0.95, 0.0, 1.0, 1.0);
+        input[4] = 0.1;
+        input[10] = 1.0;
+        input[27] = 1.0;
+        let mut second = ellipse_record(2.0, 0.95, 0.0, 1.0, 1.0);
+        second[4] = -0.1;
+        second[10] = 1.0;
+        second[27] = 1.0;
+        input.extend(second);
+
+        let output = step_physics(&input, 1.0 / 240.0, 0.0, 0.0);
+        assert!(output[4].abs() < 1.0e-8);
+        assert!(output[STRIDE + 4].abs() < 1.0e-8);
+    }
+
+    #[test]
     fn high_speed_body_does_not_tunnel_through_a_thin_wall() {
         let mut input = ellipse_record(1.0, -5.0, 0.0, 0.5, 0.5);
         input[4] = 1_000.0;
@@ -1734,9 +2621,11 @@ mod tests {
     #[test]
     fn degenerate_polygon_vertices_fall_back_without_panicking() {
         let mut input = box_record(1.0, 0.0, 0.0, 2.0, 3.0);
-        for index in 34..42 {
-            input[index] = 0.0;
-        }
+        input
+            .iter_mut()
+            .take(42)
+            .skip(34)
+            .for_each(|value| *value = 0.0);
         let body = Body::from_data(&input, 0);
         assert!((body.shape.area() - 6.0).abs() < 1.0e-10);
         assert!(body.inertia.is_finite());
@@ -1837,6 +2726,7 @@ mod tests {
         record[13] = 100.0;
         record[14] = 100.0;
         record[16] = 1.0;
+        record[28] = -1.0;
         record
     }
 
@@ -1879,8 +2769,14 @@ mod tests {
         bodies.extend(second);
 
         let mut bent = connection_record(0, 1, 2.0);
-        bent[13] = 1.0;
-        bent[15] = 0.5;
+        bent[12] = 10.0;
+        bent[13] = 0.001;
+        bent[14] = 1.0e12;
+        bent[24] = 1.0;
+        bent[25] = 0.1;
+        bent[26] = 0.1;
+        bent[27] = 1.0;
+        bent[ROPE_NODE_DATA_OFFSET + 1] = -1.0;
         let bent_output = step_physics_with_connections(&bodies, &bent, 0.01, 0.0, 0.0);
         assert_eq!(bent_output[bodies.len() + 17], 1.0);
 
@@ -1932,6 +2828,323 @@ mod tests {
             "relative_angle={relative_angle}"
         );
         assert!(all_finite(&output));
+    }
+
+    #[test]
+    fn rigid_compound_uses_combined_mass_for_external_force() {
+        let first = box_record(1.0, 0.0, 0.0, 1.0, 1.0);
+        let mut second = box_record(2.0, 0.25, 0.0, 1.0, 1.0);
+        second[21] = 100.0;
+        let mut bodies = first;
+        bodies.extend(second);
+        let mut binding = connection_record(0, 1, 0.25);
+        binding[20] = 1.0;
+        binding[22] = 0.25;
+
+        let output = step_physics_with_connections(&bodies, &binding, 0.1, 0.0, 0.0);
+        assert!((output[4] - 5.0).abs() < 1.0e-6, "first vx={}", output[4]);
+        assert!(
+            (output[STRIDE + 4] - 5.0).abs() < 1.0e-6,
+            "second vx={}",
+            output[STRIDE + 4]
+        );
+        assert!((output[15] - output[STRIDE + 15]).abs() < 1.0e-10);
+    }
+
+    #[test]
+    fn cross_layer_connection_transmits_no_force() {
+        let mut first = ellipse_record(1.0, -1.0, 0.0, 0.1, 0.1);
+        first[4] = -10.0;
+        let mut second = ellipse_record(2.0, 1.0, 0.0, 0.1, 0.1);
+        second[4] = 10.0;
+        second[33] = 2.0;
+        first.extend(second);
+        let connection = connection_record(0, 1, 2.0);
+        let output = step_physics_with_connections(&first, &connection, 0.01, 0.0, 0.0);
+        assert!((output[4] + 10.0).abs() < 1.0e-10);
+        assert!((output[STRIDE + 4] - 10.0).abs() < 1.0e-10);
+    }
+
+    #[test]
+    fn physical_string_nodes_receive_gravity_and_return_state() {
+        let mut first = ellipse_record(1.0, -1.0, 0.0, 0.1, 0.1);
+        first[9] = 1.0;
+        let mut second = ellipse_record(2.0, 1.0, 0.0, 0.1, 0.1);
+        second[9] = 1.0;
+        first.extend(second);
+        let mut connection = connection_record(0, 1, 2.0 * 2.0_f64.sqrt());
+        connection[24] = 1.0;
+        connection[25] = 0.1;
+        connection[26] = 0.1;
+        connection[27] = 1.0;
+        connection[ROPE_NODE_DATA_OFFSET] = 0.0;
+        connection[ROPE_NODE_DATA_OFFSET + 1] = 1.0;
+        let output = step_physics_with_connections(&first, &connection, 0.02, 9.81, 0.0);
+        let connection_offset = first.len();
+        assert_eq!(output[connection_offset + 27], 1.0);
+        assert!(output[connection_offset + ROPE_NODE_DATA_OFFSET + 1] < 1.0);
+        assert!(output[connection_offset + ROPE_NODE_DATA_OFFSET + 3] < 0.0);
+        assert!(all_finite(&output));
+    }
+
+    #[test]
+    fn physical_string_node_collides_with_same_layer_body() {
+        let mut first = ellipse_record(1.0, -2.0, 0.0, 0.1, 0.1);
+        first[9] = 1.0;
+        let mut second = ellipse_record(2.0, 2.0, 0.0, 0.1, 0.1);
+        second[9] = 1.0;
+        let mut floor = box_record(3.0, 0.0, -1.0, 4.0, 1.0);
+        floor[9] = 1.0;
+        first.extend(second);
+        first.extend(floor);
+        let mut connection = connection_record(0, 1, 4.1);
+        connection[24] = 1.0;
+        connection[25] = 0.2;
+        connection[26] = 0.1;
+        connection[27] = 1.0;
+        connection[ROPE_NODE_DATA_OFFSET] = 0.0;
+        connection[ROPE_NODE_DATA_OFFSET + 1] = -0.45;
+        let output = step_physics_with_connections(&first, &connection, 0.001, 0.0, 0.0);
+        let node_y = output[first.len() + ROPE_NODE_DATA_OFFSET + 1];
+        assert!(node_y > -0.45, "node_y={node_y}");
+        assert!(all_finite(&output));
+    }
+
+    #[test]
+    fn physical_string_excludes_both_connected_bodies_from_collision() {
+        let mut first = ellipse_record(1.0, -1.0, 0.0, 1.5, 1.5);
+        first[9] = 1.0;
+        let mut second = ellipse_record(2.0, 1.0, 0.0, 1.5, 1.5);
+        second[9] = 1.0;
+        first.extend(second);
+        let mut connection = connection_record(0, 1, 2.0);
+        connection[24] = 1.0;
+        connection[25] = 0.2;
+        connection[26] = 0.1;
+        connection[27] = 1.0;
+        let output = step_physics_with_connections(&first, &connection, 0.01, 0.0, 0.0);
+        let node_offset = first.len() + ROPE_NODE_DATA_OFFSET;
+        assert!(output[node_offset].abs() < 1.0e-12);
+        assert!(output[node_offset + 1].abs() < 1.0e-12);
+        assert!(output[node_offset + 2].abs() < 1.0e-12);
+        assert!(output[node_offset + 3].abs() < 1.0e-12);
+    }
+
+    #[test]
+    fn segment_collision_impulse_reaches_anchor_bodies() {
+        let first = ellipse_record(1.0, -2.0, 0.0, 0.1, 0.1);
+        let mut second = ellipse_record(2.0, 2.0, 0.0, 0.1, 0.1);
+        second[9] = 1.0;
+        let mut collider = ellipse_record(3.0, -1.0, -0.3, 0.25, 0.25);
+        collider[5] = 10.0;
+        let mut bodies = first;
+        bodies.extend(second);
+        bodies.extend(collider);
+        let mut connection = connection_record(0, 1, 4.0);
+        connection[24] = 1.0;
+        connection[25] = 0.2;
+        connection[26] = 0.1;
+        connection[27] = 1.0;
+        let output = step_physics_with_connections(&bodies, &connection, 0.001, 0.0, 0.0);
+        assert!(output[5].abs() > 1.0e-6, "anchor vy={}", output[5]);
+        assert!(output[2 * STRIDE + 5] < 10.0);
+        assert!(all_finite(&output));
+    }
+
+    #[test]
+    fn broken_physical_string_keeps_both_fragments_simulated() {
+        let mut first = ellipse_record(1.0, -1.0, 0.0, 0.1, 0.1);
+        first[9] = 1.0;
+        let mut second = ellipse_record(2.0, 1.0, 0.0, 0.1, 0.1);
+        second[9] = 1.0;
+        first.extend(second);
+        let mut connection = connection_record(0, 1, 2.0);
+        connection[17] = 2.0;
+        connection[24] = 1.0;
+        connection[25] = 0.1;
+        connection[26] = 0.1;
+        connection[27] = 1.0;
+        connection[28] = 0.0;
+        let output = step_physics_with_connections(&first, &connection, 0.02, 9.81, 0.0);
+        let connection_offset = first.len();
+        assert_eq!(output[connection_offset + 17], 2.0);
+        assert_eq!(output[connection_offset + 28], 0.0);
+        assert!(output[connection_offset + ROPE_NODE_DATA_OFFSET + 3] < 0.0);
+        assert!(all_finite(&output));
+    }
+
+    #[test]
+    fn off_center_rope_anchor_applies_torque() {
+        let first = ellipse_record(1.0, -1.0, 0.0, 0.5, 0.5);
+        let mut second = ellipse_record(2.0, 2.0, 0.0, 0.5, 0.5);
+        second[9] = 1.0;
+        let mut bodies = first;
+        bodies.extend(second);
+        let mut connection = connection_record(0, 1, 2.0);
+        connection[4] = 1.0;
+        connection[24] = 1.0;
+        connection[25] = 0.1;
+        connection[26] = 0.1;
+        connection[27] = 1.0;
+        connection[ROPE_NODE_DATA_OFFSET] = 0.5;
+        connection[ROPE_NODE_DATA_OFFSET + 1] = 0.5;
+        let output = step_physics_with_connections(&bodies, &connection, 0.01, 0.0, 0.0);
+        assert!(output[15].abs() > 1.0e-6, "angular velocity={}", output[15]);
+        assert!(all_finite(&output));
+    }
+
+    #[test]
+    fn multi_node_manual_rope_deforms_under_gravity() {
+        let mut first = ellipse_record(1.0, -2.0, 0.0, 0.1, 0.1);
+        first[9] = 1.0;
+        let mut second = ellipse_record(2.0, 2.0, 0.0, 0.1, 0.1);
+        second[9] = 1.0;
+        first.extend(second);
+        let mut connection = connection_record(0, 1, 5.0);
+        connection[8] = 1.0;
+        connection[10] = 300.0;
+        connection[24] = 1.0;
+        connection[25] = 0.1;
+        connection[26] = 0.1;
+        connection[27] = 3.0;
+        let initial = [(-1.0, 1.0), (0.0, 1.5), (1.0, 1.0)];
+        for (index, (x, y)) in initial.iter().enumerate() {
+            let offset = ROPE_NODE_DATA_OFFSET + index * 4;
+            connection[offset] = *x;
+            connection[offset + 1] = *y;
+        }
+        let output = step_physics_with_connections(&first, &connection, 0.05, 9.81, 0.0);
+        let connection_offset = first.len();
+        assert!(output[connection_offset + ROPE_NODE_DATA_OFFSET + 1] < 1.0);
+        assert!(output[connection_offset + ROPE_NODE_DATA_OFFSET + 5] < 1.5);
+        assert!(output[connection_offset + ROPE_NODE_DATA_OFFSET + 9] < 1.0);
+        assert!(all_finite(&output));
+    }
+
+    #[test]
+    fn rope_linear_density_sets_exact_lumped_node_mass() {
+        let mut bodies_data = ellipse_record(1.0, -3.0, 0.0, 0.1, 0.1);
+        bodies_data.extend(ellipse_record(2.0, 3.0, 0.0, 0.1, 0.1));
+        let bodies: Vec<Body> = (0..bodies_data.len() / STRIDE)
+            .map(|index| Body::from_data(&bodies_data, index * STRIDE))
+            .collect();
+        let mut connection = connection_record(0, 1, 6.0);
+        connection[24] = 1.0;
+        connection[26] = 2.0;
+        connection[27] = 3.0;
+        let constraint = ConnectionConstraint::from_data(&connection, 0, bodies.len()).unwrap();
+        let expected_inverse_mass = 3.0 / (2.0 * 6.0);
+        assert!((rope_node_inverse_mass(&constraint) - expected_inverse_mass).abs() < 1.0e-12);
+    }
+
+    #[test]
+    fn stretchable_rope_stiffness_is_sampling_independent() {
+        let mut bodies = ellipse_record(1.0, -1.0, 0.0, 0.1, 0.1);
+        bodies[9] = 1.0;
+        let mut second = ellipse_record(2.0, 1.0, 0.0, 0.1, 0.1);
+        second[9] = 1.0;
+        bodies.extend(second);
+
+        let mut one_node = connection_record(0, 1, 1.0);
+        one_node[8] = 1.0;
+        one_node[9] = 1.0;
+        one_node[10] = 200.0;
+        one_node[11] = 0.0;
+        one_node[12] = 10.0;
+        one_node[24] = 1.0;
+        one_node[26] = 0.1;
+        one_node[27] = 1.0;
+
+        let mut three_nodes = one_node.clone();
+        three_nodes[27] = 3.0;
+        for (index, x) in [-0.5, 0.0, 0.5].iter().enumerate() {
+            three_nodes[ROPE_NODE_DATA_OFFSET + index * 4] = *x;
+        }
+
+        let one_output = step_physics_with_connections(&bodies, &one_node, 1.0e-8, 0.0, 0.0);
+        let three_output = step_physics_with_connections(&bodies, &three_nodes, 1.0e-8, 0.0, 0.0);
+        let one_tension = one_output[bodies.len() + 18];
+        let three_tension = three_output[bodies.len() + 18];
+        assert!((one_tension - three_tension).abs() < 1.0e-6);
+    }
+
+    #[test]
+    fn non_bendable_stretchable_rope_resists_curvature() {
+        let mut bodies = ellipse_record(1.0, -2.0, 0.0, 0.1, 0.1);
+        bodies[9] = 1.0;
+        let mut second = ellipse_record(2.0, 2.0, 0.0, 0.1, 0.1);
+        second[9] = 1.0;
+        bodies.extend(second);
+        let mut connection = connection_record(0, 1, 5.0);
+        connection[8] = 1.0;
+        connection[9] = 0.0;
+        connection[10] = 0.0;
+        connection[11] = 0.0;
+        connection[12] = 10.0;
+        connection[24] = 1.0;
+        connection[26] = 0.1;
+        connection[27] = 3.0;
+        let initial = [(-1.0, 1.0), (0.0, 1.5), (1.0, 1.0)];
+        for (index, (x, y)) in initial.iter().enumerate() {
+            let offset = ROPE_NODE_DATA_OFFSET + index * 4;
+            connection[offset] = *x;
+            connection[offset + 1] = *y;
+        }
+        let output = step_physics_with_connections(&bodies, &connection, 0.01, 0.0, 0.0);
+        let middle_y = output[bodies.len() + ROPE_NODE_DATA_OFFSET + 5];
+        assert!(middle_y < 1.5, "middle_y={middle_y}");
+    }
+
+    #[test]
+    fn broken_non_bendable_fragments_do_not_recouple_across_gap() {
+        let mut bodies = ellipse_record(1.0, -2.0, 0.0, 0.1, 0.1);
+        bodies[9] = 1.0;
+        let mut second = ellipse_record(2.0, 2.0, 0.0, 0.1, 0.1);
+        second[9] = 1.0;
+        bodies.extend(second);
+        let mut connection = connection_record(0, 1, 4.0);
+        connection[8] = 1.0;
+        connection[9] = 0.0;
+        connection[10] = 0.0;
+        connection[11] = 0.0;
+        connection[12] = 10.0;
+        connection[17] = 2.0;
+        connection[24] = 1.0;
+        connection[26] = 0.1;
+        connection[27] = 2.0;
+        connection[28] = 1.0;
+        connection[ROPE_NODE_DATA_OFFSET] = -0.5;
+        connection[ROPE_NODE_DATA_OFFSET + 1] = 1.0;
+        connection[ROPE_NODE_DATA_OFFSET + 4] = 0.5;
+        connection[ROPE_NODE_DATA_OFFSET + 5] = -1.0;
+        let output = step_physics_with_connections(&bodies, &connection, 0.01, 0.0, 0.0);
+        let offset = bodies.len() + ROPE_NODE_DATA_OFFSET;
+        assert!((output[offset] + 0.5).abs() < 1.0e-12);
+        assert!((output[offset + 1] - 1.0).abs() < 1.0e-12);
+        assert!((output[offset + 4] - 0.5).abs() < 1.0e-12);
+        assert!((output[offset + 5] + 1.0).abs() < 1.0e-12);
+    }
+
+    #[test]
+    fn local_gravity_scale_angular_damping_and_manual_inertia_are_bound() {
+        let mut body = ellipse_record(1.0, 0.0, 0.0, 1.0, 1.0);
+        body[15] = 10.0;
+        body[16] = 4.0;
+        body[17] = 2.0;
+        body[19] = 3.0;
+        body[23] = 1.5;
+        body[25] = 0.0;
+        body[26] = 2.0;
+        let output = step_physics(&body, 0.1, 9.0, 0.0);
+        assert!((output[5] + 2.1).abs() < 1.0e-10);
+        let mut expected_angular_velocity = 10.0;
+        for _ in 0..BASE_SUB_STEPS {
+            expected_angular_velocity = (expected_angular_velocity
+                + 2.0 * 0.1 / BASE_SUB_STEPS as f64)
+                * (-3.0 * 0.1 / BASE_SUB_STEPS as f64).exp();
+        }
+        assert!((output[15] - expected_angular_velocity).abs() < 1.0e-10);
+        assert!((output[26] - 2.0).abs() < 1.0e-12);
     }
 
     #[test]

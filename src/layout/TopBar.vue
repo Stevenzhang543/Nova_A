@@ -38,7 +38,7 @@
       </div>
     </nav>
     <div class="top-spacer"></div>
-    <span class="release-pill">1.0.0</span>
+    <span class="release-pill">1.1.2</span>
     <input ref="fileInput" type="file" hidden accept="application/json,.json" @change="handleFileSelected">
   </header>
 </template>
@@ -48,16 +48,18 @@ import { openUrl } from '@tauri-apps/plugin-opener'
 import { onMounted, onUnmounted, ref } from 'vue'
 import { t } from '../i18n'
 import { editorState } from '../store/editor'
-import { clearScene, deleteSelected, enterEditMode, loadProject, pushHistory, redo, resetCamera, saveProject, undo } from '../store/physics'
+import { clearScene, deleteSelected, enterEditMode, loadProject, physicsState, pushHistory, redo, resetCamera, saveProject, undo } from '../store/physics'
 import { preferencesState } from '../store/preferences'
+import { confirmDialogState, requestConfirmation } from '../store/dialog'
 
 const activeMenu = ref<string | null>(null)
 const fileInput = ref<HTMLInputElement | null>(null)
 let menuTimeout: number | null = null
 const projectUrl = 'https://github.com/Stevenzhang543/Nova_A/'
 
-function confirmDestructive(message: string): boolean {
-  return !preferencesState.confirmDestructiveActions || window.confirm(message)
+function confirmDestructive(title: string, message: string): Promise<boolean> {
+  if (!preferencesState.confirmDestructiveActions) return Promise.resolve(true)
+  return requestConfirmation({ title, message, confirmLabel: t('confirmAction'), cancelLabel: t('cancel'), destructive: true })
 }
 
 async function handleSave() {
@@ -66,12 +68,12 @@ async function handleSave() {
   activeMenu.value = null
 }
 function triggerLoad() { fileInput.value?.click(); activeMenu.value = null }
-function handleClearScene() {
-  if (!confirmDestructive(t('confirmClear'))) return
+async function handleClearScene() {
+  if (!await confirmDestructive(t('clearSceneTitle'), t('confirmClear'))) return
   clearScene(); pushHistory(); activeMenu.value = null
 }
-function handleDelete() { deleteSelected(); pushHistory(); activeMenu.value = null }
-function handleDeleteAll() { handleClearScene() }
+async function handleDelete() { if (physicsState.selectedEntityId === null) return; if (!await confirmDestructive(t('deleteObjectTitle'), t('confirmDeleteObject'))) return; deleteSelected(); pushHistory(); activeMenu.value = null }
+function handleDeleteAll() { void handleClearScene() }
 function handleDeselect() { enterEditMode(null); activeMenu.value = null }
 function handleToggleGrid() { editorState.showGrid = !editorState.showGrid; activeMenu.value = null }
 function toggleAxis(axis: 'x' | 'y') {
@@ -114,13 +116,14 @@ function handleFileSelected(event: Event) {
 }
 
 function handleKeyDown(event: KeyboardEvent) {
+  if (confirmDialogState.visible) return
   const tag = document.activeElement?.tagName
   if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return
   if (event.ctrlKey && event.key.toLowerCase() === 's') { event.preventDefault(); void handleSave() }
   else if (event.ctrlKey && event.shiftKey && event.key.toLowerCase() === 'z') { event.preventDefault(); handleRedo() }
   else if (event.ctrlKey && event.key.toLowerCase() === 'z') { event.preventDefault(); handleUndo() }
   else if (event.ctrlKey && event.key.toLowerCase() === 'y') { event.preventDefault(); handleRedo() }
-  else if (event.key === 'Delete' || event.key === 'Backspace') { handleDelete() }
+  else if (event.key === 'Delete' || event.key === 'Backspace') { void handleDelete() }
   else if (event.key === 'Escape') { enterEditMode(null); activeMenu.value = null }
 }
 

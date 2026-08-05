@@ -17,6 +17,11 @@ export interface ConnectionAnchor {
   sideT: number
 }
 
+export interface RopeNode {
+  position: Vec2
+  velocity: Vec2
+}
+
 export interface Connection {
   id: number
   name: string
@@ -32,6 +37,11 @@ export interface Connection {
   maxStretchRatio: number
   bendingToleranceMass: number
   stretchingToleranceMass: number
+  collisionEnabled: boolean
+  collisionRadius: number
+  linearDensity: number
+  ropeNodes: RopeNode[]
+  breakLink: number
   binding: boolean
   bindOffset: Vec2
   bindAngle: number
@@ -40,7 +50,9 @@ export interface Connection {
   strain: number
 }
 
-export const CONNECTION_STRIDE = 24
+export const ROPE_NODE_CAPACITY = 32
+export const ROPE_NODE_DATA_OFFSET = 29
+export const CONNECTION_STRIDE = ROPE_NODE_DATA_OFFSET + ROPE_NODE_CAPACITY * 4
 
 function rotate(point: Vec2, angle: number): Vec2 {
   const cosine = Math.cos(angle)
@@ -105,6 +117,30 @@ function rayPolygonSurface(vertices: Vec2[], direction: Vec2): Vec2 {
     : { x: 0, y: 0 }
 }
 
+function sidePoint(vertices: Vec2[], index: number, sideT: number): Vec2 {
+  const a = vertices[index]
+  const b = vertices[(index + 1) % vertices.length]
+  return { x: a.x + (b.x - a.x) * sideT, y: a.y + (b.y - a.y) * sideT }
+}
+
+function ellipseSurfacePoint(entity: CircleEntity, direction: Vec2): Vec2 {
+  const scale = 1 / Math.sqrt(
+    direction.x * direction.x / (entity.radiusX * entity.radiusX)
+    + direction.y * direction.y / (entity.radiusY * entity.radiusY)
+  )
+  return { x: direction.x * scale, y: direction.y * scale }
+}
+
+function anchorLocalPoint(entity: Entity, mode: AnchorMode, index: number, sideT: number, toward: Vec2): Vec2 {
+  const vertices = polygonVertices(entity)
+  if (mode === 'vertex' && vertices?.length) return { ...vertices[index] }
+  if (mode === 'side' && vertices?.length) return sidePoint(vertices, index, sideT)
+  if (mode !== 'surface') return { x: 0, y: 0 }
+  const direction = localDirection(entity, toward)
+  if (entity instanceof CircleEntity) return ellipseSurfacePoint(entity, direction)
+  return vertices?.length ? rayPolygonSurface(vertices, direction) : { x: 0, y: 0 }
+}
+
 export function deriveAnchor(
   entity: Entity,
   mode: AnchorMode,
@@ -115,30 +151,7 @@ export function deriveAnchor(
   const vertices = polygonVertices(entity)
   const safeIndex = vertices?.length ? Math.abs(Math.round(finiteNumber(index))) % vertices.length : 0
   const safeSideT = Math.min(1, Math.max(0, finiteNumber(sideT, 0.5)))
-  let localPoint: Vec2 = { x: 0, y: 0 }
-
-  if (mode === 'vertex' && vertices?.length) {
-    localPoint = { ...vertices[safeIndex] }
-  } else if (mode === 'side' && vertices?.length) {
-    const a = vertices[safeIndex]
-    const b = vertices[(safeIndex + 1) % vertices.length]
-    localPoint = {
-      x: a.x + (b.x - a.x) * safeSideT,
-      y: a.y + (b.y - a.y) * safeSideT
-    }
-  } else if (mode === 'surface') {
-    const direction = localDirection(entity, toward)
-    if (entity instanceof CircleEntity) {
-      const scale = 1 / Math.sqrt(
-        direction.x * direction.x / (entity.radiusX * entity.radiusX)
-        + direction.y * direction.y / (entity.radiusY * entity.radiusY)
-      )
-      localPoint = { x: direction.x * scale, y: direction.y * scale }
-    } else if (vertices?.length) {
-      localPoint = rayPolygonSurface(vertices, direction)
-    }
-  }
-
+  const localPoint = anchorLocalPoint(entity, mode, safeIndex, safeSideT, toward)
   return { entityId: entity.id, mode, localPoint, index: safeIndex, sideT: safeSideT }
 }
 
@@ -312,12 +325,40 @@ export function smoothManualPath(points: Vec2[], iterations = 2): Vec2[] {
   return result
 }
 
+export function polylineLength(points: Vec2[]): number {
+  let length = 0
+  for (let index = 1; index < points.length; index++) {
+    length += Math.hypot(points[index].x - points[index - 1].x, points[index].y - points[index - 1].y)
+  }
+  return length
+}
+
+function samplePolyline(points: Vec2[], ratio: number): Vec2 {
+  const total = polylineLength(points)
+  if (points.length === 0) return { x: 0, y: 0 }
+  if (points.length === 1 || total <= 1e-12) return { ...points[0] }
+  const target = Math.min(1, Math.max(0, ratio)) * total
+  let traversed = 0
+  for (let index = 1; index < points.length; index++) {
+    const a = points[index - 1]
+    const b = points[index]
+    const segment = Math.hypot(b.x - a.x, b.y - a.y)
+    if (traversed + segment >= target || index === points.length - 1) {
+      const local = segment > 1e-12 ? (target - traversed) / segment : 0
+      return { x: a.x + (b.x - a.x) * local, y: a.y + (b.y - a.y) * local }
+    }
+    traversed += segment
+  }
+  return { ...points[points.length - 1] }
+}
+
 export function resolveAnchor(anchor: ConnectionAnchor, entities: Entity[]): Vec2 | null {
   const entity = entities.find(candidate => candidate.id === anchor.entityId)
   if (!entity) return null
+  const localPoint = currentLocalAnchor(anchor, entity)
   const scaled = {
-    x: anchor.localPoint.x * entity.transform.scale.x,
-    y: anchor.localPoint.y * entity.transform.scale.y
+    x: localPoint.x * entity.transform.scale.x,
+    y: localPoint.y * entity.transform.scale.y
   }
   const rotated = rotate(scaled, entity.transform.rotation)
   return {
@@ -327,10 +368,33 @@ export function resolveAnchor(anchor: ConnectionAnchor, entities: Entity[]): Vec
 }
 
 export function scaledLocalAnchor(anchor: ConnectionAnchor, entity: Entity): Vec2 {
+  const localPoint = currentLocalAnchor(anchor, entity)
   return {
-    x: finiteNumber(anchor.localPoint.x) * entity.transform.scale.x,
-    y: finiteNumber(anchor.localPoint.y) * entity.transform.scale.y
+    x: finiteNumber(localPoint.x) * entity.transform.scale.x,
+    y: finiteNumber(localPoint.y) * entity.transform.scale.y
   }
+}
+
+function currentLocalAnchor(anchor: ConnectionAnchor, entity: Entity): Vec2 {
+  if (anchor.mode === 'center') return { x: 0, y: 0 }
+  const vertices = polygonVertices(entity)
+  if (anchor.mode === 'vertex' && vertices?.length) {
+    return { ...vertices[Math.abs(Math.round(anchor.index)) % vertices.length] }
+  }
+  if (anchor.mode === 'side' && vertices?.length) {
+    const index = Math.abs(Math.round(anchor.index)) % vertices.length
+    const sideT = Math.min(1, Math.max(0, finiteNumber(anchor.sideT, 0.5)))
+    return sidePoint(vertices, index, sideT)
+  }
+  if (anchor.mode === 'surface') {
+    const directionLength = Math.hypot(anchor.localPoint.x, anchor.localPoint.y)
+    const direction = directionLength > 1e-12
+      ? { x: anchor.localPoint.x / directionLength, y: anchor.localPoint.y / directionLength }
+      : { x: 1, y: 0 }
+    if (entity instanceof CircleEntity) return ellipseSurfacePoint(entity, direction)
+    if (vertices?.length) return rayPolygonSurface(vertices, direction)
+  }
+  return { x: finiteNumber(anchor.localPoint.x), y: finiteNumber(anchor.localPoint.y) }
 }
 
 export function createConnection(
@@ -369,6 +433,11 @@ export function createConnection(
     maxStretchRatio: 1.25,
     bendingToleranceMass: 1e12,
     stretchingToleranceMass: 1e12,
+    collisionEnabled: true,
+    collisionRadius: 0.2,
+    linearDensity: 0.08,
+    ropeNodes: [],
+    breakLink: -1,
     binding: false,
     bindOffset: { x: 0, y: 0 },
     bindAngle: 0,
@@ -378,59 +447,53 @@ export function createConnection(
   }
 }
 
-export function normalizeConnection(connection: Connection, entities: Entity[]): boolean {
-  connection.name = typeof connection.name === 'string' && connection.name.trim()
-    ? connection.name.trim().slice(0, 80)
-    : `Connection ${connection.id}`
-  connection.style = connection.style === 'curved' || connection.style === 'manual' ? connection.style : 'straight'
-  connection.curvature = Math.min(2, Math.max(-2, finiteNumber(connection.curvature, 0.18)))
-  connection.stiffness = Math.min(1e12, Math.max(0, finiteNumber(connection.stiffness, 1200)))
-  connection.damping = Math.min(1e9, Math.max(0, finiteNumber(connection.damping, 35)))
-  connection.maxStretchRatio = Math.min(1000, Math.max(1, finiteNumber(connection.maxStretchRatio, 1.25)))
-  connection.bendingToleranceMass = Math.min(1e50, Math.max(0, finiteNumber(connection.bendingToleranceMass, 1e12)))
-  connection.stretchingToleranceMass = Math.min(1e50, Math.max(0, finiteNumber(connection.stretchingToleranceMass, 1e12)))
-  connection.binding = connection.binding === true
-  const rawBindOffset = connection.bindOffset as Vec2 | undefined
-  const hasBindOffset = rawBindOffset && Number.isFinite(Number(rawBindOffset.x)) && Number.isFinite(Number(rawBindOffset.y))
-  connection.bindOffset = hasBindOffset
-    ? { x: finiteNumber(rawBindOffset.x), y: finiteNumber(rawBindOffset.y) }
-    : { x: 0, y: 0 }
-  connection.bindAngle = normalizeAngle(connection.bindAngle)
-  connection.breakState = connection.breakState === 'snapped' || connection.breakState === 'torn' ? connection.breakState : 'intact'
-  connection.tension = Math.max(0, finiteNumber(connection.tension))
-  connection.strain = Math.max(0, finiteNumber(connection.strain))
-  connection.anchors = connection.anchors.filter(anchor => entities.some(entity => entity.id === anchor.entityId))
-  if (connection.anchors.length < 2) return false
-  if (connection.binding) connection.anchors = connection.anchors.slice(0, 2)
+function normalizeRopeState(connection: Connection): void {
+  connection.ropeNodes = (Array.isArray(connection.ropeNodes) ? connection.ropeNodes : [])
+    .map(node => ({
+      position: { x: finiteNumber(node?.position?.x), y: finiteNumber(node?.position?.y) },
+      velocity: { x: finiteNumber(node?.velocity?.x), y: finiteNumber(node?.velocity?.y) }
+    }))
+    .filter(node => Number.isFinite(node.position.x + node.position.y + node.velocity.x + node.velocity.y))
+    .slice(0, ROPE_NODE_CAPACITY)
+  connection.breakLink = Math.min(
+    connection.ropeNodes.length,
+    Math.max(-1, Math.round(finiteNumber(connection.breakLink, -1)))
+  )
+}
 
-  for (const anchor of connection.anchors) {
-    const entity = entities.find(candidate => candidate.id === anchor.entityId)!
-    anchor.mode = anchor.mode === 'center' || anchor.mode === 'vertex' || anchor.mode === 'side' ? anchor.mode : 'surface'
-    anchor.localPoint = {
-      x: finiteNumber(anchor.localPoint?.x),
-      y: finiteNumber(anchor.localPoint?.y)
-    }
-    anchor.index = Math.max(0, Math.round(finiteNumber(anchor.index)))
-    anchor.sideT = Math.min(1, Math.max(0, finiteNumber(anchor.sideT, 0.5)))
-    if (!Number.isFinite(anchor.localPoint.x + anchor.localPoint.y)) {
-      Object.assign(anchor, deriveAnchor(entity, anchor.mode, anchor.index, anchor.sideT))
-    }
+function normalizeAnchor(anchor: ConnectionAnchor, entity: Entity): void {
+  anchor.mode = anchor.mode === 'center' || anchor.mode === 'vertex' || anchor.mode === 'side' ? anchor.mode : 'surface'
+  anchor.localPoint = {
+    x: finiteNumber(anchor.localPoint?.x),
+    y: finiteNumber(anchor.localPoint?.y)
   }
-
-  if (connection.binding) {
-    const entityA = entities.find(entity => entity.id === connection.anchors[0].entityId)!
-    const entityB = entities.find(entity => entity.id === connection.anchors[1].entityId)!
-    connection.anchors[0] = deriveAnchor(entityA, 'center')
-    connection.anchors[1] = deriveAnchor(entityB, 'center')
-    if (!hasBindOffset) {
-      connection.bindOffset = rotate({
-        x: entityB.transform.position.x - entityA.transform.position.x,
-        y: entityB.transform.position.y - entityA.transform.position.y
-      }, -entityA.transform.rotation)
-      connection.bindAngle = normalizeAngle(entityB.transform.rotation - entityA.transform.rotation)
-    }
+  anchor.index = Math.max(0, Math.round(finiteNumber(anchor.index)))
+  anchor.sideT = Math.min(1, Math.max(0, finiteNumber(anchor.sideT, 0.5)))
+  if (!Number.isFinite(anchor.localPoint.x + anchor.localPoint.y)) {
+    Object.assign(anchor, deriveAnchor(entity, anchor.mode, anchor.index, anchor.sideT))
   }
+}
 
+function normalizeBinding(connection: Connection, entities: Entity[], hasBindOffset: boolean): void {
+  if (!connection.binding) return
+  connection.anchors = connection.anchors.slice(0, 2)
+  const entityA = entities.find(entity => entity.id === connection.anchors[0].entityId)!
+  const entityB = entities.find(entity => entity.id === connection.anchors[1].entityId)!
+  connection.anchors[0] = deriveAnchor(entityA, 'center')
+  connection.anchors[1] = deriveAnchor(entityB, 'center')
+  if (!hasBindOffset) {
+    connection.bindOffset = rotate({
+      x: entityB.transform.position.x - entityA.transform.position.x,
+      y: entityB.transform.position.y - entityA.transform.position.y
+    }, -entityA.transform.rotation)
+    connection.bindAngle = normalizeAngle(entityB.transform.rotation - entityA.transform.rotation)
+  }
+  connection.collisionEnabled = false
+  connection.ropeNodes = []
+  connection.breakLink = -1
+}
+
+function normalizeRoutes(connection: Connection, entities: Entity[]): void {
   const segmentCount = connection.anchors.length - 1
   connection.restLengths = Array.from({ length: segmentCount }, (_, index) => {
     const fallbackA = resolveAnchor(connection.anchors[index], entities)!
@@ -449,7 +512,75 @@ export function normalizeConnection(connection: Connection, entities: Entity[]):
     normalized[normalized.length - 1] = { x: 1, y: 0 }
     return normalized
   })
+}
+
+export function normalizeConnection(connection: Connection, entities: Entity[]): boolean {
+  connection.name = typeof connection.name === 'string' && connection.name.trim()
+    ? connection.name.trim().slice(0, 80)
+    : `Connection ${connection.id}`
+  connection.style = connection.style === 'curved' || connection.style === 'manual' ? connection.style : 'straight'
+  connection.curvature = Math.min(2, Math.max(-2, finiteNumber(connection.curvature, 0.18)))
+  connection.stiffness = Math.min(1e12, Math.max(0, finiteNumber(connection.stiffness, 1200)))
+  connection.damping = Math.min(1e9, Math.max(0, finiteNumber(connection.damping, 35)))
+  connection.maxStretchRatio = Math.min(1000, Math.max(1, finiteNumber(connection.maxStretchRatio, 1.25)))
+  connection.bendingToleranceMass = Math.min(1e50, Math.max(0, finiteNumber(connection.bendingToleranceMass, 1e12)))
+  connection.stretchingToleranceMass = Math.min(1e50, Math.max(0, finiteNumber(connection.stretchingToleranceMass, 1e12)))
+  connection.collisionEnabled = connection.collisionEnabled === true && connection.binding !== true
+  connection.collisionRadius = Math.min(1e6, Math.max(1e-6, finiteNumber(connection.collisionRadius, 0.2)))
+  connection.linearDensity = Math.min(1e50, Math.max(1e-6, finiteNumber(connection.linearDensity, 0.08)))
+  normalizeRopeState(connection)
+  connection.binding = connection.binding === true
+  const rawBindOffset = connection.bindOffset as Vec2 | undefined
+  const hasBindOffset = rawBindOffset && Number.isFinite(Number(rawBindOffset.x)) && Number.isFinite(Number(rawBindOffset.y))
+  connection.bindOffset = hasBindOffset
+    ? { x: finiteNumber(rawBindOffset.x), y: finiteNumber(rawBindOffset.y) }
+    : { x: 0, y: 0 }
+  connection.bindAngle = normalizeAngle(connection.bindAngle)
+  connection.breakState = connection.breakState === 'snapped' || connection.breakState === 'torn' ? connection.breakState : 'intact'
+  connection.tension = Math.max(0, finiteNumber(connection.tension))
+  connection.strain = Math.max(0, finiteNumber(connection.strain))
+  connection.anchors = (Array.isArray(connection.anchors) ? connection.anchors : [])
+    .filter(anchor => entities.some(entity => entity.id === anchor.entityId))
+  if (connection.anchors.length < 2) return false
+
+  for (const anchor of connection.anchors) {
+    const entity = entities.find(candidate => candidate.id === anchor.entityId)!
+    normalizeAnchor(anchor, entity)
+  }
+
+  normalizeBinding(connection, entities, Boolean(hasBindOffset))
+  normalizeRoutes(connection, entities)
   return true
+}
+
+function physicalRouteFragments(connection: Connection, start: Vec2, end: Vec2): Vec2[][] {
+  const points = [start, ...connection.ropeNodes.map(node => ({ ...node.position })), end]
+  const breakLink = connection.breakLink
+  if (connection.breakState === 'intact' || breakLink < 0 || breakLink >= points.length - 1) return [points]
+  return [points.slice(0, breakLink + 1), points.slice(breakLink + 1)]
+}
+
+function designRouteSegment(connection: Connection, segment: number, start: Vec2, end: Vec2): Vec2[] {
+  if (connection.style === 'straight') return [start, end]
+  const dx = end.x - start.x
+  const dy = end.y - start.y
+  const length = Math.max(1e-12, Math.hypot(dx, dy))
+  const normal = { x: -dy / length, y: dx / length }
+  if (connection.style === 'curved') {
+    return [
+      start,
+      {
+        x: (start.x + end.x) / 2 + normal.x * length * connection.curvature,
+        y: (start.y + end.y) / 2 + normal.y * length * connection.curvature
+      },
+      end
+    ]
+  }
+  const points = connection.manualSegments[segment] ?? [{ x: 0, y: 0 }, { x: 1, y: 0 }]
+  return points.map(point => ({
+    x: start.x + dx * point.x + normal.x * length * point.y,
+    y: start.y + dy * point.x + normal.y * length * point.y
+  }))
 }
 
 export function routePoints(connection: Connection, entities: Entity[]): Vec2[][] {
@@ -460,26 +591,72 @@ export function routePoints(connection: Connection, entities: Entity[]): Vec2[][
     const start = positions[index]
     const end = positions[index + 1]
     if (!start || !end) continue
-    const dx = end.x - start.x
-    const dy = end.y - start.y
-    const length = Math.max(1e-12, Math.hypot(dx, dy))
-    const normal = { x: -dy / length, y: dx / length }
-    if (connection.style === 'straight') {
-      segments.push([start, end])
-    } else if (connection.style === 'curved') {
-      segments.push([
-        start,
-        { x: (start.x + end.x) / 2 + normal.x * length * connection.curvature, y: (start.y + end.y) / 2 + normal.y * length * connection.curvature },
-        end
-      ])
+    if (connection.collisionEnabled && connection.ropeNodes.length && positions.length === 2) {
+      segments.push(...physicalRouteFragments(connection, start, end))
     } else {
-      segments.push((connection.manualSegments[index] ?? [{ x: 0, y: 0 }, { x: 1, y: 0 }]).map(point => ({
-        x: start.x + dx * point.x + normal.x * length * point.y,
-        y: start.y + dy * point.x + normal.y * length * point.y
-      })))
+      segments.push(designRouteSegment(connection, index, start, end))
     }
   }
   return segments
+}
+
+export function connectionSharesLayer(connection: Connection, entities: Entity[]): boolean {
+  const layers = connection.anchors
+    .map(anchor => entities.find(entity => entity.id === anchor.entityId)?.layer)
+    .filter((layer): layer is number => layer !== undefined)
+  return layers.length === connection.anchors.length && layers.every(layer => layer === layers[0])
+}
+
+export function initializeRopeNodes(connection: Connection, entities: Entity[]): void {
+  if (!connection.collisionEnabled || connection.binding || connection.anchors.length !== 2) {
+    connection.ropeNodes = []
+    return
+  }
+  const path = routePoints({ ...connection, collisionEnabled: false, ropeNodes: [] }, entities)[0]
+  if (!path || path.length < 2) { connection.ropeNodes = []; return }
+  const length = Math.max(1e-6, polylineLength(path))
+  const targetSpacing = Math.max(connection.collisionRadius * 1.25, length / (ROPE_NODE_CAPACITY + 1), 0.05)
+  const count = Math.min(ROPE_NODE_CAPACITY, Math.max(3, Math.ceil(length / targetSpacing) - 1))
+  connection.ropeNodes = Array.from({ length: count }, (_, index) => ({
+    position: samplePolyline(path, (index + 1) / (count + 1)),
+    velocity: { x: 0, y: 0 }
+  }))
+  connection.restLengths = [length]
+  connection.breakLink = -1
+}
+
+export function connectionGeometrySignature(connection: Connection, entities: Entity[]): string {
+  return JSON.stringify({
+    anchors: connection.anchors.map(anchor => {
+      const entity = entities.find(candidate => candidate.id === anchor.entityId)
+      if (!entity) return null
+      return {
+        id: entity.id,
+        point: resolveAnchor(anchor, entities),
+        local: currentLocalAnchor(anchor, entity),
+        rotation: entity.transform.rotation,
+        scale: entity.transform.scale
+      }
+    }),
+    style: connection.style,
+    curvature: connection.curvature,
+    manualSegments: connection.manualSegments,
+    radius: connection.collisionRadius
+  })
+}
+
+export function repatchConnection(connection: Connection, entities: Entity[]): void {
+  if (connection.binding || connection.anchors.length !== 2 || connection.breakState !== 'intact') return
+  const designPath = routePoints({
+    ...connection,
+    collisionEnabled: false,
+    ropeNodes: [],
+    breakLink: -1,
+    breakState: 'intact'
+  }, entities)[0]
+  if (!designPath || designPath.length < 2) return
+  connection.restLengths = [Math.max(1e-6, polylineLength(designPath))]
+  if (connection.collisionEnabled) initializeRopeNodes(connection, entities)
 }
 
 export function setManualRoute(connection: Connection, points: Vec2[], entities: Entity[]): void {
@@ -528,6 +705,9 @@ export function configureBinding(connection: Connection, entities: Entity[]): bo
   connection.bendable = false
   connection.restLengths = [Math.max(1e-6, Math.hypot(worldOffset.x, worldOffset.y))]
   connection.manualSegments = [[{ x: 0, y: 0 }, { x: 1, y: 0 }]]
+  connection.collisionEnabled = false
+  connection.ropeNodes = []
+  connection.breakLink = -1
   connection.breakState = 'intact'
   connection.tension = 0
   connection.strain = 0

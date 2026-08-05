@@ -12,8 +12,19 @@
         <InspectorSection :title="t('connections')" open>
           <div v-if="selectedConnections.length" class="connection-list">
             <article v-for="connection in selectedConnections" :key="connection.id" class="connection-item" :class="connection.breakState">
-              <button class="connection-main" @click="openConnection(connection.id)"><span class="connection-dot"></span><span><strong>{{ connection.name }}</strong><small>{{ connection.binding ? t('bind') : t(connection.breakState) }} · {{ connection.anchors.length }} {{ t('entities').toLowerCase() }}</small></span></button>
+              <button class="connection-main" :title="connection.binding ? t('boundAsCompound') : undefined" @click="openConnection(connection.id)">
+                <span class="connection-dot"></span>
+                <span>
+                  <strong>{{ connection.name }}</strong>
+                  <small>
+                    {{ connection.binding ? t('compound') : !connectionSharesLayer(connection, state.world.entities) ? t('layerIsolated') : t(connection.breakState) }}
+                    <template v-if="connection.breakState !== 'intact' && connection.breakLink >= 0"> · {{ t('breakLocation', { link: connection.breakLink + 1 }) }}</template>
+                    · {{ connection.anchors.length }} {{ t('entities').toLowerCase() }}
+                  </small>
+                </span>
+              </button>
               <button v-if="!connection.binding && connection.breakState !== 'intact'" class="mini-button" :title="t('repairConnection')" @click="repair(connection.id)">↻</button>
+              <button v-if="connection.binding" class="mini-button separate" :title="t('separateBinding')" @click="separate(connection.id)">⇄</button>
               <button class="mini-button danger" :title="t('deleteConnection')" @click="removeConnection(connection.id)">×</button>
             </article>
           </div>
@@ -97,11 +108,13 @@ import { t } from '../i18n'
 import { editorState as estate } from '../store/editor'
 import { deleteConnection, physicsState as state, pushHistory, repairConnection } from '../store/physics'
 import { preferencesState as prefs } from '../store/preferences'
+import { requestConfirmation } from '../store/dialog'
 import { BoxEntity } from '../world/BoxEntity'
 import { CircleEntity } from '../world/CircleEntity'
 import { TriangleEntity } from '../world/TriangleEntity'
 import { effectiveInertia, entityArea, finiteNumber, MIN_AREA, MIN_SIZE, normalizeEntity, syncDensityFromMass, syncMassFromDensity } from '../world/geometry'
 import ConnectionBuilder from './ConnectionBuilder.vue'
+import { connectionSharesLayer } from '../world/Connection'
 
 const InspectorSection = defineComponent({ props: { title: { type: String, required: true }, open: Boolean }, setup(props, { slots }) { return () => h('details', { class: 'inspector-section', open: props.open }, [h('summary', [h('span', props.title), h('i', '⌄')]), h('div', { class: 'section-body' }, slots.default?.())]) } })
 const PropertyRow = defineComponent({ props: { label: { type: String, required: true } }, setup(props, { slots }) { return () => h('label', { class: 'property-row' }, [h('span', props.label), h('div', { class: 'property-control' }, slots.default?.())]) } })
@@ -118,7 +131,9 @@ const effectiveEntityInertia = computed(() => selectedEntity.value ? effectiveIn
 const builderOpen = ref(false)
 const editingConnectionId = ref<number | null>(null)
 function openConnection(id: number | null) { editingConnectionId.value = id; builderOpen.value = true }
-function removeConnection(id: number) { if (prefs.confirmDestructiveActions && !window.confirm(t('confirmConnectionDelete'))) return; deleteConnection(id); pushHistory(); estate.statusText = t('connectionDeleted') }
+async function confirmConnectionAction(title: string, message: string): Promise<boolean> { return !prefs.confirmDestructiveActions || requestConfirmation({ title, message, confirmLabel: t('confirmAction'), cancelLabel: t('cancel'), destructive: true }) }
+async function removeConnection(id: number) { if (!await confirmConnectionAction(t('deleteConnectionTitle'), t('confirmConnectionDelete'))) return; deleteConnection(id); pushHistory(); estate.statusText = t('connectionDeleted') }
+async function separate(id: number) { if (!await confirmConnectionAction(t('separateBindingTitle'), t('confirmSeparateBinding'))) return; deleteConnection(id); pushHistory(); estate.statusText = t('bindingSeparated') }
 function repair(id: number) { repairConnection(id); pushHistory() }
 
 function onConfigChange() { if (!selectedEntity.value) return; if (selectedEntity.value.isStatic) selectedEntity.value.isKinematic = false; normalizeEntity(selectedEntity.value); pushHistory() }

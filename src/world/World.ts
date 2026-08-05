@@ -6,6 +6,10 @@ import type { Vec2 } from './types'
 import { finiteNumber, normalizeEntity, syncMassFromDensity } from './geometry'
 import {
   CONNECTION_STRIDE,
+  ROPE_NODE_CAPACITY,
+  ROPE_NODE_DATA_OFFSET,
+  connectionSharesLayer,
+  initializeRopeNodes,
   normalizeConnection,
   scaledLocalAnchor,
   type Connection
@@ -18,6 +22,177 @@ export interface GlobalPhysicsSettings {
   gravity: number
   airFriction: number
   timeScale: number
+}
+
+interface ConnectionRecord {
+  connection: Connection
+  segment: number
+  bodyA: number
+  bodyB: number
+}
+
+/** Writes one entity into the stable Float64 ABI shared with nova_core. */
+function writeEntityRecord(data: Float64Array, entityIndex: number, entity: Entity): void {
+  normalizeEntity(entity)
+  const index = entityIndex * PHYSICS_STRIDE
+  data[index] = entity.id
+  data[index + 1] = entity.shapeType === 'Circle' ? 1 : 0
+  data[index + 2] = entity.transform.position.x
+  data[index + 3] = entity.transform.position.y
+  data[index + 4] = entity.velocity.x
+  data[index + 5] = entity.velocity.y
+  data[index + 6] = entity.acceleration.x
+  data[index + 7] = entity.acceleration.y
+  data[index + 8] = entity.mass
+  data[index + 9] = entity.isStatic ? 1 : 0
+  data[index + 10] = entity.restitution
+  data[index + 11] = entity.dynamicFriction
+
+  if (entity instanceof CircleEntity) {
+    data[index + 12] = entity.radiusX * entity.transform.scale.x
+    data[index + 13] = entity.radiusY * entity.transform.scale.y
+  } else if (entity instanceof BoxEntity || entity instanceof TriangleEntity) {
+    const xs = entity.vertices.map(vertex => vertex.x * entity.transform.scale.x)
+    const ys = entity.vertices.map(vertex => vertex.y * entity.transform.scale.y)
+    data[index + 12] = Math.max(...xs) - Math.min(...xs)
+    data[index + 13] = Math.max(...ys) - Math.min(...ys)
+  }
+
+  data[index + 14] = entity.transform.rotation
+  data[index + 15] = entity.angularVelocity
+  data[index + 16] = entity.torque
+  data[index + 17] = entity.gravityScale
+  data[index + 18] = entity.linearDamping
+  data[index + 19] = entity.angularDamping
+  data[index + 20] = entity.staticFriction
+  data[index + 21] = entity.force.x
+  data[index + 22] = entity.force.y
+  data[index + 23] = entity.gravity
+  data[index + 24] = entity.isKinematic ? 1 : 0
+  data[index + 25] = entity.autoInertia ? 1 : 0
+  data[index + 26] = entity.inertia
+  data[index + 27] = entity.restitutionThreshold
+  data[index + 28] = entity.isSensor ? 1 : 0
+  data[index + 33] = entity.layer
+
+  if (entity instanceof BoxEntity || entity instanceof TriangleEntity) {
+    for (let vertexIndex = 0; vertexIndex < entity.vertices.length && vertexIndex < 4; vertexIndex++) {
+      const vertex = entity.vertices[vertexIndex]
+      data[index + 34 + vertexIndex * 2] = vertex.x * entity.transform.scale.x
+      data[index + 35 + vertexIndex * 2] = vertex.y * entity.transform.scale.y
+    }
+    if (entity.vertices.length === 3) {
+      data[index + 40] = entity.vertices[2].x * entity.transform.scale.x
+      data[index + 41] = entity.vertices[2].y * entity.transform.scale.y
+    }
+  }
+}
+
+function readEntityRecord(output: Float64Array, entityIndex: number, entity: Entity): void {
+  const index = entityIndex * PHYSICS_STRIDE
+  entity.transform.position.x = finiteNumber(output[index + 2], entity.transform.position.x)
+  entity.transform.position.y = finiteNumber(output[index + 3], entity.transform.position.y)
+  entity.velocity.x = finiteNumber(output[index + 4], entity.velocity.x)
+  entity.velocity.y = finiteNumber(output[index + 5], entity.velocity.y)
+  entity.mass = finiteNumber(output[index + 8], entity.mass)
+  entity.transform.rotation = finiteNumber(output[index + 14], entity.transform.rotation)
+  entity.angularVelocity = finiteNumber(output[index + 15], entity.angularVelocity)
+  entity.inertia = finiteNumber(output[index + 26], entity.inertia)
+  entity.contactCount = Math.max(0, Math.round(finiteNumber(output[index + 29], 0)))
+  entity.contactNormal.x = finiteNumber(output[index + 30], 0)
+  entity.contactNormal.y = finiteNumber(output[index + 31], 0)
+  entity.penetrationDepth = Math.max(0, finiteNumber(output[index + 32], 0))
+}
+
+function collectConnectionRecords(entities: Entity[], connections: Connection[]): ConnectionRecord[] {
+  const entityIndexes = new Map(entities.map((entity, index) => [entity.id, index]))
+  const records: ConnectionRecord[] = []
+  for (const connection of connections) {
+    const remainsActive = connection.breakState === 'intact'
+      || (connection.collisionEnabled && connection.ropeNodes.length > 0 && connection.breakLink >= 0)
+    if (!normalizeConnection(connection, entities) || !connectionSharesLayer(connection, entities) || !remainsActive) continue
+    if (connection.breakState === 'intact' && connection.collisionEnabled && connection.ropeNodes.length === 0) {
+      initializeRopeNodes(connection, entities)
+    }
+    connection.tension = 0
+    connection.strain = 0
+    for (let segment = 0; segment < connection.anchors.length - 1; segment++) {
+      const bodyA = entityIndexes.get(connection.anchors[segment].entityId)
+      const bodyB = entityIndexes.get(connection.anchors[segment + 1].entityId)
+      if (bodyA === undefined || bodyB === undefined || bodyA === bodyB) continue
+      records.push({ connection, segment, bodyA, bodyB })
+    }
+  }
+  return records
+}
+
+/** Writes one connection segment into the stable Float64 ABI shared with nova_core. */
+function writeConnectionRecord(data: Float64Array, recordIndex: number, record: ConnectionRecord, entities: Entity[]): void {
+  const { connection, segment, bodyA, bodyB } = record
+  const anchorA = connection.anchors[segment]
+  const anchorB = connection.anchors[segment + 1]
+  const localA = scaledLocalAnchor(anchorA, entities[bodyA])
+  const localB = scaledLocalAnchor(anchorB, entities[bodyB])
+  const index = recordIndex * CONNECTION_STRIDE
+  data[index] = connection.id
+  data[index + 1] = bodyA
+  data[index + 2] = bodyB
+  data[index + 3] = localA.x
+  data[index + 4] = localA.y
+  data[index + 5] = localB.x
+  data[index + 6] = localB.y
+  data[index + 7] = connection.restLengths[segment]
+  data[index + 8] = connection.stretchable ? 1 : 0
+  data[index + 9] = connection.bendable ? 1 : 0
+  data[index + 10] = connection.stiffness
+  data[index + 11] = connection.damping
+  data[index + 12] = connection.maxStretchRatio
+  data[index + 13] = connection.bendingToleranceMass
+  data[index + 14] = connection.stretchingToleranceMass
+  const manualBend = connection.style === 'manual'
+    ? Math.max(0, ...(connection.manualSegments[segment] ?? []).map(point => Math.abs(point.y)))
+    : 0
+  data[index + 15] = connection.style === 'curved' ? Math.abs(connection.curvature) : manualBend
+  data[index + 16] = 1
+  data[index + 17] = connection.breakState === 'snapped' ? 1 : connection.breakState === 'torn' ? 2 : 0
+  data[index + 20] = connection.binding ? 1 : 0
+  data[index + 21] = connection.bindAngle
+  data[index + 22] = connection.bindOffset.x
+  data[index + 23] = connection.bindOffset.y
+  data[index + 24] = connection.collisionEnabled && segment === 0 ? 1 : 0
+  data[index + 25] = connection.collisionRadius
+  data[index + 26] = connection.linearDensity
+  const nodeCount = segment === 0 ? Math.min(ROPE_NODE_CAPACITY, connection.ropeNodes.length) : 0
+  data[index + 27] = nodeCount
+  data[index + 28] = connection.breakLink
+  for (let nodeIndex = 0; nodeIndex < nodeCount; nodeIndex++) {
+    const node = connection.ropeNodes[nodeIndex]
+    const nodeOffset = index + ROPE_NODE_DATA_OFFSET + nodeIndex * 4
+    data[nodeOffset] = node.position.x
+    data[nodeOffset + 1] = node.position.y
+    data[nodeOffset + 2] = node.velocity.x
+    data[nodeOffset + 3] = node.velocity.y
+  }
+}
+
+function readConnectionRecord(output: Float64Array, offset: number, recordIndex: number, record: ConnectionRecord): void {
+  const { connection } = record
+  const index = offset + recordIndex * CONNECTION_STRIDE
+  const breakCode = Math.round(finiteNumber(output[index + 17]))
+  connection.tension = Math.max(connection.tension, finiteNumber(output[index + 18]))
+  connection.strain = Math.max(connection.strain, finiteNumber(output[index + 19]))
+  if (breakCode === 1) connection.breakState = 'snapped'
+  if (breakCode === 2) connection.breakState = 'torn'
+  const nodeCount = Math.min(ROPE_NODE_CAPACITY, Math.max(0, Math.round(finiteNumber(output[index + 27], 0))))
+  connection.breakLink = Math.min(nodeCount, Math.max(-1, Math.round(finiteNumber(output[index + 28], -1))))
+  if (!connection.collisionEnabled || nodeCount === 0) return
+  connection.ropeNodes = Array.from({ length: nodeCount }, (_, nodeIndex) => {
+    const nodeOffset = index + ROPE_NODE_DATA_OFFSET + nodeIndex * 4
+    return {
+      position: { x: finiteNumber(output[nodeOffset]), y: finiteNumber(output[nodeOffset + 1]) },
+      velocity: { x: finiteNumber(output[nodeOffset + 2]), y: finiteNumber(output[nodeOffset + 3]) }
+    }
+  })
 }
 
 export class World {
@@ -96,113 +271,10 @@ export class World {
     if (scaledDt <= 0) return
 
     const data = new Float64Array(this.entities.length * PHYSICS_STRIDE)
-
-    for (let entityIndex = 0; entityIndex < this.entities.length; entityIndex++) {
-      const entity = this.entities[entityIndex]
-      normalizeEntity(entity)
-      const index = entityIndex * PHYSICS_STRIDE
-      data[index] = entity.id
-      data[index + 1] = entity.shapeType === 'Circle' ? 1 : 0
-      data[index + 2] = entity.transform.position.x
-      data[index + 3] = entity.transform.position.y
-      data[index + 4] = entity.velocity.x
-      data[index + 5] = entity.velocity.y
-      data[index + 6] = entity.acceleration.x
-      data[index + 7] = entity.acceleration.y
-      data[index + 8] = entity.mass
-      data[index + 9] = entity.isStatic ? 1 : 0
-      data[index + 10] = entity.restitution
-      data[index + 11] = entity.dynamicFriction
-
-      if (entity instanceof CircleEntity) {
-        data[index + 12] = entity.radiusX * entity.transform.scale.x
-        data[index + 13] = entity.radiusY * entity.transform.scale.y
-      } else if (entity instanceof BoxEntity || entity instanceof TriangleEntity) {
-        const xs = entity.vertices.map(vertex => vertex.x * entity.transform.scale.x)
-        const ys = entity.vertices.map(vertex => vertex.y * entity.transform.scale.y)
-        data[index + 12] = Math.max(...xs) - Math.min(...xs)
-        data[index + 13] = Math.max(...ys) - Math.min(...ys)
-      }
-
-      data[index + 14] = entity.transform.rotation
-      data[index + 15] = entity.angularVelocity
-      data[index + 16] = entity.torque
-      data[index + 17] = entity.gravityScale
-      data[index + 18] = entity.linearDamping
-      data[index + 19] = entity.angularDamping
-      data[index + 20] = entity.staticFriction
-      data[index + 21] = entity.force.x
-      data[index + 22] = entity.force.y
-      data[index + 23] = entity.gravity
-      data[index + 24] = entity.isKinematic ? 1 : 0
-      data[index + 25] = entity.autoInertia ? 1 : 0
-      data[index + 26] = entity.inertia
-      data[index + 27] = entity.restitutionThreshold
-      data[index + 28] = entity.isSensor ? 1 : 0
-      data[index + 33] = entity.layer
-
-      if (entity instanceof BoxEntity || entity instanceof TriangleEntity) {
-        for (let vertexIndex = 0; vertexIndex < entity.vertices.length && vertexIndex < 4; vertexIndex++) {
-          const vertex = entity.vertices[vertexIndex]
-          data[index + 34 + vertexIndex * 2] = vertex.x * entity.transform.scale.x
-          data[index + 35 + vertexIndex * 2] = vertex.y * entity.transform.scale.y
-        }
-        if (entity.vertices.length === 3) {
-          data[index + 40] = entity.vertices[2].x * entity.transform.scale.x
-          data[index + 41] = entity.vertices[2].y * entity.transform.scale.y
-        }
-      }
-    }
-
-    const entityIndexes = new Map(this.entities.map((entity, index) => [entity.id, index]))
-    const activeConnections = this.connections.filter(connection => {
-      return normalizeConnection(connection, this.entities) && connection.breakState === 'intact'
-    })
-    activeConnections.forEach(connection => { connection.tension = 0; connection.strain = 0 })
-    const segmentRecords: Array<{ connection: Connection; segment: number }> = []
-    for (const connection of activeConnections) {
-      for (let segment = 0; segment < connection.anchors.length - 1; segment++) {
-        const bodyA = entityIndexes.get(connection.anchors[segment].entityId)
-        const bodyB = entityIndexes.get(connection.anchors[segment + 1].entityId)
-        if (bodyA === undefined || bodyB === undefined || bodyA === bodyB) continue
-        segmentRecords.push({ connection, segment })
-      }
-    }
+    this.entities.forEach((entity, index) => writeEntityRecord(data, index, entity))
+    const segmentRecords = collectConnectionRecords(this.entities, this.connections)
     const connectionData = new Float64Array(segmentRecords.length * CONNECTION_STRIDE)
-    for (let recordIndex = 0; recordIndex < segmentRecords.length; recordIndex++) {
-      const { connection, segment } = segmentRecords[recordIndex]
-      const anchorA = connection.anchors[segment]
-      const anchorB = connection.anchors[segment + 1]
-      const entityA = this.entities[entityIndexes.get(anchorA.entityId)!]
-      const entityB = this.entities[entityIndexes.get(anchorB.entityId)!]
-      const localA = scaledLocalAnchor(anchorA, entityA)
-      const localB = scaledLocalAnchor(anchorB, entityB)
-      const index = recordIndex * CONNECTION_STRIDE
-      connectionData[index] = connection.id
-      connectionData[index + 1] = entityIndexes.get(anchorA.entityId)!
-      connectionData[index + 2] = entityIndexes.get(anchorB.entityId)!
-      connectionData[index + 3] = localA.x
-      connectionData[index + 4] = localA.y
-      connectionData[index + 5] = localB.x
-      connectionData[index + 6] = localB.y
-      connectionData[index + 7] = connection.restLengths[segment]
-      connectionData[index + 8] = connection.stretchable ? 1 : 0
-      connectionData[index + 9] = connection.bendable ? 1 : 0
-      connectionData[index + 10] = connection.stiffness
-      connectionData[index + 11] = connection.damping
-      connectionData[index + 12] = connection.maxStretchRatio
-      connectionData[index + 13] = connection.bendingToleranceMass
-      connectionData[index + 14] = connection.stretchingToleranceMass
-      const manualBend = connection.style === 'manual'
-        ? Math.max(0, ...(connection.manualSegments[segment] ?? []).map(point => Math.abs(point.y)))
-        : 0
-      connectionData[index + 15] = connection.style === 'curved' ? Math.abs(connection.curvature) : manualBend
-      connectionData[index + 16] = 1
-      connectionData[index + 20] = connection.binding ? 1 : 0
-      connectionData[index + 21] = connection.bindAngle
-      connectionData[index + 22] = connection.bindOffset.x
-      connectionData[index + 23] = connection.bindOffset.y
-    }
+    segmentRecords.forEach((record, index) => writeConnectionRecord(connectionData, index, record, this.entities))
 
     const output = step_physics_with_connections(
       data,
@@ -218,32 +290,8 @@ export class World {
       return
     }
 
-    for (let entityIndex = 0; entityIndex < this.entities.length; entityIndex++) {
-      const entity = this.entities[entityIndex]
-      const index = entityIndex * PHYSICS_STRIDE
-      entity.transform.position.x = finiteNumber(output[index + 2], entity.transform.position.x)
-      entity.transform.position.y = finiteNumber(output[index + 3], entity.transform.position.y)
-      entity.velocity.x = finiteNumber(output[index + 4], entity.velocity.x)
-      entity.velocity.y = finiteNumber(output[index + 5], entity.velocity.y)
-      entity.mass = finiteNumber(output[index + 8], entity.mass)
-      entity.transform.rotation = finiteNumber(output[index + 14], entity.transform.rotation)
-      entity.angularVelocity = finiteNumber(output[index + 15], entity.angularVelocity)
-      entity.inertia = finiteNumber(output[index + 26], entity.inertia)
-      entity.contactCount = Math.max(0, Math.round(finiteNumber(output[index + 29], 0)))
-      entity.contactNormal.x = finiteNumber(output[index + 30], 0)
-      entity.contactNormal.y = finiteNumber(output[index + 31], 0)
-      entity.penetrationDepth = Math.max(0, finiteNumber(output[index + 32], 0))
-    }
-
+    this.entities.forEach((entity, index) => readEntityRecord(output, index, entity))
     const connectionOffset = data.length
-    for (let recordIndex = 0; recordIndex < segmentRecords.length; recordIndex++) {
-      const { connection } = segmentRecords[recordIndex]
-      const index = connectionOffset + recordIndex * CONNECTION_STRIDE
-      const breakCode = Math.round(finiteNumber(output[index + 17]))
-      connection.tension = Math.max(connection.tension, finiteNumber(output[index + 18]))
-      connection.strain = Math.max(connection.strain, finiteNumber(output[index + 19]))
-      if (breakCode === 1) connection.breakState = 'snapped'
-      if (breakCode === 2) connection.breakState = 'torn'
-    }
+    segmentRecords.forEach((record, index) => readConnectionRecord(output, connectionOffset, index, record))
   }
 }

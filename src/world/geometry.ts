@@ -186,13 +186,15 @@ export function syncDensityFromMass(entity: GeometryEntity): void {
   if (entity.autoInertia) entity.inertia = effectiveInertia(entity)
 }
 
-export function normalizeEntity(entity: GeometryEntity): void {
+function normalizeTransform(entity: GeometryEntity): void {
   entity.transform.position.x = finiteNumber(entity.transform.position.x)
   entity.transform.position.y = finiteNumber(entity.transform.position.y)
   entity.transform.rotation = normalizeAngle(entity.transform.rotation)
   entity.transform.scale.x = positiveNumber(entity.transform.scale.x, 1)
   entity.transform.scale.y = positiveNumber(entity.transform.scale.y, 1)
+}
 
+function normalizeMotion(entity: GeometryEntity): void {
   entity.velocity.x = finiteNumber(entity.velocity.x)
   entity.velocity.y = finiteNumber(entity.velocity.y)
   entity.acceleration.x = finiteNumber(entity.acceleration.x)
@@ -205,35 +207,51 @@ export function normalizeEntity(entity: GeometryEntity): void {
   entity.gravityScale = finiteNumber(entity.gravityScale, 1)
   entity.linearDamping = Math.max(0, finiteNumber(entity.linearDamping, 0))
   entity.angularDamping = Math.max(0, finiteNumber(entity.angularDamping, 0))
+}
+
+function normalizeMaterial(entity: GeometryEntity): void {
   entity.restitution = clampNumber(entity.restitution, 0, 1, 0)
   entity.restitutionThreshold = Math.max(finiteNumber(entity.restitutionThreshold, 1), 0)
   entity.staticFriction = Math.max(0, finiteNumber(entity.staticFriction, 0))
   entity.dynamicFriction = Math.max(0, finiteNumber(entity.dynamicFriction, 0))
+}
+
+function normalizeAppearance(entity: GeometryEntity): void {
   entity.transparency = clampNumber(entity.transparency, 0, 100, 100)
   entity.color.r = Math.round(clampNumber(entity.color.r, 0, 255, 0))
   entity.color.g = Math.round(clampNumber(entity.color.g, 0, 255, 180))
   entity.color.b = Math.round(clampNumber(entity.color.b, 0, 255, 255))
-  entity.layer = Math.min(Number.MAX_SAFE_INTEGER, Math.max(1, Math.round(finiteNumber(entity.layer, 1))))
+}
 
-  entity.mass = clampNumber(entity.mass, MIN_MASS, MAX_MASS, 1)
-  entity.density = clampNumber(entity.density, MIN_DENSITY, MAX_DENSITY, 1)
-
+function normalizeShape(entity: GeometryEntity): void {
   if (entity.shapeType === 'Circle') {
     entity.radiusX = positiveNumber(entity.radiusX, 1)
     entity.radiusY = positiveNumber(entity.radiusY, entity.radiusX)
-  } else if (entity.vertices) {
-    const hull = convexHull(entity.vertices)
-    if (hull.length >= 3 && polygonArea(hull) > MIN_AREA) entity.vertices = hull
-    else if (entity.shapeType === 'Triangle') {
-      entity.vertices = [{ x: 0, y: 0.5 }, { x: 0.5, y: -0.5 }, { x: -0.5, y: -0.5 }]
-    } else {
-      entity.vertices = [
-        { x: -0.5, y: -0.5 }, { x: 0.5, y: -0.5 },
-        { x: 0.5, y: 0.5 }, { x: -0.5, y: 0.5 }
-      ]
-    }
+    return
   }
+  if (!entity.vertices) return
+  const hull = convexHull(entity.vertices)
+  if (hull.length >= 3 && polygonArea(hull) > MIN_AREA) {
+    entity.vertices = hull
+  } else if (entity.shapeType === 'Triangle') {
+    entity.vertices = [{ x: 0, y: 0.5 }, { x: 0.5, y: -0.5 }, { x: -0.5, y: -0.5 }]
+  } else {
+    entity.vertices = [
+      { x: -0.5, y: -0.5 }, { x: 0.5, y: -0.5 },
+      { x: 0.5, y: 0.5 }, { x: -0.5, y: 0.5 }
+    ]
+  }
+}
 
+export function normalizeEntity(entity: GeometryEntity): void {
+  normalizeTransform(entity)
+  normalizeMotion(entity)
+  normalizeMaterial(entity)
+  normalizeAppearance(entity)
+  entity.layer = Math.min(Number.MAX_SAFE_INTEGER, Math.max(1, Math.round(finiteNumber(entity.layer, 1))))
+  entity.mass = clampNumber(entity.mass, MIN_MASS, MAX_MASS, 1)
+  entity.density = clampNumber(entity.density, MIN_DENSITY, MAX_DENSITY, 1)
+  normalizeShape(entity)
   entity.inertia = entity.autoInertia
     ? effectiveInertia(entity)
     : Math.max(MIN_INERTIA, Math.abs(finiteNumber(
