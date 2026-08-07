@@ -6,8 +6,8 @@ import { finiteNumber, positiveNumber } from './geometry'
 export class TriangleEntity extends Entity {
   vertices: Vec2[]
 
-  constructor(id: number, pos: Vec2, size: Vec2) {
-    super(id, 'Triangle')
+  constructor(id: number, pos: Vec2, size: Vec2, uuid?: string) {
+    super(id, 'Triangle', uuid)
     this.transform.position = { x: finiteNumber(pos.x), y: finiteNumber(pos.y) }
     
     // FIX: Centered Isosceles Triangle

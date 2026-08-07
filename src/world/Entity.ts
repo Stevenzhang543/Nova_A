@@ -1,8 +1,10 @@
 import { Transform } from './Transform'
 import type { Vec2 } from './types'
+import { normalizeUuid } from './identity'
 
 export abstract class Entity {
   readonly id: number
+  readonly uuid: string
   name: string
   readonly shapeType: string
   transform = new Transform()
@@ -45,8 +47,9 @@ export abstract class Entity {
   contactNormal: Vec2 = { x: 0, y: 0 }
   penetrationDepth = 0
 
-  constructor(id: number, name = 'Entity') {
+  constructor(id: number, name = 'Entity', uuid?: string) {
     this.id = id
+    this.uuid = normalizeUuid(uuid)
     this.name = name
     this.shapeType = name
   }

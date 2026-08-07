@@ -1,0 +1,266 @@
+use std::collections::HashMap;
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum PhysicsEvent {
+    BodyCreated { handle: u32 },
+    BodyDestroyed { handle: u32 },
+    ContactStarted { handle: u32 },
+    ContactEnded { handle: u32 },
+}
+
+#[derive(Clone, Debug)]
+struct BodyRecord {
+    handle: u32,
+    order: u32,
+    values: Vec<f64>,
+    previous_contact_count: usize,
+}
+
+#[derive(Clone, Debug)]
+struct ConnectionRecord {
+    handle: u32,
+    order: u32,
+    values: Vec<f64>,
+}
+
+/// Retained physics storage used by the runtime and native/WASM frontends.
+///
+/// Bodies and connections are rebuilt only when a configuration command marks
+/// the dense solver cache dirty. Ordinary steps advance the retained cache and
+/// reuse the state buffers.
+#[derive(Default)]
+pub struct PhysicsWorld {
+    bodies: Vec<BodyRecord>,
+    connections: Vec<ConnectionRecord>,
+    body_index: HashMap<u32, usize>,
+    connection_index: HashMap<u32, usize>,
+    dense_bodies: Vec<f64>,
+    dense_connections: Vec<f64>,
+    previous_bodies: Vec<f64>,
+    state_buffer: Vec<f64>,
+    events: Vec<PhysicsEvent>,
+    configuration_dirty: bool,
+    solver: Option<SolverWorld>,
+    configuration_rebuilds: u64,
+    physics_steps: u64,
+}
+
+impl PhysicsWorld {
+    pub fn new() -> Self { Self::default() }
+
+    pub fn body_count(&self) -> usize { self.bodies.len() }
+    pub fn connection_count(&self) -> usize { self.connections.len() }
+    pub fn configuration_rebuilds(&self) -> u64 { self.configuration_rebuilds }
+    pub fn physics_steps(&self) -> u64 { self.physics_steps }
+
+    pub fn create_body(&mut self, handle: u32, order: u32, values: &[f64]) -> Result<(), &'static str> {
+        if self.body_index.contains_key(&handle) { return Err("body handle already exists"); }
+        self.upsert_body(handle, order, values).map(|_| ())
+    }
+
+    pub fn upsert_body(&mut self, handle: u32, order: u32, values: &[f64]) -> Result<bool, &'static str> {
+        if values.len() != STRIDE { return Err("body record has the wrong length"); }
+        if let Some(&index) = self.body_index.get(&handle) {
+            let record = &mut self.bodies[index];
+            let changed = record.order != order || record.values != values;
+            if changed {
+                record.order = order;
+                record.values.copy_from_slice(values);
+                self.configuration_dirty = true;
+            }
+            return Ok(changed);
+        }
+        self.bodies.push(BodyRecord { handle, order, values: values.to_vec(), previous_contact_count: 0 });
+        self.rebuild_indexes();
+        self.configuration_dirty = true;
+        self.events.push(PhysicsEvent::BodyCreated { handle });
+        Ok(true)
+    }
+
+    pub fn destroy_body(&mut self, handle: u32) -> bool {
+        let Some(index) = self.body_index.get(&handle).copied() else { return false; };
+        self.bodies.remove(index);
+        self.rebuild_indexes();
+        self.configuration_dirty = true;
+        self.events.push(PhysicsEvent::BodyDestroyed { handle });
+        true
+    }
+
+    pub fn set_transform(&mut self, handle: u32, x: f64, y: f64, angle: f64) -> Result<(), &'static str> {
+        self.update_body(handle, |values| { values[2] = finite_or(x, values[2]); values[3] = finite_or(y, values[3]); values[14] = normalize_angle(angle); })
+    }
+
+    pub fn set_velocity(&mut self, handle: u32, x: f64, y: f64, angular: f64) -> Result<(), &'static str> {
+        self.update_body(handle, |values| { values[4] = finite_or(x, values[4]); values[5] = finite_or(y, values[5]); values[15] = finite_or(angular, values[15]); })
+    }
+
+    pub fn set_material(&mut self, handle: u32, restitution: f64, static_friction: f64, dynamic_friction: f64) -> Result<(), &'static str> {
+        self.update_body(handle, |values| {
+            values[10] = unit_interval(restitution);
+            values[20] = non_negative(static_friction, values[20]);
+            values[11] = non_negative(dynamic_friction, values[11]);
+        })
+    }
+
+    pub fn apply_force(&mut self, handle: u32, x: f64, y: f64, torque: f64) -> Result<(), &'static str> {
+        self.update_body(handle, |values| { values[21] = finite_or(x, values[21]); values[22] = finite_or(y, values[22]); values[16] = finite_or(torque, values[16]); })
+    }
+
+    pub fn apply_impulse(&mut self, handle: u32, x: f64, y: f64, offset_x: f64, offset_y: f64) -> Result<(), &'static str> {
+        self.update_body(handle, |values| {
+            if values[9] > 0.5 || values[24] > 0.5 { return; }
+            let mass = positive(values[8], 1.0);
+            values[4] = finite_or(values[4] + finite_or(x, 0.0) / mass, values[4]);
+            values[5] = finite_or(values[5] + finite_or(y, 0.0) / mass, values[5]);
+            let inertia = positive_with_minimum(values[26], 1.0, MIN_INERTIA);
+            values[15] = finite_or(values[15] + (offset_x * y - offset_y * x) / inertia, values[15]);
+        })
+    }
+
+    pub fn upsert_connection(&mut self, handle: u32, order: u32, values: &[f64]) -> Result<bool, &'static str> {
+        if values.len() != CONNECTION_STRIDE { return Err("connection record has the wrong length"); }
+        if let Some(&index) = self.connection_index.get(&handle) {
+            let record = &mut self.connections[index];
+            let changed = record.order != order || record.values != values;
+            if changed {
+                record.order = order;
+                record.values.copy_from_slice(values);
+                self.configuration_dirty = true;
+            }
+            return Ok(changed);
+        }
+        self.connections.push(ConnectionRecord { handle, order, values: values.to_vec() });
+        self.rebuild_indexes();
+        self.configuration_dirty = true;
+        Ok(true)
+    }
+
+    pub fn destroy_connection(&mut self, handle: u32) -> bool {
+        let Some(index) = self.connection_index.get(&handle).copied() else { return false; };
+        self.connections.remove(index);
+        self.rebuild_indexes();
+        self.configuration_dirty = true;
+        true
+    }
+
+    pub fn clear(&mut self) {
+        for record in &self.bodies { self.events.push(PhysicsEvent::BodyDestroyed { handle: record.handle }); }
+        self.bodies.clear();
+        self.connections.clear();
+        self.body_index.clear();
+        self.connection_index.clear();
+        self.dense_bodies.clear();
+        self.dense_connections.clear();
+        self.previous_bodies.clear();
+        self.state_buffer.clear();
+        self.solver = None;
+        self.configuration_dirty = false;
+        self.configuration_rebuilds = 0;
+        self.physics_steps = 0;
+    }
+
+    pub fn step(&mut self, dt: f64, global_gravity: f64, air_friction: f64) {
+        self.rebuild_dense_if_needed();
+        if self.dense_bodies.is_empty() { return; }
+        self.previous_bodies.clear();
+        self.previous_bodies.extend_from_slice(&self.dense_bodies);
+        let Some(solver) = self.solver.as_mut() else { return; };
+        solver.step(dt, global_gravity, air_friction);
+        self.physics_steps = self.physics_steps.saturating_add(1);
+        solver.copy_state(&mut self.dense_bodies, &mut self.dense_connections);
+        self.copy_dense_to_records();
+        self.collect_contact_events();
+        self.state_buffer.clear();
+        self.state_buffer.extend_from_slice(&self.dense_bodies);
+        self.state_buffer.extend_from_slice(&self.dense_connections);
+    }
+
+    pub fn state(&self) -> &[f64] { &self.state_buffer }
+    pub fn previous_body_state(&self) -> &[f64] { &self.previous_bodies }
+    pub fn body_state_len(&self) -> usize { self.dense_bodies.len() }
+    pub fn drain_events(&mut self) -> Vec<PhysicsEvent> { std::mem::take(&mut self.events) }
+
+    fn rebuild_indexes(&mut self) {
+        self.body_index.clear();
+        for (index, record) in self.bodies.iter().enumerate() { self.body_index.insert(record.handle, index); }
+        self.connection_index.clear();
+        for (index, record) in self.connections.iter().enumerate() { self.connection_index.insert(record.handle, index); }
+    }
+
+    fn rebuild_dense_if_needed(&mut self) {
+        if !self.configuration_dirty { return; }
+        self.bodies.sort_by_key(|record| record.order);
+        self.connections.sort_by_key(|record| record.order);
+        self.rebuild_indexes();
+        self.dense_bodies.clear();
+        for record in &self.bodies { self.dense_bodies.extend_from_slice(&record.values); }
+        self.dense_connections.clear();
+        for record in &self.connections { self.dense_connections.extend_from_slice(&record.values); }
+        self.solver = Some(SolverWorld::new(&self.dense_bodies, &self.dense_connections));
+        self.configuration_rebuilds = self.configuration_rebuilds.saturating_add(1);
+        self.state_buffer.clear();
+        self.state_buffer.extend_from_slice(&self.dense_bodies);
+        self.state_buffer.extend_from_slice(&self.dense_connections);
+        self.configuration_dirty = false;
+    }
+
+    fn copy_dense_to_records(&mut self) {
+        for (index, record) in self.bodies.iter_mut().enumerate() {
+            record.values.copy_from_slice(&self.dense_bodies[index * STRIDE..(index + 1) * STRIDE]);
+        }
+        for (index, record) in self.connections.iter_mut().enumerate() {
+            record.values.copy_from_slice(&self.dense_connections[index * CONNECTION_STRIDE..(index + 1) * CONNECTION_STRIDE]);
+        }
+    }
+
+    fn collect_contact_events(&mut self) {
+        for (index, record) in self.bodies.iter_mut().enumerate() {
+            let contact_count = self.dense_bodies[index * STRIDE + 29].max(0.0).round() as usize;
+            if contact_count > 0 && record.previous_contact_count == 0 {
+                self.events.push(PhysicsEvent::ContactStarted { handle: record.handle });
+            } else if contact_count == 0 && record.previous_contact_count > 0 {
+                self.events.push(PhysicsEvent::ContactEnded { handle: record.handle });
+            }
+            record.previous_contact_count = contact_count;
+        }
+    }
+
+    fn update_body(&mut self, handle: u32, update: impl FnOnce(&mut [f64])) -> Result<(), &'static str> {
+        let Some(index) = self.body_index.get(&handle).copied() else { return Err("body handle does not exist"); };
+        update(&mut self.bodies[index].values);
+        self.configuration_dirty = true;
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+mod persistent_world_tests {
+    use super::*;
+
+    fn body_record() -> Vec<f64> {
+        let mut body = vec![0.0; STRIDE];
+        body[8] = 1.0; body[12] = 1.0; body[13] = 1.0; body[17] = 1.0; body[25] = 1.0; body[26] = 1.0;
+        body
+    }
+
+    #[test]
+    fn retained_solver_is_not_rebuilt_between_ordinary_steps() {
+        let mut world = PhysicsWorld::new();
+        world.create_body(1, 0, &body_record()).unwrap();
+        world.step(1.0 / 60.0, 0.0, 0.0);
+        world.step(1.0 / 60.0, 0.0, 0.0);
+        assert_eq!(world.configuration_rebuilds(), 1);
+        assert_eq!(world.physics_steps(), 2);
+    }
+
+    #[test]
+    fn command_changes_rebuild_only_on_the_next_step() {
+        let mut world = PhysicsWorld::new();
+        world.create_body(1, 0, &body_record()).unwrap();
+        world.step(1.0 / 60.0, 0.0, 0.0);
+        world.set_velocity(1, 3.0, 0.0, 0.0).unwrap();
+        assert_eq!(world.configuration_rebuilds(), 1);
+        world.step(1.0 / 60.0, 0.0, 0.0);
+        assert_eq!(world.configuration_rebuilds(), 2);
+    }
+}

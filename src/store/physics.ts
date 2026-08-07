@@ -1,5 +1,5 @@
 import { reactive, markRaw } from 'vue'
-import { World, type GlobalPhysicsSettings } from '../world/World'
+import { World, type EngineDiagnostics, type GlobalPhysicsSettings } from '../world/World'
 import { Camera } from '../world/Camera'
 import { Entity } from '../world/Entity'
 import { BoxEntity } from '../world/BoxEntity'
@@ -20,6 +20,7 @@ import {
 import { editorState } from './editor'
 import { preferencesState } from './preferences'
 import { t } from '../i18n'
+import { normalizeUuid } from '../world/identity'
 
 interface PhysicsState {
   world: World
@@ -29,11 +30,13 @@ interface PhysicsState {
   activeTool: 'rectangle' | 'circle' | 'triangle'
   globalSettings: GlobalPhysicsSettings
   simulationRunning: boolean
+  engineDiagnostics: EngineDiagnostics
 }
 
 interface SceneEntityData {
   [key: string]: unknown
   id?: number
+  uuid?: string
   name?: string
   shapeType?: string
   layer?: number
@@ -47,8 +50,10 @@ interface SceneEntityData {
   radiusY?: number
 }
 
-interface SceneConnectionData extends Partial<Connection> {
+interface SceneConnectionData extends Omit<Partial<Connection>, 'anchors'> {
   id?: number
+  uuid?: string
+  anchors?: Array<Partial<Connection['anchors'][number]> & { entityUuid?: string }>
 }
 
 const rawWorld = new World()
@@ -64,14 +69,17 @@ export const physicsState = reactive<PhysicsState>({
   selectedEntityId: null,
   focusEntityID: null,
   activeTool: 'rectangle',
-  globalSettings: { gravity: 9.8, airFriction: 0.01, timeScale: 1 },
-  simulationRunning: false
+  globalSettings: { gravity: 9.8, airFriction: 0.01, timeScale: 1, tickRate: 60, maxCatchUpSteps: 8 },
+  simulationRunning: false,
+  engineDiagnostics: { ...rawWorld.diagnostics }
 })
 
 export function normalizeGlobalSettings(): void {
   physicsState.globalSettings.gravity = finiteNumber(physicsState.globalSettings.gravity, 9.8)
   physicsState.globalSettings.airFriction = Math.max(0, finiteNumber(physicsState.globalSettings.airFriction, 0.01))
   physicsState.globalSettings.timeScale = Math.max(0, finiteNumber(physicsState.globalSettings.timeScale, 1))
+  physicsState.globalSettings.tickRate = Math.min(1000, Math.max(1, finiteNumber(physicsState.globalSettings.tickRate, 60)))
+  physicsState.globalSettings.maxCatchUpSteps = Math.min(240, Math.max(1, Math.round(finiteNumber(physicsState.globalSettings.maxCatchUpSteps, 8))))
 }
 
 export function enterEditMode(id: number | null): void {
@@ -82,7 +90,7 @@ export function enterEditMode(id: number | null): void {
 function serializeEntity(entity: Entity): Record<string, unknown> {
   normalizeEntity(entity)
   const data: Record<string, unknown> = {
-    id: entity.id,
+    uuid: entity.uuid,
     name: entity.name,
     shapeType: entity.shapeType,
     layer: entity.layer,
@@ -127,21 +135,30 @@ function serializeEntity(entity: Entity): Record<string, unknown> {
 
 export function getSceneJSON(): string {
   normalizeGlobalSettings()
-  return JSON.stringify({
-    formatVersion: 5,
+  const entitiesById = new Map(physicsState.world.entities.map(entity => [entity.id, entity]))
+  const source = JSON.stringify({
+    formatVersion: physicsState.world.projectFormatVersion,
+    engineVersion: physicsState.world.projectEngineVersion,
     layers: [...editorState.layers],
     activeLayer: editorState.activeLayer,
     renderLayer: editorState.renderLayer,
     globalSettings: { ...physicsState.globalSettings },
     entities: physicsState.world.entities.map(serializeEntity),
-    connections: physicsState.world.connections.map(connection => ({
-      ...connection,
-      anchors: connection.anchors.map(anchor => ({ ...anchor, localPoint: { ...anchor.localPoint } })),
+    connections: physicsState.world.connections.map(connection => {
+      const { id: _runtimeId, ...stored } = connection
+      void _runtimeId
+      return {
+      ...stored,
+      anchors: connection.anchors.map(anchor => {
+        const { entityId, ...storedAnchor } = anchor
+        return { ...storedAnchor, entityUuid: entitiesById.get(entityId)?.uuid, localPoint: { ...anchor.localPoint } }
+      }),
       restLengths: [...connection.restLengths],
       manualSegments: connection.manualSegments.map(segment => segment.map(point => ({ ...point }))),
       ropeNodes: connection.ropeNodes.map(node => ({ position: { ...node.position }, velocity: { ...node.velocity } }))
-    }))
+    }} )
   })
+  return physicsState.world.formatProjectJson(source)
 }
 
 function copyVector(target: { x: number; y: number }, source: unknown): void {
@@ -172,16 +189,16 @@ function createShapeEntity(item: SceneEntityData, id: number, position: { x: num
   const shapeType = item.shapeType ?? item.name
   if (shapeType === 'Circle') {
     const radiusX = finiteNumber(item.radiusX, 1)
-    return new CircleEntity(id, position, radiusX, finiteNumber(item.radiusY, radiusX))
+    return new CircleEntity(id, position, radiusX, finiteNumber(item.radiusY, radiusX), item.uuid)
   }
   const vertices = normalizedVertices(item.vertices)
   if (shapeType === 'Box') {
-    const entity = new BoxEntity(id, position, { x: 1, y: 1 })
+    const entity = new BoxEntity(id, position, { x: 1, y: 1 }, item.uuid)
     if (vertices) entity.vertices = vertices
     return entity
   }
   if (shapeType === 'Triangle') {
-    const entity = new TriangleEntity(id, position, { x: 1, y: 1 })
+    const entity = new TriangleEntity(id, position, { x: 1, y: 1 }, item.uuid)
     if (vertices) entity.vertices = vertices
     return entity
   }
@@ -242,6 +259,7 @@ function createEntityFromData(item: SceneEntityData, forcedId?: number): Entity 
 
 export function cloneEntity(original: Entity, layer = original.layer, offset = { x: 0, y: 0 }): Entity {
   const data = serializeEntity(original) as SceneEntityData
+  delete data.uuid
   const clone = createEntityFromData(data, physicsState.world.allocateId())
   clone.layer = layer
   clone.transform.position.x += finiteNumber(offset.x)
@@ -292,6 +310,7 @@ export function duplicateConnections(entityIdMap: Map<number, number>): void {
     if (!original.anchors.every(anchor => entityIdMap.has(anchor.entityId))) continue
     const clone = structuredClone(original) as Connection
     clone.id = physicsState.world.allocateConnectionId()
+    clone.uuid = normalizeUuid(undefined)
     clone.name = `${original.name} copy`
     clone.anchors.forEach(anchor => { anchor.entityId = entityIdMap.get(anchor.entityId)! })
     clone.breakState = 'intact'
@@ -313,19 +332,26 @@ function claimIdentifier(value: unknown, fallback: number, used: Set<number>): n
   return id
 }
 
-function loadEntities(records: SceneEntityData[]): { entities: Entity[]; maximumId: number } {
+function loadEntities(records: SceneEntityData[]): { entities: Entity[]; maximumId: number; uuidToId: Map<string, number> } {
   const usedIds = new Set<number>()
+  const usedUuids = new Set<string>()
+  const uuidToId = new Map<string, number>()
   let maximumId = 0
   const entities = records.map(item => {
     const id = claimIdentifier(item.id, maximumId + 1, usedIds)
     if (id === null) throw new Error('Entity ID space is exhausted')
     maximumId = Math.max(maximumId, id)
-    return createEntityFromData(item, id)
+    let uuid = normalizeUuid(item.uuid)
+    while (usedUuids.has(uuid)) uuid = normalizeUuid(undefined)
+    usedUuids.add(uuid)
+    const entity = createEntityFromData({ ...item, uuid }, id)
+    uuidToId.set(entity.uuid, id)
+    return entity
   })
-  return { entities, maximumId }
+  return { entities, maximumId, uuidToId }
 }
 
-function loadConnections(records: unknown[], entities: Entity[]): { connections: Connection[]; maximumId: number } {
+function loadConnections(records: unknown[], entities: Entity[], uuidToId: Map<string, number>): { connections: Connection[]; maximumId: number } {
   const usedIds = new Set<number>()
   let maximumId = 0
   const connections: Connection[] = []
@@ -336,6 +362,13 @@ function loadConnections(records: unknown[], entities: Entity[]): { connections:
     if (id === null) continue
     const connection = structuredClone(item) as Connection
     connection.id = id
+    connection.uuid = normalizeUuid(item.uuid)
+    connection.anchors = item.anchors.flatMap(anchor => {
+      const runtimeId = typeof anchor.entityId === 'number'
+        ? normalizeIdentifier(anchor.entityId)
+        : typeof anchor.entityUuid === 'string' ? uuidToId.get(anchor.entityUuid) : undefined
+      return runtimeId === undefined ? [] : [{ ...anchor, entityId: runtimeId } as Connection['anchors'][number]]
+    })
     if (!normalizeConnection(connection, entities)) continue
     maximumId = Math.max(maximumId, id)
     connections.push(connection)
@@ -349,21 +382,25 @@ function loadGlobalSettings(scene: Record<string, unknown>): void {
   physicsState.globalSettings.gravity = finiteNumber(settings.gravity, physicsState.globalSettings.gravity)
   physicsState.globalSettings.airFriction = finiteNumber(settings.airFriction, physicsState.globalSettings.airFriction)
   physicsState.globalSettings.timeScale = finiteNumber(settings.timeScale, physicsState.globalSettings.timeScale)
+  physicsState.globalSettings.tickRate = finiteNumber(settings.tickRate, physicsState.globalSettings.tickRate)
+  physicsState.globalSettings.maxCatchUpSteps = finiteNumber(settings.maxCatchUpSteps, physicsState.globalSettings.maxCatchUpSteps)
   normalizeGlobalSettings()
 }
 
 export function loadProject(jsonString: string): boolean {
   try {
-    const parsed: unknown = JSON.parse(jsonString)
+    const migrated = physicsState.world.formatProjectJson(jsonString)
+    const parsed: unknown = JSON.parse(migrated)
     const root = Array.isArray(parsed) ? { entities: parsed } : parsed
     if (!root || typeof root !== 'object') throw new Error(t('invalidProjectRoot'))
     const scene = root as Record<string, unknown>
     if (!Array.isArray(scene.entities)) throw new Error(t('missingEntitiesArray'))
 
-    const { entities, maximumId } = loadEntities(scene.entities as SceneEntityData[])
+    const { entities, maximumId, uuidToId } = loadEntities(scene.entities as SceneEntityData[])
     const { connections, maximumId: maximumConnectionId } = loadConnections(
       Array.isArray(scene.connections) ? scene.connections : [],
-      entities
+      entities,
+      uuidToId
     )
 
     const parsedLayers = Array.isArray(scene.layers)
@@ -371,6 +408,7 @@ export function loadProject(jsonString: string): boolean {
       : entities.map(entity => entity.layer)
     const layers = [...new Set([1, ...parsedLayers, ...entities.map(entity => entity.layer)])].sort((a, b) => a - b)
 
+    physicsState.world.invalidateRuntime()
     physicsState.world.entities.splice(0, physicsState.world.entities.length, ...entities)
     physicsState.world.connections.splice(0, physicsState.world.connections.length, ...connections)
     physicsState.simulationRunning = false
@@ -415,6 +453,12 @@ export function resetSimulation(): void {
   if (snapshot) loadProject(snapshot)
 }
 
+export function singleStepSimulation(): void {
+  physicsState.simulationRunning = false
+  if (simulationSnapshot === null) simulationSnapshot = getSceneJSON()
+  Object.assign(physicsState.engineDiagnostics, physicsState.world.singleStep(physicsState.globalSettings))
+}
+
 export async function saveProject(): Promise<boolean> {
   const jsonString = getSceneJSON()
   try {
@@ -452,6 +496,7 @@ export function clearScene(): void {
   simulationSnapshot = null
   physicsState.world.entities.splice(0, physicsState.world.entities.length)
   physicsState.world.connections.splice(0, physicsState.world.connections.length)
+  physicsState.world.invalidateRuntime()
   enterEditMode(null)
   physicsState.world.resetId()
   physicsState.world.resetConnectionId()

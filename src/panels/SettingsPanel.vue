@@ -2,7 +2,7 @@
   <div class="settings-page">
     <header class="page-header">
       <div>
-        <span class="eyebrow">Nova_A 1.1.2</span>
+        <span class="eyebrow">Nova_A 1.2.0</span>
         <h1>{{ t('settings') }}</h1>
       </div>
       <div class="theme-switch" :aria-label="t('theme')">
@@ -35,6 +35,29 @@
         <SettingRow :label="t('globalGravity')"><input v-model.number="physics.globalSettings.gravity" type="number" step="0.1"></SettingRow>
         <SettingRow :label="t('globalAirDamping')"><input v-model.number="physics.globalSettings.airFriction" type="number" min="0" step="0.01"></SettingRow>
         <SettingRow :label="t('timeScale')"><input v-model.number="physics.globalSettings.timeScale" type="number" min="0" step="0.1"></SettingRow>
+        <SettingRow :label="t('physicsTickRate')">
+          <select v-model.number="physics.globalSettings.tickRate">
+            <option :value="30">30 Hz</option><option :value="60">60 Hz</option><option :value="120">120 Hz</option>
+            <option v-if="isCustomTickRate" :value="physics.globalSettings.tickRate">{{ t('customTickRate') }} · {{ physics.globalSettings.tickRate }} Hz</option>
+          </select>
+        </SettingRow>
+        <SettingRow :label="t('customTickRate')"><input v-model.number="physics.globalSettings.tickRate" type="number" min="1" max="1000" step="1"></SettingRow>
+        <SettingRow :label="t('maxCatchUpSteps')"><input v-model.number="physics.globalSettings.maxCatchUpSteps" type="number" min="1" max="240" step="1"></SettingRow>
+      </section>
+
+      <section class="settings-card diagnostics-card">
+        <div class="card-heading"><span class="card-icon">⌁</span><h2>{{ t('engineDiagnostics') }}</h2></div>
+        <div class="metric-grid">
+          <div><span>{{ t('runtimeBodies') }}</span><strong>{{ physics.engineDiagnostics.bodyCount }}</strong></div>
+          <div><span>{{ t('runtimeConnections') }}</span><strong>{{ physics.engineDiagnostics.connectionCount }}</strong></div>
+          <div><span>{{ t('stepsLastFrame') }}</span><strong>{{ physics.engineDiagnostics.stepsLastFrame }}</strong></div>
+          <div><span>{{ t('totalPhysicsSteps') }}</span><strong>{{ physics.engineDiagnostics.totalPhysicsSteps }}</strong></div>
+          <div><span>{{ t('interpolationAlpha') }}</span><strong>{{ physics.engineDiagnostics.interpolationAlpha.toFixed(3) }}</strong></div>
+          <div><span>{{ t('droppedTime') }}</span><strong>{{ physics.engineDiagnostics.droppedSeconds.toFixed(4) }} s</strong></div>
+          <div><span>{{ t('pendingEvents') }}</span><strong>{{ physics.engineDiagnostics.eventCount }}</strong></div>
+          <div><span>{{ t('configurationRebuilds') }}</span><strong>{{ physics.engineDiagnostics.configurationRebuilds }}</strong></div>
+          <div><span>{{ t('paused') }}</span><strong>{{ physics.simulationRunning ? t('no') : t('yes') }}</strong></div>
+        </div>
       </section>
 
       <section class="settings-card">
@@ -52,6 +75,12 @@
         <SettingRow :label="t('renderQuality')">
           <select v-model.number="prefs.maxPixelRatio"><option :value="1">1×</option><option :value="1.5">1.5×</option><option :value="2">2×</option><option :value="3">3×</option></select>
         </SettingRow>
+      </section>
+
+      <section class="settings-card">
+        <div class="card-heading"><span class="card-icon">ⓘ</span><h2>{{ t('projectInformation') }}</h2></div>
+        <SettingRow :label="t('formatVersion')"><output>v{{ physics.world.projectFormatVersion }}</output></SettingRow>
+        <SettingRow :label="t('engineVersion')"><output>{{ physics.world.projectEngineVersion }}</output></SettingRow>
       </section>
 
       <section class="settings-card">
@@ -107,6 +136,7 @@ const ToggleSwitch = defineComponent({
 })
 
 const autosaveAvailable = computed(() => autosaveState.available)
+const isCustomTickRate = computed(() => ![30, 60, 120].includes(physics.globalSettings.tickRate))
 watch(() => prefs.locale, () => { editorState.statusText = t('ready') })
 
 function applyPhysicsSettings() {
@@ -148,6 +178,10 @@ p { margin: 0 0 8px 40px; color: var(--text-muted); font-size: 12px; line-height
 .value-control { width: 190px; display: flex; align-items: center; gap: 10px; }
 .value-control input { min-width: 0; flex: 1; accent-color: var(--accent); }
 .value-control output { min-width: 46px; text-align: right; color: var(--text-primary); font-variant-numeric: tabular-nums; }
+.metric-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 4px; }
+.metric-grid > div { min-width: 0; padding: 10px; display: flex; flex-direction: column; gap: 4px; border: 1px solid var(--border-subtle); border-radius: 10px; background: var(--surface-2); }
+.metric-grid span { overflow: hidden; color: var(--text-muted); font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
+.metric-grid strong, :deep(output) { color: var(--text-primary); font-size: 12px; font-variant-numeric: tabular-nums; }
 :deep(.toggle) { width: 38px; height: 22px; padding: 3px; border: 0; border-radius: 99px; background: var(--surface-3); box-shadow: inset 0 0 0 1px var(--border-subtle); }
 :deep(.toggle span) { display: block; width: 16px; height: 16px; border-radius: 50%; background: var(--text-muted); transition: transform 180ms cubic-bezier(.2,.8,.2,1), background 180ms ease; }
 :deep(.toggle.active) { background: var(--accent); }

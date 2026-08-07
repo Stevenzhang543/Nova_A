@@ -122,7 +122,7 @@ function loop(time?: number) {
   if (camera.targetOffset !== null && prefs.reduceMotion) { camera.offset = { ...camera.targetOffset }; camera.targetOffset = null }
 
   if (editorState.currentPage === 'scene' && !state.simulationRunning) syncEditableConnections(true)
-  world.update(Math.min(dt, 0.1), state.simulationRunning, state.globalSettings)
+  Object.assign(state.engineDiagnostics, world.update(Math.min(dt, 0.1), state.simulationRunning, state.globalSettings))
   if (editorState.currentPage === 'scene' && state.simulationRunning) syncEditableConnections(false)
   for (const connection of world.connections) {
     if (connection.breakState !== 'intact' && !knownBrokenConnections.has(connection.id)) {

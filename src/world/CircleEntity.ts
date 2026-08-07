@@ -7,8 +7,8 @@ export class CircleEntity extends Entity {
   radiusX: number
   radiusY: number
 
-  constructor(id: number, pos: Vec2, rx: number, ry?: number) {
-    super(id, 'Circle')
+  constructor(id: number, pos: Vec2, rx: number, ry?: number, uuid?: string) {
+    super(id, 'Circle', uuid)
     this.transform.position = { x: finiteNumber(pos.x), y: finiteNumber(pos.y) }
     this.radiusX = positiveNumber(rx, 1)
     this.radiusY = positiveNumber(ry, this.radiusX)

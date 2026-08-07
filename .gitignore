@@ -13,6 +13,7 @@ dist
 dist-ssr
 *.local
 nova_core/target/
+/target/
 
 # Editor directories and files
 .vscode

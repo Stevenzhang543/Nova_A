@@ -4,20 +4,34 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE.md)
 [![Platforms](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey)](https://v2.tauri.app/start/prerequisites/)
-[![Release](https://img.shields.io/badge/release-1.1.2-63c6ff)]()
+[![Release](https://img.shields.io/badge/release-1.2.0-63c6ff)]()
 
 Nova_A 是一款开源 2D 物理引擎、渲染器和桌面 GUI 编辑器，使用 Rust、WebAssembly、Vue 3 与 Tauri 构建。
 
-版本 **1.1.2** 专注于可维护性与行为验证。新建连接简化为“直线”和“手动绘制”两种路径，同时保留旧曲线项目兼容性、全部现有交互与动画，以及原有渲染质量。
+版本 **1.2.0**（Engine Foundation）将 Nova_A 从“每帧重建物理世界”的编辑器升级为模块化、持久化的运行时基础。现有 v1.1.2 编辑流程、物理行为、动画和渲染质量全部保留，同时为 2.0 游戏引擎路线建立长期架构。
 
-## v1.1.2 更新内容
+## v1.2.0 更新内容
 
-- 新连接现在仅提供两种路径：“直线”和“手动绘制”。已有项目中的 `curved` 记录仍可加载和渲染；在 v1.1.2 编辑器中打开后，下次保存会使用“直线”。
-- 世界状态与 WASM 的桥接代码改为围绕原有 Float64 ABI 的明确记录收集与读取步骤，更容易审计，同时不改变数值单位或帧内执行顺序。
-- 对象、连接、项目和偏好设置的规范化拆分为小型验证函数；损坏的导入数组和耗尽的数字 ID 会被安全处理，合法项目行为不变。
-- Rust 求解器拆分为输入、宽相接触、绳碰撞、断裂判定、子步和输出阶段。绑定对象对的碰撞排除改为常数时间查找；发布构建继续使用原有优化渲染与求解管线。
-- 完整的 40 项物理测试覆盖运动、单位、质量/惯量、碰撞、图层、绑定、绳形变/碰撞/断裂、异常输入和高速稳定性；严格 Rust 检查以及 Vue/TypeScript、WASM、网页与桌面构建均纳入发布验证。
-- v1.1.1 的全部物理绳行为、主题、翻译、菜单、对话框、编辑手势、过渡和动画保持不变。
+- Rust 后端改为 Cargo workspace，依赖方向固定为 `nova_math` → `nova_physics` → `nova_runtime`；`nova_format` 统一管理存档格式，`nova_wasm` 是唯一 JavaScript 边界。`nova_core` 仅保留为小型源码兼容门面。
+- 新的持久化 `PhysicsWorld` 会保留刚体、接触、约束、绑定和绳节点。创建/修改/删除命令只在真实配置发生变化时重建求解器；普通物理步复用现有世界与 Float64 状态缓冲区。
+- 物理改用与显示刷新率无关的固定时间步累加器。编辑器提供 30/60/120 Hz、任意自定义频率、最大追赶步数、时间倍率、播放、暂停和单步执行。
+- 运行时事件和实时引擎诊断会显示刚体/连接数量、步数、插值、丢弃时间、本帧事件以及配置重建次数；渲染器不再直接耦合求解器。
+- 项目格式 6 会记录 `formatVersion` 与 `engineVersion`。保存的对象和连接使用 UUID，紧凑整数仅在运行时使用。Rust 中央迁移器继续支持 v1.1.2 数字 ID 项目和旧实体数组。
+- 原有 40 项求解器回归测试未经删除并全部通过；新增测试覆盖持久化世界、命令触发重建、项目迁移、数值验证、暂停/单步，以及 30、60、144、240 FPS 下相同的物理结果。
+- v1.1.2 的物理绳、图层、绑定、主题、翻译、菜单、对话框、编辑手势、过渡、动画与渲染行为全部保留。
+
+## 引擎工作区
+
+```text
+Vue 编辑器
+  └─ nova_wasm        唯一 WebAssembly 边界
+       ├─ nova_runtime  固定时间、事件、诊断、运行时骨架
+       │    └─ nova_physics  刚体、碰撞、求解器、绳、持久化世界
+       │         └─ nova_math  向量、变换、AABB、射线、矩形
+       └─ nova_format   版本化格式、验证与迁移
+```
+
+物理、数学、运行时和格式 crate 不导入 Vue、DOM、JavaScript 或 Tauri。内部 crate 采用静态链接，因此桌面发布仍是一个完整应用，不需要 Nova_A DLL 插件。
 
 ## 支持的构建目标
 
@@ -85,12 +99,12 @@ pnpm tauri dev
 
 ```sh
 pnpm test:core
-cargo clippy --manifest-path nova_core/Cargo.toml --all-targets -- -D warnings
+cargo clippy --workspace --all-targets -- -D warnings
 pnpm check
 pnpm build
 ```
 
-这些命令依次运行 40 项 Rust 回归测试、将警告视为错误的代码检查、Vue/TypeScript 类型检查、Release WASM 和优化后的 Vite 前端构建。
+这些命令依次运行全部 workspace 测试（包括原有 40 项物理测试）、将警告视为错误的代码检查、Vue/TypeScript 类型检查、Release WASM 和优化后的 Vite 前端构建。
 
 ### 浏览器生产预览
 
@@ -109,7 +123,14 @@ Tauri 打包前会自动执行 `pnpm build`。不同系统的结果通常位于 
 
 ## 物理属性绑定情况
 
-所有运行时物理值都会经过 Vue → Float64 WASM ABI → Rust 求解器 → Float64 ABI → 渲染器，不进行隐藏的单位换算。一个配置世界单位严格等于一米；相机缩放只负责将世界坐标转换为像素。
+配置变化会通过 Vue → `nova_wasm` 以明确的持久化世界命令传入。固定物理步保留在 Rust 内；复用的 Float64 状态缓冲区把运行时变换和绳状态返回渲染器，不进行隐藏单位换算，也不会为每个刚体创建 JavaScript 返回对象。一个配置世界单位严格等于一米；相机缩放只负责将世界坐标转换为像素。
+
+## 项目兼容性
+
+- 新存档使用项目格式 6 与引擎版本 `1.2.0`。
+- 持久化对象和连接使用 UUID；运行时句柄绝不会写入磁盘。
+- 格式迁移与验证集中在 `nova_format`，不会散落在各个编辑器组件中。
+- v1.1.2 格式 5 文件、更早的对象根节点和旧顶层实体数组仍能加载；只有用户再次保存时才会写成新格式。
 
 | 属性 | 求解器/渲染行为 |
 | --- | --- |

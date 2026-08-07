@@ -4,20 +4,34 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE.md)
 [![Platforms](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey)](https://v2.tauri.app/start/prerequisites/)
-[![Release](https://img.shields.io/badge/release-1.1.2-63c6ff)]()
+[![Release](https://img.shields.io/badge/release-1.2.0-63c6ff)]()
 
 Nova_A is an open-source 2D physics engine, renderer, and desktop GUI editor built with Rust, WebAssembly, Vue 3, and Tauri.
 
-Version **1.1.2** focuses on maintainability and verified behavior. It simplifies new connection creation to Straight and Manual paths while preserving legacy curved-project compatibility, all existing interactions, animations, and renderer quality.
+Version **1.2.0**, Engine Foundation, changes Nova_A from a frame-reconstructed physics editor into a modular, retained runtime foundation. It preserves the v1.1.2 editor workflow, physics behavior, animations, and renderer quality while establishing the architecture needed for the 2.0 game-engine roadmap.
 
-## What is new in v1.1.2
+## What is new in v1.2.0
 
-- New connections now offer exactly two path modes: Straight and Manually drawn. Existing saved `curved` records still load and render; opening one in the v1.1.2 editor selects Straight for its next save.
-- The world/WASM bridge now uses focused record collectors and readers around the unchanged Float64 ABI, making entity and connection state flow easier to audit without changing numerical units or frame order.
-- Entity, connection, project, and preference normalization are separated into small validation helpers. Malformed imported arrays and exhausted numeric identifiers are handled without disturbing valid projects.
-- The Rust solver is split into explicit input, broad-phase/contact, rope-collision, failure, substep, and output stages. Bound-pair collision exclusions now use constant-time lookup; release builds retain the same optimized renderer and solver pipeline.
-- The full 40-test physics suite covers motion, units, mass/inertia, collisions, layers, bindings, rope deformation/collision/failure, malformed input, and high-speed stability. Strict Rust linting plus Vue/TypeScript, WASM, web, and desktop builds are part of the release validation.
-- All v1.1.1 physics-string behavior, themes, translations, menus, dialogs, editing gestures, transitions, and animations remain intact.
+- The Rust backend is a Cargo workspace with one-way dependencies: `nova_math` → `nova_physics` → `nova_runtime`, with `nova_format` owning saved schemas and `nova_wasm` as the sole JavaScript boundary. `nova_core` remains a small source-compatibility facade.
+- A persistent `PhysicsWorld` now retains parsed bodies, contacts, constraints, bindings, and rope nodes. Create/update/destroy commands rebuild solver configuration only after a real edit; ordinary ticks reuse the existing world and Float64 state buffers.
+- Physics runs through a fixed-timestep accumulator independent of display refresh rate. The editor exposes 30/60/120 Hz presets, a custom rate, maximum catch-up steps, time scale, Play, Pause, and Single Step.
+- Runtime events and live engine diagnostics expose body/connection counts, steps, interpolation, dropped time, pending events, and configuration rebuilds without coupling the renderer to the solver.
+- Project format 6 records `formatVersion` and `engineVersion`. Saved entity and connection identities are UUIDs, while compact integers remain runtime-only. Central Rust migrations continue loading v1.1.2 numeric-ID projects and legacy entity arrays.
+- The original 40 solver regression tests remain unchanged and pass. Additional workspace tests cover retained-world behavior, command-driven rebuilds, project migration, numeric validation, pausing/single-step, and identical results at 30, 60, 144, and 240 render FPS.
+- All v1.1.2 physics strings, layers, bindings, themes, translations, menus, dialogs, editing gestures, transitions, animations, and renderer behavior remain available.
+
+## Engine workspace
+
+```text
+Vue editor
+  └─ nova_wasm        WebAssembly boundary only
+       ├─ nova_runtime  fixed time, events, diagnostics, runtime skeleton
+       │    └─ nova_physics  bodies, collision, solver, ropes, retained world
+       │         └─ nova_math  vectors, transforms, AABB, rays, rectangles
+       └─ nova_format   versioned schemas, validation, and migrations
+```
+
+Physics, math, runtime, and format crates contain no Vue, DOM, JavaScript, or Tauri imports. Internal crates are statically linked, so the desktop release remains one application and does not require Nova_A DLL plug-ins.
 
 ## Supported build targets
 
@@ -85,12 +99,12 @@ pnpm tauri dev
 
 ```sh
 pnpm test:core
-cargo clippy --manifest-path nova_core/Cargo.toml --all-targets -- -D warnings
+cargo clippy --workspace --all-targets -- -D warnings
 pnpm check
 pnpm build
 ```
 
-These commands run the 40-test Rust regression suite, warnings-as-errors linting, Vue/TypeScript checking, a release Rust-to-WASM build, and the optimized Vite build.
+These commands run all workspace tests (including the unchanged 40-test physics suite), warnings-as-errors linting, Vue/TypeScript checking, a release Rust-to-WASM build, and the optimized Vite build.
 
 ### Browser production preview
 
@@ -109,7 +123,14 @@ The Tauri build invokes `pnpm build` automatically before packaging. Result loca
 
 ## Physics property binding
 
-All runtime physics values cross the Vue → Float64 WASM ABI → Rust solver → Float64 ABI → renderer path without unit conversion. One configured world unit equals one meter; camera scale only converts world coordinates to pixels.
+Configuration changes cross Vue → `nova_wasm` as explicit retained-world commands. Fixed physics ticks remain inside Rust; reusable Float64 state buffers return runtime transforms and rope state to the renderer without unit conversion or per-body JavaScript object results. One configured world unit equals one meter; camera scale only converts world coordinates to pixels.
+
+## Project compatibility
+
+- New saves use project format 6 and engine version `1.2.0`.
+- Persisted entities and connections use UUIDs; runtime handles are never written to disk.
+- Format migration and validation are centralized in `nova_format`, not scattered through editor components.
+- v1.1.2 format-5 files, older object roots, and legacy top-level entity arrays continue to load. A migrated project is only written in the new format when the user saves it.
 
 | Property | Solver/render behavior |
 | --- | --- |

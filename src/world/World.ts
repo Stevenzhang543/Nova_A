@@ -14,7 +14,12 @@ import {
   scaledLocalAnchor,
   type Connection
 } from './Connection'
-import init, { step_physics_with_connections } from '../../nova_core/pkg/nova_core.js'
+import init, {
+  WasmRuntimeWorld,
+  current_format_version,
+  engine_version,
+  migrate_project_json
+} from '../../nova_core/pkg/nova_core.js'
 
 export const PHYSICS_STRIDE = 42
 
@@ -22,6 +27,19 @@ export interface GlobalPhysicsSettings {
   gravity: number
   airFriction: number
   timeScale: number
+  tickRate: number
+  maxCatchUpSteps: number
+}
+
+export interface EngineDiagnostics {
+  bodyCount: number
+  connectionCount: number
+  stepsLastFrame: number
+  totalPhysicsSteps: number
+  interpolationAlpha: number
+  droppedSeconds: number
+  eventCount: number
+  configurationRebuilds: number
 }
 
 interface ConnectionRecord {
@@ -32,10 +50,10 @@ interface ConnectionRecord {
 }
 
 /** Writes one entity into the stable Float64 ABI shared with nova_core. */
-function writeEntityRecord(data: Float64Array, entityIndex: number, entity: Entity): void {
+function writeEntityRecord(data: Float64Array, entityIndex: number, entity: Entity, runtimeHandle = entity.id): void {
   normalizeEntity(entity)
   const index = entityIndex * PHYSICS_STRIDE
-  data[index] = entity.id
+  data[index] = runtimeHandle
   data[index + 1] = entity.shapeType === 'Circle' ? 1 : 0
   data[index + 2] = entity.transform.position.x
   data[index + 3] = entity.transform.position.y
@@ -114,8 +132,6 @@ function collectConnectionRecords(entities: Entity[], connections: Connection[])
     if (connection.breakState === 'intact' && connection.collisionEnabled && connection.ropeNodes.length === 0) {
       initializeRopeNodes(connection, entities)
     }
-    connection.tension = 0
-    connection.strain = 0
     for (let segment = 0; segment < connection.anchors.length - 1; segment++) {
       const bodyA = entityIndexes.get(connection.anchors[segment].entityId)
       const bodyB = entityIndexes.get(connection.anchors[segment + 1].entityId)
@@ -127,14 +143,14 @@ function collectConnectionRecords(entities: Entity[], connections: Connection[])
 }
 
 /** Writes one connection segment into the stable Float64 ABI shared with nova_core. */
-function writeConnectionRecord(data: Float64Array, recordIndex: number, record: ConnectionRecord, entities: Entity[]): void {
+function writeConnectionRecord(data: Float64Array, recordIndex: number, record: ConnectionRecord, entities: Entity[], runtimeHandle = record.connection.id): void {
   const { connection, segment, bodyA, bodyB } = record
   const anchorA = connection.anchors[segment]
   const anchorB = connection.anchors[segment + 1]
   const localA = scaledLocalAnchor(anchorA, entities[bodyA])
   const localB = scaledLocalAnchor(anchorB, entities[bodyB])
   const index = recordIndex * CONNECTION_STRIDE
-  data[index] = connection.id
+  data[index] = runtimeHandle
   data[index + 1] = bodyA
   data[index + 2] = bodyB
   data[index + 3] = localA.x
@@ -201,12 +217,38 @@ export class World {
   entities: Entity[] = []
   connections: Connection[] = []
   private wasmLoaded = false
+  private runtime: WasmRuntimeWorld | null = null
+  private nextRuntimeHandle = 1
+  private bodyHandles = new Map<number, number>()
+  private connectionHandles = new Map<string, number>()
+  private bodyRecords = new Map<number, Float64Array>()
+  private connectionRecords = new Map<number, Float64Array>()
+  private bodyOrders = new Map<number, number>()
+  private connectionOrders = new Map<number, number>()
+  private bodyScratch = new Float64Array(PHYSICS_STRIDE)
+  private connectionScratch = new Float64Array(CONNECTION_STRIDE)
+  private stateBuffer = new Float64Array(0)
+  private previousBodyBuffer = new Float64Array(0)
+  private activeConnectionRecords: ConnectionRecord[] = []
+  private timingSignature = ''
   wasmError: Error | null = null
   readonly wasmReady: Promise<void>
+  diagnostics: EngineDiagnostics = {
+    bodyCount: 0, connectionCount: 0, stepsLastFrame: 0, totalPhysicsSteps: 0,
+    interpolationAlpha: 0, droppedSeconds: 0, eventCount: 0, configurationRebuilds: 0
+  }
+  events: Array<Record<string, unknown>> = []
+  projectFormatVersion = 6
+  projectEngineVersion = '1.2.0'
 
   constructor() {
     this.wasmReady = init()
-      .then(() => { this.wasmLoaded = true })
+      .then(() => {
+        this.runtime = new WasmRuntimeWorld()
+        this.projectFormatVersion = current_format_version()
+        this.projectEngineVersion = engine_version()
+        this.wasmLoaded = true
+      })
       .catch((error: unknown) => {
         this.wasmError = error instanceof Error ? error : new Error(String(error))
         console.error('Failed to initialize Nova_A physics WASM', this.wasmError)
@@ -263,35 +305,190 @@ export class World {
     return entity
   }
 
-  update(dt: number, isRunning: boolean, globalSettings: GlobalPhysicsSettings): void {
-    if (!isRunning || !this.wasmLoaded || this.entities.length === 0) return
+  update(dt: number, isRunning: boolean, globalSettings: GlobalPhysicsSettings): EngineDiagnostics {
+    if (!this.wasmLoaded || !this.runtime) return this.diagnostics
+    this.synchronizeRuntime()
+    this.configureTiming(globalSettings, !isRunning)
+    if (isRunning && this.entities.length > 0) {
+      this.runtime.advance(
+        Math.min(Math.max(finiteNumber(dt, 0), 0), 0.25),
+        finiteNumber(globalSettings.gravity, 9.8),
+        Math.max(0, finiteNumber(globalSettings.airFriction, 0.01))
+      )
+      this.readRuntimeState(this.runtime.interpolation_alpha())
+    }
+    this.readDiagnostics()
+    return this.diagnostics
+  }
 
-    const timeScale = Math.max(0, finiteNumber(globalSettings.timeScale, 1))
-    const scaledDt = Math.min(Math.max(finiteNumber(dt, 0) * timeScale, 0), 0.25)
-    if (scaledDt <= 0) return
-
-    const data = new Float64Array(this.entities.length * PHYSICS_STRIDE)
-    this.entities.forEach((entity, index) => writeEntityRecord(data, index, entity))
-    const segmentRecords = collectConnectionRecords(this.entities, this.connections)
-    const connectionData = new Float64Array(segmentRecords.length * CONNECTION_STRIDE)
-    segmentRecords.forEach((record, index) => writeConnectionRecord(connectionData, index, record, this.entities))
-
-    const output = step_physics_with_connections(
-      data,
-      connectionData,
-      scaledDt,
+  singleStep(globalSettings: GlobalPhysicsSettings): EngineDiagnostics {
+    if (!this.wasmLoaded || !this.runtime) return this.diagnostics
+    this.synchronizeRuntime()
+    this.configureTiming(globalSettings, true)
+    this.runtime.single_step(
       finiteNumber(globalSettings.gravity, 9.8),
       Math.max(0, finiteNumber(globalSettings.airFriction, 0.01))
     )
-    const expectedLength = data.length + connectionData.length
-    if (output.length !== expectedLength) {
-      this.wasmError = new Error(`Physics output length ${output.length} did not match expected length ${expectedLength}`)
-      console.error(this.wasmError)
-      return
+    this.readRuntimeState(1)
+    this.readDiagnostics()
+    return this.diagnostics
+  }
+
+  formatProjectJson(source: string): string {
+    return this.wasmLoaded ? migrate_project_json(source) : source
+  }
+
+  invalidateRuntime(): void {
+    this.runtime?.clear()
+    this.bodyHandles.clear()
+    this.connectionHandles.clear()
+    this.bodyRecords.clear()
+    this.connectionRecords.clear()
+    this.bodyOrders.clear()
+    this.connectionOrders.clear()
+    this.activeConnectionRecords = []
+    this.nextRuntimeHandle = 1
+    this.timingSignature = ''
+  }
+
+  private allocateRuntimeHandle(): number {
+    if (this.nextRuntimeHandle >= 0xffff_ffff) throw new Error('Runtime handle space is exhausted')
+    return this.nextRuntimeHandle++
+  }
+
+  private synchronizeRuntime(): void {
+    const runtime = this.runtime
+    if (!runtime) return
+    const liveBodies = new Set<number>()
+    this.entities.forEach((entity, order) => {
+      let handle = this.bodyHandles.get(entity.id)
+      if (handle === undefined) {
+        handle = this.allocateRuntimeHandle()
+        this.bodyHandles.set(entity.id, handle)
+      }
+      liveBodies.add(entity.id)
+      this.bodyScratch.fill(0)
+      writeEntityRecord(this.bodyScratch, 0, entity, handle)
+      const cached = this.bodyRecords.get(handle)
+      if (!cached || this.bodyOrders.get(handle) !== order || !recordsEqual(cached, this.bodyScratch)) {
+        runtime.upsert_body(handle, order, this.bodyScratch)
+        this.storeRecord(this.bodyRecords, handle, this.bodyScratch)
+        this.bodyOrders.set(handle, order)
+      }
+    })
+    for (const [entityId, handle] of [...this.bodyHandles]) {
+      if (liveBodies.has(entityId)) continue
+      runtime.destroy_body(handle)
+      this.bodyHandles.delete(entityId)
+      this.bodyRecords.delete(handle)
+      this.bodyOrders.delete(handle)
     }
 
-    this.entities.forEach((entity, index) => readEntityRecord(output, index, entity))
-    const connectionOffset = data.length
-    segmentRecords.forEach((record, index) => readConnectionRecord(output, connectionOffset, index, record))
+    this.activeConnectionRecords = collectConnectionRecords(this.entities, this.connections)
+    const liveConnections = new Set<string>()
+    this.activeConnectionRecords.forEach((record, order) => {
+      const key = `${record.connection.id}:${record.segment}`
+      liveConnections.add(key)
+      let handle = this.connectionHandles.get(key)
+      if (handle === undefined) {
+        handle = this.allocateRuntimeHandle()
+        this.connectionHandles.set(key, handle)
+      }
+      this.connectionScratch.fill(0)
+      writeConnectionRecord(this.connectionScratch, 0, record, this.entities, handle)
+      const cached = this.connectionRecords.get(handle)
+      if (!cached || this.connectionOrders.get(handle) !== order || !recordsEqual(cached, this.connectionScratch)) {
+        runtime.upsert_connection(handle, order, this.connectionScratch)
+        this.storeRecord(this.connectionRecords, handle, this.connectionScratch)
+        this.connectionOrders.set(handle, order)
+      }
+    })
+    for (const [key, handle] of [...this.connectionHandles]) {
+      if (liveConnections.has(key)) continue
+      runtime.destroy_connection(handle)
+      this.connectionHandles.delete(key)
+      this.connectionRecords.delete(handle)
+      this.connectionOrders.delete(handle)
+    }
   }
+
+  private configureTiming(settings: GlobalPhysicsSettings, paused: boolean): void {
+    if (!this.runtime) return
+    const tickRate = Math.min(1000, Math.max(1, finiteNumber(settings.tickRate, 60)))
+    const catchUp = Math.min(240, Math.max(1, Math.round(finiteNumber(settings.maxCatchUpSteps, 8))))
+    const timeScale = Math.min(100, Math.max(0, finiteNumber(settings.timeScale, 1)))
+    const signature = `${tickRate}:${catchUp}:${timeScale}:${paused}`
+    if (signature === this.timingSignature) return
+    this.runtime.set_timing(tickRate, catchUp, timeScale, paused)
+    this.timingSignature = signature
+  }
+
+  private readRuntimeState(alpha: number): void {
+    if (!this.runtime) return
+    const stateLength = this.runtime.state_len()
+    const bodyLength = this.runtime.body_state_len()
+    this.stateBuffer = ensureBuffer(this.stateBuffer, stateLength)
+    this.previousBodyBuffer = ensureBuffer(this.previousBodyBuffer, bodyLength)
+    if (this.runtime.copy_state(this.stateBuffer) !== stateLength) return
+    const previousLength = this.runtime.copy_previous_body_state(this.previousBodyBuffer)
+    this.entities.forEach((entity, index) => {
+      readEntityRecord(this.stateBuffer, index, entity)
+      if (previousLength === bodyLength && alpha < 1) {
+        const offset = index * PHYSICS_STRIDE
+        entity.transform.position.x = interpolate(this.previousBodyBuffer[offset + 2], this.stateBuffer[offset + 2], alpha)
+        entity.transform.position.y = interpolate(this.previousBodyBuffer[offset + 3], this.stateBuffer[offset + 3], alpha)
+        entity.transform.rotation = interpolateAngle(this.previousBodyBuffer[offset + 14], this.stateBuffer[offset + 14], alpha)
+      }
+      const handle = this.bodyHandles.get(entity.id)
+      if (handle !== undefined) {
+        this.bodyScratch.fill(0)
+        writeEntityRecord(this.bodyScratch, 0, entity, handle)
+        this.storeRecord(this.bodyRecords, handle, this.bodyScratch)
+      }
+    })
+    this.activeConnectionRecords.forEach((record, index) => {
+      readConnectionRecord(this.stateBuffer, bodyLength, index, record)
+      const handle = this.connectionHandles.get(`${record.connection.id}:${record.segment}`)
+      if (handle !== undefined) {
+        this.connectionScratch.fill(0)
+        writeConnectionRecord(this.connectionScratch, 0, record, this.entities, handle)
+        this.storeRecord(this.connectionRecords, handle, this.connectionScratch)
+      }
+    })
+  }
+
+  private readDiagnostics(): void {
+    if (!this.runtime) return
+    try {
+      this.diagnostics = JSON.parse(this.runtime.diagnostics_json()) as EngineDiagnostics
+      this.events = JSON.parse(this.runtime.drain_events_json()) as Array<Record<string, unknown>>
+    } catch (error) {
+      console.warn('Nova_A received malformed runtime diagnostics', error)
+    }
+  }
+
+  private storeRecord(records: Map<number, Float64Array>, handle: number, source: Float64Array): void {
+    const cached = records.get(handle)
+    if (cached) cached.set(source)
+    else records.set(handle, source.slice())
+  }
+}
+
+function recordsEqual(first: Float64Array, second: Float64Array): boolean {
+  if (first.length !== second.length) return false
+  for (let index = 0; index < first.length; index++) if (!Object.is(first[index], second[index])) return false
+  return true
+}
+
+function ensureBuffer(buffer: Float64Array, length: number): Float64Array {
+  return buffer.length === length ? buffer : new Float64Array(length)
+}
+
+function interpolate(from: number, to: number, alpha: number): number {
+  return from + (to - from) * Math.min(1, Math.max(0, finiteNumber(alpha, 1)))
+}
+
+function interpolateAngle(from: number, to: number, alpha: number): number {
+  const difference = ((to - from + Math.PI) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2) - Math.PI
+  return from + difference * Math.min(1, Math.max(0, finiteNumber(alpha, 1)))
 }

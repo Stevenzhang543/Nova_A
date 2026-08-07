@@ -4,6 +4,7 @@ import type { Entity } from './Entity'
 import { TriangleEntity } from './TriangleEntity'
 import type { Vec2 } from './types'
 import { finiteNumber, normalizeAngle } from './geometry'
+import { normalizeUuid } from './identity'
 
 export type ConnectionStyle = 'straight' | 'curved' | 'manual'
 export type AnchorMode = 'center' | 'surface' | 'vertex' | 'side'
@@ -24,6 +25,7 @@ export interface RopeNode {
 
 export interface Connection {
   id: number
+  uuid: string
   name: string
   style: ConnectionStyle
   anchors: ConnectionAnchor[]
@@ -420,6 +422,7 @@ export function createConnection(
 
   return {
     id,
+    uuid: normalizeUuid(undefined),
     name: `Connection ${id}`,
     style: 'straight',
     anchors,
@@ -515,6 +518,7 @@ function normalizeRoutes(connection: Connection, entities: Entity[]): void {
 }
 
 export function normalizeConnection(connection: Connection, entities: Entity[]): boolean {
+  connection.uuid = normalizeUuid(connection.uuid)
   connection.name = typeof connection.name === 'string' && connection.name.trim()
     ? connection.name.trim().slice(0, 80)
     : `Connection ${connection.id}`
