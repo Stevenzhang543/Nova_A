@@ -1,6 +1,6 @@
 //! Runtime orchestration independent of the editor and host platform.
 
-use std::collections::VecDeque;
+use std::collections::{HashMap, VecDeque};
 
 use nova_math::finite_or;
 use nova_physics::{PhysicsEvent, PhysicsWorld};
@@ -123,11 +123,61 @@ impl EventBus {
     }
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum ComponentKind {
+    Transform2D,
+    ShapeRenderer2D,
+    RigidBody2D,
+    BoxCollider2D,
+    EllipseCollider2D,
+    PolygonCollider2D,
+    FixedJoint2D,
+    Rope2D,
+}
+
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct RuntimeComponent {
+    pub uuid: String,
+    pub kind: ComponentKind,
+    pub enabled: bool,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct RuntimeEntity {
     pub uuid: String,
     pub handle: u32,
     pub enabled: bool,
+    pub parent_uuid: Option<String>,
+    pub components: Vec<RuntimeComponent>,
+}
+
+impl RuntimeEntity {
+    pub fn component(&self, kind: ComponentKind) -> Option<&RuntimeComponent> {
+        self.components
+            .iter()
+            .find(|component| component.kind == kind)
+    }
+
+    pub fn upsert_component(&mut self, component: RuntimeComponent) {
+        if let Some(existing) = self
+            .components
+            .iter_mut()
+            .find(|existing| existing.kind == component.kind)
+        {
+            *existing = component;
+        } else {
+            self.components.push(component);
+        }
+    }
+
+    pub fn remove_component(&mut self, kind: ComponentKind) -> bool {
+        if kind == ComponentKind::Transform2D {
+            return false;
+        }
+        let length = self.components.len();
+        self.components.retain(|component| component.kind != kind);
+        self.components.len() != length
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
@@ -135,6 +185,62 @@ pub struct RuntimeScene {
     pub uuid: String,
     pub name: String,
     pub loaded: bool,
+}
+
+#[derive(Default)]
+pub struct RuntimeSceneManager {
+    scenes: HashMap<String, RuntimeScene>,
+    active_scene_uuid: Option<String>,
+}
+
+impl RuntimeSceneManager {
+    pub fn scenes(&self) -> impl Iterator<Item = &RuntimeScene> {
+        self.scenes.values()
+    }
+
+    pub fn active_scene(&self) -> Option<&RuntimeScene> {
+        self.active_scene_uuid
+            .as_ref()
+            .and_then(|uuid| self.scenes.get(uuid))
+    }
+
+    pub fn load(&mut self, mut scene: RuntimeScene) -> bool {
+        scene.loaded = true;
+        let uuid = scene.uuid.clone();
+        let inserted = self.scenes.insert(uuid.clone(), scene).is_none();
+        if self.active_scene_uuid.is_none() {
+            self.active_scene_uuid = Some(uuid);
+        }
+        inserted
+    }
+
+    pub fn unload(&mut self, uuid: &str) -> bool {
+        let Some(scene) = self.scenes.get_mut(uuid) else {
+            return false;
+        };
+        if self.active_scene_uuid.as_deref() == Some(uuid) {
+            return false;
+        }
+        scene.loaded = false;
+        true
+    }
+
+    pub fn reload(&mut self, uuid: &str) -> bool {
+        let Some(scene) = self.scenes.get_mut(uuid) else {
+            return false;
+        };
+        scene.loaded = true;
+        true
+    }
+
+    pub fn set_active(&mut self, uuid: &str) -> bool {
+        let Some(scene) = self.scenes.get_mut(uuid) else {
+            return false;
+        };
+        scene.loaded = true;
+        self.active_scene_uuid = Some(uuid.to_owned());
+        true
+    }
 }
 
 /// Host-independent runtime skeleton. Later releases add components, input,
@@ -145,6 +251,7 @@ pub struct RuntimeWorld {
     accumulator: f64,
     diagnostics: EngineDiagnostics,
     events: EventBus,
+    scenes: RuntimeSceneManager,
 }
 
 impl Default for RuntimeWorld {
@@ -161,6 +268,7 @@ impl RuntimeWorld {
             accumulator: 0.0,
             diagnostics: EngineDiagnostics::default(),
             events: EventBus::default(),
+            scenes: RuntimeSceneManager::default(),
         }
     }
 
@@ -172,6 +280,44 @@ impl RuntimeWorld {
     }
     pub fn timing(&self) -> FixedTimeSettings {
         self.timing
+    }
+
+    pub fn scenes(&self) -> &RuntimeSceneManager {
+        &self.scenes
+    }
+
+    pub fn load_scene(&mut self, scene: RuntimeScene) -> bool {
+        let uuid = scene.uuid.clone();
+        let inserted = self.scenes.load(scene);
+        self.events.publish(EngineEvent::SceneLoaded { uuid });
+        inserted
+    }
+
+    pub fn unload_scene(&mut self, uuid: &str) -> bool {
+        if !self.scenes.unload(uuid) {
+            return false;
+        }
+        self.events.publish(EngineEvent::SceneUnloaded {
+            uuid: uuid.to_owned(),
+        });
+        true
+    }
+
+    pub fn reload_scene(&mut self, uuid: &str) -> bool {
+        if !self.scenes.reload(uuid) {
+            return false;
+        }
+        self.events.publish(EngineEvent::SceneUnloaded {
+            uuid: uuid.to_owned(),
+        });
+        self.events.publish(EngineEvent::SceneLoaded {
+            uuid: uuid.to_owned(),
+        });
+        true
+    }
+
+    pub fn set_active_scene(&mut self, uuid: &str) -> bool {
+        self.scenes.set_active(uuid)
     }
 
     pub fn set_timing(&mut self, settings: FixedTimeSettings) {
@@ -357,5 +503,51 @@ mod tests {
         assert!(runtime.physics().state().is_empty());
         runtime.single_step(0.0, 0.0);
         assert!(runtime.physics().state()[2] > 0.0);
+    }
+
+    #[test]
+    fn transform_component_is_mandatory_but_other_components_are_replaceable() {
+        let mut entity = RuntimeEntity {
+            uuid: "entity".into(),
+            handle: 1,
+            enabled: true,
+            parent_uuid: None,
+            components: vec![RuntimeComponent {
+                uuid: "transform".into(),
+                kind: ComponentKind::Transform2D,
+                enabled: true,
+            }],
+        };
+        assert!(!entity.remove_component(ComponentKind::Transform2D));
+        entity.upsert_component(RuntimeComponent {
+            uuid: "body".into(),
+            kind: ComponentKind::RigidBody2D,
+            enabled: true,
+        });
+        assert!(entity.component(ComponentKind::RigidBody2D).is_some());
+        assert!(entity.remove_component(ComponentKind::RigidBody2D));
+    }
+
+    #[test]
+    fn scene_manager_loads_switches_reloads_and_unloads() {
+        let mut runtime = RuntimeWorld::new();
+        runtime.load_scene(RuntimeScene {
+            uuid: "one".into(),
+            name: "One".into(),
+            loaded: false,
+        });
+        runtime.load_scene(RuntimeScene {
+            uuid: "two".into(),
+            name: "Two".into(),
+            loaded: false,
+        });
+        assert!(runtime.set_active_scene("two"));
+        assert_eq!(runtime.scenes().active_scene().unwrap().uuid, "two");
+        assert!(runtime.unload_scene("one"));
+        assert!(runtime.reload_scene("one"));
+        let events = runtime.drain_events();
+        assert!(events
+            .iter()
+            .any(|event| matches!(event, EngineEvent::SceneUnloaded { uuid } if uuid == "one")));
     }
 }

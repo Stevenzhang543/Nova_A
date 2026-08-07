@@ -5,6 +5,7 @@ import { TriangleEntity } from './TriangleEntity'
 import type { Vec2 } from './types'
 import { finiteNumber, normalizeAngle } from './geometry'
 import { normalizeUuid } from './identity'
+import { localPointToWorld, setWorldTransform, worldPointToLocal, worldTransform } from './hierarchy'
 
 export type ConnectionStyle = 'straight' | 'curved' | 'manual'
 export type AnchorMode = 'center' | 'surface' | 'vertex' | 'side'
@@ -27,6 +28,8 @@ export interface Connection {
   id: number
   uuid: string
   name: string
+  componentType: 'Rope2D' | 'FixedJoint2D'
+  enabled: boolean
   style: ConnectionStyle
   anchors: ConnectionAnchor[]
   restLengths: number[]
@@ -66,7 +69,8 @@ function polygonVertices(entity: Entity): Vec2[] | null {
   return entity instanceof BoxEntity || entity instanceof TriangleEntity ? entity.vertices : null
 }
 
-function worldToLocal(entity: Entity, point: Vec2): Vec2 {
+function worldToLocal(entity: Entity, point: Vec2, entities: Entity[] = [entity]): Vec2 {
+  if (entities.length > 1 || entity.parentUuid) return worldPointToLocal(entity, point, entities)
   const rotated = rotate({
     x: finiteNumber(point.x) - entity.transform.position.x,
     y: finiteNumber(point.y) - entity.transform.position.y
@@ -77,7 +81,8 @@ function worldToLocal(entity: Entity, point: Vec2): Vec2 {
   }
 }
 
-function localToWorld(entity: Entity, point: Vec2): Vec2 {
+function localToWorld(entity: Entity, point: Vec2, entities: Entity[] = [entity]): Vec2 {
+  if (entities.length > 1 || entity.parentUuid) return localPointToWorld(entity, point, entities)
   const rotated = rotate({
     x: point.x * entity.transform.scale.x,
     y: point.y * entity.transform.scale.y
@@ -88,15 +93,16 @@ function localToWorld(entity: Entity, point: Vec2): Vec2 {
   }
 }
 
-function localDirection(entity: Entity, toward: Vec2): Vec2 {
+function localDirection(entity: Entity, toward: Vec2, entities: Entity[] = [entity]): Vec2 {
+  const transform = worldTransform(entity, entities)
   const world = {
-    x: finiteNumber(toward.x) - entity.transform.position.x,
-    y: finiteNumber(toward.y) - entity.transform.position.y
+    x: finiteNumber(toward.x) - transform.position.x,
+    y: finiteNumber(toward.y) - transform.position.y
   }
-  const rotated = rotate(world, -entity.transform.rotation)
+  const rotated = rotate(world, -transform.rotation)
   const direction = {
-    x: rotated.x / entity.transform.scale.x,
-    y: rotated.y / entity.transform.scale.y
+    x: rotated.x / transform.scale.x,
+    y: rotated.y / transform.scale.y
   }
   const length = Math.hypot(direction.x, direction.y)
   return length > 1e-12 ? { x: direction.x / length, y: direction.y / length } : { x: 1, y: 0 }
@@ -133,12 +139,12 @@ function ellipseSurfacePoint(entity: CircleEntity, direction: Vec2): Vec2 {
   return { x: direction.x * scale, y: direction.y * scale }
 }
 
-function anchorLocalPoint(entity: Entity, mode: AnchorMode, index: number, sideT: number, toward: Vec2): Vec2 {
+function anchorLocalPoint(entity: Entity, mode: AnchorMode, index: number, sideT: number, toward: Vec2, entities: Entity[]): Vec2 {
   const vertices = polygonVertices(entity)
   if (mode === 'vertex' && vertices?.length) return { ...vertices[index] }
   if (mode === 'side' && vertices?.length) return sidePoint(vertices, index, sideT)
   if (mode !== 'surface') return { x: 0, y: 0 }
-  const direction = localDirection(entity, toward)
+  const direction = localDirection(entity, toward, entities)
   if (entity instanceof CircleEntity) return ellipseSurfacePoint(entity, direction)
   return vertices?.length ? rayPolygonSurface(vertices, direction) : { x: 0, y: 0 }
 }
@@ -148,17 +154,18 @@ export function deriveAnchor(
   mode: AnchorMode,
   index = 0,
   sideT = 0.5,
-  toward: Vec2 = entity.transform.position
+  toward: Vec2 = entity.transform.position,
+  entities: Entity[] = [entity]
 ): ConnectionAnchor {
   const vertices = polygonVertices(entity)
   const safeIndex = vertices?.length ? Math.abs(Math.round(finiteNumber(index))) % vertices.length : 0
   const safeSideT = Math.min(1, Math.max(0, finiteNumber(sideT, 0.5)))
-  const localPoint = anchorLocalPoint(entity, mode, safeIndex, safeSideT, toward)
+  const localPoint = anchorLocalPoint(entity, mode, safeIndex, safeSideT, toward, entities)
   return { entityId: entity.id, mode, localPoint, index: safeIndex, sideT: safeSideT }
 }
 
-export function anchorAtWorldPoint(entity: Entity, point: Vec2): ConnectionAnchor {
-  const local = worldToLocal(entity, point)
+export function anchorAtWorldPoint(entity: Entity, point: Vec2, entities: Entity[] = [entity]): ConnectionAnchor {
+  const local = worldToLocal(entity, point, entities)
   if (entity instanceof CircleEntity) {
     const directionLength = Math.hypot(local.x, local.y)
     const direction = directionLength > 1e-12 ? local : { x: entity.radiusX, y: 0 }
@@ -173,7 +180,7 @@ export function anchorAtWorldPoint(entity: Entity, point: Vec2): ConnectionAncho
   }
 
   const vertices = polygonVertices(entity)
-  if (!vertices?.length) return deriveAnchor(entity, 'surface', 0, 0.5, point)
+  if (!vertices?.length) return deriveAnchor(entity, 'surface', 0, 0.5, point, entities)
   let bestIndex = 0
   let bestT = 0
   let bestPoint = vertices[0]
@@ -198,51 +205,52 @@ export function anchorAtWorldPoint(entity: Entity, point: Vec2): ConnectionAncho
   return { entityId: entity.id, mode: 'side', localPoint: bestPoint, index: bestIndex, sideT: bestT }
 }
 
-export function entityBoundaryPoints(entity: Entity, ellipseSamples = 48): Vec2[] {
+export function entityBoundaryPoints(entity: Entity, ellipseSamples = 48, entities: Entity[] = [entity]): Vec2[] {
   if (entity instanceof CircleEntity) {
     return Array.from({ length: Math.max(16, ellipseSamples) }, (_, index) => {
       const angle = index * Math.PI * 2 / Math.max(16, ellipseSamples)
       return localToWorld(entity, {
         x: Math.cos(angle) * entity.radiusX,
         y: Math.sin(angle) * entity.radiusY
-      })
+      }, entities)
     })
   }
-  return (polygonVertices(entity) ?? []).map(point => localToWorld(entity, point))
+  return (polygonVertices(entity) ?? []).map(point => localToWorld(entity, point, entities))
 }
 
-function supportPoint(entity: Entity, direction: Vec2): Vec2 {
+function supportPoint(entity: Entity, direction: Vec2, entities: Entity[]): Vec2 {
+  const transform = worldTransform(entity, entities)
   if (entity instanceof CircleEntity) {
-    const localDirection = rotate(direction, -entity.transform.rotation)
+    const localDirection = rotate(direction, -transform.rotation)
     const scaledDirection = {
-      x: localDirection.x * entity.transform.scale.x,
-      y: localDirection.y * entity.transform.scale.y
+      x: localDirection.x * transform.scale.x,
+      y: localDirection.y * transform.scale.y
     }
     const denominator = Math.hypot(
       entity.radiusX * scaledDirection.x,
       entity.radiusY * scaledDirection.y
     )
-    if (denominator <= 1e-18) return { ...entity.transform.position }
+    if (denominator <= 1e-18) return { ...transform.position }
     return localToWorld(entity, {
       x: entity.radiusX * entity.radiusX * scaledDirection.x / denominator,
       y: entity.radiusY * entity.radiusY * scaledDirection.y / denominator
-    })
+    }, entities)
   }
 
   const vertices = polygonVertices(entity) ?? []
-  let best = entity.transform.position
+  let best = transform.position
   let bestProjection = Number.NEGATIVE_INFINITY
   for (const vertex of vertices) {
-    const world = localToWorld(entity, vertex)
+    const world = localToWorld(entity, vertex, entities)
     const projection = world.x * direction.x + world.y * direction.y
     if (projection > bestProjection) { bestProjection = projection; best = world }
   }
   return best
 }
 
-function minkowskiSupport(a: Entity, b: Entity, direction: Vec2): Vec2 {
-  const pointA = supportPoint(a, direction)
-  const pointB = supportPoint(b, { x: -direction.x, y: -direction.y })
+function minkowskiSupport(a: Entity, b: Entity, direction: Vec2, entities: Entity[]): Vec2 {
+  const pointA = supportPoint(a, direction, entities)
+  const pointB = supportPoint(b, { x: -direction.x, y: -direction.y }, entities)
   return { x: pointA.x - pointB.x, y: pointA.y - pointB.y }
 }
 
@@ -283,18 +291,20 @@ function updateSimplex(simplex: Vec2[]): { containsOrigin: boolean; direction: V
   return { containsOrigin: true, direction: { x: 0, y: 0 } }
 }
 
-export function entitiesOverlap(a: Entity, b: Entity): boolean {
+export function entitiesOverlap(a: Entity, b: Entity, entities: Entity[] = [a, b]): boolean {
+  const transformA = worldTransform(a, entities)
+  const transformB = worldTransform(b, entities)
   let direction = {
-    x: b.transform.position.x - a.transform.position.x,
-    y: b.transform.position.y - a.transform.position.y
+    x: transformB.position.x - transformA.position.x,
+    y: transformB.position.y - transformA.position.y
   }
   if (direction.x * direction.x + direction.y * direction.y <= 1e-20) direction = { x: 1, y: 0 }
-  const simplex = [minkowskiSupport(a, b, direction)]
+  const simplex = [minkowskiSupport(a, b, direction, entities)]
   direction = { x: -simplex[0].x, y: -simplex[0].y }
 
   for (let iteration = 0; iteration < 64; iteration++) {
     if (direction.x * direction.x + direction.y * direction.y <= 1e-20) return true
-    const point = minkowskiSupport(a, b, direction)
+    const point = minkowskiSupport(a, b, direction, entities)
     if (point.x * direction.x + point.y * direction.y < -1e-10) return false
     if (simplex.some(candidate => Math.hypot(candidate.x - point.x, candidate.y - point.y) <= 1e-12)) return false
     simplex.push(point)
@@ -358,22 +368,15 @@ export function resolveAnchor(anchor: ConnectionAnchor, entities: Entity[]): Vec
   const entity = entities.find(candidate => candidate.id === anchor.entityId)
   if (!entity) return null
   const localPoint = currentLocalAnchor(anchor, entity)
-  const scaled = {
-    x: localPoint.x * entity.transform.scale.x,
-    y: localPoint.y * entity.transform.scale.y
-  }
-  const rotated = rotate(scaled, entity.transform.rotation)
-  return {
-    x: entity.transform.position.x + rotated.x,
-    y: entity.transform.position.y + rotated.y
-  }
+  return localPointToWorld(entity, localPoint, entities)
 }
 
-export function scaledLocalAnchor(anchor: ConnectionAnchor, entity: Entity): Vec2 {
+export function scaledLocalAnchor(anchor: ConnectionAnchor, entity: Entity, entities: Entity[] = [entity]): Vec2 {
   const localPoint = currentLocalAnchor(anchor, entity)
+  const transform = worldTransform(entity, entities)
   return {
-    x: finiteNumber(localPoint.x) * entity.transform.scale.x,
-    y: finiteNumber(localPoint.y) * entity.transform.scale.y
+    x: finiteNumber(localPoint.x) * transform.scale.x,
+    y: finiteNumber(localPoint.y) * transform.scale.y
   }
 }
 
@@ -411,8 +414,9 @@ export function createConnection(
   if (connected.length < 2) throw new Error('A connection requires at least two valid objects')
 
   const anchors = connected.map((entity, index) => {
-    const toward = connected[index + 1]?.transform.position ?? connected[index - 1].transform.position
-    return deriveAnchor(entity, modes[index] ?? 'surface', 0, 0.5, toward)
+    const towardEntity = connected[index + 1] ?? connected[index - 1]
+    const toward = worldTransform(towardEntity, entities).position
+    return deriveAnchor(entity, modes[index] ?? 'surface', 0, 0.5, toward, entities)
   })
   const restLengths = anchors.slice(0, -1).map((anchor, index) => {
     const a = resolveAnchor(anchor, entities)!
@@ -424,6 +428,8 @@ export function createConnection(
     id,
     uuid: normalizeUuid(undefined),
     name: `Connection ${id}`,
+    componentType: 'Rope2D',
+    enabled: true,
     style: 'straight',
     anchors,
     restLengths,
@@ -482,14 +488,16 @@ function normalizeBinding(connection: Connection, entities: Entity[], hasBindOff
   connection.anchors = connection.anchors.slice(0, 2)
   const entityA = entities.find(entity => entity.id === connection.anchors[0].entityId)!
   const entityB = entities.find(entity => entity.id === connection.anchors[1].entityId)!
-  connection.anchors[0] = deriveAnchor(entityA, 'center')
-  connection.anchors[1] = deriveAnchor(entityB, 'center')
+  const transformA = worldTransform(entityA, entities)
+  const transformB = worldTransform(entityB, entities)
+  connection.anchors[0] = deriveAnchor(entityA, 'center', 0, 0.5, transformB.position, entities)
+  connection.anchors[1] = deriveAnchor(entityB, 'center', 0, 0.5, transformA.position, entities)
   if (!hasBindOffset) {
     connection.bindOffset = rotate({
-      x: entityB.transform.position.x - entityA.transform.position.x,
-      y: entityB.transform.position.y - entityA.transform.position.y
-    }, -entityA.transform.rotation)
-    connection.bindAngle = normalizeAngle(entityB.transform.rotation - entityA.transform.rotation)
+      x: transformB.position.x - transformA.position.x,
+      y: transformB.position.y - transformA.position.y
+    }, -transformA.rotation)
+    connection.bindAngle = normalizeAngle(transformB.rotation - transformA.rotation)
   }
   connection.collisionEnabled = false
   connection.ropeNodes = []
@@ -522,6 +530,10 @@ export function normalizeConnection(connection: Connection, entities: Entity[]):
   connection.name = typeof connection.name === 'string' && connection.name.trim()
     ? connection.name.trim().slice(0, 80)
     : `Connection ${connection.id}`
+  connection.componentType = connection.binding === true || connection.componentType === 'FixedJoint2D'
+    ? 'FixedJoint2D'
+    : 'Rope2D'
+  connection.enabled = connection.enabled !== false
   connection.style = connection.style === 'curved' || connection.style === 'manual' ? connection.style : 'straight'
   connection.curvature = Math.min(2, Math.max(-2, finiteNumber(connection.curvature, 0.18)))
   connection.stiffness = Math.min(1e12, Math.max(0, finiteNumber(connection.stiffness, 1200)))
@@ -606,7 +618,7 @@ export function routePoints(connection: Connection, entities: Entity[]): Vec2[][
 
 export function connectionSharesLayer(connection: Connection, entities: Entity[]): boolean {
   const layers = connection.anchors
-    .map(anchor => entities.find(entity => entity.id === anchor.entityId)?.layer)
+    .map(anchor => entities.find(entity => entity.id === anchor.entityId)?.getCollider()?.physicsLayer)
     .filter((layer): layer is number => layer !== undefined)
   return layers.length === connection.anchors.length && layers.every(layer => layer === layers[0])
 }
@@ -696,14 +708,18 @@ export function configureBinding(connection: Connection, entities: Entity[]): bo
   const entityA = entities.find(entity => entity.id === connection.anchors[0].entityId)
   const entityB = entities.find(entity => entity.id === connection.anchors[1].entityId)
   if (!entityA || !entityB || entityA.id === entityB.id) return false
-  connection.anchors = [deriveAnchor(entityA, 'center'), deriveAnchor(entityB, 'center')]
+  connection.anchors = [deriveAnchor(entityA, 'center', 0, 0.5, worldTransform(entityB, entities).position, entities), deriveAnchor(entityB, 'center', 0, 0.5, worldTransform(entityA, entities).position, entities)]
+  const transformA = worldTransform(entityA, entities)
+  const transformB = worldTransform(entityB, entities)
   const worldOffset = {
-    x: entityB.transform.position.x - entityA.transform.position.x,
-    y: entityB.transform.position.y - entityA.transform.position.y
+    x: transformB.position.x - transformA.position.x,
+    y: transformB.position.y - transformA.position.y
   }
   connection.binding = true
-  connection.bindOffset = rotate(worldOffset, -entityA.transform.rotation)
-  connection.bindAngle = normalizeAngle(entityB.transform.rotation - entityA.transform.rotation)
+  connection.componentType = 'FixedJoint2D'
+  connection.enabled = true
+  connection.bindOffset = rotate(worldOffset, -transformA.rotation)
+  connection.bindAngle = normalizeAngle(transformB.rotation - transformA.rotation)
   connection.style = 'straight'
   connection.stretchable = false
   connection.bendable = false
@@ -716,4 +732,38 @@ export function configureBinding(connection: Connection, entities: Entity[]): bo
   connection.tension = 0
   connection.strain = 0
   return normalizeConnection(connection, entities)
+}
+
+export function boundCompoundEntityIds(entityId: number, connections: Connection[], entities: Entity[]): Set<number> {
+  const existing = new Set(entities.map(entity => entity.id))
+  const members = new Set<number>([entityId])
+  const pending = [entityId]
+  while (pending.length) {
+    const current = pending.shift()!
+    for (const connection of connections) {
+      if (!connection.binding || connection.breakState !== 'intact') continue
+      const ids = connection.anchors.map(anchor => anchor.entityId).filter(id => existing.has(id))
+      if (!ids.includes(current)) continue
+      for (const id of ids) {
+        if (members.has(id)) continue
+        members.add(id)
+        pending.push(id)
+      }
+    }
+  }
+  return members
+}
+
+export function translateBoundCompound(entityId: number, delta: Vec2, connections: Connection[], entities: Entity[]): void {
+  const ids = boundCompoundEntityIds(entityId, connections, entities)
+  const transforms = [...ids].flatMap(id => {
+    const entity = entities.find(candidate => candidate.id === id)
+    return entity ? [{ entity, transform: worldTransform(entity, entities) }] : []
+  })
+  for (const { entity, transform } of transforms) {
+    setWorldTransform(entity, {
+      ...transform,
+      position: { x: transform.position.x + delta.x, y: transform.position.y + delta.y }
+    }, entities)
+  }
 }

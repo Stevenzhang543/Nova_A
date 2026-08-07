@@ -38,7 +38,7 @@
       </div>
     </nav>
     <div class="top-spacer"></div>
-    <span class="release-pill">1.2.0</span>
+    <span class="release-pill">1.3.0</span>
     <input ref="fileInput" type="file" hidden accept="application/json,.json" @change="handleFileSelected">
   </header>
 </template>

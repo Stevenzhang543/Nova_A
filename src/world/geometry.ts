@@ -39,6 +39,23 @@ interface GeometryEntity {
   transparency: number
   color: { r: number; g: number; b: number }
   layer: number
+  renderer?: {
+    vertices: Vec2[]
+    radiusX: number
+    radiusY: number
+  }
+  getCollider?: () => {
+    kind: string
+    enabled: boolean
+    offset: Vec2
+    rotation: number
+    size: Vec2
+    radiusX: number
+    radiusY: number
+    vertices: Vec2[]
+    physicsLayer: number
+    collisionMask: number
+  } | null
 }
 
 export function finiteNumber(value: unknown, fallback = 0): number {
@@ -132,25 +149,29 @@ export function polygonArea(vertices: Vec2[], scale: Vec2 = { x: 1, y: 1 }): num
 }
 
 export function entityArea(entity: GeometryEntity): number {
-  if (entity.shapeType === 'Circle') {
-    const radiusX = positiveNumber(entity.radiusX, 1) * positiveNumber(entity.transform.scale.x, 1)
-    const radiusY = positiveNumber(entity.radiusY, 1) * positiveNumber(entity.transform.scale.y, 1)
+  const collider = entity.getCollider?.()
+  if (collider?.kind === 'EllipseCollider2D' || (!collider && entity.shapeType === 'Circle')) {
+    const radiusX = positiveNumber(collider?.radiusX ?? entity.radiusX, 1) * positiveNumber(entity.transform.scale.x, 1)
+    const radiusY = positiveNumber(collider?.radiusY ?? entity.radiusY, 1) * positiveNumber(entity.transform.scale.y, 1)
     return Math.PI * radiusX * radiusY
   }
-  return polygonArea(entity.vertices ?? [], entity.transform.scale)
+  return polygonArea(collider?.vertices ?? entity.vertices ?? [], entity.transform.scale)
 }
 
 export function effectiveInertia(entity: GeometryEntity): number {
   const mass = clampNumber(entity.mass, MIN_MASS, MAX_MASS, 1)
   if (!entity.autoInertia) return positiveNumber(entity.inertia, mass)
+  const collider = entity.getCollider?.()
 
-  if (entity.shapeType === 'Circle') {
-    const radiusX = positiveNumber(entity.radiusX, 1) * positiveNumber(entity.transform.scale.x, 1)
-    const radiusY = positiveNumber(entity.radiusY, 1) * positiveNumber(entity.transform.scale.y, 1)
-    return Math.max(mass * (radiusX * radiusX + radiusY * radiusY) / 4, MIN_INERTIA)
+  if (collider?.kind === 'EllipseCollider2D' || (!collider && entity.shapeType === 'Circle')) {
+    const radiusX = positiveNumber(collider?.radiusX ?? entity.radiusX, 1) * positiveNumber(entity.transform.scale.x, 1)
+    const radiusY = positiveNumber(collider?.radiusY ?? entity.radiusY, 1) * positiveNumber(entity.transform.scale.y, 1)
+    const offset = collider?.offset ?? { x: 0, y: 0 }
+    return Math.max(mass * (radiusX * radiusX + radiusY * radiusY) / 4
+      + mass * (offset.x * offset.x + offset.y * offset.y), MIN_INERTIA)
   }
 
-  const vertices = (entity.vertices ?? []).map(vertex => ({
+  const vertices = (collider?.vertices ?? entity.vertices ?? []).map(vertex => ({
     x: finiteNumber(vertex.x) * positiveNumber(entity.transform.scale.x, 1),
     y: finiteNumber(vertex.y) * positiveNumber(entity.transform.scale.y, 1)
   }))
@@ -225,21 +246,33 @@ function normalizeAppearance(entity: GeometryEntity): void {
 
 function normalizeShape(entity: GeometryEntity): void {
   if (entity.shapeType === 'Circle') {
-    entity.radiusX = positiveNumber(entity.radiusX, 1)
-    entity.radiusY = positiveNumber(entity.radiusY, entity.radiusX)
+    const radiusX = positiveNumber(entity.radiusX, 1)
+    const radiusY = positiveNumber(entity.radiusY, radiusX)
+    if (entity.renderer) {
+      entity.renderer.radiusX = radiusX
+      entity.renderer.radiusY = radiusY
+    } else {
+      entity.radiusX = radiusX
+      entity.radiusY = radiusY
+    }
     return
   }
   if (!entity.vertices) return
   const hull = convexHull(entity.vertices)
   if (hull.length >= 3 && polygonArea(hull) > MIN_AREA) {
-    entity.vertices = hull
+    if (entity.renderer) entity.renderer.vertices = hull
+    else entity.vertices = hull
   } else if (entity.shapeType === 'Triangle') {
-    entity.vertices = [{ x: 0, y: 0.5 }, { x: 0.5, y: -0.5 }, { x: -0.5, y: -0.5 }]
+    const fallback = [{ x: 0, y: 0.5 }, { x: 0.5, y: -0.5 }, { x: -0.5, y: -0.5 }]
+    if (entity.renderer) entity.renderer.vertices = fallback
+    else entity.vertices = fallback
   } else {
-    entity.vertices = [
+    const fallback = [
       { x: -0.5, y: -0.5 }, { x: 0.5, y: -0.5 },
       { x: 0.5, y: 0.5 }, { x: -0.5, y: 0.5 }
     ]
+    if (entity.renderer) entity.renderer.vertices = fallback
+    else entity.vertices = fallback
   }
 }
 
@@ -249,6 +282,20 @@ export function normalizeEntity(entity: GeometryEntity): void {
   normalizeMaterial(entity)
   normalizeAppearance(entity)
   entity.layer = Math.min(Number.MAX_SAFE_INTEGER, Math.max(1, Math.round(finiteNumber(entity.layer, 1))))
+  const collider = entity.getCollider?.()
+  if (collider) {
+    collider.physicsLayer = Math.min(31, Math.max(0, Math.round(finiteNumber(collider.physicsLayer, 0))))
+    collider.collisionMask = Math.min(0xffff_ffff, Math.max(0, Math.round(finiteNumber(collider.collisionMask, 1)))) >>> 0
+    collider.offset.x = finiteNumber(collider.offset.x)
+    collider.offset.y = finiteNumber(collider.offset.y)
+    collider.rotation = normalizeAngle(collider.rotation)
+    collider.radiusX = positiveNumber(collider.radiusX, 1)
+    collider.radiusY = positiveNumber(collider.radiusY, collider.radiusX)
+    if (collider.kind !== 'EllipseCollider2D') {
+      const hull = convexHull(collider.vertices)
+      if (hull.length >= 3 && polygonArea(hull) > MIN_AREA) collider.vertices = hull
+    }
+  }
   entity.mass = clampNumber(entity.mass, MIN_MASS, MAX_MASS, 1)
   entity.density = clampNumber(entity.density, MIN_DENSITY, MAX_DENSITY, 1)
   normalizeShape(entity)

@@ -150,7 +150,15 @@ struct Body {
     is_static: bool,
     is_kinematic: bool,
     is_sensor: bool,
-    layer: i64,
+    layer: u32,
+    collision_mask: u32,
+    collider_offset: Vec2,
+    collider_angle_offset: f64,
+    freeze_rotation: bool,
+    continuous_collision: bool,
+    sleeping_allowed: bool,
+    sleeping: bool,
+    sleep_timer: f64,
 }
 
 impl Body {
@@ -201,13 +209,36 @@ impl Body {
         };
 
         let auto_inertia = data[data_index + 25] > 0.5;
+        let collider_offset = Vec2::new(
+            finite_or(data[data_index + 43], 0.0),
+            finite_or(data[data_index + 44], 0.0),
+        );
+        let shape_inertia = shape.inertia(mass) + mass * collider_offset.length_squared();
         let inertia = if auto_inertia {
-            shape.inertia(mass)
+            shape_inertia
         } else {
-            positive_with_minimum(data[data_index + 26], shape.inertia(mass), MIN_INERTIA)
+            positive_with_minimum(data[data_index + 26], shape_inertia, MIN_INERTIA)
         };
         let movable = !is_static && !is_kinematic;
+        let freeze_rotation = data[data_index + 46] > 0.5;
 
+        let requested_sleep = data[data_index + 49] > 0.5;
+        let externally_driven = Vec2::new(
+            finite_or(data[data_index + 4], 0.0),
+            finite_or(data[data_index + 5], 0.0),
+        )
+        .length_squared() > 1.0e-12
+            || Vec2::new(
+                finite_or(data[data_index + 6], 0.0),
+                finite_or(data[data_index + 7], 0.0),
+            )
+            .length_squared() > 1.0e-12
+            || Vec2::new(
+                finite_or(data[data_index + 21], 0.0),
+                finite_or(data[data_index + 22], 0.0),
+            )
+            .length_squared() > 1.0e-12
+            || finite_or(data[data_index + 16], 0.0).abs() > 1.0e-12;
         Self {
             data_index,
             shape,
@@ -224,7 +255,7 @@ impl Body {
                 finite_or(data[data_index + 7], 0.0),
             ),
             angle: normalize_angle(data[data_index + 14]),
-            angular_velocity: finite_or(data[data_index + 15], 0.0),
+            angular_velocity: if freeze_rotation { 0.0 } else { finite_or(data[data_index + 15], 0.0) },
             force: Vec2::new(
                 finite_or(data[data_index + 21], 0.0),
                 finite_or(data[data_index + 22], 0.0),
@@ -233,7 +264,7 @@ impl Body {
             mass,
             inv_mass: if movable { 1.0 / mass } else { 0.0 },
             inertia,
-            inv_inertia: if movable { 1.0 / inertia } else { 0.0 },
+            inv_inertia: if movable && !freeze_rotation { 1.0 / inertia } else { 0.0 },
             gravity_scale: finite_or(data[data_index + 17], 1.0),
             local_gravity: finite_or(data[data_index + 23], 0.0),
             linear_damping: non_negative(data[data_index + 18], 0.0),
@@ -245,12 +276,40 @@ impl Body {
             is_static,
             is_kinematic,
             is_sensor: data[data_index + 28] > 0.5,
-            layer: finite_or(data[data_index + 33], 1.0).round() as i64,
+            layer: finite_or(data[data_index + 33], 0.0).round().clamp(0.0, 31.0) as u32,
+            collision_mask: finite_or(data[data_index + 42], 0.0)
+                .round()
+                .clamp(0.0, u32::MAX as f64) as u32,
+            collider_offset,
+            collider_angle_offset: normalize_angle(data[data_index + 45]),
+            freeze_rotation,
+            continuous_collision: data[data_index + 47] > 0.5,
+            sleeping_allowed: data[data_index + 48] > 0.5,
+            sleeping: requested_sleep && !externally_driven,
+            sleep_timer: non_negative(data[data_index + 50], 0.0),
         }
+    }
+
+    fn collider_position(&self) -> Vec2 {
+        self.position.add(rotate(self.collider_offset, self.angle))
+    }
+
+    fn collider_angle(&self) -> f64 {
+        normalize_angle(self.angle + self.collider_angle_offset)
+    }
+
+    fn can_collide_with(&self, other: &Self) -> bool {
+        (self.collision_mask & (1_u32 << other.layer)) != 0
+            && (other.collision_mask & (1_u32 << self.layer)) != 0
     }
 
     fn integrate(&mut self, dt: f64, global_gravity: f64, air_friction: f64) {
         if self.is_static {
+            return;
+        }
+        if self.sleeping {
+            self.velocity = Vec2::ZERO;
+            self.angular_velocity = 0.0;
             return;
         }
 
@@ -277,7 +336,12 @@ impl Body {
             .add(self.velocity.mul(dt))
             .finite_or(previous_position);
         self.velocity = self.velocity.finite_or(Vec2::ZERO);
-        self.angle = normalize_angle(self.angle + self.angular_velocity * dt);
+        self.angle = if self.freeze_rotation {
+            self.angular_velocity = 0.0;
+            self.angle
+        } else {
+            normalize_angle(self.angle + self.angular_velocity * dt)
+        };
         self.angular_velocity = finite_or(self.angular_velocity, 0.0);
     }
 
@@ -298,6 +362,31 @@ impl Body {
         }
         self.velocity = self.velocity.add(impulse.mul(self.inv_mass));
         self.angular_velocity += radius.cross(impulse) * self.inv_inertia;
+        if impulse.length_squared() > 1.0e-16 {
+            self.sleeping = false;
+            self.sleep_timer = 0.0;
+        }
+    }
+
+    fn update_sleep_state(&mut self, dt: f64, has_contact: bool) {
+        if !self.sleeping_allowed || self.is_static || self.is_kinematic {
+            self.sleeping = false;
+            self.sleep_timer = 0.0;
+            return;
+        }
+        let slow = self.velocity.length_squared() <= 1.0e-6
+            && self.angular_velocity.abs() <= 1.0e-3;
+        if slow && has_contact {
+            self.sleep_timer += dt;
+            if self.sleep_timer >= 0.5 {
+                self.sleeping = true;
+                self.velocity = Vec2::ZERO;
+                self.angular_velocity = 0.0;
+            }
+        } else {
+            self.sleeping = false;
+            self.sleep_timer = 0.0;
+        }
     }
 }
 

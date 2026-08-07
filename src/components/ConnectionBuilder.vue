@@ -121,6 +121,7 @@ import {
   type Connection,
   type ConnectionAnchor
 } from '../world/Connection'
+import { worldTransform } from '../world/hierarchy'
 
 type Stage = 'objects' | 'path' | 'simulation'
 type VisiblePath = 'straight' | 'manual'
@@ -150,9 +151,9 @@ const stretchingToleranceMass = ref(existing?.stretchingToleranceMass ?? 1e12)
 const collisionEnabled = ref(existing?.collisionEnabled ?? true)
 const collisionRadius = ref(existing?.collisionRadius ?? 0.2)
 const linearDensity = ref(existing?.linearDensity ?? 0.08)
-const availableEntities = computed(() => world.entities.filter(entity => entity.id !== props.selectedId && entity.layer === selectedEntity.value?.layer))
+const availableEntities = computed(() => world.entities.filter(entity => entity.id !== props.selectedId && entity.getCollider()?.physicsLayer === selectedEntity.value?.getCollider()?.physicsLayer))
 const partnerEntity = computed(() => partnerId.value === null ? null : world.entities.find(entity => entity.id === partnerId.value) ?? null)
-const overlapping = computed(() => Boolean(selectedEntity.value && partnerEntity.value && entitiesOverlap(selectedEntity.value, partnerEntity.value)))
+const overlapping = computed(() => Boolean(selectedEntity.value && partnerEntity.value && entitiesOverlap(selectedEntity.value, partnerEntity.value, world.entities)))
 const drawingComplete = computed(() => drawnAnchors.value !== null && drawnPoints.value.length >= 2)
 
 let resizeObserver: ResizeObserver | null = null
@@ -271,7 +272,7 @@ function resizePreview() {
 
 function calculatePreviewTransform(width: number, height: number) {
   const entities = [selectedEntity.value, partnerEntity.value].filter((entity): entity is Entity => Boolean(entity))
-  const points = entities.flatMap(entity => entityBoundaryPoints(entity))
+  const points = entities.flatMap(entity => entityBoundaryPoints(entity, 64, world.entities))
   if (!points.length) return { scale: 1, offsetX: width / 2, offsetY: height / 2 }
   const xs = points.map(point => point.x)
   const ys = points.map(point => point.y)
@@ -294,7 +295,7 @@ function previewToWorld(point: Vec2): Vec2 {
 }
 
 function drawEntity(context: CanvasRenderingContext2D, entity: Entity, selected: boolean) {
-  const points = entityBoundaryPoints(entity).map(worldToPreview)
+  const points = entityBoundaryPoints(entity, 64, world.entities).map(worldToPreview)
   if (points.length < 3) return
   context.beginPath()
   context.moveTo(points[0].x, points[0].y)
@@ -304,7 +305,7 @@ function drawEntity(context: CanvasRenderingContext2D, entity: Entity, selected:
   context.strokeStyle = selected ? cssColor('--accent', '#4c8df6') : cssColor('--text-muted', '#7e8898')
   context.lineWidth = selected ? 2.2 : 1.5
   context.fill(); context.stroke()
-  const center = worldToPreview(entity.transform.position)
+  const center = worldToPreview(worldTransform(entity, world.entities).position)
   context.fillStyle = cssColor('--text-primary', '#fff')
   context.font = '600 11px "Segoe UI Variable Text", sans-serif'
   context.textAlign = 'center'; context.textBaseline = 'middle'
@@ -352,8 +353,8 @@ function renderPreview() {
     : drawnPoints.value
   if (previewPoints.length >= 2) drawPath(context, previewPoints, selectedStyle.value)
   if (displayCenters.value) {
-    if (selectedEntity.value) drawAnchor(context, selectedEntity.value.transform.position)
-    if (partnerEntity.value) drawAnchor(context, partnerEntity.value.transform.position)
+    if (selectedEntity.value) drawAnchor(context, worldTransform(selectedEntity.value, world.entities).position)
+    if (partnerEntity.value) drawAnchor(context, worldTransform(partnerEntity.value, world.entities).position)
   }
   if (drawnAnchors.value) {
     for (const anchor of drawnAnchors.value) {
@@ -374,13 +375,14 @@ function anchorNearPointer(screenPoint: Vec2, requiredEntityId?: number): { enti
   let best: { entity: Entity; anchor: ConnectionAnchor; point: Vec2; distance: number } | null = null
   for (const entity of candidates) {
     if (displayCenters.value) {
-      const centerScreen = worldToPreview(entity.transform.position)
+      const center = worldTransform(entity, world.entities).position
+      const centerScreen = worldToPreview(center)
       const centerDistance = Math.hypot(centerScreen.x - screenPoint.x, centerScreen.y - screenPoint.y)
       if (centerDistance <= 15 && (!best || centerDistance < best.distance)) {
-        best = { entity, anchor: deriveAnchor(entity, 'center'), point: { ...entity.transform.position }, distance: centerDistance }
+        best = { entity, anchor: deriveAnchor(entity, 'center', 0, 0.5, center, world.entities), point: { ...center }, distance: centerDistance }
       }
     }
-    const surfaceAnchor = anchorAtWorldPoint(entity, worldPoint)
+    const surfaceAnchor = anchorAtWorldPoint(entity, worldPoint, world.entities)
     const surfacePoint = resolveAnchor(surfaceAnchor, world.entities)!
     const surfaceScreen = worldToPreview(surfacePoint)
     const surfaceDistance = Math.hypot(surfaceScreen.x - screenPoint.x, surfaceScreen.y - screenPoint.y)

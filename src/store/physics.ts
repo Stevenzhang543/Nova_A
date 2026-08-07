@@ -1,5 +1,5 @@
 import { reactive, markRaw } from 'vue'
-import { World, type EngineDiagnostics, type GlobalPhysicsSettings } from '../world/World'
+import { World, defaultCollisionMatrix, PHYSICS_LAYER_COUNT, type EngineDiagnostics, type GlobalPhysicsSettings } from '../world/World'
 import { Camera } from '../world/Camera'
 import { Entity } from '../world/Entity'
 import { BoxEntity } from '../world/BoxEntity'
@@ -21,6 +21,9 @@ import { editorState } from './editor'
 import { preferencesState } from './preferences'
 import { t } from '../i18n'
 import { normalizeUuid } from '../world/identity'
+import { Collider2D, RigidBody2D, ShapeRenderer2D, type Component2D, type ComponentKind } from '../world/components'
+import { Transform } from '../world/Transform'
+import { SceneManager } from '../world/SceneManager'
 
 interface PhysicsState {
   world: World
@@ -38,6 +41,7 @@ interface SceneEntityData {
   id?: number
   uuid?: string
   name?: string
+  entityType?: string
   shapeType?: string
   layer?: number
   transform?: {
@@ -48,6 +52,17 @@ interface SceneEntityData {
   vertices?: Array<{ x?: number; y?: number }>
   radiusX?: number
   radiusY?: number
+  enabled?: boolean
+  tags?: string[]
+  components?: SceneComponentData[]
+}
+
+interface SceneComponentData {
+  uuid?: string
+  kind?: ComponentKind
+  enabled?: boolean
+  removed?: boolean
+  data?: Record<string, unknown>
 }
 
 interface SceneConnectionData extends Omit<Partial<Connection>, 'anchors'> {
@@ -69,10 +84,19 @@ export const physicsState = reactive<PhysicsState>({
   selectedEntityId: null,
   focusEntityID: null,
   activeTool: 'rectangle',
-  globalSettings: { gravity: 9.8, airFriction: 0.01, timeScale: 1, tickRate: 60, maxCatchUpSteps: 8 },
+  globalSettings: {
+    gravity: 9.8,
+    airFriction: 0.01,
+    timeScale: 1,
+    tickRate: 60,
+    maxCatchUpSteps: 8,
+    collisionMatrix: defaultCollisionMatrix()
+  },
   simulationRunning: false,
   engineDiagnostics: { ...rawWorld.diagnostics }
 })
+
+export const sceneManager = reactive(new SceneManager())
 
 export function normalizeGlobalSettings(): void {
   physicsState.globalSettings.gravity = finiteNumber(physicsState.globalSettings.gravity, 9.8)
@@ -80,6 +104,13 @@ export function normalizeGlobalSettings(): void {
   physicsState.globalSettings.timeScale = Math.max(0, finiteNumber(physicsState.globalSettings.timeScale, 1))
   physicsState.globalSettings.tickRate = Math.min(1000, Math.max(1, finiteNumber(physicsState.globalSettings.tickRate, 60)))
   physicsState.globalSettings.maxCatchUpSteps = Math.min(240, Math.max(1, Math.round(finiteNumber(physicsState.globalSettings.maxCatchUpSteps, 8))))
+  const source = Array.isArray(physicsState.globalSettings.collisionMatrix)
+    ? physicsState.globalSettings.collisionMatrix
+    : defaultCollisionMatrix()
+  physicsState.globalSettings.collisionMatrix = Array.from({ length: PHYSICS_LAYER_COUNT }, (_, layer) => {
+    const value = finiteNumber(source[layer], 1 << layer)
+    return Math.min(0xffff_ffff, Math.max(0, Math.round(value))) >>> 0
+  })
 }
 
 export function enterEditMode(id: number | null): void {
@@ -87,58 +118,77 @@ export function enterEditMode(id: number | null): void {
   physicsState.focusEntityID = id
 }
 
-function serializeEntity(entity: Entity): Record<string, unknown> {
-  normalizeEntity(entity)
-  const data: Record<string, unknown> = {
-    uuid: entity.uuid,
-    name: entity.name,
-    shapeType: entity.shapeType,
-    layer: entity.layer,
-    texture: entity.texture,
-    transparency: entity.transparency,
-    angularVelocity: entity.angularVelocity,
-    linearDamping: entity.linearDamping,
-    angularDamping: entity.angularDamping,
-    density: entity.density,
-    mass: entity.mass,
-    autoInertia: entity.autoInertia,
-    inertia: entity.inertia,
-    gravityScale: entity.gravityScale,
-    torque: entity.torque,
-    gravity: entity.gravity,
-    restitution: entity.restitution,
-    restitutionThreshold: entity.restitutionThreshold,
-    staticFriction: entity.staticFriction,
-    dynamicFriction: entity.dynamicFriction,
-    isSensor: entity.isSensor,
-    isStatic: entity.isStatic,
-    isKinematic: entity.isKinematic,
-    transform: {
-      position: { ...entity.transform.position },
-      scale: { ...entity.transform.scale },
-      rotation: entity.transform.rotation
-    },
-    velocity: { ...entity.velocity },
-    acceleration: { ...entity.acceleration },
-    force: { ...entity.force },
-    color: { ...entity.color }
+function serializeComponent(component: Component2D): Record<string, unknown> {
+  const data: Record<string, unknown> = {}
+  if (component instanceof Transform) {
+    data.parentUuid = component.parentUuid
+    data.position = { ...component.position }
+    data.rotation = component.rotation
+    data.scale = { ...component.scale }
+  } else if (component instanceof ShapeRenderer2D) {
+    data.shape = component.shape
+    data.vertices = component.vertices.map(vertex => ({ ...vertex }))
+    data.radiusX = component.radiusX
+    data.radiusY = component.radiusY
+    data.color = { ...component.color }
+    data.opacity = component.opacity
+    data.texture = component.texture
+    data.sortingLayer = component.sortingLayer
+    data.orderInLayer = component.orderInLayer
+  } else if (component instanceof RigidBody2D) {
+    Object.assign(data, {
+      bodyType: component.bodyType,
+      massMode: component.massMode,
+      density: component.density,
+      mass: component.mass,
+      autoInertia: component.autoInertia,
+      inertia: component.inertia,
+      gravityScale: component.gravityScale,
+      localGravity: component.localGravity,
+      velocity: { ...component.velocity },
+      acceleration: { ...component.acceleration },
+      angularVelocity: component.angularVelocity,
+      linearDamping: component.linearDamping,
+      angularDamping: component.angularDamping,
+      force: { ...component.force },
+      torque: component.torque,
+      continuousCollision: component.continuousCollision,
+      sleepingAllowed: component.sleepingAllowed,
+      freezeRotation: component.freezeRotation
+    })
+  } else if (component instanceof Collider2D) {
+    Object.assign(data, {
+      offset: { ...component.offset },
+      rotation: component.rotation,
+      size: { ...component.size },
+      radiusX: component.radiusX,
+      radiusY: component.radiusY,
+      vertices: component.vertices.map(vertex => ({ ...vertex })),
+      sensor: component.sensor,
+      physicsLayer: component.physicsLayer,
+      collisionMask: component.collisionMask >>> 0,
+      material: { ...component.material }
+    })
   }
-
-  if (entity instanceof BoxEntity || entity instanceof TriangleEntity) {
-    data.vertices = entity.vertices.map(vertex => ({ ...vertex }))
-  } else if (entity instanceof CircleEntity) {
-    data.radiusX = entity.radiusX
-    data.radiusY = entity.radiusY
-  }
-  return data
+  return { uuid: component.uuid, kind: component.kind, enabled: component.enabled, removed: component.removed, data }
 }
 
-export function getSceneJSON(): string {
+function serializeEntity(entity: Entity): Record<string, unknown> {
+  normalizeEntity(entity)
+  return {
+    uuid: entity.uuid,
+    name: entity.name,
+    enabled: entity.enabled,
+    tags: [...entity.tags],
+    entityType: entity.entityType,
+    components: [...entity.componentMap.values()].map(serializeComponent)
+  }
+}
+
+function serializeActiveScene(): Record<string, unknown> {
   normalizeGlobalSettings()
   const entitiesById = new Map(physicsState.world.entities.map(entity => [entity.id, entity]))
-  const source = JSON.stringify({
-    formatVersion: physicsState.world.projectFormatVersion,
-    engineVersion: physicsState.world.projectEngineVersion,
+  return {
     layers: [...editorState.layers],
     activeLayer: editorState.activeLayer,
     renderLayer: editorState.renderLayer,
@@ -157,7 +207,21 @@ export function getSceneJSON(): string {
       manualSegments: connection.manualSegments.map(segment => segment.map(point => ({ ...point }))),
       ropeNodes: connection.ropeNodes.map(node => ({ position: { ...node.position }, velocity: { ...node.velocity } }))
     }} )
-  })
+  }
+}
+
+function projectSource(): Record<string, unknown> {
+  sceneManager.captureActive(serializeActiveScene())
+  return {
+    formatVersion: physicsState.world.projectFormatVersion,
+    engineVersion: physicsState.world.projectEngineVersion,
+    activeSceneUuid: sceneManager.activeSceneUuid,
+    scenes: sceneManager.serialize()
+  }
+}
+
+export function getSceneJSON(): string {
+  const source = JSON.stringify(projectSource())
   return physicsState.world.formatProjectJson(source)
 }
 
@@ -185,8 +249,24 @@ function normalizedVertices(vertices: SceneEntityData['vertices']): Array<{ x: n
   return vertices.map(vertex => ({ x: finiteNumber(vertex.x, 0), y: finiteNumber(vertex.y, 0) }))
 }
 
+function storedComponent(item: SceneEntityData, kind: ComponentKind): SceneComponentData | undefined {
+  return item.components?.find(component => component.kind === kind)
+}
+
+function storedShapeType(item: SceneEntityData): string | undefined {
+  if (item.entityType) return item.entityType
+  const renderer = storedComponent(item, 'ShapeRenderer2D')?.data
+  if (renderer?.shape === 'Ellipse') return 'Circle'
+  if (renderer?.shape === 'Rectangle') return 'Box'
+  if (renderer?.shape === 'Polygon') {
+    const vertices = renderer.vertices
+    return Array.isArray(vertices) && vertices.length === 3 ? 'Triangle' : 'Box'
+  }
+  return item.shapeType ?? item.name
+}
+
 function createShapeEntity(item: SceneEntityData, id: number, position: { x: number; y: number }): Entity {
-  const shapeType = item.shapeType ?? item.name
+  const shapeType = storedShapeType(item)
   if (shapeType === 'Circle') {
     const radiusX = finiteNumber(item.radiusX, 1)
     return new CircleEntity(id, position, radiusX, finiteNumber(item.radiusY, radiusX), item.uuid)
@@ -203,6 +283,112 @@ function createShapeEntity(item: SceneEntityData, id: number, position: { x: num
     return entity
   }
   throw new Error(t('unsupportedShape', { shape: String(shapeType) }))
+}
+
+function recordData(component: SceneComponentData | undefined): Record<string, unknown> {
+  return component?.data && typeof component.data === 'object' ? component.data : {}
+}
+
+function applyComponentMetadata(target: { enabled: boolean; removed: boolean }, source: SceneComponentData): void {
+  target.enabled = source.enabled !== false
+  target.removed = source.removed === true
+  if (target.removed) target.enabled = false
+}
+
+function applyStoredComponents(entity: Entity, item: SceneEntityData): void {
+  if (!Array.isArray(item.components)) return
+
+  const transformSource = storedComponent(item, 'Transform2D')
+  if (transformSource) {
+    const data = recordData(transformSource)
+    const transform = new Transform(transformSource.uuid)
+    applyComponentMetadata(transform, transformSource)
+    transform.parentUuid = typeof data.parentUuid === 'string' ? data.parentUuid : null
+    copyVector(transform.position, data.position)
+    copyVector(transform.scale, data.scale)
+    transform.rotation = finiteNumber(data.rotation, transform.rotation)
+    transform.removed = false
+    transform.enabled = true
+    entity.componentMap.set('Transform2D', transform)
+  }
+
+  const rendererSource = storedComponent(item, 'ShapeRenderer2D')
+  if (rendererSource) {
+    const data = recordData(rendererSource)
+    const shape = data.shape === 'Ellipse' || data.shape === 'Polygon' ? data.shape : 'Rectangle'
+    const renderer = new ShapeRenderer2D(shape, rendererSource.uuid)
+    applyComponentMetadata(renderer, rendererSource)
+    const vertices = normalizedVertices(data.vertices as SceneEntityData['vertices'])
+    if (vertices) renderer.vertices = vertices
+    renderer.radiusX = Math.max(1e-9, finiteNumber(data.radiusX, renderer.radiusX))
+    renderer.radiusY = Math.max(1e-9, finiteNumber(data.radiusY, renderer.radiusY))
+    if (data.color && typeof data.color === 'object') {
+      const color = data.color as Record<string, unknown>
+      renderer.color = {
+        r: finiteNumber(color.r, renderer.color.r),
+        g: finiteNumber(color.g, renderer.color.g),
+        b: finiteNumber(color.b, renderer.color.b)
+      }
+    }
+    renderer.opacity = finiteNumber(data.opacity, renderer.opacity)
+    renderer.texture = typeof data.texture === 'string' ? data.texture : null
+    renderer.sortingLayer = normalizeIdentifier(data.sortingLayer, renderer.sortingLayer)
+    renderer.orderInLayer = Math.round(finiteNumber(data.orderInLayer, renderer.orderInLayer))
+    entity.componentMap.set('ShapeRenderer2D', renderer)
+  } else {
+    entity.removeComponent('ShapeRenderer2D')
+  }
+
+  const bodySource = storedComponent(item, 'RigidBody2D')
+  if (bodySource) {
+    const data = recordData(bodySource)
+    const body = new RigidBody2D(bodySource.uuid)
+    applyComponentMetadata(body, bodySource)
+    if (data.bodyType === 'Static' || data.bodyType === 'Kinematic') body.bodyType = data.bodyType
+    if (data.massMode === 'Manual') body.massMode = 'Manual'
+    if (typeof data.autoInertia === 'boolean') body.autoInertia = data.autoInertia
+    for (const property of ['density', 'mass', 'inertia', 'gravityScale', 'localGravity', 'angularVelocity', 'linearDamping', 'angularDamping', 'torque'] as const) {
+      body[property] = finiteNumber(data[property], body[property])
+    }
+    copyVector(body.velocity, data.velocity)
+    copyVector(body.acceleration, data.acceleration)
+    copyVector(body.force, data.force)
+    if (data.continuousCollision === 'Discrete') body.continuousCollision = 'Discrete'
+    if (typeof data.sleepingAllowed === 'boolean') body.sleepingAllowed = data.sleepingAllowed
+    if (typeof data.freezeRotation === 'boolean') body.freezeRotation = data.freezeRotation
+    entity.componentMap.set('RigidBody2D', body)
+  } else {
+    entity.removeComponent('RigidBody2D')
+  }
+
+  const colliderSource = item.components.find(component => component.kind?.endsWith('Collider2D'))
+  if (colliderSource?.kind === 'BoxCollider2D' || colliderSource?.kind === 'EllipseCollider2D' || colliderSource?.kind === 'PolygonCollider2D') {
+    for (const kind of ['BoxCollider2D', 'EllipseCollider2D', 'PolygonCollider2D'] as const) entity.componentMap.delete(kind)
+    const data = recordData(colliderSource)
+    const collider = new Collider2D(colliderSource.kind, colliderSource.uuid)
+    applyComponentMetadata(collider, colliderSource)
+    copyVector(collider.offset, data.offset)
+    copyVector(collider.size, data.size)
+    collider.rotation = finiteNumber(data.rotation, collider.rotation)
+    collider.radiusX = Math.max(1e-9, finiteNumber(data.radiusX, collider.radiusX))
+    collider.radiusY = Math.max(1e-9, finiteNumber(data.radiusY, collider.radiusY))
+    const vertices = normalizedVertices(data.vertices as SceneEntityData['vertices'])
+    if (vertices) collider.vertices = vertices
+    collider.sensor = data.sensor === true
+    collider.physicsLayer = Math.min(31, Math.max(0, Math.round(finiteNumber(data.physicsLayer))))
+    collider.collisionMask = Math.min(0xffff_ffff, Math.max(0, Math.round(finiteNumber(data.collisionMask, 1 << collider.physicsLayer)))) >>> 0
+    if (data.material && typeof data.material === 'object') {
+      const material = data.material as Record<string, unknown>
+      collider.material.restitution = finiteNumber(material.restitution, collider.material.restitution)
+      collider.material.restitutionThreshold = finiteNumber(material.restitutionThreshold, collider.material.restitutionThreshold)
+      collider.material.staticFriction = finiteNumber(material.staticFriction, collider.material.staticFriction)
+      collider.material.dynamicFriction = finiteNumber(material.dynamicFriction, collider.material.dynamicFriction)
+    }
+    entity.componentMap.set(collider.kind, collider)
+  } else {
+    const collider = entity.getCollider(true)
+    if (collider) entity.removeComponent(collider.kind)
+  }
 }
 
 function applyStoredProperties(entity: Entity, source: Record<string, unknown>): void {
@@ -247,9 +433,15 @@ function createEntityFromData(item: SceneEntityData, forcedId?: number): Entity 
   }
   const source = item as Record<string, unknown>
   const entity = createShapeEntity(item, id, position)
-  applyStoredProperties(entity, source)
-  applyStoredAppearance(entity, source)
-  applyStoredTransform(entity, item, source)
+  if (Array.isArray(item.components)) applyStoredComponents(entity, item)
+  else {
+    applyStoredProperties(entity, source)
+    applyStoredAppearance(entity, source)
+    applyStoredTransform(entity, item, source)
+  }
+  if (typeof item.name === 'string' && item.name.trim()) entity.name = item.name.trim()
+  entity.enabled = item.enabled !== false
+  entity.tags = Array.isArray(item.tags) ? item.tags.filter(tag => typeof tag === 'string').map(tag => tag.slice(0, 80)) : []
 
   if (entity.isStatic) entity.isKinematic = false
   normalizeEntity(entity)
@@ -260,6 +452,7 @@ function createEntityFromData(item: SceneEntityData, forcedId?: number): Entity 
 export function cloneEntity(original: Entity, layer = original.layer, offset = { x: 0, y: 0 }): Entity {
   const data = serializeEntity(original) as SceneEntityData
   delete data.uuid
+  data.components?.forEach(component => { delete component.uuid })
   const clone = createEntityFromData(data, physicsState.world.allocateId())
   clone.layer = layer
   clone.transform.position.x += finiteNumber(offset.x)
@@ -308,7 +501,7 @@ export function duplicateConnections(entityIdMap: Map<number, number>): void {
   const originals = [...physicsState.world.connections]
   for (const original of originals) {
     if (!original.anchors.every(anchor => entityIdMap.has(anchor.entityId))) continue
-    const clone = structuredClone(original) as Connection
+    const clone = JSON.parse(JSON.stringify(original)) as Connection
     clone.id = physicsState.world.allocateConnectionId()
     clone.uuid = normalizeUuid(undefined)
     clone.name = `${original.name} copy`
@@ -360,7 +553,7 @@ function loadConnections(records: unknown[], entities: Entity[], uuidToId: Map<s
     if (!item || typeof item !== 'object' || !Array.isArray(item.anchors)) continue
     const id = claimIdentifier(item.id, maximumId + 1, usedIds)
     if (id === null) continue
-    const connection = structuredClone(item) as Connection
+    const connection = JSON.parse(JSON.stringify(item)) as Connection
     connection.id = id
     connection.uuid = normalizeUuid(item.uuid)
     connection.anchors = item.anchors.flatMap(anchor => {
@@ -384,6 +577,9 @@ function loadGlobalSettings(scene: Record<string, unknown>): void {
   physicsState.globalSettings.timeScale = finiteNumber(settings.timeScale, physicsState.globalSettings.timeScale)
   physicsState.globalSettings.tickRate = finiteNumber(settings.tickRate, physicsState.globalSettings.tickRate)
   physicsState.globalSettings.maxCatchUpSteps = finiteNumber(settings.maxCatchUpSteps, physicsState.globalSettings.maxCatchUpSteps)
+  if (Array.isArray(settings.collisionMatrix)) {
+    physicsState.globalSettings.collisionMatrix = settings.collisionMatrix.map(value => finiteNumber(value))
+  }
   normalizeGlobalSettings()
 }
 
@@ -393,7 +589,12 @@ export function loadProject(jsonString: string): boolean {
     const parsed: unknown = JSON.parse(migrated)
     const root = Array.isArray(parsed) ? { entities: parsed } : parsed
     if (!root || typeof root !== 'object') throw new Error(t('invalidProjectRoot'))
-    const scene = root as Record<string, unknown>
+    const project = root as Record<string, unknown>
+    const sceneRecords = Array.isArray(project.scenes)
+      ? project.scenes
+      : [{ uuid: normalizeUuid(undefined), name: 'Main Scene', ...project }]
+    sceneManager.importProject(sceneRecords, project.activeSceneUuid)
+    const scene = sceneManager.activeScene.data
     if (!Array.isArray(scene.entities)) throw new Error(t('missingEntitiesArray'))
 
     const { entities, maximumId, uuidToId } = loadEntities(scene.entities as SceneEntityData[])
@@ -437,6 +638,40 @@ export function loadProject(jsonString: string): boolean {
     editorState.statusText = t('loadFailed', { message: error instanceof Error ? error.message : t('unknownError') })
     return false
   }
+}
+
+function reloadSceneManagerProject(): boolean {
+  const source = JSON.stringify({
+    formatVersion: physicsState.world.projectFormatVersion,
+    engineVersion: physicsState.world.projectEngineVersion,
+    activeSceneUuid: sceneManager.activeSceneUuid,
+    scenes: sceneManager.serialize()
+  })
+  return loadProject(source)
+}
+
+export function createScene(name?: string): boolean {
+  sceneManager.captureActive(serializeActiveScene())
+  const scene = sceneManager.create(name)
+  sceneManager.setActive(scene.uuid)
+  return reloadSceneManagerProject()
+}
+
+export function setActiveScene(uuid: string): boolean {
+  if (uuid === sceneManager.activeSceneUuid) return true
+  sceneManager.captureActive(serializeActiveScene())
+  if (!sceneManager.setActive(uuid)) return false
+  return reloadSceneManagerProject()
+}
+
+export function reloadActiveScene(): boolean {
+  return reloadSceneManagerProject()
+}
+
+export function setSceneLoaded(uuid: string, loaded: boolean): boolean {
+  sceneManager.captureActive(serializeActiveScene())
+  if (!sceneManager.setLoaded(uuid, loaded)) return false
+  return reloadSceneManagerProject()
 }
 
 export function toggleSimulation(state: boolean): void {

@@ -1,7 +1,7 @@
 fn determine_sub_steps(bodies: &[Body], dt: f64, global_gravity: f64) -> usize {
     let mut required = BASE_SUB_STEPS;
     for body in bodies {
-        if body.is_static {
+        if body.is_static || !body.continuous_collision {
             continue;
         }
         let gravity_acceleration =
@@ -51,17 +51,38 @@ fn read_constraints(
         .collect()
 }
 
-fn active_bound_pairs(constraints: &[ConnectionConstraint]) -> HashSet<(usize, usize)> {
-    constraints
+fn active_bound_pairs(
+    constraints: &[ConnectionConstraint],
+    body_count: usize,
+) -> HashSet<(usize, usize)> {
+    let mut adjacency = vec![Vec::new(); body_count];
+    for constraint in constraints
         .iter()
         .filter(|constraint| constraint.binding && constraint.active)
-        .map(|constraint| {
-            (
-                constraint.body_a.min(constraint.body_b),
-                constraint.body_a.max(constraint.body_b),
-            )
-        })
-        .collect()
+    {
+        adjacency[constraint.body_a].push(constraint.body_b);
+        adjacency[constraint.body_b].push(constraint.body_a);
+    }
+    let mut pairs = HashSet::new();
+    for start in 0..body_count {
+        let mut pending = vec![start];
+        let mut visited = vec![false; body_count];
+        visited[start] = true;
+        while let Some(current) = pending.pop() {
+            for &next in &adjacency[current] {
+                if !visited[next] {
+                    visited[next] = true;
+                    pending.push(next);
+                }
+            }
+        }
+        for (other, connected) in visited.into_iter().enumerate().skip(start + 1) {
+            if connected {
+                pairs.insert((start, other));
+            }
+        }
+    }
+    pairs
 }
 
 fn record_contact_diagnostics(data: &mut [f64], body_a: &Body, body_b: &Body, manifold: &Manifold) {
@@ -135,7 +156,12 @@ fn collect_contacts(
     let mut broad_phase: Vec<(usize, Aabb)> = bodies
         .iter()
         .enumerate()
-        .map(|(index, body)| (index, body.shape.aabb(body.position, body.angle)))
+        .map(|(index, body)| {
+            (
+                index,
+                body.shape.aabb(body.collider_position(), body.collider_angle()),
+            )
+        })
         .collect();
     broad_phase.sort_by(|a, b| a.1.min_x.total_cmp(&b.1.min_x));
 
@@ -159,7 +185,7 @@ fn collect_contacts(
             }
             let body_a = &bodies[body_a_index];
             let body_b = &bodies[body_b_index];
-            if body_a.layer != body_b.layer {
+            if !body_a.can_collide_with(body_b) {
                 continue;
             }
             let manifolds = collide(body_a, body_b);
@@ -248,6 +274,8 @@ fn write_bodies(data: &mut [f64], bodies: &[Body]) {
         data[index + 14] = normalize_angle(body.angle);
         data[index + 15] = finite_or(body.angular_velocity, 0.0);
         data[index + 26] = body.inertia;
+        data[index + 49] = if body.sleeping { 1.0 } else { 0.0 };
+        data[index + 50] = finite_or(body.sleep_timer, 0.0).max(0.0);
     }
 }
 
@@ -304,7 +332,7 @@ impl SolverWorld {
         }
         let global_gravity = finite_or(global_gravity, 0.0);
         let air_friction = non_negative(air_friction, 0.0);
-        let bound_pairs = active_bound_pairs(&self.constraints);
+        let bound_pairs = active_bound_pairs(&self.constraints, self.bodies.len());
         let sub_steps = determine_sub_steps(&self.bodies, dt, global_gravity);
         let sub_dt = dt / sub_steps as f64;
         for sub_step in 0..sub_steps {
@@ -320,6 +348,10 @@ impl SolverWorld {
                     record_diagnostics: sub_step + 1 == sub_steps,
                 },
             );
+        }
+        for body in &mut self.bodies {
+            let has_contact = self.data[body.data_index + 29] > 0.0;
+            body.update_sleep_state(dt, has_contact);
         }
         write_bodies(&mut self.data, &self.bodies);
         write_constraints(&mut self.connection_data, &self.constraints);
@@ -350,8 +382,44 @@ pub fn step_physics_with_connections(
     global_gravity: f64,
     air_friction: f64,
 ) -> Vec<f64> {
-    let mut world = SolverWorld::new(input, connection_input);
+    let source_stride = if input.is_empty() || input.len() % STRIDE == 0 {
+        STRIDE
+    } else if input.len() % V1_2_STRIDE == 0 {
+        V1_2_STRIDE
+    } else if input.len() % LEGACY_STRIDE == 0 {
+        LEGACY_STRIDE
+    } else {
+        STRIDE
+    };
+    let legacy = source_stride != STRIDE;
+    let upgraded = if legacy {
+        let mut records = vec![0.0; input.len() / source_stride * STRIDE];
+        for (record_index, source) in input.chunks_exact(source_stride).enumerate() {
+            let target = &mut records[record_index * STRIDE..(record_index + 1) * STRIDE];
+            target[..source_stride].copy_from_slice(source);
+            if source_stride == LEGACY_STRIDE {
+                let layer = finite_or(source[33], 0.0).round().clamp(0.0, 31.0) as u32;
+                target[42] = (1_u32 << layer) as f64;
+            }
+            target[47] = 1.0;
+            target[48] = 1.0;
+        }
+        records
+    } else {
+        input.to_vec()
+    };
+    let mut world = SolverWorld::new(&upgraded, connection_input);
     world.step(dt, global_gravity, air_friction);
-    world.into_output()
+    let output = world.into_output();
+    if !legacy {
+        return output;
+    }
+    let body_count = upgraded.len() / STRIDE;
+    let mut downgraded = Vec::with_capacity(body_count * source_stride + connection_input.len());
+    for record in output[..body_count * STRIDE].chunks_exact(STRIDE) {
+        downgraded.extend_from_slice(&record[..source_stride]);
+    }
+    downgraded.extend_from_slice(&output[body_count * STRIDE..]);
+    downgraded
 }
 

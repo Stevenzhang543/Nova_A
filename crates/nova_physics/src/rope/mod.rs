@@ -481,7 +481,13 @@ fn correct_rope_position(bodies: &mut [Body], constraint: &mut ConnectionConstra
     }
 }
 
-fn rope_collision_body(node: RopeNode, radius: f64, mass: f64, layer: i64) -> Body {
+fn rope_collision_body(
+    node: RopeNode,
+    radius: f64,
+    mass: f64,
+    layer: u32,
+    collision_mask: u32,
+) -> Body {
     Body {
         data_index: usize::MAX,
         shape: Shape::Ellipse {
@@ -511,6 +517,14 @@ fn rope_collision_body(node: RopeNode, radius: f64, mass: f64, layer: i64) -> Bo
         is_kinematic: false,
         is_sensor: false,
         layer,
+        collision_mask,
+        collider_offset: Vec2::ZERO,
+        collider_angle_offset: 0.0,
+        freeze_rotation: true,
+        continuous_collision: true,
+        sleeping_allowed: false,
+        sleeping: false,
+        sleep_timer: 0.0,
     }
 }
 
@@ -577,7 +591,8 @@ fn apply_rope_sample_correction(
 struct RopeSample {
     link: usize,
     ratio: f64,
-    layer: i64,
+    layer: u32,
+    collision_mask: u32,
 }
 
 #[derive(Clone, Copy)]
@@ -592,11 +607,13 @@ fn rope_can_collide_with_body(
     constraint: &ConnectionConstraint,
     body: &Body,
     body_index: usize,
-    layer: i64,
+    layer: u32,
+    collision_mask: u32,
 ) -> bool {
     body_index != constraint.body_a
         && body_index != constraint.body_b
-        && body.layer == layer
+        && (collision_mask & (1_u32 << body.layer)) != 0
+        && (body.collision_mask & (1_u32 << layer)) != 0
         && !body.is_sensor
 }
 
@@ -736,6 +753,7 @@ fn resolve_rope_sample_body(
         constraint.collision_radius,
         1.0 / sample_inverse,
         sample.layer,
+        sample.collision_mask,
     );
     for manifold in collide(&sample_body, &bodies[body_index]) {
         resolve_rope_manifold(bodies, constraint, sample, body_index, manifold);
@@ -747,6 +765,7 @@ fn resolve_rope_collisions(bodies: &mut [Body], constraint: &mut ConnectionConst
         return;
     }
     let layer = bodies[constraint.body_a].layer;
+    let collision_mask = bodies[constraint.body_a].collision_mask;
     let point_count = rope_point_count(constraint);
     for link in 0..point_count - 1 {
         if constraint.break_link == Some(link) {
@@ -761,13 +780,24 @@ fn resolve_rope_collisions(bodies: &mut [Body], constraint: &mut ConnectionConst
         for sample_index in 0..sample_count {
             let ratio = (sample_index as f64 + 0.5) / sample_count as f64;
             for body_index in 0..bodies.len() {
-                if !rope_can_collide_with_body(constraint, &bodies[body_index], body_index, layer) {
+                if !rope_can_collide_with_body(
+                    constraint,
+                    &bodies[body_index],
+                    body_index,
+                    layer,
+                    collision_mask,
+                ) {
                     continue;
                 }
                 resolve_rope_sample_body(
                     bodies,
                     constraint,
-                    RopeSample { link, ratio, layer },
+                    RopeSample {
+                        link,
+                        ratio,
+                        layer,
+                        collision_mask,
+                    },
                     body_index,
                 );
             }

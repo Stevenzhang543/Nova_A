@@ -9,10 +9,10 @@ fn minkowski_support(body_a: &Body, body_b: &Body, direction: Vec2) -> SupportPo
     let direction = direction.normalized_or(Vec2::new(1.0, 0.0));
     let point_a = body_a
         .shape
-        .support(body_a.position, body_a.angle, direction);
+        .support(body_a.collider_position(), body_a.collider_angle(), direction);
     let point_b = body_b
         .shape
-        .support(body_b.position, body_b.angle, direction.neg());
+        .support(body_b.collider_position(), body_b.collider_angle(), direction.neg());
     SupportPoint {
         point: point_a.sub(point_b),
         point_a,
@@ -68,8 +68,8 @@ fn handle_simplex(simplex: &mut Vec<SupportPoint>, direction: &mut Vec2) -> bool
 
 fn gjk(body_a: &Body, body_b: &Body) -> Option<Vec<SupportPoint>> {
     let mut direction = body_b
-        .position
-        .sub(body_a.position)
+        .collider_position()
+        .sub(body_a.collider_position())
         .normalized_or(Vec2::new(1.0, 0.0));
     let first = minkowski_support(body_a, body_b, direction);
     let mut simplex = vec![first];
@@ -146,7 +146,7 @@ fn epa(body_a: &Body, body_b: &Body, mut polytope: Vec<SupportPoint>) -> Option<
         polytope.swap(1, 2);
     }
 
-    let center_direction = body_b.position.sub(body_a.position);
+    let center_direction = body_b.collider_position().sub(body_a.collider_position());
     let tolerance = body_a
         .shape
         .characteristic_extent()
@@ -224,7 +224,7 @@ fn world_polygon_vertices(body: &Body) -> Option<Vec<Vec2>> {
     Some(
         vertices
             .iter()
-            .map(|vertex| body.position.add(rotate(*vertex, body.angle)))
+            .map(|vertex| body.collider_position().add(rotate(*vertex, body.collider_angle())))
             .collect(),
     )
 }
@@ -269,7 +269,7 @@ fn clip_segment_to_plane(points: &[Vec2], normal: Vec2, offset: f64) -> Vec<Vec2
 fn polygon_manifolds(body_a: &Body, body_b: &Body) -> Option<Vec<Manifold>> {
     let vertices_a = world_polygon_vertices(body_a)?;
     let vertices_b = world_polygon_vertices(body_b)?;
-    let center_direction = body_b.position.sub(body_a.position);
+    let center_direction = body_b.collider_position().sub(body_a.collider_position());
     let mut minimum_overlap = f64::INFINITY;
     let mut collision_normal = Vec2::new(1.0, 0.0);
     let mut reference_is_a = true;

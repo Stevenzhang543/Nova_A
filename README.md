@@ -4,21 +4,22 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE.md)
 [![Platforms](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey)](https://v2.tauri.app/start/prerequisites/)
-[![Release](https://img.shields.io/badge/release-1.2.0-63c6ff)]()
+[![Release](https://img.shields.io/badge/release-1.3.0-63c6ff)]()
 
 Nova_A is an open-source 2D physics engine, renderer, and desktop GUI editor built with Rust, WebAssembly, Vue 3, and Tauri.
 
-Version **1.2.0**, Engine Foundation, changes Nova_A from a frame-reconstructed physics editor into a modular, retained runtime foundation. It preserves the v1.1.2 editor workflow, physics behavior, animations, and renderer quality while establishing the architecture needed for the 2.0 game-engine roadmap.
+Version **1.3.0**, Scene & Component System, turns the retained v1.2 runtime into the first usable game-engine object model. Existing drawing, rendering, connections, physics properties, themes, translations, menus, animations, and editor gestures remain available.
 
-## What is new in v1.2.0
+## What is new in v1.3.0
 
-- The Rust backend is a Cargo workspace with one-way dependencies: `nova_math` → `nova_physics` → `nova_runtime`, with `nova_format` owning saved schemas and `nova_wasm` as the sole JavaScript boundary. `nova_core` remains a small source-compatibility facade.
-- A persistent `PhysicsWorld` now retains parsed bodies, contacts, constraints, bindings, and rope nodes. Create/update/destroy commands rebuild solver configuration only after a real edit; ordinary ticks reuse the existing world and Float64 state buffers.
-- Physics runs through a fixed-timestep accumulator independent of display refresh rate. The editor exposes 30/60/120 Hz presets, a custom rate, maximum catch-up steps, time scale, Play, Pause, and Single Step.
-- Runtime events and live engine diagnostics expose body/connection counts, steps, interpolation, dropped time, pending events, and configuration rebuilds without coupling the renderer to the solver.
-- Project format 6 records `formatVersion` and `engineVersion`. Saved entity and connection identities are UUIDs, while compact integers remain runtime-only. Central Rust migrations continue loading v1.1.2 numeric-ID projects and legacy entity arrays.
-- The original 40 solver regression tests remain unchanged and pass. Additional workspace tests cover retained-world behavior, command-driven rebuilds, project migration, numeric validation, pausing/single-step, and identical results at 30, 60, 144, and 240 render FPS.
-- All v1.1.2 physics strings, layers, bindings, themes, translations, menus, dialogs, editing gestures, transitions, animations, and renderer behavior remain available.
+- Entities now contain UUID-backed components instead of owning rendering, rigid-body, collider, and transform data in one monolithic class. Every entity has a mandatory `Transform2D`; `ShapeRenderer2D`, `RigidBody2D`, and the shape-specific Collider2D can be enabled, reset, removed, copied, pasted, and restored in the Inspector.
+- Transform parenting preserves world position, rotation, and scale. Parent cycles are rejected in the editor and by Rust project validation, and the scene sidebar displays the hierarchy.
+- Render sorting (`sortingLayer` and `orderInLayer`) is separate from physics layers. Colliders expose offset, rotation, sensor/material values, a 32-bit collision mask, and a project-wide symmetric 32x32 collision matrix.
+- `RigidBody2D` exposes dynamic/kinematic/static type, automatic/manual mass, automatic/manual inertia, continuous/discrete collision, sleeping, freeze rotation, damping, gravity, forces, and diagnostics. Every exposed flag crosses the Float64 ABI into the Rust solver.
+- Projects can contain multiple named scenes. The Scene Manager can create, activate, load, unload, and reload scenes while preserving each scene's entities, components, connections, render layers, and physics settings.
+- Project format 7 stores scenes and canonical component records. Central Rust migration converts format-6 and older monolithic entity records, numeric IDs, and legacy `Connection` records into UUID-backed `Rope2D` or `FixedJoint2D` records.
+- Binding overlapping objects now creates a rigid compound: editor dragging moves the full connected group, physics excludes all internal compound contacts while distributing external collision impulses across fixed joints, and rendering fills all members consistently while drawing only the union's exterior boundary.
+- The regression suite covers component identity, scene lifecycle, project migration, collision masks, continuous collision, sleeping/wake-up, freeze rotation, rigid-compound mass and transform behavior, ropes, numerical units, and retained runtime behavior.
 
 ## Engine workspace
 
@@ -127,10 +128,10 @@ Configuration changes cross Vue → `nova_wasm` as explicit retained-world comma
 
 ## Project compatibility
 
-- New saves use project format 6 and engine version `1.2.0`.
-- Persisted entities and connections use UUIDs; runtime handles are never written to disk.
+- New saves use project format 7 and engine version `1.3.0`.
+- Persisted scenes, entities, components, and connections use UUIDs; runtime handles are never written to disk.
 - Format migration and validation are centralized in `nova_format`, not scattered through editor components.
-- v1.1.2 format-5 files, older object roots, and legacy top-level entity arrays continue to load. A migrated project is only written in the new format when the user saves it.
+- v1.2 format-6 files, v1.1.2 format-5 files, older object roots, and legacy top-level entity arrays continue to load. A migrated project is only written in the new format when the user saves it.
 
 | Property | Solver/render behavior |
 | --- | --- |
@@ -146,12 +147,15 @@ Configuration changes cross Vue → `nova_wasm` as explicit retained-world comma
 | Restitution and threshold | Restitution applies only when closing speed exceeds the configured threshold. |
 | Static/dynamic friction | Sequential impulses use static friction before clamped dynamic friction. |
 | Sensor | Body-body contacts report overlap diagnostics without applying collision impulses; physical strings pass through sensor-only bodies. |
-| Layer | Bodies and connections interact only when every participant has the same layer ID. |
+| Render sorting layer/order | Controls draw order only and never changes collision behavior. |
+| Physics layer/mask/matrix | A contact is solved only when both collider masks and the project collision matrix allow the layer pair. A zero mask intentionally disables every contact. |
+| Collider offset/rotation/shape | Collision geometry is independent from renderer geometry and uses its own local transform, material, sensor state, and shape. |
+| Continuous collision, sleeping, freeze rotation | Continuous bodies request adaptive anti-tunneling substeps; eligible resting bodies sleep and wake on impulse; frozen bodies reject torque and angular impulse. |
 | String route and anchors | Straight and normalized manual routes repatch after edit-mode transforms; center/surface/vertex/side anchors follow current geometry. Legacy automatic-curve records remain readable. |
 | String stretch/bend/stiffness/damping | Applied by endpoint constraints or every physical-rope segment. Per-link constants are scaled so changing node count does not change the configured whole-string stiffness or damping. |
 | String radius/density/collision | Radius controls continuous segment collision and rendered diameter. Linear density controls exact total rope mass. Source bodies are excluded; same-layer third bodies receive equal-and-opposite impulse and friction. |
 | String failure tolerances | Configured equivalent masses are compared with calculated stretch/bend force using standard gravity. The selected link breaks and both remaining fragments continue simulating. |
-| Bind | Produces one compound motion state with combined mass and parallel-axis inertia while preserving both render shapes. |
+| Bind / FixedJoint2D | Produces one compound motion state with combined mass and parallel-axis inertia. Internal overlap borders and contacts are removed; external impulses move the assembly as one body. |
 | Color, texture, opacity | Renderer-only properties; they do not alter mass or collision geometry. |
 
 ## Numerical domain

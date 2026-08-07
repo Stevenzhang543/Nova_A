@@ -2,7 +2,7 @@
   <div class="settings-page">
     <header class="page-header">
       <div>
-        <span class="eyebrow">Nova_A 1.2.0</span>
+        <span class="eyebrow">Nova_A 1.3.0</span>
         <h1>{{ t('settings') }}</h1>
       </div>
       <div class="theme-switch" :aria-label="t('theme')">
@@ -57,6 +57,18 @@
           <div><span>{{ t('pendingEvents') }}</span><strong>{{ physics.engineDiagnostics.eventCount }}</strong></div>
           <div><span>{{ t('configurationRebuilds') }}</span><strong>{{ physics.engineDiagnostics.configurationRebuilds }}</strong></div>
           <div><span>{{ t('paused') }}</span><strong>{{ physics.simulationRunning ? t('no') : t('yes') }}</strong></div>
+        </div>
+      </section>
+
+      <section class="settings-card matrix-card">
+        <div class="card-heading"><span class="card-icon">#</span><h2>{{ t('collisionMatrix') }}</h2></div>
+        <p>{{ t('collisionMatrixDescription') }}</p>
+        <div class="matrix-scroll">
+          <div class="matrix-header"><span></span><b v-for="column in physicsLayers" :key="column">{{ column }}</b></div>
+          <div v-for="row in physicsLayers" :key="row" class="matrix-row">
+            <b>{{ row }}</b>
+            <button v-for="column in physicsLayers" :key="column" :class="{ active: layersCollide(row, column) }" :aria-label="`${row} / ${column}`" @click="toggleLayerCollision(row, column)"></button>
+          </div>
         </div>
       </section>
 
@@ -137,7 +149,26 @@ const ToggleSwitch = defineComponent({
 
 const autosaveAvailable = computed(() => autosaveState.available)
 const isCustomTickRate = computed(() => ![30, 60, 120].includes(physics.globalSettings.tickRate))
+const physicsLayers = Array.from({ length: 32 }, (_, index) => index)
 watch(() => prefs.locale, () => { editorState.statusText = t('ready') })
+
+function layerBit(layer: number): number { return (2 ** layer) >>> 0 }
+function layersCollide(first: number, second: number): boolean {
+  return (physics.globalSettings.collisionMatrix[first] & layerBit(second)) !== 0
+    && (physics.globalSettings.collisionMatrix[second] & layerBit(first)) !== 0
+}
+function toggleLayerCollision(first: number, second: number) {
+  const enabled = !layersCollide(first, second)
+  const firstBit = layerBit(second)
+  const secondBit = layerBit(first)
+  physics.globalSettings.collisionMatrix[first] = enabled
+    ? (physics.globalSettings.collisionMatrix[first] | firstBit) >>> 0
+    : (physics.globalSettings.collisionMatrix[first] & ~firstBit) >>> 0
+  physics.globalSettings.collisionMatrix[second] = enabled
+    ? (physics.globalSettings.collisionMatrix[second] | secondBit) >>> 0
+    : (physics.globalSettings.collisionMatrix[second] & ~secondBit) >>> 0
+  pushHistory()
+}
 
 function applyPhysicsSettings() {
   normalizeGlobalSettings()
@@ -168,6 +199,15 @@ h1 { margin: 0; font-size: clamp(26px, 4vw, 38px); font-weight: 620; letter-spac
 .settings-grid { width: min(1040px, 100%); margin: 0 auto; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; padding-bottom: 30px; }
 .settings-card { align-self: start; display: flex; flex-direction: column; padding: 18px; border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); background: var(--surface-1); backdrop-filter: var(--glass-blur); box-shadow: var(--shadow-sm); transition: transform 180ms ease, border-color 180ms ease; }
 .settings-card:hover { transform: translateY(-2px); border-color: var(--border-strong); }
+.matrix-card { grid-column: 1 / -1; }
+.matrix-card p { margin-bottom: 12px; }
+.matrix-scroll { max-width: 100%; padding: 7px; overflow: auto; border: 1px solid var(--border-subtle); border-radius: 10px; background: var(--surface-2); }
+.matrix-header, .matrix-row { width: max-content; display: grid; grid-template-columns: 28px repeat(32, 18px); gap: 3px; align-items: center; }
+.matrix-header { margin-bottom: 4px; }
+.matrix-header b, .matrix-row > b { color: var(--text-muted); font-size: 8px; text-align: center; font-weight: 600; }
+.matrix-row { margin-bottom: 3px; }
+.matrix-row button { width: 18px; height: 18px; padding: 0; border: 1px solid var(--border-subtle); border-radius: 4px; background: var(--surface-3); }
+.matrix-row button.active { border-color: color-mix(in srgb, var(--accent) 76%, white); background: var(--accent); box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--accent) 65%, white); }
 .card-heading { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
 .card-icon { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 9px; color: var(--accent); background: var(--accent-soft); font-size: 16px; }
 h2 { margin: 0; font-size: 15px; font-weight: 650; letter-spacing: -.01em; }

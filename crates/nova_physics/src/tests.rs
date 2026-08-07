@@ -16,6 +16,9 @@ mod tests {
         record[25] = 1.0;
         record[27] = 1.0;
         record[33] = 1.0;
+        record[42] = 2.0;
+        record[47] = 1.0;
+        record[48] = 1.0;
         record
     }
 
@@ -31,6 +34,9 @@ mod tests {
         record[25] = 1.0;
         record[27] = 1.0;
         record[33] = 1.0;
+        record[42] = 2.0;
+        record[47] = 1.0;
+        record[48] = 1.0;
         let half_width = width * 0.5;
         let half_height = height * 0.5;
         let vertices = [
@@ -760,5 +766,51 @@ mod tests {
         let output = step_physics(&body, 0.25, 0.0, 0.0);
         assert!((output[2] - 5.5).abs() < 1.0e-10, "x={}", output[2]);
         assert!((output[3] + 5.5).abs() < 1.0e-10, "y={}", output[3]);
+    }
+
+    #[test]
+    fn zero_collision_mask_disables_contacts() {
+        let mut first = ellipse_record(1.0, 0.0, 0.0, 1.0, 1.0);
+        first[42] = 0.0;
+        let mut second = ellipse_record(2.0, 0.5, 0.0, 1.0, 1.0);
+        second[42] = 0.0;
+        first.extend(second);
+        let output = step_physics(&first, 1.0 / 60.0, 0.0, 0.0);
+        assert_eq!(output[29], 0.0);
+        assert_eq!(output[STRIDE + 29], 0.0);
+    }
+
+    #[test]
+    fn freeze_rotation_rejects_torque_and_angular_impulses() {
+        let mut body = box_record(1.0, 0.0, 0.0, 2.0, 1.0);
+        body[15] = 5.0;
+        body[16] = 100.0;
+        body[46] = 1.0;
+        let output = step_physics(&body, 0.25, 0.0, 0.0);
+        assert_eq!(output[14], 0.0);
+        assert_eq!(output[15], 0.0);
+    }
+
+    #[test]
+    fn continuous_mode_controls_adaptive_substeps() {
+        let mut continuous = ellipse_record(1.0, 0.0, 0.0, 0.1, 0.1);
+        continuous[4] = 1_000.0;
+        let continuous_body = Body::from_data(&continuous, 0);
+        assert!(determine_sub_steps(&[continuous_body], 0.1, 0.0) > BASE_SUB_STEPS);
+
+        continuous[47] = 0.0;
+        let discrete_body = Body::from_data(&continuous, 0);
+        assert_eq!(determine_sub_steps(&[discrete_body], 0.1, 0.0), BASE_SUB_STEPS);
+    }
+
+    #[test]
+    fn sleeping_body_wakes_when_an_impulse_arrives() {
+        let data = ellipse_record(1.0, 0.0, 0.0, 1.0, 1.0);
+        let mut body = Body::from_data(&data, 0);
+        body.update_sleep_state(0.6, true);
+        assert!(body.sleeping);
+        body.apply_impulse(Vec2::new(1.0, 0.0), Vec2::ZERO);
+        assert!(!body.sleeping);
+        assert!(body.velocity.x > 0.0);
     }
 }

@@ -12,7 +12,9 @@ mod engine {
         MIN_DIMENSION,
     };
 
-    pub const STRIDE: usize = 42;
+    pub const LEGACY_STRIDE: usize = 42;
+    pub const V1_2_STRIDE: usize = 46;
+    pub const STRIDE: usize = 51;
     pub const ROPE_NODE_CAPACITY: usize = 32;
     pub const ROPE_NODE_DATA_OFFSET: usize = 29;
     pub const CONNECTION_STRIDE: usize = ROPE_NODE_DATA_OFFSET + ROPE_NODE_CAPACITY * 4;
@@ -38,7 +40,7 @@ mod engine {
 
 pub use engine::{
     step_physics, step_physics_with_connections, PhysicsEvent, PhysicsWorld, CONNECTION_STRIDE,
-    ROPE_NODE_CAPACITY, ROPE_NODE_DATA_OFFSET, STRIDE,
+    LEGACY_STRIDE, ROPE_NODE_CAPACITY, ROPE_NODE_DATA_OFFSET, STRIDE, V1_2_STRIDE,
 };
 
 pub mod body {

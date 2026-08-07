@@ -9,9 +9,11 @@ import type { Vec2 } from '../world/types'
 import { editorState, openContextMenu } from '../store/editor'
 import { isValidConvexPolygon, MIN_SIZE, normalizeEntity, syncMassFromDensity } from '../world/geometry'
 import { preferencesState as prefs } from '../store/preferences'
-import { connectionGeometrySignature, connectionSharesLayer, repatchConnection, resolveAnchor, routePoints, setManualRoute } from '../world/Connection'
+import { connectionGeometrySignature, connectionSharesLayer, entityBoundaryPoints, repatchConnection, resolveAnchor, routePoints, setManualRoute, translateBoundCompound } from '../world/Connection'
 import { t } from '../i18n'
 import { defaultColorForLayer } from '../world/layers'
+import { compoundGeometries } from '../world/compoundGeometry'
+import { localPointToWorld, worldPointToLocal, worldTransform } from '../world/hierarchy'
 
 const canvasRef = ref<HTMLCanvasElement | null>(null)
 let ctx: CanvasRenderingContext2D | null = null
@@ -51,24 +53,16 @@ watch(() => state.focusEntityID, (newId) => {
     
     const ent = world.entities.find(e => e.id === newId); if (!ent) return;
     
-    let maxDim = 1;
-    if (ent instanceof BoxEntity || ent instanceof TriangleEntity) {
-        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-        for (const v of ent.vertices) {
-            if (v.x < minX) minX = v.x; if (v.y < minY) minY = v.y;
-            if (v.x > maxX) maxX = v.x; if (v.y > maxY) maxY = v.y;
-        }
-        maxDim = Math.max((maxX - minX) * ent.transform.scale.x, (maxY - minY) * ent.transform.scale.y);
-    } else if (ent instanceof CircleEntity) {
-        maxDim = Math.max(ent.radiusX * ent.transform.scale.x, ent.radiusY * ent.transform.scale.y) * 2;
-    }
-    if (maxDim <= 0.1) maxDim = 1;
+    const boundary = entityBoundaryPoints(ent, 64, world.entities)
+    const xs = boundary.map(point => point.x); const ys = boundary.map(point => point.y)
+    const maxDim = boundary.length ? Math.max(Math.max(...xs) - Math.min(...xs), Math.max(...ys) - Math.min(...ys), 1) : 1
     
     const canvasW = canvasRef.value?.clientWidth || 800; const canvasH = canvasRef.value?.clientHeight || 600; const usableW = canvasW - 300; 
     const targetScale = Math.min(usableW / maxDim, canvasH / maxDim) * 0.666;
     
     camera.targetScale = Math.min(Math.max(targetScale, 0.05), 10);
-    camera.targetOffset = { x: (usableW / 2) - (ent.transform.position.x * camera.targetScale), y: (canvasH / 2) + (ent.transform.position.y * camera.targetScale) };
+    const position = worldTransform(ent, world.entities).position
+    camera.targetOffset = { x: (usableW / 2) - (position.x * camera.targetScale), y: (canvasH / 2) + (position.y * camera.targetScale) };
   } else {
     if (savedCameraState) {
       camera.targetScale = savedCameraState.scale; camera.targetOffset = { x: savedCameraState.offset.x, y: savedCameraState.offset.y };
@@ -223,7 +217,8 @@ function onMouseDown(e: MouseEvent) {
       dragEntityId = hoveredVertex.entityId; isVertexDragging = true 
       const ent = world.entities.find(e => e.id === dragEntityId)
       if (ent) {
-        const dx = wPos.x - ent.transform.position.x; const dy = wPos.y - ent.transform.position.y
+        const position = worldTransform(ent, world.entities).position
+        const dx = wPos.x - position.x; const dy = wPos.y - position.y
         dragMeta = { initialScaleX: ent.transform.scale.x, initialScaleY: ent.transform.scale.y, initialDist: Math.max(0.1, Math.sqrt(dx*dx + dy*dy)) }
       }
       return 
@@ -264,16 +259,16 @@ function onMouseMove(e: MouseEvent) {
   if (isVertexDragging && dragEntityId && dragMeta) {
     hasMovedEntity = true; 
     const ent = world.entities.find(e => e.id === dragEntityId); if (!ent || !hoveredVertex) return
+    const transform = worldTransform(ent, world.entities)
 
     if (dragButton === 2) {
-      const dx = wPos.x - ent.transform.position.x; const dy = wPos.y - ent.transform.position.y
+      const dx = wPos.x - transform.position.x; const dy = wPos.y - transform.position.y
       const distNow = Math.sqrt(dx*dx + dy*dy); const scaleFactor = distNow / dragMeta.initialDist
       ent.transform.scale.x = Math.max(MIN_SIZE, dragMeta.initialScaleX * scaleFactor); ent.transform.scale.y = Math.max(MIN_SIZE, dragMeta.initialScaleY * scaleFactor)
     } 
     else if (dragButton === 0) {
-      const dx = wPos.x - ent.transform.position.x; const dy = wPos.y - ent.transform.position.y
-      const cosR = Math.cos(-ent.transform.rotation); const sinR = Math.sin(-ent.transform.rotation)
-      const localX = (dx * cosR - dy * sinR) / ent.transform.scale.x; const localY = (dx * sinR + dy * cosR) / ent.transform.scale.y
+      const local = worldPointToLocal(ent, wPos, world.entities)
+      const localX = local.x; const localY = local.y
 
       if (ent instanceof BoxEntity || ent instanceof TriangleEntity) {
         const candidate = ent.vertices.map(vertex => ({ ...vertex }))
@@ -291,8 +286,9 @@ function onMouseMove(e: MouseEvent) {
       hasMovedEntity = true; 
       const entity = world.entities.find(ent => ent.id === dragEntityId)
       if (entity) {
-        const next = snapPoint({ x: entity.transform.position.x + wPos.x - dragStart.x, y: entity.transform.position.y + wPos.y - dragStart.y })
-        entity.transform.position.x = next.x; entity.transform.position.y = next.y
+        const position = worldTransform(entity, world.entities).position
+        const next = snapPoint({ x: position.x + wPos.x - dragStart.x, y: position.y + wPos.y - dragStart.y })
+        translateBoundCompound(entity.id, { x: next.x - position.x, y: next.y - position.y }, world.connections, world.entities)
         dragStart = wPos
       }
     } else { dragNow = wPos }
@@ -338,7 +334,7 @@ function onMouseUp() {
       const changedEntity = world.entities.find(entity => entity.id === dragEntityId)
       if (changedEntity && hasMovedEntity) {
         normalizeEntity(changedEntity)
-        syncMassFromDensity(changedEntity)
+        if (changedEntity.rigidBody.massMode === 'Automatic') syncMassFromDensity(changedEntity)
       }
       if (hasMovedEntity && state.selectedEntityId !== dragEntityId) {
           // Dragged unselected object: Don't enter edit mode
@@ -362,24 +358,21 @@ function checkHoverVertex(p: Vec2) {
   if (ent instanceof BoxEntity || ent instanceof TriangleEntity) {
     let minDist = threshold; let foundIndex = -1
     for (let i = 0; i < ent.vertices.length; i++) {
-      const v = ent.vertices[i]; const localX = v.x * ent.transform.scale.x; const localY = v.y * ent.transform.scale.y
-      const cosR = Math.cos(ent.transform.rotation); const sinR = Math.sin(ent.transform.rotation)
-      const vx = ent.transform.position.x + (localX * cosR - localY * sinR); const vy = ent.transform.position.y + (localX * sinR + localY * cosR)
+      const point = localPointToWorld(ent, ent.vertices[i], world.entities)
+      const vx = point.x; const vy = point.y
       const dist = Math.sqrt((p.x - vx)**2 + (p.y - vy)**2)
       if (dist < minDist) { minDist = dist; foundIndex = i }
     }
     if (foundIndex !== -1) { hoveredVertex = { entityId: ent.id, index: foundIndex }; document.body.style.cursor = 'crosshair'; return }
   } 
   else if (ent instanceof CircleEntity) {
-    const dx = p.x - ent.transform.position.x; const dy = p.y - ent.transform.position.y
-    const cosR = Math.cos(-ent.transform.rotation); const sinR = Math.sin(-ent.transform.rotation)
-    const localX = (dx * cosR - dy * sinR) / ent.transform.scale.x; const localY = (dx * sinR + dy * cosR) / ent.transform.scale.y
+    const local = worldPointToLocal(ent, p, world.entities)
+    const localX = local.x; const localY = local.y
     const nx = localX / ent.radiusX; const ny = localY / ent.radiusY; const mag = Math.sqrt(nx * nx + ny * ny)
     if (mag > 0) {
       const ex = (nx / mag) * ent.radiusX; const ey = (ny / mag) * ent.radiusY
-      const worldCos = Math.cos(ent.transform.rotation); const worldSin = Math.sin(ent.transform.rotation)
-      const wx = ent.transform.position.x + (ex * ent.transform.scale.x * worldCos - ey * ent.transform.scale.y * worldSin)
-      const wy = ent.transform.position.y + (ex * ent.transform.scale.x * worldSin + ey * ent.transform.scale.y * worldCos)
+      const point = localPointToWorld(ent, { x: ex, y: ey }, world.entities)
+      const wx = point.x; const wy = point.y
       const dist = Math.sqrt((p.x - wx)**2 + (p.y - wy)**2)
       if (dist < threshold) { hoveredVertex = { entityId: ent.id, index: -1, virtualPos: { x: ex, y: ey } }; document.body.style.cursor = 'crosshair'; return }
     }
@@ -388,26 +381,19 @@ function checkHoverVertex(p: Vec2) {
 }
 
 function hitTest(p: Vec2): number | null {
-  for (let i = world.entities.length - 1; i >= 0; i--) {
-    const e = world.entities[i]
+  const ordered = [...world.entities].sort((a, b) => a.layer - b.layer || a.renderer.orderInLayer - b.renderer.orderInLayer || world.entities.indexOf(a) - world.entities.indexOf(b))
+  for (let i = ordered.length - 1; i >= 0; i--) {
+    const e = ordered[i]
+    if (!e.enabled || !e.hasComponent('ShapeRenderer2D') || !e.renderer.enabled) continue
     if (editorState.currentPage === 'scene' && e.layer !== editorState.activeLayer) continue;
     if (editorState.currentPage === 'render' && editorState.renderLayer !== 'all' && e.layer !== editorState.renderLayer) continue;
-    const dx = p.x - e.transform.position.x; const dy = p.y - e.transform.position.y
-    const cosR = Math.cos(-e.transform.rotation); const sinR = Math.sin(-e.transform.rotation)
-    const localX = (dx * cosR - dy * sinR) / e.transform.scale.x; const localY = (dx * sinR + dy * cosR) / e.transform.scale.y
-    if (e instanceof BoxEntity || e instanceof TriangleEntity) {
-      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity
-      for (const v of e.vertices) { if (v.x < minX) minX = v.x; if (v.y < minY) minY = v.y; if (v.x > maxX) maxX = v.x; if (v.y > maxY) maxY = v.y }
-      if (localX < minX || localX > maxX || localY < minY || localY > maxY) continue 
-      let inside = false; const vs = e.vertices
-      for (let j = 0, k = vs.length - 1; j < vs.length; k = j++) {
-        const intersect = ((vs[j].y > localY) !== (vs[k].y > localY)) && (localX < (vs[k].x - vs[j].x) * (localY - vs[j].y) / (vs[k].y - vs[j].y) + vs[j].x)
-        if (intersect) inside = !inside
-      }
-      if (inside) return e.id
-    } else if (e instanceof CircleEntity) {
-      if (e.radiusX > 0 && e.radiusY > 0) { if ((localX * localX) / (e.radiusX * e.radiusX) + (localY * localY) / (e.radiusY * e.radiusY) <= 1) return e.id }
-    } 
+    const polygon = entityBoundaryPoints(e, 64, world.entities)
+    let inside = false
+    for (let j = 0, k = polygon.length - 1; j < polygon.length; k = j++) {
+      const a = polygon[j]; const b = polygon[k]
+      if ((a.y > p.y) !== (b.y > p.y) && p.x < (b.x - a.x) * (p.y - a.y) / (b.y - a.y) + a.x) inside = !inside
+    }
+    if (inside) return e.id
   }
   return null
 }
@@ -434,26 +420,34 @@ function render() {
   }
 
   const lwNormal = 1 / camera.scale; const lwSelected = 3 / camera.scale
-  for (const e of world.entities) {
+  const compounds = compoundGeometries(world.entities, world.connections)
+  const compoundByMember = new Map<number, (typeof compounds)[number]>()
+  for (const compound of compounds) for (const member of compound.members) compoundByMember.set(member.id, compound)
+  const renderEntities = [...world.entities].sort((a, b) => a.layer - b.layer || a.renderer.orderInLayer - b.renderer.orderInLayer || world.entities.indexOf(a) - world.entities.indexOf(b))
+  for (const e of renderEntities) {
+    if (!e.enabled || !e.hasComponent('ShapeRenderer2D') || !e.renderer.enabled) continue
     if (editorState.currentPage === 'scene' && e.layer !== editorState.activeLayer) continue;
     if (editorState.currentPage === 'render' && editorState.renderLayer !== 'all' && e.layer !== editorState.renderLayer) continue;
-    const pos = e.transform.position; const isSelected = e.id === state.selectedEntityId
+    const compound = compoundByMember.get(e.id)
+    const styleEntity = compound?.members[0] ?? e
+    const transform = worldTransform(e, world.entities)
+    const pos = transform.position; const isSelected = compound ? compound.memberIds.has(state.selectedEntityId ?? -1) : e.id === state.selectedEntityId
     const maxRadius = e instanceof CircleEntity
-      ? Math.max(e.radiusX * e.transform.scale.x, e.radiusY * e.transform.scale.y)
+      ? Math.max(e.radiusX * transform.scale.x, e.radiusY * transform.scale.y)
       : e instanceof BoxEntity || e instanceof TriangleEntity
         ? Math.max(...e.vertices.map(vertex => Math.hypot(
-          vertex.x * e.transform.scale.x,
-          vertex.y * e.transform.scale.y
+          vertex.x * transform.scale.x,
+          vertex.y * transform.scale.y
         )), MIN_SIZE)
         : MIN_SIZE
     if (pos.x + maxRadius < viewL || pos.x - maxRadius > viewR || pos.y + maxRadius < viewB || pos.y - maxRadius > viewT) continue; 
     
     ctx.lineWidth = isSelected ? lwSelected : lwNormal
-    const alpha = (e.transparency !== undefined ? e.transparency : 100) / 100
-    ctx.fillStyle = isSelected ? palette.selectionFill : `rgba(${e.color.r}, ${e.color.g}, ${e.color.b}, ${alpha})`
-    ctx.strokeStyle = isSelected ? palette.selection : `rgba(${Math.max(0, e.color.r - 50)}, ${Math.max(0, e.color.g - 50)}, ${Math.max(0, e.color.b - 50)}, ${alpha})`
+    const alpha = (styleEntity.transparency !== undefined ? styleEntity.transparency : 100) / 100
+    ctx.fillStyle = isSelected ? palette.selectionFill : `rgba(${styleEntity.color.r}, ${styleEntity.color.g}, ${styleEntity.color.b}, ${alpha})`
+    ctx.strokeStyle = isSelected ? palette.selection : `rgba(${Math.max(0, styleEntity.color.r - 50)}, ${Math.max(0, styleEntity.color.g - 50)}, ${Math.max(0, styleEntity.color.b - 50)}, ${alpha})`
     
-    ctx.save(); ctx.translate(pos.x, pos.y); ctx.rotate(e.transform.rotation)
+    ctx.save(); ctx.translate(pos.x, pos.y); ctx.rotate(transform.rotation)
     ctx.beginPath()
 
     let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
@@ -461,8 +455,8 @@ function render() {
     if (e instanceof BoxEntity || e instanceof TriangleEntity) {
       const v = e.vertices
       if (v.length > 0) {
-        ctx.moveTo(v[0].x * e.transform.scale.x, v[0].y * e.transform.scale.y) 
-        for (let i = 1; i < v.length; i++) ctx.lineTo(v[i].x * e.transform.scale.x, v[i].y * e.transform.scale.y)
+        ctx.moveTo(v[0].x * transform.scale.x, v[0].y * transform.scale.y)
+        for (let i = 1; i < v.length; i++) ctx.lineTo(v[i].x * transform.scale.x, v[i].y * transform.scale.y)
         ctx.closePath()
         for (const pt of v) {
             if (pt.x < minX) minX = pt.x; if (pt.y < minY) minY = pt.y;
@@ -470,34 +464,34 @@ function render() {
         }
       }
     } else if (e instanceof CircleEntity) {
-      const safeRx = Math.max(0.1, e.radiusX) * e.transform.scale.x; const safeRy = Math.max(0.1, e.radiusY) * e.transform.scale.y
+      const safeRx = Math.max(0.1, e.radiusX) * transform.scale.x; const safeRy = Math.max(0.1, e.radiusY) * transform.scale.y
       ctx.ellipse(0, 0, safeRx, safeRy, 0, 0, Math.PI * 2)
       minX = -Math.max(0.1, e.radiusX); maxX = Math.max(0.1, e.radiusX);
       minY = -Math.max(0.1, e.radiusY); maxY = Math.max(0.1, e.radiusY);
     }
     
-    ctx.fill(); ctx.stroke(); 
+    ctx.fill(); if (!compound || compound.members.length === 1) ctx.stroke()
 
-    if (e.texture) {
-      if (!e.textureImage) { e.textureImage = new Image(); e.textureImage.src = e.texture; }
-      if (e.textureImage.complete && e.textureImage.naturalWidth > 0) {
+    if (styleEntity.texture) {
+      if (!styleEntity.textureImage) { styleEntity.textureImage = new Image(); styleEntity.textureImage.src = styleEntity.texture; }
+      if (styleEntity.textureImage.complete && styleEntity.textureImage.naturalWidth > 0) {
           ctx.save(); ctx.clip(); ctx.scale(1, -1); 
-          minX *= e.transform.scale.x; maxX *= e.transform.scale.x;
-          minY *= e.transform.scale.y; maxY *= e.transform.scale.y;
-          ctx.drawImage(e.textureImage, minX, -maxY, maxX - minX, maxY - minY);
+          minX *= transform.scale.x; maxX *= transform.scale.x;
+          minY *= transform.scale.y; maxY *= transform.scale.y;
+          ctx.drawImage(styleEntity.textureImage, minX, -maxY, maxX - minX, maxY - minY);
           ctx.restore();
       }
     }
     ctx.restore() 
 
     if (prefs.showDiagnostics && isSelected && !isVertexDragging && !isDragging && hoveredVertex && hoveredVertex.entityId === e.id) {
-      let vx = 0, vy = 0; const cosR = Math.cos(e.transform.rotation); const sinR = Math.sin(e.transform.rotation)
+      let vx = 0, vy = 0; const cosR = Math.cos(transform.rotation); const sinR = Math.sin(transform.rotation)
       if (e instanceof CircleEntity && hoveredVertex.virtualPos) {
-        const localX = hoveredVertex.virtualPos.x * e.transform.scale.x; const localY = hoveredVertex.virtualPos.y * e.transform.scale.y
+        const localX = hoveredVertex.virtualPos.x * transform.scale.x; const localY = hoveredVertex.virtualPos.y * transform.scale.y
         vx = pos.x + (localX * cosR - localY * sinR); vy = pos.y + (localX * sinR + localY * cosR)
       } else if (e instanceof BoxEntity || e instanceof TriangleEntity) {
         const v = e.vertices[hoveredVertex.index]
-        const localX = v.x * e.transform.scale.x; const localY = v.y * e.transform.scale.y
+        const localX = v.x * transform.scale.x; const localY = v.y * transform.scale.y
         vx = pos.x + (localX * cosR - localY * sinR); vy = pos.y + (localX * sinR + localY * cosR)
       }
       ctx.beginPath(); ctx.fillStyle = palette.handle; ctx.arc(vx, vy, 6 / camera.scale, 0, Math.PI * 2); ctx.fill()
@@ -548,6 +542,26 @@ function render() {
       }
       ctx.restore()
     }
+  }
+
+  for (const compound of compounds) {
+    if (compound.members.length < 2 || compound.boundary.length === 0) continue
+    const styleEntity = compound.members[0]
+    const visible = editorState.currentPage === 'render'
+      ? editorState.renderLayer === 'all' || styleEntity.layer === editorState.renderLayer
+      : styleEntity.layer === editorState.activeLayer
+    if (!visible) continue
+    const isSelected = compound.memberIds.has(state.selectedEntityId ?? -1)
+    const alpha = styleEntity.transparency / 100
+    ctx.beginPath()
+    for (const segment of compound.boundary) {
+      ctx.moveTo(segment.start.x, segment.start.y)
+      ctx.lineTo(segment.end.x, segment.end.y)
+    }
+    ctx.lineWidth = isSelected ? lwSelected : lwNormal
+    ctx.lineCap = 'round'; ctx.lineJoin = 'round'
+    ctx.strokeStyle = isSelected ? palette.selection : `rgba(${Math.max(0, styleEntity.color.r - 50)}, ${Math.max(0, styleEntity.color.g - 50)}, ${Math.max(0, styleEntity.color.b - 50)}, ${alpha})`
+    ctx.stroke()
   }
   if (isDragging && dragEntityId === null && dragStart && dragNow) {
     ctx.strokeStyle = palette.selection; ctx.lineWidth = 1 / camera.scale; ctx.setLineDash([5/camera.scale, 5/camera.scale])

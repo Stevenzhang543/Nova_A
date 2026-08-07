@@ -20,8 +20,14 @@ import init, {
   engine_version,
   migrate_project_json
 } from '../../nova_core/pkg/nova_core.js'
+import { setWorldTransform, worldTransform } from './hierarchy'
 
-export const PHYSICS_STRIDE = 42
+export const PHYSICS_STRIDE = 51
+export const PHYSICS_LAYER_COUNT = 32
+
+export function defaultCollisionMatrix(): number[] {
+  return Array.from({ length: PHYSICS_LAYER_COUNT }, (_, layer) => (1 << layer) >>> 0)
+}
 
 export interface GlobalPhysicsSettings {
   gravity: number
@@ -29,6 +35,7 @@ export interface GlobalPhysicsSettings {
   timeScale: number
   tickRate: number
   maxCatchUpSteps: number
+  collisionMatrix: number[]
 }
 
 export interface EngineDiagnostics {
@@ -50,13 +57,15 @@ interface ConnectionRecord {
 }
 
 /** Writes one entity into the stable Float64 ABI shared with nova_core. */
-function writeEntityRecord(data: Float64Array, entityIndex: number, entity: Entity, runtimeHandle = entity.id): void {
+function writeEntityRecord(data: Float64Array, entityIndex: number, entity: Entity, entities: Entity[], settings: GlobalPhysicsSettings, runtimeHandle = entity.id): void {
   normalizeEntity(entity)
+  const transform = worldTransform(entity, entities)
+  const collider = entity.collider
   const index = entityIndex * PHYSICS_STRIDE
   data[index] = runtimeHandle
-  data[index + 1] = entity.shapeType === 'Circle' ? 1 : 0
-  data[index + 2] = entity.transform.position.x
-  data[index + 3] = entity.transform.position.y
+  data[index + 1] = collider.kind === 'EllipseCollider2D' ? 1 : 0
+  data[index + 2] = transform.position.x
+  data[index + 3] = transform.position.y
   data[index + 4] = entity.velocity.x
   data[index + 5] = entity.velocity.y
   data[index + 6] = entity.acceleration.x
@@ -66,17 +75,17 @@ function writeEntityRecord(data: Float64Array, entityIndex: number, entity: Enti
   data[index + 10] = entity.restitution
   data[index + 11] = entity.dynamicFriction
 
-  if (entity instanceof CircleEntity) {
-    data[index + 12] = entity.radiusX * entity.transform.scale.x
-    data[index + 13] = entity.radiusY * entity.transform.scale.y
-  } else if (entity instanceof BoxEntity || entity instanceof TriangleEntity) {
-    const xs = entity.vertices.map(vertex => vertex.x * entity.transform.scale.x)
-    const ys = entity.vertices.map(vertex => vertex.y * entity.transform.scale.y)
+  if (collider.kind === 'EllipseCollider2D') {
+    data[index + 12] = collider.radiusX * transform.scale.x
+    data[index + 13] = collider.radiusY * transform.scale.y
+  } else {
+    const xs = collider.vertices.map(vertex => vertex.x * transform.scale.x)
+    const ys = collider.vertices.map(vertex => vertex.y * transform.scale.y)
     data[index + 12] = Math.max(...xs) - Math.min(...xs)
     data[index + 13] = Math.max(...ys) - Math.min(...ys)
   }
 
-  data[index + 14] = entity.transform.rotation
+  data[index + 14] = transform.rotation
   data[index + 15] = entity.angularVelocity
   data[index + 16] = entity.torque
   data[index + 17] = entity.gravityScale
@@ -91,46 +100,64 @@ function writeEntityRecord(data: Float64Array, entityIndex: number, entity: Enti
   data[index + 26] = entity.inertia
   data[index + 27] = entity.restitutionThreshold
   data[index + 28] = entity.isSensor ? 1 : 0
-  data[index + 33] = entity.layer
+  data[index + 33] = collider.physicsLayer
+  const matrixMask = settings.collisionMatrix[collider.physicsLayer] ?? (1 << collider.physicsLayer)
+  data[index + 42] = (collider.collisionMask & matrixMask) >>> 0
+  data[index + 43] = collider.offset.x * transform.scale.x
+  data[index + 44] = collider.offset.y * transform.scale.y
+  data[index + 45] = collider.rotation
+  data[index + 46] = entity.rigidBody.freezeRotation ? 1 : 0
+  data[index + 47] = entity.rigidBody.continuousCollision === 'Continuous' ? 1 : 0
+  data[index + 48] = entity.rigidBody.sleepingAllowed ? 1 : 0
+  data[index + 49] = entity.rigidBody.sleeping ? 1 : 0
+  data[index + 50] = entity.rigidBody.sleepTimer
 
-  if (entity instanceof BoxEntity || entity instanceof TriangleEntity) {
-    for (let vertexIndex = 0; vertexIndex < entity.vertices.length && vertexIndex < 4; vertexIndex++) {
-      const vertex = entity.vertices[vertexIndex]
-      data[index + 34 + vertexIndex * 2] = vertex.x * entity.transform.scale.x
-      data[index + 35 + vertexIndex * 2] = vertex.y * entity.transform.scale.y
+  if (collider.kind !== 'EllipseCollider2D') {
+    for (let vertexIndex = 0; vertexIndex < collider.vertices.length && vertexIndex < 4; vertexIndex++) {
+      const vertex = collider.vertices[vertexIndex]
+      data[index + 34 + vertexIndex * 2] = vertex.x * transform.scale.x
+      data[index + 35 + vertexIndex * 2] = vertex.y * transform.scale.y
     }
-    if (entity.vertices.length === 3) {
-      data[index + 40] = entity.vertices[2].x * entity.transform.scale.x
-      data[index + 41] = entity.vertices[2].y * entity.transform.scale.y
+    if (collider.vertices.length === 3) {
+      data[index + 40] = collider.vertices[2].x * transform.scale.x
+      data[index + 41] = collider.vertices[2].y * transform.scale.y
     }
   }
 }
 
-function readEntityRecord(output: Float64Array, entityIndex: number, entity: Entity): void {
+function readEntityRecord(output: Float64Array, entityIndex: number, entity: Entity, entities: Entity[]): void {
   const index = entityIndex * PHYSICS_STRIDE
-  entity.transform.position.x = finiteNumber(output[index + 2], entity.transform.position.x)
-  entity.transform.position.y = finiteNumber(output[index + 3], entity.transform.position.y)
+  const transform = worldTransform(entity, entities)
+  setWorldTransform(entity, {
+    ...transform,
+    position: {
+      x: finiteNumber(output[index + 2], transform.position.x),
+      y: finiteNumber(output[index + 3], transform.position.y)
+    },
+    rotation: finiteNumber(output[index + 14], transform.rotation)
+  }, entities)
   entity.velocity.x = finiteNumber(output[index + 4], entity.velocity.x)
   entity.velocity.y = finiteNumber(output[index + 5], entity.velocity.y)
   entity.mass = finiteNumber(output[index + 8], entity.mass)
-  entity.transform.rotation = finiteNumber(output[index + 14], entity.transform.rotation)
   entity.angularVelocity = finiteNumber(output[index + 15], entity.angularVelocity)
   entity.inertia = finiteNumber(output[index + 26], entity.inertia)
   entity.contactCount = Math.max(0, Math.round(finiteNumber(output[index + 29], 0)))
   entity.contactNormal.x = finiteNumber(output[index + 30], 0)
   entity.contactNormal.y = finiteNumber(output[index + 31], 0)
   entity.penetrationDepth = Math.max(0, finiteNumber(output[index + 32], 0))
+  entity.rigidBody.sleeping = output[index + 49] > 0.5
+  entity.rigidBody.sleepTimer = Math.max(0, finiteNumber(output[index + 50], 0))
 }
 
-function collectConnectionRecords(entities: Entity[], connections: Connection[]): ConnectionRecord[] {
+function collectConnectionRecords(entities: Entity[], connections: Connection[], allEntities: Entity[] = entities): ConnectionRecord[] {
   const entityIndexes = new Map(entities.map((entity, index) => [entity.id, index]))
   const records: ConnectionRecord[] = []
   for (const connection of connections) {
     const remainsActive = connection.breakState === 'intact'
       || (connection.collisionEnabled && connection.ropeNodes.length > 0 && connection.breakLink >= 0)
-    if (!normalizeConnection(connection, entities) || !connectionSharesLayer(connection, entities) || !remainsActive) continue
+    if (!connection.enabled || !normalizeConnection(connection, allEntities) || !connectionSharesLayer(connection, allEntities) || !remainsActive) continue
     if (connection.breakState === 'intact' && connection.collisionEnabled && connection.ropeNodes.length === 0) {
-      initializeRopeNodes(connection, entities)
+      initializeRopeNodes(connection, allEntities)
     }
     for (let segment = 0; segment < connection.anchors.length - 1; segment++) {
       const bodyA = entityIndexes.get(connection.anchors[segment].entityId)
@@ -143,12 +170,12 @@ function collectConnectionRecords(entities: Entity[], connections: Connection[])
 }
 
 /** Writes one connection segment into the stable Float64 ABI shared with nova_core. */
-function writeConnectionRecord(data: Float64Array, recordIndex: number, record: ConnectionRecord, entities: Entity[], runtimeHandle = record.connection.id): void {
+function writeConnectionRecord(data: Float64Array, recordIndex: number, record: ConnectionRecord, entities: Entity[], allEntities: Entity[], runtimeHandle = record.connection.id): void {
   const { connection, segment, bodyA, bodyB } = record
   const anchorA = connection.anchors[segment]
   const anchorB = connection.anchors[segment + 1]
-  const localA = scaledLocalAnchor(anchorA, entities[bodyA])
-  const localB = scaledLocalAnchor(anchorB, entities[bodyB])
+  const localA = scaledLocalAnchor(anchorA, entities[bodyA], allEntities)
+  const localB = scaledLocalAnchor(anchorB, entities[bodyB], allEntities)
   const index = recordIndex * CONNECTION_STRIDE
   data[index] = runtimeHandle
   data[index + 1] = bodyA
@@ -229,6 +256,7 @@ export class World {
   private connectionScratch = new Float64Array(CONNECTION_STRIDE)
   private stateBuffer = new Float64Array(0)
   private previousBodyBuffer = new Float64Array(0)
+  private activeBodies: Entity[] = []
   private activeConnectionRecords: ConnectionRecord[] = []
   private timingSignature = ''
   wasmError: Error | null = null
@@ -238,8 +266,8 @@ export class World {
     interpolationAlpha: 0, droppedSeconds: 0, eventCount: 0, configurationRebuilds: 0
   }
   events: Array<Record<string, unknown>> = []
-  projectFormatVersion = 6
-  projectEngineVersion = '1.2.0'
+  projectFormatVersion = 7
+  projectEngineVersion = '1.3.0'
 
   constructor() {
     this.wasmReady = init()
@@ -307,7 +335,7 @@ export class World {
 
   update(dt: number, isRunning: boolean, globalSettings: GlobalPhysicsSettings): EngineDiagnostics {
     if (!this.wasmLoaded || !this.runtime) return this.diagnostics
-    this.synchronizeRuntime()
+    this.synchronizeRuntime(globalSettings)
     this.configureTiming(globalSettings, !isRunning)
     if (isRunning && this.entities.length > 0) {
       this.runtime.advance(
@@ -315,7 +343,7 @@ export class World {
         finiteNumber(globalSettings.gravity, 9.8),
         Math.max(0, finiteNumber(globalSettings.airFriction, 0.01))
       )
-      this.readRuntimeState(this.runtime.interpolation_alpha())
+      this.readRuntimeState(this.runtime.interpolation_alpha(), globalSettings)
     }
     this.readDiagnostics()
     return this.diagnostics
@@ -323,13 +351,13 @@ export class World {
 
   singleStep(globalSettings: GlobalPhysicsSettings): EngineDiagnostics {
     if (!this.wasmLoaded || !this.runtime) return this.diagnostics
-    this.synchronizeRuntime()
+    this.synchronizeRuntime(globalSettings)
     this.configureTiming(globalSettings, true)
     this.runtime.single_step(
       finiteNumber(globalSettings.gravity, 9.8),
       Math.max(0, finiteNumber(globalSettings.airFriction, 0.01))
     )
-    this.readRuntimeState(1)
+    this.readRuntimeState(1, globalSettings)
     this.readDiagnostics()
     return this.diagnostics
   }
@@ -347,6 +375,7 @@ export class World {
     this.bodyOrders.clear()
     this.connectionOrders.clear()
     this.activeConnectionRecords = []
+    this.activeBodies = []
     this.nextRuntimeHandle = 1
     this.timingSignature = ''
   }
@@ -356,11 +385,14 @@ export class World {
     return this.nextRuntimeHandle++
   }
 
-  private synchronizeRuntime(): void {
+  private synchronizeRuntime(settings: GlobalPhysicsSettings): void {
     const runtime = this.runtime
     if (!runtime) return
+    this.activeBodies = this.entities.filter(entity => entity.enabled
+      && entity.hasComponent('RigidBody2D') && entity.rigidBody.enabled
+      && entity.getCollider() !== null && entity.collider.enabled)
     const liveBodies = new Set<number>()
-    this.entities.forEach((entity, order) => {
+    this.activeBodies.forEach((entity, order) => {
       let handle = this.bodyHandles.get(entity.id)
       if (handle === undefined) {
         handle = this.allocateRuntimeHandle()
@@ -368,7 +400,7 @@ export class World {
       }
       liveBodies.add(entity.id)
       this.bodyScratch.fill(0)
-      writeEntityRecord(this.bodyScratch, 0, entity, handle)
+      writeEntityRecord(this.bodyScratch, 0, entity, this.entities, settings, handle)
       const cached = this.bodyRecords.get(handle)
       if (!cached || this.bodyOrders.get(handle) !== order || !recordsEqual(cached, this.bodyScratch)) {
         runtime.upsert_body(handle, order, this.bodyScratch)
@@ -384,7 +416,7 @@ export class World {
       this.bodyOrders.delete(handle)
     }
 
-    this.activeConnectionRecords = collectConnectionRecords(this.entities, this.connections)
+    this.activeConnectionRecords = collectConnectionRecords(this.activeBodies, this.connections, this.entities)
     const liveConnections = new Set<string>()
     this.activeConnectionRecords.forEach((record, order) => {
       const key = `${record.connection.id}:${record.segment}`
@@ -395,7 +427,7 @@ export class World {
         this.connectionHandles.set(key, handle)
       }
       this.connectionScratch.fill(0)
-      writeConnectionRecord(this.connectionScratch, 0, record, this.entities, handle)
+      writeConnectionRecord(this.connectionScratch, 0, record, this.activeBodies, this.entities, handle)
       const cached = this.connectionRecords.get(handle)
       if (!cached || this.connectionOrders.get(handle) !== order || !recordsEqual(cached, this.connectionScratch)) {
         runtime.upsert_connection(handle, order, this.connectionScratch)
@@ -423,7 +455,7 @@ export class World {
     this.timingSignature = signature
   }
 
-  private readRuntimeState(alpha: number): void {
+  private readRuntimeState(alpha: number, settings: GlobalPhysicsSettings): void {
     if (!this.runtime) return
     const stateLength = this.runtime.state_len()
     const bodyLength = this.runtime.body_state_len()
@@ -431,18 +463,24 @@ export class World {
     this.previousBodyBuffer = ensureBuffer(this.previousBodyBuffer, bodyLength)
     if (this.runtime.copy_state(this.stateBuffer) !== stateLength) return
     const previousLength = this.runtime.copy_previous_body_state(this.previousBodyBuffer)
-    this.entities.forEach((entity, index) => {
-      readEntityRecord(this.stateBuffer, index, entity)
+    this.activeBodies.forEach((entity, index) => {
+      readEntityRecord(this.stateBuffer, index, entity, this.entities)
       if (previousLength === bodyLength && alpha < 1) {
         const offset = index * PHYSICS_STRIDE
-        entity.transform.position.x = interpolate(this.previousBodyBuffer[offset + 2], this.stateBuffer[offset + 2], alpha)
-        entity.transform.position.y = interpolate(this.previousBodyBuffer[offset + 3], this.stateBuffer[offset + 3], alpha)
-        entity.transform.rotation = interpolateAngle(this.previousBodyBuffer[offset + 14], this.stateBuffer[offset + 14], alpha)
+        const transform = worldTransform(entity, this.entities)
+        setWorldTransform(entity, {
+          ...transform,
+          position: {
+            x: interpolate(this.previousBodyBuffer[offset + 2], this.stateBuffer[offset + 2], alpha),
+            y: interpolate(this.previousBodyBuffer[offset + 3], this.stateBuffer[offset + 3], alpha)
+          },
+          rotation: interpolateAngle(this.previousBodyBuffer[offset + 14], this.stateBuffer[offset + 14], alpha)
+        }, this.entities)
       }
       const handle = this.bodyHandles.get(entity.id)
       if (handle !== undefined) {
         this.bodyScratch.fill(0)
-        writeEntityRecord(this.bodyScratch, 0, entity, handle)
+        writeEntityRecord(this.bodyScratch, 0, entity, this.entities, settings, handle)
         this.storeRecord(this.bodyRecords, handle, this.bodyScratch)
       }
     })
@@ -451,7 +489,7 @@ export class World {
       const handle = this.connectionHandles.get(`${record.connection.id}:${record.segment}`)
       if (handle !== undefined) {
         this.connectionScratch.fill(0)
-        writeConnectionRecord(this.connectionScratch, 0, record, this.entities, handle)
+        writeConnectionRecord(this.connectionScratch, 0, record, this.activeBodies, this.entities, handle)
         this.storeRecord(this.connectionRecords, handle, this.connectionScratch)
       }
     })
