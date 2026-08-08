@@ -7,19 +7,37 @@
       <div class="menu-item">
         <button @click="toggleMenu('file')" :class="{ active: activeMenu === 'file' }">{{ t('file') }}</button>
         <Transition name="menu"><div v-if="activeMenu === 'file'" class="dropdown">
-          <button @click="handleSave"><span>{{ t('saveProject') }}</span><kbd>Ctrl S</kbd></button>
-          <button @click="triggerLoad"><span>{{ t('loadProject') }}</span></button>
-          <hr><button class="danger" @click="handleClearScene"><span>{{ t('clearScene') }}</span></button>
+          <button :disabled="!isEditing" @click="handleSave"><span>{{ t('saveProject') }}</span><kbd>Ctrl S</kbd></button>
+          <button :disabled="!isEditing" @click="triggerLoad"><span>{{ t('loadProject') }}</span></button>
+          <hr><button class="danger" :disabled="!isEditing" @click="handleClearScene"><span>{{ t('clearScene') }}</span></button>
         </div></Transition>
       </div>
       <div class="menu-item">
         <button @click="toggleMenu('edit')" :class="{ active: activeMenu === 'edit' }">{{ t('edit') }}</button>
         <Transition name="menu"><div v-if="activeMenu === 'edit'" class="dropdown">
-          <button @click="handleUndo"><span>{{ t('undo') }}</span><kbd>Ctrl Z</kbd></button>
-          <button @click="handleRedo"><span>{{ t('redo') }}</span><kbd>Ctrl Y</kbd></button>
-          <hr><button @click="handleDelete"><span>{{ t('deleteSelected') }}</span><kbd>Del</kbd></button>
-          <button class="danger" @click="handleDeleteAll"><span>{{ t('deleteAll') }}</span></button>
+          <button :disabled="!isEditing" @click="handleUndo"><span>{{ t('undo') }}</span><kbd>Ctrl Z</kbd></button>
+          <button :disabled="!isEditing" @click="handleRedo"><span>{{ t('redo') }}</span><kbd>Ctrl Y</kbd></button>
+          <hr><button :disabled="!isEditing || !physicsState.selectedEntityIds.length" @click="handleCopy"><span>{{ t('copy') }}</span><kbd>Ctrl C</kbd></button>
+          <button :disabled="!isEditing" @click="handlePaste"><span>{{ t('paste') }}</span><kbd>Ctrl V</kbd></button>
+          <button :disabled="!isEditing || !physicsState.selectedEntityIds.length" @click="handleDuplicate"><span>{{ t('duplicate') }}</span><kbd>Ctrl D</kbd></button>
+          <button :disabled="!isEditing || physicsState.selectedEntityId === null" @click="handleRename"><span>{{ t('rename') }}</span><kbd>F2</kbd></button>
+          <hr><button :disabled="!isEditing || !physicsState.selectedEntityIds.length" @click="handleDelete"><span>{{ t('deleteSelected') }}</span><kbd>Del</kbd></button>
+          <button class="danger" :disabled="!isEditing" @click="handleDeleteAll"><span>{{ t('deleteAll') }}</span></button>
           <hr><button @click="handleDeselect"><span>{{ t('deselectAll') }}</span><kbd>Esc</kbd></button>
+        </div></Transition>
+      </div>
+      <div class="menu-item">
+        <button @click="toggleMenu('project')" :class="{ active: activeMenu === 'project' }">{{ t('project') }}</button>
+        <Transition name="menu"><div v-if="activeMenu === 'project'" class="dropdown">
+          <button @click="openBottomPanel('project')"><span>{{ t('projectPanel') }}</span></button>
+          <button @click="openBottomPanel('build')"><span>{{ t('buildPanel') }}</span></button>
+        </div></Transition>
+      </div>
+      <div class="menu-item">
+        <button @click="toggleMenu('debug')" :class="{ active: activeMenu === 'debug' }">{{ t('debug') }}</button>
+        <Transition name="menu"><div v-if="activeMenu === 'debug'" class="dropdown">
+          <button @click="openBottomPanel('console')"><span>{{ t('console') }}</span></button>
+          <button @click="openBottomPanel('profiler')"><span>{{ t('profiler') }}</span></button>
         </div></Transition>
       </div>
       <div class="menu-item">
@@ -38,17 +56,17 @@
       </div>
     </nav>
     <div class="top-spacer"></div>
-    <span class="release-pill">1.3.0</span>
+    <span class="release-pill">1.4.0</span>
     <input ref="fileInput" type="file" hidden accept="application/json,.json" @change="handleFileSelected">
   </header>
 </template>
 
 <script setup lang="ts">
 import { openUrl } from '@tauri-apps/plugin-opener'
-import { onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { t } from '../i18n'
-import { editorState } from '../store/editor'
-import { clearScene, deleteSelected, enterEditMode, loadProject, physicsState, pushHistory, redo, resetCamera, saveProject, undo } from '../store/physics'
+import { addEditorLog, editorState } from '../store/editor'
+import { clearScene, copySelectedEntities, deleteSelected, duplicateSelectedEntities, loadProject, pasteEntities, physicsState, pushHistory, redo, resetCamera, saveProject, selectEntities, undo } from '../store/physics'
 import { preferencesState } from '../store/preferences'
 import { confirmDialogState, requestConfirmation } from '../store/dialog'
 
@@ -56,6 +74,7 @@ const activeMenu = ref<string | null>(null)
 const fileInput = ref<HTMLInputElement | null>(null)
 let menuTimeout: number | null = null
 const projectUrl = 'https://github.com/Stevenzhang543/Nova_A/'
+const isEditing = computed(() => physicsState.playMode === 'editing')
 
 function confirmDestructive(title: string, message: string): Promise<boolean> {
   if (!preferencesState.confirmDestructiveActions) return Promise.resolve(true)
@@ -63,18 +82,31 @@ function confirmDestructive(title: string, message: string): Promise<boolean> {
 }
 
 async function handleSave() {
+  if (!isEditing.value) { editorState.statusText = t('runtimeIsolation'); return }
   const saved = await saveProject()
   editorState.statusText = t(saved ? 'saved' : 'saveCancelled')
+  if (saved) addEditorLog(t('saved'), 'Project')
   activeMenu.value = null
 }
 function triggerLoad() { fileInput.value?.click(); activeMenu.value = null }
 async function handleClearScene() {
+  if (!isEditing.value) return
   if (!await confirmDestructive(t('clearSceneTitle'), t('confirmClear'))) return
   clearScene(); pushHistory(); activeMenu.value = null
 }
-async function handleDelete() { if (physicsState.selectedEntityId === null) return; if (!await confirmDestructive(t('deleteObjectTitle'), t('confirmDeleteObject'))) return; deleteSelected(); pushHistory(); activeMenu.value = null }
+async function handleDelete() { if (!isEditing.value || !physicsState.selectedEntityIds.length) return; if (!await confirmDestructive(t('deleteObjectTitle'), t('confirmDeleteObject'))) return; deleteSelected(); pushHistory('Delete entities'); activeMenu.value = null }
 function handleDeleteAll() { void handleClearScene() }
-function handleDeselect() { enterEditMode(null); activeMenu.value = null }
+function handleDeselect() { selectEntities([], 'replace'); activeMenu.value = null }
+function handleCopy() { const count = copySelectedEntities(); if (count) addEditorLog(`Copied ${count} ${count === 1 ? 'entity' : 'entities'}`); activeMenu.value = null }
+function handlePaste() { if (!isEditing.value) return; const pasted = pasteEntities(); if (pasted.length) addEditorLog(`Pasted ${pasted.length} ${pasted.length === 1 ? 'entity' : 'entities'}`); activeMenu.value = null }
+function handleDuplicate() { if (!isEditing.value) return; const duplicated = duplicateSelectedEntities(); if (duplicated.length) addEditorLog(`Duplicated ${duplicated.length} ${duplicated.length === 1 ? 'entity' : 'entities'}`); activeMenu.value = null }
+function handleRename() { if (physicsState.selectedEntityId !== null) editorState.renameRequestId = physicsState.selectedEntityId; activeMenu.value = null }
+function openBottomPanel(tab: 'console' | 'profiler' | 'project' | 'build') {
+  if (editorState.currentPage === 'settings') editorState.currentPage = 'scene'
+  editorState.bottomPanelTab = tab
+  editorState.bottomPanelOpen = true
+  activeMenu.value = null
+}
 function handleToggleGrid() { editorState.showGrid = !editorState.showGrid; activeMenu.value = null }
 function toggleAxis(axis: 'x' | 'y') {
   if (axis === 'x') editorState.showXAxis = !editorState.showXAxis
@@ -90,8 +122,8 @@ async function handleAbout() {
   if ('__TAURI_INTERNALS__' in window) await openUrl(projectUrl)
   else window.open(projectUrl, '_blank', 'noopener,noreferrer')
 }
-function handleUndo() { undo(); activeMenu.value = null }
-function handleRedo() { redo(); activeMenu.value = null }
+function handleUndo() { if (isEditing.value) undo(); activeMenu.value = null }
+function handleRedo() { if (isEditing.value) redo(); activeMenu.value = null }
 function toggleMenu(menu: string) { activeMenu.value = activeMenu.value === menu ? null : menu }
 function onMenuEnter() { if (menuTimeout !== null) window.clearTimeout(menuTimeout) }
 function onMenuLeave() {
@@ -108,6 +140,7 @@ function handleFileSelected(event: Event) {
     if (typeof event.target?.result === 'string' && loadProject(event.target.result)) {
       pushHistory()
       editorState.statusText = t('loaded')
+      addEditorLog(t('loaded'), 'Project')
     }
   }
   reader.onerror = () => { editorState.statusText = t('loadFailed', { message: reader.error?.message ?? t('fileReadFailed') }) }
@@ -119,12 +152,17 @@ function handleKeyDown(event: KeyboardEvent) {
   if (confirmDialogState.visible) return
   const tag = document.activeElement?.tagName
   if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return
-  if (event.ctrlKey && event.key.toLowerCase() === 's') { event.preventDefault(); void handleSave() }
-  else if (event.ctrlKey && event.shiftKey && event.key.toLowerCase() === 'z') { event.preventDefault(); handleRedo() }
-  else if (event.ctrlKey && event.key.toLowerCase() === 'z') { event.preventDefault(); handleUndo() }
-  else if (event.ctrlKey && event.key.toLowerCase() === 'y') { event.preventDefault(); handleRedo() }
+  const commandKey = event.ctrlKey || event.metaKey
+  if (commandKey && event.key.toLowerCase() === 's') { event.preventDefault(); void handleSave() }
+  else if (commandKey && event.shiftKey && event.key.toLowerCase() === 'z') { event.preventDefault(); handleRedo() }
+  else if (commandKey && event.key.toLowerCase() === 'z') { event.preventDefault(); handleUndo() }
+  else if (commandKey && event.key.toLowerCase() === 'y') { event.preventDefault(); handleRedo() }
+  else if (commandKey && event.key.toLowerCase() === 'c') { event.preventDefault(); handleCopy() }
+  else if (commandKey && event.key.toLowerCase() === 'v') { event.preventDefault(); handlePaste() }
+  else if (commandKey && event.key.toLowerCase() === 'd') { event.preventDefault(); handleDuplicate() }
   else if (event.key === 'Delete' || event.key === 'Backspace') { void handleDelete() }
-  else if (event.key === 'Escape') { enterEditMode(null); activeMenu.value = null }
+  else if (event.key === 'F2') { event.preventDefault(); handleRename() }
+  else if (event.key === 'Escape') { selectEntities([], 'replace'); activeMenu.value = null }
 }
 
 onMounted(() => { window.addEventListener('keydown', handleKeyDown); pushHistory() })

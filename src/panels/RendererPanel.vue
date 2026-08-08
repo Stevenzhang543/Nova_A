@@ -1,14 +1,9 @@
 <template>
-  <div class="renderer-panel">
-    <LayerBar /> <div class="viewport-wrapper">
-      <WorldCanvas class="readonly-canvas" />
-    </div>
-  </div>
+  <div class="renderer-panel"><div class="viewport-wrapper"><WorldCanvas class="readonly-canvas" /></div></div>
 </template>
 
 <script setup lang="ts">
 import WorldCanvas from "../components/WorldCanvas.vue"
-import LayerBar from "../components/LayerBar.vue"
 </script>
 
 <style scoped>

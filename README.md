@@ -4,22 +4,32 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE.md)
 [![Platforms](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey)](https://v2.tauri.app/start/prerequisites/)
-[![Release](https://img.shields.io/badge/release-1.3.0-63c6ff)]()
+[![Release](https://img.shields.io/badge/release-1.4.0-63c6ff)]()
 
 Nova_A is an open-source 2D physics engine, renderer, and desktop GUI editor built with Rust, WebAssembly, Vue 3, and Tauri.
 
-Version **1.3.0**, Scene & Component System, turns the retained v1.2 runtime into the first usable game-engine object model. Existing drawing, rendering, connections, physics properties, themes, translations, menus, animations, and editor gestures remain available.
+Version **1.4.0**, Professional Editor Foundations, turns the scene-and-component model into a structured daily-use editor while preserving the drawing tools, renderer, physics, connections, themes, translations, menus, and animations from earlier releases.
 
-## What is new in v1.3.0
+## What is new in v1.4.0
 
-- Entities now contain UUID-backed components instead of owning rendering, rigid-body, collider, and transform data in one monolithic class. Every entity has a mandatory `Transform2D`; `ShapeRenderer2D`, `RigidBody2D`, and the shape-specific Collider2D can be enabled, reset, removed, copied, pasted, and restored in the Inspector.
-- Transform parenting preserves world position, rotation, and scale. Parent cycles are rejected in the editor and by Rust project validation, and the scene sidebar displays the hierarchy.
-- Render sorting (`sortingLayer` and `orderInLayer`) is separate from physics layers. Colliders expose offset, rotation, sensor/material values, a 32-bit collision mask, and a project-wide symmetric 32x32 collision matrix.
-- `RigidBody2D` exposes dynamic/kinematic/static type, automatic/manual mass, automatic/manual inertia, continuous/discrete collision, sleeping, freeze rotation, damping, gravity, forces, and diagnostics. Every exposed flag crosses the Float64 ABI into the Rust solver.
-- Projects can contain multiple named scenes. The Scene Manager can create, activate, load, unload, and reload scenes while preserving each scene's entities, components, connections, render layers, and physics settings.
-- Project format 7 stores scenes and canonical component records. Central Rust migration converts format-6 and older monolithic entity records, numeric IDs, and legacy `Connection` records into UUID-backed `Rope2D` or `FixedJoint2D` records.
-- Binding overlapping objects now creates a rigid compound: editor dragging moves the full connected group, physics excludes all internal compound contacts while distributing external collision impulses across fixed joints, and rendering fills all members consistently while drawing only the union's exterior boundary.
-- The regression suite covers component identity, scene lifecycle, project migration, collision masks, continuous collision, sleeping/wake-up, freeze rotation, rigid-compound mass and transform behavior, ropes, numerical units, and retained runtime behavior.
+- A searchable, resizable Hierarchy supports expand/collapse, Ctrl/Shift multi-selection, drag reparenting, root reparenting, rename, duplicate, subtree delete, visibility, locking, and enabled state. Reparenting preserves world transforms and rejects hierarchy cycles.
+- The Q/W/E/R Select, Move, Rotate, and Scale tools provide on-canvas handles, local/world orientation, pivot/selection-center modes, grid snapping, and angle snapping. A completed drag creates one undoable command rather than flooding history with mouse-move snapshots.
+- Editor changes run through a bounded command history with mergeable property edits. Undo/redo, Copy/Paste, Duplicate, Delete, and F2 work from both menus and standard keyboard shortcuts; subtree clipboard operations create fresh entity/component UUIDs and repair internal parent and connection references.
+- Scene and Game views are now distinct. Scene shows authoring grids, connections, selection outlines, and gizmos; Game renders the clean player-facing result without editor overlays.
+- Play, Pause, Step, and Stop use an isolated runtime copy. Simulation never mutates the authoring document, and Stop restores the exact pre-play project state.
+- The editor now has stable professional regions for Hierarchy, viewport, Inspector, and a resizable bottom utility panel. Assets, Console, Profiler, Project Settings, and Build Settings expose honest current data; future Animation and Build workflows are labeled with their planned release instead of presenting non-functional controls.
+- The Inspector handles shared multi-selection properties and center movement while retaining all single-entity component, connection, and physics controls. Scene editing is intentionally locked during Play/Pause so authoring commands cannot corrupt runtime state.
+- Project format 8 persists editor visibility and lock state. Central Rust migration supplies safe defaults for all older formats, including v1.3 format-7 component projects and legacy monolithic files.
+
+### Editor shortcuts
+
+| Shortcut | Action |
+| --- | --- |
+| `Q` / `W` / `E` / `R` | Select / Move / Rotate / Scale |
+| `Ctrl/Cmd+Z`, `Ctrl/Cmd+Shift+Z` | Undo / Redo |
+| `Ctrl/Cmd+C`, `Ctrl/Cmd+V`, `Ctrl/Cmd+D` | Copy / Paste / Duplicate selected subtree |
+| `Delete`, `F2` | Delete selection / Rename primary selection |
+| `Ctrl/Cmd+S` | Save project |
 
 ## Engine workspace
 
@@ -128,10 +138,10 @@ Configuration changes cross Vue → `nova_wasm` as explicit retained-world comma
 
 ## Project compatibility
 
-- New saves use project format 7 and engine version `1.3.0`.
+- New saves use project format 8 and engine version `1.4.0`.
 - Persisted scenes, entities, components, and connections use UUIDs; runtime handles are never written to disk.
 - Format migration and validation are centralized in `nova_format`, not scattered through editor components.
-- v1.2 format-6 files, v1.1.2 format-5 files, older object roots, and legacy top-level entity arrays continue to load. A migrated project is only written in the new format when the user saves it.
+- v1.3 format-7 files, v1.2 format-6 files, v1.1.2 format-5 files, older object roots, and legacy top-level entity arrays continue to load. A migrated project is only written in the new format when the user saves it.
 
 | Property | Solver/render behavior |
 | --- | --- |

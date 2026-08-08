@@ -2,9 +2,18 @@ import { reactive } from "vue"
 import { cloneEntity, deleteEntity, duplicateConnections, physicsState, pushHistory } from "./physics"
 import type { Vec2 } from '../world/types'
 import { t } from '../i18n'
+import type { PivotMode, TransformSpace } from '../editor/gizmo'
 
-export type EditorPage = "scene" | "render" | "settings"
+export type EditorPage = 'scene' | 'game' | 'settings'
 type ContextMenuType = 'sidebar-entity' | 'layer' | 'grid-entity' | 'none'
+
+export interface EditorLogEntry {
+  id: number
+  timestamp: string
+  level: 'info' | 'warning' | 'error'
+  category: 'Editor' | 'Physics' | 'Project'
+  message: string
+}
 
 export const editorState = reactive({
   currentPage: "scene" as EditorPage,
@@ -16,6 +25,15 @@ export const editorState = reactive({
   layers: [1], 
   activeLayer: 1, 
   renderLayer: 'all' as number | 'all',
+  transformSpace: 'world' as TransformSpace,
+  pivotMode: 'center' as PivotMode,
+  angleSnapEnabled: true,
+  angleSnapDegrees: 15,
+  bottomPanelOpen: true,
+  bottomPanelHeight: 180,
+  bottomPanelTab: 'console' as 'assets' | 'console' | 'animation' | 'profiler' | 'project' | 'build',
+  renameRequestId: null as number | null,
+  logs: [] as EditorLogEntry[],
   manualConnectionId: null as number | null,
   manualConnectionPoints: [] as Vec2[],
   
@@ -26,6 +44,12 @@ export const editorState = reactive({
     targetId: null as number | null
   }
 })
+
+let nextLogId = 1
+export function addEditorLog(message: string, category: EditorLogEntry['category'] = 'Editor', level: EditorLogEntry['level'] = 'info'): void {
+  editorState.logs.push({ id: nextLogId++, timestamp: new Date().toLocaleTimeString(), level, category, message })
+  if (editorState.logs.length > 500) editorState.logs.splice(0, editorState.logs.length - 500)
+}
 
 export function reconfigureLayout() { editorState.layoutVersion++ }
 
@@ -86,10 +110,16 @@ export function duplicateLayer(layerId: number) {
   editorState.layers.push(newLayerId)
   const toClone = physicsState.world.entities.filter(e => e.layer === layerId)
   const entityIdMap = new Map<number, number>()
+  const entityUuidMap = new Map<string, string>()
   toClone.forEach(original => {
     const clone = cloneEntity(original, newLayerId)
     entityIdMap.set(original.id, clone.id)
+    entityUuidMap.set(original.uuid, clone.uuid)
     physicsState.world.entities.push(clone)
+  })
+  toClone.forEach(original => {
+    const clone = physicsState.world.entities.find(entity => entity.id === entityIdMap.get(original.id))
+    if (clone && original.parentUuid && entityUuidMap.has(original.parentUuid)) clone.parentUuid = entityUuidMap.get(original.parentUuid)!
   })
   duplicateConnections(entityIdMap)
   editorState.activeLayer = newLayerId

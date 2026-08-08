@@ -103,8 +103,10 @@ export function wouldCreateParentCycle(entity: Entity, parentUuid: string | null
 
 export function setParent(entity: Entity, parentUuid: string | null, entities: Entity[]): boolean {
   if (wouldCreateParentCycle(entity, parentUuid, entities)) return false
+  const nextParentUuid = parentUuid && entities.some(candidate => candidate.uuid === parentUuid) ? parentUuid : null
+  if (entity.parentUuid === nextParentUuid) return false
   const currentWorld = worldTransform(entity, entities)
-  entity.parentUuid = parentUuid && entities.some(candidate => candidate.uuid === parentUuid) ? parentUuid : null
+  entity.parentUuid = nextParentUuid
   setWorldTransform(entity, currentWorld, entities)
   return true
 }

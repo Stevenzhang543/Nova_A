@@ -6,8 +6,8 @@ use std::fmt;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Map, Value};
 
-pub const CURRENT_FORMAT_VERSION: u32 = 7;
-pub const CURRENT_ENGINE_VERSION: &str = "1.3.0";
+pub const CURRENT_FORMAT_VERSION: u32 = 8;
+pub const CURRENT_ENGINE_VERSION: &str = "1.4.0";
 
 fn default_true() -> bool {
     true
@@ -50,6 +50,10 @@ pub struct EntityFile {
     pub name: String,
     #[serde(default = "default_true")]
     pub enabled: bool,
+    #[serde(default = "default_true")]
+    pub editor_visible: bool,
+    #[serde(default)]
+    pub editor_locked: bool,
     #[serde(default)]
     pub tags: Vec<String>,
     #[serde(default)]
@@ -531,6 +535,8 @@ fn migrate_legacy_components(scene: &mut Map<String, Value>) -> Result<(), Forma
             );
         }
         entity.entry("enabled").or_insert(Value::Bool(true));
+        entity.entry("editorVisible").or_insert(Value::Bool(true));
+        entity.entry("editorLocked").or_insert(Value::Bool(false));
         entity.entry("tags").or_insert_with(|| json!([]));
     }
 
@@ -645,6 +651,8 @@ mod tests {
         assert_eq!(migrated.scenes.len(), 2);
         assert_eq!(migrated.active_scene_uuid, scene_b);
         assert_eq!(migrated.scenes[1].entities[0].components[0].uuid, component);
+        assert!(migrated.scenes[1].entities[0].editor_visible);
+        assert!(!migrated.scenes[1].entities[0].editor_locked);
     }
 
     #[test]

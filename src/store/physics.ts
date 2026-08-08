@@ -24,15 +24,20 @@ import { normalizeUuid } from '../world/identity'
 import { Collider2D, RigidBody2D, ShapeRenderer2D, type Component2D, type ComponentKind } from '../world/components'
 import { Transform } from '../world/Transform'
 import { SceneManager } from '../world/SceneManager'
+import { translateEntityTree } from '../world/hierarchy'
+import { CommandHistory, DocumentMutationCommand } from '../editor/commands'
+import { subtreeEntities, updateSelection, type SelectionMode } from '../editor/selection'
 
 interface PhysicsState {
   world: World
   camera: Camera
   selectedEntityId: number | null
+  selectedEntityIds: number[]
   focusEntityID: number | null
-  activeTool: 'rectangle' | 'circle' | 'triangle'
+  activeTool: 'select' | 'move' | 'rotate' | 'scale' | 'rectangle' | 'circle' | 'triangle'
   globalSettings: GlobalPhysicsSettings
   simulationRunning: boolean
+  playMode: 'editing' | 'playing' | 'paused'
   engineDiagnostics: EngineDiagnostics
 }
 
@@ -53,6 +58,8 @@ interface SceneEntityData {
   radiusX?: number
   radiusY?: number
   enabled?: boolean
+  editorVisible?: boolean
+  editorLocked?: boolean
   tags?: string[]
   components?: SceneComponentData[]
 }
@@ -82,8 +89,9 @@ export const physicsState = reactive<PhysicsState>({
   world: markRaw(rawWorld),
   camera: markRaw(rawCamera),
   selectedEntityId: null,
+  selectedEntityIds: [],
   focusEntityID: null,
-  activeTool: 'rectangle',
+  activeTool: 'select',
   globalSettings: {
     gravity: 9.8,
     airFriction: 0.01,
@@ -93,6 +101,7 @@ export const physicsState = reactive<PhysicsState>({
     collisionMatrix: defaultCollisionMatrix()
   },
   simulationRunning: false,
+  playMode: 'editing',
   engineDiagnostics: { ...rawWorld.diagnostics }
 })
 
@@ -115,7 +124,24 @@ export function normalizeGlobalSettings(): void {
 
 export function enterEditMode(id: number | null): void {
   physicsState.selectedEntityId = id
+  physicsState.selectedEntityIds.splice(0, physicsState.selectedEntityIds.length, ...(id === null ? [] : [id]))
   physicsState.focusEntityID = id
+}
+
+export function selectEntities(ids: number[], mode: SelectionMode = 'replace', primaryId?: number | null): void {
+  const valid = new Set(physicsState.world.entities.map(entity => entity.id))
+  const requested = ids.filter((id, index) => valid.has(id) && ids.indexOf(id) === index)
+  const next = updateSelection(physicsState.selectedEntityIds, requested, mode)
+  physicsState.selectedEntityIds.splice(0, physicsState.selectedEntityIds.length, ...next)
+  const preferred = primaryId !== undefined && primaryId !== null && next.includes(primaryId)
+    ? primaryId
+    : next[next.length - 1] ?? null
+  physicsState.selectedEntityId = preferred
+}
+
+export function selectedEntities(): Entity[] {
+  const ids = new Set(physicsState.selectedEntityIds)
+  return physicsState.world.entities.filter(entity => ids.has(entity.id))
 }
 
 function serializeComponent(component: Component2D): Record<string, unknown> {
@@ -179,6 +205,8 @@ function serializeEntity(entity: Entity): Record<string, unknown> {
     uuid: entity.uuid,
     name: entity.name,
     enabled: entity.enabled,
+    editorVisible: entity.editorVisible,
+    editorLocked: entity.editorLocked,
     tags: [...entity.tags],
     entityType: entity.entityType,
     components: [...entity.componentMap.values()].map(serializeComponent)
@@ -441,6 +469,8 @@ function createEntityFromData(item: SceneEntityData, forcedId?: number): Entity 
   }
   if (typeof item.name === 'string' && item.name.trim()) entity.name = item.name.trim()
   entity.enabled = item.enabled !== false
+  entity.editorVisible = item.editorVisible !== false
+  entity.editorLocked = item.editorLocked === true
   entity.tags = Array.isArray(item.tags) ? item.tags.filter(tag => typeof tag === 'string').map(tag => tag.slice(0, 80)) : []
 
   if (entity.isStatic) entity.isKinematic = false
@@ -459,6 +489,119 @@ export function cloneEntity(original: Entity, layer = original.layer, offset = {
   clone.transform.position.y += finiteNumber(offset.y)
   normalizeEntity(clone)
   return clone
+}
+
+interface EntityClipboard {
+  entities: SceneEntityData[]
+  connections: Array<{ connection: Connection; anchorUuids: string[] }>
+  rootUuids: string[]
+}
+
+let entityClipboard: EntityClipboard | null = null
+
+function captureEntityClipboard(ids: number[]): EntityClipboard | null {
+  const entities = subtreeEntities(ids, physicsState.world.entities)
+  if (!entities.length) return null
+  const includedIds = new Set(entities.map(entity => entity.id))
+  const includedUuids = new Set(entities.map(entity => entity.uuid))
+  const rootUuids = entities
+    .filter(entity => !entity.parentUuid || !includedUuids.has(entity.parentUuid))
+    .map(entity => entity.uuid)
+  const uuidById = new Map(physicsState.world.entities.map(entity => [entity.id, entity.uuid]))
+  const connections = physicsState.world.connections.flatMap(connection => {
+    if (!connection.anchors.every(anchor => includedIds.has(anchor.entityId))) return []
+    return [{
+      connection: JSON.parse(JSON.stringify(connection)) as Connection,
+      anchorUuids: connection.anchors.map(anchor => uuidById.get(anchor.entityId) ?? '')
+    }]
+  })
+  return {
+    entities: entities.map(entity => JSON.parse(JSON.stringify(serializeEntity(entity))) as SceneEntityData),
+    connections,
+    rootUuids
+  }
+}
+
+export function copySelectedEntities(): number {
+  entityClipboard = captureEntityClipboard(physicsState.selectedEntityIds)
+  return entityClipboard?.entities.length ?? 0
+}
+
+function pasteClipboard(clipboard: EntityClipboard, offset: { x: number; y: number }): Entity[] {
+  const sourceToClone = new Map<string, Entity>()
+  const sourceToRuntimeId = new Map<number, number>()
+  const pendingParents = new Map<Entity, string | null>()
+  for (const record of clipboard.entities) {
+    const sourceUuid = normalizeUuid(record.uuid)
+    const sourceRuntimeId = typeof record.id === 'number' ? record.id : null
+    const sourceTransform = storedComponent(record, 'Transform2D')
+    const sourceParent = typeof sourceTransform?.data?.parentUuid === 'string'
+      ? sourceTransform.data.parentUuid
+      : null
+    const cloneRecord = JSON.parse(JSON.stringify(record)) as SceneEntityData
+    delete cloneRecord.uuid
+    cloneRecord.components?.forEach(component => { delete component.uuid })
+    const clone = createEntityFromData(cloneRecord, physicsState.world.allocateId())
+    sourceToClone.set(sourceUuid, clone)
+    if (sourceRuntimeId !== null) sourceToRuntimeId.set(sourceRuntimeId, clone.id)
+    pendingParents.set(clone, sourceParent)
+    physicsState.world.entities.push(clone)
+  }
+
+  for (const [clone, sourceParent] of pendingParents) {
+    clone.parentUuid = sourceParent
+      ? sourceToClone.get(sourceParent)?.uuid
+        ?? (physicsState.world.entities.some(entity => entity.uuid === sourceParent) ? sourceParent : null)
+      : null
+  }
+
+  for (const sourceUuid of clipboard.rootUuids) {
+    const clone = sourceToClone.get(sourceUuid)
+    if (!clone) continue
+    translateEntityTree(clone, { x: finiteNumber(offset.x), y: finiteNumber(offset.y) }, physicsState.world.entities)
+    clone.name = `${clone.name} copy`.slice(0, 80)
+  }
+
+  for (const stored of clipboard.connections) {
+    const connection = JSON.parse(JSON.stringify(stored.connection)) as Connection
+    connection.id = physicsState.world.allocateConnectionId()
+    connection.uuid = normalizeUuid(undefined)
+    connection.name = `${connection.name} copy`.slice(0, 80)
+    connection.anchors.forEach((anchor, index) => {
+      const sourceUuid = stored.anchorUuids[index]
+      const clone = sourceToClone.get(sourceUuid)
+      if (clone) anchor.entityId = clone.id
+      else if (sourceToRuntimeId.has(anchor.entityId)) anchor.entityId = sourceToRuntimeId.get(anchor.entityId)!
+    })
+    connection.breakState = 'intact'
+    connection.breakLink = -1
+    connection.tension = 0
+    connection.strain = 0
+    if (normalizeConnection(connection, physicsState.world.entities)) physicsState.world.connections.push(connection)
+  }
+
+  const pastedRoots = clipboard.rootUuids.flatMap(uuid => {
+    const entity = sourceToClone.get(uuid)
+    return entity ? [entity] : []
+  })
+  selectEntities(pastedRoots.map(entity => entity.id), 'replace')
+  physicsState.world.invalidateRuntime()
+  return [...sourceToClone.values()]
+}
+
+export function pasteEntities(offset = { x: 10, y: -10 }): Entity[] {
+  if (!entityClipboard) return []
+  const pasted = pasteClipboard(entityClipboard, offset)
+  if (pasted.length) pushHistory('Paste entities')
+  return pasted
+}
+
+export function duplicateSelectedEntities(): Entity[] {
+  const clipboard = captureEntityClipboard(physicsState.selectedEntityIds)
+  if (!clipboard) return []
+  const pasted = pasteClipboard(clipboard, { x: 10, y: -10 })
+  if (pasted.length) pushHistory('Duplicate entities')
+  return pasted
 }
 
 export function addConnection(entityIds: number[], modes: AnchorMode[] = []): Connection {
@@ -613,7 +756,10 @@ export function loadProject(jsonString: string): boolean {
     physicsState.world.entities.splice(0, physicsState.world.entities.length, ...entities)
     physicsState.world.connections.splice(0, physicsState.world.connections.length, ...connections)
     physicsState.simulationRunning = false
+    physicsState.playMode = 'editing'
     simulationSnapshot = null
+    editorState.manualConnectionId = null
+    editorState.manualConnectionPoints.splice(0)
     editorState.layers.splice(0, editorState.layers.length, ...layers)
     physicsState.world.setNextId(maximumId + 1)
     physicsState.world.setNextConnectionId(maximumConnectionId + 1)
@@ -628,10 +774,10 @@ export function loadProject(jsonString: string): boolean {
       editorState.renderLayer = layers.includes(requestedRenderLayer) ? requestedRenderLayer : 'all'
     }
 
-    if (physicsState.selectedEntityId !== null
-      && !entities.some(entity => entity.id === physicsState.selectedEntityId)) {
-      enterEditMode(null)
-    }
+    const validSelection = physicsState.selectedEntityIds.filter(id => entities.some(entity => entity.id === id))
+    selectEntities(validSelection, 'replace', validSelection.includes(physicsState.selectedEntityId ?? -1)
+      ? physicsState.selectedEntityId
+      : validSelection[validSelection.length - 1] ?? null)
     return true
   } catch (error) {
     console.error('Failed to load project', error)
@@ -679,11 +825,13 @@ export function toggleSimulation(state: boolean): void {
     simulationSnapshot = getSceneJSON()
   }
   physicsState.simulationRunning = state
+  physicsState.playMode = state ? 'playing' : simulationSnapshot === null ? 'editing' : 'paused'
 }
 
 export function resetSimulation(): void {
   const snapshot = simulationSnapshot
   physicsState.simulationRunning = false
+  physicsState.playMode = 'editing'
   simulationSnapshot = null
   if (snapshot) loadProject(snapshot)
 }
@@ -691,7 +839,16 @@ export function resetSimulation(): void {
 export function singleStepSimulation(): void {
   physicsState.simulationRunning = false
   if (simulationSnapshot === null) simulationSnapshot = getSceneJSON()
+  physicsState.playMode = 'paused'
   Object.assign(physicsState.engineDiagnostics, physicsState.world.singleStep(physicsState.globalSettings))
+}
+
+export function stopPlayMode(): void {
+  resetSimulation()
+}
+
+export function hasRuntimeSession(): boolean {
+  return simulationSnapshot !== null
 }
 
 export async function saveProject(): Promise<boolean> {
@@ -728,6 +885,7 @@ export async function saveProject(): Promise<boolean> {
 
 export function clearScene(): void {
   physicsState.simulationRunning = false
+  physicsState.playMode = 'editing'
   simulationSnapshot = null
   physicsState.world.entities.splice(0, physicsState.world.entities.length)
   physicsState.world.connections.splice(0, physicsState.world.connections.length)
@@ -738,11 +896,11 @@ export function clearScene(): void {
 }
 
 export function deleteSelected(): void {
-  if (physicsState.selectedEntityId === null) return
-  const index = physicsState.world.entities.findIndex(entity => entity.id === physicsState.selectedEntityId)
-  if (index !== -1) {
-    detachEntityFromConnections(physicsState.selectedEntityId)
-    physicsState.world.entities.splice(index, 1)
+  const ids = new Set(subtreeEntities(physicsState.selectedEntityIds, physicsState.world.entities).map(entity => entity.id))
+  if (!ids.size) return
+  for (const id of ids) detachEntityFromConnections(id)
+  for (let index = physicsState.world.entities.length - 1; index >= 0; index--) {
+    if (ids.has(physicsState.world.entities[index].id)) physicsState.world.entities.splice(index, 1)
   }
   enterEditMode(null)
   if (physicsState.world.entities.length === 0) {
@@ -752,11 +910,14 @@ export function deleteSelected(): void {
 }
 
 export function deleteEntity(id: number): void {
-  const index = physicsState.world.entities.findIndex(entity => entity.id === id)
-  if (index === -1) return
-  detachEntityFromConnections(id)
-  physicsState.world.entities.splice(index, 1)
-  if (physicsState.selectedEntityId === id) enterEditMode(null)
+  const ids = new Set(subtreeEntities([id], physicsState.world.entities).map(entity => entity.id))
+  if (!ids.size) return
+  for (const entityId of ids) detachEntityFromConnections(entityId)
+  for (let index = physicsState.world.entities.length - 1; index >= 0; index--) {
+    if (ids.has(physicsState.world.entities[index].id)) physicsState.world.entities.splice(index, 1)
+  }
+  const selection = physicsState.selectedEntityIds.filter(entityId => !ids.has(entityId))
+  selectEntities(selection, 'replace')
 }
 
 export function resetCamera(): void {
@@ -784,14 +945,23 @@ export function moveToBack(id: number): void {
 }
 
 export function duplicateEntity(id: number): Entity | null {
-  const original = physicsState.world.entities.find(entity => entity.id === id)
-  if (!original) return null
-  const clone = cloneEntity(original, original.layer, { x: 10, y: -10 })
-  physicsState.world.entities.push(clone)
+  const clipboard = captureEntityClipboard([id])
+  if (!clipboard) return null
+  const clone = pasteClipboard(clipboard, { x: 10, y: -10 })[0] ?? null
   return clone
 }
 
-export const historyState = reactive({ stack: [] as string[], index: -1 })
+const commandHistory = new CommandHistory(100)
+let historyBaseline: string | null = null
+let applyingHistory = false
+export const historyState = reactive({
+  length: 0,
+  index: -1,
+  canUndo: false,
+  canRedo: false,
+  undoLabel: null as string | null,
+  redoLabel: null as string | null
+})
 
 const AUTOSAVE_KEY = 'nova_a.autosave.v2'
 let autosaveTimer: number | null = null
@@ -831,25 +1001,61 @@ export function hasAutosave(): boolean {
   return autosaveState.available
 }
 
-export function pushHistory(): void {
-  if (physicsState.simulationRunning) return
+function syncHistoryState(): void {
+  historyState.length = commandHistory.length
+  historyState.index = commandHistory.index
+  historyState.canUndo = commandHistory.canUndo
+  historyState.canRedo = commandHistory.canRedo
+  historyState.undoLabel = commandHistory.undoLabel
+  historyState.redoLabel = commandHistory.redoLabel
+}
+
+/** Keep non-command editor navigation from becoming the implicit undo target. */
+export function synchronizeHistoryBaseline(): void {
+  if (physicsState.playMode !== 'editing' || applyingHistory) return
+  historyBaseline = getSceneJSON()
+  syncHistoryState()
+}
+
+function applyHistoryDocument(document: string): void {
+  applyingHistory = true
+  try {
+    if (loadProject(document)) historyBaseline = document
+  } finally {
+    applyingHistory = false
+  }
+}
+
+export function pushHistory(label = 'Edit scene', mergeKey: string | null = null): void {
+  if (physicsState.playMode !== 'editing' || applyingHistory) return
   const stateString = getSceneJSON()
-  if (historyState.index >= 0 && historyState.stack[historyState.index] === stateString) return
-  historyState.stack = historyState.stack.slice(0, historyState.index + 1)
-  historyState.stack.push(stateString)
-  if (historyState.stack.length > 50) historyState.stack.shift()
-  historyState.index = historyState.stack.length - 1
+  if (historyBaseline === null) {
+    historyBaseline = stateString
+    syncHistoryState()
+    scheduleAutosave()
+    return
+  }
+  if (historyBaseline === stateString) return
+  commandHistory.commit(new DocumentMutationCommand({
+    label,
+    before: historyBaseline,
+    after: stateString,
+    apply: applyHistoryDocument,
+    mergeKey
+  }), true)
+  historyBaseline = stateString
+  syncHistoryState()
   scheduleAutosave()
 }
 
 export function undo(): void {
-  if (historyState.index <= 0) return
-  historyState.index--
-  if (loadProject(historyState.stack[historyState.index])) editorState.statusText = t('undoSuccess')
+  if (!commandHistory.undo()) return
+  syncHistoryState()
+  editorState.statusText = t('undoSuccess')
 }
 
 export function redo(): void {
-  if (historyState.index >= historyState.stack.length - 1) return
-  historyState.index++
-  if (loadProject(historyState.stack[historyState.index])) editorState.statusText = t('redoSuccess')
+  if (!commandHistory.redo()) return
+  syncHistoryState()
+  editorState.statusText = t('redoSuccess')
 }

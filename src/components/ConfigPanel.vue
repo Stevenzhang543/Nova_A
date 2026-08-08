@@ -1,11 +1,25 @@
 <template>
-  <div class="config-wrapper">
-    <aside class="config-panel" :class="{ visible: selectedEntity !== null }">
-      <div v-if="selectedEntity" class="settings-content" @change="onConfigChange">
+  <div class="config-wrapper" :style="{ width: `${panelWidth}px` }">
+    <div class="resize-handle" @mousedown="startResize"></div>
+    <aside class="config-panel" :class="{ runtime: !canEdit }">
+      <div v-if="selectedEntities.length > 1" class="settings-content multi-inspector">
+        <header class="inspector-header"><span class="eyebrow">{{ t('entitySettings') }}</span><h3>{{ t('multiSelected', { count: selectedEntities.length }) }}</h3></header>
+        <InspectorSection :title="t('sharedProperties')" open>
+          <PropertyRow :label="t('entityEnabled')"><button class="batch-toggle" @click="toggleAll('enabled')">{{ sharedBoolean('enabled') }}</button></PropertyRow>
+          <PropertyRow :label="t('entityVisible')"><button class="batch-toggle" @click="toggleAll('editorVisible')">{{ sharedBoolean('editorVisible') }}</button></PropertyRow>
+          <PropertyRow :label="t('entityLocked')"><button class="batch-toggle" @click="toggleAll('editorLocked')">{{ sharedBoolean('editorLocked') }}</button></PropertyRow>
+          <PropertyRow :label="t('sortingLayer')"><select v-model="multiLayer"><option value="">{{ t('mixed') }}</option><option v-for="layer in estate.layers" :key="layer" :value="String(layer)">{{ t('layer') }} {{ layer }}</option></select></PropertyRow>
+          <PropertyRow :label="t('position')"><div class="pair"><input v-model.number="multiPositionX" type="number" step="0.1"><input v-model.number="multiPositionY" type="number" step="0.1"></div></PropertyRow>
+        </InspectorSection>
+        <p class="runtime-note">{{ t('runtimeIsolation') }}</p>
+      </div>
+      <div v-else-if="selectedEntity" class="settings-content" @change="onConfigChange">
         <header class="inspector-header"><span class="eyebrow">{{ t('entitySettings') }}</span><h3>{{ selectedEntity.name }}_<small>{{ selectedEntity.id }}</small></h3></header>
 
         <InspectorSection :title="t('entitySettings')" open>
           <PropertyRow :label="t('entityEnabled')"><ToggleSwitch v-model="selectedEntity.enabled" /></PropertyRow>
+          <PropertyRow :label="t('entityVisible')"><ToggleSwitch v-model="selectedEntity.editorVisible" /></PropertyRow>
+          <PropertyRow :label="t('entityLocked')"><ToggleSwitch v-model="selectedEntity.editorLocked" /></PropertyRow>
           <PropertyRow :label="t('entityTags')"><input v-model="tagsText" type="text"></PropertyRow>
           <DiagnosticRow label="UUID" :value="selectedEntity.uuid" />
         </InspectorSection>
@@ -124,6 +138,7 @@
           <button v-for="kind in removedComponents" :key="kind" @click="addRemovedComponent(kind)">+ {{ componentTitle(kind) }}</button>
         </div>
       </div>
+      <div v-else class="empty-inspector"><span class="eyebrow">{{ t('entitySettings') }}</span><p>{{ t('noEntitiesFound') }}</p></div>
     </aside>
 
     <div v-if="showColorPicker" class="modal-scrim" @mousedown.self="showColorPicker = false"><div class="color-modal"><h4>{{ t('selectColor') }}</h4><input v-model="tempColor" type="color"><div><button @click="showColorPicker = false">{{ t('cancel') }}</button><button class="primary" @click="applyColor">{{ t('apply') }}</button></div></div></div>
@@ -132,7 +147,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, defineComponent, h, ref, watch } from 'vue'
+import { computed, defineComponent, h, onBeforeUnmount, ref, watch } from 'vue'
 import { t } from '../i18n'
 import { editorState as estate } from '../store/editor'
 import { deleteConnection, physicsState as state, pushHistory, repairConnection } from '../store/physics'
@@ -147,11 +162,13 @@ import { connectionSharesLayer } from '../world/Connection'
 import { Collider2D, RigidBody2D, ShapeRenderer2D, copyComponentValues, pasteComponentValues, type ComponentKind } from '../world/components'
 import { Transform } from '../world/Transform'
 import { setParent, wouldCreateParentCycle } from '../world/hierarchy'
+import { applyTranslation, captureTransforms } from '../editor/gizmo'
+import { selectionCenter } from '../editor/selection'
 
 const InspectorSection = defineComponent({ props: { title: { type: String, required: true }, open: Boolean }, setup(props, { slots }) { return () => h('details', { class: 'inspector-section', open: props.open }, [h('summary', [h('span', props.title), h('i', '⌄')]), h('div', { class: 'section-body' }, slots.default?.())]) } })
 const PropertyRow = defineComponent({ props: { label: { type: String, required: true } }, setup(props, { slots }) { return () => h('label', { class: 'property-row' }, [h('span', props.label), h('div', { class: 'property-control' }, slots.default?.())]) } })
 const DiagnosticRow = defineComponent({ props: { label: { type: String, required: true }, value: { type: String, required: true }, active: Boolean }, setup(props) { return () => h('div', { class: ['diagnostic-row', { active: props.active }] }, [h('span', props.label), h('code', props.value)]) } })
-const ToggleSwitch = defineComponent({ props: { modelValue: { type: Boolean, required: true } }, emits: ['update:modelValue'], setup(props, { emit }) { return () => h('button', { class: ['toggle', { active: props.modelValue }], role: 'switch', 'aria-checked': props.modelValue, onClick: () => emit('update:modelValue', !props.modelValue) }, h('i')) } })
+const ToggleSwitch = defineComponent({ props: { modelValue: { type: Boolean, required: true } }, emits: ['update:modelValue'], setup(props, { emit }) { return () => h('button', { class: ['toggle', { active: props.modelValue }], role: 'switch', 'aria-checked': props.modelValue, onClick: () => { emit('update:modelValue', !props.modelValue); onConfigChange() } }, h('i')) } })
 const NumberRange = defineComponent({ props: { modelValue: { type: Number, required: true }, min: { type: Number, required: true }, max: { type: Number, required: true }, step: { type: Number, required: true } }, emits: ['update:modelValue'], setup(props, { emit }) { const update = (event: Event) => emit('update:modelValue', Number((event.target as HTMLInputElement).value)); return () => h('div', { class: 'number-range' }, [h('input', { type: 'range', value: props.modelValue, min: props.min, max: props.max, step: props.step, onInput: update }), h('input', { type: 'number', value: props.modelValue, step: props.step, onChange: update })]) } })
 const ComponentTools = defineComponent({
   props: { kind: { type: String, required: true } },
@@ -171,12 +188,18 @@ const ComponentTools = defineComponent({
   }
 })
 
+const selectedEntities = computed(() => {
+  const ids = new Set(state.selectedEntityIds)
+  return state.world.entities.filter(entity => ids.has(entity.id))
+})
 const selectedEntity = computed(() => state.selectedEntityId === null ? null : state.world.entities.find(entity => entity.id === state.selectedEntityId) ?? null)
+const canEdit = computed(() => state.playMode === 'editing')
 const selectedConnections = computed(() => selectedEntity.value ? state.world.connections.filter(connection => connection.anchors.some(anchor => anchor.entityId === selectedEntity.value!.id)) : [])
 const entityColor = computed(() => selectedEntity.value ? `rgb(${selectedEntity.value.color.r}, ${selectedEntity.value.color.g}, ${selectedEntity.value.color.b})` : 'transparent')
 const selectedEntityArea = computed(() => selectedEntity.value ? entityArea(selectedEntity.value) : 0)
 const effectiveEntityInertia = computed(() => selectedEntity.value ? effectiveInertia(selectedEntity.value) : 0)
 const componentClipboard = ref<{ kind: ComponentKind; values: Record<string, unknown> } | null>(null)
+const panelWidth = ref(326)
 const removedComponents = computed(() => selectedEntity.value
   ? [...selectedEntity.value.componentMap.values()].filter(component => component.removed && component.kind !== 'Transform2D').map(component => component.kind)
   : [])
@@ -275,7 +298,7 @@ async function removeConnection(id: number) { if (!await confirmConnectionAction
 async function separate(id: number) { if (!await confirmConnectionAction(t('separateBindingTitle'), t('confirmSeparateBinding'))) return; deleteConnection(id); pushHistory(); estate.statusText = t('bindingSeparated') }
 function repair(id: number) { repairConnection(id); pushHistory() }
 
-function onConfigChange() { if (!selectedEntity.value) return; if (selectedEntity.value.isStatic) selectedEntity.value.isKinematic = false; normalizeEntity(selectedEntity.value); pushHistory() }
+function onConfigChange() { if (!canEdit.value || !selectedEntity.value) return; if (selectedEntity.value.isStatic) selectedEntity.value.isKinematic = false; normalizeEntity(selectedEntity.value); pushHistory('Set property', `property:${selectedEntity.value.uuid}`) }
 function onLayerChange() { if (selectedEntity.value) estate.activeLayer = selectedEntity.value.layer }
 const bodyType = computed({ get: () => !selectedEntity.value ? 'Dynamic' : selectedEntity.value.isStatic ? 'Static' : selectedEntity.value.isKinematic ? 'Kinematic' : 'Dynamic', set: value => { if (!selectedEntity.value) return; selectedEntity.value.isStatic = value === 'Static'; selectedEntity.value.isKinematic = value === 'Kinematic'; normalizeEntity(selectedEntity.value) } })
 function onDensityChange() { if (selectedEntity.value) { selectedEntity.value.rigidBody.massMode = 'Automatic'; syncMassFromDensity(selectedEntity.value) } }
@@ -321,13 +344,60 @@ function entityDimension(axis: 'x' | 'y'): number { const entity = selectedEntit
 function setEntityDimension(axis: 'x' | 'y', value: number) { const entity = selectedEntity.value; if (!entity || !Number.isFinite(value) || value < MIN_SIZE) return; if (entity instanceof CircleEntity) entity.transform.scale[axis] = value / ((axis === 'x' ? entity.radiusX : entity.radiusY) * 2); else if (entity instanceof BoxEntity || entity instanceof TriangleEntity) { const values = entity.vertices.map(vertex => vertex[axis]); entity.transform.scale[axis] = value / (Math.max(...values) - Math.min(...values)) } }
 const absoluteSizeX = computed({ get: () => entityDimension('x'), set: value => setEntityDimension('x', value) })
 const absoluteSizeY = computed({ get: () => entityDimension('y'), set: value => setEntityDimension('y', value) })
+
+type SharedBooleanProperty = 'enabled' | 'editorVisible' | 'editorLocked'
+function sharedBoolean(property: SharedBooleanProperty): string {
+  const values = new Set(selectedEntities.value.map(entity => entity[property]))
+  if (values.size !== 1) return t('mixed')
+  return values.has(true) ? t('yes') : t('no')
+}
+function toggleAll(property: SharedBooleanProperty) {
+  if (!canEdit.value) return
+  const next = !selectedEntities.value.every(entity => entity[property])
+  for (const entity of selectedEntities.value) entity[property] = next
+  pushHistory('Set shared property', `multi:${property}`)
+}
+const multiLayer = computed({
+  get: () => {
+    const layers = new Set(selectedEntities.value.map(entity => entity.layer))
+    return layers.size === 1 ? String([...layers][0]) : ''
+  },
+  set: value => {
+    if (!canEdit.value || value === '') return
+    const layer = Number(value)
+    if (!estate.layers.includes(layer)) return
+    for (const entity of selectedEntities.value) entity.layer = layer
+    pushHistory('Set shared sorting layer', 'multi:layer')
+  }
+})
+function setMultiPosition(axis: 'x' | 'y', value: number) {
+  if (!canEdit.value || !Number.isFinite(value)) return
+  const ids = selectedEntities.value.map(entity => entity.id)
+  const center = selectionCenter(ids, state.world.entities)
+  const delta = { x: 0, y: 0 }
+  delta[axis] = value - center[axis]
+  applyTranslation(captureTransforms(ids, state.world.entities), delta, state.world.entities)
+  pushHistory('Move entities', `multi-position:${axis}`)
+}
+const multiPositionX = computed({ get: () => Number(selectionCenter(selectedEntities.value.map(entity => entity.id), state.world.entities).x.toFixed(4)), set: value => setMultiPosition('x', value) })
+const multiPositionY = computed({ get: () => Number(selectionCenter(selectedEntities.value.map(entity => entity.id), state.world.entities).y.toFixed(4)), set: value => setMultiPosition('y', value) })
+
+let resizeStartX = 0
+let resizeStartWidth = 0
+function startResize(event: MouseEvent) { resizeStartX = event.clientX; resizeStartWidth = panelWidth.value; document.addEventListener('mousemove', resizePanel); document.addEventListener('mouseup', stopResize); document.body.style.cursor = 'ew-resize' }
+function resizePanel(event: MouseEvent) { panelWidth.value = Math.min(520, Math.max(270, resizeStartWidth + resizeStartX - event.clientX)) }
+function stopResize() { document.removeEventListener('mousemove', resizePanel); document.removeEventListener('mouseup', stopResize); document.body.style.cursor = 'default' }
+onBeforeUnmount(stopResize)
 </script>
 
 <style scoped>
-.config-wrapper { position: absolute; inset: 42px 0 27px auto; width: min(340px, 38vw); z-index: 180; pointer-events: none; }
-.config-panel { position: absolute; inset: 0; transform: translateX(calc(100% + 20px)); pointer-events: auto; overflow: auto; color: var(--text-secondary); background: var(--surface-1); border-left: 1px solid var(--border-subtle); backdrop-filter: var(--glass-blur); box-shadow: -14px 0 40px rgba(0,0,0,.16); transition: transform 260ms cubic-bezier(.2,.8,.2,1); }
-.config-panel.visible { transform: translateX(0); }
+.config-wrapper { position: relative; min-width: 270px; max-width: 42vw; flex: 0 0 auto; z-index: 180; border-left: 1px solid var(--border-subtle); background: var(--surface-1); }
+.resize-handle { position: absolute; inset: 0 auto 0 -4px; width: 8px; cursor: ew-resize; z-index: 6; }
+.config-panel { position: absolute; inset: 0; overflow: auto; color: var(--text-secondary); background: var(--surface-1); backdrop-filter: var(--glass-blur); }
+.config-panel.runtime { pointer-events: none; opacity: .72; }
 .settings-content { min-height: 100%; padding: 16px 14px 28px; display: flex; flex-direction: column; gap: 8px; }
+.empty-inspector { height: 100%; padding: 18px; display: flex; flex-direction: column; justify-content: center; align-items: center; color: var(--text-muted); text-align: center; }.empty-inspector p { font-size: 11px; }.runtime-note { color: var(--text-muted); font-size: 10px; line-height: 1.45; }
+.batch-toggle { min-width: 76px; height: 28px; border: 1px solid var(--border-subtle); border-radius: 7px; color: var(--accent); background: var(--surface-3); }
 .inspector-header { padding: 4px 4px 10px; }.eyebrow { color: var(--accent); font-size: 9px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }h3 { margin: 4px 0 0; color: var(--text-primary); font-size: 18px; font-weight: 610; overflow: hidden; text-overflow: ellipsis; }h3 small { color: var(--text-muted); font-size: .7em; font-weight: 500; }
 :deep(.inspector-section) { border: 1px solid var(--border-subtle); border-radius: 12px; background: color-mix(in srgb, var(--surface-2) 72%, transparent); overflow: hidden; }
 :deep(.inspector-section summary) { min-height: 38px; padding: 0 11px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; list-style: none; color: var(--text-secondary); font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
@@ -352,5 +422,5 @@ const absoluteSizeY = computed({ get: () => entityDimension('y'), set: value => 
 .add-components button { min-height: 30px; border: 1px solid var(--border-subtle); border-radius: 8px; color: var(--accent); background: var(--surface-3); text-align: left; }
 .empty-state { margin: 5px 0; color: var(--text-muted); font-size: 11px; text-align: center; }.connection-list { display: flex; flex-direction: column; gap: 6px; }.connection-item { display: flex; align-items: center; border: 1px solid var(--border-subtle); border-radius: 9px; background: var(--surface-1); }.connection-main { min-width: 0; flex: 1; padding: 7px; display: flex; align-items: center; gap: 8px; border: 0; background: transparent; text-align: left; }.connection-main > span:last-child { min-width: 0; display: flex; flex-direction: column; }.connection-main strong, .connection-main small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }.connection-main strong { color: var(--text-primary); font-size: 11px; }.connection-main small { color: var(--text-muted); font-size: 9.5px; }.connection-dot { width: 8px; height: 8px; flex: 0 0 8px; border-radius: 50%; background: var(--connection); box-shadow: 0 0 7px var(--connection); }.connection-item.snapped .connection-dot, .connection-item.torn .connection-dot { background: var(--connection-broken); box-shadow: 0 0 7px var(--connection-broken); }.mini-button { width: 26px; height: 28px; border: 0; background: transparent; color: var(--text-muted); }.mini-button:hover { color: var(--accent); }.mini-button.danger:hover { color: var(--danger); }
 .modal-scrim { position: fixed; inset: 0; z-index: 1300; display: grid; place-items: center; background: var(--scrim); pointer-events: auto; backdrop-filter: blur(6px); }.color-modal { width: 250px; padding: 18px; display: flex; flex-direction: column; align-items: center; gap: 14px; border: 1px solid var(--border-subtle); border-radius: 16px; background: var(--surface-2); box-shadow: var(--shadow-lg); }.color-modal h4 { margin: 0; }.color-modal input { width: 100px; height: 76px; border: 0; background: transparent; }.color-modal > div { width: 100%; display: flex; gap: 8px; }.color-modal button { flex: 1; min-height: 34px; border: 1px solid var(--border-subtle); border-radius: 8px; background: var(--surface-3); }.color-modal button.primary { color: var(--accent-contrast); border-color: var(--accent); background: var(--accent); }
-@media (max-width: 760px) { .config-wrapper { width: min(330px, calc(100vw - 68px)); } }
+@media (max-width: 760px) { .config-wrapper { max-width: 48vw; } }
 </style>

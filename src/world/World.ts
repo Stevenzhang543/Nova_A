@@ -266,8 +266,8 @@ export class World {
     interpolationAlpha: 0, droppedSeconds: 0, eventCount: 0, configurationRebuilds: 0
   }
   events: Array<Record<string, unknown>> = []
-  projectFormatVersion = 7
-  projectEngineVersion = '1.3.0'
+  projectFormatVersion = 8
+  projectEngineVersion = '1.4.0'
 
   constructor() {
     this.wasmReady = init()

@@ -1,19 +1,20 @@
 <script setup lang="ts">
 import { ref, onMounted, onBeforeUnmount, watch } from 'vue'
-import { physicsState, enterEditMode, pushHistory } from '../store/physics'
+import { physicsState, pushHistory, selectEntities } from '../store/physics'
 import { BoxEntity } from '../world/BoxEntity'
 import { CircleEntity } from '../world/CircleEntity'
 import { TriangleEntity } from '../world/TriangleEntity'
 import type { Entity } from '../world/Entity'
 import type { Vec2 } from '../world/types'
-import { editorState, openContextMenu } from '../store/editor'
+import { addEditorLog, editorState, openContextMenu } from '../store/editor'
 import { isValidConvexPolygon, MIN_SIZE, normalizeEntity, syncMassFromDensity } from '../world/geometry'
 import { preferencesState as prefs } from '../store/preferences'
-import { connectionGeometrySignature, connectionSharesLayer, entityBoundaryPoints, repatchConnection, resolveAnchor, routePoints, setManualRoute, translateBoundCompound } from '../world/Connection'
+import { boundCompoundEntityIds, connectionGeometrySignature, connectionSharesLayer, entityBoundaryPoints, repatchConnection, resolveAnchor, routePoints, setManualRoute } from '../world/Connection'
 import { t } from '../i18n'
 import { defaultColorForLayer } from '../world/layers'
 import { compoundGeometries } from '../world/compoundGeometry'
 import { localPointToWorld, worldPointToLocal, worldTransform } from '../world/hierarchy'
+import { applyRotation, applyScale, applyTranslation, axisVector, captureTransforms, gizmoPivot, gizmoRotation, projectedDelta, type GizmoAxis, type TransformSnapshot } from '../editor/gizmo'
 
 const canvasRef = ref<HTMLCanvasElement | null>(null)
 let ctx: CanvasRenderingContext2D | null = null
@@ -37,11 +38,21 @@ let raf = 0; let lastTime = performance.now(); let resizeObserver: ResizeObserve
 let hoveredVertex: { entityId: number, index: number, virtualPos?: Vec2 } | null = null
 let dragMeta: { initialScaleX: number, initialScaleY: number, initialDist: number } | null = null
 let dragEntityId: number | null = null; 
+let canvasDragMode: 'none' | 'draw' | 'marquee' = 'none'
+let marqueeSelectionMode: 'replace' | 'add' | 'toggle' = 'replace'
+let gizmoDrag: {
+  tool: 'move' | 'rotate' | 'scale'
+  axis: GizmoAxis
+  pivot: Vec2
+  rotation: number
+  startPointer: Vec2
+  startAngle: number
+  startLocal: Vec2
+  snapshots: TransformSnapshot[]
+} | null = null
 
 let savedCameraState: { scale: number, offset: Vec2 } | null = null;
 let hasMovedEntity = false;
-const DRAW_GUARD_MS = 260
-let drawingBlockedUntil = 0
 
 watch(() => state.focusEntityID, (newId) => {
   if (editorState.currentPage !== 'scene') return;
@@ -122,6 +133,7 @@ function loop(time?: number) {
     if (connection.breakState !== 'intact' && !knownBrokenConnections.has(connection.id)) {
       knownBrokenConnections.add(connection.id)
       editorState.statusText = t('connectionBroken', { name: connection.name })
+      addEditorLog(t('connectionBroken', { name: connection.name }), 'Physics', 'warning')
     }
   }
   render(); raf = requestAnimationFrame(loop)
@@ -143,15 +155,19 @@ onMounted(() => {
 onBeforeUnmount(() => { if (raf) cancelAnimationFrame(raf); window.removeEventListener('resize', resize); window.removeEventListener('mouseup', onMouseUp); window.removeEventListener('keydown', onKeyDown); if (resizeObserver) resizeObserver.disconnect() })
 
 function screenPos(e: MouseEvent): Vec2 { const r = canvasRef.value!.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top } }
-function onWheel(e: WheelEvent) { e.preventDefault(); const factor = Math.pow(1.1, prefs.zoomSensitivity); camera.zoomAt(screenPos(e), e.deltaY < 0 ? factor : 1 / factor) }
+function onWheel(e: WheelEvent) { e.preventDefault(); if (editorState.currentPage === 'game') return; const factor = Math.pow(1.1, prefs.zoomSensitivity); camera.zoomAt(screenPos(e), e.deltaY < 0 ? factor : 1 / factor) }
 function snapPoint(point: Vec2): Vec2 { if (!prefs.snapToGrid) return point; const step = Math.max(0.000001, prefs.gridSize); return { x: Math.round(point.x / step) * step, y: Math.round(point.y / step) * step } }
 
 function onKeyDown(event: KeyboardEvent) {
-  if (event.key !== 'Escape' || editorState.manualConnectionId === null) return
-  editorState.manualConnectionId = null
-  editorState.manualConnectionPoints.splice(0)
-  isManualDrawing = false
-  editorState.statusText = t('ready')
+  if (event.key !== 'Escape') return
+  if (editorState.manualConnectionId !== null) {
+    editorState.manualConnectionId = null
+    editorState.manualConnectionPoints.splice(0)
+    isManualDrawing = false
+    editorState.statusText = t('ready')
+  }
+  gizmoDrag = null
+  canvasDragMode = 'none'
 }
 
 function syncEditableConnections(repatchChanged: boolean) {
@@ -188,171 +204,218 @@ function strokeSmoothPath(context: CanvasRenderingContext2D, points: Vec2[]) {
   context.stroke()
 }
 
+const drawTools = new Set(['rectangle', 'circle', 'triangle'])
+function isDrawTool(): boolean { return drawTools.has(state.activeTool) }
+function selectionMode(event: MouseEvent): 'replace' | 'add' | 'toggle' { return event.ctrlKey || event.metaKey ? 'toggle' : event.shiftKey ? 'add' : 'replace' }
+function rotateVector(vector: Vec2, angle: number): Vec2 { const cosine = Math.cos(angle); const sine = Math.sin(angle); return { x: vector.x * cosine - vector.y * sine, y: vector.x * sine + vector.y * cosine } }
+function distanceToSegment(point: Vec2, start: Vec2, end: Vec2): number {
+  const dx = end.x - start.x; const dy = end.y - start.y
+  const lengthSquared = dx * dx + dy * dy
+  const amount = lengthSquared > 0 ? Math.min(1, Math.max(0, ((point.x - start.x) * dx + (point.y - start.y) * dy) / lengthSquared)) : 0
+  return Math.hypot(point.x - start.x - dx * amount, point.y - start.y - dy * amount)
+}
+function transformSelectionIds(): number[] {
+  const ids = new Set<number>()
+  for (const id of state.selectedEntityIds) for (const member of boundCompoundEntityIds(id, world.connections, world.entities)) ids.add(member)
+  return [...ids].filter(id => !world.entities.find(entity => entity.id === id)?.editorLocked)
+}
+function currentGizmo() {
+  const ids = transformSelectionIds()
+  if (!ids.length) return null
+  const primaryId = ids.includes(state.selectedEntityId ?? -1) ? state.selectedEntityId : ids[ids.length - 1] ?? null
+  return {
+    ids,
+    primaryId,
+    pivot: gizmoPivot(ids, primaryId, editorState.pivotMode, world.entities),
+    rotation: gizmoRotation(primaryId, editorState.transformSpace, world.entities)
+  }
+}
+function hitGizmo(point: Vec2): GizmoAxis | null {
+  const gizmo = currentGizmo()
+  if (!gizmo || state.activeTool === 'select' || isDrawTool()) return null
+  const unit = 1 / camera.scale
+  const x = axisVector('x', gizmo.rotation); const y = axisVector('y', gizmo.rotation)
+  const xEnd = { x: gizmo.pivot.x + x.x * 72 * unit, y: gizmo.pivot.y + x.y * 72 * unit }
+  const yEnd = { x: gizmo.pivot.x + y.x * 72 * unit, y: gizmo.pivot.y + y.y * 72 * unit }
+  if (state.activeTool === 'rotate') return Math.abs(Math.hypot(point.x - gizmo.pivot.x, point.y - gizmo.pivot.y) - 52 * unit) <= 9 * unit ? 'xy' : null
+  if (state.activeTool === 'scale') {
+    if (Math.hypot(point.x - xEnd.x, point.y - xEnd.y) <= 10 * unit) return 'x'
+    if (Math.hypot(point.x - yEnd.x, point.y - yEnd.y) <= 10 * unit) return 'y'
+    if (Math.hypot(point.x - gizmo.pivot.x, point.y - gizmo.pivot.y) <= 10 * unit) return 'xy'
+    return null
+  }
+  if (Math.hypot(point.x - gizmo.pivot.x, point.y - gizmo.pivot.y) <= 10 * unit) return 'xy'
+  if (distanceToSegment(point, gizmo.pivot, xEnd) <= 7 * unit) return 'x'
+  if (distanceToSegment(point, gizmo.pivot, yEnd) <= 7 * unit) return 'y'
+  return null
+}
+function beginGizmoDrag(axis: GizmoAxis, point: Vec2) {
+  const gizmo = currentGizmo()
+  const tool = state.activeTool
+  if (!gizmo || (tool !== 'move' && tool !== 'rotate' && tool !== 'scale')) return
+  const local = rotateVector({ x: point.x - gizmo.pivot.x, y: point.y - gizmo.pivot.y }, -gizmo.rotation)
+  gizmoDrag = {
+    tool,
+    axis,
+    pivot: gizmo.pivot,
+    rotation: gizmo.rotation,
+    startPointer: { ...point },
+    startAngle: Math.atan2(point.y - gizmo.pivot.y, point.x - gizmo.pivot.x),
+    startLocal: local,
+    snapshots: captureTransforms(gizmo.ids, world.entities)
+  }
+  hasMovedEntity = false
+}
+
+function beginVertexDrag(entityId: number, point: Vec2, button: number): boolean {
+  const entity = world.entities.find(candidate => candidate.id === entityId)
+  if (!entity || entity.editorLocked || state.playMode !== 'editing') return false
+  dragEntityId = entityId
+  dragButton = button
+  isVertexDragging = true
+  const position = worldTransform(entity, world.entities).position
+  dragMeta = {
+    initialScaleX: entity.transform.scale.x,
+    initialScaleY: entity.transform.scale.y,
+    initialDist: Math.max(0.1, Math.hypot(point.x - position.x, point.y - position.y))
+  }
+  return true
+}
+
 function onMouseDown(e: MouseEvent) {
-  const sPos = screenPos(e); const wPos = camera.screenToWorld(sPos); dragButton = e.button
-  if (editorState.manualConnectionId !== null && e.button === 0) {
-    isManualDrawing = true
-    editorState.manualConnectionPoints.splice(0, editorState.manualConnectionPoints.length, wPos)
+  const sPos = screenPos(e); const wPos = camera.screenToWorld(sPos); dragButton = e.button; hasMovedEntity = false
+  if (editorState.currentPage === 'game') return
+  if (editorState.manualConnectionId !== null && e.button === 0 && state.playMode === 'editing') { isManualDrawing = true; editorState.manualConnectionPoints.splice(0, editorState.manualConnectionPoints.length, wPos); return }
+  if (state.activeTool === 'select') checkHoverVertex(wPos)
+  if (e.button === 2 && hoveredVertex && beginVertexDrag(hoveredVertex.entityId, wPos, e.button)) return
+  if (e.button === 2) { const hitId = hitTest(wPos); if (hitId !== null) openContextMenu(e, 'grid-entity', hitId); else { isPanning = true; lastMouseScreen = sPos } return }
+  if (e.button === 1) { isPanning = true; lastMouseScreen = sPos; return }
+  if (e.button !== 0) return
+
+  if (isDrawTool()) {
+    if (state.playMode !== 'editing') return
+    canvasDragMode = 'draw'; isDragging = true; dragStart = wPos; dragNow = wPos
     return
   }
-  checkHoverVertex(wPos); hasMovedEntity = false; 
 
-  if (editorState.currentPage === 'render') { isPanning = true; lastMouseScreen = sPos; return }
-  
-  // BUGFIX: Right-click purely opens the menu. No editing mode. No zooming.
-  if (e.button === 2 && !hoveredVertex) {
-    const hitId = hitTest(wPos); 
-    if (hitId !== null) { 
-      openContextMenu(e, 'grid-entity', hitId); 
-      return; 
-    } else { 
-      isPanning = true; lastMouseScreen = sPos; return; 
-    }
+  if (state.activeTool === 'select' && state.playMode === 'editing' && hoveredVertex) {
+    if (beginVertexDrag(hoveredVertex.entityId, wPos, e.button)) return
   }
-  
-  if (e.button === 1) { isPanning = true; lastMouseScreen = sPos; return }
 
-  if (e.button === 0 || e.button === 2) {
-    if (hoveredVertex) {
-      dragEntityId = hoveredVertex.entityId; isVertexDragging = true 
-      const ent = world.entities.find(e => e.id === dragEntityId)
-      if (ent) {
-        const position = worldTransform(ent, world.entities).position
-        const dx = wPos.x - position.x; const dy = wPos.y - position.y
-        dragMeta = { initialScaleX: ent.transform.scale.x, initialScaleY: ent.transform.scale.y, initialDist: Math.max(0.1, Math.sqrt(dx*dx + dy*dy)) }
-      }
-      return 
-    }
-    if (e.button === 0) {
-      const hitId = hitTest(wPos)
-      if (hitId !== null) { dragEntityId = hitId; isDragging = true; dragStart = wPos } 
-      else { 
-        if (state.selectedEntityId !== null) {
-          enterEditMode(null)
-          drawingBlockedUntil = performance.now() + DRAW_GUARD_MS
-          return
-        }
-        if (performance.now() < drawingBlockedUntil) return
-        isDragging = true; dragStart = wPos; dragNow = wPos; dragEntityId = null 
-      }
-    }
+  if (state.playMode === 'editing') {
+    const axis = hitGizmo(wPos)
+    if (axis) { beginGizmoDrag(axis, wPos); return }
   }
+
+  const hitId = hitTest(wPos)
+  if (hitId !== null) {
+    const entity = world.entities.find(candidate => candidate.id === hitId)
+    if (!state.selectedEntityIds.includes(hitId) || e.ctrlKey || e.metaKey || e.shiftKey) selectEntities([hitId], selectionMode(e), hitId)
+    if (state.playMode === 'editing' && state.activeTool === 'move' && entity && !entity.editorLocked && state.selectedEntityIds.includes(hitId)) beginGizmoDrag('xy', wPos)
+    return
+  }
+
+  marqueeSelectionMode = selectionMode(e)
+  if (marqueeSelectionMode === 'replace') selectEntities([], 'replace')
+  canvasDragMode = 'marquee'; isDragging = true; dragStart = wPos; dragNow = wPos
 }
 
 function onMouseMove(e: MouseEvent) {
   const sPos = screenPos(e); const wPos = camera.screenToWorld(sPos)
-  if (isManualDrawing) {
-    const points = editorState.manualConnectionPoints
-    const previous = points[points.length - 1]
-    if (!previous || Math.hypot(previous.x - wPos.x, previous.y - wPos.y) > 3 / camera.scale) points.push(wPos)
-    return
-  }
-  
-  if (isPanning && lastMouseScreen) {
-    camera.targetScale = null; camera.targetOffset = null; 
-    camera.offset.x += sPos.x - lastMouseScreen.x; camera.offset.y += sPos.y - lastMouseScreen.y
-    lastMouseScreen = sPos; return
-  }
+  if (isManualDrawing) { const points = editorState.manualConnectionPoints; const previous = points[points.length - 1]; if (!previous || Math.hypot(previous.x - wPos.x, previous.y - wPos.y) > 3 / camera.scale) points.push(wPos); return }
+  if (isPanning && lastMouseScreen) { camera.targetScale = null; camera.targetOffset = null; camera.offset.x += sPos.x - lastMouseScreen.x; camera.offset.y += sPos.y - lastMouseScreen.y; lastMouseScreen = sPos; return }
 
-  if (!isDragging && !isVertexDragging) checkHoverVertex(wPos)
-
-  if (isVertexDragging && dragEntityId && dragMeta) {
-    hasMovedEntity = true; 
-    const ent = world.entities.find(e => e.id === dragEntityId); if (!ent || !hoveredVertex) return
-    const transform = worldTransform(ent, world.entities)
-
-    if (dragButton === 2) {
-      const dx = wPos.x - transform.position.x; const dy = wPos.y - transform.position.y
-      const distNow = Math.sqrt(dx*dx + dy*dy); const scaleFactor = distNow / dragMeta.initialDist
-      ent.transform.scale.x = Math.max(MIN_SIZE, dragMeta.initialScaleX * scaleFactor); ent.transform.scale.y = Math.max(MIN_SIZE, dragMeta.initialScaleY * scaleFactor)
-    } 
-    else if (dragButton === 0) {
-      const local = worldPointToLocal(ent, wPos, world.entities)
-      const localX = local.x; const localY = local.y
-
-      if (ent instanceof BoxEntity || ent instanceof TriangleEntity) {
-        const candidate = ent.vertices.map(vertex => ({ ...vertex }))
-        candidate[hoveredVertex.index] = { x: localX, y: localY }
-        if (isValidConvexPolygon(candidate)) ent.vertices = candidate
-      } else if (ent instanceof CircleEntity) {
-        ent.radiusX = Math.max(0.1, Math.abs(localX)); ent.radiusY = Math.max(0.1, Math.abs(localY))
+  if (gizmoDrag) {
+    hasMovedEntity = true
+    if (gizmoDrag.tool === 'move') {
+      let delta = projectedDelta({ x: wPos.x - gizmoDrag.startPointer.x, y: wPos.y - gizmoDrag.startPointer.y }, gizmoDrag.axis, gizmoDrag.rotation)
+      if (prefs.snapToGrid) {
+        const target = snapPoint({ x: gizmoDrag.pivot.x + delta.x, y: gizmoDrag.pivot.y + delta.y })
+        delta = projectedDelta({ x: target.x - gizmoDrag.pivot.x, y: target.y - gizmoDrag.pivot.y }, gizmoDrag.axis, gizmoDrag.rotation)
       }
+      applyTranslation(gizmoDrag.snapshots, delta, world.entities)
+    } else if (gizmoDrag.tool === 'rotate') {
+      let delta = Math.atan2(wPos.y - gizmoDrag.pivot.y, wPos.x - gizmoDrag.pivot.x) - gizmoDrag.startAngle
+      if (editorState.angleSnapEnabled) { const step = Math.max(0.1, editorState.angleSnapDegrees) * Math.PI / 180; delta = Math.round(delta / step) * step }
+      applyRotation(gizmoDrag.snapshots, gizmoDrag.pivot, delta, world.entities)
+    } else {
+      const current = rotateVector({ x: wPos.x - gizmoDrag.pivot.x, y: wPos.y - gizmoDrag.pivot.y }, -gizmoDrag.rotation)
+      let factor = { x: 1, y: 1 }
+      if (gizmoDrag.axis === 'x') factor.x = Math.max(0.01, Math.abs(current.x) / Math.max(Math.abs(gizmoDrag.startLocal.x), 1e-6))
+      else if (gizmoDrag.axis === 'y') factor.y = Math.max(0.01, Math.abs(current.y) / Math.max(Math.abs(gizmoDrag.startLocal.y), 1e-6))
+      else { const uniform = Math.max(0.01, Math.hypot(current.x, current.y) / Math.max(Math.hypot(gizmoDrag.startLocal.x, gizmoDrag.startLocal.y), 1e-6)); factor = { x: uniform, y: uniform } }
+      applyScale(gizmoDrag.snapshots, gizmoDrag.pivot, factor, world.entities)
     }
     return
   }
 
-  if (isDragging && dragStart) {
-    if (dragEntityId !== null) {
-      hasMovedEntity = true; 
-      const entity = world.entities.find(ent => ent.id === dragEntityId)
-      if (entity) {
-        const position = worldTransform(entity, world.entities).position
-        const next = snapPoint({ x: position.x + wPos.x - dragStart.x, y: position.y + wPos.y - dragStart.y })
-        translateBoundCompound(entity.id, { x: next.x - position.x, y: next.y - position.y }, world.connections, world.entities)
-        dragStart = wPos
-      }
-    } else { dragNow = wPos }
+  if (!isDragging && !isVertexDragging && state.activeTool === 'select') checkHoverVertex(wPos)
+  if (isVertexDragging && dragEntityId && dragMeta) {
+    hasMovedEntity = true
+    const entity = world.entities.find(candidate => candidate.id === dragEntityId); if (!entity || !hoveredVertex || entity.editorLocked) return
+    const transform = worldTransform(entity, world.entities)
+    if (dragButton === 2) { const scaleFactor = Math.hypot(wPos.x - transform.position.x, wPos.y - transform.position.y) / dragMeta.initialDist; entity.transform.scale.x = Math.max(MIN_SIZE, dragMeta.initialScaleX * scaleFactor); entity.transform.scale.y = Math.max(MIN_SIZE, dragMeta.initialScaleY * scaleFactor) }
+    else { const local = worldPointToLocal(entity, wPos, world.entities); if (entity instanceof BoxEntity || entity instanceof TriangleEntity) { const candidate = entity.vertices.map(vertex => ({ ...vertex })); candidate[hoveredVertex.index] = local; if (isValidConvexPolygon(candidate)) entity.vertices = candidate } else if (entity instanceof CircleEntity) { entity.radiusX = Math.max(0.1, Math.abs(local.x)); entity.radiusY = Math.max(0.1, Math.abs(local.y)) } }
+    return
   }
+  if (isDragging && dragStart) dragNow = wPos
+}
+
+function selectMarqueeEntities(start: Vec2, end: Vec2) {
+  const left = Math.min(start.x, end.x); const right = Math.max(start.x, end.x); const bottom = Math.min(start.y, end.y); const top = Math.max(start.y, end.y)
+  const ids = world.entities.flatMap(entity => {
+    if (!entity.enabled || !entity.editorVisible || entity.editorLocked || entity.layer !== editorState.activeLayer) return []
+    const boundary = entityBoundaryPoints(entity, 48, world.entities)
+    if (!boundary.length) return []
+    const xs = boundary.map(point => point.x); const ys = boundary.map(point => point.y)
+    return Math.max(...xs) >= left && Math.min(...xs) <= right && Math.max(...ys) >= bottom && Math.min(...ys) <= top ? [entity.id] : []
+  })
+  selectEntities(ids, marqueeSelectionMode)
+}
+
+function finishCanvasDrag() {
+  isDragging = isPanning = isVertexDragging = false
+  canvasDragMode = 'none'; dragStart = dragNow = lastMouseScreen = null; dragMeta = null; dragEntityId = null; gizmoDrag = null
 }
 
 function onMouseUp() {
-  if (isManualDrawing) {
-    const connection = world.connections.find(candidate => candidate.id === editorState.manualConnectionId)
-    if (connection && editorState.manualConnectionPoints.length >= 2) {
-      setManualRoute(connection, editorState.manualConnectionPoints, world.entities)
-      pushHistory()
-      editorState.statusText = t('connectionUpdated')
+  if (isManualDrawing) { const connection = world.connections.find(candidate => candidate.id === editorState.manualConnectionId); if (connection && editorState.manualConnectionPoints.length >= 2) { setManualRoute(connection, editorState.manualConnectionPoints, world.entities); pushHistory('Draw connection'); editorState.statusText = t('connectionUpdated') } editorState.manualConnectionId = null; editorState.manualConnectionPoints.splice(0); isManualDrawing = false; return }
+
+  if (gizmoDrag) {
+    if (hasMovedEntity) {
+      for (const snapshot of gizmoDrag.snapshots) { normalizeEntity(snapshot.entity); if (snapshot.entity.rigidBody.massMode === 'Automatic') syncMassFromDensity(snapshot.entity) }
+      pushHistory(`${gizmoDrag.tool[0].toUpperCase()}${gizmoDrag.tool.slice(1)} entities`, `transform:${gizmoDrag.tool}`)
     }
-    editorState.manualConnectionId = null
-    editorState.manualConnectionPoints.splice(0)
-    isManualDrawing = false
-    return
-  }
-  if (isDragging && dragEntityId === null && dragStart && dragNow) {
-    const dragDistX = Math.abs(dragStart.x - dragNow.x); const dragDistY = Math.abs(dragStart.y - dragNow.y)
-    if (dragDistX > 0.5 || dragDistY > 0.5) {
-      const w = Math.max(dragDistX, 0.1); const h = Math.max(dragDistY, 0.1)
-      const center = snapPoint({ x: Math.min(dragStart.x, dragNow.x) + w / 2, y: Math.min(dragStart.y, dragNow.y) + h / 2 }); const cx = center.x; const cy = center.y
-      let created: Entity | null = null
-      if (state.activeTool === 'rectangle') created = world.addBox({ x: cx, y: cy }, { x: w, y: h })
-      else if (state.activeTool === 'circle') created = world.addCircle({ x: cx, y: cy }, w / 2, h / 2)
-      else if (state.activeTool === 'triangle') created = world.addTriangle({ x: cx, y: cy }, { x: w, y: h })
-      if (created) {
-        created.layer = editorState.activeLayer
-        created.color = defaultColorForLayer(created.layer)
-        created.density = prefs.defaultDensity
-        created.restitution = prefs.defaultRestitution
-        created.staticFriction = prefs.defaultFriction
-        created.dynamicFriction = prefs.defaultFriction
-        syncMassFromDensity(created)
-      }
-    }
+    finishCanvasDrag(); return
   }
 
-  // BUGFIX: Resizing prevents camera zoom-out desync.
-  if (dragEntityId !== null) {
-      const changedEntity = world.entities.find(entity => entity.id === dragEntityId)
-      if (changedEntity && hasMovedEntity) {
-        normalizeEntity(changedEntity)
-        if (changedEntity.rigidBody.massMode === 'Automatic') syncMassFromDensity(changedEntity)
-      }
-      if (hasMovedEntity && state.selectedEntityId !== dragEntityId) {
-          // Dragged unselected object: Don't enter edit mode
-      } else if (!hasMovedEntity && !isVertexDragging) {
-          // Pure click: Enter editing mode
-          enterEditMode(dragEntityId);
-      }
-      // If isVertexDragging is true, we simply do nothing!
-      // The object is ALREADY selected. focusEntityID stays identical. Camera stays perfectly still.
+  if (isVertexDragging && dragEntityId !== null) {
+    const entity = world.entities.find(candidate => candidate.id === dragEntityId)
+    if (entity && hasMovedEntity) { normalizeEntity(entity); if (entity.rigidBody.massMode === 'Automatic') syncMassFromDensity(entity); pushHistory('Edit shape vertices', `vertices:${entity.uuid}`) }
+    finishCanvasDrag(); return
   }
-  
-  if (isDragging || isVertexDragging) pushHistory()
-  isDragging = isPanning = isVertexDragging = false; dragStart = dragNow = lastMouseScreen = null; dragMeta = null; dragEntityId = null
+
+  if (isDragging && dragStart && dragNow) {
+    const dragDistX = Math.abs(dragStart.x - dragNow.x); const dragDistY = Math.abs(dragStart.y - dragNow.y)
+    if (canvasDragMode === 'marquee') {
+      if (dragDistX > 0.2 || dragDistY > 0.2) selectMarqueeEntities(dragStart, dragNow)
+    } else if (canvasDragMode === 'draw' && (dragDistX > 0.5 || dragDistY > 0.5)) {
+      const width = Math.max(dragDistX, 0.1); const height = Math.max(dragDistY, 0.1)
+      const center = snapPoint({ x: Math.min(dragStart.x, dragNow.x) + width / 2, y: Math.min(dragStart.y, dragNow.y) + height / 2 })
+      let created: Entity | null = null
+      if (state.activeTool === 'rectangle') created = world.addBox(center, { x: width, y: height })
+      else if (state.activeTool === 'circle') created = world.addCircle(center, width / 2, height / 2)
+      else if (state.activeTool === 'triangle') created = world.addTriangle(center, { x: width, y: height })
+      if (created) { created.layer = editorState.activeLayer; created.color = defaultColorForLayer(created.layer); created.density = prefs.defaultDensity; created.restitution = prefs.defaultRestitution; created.staticFriction = prefs.defaultFriction; created.dynamicFriction = prefs.defaultFriction; syncMassFromDensity(created); selectEntities([created.id], 'replace', created.id); pushHistory('Create entity') }
+    }
+  }
+  finishCanvasDrag()
 }
 
 function checkHoverVertex(p: Vec2) {
   if (!state.selectedEntityId) { hoveredVertex = null; document.body.style.cursor = 'default'; return }
-  const ent = world.entities.find(e => e.id === state.selectedEntityId); if (!ent) return
+  const ent = world.entities.find(e => e.id === state.selectedEntityId)
+  if (!ent || ent.editorLocked) { hoveredVertex = null; document.body.style.cursor = 'default'; return }
   const threshold = 12 / camera.scale 
   
   if (ent instanceof BoxEntity || ent instanceof TriangleEntity) {
@@ -385,8 +448,8 @@ function hitTest(p: Vec2): number | null {
   for (let i = ordered.length - 1; i >= 0; i--) {
     const e = ordered[i]
     if (!e.enabled || !e.hasComponent('ShapeRenderer2D') || !e.renderer.enabled) continue
+    if (editorState.currentPage === 'scene' && (!e.editorVisible || e.editorLocked)) continue
     if (editorState.currentPage === 'scene' && e.layer !== editorState.activeLayer) continue;
-    if (editorState.currentPage === 'render' && editorState.renderLayer !== 'all' && e.layer !== editorState.renderLayer) continue;
     const polygon = entityBoundaryPoints(e, 64, world.entities)
     let inside = false
     for (let j = 0, k = polygon.length - 1; j < polygon.length; k = j++) {
@@ -398,6 +461,45 @@ function hitTest(p: Vec2): number | null {
   return null
 }
 
+function renderTransformGizmo(context: CanvasRenderingContext2D) {
+  if (editorState.currentPage !== 'scene' || state.playMode !== 'editing' || state.activeTool === 'select' || isDrawTool()) return
+  const gizmo = currentGizmo()
+  if (!gizmo) return
+  const unit = 1 / camera.scale
+  const xAxis = axisVector('x', gizmo.rotation)
+  const yAxis = axisVector('y', gizmo.rotation)
+  const endpoint = (axis: Vec2, length: number) => ({ x: gizmo.pivot.x + axis.x * length * unit, y: gizmo.pivot.y + axis.y * length * unit })
+  const drawAxis = (axis: Vec2, color: string) => {
+    const start = endpoint(axis, 8); const end = endpoint(axis, 72)
+    context.beginPath(); context.moveTo(start.x, start.y); context.lineTo(end.x, end.y)
+    context.lineWidth = 2.4 * unit; context.strokeStyle = color; context.stroke()
+    if (state.activeTool === 'move') {
+      const perpendicular = { x: -axis.y, y: axis.x }
+      context.beginPath(); context.moveTo(end.x, end.y)
+      context.lineTo(end.x - axis.x * 11 * unit + perpendicular.x * 5 * unit, end.y - axis.y * 11 * unit + perpendicular.y * 5 * unit)
+      context.lineTo(end.x - axis.x * 11 * unit - perpendicular.x * 5 * unit, end.y - axis.y * 11 * unit - perpendicular.y * 5 * unit)
+      context.closePath(); context.fillStyle = color; context.fill()
+    } else {
+      context.fillStyle = color; context.fillRect(end.x - 5 * unit, end.y - 5 * unit, 10 * unit, 10 * unit)
+    }
+  }
+  context.save(); context.lineCap = 'round'; context.lineJoin = 'round'
+  if (state.activeTool === 'rotate') {
+    context.beginPath(); context.arc(gizmo.pivot.x, gizmo.pivot.y, 52 * unit, 0, Math.PI * 2)
+    context.lineWidth = 3 * unit; context.strokeStyle = palette.selection; context.stroke()
+    const handle = endpoint(xAxis, 52)
+    context.beginPath(); context.arc(handle.x, handle.y, 5 * unit, 0, Math.PI * 2); context.fillStyle = palette.selection; context.fill()
+  } else {
+    drawAxis(xAxis, palette.xAxis)
+    drawAxis(yAxis, palette.yAxis)
+    context.fillStyle = state.activeTool === 'scale' ? palette.selection : palette.canvas
+    context.strokeStyle = palette.selection; context.lineWidth = 2 * unit
+    context.fillRect(gizmo.pivot.x - 6 * unit, gizmo.pivot.y - 6 * unit, 12 * unit, 12 * unit)
+    context.strokeRect(gizmo.pivot.x - 6 * unit, gizmo.pivot.y - 6 * unit, 12 * unit, 12 * unit)
+  }
+  context.restore()
+}
+
 function render() {
   if (!ctx || !canvasRef.value) return
   const cvs = canvasRef.value; const width = cvs.width / canvasPixelRatio; const height = cvs.height / canvasPixelRatio
@@ -406,7 +508,10 @@ function render() {
   const viewL = -camera.offset.x / camera.scale; const viewR = viewL + width / camera.scale
   const viewT = camera.offset.y / camera.scale; const viewB = viewT - height / camera.scale   
 
-  if (editorState.showGrid) {
+  const isGameView = editorState.currentPage === 'game'
+  const selectedIds = new Set(state.selectedEntityIds)
+
+  if (!isGameView && editorState.showGrid) {
     const step = Math.max(0.000001, prefs.gridSize); const startX = Math.floor(viewL / step) * step; const startY = Math.floor(viewB / step) * step
     ctx.beginPath(); ctx.strokeStyle = palette.grid; ctx.lineWidth = 1 / camera.scale
     for (let x = startX; x < viewR; x += step) { ctx.moveTo(x, viewB); ctx.lineTo(x, viewT) }
@@ -426,12 +531,12 @@ function render() {
   const renderEntities = [...world.entities].sort((a, b) => a.layer - b.layer || a.renderer.orderInLayer - b.renderer.orderInLayer || world.entities.indexOf(a) - world.entities.indexOf(b))
   for (const e of renderEntities) {
     if (!e.enabled || !e.hasComponent('ShapeRenderer2D') || !e.renderer.enabled) continue
+    if (!isGameView && !e.editorVisible) continue
     if (editorState.currentPage === 'scene' && e.layer !== editorState.activeLayer) continue;
-    if (editorState.currentPage === 'render' && editorState.renderLayer !== 'all' && e.layer !== editorState.renderLayer) continue;
     const compound = compoundByMember.get(e.id)
     const styleEntity = compound?.members[0] ?? e
     const transform = worldTransform(e, world.entities)
-    const pos = transform.position; const isSelected = compound ? compound.memberIds.has(state.selectedEntityId ?? -1) : e.id === state.selectedEntityId
+    const pos = transform.position; const isSelected = !isGameView && (compound ? [...compound.memberIds].some(id => selectedIds.has(id)) : selectedIds.has(e.id))
     const maxRadius = e instanceof CircleEntity
       ? Math.max(e.radiusX * transform.scale.x, e.radiusY * transform.scale.y)
       : e instanceof BoxEntity || e instanceof TriangleEntity
@@ -499,15 +604,13 @@ function render() {
   }
 
   ctx.lineWidth = 2 / camera.scale
-  if (editorState.showXAxis) { ctx.beginPath(); ctx.strokeStyle = palette.xAxis; ctx.moveTo(viewL, 0); ctx.lineTo(viewR, 0); ctx.stroke() }
-  if (editorState.showYAxis) { ctx.beginPath(); ctx.strokeStyle = palette.yAxis; ctx.moveTo(0, viewT); ctx.lineTo(0, viewB); ctx.stroke() }
-  if (prefs.showConnections) {
+  if (!isGameView && editorState.showXAxis) { ctx.beginPath(); ctx.strokeStyle = palette.xAxis; ctx.moveTo(viewL, 0); ctx.lineTo(viewR, 0); ctx.stroke() }
+  if (!isGameView && editorState.showYAxis) { ctx.beginPath(); ctx.strokeStyle = palette.yAxis; ctx.moveTo(0, viewT); ctx.lineTo(0, viewB); ctx.stroke() }
+  if (!isGameView && prefs.showConnections) {
     for (const connection of world.connections) {
       if (connection.binding || !connectionSharesLayer(connection, world.entities)) continue
       const connectedLayer = world.entities.find(entity => entity.id === connection.anchors[0]?.entityId)?.layer
-      const visible = connectedLayer !== undefined && (editorState.currentPage === 'render'
-        ? editorState.renderLayer === 'all' || connectedLayer === editorState.renderLayer
-        : connectedLayer === editorState.activeLayer)
+      const visible = connectedLayer !== undefined && connectedLayer === editorState.activeLayer
       if (!visible) continue
       ctx.save()
       ctx.strokeStyle = connection.breakState === 'intact' ? palette.connection : palette.broken
@@ -547,11 +650,9 @@ function render() {
   for (const compound of compounds) {
     if (compound.members.length < 2 || compound.boundary.length === 0) continue
     const styleEntity = compound.members[0]
-    const visible = editorState.currentPage === 'render'
-      ? editorState.renderLayer === 'all' || styleEntity.layer === editorState.renderLayer
-      : styleEntity.layer === editorState.activeLayer
+    const visible = isGameView || styleEntity.layer === editorState.activeLayer
     if (!visible) continue
-    const isSelected = compound.memberIds.has(state.selectedEntityId ?? -1)
+    const isSelected = !isGameView && [...compound.memberIds].some(id => selectedIds.has(id))
     const alpha = styleEntity.transparency / 100
     ctx.beginPath()
     for (const segment of compound.boundary) {
@@ -563,21 +664,23 @@ function render() {
     ctx.strokeStyle = isSelected ? palette.selection : `rgba(${Math.max(0, styleEntity.color.r - 50)}, ${Math.max(0, styleEntity.color.g - 50)}, ${Math.max(0, styleEntity.color.b - 50)}, ${alpha})`
     ctx.stroke()
   }
-  if (isDragging && dragEntityId === null && dragStart && dragNow) {
+  renderTransformGizmo(ctx)
+  if (!isGameView && isDragging && canvasDragMode !== 'none' && dragStart && dragNow) {
     ctx.strokeStyle = palette.selection; ctx.lineWidth = 1 / camera.scale; ctx.setLineDash([5/camera.scale, 5/camera.scale])
     const x = Math.min(dragStart.x, dragNow.x), y = Math.min(dragStart.y, dragNow.y)
     const w = Math.abs(dragStart.x - dragNow.x), h = Math.abs(dragStart.y - dragNow.y)
     ctx.beginPath()
-    if (state.activeTool === 'rectangle') ctx.rect(x, y, w, h)
+    if (canvasDragMode === 'marquee') { ctx.rect(x, y, w, h); ctx.fillStyle = palette.selectionFill; ctx.fill(); ctx.stroke() }
+    else if (state.activeTool === 'rectangle') ctx.rect(x, y, w, h)
     else if (state.activeTool === 'circle') ctx.ellipse(x+w/2, y+h/2, w/2, h/2, 0, 0, Math.PI*2) 
     else if (state.activeTool === 'triangle') { 
       ctx.save(); ctx.translate(x + w / 2, y + h / 2)
       ctx.moveTo(0, h / 2); ctx.lineTo(w / 2, -h / 2); ctx.lineTo(-w / 2, -h / 2); ctx.closePath(); ctx.stroke(); ctx.restore()
     }
-    if (state.activeTool !== 'triangle') ctx.stroke()
+    if (canvasDragMode === 'draw' && state.activeTool !== 'triangle') ctx.stroke()
     ctx.setLineDash([])
   }
-  if (editorState.manualConnectionId !== null && editorState.manualConnectionPoints.length > 1) {
+  if (!isGameView && editorState.manualConnectionId !== null && editorState.manualConnectionPoints.length > 1) {
     ctx.beginPath(); ctx.moveTo(editorState.manualConnectionPoints[0].x, editorState.manualConnectionPoints[0].y)
     for (let index = 1; index < editorState.manualConnectionPoints.length; index++) ctx.lineTo(editorState.manualConnectionPoints[index].x, editorState.manualConnectionPoints[index].y)
     ctx.strokeStyle = palette.connection; ctx.lineWidth = prefs.connectionThickness / camera.scale; ctx.lineCap = 'round'; ctx.stroke()

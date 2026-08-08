@@ -17,6 +17,8 @@ export abstract class Entity {
   readonly entityType: 'Box' | 'Circle' | 'Triangle'
   name: string
   enabled = true
+  editorVisible = true
+  editorLocked = false
   tags: string[] = []
   readonly componentMap = new Map<ComponentKind, Component2D>()
 

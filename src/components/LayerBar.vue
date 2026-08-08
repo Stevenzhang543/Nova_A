@@ -1,7 +1,7 @@
-<template><aside class="layer-bar"><div class="layer-header">{{ t(state.currentPage === 'render' ? 'renderLayers' : 'layers') }}</div><div class="layer-list"><button v-if="state.currentPage === 'render'" :class="{ active: state.renderLayer === 'all' }" @click="setRenderLayer('all')"><img src="../assets/icons/layers.svg" alt=""><span>{{ t('all') }}</span></button><button v-for="layer in state.layers" :key="layer" :class="{ active: (state.currentPage === 'scene' ? state.activeLayer : state.renderLayer) === layer }" :title="t('rightClickOptions')" @click="state.currentPage === 'scene' ? setActiveLayer(layer) : setRenderLayer(layer)" @contextmenu.prevent="openContextMenu($event, 'layer', layer)"><i class="layer-color" :style="{ background: layerColorCss(layer) }"></i><span>{{ layer }}</span></button></div><button v-if="state.currentPage === 'scene'" class="add" :title="t('addLayer')" @click="addLayer">＋</button></aside></template>
+<template><aside class="layer-bar"><div class="layer-header">{{ t('layers') }}</div><div class="layer-list"><button v-for="layer in state.layers" :key="layer" :class="{ active: state.activeLayer === layer }" :title="t('rightClickOptions')" @click="setActiveLayer(layer)" @contextmenu.prevent="openContextMenu($event, 'layer', layer)"><i class="layer-color" :style="{ background: layerColorCss(layer) }"></i><span>{{ layer }}</span></button></div><button class="add" :title="t('addLayer')" @click="addLayer">＋</button></aside></template>
 <script setup lang="ts">
 import { t } from '../i18n'
-import { addLayer, editorState as state, openContextMenu, setActiveLayer, setRenderLayer } from '../store/editor'
+import { addLayer, editorState as state, openContextMenu, setActiveLayer } from '../store/editor'
 import { layerColorCss } from '../world/layers'
 </script>
 <style scoped>

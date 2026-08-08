@@ -2,7 +2,7 @@
   <aside class="sidebar">
     <div class="nav-group">
       <button :class="{ active: state.currentPage === 'scene' }" @click="switchPage('scene')" :title="t('scene')"><img :src="sceneIcon" :alt="t('scene')"><span>{{ t('scene') }}</span></button>
-      <button :class="{ active: state.currentPage === 'render' }" @click="switchPage('render')" :title="t('render')"><img :src="renderIcon" :alt="t('render')"><span>{{ t('render') }}</span></button>
+      <button :class="{ active: state.currentPage === 'game' }" @click="switchPage('game')" :title="t('game')"><img :src="renderIcon" :alt="t('game')"><span>{{ t('game') }}</span></button>
     </div>
     <div class="nav-group">
       <button :class="{ active: state.currentPage === 'settings' }" @click="switchPage('settings')" :title="t('settings')"><img :src="settingsIcon" :alt="t('settings')"><span>{{ t('settings') }}</span></button>
@@ -13,15 +13,12 @@
 <script setup lang="ts">
 import { t } from '../i18n'
 import { closeContextMenu, editorState as state } from '../store/editor'
-import { enterEditMode, resetSimulation } from '../store/physics'
 import sceneIcon from '../assets/icons/scene.svg'
 import renderIcon from '../assets/icons/render.svg'
 import settingsIcon from '../assets/icons/settings.svg'
 
-function switchPage(page: 'scene' | 'render' | 'settings') {
+function switchPage(page: 'scene' | 'game' | 'settings') {
   closeContextMenu()
-  enterEditMode(null)
-  if (state.currentPage === 'render' && page !== 'render') resetSimulation()
   state.currentPage = page
   state.statusText = t('switchedPage', { page: t(page) })
 }

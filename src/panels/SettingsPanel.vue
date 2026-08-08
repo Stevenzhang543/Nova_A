@@ -2,7 +2,7 @@
   <div class="settings-page">
     <header class="page-header">
       <div>
-        <span class="eyebrow">Nova_A 1.3.0</span>
+        <span class="eyebrow">Nova_A 1.4.0</span>
         <h1>{{ t('settings') }}</h1>
       </div>
       <div class="theme-switch" :aria-label="t('theme')">
