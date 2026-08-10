@@ -21,12 +21,14 @@ import { editorState } from './editor'
 import { preferencesState } from './preferences'
 import { t } from '../i18n'
 import { normalizeUuid } from '../world/identity'
-import { Collider2D, RigidBody2D, ShapeRenderer2D, type Component2D, type ComponentKind } from '../world/components'
+import { Camera2D, Collider2D, RigidBody2D, Script2D, ShapeRenderer2D, SpriteRenderer2D, TextRenderer2D, type Component2D, type ComponentKind } from '../world/components'
 import { Transform } from '../world/Transform'
 import { SceneManager } from '../world/SceneManager'
-import { translateEntityTree } from '../world/hierarchy'
+import { translateEntityTree, worldTransform } from '../world/hierarchy'
 import { CommandHistory, DocumentMutationCommand } from '../editor/commands'
 import { subtreeEntities, updateSelection, type SelectionMode } from '../editor/selection'
+import { assetReference, loadAssets, registerEmbeddedImage, serializeAssetFolders, serializeAssets } from '../assets/AssetDatabase'
+import { defaultInputMap, normalizeInputMap, type InputAction } from '../runtime/input'
 
 interface PhysicsState {
   world: World
@@ -39,9 +41,10 @@ interface PhysicsState {
   simulationRunning: boolean
   playMode: 'editing' | 'playing' | 'paused'
   engineDiagnostics: EngineDiagnostics
+  inputMap: InputAction[]
 }
 
-interface SceneEntityData {
+export interface SceneEntityData {
   [key: string]: unknown
   id?: number
   uuid?: string
@@ -61,10 +64,15 @@ interface SceneEntityData {
   editorVisible?: boolean
   editorLocked?: boolean
   tags?: string[]
+  persistentAcrossScenes?: boolean
+  prefabAsset?: string | null
+  prefabInstanceUuid?: string | null
+  prefabSourceUuid?: string | null
+  prefabOverrides?: Record<string, unknown>
   components?: SceneComponentData[]
 }
 
-interface SceneComponentData {
+export interface SceneComponentData {
   uuid?: string
   kind?: ComponentKind
   enabled?: boolean
@@ -102,7 +110,8 @@ export const physicsState = reactive<PhysicsState>({
   },
   simulationRunning: false,
   playMode: 'editing',
-  engineDiagnostics: { ...rawWorld.diagnostics }
+  engineDiagnostics: { ...rawWorld.diagnostics },
+  inputMap: defaultInputMap()
 })
 
 export const sceneManager = reactive(new SceneManager())
@@ -158,9 +167,44 @@ function serializeComponent(component: Component2D): Record<string, unknown> {
     data.radiusY = component.radiusY
     data.color = { ...component.color }
     data.opacity = component.opacity
+    data.strokeColor = { ...component.strokeColor }
+    data.strokeOpacity = component.strokeOpacity
+    data.strokeWidth = component.strokeWidth
+    data.material = component.material
+    data.filterMode = component.filterMode
+    data.textureAsset = component.textureAsset
     data.texture = component.texture
     data.sortingLayer = component.sortingLayer
     data.orderInLayer = component.orderInLayer
+  } else if (component instanceof SpriteRenderer2D) {
+    Object.assign(data, {
+      spriteAsset: component.spriteAsset,
+      tint: { ...component.tint }, opacity: component.opacity,
+      flipX: component.flipX, flipY: component.flipY,
+      pivot: { ...component.pivot }, size: { ...component.size },
+      sortingLayer: component.sortingLayer, orderInLayer: component.orderInLayer,
+      material: component.material, filterMode: component.filterMode
+    })
+  } else if (component instanceof TextRenderer2D) {
+    Object.assign(data, {
+      text: component.text, fontAsset: component.fontAsset, fontFamily: component.fontFamily,
+      fontSize: component.fontSize, fontWeight: component.fontWeight, lineHeight: component.lineHeight,
+      align: component.align, color: { ...component.color }, opacity: component.opacity,
+      maxWidth: component.maxWidth, sortingLayer: component.sortingLayer,
+      orderInLayer: component.orderInLayer, material: component.material
+    })
+  } else if (component instanceof Camera2D) {
+    Object.assign(data, {
+      active: component.active, orthographicSize: component.orthographicSize,
+      viewport: { ...component.viewport }, backgroundColor: { ...component.backgroundColor },
+      nearSortingLayer: component.nearSortingLayer, farSortingLayer: component.farSortingLayer,
+      pixelPerfect: component.pixelPerfect, zoom: component.zoom
+    })
+  } else if (component instanceof Script2D) {
+    Object.assign(data, {
+      scriptAsset: component.scriptAsset,
+      properties: JSON.parse(JSON.stringify(component.properties)) as Record<string, unknown>
+    })
   } else if (component instanceof RigidBody2D) {
     Object.assign(data, {
       bodyType: component.bodyType,
@@ -199,7 +243,7 @@ function serializeComponent(component: Component2D): Record<string, unknown> {
   return { uuid: component.uuid, kind: component.kind, enabled: component.enabled, removed: component.removed, data }
 }
 
-function serializeEntity(entity: Entity): Record<string, unknown> {
+export function serializeEntity(entity: Entity): Record<string, unknown> {
   normalizeEntity(entity)
   return {
     uuid: entity.uuid,
@@ -208,6 +252,11 @@ function serializeEntity(entity: Entity): Record<string, unknown> {
     editorVisible: entity.editorVisible,
     editorLocked: entity.editorLocked,
     tags: [...entity.tags],
+    persistentAcrossScenes: entity.persistentAcrossScenes,
+    prefabAsset: entity.prefabAsset,
+    prefabInstanceUuid: entity.prefabInstanceUuid,
+    prefabSourceUuid: entity.prefabSourceUuid,
+    prefabOverrides: JSON.parse(JSON.stringify(entity.prefabOverrides)) as Record<string, unknown>,
     entityType: entity.entityType,
     components: [...entity.componentMap.values()].map(serializeComponent)
   }
@@ -243,6 +292,12 @@ function projectSource(): Record<string, unknown> {
   return {
     formatVersion: physicsState.world.projectFormatVersion,
     engineVersion: physicsState.world.projectEngineVersion,
+    assets: serializeAssets(),
+    assetFolders: serializeAssetFolders(),
+    projectSettings: { inputMap: normalizeInputMap(physicsState.inputMap) },
+    projectStructure: {
+      assetsRoot: 'Assets', settingsRoot: 'ProjectSettings', cacheRoot: '.nova/cache', importedRoot: '.nova/imported'
+    },
     activeSceneUuid: sceneManager.activeSceneUuid,
     scenes: sceneManager.serialize()
   }
@@ -251,6 +306,84 @@ function projectSource(): Record<string, unknown> {
 export function getSceneJSON(): string {
   const source = JSON.stringify(projectSource())
   return physicsState.world.formatProjectJson(source)
+}
+
+const ASSET_COMPONENT_FIELDS: Partial<Record<ComponentKind, 'textureAsset' | 'spriteAsset' | 'fontAsset' | 'scriptAsset'>> = {
+  ShapeRenderer2D: 'textureAsset',
+  SpriteRenderer2D: 'spriteAsset',
+  TextRenderer2D: 'fontAsset',
+  Script2D: 'scriptAsset'
+}
+
+function matchesAssetReference(value: unknown, uuid: string): boolean {
+  return value === uuid || value === `asset://${uuid}`
+}
+
+function visitStoredAssetReferences(scene: Record<string, unknown>, uuid: string, clear: boolean): number {
+  if (!Array.isArray(scene.entities)) return 0
+  let count = 0
+  for (const entity of scene.entities) {
+    if (!entity || typeof entity !== 'object' || !Array.isArray((entity as SceneEntityData).components)) continue
+    const storedEntity = entity as SceneEntityData
+    if (matchesAssetReference(storedEntity.prefabAsset, uuid)) {
+      count++
+      if (clear) {
+        storedEntity.prefabAsset = null
+        storedEntity.prefabInstanceUuid = null
+        storedEntity.prefabSourceUuid = null
+        storedEntity.prefabOverrides = {}
+      }
+    }
+    for (const rawComponent of storedEntity.components ?? []) {
+      if (!rawComponent || typeof rawComponent !== 'object') continue
+      const component = rawComponent as { kind?: ComponentKind; data?: Record<string, unknown> }
+      const field = component.kind ? ASSET_COMPONENT_FIELDS[component.kind] : undefined
+      if (!field || !component.data || !matchesAssetReference(component.data[field], uuid)) continue
+      count++
+      if (clear) component.data[field] = null
+    }
+  }
+  return count
+}
+
+function visitLiveAssetReferences(uuid: string, clear: boolean): number {
+  let count = 0
+  for (const entity of physicsState.world.entities) {
+    if (matchesAssetReference(entity.prefabAsset, uuid)) {
+      count++
+      if (clear) {
+        entity.prefabAsset = null
+        entity.prefabInstanceUuid = null
+        entity.prefabSourceUuid = null
+        entity.prefabOverrides = {}
+      }
+    }
+    for (const component of entity.componentMap.values()) {
+      const field = ASSET_COMPONENT_FIELDS[component.kind]
+      if (!field || !matchesAssetReference((component as unknown as Record<string, unknown>)[field], uuid)) continue
+      count++
+      if (clear) (component as unknown as Record<string, unknown>)[field] = null
+    }
+  }
+  return count
+}
+
+/** Counts references in the live scene and every unloaded scene document. */
+export function countAssetReferences(uuid: string): number {
+  let count = visitLiveAssetReferences(uuid, false)
+  for (const scene of sceneManager.scenes) {
+    if (scene.uuid !== sceneManager.activeSceneUuid) count += visitStoredAssetReferences(scene.data, uuid, false)
+  }
+  return count
+}
+
+/** Clears an asset reference everywhere so deleting an asset cannot leave a broken scene. */
+export function clearAssetReferences(uuid: string): number {
+  let count = visitLiveAssetReferences(uuid, true)
+  for (const scene of sceneManager.scenes) {
+    if (scene.uuid !== sceneManager.activeSceneUuid) count += visitStoredAssetReferences(scene.data, uuid, true)
+  }
+  return count
 }
 
 function copyVector(target: { x: number; y: number }, source: unknown): void {
@@ -359,12 +492,105 @@ function applyStoredComponents(entity: Entity, item: SceneEntityData): void {
       }
     }
     renderer.opacity = finiteNumber(data.opacity, renderer.opacity)
+    if (data.strokeColor && typeof data.strokeColor === 'object') {
+      const color = data.strokeColor as Record<string, unknown>
+      renderer.strokeColor = { r: finiteNumber(color.r, renderer.strokeColor.r), g: finiteNumber(color.g, renderer.strokeColor.g), b: finiteNumber(color.b, renderer.strokeColor.b) }
+    }
+    renderer.strokeOpacity = finiteNumber(data.strokeOpacity, renderer.strokeOpacity)
+    renderer.strokeWidth = Math.max(0, finiteNumber(data.strokeWidth, renderer.strokeWidth))
+    renderer.material = typeof data.material === 'string' ? data.material.slice(0, 80) : renderer.material
+    renderer.filterMode = data.filterMode === 'Nearest' ? 'Nearest' : 'Linear'
+    renderer.textureAsset = typeof data.textureAsset === 'string' ? data.textureAsset : null
     renderer.texture = typeof data.texture === 'string' ? data.texture : null
     renderer.sortingLayer = normalizeIdentifier(data.sortingLayer, renderer.sortingLayer)
     renderer.orderInLayer = Math.round(finiteNumber(data.orderInLayer, renderer.orderInLayer))
     entity.componentMap.set('ShapeRenderer2D', renderer)
   } else {
     entity.removeComponent('ShapeRenderer2D')
+  }
+
+  const spriteSource = storedComponent(item, 'SpriteRenderer2D')
+  if (spriteSource) {
+    const data = recordData(spriteSource)
+    const sprite = new SpriteRenderer2D(spriteSource.uuid)
+    applyComponentMetadata(sprite, spriteSource)
+    sprite.spriteAsset = typeof data.spriteAsset === 'string' ? data.spriteAsset : null
+    if (data.tint && typeof data.tint === 'object') {
+      const color = data.tint as Record<string, unknown>
+      sprite.tint = { r: finiteNumber(color.r, 255), g: finiteNumber(color.g, 255), b: finiteNumber(color.b, 255) }
+    }
+    sprite.opacity = finiteNumber(data.opacity, sprite.opacity)
+    sprite.flipX = data.flipX === true; sprite.flipY = data.flipY === true
+    copyVector(sprite.pivot, data.pivot); copyVector(sprite.size, data.size)
+    sprite.sortingLayer = normalizeIdentifier(data.sortingLayer, sprite.sortingLayer)
+    sprite.orderInLayer = Math.round(finiteNumber(data.orderInLayer, sprite.orderInLayer))
+    sprite.material = typeof data.material === 'string' ? data.material.slice(0, 80) : sprite.material
+    sprite.filterMode = data.filterMode === 'Nearest' ? 'Nearest' : 'Linear'
+    entity.componentMap.set('SpriteRenderer2D', sprite)
+  }
+
+  const textSource = storedComponent(item, 'TextRenderer2D')
+  if (textSource) {
+    const data = recordData(textSource)
+    const text = new TextRenderer2D(textSource.uuid)
+    applyComponentMetadata(text, textSource)
+    text.text = typeof data.text === 'string' ? data.text.slice(0, 10_000) : text.text
+    text.fontAsset = typeof data.fontAsset === 'string' ? data.fontAsset : null
+    text.fontFamily = typeof data.fontFamily === 'string' ? data.fontFamily.slice(0, 200) : text.fontFamily
+    text.fontSize = Math.max(.000001, finiteNumber(data.fontSize, text.fontSize))
+    text.fontWeight = Math.min(900, Math.max(100, Math.round(finiteNumber(data.fontWeight, text.fontWeight))))
+    text.lineHeight = Math.min(10, Math.max(.1, finiteNumber(data.lineHeight, text.lineHeight)))
+    if (['left', 'right', 'center', 'start', 'end'].includes(String(data.align))) text.align = data.align as CanvasTextAlign
+    if (data.color && typeof data.color === 'object') {
+      const color = data.color as Record<string, unknown>
+      text.color = { r: finiteNumber(color.r, 255), g: finiteNumber(color.g, 255), b: finiteNumber(color.b, 255) }
+    }
+    text.opacity = finiteNumber(data.opacity, text.opacity)
+    text.maxWidth = Math.max(0, finiteNumber(data.maxWidth, text.maxWidth))
+    text.sortingLayer = normalizeIdentifier(data.sortingLayer, text.sortingLayer)
+    text.orderInLayer = Math.round(finiteNumber(data.orderInLayer, text.orderInLayer))
+    text.material = typeof data.material === 'string' ? data.material.slice(0, 80) : text.material
+    entity.componentMap.set('TextRenderer2D', text)
+  }
+
+  const cameraSource = storedComponent(item, 'Camera2D')
+  if (cameraSource) {
+    const data = recordData(cameraSource)
+    const camera = new Camera2D(cameraSource.uuid)
+    applyComponentMetadata(camera, cameraSource)
+    camera.active = data.active !== false
+    camera.orthographicSize = Math.max(.000001, finiteNumber(data.orthographicSize, camera.orthographicSize))
+    if (data.viewport && typeof data.viewport === 'object') {
+      const viewport = data.viewport as Record<string, unknown>
+      camera.viewport = {
+        x: Math.min(1, Math.max(0, finiteNumber(viewport.x))), y: Math.min(1, Math.max(0, finiteNumber(viewport.y))),
+        width: Math.min(1, Math.max(.000001, finiteNumber(viewport.width, 1))), height: Math.min(1, Math.max(.000001, finiteNumber(viewport.height, 1)))
+      }
+    }
+    if (data.backgroundColor && typeof data.backgroundColor === 'object') {
+      const color = data.backgroundColor as Record<string, unknown>
+      camera.backgroundColor = { r: finiteNumber(color.r, 17), g: finiteNumber(color.g, 21), b: finiteNumber(color.b, 27) }
+    }
+    camera.nearSortingLayer = Math.round(finiteNumber(data.nearSortingLayer, camera.nearSortingLayer))
+    camera.farSortingLayer = Math.round(finiteNumber(data.farSortingLayer, camera.farSortingLayer))
+    camera.pixelPerfect = data.pixelPerfect === true
+    camera.zoom = Math.max(.000001, finiteNumber(data.zoom, camera.zoom))
+    entity.componentMap.set('Camera2D', camera)
+  }
+
+  const scriptSource = storedComponent(item, 'Script2D')
+  if (scriptSource) {
+    const data = recordData(scriptSource)
+    const script = new Script2D(scriptSource.uuid)
+    applyComponentMetadata(script, scriptSource)
+    script.scriptAsset = typeof data.scriptAsset === 'string' ? data.scriptAsset : null
+    if (data.properties && typeof data.properties === 'object' && !Array.isArray(data.properties)) {
+      for (const [name, value] of Object.entries(data.properties as Record<string, unknown>)) {
+        if (typeof value === 'number' && Number.isFinite(value)) script.properties[name] = value
+        else if (typeof value === 'string' || typeof value === 'boolean') script.properties[name] = value
+      }
+    }
+    entity.componentMap.set('Script2D', script)
   }
 
   const bodySource = storedComponent(item, 'RigidBody2D')
@@ -452,7 +678,7 @@ function applyStoredTransform(entity: Entity, item: SceneEntityData, source: Rec
   copyVector(entity.force, source.force)
 }
 
-function createEntityFromData(item: SceneEntityData, forcedId?: number): Entity {
+export function createEntityFromData(item: SceneEntityData, forcedId?: number): Entity {
   if (!item || typeof item !== 'object') throw new Error(t('invalidEntityRecord'))
   const id = normalizeIdentifier(forcedId ?? item.id)
   const position = {
@@ -472,6 +698,13 @@ function createEntityFromData(item: SceneEntityData, forcedId?: number): Entity 
   entity.editorVisible = item.editorVisible !== false
   entity.editorLocked = item.editorLocked === true
   entity.tags = Array.isArray(item.tags) ? item.tags.filter(tag => typeof tag === 'string').map(tag => tag.slice(0, 80)) : []
+  entity.persistentAcrossScenes = item.persistentAcrossScenes === true
+  entity.prefabAsset = typeof item.prefabAsset === 'string' ? item.prefabAsset : null
+  entity.prefabInstanceUuid = typeof item.prefabInstanceUuid === 'string' ? item.prefabInstanceUuid : null
+  entity.prefabSourceUuid = typeof item.prefabSourceUuid === 'string' ? item.prefabSourceUuid : null
+  entity.prefabOverrides = item.prefabOverrides && typeof item.prefabOverrides === 'object' && !Array.isArray(item.prefabOverrides)
+    ? JSON.parse(JSON.stringify(item.prefabOverrides)) as Record<string, unknown>
+    : {}
 
   if (entity.isStatic) entity.isKinematic = false
   normalizeEntity(entity)
@@ -491,15 +724,21 @@ export function cloneEntity(original: Entity, layer = original.layer, offset = {
   return clone
 }
 
-interface EntityClipboard {
+export interface EntityBundle {
   entities: SceneEntityData[]
   connections: Array<{ connection: Connection; anchorUuids: string[] }>
   rootUuids: string[]
 }
 
-let entityClipboard: EntityClipboard | null = null
+export interface EntityBundleInstance {
+  entities: Entity[]
+  roots: Entity[]
+  sourceToEntity: Map<string, Entity>
+}
 
-function captureEntityClipboard(ids: number[]): EntityClipboard | null {
+let entityClipboard: EntityBundle | null = null
+
+export function captureEntityBundle(ids: number[]): EntityBundle | null {
   const entities = subtreeEntities(ids, physicsState.world.entities)
   if (!entities.length) return null
   const includedIds = new Set(entities.map(entity => entity.id))
@@ -523,14 +762,19 @@ function captureEntityClipboard(ids: number[]): EntityClipboard | null {
 }
 
 export function copySelectedEntities(): number {
-  entityClipboard = captureEntityClipboard(physicsState.selectedEntityIds)
+  entityClipboard = captureEntityBundle(physicsState.selectedEntityIds)
   return entityClipboard?.entities.length ?? 0
 }
 
-function pasteClipboard(clipboard: EntityClipboard, offset: { x: number; y: number }): Entity[] {
+export function instantiateEntityBundle(
+  clipboard: EntityBundle,
+  offset: { x: number; y: number },
+  rootNameSuffix = ' copy'
+): EntityBundleInstance {
   const sourceToClone = new Map<string, Entity>()
   const sourceToRuntimeId = new Map<number, number>()
   const pendingParents = new Map<Entity, string | null>()
+  const clonedPrefabInstances = new Map<string, string>()
   for (const record of clipboard.entities) {
     const sourceUuid = normalizeUuid(record.uuid)
     const sourceRuntimeId = typeof record.id === 'number' ? record.id : null
@@ -542,6 +786,14 @@ function pasteClipboard(clipboard: EntityClipboard, offset: { x: number; y: numb
     delete cloneRecord.uuid
     cloneRecord.components?.forEach(component => { delete component.uuid })
     const clone = createEntityFromData(cloneRecord, physicsState.world.allocateId())
+    if (record.prefabInstanceUuid) {
+      let instanceUuid = clonedPrefabInstances.get(record.prefabInstanceUuid)
+      if (!instanceUuid) {
+        instanceUuid = normalizeUuid(undefined)
+        clonedPrefabInstances.set(record.prefabInstanceUuid, instanceUuid)
+      }
+      clone.prefabInstanceUuid = instanceUuid
+    }
     sourceToClone.set(sourceUuid, clone)
     if (sourceRuntimeId !== null) sourceToRuntimeId.set(sourceRuntimeId, clone.id)
     pendingParents.set(clone, sourceParent)
@@ -559,14 +811,14 @@ function pasteClipboard(clipboard: EntityClipboard, offset: { x: number; y: numb
     const clone = sourceToClone.get(sourceUuid)
     if (!clone) continue
     translateEntityTree(clone, { x: finiteNumber(offset.x), y: finiteNumber(offset.y) }, physicsState.world.entities)
-    clone.name = `${clone.name} copy`.slice(0, 80)
+    if (rootNameSuffix) clone.name = `${clone.name}${rootNameSuffix}`.slice(0, 80)
   }
 
   for (const stored of clipboard.connections) {
     const connection = JSON.parse(JSON.stringify(stored.connection)) as Connection
     connection.id = physicsState.world.allocateConnectionId()
     connection.uuid = normalizeUuid(undefined)
-    connection.name = `${connection.name} copy`.slice(0, 80)
+    if (rootNameSuffix) connection.name = `${connection.name}${rootNameSuffix}`.slice(0, 80)
     connection.anchors.forEach((anchor, index) => {
       const sourceUuid = stored.anchorUuids[index]
       const clone = sourceToClone.get(sourceUuid)
@@ -586,22 +838,22 @@ function pasteClipboard(clipboard: EntityClipboard, offset: { x: number; y: numb
   })
   selectEntities(pastedRoots.map(entity => entity.id), 'replace')
   physicsState.world.invalidateRuntime()
-  return [...sourceToClone.values()]
+  return { entities: [...sourceToClone.values()], roots: pastedRoots, sourceToEntity: sourceToClone }
 }
 
 export function pasteEntities(offset = { x: 10, y: -10 }): Entity[] {
   if (!entityClipboard) return []
-  const pasted = pasteClipboard(entityClipboard, offset)
-  if (pasted.length) pushHistory('Paste entities')
-  return pasted
+  const pasted = instantiateEntityBundle(entityClipboard, offset)
+  if (pasted.entities.length) pushHistory('Paste entities')
+  return pasted.entities
 }
 
 export function duplicateSelectedEntities(): Entity[] {
-  const clipboard = captureEntityClipboard(physicsState.selectedEntityIds)
+  const clipboard = captureEntityBundle(physicsState.selectedEntityIds)
   if (!clipboard) return []
-  const pasted = pasteClipboard(clipboard, { x: 10, y: -10 })
-  if (pasted.length) pushHistory('Duplicate entities')
-  return pasted
+  const pasted = instantiateEntityBundle(clipboard, { x: 10, y: -10 })
+  if (pasted.entities.length) pushHistory('Duplicate entities')
+  return pasted.entities
 }
 
 export function addConnection(entityIds: number[], modes: AnchorMode[] = []): Connection {
@@ -726,13 +978,18 @@ function loadGlobalSettings(scene: Record<string, unknown>): void {
   normalizeGlobalSettings()
 }
 
-export function loadProject(jsonString: string): boolean {
+export function loadProject(jsonString: string, preserveRuntimeSession = false): boolean {
   try {
     const migrated = physicsState.world.formatProjectJson(jsonString)
     const parsed: unknown = JSON.parse(migrated)
     const root = Array.isArray(parsed) ? { entities: parsed } : parsed
     if (!root || typeof root !== 'object') throw new Error(t('invalidProjectRoot'))
     const project = root as Record<string, unknown>
+    loadAssets(project.assets, project.assetFolders)
+    const projectSettings = project.projectSettings && typeof project.projectSettings === 'object'
+      ? project.projectSettings as Record<string, unknown>
+      : {}
+    physicsState.inputMap.splice(0, physicsState.inputMap.length, ...normalizeInputMap(projectSettings.inputMap))
     const sceneRecords = Array.isArray(project.scenes)
       ? project.scenes
       : [{ uuid: normalizeUuid(undefined), name: 'Main Scene', ...project }]
@@ -741,6 +998,13 @@ export function loadProject(jsonString: string): boolean {
     if (!Array.isArray(scene.entities)) throw new Error(t('missingEntitiesArray'))
 
     const { entities, maximumId, uuidToId } = loadEntities(scene.entities as SceneEntityData[])
+    for (const entity of entities) {
+      const renderer = entity.getComponent<ShapeRenderer2D>('ShapeRenderer2D')
+      if (renderer?.texture && !renderer.textureAsset) {
+        const asset = registerEmbeddedImage(renderer.texture, `${entity.name} texture`)
+        renderer.textureAsset = assetReference(asset.uuid)
+      }
+    }
     const { connections, maximumId: maximumConnectionId } = loadConnections(
       Array.isArray(scene.connections) ? scene.connections : [],
       entities,
@@ -755,9 +1019,11 @@ export function loadProject(jsonString: string): boolean {
     physicsState.world.invalidateRuntime()
     physicsState.world.entities.splice(0, physicsState.world.entities.length, ...entities)
     physicsState.world.connections.splice(0, physicsState.world.connections.length, ...connections)
-    physicsState.simulationRunning = false
-    physicsState.playMode = 'editing'
-    simulationSnapshot = null
+    if (!preserveRuntimeSession) {
+      physicsState.simulationRunning = false
+      physicsState.playMode = 'editing'
+      simulationSnapshot = null
+    }
     editorState.manualConnectionId = null
     editorState.manualConnectionPoints.splice(0)
     editorState.layers.splice(0, editorState.layers.length, ...layers)
@@ -786,14 +1052,17 @@ export function loadProject(jsonString: string): boolean {
   }
 }
 
-function reloadSceneManagerProject(): boolean {
+function reloadSceneManagerProject(preserveRuntimeSession = false): boolean {
   const source = JSON.stringify({
     formatVersion: physicsState.world.projectFormatVersion,
     engineVersion: physicsState.world.projectEngineVersion,
+    assets: serializeAssets(),
+    assetFolders: serializeAssetFolders(),
+    projectSettings: { inputMap: normalizeInputMap(physicsState.inputMap) },
     activeSceneUuid: sceneManager.activeSceneUuid,
     scenes: sceneManager.serialize()
   })
-  return loadProject(source)
+  return loadProject(source, preserveRuntimeSession)
 }
 
 export function createScene(name?: string): boolean {
@@ -818,6 +1087,74 @@ export function setSceneLoaded(uuid: string, loaded: boolean): boolean {
   sceneManager.captureActive(serializeActiveScene())
   if (!sceneManager.setLoaded(uuid, loaded)) return false
   return reloadSceneManagerProject()
+}
+
+function persistentEntityRecords(): EntityBundle | null {
+  const persistentIds = physicsState.world.entities
+    .filter(entity => entity.persistentAcrossScenes)
+    .map(entity => entity.id)
+  const snapshot = captureEntityBundle(persistentIds)
+  if (!snapshot) return null
+  for (const rootUuid of snapshot.rootUuids) {
+    const source = physicsState.world.entities.find(entity => entity.uuid === rootUuid)
+    const record = snapshot.entities.find(entity => entity.uuid === rootUuid)
+    const transform = record?.components?.find(component => component.kind === 'Transform2D')?.data
+    if (!source || !transform || typeof transform !== 'object') continue
+    const absolute = worldTransform(source, physicsState.world.entities)
+    transform.parentUuid = null
+    transform.position = { ...absolute.position }
+    transform.rotation = absolute.rotation
+    transform.scale = { ...absolute.scale }
+  }
+  return snapshot
+}
+
+function restorePersistentEntities(snapshot: EntityBundle | null): void {
+  if (!snapshot) return
+  const existing = new Set(physicsState.world.entities.map(entity => entity.uuid))
+  const runtimeIdByUuid = new Map(physicsState.world.entities.map(entity => [entity.uuid, entity.id]))
+  for (const record of snapshot.entities) {
+    if (!record.uuid || existing.has(record.uuid)) continue
+    const entity = createEntityFromData(record, physicsState.world.allocateId())
+    physicsState.world.entities.push(entity)
+    existing.add(entity.uuid)
+    runtimeIdByUuid.set(entity.uuid, entity.id)
+    if (!editorState.layers.includes(entity.layer)) editorState.layers.push(entity.layer)
+  }
+  const existingConnections = new Set(physicsState.world.connections.map(connection => connection.uuid))
+  for (const stored of snapshot.connections) {
+    if (existingConnections.has(stored.connection.uuid)) continue
+    const connection = JSON.parse(JSON.stringify(stored.connection)) as Connection
+    connection.id = physicsState.world.allocateConnectionId()
+    connection.anchors.forEach((anchor, index) => {
+      const runtimeId = runtimeIdByUuid.get(stored.anchorUuids[index])
+      if (runtimeId !== undefined) anchor.entityId = runtimeId
+    })
+    if (connection.anchors.every((_, index) => runtimeIdByUuid.has(stored.anchorUuids[index]))
+      && normalizeConnection(connection, physicsState.world.entities)) {
+      physicsState.world.connections.push(connection)
+      existingConnections.add(connection.uuid)
+    }
+  }
+  editorState.layers.sort((first, second) => first - second)
+  physicsState.world.invalidateRuntime()
+}
+
+/** Runtime-only scene switch. Persistent entities retain their UUID and state. */
+export function runtimeLoadScene(identifier: string): boolean {
+  const target = sceneManager.scenes.find(scene => scene.uuid === identifier || scene.name === identifier)
+  if (!target) return false
+  const persistent = persistentEntityRecords()
+  if (!sceneManager.setActive(target.uuid) || !reloadSceneManagerProject(true)) return false
+  restorePersistentEntities(persistent)
+  return true
+}
+
+export function runtimeReloadScene(): boolean {
+  const persistent = persistentEntityRecords()
+  if (!reloadSceneManagerProject(true)) return false
+  restorePersistentEntities(persistent)
+  return true
 }
 
 export function toggleSimulation(state: boolean): void {
@@ -860,8 +1197,8 @@ export async function saveProject(): Promise<boolean> {
           createWritable: () => Promise<{ write: (value: string) => Promise<void>; close: () => Promise<void> }>
         }>
       }).showSaveFilePicker({
-        suggestedName: 'nova_scene.json',
-        types: [{ description: 'JSON File', accept: { 'application/json': ['.json'] } }]
+          suggestedName: 'project.nova',
+          types: [{ description: 'Nova_A Project', accept: { 'application/json': ['.nova', '.json'] } }]
       })
       const writable = await handle.createWritable()
       await writable.write(jsonString)
@@ -877,7 +1214,7 @@ export async function saveProject(): Promise<boolean> {
   const url = URL.createObjectURL(blob)
   const anchor = document.createElement('a')
   anchor.href = url
-  anchor.download = 'nova_scene.json'
+  anchor.download = 'project.nova'
   anchor.click()
   window.setTimeout(() => URL.revokeObjectURL(url), 0)
   return true
@@ -945,9 +1282,9 @@ export function moveToBack(id: number): void {
 }
 
 export function duplicateEntity(id: number): Entity | null {
-  const clipboard = captureEntityClipboard([id])
+  const clipboard = captureEntityBundle([id])
   if (!clipboard) return null
-  const clone = pasteClipboard(clipboard, { x: 10, y: -10 })[0] ?? null
+  const clone = instantiateEntityBundle(clipboard, { x: 10, y: -10 }).entities[0] ?? null
   return clone
 }
 

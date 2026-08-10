@@ -6,8 +6,8 @@ use std::fmt;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Map, Value};
 
-pub const CURRENT_FORMAT_VERSION: u32 = 8;
-pub const CURRENT_ENGINE_VERSION: &str = "1.4.0";
+pub const CURRENT_FORMAT_VERSION: u32 = 10;
+pub const CURRENT_ENGINE_VERSION: &str = "1.6.0";
 
 fn default_true() -> bool {
     true
@@ -22,6 +22,8 @@ pub struct ProjectFile {
     pub active_scene_uuid: String,
     #[serde(default)]
     pub scenes: Vec<SceneFile>,
+    #[serde(default)]
+    pub assets: Vec<AssetReference>,
     #[serde(default, flatten)]
     pub extra: BTreeMap<String, Value>,
 }
@@ -130,6 +132,11 @@ pub fn migrate_project_value(value: Value) -> Result<ProjectFile, FormatError> {
             ))
         }
     };
+    let legacy_project_settings = if root.get("scenes").is_some_and(Value::is_array) {
+        None
+    } else {
+        root.remove("projectSettings")
+    };
     let source_version = root
         .get("formatVersion")
         .and_then(Value::as_u64)
@@ -152,7 +159,14 @@ pub fn migrate_project_value(value: Value) -> Result<ProjectFile, FormatError> {
         if let Some(assets) = assets {
             root.insert("assets".into(), assets);
         }
+        if let Some(settings) = legacy_project_settings {
+            root.insert("projectSettings".into(), settings);
+        }
     }
+    root.entry("assets")
+        .or_insert_with(|| Value::Array(Vec::new()));
+    root.entry("projectSettings")
+        .or_insert_with(|| json!({ "inputMap": [] }));
 
     let requested_active_scene = root
         .get("activeSceneUuid")
@@ -218,7 +232,24 @@ pub fn validate_project(project: &ProjectFile) -> Result<(), FormatError> {
             "project must contain at least one scene".into(),
         ));
     }
+    validate_project_settings(project.extra.get("projectSettings"))?;
     let mut identities = std::collections::HashSet::new();
+    let mut asset_types = HashMap::<&str, &str>::new();
+    for asset in &project.assets {
+        if !is_uuid(&asset.uuid) || !identities.insert(asset.uuid.as_str()) {
+            return Err(FormatError(format!(
+                "invalid or duplicate asset UUID: {}",
+                asset.uuid
+            )));
+        }
+        if asset.path.split('/').any(|part| part == "..") {
+            return Err(FormatError(format!(
+                "asset {} contains an unsafe project path",
+                asset.uuid
+            )));
+        }
+        asset_types.insert(asset.uuid.as_str(), asset.asset_type.as_str());
+    }
     let mut scene_ids = std::collections::HashSet::new();
     for scene in &project.scenes {
         if !is_uuid(&scene.uuid) || !scene_ids.insert(scene.uuid.as_str()) {
@@ -264,6 +295,24 @@ pub fn validate_project(project: &ProjectFile) -> Result<(), FormatError> {
                         }
                         parents.insert(entity.uuid.as_str(), parent);
                     }
+                } else if component.kind == "Script2D" {
+                    validate_asset_reference(
+                        component.data.get("scriptAsset"),
+                        "script",
+                        &asset_types,
+                    )?;
+                } else if component.kind == "SpriteRenderer2D" {
+                    validate_asset_reference(
+                        component.data.get("spriteAsset"),
+                        "image",
+                        &asset_types,
+                    )?;
+                } else if component.kind == "TextRenderer2D" {
+                    validate_asset_reference(
+                        component.data.get("fontAsset"),
+                        "font",
+                        &asset_types,
+                    )?;
                 }
             }
             if !component_kinds.contains("Transform2D") {
@@ -272,6 +321,7 @@ pub fn validate_project(project: &ProjectFile) -> Result<(), FormatError> {
                     entity.uuid
                 )));
             }
+            validate_asset_reference(entity.extra.get("prefabAsset"), "prefab", &asset_types)?;
         }
         for connection in &scene.connections {
             if !is_uuid(&connection.uuid) || !identities.insert(connection.uuid.as_str()) {
@@ -308,6 +358,103 @@ pub fn validate_project(project: &ProjectFile) -> Result<(), FormatError> {
         return Err(FormatError(
             "activeSceneUuid does not identify a saved scene".into(),
         ));
+    }
+    Ok(())
+}
+
+fn validate_asset_reference(
+    value: Option<&Value>,
+    expected_type: &str,
+    asset_types: &HashMap<&str, &str>,
+) -> Result<(), FormatError> {
+    let Some(reference) = value.and_then(Value::as_str) else {
+        return Ok(());
+    };
+    let Some(uuid) = reference.strip_prefix("asset://") else {
+        return Err(FormatError(format!("invalid asset reference: {reference}")));
+    };
+    let Some(actual_type) = asset_types.get(uuid) else {
+        return Err(FormatError(format!(
+            "asset reference points to missing asset: {uuid}"
+        )));
+    };
+    if *actual_type != expected_type {
+        return Err(FormatError(format!(
+            "asset {uuid} has type {actual_type}, expected {expected_type}"
+        )));
+    }
+    Ok(())
+}
+
+fn validate_project_settings(value: Option<&Value>) -> Result<(), FormatError> {
+    let settings = value
+        .and_then(Value::as_object)
+        .ok_or_else(|| FormatError("projectSettings must be an object".into()))?;
+    let actions = settings
+        .get("inputMap")
+        .and_then(Value::as_array)
+        .ok_or_else(|| FormatError("projectSettings.inputMap must be an array".into()))?;
+    if actions.len() > 128 {
+        return Err(FormatError(
+            "input map cannot contain more than 128 actions".into(),
+        ));
+    }
+    let mut action_names = std::collections::HashSet::new();
+    for action in actions {
+        let action = action
+            .as_object()
+            .ok_or_else(|| FormatError("every input action must be an object".into()))?;
+        let name = action
+            .get("name")
+            .and_then(Value::as_str)
+            .unwrap_or("")
+            .trim();
+        if name.is_empty() || name.len() > 80 || !action_names.insert(name) {
+            return Err(FormatError(format!(
+                "invalid or duplicate input action: {name}"
+            )));
+        }
+        if !matches!(
+            action.get("kind").and_then(Value::as_str),
+            Some("button" | "axis" | "vector2")
+        ) {
+            return Err(FormatError(format!(
+                "input action {name} has an invalid kind"
+            )));
+        }
+        let bindings = action
+            .get("bindings")
+            .and_then(Value::as_array)
+            .ok_or_else(|| FormatError(format!("input action {name} bindings must be an array")))?;
+        if bindings.len() > 32 {
+            return Err(FormatError(format!(
+                "input action {name} has too many bindings"
+            )));
+        }
+        for binding in bindings {
+            let binding = binding.as_object().ok_or_else(|| {
+                FormatError(format!("input action {name} contains an invalid binding"))
+            })?;
+            if !matches!(
+                binding.get("device").and_then(Value::as_str),
+                Some(
+                    "keyboard" | "mouse-button" | "mouse-wheel" | "gamepad-button" | "gamepad-axis"
+                )
+            ) {
+                return Err(FormatError(format!(
+                    "input action {name} contains an invalid device"
+                )));
+            }
+            if !binding
+                .get("code")
+                .and_then(Value::as_str)
+                .is_some_and(|code| !code.is_empty() && code.len() <= 80)
+            {
+                return Err(FormatError(format!(
+                    "input action {name} contains an invalid code"
+                )));
+            }
+        }
     }
     Ok(())
 }
@@ -653,6 +800,100 @@ mod tests {
         assert_eq!(migrated.scenes[1].entities[0].components[0].uuid, component);
         assert!(migrated.scenes[1].entities[0].editor_visible);
         assert!(!migrated.scenes[1].entities[0].editor_locked);
+    }
+
+    #[test]
+    fn preserves_v1_5_assets_import_metadata_and_empty_folders() {
+        let scene = deterministic_uuid("asset-scene");
+        let asset = deterministic_uuid("asset-image");
+        let source = json!({
+            "formatVersion": 8,
+            "activeSceneUuid": scene,
+            "assetFolders": ["Assets/Sprites/Empty"],
+            "assets": [{
+                "uuid": asset,
+                "path": "Assets/Sprites/hero.png",
+                "assetType": "image",
+                "mimeType": "image/png",
+                "settings": {"filterMode":"Nearest","pixelsPerUnit":32,"atlas":true}
+            }],
+            "scenes": [{"uuid":scene,"name":"Main Scene","entities":[],"connections":[]}]
+        });
+        let migrated = migrate_project_value(source).unwrap();
+        assert_eq!(migrated.format_version, CURRENT_FORMAT_VERSION);
+        assert_eq!(migrated.assets.len(), 1);
+        assert_eq!(migrated.assets[0].uuid, asset);
+        assert_eq!(migrated.assets[0].extra["mimeType"], "image/png");
+        assert_eq!(migrated.assets[0].extra["settings"]["pixelsPerUnit"], 32);
+        assert_eq!(migrated.extra["assetFolders"][0], "Assets/Sprites/Empty");
+    }
+
+    #[test]
+    fn validates_v1_6_scripts_prefabs_and_input_actions() {
+        let scene = deterministic_uuid("gameplay-scene");
+        let entity = deterministic_uuid("scripted-entity");
+        let transform = deterministic_uuid("scripted-transform");
+        let script_component = deterministic_uuid("script-component");
+        let script_asset = deterministic_uuid("script-asset");
+        let prefab_asset = deterministic_uuid("prefab-asset");
+        let source = json!({
+            "formatVersion": CURRENT_FORMAT_VERSION,
+            "activeSceneUuid": scene,
+            "projectSettings": {"inputMap":[{
+                "name":"Jump", "kind":"button", "bindings":[{
+                    "device":"keyboard", "code":"Space", "scale":1,
+                    "x":1, "y":0, "gamepad":0, "deadzone":0.18
+                }]
+            }]},
+            "assets": [
+                {"uuid":script_asset,"path":"Assets/Scripts/player.rhai","assetType":"script"},
+                {"uuid":prefab_asset,"path":"Assets/Prefabs/player.nova-prefab","assetType":"prefab"}
+            ],
+            "scenes": [{"uuid":scene,"name":"Main Scene","entities":[{
+                "uuid":entity,"name":"Player","prefabAsset":format!("asset://{prefab_asset}"),
+                "components":[
+                    {"uuid":transform,"kind":"Transform2D","enabled":true,"data":{"parentUuid":null}},
+                    {"uuid":script_component,"kind":"Script2D","enabled":true,"data":{"scriptAsset":format!("asset://{script_asset}"),"properties":{"speed":5.0}}}
+                ]
+            }],"connections":[]}]
+        });
+        let migrated = migrate_project_value(source).unwrap();
+        assert_eq!(
+            migrated.extra["projectSettings"]["inputMap"][0]["name"],
+            "Jump"
+        );
+        assert_eq!(
+            migrated.scenes[0].entities[0].components[1].kind,
+            "Script2D"
+        );
+    }
+
+    #[test]
+    fn rejects_invalid_v1_6_input_devices() {
+        let scene = deterministic_uuid("bad-input-scene");
+        let source = json!({
+            "formatVersion": CURRENT_FORMAT_VERSION,
+            "activeSceneUuid": scene,
+            "projectSettings":{"inputMap":[{"name":"Jump","kind":"button","bindings":[{"device":"network","code":"Space"}]}]},
+            "assets":[],
+            "scenes":[{"uuid":scene,"name":"Main Scene","entities":[],"connections":[]}]
+        });
+        let error = migrate_project_value(source).unwrap_err();
+        assert!(error.0.contains("invalid device"));
+    }
+
+    #[test]
+    fn rejects_unsafe_asset_paths() {
+        let scene = deterministic_uuid("unsafe-asset-scene");
+        let asset = deterministic_uuid("unsafe-asset");
+        let source = json!({
+            "formatVersion": CURRENT_FORMAT_VERSION,
+            "activeSceneUuid": scene,
+            "assets": [{"uuid":asset,"path":"Assets/../private.png","assetType":"image"}],
+            "scenes": [{"uuid":scene,"name":"Main Scene","entities":[],"connections":[]}]
+        });
+        let error = migrate_project_value(source).unwrap_err();
+        assert!(error.0.contains("unsafe project path"));
     }
 
     #[test]

@@ -1,11 +1,23 @@
 use std::collections::HashMap;
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum PhysicsEvent {
     BodyCreated { handle: u32 },
     BodyDestroyed { handle: u32 },
-    ContactStarted { handle: u32 },
-    ContactEnded { handle: u32 },
+    ContactStarted(PhysicsContact),
+    ContactStayed(PhysicsContact),
+    ContactEnded(PhysicsContact),
+}
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct PhysicsContact {
+    pub first: u32,
+    pub second: u32,
+    pub sensor: bool,
+    pub point: [f64; 2],
+    pub normal: [f64; 2],
+    pub relative_velocity: [f64; 2],
+    pub penetration: f64,
 }
 
 #[derive(Clone, Debug)]
@@ -13,7 +25,6 @@ struct BodyRecord {
     handle: u32,
     order: u32,
     values: Vec<f64>,
-    previous_contact_count: usize,
 }
 
 #[derive(Clone, Debug)]
@@ -39,6 +50,7 @@ pub struct PhysicsWorld {
     previous_bodies: Vec<f64>,
     state_buffer: Vec<f64>,
     events: Vec<PhysicsEvent>,
+    contacts: HashMap<(u32, u32), PhysicsContact>,
     configuration_dirty: bool,
     solver: Option<SolverWorld>,
     configuration_rebuilds: u64,
@@ -70,7 +82,7 @@ impl PhysicsWorld {
             }
             return Ok(changed);
         }
-        self.bodies.push(BodyRecord { handle, order, values: values.to_vec(), previous_contact_count: 0 });
+        self.bodies.push(BodyRecord { handle, order, values: values.to_vec() });
         self.rebuild_indexes();
         self.configuration_dirty = true;
         self.events.push(PhysicsEvent::BodyCreated { handle });
@@ -79,6 +91,17 @@ impl PhysicsWorld {
 
     pub fn destroy_body(&mut self, handle: u32) -> bool {
         let Some(index) = self.body_index.get(&handle).copied() else { return false; };
+        let ended = self
+            .contacts
+            .iter()
+            .filter_map(|(pair, contact)| {
+                (pair.0 == handle || pair.1 == handle).then_some((*pair, *contact))
+            })
+            .collect::<Vec<_>>();
+        for (pair, contact) in ended {
+            self.contacts.remove(&pair);
+            self.events.push(PhysicsEvent::ContactEnded(contact));
+        }
         self.bodies.remove(index);
         self.rebuild_indexes();
         self.configuration_dirty = true;
@@ -153,6 +176,7 @@ impl PhysicsWorld {
         self.dense_connections.clear();
         self.previous_bodies.clear();
         self.state_buffer.clear();
+        self.contacts.clear();
         self.solver = None;
         self.configuration_dirty = false;
         self.configuration_rebuilds = 0;
@@ -214,15 +238,47 @@ impl PhysicsWorld {
     }
 
     fn collect_contact_events(&mut self) {
-        for (index, record) in self.bodies.iter_mut().enumerate() {
-            let contact_count = self.dense_bodies[index * STRIDE + 29].max(0.0).round() as usize;
-            if contact_count > 0 && record.previous_contact_count == 0 {
-                self.events.push(PhysicsEvent::ContactStarted { handle: record.handle });
-            } else if contact_count == 0 && record.previous_contact_count > 0 {
-                self.events.push(PhysicsEvent::ContactEnded { handle: record.handle });
+        let mut current = HashMap::<(u32, u32), PhysicsContact>::new();
+        if let Some(solver) = self.solver.as_ref() {
+            for contact in solver.contacts() {
+                let (Some(first), Some(second)) = (
+                    self.bodies.get(contact.body_a),
+                    self.bodies.get(contact.body_b),
+                ) else {
+                    continue;
+                };
+                let pair = (first.handle.min(second.handle), first.handle.max(second.handle));
+                let snapshot = PhysicsContact {
+                    first: first.handle,
+                    second: second.handle,
+                    sensor: contact.sensor,
+                    point: [contact.point.x, contact.point.y],
+                    normal: [contact.normal.x, contact.normal.y],
+                    relative_velocity: [contact.relative_velocity.x, contact.relative_velocity.y],
+                    penetration: contact.penetration.max(0.0),
+                };
+                match current.get_mut(&pair) {
+                    Some(existing) if existing.penetration < snapshot.penetration => *existing = snapshot,
+                    None => {
+                        current.insert(pair, snapshot);
+                    }
+                    _ => {}
+                }
             }
-            record.previous_contact_count = contact_count;
         }
+        for (pair, contact) in &current {
+            self.events.push(if self.contacts.contains_key(pair) {
+                PhysicsEvent::ContactStayed(*contact)
+            } else {
+                PhysicsEvent::ContactStarted(*contact)
+            });
+        }
+        for (pair, contact) in &self.contacts {
+            if !current.contains_key(pair) {
+                self.events.push(PhysicsEvent::ContactEnded(*contact));
+            }
+        }
+        self.contacts = current;
     }
 
     fn update_body(&mut self, handle: u32, update: impl FnOnce(&mut [f64])) -> Result<(), &'static str> {
@@ -262,5 +318,32 @@ mod persistent_world_tests {
         assert_eq!(world.configuration_rebuilds(), 1);
         world.step(1.0 / 60.0, 0.0, 0.0);
         assert_eq!(world.configuration_rebuilds(), 2);
+    }
+
+    #[test]
+    fn contact_events_identify_both_bodies_and_sensor_state() {
+        let mut first = body_record();
+        let mut second = body_record();
+        first[9] = 1.0;
+        first[28] = 1.0;
+        first[42] = 1.0;
+        second[42] = 1.0;
+        second[2] = 0.25;
+        let mut world = PhysicsWorld::new();
+        world.create_body(10, 0, &first).unwrap();
+        world.create_body(20, 1, &second).unwrap();
+        world.drain_events();
+        world.step(1.0 / 60.0, 0.0, 0.0);
+        let events = world.drain_events();
+        assert!(events.iter().any(|event| matches!(
+            event,
+            PhysicsEvent::ContactStarted(contact)
+                if contact.first == 10 && contact.second == 20 && contact.sensor
+        )));
+        world.step(1.0 / 60.0, 0.0, 0.0);
+        assert!(world
+            .drain_events()
+            .iter()
+            .any(|event| matches!(event, PhysicsEvent::ContactStayed(_))));
     }
 }

@@ -56,8 +56,8 @@
       </div>
     </nav>
     <div class="top-spacer"></div>
-    <span class="release-pill">1.4.0</span>
-    <input ref="fileInput" type="file" hidden accept="application/json,.json" @change="handleFileSelected">
+    <span class="release-pill">1.6.0</span>
+    <input ref="fileInput" type="file" hidden accept="application/json,.nova,.json" @change="handleFileSelected">
   </header>
 </template>
 

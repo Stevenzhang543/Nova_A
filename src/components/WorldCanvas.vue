@@ -15,9 +15,17 @@ import { defaultColorForLayer } from '../world/layers'
 import { compoundGeometries } from '../world/compoundGeometry'
 import { localPointToWorld, worldPointToLocal, worldTransform } from '../world/hierarchy'
 import { applyRotation, applyScale, applyTranslation, axisVector, captureTransforms, gizmoPivot, gizmoRotation, projectedDelta, type GizmoAxis, type TransformSnapshot } from '../editor/gizmo'
+import { createRenderer2D, type Renderer2D } from '../renderer'
+import { renderWorld } from '../renderer/sceneRenderer'
+import { assetReference, resolveAsset } from '../assets/AssetDatabase'
+import { SpriteRenderer2D } from '../world/components'
+import { gameplayRuntime } from '../runtime/GameplayRuntime'
+import { instantiatePrefab } from '../runtime/prefabs'
 
 const canvasRef = ref<HTMLCanvasElement | null>(null)
+const renderCanvasRef = ref<HTMLCanvasElement | null>(null)
 let ctx: CanvasRenderingContext2D | null = null
+let renderer: Renderer2D | null = null
 let canvasPixelRatio = 1
 let isManualDrawing = false
 const knownBrokenConnections = new Set<number>()
@@ -101,10 +109,11 @@ function resize() {
   const dpr = canvasPixelRatio; const r = canvas.getBoundingClientRect()
   const oldWidth = canvas.width / dpr; const oldHeight = canvas.height / dpr
   canvas.width = Math.max(1, Math.round(r.width * dpr)); canvas.height = Math.max(1, Math.round(r.height * dpr))
+  renderer?.resize(r.width, r.height, dpr)
   if (oldWidth > 0 && oldHeight > 0 && (oldWidth !== r.width || oldHeight !== r.height)) {
     camera.offset.x += (r.width - oldWidth) / 2; camera.offset.y += (r.height - oldHeight) / 2
   }
-  if (!ctx) ctx = canvas.getContext('2d', { alpha: false })!
+  if (!ctx) ctx = canvas.getContext('2d', { alpha: true })!
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0); render()
 }
 
@@ -127,7 +136,7 @@ function loop(time?: number) {
   if (camera.targetOffset !== null && prefs.reduceMotion) { camera.offset = { ...camera.targetOffset }; camera.targetOffset = null }
 
   if (editorState.currentPage === 'scene' && !state.simulationRunning) syncEditableConnections(true)
-  Object.assign(state.engineDiagnostics, world.update(Math.min(dt, 0.1), state.simulationRunning, state.globalSettings))
+  gameplayRuntime.frame(Math.min(dt, 0.1), canvasRef.value?.getBoundingClientRect())
   if (editorState.currentPage === 'scene' && state.simulationRunning) syncEditableConnections(false)
   for (const connection of world.connections) {
     if (connection.breakState !== 'intact' && !knownBrokenConnections.has(connection.id)) {
@@ -141,6 +150,7 @@ function loop(time?: number) {
 
 onMounted(() => {
   readPalette()
+  if (renderCanvasRef.value) renderer = createRenderer2D(renderCanvasRef.value)
   world.connections.filter(connection => connection.breakState !== 'intact').forEach(connection => knownBrokenConnections.add(connection.id))
   resize()
   if (canvasRef.value) {
@@ -152,10 +162,44 @@ onMounted(() => {
     if (world.wasmError) editorState.statusText = t('physicsUnavailable', { message: world.wasmError.message })
   })
 })
-onBeforeUnmount(() => { if (raf) cancelAnimationFrame(raf); window.removeEventListener('resize', resize); window.removeEventListener('mouseup', onMouseUp); window.removeEventListener('keydown', onKeyDown); if (resizeObserver) resizeObserver.disconnect() })
+onBeforeUnmount(() => { if (raf) cancelAnimationFrame(raf); window.removeEventListener('resize', resize); window.removeEventListener('mouseup', onMouseUp); window.removeEventListener('keydown', onKeyDown); if (resizeObserver) resizeObserver.disconnect(); renderer?.destroy(); renderer = null })
 
 function screenPos(e: MouseEvent): Vec2 { const r = canvasRef.value!.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top } }
 function onWheel(e: WheelEvent) { e.preventDefault(); if (editorState.currentPage === 'game') return; const factor = Math.pow(1.1, prefs.zoomSensitivity); camera.zoomAt(screenPos(e), e.deltaY < 0 ? factor : 1 / factor) }
+function onAssetDragOver(event: DragEvent) { if (state.playMode === 'editing' && event.dataTransfer?.types.includes('application/x-nova-asset-guid')) event.preventDefault() }
+function onAssetDrop(event: DragEvent) {
+  if (state.playMode !== 'editing') return
+  const guid = event.dataTransfer?.getData('application/x-nova-asset-guid')
+  const asset = resolveAsset(guid)
+  if (!asset || (asset.assetType !== 'image' && asset.assetType !== 'prefab')) return
+  event.preventDefault()
+  const point = camera.screenToWorld(screenPos(event))
+  if (asset.assetType === 'prefab') {
+    const entities = instantiatePrefab(assetReference(asset.uuid), point)
+    if (!entities.length) return
+    pushHistory('Instantiate prefab')
+    addEditorLog(t('prefabInstantiated', { name: asset.name }), 'Assets')
+    return
+  }
+  const pixelsPerUnit = Math.max(.000001, asset.settings.pixelsPerUnit)
+  const importedWidth = asset.settings.spriteRegion?.width || asset.width
+  const importedHeight = asset.settings.spriteRegion?.height || asset.height
+  const width = Math.max(.1, (importedWidth || pixelsPerUnit) / pixelsPerUnit)
+  const height = Math.max(.1, (importedHeight || pixelsPerUnit) / pixelsPerUnit)
+  const entity = world.addBox(point, { x: width, y: height })
+  entity.name = asset.name.replace(/\.[^.]+$/, '').slice(0, 80) || 'Sprite'
+  entity.renderer.enabled = false
+  const sprite = entity.addComponent(new SpriteRenderer2D())
+  sprite.spriteAsset = assetReference(asset.uuid)
+  sprite.size = { x: width, y: height }
+  sprite.pivot = { ...asset.settings.pivot }
+  sprite.filterMode = asset.settings.filterMode
+  sprite.sortingLayer = editorState.activeLayer
+  entity.layer = editorState.activeLayer
+  selectEntities([entity.id], 'replace')
+  pushHistory('Create sprite from asset')
+  addEditorLog(t('assetDropped', { name: asset.name }), 'Assets')
+}
 function snapPoint(point: Vec2): Vec2 { if (!prefs.snapToGrid) return point; const step = Math.max(0.000001, prefs.gridSize); return { x: Math.round(point.x / step) * step, y: Math.round(point.y / step) * step } }
 
 function onKeyDown(event: KeyboardEvent) {
@@ -503,7 +547,18 @@ function renderTransformGizmo(context: CanvasRenderingContext2D) {
 function render() {
   if (!ctx || !canvasRef.value) return
   const cvs = canvasRef.value; const width = cvs.width / canvasPixelRatio; const height = cvs.height / canvasPixelRatio
-  ctx.fillStyle = palette.canvas; ctx.fillRect(0, 0, width, height)
+  if (renderer) {
+    Object.assign(editorState.rendererStats, renderWorld(renderer, world.entities, {
+      width, height, pixelRatio: canvasPixelRatio,
+      editorCamera: { scale: camera.scale, offset: { ...camera.offset } },
+      gameView: editorState.currentPage === 'game', activeLayer: editorState.activeLayer,
+      renderLayer: editorState.currentPage === 'game' ? editorState.renderLayer : editorState.activeLayer,
+      canvasColor: palette.canvas,
+      connections: world.connections,
+      editorGrid: { enabled: editorState.showGrid, step: prefs.gridSize, color: palette.grid }
+    }))
+  }
+  ctx.clearRect(0, 0, width, height)
   ctx.save(); ctx.translate(camera.offset.x, camera.offset.y); ctx.scale(camera.scale, -camera.scale) 
   const viewL = -camera.offset.x / camera.scale; const viewR = viewL + width / camera.scale
   const viewT = camera.offset.y / camera.scale; const viewB = viewT - height / camera.scale   
@@ -512,12 +567,11 @@ function render() {
   const selectedIds = new Set(state.selectedEntityIds)
 
   if (!isGameView && editorState.showGrid) {
-    const step = Math.max(0.000001, prefs.gridSize); const startX = Math.floor(viewL / step) * step; const startY = Math.floor(viewB / step) * step
-    ctx.beginPath(); ctx.strokeStyle = palette.grid; ctx.lineWidth = 1 / camera.scale
-    for (let x = startX; x < viewR; x += step) { ctx.moveTo(x, viewB); ctx.lineTo(x, viewT) }
-    for (let y = startY; y < viewT; y += step) { ctx.moveTo(viewL, y); ctx.lineTo(viewR, y) }
-    ctx.stroke()
-    let textStep = step * 10; if (camera.scale * step < 3) textStep = step * 50; if (camera.scale * step < 1) textStep = step * 100
+    let step = Math.max(0.000001, prefs.gridSize)
+    while (camera.scale * step < 8) step *= 10
+    while ((viewR - viewL) / step + (viewT - viewB) / step > 1_024) step *= 10
+    const startX = Math.floor(viewL / step) * step; const startY = Math.floor(viewB / step) * step
+    const textStep = step * 10
     ctx.save(); ctx.scale(1, -1); ctx.fillStyle = palette.label; ctx.font = `${10 / camera.scale}px sans-serif`
     for (let x = startX; x < viewR; x += step) { if (editorState.showXAxis && x % textStep === 0 && x !== 0) ctx.fillText(x.toString(), x + 2, 12 / camera.scale) }
     for (let y = startY; y < viewT; y += step) { if (editorState.showYAxis && y % textStep === 0 && y !== 0) ctx.fillText(y.toString(), 4 / camera.scale, -y + 4 / camera.scale) }
@@ -530,11 +584,10 @@ function render() {
   for (const compound of compounds) for (const member of compound.members) compoundByMember.set(member.id, compound)
   const renderEntities = [...world.entities].sort((a, b) => a.layer - b.layer || a.renderer.orderInLayer - b.renderer.orderInLayer || world.entities.indexOf(a) - world.entities.indexOf(b))
   for (const e of renderEntities) {
-    if (!e.enabled || !e.hasComponent('ShapeRenderer2D') || !e.renderer.enabled) continue
+    if (!e.enabled) continue
     if (!isGameView && !e.editorVisible) continue
     if (editorState.currentPage === 'scene' && e.layer !== editorState.activeLayer) continue;
     const compound = compoundByMember.get(e.id)
-    const styleEntity = compound?.members[0] ?? e
     const transform = worldTransform(e, world.entities)
     const pos = transform.position; const isSelected = !isGameView && (compound ? [...compound.memberIds].some(id => selectedIds.has(id)) : selectedIds.has(e.id))
     const maxRadius = e instanceof CircleEntity
@@ -546,16 +599,14 @@ function render() {
         )), MIN_SIZE)
         : MIN_SIZE
     if (pos.x + maxRadius < viewL || pos.x - maxRadius > viewR || pos.y + maxRadius < viewB || pos.y - maxRadius > viewT) continue; 
+    if (!isSelected) continue
     
     ctx.lineWidth = isSelected ? lwSelected : lwNormal
-    const alpha = (styleEntity.transparency !== undefined ? styleEntity.transparency : 100) / 100
-    ctx.fillStyle = isSelected ? palette.selectionFill : `rgba(${styleEntity.color.r}, ${styleEntity.color.g}, ${styleEntity.color.b}, ${alpha})`
-    ctx.strokeStyle = isSelected ? palette.selection : `rgba(${Math.max(0, styleEntity.color.r - 50)}, ${Math.max(0, styleEntity.color.g - 50)}, ${Math.max(0, styleEntity.color.b - 50)}, ${alpha})`
+    ctx.fillStyle = palette.selectionFill
+    ctx.strokeStyle = palette.selection
     
     ctx.save(); ctx.translate(pos.x, pos.y); ctx.rotate(transform.rotation)
     ctx.beginPath()
-
-    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
 
     if (e instanceof BoxEntity || e instanceof TriangleEntity) {
       const v = e.vertices
@@ -563,30 +614,14 @@ function render() {
         ctx.moveTo(v[0].x * transform.scale.x, v[0].y * transform.scale.y)
         for (let i = 1; i < v.length; i++) ctx.lineTo(v[i].x * transform.scale.x, v[i].y * transform.scale.y)
         ctx.closePath()
-        for (const pt of v) {
-            if (pt.x < minX) minX = pt.x; if (pt.y < minY) minY = pt.y;
-            if (pt.x > maxX) maxX = pt.x; if (pt.y > maxY) maxY = pt.y;
-        }
       }
     } else if (e instanceof CircleEntity) {
       const safeRx = Math.max(0.1, e.radiusX) * transform.scale.x; const safeRy = Math.max(0.1, e.radiusY) * transform.scale.y
       ctx.ellipse(0, 0, safeRx, safeRy, 0, 0, Math.PI * 2)
-      minX = -Math.max(0.1, e.radiusX); maxX = Math.max(0.1, e.radiusX);
-      minY = -Math.max(0.1, e.radiusY); maxY = Math.max(0.1, e.radiusY);
     }
     
     ctx.fill(); if (!compound || compound.members.length === 1) ctx.stroke()
 
-    if (styleEntity.texture) {
-      if (!styleEntity.textureImage) { styleEntity.textureImage = new Image(); styleEntity.textureImage.src = styleEntity.texture; }
-      if (styleEntity.textureImage.complete && styleEntity.textureImage.naturalWidth > 0) {
-          ctx.save(); ctx.clip(); ctx.scale(1, -1); 
-          minX *= transform.scale.x; maxX *= transform.scale.x;
-          minY *= transform.scale.y; maxY *= transform.scale.y;
-          ctx.drawImage(styleEntity.textureImage, minX, -maxY, maxX - minX, maxY - minY);
-          ctx.restore();
-      }
-    }
     ctx.restore() 
 
     if (prefs.showDiagnostics && isSelected && !isVertexDragging && !isDragging && hoveredVertex && hoveredVertex.entityId === e.id) {
@@ -650,10 +685,9 @@ function render() {
   for (const compound of compounds) {
     if (compound.members.length < 2 || compound.boundary.length === 0) continue
     const styleEntity = compound.members[0]
-    const visible = isGameView || styleEntity.layer === editorState.activeLayer
-    if (!visible) continue
     const isSelected = !isGameView && [...compound.memberIds].some(id => selectedIds.has(id))
-    const alpha = styleEntity.transparency / 100
+    const visible = isSelected && styleEntity.layer === editorState.activeLayer
+    if (!visible) continue
     ctx.beginPath()
     for (const segment of compound.boundary) {
       ctx.moveTo(segment.start.x, segment.start.y)
@@ -661,7 +695,7 @@ function render() {
     }
     ctx.lineWidth = isSelected ? lwSelected : lwNormal
     ctx.lineCap = 'round'; ctx.lineJoin = 'round'
-    ctx.strokeStyle = isSelected ? palette.selection : `rgba(${Math.max(0, styleEntity.color.r - 50)}, ${Math.max(0, styleEntity.color.g - 50)}, ${Math.max(0, styleEntity.color.b - 50)}, ${alpha})`
+    ctx.strokeStyle = palette.selection
     ctx.stroke()
   }
   renderTransformGizmo(ctx)
@@ -690,12 +724,15 @@ function render() {
 </script>
 
 <template>
-  <div class="canvas-container">
-    <canvas ref="canvasRef" @mousedown="onMouseDown" @mousemove="onMouseMove" @mouseup="onMouseUp" @wheel="onWheel" @contextmenu.prevent />
+  <div class="canvas-container" @dragover="onAssetDragOver" @drop="onAssetDrop">
+    <canvas ref="renderCanvasRef" class="render-canvas" aria-hidden="true" />
+    <canvas ref="canvasRef" class="overlay-canvas" @mousedown="onMouseDown" @mousemove="onMouseMove" @mouseup="onMouseUp" @wheel="onWheel" @contextmenu.prevent />
   </div>
 </template>
 
 <style scoped>
-.canvas-container { width: 100%; height: 100%; overflow: hidden; }
-canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+.canvas-container { position: relative; width: 100%; height: 100%; overflow: hidden; }
+canvas { position: absolute; inset: 0; display: block; width: 100%; height: 100%; touch-action: none; }
+.render-canvas { z-index: 0; pointer-events: none; }
+.overlay-canvas { z-index: 1; }
 </style>

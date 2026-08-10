@@ -2,7 +2,7 @@
   <div class="settings-page">
     <header class="page-header">
       <div>
-        <span class="eyebrow">Nova_A 1.4.0</span>
+        <span class="eyebrow">Nova_A 1.6.0</span>
         <h1>{{ t('settings') }}</h1>
       </div>
       <div class="theme-switch" :aria-label="t('theme')">
@@ -43,6 +43,44 @@
         </SettingRow>
         <SettingRow :label="t('customTickRate')"><input v-model.number="physics.globalSettings.tickRate" type="number" min="1" max="1000" step="1"></SettingRow>
         <SettingRow :label="t('maxCatchUpSteps')"><input v-model.number="physics.globalSettings.maxCatchUpSteps" type="number" min="1" max="240" step="1"></SettingRow>
+      </section>
+
+      <section class="settings-card input-map-card">
+        <div class="card-heading"><span class="card-icon">⌨</span><h2>{{ t('inputMap') }}</h2></div>
+        <p>{{ t('inputMapDescription') }}</p>
+        <div class="input-actions">
+          <article v-for="(action, actionIndex) in physics.inputMap" :key="`${action.name}-${actionIndex}`" class="input-action">
+            <div class="input-action-heading">
+              <input v-model.trim="action.name" :aria-label="t('actionName')" maxlength="80" @change="commitInputMap">
+              <select v-model="action.kind" :aria-label="t('actionType')" @change="commitInputMap">
+                <option value="button">{{ t('inputButton') }}</option>
+                <option value="axis">{{ t('inputAxis') }}</option>
+                <option value="vector2">{{ t('inputVector') }}</option>
+              </select>
+              <button class="icon-action danger" :title="t('removeInputAction')" @click="removeInputAction(actionIndex)">×</button>
+            </div>
+            <div v-for="(binding, bindingIndex) in action.bindings" :key="bindingIndex" class="input-binding">
+              <select v-model="binding.device" :aria-label="t('inputDevice')" @change="setBindingDevice(binding); commitInputMap()">
+                <option value="keyboard">{{ t('keyboard') }}</option>
+                <option value="mouse-button">{{ t('mouseButton') }}</option>
+                <option value="mouse-wheel">{{ t('mouseWheel') }}</option>
+                <option value="gamepad-button">{{ t('gamepadButton') }}</option>
+                <option value="gamepad-axis">{{ t('gamepadAxis') }}</option>
+              </select>
+              <input v-model.trim="binding.code" :aria-label="t('bindingCode')" maxlength="80" @change="commitInputMap">
+              <template v-if="action.kind === 'vector2'">
+                <input v-model.number="binding.x" :aria-label="t('inputX')" type="number" min="-100" max="100" step="0.1" @change="commitInputMap">
+                <input v-model.number="binding.y" :aria-label="t('inputY')" type="number" min="-100" max="100" step="0.1" @change="commitInputMap">
+              </template>
+              <input v-else v-model.number="binding.scale" :aria-label="t('inputScale')" type="number" min="-100" max="100" step="0.1" @change="commitInputMap">
+              <input v-if="binding.device.startsWith('gamepad')" v-model.number="binding.gamepad" :aria-label="t('gamepadIndex')" type="number" min="0" max="15" step="1" @change="commitInputMap">
+              <input v-if="binding.device === 'gamepad-axis'" v-model.number="binding.deadzone" :aria-label="t('deadzone')" type="number" min="0" max="0.99" step="0.01" @change="commitInputMap">
+              <button class="icon-action danger" :title="t('removeBinding')" @click="removeInputBinding(actionIndex, bindingIndex)">×</button>
+            </div>
+            <button class="secondary-action compact-action" @click="addInputBinding(actionIndex)">+ {{ t('addBinding') }}</button>
+          </article>
+        </div>
+        <button class="secondary-action" @click="addInputAction">+ {{ t('addInputAction') }}</button>
       </section>
 
       <section class="settings-card diagnostics-card">
@@ -121,6 +159,7 @@ import { editorState } from '../store/editor'
 import { autosaveState, normalizeGlobalSettings, physicsState as physics, pushHistory, restoreAutosave } from '../store/physics'
 import { preferencesState as prefs, resetPreferences } from '../store/preferences'
 import type { ThemeMode } from '../store/preferences'
+import { createInputBinding, normalizeInputMap, type InputBinding } from '../runtime/input'
 
 function setTheme(theme: ThemeMode) {
   prefs.theme = theme
@@ -175,6 +214,39 @@ function applyPhysicsSettings() {
   pushHistory()
 }
 
+function commitInputMap() {
+  const normalized = normalizeInputMap(physics.inputMap)
+  physics.inputMap.splice(0, physics.inputMap.length, ...normalized)
+  pushHistory('Edit input map')
+}
+
+function addInputAction() {
+  const used = new Set(physics.inputMap.map(action => action.name))
+  let suffix = physics.inputMap.length + 1
+  while (used.has(`Action${suffix}`)) suffix++
+  physics.inputMap.push({ name: `Action${suffix}`, kind: 'button', bindings: [createInputBinding()] })
+  pushHistory('Add input action')
+}
+
+function removeInputAction(index: number) {
+  physics.inputMap.splice(index, 1)
+  pushHistory('Remove input action')
+}
+
+function addInputBinding(actionIndex: number) {
+  physics.inputMap[actionIndex]?.bindings.push(createInputBinding())
+  pushHistory('Add input binding')
+}
+
+function removeInputBinding(actionIndex: number, bindingIndex: number) {
+  physics.inputMap[actionIndex]?.bindings.splice(bindingIndex, 1)
+  pushHistory('Remove input binding')
+}
+
+function setBindingDevice(binding: InputBinding) {
+  binding.code = binding.device === 'keyboard' ? 'Space' : binding.device === 'mouse-wheel' ? 'y' : '0'
+}
+
 function restoreSavedScene() {
   if (restoreAutosave()) {
     pushHistory()
@@ -200,6 +272,18 @@ h1 { margin: 0; font-size: clamp(26px, 4vw, 38px); font-weight: 620; letter-spac
 .settings-card { align-self: start; display: flex; flex-direction: column; padding: 18px; border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); background: var(--surface-1); backdrop-filter: var(--glass-blur); box-shadow: var(--shadow-sm); transition: transform 180ms ease, border-color 180ms ease; }
 .settings-card:hover { transform: translateY(-2px); border-color: var(--border-strong); }
 .matrix-card { grid-column: 1 / -1; }
+.input-map-card { grid-column: 1 / -1; }
+.input-actions { display: flex; flex-direction: column; gap: 9px; }
+.input-action { padding: 9px; border: 1px solid var(--border-subtle); border-radius: 10px; background: var(--surface-2); }
+.input-action-heading, .input-binding { display: grid; grid-template-columns: minmax(120px, 1.3fr) minmax(110px, 1fr) repeat(4, minmax(64px, .6fr)) 28px; gap: 6px; align-items: center; }
+.input-action-heading { margin-bottom: 7px; }
+.input-action-heading > input { grid-column: span 3; }
+.input-action-heading > select { grid-column: span 3; }
+.input-binding { padding: 6px 0; border-top: 1px solid var(--border-subtle); }
+.input-binding input, .input-binding select, .input-action-heading input, .input-action-heading select { width: 100%; min-width: 0; }
+.icon-action { width: 28px; height: 28px; padding: 0; border: 1px solid var(--border-subtle); border-radius: 7px; color: var(--text-muted); background: var(--surface-3); }
+.icon-action.danger:hover { color: var(--danger); border-color: var(--danger); }
+.compact-action { min-height: 29px; margin-top: 6px; }
 .matrix-card p { margin-bottom: 12px; }
 .matrix-scroll { max-width: 100%; padding: 7px; overflow: auto; border: 1px solid var(--border-subtle); border-radius: 10px; background: var(--surface-2); }
 .matrix-header, .matrix-row { width: max-content; display: grid; grid-template-columns: 28px repeat(32, 18px); gap: 3px; align-items: center; }
@@ -230,5 +314,5 @@ p { margin: 0 0 8px 40px; color: var(--text-muted); font-size: 12px; line-height
 .secondary-action:hover { border-color: var(--accent); background: var(--accent-soft); }
 .danger-action { color: var(--danger); background: var(--danger-soft); }
 .danger-action:hover { border-color: var(--danger); }
-@media (max-width: 800px) { .settings-grid { grid-template-columns: 1fr; } .page-header { align-items: flex-start; flex-direction: column; } }
+@media (max-width: 800px) { .settings-grid { grid-template-columns: 1fr; } .page-header { align-items: flex-start; flex-direction: column; } .input-action-heading, .input-binding { grid-template-columns: repeat(2, minmax(0, 1fr)) 28px; } .input-action-heading > input, .input-action-heading > select { grid-column: auto; } }
 </style>

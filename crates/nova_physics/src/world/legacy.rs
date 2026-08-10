@@ -221,7 +221,7 @@ fn simulate_sub_step(
     bound_pairs: &HashSet<(usize, usize)>,
     data: &mut [f64],
     context: SubStepContext,
-) {
+) -> Vec<SolverContactSnapshot> {
     for body in bodies.iter_mut() {
         body.integrate(context.dt, context.global_gravity, context.air_friction);
     }
@@ -261,6 +261,26 @@ fn simulate_sub_step(
         }
         synchronize_binding_motion(bodies, constraint);
     }
+    contacts
+        .iter()
+        .map(|contact| {
+            let body_a = &bodies[contact.body_a];
+            let body_b = &bodies[contact.body_b];
+            let point_a = body_a.position.add(contact.radius_a);
+            let point_b = body_b.position.add(contact.radius_b);
+            SolverContactSnapshot {
+                body_a: contact.body_a,
+                body_b: contact.body_b,
+                point: point_a.add(point_b).mul(0.5),
+                normal: contact.normal,
+                relative_velocity: body_b
+                    .point_velocity(contact.radius_b)
+                    .sub(body_a.point_velocity(contact.radius_a)),
+                penetration: contact.depth,
+                sensor: contact.is_sensor,
+            }
+        })
+        .collect()
 }
 
 fn write_bodies(data: &mut [f64], bodies: &[Body]) {
@@ -308,6 +328,18 @@ struct SolverWorld {
     connection_data: Vec<f64>,
     bodies: Vec<Body>,
     constraints: Vec<ConnectionConstraint>,
+    contacts: Vec<SolverContactSnapshot>,
+}
+
+#[derive(Clone, Copy, Debug)]
+struct SolverContactSnapshot {
+    body_a: usize,
+    body_b: usize,
+    point: Vec2,
+    normal: Vec2,
+    relative_velocity: Vec2,
+    penetration: f64,
+    sensor: bool,
 }
 
 impl SolverWorld {
@@ -318,7 +350,7 @@ impl SolverWorld {
         reset_contact_diagnostics(&mut data, body_count);
         let bodies = read_bodies(&data, body_count);
         let constraints = read_constraints(&connection_data, body_count, &bodies);
-        Self { data, connection_data, bodies, constraints }
+        Self { data, connection_data, bodies, constraints, contacts: Vec::new() }
     }
 
     fn step(&mut self, dt: f64, global_gravity: f64, air_friction: f64) {
@@ -326,6 +358,7 @@ impl SolverWorld {
         reset_contact_diagnostics(&mut self.data, body_count);
         let dt = finite_or(dt, 0.0).clamp(0.0, 0.25);
         if body_count == 0 || dt <= 0.0 {
+            self.contacts.clear();
             write_bodies(&mut self.data, &self.bodies);
             write_constraints(&mut self.connection_data, &self.constraints);
             return;
@@ -336,7 +369,7 @@ impl SolverWorld {
         let sub_steps = determine_sub_steps(&self.bodies, dt, global_gravity);
         let sub_dt = dt / sub_steps as f64;
         for sub_step in 0..sub_steps {
-            simulate_sub_step(
+            let contacts = simulate_sub_step(
                 &mut self.bodies,
                 &mut self.constraints,
                 &bound_pairs,
@@ -348,6 +381,9 @@ impl SolverWorld {
                     record_diagnostics: sub_step + 1 == sub_steps,
                 },
             );
+            if sub_step + 1 == sub_steps {
+                self.contacts = contacts;
+            }
         }
         for body in &mut self.bodies {
             let has_contact = self.data[body.data_index + 29] > 0.0;
@@ -362,6 +398,10 @@ impl SolverWorld {
         bodies.extend_from_slice(&self.data);
         connections.clear();
         connections.extend_from_slice(&self.connection_data);
+    }
+
+    fn contacts(&self) -> &[SolverContactSnapshot] {
+        &self.contacts
     }
 
     fn into_output(self) -> Vec<f64> {

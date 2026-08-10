@@ -50,6 +50,16 @@ pub struct StepReport {
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
+pub struct EngineTime {
+    pub delta: f64,
+    pub fixed_delta: f64,
+    pub elapsed: f64,
+    pub scale: f64,
+    pub frame: u64,
+}
+
+#[derive(Clone, Copy, Debug, Default, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct EngineDiagnostics {
     pub body_count: usize,
     pub connection_count: usize,
@@ -65,18 +75,41 @@ pub struct EngineDiagnostics {
 #[serde(tag = "type", rename_all = "camelCase")]
 pub enum EngineEvent {
     CollisionStarted {
-        handle: u32,
+        first: u32,
+        second: u32,
+        point: [f64; 2],
+        normal: [f64; 2],
+        relative_velocity: [f64; 2],
+        penetration: f64,
+    },
+    CollisionStayed {
+        first: u32,
+        second: u32,
+        point: [f64; 2],
+        normal: [f64; 2],
+        relative_velocity: [f64; 2],
+        penetration: f64,
     },
     CollisionEnded {
-        handle: u32,
+        first: u32,
+        second: u32,
+        point: [f64; 2],
+        normal: [f64; 2],
+        relative_velocity: [f64; 2],
     },
     TriggerEntered {
         first: u32,
         second: u32,
+        point: [f64; 2],
+        normal: [f64; 2],
+        relative_velocity: [f64; 2],
     },
     TriggerExited {
         first: u32,
         second: u32,
+        point: [f64; 2],
+        normal: [f64; 2],
+        relative_velocity: [f64; 2],
     },
     EntityCreated {
         handle: u32,
@@ -127,6 +160,10 @@ impl EventBus {
 pub enum ComponentKind {
     Transform2D,
     ShapeRenderer2D,
+    SpriteRenderer2D,
+    TextRenderer2D,
+    Camera2D,
+    Script2D,
     RigidBody2D,
     BoxCollider2D,
     EllipseCollider2D,
@@ -252,6 +289,8 @@ pub struct RuntimeWorld {
     diagnostics: EngineDiagnostics,
     events: EventBus,
     scenes: RuntimeSceneManager,
+    time: EngineTime,
+    prepared_report: Option<StepReport>,
 }
 
 impl Default for RuntimeWorld {
@@ -269,6 +308,8 @@ impl RuntimeWorld {
             diagnostics: EngineDiagnostics::default(),
             events: EventBus::default(),
             scenes: RuntimeSceneManager::default(),
+            time: EngineTime::default(),
+            prepared_report: None,
         }
     }
 
@@ -280,6 +321,10 @@ impl RuntimeWorld {
     }
     pub fn timing(&self) -> FixedTimeSettings {
         self.timing
+    }
+
+    pub fn time(&self) -> EngineTime {
+        self.time
     }
 
     pub fn scenes(&self) -> &RuntimeSceneManager {
@@ -368,21 +413,36 @@ impl RuntimeWorld {
         global_gravity: f64,
         air_friction: f64,
     ) -> StepReport {
+        let report = self.prepare_advance(frame_delta);
+        for _ in 0..report.steps {
+            self.advance_fixed_tick(global_gravity, air_friction);
+        }
+        self.complete_advance();
+        report
+    }
+
+    /// Calculates this rendered frame's fixed ticks without stepping physics.
+    /// Hosts use this split form to run `FixedUpdate` immediately before each
+    /// deterministic physics tick.
+    pub fn prepare_advance(&mut self, frame_delta: f64) -> StepReport {
         let settings = self.timing.normalized();
         let fixed_delta = settings.fixed_delta();
         let frame_delta = finite_or(frame_delta, 0.0).clamp(0.0, 0.25);
         let mut report = StepReport::default();
+        self.time.fixed_delta = fixed_delta;
+        self.time.scale = settings.time_scale;
+        self.time.delta = 0.0;
         if !settings.paused && settings.time_scale > 0.0 {
-            self.accumulator += frame_delta * settings.time_scale;
+            let scaled_delta = frame_delta * settings.time_scale;
+            self.time.delta = scaled_delta;
+            self.time.elapsed += scaled_delta;
+            self.time.frame = self.time.frame.saturating_add(1);
+            self.accumulator += scaled_delta;
             while self.accumulator + f64::EPSILON >= fixed_delta
                 && report.steps < settings.max_catch_up_steps
             {
-                self.physics.step(fixed_delta, global_gravity, air_friction);
                 self.accumulator = (self.accumulator - fixed_delta).max(0.0);
                 report.steps += 1;
-                self.diagnostics.total_physics_steps =
-                    self.diagnostics.total_physics_steps.saturating_add(1);
-                self.forward_physics_events();
             }
             if self.accumulator >= fixed_delta {
                 let retained = self.accumulator % fixed_delta;
@@ -391,16 +451,26 @@ impl RuntimeWorld {
             }
         }
         report.interpolation_alpha = (self.accumulator / fixed_delta).clamp(0.0, 1.0);
-        self.refresh_diagnostics(report);
+        self.prepared_report = Some(report);
         report
     }
 
-    pub fn single_step(&mut self, global_gravity: f64, air_friction: f64) -> StepReport {
+    pub fn advance_fixed_tick(&mut self, global_gravity: f64, air_friction: f64) {
         let fixed_delta = self.timing.fixed_delta();
         self.physics.step(fixed_delta, global_gravity, air_friction);
         self.diagnostics.total_physics_steps =
             self.diagnostics.total_physics_steps.saturating_add(1);
         self.forward_physics_events();
+    }
+
+    pub fn complete_advance(&mut self) -> StepReport {
+        let report = self.prepared_report.take().unwrap_or_default();
+        self.refresh_diagnostics(report);
+        report
+    }
+
+    pub fn single_step(&mut self, global_gravity: f64, air_friction: f64) -> StepReport {
+        self.advance_fixed_tick(global_gravity, air_friction);
         let report = StepReport {
             steps: 1,
             interpolation_alpha: 1.0,
@@ -423,6 +493,8 @@ impl RuntimeWorld {
     pub fn clear(&mut self) {
         self.physics.clear();
         self.accumulator = 0.0;
+        self.time = EngineTime::default();
+        self.prepared_report = None;
         self.forward_physics_events();
         self.refresh_diagnostics(StepReport::default());
     }
@@ -432,8 +504,48 @@ impl RuntimeWorld {
             let event = match event {
                 PhysicsEvent::BodyCreated { handle } => EngineEvent::EntityCreated { handle },
                 PhysicsEvent::BodyDestroyed { handle } => EngineEvent::EntityDestroyed { handle },
-                PhysicsEvent::ContactStarted { handle } => EngineEvent::CollisionStarted { handle },
-                PhysicsEvent::ContactEnded { handle } => EngineEvent::CollisionEnded { handle },
+                PhysicsEvent::ContactStarted(contact) if contact.sensor => {
+                    EngineEvent::TriggerEntered {
+                        first: contact.first,
+                        second: contact.second,
+                        point: contact.point,
+                        normal: contact.normal,
+                        relative_velocity: contact.relative_velocity,
+                    }
+                }
+                PhysicsEvent::ContactStayed(contact) if contact.sensor => continue,
+                PhysicsEvent::ContactEnded(contact) if contact.sensor => {
+                    EngineEvent::TriggerExited {
+                        first: contact.first,
+                        second: contact.second,
+                        point: contact.point,
+                        normal: contact.normal,
+                        relative_velocity: contact.relative_velocity,
+                    }
+                }
+                PhysicsEvent::ContactStarted(contact) => EngineEvent::CollisionStarted {
+                    first: contact.first,
+                    second: contact.second,
+                    point: contact.point,
+                    normal: contact.normal,
+                    relative_velocity: contact.relative_velocity,
+                    penetration: contact.penetration,
+                },
+                PhysicsEvent::ContactStayed(contact) => EngineEvent::CollisionStayed {
+                    first: contact.first,
+                    second: contact.second,
+                    point: contact.point,
+                    normal: contact.normal,
+                    relative_velocity: contact.relative_velocity,
+                    penetration: contact.penetration,
+                },
+                PhysicsEvent::ContactEnded(contact) => EngineEvent::CollisionEnded {
+                    first: contact.first,
+                    second: contact.second,
+                    point: contact.point,
+                    normal: contact.normal,
+                    relative_velocity: contact.relative_velocity,
+                },
             };
             self.events.publish(event);
         }
@@ -503,6 +615,29 @@ mod tests {
         assert!(runtime.physics().state().is_empty());
         runtime.single_step(0.0, 0.0);
         assert!(runtime.physics().state()[2] > 0.0);
+    }
+
+    #[test]
+    fn split_frame_places_host_fixed_update_before_each_tick() {
+        let mut runtime = RuntimeWorld::new();
+        runtime
+            .physics_mut()
+            .upsert_body(1, 0, &moving_body())
+            .unwrap();
+        runtime.set_timing(FixedTimeSettings {
+            paused: false,
+            ..FixedTimeSettings::default()
+        });
+        let report = runtime.prepare_advance(1.0 / 30.0);
+        assert_eq!(report.steps, 2);
+        assert!(runtime.physics().state().is_empty());
+        for _ in 0..report.steps {
+            runtime.advance_fixed_tick(0.0, 0.0);
+        }
+        runtime.complete_advance();
+        assert!(runtime.physics().state()[2] > 0.0);
+        assert_eq!(runtime.time().frame, 1);
+        assert_eq!(runtime.time().fixed_delta, 1.0 / 60.0);
     }
 
     #[test]

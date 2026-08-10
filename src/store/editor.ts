@@ -11,7 +11,7 @@ export interface EditorLogEntry {
   id: number
   timestamp: string
   level: 'info' | 'warning' | 'error'
-  category: 'Editor' | 'Physics' | 'Project'
+  category: 'Editor' | 'Physics' | 'Project' | 'Renderer' | 'Assets' | 'Runtime' | 'Script'
   message: string
 }
 
@@ -34,6 +34,15 @@ export const editorState = reactive({
   bottomPanelTab: 'console' as 'assets' | 'console' | 'animation' | 'profiler' | 'project' | 'build',
   renameRequestId: null as number | null,
   logs: [] as EditorLogEntry[],
+  rendererStats: {
+    backend: 'Canvas2D' as 'WebGL2' | 'Canvas2D',
+    drawCalls: 0,
+    batches: 0,
+    triangles: 0,
+    sprites: 0,
+    shapes: 0,
+    text: 0
+  },
   manualConnectionId: null as number | null,
   manualConnectionPoints: [] as Vec2[],
   

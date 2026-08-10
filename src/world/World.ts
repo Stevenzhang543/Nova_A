@@ -49,6 +49,19 @@ export interface EngineDiagnostics {
   configurationRebuilds: number
 }
 
+export interface RuntimePhysicsEvent {
+  type: 'collisionStarted' | 'collisionStayed' | 'collisionEnded' | 'triggerEntered' | 'triggerExited' | string
+  first?: number
+  second?: number
+  firstEntityUuid?: string
+  secondEntityUuid?: string
+  point?: [number, number]
+  normal?: [number, number]
+  relativeVelocity?: [number, number]
+  penetration?: number
+  [key: string]: unknown
+}
+
 interface ConnectionRecord {
   connection: Connection
   segment: number
@@ -265,9 +278,9 @@ export class World {
     bodyCount: 0, connectionCount: 0, stepsLastFrame: 0, totalPhysicsSteps: 0,
     interpolationAlpha: 0, droppedSeconds: 0, eventCount: 0, configurationRebuilds: 0
   }
-  events: Array<Record<string, unknown>> = []
-  projectFormatVersion = 8
-  projectEngineVersion = '1.4.0'
+  events: RuntimePhysicsEvent[] = []
+  projectFormatVersion = 10
+  projectEngineVersion = '1.6.0'
 
   constructor() {
     this.wasmReady = init()
@@ -333,17 +346,35 @@ export class World {
     return entity
   }
 
-  update(dt: number, isRunning: boolean, globalSettings: GlobalPhysicsSettings): EngineDiagnostics {
+  update(
+    dt: number,
+    isRunning: boolean,
+    globalSettings: GlobalPhysicsSettings,
+    beforeFixedStep?: (fixedDelta: number) => void
+  ): EngineDiagnostics {
     if (!this.wasmLoaded || !this.runtime) return this.diagnostics
-    this.synchronizeRuntime(globalSettings)
     this.configureTiming(globalSettings, !isRunning)
     if (isRunning && this.entities.length > 0) {
-      this.runtime.advance(
-        Math.min(Math.max(finiteNumber(dt, 0), 0), 0.25),
-        finiteNumber(globalSettings.gravity, 9.8),
-        Math.max(0, finiteNumber(globalSettings.airFriction, 0.01))
-      )
+      const frameDelta = Math.min(Math.max(finiteNumber(dt, 0), 0), 0.25)
+      const gravity = finiteNumber(globalSettings.gravity, 9.8)
+      const airFriction = Math.max(0, finiteNumber(globalSettings.airFriction, 0.01))
+      if (beforeFixedStep) {
+        const steps = this.runtime.prepare_advance(frameDelta)
+        const fixedDelta = 1 / Math.min(1000, Math.max(1, finiteNumber(globalSettings.tickRate, 60)))
+        for (let step = 0; step < steps; step++) {
+          beforeFixedStep(fixedDelta)
+          this.synchronizeRuntime(globalSettings)
+          this.runtime.advance_fixed_tick(gravity, airFriction)
+          this.readRuntimeState(1, globalSettings)
+        }
+        this.runtime.complete_advance()
+      } else {
+        this.synchronizeRuntime(globalSettings)
+        this.runtime.advance(frameDelta, gravity, airFriction)
+      }
       this.readRuntimeState(this.runtime.interpolation_alpha(), globalSettings)
+    } else {
+      this.synchronizeRuntime(globalSettings)
     }
     this.readDiagnostics()
     return this.diagnostics
@@ -499,7 +530,17 @@ export class World {
     if (!this.runtime) return
     try {
       this.diagnostics = JSON.parse(this.runtime.diagnostics_json()) as EngineDiagnostics
-      this.events = JSON.parse(this.runtime.drain_events_json()) as Array<Record<string, unknown>>
+      const rawEvents = JSON.parse(this.runtime.drain_events_json()) as RuntimePhysicsEvent[]
+      const entityByHandle = new Map<number, Entity>()
+      for (const entity of this.activeBodies) {
+        const handle = this.bodyHandles.get(entity.id)
+        if (handle !== undefined) entityByHandle.set(handle, entity)
+      }
+      this.events = rawEvents.map(event => ({
+        ...event,
+        firstEntityUuid: typeof event.first === 'number' ? entityByHandle.get(event.first)?.uuid : undefined,
+        secondEntityUuid: typeof event.second === 'number' ? entityByHandle.get(event.second)?.uuid : undefined
+      }))
     } catch (error) {
       console.warn('Nova_A received malformed runtime diagnostics', error)
     }

@@ -4,22 +4,22 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE.md)
 [![Platforms](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey)](https://v2.tauri.app/start/prerequisites/)
-[![Release](https://img.shields.io/badge/release-1.4.0-63c6ff)]()
+[![Release](https://img.shields.io/badge/release-1.6.0-63c6ff)]()
 
 Nova_A is an open-source 2D physics engine, renderer, and desktop GUI editor built with Rust, WebAssembly, Vue 3, and Tauri.
 
-Version **1.4.0**, Professional Editor Foundations, turns the scene-and-component model into a structured daily-use editor while preserving the drawing tools, renderer, physics, connections, themes, translations, menus, and animations from earlier releases.
+Version **1.6.0**, Gameplay Runtime, turns authored scenes into playable projects with deterministic lifecycle hooks, sandboxed Rhai scripts, input actions, timers, collision callbacks, reusable prefabs, and runtime scene transitions.
 
-## What is new in v1.4.0
+## What is new in v1.6.0
 
-- A searchable, resizable Hierarchy supports expand/collapse, Ctrl/Shift multi-selection, drag reparenting, root reparenting, rename, duplicate, subtree delete, visibility, locking, and enabled state. Reparenting preserves world transforms and rejects hierarchy cycles.
-- The Q/W/E/R Select, Move, Rotate, and Scale tools provide on-canvas handles, local/world orientation, pivot/selection-center modes, grid snapping, and angle snapping. A completed drag creates one undoable command rather than flooding history with mouse-move snapshots.
-- Editor changes run through a bounded command history with mergeable property edits. Undo/redo, Copy/Paste, Duplicate, Delete, and F2 work from both menus and standard keyboard shortcuts; subtree clipboard operations create fresh entity/component UUIDs and repair internal parent and connection references.
-- Scene and Game views are now distinct. Scene shows authoring grids, connections, selection outlines, and gizmos; Game renders the clean player-facing result without editor overlays.
-- Play, Pause, Step, and Stop use an isolated runtime copy. Simulation never mutates the authoring document, and Stop restores the exact pre-play project state.
-- The editor now has stable professional regions for Hierarchy, viewport, Inspector, and a resizable bottom utility panel. Assets, Console, Profiler, Project Settings, and Build Settings expose honest current data; future Animation and Build workflows are labeled with their planned release instead of presenting non-functional controls.
-- The Inspector handles shared multi-selection properties and center movement while retaining all single-entity component, connection, and physics controls. Scene editing is intentionally locked during Play/Pause so authoring commands cannot corrupt runtime state.
-- Project format 8 persists editor visibility and lock state. Central Rust migration supplies safe defaults for all older formats, including v1.3 format-7 component projects and legacy monolithic files.
+- A stable gameplay loop calls `awake` and `start` once, `fixed_update` immediately before each physics tick, `update` once per rendered frame, `late_update` afterward, and `on_destroy` before removal. Scaled delta time, fixed delta, elapsed time, frame count, and named pause/resume/repeat timers are available to scripts.
+- `Script2D` runs Rhai through the new `nova_script` Rust crate. Scripts can export typed Inspector properties and use a deliberately small entity, transform, rigid-body, input, prefab, timer, and scene API. File, process, network, Tauri, import, and dynamic-evaluation access are not exposed; operation and recursion limits isolate failures to the affected component.
+- The project Input Map supports named button, axis, and 2D-vector actions with keyboard, mouse button, wheel, gamepad button, and gamepad axis bindings. Scripts query held, pressed, released, scalar, and vector states without depending on a specific device.
+- Collision enter/stay/exit and trigger enter/exit callbacks identify the other entity and provide contact point, normal, and relative velocity. Sensor contacts remain non-physical while still generating trigger events.
+- Prefab assets preserve entity hierarchies and internal connections. Drag a prefab into the Scene view to instantiate it; apply base changes, revert an instance, unpack it, or keep per-property overrides while another base instance is updated. Nested prefab inheritance is intentionally not used in v1.6.0.
+- Runtime scripts can load or reload scenes by UUID or name and request quit. Entities marked persistent keep their UUID, hierarchy, live component state, and internal connections across scene transitions; stopping Play mode restores the authored project.
+- Grid geometry is now rendered behind scene objects instead of through them. Scene and Game share one persistent render surface, preventing dotted transition artifacts, resize flashes, and disappearing output. The Assets toolbar also remains horizontal and scrollable in Chinese and other longer translations.
+- Project format 10 persists input actions, `Script2D`, prefab instance metadata, and persistent-entity flags. Rust migration and validation preserve older projects while rejecting invalid input bindings and missing or incorrectly typed asset references.
 
 ### Editor shortcuts
 
@@ -39,10 +39,11 @@ Vue editor
        ├─ nova_runtime  fixed time, events, diagnostics, runtime skeleton
        │    └─ nova_physics  bodies, collision, solver, ropes, retained world
        │         └─ nova_math  vectors, transforms, AABB, rays, rectangles
+       ├─ nova_script   sandboxed Rhai gameplay execution
        └─ nova_format   versioned schemas, validation, and migrations
 ```
 
-Physics, math, runtime, and format crates contain no Vue, DOM, JavaScript, or Tauri imports. Internal crates are statically linked, so the desktop release remains one application and does not require Nova_A DLL plug-ins.
+Physics, math, runtime, script, and format crates contain no Vue, DOM, JavaScript, or Tauri imports. Internal crates are statically linked, so the desktop release remains one application and does not require Nova_A DLL plug-ins.
 
 ## Supported build targets
 
@@ -115,7 +116,7 @@ pnpm check
 pnpm build
 ```
 
-These commands run all workspace tests (including the unchanged 40-test physics suite), warnings-as-errors linting, Vue/TypeScript checking, a release Rust-to-WASM build, and the optimized Vite build.
+These commands run all workspace tests (including the complete physics suite), warnings-as-errors linting, Vue/TypeScript checking, a release Rust-to-WASM build, and the optimized Vite build.
 
 ### Browser production preview
 
@@ -138,10 +139,10 @@ Configuration changes cross Vue → `nova_wasm` as explicit retained-world comma
 
 ## Project compatibility
 
-- New saves use project format 8 and engine version `1.4.0`.
+- New saves use project format 10 and engine version `1.6.0`.
 - Persisted scenes, entities, components, and connections use UUIDs; runtime handles are never written to disk.
 - Format migration and validation are centralized in `nova_format`, not scattered through editor components.
-- v1.3 format-7 files, v1.2 format-6 files, v1.1.2 format-5 files, older object roots, and legacy top-level entity arrays continue to load. A migrated project is only written in the new format when the user saves it.
+- v1.5 format-9 files, v1.4 format-8 files, v1.3 format-7 files, v1.2 format-6 files, v1.1.2 format-5 files, older object roots, and legacy top-level entity arrays continue to load. A migrated project is only written in the new format when the user saves it.
 
 | Property | Solver/render behavior |
 | --- | --- |

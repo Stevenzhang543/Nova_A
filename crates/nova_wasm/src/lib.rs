@@ -1,6 +1,7 @@
 //! The only `wasm_bindgen` boundary in the Nova_A workspace.
 
 use nova_runtime::{FixedTimeSettings, RuntimeWorld};
+use nova_script::{ScriptContext, ScriptRuntime};
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
@@ -70,6 +71,18 @@ impl WasmRuntimeWorld {
         self.inner.advance(frame_delta, gravity, air_friction).steps
     }
 
+    pub fn prepare_advance(&mut self, frame_delta: f64) -> u32 {
+        self.inner.prepare_advance(frame_delta).steps
+    }
+
+    pub fn advance_fixed_tick(&mut self, gravity: f64, air_friction: f64) {
+        self.inner.advance_fixed_tick(gravity, air_friction);
+    }
+
+    pub fn complete_advance(&mut self) {
+        self.inner.complete_advance();
+    }
+
     pub fn single_step(&mut self, gravity: f64, air_friction: f64) {
         self.inner.single_step(gravity, air_friction);
     }
@@ -102,12 +115,62 @@ impl WasmRuntimeWorld {
         serde_json::to_string(&self.inner.diagnostics()).unwrap_or_else(|_| String::from("{}"))
     }
 
+    pub fn time_json(&self) -> String {
+        serde_json::to_string(&self.inner.time()).unwrap_or_else(|_| String::from("{}"))
+    }
+
     pub fn drain_events_json(&mut self) -> String {
         serde_json::to_string(&self.inner.drain_events()).unwrap_or_else(|_| String::from("[]"))
     }
 }
 
 impl Default for WasmRuntimeWorld {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+/// Rhai is kept behind the same WASM boundary as the runtime. The JavaScript
+/// host exchanges JSON snapshots and validated commands, never Rust pointers.
+#[wasm_bindgen]
+pub struct WasmScriptRuntime {
+    inner: ScriptRuntime,
+}
+
+#[wasm_bindgen]
+impl WasmScriptRuntime {
+    #[wasm_bindgen(constructor)]
+    pub fn new() -> Self {
+        Self {
+            inner: ScriptRuntime::new(),
+        }
+    }
+
+    pub fn validate(&self, source: &str) -> Result<String, JsValue> {
+        let exports = self
+            .inner
+            .validate(source)
+            .map_err(|error| JsValue::from_str(&error))?;
+        serde_json::to_string(&exports).map_err(|error| JsValue::from_str(&error.to_string()))
+    }
+
+    pub fn execute_json(
+        &self,
+        source: &str,
+        function: &str,
+        context_json: &str,
+    ) -> Result<String, JsValue> {
+        let context: ScriptContext = serde_json::from_str(context_json)
+            .map_err(|error| JsValue::from_str(&format!("invalid script context: {error}")))?;
+        let result = self
+            .inner
+            .execute(source, function, context)
+            .map_err(|error| JsValue::from_str(&error))?;
+        serde_json::to_string(&result).map_err(|error| JsValue::from_str(&error.to_string()))
+    }
+}
+
+impl Default for WasmScriptRuntime {
     fn default() -> Self {
         Self::new()
     }

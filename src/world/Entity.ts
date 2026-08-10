@@ -3,8 +3,12 @@ import type { Vec2 } from './types'
 import { normalizeUuid } from './identity'
 import {
   Collider2D,
+  Camera2D,
   RigidBody2D,
   ShapeRenderer2D,
+  SpriteRenderer2D,
+  Script2D,
+  TextRenderer2D,
   type Component2D,
   type ComponentKind,
   type EntityComponent
@@ -20,6 +24,11 @@ export abstract class Entity {
   editorVisible = true
   editorLocked = false
   tags: string[] = []
+  persistentAcrossScenes = false
+  prefabAsset: string | null = null
+  prefabInstanceUuid: string | null = null
+  prefabSourceUuid: string | null = null
+  prefabOverrides: Record<string, unknown> = {}
   readonly componentMap = new Map<ComponentKind, Component2D>()
 
   constructor(id: number, entityType: 'Box' | 'Circle' | 'Triangle', uuid?: string) {
@@ -83,6 +92,22 @@ export abstract class Entity {
     return this.getComponent<RigidBody2D>('RigidBody2D', true)!
   }
 
+  get spriteRenderer(): SpriteRenderer2D | null {
+    return this.getComponent<SpriteRenderer2D>('SpriteRenderer2D')
+  }
+
+  get textRenderer(): TextRenderer2D | null {
+    return this.getComponent<TextRenderer2D>('TextRenderer2D')
+  }
+
+  get camera2D(): Camera2D | null {
+    return this.getComponent<Camera2D>('Camera2D')
+  }
+
+  get script2D(): Script2D | null {
+    return this.getComponent<Script2D>('Script2D')
+  }
+
   get collider(): Collider2D {
     return this.getCollider(true)!
   }
@@ -90,8 +115,16 @@ export abstract class Entity {
   get parentUuid(): string | null { return this.transform.parentUuid }
   set parentUuid(value: string | null) { this.transform.parentUuid = value }
   get shapeType(): string { return this.entityType }
-  get layer(): number { return this.renderer.sortingLayer }
-  set layer(value: number) { this.renderer.sortingLayer = value }
+  get layer(): number {
+    return this.spriteRenderer?.sortingLayer ?? this.textRenderer?.sortingLayer ?? this.renderer.sortingLayer
+  }
+  set layer(value: number) {
+    this.renderer.sortingLayer = value
+    const sprite = this.getComponent<SpriteRenderer2D>('SpriteRenderer2D', true)
+    const text = this.getComponent<TextRenderer2D>('TextRenderer2D', true)
+    if (sprite) sprite.sortingLayer = value
+    if (text) text.sortingLayer = value
+  }
   get color() { return this.renderer.color }
   set color(value: { r: number; g: number; b: number }) { this.renderer.color = value }
   get transparency(): number { return this.renderer.opacity }

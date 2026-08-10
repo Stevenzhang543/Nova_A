@@ -9,6 +9,10 @@ export type ColliderKind2D = 'BoxCollider2D' | 'EllipseCollider2D' | 'PolygonCol
 export type ComponentKind =
   | 'Transform2D'
   | 'ShapeRenderer2D'
+  | 'SpriteRenderer2D'
+  | 'TextRenderer2D'
+  | 'Camera2D'
+  | 'Script2D'
   | 'RigidBody2D'
   | ColliderKind2D
   | 'FixedJoint2D'
@@ -40,6 +44,12 @@ export class ShapeRenderer2D extends ComponentBase {
   radiusY = 1
   color = { r: 0, g: 180, b: 255 }
   opacity = 100
+  strokeColor = { r: 0, g: 90, b: 155 }
+  strokeOpacity = 100
+  strokeWidth = 1
+  material = 'Default'
+  filterMode: 'Nearest' | 'Linear' = 'Linear'
+  textureAsset: string | null = null
   texture: string | null = null
   textureImage?: HTMLImageElement
   sortingLayer = 1
@@ -49,6 +59,67 @@ export class ShapeRenderer2D extends ComponentBase {
     super(uuid)
     this.shape = shape
   }
+}
+
+export class SpriteRenderer2D extends ComponentBase {
+  readonly kind = 'SpriteRenderer2D' as const
+  spriteAsset: string | null = null
+  tint = { r: 255, g: 255, b: 255 }
+  opacity = 100
+  flipX = false
+  flipY = false
+  pivot: Vec2 = { x: .5, y: .5 }
+  size: Vec2 = { x: 1, y: 1 }
+  sortingLayer = 1
+  orderInLayer = 0
+  material = 'Default'
+  filterMode: 'Nearest' | 'Linear' = 'Linear'
+
+  constructor(uuid?: string) { super(uuid) }
+}
+
+export class TextRenderer2D extends ComponentBase {
+  readonly kind = 'TextRenderer2D' as const
+  text = 'Text'
+  fontAsset: string | null = null
+  fontFamily = 'Segoe UI Variable Text, sans-serif'
+  fontSize = 1
+  fontWeight = 500
+  lineHeight = 1.2
+  align: CanvasTextAlign = 'center'
+  color = { r: 255, g: 255, b: 255 }
+  opacity = 100
+  maxWidth = 0
+  sortingLayer = 1
+  orderInLayer = 0
+  material = 'Default'
+
+  constructor(uuid?: string) { super(uuid) }
+}
+
+export class Camera2D extends ComponentBase {
+  readonly kind = 'Camera2D' as const
+  active = true
+  orthographicSize = 10
+  viewport = { x: 0, y: 0, width: 1, height: 1 }
+  backgroundColor = { r: 17, g: 21, b: 27 }
+  nearSortingLayer = -1_000_000
+  farSortingLayer = 1_000_000
+  pixelPerfect = false
+  zoom = 1
+
+  constructor(uuid?: string) { super(uuid) }
+}
+
+export type ScriptPropertyValue = number | string | boolean
+
+export class Script2D extends ComponentBase {
+  readonly kind = 'Script2D' as const
+  scriptAsset: string | null = null
+  properties: Record<string, ScriptPropertyValue> = {}
+  lastError: string | null = null
+
+  constructor(uuid?: string) { super(uuid) }
 }
 
 export class RigidBody2D extends ComponentBase {
@@ -113,7 +184,7 @@ export class Collider2D extends ComponentBase {
   }
 }
 
-export type EntityComponent = ShapeRenderer2D | RigidBody2D | Collider2D
+export type EntityComponent = ShapeRenderer2D | SpriteRenderer2D | TextRenderer2D | Camera2D | Script2D | RigidBody2D | Collider2D
 
 function clonePersistedValue<T>(value: T): T {
   if (value === undefined) return value
@@ -123,7 +194,7 @@ function clonePersistedValue<T>(value: T): T {
 export function copyComponentValues<T extends Component2D>(component: T): Record<string, unknown> {
   const values: Record<string, unknown> = {}
   for (const [key, value] of Object.entries(component)) {
-    if (key === 'uuid' || key === 'kind' || key === 'removed' || key === 'textureImage') continue
+    if (key === 'uuid' || key === 'kind' || key === 'removed' || key === 'textureImage' || key === 'lastError') continue
     values[key] = clonePersistedValue(value)
   }
   return values

@@ -19,7 +19,8 @@
 <script setup lang="ts">
 import { t } from '../i18n'
 import { addEditorLog, editorState } from '../store/editor'
-import { physicsState as state, singleStepSimulation, stopPlayMode, toggleSimulation } from '../store/physics'
+import { physicsState as state, stopPlayMode, toggleSimulation } from '../store/physics'
+import { gameplayRuntime } from '../runtime/GameplayRuntime'
 
 async function ensurePhysics(): Promise<boolean> {
   editorState.statusText = t('physicsLoading')
@@ -32,6 +33,7 @@ async function ensurePhysics(): Promise<boolean> {
 async function playSimulation() {
   if (!await ensurePhysics()) return
   toggleSimulation(true)
+  gameplayRuntime.beginSession()
   editorState.statusText = t('physicsRunning')
   addEditorLog(t('physicsRunning'), 'Physics')
 }
@@ -44,12 +46,14 @@ function pauseSimulation() {
 
 async function stepSimulation() {
   if (!await ensurePhysics()) return
-  singleStepSimulation()
+  if (state.playMode === 'editing') { toggleSimulation(true); toggleSimulation(false) }
+  gameplayRuntime.stepOnce()
   editorState.statusText = t('physicsStepped')
   addEditorLog(t('physicsStepped'), 'Physics')
 }
 
 function restoreSimulation() {
+  gameplayRuntime.stopSession()
   stopPlayMode()
   editorState.statusText = t('simulationRestored')
   addEditorLog(t('simulationRestored'), 'Physics')

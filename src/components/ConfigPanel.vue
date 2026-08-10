@@ -20,8 +20,19 @@
           <PropertyRow :label="t('entityEnabled')"><ToggleSwitch v-model="selectedEntity.enabled" /></PropertyRow>
           <PropertyRow :label="t('entityVisible')"><ToggleSwitch v-model="selectedEntity.editorVisible" /></PropertyRow>
           <PropertyRow :label="t('entityLocked')"><ToggleSwitch v-model="selectedEntity.editorLocked" /></PropertyRow>
+          <PropertyRow :label="t('persistentEntity')"><ToggleSwitch v-model="selectedEntity.persistentAcrossScenes" /></PropertyRow>
           <PropertyRow :label="t('entityTags')"><input v-model="tagsText" type="text"></PropertyRow>
           <DiagnosticRow label="UUID" :value="selectedEntity.uuid" />
+          <template v-if="selectedEntity.prefabAsset">
+            <DiagnosticRow :label="t('prefabInstance')" :value="selectedEntity.prefabAsset" active />
+            <DiagnosticRow :label="t('prefabOverrides')" :value="String(prefabOverrideCount)" />
+            <div class="prefab-actions">
+              <button @click="applySelectedPrefab">{{ t('applyPrefab') }}</button>
+              <button @click="revertSelectedPrefab">{{ t('revertPrefab') }}</button>
+              <button @click="unpackSelectedPrefab">{{ t('unpackPrefab') }}</button>
+            </div>
+          </template>
+          <button v-else class="secondary-action" @click="createSelectedPrefab">{{ t('createPrefab') }}</button>
         </InspectorSection>
 
         <InspectorSection v-if="selectedEntity.hasComponent('RigidBody2D')" :title="t('rigidBody2D')" open>
@@ -62,8 +73,68 @@
           <PropertyRow :label="t('orderInLayer')"><input v-model.number="selectedEntity.renderer.orderInLayer" type="number" step="1"></PropertyRow>
           <PropertyRow :label="t('colorRgb')"><button class="color-well" :style="{ background: entityColor }" :aria-label="t('pickColor')" @click="openColorPicker"></button></PropertyRow>
           <PropertyRow :label="t('transparency')"><NumberRange v-model="selectedEntity.transparency" :min="0" :max="100" :step="1" /></PropertyRow>
-          <label class="stacked-field"><span>{{ t('imageTexture') }}</span><input ref="textureInput" type="file" accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml" @change="applyTexture"></label>
-          <button v-if="selectedEntity.texture" class="secondary-action" @click="clearTexture">{{ t('removeTexture') }}</button>
+          <PropertyRow :label="t('strokeColor')"><input type="color" :value="rgbHex(selectedEntity.renderer.strokeColor)" @input="setRgb(selectedEntity.renderer.strokeColor, $event)"></PropertyRow>
+          <PropertyRow :label="t('strokeWidth')"><input v-model.number="selectedEntity.renderer.strokeWidth" type="number" min="0" step="0.1"></PropertyRow>
+          <PropertyRow :label="t('strokeOpacity')"><NumberRange v-model="selectedEntity.renderer.strokeOpacity" :min="0" :max="100" :step="1" /></PropertyRow>
+          <PropertyRow :label="t('material')"><input v-model="selectedEntity.renderer.material" type="text"></PropertyRow>
+          <PropertyRow :label="t('filterMode')"><select v-model="selectedEntity.renderer.filterMode"><option value="Linear">{{ t('linear') }}</option><option value="Nearest">{{ t('nearest') }}</option></select></PropertyRow>
+          <PropertyRow :label="t('imageTexture')"><select v-model="selectedEntity.renderer.textureAsset"><option :value="null">{{ t('none') }}</option><option v-for="asset in imageAssets" :key="asset.uuid" :value="assetReference(asset.uuid)">{{ asset.name }}</option></select></PropertyRow>
+          <label class="stacked-field"><span>{{ t('importTexture') }}</span><input ref="textureInput" type="file" accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml" @change="applyTexture"></label>
+          <button v-if="selectedEntity.renderer.textureAsset || selectedEntity.texture" class="secondary-action" @click="clearTexture">{{ t('removeTexture') }}</button>
+        </InspectorSection>
+
+        <InspectorSection v-if="selectedEntity.spriteRenderer" :title="t('spriteRenderer2D')" open>
+          <ComponentTools kind="SpriteRenderer2D" />
+          <PropertyRow :label="t('spriteAsset')"><select v-model="selectedEntity.spriteRenderer.spriteAsset"><option :value="null">{{ t('none') }}</option><option v-for="asset in imageAssets" :key="asset.uuid" :value="assetReference(asset.uuid)">{{ asset.name }}</option></select></PropertyRow>
+          <PropertyRow :label="t('tint')"><input type="color" :value="rgbHex(selectedEntity.spriteRenderer.tint)" @input="setRgb(selectedEntity.spriteRenderer!.tint, $event)"></PropertyRow>
+          <PropertyRow :label="t('opacity')"><NumberRange v-model="selectedEntity.spriteRenderer.opacity" :min="0" :max="100" :step="1" /></PropertyRow>
+          <PropertyRow :label="t('spriteSize')"><div class="pair"><input v-model.number="selectedEntity.spriteRenderer.size.x" type="number" min="0.000001" step="0.1"><input v-model.number="selectedEntity.spriteRenderer.size.y" type="number" min="0.000001" step="0.1"></div></PropertyRow>
+          <PropertyRow :label="t('pivot')"><div class="pair"><input v-model.number="selectedEntity.spriteRenderer.pivot.x" type="number" step="0.05"><input v-model.number="selectedEntity.spriteRenderer.pivot.y" type="number" step="0.05"></div></PropertyRow>
+          <PropertyRow :label="t('flipX')"><ToggleSwitch v-model="selectedEntity.spriteRenderer.flipX" /></PropertyRow>
+          <PropertyRow :label="t('flipY')"><ToggleSwitch v-model="selectedEntity.spriteRenderer.flipY" /></PropertyRow>
+          <PropertyRow :label="t('sortingLayer')"><select v-model.number="selectedEntity.spriteRenderer.sortingLayer"><option v-for="layer in estate.layers" :key="layer" :value="layer">{{ t('layer') }} {{ layer }}</option></select></PropertyRow>
+          <PropertyRow :label="t('orderInLayer')"><input v-model.number="selectedEntity.spriteRenderer.orderInLayer" type="number" step="1"></PropertyRow>
+          <PropertyRow :label="t('material')"><input v-model="selectedEntity.spriteRenderer.material" type="text"></PropertyRow>
+          <PropertyRow :label="t('filterMode')"><select v-model="selectedEntity.spriteRenderer.filterMode"><option value="Linear">{{ t('linear') }}</option><option value="Nearest">{{ t('nearest') }}</option></select></PropertyRow>
+        </InspectorSection>
+
+        <InspectorSection v-if="selectedEntity.textRenderer" :title="t('textRenderer2D')" open>
+          <ComponentTools kind="TextRenderer2D" />
+          <label class="stacked-field"><span>{{ t('textContent') }}</span><textarea v-model="selectedEntity.textRenderer.text" rows="3"></textarea></label>
+          <PropertyRow :label="t('fontAsset')"><select v-model="selectedEntity.textRenderer.fontAsset"><option :value="null">{{ t('defaultFont') }}</option><option v-for="asset in fontAssets" :key="asset.uuid" :value="assetReference(asset.uuid)">{{ asset.name }}</option></select></PropertyRow>
+          <PropertyRow :label="t('fontSize')"><input v-model.number="selectedEntity.textRenderer.fontSize" type="number" min="0.000001" step="0.1"></PropertyRow>
+          <PropertyRow :label="t('fontWeight')"><input v-model.number="selectedEntity.textRenderer.fontWeight" type="number" min="100" max="900" step="100"></PropertyRow>
+          <PropertyRow :label="t('lineHeight')"><input v-model.number="selectedEntity.textRenderer.lineHeight" type="number" min="0.1" max="10" step="0.1"></PropertyRow>
+          <PropertyRow :label="t('alignment')"><select v-model="selectedEntity.textRenderer.align"><option value="left">{{ t('left') }}</option><option value="center">{{ t('center') }}</option><option value="right">{{ t('right') }}</option></select></PropertyRow>
+          <PropertyRow :label="t('textColor')"><input type="color" :value="rgbHex(selectedEntity.textRenderer.color)" @input="setRgb(selectedEntity.textRenderer!.color, $event)"></PropertyRow>
+          <PropertyRow :label="t('opacity')"><NumberRange v-model="selectedEntity.textRenderer.opacity" :min="0" :max="100" :step="1" /></PropertyRow>
+          <PropertyRow :label="t('maxWidth')"><input v-model.number="selectedEntity.textRenderer.maxWidth" type="number" min="0" step="0.1"></PropertyRow>
+          <PropertyRow :label="t('sortingLayer')"><select v-model.number="selectedEntity.textRenderer.sortingLayer"><option v-for="layer in estate.layers" :key="layer" :value="layer">{{ t('layer') }} {{ layer }}</option></select></PropertyRow>
+          <PropertyRow :label="t('orderInLayer')"><input v-model.number="selectedEntity.textRenderer.orderInLayer" type="number" step="1"></PropertyRow>
+        </InspectorSection>
+
+        <InspectorSection v-if="selectedEntity.camera2D" :title="t('camera2D')" open>
+          <ComponentTools kind="Camera2D" />
+          <PropertyRow :label="t('activeCamera')"><ToggleSwitch v-model="selectedEntity.camera2D.active" /></PropertyRow>
+          <PropertyRow :label="t('orthographicSize')"><input v-model.number="selectedEntity.camera2D.orthographicSize" type="number" min="0.000001" step="0.1"></PropertyRow>
+          <PropertyRow :label="t('cameraZoom')"><input v-model.number="selectedEntity.camera2D.zoom" type="number" min="0.000001" step="0.1"></PropertyRow>
+          <PropertyRow :label="t('backgroundColor')"><input type="color" :value="rgbHex(selectedEntity.camera2D.backgroundColor)" @input="setRgb(selectedEntity.camera2D!.backgroundColor, $event)"></PropertyRow>
+          <PropertyRow :label="t('pixelPerfect')"><ToggleSwitch v-model="selectedEntity.camera2D.pixelPerfect" /></PropertyRow>
+          <PropertyRow :label="t('viewportOrigin')"><div class="pair"><input v-model.number="selectedEntity.camera2D.viewport.x" type="number" min="0" max="1" step="0.05"><input v-model.number="selectedEntity.camera2D.viewport.y" type="number" min="0" max="1" step="0.05"></div></PropertyRow>
+          <PropertyRow :label="t('viewportSize')"><div class="pair"><input v-model.number="selectedEntity.camera2D.viewport.width" type="number" min="0.01" max="1" step="0.05"><input v-model.number="selectedEntity.camera2D.viewport.height" type="number" min="0.01" max="1" step="0.05"></div></PropertyRow>
+          <PropertyRow :label="t('sortingRange')"><div class="pair"><input v-model.number="selectedEntity.camera2D.nearSortingLayer" type="number" step="1"><input v-model.number="selectedEntity.camera2D.farSortingLayer" type="number" step="1"></div></PropertyRow>
+        </InspectorSection>
+
+        <InspectorSection v-if="selectedEntity.script2D" :title="t('script2D')" open>
+          <ComponentTools kind="Script2D" />
+          <PropertyRow :label="t('scriptAsset')"><select v-model="selectedEntity.script2D.scriptAsset" @change="synchronizeScriptProperties"><option :value="null">{{ t('none') }}</option><option v-for="asset in scriptAssets" :key="asset.uuid" :value="assetReference(asset.uuid)">{{ asset.name }}</option></select></PropertyRow>
+          <button class="secondary-action" @click="synchronizeScriptProperties">{{ t('refreshScriptProperties') }}</button>
+          <PropertyRow v-for="(value, name) in selectedEntity.script2D.properties" :key="name" :label="String(name)">
+            <ToggleSwitch v-if="typeof value === 'boolean'" :model-value="value" @update:model-value="setScriptProperty(String(name), $event)" />
+            <input v-else-if="typeof value === 'number'" :value="value" type="number" step="0.01" @change="setScriptProperty(String(name), Number(($event.target as HTMLInputElement).value))">
+            <input v-else :value="value" type="text" @change="setScriptProperty(String(name), ($event.target as HTMLInputElement).value)">
+          </PropertyRow>
+          <p v-if="selectedEntity.script2D.lastError" class="script-error">{{ selectedEntity.script2D.lastError }}</p>
         </InspectorSection>
 
         <InspectorSection v-if="selectedEntity.hasComponent('ShapeRenderer2D')" :title="t('shapeSize')">
@@ -133,9 +204,9 @@
           <DiagnosticRow v-if="selectedEntity.contactCount > 0" :label="t('penetration')" :value="`${selectedEntity.penetrationDepth.toPrecision(5)} m`" />
         </InspectorSection>
 
-        <div v-if="removedComponents.length" class="add-components">
+        <div v-if="addableComponents.length" class="add-components">
           <span>{{ t('addComponent') }}</span>
-          <button v-for="kind in removedComponents" :key="kind" @click="addRemovedComponent(kind)">+ {{ componentTitle(kind) }}</button>
+          <button v-for="kind in addableComponents" :key="kind" @click="addComponent(kind)">+ {{ componentTitle(kind) }}</button>
         </div>
       </div>
       <div v-else class="empty-inspector"><span class="eyebrow">{{ t('entitySettings') }}</span><p>{{ t('noEntitiesFound') }}</p></div>
@@ -159,11 +230,14 @@ import { TriangleEntity } from '../world/TriangleEntity'
 import { effectiveInertia, entityArea, finiteNumber, MIN_AREA, MIN_SIZE, normalizeEntity, syncDensityFromMass, syncMassFromDensity } from '../world/geometry'
 import ConnectionBuilder from './ConnectionBuilder.vue'
 import { connectionSharesLayer } from '../world/Connection'
-import { Collider2D, RigidBody2D, ShapeRenderer2D, copyComponentValues, pasteComponentValues, type ComponentKind } from '../world/components'
+import { Camera2D, Collider2D, RigidBody2D, Script2D, ShapeRenderer2D, SpriteRenderer2D, TextRenderer2D, copyComponentValues, pasteComponentValues, type ComponentKind, type ScriptPropertyValue } from '../world/components'
 import { Transform } from '../world/Transform'
 import { setParent, wouldCreateParentCycle } from '../world/hierarchy'
 import { applyTranslation, captureTransforms } from '../editor/gizmo'
 import { selectionCenter } from '../editor/selection'
+import { assetReference, assetState, importAssetFiles } from '../assets/AssetDatabase'
+import { gameplayRuntime } from '../runtime/GameplayRuntime'
+import { applyPrefabFromInstance, capturePrefabOverrides, createPrefabFromEntities, revertPrefabInstance, unpackPrefabInstance } from '../runtime/prefabs'
 
 const InspectorSection = defineComponent({ props: { title: { type: String, required: true }, open: Boolean }, setup(props, { slots }) { return () => h('details', { class: 'inspector-section', open: props.open }, [h('summary', [h('span', props.title), h('i', '⌄')]), h('div', { class: 'section-body' }, slots.default?.())]) } })
 const PropertyRow = defineComponent({ props: { label: { type: String, required: true } }, setup(props, { slots }) { return () => h('label', { class: 'property-row' }, [h('span', props.label), h('div', { class: 'property-control' }, slots.default?.())]) } })
@@ -199,10 +273,17 @@ const entityColor = computed(() => selectedEntity.value ? `rgb(${selectedEntity.
 const selectedEntityArea = computed(() => selectedEntity.value ? entityArea(selectedEntity.value) : 0)
 const effectiveEntityInertia = computed(() => selectedEntity.value ? effectiveInertia(selectedEntity.value) : 0)
 const componentClipboard = ref<{ kind: ComponentKind; values: Record<string, unknown> } | null>(null)
-const panelWidth = ref(326)
-const removedComponents = computed(() => selectedEntity.value
-  ? [...selectedEntity.value.componentMap.values()].filter(component => component.removed && component.kind !== 'Transform2D').map(component => component.kind)
-  : [])
+const panelWidth = ref(292)
+const imageAssets = computed(() => assetState.records.filter(asset => asset.assetType === 'image'))
+const fontAssets = computed(() => assetState.records.filter(asset => asset.assetType === 'font'))
+const scriptAssets = computed(() => assetState.records.filter(asset => asset.assetType === 'script'))
+const optionalComponents: ComponentKind[] = ['SpriteRenderer2D', 'TextRenderer2D', 'Camera2D', 'Script2D']
+const addableComponents = computed(() => {
+  if (!selectedEntity.value) return []
+  const removed = [...selectedEntity.value.componentMap.values()].filter(component => component.removed && component.kind !== 'Transform2D').map(component => component.kind)
+  const missing = optionalComponents.filter(kind => !selectedEntity.value!.componentMap.has(kind))
+  return [...new Set([...removed, ...missing])]
+})
 const parentCandidates = computed(() => selectedEntity.value
   ? state.world.entities.filter(entity => entity !== selectedEntity.value && !wouldCreateParentCycle(selectedEntity.value!, entity.uuid, state.world.entities))
   : [])
@@ -220,10 +301,15 @@ const tagsText = computed({
     selectedEntity.value.tags = [...new Set(value.split(',').map(tag => tag.trim()).filter(Boolean))].slice(0, 32)
   }
 })
+const prefabOverrideCount = computed(() => selectedEntity.value ? Object.keys(selectedEntity.value.prefabOverrides).length : 0)
 
 function componentTitle(kind: ComponentKind): string {
   if (kind === 'Transform2D') return t('transform2D')
   if (kind === 'ShapeRenderer2D') return t('shapeRenderer2D')
+  if (kind === 'SpriteRenderer2D') return t('spriteRenderer2D')
+  if (kind === 'TextRenderer2D') return t('textRenderer2D')
+  if (kind === 'Camera2D') return t('camera2D')
+  if (kind === 'Script2D') return t('script2D')
   if (kind === 'RigidBody2D') return t('rigidBody2D')
   return t('collider2D')
 }
@@ -258,7 +344,11 @@ function resetComponent(kind: ComponentKind) {
     fresh.radiusX = component.radiusX
     fresh.radiusY = component.radiusY
     pasteComponentValues(component, copyComponentValues(fresh))
-  } else if (component instanceof RigidBody2D) pasteComponentValues(component, copyComponentValues(new RigidBody2D()))
+  } else if (component instanceof SpriteRenderer2D) pasteComponentValues(component, copyComponentValues(new SpriteRenderer2D()))
+  else if (component instanceof TextRenderer2D) pasteComponentValues(component, copyComponentValues(new TextRenderer2D()))
+  else if (component instanceof Camera2D) pasteComponentValues(component, copyComponentValues(new Camera2D()))
+  else if (component instanceof Script2D) pasteComponentValues(component, copyComponentValues(new Script2D()))
+  else if (component instanceof RigidBody2D) pasteComponentValues(component, copyComponentValues(new RigidBody2D()))
   else if (component instanceof Collider2D) {
     const fresh = new Collider2D(component.kind)
     fresh.size = { ...component.size }
@@ -289,6 +379,19 @@ function addRemovedComponent(kind: ComponentKind) {
   pushHistory()
   estate.statusText = t('componentAdded')
 }
+function addComponent(kind: ComponentKind) {
+  const entity = selectedEntity.value
+  if (!entity) return
+  const existing = entity.getComponent(kind, true)
+  if (existing) { addRemovedComponent(kind); return }
+  if (kind === 'SpriteRenderer2D') { const component = entity.addComponent(new SpriteRenderer2D()); component.sortingLayer = entity.layer }
+  else if (kind === 'TextRenderer2D') { const component = entity.addComponent(new TextRenderer2D()); component.sortingLayer = entity.layer }
+  else if (kind === 'Camera2D') entity.addComponent(new Camera2D())
+  else if (kind === 'Script2D') entity.addComponent(new Script2D())
+  else return
+  pushHistory('Add component')
+  estate.statusText = t('componentAdded')
+}
 
 const builderOpen = ref(false)
 const editingConnectionId = ref<number | null>(null)
@@ -298,7 +401,26 @@ async function removeConnection(id: number) { if (!await confirmConnectionAction
 async function separate(id: number) { if (!await confirmConnectionAction(t('separateBindingTitle'), t('confirmSeparateBinding'))) return; deleteConnection(id); pushHistory(); estate.statusText = t('bindingSeparated') }
 function repair(id: number) { repairConnection(id); pushHistory() }
 
-function onConfigChange() { if (!canEdit.value || !selectedEntity.value) return; if (selectedEntity.value.isStatic) selectedEntity.value.isKinematic = false; normalizeEntity(selectedEntity.value); pushHistory('Set property', `property:${selectedEntity.value.uuid}`) }
+function onConfigChange() { if (!canEdit.value || !selectedEntity.value) return; if (selectedEntity.value.isStatic) selectedEntity.value.isKinematic = false; normalizeEntity(selectedEntity.value); if (selectedEntity.value.prefabAsset) capturePrefabOverrides(selectedEntity.value); pushHistory('Set property', `property:${selectedEntity.value.uuid}`) }
+function synchronizeScriptProperties() {
+  if (!selectedEntity.value?.script2D) return
+  const error = gameplayRuntime.synchronizeExports(selectedEntity.value)
+  estate.statusText = error ?? t('scriptPropertiesUpdated')
+  if (!error) pushHistory('Refresh script properties')
+}
+function setScriptProperty(name: string, value: ScriptPropertyValue) {
+  if (!selectedEntity.value?.script2D) return
+  selectedEntity.value.script2D.properties[name] = value
+  onConfigChange()
+}
+function createSelectedPrefab() {
+  if (!selectedEntity.value) return
+  const reference = createPrefabFromEntities([selectedEntity.value.id], selectedEntity.value.name)
+  estate.statusText = reference ? t('prefabCreated') : t('prefabFailed')
+}
+function applySelectedPrefab() { if (selectedEntity.value && applyPrefabFromInstance(selectedEntity.value)) estate.statusText = t('prefabApplied') }
+function revertSelectedPrefab() { if (selectedEntity.value && revertPrefabInstance(selectedEntity.value)) estate.statusText = t('prefabReverted') }
+function unpackSelectedPrefab() { if (selectedEntity.value && unpackPrefabInstance(selectedEntity.value)) estate.statusText = t('prefabUnpacked') }
 function onLayerChange() { if (selectedEntity.value) estate.activeLayer = selectedEntity.value.layer }
 const bodyType = computed({ get: () => !selectedEntity.value ? 'Dynamic' : selectedEntity.value.isStatic ? 'Static' : selectedEntity.value.isKinematic ? 'Kinematic' : 'Dynamic', set: value => { if (!selectedEntity.value) return; selectedEntity.value.isStatic = value === 'Static'; selectedEntity.value.isKinematic = value === 'Kinematic'; normalizeEntity(selectedEntity.value) } })
 function onDensityChange() { if (selectedEntity.value) { selectedEntity.value.rigidBody.massMode = 'Automatic'; syncMassFromDensity(selectedEntity.value) } }
@@ -306,8 +428,10 @@ function onMassChange() { if (selectedEntity.value) { selectedEntity.value.rigid
 watch(selectedEntityArea, area => { if (selectedEntity.value && area > MIN_AREA && selectedEntity.value.rigidBody.massMode === 'Automatic') syncMassFromDensity(selectedEntity.value) })
 
 const textureInput = ref<HTMLInputElement | null>(null)
-function applyTexture(event: Event) { const entity = selectedEntity.value; const file = (event.target as HTMLInputElement).files?.[0]; if (!entity || !file) return; const reader = new FileReader(); reader.onload = () => { if (typeof reader.result !== 'string') return; entity.texture = reader.result; entity.textureImage = undefined; pushHistory() }; reader.onerror = () => { estate.statusText = t('textureFailed') }; reader.readAsDataURL(file) }
-function clearTexture() { if (!selectedEntity.value) return; selectedEntity.value.texture = null; selectedEntity.value.textureImage = undefined; if (textureInput.value) textureInput.value.value = ''; pushHistory() }
+async function applyTexture(event: Event) { const entity = selectedEntity.value; const file = (event.target as HTMLInputElement).files?.[0]; if (!entity || !file) return; try { const [asset] = await importAssetFiles([file], 'Assets/Sprites'); if (!asset) return; entity.renderer.textureAsset = assetReference(asset.uuid); entity.texture = null; entity.textureImage = undefined; pushHistory('Import texture asset') } catch { estate.statusText = t('textureFailed') } }
+function clearTexture() { if (!selectedEntity.value) return; selectedEntity.value.renderer.textureAsset = null; selectedEntity.value.texture = null; selectedEntity.value.textureImage = undefined; if (textureInput.value) textureInput.value.value = ''; pushHistory() }
+function rgbHex(color: { r: number; g: number; b: number }): string { return `#${[color.r, color.g, color.b].map(value => Math.min(255, Math.max(0, Math.round(value))).toString(16).padStart(2, '0')).join('')}` }
+function setRgb(target: { r: number; g: number; b: number }, event: Event) { const value = Number.parseInt((event.target as HTMLInputElement).value.slice(1), 16); target.r = value >> 16 & 255; target.g = value >> 8 & 255; target.b = value & 255; onConfigChange() }
 
 const impulseX = ref(0), impulseY = ref(0), offsetX = ref(0), offsetY = ref(0), angularImpulse = ref(0)
 function applyImpulse() { const entity = selectedEntity.value; if (!entity || bodyType.value !== 'Dynamic') return; normalizeEntity(entity); const x = finiteNumber(impulseX.value), y = finiteNumber(impulseY.value); entity.velocity.x += x / entity.mass; entity.velocity.y += y / entity.mass; entity.angularVelocity += (finiteNumber(offsetX.value) * y - finiteNumber(offsetY.value) * x) / effectiveInertia(entity); normalizeEntity(entity); pushHistory() }
@@ -385,42 +509,47 @@ const multiPositionY = computed({ get: () => Number(selectionCenter(selectedEnti
 let resizeStartX = 0
 let resizeStartWidth = 0
 function startResize(event: MouseEvent) { resizeStartX = event.clientX; resizeStartWidth = panelWidth.value; document.addEventListener('mousemove', resizePanel); document.addEventListener('mouseup', stopResize); document.body.style.cursor = 'ew-resize' }
-function resizePanel(event: MouseEvent) { panelWidth.value = Math.min(520, Math.max(270, resizeStartWidth + resizeStartX - event.clientX)) }
+function resizePanel(event: MouseEvent) { panelWidth.value = Math.min(480, Math.max(252, resizeStartWidth + resizeStartX - event.clientX)) }
 function stopResize() { document.removeEventListener('mousemove', resizePanel); document.removeEventListener('mouseup', stopResize); document.body.style.cursor = 'default' }
 onBeforeUnmount(stopResize)
 </script>
 
 <style scoped>
-.config-wrapper { position: relative; min-width: 270px; max-width: 42vw; flex: 0 0 auto; z-index: 180; border-left: 1px solid var(--border-subtle); background: var(--surface-1); }
+.config-wrapper { position: relative; min-width: 252px; max-width: 38vw; flex: 0 0 auto; z-index: 180; border-left: 1px solid var(--border-subtle); background: var(--surface-1); }
 .resize-handle { position: absolute; inset: 0 auto 0 -4px; width: 8px; cursor: ew-resize; z-index: 6; }
-.config-panel { position: absolute; inset: 0; overflow: auto; color: var(--text-secondary); background: var(--surface-1); backdrop-filter: var(--glass-blur); }
+.config-panel { position: absolute; inset: 0; overflow: auto; color: var(--text-secondary); background: var(--surface-1); backdrop-filter: var(--glass-blur); font-family: inherit; font-size: 11px; }
+.config-panel :deep(button), .config-panel :deep(input), .config-panel :deep(select), .config-panel :deep(textarea) { font-family: inherit; font-size: 10.5px; }
 .config-panel.runtime { pointer-events: none; opacity: .72; }
-.settings-content { min-height: 100%; padding: 16px 14px 28px; display: flex; flex-direction: column; gap: 8px; }
+.settings-content { min-height: 100%; padding: 14px 11px 26px; display: flex; flex-direction: column; gap: 8px; }
 .empty-inspector { height: 100%; padding: 18px; display: flex; flex-direction: column; justify-content: center; align-items: center; color: var(--text-muted); text-align: center; }.empty-inspector p { font-size: 11px; }.runtime-note { color: var(--text-muted); font-size: 10px; line-height: 1.45; }
 .batch-toggle { min-width: 76px; height: 28px; border: 1px solid var(--border-subtle); border-radius: 7px; color: var(--accent); background: var(--surface-3); }
-.inspector-header { padding: 4px 4px 10px; }.eyebrow { color: var(--accent); font-size: 9px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }h3 { margin: 4px 0 0; color: var(--text-primary); font-size: 18px; font-weight: 610; overflow: hidden; text-overflow: ellipsis; }h3 small { color: var(--text-muted); font-size: .7em; font-weight: 500; }
+.inspector-header { padding: 3px 3px 9px; }.eyebrow { color: var(--accent); font-size: 8.5px; font-weight: 720; letter-spacing: .11em; text-transform: uppercase; }h3 { margin: 4px 0 0; color: var(--text-primary); font-family: inherit; font-size: 16px; font-weight: 650; line-height: 1.25; overflow: hidden; text-overflow: ellipsis; }h3 small { color: var(--text-muted); font-size: 11px; font-weight: 500; }
 :deep(.inspector-section) { border: 1px solid var(--border-subtle); border-radius: 12px; background: color-mix(in srgb, var(--surface-2) 72%, transparent); overflow: hidden; }
-:deep(.inspector-section summary) { min-height: 38px; padding: 0 11px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; list-style: none; color: var(--text-secondary); font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+:deep(.inspector-section summary) { min-height: 37px; padding: 0 10px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; list-style: none; color: var(--text-primary); font-family: inherit; font-size: 10.5px; font-weight: 680; letter-spacing: .055em; text-transform: uppercase; }
 :deep(.inspector-section summary::-webkit-details-marker) { display: none; }:deep(.inspector-section summary i) { font-style: normal; transition: transform 160ms ease; }:deep(.inspector-section[open] summary i) { transform: rotate(180deg); }
-:deep(.section-body) { padding: 4px 11px 12px; display: flex; flex-direction: column; gap: 9px; border-top: 1px solid var(--border-subtle); }
+:deep(.section-body) { padding: 4px 10px 11px; display: flex; flex-direction: column; gap: 8px; border-top: 1px solid var(--border-subtle); }
 :deep(.section-body > select), :deep(.section-body > input) { width: 100%; }
 :deep(.component-tools) { min-height: 31px; display: flex; align-items: center; justify-content: flex-end; gap: 4px; }
-:deep(.component-tools button) { min-width: 30px; height: 25px; padding: 0 7px; border: 1px solid var(--border-subtle); border-radius: 7px; color: var(--text-muted); background: var(--surface-3); font-size: 9px; }
+:deep(.component-tools button) { min-width: 30px; height: 25px; padding: 0 7px; border: 1px solid var(--border-subtle); border-radius: 7px; color: var(--text-muted); background: var(--surface-3); font-size: 9.5px; }
 :deep(.component-tools button:hover:not(:disabled)), :deep(.component-tools button.active) { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 42%, var(--border-subtle)); }
 :deep(.component-tools button.danger:hover) { color: var(--danger); border-color: var(--danger); }
 :deep(.component-tools button:disabled) { opacity: .36; }
-:deep(.property-row) { min-height: 39px; display: flex; align-items: center; justify-content: space-between; gap: 10px; border-bottom: 1px solid var(--border-subtle); color: var(--text-secondary); font-size: 11.5px; }
+:deep(.property-row) { min-height: 37px; display: flex; align-items: center; justify-content: space-between; gap: 9px; border-bottom: 1px solid var(--border-subtle); color: var(--text-secondary); font-family: inherit; font-size: 11px; font-weight: 450; }
 :deep(.property-row:last-child) { border-bottom: 0; }:deep(.property-control) { width: 58%; display: flex; justify-content: flex-end; }:deep(.property-control > input), :deep(.property-control > select) { width: 100%; min-width: 0; }
 .pair { width: 100%; display: flex; gap: 6px; }.pair input { width: 50%; min-width: 0; }
 :deep(.number-range) { width: 100%; display: flex; align-items: center; gap: 7px; }:deep(.number-range input[type='range']) { min-width: 0; flex: 1; accent-color: var(--accent); }:deep(.number-range input[type='number']) { width: 72px; min-width: 60px; }
 :deep(.toggle) { width: 38px; height: 22px; padding: 3px; border: 0; border-radius: 99px; background: var(--surface-3); }:deep(.toggle i) { display: block; width: 16px; height: 16px; border-radius: 50%; background: var(--text-muted); transition: transform 180ms ease; }:deep(.toggle.active) { background: var(--accent); }:deep(.toggle.active i) { transform: translateX(16px); background: var(--accent-contrast); }
-:deep(.diagnostic-row) { min-height: 30px; display: flex; align-items: center; justify-content: space-between; gap: 8px; color: var(--text-muted); font-size: 10.5px; }:deep(.diagnostic-row code) { color: var(--accent); font-family: ui-monospace, SFMono-Regular, Consolas, monospace; }:deep(.diagnostic-row.active code) { color: var(--warning); }
-.stacked-field { display: flex; flex-direction: column; gap: 6px; color: var(--text-secondary); font-size: 11.5px; }.stacked-field input { width: 100%; color: var(--text-muted); font-size: 10px; }
+:deep(.diagnostic-row) { min-height: 30px; display: flex; align-items: center; justify-content: space-between; gap: 8px; color: var(--text-muted); font-family: inherit; font-size: 10.5px; }:deep(.diagnostic-row code) { color: var(--accent); font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 9.5px; }:deep(.diagnostic-row.active code) { color: var(--warning); }
+.stacked-field { display: flex; flex-direction: column; gap: 6px; color: var(--text-secondary); font-family: inherit; font-size: 11px; }.stacked-field input, .stacked-field textarea { width: 100%; color: var(--text-secondary); font: inherit; }.stacked-field textarea { min-height: 58px; padding: 7px; resize: vertical; border: 1px solid var(--border-subtle); border-radius: 7px; background: var(--input-bg); }
 .color-well { width: 48px; height: 25px; border: 3px solid var(--surface-3); border-radius: 8px; box-shadow: 0 0 0 1px var(--border-strong); }
 .primary-action, .secondary-action { min-height: 33px; width: 100%; display: flex; align-items: center; justify-content: center; gap: 6px; border-radius: 8px; border: 1px solid var(--accent); color: var(--accent-contrast); background: var(--accent); font-size: 11px; }.secondary-action { border-color: var(--border-subtle); color: var(--text-secondary); background: var(--surface-3); }
+.prefab-actions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 5px; }
+.prefab-actions button { min-width: 0; min-height: 30px; padding: 4px 5px; overflow: hidden; border: 1px solid var(--border-subtle); border-radius: 7px; color: var(--text-secondary); background: var(--surface-3); font-size: 9.5px; text-overflow: ellipsis; white-space: nowrap; }
+.prefab-actions button:hover { color: var(--accent); border-color: var(--accent); }
+.script-error { margin: 0; padding: 8px; overflow-wrap: anywhere; border: 1px solid color-mix(in srgb, var(--danger) 50%, var(--border-subtle)); border-radius: 7px; color: var(--danger); background: var(--danger-soft); font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 9.5px; line-height: 1.45; }
 .add-components { padding: 11px; display: flex; flex-direction: column; gap: 6px; border: 1px dashed var(--border-strong); border-radius: 12px; color: var(--text-muted); font-size: 10px; }
 .add-components button { min-height: 30px; border: 1px solid var(--border-subtle); border-radius: 8px; color: var(--accent); background: var(--surface-3); text-align: left; }
 .empty-state { margin: 5px 0; color: var(--text-muted); font-size: 11px; text-align: center; }.connection-list { display: flex; flex-direction: column; gap: 6px; }.connection-item { display: flex; align-items: center; border: 1px solid var(--border-subtle); border-radius: 9px; background: var(--surface-1); }.connection-main { min-width: 0; flex: 1; padding: 7px; display: flex; align-items: center; gap: 8px; border: 0; background: transparent; text-align: left; }.connection-main > span:last-child { min-width: 0; display: flex; flex-direction: column; }.connection-main strong, .connection-main small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }.connection-main strong { color: var(--text-primary); font-size: 11px; }.connection-main small { color: var(--text-muted); font-size: 9.5px; }.connection-dot { width: 8px; height: 8px; flex: 0 0 8px; border-radius: 50%; background: var(--connection); box-shadow: 0 0 7px var(--connection); }.connection-item.snapped .connection-dot, .connection-item.torn .connection-dot { background: var(--connection-broken); box-shadow: 0 0 7px var(--connection-broken); }.mini-button { width: 26px; height: 28px; border: 0; background: transparent; color: var(--text-muted); }.mini-button:hover { color: var(--accent); }.mini-button.danger:hover { color: var(--danger); }
 .modal-scrim { position: fixed; inset: 0; z-index: 1300; display: grid; place-items: center; background: var(--scrim); pointer-events: auto; backdrop-filter: blur(6px); }.color-modal { width: 250px; padding: 18px; display: flex; flex-direction: column; align-items: center; gap: 14px; border: 1px solid var(--border-subtle); border-radius: 16px; background: var(--surface-2); box-shadow: var(--shadow-lg); }.color-modal h4 { margin: 0; }.color-modal input { width: 100px; height: 76px; border: 0; background: transparent; }.color-modal > div { width: 100%; display: flex; gap: 8px; }.color-modal button { flex: 1; min-height: 34px; border: 1px solid var(--border-subtle); border-radius: 8px; background: var(--surface-3); }.color-modal button.primary { color: var(--accent-contrast); border-color: var(--accent); background: var(--accent); }
-@media (max-width: 760px) { .config-wrapper { max-width: 48vw; } }
+@media (max-width: 760px) { .config-wrapper { max-width: 46vw; } }
 </style>

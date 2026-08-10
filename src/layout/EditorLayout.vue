@@ -9,10 +9,12 @@
       <SceneSideBar v-if="state.currentPage !== 'settings'" />
       <div class="editor-workspace">
         <div class="editor-content">
+          <div :class="['persistent-viewport', `${state.currentPage}-view`, { inactive: state.currentPage === 'settings' }]">
+            <LayerBar v-if="state.currentPage === 'scene'" />
+            <WorldCanvas />
+          </div>
           <Transition name="page" mode="out-in">
-            <ScenePanel v-if="state.currentPage === 'scene'" key="scene" />
-            <RendererPanel v-else-if="state.currentPage === 'game'" key="game" />
-            <SettingsPanel v-else key="settings" />
+            <SettingsPanel v-if="state.currentPage === 'settings'" key="settings" class="settings-host" />
           </Transition>
         </div>
         <EditorBottomPanel v-if="state.currentPage !== 'settings'" />
@@ -39,9 +41,9 @@ import ActionBar from "../components/ActionBar.vue"
 import ContextMenu from "../components/ContextMenu.vue" // NEW
 import ConfirmDialog from "../components/ConfirmDialog.vue"
 
-import ScenePanel from "../panels/ScenePanel.vue"
-import RendererPanel from "../panels/RendererPanel.vue"
 import SettingsPanel from "../panels/SettingsPanel.vue"
+import WorldCanvas from "../components/WorldCanvas.vue"
+import LayerBar from "../components/LayerBar.vue"
 
 import { editorState as state, closeContextMenu } from "../store/editor"
 </script>
@@ -51,6 +53,13 @@ import { editorState as state, closeContextMenu } from "../store/editor"
 .editor-main { flex: 1; display: flex; min-height: 0; }
 .editor-workspace { min-width: 0; flex: 1; display: flex; flex-direction: column; }
 .editor-content { min-height: 0; flex: 1; position: relative; overflow: hidden; background: var(--bg-canvas); }
+.persistent-viewport { position: absolute; inset: 0; }
+.persistent-viewport.scene-view { animation: viewport-scene-reveal 170ms cubic-bezier(.2,.8,.2,1); }
+.persistent-viewport.game-view { animation: viewport-game-reveal 170ms cubic-bezier(.2,.8,.2,1); }
+.persistent-viewport.inactive { visibility: hidden; pointer-events: none; }
+.settings-host { position: absolute; inset: 0; z-index: 2; }
+@keyframes viewport-scene-reveal { from { opacity: .88; filter: saturate(.9); } to { opacity: 1; filter: saturate(1); } }
+@keyframes viewport-game-reveal { from { opacity: .88; filter: saturate(.9); } to { opacity: 1; filter: saturate(1); } }
 .page-enter-active, .page-leave-active { transition: opacity 150ms ease, transform 180ms cubic-bezier(.2,.8,.2,1); }
 .page-enter-from { opacity: 0; transform: translateY(5px); }
 .page-leave-to { opacity: 0; transform: translateY(-3px); }
