@@ -1,6 +1,7 @@
 <template>
-  <div class="modal-scrim" @mousedown.self="emit('close')">
-    <section class="builder" role="dialog" aria-modal="true" :aria-label="t('connectionBuilder')">
+  <Teleport to="body">
+    <div class="modal-scrim" @mousedown.self="emit('close')">
+      <section class="builder" role="dialog" aria-modal="true" :aria-label="t('connectionBuilder')">
       <header>
         <div>
           <span class="eyebrow">{{ t('connections') }}</span>
@@ -93,8 +94,9 @@
         <button v-if="stage !== 'objects'" class="secondary" @click="goBack">← {{ t('back') }}</button>
         <button v-if="stage === 'simulation'" class="primary" :disabled="!drawingComplete" @click="saveConnection">{{ t(props.connectionId === null ? 'createConnection' : 'saveConnection') }}</button>
       </footer>
-    </section>
-  </div>
+      </section>
+    </div>
+  </Teleport>
 </template>
 
 <script setup lang="ts">

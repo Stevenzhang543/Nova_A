@@ -21,14 +21,22 @@ import { editorState } from './editor'
 import { preferencesState } from './preferences'
 import { t } from '../i18n'
 import { normalizeUuid } from '../world/identity'
-import { Camera2D, Collider2D, RigidBody2D, Script2D, ShapeRenderer2D, SpriteRenderer2D, TextRenderer2D, type Component2D, type ComponentKind } from '../world/components'
+import {
+  Animator, AudioListener, AudioSource, Button, Camera2D, Canvas, Checkbox, Collider2D,
+  Image as UIImage, Joint2D, Panel, ParticleEmitter2D, ProgressBar, RectTransform, RigidBody2D, Script2D,
+  ShapeRenderer2D, Slider, SpriteRenderer2D, Text as UIText, TextInput, TextRenderer2D, TileMap2D,
+  copyComponentValues, pasteComponentValues, type Component2D, type ComponentKind
+} from '../world/components'
 import { Transform } from '../world/Transform'
 import { SceneManager } from '../world/SceneManager'
 import { translateEntityTree, worldTransform } from '../world/hierarchy'
 import { CommandHistory, DocumentMutationCommand } from '../editor/commands'
 import { subtreeEntities, updateSelection, type SelectionMode } from '../editor/selection'
-import { assetReference, loadAssets, registerEmbeddedImage, serializeAssetFolders, serializeAssets } from '../assets/AssetDatabase'
+import { assetReference, assetState, loadAssets, readTextAsset, registerEmbeddedImage, serializeAssetFolders, serializeAssets, updateTextAsset } from '../assets/AssetDatabase'
 import { defaultInputMap, normalizeInputMap, type InputAction } from '../runtime/input'
+import { defaultAudioSettings, normalizeAudioSettings, type AudioProjectSettings } from '../runtime/audio'
+import { normalizeParticleEmitter } from '../runtime/particles'
+import { invalidateTileMap, normalizeTileMap } from '../runtime/tilemap'
 
 interface PhysicsState {
   world: World
@@ -42,6 +50,7 @@ interface PhysicsState {
   playMode: 'editing' | 'playing' | 'paused'
   engineDiagnostics: EngineDiagnostics
   inputMap: InputAction[]
+  audioSettings: AudioProjectSettings
 }
 
 export interface SceneEntityData {
@@ -111,7 +120,8 @@ export const physicsState = reactive<PhysicsState>({
   simulationRunning: false,
   playMode: 'editing',
   engineDiagnostics: { ...rawWorld.diagnostics },
-  inputMap: defaultInputMap()
+  inputMap: defaultInputMap(),
+  audioSettings: defaultAudioSettings()
 })
 
 export const sceneManager = reactive(new SceneManager())
@@ -237,8 +247,12 @@ function serializeComponent(component: Component2D): Record<string, unknown> {
       sensor: component.sensor,
       physicsLayer: component.physicsLayer,
       collisionMask: component.collisionMask >>> 0,
+      oneWay: component.oneWay,
+      oneWayNormal: { ...component.oneWayNormal },
       material: { ...component.material }
     })
+  } else {
+    Object.assign(data, copyComponentValues(component))
   }
   return { uuid: component.uuid, kind: component.kind, enabled: component.enabled, removed: component.removed, data }
 }
@@ -294,7 +308,7 @@ function projectSource(): Record<string, unknown> {
     engineVersion: physicsState.world.projectEngineVersion,
     assets: serializeAssets(),
     assetFolders: serializeAssetFolders(),
-    projectSettings: { inputMap: normalizeInputMap(physicsState.inputMap) },
+    projectSettings: { inputMap: normalizeInputMap(physicsState.inputMap), audio: normalizeAudioSettings(physicsState.audioSettings) },
     projectStructure: {
       assetsRoot: 'Assets', settingsRoot: 'ProjectSettings', cacheRoot: '.nova/cache', importedRoot: '.nova/imported'
     },
@@ -308,11 +322,17 @@ export function getSceneJSON(): string {
   return physicsState.world.formatProjectJson(source)
 }
 
-const ASSET_COMPONENT_FIELDS: Partial<Record<ComponentKind, 'textureAsset' | 'spriteAsset' | 'fontAsset' | 'scriptAsset'>> = {
+const ASSET_COMPONENT_FIELDS: Partial<Record<ComponentKind, 'textureAsset' | 'spriteAsset' | 'fontAsset' | 'scriptAsset' | 'controllerAsset' | 'audioClip' | 'tileSetAsset'>> = {
   ShapeRenderer2D: 'textureAsset',
   SpriteRenderer2D: 'spriteAsset',
   TextRenderer2D: 'fontAsset',
-  Script2D: 'scriptAsset'
+  Script2D: 'scriptAsset',
+  Animator: 'controllerAsset',
+  AudioSource: 'audioClip',
+  Image: 'spriteAsset',
+  Text: 'fontAsset',
+  TileMap2D: 'tileSetAsset',
+  ParticleEmitter2D: 'textureAsset'
 }
 
 function matchesAssetReference(value: unknown, uuid: string): boolean {
@@ -368,13 +388,38 @@ function visitLiveAssetReferences(uuid: string, clear: boolean): number {
   return count
 }
 
+function visitDocumentAssetReferences(uuid: string, clear: boolean): number {
+  let count = 0
+  const target = `asset://${uuid}`
+  const visit = (value: unknown): unknown => {
+    if (value === uuid || value === target) { count++; return clear ? null : value }
+    if (Array.isArray(value)) return value.map(visit)
+    if (value && typeof value === 'object') {
+      for (const [key, child] of Object.entries(value as Record<string, unknown>)) (value as Record<string, unknown>)[key] = visit(child)
+    }
+    return value
+  }
+  for (const asset of assetState.records) {
+    if (asset.uuid === uuid || !['animation', 'controller', 'tileset'].includes(asset.assetType)) continue
+    const source = readTextAsset(asset.uuid)
+    if (!source) continue
+    try {
+      const document = JSON.parse(source) as unknown
+      const before = count
+      visit(document)
+      if (clear && count > before) updateTextAsset(asset.uuid, JSON.stringify(document, null, 2))
+    } catch { /* Invalid editor documents are left untouched. */ }
+  }
+  return count
+}
+
 /** Counts references in the live scene and every unloaded scene document. */
 export function countAssetReferences(uuid: string): number {
   let count = visitLiveAssetReferences(uuid, false)
   for (const scene of sceneManager.scenes) {
     if (scene.uuid !== sceneManager.activeSceneUuid) count += visitStoredAssetReferences(scene.data, uuid, false)
   }
-  return count
+  return count + visitDocumentAssetReferences(uuid, false)
 }
 
 /** Clears an asset reference everywhere so deleting an asset cannot leave a broken scene. */
@@ -383,7 +428,7 @@ export function clearAssetReferences(uuid: string): number {
   for (const scene of sceneManager.scenes) {
     if (scene.uuid !== sceneManager.activeSceneUuid) count += visitStoredAssetReferences(scene.data, uuid, true)
   }
-  return count
+  return count + visitDocumentAssetReferences(uuid, true)
 }
 
 function copyVector(target: { x: number; y: number }, source: unknown): void {
@@ -454,6 +499,120 @@ function applyComponentMetadata(target: { enabled: boolean; removed: boolean }, 
   target.enabled = source.enabled !== false
   target.removed = source.removed === true
   if (target.removed) target.enabled = false
+}
+
+const EXTENDED_COMPONENT_KINDS = [
+  'Animator', 'AudioSource', 'AudioListener', 'Canvas', 'RectTransform', 'Panel', 'Image',
+  'Text', 'Button', 'Slider', 'ProgressBar', 'Checkbox', 'TextInput', 'TileMap2D', 'ParticleEmitter2D',
+  'FixedJoint2D', 'DistanceJoint2D', 'RevoluteJoint2D', 'PrismaticJoint2D', 'SpringJoint2D'
+] as const
+
+function createExtendedComponent(kind: typeof EXTENDED_COMPONENT_KINDS[number], uuid?: string): Component2D {
+  if (kind === 'Animator') return new Animator(uuid)
+  if (kind === 'AudioSource') return new AudioSource(uuid)
+  if (kind === 'AudioListener') return new AudioListener(uuid)
+  if (kind === 'Canvas') return new Canvas(uuid)
+  if (kind === 'RectTransform') return new RectTransform(uuid)
+  if (kind === 'Panel') return new Panel(uuid)
+  if (kind === 'Image') return new UIImage(uuid)
+  if (kind === 'Text') return new UIText(uuid)
+  if (kind === 'Button') return new Button(uuid)
+  if (kind === 'Slider') return new Slider(uuid)
+  if (kind === 'ProgressBar') return new ProgressBar(uuid)
+  if (kind === 'Checkbox') return new Checkbox(uuid)
+  if (kind === 'TextInput') return new TextInput(uuid)
+  if (kind === 'TileMap2D') return new TileMap2D(uuid)
+  if (kind === 'ParticleEmitter2D') return new ParticleEmitter2D(uuid)
+  return new Joint2D(kind, uuid)
+}
+
+function clamp(value: unknown, fallback: number, minimum: number, maximum: number): number {
+  return Math.min(maximum, Math.max(minimum, finiteNumber(value, fallback)))
+}
+
+function safeVector(value: unknown, fallback: { x: number; y: number }): { x: number; y: number } {
+  const source = value && typeof value === 'object' ? value as Record<string, unknown> : {}
+  return { x: finiteNumber(source.x, fallback.x), y: finiteNumber(source.y, fallback.y) }
+}
+
+function safeColor(value: unknown, fallback: { r: number; g: number; b: number }): { r: number; g: number; b: number } {
+  const source = value && typeof value === 'object' ? value as Record<string, unknown> : {}
+  return {
+    r: Math.round(clamp(source.r, fallback.r, 0, 255)),
+    g: Math.round(clamp(source.g, fallback.g, 0, 255)),
+    b: Math.round(clamp(source.b, fallback.b, 0, 255))
+  }
+}
+
+function normalizeExtendedComponent(component: Component2D): void {
+  if (component instanceof Animator) {
+    component.controllerAsset = typeof component.controllerAsset === 'string' ? component.controllerAsset : null
+    component.speed = clamp(component.speed, 1, -100, 100)
+    component.currentState = typeof component.currentState === 'string' ? component.currentState.slice(0, 80) : ''
+    const parameters: Record<string, boolean | number> = {}
+    if (component.parameters && typeof component.parameters === 'object') for (const [name, value] of Object.entries(component.parameters).slice(0, 256)) {
+      if (typeof value === 'boolean' || typeof value === 'number' && Number.isFinite(value)) parameters[name.slice(0, 80)] = value
+    }
+    component.parameters = parameters
+  } else if (component instanceof AudioSource) {
+    component.audioClip = typeof component.audioClip === 'string' ? component.audioClip : null
+    component.volume = clamp(component.volume, 1, 0, 1); component.pitch = clamp(component.pitch, 1, .25, 4)
+    component.spatialBlend = clamp(component.spatialBlend, 0, 0, 1); component.minDistance = clamp(component.minDistance, 1, 0, 1e9)
+    component.maxDistance = clamp(component.maxDistance, 50, component.minDistance + 1e-6, 1e9)
+    if (!['Master', 'Music', 'SFX', 'UI'].includes(component.bus)) component.bus = 'SFX'
+  } else if (component instanceof Canvas) {
+    component.referenceSize = safeVector(component.referenceSize, { x: 1920, y: 1080 })
+    component.referenceSize.x = clamp(component.referenceSize.x, 1920, 1, 100_000)
+    component.referenceSize.y = clamp(component.referenceSize.y, 1080, 1, 100_000)
+    component.sortingOrder = Math.round(clamp(component.sortingOrder, 0, -1_000_000, 1_000_000))
+  } else if (component instanceof RectTransform) {
+    if (!['top-left', 'top', 'top-right', 'left', 'center', 'right', 'bottom-left', 'bottom', 'bottom-right', 'stretch'].includes(component.anchorPreset)) component.anchorPreset = 'center'
+    component.pivot = safeVector(component.pivot, { x: .5, y: .5 }); component.position = safeVector(component.position, { x: 0, y: 0 }); component.size = safeVector(component.size, { x: 240, y: 80 })
+    component.pivot.x = clamp(component.pivot.x, .5, 0, 1); component.pivot.y = clamp(component.pivot.y, .5, 0, 1)
+    component.size.x = clamp(component.size.x, 240, 0, 1e9); component.size.y = clamp(component.size.y, 80, 0, 1e9)
+    if (!component.margins || typeof component.margins !== 'object') component.margins = { left: 0, top: 0, right: 0, bottom: 0 }
+    for (const side of ['left', 'top', 'right', 'bottom'] as const) component.margins[side] = finiteNumber(component.margins[side])
+  } else if (component instanceof Panel) {
+    component.color = safeColor(component.color, { r: 35, g: 41, b: 52 })
+    component.opacity = clamp(component.opacity, 92, 0, 100); component.cornerRadius = clamp(component.cornerRadius, 14, 0, 1e6)
+  } else if (component instanceof UIImage) {
+    component.tint = safeColor(component.tint, { r: 255, g: 255, b: 255 })
+    component.spriteAsset = typeof component.spriteAsset === 'string' ? component.spriteAsset : null
+    component.opacity = clamp(component.opacity, 100, 0, 100)
+  } else if (component instanceof UIText) {
+    component.color = safeColor(component.color, { r: 245, g: 248, b: 252 })
+    component.text = typeof component.text === 'string' ? component.text.slice(0, 100_000) : 'Text'
+    component.fontAsset = typeof component.fontAsset === 'string' ? component.fontAsset : null
+    component.fontFamily = typeof component.fontFamily === 'string' ? component.fontFamily.slice(0, 200) : 'Nunito Sans, sans-serif'
+    component.fontSize = clamp(component.fontSize, 24, 1, 1000); component.fontWeight = Math.round(clamp(component.fontWeight, 600, 100, 900)); component.opacity = clamp(component.opacity, 100, 0, 100)
+    if (!['left', 'right', 'center', 'start', 'end'].includes(component.align)) component.align = 'center'
+  } else if (component instanceof Button) {
+    component.normalColor = safeColor(component.normalColor, { r: 45, g: 106, b: 214 }); component.hoveredColor = safeColor(component.hoveredColor, { r: 61, g: 126, b: 235 }); component.pressedColor = safeColor(component.pressedColor, { r: 31, g: 82, b: 174 }); component.disabledColor = safeColor(component.disabledColor, { r: 90, g: 97, b: 110 })
+    component.state = component.interactable ? 'Normal' : 'Disabled'
+    component.onPressed = typeof component.onPressed === 'string' ? component.onPressed.slice(0, 80) : 'on_pressed'; component.onHoverEnter = typeof component.onHoverEnter === 'string' ? component.onHoverEnter.slice(0, 80) : 'on_hover_enter'; component.onHoverExit = typeof component.onHoverExit === 'string' ? component.onHoverExit.slice(0, 80) : 'on_hover_exit'
+  } else if (component instanceof Slider || component instanceof ProgressBar) {
+    component.min = finiteNumber(component.min); component.max = Math.max(component.min + 1e-9, finiteNumber(component.max, 1)); component.value = clamp(component.value, .5, component.min, component.max)
+    if (component instanceof ProgressBar) { component.fillColor = safeColor(component.fillColor, { r: 79, g: 150, b: 255 }); component.backgroundColor = safeColor(component.backgroundColor, { r: 31, g: 37, b: 47 }) }
+  } else if (component instanceof Checkbox) {
+    component.label = typeof component.label === 'string' ? component.label.slice(0, 1000) : 'Checkbox'
+  } else if (component instanceof TextInput) {
+    component.value = typeof component.value === 'string' ? component.value.slice(0, 100_000) : ''
+    component.placeholder = typeof component.placeholder === 'string' ? component.placeholder.slice(0, 1000) : ''
+    component.maxLength = Math.round(clamp(component.maxLength, 256, 0, 100_000)); component.value = component.value.slice(0, component.maxLength)
+  } else if (component instanceof TileMap2D) {
+    normalizeTileMap(component)
+    invalidateTileMap(component)
+  } else if (component instanceof ParticleEmitter2D) {
+    normalizeParticleEmitter(component)
+  } else if (component instanceof Joint2D) {
+    component.targetEntityUuid = typeof component.targetEntityUuid === 'string' ? component.targetEntityUuid : null
+    component.anchor = safeVector(component.anchor, { x: 0, y: 0 }); component.connectedAnchor = safeVector(component.connectedAnchor, { x: 0, y: 0 })
+    component.axis = safeVector(component.axis, { x: 1, y: 0 }); const axisLength = Math.hypot(component.axis.x, component.axis.y)
+    component.axis = axisLength > 1e-9 ? { x: component.axis.x / axisLength, y: component.axis.y / axisLength } : { x: 1, y: 0 }
+    component.distance = clamp(component.distance, 1, 0, 1e9); component.stiffness = clamp(component.stiffness, 1200, 0, 1e12); component.damping = clamp(component.damping, 35, 0, 1e9)
+    component.lowerLimit = finiteNumber(component.lowerLimit, -1); component.upperLimit = Math.max(component.lowerLimit, finiteNumber(component.upperLimit, 1))
+    component.referenceOffset = safeVector(component.referenceOffset, { x: 0, y: 0 }); component.referenceAngle = finiteNumber(component.referenceAngle)
+  }
 }
 
 function applyStoredComponents(entity: Entity, item: SceneEntityData): void {
@@ -593,6 +752,16 @@ function applyStoredComponents(entity: Entity, item: SceneEntityData): void {
     entity.componentMap.set('Script2D', script)
   }
 
+  for (const kind of EXTENDED_COMPONENT_KINDS) {
+    const source = storedComponent(item, kind)
+    if (!source) continue
+    const component = createExtendedComponent(kind, source.uuid)
+    applyComponentMetadata(component, source)
+    pasteComponentValues(component, recordData(source))
+    normalizeExtendedComponent(component)
+    entity.componentMap.set(kind, component)
+  }
+
   const bodySource = storedComponent(item, 'RigidBody2D')
   if (bodySource) {
     const data = recordData(bodySource)
@@ -607,7 +776,7 @@ function applyStoredComponents(entity: Entity, item: SceneEntityData): void {
     copyVector(body.velocity, data.velocity)
     copyVector(body.acceleration, data.acceleration)
     copyVector(body.force, data.force)
-    if (data.continuousCollision === 'Discrete') body.continuousCollision = 'Discrete'
+    body.continuousCollision = data.continuousCollision === 'Continuous' ? 'Continuous' : 'Discrete'
     if (typeof data.sleepingAllowed === 'boolean') body.sleepingAllowed = data.sleepingAllowed
     if (typeof data.freezeRotation === 'boolean') body.freezeRotation = data.freezeRotation
     entity.componentMap.set('RigidBody2D', body)
@@ -631,6 +800,10 @@ function applyStoredComponents(entity: Entity, item: SceneEntityData): void {
     collider.sensor = data.sensor === true
     collider.physicsLayer = Math.min(31, Math.max(0, Math.round(finiteNumber(data.physicsLayer))))
     collider.collisionMask = Math.min(0xffff_ffff, Math.max(0, Math.round(finiteNumber(data.collisionMask, 1 << collider.physicsLayer)))) >>> 0
+    collider.oneWay = data.oneWay === true
+    copyVector(collider.oneWayNormal, data.oneWayNormal)
+    const oneWayLength = Math.hypot(collider.oneWayNormal.x, collider.oneWayNormal.y)
+    collider.oneWayNormal = oneWayLength > 1e-9 ? { x: collider.oneWayNormal.x / oneWayLength, y: collider.oneWayNormal.y / oneWayLength } : { x: 0, y: 1 }
     if (data.material && typeof data.material === 'object') {
       const material = data.material as Record<string, unknown>
       collider.material.restitution = finiteNumber(material.restitution, collider.material.restitution)
@@ -709,6 +882,53 @@ export function createEntityFromData(item: SceneEntityData, forcedId?: number): 
   if (entity.isStatic) entity.isKinematic = false
   normalizeEntity(entity)
   syncDensityFromMass(entity)
+  return entity
+}
+
+export type UiElementKind = 'Canvas' | 'Panel' | 'Image' | 'Text' | 'Button' | 'Slider' | 'ProgressBar' | 'Checkbox' | 'TextInput'
+
+/** Creates a renderer-independent runtime UI entity without a physics body or collider. */
+export function createUiEntity(kind: UiElementKind, parentUuid: string | null = null): Entity {
+  const entity = physicsState.world.addBox({ x: 0, y: 0 }, { x: 1, y: 1 })
+  entity.name = kind
+  entity.layer = editorState.activeLayer
+  entity.renderer.enabled = false
+  entity.removeComponent('RigidBody2D')
+  const collider = entity.getCollider()
+  if (collider) entity.removeComponent(collider.kind)
+  entity.addComponent(new RectTransform())
+  entity.parentUuid = parentUuid
+  if (kind === 'Canvas') {
+    entity.addComponent(new Canvas())
+    const rect = entity.getComponent<RectTransform>('RectTransform')!
+    rect.anchorPreset = 'stretch'
+  } else if (kind === 'Panel') entity.addComponent(new Panel())
+  else if (kind === 'Image') entity.addComponent(new UIImage())
+  else if (kind === 'Text') entity.addComponent(new UIText())
+  else if (kind === 'Button') {
+    entity.addComponent(new Button())
+    const text = entity.addComponent(new UIText()); text.text = 'Button'
+  } else if (kind === 'Slider') entity.addComponent(new Slider())
+  else if (kind === 'ProgressBar') entity.addComponent(new ProgressBar())
+  else if (kind === 'Checkbox') entity.addComponent(new Checkbox())
+  else entity.addComponent(new TextInput())
+  selectEntities([entity.id], 'replace', entity.id)
+  pushHistory(`Create UI ${kind}`)
+  return entity
+}
+
+/** Creates a tilemap host entity; tile collision is generated in merged runtime batches. */
+export function createTileMapEntity(): Entity {
+  const entity = physicsState.world.addBox({ x: 0, y: 0 }, { x: 1, y: 1 })
+  entity.name = 'TileMap'
+  entity.layer = editorState.activeLayer
+  entity.renderer.enabled = false
+  entity.removeComponent('RigidBody2D')
+  const collider = entity.getCollider()
+  if (collider) entity.removeComponent(collider.kind)
+  entity.addComponent(new TileMap2D())
+  selectEntities([entity.id], 'replace', entity.id)
+  pushHistory('Create TileMap')
   return entity
 }
 
@@ -990,6 +1210,7 @@ export function loadProject(jsonString: string, preserveRuntimeSession = false):
       ? project.projectSettings as Record<string, unknown>
       : {}
     physicsState.inputMap.splice(0, physicsState.inputMap.length, ...normalizeInputMap(projectSettings.inputMap))
+    Object.assign(physicsState.audioSettings, normalizeAudioSettings(projectSettings.audio))
     const sceneRecords = Array.isArray(project.scenes)
       ? project.scenes
       : [{ uuid: normalizeUuid(undefined), name: 'Main Scene', ...project }]
@@ -1058,7 +1279,7 @@ function reloadSceneManagerProject(preserveRuntimeSession = false): boolean {
     engineVersion: physicsState.world.projectEngineVersion,
     assets: serializeAssets(),
     assetFolders: serializeAssetFolders(),
-    projectSettings: { inputMap: normalizeInputMap(physicsState.inputMap) },
+    projectSettings: { inputMap: normalizeInputMap(physicsState.inputMap), audio: normalizeAudioSettings(physicsState.audioSettings) },
     activeSceneUuid: sceneManager.activeSceneUuid,
     scenes: sceneManager.serialize()
   })

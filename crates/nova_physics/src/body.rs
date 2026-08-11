@@ -159,6 +159,8 @@ struct Body {
     sleeping_allowed: bool,
     sleeping: bool,
     sleep_timer: f64,
+    one_way: bool,
+    one_way_normal: Vec2,
 }
 
 impl Body {
@@ -287,6 +289,12 @@ impl Body {
             sleeping_allowed: data[data_index + 48] > 0.5,
             sleeping: requested_sleep && !externally_driven,
             sleep_timer: non_negative(data[data_index + 50], 0.0),
+            one_way: data[data_index + 51] > 0.5,
+            one_way_normal: Vec2::new(
+                finite_or(data[data_index + 52], 0.0),
+                finite_or(data[data_index + 53], 1.0),
+            )
+            .normalized_or(Vec2::new(0.0, 1.0)),
         }
     }
 
@@ -301,6 +309,21 @@ impl Body {
     fn can_collide_with(&self, other: &Self) -> bool {
         (self.collision_mask & (1_u32 << other.layer)) != 0
             && (other.collision_mask & (1_u32 << self.layer)) != 0
+    }
+
+    fn accepts_one_way_contact(&self, other: &Self, normal_to_other: Vec2) -> bool {
+        if !self.one_way {
+            return true;
+        }
+        let allowed = rotate(self.one_way_normal, self.collider_angle())
+            .normalized_or(Vec2::new(0.0, 1.0));
+        let on_blocking_side = other
+            .collider_position()
+            .sub(self.collider_position())
+            .dot(allowed)
+            >= -POSITION_SLOP;
+        let approaching_or_resting = other.velocity.sub(self.velocity).dot(allowed) <= 0.05;
+        normal_to_other.dot(allowed) >= 0.5 && on_blocking_side && approaching_or_resting
     }
 
     fn integrate(&mut self, dt: f64, global_gravity: f64, air_friction: f64) {
@@ -368,7 +391,7 @@ impl Body {
         }
     }
 
-    fn update_sleep_state(&mut self, dt: f64, has_contact: bool) {
+    fn update_sleep_state(&mut self, dt: f64, _has_contact: bool) {
         if !self.sleeping_allowed || self.is_static || self.is_kinematic {
             self.sleeping = false;
             self.sleep_timer = 0.0;
@@ -376,7 +399,7 @@ impl Body {
         }
         let slow = self.velocity.length_squared() <= 1.0e-6
             && self.angular_velocity.abs() <= 1.0e-3;
-        if slow && has_contact {
+        if slow {
             self.sleep_timer += dt;
             if self.sleep_timer >= 0.5 {
                 self.sleeping = true;

@@ -6,6 +6,7 @@ import type { Vec2 } from './types'
 import { finiteNumber, normalizeEntity, syncMassFromDensity } from './geometry'
 import {
   CONNECTION_STRIDE,
+  connectionsFromJointComponents,
   ROPE_NODE_CAPACITY,
   ROPE_NODE_DATA_OFFSET,
   connectionSharesLayer,
@@ -21,8 +22,11 @@ import init, {
   migrate_project_json
 } from '../../nova_core/pkg/nova_core.js'
 import { setWorldTransform, worldTransform } from './hierarchy'
+import { TileMap2D } from './components'
+import { buildTileColliderDescriptors } from '../runtime/tilemap'
+import { assetState } from '../assets/AssetDatabase'
 
-export const PHYSICS_STRIDE = 51
+export const PHYSICS_STRIDE = 54
 export const PHYSICS_LAYER_COUNT = 32
 
 export function defaultCollisionMatrix(): number[] {
@@ -61,6 +65,15 @@ export interface RuntimePhysicsEvent {
   penetration?: number
   [key: string]: unknown
 }
+
+export interface PhysicsQueryHit2D {
+  entityUuid: string
+  point: Vec2
+  normal: Vec2
+  distance: number
+}
+
+interface WasmQueryHit { handle: number; point: [number, number]; normal: [number, number]; distance: number }
 
 interface ConnectionRecord {
   connection: Connection
@@ -124,6 +137,9 @@ function writeEntityRecord(data: Float64Array, entityIndex: number, entity: Enti
   data[index + 48] = entity.rigidBody.sleepingAllowed ? 1 : 0
   data[index + 49] = entity.rigidBody.sleeping ? 1 : 0
   data[index + 50] = entity.rigidBody.sleepTimer
+  data[index + 51] = collider.oneWay ? 1 : 0
+  data[index + 52] = collider.oneWayNormal.x
+  data[index + 53] = collider.oneWayNormal.y
 
   if (collider.kind !== 'EllipseCollider2D') {
     for (let vertexIndex = 0; vertexIndex < collider.vertices.length && vertexIndex < 4; vertexIndex++) {
@@ -211,6 +227,11 @@ function writeConnectionRecord(data: Float64Array, recordIndex: number, record: 
   data[index + 15] = connection.style === 'curved' ? Math.abs(connection.curvature) : manualBend
   data[index + 16] = 1
   data[index + 17] = connection.breakState === 'snapped' ? 1 : connection.breakState === 'torn' ? 2 : 0
+  data[index + 18] = connection.componentType === 'FixedJoint2D' ? 1
+    : connection.componentType === 'DistanceJoint2D' ? 2
+      : connection.componentType === 'RevoluteJoint2D' ? 3
+        : connection.componentType === 'PrismaticJoint2D' ? 4
+          : connection.componentType === 'SpringJoint2D' ? 5 : 0
   data[index + 20] = connection.binding ? 1 : 0
   data[index + 21] = connection.bindAngle
   data[index + 22] = connection.bindOffset.x
@@ -221,6 +242,14 @@ function writeConnectionRecord(data: Float64Array, recordIndex: number, record: 
   const nodeCount = segment === 0 ? Math.min(ROPE_NODE_CAPACITY, connection.ropeNodes.length) : 0
   data[index + 27] = nodeCount
   data[index + 28] = connection.breakLink
+  if (connection.componentType !== 'Rope2D') {
+    data[index + 29] = connection.jointAxis.x
+    data[index + 30] = connection.jointAxis.y
+    data[index + 31] = connection.limitsEnabled ? 1 : 0
+    data[index + 32] = connection.lowerLimit
+    data[index + 33] = connection.upperLimit
+    data[index + 34] = connection.collideConnected ? 1 : 0
+  }
   for (let nodeIndex = 0; nodeIndex < nodeCount; nodeIndex++) {
     const node = connection.ropeNodes[nodeIndex]
     const nodeOffset = index + ROPE_NODE_DATA_OFFSET + nodeIndex * 4
@@ -270,8 +299,12 @@ export class World {
   private stateBuffer = new Float64Array(0)
   private previousBodyBuffer = new Float64Array(0)
   private activeBodies: Entity[] = []
+  private tileCollisionBodies: Entity[] = []
+  private tileCollisionOwners = new Map<number, Entity>()
+  private tileCollisionSignature = ''
   private activeConnectionRecords: ConnectionRecord[] = []
   private timingSignature = ''
+  private lastSettings: GlobalPhysicsSettings = { gravity: 9.8, airFriction: .01, timeScale: 1, tickRate: 60, maxCatchUpSteps: 8, collisionMatrix: defaultCollisionMatrix() }
   wasmError: Error | null = null
   readonly wasmReady: Promise<void>
   diagnostics: EngineDiagnostics = {
@@ -279,8 +312,8 @@ export class World {
     interpolationAlpha: 0, droppedSeconds: 0, eventCount: 0, configurationRebuilds: 0
   }
   events: RuntimePhysicsEvent[] = []
-  projectFormatVersion = 10
-  projectEngineVersion = '1.6.0'
+  projectFormatVersion = 12
+  projectEngineVersion = '1.8.0'
 
   constructor() {
     this.wasmReady = init()
@@ -352,6 +385,7 @@ export class World {
     globalSettings: GlobalPhysicsSettings,
     beforeFixedStep?: (fixedDelta: number) => void
   ): EngineDiagnostics {
+    this.lastSettings = globalSettings
     if (!this.wasmLoaded || !this.runtime) return this.diagnostics
     this.configureTiming(globalSettings, !isRunning)
     if (isRunning && this.entities.length > 0) {
@@ -381,6 +415,7 @@ export class World {
   }
 
   singleStep(globalSettings: GlobalPhysicsSettings): EngineDiagnostics {
+    this.lastSettings = globalSettings
     if (!this.wasmLoaded || !this.runtime) return this.diagnostics
     this.synchronizeRuntime(globalSettings)
     this.configureTiming(globalSettings, true)
@@ -397,6 +432,44 @@ export class World {
     return this.wasmLoaded ? migrate_project_json(source) : source
   }
 
+  raycast(origin: Vec2, direction: Vec2, distance: number, mask = 0xffff_ffff): PhysicsQueryHit2D | null {
+    this.prepareQuery()
+    if (!this.runtime) return null
+    return this.mapQueryHit(JSON.parse(this.runtime.raycast_json(origin.x, origin.y, direction.x, direction.y, distance, mask >>> 0)) as WasmQueryHit | null)
+  }
+
+  raycastAll(origin: Vec2, direction: Vec2, distance: number, mask = 0xffff_ffff): PhysicsQueryHit2D[] {
+    this.prepareQuery()
+    if (!this.runtime) return []
+    const mapped = (JSON.parse(this.runtime.raycast_all_json(origin.x, origin.y, direction.x, direction.y, distance, mask >>> 0)) as WasmQueryHit[]).flatMap(hit => {
+      const mapped = this.mapQueryHit(hit)
+      return mapped ? [mapped] : []
+    })
+    const seen = new Set<string>()
+    return mapped.filter(hit => !seen.has(hit.entityUuid) && Boolean(seen.add(hit.entityUuid)))
+  }
+
+  overlapPoint(point: Vec2, mask = 0xffff_ffff): string[] {
+    this.prepareQuery()
+    return this.runtime ? this.mapQueryHandles(JSON.parse(this.runtime.overlap_point_json(point.x, point.y, mask >>> 0)) as number[]) : []
+  }
+
+  overlapCircle(center: Vec2, radius: number, mask = 0xffff_ffff): string[] {
+    this.prepareQuery()
+    return this.runtime ? this.mapQueryHandles(JSON.parse(this.runtime.overlap_circle_json(center.x, center.y, radius, mask >>> 0)) as number[]) : []
+  }
+
+  overlapBox(center: Vec2, size: Vec2, angle = 0, mask = 0xffff_ffff): string[] {
+    this.prepareQuery()
+    return this.runtime ? this.mapQueryHandles(JSON.parse(this.runtime.overlap_box_json(center.x, center.y, size.x, size.y, angle, mask >>> 0)) as number[]) : []
+  }
+
+  shapeCast(center: Vec2, size: Vec2, angle: number, direction: Vec2, distance: number, mask = 0xffff_ffff): PhysicsQueryHit2D | null {
+    this.prepareQuery()
+    if (!this.runtime) return null
+    return this.mapQueryHit(JSON.parse(this.runtime.shape_cast_json(center.x, center.y, size.x, size.y, angle, direction.x, direction.y, distance, mask >>> 0)) as WasmQueryHit | null)
+  }
+
   invalidateRuntime(): void {
     this.runtime?.clear()
     this.bodyHandles.clear()
@@ -407,6 +480,9 @@ export class World {
     this.connectionOrders.clear()
     this.activeConnectionRecords = []
     this.activeBodies = []
+    this.tileCollisionBodies = []
+    this.tileCollisionOwners.clear()
+    this.tileCollisionSignature = ''
     this.nextRuntimeHandle = 1
     this.timingSignature = ''
   }
@@ -416,12 +492,34 @@ export class World {
     return this.nextRuntimeHandle++
   }
 
+  private prepareQuery(): void { if (this.wasmLoaded) this.synchronizeRuntime(this.lastSettings) }
+
+  private entityForHandle(handle: number): Entity | null {
+    const entity = this.activeBodies.find(candidate => this.bodyHandles.get(candidate.id) === handle) ?? null
+    return entity ? this.tileCollisionOwners.get(entity.id) ?? entity : null
+  }
+
+  private mapQueryHit(hit: WasmQueryHit | null): PhysicsQueryHit2D | null {
+    if (!hit) return null
+    const entity = this.entityForHandle(hit.handle)
+    if (!entity) return null
+    return { entityUuid: entity.uuid, point: { x: finiteNumber(hit.point?.[0]), y: finiteNumber(hit.point?.[1]) }, normal: { x: finiteNumber(hit.normal?.[0]), y: finiteNumber(hit.normal?.[1]) }, distance: Math.max(0, finiteNumber(hit.distance)) }
+  }
+
+  private mapQueryHandles(handles: number[]): string[] {
+    return [...new Set(handles.flatMap(handle => {
+      const entity = this.entityForHandle(handle)
+      return entity ? [entity.uuid] : []
+    }))]
+  }
+
   private synchronizeRuntime(settings: GlobalPhysicsSettings): void {
     const runtime = this.runtime
     if (!runtime) return
+    this.rebuildTileCollisionBodies()
     this.activeBodies = this.entities.filter(entity => entity.enabled
       && entity.hasComponent('RigidBody2D') && entity.rigidBody.enabled
-      && entity.getCollider() !== null && entity.collider.enabled)
+      && entity.getCollider() !== null && entity.collider.enabled).concat(this.tileCollisionBodies)
     const liveBodies = new Set<number>()
     this.activeBodies.forEach((entity, order) => {
       let handle = this.bodyHandles.get(entity.id)
@@ -447,10 +545,11 @@ export class World {
       this.bodyOrders.delete(handle)
     }
 
-    this.activeConnectionRecords = collectConnectionRecords(this.activeBodies, this.connections, this.entities)
+    const runtimeConnections = [...this.connections, ...connectionsFromJointComponents(this.entities)]
+    this.activeConnectionRecords = collectConnectionRecords(this.activeBodies, runtimeConnections, this.entities)
     const liveConnections = new Set<string>()
     this.activeConnectionRecords.forEach((record, order) => {
-      const key = `${record.connection.id}:${record.segment}`
+      const key = `${record.connection.uuid}:${record.segment}`
       liveConnections.add(key)
       let handle = this.connectionHandles.get(key)
       if (handle === undefined) {
@@ -486,6 +585,50 @@ export class World {
     this.timingSignature = signature
   }
 
+  private rebuildTileCollisionBodies(): void {
+    const tileMaps = this.entities.flatMap(entity => {
+      const component = entity.getComponent<TileMap2D>('TileMap2D')
+      return component?.enabled && !component.removed && entity.enabled ? [{ entity, component }] : []
+    })
+    const signature = `${assetState.generation}|${tileMaps.map(({ entity, component }) => {
+      const transform = worldTransform(entity, this.entities)
+      return [entity.uuid, component.revision, component.tileSetAsset, component.width, component.height, component.tileSize.x, component.tileSize.y, component.physicsLayer, component.collisionMask, transform.position.x, transform.position.y, transform.rotation, transform.scale.x, transform.scale.y].join(':')
+    }).join('|')}`
+    if (signature === this.tileCollisionSignature) return
+    this.tileCollisionSignature = signature
+    this.tileCollisionBodies = []
+    this.tileCollisionOwners.clear()
+    let syntheticId = -1
+    for (const { entity, component } of tileMaps) {
+      const transform = worldTransform(entity, this.entities)
+      for (const descriptor of buildTileColliderDescriptors(component)) {
+        const center = {
+          x: descriptor.center.x * transform.scale.x,
+          y: descriptor.center.y * transform.scale.y
+        }
+        const cosine = Math.cos(transform.rotation), sine = Math.sin(transform.rotation)
+        const worldCenter = {
+          x: transform.position.x + center.x * cosine - center.y * sine,
+          y: transform.position.y + center.x * sine + center.y * cosine
+        }
+        const body = new BoxEntity(syntheticId--, worldCenter, descriptor.size)
+        body.name = `${entity.name} collision`
+        body.editorVisible = false
+        body.renderer.enabled = false
+        body.isStatic = true
+        body.transform.rotation = transform.rotation
+        body.transform.scale = { x: transform.scale.x, y: transform.scale.y }
+        if (descriptor.vertices.length >= 3) body.vertices = descriptor.vertices.map(point => ({ ...point }))
+        body.collider.physicsLayer = component.physicsLayer
+        body.collider.collisionMask = component.collisionMask >>> 0
+        body.collider.oneWay = descriptor.oneWay
+        body.collider.oneWayNormal = { x: 0, y: 1 }
+        this.tileCollisionBodies.push(body)
+        this.tileCollisionOwners.set(body.id, entity)
+      }
+    }
+  }
+
   private readRuntimeState(alpha: number, settings: GlobalPhysicsSettings): void {
     if (!this.runtime) return
     const stateLength = this.runtime.state_len()
@@ -517,7 +660,7 @@ export class World {
     })
     this.activeConnectionRecords.forEach((record, index) => {
       readConnectionRecord(this.stateBuffer, bodyLength, index, record)
-      const handle = this.connectionHandles.get(`${record.connection.id}:${record.segment}`)
+      const handle = this.connectionHandles.get(`${record.connection.uuid}:${record.segment}`)
       if (handle !== undefined) {
         this.connectionScratch.fill(0)
         writeConnectionRecord(this.connectionScratch, 0, record, this.activeBodies, this.entities, handle)
@@ -534,7 +677,7 @@ export class World {
       const entityByHandle = new Map<number, Entity>()
       for (const entity of this.activeBodies) {
         const handle = this.bodyHandles.get(entity.id)
-        if (handle !== undefined) entityByHandle.set(handle, entity)
+        if (handle !== undefined) entityByHandle.set(handle, this.tileCollisionOwners.get(entity.id) ?? entity)
       }
       this.events = rawEvents.map(event => ({
         ...event,

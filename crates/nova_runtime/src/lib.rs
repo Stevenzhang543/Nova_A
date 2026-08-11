@@ -3,7 +3,7 @@
 use std::collections::{HashMap, VecDeque};
 
 use nova_math::finite_or;
-use nova_physics::{PhysicsEvent, PhysicsWorld};
+use nova_physics::{PhysicsEvent, PhysicsQueryHit, PhysicsWorld};
 use serde::Serialize;
 
 pub const DEFAULT_TICK_RATE: f64 = 60.0;
@@ -405,6 +405,46 @@ impl RuntimeWorld {
 
     pub fn destroy_connection(&mut self, handle: u32) -> bool {
         self.physics.destroy_connection(handle)
+    }
+
+    pub fn raycast(
+        &self,
+        origin: [f64; 2],
+        direction: [f64; 2],
+        distance: f64,
+        mask: u32,
+    ) -> Option<PhysicsQueryHit> {
+        self.physics.raycast(origin, direction, distance, mask)
+    }
+    pub fn raycast_all(
+        &self,
+        origin: [f64; 2],
+        direction: [f64; 2],
+        distance: f64,
+        mask: u32,
+    ) -> Vec<PhysicsQueryHit> {
+        self.physics.raycast_all(origin, direction, distance, mask)
+    }
+    pub fn overlap_point(&self, point: [f64; 2], mask: u32) -> Vec<u32> {
+        self.physics.overlap_point(point, mask)
+    }
+    pub fn overlap_circle(&self, center: [f64; 2], radius: f64, mask: u32) -> Vec<u32> {
+        self.physics.overlap_circle(center, radius, mask)
+    }
+    pub fn overlap_box(&self, center: [f64; 2], size: [f64; 2], angle: f64, mask: u32) -> Vec<u32> {
+        self.physics.overlap_box(center, size, angle, mask)
+    }
+    pub fn shape_cast(
+        &self,
+        center: [f64; 2],
+        size: [f64; 2],
+        angle: f64,
+        direction: [f64; 2],
+        distance: f64,
+        mask: u32,
+    ) -> Option<PhysicsQueryHit> {
+        self.physics
+            .shape_cast(center, size, angle, direction, distance, mask)
     }
 
     pub fn advance(

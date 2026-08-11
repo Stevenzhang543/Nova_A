@@ -813,4 +813,114 @@ mod tests {
         assert!(!body.sleeping);
         assert!(body.velocity.x > 0.0);
     }
+
+    #[test]
+    fn motionless_body_sleeps_without_requiring_a_contact() {
+        let data = ellipse_record(1.0, 0.0, 0.0, 1.0, 1.0);
+        let mut body = Body::from_data(&data, 0);
+        body.update_sleep_state(0.6, false);
+        assert!(body.sleeping);
+    }
+
+    #[test]
+    fn fixed_joint_preserves_the_reference_transform() {
+        let mut bodies = box_record(1.0, 0.0, 0.0, 1.0, 1.0);
+        bodies[4] = 4.0;
+        bodies.extend(box_record(2.0, 2.0, 0.0, 1.0, 1.0));
+        let mut joint = connection_record(0, 1, 2.0);
+        joint[18] = 1.0;
+        joint[22] = 2.0;
+        let output = step_physics_with_connections(&bodies, &joint, 0.1, 0.0, 0.0);
+        let offset = Vec2::new(output[STRIDE + 2] - output[2], output[STRIDE + 3] - output[3]);
+        assert!((offset.x - 2.0).abs() < 1.0e-6, "offset={offset:?}");
+        assert!(offset.y.abs() < 1.0e-6, "offset={offset:?}");
+        assert!((output[4] - output[STRIDE + 4]).abs() < 1.0e-6);
+    }
+
+    #[test]
+    fn distance_joint_holds_its_configured_length() {
+        let mut bodies = ellipse_record(1.0, -1.0, 0.0, 0.1, 0.1);
+        bodies[4] = -8.0;
+        let mut second = ellipse_record(2.0, 1.0, 0.0, 0.1, 0.1);
+        second[4] = 8.0;
+        bodies.extend(second);
+        let mut joint = connection_record(0, 1, 2.0);
+        joint[18] = 2.0;
+        let output = step_physics_with_connections(&bodies, &joint, 0.1, 0.0, 0.0);
+        let distance = Vec2::new(output[STRIDE + 2] - output[2], output[STRIDE + 3] - output[3]).length();
+        assert!((distance - 2.0).abs() < 1.0e-5, "distance={distance}, a=({},{}), b=({},{}), va=({},{}), vb=({},{})", output[2], output[3], output[STRIDE + 2], output[STRIDE + 3], output[4], output[5], output[STRIDE + 4], output[STRIDE + 5]);
+    }
+
+    #[test]
+    fn revolute_joint_keeps_anchors_together_but_allows_rotation() {
+        let mut bodies = box_record(1.0, -1.0, 0.0, 1.0, 1.0);
+        bodies[15] = -1.0;
+        let mut second = box_record(2.0, 1.0, 0.0, 1.0, 1.0);
+        second[15] = 1.0;
+        bodies.extend(second);
+        let mut joint = connection_record(0, 1, 1.0);
+        joint[3] = 1.0;
+        joint[5] = -1.0;
+        joint[18] = 3.0;
+        let output = step_physics_with_connections(&bodies, &joint, 0.05, 0.0, 0.0);
+        let anchor_a = Vec2::new(output[2], output[3]).add(rotate(Vec2::new(1.0, 0.0), output[14]));
+        let anchor_b = Vec2::new(output[STRIDE + 2], output[STRIDE + 3]).add(rotate(Vec2::new(-1.0, 0.0), output[STRIDE + 14]));
+        assert!(anchor_b.sub(anchor_a).length() < 1.0e-5);
+        assert!((output[STRIDE + 14] - output[14]).abs() > 1.0e-4);
+    }
+
+    #[test]
+    fn prismatic_joint_locks_perpendicular_motion_and_applies_limits() {
+        let mut bodies = box_record(1.0, 0.0, 0.0, 1.0, 1.0);
+        bodies[9] = 1.0;
+        bodies.extend(box_record(2.0, 3.0, 2.0, 1.0, 1.0));
+        let mut joint = connection_record(0, 1, 1.0);
+        joint[18] = 4.0;
+        joint[29] = 1.0;
+        joint[31] = 1.0;
+        joint[32] = -2.0;
+        joint[33] = 2.0;
+        let mut parsed = vec![Body::from_data(&bodies, 0), Body::from_data(&bodies, STRIDE)];
+        let parsed_joint = ConnectionConstraint::from_data(&joint, 0, 2).unwrap();
+        correct_prismatic_position(&mut parsed, &parsed_joint);
+        assert!(parsed[1].position.y.abs() < 1.0e-9);
+        assert!(parsed[1].position.x <= 2.0 + 1.0e-9);
+        let output = step_physics_with_connections(&bodies, &joint, 0.05, 0.0, 0.0);
+        assert!(output[STRIDE + 3].abs() < 1.0e-5, "x={}, y={}, vx={}, vy={}", output[STRIDE + 2], output[STRIDE + 3], output[STRIDE + 4], output[STRIDE + 5]);
+        assert!(output[STRIDE + 2] <= 2.0 + 1.0e-5, "x={}", output[STRIDE + 2]);
+    }
+
+    #[test]
+    fn spring_joint_applies_hooke_force_in_both_directions() {
+        let mut bodies = ellipse_record(1.0, -1.0, 0.0, 0.1, 0.1);
+        bodies.extend(ellipse_record(2.0, 1.0, 0.0, 0.1, 0.1));
+        let mut joint = connection_record(0, 1, 1.0);
+        joint[8] = 1.0;
+        joint[9] = 0.0;
+        joint[10] = 100.0;
+        joint[18] = 5.0;
+        let output = step_physics_with_connections(&bodies, &joint, 0.01, 0.0, 0.0);
+        assert!(output[4] > 0.0);
+        assert!(output[STRIDE + 4] < 0.0);
+    }
+
+    #[test]
+    fn one_way_platform_blocks_above_and_allows_passage_from_below() {
+        let mut falling = box_record(1.0, 0.0, 0.30, 0.5, 0.5);
+        falling[5] = -2.0;
+        let mut platform = box_record(2.0, 0.0, 0.0, 2.0, 0.2);
+        platform[9] = 1.0;
+        platform[51] = 1.0;
+        platform[53] = 1.0;
+        falling.extend(platform.clone());
+        let blocked = step_physics(&falling, 1.0 / 120.0, 0.0, 0.0);
+        assert!(blocked[29] > 0.0);
+
+        let mut rising = box_record(1.0, 0.0, -0.30, 0.5, 0.5);
+        rising[5] = 2.0;
+        rising.extend(platform);
+        let passed = step_physics(&rising, 1.0 / 120.0, 0.0, 0.0);
+        assert_eq!(passed[29], 0.0);
+        assert!((passed[5] - 2.0).abs() < 1.0e-10);
+    }
 }

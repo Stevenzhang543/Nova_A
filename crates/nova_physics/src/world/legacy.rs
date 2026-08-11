@@ -58,7 +58,11 @@ fn active_bound_pairs(
     let mut adjacency = vec![Vec::new(); body_count];
     for constraint in constraints
         .iter()
-        .filter(|constraint| constraint.binding && constraint.active)
+        .filter(|constraint| {
+            constraint.active
+                && !constraint.collide_connected
+                && (constraint.binding || constraint.joint_kind > 0)
+        })
     {
         adjacency[constraint.body_a].push(constraint.body_b);
         adjacency[constraint.body_b].push(constraint.body_a);
@@ -191,6 +195,11 @@ fn collect_contacts(
             let manifolds = collide(body_a, body_b);
             let position_weight = 1.0 / manifolds.len().max(1) as f64;
             for manifold in manifolds {
+                if !body_a.accepts_one_way_contact(body_b, manifold.normal)
+                    || !body_b.accepts_one_way_contact(body_a, manifold.normal.neg())
+                {
+                    continue;
+                }
                 if record_diagnostics {
                     record_contact_diagnostics(data, body_a, body_b, &manifold);
                 }
@@ -256,7 +265,7 @@ fn simulate_sub_step(
         constraint.evaluate_failure(bodies);
     }
     for constraint in constraints.iter() {
-        if constraint.binding {
+        if constraint.binding || constraint.joint_kind == 1 {
             correct_binding_position(bodies, constraint);
         }
         synchronize_binding_motion(bodies, constraint);

@@ -4,22 +4,22 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE.md)
 [![Platforms](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey)](https://v2.tauri.app/start/prerequisites/)
-[![Release](https://img.shields.io/badge/release-1.6.0-63c6ff)]()
+[![Release](https://img.shields.io/badge/release-1.8.0-63c6ff)]()
 
 Nova_A is an open-source 2D physics engine, renderer, and desktop GUI editor built with Rust, WebAssembly, Vue 3, and Tauri.
 
-Version **1.6.0**, Gameplay Runtime, turns authored scenes into playable projects with deterministic lifecycle hooks, sandboxed Rhai scripts, input actions, timers, collision callbacks, reusable prefabs, and runtime scene transitions.
+Version **1.8.0**, Advanced 2D, adds production tilemaps, particles, physics queries, joints, one-way collision, sleeping, and selective continuous collision while preserving the animation, audio, scripting, UI, rope, and editor workflows from earlier releases.
 
-## What is new in v1.6.0
+## What is new in v1.8.0
 
-- A stable gameplay loop calls `awake` and `start` once, `fixed_update` immediately before each physics tick, `update` once per rendered frame, `late_update` afterward, and `on_destroy` before removal. Scaled delta time, fixed delta, elapsed time, frame count, and named pause/resume/repeat timers are available to scripts.
-- `Script2D` runs Rhai through the new `nova_script` Rust crate. Scripts can export typed Inspector properties and use a deliberately small entity, transform, rigid-body, input, prefab, timer, and scene API. File, process, network, Tauri, import, and dynamic-evaluation access are not exposed; operation and recursion limits isolate failures to the affected component.
-- The project Input Map supports named button, axis, and 2D-vector actions with keyboard, mouse button, wheel, gamepad button, and gamepad axis bindings. Scripts query held, pressed, released, scalar, and vector states without depending on a specific device.
-- Collision enter/stay/exit and trigger enter/exit callbacks identify the other entity and provide contact point, normal, and relative velocity. Sensor contacts remain non-physical while still generating trigger events.
-- Prefab assets preserve entity hierarchies and internal connections. Drag a prefab into the Scene view to instantiate it; apply base changes, revert an instance, unpack it, or keep per-property overrides while another base instance is updated. Nested prefab inheritance is intentionally not used in v1.6.0.
-- Runtime scripts can load or reload scenes by UUID or name and request quit. Entities marked persistent keep their UUID, hierarchy, live component state, and internal connections across scene transitions; stopping Play mode restores the authored project.
-- Grid geometry is now rendered behind scene objects instead of through them. Scene and Game share one persistent render surface, preventing dotted transition artifacts, resize flashes, and disappearing output. The Assets toolbar also remains horizontal and scrollable in Chinese and other longer translations.
-- Project format 10 persists input actions, `Script2D`, prefab instance metadata, and persistent-entity flags. Rust migration and validation preserve older projects while rejecting invalid input bindings and missing or incorrectly typed asset references.
+- `.nova-tileset` assets define source texture, tile dimensions, a palette, names, and per-tile None/Box/Polygon/One-way collision. The Tilemap panel supports brush, rectangle, eraser, fill, eyedropper, and selection tools directly in Scene view.
+- `TileMap2D` stores bounded map data in 32 x 32 chunks by default. Only changed visible chunks are rebuilt, camera-excluded chunks are skipped before sprite generation, and texture-atlas regions remain batched by the WebGL2 renderer.
+- Tile collision generates static geometry instead of one rigid body per tile. Adjacent box tiles are greedily merged, one-way runs are merged horizontally, and convex polygon tiles retain their authored shape.
+- `Physics2D` exposes `raycast`, `raycastAll`, point/circle/box overlap, and box shape-cast queries with physics-layer masks. Results use stable entity UUIDs and include hit point, normal, and world-unit distance.
+- Fixed, Distance, Revolute, Prismatic, and Spring joint components are available in the inspector. Connected-body collision is configurable; anchors, distance, spring response, slider axis, and limits are solved in Rust. Existing authored connections remain `Rope2D`.
+- Motionless dynamic bodies sleep and wake on forces, impulses, collisions, connected-body motion, and transform changes. `Discrete` is the safe default collision mode; `Continuous` selectively enables adaptive anti-tunneling work for fast bodies.
+- `ParticleEmitter2D` supports optional texture, rate, burst, lifetime, velocity, gravity, rotation, scale/color/opacity over lifetime, local/world space, alpha/additive blending, and GPU-batched renderer submission.
+- Project format 12 persists TileSets, TileMaps, particles, joints, and one-way colliders. Central Rust validation checks new asset and entity references while format 11 and older projects migrate automatically.
 
 ### Editor shortcuts
 
@@ -139,10 +139,10 @@ Configuration changes cross Vue → `nova_wasm` as explicit retained-world comma
 
 ## Project compatibility
 
-- New saves use project format 10 and engine version `1.6.0`.
+- New saves use project format 12 and engine version `1.8.0`.
 - Persisted scenes, entities, components, and connections use UUIDs; runtime handles are never written to disk.
 - Format migration and validation are centralized in `nova_format`, not scattered through editor components.
-- v1.5 format-9 files, v1.4 format-8 files, v1.3 format-7 files, v1.2 format-6 files, v1.1.2 format-5 files, older object roots, and legacy top-level entity arrays continue to load. A migrated project is only written in the new format when the user saves it.
+- v1.7 format-11 files, v1.6 format-10 files, v1.5 format-9 files, v1.4 format-8 files, v1.3 format-7 files, v1.2 format-6 files, v1.1.2 format-5 files, older object roots, and legacy top-level entity arrays continue to load. A migrated project is only written in the new format when the user saves it.
 
 | Property | Solver/render behavior |
 | --- | --- |
@@ -161,7 +161,11 @@ Configuration changes cross Vue → `nova_wasm` as explicit retained-world comma
 | Render sorting layer/order | Controls draw order only and never changes collision behavior. |
 | Physics layer/mask/matrix | A contact is solved only when both collider masks and the project collision matrix allow the layer pair. A zero mask intentionally disables every contact. |
 | Collider offset/rotation/shape | Collision geometry is independent from renderer geometry and uses its own local transform, material, sensor state, and shape. |
-| Continuous collision, sleeping, freeze rotation | Continuous bodies request adaptive anti-tunneling substeps; eligible resting bodies sleep and wake on impulse; frozen bodies reject torque and angular impulse. |
+| Continuous collision, sleeping, freeze rotation | Continuous bodies request adaptive anti-tunneling substeps; eligible resting bodies sleep and wake on forces, impulses, contacts, connected motion, or transform edits; frozen bodies reject torque and angular impulse. |
+| TileMap rendering/collision | Visible changed chunks submit atlas-backed sprites; merged static box, convex polygon, and one-way geometry uses the TileMap physics layer and mask. |
+| Physics queries | Ray, overlap, and shape-cast queries use world units, precise collider geometry, physics-layer masks, sorted hits, and entity UUID results. |
+| Joint components | Fixed, distance, revolute, prismatic, and spring constraints apply at configured anchors; connected-body collision and slider limits are explicit. |
+| ParticleEmitter2D | Rate, burst, lifetime, velocity, gravity, rotation, scale, color, opacity, blend, and coordinate space feed the batched renderer during Play mode. |
 | String route and anchors | Straight and normalized manual routes repatch after edit-mode transforms; center/surface/vertex/side anchors follow current geometry. Legacy automatic-curve records remain readable. |
 | String stretch/bend/stiffness/damping | Applied by endpoint constraints or every physical-rope segment. Per-link constants are scaled so changing node count does not change the configured whole-string stiffness or damping. |
 | String radius/density/collision | Radius controls continuous segment collision and rendered diameter. Linear density controls exact total rope mass. Source bodies are excluded; same-layer third bodies receive equal-and-opposite impulse and friction. |

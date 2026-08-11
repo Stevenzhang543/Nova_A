@@ -48,6 +48,9 @@ function inferAssetType(file: Pick<File, 'name' | 'type'>): AssetType {
   if (extension === 'nova-prefab' || extension === 'prefab') return 'prefab'
   if (extension === 'rhai' || mime === 'text/x-rhai') return 'script'
   if (extension === 'nova-material' || extension === 'material') return 'material'
+  if (extension === 'nova-anim') return 'animation'
+  if (extension === 'nova-controller') return 'controller'
+  if (extension === 'nova-tileset') return 'tileset'
   return 'other'
 }
 
@@ -59,6 +62,9 @@ function defaultFolder(type: AssetType): string {
   if (type === 'prefab') return 'Assets/Prefabs'
   if (type === 'script') return 'Assets/Scripts'
   if (type === 'material') return 'Assets/Materials'
+  if (type === 'animation') return 'Assets/Animations'
+  if (type === 'controller') return 'Assets/Controllers'
+  if (type === 'tileset') return 'Assets/TileSets'
   return 'Assets'
 }
 
@@ -187,12 +193,12 @@ function textDataUrl(source: string, mimeType: string): string {
 
 export function createTextAsset(
   name: string,
-  assetType: 'script' | 'prefab' | 'scene' | 'material',
+  assetType: 'script' | 'prefab' | 'scene' | 'material' | 'animation' | 'controller' | 'tileset',
   source: string,
   requestedFolder?: string
 ): AssetRecord {
   const uuid = normalizeUuid(undefined)
-  const extension = assetType === 'script' ? '.rhai' : assetType === 'prefab' ? '.nova-prefab' : assetType === 'scene' ? '.nova-scene' : '.nova-material'
+  const extension = assetType === 'script' ? '.rhai' : assetType === 'prefab' ? '.nova-prefab' : assetType === 'scene' ? '.nova-scene' : assetType === 'material' ? '.nova-material' : assetType === 'animation' ? '.nova-anim' : assetType === 'controller' ? '.nova-controller' : '.nova-tileset'
   const safeName = sanitizedName(name).endsWith(extension) ? sanitizedName(name) : `${sanitizedName(name)}${extension}`
   const mimeType = assetType === 'script' ? 'text/x-rhai' : `application/x-nova-${assetType}`
   const record: AssetRecord = {
@@ -223,7 +229,7 @@ export function createTextAsset(
 
 export function readTextAsset(reference: string | null | undefined): string | null {
   const record = resolveAsset(reference)
-  if (!record || !['script', 'prefab', 'scene', 'material'].includes(record.assetType)) return null
+  if (!record || !['script', 'prefab', 'scene', 'material', 'animation', 'controller', 'tileset'].includes(record.assetType)) return null
   const comma = record.source.indexOf(',')
   if (!record.source.startsWith('data:') || comma < 0) return record.source || null
   try {
@@ -239,7 +245,7 @@ export function readTextAsset(reference: string | null | undefined): string | nu
 
 export function updateTextAsset(uuid: string, source: string): boolean {
   const record = assetState.records.find(asset => asset.uuid === uuid)
-  if (!record || !['script', 'prefab', 'scene', 'material'].includes(record.assetType)) return false
+  if (!record || !['script', 'prefab', 'scene', 'material', 'animation', 'controller', 'tileset'].includes(record.assetType)) return false
   record.source = textDataUrl(source, record.mimeType || 'text/plain')
   record.byteLength = new TextEncoder().encode(source).byteLength
   record.sourceModified = Date.now()
@@ -269,7 +275,7 @@ export function loadAssets(source: unknown, folderSource?: unknown): void {
   for (const value of records) {
     if (!value || typeof value !== 'object') continue
     const item = value as Partial<AssetRecord>
-    const assetType = ['image', 'audio', 'font', 'scene', 'prefab', 'script', 'material', 'other'].includes(String(item.assetType)) ? item.assetType as AssetType : 'other'
+    const assetType = ['image', 'audio', 'font', 'scene', 'prefab', 'script', 'material', 'animation', 'controller', 'tileset', 'other'].includes(String(item.assetType)) ? item.assetType as AssetType : 'other'
     const uuid = normalizeUuid(item.uuid)
     const settings: AssetImportSettings = { ...defaultImportSettings(), ...(item.settings ?? {}) }
     settings.pixelsPerUnit = Math.min(1_000_000, Math.max(.000001, Number(settings.pixelsPerUnit) || 100))
@@ -375,6 +381,31 @@ export function resolveTexture(reference: string | null | undefined, filterOverr
   }
   if (!image.complete || image.naturalWidth <= 0) return null
   return importedSpriteRegion(record, { key: `asset:${record.uuid}`, source: image, uv: { x: 0, y: 0, width: 1, height: 1 }, filter: filterOverride ?? record.settings.filterMode })
+}
+
+/** Resolves a pixel-space sub-region without allocating another texture. */
+export function resolveTextureRegion(
+  reference: string | null | undefined,
+  region: { x: number; y: number; width: number; height: number },
+  filterOverride?: 'Nearest' | 'Linear'
+): TextureRegion | null {
+  const record = resolveAsset(reference)
+  const texture = resolveTexture(reference, filterOverride)
+  if (!record || !texture || record.width <= 0 || record.height <= 0) return null
+  const x = Math.min(record.width - 1, Math.max(0, Number(region.x) || 0))
+  const y = Math.min(record.height - 1, Math.max(0, Number(region.y) || 0))
+  const width = Math.min(record.width - x, Math.max(1, Number(region.width) || 1))
+  const height = Math.min(record.height - y, Math.max(1, Number(region.height) || 1))
+  return {
+    ...texture,
+    key: `${texture.key}:region:${x}:${y}:${width}:${height}`,
+    uv: {
+      x: texture.uv.x + x / record.width * texture.uv.width,
+      y: texture.uv.y + y / record.height * texture.uv.height,
+      width: width / record.width * texture.uv.width,
+      height: height / record.height * texture.uv.height
+    }
+  }
 }
 
 function importedSpriteRegion(record: AssetRecord, texture: TextureRegion): TextureRegion {

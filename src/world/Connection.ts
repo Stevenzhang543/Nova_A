@@ -6,9 +6,10 @@ import type { Vec2 } from './types'
 import { finiteNumber, normalizeAngle } from './geometry'
 import { normalizeUuid } from './identity'
 import { localPointToWorld, setWorldTransform, worldPointToLocal, worldTransform } from './hierarchy'
+import { Joint2D, type JointKind2D } from './components'
 
 export type ConnectionStyle = 'straight' | 'curved' | 'manual'
-export type AnchorMode = 'center' | 'surface' | 'vertex' | 'side'
+export type AnchorMode = 'center' | 'surface' | 'vertex' | 'side' | 'local'
 export type ConnectionBreakState = 'intact' | 'snapped' | 'torn'
 
 export interface ConnectionAnchor {
@@ -28,7 +29,7 @@ export interface Connection {
   id: number
   uuid: string
   name: string
-  componentType: 'Rope2D' | 'FixedJoint2D'
+  componentType: 'Rope2D' | JointKind2D
   enabled: boolean
   style: ConnectionStyle
   anchors: ConnectionAnchor[]
@@ -53,6 +54,11 @@ export interface Connection {
   breakState: ConnectionBreakState
   tension: number
   strain: number
+  jointAxis: Vec2
+  limitsEnabled: boolean
+  lowerLimit: number
+  upperLimit: number
+  collideConnected: boolean
 }
 
 export const ROPE_NODE_CAPACITY = 32
@@ -453,6 +459,11 @@ export function createConnection(
     breakState: 'intact',
     tension: 0,
     strain: 0
+    , jointAxis: { x: 1, y: 0 }
+    , limitsEnabled: false
+    , lowerLimit: -1
+    , upperLimit: 1
+    , collideConnected: false
   }
 }
 
@@ -471,7 +482,7 @@ function normalizeRopeState(connection: Connection): void {
 }
 
 function normalizeAnchor(anchor: ConnectionAnchor, entity: Entity): void {
-  anchor.mode = anchor.mode === 'center' || anchor.mode === 'vertex' || anchor.mode === 'side' ? anchor.mode : 'surface'
+  anchor.mode = anchor.mode === 'center' || anchor.mode === 'vertex' || anchor.mode === 'side' || anchor.mode === 'local' ? anchor.mode : 'surface'
   anchor.localPoint = {
     x: finiteNumber(anchor.localPoint?.x),
     y: finiteNumber(anchor.localPoint?.y)
@@ -530,9 +541,8 @@ export function normalizeConnection(connection: Connection, entities: Entity[]):
   connection.name = typeof connection.name === 'string' && connection.name.trim()
     ? connection.name.trim().slice(0, 80)
     : `Connection ${connection.id}`
-  connection.componentType = connection.binding === true || connection.componentType === 'FixedJoint2D'
-    ? 'FixedJoint2D'
-    : 'Rope2D'
+  const componentTypes: Connection['componentType'][] = ['Rope2D', 'FixedJoint2D', 'DistanceJoint2D', 'RevoluteJoint2D', 'PrismaticJoint2D', 'SpringJoint2D']
+  connection.componentType = connection.binding === true ? 'FixedJoint2D' : componentTypes.includes(connection.componentType) ? connection.componentType : 'Rope2D'
   connection.enabled = connection.enabled !== false
   connection.style = connection.style === 'curved' || connection.style === 'manual' ? connection.style : 'straight'
   connection.curvature = Math.min(2, Math.max(-2, finiteNumber(connection.curvature, 0.18)))
@@ -555,6 +565,13 @@ export function normalizeConnection(connection: Connection, entities: Entity[]):
   connection.breakState = connection.breakState === 'snapped' || connection.breakState === 'torn' ? connection.breakState : 'intact'
   connection.tension = Math.max(0, finiteNumber(connection.tension))
   connection.strain = Math.max(0, finiteNumber(connection.strain))
+  const rawAxis = connection.jointAxis as Vec2 | undefined
+  const axisLength = Math.hypot(finiteNumber(rawAxis?.x, 1), finiteNumber(rawAxis?.y))
+  connection.jointAxis = axisLength > 1e-9 ? { x: finiteNumber(rawAxis?.x, 1) / axisLength, y: finiteNumber(rawAxis?.y) / axisLength } : { x: 1, y: 0 }
+  connection.limitsEnabled = connection.limitsEnabled === true
+  connection.lowerLimit = finiteNumber(connection.lowerLimit, -1)
+  connection.upperLimit = Math.max(connection.lowerLimit, finiteNumber(connection.upperLimit, 1))
+  connection.collideConnected = connection.collideConnected === true
   connection.anchors = (Array.isArray(connection.anchors) ? connection.anchors : [])
     .filter(anchor => entities.some(entity => entity.id === anchor.entityId))
   if (connection.anchors.length < 2) return false
@@ -567,6 +584,52 @@ export function normalizeConnection(connection: Connection, entities: Entity[]):
   normalizeBinding(connection, entities, Boolean(hasBindOffset))
   normalizeRoutes(connection, entities)
   return true
+}
+
+export function connectionsFromJointComponents(entities: Entity[]): Connection[] {
+  const result: Connection[] = []
+  for (const entity of entities) {
+    for (const component of entity.componentMap.values()) {
+      if (!(component instanceof Joint2D) || !component.enabled || component.removed || !component.targetEntityUuid) continue
+      const target = entities.find(candidate => candidate.uuid === component.targetEntityUuid)
+      if (!target || target === entity || !target.enabled) continue
+      const transformA = worldTransform(entity, entities)
+      const transformB = worldTransform(target, entities)
+      if (!component.initialized) {
+        component.referenceOffset = rotate({ x: transformB.position.x - transformA.position.x, y: transformB.position.y - transformA.position.y }, -transformA.rotation)
+        component.referenceAngle = normalizeAngle(transformB.rotation - transformA.rotation)
+        const anchorA = localPointToWorld(entity, component.anchor, entities)
+        const anchorB = localPointToWorld(target, component.connectedAnchor, entities)
+        if (component.kind === 'DistanceJoint2D' || component.kind === 'SpringJoint2D') component.distance = Math.max(1e-6, Math.hypot(anchorB.x - anchorA.x, anchorB.y - anchorA.y))
+        component.initialized = true
+      }
+      const connection = createConnection(-Math.max(1, entity.id), entities, [entity.id, target.id], ['center', 'center'])
+      connection.uuid = component.uuid
+      connection.name = component.kind
+      connection.componentType = component.kind
+      connection.enabled = component.enabled
+      connection.anchors = [
+        { entityId: entity.id, mode: 'local', localPoint: { ...component.anchor }, index: 0, sideT: .5 },
+        { entityId: target.id, mode: 'local', localPoint: { ...component.connectedAnchor }, index: 0, sideT: .5 }
+      ]
+      connection.restLengths = [component.kind === 'RevoluteJoint2D' ? 1e-6 : component.distance]
+      connection.stretchable = component.kind === 'SpringJoint2D'
+      connection.bendable = false
+      connection.stiffness = component.stiffness
+      connection.damping = component.damping
+      connection.binding = false
+      connection.bindOffset = { ...component.referenceOffset }
+      connection.bindAngle = component.referenceAngle
+      connection.collisionEnabled = false
+      connection.jointAxis = { ...component.axis }
+      connection.limitsEnabled = component.limitsEnabled
+      connection.lowerLimit = component.lowerLimit
+      connection.upperLimit = component.upperLimit
+      connection.collideConnected = component.collideConnected
+      result.push(connection)
+    }
+  }
+  return result
 }
 
 function physicalRouteFragments(connection: Connection, start: Vec2, end: Vec2): Vec2[][] {

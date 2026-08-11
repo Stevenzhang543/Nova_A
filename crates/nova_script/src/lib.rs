@@ -140,6 +140,27 @@ pub enum ScriptCommand {
     SetAngularVelocity {
         radians_per_second: f64,
     },
+    AnimatorSetBool {
+        name: String,
+        value: bool,
+    },
+    AnimatorSetFloat {
+        name: String,
+        value: f64,
+    },
+    AnimatorSetInteger {
+        name: String,
+        value: i64,
+    },
+    AnimatorTrigger {
+        name: String,
+    },
+    AnimatorPlay {
+        state: String,
+    },
+    AudioPlay,
+    AudioPause,
+    AudioStop,
     Destroy,
     Instantiate {
         prefab: String,
@@ -530,6 +551,75 @@ fn register_command_api(engine: &mut Engine, output: Rc<RefCell<HostOutput>>) {
             .push(ScriptCommand::SetAngularVelocity { radians_per_second });
     });
     let commands = Rc::clone(&output);
+    engine.register_fn("animator_set_bool", move |name: &str, value: bool| {
+        commands
+            .borrow_mut()
+            .commands
+            .push(ScriptCommand::AnimatorSetBool {
+                name: name.chars().take(80).collect(),
+                value,
+            });
+    });
+    let commands = Rc::clone(&output);
+    engine.register_fn("animator_set_float", move |name: &str, value: FLOAT| {
+        commands
+            .borrow_mut()
+            .commands
+            .push(ScriptCommand::AnimatorSetFloat {
+                name: name.chars().take(80).collect(),
+                value,
+            });
+    });
+    let commands = Rc::clone(&output);
+    engine.register_fn("animator_set_integer", move |name: &str, value: INT| {
+        commands
+            .borrow_mut()
+            .commands
+            .push(ScriptCommand::AnimatorSetInteger {
+                name: name.chars().take(80).collect(),
+                value,
+            });
+    });
+    let commands = Rc::clone(&output);
+    engine.register_fn("animator_trigger", move |name: &str| {
+        commands
+            .borrow_mut()
+            .commands
+            .push(ScriptCommand::AnimatorTrigger {
+                name: name.chars().take(80).collect(),
+            });
+    });
+    let commands = Rc::clone(&output);
+    engine.register_fn("animator_play", move |state: &str| {
+        commands
+            .borrow_mut()
+            .commands
+            .push(ScriptCommand::AnimatorPlay {
+                state: state.chars().take(80).collect(),
+            });
+    });
+    let commands = Rc::clone(&output);
+    engine.register_fn("audio_play", move || {
+        commands
+            .borrow_mut()
+            .commands
+            .push(ScriptCommand::AudioPlay)
+    });
+    let commands = Rc::clone(&output);
+    engine.register_fn("audio_pause", move || {
+        commands
+            .borrow_mut()
+            .commands
+            .push(ScriptCommand::AudioPause)
+    });
+    let commands = Rc::clone(&output);
+    engine.register_fn("audio_stop", move || {
+        commands
+            .borrow_mut()
+            .commands
+            .push(ScriptCommand::AudioStop)
+    });
+    let commands = Rc::clone(&output);
     engine.register_fn("destroy", move || {
         commands.borrow_mut().commands.push(ScriptCommand::Destroy)
     });
@@ -803,6 +893,51 @@ mod tests {
             vec![ScriptCommand::ApplyImpulse { x: 0.0, y: 1.25 }]
         );
         assert_eq!(execution.logs[0].message, "jump Player");
+    }
+
+    #[test]
+    fn animation_and_audio_commands_cross_the_sandbox_boundary() {
+        let source = r#"
+            fn update(dt) {
+                animator_set_bool("moving", true);
+                animator_set_float("speed", dt);
+                animator_set_integer("direction", 2);
+                animator_trigger("jump");
+                animator_play("Run");
+                audio_play();
+                audio_pause();
+                audio_stop();
+            }
+        "#;
+        let execution = ScriptRuntime::new()
+            .execute(source, "update", context())
+            .unwrap();
+        assert_eq!(
+            execution.commands,
+            vec![
+                ScriptCommand::AnimatorSetBool {
+                    name: "moving".into(),
+                    value: true
+                },
+                ScriptCommand::AnimatorSetFloat {
+                    name: "speed".into(),
+                    value: 0.25
+                },
+                ScriptCommand::AnimatorSetInteger {
+                    name: "direction".into(),
+                    value: 2
+                },
+                ScriptCommand::AnimatorTrigger {
+                    name: "jump".into()
+                },
+                ScriptCommand::AnimatorPlay {
+                    state: "Run".into()
+                },
+                ScriptCommand::AudioPlay,
+                ScriptCommand::AudioPause,
+                ScriptCommand::AudioStop,
+            ]
+        );
     }
 
     #[test]

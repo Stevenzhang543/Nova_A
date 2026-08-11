@@ -9,6 +9,7 @@ import {
 } from '../store/physics'
 import { finiteNumber, normalizeEntity } from '../world/geometry'
 import type { Entity } from '../world/Entity'
+import type { Animator } from '../world/components'
 import { worldTransform, setWorldTransform } from '../world/hierarchy'
 import type { RuntimePhysicsEvent } from '../world/World'
 import { instantiatePrefab } from './prefabs'
@@ -16,6 +17,9 @@ import { InputManager, type InputSnapshot } from './input'
 import { RuntimeTime } from './time'
 import { WasmScriptRuntime } from '../../nova_core/pkg/nova_core.js'
 import { subtreeEntities } from '../editor/selection'
+import { animationRuntime, setAnimatorParameter } from './animation'
+import { audioRuntime } from './audio'
+import { particleRuntime } from './particles'
 
 type LifecycleFunction = 'awake' | 'start' | 'fixed_update' | 'update' | 'late_update' | 'on_destroy' | 'on_timer'
 
@@ -35,6 +39,14 @@ type ScriptCommand =
   | { type: 'setRotation'; radians: number }
   | { type: 'setScale'; x: number; y: number }
   | { type: 'setAngularVelocity'; radiansPerSecond: number }
+  | { type: 'animatorSetBool'; name: string; value: boolean }
+  | { type: 'animatorSetFloat'; name: string; value: number }
+  | { type: 'animatorSetInteger'; name: string; value: number }
+  | { type: 'animatorTrigger'; name: string }
+  | { type: 'animatorPlay'; state: string }
+  | { type: 'audioPlay' }
+  | { type: 'audioPause' }
+  | { type: 'audioStop' }
   | { type: 'destroy' }
   | { type: 'instantiate'; prefab: string }
   | { type: 'loadScene'; scene: string }
@@ -92,6 +104,15 @@ fn late_update(dt) {
 
 fn on_collision_enter(other, point_x, point_y, normal_x, normal_y, relative_x, relative_y) {
 }
+
+fn on_pressed() {
+}
+
+fn on_hover_enter() {
+}
+
+fn on_hover_exit() {
+}
 `
 
 export class GameplayRuntime {
@@ -131,6 +152,8 @@ export class GameplayRuntime {
   frame(frameDelta: number, viewport?: DOMRect): void {
     if (physicsState.playMode !== 'playing') {
       Object.assign(physicsState.engineDiagnostics, physicsState.world.update(frameDelta, false, physicsState.globalSettings))
+      audioRuntime.update(physicsState.world.entities, physicsState.audioSettings, false)
+      particleRuntime.update(physicsState.world.entities, frameDelta, false)
       return
     }
     if (!this.active) this.beginSession()
@@ -168,6 +191,9 @@ export class GameplayRuntime {
     this.runPhase('update')
     this.flushEntityCommands()
     this.runPhase('late_update')
+    animationRuntime.update(physicsState.world.entities, this.time.value.delta)
+    particleRuntime.update(physicsState.world.entities, this.time.value.delta, true)
+    audioRuntime.update(physicsState.world.entities, physicsState.audioSettings, true)
     this.flushStructuralCommands()
     if (this.quitRequested) {
       this.quitRequested = false
@@ -196,6 +222,9 @@ export class GameplayRuntime {
     this.dispatchPhysicsEvents(physicsState.world.events)
     this.runPhase('update')
     this.runPhase('late_update')
+    animationRuntime.update(physicsState.world.entities, this.time.value.fixedDelta)
+    particleRuntime.update(physicsState.world.entities, this.time.value.fixedDelta, true)
+    audioRuntime.update(physicsState.world.entities, physicsState.audioSettings, true)
     this.flushStructuralCommands()
   }
 
@@ -206,6 +235,9 @@ export class GameplayRuntime {
     for (const entity of ending) this.runEntityFunction(entity, 'on_destroy')
     this.pendingDestroy.clear()
     this.pendingPrefabs = []
+    animationRuntime.reset()
+    particleRuntime.reset()
+    audioRuntime.stopAll()
     this.pendingScene = null
     this.active = false
     this.input.stop()
@@ -248,6 +280,13 @@ export class GameplayRuntime {
     } catch (error) {
       return { error: this.errorMessage(error), exports: [] }
     }
+  }
+
+  invokeUiCallback(entity: Entity, functionName: string): void {
+    if (!this.active || !functionName.trim()) return
+    this.runEntityFunction(entity, functionName.trim().slice(0, 80))
+    this.flushEntityCommands()
+    this.flushStructuralCommands()
   }
 
   private ensureScriptRuntime(): void {
@@ -343,7 +382,20 @@ export class GameplayRuntime {
       setWorldTransform(entity, { ...transform, scale: { x: finite(command.x), y: finite(command.y) } }, physicsState.world.entities)
     } else if (command.type === 'setAngularVelocity' && entity.hasComponent('RigidBody2D')) {
       entity.angularVelocity = finite(command.radiansPerSecond)
-    } else if (command.type === 'destroy') this.pendingDestroy.add(entity.id)
+    } else if (command.type === 'animatorSetBool') {
+      const animator = entity.getComponent<Animator>('Animator'); if (animator) setAnimatorParameter(animator, command.name, command.value)
+    } else if (command.type === 'animatorSetFloat') {
+      const animator = entity.getComponent<Animator>('Animator'); if (animator) setAnimatorParameter(animator, command.name, finite(command.value))
+    } else if (command.type === 'animatorSetInteger') {
+      const animator = entity.getComponent<Animator>('Animator'); if (animator) setAnimatorParameter(animator, command.name, Math.round(finite(command.value)))
+    } else if (command.type === 'animatorTrigger') {
+      const animator = entity.getComponent<Animator>('Animator'); if (animator) setAnimatorParameter(animator, command.name, true)
+    } else if (command.type === 'animatorPlay') {
+      const animator = entity.getComponent<Animator>('Animator'); if (animator) animator.currentState = command.state.trim().slice(0, 80)
+    } else if (command.type === 'audioPlay') audioRuntime.play(entity, physicsState.world.entities)
+    else if (command.type === 'audioPause') audioRuntime.pause(entity)
+    else if (command.type === 'audioStop') audioRuntime.stop(entity)
+    else if (command.type === 'destroy') this.pendingDestroy.add(entity.id)
     else if (command.type === 'instantiate') {
       const transform = worldTransform(entity, physicsState.world.entities)
       this.pendingPrefabs.push({ reference: command.prefab, position: { ...transform.position } })

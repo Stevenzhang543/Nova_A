@@ -39,7 +39,7 @@
           <ComponentTools kind="RigidBody2D" />
           <select v-model="bodyType"><option value="Dynamic">{{ t('dynamic') }}</option><option value="Kinematic">{{ t('kinematic') }}</option><option value="Static">{{ t('static') }}</option></select>
           <PropertyRow :label="t('massMode')"><select v-model="selectedEntity.rigidBody.massMode"><option value="Automatic">{{ t('automatic') }}</option><option value="Manual">{{ t('manualMass') }}</option></select></PropertyRow>
-          <PropertyRow :label="t('continuousCollision')"><select v-model="selectedEntity.rigidBody.continuousCollision"><option value="Continuous">{{ t('yes') }}</option><option value="Discrete">{{ t('no') }}</option></select></PropertyRow>
+          <PropertyRow :label="t('continuousCollision')"><select v-model="selectedEntity.rigidBody.continuousCollision"><option value="Discrete">{{ t('discreteMode') }}</option><option value="Continuous">{{ t('continuousMode') }}</option></select></PropertyRow>
           <PropertyRow :label="t('sleepingAllowed')"><ToggleSwitch v-model="selectedEntity.rigidBody.sleepingAllowed" /></PropertyRow>
           <PropertyRow :label="t('freezeRotation')"><ToggleSwitch v-model="selectedEntity.rigidBody.freezeRotation" /></PropertyRow>
         </InspectorSection>
@@ -192,6 +192,8 @@
           <PropertyRow :label="t('physicsLayer')"><input v-model.number="selectedEntity.collider.physicsLayer" type="number" min="0" max="31" step="1"></PropertyRow>
           <PropertyRow :label="t('collisionMask')"><input v-model.number="selectedEntity.collider.collisionMask" type="number" min="0" max="4294967295" step="1"></PropertyRow>
           <PropertyRow :label="t('isSensor')"><ToggleSwitch v-model="selectedEntity.isSensor" /></PropertyRow>
+          <PropertyRow :label="t('oneWayCollider')"><ToggleSwitch v-model="selectedEntity.collider.oneWay" /></PropertyRow>
+          <PropertyRow v-if="selectedEntity.collider.oneWay" :label="t('oneWayNormal')"><div class="field-pair"><input v-model.number="selectedEntity.collider.oneWayNormal.x" type="number" step="0.1"><input v-model.number="selectedEntity.collider.oneWayNormal.y" type="number" step="0.1"></div></PropertyRow>
           <PropertyRow :label="t('restitution')"><NumberRange v-model="selectedEntity.restitution" :min="0" :max="1" :step="0.01" /></PropertyRow>
           <PropertyRow :label="t('restitutionThreshold')"><input v-model.number="selectedEntity.restitutionThreshold" type="number" min="0" step="0.1"></PropertyRow>
           <PropertyRow :label="t('staticFriction')"><NumberRange v-model="selectedEntity.staticFriction" :min="0" :max="Math.max(1, selectedEntity.staticFriction)" :step="0.01" /></PropertyRow>
@@ -204,12 +206,14 @@
           <DiagnosticRow v-if="selectedEntity.contactCount > 0" :label="t('penetration')" :value="`${selectedEntity.penetrationDepth.toPrecision(5)} m`" />
         </InspectorSection>
 
+        <RuntimeComponentsInspector :entity="selectedEntity" />
+
         <div v-if="addableComponents.length" class="add-components">
           <span>{{ t('addComponent') }}</span>
           <button v-for="kind in addableComponents" :key="kind" @click="addComponent(kind)">+ {{ componentTitle(kind) }}</button>
         </div>
       </div>
-      <div v-else class="empty-inspector"><span class="eyebrow">{{ t('entitySettings') }}</span><p>{{ t('noEntitiesFound') }}</p></div>
+      <div v-else class="empty-inspector"><span class="eyebrow">{{ t('entitySettings') }}</span><p>{{ t('noEntitiesFound') }}</p><strong>{{ t('createGameUi') }}</strong><div class="empty-ui-actions"><button v-for="kind in uiKinds" :key="kind" @click="createUiEntity(kind)">+ {{ t(`create${kind}`) }}</button></div></div>
     </aside>
 
     <div v-if="showColorPicker" class="modal-scrim" @mousedown.self="showColorPicker = false"><div class="color-modal"><h4>{{ t('selectColor') }}</h4><input v-model="tempColor" type="color"><div><button @click="showColorPicker = false">{{ t('cancel') }}</button><button class="primary" @click="applyColor">{{ t('apply') }}</button></div></div></div>
@@ -221,7 +225,7 @@
 import { computed, defineComponent, h, onBeforeUnmount, ref, watch } from 'vue'
 import { t } from '../i18n'
 import { editorState as estate } from '../store/editor'
-import { deleteConnection, physicsState as state, pushHistory, repairConnection } from '../store/physics'
+import { createUiEntity, deleteConnection, physicsState as state, pushHistory, repairConnection, type UiElementKind } from '../store/physics'
 import { preferencesState as prefs } from '../store/preferences'
 import { requestConfirmation } from '../store/dialog'
 import { BoxEntity } from '../world/BoxEntity'
@@ -229,8 +233,9 @@ import { CircleEntity } from '../world/CircleEntity'
 import { TriangleEntity } from '../world/TriangleEntity'
 import { effectiveInertia, entityArea, finiteNumber, MIN_AREA, MIN_SIZE, normalizeEntity, syncDensityFromMass, syncMassFromDensity } from '../world/geometry'
 import ConnectionBuilder from './ConnectionBuilder.vue'
+import RuntimeComponentsInspector from './RuntimeComponentsInspector.vue'
 import { connectionSharesLayer } from '../world/Connection'
-import { Camera2D, Collider2D, RigidBody2D, Script2D, ShapeRenderer2D, SpriteRenderer2D, TextRenderer2D, copyComponentValues, pasteComponentValues, type ComponentKind, type ScriptPropertyValue } from '../world/components'
+import { Animator, AudioListener, AudioSource, Button, Camera2D, Canvas, Checkbox, Collider2D, Image as UIImage, Joint2D, Panel, ParticleEmitter2D, ProgressBar, RectTransform, RigidBody2D, Script2D, ShapeRenderer2D, Slider, SpriteRenderer2D, Text as UIText, TextInput, TextRenderer2D, TileMap2D, copyComponentValues, pasteComponentValues, type Component2D, type ComponentKind, type JointKind2D, type ScriptPropertyValue } from '../world/components'
 import { Transform } from '../world/Transform'
 import { setParent, wouldCreateParentCycle } from '../world/hierarchy'
 import { applyTranslation, captureTransforms } from '../editor/gizmo'
@@ -277,7 +282,8 @@ const panelWidth = ref(292)
 const imageAssets = computed(() => assetState.records.filter(asset => asset.assetType === 'image'))
 const fontAssets = computed(() => assetState.records.filter(asset => asset.assetType === 'font'))
 const scriptAssets = computed(() => assetState.records.filter(asset => asset.assetType === 'script'))
-const optionalComponents: ComponentKind[] = ['SpriteRenderer2D', 'TextRenderer2D', 'Camera2D', 'Script2D']
+const optionalComponents: ComponentKind[] = ['SpriteRenderer2D', 'TextRenderer2D', 'Camera2D', 'Script2D', 'Animator', 'AudioSource', 'AudioListener', 'Canvas', 'RectTransform', 'Panel', 'Image', 'Text', 'Button', 'Slider', 'ProgressBar', 'Checkbox', 'TextInput', 'TileMap2D', 'ParticleEmitter2D', 'FixedJoint2D', 'DistanceJoint2D', 'RevoluteJoint2D', 'PrismaticJoint2D', 'SpringJoint2D']
+const uiKinds: UiElementKind[] = ['Canvas', 'Panel', 'Image', 'Text', 'Button', 'Slider', 'ProgressBar', 'Checkbox', 'TextInput']
 const addableComponents = computed(() => {
   if (!selectedEntity.value) return []
   const removed = [...selectedEntity.value.componentMap.values()].filter(component => component.removed && component.kind !== 'Transform2D').map(component => component.kind)
@@ -311,7 +317,43 @@ function componentTitle(kind: ComponentKind): string {
   if (kind === 'Camera2D') return t('camera2D')
   if (kind === 'Script2D') return t('script2D')
   if (kind === 'RigidBody2D') return t('rigidBody2D')
+  if (kind === 'Animator') return t('animator')
+  if (kind === 'AudioSource') return t('audioSource')
+  if (kind === 'AudioListener') return t('audioListener')
+  if (kind === 'RectTransform') return t('rectTransform')
+  if (kind === 'Canvas') return t('uiCanvas')
+  if (kind === 'Panel') return t('uiPanel')
+  if (kind === 'Image') return t('uiImage')
+  if (kind === 'Text') return t('uiText')
+  if (kind === 'Button') return t('uiButton')
+  if (kind === 'Slider') return t('uiSlider')
+  if (kind === 'ProgressBar') return t('uiProgressBar')
+  if (kind === 'Checkbox') return t('uiCheckbox')
+  if (kind === 'TextInput') return t('uiTextInput')
+  if (kind === 'TileMap2D') return t('tileMap2D')
+  if (kind === 'ParticleEmitter2D') return t('particleEmitter2D')
+  if (kind.endsWith('Joint2D')) return t(kind as Parameters<typeof t>[0])
   return t('collider2D')
+}
+
+function newOptionalComponent(kind: ComponentKind): Component2D | null {
+  if (kind === 'Animator') return new Animator()
+  if (kind === 'AudioSource') return new AudioSource()
+  if (kind === 'AudioListener') return new AudioListener()
+  if (kind === 'Canvas') return new Canvas()
+  if (kind === 'RectTransform') return new RectTransform()
+  if (kind === 'Panel') return new Panel()
+  if (kind === 'Image') return new UIImage()
+  if (kind === 'Text') return new UIText()
+  if (kind === 'Button') return new Button()
+  if (kind === 'Slider') return new Slider()
+  if (kind === 'ProgressBar') return new ProgressBar()
+  if (kind === 'Checkbox') return new Checkbox()
+  if (kind === 'TextInput') return new TextInput()
+  if (kind === 'TileMap2D') return new TileMap2D()
+  if (kind === 'ParticleEmitter2D') return new ParticleEmitter2D()
+  if (kind.endsWith('Joint2D')) return new Joint2D(kind as JointKind2D)
+  return null
 }
 function toggleComponent(kind: ComponentKind) {
   const component = selectedEntity.value?.getComponent(kind, true)
@@ -356,6 +398,9 @@ function resetComponent(kind: ComponentKind) {
     fresh.radiusX = component.radiusX
     fresh.radiusY = component.radiusY
     pasteComponentValues(component, copyComponentValues(fresh))
+  } else {
+    const fresh = newOptionalComponent(kind)
+    if (fresh) pasteComponentValues(component, copyComponentValues(fresh))
   }
   component.enabled = true
   component.removed = false
@@ -388,7 +433,11 @@ function addComponent(kind: ComponentKind) {
   else if (kind === 'TextRenderer2D') { const component = entity.addComponent(new TextRenderer2D()); component.sortingLayer = entity.layer }
   else if (kind === 'Camera2D') entity.addComponent(new Camera2D())
   else if (kind === 'Script2D') entity.addComponent(new Script2D())
-  else return
+  else {
+    const component = newOptionalComponent(kind)
+    if (!component) return
+    entity.addComponent(component)
+  }
   pushHistory('Add component')
   estate.statusText = t('componentAdded')
 }
@@ -521,7 +570,7 @@ onBeforeUnmount(stopResize)
 .config-panel :deep(button), .config-panel :deep(input), .config-panel :deep(select), .config-panel :deep(textarea) { font-family: inherit; font-size: 10.5px; }
 .config-panel.runtime { pointer-events: none; opacity: .72; }
 .settings-content { min-height: 100%; padding: 14px 11px 26px; display: flex; flex-direction: column; gap: 8px; }
-.empty-inspector { height: 100%; padding: 18px; display: flex; flex-direction: column; justify-content: center; align-items: center; color: var(--text-muted); text-align: center; }.empty-inspector p { font-size: 11px; }.runtime-note { color: var(--text-muted); font-size: 10px; line-height: 1.45; }
+.empty-inspector { height: 100%; padding: 18px; display: flex; flex-direction: column; justify-content: center; align-items: center; color: var(--text-muted); text-align: center; }.empty-inspector p { font-size: 11px; }.empty-inspector > strong { margin-top: 12px; color: var(--text-secondary); font-size: 10px; }.empty-ui-actions { width: 100%; margin-top: 7px; display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }.empty-ui-actions button { min-height: 28px; overflow: hidden; border: 1px solid var(--border-subtle); border-radius: 7px; color: var(--accent); background: var(--surface-3); font-size: 8px; text-overflow: ellipsis; white-space: nowrap; }.runtime-note { color: var(--text-muted); font-size: 10px; line-height: 1.45; }
 .batch-toggle { min-width: 76px; height: 28px; border: 1px solid var(--border-subtle); border-radius: 7px; color: var(--accent); background: var(--surface-3); }
 .inspector-header { padding: 3px 3px 9px; }.eyebrow { color: var(--accent); font-size: 8.5px; font-weight: 720; letter-spacing: .11em; text-transform: uppercase; }h3 { margin: 4px 0 0; color: var(--text-primary); font-family: inherit; font-size: 16px; font-weight: 650; line-height: 1.25; overflow: hidden; text-overflow: ellipsis; }h3 small { color: var(--text-muted); font-size: 11px; font-weight: 500; }
 :deep(.inspector-section) { border: 1px solid var(--border-subtle); border-radius: 12px; background: color-mix(in srgb, var(--surface-2) 72%, transparent); overflow: hidden; }

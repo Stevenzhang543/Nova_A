@@ -6,8 +6,8 @@ use std::fmt;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Map, Value};
 
-pub const CURRENT_FORMAT_VERSION: u32 = 10;
-pub const CURRENT_ENGINE_VERSION: &str = "1.6.0";
+pub const CURRENT_FORMAT_VERSION: u32 = 12;
+pub const CURRENT_ENGINE_VERSION: &str = "1.8.0";
 
 fn default_true() -> bool {
     true
@@ -167,6 +167,21 @@ pub fn migrate_project_value(value: Value) -> Result<ProjectFile, FormatError> {
         .or_insert_with(|| Value::Array(Vec::new()));
     root.entry("projectSettings")
         .or_insert_with(|| json!({ "inputMap": [] }));
+    if let Some(settings) = root
+        .get_mut("projectSettings")
+        .and_then(Value::as_object_mut)
+    {
+        settings
+            .entry("inputMap")
+            .or_insert_with(|| Value::Array(Vec::new()));
+        settings.entry("audio").or_insert_with(|| {
+            json!({
+                "masterVolume": 1.0,
+                "sampleRate": 48000,
+                "buses": { "Master": 1.0, "Music": 1.0, "SFX": 1.0, "UI": 1.0 }
+            })
+        });
+    }
 
     let requested_active_scene = root
         .get("activeSceneUuid")
@@ -313,6 +328,62 @@ pub fn validate_project(project: &ProjectFile) -> Result<(), FormatError> {
                         "font",
                         &asset_types,
                     )?;
+                } else if component.kind == "Animator" {
+                    validate_asset_reference(
+                        component.data.get("controllerAsset"),
+                        "controller",
+                        &asset_types,
+                    )?;
+                } else if component.kind == "AudioSource" {
+                    validate_asset_reference(
+                        component.data.get("audioClip"),
+                        "audio",
+                        &asset_types,
+                    )?;
+                } else if component.kind == "Image" {
+                    validate_asset_reference(
+                        component.data.get("spriteAsset"),
+                        "image",
+                        &asset_types,
+                    )?;
+                } else if component.kind == "Text" {
+                    validate_asset_reference(
+                        component.data.get("fontAsset"),
+                        "font",
+                        &asset_types,
+                    )?;
+                } else if component.kind == "TileMap2D" {
+                    validate_asset_reference(
+                        component.data.get("tileSetAsset"),
+                        "tileset",
+                        &asset_types,
+                    )?;
+                } else if component.kind == "ParticleEmitter2D" {
+                    validate_asset_reference(
+                        component.data.get("textureAsset"),
+                        "image",
+                        &asset_types,
+                    )?;
+                } else if matches!(
+                    component.kind.as_str(),
+                    "FixedJoint2D"
+                        | "DistanceJoint2D"
+                        | "RevoluteJoint2D"
+                        | "PrismaticJoint2D"
+                        | "SpringJoint2D"
+                ) {
+                    if let Some(target) = component
+                        .data
+                        .get("targetEntityUuid")
+                        .and_then(Value::as_str)
+                    {
+                        if !entity_ids.contains(target) || target == entity.uuid {
+                            return Err(FormatError(format!(
+                                "joint {} refers to an invalid target entity {}",
+                                component.uuid, target
+                            )));
+                        }
+                    }
                 }
             }
             if !component_kinds.contains("Transform2D") {
@@ -394,6 +465,42 @@ fn validate_project_settings(value: Option<&Value>) -> Result<(), FormatError> {
         .get("inputMap")
         .and_then(Value::as_array)
         .ok_or_else(|| FormatError("projectSettings.inputMap must be an array".into()))?;
+    if let Some(audio) = settings.get("audio") {
+        let audio = audio
+            .as_object()
+            .ok_or_else(|| FormatError("projectSettings.audio must be an object".into()))?;
+        let unit_gain = |name: &str, value: Option<&Value>| -> Result<(), FormatError> {
+            let gain = value
+                .and_then(Value::as_f64)
+                .ok_or_else(|| FormatError(format!("{name} must be a number")))?;
+            if !(0.0..=1.0).contains(&gain) {
+                return Err(FormatError(format!("{name} must be between 0 and 1")));
+            }
+            Ok(())
+        };
+        unit_gain(
+            "projectSettings.audio.masterVolume",
+            audio.get("masterVolume"),
+        )?;
+        if !matches!(
+            audio.get("sampleRate").and_then(Value::as_u64),
+            Some(44100 | 48000 | 96000)
+        ) {
+            return Err(FormatError(
+                "projectSettings.audio.sampleRate is unsupported".into(),
+            ));
+        }
+        let buses = audio
+            .get("buses")
+            .and_then(Value::as_object)
+            .ok_or_else(|| FormatError("projectSettings.audio.buses must be an object".into()))?;
+        for bus in ["Master", "Music", "SFX", "UI"] {
+            unit_gain(
+                &format!("projectSettings.audio.buses.{bus}"),
+                buses.get(bus),
+            )?;
+        }
+    }
     if actions.len() > 128 {
         return Err(FormatError(
             "input map cannot contain more than 128 actions".into(),
@@ -826,6 +933,115 @@ mod tests {
         assert_eq!(migrated.assets[0].extra["mimeType"], "image/png");
         assert_eq!(migrated.assets[0].extra["settings"]["pixelsPerUnit"], 32);
         assert_eq!(migrated.extra["assetFolders"][0], "Assets/Sprites/Empty");
+    }
+
+    #[test]
+    fn migrates_audio_settings_and_validates_v1_7_asset_components() {
+        let scene = deterministic_uuid("v1-7-scene");
+        let entity = deterministic_uuid("v1-7-entity");
+        let transform = deterministic_uuid("v1-7-transform");
+        let animator = deterministic_uuid("v1-7-animator");
+        let audio_source = deterministic_uuid("v1-7-audio-source");
+        let controller = deterministic_uuid("v1-7-controller");
+        let audio = deterministic_uuid("v1-7-audio");
+        let source = json!({
+            "formatVersion": 10,
+            "activeSceneUuid": scene,
+            "projectSettings": {"inputMap": []},
+            "assets": [
+                {"uuid":controller,"path":"Assets/Controllers/player.nova-controller","assetType":"controller"},
+                {"uuid":audio,"path":"Assets/Audio/jump.wav","assetType":"audio"}
+            ],
+            "scenes": [{"uuid":scene,"name":"Main Scene","entities":[{
+                "uuid":entity,"name":"Player","components":[
+                    {"uuid":transform,"kind":"Transform2D","data":{"parentUuid":null}},
+                    {"uuid":animator,"kind":"Animator","data":{"controllerAsset":format!("asset://{controller}")}},
+                    {"uuid":audio_source,"kind":"AudioSource","data":{"audioClip":format!("asset://{audio}")}}
+                ]
+            }],"connections":[]}]
+        });
+        let migrated = migrate_project_value(source).unwrap();
+        assert_eq!(migrated.format_version, CURRENT_FORMAT_VERSION);
+        assert_eq!(
+            migrated.extra["projectSettings"]["audio"]["sampleRate"],
+            48000
+        );
+        assert_eq!(
+            migrated.extra["projectSettings"]["audio"]["buses"]["SFX"],
+            1.0
+        );
+    }
+
+    #[test]
+    fn validates_v1_8_tilemap_particles_and_joint_targets() {
+        let scene = deterministic_uuid("v1-8-scene");
+        let tile_entity = deterministic_uuid("v1-8-tile-entity");
+        let body_entity = deterministic_uuid("v1-8-body-entity");
+        let tile_transform = deterministic_uuid("v1-8-tile-transform");
+        let body_transform = deterministic_uuid("v1-8-body-transform");
+        let tilemap = deterministic_uuid("v1-8-tilemap");
+        let particles = deterministic_uuid("v1-8-particles");
+        let joint = deterministic_uuid("v1-8-joint");
+        let tileset = deterministic_uuid("v1-8-tileset-asset");
+        let image = deterministic_uuid("v1-8-image-asset");
+        let source = json!({
+            "formatVersion": 11,
+            "activeSceneUuid": scene,
+            "assets": [
+                {"uuid":tileset,"path":"Assets/TileSets/world.nova-tileset","assetType":"tileset"},
+                {"uuid":image,"path":"Assets/Textures/spark.png","assetType":"image"}
+            ],
+            "scenes": [{"uuid":scene,"name":"Main Scene","entities":[
+                {"uuid":tile_entity,"name":"World","components":[
+                    {"uuid":tile_transform,"kind":"Transform2D","data":{"parentUuid":null}},
+                    {"uuid":tilemap,"kind":"TileMap2D","data":{"tileSetAsset":format!("asset://{tileset}")}},
+                    {"uuid":particles,"kind":"ParticleEmitter2D","data":{"textureAsset":format!("asset://{image}")}},
+                    {"uuid":joint,"kind":"FixedJoint2D","data":{"targetEntityUuid":body_entity}}
+                ]},
+                {"uuid":body_entity,"name":"Body","components":[
+                    {"uuid":body_transform,"kind":"Transform2D","data":{"parentUuid":null}}
+                ]}
+            ],"connections":[]}]
+        });
+        let migrated = migrate_project_value(source).unwrap();
+        assert_eq!(migrated.format_version, CURRENT_FORMAT_VERSION);
+        assert_eq!(migrated.engine_version, CURRENT_ENGINE_VERSION);
+    }
+
+    #[test]
+    fn rejects_v1_8_joint_targeting_its_own_entity() {
+        let scene = deterministic_uuid("v1-8-invalid-scene");
+        let entity = deterministic_uuid("v1-8-invalid-entity");
+        let transform = deterministic_uuid("v1-8-invalid-transform");
+        let joint = deterministic_uuid("v1-8-invalid-joint");
+        let source = json!({
+            "formatVersion": CURRENT_FORMAT_VERSION,
+            "activeSceneUuid": scene,
+            "assets": [],
+            "scenes": [{"uuid":scene,"name":"Main Scene","entities":[{
+                "uuid":entity,"name":"Body","components":[
+                    {"uuid":transform,"kind":"Transform2D","data":{"parentUuid":null}},
+                    {"uuid":joint,"kind":"FixedJoint2D","data":{"targetEntityUuid":entity}}
+                ]
+            }],"connections":[]}]
+        });
+        let error = migrate_project_value(source).unwrap_err();
+        assert!(error.0.contains("invalid target entity"));
+    }
+
+    #[test]
+    fn rejects_invalid_v1_7_audio_gain() {
+        let scene = deterministic_uuid("invalid-audio-scene");
+        let source = json!({
+            "formatVersion": CURRENT_FORMAT_VERSION,
+            "activeSceneUuid": scene,
+            "projectSettings": {"inputMap": [], "audio": {
+                "masterVolume": 2.0, "sampleRate": 48000,
+                "buses": {"Master":1.0,"Music":1.0,"SFX":1.0,"UI":1.0}
+            }},
+            "scenes": [{"uuid":scene,"name":"Main Scene","entities":[],"connections":[]}]
+        });
+        assert!(migrate_project_value(source).is_err());
     }
 
     #[test]

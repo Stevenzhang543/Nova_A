@@ -1,6 +1,6 @@
 import type { TextureFilter, TextureRegion } from '../renderer'
 
-export type AssetType = 'image' | 'audio' | 'font' | 'scene' | 'prefab' | 'script' | 'material' | 'other'
+export type AssetType = 'image' | 'audio' | 'font' | 'scene' | 'prefab' | 'script' | 'material' | 'animation' | 'controller' | 'tileset' | 'other'
 export type AssetCompression = 'None' | 'Lossless' | 'Optimized'
 
 export interface SpriteRegion {
@@ -44,7 +44,7 @@ export interface TextureAtlasPage {
 
 export const DEFAULT_ASSET_FOLDERS = [
   'Assets', 'Assets/Scenes', 'Assets/Sprites', 'Assets/Audio', 'Assets/Scripts',
-  'Assets/Fonts', 'Assets/Prefabs', 'Assets/Tiles', 'Assets/Materials', 'ProjectSettings',
+  'Assets/Fonts', 'Assets/Prefabs', 'Assets/Tiles', 'Assets/TileSets', 'Assets/Materials', 'Assets/Animations', 'Assets/Controllers', 'ProjectSettings',
   '.nova/cache', '.nova/imported'
 ] as const
 

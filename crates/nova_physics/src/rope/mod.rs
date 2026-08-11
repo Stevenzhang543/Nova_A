@@ -27,6 +27,12 @@ struct ConnectionConstraint {
     broken_code: u8,
     tension: f64,
     strain: f64,
+    joint_kind: u8,
+    joint_axis: Vec2,
+    limits_enabled: bool,
+    lower_limit: f64,
+    upper_limit: f64,
+    collide_connected: bool,
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -108,6 +114,17 @@ impl ConnectionConstraint {
             broken_code,
             tension: 0.0,
             strain: 0.0,
+            joint_kind: non_negative(data[data_index + 18], 0.0).round().clamp(0.0, 5.0) as u8,
+            joint_axis: Vec2::new(
+                finite_or(data[data_index + 29], 1.0),
+                finite_or(data[data_index + 30], 0.0),
+            )
+            .normalized_or(Vec2::new(1.0, 0.0)),
+            limits_enabled: data[data_index + 31] > 0.5,
+            lower_limit: finite_or(data[data_index + 32], -1.0),
+            upper_limit: finite_or(data[data_index + 33], 1.0)
+                .max(finite_or(data[data_index + 32], -1.0)),
+            collide_connected: data[data_index + 34] > 0.5,
         })
     }
 
@@ -202,7 +219,8 @@ impl ConnectionConstraint {
     }
 
     fn evaluate_failure(&mut self, bodies: &[Body]) {
-        if !self.active || self.broken_code != 0 || self.binding {
+        // Joint components do not use Rope2D's tear/snap thresholds.
+        if !self.active || self.broken_code != 0 || self.binding || self.joint_kind > 0 {
             return;
         }
         let physical_rope = self.collision_enabled && !self.rope_nodes.is_empty();
@@ -525,6 +543,8 @@ fn rope_collision_body(
         sleeping_allowed: false,
         sleeping: false,
         sleep_timer: 0.0,
+        one_way: false,
+        one_way_normal: Vec2::new(0.0, 1.0),
     }
 }
 
@@ -918,7 +938,7 @@ fn correct_binding_position(bodies: &mut [Body], constraint: &ConnectionConstrai
 }
 
 fn synchronize_binding_motion(bodies: &mut [Body], constraint: &ConnectionConstraint) {
-    if !constraint.binding || !constraint.active {
+    if (!constraint.binding && constraint.joint_kind != 1) || !constraint.active {
         return;
     }
     let (a_index, b_index) = (constraint.body_a, constraint.body_b);
@@ -987,13 +1007,151 @@ fn synchronize_binding_motion(bodies: &mut [Body], constraint: &ConnectionConstr
     b.angular_velocity = finite_or(angular_velocity, 0.0);
 }
 
+fn solve_anchor_point_velocity(bodies: &mut [Body], constraint: &mut ConnectionConstraint, dt: f64) {
+    let (radius_a, radius_b, error, relative_velocity, k11, k12, k22) = {
+        let a = &bodies[constraint.body_a];
+        let b = &bodies[constraint.body_b];
+        let radius_a = rotate(constraint.local_anchor_a, a.angle);
+        let radius_b = rotate(constraint.local_anchor_b, b.angle);
+        let error = b.position.add(radius_b).sub(a.position.add(radius_a));
+        let relative_velocity = b.point_velocity(radius_b).sub(a.point_velocity(radius_a));
+        let (k11, k12, k22) = binding_mass_matrix(a, b, radius_a, radius_b);
+        (radius_a, radius_b, error, relative_velocity, k11, k12, k22)
+    };
+    let impulse = solve_symmetric_2x2(k11, k12, k22, relative_velocity.add(error.mul(0.2 / dt)).neg());
+    if impulse.length_squared() > 0.0 {
+        apply_pair_impulse(bodies, constraint.body_a, constraint.body_b, impulse, radius_a, radius_b);
+        constraint.tension = constraint.tension.max(impulse.length() / dt);
+    }
+}
+
+fn correct_anchor_point_position(bodies: &mut [Body], constraint: &ConnectionConstraint) {
+    for _ in 0..4 {
+        let (radius_a, radius_b, error, k11, k12, k22) = {
+            let a = &bodies[constraint.body_a];
+            let b = &bodies[constraint.body_b];
+            let radius_a = rotate(constraint.local_anchor_a, a.angle);
+            let radius_b = rotate(constraint.local_anchor_b, b.angle);
+            let error = b.position.add(radius_b).sub(a.position.add(radius_a));
+            let (k11, k12, k22) = binding_mass_matrix(a, b, radius_a, radius_b);
+            (radius_a, radius_b, error, k11, k12, k22)
+        };
+        let impulse = solve_symmetric_2x2(k11, k12, k22, error.mul(-0.75));
+        let (a, b) = two_bodies_mut(bodies, constraint.body_a, constraint.body_b);
+        a.position = a.position.sub(impulse.mul(a.inv_mass)).finite_or(a.position);
+        a.angle = normalize_angle(a.angle - radius_a.cross(impulse) * a.inv_inertia);
+        b.position = b.position.add(impulse.mul(b.inv_mass)).finite_or(b.position);
+        b.angle = normalize_angle(b.angle + radius_b.cross(impulse) * b.inv_inertia);
+    }
+}
+
+fn solve_relative_angle_velocity(bodies: &mut [Body], constraint: &ConnectionConstraint, dt: f64) {
+    let a = &bodies[constraint.body_a];
+    let b = &bodies[constraint.body_b];
+    let inverse = a.inv_inertia + b.inv_inertia;
+    if inverse <= 0.0 { return; }
+    let error = normalize_angle((b.angle - a.angle) - constraint.bind_angle);
+    let impulse = -((b.angular_velocity - a.angular_velocity) + error * 0.2 / dt) / inverse;
+    let (a, b) = two_bodies_mut(bodies, constraint.body_a, constraint.body_b);
+    a.angular_velocity -= impulse * a.inv_inertia;
+    b.angular_velocity += impulse * b.inv_inertia;
+}
+
+fn correct_relative_angle(bodies: &mut [Body], constraint: &ConnectionConstraint) {
+    let a = &bodies[constraint.body_a];
+    let b = &bodies[constraint.body_b];
+    let inverse = a.inv_inertia + b.inv_inertia;
+    if inverse <= 0.0 { return; }
+    let impulse = -normalize_angle((b.angle - a.angle) - constraint.bind_angle) * 0.75 / inverse;
+    let (a, b) = two_bodies_mut(bodies, constraint.body_a, constraint.body_b);
+    a.angle = normalize_angle(a.angle - impulse * a.inv_inertia);
+    b.angle = normalize_angle(b.angle + impulse * b.inv_inertia);
+}
+
+fn solve_prismatic_velocity(bodies: &mut [Body], constraint: &mut ConnectionConstraint, dt: f64) {
+    let (radius_a, radius_b, axis, perpendicular, translation, relative_velocity) = {
+        let a = &bodies[constraint.body_a];
+        let b = &bodies[constraint.body_b];
+        let radius_a = rotate(constraint.local_anchor_a, a.angle);
+        let radius_b = rotate(constraint.local_anchor_b, b.angle);
+        let axis = rotate(constraint.joint_axis, a.angle).normalized_or(Vec2::new(1.0, 0.0));
+        let perpendicular = axis.perp();
+        let delta = b.position.add(radius_b).sub(a.position.add(radius_a));
+        (radius_a, radius_b, axis, perpendicular, delta.dot(axis), b.point_velocity(radius_b).sub(a.point_velocity(radius_a)))
+    };
+    let solve_axis = |bodies: &mut [Body], direction: Vec2, error: f64, relative_speed: f64| {
+        let a = &bodies[constraint.body_a];
+        let b = &bodies[constraint.body_b];
+        let denominator = a.inv_mass + b.inv_mass
+            + radius_a.cross(direction).powi(2) * a.inv_inertia
+            + radius_b.cross(direction).powi(2) * b.inv_inertia;
+        if denominator <= 0.0 { return 0.0; }
+        let impulse = -(relative_speed + error * 0.2 / dt) / denominator;
+        apply_pair_impulse(bodies, constraint.body_a, constraint.body_b, direction.mul(impulse), radius_a, radius_b);
+        impulse.abs() / dt
+    };
+    let perpendicular_error = {
+        let a = &bodies[constraint.body_a];
+        let b = &bodies[constraint.body_b];
+        b.position.add(radius_b).sub(a.position.add(radius_a)).dot(perpendicular)
+    };
+    constraint.tension = constraint.tension.max(solve_axis(bodies, perpendicular, perpendicular_error, relative_velocity.dot(perpendicular)));
+    if constraint.limits_enabled {
+        let error = if translation < constraint.lower_limit { translation - constraint.lower_limit }
+            else if translation > constraint.upper_limit { translation - constraint.upper_limit } else { 0.0 };
+        if error != 0.0 { constraint.tension = constraint.tension.max(solve_axis(bodies, axis, error, relative_velocity.dot(axis))); }
+    }
+    solve_relative_angle_velocity(bodies, constraint, dt);
+}
+
+fn correct_prismatic_position(bodies: &mut [Body], constraint: &ConnectionConstraint) {
+    for _ in 0..4 {
+        let (radius_a, radius_b, axis, perpendicular, delta) = {
+            let a = &bodies[constraint.body_a];
+            let b = &bodies[constraint.body_b];
+            let radius_a = rotate(constraint.local_anchor_a, a.angle);
+            let radius_b = rotate(constraint.local_anchor_b, b.angle);
+            let axis = rotate(constraint.joint_axis, a.angle).normalized_or(Vec2::new(1.0, 0.0));
+            let delta = b.position.add(radius_b).sub(a.position.add(radius_a));
+            (radius_a, radius_b, axis, axis.perp(), delta)
+        };
+        let translation = delta.dot(axis);
+        let axis_error = if constraint.limits_enabled && translation < constraint.lower_limit { translation - constraint.lower_limit }
+            else if constraint.limits_enabled && translation > constraint.upper_limit { translation - constraint.upper_limit } else { 0.0 };
+        for (direction, error) in [(perpendicular, delta.dot(perpendicular)), (axis, axis_error)] {
+            if error.abs() <= POSITION_SLOP { continue; }
+            let a = &bodies[constraint.body_a];
+            let b = &bodies[constraint.body_b];
+            let denominator = a.inv_mass + b.inv_mass
+                + radius_a.cross(direction).powi(2) * a.inv_inertia
+                + radius_b.cross(direction).powi(2) * b.inv_inertia;
+            if denominator <= 0.0 { continue; }
+            let impulse = direction.mul(-error / denominator);
+            let (a, b) = two_bodies_mut(bodies, constraint.body_a, constraint.body_b);
+            a.position = a.position.sub(impulse.mul(a.inv_mass)).finite_or(a.position);
+            a.angle = normalize_angle(a.angle - radius_a.cross(impulse) * a.inv_inertia);
+            b.position = b.position.add(impulse.mul(b.inv_mass)).finite_or(b.position);
+            b.angle = normalize_angle(b.angle + radius_b.cross(impulse) * b.inv_inertia);
+        }
+    }
+    correct_relative_angle(bodies, constraint);
+}
+
 fn solve_connection_velocity(bodies: &mut [Body], constraint: &mut ConnectionConstraint, dt: f64) {
     let simulating_fragments = constraint.collision_enabled && constraint.break_link.is_some();
     if !constraint.active || (constraint.broken_code != 0 && !simulating_fragments) || dt <= 0.0 {
         return;
     }
-    if constraint.binding {
+    if constraint.binding || constraint.joint_kind == 1 {
         solve_binding_velocity(bodies, constraint, dt);
+        return;
+    }
+    if constraint.joint_kind == 3 {
+        solve_anchor_point_velocity(bodies, constraint, dt);
+        return;
+    }
+    if constraint.joint_kind == 4 {
+        solve_prismatic_velocity(bodies, constraint, dt);
         return;
     }
     if constraint.collision_enabled {
@@ -1002,7 +1160,7 @@ fn solve_connection_velocity(bodies: &mut [Body], constraint: &mut ConnectionCon
     }
     let (radius_a, radius_b, normal, length, _) = constraint.geometry(bodies);
     let error = length - constraint.rest_length;
-    if constraint.bendable && error <= 0.0 {
+    if constraint.joint_kind != 2 && constraint.bendable && error <= 0.0 {
         constraint.tension = 0.0;
         return;
     }
@@ -1058,8 +1216,16 @@ fn correct_connection_position(bodies: &mut [Body], constraint: &mut ConnectionC
     if !constraint.active || (constraint.broken_code != 0 && !simulating_fragments) {
         return;
     }
-    if constraint.binding {
+    if constraint.binding || constraint.joint_kind == 1 {
         correct_binding_position(bodies, constraint);
+        return;
+    }
+    if constraint.joint_kind == 3 {
+        correct_anchor_point_position(bodies, constraint);
+        return;
+    }
+    if constraint.joint_kind == 4 {
+        correct_prismatic_position(bodies, constraint);
         return;
     }
     if constraint.collision_enabled {
@@ -1068,7 +1234,9 @@ fn correct_connection_position(bodies: &mut [Body], constraint: &mut ConnectionC
     }
     let (radius_a, radius_b, normal, length, _) = constraint.geometry(bodies);
     let error = length - constraint.rest_length;
-    if constraint.stretchable || (constraint.bendable && error <= POSITION_SLOP) {
+    if constraint.stretchable
+        || (constraint.joint_kind != 2 && constraint.bendable && error <= POSITION_SLOP)
+    {
         return;
     }
     let a = &bodies[constraint.body_a];
@@ -1082,7 +1250,8 @@ fn correct_connection_position(bodies: &mut [Body], constraint: &mut ConnectionC
     if denominator <= 0.0 {
         return;
     }
-    let correction = normal.mul(error * 0.75 / denominator);
+    let projection = if constraint.joint_kind == 2 { 1.0 } else { 0.75 };
+    let correction = normal.mul(error * projection / denominator);
     let (a, b) = two_bodies_mut(bodies, constraint.body_a, constraint.body_b);
     a.position = a
         .position

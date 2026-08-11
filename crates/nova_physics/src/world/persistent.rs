@@ -76,8 +76,16 @@ impl PhysicsWorld {
             let record = &mut self.bodies[index];
             let changed = record.order != order || record.values != values;
             if changed {
+                let transform_changed = [2_usize, 3, 12, 13, 14, 43, 44, 45]
+                    .into_iter()
+                    .any(|field| record.values[field] != values[field])
+                    || record.values[34..42] != values[34..42];
                 record.order = order;
                 record.values.copy_from_slice(values);
+                if transform_changed {
+                    record.values[49] = 0.0;
+                    record.values[50] = 0.0;
+                }
                 self.configuration_dirty = true;
             }
             return Ok(changed);
@@ -110,11 +118,11 @@ impl PhysicsWorld {
     }
 
     pub fn set_transform(&mut self, handle: u32, x: f64, y: f64, angle: f64) -> Result<(), &'static str> {
-        self.update_body(handle, |values| { values[2] = finite_or(x, values[2]); values[3] = finite_or(y, values[3]); values[14] = normalize_angle(angle); })
+        self.update_body(handle, |values| { values[2] = finite_or(x, values[2]); values[3] = finite_or(y, values[3]); values[14] = normalize_angle(angle); values[49] = 0.0; values[50] = 0.0; })
     }
 
     pub fn set_velocity(&mut self, handle: u32, x: f64, y: f64, angular: f64) -> Result<(), &'static str> {
-        self.update_body(handle, |values| { values[4] = finite_or(x, values[4]); values[5] = finite_or(y, values[5]); values[15] = finite_or(angular, values[15]); })
+        self.update_body(handle, |values| { values[4] = finite_or(x, values[4]); values[5] = finite_or(y, values[5]); values[15] = finite_or(angular, values[15]); values[49] = 0.0; values[50] = 0.0; })
     }
 
     pub fn set_material(&mut self, handle: u32, restitution: f64, static_friction: f64, dynamic_friction: f64) -> Result<(), &'static str> {
@@ -126,7 +134,7 @@ impl PhysicsWorld {
     }
 
     pub fn apply_force(&mut self, handle: u32, x: f64, y: f64, torque: f64) -> Result<(), &'static str> {
-        self.update_body(handle, |values| { values[21] = finite_or(x, values[21]); values[22] = finite_or(y, values[22]); values[16] = finite_or(torque, values[16]); })
+        self.update_body(handle, |values| { values[21] = finite_or(x, values[21]); values[22] = finite_or(y, values[22]); values[16] = finite_or(torque, values[16]); values[49] = 0.0; values[50] = 0.0; })
     }
 
     pub fn apply_impulse(&mut self, handle: u32, x: f64, y: f64, offset_x: f64, offset_y: f64) -> Result<(), &'static str> {
@@ -137,6 +145,8 @@ impl PhysicsWorld {
             values[5] = finite_or(values[5] + finite_or(y, 0.0) / mass, values[5]);
             let inertia = positive_with_minimum(values[26], 1.0, MIN_INERTIA);
             values[15] = finite_or(values[15] + (offset_x * y - offset_y * x) / inertia, values[15]);
+            values[49] = 0.0;
+            values[50] = 0.0;
         })
     }
 
@@ -318,6 +328,25 @@ mod persistent_world_tests {
         assert_eq!(world.configuration_rebuilds(), 1);
         world.step(1.0 / 60.0, 0.0, 0.0);
         assert_eq!(world.configuration_rebuilds(), 2);
+    }
+
+    #[test]
+    fn transform_commands_wake_a_sleeping_body() {
+        let mut record = body_record();
+        record[48] = 1.0;
+        record[49] = 1.0;
+        record[50] = 1.0;
+        let mut world = PhysicsWorld::new();
+        world.create_body(1, 0, &record).unwrap();
+        world.set_transform(1, 3.0, 4.0, 0.5).unwrap();
+        assert_eq!(world.bodies[0].values[49], 0.0);
+        assert_eq!(world.bodies[0].values[50], 0.0);
+
+        let mut moved = record;
+        moved[2] = 8.0;
+        world.upsert_body(1, 0, &moved).unwrap();
+        assert_eq!(world.bodies[0].values[49], 0.0);
+        assert_eq!(world.bodies[0].values[50], 0.0);
     }
 
     #[test]

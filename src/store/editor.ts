@@ -31,7 +31,7 @@ export const editorState = reactive({
   angleSnapDegrees: 15,
   bottomPanelOpen: true,
   bottomPanelHeight: 180,
-  bottomPanelTab: 'console' as 'assets' | 'console' | 'animation' | 'profiler' | 'project' | 'build',
+  bottomPanelTab: 'console' as 'assets' | 'console' | 'animation' | 'tilemap' | 'profiler' | 'project' | 'build',
   renameRequestId: null as number | null,
   logs: [] as EditorLogEntry[],
   rendererStats: {

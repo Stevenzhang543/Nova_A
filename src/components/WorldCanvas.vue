@@ -18,9 +18,11 @@ import { applyRotation, applyScale, applyTranslation, axisVector, captureTransfo
 import { createRenderer2D, type Renderer2D } from '../renderer'
 import { renderWorld } from '../renderer/sceneRenderer'
 import { assetReference, resolveAsset } from '../assets/AssetDatabase'
-import { SpriteRenderer2D } from '../world/components'
+import { SpriteRenderer2D, type TileMap2D } from '../world/components'
 import { gameplayRuntime } from '../runtime/GameplayRuntime'
+import { gameUiRuntime } from '../runtime/gameUi'
 import { instantiatePrefab } from '../runtime/prefabs'
+import { beginTileStroke, continueTileStroke, endTileStroke, tilemapEditorState, worldToTile, type TileStroke } from '../runtime/tilemap'
 
 const canvasRef = ref<HTMLCanvasElement | null>(null)
 const renderCanvasRef = ref<HTMLCanvasElement | null>(null)
@@ -58,6 +60,8 @@ let gizmoDrag: {
   startLocal: Vec2
   snapshots: TransformSnapshot[]
 } | null = null
+let tileStroke: { entity: Entity; component: TileMap2D; stroke: TileStroke } | null = null
+let tileHover: { x: number; y: number } | null = null
 
 let savedCameraState: { scale: number, offset: Vec2 } | null = null;
 let hasMovedEntity = false;
@@ -150,6 +154,7 @@ function loop(time?: number) {
 
 onMounted(() => {
   readPalette()
+  gameUiRuntime.setCallback((entity, functionName) => gameplayRuntime.invokeUiCallback(entity, functionName))
   if (renderCanvasRef.value) renderer = createRenderer2D(renderCanvasRef.value)
   world.connections.filter(connection => connection.breakState !== 'intact').forEach(connection => knownBrokenConnections.add(connection.id))
   resize()
@@ -162,7 +167,7 @@ onMounted(() => {
     if (world.wasmError) editorState.statusText = t('physicsUnavailable', { message: world.wasmError.message })
   })
 })
-onBeforeUnmount(() => { if (raf) cancelAnimationFrame(raf); window.removeEventListener('resize', resize); window.removeEventListener('mouseup', onMouseUp); window.removeEventListener('keydown', onKeyDown); if (resizeObserver) resizeObserver.disconnect(); renderer?.destroy(); renderer = null })
+onBeforeUnmount(() => { if (raf) cancelAnimationFrame(raf); window.removeEventListener('resize', resize); window.removeEventListener('mouseup', onMouseUp); window.removeEventListener('keydown', onKeyDown); if (resizeObserver) resizeObserver.disconnect(); gameUiRuntime.reset(); renderer?.destroy(); renderer = null })
 
 function screenPos(e: MouseEvent): Vec2 { const r = canvasRef.value!.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top } }
 function onWheel(e: WheelEvent) { e.preventDefault(); if (editorState.currentPage === 'game') return; const factor = Math.pow(1.1, prefs.zoomSensitivity); camera.zoomAt(screenPos(e), e.deltaY < 0 ? factor : 1 / factor) }
@@ -203,6 +208,7 @@ function onAssetDrop(event: DragEvent) {
 function snapPoint(point: Vec2): Vec2 { if (!prefs.snapToGrid) return point; const step = Math.max(0.000001, prefs.gridSize); return { x: Math.round(point.x / step) * step, y: Math.round(point.y / step) * step } }
 
 function onKeyDown(event: KeyboardEvent) {
+  if (editorState.currentPage === 'game' && gameUiRuntime.keyDown(event)) { event.preventDefault(); return }
   if (event.key !== 'Escape') return
   if (editorState.manualConnectionId !== null) {
     editorState.manualConnectionId = null
@@ -328,7 +334,13 @@ function beginVertexDrag(entityId: number, point: Vec2, button: number): boolean
 
 function onMouseDown(e: MouseEvent) {
   const sPos = screenPos(e); const wPos = camera.screenToWorld(sPos); dragButton = e.button; hasMovedEntity = false
-  if (editorState.currentPage === 'game') return
+  if (editorState.currentPage === 'game') { if (e.button === 0) gameUiRuntime.pointerDown(sPos); return }
+  const tileEntity = tilemapEditorState.active ? world.entities.find(entity => entity.uuid === tilemapEditorState.selectedEntityUuid) ?? null : null
+  const tileMap = tileEntity?.getComponent<TileMap2D>('TileMap2D') ?? null
+  if (e.button === 0 && tileEntity && tileMap && state.playMode === 'editing') {
+    const cell = worldToTile(tileEntity, tileMap, wPos, world.entities)
+    if (cell) { tileStroke = { entity: tileEntity, component: tileMap, stroke: beginTileStroke(tileMap, cell) }; tileHover = cell; return }
+  }
   if (editorState.manualConnectionId !== null && e.button === 0 && state.playMode === 'editing') { isManualDrawing = true; editorState.manualConnectionPoints.splice(0, editorState.manualConnectionPoints.length, wPos); return }
   if (state.activeTool === 'select') checkHoverVertex(wPos)
   if (e.button === 2 && hoveredVertex && beginVertexDrag(hoveredVertex.entityId, wPos, e.button)) return
@@ -366,6 +378,15 @@ function onMouseDown(e: MouseEvent) {
 
 function onMouseMove(e: MouseEvent) {
   const sPos = screenPos(e); const wPos = camera.screenToWorld(sPos)
+  if (editorState.currentPage === 'game') { gameUiRuntime.pointerMove(sPos); return }
+  if (tilemapEditorState.active) {
+    const tileEntity = tileStroke?.entity ?? world.entities.find(entity => entity.uuid === tilemapEditorState.selectedEntityUuid) ?? null
+    const tileMap = tileStroke?.component ?? tileEntity?.getComponent<TileMap2D>('TileMap2D') ?? null
+    const cell = tileEntity && tileMap ? worldToTile(tileEntity, tileMap, wPos, world.entities) : null
+    tileHover = cell
+    if (tileStroke && cell) continueTileStroke(tileStroke.component, tileStroke.stroke, cell)
+    if (tileStroke) return
+  }
   if (isManualDrawing) { const points = editorState.manualConnectionPoints; const previous = points[points.length - 1]; if (!previous || Math.hypot(previous.x - wPos.x, previous.y - wPos.y) > 3 / camera.scale) points.push(wPos); return }
   if (isPanning && lastMouseScreen) { camera.targetScale = null; camera.targetOffset = null; camera.offset.x += sPos.x - lastMouseScreen.x; camera.offset.y += sPos.y - lastMouseScreen.y; lastMouseScreen = sPos; return }
 
@@ -422,7 +443,19 @@ function finishCanvasDrag() {
   canvasDragMode = 'none'; dragStart = dragNow = lastMouseScreen = null; dragMeta = null; dragEntityId = null; gizmoDrag = null
 }
 
-function onMouseUp() {
+function onMouseUp(event?: MouseEvent) {
+  if (editorState.currentPage === 'game') {
+    if (event && canvasRef.value) gameUiRuntime.pointerUp(screenPos(event))
+    return
+  }
+  if (tileStroke) {
+    const point = event && canvasRef.value ? camera.screenToWorld(screenPos(event)) : null
+    const cell = point ? worldToTile(tileStroke.entity, tileStroke.component, point, world.entities) : tileStroke.stroke.previous
+    const changed = cell ? endTileStroke(tileStroke.component, tileStroke.stroke, cell) : tileStroke.stroke.changed
+    if (changed) pushHistory('Paint TileMap', `tilemap:${tileStroke.entity.uuid}`)
+    tileStroke = null
+    return
+  }
   if (isManualDrawing) { const connection = world.connections.find(candidate => candidate.id === editorState.manualConnectionId); if (connection && editorState.manualConnectionPoints.length >= 2) { setManualRoute(connection, editorState.manualConnectionPoints, world.entities); pushHistory('Draw connection'); editorState.statusText = t('connectionUpdated') } editorState.manualConnectionId = null; editorState.manualConnectionPoints.splice(0); isManualDrawing = false; return }
 
   if (gizmoDrag) {
@@ -565,6 +598,8 @@ function render() {
 
   const isGameView = editorState.currentPage === 'game'
   const selectedIds = new Set(state.selectedEntityIds)
+
+  if (!isGameView && tilemapEditorState.active) drawTilemapOverlay(ctx, { minX: viewL, maxX: viewR, minY: viewB, maxY: viewT })
 
   if (!isGameView && editorState.showGrid) {
     let step = Math.max(0.000001, prefs.gridSize)
@@ -720,6 +755,62 @@ function render() {
     ctx.strokeStyle = palette.connection; ctx.lineWidth = prefs.connectionThickness / camera.scale; ctx.lineCap = 'round'; ctx.stroke()
   }
   ctx.restore()
+  if (isGameView) gameUiRuntime.render(ctx, width, height, world.entities)
+}
+
+function drawTilemapOverlay(context: CanvasRenderingContext2D, view: { minX: number; maxX: number; minY: number; maxY: number }) {
+  const entity = world.entities.find(candidate => candidate.uuid === tilemapEditorState.selectedEntityUuid)
+  const component = entity?.getComponent<TileMap2D>('TileMap2D')
+  if (!entity || !component) return
+  const halfWidth = component.width * component.tileSize.x * .5
+  const halfHeight = component.height * component.tileSize.y * .5
+  context.save()
+  context.strokeStyle = palette.selection
+  context.globalAlpha = .34
+  context.lineWidth = 1 / camera.scale
+  const localView = [
+    worldPointToLocal(entity, { x: view.minX, y: view.minY }, world.entities),
+    worldPointToLocal(entity, { x: view.maxX, y: view.minY }, world.entities),
+    worldPointToLocal(entity, { x: view.maxX, y: view.maxY }, world.entities),
+    worldPointToLocal(entity, { x: view.minX, y: view.maxY }, world.entities)
+  ]
+  const minimumLocalX = Math.min(...localView.map(point => point.x)), maximumLocalX = Math.max(...localView.map(point => point.x))
+  const minimumLocalY = Math.min(...localView.map(point => point.y)), maximumLocalY = Math.max(...localView.map(point => point.y))
+  const firstX = Math.max(0, Math.floor((minimumLocalX + halfWidth) / component.tileSize.x))
+  const lastX = Math.min(component.width, Math.ceil((maximumLocalX + halfWidth) / component.tileSize.x))
+  const firstY = Math.max(0, Math.floor((minimumLocalY + halfHeight) / component.tileSize.y))
+  const lastY = Math.min(component.height, Math.ceil((maximumLocalY + halfHeight) / component.tileSize.y))
+  const transform = worldTransform(entity, world.entities)
+  const stepX = Math.max(1, Math.ceil(7 / Math.max(1e-9, camera.scale * component.tileSize.x * Math.abs(transform.scale.x))))
+  const stepY = Math.max(1, Math.ceil(7 / Math.max(1e-9, camera.scale * component.tileSize.y * Math.abs(transform.scale.y))))
+  for (let x = firstX; x <= lastX; x += stepX) {
+    const localX = x * component.tileSize.x - halfWidth
+    const start = localPointToWorld(entity, { x: localX, y: -halfHeight }, world.entities)
+    const end = localPointToWorld(entity, { x: localX, y: halfHeight }, world.entities)
+    context.beginPath(); context.moveTo(start.x, start.y); context.lineTo(end.x, end.y); context.stroke()
+  }
+  for (let y = firstY; y <= lastY; y += stepY) {
+    const localY = y * component.tileSize.y - halfHeight
+    const start = localPointToWorld(entity, { x: -halfWidth, y: localY }, world.entities)
+    const end = localPointToWorld(entity, { x: halfWidth, y: localY }, world.entities)
+    context.beginPath(); context.moveTo(start.x, start.y); context.lineTo(end.x, end.y); context.stroke()
+  }
+  const selection = tilemapEditorState.selection
+  const cells = selection ? [selection.start, selection.end] : tileHover ? [tileHover, tileHover] : null
+  if (cells) {
+    const left = Math.min(cells[0].x, cells[1].x), right = Math.max(cells[0].x, cells[1].x) + 1
+    const bottom = Math.min(cells[0].y, cells[1].y), top = Math.max(cells[0].y, cells[1].y) + 1
+    const corners = [
+      { x: left * component.tileSize.x - halfWidth, y: bottom * component.tileSize.y - halfHeight },
+      { x: right * component.tileSize.x - halfWidth, y: bottom * component.tileSize.y - halfHeight },
+      { x: right * component.tileSize.x - halfWidth, y: top * component.tileSize.y - halfHeight },
+      { x: left * component.tileSize.x - halfWidth, y: top * component.tileSize.y - halfHeight }
+    ].map(point => localPointToWorld(entity, point, world.entities))
+    context.beginPath(); context.moveTo(corners[0].x, corners[0].y); corners.slice(1).forEach(point => context.lineTo(point.x, point.y)); context.closePath()
+    context.globalAlpha = .22; context.fillStyle = palette.selection; context.fill()
+    context.globalAlpha = 1; context.lineWidth = 2 / camera.scale; context.stroke()
+  }
+  context.restore()
 }
 </script>
 

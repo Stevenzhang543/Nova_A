@@ -48,6 +48,90 @@ impl WasmRuntimeWorld {
         self.inner.destroy_connection(handle)
     }
 
+    pub fn raycast_json(
+        &self,
+        origin_x: f64,
+        origin_y: f64,
+        direction_x: f64,
+        direction_y: f64,
+        distance: f64,
+        mask: u32,
+    ) -> String {
+        serde_json::to_string(&self.inner.raycast(
+            [origin_x, origin_y],
+            [direction_x, direction_y],
+            distance,
+            mask,
+        ))
+        .unwrap_or_else(|_| String::from("null"))
+    }
+
+    pub fn raycast_all_json(
+        &self,
+        origin_x: f64,
+        origin_y: f64,
+        direction_x: f64,
+        direction_y: f64,
+        distance: f64,
+        mask: u32,
+    ) -> String {
+        serde_json::to_string(&self.inner.raycast_all(
+            [origin_x, origin_y],
+            [direction_x, direction_y],
+            distance,
+            mask,
+        ))
+        .unwrap_or_else(|_| String::from("[]"))
+    }
+
+    pub fn overlap_point_json(&self, x: f64, y: f64, mask: u32) -> String {
+        serde_json::to_string(&self.inner.overlap_point([x, y], mask))
+            .unwrap_or_else(|_| String::from("[]"))
+    }
+
+    pub fn overlap_circle_json(&self, x: f64, y: f64, radius: f64, mask: u32) -> String {
+        serde_json::to_string(&self.inner.overlap_circle([x, y], radius, mask))
+            .unwrap_or_else(|_| String::from("[]"))
+    }
+
+    pub fn overlap_box_json(
+        &self,
+        x: f64,
+        y: f64,
+        width: f64,
+        height: f64,
+        angle: f64,
+        mask: u32,
+    ) -> String {
+        serde_json::to_string(&self.inner.overlap_box([x, y], [width, height], angle, mask))
+            .unwrap_or_else(|_| String::from("[]"))
+    }
+
+    // Flat scalar arguments keep the wasm-bindgen boundary allocation-free for hot queries.
+    #[allow(clippy::too_many_arguments)]
+    pub fn shape_cast_json(
+        &self,
+        x: f64,
+        y: f64,
+        width: f64,
+        height: f64,
+        angle: f64,
+        direction_x: f64,
+        direction_y: f64,
+        distance: f64,
+        mask: u32,
+    ) -> String {
+        serde_json::to_string(&self.inner.shape_cast(
+            [x, y],
+            [width, height],
+            angle,
+            [direction_x, direction_y],
+            distance,
+            mask,
+        ))
+        .unwrap_or_else(|_| String::from("null"))
+    }
+
     pub fn clear(&mut self) {
         self.inner.clear();
     }

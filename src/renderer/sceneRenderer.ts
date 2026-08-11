@@ -1,10 +1,12 @@
 import { resolveAsset, resolveTexture } from '../assets/AssetDatabase'
 import { compoundGeometries } from '../world/compoundGeometry'
 import type { Connection } from '../world/Connection'
-import { Camera2D, ShapeRenderer2D, SpriteRenderer2D, TextRenderer2D } from '../world/components'
+import { Camera2D, ShapeRenderer2D, SpriteRenderer2D, TextRenderer2D, TileMap2D } from '../world/components'
 import type { Entity } from '../world/Entity'
 import { worldTransform } from '../world/hierarchy'
 import type { CameraRenderView, RenderColor, Renderer2D, RendererStats } from './types'
+import { tileChunkCommands } from '../runtime/tilemap'
+import { particleRuntime } from '../runtime/particles'
 
 export interface SceneRenderOptions {
   width: number
@@ -60,7 +62,18 @@ export function activeGameCamera(entities: Entity[], width: number, height: numb
 }
 
 function sortingLayer(entity: Entity): number {
-  return entity.spriteRenderer?.sortingLayer ?? entity.textRenderer?.sortingLayer ?? entity.renderer.sortingLayer
+  return entity.getComponent<TileMap2D>('TileMap2D')?.sortingLayer
+    ?? entity.spriteRenderer?.sortingLayer ?? entity.textRenderer?.sortingLayer ?? entity.renderer.sortingLayer
+}
+
+function visibleWorldBounds(view: CameraRenderView, width: number, height: number) {
+  const center = view.position ?? { x: (width * .5 - view.offset.x) / view.scale, y: (view.offset.y - height * .5) / view.scale }
+  const halfWidth = width / Math.max(1e-9, view.scale) * .5
+  const halfHeight = height / Math.max(1e-9, view.scale) * .5
+  const rotation = view.rotation ?? 0
+  const extentX = Math.abs(Math.cos(rotation)) * halfWidth + Math.abs(Math.sin(rotation)) * halfHeight
+  const extentY = Math.abs(Math.sin(rotation)) * halfWidth + Math.abs(Math.cos(rotation)) * halfHeight
+  return { minX: center.x - extentX, maxX: center.x + extentX, minY: center.y - extentY, maxY: center.y + extentY }
 }
 
 function submitSprite(renderer: Renderer2D, entity: Entity, sprite: SpriteRenderer2D, entities: Entity[]): void {
@@ -99,6 +112,8 @@ export function renderWorld(renderer: Renderer2D, entities: Entity[], options: S
     clearColor: camera?.background ?? parseCssColor(options.canvasColor)
   })
   renderer.beginCamera(camera?.view ?? options.editorCamera)
+  const activeView = camera?.view ?? options.editorCamera
+  const visibleBounds = visibleWorldBounds(activeView, options.width, options.height)
   if (!options.gameView && options.editorGrid?.enabled) submitEditorGrid(renderer, options)
   const compounds = compoundGeometries(entities, options.connections)
   const compoundMembers = new Set(compounds.filter(compound => compound.members.length > 1).flatMap(compound => [...compound.memberIds]))
@@ -111,6 +126,8 @@ export function renderWorld(renderer: Renderer2D, entities: Entity[], options: S
     .filter(entity => sortingLayer(entity) >= near && sortingLayer(entity) <= far)
     .sort((first, second) => sortingLayer(first) - sortingLayer(second) || first.renderer.orderInLayer - second.renderer.orderInLayer || first.id - second.id)
   for (const entity of visible) {
+    const tileMap = entity.getComponent<TileMap2D>('TileMap2D')
+    if (tileMap) for (const chunk of tileChunkCommands(entity, tileMap, entities, visibleBounds)) renderer.submitTileChunk(chunk)
     const shape = entity.getComponent<ShapeRenderer2D>('ShapeRenderer2D')
     if (shape) {
       const transform = worldTransform(entity, entities)
@@ -127,6 +144,7 @@ export function renderWorld(renderer: Renderer2D, entities: Entity[], options: S
     const text = entity.getComponent<TextRenderer2D>('TextRenderer2D')
     if (text) submitText(renderer, entity, text, entities)
   }
+  particleRuntime.submit(renderer, visible)
   for (const compound of compounds) {
     if (compound.members.length < 2 || !compound.members.some(member => visible.includes(member))) continue
     const style = compound.members[0].renderer

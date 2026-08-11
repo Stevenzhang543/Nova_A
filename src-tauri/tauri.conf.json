@@ -1,6 +1,6 @@
 {
   "productName": "Nova_A",
-  "version": "1.6.0",
+  "version": "1.8.0",
   "identifier": "top.whitelists.novaa",
   "build": {
     "beforeDevCommand": "pnpm dev",

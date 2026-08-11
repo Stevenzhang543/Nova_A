@@ -14,7 +14,7 @@ mod engine {
 
     pub const LEGACY_STRIDE: usize = 42;
     pub const V1_2_STRIDE: usize = 46;
-    pub const STRIDE: usize = 51;
+    pub const STRIDE: usize = 54;
     pub const ROPE_NODE_CAPACITY: usize = 32;
     pub const ROPE_NODE_DATA_OFFSET: usize = 29;
     pub const CONNECTION_STRIDE: usize = ROPE_NODE_DATA_OFFSET + ROPE_NODE_CAPACITY * 4;
@@ -33,15 +33,16 @@ mod engine {
     include!("rope/mod.rs");
     include!("world/legacy.rs");
     include!("world/persistent.rs");
+    include!("query/mod.rs");
 
     #[cfg(test)]
     include!("tests.rs");
 }
 
 pub use engine::{
-    step_physics, step_physics_with_connections, PhysicsContact, PhysicsEvent, PhysicsWorld,
-    CONNECTION_STRIDE, LEGACY_STRIDE, ROPE_NODE_CAPACITY, ROPE_NODE_DATA_OFFSET, STRIDE,
-    V1_2_STRIDE,
+    step_physics, step_physics_with_connections, PhysicsContact, PhysicsEvent, PhysicsQueryHit,
+    PhysicsWorld, CONNECTION_STRIDE, LEGACY_STRIDE, ROPE_NODE_CAPACITY, ROPE_NODE_DATA_OFFSET,
+    STRIDE, V1_2_STRIDE,
 };
 
 pub mod body {
@@ -152,19 +153,7 @@ pub mod joint {
 }
 
 pub mod query {
-    use crate::body::BodyHandle;
-    use nova_math::Vec2;
-
-    #[derive(Clone, Copy, Debug, PartialEq)]
-    pub struct RayHit {
-        pub body: BodyHandle,
-        pub point: Vec2,
-        pub normal: Vec2,
-        pub distance: f64,
-    }
-
-    #[derive(Default)]
-    pub struct PhysicsQuery;
+    pub use crate::PhysicsQueryHit;
 }
 
 pub mod world {

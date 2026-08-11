@@ -2,7 +2,7 @@
   <div class="settings-page">
     <header class="page-header">
       <div>
-        <span class="eyebrow">Nova_A 1.6.0</span>
+        <span class="eyebrow">Nova_A 1.8.0</span>
         <h1>{{ t('settings') }}</h1>
       </div>
       <div class="theme-switch" :aria-label="t('theme')">
@@ -43,6 +43,15 @@
         </SettingRow>
         <SettingRow :label="t('customTickRate')"><input v-model.number="physics.globalSettings.tickRate" type="number" min="1" max="1000" step="1"></SettingRow>
         <SettingRow :label="t('maxCatchUpSteps')"><input v-model.number="physics.globalSettings.maxCatchUpSteps" type="number" min="1" max="240" step="1"></SettingRow>
+      </section>
+
+      <section class="settings-card" @change="commitAudioSettings">
+        <div class="card-heading"><span class="card-icon">♫</span><h2>{{ t('audioSettings') }}</h2></div>
+        <SettingRow :label="t('masterVolume')"><div class="value-control"><input v-model.number="physics.audioSettings.masterVolume" type="range" min="0" max="1" step="0.01"><output>{{ Math.round(physics.audioSettings.masterVolume * 100) }}%</output></div></SettingRow>
+        <SettingRow :label="t('musicVolume')"><div class="value-control"><input v-model.number="physics.audioSettings.buses.Music" type="range" min="0" max="1" step="0.01"><output>{{ Math.round(physics.audioSettings.buses.Music * 100) }}%</output></div></SettingRow>
+        <SettingRow :label="t('sfxVolume')"><div class="value-control"><input v-model.number="physics.audioSettings.buses.SFX" type="range" min="0" max="1" step="0.01"><output>{{ Math.round(physics.audioSettings.buses.SFX * 100) }}%</output></div></SettingRow>
+        <SettingRow :label="t('uiVolume')"><div class="value-control"><input v-model.number="physics.audioSettings.buses.UI" type="range" min="0" max="1" step="0.01"><output>{{ Math.round(physics.audioSettings.buses.UI * 100) }}%</output></div></SettingRow>
+        <SettingRow :label="t('sampleRate')"><select v-model.number="physics.audioSettings.sampleRate"><option :value="44100">44.1 kHz</option><option :value="48000">48 kHz</option><option :value="96000">96 kHz</option></select></SettingRow>
       </section>
 
       <section class="settings-card input-map-card">
@@ -160,6 +169,7 @@ import { autosaveState, normalizeGlobalSettings, physicsState as physics, pushHi
 import { preferencesState as prefs, resetPreferences } from '../store/preferences'
 import type { ThemeMode } from '../store/preferences'
 import { createInputBinding, normalizeInputMap, type InputBinding } from '../runtime/input'
+import { normalizeAudioSettings } from '../runtime/audio'
 
 function setTheme(theme: ThemeMode) {
   prefs.theme = theme
@@ -212,6 +222,11 @@ function toggleLayerCollision(first: number, second: number) {
 function applyPhysicsSettings() {
   normalizeGlobalSettings()
   pushHistory()
+}
+
+function commitAudioSettings() {
+  Object.assign(physics.audioSettings, normalizeAudioSettings(physics.audioSettings))
+  pushHistory('Edit audio settings')
 }
 
 function commitInputMap() {
