@@ -1,4 +1,7 @@
-import { shapeGeometry, spriteGeometry, strokeGeometry, type GeometryData } from './geometry'
+import { nineSliceGeometry, shapeGeometry, spriteGeometry, strokeGeometry, type GeometryData } from './geometry'
+import { assetState, resolveTexture as resolveTextureAsset } from '../assets/AssetDatabase'
+import { analyzeMaterialShader, resolveMaterial, type Material2DResource } from './materials'
+import { renderingSettings } from './renderSettings'
 import {
   normalizedColor,
   type CameraRenderView,
@@ -18,11 +21,13 @@ interface GeometryPacket {
   order: number
   sequence: number
   material: string
-  blend: 'Alpha' | 'Additive'
+  blend: 'Alpha' | 'Additive' | 'Multiply' | 'Screen'
   texture: TextureRegion | null
   filter: TextureFilter
   color: [number, number, number, number]
   geometry: GeometryData
+  camera: CameraRenderView
+  cameraIndex: number
 }
 
 interface CachedTexture {
@@ -39,9 +44,9 @@ interface CachedText {
 
 const VERTEX_SOURCE = `#version 300 es
 precision highp float;
-in vec2 a_position;
-in vec2 a_uv;
-in vec4 a_color;
+layout(location=0) in vec2 a_position;
+layout(location=1) in vec2 a_uv;
+layout(location=2) in vec4 a_color;
 uniform vec4 u_camera;
 uniform vec2 u_rotation;
 out vec2 v_uv;
@@ -62,10 +67,20 @@ precision highp float;
 in vec2 v_uv;
 in vec4 v_color;
 uniform sampler2D u_texture;
+uniform bool u_linearTexture;
+uniform bool u_writeColor;
 out vec4 outputColor;
 void main() {
-  outputColor = texture(u_texture, v_uv) * v_color;
+  vec4 sampled = texture(u_texture, v_uv);
+  if (u_linearTexture) sampled = vec4(pow(max(sampled.rgb, vec3(0.0)), vec3(1.0 / 2.2)), sampled.a);
+  outputColor = sampled * v_color;
 }`
+
+const POST_VERTEX_SOURCE = `#version 300 es
+precision highp float;
+const vec2 positions[3] = vec2[3](vec2(-1.,-1.),vec2(3.,-1.),vec2(-1.,3.));
+out vec2 v_uv;
+void main(){ vec2 position=positions[gl_VertexID]; gl_Position=vec4(position,0.,1.); v_uv=position*.5+.5; }`
 
 function compileShader(gl: WebGL2RenderingContext, type: number, source: string): WebGLShader {
   const shader = gl.createShader(type)
@@ -80,9 +95,9 @@ function compileShader(gl: WebGL2RenderingContext, type: number, source: string)
   return shader
 }
 
-function createProgram(gl: WebGL2RenderingContext): WebGLProgram {
+function createProgram(gl: WebGL2RenderingContext, fragmentSource = FRAGMENT_SOURCE): WebGLProgram {
   const vertex = compileShader(gl, gl.VERTEX_SHADER, VERTEX_SOURCE)
-  const fragment = compileShader(gl, gl.FRAGMENT_SHADER, FRAGMENT_SOURCE)
+  const fragment = compileShader(gl, gl.FRAGMENT_SHADER, fragmentSource)
   const program = gl.createProgram()
   if (!program) throw new Error('Could not allocate WebGL program')
   gl.attachShader(program, vertex)
@@ -98,6 +113,65 @@ function createProgram(gl: WebGL2RenderingContext): WebGLProgram {
   return program
 }
 
+interface ProgramState {
+  program: WebGLProgram
+  camera: WebGLUniformLocation
+  texture: WebGLUniformLocation
+  rotation: WebGLUniformLocation
+  linearTexture: WebGLUniformLocation | null
+  material: Material2DResource | null
+}
+
+interface PostProgramState { program: WebGLProgram; texture: WebGLUniformLocation; material: Material2DResource }
+interface TimerQueryExtension { TIME_ELAPSED_EXT: number; GPU_DISJOINT_EXT: number }
+
+function materialFragment(material: Material2DResource): string {
+  const uniforms = Object.entries(material.uniforms).map(([name, value]) => Array.isArray(value)
+    ? `uniform vec${value.length} ${name};`
+    : typeof value === 'boolean' ? `uniform bool ${name};` : `uniform float ${name};`).join('\n')
+  const textures = Object.keys(material.textures).map(name => `uniform sampler2D ${name};`).join('\n')
+  const converted = material.colorSpace === 'Linear' ? `vec4(pow(max(result.rgb, vec3(0.0)), vec3(1.0 / 2.2)), result.a)` : 'result'
+  return `#version 300 es
+precision highp float;
+in vec2 v_uv;
+in vec4 v_color;
+uniform sampler2D u_texture;
+uniform bool u_linearTexture;
+${uniforms}
+${textures}
+${material.fragment}
+out vec4 outputColor;
+void main(){ vec4 sampled=texture(u_texture,v_uv); if(u_linearTexture) sampled=vec4(pow(max(sampled.rgb,vec3(0.0)),vec3(1.0/2.2)),sampled.a); vec4 shaded=nova_material(sampled * v_color,v_uv); vec4 result=u_writeColor ? shaded : vec4(sampled.rgb * v_color.rgb, shaded.a); outputColor = ${converted}; }`
+}
+
+function postMaterialFragment(material: Material2DResource): string {
+  const uniforms = Object.entries(material.uniforms).map(([name, value]) => Array.isArray(value)
+    ? `uniform vec${value.length} ${name};`
+    : typeof value === 'boolean' ? `uniform bool ${name};` : `uniform float ${name};`).join('\n')
+  const textures = Object.keys(material.textures).map(name => `uniform sampler2D ${name};`).join('\n')
+  const converted = material.colorSpace === 'Linear' ? 'vec4(pow(max(result.rgb,vec3(0.0)),vec3(1.0/2.2)),result.a)' : 'result'
+  return `#version 300 es
+precision highp float;
+in vec2 v_uv;
+uniform sampler2D u_texture;
+${uniforms}
+${textures}
+${material.fragment}
+out vec4 outputColor;
+void main(){ vec4 result=nova_material(texture(u_texture,v_uv),v_uv); outputColor=${converted}; }`
+}
+
+function createPostProgram(gl: WebGL2RenderingContext, material: Material2DResource): WebGLProgram {
+  const vertex = compileShader(gl, gl.VERTEX_SHADER, POST_VERTEX_SOURCE)
+  const fragment = compileShader(gl, gl.FRAGMENT_SHADER, postMaterialFragment(material))
+  const program = gl.createProgram()
+  if (!program) throw new Error('Could not allocate post-process program')
+  gl.attachShader(program, vertex); gl.attachShader(program, fragment); gl.linkProgram(program)
+  gl.deleteShader(vertex); gl.deleteShader(fragment)
+  if (!gl.getProgramParameter(program, gl.LINK_STATUS)) { const message = gl.getProgramInfoLog(program) || 'Post-process shader link failed'; gl.deleteProgram(program); throw new Error(message) }
+  return program
+}
+
 function textureDimensions(source: TexImageSource): { width: number; height: number } {
   if (source instanceof HTMLImageElement) return { width: source.naturalWidth, height: source.naturalHeight }
   if (source instanceof HTMLVideoElement) return { width: source.videoWidth, height: source.videoHeight }
@@ -106,17 +180,22 @@ function textureDimensions(source: TexImageSource): { width: number; height: num
 }
 
 export class WebGL2Renderer implements Renderer2D {
-  readonly stats: RendererStats = { backend: 'WebGL2', drawCalls: 0, batches: 0, triangles: 0, sprites: 0, shapes: 0, text: 0 }
+  readonly stats: RendererStats = { backend: 'WebGL2', drawCalls: 0, batches: 0, triangles: 0, sprites: 0, shapes: 0, text: 0, textures: 0, gpuMs: null, passes: 1, renderTargets: 1, overdraw: 0 }
   private readonly gl: WebGL2RenderingContext
   private readonly program: WebGLProgram
   private readonly vao: WebGLVertexArrayObject
   private readonly vertexBuffer: WebGLBuffer
   private readonly indexBuffer: WebGLBuffer
-  private readonly framebuffer: WebGLFramebuffer
-  private readonly colorTarget: WebGLTexture
-  private readonly cameraLocation: WebGLUniformLocation
-  private readonly textureLocation: WebGLUniformLocation
-  private readonly rotationLocation: WebGLUniformLocation
+  private framebuffer: WebGLFramebuffer | null = null
+  private colorTarget: WebGLTexture | null = null
+  private readonly baseProgramState: ProgramState
+  private readonly materialPrograms = new Map<string, ProgramState | null>()
+  private materialGeneration = -1
+  private postProgram: (PostProgramState & { reference: string; generation: number }) | null = null
+  private readonly timerExtension: TimerQueryExtension | null
+  private activeTimer: WebGLQuery | null = null
+  private pendingTimers: WebGLQuery[] = []
+  private lastGpuMs: number | null = null
   private readonly whiteCanvas: HTMLCanvasElement
   private readonly whiteRegion: TextureRegion
   private readonly textureCache = new WeakMap<object, CachedTexture>()
@@ -125,10 +204,14 @@ export class WebGL2Renderer implements Renderer2D {
   private frame: FrameOptions = { width: 1, height: 1, pixelRatio: 1, clearColor: { r: 0, g: 0, b: 0, a: 1 } }
   private camera: CameraRenderView = { scale: 1, offset: { x: 0, y: 0 } }
   private sequence = 0
+  private cameraIndex = -1
   private targetWidth = 0
   private targetHeight = 0
   private validatedFirstDraw = false
   private validatedFirstBlit = false
+  private effectsTargetActive = false
+  private effectsWidth = 0
+  private effectsHeight = 0
 
   constructor(private readonly canvas: HTMLCanvasElement) {
     const gl = canvas.getContext('webgl2', { alpha: false, antialias: false, depth: false, premultipliedAlpha: true })
@@ -136,20 +219,16 @@ export class WebGL2Renderer implements Renderer2D {
     this.gl = gl
     this.program = createProgram(gl)
     const vao = gl.createVertexArray(), vertexBuffer = gl.createBuffer(), indexBuffer = gl.createBuffer()
-    const framebuffer = gl.createFramebuffer(), colorTarget = gl.createTexture()
-    if (!vao || !vertexBuffer || !indexBuffer || !framebuffer || !colorTarget) throw new Error('Could not allocate WebGL buffers')
+    if (!vao || !vertexBuffer || !indexBuffer) throw new Error('Could not allocate WebGL buffers')
     this.vao = vao
     this.vertexBuffer = vertexBuffer
     this.indexBuffer = indexBuffer
-    this.framebuffer = framebuffer
-    this.colorTarget = colorTarget
     const cameraLocation = gl.getUniformLocation(this.program, 'u_camera')
     const textureLocation = gl.getUniformLocation(this.program, 'u_texture')
     const rotationLocation = gl.getUniformLocation(this.program, 'u_rotation')
     if (!cameraLocation || !textureLocation || !rotationLocation) throw new Error('Renderer shader uniforms are unavailable')
-    this.cameraLocation = cameraLocation
-    this.textureLocation = textureLocation
-    this.rotationLocation = rotationLocation
+    this.baseProgramState = { program: this.program, camera: cameraLocation, texture: textureLocation, rotation: rotationLocation, linearTexture: gl.getUniformLocation(this.program, 'u_linearTexture'), material: null }
+    this.timerExtension = gl.getExtension('EXT_disjoint_timer_query_webgl2') as TimerQueryExtension | null
 
     gl.bindVertexArray(vao)
     gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer)
@@ -179,17 +258,7 @@ export class WebGL2Renderer implements Renderer2D {
     this.targetHeight = pixelHeight
     if (this.canvas.width !== pixelWidth) this.canvas.width = pixelWidth
     if (this.canvas.height !== pixelHeight) this.canvas.height = pixelHeight
-    const gl = this.gl
-    gl.bindTexture(gl.TEXTURE_2D, this.colorTarget)
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR)
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR)
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE)
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE)
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, pixelWidth, pixelHeight, 0, gl.RGBA, gl.UNSIGNED_BYTE, null)
-    gl.bindFramebuffer(gl.FRAMEBUFFER, this.framebuffer)
-    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, this.colorTarget, 0)
-    if (gl.checkFramebufferStatus(gl.FRAMEBUFFER) !== gl.FRAMEBUFFER_COMPLETE) throw new Error('Renderer framebuffer is incomplete')
-    gl.bindFramebuffer(gl.FRAMEBUFFER, null)
+    if (this.framebuffer && this.colorTarget) this.resizeEffectsTarget(pixelWidth, pixelHeight)
   }
 
   beginFrame(options: FrameOptions): void {
@@ -197,22 +266,30 @@ export class WebGL2Renderer implements Renderer2D {
     this.resize(options.width, options.height, options.pixelRatio)
     this.packets = []
     this.sequence = 0
-    Object.assign(this.stats, { drawCalls: 0, batches: 0, triangles: 0, sprites: 0, shapes: 0, text: 0 })
+    this.cameraIndex = -1
+    this.effectsTargetActive = Boolean(renderingSettings.postProcessing.enabled && renderingSettings.postProcessing.userMaterial)
+    if (this.effectsTargetActive) this.ensureEffectsTarget()
+    this.pollGpuTimers()
+    Object.assign(this.stats, { drawCalls: 0, batches: 0, triangles: 0, sprites: 0, shapes: 0, text: 0, textures: 0, gpuMs: this.lastGpuMs, passes: 1, renderTargets: this.effectsTargetActive ? 1 : 0, overdraw: 0 })
     const gl = this.gl
-    gl.bindFramebuffer(gl.FRAMEBUFFER, this.framebuffer)
+    gl.bindFramebuffer(gl.FRAMEBUFFER, this.effectsTargetActive ? this.framebuffer : null)
     const [r, g, b, a] = normalizedColor(options.clearColor)
     gl.viewport(0, 0, this.canvas.width, this.canvas.height)
     gl.disable(gl.DEPTH_TEST)
     gl.enable(gl.BLEND)
     gl.clearColor(r, g, b, a)
     gl.clear(gl.COLOR_BUFFER_BIT)
+    if (this.timerExtension && !this.activeTimer) {
+      this.activeTimer = gl.createQuery()
+      if (this.activeTimer) gl.beginQuery(this.timerExtension.TIME_ELAPSED_EXT, this.activeTimer)
+    }
   }
 
-  beginCamera(camera: CameraRenderView): void { this.camera = camera }
+  beginCamera(camera: CameraRenderView): void { this.camera = camera; this.cameraIndex++ }
 
   submitSprite(command: SpriteRenderCommand): void {
     this.stats.sprites++
-    this.queue(command, command.texture, command.tint, spriteGeometry(command))
+    this.queue(command, command.texture, command.tint, command.mesh ? spriteGeometry(command) : command.nineSlice ? nineSliceGeometry(command) : spriteGeometry(command))
   }
 
   submitShape(command: ShapeRenderCommand): void {
@@ -245,7 +322,7 @@ export class WebGL2Renderer implements Renderer2D {
   endCamera(): void { /* Commands are flushed at endFrame to preserve global sorting. */ }
 
   endFrame(): RendererStats {
-    this.packets.sort((first, second) => first.layer - second.layer || first.order - second.order || first.material.localeCompare(second.material) || first.sequence - second.sequence)
+    this.packets.sort((first, second) => first.cameraIndex - second.cameraIndex || first.layer - second.layer || first.order - second.order || first.material.localeCompare(second.material) || first.sequence - second.sequence)
     let batch: GeometryPacket[] = []
     const flush = () => {
       if (!batch.length) return
@@ -255,6 +332,7 @@ export class WebGL2Renderer implements Renderer2D {
     for (const packet of this.packets) {
       const previous = batch[0]
       const sameBatch = previous
+        && previous.cameraIndex === packet.cameraIndex
         && previous.texture?.source === packet.texture?.source
         && previous.filter === packet.filter
         && previous.material === packet.material
@@ -265,9 +343,17 @@ export class WebGL2Renderer implements Renderer2D {
     }
     flush()
     const gl = this.gl
-    gl.bindFramebuffer(gl.READ_FRAMEBUFFER, this.framebuffer)
-    gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, null)
-    gl.blitFramebuffer(0, 0, this.canvas.width, this.canvas.height, 0, 0, this.canvas.width, this.canvas.height, gl.COLOR_BUFFER_BIT, gl.NEAREST)
+    const postMaterial = this.effectsTargetActive ? renderingSettings.postProcessing.userMaterial : null
+    if (postMaterial && !this.drawPostMaterial(postMaterial)) {
+      gl.bindFramebuffer(gl.READ_FRAMEBUFFER, this.framebuffer)
+      gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, null)
+      gl.blitFramebuffer(0, 0, this.canvas.width, this.canvas.height, 0, 0, this.canvas.width, this.canvas.height, gl.COLOR_BUFFER_BIT, gl.NEAREST)
+    }
+    if (this.activeTimer && this.timerExtension) {
+      gl.endQuery(this.timerExtension.TIME_ELAPSED_EXT)
+      this.pendingTimers.push(this.activeTimer)
+      this.activeTimer = null
+    }
     if (!this.validatedFirstBlit) {
       const error = gl.getError()
       if (error !== gl.NO_ERROR) throw new Error(`WebGL2 renderer failed its first framebuffer copy (error 0x${error.toString(16)})`)
@@ -282,14 +368,18 @@ export class WebGL2Renderer implements Renderer2D {
     gl.deleteBuffer(this.vertexBuffer)
     gl.deleteBuffer(this.indexBuffer)
     gl.deleteVertexArray(this.vao)
-    gl.deleteFramebuffer(this.framebuffer)
-    gl.deleteTexture(this.colorTarget)
+    if (this.framebuffer) gl.deleteFramebuffer(this.framebuffer)
+    if (this.colorTarget) gl.deleteTexture(this.colorTarget)
     gl.deleteProgram(this.program)
+    for (const state of this.materialPrograms.values()) if (state) gl.deleteProgram(state.program)
+    if (this.postProgram) gl.deleteProgram(this.postProgram.program)
+    for (const query of this.pendingTimers) gl.deleteQuery(query)
+    this.materialPrograms.clear()
     this.textCache.clear()
   }
 
   private queue(
-    order: { sortingLayer: number; orderInLayer: number; material: string; blendMode?: 'Alpha' | 'Additive' },
+    order: { sortingLayer: number; orderInLayer: number; material: string; blendMode?: 'Alpha' | 'Additive' | 'Multiply' | 'Screen' },
     texture: TextureRegion | null,
     color: { r: number; g: number; b: number; a: number },
     geometry: GeometryData,
@@ -298,7 +388,8 @@ export class WebGL2Renderer implements Renderer2D {
     if (!geometry.positions.length || !geometry.indices.length) return
     this.packets.push({
       layer: order.sortingLayer, order: orderOverride, sequence: this.sequence++, material: order.material || 'Default',
-      blend: order.blendMode ?? 'Alpha', texture, filter: texture?.filter ?? 'Linear', color: normalizedColor(color), geometry
+      blend: order.blendMode ?? 'Alpha', texture, filter: texture?.filter ?? 'Linear', color: normalizedColor(color), geometry,
+      camera: this.camera, cameraIndex: this.cameraIndex
     })
   }
 
@@ -317,7 +408,8 @@ export class WebGL2Renderer implements Renderer2D {
       vertexOffset += packet.geometry.positions.length
     }
 
-    const viewport = this.camera.viewport ?? { x: 0, y: 0, width: 1, height: 1 }
+    const camera = batch[0].camera
+    const viewport = camera.viewport ?? { x: 0, y: 0, width: 1, height: 1 }
     const viewportX = Math.round(viewport.x * this.canvas.width)
     const viewportY = Math.round(viewport.y * this.canvas.height)
     const viewportWidth = Math.max(1, Math.round(viewport.width * this.canvas.width))
@@ -325,7 +417,8 @@ export class WebGL2Renderer implements Renderer2D {
     gl.enable(gl.SCISSOR_TEST)
     gl.scissor(viewportX, viewportY, viewportWidth, viewportHeight)
     gl.viewport(viewportX, viewportY, viewportWidth, viewportHeight)
-    gl.useProgram(this.program)
+    const program = this.programFor(batch[0].material)
+    gl.useProgram(program.program)
     gl.bindVertexArray(this.vao)
     gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer)
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.DYNAMIC_DRAW)
@@ -333,23 +426,28 @@ export class WebGL2Renderer implements Renderer2D {
     gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint32Array(indices), gl.DYNAMIC_DRAW)
     const width = this.frame.width * viewport.width
     const height = this.frame.height * viewport.height
-    const center = this.camera.position ?? {
-      x: (this.frame.width * .5 - this.camera.offset.x) / this.camera.scale,
-      y: (this.camera.offset.y - this.frame.height * .5) / this.camera.scale
+    const center = camera.position ?? {
+      x: (this.frame.width * .5 - camera.offset.x) / camera.scale,
+      y: (camera.offset.y - this.frame.height * .5) / camera.scale
     }
     gl.uniform4f(
-      this.cameraLocation,
-      2 * this.camera.scale / Math.max(1, width),
-      2 * this.camera.scale / Math.max(1, height),
+      program.camera,
+      2 * camera.scale / Math.max(1, width),
+      2 * camera.scale / Math.max(1, height),
       center.x,
       center.y
     )
-    const rotation = this.camera.rotation ?? 0
-    gl.uniform2f(this.rotationLocation, Math.cos(rotation), Math.sin(rotation))
+    const rotation = camera.rotation ?? 0
+    gl.uniform2f(program.rotation, Math.cos(rotation), Math.sin(rotation))
     gl.activeTexture(gl.TEXTURE0)
     gl.bindTexture(gl.TEXTURE_2D, this.resolveTexture(batch[0].texture ?? this.whiteRegion, batch[0].filter))
-    gl.uniform1i(this.textureLocation, 0)
+    gl.uniform1i(program.texture, 0)
+    if (program.linearTexture) gl.uniform1i(program.linearTexture, batch[0].texture?.colorSpace === 'Linear' ? 1 : 0)
+    if (program.material) this.applyMaterialUniforms(program)
+    if (program.material) { const writeColor = gl.getUniformLocation(program.program, 'u_writeColor'); if (writeColor) gl.uniform1i(writeColor, program.material.writeColor ? 1 : 0) }
     if (batch[0].blend === 'Additive') gl.blendFunc(gl.SRC_ALPHA, gl.ONE)
+    else if (batch[0].blend === 'Multiply') gl.blendFunc(gl.DST_COLOR, gl.ONE_MINUS_SRC_ALPHA)
+    else if (batch[0].blend === 'Screen') gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_COLOR)
     else gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
     gl.drawElements(gl.TRIANGLES, indices.length, gl.UNSIGNED_INT, 0)
     if (!this.validatedFirstDraw) {
@@ -362,6 +460,108 @@ export class WebGL2Renderer implements Renderer2D {
     this.stats.drawCalls++
     this.stats.batches++
     this.stats.triangles += indices.length / 3
+    this.stats.overdraw += indices.length / 3
+    this.stats.textures = Math.max(this.stats.textures, batch[0].texture ? 1 : 0)
+  }
+
+  private programFor(reference: string): ProgramState {
+    if (this.materialGeneration !== assetState.generation) {
+      for (const state of this.materialPrograms.values()) if (state) this.gl.deleteProgram(state.program)
+      this.materialPrograms.clear(); this.materialGeneration = assetState.generation
+    }
+    if (!reference || reference === 'Default' || reference === 'Particles' || reference.startsWith('__')) return this.baseProgramState
+    if (this.materialPrograms.has(reference)) return this.materialPrograms.get(reference) ?? this.baseProgramState
+    const material = resolveMaterial(reference)
+    if (analyzeMaterialShader(material.fragment).some(item => item.severity === 'error')) { this.materialPrograms.set(reference, null); return this.baseProgramState }
+    try {
+      const program = createProgram(this.gl, materialFragment(material))
+      const camera = this.gl.getUniformLocation(program, 'u_camera'), texture = this.gl.getUniformLocation(program, 'u_texture'), rotation = this.gl.getUniformLocation(program, 'u_rotation')
+      if (!camera || !texture || !rotation) throw new Error('Material shader does not expose the renderer uniforms')
+      const state = { program, camera, texture, rotation, linearTexture: this.gl.getUniformLocation(program, 'u_linearTexture'), material }
+      this.materialPrograms.set(reference, state)
+      return state
+    } catch {
+      this.materialPrograms.set(reference, null)
+      return this.baseProgramState
+    }
+  }
+
+  private applyMaterialUniforms(state: ProgramState): void {
+    this.applyResourceUniforms(state.program, state.material!)
+  }
+
+  private applyResourceUniforms(program: WebGLProgram, material: Material2DResource): void {
+    for (const [name, value] of Object.entries(material.uniforms)) {
+      const location = this.gl.getUniformLocation(program, name)
+      if (!location) continue
+      if (typeof value === 'boolean') this.gl.uniform1i(location, value ? 1 : 0)
+      else if (typeof value === 'number') this.gl.uniform1f(location, value)
+      else if (value.length === 2) this.gl.uniform2fv(location, value)
+      else if (value.length === 3) this.gl.uniform3fv(location, value)
+      else if (value.length === 4) this.gl.uniform4fv(location, value)
+    }
+    Object.entries(material.textures).slice(0, 7).forEach(([name, reference], index) => {
+      const location = this.gl.getUniformLocation(program, name)
+      if (!location) return
+      const region = resolveTextureAsset(reference, material.sampling) ?? this.whiteRegion
+      this.gl.activeTexture(this.gl.TEXTURE1 + index)
+      this.gl.bindTexture(this.gl.TEXTURE_2D, this.resolveTexture(region, material.sampling))
+      this.gl.uniform1i(location, index + 1)
+    })
+    this.gl.activeTexture(this.gl.TEXTURE0)
+  }
+
+  private drawPostMaterial(reference: string): boolean {
+    if (!this.colorTarget) return false
+    const material = resolveMaterial(reference)
+    if (analyzeMaterialShader(material.fragment).some(item => item.severity === 'error')) return false
+    if (!this.postProgram || this.postProgram.reference !== reference || this.postProgram.generation !== assetState.generation) {
+      if (this.postProgram) this.gl.deleteProgram(this.postProgram.program)
+      try {
+        const program = createPostProgram(this.gl, material)
+        const texture = this.gl.getUniformLocation(program, 'u_texture')
+        if (!texture) { this.gl.deleteProgram(program); return false }
+        this.postProgram = { reference, generation: assetState.generation, program, texture, material }
+      } catch { this.postProgram = null; return false }
+    }
+    const gl = this.gl, state = this.postProgram
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null); gl.viewport(0, 0, this.canvas.width, this.canvas.height); gl.disable(gl.BLEND)
+    gl.useProgram(state.program); gl.bindVertexArray(this.vao); gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, this.colorTarget); gl.uniform1i(state.texture, 0)
+    this.applyResourceUniforms(state.program, state.material); gl.drawArrays(gl.TRIANGLES, 0, 3); gl.bindVertexArray(null); gl.enable(gl.BLEND)
+    return gl.getError() === gl.NO_ERROR
+  }
+
+  private ensureEffectsTarget(): void {
+    const gl = this.gl
+    if (!this.framebuffer) this.framebuffer = gl.createFramebuffer()
+    if (!this.colorTarget) this.colorTarget = gl.createTexture()
+    if (!this.framebuffer || !this.colorTarget) throw new Error('Could not allocate the optional post-process surface')
+    if (this.effectsWidth !== this.canvas.width || this.effectsHeight !== this.canvas.height) this.resizeEffectsTarget(this.canvas.width, this.canvas.height)
+  }
+
+  private resizeEffectsTarget(pixelWidth: number, pixelHeight: number): void {
+    if (!this.framebuffer || !this.colorTarget) return
+    const gl = this.gl
+    gl.bindTexture(gl.TEXTURE_2D, this.colorTarget)
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR)
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE)
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, pixelWidth, pixelHeight, 0, gl.RGBA, gl.UNSIGNED_BYTE, null)
+    gl.bindFramebuffer(gl.FRAMEBUFFER, this.framebuffer); gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, this.colorTarget, 0)
+    if (gl.checkFramebufferStatus(gl.FRAMEBUFFER) !== gl.FRAMEBUFFER_COMPLETE) throw new Error('Renderer framebuffer is incomplete')
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null)
+    this.effectsWidth = pixelWidth; this.effectsHeight = pixelHeight
+  }
+
+  private pollGpuTimers(): void {
+    if (!this.timerExtension) return
+    while (this.pendingTimers.length) {
+      const query = this.pendingTimers[0]
+      if (!this.gl.getQueryParameter(query, this.gl.QUERY_RESULT_AVAILABLE)) break
+      this.pendingTimers.shift()
+      const disjoint = this.gl.getParameter(this.timerExtension.GPU_DISJOINT_EXT) as boolean
+      if (!disjoint) this.lastGpuMs = Number(this.gl.getQueryParameter(query, this.gl.QUERY_RESULT)) / 1_000_000
+      this.gl.deleteQuery(query)
+    }
   }
 
   private resolveTexture(region: TextureRegion, filter: TextureFilter): WebGLTexture {

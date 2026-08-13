@@ -13,11 +13,13 @@ interface RuntimeTimer {
   remaining: number
   repeat: boolean
   paused: boolean
+  kind: 'timer' | 'task'
 }
 
 export interface TimerExpiration {
   entityUuid: string
   name: string
+  kind: 'timer' | 'task'
 }
 
 export class RuntimeTime {
@@ -35,18 +37,24 @@ export class RuntimeTime {
 
   start(entityUuid: string, name: string, seconds: number, repeat: boolean): void {
     const duration = Math.min(86_400, Math.max(.000001, Number.isFinite(seconds) ? seconds : 0))
-    this.timers.set(this.key(entityUuid, name), { entityUuid, name, duration, remaining: duration, repeat, paused: false })
+    this.timers.set(this.key(entityUuid, name, 'timer'), { entityUuid, name, duration, remaining: duration, repeat, paused: false, kind: 'timer' })
+  }
+
+  startTask(entityUuid: string, name: string, seconds: number): void {
+    const duration = Math.min(86_400, Math.max(.000001, Number.isFinite(seconds) ? seconds : 0))
+    this.timers.set(this.key(entityUuid, name, 'task'), { entityUuid, name, duration, remaining: duration, repeat: false, paused: false, kind: 'task' })
   }
 
   pause(entityUuid: string, name: string): void {
-    const timer = this.timers.get(this.key(entityUuid, name)); if (timer) timer.paused = true
+    const timer = this.timers.get(this.key(entityUuid, name, 'timer')); if (timer) timer.paused = true
   }
 
   resume(entityUuid: string, name: string): void {
-    const timer = this.timers.get(this.key(entityUuid, name)); if (timer) timer.paused = false
+    const timer = this.timers.get(this.key(entityUuid, name, 'timer')); if (timer) timer.paused = false
   }
 
-  cancel(entityUuid: string, name: string): void { this.timers.delete(this.key(entityUuid, name)) }
+  cancel(entityUuid: string, name: string): void { this.timers.delete(this.key(entityUuid, name, 'timer')) }
+  cancelTask(entityUuid: string, name: string): void { this.timers.delete(this.key(entityUuid, name, 'task')) }
 
   removeEntity(entityUuid: string): void {
     for (const [key, timer] of this.timers) if (timer.entityUuid === entityUuid) this.timers.delete(key)
@@ -65,7 +73,7 @@ export class RuntimeTime {
       timer.remaining -= delta
       let safety = 0
       while (timer.remaining <= 0 && safety++ < 64) {
-        expired.push({ entityUuid: timer.entityUuid, name: timer.name })
+        expired.push({ entityUuid: timer.entityUuid, name: timer.name, kind: timer.kind })
         if (!timer.repeat) { this.timers.delete(key); break }
         timer.remaining += timer.duration
       }
@@ -73,5 +81,5 @@ export class RuntimeTime {
     return expired
   }
 
-  private key(entityUuid: string, name: string): string { return `${entityUuid}\u0000${name}` }
+  private key(entityUuid: string, name: string, kind: 'timer' | 'task'): string { return `${entityUuid}\u0000${kind}\u0000${name}` }
 }

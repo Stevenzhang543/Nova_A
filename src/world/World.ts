@@ -312,8 +312,8 @@ export class World {
     interpolationAlpha: 0, droppedSeconds: 0, eventCount: 0, configurationRebuilds: 0
   }
   events: RuntimePhysicsEvent[] = []
-  projectFormatVersion = 12
-  projectEngineVersion = '1.8.0'
+  projectFormatVersion = 17
+  projectEngineVersion = '2.4.0'
 
   constructor() {
     this.wasmReady = init()

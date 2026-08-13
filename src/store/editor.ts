@@ -3,16 +3,23 @@ import { cloneEntity, deleteEntity, duplicateConnections, physicsState, pushHist
 import type { Vec2 } from '../world/types'
 import { t } from '../i18n'
 import type { PivotMode, TransformSpace } from '../editor/gizmo'
+import { scriptProjectSettings } from '../runtime/scriptSettings'
 
-export type EditorPage = 'scene' | 'game' | 'settings'
+export type EditorPage = 'scene' | 'game' | 'script' | 'settings'
+export type EditorWorkspace = 'design' | 'script' | 'animation' | 'interface' | 'debug'
+export type BottomPanelTab = 'assets' | 'console' | 'animation' | 'tilemap' | 'profiler' | 'rendering' | 'project' | 'build'
+export type InspectorCategory = 'all' | 'general' | 'transform' | 'render' | 'physics' | 'gameplay' | 'ui'
 type ContextMenuType = 'sidebar-entity' | 'layer' | 'grid-entity' | 'none'
+export type EditorLogLevel = 'trace' | 'debug' | 'info' | 'warning' | 'error' | 'fatal'
+export type EditorLogCategory = 'Editor' | 'Physics' | 'Project' | 'Renderer' | 'Assets' | 'Audio' | 'Engine' | 'Runtime' | 'Script' | 'Save' | 'Plugin'
 
 export interface EditorLogEntry {
   id: number
   timestamp: string
-  level: 'info' | 'warning' | 'error'
-  category: 'Editor' | 'Physics' | 'Project' | 'Renderer' | 'Assets' | 'Runtime' | 'Script'
+  level: EditorLogLevel
+  category: EditorLogCategory
   message: string
+  source?: string
 }
 
 export const editorState = reactive({
@@ -29,9 +36,18 @@ export const editorState = reactive({
   pivotMode: 'center' as PivotMode,
   angleSnapEnabled: true,
   angleSnapDegrees: 15,
-  bottomPanelOpen: true,
-  bottomPanelHeight: 180,
-  bottomPanelTab: 'console' as 'assets' | 'console' | 'animation' | 'tilemap' | 'profiler' | 'project' | 'build',
+  activeWorkspace: 'design' as EditorWorkspace,
+  hierarchyVisible: true,
+  inspectorVisible: true,
+  bottomPanelVisible: true,
+  distractionFree: false,
+  commandPaletteOpen: false,
+  inspectorSearch: '',
+  inspectorCategory: 'all' as InspectorCategory,
+  componentPickerOpen: false,
+  bottomPanelOpen: false,
+  bottomPanelHeight: 240,
+  bottomPanelTab: 'assets' as BottomPanelTab,
   renameRequestId: null as number | null,
   logs: [] as EditorLogEntry[],
   rendererStats: {
@@ -41,7 +57,12 @@ export const editorState = reactive({
     triangles: 0,
     sprites: 0,
     shapes: 0,
-    text: 0
+    text: 0,
+    textures: 0,
+    gpuMs: null as number | null,
+    passes: 1,
+    renderTargets: 0,
+    overdraw: 0
   },
   manualConnectionId: null as number | null,
   manualConnectionPoints: [] as Vec2[],
@@ -55,9 +76,10 @@ export const editorState = reactive({
 })
 
 let nextLogId = 1
-export function addEditorLog(message: string, category: EditorLogEntry['category'] = 'Editor', level: EditorLogEntry['level'] = 'info'): void {
-  editorState.logs.push({ id: nextLogId++, timestamp: new Date().toLocaleTimeString(), level, category, message })
-  if (editorState.logs.length > 500) editorState.logs.splice(0, editorState.logs.length - 500)
+export function addEditorLog(message: string, category: EditorLogCategory = 'Editor', level: EditorLogLevel = 'info', source?: string): void {
+  editorState.logs.push({ id: nextLogId++, timestamp: new Date().toLocaleTimeString(), level, category, message, source })
+  const limit = Math.min(10_000, Math.max(100, scriptProjectSettings.maxConsoleEntries))
+  if (editorState.logs.length > limit) editorState.logs.splice(0, editorState.logs.length - limit)
 }
 
 export function reconfigureLayout() { editorState.layoutVersion++ }

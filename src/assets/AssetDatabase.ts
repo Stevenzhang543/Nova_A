@@ -3,7 +3,9 @@ import { normalizeUuid } from '../world/identity'
 import { buildTextureAtlases } from './TextureAtlas'
 import {
   DEFAULT_ASSET_FOLDERS,
+  defaultAnimationImportMetadata,
   defaultImportSettings,
+  defaultScriptMetadata,
   type AssetImportSettings,
   type AssetRecord,
   type AssetType,
@@ -50,6 +52,10 @@ function inferAssetType(file: Pick<File, 'name' | 'type'>): AssetType {
   if (extension === 'nova-material' || extension === 'material') return 'material'
   if (extension === 'nova-anim') return 'animation'
   if (extension === 'nova-controller') return 'controller'
+  if (extension === 'nova-mask') return 'animationMask'
+  if (extension === 'nova-rig') return 'rig'
+  if (extension === 'nova-skin') return 'skin'
+  if (extension === 'nova-timeline') return 'timeline'
   if (extension === 'nova-tileset') return 'tileset'
   return 'other'
 }
@@ -64,6 +70,10 @@ function defaultFolder(type: AssetType): string {
   if (type === 'material') return 'Assets/Materials'
   if (type === 'animation') return 'Assets/Animations'
   if (type === 'controller') return 'Assets/Controllers'
+  if (type === 'animationMask') return 'Assets/AnimationMasks'
+  if (type === 'rig') return 'Assets/Rigs'
+  if (type === 'skin') return 'Assets/Skins'
+  if (type === 'timeline') return 'Assets/Timelines'
   if (type === 'tileset') return 'Assets/TileSets'
   return 'Assets'
 }
@@ -153,7 +163,9 @@ export async function importAssetFiles(files: Iterable<File>, requestedFolder?: 
         height: metadata.height,
         duration: assetType === 'audio' ? await audioMetadata(source) : 0,
         fontFamily: assetType === 'font' ? fontFamilyFor(uuid) : '',
-        settings
+        settings,
+        script: assetType === 'script' ? defaultScriptMetadata() : undefined,
+        animationImport: assetType === 'animation' ? defaultAnimationImportMetadata() : undefined
       }
       assetState.records.push(record)
       imported.push(record)
@@ -193,12 +205,12 @@ function textDataUrl(source: string, mimeType: string): string {
 
 export function createTextAsset(
   name: string,
-  assetType: 'script' | 'prefab' | 'scene' | 'material' | 'animation' | 'controller' | 'tileset',
+  assetType: 'script' | 'prefab' | 'scene' | 'material' | 'animation' | 'controller' | 'animationMask' | 'rig' | 'skin' | 'timeline' | 'tileset',
   source: string,
   requestedFolder?: string
 ): AssetRecord {
   const uuid = normalizeUuid(undefined)
-  const extension = assetType === 'script' ? '.rhai' : assetType === 'prefab' ? '.nova-prefab' : assetType === 'scene' ? '.nova-scene' : assetType === 'material' ? '.nova-material' : assetType === 'animation' ? '.nova-anim' : assetType === 'controller' ? '.nova-controller' : '.nova-tileset'
+  const extension = assetType === 'script' ? '.rhai' : assetType === 'prefab' ? '.nova-prefab' : assetType === 'scene' ? '.nova-scene' : assetType === 'material' ? '.nova-material' : assetType === 'animation' ? '.nova-anim' : assetType === 'controller' ? '.nova-controller' : assetType === 'animationMask' ? '.nova-mask' : assetType === 'rig' ? '.nova-rig' : assetType === 'skin' ? '.nova-skin' : assetType === 'timeline' ? '.nova-timeline' : '.nova-tileset'
   const safeName = sanitizedName(name).endsWith(extension) ? sanitizedName(name) : `${sanitizedName(name)}${extension}`
   const mimeType = assetType === 'script' ? 'text/x-rhai' : `application/x-nova-${assetType}`
   const record: AssetRecord = {
@@ -215,7 +227,9 @@ export function createTextAsset(
     height: 0,
     duration: 0,
     fontFamily: '',
-    settings: defaultImportSettings()
+    settings: defaultImportSettings(),
+    script: assetType === 'script' ? defaultScriptMetadata() : undefined,
+    animationImport: assetType === 'animation' ? defaultAnimationImportMetadata() : undefined
   }
   assetState.records.push(record)
   const folder = record.path.slice(0, record.path.lastIndexOf('/'))
@@ -229,7 +243,7 @@ export function createTextAsset(
 
 export function readTextAsset(reference: string | null | undefined): string | null {
   const record = resolveAsset(reference)
-  if (!record || !['script', 'prefab', 'scene', 'material', 'animation', 'controller', 'tileset'].includes(record.assetType)) return null
+  if (!record || !['script', 'prefab', 'scene', 'material', 'animation', 'controller', 'animationMask', 'rig', 'skin', 'timeline', 'tileset'].includes(record.assetType)) return null
   const comma = record.source.indexOf(',')
   if (!record.source.startsWith('data:') || comma < 0) return record.source || null
   try {
@@ -245,7 +259,7 @@ export function readTextAsset(reference: string | null | undefined): string | nu
 
 export function updateTextAsset(uuid: string, source: string): boolean {
   const record = assetState.records.find(asset => asset.uuid === uuid)
-  if (!record || !['script', 'prefab', 'scene', 'material', 'animation', 'controller', 'tileset'].includes(record.assetType)) return false
+  if (!record || !['script', 'prefab', 'scene', 'material', 'animation', 'controller', 'animationMask', 'rig', 'skin', 'timeline', 'tileset'].includes(record.assetType)) return false
   record.source = textDataUrl(source, record.mimeType || 'text/plain')
   record.byteLength = new TextEncoder().encode(source).byteLength
   record.sourceModified = Date.now()
@@ -255,7 +269,12 @@ export function updateTextAsset(uuid: string, source: string): boolean {
 }
 
 export function serializeAssets(): AssetRecord[] {
-  return assetState.records.map(record => JSON.parse(JSON.stringify(record)) as AssetRecord)
+  return assetState.records.map(record => {
+    const copy = JSON.parse(JSON.stringify(record)) as AssetRecord
+    const unknown = copy.unknownFields && typeof copy.unknownFields === 'object' ? copy.unknownFields : {}
+    delete copy.unknownFields
+    return { ...unknown, ...copy } as AssetRecord
+  })
 }
 
 export function serializeAssetFolders(): string[] {
@@ -275,9 +294,15 @@ export function loadAssets(source: unknown, folderSource?: unknown): void {
   for (const value of records) {
     if (!value || typeof value !== 'object') continue
     const item = value as Partial<AssetRecord>
-    const assetType = ['image', 'audio', 'font', 'scene', 'prefab', 'script', 'material', 'animation', 'controller', 'tileset', 'other'].includes(String(item.assetType)) ? item.assetType as AssetType : 'other'
+    const knownFields = new Set(['uuid', 'name', 'path', 'assetType', 'mimeType', 'byteLength', 'source', 'sourceModified', 'importedAt', 'width', 'height', 'duration', 'fontFamily', 'settings', 'script', 'animationImport', 'unknownFields'])
+    const inheritedUnknown = item.unknownFields && typeof item.unknownFields === 'object' ? item.unknownFields : {}
+    const unknownFields = { ...inheritedUnknown, ...Object.fromEntries(Object.entries(value).filter(([key]) => !knownFields.has(key))) }
+    const assetType = ['image', 'audio', 'font', 'scene', 'prefab', 'script', 'material', 'animation', 'controller', 'animationMask', 'rig', 'skin', 'timeline', 'tileset', 'other'].includes(String(item.assetType)) ? item.assetType as AssetType : 'other'
     const uuid = normalizeUuid(item.uuid)
     const settings: AssetImportSettings = { ...defaultImportSettings(), ...(item.settings ?? {}) }
+    settings.colorSpace = settings.colorSpace === 'Linear' ? 'Linear' : 'sRGB'
+    const variants = settings.platformVariants && typeof settings.platformVariants === 'object' ? settings.platformVariants : {}
+    settings.platformVariants = Object.fromEntries(Object.entries(variants).filter(([platform, compression]) => ['windows', 'linux', 'macos', 'web'].includes(platform) && ['None', 'Lossless', 'Optimized'].includes(String(compression)))) as AssetImportSettings['platformVariants']
     settings.pixelsPerUnit = Math.min(1_000_000, Math.max(.000001, Number(settings.pixelsPerUnit) || 100))
     settings.pivot = {
       x: Math.min(1, Math.max(0, Number(settings.pivot?.x) || 0)),
@@ -294,7 +319,27 @@ export function loadAssets(source: unknown, folderSource?: unknown): void {
       assetType, mimeType: String(item.mimeType || 'application/octet-stream'), byteLength: Math.max(0, Number(item.byteLength) || 0),
       source: typeof item.source === 'string' ? item.source : '', sourceModified: Number(item.sourceModified) || 0,
       importedAt: Number(item.importedAt) || 0, width: Math.max(0, Number(item.width) || 0), height: Math.max(0, Number(item.height) || 0),
-      duration: Math.max(0, Number(item.duration) || 0), fontFamily: item.fontFamily || (assetType === 'font' ? fontFamilyFor(uuid) : ''), settings
+      duration: Math.max(0, Number(item.duration) || 0), fontFamily: item.fontFamily || (assetType === 'font' ? fontFamilyFor(uuid) : ''), settings,
+      script: assetType === 'script' ? {
+        ...defaultScriptMetadata(),
+        ...(item.script ?? {}),
+        breakpoints: Array.isArray(item.script?.breakpoints) ? [...new Set(item.script.breakpoints.map(Number).filter(value => Number.isInteger(value) && value > 0))].slice(0, 1000) : [],
+        tests: Array.isArray(item.script?.tests) ? item.script.tests.filter(value => typeof value === 'string').map(value => value.slice(0, 80)).slice(0, 256) : [],
+        packageDependencies: Array.isArray(item.script?.packageDependencies) ? item.script.packageDependencies.filter(value => typeof value === 'string').map(value => value.slice(0, 256)).slice(0, 128) : []
+      } : undefined,
+      animationImport: assetType === 'animation' ? {
+        ...defaultAnimationImportMetadata(),
+        ...(item.animationImport ?? {}),
+        sourceAsset: typeof item.animationImport?.sourceAsset === 'string' ? item.animationImport.sourceAsset : null,
+        sourceFrameRate: Math.min(240, Math.max(1, Number(item.animationImport?.sourceFrameRate) || 60)),
+        sampleRate: Math.min(240, Math.max(1, Number(item.animationImport?.sampleRate) || 60)),
+        trackMappings: Array.isArray(item.animationImport?.trackMappings) ? item.animationImport.trackMappings.flatMap(mapping => {
+          if (!mapping || typeof mapping.source !== 'string' || typeof mapping.target !== 'string') return []
+          return [{ source: mapping.source.slice(0, 256), target: mapping.target.slice(0, 256) }]
+        }).slice(0, 512) : [],
+        lastImportedAt: Math.max(0, Number(item.animationImport?.lastImportedAt) || 0)
+      } : undefined,
+      unknownFields: Object.keys(unknownFields).length ? unknownFields : undefined
     })
   }
   const folders = new Set<string>(DEFAULT_ASSET_FOLDERS)
@@ -371,7 +416,7 @@ export function resolveTexture(reference: string | null | undefined, filterOverr
   if (!record || record.assetType !== 'image' || !record.source) return null
   for (const page of assetState.atlasPages) {
     const region = page.regions.get(record.uuid)
-    if (region) return importedSpriteRegion(record, filterOverride ? { ...region, filter: filterOverride } : region)
+    if (region) return importedSpriteRegion(record, { ...region, filter: filterOverride ?? region.filter, colorSpace: record.settings.colorSpace })
   }
   let image = imageCache.get(record.uuid)
   if (!image) {
@@ -380,7 +425,7 @@ export function resolveTexture(reference: string | null | undefined, filterOverr
     imageCache.set(record.uuid, image)
   }
   if (!image.complete || image.naturalWidth <= 0) return null
-  return importedSpriteRegion(record, { key: `asset:${record.uuid}`, source: image, uv: { x: 0, y: 0, width: 1, height: 1 }, filter: filterOverride ?? record.settings.filterMode })
+  return importedSpriteRegion(record, { key: `asset:${record.uuid}`, source: image, uv: { x: 0, y: 0, width: 1, height: 1 }, filter: filterOverride ?? record.settings.filterMode, colorSpace: record.settings.colorSpace })
 }
 
 /** Resolves a pixel-space sub-region without allocating another texture. */

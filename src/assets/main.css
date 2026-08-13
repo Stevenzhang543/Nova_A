@@ -9,6 +9,7 @@
   --surface-3: #262c37;
   --surface-hover: #2d3441;
   --input-bg: #11151b;
+  --field-bg: #11151b;
   --text-primary: #f4f6f8;
   --text-secondary: #f4f6f8;
   --text-muted: #f4f6f8;
@@ -24,6 +25,7 @@
   --warning: #f6c760;
   --scrim: rgba(0, 0, 0, 0.62);
   --shadow-sm: 0 8px 24px rgba(0, 0, 0, 0.28);
+  --shadow-md: 0 14px 38px rgba(0, 0, 0, 0.34);
   --shadow-lg: 0 24px 64px rgba(0, 0, 0, 0.4);
   --glass-blur: blur(18px) saturate(125%);
   --icon-filter: none;
@@ -39,6 +41,9 @@
   --radius-sm: 7px;
   --radius-md: 12px;
   --radius-lg: 18px;
+  --font-xs: 11px;
+  --font-sm: 12px;
+  --font-md: 14px;
 }
 
 :root[data-theme='light'] {
@@ -50,6 +55,7 @@
   --surface-3: #d8dee7;
   --surface-hover: #ccd4df;
   --input-bg: #e7ebf0;
+  --field-bg: #e7ebf0;
   --text-primary: #18202c;
   --text-secondary: #18202c;
   --text-muted: #18202c;
@@ -65,6 +71,7 @@
   --warning: #9a6700;
   --scrim: rgba(31, 41, 55, 0.34);
   --shadow-sm: 0 8px 26px rgba(43, 55, 74, 0.12);
+  --shadow-md: 0 14px 38px rgba(43, 55, 74, 0.16);
   --shadow-lg: 0 24px 64px rgba(43, 55, 74, 0.2);
   --glass-blur: blur(18px) saturate(120%);
   --icon-filter: invert(1) saturate(0) brightness(0.35);
@@ -134,7 +141,7 @@ body,
   height: 100vh;
   overflow: hidden !important;
   font-family: "Segoe UI Variable Text", "Segoe UI Variable", Aptos, ui-rounded, -apple-system, BlinkMacSystemFont, "Noto Sans SC", "Microsoft YaHei UI", sans-serif;
-  font-size: calc(14px * var(--ui-scale));
+  font-size: calc(15px * var(--ui-scale));
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;

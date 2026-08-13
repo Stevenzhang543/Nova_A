@@ -85,7 +85,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', handleShortcut))
 </script>
 
 <style scoped>
-.toolbar { position: absolute; top: 49px; left: 316px; right: 304px; z-index: 240; width: max-content; max-width: calc(100vw - 620px); margin: 0 auto; padding: 5px; display: flex; align-items: center; gap: 4px; overflow: hidden; border: 1px solid var(--border-subtle); border-radius: 13px; background: var(--surface-1); backdrop-filter: var(--glass-blur); box-shadow: var(--shadow-sm); }
+.toolbar { min-height: 43px; width: 100%; padding: 5px max(8px, calc((100vw - 760px) / 2)); display: flex; align-items: center; justify-content: center; gap: 4px; overflow-x: auto; overflow-y: hidden; border-bottom: 1px solid var(--border-subtle); background: color-mix(in srgb, var(--surface-1) 96%, var(--bg-base)); scrollbar-width: thin; }
 button { position: relative; min-width: 36px; height: 31px; padding: 0 8px; display: grid; place-items: center; border: 1px solid transparent; border-radius: 8px; color: var(--text-muted); background: transparent; font-size: 10px; }
 button svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
 button:hover { color: var(--text-primary); background: var(--surface-hover); }
@@ -95,6 +95,6 @@ button.active { color: var(--accent); border-color: color-mix(in srgb, var(--acc
 .segmented { padding: 2px; display: flex; border: 1px solid var(--border-subtle); border-radius: 8px; background: var(--surface-2); }
 .segmented button { min-width: auto; height: 25px; padding: 0 7px; }
 .snap { white-space: nowrap; }
-@media (max-width: 1120px) { .segmented { display: none; } .toolbar { left: 160px; right: 270px; max-width: calc(100vw - 440px); } }
-@media (max-width: 760px) { .snap { display: none; } .toolbar { left: 78px; right: 256px; max-width: calc(100vw - 344px); } }
+@media (max-width: 1120px) { .segmented { display: none; } .toolbar { justify-content: flex-start; padding-inline: 8px; } }
+@media (max-width: 760px) { .snap { display: none; } }
 </style>

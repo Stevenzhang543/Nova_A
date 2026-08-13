@@ -2,7 +2,7 @@
   <div class="settings-page">
     <header class="page-header">
       <div>
-        <span class="eyebrow">Nova_A 1.8.0</span>
+        <span class="eyebrow">Nova_A 2.4.0</span>
         <h1>{{ t('settings') }}</h1>
       </div>
       <div class="theme-switch" :aria-label="t('theme')">
@@ -138,8 +138,18 @@
 
       <section class="settings-card">
         <div class="card-heading"><span class="card-icon">ⓘ</span><h2>{{ t('projectInformation') }}</h2></div>
-        <SettingRow :label="t('formatVersion')"><output>v{{ physics.world.projectFormatVersion }}</output></SettingRow>
+        <SettingRow :label="t('formatVersion')"><output>{{ t('projectFormatTwo') }} · schema {{ physics.world.projectFormatVersion }}</output></SettingRow>
         <SettingRow :label="t('engineVersion')"><output>{{ physics.world.projectEngineVersion }}</output></SettingRow>
+      </section>
+
+      <section class="settings-card">
+        <div class="card-heading"><span class="card-icon">W</span><h2>{{ t('plugins') }}</h2></div>
+        <PluginSettings />
+      </section>
+
+      <section class="settings-card">
+        <div class="card-heading"><span class="card-icon">S</span><h2>{{ t('saveData') }}</h2></div>
+        <SaveDataSettings />
       </section>
 
       <section class="settings-card">
@@ -170,6 +180,8 @@ import { preferencesState as prefs, resetPreferences } from '../store/preference
 import type { ThemeMode } from '../store/preferences'
 import { createInputBinding, normalizeInputMap, type InputBinding } from '../runtime/input'
 import { normalizeAudioSettings } from '../runtime/audio'
+import PluginSettings from '../components/PluginSettings.vue'
+import SaveDataSettings from '../components/SaveDataSettings.vue'
 
 function setTheme(theme: ThemeMode) {
   prefs.theme = theme

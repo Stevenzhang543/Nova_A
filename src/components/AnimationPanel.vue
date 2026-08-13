@@ -1,188 +1,192 @@
 <template>
-  <section class="animation-editor">
-    <header class="animation-toolbar">
-      <button class="primary" @click="newClip">+ {{ t('animationClip') }}</button>
-      <button @click="newController">+ {{ t('animatorController') }}</button>
-      <select v-model="selectedGuid">
+  <section class="animation-studio" tabindex="0" @keydown="onKeyDown">
+    <header class="studio-toolbar">
+      <div class="create-menu">
+        <button class="primary" @click="newAsset('animation')">+ {{ t('animationClip') }}</button>
+        <button @click="newAsset('controller')">+ {{ t('animatorController') }}</button>
+        <button @click="newAsset('rig')">+ {{ t('rig') }}</button>
+        <button @click="newAsset('skin')">+ {{ t('skin') }}</button>
+        <button @click="newAsset('timeline')">+ {{ t('timeline') }}</button>
+        <button @click="newAsset('animationMask')">+ {{ t('animationMask') }}</button>
+      </div>
+      <select v-model="selectedGuid" class="asset-select">
         <option value="">{{ t('selectAnimationAsset') }}</option>
-        <option v-for="asset in animationAssets" :key="asset.uuid" :value="asset.uuid">{{ asset.name }}</option>
+        <option v-for="asset in studioAssets" :key="asset.uuid" :value="asset.uuid">{{ asset.name }}</option>
       </select>
-      <span></span>
+      <span class="toolbar-spacer"></span>
       <button :disabled="!document" @click="save">{{ t('saveAsset') }}</button>
     </header>
 
-    <div v-if="clip" class="clip-editor">
-      <aside>
-        <label>{{ t('loop') }} <input v-model="clip.loop" type="checkbox"></label>
+    <nav class="studio-modes" :aria-label="t('animationWorkspace')">
+      <button v-for="mode in visibleModes" :key="mode.id" :class="{ active: studio.view === mode.id }" @click="studio.view = mode.id">{{ t(mode.label) }}</button>
+    </nav>
+
+    <div v-if="clip && (studio.view === 'dope' || studio.view === 'curve')" class="clip-workspace">
+      <header class="transport">
+        <button :class="{ active: studio.previewPlaying }" @click="togglePreview">{{ studio.previewPlaying ? '❚❚' : '▶' }}</button>
+        <button :class="{ active: studio.recordMode, record: studio.recordMode }" @click="studio.recordMode = !studio.recordMode">● {{ t('record') }}</button>
+        <button :class="{ active: studio.snapEnabled }" @click="studio.snapEnabled = !studio.snapEnabled">⌗ {{ t('snap') }}</button>
+        <label>{{ t('playhead') }} <input v-model.number="studio.playhead" type="number" min="0" :step="frameStep" @change="snapPlayhead"></label>
         <label>{{ t('frameRate') }} <input v-model.number="clip.frameRate" type="number" min="1" max="240"></label>
-        <button @click="addSpriteFrame">+ {{ t('spriteFrame') }}</button>
-        <button @click="addTrack">+ {{ t('propertyTrack') }}</button>
+        <label>{{ t('loop') }} <input v-model="clip.loop" type="checkbox"></label>
+        <select v-model="selectedTangent" :disabled="!selectedKeys.length" @change="applyTangent"><option v-for="mode in tangentModes" :key="mode">{{ mode }}</option></select>
+        <button :disabled="!selectedKeys.length" @click="copyKeys">{{ t('copy') }}</button>
+        <button :disabled="!keyClipboard.length" @click="pasteKeys">{{ t('paste') }}</button>
+      </header>
+      <aside class="track-list">
+        <header><strong>{{ t('tracks') }}</strong><button @click="addTrack">+</button></header>
+        <button v-for="(track, index) in clip.tracks" :key="trackId(track, index)" :class="{ active: selectedTrack === index }" @click="selectedTrack = index">
+          <span>{{ targetName(track.targetEntityUuid) }}</span><strong>{{ track.property }}</strong><small>{{ track.keyframes.length }} {{ t('keys') }}</small>
+        </button>
+        <button class="special-track" @click="addEvent">⚑ {{ t('animationEvents') }} ({{ clip.events.length }})</button>
+        <button class="special-track" @click="addSpriteFrame">▧ {{ t('spriteFrames') }} ({{ clip.spriteFrames.length }})</button>
       </aside>
-      <main class="timeline">
-        <div class="time-ruler"><i v-for="tick in 12" :key="tick">{{ (tick - 1) / clip.frameRate }}s</i></div>
-        <article v-if="clip.spriteFrames.length" class="timeline-row">
-          <strong>{{ t('spriteFrames') }}</strong>
-          <div class="frame-strip">
-            <label v-for="(frame, index) in clip.spriteFrames" :key="index" class="sprite-frame">
-              <span>#{{ index + 1 }}</span>
-              <select v-model="frame.spriteAsset"><option :value="null">{{ t('none') }}</option><option v-for="asset in imageAssets" :key="asset.uuid" :value="assetReference(asset.uuid)">{{ asset.name }}</option></select>
-              <input v-model.number="frame.duration" type="number" min="0.001" step="0.01" :title="t('frameDuration')">
-              <button @click="clip.spriteFrames.splice(index, 1)">×</button>
-            </label>
-          </div>
-        </article>
-        <article v-for="(track, trackIndex) in clip.tracks" :key="trackIndex" class="timeline-row">
-          <select v-model="track.property"><option v-for="property in properties" :key="property" :value="property">{{ property }}</option></select>
-          <div class="keyframes">
-            <label v-for="(keyframe, keyIndex) in track.keyframes" :key="keyIndex">
-              <input v-model.number="keyframe.time" type="number" min="0" step="0.01" :title="t('keyframeTime')">
-              <input v-model.number="keyframe.value" type="number" step="0.01" :title="t('keyframeValue')">
-              <button @click="track.keyframes.splice(keyIndex, 1)">×</button>
-            </label>
-            <button @click="track.keyframes.push({ time: nextKeyTime(track), value: 0 })">+ {{ t('keyframe') }}</button>
-            <button class="danger" @click="clip.tracks.splice(trackIndex, 1)">× {{ t('track') }}</button>
-          </div>
-        </article>
-        <p v-if="!clip.spriteFrames.length && !clip.tracks.length" class="empty">{{ t('emptyAnimation') }}</p>
+
+      <main v-if="studio.view === 'dope'" class="dope-sheet" @pointerdown.self="beginBoxSelection" @pointermove="moveBoxSelection" @pointerup="finishBoxSelection">
+        <div class="time-ruler" :style="timelineWidthStyle">
+          <i v-for="tick in rulerTicks" :key="tick" :style="{ left: `${timeToPixel(tick)}px` }">{{ formatTime(tick) }}</i>
+          <b class="playhead" :style="{ left: `${timeToPixel(studio.playhead)}px` }"></b>
+        </div>
+        <div class="track-lanes" :style="timelineWidthStyle">
+          <article v-for="(track, trackIndex) in clip.tracks" :key="trackId(track, trackIndex)" class="track-lane">
+            <button v-for="(keyframe, keyIndex) in track.keyframes" :key="keyId(trackIndex, keyIndex)" class="key-dot" :class="{ selected: isKeySelected(trackIndex, keyIndex) }" :style="{ left: `${timeToPixel(keyframe.time)}px` }" :title="`${keyframe.value} @ ${formatTime(keyframe.time)}`" @click.stop="selectKey(trackIndex, keyIndex, $event)" @pointerdown.stop="beginKeyDrag(trackIndex, keyIndex, $event)"></button>
+          </article>
+          <article class="event-lane"><button v-for="(event, index) in clip.events" :key="index" class="event-key" :style="{ left: `${timeToPixel(event.time)}px` }" :title="event.signal" @click="studio.playhead = event.time">⚑</button></article>
+        </div>
+        <div v-if="selectionBox" class="selection-box" :style="boxStyle"></div>
       </main>
+
+      <main v-else class="curve-editor">
+        <svg v-if="activeTrack" viewBox="0 0 1000 400" preserveAspectRatio="none" @pointerdown="curvePointer">
+          <g class="curve-grid"><line v-for="x in 11" :key="`x${x}`" :x1="(x-1)*100" y1="0" :x2="(x-1)*100" y2="400"/><line v-for="y in 9" :key="`y${y}`" x1="0" :y1="(y-1)*50" x2="1000" :y2="(y-1)*50"/></g>
+          <polyline :points="curvePoints" />
+          <circle v-for="(keyframe, index) in activeTrack.keyframes" :key="index" :cx="curveX(keyframe.time)" :cy="curveY(keyframe.value)" r="6" :class="{ selected: isKeySelected(selectedTrack, index) }" @click.stop="selectKey(selectedTrack, index, $event)" />
+        </svg>
+        <aside v-if="selectedKeys[0]" class="key-inspector">
+          <strong>{{ t('keyframe') }}</strong>
+          <label>{{ t('keyframeTime') }}<input v-model.number="selectedKeys[0].keyframe.time" type="number" min="0" :step="frameStep"></label>
+          <label>{{ t('keyframeValue') }}<input v-model.number="selectedKeys[0].keyframe.value" type="number" step="0.01"></label>
+          <label>{{ t('tangentMode') }}<select v-model="selectedKeys[0].keyframe.tangentMode"><option v-for="mode in tangentModes" :key="mode">{{ mode }}</option></select></label>
+          <label v-if="selectedKeys[0].keyframe.tangentMode === 'Free'">{{ t('tangents') }}<span><input v-model.number="selectedKeys[0].keyframe.inTangent" type="number" step="0.1"><input v-model.number="selectedKeys[0].keyframe.outTangent" type="number" step="0.1"></span></label>
+        </aside>
+      </main>
+
+      <aside class="clip-inspector">
+        <template v-if="activeTrack">
+          <strong>{{ t('track') }}</strong>
+          <label>{{ t('property') }}<select v-model="activeTrack.property"><option v-for="property in properties" :key="property">{{ property }}</option></select></label>
+          <label>{{ t('target') }}<select v-model="activeTrack.targetEntityUuid"><option :value="null">{{ t('animationOwner') }}</option><option v-for="entity in entities" :key="entity.uuid" :value="entity.uuid">{{ entity.name }}</option></select></label>
+          <button @click="addKey(activeTrack)">+ {{ t('keyframe') }}</button>
+          <button class="danger" @click="removeActiveTrack">× {{ t('track') }}</button>
+        </template>
+        <details :open="clip.events.length > 0"><summary>{{ t('animationEvents') }}</summary><label v-for="(event, index) in clip.events" :key="index" class="event-edit"><input v-model.number="event.time" type="number" min="0" :step="frameStep"><input v-model="event.signal"><input v-model="event.payload"><button @click="clip.events.splice(index,1)">×</button></label></details>
+        <details :open="clip.spriteFrames.length > 0"><summary>{{ t('spriteFrames') }}</summary><label v-for="(frame, index) in clip.spriteFrames" :key="index" class="frame-edit"><select v-model="frame.spriteAsset"><option :value="null">{{ t('none') }}</option><option v-for="asset in imageAssets" :key="asset.uuid" :value="assetReference(asset.uuid)">{{ asset.name }}</option></select><input v-model.number="frame.duration" type="number" min="0.001" step="0.01"><button @click="clip.spriteFrames.splice(index,1)">×</button></label></details>
+      </aside>
     </div>
 
-    <div v-else-if="controller" class="controller-editor">
+    <div v-else-if="controller" class="controller-workspace">
       <aside class="controller-sidebar">
-        <strong>{{ t('parameters') }}</strong>
-        <label v-for="(parameter, index) in controller.parameters" :key="parameter.name">
-          <input v-model="parameter.name" maxlength="80">
-          <select v-model="parameter.type"><option>Bool</option><option>Float</option><option>Integer</option><option>Trigger</option></select>
-          <input v-if="parameter.type === 'Bool' || parameter.type === 'Trigger'" v-model="parameter.defaultValue" type="checkbox">
-          <input v-else v-model.number="parameter.defaultValue" type="number">
-          <button @click="controller.parameters.splice(index, 1)">×</button>
-        </label>
-        <button @click="addParameter">+ {{ t('parameter') }}</button>
-        <strong>{{ t('transitions') }}</strong>
-        <article v-for="(transition, index) in controller.transitions" :key="transition.id" class="transition-card">
-          <label class="transition-row">
-            <select v-model="transition.from"><option v-for="state in controller.states" :key="state.id" :value="state.id">{{ state.name }}</option></select>
-            <span>→</span>
-            <select v-model="transition.to"><option v-for="state in controller.states" :key="state.id" :value="state.id">{{ state.name }}</option></select>
-            <button @click="controller.transitions.splice(index, 1)">×</button>
-          </label>
-          <label><span>{{ t('exitTime') }}</span><input v-model="transition.hasExitTime" type="checkbox"><input v-if="transition.hasExitTime" v-model.number="transition.exitTime" type="number" min="0" max="1" step="0.05"></label>
-          <label><span>{{ t('duration') }}</span><input v-model.number="transition.duration" type="number" min="0" step="0.05"></label>
-          <label v-for="(condition, conditionIndex) in transition.conditions" :key="conditionIndex" class="condition-row">
-            <select v-model="condition.parameter"><option v-for="parameter in controller.parameters" :key="parameter.name" :value="parameter.name">{{ parameter.name }}</option></select>
-            <select v-model="condition.operator"><option v-for="operator in conditionOperators" :key="operator">{{ operator }}</option></select>
-            <input v-if="condition.operator !== 'trigger'" v-model="condition.value" :type="conditionType(condition.parameter)">
-            <button @click="transition.conditions.splice(conditionIndex, 1)">×</button>
-          </label>
-          <button :disabled="!controller.parameters.length" @click="addCondition(transition)">+ {{ t('condition') }}</button>
+        <header><strong>{{ t('layers') }}</strong><button @click="addLayer">+</button></header>
+        <article v-for="(layer, index) in controller.layers" :key="layer.id" class="layer-card">
+          <input v-model="layer.name"><input v-model.number="layer.weight" type="range" min="0" max="1" step="0.05"><select v-model="layer.maskAsset"><option :value="null">{{ t('noMask') }}</option><option v-for="asset in maskAssets" :key="asset.uuid" :value="assetReference(asset.uuid)">{{ asset.name }}</option></select><label>{{ t('additive') }} <input v-model="layer.additive" type="checkbox"></label><button v-if="index" @click="controller.layers.splice(index,1)">×</button>
         </article>
-        <button :disabled="controller.states.length < 2" @click="addTransition">+ {{ t('transition') }}</button>
+        <header><strong>{{ t('parameters') }}</strong><button @click="addParameter">+</button></header>
+        <label v-for="(parameter,index) in controller.parameters" :key="index" class="parameter-row"><input v-model="parameter.name"><select v-model="parameter.type"><option>Bool</option><option>Float</option><option>Integer</option><option>Trigger</option></select><input v-if="parameter.type === 'Float' || parameter.type === 'Integer'" v-model.number="parameter.defaultValue" type="number"><input v-else v-model="parameter.defaultValue" type="checkbox"><button @click="controller.parameters.splice(index,1)">×</button></label>
       </aside>
       <main class="state-machine">
-        <svg aria-hidden="true"><line v-for="transition in controller.transitions" :key="transition.id" v-bind="transitionLine(transition)" /></svg>
-        <button
-          v-for="stateNode in controller.states" :key="stateNode.id"
-          :class="['state-node', { default: controller.defaultState === stateNode.id, selected: selectedStateId === stateNode.id }]"
-          :style="{ left: `${stateNode.x}px`, top: `${stateNode.y}px` }"
-          @click="selectedStateId = stateNode.id"
-        >{{ stateNode.name }}</button>
+        <svg aria-hidden="true"><line v-for="transition in controller.transitions" :key="transition.id" v-bind="transitionLine(transition)"/></svg>
+        <button v-for="state in controller.states" :key="state.id" :class="['state-node',{ selected:selectedStateId===state.id, default:controller.defaultState===state.id }]" :style="{left:`${state.x}px`,top:`${state.y}px`}" @click="selectedStateId=state.id">{{ state.name }}<small v-if="state.blendTree">{{ t('blendTree') }}</small></button>
         <button class="add-state" @click="addState">+ {{ t('state') }}</button>
       </main>
-      <aside v-if="selectedState" class="state-inspector">
-        <label>{{ t('stateName') }} <input v-model="selectedState.name"></label>
-        <label>{{ t('animationClip') }} <select v-model="selectedState.clipAsset"><option :value="null">{{ t('none') }}</option><option v-for="asset in clipAssets" :key="asset.uuid" :value="assetReference(asset.uuid)">{{ asset.name }}</option></select></label>
-        <label>{{ t('speed') }} <input v-model.number="selectedState.speed" type="number" step="0.1"></label>
-        <label>{{ t('defaultState') }} <input :checked="controller.defaultState === selectedState.id" type="checkbox" @change="controller.defaultState = selectedState!.id"></label>
-        <button class="danger" :disabled="controller.states.length <= 1" @click="removeState">{{ t('deleteState') }}</button>
+      <aside class="state-inspector">
+        <template v-if="selectedState">
+          <label>{{ t('stateName') }}<input v-model="selectedState.name"></label>
+          <label>{{ t('subgraph') }}<input v-model="selectedState.subgraph"></label>
+          <label>{{ t('animationClip') }}<select v-model="selectedState.clipAsset"><option :value="null">{{ t('none') }}</option><option v-for="asset in clipAssets" :key="asset.uuid" :value="assetReference(asset.uuid)">{{ asset.name }}</option></select></label>
+          <label>{{ t('speed') }}<input v-model.number="selectedState.speed" type="number" step="0.1"></label>
+          <button @click="toggleBlendTree">{{ selectedState.blendTree ? t('removeBlendTree') : t('addBlendTree') }}</button>
+          <template v-if="selectedState.blendTree"><label>{{ t('blendParameter') }}<select v-model="selectedState.blendTree.parameter"><option v-for="parameter in numericParameters" :key="parameter.name">{{ parameter.name }}</option></select></label><label v-for="(child,index) in selectedState.blendTree.children" :key="index" class="blend-child"><select v-model="child.clipAsset"><option :value="null">{{ t('none') }}</option><option v-for="asset in clipAssets" :key="asset.uuid" :value="assetReference(asset.uuid)">{{ asset.name }}</option></select><input v-model.number="child.threshold" type="number" step="0.1"><button @click="selectedState.blendTree!.children.splice(index,1)">×</button></label><button @click="selectedState.blendTree.children.push({clipAsset:null,threshold:selectedState.blendTree!.children.length,speed:1})">+ {{ t('blendChild') }}</button></template>
+          <button class="danger" :disabled="controller.states.length<=1" @click="removeState">× {{ t('deleteState') }}</button>
+        </template>
+        <hr><strong>{{ t('transitions') }}</strong>
+        <article v-for="(transition,index) in controller.transitions" :key="transition.id" class="transition-card"><select v-model="transition.from"><option v-for="state in controller.states" :key="state.id" :value="state.id">{{ state.name }}</option></select><span>→</span><select v-model="transition.to"><option v-for="state in controller.states" :key="state.id" :value="state.id">{{ state.name }}</option></select><select v-model="transition.interruption"><option v-for="value in interruptions" :key="value">{{ value }}</option></select><label>{{ t('exitTime') }} <input v-model="transition.hasExitTime" type="checkbox"><input v-if="transition.hasExitTime" v-model.number="transition.exitTime" type="number" min="0" max="1" step="0.05"></label><label>{{ t('duration') }} <input v-model.number="transition.duration" type="number" min="0" step="0.05"></label><details><summary>{{ t('conditions') }} ({{ transition.conditions.length }})</summary><label v-for="(condition,conditionIndex) in transition.conditions" :key="conditionIndex" class="condition-row"><select v-model="condition.parameter"><option v-for="parameter in controller.parameters" :key="parameter.name">{{ parameter.name }}</option></select><select v-model="condition.operator"><option v-for="operator in conditionOperators" :key="operator">{{ operator }}</option></select><input v-if="condition.operator !== 'trigger'" v-model="condition.value"><button @click="transition.conditions.splice(conditionIndex,1)">×</button></label><button :disabled="!controller.parameters.length" @click="addCondition(transition)">+ {{ t('condition') }}</button></details><button @click="controller.transitions.splice(index,1)">×</button></article>
+        <button :disabled="controller.states.length<2" @click="addTransition">+ {{ t('transition') }}</button>
+        <button :disabled="!selectedAnimator" @click="previewController">▶ {{ t('livePreview') }}</button>
       </aside>
     </div>
+
+    <div v-else-if="rig" class="rig-workspace">
+      <aside class="rig-list"><header><strong>{{ t('bones') }}</strong><button @click="addBone">+</button></header><button v-for="bone in rig.bones" :key="bone.id" :class="{active:selectedBoneId===bone.id}" @click="selectedBoneId=bone.id"><span>◇</span><strong>{{ bone.name }}</strong><small>{{ bone.parentId || t('rootBone') }}</small></button><header><strong>{{ t('ikChains') }}</strong><button @click="addIk">+</button></header><button v-for="chain in rig.ikChains" :key="chain.id" @click="selectedIkId=chain.id">⌁ {{ chain.name }}</button><header><strong>{{ t('constraints') }}</strong><button @click="addConstraint">+</button></header><button v-for="constraint in rig.constraints" :key="constraint.id" @click="selectedConstraintId=constraint.id">⊣ {{ constraint.type }}</button></aside>
+      <main class="rig-canvas"><svg viewBox="-8 -5 16 10"><g v-for="bone in rig.bones" :key="bone.id" :transform="boneTransform(bone)"><line x1="0" y1="0" :x2="bone.length" y2="0"/><circle cx="0" cy="0" r=".14" :class="{selected:selectedBoneId===bone.id}"/></g><g v-for="chain in rig.ikChains" :key="chain.id" class="ik-target"><circle :cx="chain.target.x" :cy="-chain.target.y" r=".2"/><line :x1="chain.target.x-.28" :y1="-chain.target.y" :x2="chain.target.x+.28" :y2="-chain.target.y"/><line :x1="chain.target.x" :y1="-chain.target.y-.28" :x2="chain.target.x" :y2="-chain.target.y+.28"/></g></svg></main>
+      <aside class="rig-inspector"><template v-if="selectedBone"><strong>{{ t('poseTools') }}</strong><label>{{ t('boneName') }}<input v-model="selectedBone.name"></label><label>{{ t('parentEntity') }}<select v-model="selectedBone.parentId"><option :value="null">{{ t('rootBone') }}</option><option v-for="bone in parentBoneOptions" :key="bone.id" :value="bone.id">{{ bone.name }}</option></select></label><label>{{ t('position') }}<span><input v-model.number="selectedBone.position.x" type="number" step="0.1"><input v-model.number="selectedBone.position.y" type="number" step="0.1"></span></label><label>{{ t('rotationDegrees') }}<input :value="selectedBone.rotation*180/Math.PI" type="number" @change="selectedBone!.rotation=Number(($event.target as HTMLInputElement).value)*Math.PI/180"></label><label>{{ t('boneLength') }}<input v-model.number="selectedBone.length" type="number" min="0.000001" step="0.1"></label><button @click="resetPose">{{ t('resetPose') }}</button></template><template v-if="selectedIk"><strong>{{ t('ikChain') }}</strong><label>{{ t('target') }}<span><input v-model.number="selectedIk.target.x" type="number"><input v-model.number="selectedIk.target.y" type="number"></span></label><label>{{ t('chainLength') }}<input v-model.number="selectedIk.chainLength" type="number" min="1" max="64"></label><label>{{ t('weight') }}<input v-model.number="selectedIk.weight" type="range" min="0" max="1" step="0.05"></label></template></aside>
+    </div>
+
+    <div v-else-if="skin" class="skin-workspace"><aside><strong>{{ t('skin') }}</strong><label>{{ t('rigAsset') }}<select v-model="skin.rigAsset"><option :value="null">{{ t('none') }}</option><option v-for="asset in rigAssets" :key="asset.uuid" :value="assetReference(asset.uuid)">{{ asset.name }}</option></select></label><p>{{ t('weightedDeformationHint') }}</p></aside><main><article v-for="(vertex,index) in skin.vertices" :key="index"><span>#{{ index+1 }}</span><input v-model.number="vertex.position.x" type="number" step="0.05"><input v-model.number="vertex.position.y" type="number" step="0.05"><select v-model="vertex.weights[0].boneId"><option v-for="bone in linkedRig?.bones || []" :key="bone.id">{{ bone.id }}</option></select><input v-model.number="vertex.weights[0].weight" type="number" min="0" max="1" step="0.05"></article></main></div>
+
+    <div v-else-if="timeline" class="sequencer">
+      <header class="transport"><button :class="{active:studio.previewPlaying}" @click="togglePreview">{{ studio.previewPlaying?'❚❚':'▶' }}</button><label>{{ t('playhead') }}<input v-model.number="studio.playhead" type="number" min="0" :max="timeline.duration" :step="1/timeline.frameRate"></label><label>{{ t('duration') }}<input v-model.number="timeline.duration" type="number" min="0.001"></label><select v-model="newTimelineTrackType"><option v-for="type in timelineTypes" :key="type">{{ type }}</option></select><button @click="addTimelineTrack">+ {{ t('track') }}</button></header>
+      <aside><button v-for="(track,index) in timeline.tracks" :key="track.id" :class="{active:selectedTimelineTrack===index}" @click="selectedTimelineTrack=index"><span>{{ track.type }}</span><strong>{{ track.name }}</strong><input v-model="track.muted" type="checkbox" :title="t('mute')"></button></aside>
+      <main><div class="sequencer-ruler" :style="timelineWidthStyle"><i v-for="tick in timelineRulerTicks" :key="tick" :style="{left:`${timeToPixel(tick)}px`}">{{ formatTime(tick) }}</i><b class="playhead" :style="{left:`${timeToPixel(studio.playhead)}px`}"></b></div><article v-for="(track,trackIndex) in timeline.tracks" :key="track.id" class="sequence-lane" :style="timelineWidthStyle"><button v-for="(item,index) in track.clips" :key="item.id" :style="{left:`${timeToPixel(item.start)}px`,width:`${Math.max(20,item.duration*pixelsPerSecond)}px`}" @click="selectedTimelineClip={trackIndex,index}">{{ String(item.value||track.type) }}</button></article></main>
+      <aside class="timeline-inspector"><template v-if="activeTimelineTrack"><label>{{ t('track') }}<input v-model="activeTimelineTrack.name"></label><button @click="addTimelineClip">+ {{ t('timelineClip') }}</button></template><template v-if="activeTimelineClip"><label>{{ t('start') }}<input v-model.number="activeTimelineClip.start" type="number" min="0"></label><label>{{ t('duration') }}<input v-model.number="activeTimelineClip.duration" type="number" min="0.001"></label><label>{{ t('target') }}<select v-model="activeTimelineClip.targetEntityUuid"><option :value="null">{{ t('animationOwner') }}</option><option v-for="entity in entities" :key="entity.uuid" :value="entity.uuid">{{ entity.name }}</option></select></label><label>{{ t('value') }}<input v-model="activeTimelineClip.value"></label><label>{{ t('asset') }}<input v-model="activeTimelineClip.asset"></label><label>{{ t('eventPayload') }}<textarea v-model="activeTimelineClip.payload"></textarea></label></template></aside>
+    </div>
+
+    <div v-else-if="mask" class="mask-workspace"><header><strong>{{ t('animationMask') }}</strong><p>{{ t('animationMaskHint') }}</p></header><label v-for="property in properties" :key="property"><input type="checkbox" :checked="mask.properties.includes(property)" @change="toggleMaskProperty(property)">{{ property }}</label></div>
     <p v-else class="empty">{{ t('selectAnimationAsset') }}</p>
   </section>
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { assetReference, assetState, readTextAsset, updateTextAsset } from '../assets/AssetDatabase'
-import { addEditorLog } from '../store/editor'
-import { pushHistory } from '../store/physics'
 import { t } from '../i18n'
-import {
-  createAnimationClipAsset, createAnimatorControllerAsset, defaultAnimatorController,
-  normalizeAnimationClip, normalizeAnimatorController,
-  type AnimatableProperty, type AnimationClipDocument, type AnimationTrack,
-  type AnimatorControllerDocument, type AnimatorTransition, type TransitionCondition
-} from '../runtime/animation'
+import { addEditorLog } from '../store/editor'
+import { physicsState, pushHistory, toggleSimulation } from '../store/physics'
+import { animationStudioState as studio, setOpenAnimationRecordingDocument } from '../editor/animationStudioState'
+import { createAnimationClipAsset, createAnimationMaskAsset, createAnimatorControllerAsset, defaultAnimatorController, normalizeAnimationClip, normalizeAnimationMask, normalizeAnimatorController, sampleAnimationTrack, type AnimatableProperty, type AnimationClipDocument, type AnimationKeyframe, type AnimationMaskDocument, type AnimationTrack, type AnimatorControllerDocument, type AnimatorTransition, type KeyTangentMode, type TransitionCondition, type TransitionInterruption } from '../runtime/animation'
+import { createRigAsset, createSkinAsset, normalizeRig, normalizeSkin, readRig, type RigBone2D, type RigDocument, type SkinDocument } from '../runtime/rigging'
+import { createTimelineAsset, normalizeTimeline, type TimelineDocument, type TimelineTrackType } from '../runtime/timeline'
+import type { Animator } from '../world/components'
 
-const properties: AnimatableProperty[] = ['Transform.position.x', 'Transform.position.y', 'Transform.rotation', 'SpriteRenderer.opacity', 'UI.opacity']
-const conditionOperators: TransitionCondition['operator'][] = ['==', '!=', '>', '<', '>=', '<=', 'trigger']
-const selectedGuid = ref('')
-const clip = ref<AnimationClipDocument | null>(null)
-const controller = ref<AnimatorControllerDocument | null>(null)
-const selectedStateId = ref('')
-const animationAssets = computed(() => assetState.records.filter(asset => asset.assetType === 'animation' || asset.assetType === 'controller'))
-const clipAssets = computed(() => assetState.records.filter(asset => asset.assetType === 'animation'))
-const imageAssets = computed(() => assetState.records.filter(asset => asset.assetType === 'image'))
-const selectedAsset = computed(() => assetState.records.find(asset => asset.uuid === selectedGuid.value) ?? null)
-const document = computed(() => clip.value ?? controller.value)
-const selectedState = computed(() => controller.value?.states.find(state => state.id === selectedStateId.value) ?? null)
+type StudioDocument = AnimationClipDocument | AnimatorControllerDocument | AnimationMaskDocument | RigDocument | SkinDocument | TimelineDocument
+type StudioAssetType = 'animation'|'controller'|'animationMask'|'rig'|'skin'|'timeline'
+const properties: AnimatableProperty[] = ['Transform.position.x','Transform.position.y','Transform.rotation','Transform.scale.x','Transform.scale.y','SpriteRenderer.opacity','UI.opacity']
+const tangentModes: KeyTangentMode[] = ['Auto','Linear','Constant','Free']
+const interruptions: TransitionInterruption[] = ['None','Source','Destination','SourceThenDestination']
+const conditionOperators: TransitionCondition['operator'][] = ['==','!=','>','<','>=','<=','trigger']
+const timelineTypes: TimelineTrackType[] = ['Animation','Audio','Camera','Event','Visibility','ScriptCall']
+const selectedGuid = ref(''), clip = ref<AnimationClipDocument|null>(null), controller = ref<AnimatorControllerDocument|null>(null), mask = ref<AnimationMaskDocument|null>(null), rig = ref<RigDocument|null>(null), skin = ref<SkinDocument|null>(null), timeline = ref<TimelineDocument|null>(null)
+const selectedTrack = ref(0), selectedStateId = ref(''), selectedBoneId = ref(''), selectedIkId = ref(''), selectedConstraintId = ref(''), selectedTimelineTrack = ref(0), selectedTimelineClip = ref<{trackIndex:number;index:number}|null>(null)
+const pixelsPerSecond=120, selectedTangent=ref<KeyTangentMode>('Auto'), keyClipboard=ref<AnimationKeyframe[]>([]), keyDrag=ref<{track:number;key:number;startX:number;startTime:number}|null>(null), selectionBox=ref<{x1:number;y1:number;x2:number;y2:number}|null>(null), newTimelineTrackType=ref<TimelineTrackType>('Animation')
+const entities=computed(()=>physicsState.world.entities), studioAssets=computed(()=>assetState.records.filter(asset=>['animation','controller','animationMask','rig','skin','timeline'].includes(asset.assetType))), imageAssets=computed(()=>assetState.records.filter(asset=>asset.assetType==='image')), clipAssets=computed(()=>assetState.records.filter(asset=>asset.assetType==='animation')), maskAssets=computed(()=>assetState.records.filter(asset=>asset.assetType==='animationMask')), rigAssets=computed(()=>assetState.records.filter(asset=>asset.assetType==='rig'))
+const document=computed<StudioDocument|null>(()=>clip.value??controller.value??mask.value??rig.value??skin.value??timeline.value), selectedAsset=computed(()=>assetState.records.find(asset=>asset.uuid===selectedGuid.value)??null), activeTrack=computed(()=>clip.value?.tracks[selectedTrack.value]??null), selectedState=computed(()=>controller.value?.states.find(state=>state.id===selectedStateId.value)??null), numericParameters=computed(()=>controller.value?.parameters.filter(parameter=>parameter.type==='Float'||parameter.type==='Integer')??[]), selectedBone=computed(()=>rig.value?.bones.find(bone=>bone.id===selectedBoneId.value)??null), selectedIk=computed(()=>rig.value?.ikChains.find(chain=>chain.id===selectedIkId.value)??null), parentBoneOptions=computed(()=>rig.value?.bones.filter(bone=>bone.id!==selectedBoneId.value)??[]), linkedRig=computed(()=>readRig(skin.value?.rigAsset??null)), activeTimelineTrack=computed(()=>timeline.value?.tracks[selectedTimelineTrack.value]??null), activeTimelineClip=computed(()=>{const value=selectedTimelineClip.value;return value&&timeline.value?timeline.value.tracks[value.trackIndex]?.clips[value.index]??null:null}), selectedAnimator=computed(()=>physicsState.world.entities.find(entity=>entity.getComponent<Animator>('Animator')?.controllerAsset===assetReference(selectedGuid.value))?.getComponent<Animator>('Animator')??null)
+const frameStep=computed(()=>1/Math.max(1,clip.value?.frameRate??60)), clipDuration=computed(()=>Math.max(1,...(clip.value?.tracks.flatMap(track=>track.keyframes.map(key=>key.time))??[1]))), rulerTicks=computed(()=>Array.from({length:Math.ceil(clipDuration.value)+1},(_,index)=>index)), timelineRulerTicks=computed(()=>Array.from({length:Math.ceil(timeline.value?.duration??1)+1},(_,index)=>index)), timelineWidthStyle=computed(()=>({width:`${Math.max(720,(timeline.value?.duration??clipDuration.value)*pixelsPerSecond+80)}px`}))
+const visibleModes=computed(()=>selectedAsset.value?.assetType==='animation'?[{id:'dope' as const,label:'dopeSheet' as const},{id:'curve' as const,label:'curveEditor' as const}]:selectedAsset.value?.assetType==='controller'?[{id:'controller' as const,label:'stateMachine' as const}]:selectedAsset.value?.assetType==='rig'?[{id:'rig' as const,label:'rigging' as const}]:selectedAsset.value?.assetType==='skin'?[{id:'rig' as const,label:'skinning' as const}]:selectedAsset.value?.assetType==='timeline'?[{id:'timeline' as const,label:'timeline' as const}]:selectedAsset.value?.assetType==='animationMask'?[{id:'dope' as const,label:'animationMask' as const}]:[])
+const selectedKeys=computed(()=>{if(!clip.value)return[];return studio.selectedKeyIds.flatMap(id=>{const [track,key]=id.split(':').map(Number),keyframe=clip.value!.tracks[track]?.keyframes[key];return keyframe?[{track,key,keyframe}]:[]})})
+const curveRange=computed(()=>{const values=activeTrack.value?.keyframes.map(key=>key.value)??[0,1],min=Math.min(...values),max=Math.max(...values);return{min:min===max?min-1:min,max:min===max?max+1:max}}), curvePoints=computed(()=>{if(!activeTrack.value)return'';const duration=Math.max(frameStep.value,clipDuration.value);return Array.from({length:240},(_,index)=>{const time=index/239*duration,value=sampleAnimationTrack(activeTrack.value!.keyframes,time)??0;return`${time/duration*1000},${curveY(value)}`}).join(' ')})
+const boxStyle=computed(()=>selectionBox.value?{left:`${Math.min(selectionBox.value.x1,selectionBox.value.x2)}px`,top:`${Math.min(selectionBox.value.y1,selectionBox.value.y2)}px`,width:`${Math.abs(selectionBox.value.x2-selectionBox.value.x1)}px`,height:`${Math.abs(selectionBox.value.y2-selectionBox.value.y1)}px`}:{})
 
-watch(selectedGuid, guid => {
-  clip.value = null; controller.value = null; selectedStateId.value = ''
-  const asset = assetState.records.find(candidate => candidate.uuid === guid)
-  const source = readTextAsset(guid)
-  if (!asset || !source) return
-  try {
-    if (asset.assetType === 'animation') clip.value = normalizeAnimationClip(JSON.parse(source))
-    if (asset.assetType === 'controller') {
-      controller.value = normalizeAnimatorController(JSON.parse(source))
-      selectedStateId.value = controller.value.states[0]?.id ?? ''
-    }
-  } catch { /* Invalid documents remain closed and cannot overwrite the source. */ }
-}, { immediate: true })
-
-function newClip() { const asset = createAnimationClipAsset(t('newAnimationName')); selectedGuid.value = asset.uuid; assetState.selectedGuid = asset.uuid; pushHistory('Create animation clip') }
-function newController() { const asset = createAnimatorControllerAsset(t('newControllerName')); selectedGuid.value = asset.uuid; assetState.selectedGuid = asset.uuid; pushHistory('Create animator controller') }
-function save() {
-  const asset = selectedAsset.value; if (!asset || !document.value) return
-  const normalized = asset.assetType === 'animation' ? normalizeAnimationClip(document.value) : normalizeAnimatorController(document.value)
-  if (!updateTextAsset(asset.uuid, JSON.stringify(normalized, null, 2))) return
-  if (asset.assetType === 'animation') clip.value = normalized as AnimationClipDocument
-  else controller.value = normalized as AnimatorControllerDocument
-  pushHistory('Edit animation asset', `animation:${asset.uuid}`); addEditorLog(t('animationSaved', { name: asset.name }), 'Editor')
-}
-function addSpriteFrame() { clip.value?.spriteFrames.push({ spriteAsset: null, duration: 1 / Math.max(1, clip.value.frameRate) }) }
-function addTrack() { clip.value?.tracks.push({ property: 'Transform.position.x', keyframes: [{ time: 0, value: 0 }] }) }
-function nextKeyTime(track: AnimationTrack) { return (track.keyframes[track.keyframes.length - 1]?.time ?? -1 / (clip.value?.frameRate ?? 12)) + 1 / (clip.value?.frameRate ?? 12) }
-function addParameter() { controller.value?.parameters.push({ name: `parameter_${(controller.value?.parameters.length ?? 0) + 1}`, type: 'Bool', defaultValue: false }) }
-function addState() {
-  const document = controller.value; if (!document) return
-  const id = `state_${Date.now().toString(36)}`
-  document.states.push({ id, name: `State ${document.states.length + 1}`, clipAsset: null, speed: 1, x: 80 + (document.states.length % 4) * 150, y: 80 + Math.floor(document.states.length / 4) * 90 })
-  selectedStateId.value = id
-}
-function removeState() {
-  const document = controller.value; const state = selectedState.value
-  if (!document || !state || document.states.length <= 1) return
-  document.states = document.states.filter(candidate => candidate.id !== state.id)
-  document.transitions = document.transitions.filter(transition => transition.from !== state.id && transition.to !== state.id)
-  if (document.defaultState === state.id) document.defaultState = document.states[0].id
-  selectedStateId.value = document.states[0].id
-}
-function addTransition() {
-  const document = controller.value; if (!document || document.states.length < 2) return
-  document.transitions.push({ id: `transition_${Date.now().toString(36)}`, from: document.states[0].id, to: document.states[1].id, hasExitTime: true, exitTime: 1, duration: .1, conditions: [] })
-}
-function addCondition(transition: AnimatorTransition) {
-  const parameter = controller.value?.parameters[0]; if (!parameter) return
-  transition.conditions.push({ parameter: parameter.name, operator: parameter.type === 'Trigger' ? 'trigger' : '==', value: parameter.defaultValue })
-}
-function conditionType(parameterName: string) { return controller.value?.parameters.find(parameter => parameter.name === parameterName)?.type === 'Bool' ? 'checkbox' : 'number' }
-function transitionLine(transition: AnimatorTransition) {
-  const document = controller.value ?? defaultAnimatorController(); const from = document.states.find(state => state.id === transition.from); const to = document.states.find(state => state.id === transition.to)
-  return { x1: (from?.x ?? 0) + 55, y1: (from?.y ?? 0) + 18, x2: (to?.x ?? 0) + 55, y2: (to?.y ?? 0) + 18 }
-}
+watch(selectedGuid,guid=>{clip.value=controller.value=mask.value=rig.value=skin.value=timeline.value=null;studio.selectedKeyIds.splice(0);studio.selectedAssetGuid=guid;const asset=assetState.records.find(item=>item.uuid===guid),source=readTextAsset(guid);if(!asset||!source)return;try{const raw=JSON.parse(source);if(asset.assetType==='animation'){clip.value=normalizeAnimationClip(raw);studio.view='dope'}else if(asset.assetType==='controller'){controller.value=normalizeAnimatorController(raw);selectedStateId.value=controller.value.states[0]?.id??'';studio.view='controller'}else if(asset.assetType==='animationMask'){mask.value=normalizeAnimationMask(raw);studio.view='dope'}else if(asset.assetType==='rig'){rig.value=normalizeRig(raw);selectedBoneId.value=rig.value.bones[0]?.id??'';studio.view='rig'}else if(asset.assetType==='skin'){skin.value=normalizeSkin(raw);studio.view='rig'}else if(asset.assetType==='timeline'){timeline.value=normalizeTimeline(raw);studio.view='timeline'}}catch{/* Invalid source stays untouched. */}},{immediate:true})
+watch([selectedGuid,clip],([guid,document])=>setOpenAnimationRecordingDocument(guid,document),{immediate:true})
+watch(()=>assetState.selectedGuid,guid=>{if(guid&&studioAssets.value.some(asset=>asset.uuid===guid))selectedGuid.value=guid},{immediate:true})
+let previewFrame=0,lastPreview=0
+function previewLoop(time:number){if(!studio.previewPlaying)return;const delta=Math.min(.1,(time-lastPreview)/1000);lastPreview=time;const duration=timeline.value?.duration??clipDuration.value;studio.playhead=duration>0?(studio.playhead+delta)%duration:0;previewFrame=requestAnimationFrame(previewLoop)}
+function togglePreview(){studio.previewPlaying=!studio.previewPlaying;if(studio.previewPlaying){lastPreview=performance.now();previewFrame=requestAnimationFrame(previewLoop)}else cancelAnimationFrame(previewFrame)}
+onBeforeUnmount(()=>{cancelAnimationFrame(previewFrame);setOpenAnimationRecordingDocument('',null)})
+function newAsset(type:StudioAssetType){const asset=type==='animation'?createAnimationClipAsset(t('newAnimationName')):type==='controller'?createAnimatorControllerAsset(t('newControllerName')):type==='animationMask'?createAnimationMaskAsset(t('newMaskName')):type==='rig'?createRigAsset(t('newRigName')):type==='skin'?createSkinAsset(t('newSkinName')):createTimelineAsset(t('newTimelineName'));selectedGuid.value=asset.uuid;assetState.selectedGuid=asset.uuid;pushHistory(`Create ${type}`)}
+function save(){const asset=selectedAsset.value;if(!asset||!document.value)return;let normalized:StudioDocument=document.value;if(asset.assetType==='animation')normalized=normalizeAnimationClip(document.value);else if(asset.assetType==='controller')normalized=normalizeAnimatorController(document.value);else if(asset.assetType==='animationMask')normalized=normalizeAnimationMask(document.value);else if(asset.assetType==='rig')normalized=normalizeRig(document.value);else if(asset.assetType==='skin')normalized=normalizeSkin(document.value);else if(asset.assetType==='timeline')normalized=normalizeTimeline(document.value);if(updateTextAsset(asset.uuid,JSON.stringify(normalized,null,2))){pushHistory('Edit animation asset',`animation:${asset.uuid}`);addEditorLog(t('animationSaved',{name:asset.name}),'Editor')}}
+function addTrack(){clip.value?.tracks.push({property:'Transform.position.x',targetEntityUuid:physicsState.world.entities.find(entity=>entity.id===physicsState.selectedEntityId)?.uuid??null,keyframes:[newKey()]});selectedTrack.value=(clip.value?.tracks.length??1)-1}function newKey():AnimationKeyframe{return{time:studio.snapEnabled?Math.round(studio.playhead/frameStep.value)*frameStep.value:studio.playhead,value:0,tangentMode:'Auto',inTangent:0,outTangent:0}}function addKey(track:AnimationTrack){track.keyframes.push(newKey());track.keyframes.sort((a,b)=>a.time-b.time)}function removeActiveTrack(){clip.value?.tracks.splice(selectedTrack.value,1);selectedTrack.value=Math.max(0,selectedTrack.value-1)}function addEvent(){clip.value?.events.push({time:studio.playhead,signal:'animation.event',payload:''})}function addSpriteFrame(){clip.value?.spriteFrames.push({spriteAsset:null,duration:frameStep.value})}
+function keyId(track:number,key:number){return`${track}:${key}`}function trackId(track:AnimationTrack,index:number){return`${track.targetEntityUuid??'owner'}:${track.property}:${index}`}function isKeySelected(track:number,key:number){return studio.selectedKeyIds.includes(keyId(track,key))}function selectKey(track:number,key:number,event:MouseEvent|PointerEvent){const id=keyId(track,key);if(!(event.ctrlKey||event.metaKey||event.shiftKey))studio.selectedKeyIds.splice(0);if(studio.selectedKeyIds.includes(id))studio.selectedKeyIds.splice(studio.selectedKeyIds.indexOf(id),1);else studio.selectedKeyIds.push(id);selectedTrack.value=track;selectedTangent.value=clip.value!.tracks[track].keyframes[key].tangentMode}
+function copyKeys(){keyClipboard.value=selectedKeys.value.map(item=>JSON.parse(JSON.stringify(item.keyframe)) as AnimationKeyframe)}function pasteKeys(){const track=activeTrack.value;if(!track)return;const start=Math.min(...keyClipboard.value.map(key=>key.time));for(const source of keyClipboard.value)track.keyframes.push({...source,time:studio.playhead+source.time-start});track.keyframes.sort((a,b)=>a.time-b.time)}function applyTangent(){selectedKeys.value.forEach(item=>item.keyframe.tangentMode=selectedTangent.value)}function beginKeyDrag(track:number,key:number,event:PointerEvent){selectKey(track,key,event);keyDrag.value={track,key,startX:event.clientX,startTime:clip.value!.tracks[track].keyframes[key].time};window.addEventListener('pointermove',moveKeyDrag);window.addEventListener('pointerup',finishKeyDrag,{once:true})}function moveKeyDrag(event:PointerEvent){if(!keyDrag.value||!clip.value)return;let time=keyDrag.value.startTime+(event.clientX-keyDrag.value.startX)/pixelsPerSecond;if(studio.snapEnabled)time=Math.round(time/frameStep.value)*frameStep.value;clip.value.tracks[keyDrag.value.track].keyframes[keyDrag.value.key].time=Math.max(0,time)}function finishKeyDrag(){window.removeEventListener('pointermove',moveKeyDrag);keyDrag.value=null;clip.value?.tracks.forEach(track=>track.keyframes.sort((a,b)=>a.time-b.time))}
+function beginBoxSelection(event:PointerEvent){const target=event.currentTarget as HTMLElement,rect=target.getBoundingClientRect();selectionBox.value={x1:event.clientX-rect.left+target.scrollLeft,y1:event.clientY-rect.top+target.scrollTop,x2:event.clientX-rect.left+target.scrollLeft,y2:event.clientY-rect.top+target.scrollTop};studio.selectedKeyIds.splice(0)}function moveBoxSelection(event:PointerEvent){if(!selectionBox.value)return;const target=event.currentTarget as HTMLElement,rect=target.getBoundingClientRect();selectionBox.value.x2=event.clientX-rect.left+target.scrollLeft;selectionBox.value.y2=event.clientY-rect.top+target.scrollTop}function finishBoxSelection(){const box=selectionBox.value;if(!box||!clip.value){selectionBox.value=null;return}const left=Math.min(box.x1,box.x2),right=Math.max(box.x1,box.x2),top=Math.min(box.y1,box.y2)-30,bottom=Math.max(box.y1,box.y2)-30;clip.value.tracks.forEach((track,ti)=>track.keyframes.forEach((key,ki)=>{const x=timeToPixel(key.time),y=ti*42+21;if(x>=left&&x<=right&&y>=top&&y<=bottom)studio.selectedKeyIds.push(keyId(ti,ki))}));selectionBox.value=null}
+function onKeyDown(event:KeyboardEvent){if((event.ctrlKey||event.metaKey)&&event.key.toLowerCase()==='c'){event.preventDefault();copyKeys()}else if((event.ctrlKey||event.metaKey)&&event.key.toLowerCase()==='v'){event.preventDefault();pasteKeys()}else if(event.key==='Delete'&&clip.value){for(const item of [...selectedKeys.value].sort((a,b)=>b.key-a.key))clip.value.tracks[item.track].keyframes.splice(item.key,1);studio.selectedKeyIds.splice(0)}}function snapPlayhead(){if(studio.snapEnabled)studio.playhead=Math.round(studio.playhead/frameStep.value)*frameStep.value}function timeToPixel(time:number){return 40+time*pixelsPerSecond}function formatTime(time:number){return`${Number(time.toFixed(3))}s`}function targetName(uuid:string|null){return uuid?entities.value.find(entity=>entity.uuid===uuid)?.name??t('missingTarget'):t('animationOwner')}function curveX(time:number){return time/Math.max(frameStep.value,clipDuration.value)*1000}function curveY(value:number){return 380-(value-curveRange.value.min)/(curveRange.value.max-curveRange.value.min)*360}function curvePointer(event:PointerEvent){const svg=event.currentTarget as SVGSVGElement,rect=svg.getBoundingClientRect();studio.playhead=Math.max(0,(event.clientX-rect.left)/rect.width*clipDuration.value);snapPlayhead()}
+function addParameter(){controller.value?.parameters.push({name:`parameter_${(controller.value?.parameters.length??0)+1}`,type:'Float',defaultValue:0})}function addLayer(){if(!controller.value)return;controller.value.layers.push({id:`layer_${Date.now().toString(36)}`,name:`Layer ${controller.value.layers.length+1}`,defaultState:controller.value.defaultState,weight:1,additive:false,maskAsset:null})}function addState(){const value=controller.value;if(!value)return;const id=`state_${Date.now().toString(36)}`;value.states.push({id,name:`State ${value.states.length+1}`,clipAsset:null,speed:1,x:90+(value.states.length%4)*150,y:80+Math.floor(value.states.length/4)*90,subgraph:'Base',blendTree:null});selectedStateId.value=id}function removeState(){const value=controller.value,state=selectedState.value;if(!value||!state||value.states.length<=1)return;value.states=value.states.filter(item=>item.id!==state.id);value.transitions=value.transitions.filter(item=>item.from!==state.id&&item.to!==state.id);value.layers.forEach(layer=>{if(layer.defaultState===state.id)layer.defaultState=value.states[0].id});if(value.defaultState===state.id)value.defaultState=value.states[0].id;selectedStateId.value=value.states[0].id}function addTransition(){const value=controller.value;if(!value||value.states.length<2)return;value.transitions.push({id:`transition_${Date.now().toString(36)}`,from:value.states[0].id,to:value.states[1].id,hasExitTime:true,exitTime:1,duration:.1,interruption:'SourceThenDestination',conditions:[]})}function transitionLine(transition:AnimatorTransition){const value=controller.value??defaultAnimatorController(),from=value.states.find(state=>state.id===transition.from),to=value.states.find(state=>state.id===transition.to);return{x1:(from?.x??0)+55,y1:(from?.y??0)+18,x2:(to?.x??0)+55,y2:(to?.y??0)+18}}function toggleBlendTree(){const state=selectedState.value;if(!state)return;state.blendTree=state.blendTree?null:{parameter:numericParameters.value[0]?.name??'',children:[{clipAsset:state.clipAsset,threshold:0,speed:1}]} }function previewController(){const animator=selectedAnimator.value;if(!animator||!selectedState.value)return;toggleSimulation(true);animator.currentState=selectedState.value.id}
+function addBone(){if(!rig.value)return;const parent=selectedBone.value,id=`bone_${Date.now().toString(36)}`;rig.value.bones.push({id,name:`Bone ${rig.value.bones.length+1}`,parentId:parent?.id??null,position:{x:parent?.length??1,y:0},rotation:0,scale:{x:1,y:1},length:1});selectedBoneId.value=id}function addIk(){if(!rig.value||!selectedBone.value)return;const id=`ik_${Date.now().toString(36)}`;rig.value.ikChains.push({id,name:`IK ${rig.value.ikChains.length+1}`,endBoneId:selectedBone.value.id,chainLength:2,target:{x:2,y:0},weight:1,iterations:8});selectedIkId.value=id}function addConstraint(){if(!rig.value||!selectedBone.value)return;const id=`constraint_${Date.now().toString(36)}`;rig.value.constraints.push({id,boneId:selectedBone.value.id,type:'RotationLimit',targetBoneId:null,minimum:{x:-Math.PI,y:-1e6},maximum:{x:Math.PI,y:1e6},weight:1});selectedConstraintId.value=id}function boneTransform(bone:RigBone2D){return`translate(${bone.position.x} ${-bone.position.y}) rotate(${-bone.rotation*180/Math.PI}) scale(${bone.scale.x} ${bone.scale.y})`}function resetPose(){if(selectedBone.value){selectedBone.value.rotation=0;selectedBone.value.scale={x:1,y:1}}}
+function addTimelineTrack(){if(!timeline.value)return;timeline.value.tracks.push({id:`track_${Date.now().toString(36)}`,name:newTimelineTrackType.value,type:newTimelineTrackType.value,muted:false,clips:[]});selectedTimelineTrack.value=timeline.value.tracks.length-1}function addTimelineClip(){const track=activeTimelineTrack.value;if(!track)return;track.clips.push({id:`clip_${Date.now().toString(36)}`,start:studio.playhead,duration:1,asset:null,targetEntityUuid:null,value:track.type==='Visibility'?true:'',payload:''});selectedTimelineClip.value={trackIndex:selectedTimelineTrack.value,index:track.clips.length-1}}function toggleMaskProperty(property:AnimatableProperty){if(!mask.value)return;const index=mask.value.properties.indexOf(property);if(index>=0)mask.value.properties.splice(index,1);else mask.value.properties.push(property)}
+function addCondition(transition:AnimatorTransition){const parameter=controller.value?.parameters[0];if(parameter)transition.conditions.push({parameter:parameter.name,operator:parameter.type==='Trigger'?'trigger':'==',value:parameter.defaultValue})}
 </script>
 
 <style scoped>
-.animation-editor { height: 100%; min-height: 150px; display: flex; flex-direction: column; overflow: hidden; }.animation-toolbar { min-height: 38px; padding: 5px 8px; display: flex; align-items: center; gap: 6px; border-bottom: 1px solid var(--border-subtle); }.animation-toolbar span { flex: 1; }.animation-toolbar button, .animation-toolbar select, .clip-editor button, .controller-editor button { min-height: 27px; border: 1px solid var(--border-subtle); border-radius: 7px; color: var(--text-secondary); background: var(--surface-2); font-size: 9px; }.animation-toolbar button.primary { color: var(--accent-contrast); border-color: var(--accent); background: var(--accent); }.clip-editor, .controller-editor { flex: 1; min-height: 0; display: grid; grid-template-columns: 190px 1fr; }.clip-editor > aside, .controller-sidebar, .state-inspector { padding: 8px; display: flex; flex-direction: column; gap: 7px; overflow: auto; border-right: 1px solid var(--border-subtle); background: var(--surface-2); }.clip-editor aside label, .controller-sidebar label, .state-inspector label { display: flex; align-items: center; gap: 5px; color: var(--text-muted); font-size: 9px; }.clip-editor aside label input { margin-left: auto; max-width: 82px; }.timeline { min-width: 0; overflow: auto; }.time-ruler { min-width: 720px; height: 23px; display: grid; grid-template-columns: repeat(12, 1fr); border-bottom: 1px solid var(--border-subtle); color: var(--text-muted); font-size: 8px; }.time-ruler i { padding: 5px; border-left: 1px solid var(--border-subtle); font-style: normal; }.timeline-row { min-width: 720px; min-height: 51px; padding: 6px; display: grid; grid-template-columns: 150px 1fr; gap: 7px; border-bottom: 1px solid var(--border-subtle); }.frame-strip, .keyframes { display: flex; align-items: center; gap: 5px; overflow-x: auto; }.sprite-frame, .keyframes label { padding: 3px; display: flex; align-items: center; gap: 3px; border: 1px solid var(--border-subtle); border-radius: 6px; background: var(--surface-2); }.sprite-frame select { width: 90px; }.sprite-frame input, .keyframes input { width: 54px; }.controller-editor { grid-template-columns: 230px minmax(280px, 1fr) 190px; }.controller-sidebar strong { margin-top: 5px; color: var(--text-primary); font-size: 9px; }.controller-sidebar label { display: grid; grid-template-columns: 1fr 66px 45px 22px; }.controller-sidebar .transition-row { grid-template-columns: 1fr auto 1fr 22px; }.transition-card { padding: 5px; display: grid; gap: 4px; border: 1px solid var(--border-subtle); border-radius: 7px; }.transition-card > label { padding: 0; }.transition-card .condition-row { grid-template-columns: 1fr 50px 45px 22px; }.state-machine { position: relative; min-height: 180px; overflow: auto; background-image: radial-gradient(var(--border-subtle) 1px, transparent 1px); background-size: 16px 16px; }.state-machine svg { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }.state-machine line { stroke: var(--accent); stroke-width: 2; }.state-node { position: absolute; width: 110px; height: 36px; }.state-node.default { border-color: var(--success); }.state-node.selected { outline: 2px solid var(--accent); }.add-state { position: sticky; top: 8px; left: 8px; margin: 8px; }.state-inspector { border: 0; border-left: 1px solid var(--border-subtle); }.state-inspector label { align-items: stretch; flex-direction: column; }.danger { color: var(--danger) !important; }.empty { padding: 18px; color: var(--text-muted); font-size: 10px; }
+.animation-studio{height:100%;min-width:0;min-height:180px;display:flex;flex-direction:column;overflow:hidden;color:var(--text-secondary);background:var(--surface-1)}button,select,input,textarea{min-width:0}.studio-toolbar,.transport{min-height:43px;padding:6px 8px;display:flex;align-items:center;gap:6px;border-bottom:1px solid var(--border-subtle);background:var(--surface-1)}.studio-toolbar button,.transport button,.studio-modes button,.animation-studio select{min-height:30px;padding:0 9px;border:1px solid var(--border-subtle);border-radius:7px;color:var(--text-secondary);background:var(--surface-2);font-size:11px}.create-menu{display:flex;gap:5px;flex-wrap:wrap}.primary{color:var(--accent-contrast)!important;border-color:var(--accent)!important;background:var(--accent)!important}.asset-select{width:min(300px,28vw)}.toolbar-spacer{flex:1}.studio-modes{min-height:34px;padding:3px 8px;display:flex;gap:4px;border-bottom:1px solid var(--border-subtle);background:var(--surface-2)}.studio-modes button{min-height:27px;border-color:transparent;background:transparent}.studio-modes button.active,.transport button.active{color:var(--accent);border-color:var(--accent);background:var(--accent-soft)}.transport .record{color:#fff;border-color:#df3e4f;background:#b92537}.transport label{display:flex;align-items:center;gap:5px;color:var(--text-muted);font-size:10px}.transport label input[type=number]{width:76px;height:29px}.clip-workspace{flex:1;min-height:0;display:grid;grid-template-columns:210px minmax(360px,1fr) 220px;grid-template-rows:auto minmax(0,1fr);overflow:hidden}.clip-workspace>.transport{grid-column:1/-1}.track-list,.clip-inspector,.controller-sidebar,.state-inspector,.rig-list,.rig-inspector,.timeline-inspector{min-width:0;padding:8px;overflow:auto;background:var(--surface-2)}.track-list{border-right:1px solid var(--border-subtle)}.clip-inspector,.state-inspector,.rig-inspector,.timeline-inspector{border-left:1px solid var(--border-subtle)}.track-list header,.controller-sidebar header,.rig-list header{min-height:30px;display:flex;align-items:center;justify-content:space-between}.track-list>button,.rig-list>button{width:100%;min-height:45px;padding:5px 8px;display:flex;flex-direction:column;align-items:flex-start;border:1px solid transparent;border-radius:7px;color:var(--text-muted);background:transparent;text-align:left}.track-list>button.active,.rig-list>button.active{border-color:var(--accent);background:var(--accent-soft)}.track-list small,.rig-list small{font-size:9px}.special-track{min-height:31px!important;justify-content:center!important}.dope-sheet,.curve-editor{position:relative;min-width:0;min-height:0;overflow:auto;background-color:var(--bg-canvas);background-image:linear-gradient(var(--border-subtle) 1px,transparent 1px);background-size:100% 42px}.time-ruler,.sequencer-ruler{position:sticky;top:0;z-index:3;height:31px;border-bottom:1px solid var(--border-subtle);background:var(--surface-1)}.time-ruler i,.sequencer-ruler i{position:absolute;top:0;height:100%;padding:7px 4px;border-left:1px solid var(--border-subtle);color:var(--text-muted);font-size:9px;font-style:normal}.playhead{position:absolute;top:0;bottom:0;width:2px;background:#ef4d62;box-shadow:0 0 7px #ef4d62}.track-lanes{position:relative}.track-lane,.event-lane{position:relative;height:42px;border-bottom:1px solid var(--border-subtle)}.key-dot{position:absolute;top:14px;width:14px;height:14px;padding:0;transform:translateX(-7px) rotate(45deg);border:2px solid var(--surface-1);border-radius:3px;background:var(--accent)}.key-dot.selected{outline:2px solid var(--warning);outline-offset:2px}.event-key{position:absolute;top:9px;transform:translateX(-8px);border:0;color:var(--warning);background:transparent}.selection-box{position:absolute;z-index:5;pointer-events:none;border:1px solid var(--accent);background:var(--accent-soft)}.curve-editor{display:flex}.curve-editor svg{min-width:620px;flex:1}.curve-grid line{stroke:var(--border-subtle);stroke-width:1}.curve-editor polyline{fill:none;stroke:var(--accent);stroke-width:3}.curve-editor circle{fill:var(--surface-1);stroke:var(--accent);stroke-width:3}.curve-editor circle.selected{fill:var(--warning)}.key-inspector{width:180px;padding:10px;display:flex;flex-direction:column;gap:8px;border-left:1px solid var(--border-subtle);background:var(--surface-2)}.clip-inspector label,.key-inspector label,.state-inspector label,.rig-inspector label,.timeline-inspector label,.skin-workspace label{display:flex;flex-direction:column;gap:4px;color:var(--text-muted);font-size:10px}.clip-inspector button,.state-inspector button,.rig-inspector button,.timeline-inspector button{min-height:29px;margin-top:5px;border:1px solid var(--border-subtle);border-radius:7px;color:var(--text-secondary);background:var(--surface-3)}details{margin-top:9px;border-top:1px solid var(--border-subtle)}summary{padding:8px 0;cursor:pointer}.event-edit,.frame-edit,.blend-child{margin-bottom:6px;padding:5px;border:1px solid var(--border-subtle);border-radius:7px}.event-edit{display:grid!important;grid-template-columns:60px 1fr 1fr 24px}.frame-edit{display:grid!important;grid-template-columns:1fr 60px 24px}.danger{color:var(--danger)!important}.controller-workspace,.rig-workspace,.skin-workspace,.sequencer{flex:1;min-height:0;display:grid;grid-template-columns:220px minmax(340px,1fr) 250px;overflow:hidden}.controller-sidebar{border-right:1px solid var(--border-subtle)}.layer-card,.parameter-row,.transition-card{margin-bottom:6px;padding:6px;display:grid;gap:5px;border:1px solid var(--border-subtle);border-radius:8px;background:var(--surface-1)}.layer-card{grid-template-columns:1fr auto}.parameter-row{grid-template-columns:1fr 72px 25px}.state-machine{position:relative;min-height:0;overflow:auto;background-color:var(--bg-canvas);background-image:radial-gradient(var(--border-subtle) 1px,transparent 1px);background-size:18px 18px}.state-machine svg{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}.state-machine line{stroke:var(--accent);stroke-width:2}.state-node{position:absolute;width:120px;min-height:42px;border:1px solid var(--border-strong);border-radius:9px;color:var(--text-primary);background:var(--surface-2)}.state-node small{display:block;color:var(--accent);font-size:8px}.state-node.default{border-color:var(--success)}.state-node.selected{outline:2px solid var(--accent)}.add-state{position:sticky;top:8px;left:8px;margin:8px}.transition-card{grid-template-columns:1fr auto 1fr}.transition-card label,.transition-card>select:nth-of-type(3),.transition-card>button{grid-column:1/-1}.rig-canvas{min-height:0;background:var(--bg-canvas)}.rig-canvas svg{width:100%;height:100%}.rig-canvas line{stroke:var(--accent);stroke-width:.09;stroke-linecap:round}.rig-canvas circle{fill:var(--surface-1);stroke:var(--accent);stroke-width:.06}.rig-canvas circle.selected{fill:var(--warning)}.ik-target{stroke:var(--warning);fill:none}.rig-inspector label span,.key-inspector label span{display:flex;gap:4px}.rig-inspector label span input,.key-inspector label span input{width:50%}.skin-workspace{grid-template-columns:220px 1fr}.skin-workspace aside{padding:12px;border-right:1px solid var(--border-subtle);background:var(--surface-2)}.skin-workspace main{padding:10px;overflow:auto}.skin-workspace article{min-height:38px;display:grid;grid-template-columns:36px 70px 70px 1fr 70px;gap:5px;align-items:center;border-bottom:1px solid var(--border-subtle)}.sequencer{grid-template-rows:auto minmax(0,1fr)}.sequencer>.transport{grid-column:1/-1}.sequencer>aside:not(.timeline-inspector){padding:8px;overflow:auto;border-right:1px solid var(--border-subtle);background:var(--surface-2)}.sequencer>aside>button{width:100%;min-height:42px;display:flex;flex-direction:column;align-items:flex-start;border:1px solid transparent;border-radius:7px;background:transparent}.sequencer>aside>button.active{border-color:var(--accent);background:var(--accent-soft)}.sequencer main{min-width:0;overflow:auto}.sequence-lane{position:relative;height:42px;border-bottom:1px solid var(--border-subtle)}.sequence-lane button{position:absolute;top:6px;height:30px;overflow:hidden;border:1px solid var(--accent);border-radius:6px;color:var(--accent);background:var(--accent-soft);text-overflow:ellipsis;white-space:nowrap}.timeline-inspector textarea{min-height:60px;resize:vertical}.mask-workspace{padding:18px;overflow:auto}.mask-workspace header{margin-bottom:12px}.mask-workspace label{min-height:36px;display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--border-subtle)}.empty{margin:auto;color:var(--text-muted)}
+.parameter-row{grid-template-columns:1fr 72px 60px 25px}.condition-row{display:grid!important;grid-template-columns:1fr 52px 58px 24px!important;gap:4px!important}.transition-card details{grid-column:1/-1}
+@media(max-width:900px){.studio-toolbar{align-items:stretch;flex-wrap:wrap}.create-menu{width:100%}.create-menu button{flex:1 1 112px;padding-inline:5px}.asset-select{width:min(100%,320px);flex:1}.clip-workspace{grid-template-columns:170px minmax(300px,1fr)}.clip-inspector{display:none}.controller-workspace,.rig-workspace,.sequencer{grid-template-columns:180px minmax(320px,1fr)}.state-inspector,.rig-inspector,.timeline-inspector{display:none}}
 </style>

@@ -2,9 +2,21 @@
   <div class="config-wrapper" :style="{ width: `${panelWidth}px` }">
     <div class="resize-handle" @mousedown="startResize"></div>
     <aside class="config-panel" :class="{ runtime: !canEdit }">
+      <div v-if="selectedEntities.length" class="inspector-sticky">
+        <header class="inspector-header">
+          <span class="eyebrow">{{ t('entitySettings') }}</span>
+          <h3>{{ selectedEntities.length > 1 ? t('multiSelected', { count: selectedEntities.length }) : `${selectedEntity?.name}_${selectedEntity?.id}` }}</h3>
+        </header>
+        <div class="inspector-search-row">
+          <input v-model="estate.inspectorSearch" type="search" :placeholder="t('searchInspector')">
+          <button v-if="selectedEntity && addableComponents.length" class="add-component-trigger" @click="openComponentPicker">+ {{ t('addComponent') }}</button>
+        </div>
+        <nav class="inspector-categories" :aria-label="t('inspectorCategories')">
+          <button v-for="category in inspectorCategories" :key="category.id" :class="{ active: estate.inspectorCategory === category.id }" @click="estate.inspectorCategory = category.id">{{ t(category.label) }}</button>
+        </nav>
+      </div>
       <div v-if="selectedEntities.length > 1" class="settings-content multi-inspector">
-        <header class="inspector-header"><span class="eyebrow">{{ t('entitySettings') }}</span><h3>{{ t('multiSelected', { count: selectedEntities.length }) }}</h3></header>
-        <InspectorSection :title="t('sharedProperties')" open>
+        <InspectorSection :title="t('sharedProperties')" category="general" open>
           <PropertyRow :label="t('entityEnabled')"><button class="batch-toggle" @click="toggleAll('enabled')">{{ sharedBoolean('enabled') }}</button></PropertyRow>
           <PropertyRow :label="t('entityVisible')"><button class="batch-toggle" @click="toggleAll('editorVisible')">{{ sharedBoolean('editorVisible') }}</button></PropertyRow>
           <PropertyRow :label="t('entityLocked')"><button class="batch-toggle" @click="toggleAll('editorLocked')">{{ sharedBoolean('editorLocked') }}</button></PropertyRow>
@@ -14,9 +26,7 @@
         <p class="runtime-note">{{ t('runtimeIsolation') }}</p>
       </div>
       <div v-else-if="selectedEntity" class="settings-content" @change="onConfigChange">
-        <header class="inspector-header"><span class="eyebrow">{{ t('entitySettings') }}</span><h3>{{ selectedEntity.name }}_<small>{{ selectedEntity.id }}</small></h3></header>
-
-        <InspectorSection :title="t('entitySettings')" open>
+        <InspectorSection :title="t('entitySettings')" category="general" open>
           <PropertyRow :label="t('entityEnabled')"><ToggleSwitch v-model="selectedEntity.enabled" /></PropertyRow>
           <PropertyRow :label="t('entityVisible')"><ToggleSwitch v-model="selectedEntity.editorVisible" /></PropertyRow>
           <PropertyRow :label="t('entityLocked')"><ToggleSwitch v-model="selectedEntity.editorLocked" /></PropertyRow>
@@ -35,7 +45,7 @@
           <button v-else class="secondary-action" @click="createSelectedPrefab">{{ t('createPrefab') }}</button>
         </InspectorSection>
 
-        <InspectorSection v-if="selectedEntity.hasComponent('RigidBody2D')" :title="t('rigidBody2D')" open>
+        <InspectorSection v-if="selectedEntity.hasComponent('RigidBody2D')" :title="t('rigidBody2D')" category="physics" open>
           <ComponentTools kind="RigidBody2D" />
           <select v-model="bodyType"><option value="Dynamic">{{ t('dynamic') }}</option><option value="Kinematic">{{ t('kinematic') }}</option><option value="Static">{{ t('static') }}</option></select>
           <PropertyRow :label="t('massMode')"><select v-model="selectedEntity.rigidBody.massMode"><option value="Automatic">{{ t('automatic') }}</option><option value="Manual">{{ t('manualMass') }}</option></select></PropertyRow>
@@ -44,7 +54,7 @@
           <PropertyRow :label="t('freezeRotation')"><ToggleSwitch v-model="selectedEntity.rigidBody.freezeRotation" /></PropertyRow>
         </InspectorSection>
 
-        <InspectorSection :title="t('connections')" open>
+        <InspectorSection :title="t('connections')" category="physics" open>
           <div v-if="selectedConnections.length" class="connection-list">
             <article v-for="connection in selectedConnections" :key="connection.id" class="connection-item" :class="connection.breakState">
               <button class="connection-main" :title="connection.binding ? t('boundAsCompound') : undefined" @click="openConnection(connection.id)">
@@ -67,7 +77,7 @@
           <button class="primary-action" @click="openConnection(null)"><span>＋</span>{{ t('addConnection') }}</button>
         </InspectorSection>
 
-        <InspectorSection v-if="selectedEntity.hasComponent('ShapeRenderer2D')" :title="t('shapeRenderer2D')">
+        <InspectorSection v-if="selectedEntity.hasComponent('ShapeRenderer2D') && !selectedEntity.hasComponent('RectTransform')" :title="t('shapeRenderer2D')" category="render">
           <ComponentTools kind="ShapeRenderer2D" />
           <PropertyRow :label="t('sortingLayer')"><select v-model.number="selectedEntity.layer" @change="onLayerChange"><option v-for="layer in estate.layers" :key="layer" :value="layer">{{ t('layer') }} {{ layer }}</option></select></PropertyRow>
           <PropertyRow :label="t('orderInLayer')"><input v-model.number="selectedEntity.renderer.orderInLayer" type="number" step="1"></PropertyRow>
@@ -76,14 +86,14 @@
           <PropertyRow :label="t('strokeColor')"><input type="color" :value="rgbHex(selectedEntity.renderer.strokeColor)" @input="setRgb(selectedEntity.renderer.strokeColor, $event)"></PropertyRow>
           <PropertyRow :label="t('strokeWidth')"><input v-model.number="selectedEntity.renderer.strokeWidth" type="number" min="0" step="0.1"></PropertyRow>
           <PropertyRow :label="t('strokeOpacity')"><NumberRange v-model="selectedEntity.renderer.strokeOpacity" :min="0" :max="100" :step="1" /></PropertyRow>
-          <PropertyRow :label="t('material')"><input v-model="selectedEntity.renderer.material" type="text"></PropertyRow>
+          <PropertyRow :label="t('material')"><select v-model="selectedEntity.renderer.material"><option value="Default">{{ t('default') }}</option><option v-for="asset in materialAssets" :key="asset.uuid" :value="assetReference(asset.uuid)">{{ asset.name }}</option></select></PropertyRow>
           <PropertyRow :label="t('filterMode')"><select v-model="selectedEntity.renderer.filterMode"><option value="Linear">{{ t('linear') }}</option><option value="Nearest">{{ t('nearest') }}</option></select></PropertyRow>
           <PropertyRow :label="t('imageTexture')"><select v-model="selectedEntity.renderer.textureAsset"><option :value="null">{{ t('none') }}</option><option v-for="asset in imageAssets" :key="asset.uuid" :value="assetReference(asset.uuid)">{{ asset.name }}</option></select></PropertyRow>
           <label class="stacked-field"><span>{{ t('importTexture') }}</span><input ref="textureInput" type="file" accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml" @change="applyTexture"></label>
           <button v-if="selectedEntity.renderer.textureAsset || selectedEntity.texture" class="secondary-action" @click="clearTexture">{{ t('removeTexture') }}</button>
         </InspectorSection>
 
-        <InspectorSection v-if="selectedEntity.spriteRenderer" :title="t('spriteRenderer2D')" open>
+        <InspectorSection v-if="selectedEntity.spriteRenderer" :title="t('spriteRenderer2D')" category="render" open>
           <ComponentTools kind="SpriteRenderer2D" />
           <PropertyRow :label="t('spriteAsset')"><select v-model="selectedEntity.spriteRenderer.spriteAsset"><option :value="null">{{ t('none') }}</option><option v-for="asset in imageAssets" :key="asset.uuid" :value="assetReference(asset.uuid)">{{ asset.name }}</option></select></PropertyRow>
           <PropertyRow :label="t('tint')"><input type="color" :value="rgbHex(selectedEntity.spriteRenderer.tint)" @input="setRgb(selectedEntity.spriteRenderer!.tint, $event)"></PropertyRow>
@@ -94,11 +104,15 @@
           <PropertyRow :label="t('flipY')"><ToggleSwitch v-model="selectedEntity.spriteRenderer.flipY" /></PropertyRow>
           <PropertyRow :label="t('sortingLayer')"><select v-model.number="selectedEntity.spriteRenderer.sortingLayer"><option v-for="layer in estate.layers" :key="layer" :value="layer">{{ t('layer') }} {{ layer }}</option></select></PropertyRow>
           <PropertyRow :label="t('orderInLayer')"><input v-model.number="selectedEntity.spriteRenderer.orderInLayer" type="number" step="1"></PropertyRow>
-          <PropertyRow :label="t('material')"><input v-model="selectedEntity.spriteRenderer.material" type="text"></PropertyRow>
+          <PropertyRow :label="t('material')"><select v-model="selectedEntity.spriteRenderer.material"><option value="Default">{{ t('default') }}</option><option v-for="asset in materialAssets" :key="asset.uuid" :value="assetReference(asset.uuid)">{{ asset.name }}</option></select></PropertyRow>
           <PropertyRow :label="t('filterMode')"><select v-model="selectedEntity.spriteRenderer.filterMode"><option value="Linear">{{ t('linear') }}</option><option value="Nearest">{{ t('nearest') }}</option></select></PropertyRow>
+          <PropertyRow :label="t('normalMap')"><select v-model="selectedEntity.spriteRenderer.normalMapAsset"><option :value="null">{{ t('none') }}</option><option v-for="asset in imageAssets" :key="asset.uuid" :value="assetReference(asset.uuid)">{{ asset.name }}</option></select></PropertyRow>
+          <PropertyRow :label="t('lightMask')"><input v-model.number="selectedEntity.spriteRenderer.lightMask" type="number" min="0" max="4294967295" step="1"></PropertyRow>
+          <PropertyRow :label="t('nineSlice')"><ToggleSwitch v-model="selectedEntity.spriteRenderer.nineSlice.enabled" /></PropertyRow>
+          <PropertyRow v-if="selectedEntity.spriteRenderer.nineSlice.enabled" :label="t('sliceBorders')"><div class="quad"><input v-model.number="selectedEntity.spriteRenderer.nineSlice.left" type="number" min="0"><input v-model.number="selectedEntity.spriteRenderer.nineSlice.top" type="number" min="0"><input v-model.number="selectedEntity.spriteRenderer.nineSlice.right" type="number" min="0"><input v-model.number="selectedEntity.spriteRenderer.nineSlice.bottom" type="number" min="0"></div></PropertyRow>
         </InspectorSection>
 
-        <InspectorSection v-if="selectedEntity.textRenderer" :title="t('textRenderer2D')" open>
+        <InspectorSection v-if="selectedEntity.textRenderer" :title="t('textRenderer2D')" category="render" open>
           <ComponentTools kind="TextRenderer2D" />
           <label class="stacked-field"><span>{{ t('textContent') }}</span><textarea v-model="selectedEntity.textRenderer.text" rows="3"></textarea></label>
           <PropertyRow :label="t('fontAsset')"><select v-model="selectedEntity.textRenderer.fontAsset"><option :value="null">{{ t('defaultFont') }}</option><option v-for="asset in fontAssets" :key="asset.uuid" :value="assetReference(asset.uuid)">{{ asset.name }}</option></select></PropertyRow>
@@ -113,7 +127,7 @@
           <PropertyRow :label="t('orderInLayer')"><input v-model.number="selectedEntity.textRenderer.orderInLayer" type="number" step="1"></PropertyRow>
         </InspectorSection>
 
-        <InspectorSection v-if="selectedEntity.camera2D" :title="t('camera2D')" open>
+        <InspectorSection v-if="selectedEntity.camera2D" :title="t('camera2D')" category="render" open>
           <ComponentTools kind="Camera2D" />
           <PropertyRow :label="t('activeCamera')"><ToggleSwitch v-model="selectedEntity.camera2D.active" /></PropertyRow>
           <PropertyRow :label="t('orthographicSize')"><input v-model.number="selectedEntity.camera2D.orthographicSize" type="number" min="0.000001" step="0.1"></PropertyRow>
@@ -123,9 +137,12 @@
           <PropertyRow :label="t('viewportOrigin')"><div class="pair"><input v-model.number="selectedEntity.camera2D.viewport.x" type="number" min="0" max="1" step="0.05"><input v-model.number="selectedEntity.camera2D.viewport.y" type="number" min="0" max="1" step="0.05"></div></PropertyRow>
           <PropertyRow :label="t('viewportSize')"><div class="pair"><input v-model.number="selectedEntity.camera2D.viewport.width" type="number" min="0.01" max="1" step="0.05"><input v-model.number="selectedEntity.camera2D.viewport.height" type="number" min="0.01" max="1" step="0.05"></div></PropertyRow>
           <PropertyRow :label="t('sortingRange')"><div class="pair"><input v-model.number="selectedEntity.camera2D.nearSortingLayer" type="number" step="1"><input v-model.number="selectedEntity.camera2D.farSortingLayer" type="number" step="1"></div></PropertyRow>
+          <PropertyRow :label="t('cameraPriority')"><div class="pair"><input v-model.number="selectedEntity.camera2D.priority" type="number" step="1"><input v-model.number="selectedEntity.camera2D.stackOrder" type="number" step="1"></div></PropertyRow>
+          <PropertyRow :label="t('cullingMask')"><input v-model.number="selectedEntity.camera2D.cullingMask" type="number" min="0" max="4294967295" step="1"></PropertyRow>
+          <PropertyRow :label="t('renderTexture')"><input v-model="selectedEntity.camera2D.renderTexture" type="text" :placeholder="t('renderTextureName')"></PropertyRow>
         </InspectorSection>
 
-        <InspectorSection v-if="selectedEntity.script2D" :title="t('script2D')" open>
+        <InspectorSection v-if="selectedEntity.script2D" :title="t('script2D')" category="gameplay" open>
           <ComponentTools kind="Script2D" />
           <PropertyRow :label="t('scriptAsset')"><select v-model="selectedEntity.script2D.scriptAsset" @change="synchronizeScriptProperties"><option :value="null">{{ t('none') }}</option><option v-for="asset in scriptAssets" :key="asset.uuid" :value="assetReference(asset.uuid)">{{ asset.name }}</option></select></PropertyRow>
           <button class="secondary-action" @click="synchronizeScriptProperties">{{ t('refreshScriptProperties') }}</button>
@@ -137,29 +154,29 @@
           <p v-if="selectedEntity.script2D.lastError" class="script-error">{{ selectedEntity.script2D.lastError }}</p>
         </InspectorSection>
 
-        <InspectorSection v-if="selectedEntity.hasComponent('ShapeRenderer2D')" :title="t('shapeSize')">
+        <InspectorSection v-if="selectedEntity.hasComponent('ShapeRenderer2D') && !selectedEntity.hasComponent('RectTransform')" :title="t('shapeSize')" category="render">
           <PropertyRow :label="t('absoluteSize')"><div class="pair"><input v-model.number="absoluteSizeX" type="number" min="0.000001" step="0.1"><input v-model.number="absoluteSizeY" type="number" min="0.000001" step="0.1"></div></PropertyRow>
         </InspectorSection>
 
-        <InspectorSection :title="t('transform2D')" open>
+        <InspectorSection :title="t('transform2D')" category="transform" open>
           <ComponentTools kind="Transform2D" />
           <PropertyRow :label="t('parentEntity')"><select v-model="selectedParentUuid"><option value="">{{ t('noParent') }}</option><option v-for="entity in parentCandidates" :key="entity.uuid" :value="entity.uuid">{{ entity.name }}_{{ entity.id }}</option></select></PropertyRow>
           <PropertyRow :label="t('position')"><div class="pair"><input v-model.number="selectedEntity.transform.position.x" type="number" step="0.01"><input v-model.number="selectedEntity.transform.position.y" type="number" step="0.01"></div></PropertyRow>
           <PropertyRow :label="t('rotationDegrees')"><NumberRange v-model="rotationDegrees" :min="-180" :max="180" :step="1" /></PropertyRow>
         </InspectorSection>
 
-        <InspectorSection v-if="selectedEntity.hasComponent('RigidBody2D')" :title="t('transformMotion')">
+        <InspectorSection v-if="selectedEntity.hasComponent('RigidBody2D')" :title="t('transformMotion')" category="physics">
           <PropertyRow :label="t('linearVelocity')"><div class="pair"><input v-model.number="selectedEntity.velocity.x" type="number" step="0.01"><input v-model.number="selectedEntity.velocity.y" type="number" step="0.01"></div></PropertyRow>
           <PropertyRow :label="t('accelerationXY')"><div class="pair"><input v-model.number="selectedEntity.acceleration.x" type="number" step="0.01"><input v-model.number="selectedEntity.acceleration.y" type="number" step="0.01"></div></PropertyRow>
           <PropertyRow :label="t('angularVelocity')"><input v-model.number="selectedEntity.angularVelocity" type="number" step="0.01"></PropertyRow>
         </InspectorSection>
 
-        <InspectorSection v-if="selectedEntity.hasComponent('RigidBody2D')" :title="t('dampingFriction')">
+        <InspectorSection v-if="selectedEntity.hasComponent('RigidBody2D')" :title="t('dampingFriction')" category="physics">
           <PropertyRow :label="t('linearDamping')"><NumberRange v-model="selectedEntity.linearDamping" :min="0" :max="Math.max(1, selectedEntity.linearDamping)" :step="0.01" /></PropertyRow>
           <PropertyRow :label="t('angularDamping')"><NumberRange v-model="selectedEntity.angularDamping" :min="0" :max="Math.max(1, selectedEntity.angularDamping)" :step="0.01" /></PropertyRow>
         </InspectorSection>
 
-        <InspectorSection v-if="selectedEntity.hasComponent('RigidBody2D')" :title="t('massProperties')">
+        <InspectorSection v-if="selectedEntity.hasComponent('RigidBody2D')" :title="t('massProperties')" category="physics">
           <DiagnosticRow :label="t('invMass')" :value="selectedEntity.mass > 0 && bodyType === 'Dynamic' ? (1 / selectedEntity.mass).toPrecision(6) : `0 (${t('infinite')})`" />
           <DiagnosticRow :label="t('invInertia')" :value="effectiveEntityInertia > 0 && bodyType === 'Dynamic' ? (1 / effectiveEntityInertia).toPrecision(6) : `0 (${t('infinite')})`" />
           <DiagnosticRow :label="t('surfaceArea')" :value="selectedEntityArea.toPrecision(7)" />
@@ -171,12 +188,12 @@
           <PropertyRow :label="t('localGravity')"><input v-model.number="selectedEntity.gravity" type="number" step="0.1"></PropertyRow>
         </InspectorSection>
 
-        <InspectorSection v-if="selectedEntity.hasComponent('RigidBody2D')" :title="t('continuousForces')">
+        <InspectorSection v-if="selectedEntity.hasComponent('RigidBody2D')" :title="t('continuousForces')" category="physics">
           <PropertyRow :label="t('forceXY')"><div class="pair"><input v-model.number="selectedEntity.force.x" type="number" step="0.01"><input v-model.number="selectedEntity.force.y" type="number" step="0.01"></div></PropertyRow>
           <PropertyRow :label="t('torque')"><input v-model.number="selectedEntity.torque" type="number" step="0.01"></PropertyRow>
         </InspectorSection>
 
-        <InspectorSection v-if="selectedEntity.hasComponent('RigidBody2D')" :title="t('interactiveImpulses')">
+        <InspectorSection v-if="selectedEntity.hasComponent('RigidBody2D')" :title="t('interactiveImpulses')" category="physics">
           <div class="pair"><input v-model.number="impulseX" type="number" :placeholder="t('impulseX')"><input v-model.number="impulseY" type="number" :placeholder="t('impulseY')"></div>
           <div class="pair"><input v-model.number="offsetX" type="number" :placeholder="t('offsetX')"><input v-model.number="offsetY" type="number" :placeholder="t('offsetY')"></div>
           <button class="primary-action" :disabled="bodyType !== 'Dynamic'" @click="applyImpulse">{{ t('applyLinearImpulse') }}</button>
@@ -184,7 +201,7 @@
           <button class="primary-action" :disabled="bodyType !== 'Dynamic'" @click="applyAngularImpulse">{{ t('applyAngularImpulse') }}</button>
         </InspectorSection>
 
-        <InspectorSection v-if="selectedEntity.getCollider()" :title="t('collider2D')">
+        <InspectorSection v-if="selectedEntity.getCollider()" :title="t('collider2D')" category="physics">
           <ComponentTools :kind="selectedEntity.collider.kind" />
           <PropertyRow :label="t('colliderOffset')"><div class="pair"><input v-model.number="selectedEntity.collider.offset.x" type="number" step="0.01"><input v-model.number="selectedEntity.collider.offset.y" type="number" step="0.01"></div></PropertyRow>
           <PropertyRow :label="t('colliderSize')"><div class="pair"><input v-model.number="colliderSizeX" type="number" min="0.000001" step="0.1"><input v-model.number="colliderSizeY" type="number" min="0.000001" step="0.1"></div></PropertyRow>
@@ -200,31 +217,39 @@
           <PropertyRow :label="t('dynamicFriction')"><NumberRange v-model="selectedEntity.dynamicFriction" :min="0" :max="Math.max(1, selectedEntity.dynamicFriction)" :step="0.01" /></PropertyRow>
         </InspectorSection>
 
-        <InspectorSection v-if="prefs.showDiagnostics && selectedEntity.hasComponent('RigidBody2D')" :title="t('collisionDiagnostics')">
+        <InspectorSection v-if="prefs.showDiagnostics && selectedEntity.hasComponent('RigidBody2D')" :title="t('collisionDiagnostics')" category="physics">
           <DiagnosticRow :label="t('contacts')" :value="String(selectedEntity.contactCount)" :active="selectedEntity.contactCount > 0" />
           <DiagnosticRow v-if="selectedEntity.contactCount > 0" :label="t('normal')" :value="`[${selectedEntity.contactNormal.x.toFixed(3)}, ${selectedEntity.contactNormal.y.toFixed(3)}]`" />
           <DiagnosticRow v-if="selectedEntity.contactCount > 0" :label="t('penetration')" :value="`${selectedEntity.penetrationDepth.toPrecision(5)} m`" />
         </InspectorSection>
 
-        <RuntimeComponentsInspector :entity="selectedEntity" />
-
-        <div v-if="addableComponents.length" class="add-components">
-          <span>{{ t('addComponent') }}</span>
-          <button v-for="kind in addableComponents" :key="kind" @click="addComponent(kind)">+ {{ componentTitle(kind) }}</button>
-        </div>
+        <RuntimeComponentsInspector :entity="selectedEntity" :search-query="estate.inspectorSearch" :category="estate.inspectorCategory" />
+        <p v-if="!inspectorHasMatches" class="inspector-no-results">{{ t('noInspectorResults') }}</p>
       </div>
       <div v-else class="empty-inspector"><span class="eyebrow">{{ t('entitySettings') }}</span><p>{{ t('noEntitiesFound') }}</p><strong>{{ t('createGameUi') }}</strong><div class="empty-ui-actions"><button v-for="kind in uiKinds" :key="kind" @click="createUiEntity(kind)">+ {{ t(`create${kind}`) }}</button></div></div>
     </aside>
 
     <div v-if="showColorPicker" class="modal-scrim" @mousedown.self="showColorPicker = false"><div class="color-modal"><h4>{{ t('selectColor') }}</h4><input v-model="tempColor" type="color"><div><button @click="showColorPicker = false">{{ t('cancel') }}</button><button class="primary" @click="applyColor">{{ t('apply') }}</button></div></div></div>
+    <Teleport to="body">
+      <div v-if="estate.componentPickerOpen && selectedEntity" class="modal-scrim component-picker-scrim" @mousedown.self="closeComponentPicker">
+        <section class="component-picker" role="dialog" aria-modal="true" :aria-label="t('addComponent')" @keydown.escape="closeComponentPicker">
+          <header><div><span class="eyebrow">{{ t('addComponent') }}</span><h4>{{ selectedEntity.name }}</h4></div><button :aria-label="t('cancel')" @click="closeComponentPicker">×</button></header>
+          <input ref="componentSearchInput" v-model="componentSearch" type="search" :placeholder="t('searchComponents')">
+          <div class="component-picker-list">
+            <button v-for="kind in filteredAddableComponents" :key="kind" @click="chooseComponent(kind)"><span>{{ componentGlyph(kind) }}</span><span><strong>{{ componentTitle(kind) }}</strong><small>{{ t(componentCategoryLabel(componentCategory(kind))) }}</small></span><i>+</i></button>
+            <p v-if="!filteredAddableComponents.length">{{ t('noComponentsFound') }}</p>
+          </div>
+        </section>
+      </div>
+    </Teleport>
     <ConnectionBuilder v-if="selectedEntity && builderOpen" :selected-id="selectedEntity.id" :connection-id="editingConnectionId" @close="builderOpen = false" />
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, defineComponent, h, onBeforeUnmount, ref, watch } from 'vue'
+import { computed, defineComponent, h, nextTick, onBeforeUnmount, ref, watch } from 'vue'
 import { t } from '../i18n'
-import { editorState as estate } from '../store/editor'
+import { editorState as estate, type InspectorCategory } from '../store/editor'
 import { createUiEntity, deleteConnection, physicsState as state, pushHistory, repairConnection, type UiElementKind } from '../store/physics'
 import { preferencesState as prefs } from '../store/preferences'
 import { requestConfirmation } from '../store/dialog'
@@ -235,16 +260,17 @@ import { effectiveInertia, entityArea, finiteNumber, MIN_AREA, MIN_SIZE, normali
 import ConnectionBuilder from './ConnectionBuilder.vue'
 import RuntimeComponentsInspector from './RuntimeComponentsInspector.vue'
 import { connectionSharesLayer } from '../world/Connection'
-import { Animator, AudioListener, AudioSource, Button, Camera2D, Canvas, Checkbox, Collider2D, Image as UIImage, Joint2D, Panel, ParticleEmitter2D, ProgressBar, RectTransform, RigidBody2D, Script2D, ShapeRenderer2D, Slider, SpriteRenderer2D, Text as UIText, TextInput, TextRenderer2D, TileMap2D, copyComponentValues, pasteComponentValues, type Component2D, type ComponentKind, type JointKind2D, type ScriptPropertyValue } from '../world/components'
+import { Animator, AudioListener, AudioSource, Button, Camera2D, Canvas, Checkbox, Collider2D, Image as UIImage, Joint2D, Light2D, Panel, ParticleEmitter2D, ProgressBar, RectTransform, RigidBody2D, Script2D, ShadowCaster2D, ShapeRenderer2D, Skeleton2D, Slider, SpriteRenderer2D, Text as UIText, TextInput, TextRenderer2D, TileMap2D, TimelinePlayer, copyComponentValues, pasteComponentValues, type Component2D, type ComponentKind, type JointKind2D, type ScriptPropertyValue } from '../world/components'
 import { Transform } from '../world/Transform'
 import { setParent, wouldCreateParentCycle } from '../world/hierarchy'
 import { applyTranslation, captureTransforms } from '../editor/gizmo'
 import { selectionCenter } from '../editor/selection'
 import { assetReference, assetState, importAssetFiles } from '../assets/AssetDatabase'
 import { gameplayRuntime } from '../runtime/GameplayRuntime'
+import { recordEntityProperties } from '../editor/animationStudioState'
 import { applyPrefabFromInstance, capturePrefabOverrides, createPrefabFromEntities, revertPrefabInstance, unpackPrefabInstance } from '../runtime/prefabs'
 
-const InspectorSection = defineComponent({ props: { title: { type: String, required: true }, open: Boolean }, setup(props, { slots }) { return () => h('details', { class: 'inspector-section', open: props.open }, [h('summary', [h('span', props.title), h('i', '⌄')]), h('div', { class: 'section-body' }, slots.default?.())]) } })
+const InspectorSection = defineComponent({ props: { title: { type: String, required: true }, category: { type: String, default: 'general' }, open: Boolean }, setup(props, { slots }) { return () => h('details', { class: 'inspector-section', open: props.open, style: { display: inspectorSectionVisible(props.title, props.category as InspectorCategory) ? '' : 'none' } }, [h('summary', [h('span', props.title), h('i', '⌄')]), h('div', { class: 'section-body' }, slots.default?.())]) } })
 const PropertyRow = defineComponent({ props: { label: { type: String, required: true } }, setup(props, { slots }) { return () => h('label', { class: 'property-row' }, [h('span', props.label), h('div', { class: 'property-control' }, slots.default?.())]) } })
 const DiagnosticRow = defineComponent({ props: { label: { type: String, required: true }, value: { type: String, required: true }, active: Boolean }, setup(props) { return () => h('div', { class: ['diagnostic-row', { active: props.active }] }, [h('span', props.label), h('code', props.value)]) } })
 const ToggleSwitch = defineComponent({ props: { modelValue: { type: Boolean, required: true } }, emits: ['update:modelValue'], setup(props, { emit }) { return () => h('button', { class: ['toggle', { active: props.modelValue }], role: 'switch', 'aria-checked': props.modelValue, onClick: () => { emit('update:modelValue', !props.modelValue); onConfigChange() } }, h('i')) } })
@@ -282,14 +308,71 @@ const panelWidth = ref(292)
 const imageAssets = computed(() => assetState.records.filter(asset => asset.assetType === 'image'))
 const fontAssets = computed(() => assetState.records.filter(asset => asset.assetType === 'font'))
 const scriptAssets = computed(() => assetState.records.filter(asset => asset.assetType === 'script'))
-const optionalComponents: ComponentKind[] = ['SpriteRenderer2D', 'TextRenderer2D', 'Camera2D', 'Script2D', 'Animator', 'AudioSource', 'AudioListener', 'Canvas', 'RectTransform', 'Panel', 'Image', 'Text', 'Button', 'Slider', 'ProgressBar', 'Checkbox', 'TextInput', 'TileMap2D', 'ParticleEmitter2D', 'FixedJoint2D', 'DistanceJoint2D', 'RevoluteJoint2D', 'PrismaticJoint2D', 'SpringJoint2D']
+const materialAssets = computed(() => assetState.records.filter(asset => asset.assetType === 'material'))
+const optionalComponents: ComponentKind[] = ['SpriteRenderer2D', 'TextRenderer2D', 'Camera2D', 'Light2D', 'ShadowCaster2D', 'Script2D', 'Animator', 'Skeleton2D', 'TimelinePlayer', 'AudioSource', 'AudioListener', 'Canvas', 'RectTransform', 'Panel', 'Image', 'Text', 'Button', 'Slider', 'ProgressBar', 'Checkbox', 'TextInput', 'TileMap2D', 'ParticleEmitter2D', 'FixedJoint2D', 'DistanceJoint2D', 'RevoluteJoint2D', 'PrismaticJoint2D', 'SpringJoint2D']
 const uiKinds: UiElementKind[] = ['Canvas', 'Panel', 'Image', 'Text', 'Button', 'Slider', 'ProgressBar', 'Checkbox', 'TextInput']
+const inspectorCategories = [
+  { id: 'all' as const, label: 'all' as const }, { id: 'general' as const, label: 'categoryGeneral' as const },
+  { id: 'transform' as const, label: 'categoryTransform' as const }, { id: 'render' as const, label: 'categoryRendering' as const },
+  { id: 'physics' as const, label: 'categoryPhysics' as const }, { id: 'gameplay' as const, label: 'categoryGameplay' as const },
+  { id: 'ui' as const, label: 'categoryUi' as const }
+]
+const componentSearch = ref('')
+const componentSearchInput = ref<HTMLInputElement | null>(null)
 const addableComponents = computed(() => {
   if (!selectedEntity.value) return []
   const removed = [...selectedEntity.value.componentMap.values()].filter(component => component.removed && component.kind !== 'Transform2D').map(component => component.kind)
   const missing = optionalComponents.filter(kind => !selectedEntity.value!.componentMap.has(kind))
   return [...new Set([...removed, ...missing])]
 })
+const filteredAddableComponents = computed(() => {
+  const needle = componentSearch.value.trim().toLocaleLowerCase()
+  return addableComponents.value.filter(kind => !needle || `${componentTitle(kind)} ${kind} ${t(componentCategoryLabel(componentCategory(kind)))}`.toLocaleLowerCase().includes(needle))
+})
+const coreInspectorSections = computed(() => {
+  if (!selectedEntity.value) return []
+  const entity = selectedEntity.value
+  return [
+    [t('entitySettings'), 'general'], [t('connections'), 'physics'], [t('transform2D'), 'transform'],
+    entity.hasComponent('ShapeRenderer2D') && !entity.hasComponent('RectTransform') ? [t('shapeRenderer2D'), 'render'] : null,
+    entity.spriteRenderer ? [t('spriteRenderer2D'), 'render'] : null, entity.textRenderer ? [t('textRenderer2D'), 'render'] : null,
+    entity.camera2D ? [t('camera2D'), 'render'] : null, entity.script2D ? [t('script2D'), 'gameplay'] : null,
+    entity.hasComponent('RigidBody2D') ? [t('rigidBody2D'), 'physics'] : null, entity.getCollider() ? [t('collider2D'), 'physics'] : null
+  ].filter((entry): entry is [string, string] => entry !== null)
+})
+const inspectorHasMatches = computed(() => {
+  if (coreInspectorSections.value.some(([title, category]) => inspectorSectionVisible(title, category as InspectorCategory))) return true
+  if (!selectedEntity.value) return false
+  return [...selectedEntity.value.componentMap.values()].some(component => !component.removed && inspectorSectionVisible(componentTitle(component.kind), componentCategory(component.kind)))
+})
+
+function inspectorSectionVisible(title: string, category: InspectorCategory): boolean {
+  if (estate.inspectorCategory !== 'all' && estate.inspectorCategory !== category) return false
+  const needle = estate.inspectorSearch.trim().toLocaleLowerCase()
+  return !needle || title.toLocaleLowerCase().includes(needle)
+}
+
+function componentCategory(kind: ComponentKind): InspectorCategory {
+  if (['Canvas', 'RectTransform', 'Panel', 'Image', 'Text', 'Button', 'Slider', 'ProgressBar', 'Checkbox', 'TextInput'].includes(kind)) return 'ui'
+  if (['SpriteRenderer2D', 'TextRenderer2D', 'Camera2D', 'TileMap2D', 'ParticleEmitter2D', 'Light2D', 'ShadowCaster2D'].includes(kind)) return 'render'
+  if (kind.endsWith('Joint2D')) return 'physics'
+  return 'gameplay'
+}
+function componentCategoryLabel(category: InspectorCategory): 'categoryGeneral' | 'categoryTransform' | 'categoryRendering' | 'categoryPhysics' | 'categoryGameplay' | 'categoryUi' {
+  const labels: Record<InspectorCategory, 'categoryGeneral' | 'categoryTransform' | 'categoryRendering' | 'categoryPhysics' | 'categoryGameplay' | 'categoryUi'> = { general: 'categoryGeneral', transform: 'categoryTransform', render: 'categoryRendering', physics: 'categoryPhysics', gameplay: 'categoryGameplay', ui: 'categoryUi', all: 'categoryGeneral' }
+  return labels[category]
+}
+function componentGlyph(kind: ComponentKind): string {
+  const category = componentCategory(kind)
+  return ({ ui: '▣', render: '◇', physics: '◎', gameplay: '{}', general: '•', transform: '↗', all: '•' })[category]
+}
+function openComponentPicker(): void {
+  componentSearch.value = ''
+  estate.componentPickerOpen = true
+  void nextTick(() => componentSearchInput.value?.focus())
+}
+function closeComponentPicker(): void { estate.componentPickerOpen = false }
+function chooseComponent(kind: ComponentKind): void { addComponent(kind); closeComponentPicker() }
 const parentCandidates = computed(() => selectedEntity.value
   ? state.world.entities.filter(entity => entity !== selectedEntity.value && !wouldCreateParentCycle(selectedEntity.value!, entity.uuid, state.world.entities))
   : [])
@@ -318,6 +401,8 @@ function componentTitle(kind: ComponentKind): string {
   if (kind === 'Script2D') return t('script2D')
   if (kind === 'RigidBody2D') return t('rigidBody2D')
   if (kind === 'Animator') return t('animator')
+  if (kind === 'Skeleton2D') return t('skeleton2D')
+  if (kind === 'TimelinePlayer') return t('timelinePlayer')
   if (kind === 'AudioSource') return t('audioSource')
   if (kind === 'AudioListener') return t('audioListener')
   if (kind === 'RectTransform') return t('rectTransform')
@@ -332,12 +417,16 @@ function componentTitle(kind: ComponentKind): string {
   if (kind === 'TextInput') return t('uiTextInput')
   if (kind === 'TileMap2D') return t('tileMap2D')
   if (kind === 'ParticleEmitter2D') return t('particleEmitter2D')
+  if (kind === 'Light2D') return t('light2D')
+  if (kind === 'ShadowCaster2D') return t('shadowCaster2D')
   if (kind.endsWith('Joint2D')) return t(kind as Parameters<typeof t>[0])
   return t('collider2D')
 }
 
 function newOptionalComponent(kind: ComponentKind): Component2D | null {
   if (kind === 'Animator') return new Animator()
+  if (kind === 'Skeleton2D') return new Skeleton2D()
+  if (kind === 'TimelinePlayer') return new TimelinePlayer()
   if (kind === 'AudioSource') return new AudioSource()
   if (kind === 'AudioListener') return new AudioListener()
   if (kind === 'Canvas') return new Canvas()
@@ -352,6 +441,8 @@ function newOptionalComponent(kind: ComponentKind): Component2D | null {
   if (kind === 'TextInput') return new TextInput()
   if (kind === 'TileMap2D') return new TileMap2D()
   if (kind === 'ParticleEmitter2D') return new ParticleEmitter2D()
+  if (kind === 'Light2D') return new Light2D()
+  if (kind === 'ShadowCaster2D') return new ShadowCaster2D()
   if (kind.endsWith('Joint2D')) return new Joint2D(kind as JointKind2D)
   return null
 }
@@ -450,7 +541,7 @@ async function removeConnection(id: number) { if (!await confirmConnectionAction
 async function separate(id: number) { if (!await confirmConnectionAction(t('separateBindingTitle'), t('confirmSeparateBinding'))) return; deleteConnection(id); pushHistory(); estate.statusText = t('bindingSeparated') }
 function repair(id: number) { repairConnection(id); pushHistory() }
 
-function onConfigChange() { if (!canEdit.value || !selectedEntity.value) return; if (selectedEntity.value.isStatic) selectedEntity.value.isKinematic = false; normalizeEntity(selectedEntity.value); if (selectedEntity.value.prefabAsset) capturePrefabOverrides(selectedEntity.value); pushHistory('Set property', `property:${selectedEntity.value.uuid}`) }
+function onConfigChange() { if (!canEdit.value || !selectedEntity.value) return; if (selectedEntity.value.isStatic) selectedEntity.value.isKinematic = false; normalizeEntity(selectedEntity.value); if (selectedEntity.value.prefabAsset) capturePrefabOverrides(selectedEntity.value); recordEntityProperties([selectedEntity.value]); pushHistory('Set property', `property:${selectedEntity.value.uuid}`) }
 function synchronizeScriptProperties() {
   if (!selectedEntity.value?.script2D) return
   const error = gameplayRuntime.synchronizeExports(selectedEntity.value)
@@ -569,10 +660,13 @@ onBeforeUnmount(stopResize)
 .config-panel { position: absolute; inset: 0; overflow: auto; color: var(--text-secondary); background: var(--surface-1); backdrop-filter: var(--glass-blur); font-family: inherit; font-size: 11px; }
 .config-panel :deep(button), .config-panel :deep(input), .config-panel :deep(select), .config-panel :deep(textarea) { font-family: inherit; font-size: 10.5px; }
 .config-panel.runtime { pointer-events: none; opacity: .72; }
-.settings-content { min-height: 100%; padding: 14px 11px 26px; display: flex; flex-direction: column; gap: 8px; }
+.settings-content { min-height: 100%; padding: 8px 11px 26px; display: flex; flex-direction: column; gap: 8px; }
+.inspector-sticky { position: sticky; top: 0; z-index: 12; padding: 10px 11px 7px; border-bottom: 1px solid var(--border-subtle); background: color-mix(in srgb, var(--surface-1) 96%, transparent); backdrop-filter: var(--glass-blur); }
+.inspector-search-row { display: flex; gap: 6px; }.inspector-search-row input { min-width: 0; height: 30px; min-height: 30px; flex: 1; }.add-component-trigger { min-width: 96px; min-height: 30px; padding: 0 8px; border: 1px solid var(--accent); border-radius: 7px; color: var(--accent-contrast); background: var(--accent); font-size: 9px !important; white-space: nowrap; }
+.inspector-categories { margin-top: 7px; display: flex; gap: 3px; overflow-x: auto; scrollbar-width: none; }.inspector-categories::-webkit-scrollbar { display: none; }.inspector-categories button { height: 24px; padding: 0 8px; flex: 0 0 auto; border: 1px solid transparent; border-radius: 999px; color: var(--text-muted); background: transparent; font-size: 8.5px !important; white-space: nowrap; }.inspector-categories button:hover, .inspector-categories button.active { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 35%, transparent); background: var(--accent-soft); }
 .empty-inspector { height: 100%; padding: 18px; display: flex; flex-direction: column; justify-content: center; align-items: center; color: var(--text-muted); text-align: center; }.empty-inspector p { font-size: 11px; }.empty-inspector > strong { margin-top: 12px; color: var(--text-secondary); font-size: 10px; }.empty-ui-actions { width: 100%; margin-top: 7px; display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }.empty-ui-actions button { min-height: 28px; overflow: hidden; border: 1px solid var(--border-subtle); border-radius: 7px; color: var(--accent); background: var(--surface-3); font-size: 8px; text-overflow: ellipsis; white-space: nowrap; }.runtime-note { color: var(--text-muted); font-size: 10px; line-height: 1.45; }
 .batch-toggle { min-width: 76px; height: 28px; border: 1px solid var(--border-subtle); border-radius: 7px; color: var(--accent); background: var(--surface-3); }
-.inspector-header { padding: 3px 3px 9px; }.eyebrow { color: var(--accent); font-size: 8.5px; font-weight: 720; letter-spacing: .11em; text-transform: uppercase; }h3 { margin: 4px 0 0; color: var(--text-primary); font-family: inherit; font-size: 16px; font-weight: 650; line-height: 1.25; overflow: hidden; text-overflow: ellipsis; }h3 small { color: var(--text-muted); font-size: 11px; font-weight: 500; }
+.inspector-header { padding: 0 3px 8px; }.eyebrow { color: var(--accent); font-size: 8.5px; font-weight: 720; letter-spacing: .11em; text-transform: uppercase; }h3 { margin: 3px 0 0; color: var(--text-primary); font-family: inherit; font-size: 14px; font-weight: 650; line-height: 1.2; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }h3 small { color: var(--text-muted); font-size: 11px; font-weight: 500; }
 :deep(.inspector-section) { border: 1px solid var(--border-subtle); border-radius: 12px; background: color-mix(in srgb, var(--surface-2) 72%, transparent); overflow: hidden; }
 :deep(.inspector-section summary) { min-height: 37px; padding: 0 10px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; list-style: none; color: var(--text-primary); font-family: inherit; font-size: 10.5px; font-weight: 680; letter-spacing: .055em; text-transform: uppercase; }
 :deep(.inspector-section summary::-webkit-details-marker) { display: none; }:deep(.inspector-section summary i) { font-style: normal; transition: transform 160ms ease; }:deep(.inspector-section[open] summary i) { transform: rotate(180deg); }
@@ -596,9 +690,10 @@ onBeforeUnmount(stopResize)
 .prefab-actions button { min-width: 0; min-height: 30px; padding: 4px 5px; overflow: hidden; border: 1px solid var(--border-subtle); border-radius: 7px; color: var(--text-secondary); background: var(--surface-3); font-size: 9.5px; text-overflow: ellipsis; white-space: nowrap; }
 .prefab-actions button:hover { color: var(--accent); border-color: var(--accent); }
 .script-error { margin: 0; padding: 8px; overflow-wrap: anywhere; border: 1px solid color-mix(in srgb, var(--danger) 50%, var(--border-subtle)); border-radius: 7px; color: var(--danger); background: var(--danger-soft); font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 9.5px; line-height: 1.45; }
-.add-components { padding: 11px; display: flex; flex-direction: column; gap: 6px; border: 1px dashed var(--border-strong); border-radius: 12px; color: var(--text-muted); font-size: 10px; }
-.add-components button { min-height: 30px; border: 1px solid var(--border-subtle); border-radius: 8px; color: var(--accent); background: var(--surface-3); text-align: left; }
+.inspector-no-results { margin: 14px 4px; padding: 18px 10px; border: 1px dashed var(--border-strong); border-radius: 10px; color: var(--text-muted); text-align: center; font-size: 10px; line-height: 1.45; }
 .empty-state { margin: 5px 0; color: var(--text-muted); font-size: 11px; text-align: center; }.connection-list { display: flex; flex-direction: column; gap: 6px; }.connection-item { display: flex; align-items: center; border: 1px solid var(--border-subtle); border-radius: 9px; background: var(--surface-1); }.connection-main { min-width: 0; flex: 1; padding: 7px; display: flex; align-items: center; gap: 8px; border: 0; background: transparent; text-align: left; }.connection-main > span:last-child { min-width: 0; display: flex; flex-direction: column; }.connection-main strong, .connection-main small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }.connection-main strong { color: var(--text-primary); font-size: 11px; }.connection-main small { color: var(--text-muted); font-size: 9.5px; }.connection-dot { width: 8px; height: 8px; flex: 0 0 8px; border-radius: 50%; background: var(--connection); box-shadow: 0 0 7px var(--connection); }.connection-item.snapped .connection-dot, .connection-item.torn .connection-dot { background: var(--connection-broken); box-shadow: 0 0 7px var(--connection-broken); }.mini-button { width: 26px; height: 28px; border: 0; background: transparent; color: var(--text-muted); }.mini-button:hover { color: var(--accent); }.mini-button.danger:hover { color: var(--danger); }
 .modal-scrim { position: fixed; inset: 0; z-index: 1300; display: grid; place-items: center; background: var(--scrim); pointer-events: auto; backdrop-filter: blur(6px); }.color-modal { width: 250px; padding: 18px; display: flex; flex-direction: column; align-items: center; gap: 14px; border: 1px solid var(--border-subtle); border-radius: 16px; background: var(--surface-2); box-shadow: var(--shadow-lg); }.color-modal h4 { margin: 0; }.color-modal input { width: 100px; height: 76px; border: 0; background: transparent; }.color-modal > div { width: 100%; display: flex; gap: 8px; }.color-modal button { flex: 1; min-height: 34px; border: 1px solid var(--border-subtle); border-radius: 8px; background: var(--surface-3); }.color-modal button.primary { color: var(--accent-contrast); border-color: var(--accent); background: var(--accent); }
+.component-picker-scrim { z-index: 1400; }.component-picker { width: min(520px, calc(100vw - 30px)); max-height: min(620px, calc(100vh - 60px)); padding: 12px; display: flex; flex-direction: column; gap: 10px; overflow: hidden; border: 1px solid var(--border-strong); border-radius: 16px; background: var(--surface-1); box-shadow: var(--shadow-lg); }.component-picker > header { display: flex; align-items: center; justify-content: space-between; }.component-picker > header h4 { margin: 3px 0 0; font-size: 14px; }.component-picker > header > button { width: 30px; height: 30px; border: 0; border-radius: 7px; color: var(--text-muted); background: transparent; }.component-picker > header > button:hover { color: var(--text-primary); background: var(--surface-hover); }.component-picker > input { width: 100%; }.component-picker-list { min-height: 60px; overflow: auto; display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }.component-picker-list > button { min-width: 0; min-height: 48px; padding: 6px 8px; display: grid; grid-template-columns: 29px 1fr 18px; align-items: center; gap: 7px; border: 1px solid var(--border-subtle); border-radius: 9px; color: var(--text-secondary); background: var(--surface-2); text-align: left; }.component-picker-list > button:hover { border-color: color-mix(in srgb, var(--accent) 55%, var(--border-subtle)); background: var(--accent-soft); }.component-picker-list > button > span:first-child { width: 28px; height: 28px; display: grid; place-items: center; border-radius: 7px; color: var(--accent); background: var(--surface-3); font: 600 9px/1 ui-monospace, SFMono-Regular, Consolas, monospace; }.component-picker-list > button > span:nth-child(2) { min-width: 0; display: flex; flex-direction: column; gap: 2px; }.component-picker-list strong { overflow: hidden; font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }.component-picker-list small { color: var(--text-muted); font-size: 8px; }.component-picker-list i { color: var(--accent); font-size: 15px; font-style: normal; }.component-picker-list > p { grid-column: 1 / -1; padding: 24px; color: var(--text-muted); text-align: center; font-size: 10px; }
 @media (max-width: 760px) { .config-wrapper { max-width: 46vw; } }
+@media (max-width: 560px) { .component-picker-list { grid-template-columns: 1fr; } }
 </style>

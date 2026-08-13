@@ -1,7 +1,7 @@
 import type { Vec2 } from '../world/types'
 
 export type TextureFilter = 'Nearest' | 'Linear'
-export type BlendMode2D = 'Alpha' | 'Additive'
+export type BlendMode2D = 'Alpha' | 'Additive' | 'Multiply' | 'Screen'
 
 export interface RenderColor {
   r: number
@@ -15,6 +15,7 @@ export interface TextureRegion {
   source: TexImageSource
   uv: { x: number; y: number; width: number; height: number }
   filter: TextureFilter
+  colorSpace?: 'sRGB' | 'Linear'
 }
 
 export interface FrameOptions {
@@ -63,6 +64,8 @@ export interface SpriteRenderCommand extends RenderOrder {
   flipY: boolean
   tint: RenderColor
   texture: TextureRegion
+  nineSlice?: { left: number; top: number; right: number; bottom: number } | null
+  mesh?: { positions: Vec2[]; uvs: Vec2[]; indices: number[] } | null
 }
 
 export interface TextRenderCommand extends RenderOrder {
@@ -91,6 +94,11 @@ export interface RendererStats {
   sprites: number
   shapes: number
   text: number
+  textures: number
+  gpuMs: number | null
+  passes: number
+  renderTargets: number
+  overdraw: number
 }
 
 export interface Renderer2D {

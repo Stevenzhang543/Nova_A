@@ -48,9 +48,9 @@ export async function exportProjectFolder(projectJson: string, assets: AssetReco
     await writeFile(root, asset.path, blob)
   }
   const manifest = assets.map(({ source: _source, ...asset }) => asset)
-  await writeFile(root, '.nova/imported/manifest.json', JSON.stringify({ generatedBy: 'Nova_A 1.8.0', assets: manifest }, null, 2))
+  await writeFile(root, '.nova/imported/manifest.json', JSON.stringify({ generatedBy: 'Nova_A 2.4.0', assets: manifest }, null, 2))
   await writeFile(root, '.nova/cache/index.json', JSON.stringify({
-    generatedBy: 'Nova_A 1.8.0',
+    generatedBy: 'Nova_A 2.4.0',
     disposable: true,
     entries: assets.map(asset => ({ uuid: asset.uuid, sourceModified: asset.sourceModified, byteLength: asset.byteLength, settings: asset.settings }))
   }, null, 2))

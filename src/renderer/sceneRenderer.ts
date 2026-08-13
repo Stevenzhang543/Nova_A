@@ -7,6 +7,9 @@ import { worldTransform } from '../world/hierarchy'
 import type { CameraRenderView, RenderColor, Renderer2D, RendererStats } from './types'
 import { tileChunkCommands } from '../runtime/tilemap'
 import { particleRuntime } from '../runtime/particles'
+import { resolveMaterial } from './materials'
+import type { TextureFilter } from './types'
+import { deformSkin } from '../runtime/rigging'
 
 export interface SceneRenderOptions {
   width: number
@@ -40,25 +43,30 @@ function parseCssColor(value: string): RenderColor {
   return { r: 17, g: 21, b: 27, a: 1 }
 }
 
-export function activeGameCamera(entities: Entity[], width: number, height: number): ActiveCamera | null {
-  const entity = entities.find(candidate => candidate.enabled && candidate.camera2D?.enabled && candidate.camera2D.active)
-  const component = entity?.camera2D
-  if (!entity || !component) return null
-  const transform = worldTransform(entity, entities)
-  const rawScale = height / (2 * Math.max(.000001, component.orthographicSize)) * Math.max(.000001, component.zoom)
-  const scale = component.pixelPerfect ? Math.max(1, Math.round(rawScale)) : rawScale
-  return {
-    entity,
-    component,
-    view: {
-      scale,
-      offset: { x: width * .5, y: height * .5 },
-      position: { ...transform.position },
-      rotation: transform.rotation,
-      viewport: { ...component.viewport }
-    },
-    background: rgba(component.backgroundColor)
-  }
+export function activeGameCameras(entities: Entity[], width: number, height: number): ActiveCamera[] {
+  return entities
+    .flatMap(entity => {
+      const component = entity.camera2D
+      if (!entity.enabled || !component?.enabled || component.removed || !component.active) return []
+      const transform = worldTransform(entity, entities)
+      const viewportHeight = height * component.viewport.height
+      const rawScale = viewportHeight / (2 * Math.max(.000001, component.orthographicSize)) * Math.max(.000001, component.zoom)
+      const scale = component.pixelPerfect ? Math.max(1, Math.round(rawScale)) : rawScale
+      const position = component.pixelPerfect
+        ? { x: Math.round(transform.position.x * scale) / scale, y: Math.round(transform.position.y * scale) / scale }
+        : { ...transform.position }
+      return [{ entity, component, view: { scale, offset: { x: width * .5, y: height * .5 }, position, rotation: transform.rotation, viewport: { ...component.viewport } }, background: rgba(component.backgroundColor) }]
+    })
+    .sort((first, second) => first.component.priority - second.component.priority || first.component.stackOrder - second.component.stackOrder || first.entity.id - second.entity.id)
+}
+
+export function activeGameCamera(entities: Entity[], width: number, height: number): ActiveCamera | null { return activeGameCameras(entities, width, height)[0] ?? null }
+
+function renderState(reference: string, fallbackFilter: TextureFilter) {
+  const asset = resolveAsset(reference)
+  if (asset?.assetType !== 'material') return { blendMode: 'Alpha' as const, sampling: fallbackFilter }
+  const material = resolveMaterial(reference)
+  return { blendMode: material.blendMode, sampling: material.sampling }
 }
 
 function sortingLayer(entity: Entity): number {
@@ -78,7 +86,8 @@ function visibleWorldBounds(view: CameraRenderView, width: number, height: numbe
 
 function submitSprite(renderer: Renderer2D, entity: Entity, sprite: SpriteRenderer2D, entities: Entity[]): void {
   if (!sprite.enabled || sprite.removed || !sprite.spriteAsset) return
-  const texture = resolveTexture(sprite.spriteAsset, sprite.filterMode)
+  const state = renderState(sprite.material, sprite.filterMode)
+  const texture = resolveTexture(sprite.spriteAsset, state.sampling)
   if (!texture) return
   const transform = worldTransform(entity, entities)
   renderer.submitSprite({
@@ -86,7 +95,9 @@ function submitSprite(renderer: Renderer2D, entity: Entity, sprite: SpriteRender
     size: sprite.size, pivot: sprite.pivot, flipX: sprite.flipX, flipY: sprite.flipY,
     tint: rgba(sprite.tint, sprite.opacity), texture,
     sortingLayer: sprite.sortingLayer, orderInLayer: sprite.orderInLayer,
-    material: sprite.material
+    material: sprite.material, blendMode: state.blendMode,
+    nineSlice: sprite.nineSlice.enabled ? { left: sprite.nineSlice.left, top: sprite.nineSlice.top, right: sprite.nineSlice.right, bottom: sprite.nineSlice.bottom } : null,
+    mesh: deformSkin(entity, sprite)
   })
 }
 
@@ -104,60 +115,63 @@ function submitText(renderer: Renderer2D, entity: Entity, text: TextRenderer2D, 
 }
 
 export function renderWorld(renderer: Renderer2D, entities: Entity[], options: SceneRenderOptions): RendererStats {
-  const camera = options.gameView ? activeGameCamera(entities, options.width, options.height) : null
+  const cameras = options.gameView ? activeGameCameras(entities, options.width, options.height) : []
+  const primaryCamera = cameras[0] ?? null
   renderer.beginFrame({
     width: options.width,
     height: options.height,
     pixelRatio: options.pixelRatio,
-    clearColor: camera?.background ?? parseCssColor(options.canvasColor)
+    clearColor: primaryCamera?.background ?? parseCssColor(options.canvasColor)
   })
-  renderer.beginCamera(camera?.view ?? options.editorCamera)
-  const activeView = camera?.view ?? options.editorCamera
-  const visibleBounds = visibleWorldBounds(activeView, options.width, options.height)
-  if (!options.gameView && options.editorGrid?.enabled) submitEditorGrid(renderer, options)
   const compounds = compoundGeometries(entities, options.connections)
   const compoundMembers = new Set(compounds.filter(compound => compound.members.length > 1).flatMap(compound => [...compound.memberIds]))
-  const near = camera?.component.nearSortingLayer ?? -Infinity
-  const far = camera?.component.farSortingLayer ?? Infinity
-  const visible = entities
-    .filter(entity => entity.enabled && (options.gameView || entity.editorVisible))
-    .filter(entity => options.gameView || entity.layer === options.activeLayer)
-    .filter(entity => options.renderLayer === 'all' || entity.layer === options.renderLayer)
-    .filter(entity => sortingLayer(entity) >= near && sortingLayer(entity) <= far)
-    .sort((first, second) => sortingLayer(first) - sortingLayer(second) || first.renderer.orderInLayer - second.renderer.orderInLayer || first.id - second.id)
-  for (const entity of visible) {
-    const tileMap = entity.getComponent<TileMap2D>('TileMap2D')
-    if (tileMap) for (const chunk of tileChunkCommands(entity, tileMap, entities, visibleBounds)) renderer.submitTileChunk(chunk)
-    const shape = entity.getComponent<ShapeRenderer2D>('ShapeRenderer2D')
-    if (shape) {
-      const transform = worldTransform(entity, entities)
-      renderer.submitShape({
-        shape: shape.shape, position: transform.position, rotation: transform.rotation, scale: transform.scale,
-        vertices: shape.vertices, radiusX: shape.radiusX, radiusY: shape.radiusY,
-        fill: rgba(shape.color, shape.opacity), stroke: rgba(shape.strokeColor, compoundMembers.has(entity.id) ? 0 : shape.strokeOpacity),
-        strokeWidth: shape.strokeWidth, texture: resolveTexture(shape.textureAsset, shape.filterMode),
-        sortingLayer: shape.sortingLayer, orderInLayer: shape.orderInLayer, material: shape.material
-      })
+  const passes = options.gameView && cameras.length ? cameras : [{ entity: null, component: null, view: options.editorCamera, background: parseCssColor(options.canvasColor) }]
+  for (const camera of passes) {
+    renderer.beginCamera(camera.view)
+    const visibleBounds = visibleWorldBounds(camera.view, options.width, options.height)
+    if (!options.gameView && options.editorGrid?.enabled) submitEditorGrid(renderer, options)
+    const near = camera.component?.nearSortingLayer ?? -Infinity
+    const far = camera.component?.farSortingLayer ?? Infinity
+    const cullingMask = camera.component?.cullingMask ?? 0xffff_ffff
+    const visible = entities
+      .filter(entity => entity.enabled && (options.gameView || entity.editorVisible))
+      .filter(entity => options.gameView || entity.layer === options.activeLayer)
+      .filter(entity => options.renderLayer === 'all' || entity.layer === options.renderLayer)
+      .filter(entity => (cullingMask & (1 << (entity.layer & 31))) !== 0)
+      .filter(entity => sortingLayer(entity) >= near && sortingLayer(entity) <= far)
+      .sort((first, second) => sortingLayer(first) - sortingLayer(second) || first.renderer.orderInLayer - second.renderer.orderInLayer || first.id - second.id)
+    for (const entity of visible) {
+      const tileMap = entity.getComponent<TileMap2D>('TileMap2D')
+      if (tileMap) for (const chunk of tileChunkCommands(entity, tileMap, entities, visibleBounds)) renderer.submitTileChunk(chunk)
+      const shape = entity.getComponent<ShapeRenderer2D>('ShapeRenderer2D')
+      if (shape) {
+        const transform = worldTransform(entity, entities)
+        const materialState = renderState(shape.material, shape.filterMode)
+        renderer.submitShape({
+          shape: shape.shape, position: transform.position, rotation: transform.rotation, scale: transform.scale,
+          vertices: shape.vertices, radiusX: shape.radiusX, radiusY: shape.radiusY,
+          fill: rgba(shape.color, shape.opacity), stroke: rgba(shape.strokeColor, compoundMembers.has(entity.id) ? 0 : shape.strokeOpacity),
+          strokeWidth: shape.strokeWidth, texture: resolveTexture(shape.textureAsset, materialState.sampling),
+          sortingLayer: shape.sortingLayer, orderInLayer: shape.orderInLayer, material: shape.material, blendMode: materialState.blendMode
+        })
+      }
+      const sprite = entity.getComponent<SpriteRenderer2D>('SpriteRenderer2D')
+      if (sprite) submitSprite(renderer, entity, sprite, entities)
+      const text = entity.getComponent<TextRenderer2D>('TextRenderer2D')
+      if (text) submitText(renderer, entity, text, entities)
     }
-    const sprite = entity.getComponent<SpriteRenderer2D>('SpriteRenderer2D')
-    if (sprite) submitSprite(renderer, entity, sprite, entities)
-    const text = entity.getComponent<TextRenderer2D>('TextRenderer2D')
-    if (text) submitText(renderer, entity, text, entities)
-  }
-  particleRuntime.submit(renderer, visible)
-  for (const compound of compounds) {
-    if (compound.members.length < 2 || !compound.members.some(member => visible.includes(member))) continue
-    const style = compound.members[0].renderer
-    for (const segment of compound.boundary) {
-      renderer.submitShape({
-        shape: 'Line', position: { x: 0, y: 0 }, rotation: 0, scale: { x: 1, y: 1 },
-        vertices: [segment.start, segment.end], radiusX: 0, radiusY: 0,
+    particleRuntime.submit(renderer, visible)
+    for (const compound of compounds) {
+      if (compound.members.length < 2 || !compound.members.some(member => visible.includes(member))) continue
+      const style = compound.members[0].renderer
+      for (const segment of compound.boundary) renderer.submitShape({
+        shape: 'Line', position: { x: 0, y: 0 }, rotation: 0, scale: { x: 1, y: 1 }, vertices: [segment.start, segment.end], radiusX: 0, radiusY: 0,
         fill: rgba(style.color, 0), stroke: rgba(style.strokeColor, style.strokeOpacity), strokeWidth: style.strokeWidth,
         sortingLayer: style.sortingLayer, orderInLayer: style.orderInLayer + .001, material: style.material
       })
     }
+    renderer.endCamera()
   }
-  renderer.endCamera()
   return renderer.endFrame()
 }
 

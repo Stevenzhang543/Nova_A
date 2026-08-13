@@ -7,6 +7,8 @@
       <div class="menu-item">
         <button @click="toggleMenu('file')" :class="{ active: activeMenu === 'file' }">{{ t('file') }}</button>
         <Transition name="menu"><div v-if="activeMenu === 'file'" class="dropdown">
+          <button :disabled="!isEditing" @click="handleProjectManager"><span>{{ t('projectManager') }}</span></button>
+          <hr>
           <button :disabled="!isEditing" @click="handleSave"><span>{{ t('saveProject') }}</span><kbd>Ctrl S</kbd></button>
           <button :disabled="!isEditing" @click="triggerLoad"><span>{{ t('loadProject') }}</span></button>
           <hr><button class="danger" :disabled="!isEditing" @click="handleClearScene"><span>{{ t('clearScene') }}</span></button>
@@ -49,14 +51,24 @@
           <button @click="toggleAxis('y')"><span>{{ t(editorState.showYAxis ? 'hideYAxis' : 'showYAxis') }}</span><span class="check">{{ editorState.showYAxis ? '✓' : '' }}</span></button>
           <button @click="handleToggleAllAxes"><span>{{ t((editorState.showXAxis || editorState.showYAxis) ? 'hideAllAxes' : 'showAllAxes') }}</span></button>
           <hr><button @click="handleResetCamera"><span>{{ t('resetCamera') }}</span></button>
+          <hr>
+          <button @click="handleTogglePanel('hierarchy')"><span>{{ t('toggleHierarchy') }}</span><span class="check">{{ editorState.hierarchyVisible ? '✓' : '' }}</span></button>
+          <button @click="handleTogglePanel('inspector')"><span>{{ t('toggleInspector') }}</span><span class="check">{{ editorState.inspectorVisible ? '✓' : '' }}</span></button>
+          <button @click="handleTogglePanel('bottom')"><span>{{ t('toggleBottomPanel') }}</span><span class="check">{{ editorState.bottomPanelVisible ? '✓' : '' }}</span></button>
+          <button @click="handleFocusMode"><span>{{ t('focusMode') }}</span><span class="check">{{ editorState.distractionFree ? '✓' : '' }}</span></button>
+          <button @click="handleResetLayout"><span>{{ t('resetLayout') }}</span></button>
         </div></Transition>
       </div>
       <div class="menu-item">
-        <button @click="handleAbout">{{ t('about') }}</button>
+        <button @click="toggleMenu('help')" :class="{ active: activeMenu === 'help' }">{{ t('help') }}</button>
+        <Transition name="menu"><div v-if="activeMenu === 'help'" class="dropdown dropdown-right">
+          <button @click="handleManual"><span>{{ t('manual') }}</span></button>
+          <button @click="handleAbout"><span>{{ t('about') }}</span></button>
+        </div></Transition>
       </div>
     </nav>
     <div class="top-spacer"></div>
-    <span class="release-pill">1.8.0</span>
+    <span class="release-pill">2.4.0</span>
     <input ref="fileInput" type="file" hidden accept="application/json,.nova,.json" @change="handleFileSelected">
   </header>
 </template>
@@ -66,9 +78,11 @@ import { openUrl } from '@tauri-apps/plugin-opener'
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { t } from '../i18n'
 import { addEditorLog, editorState } from '../store/editor'
-import { clearScene, copySelectedEntities, deleteSelected, duplicateSelectedEntities, loadProject, pasteEntities, physicsState, pushHistory, redo, resetCamera, saveProject, selectEntities, undo } from '../store/physics'
+import { clearScene, copySelectedEntities, deleteSelected, duplicateSelectedEntities, pasteEntities, physicsState, pushHistory, redo, resetCamera, saveProject, selectEntities, undo } from '../store/physics'
 import { preferencesState } from '../store/preferences'
 import { confirmDialogState, requestConfirmation } from '../store/dialog'
+import { openProjectDocument, rememberCurrentProject, showProjectManager } from '../projects/projectManager'
+import { resetEditorLayout, toggleEditorPanel, toggleFocusMode } from '../editor/workspaces'
 
 const activeMenu = ref<string | null>(null)
 const fileInput = ref<HTMLInputElement | null>(null)
@@ -85,7 +99,7 @@ async function handleSave() {
   if (!isEditing.value) { editorState.statusText = t('runtimeIsolation'); return }
   const saved = await saveProject()
   editorState.statusText = t(saved ? 'saved' : 'saveCancelled')
-  if (saved) addEditorLog(t('saved'), 'Project')
+  if (saved) { rememberCurrentProject(); addEditorLog(t('saved'), 'Project') }
   activeMenu.value = null
 }
 function triggerLoad() { fileInput.value?.click(); activeMenu.value = null }
@@ -117,11 +131,16 @@ function handleToggleAllAxes() {
   editorState.showXAxis = visible; editorState.showYAxis = visible; activeMenu.value = null
 }
 function handleResetCamera() { resetCamera(); activeMenu.value = null }
+function handleTogglePanel(panel: 'hierarchy' | 'inspector' | 'bottom') { toggleEditorPanel(panel); activeMenu.value = null }
+function handleFocusMode() { toggleFocusMode(); activeMenu.value = null }
+function handleResetLayout() { resetEditorLayout(); activeMenu.value = null }
 async function handleAbout() {
   activeMenu.value = null
   if ('__TAURI_INTERNALS__' in window) await openUrl(projectUrl)
   else window.open(projectUrl, '_blank', 'noopener,noreferrer')
 }
+function handleManual() { activeMenu.value = null; window.open('./manual/index.html', '_blank', 'noopener,noreferrer') }
+function handleProjectManager() { activeMenu.value = null; showProjectManager() }
 function handleUndo() { if (isEditing.value) undo(); activeMenu.value = null }
 function handleRedo() { if (isEditing.value) redo(); activeMenu.value = null }
 function toggleMenu(menu: string) { activeMenu.value = activeMenu.value === menu ? null : menu }
@@ -136,8 +155,8 @@ function handleFileSelected(event: Event) {
   const file = target.files?.[0]
   if (!file) return
   const reader = new FileReader()
-  reader.onload = event => {
-    if (typeof event.target?.result === 'string' && loadProject(event.target.result)) {
+  reader.onload = async event => {
+    if (typeof event.target?.result === 'string' && await openProjectDocument(event.target.result, file.name)) {
       pushHistory()
       editorState.statusText = t('loaded')
       addEditorLog(t('loaded'), 'Project')
@@ -178,6 +197,7 @@ onUnmounted(() => { window.removeEventListener('keydown', handleKeyDown); if (me
 .menu-item > button { height: 28px; padding: 0 10px; border: 0; border-radius: 8px; color: var(--text-secondary); background: transparent; font-size: 12px; }
 .menu-item > button:hover, .menu-item > button.active { color: var(--text-primary); background: var(--surface-hover); }
 .dropdown { position: absolute; top: 36px; left: 0; min-width: 230px; padding: 6px; display: flex; flex-direction: column; border: 1px solid var(--border-subtle); border-radius: var(--radius-md); background: var(--surface-1); backdrop-filter: var(--glass-blur); box-shadow: var(--shadow-lg); }
+.dropdown-right { right: 0; left: auto; }
 .dropdown button { min-height: 34px; padding: 0 9px; display: flex; align-items: center; justify-content: space-between; gap: 18px; border: 0; border-radius: 7px; background: transparent; color: var(--text-secondary); text-align: left; font-size: 12px; }
 .dropdown button:hover { color: var(--text-primary); background: var(--accent-soft); }
 .dropdown button.danger { color: var(--danger); }

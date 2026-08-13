@@ -1,3507 +1,407 @@
-1. What Nova_A v1.1.2 can currently do
+# Nova_A 2.1.0 -> 3.0.0 Product and Engineering Roadmap
+
+Document status: authoritative roadmap
+Last reviewed: 2026-08-12
+Product owner: Whitelist
+Project: https://github.com/Stevenzhang543/Nova_A
+
+## 1. Product decision
+
+Nova_A is a professional, 2D-first game engine and editor. Its goal is not to copy every subsystem in Unity or Unreal Engine. Literal feature parity would require 3D rendering, ray tracing, VR/XR, cinematic virtual production, terrain, foliage, and AAA content pipelines, which would destroy Nova_A's lightweight identity.
+
+The target is instead:
+
+- Complete feature coverage for building, debugging, profiling, exporting, and extending serious 2D games.
+- Familiar workflows for users coming from Unity, Unreal, Godot, GameMaker, or Defold.
+- A small, fast core whose optional systems are loaded only when a project uses them.
+- Precise world units and persistent Rust physics as first-class advantages.
+- An open extension API so specialized capabilities do not have to become permanent core weight.
+- Backward-compatible projects, explicit migrations, and no silent data loss.
+
+Nova_A 3.0 must be better than broad engines in measurable, focused ways: editor startup time, empty-player size, iteration latency, deterministic 2D simulation, clarity of the 2D workflow, and the amount of functionality available without installing a large toolchain. It does not claim to be universally better at workloads outside its 2D scope.
+
+## 2. What Nova_A already provides at 2.0.0
+
+### Architecture and project data
+
+- Vue 3 editor, Tauri desktop shell, WebAssembly bridge, and modular Rust workspace.
+- Separate `nova_math`, `nova_physics`, `nova_runtime`, `nova_script`, `nova_format`, and `nova_wasm` crates.
+- Persistent Rust physics world with stable runtime handles and a compact typed-array state bridge.
+- Format 2 / schema 14 project documents, centralized validation and migration from older schemas.
+- Project Manager, recent projects, autosave, templates, scenes, entities, components, hierarchy, parenting, UUIDs, prefabs, and overrides.
+- Asset database with stable GUID references and import metadata.
+
+### Runtime and gameplay
+
+- Fixed-timestep runtime, time scale, pause, single-step, scene lifecycle, and collision/trigger events.
+- Rhai scripting with lifecycle callbacks, input, entity, transform, physics, scene, audio, UI, save-data, and event APIs.
+- Named keyboard, mouse, wheel, and gamepad input actions.
+- Runtime UI components, event callbacks, focusable text input, and game-view interaction.
+- Save slots and project-local runtime state.
+
+### Physics
+
+- Dynamic, kinematic, and static rigid bodies.
+- Mass/density/inertia, forces, impulses, torque, gravity, damping, sleep, freeze rotation, and CCD settings.
+- Convex polygon, ellipse, and editor shape collision with GJK/EPA/contact solving.
+- Restitution, static/dynamic friction, sensors, one-way collision, physics layers, and masks.
+- Fixed, distance, revolute, prismatic, and spring joints.
+- Physical strings with bend/stretch constraints, collisions, anchor forces, and breakage.
+- Rigid compound binding and separation.
+- Layer isolation: objects on separate logical layers do not physically interact.
+- Physics queries, diagnostics, collider overlays, contacts, and runtime statistics.
+
+### Rendering and content
+
+- WebGL2 renderer with Canvas2D fallback, batching, culling, editor overlays, ordering, cameras, sprites, shapes, and text.
+- Texture import, tint, opacity, filtering, custom fonts, and layer-specific default colors.
+- Sprite/property animation clips and animator controllers.
+- Audio sources/listeners and audio buses.
+- Particles and tilemaps.
+- Editor Scene and Game views, move/rotate/scale gizmos, snapping, grids, axes, zoom, and selection.
+
+### Production tools
+
+- Assets, Console, Animation, Profiler, Tilemap, Project Settings, and Build Settings panels.
+- Windows and web-oriented build/player pipeline, packed `.nova-pak` content, build reports, crash logs, and diagnostics.
+- Initial sandboxed WASM plugin runtime.
+- English, German, and Chinese UI and manuals.
+
+## 3. Research comparison and lessons
+
+The roadmap is based on official documentation reviewed in August 2026.
+
+| Engine | Strongest workflow ideas | Expansion model | Trade-off Nova_A should avoid |
+| --- | --- | --- | --- |
+| Unity | Project/Hierarchy/Scene/Game/Inspector mental model; component composition; searchable Package Manager; UI Toolkit and visual authoring | Registry, Git, disk, and embedded packages; custom editor windows and inspectors | Large installation and many packages/subsystems visible even in small projects |
+| Unreal Engine | Task-specific editors; World Outliner + Details; dockable layouts; Content Drawer stays hidden until needed | Code/data plugins, editor modes, utility widgets, menu/toolbar tools | 3D-first complexity and an intimidating number of specialized panels |
+| Godot | Clear 2D/3D/Script workspaces; contextual docks; bottom panels folded by default; integrated docs and script editor | Editor/import plugins and GDExtension | A single inspector can still become long when nodes gain many capabilities |
+| GameMaker | Multiple workspaces and pop-out layouts; direct room/object/sprite editors | Marketplace/extensions | Proprietary workflow and less general low-level control |
+| Defold | Small editor; assets plus focused editors; compact runtime and reusable collections | Editor scripts and native extensions | Native extensions can require rebuilding a project-specific engine |
+
+Sources:
+
+- Unity Editor: https://docs.unity.cn/6000.2/Documentation/Manual/unity-editor.html
+- Unity Package Manager: https://docs.unity3d.com/Manual/upm-ui.html
+- Unity UI Toolkit: https://docs.unity3d.com/2023.2/Documentation/Manual/UIElements.html
+- Unity Visual Scripting: https://docs.unity.cn/6000.1/Documentation/Manual/com.unity.visualscripting.html
+- Unreal Editor interface: https://dev.epicgames.com/documentation/en-us/unreal-engine/unreal-editor-interface
+- Unreal layout customization: https://dev.epicgames.com/documentation/en-us/unreal-engine/layout-customization
+- Unreal plugins: https://dev.epicgames.com/documentation/en-us/unreal-engine/plugins-in-unreal-engine
+- Unreal tools and editors: https://dev.epicgames.com/documentation/en-us/unreal-engine/tools-and-editors-in-unreal-engine
+- Godot editor overview: https://docs.godotengine.org/en/stable/getting_started/introduction/first_look_at_the_editor.html
+- Godot editor plugins: https://docs.godotengine.org/en/stable/tutorials/plugins/editor/index.html
+- Godot feature list: https://docs.godotengine.org/en/stable/about/list_of_features.html
+- Defold editor: https://defold.com/manuals/editor/
+- Defold editor scripts: https://defold.com/manuals/editor-scripts/
+- Defold native extensions: https://defold.com/manuals/extensions/
+- GameMaker workspaces: https://manual.gamemaker.io/beta/en/Introduction/Workspaces.htm
+
+The main lesson is not to place every capability in one permanent inspector. Nova_A must use stable global navigation, task workspaces, contextual editors, a searchable component picker, a folded bottom drawer, and user-persisted panel choices.
+
+## 4. Feature gaps to close before 3.0
 
-According to the project structure and introduction, Nova_A currently contains:
+### Editor workflow gaps
 
-A Rust physics core
-WebAssembly bridge
-Vue 3 editor frontend
-Tauri desktop application
-Renderer
-Physics editor
-Project serialization system
+- No task-focused workspaces or saved panel arrangements.
+- No command palette or global command/search system.
+- The inspector is a single long stream; adding components requires scrolling.
+- No general dock/floating-panel model or user-named layouts.
+- Asset types do not consistently open dedicated contextual editors.
+- Limited keyboard-only navigation and editor accessibility.
 
-The architecture is actually quite modern:
+### Scripting and gameplay gaps
 
-Vue 3 Editor
-      |
-      |
- Float64 WASM ABI
-      |
-      |
-Rust Physics Engine
-      |
-      |
-Renderer
+- Script editor lacks language-service completion, symbol navigation, safe rename, breakpoints, watches, and a real debugger.
+- Script modules, dependency declarations, coroutines/tasks, signals, and typed generated API documentation are incomplete.
+- No optional visual scripting/state-graph gameplay system.
+- Navigation, agents, behavior tools, and a production character controller are missing.
+- Networking is missing; it should be optional rather than core weight.
 
-2. Current physics capabilities
-2.1 Rigid body physics
+### Rendering, animation, and content gaps
 
-Nova_A already supports:
+- No 2D lighting/shadows, normal maps, material graph, user shaders, render textures, camera stacks, or post-processing stack.
+- Animation lacks curve editing, events, blend trees, skeletal rigs, IK, and a general timeline/sequencer.
+- Asset importing lacks a dependency graph, content-addressed cache, background import workers, hot reimport, and platform variants.
+- Tilemap workflow needs palettes, rule tiles, terrain painting, streaming chunks, and navigation/collision baking.
 
-Dynamic bodies
+### Audio, UI, and world gaps
 
-Objects affected by:
+- No audio mixer effects, snapshots, ducking, streaming, or spatial attenuation authoring.
+- UI needs responsive containers, style/theme resources, localization-aware layout, full focus navigation, and reusable UI scenes.
+- No localization database, plural rules, fallback fonts, or translation preview.
+- No world partition/chunk streaming or origin-management tools for large 2D worlds.
 
-gravity
-force
-torque
-velocity
-angular velocity
-damping
+### Extensibility and shipping gaps
 
-Example:
+- Plugin API 1 is runtime-only and too small. It lacks editor commands, panels, importers, custom components, inspectors, settings, and build hooks.
+- No package registry/client, dependency lockfile, compatibility resolver, signing, or permission review UI.
+- Native desktop export is host-oriented; Android and polished platform templates are absent.
+- Source-control status/diff/merge workflows and team-safe scene files need improvement.
+- Automated scene/runtime tests, deterministic replay, memory budgets, and frame-trace capture are incomplete.
 
-Box
- |
-gravity
- |
-falls
- |
-collides
- |
-rotates
+## 5. Non-negotiable engineering rules for every release
 
-The engine calculates:
+1. Preserve features and project data. When a workflow is replaced, the replacement must expose the same capability before the old UI is removed.
+2. Never silently discard unknown components, fields, assets, plugin data, or newer project data.
+3. Every persisted format change requires validation, migration, round-trip tests, corruption tests, and an explicit schema bump.
+4. Every user-visible string must exist in English, German, and Chinese. Layout tests must include all three languages.
+5. Physics uses finite `f64` values and exact world units. One configured metre equals one world metre; viewport zoom never changes simulation values.
+6. Runtime physics remains in Rust. The frontend does not become a second authoritative physics implementation.
+7. Rendering may interpolate visual transforms but must not write interpolated state back into physics.
+8. Optional systems must be lazy or package-based. A project pays runtime and distribution cost only for features it uses.
+9. No unbounded per-frame allocations, DOM growth, event listeners, timers, asset caches, logs, or script work queues.
+10. Keyboard, mouse, gamepad, narrow-window, high-DPI, light/dark theme, reduced-motion, and all-language behavior must be audited.
+11. Build gates are `cargo fmt --check`, `cargo clippy --workspace --all-targets -- -D warnings`, `cargo test --workspace --all-targets`, `vue-tsc --noEmit`, production web build, manual audit, and release-specific audits.
+12. Each feature must have a visible UI entry, a saved representation when applicable, a runtime/calculation binding, error handling, undo/redo where applicable, documentation, and tests.
 
-F = ma
+## 6. Performance and size budgets
 
-τ = Iα
+These are release targets, not claims until measured on the documented reference machine.
 
-meaning it has real physical force and rotational simulation.
+- Editor cold start to usable Project Manager: <= 3 seconds.
+- Existing-project open to editable scene for a medium project: <= 2 seconds excluding first-time external asset decoding.
+- Empty standalone player executable and engine code: <= 15 MB before game assets and OS web-runtime prerequisites.
+- Editor idle working set: <= 300 MB for an empty project.
+- Inspector or workspace switch response: <= 100 ms at the 95th percentile.
+- Script edit to hot-reload result: <= 500 ms for a small project.
+- 10,000 visible static sprites at 60 FPS on the published integrated-GPU reference profile, with a documented benchmark scene.
+- Physics produces no NaN/Infinity for any accepted finite input and remains stable across supported tick rates.
+- A deterministic replay test produces identical checksums on repeated runs of the same engine build and platform.
 
-2.2 Mass system
+Performance work may not reduce visual quality by silently lowering sampling, disabling animation, removing collision, or changing configured precision. Explicit quality levels are allowed only when user-selectable and documented.
 
-It supports:
+## 7. Release plan
 
-density
-mass
-automatic inertia
-manual inertia
+### 2.1.0 - Workspace and Editor UX Foundation
 
-Example:
-
-A circle:
-
-radius = 1m
-density = 10
-
-↓
-
-mass calculated automatically
-
-Changing mass changes density relationships.
-
-This is already better than many beginner engines.
-
-2.3 Collision system
-
-Currently:
-
-convex polygon collision
-ellipse collision
-layers
-sensors
-friction
-restitution
-
-Meaning:
-
-You can build:
-
-boxes
-platforms
-balls
-machines
-physical puzzles
-
-2.4 Rope physics
-
-This is one of Nova_A's strongest features.
-
-It supports:
-
-rope segments
-stretching
-bending
-damping
-rope collision
-rope breaking
-
-Example:
-
-Anchor
- |
- |
-rope
- |
- |
-Box
-
-The rope can:
-
-deform
-transfer force
-break under stress
-
-This is not a trivial feature.
-
-2.5 Constraint/binding system
-
-It supports binding bodies together.
-
-Example:
-
-Two objects:
-
-Wheel       Engine
-
-   \       /
-
-    connected
-
-
-They become one physics state while keeping separate rendering.
-
-This is basically the foundation of joints.
-
-3. Current rendering capabilities
-
-Currently Nova_A has:
-
-object rendering
-textures
-colors
-opacity
-camera transform
-editor visualization
-
-Rendering properties are separated from physics properties.
-
-Meaning:
-
-A red object:
-
-Physics:
-mass = 10kg
-
-Renderer:
-color = red
-texture = metal.png
-
-Good design.
-
-4. Current editor capabilities
-
-Nova_A already has:
-
-project files
-object editing
-connection editing
-preferences
-themes
-animations/transitions
-browser preview
-desktop build
-
-This is important.
-
-You already have the beginning of:
-
-Unity Scene Editor
-        |
-        |
-Nova_A Editor
-5. Where Nova_A currently stands
-
-I would classify it like this:
-
-Category	Status
-Physics engine	Advanced
-Renderer	Basic-medium
-Editor	Medium
-Game framework	Missing
-Asset pipeline	Missing
-Runtime	Missing
-Scripting	Missing
-Audio	Missing
-Animation	Basic
-UI system	Missing
-Publishing pipeline	Missing
-
-The biggest issue:
-
-Nova_A is currently an engine component, not an engine product.
-
-6. What makes Unity/Godot/other engines "engines"?
-
-A physics engine answers:
-
-"How do objects move?"
-
-A game engine answers:
-
-"How do I make a complete game?"
-
-You need another layer.
-
-Current:
-
-Nova_A
-
-Physics
-Renderer
-Editor
-
-Need:
-
-Nova_A
-
-├── Physics
-├── Renderer
-├── Scene System
-├── Entity System
-├── Component System
-├── Asset Manager
-├── Animation
-├── Audio
-├── Input
-├── UI
-├── Scripting
-├── Build System
-└── Editor
-7. Roadmap: turning Nova_A into a real 2D game engine
-
-I would not randomly add features.
-
-Do it in this order.
-
-Phase 1 — Create a real runtime engine
-
-Current problem:
-
-Your editor exists, but what runs the game?
-
-You need:
-
-Nova_A Editor
-
-creates
-
-Nova_A Game Runtime
-
-runs
-
-Add:
-
-nova_runtime/
-
-Structure:
-
-nova_core
- |
- |-- physics
- |-- renderer
- |
-nova_runtime
- |
- |-- game loop
- |-- scene loading
- |-- input
- |-- audio
- |
-nova_editor
-
-Your runtime needs:
-
-Game loop
+Goal: make every existing feature discoverable without making users search through one long right panel.
 
 Implement:
 
-while running:
-
-    input()
-
-    physics.step()
-
-    update()
-
-    render()
-
-
-Fixed timestep:
-
-physics:
-60Hz
-
-render:
-variable FPS
-
-Example:
-
-Physics:
-60 updates/sec
-
-Renderer:
-144 FPS
-Phase 2 — Entity Component System (ECS)
-
-This is mandatory.
-
-Do not keep objects as special classes.
-
-Use:
-
-Entity
-
-+
-Components
-
-Example:
-
-Player:
-
-Entity 001
-
-Components:
-
-Transform
-SpriteRenderer
-RigidBody
-Collider
-Script
-AudioSource
-
-Enemy:
-
-Entity 002
-
-Transform
-SpriteRenderer
-AI
-Collider
-
-Implementation:
-
-Create:
-
-nova_ecs
-
-with:
-
-EntityID
-
-ComponentStorage<T>
-
-System
-
-Example:
-
-PhysicsSystem
-
-gets:
-
-all entities with:
-
-RigidBody
-+
-Collider
-+
-Transform
-
-updates them
-Phase 3 — Scene system
-
-Currently you have projects.
-
-Games need scenes.
-
-Example:
-
-MainMenu.scene
-
-Level1.scene
-
-BossFight.scene
-
-Create:
-
-Scene
- |
- |-- entities
- |-- lighting
- |-- camera
- |-- settings
-
-File:
-
-{
-"name":"Level1",
-
-"entities":[
-
-{
-"id":1,
-
-"type":"Player"
-
-}
-
-]
-
-}
-Phase 4 — Asset system
-
-Professional engines need:
-
-Assets/
-
-textures/
-audio/
-fonts/
-scenes/
-scripts/
-materials/
-
-Create:
-
-AssetManager
-
-Functions:
-
-load_texture()
-
-load_audio()
-
-load_scene()
-
-unload_asset()
-
-Need importing:
-
-Images:
-
-png
-jpg
-webp
-
-Audio:
-
-wav
-ogg
-Phase 5 — Sprite system
-
-A 2D engine needs sprites.
-
-Add:
-
-SpriteRenderer
-
-Properties:
-
-texture
-
-position
-
-rotation
-
-scale
-
-layer
-
-Then:
-
-Sprite sheet:
-
-player.png
-
-+---+---+---+
-| 1 | 2 | 3 |
-+---+---+---+
-
-Animation:
-
-idle:
-
-frame1
-frame2
-frame3
-Phase 6 — Animation system
-
-Add:
-
-Animator
-
-Example:
-
-Player
-
-Animation:
-
-Idle
-Run
-Jump
-Attack
-
-Data:
-
-{
-"Run":
-
-{
-"frames":[1,2,3,4],
-"speed":12
-}
-
-}
-Phase 7 — Input system
-
-You need:
-
-Keyboard:
-
-A
-D
-Space
-
-Mouse:
-
-click
-drag
-position
-
-Controller:
-
-Xbox
-Playstation
-
-API:
-
-Input.is_pressed("jump")
-
-Input.mouse_position()
-Phase 8 — Scripting
-
-This is a huge step.
-
-Users cannot write Rust.
-
-You need:
-
-A scripting language.
-
-Options:
-
-Lua
-
-Recommended.
-
-Add:
-
-rlua
-
-Example:
-
-function update()
-
-if Input.key("SPACE") then
-
-player.jump()
-
-end
-
-end
-Phase 9 — UI system
-
-Need:
-
-Button
-
-Label
-
-Panel
-
-Slider
-
-Textbox
-
-For:
-
-menus
-health bars
-inventory
-settings
-Phase 10 — Audio
-
-Add:
-
-AudioSource
-
-Support:
-
-music
-
-sound effect
-
-volume
-
-pitch
-
-loop
-Phase 11 — Particle system
-
-Essential for professional feeling.
-
-Examples:
-
-Explosion:
-
-*
-**
-***
-**
-*
-
-Add:
-
-ParticleEmitter
-
-Properties:
-
-count
-velocity
-life
-gravity
-texture
-Phase 12 — Editor upgrade
-
-Your editor should become:
-
-Scene hierarchy
-
-Like Unity:
-
-Scene
-
-|- Player
-
-|- Enemy
-
-|- Camera
-
-|- Light
-Inspector
-
-Select object:
-
-Player
-
-Transform
-
-x:
-10
-
-y:
-20
-
-
-Physics
-
-mass:
-5
-
-
-Sprite
-
-texture:
-player.png
-Gizmos
-
-Add:
-
-move tool
-rotate tool
-scale tool
-Phase 13 — Professional features
-
-After the basics:
-
-Debug tools
-
-Add:
-
-Physics visualization:
-
-Collider:
-
-+-------+
-|       |
-| box   |
-+-------+
-
-
-FPS counter:
-
-FPS:144
-
-Physics:
-0.3ms
-Profiling
-
-Show:
-
-Physics:
-2ms
-
-Render:
-4ms
-
-Scripts:
-1ms
-Packaging
-
-One click:
-
-Build Windows
-
-Build Linux
-
-Build Web
-My suggested Nova_A version roadmap
-v1.2
-
-"Runtime Foundation"
-
-Add:
-
-game loop
-ECS
-scene loading
-input
-v1.5
-
-"2D Game Framework"
-
-Add:
-
-sprites
-animation
-audio
-assets
-scripting
-v2.0
-
-"Game Engine"
-
-Add:
-
-complete editor
-debugger
-build pipeline
-package manager
-My evaluation
-
-For a middle-school developer, Nova_A is already unusually ambitious. The physics side is actually ahead of the average hobby engine. The next challenge is not "more physics"; it is software architecture.
-
-The biggest architectural decision I would make now:
-
-Stop thinking of Nova_A as a physics editor. Start redesigning it as a complete game creation platform.
-
-The physics engine should become only one module.
-
-The final architecture should look like:
-
-                 Nova_A
-
-                    |
-        -------------------------
-        |                       |
-   Editor                    Runtime
-        |                       |
-        |                 Game Engine
-        |
- ------------------------------
- |
- ECS
- Physics
- Renderer
- Audio
- Input
- Animation
- UI
- Script
- Asset System
-
-
-If you build in this order, Nova_A can realistically become a small but genuine open-source 2D game engine rather than another physics sandbox.
-
-Now I have a rough idea. It's now only considering objects' moments and motion. However for it to be an actual game engine, it needs a complete refresh in the backend, with more introduced UIs. I'll give you some snapshots in my app, for you to see what it can do, and what's missing, easier for you to understand.
-
-Now I need you to give me a thorough plan, for me to give it as a clear-and-nice instruction to give it to my coder. 1.List ALL components sorted in parts, in a recommended path, and fit them in to every version, and what to do in each version. (1.2.0:xxx: 1.3.0:xxx 1.4.0:xxx......2.0.0:xxx). 2.Tell my coder what exactly he should do for each component. You need to explain very thoroughly. You need to treat my coder as an idiot.
-
-Meanwhile, I need you to know that, now the app is only a SINGLE .exe files, compiling all components into one application, with no dll files or excessive folders. Will that effect anything in the future? How can we improve this? If it brings positive impact, write that in the roadmap. Also give thorough instructions.
-
-For your information, the x.0.0 versions are big releases, for huge updates. 0.x.0 versions are for feature implementations. 0.0.x versions are for bug fixes and component improvements.
-Worked for 3m 18s
-
-Yes. After looking at the screenshots and re-reading the actual v1.1.2 source, I would change the roadmap substantially from my previous answer.
-
-Nova_A should not try to become a game engine by simply attaching audio, scripting and animation to the current Entity class. The current architecture is appropriate for a physics/editor application, but if you keep extending it directly, you will eventually end up with one enormous object type containing physics, graphics, audio, scripts, animation, UI and gameplay state.
-
-There are already some clear architectural warning signs:
-
-Entity.ts currently owns transform, texture/color, velocity, mass, gravity, forces, friction, body type and collision diagnostics at the same time.
-WorldCanvas.vue currently handles the animation loop, physics stepping, editor input, hit testing, camera interaction and actual Canvas2D rendering in one component.
-World.ts rebuilds large Float64Arrays from the TypeScript objects every physics update, sends them into WASM and reads the values back afterward.
-Your Rust physics engine is still essentially one very large lib.rs; it is already almost 3,000 lines and contains math, shapes, bodies, collision detection, solver logic and WASM-facing functionality together.
-Rendering is currently Canvas2D.
-
-None of these are bad decisions for Nova_A 1.1.2. They are precisely the kind of architecture that lets you get a physics program working quickly. But 1.2.x is the point where I would stop adding random user-facing features and build a foundation that will survive Nova_A 2.0.
-
-Below is the roadmap I would give your coder.
-
-Nova_A 1.2 → 2.0 engineering plan
-
-I would define the releases like this:
-
-Version	Release name	Main purpose
-1.2.0	Engine Foundation	Rebuild the backend architecture without changing what Nova_A fundamentally does
-1.3.0	Scene & Component System	Replace monolithic entities with actual game-engine objects/components
-1.4.0	Professional Editor	Turn the existing editor into a proper scene editor
-1.5.0	Rendering & Asset Pipeline	Build a real 2D rendering and asset system
-1.6.0	Gameplay Runtime	Input, scripting, prefabs, scenes and game lifecycle
-1.7.0	Animation, Audio & UI	Add the systems needed to create a complete playable game
-1.8.0	Advanced 2D Systems	Tilemaps, particles, advanced physics, queries and world tools
-1.9.0	Build, Debug & Distribution	Export actual games, profiling, packaging and developer tooling
-2.0.0	Nova_A Game Engine	Stabilize everything as one coherent public game engine
-
-Your 1.x.y rules still work:
-
-1.2.0, 1.3.0, etc. = feature releases.
-1.2.1, 1.2.2 = fixes and refinements to 1.2.
-2.0.0 = the major identity change from "physics/rendering editor" to game engine.
-First: define what Nova_A 2.0 actually means
-
-Do not call Nova_A a complete game engine until the following workflow works from beginning to end:
-
-Create Project → Import artwork → Create Scene → Create Player → Add Sprite → Add Collider → Add RigidBody → Add Script → Configure Input → Add Camera → Add Animation → Add Sound → Add UI → Press Play → Switch scenes → Save game data → Build → Receive a standalone playable executable.
-
-That is the test.
-
-If one of those essential stages requires manually editing Nova_A source code, the engine is not finished.
-
-PART I — Core architecture
-Nova_A 1.2.0 — Engine Foundation
-
-This is the most important release before 2.0.
-
-Do not add animation, audio, tilemaps or scripting yet.
-
-Fix the foundation first.
-
-1. Split nova_core
-
-Right now nova_core/src/lib.rs contains essentially the entire physics backend.
-
-That must stop growing.
-
-Create a Cargo workspace.
-
-Target structure:
-
-Nova_A/
-│
-├─ Cargo.toml
-│
-├─ crates/
-│  ├─ nova_math/
-│  ├─ nova_physics/
-│  ├─ nova_runtime/
-│  ├─ nova_format/
-│  └─ nova_wasm/
-│
-├─ src/
-│  └─ editor frontend
-│
-├─ src-tauri/
-│
-└─ tests/
-nova_math
-
-Put here:
-
-Vec2
-Mat3 / Transform2D maths
-AABB
-Ray2
-Rect
-angle utilities
-interpolation
-numeric validation
-
-There must be zero Vue, WASM or Tauri code here.
-
-nova_physics
-
-Put here:
-
-Body
-Collider
-Shape
-BroadPhase
-NarrowPhase
-Contact
-Manifold
-Solver
-Rope
-Joint
-PhysicsWorld
-PhysicsMaterial
-PhysicsQuery
-
-Move all physics algorithms out of the giant lib.rs.
-
-Suggested structure:
-
-nova_physics/src/
-├─ lib.rs
-├─ body.rs
-├─ collider.rs
-├─ shape.rs
-├─ world.rs
-├─ material.rs
-├─ collision/
-│  ├─ mod.rs
-│  ├─ broad_phase.rs
-│  ├─ gjk.rs
-│  ├─ epa.rs
-│  └─ manifold.rs
-├─ solver/
-│  ├─ mod.rs
-│  ├─ contact_solver.rs
-│  └─ constraint_solver.rs
-├─ rope/
-└─ query/
-
-lib.rs should largely become exports:
-
-pub mod body;
-pub mod collider;
-pub mod collision;
-pub mod world;
-
-It should not remain another 3,000-line file.
-
-nova_runtime
-
-This becomes the actual game runtime.
-
-Initially it can be small.
-
-It will eventually own:
-
-RuntimeWorld
-Entities
-Components
-Scenes
-Game loop
-Time
-Input
-Script execution
-Animation
-Audio requests
-Events
-
-In 1.2.0, only build its skeleton.
-
-nova_format
-
-This owns serialization.
-
-Do not allow the editor itself to define the project format.
-
-It should contain definitions for:
-
-ProjectFile
-SceneFile
-EntityFile
-ComponentFile
-AssetReference
-formatVersion
-migration
-validation
-
-This becomes extremely important later.
-
-nova_wasm
-
-This is the only crate whose purpose is exposing Rust to JavaScript.
-
-It should contain wasm_bindgen.
-
-The actual physics engine should not care whether it is running under WASM, Windows or Linux.
-
-Architecture:
-
-Vue/TS
-   │
-nova_wasm
-   │
-nova_runtime
-   │
-nova_physics
-   │
-nova_math
-
-Never:
-
-nova_physics
-   ↓
-Vue
-Tauri
-JavaScript
-DOM
-
-The dependency direction must remain one-way.
-
-2. Replace the current per-frame physics ABI
-
-This is a major change.
-
-Currently TypeScript does approximately:
-
-Entity objects
-   ↓
-build Float64Array
-   ↓
-WASM
-   ↓
-reconstruct physics bodies
-   ↓
-simulate
-   ↓
-return Float64Array
-   ↓
-write everything into Entity objects
-
-That is visible in World.ts.
-
-It worked well for a physics editor.
-
-It should not remain the final engine architecture.
-
-Instead create a persistent Rust physics world.
-
-Something conceptually like:
-
-pub struct PhysicsWorld {
-    bodies: ...,
-    colliders: ...,
-    joints: ...,
-    contacts: ...,
-}
-
-Expose commands such as:
-
-create_body()
-destroy_body()
-
-create_collider()
-destroy_collider()
-
-set_transform()
-set_velocity()
-set_body_type()
-set_material()
-
-apply_force()
-apply_impulse()
-
-step()
-
-get_body_states()
-drain_events()
-
-The important change is this:
-
-Before
-
-Every frame:
-
-"Here are all the objects. Rebuild the physics world."
-
-After
-
-When a user creates an object:
-
-"Create body #384."
-
-When the user changes mass:
-
-"Change body #384 mass."
-
-Every frame:
-
-"Advance the already-existing world by 1/60 second."
-
-That is much cleaner.
-
-3. Keep a compact state buffer
-
-Do not replace the Float64 buffer with thousands of JavaScript objects returned through WASM every frame.
-
-Keep a high-performance buffer for runtime state.
-
-For example:
-
-BodyState:
-
-id
-position.x
-position.y
-rotation
-velocity.x
-velocity.y
-angularVelocity
-sleeping
-
-Reuse the same allocated buffer where possible.
-
-Do not allocate a brand-new enormous buffer for every object every frame unless necessary.
-
-Configuration changes go through commands.
-
-Runtime transforms come back through the state buffer.
-
-4. Implement a proper fixed timestep
-
-Your viewport currently derives dt directly from requestAnimationFrame and calls the physics world from that loop.
-
-Replace that with an accumulator.
-
-Default:
-
-Physics frequency = 60 Hz
-fixedDeltaTime = 1 / 60
-
-Conceptually:
-
-frameDelta = currentTime - previousTime
-
-accumulator += frameDelta
-
-while accumulator >= fixedDeltaTime:
-    fixedUpdate()
-    physics.step(fixedDeltaTime)
-    accumulator -= fixedDeltaTime
-
-alpha = accumulator / fixedDeltaTime
-
-render(interpolatedTransform(alpha))
-
-This gives you:
-
-60 Hz physics
-144 Hz rendering
-
-without physics behaving differently at different monitor refresh rates.
-
-Add settings:
-
-Physics Tick Rate: 30 / 60 / 120 / Custom
-Maximum catch-up steps
-Time scale
-Paused
-5. Create an event bus
-
-Systems must stop directly knowing about every other system.
+1. Add a persistent workspace model with Design, Script, Animation, Interface, and Debug presets.
+2. Add a workspace bar that switches page, hierarchy visibility, inspector visibility, bottom drawer tab, bottom drawer height, and focus mode as one reversible layout transaction.
+3. Preserve the user's latest layout in local storage. Reject malformed stored values and provide Reset Layout.
+4. Keep the bottom drawer collapsed in the default Design workspace. Never hide its tabs when it is available.
+5. Add explicit Hierarchy, Inspector, Bottom Panel, and Focus Mode controls. Focus Mode is temporary and must not erase the saved layout.
+6. Add a global command palette on `Ctrl/Cmd+K` and `Ctrl/Cmd+Shift+P`. Commands must be searchable by localized label and keywords, keyboard navigable, and usable without a mouse.
+7. Include commands for workspaces, Scene/Game views, settings, every bottom tool, panel toggles, and layout reset.
+8. Redesign the inspector header as a sticky control area with search, category filters, and an always-visible Add Component button.
+9. Replace the bottom-of-inspector component list with a searchable, categorized component picker. This relocates the feature; it does not remove any component type.
+10. Filter both core and optional/runtime components by category and translated name. A zero-result state must explain how to clear the filter.
+11. Add responsive rules so the workspace bar, inspector picker, and command palette remain usable at the minimum 900 x 600 desktop size and in all three languages.
+12. Update all version metadata to 2.1.0 and document the new navigation in all manuals.
+
+Implementation boundaries:
+
+- Workspace/layout state belongs in `src/editor`, not in physics or project documents.
+- User layout preferences are machine-local and must never dirty or alter the game project.
+- Existing editor page, bottom panel, inspector editing, undo/redo, and runtime-isolation behavior must remain unchanged.
+- Workspace changes must call the existing resize/reconfigure path so the canvas never stretches or disappears.
+
+Acceptance tests:
+
+- Switch through every workspace and return to Design; no panel overlaps and viewport bounds remain valid.
+- Reload the editor; layout preferences restore, while a corrupt preference falls back safely.
+- Open every existing bottom panel through the command palette.
+- Select an entity with every component; locate, edit, reset, copy/paste, and remove components with filters active.
+- Add every allowed component without scrolling to the inspector bottom.
+- Test keyboard-only palette/picker operation, Escape handling, three languages, both themes, high contrast, reduced motion, and 900 x 600.
+
+### 2.2.0 - Script Studio and Gameplay Events
+
+Goal: make scripting a first-class, debuggable workflow rather than a text field.
 
 Implement:
 
-EngineEvent
-
-Eventually it should carry:
-
-CollisionStarted
-CollisionEnded
-TriggerEntered
-TriggerExited
-EntityCreated
-EntityDestroyed
-SceneLoaded
-SceneUnloaded
-AssetReloaded
-AnimationEvent
-ScriptError
-
-Do not wire the renderer directly into the physics solver.
-
-6. Create project-format versioning now
-
-Every saved Nova_A project must contain something like:
-
-{
-  "formatVersion": 2,
-  "engineVersion": "1.2.0"
-}
-
-Then implement migrations:
-
-v1 format
- ↓
-migrate_v1_to_v2()
- ↓
-v2 format
-
-Never write code like:
-
-if project.version === "1.1.2"
-
-throughout the editor.
-
-Centralize migrations.
-
-And 1.1.2 projects must continue opening.
-
-That is a release requirement.
-
-7. Start using UUIDs for saved identities
-
-Your current world increments numeric IDs.
-
-That works inside one scene.
-
-It becomes problematic once you have:
-
-copy/paste
-prefabs
-imported scenes
-asset references
-scene merging
-duplicated objects
-
-Use two identifiers.
-
-Persistent identifier
-
-A UUID:
-
-a65050f6-...
-
-Saved in scenes/projects.
-
-Runtime handle
-
-A compact integer:
-
-384
-
-Used internally for fast lookups.
-
-Do not use the UUID as an array index.
-
-1.2.0 UI work
-
-Do not radically redesign the UI yet.
-
-Add only:
-
-Play
-Pause
-Single Physics Step
-fixed timestep setting
-engine diagnostic panel
-project version information
-
-Keep your existing Scene/Render workflow temporarily.
-
-1.2.0 completion requirements
-
-Do not publish 1.2.0 until:
-
-All existing 40 physics tests still pass. Your README currently describes those tests as covering motion, mass/inertia, collision, ropes, bindings and high-speed behavior.
-Existing 1.1.2 files load.
-Saving creates the new versioned project format.
-Physics simulation is persistent rather than reconstructed every frame.
-Simulation speed does not change when rendering runs at 30, 60, 144 or 240 FPS.
-No physics code imports editor code.
-No giant replacement lib.rs appears somewhere else.
-PART II — Actual game objects
-Nova_A 1.3.0 — Scene & Component System
-
-This release changes the conceptual model of Nova_A.
-
-Your current Entity essentially means:
-
-"A physical shape that can also be rendered."
-
-A game engine needs:
-
-"An object that can possess arbitrary capabilities."
-
-1. Replace shape classes with entities + components
-
-Do not have the fundamental game object be:
-
-BoxEntity
-CircleEntity
-TriangleEntity
-
-Instead:
-
-Entity
- ├─ Transform2D
- ├─ ShapeRenderer2D
- ├─ RigidBody2D
- └─ PolygonCollider2D
-
-A triangle becomes:
-
-Entity "Triangle_1"
-
-Transform2D
-ShapeRenderer2D
-PolygonCollider2D
-RigidBody2D
-
-A player might be:
-
-Entity "Player"
-
-Transform2D
-SpriteRenderer2D
-RigidBody2D
-CapsuleCollider2D
-Animator
-AudioSource
-Script
-2. Base Entity becomes tiny
-
-The entity itself should contain approximately:
-
-UUID
-name
-enabled
-parent
-components
-tags
-
-Not:
-
-mass
-texture
-velocity
-friction
-color
-gravity
-
-Those belong to components.
-
-3. Mandatory Transform2D
-
-Every scene entity receives:
-
-Transform2D
-
-Position X/Y
-Rotation
-Scale X/Y
-Parent
-
-Support local and world transforms.
-
-Example:
-
-Car
- ├─ Body
- ├─ FrontWheel
- └─ RearWheel
-
-Moving the car moves its children.
-
-Implement cycle detection.
-
-This must be rejected:
-
-A parent = B
-B parent = A
-4. RigidBody2D component
-
-Fields:
-
-Body Type:
-    Static
-    Dynamic
-    Kinematic
-
-Mass Mode:
-    Automatic
-    Manual
-
-Mass
-Inertia
-Gravity Scale
-Linear Damping
-Angular Damping
-Continuous Collision Mode
-Sleeping Allowed
-Freeze Rotation
-
-Replace your separate:
-
-isStatic
-isKinematic
-
-with:
-
-BodyType enum
-5. Collider2D components
-
-Create separate collider components.
-
-Start with:
-
-BoxCollider2D
-Circle/EllipseCollider2D
-PolygonCollider2D
-
-Later:
-
-CapsuleCollider2D
-
-Fields:
-
-Offset
-Rotation
-Size
-Sensor / Trigger
-Physics Material
-Collision Layer
-Collision Mask
-
-This separation is critical.
-
-The visible sprite does not have to equal the collision shape.
-
-A character can therefore look like this:
-
-      sprite
-   ┌─────────┐
-   │ person  │
-   │   ◯     │
-   │  /|\    │
-   │  / \    │
-   └─────────┘
-
-but collision:
-
-      ╭───╮
-      │   │
-      │   │
-      ╰───╯
-
-Your current architecture couples them too strongly.
-
-6. Separate physics layers from rendering layers
-
-This should be corrected early.
-
-Right now Nova_A's layer is effectively part of physics interaction as well as editor/render filtering. Your README explicitly says participants interact when they share a layer.
-
-Game engines need these concepts separated.
-
-Rendering
-Sorting Layer:
-Background
-World
-Characters
-Foreground
-UI
-
-Order:
--1000 ... +1000
-Physics
-Physics Layer:
-Player
-Enemy
-World
-Projectile
-Trigger
-
-And a mask.
-
-Example:
-
-Player:
-
-belongs to:
-Player
-
-collides with:
-World
-Enemy
-Projectile
-
-Implement a collision matrix under:
-
-Project Settings
-→ Physics 2D
-→ Collision Matrix
-7. Turn Connections into actual components/systems
-
-Keep your rope work; it is one of Nova_A's distinctive features.
-
-But reorganize it.
-
-Eventually:
-
-DistanceJoint2D
-FixedJoint2D
-RevoluteJoint2D
-Rope2D
-
-Your existing physical strings become Rope2D.
-
-Bindings become FixedJoint2D or compound-body functionality.
-
-Do not delete compatibility with old Connection records. Migrate them.
-
-8. Scene system
-
-Create:
-
-*.nova-scene
-
-A project may now contain:
-
-MainMenu.nova-scene
-Level01.nova-scene
-Level02.nova-scene
-GameOver.nova-scene
-
-A scene contains:
-
-entities
-hierarchy
-scene settings
-camera
-environment
-
-Create:
-
-SceneManager
-
-with:
-
-loadScene()
-unloadScene()
-reloadScene()
-setActiveScene()
-1.3.0 Inspector redesign
-
-This changes the screenshot you showed me considerably.
-
-Instead of the right side permanently containing:
-
-Body Type
-Connections
-Appearance
-Shape & Size
-Motion
-Friction
-Mass
-Forces
-...
-
-show:
-
-PLAYER
-
-[ Transform 2D            ˄ ]
- Position     X       Y
- Rotation
- Scale
-
-[ Sprite Renderer 2D      ˄ ]
- Sprite
- Color
- Sorting Layer
- Order
-
-[ Rigid Body 2D           ˄ ]
- Type
- Mass
- Gravity
- Damping
-
-[ Box Collider 2D         ˄ ]
- Size
- Offset
- Material
- Sensor
-
-        + Add Component
-
-Each section must have:
-
-Enable/disable
-Reset
-Remove
-Copy
-Paste values
-
-where applicable.
-
-That single change makes Nova_A start looking like an actual engine.
-
-PART III — Editor
-Nova_A 1.4.0 — Professional Editor
-
-Now redesign the interface.
-
-Your existing visual style is good enough to preserve. I would not throw it away.
-
-But the information architecture needs changing.
-
-Main layout
-
-Use this arrangement:
-
-┌─────────────────────────────────────────────────────────────┐
-│ File Edit View Project Debug        ▶ Ⅱ ■               │
-├───────────────┬────────────────────────────┬────────────────┤
-│               │                            │                │
-│ Scene         │                            │ Inspector      │
-│ Hierarchy     │       Scene View           │                │
-│               │                            │                │
-│               │                            │                │
-├───────────────┴────────────────────────────┴────────────────┤
-│ Assets / Console / Animation / Profiler                    │
-└─────────────────────────────────────────────────────────────┘
-1. Scene Hierarchy
-
-Replace the flat Entities panel with:
-
-Level01
-├─ Camera
-├─ Environment
-│  ├─ Background
-│  └─ Ground
-├─ Player
-│  ├─ Sprite
-│  └─ Weapon
-└─ Enemies
-   ├─ Slime01
-   └─ Slime02
-
-Support:
-
-expand/collapse
-drag-to-reparent
-rename
-duplicate
-delete
-enable/disable
-multi-selection
-search
-lock
-visibility
-2. Real transform gizmos
-
-Add tools:
-
-Q Select
-W Move
-E Rotate
-R Scale
-
-Viewport handles:
-
-      ↑ Y
-      │
-      ●────→ X
-
-Rotation ring.
-
-Scale handles.
-
-Also:
-
-Local / World
-Pivot / Center
-Grid Snap
-Angle Snap
-3. Multi-selection
-
-Allow:
-
-Ctrl + click
-Shift + click
-drag selection box
-
-Then allow changing shared properties across multiple objects.
-
-4. Replace history snapshots with Commands
+- A dedicated Script workspace with tabbed files, project search, find/replace, line/column status, diagnostics, generated engine API reference, completion, signature help, hover documentation, symbol list, go-to definition, and safe rename.
+- A parser/language service for the supported Rhai subset. Analysis runs in a worker and is cancellable.
+- Compile-on-save and hot reload at a safe frame boundary. Keep previous valid bytecode if a new edit fails.
+- Breakpoints, pause/continue/step, call stack, locals, watches, and bounded console inspection.
+- Script modules, explicit exports, read-only project package dependencies, and circular-dependency diagnostics.
+- Typed engine handles and consistent error values instead of silent null behavior.
+- A signal/event system for editor-authored custom events, collision/trigger events, UI events, animation events, and scene lifecycle events.
+- Coroutine/task primitives tied to scene/entity lifetime so destroyed owners cancel pending work.
+- A script test runner with headless lifecycle, event, and error-isolation tests.
+
+Do not allow script failures to crash physics, rendering, the editor, or unrelated entities. Debug-only facilities must be stripped from release players unless enabled.
+
+### 2.3.0 - 2D Rendering, Materials, and Lighting
+
+Goal: deliver modern 2D visuals while keeping the default renderer compact.
 
 Implement:
 
-Command
-execute()
-undo()
-redo()
-merge()
+- A render graph separating world, lighting, UI, editor overlays, and post-process passes.
+- 2D point, spot, directional, and area lights; light layers/masks; ambient light; normal maps; shadow casters; soft-shadow quality levels.
+- Material resources with shader, textures, uniforms, blend mode, sampling, and render-state data.
+- A safe GLSL ES shader editor with compile diagnostics, preview, fallback material, and documented limits.
+- Render textures, multiple cameras, camera stacks, viewport rectangles, pixel-perfect camera mode, and screenshots.
+- Post-processing as optional passes: color adjustment, vignette, bloom, blur, and user shader pass.
+- Nine-slice sprites, sprite atlases, texture compression/variants, and explicit sRGB/linear handling.
+- GPU timing when supported, pass/batch/texture statistics, overdraw view, and render-debug captures.
 
-Examples:
+Canvas2D remains a compatibility fallback. Projects that do not use lights or effects must not allocate their framebuffers or shader variants.
 
-MoveEntityCommand
-DeleteEntityCommand
-AddComponentCommand
-SetPropertyCommand
-ReparentEntityCommand
+### 2.4.0 - Animation, Rigging, and Timeline
 
-Dragging one object continuously for two seconds must result in one undo operation, not thousands.
-
-Shortcut:
-
-Ctrl+Z
-Ctrl+Y
-Ctrl+Shift+Z
-5. Clipboard
+Goal: support character animation, procedural transitions, and scripted sequences.
 
 Implement:
 
-Ctrl+C
-Ctrl+V
-Ctrl+D
-Delete
-F2
+- A dedicated animation workspace with dope sheet, curve editor, key tangent modes, box selection, snapping, copy/paste, and multi-track editing.
+- Animation events routed through the signal system.
+- Animator blend trees, transition interruption, exit time, layers, masks, state-machine subgraphs, and live runtime preview.
+- 2D skeletal rigs, bones, weighted sprite deformation, skin resources, IK chains, constraints, and pose tools.
+- A general Timeline/Sequencer for animation, audio, camera, events, visibility, and script-call tracks.
+- Recording of inspector/gizmo changes into keyframes with an explicit record mode.
+- Animation import/reimport mapping and deterministic sampling independent of render FPS.
 
-When copying an entity, copy its children and components.
+Old clips/controllers must migrate without visual changes. Timeline and rigging stay out of players that do not reference them.
 
-Generate new UUIDs on paste.
+### 2.5.0 - Asset Pipeline, Packages, and Plugin API 2
 
-Repair references inside the copied subtree.
-
-6. Scene view versus Game view
-
-Your current "Scene" and "Render" concept should eventually become:
-
-Scene
-Game
-Scene
-
-Developer editing view:
-
-grid
-gizmos
-colliders
-joint lines
-selection
-diagnostics
-Game
-
-Exactly what the player's camera sees.
-
-No editor grid.
-
-No handles.
-
-No selection outline.
-
-This is much more useful than a generic "Render" page.
-
-7. Play modes
-
-Top toolbar:
-
-▶ Play
-Ⅱ Pause
->| Step
-■ Stop
-
-Important rule:
-
-When Play starts:
-
-Editor Scene
-    ↓ clone
-Runtime Scene
-
-Runtime changes must not overwrite the editor scene.
-
-When Stop is pressed:
-
-discard runtime state
-restore editor state
-
-Later you can add:
-
-Apply Runtime Changes
-
-but not yet.
-
-8. Panels
-
-Create:
-
-Hierarchy
-Inspector
-Assets
-Console
-Animation
-Profiler
-Project Settings
-Build Settings
-
-Panels should be resizable.
-
-If docking is too much engineering for 1.4, use fixed regions first.
-
-Do not spend months writing an IDE docking framework.
-
-PART IV — Rendering and assets
-Nova_A 1.5.0 — Renderer & Asset Pipeline
-
-This is where Nova_A starts becoming a serious 2D engine.
-
-Your current Canvas2D renderer is doing actual scene rendering itself.
-
-Keep Canvas2D as a debugging/editor fallback, but build a renderer abstraction.
-
-1. Renderer API
-
-Create:
-
-Renderer2D
-beginFrame()
-beginCamera()
-submitSprite()
-submitShape()
-submitText()
-submitTileChunk()
-endCamera()
-endFrame()
-
-The editor must not draw every game object manually inside WorldCanvas.vue.
-
-2. Split the viewport
-
-I recommend:
-
-WebGL2 canvas
-    ↓
-actual game rendering
-
-Canvas2D overlay
-    ↓
-grid
-gizmos
-selection boxes
-colliders
-debug lines
-labels
-
-This is far cleaner than putting everything into one Canvas2D render function.
-
-3. Use WebGL2 as the 2.0 production renderer
-
-Do not require WebGPU for Nova_A 2.0.
-
-WebGL2 gives you excellent support across your browser/Tauri architecture.
-
-You can add WebGPU later.
+Goal: make large projects fast to iterate and make Nova_A safely extensible.
 
 Implement:
 
-vertex buffers
-index buffers
-textures
-shader programs
-framebuffers
-sprite batching
-texture atlases
-camera matrices
-blending
-scissor rectangles
-4. SpriteRenderer2D
+- Content-addressed import cache keyed by source bytes, importer version, platform, and settings.
+- Background import workers, progress/cancellation, atomic cache writes, file watching, debounced hot reimport, and failure fallback to the last valid artifact.
+- Asset dependency/reverse-dependency graph, reference finder, unused-asset report, move/rename repair, missing-reference repair, and build inclusion explanation.
+- Dedicated import settings and previews for images, atlases, fonts, audio, tile data, scripts, shaders, animations, and localization files.
+- Package manifests, semantic-version resolution, lockfile, local/Git/registry sources, offline cache, update preview, compatibility report, and uninstall impact analysis.
+- Plugin API 2 with versioned editor commands, menus, workspace panels, importers, asset editors, custom components, custom inspectors, gizmos, settings pages, build hooks, runtime systems, and events.
+- Capability permissions, per-project enablement, signature/hash verification, time/memory limits for sandboxed extensions, crash isolation, and a Safe Mode startup.
+- A package/plugin management UI that clearly separates installed, project, update, incompatible, and disabled packages.
 
-Properties:
+Native extensions are optional advanced packages and must never be silently downloaded or executed. Standard plugins remain sandboxed WASM.
 
-Sprite asset
-Tint
-Opacity
+### 2.6.0 - Worlds, Navigation, and Gameplay Tools
 
-Flip X
-Flip Y
+Goal: make complete platformers, top-down games, simulations, and large 2D worlds practical.
 
-Pivot X/Y
+Implement:
 
-Sorting Layer
-Order in Layer
+- CharacterBody2D/controller with slopes, steps, floor/wall/ceiling state, moving-platform velocity, one-way platforms, coyote-time helpers, and exact-unit motion APIs.
+- Area2D/effectors for gravity zones, wind, drag, buoyancy, damage, and custom signals.
+- Navigation regions, polygons, grid navigation, obstacles, agents, A*/flow-field options, avoidance, path smoothing, dynamic rebaking, and debug overlays.
+- Behavior tree and hierarchical state-machine assets as optional gameplay tooling.
+- Tile palettes, brush presets, rule/terrain tiles, layers, chunk streaming, collision/navigation/occluder baking, and large-map editing.
+- World chunks, asynchronous scene streaming, portals, preload priorities, memory budgets, and origin shifting for large coordinates.
+- Object pooling and spawn/despawn tools integrated with prefabs and lifecycle events.
 
-Material
+Navigation and AI are separate runtime packages. A physics-only project must not carry them.
 
-Texture Filtering:
-Nearest
-Linear
+### 2.7.0 - UI, Audio, Localization, and Accessibility
 
-Support pixel-art mode.
+Goal: support polished menus, HUDs, dialogue, audio mixes, and international releases.
 
-5. ShapeRenderer2D
+Implement:
 
-Preserve what Nova_A already does well.
+- Layout containers, anchors, size policies, safe areas, aspect constraints, responsive breakpoints, reusable UI scenes, clipping, masks, and scroll views.
+- Theme/style resources with states, inheritance, variables, preview, and per-control overrides.
+- Complete keyboard/gamepad focus navigation, focus visualization, screen-reader metadata export where the platform permits, and runtime input remapping widgets.
+- Localization tables, locales, plural/select rules, variable formatting, fallback chains, pseudolocalization, font fallback, right-to-left layout, and live locale preview.
+- Audio mixer graph with buses, sends, mute/solo, effects, meters, snapshots, ducking, spatial attenuation curves, streaming music, and voice limits.
+- Audio waveform preview, loop markers, import normalization options, and profiler voice/buffer reporting.
 
-Support:
+Editor and runtime accessibility settings remain distinct. Localization data is stripped to selected build locales.
 
-Rectangle
-Ellipse
-Polygon
-Line
+### 2.8.0 - Performance, Testing, Data, and Optional Networking
 
-Properties:
+Goal: make correctness and scale repeatable rather than dependent on manual testing.
 
-Fill
-Stroke
-Stroke width
-Opacity
-Material
+Implement:
 
-This lets existing projects remain visually meaningful.
+- Frame trace recorder correlating input, scripts, animation, physics, audio, rendering, asset work, allocations, and GPU passes.
+- Memory/asset budget tools, leak detection, object lifetime views, and capture comparison.
+- Deterministic input recording/replay, physics checksums, fixed random seeds, and regression playback.
+- Unit, scene, integration, and headless game tests with assertions, timeouts, screenshots, and CI-readable reports.
+- Data resources, schema validation, generated typed accessors, database/CSV/JSON import, and migrations for save data.
+- A bounded job/task scheduler with worker availability detection and a single-thread fallback.
+- Optional networking package: transport abstraction, WebSocket and UDP-capable native transports, connection lifecycle, RPCs, replicated properties, snapshots, interpolation, prediction, rollback helpers, bandwidth limits, and multiplayer diagnostics.
+- Authoritative-server/headless export mode and deterministic simulation tests for supported gameplay patterns.
 
-6. Camera2D
+Networking is disabled and excluded by default. Nova_A does not promise that arbitrary scripts or floating-point worlds are automatically deterministic across all hardware.
 
-A game camera must be an entity/component.
+### 2.9.0 - Platform Export, Team Workflow, and Ecosystem
 
-Properties:
+Goal: make shipping and collaborating reliable before the 3.0 stability promise.
 
-Active
-Orthographic Size
-Viewport
-Background Color
+Implement:
 
-Near/Far sorting range
+- Reproducible export templates for Windows, Linux, macOS, web, and an optional Android package where toolchain support is available.
+- Platform presets, icons/splash, permissions, orientation, signing/notarization guidance, architecture selection, debug/release profiles, and validation before build.
+- Incremental builds, build cache, package compression, patch/delta manifests, content hashes, deterministic build reports, and command-line/headless export.
+- Player crash capture, symbol mapping workflow, structured logs, opt-in telemetry adapter, and privacy controls.
+- Source-control status overlays, ignore-file generator, external diff/merge hooks, text-stable scene/prefab output, conflict detection, and safe lock files.
+- Package registry client polish, publisher identity, permissions review, ratings/security links, and offline/local mirrors. No arbitrary extension executes during package browsing.
+- Project upgrade preview, full backup option, compatibility analyzer, package audit, and rollback instructions.
+- Example projects and templates exercising platformer, top-down, UI-heavy, physics-puzzle, and networked-optional workflows.
 
-Pixel Perfect
-Zoom
+Console exports are not a 3.0 requirement because they require vendor programs and restricted SDKs. The public extension/build architecture must not block a future authorized backend.
 
-Later add:
+### 3.0.0 - Nova_A Studio Stable
 
-Camera follow
-Screen shake
+Goal: ship a stable, professional 2D engine whose full creation loop is coherent and supported.
 
-as scripts/components.
+Required end-to-end workflow:
 
-7. Asset system
+Create project -> import assets -> build scenes/prefabs -> author input/scripts/animation/audio/UI -> run and debug -> profile/test -> save/load -> export -> launch a standalone player without editing engine source.
 
-This cannot remain as an HTML <input type=file> texture attached directly to an entity.
+Release requirements:
 
-Create an actual project structure:
+1. Freeze and document the supported project schema, runtime API, Plugin API 2, package manifest, build CLI, and compatibility policy.
+2. Provide automatic migration from every project format Nova_A has publicly shipped. Migration is previewable, backed up, atomic, and covered by golden files.
+3. Run full audits of every component, property, button, selection, menu, shortcut, calculation, renderer binding, serialization path, localization, and manual anchor.
+4. Publish benchmark methodology and measured results for startup, memory, build size, frame time, physics throughput, asset import, script reload, and export.
+5. Meet the budgets in section 6 or publish the measured exception and corrective plan; never fabricate a passing result.
+6. Run 24-hour stability tests, repeated play/stop cycles, scene streaming stress, asset reimport stress, corrupted-input fuzzing, and plugin fault isolation.
+7. Verify Windows, Linux, macOS, web, and supported Android export on documented clean machines or CI runners.
+8. Complete English, German, and Chinese UI/manual coverage, keyboard navigation, contrast, reduced motion, scalable UI, and minimum-resolution tests.
+9. Ship reference games and source projects demonstrating platformer, top-down, UI, animation, audio, lighting, tilemap, save, plugin, and build workflows.
+10. Publish clear known limitations: Nova_A remains a 2D engine and does not include built-in 3D, ray tracing, VR/XR, AAA terrain/foliage, cinematic virtual-production, or console SDKs.
 
-MyGame/
-├─ project.nova
-├─ Assets/
-│  ├─ Scenes/
-│  ├─ Sprites/
-│  ├─ Audio/
-│  ├─ Scripts/
-│  ├─ Fonts/
-│  ├─ Prefabs/
-│  ├─ Tiles/
-│  └─ Materials/
-└─ ProjectSettings/
+The 3.0 core should include only the systems needed by most 2D games. Lighting, rigging, behavior tools, networking, Android support, and third-party integrations may be official optional packages. Removing an unused package must never make a project that does not reference it larger or slower.
 
-Generated files:
+## 8. Permanent release audit checklist
 
-.nova/
-├─ cache/
-└─ imported/
+For every feature release, the coder must produce an edit ledger and answer all of these with evidence:
 
-.nova/ should be safe to delete.
+### UI and interaction
 
-The engine rebuilds it.
+- Does every visible control execute a real command or update a real persisted/runtime property?
+- Is disabled state accurate and explained where necessary?
+- Are focus, hover, pressed, selected, validation, loading, empty, error, and success states visible?
+- Does it work with mouse, keyboard, trackpad/wheel, and at minimum window size?
+- Does it work in English, German, and Chinese, light/dark themes, high contrast, and reduced motion?
+- Are dialogs inside the Nova_A UI rather than native browser confirm/prompt windows?
 
-8. Assets must have GUIDs
+### Data and history
 
-Do not store:
+- Does save/load round-trip the feature without numeric or reference drift?
+- Does undo/redo include it and coalesce continuous edits correctly?
+- Are old projects migrated and unknown/newer fields preserved or rejected safely?
+- Do duplicate, prefab, scene switch, play/stop isolation, build, and import/export paths preserve it?
 
-"C:\Users\...\player.png"
+### Runtime and calculations
 
-inside scenes.
+- Is the editor property connected to the authoritative runtime/calculation path?
+- Are units, clamping, finite-value validation, defaults, and edge cases documented and tested?
+- Does renderer output match runtime state without one-frame stale data or scale conversion errors?
+- Are different render/physics layers handled deliberately?
+- Are allocation, cache, event-listener, and destruction lifetimes bounded?
 
-Store:
+### Verification
 
-asset://1e83f7...
+- Rust format, clippy, tests, TypeScript check, production build, manual audit, and release audit pass.
+- Browser smoke tests cover Project Manager, Scene, Game, Settings, all workspaces, all bottom panels, inspector filters/picker, save/load, play/stop, and representative build settings.
+- The edit ledger lists every file added, modified, deleted, and mechanically regenerated, with functional consequences and known limitations.
 
-The asset database resolves GUID → file.
+## 9. Versioning policy
 
-This means users can rename/move files inside the editor without destroying every reference.
-
-9. Import pipeline
-
-Every asset needs:
-
-Source asset
-       ↓
-Importer
-       ↓
-Imported engine representation
-       ↓
-Cache
-
-For images:
-
-PNG
-JPEG
-WebP
-
-Importer settings:
-
-Filter mode
-Compression
-Pixels per unit
-Sprite region
-Pivot
-Atlas
-
-Audio:
-
-WAV
-OGG
-MP3 if supported
-
-Fonts:
-
-TTF
-OTF
-10. Asset Browser
-
-Bottom panel:
-
-Assets
-├─ Sprites
-│  ├─ player.png
-│  └─ enemy.png
-├─ Scenes
-├─ Prefabs
-└─ Audio
-
-Support:
-
-drag assets into scene
-thumbnails
-search
-rename
-delete
-folders
-type filters
-reveal in Explorer
-11. Texture atlases and batching
-
-Do not issue one GPU draw call per sprite.
-
-Implement sprite batching.
-
-Conceptually:
-
-same texture/material/layer
-        ↓
-one batch
-        ↓
-one/few draw calls
-
-Then add automatic texture-atlas generation.
-
-PART V — Game runtime
-Nova_A 1.6.0 — Gameplay Runtime
-
-This release is where users can finally make behavior, rather than merely simulations.
-
-1. Engine lifecycle
-
-Define exact lifecycle order:
-
-Scene load
-
-Awake
-Start
-
-every rendered frame:
-    Update
-
-every physics tick:
-    FixedUpdate
-
-after Update:
-    LateUpdate
-
-render
-
-OnDestroy
-
-Do not allow each subsystem to invent its own order.
-
-Document it.
-
-2. Time API
-
-Expose:
-
-Time.delta
-Time.fixedDelta
-Time.elapsed
-Time.scale
-Time.frame
-
-Also timers:
-
-Timer
-
-with:
-
-start
-pause
-resume
-cancel
-repeat
-3. Input system
-
-Never teach game scripts to directly check:
-
-KeyboardEvent.code === "Space"
-
-Create actions.
-
-Project Settings:
-
-Input Map
-
-MoveLeft
-   Keyboard A
-   Keyboard Left
-
-MoveRight
-   Keyboard D
-   Keyboard Right
-
-Jump
-   Keyboard Space
-   Gamepad Button 0
-
-Move
-   Gamepad Left Stick
-
-API:
-
-Input.is_down("Jump")
-Input.was_pressed("Jump")
-Input.was_released("Jump")
-
-Input.axis("Horizontal")
-Input.vector("Move")
-
-Support:
-
-keyboard
-mouse
-wheel
-controller/gamepad
-4. Scripting
-
-For your current Rust + WASM architecture, I would use Rhai for Nova_A 2.x scripting, rather than trying to embed another full JavaScript runtime inside the engine.
-
-Rhai is Rust-native and supports WebAssembly targets, making it unusually suitable for your existing architecture.
-
-Create:
-
-nova_script
-
-and expose only Nova_A APIs.
-
-Example Nova script:
-
-fn start() {
-    print("Player started");
-}
-
-fn update(dt) {
-    if input_pressed("Jump") {
-        apply_impulse(0.0, 10.0);
-    }
-}
-
-Do not expose arbitrary:
-
-filesystem
-process execution
-network
-Tauri internals
-
-to game scripts by default.
-
-Register only game APIs.
-
-5. ScriptComponent
-
-Inspector:
-
-Script
-
-Source:
-PlayerController.rhai
-
-Properties:
-Move Speed    5
-Jump Force    10
-
-Allow scripts to expose editor properties.
-
-Conceptually:
-
-@export
-let move_speed = 5.0;
-
-Nova_A displays that value in the Inspector.
-
-6. Script-facing entity API
-
-Provide:
-
-entity()
-find_entity()
-get_component()
-has_component()
-
-transform
-rigid_body
-animator
-audio_source
-
-destroy()
-instantiate()
-
-Do not expose raw internal Rust pointers.
-
-Use safe handles.
-
-7. Physics events
-
-Scripts need:
-
-on_collision_enter
-on_collision_stay
-on_collision_exit
-
-on_trigger_enter
-on_trigger_exit
-
-Event data:
-
-other entity
-contact point
-contact normal
-relative velocity
-8. Prefabs
-
-This is essential.
-
-Create:
-
-Player.nova-prefab
-Enemy.nova-prefab
-Coin.nova-prefab
-
-A prefab contains an entity hierarchy.
-
-Scene instances remember:
-
-Prefab GUID
-Overrides
-
-Example:
-
-Enemy prefab:
-Health = 100
-
-Level instance:
-Health override = 150
-
-Changing the prefab's Sprite should update instances without deleting the Health override.
-
-Do not implement prefab inheritance yet.
-
-One base prefab + instance overrides is enough for 2.0.
-
-9. Runtime scene switching
-
-Script API:
-
-Scene.load("Level02")
-Scene.reload()
-Scene.quit()
-
-Support optionally:
-
-persistent entities
-
-for things such as:
-
-GameManager
-MusicManager
-SaveManager
-PART VI — Full game features
-Nova_A 1.7.0 — Animation, Audio & UI
-
-Now a person should be capable of creating an actual small game.
-
-1. AnimationClip
-
-Create animation assets.
-
-Example:
-
-PlayerIdle.anim
-PlayerRun.anim
-PlayerJump.anim
-
-Sprite animation:
-
-frames
-frame duration
-looping
-
-Also allow property animation:
-
-Transform.position
-Transform.rotation
-SpriteRenderer.opacity
-UI opacity
-2. Animator
-
-Component:
-
-Animator
-
-Controller:
-Player.controller
-
-State machine:
-
-            speed > 0
-Idle  ─────────────────→ Run
-
-Run   ─────────────────→ Idle
-            speed = 0
-
-Any   ─────────────────→ Jump
-            jumping
-
-Parameters:
-
-Bool
-Float
-Integer
-Trigger
-3. Animation Editor
-
-Bottom panel:
-
-Animation
-
-0s       0.5       1.0
-│---------│---------│
-
-Sprite    ●   ●   ●   ●
-Position  ●               ●
-
-And state-machine editor.
-
-4. Audio system
-
-Components:
-
-AudioSource
-Audio Clip
-Volume
-Pitch
-Loop
-Autoplay
-Spatial Blend
-Min Distance
-Max Distance
-AudioListener
-
-Usually attached to Camera.
-
-Support:
-
-Master
-Music
-SFX
-UI
-
-mixing buses.
-
-Project settings:
-
-Audio
-Master Volume
-Sample Rate
-5. Game UI system
-
-Do not use the Vue editor interface as the game's interface.
-
-Game UI must be part of the game runtime.
-
-Components:
-
-Canvas
-RectTransform
-Panel
-Image
-Text
-Button
-Slider
-ProgressBar
-Checkbox
-TextInput
-6. RectTransform
-
-UI layout uses:
-
-Anchor
-Pivot
-Position
-Size
-Margins
-
-Support:
-
-top-left
-top
-top-right
-left
-center
-right
-bottom-left
-bottom
-bottom-right
-stretch
-7. Buttons/events
-
-Button:
-
-Normal
-Hovered
-Pressed
-Disabled
-
-Script callbacks:
-
-on_pressed
-on_hover_enter
-on_hover_exit
-PART VII — Advanced 2D engine systems
-Nova_A 1.8.0 — Advanced 2D
-
-This release builds the systems people expect specifically from a proper 2D engine.
-
-1. Tilemaps
-
-Create:
-
-TileSet
-TileMap
-TilePalette
-
-Workflow:
-
-tileset.png
-     ↓
-TileSet importer
-     ↓
-define tile size
-     ↓
-paint tiles into scene
-
-Support:
-
-rectangle brush
-eraser
-fill
-eyedropper
-selection
-2. Chunk tilemaps
-
-Do not render every tile individually.
-
-Divide maps into chunks, for example:
-
-32 × 32 tiles
-
-Only rebuild changed chunks.
-
-Cull chunks outside camera.
-
-3. Tile collision
-
-Tile definitions can contain:
-
-No collider
-Box
-Polygon
-One-way platform
-
-Do not create thousands of independent RigidBodies.
-
-Generate optimized static collision geometry.
-
-Merge neighboring blocks when possible.
-
-4. Advanced physics API
-
-Add:
-
-raycast
-raycast_all
-overlap_point
-overlap_circle
-overlap_box
-shape_cast
-
-Example:
-
-Physics2D.raycast(
-    origin,
-    direction,
-    distance,
-    mask
-)
-5. Joints
-
-Add:
-
-FixedJoint2D
-DistanceJoint2D
-RevoluteJoint2D
-PrismaticJoint2D
-SpringJoint2D
-
-Preserve Nova_A's existing ropes as:
-
-Rope2D
-
-Rope physics can remain one of the engine's differentiators.
-
-6. Sleeping
-
-Bodies that stop moving should sleep.
-
-States:
-
-Awake
-Sleeping
-
-Wake when:
-
-force is applied
-collision occurs
-connected active body moves
-transform changes
-
-This becomes important for large scenes.
-
-7. Improve broad phase
-
-When the scene becomes large, naive body-pair checking will become increasingly expensive.
-
-Implement a spatial broad phase such as:
-
-Dynamic AABB tree
-
-or another carefully tested broad-phase structure.
-
-Keep narrow-phase GJK/EPA for appropriate convex shapes.
-
-8. Continuous collision
-
-Your existing adaptive-substep strategy is already designed to reduce tunnelling, according to the project's numerical description.
-
-Now formalize body collision mode:
-
-Discrete
-Continuous
-
-Continuous should be used selectively, such as:
-
-bullets
-fast projectiles
-
-not every body.
-
-9. Particles
-
-Create:
-
-ParticleEmitter2D
-
-Properties:
-
-Texture
-Emission Rate
-Burst
-Lifetime
-Initial Velocity
-Gravity
-Rotation
-Scale over Lifetime
-Color over Lifetime
-Opacity over Lifetime
-
-Use GPU batching.
-
-10. 2D lights — optional but recommended
-
-For 2.0:
-
-Ambient Light
-Point Light 2D
-Directional Light 2D
-
-Then:
-
-LightOccluder2D
-
-Do this only after sprites/tilemaps/particles are stable.
-
-Lighting must not delay the entire 2.0 release if it proves excessively complicated.
-
-PART VIII — Make games distributable
-Nova_A 1.9.0 — Build, Debug & Distribution
-
-This is the point where Nova_A stops being only an editor.
-
-1. Create Nova Player
-
-Separate these two concepts:
-
-Nova_A Editor
-
-Nova_A Player
-
-The player contains:
-
-runtime
-physics
-renderer
-audio
-scripts
-input
-assets
-
-It does not contain:
-
-Inspector
-Hierarchy
-Asset browser
-Editor grid
-Editor menus
-Scene gizmos
-2. Build Settings UI
-
-Add:
-
-File
-→ Build Settings
-
-Show:
-
-Target:
-○ Windows
-○ Linux
-○ macOS
-○ Web
-
-Architecture:
-x86_64
-
-Scenes:
-1. MainMenu
-2. Level01
-3. Level02
-
-Startup Scene:
-MainMenu
-
-Build
-Build & Run
-3. Create a .nova-pak
-
-This is the answer to your single-EXE question as well.
-
-Build project assets into:
-
-game.nova-pak
-
-The package can contain:
-
-compiled scenes
-textures
-audio
-fonts
-compiled scripts
-materials
-metadata
-
-Use an indexed archive rather than hundreds of loose runtime files.
-
-Conceptually:
-
-Header
-Asset table
-Offsets
-Compressed asset blocks
-
-Do not simply ZIP the folder and rename it without designing versioning/indexing.
-
-4. Development export
-
-Recommended default:
-
-MyGame/
-├─ MyGame.exe
-└─ game.nova-pak
-
-Two files.
-
-This is extremely clean.
-
-There is no reason professional software must be physically one file.
-
-5. Optional single-file game export
-
-Then offer:
-
-☑ Package game data into executable
-
-which produces:
-
-MyGame.exe
-
-Internally:
-
-Nova Player
-+
-game.nova-pak
-
-can be embedded into application resources at build time.
-
-The runtime reads the embedded resource.
-
-This should be an export option, not the fundamental architecture.
-
-6. Console
-
-Add an actual developer console.
-
-Levels:
-
-Trace
-Debug
-Info
-Warning
-Error
-Fatal
-
-Each message:
-
-timestamp
-category
-source
-message
-
-Filters:
-
-Physics
-Renderer
-Script
-Assets
-Audio
-Engine
-
-Click a script error → open script and line.
-
-7. Profiler
-
-Panels:
-
-Frame
-Physics
-Rendering
-Scripts
-Animation
-Audio
-Assets
-
-Display:
-
-Frame:       8.3 ms
-Physics:     1.7 ms
-Scripts:     0.8 ms
-Rendering:   4.2 ms
-Other:       1.6 ms
-
-Also:
-
-draw calls
-sprites
-rigid bodies
-active contacts
-script instances
-memory
-8. Physics debugger
-
-Checkboxes:
-
-Show Colliders
-Show Contact Points
-Show Normals
-Show Sleeping Bodies
-Show AABBs
-Show Joint Constraints
-Show Rope Nodes
-
-This will be invaluable for Nova_A itself.
-
-9. Crash handling
-
-On engine/runtime failure, write:
-
-Logs/
-Nova_A-2026-08-07.log
-
-Include:
-
-Nova_A version
-OS
-renderer
-project
-scene
-error
-stack trace
-
-Do not silently swallow runtime errors.
-
-10. Automated build validation
-
-GitHub Actions should run:
-
-cargo test
-cargo clippy
-vue-tsc
-frontend build
-WASM build
-Tauri build/check
-
-Your existing project already treats Rust linting, TS checking, WASM building and desktop building as release validation; preserve that philosophy as the engine expands.
-
-Add tests for:
-
-scene serialization
-migration
-prefabs
-components
-hierarchy
-asset references
-scripts
-physics events
-scene switching
-PART IX — Nova_A 2.0.0
-
-2.0 should not be another feature dump.
-
-It should make all the previous systems coherent.
-
-Think of 2.0.0 as:
-
-"We now promise that this is an actual game engine."
-
-2.0.0 requirements
-Project Manager
-
-Starting Nova_A should offer:
-
-Nova_A
-
-New Project
-Open Project
-Recent Projects
-Import Project
-
-Templates:
-
-Empty 2D
-Platformer
-Top-down
-Physics Sandbox
-Stable project format
-
-Declare:
-
-Nova_A Project Format 2
-
-From 2.0 onward, make compatibility a serious guarantee.
-
-Stable component API
-
-Document every standard component.
-
-For example:
-
-Transform2D
-Camera2D
-
-SpriteRenderer2D
-ShapeRenderer2D
-TextRenderer2D
-
-RigidBody2D
-BoxCollider2D
-CircleCollider2D
-PolygonCollider2D
-
-FixedJoint2D
-DistanceJoint2D
-RevoluteJoint2D
-Rope2D
-
-Script
-Animator
-
-AudioSource
-AudioListener
-
-ParticleEmitter2D
-
-Canvas
-RectTransform
-Image
-Text
-Button
-Slider
-
-TileMap
-Documentation
-
-Documentation should be divided into:
-
-Getting Started
-Editor Manual
-Scripting Reference
-Component Reference
-Physics Manual
-Renderer Manual
-Asset Pipeline
-Build & Export
-API Reference
-Migration Guide
-Tutorials
-
-At minimum ship three complete tutorials.
-
-Tutorial 1
-
-Physics playground.
-
-Shows:
-
-Rigid bodies
-colliders
-materials
-rope
-joints
-Tutorial 2
-
-Platformer.
-
-Shows:
-
-sprite
-animation
-input
-scripts
-camera
-tilemap
-audio
-UI
-Tutorial 3
-
-Top-down game.
-
-Shows:
-
-prefabs
-scene transitions
-triggers
-enemy behavior
-particles
-save data
-
-If Nova_A cannot comfortably build those three projects, don't release 2.0 yet.
-
-Save-game system
-
-I would include a small persistence system before final 2.0.
-
-Scripts should be able to store:
-
-bool
-number
-string
-arrays/maps
-
-Example conceptual API:
-
-Save.set("level", 3)
-Save.set("coins", 52)
-
-Save.commit("slot1")
-
-Do not expose arbitrary binary serialization of engine internals.
-
-Game saves need their own data model.
-
-Plugin architecture
-
-Do not rush into DLL plugins.
-
-For 2.0, define a plugin API but keep the first version conservative.
-
-Possible later extension mechanism:
-
-WASM engine plugins
-
-because it fits Nova_A's existing cross-platform philosophy better than arbitrary Windows DLLs.
-
-Native plugin DLLs can come after 2.0 if there is a real demand.
-
-What the final architecture should look like
-
-By 2.0:
-
-                         Nova_A
-                            │
-              ┌─────────────┴─────────────┐
-              │                           │
-           Editor                      Player
-              │                           │
-              └─────────────┬─────────────┘
-                            │
-                      Nova Runtime
-                            │
-       ┌───────────┬────────┼────────┬───────────┐
-       │           │        │        │           │
-      ECS/       Script   Animation Input       Audio
-   Components
-       │
-       ├──────── Physics
-       │
-       ├──────── Rendering
-       │
-       └──────── Assets
-
-And underneath:
-
-nova_math
-nova_physics
-nova_runtime
-nova_format
-nova_script
-nova_wasm
-Your single .exe question
-
-This part deserves a very clear answer.
-
-No, modularizing the engine does NOT mean you need DLL files.
-
-This is a common misconception.
-
-You can have:
-
-nova_math
-nova_physics
-nova_runtime
-nova_format
-nova_script
-
-as completely separate Rust crates internally and still compile them into:
-
-Nova_A.exe
-
-Cargo crates are source/build modules.
-
-They do not automatically mean Windows DLLs.
-
-For your internal Rust libraries, use normal Rust libraries/rlib where appropriate. The final application links them together.
-
-Your existing Tauri crate already declares several library output forms including staticlib, cdylib and rlib, while nova_core currently builds a cdylib/rlib because it needs a WASM-facing library.
-
-So tell the coder:
-
-Modularize source code aggressively. Do not modularize deployment into DLLs unless there is an actual runtime reason.
-
-Those are completely different things.
-
-What should remain one executable?
-
-The Nova_A editor can continue to be distributed very cleanly.
-
-Conceptually:
-
-Nova_A.exe
-
-contains:
-editor frontend
-icons
-WASM
-engine
-built-in shaders
-built-in resources
-
-Your current Tauri configuration already takes the built frontend distribution and packages the application through Tauri.
-
-There is no requirement for:
-
-nova_physics.dll
-nova_audio.dll
-nova_renderer.dll
-nova_runtime.dll
-
-Do not create those just because the source has modules.
-
-But projects themselves should NOT live inside Nova_A.exe
-
-This is different.
-
-A developer creates content after the editor was compiled.
-
-Therefore:
-
-Nova_A.exe
-
-cannot somehow permanently contain every future user's:
-
-sprites
-music
-scripts
-scenes
-prefabs
-tilemaps
-
-while they are editing.
-
-Those belong inside the project folder.
-
-That is normal and desirable.
-
-Development
-
-A user has:
-
-Nova_A.exe
-
-Projects/
-└─ MyGame/
-   ├─ project.nova
-   ├─ Assets/
-   └─ ProjectSettings/
-Export
-
-Then Nova_A converts it into:
-
-MyGame.exe
-game.nova-pak
-
-or optionally:
-
-MyGame.exe
-
-with the pack embedded.
-
-That gives you both:
-
-professional internal architecture
-
-and
-
-clean distribution.
-
-Do not obsess over a literal one-file installation
-
-There is an important distinction:
-
-Good
-
-"Nova_A presents itself to the user as one clean application."
-
-Bad architectural requirement
-
-"Every byte Nova_A might ever need must physically exist in the PE executable and no additional file is ever permitted."
-
-The second requirement eventually makes:
-
-plugins harder
-asset caching harder
-updating harder
-game projects harder
-debugging harder
-localization harder
-
-without giving the end user any meaningful advantage.
-
-Keep the editor distribution clean, but allow the application to use its normal app-data directories internally.
-
-For example:
-
-%APPDATA%/Nova_A/
-├─ settings.json
-├─ logs/
-├─ cache/
-└─ templates/
-
-That is professional application behavior.
-
-Master component plan
-
-This is the checklist I would actually track as GitHub milestones.
-
-System	Component	Version
-Architecture	Cargo workspace/module split	1.2
-Architecture	Persistent PhysicsWorld	1.2
-Architecture	Fixed timestep	1.2
-Architecture	Event system	1.2
-Serialization	Versioned project format	1.2
-Serialization	v1.1.x migration	1.2
-Identity	UUID + runtime handles	1.2
-Scene	Entity/component architecture	1.3
-Scene	Transform2D	1.3
-Scene	Parent/child hierarchy	1.3
-Physics	RigidBody2D	1.3
-Physics	Collider2D separation	1.3
-Physics	Collision layers/masks	1.3
-Scene	Multi-scene support	1.3
-Editor	Component Inspector	1.3
-Editor	Hierarchy	1.4
-Editor	Move/rotate/scale gizmos	1.4
-Editor	Multi-selection	1.4
-Editor	Command undo/redo	1.4
-Editor	Copy/paste/duplicate	1.4
-Editor	Scene/Game views	1.4
-Editor	Play/Pause/Step	1.4
-Renderer	Renderer2D abstraction	1.5
-Renderer	WebGL2 backend	1.5
-Renderer	SpriteRenderer2D	1.5
-Renderer	ShapeRenderer2D	1.5
-Renderer	TextRenderer2D	1.5
-Renderer	Camera2D	1.5
-Renderer	Sorting layers	1.5
-Renderer	Batching	1.5
-Renderer	Texture atlas	1.5
-Assets	Asset database/GUIDs	1.5
-Assets	Image importer	1.5
-Assets	Audio/font importer	1.5
-Assets	Asset Browser	1.5
-Runtime	Lifecycle	1.6
-Runtime	Time system	1.6
-Input	Action mapping	1.6
-Input	Keyboard/mouse/gamepad	1.6
-Scripting	Rhai runtime	1.6
-Scripting	Script component	1.6
-Physics	Collision/trigger events	1.6
-Scene	Prefabs	1.6
-Scene	Runtime scene switching	1.6
-Animation	AnimationClip	1.7
-Animation	Animator/state machine	1.7
-Animation	Animation editor	1.7
-Audio	AudioSource	1.7
-Audio	AudioListener	1.7
-Audio	Mixer/buses	1.7
-UI	Canvas/RectTransform	1.7
-UI	Text/Image/Button	1.7
-UI	Slider/etc.	1.7
-Tilemap	TileSet/TileMap	1.8
-Tilemap	Palette/editor	1.8
-Tilemap	Chunk renderer	1.8
-Physics	Tile collision	1.8
-Physics	Raycasts/queries	1.8
-Physics	Joints	1.8
-Physics	Sleeping	1.8
-Physics	Improved broad phase	1.8
-Physics	CCD	1.8
-Rendering	ParticleEmitter2D	1.8
-Rendering	2D lighting	1.8 optional
-Distribution	Nova Player	1.9
-Distribution	Build Settings	1.9
-Distribution	.nova-pak	1.9
-Distribution	Windows export	1.9
-Distribution	Web export	1.9
-Distribution	macOS/Linux export	1.9
-Distribution	Optional single EXE export	1.9
-Debug	Console	1.9
-Debug	Physics debugger	1.9
-Debug	Profiler	1.9
-Debug	Crash logging	1.9
-Tooling	CI/build validation	1.9
-Engine	Project Manager	2.0
-Engine	Templates	2.0
-Engine	Stable API	2.0
-Engine	Stable project format	2.0
-Engine	Save-game API	2.0
-Engine	Documentation	2.0
-Engine	Example games	2.0
-Engine	Plugin API foundation	2.0
-Things I specifically would NOT put into Nova_A 2.0
-
-Do not let scope explode.
-
-Do not make these 2.0 requirements:
-
-3D
-multiplayer networking
-visual scripting
-C# support
-Vulkan-specific renderer
-WebGPU requirement
-marketplace
-cloud accounts
-collaborative editing
-AI tools
-console ports
-mobile editor
-complex ECS parallel scheduling
-native DLL plugin ecosystem
-ray-traced anything
-
-Those can all wait.
-
-A small engine that can reliably make complete 2D games is dramatically better than a gigantic half-working engine.
-
-Rules I would give the coder
-
-These matter enough that I would literally put them in CONTRIBUTING.md.
-
-Rule 1 — Preserve old projects
-
-Every schema change needs a migration.
-
-Never simply say:
-
-"1.1 projects are incompatible."
-
-Rule 2 — Editor and runtime are separate
-
-Never put game-only behavior inside Vue components.
-
-Never put editor selection logic inside nova_runtime.
-
-Rule 3 — Physics and rendering are separate
-
-A collider does not automatically equal the visible sprite.
-
-A SpriteRenderer does not automatically mean a collider exists.
-
-Rule 4 — Rendering and collision layers are separate
-
-Never reuse one layer property for both.
-
-Rule 5 — No new giant source files
-
-As a guideline:
-
-If a file starts approaching several hundred lines because it has multiple independent responsibilities, split it.
-
-Not because "large files are bad", but because something like the current WorldCanvas.vue is simultaneously becoming an editor controller, renderer, input system and runtime loop.
-
-Rule 6 — Every feature receives tests
-
-Example:
-
-When implementing parenting:
-
-✓ child follows parent
-✓ nested child follows grandparent
-✓ world/local transforms correct
-✓ deleting parent behaves correctly
-✓ cycles rejected
-✓ save/load preserves hierarchy
-
-When implementing prefabs:
-
-✓ instantiate
-✓ override property
-✓ change prefab
-✓ instance receives update
-✓ overridden property remains
-✓ delete prefab
-✓ missing prefab handled gracefully
-Rule 7 — No UI-only implementation
-
-When adding a checkbox such as:
-
-Continuous Collision
-
-do not merely make it save.
-
-Tests must prove it changes the runtime.
-
-Your v1.1.2 README already has a strong emphasis on the chain from UI values → Float64 ABI → physics behavior. Preserve that discipline.
-
-Rule 8 — No silent failure
-
-Invalid project:
-
-show meaningful error
-
-Missing asset:
-
-show missing-asset placeholder
-log GUID/path
-
-Broken script:
-
-disable script instance
-show line number
-continue game if possible
-
-Never crash the entire editor because one asset is malformed.
-
-One particularly important design change
-
-There is one thing I would tell your coder not to misunderstand:
-
-Do not "rewrite Nova_A."
-
-Evolve it.
-
-The sequence should be:
-
-1.1.2 implementation
-        │
-        ├── create new architecture
-        │
-        ├── adapt old Entity → new Components
-        │
-        ├── adapt old Connection → Rope/Joint
-        │
-        ├── keep old loader
-        │
-        └── delete old path only after parity tests
-
-Not:
-
-delete everything
-↓
-write new engine
-↓
-discover six months later that ropes,
-collisions and project loading are broken
-
-The existing physics engine already has working features worth preserving: dynamic/static/kinematic bodies, GJK/EPA-style convex collision machinery, friction/restitution, mass/inertia, sensors, rope simulation, rope collision/breaking and bindings.
-
-Build the game engine around that work, then refactor the internals behind tests.
-
-Nova_A 1.2.0 objective: create a permanent modular runtime foundation while achieving 100% behavioral compatibility with Nova_A 1.1.2. Do not add major gameplay systems. Split the Rust core, introduce a persistent PhysicsWorld, implement fixed-timestep simulation, introduce versioned serialization and persistent UUIDs, preserve all existing UI/physics behavior, and keep the Windows editor distributable as one clean application. No old project may stop working.
-
-Then 1.3.0 is where the visible transformation starts.
-
-That ordering is important. If you jump directly from the UI in your screenshots into scripts, sprites, tilemaps and audio, you'll be building them on top of an Entity class and WorldCanvas.vue architecture that was never designed to hold an entire game engine.
-
-With this sequence, 1.2–1.4 transforms Nova_A's architecture, 1.5–1.8 transforms its capabilities, 1.9 transforms it into something that can ship games, and 2.0 formalizes it as a real engine.
+- `x.0.0` is a major compatibility or product-identity release.
+- `x.y.0` is a planned feature release.
+- `x.y.z` is a bug-fix or contained feature-adjustment release.
+- Project schema, package API, and plugin API versions are independent from application SemVer. They change only when their data/contracts change.
+- A version number is updated only after implementation and release checks pass; development builds may display a prerelease suffix.

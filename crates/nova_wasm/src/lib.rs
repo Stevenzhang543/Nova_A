@@ -252,6 +252,34 @@ impl WasmScriptRuntime {
             .map_err(|error| JsValue::from_str(&error))?;
         serde_json::to_string(&result).map_err(|error| JsValue::from_str(&error.to_string()))
     }
+
+    /// Atomically replaces the cached program only after successful compile.
+    pub fn compile_cached(&mut self, script_id: &str, source: &str) -> Result<String, JsValue> {
+        let exports = self
+            .inner
+            .upsert(script_id, source)
+            .map_err(|error| JsValue::from_str(&error))?;
+        serde_json::to_string(&exports).map_err(|error| JsValue::from_str(&error.to_string()))
+    }
+
+    pub fn execute_cached_json(
+        &self,
+        script_id: &str,
+        function: &str,
+        context_json: &str,
+    ) -> Result<String, JsValue> {
+        let context: ScriptContext = serde_json::from_str(context_json)
+            .map_err(|error| JsValue::from_str(&format!("invalid script context: {error}")))?;
+        let result = self
+            .inner
+            .execute_cached(script_id, function, context)
+            .map_err(|error| JsValue::from_str(&error))?;
+        serde_json::to_string(&result).map_err(|error| JsValue::from_str(&error.to_string()))
+    }
+
+    pub fn remove_cached(&mut self, script_id: &str) -> bool {
+        self.inner.remove(script_id)
+    }
 }
 
 impl Default for WasmScriptRuntime {

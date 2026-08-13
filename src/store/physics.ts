@@ -23,8 +23,8 @@ import { t } from '../i18n'
 import { normalizeUuid } from '../world/identity'
 import {
   Animator, AudioListener, AudioSource, Button, Camera2D, Canvas, Checkbox, Collider2D,
-  Image as UIImage, Joint2D, Panel, ParticleEmitter2D, ProgressBar, RectTransform, RigidBody2D, Script2D,
-  ShapeRenderer2D, Slider, SpriteRenderer2D, Text as UIText, TextInput, TextRenderer2D, TileMap2D,
+  Image as UIImage, Joint2D, Light2D, Panel, ParticleEmitter2D, ProgressBar, RectTransform, RigidBody2D, Script2D, ShadowCaster2D,
+  ShapeRenderer2D, Skeleton2D, Slider, SpriteRenderer2D, Text as UIText, TextInput, TextRenderer2D, TileMap2D, TimelinePlayer,
   copyComponentValues, pasteComponentValues, type Component2D, type ComponentKind
 } from '../world/components'
 import { Transform } from '../world/Transform'
@@ -37,6 +37,14 @@ import { defaultInputMap, normalizeInputMap, type InputAction } from '../runtime
 import { defaultAudioSettings, normalizeAudioSettings, type AudioProjectSettings } from '../runtime/audio'
 import { normalizeParticleEmitter } from '../runtime/particles'
 import { invalidateTileMap, normalizeTileMap } from '../runtime/tilemap'
+import { buildSettings, normalizeBuildSettings, serializeBuildSettings } from '../runtime/buildSettings'
+import { normalizeScriptSettings, scriptProjectSettings, serializeScriptSettings } from '../runtime/scriptSettings'
+import { hydrateProjectMetadata, serializeProjectMetadata } from '../projects/projectSession'
+import { NOVA_PROJECT_FORMAT, NOVA_PROJECT_FORMAT_MAJOR, projectCompatibility } from '../projects/projectFormat'
+import { loadPluginManifests, serializePluginManifests } from '../runtime/plugins'
+import { useSaveProject } from '../runtime/saveGame'
+import { loadRenderingSettings, serializeRenderingSettings } from '../renderer/renderSettings'
+import { clearRenderTextures } from '../renderer/renderTextures'
 
 interface PhysicsState {
   world: World
@@ -193,7 +201,9 @@ function serializeComponent(component: Component2D): Record<string, unknown> {
       flipX: component.flipX, flipY: component.flipY,
       pivot: { ...component.pivot }, size: { ...component.size },
       sortingLayer: component.sortingLayer, orderInLayer: component.orderInLayer,
-      material: component.material, filterMode: component.filterMode
+      material: component.material, filterMode: component.filterMode,
+      normalMapAsset: component.normalMapAsset, lightMask: component.lightMask >>> 0,
+      nineSlice: { ...component.nineSlice }
     })
   } else if (component instanceof TextRenderer2D) {
     Object.assign(data, {
@@ -208,7 +218,10 @@ function serializeComponent(component: Component2D): Record<string, unknown> {
       active: component.active, orthographicSize: component.orthographicSize,
       viewport: { ...component.viewport }, backgroundColor: { ...component.backgroundColor },
       nearSortingLayer: component.nearSortingLayer, farSortingLayer: component.farSortingLayer,
-      pixelPerfect: component.pixelPerfect, zoom: component.zoom
+      pixelPerfect: component.pixelPerfect, zoom: component.zoom,
+      priority: component.priority, stackOrder: component.stackOrder,
+      cullingMask: component.cullingMask >>> 0, clearColor: component.clearColor,
+      renderTexture: component.renderTexture
     })
   } else if (component instanceof Script2D) {
     Object.assign(data, {
@@ -304,11 +317,16 @@ function serializeActiveScene(): Record<string, unknown> {
 function projectSource(): Record<string, unknown> {
   sceneManager.captureActive(serializeActiveScene())
   return {
+    projectFormat: NOVA_PROJECT_FORMAT,
+    projectFormatMajor: NOVA_PROJECT_FORMAT_MAJOR,
     formatVersion: physicsState.world.projectFormatVersion,
     engineVersion: physicsState.world.projectEngineVersion,
+    compatibility: projectCompatibility(),
+    projectMetadata: serializeProjectMetadata(),
     assets: serializeAssets(),
     assetFolders: serializeAssetFolders(),
-    projectSettings: { inputMap: normalizeInputMap(physicsState.inputMap), audio: normalizeAudioSettings(physicsState.audioSettings) },
+    plugins: serializePluginManifests(),
+    projectSettings: { inputMap: normalizeInputMap(physicsState.inputMap), audio: normalizeAudioSettings(physicsState.audioSettings), build: serializeBuildSettings(), scripting: serializeScriptSettings(), rendering: serializeRenderingSettings() },
     projectStructure: {
       assetsRoot: 'Assets', settingsRoot: 'ProjectSettings', cacheRoot: '.nova/cache', importedRoot: '.nova/imported'
     },
@@ -322,17 +340,19 @@ export function getSceneJSON(): string {
   return physicsState.world.formatProjectJson(source)
 }
 
-const ASSET_COMPONENT_FIELDS: Partial<Record<ComponentKind, 'textureAsset' | 'spriteAsset' | 'fontAsset' | 'scriptAsset' | 'controllerAsset' | 'audioClip' | 'tileSetAsset'>> = {
-  ShapeRenderer2D: 'textureAsset',
-  SpriteRenderer2D: 'spriteAsset',
-  TextRenderer2D: 'fontAsset',
-  Script2D: 'scriptAsset',
-  Animator: 'controllerAsset',
-  AudioSource: 'audioClip',
-  Image: 'spriteAsset',
-  Text: 'fontAsset',
-  TileMap2D: 'tileSetAsset',
-  ParticleEmitter2D: 'textureAsset'
+const ASSET_COMPONENT_FIELDS: Partial<Record<ComponentKind, string[]>> = {
+  ShapeRenderer2D: ['textureAsset'],
+  SpriteRenderer2D: ['spriteAsset', 'normalMapAsset'],
+  TextRenderer2D: ['fontAsset'],
+  Script2D: ['scriptAsset'],
+  Animator: ['controllerAsset'],
+  Skeleton2D: ['rigAsset', 'skinAsset'],
+  TimelinePlayer: ['timelineAsset'],
+  AudioSource: ['audioClip'],
+  Image: ['spriteAsset'],
+  Text: ['fontAsset'],
+  TileMap2D: ['tileSetAsset'],
+  ParticleEmitter2D: ['textureAsset']
 }
 
 function matchesAssetReference(value: unknown, uuid: string): boolean {
@@ -357,10 +377,12 @@ function visitStoredAssetReferences(scene: Record<string, unknown>, uuid: string
     for (const rawComponent of storedEntity.components ?? []) {
       if (!rawComponent || typeof rawComponent !== 'object') continue
       const component = rawComponent as { kind?: ComponentKind; data?: Record<string, unknown> }
-      const field = component.kind ? ASSET_COMPONENT_FIELDS[component.kind] : undefined
-      if (!field || !component.data || !matchesAssetReference(component.data[field], uuid)) continue
-      count++
-      if (clear) component.data[field] = null
+      const fields = component.kind ? ASSET_COMPONENT_FIELDS[component.kind] : undefined
+      if (!fields || !component.data) continue
+      for (const field of fields) if (matchesAssetReference(component.data[field], uuid)) {
+        count++
+        if (clear) component.data[field] = null
+      }
     }
   }
   return count
@@ -379,10 +401,12 @@ function visitLiveAssetReferences(uuid: string, clear: boolean): number {
       }
     }
     for (const component of entity.componentMap.values()) {
-      const field = ASSET_COMPONENT_FIELDS[component.kind]
-      if (!field || !matchesAssetReference((component as unknown as Record<string, unknown>)[field], uuid)) continue
-      count++
-      if (clear) (component as unknown as Record<string, unknown>)[field] = null
+      const fields = ASSET_COMPONENT_FIELDS[component.kind]
+      if (!fields) continue
+      for (const field of fields) if (matchesAssetReference((component as unknown as Record<string, unknown>)[field], uuid)) {
+        count++
+        if (clear) (component as unknown as Record<string, unknown>)[field] = null
+      }
     }
   }
   return count
@@ -502,13 +526,15 @@ function applyComponentMetadata(target: { enabled: boolean; removed: boolean }, 
 }
 
 const EXTENDED_COMPONENT_KINDS = [
-  'Animator', 'AudioSource', 'AudioListener', 'Canvas', 'RectTransform', 'Panel', 'Image',
-  'Text', 'Button', 'Slider', 'ProgressBar', 'Checkbox', 'TextInput', 'TileMap2D', 'ParticleEmitter2D',
+  'Animator', 'Skeleton2D', 'TimelinePlayer', 'AudioSource', 'AudioListener', 'Canvas', 'RectTransform', 'Panel', 'Image',
+  'Text', 'Button', 'Slider', 'ProgressBar', 'Checkbox', 'TextInput', 'TileMap2D', 'ParticleEmitter2D', 'Light2D', 'ShadowCaster2D',
   'FixedJoint2D', 'DistanceJoint2D', 'RevoluteJoint2D', 'PrismaticJoint2D', 'SpringJoint2D'
 ] as const
 
 function createExtendedComponent(kind: typeof EXTENDED_COMPONENT_KINDS[number], uuid?: string): Component2D {
   if (kind === 'Animator') return new Animator(uuid)
+  if (kind === 'Skeleton2D') return new Skeleton2D(uuid)
+  if (kind === 'TimelinePlayer') return new TimelinePlayer(uuid)
   if (kind === 'AudioSource') return new AudioSource(uuid)
   if (kind === 'AudioListener') return new AudioListener(uuid)
   if (kind === 'Canvas') return new Canvas(uuid)
@@ -523,6 +549,8 @@ function createExtendedComponent(kind: typeof EXTENDED_COMPONENT_KINDS[number], 
   if (kind === 'TextInput') return new TextInput(uuid)
   if (kind === 'TileMap2D') return new TileMap2D(uuid)
   if (kind === 'ParticleEmitter2D') return new ParticleEmitter2D(uuid)
+  if (kind === 'Light2D') return new Light2D(uuid)
+  if (kind === 'ShadowCaster2D') return new ShadowCaster2D(uuid)
   return new Joint2D(kind, uuid)
 }
 
@@ -554,6 +582,22 @@ function normalizeExtendedComponent(component: Component2D): void {
       if (typeof value === 'boolean' || typeof value === 'number' && Number.isFinite(value)) parameters[name.slice(0, 80)] = value
     }
     component.parameters = parameters
+    const layerWeights: Record<string, number> = {}
+    if (component.layerWeights && typeof component.layerWeights === 'object') for (const [name, value] of Object.entries(component.layerWeights).slice(0, 32)) {
+      layerWeights[name.slice(0, 80)] = clamp(value, 1, 0, 1)
+    }
+    component.layerWeights = layerWeights
+  } else if (component instanceof Skeleton2D) {
+    component.rigAsset = typeof component.rigAsset === 'string' ? component.rigAsset : null
+    component.skinAsset = typeof component.skinAsset === 'string' ? component.skinAsset : null
+    component.pose = (Array.isArray(component.pose) ? component.pose : []).slice(0, 512).flatMap(value => {
+      if (!value || typeof value.boneId !== 'string') return []
+      return [{ boneId: value.boneId.slice(0, 80), position: safeVector(value.position, { x: 0, y: 0 }), rotation: finiteNumber(value.rotation), scale: safeVector(value.scale, { x: 1, y: 1 }) }]
+    })
+  } else if (component instanceof TimelinePlayer) {
+    component.timelineAsset = typeof component.timelineAsset === 'string' ? component.timelineAsset : null
+    component.speed = clamp(component.speed, 1, -100, 100)
+    component.currentTime = clamp(component.currentTime, 0, 0, 86_400)
   } else if (component instanceof AudioSource) {
     component.audioClip = typeof component.audioClip === 'string' ? component.audioClip : null
     component.volume = clamp(component.volume, 1, 0, 1); component.pitch = clamp(component.pitch, 1, .25, 4)
@@ -604,6 +648,20 @@ function normalizeExtendedComponent(component: Component2D): void {
     invalidateTileMap(component)
   } else if (component instanceof ParticleEmitter2D) {
     normalizeParticleEmitter(component)
+  } else if (component instanceof Light2D) {
+    if (!['Point', 'Spot', 'Directional', 'Area'].includes(component.lightType)) component.lightType = 'Point'
+    component.color = safeColor(component.color, { r: 255, g: 235, b: 196 })
+    component.intensity = clamp(component.intensity, 1, 0, 32)
+    component.range = clamp(component.range, 8, .001, 1e6)
+    component.innerAngle = clamp(component.innerAngle, 30, 0, 179)
+    component.outerAngle = clamp(component.outerAngle, 55, component.innerAngle, 179)
+    component.areaSize = safeVector(component.areaSize, { x: 4, y: 2 })
+    component.areaSize.x = clamp(component.areaSize.x, 4, .001, 1e6); component.areaSize.y = clamp(component.areaSize.y, 2, .001, 1e6)
+    component.layerMask = Math.round(clamp(component.layerMask, 0xffff_ffff, 0, 0xffff_ffff)) >>> 0
+    component.shadowSoftness = clamp(component.shadowSoftness, .5, 0, 1)
+  } else if (component instanceof ShadowCaster2D) {
+    component.layerMask = Math.round(clamp(component.layerMask, 0xffff_ffff, 0, 0xffff_ffff)) >>> 0
+    component.opacity = clamp(component.opacity, .85, 0, 1)
   } else if (component instanceof Joint2D) {
     component.targetEntityUuid = typeof component.targetEntityUuid === 'string' ? component.targetEntityUuid : null
     component.anchor = safeVector(component.anchor, { x: 0, y: 0 }); component.connectedAnchor = safeVector(component.connectedAnchor, { x: 0, y: 0 })
@@ -685,6 +743,9 @@ function applyStoredComponents(entity: Entity, item: SceneEntityData): void {
     sprite.orderInLayer = Math.round(finiteNumber(data.orderInLayer, sprite.orderInLayer))
     sprite.material = typeof data.material === 'string' ? data.material.slice(0, 80) : sprite.material
     sprite.filterMode = data.filterMode === 'Nearest' ? 'Nearest' : 'Linear'
+    sprite.normalMapAsset = typeof data.normalMapAsset === 'string' ? data.normalMapAsset : null
+    sprite.lightMask = Math.round(clamp(data.lightMask, 0xffff_ffff, 0, 0xffff_ffff)) >>> 0
+    if (data.nineSlice && typeof data.nineSlice === 'object') Object.assign(sprite.nineSlice, data.nineSlice)
     entity.componentMap.set('SpriteRenderer2D', sprite)
   }
 
@@ -734,6 +795,10 @@ function applyStoredComponents(entity: Entity, item: SceneEntityData): void {
     camera.farSortingLayer = Math.round(finiteNumber(data.farSortingLayer, camera.farSortingLayer))
     camera.pixelPerfect = data.pixelPerfect === true
     camera.zoom = Math.max(.000001, finiteNumber(data.zoom, camera.zoom))
+    camera.priority = Math.round(finiteNumber(data.priority, 0)); camera.stackOrder = Math.round(finiteNumber(data.stackOrder, 0))
+    camera.cullingMask = Math.round(clamp(data.cullingMask, 0xffff_ffff, 0, 0xffff_ffff)) >>> 0
+    camera.clearColor = data.clearColor !== false
+    camera.renderTexture = typeof data.renderTexture === 'string' ? data.renderTexture.slice(0, 120) : ''
     entity.componentMap.set('Camera2D', camera)
   }
 
@@ -888,32 +953,50 @@ export function createEntityFromData(item: SceneEntityData, forcedId?: number): 
 export type UiElementKind = 'Canvas' | 'Panel' | 'Image' | 'Text' | 'Button' | 'Slider' | 'ProgressBar' | 'Checkbox' | 'TextInput'
 
 /** Creates a renderer-independent runtime UI entity without a physics body or collider. */
-export function createUiEntity(kind: UiElementKind, parentUuid: string | null = null): Entity {
+export function createUiEntity(kind: UiElementKind, parentUuid: string | null = null, recordHistory = true): Entity {
+  if (kind !== 'Canvas' && !parentUuid) {
+    const canvas = physicsState.world.entities.find(entity => entity.hasComponent('Canvas') && !entity.parentUuid)
+    parentUuid = canvas?.uuid ?? createUiEntity('Canvas', null, false).uuid
+  }
   const entity = physicsState.world.addBox({ x: 0, y: 0 }, { x: 1, y: 1 })
-  entity.name = kind
+  const sameKind = physicsState.world.entities.filter(candidate => candidate.name === kind || candidate.name.startsWith(`${kind} `)).length
+  entity.name = sameKind ? `${kind} ${sameKind + 1}` : kind
   entity.layer = editorState.activeLayer
   entity.renderer.enabled = false
+  entity.removeComponent('ShapeRenderer2D')
   entity.removeComponent('RigidBody2D')
   const collider = entity.getCollider()
   if (collider) entity.removeComponent(collider.kind)
-  entity.addComponent(new RectTransform())
-  entity.parentUuid = parentUuid
+  const rect = entity.addComponent(new RectTransform())
+  entity.parentUuid = kind === 'Canvas' ? null : parentUuid
   if (kind === 'Canvas') {
     entity.addComponent(new Canvas())
-    const rect = entity.getComponent<RectTransform>('RectTransform')!
     rect.anchorPreset = 'stretch'
-  } else if (kind === 'Panel') entity.addComponent(new Panel())
-  else if (kind === 'Image') entity.addComponent(new UIImage())
-  else if (kind === 'Text') entity.addComponent(new UIText())
+  } else if (kind === 'Panel') { entity.addComponent(new Panel()); rect.size = { x: 1200, y: 720 } }
+  else if (kind === 'Image') { entity.addComponent(new UIImage()); rect.size = { x: 420, y: 260 } }
+  else if (kind === 'Text') { entity.addComponent(new UIText()); rect.size = { x: 520, y: 96 } }
   else if (kind === 'Button') {
     entity.addComponent(new Button())
     const text = entity.addComponent(new UIText()); text.text = 'Button'
-  } else if (kind === 'Slider') entity.addComponent(new Slider())
-  else if (kind === 'ProgressBar') entity.addComponent(new ProgressBar())
-  else if (kind === 'Checkbox') entity.addComponent(new Checkbox())
-  else entity.addComponent(new TextInput())
-  selectEntities([entity.id], 'replace', entity.id)
-  pushHistory(`Create UI ${kind}`)
+    rect.size = { x: 360, y: 104 }
+  } else if (kind === 'Slider') { entity.addComponent(new Slider()); rect.size = { x: 480, y: 80 } }
+  else if (kind === 'ProgressBar') { entity.addComponent(new ProgressBar()); rect.size = { x: 480, y: 64 } }
+  else if (kind === 'Checkbox') { entity.addComponent(new Checkbox()); rect.size = { x: 360, y: 72 } }
+  else { entity.addComponent(new TextInput()); rect.size = { x: 300, y: 96 } }
+  if (kind !== 'Canvas') {
+    const defaultPositions: Record<Exclude<UiElementKind, 'Canvas'>, { x: number; y: number }> = {
+      Panel: { x: 0, y: 0 }, Image: { x: -300, y: -100 }, Text: { x: 220, y: -250 },
+      Button: { x: 210, y: -140 }, Slider: { x: 210, y: -35 }, ProgressBar: { x: 210, y: 60 },
+      Checkbox: { x: 210, y: 145 }, TextInput: { x: 0, y: 270 }
+    }
+    const sameKindSiblingCount = physicsState.world.entities.filter(candidate => candidate !== entity && candidate.parentUuid === entity.parentUuid && candidate.hasComponent(kind)).length
+    const position = defaultPositions[kind]
+    rect.position = { x: position.x + sameKindSiblingCount * 24, y: position.y + sameKindSiblingCount * 20 }
+  }
+  if (recordHistory) {
+    selectEntities([entity.id], 'replace', entity.id)
+    pushHistory(`Create UI ${kind}`)
+  }
   return entity
 }
 
@@ -1205,16 +1288,22 @@ export function loadProject(jsonString: string, preserveRuntimeSession = false):
     const root = Array.isArray(parsed) ? { entities: parsed } : parsed
     if (!root || typeof root !== 'object') throw new Error(t('invalidProjectRoot'))
     const project = root as Record<string, unknown>
+    hydrateProjectMetadata(project.projectMetadata)
+    useSaveProject()
     loadAssets(project.assets, project.assetFolders)
+    loadPluginManifests(project.plugins)
     const projectSettings = project.projectSettings && typeof project.projectSettings === 'object'
       ? project.projectSettings as Record<string, unknown>
       : {}
     physicsState.inputMap.splice(0, physicsState.inputMap.length, ...normalizeInputMap(projectSettings.inputMap))
     Object.assign(physicsState.audioSettings, normalizeAudioSettings(projectSettings.audio))
+    Object.assign(scriptProjectSettings, normalizeScriptSettings(projectSettings.scripting))
+    loadRenderingSettings(projectSettings.rendering)
     const sceneRecords = Array.isArray(project.scenes)
       ? project.scenes
       : [{ uuid: normalizeUuid(undefined), name: 'Main Scene', ...project }]
     sceneManager.importProject(sceneRecords, project.activeSceneUuid)
+    Object.assign(buildSettings, normalizeBuildSettings(projectSettings.build, sceneManager.scenes.map(scene => scene.uuid)))
     const scene = sceneManager.activeScene.data
     if (!Array.isArray(scene.entities)) throw new Error(t('missingEntitiesArray'))
 
@@ -1275,11 +1364,16 @@ export function loadProject(jsonString: string, preserveRuntimeSession = false):
 
 function reloadSceneManagerProject(preserveRuntimeSession = false): boolean {
   const source = JSON.stringify({
+    projectFormat: NOVA_PROJECT_FORMAT,
+    projectFormatMajor: NOVA_PROJECT_FORMAT_MAJOR,
     formatVersion: physicsState.world.projectFormatVersion,
     engineVersion: physicsState.world.projectEngineVersion,
+    compatibility: projectCompatibility(),
+    projectMetadata: serializeProjectMetadata(),
     assets: serializeAssets(),
     assetFolders: serializeAssetFolders(),
-    projectSettings: { inputMap: normalizeInputMap(physicsState.inputMap), audio: normalizeAudioSettings(physicsState.audioSettings) },
+    plugins: serializePluginManifests(),
+    projectSettings: { inputMap: normalizeInputMap(physicsState.inputMap), audio: normalizeAudioSettings(physicsState.audioSettings), build: serializeBuildSettings(), scripting: serializeScriptSettings(), rendering: serializeRenderingSettings() },
     activeSceneUuid: sceneManager.activeSceneUuid,
     scenes: sceneManager.serialize()
   })
@@ -1287,6 +1381,8 @@ function reloadSceneManagerProject(preserveRuntimeSession = false): boolean {
 }
 
 export function createScene(name?: string): boolean {
+  selectEntities([], 'replace')
+  clearRenderTextures()
   sceneManager.captureActive(serializeActiveScene())
   const scene = sceneManager.create(name)
   sceneManager.setActive(scene.uuid)
@@ -1295,12 +1391,16 @@ export function createScene(name?: string): boolean {
 
 export function setActiveScene(uuid: string): boolean {
   if (uuid === sceneManager.activeSceneUuid) return true
+  selectEntities([], 'replace')
+  clearRenderTextures()
   sceneManager.captureActive(serializeActiveScene())
   if (!sceneManager.setActive(uuid)) return false
   return reloadSceneManagerProject()
 }
 
 export function reloadActiveScene(): boolean {
+  selectEntities([], 'replace')
+  clearRenderTextures()
   return reloadSceneManagerProject()
 }
 
@@ -1479,7 +1579,7 @@ export function deleteEntity(id: number): void {
 }
 
 export function resetCamera(): void {
-  physicsState.camera.scale = 0.5
+  physicsState.camera.scale = 40
   physicsState.camera.targetScale = null
   physicsState.camera.targetOffset = null
   const canvas = document.querySelector('canvas')

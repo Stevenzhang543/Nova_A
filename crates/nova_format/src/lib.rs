@@ -6,8 +6,11 @@ use std::fmt;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Map, Value};
 
-pub const CURRENT_FORMAT_VERSION: u32 = 12;
-pub const CURRENT_ENGINE_VERSION: &str = "1.8.0";
+pub const PROJECT_FORMAT_NAME: &str = "Nova_A Project Format 2";
+pub const PROJECT_FORMAT_MAJOR: u32 = 2;
+pub const CURRENT_FORMAT_VERSION: u32 = 17;
+pub const MINIMUM_SUPPORTED_FORMAT_VERSION: u32 = 5;
+pub const CURRENT_ENGINE_VERSION: &str = "2.4.0";
 
 fn default_true() -> bool {
     true
@@ -16,8 +19,11 @@ fn default_true() -> bool {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ProjectFile {
+    pub project_format: String,
+    pub project_format_major: u32,
     pub format_version: u32,
     pub engine_version: String,
+    pub compatibility: CompatibilityFile,
     #[serde(default)]
     pub active_scene_uuid: String,
     #[serde(default)]
@@ -26,6 +32,15 @@ pub struct ProjectFile {
     pub assets: Vec<AssetReference>,
     #[serde(default, flatten)]
     pub extra: BTreeMap<String, Value>,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CompatibilityFile {
+    pub format: String,
+    pub major: u32,
+    pub schema_version: u32,
+    pub minimum_schema_version: u32,
 }
 
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
@@ -141,6 +156,15 @@ pub fn migrate_project_value(value: Value) -> Result<ProjectFile, FormatError> {
         .get("formatVersion")
         .and_then(Value::as_u64)
         .unwrap_or(1) as u32;
+    let source_major = root
+        .get("projectFormatMajor")
+        .and_then(Value::as_u64)
+        .unwrap_or(1) as u32;
+    if source_major > PROJECT_FORMAT_MAJOR {
+        return Err(FormatError(format!(
+            "project format major {source_major} is newer than supported major {PROJECT_FORMAT_MAJOR}"
+        )));
+    }
     if source_version > CURRENT_FORMAT_VERSION {
         return Err(FormatError(format!("project format {source_version} is newer than supported format {CURRENT_FORMAT_VERSION}")));
     }
@@ -148,6 +172,11 @@ pub fn migrate_project_value(value: Value) -> Result<ProjectFile, FormatError> {
         let assets = root.remove("assets");
         root.remove("formatVersion");
         root.remove("engineVersion");
+        root.remove("projectFormat");
+        root.remove("projectFormatMajor");
+        root.remove("compatibility");
+        root.remove("projectMetadata");
+        root.remove("plugins");
         root.remove("activeSceneUuid");
         let mut scene = std::mem::take(&mut root);
         let scene_uuid = deterministic_uuid("nova-a-scene:main");
@@ -165,6 +194,18 @@ pub fn migrate_project_value(value: Value) -> Result<ProjectFile, FormatError> {
     }
     root.entry("assets")
         .or_insert_with(|| Value::Array(Vec::new()));
+    root.entry("plugins")
+        .or_insert_with(|| Value::Array(Vec::new()));
+    root.entry("projectMetadata").or_insert_with(|| {
+        json!({
+            "id": deterministic_uuid("nova-a-project:imported"),
+            "name": "Imported Project",
+            "createdAt": "1970-01-01T00:00:00.000Z",
+            "updatedAt": "1970-01-01T00:00:00.000Z",
+            "format": PROJECT_FORMAT_NAME,
+            "template": "imported"
+        })
+    });
     root.entry("projectSettings")
         .or_insert_with(|| json!({ "inputMap": [] }));
     if let Some(settings) = root
@@ -181,6 +222,25 @@ pub fn migrate_project_value(value: Value) -> Result<ProjectFile, FormatError> {
                 "buses": { "Master": 1.0, "Music": 1.0, "SFX": 1.0, "UI": 1.0 }
             })
         });
+        settings.entry("build").or_insert_with(|| {
+            json!({
+                "gameName": "MyGame", "target": "windows", "architecture": "x86_64",
+                "sceneOrder": [], "startupSceneUuid": "", "packageIntoExecutable": false,
+                "developmentBuild": true, "outputDirectory": ""
+            })
+        });
+        settings.entry("scripting").or_insert_with(
+            || json!({ "customSignals": [], "maxConsoleEntries": 2000, "debuggerEnabled": true }),
+        );
+        settings.entry("rendering").or_insert_with(|| json!({
+            "lightingEnabled": false,
+            "ambientColor": { "r": 255, "g": 255, "b": 255 },
+            "ambientIntensity": 1.0,
+            "shadowQuality": "Soft",
+            "colorSpace": "sRGB",
+            "postProcessing": { "enabled": false, "exposure": 0.0, "contrast": 1.0, "saturation": 1.0, "vignette": 0.0, "bloom": 0.0, "blur": 0.0, "userMaterial": null },
+            "debugView": "None"
+        }));
     }
 
     let requested_active_scene = root
@@ -227,8 +287,19 @@ pub fn migrate_project_value(value: Value) -> Result<ProjectFile, FormatError> {
         let active = scenes[0]["uuid"].clone();
         root.insert("activeSceneUuid".into(), active);
     }
+    root.insert("projectFormat".into(), json!(PROJECT_FORMAT_NAME));
+    root.insert("projectFormatMajor".into(), json!(PROJECT_FORMAT_MAJOR));
     root.insert("formatVersion".into(), json!(CURRENT_FORMAT_VERSION));
     root.insert("engineVersion".into(), json!(CURRENT_ENGINE_VERSION));
+    root.insert(
+        "compatibility".into(),
+        json!({
+            "format": PROJECT_FORMAT_NAME,
+            "major": PROJECT_FORMAT_MAJOR,
+            "schemaVersion": CURRENT_FORMAT_VERSION,
+            "minimumSchemaVersion": MINIMUM_SUPPORTED_FORMAT_VERSION
+        }),
+    );
     let project: ProjectFile = serde_json::from_value(Value::Object(root))
         .map_err(|error| FormatError(format!("project schema is invalid: {error}")))?;
     validate_project(&project)?;
@@ -236,6 +307,17 @@ pub fn migrate_project_value(value: Value) -> Result<ProjectFile, FormatError> {
 }
 
 pub fn validate_project(project: &ProjectFile) -> Result<(), FormatError> {
+    if project.project_format != PROJECT_FORMAT_NAME
+        || project.project_format_major != PROJECT_FORMAT_MAJOR
+        || project.compatibility.format != PROJECT_FORMAT_NAME
+        || project.compatibility.major != PROJECT_FORMAT_MAJOR
+        || project.compatibility.schema_version != CURRENT_FORMAT_VERSION
+        || project.compatibility.minimum_schema_version != MINIMUM_SUPPORTED_FORMAT_VERSION
+    {
+        return Err(FormatError(
+            "project compatibility metadata does not match Nova_A Project Format 2".into(),
+        ));
+    }
     if project.format_version != CURRENT_FORMAT_VERSION {
         return Err(FormatError(format!(
             "expected format {}, received {}",
@@ -264,7 +346,12 @@ pub fn validate_project(project: &ProjectFile) -> Result<(), FormatError> {
             )));
         }
         asset_types.insert(asset.uuid.as_str(), asset.asset_type.as_str());
+        if asset.asset_type == "script" {
+            validate_script_asset(asset)?;
+        }
     }
+    validate_project_metadata(project.extra.get("projectMetadata"))?;
+    validate_plugins(project.extra.get("plugins"), &asset_types)?;
     let mut scene_ids = std::collections::HashSet::new();
     for scene in &project.scenes {
         if !is_uuid(&scene.uuid) || !scene_ids.insert(scene.uuid.as_str()) {
@@ -288,6 +375,12 @@ pub fn validate_project(project: &ProjectFile) -> Result<(), FormatError> {
             }
             let mut component_kinds = std::collections::HashSet::new();
             for component in &entity.components {
+                if !is_standard_component_kind(&component.kind) {
+                    return Err(FormatError(format!(
+                        "entity {} contains unsupported component kind {}",
+                        entity.uuid, component.kind
+                    )));
+                }
                 if !is_uuid(&component.uuid) || !identities.insert(component.uuid.as_str()) {
                     return Err(FormatError(format!(
                         "invalid or duplicate component UUID: {}",
@@ -322,6 +415,11 @@ pub fn validate_project(project: &ProjectFile) -> Result<(), FormatError> {
                         "image",
                         &asset_types,
                     )?;
+                    validate_asset_reference(
+                        component.data.get("normalMapAsset"),
+                        "image",
+                        &asset_types,
+                    )?;
                 } else if component.kind == "TextRenderer2D" {
                     validate_asset_reference(
                         component.data.get("fontAsset"),
@@ -332,6 +430,19 @@ pub fn validate_project(project: &ProjectFile) -> Result<(), FormatError> {
                     validate_asset_reference(
                         component.data.get("controllerAsset"),
                         "controller",
+                        &asset_types,
+                    )?;
+                } else if component.kind == "Skeleton2D" {
+                    validate_asset_reference(component.data.get("rigAsset"), "rig", &asset_types)?;
+                    validate_asset_reference(
+                        component.data.get("skinAsset"),
+                        "skin",
+                        &asset_types,
+                    )?;
+                } else if component.kind == "TimelinePlayer" {
+                    validate_asset_reference(
+                        component.data.get("timelineAsset"),
+                        "timeline",
                         &asset_types,
                     )?;
                 } else if component.kind == "AudioSource" {
@@ -457,6 +568,133 @@ fn validate_asset_reference(
     Ok(())
 }
 
+fn is_standard_component_kind(kind: &str) -> bool {
+    matches!(
+        kind,
+        "Transform2D"
+            | "Camera2D"
+            | "SpriteRenderer2D"
+            | "ShapeRenderer2D"
+            | "TextRenderer2D"
+            | "RigidBody2D"
+            | "BoxCollider2D"
+            | "EllipseCollider2D"
+            | "PolygonCollider2D"
+            | "FixedJoint2D"
+            | "DistanceJoint2D"
+            | "RevoluteJoint2D"
+            | "PrismaticJoint2D"
+            | "SpringJoint2D"
+            | "Rope2D"
+            | "Script2D"
+            | "Animator"
+            | "Skeleton2D"
+            | "TimelinePlayer"
+            | "AudioSource"
+            | "AudioListener"
+            | "ParticleEmitter2D"
+            | "Light2D"
+            | "ShadowCaster2D"
+            | "Canvas"
+            | "RectTransform"
+            | "Panel"
+            | "Image"
+            | "Text"
+            | "Button"
+            | "Slider"
+            | "ProgressBar"
+            | "Checkbox"
+            | "TextInput"
+            | "TileMap2D"
+    )
+}
+
+fn validate_project_metadata(value: Option<&Value>) -> Result<(), FormatError> {
+    let metadata = value
+        .and_then(Value::as_object)
+        .ok_or_else(|| FormatError("projectMetadata must be an object".into()))?;
+    let id = metadata.get("id").and_then(Value::as_str).unwrap_or("");
+    let name = metadata.get("name").and_then(Value::as_str).unwrap_or("");
+    if !is_uuid(id) {
+        return Err(FormatError("projectMetadata.id must be a UUID".into()));
+    }
+    if name.trim().is_empty() || name.chars().count() > 80 {
+        return Err(FormatError(
+            "projectMetadata.name must contain 1 to 80 characters".into(),
+        ));
+    }
+    if metadata.get("format").and_then(Value::as_str) != Some(PROJECT_FORMAT_NAME) {
+        return Err(FormatError(
+            "projectMetadata.format must identify Nova_A Project Format 2".into(),
+        ));
+    }
+    Ok(())
+}
+
+fn validate_plugins(
+    value: Option<&Value>,
+    asset_types: &HashMap<&str, &str>,
+) -> Result<(), FormatError> {
+    let plugins = value
+        .and_then(Value::as_array)
+        .ok_or_else(|| FormatError("plugins must be an array".into()))?;
+    if plugins.len() > 256 {
+        return Err(FormatError(
+            "a project cannot configure more than 256 plugins".into(),
+        ));
+    }
+    let mut ids = std::collections::HashSet::new();
+    for plugin in plugins {
+        let plugin = plugin
+            .as_object()
+            .ok_or_else(|| FormatError("every plugin manifest must be an object".into()))?;
+        let id = plugin.get("id").and_then(Value::as_str).unwrap_or("");
+        let name = plugin.get("name").and_then(Value::as_str).unwrap_or("");
+        let entry = plugin.get("entry").and_then(Value::as_str).unwrap_or("");
+        if id.is_empty()
+            || id.len() > 120
+            || !id.contains('.')
+            || !id.chars().all(|character| {
+                character.is_ascii_lowercase()
+                    || character.is_ascii_digit()
+                    || matches!(character, '.' | '-')
+            })
+            || !ids.insert(id)
+        {
+            return Err(FormatError(format!("invalid or duplicate plugin id: {id}")));
+        }
+        if name.trim().is_empty() || name.chars().count() > 120 {
+            return Err(FormatError(format!("plugin {id} has an invalid name")));
+        }
+        if plugin.get("apiVersion").and_then(Value::as_u64) != Some(1) {
+            return Err(FormatError(format!(
+                "plugin {id} does not target Nova_A WASM Plugin API 1"
+            )));
+        }
+        if !entry.ends_with(".wasm")
+            || entry.contains("..")
+            || entry.contains('\\')
+            || entry.starts_with('/')
+        {
+            return Err(FormatError(format!("plugin {id} has an unsafe entry path")));
+        }
+        let permissions = plugin
+            .get("permissions")
+            .and_then(Value::as_array)
+            .ok_or_else(|| FormatError(format!("plugin {id} permissions must be an array")))?;
+        if permissions
+            .iter()
+            .any(|permission| !matches!(permission.as_str(), Some("log" | "events")))
+        {
+            return Err(FormatError(format!(
+                "plugin {id} requests an unsupported permission"
+            )));
+        }
+        validate_asset_reference(plugin.get("entryAsset"), "other", asset_types)?;
+    }
+    Ok(())
+}
+
 fn validate_project_settings(value: Option<&Value>) -> Result<(), FormatError> {
     let settings = value
         .and_then(Value::as_object)
@@ -465,6 +703,114 @@ fn validate_project_settings(value: Option<&Value>) -> Result<(), FormatError> {
         .get("inputMap")
         .and_then(Value::as_array)
         .ok_or_else(|| FormatError("projectSettings.inputMap must be an array".into()))?;
+    if let Some(rendering) = settings.get("rendering") {
+        let rendering = rendering
+            .as_object()
+            .ok_or_else(|| FormatError("projectSettings.rendering must be an object".into()))?;
+        if !rendering
+            .get("lightingEnabled")
+            .is_some_and(Value::is_boolean)
+        {
+            return Err(FormatError(
+                "projectSettings.rendering.lightingEnabled must be a boolean".into(),
+            ));
+        }
+        if !matches!(
+            rendering.get("shadowQuality").and_then(Value::as_str),
+            Some("Off" | "Hard" | "Soft" | "Ultra")
+        ) {
+            return Err(FormatError(
+                "projectSettings.rendering.shadowQuality is unsupported".into(),
+            ));
+        }
+        if !matches!(
+            rendering.get("colorSpace").and_then(Value::as_str),
+            Some("sRGB" | "Linear")
+        ) {
+            return Err(FormatError(
+                "projectSettings.rendering.colorSpace is unsupported".into(),
+            ));
+        }
+        if !rendering
+            .get("postProcessing")
+            .is_some_and(Value::is_object)
+        {
+            return Err(FormatError(
+                "projectSettings.rendering.postProcessing must be an object".into(),
+            ));
+        }
+    }
+    if let Some(scripting) = settings.get("scripting") {
+        let scripting = scripting
+            .as_object()
+            .ok_or_else(|| FormatError("projectSettings.scripting must be an object".into()))?;
+        let signals = scripting
+            .get("customSignals")
+            .and_then(Value::as_array)
+            .ok_or_else(|| {
+                FormatError("projectSettings.scripting.customSignals must be an array".into())
+            })?;
+        if signals.len() > 256
+            || signals.iter().any(|signal| {
+                !signal
+                    .as_str()
+                    .is_some_and(|name| !name.trim().is_empty() && name.len() <= 128)
+            })
+        {
+            return Err(FormatError(
+                "projectSettings.scripting.customSignals contains an invalid signal".into(),
+            ));
+        }
+        if !matches!(
+            scripting.get("maxConsoleEntries").and_then(Value::as_u64),
+            Some(100..=10000)
+        ) {
+            return Err(FormatError(
+                "projectSettings.scripting.maxConsoleEntries must be between 100 and 10000".into(),
+            ));
+        }
+        if !scripting
+            .get("debuggerEnabled")
+            .is_some_and(Value::is_boolean)
+        {
+            return Err(FormatError(
+                "projectSettings.scripting.debuggerEnabled must be a boolean".into(),
+            ));
+        }
+    }
+    if let Some(build) = settings.get("build") {
+        let build = build
+            .as_object()
+            .ok_or_else(|| FormatError("projectSettings.build must be an object".into()))?;
+        let game_name = build
+            .get("gameName")
+            .and_then(Value::as_str)
+            .unwrap_or("")
+            .trim();
+        if game_name.is_empty() || game_name.len() > 80 {
+            return Err(FormatError(
+                "projectSettings.build.gameName must contain 1 to 80 characters".into(),
+            ));
+        }
+        if !matches!(
+            build.get("target").and_then(Value::as_str),
+            Some("windows" | "linux" | "macos" | "web")
+        ) {
+            return Err(FormatError(
+                "projectSettings.build.target is unsupported".into(),
+            ));
+        }
+        if build.get("architecture").and_then(Value::as_str) != Some("x86_64") {
+            return Err(FormatError(
+                "projectSettings.build.architecture is unsupported".into(),
+            ));
+        }
+        if !build.get("sceneOrder").is_some_and(Value::is_array) {
+            return Err(FormatError(
+                "projectSettings.build.sceneOrder must be an array".into(),
+            ));
+        }
+    }
     if let Some(audio) = settings.get("audio") {
         let audio = audio
             .as_object()
@@ -561,6 +907,59 @@ fn validate_project_settings(value: Option<&Value>) -> Result<(), FormatError> {
                     "input action {name} contains an invalid code"
                 )));
             }
+        }
+    }
+    Ok(())
+}
+
+fn validate_script_asset(asset: &AssetReference) -> Result<(), FormatError> {
+    let Some(metadata) = asset.extra.get("script") else {
+        return Ok(());
+    };
+    let metadata = metadata
+        .as_object()
+        .ok_or_else(|| FormatError(format!("script metadata must be an object: {}", asset.path)))?;
+    if metadata.get("version").and_then(Value::as_u64) != Some(1) {
+        return Err(FormatError(format!(
+            "script metadata version is unsupported: {}",
+            asset.path
+        )));
+    }
+    let breakpoints = metadata
+        .get("breakpoints")
+        .and_then(Value::as_array)
+        .ok_or_else(|| {
+            FormatError(format!(
+                "script breakpoints must be an array: {}",
+                asset.path
+            ))
+        })?;
+    if breakpoints.len() > 1000
+        || breakpoints.iter().any(|line| {
+            !line
+                .as_u64()
+                .is_some_and(|line| line > 0 && line <= 1_000_000)
+        })
+    {
+        return Err(FormatError(format!(
+            "script breakpoints are invalid: {}",
+            asset.path
+        )));
+    }
+    for key in ["tests", "packageDependencies"] {
+        let entries = metadata
+            .get(key)
+            .and_then(Value::as_array)
+            .ok_or_else(|| FormatError(format!("script {key} must be an array: {}", asset.path)))?;
+        if entries.len() > 256
+            || entries
+                .iter()
+                .any(|entry| !entry.as_str().is_some_and(|value| value.len() <= 256))
+        {
+            return Err(FormatError(format!(
+                "script {key} is invalid: {}",
+                asset.path
+            )));
         }
     }
     Ok(())
@@ -1116,5 +1515,235 @@ mod tests {
     fn rejects_future_project_formats() {
         let error = migrate_project_str(r#"{"formatVersion":999,"entities":[]}"#).unwrap_err();
         assert!(error.0.contains("newer"));
+    }
+
+    #[test]
+    fn migrates_v1_9_projects_into_project_format_two() {
+        let scene = deterministic_uuid("v1-9-build-scene");
+        let source = json!({
+            "formatVersion": 13,
+            "activeSceneUuid": scene,
+            "projectSettings": {"inputMap": []},
+            "assets": [],
+            "scenes": [{"uuid":scene,"name":"Main Scene","entities":[],"connections":[]}]
+        });
+        let migrated = migrate_project_value(source).unwrap();
+        assert_eq!(migrated.project_format, PROJECT_FORMAT_NAME);
+        assert_eq!(migrated.project_format_major, PROJECT_FORMAT_MAJOR);
+        assert_eq!(migrated.format_version, CURRENT_FORMAT_VERSION);
+        assert_eq!(migrated.engine_version, CURRENT_ENGINE_VERSION);
+        assert_eq!(
+            migrated.extra["projectSettings"]["build"]["architecture"],
+            "x86_64"
+        );
+        assert_eq!(
+            migrated.extra["projectSettings"]["build"]["developmentBuild"],
+            true
+        );
+    }
+
+    #[test]
+    fn project_format_two_serialization_round_trip_preserves_game_data() {
+        let scene = deterministic_uuid("format-two-round-trip-scene");
+        let parent = deterministic_uuid("format-two-round-trip-parent");
+        let child = deterministic_uuid("format-two-round-trip-child");
+        let parent_transform = deterministic_uuid("format-two-round-trip-parent-transform");
+        let child_transform = deterministic_uuid("format-two-round-trip-child-transform");
+        let script_component = deterministic_uuid("format-two-round-trip-script-component");
+        let script_asset = deterministic_uuid("format-two-round-trip-script-asset");
+        let prefab_asset = deterministic_uuid("format-two-round-trip-prefab-asset");
+        let source = json!({
+            "formatVersion": CURRENT_FORMAT_VERSION,
+            "activeSceneUuid": scene,
+            "projectSettings": {"inputMap": []},
+            "customGameData": {"difficulty":"hard","chapter":3},
+            "assets": [
+                {"uuid":script_asset,"path":"Assets/Scripts/player.rhai","assetType":"script"},
+                {"uuid":prefab_asset,"path":"Assets/Prefabs/player.nova-prefab","assetType":"prefab"}
+            ],
+            "scenes": [{"uuid":scene,"name":"Gameplay","entities":[
+                {"uuid":parent,"name":"Parent","components":[
+                    {"uuid":parent_transform,"kind":"Transform2D","data":{"parentUuid":null}}
+                ]},
+                {"uuid":child,"name":"Child","prefabAsset":format!("asset://{prefab_asset}"),"components":[
+                    {"uuid":child_transform,"kind":"Transform2D","data":{"parentUuid":parent}},
+                    {"uuid":script_component,"kind":"Script2D","data":{"scriptAsset":format!("asset://{script_asset}"),"properties":{"speed":7.5}}}
+                ]}
+            ],"connections":[]}]
+        });
+
+        let migrated = migrate_project_value(source).unwrap();
+        let serialized = serde_json::to_string(&migrated).unwrap();
+        let restored: ProjectFile = serde_json::from_str(&serialized).unwrap();
+
+        validate_project(&restored).unwrap();
+        assert_eq!(restored.project_format, PROJECT_FORMAT_NAME);
+        assert_eq!(restored.extra["customGameData"]["difficulty"], "hard");
+        assert_eq!(
+            restored.scenes[0].entities[1].extra["prefabAsset"],
+            format!("asset://{prefab_asset}")
+        );
+        assert_eq!(
+            restored.scenes[0].entities[1].components[0].data["parentUuid"],
+            parent
+        );
+        assert_eq!(
+            restored.scenes[0].entities[1].components[1].data["properties"]["speed"],
+            7.5
+        );
+    }
+
+    #[test]
+    fn rejects_missing_hierarchy_parents() {
+        let scene = deterministic_uuid("missing-parent-scene");
+        let entity = deterministic_uuid("missing-parent-entity");
+        let transform = deterministic_uuid("missing-parent-transform");
+        let missing_parent = deterministic_uuid("missing-parent-target");
+        let source = json!({
+            "formatVersion": CURRENT_FORMAT_VERSION,
+            "activeSceneUuid": scene,
+            "assets": [],
+            "scenes": [{"uuid":scene,"name":"Main Scene","entities":[{
+                "uuid":entity,"name":"Child","components":[
+                    {"uuid":transform,"kind":"Transform2D","data":{"parentUuid":missing_parent}}
+                ]
+            }],"connections":[]}]
+        });
+
+        let error = migrate_project_value(source).unwrap_err();
+        assert!(error.0.contains("missing parent"));
+    }
+
+    #[test]
+    fn rejects_hierarchy_cycles() {
+        let scene = deterministic_uuid("parent-cycle-scene");
+        let entity_a = deterministic_uuid("parent-cycle-a");
+        let entity_b = deterministic_uuid("parent-cycle-b");
+        let transform_a = deterministic_uuid("parent-cycle-transform-a");
+        let transform_b = deterministic_uuid("parent-cycle-transform-b");
+        let source = json!({
+            "formatVersion": CURRENT_FORMAT_VERSION,
+            "activeSceneUuid": scene,
+            "assets": [],
+            "scenes": [{"uuid":scene,"name":"Main Scene","entities":[
+                {"uuid":entity_a,"name":"A","components":[
+                    {"uuid":transform_a,"kind":"Transform2D","data":{"parentUuid":entity_b}}
+                ]},
+                {"uuid":entity_b,"name":"B","components":[
+                    {"uuid":transform_b,"kind":"Transform2D","data":{"parentUuid":entity_a}}
+                ]}
+            ],"connections":[]}]
+        });
+
+        let error = migrate_project_value(source).unwrap_err();
+        assert!(error.0.contains("parent cycle"));
+    }
+
+    #[test]
+    fn rejects_invalid_build_targets() {
+        let scene = deterministic_uuid("v1-9-invalid-build-scene");
+        let source = json!({
+            "formatVersion": CURRENT_FORMAT_VERSION,
+            "activeSceneUuid": scene,
+            "projectSettings": {"inputMap": [], "build": {
+                "gameName":"Demo", "target":"console", "architecture":"x86_64", "sceneOrder":[]
+            }},
+            "assets": [],
+            "scenes": [{"uuid":scene,"name":"Main Scene","entities":[],"connections":[]}]
+        });
+        let error = migrate_project_value(source).unwrap_err();
+        assert!(error.0.contains("build.target"));
+    }
+
+    #[test]
+    fn migrates_and_validates_v2_2_script_metadata_and_settings() {
+        let script = deterministic_uuid("v2.2-script");
+        let source = json!({
+            "formatVersion": 14,
+            "engineVersion": "2.1.0",
+            "projectSettings": {"inputMap": []},
+            "assets": [{
+                "uuid": script, "path": "Assets/Scripts/Game.rhai", "assetType": "script",
+                "script": {"version": 1, "breakpoints": [3, 8], "tests": ["test_move"], "packageDependencies": []}
+            }],
+            "entities": []
+        });
+        let migrated = migrate_project_value(source).unwrap();
+        assert_eq!(migrated.format_version, CURRENT_FORMAT_VERSION);
+        assert_eq!(
+            migrated.extra["projectSettings"]["scripting"]["maxConsoleEntries"],
+            2000
+        );
+        assert_eq!(migrated.assets[0].extra["script"]["breakpoints"][1], 8);
+        assert_eq!(
+            migrated.extra["projectSettings"]["rendering"]["lightingEnabled"],
+            false
+        );
+    }
+
+    #[test]
+    fn migrates_and_round_trips_v2_4_animation_components() {
+        let scene = deterministic_uuid("v2.4-scene");
+        let entity = deterministic_uuid("v2.4-entity");
+        let transform = deterministic_uuid("v2.4-transform");
+        let skeleton = deterministic_uuid("v2.4-skeleton");
+        let player = deterministic_uuid("v2.4-timeline-player");
+        let rig = deterministic_uuid("v2.4-rig");
+        let skin = deterministic_uuid("v2.4-skin");
+        let timeline = deterministic_uuid("v2.4-timeline");
+        let source = json!({
+            "formatVersion": 16,
+            "engineVersion": "2.3.0",
+            "activeSceneUuid": scene,
+            "assets": [
+                {"uuid":rig,"path":"Assets/Rigs/Hero.nova-rig","assetType":"rig","futureImporterField":{"kept":true}},
+                {"uuid":skin,"path":"Assets/Skins/Hero.nova-skin","assetType":"skin"},
+                {"uuid":timeline,"path":"Assets/Timelines/Intro.nova-timeline","assetType":"timeline"}
+            ],
+            "scenes": [{"uuid":scene,"name":"Main","entities":[{
+                "uuid":entity,"name":"Hero","components":[
+                    {"uuid":transform,"kind":"Transform2D","data":{}},
+                    {"uuid":skeleton,"kind":"Skeleton2D","data":{"rigAsset":format!("asset://{rig}"),"skinAsset":format!("asset://{skin}"),"pose":[]}},
+                    {"uuid":player,"kind":"TimelinePlayer","data":{"timelineAsset":format!("asset://{timeline}"),"autoplay":true}}
+                ]
+            }],"connections":[]}]
+        });
+        let migrated = migrate_project_value(source).unwrap();
+        validate_project(&migrated).unwrap();
+        assert_eq!(migrated.format_version, 17);
+        assert_eq!(migrated.engine_version, "2.4.0");
+        assert_eq!(
+            migrated.assets[0].extra["futureImporterField"]["kept"],
+            true
+        );
+        let encoded = serde_json::to_string(&migrated).unwrap();
+        let restored: ProjectFile = serde_json::from_str(&encoded).unwrap();
+        validate_project(&restored).unwrap();
+        assert_eq!(
+            restored.scenes[0].entities[0].components[1].data["pose"],
+            json!([])
+        );
+    }
+
+    #[test]
+    fn rejects_wrong_v2_4_animation_asset_types() {
+        let scene = deterministic_uuid("v2.4-wrong-scene");
+        let entity = deterministic_uuid("v2.4-wrong-entity");
+        let transform = deterministic_uuid("v2.4-wrong-transform");
+        let skeleton = deterministic_uuid("v2.4-wrong-skeleton");
+        let timeline = deterministic_uuid("v2.4-wrong-timeline");
+        let source = json!({
+            "formatVersion": CURRENT_FORMAT_VERSION,
+            "activeSceneUuid": scene,
+            "assets": [{"uuid":timeline,"path":"Assets/Timelines/Intro.nova-timeline","assetType":"timeline"}],
+            "scenes": [{"uuid":scene,"name":"Main","entities":[{
+                "uuid":entity,"name":"Hero","components":[
+                    {"uuid":transform,"kind":"Transform2D","data":{}},
+                    {"uuid":skeleton,"kind":"Skeleton2D","data":{"rigAsset":format!("asset://{timeline}")}}
+                ]
+            }],"connections":[]}]
+        });
+        let error = migrate_project_value(source).unwrap_err();
+        assert!(error.0.contains("expected rig"));
     }
 }

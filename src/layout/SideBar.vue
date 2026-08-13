@@ -3,6 +3,7 @@
     <div class="nav-group">
       <button :class="{ active: state.currentPage === 'scene' }" @click="switchPage('scene')" :title="t('scene')"><img :src="sceneIcon" :alt="t('scene')"><span>{{ t('scene') }}</span></button>
       <button :class="{ active: state.currentPage === 'game' }" @click="switchPage('game')" :title="t('game')"><img :src="renderIcon" :alt="t('game')"><span>{{ t('game') }}</span></button>
+      <button :class="{ active: state.currentPage === 'script' }" @click="openScripts" :title="t('scripts')"><span class="script-icon">{ }</span><span>{{ t('scripts') }}</span></button>
     </div>
     <div class="nav-group">
       <button :class="{ active: state.currentPage === 'settings' }" @click="switchPage('settings')" :title="t('settings')"><img :src="settingsIcon" :alt="t('settings')"><span>{{ t('settings') }}</span></button>
@@ -16,12 +17,16 @@ import { closeContextMenu, editorState as state } from '../store/editor'
 import sceneIcon from '../assets/icons/scene.svg'
 import renderIcon from '../assets/icons/render.svg'
 import settingsIcon from '../assets/icons/settings.svg'
+import { applyEditorWorkspace } from '../editor/workspaces'
 
 function switchPage(page: 'scene' | 'game' | 'settings') {
   closeContextMenu()
-  state.currentPage = page
+  if (page === 'scene') applyEditorWorkspace('design')
+  else if (page === 'game') applyEditorWorkspace('debug')
+  else state.currentPage = page
   state.statusText = t('switchedPage', { page: t(page) })
 }
+function openScripts() { closeContextMenu(); applyEditorWorkspace('script') }
 </script>
 
 <style scoped>
@@ -34,4 +39,5 @@ button:hover { color: var(--text-primary); background: var(--surface-hover); }
 button:hover img { opacity: 1; transform: translateY(-1px); }
 button.active { color: var(--accent); background: var(--accent-soft); border-color: color-mix(in srgb, var(--accent) 24%, transparent); }
 button.active img { opacity: 1; filter: var(--icon-filter) drop-shadow(0 0 7px var(--accent)); }
+.script-icon { font: 700 13px ui-monospace, monospace; }
 </style>

@@ -1,12 +1,35 @@
 import { defineConfig } from "vite";
 import vue from "@vitejs/plugin-vue";
+import { resolve } from "node:path";
+import { copyFile, mkdir } from "node:fs/promises";
+
+const projectRoot = process.cwd();
 
 // @ts-expect-error process is a nodejs global
 const host = process.env.TAURI_DEV_HOST;
 
 // https://vite.dev/config/
 export default defineConfig(async () => ({
-  plugins: [vue()],
+  base: './',
+  plugins: [vue(), {
+    name: 'nova-manual-assets',
+    apply: 'build',
+    async writeBundle(options) {
+      const output = resolve(projectRoot, options.dir ?? 'dist', 'manual')
+      await mkdir(output, { recursive: true })
+      await Promise.all(['MANUAL.en.md', 'MANUAL.de.md', 'MANUAL.zh-CN.md'].map(file => copyFile(resolve(projectRoot, 'manual', file), resolve(output, file))))
+    }
+  }],
+  build: {
+    manifest: true,
+    rollupOptions: {
+      input: {
+        editor: resolve(projectRoot, 'index.html'),
+        player: resolve(projectRoot, 'player.html'),
+        manual: resolve(projectRoot, 'manual/index.html')
+      }
+    }
+  },
 
   // Vite options tailored for Tauri development and only applied in `tauri dev` or `tauri build`
   //

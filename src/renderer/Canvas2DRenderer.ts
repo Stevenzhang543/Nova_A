@@ -11,9 +11,9 @@ import type {
 } from './types'
 
 type QueuedCommand =
-  | { type: 'shape'; value: ShapeRenderCommand }
-  | { type: 'sprite'; value: SpriteRenderCommand }
-  | { type: 'text'; value: TextRenderCommand }
+  | { type: 'shape'; value: ShapeRenderCommand; camera: CameraRenderView; cameraIndex: number }
+  | { type: 'sprite'; value: SpriteRenderCommand; camera: CameraRenderView; cameraIndex: number }
+  | { type: 'text'; value: TextRenderCommand; camera: CameraRenderView; cameraIndex: number }
 
 function cssColor(color: { r: number; g: number; b: number; a: number }): string {
   return `rgba(${color.r},${color.g},${color.b},${Math.min(1, Math.max(0, color.a))})`
@@ -31,12 +31,13 @@ function textureDimensions(source: TexImageSource): { width: number; height: num
 }
 
 export class Canvas2DRenderer implements Renderer2D {
-  readonly stats: RendererStats = { backend: 'Canvas2D', drawCalls: 0, batches: 0, triangles: 0, sprites: 0, shapes: 0, text: 0 }
+  readonly stats: RendererStats = { backend: 'Canvas2D', drawCalls: 0, batches: 0, triangles: 0, sprites: 0, shapes: 0, text: 0, textures: 0, gpuMs: null, passes: 1, renderTargets: 0, overdraw: 0 }
   private readonly context: CanvasRenderingContext2D
   private commands: QueuedCommand[] = []
   private tintedTextures = new WeakMap<object, Map<string, HTMLCanvasElement>>()
   private frame: FrameOptions = { width: 1, height: 1, pixelRatio: 1, clearColor: { r: 0, g: 0, b: 0, a: 1 } }
   private camera: CameraRenderView = { scale: 1, offset: { x: 0, y: 0 } }
+  private cameraIndex = -1
 
   constructor(private readonly canvas: HTMLCanvasElement) {
     const context = canvas.getContext('2d', { alpha: false })
@@ -54,45 +55,37 @@ export class Canvas2DRenderer implements Renderer2D {
     this.frame = options
     this.resize(options.width, options.height, options.pixelRatio)
     this.commands = []
-    Object.assign(this.stats, { drawCalls: 0, batches: 0, triangles: 0, sprites: 0, shapes: 0, text: 0 })
+    this.cameraIndex = -1
+    Object.assign(this.stats, { drawCalls: 0, batches: 0, triangles: 0, sprites: 0, shapes: 0, text: 0, textures: 0, gpuMs: null, passes: 1, renderTargets: 0, overdraw: 0 })
     this.context.setTransform(options.pixelRatio, 0, 0, options.pixelRatio, 0, 0)
     this.context.fillStyle = cssColor(options.clearColor)
     this.context.fillRect(0, 0, options.width, options.height)
   }
-  beginCamera(camera: CameraRenderView): void { this.camera = camera }
-  submitSprite(command: SpriteRenderCommand): void { this.commands.push({ type: 'sprite', value: command }); this.stats.sprites++ }
-  submitShape(command: ShapeRenderCommand): void { this.commands.push({ type: 'shape', value: command }); this.stats.shapes++ }
-  submitText(command: TextRenderCommand): void { this.commands.push({ type: 'text', value: command }); this.stats.text++ }
+  beginCamera(camera: CameraRenderView): void { this.camera = camera; this.cameraIndex++ }
+  submitSprite(command: SpriteRenderCommand): void { this.commands.push({ type: 'sprite', value: command, camera: this.camera, cameraIndex: this.cameraIndex }); this.stats.sprites++ }
+  submitShape(command: ShapeRenderCommand): void { this.commands.push({ type: 'shape', value: command, camera: this.camera, cameraIndex: this.cameraIndex }); this.stats.shapes++ }
+  submitText(command: TextRenderCommand): void { this.commands.push({ type: 'text', value: command, camera: this.camera, cameraIndex: this.cameraIndex }); this.stats.text++ }
   submitTileChunk(command: TileChunkRenderCommand): void { for (const sprite of command.sprites) this.submitSprite({ ...sprite, sortingLayer: command.sortingLayer, orderInLayer: command.orderInLayer, material: command.material, blendMode: command.blendMode }) }
   endCamera(): void { /* Rendering is sorted and performed in endFrame. */ }
   endFrame(): RendererStats {
-    this.commands.sort((first, second) => first.value.sortingLayer - second.value.sortingLayer || first.value.orderInLayer - second.value.orderInLayer)
+    this.commands.sort((first, second) => first.cameraIndex - second.cameraIndex || first.value.sortingLayer - second.value.sortingLayer || first.value.orderInLayer - second.value.orderInLayer)
     const context = this.context
-    context.save()
-    const center = this.camera.position
-    const viewport = this.camera.viewport ?? { x: 0, y: 0, width: 1, height: 1 }
-    const viewportX = viewport.x * this.frame.width
-    const viewportY = (1 - viewport.y - viewport.height) * this.frame.height
-    const viewportWidth = viewport.width * this.frame.width
-    const viewportHeight = viewport.height * this.frame.height
-    context.beginPath()
-    context.rect(viewportX, viewportY, viewportWidth, viewportHeight)
-    context.clip()
-    context.translate(viewportX + viewportWidth * .5, viewportY + viewportHeight * .5)
-    context.scale(this.camera.scale, -this.camera.scale)
-    context.rotate(-(this.camera.rotation ?? 0))
-    if (center) context.translate(-center.x, -center.y)
-    else context.translate(
-      -(this.frame.width * .5 - this.camera.offset.x) / this.camera.scale,
-      -(this.camera.offset.y - this.frame.height * .5) / this.camera.scale
-    )
+    let activeCameraIndex = Number.NaN
+    let cameraSaved = false
     for (const command of this.commands) {
+      if (command.cameraIndex !== activeCameraIndex) {
+        if (cameraSaved) context.restore()
+        activeCameraIndex = command.cameraIndex
+        cameraSaved = true
+        context.save()
+        this.applyCamera(context, command.camera)
+      }
       context.save()
       const value = command.value
       context.translate(value.position.x, value.position.y)
       context.rotate(value.rotation)
       context.scale(value.scale.x, value.scale.y)
-      context.globalCompositeOperation = value.blendMode === 'Additive' ? 'lighter' : 'source-over'
+      context.globalCompositeOperation = value.blendMode === 'Additive' ? 'lighter' : value.blendMode === 'Multiply' ? 'multiply' : value.blendMode === 'Screen' ? 'screen' : 'source-over'
       if (command.type === 'shape') this.drawShape(context, command.value)
       else if (command.type === 'sprite') this.drawSprite(context, command.value)
       else this.drawText(context, command.value)
@@ -101,12 +94,33 @@ export class Canvas2DRenderer implements Renderer2D {
       this.stats.triangles += command.type === 'shape'
         ? command.value.shape === 'Line' ? 2 : Math.max(1, command.value.shape === 'Ellipse' ? 46 : command.value.vertices.length - 2)
         : 2
+      this.stats.overdraw += command.type === 'shape' ? Math.max(1, command.value.vertices.length - 2) : 2
     }
-    context.restore()
+    if (cameraSaved) context.restore()
     this.stats.batches = this.stats.drawCalls
     return { ...this.stats }
   }
   destroy(): void { this.commands = []; this.tintedTextures = new WeakMap() }
+
+  private applyCamera(context: CanvasRenderingContext2D, camera: CameraRenderView): void {
+    const center = camera.position
+    const viewport = camera.viewport ?? { x: 0, y: 0, width: 1, height: 1 }
+    const viewportX = viewport.x * this.frame.width
+    const viewportY = (1 - viewport.y - viewport.height) * this.frame.height
+    const viewportWidth = viewport.width * this.frame.width
+    const viewportHeight = viewport.height * this.frame.height
+    context.beginPath()
+    context.rect(viewportX, viewportY, viewportWidth, viewportHeight)
+    context.clip()
+    context.translate(viewportX + viewportWidth * .5, viewportY + viewportHeight * .5)
+    context.scale(camera.scale, -camera.scale)
+    context.rotate(-(camera.rotation ?? 0))
+    if (center) context.translate(-center.x, -center.y)
+    else context.translate(
+      -(this.frame.width * .5 - camera.offset.x) / camera.scale,
+      -(camera.offset.y - this.frame.height * .5) / camera.scale
+    )
+  }
 
   private drawShape(context: CanvasRenderingContext2D, command: ShapeRenderCommand): void {
     context.beginPath()
@@ -137,12 +151,45 @@ export class Canvas2DRenderer implements Renderer2D {
     }
   }
   private drawSprite(context: CanvasRenderingContext2D, command: SpriteRenderCommand): void {
+    if (command.mesh) {
+      this.drawSkinnedMesh(context, command)
+      return
+    }
     const left = -command.pivot.x * command.size.x
     const bottom = -command.pivot.y * command.size.y
     context.globalAlpha = command.tint.a
     context.scale(command.flipX ? -1 : 1, command.flipY ? -1 : 1)
     context.scale(1, -1)
-    this.drawTexture(context, command.texture, left, -bottom - command.size.y, command.size.x, command.size.y, command.tint)
+    if (command.nineSlice) this.drawNineSlice(context, command, left, -bottom - command.size.y)
+    else this.drawTexture(context, command.texture, left, -bottom - command.size.y, command.size.x, command.size.y, command.tint)
+    context.globalAlpha = 1
+  }
+  private drawSkinnedMesh(context: CanvasRenderingContext2D, command: SpriteRenderCommand): void {
+    const mesh = command.mesh!
+    const dimensions = textureDimensions(command.texture.source)
+    const region = command.texture.uv
+    context.globalAlpha = command.tint.a
+    context.imageSmoothingEnabled = command.texture.filter !== 'Nearest'
+    for (let index = 0; index + 2 < mesh.indices.length; index += 3) {
+      const indices = [mesh.indices[index], mesh.indices[index + 1], mesh.indices[index + 2]]
+      const p = indices.map(vertex => mesh.positions[vertex])
+      const uv = indices.map(vertex => ({
+        x: (region.x + (command.flipX ? 1 - mesh.uvs[vertex].x : mesh.uvs[vertex].x) * region.width) * dimensions.width,
+        y: (region.y + (command.flipY ? 1 - mesh.uvs[vertex].y : mesh.uvs[vertex].y) * region.height) * dimensions.height
+      }))
+      const denominator = uv[0].x * (uv[1].y - uv[2].y) + uv[1].x * (uv[2].y - uv[0].y) + uv[2].x * (uv[0].y - uv[1].y)
+      if (Math.abs(denominator) < 1e-9) continue
+      const a = (p[0].x * (uv[1].y - uv[2].y) + p[1].x * (uv[2].y - uv[0].y) + p[2].x * (uv[0].y - uv[1].y)) / denominator
+      const c = (p[0].x * (uv[2].x - uv[1].x) + p[1].x * (uv[0].x - uv[2].x) + p[2].x * (uv[1].x - uv[0].x)) / denominator
+      const e = (p[0].x * (uv[1].x * uv[2].y - uv[2].x * uv[1].y) + p[1].x * (uv[2].x * uv[0].y - uv[0].x * uv[2].y) + p[2].x * (uv[0].x * uv[1].y - uv[1].x * uv[0].y)) / denominator
+      const b = (p[0].y * (uv[1].y - uv[2].y) + p[1].y * (uv[2].y - uv[0].y) + p[2].y * (uv[0].y - uv[1].y)) / denominator
+      const d = (p[0].y * (uv[2].x - uv[1].x) + p[1].y * (uv[0].x - uv[2].x) + p[2].y * (uv[1].x - uv[0].x)) / denominator
+      const f = (p[0].y * (uv[1].x * uv[2].y - uv[2].x * uv[1].y) + p[1].y * (uv[2].x * uv[0].y - uv[0].x * uv[2].y) + p[2].y * (uv[0].x * uv[1].y - uv[1].x * uv[0].y)) / denominator
+      context.save(); context.beginPath(); context.moveTo(p[0].x, -p[0].y); context.lineTo(p[1].x, -p[1].y); context.lineTo(p[2].x, -p[2].y); context.closePath(); context.clip()
+      context.transform(a, -b, c, -d, e, -f)
+      context.drawImage(command.texture.source as CanvasImageSource, 0, 0)
+      context.restore()
+    }
     context.globalAlpha = 1
   }
   private drawText(context: CanvasRenderingContext2D, command: TextRenderCommand): void {
@@ -193,5 +240,21 @@ export class Canvas2DRenderer implements Renderer2D {
       variants.set(key, tinted)
     }
     context.drawImage(tinted, x, y, width, height)
+  }
+
+  private drawNineSlice(context: CanvasRenderingContext2D, command: SpriteRenderCommand, x: number, y: number): void {
+    const slice = command.nineSlice!
+    const dimensions = textureDimensions(command.texture.source)
+    const sourceX = command.texture.uv.x * dimensions.width, sourceY = command.texture.uv.y * dimensions.height
+    const sourceWidth = command.texture.uv.width * dimensions.width, sourceHeight = command.texture.uv.height * dimensions.height
+    const sx = [0, Math.min(sourceWidth, slice.left), Math.max(0, sourceWidth - slice.right), sourceWidth]
+    const sy = [0, Math.min(sourceHeight, slice.top), Math.max(0, sourceHeight - slice.bottom), sourceHeight]
+    const dx = [0, Math.min(command.size.x, slice.left / Math.max(1, sourceWidth) * command.size.x), Math.max(0, command.size.x - slice.right / Math.max(1, sourceWidth) * command.size.x), command.size.x]
+    const dy = [0, Math.min(command.size.y, slice.top / Math.max(1, sourceHeight) * command.size.y), Math.max(0, command.size.y - slice.bottom / Math.max(1, sourceHeight) * command.size.y), command.size.y]
+    context.imageSmoothingEnabled = command.texture.filter !== 'Nearest'
+    for (let row = 0; row < 3; row++) for (let column = 0; column < 3; column++) {
+      const sw = sx[column + 1] - sx[column], sh = sy[row + 1] - sy[row], dw = dx[column + 1] - dx[column], dh = dy[row + 1] - dy[row]
+      if (sw > 0 && sh > 0 && dw > 0 && dh > 0) context.drawImage(command.texture.source as CanvasImageSource, sourceX + sx[column], sourceY + sy[row], sw, sh, x + dx[column], y + dy[row], dw, dh)
+    }
   }
 }

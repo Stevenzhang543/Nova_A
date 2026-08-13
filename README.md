@@ -1,25 +1,84 @@
 **Languages:** [中文](./README.zh-CN.md) | English
 
-# Nova_A Physics & Rendering Engine
+# Nova_A 2D Game Engine & Editor
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE.md)
 [![Platforms](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey)](https://v2.tauri.app/start/prerequisites/)
-[![Release](https://img.shields.io/badge/release-1.8.0-63c6ff)]()
+[![Release](https://img.shields.io/badge/release-2.4.0-63c6ff)]()
 
-Nova_A is an open-source 2D physics engine, renderer, and desktop GUI editor built with Rust, WebAssembly, Vue 3, and Tauri.
+Nova_A is an open-source 2D game engine and desktop editor built with Rust, WebAssembly, Vue 3, and Tauri.
 
-Version **1.8.0**, Advanced 2D, adds production tilemaps, particles, physics queries, joints, one-way collision, sleeping, and selective continuous collision while preserving the animation, audio, scripting, UI, rope, and editor workflows from earlier releases.
+Version **2.4.0** makes animation a complete production workflow: dope sheet and curve editing, exact tangents, multi-track/target animation, box selection, snapping, copy/paste, signal events, layered animator controllers, masks, blend trees, transition interruption, rigs, weighted skins, IK, constraints, recording, deterministic reimport, and a general Timeline. Project Format 2 schema 17 validates the new references. Unreferenced rig, skin, and Timeline resources are excluded from player packs.
 
-## What is new in v1.8.0
+**Manual:** [interactive English/German/Chinese webpage](./manual/index.html) · [English Markdown](./manual/MANUAL.en.md) · [Deutsch](./manual/MANUAL.de.md) · [中文](./manual/MANUAL.zh-CN.md)
 
-- `.nova-tileset` assets define source texture, tile dimensions, a palette, names, and per-tile None/Box/Polygon/One-way collision. The Tilemap panel supports brush, rectangle, eraser, fill, eyedropper, and selection tools directly in Scene view.
-- `TileMap2D` stores bounded map data in 32 x 32 chunks by default. Only changed visible chunks are rebuilt, camera-excluded chunks are skipped before sprite generation, and texture-atlas regions remain batched by the WebGL2 renderer.
-- Tile collision generates static geometry instead of one rigid body per tile. Adjacent box tiles are greedily merged, one-way runs are merged horizontally, and convex polygon tiles retain their authored shape.
-- `Physics2D` exposes `raycast`, `raycastAll`, point/circle/box overlap, and box shape-cast queries with physics-layer masks. Results use stable entity UUIDs and include hit point, normal, and world-unit distance.
-- Fixed, Distance, Revolute, Prismatic, and Spring joint components are available in the inspector. Connected-body collision is configurable; anchors, distance, spring response, slider axis, and limits are solved in Rust. Existing authored connections remain `Rope2D`.
-- Motionless dynamic bodies sleep and wake on forces, impulses, collisions, connected-body motion, and transform changes. `Discrete` is the safe default collision mode; `Continuous` selectively enables adaptive anti-tunneling work for fast bodies.
-- `ParticleEmitter2D` supports optional texture, rate, burst, lifetime, velocity, gravity, rotation, scale/color/opacity over lifetime, local/world space, alpha/additive blending, and GPU-batched renderer submission.
-- Project format 12 persists TileSets, TileMaps, particles, joints, and one-way colliders. Central Rust validation checks new asset and entity references while format 11 and older projects migrate automatically.
+## What is new in v2.4.0
+
+- The dedicated **Animation Studio** opens clips, controllers, animation masks, rigs, skins, and Timelines in contextual editors rather than a single long form.
+- Clips support dope-sheet and sampled curve views, Auto/Linear/Constant/Free tangents, box and multi-selection, snapping, key drag, copy/paste, sprite frames, event signals, and tracks that target the owner or another entity.
+- Animator controllers support typed parameter defaults, transition conditions/exit time/duration/interruption, layers, weights, additive evaluation, masks, subgraphs, 1D blend trees, and live play-mode preview.
+- `Skeleton2D` and rig/skin resources add hierarchical bones, pose overrides, inverse-bind weighted sprite deformation, IK chains, rotation/copy/position constraints, and WebGL2/Canvas2D rendering.
+- `TimelinePlayer` sequences animation, audio, camera, event, visibility, and script-call tracks at fixed simulation ticks. Animation events use the bounded signal system.
+- Explicit Record mode captures Inspector and gizmo transforms as snapped keyframes. Animation import metadata preserves a stable target GUID and deterministically resamples mapped source tracks.
+- New TextInput controls use a balanced 300 x 96 default instead of the previous wide 360 x 88 rectangle.
+- Schema 17 migrates schema 16 clips/controllers without visual changes, validates rig/skin/Timeline asset types, and preserves unknown asset fields.
+
+### Retained v2.3 rendering foundation
+
+- The **Rendering** bottom tool edits ambient light, shadow quality, color space, debug views, post effects, user post materials, safe material shaders and live previews.
+- Point, spot, directional and area lights honor rendering layers/masks; ShadowCaster2D supports hard/soft/ultra quality and SpriteRenderer2D normal maps affect light response.
+- Materials carry validated shader source, textures, finite uniforms, blend mode, sampling, color space and color-write state. Invalid shaders use the default material without breaking the frame.
+- Multiple Camera2D components support priority/stack ordering, normalized viewports, culling masks, pixel-perfect placement and named render-texture captures.
+- Optional color adjustment, vignette, bloom, blur and custom material passes are isolated from UI/editor overlays. World and UI images support nine-slice rendering.
+- Image imports expose sRGB/linear metadata and platform compression variants. Atlases, nearest/linear sampling and existing sprite-region settings remain supported.
+- Rendering diagnostics show pass timing, draw calls, triangles, textures, overdraw, render targets and GPU time where timer queries are supported; captures download as PNG.
+- The Scene toolbar now participates in document flow, preventing overlap with the workspace strip and Canvas labels. Overlay clearing and selection reset remove retained white handle dots on axis/scene changes.
+
+### Retained v2.2 scripting foundation
+
+- Script is now a dedicated full-width workspace instead of a tiny textarea inside the Asset importer.
+- Explicit `use "…"` project modules support dependency diagnostics and reject missing or circular dependencies. Package declarations are read-only metadata.
+- Typed Entity/Component/Animator/AudioSource handles report `valid`, `kind`, `id`, and `error` consistently.
+- Signals connect custom editor events, scripts, physics contacts, UI callbacks, animation events, and scene lifecycle at safe runtime boundaries.
+- Entity-owned `task_wait`/`on_task` scheduling is cancelled automatically when the entity or scene ends.
+- Development sessions support persisted breakpoints, Continue/Step, call stack, locals and safe property-path watches; release packages strip debugger metadata unless Development Build is enabled.
+- Templates retain physical metre-scale values but now open at 40 editor pixels per world unit, so default characters and platforms are immediately visible.
+- Bottom tools use larger default text and responsive proportional panes; script editing no longer competes with the folder tree and asset importer.
+
+### Retained v2.1 editor workspace foundation
+
+- Five one-click workspaces provide focused layouts without removing any editor panel or capability.
+- Hierarchy, Inspector and bottom drawer visibility are independently controllable; Focus Mode temporarily hides chrome without erasing the saved layout.
+- The default Design workspace keeps the bottom drawer folded, and local layout persistence validates malformed or stale stored data before use.
+- `Ctrl/Cmd+K` or `Ctrl/Cmd+Shift+P` opens a keyboard-navigable command palette covering workspaces, views, settings, all bottom tools, panel toggles and layout reset.
+- Inspector search and General/Transform/Rendering/Physics/Gameplay/UI categories eliminate long-scroll hunting.
+- Add Component is now an always-visible, searchable, categorized picker that uses the original component creation and undo paths.
+- View menu layout commands and responsive 900 x 600 behavior keep the new shell discoverable in English, German and Chinese.
+
+### Retained v2.0 engine foundation
+
+- Nova_A starts in a Project Manager with New, Open, Import, Continue and local recent-project workflows.
+- Four self-auditing templates are included: Empty 2D, Platformer, Top-down and Physics Sandbox. They refuse to open if a subsystem required by their tutorial is missing.
+- **Nova_A Project Format 2** (schema 17) records compatibility/project identity and migrates every supported legacy schema from 5 through 16.
+- Stable Component API 2.0 documents every built-in component and keeps rendering, collision, editor and runtime responsibilities separate.
+- Rhai scripts can persist finite booleans, numbers, strings, arrays and maps through isolated named save slots.
+- WASM Plugin API 1 validates manifests/modules, exposes only log/event capabilities, and provides no filesystem, network or process access.
+- The bundled manual documents every editor command, component, physics property, runtime API, asset workflow, build option, migration step and three complete tutorials in English, German and Chinese.
+- CI now validates all three desktop operating systems and audits documentation completeness in addition to code, WASM and frontend builds.
+
+### Retained v1.9 distribution and debugging foundation
+
+- Nova Player is a runtime-only application mode containing the runtime, physics, renderer, audio, scripts, input, and packaged assets. It does not mount the Inspector, Hierarchy, Asset Browser, editor grid, menus, or gizmos.
+- Build Settings configures game name, Windows/Linux/macOS/Web target, x86_64 architecture, ordered scenes, startup scene, development metadata, output directory, and optional executable-embedded game data.
+- `game.nova-pak` is a versioned indexed archive with per-entry paths, offsets, MIME/type metadata, original sizes, optional gzip blocks, and SHA-256 verification. Project JSON and imported assets are packaged once rather than emitted as hundreds of loose content files.
+- Host-native Windows and Linux builds produce Nova Player plus `game.nova-pak`, or one executable with the package appended and read from a verified footer. macOS builds preserve the `.app` bundle and place the package beside its internal player. Web builds produce `index.html`, the production Nova Player modules, and `game.nova-pak`.
+- Console messages now support Trace, Debug, Info, Warning, Error, and Fatal levels, category/search filters, source data, a 2,000-message bounded history, and script-asset navigation.
+- Profiler samples real frame, physics, rendering, script, animation, and audio times, plus FPS, memory when exposed by the browser, draw calls, sprites, bodies, contacts, and script instances. A bounded history chart can be frozen or cleared.
+- Physics debugging can overlay colliders, contact points, normals, sleeping bodies, AABBs, joint constraints, and rope nodes.
+- Frontend failures and Rust panics write versioned diagnostic logs under the user's Nova_A application-data `Logs` directory. CI validates Rust tests and clippy, TypeScript, WASM, frontend production output, and the Tauri backend.
+- Game UI now renders and can be selected in Scene view, automatically receives a Canvas when needed, has component-specific visible defaults, shows missing-image placeholders, imports images directly from the Inspector, and uses a native Game-view TextInput overlay for selection, paste, passwords, IME, German, and Chinese input.
+- Bottom tabs always wrap instead of falling into a native horizontal tab scroller. Assets, Console, Animation, Profiler, Tilemap, Project Settings, and Build Settings own their scrolling; Animation timestamps and frame controls remain bounded and readable.
+- Project format 13 persists Build Settings. Format 12 and every previously supported project format migrate automatically.
 
 ### Editor shortcuts
 
@@ -113,6 +172,7 @@ pnpm tauri dev
 pnpm test:core
 cargo clippy --workspace --all-targets -- -D warnings
 pnpm check
+pnpm audit:manual
 pnpm build
 ```
 
@@ -133,16 +193,34 @@ pnpm tauri build
 
 The Tauri build invokes `pnpm build` automatically before packaging. Result locations vary by operating system under `src-tauri/target/release/bundle/`.
 
+### Export a game with Nova Player
+
+1. Open **Project → Build Settings**.
+2. Set the game name and select the target that matches the current desktop host, or select **Web**.
+3. Order the included scenes and choose the startup scene.
+4. Leave the output field blank for `Documents/Nova_A Builds/<GameName>`, or enter an explicit directory.
+5. Choose **Build** or **Build & Run**. Build & Run is available for desktop targets.
+
+The default desktop development export is intentionally two files:
+
+```text
+MyGame/
+├─ MyGame.exe       # MyGame on Linux; MyGame.app on macOS
+└─ game.nova-pak
+```
+
+On Windows and Linux, **Package game data into executable** creates a single player executable. macOS keeps the package inside the application bundle so app structure and signing are not corrupted. Desktop targets are host-native: create a Windows export on Windows, Linux export on Linux, and macOS export on macOS. Web export produces a deployable folder containing `index.html`, Nova Player modules/styles, and `game.nova-pak`; serve that folder over HTTP rather than opening `index.html` through `file://`.
+
 ## Physics property binding
 
 Configuration changes cross Vue → `nova_wasm` as explicit retained-world commands. Fixed physics ticks remain inside Rust; reusable Float64 state buffers return runtime transforms and rope state to the renderer without unit conversion or per-body JavaScript object results. One configured world unit equals one meter; camera scale only converts world coordinates to pixels.
 
 ## Project compatibility
 
-- New saves use project format 12 and engine version `1.8.0`.
+- New saves use **Nova_A Project Format 2**, schema 17, and engine version `2.4.0`.
 - Persisted scenes, entities, components, and connections use UUIDs; runtime handles are never written to disk.
 - Format migration and validation are centralized in `nova_format`, not scattered through editor components.
-- v1.7 format-11 files, v1.6 format-10 files, v1.5 format-9 files, v1.4 format-8 files, v1.3 format-7 files, v1.2 format-6 files, v1.1.2 format-5 files, older object roots, and legacy top-level entity arrays continue to load. A migrated project is only written in the new format when the user saves it.
+- v1.9 format-13 files, v1.8 format-12 files, v1.7 format-11 files, v1.6 format-10 files, v1.5 format-9 files, v1.4 format-8 files, v1.3 format-7 files, v1.2 format-6 files, v1.1.2 format-5 files, older object roots, and legacy top-level entity arrays continue to load. A migrated project is only written in Format 2 when the user saves it.
 
 | Property | Solver/render behavior |
 | --- | --- |

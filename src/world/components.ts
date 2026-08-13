@@ -7,6 +7,7 @@ export type CollisionMode2D = 'Discrete' | 'Continuous'
 export type TileCollision2D = 'None' | 'Box' | 'Polygon' | 'OneWay'
 export type JointKind2D = 'FixedJoint2D' | 'DistanceJoint2D' | 'RevoluteJoint2D' | 'PrismaticJoint2D' | 'SpringJoint2D'
 export type RendererShape2D = 'Rectangle' | 'Ellipse' | 'Polygon'
+export type LightKind2D = 'Point' | 'Spot' | 'Directional' | 'Area'
 export type ColliderKind2D = 'BoxCollider2D' | 'EllipseCollider2D' | 'PolygonCollider2D'
 export type ComponentKind =
   | 'Transform2D'
@@ -16,6 +17,8 @@ export type ComponentKind =
   | 'Camera2D'
   | 'Script2D'
   | 'Animator'
+  | 'Skeleton2D'
+  | 'TimelinePlayer'
   | 'AudioSource'
   | 'AudioListener'
   | 'Canvas'
@@ -30,6 +33,8 @@ export type ComponentKind =
   | 'TextInput'
   | 'TileMap2D'
   | 'ParticleEmitter2D'
+  | 'Light2D'
+  | 'ShadowCaster2D'
   | 'RigidBody2D'
   | ColliderKind2D
   | JointKind2D
@@ -91,6 +96,9 @@ export class SpriteRenderer2D extends ComponentBase {
   orderInLayer = 0
   material = 'Default'
   filterMode: 'Nearest' | 'Linear' = 'Linear'
+  normalMapAsset: string | null = null
+  lightMask = 0xffff_ffff
+  nineSlice = { enabled: false, left: 0, top: 0, right: 0, bottom: 0 }
 
   constructor(uuid?: string) { super(uuid) }
 }
@@ -124,6 +132,11 @@ export class Camera2D extends ComponentBase {
   farSortingLayer = 1_000_000
   pixelPerfect = false
   zoom = 1
+  priority = 0
+  stackOrder = 0
+  cullingMask = 0xffff_ffff
+  clearColor = true
+  renderTexture = ''
 
   constructor(uuid?: string) { super(uuid) }
 }
@@ -148,6 +161,36 @@ export class Animator extends ComponentBase {
   autoplay = true
   currentState = ''
   parameters: Record<string, AnimatorParameterValue> = {}
+  layerWeights: Record<string, number> = {}
+
+  constructor(uuid?: string) { super(uuid) }
+}
+
+export interface BonePose2D {
+  boneId: string
+  position: Vec2
+  rotation: number
+  scale: Vec2
+}
+
+export class Skeleton2D extends ComponentBase {
+  readonly kind = 'Skeleton2D' as const
+  rigAsset: string | null = null
+  skinAsset: string | null = null
+  pose: BonePose2D[] = []
+  previewEnabled = true
+
+  constructor(uuid?: string) { super(uuid) }
+}
+
+export class TimelinePlayer extends ComponentBase {
+  readonly kind = 'TimelinePlayer' as const
+  timelineAsset: string | null = null
+  autoplay = true
+  loop = false
+  speed = 1
+  currentTime = 0
+  playing = false
 
   constructor(uuid?: string) { super(uuid) }
 }
@@ -216,6 +259,7 @@ export class Image extends ComponentBase {
   tint = { r: 255, g: 255, b: 255 }
   opacity = 100
   preserveAspect = true
+  nineSlice = { enabled: false, left: 0, top: 0, right: 0, bottom: 0 }
 
   constructor(uuid?: string) { super(uuid) }
 }
@@ -345,6 +389,31 @@ export class ParticleEmitter2D extends ComponentBase {
   constructor(uuid?: string) { super(uuid) }
 }
 
+export class Light2D extends ComponentBase {
+  readonly kind = 'Light2D' as const
+  lightType: LightKind2D = 'Point'
+  color = { r: 255, g: 235, b: 196 }
+  intensity = 1
+  range = 8
+  innerAngle = 30
+  outerAngle = 55
+  areaSize: Vec2 = { x: 4, y: 2 }
+  layerMask = 0xffff_ffff
+  castsShadows = true
+  shadowSoftness = .5
+
+  constructor(uuid?: string) { super(uuid) }
+}
+
+export class ShadowCaster2D extends ComponentBase {
+  readonly kind = 'ShadowCaster2D' as const
+  layerMask = 0xffff_ffff
+  selfShadows = false
+  opacity = .85
+
+  constructor(uuid?: string) { super(uuid) }
+}
+
 export class Joint2D extends ComponentBase {
   readonly kind: JointKind2D
   targetEntityUuid: string | null = null
@@ -434,9 +503,9 @@ export class Collider2D extends ComponentBase {
 
 export type EntityComponent =
   | ShapeRenderer2D | SpriteRenderer2D | TextRenderer2D | Camera2D | Script2D
-  | Animator | AudioSource | AudioListener | Canvas | RectTransform | Panel | Image
+  | Animator | Skeleton2D | TimelinePlayer | AudioSource | AudioListener | Canvas | RectTransform | Panel | Image
   | Text | Button | Slider | ProgressBar | Checkbox | TextInput
-  | TileMap2D | ParticleEmitter2D | Joint2D | RigidBody2D | Collider2D
+  | TileMap2D | ParticleEmitter2D | Light2D | ShadowCaster2D | Joint2D | RigidBody2D | Collider2D
 
 function clonePersistedValue<T>(value: T): T {
   if (value === undefined) return value

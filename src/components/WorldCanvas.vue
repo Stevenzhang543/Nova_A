@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onBeforeUnmount, watch } from 'vue'
+import { ref, onMounted, onBeforeUnmount, watch, nextTick } from 'vue'
 import { physicsState, pushHistory, selectEntities } from '../store/physics'
 import { BoxEntity } from '../world/BoxEntity'
 import { CircleEntity } from '../world/CircleEntity'
@@ -18,14 +18,24 @@ import { applyRotation, applyScale, applyTranslation, axisVector, captureTransfo
 import { createRenderer2D, type Renderer2D } from '../renderer'
 import { renderWorld } from '../renderer/sceneRenderer'
 import { assetReference, resolveAsset } from '../assets/AssetDatabase'
-import { SpriteRenderer2D, type TileMap2D } from '../world/components'
+import { SpriteRenderer2D, type Joint2D, type TextInput, type TileMap2D } from '../world/components'
 import { gameplayRuntime } from '../runtime/GameplayRuntime'
 import { gameUiRuntime } from '../runtime/gameUi'
 import { instantiatePrefab } from '../runtime/prefabs'
 import { beginTileStroke, continueTileStroke, endTileStroke, tilemapEditorState, worldToTile, type TileStroke } from '../runtime/tilemap'
+import { recordFrameProfile } from '../runtime/profiler'
+import { physicsDebugState } from '../runtime/physicsDebug'
+import { renderDebugView2D, renderLighting2D, renderPostProcessOverlay, worldPostProcessFilter } from '../renderer/lighting2d'
+import { beginRenderGraph, captureRenderSurface, completeRenderGraph, recordRenderPass, renderGraphState } from '../renderer/renderGraph'
+import { captureRenderTexture } from '../renderer/renderTextures'
+import { activeGameCameras } from '../renderer/sceneRenderer'
+import { renderingSettings } from '../renderer/renderSettings'
+import { recordEntityProperties } from '../editor/animationStudioState'
 
 const canvasRef = ref<HTMLCanvasElement | null>(null)
 const renderCanvasRef = ref<HTMLCanvasElement | null>(null)
+const nativeInputRef = ref<HTMLInputElement | null>(null)
+const focusedUiInput = ref<{ entity: Entity; rect: { x: number; y: number; width: number; height: number }; input: TextInput } | null>(null)
 let ctx: CanvasRenderingContext2D | null = null
 let renderer: Renderer2D | null = null
 let canvasPixelRatio = 1
@@ -83,7 +93,7 @@ watch(() => state.focusEntityID, (newId) => {
     const canvasW = canvasRef.value?.clientWidth || 800; const canvasH = canvasRef.value?.clientHeight || 600; const usableW = canvasW - 300; 
     const targetScale = Math.min(usableW / maxDim, canvasH / maxDim) * 0.666;
     
-    camera.targetScale = Math.min(Math.max(targetScale, 0.05), 10);
+    camera.targetScale = Math.min(Math.max(targetScale, 0.05), 1000);
     const position = worldTransform(ent, world.entities).position
     camera.targetOffset = { x: (usableW / 2) - (position.x * camera.targetScale), y: (canvasH / 2) + (position.y * camera.targetScale) };
   } else {
@@ -106,6 +116,34 @@ function readPalette() {
 }
 
 watch(() => [prefs.theme, prefs.highContrast, prefs.maxPixelRatio], () => { readPalette(); resize() })
+watch(() => editorState.currentPage, page => {
+  if (page !== 'game') {
+    gameUiRuntime.blurTextInput()
+    focusedUiInput.value = null
+  }
+})
+
+function synchronizeNativeInput(focus = false) {
+  const active = gameUiRuntime.focusedTextInput()
+  focusedUiInput.value = active
+  if (focus && active) void nextTick(() => { nativeInputRef.value?.focus(); nativeInputRef.value?.select() })
+}
+
+function nativeInputStyle() {
+  const rect = focusedUiInput.value?.rect
+  return rect ? { left: `${rect.x}px`, top: `${rect.y}px`, width: `${rect.width}px`, height: `${rect.height}px` } : {}
+}
+
+function onNativeInput(event: Event) {
+  const active = focusedUiInput.value
+  if (!active) return
+  active.input.value = (event.target as HTMLInputElement).value.slice(0, Math.max(0, active.input.maxLength))
+}
+
+function closeNativeInput() {
+  gameUiRuntime.blurTextInput()
+  focusedUiInput.value = null
+}
 
 function resize() {
   const canvas = canvasRef.value; if (!canvas) return
@@ -123,6 +161,7 @@ function resize() {
 
 function loop(time?: number) {
   const now = time || performance.now(); const dt = (now - lastTime) / 1000; lastTime = now
+  const frameStarted = performance.now()
 
   if (camera.targetScale !== null && !prefs.reduceMotion) {
     camera.scale += (camera.targetScale - camera.scale) * (1 - Math.exp(-8 * dt));
@@ -149,7 +188,20 @@ function loop(time?: number) {
       addEditorLog(t('connectionBroken', { name: connection.name }), 'Physics', 'warning')
     }
   }
-  render(); raf = requestAnimationFrame(loop)
+  const renderingStarted = performance.now()
+  render()
+  const renderingMs = performance.now() - renderingStarted
+  const timings = gameplayRuntime.diagnostics.timings
+  const frameMs = Math.max(0, dt * 1000)
+  const measured = timings.physicsMs + timings.scriptsMs + timings.animationMs + timings.audioMs + timings.assetsMs + renderingMs
+  const memory = (performance as Performance & { memory?: { usedJSHeapSize: number } }).memory
+  recordFrameProfile({
+    frameMs, physicsMs: timings.physicsMs, renderingMs, scriptsMs: timings.scriptsMs,
+    animationMs: timings.animationMs, audioMs: timings.audioMs, assetsMs: timings.assetsMs,
+    otherMs: Math.max(0, Math.min(performance.now() - frameStarted, frameMs || Number.POSITIVE_INFINITY) - measured),
+    fps: dt > 0 ? 1 / dt : 0, memoryMb: memory ? memory.usedJSHeapSize / (1024 * 1024) : null
+  })
+  raf = requestAnimationFrame(loop)
 }
 
 onMounted(() => {
@@ -208,6 +260,7 @@ function onAssetDrop(event: DragEvent) {
 function snapPoint(point: Vec2): Vec2 { if (!prefs.snapToGrid) return point; const step = Math.max(0.000001, prefs.gridSize); return { x: Math.round(point.x / step) * step, y: Math.round(point.y / step) * step } }
 
 function onKeyDown(event: KeyboardEvent) {
+  if (focusedUiInput.value && (document.activeElement === nativeInputRef.value || event.isComposing)) return
   if (editorState.currentPage === 'game' && gameUiRuntime.keyDown(event)) { event.preventDefault(); return }
   if (event.key !== 'Escape') return
   if (editorState.manualConnectionId !== null) {
@@ -334,7 +387,10 @@ function beginVertexDrag(entityId: number, point: Vec2, button: number): boolean
 
 function onMouseDown(e: MouseEvent) {
   const sPos = screenPos(e); const wPos = camera.screenToWorld(sPos); dragButton = e.button; hasMovedEntity = false
-  if (editorState.currentPage === 'game') { if (e.button === 0) gameUiRuntime.pointerDown(sPos); return }
+  if (editorState.currentPage === 'game') {
+    if (e.button === 0) { gameUiRuntime.pointerDown(sPos); synchronizeNativeInput(true) }
+    return
+  }
   const tileEntity = tilemapEditorState.active ? world.entities.find(entity => entity.uuid === tilemapEditorState.selectedEntityUuid) ?? null : null
   const tileMap = tileEntity?.getComponent<TileMap2D>('TileMap2D') ?? null
   if (e.button === 0 && tileEntity && tileMap && state.playMode === 'editing') {
@@ -342,6 +398,13 @@ function onMouseDown(e: MouseEvent) {
     if (cell) { tileStroke = { entity: tileEntity, component: tileMap, stroke: beginTileStroke(tileMap, cell) }; tileHover = cell; return }
   }
   if (editorState.manualConnectionId !== null && e.button === 0 && state.playMode === 'editing') { isManualDrawing = true; editorState.manualConnectionPoints.splice(0, editorState.manualConnectionPoints.length, wPos); return }
+  if (e.button === 0 && state.activeTool === 'select' && state.playMode === 'editing') {
+    const uiEntity = gameUiRuntime.entityAt(sPos)
+    if (uiEntity && !uiEntity.hasComponent('Canvas')) {
+      selectEntities([uiEntity.id], selectionMode(e), uiEntity.id)
+      return
+    }
+  }
   if (state.activeTool === 'select') checkHoverVertex(wPos)
   if (e.button === 2 && hoveredVertex && beginVertexDrag(hoveredVertex.entityId, wPos, e.button)) return
   if (e.button === 2) { const hitId = hitTest(wPos); if (hitId !== null) openContextMenu(e, 'grid-entity', hitId); else { isPanning = true; lastMouseScreen = sPos } return }
@@ -429,7 +492,7 @@ function onMouseMove(e: MouseEvent) {
 function selectMarqueeEntities(start: Vec2, end: Vec2) {
   const left = Math.min(start.x, end.x); const right = Math.max(start.x, end.x); const bottom = Math.min(start.y, end.y); const top = Math.max(start.y, end.y)
   const ids = world.entities.flatMap(entity => {
-    if (!entity.enabled || !entity.editorVisible || entity.editorLocked || entity.layer !== editorState.activeLayer) return []
+    if (!entity.enabled || !entity.editorVisible || entity.editorLocked || entity.layer !== editorState.activeLayer || entity.hasComponent('RectTransform')) return []
     const boundary = entityBoundaryPoints(entity, 48, world.entities)
     if (!boundary.length) return []
     const xs = boundary.map(point => point.x); const ys = boundary.map(point => point.y)
@@ -461,6 +524,7 @@ function onMouseUp(event?: MouseEvent) {
   if (gizmoDrag) {
     if (hasMovedEntity) {
       for (const snapshot of gizmoDrag.snapshots) { normalizeEntity(snapshot.entity); if (snapshot.entity.rigidBody.massMode === 'Automatic') syncMassFromDensity(snapshot.entity) }
+      recordEntityProperties(gizmoDrag.snapshots.map(snapshot => snapshot.entity))
       pushHistory(`${gizmoDrag.tool[0].toUpperCase()}${gizmoDrag.tool.slice(1)} entities`, `transform:${gizmoDrag.tool}`)
     }
     finishCanvasDrag(); return
@@ -492,7 +556,7 @@ function onMouseUp(event?: MouseEvent) {
 function checkHoverVertex(p: Vec2) {
   if (!state.selectedEntityId) { hoveredVertex = null; document.body.style.cursor = 'default'; return }
   const ent = world.entities.find(e => e.id === state.selectedEntityId)
-  if (!ent || ent.editorLocked) { hoveredVertex = null; document.body.style.cursor = 'default'; return }
+  if (!ent || ent.editorLocked || ent.hasComponent('RectTransform')) { hoveredVertex = null; document.body.style.cursor = 'default'; return }
   const threshold = 12 / camera.scale 
   
   if (ent instanceof BoxEntity || ent instanceof TriangleEntity) {
@@ -524,7 +588,7 @@ function hitTest(p: Vec2): number | null {
   const ordered = [...world.entities].sort((a, b) => a.layer - b.layer || a.renderer.orderInLayer - b.renderer.orderInLayer || world.entities.indexOf(a) - world.entities.indexOf(b))
   for (let i = ordered.length - 1; i >= 0; i--) {
     const e = ordered[i]
-    if (!e.enabled || !e.hasComponent('ShapeRenderer2D') || !e.renderer.enabled) continue
+    if (!e.enabled || e.hasComponent('RectTransform') || !e.hasComponent('ShapeRenderer2D') || !e.renderer.enabled) continue
     if (editorState.currentPage === 'scene' && (!e.editorVisible || e.editorLocked)) continue
     if (editorState.currentPage === 'scene' && e.layer !== editorState.activeLayer) continue;
     const polygon = entityBoundaryPoints(e, 64, world.entities)
@@ -577,9 +641,83 @@ function renderTransformGizmo(context: CanvasRenderingContext2D) {
   context.restore()
 }
 
+function rotateLocal(point: Vec2, angle: number): Vec2 {
+  const cosine = Math.cos(angle), sine = Math.sin(angle)
+  return { x: point.x * cosine - point.y * sine, y: point.x * sine + point.y * cosine }
+}
+
+function colliderOutline(entity: Entity): Vec2[] {
+  const collider = entity.getCollider()
+  if (!collider?.enabled) return []
+  const local = collider.kind === 'EllipseCollider2D'
+    ? Array.from({ length: 49 }, (_, index) => {
+      const angle = index / 48 * Math.PI * 2
+      const point = rotateLocal({ x: Math.cos(angle) * collider.radiusX, y: Math.sin(angle) * collider.radiusY }, collider.rotation)
+      return { x: collider.offset.x + point.x, y: collider.offset.y + point.y }
+    })
+    : [...collider.vertices, collider.vertices[0]].filter(Boolean).map(vertex => {
+      const point = rotateLocal(vertex, collider.rotation)
+      return { x: collider.offset.x + point.x, y: collider.offset.y + point.y }
+    })
+  return local.map(point => localPointToWorld(entity, point, world.entities))
+}
+
+function drawPhysicsDebug(context: CanvasRenderingContext2D) {
+  if (!physicsDebugState.enabled) return
+  context.save()
+  context.lineWidth = 1.5 / camera.scale
+  for (const entity of world.entities) {
+    if (!entity.enabled || (editorState.currentPage === 'scene' && entity.layer !== editorState.activeLayer)) continue
+    const points = colliderOutline(entity)
+    if (points.length < 2) continue
+    if (physicsDebugState.showSleepingBodies && entity.rigidBody.sleeping) {
+      context.beginPath(); context.moveTo(points[0].x, points[0].y); points.slice(1).forEach(point => context.lineTo(point.x, point.y)); context.closePath()
+      context.fillStyle = 'rgba(92,156,255,.13)'; context.fill()
+    }
+    if (physicsDebugState.showColliders) {
+      context.beginPath(); context.moveTo(points[0].x, points[0].y); points.slice(1).forEach(point => context.lineTo(point.x, point.y))
+      context.strokeStyle = entity.collider.sensor ? '#f2b45f' : entity.rigidBody.sleeping ? '#669ce8' : '#62d8a0'; context.stroke()
+    }
+    if (physicsDebugState.showAabbs) {
+      const xs = points.map(point => point.x), ys = points.map(point => point.y)
+      const left = Math.min(...xs), right = Math.max(...xs), bottom = Math.min(...ys), top = Math.max(...ys)
+      context.setLineDash([4 / camera.scale, 4 / camera.scale]); context.strokeStyle = '#b786f5'; context.strokeRect(left, bottom, right - left, top - bottom); context.setLineDash([])
+    }
+  }
+  if (physicsDebugState.showJointConstraints) {
+    const jointKinds = ['FixedJoint2D', 'DistanceJoint2D', 'RevoluteJoint2D', 'PrismaticJoint2D', 'SpringJoint2D'] as const
+    context.strokeStyle = '#e6b35a'; context.setLineDash([5 / camera.scale, 3 / camera.scale])
+    for (const entity of world.entities) for (const kind of jointKinds) {
+      const joint = entity.getComponent<Joint2D>(kind)
+      const target = joint?.targetEntityUuid ? world.entities.find(candidate => candidate.uuid === joint.targetEntityUuid) : null
+      if (!joint?.enabled || !target) continue
+      const first = localPointToWorld(entity, joint.anchor, world.entities), second = localPointToWorld(target, joint.connectedAnchor, world.entities)
+      context.beginPath(); context.moveTo(first.x, first.y); context.lineTo(second.x, second.y); context.stroke()
+    }
+    context.setLineDash([])
+  }
+  if (physicsDebugState.showRopeNodes) {
+    context.fillStyle = '#8bb8ff'
+    for (const connection of world.connections) for (const node of connection.ropeNodes) { context.beginPath(); context.arc(node.position.x, node.position.y, 2.5 / camera.scale, 0, Math.PI * 2); context.fill() }
+  }
+  if (physicsDebugState.showContactPoints || physicsDebugState.showNormals) {
+    for (const event of world.events) {
+      if (!Array.isArray(event.point)) continue
+      const point = { x: Number(event.point[0]), y: Number(event.point[1]) }
+      if (physicsDebugState.showContactPoints) { context.beginPath(); context.arc(point.x, point.y, 4 / camera.scale, 0, Math.PI * 2); context.fillStyle = '#ff6b78'; context.fill() }
+      if (physicsDebugState.showNormals && Array.isArray(event.normal)) {
+        context.beginPath(); context.moveTo(point.x, point.y); context.lineTo(point.x + Number(event.normal[0]) * 24 / camera.scale, point.y + Number(event.normal[1]) * 24 / camera.scale); context.strokeStyle = '#ffdf73'; context.stroke()
+      }
+    }
+  }
+  context.restore()
+}
+
 function render() {
   if (!ctx || !canvasRef.value) return
   const cvs = canvasRef.value; const width = cvs.width / canvasPixelRatio; const height = cvs.height / canvasPixelRatio
+  const graphStarted = beginRenderGraph()
+  let passStarted = graphStarted
   if (renderer) {
     Object.assign(editorState.rendererStats, renderWorld(renderer, world.entities, {
       width, height, pixelRatio: canvasPixelRatio,
@@ -591,12 +729,28 @@ function render() {
       editorGrid: { enabled: editorState.showGrid, step: prefs.gridSize, color: palette.grid }
     }))
   }
-  ctx.clearRect(0, 0, width, height)
+  passStarted = recordRenderPass('World', passStarted, true, editorState.rendererStats.drawCalls)
+  // Reset and clear in backing-store pixels. This prevents retained overlay
+  // fragments when DPR, axes, scenes, or panel dimensions change together.
+  ctx.setTransform(1, 0, 0, 1, 0, 0)
+  ctx.clearRect(0, 0, cvs.width, cvs.height)
+  ctx.setTransform(canvasPixelRatio, 0, 0, canvasPixelRatio, 0, 0)
+  const isGameView = editorState.currentPage === 'game'
+  renderLighting2D(ctx, world.entities, {
+    width, height, editorCamera: { scale: camera.scale, offset: { ...camera.offset } },
+    gameView: isGameView, activeLayer: editorState.activeLayer
+  })
+  passStarted = recordRenderPass('Lighting', passStarted, renderingSettings.lightingEnabled)
+  renderPostProcessOverlay(ctx, width, height)
+  renderDebugView2D(ctx, world.entities, {
+    width, height, editorCamera: { scale: camera.scale, offset: { ...camera.offset } },
+    gameView: isGameView, activeLayer: editorState.activeLayer
+  })
+  passStarted = recordRenderPass('PostProcess', passStarted, renderingSettings.postProcessing.enabled || renderingSettings.debugView !== 'None')
   ctx.save(); ctx.translate(camera.offset.x, camera.offset.y); ctx.scale(camera.scale, -camera.scale) 
   const viewL = -camera.offset.x / camera.scale; const viewR = viewL + width / camera.scale
   const viewT = camera.offset.y / camera.scale; const viewB = viewT - height / camera.scale   
 
-  const isGameView = editorState.currentPage === 'game'
   const selectedIds = new Set(state.selectedEntityIds)
 
   if (!isGameView && tilemapEditorState.active) drawTilemapOverlay(ctx, { minX: viewL, maxX: viewR, minY: viewB, maxY: viewT })
@@ -620,6 +774,7 @@ function render() {
   const renderEntities = [...world.entities].sort((a, b) => a.layer - b.layer || a.renderer.orderInLayer - b.renderer.orderInLayer || world.entities.indexOf(a) - world.entities.indexOf(b))
   for (const e of renderEntities) {
     if (!e.enabled) continue
+    if (e.hasComponent('RectTransform')) continue
     if (!isGameView && !e.editorVisible) continue
     if (editorState.currentPage === 'scene' && e.layer !== editorState.activeLayer) continue;
     const compound = compoundByMember.get(e.id)
@@ -754,8 +909,23 @@ function render() {
     for (let index = 1; index < editorState.manualConnectionPoints.length; index++) ctx.lineTo(editorState.manualConnectionPoints[index].x, editorState.manualConnectionPoints[index].y)
     ctx.strokeStyle = palette.connection; ctx.lineWidth = prefs.connectionThickness / camera.scale; ctx.lineCap = 'round'; ctx.stroke()
   }
+  drawPhysicsDebug(ctx)
   ctx.restore()
-  if (isGameView) gameUiRuntime.render(ctx, width, height, world.entities)
+  passStarted = recordRenderPass('EditorOverlay', passStarted, !isGameView, 1)
+  const uiEntities = isGameView ? world.entities : world.entities.filter(entity => entity.layer === editorState.activeLayer)
+  gameUiRuntime.render(ctx, width, height, uiEntities, { editor: !isGameView, selectedEntityIds: selectedIds })
+  recordRenderPass('UI', passStarted, true, uiEntities.length ? 1 : 0)
+  completeRenderGraph(graphStarted, editorState.rendererStats, passStarted, passStarted)
+  editorState.rendererStats.passes = 5
+  if (renderCanvasRef.value) {
+    captureRenderSurface(renderCanvasRef.value, canvasRef.value, worldPostProcessFilter())
+    const renderTextureCameras = isGameView ? activeGameCameras(world.entities, width, height).filter(camera => camera.component.renderTexture) : []
+    editorState.rendererStats.renderTargets += new Set(renderTextureCameras.map(camera => camera.component.renderTexture)).size
+    for (const activeCamera of renderTextureCameras) {
+      if (activeCamera.component.renderTexture) captureRenderTexture(activeCamera.component.renderTexture, renderCanvasRef.value, activeCamera.component.viewport, renderGraphState.frame)
+    }
+  }
+  if (isGameView && focusedUiInput.value) synchronizeNativeInput()
 }
 
 function drawTilemapOverlay(context: CanvasRenderingContext2D, view: { minX: number; maxX: number; minY: number; maxY: number }) {
@@ -816,14 +986,29 @@ function drawTilemapOverlay(context: CanvasRenderingContext2D, view: { minX: num
 
 <template>
   <div class="canvas-container" @dragover="onAssetDragOver" @drop="onAssetDrop">
-    <canvas ref="renderCanvasRef" class="render-canvas" aria-hidden="true" />
+    <canvas ref="renderCanvasRef" class="render-canvas" :style="{ filter: worldPostProcessFilter() }" aria-hidden="true" />
     <canvas ref="canvasRef" class="overlay-canvas" @mousedown="onMouseDown" @mousemove="onMouseMove" @mouseup="onMouseUp" @wheel="onWheel" @contextmenu.prevent />
+    <input
+      v-if="focusedUiInput && editorState.currentPage === 'game'"
+      ref="nativeInputRef"
+      class="native-ui-input"
+      :style="nativeInputStyle()"
+      :type="focusedUiInput.input.password ? 'password' : 'text'"
+      :value="focusedUiInput.input.value"
+      :placeholder="focusedUiInput.input.placeholder"
+      :maxlength="Math.max(0, focusedUiInput.input.maxLength)"
+      @input="onNativeInput"
+      @keydown.enter.prevent="closeNativeInput"
+      @keydown.esc.prevent="closeNativeInput"
+      @blur="closeNativeInput"
+    >
   </div>
 </template>
 
 <style scoped>
-.canvas-container { position: relative; width: 100%; height: 100%; overflow: hidden; }
+.canvas-container { position: relative; width: 100%; height: 100%; overflow: hidden; contain: strict; isolation: isolate; }
 canvas { position: absolute; inset: 0; display: block; width: 100%; height: 100%; touch-action: none; }
-.render-canvas { z-index: 0; pointer-events: none; }
-.overlay-canvas { z-index: 1; }
+.render-canvas { z-index: 0; pointer-events: none; backface-visibility: hidden; }
+.overlay-canvas { z-index: 1; backface-visibility: hidden; }
+.native-ui-input { position: absolute; z-index: 8; min-width: 0; min-height: 0; padding: 0 12px; border: 2px solid #4f96ff; border-radius: 8px; outline: 0; color: #f5f7fb; background: #151b24; box-shadow: 0 0 0 3px rgba(79,150,255,.18); font: 500 16px/1.2 Nunito Sans, Segoe UI, sans-serif; }
 </style>

@@ -4,9 +4,14 @@ import type {
   Button, Canvas, Checkbox, Image, Panel, ProgressBar, RectTransform, Slider, Text, TextInput
 } from '../world/components'
 
-interface UiRect { x: number; y: number; width: number; height: number }
+export interface UiRect { x: number; y: number; width: number; height: number }
 interface ResolvedUi { entity: Entity; rect: UiRect; order: number }
 type UiCallback = (entity: Entity, functionName: string) => void
+
+export interface GameUiRenderOptions {
+  editor?: boolean
+  selectedEntityIds?: Iterable<number>
+}
 
 function color(value: { r: number; g: number; b: number }, opacity = 100): string {
   return `rgba(${Math.round(value.r)},${Math.round(value.g)},${Math.round(value.b)},${Math.min(1, Math.max(0, opacity / 100))})`
@@ -28,6 +33,25 @@ function roundRect(context: CanvasRenderingContext2D, rect: UiRect, radius: numb
   context.beginPath(); context.roundRect(rect.x, rect.y, rect.width, rect.height, safe)
 }
 
+function drawNineSliceImage(
+  context: CanvasRenderingContext2D,
+  source: CanvasImageSource,
+  sourceRect: UiRect,
+  destination: UiRect,
+  border: { left: number; top: number; right: number; bottom: number }
+): void {
+  const left = Math.min(sourceRect.width, Math.max(0, border.left)), right = Math.min(sourceRect.width - left, Math.max(0, border.right))
+  const top = Math.min(sourceRect.height, Math.max(0, border.top)), bottom = Math.min(sourceRect.height - top, Math.max(0, border.bottom))
+  const destinationLeft = Math.min(destination.width, left), destinationRight = Math.min(destination.width - destinationLeft, right)
+  const destinationTop = Math.min(destination.height, top), destinationBottom = Math.min(destination.height - destinationTop, bottom)
+  const sx = [0, left, sourceRect.width - right, sourceRect.width], sy = [0, top, sourceRect.height - bottom, sourceRect.height]
+  const dx = [0, destinationLeft, destination.width - destinationRight, destination.width], dy = [0, destinationTop, destination.height - destinationBottom, destination.height]
+  for (let row = 0; row < 3; row++) for (let column = 0; column < 3; column++) {
+    const sw = sx[column + 1] - sx[column], sh = sy[row + 1] - sy[row], dw = dx[column + 1] - dx[column], dh = dy[row + 1] - dy[row]
+    if (sw > 0 && sh > 0 && dw > 0 && dh > 0) context.drawImage(source, sourceRect.x + sx[column], sourceRect.y + sy[row], sw, sh, destination.x + dx[column], destination.y + dy[row], dw, dh)
+  }
+}
+
 class GameUiRuntime {
   private resolved: ResolvedUi[] = []
   private hovered: Entity | null = null
@@ -37,12 +61,38 @@ class GameUiRuntime {
 
   setCallback(callback: UiCallback): void { this.callback = callback }
 
-  render(context: CanvasRenderingContext2D, width: number, height: number, entities: Entity[]): void {
-    this.resolved = this.resolve(width, height, entities)
+  render(context: CanvasRenderingContext2D, width: number, height: number, entities: Entity[], options: GameUiRenderOptions = {}): void {
+    const resolved = this.resolve(width, height, entities)
+    this.resolved = options.editor ? resolved.filter(item => item.entity.editorVisible) : resolved
+    const selected = new Set(options.selectedEntityIds ?? [])
     context.save()
-    for (const item of this.resolved) this.draw(context, item.entity, item.rect)
+    context.beginPath()
+    context.rect(0, 0, Math.max(0, width), Math.max(0, height))
+    context.clip()
+    for (const item of this.resolved) {
+      this.draw(context, item.entity, item.rect, options.editor === true)
+      if (options.editor) this.drawEditorOverlay(context, item.entity, item.rect, selected.has(item.entity.id))
+    }
     context.restore()
   }
+
+  entityAt(point: { x: number; y: number }, interactiveOnly = false): Entity | null {
+    for (let index = this.resolved.length - 1; index >= 0; index--) {
+      const { entity, rect } = this.resolved[index]
+      const interactive = entity.hasComponent('Button') || entity.hasComponent('Slider') || entity.hasComponent('Checkbox') || entity.hasComponent('TextInput')
+      if ((!interactiveOnly || interactive) && point.x >= rect.x && point.x <= rect.x + rect.width && point.y >= rect.y && point.y <= rect.y + rect.height) return entity
+    }
+    return null
+  }
+
+  focusedTextInput(): { entity: Entity; rect: UiRect; input: TextInput } | null {
+    if (!this.focusedInput) return null
+    const item = this.resolved.find(candidate => candidate.entity === this.focusedInput)
+    const input = this.focusedInput.getComponent<TextInput>('TextInput')
+    return item && input ? { entity: this.focusedInput, rect: { ...item.rect }, input } : null
+  }
+
+  blurTextInput(): void { this.focusedInput = null }
 
   pointerDown(point: { x: number; y: number }): boolean {
     const entity = this.hit(point)
@@ -151,7 +201,7 @@ class GameUiRuntime {
     }).sort((first, second) => first.order - second.order)
   }
 
-  private draw(context: CanvasRenderingContext2D, entity: Entity, rect: UiRect): void {
+  private draw(context: CanvasRenderingContext2D, entity: Entity, rect: UiRect, editor: boolean): void {
     const panel = entity.getComponent<Panel>('Panel')
     const button = entity.getComponent<Button>('Button')
     if (panel || button) {
@@ -177,14 +227,19 @@ class GameUiRuntime {
           destination.x += (rect.width - destination.width) / 2; destination.y += (rect.height - destination.height) / 2
         }
         context.save(); context.globalAlpha = image.opacity / 100
-        context.drawImage(source, sx, sy, sw, sh, destination.x, destination.y, destination.width, destination.height)
+        if (image.nineSlice.enabled && !image.preserveAspect) drawNineSliceImage(context, source, { x: sx, y: sy, width: sw, height: sh }, destination, image.nineSlice)
+        else context.drawImage(source, sx, sy, sw, sh, destination.x, destination.y, destination.width, destination.height)
         if (image.tint.r !== 255 || image.tint.g !== 255 || image.tint.b !== 255) {
           context.globalCompositeOperation = 'multiply'; context.fillStyle = color(image.tint); context.fillRect(destination.x, destination.y, destination.width, destination.height)
-          context.globalCompositeOperation = 'destination-in'; context.drawImage(source, sx, sy, sw, sh, destination.x, destination.y, destination.width, destination.height)
+          context.globalCompositeOperation = 'destination-in'
+          if (image.nineSlice.enabled && !image.preserveAspect) drawNineSliceImage(context, source, { x: sx, y: sy, width: sw, height: sh }, destination, image.nineSlice)
+          else context.drawImage(source, sx, sy, sw, sh, destination.x, destination.y, destination.width, destination.height)
         }
         context.restore()
+      } else {
+        this.drawMissingImage(context, rect, true)
       }
-    }
+    } else if (image && editor) this.drawMissingImage(context, rect, false)
     const progress = entity.getComponent<ProgressBar>('ProgressBar')
     const slider = entity.getComponent<Slider>('Slider')
     if (progress || slider) {
@@ -219,13 +274,53 @@ class GameUiRuntime {
     }
   }
 
-  private hit(point: { x: number; y: number }): Entity | null {
-    for (let index = this.resolved.length - 1; index >= 0; index--) {
-      const { entity, rect } = this.resolved[index]
-      const interactive = entity.hasComponent('Button') || entity.hasComponent('Slider') || entity.hasComponent('Checkbox') || entity.hasComponent('TextInput')
-      if (interactive && point.x >= rect.x && point.x <= rect.x + rect.width && point.y >= rect.y && point.y <= rect.y + rect.height) return entity
+  private drawMissingImage(context: CanvasRenderingContext2D, rect: UiRect, broken: boolean): void {
+    context.save()
+    context.fillStyle = broken ? 'rgba(164,54,102,.2)' : 'rgba(86,105,137,.14)'
+    context.strokeStyle = broken ? '#ff5f91' : '#71809a'
+    context.lineWidth = 1
+    context.setLineDash([6, 5])
+    context.fillRect(rect.x, rect.y, rect.width, rect.height)
+    context.strokeRect(rect.x + .5, rect.y + .5, Math.max(0, rect.width - 1), Math.max(0, rect.height - 1))
+    context.setLineDash([])
+    const inset = Math.min(20, rect.width * .16, rect.height * .16)
+    context.beginPath()
+    context.moveTo(rect.x + inset, rect.y + rect.height - inset)
+    context.lineTo(rect.x + rect.width * .42, rect.y + rect.height * .48)
+    context.lineTo(rect.x + rect.width * .58, rect.y + rect.height * .64)
+    context.lineTo(rect.x + rect.width - inset, rect.y + rect.height * .32)
+    context.stroke()
+    context.restore()
+  }
+
+  private drawEditorOverlay(context: CanvasRenderingContext2D, entity: Entity, rect: UiRect, selected: boolean): void {
+    const canvas = entity.getComponent<Canvas>('Canvas')
+    if (!selected && !canvas) return
+    context.save()
+    context.strokeStyle = selected ? '#61a5ff' : 'rgba(97,165,255,.5)'
+    context.fillStyle = selected ? 'rgba(97,165,255,.08)' : 'transparent'
+    context.lineWidth = selected ? 2 : 1
+    // Keep Canvas bounds visible without a dotted pattern that can resemble
+    // retained pixels after scene or axis changes.
+    context.setLineDash([])
+    context.fillRect(rect.x, rect.y, rect.width, rect.height)
+    context.strokeRect(rect.x + 1, rect.y + 1, Math.max(0, rect.width - 2), Math.max(0, rect.height - 2))
+    if (selected) {
+      for (const point of [[rect.x, rect.y], [rect.x + rect.width, rect.y], [rect.x, rect.y + rect.height], [rect.x + rect.width, rect.y + rect.height]]) {
+        context.beginPath(); context.rect(point[0] - 3.5, point[1] - 3.5, 7, 7); context.fillStyle = '#61a5ff'; context.fill(); context.stroke()
+      }
     }
-    return null
+    if (canvas && rect.width >= 32 && rect.height >= 18) {
+      context.font = '600 11px Nunito Sans, Segoe UI, sans-serif'; context.textAlign = 'right'; context.textBaseline = 'top'
+      const labelWidth = Math.max(0, Math.min(rect.width - 16, context.measureText(entity.name).width + 12)), labelX = rect.x + rect.width - 6
+      context.fillStyle = 'rgba(22,31,45,.82)'; context.fillRect(labelX - labelWidth, rect.y + 5, labelWidth, 18)
+      if (labelWidth > 12) { context.fillStyle = '#8bb8ff'; context.fillText(entity.name, labelX - 6, rect.y + 8, labelWidth - 12) }
+    }
+    context.restore()
+  }
+
+  private hit(point: { x: number; y: number }): Entity | null {
+    return this.entityAt(point, true)
   }
 
   private updateSlider(entity: Entity, point: { x: number; y: number }): void {

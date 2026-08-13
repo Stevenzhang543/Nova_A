@@ -61,13 +61,13 @@ function restoreSimulation() {
 </script>
 
 <style scoped>
-.actionbar { position: absolute; top: 4px; left: 50%; z-index: 320; transform: translateX(-50%); height: 34px; padding: 3px; display: flex; align-items: center; gap: 3px; border: 1px solid var(--border-subtle); border-radius: 10px; background: var(--surface-2); box-shadow: var(--shadow-sm); }
+.actionbar { min-width: 0; height: 38px; padding: 4px 8px 4px 6px; display: flex; align-items: center; justify-content: center; gap: 3px; border-left: 1px solid var(--border-subtle); background: transparent; }
 button { width: 32px; height: 26px; display: grid; place-items: center; border: 1px solid transparent; border-radius: 7px; background: transparent; }
 button:hover { background: var(--surface-hover); }
 button.active { border-color: color-mix(in srgb, var(--accent) 24%, transparent); background: var(--accent-soft); }
 button img { width: 15px; height: 15px; opacity: .7; filter: var(--icon-filter); }
 button.active img { opacity: 1; filter: var(--icon-filter) drop-shadow(0 0 5px var(--accent)); }
 .step-button span[aria-hidden='true'] { color: var(--text-secondary); font-size: 17px; font-weight: 700; letter-spacing: -3px; transform: translateX(-1px); }
-.mode-label { min-width: 62px; padding: 0 7px 0 5px; color: var(--text-muted); font-size: 9px; white-space: nowrap; }
+.mode-label { min-width: 62px; max-width: 92px; padding: 0 5px; overflow: hidden; color: var(--text-muted); font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
 </style>

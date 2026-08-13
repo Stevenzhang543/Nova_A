@@ -52,6 +52,17 @@ pub struct ContactSnapshot {
     pub relative_velocity: [f64; 2],
 }
 
+#[derive(Clone, Debug, Default, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct EventSnapshot {
+    #[serde(default)]
+    pub name: String,
+    #[serde(default)]
+    pub source: String,
+    #[serde(default)]
+    pub payload: Value,
+}
+
 #[derive(Clone, Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TransformSnapshot {
@@ -104,7 +115,11 @@ pub struct ScriptContext {
     #[serde(default)]
     pub contact: Option<ContactSnapshot>,
     #[serde(default)]
+    pub event: Option<EventSnapshot>,
+    #[serde(default)]
     pub properties: BTreeMap<String, Value>,
+    #[serde(default)]
+    pub save: BTreeMap<String, Value>,
     #[serde(default)]
     pub transform: TransformSnapshot,
     #[serde(default)]
@@ -184,6 +199,32 @@ pub enum ScriptCommand {
     CancelTimer {
         name: String,
     },
+    StartTask {
+        name: String,
+        seconds: f64,
+    },
+    CancelTask {
+        name: String,
+    },
+    EmitSignal {
+        name: String,
+        target: String,
+        payload: Value,
+    },
+    SaveSet {
+        key: String,
+        value: Value,
+    },
+    SaveDelete {
+        key: String,
+    },
+    SaveClear,
+    SaveLoad {
+        slot: String,
+    },
+    SaveCommit {
+        slot: String,
+    },
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize)]
@@ -220,12 +261,19 @@ struct PreparedScript {
     exports: Vec<ExportedProperty>,
 }
 
+struct CompiledScript {
+    prepared: PreparedScript,
+    ast: AST,
+}
+
 #[derive(Default)]
-pub struct ScriptRuntime;
+pub struct ScriptRuntime {
+    scripts: BTreeMap<String, CompiledScript>,
+}
 
 impl ScriptRuntime {
     pub fn new() -> Self {
-        Self
+        Self::default()
     }
 
     pub fn validate(&self, source: &str) -> Result<Vec<ExportedProperty>, String> {
@@ -244,25 +292,72 @@ impl ScriptRuntime {
         context: ScriptContext,
     ) -> Result<ScriptExecution, String> {
         let prepared = prepare_script(source)?;
-        let output = Rc::new(RefCell::new(HostOutput::default()));
-        let engine = engine_with_host(&context, Rc::clone(&output));
+        let engine = base_engine();
         let ast = engine
             .compile(&prepared.source)
             .map_err(|error| error.to_string())?;
-        let mut scope = Scope::new();
-        engine
-            .run_ast_with_scope(&mut scope, &ast)
-            .map_err(|error| error.to_string())?;
-        call_lifecycle(&engine, &mut scope, &ast, function, &context)?;
-
-        let properties = collect_properties(&scope, &prepared.exports, &context.properties);
-        let mut output = output.borrow_mut();
-        Ok(ScriptExecution {
-            commands: std::mem::take(&mut output.commands),
-            logs: std::mem::take(&mut output.logs),
-            properties,
-        })
+        execute_prepared(&prepared, &ast, function, context)
     }
+
+    /// Compile a script without replacing the previous valid program until
+    /// compilation succeeds. The host applies this at a frame boundary.
+    pub fn upsert(
+        &mut self,
+        script_id: &str,
+        source: &str,
+    ) -> Result<Vec<ExportedProperty>, String> {
+        if script_id.trim().is_empty() {
+            return Err("script id cannot be empty".into());
+        }
+        let prepared = prepare_script(source)?;
+        let ast = base_engine()
+            .compile(&prepared.source)
+            .map_err(|error| error.to_string())?;
+        let exports = prepared.exports.clone();
+        self.scripts
+            .insert(script_id.to_owned(), CompiledScript { prepared, ast });
+        Ok(exports)
+    }
+
+    pub fn remove(&mut self, script_id: &str) -> bool {
+        self.scripts.remove(script_id).is_some()
+    }
+
+    pub fn execute_cached(
+        &self,
+        script_id: &str,
+        function: &str,
+        context: ScriptContext,
+    ) -> Result<ScriptExecution, String> {
+        let compiled = self
+            .scripts
+            .get(script_id)
+            .ok_or_else(|| format!("script is not compiled: {script_id}"))?;
+        execute_prepared(&compiled.prepared, &compiled.ast, function, context)
+    }
+}
+
+fn execute_prepared(
+    prepared: &PreparedScript,
+    ast: &AST,
+    function: &str,
+    context: ScriptContext,
+) -> Result<ScriptExecution, String> {
+    let output = Rc::new(RefCell::new(HostOutput::default()));
+    let engine = engine_with_host(&context, Rc::clone(&output));
+    let mut scope = Scope::new();
+    engine
+        .run_ast_with_scope(&mut scope, ast)
+        .map_err(|error| error.to_string())?;
+    call_lifecycle(&engine, &mut scope, ast, function, &context)?;
+
+    let properties = collect_properties(&scope, &prepared.exports, &context.properties);
+    let mut output = output.borrow_mut();
+    Ok(ScriptExecution {
+        commands: std::mem::take(&mut output.commands),
+        logs: std::mem::take(&mut output.logs),
+        properties,
+    })
 }
 
 fn base_engine() -> Engine {
@@ -288,11 +383,22 @@ fn engine_with_host(context: &ScriptContext, output: Rc<RefCell<HostOutput>>) ->
 
     let entity = context.entity.clone();
     engine.register_fn("entity", move || entity.clone());
+    let entity = context.entity.clone();
+    engine.register_fn("entity_handle", move || {
+        handle_map(true, "Entity", &entity, "")
+    });
     let entity_name = context.entity_name.clone();
     engine.register_fn("entity_name", move || entity_name.clone());
     let entities = context.entities.clone();
     engine.register_fn("find_entity", move |name: &str| {
         entities.get(name).cloned().unwrap_or_default()
+    });
+    let entities = context.entities.clone();
+    engine.register_fn("find_entity_handle", move |name: &str| {
+        entities
+            .get(name)
+            .map(|id| handle_map(true, "Entity", id, ""))
+            .unwrap_or_else(|| handle_map(false, "Entity", "", "Entity not found"))
     });
     let components = context.components.clone();
     engine.register_fn("has_component", move |kind: &str| {
@@ -307,13 +413,37 @@ fn engine_with_host(context: &ScriptContext, output: Rc<RefCell<HostOutput>>) ->
             .map(|component| format!("component://{component_entity}/{component}"))
             .unwrap_or_default()
     });
+    let component_entity = context.entity.clone();
+    let components = context.components.clone();
+    engine.register_fn("component_handle", move |kind: &str| {
+        if components.iter().any(|component| component == kind) {
+            handle_map(
+                true,
+                kind,
+                &format!("component://{component_entity}/{kind}"),
+                "",
+            )
+        } else {
+            handle_map(false, kind, "", "Component not found")
+        }
+    });
     register_entity_api(&mut engine, context);
 
     register_time_api(&mut engine, context);
     register_input_api(&mut engine, context);
     register_property_api(&mut engine, context);
+    register_save_api(&mut engine, context, Rc::clone(&output));
     register_command_api(&mut engine, output);
     engine
+}
+
+fn handle_map(valid: bool, kind: &str, id: &str, error: &str) -> Map {
+    let mut map = Map::new();
+    map.insert("valid".into(), Dynamic::from_bool(valid));
+    map.insert("kind".into(), Dynamic::from(kind.to_owned()));
+    map.insert("id".into(), Dynamic::from(id.to_owned()));
+    map.insert("error".into(), Dynamic::from(error.to_owned()));
+    map
 }
 
 fn register_time_api(engine: &mut Engine, context: &ScriptContext) {
@@ -371,6 +501,10 @@ fn register_entity_api(engine: &mut Engine, context: &ScriptContext) {
             map.insert("body_type".into(), Dynamic::from(body.body_type.clone()));
         } else {
             map.insert("valid".into(), Dynamic::from_bool(false));
+            map.insert(
+                "error".into(),
+                Dynamic::from("RigidBody2D component not found"),
+            );
         }
         map
     });
@@ -385,11 +519,39 @@ fn register_entity_api(engine: &mut Engine, context: &ScriptContext) {
     });
     let component_entity = context.entity.clone();
     let components = context.components.clone();
+    engine.register_fn("animator_handle", move || {
+        if components.iter().any(|kind| kind == "Animator") {
+            handle_map(
+                true,
+                "Animator",
+                &format!("component://{component_entity}/Animator"),
+                "",
+            )
+        } else {
+            handle_map(false, "Animator", "", "Animator component not found")
+        }
+    });
+    let component_entity = context.entity.clone();
+    let components = context.components.clone();
     engine.register_fn("audio_source", move || {
         if components.iter().any(|kind| kind == "AudioSource") {
             format!("component://{component_entity}/AudioSource")
         } else {
             String::new()
+        }
+    });
+    let component_entity = context.entity.clone();
+    let components = context.components.clone();
+    engine.register_fn("audio_source_handle", move || {
+        if components.iter().any(|kind| kind == "AudioSource") {
+            handle_map(
+                true,
+                "AudioSource",
+                &format!("component://{component_entity}/AudioSource"),
+                "",
+            )
+        } else {
+            handle_map(false, "AudioSource", "", "AudioSource component not found")
         }
     });
 }
@@ -500,7 +662,94 @@ fn register_property_api(engine: &mut Engine, context: &ScriptContext) {
     });
 }
 
+fn register_save_api(
+    engine: &mut Engine,
+    context: &ScriptContext,
+    output: Rc<RefCell<HostOutput>>,
+) {
+    let values = context.save.clone();
+    engine.register_fn("save_has", move |key: &str| values.contains_key(key));
+
+    let values = context.save.clone();
+    engine.register_fn("save_get", move |key: &str, fallback: Dynamic| {
+        values
+            .get(key)
+            .and_then(json_to_dynamic)
+            .unwrap_or(fallback)
+    });
+
+    let commands = Rc::clone(&output);
+    engine.register_fn("save_set", move |key: &str, value: Dynamic| {
+        let key = key.trim().chars().take(80).collect::<String>();
+        let Some(value) = dynamic_to_json(value) else {
+            commands.borrow_mut().logs.push(ScriptLog {
+                level: "error".into(),
+                message: "Save.set received an unsupported value".into(),
+            });
+            return;
+        };
+        if key.is_empty() {
+            commands.borrow_mut().logs.push(ScriptLog {
+                level: "error".into(),
+                message: "Save.set requires a non-empty key".into(),
+            });
+            return;
+        }
+        commands
+            .borrow_mut()
+            .commands
+            .push(ScriptCommand::SaveSet { key, value });
+    });
+
+    let commands = Rc::clone(&output);
+    engine.register_fn("save_delete", move |key: &str| {
+        commands
+            .borrow_mut()
+            .commands
+            .push(ScriptCommand::SaveDelete {
+                key: key.trim().chars().take(80).collect(),
+            });
+    });
+    let commands = Rc::clone(&output);
+    engine.register_fn("save_clear", move || {
+        commands
+            .borrow_mut()
+            .commands
+            .push(ScriptCommand::SaveClear);
+    });
+    let commands = Rc::clone(&output);
+    engine.register_fn("save_load", move |slot: &str| {
+        commands
+            .borrow_mut()
+            .commands
+            .push(ScriptCommand::SaveLoad {
+                slot: slot.trim().chars().take(80).collect(),
+            });
+    });
+    engine.register_fn("save_commit", move |slot: &str| {
+        output
+            .borrow_mut()
+            .commands
+            .push(ScriptCommand::SaveCommit {
+                slot: slot.trim().chars().take(80).collect(),
+            });
+    });
+}
+
 fn register_command_api(engine: &mut Engine, output: Rc<RefCell<HostOutput>>) {
+    let assertions = Rc::clone(&output);
+    engine.register_fn("expect", move |condition: bool, message: &str| {
+        if !condition {
+            assertions.borrow_mut().logs.push(ScriptLog {
+                level: "error".into(),
+                message: format!(
+                    "Expectation failed: {}",
+                    message.chars().take(512).collect::<String>()
+                ),
+            });
+        }
+        condition
+    });
     let commands = Rc::clone(&output);
     engine.register_fn("apply_force", move |x: FLOAT, y: FLOAT| {
         commands
@@ -684,14 +933,69 @@ fn register_command_api(engine: &mut Engine, output: Rc<RefCell<HostOutput>>) {
                 name: name.chars().take(128).collect(),
             });
     });
+    let commands = Rc::clone(&output);
     engine.register_fn("timer_cancel", move |name: &str| {
-        output
+        commands
             .borrow_mut()
             .commands
             .push(ScriptCommand::CancelTimer {
                 name: name.chars().take(128).collect(),
             });
     });
+    let commands = Rc::clone(&output);
+    engine.register_fn("task_wait", move |name: &str, seconds: FLOAT| {
+        commands
+            .borrow_mut()
+            .commands
+            .push(ScriptCommand::StartTask {
+                name: name.chars().take(128).collect(),
+                seconds: seconds.max(0.0),
+            });
+    });
+    let commands = Rc::clone(&output);
+    engine.register_fn("task_cancel", move |name: &str| {
+        commands
+            .borrow_mut()
+            .commands
+            .push(ScriptCommand::CancelTask {
+                name: name.chars().take(128).collect(),
+            });
+    });
+    let commands = Rc::clone(&output);
+    engine.register_fn(
+        "signal_emit",
+        move |name: &str, payload: Dynamic| match dynamic_to_json(payload) {
+            Some(payload) => commands
+                .borrow_mut()
+                .commands
+                .push(ScriptCommand::EmitSignal {
+                    name: name.chars().take(128).collect(),
+                    target: String::new(),
+                    payload,
+                }),
+            None => commands.borrow_mut().logs.push(ScriptLog {
+                level: "error".into(),
+                message: "Signal payload is not serializable".into(),
+            }),
+        },
+    );
+    engine.register_fn(
+        "signal_emit_to",
+        move |target: &str, name: &str, payload: Dynamic| match dynamic_to_json(payload) {
+            Some(payload) => output
+                .borrow_mut()
+                .commands
+                .push(ScriptCommand::EmitSignal {
+                    name: name.chars().take(128).collect(),
+                    target: target.chars().take(128).collect(),
+                    payload,
+                }),
+            None => output.borrow_mut().logs.push(ScriptLog {
+                level: "error".into(),
+                message: "Signal payload is not serializable".into(),
+            }),
+        },
+    );
 }
 
 fn call_lifecycle(
@@ -709,21 +1013,36 @@ fn call_lifecycle(
     }
     let result = match function {
         "update" | "late_update" => {
-            engine.call_fn::<()>(scope, ast, function, (context.time.delta,))
+            engine.call_fn::<Dynamic>(scope, ast, function, (context.time.delta,))
         }
-        "fixed_update" => engine.call_fn::<()>(scope, ast, function, (context.time.fixed_delta,)),
+        "fixed_update" => {
+            engine.call_fn::<Dynamic>(scope, ast, function, (context.time.fixed_delta,))
+        }
         "on_timer" => {
             let name = context
                 .contact
                 .as_ref()
                 .map(|contact| contact.other_entity.clone())
                 .unwrap_or_default();
-            engine.call_fn::<()>(scope, ast, function, (name,))
+            engine.call_fn::<Dynamic>(scope, ast, function, (name,))
+        }
+        "on_task" => {
+            let name = context
+                .event
+                .as_ref()
+                .map(|event| event.name.clone())
+                .unwrap_or_default();
+            engine.call_fn::<Dynamic>(scope, ast, function, (name,))
+        }
+        "on_signal" => {
+            let event = context.event.clone().unwrap_or_default();
+            let payload = json_to_dynamic(&event.payload).unwrap_or(Dynamic::UNIT);
+            engine.call_fn::<Dynamic>(scope, ast, function, (event.name, payload, event.source))
         }
         "on_collision_enter" | "on_collision_stay" | "on_collision_exit" | "on_trigger_enter"
         | "on_trigger_exit" => {
             let contact = context.contact.clone().unwrap_or_default();
-            engine.call_fn::<()>(
+            engine.call_fn::<Dynamic>(
                 scope,
                 ast,
                 function,
@@ -738,9 +1057,9 @@ fn call_lifecycle(
                 ),
             )
         }
-        _ => engine.call_fn::<()>(scope, ast, function, ()),
+        _ => engine.call_fn::<Dynamic>(scope, ast, function, ()),
     };
-    result.map_err(|error| error.to_string())
+    result.map(|_| ()).map_err(|error| error.to_string())
 }
 
 fn collect_properties(
@@ -771,8 +1090,42 @@ fn dynamic_to_json(value: Dynamic) -> Option<Value> {
         Some(Value::String(
             value.cast::<rhai::ImmutableString>().to_string(),
         ))
+    } else if value.is::<rhai::Array>() {
+        value
+            .cast::<rhai::Array>()
+            .into_iter()
+            .map(dynamic_to_json)
+            .collect::<Option<Vec<_>>>()
+            .map(Value::Array)
+    } else if value.is::<Map>() {
+        value
+            .cast::<Map>()
+            .into_iter()
+            .map(|(key, value)| dynamic_to_json(value).map(|value| (key.to_string(), value)))
+            .collect::<Option<serde_json::Map<String, Value>>>()
+            .map(Value::Object)
     } else {
         None
+    }
+}
+
+fn json_to_dynamic(value: &Value) -> Option<Dynamic> {
+    match value {
+        Value::Null => Some(Dynamic::UNIT),
+        Value::Bool(value) => Some(Dynamic::from_bool(*value)),
+        Value::Number(value) if value.is_i64() => value.as_i64().map(Dynamic::from_int),
+        Value::Number(value) => value.as_f64().map(Dynamic::from_float),
+        Value::String(value) => Some(Dynamic::from(value.clone())),
+        Value::Array(values) => values
+            .iter()
+            .map(json_to_dynamic)
+            .collect::<Option<rhai::Array>>()
+            .map(Dynamic::from_array),
+        Value::Object(values) => values
+            .iter()
+            .map(|(key, value)| json_to_dynamic(value).map(|value| (key.clone().into(), value)))
+            .collect::<Option<Map>>()
+            .map(Dynamic::from_map),
     }
 }
 
@@ -1007,11 +1360,85 @@ mod tests {
     }
 
     #[test]
+    fn save_commands_support_scalars_arrays_and_maps() {
+        let mut script_context = context();
+        script_context.save.insert("coins".into(), Value::from(4));
+        let source = r#"
+            fn update(dt) {
+                let next = save_get("coins", 0) + 1;
+                save_set("coins", next);
+                save_set("checkpoint", [2.0, 3.0]);
+                save_set("flags", #{ boss: false, area: "cave" });
+                save_commit("slot1");
+            }
+        "#;
+        let execution = ScriptRuntime::new()
+            .execute(source, "update", script_context)
+            .unwrap();
+        assert_eq!(execution.commands.len(), 4);
+        assert!(matches!(
+            &execution.commands[0],
+            ScriptCommand::SaveSet { key, value } if key == "coins" && value == &Value::from(5)
+        ));
+        assert!(matches!(
+            &execution.commands[3],
+            ScriptCommand::SaveCommit { slot } if slot == "slot1"
+        ));
+    }
+
+    #[test]
     fn runaway_scripts_hit_the_operation_limit() {
         let source = "fn update(dt) { while true { let value = dt * 2.0; } }";
         let error = ScriptRuntime::new()
             .execute(source, "update", context())
             .unwrap_err();
         assert!(error.to_lowercase().contains("operations"));
+    }
+
+    #[test]
+    fn cached_compile_is_atomic_and_keeps_the_previous_valid_ast() {
+        let mut runtime = ScriptRuntime::new();
+        runtime
+            .upsert("player", "fn update(dt) { set_velocity(3.0, 4.0); }")
+            .unwrap();
+        assert!(runtime.upsert("player", "fn update(dt) {").is_err());
+        let result = runtime
+            .execute_cached("player", "update", context())
+            .unwrap();
+        assert!(
+            matches!(result.commands.first(), Some(ScriptCommand::SetVelocity { x, y }) if *x == 3.0 && *y == 4.0)
+        );
+    }
+
+    #[test]
+    fn signals_tasks_typed_handles_and_expectations_cross_the_sandbox() {
+        let source = r#"
+            fn update(dt) {
+                let current = entity_handle();
+                let missing = find_entity_handle("Nobody");
+                expect(current.valid && !missing.valid, "typed handles");
+                task_wait("resume", 0.25);
+                signal_emit_to(current.id, "player.ready", #{ score: 3 });
+            }
+        "#;
+        let result = ScriptRuntime::new()
+            .execute(source, "update", context())
+            .unwrap();
+        assert!(result.logs.is_empty());
+        assert!(result.commands.iter().any(|command| matches!(command, ScriptCommand::StartTask { name, seconds } if name == "resume" && *seconds == 0.25)));
+        assert!(result.commands.iter().any(|command| matches!(command, ScriptCommand::EmitSignal { name, target, .. } if name == "player.ready" && target == "entity-1")));
+    }
+
+    #[test]
+    fn lifecycle_functions_may_end_with_a_value_returning_expression() {
+        let source = r#"
+            fn test_expectation() {
+                expect(true, "the final expression may return a value");
+            }
+        "#;
+        let result = ScriptRuntime::new()
+            .execute(source, "test_expectation", context())
+            .unwrap();
+        assert!(result.logs.is_empty());
     }
 }
