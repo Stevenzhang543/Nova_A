@@ -8,9 +8,9 @@ use serde_json::{json, Map, Value};
 
 pub const PROJECT_FORMAT_NAME: &str = "Nova_A Project Format 2";
 pub const PROJECT_FORMAT_MAJOR: u32 = 2;
-pub const CURRENT_FORMAT_VERSION: u32 = 17;
+pub const CURRENT_FORMAT_VERSION: u32 = 22;
 pub const MINIMUM_SUPPORTED_FORMAT_VERSION: u32 = 5;
-pub const CURRENT_ENGINE_VERSION: &str = "2.4.0";
+pub const CURRENT_ENGINE_VERSION: &str = "3.0.0";
 
 fn default_true() -> bool {
     true
@@ -170,13 +170,14 @@ pub fn migrate_project_value(value: Value) -> Result<ProjectFile, FormatError> {
     }
     if !root.get("scenes").is_some_and(Value::is_array) {
         let assets = root.remove("assets");
+        let plugins = root.remove("plugins");
+        let packages = root.remove("packages");
         root.remove("formatVersion");
         root.remove("engineVersion");
         root.remove("projectFormat");
         root.remove("projectFormatMajor");
         root.remove("compatibility");
         root.remove("projectMetadata");
-        root.remove("plugins");
         root.remove("activeSceneUuid");
         let mut scene = std::mem::take(&mut root);
         let scene_uuid = deterministic_uuid("nova-a-scene:main");
@@ -188,6 +189,12 @@ pub fn migrate_project_value(value: Value) -> Result<ProjectFile, FormatError> {
         if let Some(assets) = assets {
             root.insert("assets".into(), assets);
         }
+        if let Some(plugins) = plugins {
+            root.insert("plugins".into(), plugins);
+        }
+        if let Some(packages) = packages {
+            root.insert("packages".into(), packages);
+        }
         if let Some(settings) = legacy_project_settings {
             root.insert("projectSettings".into(), settings);
         }
@@ -196,6 +203,15 @@ pub fn migrate_project_value(value: Value) -> Result<ProjectFile, FormatError> {
         .or_insert_with(|| Value::Array(Vec::new()));
     root.entry("plugins")
         .or_insert_with(|| Value::Array(Vec::new()));
+    root.entry("packages").or_insert_with(|| {
+        json!({
+            "manifestVersion": 1,
+            "installed": [],
+            "lockfile": [],
+            "offlineCache": [],
+            "offlineMode": true
+        })
+    });
     root.entry("projectMetadata").or_insert_with(|| {
         json!({
             "id": deterministic_uuid("nova-a-project:imported"),
@@ -219,16 +235,41 @@ pub fn migrate_project_value(value: Value) -> Result<ProjectFile, FormatError> {
             json!({
                 "masterVolume": 1.0,
                 "sampleRate": 48000,
-                "buses": { "Master": 1.0, "Music": 1.0, "SFX": 1.0, "UI": 1.0 }
+                "buses": { "Master": 1.0, "Music": 1.0, "SFX": 1.0, "UI": 1.0 },
+                "mixer": {
+                    "buses": [
+                        {"id":"Master","name":"Master","gain":1.0,"mute":false,"solo":false,"parent":null,"voiceLimit":32,"sends":[],"effects":[]},
+                        {"id":"Music","name":"Music","gain":1.0,"mute":false,"solo":false,"parent":"Master","voiceLimit":4,"sends":[],"effects":[]},
+                        {"id":"SFX","name":"SFX","gain":1.0,"mute":false,"solo":false,"parent":"Master","voiceLimit":32,"sends":[],"effects":[]},
+                        {"id":"UI","name":"UI","gain":1.0,"mute":false,"solo":false,"parent":"Master","voiceLimit":32,"sends":[],"effects":[]}
+                    ],
+                    "snapshots": [{"id":"default","name":"Default","masterVolume":1.0,"busGains":{"Master":1.0,"Music":1.0,"SFX":1.0,"UI":1.0}}],
+                    "activeSnapshot": null, "ducking": [], "masterVoiceLimit": 128
+                }
             })
         });
         settings.entry("build").or_insert_with(|| {
             json!({
                 "gameName": "MyGame", "target": "windows", "architecture": "x86_64",
+                "runtimeMode": "game", "profile": "debug",
                 "sceneOrder": [], "startupSceneUuid": "", "packageIntoExecutable": false,
-                "developmentBuild": true, "outputDirectory": ""
+                "developmentBuild": true, "outputDirectory": "",
+                "platform": {"identifier":"top.whitelists.mygame","version":"1.0.0","iconAsset":null,"splashAsset":null,"orientation":"auto","permissions":[],"signingMode":"none","signingIdentity":"","notarizationProfile":""},
+                "delivery": {"deterministic":true,"incremental":true,"compression":"balanced","patchManifest":true,"structuredLogs":true,"crashReports":true,"telemetryEnabled":false,"telemetryEndpoint":"","privacyPolicyUrl":""}
             })
         });
+        if let Some(build) = settings.get_mut("build").and_then(Value::as_object_mut) {
+            build.entry("runtimeMode").or_insert_with(|| json!("game"));
+            let development = build
+                .get("developmentBuild")
+                .and_then(Value::as_bool)
+                .unwrap_or(true);
+            build
+                .entry("profile")
+                .or_insert_with(|| json!(if development { "debug" } else { "release" }));
+            build.entry("platform").or_insert_with(|| json!({"identifier":"top.whitelists.mygame","version":"1.0.0","iconAsset":null,"splashAsset":null,"orientation":"auto","permissions":[],"signingMode":"none","signingIdentity":"","notarizationProfile":""}));
+            build.entry("delivery").or_insert_with(|| json!({"deterministic":true,"incremental":true,"compression":"balanced","patchManifest":true,"structuredLogs":true,"crashReports":true,"telemetryEnabled":false,"telemetryEndpoint":"","privacyPolicyUrl":""}));
+        }
         settings.entry("scripting").or_insert_with(
             || json!({ "customSignals": [], "maxConsoleEntries": 2000, "debuggerEnabled": true }),
         );
@@ -241,6 +282,28 @@ pub fn migrate_project_value(value: Value) -> Result<ProjectFile, FormatError> {
             "postProcessing": { "enabled": false, "exposure": 0.0, "contrast": 1.0, "saturation": 1.0, "vignette": 0.0, "bloom": 0.0, "blur": 0.0, "userMaterial": null },
             "debugView": "None"
         }));
+        settings.entry("world").or_insert_with(|| {
+            json!({
+                "navigationDebug": false, "areaDebug": false, "chunkDebug": false,
+                "streamingEnabled": true, "memoryBudgetMb": 256.0, "originShiftThreshold": 10000.0
+            })
+        });
+        settings.entry("presentation").or_insert_with(|| {
+            json!({
+                "localization": {"sourceLocale":"en","previewLocale":"en","fallbackChain":["en"],"pseudolocalization":false,"buildLocales":["en"]},
+                "accessibility": {"keyboardNavigation":true,"gamepadNavigation":true,"screenReaderMetadata":true,"focusRingColor":"#79b2ff","focusRingWidth":3.0,"reducedMotion":false,"announceFocusChanges":true}
+            })
+        });
+        settings.entry("production").or_insert_with(|| {
+            json!({
+                "performance": {"traceCapacity":600,"memoryBudgetMb":300.0,"assetBudgetMb":512.0,"leakWindowFrames":600,"lifetimeCapacity":2000},
+                "replay": {"seed":1313822273_u64,"capacity":3600,"strictChecksums":true},
+                "testing": {"defaultTimeoutMs":10000,"tests":[]},
+                "data": {"saveSchemaVersion":1,"saveMigrations":[]},
+                "jobs": {"maxWorkers":2,"maxQueued":256,"timeoutMs":15000},
+                "networking": {"enabled":false,"role":"client","transport":"websocket","endpoint":"ws://127.0.0.1:7777","bindAddress":"127.0.0.1:0","snapshotRate":20,"interpolationMs":100,"rollbackFrames":120,"bandwidthKbps":256,"reconnect":true,"replicatedEntities":[]}
+            })
+        });
     }
 
     let requested_active_scene = root
@@ -352,6 +415,7 @@ pub fn validate_project(project: &ProjectFile) -> Result<(), FormatError> {
     }
     validate_project_metadata(project.extra.get("projectMetadata"))?;
     validate_plugins(project.extra.get("plugins"), &asset_types)?;
+    validate_packages(project.extra.get("packages"))?;
     let mut scene_ids = std::collections::HashSet::new();
     for scene in &project.scenes {
         if !is_uuid(&scene.uuid) || !scene_ids.insert(scene.uuid.as_str()) {
@@ -451,6 +515,12 @@ pub fn validate_project(project: &ProjectFile) -> Result<(), FormatError> {
                         "audio",
                         &asset_types,
                     )?;
+                } else if component.kind == "Canvas" {
+                    validate_asset_reference(
+                        component.data.get("themeAsset"),
+                        "uiTheme",
+                        &asset_types,
+                    )?;
                 } else if component.kind == "Image" {
                     validate_asset_reference(
                         component.data.get("spriteAsset"),
@@ -473,6 +543,24 @@ pub fn validate_project(project: &ProjectFile) -> Result<(), FormatError> {
                     validate_asset_reference(
                         component.data.get("textureAsset"),
                         "image",
+                        &asset_types,
+                    )?;
+                } else if component.kind == "BehaviorTree2D" {
+                    validate_asset_reference(
+                        component.data.get("treeAsset"),
+                        "behaviorTree",
+                        &asset_types,
+                    )?;
+                } else if component.kind == "StateMachine2D" {
+                    validate_asset_reference(
+                        component.data.get("machineAsset"),
+                        "stateMachine",
+                        &asset_types,
+                    )?;
+                } else if component.kind == "ObjectPool2D" {
+                    validate_asset_reference(
+                        component.data.get("prefabAsset"),
+                        "prefab",
                         &asset_types,
                     )?;
                 } else if matches!(
@@ -606,6 +694,17 @@ fn is_standard_component_kind(kind: &str) -> bool {
             | "Checkbox"
             | "TextInput"
             | "TileMap2D"
+            | "CharacterBody2D"
+            | "Area2D"
+            | "AreaEffector2D"
+            | "NavigationRegion2D"
+            | "NavigationObstacle2D"
+            | "NavigationAgent2D"
+            | "BehaviorTree2D"
+            | "StateMachine2D"
+            | "WorldChunk2D"
+            | "Portal2D"
+            | "ObjectPool2D"
     )
 }
 
@@ -631,6 +730,17 @@ fn validate_project_metadata(value: Option<&Value>) -> Result<(), FormatError> {
     Ok(())
 }
 
+fn valid_reverse_domain_id(value: &str) -> bool {
+    !value.is_empty()
+        && value.len() <= 120
+        && value.contains('.')
+        && value.chars().all(|character| {
+            character.is_ascii_lowercase()
+                || character.is_ascii_digit()
+                || matches!(character, '.' | '-')
+        })
+}
+
 fn validate_plugins(
     value: Option<&Value>,
     asset_types: &HashMap<&str, &str>,
@@ -651,27 +761,28 @@ fn validate_plugins(
         let id = plugin.get("id").and_then(Value::as_str).unwrap_or("");
         let name = plugin.get("name").and_then(Value::as_str).unwrap_or("");
         let entry = plugin.get("entry").and_then(Value::as_str).unwrap_or("");
-        if id.is_empty()
-            || id.len() > 120
-            || !id.contains('.')
-            || !id.chars().all(|character| {
-                character.is_ascii_lowercase()
-                    || character.is_ascii_digit()
-                    || matches!(character, '.' | '-')
-            })
-            || !ids.insert(id)
-        {
+        if !valid_reverse_domain_id(id) || !ids.insert(id) {
             return Err(FormatError(format!("invalid or duplicate plugin id: {id}")));
         }
         if name.trim().is_empty() || name.chars().count() > 120 {
             return Err(FormatError(format!("plugin {id} has an invalid name")));
         }
-        if plugin.get("apiVersion").and_then(Value::as_u64) != Some(1) {
+        let api_version = plugin.get("apiVersion").and_then(Value::as_u64);
+        if !matches!(api_version, Some(1 | 2)) {
             return Err(FormatError(format!(
-                "plugin {id} does not target Nova_A WASM Plugin API 1"
+                "plugin {id} does not target Nova_A WASM Plugin API 1 or 2"
             )));
         }
-        if !entry.ends_with(".wasm")
+        let entry_type = plugin
+            .get("entryType")
+            .and_then(Value::as_str)
+            .unwrap_or("wasm");
+        if !matches!(entry_type, "wasm" | "native") {
+            return Err(FormatError(format!(
+                "plugin {id} has an invalid entry type"
+            )));
+        }
+        if (entry_type == "wasm" && !entry.ends_with(".wasm"))
             || entry.contains("..")
             || entry.contains('\\')
             || entry.starts_with('/')
@@ -682,15 +793,99 @@ fn validate_plugins(
             .get("permissions")
             .and_then(Value::as_array)
             .ok_or_else(|| FormatError(format!("plugin {id} permissions must be an array")))?;
-        if permissions
-            .iter()
-            .any(|permission| !matches!(permission.as_str(), Some("log" | "events")))
-        {
+        if permissions.iter().any(|permission| {
+            !matches!(
+                permission.as_str(),
+                Some(
+                    "log"
+                        | "events"
+                        | "editor.commands"
+                        | "editor.menus"
+                        | "editor.panels"
+                        | "editor.importers"
+                        | "editor.assets"
+                        | "editor.components"
+                        | "editor.inspectors"
+                        | "editor.gizmos"
+                        | "editor.settings"
+                        | "build.hooks"
+                        | "runtime.systems"
+                )
+            )
+        }) {
             return Err(FormatError(format!(
                 "plugin {id} requests an unsupported permission"
             )));
         }
-        validate_asset_reference(plugin.get("entryAsset"), "other", asset_types)?;
+        if api_version == Some(1)
+            && permissions
+                .iter()
+                .any(|permission| !matches!(permission.as_str(), Some("log" | "events")))
+        {
+            return Err(FormatError(format!(
+                "Plugin API 1 manifest {id} requests an API 2 capability"
+            )));
+        }
+        if entry_type == "wasm" {
+            validate_asset_reference(plugin.get("entryAsset"), "other", asset_types)?;
+        }
+    }
+    Ok(())
+}
+
+fn validate_packages(value: Option<&Value>) -> Result<(), FormatError> {
+    let packages = value
+        .and_then(Value::as_object)
+        .ok_or_else(|| FormatError("packages must be an object".into()))?;
+    if packages.get("manifestVersion").and_then(Value::as_u64) != Some(1) {
+        return Err(FormatError("packages.manifestVersion must be 1".into()));
+    }
+    for field in ["installed", "lockfile", "offlineCache"] {
+        let entries = packages
+            .get(field)
+            .and_then(Value::as_array)
+            .ok_or_else(|| FormatError(format!("packages.{field} must be an array")))?;
+        if entries.len() > 2048 {
+            return Err(FormatError(format!("packages.{field} is too large")));
+        }
+    }
+    let mut ids = std::collections::HashSet::new();
+    for installed in packages["installed"].as_array().expect("validated array") {
+        let item = installed
+            .as_object()
+            .ok_or_else(|| FormatError("every installed package must be an object".into()))?;
+        let manifest = item
+            .get("manifest")
+            .and_then(Value::as_object)
+            .ok_or_else(|| FormatError("installed package manifest must be an object".into()))?;
+        let id = manifest.get("id").and_then(Value::as_str).unwrap_or("");
+        if !valid_reverse_domain_id(id) || !ids.insert(id) {
+            return Err(FormatError(format!(
+                "invalid or duplicate package id: {id}"
+            )));
+        }
+        if manifest.get("manifestVersion").and_then(Value::as_u64) != Some(1) {
+            return Err(FormatError(format!(
+                "package {id} manifestVersion must be 1"
+            )));
+        }
+        let source = item
+            .get("source")
+            .and_then(Value::as_object)
+            .ok_or_else(|| FormatError(format!("package {id} source must be an object")))?;
+        if !matches!(
+            source.get("kind").and_then(Value::as_str),
+            Some("local" | "git" | "registry")
+        ) {
+            return Err(FormatError(format!("package {id} source is unsupported")));
+        }
+    }
+    if packages
+        .get("offlineMode")
+        .and_then(Value::as_bool)
+        .is_none()
+    {
+        return Err(FormatError("packages.offlineMode must be a boolean".into()));
     }
     Ok(())
 }
@@ -703,6 +898,41 @@ fn validate_project_settings(value: Option<&Value>) -> Result<(), FormatError> {
         .get("inputMap")
         .and_then(Value::as_array)
         .ok_or_else(|| FormatError("projectSettings.inputMap must be an array".into()))?;
+    if let Some(world) = settings.get("world") {
+        let world = world
+            .as_object()
+            .ok_or_else(|| FormatError("projectSettings.world must be an object".into()))?;
+        for key in [
+            "navigationDebug",
+            "areaDebug",
+            "chunkDebug",
+            "streamingEnabled",
+        ] {
+            if !world.get(key).is_some_and(Value::is_boolean) {
+                return Err(FormatError(format!(
+                    "projectSettings.world.{key} must be a boolean"
+                )));
+            }
+        }
+        let memory = world
+            .get("memoryBudgetMb")
+            .and_then(Value::as_f64)
+            .unwrap_or(f64::NAN);
+        let threshold = world
+            .get("originShiftThreshold")
+            .and_then(Value::as_f64)
+            .unwrap_or(f64::NAN);
+        if !memory.is_finite() || !(1.0..=65_536.0).contains(&memory) {
+            return Err(FormatError(
+                "projectSettings.world.memoryBudgetMb must be between 1 and 65536".into(),
+            ));
+        }
+        if !threshold.is_finite() || !(1.0..=1.0e12).contains(&threshold) {
+            return Err(FormatError(
+                "projectSettings.world.originShiftThreshold must be between 1 and 1e12".into(),
+            ));
+        }
+    }
     if let Some(rendering) = settings.get("rendering") {
         let rendering = rendering
             .as_object()
@@ -794,21 +1024,146 @@ fn validate_project_settings(value: Option<&Value>) -> Result<(), FormatError> {
         }
         if !matches!(
             build.get("target").and_then(Value::as_str),
-            Some("windows" | "linux" | "macos" | "web")
+            Some("windows" | "linux" | "macos" | "web" | "android")
         ) {
             return Err(FormatError(
                 "projectSettings.build.target is unsupported".into(),
             ));
         }
-        if build.get("architecture").and_then(Value::as_str) != Some("x86_64") {
+        if !matches!(
+            build.get("architecture").and_then(Value::as_str),
+            Some("x86_64" | "aarch64")
+        ) {
             return Err(FormatError(
                 "projectSettings.build.architecture is unsupported".into(),
+            ));
+        }
+        if !matches!(
+            build.get("runtimeMode").and_then(Value::as_str),
+            Some("game" | "headless-server")
+        ) {
+            return Err(FormatError(
+                "projectSettings.build.runtimeMode is unsupported".into(),
             ));
         }
         if !build.get("sceneOrder").is_some_and(Value::is_array) {
             return Err(FormatError(
                 "projectSettings.build.sceneOrder must be an array".into(),
             ));
+        }
+        if !matches!(
+            build.get("profile").and_then(Value::as_str),
+            Some("debug" | "release")
+        ) {
+            return Err(FormatError(
+                "projectSettings.build.profile is unsupported".into(),
+            ));
+        }
+        let platform = build
+            .get("platform")
+            .and_then(Value::as_object)
+            .ok_or_else(|| {
+                FormatError("projectSettings.build.platform must be an object".into())
+            })?;
+        let identifier = platform
+            .get("identifier")
+            .and_then(Value::as_str)
+            .unwrap_or("");
+        if identifier.len() > 160
+            || identifier.split('.').count() < 2
+            || identifier.split('.').any(|part| {
+                part.is_empty()
+                    || !part.chars().all(|character| {
+                        character.is_ascii_lowercase()
+                            || character.is_ascii_digit()
+                            || character == '-'
+                    })
+            })
+        {
+            return Err(FormatError(
+                "projectSettings.build.platform.identifier is invalid".into(),
+            ));
+        }
+        let application_version = platform
+            .get("version")
+            .and_then(Value::as_str)
+            .unwrap_or("");
+        if application_version.is_empty()
+            || application_version.len() > 40
+            || application_version.split('.').count() < 3
+        {
+            return Err(FormatError(
+                "projectSettings.build.platform.version is invalid".into(),
+            ));
+        }
+        if !matches!(
+            platform.get("orientation").and_then(Value::as_str),
+            Some("auto" | "landscape" | "portrait")
+        ) || !matches!(
+            platform.get("signingMode").and_then(Value::as_str),
+            Some("none" | "manual")
+        ) {
+            return Err(FormatError(
+                "projectSettings.build.platform options are invalid".into(),
+            ));
+        }
+        let permissions = platform
+            .get("permissions")
+            .and_then(Value::as_array)
+            .ok_or_else(|| {
+                FormatError("projectSettings.build.platform.permissions must be an array".into())
+            })?;
+        if permissions.len() > 64
+            || permissions.iter().any(|value| {
+                !value
+                    .as_str()
+                    .is_some_and(|text| !text.is_empty() && text.len() <= 120)
+            })
+        {
+            return Err(FormatError(
+                "projectSettings.build.platform.permissions is invalid".into(),
+            ));
+        }
+        let delivery = build
+            .get("delivery")
+            .and_then(Value::as_object)
+            .ok_or_else(|| {
+                FormatError("projectSettings.build.delivery must be an object".into())
+            })?;
+        for key in [
+            "deterministic",
+            "incremental",
+            "patchManifest",
+            "structuredLogs",
+            "crashReports",
+            "telemetryEnabled",
+        ] {
+            if !delivery.get(key).is_some_and(Value::is_boolean) {
+                return Err(FormatError(format!(
+                    "projectSettings.build.delivery.{key} must be a boolean"
+                )));
+            }
+        }
+        if !matches!(
+            delivery.get("compression").and_then(Value::as_str),
+            Some("store" | "balanced" | "maximum")
+        ) {
+            return Err(FormatError(
+                "projectSettings.build.delivery.compression is unsupported".into(),
+            ));
+        }
+        if delivery.get("telemetryEnabled").and_then(Value::as_bool) == Some(true) {
+            for key in ["telemetryEndpoint", "privacyPolicyUrl"] {
+                if !delivery
+                    .get(key)
+                    .and_then(Value::as_str)
+                    .is_some_and(|url| url.starts_with("https://") && url.len() <= 500)
+                {
+                    return Err(FormatError(format!(
+                        "projectSettings.build.delivery.{key} must be a bounded HTTPS URL"
+                    )));
+                }
+            }
         }
     }
     if let Some(audio) = settings.get("audio") {
@@ -845,6 +1200,434 @@ fn validate_project_settings(value: Option<&Value>) -> Result<(), FormatError> {
                 &format!("projectSettings.audio.buses.{bus}"),
                 buses.get(bus),
             )?;
+        }
+        if let Some(mixer) = audio.get("mixer") {
+            let mixer = mixer.as_object().ok_or_else(|| {
+                FormatError("projectSettings.audio.mixer must be an object".into())
+            })?;
+            let mixer_buses = mixer
+                .get("buses")
+                .and_then(Value::as_array)
+                .ok_or_else(|| {
+                    FormatError("projectSettings.audio.mixer.buses must be an array".into())
+                })?;
+            if mixer_buses.is_empty() || mixer_buses.len() > 32 {
+                return Err(FormatError("audio mixer must contain 1 to 32 buses".into()));
+            }
+            let mut bus_ids = std::collections::HashSet::new();
+            for bus in mixer_buses {
+                let bus = bus
+                    .as_object()
+                    .ok_or_else(|| FormatError("every audio mixer bus must be an object".into()))?;
+                let id = bus
+                    .get("id")
+                    .and_then(Value::as_str)
+                    .ok_or_else(|| FormatError("audio mixer bus id must be a string".into()))?;
+                if id.is_empty() || id.len() > 80 || !bus_ids.insert(id) {
+                    return Err(FormatError(
+                        "audio mixer bus ids must be unique and non-empty".into(),
+                    ));
+                }
+                unit_gain("projectSettings.audio.mixer.bus.gain", bus.get("gain"))?;
+                if !bus
+                    .get("voiceLimit")
+                    .and_then(Value::as_u64)
+                    .is_some_and(|value| (1..=512).contains(&value))
+                {
+                    return Err(FormatError(
+                        "audio mixer voiceLimit must be between 1 and 512".into(),
+                    ));
+                }
+                if !bus
+                    .get("effects")
+                    .and_then(Value::as_array)
+                    .is_some_and(|values| values.len() <= 8)
+                    || !bus
+                        .get("sends")
+                        .and_then(Value::as_array)
+                        .is_some_and(|values| values.len() <= 16)
+                {
+                    return Err(FormatError(
+                        "audio mixer buses allow at most 8 effects and 16 sends".into(),
+                    ));
+                }
+            }
+            if !bus_ids.contains("Master") {
+                return Err(FormatError("audio mixer requires a Master bus".into()));
+            }
+            if !mixer
+                .get("masterVoiceLimit")
+                .and_then(Value::as_u64)
+                .is_some_and(|value| (1..=1024).contains(&value))
+            {
+                return Err(FormatError(
+                    "audio mixer masterVoiceLimit must be between 1 and 1024".into(),
+                ));
+            }
+        }
+    }
+    if let Some(presentation) = settings.get("presentation") {
+        let presentation = presentation
+            .as_object()
+            .ok_or_else(|| FormatError("projectSettings.presentation must be an object".into()))?;
+        let localization = presentation
+            .get("localization")
+            .and_then(Value::as_object)
+            .ok_or_else(|| {
+                FormatError("projectSettings.presentation.localization must be an object".into())
+            })?;
+        for key in ["sourceLocale", "previewLocale"] {
+            if !localization
+                .get(key)
+                .and_then(Value::as_str)
+                .is_some_and(|value| !value.is_empty() && value.len() <= 35)
+            {
+                return Err(FormatError(format!(
+                    "projectSettings.presentation.localization.{key} is invalid"
+                )));
+            }
+        }
+        for key in ["fallbackChain", "buildLocales"] {
+            if !localization
+                .get(key)
+                .and_then(Value::as_array)
+                .is_some_and(|values| values.len() <= 64 && values.iter().all(Value::is_string))
+            {
+                return Err(FormatError(format!("projectSettings.presentation.localization.{key} must be a bounded string array")));
+            }
+        }
+        let accessibility = presentation
+            .get("accessibility")
+            .and_then(Value::as_object)
+            .ok_or_else(|| {
+                FormatError("projectSettings.presentation.accessibility must be an object".into())
+            })?;
+        for key in [
+            "keyboardNavigation",
+            "gamepadNavigation",
+            "screenReaderMetadata",
+            "reducedMotion",
+            "announceFocusChanges",
+        ] {
+            if !accessibility.get(key).is_some_and(Value::is_boolean) {
+                return Err(FormatError(format!(
+                    "projectSettings.presentation.accessibility.{key} must be a boolean"
+                )));
+            }
+        }
+        if !accessibility
+            .get("focusRingWidth")
+            .and_then(Value::as_f64)
+            .is_some_and(|value| value.is_finite() && (1.0..=12.0).contains(&value))
+        {
+            return Err(FormatError("projectSettings.presentation.accessibility.focusRingWidth must be between 1 and 12".into()));
+        }
+    }
+    if let Some(production) = settings.get("production") {
+        let production = production
+            .as_object()
+            .ok_or_else(|| FormatError("projectSettings.production must be an object".into()))?;
+        let bounded_u64 = |path: &str, value: Option<&Value>, minimum: u64, maximum: u64| {
+            if !value
+                .and_then(Value::as_u64)
+                .is_some_and(|number| (minimum..=maximum).contains(&number))
+            {
+                return Err(FormatError(format!(
+                    "projectSettings.production.{path} must be between {minimum} and {maximum}"
+                )));
+            }
+            Ok(())
+        };
+        let bounded_f64 = |path: &str, value: Option<&Value>, minimum: f64, maximum: f64| {
+            if !value
+                .and_then(Value::as_f64)
+                .is_some_and(|number| number.is_finite() && (minimum..=maximum).contains(&number))
+            {
+                return Err(FormatError(format!(
+                    "projectSettings.production.{path} must be finite and between {minimum} and {maximum}"
+                )));
+            }
+            Ok(())
+        };
+        let performance = production
+            .get("performance")
+            .and_then(Value::as_object)
+            .ok_or_else(|| {
+                FormatError("projectSettings.production.performance must be an object".into())
+            })?;
+        bounded_u64(
+            "performance.traceCapacity",
+            performance.get("traceCapacity"),
+            60,
+            10_000,
+        )?;
+        bounded_f64(
+            "performance.memoryBudgetMb",
+            performance.get("memoryBudgetMb"),
+            16.0,
+            65_536.0,
+        )?;
+        bounded_f64(
+            "performance.assetBudgetMb",
+            performance.get("assetBudgetMb"),
+            1.0,
+            1_048_576.0,
+        )?;
+        bounded_u64(
+            "performance.leakWindowFrames",
+            performance.get("leakWindowFrames"),
+            60,
+            60_000,
+        )?;
+        bounded_u64(
+            "performance.lifetimeCapacity",
+            performance.get("lifetimeCapacity"),
+            100,
+            20_000,
+        )?;
+
+        let replay = production
+            .get("replay")
+            .and_then(Value::as_object)
+            .ok_or_else(|| {
+                FormatError("projectSettings.production.replay must be an object".into())
+            })?;
+        bounded_u64("replay.seed", replay.get("seed"), 0, u32::MAX as u64)?;
+        bounded_u64("replay.capacity", replay.get("capacity"), 60, 60_000)?;
+        if !replay.get("strictChecksums").is_some_and(Value::is_boolean) {
+            return Err(FormatError(
+                "projectSettings.production.replay.strictChecksums must be a boolean".into(),
+            ));
+        }
+
+        let testing = production
+            .get("testing")
+            .and_then(Value::as_object)
+            .ok_or_else(|| {
+                FormatError("projectSettings.production.testing must be an object".into())
+            })?;
+        bounded_u64(
+            "testing.defaultTimeoutMs",
+            testing.get("defaultTimeoutMs"),
+            100,
+            120_000,
+        )?;
+        let tests = testing
+            .get("tests")
+            .and_then(Value::as_array)
+            .ok_or_else(|| {
+                FormatError("projectSettings.production.testing.tests must be an array".into())
+            })?;
+        if tests.len() > 256 {
+            return Err(FormatError(
+                "project tests are limited to 256 entries".into(),
+            ));
+        }
+        let mut test_ids = std::collections::HashSet::new();
+        for test in tests {
+            let test = test
+                .as_object()
+                .ok_or_else(|| FormatError("every project test must be an object".into()))?;
+            let id = test.get("id").and_then(Value::as_str).unwrap_or("");
+            let name = test.get("name").and_then(Value::as_str).unwrap_or("");
+            if id.is_empty()
+                || id.len() > 80
+                || !test_ids.insert(id)
+                || name.is_empty()
+                || name.len() > 120
+            {
+                return Err(FormatError(
+                    "project tests require unique bounded ids and names".into(),
+                ));
+            }
+            if !matches!(
+                test.get("kind").and_then(Value::as_str),
+                Some("unit" | "scene" | "integration" | "headless")
+            ) {
+                return Err(FormatError(format!(
+                    "project test {id} has an unsupported kind"
+                )));
+            }
+            bounded_u64("testing.test.steps", test.get("steps"), 0, 60_000)?;
+            bounded_u64(
+                "testing.test.timeoutMs",
+                test.get("timeoutMs"),
+                100,
+                120_000,
+            )?;
+            if !test.get("captureScreenshot").is_some_and(Value::is_boolean)
+                || !test
+                    .get("assertions")
+                    .and_then(Value::as_array)
+                    .is_some_and(|items| items.len() <= 64)
+            {
+                return Err(FormatError(format!(
+                    "project test {id} has invalid assertions or screenshot settings"
+                )));
+            }
+        }
+
+        let data = production
+            .get("data")
+            .and_then(Value::as_object)
+            .ok_or_else(|| {
+                FormatError("projectSettings.production.data must be an object".into())
+            })?;
+        bounded_u64(
+            "data.saveSchemaVersion",
+            data.get("saveSchemaVersion"),
+            1,
+            65_535,
+        )?;
+        let migrations = data
+            .get("saveMigrations")
+            .and_then(Value::as_array)
+            .ok_or_else(|| {
+                FormatError(
+                    "projectSettings.production.data.saveMigrations must be an array".into(),
+                )
+            })?;
+        if migrations.len() > 128 {
+            return Err(FormatError(
+                "save-data migrations are limited to 128 entries".into(),
+            ));
+        }
+        for migration in migrations {
+            let migration = migration
+                .as_object()
+                .ok_or_else(|| FormatError("every save-data migration must be an object".into()))?;
+            let from = migration
+                .get("fromVersion")
+                .and_then(Value::as_u64)
+                .unwrap_or(u64::MAX);
+            let to = migration
+                .get("toVersion")
+                .and_then(Value::as_u64)
+                .unwrap_or(0);
+            if from >= to
+                || to > 65_535
+                || !migration.get("renames").is_some_and(Value::is_object)
+                || !migration.get("defaults").is_some_and(Value::is_object)
+                || !migration
+                    .get("remove")
+                    .and_then(Value::as_array)
+                    .is_some_and(|items| items.len() <= 256)
+            {
+                return Err(FormatError(
+                    "save-data migration is invalid or unbounded".into(),
+                ));
+            }
+        }
+
+        let jobs = production
+            .get("jobs")
+            .and_then(Value::as_object)
+            .ok_or_else(|| {
+                FormatError("projectSettings.production.jobs must be an object".into())
+            })?;
+        bounded_u64("jobs.maxWorkers", jobs.get("maxWorkers"), 1, 8)?;
+        bounded_u64("jobs.maxQueued", jobs.get("maxQueued"), 8, 2_048)?;
+        bounded_u64("jobs.timeoutMs", jobs.get("timeoutMs"), 100, 120_000)?;
+
+        let networking = production
+            .get("networking")
+            .and_then(Value::as_object)
+            .ok_or_else(|| {
+                FormatError("projectSettings.production.networking must be an object".into())
+            })?;
+        if !networking.get("enabled").is_some_and(Value::is_boolean)
+            || !networking.get("reconnect").is_some_and(Value::is_boolean)
+            || !matches!(
+                networking.get("role").and_then(Value::as_str),
+                Some("client" | "server" | "host")
+            )
+            || !matches!(
+                networking.get("transport").and_then(Value::as_str),
+                Some("websocket" | "native-udp")
+            )
+        {
+            return Err(FormatError(
+                "production networking lifecycle settings are invalid".into(),
+            ));
+        }
+        for key in ["endpoint", "bindAddress"] {
+            if !networking
+                .get(key)
+                .and_then(Value::as_str)
+                .is_some_and(|text| !text.is_empty() && text.len() <= 512)
+            {
+                return Err(FormatError(format!(
+                    "production networking {key} is invalid"
+                )));
+            }
+        }
+        bounded_u64(
+            "networking.snapshotRate",
+            networking.get("snapshotRate"),
+            1,
+            120,
+        )?;
+        bounded_u64(
+            "networking.interpolationMs",
+            networking.get("interpolationMs"),
+            0,
+            2_000,
+        )?;
+        bounded_u64(
+            "networking.rollbackFrames",
+            networking.get("rollbackFrames"),
+            0,
+            600,
+        )?;
+        bounded_u64(
+            "networking.bandwidthKbps",
+            networking.get("bandwidthKbps"),
+            8,
+            1_000_000,
+        )?;
+        let replicated_entities = networking
+            .get("replicatedEntities")
+            .and_then(Value::as_array)
+            .ok_or_else(|| FormatError("networking.replicatedEntities must be an array".into()))?;
+        if replicated_entities.len() > 2_000 {
+            return Err(FormatError(
+                "production networking is limited to 2000 replicated entities".into(),
+            ));
+        }
+        let mut replicated_ids = std::collections::HashSet::new();
+        for definition in replicated_entities {
+            let definition = definition.as_object().ok_or_else(|| {
+                FormatError("every replicated-entity definition must be an object".into())
+            })?;
+            let entity_uuid = definition
+                .get("entityUuid")
+                .and_then(Value::as_str)
+                .unwrap_or("");
+            let properties = definition
+                .get("properties")
+                .and_then(Value::as_array)
+                .ok_or_else(|| FormatError("replicated properties must be an array".into()))?;
+            if entity_uuid.is_empty()
+                || entity_uuid.len() > 128
+                || !replicated_ids.insert(entity_uuid)
+                || !matches!(
+                    definition.get("authority").and_then(Value::as_str),
+                    Some("server" | "owner")
+                )
+                || !definition.get("interpolate").is_some_and(Value::is_boolean)
+                || !definition.get("predict").is_some_and(Value::is_boolean)
+                || properties.len() > 3
+                || properties.iter().any(|property| {
+                    !matches!(
+                        property.as_str(),
+                        Some("transform" | "rotation" | "velocity")
+                    )
+                })
+            {
+                return Err(FormatError(
+                    "replicated entity authority, flags, or properties are invalid".into(),
+                ));
+            }
         }
     }
     if actions.len() > 128 {
@@ -1262,6 +2045,162 @@ fn is_uuid(value: &str) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn every_public_schema_matches_the_v3_golden_projection() {
+        let inputs: Value = serde_json::from_str(include_str!(
+            "../../../tests/fixtures/migrations/public-schema-inputs.json"
+        ))
+        .unwrap();
+        let expected: Value = serde_json::from_str(include_str!(
+            "../../../tests/fixtures/migrations/public-schema-expected.json"
+        ))
+        .unwrap();
+        let schemas = inputs["publicSchemas"].as_array().unwrap();
+        assert_eq!(
+            schemas.len(),
+            (CURRENT_FORMAT_VERSION - MINIMUM_SUPPORTED_FORMAT_VERSION + 1) as usize
+        );
+        for (offset, schema) in schemas.iter().enumerate() {
+            let schema = schema.as_u64().unwrap() as u32;
+            assert_eq!(schema, MINIMUM_SUPPORTED_FORMAT_VERSION + offset as u32);
+            let mut source = inputs["baseProject"].clone();
+            source["formatVersion"] = json!(schema);
+            let migrated = migrate_project_value(source)
+                .unwrap_or_else(|error| panic!("schema {schema}: {error}"));
+            validate_project(&migrated).unwrap();
+            assert_eq!(
+                migrated.project_format,
+                expected["targetProjectFormat"].as_str().unwrap()
+            );
+            assert_eq!(
+                migrated.project_format_major,
+                expected["targetMajor"].as_u64().unwrap() as u32
+            );
+            assert_eq!(
+                migrated.format_version,
+                expected["targetSchema"].as_u64().unwrap() as u32
+            );
+            assert_eq!(
+                migrated.engine_version,
+                expected["targetEngine"].as_str().unwrap()
+            );
+            assert_eq!(
+                migrated.compatibility.minimum_schema_version,
+                expected["minimumSchema"].as_u64().unwrap() as u32
+            );
+            assert_eq!(
+                migrated.scenes.len(),
+                expected["sceneCount"].as_u64().unwrap() as usize
+            );
+            assert_eq!(
+                migrated.scenes[0].entities.len(),
+                expected["entityCount"].as_u64().unwrap() as usize
+            );
+            assert_eq!(
+                migrated.active_scene_uuid,
+                expected["activeSceneUuid"].as_str().unwrap()
+            );
+            assert_eq!(
+                migrated.extra["futureGoldenMarker"],
+                expected["preservedMarker"]
+            );
+
+            let serialized = serde_json::to_string(&migrated).unwrap();
+            let restored: ProjectFile = serde_json::from_str(&serialized).unwrap();
+            validate_project(&restored).unwrap();
+            assert_eq!(
+                restored.extra["futureGoldenMarker"],
+                expected["preservedMarker"]
+            );
+        }
+    }
+
+    #[test]
+    fn corrupted_input_fuzz_cases_never_panic_or_accept_future_schemas() {
+        let valid = include_str!("../../../tests/fixtures/migrations/public-schema-inputs.json");
+        for seed in 0..512_usize {
+            let mut bytes = valid.as_bytes().to_vec();
+            let index = seed.wrapping_mul(97).wrapping_add(31) % bytes.len();
+            bytes[index] ^= 1_u8 << (seed % 7);
+            let source = String::from_utf8_lossy(&bytes);
+            let result = std::panic::catch_unwind(|| migrate_project_str(&source));
+            assert!(
+                result.is_ok(),
+                "migration panicked for deterministic fuzz seed {seed}"
+            );
+        }
+        let future = json!({"formatVersion": CURRENT_FORMAT_VERSION + 1, "entities": []});
+        assert!(migrate_project_value(future)
+            .unwrap_err()
+            .0
+            .contains("newer than supported"));
+    }
+
+    #[test]
+    fn schema_19_adds_valid_world_settings_and_preserves_unknown_world_fields() {
+        let scene = deterministic_uuid("schema-19-scene");
+        let source = json!({
+            "formatVersion": 18,
+            "projectSettings": {"inputMap": [], "world": {
+                "navigationDebug": true, "areaDebug": false, "chunkDebug": true,
+                "streamingEnabled": true, "memoryBudgetMb": 512.0,
+                "originShiftThreshold": 25000.0, "futureWorldField": {"kept": true}
+            }},
+            "activeSceneUuid": scene,
+            "scenes": [{"uuid":scene,"name":"World","entities":[],"connections":[]}]
+        });
+        let migrated = migrate_project_value(source).unwrap();
+        assert_eq!(migrated.format_version, CURRENT_FORMAT_VERSION);
+        assert_eq!(
+            migrated.extra["projectSettings"]["world"]["memoryBudgetMb"],
+            512.0
+        );
+        assert_eq!(
+            migrated.extra["projectSettings"]["world"]["futureWorldField"]["kept"],
+            true
+        );
+    }
+
+    #[test]
+    fn schema_19_rejects_invalid_world_memory_budget() {
+        let scene = deterministic_uuid("schema-19-invalid");
+        let source = json!({
+            "formatVersion": 19,
+            "projectSettings": {"inputMap": [], "world": {
+                "navigationDebug": false, "areaDebug": false, "chunkDebug": false,
+                "streamingEnabled": true, "memoryBudgetMb": 0.0, "originShiftThreshold": 10000.0
+            }},
+            "activeSceneUuid": scene,
+            "scenes": [{"uuid":scene,"name":"World","entities":[],"connections":[]}]
+        });
+        assert!(migrate_project_value(source).is_err());
+    }
+
+    #[test]
+    fn schema_19_accepts_world_gameplay_components() {
+        let scene = deterministic_uuid("schema-19-components-scene");
+        let entity = deterministic_uuid("schema-19-components-entity");
+        let transform = deterministic_uuid("schema-19-components-transform");
+        let character = deterministic_uuid("schema-19-components-character");
+        let source = json!({
+            "formatVersion": 18,
+            "projectSettings": {"inputMap": []},
+            "activeSceneUuid": scene,
+            "scenes": [{"uuid":scene,"name":"World","connections":[],"entities":[{
+                "uuid": entity, "name": "Player", "enabled": true,
+                "components": [
+                    {"uuid":transform,"kind":"Transform2D","enabled":true,"removed":false,"data":{}},
+                    {"uuid":character,"kind":"CharacterBody2D","enabled":true,"removed":false,"data":{"maxSlopeAngle":45.0}}
+                ]
+            }]}]
+        });
+        let migrated = migrate_project_value(source).unwrap();
+        assert_eq!(
+            migrated.scenes[0].entities[0].components[1].kind,
+            "CharacterBody2D"
+        );
+    }
 
     #[test]
     fn migrates_v1_1_2_numeric_identities_without_losing_data() {
@@ -1710,8 +2649,8 @@ mod tests {
         });
         let migrated = migrate_project_value(source).unwrap();
         validate_project(&migrated).unwrap();
-        assert_eq!(migrated.format_version, 17);
-        assert_eq!(migrated.engine_version, "2.4.0");
+        assert_eq!(migrated.format_version, CURRENT_FORMAT_VERSION);
+        assert_eq!(migrated.engine_version, CURRENT_ENGINE_VERSION);
         assert_eq!(
             migrated.assets[0].extra["futureImporterField"]["kept"],
             true
@@ -1745,5 +2684,199 @@ mod tests {
         });
         let error = migrate_project_value(source).unwrap_err();
         assert!(error.0.contains("expected rig"));
+    }
+
+    #[test]
+    fn migrates_and_validates_v2_5_packages_and_plugin_api_2() {
+        let plugin_asset = deterministic_uuid("v2.5-plugin-wasm");
+        let source = json!({
+            "formatVersion": 17,
+            "engineVersion": "2.4.0",
+            "plugins": [{
+                "id":"top.whitelists.tool", "name":"Tool", "version":"1.0.0",
+                "apiVersion":2, "engine":"^2.5.0", "entry":"tool.wasm",
+                "entryAsset":format!("asset://{plugin_asset}"), "entryType":"wasm",
+                "permissions":["editor.commands", "runtime.systems"]
+            }],
+            "packages": {
+                "manifestVersion":1, "installed":[{
+                    "manifest":{"manifestVersion":1,"id":"top.whitelists.tool","name":"Tool","version":"1.0.0"},
+                    "source":{"kind":"local","location":"tool.json"}, "enabled":true, "project":true
+                }], "lockfile":[], "offlineCache":[], "offlineMode":true
+            },
+            "assets": [{"uuid":plugin_asset,"path":"Assets/Plugins/tool.wasm","assetType":"other"}],
+            "entities": []
+        });
+        let migrated = migrate_project_value(source).unwrap();
+        validate_project(&migrated).unwrap();
+        assert_eq!(migrated.format_version, CURRENT_FORMAT_VERSION);
+        assert_eq!(migrated.extra["plugins"][0]["apiVersion"], 2);
+        assert_eq!(
+            migrated.extra["packages"]["installed"][0]["manifest"]["id"],
+            "top.whitelists.tool"
+        );
+    }
+
+    #[test]
+    fn preserves_v2_0_plugin_api_1_projects() {
+        let plugin_asset = deterministic_uuid("v2.0-plugin-wasm");
+        let source = json!({
+            "formatVersion": 12,
+            "engineVersion": "2.0.0",
+            "plugins": [{
+                "id":"top.whitelists.legacy", "name":"Legacy", "version":"1.0.0",
+                "apiVersion":1, "entry":"legacy.wasm", "entryAsset":format!("asset://{plugin_asset}"),
+                "permissions":["log", "events"]
+            }],
+            "assets": [{"uuid":plugin_asset,"path":"Assets/Plugins/legacy.wasm","assetType":"other"}],
+            "entities": []
+        });
+        let migrated = migrate_project_value(source).unwrap();
+        assert_eq!(migrated.extra["plugins"][0]["apiVersion"], 1);
+        assert_eq!(migrated.extra["packages"]["manifestVersion"], 1);
+    }
+
+    #[test]
+    fn migrates_and_validates_v2_7_presentation_and_audio_mixer() {
+        let source = json!({
+            "formatVersion": 19,
+            "engineVersion": "2.6.0",
+            "projectSettings": {"inputMap": []},
+            "entities": []
+        });
+        let migrated = migrate_project_value(source).unwrap();
+        validate_project(&migrated).unwrap();
+        assert_eq!(migrated.format_version, CURRENT_FORMAT_VERSION);
+        assert_eq!(migrated.engine_version, CURRENT_ENGINE_VERSION);
+        assert_eq!(
+            migrated.extra["projectSettings"]["presentation"]["localization"]["buildLocales"][0],
+            "en"
+        );
+        assert_eq!(
+            migrated.extra["projectSettings"]["presentation"]["accessibility"]
+                ["keyboardNavigation"],
+            true
+        );
+        assert_eq!(
+            migrated.extra["projectSettings"]["audio"]["mixer"]["buses"][0]["id"],
+            "Master"
+        );
+        let encoded = serde_json::to_string(&migrated).unwrap();
+        let restored: ProjectFile = serde_json::from_str(&encoded).unwrap();
+        validate_project(&restored).unwrap();
+    }
+
+    #[test]
+    fn rejects_unbounded_v2_7_audio_mixer() {
+        let mut migrated = migrate_project_value(json!({
+            "formatVersion": 19,
+            "engineVersion": "2.6.0",
+            "projectSettings": {"inputMap": []},
+            "entities": []
+        }))
+        .unwrap();
+        migrated.extra.get_mut("projectSettings").unwrap()["audio"]["mixer"]["buses"] = json!((0
+            ..33)
+            .map(|index| json!({
+                "id": format!("Bus-{index}"), "name": format!("Bus {index}"),
+                "gain": 1.0, "voiceLimit": 32, "effects": [], "sends": []
+            }))
+            .collect::<Vec<_>>());
+        let error = validate_project(&migrated).unwrap_err();
+        assert!(error.0.contains("1 to 32 buses"));
+    }
+
+    #[test]
+    fn migrates_and_validates_v2_8_production_settings() {
+        let source = json!({
+            "formatVersion": 20,
+            "engineVersion": "2.7.0",
+            "projectSettings": {"inputMap": [], "build": {
+                "gameName":"Test", "target":"windows", "architecture":"x86_64",
+                "sceneOrder":[], "startupSceneUuid":"", "packageIntoExecutable":false,
+                "developmentBuild":true, "outputDirectory":""
+            }},
+            "entities": []
+        });
+        let migrated = migrate_project_value(source).unwrap();
+        validate_project(&migrated).unwrap();
+        assert_eq!(migrated.format_version, CURRENT_FORMAT_VERSION);
+        assert_eq!(migrated.engine_version, CURRENT_ENGINE_VERSION);
+        assert_eq!(
+            migrated.extra["projectSettings"]["build"]["runtimeMode"],
+            "game"
+        );
+        assert_eq!(
+            migrated.extra["projectSettings"]["production"]["performance"]["traceCapacity"],
+            600
+        );
+        assert_eq!(
+            migrated.extra["projectSettings"]["production"]["networking"]["enabled"],
+            false
+        );
+    }
+
+    #[test]
+    fn rejects_unbounded_v2_8_jobs_and_tests() {
+        let mut migrated = migrate_project_value(json!({
+            "formatVersion": 20,
+            "engineVersion": "2.7.0",
+            "projectSettings": {"inputMap": []},
+            "entities": []
+        }))
+        .unwrap();
+        migrated.extra.get_mut("projectSettings").unwrap()["production"]["jobs"]["maxWorkers"] =
+            json!(9);
+        let error = validate_project(&migrated).unwrap_err();
+        assert!(error.0.contains("jobs.maxWorkers"));
+    }
+
+    #[test]
+    fn migrates_and_validates_v2_9_platform_delivery_settings() {
+        let source = json!({
+            "formatVersion": 21,
+            "engineVersion": "2.8.0",
+            "projectSettings": {"inputMap": [], "build": {
+                "gameName":"Shipping Test", "target":"web", "architecture":"x86_64",
+                "sceneOrder":[], "startupSceneUuid":"", "packageIntoExecutable":false,
+                "developmentBuild":false, "outputDirectory":"", "runtimeMode":"game"
+            }},
+            "entities": []
+        });
+        let migrated = migrate_project_value(source).unwrap();
+        validate_project(&migrated).unwrap();
+        assert_eq!(migrated.format_version, 22);
+        assert_eq!(migrated.engine_version, CURRENT_ENGINE_VERSION);
+        assert_eq!(
+            migrated.extra["projectSettings"]["build"]["profile"],
+            "release"
+        );
+        assert_eq!(
+            migrated.extra["projectSettings"]["build"]["platform"]["identifier"],
+            "top.whitelists.mygame"
+        );
+        assert_eq!(
+            migrated.extra["projectSettings"]["build"]["delivery"]["deterministic"],
+            true
+        );
+        assert_eq!(
+            migrated.extra["projectSettings"]["build"]["delivery"]["telemetryEnabled"],
+            false
+        );
+    }
+
+    #[test]
+    fn rejects_insecure_v2_9_telemetry_endpoint() {
+        let mut migrated = migrate_project_value(json!({
+            "formatVersion": 21, "engineVersion": "2.8.0",
+            "projectSettings": {"inputMap": []}, "entities": []
+        }))
+        .unwrap();
+        let delivery = &mut migrated.extra.get_mut("projectSettings").unwrap()["build"]["delivery"];
+        delivery["telemetryEnabled"] = json!(true);
+        delivery["telemetryEndpoint"] = json!("http://insecure.invalid/events");
+        delivery["privacyPolicyUrl"] = json!("https://example.invalid/privacy");
+        let error = validate_project(&migrated).unwrap_err();
+        assert!(error.0.contains("bounded HTTPS URL"));
     }
 }

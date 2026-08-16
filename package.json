@@ -1,7 +1,7 @@
 {
   "name": "nova_a",
   "private": true,
-  "version": "2.4.0",
+  "version": "3.0.0",
   "homepage": "https://github.com/Stevenzhang543/Nova_A/",
   "repository": {
     "type": "git",
@@ -23,7 +23,18 @@
     "audit:scripts": "node scripts/audit-script-studio.mjs",
     "audit:rendering": "node scripts/audit-rendering.mjs",
     "audit:animation": "node scripts/audit-animation.mjs",
-    "audit": "pnpm audit:manual && pnpm audit:editor && pnpm audit:scripts && pnpm audit:rendering && pnpm audit:animation",
+    "audit:v2.5": "node scripts/audit-v2.5.mjs",
+    "audit:v2.6": "node scripts/audit-v2.6.mjs",
+    "audit:v2.7": "node scripts/audit-v2.7.mjs",
+    "audit:v2.8": "node scripts/audit-v2.8.mjs",
+    "audit:v2.9": "node scripts/audit-v2.9.mjs",
+    "audit:typography": "node scripts/audit-typography.mjs",
+    "audit:v3": "node scripts/audit-v3.mjs",
+    "references": "node scripts/export-reference-projects.mjs",
+    "benchmark:v3": "node scripts/benchmark-v3.mjs",
+    "stability:v3": "node scripts/stability-v3.mjs",
+    "audit": "pnpm audit:manual && pnpm audit:editor && pnpm audit:scripts && pnpm audit:rendering && pnpm audit:animation && pnpm audit:v2.5 && pnpm audit:v2.6 && pnpm audit:v2.7 && pnpm audit:v2.8 && pnpm audit:v2.9 && pnpm audit:typography && pnpm audit:v3",
+    "export": "node scripts/nova-export.mjs",
     "dev": "pnpm build:wasm:dev && vite",
     "build": "pnpm build:wasm && vue-tsc --noEmit && vite build",
     "preview": "vite preview",
@@ -45,7 +56,7 @@
     "overrides": {
       "brace-expansion": "2.1.4",
       "minimatch": "9.0.7",
-      "nanoid": "3.3.17",
+      "nanoid": "3.3.18",
       "picomatch": "4.0.4",
       "postcss": "8.5.23",
       "rollup": "4.59.0"

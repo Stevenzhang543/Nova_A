@@ -7,7 +7,7 @@ import {
   NOVA_PROJECT_SCHEMA_VERSION, projectCompatibility
 } from './projectFormat'
 
-export type ProjectTemplateId = 'empty' | 'platformer' | 'top-down' | 'physics-sandbox'
+export type ProjectTemplateId = 'empty' | 'platformer' | 'top-down' | 'physics-sandbox' | 'ui-showcase' | 'networked-optional'
 
 export interface ProjectTemplateDescriptor {
   id: ProjectTemplateId
@@ -21,6 +21,8 @@ export const PROJECT_TEMPLATES: readonly ProjectTemplateDescriptor[] = [
   { id: 'platformer', name: 'Platformer', description: 'A playable foundation with a player, platforms, UI, animation, audio, and scripts.', features: ['Physics', 'TileMap2D', 'Animator', 'Audio', 'UI'] },
   { id: 'top-down', name: 'Top-down', description: 'A two-scene action template with triggers, enemies, prefabs, particles, and save data.', features: ['Prefabs', 'Scene switch', 'Triggers', 'Particles', 'Save API'] },
   { id: 'physics-sandbox', name: 'Physics Sandbox', description: 'A playground for materials, ropes, joints, and collision behavior.', features: ['Rigid bodies', 'Materials', 'Rope2D', 'Joints', 'Debugger'] }
+  ,{ id: 'ui-showcase', name: 'UI Showcase', description: 'A responsive menu and HUD demonstrating themes, localization, focus, and audio.', features: ['Responsive UI', 'Themes', 'Localization', 'Focus', 'Audio mixer'] }
+  ,{ id: 'networked-optional', name: 'Networked Optional', description: 'An opt-in multiplayer sample with bounded replication and authoritative roles.', features: ['Optional package', 'Replication', 'Prediction', 'Diagnostics', 'Headless'] }
 ] as const
 
 type JsonRecord = Record<string, unknown>
@@ -91,7 +93,7 @@ function canvasWithLabel(seed: string, text: string): JsonRecord[] {
   return [canvas, label]
 }
 
-function textAsset(seed: string, name: string, assetType: 'script' | 'animation' | 'controller' | 'prefab', path: string, source: string, mimeType: string): JsonRecord {
+function textAsset(seed: string, name: string, assetType: 'script' | 'animation' | 'controller' | 'prefab' | 'localization' | 'uiTheme', path: string, source: string, mimeType: string): JsonRecord {
   return {
     uuid: stableUuid(`asset:${seed}`), name, path, assetType,
     mimeType, byteLength: source.length, source, sourceModified: 0, importedAt: 0,
@@ -152,10 +154,16 @@ function project(name: string, template: ProjectTemplateId, scenes: JsonRecord[]
     assets,
     assetFolders: ['Assets', 'Assets/Scenes', 'Assets/Sprites', 'Assets/Audio', 'Assets/Scripts', 'Assets/Fonts', 'Assets/Prefabs', 'Assets/Tiles', 'Assets/TileSets', 'Assets/Materials', 'Assets/Animations', 'Assets/Controllers', 'ProjectSettings', '.nova/cache', '.nova/imported'],
     plugins: [],
+    packages: { manifestVersion: 1, installed: [], lockfile: [], offlineCache: [], offlineMode: true },
     projectSettings: {
       inputMap: defaultInputMap(), audio: defaultAudioSettings(), scripting: { customSignals: [], maxConsoleEntries: 2000, debuggerEnabled: true },
       rendering: { lightingEnabled: false, ambientColor: { r: 255, g: 255, b: 255 }, ambientIntensity: 1, shadowQuality: 'Soft', colorSpace: 'sRGB', postProcessing: { enabled: false, exposure: 0, contrast: 1, saturation: 1, vignette: 0, bloom: 0, blur: 0, userMaterial: null }, debugView: 'None' },
-      build: { gameName: name, target: 'windows', architecture: 'x86_64', sceneOrder: sceneIds, startupSceneUuid: sceneIds[0], packageIntoExecutable: false, developmentBuild: true, outputDirectory: '' }
+      build: {
+        gameName: name, target: 'windows', architecture: 'x86_64', runtimeMode: 'game', profile: 'debug', sceneOrder: sceneIds, startupSceneUuid: sceneIds[0], packageIntoExecutable: false, developmentBuild: true, outputDirectory: '',
+        platform: { identifier: `top.whitelists.${name.toLowerCase().replace(/[^a-z0-9]+/g, '') || 'game'}`, version: '1.0.0', iconAsset: null, splashAsset: null, orientation: 'auto', permissions: [], signingMode: 'none', signingIdentity: '', notarizationProfile: '' },
+        delivery: { deterministic: true, incremental: true, compression: 'balanced', patchManifest: true, structuredLogs: true, crashReports: true, telemetryEnabled: false, telemetryEndpoint: '', privacyPolicyUrl: '' }
+      },
+      world: { navigationDebug: false, areaDebug: false, chunkDebug: false, streamingEnabled: true, memoryBudgetMb: 256, originShiftThreshold: 10000 }
     },
     projectStructure: { assetsRoot: 'Assets', settingsRoot: 'ProjectSettings', cacheRoot: '.nova/cache', importedRoot: '.nova/imported' },
     activeSceneUuid: sceneIds[0], scenes
@@ -172,18 +180,20 @@ function platformerTemplate(name: string): JsonRecord {
   const audioId = stableUuid('asset:platformer-jump-audio')
   const clipId = stableUuid('asset:platformer-idle-clip')
   const controllerId = stableUuid('asset:platformer-animator-controller')
-  const source = `@export let speed = 8.0;\n@export let jump_force = 12.0;\nfn fixed_update(dt) {\n  let move = input_axis("MoveHorizontal");\n  set_velocity(move * speed, rigid_body().velocity_y);\n  if input_pressed("Jump") { apply_impulse(0.0, -jump_force); audio_play(); }\n}`
+  const source = `@export let speed = 8.0;\n@export let gravity = -22.0;\n@export let jump_speed = 12.0;\nfn fixed_update(dt) {\n  let move = input_axis("MoveHorizontal");\n  let vertical = rigid_body().velocity_y + gravity * dt;\n  if input_pressed("Jump") && can_coyote_jump() { vertical = jump_speed; audio_play(); }\n  move_character(move * speed * dt, vertical * dt);\n}`
   const clip = JSON.stringify({ version: 1, name: 'Player Idle', loop: true, frameRate: 4, spriteFrames: [{ spriteAsset: `asset://${spriteId}`, duration: .25 }], tracks: [{ property: 'SpriteRenderer.opacity', keyframes: [{ time: 0, value: 82 }, { time: .5, value: 100 }, { time: 1, value: 82 }] }] })
   const controller = JSON.stringify({ version: 1, name: 'Player Controller', defaultState: 'idle', parameters: [], states: [{ id: 'idle', name: 'Idle', clipAsset: `asset://${clipId}`, speed: 1, x: 80, y: 80 }], transitions: [] })
-  const player = shape('platformer-player', 'Player', [-4, -2], [1.1, 1.8], { color: [105, 168, 255], scriptAsset: scriptId, extra: [
+  const player = shape('platformer-player', 'Player', [-4, -2], [1.1, 1.8], { color: [105, 168, 255], body: 'Kinematic', scriptAsset: scriptId, extra: [
+    component('platformer-player', 'CharacterBody2D', { maxSlopeAngle: 45, stepHeight: .35, floorSnap: .15, safeMargin: .001, maxSlides: 4, coyoteTime: .12, applyPlatformVelocity: true, collisionMask: 0xffffffff }),
     component('platformer-player', 'SpriteRenderer2D', { spriteAsset: `asset://${spriteId}`, tint: { r: 255, g: 255, b: 255 }, opacity: 100, size: { x: 1.1, y: 1.8 }, pivot: { x: .5, y: .5 }, flipX: false, flipY: false, sortingLayer: 1, orderInLayer: 2, material: 'Default', filterMode: 'Linear' }),
     component('platformer-player', 'Animator', { controllerAsset: `asset://${controllerId}`, speed: 1, autoplay: true, currentState: 'idle', parameters: {} }),
     component('platformer-player', 'AudioSource', { audioClip: `asset://${audioId}`, volume: .8, pitch: 1, loop: false, autoplay: false, bus: 'SFX', spatialBlend: 0, minDistance: 1, maxDistance: 50 })
   ] })
-  const ground = shape('platformer-ground', 'Ground', [0, 4], [18, 1], { body: 'Static', color: [87, 107, 94], friction: .8 })
-  const platform = shape('platformer-platform', 'Platform', [3, 1], [5, .7], { body: 'Static', color: [112, 137, 120], friction: .8 })
+  const ground = shape('platformer-ground', 'Ground', [0, -4], [18, 1], { body: 'Static', color: [87, 107, 94], friction: .8, extra: [component('platformer-ground', 'ShadowCaster2D', { layerMask: 0xffffffff, selfShadows: false, opacity: .82 })] })
+  const platform = shape('platformer-platform', 'Platform', [3, -1], [5, .7], { body: 'Static', color: [112, 137, 120], friction: .8, extra: [component('platformer-platform', 'ShadowCaster2D', { layerMask: 0xffffffff, selfShadows: false, opacity: .82 })] })
+  const light = entity('platformer-light', 'Level Light', [-2, -1], [component('platformer-light', 'Light2D', { lightType: 'Point', color: { r: 255, g: 226, b: 178 }, intensity: .9, range: 10, innerAngle: 30, outerAngle: 55, areaSize: { x: 4, y: 2 }, layerMask: 0xffffffff, castsShadows: true, shadowSoftness: .58 })])
   const tileMap = entity('platformer-tilemap', 'World TileMap', [0, 0], [component('platformer-tilemap', 'TileMap2D', { width: 32, height: 18, tileSize: 1, chunkSize: 32, cells: [], tileSetAsset: null })])
-  const tutorialScene = scene('platformer-main', 'Level 01', [camera('platformer-camera'), tileMap, ground, platform, player, ...canvasWithLabel('platformer-ui', 'Move, jump, and inspect every component in this template.')])
+  const tutorialScene = scene('platformer-main', 'Level 01', [camera('platformer-camera'), tileMap, light, ground, platform, player, ...canvasWithLabel('platformer-ui', 'Move, jump, and inspect every component in this template.')])
   const result = project(name, 'platformer', [tutorialScene], [
     scriptAsset('platformer-controller', 'PlayerController', source), imageAsset('platformer-player-sprite', 'Player', '#69a8ff'), beepAsset('platformer-jump-audio', 'Jump'),
     textAsset('platformer-idle-clip', 'PlayerIdle.nova-anim', 'animation', 'Assets/Animations/PlayerIdle.nova-anim', clip, 'application/x-nova-animation'),
@@ -193,6 +203,9 @@ function platformerTemplate(name: string): JsonRecord {
     { name: 'MoveHorizontal', kind: 'axis', bindings: [{ device: 'keyboard', code: 'KeyA', scale: -1, x: -1, y: 0, gamepad: 0, deadzone: .15 }, { device: 'keyboard', code: 'KeyD', scale: 1, x: 1, y: 0, gamepad: 0, deadzone: .15 }] },
     { name: 'Jump', kind: 'button', bindings: [{ device: 'keyboard', code: 'Space', scale: 1, x: 0, y: 0, gamepad: 0, deadzone: .15 }] }
   ]
+  const rendering = (result.projectSettings as JsonRecord).rendering as JsonRecord
+  rendering.lightingEnabled = true
+  rendering.ambientIntensity = .48
   return result
 }
 
@@ -221,23 +234,79 @@ function topDownTemplate(name: string): JsonRecord {
 }
 
 function physicsTemplate(name: string): JsonRecord {
-  const first = shape('sandbox-box', 'Jointed Box', [-3, -2], [2, 2], { color: [103, 162, 255], restitution: .2, extra: [component('sandbox-box', 'DistanceJoint2D', { targetEntityUuid: stableUuid('entity:sandbox-ball'), distance: 6, stiffness: 900, damping: 35, collideConnected: false })] })
-  const second = shape('sandbox-ball', 'Rope Ball', [3, -2], [1.8, 1.8], { type: 'Circle', color: [236, 154, 92], restitution: .7 })
-  const anchors = [first, second].map(value => ({ entityUuid: value.uuid, mode: 'center', localPoint: { x: 0, y: 0 }, index: 0, sideT: .5 }))
+  // Joint and rope examples use separate bodies. Coupling two independent
+  // constraints across the same pair creates an over-constrained tutorial.
+  const jointAnchor = shape('sandbox-joint-anchor', 'Joint Anchor', [-5, 0], [.8, .8], { body: 'Static', color: [132, 148, 166], friction: .8 })
+  const jointedBox = shape('sandbox-box', 'Jointed Box', [-5, -3], [2, 2], { color: [103, 162, 255], restitution: .2, extra: [component('sandbox-box', 'DistanceJoint2D', { targetEntityUuid: stableUuid('entity:sandbox-joint-anchor'), distance: 3, stiffness: 240, damping: 28, collideConnected: false })] })
+  const ropeEnd = shape('sandbox-rope-end', 'Rope End', [1, -2], [1.4, 1.4], { color: [120, 205, 176], restitution: .25 })
+  const ropeBall = shape('sandbox-ball', 'Rope Ball', [5, -2], [1.8, 1.8], { type: 'Circle', color: [236, 154, 92], restitution: .7 })
+  const anchors = [ropeEnd, ropeBall].map(value => ({ entityUuid: value.uuid, mode: 'center', localPoint: { x: 0, y: 0 }, index: 0, sideT: .5 }))
   const rope = {
     uuid: stableUuid('connection:sandbox-rope'), name: 'Elastic Rope', type: 'rope', route: 'manual', anchors,
-    manualPoints: [{ x: -3, y: -2 }, { x: 0, y: 0 }, { x: 3, y: -2 }], manualSegments: [], restLengths: [],
-    stretchable: true, bendable: true, stiffness: 650, damping: 24, maxStretch: .45, bendTolerance: 120, stretchTolerance: 180,
+    manualPoints: [{ x: 1, y: -2 }, { x: 3, y: -.8 }, { x: 5, y: -2 }], manualSegments: [], restLengths: [],
+    stretchable: true, bendable: true, stiffness: 120, damping: 24, maxStretch: .45, bendTolerance: 120, stretchTolerance: 180,
     collisionEnabled: true, thickness: .18, ropeNodes: [], breakState: 'intact', breakLink: -1, tension: 0, strain: 0
   }
-  return project(name, 'physics-sandbox', [scene('sandbox', 'Physics Playground', [camera('sandbox-camera'), shape('sandbox-ground', 'Ground', [0, 5], [20, 1], { body: 'Static', color: [89, 102, 116], friction: .85 }), first, second, ...canvasWithLabel('sandbox-ui', 'Press Play, then enable collider, joint, and rope debugger overlays.')], [rope])])
+  return project(name, 'physics-sandbox', [scene('sandbox', 'Physics Playground', [camera('sandbox-camera'), shape('sandbox-ground', 'Ground', [0, -5], [20, 1], { body: 'Static', color: [89, 102, 116], friction: .85 }), jointAnchor, jointedBox, ropeEnd, ropeBall, ...canvasWithLabel('sandbox-ui', 'Press Play, then inspect live collision, joint, and Rope2D telemetry.')], [rope])])
+}
+
+function uiElement(seed: string, name: string, parentUuid: string, position: [number, number], size: [number, number], kind: string, data: JsonRecord): JsonRecord {
+  const result = entity(seed, name, [0, 0], [
+    component(seed, 'RectTransform', { parentUuid, anchorPreset: 'center', position: { x: position[0], y: position[1] }, size: { x: size[0], y: size[1] }, minSize: { x: Math.min(80, size[0]), y: Math.min(32, size[1]) }, maxSize: { x: 4096, y: 4096 }, flexGrow: 0, flexShrink: 1 }),
+    component(seed, kind, data)
+  ])
+  const transform = (result.components as JsonRecord[])[0].data as JsonRecord
+  transform.parentUuid = parentUuid
+  return result
+}
+
+function uiShowcaseTemplate(name: string): JsonRecord {
+  const canvasUuid = stableUuid('entity:ui-showcase-canvas')
+  const canvas = entity('ui-showcase-canvas', 'Responsive Canvas', [0, 0], [
+    component('ui-showcase-canvas', 'RectTransform', { parentUuid: null, anchorPreset: 'stretch', position: { x: 0, y: 0 }, size: { x: 1920, y: 1080 }, minSize: { x: 320, y: 180 }, maxSize: { x: 7680, y: 4320 }, flexGrow: 1, flexShrink: 1 }),
+    component('ui-showcase-canvas', 'Canvas', { referenceSize: { x: 1920, y: 1080 }, scaleWithScreen: true, sortingOrder: 100, safeArea: true })
+  ])
+  const panel = uiElement('ui-showcase-panel', 'Menu Panel', canvasUuid, [0, 0], [720, 620], 'Panel', { color: { r: 28, g: 34, b: 46 }, opacity: 96, cornerRadius: 24, layout: 'vertical', gap: 18, padding: 36, clipping: true, styleClass: 'menu-card' })
+  const panelUuid = String(panel.uuid)
+  const title = uiElement('ui-showcase-title', 'Localized Title', panelUuid, [0, -220], [600, 70], 'Text', { text: '{menu.title}', fontSize: 38, fontWeight: 700, align: 'center', color: { r: 244, g: 248, b: 255 }, opacity: 100, localizationKey: 'menu.title' })
+  const nameInput = uiElement('ui-showcase-input', 'Player Name', panelUuid, [0, -110], [560, 58], 'TextInput', { value: '', placeholder: '{menu.playerName}', fontSize: 20, maxLength: 32, focusable: true, tabIndex: 1, styleClass: 'input' })
+  const playButton = uiElement('ui-showcase-play', 'Play Button', panelUuid, [0, -20], [560, 62], 'Button', { text: '{menu.play}', action: 'StartGame', focusable: true, tabIndex: 2, styleClass: 'primary', accessibilityLabel: 'Start game' })
+  const options = uiElement('ui-showcase-options', 'Options Toggle', panelUuid, [0, 70], [560, 54], 'Checkbox', { checked: true, label: '{menu.sound}', action: 'ToggleSound', focusable: true, tabIndex: 3, styleClass: 'checkbox' })
+  const loading = uiElement('ui-showcase-progress', 'Loading Progress', panelUuid, [0, 160], [560, 28], 'ProgressBar', { value: 68, minimum: 0, maximum: 100, styleClass: 'progress' })
+  const scroll = uiElement('ui-showcase-scroll', 'News Scroll View', panelUuid, [0, 245], [560, 90], 'Panel', { color: { r: 22, g: 27, b: 37 }, opacity: 100, cornerRadius: 12, clipping: true, scrollHorizontal: false, scrollVertical: true, contentSize: { x: 560, y: 360 }, scrollSpeed: 42, showScrollbars: true, styleClass: 'scroll' })
+  const localization = JSON.stringify({ locale: 'en', entries: { 'menu.title': 'Nova_A UI Showcase', 'menu.playerName': 'Player name', 'menu.play': 'Play', 'menu.sound': 'Sound enabled' } })
+  const theme = JSON.stringify({ version: 1, name: 'Showcase', variables: { accent: '#6ea8fe', radius: 12, spacing: 8 }, classes: { 'menu-card': { background: '#1d222c', radius: 24 }, primary: { background: '#4c8df6', foreground: '#ffffff' }, input: { background: '#11151b' } } })
+  const result = project(name, 'ui-showcase', [scene('ui-showcase', 'UI Showcase', [camera('ui-showcase-camera'), canvas, panel, title, nameInput, playButton, options, loading, scroll])], [
+    { ...textAsset('ui-showcase-locale', 'en.nova-locale', 'localization', 'Assets/Localization/en.nova-locale', localization, 'application/x-nova-localization'), settings: { localizationSettings: { locale: 'en', fallbackLocale: '' } } },
+    textAsset('ui-showcase-theme', 'Showcase.nova-theme', 'uiTheme', 'Assets/Themes/Showcase.nova-theme', theme, 'application/x-nova-ui-theme'),
+    beepAsset('ui-showcase-click', 'UIClick')
+  ])
+  ;((result.projectSettings as JsonRecord).presentation as JsonRecord) = { localization: { sourceLocale: 'en', previewLocale: 'en', fallbackChain: ['en'], pseudolocalization: false, buildLocales: ['en'] }, accessibility: { keyboardNavigation: true, gamepadNavigation: true, screenReaderMetadata: true, focusRingColor: '#79b2ff', focusRingWidth: 3, reducedMotion: false, announceFocusChanges: true } }
+  return result
+}
+
+function networkedOptionalTemplate(name: string): JsonRecord {
+  const first = shape('network-player-one', 'Server Player', [-3, 0], [1.4, 1.4], { type: 'Circle', color: [92, 181, 255], body: 'Kinematic' })
+  const second = shape('network-player-two', 'Remote Player', [3, 0], [1.4, 1.4], { type: 'Circle', color: [242, 153, 92], body: 'Kinematic' })
+  const result = project(name, 'networked-optional', [scene('network-arena', 'Network Arena', [camera('network-camera'), first, second, ...canvasWithLabel('network-ui', 'Open Production Lab → Networking to connect, replicate, and inspect bandwidth.')])])
+  result.packages = { manifestVersion: 1, installed: [{
+    manifest: { manifestVersion: 1, id: 'top.whitelists.novaa.networking', name: 'Nova Optional Networking', version: '2.9.0', description: 'Bounded replication and authoritative multiplayer tools.', engine: '>=2.9.0 <4.0.0', dependencies: {}, pluginApi: null, native: false, sha256: 'official-networking-2.9.0', signature: 'nova-a-official', publisher: 'Whitelist', publisherVerified: true, permissions: ['network.client', 'network.listen'], rating: 5, securityUrl: 'https://github.com/Stevenzhang543/Nova_A/security', documentationUrl: 'https://github.com/Stevenzhang543/Nova_A/' },
+    source: { kind: 'registry', location: 'Nova_A official offline package' }, enabled: true, project: true, installedAt: 0
+  }], lockfile: [{ id: 'top.whitelists.novaa.networking', version: '2.9.0', source: { kind: 'registry', location: 'Nova_A official offline package' }, sha256: 'official-networking-2.9.0' }], offlineCache: [], offlineMode: true }
+  ;((result.projectSettings as JsonRecord).production as JsonRecord) = {
+    performance: { traceCapacity: 600, memoryBudgetMb: 300, assetBudgetMb: 512, leakWindowFrames: 600, lifetimeCapacity: 2000 }, replay: { seed: 1313822273, capacity: 3600, strictChecksums: true }, testing: { defaultTimeoutMs: 10000, tests: [{ id: 'network-headless', name: 'Network headless smoke', kind: 'headless', sceneUuid: String((result.scenes as JsonRecord[])[0].uuid), steps: 120, timeoutMs: 10000, captureScreenshot: false, assertions: [{ kind: 'finitePhysics', target: '', expected: 'true' }, { kind: 'noRuntimeErrors', target: '', expected: 'true' }] }] }, data: { saveSchemaVersion: 1, saveMigrations: [] }, jobs: { maxWorkers: 2, maxQueued: 256, timeoutMs: 15000 },
+    networking: { enabled: true, role: 'host', transport: 'websocket', endpoint: 'ws://127.0.0.1:7777', bindAddress: '127.0.0.1:7777', snapshotRate: 20, interpolationMs: 100, rollbackFrames: 120, bandwidthKbps: 256, reconnect: true, replicatedEntities: [first, second].map(value => ({ entityUuid: value.uuid, authority: 'server', properties: ['transform', 'rotation', 'velocity'], interpolate: true, predict: true })) }
+  }
+  return result
 }
 
 export function createTemplateProject(template: ProjectTemplateId, name: string): JsonRecord {
   const result = template === 'platformer' ? platformerTemplate(name)
     : template === 'top-down' ? topDownTemplate(name)
       : template === 'physics-sandbox' ? physicsTemplate(name)
-        : emptyTemplate(name)
+        : template === 'ui-showcase' ? uiShowcaseTemplate(name)
+          : template === 'networked-optional' ? networkedOptionalTemplate(name)
+            : emptyTemplate(name)
   const failures = auditTemplateProject(result, template)
   if (failures.length) throw new Error(`Template ${template} failed its release audit: ${failures.join('; ')}`)
   return result
@@ -252,6 +321,11 @@ export function auditTemplateProject(project: JsonRecord, template: ProjectTempl
   const connections = scenes.flatMap(scene => Array.isArray(scene.connections) ? scene.connections as JsonRecord[] : [])
   const failures: string[] = []
   const requireComponents = (...kinds: string[]) => { for (const kind of kinds) if (!components.has(kind)) failures.push(`missing ${kind}`) }
+  const entityY = (name: string): number => {
+    const sourceEntity = entities.find(item => item.name === name)
+    const transform = Array.isArray(sourceEntity?.components) ? (sourceEntity.components as JsonRecord[]).find(item => item.kind === 'Transform2D') : undefined
+    return Number(((transform?.data as JsonRecord | undefined)?.position as JsonRecord | undefined)?.y)
+  }
   if (!scenes.length) failures.push('missing scene')
   requireComponents('Transform2D', 'Camera2D')
   for (const sourceScene of scenes) {
@@ -279,8 +353,11 @@ export function auditTemplateProject(project: JsonRecord, template: ProjectTempl
     }
   }
   if (template === 'platformer') {
-    requireComponents('SpriteRenderer2D', 'RigidBody2D', 'BoxCollider2D', 'Script2D', 'Animator', 'AudioSource', 'TileMap2D', 'Canvas', 'Text')
+    requireComponents('SpriteRenderer2D', 'RigidBody2D', 'BoxCollider2D', 'Script2D', 'Animator', 'AudioSource', 'TileMap2D', 'Light2D', 'ShadowCaster2D', 'Canvas', 'Text')
     for (const type of ['image', 'audio', 'script', 'animation', 'controller']) if (!assetTypes.has(type)) failures.push(`missing ${type} asset`)
+    if (!(entityY('Ground') < entityY('Player'))) failures.push('gravity-driven player must start above the ground')
+    const scripts = assets.filter(asset => asset.assetType === 'script').map(asset => String(asset.source)).join('\n')
+    if (!scripts.includes('move_character(') || !scripts.includes('can_coyote_jump(')) failures.push('platformer must demonstrate exact CharacterBody2D motion and coyote time')
   } else if (template === 'top-down') {
     requireComponents('Script2D', 'ParticleEmitter2D', 'Canvas', 'Text')
     if (scenes.length < 2) failures.push('missing scene transition target')
@@ -290,6 +367,16 @@ export function auditTemplateProject(project: JsonRecord, template: ProjectTempl
   } else if (template === 'physics-sandbox') {
     requireComponents('RigidBody2D', 'DistanceJoint2D', 'BoxCollider2D', 'EllipseCollider2D')
     if (!connections.some(connection => connection.type === 'rope')) failures.push('missing Rope2D connection')
+    if (!(entityY('Ground') < Math.min(entityY('Jointed Box'), entityY('Rope End'), entityY('Rope Ball')))) failures.push('sandbox bodies must start above the collision ground')
+  } else if (template === 'ui-showcase') {
+    requireComponents('Canvas', 'Panel', 'Text', 'TextInput', 'Button', 'Checkbox', 'ProgressBar')
+    for (const type of ['localization', 'uiTheme', 'audio']) if (!assetTypes.has(type)) failures.push(`missing ${type} asset`)
+  } else if (template === 'networked-optional') {
+    const packages = project.packages as JsonRecord | undefined
+    const installed = Array.isArray(packages?.installed) ? packages.installed as JsonRecord[] : []
+    if (!installed.some(item => (item.manifest as JsonRecord | undefined)?.id === 'top.whitelists.novaa.networking')) failures.push('missing optional networking package')
+    const production = ((project.projectSettings as JsonRecord | undefined)?.production as JsonRecord | undefined)?.networking as JsonRecord | undefined
+    if (production?.enabled !== true || !Array.isArray(production.replicatedEntities) || production.replicatedEntities.length !== 2) failures.push('network replication is not configured')
   }
   return failures
 }

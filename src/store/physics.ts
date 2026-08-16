@@ -22,9 +22,10 @@ import { preferencesState } from './preferences'
 import { t } from '../i18n'
 import { normalizeUuid } from '../world/identity'
 import {
-  Animator, AudioListener, AudioSource, Button, Camera2D, Canvas, Checkbox, Collider2D,
+  Animator, Area2D, AreaEffector2D, AudioListener, AudioSource, BehaviorTree2D, Button, Camera2D, Canvas, CharacterBody2D, Checkbox, Collider2D,
   Image as UIImage, Joint2D, Light2D, Panel, ParticleEmitter2D, ProgressBar, RectTransform, RigidBody2D, Script2D, ShadowCaster2D,
-  ShapeRenderer2D, Skeleton2D, Slider, SpriteRenderer2D, Text as UIText, TextInput, TextRenderer2D, TileMap2D, TimelinePlayer,
+  NavigationAgent2D, NavigationObstacle2D, NavigationRegion2D, ObjectPool2D, Portal2D, ShapeRenderer2D, Skeleton2D, Slider, SpriteRenderer2D, StateMachine2D,
+  Text as UIText, TextInput, TextRenderer2D, TileMap2D, TimelinePlayer, WorldChunk2D,
   copyComponentValues, pasteComponentValues, type Component2D, type ComponentKind
 } from '../world/components'
 import { Transform } from '../world/Transform'
@@ -45,6 +46,13 @@ import { loadPluginManifests, serializePluginManifests } from '../runtime/plugin
 import { useSaveProject } from '../runtime/saveGame'
 import { loadRenderingSettings, serializeRenderingSettings } from '../renderer/renderSettings'
 import { clearRenderTextures } from '../renderer/renderTextures'
+import { beginPhysicsMonitorSession } from '../runtime/physicsMonitor'
+import { loadPackageState, serializePackageState } from '../runtime/packages'
+import { loadWorldGameplaySettings, serializeWorldGameplaySettings } from '../runtime/worldGameplay'
+import { loadLocalizationSettings, serializeLocalizationSettings } from '../runtime/localization'
+import { loadRuntimeAccessibilitySettings, serializeRuntimeAccessibilitySettings } from '../runtime/presentation'
+import { loadProductionSettings, serializeProductionSettings } from '../runtime/production'
+import { markSourceBaseline, refreshSourceStatus, stableProjectText } from '../runtime/teamWorkflow'
 
 interface PhysicsState {
   world: World
@@ -326,7 +334,8 @@ function projectSource(): Record<string, unknown> {
     assets: serializeAssets(),
     assetFolders: serializeAssetFolders(),
     plugins: serializePluginManifests(),
-    projectSettings: { inputMap: normalizeInputMap(physicsState.inputMap), audio: normalizeAudioSettings(physicsState.audioSettings), build: serializeBuildSettings(), scripting: serializeScriptSettings(), rendering: serializeRenderingSettings() },
+    packages: serializePackageState(),
+    projectSettings: { inputMap: normalizeInputMap(physicsState.inputMap), audio: normalizeAudioSettings(physicsState.audioSettings), build: serializeBuildSettings(), scripting: serializeScriptSettings(), rendering: serializeRenderingSettings(), world: serializeWorldGameplaySettings(), presentation: { localization: serializeLocalizationSettings(), accessibility: serializeRuntimeAccessibilitySettings() }, production: serializeProductionSettings() },
     projectStructure: {
       assetsRoot: 'Assets', settingsRoot: 'ProjectSettings', cacheRoot: '.nova/cache', importedRoot: '.nova/imported'
     },
@@ -349,9 +358,13 @@ const ASSET_COMPONENT_FIELDS: Partial<Record<ComponentKind, string[]>> = {
   Skeleton2D: ['rigAsset', 'skinAsset'],
   TimelinePlayer: ['timelineAsset'],
   AudioSource: ['audioClip'],
+  Canvas: ['themeAsset'],
   Image: ['spriteAsset'],
   Text: ['fontAsset'],
   TileMap2D: ['tileSetAsset'],
+  BehaviorTree2D: ['treeAsset'],
+  StateMachine2D: ['machineAsset'],
+  ObjectPool2D: ['prefabAsset'],
   ParticleEmitter2D: ['textureAsset']
 }
 
@@ -359,16 +372,17 @@ function matchesAssetReference(value: unknown, uuid: string): boolean {
   return value === uuid || value === `asset://${uuid}`
 }
 
-function visitStoredAssetReferences(scene: Record<string, unknown>, uuid: string, clear: boolean): number {
+function visitStoredAssetReferences(scene: Record<string, unknown>, uuid: string, clear: boolean, replacementUuid?: string): number {
   if (!Array.isArray(scene.entities)) return 0
   let count = 0
+  const replacement = replacementUuid ? `asset://${replacementUuid}` : null
   for (const entity of scene.entities) {
     if (!entity || typeof entity !== 'object' || !Array.isArray((entity as SceneEntityData).components)) continue
     const storedEntity = entity as SceneEntityData
     if (matchesAssetReference(storedEntity.prefabAsset, uuid)) {
       count++
       if (clear) {
-        storedEntity.prefabAsset = null
+        storedEntity.prefabAsset = replacement
         storedEntity.prefabInstanceUuid = null
         storedEntity.prefabSourceUuid = null
         storedEntity.prefabOverrides = {}
@@ -381,20 +395,21 @@ function visitStoredAssetReferences(scene: Record<string, unknown>, uuid: string
       if (!fields || !component.data) continue
       for (const field of fields) if (matchesAssetReference(component.data[field], uuid)) {
         count++
-        if (clear) component.data[field] = null
+        if (clear) component.data[field] = replacement
       }
     }
   }
   return count
 }
 
-function visitLiveAssetReferences(uuid: string, clear: boolean): number {
+function visitLiveAssetReferences(uuid: string, clear: boolean, replacementUuid?: string): number {
   let count = 0
+  const replacement = replacementUuid ? `asset://${replacementUuid}` : null
   for (const entity of physicsState.world.entities) {
     if (matchesAssetReference(entity.prefabAsset, uuid)) {
       count++
       if (clear) {
-        entity.prefabAsset = null
+        entity.prefabAsset = replacement
         entity.prefabInstanceUuid = null
         entity.prefabSourceUuid = null
         entity.prefabOverrides = {}
@@ -405,18 +420,19 @@ function visitLiveAssetReferences(uuid: string, clear: boolean): number {
       if (!fields) continue
       for (const field of fields) if (matchesAssetReference((component as unknown as Record<string, unknown>)[field], uuid)) {
         count++
-        if (clear) (component as unknown as Record<string, unknown>)[field] = null
+        if (clear) (component as unknown as Record<string, unknown>)[field] = replacement
       }
     }
   }
   return count
 }
 
-function visitDocumentAssetReferences(uuid: string, clear: boolean): number {
+function visitDocumentAssetReferences(uuid: string, clear: boolean, replacementUuid?: string): number {
   let count = 0
   const target = `asset://${uuid}`
+  const replacement = replacementUuid ? `asset://${replacementUuid}` : null
   const visit = (value: unknown): unknown => {
-    if (value === uuid || value === target) { count++; return clear ? null : value }
+    if (value === uuid || value === target) { count++; return clear ? replacement : value }
     if (Array.isArray(value)) return value.map(visit)
     if (value && typeof value === 'object') {
       for (const [key, child] of Object.entries(value as Record<string, unknown>)) (value as Record<string, unknown>)[key] = visit(child)
@@ -453,6 +469,16 @@ export function clearAssetReferences(uuid: string): number {
     if (scene.uuid !== sceneManager.activeSceneUuid) count += visitStoredAssetReferences(scene.data, uuid, true)
   }
   return count + visitDocumentAssetReferences(uuid, true)
+}
+
+/** Replaces a missing GUID in live, unloaded-scene, and editor-document references. */
+export function replaceAssetReferences(uuid: string, replacementUuid: string): number {
+  if (!uuid || !replacementUuid || uuid === replacementUuid) return 0
+  let count = visitLiveAssetReferences(uuid, true, replacementUuid)
+  for (const scene of sceneManager.scenes) {
+    if (scene.uuid !== sceneManager.activeSceneUuid) count += visitStoredAssetReferences(scene.data, uuid, true, replacementUuid)
+  }
+  return count + visitDocumentAssetReferences(uuid, true, replacementUuid)
 }
 
 function copyVector(target: { x: number; y: number }, source: unknown): void {
@@ -528,6 +554,8 @@ function applyComponentMetadata(target: { enabled: boolean; removed: boolean }, 
 const EXTENDED_COMPONENT_KINDS = [
   'Animator', 'Skeleton2D', 'TimelinePlayer', 'AudioSource', 'AudioListener', 'Canvas', 'RectTransform', 'Panel', 'Image',
   'Text', 'Button', 'Slider', 'ProgressBar', 'Checkbox', 'TextInput', 'TileMap2D', 'ParticleEmitter2D', 'Light2D', 'ShadowCaster2D',
+  'CharacterBody2D', 'Area2D', 'AreaEffector2D', 'NavigationRegion2D', 'NavigationObstacle2D', 'NavigationAgent2D', 'BehaviorTree2D', 'StateMachine2D',
+  'WorldChunk2D', 'Portal2D', 'ObjectPool2D',
   'FixedJoint2D', 'DistanceJoint2D', 'RevoluteJoint2D', 'PrismaticJoint2D', 'SpringJoint2D'
 ] as const
 
@@ -548,6 +576,17 @@ function createExtendedComponent(kind: typeof EXTENDED_COMPONENT_KINDS[number], 
   if (kind === 'Checkbox') return new Checkbox(uuid)
   if (kind === 'TextInput') return new TextInput(uuid)
   if (kind === 'TileMap2D') return new TileMap2D(uuid)
+  if (kind === 'CharacterBody2D') return new CharacterBody2D(uuid)
+  if (kind === 'Area2D') return new Area2D(uuid)
+  if (kind === 'AreaEffector2D') return new AreaEffector2D(uuid)
+  if (kind === 'NavigationRegion2D') return new NavigationRegion2D(uuid)
+  if (kind === 'NavigationObstacle2D') return new NavigationObstacle2D(uuid)
+  if (kind === 'NavigationAgent2D') return new NavigationAgent2D(uuid)
+  if (kind === 'BehaviorTree2D') return new BehaviorTree2D(uuid)
+  if (kind === 'StateMachine2D') return new StateMachine2D(uuid)
+  if (kind === 'WorldChunk2D') return new WorldChunk2D(uuid)
+  if (kind === 'Portal2D') return new Portal2D(uuid)
+  if (kind === 'ObjectPool2D') return new ObjectPool2D(uuid)
   if (kind === 'ParticleEmitter2D') return new ParticleEmitter2D(uuid)
   if (kind === 'Light2D') return new Light2D(uuid)
   if (kind === 'ShadowCaster2D') return new ShadowCaster2D(uuid)
@@ -570,6 +609,18 @@ function safeColor(value: unknown, fallback: { r: number; g: number; b: number }
     g: Math.round(clamp(source.g, fallback.g, 0, 255)),
     b: Math.round(clamp(source.b, fallback.b, 0, 255))
   }
+}
+
+function safeStyleOverrides(value: unknown): Record<string, string | number> {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return {}
+  const allowed = new Set(['background', 'foreground', 'border', 'borderWidth', 'cornerRadius', 'fontSize', 'fontWeight', 'opacity'])
+  const result: Record<string, string | number> = {}
+  for (const [key, raw] of Object.entries(value as Record<string, unknown>)) {
+    if (!allowed.has(key)) continue
+    if (typeof raw === 'string') result[key] = raw.slice(0, 80)
+    else if (typeof raw === 'number' && Number.isFinite(raw)) result[key] = raw
+  }
+  return result
 }
 
 function normalizeExtendedComponent(component: Component2D): void {
@@ -603,12 +654,20 @@ function normalizeExtendedComponent(component: Component2D): void {
     component.volume = clamp(component.volume, 1, 0, 1); component.pitch = clamp(component.pitch, 1, .25, 4)
     component.spatialBlend = clamp(component.spatialBlend, 0, 0, 1); component.minDistance = clamp(component.minDistance, 1, 0, 1e9)
     component.maxDistance = clamp(component.maxDistance, 50, component.minDistance + 1e-6, 1e9)
-    if (!['Master', 'Music', 'SFX', 'UI'].includes(component.bus)) component.bus = 'SFX'
+    component.bus = typeof component.bus === 'string' && component.bus.trim() ? component.bus.trim().slice(0, 80) : 'SFX'
+    if (!['Linear', 'Inverse', 'Exponential', 'Custom'].includes(component.attenuationCurve)) component.attenuationCurve = 'Linear'
+    component.voicePriority = Math.round(clamp(component.voicePriority, 50, 0, 255))
+    if (!['ImportSetting', 'Stream', 'Buffer'].includes(component.streamOverride)) component.streamOverride = 'ImportSetting'
+    component.customAttenuation = (Array.isArray(component.customAttenuation) ? component.customAttenuation : []).slice(0, 64).map(point => ({ distance: clamp(point?.distance, 0, 0, 1), gain: clamp(point?.gain, 1, 0, 1) })).sort((a, b) => a.distance - b.distance)
+    if (component.customAttenuation.length < 2) component.customAttenuation = [{ distance: 0, gain: 1 }, { distance: 1, gain: 0 }]
   } else if (component instanceof Canvas) {
     component.referenceSize = safeVector(component.referenceSize, { x: 1920, y: 1080 })
     component.referenceSize.x = clamp(component.referenceSize.x, 1920, 1, 100_000)
     component.referenceSize.y = clamp(component.referenceSize.y, 1080, 1, 100_000)
     component.sortingOrder = Math.round(clamp(component.sortingOrder, 0, -1_000_000, 1_000_000))
+    if (!component.safeAreaInsets || typeof component.safeAreaInsets !== 'object') component.safeAreaInsets = { left: 0, top: 0, right: 0, bottom: 0 }
+    for (const side of ['left', 'top', 'right', 'bottom'] as const) component.safeAreaInsets[side] = clamp(component.safeAreaInsets[side], 0, 0, 100_000)
+    component.themeAsset = typeof component.themeAsset === 'string' ? component.themeAsset.slice(0, 160) : null
   } else if (component instanceof RectTransform) {
     if (!['top-left', 'top', 'top-right', 'left', 'center', 'right', 'bottom-left', 'bottom', 'bottom-right', 'stretch'].includes(component.anchorPreset)) component.anchorPreset = 'center'
     component.pivot = safeVector(component.pivot, { x: .5, y: .5 }); component.position = safeVector(component.position, { x: 0, y: 0 }); component.size = safeVector(component.size, { x: 240, y: 80 })
@@ -616,9 +675,30 @@ function normalizeExtendedComponent(component: Component2D): void {
     component.size.x = clamp(component.size.x, 240, 0, 1e9); component.size.y = clamp(component.size.y, 80, 0, 1e9)
     if (!component.margins || typeof component.margins !== 'object') component.margins = { left: 0, top: 0, right: 0, bottom: 0 }
     for (const side of ['left', 'top', 'right', 'bottom'] as const) component.margins[side] = finiteNumber(component.margins[side])
+    if (!['Fixed', 'Fill', 'Content'].includes(component.horizontalPolicy)) component.horizontalPolicy = 'Fixed'
+    if (!['Fixed', 'Fill', 'Content'].includes(component.verticalPolicy)) component.verticalPolicy = 'Fixed'
+    component.minSize = safeVector(component.minSize, { x: 0, y: 0 }); component.maxSize = safeVector(component.maxSize, { x: 100_000, y: 100_000 })
+    component.minSize.x = clamp(component.minSize.x, 0, 0, 1e9); component.minSize.y = clamp(component.minSize.y, 0, 0, 1e9)
+    component.maxSize.x = clamp(component.maxSize.x, 100_000, component.minSize.x, 1e9); component.maxSize.y = clamp(component.maxSize.y, 100_000, component.minSize.y, 1e9)
+    component.aspectRatio = clamp(component.aspectRatio, 0, 0, 1e6)
+    if (!['None', 'Fit', 'WidthControlsHeight', 'HeightControlsWidth'].includes(component.aspectConstraint)) component.aspectConstraint = 'None'
+    component.breakpoints = (Array.isArray(component.breakpoints) ? component.breakpoints : []).slice(0, 32).map(point => ({ minWidth: clamp(point?.minWidth, 0, 0, 100_000), maxWidth: clamp(point?.maxWidth, 100_000, 0, 100_000), visible: point?.visible !== false, position: safeVector(point?.position, component.position), size: safeVector(point?.size, component.size) })).filter(point => point.maxWidth >= point.minWidth)
+    component.tabIndex = Math.round(clamp(component.tabIndex, 0, -1, 100_000)); component.remapBindingIndex = Math.round(clamp(component.remapBindingIndex, 0, 0, 31))
+    for (const key of ['focusUp', 'focusDown', 'focusLeft', 'focusRight'] as const) component[key] = typeof component[key] === 'string' && component[key] ? component[key]!.slice(0, 160) : null
+    component.accessibilityRole = typeof component.accessibilityRole === 'string' ? component.accessibilityRole.slice(0, 80) : ''
+    component.accessibilityLabel = typeof component.accessibilityLabel === 'string' ? component.accessibilityLabel.slice(0, 500) : ''
+    component.accessibilityDescription = typeof component.accessibilityDescription === 'string' ? component.accessibilityDescription.slice(0, 1000) : ''
+    component.remapAction = typeof component.remapAction === 'string' ? component.remapAction.slice(0, 80) : ''
   } else if (component instanceof Panel) {
     component.color = safeColor(component.color, { r: 35, g: 41, b: 52 })
     component.opacity = clamp(component.opacity, 92, 0, 100); component.cornerRadius = clamp(component.cornerRadius, 14, 0, 1e6)
+    if (!['None', 'Horizontal', 'Vertical', 'Grid'].includes(component.layout)) component.layout = 'None'
+    component.gap = clamp(component.gap, 8, 0, 1e6); component.columns = Math.round(clamp(component.columns, 2, 1, 64)); component.scrollSpeed = clamp(component.scrollSpeed, 42, 0, 1e6)
+    if (!component.padding || typeof component.padding !== 'object') component.padding = { left: 0, top: 0, right: 0, bottom: 0 }
+    for (const side of ['left', 'top', 'right', 'bottom'] as const) component.padding[side] = finiteNumber(component.padding[side])
+    component.scrollOffset = safeVector(component.scrollOffset, { x: 0, y: 0 }); component.contentSize = safeVector(component.contentSize, { x: 0, y: 0 })
+    component.styleClass = typeof component.styleClass === 'string' ? component.styleClass.slice(0, 80) : 'panel'
+    component.styleOverrides = safeStyleOverrides(component.styleOverrides)
   } else if (component instanceof UIImage) {
     component.tint = safeColor(component.tint, { r: 255, g: 255, b: 255 })
     component.spriteAsset = typeof component.spriteAsset === 'string' ? component.spriteAsset : null
@@ -630,22 +710,64 @@ function normalizeExtendedComponent(component: Component2D): void {
     component.fontFamily = typeof component.fontFamily === 'string' ? component.fontFamily.slice(0, 200) : 'Nunito Sans, sans-serif'
     component.fontSize = clamp(component.fontSize, 24, 1, 1000); component.fontWeight = Math.round(clamp(component.fontWeight, 600, 100, 900)); component.opacity = clamp(component.opacity, 100, 0, 100)
     if (!['left', 'right', 'center', 'start', 'end'].includes(component.align)) component.align = 'center'
+    component.localizationKey = typeof component.localizationKey === 'string' ? component.localizationKey.slice(0, 240) : ''
+    if (!component.localizationVariables || typeof component.localizationVariables !== 'object' || Array.isArray(component.localizationVariables)) component.localizationVariables = {}
   } else if (component instanceof Button) {
     component.normalColor = safeColor(component.normalColor, { r: 45, g: 106, b: 214 }); component.hoveredColor = safeColor(component.hoveredColor, { r: 61, g: 126, b: 235 }); component.pressedColor = safeColor(component.pressedColor, { r: 31, g: 82, b: 174 }); component.disabledColor = safeColor(component.disabledColor, { r: 90, g: 97, b: 110 })
     component.state = component.interactable ? 'Normal' : 'Disabled'
     component.onPressed = typeof component.onPressed === 'string' ? component.onPressed.slice(0, 80) : 'on_pressed'; component.onHoverEnter = typeof component.onHoverEnter === 'string' ? component.onHoverEnter.slice(0, 80) : 'on_hover_enter'; component.onHoverExit = typeof component.onHoverExit === 'string' ? component.onHoverExit.slice(0, 80) : 'on_hover_exit'
+    component.styleClass = typeof component.styleClass === 'string' ? component.styleClass.slice(0, 80) : 'button'
+    component.styleOverrides = safeStyleOverrides(component.styleOverrides)
   } else if (component instanceof Slider || component instanceof ProgressBar) {
     component.min = finiteNumber(component.min); component.max = Math.max(component.min + 1e-9, finiteNumber(component.max, 1)); component.value = clamp(component.value, .5, component.min, component.max)
     if (component instanceof ProgressBar) { component.fillColor = safeColor(component.fillColor, { r: 79, g: 150, b: 255 }); component.backgroundColor = safeColor(component.backgroundColor, { r: 31, g: 37, b: 47 }) }
+    component.styleClass = typeof component.styleClass === 'string' ? component.styleClass.slice(0, 80) : component instanceof ProgressBar ? 'progress' : 'slider'
+    component.styleOverrides = safeStyleOverrides(component.styleOverrides)
   } else if (component instanceof Checkbox) {
     component.label = typeof component.label === 'string' ? component.label.slice(0, 1000) : 'Checkbox'
+    component.localizationKey = typeof component.localizationKey === 'string' ? component.localizationKey.slice(0, 240) : ''
+    component.styleClass = typeof component.styleClass === 'string' ? component.styleClass.slice(0, 80) : 'checkbox'; component.styleOverrides = safeStyleOverrides(component.styleOverrides)
   } else if (component instanceof TextInput) {
     component.value = typeof component.value === 'string' ? component.value.slice(0, 100_000) : ''
     component.placeholder = typeof component.placeholder === 'string' ? component.placeholder.slice(0, 1000) : ''
     component.maxLength = Math.round(clamp(component.maxLength, 256, 0, 100_000)); component.value = component.value.slice(0, component.maxLength)
+    component.styleClass = typeof component.styleClass === 'string' ? component.styleClass.slice(0, 80) : 'input'; component.styleOverrides = safeStyleOverrides(component.styleOverrides)
   } else if (component instanceof TileMap2D) {
     normalizeTileMap(component)
     invalidateTileMap(component)
+  } else if (component instanceof CharacterBody2D) {
+    component.maxSlopeAngle = clamp(component.maxSlopeAngle, 45, 0, 89.9); component.stepHeight = clamp(component.stepHeight, .35, 0, 1e6)
+    component.floorSnap = clamp(component.floorSnap, .15, 0, 1e6); component.safeMargin = clamp(component.safeMargin, .001, 1e-9, 1e3)
+    component.maxSlides = Math.round(clamp(component.maxSlides, 4, 1, 32)); component.coyoteTime = clamp(component.coyoteTime, .12, 0, 60)
+    component.collisionMask = Math.round(clamp(component.collisionMask, 0xffff_ffff, 0, 0xffff_ffff)) >>> 0
+  } else if (component instanceof Area2D) {
+    component.size = safeVector(component.size, { x: 4, y: 4 }); component.size.x = clamp(component.size.x, 4, 1e-6, 1e9); component.size.y = clamp(component.size.y, 4, 1e-6, 1e9)
+    component.radius = clamp(component.radius, 2, 1e-6, 1e9); component.collisionMask = Math.round(clamp(component.collisionMask, 0xffff_ffff, 0, 0xffff_ffff)) >>> 0
+    if (!['Box', 'Circle'].includes(component.shape)) component.shape = 'Box'
+  } else if (component instanceof AreaEffector2D) {
+    component.priority = Math.round(clamp(component.priority, 0, -10_000, 10_000)); component.effectors = (Array.isArray(component.effectors) ? component.effectors : []).slice(0, 32).map((effect, index) => ({
+      id: typeof effect.id === 'string' ? effect.id.slice(0, 80) : `effect-${index}`, kind: ['Gravity', 'Wind', 'Drag', 'Buoyancy', 'Damage', 'Signal'].includes(effect.kind) ? effect.kind : 'Signal',
+      enabled: effect.enabled !== false, direction: safeVector(effect.direction, { x: 0, y: -1 }), strength: finiteNumber(effect.strength), drag: clamp(effect.drag, 0, 0, 1e9),
+      fluidDensity: clamp(effect.fluidDensity, 1, 0, 1e9), damagePerSecond: clamp(effect.damagePerSecond, 0, 0, 1e9), signal: typeof effect.signal === 'string' ? effect.signal.slice(0, 128) : 'area.effect'
+    }))
+  } else if (component instanceof NavigationRegion2D) {
+    component.polygon = (Array.isArray(component.polygon) ? component.polygon : []).slice(0, 4096).map(point => safeVector(point, { x: 0, y: 0 }))
+    component.cellSize = clamp(component.cellSize, .5, .01, 1e6); component.rebakeInterval = clamp(component.rebakeInterval, .5, .02, 60); component.navigationLayer = Math.round(clamp(component.navigationLayer, 1, 1, 32)); component.traversalCost = clamp(component.traversalCost, 1, .001, 1e6)
+    if (!['AStar', 'FlowField'].includes(component.algorithm)) component.algorithm = 'AStar'
+  } else if (component instanceof NavigationObstacle2D) {
+    component.size = safeVector(component.size, { x: 1, y: 1 }); component.radius = clamp(component.radius, .5, .001, 1e6); component.navigationLayer = Math.round(clamp(component.navigationLayer, 1, 1, 32)); if (!['Box', 'Circle'].includes(component.shape)) component.shape = 'Circle'
+  } else if (component instanceof NavigationAgent2D) {
+    component.targetPosition = safeVector(component.targetPosition, { x: 0, y: 0 }); component.targetEntityUuid = typeof component.targetEntityUuid === 'string' ? component.targetEntityUuid : null
+    component.speed = clamp(component.speed, 4, 0, 1e6); component.acceleration = clamp(component.acceleration, 20, 0, 1e9); component.radius = clamp(component.radius, .4, .001, 1e6); component.stoppingDistance = clamp(component.stoppingDistance, .1, 0, 1e6); component.avoidanceRadius = clamp(component.avoidanceRadius, 1.2, 0, 1e6); component.repathInterval = clamp(component.repathInterval, .25, .02, 60); component.navigationLayer = Math.round(clamp(component.navigationLayer, 1, 1, 32))
+  } else if (component instanceof BehaviorTree2D) {
+    component.treeAsset = typeof component.treeAsset === 'string' ? component.treeAsset : null; component.tickRate = clamp(component.tickRate, 10, 1, 1000)
+  } else if (component instanceof StateMachine2D) component.machineAsset = typeof component.machineAsset === 'string' ? component.machineAsset : null
+  else if (component instanceof WorldChunk2D) {
+    component.size = safeVector(component.size, { x: 64, y: 64 }); component.loadDistance = clamp(component.loadDistance, 96, 0, 1e9); component.unloadDistance = clamp(component.unloadDistance, 128, component.loadDistance, 1e9); component.preloadPriority = Math.round(clamp(component.preloadPriority, 0, -1e6, 1e6)); component.memoryEstimateMb = clamp(component.memoryEstimateMb, 8, .001, 1e6); component.sceneUuid = typeof component.sceneUuid === 'string' ? component.sceneUuid.slice(0, 128) : ''
+  } else if (component instanceof Portal2D) {
+    component.targetSceneUuid = typeof component.targetSceneUuid === 'string' ? component.targetSceneUuid.slice(0, 128) : ''; component.targetPortal = typeof component.targetPortal === 'string' ? component.targetPortal.slice(0, 128) : ''; component.triggerRadius = clamp(component.triggerRadius, 1, .001, 1e6)
+  } else if (component instanceof ObjectPool2D) {
+    component.prefabAsset = typeof component.prefabAsset === 'string' ? component.prefabAsset : null; component.prewarm = Math.round(clamp(component.prewarm, 8, 0, 100_000)); component.capacity = Math.round(clamp(component.capacity, 32, Math.max(1, component.prewarm), 100_000))
   } else if (component instanceof ParticleEmitter2D) {
     normalizeParticleEmitter(component)
   } else if (component instanceof Light2D) {
@@ -1292,6 +1414,7 @@ export function loadProject(jsonString: string, preserveRuntimeSession = false):
     useSaveProject()
     loadAssets(project.assets, project.assetFolders)
     loadPluginManifests(project.plugins)
+    loadPackageState(project.packages)
     const projectSettings = project.projectSettings && typeof project.projectSettings === 'object'
       ? project.projectSettings as Record<string, unknown>
       : {}
@@ -1299,6 +1422,11 @@ export function loadProject(jsonString: string, preserveRuntimeSession = false):
     Object.assign(physicsState.audioSettings, normalizeAudioSettings(projectSettings.audio))
     Object.assign(scriptProjectSettings, normalizeScriptSettings(projectSettings.scripting))
     loadRenderingSettings(projectSettings.rendering)
+    loadWorldGameplaySettings(projectSettings.world)
+    loadProductionSettings(projectSettings.production)
+    const presentation = projectSettings.presentation && typeof projectSettings.presentation === 'object' ? projectSettings.presentation as Record<string, unknown> : {}
+    loadLocalizationSettings(presentation.localization)
+    loadRuntimeAccessibilitySettings(presentation.accessibility)
     const sceneRecords = Array.isArray(project.scenes)
       ? project.scenes
       : [{ uuid: normalizeUuid(undefined), name: 'Main Scene', ...project }]
@@ -1373,7 +1501,8 @@ function reloadSceneManagerProject(preserveRuntimeSession = false): boolean {
     assets: serializeAssets(),
     assetFolders: serializeAssetFolders(),
     plugins: serializePluginManifests(),
-    projectSettings: { inputMap: normalizeInputMap(physicsState.inputMap), audio: normalizeAudioSettings(physicsState.audioSettings), build: serializeBuildSettings(), scripting: serializeScriptSettings(), rendering: serializeRenderingSettings() },
+    packages: serializePackageState(),
+    projectSettings: { inputMap: normalizeInputMap(physicsState.inputMap), audio: normalizeAudioSettings(physicsState.audioSettings), build: serializeBuildSettings(), scripting: serializeScriptSettings(), rendering: serializeRenderingSettings(), world: serializeWorldGameplaySettings(), presentation: { localization: serializeLocalizationSettings(), accessibility: serializeRuntimeAccessibilitySettings() }, production: serializeProductionSettings() },
     activeSceneUuid: sceneManager.activeSceneUuid,
     scenes: sceneManager.serialize()
   })
@@ -1481,6 +1610,7 @@ export function runtimeReloadScene(): boolean {
 export function toggleSimulation(state: boolean): void {
   if (state && !physicsState.simulationRunning && simulationSnapshot === null) {
     simulationSnapshot = getSceneJSON()
+    beginPhysicsMonitorSession()
   }
   physicsState.simulationRunning = state
   physicsState.playMode = state ? 'playing' : simulationSnapshot === null ? 'editing' : 'paused'
@@ -1510,7 +1640,7 @@ export function hasRuntimeSession(): boolean {
 }
 
 export async function saveProject(): Promise<boolean> {
-  const jsonString = getSceneJSON()
+  const jsonString = stableProjectText(getSceneJSON())
   try {
     if ('showSaveFilePicker' in window) {
       const handle = await (window as unknown as {
@@ -1524,6 +1654,7 @@ export async function saveProject(): Promise<boolean> {
       const writable = await handle.createWritable()
       await writable.write(jsonString)
       await writable.close()
+      markSourceBaseline(jsonString)
       return true
     }
   } catch (error) {
@@ -1538,6 +1669,7 @@ export async function saveProject(): Promise<boolean> {
   anchor.download = 'project.nova'
   anchor.click()
   window.setTimeout(() => URL.revokeObjectURL(url), 0)
+  markSourceBaseline(jsonString)
   return true
 }
 
@@ -1704,16 +1836,19 @@ export function pushHistory(label = 'Edit scene', mergeKey: string | null = null
   historyBaseline = stateString
   syncHistoryState()
   scheduleAutosave()
+  window.setTimeout(() => refreshSourceStatus(getSceneJSON()), 0)
 }
 
 export function undo(): void {
   if (!commandHistory.undo()) return
   syncHistoryState()
   editorState.statusText = t('undoSuccess')
+  window.setTimeout(() => refreshSourceStatus(getSceneJSON()), 0)
 }
 
 export function redo(): void {
   if (!commandHistory.redo()) return
   syncHistoryState()
   editorState.statusText = t('redoSuccess')
+  window.setTimeout(() => refreshSourceStatus(getSceneJSON()), 0)
 }

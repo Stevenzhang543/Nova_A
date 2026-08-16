@@ -27,6 +27,11 @@ import { pluginRuntime } from './plugins'
 import { analyzeScript } from '../editor/scriptLanguage'
 import { clearScriptDebugger, pauseScriptDebugger, scriptDebugState } from './scriptDebug'
 import { scriptProjectSettings } from './scriptSettings'
+import { beforeWorldPhysicsStep, beginWorldGameplay, canUseCoyoteTime, queueCharacterMotion, resetWorldGameplay } from './worldGameplay'
+import { acquirePooled, releasePooled } from './objectPool'
+import type { CharacterBody2D } from '../world/components'
+import { completeReplayFixedStep, deterministicRandom, replayFixedInput, resetDeterministicSeed } from './replay'
+import { beginProductionRuntime, stopProductionRuntime, updateProductionRuntime } from './productionRuntime'
 
 type LifecycleFunction = 'awake' | 'start' | 'fixed_update' | 'update' | 'late_update' | 'on_destroy' | 'on_timer' | 'on_task' | 'on_signal'
 
@@ -46,6 +51,7 @@ type ScriptCommand =
   | { type: 'setRotation'; radians: number }
   | { type: 'setScale'; x: number; y: number }
   | { type: 'setAngularVelocity'; radiansPerSecond: number }
+  | { type: 'moveCharacter'; x: number; y: number }
   | { type: 'animatorSetBool'; name: string; value: boolean }
   | { type: 'animatorSetFloat'; name: string; value: number }
   | { type: 'animatorSetInteger'; name: string; value: number }
@@ -55,6 +61,7 @@ type ScriptCommand =
   | { type: 'audioPause' }
   | { type: 'audioStop' }
   | { type: 'destroy' }
+  | { type: 'despawn' }
   | { type: 'instantiate'; prefab: string }
   | { type: 'loadScene'; scene: string }
   | { type: 'reloadScene' }
@@ -89,7 +96,7 @@ export interface RuntimeDiagnostics {
   lifecycleCalls: number
   activeTimers: number
   sceneSwitches: number
-  timings: { physicsMs: number; scriptsMs: number; animationMs: number; audioMs: number; assetsMs: number }
+  timings: { inputMs: number; physicsMs: number; scriptsMs: number; animationMs: number; audioMs: number; assetsMs: number }
 }
 
 const EMPTY_INPUT: InputSnapshot = {
@@ -138,7 +145,7 @@ fn on_hover_exit() {
 export class GameplayRuntime {
   readonly input = new InputManager()
   readonly time = new RuntimeTime()
-  readonly diagnostics: RuntimeDiagnostics = { scripts: 0, scriptErrors: 0, lifecycleCalls: 0, activeTimers: 0, sceneSwitches: 0, timings: { physicsMs: 0, scriptsMs: 0, animationMs: 0, audioMs: 0, assetsMs: 0 } }
+  readonly diagnostics: RuntimeDiagnostics = { scripts: 0, scriptErrors: 0, lifecycleCalls: 0, activeTimers: 0, sceneSwitches: 0, timings: { inputMs: 0, physicsMs: 0, scriptsMs: 0, animationMs: 0, audioMs: 0, assetsMs: 0 } }
   private scriptRuntime: WasmScriptRuntime | null = null
   private active = false
   private awakened = new Set<string>()
@@ -163,6 +170,7 @@ export class GameplayRuntime {
     this.active = true
     this.input.start()
     this.time.reset()
+    resetDeterministicSeed()
     this.awakened.clear()
     this.started.clear()
     this.fixedPressed = {}
@@ -189,6 +197,8 @@ export class GameplayRuntime {
     this.emitSignal('scene.started', { scene: sceneManager.activeSceneUuid }, '', 'runtime')
     useSaveProject()
     void pluginRuntime.start()
+    void beginWorldGameplay((name, payload, target, source) => this.emitSignal(name, payload, target, source))
+    beginProductionRuntime()
     this.ensureLifecycle()
     this.flushStructuralCommands()
     addEditorLog('Gameplay runtime started', 'Runtime')
@@ -204,14 +214,16 @@ export class GameplayRuntime {
       const audioMs = performance.now() - audioStarted
       particleRuntime.update(physicsState.world.entities, frameDelta, false)
       pluginRuntime.update(frameDelta)
-      Object.assign(this.diagnostics.timings, { physicsMs, scriptsMs: 0, animationMs: 0, audioMs, assetsMs: 0 })
+      Object.assign(this.diagnostics.timings, { inputMs: 0, physicsMs, scriptsMs: 0, animationMs: 0, audioMs, assetsMs: 0 })
       return
     }
     if (!this.active) this.beginSession()
     this.flushHotReloads()
     this.dispatchSignals()
     this.ensureLifecycle()
+    const inputStarted = performance.now()
     const frameInput = this.input.sample(physicsState.inputMap, viewport)
+    const inputMs = performance.now() - inputStarted
     this.inputSnapshot = frameInput
     this.latchFixedInput(frameInput)
     const expired = this.time.beginFrame(frameDelta, physicsState.globalSettings.tickRate, physicsState.globalSettings.timeScale)
@@ -233,9 +245,10 @@ export class GameplayRuntime {
       physicsState.globalSettings,
       fixedDelta => {
         const fixedScriptsStarted = performance.now()
-        this.inputSnapshot = firstFixedStep
+        const fixedInput = firstFixedStep
           ? { ...frameInput, pressed: { ...this.fixedPressed }, released: { ...this.fixedReleased } }
           : { ...frameInput, pressed: {}, released: {} }
+        this.inputSnapshot = replayFixedInput(fixedInput)
         if (firstFixedStep) {
           this.fixedPressed = {}
           this.fixedReleased = {}
@@ -244,10 +257,13 @@ export class GameplayRuntime {
         this.time.value.fixedDelta = fixedDelta
         this.runPhase('fixed_update')
         this.flushEntityCommands()
+        beforeWorldPhysicsStep(fixedDelta, this.time.value.elapsed, this.time.value.frame, (name, payload, target, source) => this.emitSignal(name, payload, target, source), scene => { this.pendingScene = { type: 'load', identifier: scene } })
         animationRuntime.update(physicsState.world.entities, fixedDelta)
         timelineRuntime.update(physicsState.world.entities, fixedDelta)
+        updateProductionRuntime(physicsState.world.entities, fixedDelta)
         fixedScriptsMs += performance.now() - fixedScriptsStarted
-      }
+      },
+      () => completeReplayFixedStep(physicsState.world.stateChecksum())
     ))
     const physicsAndFixedScriptsMs = performance.now() - physicsStarted
     scriptsMs += fixedScriptsMs
@@ -267,7 +283,7 @@ export class GameplayRuntime {
     const audioMs = performance.now() - audioStarted
     this.flushStructuralCommands()
     Object.assign(this.diagnostics.timings, {
-      physicsMs: Math.max(0, physicsAndFixedScriptsMs - fixedScriptsMs), scriptsMs, animationMs, audioMs, assetsMs: 0
+      inputMs, physicsMs: Math.max(0, physicsAndFixedScriptsMs - fixedScriptsMs), scriptsMs, animationMs, audioMs, assetsMs: 0
     })
     if (this.quitRequested) {
       this.quitRequested = false
@@ -280,7 +296,7 @@ export class GameplayRuntime {
   stepOnce(viewport?: DOMRect): void {
     if (!this.active) this.beginSession()
     this.ensureLifecycle()
-    this.inputSnapshot = this.input.sample(physicsState.inputMap, viewport)
+    this.inputSnapshot = replayFixedInput(this.input.sample(physicsState.inputMap, viewport))
     this.latchFixedInput(this.inputSnapshot)
     this.inputSnapshot = {
       ...this.inputSnapshot,
@@ -292,7 +308,10 @@ export class GameplayRuntime {
     this.time.beginFrame(this.time.value.fixedDelta, physicsState.globalSettings.tickRate, physicsState.globalSettings.timeScale)
     this.runPhase('fixed_update')
     this.flushEntityCommands()
+    beforeWorldPhysicsStep(this.time.value.fixedDelta, this.time.value.elapsed, this.time.value.frame, (name, payload, target, source) => this.emitSignal(name, payload, target, source), scene => { this.pendingScene = { type: 'load', identifier: scene } })
     Object.assign(physicsState.engineDiagnostics, physicsState.world.singleStep(physicsState.globalSettings))
+    completeReplayFixedStep(physicsState.world.stateChecksum())
+    updateProductionRuntime(physicsState.world.entities, this.time.value.fixedDelta)
     this.dispatchPhysicsEvents(physicsState.world.events)
     this.runPhase('update')
     this.runPhase('late_update')
@@ -316,6 +335,8 @@ export class GameplayRuntime {
     timelineRuntime.reset()
     timelineRuntime.onEvent = null
     particleRuntime.reset()
+    resetWorldGameplay()
+    stopProductionRuntime()
     pluginRuntime.stop()
     audioRuntime.stopAll()
     this.pendingScene = null
@@ -430,7 +451,7 @@ export class GameplayRuntime {
           const isolated = new WasmScriptRuntime()
           const context = {
             entity: 'test-entity', entityName: 'Script test', components: [], entities: {},
-            time: { delta: 0, fixedDelta: 1 / 60, elapsed: 0, scale: 1, frame: 0 }, input: EMPTY_INPUT,
+            time: { delta: 0, fixedDelta: 1 / 60, elapsed: 0, scale: 1, frame: 0 }, randomSeed: 1, input: EMPTY_INPUT,
             event: { name: 'test.run', source: 'Script Studio', payload: { test: symbol.name } },
             properties: {} as Record<string, number | string | boolean>, save: {},
             transform: { position: [0, 0], rotation: 0, scale: [1, 1] }, rigidBody: null
@@ -510,6 +531,7 @@ export class GameplayRuntime {
       components: entity.components.map(value => value.kind),
       entities: Object.fromEntries(physicsState.world.entities.map(value => [value.name, value.uuid])),
       time: { ...this.time.value },
+      randomSeed: Math.floor(deterministicRandom() * 0x1_0000_0000),
       input: this.inputSnapshot,
       contact,
       event,
@@ -521,11 +543,19 @@ export class GameplayRuntime {
         scale: [runtimeTransform.scale.x, runtimeTransform.scale.y]
       },
       rigidBody: entity.hasComponent('RigidBody2D') ? {
-        velocity: [entity.velocity.x, entity.velocity.y],
+        velocity: (() => { const character = entity.getComponent<CharacterBody2D>('CharacterBody2D'); return character ? [character.motionVelocity.x, character.motionVelocity.y] : [entity.velocity.x, entity.velocity.y] })(),
         angularVelocity: entity.angularVelocity,
         mass: entity.mass,
         bodyType: entity.isStatic ? 'Static' : entity.isKinematic ? 'Kinematic' : 'Dynamic'
-      } : null
+      } : null,
+      character: (() => {
+        const character = entity.getComponent<CharacterBody2D>('CharacterBody2D')
+        return character ? {
+          onFloor: character.onFloor, onWall: character.onWall, onCeiling: character.onCeiling,
+          canCoyoteJump: canUseCoyoteTime(entity), floorNormal: [character.floorNormal.x, character.floorNormal.y],
+          wallNormal: [character.wallNormal.x, character.wallNormal.y], platformVelocity: [character.platformVelocity.x, character.platformVelocity.y]
+        } : null
+      })()
     }
     if (!bypassBreakpoint && scriptProjectSettings.debuggerEnabled && scriptDebugState.enabled && !scriptDebugState.paused) {
       const fn = analyzeScript(source).functions[functionName]
@@ -573,6 +603,8 @@ export class GameplayRuntime {
       setWorldTransform(entity, { ...transform, scale: { x: finite(command.x), y: finite(command.y) } }, physicsState.world.entities)
     } else if (command.type === 'setAngularVelocity' && entity.hasComponent('RigidBody2D')) {
       entity.angularVelocity = finite(command.radiansPerSecond)
+    } else if (command.type === 'moveCharacter') {
+      queueCharacterMotion(entity, { x: finite(command.x), y: finite(command.y) })
     } else if (command.type === 'animatorSetBool') {
       const animator = entity.getComponent<Animator>('Animator'); if (animator) setAnimatorParameter(animator, command.name, command.value)
     } else if (command.type === 'animatorSetFloat') {
@@ -587,6 +619,7 @@ export class GameplayRuntime {
     else if (command.type === 'audioPause') audioRuntime.pause(entity)
     else if (command.type === 'audioStop') audioRuntime.stop(entity)
     else if (command.type === 'destroy') this.pendingDestroy.add(entity.id)
+    else if (command.type === 'despawn') { if (!releasePooled(entity)) this.pendingDestroy.add(entity.id) }
     else if (command.type === 'instantiate') {
       const transform = worldTransform(entity, physicsState.world.entities)
       this.pendingPrefabs.push({ reference: command.prefab, position: { ...transform.position } })
@@ -624,7 +657,7 @@ export class GameplayRuntime {
       for (const candidate of doomed) this.destroying.delete(candidate.uuid)
     }
     this.pendingDestroy.clear()
-    for (const request of this.pendingPrefabs) instantiatePrefab(request.reference, request.position, false)
+    for (const request of this.pendingPrefabs) acquirePooled(request.reference, request.position) ?? instantiatePrefab(request.reference, request.position, false)
     this.pendingPrefabs = []
     this.ensureLifecycle()
   }

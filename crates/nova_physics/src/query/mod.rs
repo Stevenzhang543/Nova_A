@@ -7,6 +7,22 @@ pub struct PhysicsQueryHit {
     pub distance: f64,
 }
 
+#[derive(Clone, Copy, Debug, Default, PartialEq, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CharacterMoveResult {
+    pub position: [f64; 2],
+    pub applied_motion: [f64; 2],
+    pub remaining_motion: [f64; 2],
+    pub floor_normal: [f64; 2],
+    pub wall_normal: [f64; 2],
+    pub ceiling_normal: [f64; 2],
+    pub platform_velocity: [f64; 2],
+    pub on_floor: bool,
+    pub on_wall: bool,
+    pub on_ceiling: bool,
+    pub slide_count: u32,
+}
+
 fn query_enabled(mask: u32, body: &Body) -> bool {
     mask & (1_u32 << body.layer) != 0
 }
@@ -215,6 +231,20 @@ impl PhysicsWorld {
     }
 
     pub fn shape_cast(&self, center: [f64; 2], size: [f64; 2], angle: f64, direction: [f64; 2], distance: f64, mask: u32) -> Option<PhysicsQueryHit> {
+        self.shape_cast_excluding(center, size, angle, direction, distance, mask, None)
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn shape_cast_excluding(
+        &self,
+        center: [f64; 2],
+        size: [f64; 2],
+        angle: f64,
+        direction: [f64; 2],
+        distance: f64,
+        mask: u32,
+        excluded_handle: Option<u32>,
+    ) -> Option<PhysicsQueryHit> {
         let start = Vec2::new(finite_or(center[0], 0.0), finite_or(center[1], 0.0));
         let direction = Vec2::new(finite_or(direction[0], 1.0), finite_or(direction[1], 0.0)).normalized_or(Vec2::new(1.0, 0.0));
         let distance = non_negative(distance, 0.0);
@@ -225,7 +255,13 @@ impl PhysicsWorld {
         let query_half_height = query_bounds.max_y.abs().max(query_bounds.min_y.abs());
         let mut best: Option<PhysicsQueryHit> = None;
         for (handle, body) in self.query_records() {
-            if !query_enabled(mask, &body) { continue; }
+            if Some(handle) == excluded_handle || !query_enabled(mask, &body) { continue; }
+            if body.one_way {
+                let allowed = rotate(body.one_way_normal, body.collider_angle())
+                    .normalized_or(Vec2::new(0.0, 1.0));
+                let starts_on_blocking_side = start.sub(body.collider_position()).dot(allowed) >= -POSITION_SLOP;
+                if direction.dot(allowed) >= -EPSILON || !starts_on_blocking_side { continue; }
+            }
             let target_bounds = body.shape.aabb(body.collider_position(), body.collider_angle());
             let expanded = Aabb {
                 min_x: target_bounds.min_x - query_half_width,
@@ -263,6 +299,126 @@ impl PhysicsWorld {
         }
         best
     }
+
+    #[allow(clippy::too_many_arguments)]
+    pub fn move_character_box(
+        &mut self,
+        handle: u32,
+        size: [f64; 2],
+        displacement: [f64; 2],
+        max_slope_angle: f64,
+        step_height: f64,
+        floor_snap: f64,
+        max_slides: u32,
+        safe_margin: f64,
+        mask: u32,
+    ) -> Result<CharacterMoveResult, &'static str> {
+        let Some(body_index) = self.body_index.get(&handle).copied() else {
+            return Err("character body handle does not exist");
+        };
+        let start = Vec2::new(
+            finite_or(self.bodies[body_index].values[2], 0.0),
+            finite_or(self.bodies[body_index].values[3], 0.0),
+        );
+        let angle = normalize_angle(self.bodies[body_index].values[14]);
+        let size = [
+            positive(size[0].abs(), MIN_DIMENSION),
+            positive(size[1].abs(), MIN_DIMENSION),
+        ];
+        let requested = Vec2::new(finite_or(displacement[0], 0.0), finite_or(displacement[1], 0.0));
+        let slope_cosine = finite_or(max_slope_angle, std::f64::consts::FRAC_PI_4)
+            .clamp(0.0, std::f64::consts::FRAC_PI_2)
+            .cos();
+        let step_height = non_negative(step_height, 0.0);
+        let floor_snap = non_negative(floor_snap, 0.0);
+        let margin = non_negative(safe_margin, 1.0e-5).max(1.0e-9);
+        let maximum_slides = max_slides.clamp(1, 32);
+        let mut result = CharacterMoveResult {
+            position: [start.x, start.y],
+            remaining_motion: [requested.x, requested.y],
+            ..CharacterMoveResult::default()
+        };
+        let mut position = start;
+        let mut remaining = requested;
+
+        for _ in 0..maximum_slides {
+            let distance = remaining.length();
+            if distance <= EPSILON { break; }
+            let direction = remaining.mul(1.0 / distance);
+            let hit = self.shape_cast_excluding(
+                [position.x, position.y], size, angle,
+                [direction.x, direction.y], distance + margin, mask, Some(handle),
+            );
+            let Some(hit) = hit else {
+                position = position.add(remaining);
+                remaining = Vec2::ZERO;
+                break;
+            };
+            let travel = (hit.distance - margin).clamp(0.0, distance);
+            position = position.add(direction.mul(travel));
+            let normal = Vec2::new(hit.normal[0], hit.normal[1]).normalized_or(direction.neg());
+            if normal.y >= slope_cosine {
+                result.on_floor = true;
+                result.floor_normal = [normal.x, normal.y];
+                if let Some(platform) = self.bodies.iter().find(|record| record.handle == hit.handle) {
+                    result.platform_velocity = [
+                        finite_or(platform.values[4], 0.0),
+                        finite_or(platform.values[5], 0.0),
+                    ];
+                }
+            } else if normal.y <= -slope_cosine {
+                result.on_ceiling = true;
+                result.ceiling_normal = [normal.x, normal.y];
+            } else {
+                result.on_wall = true;
+                result.wall_normal = [normal.x, normal.y];
+            }
+            result.slide_count = result.slide_count.saturating_add(1);
+
+            let untravelled = direction.mul((distance - travel).max(0.0));
+            if result.on_wall && step_height > EPSILON && direction.y.abs() < 0.5 {
+                let raised = position.add(Vec2::new(0.0, step_height));
+                let step_hit = self.shape_cast_excluding(
+                    [raised.x, raised.y], size, angle,
+                    [direction.x, direction.y], untravelled.length(), mask, Some(handle),
+                );
+                if step_hit.is_none() {
+                    position = raised.add(untravelled);
+                    remaining = Vec2::ZERO;
+                    break;
+                }
+            }
+            let into_surface = untravelled.dot(normal);
+            remaining = if into_surface < 0.0 {
+                untravelled.sub(normal.mul(into_surface))
+            } else {
+                untravelled
+            };
+            if remaining.length() <= margin { remaining = Vec2::ZERO; break; }
+        }
+
+        if floor_snap > EPSILON && !result.on_floor && requested.y <= EPSILON {
+            if let Some(hit) = self.shape_cast_excluding(
+                [position.x, position.y], size, angle, [0.0, -1.0], floor_snap + margin, mask, Some(handle),
+            ) {
+                let normal = Vec2::new(hit.normal[0], hit.normal[1]).normalized_or(Vec2::new(0.0, 1.0));
+                if normal.y >= slope_cosine {
+                    position.y -= (hit.distance - margin).clamp(0.0, floor_snap);
+                    result.on_floor = true;
+                    result.floor_normal = [normal.x, normal.y];
+                    if let Some(platform) = self.bodies.iter().find(|record| record.handle == hit.handle) {
+                        result.platform_velocity = [finite_or(platform.values[4], 0.0), finite_or(platform.values[5], 0.0)];
+                    }
+                }
+            }
+        }
+
+        self.set_transform(handle, position.x, position.y, angle)?;
+        result.position = [position.x, position.y];
+        result.applied_motion = [position.x - start.x, position.y - start.y];
+        result.remaining_motion = [remaining.x, remaining.y];
+        Ok(result)
+    }
 }
 
 #[cfg(test)]
@@ -292,5 +448,16 @@ mod query_tests {
         let cast = world.shape_cast([0.0, 0.0], [0.5, 0.5], 0.0, [1.0, 0.0], 10.0, 1).unwrap();
         assert_eq!(cast.handle, 10);
         assert!((cast.distance - 0.75).abs() < 1.0e-6);
+    }
+
+    #[test]
+    fn character_motion_uses_exact_units_and_excludes_its_own_collider() {
+        let mut world = PhysicsWorld::new();
+        world.create_body(1, 0, &box_record(0.0, 0.0, 0)).unwrap();
+        world.create_body(2, 1, &box_record(4.0, 0.0, 0)).unwrap();
+        let moved = world.move_character_box(1, [2.0, 2.0], [10.0, 0.0], std::f64::consts::FRAC_PI_4, 0.0, 0.0, 4, 1.0e-5, 1).unwrap();
+        assert!(moved.on_wall);
+        assert!((moved.position[0] - 2.0).abs() < 1.0e-4);
+        assert!((moved.applied_motion[0] - 2.0).abs() < 1.0e-4);
     }
 }

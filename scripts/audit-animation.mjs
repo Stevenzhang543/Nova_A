@@ -25,7 +25,7 @@ assert(state.includes('setOpenAnimationRecordingDocument') && panel.includes('se
 assert(components.includes('Skeleton2D') && components.includes('TimelinePlayer') && inspector.includes('timelineAsset') && inspector.includes('skinAsset'), 'new runtime components are not inspectable')
 for (const type of ['animationMask', 'rig', 'skin', 'timeline']) assert(assets.includes(`'${type}'`) && bottom.includes(`type: '${type}'`), `asset workflow missing: ${type}`)
 assert(animation.includes('reimportAnimationClip') && bottom.includes('trackMappings') && assets.includes('animationImport'), 'animation import/reimport mapping is incomplete')
-assert(format.includes('CURRENT_FORMAT_VERSION: u32 = 17') && format.includes('Skeleton2D') && format.includes('TimelinePlayer'), 'schema 17 component validation is not active')
+assert(format.includes('CURRENT_FORMAT_VERSION: u32 = 22') && format.includes('Skeleton2D') && format.includes('TimelinePlayer'), 'current schema component validation is not active')
 assert(pak.includes('excludedOptionalUuids') && pak.includes('usesRigging') && pak.includes('usesTimeline'), 'unused rig/timeline resources are not stripped from player packs')
 assert(components.includes('class TextInput') && bottom.includes('flex-wrap: wrap'), 'UI regression guard is incomplete')
 for (const locale of ['Object.assign(en', 'Object.assign(de', 'Object.assign(zh']) assert(i18n.split(locale).some(block => block.slice(0, 8_000).includes('animationWorkspace')), `${locale} lacks v2.4 translations`)

@@ -27,6 +27,12 @@ export default defineConfig(async () => ({
         editor: resolve(projectRoot, 'index.html'),
         player: resolve(projectRoot, 'player.html'),
         manual: resolve(projectRoot, 'manual/index.html')
+      },
+      output: {
+        manualChunks(id) {
+          if (id.includes('/nova_core/pkg/') || id.includes('\\nova_core\\pkg\\')) return 'nova-runtime'
+          if (id.includes('/node_modules/.pnpm/vue@') || id.includes('/node_modules/.pnpm/@vue+') || id.includes('\\node_modules\\.pnpm\\vue@') || id.includes('\\node_modules\\.pnpm\\@vue+')) return 'vue-runtime'
+        }
       }
     }
   },

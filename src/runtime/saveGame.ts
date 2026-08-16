@@ -1,5 +1,6 @@
 import { reactive } from 'vue'
 import { projectSessionState } from '../projects/projectSession'
+import { productionSettings } from './production'
 
 export type SaveScalar = boolean | number | string | null
 export type SaveValue = SaveScalar | SaveValue[] | { [key: string]: SaveValue }
@@ -25,6 +26,44 @@ function safeName(value: string, fallback: string): string {
 
 function storageKey(projectId: string, slot: string): string {
   return `${SAVE_PREFIX}:${safeName(projectId, 'project')}:${safeName(slot, 'slot1')}`
+}
+
+interface SaveEnvelope {
+  format: 'nova-save'
+  version: number
+  values: Record<string, SaveValue>
+}
+
+function saveEnvelope(value: unknown): { version: number; values: unknown } {
+  if (value && typeof value === 'object' && !Array.isArray(value)) {
+    const source = value as Record<string, unknown>
+    if (source.format === 'nova-save' && Number.isInteger(source.version) && source.values && typeof source.values === 'object' && !Array.isArray(source.values)) {
+      return { version: Math.max(1, Math.min(65_535, Number(source.version))), values: source.values }
+    }
+  }
+  return { version: 1, values: value }
+}
+
+/** Applies the project's ordered, bounded top-level save-data migrations. */
+export function migrateSaveData(value: unknown, storedVersion = 1): SaveEnvelope {
+  const normalized = normalizeSaveValue(value)
+  if (!normalized || Array.isArray(normalized) || typeof normalized !== 'object') throw new Error('The save slot root must be a map.')
+  const values = { ...(normalized as Record<string, SaveValue>) }
+  const targetVersion = productionSettings.data.saveSchemaVersion
+  let version = Math.max(1, Math.min(65_535, Math.round(storedVersion)))
+  if (version > targetVersion) throw new Error(`Save data schema ${version} is newer than supported schema ${targetVersion}.`)
+  while (version < targetVersion) {
+    const migration = productionSettings.data.saveMigrations.find(item => item.fromVersion === version)
+    if (!migration) throw new Error(`Save data requires a migration from schema ${version} to ${targetVersion}.`)
+    for (const [from, to] of Object.entries(migration.renames)) {
+      if (Object.prototype.hasOwnProperty.call(values, from) && !Object.prototype.hasOwnProperty.call(values, to)) values[to] = values[from]
+      delete values[from]
+    }
+    for (const [key, fallback] of Object.entries(migration.defaults)) if (!Object.prototype.hasOwnProperty.call(values, key)) values[key] = normalizeSaveValue(fallback)
+    for (const key of migration.remove) delete values[key]
+    version = migration.toVersion
+  }
+  return { format: 'nova-save', version, values }
 }
 
 export function normalizeSaveValue(value: unknown, depth = 0): SaveValue {
@@ -63,9 +102,8 @@ export function loadSaveSlot(slot: string): boolean {
   try {
     const source = typeof localStorage === 'undefined' ? null : localStorage.getItem(storageKey(projectId, safeSlot))
     const parsed = source ? JSON.parse(source) : {}
-    const normalized = normalizeSaveValue(parsed)
-    if (!normalized || Array.isArray(normalized) || typeof normalized !== 'object') throw new Error('The save slot root must be a map.')
-    saveGameState.values = normalized as Record<string, SaveValue>
+    const envelope = source ? saveEnvelope(parsed) : { version: productionSettings.data.saveSchemaVersion, values: {} }
+    saveGameState.values = migrateSaveData(envelope.values, envelope.version).values
     saveGameState.dirty = false
     return source !== null
   } catch (error) {
@@ -104,7 +142,7 @@ export function commitSaveSlot(slot = saveGameState.slot): boolean {
   saveGameState.slot = safeName(slot, 'slot1')
   saveGameState.error = ''
   try {
-    const source = JSON.stringify(normalizeSaveValue(saveGameState.values))
+    const source = JSON.stringify(migrateSaveData(saveGameState.values, productionSettings.data.saveSchemaVersion))
     if (new Blob([source]).size > MAX_SAVE_BYTES) throw new Error(`Save data exceeds the ${MAX_SAVE_BYTES} byte limit.`)
     if (typeof localStorage === 'undefined') throw new Error('Persistent storage is unavailable in this runtime.')
     localStorage.setItem(storageKey(saveGameState.projectId, saveGameState.slot), source)

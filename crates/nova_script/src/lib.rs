@@ -100,6 +100,21 @@ pub struct RigidBodySnapshot {
 
 #[derive(Clone, Debug, Default, Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub struct CharacterSnapshot {
+    pub on_floor: bool,
+    pub on_wall: bool,
+    pub on_ceiling: bool,
+    pub can_coyote_jump: bool,
+    #[serde(default)]
+    pub floor_normal: [f64; 2],
+    #[serde(default)]
+    pub wall_normal: [f64; 2],
+    #[serde(default)]
+    pub platform_velocity: [f64; 2],
+}
+
+#[derive(Clone, Debug, Default, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ScriptContext {
     pub entity: String,
     #[serde(default)]
@@ -110,6 +125,8 @@ pub struct ScriptContext {
     pub entities: BTreeMap<String, String>,
     #[serde(default)]
     pub time: TimeSnapshot,
+    #[serde(default)]
+    pub random_seed: u64,
     #[serde(default)]
     pub input: InputSnapshot,
     #[serde(default)]
@@ -124,6 +141,8 @@ pub struct ScriptContext {
     pub transform: TransformSnapshot,
     #[serde(default)]
     pub rigid_body: Option<RigidBodySnapshot>,
+    #[serde(default)]
+    pub character: Option<CharacterSnapshot>,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize)]
@@ -155,6 +174,10 @@ pub enum ScriptCommand {
     SetAngularVelocity {
         radians_per_second: f64,
     },
+    MoveCharacter {
+        x: f64,
+        y: f64,
+    },
     AnimatorSetBool {
         name: String,
         value: bool,
@@ -177,6 +200,7 @@ pub enum ScriptCommand {
     AudioPause,
     AudioStop,
     Destroy,
+    Despawn,
     Instantiate {
         prefab: String,
     },
@@ -430,10 +454,34 @@ fn engine_with_host(context: &ScriptContext, output: Rc<RefCell<HostOutput>>) ->
     register_entity_api(&mut engine, context);
 
     register_time_api(&mut engine, context);
+    let random_state = Rc::new(RefCell::new(if context.random_seed == 0 {
+        0x6d2b79f5
+    } else {
+        context.random_seed
+    }));
+    let state = Rc::clone(&random_state);
+    engine.register_fn("random", move || {
+        let mut value = state.borrow_mut();
+        *value ^= *value << 13;
+        *value ^= *value >> 7;
+        *value ^= *value << 17;
+        (*value as f64) / (u64::MAX as f64 + 1.0)
+    });
+    let state = Rc::clone(&random_state);
+    engine.register_fn("random_range", move |minimum: FLOAT, maximum: FLOAT| {
+        if !minimum.is_finite() || !maximum.is_finite() || maximum <= minimum {
+            return minimum;
+        }
+        let mut value = state.borrow_mut();
+        *value ^= *value << 13;
+        *value ^= *value >> 7;
+        *value ^= *value << 17;
+        minimum + (maximum - minimum) * ((*value as f64) / (u64::MAX as f64 + 1.0))
+    });
     register_input_api(&mut engine, context);
     register_property_api(&mut engine, context);
     register_save_api(&mut engine, context, Rc::clone(&output));
-    register_command_api(&mut engine, output);
+    register_command_api(&mut engine, context, output);
     engine
 }
 
@@ -736,7 +784,11 @@ fn register_save_api(
     });
 }
 
-fn register_command_api(engine: &mut Engine, output: Rc<RefCell<HostOutput>>) {
+fn register_command_api(
+    engine: &mut Engine,
+    context: &ScriptContext,
+    output: Rc<RefCell<HostOutput>>,
+) {
     let assertions = Rc::clone(&output);
     engine.register_fn("expect", move |condition: bool, message: &str| {
         if !condition {
@@ -798,6 +850,46 @@ fn register_command_api(engine: &mut Engine, output: Rc<RefCell<HostOutput>>) {
             .borrow_mut()
             .commands
             .push(ScriptCommand::SetAngularVelocity { radians_per_second });
+    });
+
+    let character = context.character.clone().unwrap_or_default();
+    let snapshot = character.clone();
+    engine.register_fn("character_is_on_floor", move || snapshot.on_floor);
+    let snapshot = character.clone();
+    engine.register_fn("character_is_on_wall", move || snapshot.on_wall);
+    let snapshot = character.clone();
+    engine.register_fn("character_is_on_ceiling", move || snapshot.on_ceiling);
+    let snapshot = character.clone();
+    engine.register_fn("character_can_coyote_jump", move || {
+        snapshot.can_coyote_jump
+    });
+    let snapshot = character.clone();
+    engine.register_fn("can_coyote_jump", move || snapshot.can_coyote_jump);
+    let snapshot = character.clone();
+    engine.register_fn("character_floor_normal_x", move || snapshot.floor_normal[0]);
+    let snapshot = character.clone();
+    engine.register_fn("character_floor_normal_y", move || snapshot.floor_normal[1]);
+    let snapshot = character.clone();
+    engine.register_fn("character_floor_normal", move || {
+        vector_map(snapshot.floor_normal)
+    });
+    let snapshot = character.clone();
+    engine.register_fn("character_platform_velocity_x", move || {
+        snapshot.platform_velocity[0]
+    });
+    let snapshot = character.clone();
+    engine.register_fn("character_platform_velocity", move || {
+        vector_map(snapshot.platform_velocity)
+    });
+    engine.register_fn("character_platform_velocity_y", move || {
+        character.platform_velocity[1]
+    });
+    let commands = Rc::clone(&output);
+    engine.register_fn("move_character", move |x: FLOAT, y: FLOAT| {
+        commands
+            .borrow_mut()
+            .commands
+            .push(ScriptCommand::MoveCharacter { x, y });
     });
     let commands = Rc::clone(&output);
     engine.register_fn("animator_set_bool", move |name: &str, value: bool| {
@@ -871,6 +963,11 @@ fn register_command_api(engine: &mut Engine, output: Rc<RefCell<HostOutput>>) {
     let commands = Rc::clone(&output);
     engine.register_fn("destroy", move || {
         commands.borrow_mut().commands.push(ScriptCommand::Destroy)
+    });
+
+    let commands = Rc::clone(&output);
+    engine.register_fn("despawn", move || {
+        commands.borrow_mut().commands.push(ScriptCommand::Despawn)
     });
     let commands = Rc::clone(&output);
     engine.register_fn("instantiate", move |prefab: &str| {
@@ -1440,5 +1537,28 @@ mod tests {
             .execute(source, "test_expectation", context())
             .unwrap();
         assert!(result.logs.is_empty());
+    }
+
+    #[test]
+    fn seeded_random_numbers_are_repeatable_and_bounded() {
+        let source = r#"
+            fn update(dt) {
+                set_position(random(), random_range(-4.0, 9.0));
+            }
+        "#;
+        let mut seeded = context();
+        seeded.random_seed = 0x1234_5678_9abc_def0;
+        let first = ScriptRuntime::new()
+            .execute(source, "update", seeded.clone())
+            .unwrap();
+        let second = ScriptRuntime::new()
+            .execute(source, "update", seeded)
+            .unwrap();
+        assert_eq!(first.commands, second.commands);
+        assert!(matches!(
+            first.commands.first(),
+            Some(ScriptCommand::SetPosition { x, y })
+                if (0.0..1.0).contains(x) && (-4.0..9.0).contains(y)
+        ));
     }
 }

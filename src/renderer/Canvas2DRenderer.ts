@@ -58,6 +58,10 @@ export class Canvas2DRenderer implements Renderer2D {
     this.cameraIndex = -1
     Object.assign(this.stats, { drawCalls: 0, batches: 0, triangles: 0, sprites: 0, shapes: 0, text: 0, textures: 0, gpuMs: null, passes: 1, renderTargets: 0, overdraw: 0 })
     this.context.setTransform(options.pixelRatio, 0, 0, options.pixelRatio, 0, 0)
+    this.context.imageSmoothingEnabled = true
+    this.context.imageSmoothingQuality = 'high'
+    this.context.lineCap = 'round'
+    this.context.lineJoin = 'round'
     this.context.fillStyle = cssColor(options.clearColor)
     this.context.fillRect(0, 0, options.width, options.height)
   }

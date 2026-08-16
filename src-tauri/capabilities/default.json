@@ -10,6 +10,9 @@
       "allow": [
         {
           "url": "https://github.com/Stevenzhang543/Nova_A/"
+        },
+        {
+          "url": "https://github.com/Stevenzhang543/Nova_A/security"
         }
       ]
     }

@@ -41,9 +41,9 @@
   --radius-sm: 7px;
   --radius-md: 12px;
   --radius-lg: 18px;
-  --font-xs: 11px;
-  --font-sm: 12px;
-  --font-md: 14px;
+  --font-xs: 12px;
+  --font-sm: 13px;
+  --font-md: 15px;
 }
 
 :root[data-theme='light'] {
@@ -141,8 +141,11 @@ body,
   height: 100vh;
   overflow: hidden !important;
   font-family: "Segoe UI Variable Text", "Segoe UI Variable", Aptos, ui-rounded, -apple-system, BlinkMacSystemFont, "Noto Sans SC", "Microsoft YaHei UI", sans-serif;
-  font-size: calc(15px * var(--ui-scale));
+  font-size: calc(16px * var(--ui-scale));
   font-synthesis: none;
+  font-kerning: normal;
+  font-optical-sizing: auto;
+  font-feature-settings: "kern" 1, "liga" 1, "calt" 1;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -173,7 +176,7 @@ input[type='number'],
 input[type='text'],
 select,
 textarea {
-  min-height: 32px;
+  min-height: 34px;
   color: var(--text-primary);
   background: var(--input-bg);
   border: 1px solid var(--border-subtle);

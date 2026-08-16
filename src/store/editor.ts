@@ -7,7 +7,7 @@ import { scriptProjectSettings } from '../runtime/scriptSettings'
 
 export type EditorPage = 'scene' | 'game' | 'script' | 'settings'
 export type EditorWorkspace = 'design' | 'script' | 'animation' | 'interface' | 'debug'
-export type BottomPanelTab = 'assets' | 'console' | 'animation' | 'tilemap' | 'profiler' | 'rendering' | 'project' | 'build'
+export type BottomPanelTab = 'assets' | 'packages' | 'console' | 'animation' | 'tilemap' | 'world' | 'presentation' | 'profiler' | 'rendering' | 'project' | 'build'
 export type InspectorCategory = 'all' | 'general' | 'transform' | 'render' | 'physics' | 'gameplay' | 'ui'
 type ContextMenuType = 'sidebar-entity' | 'layer' | 'grid-entity' | 'none'
 export type EditorLogLevel = 'trace' | 'debug' | 'info' | 'warning' | 'error' | 'fatal'

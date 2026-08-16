@@ -44,7 +44,18 @@ export const STABLE_COMPONENTS: readonly ComponentDescriptor[] = [
   { kind: 'ProgressBar', category: 'UI', unique: true, summary: 'Read-only normalized progress display.' },
   { kind: 'Checkbox', category: 'UI', unique: true, summary: 'Boolean UI control.' },
   { kind: 'TextInput', category: 'UI', unique: true, summary: 'Native text-entry control with IME support.' },
-  { kind: 'TileMap2D', category: 'World', unique: true, summary: 'Chunked tile layer with optional collision.' }
+  { kind: 'TileMap2D', category: 'World', unique: true, summary: 'Chunked tile layers with collision, navigation, and occluder baking.' },
+  { kind: 'CharacterBody2D', category: 'Gameplay', unique: true, summary: 'Exact-unit slope, step, platform, and coyote-time character motion.' },
+  { kind: 'Area2D', category: 'Physics', unique: true, summary: 'Bounded overlap region for gameplay effectors and signals.' },
+  { kind: 'AreaEffector2D', category: 'Gameplay', unique: true, summary: 'Gravity, wind, drag, buoyancy, damage, and signal effects.' },
+  { kind: 'NavigationRegion2D', category: 'World', unique: true, summary: 'Optional polygon/grid navigation surface with dynamic rebaking.' },
+  { kind: 'NavigationObstacle2D', category: 'World', unique: true, summary: 'Static or dynamic navigation and avoidance obstacle.' },
+  { kind: 'NavigationAgent2D', category: 'Gameplay', unique: true, summary: 'A*, flow-field, smoothing, and local-avoidance path follower.' },
+  { kind: 'BehaviorTree2D', category: 'Gameplay', unique: true, summary: 'Optional behavior-tree asset runner.' },
+  { kind: 'StateMachine2D', category: 'Gameplay', unique: true, summary: 'Optional hierarchical gameplay state-machine runner.' },
+  { kind: 'WorldChunk2D', category: 'World', unique: true, summary: 'Distance-streamed world partition with explicit memory budget.' },
+  { kind: 'Portal2D', category: 'World', unique: true, summary: 'Scene portal with preload and destination metadata.' },
+  { kind: 'ObjectPool2D', category: 'Gameplay', unique: true, summary: 'Bounded prefab pool with spawn and despawn lifecycle events.' }
 ] as const
 
 export const STABLE_COMPONENT_KINDS = STABLE_COMPONENTS.map(component => component.kind) as readonly ComponentKind[]

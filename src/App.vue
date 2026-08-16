@@ -3,6 +3,9 @@
   <EditorLayout v-else-if="mode === 'editor'" />
   <PlayerApp v-else-if="mode === 'player'" />
   <div v-else class="app-loading">Nova_A</div>
+  <ManualViewer />
+  <StudioStatusDialog />
+  <ErrorRecovery />
 </template>
 
 <script setup lang="ts">
@@ -10,6 +13,9 @@ import { onMounted, ref } from 'vue'
 import EditorLayout from './layout/EditorLayout.vue'
 import PlayerApp from './PlayerApp.vue'
 import ProjectManager from './components/ProjectManager.vue'
+import ManualViewer from './components/ManualViewer.vue'
+import StudioStatusDialog from './components/StudioStatusDialog.vue'
+import ErrorRecovery from './components/ErrorRecovery.vue'
 import { projectManagerState as projectManager } from './projects/projectManager'
 
 const mode = ref<'loading' | 'editor' | 'player'>('loading')

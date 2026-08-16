@@ -1,4 +1,4 @@
-# Nova_A 2.4 – Vollständiges Handbuch
+# Nova_A 3.0.0 – Vollständiges Handbuch
 
 Nova_A ist eine quelloffene 2D-Spielengine mit Editor. Dieses Handbuch erklärt den vollständigen Weg vom Projekt bis zum eigenständigen Player. Eine Welteinheit entspricht einer Rastereinheit; physikalische Angaben verwenden die angezeigten SI-Einheiten.
 
@@ -24,6 +24,9 @@ Nova_A ist eine quelloffene 2D-Spielengine mit Editor. Dieses Handbuch erklärt 
 18. Migration
 19. Drei Tutorials
 20. Kürzel und Fehlerbehebung
+21. Asset-Pipeline, Pakete, Plugin API 2 und Physikmonitor
+22. Welten, Navigation und Gameplay
+23. Responsive UI, Themes, Lokalisierung, Audio und Barrierefreiheit
 
 ## 1. Erste Schritte
 
@@ -75,7 +78,7 @@ Vorlagen:
 - Raster schaltet nur parallele Rasterlinien. X-, Y- und alle Achsen verändern das Raster nicht.
 - Kamera zurücksetzen stellt Schwenken/Zoom des Editors zurück.
 - Konsole, Profiler, Projekt und Build-Einstellungen öffnen das jeweilige untere Werkzeug.
-- Hilfe öffnet Handbuch oder GitHub; das Versionsfeld zeigt 2.4.0.
+- Hilfe öffnet das Handbuch innerhalb der App oder GitHub; das Versionsfeld zeigt 3.0.0.
 
 ### Arbeitsbereiche, Panels und Befehlspalette
 
@@ -248,7 +251,7 @@ Game-Name, Windows/Linux/macOS/Web, x86_64, geordnete Szenen, Startszene, Develo
 
 ## 18. Migration
 
-**Nova_A Project Format 2**, Schema 17, unterstützt Legacy ab Schema 5. Dokumente enthalten Format/Major, Schema, Engineversion, Kompatibilität und Projekt-UUID. Schema 17 validiert `Skeleton2D`-Rig/Skin- und `TimelinePlayer`-Referenzen und erhält unbekannte Asset-Felder. Geordnete Migrationen erhalten IDs, Komponenten, Hierarchie, Szenen, Assets, Prefabs, Eingabe, Audio, Tilemaps, Partikel, Gelenke, Build- und Renderingwerte. Neuere unbekannte Formate werden verständlich abgelehnt.
+**Nova_A Project Format 2**, Schema 22, unterstützt Legacy ab Schema 5. Dokumente enthalten Format/Major, Schema, Engineversion, Kompatibilität und Projekt-UUID. Schema 22 validiert Plattform-/Auslieferungseinstellungen und erhält Produktion, Präsentation, Audio, Welt, Rig/Skin, Timeline sowie unbekannte Asset-Daten. Geordnete Migrationen erhalten IDs, Komponenten, Hierarchie, Szenen, Assets, Prefabs, Eingabe, Audio, Tilemaps, Partikel, Gelenke, Build- und Renderingwerte. Neuere unbekannte Formate werden verständlich abgelehnt.
 
 Vor Migration Backup/Commit erstellen. Danach Assets, Skripte, Ebenen, Szenen und Buildreihenfolge prüfen und als Format 2 speichern. Künftige Schemaänderungen benötigen Migrationen.
 
@@ -277,4 +280,100 @@ Release-Audit: jede Vorlage erstellen/importieren, speichern/neu öffnen, Play/P
 
 Der Arbeitsbereich **Skript** öffnet jetzt einen eigenen Vollbild-Editor. Links befinden sich Projektsuche und Dateien, oben Tabs, in der Mitte Rhai-Quelltext mit Zeilen, Haltepunkten, Suchen/Ersetzen, Status, Vervollständigung, Signaturhilfe und Definitionen. Rechts stehen Diagnose, Symbole, Module, Debugger, Tests, Signale und die aus einem gemeinsamen Katalog erzeugte Engine-API. F2 benennt ein Symbol erst nach Bestätigung und erfolgreicher Kompilierung aller betroffenen Module projektweit um.
 
-`use "Movement.rhai";` importiert schreibgeschützte Projektmodule; fehlende und zyklische Abhängigkeiten werden abgelehnt. Gültiges Speichern ersetzt das kompilierte Programm nur an einer sicheren Frame-Grenze; bei einem Fehler läuft die vorherige gültige Version weiter. Entwicklungssitzungen bieten Continue/Step, Stack, Locals und sichere Watches. `test_*` läuft isoliert und `expect` meldet Fehler. Getypte Handles liefern `valid/kind/id/error`. `task_wait` wird mit Objekt/Szene abgebrochen. `signal_emit` erreicht `on_signal`; Physik, UI, Animation und Szenenlebenszyklus benutzen dieselbe begrenzte Warteschlange. Format 2 Schema 17 speichert die Metadaten; Release-Builds entfernen Debugdaten.
+`use "Movement.rhai";` importiert schreibgeschützte Projektmodule; fehlende und zyklische Abhängigkeiten werden abgelehnt. Gültiges Speichern ersetzt das kompilierte Programm nur an einer sicheren Frame-Grenze; bei einem Fehler läuft die vorherige gültige Version weiter. Entwicklungssitzungen bieten Continue/Step, Stack, Locals und sichere Watches. `test_*` läuft isoliert und `expect` meldet Fehler. Getypte Handles liefern `valid/kind/id/error`. `task_wait` wird mit Objekt/Szene abgebrochen. `signal_emit` erreicht `on_signal`; Physik, UI, Animation und Szenenlebenszyklus benutzen dieselbe begrenzte Warteschlange. Format 2 Schema 22 speichert die Metadaten; Release-Builds entfernen Debugdaten.
+
+
+## 21. Nova_A 2.5: Asset-Pipeline, Pakete, Plugin API 2 und Physikmonitor
+
+### Asset-Import und Cache
+
+Im unteren Panel **Assets** öffnen. **Assets importieren** unterstützt Bilder, Audio, Schriften, Szenen, Prefabs, Rhai-Skripte, Materialien, Animationen/Controller/Masken, Rigs/Skins/Timelines, TileSets, Atlanten, Shader und Lokalisierungsdateien. Jeder Auftrag zeigt Warteschlange, Lesen, Verarbeitung, Cache-Schreiben, Fertig, Abgebrochen oder Fehlgeschlagen; Abbrechen stoppt Warteschlange, Stream-Lesen und Hashing. Der Schlüssel enthält SHA-256 der Quelldaten, Importer-Version, Zielplattform und normalisierte Einstellungen. Ein identischer Import zeigt **Artefakt aus Cache**. Neuimport behält die GUID; bei Fehlern bleibt das letzte gültige Artefakt aktiv.
+
+Die Auswahl zeigt Vorschau und typspezifische Einstellungen. Bilder bieten Filterung, Regionen, Atlas, Farbraum, Pixel pro Einheit, Pivot, Kompression und Plattformvarianten. Audio bietet Vorschau, Normalisierung, Streaming und Abtastrate. Schriften zeigen eine Vorschau. Skripte zeigen UTF-8/Modul-Metadaten und öffnen das Skriptstudio. Atlas-, Tile-, Shader-, Animations- und Lokalisierungsressourcen besitzen eigene Einstellungen.
+
+**Ungenutzte Assets** durchsucht Projekt- und Asset-Referenzen. **Fehlende Referenzen** meldet unbekannte `asset://`-GUIDs. Referenzen und Build nennt Besitzer und Aufnahmegrund. Verschieben/Umbenennen repariert Pfade; Löschen nutzt den Nova_A-Dialog und bereinigt bekannte Referenzen.
+
+### Pakete und Plugin API 2
+
+**Pakete** im unteren Panel oder in der Befehlspalette öffnen. Ansichten trennen Installiert, Projekt, Updates, Inkompatibel und Deaktiviert. JSON-Manifeste können lokale, Git- oder Registry-Quellen beschreiben. Nova_A prüft Reverse-Domain-ID, SemVer, Engine-Bereich, Abhängigkeiten, Quelle, Hash und Lockdatei. Ein neueres Manifest wird als Update zwischengespeichert; vor **Update anwenden** den Bericht prüfen. Bei abhängigen Paketen wird die Deinstallation blockiert.
+
+Plugin API 2 deklariert Editorbefehle, Menüs, Panels, Importer, Asset-Editoren, Komponenten, Inspektoren, Gizmos, Einstellungen, Build-Hooks, Runtime-Systeme und Ereignisse. Jeder Beitrag braucht seine Berechtigung. WASM-Plugins besitzen 16-MB- und Aufrufzeitgrenzen; SHA-256 und optionale Ed25519-Signaturen werden geprüft. Native Erweiterungen werden nie heruntergeladen oder ausgeführt. Pakete lassen sich pro Projekt deaktivieren; der Sicherheitsmodus überspringt Drittanbieter-Code. `?safe-mode=1` startet einmal sicher. API-1-Projekte mit Log/Ereignis-Berechtigung bleiben kompatibel.
+
+### Physikmonitor und Kollisionsverlauf
+
+Play oder Pause drücken. Der rechte Physikmonitor zeigt Weltposition, Richtung, Betrag/Geschwindigkeit, Beschleunigung, Kraft, Winkelgeschwindigkeit, kinetische Energie, Kontakte und Aktiv/Ruhezustand aus der autoritativen Rust-Runtime. Der Kollisionsverlauf zeigt Objektpaare, Fixed-Step/Zeit, Punkt, relative Geschwindigkeit vorher/nachher, Richtungsänderung, Normal-/Tangentialimpuls und Normal-/Reibungskraft. Einfrieren hält den Stand, Leeren entfernt nur den Verlauf, Suche filtert beide Ansichten und Einklappen gibt Platz zurück. Verlauf und DOM-Zeilen bleiben begrenzt.
+
+### Release-Prüfung 2.5
+
+Alle Templates, Assettypen, Neuimport/Abbruch/Cache/Fallback, Verschieben/Umbenennen/Löschen, Referenzberichte, kompatible/inkompatible/API-1/API-2/native Manifeste, Update/Deinstallationsauswirkung/Sicherheitsmodus, Play/Pause/Step/Stop, Physikmonitor, Ansichten/Arbeitsbereiche/Themen/Sprachen, Speichern/Öffnen, Build und Player prüfen. Pflicht: Rust-Format, striktes Clippy, alle Rust-Tests, Vue-Typprüfung, Produktionsbuild, Audit-Skripte und Browser-Smoke-Test bei 900 × 600 sowie normaler Desktopgröße.
+
+## 22. Nova_A 2.6: Welten, Navigation und Gameplay
+
+**Weltwerkzeuge** über unteres Panel oder Befehlspalette öffnen. Die Tabs halten Weltfunktionen aus dem langen Objektinspektor; **Hinzufügen** nutzt die normale Undo-Historie.
+
+- **CharacterBody2D:** an einen kinematischen Körper mit Collider hängen. Neigungswinkel, Stufenhöhe, Bodenfang, Sicherheitsabstand und Gleitvorgänge gehen in Welt­einheiten an den Rust-Solver. Plattformgeschwindigkeit und Boden/Wand/Decke werden angezeigt. Rhai bietet `move_character`, `can_coyote_jump`, Kontakthelfer, Bodennormale und Plattformgeschwindigkeit. Ein Meter bleibt exakt ein Weltmeter.
+- **Area2D:** Box/Kreis und Maske wählen; Schwerkraft, Wind, Widerstand, Auftrieb, Schaden oder Signal hinzufügen. Kräfte gelten genau einen festen Rust-Schritt; Enter/Exit, Schaden und benutzerdefinierte Signale laufen durch die begrenzte Ereigniswarteschlange.
+- **Navigation:** optionales Nova-Navigationspaket aktivieren. Polygon-/Gitterregion, Hindernisse und Agenten mit A* oder FlowField, Diagonalen, Layer, Repath/Rebake, Vermeidung und Glättung bearbeiten. Debug zeigt den begrenzten Pfad. Reine Physikprojekte laden das Modul nicht.
+- **AI:** optionales Gameplay-AI-Paket liefert Behavior Tree und hierarchische State Machine als Assets; Aktionen und Zustandswechsel senden Runtime-Signale.
+- **Streaming:** WorldChunk2D speichert Grenzen, Lade-/Entladedistanz, Priorität, Speicher und Szene. Speicherbudget begrenzt geladene Chunks; Szenen werden asynchron geplant. Origin Shift stabilisiert große Koordinaten. Portal2D lädt beim Eintritt eines Players/CharacterBody die Zielszene.
+- **Object Pool:** Prefab, Vorwärmen, Kapazität und begrenzte Erweiterung festlegen. `instantiate` übernimmt freie Instanzen, `despawn()` gibt sie zurück; Spawn/Despawn-Signale beachten den Lebenszyklus.
+
+Das **Tilemap**-Panel erstellt Tile Palette, Brush Preset und Terrain Rules. Sichtbare, gesperrte Ebenen mit Deckkraft können hinzugefügt, dupliziert, gewechselt oder entfernt werden. Tiles speichern Gelände, Navigationskosten, Occluder und None/Box/Polygon/OneWay-Kollision. **Kachelkarte backen** meldet Kollisionsformen, Navigation, Occluder und Chunks. Schema 19 speichert Weltwerte, Komponenten und Assets und erhält unbekannte Felder. Der Platformer nutzt CharacterBody2D mit exakter Bewegung und Kulanzsprung.
+
+## 23. Nova_A 2.7: Responsive UI, Themes, Lokalisierung, Audio und Accessibility
+
+**Präsentation** wird aus dem unteren Panel, dem Interface-Arbeitsbereich oder der Befehlspalette geöffnet. UI bündelt Canvas/RectTransform/Panel-Werkzeuge: Anker, Fixed/Fill/Content-Größenregeln, Min/Max, Seitenverhältnis, sichere Bereiche, bis zu 32 Breiten-Breakpoints, Horizontal/Vertical/Grid-Container, Innenabstand, Umbruch, Clip, runde Maske, Mausrad-Scrollansicht, Scrollleisten und wiederverwendbare UI-Prefabs. **UI-Szene speichern** legt den gewählten Teilbaum unter `Assets/Prefabs/UI` ab.
+
+`.nova-theme`-Ressourcen besitzen Elternvererbung, Variablen, Stilklassen und Normal/Hovered/Pressed/Disabled/Focused-Zustände. Canvas wählt das Theme; jedes Steuerelement wählt eine Klasse und kann den Hintergrund gezielt überschreiben. Die Vorschau reagiert live.
+
+Focusable RectTransforms verwenden Tab-Reihenfolge, optionale Richtungs-UUIDs und sonst räumliche Pfeil-/D-Pad-Navigation. Enter, Leertaste und Gamepad-Taste 0 aktivieren. Rolle, Label und Beschreibung werden im Game-View in einen begrenzten Screenreader-Baum exportiert. Ein Button mit Remap-Aktion erfasst die nächste Tastatur-/Gamepad-Taste. Runtime-Barrierefreiheit ist ausdrücklich von Editor-Kontrast, Schrift und Bewegungsoptionen getrennt.
+
+Lokalisierungstabellen speichern Strings sowie Plural-/Select-Maps. `{name}`, `{value, number}` und `{value, date}` werden formatiert. Quellsprache, Live-Vorschau, Fallback-Kette, Pseudolokalisierung, Font-Fallback, RTL und Build-Sprachen sind Projekteinstellungen; nicht gewählte Sprachen werden aus dem Player entfernt.
+
+Der Audiomixer unterstützt höchstens 32 Busse, 8 Effekte und 16 Sends pro Bus, Snapshots, Ducking, Mute/Solo, Pegelanzeigen und Voice-Limits. Low/High Pass, Compressor, Delay und Reverb wenden Aktivierung und Wet/Dry tatsächlich an; Delay verwendet Feedback. AudioSource bietet Bus, Priorität, Streaming, räumliche Kurve und Distanz. Die Asset-Vorschau zeigt dekodierte Wellenform, Loop-Marken, Normalisierungsziel/-verstärkung; der Profiler zeigt aktive, gestreamte, gepufferte und begrenzte Stimmen.
+
+**Hilfe > Handbuch** öffnet die gebündelte Seite gleichursprünglich in Nova_A. Dadurch wird keine interne `tauri.localhost`-URL an den externen Opener gegeben. Release-Audit: sämtliche UI-Layouts/States/Fokus/Remaps, drei Sprachen plus Pseudo/RTL/Fallback, Build-Sprachfilter, Mixerpfade/Effekte/Ducking/Snapshots/Voice-Limits, Wellenform/Loop/Streaming/Spatial, Handbuch, Speichern/Migration, Play/Pause/Step/Stop und alle Web-/Windows-Artefakte prüfen.
+
+## 24. Nova_A 2.8: Production Lab, Tests, Daten, Jobs und optionales Netzwerk
+
+**Production Lab** ist im unteren Panel und in der Befehlspalette erreichbar. **Trace** zeichnet eine begrenzte Frame-Historie für Eingabe, Skripte, Animation, Physik, Audio, Rendering, Assets, Allokationen und GPU-Pässe auf. Capacity begrenzt den Speicher; Capture friert einen Vergleichsstand ein. Der Physik-Debugger liest den Solver nur. **Memory** setzt Gesamt-/Asset-/Textur-/Audio-/Skriptbudgets, zeigt aktuelle/Spitzenwerte und Lebensdauerereignisse. Leak-Erkennung meldet lange überlebende Objekte, löscht aber nichts. Zwei Speicher-Captures liefern signierte Byte-/Objektdifferenzen.
+
+**Replay:** Seed und Kapazität einstellen, Record starten und stoppen. Pro Fixed Step werden normalisierte Eingaben und Physik-Checksumme gespeichert. Play stellt das Startprojekt wieder her und meldet Frame/Erwartet/Ist bei Abweichungen. Rhai `random()` und `random_range()` benutzen denselben Seed. Beliebige Gleitkomma-Skripte sind nicht auf jeder Hardware garantiert bitgleich.
+
+**Tests:** Add Test erzeugt Unit, Scene, Integration oder Headless mit Szene, Timeout, Schrittlimit und Screenshot. Assertions prüfen Mindestzahl/Existenz von Entities, endliche Physik, Physik-Checksumme oder das Fehlen von Runtime-Fehlern. Run Selected/All liefern Pass/Fail/Error/Timeout; Export JSON/JUnit ist CI-lesbar. Headless erzeugt keine Screenshots.
+
+**Data:** Data Schema definiert eindeutige String/Number/Integer/Boolean/JSON-Felder, Required und Default. Data Table wählt ein Schema; Import JSON/CSV/Database Result nimmt lokale Zeilen entgegen und Validation zeigt Zeile/Feld/Schwere/Text. Generate Accessor lädt einen getypten TypeScript-Zugriff herunter. Nova_A speichert keine Datenbank-Zugangsdaten. Spielstände sind versionierte `nova-save`-Hüllen; geordnete Rename/Remove/Default-Migrationen werden lückenlos angewandt, zukünftige Versionen abgelehnt.
+
+**Jobs:** Worker-Zahl und Queue sind begrenzt; Status ist Queued/Running/Complete/Failed/Cancelled. Cancel beendet Queue oder ausstehenden Auftrag. Ohne Worker läuft genau ein serieller, nachgebender Fallback.
+
+**Networking:** Standard ist deinstalliert, deaktiviert und aus dem Player entfernt. Erst offizielles Paket installieren, dann WebSocket oder natives UDP, Endpunkt, Client/Server/Host, Grenzen, Snapshot-Rate, Interpolation, Prediction und Rollback wählen. Connect/Disconnect steuern Transport, Reconnect und Queues. Replicate Selected fügt eine Entity mit Authority/Eigenschaften hinzu; RPC/Snapshot-Größen sind begrenzt. Diagnose zeigt Zustand, Peers, Latenz, Bytes/Pakete, Drops und Korrekturen. Build Settings **Authoritative headless server** benötigt nativen Target und aktives Netzwerk, entfernt Canvas und tickt Fixed Simulation.
+
+WebGL nutzt Multisampling; Canvas hohe Glättung und runde Linien; Text Kerning/Ligaturen/optische Größe. Explizites Nearest-Pixelart bleibt scharf. Release-Audit: alle Tabs/Buttons, Captures/Budgets/Leaks, Replay/Mismatch, vier Testarten/Berichte, Datenimporte/Migrationen, Job-Sättigung/Abbruch/Fallback, Netzwerk aus/installiert/WebSocket/UDP/Abbruch beim Laden, Game/Headless-Build, alle Sprachen/Themes/Größen sowie Format, Clippy, Rust-Tests, TypeScript, Build, Audits, Browser-Smoke, Installer, Release-Dateien und SHA-256 prüfen.
+
+## 25. Nova_A 2.9: Auslieferung, Teamarbeit, Pakete und Upgrades
+
+### Übersichtliches Build Settings
+
+**Projekt → Build Settings** ist in **Übersicht**, **Plattform**, **Auslieferung** und **Team** gegliedert. Übersicht enthält Name, Ziel, x86_64/aarch64, Debug/Release, Runtime, Szenen, Startszene, Ausgabe sowie Build/Build & Run. Fehler der Vorprüfung blockieren den Export; Warnungen erklären Einschränkungen. Plattform enthält Identifier, Version, Icon, Splash, Orientierung, Berechtigungen sowie Signatur-/Notarisierungshinweise. Windows, Linux, macOS und Web sind eingebaut. Android benötigt das ausdrücklich installierte offizielle Paket, SDK/JDK und `NOVA_A_ANDROID_TEMPLATE`; sonst bleibt es sicher deaktiviert.
+
+### Reproduzierbare Builds und Datenschutz
+
+Deterministische Metadaten, inkrementelle Schreibvorgänge, drei Kompressionsstufen, Cache, SHA-256, Patch-Manifest und Build-Bericht sind verbunden. `nova-build-report.json`, Cache-Manifest, optionales Delta-Manifest und native Symbolmap erklären jedes Ergebnis. Der Headless-CLI-Aufruf lautet `pnpm export -- --project ./project.nova --target web --profile release --output ./Builds/MyGame`; `--help` zeigt weitere begrenzte Optionen.
+
+Strukturierte Logs und Crash Capture sind explizite Build-Optionen. Telemetrie ist standardmäßig aus, akzeptiert nur skalare Werte in einer begrenzten Queue und sendet nach Einwilligung ausschließlich an HTTPS. Eine HTTPS-Datenschutzerklärung ist Pflicht; Deaktivieren beendet Sammlung und leert die Queue.
+
+### Team, Registry und Upgrade
+
+Die Team-Seite zeigt UUID-basierten Status, erzeugt `.gitignore`, startet nur gewählte Diff-/Merge-Programme ohne Shell, prüft eingehende `.nova`-Dateien dreiseitig und verwaltet ablaufende Sperren. `{base}`, `{ours}`, `{theirs}` und `{output}` sind begrenzte Dateien; das Ergebnis wird nach Prüfung wieder importiert. Stable JSON sortiert Objektschlüssel, aber nie semantische Array-Reihenfolgen.
+
+Registry Browse zeigt verifizierten Publisher, Rating, Berechtigungen, Dokumentation und Security-Link. Browsen führt keinen Code aus; nur **Installieren** verändert Lockfile/Projekt. Offline-Cache und lokale Spiegel werden ausdrücklich importiert. Alte Projekte zeigen vor dem Öffnen Schema-/Paketfolgen, vollständiges Backup und Validierung; eine lokale Rückrollkopie kann im Projektmanager heruntergeladen werden.
+
+Sechs geprüfte Vorlagen decken Empty, Platformer, Top-down, Physics Sandbox, UI Showcase und Networked Optional ab. Das Release-Audit prüft alle Oberflächen/Sprachen/Themes/Größen, Vorlagen, Speicherung/Migration/Rollback, Runtime/Physik, Pakete/Team, Plattform-/CLI-/Delta-Builds, Datenschutz, Rust fmt/Clippy/Tests, TypeScript, Audits, Browser, Installer, Archive und SHA-256.
+
+## 26. Nova_A 3.0: stabile Verträge, Wiederherstellung und Nachweise
+
+**Hilfe → Studio-Status** zeigt Project Format 2/Schema 22, Runtime API 1, Plugin API 2, Package Manifest 1 und Build CLI 1. Projekte der Schemata 5–22 verwenden Vorschau, vollständige Sicherung, Paketprüfung, In-Memory-Validierung, atomaren Sitzungswechsel und Rollback. Ein zukünftiges Schema wird vor jeder Änderung abgelehnt.
+
+Bei einem unerwarteten Fehler erscheint ein Nova_A-Dialog mit begrenzter Meldung, Kontext, Zeit und optionalem Stack. Diagnose kann kopiert/heruntergeladen, die Operation sicher verlassen oder Nova_A im Sicherheitsmodus ohne Drittanbieter-Plugins gestartet werden. Abbruch und harmlose ResizeObserver-Meldungen sind nicht fatal; ein Atlasfehler behält den letzten gültigen Atlas.
+
+`reference-projects` enthält sechs bearbeitbare Quellprojekte und ein berechtigungsfreies Plugin-API-2-Beispiel. `pnpm benchmark:v3` und `pnpm stability:v3` schreiben maschinenlesbare Nachweise. Ein Smoke ist kein 24-Stunden-Pass; Plattformen bleiben bis zu einem erfolgreichen CI-Artefakt als ausstehend markiert. Verträge, Methodik und Grenzen stehen in `docs/`.

@@ -1,75 +1,146 @@
 import { reactive } from 'vue'
 import { addEditorLog } from '../store/editor'
 import { assetReference, resolveAsset } from '../assets/AssetDatabase'
+import { NOVA_PLUGIN_API_VERSION } from './stableContracts'
 
-export const NOVA_PLUGIN_API_VERSION = 1
+export { NOVA_PLUGIN_API_VERSION }
 export const MAX_PLUGIN_BYTES = 16 * 1024 * 1024
-export type PluginPermission = 'log' | 'events'
+export const MAX_PLUGIN_CALL_MS = 8
+export type PluginPermission =
+  | 'log' | 'events' | 'editor.commands' | 'editor.menus' | 'editor.panels' | 'editor.importers'
+  | 'editor.assets' | 'editor.components' | 'editor.inspectors' | 'editor.gizmos' | 'editor.settings'
+  | 'build.hooks' | 'runtime.systems'
+export type PluginContributionKind = 'commands' | 'menus' | 'panels' | 'importers' | 'assetEditors' | 'components' | 'inspectors' | 'gizmos' | 'settings' | 'buildHooks' | 'runtimeSystems' | 'events'
+export interface PluginContribution { id: string; label: string; kind: PluginContributionKind }
 
 export interface PluginManifest {
   id: string
   name: string
   version: string
-  apiVersion: number
+  apiVersion: 1 | 2
   engine: string
   entry: string
   entryAsset: string | null
+  entryType: 'wasm' | 'native'
   permissions: PluginPermission[]
   enabled: boolean
+  projectEnabled: boolean
+  sha256: string
+  signature: string
+  publicKey: string
+  contributions: Partial<Record<PluginContributionKind, Array<{ id: string; label: string }>>>
 }
 
 interface ActivePlugin { manifest: PluginManifest; instance: WebAssembly.Instance }
+const allowedPermissions = new Set<PluginPermission>(['log', 'events', 'editor.commands', 'editor.menus', 'editor.panels', 'editor.importers', 'editor.assets', 'editor.components', 'editor.inspectors', 'editor.gizmos', 'editor.settings', 'build.hooks', 'runtime.systems'])
+const contributionPermission: Record<PluginContributionKind, PluginPermission> = {
+  commands: 'editor.commands', menus: 'editor.menus', panels: 'editor.panels', importers: 'editor.importers', assetEditors: 'editor.assets', components: 'editor.components', inspectors: 'editor.inspectors', gizmos: 'editor.gizmos', settings: 'editor.settings', buildHooks: 'build.hooks', runtimeSystems: 'runtime.systems', events: 'events'
+}
 
-const allowedPermissions = new Set<PluginPermission>(['log', 'events'])
-export const pluginState = reactive({ manifests: [] as PluginManifest[], active: 0, errors: [] as string[] })
+const startupSafeMode = typeof location !== 'undefined' && new URLSearchParams(location.search).get('safe-mode') === '1'
+  || typeof localStorage !== 'undefined' && localStorage.getItem('nova-a-plugin-safe-mode') === 'true'
+export const pluginState = reactive({
+  manifests: [] as PluginManifest[], active: 0, errors: [] as string[], safeMode: startupSafeMode,
+  safeModeRecommended: typeof localStorage !== 'undefined' && localStorage.getItem('nova-a-plugin-crashed') === 'true',
+  contributions: [] as Array<PluginContribution & { pluginId: string; pluginName: string }>
+})
 
 function safeText(value: unknown, maximum: number): string { return typeof value === 'string' ? value.trim().slice(0, maximum) : '' }
+function decodeBase64(value: string): Uint8Array { return Uint8Array.from(atob(value), character => character.charCodeAt(0)) }
+function hex(bytes: ArrayBuffer): string { return [...new Uint8Array(bytes)].map(value => value.toString(16).padStart(2, '0')).join('') }
 
 export function normalizePluginManifest(value: unknown): PluginManifest {
   const source = value && typeof value === 'object' ? value as Partial<PluginManifest> : {}
-  const id = safeText(source.id, 120)
-  const name = safeText(source.name, 120)
-  const version = safeText(source.version, 40)
+  const id = safeText(source.id, 120), name = safeText(source.name, 120), version = safeText(source.version, 40)
+  const entryType = source.entryType === 'native' ? 'native' : 'wasm'
   const entry = safeText(source.entry, 240)
-  if (!/^[a-z0-9]+(?:[.-][a-z0-9]+)+$/.test(id)) throw new Error('Plugin id must use reverse-domain style, for example top.whitelists.camera-tools.')
+  if (!/^[a-z0-9]+(?:[.-][a-z0-9]+)+$/.test(id)) throw new Error('Plugin ID must use reverse-domain style.')
   if (!name) throw new Error('Plugin name is required.')
   if (!/^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/.test(version)) throw new Error('Plugin version must use semantic versioning.')
-  if (Number(source.apiVersion) !== NOVA_PLUGIN_API_VERSION) throw new Error(`Plugin API ${source.apiVersion} is unsupported; Nova_A requires API ${NOVA_PLUGIN_API_VERSION}.`)
-  if (!entry.toLowerCase().endsWith('.wasm') || entry.includes('..') || entry.startsWith('/') || entry.includes('\\')) throw new Error('Plugin entry must be a safe relative .wasm path.')
+  const apiVersion = Number(source.apiVersion)
+  if (apiVersion !== 1 && apiVersion !== NOVA_PLUGIN_API_VERSION) throw new Error(`Plugin API ${source.apiVersion} is unsupported; Nova_A accepts API 1 or ${NOVA_PLUGIN_API_VERSION}.`)
+  if (entry.includes('..') || entry.startsWith('/') || entry.includes('\\') || (entryType === 'wasm' && !entry.toLowerCase().endsWith('.wasm'))) throw new Error('Plugin entry must be a safe relative path.')
   const permissions = Array.isArray(source.permissions) ? [...new Set(source.permissions.filter((permission): permission is PluginPermission => allowedPermissions.has(permission as PluginPermission)))] : []
-  if (Array.isArray(source.permissions) && permissions.length !== source.permissions.length) throw new Error('Plugin requests an unsupported permission. Nova_A 2.0 only supports log and events.')
-  return { id, name, version, apiVersion: NOVA_PLUGIN_API_VERSION, engine: safeText(source.engine, 40) || '^2.0.0', entry, entryAsset: typeof source.entryAsset === 'string' ? source.entryAsset : null, permissions, enabled: source.enabled !== false }
+  if (Array.isArray(source.permissions) && permissions.length !== source.permissions.length) throw new Error('Plugin requests an unsupported capability.')
+  if (apiVersion === 1 && permissions.some(permission => permission !== 'log' && permission !== 'events')) throw new Error('Plugin API 1 only supports log and events permissions.')
+  const contributions: PluginManifest['contributions'] = {}
+  if (source.contributions && typeof source.contributions === 'object') {
+    for (const kind of Object.keys(contributionPermission) as PluginContributionKind[]) {
+      const values = source.contributions[kind]
+      if (!Array.isArray(values)) continue
+      if (!permissions.includes(contributionPermission[kind])) throw new Error(`${kind} contributions require ${contributionPermission[kind]}.`)
+      contributions[kind] = values.flatMap(item => item && typeof item === 'object' && safeText(item.id, 120) ? [{ id: safeText(item.id, 120), label: safeText(item.label, 120) || safeText(item.id, 120) }] : []).slice(0, 256)
+    }
+  }
+  return {
+    id, name, version, apiVersion, engine: safeText(source.engine, 40) || (apiVersion === 1 ? '^2.0.0' : '^2.6.0'), entry,
+    entryAsset: typeof source.entryAsset === 'string' ? source.entryAsset : null, entryType, permissions,
+    enabled: source.enabled !== false, projectEnabled: source.projectEnabled !== false,
+    sha256: safeText(source.sha256, 128).toLowerCase(), signature: safeText(source.signature, 1024), publicKey: safeText(source.publicKey, 1024), contributions
+  }
+}
+
+function refreshContributions(): void {
+  pluginState.contributions.splice(0)
+  for (const manifest of pluginState.manifests.filter(item => item.enabled && item.projectEnabled && item.entryType === 'wasm')) {
+    for (const [kind, items] of Object.entries(manifest.contributions) as Array<[PluginContributionKind, Array<{ id: string; label: string }>]>) {
+      for (const item of items) pluginState.contributions.push({ ...item, kind, pluginId: manifest.id, pluginName: manifest.name })
+    }
+  }
+}
+
+export function setPluginSafeMode(enabled: boolean): void {
+  pluginState.safeMode = enabled
+  if (typeof localStorage !== 'undefined') localStorage.setItem('nova-a-plugin-safe-mode', String(enabled))
+  if (enabled) pluginRuntime.stop()
 }
 
 export function loadPluginManifests(value: unknown): void {
   const manifests = Array.isArray(value) ? value.flatMap(item => { try { return [normalizePluginManifest(item)] } catch { return [] } }) : []
-  const unique = new Map(manifests.map(manifest => [manifest.id, manifest]))
-  pluginState.manifests.splice(0, pluginState.manifests.length, ...unique.values())
+  pluginState.manifests.splice(0, pluginState.manifests.length, ...new Map(manifests.map(manifest => [manifest.id, manifest])).values())
+  refreshContributions()
 }
 
-export function serializePluginManifests(): PluginManifest[] { return pluginState.manifests.map(manifest => ({ ...manifest, permissions: [...manifest.permissions] })) }
+export function serializePluginManifests(): PluginManifest[] { return pluginState.manifests.map(manifest => JSON.parse(JSON.stringify(manifest)) as PluginManifest) }
+
+async function verifyPlugin(manifest: PluginManifest, bytes: ArrayBuffer): Promise<void> {
+  const digest = await crypto.subtle.digest('SHA-256', bytes)
+  if (manifest.sha256 && hex(digest) !== manifest.sha256) throw new Error('Plugin SHA-256 does not match its manifest.')
+  if (manifest.signature || manifest.publicKey) {
+    if (!manifest.signature || !manifest.publicKey) throw new Error('Signed plugins require both signature and public key.')
+    const key = await crypto.subtle.importKey('raw', decodeBase64(manifest.publicKey), { name: 'Ed25519' }, false, ['verify'])
+    if (!await crypto.subtle.verify({ name: 'Ed25519' }, key, decodeBase64(manifest.signature), digest)) throw new Error('Plugin signature is invalid.')
+  }
+}
+
+function assertMemory(instance: WebAssembly.Instance): void {
+  const memory = instance.exports.memory
+  if (memory instanceof WebAssembly.Memory && memory.buffer.byteLength > MAX_PLUGIN_BYTES) throw new Error('Plugin exceeds the 16 MB memory limit.')
+}
 
 export async function instantiateWasmPlugin(manifestValue: unknown, bytes: ArrayBuffer): Promise<WebAssembly.Instance> {
   const manifest = normalizePluginManifest(manifestValue)
-  if (bytes.byteLength < 8 || bytes.byteLength > MAX_PLUGIN_BYTES) throw new Error('Plugin binary is empty or exceeds the 16 MB limit.')
+  if (manifest.entryType === 'native') throw new Error('Native extensions are not downloaded or executed by Nova_A.')
+  if (bytes.byteLength < 8 || bytes.byteLength > MAX_PLUGIN_BYTES) throw new Error('Plugin binary is empty or exceeds 16 MB.')
   const magic = new Uint8Array(bytes, 0, 4)
-  if (magic[0] !== 0 || magic[1] !== 97 || magic[2] !== 115 || magic[3] !== 109) throw new Error('Plugin entry is not a WebAssembly module.')
-  const canLog = manifest.permissions.includes('log')
-  const imports = {
-    nova: {
-      api_version: () => NOVA_PLUGIN_API_VERSION,
-      log: (level: number, code: number) => { if (canLog) addEditorLog(`${manifest.name}: plugin message ${code}`, 'Plugin', level >= 3 ? 'error' : level === 2 ? 'warning' : 'info') },
-      emit_event: (_event: number, _value: number) => manifest.permissions.includes('events') ? 1 : 0
-    }
-  }
+  if (magic[0] !== 0 || magic[1] !== 97 || magic[2] !== 115 || magic[3] !== 109) throw new Error('Plugin entry is not WebAssembly.')
+  await verifyPlugin(manifest, bytes)
+  const imports = { nova: {
+    api_version: () => manifest.apiVersion,
+    log: (level: number, code: number) => { if (manifest.permissions.includes('log')) addEditorLog(`${manifest.name}: plugin message ${code}`, 'Plugin', level >= 3 ? 'error' : level === 2 ? 'warning' : 'info') },
+    emit_event: (_event: number, _value: number) => manifest.permissions.includes('events') ? 1 : 0,
+    has_capability: (capability: number) => capability >= 0 && capability < manifest.permissions.length ? 1 : 0
+  } }
+  const started = performance.now()
   const result = await WebAssembly.instantiate(bytes, imports)
   const instance = result instanceof WebAssembly.Instance ? result : result.instance
+  assertMemory(instance)
   const exports = instance.exports as Record<string, WebAssembly.ExportValue>
-  const api = exports.nova_plugin_api_version
-  if (typeof api !== 'function' || Number((api as CallableFunction)()) !== NOVA_PLUGIN_API_VERSION) throw new Error('Plugin must export nova_plugin_api_version() returning 1.')
-  const initialize = exports.nova_plugin_init
-  if (typeof initialize !== 'function') throw new Error('Plugin must export nova_plugin_init().')
-  ;(initialize as CallableFunction)()
+  if (typeof exports.nova_plugin_api_version !== 'function' || Number((exports.nova_plugin_api_version as CallableFunction)()) !== manifest.apiVersion) throw new Error(`Plugin must export nova_plugin_api_version() returning ${manifest.apiVersion}.`)
+  if (typeof exports.nova_plugin_init !== 'function') throw new Error('Plugin must export nova_plugin_init().')
+  ;(exports.nova_plugin_init as CallableFunction)()
+  if (performance.now() - started > 100) throw new Error('Plugin initialization exceeded the 100 ms limit.')
+  assertMemory(instance)
   return instance
 }
 
@@ -82,54 +153,58 @@ async function bytesFromAsset(reference: string | null): Promise<ArrayBuffer> {
 class PluginRuntime {
   private active: ActivePlugin[] = []
   private generation = 0
-
   async start(): Promise<void> {
-    this.stop()
-    const generation = this.generation
-    pluginState.errors.splice(0)
-    for (const manifest of pluginState.manifests.filter(item => item.enabled)) {
+    this.stop(); const generation = this.generation; pluginState.errors.splice(0)
+    if (pluginState.safeMode) { addEditorLog('Plugin Safe Mode is active; third-party plugins were skipped.', 'Plugin', 'warning'); return }
+    for (const manifest of pluginState.manifests.filter(item => item.enabled && item.projectEnabled && item.entryType === 'wasm')) {
       try {
         const instance = await instantiateWasmPlugin(manifest, await bytesFromAsset(manifest.entryAsset))
         if (generation !== this.generation) return
         this.active.push({ manifest, instance })
-      } catch (error) {
-        const message = `${manifest.name}: ${error instanceof Error ? error.message : String(error)}`
-        pluginState.errors.push(message)
-        addEditorLog(message, 'Plugin', 'error')
-      }
+      } catch (error) { this.isolateFailure(manifest, error) }
     }
-    pluginState.active = this.active.length
+    pluginState.active = this.active.length; refreshContributions()
   }
-
   update(delta: number): void {
     const failed = new Set<ActivePlugin>()
     for (const plugin of this.active) {
       const update = plugin.instance.exports.nova_plugin_update
       if (typeof update !== 'function') continue
-      try { (update as CallableFunction)(Number.isFinite(delta) ? delta : 0) } catch (error) {
-        failed.add(plugin)
-        const message = `${plugin.manifest.name}: ${error instanceof Error ? error.message : String(error)}`
-        pluginState.errors.push(message)
-        addEditorLog(`${message}. The plugin was disabled for this play session.`, 'Plugin', 'error')
-      }
+      try {
+        const started = performance.now(); (update as CallableFunction)(Number.isFinite(delta) ? delta : 0); assertMemory(plugin.instance)
+        if (performance.now() - started > MAX_PLUGIN_CALL_MS) throw new Error(`runtime call exceeded ${MAX_PLUGIN_CALL_MS} ms`)
+      } catch (error) { failed.add(plugin); this.isolateFailure(plugin.manifest, error) }
     }
-    if (failed.size) this.active = this.active.filter(plugin => !failed.has(plugin))
-    pluginState.active = this.active.length
+    if (failed.size) this.active = this.active.filter(plugin => !failed.has(plugin)); pluginState.active = this.active.length
   }
-
+  invokeCommand(commandId: string, pluginId?: string): boolean {
+    const contribution = pluginState.contributions.find(item => item.kind === 'commands' && item.id === commandId && (!pluginId || item.pluginId === pluginId))
+    const plugin = contribution && this.active.find(item => item.manifest.id === contribution.pluginId)
+    const handler = plugin?.instance.exports.nova_plugin_command
+    if (!plugin || typeof handler !== 'function') return false
+    try {
+      const started = performance.now()
+      ;(handler as CallableFunction)(plugin.manifest.contributions.commands?.findIndex(item => item.id === commandId) ?? -1)
+      assertMemory(plugin.instance)
+      if (performance.now() - started > MAX_PLUGIN_CALL_MS) throw new Error(`command call exceeded ${MAX_PLUGIN_CALL_MS} ms`)
+      return true
+    } catch (error) {
+      this.active = this.active.filter(item => item !== plugin); pluginState.active = this.active.length
+      this.isolateFailure(plugin.manifest, error); return false
+    }
+  }
   stop(): void {
     this.generation++
-    for (const plugin of this.active) {
-      const shutdown = plugin.instance.exports.nova_plugin_shutdown
-      if (typeof shutdown === 'function') { try { (shutdown as CallableFunction)() } catch { /* Shutdown cannot block the runtime. */ } }
-    }
-    this.active = []
-    pluginState.active = 0
+    for (const plugin of this.active) { const shutdown = plugin.instance.exports.nova_plugin_shutdown; if (typeof shutdown === 'function') try { (shutdown as CallableFunction)() } catch { /* isolated */ } }
+    this.active = []; pluginState.active = 0
+  }
+  private isolateFailure(manifest: PluginManifest, error: unknown): void {
+    const message = `${manifest.name}: ${error instanceof Error ? error.message : String(error)}`
+    pluginState.errors.push(message); addEditorLog(`${message}. The plugin was isolated.`, 'Plugin', 'error')
+    if (typeof localStorage !== 'undefined') localStorage.setItem('nova-a-plugin-crashed', 'true')
+    pluginState.safeModeRecommended = true
   }
 }
 
-export function attachPluginAsset(manifest: PluginManifest, uuid: string): PluginManifest {
-  return { ...manifest, entryAsset: assetReference(uuid) }
-}
-
+export function attachPluginAsset(manifest: PluginManifest, uuid: string): PluginManifest { return { ...manifest, entryAsset: assetReference(uuid) } }
 export const pluginRuntime = new PluginRuntime()

@@ -20,10 +20,13 @@ import { renderWorld } from '../renderer/sceneRenderer'
 import { assetReference, resolveAsset } from '../assets/AssetDatabase'
 import { SpriteRenderer2D, type Joint2D, type TextInput, type TileMap2D } from '../world/components'
 import { gameplayRuntime } from '../runtime/GameplayRuntime'
-import { gameUiRuntime } from '../runtime/gameUi'
+import { gameUiRuntime, type UiAccessibilityNode } from '../runtime/gameUi'
+import { rebindInputAction } from '../runtime/input'
 import { instantiatePrefab } from '../runtime/prefabs'
 import { beginTileStroke, continueTileStroke, endTileStroke, tilemapEditorState, worldToTile, type TileStroke } from '../runtime/tilemap'
-import { recordFrameProfile } from '../runtime/profiler'
+import { profilerState, recordFrameProfile } from '../runtime/profiler'
+import { samplePerformanceTools } from '../runtime/performanceTools'
+import { reportFatalError, reportRecoverableError } from '../runtime/faultCenter'
 import { physicsDebugState } from '../runtime/physicsDebug'
 import { renderDebugView2D, renderLighting2D, renderPostProcessOverlay, worldPostProcessFilter } from '../renderer/lighting2d'
 import { beginRenderGraph, captureRenderSurface, completeRenderGraph, recordRenderPass, renderGraphState } from '../renderer/renderGraph'
@@ -31,11 +34,14 @@ import { captureRenderTexture } from '../renderer/renderTextures'
 import { activeGameCameras } from '../renderer/sceneRenderer'
 import { renderingSettings } from '../renderer/renderSettings'
 import { recordEntityProperties } from '../editor/animationStudioState'
+import { navigationPaths, worldGameplayState } from '../runtime/worldGameplay'
 
 const canvasRef = ref<HTMLCanvasElement | null>(null)
 const renderCanvasRef = ref<HTMLCanvasElement | null>(null)
 const nativeInputRef = ref<HTMLInputElement | null>(null)
 const focusedUiInput = ref<{ entity: Entity; rect: { x: number; y: number; width: number; height: number }; input: TextInput } | null>(null)
+const accessibilityNodes = ref<UiAccessibilityNode[]>([])
+let accessibilitySignature = ''
 let ctx: CanvasRenderingContext2D | null = null
 let renderer: Renderer2D | null = null
 let canvasPixelRatio = 1
@@ -53,7 +59,7 @@ const camera = physicsState.camera
 
 let isDragging = false; let isPanning = false; let isVertexDragging = false; let dragButton = 0 
 let dragStart: Vec2 | null = null; let dragNow: Vec2 | null = null; let lastMouseScreen: Vec2 | null = null
-let raf = 0; let lastTime = performance.now(); let resizeObserver: ResizeObserver | null = null 
+let raf = 0; let resizeRaf = 0; let lastTime = performance.now(); let resizeObserver: ResizeObserver | null = null
 
 let hoveredVertex: { entityId: number, index: number, virtualPos?: Vec2 } | null = null
 let dragMeta: { initialScaleX: number, initialScaleY: number, initialDist: number } | null = null
@@ -115,7 +121,7 @@ function readPalette() {
   }
 }
 
-watch(() => [prefs.theme, prefs.highContrast, prefs.maxPixelRatio], () => { readPalette(); resize() })
+watch(() => [prefs.theme, prefs.highContrast, prefs.maxPixelRatio], () => { readPalette(); scheduleResize() })
 watch(() => editorState.currentPage, page => {
   if (page !== 'game') {
     gameUiRuntime.blurTextInput()
@@ -150,16 +156,35 @@ function resize() {
   canvasPixelRatio = Math.min(window.devicePixelRatio || 1, prefs.maxPixelRatio)
   const dpr = canvasPixelRatio; const r = canvas.getBoundingClientRect()
   const oldWidth = canvas.width / dpr; const oldHeight = canvas.height / dpr
-  canvas.width = Math.max(1, Math.round(r.width * dpr)); canvas.height = Math.max(1, Math.round(r.height * dpr))
+  const nextWidth = Math.max(1, Math.round(r.width * dpr)); const nextHeight = Math.max(1, Math.round(r.height * dpr))
+  const backingStoreChanged = canvas.width !== nextWidth || canvas.height !== nextHeight
+  if (backingStoreChanged) {
+    canvas.width = nextWidth; canvas.height = nextHeight
+  }
+  // CSS dimensions can change without changing a rounded backing-store pixel.
+  // The WebGL viewport still needs the latest logical size in that case.
   renderer?.resize(r.width, r.height, dpr)
   if (oldWidth > 0 && oldHeight > 0 && (oldWidth !== r.width || oldHeight !== r.height)) {
     camera.offset.x += (r.width - oldWidth) / 2; camera.offset.y += (r.height - oldHeight) / 2
   }
   if (!ctx) ctx = canvas.getContext('2d', { alpha: true })!
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0); render()
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+  ctx.imageSmoothingEnabled = true
+  ctx.imageSmoothingQuality = 'high'
+  ctx.lineCap = 'round'
+  ctx.lineJoin = 'round'
+  render()
 }
 
-function loop(time?: number) {
+function scheduleResize() {
+  if (resizeRaf) return
+  resizeRaf = requestAnimationFrame(() => {
+    resizeRaf = 0
+    resize()
+  })
+}
+
+function runFrame(time?: number) {
   const now = time || performance.now(); const dt = (now - lastTime) / 1000; lastTime = now
   const frameStarted = performance.now()
 
@@ -195,34 +220,45 @@ function loop(time?: number) {
   const frameMs = Math.max(0, dt * 1000)
   const measured = timings.physicsMs + timings.scriptsMs + timings.animationMs + timings.audioMs + timings.assetsMs + renderingMs
   const memory = (performance as Performance & { memory?: { usedJSHeapSize: number } }).memory
+  const performanceSample = samplePerformanceTools(profilerState.current.frame + 1, world.entities.map(entity => entity.uuid), editorState.rendererStats)
   recordFrameProfile({
     frameMs, physicsMs: timings.physicsMs, renderingMs, scriptsMs: timings.scriptsMs,
     animationMs: timings.animationMs, audioMs: timings.audioMs, assetsMs: timings.assetsMs,
     otherMs: Math.max(0, Math.min(performance.now() - frameStarted, frameMs || Number.POSITIVE_INFINITY) - measured),
-    fps: dt > 0 ? 1 / dt : 0, memoryMb: memory ? memory.usedJSHeapSize / (1024 * 1024) : null
+    fps: dt > 0 ? 1 / dt : 0, memoryMb: memory ? memory.usedJSHeapSize / (1024 * 1024) : null,
+    inputMs: timings.inputMs, allocations: performanceSample.allocations,
+    gpuPasses: renderGraphState.passes.filter(pass => pass.enabled).length, assetJobs: performanceSample.assetJobs
   })
+}
+
+function loop(time?: number) {
+  try { runFrame(time) }
+  catch (error) { raf = 0; reportFatalError(error, 'Scene/Game frame', 'Renderer'); return }
   raf = requestAnimationFrame(loop)
 }
 
 onMounted(() => {
   readPalette()
   gameUiRuntime.setCallback((entity, functionName) => gameplayRuntime.invokeUiCallback(entity, functionName))
+  gameUiRuntime.setRemapCallback((action, bindingIndex, binding) => {
+    if (rebindInputAction(physicsState.inputMap, action, bindingIndex, binding)) pushHistory('Remap runtime input')
+  })
   if (renderCanvasRef.value) renderer = createRenderer2D(renderCanvasRef.value)
   world.connections.filter(connection => connection.breakState !== 'intact').forEach(connection => knownBrokenConnections.add(connection.id))
   resize()
   if (canvasRef.value) {
     const r = canvasRef.value.getBoundingClientRect(); camera.offset.x = r.width / 2; camera.offset.y = r.height / 2
-    resizeObserver = new ResizeObserver(() => resize()); resizeObserver.observe(canvasRef.value.parentElement!)
+    resizeObserver = new ResizeObserver(scheduleResize); resizeObserver.observe(canvasRef.value.parentElement!)
   }
-  lastTime = performance.now(); loop(); window.addEventListener('resize', resize); window.addEventListener('mouseup', onMouseUp); window.addEventListener('keydown', onKeyDown)
+  lastTime = performance.now(); loop(); window.addEventListener('resize', scheduleResize); window.addEventListener('mouseup', onMouseUp); window.addEventListener('keydown', onKeyDown)
   void world.wasmReady.then(() => {
     if (world.wasmError) editorState.statusText = t('physicsUnavailable', { message: world.wasmError.message })
-  })
+  }).catch(error => { editorState.statusText = t('physicsUnavailable', { message: error instanceof Error ? error.message : String(error) }); reportRecoverableError(error, 'Physics WebAssembly initialization', 'Physics') })
 })
-onBeforeUnmount(() => { if (raf) cancelAnimationFrame(raf); window.removeEventListener('resize', resize); window.removeEventListener('mouseup', onMouseUp); window.removeEventListener('keydown', onKeyDown); if (resizeObserver) resizeObserver.disconnect(); gameUiRuntime.reset(); renderer?.destroy(); renderer = null })
+onBeforeUnmount(() => { if (raf) cancelAnimationFrame(raf); if (resizeRaf) cancelAnimationFrame(resizeRaf); window.removeEventListener('resize', scheduleResize); window.removeEventListener('mouseup', onMouseUp); window.removeEventListener('keydown', onKeyDown); if (resizeObserver) resizeObserver.disconnect(); gameUiRuntime.reset(); renderer?.destroy(); renderer = null })
 
 function screenPos(e: MouseEvent): Vec2 { const r = canvasRef.value!.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top } }
-function onWheel(e: WheelEvent) { e.preventDefault(); if (editorState.currentPage === 'game') return; const factor = Math.pow(1.1, prefs.zoomSensitivity); camera.zoomAt(screenPos(e), e.deltaY < 0 ? factor : 1 / factor) }
+function onWheel(e: WheelEvent) { e.preventDefault(); if (editorState.currentPage === 'game') { gameUiRuntime.wheel(screenPos(e), e.deltaX, e.deltaY); return } const factor = Math.pow(1.1, prefs.zoomSensitivity); camera.zoomAt(screenPos(e), e.deltaY < 0 ? factor : 1 / factor) }
 function onAssetDragOver(event: DragEvent) { if (state.playMode === 'editing' && event.dataTransfer?.types.includes('application/x-nova-asset-guid')) event.preventDefault() }
 function onAssetDrop(event: DragEvent) {
   if (state.playMode !== 'editing') return
@@ -910,10 +946,14 @@ function render() {
     ctx.strokeStyle = palette.connection; ctx.lineWidth = prefs.connectionThickness / camera.scale; ctx.lineCap = 'round'; ctx.stroke()
   }
   drawPhysicsDebug(ctx)
+  drawWorldGameplayDebug(ctx)
   ctx.restore()
   passStarted = recordRenderPass('EditorOverlay', passStarted, !isGameView, 1)
   const uiEntities = isGameView ? world.entities : world.entities.filter(entity => entity.layer === editorState.activeLayer)
   gameUiRuntime.render(ctx, width, height, uiEntities, { editor: !isGameView, selectedEntityIds: selectedIds })
+  const nodes = isGameView ? gameUiRuntime.accessibilityNodes() : []
+  const nextAccessibilitySignature = nodes.map(node => `${node.uuid}:${node.rect.x.toFixed(1)}:${node.rect.y.toFixed(1)}:${node.rect.width.toFixed(1)}:${node.rect.height.toFixed(1)}:${node.label}:${node.focused}:${node.disabled}`).join('|')
+  if (nextAccessibilitySignature !== accessibilitySignature) { accessibilitySignature = nextAccessibilitySignature; accessibilityNodes.value = nodes }
   recordRenderPass('UI', passStarted, true, uiEntities.length ? 1 : 0)
   completeRenderGraph(graphStarted, editorState.rendererStats, passStarted, passStarted)
   editorState.rendererStats.passes = 5
@@ -926,6 +966,32 @@ function render() {
     }
   }
   if (isGameView && focusedUiInput.value) synchronizeNativeInput()
+}
+
+function drawWorldGameplayDebug(context: CanvasRenderingContext2D): void {
+  context.save(); context.lineWidth = 2 / camera.scale
+  if (worldGameplayState.navigationDebug) {
+    context.strokeStyle = '#5ea6ff'; context.fillStyle = '#5ea6ff'
+    for (const path of navigationPaths()) {
+      if (!path.points.length) continue
+      context.beginPath(); context.moveTo(path.points[0].x, path.points[0].y); path.points.slice(1).forEach(point => context.lineTo(point.x, point.y)); context.stroke()
+      for (const point of path.points) { context.beginPath(); context.arc(point.x, point.y, 2.5 / camera.scale, 0, Math.PI * 2); context.fill() }
+    }
+  }
+  for (const entity of world.entities) {
+    const transform = worldTransform(entity, world.entities)
+    const area = entity.getComponent<import('../world/components').Area2D>('Area2D')
+    if (worldGameplayState.areaDebug && area?.enabled) {
+      context.setLineDash([6 / camera.scale, 4 / camera.scale]); context.strokeStyle = '#65d6b4'
+      context.beginPath()
+      if (area.shape === 'Circle') context.arc(transform.position.x, transform.position.y, area.radius, 0, Math.PI * 2)
+      else context.rect(transform.position.x - area.size.x / 2, transform.position.y - area.size.y / 2, area.size.x, area.size.y)
+      context.stroke(); context.setLineDash([])
+    }
+    const chunk = entity.getComponent<import('../world/components').WorldChunk2D>('WorldChunk2D')
+    if (worldGameplayState.chunkDebug && chunk?.enabled) { context.strokeStyle = '#c28cff'; context.strokeRect(transform.position.x - chunk.size.x / 2, transform.position.y - chunk.size.y / 2, chunk.size.x, chunk.size.y) }
+  }
+  context.restore()
 }
 
 function drawTilemapOverlay(context: CanvasRenderingContext2D, view: { minX: number; maxX: number; minY: number; maxY: number }) {
@@ -988,6 +1054,21 @@ function drawTilemapOverlay(context: CanvasRenderingContext2D, view: { minX: num
   <div class="canvas-container" @dragover="onAssetDragOver" @drop="onAssetDrop">
     <canvas ref="renderCanvasRef" class="render-canvas" :style="{ filter: worldPostProcessFilter() }" aria-hidden="true" />
     <canvas ref="canvasRef" class="overlay-canvas" @mousedown="onMouseDown" @mousemove="onMouseMove" @mouseup="onMouseUp" @wheel="onWheel" @contextmenu.prevent />
+    <div v-if="editorState.currentPage === 'game' && accessibilityNodes.length" class="game-ui-a11y" aria-label="Game UI">
+      <div
+        v-for="node in accessibilityNodes"
+        :key="node.uuid"
+        class="game-ui-a11y-node"
+        :style="{ left: `${node.rect.x}px`, top: `${node.rect.y}px`, width: `${node.rect.width}px`, height: `${node.rect.height}px` }"
+        :role="node.role"
+        :aria-label="node.label"
+        :aria-description="node.description || undefined"
+        :aria-disabled="node.disabled"
+        :aria-current="node.focused ? 'true' : undefined"
+        :tabindex="node.disabled ? -1 : node.tabIndex"
+        @focus="gameUiRuntime.focusByUuid(node.uuid)"
+      ></div>
+    </div>
     <input
       v-if="focusedUiInput && editorState.currentPage === 'game'"
       ref="nativeInputRef"
@@ -1008,7 +1089,9 @@ function drawTilemapOverlay(context: CanvasRenderingContext2D, view: { minX: num
 <style scoped>
 .canvas-container { position: relative; width: 100%; height: 100%; overflow: hidden; contain: strict; isolation: isolate; }
 canvas { position: absolute; inset: 0; display: block; width: 100%; height: 100%; touch-action: none; }
-.render-canvas { z-index: 0; pointer-events: none; backface-visibility: hidden; }
-.overlay-canvas { z-index: 1; backface-visibility: hidden; }
+.render-canvas { z-index: 0; pointer-events: none; image-rendering: auto; }
+.overlay-canvas { z-index: 1; image-rendering: auto; }
 .native-ui-input { position: absolute; z-index: 8; min-width: 0; min-height: 0; padding: 0 12px; border: 2px solid #4f96ff; border-radius: 8px; outline: 0; color: #f5f7fb; background: #151b24; box-shadow: 0 0 0 3px rgba(79,150,255,.18); font: 500 16px/1.2 Nunito Sans, Segoe UI, sans-serif; }
+.game-ui-a11y { position: absolute; inset: 0; z-index: 7; pointer-events: none; }
+.game-ui-a11y-node { position: absolute; overflow: hidden; opacity: .001; pointer-events: none; }
 </style>

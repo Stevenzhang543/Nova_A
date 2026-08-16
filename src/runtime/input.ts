@@ -93,6 +93,16 @@ export function normalizeInputMap(source: unknown): InputAction[] {
   return actions.length ? actions.slice(0, 128) : defaultInputMap()
 }
 
+/** Replaces one project input binding without changing the action's axis/vector semantics. */
+export function rebindInputAction(actions: InputAction[], actionName: string, bindingIndex: number, value: Pick<InputBinding, 'device' | 'code'>): boolean {
+  const action = actions.find(candidate => candidate.name === actionName)
+  if (!action || bindingIndex < 0 || bindingIndex > 31 || !['keyboard', 'gamepad-button', 'gamepad-axis'].includes(value.device)) return false
+  while (action.bindings.length <= bindingIndex) action.bindings.push(createInputBinding(value.device, value.code))
+  const previous = action.bindings[bindingIndex]
+  action.bindings[bindingIndex] = { ...previous, device: value.device, code: String(value.code).slice(0, 80) }
+  return true
+}
+
 function emptySnapshot(): InputSnapshot {
   return { down: {}, pressed: {}, released: {}, axes: {}, vectors: {}, mousePosition: [0, 0], wheel: [0, 0] }
 }

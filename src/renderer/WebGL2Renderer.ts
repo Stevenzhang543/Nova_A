@@ -214,7 +214,7 @@ export class WebGL2Renderer implements Renderer2D {
   private effectsHeight = 0
 
   constructor(private readonly canvas: HTMLCanvasElement) {
-    const gl = canvas.getContext('webgl2', { alpha: false, antialias: false, depth: false, premultipliedAlpha: true })
+    const gl = canvas.getContext('webgl2', { alpha: false, antialias: true, depth: false, premultipliedAlpha: true, powerPreference: 'high-performance' })
     if (!gl) throw new Error('WebGL2 is unavailable')
     this.gl = gl
     this.program = createProgram(gl)

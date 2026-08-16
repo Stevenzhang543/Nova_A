@@ -86,11 +86,11 @@ onBeforeUnmount(() => window.removeEventListener('keydown', handleShortcut))
 
 <style scoped>
 .toolbar { min-height: 43px; width: 100%; padding: 5px max(8px, calc((100vw - 760px) / 2)); display: flex; align-items: center; justify-content: center; gap: 4px; overflow-x: auto; overflow-y: hidden; border-bottom: 1px solid var(--border-subtle); background: color-mix(in srgb, var(--surface-1) 96%, var(--bg-base)); scrollbar-width: thin; }
-button { position: relative; min-width: 36px; height: 31px; padding: 0 8px; display: grid; place-items: center; border: 1px solid transparent; border-radius: 8px; color: var(--text-muted); background: transparent; font-size: 10px; }
+button { position: relative; min-width: 36px; height: 31px; padding: 0 8px; display: grid; place-items: center; border: 1px solid transparent; border-radius: 8px; color: var(--text-muted); background: transparent; font-size:11px; }
 button svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
 button:hover { color: var(--text-primary); background: var(--surface-hover); }
 button.active { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 34%, transparent); background: var(--accent-soft); }
-.tool-key { position: absolute; right: 3px; bottom: 1px; color: var(--text-muted); font-size: 6.5px; font-weight: 700; }
+.tool-key { position: absolute; right: 3px; bottom: 1px; color: var(--text-muted); font-size:11px; font-weight: 700; }
 .divider { width: 1px; height: 23px; margin: 0 2px; background: var(--border-subtle); }
 .segmented { padding: 2px; display: flex; border: 1px solid var(--border-subtle); border-radius: 8px; background: var(--surface-2); }
 .segmented button { min-width: auto; height: 25px; padding: 0 7px; }

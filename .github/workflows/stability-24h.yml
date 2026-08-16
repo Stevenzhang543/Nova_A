@@ -1,0 +1,22 @@
+name: Nova_A 24-hour stability qualification
+
+on:
+  workflow_dispatch:
+
+jobs:
+  stability:
+    runs-on: [self-hosted, nova-a-stability]
+    timeout-minutes: 1500
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: 10.30.0 }
+      - uses: actions/setup-node@v4
+        with: { node-version: 20, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm references
+      - run: node scripts/stability-v3.mjs --duration-hours=24 --output=release-audits/v3.0.0-stability-24h.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: nova-a-v3-stability-24h
+          path: release-audits/v3.0.0-stability-24h.json

@@ -141,6 +141,7 @@ fn contact_from_manifold(
         depth: manifold.depth,
         radius_a,
         radius_b,
+        initial_relative_velocity,
         restitution_bias,
         static_friction,
         dynamic_friction,
@@ -285,6 +286,11 @@ fn simulate_sub_step(
                 relative_velocity: body_b
                     .point_velocity(contact.radius_b)
                     .sub(body_a.point_velocity(contact.radius_a)),
+                initial_relative_velocity: contact.initial_relative_velocity,
+                normal_impulse: contact.normal_impulse,
+                tangent_impulse: contact.tangent_impulse,
+                normal_force: contact.normal_impulse / context.dt.max(f64::EPSILON),
+                tangent_force: contact.tangent_impulse / context.dt.max(f64::EPSILON),
                 penetration: contact.depth,
                 sensor: contact.is_sensor,
             }
@@ -347,6 +353,11 @@ struct SolverContactSnapshot {
     point: Vec2,
     normal: Vec2,
     relative_velocity: Vec2,
+    initial_relative_velocity: Vec2,
+    normal_impulse: f64,
+    tangent_impulse: f64,
+    normal_force: f64,
+    tangent_force: f64,
     penetration: f64,
     sensor: bool,
 }

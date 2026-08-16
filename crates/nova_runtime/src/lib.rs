@@ -3,7 +3,7 @@
 use std::collections::{HashMap, VecDeque};
 
 use nova_math::finite_or;
-use nova_physics::{PhysicsEvent, PhysicsQueryHit, PhysicsWorld};
+use nova_physics::{CharacterMoveResult, PhysicsEvent, PhysicsQueryHit, PhysicsWorld};
 use serde::Serialize;
 
 pub const DEFAULT_TICK_RATE: f64 = 60.0;
@@ -80,6 +80,11 @@ pub enum EngineEvent {
         point: [f64; 2],
         normal: [f64; 2],
         relative_velocity: [f64; 2],
+        initial_relative_velocity: [f64; 2],
+        normal_impulse: f64,
+        tangent_impulse: f64,
+        normal_force: f64,
+        tangent_force: f64,
         penetration: f64,
     },
     CollisionStayed {
@@ -88,6 +93,11 @@ pub enum EngineEvent {
         point: [f64; 2],
         normal: [f64; 2],
         relative_velocity: [f64; 2],
+        initial_relative_velocity: [f64; 2],
+        normal_impulse: f64,
+        tangent_impulse: f64,
+        normal_force: f64,
+        tangent_force: f64,
         penetration: f64,
     },
     CollisionEnded {
@@ -96,6 +106,11 @@ pub enum EngineEvent {
         point: [f64; 2],
         normal: [f64; 2],
         relative_velocity: [f64; 2],
+        initial_relative_velocity: [f64; 2],
+        normal_impulse: f64,
+        tangent_impulse: f64,
+        normal_force: f64,
+        tangent_force: f64,
     },
     TriggerEntered {
         first: u32,
@@ -447,6 +462,52 @@ impl RuntimeWorld {
             .shape_cast(center, size, angle, direction, distance, mask)
     }
 
+    #[allow(clippy::too_many_arguments)]
+    pub fn move_character_box(
+        &mut self,
+        handle: u32,
+        size: [f64; 2],
+        displacement: [f64; 2],
+        max_slope_angle: f64,
+        step_height: f64,
+        floor_snap: f64,
+        max_slides: u32,
+        safe_margin: f64,
+        mask: u32,
+    ) -> Result<CharacterMoveResult, &'static str> {
+        self.physics.move_character_box(
+            handle,
+            size,
+            displacement,
+            max_slope_angle,
+            step_height,
+            floor_snap,
+            max_slides,
+            safe_margin,
+            mask,
+        )
+    }
+
+    pub fn apply_force(
+        &mut self,
+        handle: u32,
+        x: f64,
+        y: f64,
+        torque: f64,
+    ) -> Result<(), &'static str> {
+        self.physics.apply_force(handle, x, y, torque)
+    }
+
+    pub fn apply_transient_force(
+        &mut self,
+        handle: u32,
+        x: f64,
+        y: f64,
+        torque: f64,
+    ) -> Result<(), &'static str> {
+        self.physics.apply_transient_force(handle, x, y, torque)
+    }
+
     pub fn advance(
         &mut self,
         frame_delta: f64,
@@ -569,6 +630,11 @@ impl RuntimeWorld {
                     point: contact.point,
                     normal: contact.normal,
                     relative_velocity: contact.relative_velocity,
+                    initial_relative_velocity: contact.initial_relative_velocity,
+                    normal_impulse: contact.normal_impulse,
+                    tangent_impulse: contact.tangent_impulse,
+                    normal_force: contact.normal_force,
+                    tangent_force: contact.tangent_force,
                     penetration: contact.penetration,
                 },
                 PhysicsEvent::ContactStayed(contact) => EngineEvent::CollisionStayed {
@@ -577,6 +643,11 @@ impl RuntimeWorld {
                     point: contact.point,
                     normal: contact.normal,
                     relative_velocity: contact.relative_velocity,
+                    initial_relative_velocity: contact.initial_relative_velocity,
+                    normal_impulse: contact.normal_impulse,
+                    tangent_impulse: contact.tangent_impulse,
+                    normal_force: contact.normal_force,
+                    tangent_force: contact.tangent_force,
                     penetration: contact.penetration,
                 },
                 PhysicsEvent::ContactEnded(contact) => EngineEvent::CollisionEnded {
@@ -585,6 +656,11 @@ impl RuntimeWorld {
                     point: contact.point,
                     normal: contact.normal,
                     relative_velocity: contact.relative_velocity,
+                    initial_relative_velocity: contact.initial_relative_velocity,
+                    normal_impulse: contact.normal_impulse,
+                    tangent_impulse: contact.tangent_impulse,
+                    normal_force: contact.normal_force,
+                    tangent_force: contact.tangent_force,
                 },
             };
             self.events.publish(event);

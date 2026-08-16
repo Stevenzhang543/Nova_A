@@ -132,6 +132,56 @@ impl WasmRuntimeWorld {
         .unwrap_or_else(|_| String::from("null"))
     }
 
+    #[allow(clippy::too_many_arguments)]
+    pub fn move_character_box_json(
+        &mut self,
+        handle: u32,
+        width: f64,
+        height: f64,
+        displacement_x: f64,
+        displacement_y: f64,
+        max_slope_angle: f64,
+        step_height: f64,
+        floor_snap: f64,
+        max_slides: u32,
+        safe_margin: f64,
+        mask: u32,
+    ) -> String {
+        match self.inner.move_character_box(
+            handle,
+            [width, height],
+            [displacement_x, displacement_y],
+            max_slope_angle,
+            step_height,
+            floor_snap,
+            max_slides,
+            safe_margin,
+            mask,
+        ) {
+            Ok(result) => serde_json::to_string(&result).unwrap_or_else(|_| String::from("null")),
+            Err(error) => serde_json::to_string(&serde_json::json!({ "error": error }))
+                .unwrap_or_else(|_| String::from("null")),
+        }
+    }
+
+    pub fn apply_force(&mut self, handle: u32, x: f64, y: f64, torque: f64) -> Result<(), JsValue> {
+        self.inner
+            .apply_force(handle, x, y, torque)
+            .map_err(JsValue::from_str)
+    }
+
+    pub fn apply_transient_force(
+        &mut self,
+        handle: u32,
+        x: f64,
+        y: f64,
+        torque: f64,
+    ) -> Result<(), JsValue> {
+        self.inner
+            .apply_transient_force(handle, x, y, torque)
+            .map_err(JsValue::from_str)
+    }
+
     pub fn clear(&mut self) {
         self.inner.clear();
     }
@@ -193,6 +243,10 @@ impl WasmRuntimeWorld {
         let length = state.len().min(target.len());
         target[..length].copy_from_slice(&state[..length]);
         length
+    }
+
+    pub fn state_checksum(&self) -> String {
+        format!("{:016x}", self.inner.physics().state_checksum())
     }
 
     pub fn diagnostics_json(&self) -> String {

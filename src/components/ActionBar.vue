@@ -68,6 +68,6 @@ button.active { border-color: color-mix(in srgb, var(--accent) 24%, transparent)
 button img { width: 15px; height: 15px; opacity: .7; filter: var(--icon-filter); }
 button.active img { opacity: 1; filter: var(--icon-filter) drop-shadow(0 0 5px var(--accent)); }
 .step-button span[aria-hidden='true'] { color: var(--text-secondary); font-size: 17px; font-weight: 700; letter-spacing: -3px; transform: translateX(-1px); }
-.mode-label { min-width: 62px; max-width: 92px; padding: 0 5px; overflow: hidden; color: var(--text-muted); font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
+.mode-label { min-width: 62px; max-width: 92px; padding: 0 5px; overflow: hidden; color: var(--text-muted); font-size:11px; text-overflow: ellipsis; white-space: nowrap; }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
 </style>

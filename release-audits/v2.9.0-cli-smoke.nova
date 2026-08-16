@@ -1,0 +1,27 @@
+{
+  "projectFormat": "Nova_A Project Format 2",
+  "projectFormatMajor": 2,
+  "formatVersion": 22,
+  "engineVersion": "2.9.0",
+  "activeSceneUuid": "8b8d4d4c-921a-4e37-9184-c1a1e37d8401",
+  "projectMetadata": {
+    "id": "17fd9047-113e-4b88-bb49-a72b27bbad72",
+    "name": "CLI Smoke",
+    "template": "empty"
+  },
+  "projectSettings": {
+    "build": {
+      "gameName": "CLI Smoke",
+      "startupSceneUuid": "8b8d4d4c-921a-4e37-9184-c1a1e37d8401"
+    }
+  },
+  "assets": [],
+  "scenes": [
+    {
+      "uuid": "8b8d4d4c-921a-4e37-9184-c1a1e37d8401",
+      "name": "Main",
+      "entities": [],
+      "connections": []
+    }
+  ]
+}

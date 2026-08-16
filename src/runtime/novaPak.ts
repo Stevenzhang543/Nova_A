@@ -64,16 +64,30 @@ function safePackagePath(value: string): string {
   return normalized
 }
 
+const INLINE_TEXT_ASSET_TYPES = new Set(['script', 'prefab', 'scene', 'material', 'animation', 'controller', 'animationMask', 'rig', 'skin', 'timeline', 'tileset', 'atlas', 'shader', 'localization', 'uiTheme', 'behaviorTree', 'stateMachine', 'tilePalette', 'brushPreset', 'terrainRules', 'dataSchema', 'dataTable', 'replay'])
+
 async function assetBytes(asset: AssetRecord): Promise<Uint8Array> {
   if (!asset.source) throw new Error(`Asset ${asset.name} has no imported source data`)
+  if (INLINE_TEXT_ASSET_TYPES.has(asset.assetType) && !/^(?:data:|blob:|https?:)/i.test(asset.source)) return new TextEncoder().encode(asset.source)
   const response = await fetch(asset.source)
   if (!response.ok && !asset.source.startsWith('data:') && !asset.source.startsWith('blob:')) throw new Error(`Could not read ${asset.path}`)
   return new Uint8Array(await response.arrayBuffer())
 }
 
-export async function createNovaPak(projectJson: string, assets: AssetRecord[], startupSceneUuid: string): Promise<Uint8Array> {
+export interface NovaPakBuildOptions { deterministic?: boolean; compression?: 'store' | 'balanced' | 'maximum' }
+
+export async function createNovaPak(projectJson: string, assets: AssetRecord[], startupSceneUuid: string, options: NovaPakBuildOptions = {}): Promise<Uint8Array> {
   const project = JSON.parse(projectJson) as Record<string, unknown>
   const developmentBuild = (project.projectSettings as { build?: { developmentBuild?: boolean } } | undefined)?.build?.developmentBuild !== false
+  const packageEntries = project.packages && typeof project.packages === 'object' && Array.isArray((project.packages as Record<string, unknown>).installed)
+    ? (project.packages as { installed: Array<Record<string, unknown>> }).installed : []
+  const networkingIncluded = packageEntries.some(item => {
+    const manifest = item.manifest && typeof item.manifest === 'object' ? item.manifest as Record<string, unknown> : {}
+    return manifest.id === 'top.whitelists.novaa.networking' && item.enabled !== false && item.project !== false
+  })
+  const projectSettings = project.projectSettings && typeof project.projectSettings === 'object' ? project.projectSettings as Record<string, unknown> : {}
+  const production = projectSettings.production && typeof projectSettings.production === 'object' ? projectSettings.production as Record<string, unknown> : null
+  if (production && !networkingIncluded) delete production.networking
   let projectAssets = Array.isArray(project.assets) ? project.assets as Array<Record<string, unknown>> : []
   const componentKinds = new Set((Array.isArray(project.scenes) ? project.scenes : []).flatMap(scene => {
     const entities = scene && typeof scene === 'object' && Array.isArray((scene as Record<string, unknown>).entities) ? (scene as { entities: unknown[] }).entities : []
@@ -83,9 +97,15 @@ export async function createNovaPak(projectJson: string, assets: AssetRecord[], 
   }).filter((kind): kind is string => typeof kind === 'string'))
   const usesRigging = componentKinds.has('Skeleton2D')
   const usesTimeline = componentKinds.has('TimelinePlayer')
+  const presentation = (project.projectSettings as { presentation?: { localization?: { sourceLocale?: string; buildLocales?: string[] } } } | undefined)?.presentation
+  const selectedLocales = new Set((presentation?.localization?.buildLocales ?? [presentation?.localization?.sourceLocale ?? 'en']).map(locale => String(locale).toLowerCase()))
+  if (presentation?.localization?.sourceLocale) selectedLocales.add(presentation.localization.sourceLocale.toLowerCase())
   const excludedOptionalUuids = new Set(projectAssets.flatMap(asset => {
     const type = String(asset.assetType)
-    const unused = (type === 'rig' || type === 'skin') ? !usesRigging : type === 'timeline' ? !usesTimeline : false
+    const locale = type === 'localization' && asset.settings && typeof asset.settings === 'object'
+      ? String(((asset.settings as Record<string, unknown>).localizationSettings as Record<string, unknown> | undefined)?.locale ?? '').toLowerCase()
+      : ''
+    const unused = (type === 'rig' || type === 'skin') ? !usesRigging : type === 'timeline' ? !usesTimeline : type === 'localization' ? !selectedLocales.has(locale) : false
     return unused && typeof asset.uuid === 'string' ? [asset.uuid] : []
   }))
   projectAssets = projectAssets.filter(asset => !excludedOptionalUuids.has(String(asset.uuid)))
@@ -109,13 +129,15 @@ export async function createNovaPak(projectJson: string, assets: AssetRecord[], 
     if (excludedOptionalUuids.has(asset.uuid)) continue
     sources.push({ path: safePackagePath(asset.path), bytes: await assetBytes(asset), mimeType: asset.mimeType || 'application/octet-stream', asset })
   }
+  sources.sort((first, second) => first.path.localeCompare(second.path))
 
   const entries: NovaPakEntry[] = []
   const blocks: Uint8Array[] = []
   let offset = 0
   for (const source of sources) {
-    const compressed = await gzip(source.bytes)
-    const useCompressed = compressed !== null && compressed.byteLength + 16 < source.bytes.byteLength
+    const compressed = options.compression === 'store' ? null : await gzip(source.bytes)
+    const savingsRequired = options.compression === 'maximum' ? 0 : 16
+    const useCompressed = compressed !== null && compressed.byteLength + savingsRequired < source.bytes.byteLength
     const block = useCompressed ? compressed : source.bytes
     entries.push({
       path: source.path,
@@ -134,8 +156,8 @@ export async function createNovaPak(projectJson: string, assets: AssetRecord[], 
 
   const index: NovaPakIndex = {
     format: 'nova-pak', version: NOVA_PAK_VERSION,
-    engineVersion: String(project.engineVersion ?? '2.4.0'),
-    createdAt: new Date().toISOString(), startupSceneUuid, entries
+    engineVersion: String(project.engineVersion ?? '3.0.0'),
+    createdAt: options.deterministic === false ? new Date().toISOString() : '1970-01-01T00:00:00.000Z', startupSceneUuid, entries
   }
   const indexBytes = new TextEncoder().encode(JSON.stringify(index))
   const header = new Uint8Array(HEADER_BYTES)

@@ -1,0 +1,321 @@
+Date : 2026-08-14 16:18:16
+Directory : c:\Users\steve\OneDrive\Desktop\Nova_A
+Total : 227 files,  43543 codes, 132 comments, 4627 blanks, all 48302 lines
+
+Languages
++--------------------+------------+------------+------------+------------+------------+
+| language           | files      | code       | comment    | blank      | total      |
++--------------------+------------+------------+------------+------------+------------+
+| TypeScript         |        101 |     16,770 |         68 |      1,617 |     18,455 |
+| Rust               |         18 |     10,980 |         43 |        673 |     11,696 |
+| vue                |         38 |      6,186 |          0 |        450 |      6,636 |
+| TOML               |         12 |      5,439 |          8 |        600 |      6,047 |
+| Markdown           |         23 |      2,030 |          0 |        867 |      2,897 |
+| YAML               |          2 |        922 |          0 |        236 |      1,158 |
+| JavaScript         |         11 |        505 |          0 |         80 |        585 |
+| PostCSS            |          1 |        246 |          0 |         24 |        270 |
+| JSON               |          5 |        186 |          0 |          5 |        191 |
+| HTML               |          3 |        133 |          0 |          8 |        141 |
+| XML                |         11 |         66 |         11 |         55 |        132 |
+| PowerShell         |          1 |         59 |          0 |          9 |         68 |
+| JSON with Comments |          1 |         21 |          2 |          3 |         26 |
++--------------------+------------+------------+------------+------------+------------+
+
+Directories
++-----------------------------------------------------------------------------------------+------------+------------+------------+------------+------------+
+| path                                                                                    | files      | code       | comment    | blank      | total      |
++-----------------------------------------------------------------------------------------+------------+------------+------------+------------+------------+
+| .                                                                                       |        227 |     43,543 |        132 |      4,627 |     48,302 |
+| . (Files)                                                                               |         13 |      1,991 |         11 |        464 |      2,466 |
+| .github                                                                                 |          1 |         44 |          0 |          3 |         47 |
+| .github\workflows                                                                       |          1 |         44 |          0 |          3 |         47 |
+| crates                                                                                  |         21 |     10,076 |         40 |        637 |     10,753 |
+| crates\nova_format                                                                      |          2 |      2,728 |          1 |         80 |      2,809 |
+| crates\nova_format (Files)                                                              |          1 |         13 |          0 |          4 |         17 |
+| crates\nova_format\src                                                                  |          1 |      2,715 |          1 |         76 |      2,792 |
+| crates\nova_math                                                                        |          2 |        318 |          2 |         47 |        367 |
+| crates\nova_math (Files)                                                                |          1 |         10 |          0 |          3 |         13 |
+| crates\nova_math\src                                                                    |          1 |        308 |          2 |         44 |        354 |
+| crates\nova_physics                                                                     |         10 |      4,413 |         18 |        316 |      4,747 |
+| crates\nova_physics (Files)                                                             |          1 |         13 |          0 |          3 |         16 |
+| crates\nova_physics\src                                                                 |          9 |      4,400 |         18 |        313 |      4,731 |
+| crates\nova_physics\src (Files)                                                         |          3 |      1,419 |          4 |        125 |      1,548 |
+| crates\nova_physics\src\collision                                                       |          1 |        322 |          0 |         35 |        357 |
+| crates\nova_physics\src\query                                                           |          1 |        437 |          0 |         27 |        464 |
+| crates\nova_physics\src\rope                                                            |          1 |      1,222 |          5 |         56 |      1,283 |
+| crates\nova_physics\src\solver                                                          |          1 |        135 |          0 |         11 |        146 |
+| crates\nova_physics\src\world                                                           |          2 |        865 |          9 |         59 |        933 |
+| crates\nova_runtime                                                                     |          2 |        748 |          6 |         69 |        823 |
+| crates\nova_runtime (Files)                                                             |          1 |         14 |          0 |          4 |         18 |
+| crates\nova_runtime\src                                                                 |          1 |        734 |          6 |         65 |        805 |
+| crates\nova_script                                                                      |          2 |      1,504 |          7 |         71 |      1,582 |
+| crates\nova_script (Files)                                                              |          1 |         14 |          0 |          3 |         17 |
+| crates\nova_script\src                                                                  |          1 |      1,490 |          7 |         68 |      1,565 |
+| crates\nova_wasm                                                                        |          3 |        365 |          6 |         54 |        425 |
+| crates\nova_wasm (Files)                                                                |          2 |         34 |          0 |          9 |         43 |
+| crates\nova_wasm\src                                                                    |          1 |        331 |          6 |         45 |        382 |
+| manual                                                                                  |          4 |        952 |          0 |        492 |      1,444 |
+| nova_core                                                                               |          3 |         30 |          2 |         10 |         42 |
+| nova_core (Files)                                                                       |          2 |         29 |          0 |          8 |         37 |
+| nova_core\src                                                                           |          1 |          1 |          2 |          2 |          5 |
+| release-audits                                                                          |          9 |        457 |          0 |        147 |        604 |
+| releases                                                                                |          6 |        196 |          0 |         64 |        260 |
+| releases\v2.6.0                                                                         |          2 |         54 |          0 |         17 |         71 |
+| releases\v2.7.0                                                                         |          2 |         74 |          0 |         26 |        100 |
+| releases\v2.8.0                                                                         |          2 |         68 |          0 |         21 |         89 |
+| scripts                                                                                 |         12 |        564 |          0 |         89 |        653 |
+| src                                                                                     |        150 |     23,218 |         72 |      2,141 |     25,431 |
+| src (Files)                                                                             |          6 |        540 |          1 |         51 |        592 |
+| src-tauri                                                                               |          7 |      5,957 |          7 |        579 |      6,543 |
+| src-tauri (Files)                                                                       |          4 |      4,939 |          6 |        519 |      5,464 |
+| src-tauri\capabilities                                                                  |          1 |         20 |          0 |          1 |         21 |
+| src-tauri\src                                                                           |          2 |        998 |          1 |         59 |      1,058 |
+| src\assets                                                                              |         19 |      1,371 |         14 |        175 |      1,560 |
+| src\assets (Files)                                                                      |          8 |      1,305 |          3 |        120 |      1,428 |
+| src\assets\icons                                                                        |         11 |         66 |         11 |         55 |        132 |
+| src\components                                                                          |         29 |      5,424 |          0 |        380 |      5,804 |
+| src\editor                                                                              |          9 |        561 |         12 |         73 |        646 |
+| src\layout                                                                              |          4 |        337 |          0 |         23 |        360 |
+| src\panels                                                                              |          3 |        336 |          0 |         36 |        372 |
+| src\projects                                                                            |          4 |        588 |          2 |         58 |        648 |
+| src\renderer                                                                            |         11 |      1,738 |          0 |        135 |      1,873 |
+| src\runtime                                                                             |         44 |      7,095 |         21 |        713 |      7,829 |
+| src\store                                                                               |          4 |      2,035 |          7 |        166 |      2,208 |
+| src\world                                                                               |         17 |      3,193 |         15 |        331 |      3,539 |
+| tests                                                                                   |          1 |         58 |          0 |          1 |         59 |
+| tests\fixtures                                                                          |          1 |         58 |          0 |          1 |         59 |
++-----------------------------------------------------------------------------------------+------------+------------+------------+------------+------------+
+
+Files
++-----------------------------------------------------------------------------------------+--------------------+------------+------------+------------+------------+
+| filename                                                                                | language           | code       | comment    | blank      | total      |
++-----------------------------------------------------------------------------------------+--------------------+------------+------------+------------+------------+
+| c:\Users\steve\OneDrive\Desktop\Nova_A\.github\workflows\ci.yml                         | YAML               |         44 |          0 |          3 |         47 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\Cargo.lock                                       | TOML               |        420 |          2 |         56 |        478 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\Cargo.toml                                       | TOML               |         24 |          0 |          3 |         27 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\LICENSE.md                                       | Markdown           |         17 |          0 |          5 |         22 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\README.md                                        | Markdown           |        241 |          0 |         77 |        318 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\README.zh-CN.md                                  | Markdown           |        241 |          0 |         76 |        317 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\crates\nova_format\Cargo.toml                    | TOML               |         13 |          0 |          4 |         17 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\crates\nova_format\src\lib.rs                    | Rust               |      2,715 |          1 |         76 |      2,792 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\crates\nova_math\Cargo.toml                      | TOML               |         10 |          0 |          3 |         13 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\crates\nova_math\src\lib.rs                      | Rust               |        308 |          2 |         44 |        354 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\crates\nova_physics\Cargo.toml                   | TOML               |         13 |          0 |          3 |         16 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\crates\nova_physics\src\body.rs                  | Rust               |        393 |          0 |         23 |        416 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\crates\nova_physics\src\collision\mod.rs         | Rust               |        322 |          0 |         35 |        357 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\crates\nova_physics\src\lib.rs                   | Rust               |        131 |          4 |         27 |        162 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\crates\nova_physics\src\query\mod.rs             | Rust               |        437 |          0 |         27 |        464 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\crates\nova_physics\src\rope\mod.rs              | Rust               |      1,222 |          5 |         56 |      1,283 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\crates\nova_physics\src\solver\contact_solver.rs | Rust               |        135 |          0 |         11 |        146 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\crates\nova_physics\src\tests.rs                 | Rust               |        895 |          0 |         75 |        970 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\crates\nova_physics\src\world\legacy.rs          | Rust               |        462 |          0 |         24 |        486 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\crates\nova_physics\src\world\persistent.rs      | Rust               |        403 |          9 |         35 |        447 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\crates\nova_runtime\Cargo.toml                   | TOML               |         14 |          0 |          4 |         18 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\crates\nova_runtime\src\lib.rs                   | Rust               |        734 |          6 |         65 |        805 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\crates\nova_script\Cargo.toml                    | TOML               |         14 |          0 |          3 |         17 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\crates\nova_script\src\lib.rs                    | Rust               |      1,490 |          7 |         68 |      1,565 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\crates\nova_wasm\Cargo.toml                      | TOML               |         17 |          0 |          3 |         20 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\crates\nova_wasm\LICENSE.md                      | Markdown           |         17 |          0 |          6 |         23 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\crates\nova_wasm\src\lib.rs                      | Rust               |        331 |          6 |         45 |        382 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\index.html                                       | HTML               |         13 |          0 |          2 |         15 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\manual\MANUAL.de.md                              | Markdown           |        230 |          0 |        142 |        372 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\manual\MANUAL.en.md                              | Markdown           |        342 |          0 |        191 |        533 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\manual\MANUAL.zh-CN.md                           | Markdown           |        272 |          0 |        154 |        426 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\manual\index.html                                | HTML               |        108 |          0 |          5 |        113 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\nova_core\Cargo.toml                             | TOML               |         12 |          0 |          3 |         15 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\nova_core\LICENSE.md                             | Markdown           |         17 |          0 |          5 |         22 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\nova_core\src\lib.rs                             | Rust               |          1 |          2 |          2 |          5 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\package.json                                     | JSON               |         60 |          0 |          1 |         61 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\player.html                                      | HTML               |         12 |          0 |          1 |         13 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\pnpm-lock.yaml                                   | YAML               |        878 |          0 |        233 |      1,111 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\release-audits\v2.4.0-edit-ledger.md             | Markdown           |         52 |          0 |         14 |         66 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\release-audits\v2.6.0-edit-ledger.md             | Markdown           |         73 |          0 |         18 |         91 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\release-audits\v2.6.0-release-notes.md           | Markdown           |         37 |          0 |         12 |         49 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\release-audits\v2.7.0-edit-ledger.md             | Markdown           |         48 |          0 |         16 |         64 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\release-audits\v2.7.0-release-notes.md           | Markdown           |         57 |          0 |         21 |         78 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\release-audits\v2.8.0-edit-ledger.md             | Markdown           |         62 |          0 |         20 |         82 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\release-audits\v2.8.0-release-notes.md           | Markdown           |         51 |          0 |         16 |         67 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\release-audits\v2.9.0-edit-ledger.md             | Markdown           |         55 |          0 |         19 |         74 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\release-audits\v2.9.0-release-notes.md           | Markdown           |         22 |          0 |         11 |         33 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\releases\v2.6.0\LICENSE.md                       | Markdown           |         17 |          0 |          5 |         22 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\releases\v2.6.0\RELEASE_NOTES.md                 | Markdown           |         37 |          0 |         12 |         49 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\releases\v2.7.0\LICENSE.md                       | Markdown           |         17 |          0 |          5 |         22 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\releases\v2.7.0\RELEASE_NOTES.md                 | Markdown           |         57 |          0 |         21 |         78 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\releases\v2.8.0\LICENSE.md                       | Markdown           |         17 |          0 |          5 |         22 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\releases\v2.8.0\RELEASE_NOTES.md                 | Markdown           |         51 |          0 |         16 |         67 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\rust-toolchain.toml                              | TOML               |          4 |          0 |          1 |          5 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\scripts\audit-animation.mjs                      | JavaScript         |         30 |          0 |          4 |         34 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\scripts\audit-editor-shell.mjs                   | JavaScript         |         42 |          0 |          6 |         48 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\scripts\audit-manual.mjs                         | JavaScript         |         37 |          0 |          6 |         43 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\scripts\audit-rendering.mjs                      | JavaScript         |         38 |          0 |          5 |         43 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\scripts\audit-script-studio.mjs                  | JavaScript         |         29 |          0 |          4 |         33 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\scripts\audit-v2.5.mjs                           | JavaScript         |         36 |          0 |          8 |         44 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\scripts\audit-v2.6.mjs                           | JavaScript         |         37 |          0 |          5 |         42 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\scripts\audit-v2.7.mjs                           | JavaScript         |         33 |          0 |         11 |         44 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\scripts\audit-v2.8.mjs                           | JavaScript         |         68 |          0 |         12 |         80 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\scripts\audit-v2.9.mjs                           | JavaScript         |         41 |          0 |         11 |         52 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\scripts\nova-export.mjs                          | JavaScript         |        114 |          0 |          8 |        122 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\scripts\package-release.ps1                      | PowerShell         |         59 |          0 |          9 |         68 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src-tauri\Cargo.lock                             | TOML               |      4,878 |          2 |        512 |      5,392 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src-tauri\Cargo.toml                             | TOML               |         20 |          4 |          5 |         29 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src-tauri\build.rs                               | Rust               |          3 |          0 |          1 |          4 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src-tauri\capabilities\default.json              | JSON               |         20 |          0 |          1 |         21 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src-tauri\src\lib.rs                             | Rust               |        994 |          0 |         57 |      1,051 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src-tauri\src\main.rs                            | Rust               |          4 |          1 |          2 |          7 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src-tauri\tauri.conf.json                        | JSON               |         38 |          0 |          1 |         39 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src\App.vue                                      | vue                |         28 |          0 |          4 |         32 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src\PlayerApp.vue                                | vue                |         61 |          0 |          7 |         68 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src\assets\AssetDatabase.ts                      | TypeScript         |        533 |          2 |         34 |        569 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src\assets\TextureAtlas.ts                       | TypeScript         |         74 |          0 |          8 |         82 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src\assets\assetGraph.ts                         | TypeScript         |         85 |          0 |         10 |         95 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src\assets\icons\addLayer.svg                    | XML                |          6 |          1 |          5 |         12 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src\assets\icons\arrow.svg                       | XML                |          6 |          1 |          5 |         12 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src\assets\icons\color.svg                       | XML                |          6 |          1 |          5 |         12 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src\assets\icons\layers.svg                      | XML                |          6 |          1 |          5 |         12 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src\assets\icons\pictures.svg                    | XML                |          6 |          1 |          5 |         12 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src\assets\icons\play.svg                        | XML                |          6 |          1 |          5 |         12 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src\assets\icons\render.svg                      | XML                |          6 |          1 |          5 |         12 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src\assets\icons\reset.svg                       | XML                |          6 |          1 |          5 |         12 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src\assets\icons\scene.svg                       | XML                |          6 |          1 |          5 |         12 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src\assets\icons\settings.svg                    | XML                |          6 |          1 |          5 |         12 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src\assets\icons\stop.svg                        | XML                |          6 |          1 |          5 |         12 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src\assets\import.worker.ts                      | TypeScript         |         21 |          0 |          3 |         24 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src\assets\importPipeline.ts                     | TypeScript         |        184 |          0 |         21 |        205 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src\assets\main.css                              | PostCSS            |        246 |          0 |         24 |        270 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src\assets\projectFolder.ts                      | TypeScript         |         54 |          0 |          7 |         61 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src\assets\types.ts                              | TypeScript         |        108 |          1 |         13 |        122 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src\components\ActionBar.vue                     | vue                |         66 |          0 |          8 |         74 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src\components\AnimationPanel.vue                | vue                |        178 |          0 |         15 |        193 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src\components\BuildSettingsPanel.vue            | vue                |        103 |          0 |          8 |        111 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src\components\CommandPalette.vue                | vue                |         97 |          0 |          8 |        105 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src\components\ConfigPanel.vue                   | vue                |        696 |          0 |         35 |        731 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src\components\ConfirmDialog.vue                 | vue                |         50 |          0 |          7 |         57 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src\components\ConnectionBuilder.vue             | vue                |        496 |          0 |         38 |        534 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src\components\ConsolePanel.vue                  | vue                |         54 |          0 |          5 |         59 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src\components\ContextMenu.vue                   | vue                |         85 |          0 |          7 |         92 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src\components\EditorBottomPanel.vue             | vue                |        402 |          0 |         15 |        417 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src\components\LayerBar.vue                      | vue                |          9 |          0 |          1 |         10 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src\components\ManualViewer.vue                  | vue                |         19 |          0 |          4 |         23 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src\components\PackageManagerPanel.vue           | vue                |        150 |          0 |          4 |        154 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src\components\PhysicsRuntimePanel.vue           | vue                |        131 |          0 |          9 |        140 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src\components\PluginSettings.vue                | vue                |         61 |          0 |          6 |         67 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src\components\PresentationPanel.vue             | vue                |        136 |          0 |         10 |        146 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src\components\ProfilerPanel.vue                 | vue                |        260 |          0 |         18 |        278 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src\components\ProjectManager.vue                | vue                |        114 |          0 |         10 |        124 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src\components\RenderingPanel.vue                | vue                |         89 |          0 |          7 |         96 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src\components\RuntimeComponentsInspector.vue    | vue                |        273 |          0 |         19 |        292 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src\components\SaveDataSettings.vue              | vue                |         27 |          0 |          4 |         31 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src\components\SceneSideBar.vue                  | vue                |        212 |          0 |         15 |        227 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src\components\ScriptStudio.vue                  | vue                |        221 |          0 |         19 |        240 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src\components\TeamWorkflowPanel.vue             | vue                |         63 |          0 |          4 |         67 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src\components\TilemapPanel.vue                  | vue                |        160 |          0 |          7 |        167 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src\components\ToolBar.vue                       | vue                |         91 |          0 |         10 |        101 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src\components\WorkspaceBar.vue                  | vue                |         44 |          0 |          5 |         49 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src\components\WorldCanvas.vue                   | vue                |      1,023 |          0 |         69 |      1,092 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src\components\WorldToolsPanel.vue               | vue                |        114 |          0 |         13 |        127 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src\editor\animationStudioState.ts               | TypeScript         |         50 |          1 |          6 |         57 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src\editor\commands.ts                           | TypeScript         |         90 |          5 |         14 |        109 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src\editor\gizmo.ts                              | TypeScript         |         84 |          0 |         11 |         95 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src\editor\scriptApi.ts                          | TypeScript         |         69 |          3 |          4 |         76 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src\editor\scriptLanguage.ts                     | TypeScript         |         86 |          1 |         11 |         98 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src\editor\scriptLanguage.worker.ts              | TypeScript         |          4 |          0 |          2 |          6 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src\editor\scriptStudioState.ts                  | TypeScript         |         15 |          0 |          4 |         19 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src\editor\selection.ts                          | TypeScript         |         51 |          1 |          7 |         59 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src\editor\workspaces.ts                         | TypeScript         |        112 |          1 |         14 |        127 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src\i18n.ts                                      | TypeScript         |        435 |          0 |         35 |        470 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src\layout\EditorLayout.vue                      | vue                |         81 |          0 |          9 |         90 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src\layout\SideBar.vue                           | vue                |         40 |          0 |          4 |         44 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src\layout\StatusBar.vue                         | vue                |         11 |          0 |          1 |         12 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src\layout\TopBar.vue                            | vue                |        205 |          0 |          9 |        214 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src\main.ts                                      | TypeScript         |          6 |          0 |          2 |          8 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src\panels\RendererPanel.vue                     | vue                |         10 |          0 |          3 |         13 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src\panels\ScenePanel.vue                        | vue                |         10 |          0 |          3 |         13 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src\panels\SettingsPanel.vue                     | vue                |        316 |          0 |         30 |        346 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src\player.ts                                    | TypeScript         |          6 |          0 |          2 |          8 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src\projects\projectFormat.ts                    | TypeScript         |         19 |          0 |          3 |         22 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src\projects\projectManager.ts                   | TypeScript         |        157 |          0 |         17 |        174 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src\projects\projectSession.ts                   | TypeScript         |         58 |          0 |         11 |         69 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src\projects\templates.ts                        | TypeScript         |        354 |          2 |         27 |        383 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src\renderer\Canvas2DRenderer.ts                 | TypeScript         |        254 |          0 |         11 |        265 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src\renderer\WebGL2Renderer.ts                   | TypeScript         |        585 |          0 |         41 |        626 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src\renderer\geometry.ts                         | TypeScript         |        128 |          0 |          8 |        136 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src\renderer\index.ts                            | TypeScript         |         12 |          0 |          3 |         15 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src\renderer\lighting2d.ts                       | TypeScript         |        221 |          0 |         16 |        237 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src\renderer\materials.ts                        | TypeScript         |        111 |          0 |         12 |        123 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src\renderer\renderGraph.ts                      | TypeScript         |         40 |          0 |          4 |         44 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src\renderer\renderSettings.ts                   | TypeScript         |         69 |          0 |          9 |         78 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src\renderer\renderTextures.ts                   | TypeScript         |         19 |          0 |          3 |         22 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src\renderer\sceneRenderer.ts                    | TypeScript         |        186 |          0 |         13 |        199 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src\renderer\types.ts                            | TypeScript         |        113 |          0 |         15 |        128 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src\runtime\GameplayRuntime.ts                   | TypeScript         |        784 |          0 |         50 |        834 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src\runtime\aiTools.ts                           | TypeScript         |         45 |          0 |          8 |         53 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src\runtime\animation.ts                         | TypeScript         |        436 |          0 |         40 |        476 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src\runtime\audio.ts                             | TypeScript         |        386 |          1 |         36 |        423 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src\runtime\buildSettings.ts                     | TypeScript         |        179 |          0 |         20 |        199 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src\runtime\crashReporter.ts                     | TypeScript         |         51 |          3 |          6 |         60 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src\runtime\dataResources.ts                     | TypeScript         |         86 |          0 |         12 |         98 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src\runtime\gameExporter.ts                      | TypeScript         |        164 |          0 |         16 |        180 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src\runtime\gameUi.ts                            | TypeScript         |        359 |          0 |         30 |        389 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src\runtime\input.ts                             | TypeScript         |        196 |          1 |         18 |        215 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src\runtime\jobScheduler.ts                      | TypeScript         |         78 |          0 |         11 |         89 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src\runtime\jobScheduler.worker.ts               | TypeScript         |         32 |          0 |          4 |         36 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src\runtime\localization.ts                      | TypeScript         |        185 |          0 |         25 |        210 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src\runtime\navigation2d.ts                      | TypeScript         |        222 |          0 |         22 |        244 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src\runtime\networking.ts                        | TypeScript         |        220 |          0 |         16 |        236 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src\runtime\novaPak.ts                           | TypeScript         |        197 |          0 |         20 |        217 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src\runtime\objectPool.ts                        | TypeScript         |         44 |          0 |          9 |         53 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src\runtime\openManual.ts                        | TypeScript         |          7 |          1 |          4 |         12 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src\runtime\packages.ts                          | TypeScript         |        258 |          1 |         28 |        287 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src\runtime\particles.ts                         | TypeScript         |        156 |          0 |         16 |        172 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src\runtime\performanceTools.ts                  | TypeScript         |        115 |          2 |         13 |        130 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src\runtime\physics2d.ts                         | TypeScript         |         17 |          1 |          2 |         20 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src\runtime\physicsDebug.ts                      | TypeScript         |         11 |          0 |          2 |         13 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src\runtime\physicsMonitor.ts                    | TypeScript         |        171 |          3 |         14 |        188 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src\runtime\plugins.ts                           | TypeScript         |        193 |          0 |         17 |        210 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src\runtime\prefabs.ts                           | TypeScript         |        308 |          0 |         21 |        329 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src\runtime\presentation.ts                      | TypeScript         |         39 |          0 |          6 |         45 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src\runtime\production.ts                        | TypeScript         |        160 |          0 |         14 |        174 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src\runtime\productionRuntime.ts                 | TypeScript         |         32 |          0 |          4 |         36 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src\runtime\profiler.ts                          | TypeScript         |         45 |          0 |          6 |         51 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src\runtime\projectUpgrade.ts                    | TypeScript         |         70 |          0 |          8 |         78 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src\runtime\replay.ts                            | TypeScript         |        107 |          0 |         15 |        122 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src\runtime\rigging.ts                           | TypeScript         |        252 |          0 |         22 |        274 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src\runtime\saveGame.ts                          | TypeScript         |        144 |          1 |         18 |        163 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src\runtime\scriptDebug.ts                       | TypeScript         |         68 |          0 |         11 |         79 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src\runtime\scriptSettings.ts                    | TypeScript         |         24 |          0 |          5 |         29 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src\runtime\shipping.ts                          | TypeScript         |         40 |          1 |          7 |         48 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src\runtime\teamWorkflow.ts                      | TypeScript         |        189 |          1 |         28 |        218 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src\runtime\testRunner.ts                        | TypeScript         |         84 |          0 |          9 |         93 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src\runtime\tilemap.ts                           | TypeScript         |        473 |          3 |         41 |        517 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src\runtime\time.ts                              | TypeScript         |         72 |          0 |         14 |         86 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src\runtime\timeline.ts                          | TypeScript         |        100 |          0 |         13 |        113 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src\runtime\uiTheme.ts                           | TypeScript         |         99 |          0 |         12 |        111 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src\runtime\worldGameplay.ts                     | TypeScript         |        197 |          2 |         20 |        219 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src\store\dialog.ts                              | TypeScript         |         29 |          0 |          7 |         36 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src\store\editor.ts                              | TypeScript         |        162 |          0 |         17 |        179 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src\store\physics.ts                             | TypeScript         |      1,722 |          7 |        126 |      1,855 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src\store\preferences.ts                         | TypeScript         |        122 |          0 |         16 |        138 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src\vite-env.d.ts                                | TypeScript         |          4 |          1 |          1 |          6 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src\world\BoxEntity.ts                           | TypeScript         |         26 |          2 |          4 |         32 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src\world\Camera.ts                              | TypeScript         |         29 |          4 |          8 |         41 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src\world\CircleEntity.ts                        | TypeScript         |         17 |          1 |          3 |         21 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src\world\Connection.ts                          | TypeScript         |        778 |          0 |         55 |        833 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src\world\Entity.ts                              | TypeScript         |        169 |          1 |         19 |        189 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src\world\SceneManager.ts                        | TypeScript         |         89 |          3 |         15 |        107 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src\world\Transform.ts                           | TypeScript         |         15 |          0 |          3 |         18 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src\world\TriangleEntity.ts                      | TypeScript         |         24 |          2 |          4 |         30 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src\world\World.ts                               | TypeScript         |        727 |          2 |         58 |        787 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src\world\componentRegistry.ts                   | TypeScript         |         60 |          0 |          6 |         66 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src\world\components.ts                          | TypeScript         |        675 |          0 |         93 |        768 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src\world\compoundGeometry.ts                    | TypeScript         |        116 |          0 |         12 |        128 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src\world\geometry.ts                            | TypeScript         |        279 |          0 |         30 |        309 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src\world\hierarchy.ts                           | TypeScript         |        127 |          0 |         11 |        138 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src\world\identity.ts                            | TypeScript         |         18 |          0 |          4 |         22 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src\world\layers.ts                              | TypeScript         |         40 |          0 |          5 |         45 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\src\world\types.ts                               | TypeScript         |          4 |          0 |          1 |          5 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\tests\fixtures\v1_1_2_project.json               | JSON               |         58 |          0 |          1 |         59 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\tsconfig.json                                    | JSON with Comments |         21 |          2 |          3 |         26 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\tsconfig.node.json                               | JSON               |         10 |          0 |          1 |         11 |
+| c:\Users\steve\OneDrive\Desktop\Nova_A\vite.config.ts                                   | TypeScript         |         50 |          7 |          5 |         62 |
+| Total                                                                                   |                    |     43,543 |        132 |      4,627 |     48,302 |
++-----------------------------------------------------------------------------------------+--------------------+------------+------------+------------+------------+

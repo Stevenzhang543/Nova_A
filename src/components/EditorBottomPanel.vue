@@ -2,7 +2,8 @@
   <section class="bottom-panel" :class="{ collapsed: !estate.bottomPanelOpen }" :style="panelStyle">
     <div v-if="estate.bottomPanelOpen" class="resize-handle" @mousedown="startResize"></div>
     <header class="panel-tabs">
-      <button v-for="tab in tabs" :key="tab.id" :class="{ active: estate.bottomPanelTab === tab.id }" @click="openTab(tab.id)">{{ t(tab.label) }}</button>
+      <select v-model="estate.bottomPanelTab" class="compact-tab-select" :aria-label="t('tools')" @change="estate.bottomPanelOpen = true"><option v-for="tab in tabs" :key="tab.id" :value="tab.id">{{ t(tab.label) }}</option></select>
+      <button v-for="tab in tabs" :key="tab.id" class="panel-tab" :class="{ active: estate.bottomPanelTab === tab.id }" @click="openTab(tab.id)">{{ t(tab.label) }}</button>
       <span></span>
       <button v-if="estate.bottomPanelTab === 'console' && estate.bottomPanelOpen" :title="t('clearConsole')" @click="estate.logs.splice(0)">⌫</button>
       <button :title="t(estate.bottomPanelOpen ? 'collapsePanel' : 'expandPanel')" @click="estate.bottomPanelOpen = !estate.bottomPanelOpen">{{ estate.bottomPanelOpen ? '⌄' : '⌃' }}</button>
@@ -36,8 +37,36 @@
             <nav class="asset-filters" :aria-label="t('assetType')">
               <button v-for="filter in assetFilters" :key="filter.type" :class="{ active: assets.typeFilter === filter.type }" @click="assets.typeFilter = filter.type">{{ t(filter.label) }}</button>
             </nav>
-            <input ref="assetInput" hidden type="file" multiple accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml,audio/wav,audio/ogg,audio/mpeg,font/ttf,font/otf,font/woff,font/woff2,.ttf,.otf,.woff,.woff2,.rhai,.nova-prefab,.nova-scene,.nova-material,.nova-anim,.nova-controller,.nova-mask,.nova-rig,.nova-skin,.nova-timeline,.nova-tileset" @change="importFiles">
+            <div class="asset-diagnostics">
+              <button @click="reportUnusedAssets">{{ t('unusedAssetReport') }}</button>
+              <button :disabled="!assetGraph.missingReferences.length" @click="openMissingRepair">{{ t('missingReferences') }} <span>{{ assetGraph.missingReferences.length }}</span></button>
+              <span v-if="assets.atlasError" class="atlas-error" :title="assets.atlasError">{{ t('atlasRebuildFailed') }}</span>
+            </div>
+            <input ref="assetInput" hidden type="file" multiple accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml,audio/wav,audio/ogg,audio/mpeg,font/ttf,font/otf,font/woff,font/woff2,.ttf,.otf,.woff,.woff2,.rhai,.nova-prefab,.nova-scene,.nova-material,.nova-anim,.nova-controller,.nova-mask,.nova-rig,.nova-skin,.nova-timeline,.nova-tileset,.nova-atlas,.glsl,.frag,.vert,.nova-shader,.csv,.po,.arb,.nova-locale,.nova-theme" @change="importFiles">
           </header>
+
+          <div v-if="importJobs.length" class="import-queue" aria-live="polite">
+            <article v-for="job in importJobs" :key="job.id">
+              <span><strong>{{ job.name }}</strong><small>{{ t(`importStatus_${job.status}`) }}</small></span>
+              <progress :value="job.progress" max="1"></progress>
+              <button v-if="!['complete','cancelled','failed'].includes(job.status)" @click="cancelAssetImport(job.id)">{{ t('cancel') }}</button>
+              <em v-else-if="job.error" :title="job.error">{{ job.error }}</em>
+            </article>
+          </div>
+
+          <section v-if="repairMode && missingReferenceIds.length" class="missing-repair" aria-live="polite">
+            <strong>{{ t('repairMissingReference') }}</strong>
+            <select v-model="selectedMissingReference" :aria-label="t('missingReferences')">
+              <option v-for="reference in missingReferenceIds" :key="reference" :value="reference">{{ reference }}</option>
+            </select>
+            <span>→</span>
+            <select v-model="replacementAssetGuid" :aria-label="t('replacementAsset')">
+              <option value="" disabled>{{ t('chooseReplacementAsset') }}</option>
+              <option v-for="asset in assets.records" :key="asset.uuid" :value="asset.uuid">{{ asset.path }}</option>
+            </select>
+            <button class="primary" :disabled="!replacementAssetGuid" @click="repairSelectedMissingReference">{{ t('repairReference') }}</button>
+            <button :title="t('close')" @click="repairMode = false">×</button>
+          </section>
 
           <div class="asset-grid">
             <article
@@ -51,6 +80,7 @@
             >
               <span v-if="asset.assetType === 'image'" class="asset-preview" :style="{ backgroundImage: `url(${asset.source})`, imageRendering: asset.settings.filterMode === 'Nearest' ? 'pixelated' : 'auto' }"></span>
               <span v-else class="asset-preview asset-icon">{{ assetIcon(asset.assetType) }}</span>
+              <span v-if="assetSourceStatus(asset.uuid)" :class="['source-badge', assetSourceStatus(asset.uuid)]">{{ assetSourceStatus(asset.uuid)?.slice(0, 1).toUpperCase() }}</span>
               <input v-if="renamingGuid === asset.uuid" v-model="renameValue" @click.stop @keydown.enter="commitRename" @keydown.escape="renamingGuid = null" @blur="commitRename">
               <strong v-else>{{ asset.name }}</strong>
               <small>{{ asset.assetType }} · {{ formatBytes(asset.byteLength) }}</small>
@@ -62,8 +92,13 @@
         <aside v-if="selectedAsset" class="asset-inspector" @change="assetSettingsChanged">
           <header><span>{{ t('assetInspector') }}</span><strong>{{ selectedAsset.name }}</strong></header>
           <div v-if="selectedAsset.assetType === 'image'" class="large-preview" :style="{ backgroundImage: `url(${selectedAsset.source})`, imageRendering: selectedAsset.settings.filterMode === 'Nearest' ? 'pixelated' : 'auto' }"></div>
+          <audio v-else-if="selectedAsset.assetType === 'audio'" class="asset-media-preview" :src="selectedAsset.source" controls preload="metadata"></audio>
+          <div v-else-if="selectedAsset.assetType === 'font'" class="font-preview" :style="{ fontFamily: selectedAsset.fontFamily }">Nova_A Aa 123</div>
           <label><span>GUID</span><code>{{ selectedAsset.uuid.slice(0, 13) }}…</code></label>
           <label><span>{{ t('assetPath') }}</span><code>{{ selectedAsset.path }}</code></label>
+          <label v-if="selectedAsset.pipeline"><span>{{ t('importCache') }}</span><code>{{ selectedAsset.pipeline.cacheHit ? t('cacheHit') : t('cacheWritten') }}</code></label>
+          <label v-if="selectedAsset.pipeline"><span>SHA-256</span><code :title="selectedAsset.pipeline.contentHash">{{ selectedAsset.pipeline.contentHash.slice(0, 13) }}…</code></label>
+          <p v-if="selectedAsset.pipeline?.status === 'failed'" class="pipeline-error">{{ selectedAsset.pipeline.error }}</p>
           <template v-if="selectedAsset.assetType === 'image'">
             <label><span>{{ t('dimensions') }}</span><b>{{ selectedAsset.width }} × {{ selectedAsset.height }}</b></label>
             <label><span>{{ t('filterMode') }}</span><select v-model="selectedAsset.settings.filterMode"><option value="Linear">{{ t('linear') }}</option><option value="Nearest">{{ t('nearest') }}</option></select></label>
@@ -77,11 +112,43 @@
             <label><span>{{ t('useTextureAtlas') }}</span><input v-model="selectedAsset.settings.atlas" type="checkbox"></label>
             <label v-for="platform in compressionPlatforms" :key="platform"><span>{{ t(platform) }} {{ t('compression') }}</span><select v-model="selectedAsset.settings.platformVariants[platform]"><option :value="undefined">{{ t('inherit') }}</option><option>None</option><option>Lossless</option><option>Optimized</option></select></label>
           </template>
-          <label v-else-if="selectedAsset.assetType === 'audio'"><span>{{ t('duration') }}</span><b>{{ selectedAsset.duration.toFixed(2) }}s</b></label>
+          <template v-else-if="selectedAsset.assetType === 'audio'">
+            <label><span>{{ t('duration') }}</span><b>{{ selectedAsset.duration.toFixed(2) }}s</b></label>
+            <label><span>{{ t('normalizeAudio') }}</span><input v-model="selectedAsset.settings.audioSettings.normalize" type="checkbox"></label>
+            <label><span>{{ t('streamAudio') }}</span><input v-model="selectedAsset.settings.audioSettings.streaming" type="checkbox"></label>
+            <label><span>{{ t('sampleRate') }}</span><select v-model.number="selectedAsset.settings.audioSettings.sampleRate"><option :value="22050">22050</option><option :value="44100">44100</option><option :value="48000">48000</option><option :value="96000">96000</option></select></label>
+          </template>
           <label v-else-if="selectedAsset.assetType === 'font'"><span>{{ t('fontFamily') }}</span><b :style="{ fontFamily: selectedAsset.fontFamily }">Nova_A</b></label>
           <template v-else-if="selectedAsset.assetType === 'script'">
             <p class="drag-hint">{{ t('scriptStudioAssetHint') }}</p>
+            <label><span>{{ t('module') }}</span><input v-model="selectedAsset.settings.scriptSettings.module" type="checkbox"></label>
+            <label><span>{{ t('encoding') }}</span><b>UTF-8</b></label>
             <button class="save-script" @click="openInScriptStudio(selectedAsset.uuid)">{{ t('openScriptStudio') }}</button>
+          </template>
+          <template v-else-if="selectedAsset.assetType === 'atlas'">
+            <label><span>{{ t('atlasMaxSize') }}</span><select v-model.number="selectedAsset.settings.atlasSettings.maxSize"><option :value="512">512</option><option :value="1024">1024</option><option :value="2048">2048</option><option :value="4096">4096</option></select></label>
+            <label><span>{{ t('atlasPadding') }}</span><input v-model.number="selectedAsset.settings.atlasSettings.padding" type="number" min="0" max="32"></label>
+            <label><span>{{ t('trimTransparent') }}</span><input v-model="selectedAsset.settings.atlasSettings.trim" type="checkbox"></label>
+            <textarea class="text-preview" readonly :value="selectedTextSource"></textarea>
+          </template>
+          <template v-else-if="selectedAsset.assetType === 'tileset'">
+            <label><span>{{ t('tileSize') }}</span><div><input v-model.number="selectedAsset.settings.tileSettings.tileWidth" type="number" min="1"><input v-model.number="selectedAsset.settings.tileSettings.tileHeight" type="number" min="1"></div></label>
+            <label><span>{{ t('marginSpacing') }}</span><div><input v-model.number="selectedAsset.settings.tileSettings.margin" type="number" min="0"><input v-model.number="selectedAsset.settings.tileSettings.spacing" type="number" min="0"></div></label>
+            <textarea class="text-preview" readonly :value="selectedTextSource"></textarea>
+          </template>
+          <template v-else-if="selectedAsset.assetType === 'shader'">
+            <label><span>{{ t('shaderStage') }}</span><select v-model="selectedAsset.settings.shaderSettings.stage"><option value="fragment">Fragment</option><option value="vertex">Vertex</option></select></label>
+            <label><span>{{ t('entryPoint') }}</span><input v-model="selectedAsset.settings.shaderSettings.entry"></label>
+            <textarea class="text-preview" readonly :value="selectedTextSource"></textarea>
+          </template>
+          <template v-else-if="selectedAsset.assetType === 'localization'">
+            <label><span>{{ t('locale') }}</span><input v-model="selectedAsset.settings.localizationSettings.locale"></label>
+            <label><span>{{ t('fallbackLocale') }}</span><input v-model="selectedAsset.settings.localizationSettings.fallbackLocale"></label>
+            <textarea class="text-preview" readonly :value="selectedTextSource"></textarea>
+          </template>
+          <template v-else-if="selectedAsset.assetType === 'uiTheme'">
+            <p class="drag-hint">{{ t('uiThemeAssetHint') }}</p>
+            <textarea class="text-preview" readonly :value="selectedTextSource"></textarea>
           </template>
           <template v-else-if="selectedAsset.assetType === 'animation' && selectedAsset.animationImport">
             <p class="drag-hint">{{ t('animationImportHint') }}</p>
@@ -92,21 +159,32 @@
             <button class="save-script" @click="reimportAnimation">{{ t('reimportAnimation') }}</button>
           </template>
           <button v-else-if="selectedAsset.assetType === 'prefab'" class="save-script" @click="instantiateSelectedPrefab">{{ t('instantiatePrefabAction') }}</button>
-          <div class="asset-actions"><button @click="revealAsset">{{ t('revealAsset') }}</button><button class="danger" @click="removeSelectedAsset">{{ t('deleteAsset') }}</button></div>
+          <section class="reference-summary">
+            <strong>{{ t('assetReferences') }}</strong>
+            <p>{{ t('referenceCount', { count: selectedReferences.length }) }}</p>
+            <ul v-if="selectedReferences.length"><li v-for="owner in selectedReferences.slice(0, 8)" :key="owner">{{ referenceName(owner) }}</li></ul>
+            <p v-if="selectedInclusion.length">{{ selectedInclusion.join(' · ') }}</p>
+            <p v-else>{{ t('excludedFromBuild') }}</p>
+          </section>
+          <div class="asset-actions"><button @click="reimportInput?.click()">{{ t('reimportAsset') }}</button><button @click="revealAsset">{{ t('revealAsset') }}</button><button class="danger" @click="removeSelectedAsset">{{ t('deleteAsset') }}</button></div>
+          <input ref="reimportInput" hidden type="file" @change="reimportSelectedAsset">
           <p class="drag-hint">{{ t('dragAssetHint') }}</p>
         </aside>
       </div>
 
       <ConsolePanel v-else-if="estate.bottomPanelTab === 'console'" />
+      <PackageManagerPanel v-else-if="estate.bottomPanelTab === 'packages'" />
       <ProfilerPanel v-else-if="estate.bottomPanelTab === 'profiler'" />
       <RenderingPanel v-else-if="estate.bottomPanelTab === 'rendering'" />
 
       <AnimationPanel v-else-if="estate.bottomPanelTab === 'animation'" />
       <TilemapPanel v-else-if="estate.bottomPanelTab === 'tilemap'" />
+      <WorldToolsPanel v-else-if="estate.bottomPanelTab === 'world'" />
+      <PresentationPanel v-else-if="estate.bottomPanelTab === 'presentation'" />
 
       <div v-else-if="estate.bottomPanelTab === 'project'" class="project-summary">
-        <article><span>{{ t('engineVersion') }}</span><strong>2.4.0</strong></article>
-        <article><span>{{ t('formatVersion') }}</span><strong>{{ t('projectFormatTwo') }} · schema 17</strong></article>
+        <article><span>{{ t('engineVersion') }}</span><strong>3.0.0</strong></article>
+        <article><span>{{ t('formatVersion') }}</span><strong>{{ t('projectFormatTwo') }} · schema 22</strong></article>
         <article><span>{{ t('scenes') }}</span><strong>{{ sceneManager.scenes.length }}</strong></article>
         <article><span>{{ t('assets') }}</span><strong>{{ assets.records.length }}</strong></article>
         <article><span>{{ t('rendererBackend') }}</span><strong>{{ estate.rendererStats.backend }}</strong></article>
@@ -122,11 +200,11 @@
 import { computed, nextTick, onBeforeUnmount, ref } from 'vue'
 import { t } from '../i18n'
 import { addEditorLog, editorState as estate } from '../store/editor'
-import { clearAssetReferences, countAssetReferences, getSceneJSON, physicsState as state, pushHistory, sceneManager } from '../store/physics'
+import { clearAssetReferences, countAssetReferences, getSceneJSON, physicsState as state, pushHistory, replaceAssetReferences, sceneManager } from '../store/physics'
 import { requestConfirmation } from '../store/dialog'
 import {
   assetReference, assetState as assets, createAssetFolder, createTextAsset, deleteAsset, filteredAssets, importAssetFiles,
-  moveAsset, rebuildTextureAtlases, renameAsset
+  moveAsset, queueTextureAtlasRebuild, readTextAsset, reimportAsset, renameAsset
 } from '../assets/AssetDatabase'
 import type { AssetType } from '../assets/types'
 import { exportProjectFolder } from '../assets/projectFolder'
@@ -141,12 +219,20 @@ import ConsolePanel from './ConsolePanel.vue'
 import ProfilerPanel from './ProfilerPanel.vue'
 import RenderingPanel from './RenderingPanel.vue'
 import TilemapPanel from './TilemapPanel.vue'
+import WorldToolsPanel from './WorldToolsPanel.vue'
+import PackageManagerPanel from './PackageManagerPanel.vue'
+import PresentationPanel from './PresentationPanel.vue'
+import { buildAssetDependencyGraph, explainAssetBuildInclusion, findAssetReferences, repairMissingAssetReference, unusedAssetReport } from '../assets/assetGraph'
+import { cancelAssetImport, importPipelineState } from '../assets/importPipeline'
+import { sourceStatusFor } from '../runtime/teamWorkflow'
 
 const tabs = [
-  { id: 'assets' as const, label: 'assets' as const }, { id: 'console' as const, label: 'console' as const },
-  { id: 'animation' as const, label: 'animation' as const }, { id: 'profiler' as const, label: 'profiler' as const },
+  { id: 'assets' as const, label: 'assets' as const }, { id: 'packages' as const, label: 'packages' as const }, { id: 'console' as const, label: 'console' as const },
+  { id: 'animation' as const, label: 'animation' as const }, { id: 'profiler' as const, label: 'productionLab' as const },
   { id: 'rendering' as const, label: 'renderingStudio' as const },
   { id: 'tilemap' as const, label: 'tilemap' as const },
+  { id: 'world' as const, label: 'worldTools' as const },
+  { id: 'presentation' as const, label: 'presentationStudio' as const },
   { id: 'project' as const, label: 'projectPanel' as const }, { id: 'build' as const, label: 'buildPanel' as const }
 ]
 const assetFilters: Array<{ type: AssetType | 'all'; label: Parameters<typeof t>[0] }> = [
@@ -154,17 +240,28 @@ const assetFilters: Array<{ type: AssetType | 'all'; label: Parameters<typeof t>
   { type: 'font', label: 'fontAssets' }, { type: 'scene', label: 'scenes' }, { type: 'prefab', label: 'prefabs' },
   { type: 'script', label: 'scripts' }, { type: 'material', label: 'materials' }, { type: 'animation', label: 'animations' },
   { type: 'controller', label: 'controllers' }, { type: 'animationMask', label: 'animationMasks' }, { type: 'rig', label: 'rigs' },
-  { type: 'skin', label: 'skins' }, { type: 'timeline', label: 'timelines' }, { type: 'tileset', label: 'tileSets' }, { type: 'other', label: 'otherAssets' }
+  { type: 'skin', label: 'skins' }, { type: 'timeline', label: 'timelines' }, { type: 'tileset', label: 'tileSets' }, { type: 'atlas', label: 'atlases' },
+  { type: 'shader', label: 'shaders' }, { type: 'localization', label: 'localizationFiles' }, { type: 'uiTheme', label: 'uiThemes' },
+  { type: 'dataSchema', label: 'dataSchema' }, { type: 'dataTable', label: 'dataTable' }, { type: 'replay', label: 'replayAssets' }, { type: 'other', label: 'otherAssets' }
 ]
 const compressionPlatforms = ['windows', 'linux', 'macos', 'web'] as const
-const panelStyle = computed(() => ({ height: estate.bottomPanelOpen ? `${estate.bottomPanelHeight}px` : '34px' }))
+const panelStyle = computed(() => ({ height: estate.bottomPanelOpen ? `min(${estate.bottomPanelHeight}px, 42vh)` : '34px' }))
 const displayedAssets = computed(() => { void assets.generation; return filteredAssets() })
 const visibleFolders = computed(() => assets.folders.filter(folder => !folder.startsWith('.nova/')))
 const selectedAsset = computed(() => assets.records.find(asset => asset.uuid === assets.selectedGuid) ?? null)
+const projectSnapshot = computed(() => { void assets.generation; try { return JSON.parse(getSceneJSON()) as unknown } catch { return null } })
+const assetGraph = computed(() => buildAssetDependencyGraph(assets.records, projectSnapshot.value))
+const selectedReferences = computed(() => selectedAsset.value ? findAssetReferences(selectedAsset.value.uuid, assets.records, projectSnapshot.value) : [])
+const selectedInclusion = computed(() => selectedAsset.value ? explainAssetBuildInclusion(selectedAsset.value.uuid, assets.records, projectSnapshot.value) : [])
+const selectedTextSource = computed(() => selectedAsset.value ? readTextAsset(selectedAsset.value.uuid) ?? '' : '')
+const importJobs = computed(() => importPipelineState.jobs)
+const missingReferenceIds = computed(() => [...new Set(assetGraph.value.missingReferences.map(item => item.reference))])
 const animationSources = computed(() => assets.records.filter(asset => asset.assetType === 'animation' && asset.uuid !== selectedAsset.value?.uuid))
 const assetInput = ref<HTMLInputElement | null>(null)
+const reimportInput = ref<HTMLInputElement | null>(null)
 const creatingFolder = ref(false), newFolderName = ref('')
 const renamingGuid = ref<string | null>(null), renameValue = ref('')
+const repairMode = ref(false), selectedMissingReference = ref(''), replacementAssetGuid = ref('')
 function openTab(id: typeof tabs[number]['id']) { estate.bottomPanelTab = id; estate.bottomPanelOpen = true }
 async function importFiles(event: Event) {
   const input = event.target as HTMLInputElement
@@ -222,7 +319,7 @@ function toggleSpriteRegion(event: Event) {
     ? { x: 0, y: 0, width: Math.max(1, asset.width), height: Math.max(1, asset.height) }
     : null
 }
-function assetSettingsChanged() { void rebuildTextureAtlases(); pushHistory('Change import settings', `asset:${selectedAsset.value?.uuid}`) }
+function assetSettingsChanged() { queueTextureAtlasRebuild(); pushHistory('Change import settings', `asset:${selectedAsset.value?.uuid}`) }
 function reimportAnimation() {
   const asset = selectedAsset.value
   if (!asset?.animationImport) return
@@ -231,6 +328,38 @@ function reimportAnimation() {
   pushHistory('Reimport animation', `asset:${asset.uuid}`)
   addEditorLog(t('animationReimported', { name: asset.name }), 'Assets')
 }
+async function reimportSelectedAsset(event: Event) {
+  const input = event.target as HTMLInputElement, file = input.files?.[0]; input.value = ''
+  const asset = selectedAsset.value
+  if (!asset || !file) return
+  const success = await reimportAsset(asset.uuid, file)
+  addEditorLog(t(success ? 'assetReimported' : 'assetReimportFailed', { name: asset.name }), 'Assets', success ? 'info' : 'error')
+  if (success) pushHistory('Reimport asset', `asset:${asset.uuid}`)
+}
+function reportUnusedAssets() {
+  const unused = unusedAssetReport(assets.records, projectSnapshot.value)
+  addEditorLog(unused.length ? t('unusedAssetsFound', { count: unused.length, names: unused.slice(0, 12).map(asset => asset.name).join(', ') }) : t('noUnusedAssets'), 'Assets', unused.length ? 'warning' : 'info')
+}
+function openMissingRepair() {
+  const missing = assetGraph.value.missingReferences
+  repairMode.value = missing.length > 0
+  selectedMissingReference.value = missing[0]?.reference ?? ''
+  replacementAssetGuid.value = ''
+  addEditorLog(missing.length ? t('missingReferencesFound', { count: missing.length, names: missing.slice(0, 12).map(item => item.reference).join(', ') }) : t('noMissingReferences'), 'Assets', missing.length ? 'error' : 'info')
+}
+function repairSelectedMissingReference() {
+  if (!selectedMissingReference.value || !replacementAssetGuid.value) return
+  const projectChanges = replaceAssetReferences(selectedMissingReference.value, replacementAssetGuid.value)
+  const assetChanges = repairMissingAssetReference(assets.records, selectedMissingReference.value, replacementAssetGuid.value)
+  if (assetChanges) assets.generation++
+  const count = projectChanges + assetChanges
+  pushHistory('Repair missing asset reference')
+  addEditorLog(t('missingReferenceRepaired', { count }), 'Assets', count ? 'info' : 'warning')
+  selectedMissingReference.value = missingReferenceIds.value[0] ?? ''
+  replacementAssetGuid.value = ''
+  repairMode.value = missingReferenceIds.value.length > 0
+}
+function referenceName(owner: string): string { return owner === 'project' ? t('project') : assets.records.find(asset => asset.uuid === owner)?.path ?? owner }
 async function exportFolder() {
   try {
     const result = await exportProjectFolder(getSceneJSON(), assets.records, assets.folders)
@@ -243,6 +372,7 @@ async function exportFolder() {
 }
 function assetIcon(type: AssetType): string { return type === 'audio' ? '♫' : type === 'font' ? 'Aa' : type === 'scene' ? '◇' : type === 'prefab' ? '⬡' : type === 'animation' ? '▶' : type === 'controller' ? '⌘' : type === 'animationMask' ? '◐' : type === 'rig' ? '◍' : type === 'skin' ? '▧' : type === 'timeline' ? '⏱' : type === 'material' ? '◩' : '◆' }
 function formatBytes(value: number): string { return value < 1024 ? `${value} B` : value < 1024 ** 2 ? `${(value / 1024).toFixed(1)} KB` : `${(value / 1024 ** 2).toFixed(1)} MB` }
+function assetSourceStatus(uuid: string) { return sourceStatusFor(uuid) }
 
 let startY = 0, startHeight = 0
 function startResize(event: MouseEvent) { startY = event.clientY; startHeight = estate.bottomPanelHeight; document.addEventListener('mousemove', resizePanel); document.addEventListener('mouseup', stopResize); document.body.style.cursor = 'ns-resize' }
@@ -253,25 +383,31 @@ onBeforeUnmount(stopResize)
 
 <style scoped>
 .asset-inspector label.region-field { padding: 6px 0; flex-direction: column; align-items: stretch; }.asset-inspector label.region-field > div { max-width: none; }.asset-inspector label.region-field input { width: 25%; min-width: 0; }
-.bottom-panel { position: relative; flex: 0 0 auto; min-height: 34px; display: flex; flex-direction: column; border-top: 1px solid var(--border-subtle); background: var(--surface-1); }
+.bottom-panel { position: relative; flex: 0 0 auto; min-height: 34px; display: flex; flex-direction: column; border-top: 1px solid var(--border-subtle); background: var(--surface-1); container-type: inline-size; }
 .resize-handle { position: absolute; inset: -4px 0 auto; height: 8px; cursor: ns-resize; z-index: 5; }
 .panel-tabs { min-height: 34px; flex: 0 0 auto; padding: 3px 5px; display: flex; align-items: center; flex-wrap: wrap; gap: 2px; overflow: hidden; border-bottom: 1px solid var(--border-subtle); }
 .panel-tabs span { min-width: 4px; flex: 1; }.panel-tabs button { height: 29px; padding: 0 clamp(7px, .9vw, 12px); flex: 0 1 auto; border: 0; border-radius: 7px; color: var(--text-muted); background: transparent; font-size: clamp(10px, .82vw, 12px); white-space: nowrap; word-break: keep-all; writing-mode: horizontal-tb; }.panel-tabs button:hover, .panel-tabs button.active { color: var(--text-primary); background: var(--surface-hover); }.panel-tabs button.active { color: var(--accent); }
+.compact-tab-select{display:none;width:min(240px,calc(100% - 76px));min-height:28px;height:28px;padding-block:2px}
+@container(max-width:760px){.panel-tabs{flex-wrap:nowrap}.panel-tabs .panel-tab{display:none}.compact-tab-select{display:block}.panel-tabs>span{display:block}}
 .panel-content { flex: 1; min-width: 0; min-height: 0; overflow: hidden; }.asset-browser { height: 100%; min-height: 120px; display: grid; grid-template-columns: minmax(145px,18%) minmax(180px,1fr); overflow: hidden; }.asset-browser.inspecting { grid-template-columns: minmax(145px,18%) minmax(160px,1fr) minmax(205px,25%); }.folder-tree, .asset-inspector { min-height: 0; padding: 9px; overflow: auto; background: var(--surface-2); }.folder-tree { border-right: 1px solid var(--border-subtle); }.folder-tree strong { display: block; padding: 3px 7px 8px; color: var(--text-muted); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; }.folder-tree button { width: 100%; min-height: 29px; padding: 0 7px; display: flex; align-items: center; gap: 5px; border: 0; border-radius: 7px; color: var(--text-muted); background: transparent; font-size: 12px; text-align: left; }.folder-tree button.active, .folder-tree button:hover { color: var(--accent); background: var(--accent-soft); }
-.asset-workspace { min-width: 0; overflow: hidden; display: flex; flex-direction: column; }.asset-toolbar { min-height: 86px; padding: 6px 8px; display: grid; grid-template-rows: auto auto; gap: 5px; overflow: visible; border-bottom: 1px solid var(--border-subtle); }.asset-actions-row, .asset-filters { min-width: 0; display: flex; align-items: center; flex-wrap: wrap; gap: 5px; }.asset-toolbar button { height: 31px; padding: 0 8px; flex: 0 0 auto; border: 1px solid var(--border-subtle); border-radius: 7px; color: var(--text-secondary); background: var(--surface-2); font-size: 11px; white-space: nowrap; word-break: keep-all; writing-mode: horizontal-tb; }.asset-toolbar button.primary { color: var(--accent-contrast); border-color: var(--accent); background: var(--accent); }.asset-toolbar .path { min-width: 45px; flex: 1 1 80px; overflow: hidden; color: var(--text-muted); font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }.asset-toolbar input { width: 140px; min-width: 100px; min-height: 31px; flex: 0 1 140px; font-size: 11px; }.asset-toolbar .folder-input { width: 105px; }.asset-filters button { height: 25px; padding-inline: 8px; border-radius: 999px; font-size: 11px; }.asset-filters button.active { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 65%, var(--border-subtle)); background: var(--accent-soft); }
-.asset-grid { min-height: 0; flex: 1; padding: 9px; display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); grid-auto-rows: 58px; gap: 7px; overflow: auto; }.asset-grid article { min-width: 0; padding: 7px; display: grid; grid-template-columns: 42px 1fr; grid-template-rows: 1fr 1fr; column-gap: 7px; border: 1px solid var(--border-subtle); border-radius: 9px; background: var(--surface-2); cursor: grab; }.asset-grid article:hover, .asset-grid article.selected { border-color: color-mix(in srgb, var(--accent) 60%, var(--border-subtle)); background: var(--accent-soft); }.asset-preview { grid-row: 1 / 3; width: 42px; height: 42px; border-radius: 7px; background-color: var(--surface-3); background-position: center; background-repeat: no-repeat; background-size: contain; }.asset-icon { display: grid; place-items: center; color: var(--accent); font-size: 17px; font-weight: 650; }.asset-grid strong, .asset-grid small, .asset-grid input { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }.asset-grid strong { align-self: end; font-size: 11px; }.asset-grid small { color: var(--text-muted); font-size: 10px; }.asset-grid input { width: 100%; height: 22px; min-height: 22px; font-size: 10px; }
-.asset-inspector { border-left: 1px solid var(--border-subtle); }.asset-inspector header { padding: 2px 2px 8px; display: flex; flex-direction: column; gap: 2px; }.asset-inspector header span { color: var(--accent); font-size: 10px; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; }.asset-inspector header strong { overflow: hidden; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }.large-preview { width: 100%; aspect-ratio: 16 / 9; margin-bottom: 7px; border: 1px solid var(--border-subtle); border-radius: 8px; background-color: var(--surface-3); background-position: center; background-repeat: no-repeat; background-size: contain; }.asset-inspector label { min-height: 29px; display: flex; align-items: center; justify-content: space-between; gap: 7px; border-bottom: 1px solid var(--border-subtle); color: var(--text-muted); font-size: 10px; }.asset-inspector label > *:last-child { max-width: 58%; }.asset-inspector label code { overflow: hidden; color: var(--accent); font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }.asset-inspector label input:not([type='checkbox']), .asset-inspector label select { width: 105px; min-height: 24px; font-size: 10px; }.asset-inspector label div { display: flex; gap: 3px; }.asset-inspector label div input { width: 50%; }.asset-actions { margin-top: 8px; display: flex; gap: 5px; }.asset-actions button { min-height: 32px; flex: 1; border: 1px solid var(--border-subtle); border-radius: 7px; color: var(--text-secondary); background: var(--surface-3); font-size: 10px; }.asset-actions button.danger { color: var(--danger); }.drag-hint { color: var(--text-muted); font-size: 10px; line-height: 1.45; }
-.script-source { padding: 6px 0; flex-direction: column; align-items: stretch !important; }.script-source textarea { width: 100%; min-height: 130px; resize: vertical; font: 9px/1.5 ui-monospace, SFMono-Regular, Consolas, monospace; white-space: pre; }.script-validation { margin: 5px 0; color: var(--success); font-size: 10px; }.script-validation.error { color: var(--danger); }.save-script { width: 100%; min-height: 32px; border: 1px solid var(--accent); border-radius: 7px; color: var(--accent); background: var(--accent-soft); font-size: 10px; }
+.asset-workspace { position: relative; min-width: 0; overflow: hidden; display: flex; flex-direction: column; }.asset-toolbar { min-height: 86px; padding: 6px 8px; display: grid; grid-template-columns:minmax(0,1fr) auto; gap: 5px; overflow: visible; border-bottom: 1px solid var(--border-subtle); }.asset-actions-row, .asset-filters { min-width: 0; display: flex; align-items: center; flex-wrap: wrap; gap: 5px; }.asset-actions-row{grid-column:1/-1}.asset-toolbar button { height: 31px; padding: 0 8px; flex: 0 0 auto; border: 1px solid var(--border-subtle); border-radius: 7px; color: var(--text-secondary); background: var(--surface-2); font-size: 11px; white-space: nowrap; word-break: keep-all; writing-mode: horizontal-tb; }.asset-toolbar button.primary { color: var(--accent-contrast); border-color: var(--accent); background: var(--accent); }.asset-toolbar .path { min-width: 45px; flex: 1 1 80px; overflow: hidden; color: var(--text-muted); font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }.asset-toolbar input { width: 140px; min-width: 100px; min-height: 31px; flex: 0 1 140px; font-size: 11px; }.asset-toolbar .folder-input { width: 105px; }.asset-filters button { height: 25px; padding-inline: 8px; border-radius: 999px; font-size: 11px; }.asset-filters button.active { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 65%, var(--border-subtle)); background: var(--accent-soft); }.asset-diagnostics{display:flex;align-items:center;gap:4px}.asset-diagnostics button{height:25px;font-size:11px}.asset-diagnostics span{color:var(--danger)}.asset-diagnostics .atlas-error{max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.import-queue{position:absolute;z-index:6;top:87px;right:8px;width:min(360px,calc(100% - 16px));padding:6px;display:grid;gap:4px;border:1px solid var(--border-strong);border-radius:9px;background:var(--surface-1);box-shadow:var(--shadow-md)}.import-queue article{min-width:0;display:grid;grid-template-columns:minmax(80px,1fr) 90px auto;align-items:center;gap:6px}.import-queue article>span{min-width:0;display:grid}.import-queue strong,.import-queue small,.import-queue em{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.import-queue small,.import-queue em{color:var(--text-muted);font-size:11px}.import-queue progress{width:100%;accent-color:var(--accent)}.import-queue button{min-height:25px}
+.missing-repair{margin:7px 8px 0;padding:6px;display:flex;align-items:center;gap:6px;border:1px solid var(--warning);border-radius:8px;background:color-mix(in srgb,var(--warning) 7%,var(--surface-2));font-size:11px}.missing-repair strong{flex:0 0 auto}.missing-repair select{min-width:0;min-height:28px;flex:1;font-size:11px}.missing-repair button{min-height:28px;padding:0 8px;white-space:nowrap}.missing-repair button.primary{color:var(--accent-contrast);border-color:var(--accent);background:var(--accent)}
+.asset-grid { min-height: 0; flex: 1; padding: 9px; display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); grid-auto-rows: 58px; gap: 7px; overflow: auto; }.asset-grid article { position: relative; min-width: 0; padding: 7px; display: grid; grid-template-columns: 42px 1fr; grid-template-rows: 1fr 1fr; column-gap: 7px; border: 1px solid var(--border-subtle); border-radius: 9px; background: var(--surface-2); cursor: grab; }.asset-grid article:hover, .asset-grid article.selected { border-color: color-mix(in srgb, var(--accent) 60%, var(--border-subtle)); background: var(--accent-soft); }.asset-preview { grid-row: 1 / 3; width: 42px; height: 42px; border-radius: 7px; background-color: var(--surface-3); background-position: center; background-repeat: no-repeat; background-size: contain; }.asset-icon { display: grid; place-items: center; color: var(--accent); font-size: 17px; font-weight: 650; }.asset-grid strong, .asset-grid small, .asset-grid input { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }.asset-grid strong { align-self: end; font-size: 11px; }.asset-grid small { color: var(--text-muted); font-size:11px; }.asset-grid input { width: 100%; height: 22px; min-height: 22px; font-size:11px; }.source-badge{position:absolute;top:4px;right:4px;width:18px;height:18px;display:grid;place-items:center;border-radius:5px;font-size:11px;font-weight:750;box-shadow:0 2px 8px rgba(0,0,0,.2)}.source-badge.added{color:var(--success);background:color-mix(in srgb,var(--success) 18%,var(--surface-1))}.source-badge.modified{color:var(--warning);background:color-mix(in srgb,var(--warning) 18%,var(--surface-1))}.source-badge.deleted,.source-badge.conflict{color:var(--danger);background:color-mix(in srgb,var(--danger) 18%,var(--surface-1))}
+.asset-inspector { border-left: 1px solid var(--border-subtle); }.asset-inspector header { padding: 2px 2px 8px; display: flex; flex-direction: column; gap: 2px; }.asset-inspector header span { color: var(--accent); font-size:11px; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; }.asset-inspector header strong { overflow: hidden; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }.large-preview { width: 100%; aspect-ratio: 16 / 9; margin-bottom: 7px; border: 1px solid var(--border-subtle); border-radius: 8px; background-color: var(--surface-3); background-position: center; background-repeat: no-repeat; background-size: contain; }.asset-media-preview{width:100%;height:34px;margin-bottom:7px}.font-preview{min-height:60px;margin-bottom:7px;padding:10px;display:grid;place-items:center;border:1px solid var(--border-subtle);border-radius:8px;background:var(--surface-3);font-size:20px}.asset-inspector label { min-height: 29px; display: flex; align-items: center; justify-content: space-between; gap: 7px; border-bottom: 1px solid var(--border-subtle); color: var(--text-muted); font-size:11px; }.asset-inspector label > *:last-child { max-width: 58%; }.asset-inspector label code { overflow: hidden; color: var(--accent); font-size:11px; text-overflow: ellipsis; white-space: nowrap; }.asset-inspector label input:not([type='checkbox']), .asset-inspector label select { width: 105px; min-height: 24px; font-size:11px; }.asset-inspector label div { display: flex; gap: 3px; }.asset-inspector label div input { width: 50%; }.asset-actions { margin-top: 8px; display: flex; gap: 5px; }.asset-actions button { min-width:0;min-height:32px;padding:0 4px;flex:1;overflow:hidden;border:1px solid var(--border-subtle);border-radius:7px;color:var(--text-secondary);background:var(--surface-3);font-size:11px;text-overflow:ellipsis;white-space:nowrap}.asset-actions button.danger { color: var(--danger); }.drag-hint { color: var(--text-muted); font-size:11px; line-height: 1.45; }.text-preview{width:100%;min-height:82px;margin:7px 0;resize:vertical;font:9px/1.45 ui-monospace,SFMono-Regular,Consolas,monospace}.pipeline-error{padding:6px;border:1px solid var(--danger);border-radius:7px;color:var(--danger);font-size:11px}.reference-summary{margin-top:8px;padding:7px;border:1px solid var(--border-subtle);border-radius:8px;background:var(--surface-3)}.reference-summary strong{font-size:11px}.reference-summary p,.reference-summary li{margin:4px 0;color:var(--text-muted);font-size:11px;line-height:1.35}.reference-summary ul{margin:3px 0;padding-left:16px}
+.script-source { padding: 6px 0; flex-direction: column; align-items: stretch !important; }.script-source textarea { width: 100%; min-height: 130px; resize: vertical; font: 9px/1.5 ui-monospace, SFMono-Regular, Consolas, monospace; white-space: pre; }.script-validation { margin: 5px 0; color: var(--success); font-size:11px; }.script-validation.error { color: var(--danger); }.save-script { width: 100%; min-height: 32px; border: 1px solid var(--accent); border-radius: 7px; color: var(--accent); background: var(--accent-soft); font-size:11px; }
 .mapping-editor{margin:7px 0}.mapping-editor label{display:grid;grid-template-columns:1fr 1fr 24px}.mapping-editor input{width:100%!important}.mapping-editor button{min-height:26px;border:1px solid var(--border-subtle);border-radius:6px;background:var(--surface-3);color:var(--text-secondary)}
 :global(html[lang='zh-CN']) .asset-toolbar, :global(html[lang='zh-CN']) .panel-tabs { line-height: 1; writing-mode: horizontal-tb; }
-.console-list { min-width: 600px; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 10px; }.log-entry { min-height: 29px; padding: 4px 10px; display: grid; grid-template-columns: 72px 70px 1fr; gap: 8px; align-items: center; border-bottom: 1px solid var(--border-subtle); }.log-entry time { color: var(--text-muted); }.log-entry strong { color: var(--accent); }.log-entry.warning strong { color: var(--warning); }.log-entry.error strong { color: var(--danger); }
-.metric-grid { padding: 10px; display: grid; grid-template-columns: repeat(auto-fit, minmax(145px, 1fr)); gap: 8px; }.metric-grid article, .project-summary article { padding: 9px; display: flex; justify-content: space-between; gap: 10px; border: 1px solid var(--border-subtle); border-radius: 8px; background: var(--surface-2); font-size: 10px; }.metric-grid span, .project-summary span { color: var(--text-muted); }.metric-grid strong, .project-summary strong { color: var(--accent); }.project-summary { height: 100%; padding: 10px; display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 8px; overflow: auto; }.project-summary p { grid-column: 1 / -1; margin: 2px; color: var(--text-muted); font-size: 10px; }.future-panel, .empty { padding: 18px; color: var(--text-muted); font-size: 11px; }.future-panel strong { color: var(--text-primary); }.future-panel p { margin: 5px 0 0; }
+.console-list { min-width: 600px; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size:11px; }.log-entry { min-height: 29px; padding: 4px 10px; display: grid; grid-template-columns: 72px 70px 1fr; gap: 8px; align-items: center; border-bottom: 1px solid var(--border-subtle); }.log-entry time { color: var(--text-muted); }.log-entry strong { color: var(--accent); }.log-entry.warning strong { color: var(--warning); }.log-entry.error strong { color: var(--danger); }
+.metric-grid { padding: 10px; display: grid; grid-template-columns: repeat(auto-fit, minmax(145px, 1fr)); gap: 8px; }.metric-grid article, .project-summary article { padding: 9px; display: flex; justify-content: space-between; gap: 10px; border: 1px solid var(--border-subtle); border-radius: 8px; background: var(--surface-2); font-size:11px; }.metric-grid span, .project-summary span { color: var(--text-muted); }.metric-grid strong, .project-summary strong { color: var(--accent); }.project-summary { height: 100%; padding: 10px; display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 8px; overflow: auto; }.project-summary p { grid-column: 1 / -1; margin: 2px; color: var(--text-muted); font-size:11px; }.future-panel, .empty { padding: 18px; color: var(--text-muted); font-size: 11px; }.future-panel strong { color: var(--text-primary); }.future-panel p { margin: 5px 0 0; }
 @media (max-width: 1050px) {
   .asset-browser { grid-template-columns: 105px minmax(140px, 1fr); }
   .asset-browser.inspecting { grid-template-columns: 105px minmax(140px, 1fr) 195px; }
   .folder-tree, .asset-inspector { padding: 6px; }
   .folder-tree button { padding-inline: 5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .asset-toolbar .path { flex-basis: 60px; }
+  .asset-toolbar{grid-template-columns:1fr}.asset-diagnostics{grid-column:1}.asset-filters{max-height:58px;overflow:auto}.asset-inspector label>span:first-child{max-width:46%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .missing-repair{flex-wrap:wrap}.missing-repair strong{width:100%}.missing-repair select{flex-basis:140px}
 }
 @media (max-width: 760px) {
   .asset-browser { position: relative; grid-template-columns: 92px minmax(130px, 1fr); }

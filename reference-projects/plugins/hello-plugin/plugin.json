@@ -1,0 +1,16 @@
+{
+  "id": "top.whitelists.novaa.samples.hello",
+  "name": "Hello Plugin API 2",
+  "version": "1.0.0",
+  "apiVersion": 2,
+  "engine": ">=3.0.0 <4.0.0",
+  "entry": "hello-plugin.wasm",
+  "entryType": "wasm",
+  "permissions": [],
+  "enabled": true,
+  "projectEnabled": true,
+  "sha256": "0cb3fd8b694228a8d05be7744e41a1989d2d48a2e5630d24f49e68ab915b4213",
+  "signature": "",
+  "publicKey": "",
+  "contributions": {}
+}

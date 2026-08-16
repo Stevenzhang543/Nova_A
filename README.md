@@ -4,24 +4,77 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE.md)
 [![Platforms](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey)](https://v2.tauri.app/start/prerequisites/)
-[![Release](https://img.shields.io/badge/release-2.4.0-63c6ff)]()
+[![Release](https://img.shields.io/badge/release-3.0.0-63c6ff)]()
 
 Nova_A is an open-source 2D game engine and desktop editor built with Rust, WebAssembly, Vue 3, and Tauri.
 
-Version **2.4.0** makes animation a complete production workflow: dope sheet and curve editing, exact tangents, multi-track/target animation, box selection, snapping, copy/paste, signal events, layered animator controllers, masks, blend trees, transition interruption, rigs, weighted skins, IK, constraints, recording, deterministic reimport, and a general Timeline. Project Format 2 schema 17 validates the new references. Unreferenced rig, skin, and Timeline resources are excluded from player packs.
+Version **3.0.0** stabilizes Nova_A's complete 2D creation loop. Project Format 2 remains schema 22; Runtime API 1, Plugin API 2, Package Manifest 1, and Build CLI 1 are now documented compatibility contracts. The release adds all-public-version migration goldens, generated source projects, qualification workflows, honest benchmark/stability evidence, readable typography, and contained fatal-error recovery.
 
 **Manual:** [interactive English/German/Chinese webpage](./manual/index.html) · [English Markdown](./manual/MANUAL.en.md) · [Deutsch](./manual/MANUAL.de.md) · [中文](./manual/MANUAL.zh-CN.md)
 
-## What is new in v2.4.0
+## What is new in v3.0.0
 
-- The dedicated **Animation Studio** opens clips, controllers, animation masks, rigs, skins, and Timelines in contextual editors rather than a single long form.
-- Clips support dope-sheet and sampled curve views, Auto/Linear/Constant/Free tangents, box and multi-selection, snapping, key drag, copy/paste, sprite frames, event signals, and tracks that target the owner or another entity.
-- Animator controllers support typed parameter defaults, transition conditions/exit time/duration/interruption, layers, weights, additive evaluation, masks, subgraphs, 1D blend trees, and live play-mode preview.
-- `Skeleton2D` and rig/skin resources add hierarchical bones, pose overrides, inverse-bind weighted sprite deformation, IK chains, rotation/copy/position constraints, and WebGL2/Canvas2D rendering.
-- `TimelinePlayer` sequences animation, audio, camera, event, visibility, and script-call tracks at fixed simulation ticks. Animation events use the bounded signal system.
-- Explicit Record mode captures Inspector and gizmo transforms as snapped keyframes. Animation import metadata preserves a stable target GUID and deterministically resamples mapped source tracks.
-- New TextInput controls use a balanced 300 x 96 default instead of the previous wide 360 x 88 rectangle.
-- Schema 17 migrates schema 16 clips/controllers without visual changes, validates rig/skin/Timeline asset types, and preserves unknown asset fields.
+- **Frozen public contracts:** Help → Studio Status exposes project, runtime, plugin, package, and CLI versions. The [contract](./docs/STABLE_CONTRACTS.md) and [compatibility policy](./docs/COMPATIBILITY.md) define the 3.x promise.
+- **Every public migration is tested:** schemas 5–22 migrate through preview, backup, in-memory validation, atomic session replacement, unknown-field preservation, and Rust golden/corruption tests.
+- **Reference source projects:** six generated `.nova` projects and a permission-free Plugin API 2 sample cover platformer, top-down, UI, animation, audio, lighting, tilemap, save, plugin, tests, networking, and build workflows.
+- **Release evidence without invented passes:** benchmark, stability, clean-runner platform, and 24-hour qualification tooling publish measured results or an explicit pending exception and corrective plan.
+- **Safer failure behavior:** Vue, animation frame, promise, optional package, opener, and atlas failures are contained by a bounded in-app diagnostic/recovery surface with Safe Mode.
+- **Friendlier text:** the scalable multilingual rounded system stack now uses a 16 px base and an 11 px absolute UI floor while retaining compact mode, contrast, and reduced-motion support.
+- **Scope is explicit:** read the [benchmark policy](./docs/BENCHMARKS.md), [stability gate](./docs/STABILITY.md), [platform matrix](./docs/PLATFORM_VERIFICATION.md), and [known limitations](./docs/KNOWN_LIMITATIONS.md).
+
+### Retained v2.9 shipping and collaboration foundation
+
+- **Focused Shipping workspace:** Build Settings is divided into Overview, Platform, Delivery, and Team pages, with validation and build reports visible without scrolling through one long form. The bottom toolbar collapses to a compact selector when space is narrow.
+- **Platform delivery:** Windows, Linux, macOS, Web, and conditional Android targets expose debug/release profiles, x86_64/aarch64, identifiers, versions, icons, splash, orientation, permissions, signing/notarization guidance, compression, and preflight validation. Android remains unavailable until its official package, SDK, JDK, and local template are present.
+- **Reproducible exports:** stable project text, sorted package sources, deterministic `.nova-pak` timestamps, SHA-256 build records, incremental writes, cache metrics, patch manifests, and the `pnpm export -- …` headless CLI make builds inspectable and automation-friendly.
+- **Player operations and privacy:** structured logs, crash records and symbol maps are explicit delivery options. Telemetry is disabled by default, bounded to scalar events, requires HTTPS, and shows its privacy contract before enabling.
+- **Team workflow:** UUID-level source status overlays, generated ignore rules, bounded native diff/merge hooks, three-way conflict detection, stable scene/prefab JSON, and expiring machine/file locks support review without hiding project state.
+- **Registry safety:** registry browsing shows verified publishers, requested permissions, ratings, documentation and security links; browsing never executes a package. Explicit installs and offline/local mirrors remain separate actions.
+- **Safe upgrades and complete examples:** older projects receive a schema/package impact preview, optional complete backup, validation-before-replacement, and a downloadable rollback copy. Empty, Platformer, Top-down, Physics Sandbox, UI Showcase, and Networked Optional templates are audited at creation.
+
+### Retained v2.8 production foundation
+
+- **Production Lab:** trace every frame across input, scripts, animation, physics, audio, rendering, assets, allocations and GPU passes; capture and compare bounded memory/lifetime snapshots.
+- **Deterministic regression:** record input, replay with fixed seeds, compare physics checksums and export replay assets. Rhai `random()` and `random_range()` are seeded by the runtime.
+- **Automated testing:** unit, scene, integration and headless definitions support assertions, timeouts, optional screenshots, and JSON/JUnit CI reports.
+- **Data resources:** schema/table assets validate typed fields, import CSV/JSON/database results, generate TypeScript accessors and migrate versioned save envelopes.
+- **Bounded jobs:** worker-count/queue limits, cancellation and a serialized fallback prevent unavailable workers from flooding the UI thread.
+- **Optional networking:** install the official package to enable WebSocket or native UDP transports, RPCs, snapshots, interpolation, prediction/rollback helpers, replication budgets and diagnostics. It remains disabled and excluded by default.
+- **Headless server:** native builds can select authoritative headless runtime mode; validation blocks an invalid platform or missing networking package.
+- **Sharper presentation without jagged edges:** WebGL multisampling, high-quality Canvas interpolation, rounded stroke joins and optical font shaping improve UI and game rendering while preserving explicit nearest-neighbor pixel art.
+
+- The dedicated **Presentation** panel keeps UI, localization, audio, and runtime accessibility authoring out of the Object Inspector and is available from Interface workspace and Command Palette.
+- Canvas/RectTransform/Panel now apply anchors, fill/content/fixed size policies, safe areas, aspect constraints, responsive breakpoints, horizontal/vertical/grid containers, clipping, rounded masks, wheel-driven scroll views, and reusable UI prefabs.
+- `.nova-theme` resources support parent inheritance, variables, normal/hovered/pressed/disabled/focused states, live preview, style classes, and per-control overrides.
+- Runtime UI provides visible keyboard/gamepad focus, explicit or spatial navigation, screen-reader metadata, and controls that capture input remaps. Runtime accessibility remains separate from editor preferences.
+- Localization tables support source/preview locale, fallback chains, plural/select forms, variables, number/date formatting, pseudolocalization, font fallback, RTL layout, live preview, and build-locale stripping.
+- The audio graph supports custom buses, parent routing, sends, mute/solo, effects with wet/dry processing, meters, snapshots, ducking, spatial curves, streaming overrides, and bounded master/per-bus voices.
+- Audio assets gain decoded waveform preview, loop markers, peak-normalization gain, streaming selection, and active/streaming/buffered/limited voice diagnostics.
+- The bundled manual now opens in a same-origin app overlay. It no longer asks Tauri to open `http://tauri.localhost/manual/index.html`, eliminating the reported fatal URL-permission error.
+- Every release ships web, source, portable EXE, MSI and NSIS artifacts plus release notes, license and SHA-256 checksums.
+
+### Retained v2.6 worlds and gameplay foundation
+
+- CharacterBody2D provides slopes, steps, floor/wall/ceiling state, floor snapping, moving-platform velocity, one-way platforms, coyote helpers, and exact-unit Rhai motion.
+- Area2D effectors accumulate gravity, wind, drag and buoyancy for one authoritative Rust fixed tick; damage and custom signals use the bounded runtime event queue.
+- Navigation regions/agents provide bounded grids, polygons, obstacles, A* or flow fields, avoidance, smoothing, dynamic rebakes and Scene debug overlays. Navigation and behavior tools remain separate lazy project packages.
+- Behavior-tree and hierarchical state-machine assets connect to runtime signals without entering physics-only builds.
+- Tilemaps now support palettes, brush/terrain assets, layers, streaming controls and collision/navigation/occluder bake diagnostics.
+- World chunks stream scenes asynchronously under priority and memory budgets, shift the origin at large coordinates, and use portals for runtime scene transitions.
+- Object pools prewarm bounded prefab instances and connect spawn/despawn lifecycle signals. The Platformer template demonstrates CharacterBody2D.
+- The dedicated World Tools bottom panel keeps character, area, navigation, AI, streaming and pooling authoring out of the long Object Inspector.
+
+### Retained v2.5 asset and package foundation
+
+- Content-addressed imports hash source bytes, importer version, platform, and normalized settings; identical imports reuse the Cache API artifact.
+- Imports run through a bounded background queue with visible progress and cancellation. File watching is debounced, cache writes are staged, and a failed reimport keeps the last valid artifact.
+- Asset tools expose dependency/reverse-dependency lookup, reference and build-inclusion explanations, unused reports, missing-reference reports, and path repair on move/rename.
+- The importer has settings/previews for images, atlases, fonts, audio, tile data, scripts, shaders, animations, and localization data.
+- The Package Manager covers local/Git/registry manifests, semantic-version compatibility, lockfiles, offline cached manifests, update previews, disabled/incompatible views, and uninstall-impact checks.
+- Plugin API 2 adds declared editor/runtime contribution points, per-project enablement, capability permissions, SHA-256/signature verification, bounded WASM memory/call budgets, crash isolation, and Safe Mode. Native extensions are never downloaded or executed.
+- During Play/Pause, the Physics Monitor slides out with position, direction, speed, acceleration, velocity, force, energy, contacts, and a bounded collision timeline containing impact forces, impulses, collision points, and before/after relative motion.
+- ResizeObserver delivery notices are filtered from fatal crash reporting, and resize work is coalesced to one animation frame to prevent the reported false render crash.
+- Project Format 2 schema 18 validates package state and Plugin API 1/2 manifests while preserving existing 2.4 animation resources.
 
 ### Retained v2.3 rendering foundation
 
@@ -59,7 +112,7 @@ Version **2.4.0** makes animation a complete production workflow: dope sheet and
 
 - Nova_A starts in a Project Manager with New, Open, Import, Continue and local recent-project workflows.
 - Four self-auditing templates are included: Empty 2D, Platformer, Top-down and Physics Sandbox. They refuse to open if a subsystem required by their tutorial is missing.
-- **Nova_A Project Format 2** (schema 17) records compatibility/project identity and migrates every supported legacy schema from 5 through 16.
+- **Nova_A Project Format 2** (schema 22) records compatibility/project identity and migrates every supported legacy schema from 5 onward.
 - Stable Component API 2.0 documents every built-in component and keeps rendering, collision, editor and runtime responsibilities separate.
 - Rhai scripts can persist finite booleans, numbers, strings, arrays and maps through isolated named save slots.
 - WASM Plugin API 1 validates manifests/modules, exposes only log/event capabilities, and provides no filesystem, network or process access.
@@ -193,6 +246,22 @@ pnpm tauri build
 
 The Tauri build invokes `pnpm build` automatically before packaging. Result locations vary by operating system under `src-tauri/target/release/bundle/`.
 
+After the native build succeeds, assemble the complete versioned release set:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\package-release.ps1 -Version 3.0.0
+```
+
+This creates `releases/v3.0.0/` with a portable executable, MSI, NSIS setup executable, web ZIP, source ZIP, reference-project ZIP, release-evidence ZIP, release notes, exhaustive edit ledger, license, and `SHA256SUMS.txt`.
+
+### Headless export
+
+```sh
+pnpm export -- --project ./project.nova --target web --profile release --output ./Builds/MyGame
+```
+
+The CLI accepts `windows`, `linux`, `macos`, or `web`; desktop output requires the matching host player. It writes `nova-build-report.json`, `.nova-build-cache/manifest.json`, and—when enabled—`nova-patch-manifest.json`. Use `--compression store|balanced|maximum`, `--architecture x86_64|aarch64`, `--runtime game|headless-server`, `--no-incremental`, or `--no-patch`. Run `pnpm export -- --help` for the bounded argument contract.
+
 ### Export a game with Nova Player
 
 1. Open **Project → Build Settings**.
@@ -217,7 +286,7 @@ Configuration changes cross Vue → `nova_wasm` as explicit retained-world comma
 
 ## Project compatibility
 
-- New saves use **Nova_A Project Format 2**, schema 17, and engine version `2.4.0`.
+- New saves use **Nova_A Project Format 2**, schema 22, and engine version `3.0.0`.
 - Persisted scenes, entities, components, and connections use UUIDs; runtime handles are never written to disk.
 - Format migration and validation are centralized in `nova_format`, not scattered through editor components.
 - v1.9 format-13 files, v1.8 format-12 files, v1.7 format-11 files, v1.6 format-10 files, v1.5 format-9 files, v1.4 format-8 files, v1.3 format-7 files, v1.2 format-6 files, v1.1.2 format-5 files, older object roots, and legacy top-level entity arrays continue to load. A migrated project is only written in Format 2 when the user saves it.

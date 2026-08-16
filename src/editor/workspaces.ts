@@ -17,7 +17,7 @@ export const WORKSPACE_PRESETS: readonly WorkspacePreset[] = [
   { id: 'design', label: 'workspaceDesign', page: 'scene', hierarchyVisible: true, inspectorVisible: true, bottomPanelVisible: true, bottomPanelOpen: false, bottomPanelTab: 'assets', bottomPanelHeight: 240 },
   { id: 'script', label: 'workspaceScript', page: 'script', hierarchyVisible: false, inspectorVisible: false, bottomPanelVisible: false, bottomPanelOpen: false, bottomPanelTab: 'assets', bottomPanelHeight: 320 },
   { id: 'animation', label: 'workspaceAnimation', page: 'scene', hierarchyVisible: true, inspectorVisible: true, bottomPanelVisible: true, bottomPanelOpen: true, bottomPanelTab: 'animation', bottomPanelHeight: 360 },
-  { id: 'interface', label: 'workspaceInterface', page: 'scene', hierarchyVisible: true, inspectorVisible: true, bottomPanelVisible: true, bottomPanelOpen: false, bottomPanelTab: 'assets', bottomPanelHeight: 260 },
+  { id: 'interface', label: 'workspaceInterface', page: 'scene', hierarchyVisible: true, inspectorVisible: true, bottomPanelVisible: true, bottomPanelOpen: true, bottomPanelTab: 'presentation', bottomPanelHeight: 390 },
   { id: 'debug', label: 'workspaceDebug', page: 'game', hierarchyVisible: false, inspectorVisible: false, bottomPanelVisible: true, bottomPanelOpen: true, bottomPanelTab: 'console', bottomPanelHeight: 280 }
 ]
 
@@ -26,7 +26,7 @@ type PanelName = 'hierarchy' | 'inspector' | 'bottom'
 const STORAGE_KEY = 'nova-a-editor-layout-v1'
 const WORKSPACES = new Set<EditorWorkspace>(WORKSPACE_PRESETS.map(preset => preset.id))
 const PAGES = new Set<EditorPage>(['scene', 'game', 'script', 'settings'])
-const BOTTOM_TABS = new Set<BottomPanelTab>(['assets', 'console', 'animation', 'tilemap', 'profiler', 'rendering', 'project', 'build'])
+const BOTTOM_TABS = new Set<BottomPanelTab>(['assets', 'packages', 'console', 'animation', 'tilemap', 'world', 'presentation', 'profiler', 'rendering', 'project', 'build'])
 let initialized = false
 
 function notifyLayoutChanged(): void {

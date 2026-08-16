@@ -25,6 +25,7 @@ import { setWorldTransform, worldTransform } from './hierarchy'
 import { TileMap2D } from './components'
 import { buildTileColliderDescriptors } from '../runtime/tilemap'
 import { assetState } from '../assets/AssetDatabase'
+import { recordPhysicsTelemetry } from '../runtime/physicsMonitor'
 
 export const PHYSICS_STRIDE = 54
 export const PHYSICS_LAYER_COUNT = 32
@@ -62,8 +63,27 @@ export interface RuntimePhysicsEvent {
   point?: [number, number]
   normal?: [number, number]
   relativeVelocity?: [number, number]
+  initialRelativeVelocity?: [number, number]
+  normalImpulse?: number
+  tangentImpulse?: number
+  normalForce?: number
+  tangentForce?: number
   penetration?: number
   [key: string]: unknown
+}
+
+export interface CharacterMoveResult2D {
+  position: [number, number]
+  appliedMotion: [number, number]
+  remainingMotion: [number, number]
+  floorNormal: [number, number]
+  wallNormal: [number, number]
+  ceilingNormal: [number, number]
+  platformVelocity: [number, number]
+  onFloor: boolean
+  onWall: boolean
+  onCeiling: boolean
+  slideCount: number
 }
 
 export interface PhysicsQueryHit2D {
@@ -312,8 +332,8 @@ export class World {
     interpolationAlpha: 0, droppedSeconds: 0, eventCount: 0, configurationRebuilds: 0
   }
   events: RuntimePhysicsEvent[] = []
-  projectFormatVersion = 17
-  projectEngineVersion = '2.4.0'
+  projectFormatVersion = 18
+  projectEngineVersion = '3.0.0'
 
   constructor() {
     this.wasmReady = init()
@@ -383,7 +403,8 @@ export class World {
     dt: number,
     isRunning: boolean,
     globalSettings: GlobalPhysicsSettings,
-    beforeFixedStep?: (fixedDelta: number) => void
+    beforeFixedStep?: (fixedDelta: number) => void,
+    afterFixedStep?: (fixedDelta: number) => void
   ): EngineDiagnostics {
     this.lastSettings = globalSettings
     if (!this.wasmLoaded || !this.runtime) return this.diagnostics
@@ -400,6 +421,7 @@ export class World {
           this.synchronizeRuntime(globalSettings)
           this.runtime.advance_fixed_tick(gravity, airFriction)
           this.readRuntimeState(1, globalSettings)
+          afterFixedStep?.(fixedDelta)
         }
         this.runtime.complete_advance()
       } else {
@@ -426,6 +448,11 @@ export class World {
     this.readRuntimeState(1, globalSettings)
     this.readDiagnostics()
     return this.diagnostics
+  }
+
+  stateChecksum(): string {
+    if (!this.runtime) return '0000000000000000'
+    return (this.runtime as unknown as { state_checksum: () => string }).state_checksum()
   }
 
   formatProjectJson(source: string): string {
@@ -468,6 +495,48 @@ export class World {
     this.prepareQuery()
     if (!this.runtime) return null
     return this.mapQueryHit(JSON.parse(this.runtime.shape_cast_json(center.x, center.y, size.x, size.y, angle, direction.x, direction.y, distance, mask >>> 0)) as WasmQueryHit | null)
+  }
+
+  moveCharacterBox(
+    entity: Entity,
+    size: Vec2,
+    displacement: Vec2,
+    settings: { maxSlopeAngle: number; stepHeight: number; floorSnap: number; maxSlides: number; safeMargin: number; collisionMask: number }
+  ): CharacterMoveResult2D | null {
+    this.prepareQuery()
+    const handle = this.bodyHandles.get(entity.id)
+    if (!this.runtime || handle === undefined) return null
+    const runtime = this.runtime as unknown as {
+      move_character_box_json: (handle: number, width: number, height: number, dx: number, dy: number, slope: number, step: number, snap: number, slides: number, margin: number, mask: number) => string
+    }
+    const result = JSON.parse(runtime.move_character_box_json(
+      handle,
+      Math.abs(finiteNumber(size.x, 1)), Math.abs(finiteNumber(size.y, 1)),
+      finiteNumber(displacement.x), finiteNumber(displacement.y),
+      finiteNumber(settings.maxSlopeAngle, Math.PI / 4), Math.max(0, finiteNumber(settings.stepHeight)),
+      Math.max(0, finiteNumber(settings.floorSnap)), Math.min(32, Math.max(1, Math.round(finiteNumber(settings.maxSlides, 4)))),
+      Math.max(1e-9, finiteNumber(settings.safeMargin, 1e-5)), settings.collisionMask >>> 0
+    )) as CharacterMoveResult2D & { error?: string }
+    if (result.error) return null
+    setWorldTransform(entity, {
+      ...worldTransform(entity, this.entities),
+      position: { x: result.position[0], y: result.position[1] }
+    }, this.entities)
+    const record = this.bodyRecords.get(handle)
+    if (record) {
+      record[2] = result.position[0]
+      record[3] = result.position[1]
+    }
+    return result
+  }
+
+  applyTransientForce(entity: Entity, force: Vec2, torque = 0): boolean {
+    this.prepareQuery()
+    const handle = this.bodyHandles.get(entity.id)
+    if (!this.runtime || handle === undefined) return false
+    const runtime = this.runtime as unknown as { apply_transient_force: (handle: number, x: number, y: number, torque: number) => void }
+    runtime.apply_transient_force(handle, finiteNumber(force.x), finiteNumber(force.y), finiteNumber(torque))
+    return true
   }
 
   invalidateRuntime(): void {
@@ -684,6 +753,7 @@ export class World {
         firstEntityUuid: typeof event.first === 'number' ? entityByHandle.get(event.first)?.uuid : undefined,
         secondEntityUuid: typeof event.second === 'number' ? entityByHandle.get(event.second)?.uuid : undefined
       }))
+      recordPhysicsTelemetry(this.entities, this.events, this.diagnostics, this.lastSettings.tickRate)
     } catch (error) {
       console.warn('Nova_A received malformed runtime diagnostics', error)
     }

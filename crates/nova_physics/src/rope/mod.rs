@@ -429,9 +429,19 @@ fn solve_rope_velocity(bodies: &mut [Body], constraint: &mut ConnectionConstrain
             } else {
                 raw_force
             };
-            constraint.tension = constraint.tension.max(force.abs());
-            constraint.link_tensions[point_a] = constraint.link_tensions[point_a].max(force.abs());
-            -force * dt / SOLVER_ITERATIONS as f64
+            let iteration_dt = dt / SOLVER_ITERATIONS as f64;
+            // Backward-Euler compliance keeps high stiffness/damping stable even
+            // when a rope is represented by many low-mass collision samples.
+            // A direct F*dt impulse feeds the new relative speed back into the
+            // next solver iteration and diverges as sampling density increases.
+            let compliance = 1.0
+                + denominator * (link_damping * iteration_dt
+                    + link_stiffness * iteration_dt * iteration_dt);
+            let impulse = -force * iteration_dt / compliance.max(EPSILON);
+            let effective_force = (impulse / iteration_dt).abs();
+            constraint.tension = constraint.tension.max(effective_force);
+            constraint.link_tensions[point_a] = constraint.link_tensions[point_a].max(effective_force);
+            impulse
         } else {
             let bias = 0.25 * error / dt;
             let impulse = -(relative_speed + bias) / denominator;
@@ -1190,8 +1200,13 @@ fn solve_connection_velocity(bodies: &mut [Body], constraint: &mut ConnectionCon
         } else {
             raw_force
         };
-        constraint.tension = constraint.tension.max(force.abs());
-        -force * dt / SOLVER_ITERATIONS as f64
+        let iteration_dt = dt / SOLVER_ITERATIONS as f64;
+        let compliance = 1.0
+            + denominator * (constraint.damping * iteration_dt
+                + constraint.stiffness * iteration_dt * iteration_dt);
+        let impulse = -force * iteration_dt / compliance.max(EPSILON);
+        constraint.tension = constraint.tension.max((impulse / iteration_dt).abs());
+        impulse
     } else {
         let bias = 0.25 * error / dt;
         let impulse = -(relative_speed + bias) / denominator;

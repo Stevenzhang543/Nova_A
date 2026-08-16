@@ -17,6 +17,11 @@ pub struct PhysicsContact {
     pub point: [f64; 2],
     pub normal: [f64; 2],
     pub relative_velocity: [f64; 2],
+    pub initial_relative_velocity: [f64; 2],
+    pub normal_impulse: f64,
+    pub tangent_impulse: f64,
+    pub normal_force: f64,
+    pub tangent_force: f64,
     pub penetration: f64,
 }
 
@@ -51,6 +56,7 @@ pub struct PhysicsWorld {
     state_buffer: Vec<f64>,
     events: Vec<PhysicsEvent>,
     contacts: HashMap<(u32, u32), PhysicsContact>,
+    transient_forces: HashMap<u32, (f64, f64, f64)>,
     configuration_dirty: bool,
     solver: Option<SolverWorld>,
     configuration_rebuilds: u64,
@@ -137,6 +143,17 @@ impl PhysicsWorld {
         self.update_body(handle, |values| { values[21] = finite_or(x, values[21]); values[22] = finite_or(y, values[22]); values[16] = finite_or(torque, values[16]); values[49] = 0.0; values[50] = 0.0; })
     }
 
+    /// Adds a force for the next fixed step only. Multiple effectors accumulate
+    /// without changing the retained body descriptor or rebuilding the solver.
+    pub fn apply_transient_force(&mut self, handle: u32, x: f64, y: f64, torque: f64) -> Result<(), &'static str> {
+        if !self.body_index.contains_key(&handle) { return Err("body handle does not exist"); }
+        let entry = self.transient_forces.entry(handle).or_insert((0.0, 0.0, 0.0));
+        entry.0 = finite_or(entry.0 + finite_or(x, 0.0), entry.0);
+        entry.1 = finite_or(entry.1 + finite_or(y, 0.0), entry.1);
+        entry.2 = finite_or(entry.2 + finite_or(torque, 0.0), entry.2);
+        Ok(())
+    }
+
     pub fn apply_impulse(&mut self, handle: u32, x: f64, y: f64, offset_x: f64, offset_y: f64) -> Result<(), &'static str> {
         self.update_body(handle, |values| {
             if values[9] > 0.5 || values[24] > 0.5 { return; }
@@ -187,6 +204,7 @@ impl PhysicsWorld {
         self.previous_bodies.clear();
         self.state_buffer.clear();
         self.contacts.clear();
+        self.transient_forces.clear();
         self.solver = None;
         self.configuration_dirty = false;
         self.configuration_rebuilds = 0;
@@ -199,7 +217,23 @@ impl PhysicsWorld {
         self.previous_bodies.clear();
         self.previous_bodies.extend_from_slice(&self.dense_bodies);
         let Some(solver) = self.solver.as_mut() else { return; };
+        let transient_forces = std::mem::take(&mut self.transient_forces);
+        for (handle, (x, y, torque)) in &transient_forces {
+            let Some(index) = self.body_index.get(handle).copied() else { continue; };
+            let Some(body) = solver.bodies.get_mut(index) else { continue; };
+            body.force.x = finite_or(body.force.x + x, body.force.x);
+            body.force.y = finite_or(body.force.y + y, body.force.y);
+            body.torque = finite_or(body.torque + torque, body.torque);
+        }
         solver.step(dt, global_gravity, air_friction);
+        for (handle, (x, y, torque)) in transient_forces {
+            let Some(index) = self.body_index.get(&handle).copied() else { continue; };
+            let Some(body) = solver.bodies.get_mut(index) else { continue; };
+            body.force.x = finite_or(body.force.x - x, body.force.x);
+            body.force.y = finite_or(body.force.y - y, body.force.y);
+            body.torque = finite_or(body.torque - torque, body.torque);
+        }
+        write_bodies(&mut solver.data, &solver.bodies);
         self.physics_steps = self.physics_steps.saturating_add(1);
         solver.copy_state(&mut self.dense_bodies, &mut self.dense_connections);
         self.copy_dense_to_records();
@@ -210,6 +244,19 @@ impl PhysicsWorld {
     }
 
     pub fn state(&self) -> &[f64] { &self.state_buffer }
+    /// Stable checksum of the authoritative, ordered physics state. Float bits
+    /// are hashed exactly so replay diagnostics detect even sub-pixel drift.
+    pub fn state_checksum(&self) -> u64 {
+        let mut hash = 0xcbf2_9ce4_8422_2325_u64;
+        for value in &self.state_buffer {
+            for byte in value.to_bits().to_le_bytes() {
+                hash ^= u64::from(byte);
+                hash = hash.wrapping_mul(0x0000_0100_0000_01b3);
+            }
+        }
+        hash ^= self.physics_steps;
+        hash.wrapping_mul(0x0000_0100_0000_01b3)
+    }
     pub fn previous_body_state(&self) -> &[f64] { &self.previous_bodies }
     pub fn body_state_len(&self) -> usize { self.dense_bodies.len() }
     pub fn drain_events(&mut self) -> Vec<PhysicsEvent> { std::mem::take(&mut self.events) }
@@ -265,6 +312,11 @@ impl PhysicsWorld {
                     point: [contact.point.x, contact.point.y],
                     normal: [contact.normal.x, contact.normal.y],
                     relative_velocity: [contact.relative_velocity.x, contact.relative_velocity.y],
+                    initial_relative_velocity: [contact.initial_relative_velocity.x, contact.initial_relative_velocity.y],
+                    normal_impulse: contact.normal_impulse,
+                    tangent_impulse: contact.tangent_impulse,
+                    normal_force: contact.normal_force,
+                    tangent_force: contact.tangent_force,
                     penetration: contact.penetration.max(0.0),
                 };
                 match current.get_mut(&pair) {
@@ -328,6 +380,22 @@ mod persistent_world_tests {
         assert_eq!(world.configuration_rebuilds(), 1);
         world.step(1.0 / 60.0, 0.0, 0.0);
         assert_eq!(world.configuration_rebuilds(), 2);
+    }
+
+    #[test]
+    fn transient_forces_accumulate_for_one_tick_without_rebuilding() {
+        let mut world = PhysicsWorld::new();
+        world.create_body(1, 0, &body_record()).unwrap();
+        world.step(0.1, 0.0, 0.0);
+        let rebuilds = world.configuration_rebuilds();
+        world.apply_transient_force(1, 2.0, 0.0, 0.0).unwrap();
+        world.apply_transient_force(1, 3.0, 0.0, 0.0).unwrap();
+        world.step(0.1, 0.0, 0.0);
+        let velocity_after_force = world.state()[4];
+        world.step(0.1, 0.0, 0.0);
+        assert!((velocity_after_force - 0.5).abs() < 1.0e-9);
+        assert!((world.state()[4] - velocity_after_force).abs() < 1.0e-9);
+        assert_eq!(world.configuration_rebuilds(), rebuilds);
     }
 
     #[test]

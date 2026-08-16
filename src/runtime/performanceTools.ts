@@ -1,0 +1,129 @@
+import { reactive } from 'vue'
+import { assetState } from '../assets/AssetDatabase'
+import type { RendererStats } from '../renderer'
+import { productionSettings } from './production'
+import { profilerState, type FrameProfile } from './profiler'
+import { jobSchedulerState } from './jobScheduler'
+
+export interface LifetimeEvent {
+  frame: number
+  timestamp: number
+  kind: 'entity' | 'asset' | 'audio' | 'job' | 'network'
+  id: string
+  action: 'created' | 'retained' | 'released'
+}
+
+export interface PerformanceCapture {
+  id: string
+  name: string
+  createdAt: string
+  frames: FrameProfile[]
+  memoryMb: number | null
+  assetMb: number
+  liveEntities: number
+  renderer: RendererStats
+}
+
+export interface CaptureComparison {
+  first: string
+  second: string
+  averageFrameDeltaMs: number
+  peakFrameDeltaMs: number
+  memoryDeltaMb: number | null
+  assetDeltaMb: number
+  entityDelta: number
+}
+
+export const performanceToolsState = reactive({
+  memoryMb: null as number | null,
+  assetMb: 0,
+  memoryBudgetExceeded: false,
+  assetBudgetExceeded: false,
+  possibleLeak: false,
+  leakSlopeMbPerMinute: 0,
+  liveEntities: 0,
+  createdEntities: 0,
+  releasedEntities: 0,
+  lifetimeEvents: [] as LifetimeEvent[],
+  captures: [] as PerformanceCapture[],
+  comparison: null as CaptureComparison | null
+})
+
+const knownEntities = new Set<string>()
+const memoryWindow: Array<{ frame: number; value: number }> = []
+
+function cloneStats(stats: RendererStats): RendererStats { return { ...stats } }
+function finiteAverage(values: number[]): number { return values.length ? values.reduce((total, value) => total + value, 0) / values.length : 0 }
+
+function recordLifetime(frame: number, kind: LifetimeEvent['kind'], id: string, action: LifetimeEvent['action']): void {
+  performanceToolsState.lifetimeEvents.push({ frame, timestamp: performance.now(), kind, id: id.slice(0, 160), action })
+  const capacity = productionSettings.performance.lifetimeCapacity
+  if (performanceToolsState.lifetimeEvents.length > capacity) performanceToolsState.lifetimeEvents.splice(0, performanceToolsState.lifetimeEvents.length - capacity)
+}
+
+export function samplePerformanceTools(frame: number, entityUuids: string[], renderer: RendererStats): { allocations: number; assetJobs: number } {
+  const current = new Set(entityUuids.slice(0, 100_000))
+  let allocations = 0
+  for (const uuid of current) if (!knownEntities.has(uuid)) { allocations++; performanceToolsState.createdEntities++; recordLifetime(frame, 'entity', uuid, 'created') }
+  for (const uuid of knownEntities) if (!current.has(uuid)) { allocations++; performanceToolsState.releasedEntities++; recordLifetime(frame, 'entity', uuid, 'released') }
+  knownEntities.clear(); current.forEach(uuid => knownEntities.add(uuid))
+  performanceToolsState.liveEntities = knownEntities.size
+  performanceToolsState.assetMb = assetState.records.reduce((total, asset) => total + Math.max(0, asset.byteLength), 0) / (1024 * 1024)
+  const memory = (performance as Performance & { memory?: { usedJSHeapSize: number } }).memory
+  performanceToolsState.memoryMb = memory ? memory.usedJSHeapSize / (1024 * 1024) : null
+  performanceToolsState.memoryBudgetExceeded = performanceToolsState.memoryMb !== null && performanceToolsState.memoryMb > productionSettings.performance.memoryBudgetMb
+  performanceToolsState.assetBudgetExceeded = performanceToolsState.assetMb > productionSettings.performance.assetBudgetMb
+
+  if (performanceToolsState.memoryMb !== null) {
+    memoryWindow.push({ frame, value: performanceToolsState.memoryMb })
+    const capacity = productionSettings.performance.leakWindowFrames
+    if (memoryWindow.length > capacity) memoryWindow.splice(0, memoryWindow.length - capacity)
+    if (memoryWindow.length >= Math.min(60, capacity)) {
+      const first = memoryWindow[0], last = memoryWindow[memoryWindow.length - 1]
+      const elapsedMinutes = Math.max(1 / 3_600, (last.frame - first.frame) / 60 / 60)
+      const slope = (last.value - first.value) / elapsedMinutes
+      performanceToolsState.leakSlopeMbPerMinute = slope
+      const risingSamples = memoryWindow.slice(1).filter((sample, index) => sample.value >= memoryWindow[index].value - .05).length
+      performanceToolsState.possibleLeak = slope > 1 && risingSamples / Math.max(1, memoryWindow.length - 1) > .8
+    }
+  }
+  // Retain a bounded indication that GPU/render resources are alive without
+  // retaining the resources themselves.
+  if (renderer.renderTargets > 0 && frame % 120 === 0) recordLifetime(frame, 'asset', `render-targets:${renderer.renderTargets}`, 'retained')
+  return { allocations, assetJobs: jobSchedulerState.active + jobSchedulerState.queued }
+}
+
+export function capturePerformance(name = `Capture ${performanceToolsState.captures.length + 1}`, renderer: RendererStats): PerformanceCapture {
+  const capture: PerformanceCapture = {
+    id: `capture-${Date.now().toString(36)}-${performanceToolsState.captures.length}`,
+    name: name.trim().slice(0, 120) || 'Capture', createdAt: new Date().toISOString(),
+    frames: profilerState.samples.slice(-productionSettings.performance.traceCapacity).map(frame => ({ ...frame })),
+    memoryMb: performanceToolsState.memoryMb, assetMb: performanceToolsState.assetMb,
+    liveEntities: performanceToolsState.liveEntities, renderer: cloneStats(renderer)
+  }
+  performanceToolsState.captures.push(capture)
+  if (performanceToolsState.captures.length > 16) performanceToolsState.captures.splice(0, performanceToolsState.captures.length - 16)
+  return capture
+}
+
+export function comparePerformanceCaptures(firstId: string, secondId: string): CaptureComparison | null {
+  const first = performanceToolsState.captures.find(capture => capture.id === firstId)
+  const second = performanceToolsState.captures.find(capture => capture.id === secondId)
+  if (!first || !second || first.id === second.id) { performanceToolsState.comparison = null; return null }
+  const firstFrames = first.frames.map(frame => frame.frameMs), secondFrames = second.frames.map(frame => frame.frameMs)
+  const comparison: CaptureComparison = {
+    first: first.id, second: second.id,
+    averageFrameDeltaMs: finiteAverage(secondFrames) - finiteAverage(firstFrames),
+    peakFrameDeltaMs: Math.max(0, ...secondFrames) - Math.max(0, ...firstFrames),
+    memoryDeltaMb: first.memoryMb === null || second.memoryMb === null ? null : second.memoryMb - first.memoryMb,
+    assetDeltaMb: second.assetMb - first.assetMb, entityDelta: second.liveEntities - first.liveEntities
+  }
+  performanceToolsState.comparison = comparison
+  return comparison
+}
+
+export function clearPerformanceTools(): void {
+  knownEntities.clear(); memoryWindow.splice(0)
+  Object.assign(performanceToolsState, { memoryMb: null, assetMb: 0, memoryBudgetExceeded: false, assetBudgetExceeded: false, possibleLeak: false, leakSlopeMbPerMinute: 0, liveEntities: 0, createdEntities: 0, releasedEntities: 0, comparison: null })
+  performanceToolsState.lifetimeEvents.splice(0)
+}

@@ -40,9 +40,9 @@ mod engine {
 }
 
 pub use engine::{
-    step_physics, step_physics_with_connections, PhysicsContact, PhysicsEvent, PhysicsQueryHit,
-    PhysicsWorld, CONNECTION_STRIDE, LEGACY_STRIDE, ROPE_NODE_CAPACITY, ROPE_NODE_DATA_OFFSET,
-    STRIDE, V1_2_STRIDE,
+    step_physics, step_physics_with_connections, CharacterMoveResult, PhysicsContact, PhysicsEvent,
+    PhysicsQueryHit, PhysicsWorld, CONNECTION_STRIDE, LEGACY_STRIDE, ROPE_NODE_CAPACITY,
+    ROPE_NODE_DATA_OFFSET, STRIDE, V1_2_STRIDE,
 };
 
 pub mod body {

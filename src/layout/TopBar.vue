@@ -63,12 +63,13 @@
         <button @click="toggleMenu('help')" :class="{ active: activeMenu === 'help' }">{{ t('help') }}</button>
         <Transition name="menu"><div v-if="activeMenu === 'help'" class="dropdown dropdown-right">
           <button @click="handleManual"><span>{{ t('manual') }}</span></button>
+          <button @click="handleStudioStatus"><span>{{ t('studioStatus') }}</span></button>
           <button @click="handleAbout"><span>{{ t('about') }}</span></button>
         </div></Transition>
       </div>
     </nav>
     <div class="top-spacer"></div>
-    <span class="release-pill">2.4.0</span>
+    <span class="release-pill">3.0.0</span>
     <input ref="fileInput" type="file" hidden accept="application/json,.nova,.json" @change="handleFileSelected">
   </header>
 </template>
@@ -83,6 +84,9 @@ import { preferencesState } from '../store/preferences'
 import { confirmDialogState, requestConfirmation } from '../store/dialog'
 import { openProjectDocument, rememberCurrentProject, showProjectManager } from '../projects/projectManager'
 import { resetEditorLayout, toggleEditorPanel, toggleFocusMode } from '../editor/workspaces'
+import { openBundledManual } from '../runtime/openManual'
+import { reportRecoverableError } from '../runtime/faultCenter'
+import { openStudioStatus } from '../runtime/stableContracts'
 
 const activeMenu = ref<string | null>(null)
 const fileInput = ref<HTMLInputElement | null>(null)
@@ -136,10 +140,13 @@ function handleFocusMode() { toggleFocusMode(); activeMenu.value = null }
 function handleResetLayout() { resetEditorLayout(); activeMenu.value = null }
 async function handleAbout() {
   activeMenu.value = null
-  if ('__TAURI_INTERNALS__' in window) await openUrl(projectUrl)
-  else window.open(projectUrl, '_blank', 'noopener,noreferrer')
+  try {
+    if ('__TAURI_INTERNALS__' in window) await openUrl(projectUrl)
+    else if (!window.open(projectUrl, '_blank', 'noopener,noreferrer')) throw new Error(t('popupBlocked'))
+  } catch (error) { reportRecoverableError(error, t('openProjectWebsite'), 'Editor'); editorState.statusText = t('openWebsiteFailed') }
 }
-function handleManual() { activeMenu.value = null; window.open('./manual/index.html', '_blank', 'noopener,noreferrer') }
+function handleManual() { activeMenu.value = null; void openBundledManual() }
+function handleStudioStatus() { activeMenu.value = null; openStudioStatus() }
 function handleProjectManager() { activeMenu.value = null; showProjectManager() }
 function handleUndo() { if (isEditing.value) undo(); activeMenu.value = null }
 function handleRedo() { if (isEditing.value) redo(); activeMenu.value = null }
@@ -203,10 +210,10 @@ onUnmounted(() => { window.removeEventListener('keydown', handleKeyDown); if (me
 .dropdown button.danger { color: var(--danger); }
 .dropdown button.danger:hover { background: var(--danger-soft); }
 .dropdown hr { width: 100%; margin: 5px 0; border: 0; border-top: 1px solid var(--border-subtle); }
-kbd { color: var(--text-muted); font-family: inherit; font-size: 10px; }
+kbd { color: var(--text-muted); font-family: inherit; font-size:11px; }
 .check { color: var(--accent); }
 .top-spacer { flex: 1; }
-.release-pill { padding: 3px 8px; border: 1px solid var(--border-subtle); border-radius: 999px; color: var(--text-muted); font-size: 10px; }
+.release-pill { padding: 3px 8px; border: 1px solid var(--border-subtle); border-radius: 999px; color: var(--text-muted); font-size:11px; }
 .menu-enter-active, .menu-leave-active { transition: opacity 130ms ease, transform 130ms ease; transform-origin: top left; }
 .menu-enter-from, .menu-leave-to { opacity: 0; transform: translateY(-4px) scale(.98); }
 </style>

@@ -84,7 +84,7 @@ export function renderMaterialPreview(canvas: HTMLCanvasElement, materialInput: 
   const material = normalizeMaterial(materialInput)
   const diagnostics = analyzeMaterialShader(material.fragment)
   if (diagnostics.some(item => item.severity === 'error')) return diagnostics
-  const gl = canvas.getContext('webgl2', { alpha: true, antialias: false })
+  const gl = canvas.getContext('webgl2', { alpha: true, antialias: true, premultipliedAlpha: true })
   if (!gl) return [...diagnostics, { line: 1, severity: 'warning', message: 'WebGL2 is unavailable; the base-material fallback remains active.' }]
   const uniforms = Object.entries(material.uniforms).map(([name, value]) => Array.isArray(value) ? `uniform vec${value.length} ${name};` : typeof value === 'boolean' ? `uniform bool ${name};` : `uniform float ${name};`).join('\n')
   const textures = Object.keys(material.textures).map(name => `uniform sampler2D ${name};`).join('\n')

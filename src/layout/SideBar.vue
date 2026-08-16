@@ -34,7 +34,7 @@ function openScripts() { closeContextMenu(); applyEditorWorkspace('script') }
 .nav-group { display: flex; flex-direction: column; gap: 6px; }
 button { height: 50px; padding: 6px 3px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; border: 1px solid transparent; border-radius: 12px; background: transparent; color: var(--text-muted); }
 button img { width: 18px; height: 18px; opacity: .72; filter: var(--icon-filter); transition: opacity 160ms ease, transform 180ms cubic-bezier(.2,.8,.2,1); }
-button span { font-size: 9px; letter-spacing: .01em; }
+button span { font-size:11px; letter-spacing: .01em; }
 button:hover { color: var(--text-primary); background: var(--surface-hover); }
 button:hover img { opacity: 1; transform: translateY(-1px); }
 button.active { color: var(--accent); background: var(--accent-soft); border-color: color-mix(in srgb, var(--accent) 24%, transparent); }

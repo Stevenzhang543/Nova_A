@@ -2,6 +2,8 @@ import { reactive } from 'vue'
 import { getSceneJSON, loadProject, physicsState } from '../store/physics'
 import { beginProjectSession, newProjectMetadata, projectSessionState, safeProjectName, touchProjectMetadata } from './projectSession'
 import { createTemplateProjectJson, type ProjectTemplateId } from './templates'
+import { analyzeProjectUpgrade, downloadProjectBackup, readUpgradeRollback, storeUpgradeRollback, type UpgradePreview } from '../runtime/projectUpgrade'
+import { markSourceBaseline } from '../runtime/teamWorkflow'
 
 const RECENT_KEY = 'nova_a.recent_projects.v2'
 const MAX_RECENT_PROJECTS = 8
@@ -39,7 +41,10 @@ export const projectManagerState = reactive({
   busy: false,
   error: '',
   recents: readRecents() as RecentProject[],
-  currentSnapshot: null as string | null
+  currentSnapshot: null as string | null,
+  pendingUpgrade: null as null | { source: string; fileName: string; importAsCopy: boolean; preview: UpgradePreview },
+  backupBeforeUpgrade: true
+  ,rollbackAvailable: readUpgradeRollback() !== null
 })
 
 export async function createNewProject(name: string, template: ProjectTemplateId): Promise<boolean> {
@@ -50,6 +55,7 @@ export async function createNewProject(name: string, template: ProjectTemplateId
     const source = createTemplateProjectJson(template, safeProjectName(name))
     if (!loadProject(source)) throw new Error('The selected template did not pass project validation.')
     projectManagerState.currentSnapshot = getSceneJSON()
+    markSourceBaseline(projectManagerState.currentSnapshot)
     rememberCurrentProject(projectManagerState.currentSnapshot)
     projectManagerState.visible = false
     return true
@@ -60,6 +66,23 @@ export async function createNewProject(name: string, template: ProjectTemplateId
 }
 
 export async function openProjectDocument(source: string, fileName = 'project.nova', importAsCopy = false): Promise<boolean> {
+  try {
+    const preview = analyzeProjectUpgrade(source)
+    if (!preview.supported) throw new Error(preview.warnings[0] || 'This project cannot be opened safely by this Nova_A version.')
+    if (preview.requiresMigration) {
+      projectManagerState.pendingUpgrade = { source, fileName, importAsCopy, preview }
+      projectManagerState.visible = true
+      projectManagerState.error = ''
+      return false
+    }
+  } catch (error) {
+    projectManagerState.error = error instanceof Error ? error.message : String(error)
+    return false
+  }
+  return openProjectDocumentNow(source, fileName, importAsCopy)
+}
+
+async function openProjectDocumentNow(source: string, fileName = 'project.nova', importAsCopy = false): Promise<boolean> {
   projectManagerState.busy = true
   projectManagerState.error = ''
   try {
@@ -75,6 +98,7 @@ export async function openProjectDocument(source: string, fileName = 'project.no
       beginProjectSession(newProjectMetadata(`${safeProjectName(baseName)}${importAsCopy ? ' (Imported)' : ''}`, 'imported'))
     }
     projectManagerState.currentSnapshot = getSceneJSON()
+    markSourceBaseline(projectManagerState.currentSnapshot)
     rememberCurrentProject(projectManagerState.currentSnapshot)
     projectManagerState.visible = false
     return true
@@ -82,6 +106,26 @@ export async function openProjectDocument(source: string, fileName = 'project.no
     projectManagerState.error = error instanceof Error ? error.message : String(error)
     return false
   } finally { projectManagerState.busy = false }
+}
+
+export async function applyPendingProjectUpgrade(): Promise<boolean> {
+  const pending = projectManagerState.pendingUpgrade
+  if (!pending) return false
+  if (projectManagerState.backupBeforeUpgrade) downloadProjectBackup(pending.source, pending.fileName.replace(/\.(nova|json)$/i, ''))
+  storeUpgradeRollback(pending.source, pending.fileName)
+  projectManagerState.rollbackAvailable = true
+  projectManagerState.pendingUpgrade = null
+  return openProjectDocumentNow(pending.source, pending.fileName, pending.importAsCopy)
+}
+
+export function cancelPendingProjectUpgrade(): void { projectManagerState.pendingUpgrade = null }
+
+export function downloadLastUpgradeRollback(): boolean {
+  const rollback = readUpgradeRollback()
+  if (!rollback) return false
+  downloadProjectBackup(rollback.source, rollback.fileName.replace(/\.(nova|json)$/i, ''))
+  projectManagerState.rollbackAvailable = true
+  return true
 }
 
 export async function openRecentProject(id: string): Promise<boolean> {

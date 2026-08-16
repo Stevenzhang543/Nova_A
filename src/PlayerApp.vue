@@ -1,24 +1,26 @@
 <template>
   <main class="player-root">
-    <WorldCanvas v-if="ready" />
+    <WorldCanvas v-if="ready && !headless" />
     <section v-else class="player-status" :class="{ error: errorMessage }">
       <span class="player-mark">N</span>
-      <strong>Nova Player</strong>
-      <p>{{ errorMessage ? t('playerLoadFailed', { message: errorMessage }) : t('playerLoading') }}</p>
+      <strong>{{ headless ? t('headlessServer') : 'Nova Player' }}</strong>
+      <p>{{ errorMessage ? t('playerLoadFailed', { message: errorMessage }) : ready && headless ? t('headlessServerRunning') : t('playerLoading') }}</p>
     </section>
   </main>
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { onBeforeUnmount, onMounted, ref } from 'vue'
 import WorldCanvas from './components/WorldCanvas.vue'
 import { t } from './i18n'
 import { gameplayRuntime } from './runtime/GameplayRuntime'
 import { projectJsonFromNovaPak } from './runtime/novaPak'
 import { editorState } from './store/editor'
 import { loadProject, physicsState, toggleSimulation } from './store/physics'
+import { buildSettings } from './runtime/buildSettings'
 
-const ready = ref(false), errorMessage = ref('')
+const ready = ref(false), headless = ref(false), errorMessage = ref('')
+let headlessTimer: number | null = null
 
 function decodeBase64(value: string): Uint8Array {
   const binary = atob(value)
@@ -46,12 +48,18 @@ onMounted(async () => {
     if (physicsState.world.wasmError) throw physicsState.world.wasmError
     toggleSimulation(true)
     gameplayRuntime.beginSession()
-    document.title = 'Nova Player'
+    headless.value = buildSettings.runtimeMode === 'headless-server'
+    if (headless.value) {
+      const tickRate = Math.max(1, Math.min(1_000, physicsState.globalSettings.tickRate))
+      headlessTimer = window.setInterval(() => gameplayRuntime.frame(1 / tickRate), 1_000 / tickRate)
+    }
+    document.title = headless.value ? 'Nova Headless Server' : 'Nova Player'
     ready.value = true
   } catch (error) {
     errorMessage.value = error instanceof Error ? error.message : String(error)
   }
 })
+onBeforeUnmount(() => { if (headlessTimer !== null) window.clearInterval(headlessTimer); gameplayRuntime.stopSession(false) })
 </script>
 
 <style scoped>

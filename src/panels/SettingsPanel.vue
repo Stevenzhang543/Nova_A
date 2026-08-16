@@ -2,7 +2,7 @@
   <div class="settings-page">
     <header class="page-header">
       <div>
-        <span class="eyebrow">Nova_A 2.4.0</span>
+        <span class="eyebrow">Nova_A 3.0.0</span>
         <h1>{{ t('settings') }}</h1>
       </div>
       <div class="theme-switch" :aria-label="t('theme')">
@@ -315,7 +315,7 @@ h1 { margin: 0; font-size: clamp(26px, 4vw, 38px); font-weight: 620; letter-spac
 .matrix-scroll { max-width: 100%; padding: 7px; overflow: auto; border: 1px solid var(--border-subtle); border-radius: 10px; background: var(--surface-2); }
 .matrix-header, .matrix-row { width: max-content; display: grid; grid-template-columns: 28px repeat(32, 18px); gap: 3px; align-items: center; }
 .matrix-header { margin-bottom: 4px; }
-.matrix-header b, .matrix-row > b { color: var(--text-muted); font-size: 8px; text-align: center; font-weight: 600; }
+.matrix-header b, .matrix-row > b { color: var(--text-muted); font-size:11px; text-align: center; font-weight: 600; }
 .matrix-row { margin-bottom: 3px; }
 .matrix-row button { width: 18px; height: 18px; padding: 0; border: 1px solid var(--border-subtle); border-radius: 4px; background: var(--surface-3); }
 .matrix-row button.active { border-color: color-mix(in srgb, var(--accent) 76%, white); background: var(--accent); box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--accent) 65%, white); }
@@ -331,7 +331,7 @@ p { margin: 0 0 8px 40px; color: var(--text-muted); font-size: 12px; line-height
 .value-control output { min-width: 46px; text-align: right; color: var(--text-primary); font-variant-numeric: tabular-nums; }
 .metric-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 4px; }
 .metric-grid > div { min-width: 0; padding: 10px; display: flex; flex-direction: column; gap: 4px; border: 1px solid var(--border-subtle); border-radius: 10px; background: var(--surface-2); }
-.metric-grid span { overflow: hidden; color: var(--text-muted); font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
+.metric-grid span { overflow: hidden; color: var(--text-muted); font-size:11px; text-overflow: ellipsis; white-space: nowrap; }
 .metric-grid strong, :deep(output) { color: var(--text-primary); font-size: 12px; font-variant-numeric: tabular-nums; }
 :deep(.toggle) { width: 38px; height: 22px; padding: 3px; border: 0; border-radius: 99px; background: var(--surface-3); box-shadow: inset 0 0 0 1px var(--border-subtle); }
 :deep(.toggle span) { display: block; width: 16px; height: 16px; border-radius: 50%; background: var(--text-muted); transition: transform 180ms cubic-bezier(.2,.8,.2,1), background 180ms ease; }

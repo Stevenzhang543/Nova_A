@@ -21,7 +21,7 @@ for (const panel of ['hierarchyVisible', 'inspectorVisible', 'bottomPanelVisible
 assert(layout.includes('workspace-control-row') && layout.indexOf('<WorkspaceBar') < layout.indexOf('<ActionBar'), 'workspace and playback controls are not structurally separated')
 const actionBarRule = actionBar.match(/\.actionbar\s*\{([^}]*)\}/)?.[1] ?? ''
 assert(actionBarRule && !actionBarRule.includes('position: absolute') && !actionBarRule.includes('translateX(-50%)'), 'playback controls can overlap editor navigation')
-for (const tab of ['assets', 'console', 'animation', 'tilemap', 'profiler', 'rendering', 'project', 'build']) {
+for (const tab of ['assets', 'packages', 'console', 'animation', 'tilemap', 'world', 'profiler', 'rendering', 'project', 'build']) {
   assert(palette.includes(`toolCommand('${tab}'`), `Command palette cannot open ${tab}`)
 }
 assert(workspaces.includes("'rendering'"), 'Rendering panel cannot be restored from saved workspace state')
@@ -42,6 +42,6 @@ const versions = await Promise.all([
   read('package.json'), read('Cargo.toml'), read('src-tauri/Cargo.toml'), read('src-tauri/tauri.conf.json'),
   read('crates/nova_format/src/lib.rs'), read('src/projects/projectFormat.ts')
 ])
-for (const source of versions) assert(source.includes('2.4.0'), 'A primary release metadata file does not identify 2.4.0')
+for (const source of versions) assert(source.includes('3.0.0'), 'A primary release metadata file does not identify 3.0.0')
 
 console.log('Editor shell audit passed: 5 workspaces, persistent panel layout, command coverage, and searchable component inspector.')

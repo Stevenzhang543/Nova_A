@@ -5,6 +5,8 @@ export type BodyType2D = 'Dynamic' | 'Kinematic' | 'Static'
 export type MassMode2D = 'Automatic' | 'Manual'
 export type CollisionMode2D = 'Discrete' | 'Continuous'
 export type TileCollision2D = 'None' | 'Box' | 'Polygon' | 'OneWay'
+export type AreaEffectKind2D = 'Gravity' | 'Wind' | 'Drag' | 'Buoyancy' | 'Damage' | 'Signal'
+export type NavigationAlgorithm2D = 'AStar' | 'FlowField'
 export type JointKind2D = 'FixedJoint2D' | 'DistanceJoint2D' | 'RevoluteJoint2D' | 'PrismaticJoint2D' | 'SpringJoint2D'
 export type RendererShape2D = 'Rectangle' | 'Ellipse' | 'Polygon'
 export type LightKind2D = 'Point' | 'Spot' | 'Directional' | 'Area'
@@ -32,6 +34,17 @@ export type ComponentKind =
   | 'Checkbox'
   | 'TextInput'
   | 'TileMap2D'
+  | 'CharacterBody2D'
+  | 'Area2D'
+  | 'AreaEffector2D'
+  | 'NavigationRegion2D'
+  | 'NavigationObstacle2D'
+  | 'NavigationAgent2D'
+  | 'BehaviorTree2D'
+  | 'StateMachine2D'
+  | 'WorldChunk2D'
+  | 'Portal2D'
+  | 'ObjectPool2D'
   | 'ParticleEmitter2D'
   | 'Light2D'
   | 'ShadowCaster2D'
@@ -195,7 +208,8 @@ export class TimelinePlayer extends ComponentBase {
   constructor(uuid?: string) { super(uuid) }
 }
 
-export type AudioBus = 'Master' | 'Music' | 'SFX' | 'UI'
+export type AudioBus = string
+export type AudioAttenuationCurve = 'Linear' | 'Inverse' | 'Exponential' | 'Custom'
 
 export class AudioSource extends ComponentBase {
   readonly kind = 'AudioSource' as const
@@ -208,6 +222,10 @@ export class AudioSource extends ComponentBase {
   minDistance = 1
   maxDistance = 50
   bus: AudioBus = 'SFX'
+  attenuationCurve: AudioAttenuationCurve = 'Linear'
+  customAttenuation: Array<{ distance: number; gain: number }> = [{ distance: 0, gain: 1 }, { distance: 1, gain: 0 }]
+  voicePriority = 50
+  streamOverride: 'ImportSetting' | 'Stream' | 'Buffer' = 'ImportSetting'
 
   constructor(uuid?: string) { super(uuid) }
 }
@@ -229,6 +247,9 @@ export class Canvas extends ComponentBase {
   referenceSize: Vec2 = { x: 1920, y: 1080 }
   scaleWithScreen = true
   sortingOrder = 0
+  safeArea = false
+  safeAreaInsets = { left: 0, top: 0, right: 0, bottom: 0 }
+  themeAsset: string | null = null
 
   constructor(uuid?: string) { super(uuid) }
 }
@@ -240,6 +261,25 @@ export class RectTransform extends ComponentBase {
   position: Vec2 = { x: 0, y: 0 }
   size: Vec2 = { x: 240, y: 80 }
   margins = { left: 0, top: 0, right: 0, bottom: 0 }
+  horizontalPolicy: 'Fixed' | 'Fill' | 'Content' = 'Fixed'
+  verticalPolicy: 'Fixed' | 'Fill' | 'Content' = 'Fixed'
+  minSize: Vec2 = { x: 0, y: 0 }
+  maxSize: Vec2 = { x: 100_000, y: 100_000 }
+  aspectRatio = 0
+  aspectConstraint: 'None' | 'Fit' | 'WidthControlsHeight' | 'HeightControlsWidth' = 'None'
+  breakpoints: Array<{ minWidth: number; maxWidth: number; visible: boolean; position: Vec2; size: Vec2 }> = []
+  focusable = true
+  tabIndex = 0
+  focusUp: string | null = null
+  focusDown: string | null = null
+  focusLeft: string | null = null
+  focusRight: string | null = null
+  accessibilityRole = ''
+  accessibilityLabel = ''
+  accessibilityDescription = ''
+  accessibilityHidden = false
+  remapAction = ''
+  remapBindingIndex = 0
 
   constructor(uuid?: string) { super(uuid) }
 }
@@ -249,6 +289,23 @@ export class Panel extends ComponentBase {
   color = { r: 35, g: 41, b: 52 }
   opacity = 92
   cornerRadius = 14
+  layout: 'None' | 'Horizontal' | 'Vertical' | 'Grid' = 'None'
+  gap = 8
+  padding = { left: 0, top: 0, right: 0, bottom: 0 }
+  columns = 2
+  wrap = false
+  align: 'Start' | 'Center' | 'End' | 'Stretch' = 'Start'
+  justify: 'Start' | 'Center' | 'End' | 'SpaceBetween' = 'Start'
+  clipChildren = false
+  maskChildren = false
+  scrollHorizontal = false
+  scrollVertical = false
+  scrollOffset: Vec2 = { x: 0, y: 0 }
+  contentSize: Vec2 = { x: 0, y: 0 }
+  showScrollbars = true
+  scrollSpeed = 42
+  styleClass = 'panel'
+  styleOverrides: Record<string, string | number> = {}
 
   constructor(uuid?: string) { super(uuid) }
 }
@@ -274,6 +331,8 @@ export class Text extends ComponentBase {
   align: CanvasTextAlign = 'center'
   color = { r: 245, g: 248, b: 252 }
   opacity = 100
+  localizationKey = ''
+  localizationVariables: Record<string, string | number | boolean> = {}
 
   constructor(uuid?: string) { super(uuid) }
 }
@@ -291,6 +350,8 @@ export class Button extends ComponentBase {
   onPressed = 'on_pressed'
   onHoverEnter = 'on_hover_enter'
   onHoverExit = 'on_hover_exit'
+  styleClass = 'button'
+  styleOverrides: Record<string, string | number> = {}
 
   constructor(uuid?: string) { super(uuid) }
 }
@@ -302,6 +363,8 @@ export class Slider extends ComponentBase {
   value = .5
   wholeNumbers = false
   interactable = true
+  styleClass = 'slider'
+  styleOverrides: Record<string, string | number> = {}
 
   constructor(uuid?: string) { super(uuid) }
 }
@@ -313,6 +376,8 @@ export class ProgressBar extends ComponentBase {
   value = .5
   fillColor = { r: 79, g: 150, b: 255 }
   backgroundColor = { r: 31, g: 37, b: 47 }
+  styleClass = 'progress'
+  styleOverrides: Record<string, string | number> = {}
 
   constructor(uuid?: string) { super(uuid) }
 }
@@ -322,6 +387,9 @@ export class Checkbox extends ComponentBase {
   checked = false
   interactable = true
   label = 'Checkbox'
+  localizationKey = ''
+  styleClass = 'checkbox'
+  styleOverrides: Record<string, string | number> = {}
 
   constructor(uuid?: string) { super(uuid) }
 }
@@ -333,6 +401,8 @@ export class TextInput extends ComponentBase {
   maxLength = 256
   interactable = true
   password = false
+  styleClass = 'input'
+  styleOverrides: Record<string, string | number> = {}
 
   constructor(uuid?: string) { super(uuid) }
 }
@@ -353,7 +423,171 @@ export class TileMap2D extends ComponentBase {
   filterMode: 'Nearest' | 'Linear' = 'Nearest'
   physicsLayer = 0
   collisionMask = 1
+  layers: Array<{ id: string; name: string; visible: boolean; locked: boolean; opacity: number; tiles: number[] }> = [
+    { id: 'base', name: 'Base', visible: true, locked: false, opacity: 1, tiles: this.tiles }
+  ]
+  activeLayer = 0
+  streamingEnabled = false
+  streamingRadius = 3
+  bakeCollision = true
+  bakeNavigation = false
+  bakeOccluders = false
   revision = 0
+
+  constructor(uuid?: string) { super(uuid) }
+}
+
+export class CharacterBody2D extends ComponentBase {
+  readonly kind = 'CharacterBody2D' as const
+  maxSlopeAngle = 45
+  stepHeight = 0.35
+  floorSnap = 0.15
+  safeMargin = 0.001
+  maxSlides = 4
+  coyoteTime = 0.12
+  applyPlatformVelocity = true
+  collisionMask = 0xffff_ffff
+  requestedMotion: Vec2 = { x: 0, y: 0 }
+  motionVelocity: Vec2 = { x: 0, y: 0 }
+  onFloor = false
+  onWall = false
+  onCeiling = false
+  floorNormal: Vec2 = { x: 0, y: 1 }
+  wallNormal: Vec2 = { x: 0, y: 0 }
+  ceilingNormal: Vec2 = { x: 0, y: -1 }
+  platformVelocity: Vec2 = { x: 0, y: 0 }
+  secondsSinceFloor = Number.POSITIVE_INFINITY
+
+  constructor(uuid?: string) { super(uuid) }
+}
+
+export class Area2D extends ComponentBase {
+  readonly kind = 'Area2D' as const
+  shape: 'Box' | 'Circle' = 'Box'
+  size: Vec2 = { x: 4, y: 4 }
+  radius = 2
+  collisionMask = 0xffff_ffff
+  monitorable = true
+
+  constructor(uuid?: string) { super(uuid) }
+}
+
+export interface AreaEffect2D {
+  id: string
+  kind: AreaEffectKind2D
+  enabled: boolean
+  direction: Vec2
+  strength: number
+  drag: number
+  fluidDensity: number
+  damagePerSecond: number
+  signal: string
+}
+
+export class AreaEffector2D extends ComponentBase {
+  readonly kind = 'AreaEffector2D' as const
+  priority = 0
+  effectors: AreaEffect2D[] = [{
+    id: 'gravity', kind: 'Gravity', enabled: true, direction: { x: 0, y: -1 }, strength: 9.80665,
+    drag: 0, fluidDensity: 1, damagePerSecond: 0, signal: 'area.effect'
+  }]
+
+  constructor(uuid?: string) { super(uuid) }
+}
+
+export class NavigationRegion2D extends ComponentBase {
+  readonly kind = 'NavigationRegion2D' as const
+  polygon: Vec2[] = [{ x: -5, y: -5 }, { x: 5, y: -5 }, { x: 5, y: 5 }, { x: -5, y: 5 }]
+  cellSize = 0.5
+  algorithm: NavigationAlgorithm2D = 'AStar'
+  allowDiagonal = true
+  dynamic = false
+  rebakeInterval = 0.5
+  navigationLayer = 1
+  traversalCost = 1
+
+  constructor(uuid?: string) { super(uuid) }
+}
+
+export class NavigationObstacle2D extends ComponentBase {
+  readonly kind = 'NavigationObstacle2D' as const
+  shape: 'Box' | 'Circle' = 'Circle'
+  size: Vec2 = { x: 1, y: 1 }
+  radius = 0.5
+  dynamic = true
+  navigationLayer = 1
+
+  constructor(uuid?: string) { super(uuid) }
+}
+
+export class NavigationAgent2D extends ComponentBase {
+  readonly kind = 'NavigationAgent2D' as const
+  targetPosition: Vec2 = { x: 0, y: 0 }
+  targetEntityUuid: string | null = null
+  speed = 4
+  acceleration = 20
+  radius = 0.4
+  stoppingDistance = 0.1
+  avoidance = true
+  avoidanceRadius = 1.2
+  pathSmoothing = true
+  repathInterval = 0.25
+  navigationLayer = 1
+  path: Vec2[] = []
+  pathIndex = 0
+  velocity: Vec2 = { x: 0, y: 0 }
+  pathStatus: 'Idle' | 'Ready' | 'Unreachable' = 'Idle'
+
+  constructor(uuid?: string) { super(uuid) }
+}
+
+export class BehaviorTree2D extends ComponentBase {
+  readonly kind = 'BehaviorTree2D' as const
+  treeAsset: string | null = null
+  tickRate = 10
+  currentNode = ''
+
+  constructor(uuid?: string) { super(uuid) }
+}
+
+export class StateMachine2D extends ComponentBase {
+  readonly kind = 'StateMachine2D' as const
+  machineAsset: string | null = null
+  currentState = ''
+
+  constructor(uuid?: string) { super(uuid) }
+}
+
+export class WorldChunk2D extends ComponentBase {
+  readonly kind = 'WorldChunk2D' as const
+  size: Vec2 = { x: 64, y: 64 }
+  loadDistance = 96
+  unloadDistance = 128
+  preloadPriority = 0
+  memoryEstimateMb = 8
+  sceneUuid = ''
+  initiallyLoaded = true
+
+  constructor(uuid?: string) { super(uuid) }
+}
+
+export class Portal2D extends ComponentBase {
+  readonly kind = 'Portal2D' as const
+  targetSceneUuid = ''
+  targetPortal = ''
+  triggerRadius = 1
+  preload = true
+
+  constructor(uuid?: string) { super(uuid) }
+}
+
+export class ObjectPool2D extends ComponentBase {
+  readonly kind = 'ObjectPool2D' as const
+  prefabAsset: string | null = null
+  prewarm = 8
+  capacity = 32
+  autoExpand = true
+  activeCount = 0
 
   constructor(uuid?: string) { super(uuid) }
 }
@@ -505,7 +739,9 @@ export type EntityComponent =
   | ShapeRenderer2D | SpriteRenderer2D | TextRenderer2D | Camera2D | Script2D
   | Animator | Skeleton2D | TimelinePlayer | AudioSource | AudioListener | Canvas | RectTransform | Panel | Image
   | Text | Button | Slider | ProgressBar | Checkbox | TextInput
-  | TileMap2D | ParticleEmitter2D | Light2D | ShadowCaster2D | Joint2D | RigidBody2D | Collider2D
+  | TileMap2D | CharacterBody2D | Area2D | AreaEffector2D | NavigationRegion2D | NavigationObstacle2D | NavigationAgent2D
+  | BehaviorTree2D | StateMachine2D | WorldChunk2D | Portal2D | ObjectPool2D
+  | ParticleEmitter2D | Light2D | ShadowCaster2D | Joint2D | RigidBody2D | Collider2D
 
 function clonePersistedValue<T>(value: T): T {
   if (value === undefined) return value
@@ -515,7 +751,8 @@ function clonePersistedValue<T>(value: T): T {
 export function copyComponentValues<T extends Component2D>(component: T): Record<string, unknown> {
   const values: Record<string, unknown> = {}
   for (const [key, value] of Object.entries(component)) {
-    if (key === 'uuid' || key === 'kind' || key === 'removed' || key === 'textureImage' || key === 'lastError' || key === 'state') continue
+    if (key === 'uuid' || key === 'kind' || key === 'removed' || key === 'textureImage' || key === 'lastError' || key === 'state'
+      || ['requestedMotion', 'motionVelocity', 'onFloor', 'onWall', 'onCeiling', 'floorNormal', 'wallNormal', 'ceilingNormal', 'platformVelocity', 'secondsSinceFloor', 'path', 'pathIndex', 'velocity', 'pathStatus', 'currentNode', 'currentState', 'activeCount'].includes(key)) continue
     values[key] = clonePersistedValue(value)
   }
   return values

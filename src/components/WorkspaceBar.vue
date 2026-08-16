@@ -39,10 +39,10 @@ function selectWorkspace(workspace: EditorWorkspace): void {
 .workspace-list, .panel-controls { min-width: 0; display: flex; align-items: center; gap: 3px; }
 .workspace-list { overflow-x: auto; scrollbar-width: none; }.workspace-list::-webkit-scrollbar { display: none; }
 .workspace-spacer { flex: 1; }
-button { height: 29px; padding: 0 10px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; flex: 0 0 auto; border: 1px solid transparent; border-radius: 8px; color: var(--text-muted); background: transparent; font-size: 10px; white-space: nowrap; }
+button { height: 29px; padding: 0 10px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; flex: 0 0 auto; border: 1px solid transparent; border-radius: 8px; color: var(--text-muted); background: transparent; font-size:11px; white-space: nowrap; }
 button:hover { color: var(--text-primary); background: var(--surface-hover); }
 button.active { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 30%, transparent); background: var(--accent-soft); }
 .workspace-list button span { min-width: 15px; color: currentColor; font: 600 10px/1 ui-monospace, SFMono-Regular, Consolas, monospace; }
-.panel-controls { flex: 0 0 auto; padding-left: 6px; border-left: 1px solid var(--border-subtle); }.panel-controls button { width: 29px; padding: 0; font-size: 9px; font-weight: 700; }.panel-controls .command-trigger { width: auto; padding: 0 8px; font-weight: 550; }.command-trigger span { color: var(--text-muted); }
-@media (max-width: 1180px) { .workspace-list button { width: 31px; padding: 0; font-size: 0; }.workspace-list button span { font-size: 10px; }.panel-controls { padding-left: 3px; }.panel-controls button:nth-child(-n+3) { display: none; } }
+.panel-controls { flex: 0 0 auto; padding-left: 6px; border-left: 1px solid var(--border-subtle); }.panel-controls button { width: 29px; padding: 0; font-size:11px; font-weight: 700; }.panel-controls .command-trigger { width: auto; padding: 0 8px; font-weight: 550; }.command-trigger span { color: var(--text-muted); }
+@media (max-width: 1180px) { .workspace-list button { width: 31px; padding: 0; font-size: 0; }.workspace-list button span { font-size:11px; }.panel-controls { padding-left: 3px; }.panel-controls button:nth-child(-n+3) { display: none; } }
 </style>

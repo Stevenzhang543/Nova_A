@@ -1,0 +1,204 @@
+import { reactive } from 'vue'
+import type { AssetImportSettings, AssetPipelineMetadata } from './types'
+
+export const ASSET_IMPORTER_VERSION = '2.0.0'
+const CACHE_NAME = 'nova-a-imports-v2'
+const MAX_PARALLEL_IMPORTS = Math.max(1, Math.min(4, navigator.hardwareConcurrency ? Math.floor(navigator.hardwareConcurrency / 2) : 2))
+
+export interface AssetImportJob {
+  id: number
+  name: string
+  progress: number
+  status: 'queued' | 'reading' | 'processing' | 'writing' | 'complete' | 'cancelled' | 'failed'
+  error: string
+}
+
+export interface ImportedArtifact {
+  bytes: ArrayBuffer
+  source: string
+  metadata: AssetPipelineMetadata
+}
+
+let nextJobId = 1
+let running = 0
+const waiting: Array<() => void> = []
+const controllers = new Map<number, AbortController>()
+const memoryCache = new Map<string, Blob>()
+
+export const importPipelineState = reactive({ jobs: [] as AssetImportJob[] })
+
+function platform(): AssetPipelineMetadata['platform'] {
+  const value = navigator.userAgent.toLowerCase()
+  if (value.includes('windows')) return 'windows'
+  if (value.includes('mac')) return 'macos'
+  if (value.includes('linux')) return 'linux'
+  return 'web'
+}
+
+function stable(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map(stable).join(',')}]`
+  if (value && typeof value === 'object') return `{${Object.entries(value as Record<string, unknown>).sort(([a], [b]) => a.localeCompare(b)).map(([key, item]) => `${JSON.stringify(key)}:${stable(item)}`).join(',')}}`
+  return JSON.stringify(value)
+}
+
+async function acquire(signal: AbortSignal): Promise<void> {
+  if (running < MAX_PARALLEL_IMPORTS) { running++; return }
+  await new Promise<void>((resolve, reject) => {
+    const start = () => { signal.removeEventListener('abort', cancel); running++; resolve() }
+    const cancel = () => { const index = waiting.indexOf(start); if (index >= 0) waiting.splice(index, 1); reject(new DOMException('Import cancelled', 'AbortError')) }
+    waiting.push(start)
+    signal.addEventListener('abort', cancel, { once: true })
+  })
+}
+
+function release(): void { running = Math.max(0, running - 1); waiting.shift()?.() }
+
+async function readBytes(file: File, job: AssetImportJob, signal: AbortSignal): Promise<ArrayBuffer> {
+  if (!file.stream) return file.arrayBuffer()
+  const reader = file.stream().getReader()
+  const chunks: Uint8Array[] = []
+  let received = 0
+  try {
+    while (true) {
+      if (signal.aborted) throw new DOMException('Import cancelled', 'AbortError')
+      const result = await reader.read()
+      if (result.done) break
+      chunks.push(result.value)
+      received += result.value.byteLength
+      job.progress = file.size ? Math.min(.62, received / file.size * .62) : .62
+    }
+  } finally { reader.releaseLock() }
+  const bytes = new Uint8Array(received)
+  let offset = 0
+  for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.byteLength }
+  return bytes.buffer
+}
+
+async function hashInWorker(bytes: ArrayBuffer, settings: AssetImportSettings, target: string, signal: AbortSignal): Promise<{ sourceHash: string; cacheKey: string }> {
+  if (typeof Worker === 'undefined') {
+    const source = await crypto.subtle.digest('SHA-256', bytes)
+    const sourceHash = [...new Uint8Array(source)].map(value => value.toString(16).padStart(2, '0')).join('')
+    const key = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(`${sourceHash}\n${ASSET_IMPORTER_VERSION}\n${target}\n${stable(settings)}`))
+    return { sourceHash, cacheKey: [...new Uint8Array(key)].map(value => value.toString(16).padStart(2, '0')).join('') }
+  }
+  const worker = new Worker(new URL('./import.worker.ts', import.meta.url), { type: 'module' })
+  return new Promise((resolve, reject) => {
+    const cancel = () => { worker.terminate(); reject(new DOMException('Import cancelled', 'AbortError')) }
+    signal.addEventListener('abort', cancel, { once: true })
+    worker.onmessage = event => {
+      signal.removeEventListener('abort', cancel)
+      worker.terminate()
+      if (event.data.error) reject(new Error(event.data.error))
+      else resolve(event.data as { sourceHash: string; cacheKey: string })
+    }
+    worker.onerror = event => { signal.removeEventListener('abort', cancel); worker.terminate(); reject(new Error(event.message)) }
+    worker.postMessage({ id: 1, bytes, settings: stable(settings), importerVersion: ASSET_IMPORTER_VERSION, platform: target })
+  })
+}
+
+async function cachedArtifact(key: string): Promise<Blob | null> {
+  const memory = memoryCache.get(key)
+  if (memory) return memory
+  if (!('caches' in window)) return null
+  const response = await (await caches.open(CACHE_NAME)).match(`/__nova_import_cache__/${key}`)
+  if (!response) return null
+  const blob = await response.blob()
+  memoryCache.set(key, blob)
+  return blob
+}
+
+function dataUrl(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => typeof reader.result === 'string' ? resolve(reader.result) : reject(new Error('Imported artifact could not be encoded'))
+    reader.onerror = () => reject(reader.error ?? new Error('Imported artifact could not be encoded'))
+    reader.readAsDataURL(blob)
+  })
+}
+
+async function atomicCacheWrite(key: string, blob: Blob): Promise<void> {
+  memoryCache.set(key, blob)
+  if (!('caches' in window)) return
+  const cache = await caches.open(CACHE_NAME)
+  const temporary = new Request(`/__nova_import_cache__/tmp-${key}-${crypto.randomUUID()}`)
+  const final = new Request(`/__nova_import_cache__/${key}`)
+  await cache.put(temporary, new Response(blob))
+  const staged = await cache.match(temporary)
+  if (!staged) throw new Error('Atomic asset-cache verification failed')
+  await cache.put(final, staged.clone())
+  await cache.delete(temporary)
+}
+
+export async function processAssetImport(file: File, settings: AssetImportSettings): Promise<ImportedArtifact> {
+  const job = reactive<AssetImportJob>({ id: nextJobId++, name: file.name, progress: 0, status: 'queued', error: '' })
+  importPipelineState.jobs.push(job)
+  const controller = new AbortController()
+  controllers.set(job.id, controller)
+  let acquired = false
+  try {
+    await acquire(controller.signal); acquired = true
+    job.status = 'reading'
+    const bytes = await readBytes(file, job, controller.signal)
+    if (controller.signal.aborted) throw new DOMException('Import cancelled', 'AbortError')
+    job.status = 'processing'; job.progress = .7
+    const target = platform()
+    const hashes = await hashInWorker(bytes.slice(0), settings, target, controller.signal)
+    if (controller.signal.aborted) throw new DOMException('Import cancelled', 'AbortError')
+    job.status = 'writing'; job.progress = .88
+    const blob = new Blob([bytes], { type: file.type || 'application/octet-stream' })
+    const cached = await cachedArtifact(hashes.cacheKey)
+    const artifact = cached ?? blob
+    if (!cached) await atomicCacheWrite(hashes.cacheKey, blob)
+    const source = await dataUrl(artifact)
+    job.status = 'complete'; job.progress = 1
+    return {
+      bytes, source,
+      metadata: {
+        importerVersion: ASSET_IMPORTER_VERSION, platform: target, contentHash: hashes.sourceHash,
+        cacheKey: hashes.cacheKey, status: 'ready', lastValidSource: source, error: '', dependencies: [], cacheHit: cached !== null
+      }
+    }
+  } catch (error) {
+    job.status = error instanceof DOMException && error.name === 'AbortError' ? 'cancelled' : 'failed'
+    job.error = error instanceof Error ? error.message : String(error)
+    throw error
+  } finally {
+    controllers.delete(job.id)
+    if (acquired) release()
+    if (importPipelineState.jobs.length > 50) importPipelineState.jobs.splice(0, importPipelineState.jobs.length - 50)
+    window.setTimeout(() => {
+      const index = importPipelineState.jobs.indexOf(job)
+      if (index >= 0 && ['complete', 'cancelled', 'failed'].includes(job.status)) importPipelineState.jobs.splice(index, 1)
+    }, job.status === 'failed' ? 15_000 : 3000)
+  }
+}
+
+export function cancelAssetImport(jobId: number): void { controllers.get(jobId)?.abort() }
+
+type WatchedHandle = { getFile(): Promise<File> }
+const watchers = new Map<string, { handle: WatchedHandle; modified: number; timer: number }>()
+
+export function watchAssetSource(uuid: string, handle: WatchedHandle, onChange: (file: File) => Promise<void>): void {
+  stopWatchingAsset(uuid)
+  let debounce = 0
+  const entry = { handle, modified: 0, timer: 0 }
+  entry.timer = window.setInterval(async () => {
+    try {
+      const file = await handle.getFile()
+      if (!entry.modified) { entry.modified = file.lastModified; return }
+      if (file.lastModified === entry.modified) return
+      entry.modified = file.lastModified
+      window.clearTimeout(debounce)
+      debounce = window.setTimeout(() => { void onChange(file) }, 250)
+    } catch { stopWatchingAsset(uuid) }
+  }, 1000)
+  watchers.set(uuid, entry)
+}
+
+export function stopWatchingAsset(uuid: string): void {
+  const entry = watchers.get(uuid)
+  if (entry) window.clearInterval(entry.timer)
+  watchers.delete(uuid)
+}
+
+export function isAssetWatched(uuid: string): boolean { return watchers.has(uuid) }

@@ -7,6 +7,7 @@ struct Contact {
     depth: f64,
     radius_a: Vec2,
     radius_b: Vec2,
+    initial_relative_velocity: Vec2,
     restitution_bias: f64,
     static_friction: f64,
     dynamic_friction: f64,

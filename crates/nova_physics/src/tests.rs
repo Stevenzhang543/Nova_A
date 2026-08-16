@@ -679,6 +679,49 @@ mod tests {
     }
 
     #[test]
+    fn damped_collision_rope_remains_bounded_over_many_steps() {
+        let mut bodies = ellipse_record(1.0, 1.0, -2.0, 0.7, 0.7);
+        bodies.extend(ellipse_record(2.0, 5.0, -2.0, 0.9, 0.9));
+        let mut floor = box_record(3.0, 3.0, -5.0, 10.0, 1.0);
+        floor[9] = 1.0;
+        bodies.extend(floor);
+
+        let mut connection = connection_record(0, 1, 4.0);
+        connection[8] = 1.0;
+        connection[9] = 1.0;
+        connection[10] = 120.0;
+        connection[11] = 24.0;
+        connection[12] = 1.45;
+        connection[13] = 180.0;
+        connection[14] = 180.0;
+        connection[24] = 1.0;
+        connection[25] = 0.18;
+        connection[26] = 0.08;
+        connection[27] = 15.0;
+        for node in 0..15 {
+            let ratio = (node + 1) as f64 / 16.0;
+            let offset = ROPE_NODE_DATA_OFFSET + node * 4;
+            connection[offset] = 1.0 + ratio * 4.0;
+            connection[offset + 1] = -2.0;
+        }
+
+        let body_length = bodies.len();
+        for _ in 0..360 {
+            let output = step_physics_with_connections(
+                &bodies,
+                &connection,
+                1.0 / 120.0,
+                9.8,
+                0.01,
+            );
+            bodies.copy_from_slice(&output[..body_length]);
+            connection.copy_from_slice(&output[body_length..]);
+            assert!(all_finite(&output));
+            assert!(output.iter().all(|value| value.abs() < 1.0e8));
+        }
+    }
+
+    #[test]
     fn non_bendable_stretchable_rope_resists_curvature() {
         let mut bodies = ellipse_record(1.0, -2.0, 0.0, 0.1, 0.1);
         bodies[9] = 1.0;

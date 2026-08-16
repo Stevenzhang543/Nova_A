@@ -1,6 +1,6 @@
-# Nova_A 2.3 Complete Manual
+# Nova_A 2.9 Complete Manual
 
-Nova_A is an open-source 2D game engine and editor. This manual describes the complete editor-to-player workflow in Nova_A 2.4.0. One world unit is one configured grid unit; physics values use SI-style units where shown.
+Nova_A is an open-source 2D game engine and editor. This manual describes the complete editor-to-player workflow in Nova_A 3.0.0. One world unit is one configured grid unit; physics values use SI-style units where shown.
 
 ## Contents
 
@@ -24,6 +24,9 @@ Nova_A is an open-source 2D game engine and editor. This manual describes the co
 18. Migration and compatibility
 19. Tutorials
 20. Shortcuts and troubleshooting
+21. Asset pipeline, packages, Plugin API 2 and Physics Monitor
+22. Worlds, navigation and gameplay tools
+23. Responsive UI, themes, localization, audio and accessibility
 
 ## 1. Getting started
 
@@ -251,7 +254,7 @@ Scripts cannot access filesystem, network, process, DOM or dynamic imports. Oper
 
 Choose **Script** in the workspace strip or double-click a script in Assets. The left pane lists project scripts and searches file names, paths, and source matches. Tabs retain open files. The center editor includes line numbers, gutter breakpoints, Ctrl/Cmd+S, find/replace, line/column status, completion, signature/context help, and generated engine API documentation. Problems are produced by a cancellable Web Worker and confirmed by the Rust/Rhai compiler on save. Symbols provide function/export/test navigation, F12 goes to definitions, and F2 performs an app-confirmed project-wide rename only after every affected module compiles.
 
-Use `use "Movement.rhai";` or an `Assets/...` path for read-only project modules. Missing or circular dependencies are diagnosed before execution. Script asset metadata persists breakpoints, discovered `test_*` functions, and read-only package declarations in schema 17.
+Use `use "Movement.rhai";` or an `Assets/...` path for read-only project modules. Missing or circular dependencies are diagnosed before execution. Script asset metadata persists breakpoints, discovered `test_*` functions, and read-only package declarations in schema 22.
 
 In a development play session, a breakpoint pauses at the containing callback and exposes Continue, Step, call stack, bounded locals, and safe dot-path watches. Release packages remove breakpoint/test/package metadata and disable debugger settings unless **Development Build** is checked. Functions named `test_*` run in isolated runtimes; use `expect(condition, message)` to report failures without affecting another script.
 
@@ -331,7 +334,7 @@ Desktop targets are built on their matching host OS. Web produces static files. 
 
 ## 18. Migration and compatibility
 
-Nova_A 2.0 declares **Nova_A Project Format 2**; Nova_A 2.4 uses schema 17 with minimum supported legacy schema 5. Every saved project includes format name/major, schema, engine version, compatibility record and project metadata UUID. Schema 17 adds validated `Skeleton2D` rig/skin and `TimelinePlayer` references and preserves unknown asset fields.
+Nova_A 2.0 declares **Nova_A Project Format 2**; Nova_A 2.9 uses schema 22 with minimum supported legacy schema 5. Every saved project includes format name/major, schema, engine version, compatibility record and project metadata UUID. Schema 22 adds validated platform and delivery settings while retaining production, presentation, audio, world, rig/skin, Timeline and unknown asset data.
 
 Opening an older supported project runs ordered migrations for legacy numeric IDs, components, hierarchy, scenes, assets, prefabs, input, audio, tilemaps, particles, joints, build settings and 2.0 metadata. Existing data is preserved where valid. A project with a newer major/schema is rejected with a useful message instead of guessed conversion.
 
@@ -366,3 +369,174 @@ Create Top-down. Play with WASD; E instantiates the enemy prefab. Inspect enemy 
 If a component is invisible, confirm entity/component enabled state, active scene/layer, Camera2D range, renderer sorting and asset reference. If physics does not interact, confirm both colliders, body types, physics layer/mask and sensor state. If a script fails, open Console and click its source; validate action names and exported property types. If build fails, ensure every ordered scene exists and the startup scene is selected; build desktop targets on the corresponding host OS. If an old project fails, do not hand-edit its schema—keep the original and report the exact migration error.
 
 Release audit: create/import each template, save/reopen, play/pause/step/stop, switch scenes, instantiate a prefab, trigger physics events, persist/load save data, build Player + pack, launch it, and confirm editor-only UI is absent.
+
+
+## 21. Nova_A 2.5 asset pipeline, packages, Plugin API 2, and physics monitor
+
+### Asset importing and cache
+
+Open the bottom panel and choose **Assets**. **Import assets** accepts images, audio, fonts, scenes, prefabs, Rhai scripts, materials, animations/controllers/masks, rigs/skins/Timelines, tile sets, atlases, shaders, and localization files. Each job shows Queued, Reading, Processing, Writing cache, Complete, Cancelled, or Failed; Cancel aborts queued, stream-reading, and hashing work. Imports are keyed by the SHA-256 of source bytes plus importer version, target platform, and normalized import settings. A repeated input shows **Reused cached artifact**. Reimport preserves the asset GUID; on failure Nova_A reports the error and continues using the last valid artifact.
+
+Select an asset for its preview and type-specific settings. Images expose filtering, regions, atlasing, color space, pixels-per-unit, pivot, compression, and platform variants. Audio exposes preview, normalization, streaming, and sample rate. Fonts preview the imported family. Scripts show UTF-8/module metadata and open in Script Studio. Atlas, tile, shader, animation, and localization resources expose their dedicated settings and source preview.
+
+**Unused report** scans project and asset references. **Missing references** reports unknown `asset://` GUIDs. The inspector's References and build section lists owners and why the selected asset enters a player build. Moving or renaming repairs project-path references; deleting still uses Nova_A's in-app confirmation and clears known scene/document references.
+
+### Packages and Plugin API 2
+
+Choose **Packages** in the bottom panel or Command Palette. Views separate Installed, Project, Updates, Incompatible, and Disabled packages. Import a JSON manifest from a local, Git, or registry source. Nova_A validates reverse-domain IDs, semantic versions, engine ranges, dependencies, source kind, hashes, and the project lockfile. Importing a newer manifest caches it as an update; inspect the compatibility report before **Apply update**. Uninstall is blocked while another project package depends on it.
+
+Plugin API 2 manifests declare editor commands, menus, panels, importers, asset editors, components, inspectors, gizmos, settings, build hooks, runtime systems, and events. Every contribution needs the matching capability. Standard plugins are sandboxed WebAssembly with a 16 MB binary/memory ceiling and bounded calls; SHA-256 and optional Ed25519 signatures are checked. Native extensions are displayed as requiring explicit external installation and are never downloaded or run. Disable a package per project, or enable Plugin Safe Mode to skip all third-party code. `?safe-mode=1` performs one safe startup. Existing Plugin API 1 projects remain compatible with their log/events permissions.
+
+### Physics Monitor and collision timeline
+
+Press Play or Pause. A right-side Physics Monitor slides out without replacing the Scene/Game view. Object Properties displays each enabled rigid body's world position (m), direction, speed, velocity, acceleration, force, angular velocity, kinetic energy, contact count, and awake/sleeping state. Values come from the authoritative Rust runtime; renderer interpolation never writes them back.
+
+Collision Timeline records collision/trigger start, stay, and end events with both object names, fixed step and session time, collision point, incoming/resulting relative velocity, direction change, normal/tangent impulse, and normal/friction force. Freeze preserves the current snapshot, Clear resets only the timeline, the search filters both views, and Collapse returns viewport width. History and rendered rows are bounded; active `collisionStayed` rows are replaced instead of growing every fixed step.
+
+### 2.5 release audit
+
+Before release, create/open each template; import and reimport every asset type; cancel a large import; verify cache hit and failure fallback; move/rename/delete assets; run unused/missing/reference reports; install compatible/incompatible/API 1/API 2/native package manifests; preview/apply an update; test uninstall impact and Safe Mode; Play/Pause/Step/Stop; inspect moving bodies and a collision; switch views/workspaces/themes/languages; save/reopen; build and launch the Player. Required gates are Rust format, strict Clippy, all Rust tests, Vue type-check, production build, all audit scripts, and browser smoke tests at 900 x 600 and a normal desktop size.
+
+## 22. Nova_A 2.6 worlds, navigation, and gameplay tools
+
+Open **World Tools** from the bottom drawer or Command Palette. Its tabs keep world-authoring controls out of the Object Inspector; selecting **Add** creates the tab's real component through the normal undo history.
+
+- **CharacterBody2D:** attach it to a Kinematic body with a collider. Maximum slope angle, step height, floor snap, safe margin and maximum slides are world-unit solver inputs. Inherit platform velocity transfers support-body motion. Runtime badges show floor/wall/ceiling. Rhai uses `move_character(dx,dy)`, `can_coyote_jump()`, contact-state functions, floor normal and platform velocity. One configured metre moves exactly one world metre.
+- **Area2D / Area Effector:** choose Box/Circle and mask, then add Gravity, Wind, Drag, Buoyancy, Damage or Signal entries. Force effectors accumulate for exactly one Rust fixed step; damage emits `area.damage`, custom effects emit the selected signal, and enter/exit emit `area.entered` / `area.exited`.
+- **Navigation:** enable the optional Nova Navigation package, then author a polygon/grid region, static/dynamic obstacles and agents. Choose A* or FlowField, diagonal travel, cell size, layer, repath/rebake intervals, speed, acceleration, avoidance and smoothing. Debug overlay shows the bounded computed path. Physics-only projects leave this package disabled and do not load its module.
+- **AI:** enable Nova Gameplay AI only when required. Create Behavior Tree or hierarchical State Machine assets, assign them to their component and connect Action/enter/exit names to runtime signals.
+- **Streaming:** WorldChunk2D has bounds, load/unload distances, priority, estimated memory and optional scene. Project memory budget limits loaded chunks; streaming work is queued asynchronously. Origin shifting keeps large coordinates numerically stable. Portal2D sends `portal.entered` and queues its target scene once a player/CharacterBody enters its radius.
+- **Pooling:** ObjectPool2D chooses a prefab, prewarm count, bounded capacity and expansion policy. `instantiate` acquires a prepared instance when possible; `despawn()` returns it. `pool.spawned` and `pool.despawned` follow normal lifecycle boundaries.
+
+The **Tilemap** panel creates Tile Palette, Brush Preset and Terrain Rules assets. It supports multiple visible/locked/opacity layers; add, duplicate, switch or remove a layer using the layer controls. Tile definitions store terrain, navigation cost, occluder state and None/Box/Polygon/OneWay collision. **Bake tile map** reports merged collision shapes, navigation cells, occluders and bounded chunks. Streaming culls chunks by visible bounds; collision uses every visible layer.
+
+Schema 19 saves world budgets/debug flags and every new component/asset while preserving unknown fields. The Platformer template uses CharacterBody2D exact motion and coyote jumping. Release validation must exercise every World Tools tab, both optional-package states, tile layers/bakes, portals, pool reuse, save/reopen, undo/redo, all languages/themes, Play/Step/Stop, and the complete build gates.
+
+## 23. Nova_A 2.7 responsive UI, Audio, localization, and Accessibility
+
+Open **Presentation** from the bottom drawer, the Interface workspace, or Command Palette. Its four tabs separate presentation work from object-level editing.
+
+### Responsive UI and themes
+
+- Add Canvas, Panel, Image, Text, Button, Slider, ProgressBar, Checkbox or TextInput from the Inspector. Scene view shows the same UI rectangles as Game view and still allows selection.
+- RectTransform anchors against its parent. Fixed uses the entered size, Fill uses parent space minus margins, and Content measures supported text. Minimum/maximum size and Width Controls Height, Height Controls Width or Fit aspect constraints are applied before drawing.
+- Canvas can scale from its reference size and inset children into a safe area. Add up to 32 width breakpoints with alternate position, size and visibility.
+- Panel layout can be None, Horizontal, Vertical or Grid with gap, columns, padding and wrapping. Clip cuts children to the panel; rounded mask uses its corner radius. Enable horizontal/vertical scrolling, set optional content size and wheel speed, and choose whether to show scrollbars.
+- **Save reusable UI scene** stores the selected UI subtree as a normal prefab in `Assets/Prefabs/UI`; prefab instance and override rules remain unchanged.
+- **New theme** creates a `.nova-theme` asset. A theme has variables, style classes and normal/hovered/pressed/disabled/focused states. Set `parentTheme` in the document to inherit, edit variables in Presentation, assign the theme to Canvas and choose a style class on each control. A non-empty control background override wins over the inherited state.
+
+### Focus, input remapping and screen readers
+
+Enable **Focusable** on a RectTransform and set Tab index. Tab/Shift+Tab use tab order; arrows and D-pad use an explicit Up/Down/Left/Right UUID when supplied, otherwise the closest control in that direction. Enter, Space and gamepad button 0 activate. Focus uses the runtime focus-ring color/width.
+
+Set accessibility role, label and description on RectTransform. In Game view, enabled metadata is mirrored into a bounded off-screen DOM tree for platform screen readers; Hide from screen readers excludes a control. Set **Input remap action / slot** on a Button: activating it captures the next keyboard key or gamepad button and updates that named Input Map binding. Keyboard navigation, gamepad navigation, screen-reader export, focus events and reduced motion are runtime project settings; editor font/contrast/reduced-motion preferences remain separate.
+
+### Localization
+
+Create/select a Localization asset. Each entry contains per-locale values; values may be strings, plural maps (`one`, `few`, `many`, `other`) or select maps. Use `{variable}`, `{variable, number}` and `{variable, date}`. Text and Checkbox use Localization key and fall back to their authored text.
+
+Project localization selects source and live preview locale, a bounded fallback chain and build locales. Pseudolocalization expands/accents text to reveal clipping. Locale metadata can select left-to-right or right-to-left and font fallback asset GUIDs; RTL reverses horizontal/grid flow and text alignment. Player packages include only source plus selected build locales.
+
+### Audio mixer and asset tools
+
+The Audio tab edits a bounded mixer graph: up to 32 buses, 8 effects and 16 sends per bus, 32 snapshots and ducking rules, 1–512 voices per bus and 1–1024 total. Every bus has parent, gain, mute, solo and voice limit. Sends route a gain-controlled copy without cycles. Low/High Pass, Compressor, Delay and Reverb apply enabled state and wet/dry; Delay also applies feedback. Snapshots store master/bus gains; ducking attenuates its target while the trigger bus has voices. Meters display live analyzer levels.
+
+AudioSource selects any mixer bus, volume, pitch, loop/autoplay, priority, streaming override, spatial blend, min/max distance and Linear/Inverse/Exponential/Custom attenuation. The selected audio asset shows a decoded waveform, loop start/end markers, streaming choice, target peak and calculated normalization gain. Profiler values report active, streaming, buffered and voice-limited counts. Loop marker edits affect a currently owned audio element without recreating it.
+
+### Manual and release audit
+
+**Help > Manual** opens the bundled `manual/index.html` in Nova_A's same-origin overlay; Reload refreshes it and Close returns to the untouched editor. It never sends an internal `tauri.localhost` URL through the external URL opener.
+
+Audit at 900 × 600 and desktop size: create every UI control; test anchors/policies/breakpoints/safe area/layout/clipping/mask/scroll; save/instantiate UI prefab; theme states/inheritance/override; keyboard/gamepad focus and remap; screen-reader labels; English/German/Chinese plus pseudo/RTL/fallback; locale-stripped build; all mixer routing/effects/snapshot/ducking/meter/voice cases; waveform/loop/normalize/streaming/spatial audio; manual open/reload/close; save/reopen/migrate; undo/redo; Play/Pause/Step/Stop; web and native release artifacts.
+
+## 24. Nova_A 2.8 Production Lab, deterministic testing, data, jobs, and networking
+
+Open **Production Lab** from the bottom panel or Command Palette. Its tabs stay separate from the Object Inspector so diagnostics do not compete with component fields.
+
+### Trace and Memory
+
+- **Trace** records a bounded per-frame breakdown for input, scripts, animation, physics, audio, rendering, asset work, JavaScript allocations and enabled GPU passes. Capacity changes retained history. **Capture** freezes a named snapshot; the chart and cards read those same frames.
+- Physics debug controls remain here. Shape/contact/force/joint/string overlays and selected-body values read authoritative runtime state and never write to the solver.
+- **Memory** edits warning budgets for total, assets, textures, audio and scripts. Current/peak bytes, retained objects and warning state are live. Lifetime events record bounded entity and asset-job changes. **Detect leaks** reports objects surviving past the observation window; it never deletes them.
+- **Capture memory** stores current categories/lifetimes. Choose two captures and **Compare** for signed byte/object deltas. Clear removes diagnostics only.
+
+### Replay and deterministic random values
+
+- Set **Seed** and **Capacity**, then **Record**. Each fixed step stores normalized actions/buttons/vectors and an authoritative physics checksum. **Stop recording** creates a Replay asset for export or playback.
+- **Play replay** restores the captured initial project, resets the seed and substitutes recorded input for live input. Mismatches identify fixed frame, expected hash and actual hash. **Stop playback** returns input; top-bar Stop restores the edit snapshot.
+- Rhai `random()` returns a seeded value in `[0,1)`; `random_range(min,max)` consumes the same stream. Supported replays are reproducible, but Nova_A does not claim arbitrary floating-point scripts are bit-identical on every CPU/browser.
+
+### Tests and CI reports
+
+- **Add test** creates Unit, Scene, Integration or Headless definitions with name, optional scene, timeout, fixed-step limit and screenshot choice.
+- Assertions cover minimum entity count, named/UUID entity existence, finite physics state, physics checksum equality and absence of runtime errors. **Run selected** isolates one definition; **Run all** runs every definition and reports pass/fail/error/timeout.
+- Screenshot-enabled non-headless tests attach the game image. **Export JSON** and **Export JUnit** download CI-readable reports. Headless tests omit rendering/screenshots.
+
+### Data resources and save migrations
+
+- **Data** creates Data Schema and Data Table assets. Schema fields have safe unique key, String/Number/Integer/Boolean/JSON type, required flag and default. Save validates definitions and rows.
+- A table selects its schema. **Import JSON** accepts an array or `{ rows: [...] }`; **Import CSV** supports headers and quoted cells; **Import database result** accepts a JSON row array produced externally. Nova_A stores no database credentials.
+- Validation reports row, field, severity and message. **Generate accessor** downloads a typed TypeScript interface and safe lookups.
+- Saves use a versioned `nova-save` envelope. Ordered project migrations rename/remove/default top-level keys. Missing steps and future versions are rejected rather than guessed.
+
+### Jobs
+
+- **Jobs** shows worker availability, worker limit and maximum queue. Parse/hash/sample jobs show queued/running/complete/failed/cancelled state; Cancel removes queued work or rejects a pending result.
+- Without Worker support, one serialized main-thread fallback yields between jobs. Queue and retained history are bounded, so repeated Sample clicks cannot create unlimited work.
+
+### Optional networking and headless server
+
+- Networking starts uninstalled, disabled and excluded from player data. **Install official networking package** first, then enable it. Projects that never reference networking retain no networking settings in their pack.
+- Choose WebSocket or native UDP, endpoint, Client/Server/Host, a shared send/receive bandwidth ceiling, snapshot rate, interpolation delay, prediction and rollback history. **Connect** starts; **Disconnect** closes transport, reconnect timer and queues. UDP is Tauri-only; WebSocket is the browser transport.
+- **Replicate selected** adds the selected entity. Choose authority and properties; snapshots are bounded, sequence checked and interpolated. RPC names/payloads are bounded. Diagnostics show connection state, peers, latency, traffic, dropped data, corrections and recent events.
+- Build Settings **Authoritative headless server** removes the canvas and advances fixed simulation on a bounded timer. Validation requires a native target and installed/enabled networking. It supports server-authoritative patterns without promising universal cross-hardware determinism.
+
+### Anti-aliasing and retained v2.8 release audit
+
+WebGL scene/material contexts request multisampling. Canvas paths use high-quality smoothing plus round caps/joins; UI text enables kerning, ligatures and optical sizing. Explicit Nearest pixel-art assets remain crisp.
+
+Release audit: exercise every Production Lab tab/button; trace/capture/compare; exceed budgets; create/destroy entities; record/play/export and force a mismatch; run all four test kinds/reports; create/import/validate schemas/tables; migrate legacy/future saves; saturate/cancel jobs with/without workers; verify networking uninstalled, installed-disabled, WebSocket, UDP and disconnect-during-load; build game/headless; test all languages/themes/reduced motion at 900 × 600 and desktop sizes; then run format, strict Clippy, Rust tests, TypeScript, production build, static audits, browser smoke, Tauri installers, release packaging and SHA-256 checks.
+
+## 25. Nova_A 2.9 shipping, collaboration, packages, and upgrades
+
+### Focused Build Settings layout
+
+Open **Project → Build Settings** or the Build bottom tool. The panel is divided into **Overview**, **Platform**, **Delivery**, and **Team**, so related controls stay visible without a long mixed form. Overview chooses the game name, target, architecture, debug/release profile, runtime mode, scene order, startup scene, output and Build/Build & Run. The validation card is authoritative: errors block export; warnings explain conditional behavior. Build & Run is limited to host-native desktop targets.
+
+Platform exposes identifier, application version, icon/splash asset references, orientation, permission declarations, signing mode/identity and notarization profile. Windows, Linux, macOS and Web templates are reproducible. Android additionally requires the explicitly installed official Android package, `ANDROID_HOME` or `ANDROID_SDK_ROOT`, `JAVA_HOME`, and `NOVA_A_ANDROID_TEMPLATE`; missing tools disable the target instead of producing a partial build. Console SDKs are not bundled.
+
+### Delivery, reports, CLI, and operations
+
+Delivery controls deterministic metadata, incremental writes, store/balanced/maximum package compression, patch manifests, structured logs, crash capture, and telemetry. A build emits content SHA-256 records, a deterministic build ID, `nova-build-report.json`, `.nova-build-cache/manifest.json`, and an optional `nova-patch-manifest.json` containing added/changed/removed paths. A symbol map accompanies native outputs. Stable input plus the same target/profile produces stable package/report data; non-deterministic mode records wall-clock creation time.
+
+Run `pnpm export -- --project ./project.nova --target web --profile release --output ./Builds/MyGame`. `--architecture`, `--runtime`, `--compression`, `--no-incremental`, and `--no-patch` refine it; `--help` lists the bounded syntax. Web output includes Nova Player production assets. Desktop CLI output needs a matching host player and refuses unsafe output paths.
+
+Crash capture writes a bounded structured record rather than failing the editor. Symbol files let maintainers map release addresses. Telemetry is off by default, accepts scalar event properties only, keeps a bounded queue, and sends only to a configured HTTPS endpoint when explicitly enabled. Configure and publish an HTTPS privacy policy; disabling telemetry stops collection and clears the queue.
+
+### Team page and source-control workflow
+
+Source status compares the saved baseline with scenes, prefabs, assets, packages and project settings by stable UUID fingerprint. **Generate .gitignore** downloads rules for caches/imports/builds/locks while retaining sources and package lockfiles. **Open diff** invokes only the executable and arguments selected by the user; without native integration it downloads saved/current snapshots. Choose an incoming `.nova` file to run three-way conflict detection. **Open merge** passes bounded `{base}`, `{ours}`, `{theirs}` and `{output}` files without a shell. Import the merged output after reviewing it. Temporary tool folders older than 24 hours are cleaned on later use.
+
+Project locks expire, are owner-labelled and cannot overwrite another unexpired local editor lock. Download `.nova-lock` only if the team deliberately commits file locks. Saving writes recursively key-sorted, indented JSON; array order remains semantic, so scene/entity order is never silently rearranged.
+
+### Registry, upgrades, and templates
+
+Registry Browse shows search/source, verified publisher, rating, requested permissions, documentation and security links. Browsing is data-only: no package code runs. **Install** is the explicit transition to package resolution and lockfile update. Offline mode uses cached manifests; a local mirror can be imported deliberately. Permission review remains visible after installation.
+
+Opening an older project first shows source/target schema, engine, scene/entity/asset counts, migration warnings and a package compatibility audit. Keep **Download complete pre-upgrade backup** enabled. Migration occurs in memory and the canonical validator must accept the complete result before the editor session changes. A bounded machine-local rollback copy is retained when possible and Project Manager exposes **Download rollback copy**.
+
+Templates: **Empty 2D** is minimal; **Platformer** exercises characters/physics/tilemap/animation/audio/UI; **Top-down** exercises prefabs/scenes/triggers/particles/save data; **Physics Sandbox** exercises rigid bodies/materials/joints/ropes; **UI Showcase** exercises responsive controls/theme/localization/focus/scroll/audio; **Networked Optional** explicitly installs the official networking package and demonstrates authority, replication, prediction, diagnostics and a headless test. Every template is audited before it replaces the current project.
+
+### v2.9 permanent release audit
+
+Check every workspace, menu, button, selection and inspector field; all languages, light/dark/high contrast, reduced motion and narrow/desktop layouts; save/reopen/migrate/backup/rollback; every template; Play/Pause/Step/Stop; physics monitor; assets/packages/plugins; registry browse/install/offline; source changes/conflicts/diff/merge/locks; each platform/profile/architecture validation branch; deterministic repeat, incremental cache hit, changed/removed delta, compression modes, CLI/Web/native/headless; crash/log/symbol/privacy behavior. Then require Rust format, warnings-as-errors Clippy, all Rust and Tauri tests, Vue type-check, every static audit, optimized Web build, browser interaction/console smoke, Tauri installers, source/web archives, portable executable smoke, and SHA-256 verification.
+
+## 26. Nova_A 3.0 stable contracts, recovery, and evidence
+
+Open **Help → Studio Status** to view Project Format 2/schema 22, Runtime API 1, Plugin API 2, Package Manifest 1, and Build CLI 1. **Copy diagnostics** copies those versions and the platform; **Manual** returns here. Projects from schemas 5–22 use the migration preview, complete source backup, package audit, in-memory validation, atomic session replacement, and rollback copy described in section 18. A future schema is rejected before the session changes.
+
+If Nova_A contains an unexpected editor/runtime exception, its in-app recovery dialog shows a bounded message, context, timestamp, and optional stack. **Copy diagnostics** and **Download diagnostics** preserve evidence; **Continue safely** dismisses the failed operation; **Restart in safe mode** reloads with third-party plugins skipped. Cancellation and harmless ResizeObserver delivery notices are not fatal. A failed texture-atlas rebuild keeps the last valid atlas.
+
+The generated projects under `reference-projects/projects` are editable source examples. Platformer includes lighting/shadows, tilemap, animation, audio, script, UI, and build settings; Top-down includes scenes, prefab, particles and Save API; the other templates cover physics/rope/joints, responsive UI/localization/audio, empty setup, and optional networking. `reference-projects/plugins/hello-plugin` is the minimal permission-free Plugin API 2 example.
+
+Release evidence is deliberately honest. `pnpm benchmark:v3` publishes headless measurements and marks native/GPU-only values pending. `pnpm stability:v3` is only a smoke; a report is a 24-hour pass only when `qualified24Hours` is true. Clean Linux/macOS and Android artifacts stay pending until their documented CI jobs actually upload them. See `docs/` for contracts, compatibility, benchmarks, stability, platform evidence, and limitations.

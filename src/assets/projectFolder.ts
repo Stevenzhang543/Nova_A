@@ -1,4 +1,5 @@
 import type { AssetRecord } from './types'
+import { stableProjectText } from '../runtime/teamWorkflow'
 
 interface WritableFile {
   write(value: Blob | string): Promise<void>
@@ -41,16 +42,16 @@ export async function exportProjectFolder(projectJson: string, assets: AssetReco
     throw error
   }
   for (const folder of folders) await directoryAt(root, folder)
-  await writeFile(root, 'project.nova', projectJson)
+  await writeFile(root, 'project.nova', stableProjectText(projectJson))
   for (const asset of assets) {
     if (!asset.source || !asset.path.startsWith('Assets/')) continue
     const blob = await fetch(asset.source).then(response => response.blob())
     await writeFile(root, asset.path, blob)
   }
   const manifest = assets.map(({ source: _source, ...asset }) => asset)
-  await writeFile(root, '.nova/imported/manifest.json', JSON.stringify({ generatedBy: 'Nova_A 2.4.0', assets: manifest }, null, 2))
+  await writeFile(root, '.nova/imported/manifest.json', JSON.stringify({ generatedBy: 'Nova_A 3.0.0', assets: manifest }, null, 2))
   await writeFile(root, '.nova/cache/index.json', JSON.stringify({
-    generatedBy: 'Nova_A 2.4.0',
+    generatedBy: 'Nova_A 3.0.0',
     disposable: true,
     entries: assets.map(asset => ({ uuid: asset.uuid, sourceModified: asset.sourceModified, byteLength: asset.byteLength, settings: asset.settings }))
   }, null, 2))

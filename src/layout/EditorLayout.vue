@@ -24,6 +24,9 @@
         <EditorBottomPanel v-if="state.currentPage !== 'settings' && state.currentPage !== 'script' && state.bottomPanelVisible && !state.distractionFree" />
       </div>
       <ConfigPanel v-if="state.currentPage === 'scene' && state.inspectorVisible && !state.distractionFree" />
+      <Transition name="physics-panel">
+        <PhysicsRuntimePanel v-if="physicsState.playMode !== 'editing' && state.currentPage !== 'settings' && state.currentPage !== 'script' && !state.distractionFree" />
+      </Transition>
     </div>
     
     <ContextMenu />
@@ -52,8 +55,10 @@ import ScriptStudio from "../components/ScriptStudio.vue"
 import SettingsPanel from "../panels/SettingsPanel.vue"
 import WorldCanvas from "../components/WorldCanvas.vue"
 import LayerBar from "../components/LayerBar.vue"
+import PhysicsRuntimePanel from "../components/PhysicsRuntimePanel.vue"
 
 import { editorState as state, closeContextMenu } from "../store/editor"
+import { physicsState } from '../store/physics'
 import { initializeEditorWorkspaces } from '../editor/workspaces'
 
 initializeEditorWorkspaces()
@@ -64,7 +69,7 @@ initializeEditorWorkspaces()
 .workspace-control-row { min-width: 0; flex: 0 0 38px; display: flex; align-items: stretch; border-bottom: 1px solid var(--border-subtle); background: color-mix(in srgb, var(--surface-1) 94%, var(--bg-base)); isolation: isolate; }
 .workspace-control-row :deep(.workspace-bar) { min-width: 0; flex: 1; border-bottom: 0; }
 .workspace-control-row :deep(.actionbar) { flex: 0 0 auto; }
-.editor-main { flex: 1; display: flex; min-height: 0; }
+.editor-main { position: relative; flex: 1; display: flex; min-height: 0; }
 .scene-toolbar-row { flex: 0 0 auto; }
 .editor-workspace { min-width: 0; flex: 1; display: flex; flex-direction: column; }
 .editor-content { min-height: 0; flex: 1; position: relative; overflow: hidden; background: var(--bg-canvas); }
@@ -78,5 +83,7 @@ initializeEditorWorkspaces()
 .page-enter-active, .page-leave-active { transition: opacity 150ms ease, transform 180ms cubic-bezier(.2,.8,.2,1); }
 .page-enter-from { opacity: 0; transform: translateY(5px); }
 .page-leave-to { opacity: 0; transform: translateY(-3px); }
+.physics-panel-enter-active, .physics-panel-leave-active { transition: width 190ms ease, opacity 150ms ease, transform 190ms cubic-bezier(.2,.8,.2,1); }
+.physics-panel-enter-from, .physics-panel-leave-to { width: 0; opacity: 0; transform: translateX(24px); }
 @media (max-width: 720px) { .workspace-control-row :deep(.mode-label) { display: none; } }
 </style>

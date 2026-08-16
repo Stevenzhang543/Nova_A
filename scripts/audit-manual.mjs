@@ -33,7 +33,7 @@ for (const file of manuals) {
 
 const html = await readFile(resolve(root, 'manual', 'index.html'), 'utf8')
 assert(!/Vervollst\?ndigung|g\?ltige|\?{3,}/.test(html), 'localized HTML contains encoding replacement characters')
-assert(html.includes('<title>Nova_A 2.4 Manual</title>') && !html.includes('Engine 2.3.0'), 'HTML manual metadata is stale')
+assert(html.includes('<title>Nova_A 3.0 Manual</title>') && html.includes('3.0 Documentation') && html.includes('Engine 3.0.0'), 'HTML manual metadata is stale')
 for (const language of ['en', 'de', 'zh-CN']) assert(html.includes(`data-lang="${language}"`), `HTML manual is missing ${language}`)
 for (const file of manuals) assert(html.includes(file), `HTML manual does not link ${file}`)
 assert((html.match(/<section id=/g) ?? []).length >= 50, 'HTML manual does not expose enough bookmarkable sections')
