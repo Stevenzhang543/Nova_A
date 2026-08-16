@@ -1,0 +1,13 @@
+{
+  "engineVersion": "3.2.0",
+  "schema": 23,
+  "projectName": "Nova_A Empty 2D Reference",
+  "minimumScenes": 1,
+  "minimumEntities": 1,
+  "expectedValidation": "pass",
+  "demonstrates": [
+    "Camera2D",
+    "Input map",
+    "Build settings"
+  ]
+}

@@ -156,7 +156,7 @@ export async function createNovaPak(projectJson: string, assets: AssetRecord[], 
 
   const index: NovaPakIndex = {
     format: 'nova-pak', version: NOVA_PAK_VERSION,
-    engineVersion: String(project.engineVersion ?? '3.0.0'),
+    engineVersion: String(project.engineVersion ?? '3.2.0'),
     createdAt: options.deterministic === false ? new Date().toISOString() : '1970-01-01T00:00:00.000Z', startupSceneUuid, entries
   }
   const indexBytes = new TextEncoder().encode(JSON.stringify(index))

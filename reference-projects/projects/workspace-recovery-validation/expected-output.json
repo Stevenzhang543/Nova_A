@@ -1,0 +1,16 @@
+{
+  "engineVersion": "3.2.0",
+  "schema": 23,
+  "projectName": "Workspace and Recovery Validation",
+  "minimumScenes": 1,
+  "minimumEntities": 1,
+  "expectedValidation": "pass",
+  "demonstrates": [
+    "workspace import/export",
+    "docking",
+    "100-step history",
+    "autosave recovery",
+    "safe layout",
+    "read-only recovery"
+  ]
+}

@@ -1,7 +1,8 @@
-import { physicsState, sceneManager } from '../store/physics'
+import { getSceneJSON, physicsState, sceneManager } from '../store/physics'
 import { buildSettings } from './buildSettings'
 import { recordTelemetry } from './shipping'
 import { reportFatalError } from './faultCenter'
+import { markRecoverySessionCrashed, storeRecoverySnapshot } from './recovery'
 
 interface CrashPayload {
   message: string
@@ -45,6 +46,10 @@ export function installCrashReporter(renderer = 'Editor'): void {
       scene: sceneManager.activeScene?.name ?? 'Unknown', renderer
     }
     reportFatalError(error, renderer === 'Nova_A Editor' ? 'Uncaught editor error' : 'Uncaught player error')
+    markRecoverySessionCrashed()
+    if (renderer === 'Nova_A Editor') {
+      try { storeRecoverySnapshot(getSceneJSON(), 'crash') } catch { /* The last valid autosave remains available. */ }
+    }
     void persistCrash(payload).catch(persistError => console.error('Could not persist Nova_A crash', persistError))
   }
   window.addEventListener('error', event => {

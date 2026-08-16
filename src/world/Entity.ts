@@ -14,6 +14,19 @@ import {
   type EntityComponent
 } from './components'
 
+export interface PrefabInstanceLayer {
+  asset: string
+  instanceUuid: string
+  sourceUuid: string
+  overrides: Record<string, unknown>
+}
+
+export interface SceneInstanceLayer {
+  asset: string
+  instanceUuid: string
+  sourceUuid: string
+}
+
 /** A scene identity with capabilities supplied entirely by components. */
 export abstract class Entity {
   readonly id: number
@@ -29,6 +42,8 @@ export abstract class Entity {
   prefabInstanceUuid: string | null = null
   prefabSourceUuid: string | null = null
   prefabOverrides: Record<string, unknown> = {}
+  prefabLayers: PrefabInstanceLayer[] = []
+  sceneLayers: SceneInstanceLayer[] = []
   readonly componentMap = new Map<ComponentKind, Component2D>()
 
   constructor(id: number, entityType: 'Box' | 'Circle' | 'Triangle', uuid?: string) {

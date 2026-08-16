@@ -1,4 +1,18 @@
-# Nova_A 3.0.0 – Vollständiges Handbuch
+# Nova_A 3.2.0 – Vollständiges Handbuch
+
+## Neu in 3.1: Arbeitsbereiche, Navigation und sichere Wiederherstellung
+
+Nova_A startet standardmäßig rahmenlos im Vollbild des aktiven Monitors. **F11** wechselt zum letzten gültigen Fensterzustand zurück. **Einstellungen > Editor > Editor im Vollbild starten** steuert den nächsten Start; ein nicht mehr vorhandener Monitor führt zu einem sicher zentrierten Fenster.
+
+Die obere Reihe enthält **Zurück**, **Vorwärts**, **Design**, **Skript**, **Animation**, **UI**, **Debug**, **Benutzerdefiniert**, **Hierarchie**, **Inspektor**, **Unterer Bereich**, **Verwalten**, **Befehlspalette** und **Fokusmodus**. Seitenbereiche lassen sich einklappen, an beiden Seiten andocken und über den Griff skalieren. **Arbeitsbereiche verwalten** speichert, dupliziert, benennt um, aktualisiert, importiert/exportiert oder setzt Layouts zurück; Layouts gelten wahlweise pro Benutzer oder Projekt. `?safe-layout=1` ignoriert gespeicherte Geometrie.
+
+Die frühere untere **Präsentation** ist vollständig in den zentralen **UI-Arbeitsbereich** migriert. **Production Lab** heißt jetzt **Profiler**. Laufzeitdiagnose und Spielstände befinden sich unter **Debug > Profiler > Diagnose**, Plugin-Installation und Sicherheit unter **Pakete > Plugin API**, Projektinformationen unter **Projektzustand**. Optionale KI-, Navigation-, Streaming-, Pool- und Netzwerkwerkzeuge erscheinen nur bei passendem Paket, vorhandenen Projektdaten oder aktivierten experimentellen Funktionen.
+
+**Strg/Befehl+K** oder **Strg/Befehl+Umschalt+P** öffnet die Palette. Sie durchsucht Befehle, Einstellungen, Assets, Szenen, Objekte, Komponenten, Skripte und Plugin-Befehle. Speichern, Rückgängig, Wiederholen, Kopieren, Einfügen, Duplizieren, Löschen, Start und Stopp sind in Menü und Palette erreichbar. Der Tastenkürzel-Editor weist Konflikte ab und kann einzelne oder alle Belegungen zurücksetzen. Einstellungen sind durchsuchbar und nach Editor, Projekt und Laufzeit gefiltert.
+
+Benannte Dokumenttransaktionen halten einhundert Schritte; zusammenhängende Ziehbewegungen werden gruppiert. Autosaves sind begrenzte, geprüfte Schnappschüsse und überschreiben nie die letzte manuelle Speicherung. Nach einem unsauberen Ende zeigt **Absturzwiederherstellung** Projekt, Zeit, Grund und Größe; beschädigte Einträge werden übersprungen. Ein Schnappschuss kann normal, schreibgeschützt oder im Sicherheitsmodus geöffnet werden. Der Sicherheitsmodus deaktiviert nicht verifizierte Drittanbieterpakete und stellt das Standardlayout her.
+
+Die **Aufgabenzentrale** bündelt Importe, Builds, Paketoperationen, Migrationen und Speicherungen mit Fortschritt, Abbruch, Wiederholung und Fehlerdetails. **Diagnose kopieren** erzeugt einen begrenzten Fehlerbericht. Toast, Banner, App-Modal und Inline-Fehler haben getrennte Aufgaben; Browser-Dialoge werden nicht verwendet. Die Freigabeprüfung umfasst F11/Monitorwechsel, alle Arbeitsbereichsaktionen, 100 Undo/Redo-Schritte, beschädigte Wiederherstellung, Tastaturbedienung, drei Sprachen, Kontrast und Layouts von 1366×768 bis 3840×2160.
 
 Nova_A ist eine quelloffene 2D-Spielengine mit Editor. Dieses Handbuch erklärt den vollständigen Weg vom Projekt bis zum eigenständigen Player. Eine Welteinheit entspricht einer Rastereinheit; physikalische Angaben verwenden die angezeigten SI-Einheiten.
 
@@ -78,7 +92,7 @@ Vorlagen:
 - Raster schaltet nur parallele Rasterlinien. X-, Y- und alle Achsen verändern das Raster nicht.
 - Kamera zurücksetzen stellt Schwenken/Zoom des Editors zurück.
 - Konsole, Profiler, Projekt und Build-Einstellungen öffnen das jeweilige untere Werkzeug.
-- Hilfe öffnet das Handbuch innerhalb der App oder GitHub; das Versionsfeld zeigt 3.0.0.
+- Hilfe öffnet das Handbuch innerhalb der App oder GitHub; das Versionsfeld zeigt 3.2.0.
 
 ### Arbeitsbereiche, Panels und Befehlspalette
 
@@ -251,7 +265,7 @@ Game-Name, Windows/Linux/macOS/Web, x86_64, geordnete Szenen, Startszene, Develo
 
 ## 18. Migration
 
-**Nova_A Project Format 2**, Schema 22, unterstützt Legacy ab Schema 5. Dokumente enthalten Format/Major, Schema, Engineversion, Kompatibilität und Projekt-UUID. Schema 22 validiert Plattform-/Auslieferungseinstellungen und erhält Produktion, Präsentation, Audio, Welt, Rig/Skin, Timeline sowie unbekannte Asset-Daten. Geordnete Migrationen erhalten IDs, Komponenten, Hierarchie, Szenen, Assets, Prefabs, Eingabe, Audio, Tilemaps, Partikel, Gelenke, Build- und Renderingwerte. Neuere unbekannte Formate werden verständlich abgelehnt.
+**Nova_A Project Format 2**, Schema 23, unterstützt Legacy ab Schema 5. Dokumente enthalten Format/Major, Schema, Engineversion, Kompatibilität, Projekt-UUID und Manifest. Schema 23 ergänzt deterministische Projekt-, Szenen-, Prefab- und Assetdaten und erhält Produktion, Präsentation, Audio, Welt, Rig/Skin, Timeline sowie unbekannte Felder. Geordnete Migrationen erhalten IDs, Komponenten, Hierarchie, Szenen, Assets, Prefabs, Eingabe, Audio, Tilemaps, Partikel, Gelenke, Build- und Renderingwerte. Neuere Formate öffnen nur in der schreibgeschützten Kompatibilitätsansicht.
 
 Vor Migration Backup/Commit erstellen. Danach Assets, Skripte, Ebenen, Szenen und Buildreihenfolge prüfen und als Format 2 speichern. Künftige Schemaänderungen benötigen Migrationen.
 
@@ -280,7 +294,7 @@ Release-Audit: jede Vorlage erstellen/importieren, speichern/neu öffnen, Play/P
 
 Der Arbeitsbereich **Skript** öffnet jetzt einen eigenen Vollbild-Editor. Links befinden sich Projektsuche und Dateien, oben Tabs, in der Mitte Rhai-Quelltext mit Zeilen, Haltepunkten, Suchen/Ersetzen, Status, Vervollständigung, Signaturhilfe und Definitionen. Rechts stehen Diagnose, Symbole, Module, Debugger, Tests, Signale und die aus einem gemeinsamen Katalog erzeugte Engine-API. F2 benennt ein Symbol erst nach Bestätigung und erfolgreicher Kompilierung aller betroffenen Module projektweit um.
 
-`use "Movement.rhai";` importiert schreibgeschützte Projektmodule; fehlende und zyklische Abhängigkeiten werden abgelehnt. Gültiges Speichern ersetzt das kompilierte Programm nur an einer sicheren Frame-Grenze; bei einem Fehler läuft die vorherige gültige Version weiter. Entwicklungssitzungen bieten Continue/Step, Stack, Locals und sichere Watches. `test_*` läuft isoliert und `expect` meldet Fehler. Getypte Handles liefern `valid/kind/id/error`. `task_wait` wird mit Objekt/Szene abgebrochen. `signal_emit` erreicht `on_signal`; Physik, UI, Animation und Szenenlebenszyklus benutzen dieselbe begrenzte Warteschlange. Format 2 Schema 22 speichert die Metadaten; Release-Builds entfernen Debugdaten.
+`use "Movement.rhai";` importiert schreibgeschützte Projektmodule; fehlende und zyklische Abhängigkeiten werden abgelehnt. Gültiges Speichern ersetzt das kompilierte Programm nur an einer sicheren Frame-Grenze; bei einem Fehler läuft die vorherige gültige Version weiter. Entwicklungssitzungen bieten Continue/Step, Stack, Locals und sichere Watches. `test_*` läuft isoliert und `expect` meldet Fehler. Getypte Handles liefern `valid/kind/id/error`. `task_wait` wird mit Objekt/Szene abgebrochen. `signal_emit` erreicht `on_signal`; Physik, UI, Animation und Szenenlebenszyklus benutzen dieselbe begrenzte Warteschlange. Format 2 Schema 23 speichert die Metadaten; Release-Builds entfernen Debugdaten.
 
 
 ## 21. Nova_A 2.5: Asset-Pipeline, Pakete, Plugin API 2 und Physikmonitor
@@ -334,9 +348,9 @@ Der Audiomixer unterstützt höchstens 32 Busse, 8 Effekte und 16 Sends pro Bus,
 
 **Hilfe > Handbuch** öffnet die gebündelte Seite gleichursprünglich in Nova_A. Dadurch wird keine interne `tauri.localhost`-URL an den externen Opener gegeben. Release-Audit: sämtliche UI-Layouts/States/Fokus/Remaps, drei Sprachen plus Pseudo/RTL/Fallback, Build-Sprachfilter, Mixerpfade/Effekte/Ducking/Snapshots/Voice-Limits, Wellenform/Loop/Streaming/Spatial, Handbuch, Speichern/Migration, Play/Pause/Step/Stop und alle Web-/Windows-Artefakte prüfen.
 
-## 24. Nova_A 2.8: Production Lab, Tests, Daten, Jobs und optionales Netzwerk
+## 24. Nova_A 2.8: Profiler, Tests, Daten, Jobs und optionales Netzwerk
 
-**Production Lab** ist im unteren Panel und in der Befehlspalette erreichbar. **Trace** zeichnet eine begrenzte Frame-Historie für Eingabe, Skripte, Animation, Physik, Audio, Rendering, Assets, Allokationen und GPU-Pässe auf. Capacity begrenzt den Speicher; Capture friert einen Vergleichsstand ein. Der Physik-Debugger liest den Solver nur. **Memory** setzt Gesamt-/Asset-/Textur-/Audio-/Skriptbudgets, zeigt aktuelle/Spitzenwerte und Lebensdauerereignisse. Leak-Erkennung meldet lange überlebende Objekte, löscht aber nichts. Zwei Speicher-Captures liefern signierte Byte-/Objektdifferenzen.
+**Profiler** (bis 3.0 „Production Lab“) ist im unteren Panel und in der Befehlspalette erreichbar. **Trace** zeichnet eine begrenzte Frame-Historie für Eingabe, Skripte, Animation, Physik, Audio, Rendering, Assets, Allokationen und GPU-Pässe auf. Capacity begrenzt den Speicher; Capture friert einen Vergleichsstand ein. Der Physik-Debugger liest den Solver nur. **Memory** setzt Gesamt-/Asset-/Textur-/Audio-/Skriptbudgets, zeigt aktuelle/Spitzenwerte und Lebensdauerereignisse. Leak-Erkennung meldet lange überlebende Objekte, löscht aber nichts. Zwei Speicher-Captures liefern signierte Byte-/Objektdifferenzen.
 
 **Replay:** Seed und Kapazität einstellen, Record starten und stoppen. Pro Fixed Step werden normalisierte Eingaben und Physik-Checksumme gespeichert. Play stellt das Startprojekt wieder her und meldet Frame/Erwartet/Ist bei Abweichungen. Rhai `random()` und `random_range()` benutzen denselben Seed. Beliebige Gleitkomma-Skripte sind nicht auf jeder Hardware garantiert bitgleich.
 
@@ -372,8 +386,18 @@ Sechs geprüfte Vorlagen decken Empty, Platformer, Top-down, Physics Sandbox, UI
 
 ## 26. Nova_A 3.0: stabile Verträge, Wiederherstellung und Nachweise
 
-**Hilfe → Studio-Status** zeigt Project Format 2/Schema 22, Runtime API 1, Plugin API 2, Package Manifest 1 und Build CLI 1. Projekte der Schemata 5–22 verwenden Vorschau, vollständige Sicherung, Paketprüfung, In-Memory-Validierung, atomaren Sitzungswechsel und Rollback. Ein zukünftiges Schema wird vor jeder Änderung abgelehnt.
+**Hilfe → Studio-Status** zeigt Project Format 2/Schema 23, Runtime API 1, Plugin API 2, Package Manifest 1 und Build CLI 1. Projekte der Schemata 5–23 verwenden Vorschau, vollständige Sicherung, Paketprüfung, In-Memory-Validierung, atomaren Sitzungswechsel und Rollback. Ein zukünftiges Schema bleibt in einer nicht verändernden Kompatibilitätsansicht.
 
 Bei einem unerwarteten Fehler erscheint ein Nova_A-Dialog mit begrenzter Meldung, Kontext, Zeit und optionalem Stack. Diagnose kann kopiert/heruntergeladen, die Operation sicher verlassen oder Nova_A im Sicherheitsmodus ohne Drittanbieter-Plugins gestartet werden. Abbruch und harmlose ResizeObserver-Meldungen sind nicht fatal; ein Atlasfehler behält den letzten gültigen Atlas.
 
 `reference-projects` enthält sechs bearbeitbare Quellprojekte und ein berechtigungsfreies Plugin-API-2-Beispiel. `pnpm benchmark:v3` und `pnpm stability:v3` schreiben maschinenlesbare Nachweise. Ein Smoke ist kein 24-Stunden-Pass; Plattformen bleiben bis zu einem erfolgreichen CI-Artefakt als ausstehend markiert. Verträge, Methodik und Grenzen stehen in `docs/`.
+
+## Nova_A 3.2: Projektdaten, Szenen, Prefabs und Assets
+
+Nova_A 3.2 schreibt Project Format 2, Schema 23. Das Manifest enthält Projekt-UUID, Enginebereich, Schema, `Packages.lock`, Buildvorgaben sowie Rollen für `Assets`, `ProjectSettings`, `.nova/imported`, `.nova/cache` und `.nova/user`. Generierte Artefakte sind markiert und nicht direkt bearbeitbar. Kanonisches JSON verwendet sortierte Schlüssel, zwei Leerzeichen, LF, eine Schlusszeile, endliche Zahlen, stabile Assetreihenfolge und unveränderte Autorenreihenfolgen. Persistente Referenzen benutzen `asset://UUID`, sodass Verschieben und Umbenennen ihre Identität nicht ändert.
+
+**Szenen-Asset erstellen** erzeugt aus der Auswahl eine instanziierbare Szene. Verschachtelte Szenen- und Prefabebenen sowie UUID-Neuzuordnung bleiben beim Duplizieren erhalten. Der Inspector vergleicht Prefab-Überschreibungen, setzt einzelne Werte zurück und bietet Apply, Revert und Unpack. Transform2D ist zwingend, CharacterBody2D verlangt RigidBody2D und Area2D einen Collider.
+
+Das suchbare Assetmenü unterstützt Favoriten und gespeicherte Filter. Metadaten zeigen Importerversion, Quell-/Artefakt-Hash, Cache und Abhängigkeiten. Die Hintergrundwarteschlange bietet Fortschritt, Abbruch, Wiederholung und Logs. Verknüpfte externe Quellen melden Änderungen mit Reimportieren/Behalten/Als Kopie. Verschieben, Umbenennen und Löschen zeigen bekannte Abhängigkeiten; fehlende UUIDs lassen sich reparieren.
+
+**Projekt prüfen** und **Projekt reparieren** stehen in Palette und Projektzustand. Reparaturen werden angezeigt, vollständig gesichert und erneut geprüft; Fehler stellen die vorige Sitzung wieder her. Schema 5–22 zeigt vorab Engine-/Paketkompatibilität und jeden Migrationsschritt. Zukünftige Schemata werden nur schreibgeschützt angezeigt. Das Desktopfenster startet maximiert, dekoriert und größenveränderbar; F11 aktiviert echtes Vollbild.

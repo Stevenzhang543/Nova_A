@@ -1,0 +1,33 @@
+{
+  "format": "nova-deterministic-serialization-report",
+  "version": 1,
+  "engineVersion": "3.2.0",
+  "generatedAt": "2026-08-16T11:19:48.375Z",
+  "checks": [
+    {
+      "name": "no-op save byte identity",
+      "status": "passed"
+    },
+    {
+      "name": "object insertion order independence",
+      "status": "passed"
+    },
+    {
+      "name": "LF terminated and two-space indented",
+      "status": "passed"
+    },
+    {
+      "name": "nested instance and override survival",
+      "status": "passed"
+    },
+    {
+      "name": "SHA-256 content hash known-answer vectors",
+      "status": "passed"
+    },
+    {
+      "name": "repair validates manifest identity, directories, and asset hashes",
+      "status": "passed"
+    }
+  ],
+  "status": "passed"
+}

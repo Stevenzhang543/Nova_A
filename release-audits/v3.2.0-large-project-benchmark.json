@@ -1,0 +1,48 @@
+{
+  "format": "nova-large-project-benchmark",
+  "version": 1,
+  "engineVersion": "3.2.0",
+  "generatedAt": "2026-08-16T11:19:49.301Z",
+  "referenceHardware": "win32/x64 Node v22.22.2",
+  "assetCount": 50000,
+  "totalSetupMs": 268.6309,
+  "indexMs": 102.9545,
+  "lookup50kMs": 8.250200000000007,
+  "searchTimes": [
+    {
+      "query": "asset 00042",
+      "durationMs": 16.06790000000001,
+      "results": 1
+    },
+    {
+      "query": "group-19",
+      "durationMs": 18.052699999999987,
+      "results": 2750
+    },
+    {
+      "query": "49999",
+      "durationMs": 14.058300000000003,
+      "results": 1
+    },
+    {
+      "query": "missing",
+      "durationMs": 13.600500000000011,
+      "results": 0
+    },
+    {
+      "query": ".png",
+      "durationMs": 15.183600000000013,
+      "results": 50000
+    }
+  ],
+  "maxSearchMs": 18.052699999999987,
+  "serializeMs": 49.07510000000002,
+  "canonicalBytes": 11061388,
+  "thresholds": {
+    "maxIndexMs": 2500,
+    "maxSearchMs": 750,
+    "maxLookup50kMs": 1000,
+    "maxSerializeMs": 5000
+  },
+  "status": "passed"
+}

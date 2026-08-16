@@ -17,8 +17,8 @@
       <div class="menu-item">
         <button @click="toggleMenu('edit')" :class="{ active: activeMenu === 'edit' }">{{ t('edit') }}</button>
         <Transition name="menu"><div v-if="activeMenu === 'edit'" class="dropdown">
-          <button :disabled="!isEditing" @click="handleUndo"><span>{{ t('undo') }}</span><kbd>Ctrl Z</kbd></button>
-          <button :disabled="!isEditing" @click="handleRedo"><span>{{ t('redo') }}</span><kbd>Ctrl Y</kbd></button>
+          <button :disabled="!isEditing || !historyState.canUndo" @click="handleUndo"><span>{{ historyState.undoLabel ? `${t('undo')} · ${historyState.undoLabel}` : t('undo') }}</span><kbd>Ctrl Z</kbd></button>
+          <button :disabled="!isEditing || !historyState.canRedo" @click="handleRedo"><span>{{ historyState.redoLabel ? `${t('redo')} · ${historyState.redoLabel}` : t('redo') }}</span><kbd>Ctrl Y</kbd></button>
           <hr><button :disabled="!isEditing || !physicsState.selectedEntityIds.length" @click="handleCopy"><span>{{ t('copy') }}</span><kbd>Ctrl C</kbd></button>
           <button :disabled="!isEditing" @click="handlePaste"><span>{{ t('paste') }}</span><kbd>Ctrl V</kbd></button>
           <button :disabled="!isEditing || !physicsState.selectedEntityIds.length" @click="handleDuplicate"><span>{{ t('duplicate') }}</span><kbd>Ctrl D</kbd></button>
@@ -31,7 +31,7 @@
       <div class="menu-item">
         <button @click="toggleMenu('project')" :class="{ active: activeMenu === 'project' }">{{ t('project') }}</button>
         <Transition name="menu"><div v-if="activeMenu === 'project'" class="dropdown">
-          <button @click="openBottomPanel('project')"><span>{{ t('projectPanel') }}</span></button>
+          <button @click="openBottomPanel('project')"><span>{{ t('projectHealth') }}</span></button>
           <button @click="openBottomPanel('build')"><span>{{ t('buildPanel') }}</span></button>
         </div></Transition>
       </div>
@@ -40,6 +40,7 @@
         <Transition name="menu"><div v-if="activeMenu === 'debug'" class="dropdown">
           <button @click="openBottomPanel('console')"><span>{{ t('console') }}</span></button>
           <button @click="openBottomPanel('profiler')"><span>{{ t('profiler') }}</span></button>
+          <button @click="handleStatusCenter"><span>{{ t('statusCenter') }}</span></button>
         </div></Transition>
       </div>
       <div class="menu-item">
@@ -57,6 +58,11 @@
           <button @click="handleTogglePanel('bottom')"><span>{{ t('toggleBottomPanel') }}</span><span class="check">{{ editorState.bottomPanelVisible ? '✓' : '' }}</span></button>
           <button @click="handleFocusMode"><span>{{ t('focusMode') }}</span><span class="check">{{ editorState.distractionFree ? '✓' : '' }}</span></button>
           <button @click="handleResetLayout"><span>{{ t('resetLayout') }}</span></button>
+          <button @click="handleWorkspaceManager"><span>{{ t('manageWorkspaces') }}</span><kbd>Ctrl Alt W</kbd></button>
+          <hr>
+          <button @click="handleFullscreen"><span>{{ t('toggleFullscreen') }}</span><kbd>F11</kbd></button>
+          <button @click="handleCommandPalette"><span>{{ t('commandPalette') }}</span><kbd>Ctrl K</kbd></button>
+          <button @click="handleShortcutEditor"><span>{{ t('shortcutEditor') }}</span><kbd>Ctrl Alt K</kbd></button>
         </div></Transition>
       </div>
       <div class="menu-item">
@@ -69,7 +75,8 @@
       </div>
     </nav>
     <div class="top-spacer"></div>
-    <span class="release-pill">3.0.0</span>
+    <span v-if="recoveryState.safeMode" class="safe-pill">{{ t('safeMode') }}</span>
+    <span class="release-pill">3.2.0</span>
     <input ref="fileInput" type="file" hidden accept="application/json,.nova,.json" @change="handleFileSelected">
   </header>
 </template>
@@ -79,7 +86,7 @@ import { openUrl } from '@tauri-apps/plugin-opener'
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { t } from '../i18n'
 import { addEditorLog, editorState } from '../store/editor'
-import { clearScene, copySelectedEntities, deleteSelected, duplicateSelectedEntities, pasteEntities, physicsState, pushHistory, redo, resetCamera, saveProject, selectEntities, undo } from '../store/physics'
+import { clearScene, copySelectedEntities, deleteSelected, duplicateSelectedEntities, historyState, pasteEntities, physicsState, pushHistory, redo, resetCamera, saveProject, selectEntities, undo } from '../store/physics'
 import { preferencesState } from '../store/preferences'
 import { confirmDialogState, requestConfirmation } from '../store/dialog'
 import { openProjectDocument, rememberCurrentProject, showProjectManager } from '../projects/projectManager'
@@ -87,12 +94,15 @@ import { resetEditorLayout, toggleEditorPanel, toggleFocusMode } from '../editor
 import { openBundledManual } from '../runtime/openManual'
 import { reportRecoverableError } from '../runtime/faultCenter'
 import { openStudioStatus } from '../runtime/stableContracts'
+import { recoveryState } from '../runtime/recovery'
+import { completeTask, failTask, startTask } from '../runtime/editorFeedback'
+import { toggleEditorFullscreen } from '../runtime/editorWindow'
 
 const activeMenu = ref<string | null>(null)
 const fileInput = ref<HTMLInputElement | null>(null)
 let menuTimeout: number | null = null
 const projectUrl = 'https://github.com/Stevenzhang543/Nova_A/'
-const isEditing = computed(() => physicsState.playMode === 'editing')
+const isEditing = computed(() => physicsState.playMode === 'editing' && !recoveryState.readOnly)
 
 function confirmDestructive(title: string, message: string): Promise<boolean> {
   if (!preferencesState.confirmDestructiveActions) return Promise.resolve(true)
@@ -101,7 +111,10 @@ function confirmDestructive(title: string, message: string): Promise<boolean> {
 
 async function handleSave() {
   if (!isEditing.value) { editorState.statusText = t('runtimeIsolation'); return }
-  const saved = await saveProject()
+  const task = startTask(t('saveProject'), { detail: t('atomicSaveInProgress'), progress: null })
+  let saved = false
+  try { saved = await saveProject(); if (saved) completeTask(task, t('atomicSaveComplete')); else completeTask(task, t('saveCancelled')) }
+  catch (error) { failTask(task, error) }
   editorState.statusText = t(saved ? 'saved' : 'saveCancelled')
   if (saved) { rememberCurrentProject(); addEditorLog(t('saved'), 'Project') }
   activeMenu.value = null
@@ -138,6 +151,11 @@ function handleResetCamera() { resetCamera(); activeMenu.value = null }
 function handleTogglePanel(panel: 'hierarchy' | 'inspector' | 'bottom') { toggleEditorPanel(panel); activeMenu.value = null }
 function handleFocusMode() { toggleFocusMode(); activeMenu.value = null }
 function handleResetLayout() { resetEditorLayout(); activeMenu.value = null }
+function handleWorkspaceManager() { editorState.workspaceManagerOpen = true; activeMenu.value = null }
+function handleShortcutEditor() { editorState.shortcutEditorOpen = true; activeMenu.value = null }
+function handleStatusCenter() { editorState.statusCenterOpen = true; activeMenu.value = null }
+function handleCommandPalette() { editorState.commandPaletteOpen = true; activeMenu.value = null }
+function handleFullscreen() { activeMenu.value = null; void toggleEditorFullscreen() }
 async function handleAbout() {
   activeMenu.value = null
   try {
@@ -214,6 +232,7 @@ kbd { color: var(--text-muted); font-family: inherit; font-size:11px; }
 .check { color: var(--accent); }
 .top-spacer { flex: 1; }
 .release-pill { padding: 3px 8px; border: 1px solid var(--border-subtle); border-radius: 999px; color: var(--text-muted); font-size:11px; }
+.safe-pill{padding:3px 8px;border:1px solid var(--warning);border-radius:999px;color:var(--warning);font-size:11px}
 .menu-enter-active, .menu-leave-active { transition: opacity 130ms ease, transform 130ms ease; transform-origin: top left; }
 .menu-enter-from, .menu-leave-to { opacity: 0; transform: translateY(-4px) scale(.98); }
 </style>

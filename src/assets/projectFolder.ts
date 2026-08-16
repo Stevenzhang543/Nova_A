@@ -1,5 +1,6 @@
 import type { AssetRecord } from './types'
-import { stableProjectText } from '../runtime/teamWorkflow'
+import { canonicalProjectText } from '../projects/projectData'
+import { NOVA_ENGINE_VERSION, NOVA_PROJECT_SCHEMA_VERSION } from '../projects/projectFormat'
 
 interface WritableFile {
   write(value: Blob | string): Promise<void>
@@ -42,19 +43,23 @@ export async function exportProjectFolder(projectJson: string, assets: AssetReco
     throw error
   }
   for (const folder of folders) await directoryAt(root, folder)
-  await writeFile(root, 'project.nova', stableProjectText(projectJson))
+  const project = JSON.parse(canonicalProjectText(projectJson)) as Record<string, unknown>
+  await writeFile(root, 'project.nova', canonicalProjectText(project))
   for (const asset of assets) {
     if (!asset.source || !asset.path.startsWith('Assets/')) continue
     const blob = await fetch(asset.source).then(response => response.blob())
     await writeFile(root, asset.path, blob)
   }
   const manifest = assets.map(({ source: _source, ...asset }) => asset)
-  await writeFile(root, '.nova/imported/manifest.json', JSON.stringify({ generatedBy: 'Nova_A 3.0.0', assets: manifest }, null, 2))
+  await writeFile(root, '.nova/imported/manifest.json', canonicalProjectText({ generatedBy: `Nova_A ${NOVA_ENGINE_VERSION}`, generated: true, editable: false, schemaVersion: NOVA_PROJECT_SCHEMA_VERSION, assets: manifest }))
   await writeFile(root, '.nova/cache/index.json', JSON.stringify({
-    generatedBy: 'Nova_A 3.0.0',
+    generatedBy: `Nova_A ${NOVA_ENGINE_VERSION}`,
     disposable: true,
     entries: assets.map(asset => ({ uuid: asset.uuid, sourceModified: asset.sourceModified, byteLength: asset.byteLength, settings: asset.settings }))
   }, null, 2))
+  await writeFile(root, 'ProjectSettings/project.manifest.json', canonicalProjectText(project.manifest ?? {}))
+  await writeFile(root, 'ProjectSettings/build.presets.json', canonicalProjectText({ version: 1, presets: [(project.projectSettings as Record<string, unknown> | undefined)?.build ?? {}] }))
+  await writeFile(root, 'Packages.lock', canonicalProjectText((project.packages as Record<string, unknown> | undefined)?.lockfile ?? []))
   await writeFile(root, 'ProjectSettings/renderer.json', JSON.stringify({ backend: 'WebGL2', fallback: 'Canvas2D', atlasPageSize: 2048 }, null, 2))
   return 'saved'
 }

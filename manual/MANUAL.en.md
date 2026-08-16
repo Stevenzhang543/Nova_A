@@ -1,6 +1,6 @@
-# Nova_A 2.9 Complete Manual
+# Nova_A 3.2.0 Complete Manual
 
-Nova_A is an open-source 2D game engine and editor. This manual describes the complete editor-to-player workflow in Nova_A 3.0.0. One world unit is one configured grid unit; physics values use SI-style units where shown.
+Nova_A is an open-source 2D game engine and editor. This manual describes the complete editor-to-player workflow in Nova_A 3.2.0. One world unit is one configured grid unit; physics values use SI-style units where shown.
 
 ## Contents
 
@@ -254,7 +254,7 @@ Scripts cannot access filesystem, network, process, DOM or dynamic imports. Oper
 
 Choose **Script** in the workspace strip or double-click a script in Assets. The left pane lists project scripts and searches file names, paths, and source matches. Tabs retain open files. The center editor includes line numbers, gutter breakpoints, Ctrl/Cmd+S, find/replace, line/column status, completion, signature/context help, and generated engine API documentation. Problems are produced by a cancellable Web Worker and confirmed by the Rust/Rhai compiler on save. Symbols provide function/export/test navigation, F12 goes to definitions, and F2 performs an app-confirmed project-wide rename only after every affected module compiles.
 
-Use `use "Movement.rhai";` or an `Assets/...` path for read-only project modules. Missing or circular dependencies are diagnosed before execution. Script asset metadata persists breakpoints, discovered `test_*` functions, and read-only package declarations in schema 22.
+Use `use "Movement.rhai";` or an `Assets/...` path for read-only project modules. Missing or circular dependencies are diagnosed before execution. Script asset metadata persists breakpoints, discovered `test_*` functions, and read-only package declarations in schema 23.
 
 In a development play session, a breakpoint pauses at the containing callback and exposes Continue, Step, call stack, bounded locals, and safe dot-path watches. Release packages remove breakpoint/test/package metadata and disable debugger settings unless **Development Build** is checked. Functions named `test_*` run in isolated runtimes; use `expect(condition, message)` to report failures without affecting another script.
 
@@ -449,9 +449,9 @@ AudioSource selects any mixer bus, volume, pitch, loop/autoplay, priority, strea
 
 Audit at 900 × 600 and desktop size: create every UI control; test anchors/policies/breakpoints/safe area/layout/clipping/mask/scroll; save/instantiate UI prefab; theme states/inheritance/override; keyboard/gamepad focus and remap; screen-reader labels; English/German/Chinese plus pseudo/RTL/fallback; locale-stripped build; all mixer routing/effects/snapshot/ducking/meter/voice cases; waveform/loop/normalize/streaming/spatial audio; manual open/reload/close; save/reopen/migrate; undo/redo; Play/Pause/Step/Stop; web and native release artifacts.
 
-## 24. Nova_A 2.8 Production Lab, deterministic testing, data, jobs, and networking
+## 24. Nova_A 2.8 Profiler, deterministic testing, data, jobs, and networking
 
-Open **Production Lab** from the bottom panel or Command Palette. Its tabs stay separate from the Object Inspector so diagnostics do not compete with component fields.
+Open **Profiler** (named Production Lab before 3.1) from the bottom panel or Command Palette. Its tabs stay separate from the Object Inspector so diagnostics do not compete with component fields.
 
 ### Trace and Memory
 
@@ -533,10 +533,66 @@ Check every workspace, menu, button, selection and inspector field; all language
 
 ## 26. Nova_A 3.0 stable contracts, recovery, and evidence
 
-Open **Help → Studio Status** to view Project Format 2/schema 22, Runtime API 1, Plugin API 2, Package Manifest 1, and Build CLI 1. **Copy diagnostics** copies those versions and the platform; **Manual** returns here. Projects from schemas 5–22 use the migration preview, complete source backup, package audit, in-memory validation, atomic session replacement, and rollback copy described in section 18. A future schema is rejected before the session changes.
+Open **Help → Studio Status** to view Project Format 2/schema 23, Runtime API 1, Plugin API 2, Package Manifest 1, and Build CLI 1. **Copy diagnostics** copies those versions and the platform; **Manual** returns here. Projects from schemas 5–23 use the migration preview, complete source backup, package audit, in-memory validation, atomic session replacement, and rollback copy described in section 18. A future schema opens only in the non-mutating compatibility viewer.
 
 If Nova_A contains an unexpected editor/runtime exception, its in-app recovery dialog shows a bounded message, context, timestamp, and optional stack. **Copy diagnostics** and **Download diagnostics** preserve evidence; **Continue safely** dismisses the failed operation; **Restart in safe mode** reloads with third-party plugins skipped. Cancellation and harmless ResizeObserver delivery notices are not fatal. A failed texture-atlas rebuild keeps the last valid atlas.
 
 The generated projects under `reference-projects/projects` are editable source examples. Platformer includes lighting/shadows, tilemap, animation, audio, script, UI, and build settings; Top-down includes scenes, prefab, particles and Save API; the other templates cover physics/rope/joints, responsive UI/localization/audio, empty setup, and optional networking. `reference-projects/plugins/hello-plugin` is the minimal permission-free Plugin API 2 example.
 
 Release evidence is deliberately honest. `pnpm benchmark:v3` publishes headless measurements and marks native/GPU-only values pending. `pnpm stability:v3` is only a smoke; a report is a 24-hour pass only when `qualified24Hours` is true. Clean Linux/macOS and Android artifacts stay pending until their documented CI jobs actually upload them. See `docs/` for contracts, compatibility, benchmarks, stability, platform evidence, and limitations.
+
+## 27. Nova_A 3.1 editor workspaces, recovery, and navigation
+
+### Window and workspace controls
+
+Nova_A starts borderless and fullscreen on the active monitor. Press **F11** to return to the last valid windowed size and position, and press it again to enter fullscreen. **Settings > Editor > Launch editor in fullscreen** controls the next launch. If the saved monitor is absent, Nova_A centers a safe window on an available monitor instead of opening off-screen.
+
+The top workspace row contains **Back**, **Forward**, **Design**, **Script**, **Animation**, **UI**, **Debug**, **Custom**, **Hierarchy**, **Inspector**, **Bottom panel**, **Manage**, **Command palette**, and **Focus mode**. The three panel buttons collapse or restore their named regions. Side-panel drag handles resize them. In **Manage workspaces**, choose user-wide or per-project storage; save the current layout, duplicate a custom layout, rename it, update it from the current docks and sizes, import/export `.nova-workspaces`, or reset safely. Hierarchy and Inspector can dock left or right. Start with `?safe-layout=1` to ignore saved geometry.
+
+The former **Presentation** bottom tool is now the central **UI** workspace; its UI, themes, localization, accessibility, and audio tools are unchanged. **Production Lab** is now named **Profiler**. Project information is summarized by **Project Health**. Runtime counters and save-data inspection are under **Debug > Profiler > Diagnostics**. Plugin installation and security are under **Packages > Plugin API**. AI, navigation, streaming, pooling, and networking controls remain hidden unless their package, existing project data, or **Experimental project capabilities** setting makes them relevant.
+
+### Commands, search, shortcuts, and settings
+
+Open the command palette with **Ctrl/Cmd+K** or **Ctrl/Cmd+Shift+P**. It searches commands, settings, assets, scenes, objects, components, scripts, and registered plugin commands. Core Save, Undo, Redo, Copy, Paste, Duplicate, Delete, Play, and Stop actions are available from both menus and the palette. Results open the relevant editor surface and select the matching resource when possible.
+
+Open **Keyboard shortcuts** from View or the palette. Select a binding and press the new combination; reserved conflicts are rejected and each binding or the complete map can be reset. Back/Forward keeps a bounded history of visited pages, workspaces, scenes, and bottom tools. Tool buttons expose labels, shortcuts, and documentation identifiers, and every interactive control has a visible keyboard focus ring.
+
+Settings can be searched by name or purpose and filtered by **All**, **Editor**, **Project**, or **Runtime**. Editor scope contains appearance, language, layout, window, motion, and confirmation preferences. Project scope contains physics, audio, input, canvas, collision, and defaults. Related-tool cards link to Packages, Debug, and Project Health rather than duplicating those workflows.
+
+### Undo, autosave, recovery, and Task Center
+
+Editor mutations use named, bounded transactions. Continuous drags and repeated edits can merge into one operation; Undo and Redo retain one hundred committed document changes. Normal project saves use a staged writable document where supported. Autosave snapshots are separately checksummed, bounded by count and total bytes, and never replace the last manual save.
+
+After an unclean shutdown, **Crash recovery** lists valid snapshots with project, timestamp, reason, and size; corrupt entries are skipped. Choose a snapshot, discard it, open it read-only, or open in Safe Mode. Safe Mode disables unverified third-party packages and restores the default layout. Read-only recovery visibly blocks document mutation. Temporary recovery keys are cleaned on startup.
+
+The bottom status button opens **Task Center**. It combines asset imports, builds, package installs/updates/removals, migrations, and saves. Running work shows progress or a spinner and offers Cancel where the operation supports cancellation. Failed tasks retain error details and Retry where safe. **Copy diagnostic details** includes bounded task and fault information for bug reports. Brief success uses a toast, sustained state uses a banner, decisions use an in-app modal, and field validation stays inline; browser alert/confirm/prompt windows are never used.
+
+### v3.1 validation checklist
+
+Verify first and second launch, F11, monitor removal, saved bounds, all six workspaces, both dock sides, every workspace action, safe layout, palette search categories, shortcut editing/conflicts, Back/Forward, Settings scopes, one hundred mixed Undo/Redo operations, interrupted save/import/package/migration, corrupt-latest recovery, Safe Mode/read-only, Task Center cancel/retry/copy details, keyboard-only open/edit/save/play/stop/console, English/German/Chinese text, high contrast, and 1366×768 through 3840×2160 layouts. Release evidence records measured results and clearly labels anything that was not exercised on the current machine.
+
+## v3.2 project data, scenes, prefabs, and assets
+
+Nova_A 3.2 writes Project Format 2 schema 23. The project manifest records the stable project UUID, engine compatibility range, schema, `Packages.lock`, build presets, and ownership of `Assets`, `ProjectSettings`, `.nova/imported`, `.nova/cache`, and `.nova/user`. Generated and cache content is visibly marked and generated text assets cannot be edited directly.
+
+Saves use canonical JSON: lexicographic object keys, two spaces, LF endings, one final newline, finite numbers, normalized negative zero, stable asset ordering, sorted set-like folders/presets/dependencies, preserved authoring arrays, and recursive unknown-field preservation. Persistent asset references use `asset://UUID`; renaming and moving an asset changes its display path without changing references.
+
+### Scene and prefab instances
+
+Select one or more objects and choose **Create scene asset** in Assets. Select a scene asset and choose **Instantiate scene** to place it at the viewport center. Scene-instance layers persist through nested instancing and duplication; **Unpack scene** removes only the outer layer.
+
+Prefab instances retain nested prefab layers. In the Inspector, **Compare overrides** lists changed property paths. **Reset** restores one property, **Apply** writes the selected instance to the prefab and refreshes other instances while preserving their overrides, **Revert** restores the asset state, and **Unpack** removes one prefab layer. UUID remapping prevents duplicated hierarchies and connections from targeting their source objects. CharacterBody2D automatically requires RigidBody2D; Area2D requires a collider; all objects require Transform2D.
+
+### Asset browser and importer
+
+Open **Assets** and use the searchable type menu instead of a long chip strip. It also toggles Favorites and applies saved query/folder/type filters. The folder tree controls the current source location; preview cards show thumbnails and source-control/import status. The Inspector displays source and artifact SHA-256 values, cache result, dependencies, reverse dependencies, build inclusion, import settings, and compatible saved presets.
+
+Imports run in a bounded background queue with progress, Cancel, Retry, and a per-job log. Cache output is staged and verified; a failed reimport keeps the last valid artifact. **Link source** uses the browser file-access API where available. When a linked source changes, choose Reimport, Keep current, or Import as copy. Move, rename, and delete open an in-app preview listing known dependents. Missing References opens the UUID repair tool; Unused Asset Report identifies safe-delete candidates.
+
+### Validate, repair, migration, and compatibility
+
+Use the command palette or Project Health for **Validate project** and **Repair project**. Validation reports identity, schema, manifest, path, import metadata, component dependencies, and missing references. Repair first previews conservative changes; applying it creates a complete backup, validates the replacement, and restores the previous project if anything fails.
+
+Opening schemas 5–22 shows project, engine/package compatibility, counts, warnings, and every migration step. The original is backed up and rollback data is retained before in-memory migration. A future schema is never downgraded: Project Manager opens its original text in a read-only compatibility viewer for inspection or download.
+
+The desktop application starts as a maximized, decorated, resizable window. Restore or drag its normal window controls at any time. F11 alone toggles actual fullscreen and returns to the saved maximized/windowed state.

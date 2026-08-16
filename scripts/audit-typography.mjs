@@ -21,6 +21,10 @@ for (const path of checked) {
     const size = Number(match[1])
     if (size > 0 && size < 11) failures.push(`${relative(root, path)} uses ${size}px text`)
   }
+  for (const match of source.matchAll(/(?:^|[;{])\s*font\s*:\s*(?:[^;{}]*?\s)?([0-9]+(?:\.[0-9]+)?)px(?:\/[0-9.]+)?/gm)) {
+    const size = Number(match[1])
+    if (size > 0 && size < 11) failures.push(`${relative(root, path)} uses ${size}px shorthand text`)
+  }
 }
 
 const main = await readFile(join(sourceRoot, 'assets', 'main.css'), 'utf8')

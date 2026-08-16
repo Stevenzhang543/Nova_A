@@ -36,13 +36,38 @@ export interface AssetImportSettings {
 export interface AssetPipelineMetadata {
   importerVersion: string
   platform: 'windows' | 'linux' | 'macos' | 'web'
+  sourceHash: string
+  artifactHash: string
   contentHash: string
   cacheKey: string
   status: 'ready' | 'failed'
   lastValidSource: string
   error: string
   dependencies: string[]
+  reverseDependencies: string[]
   cacheHit: boolean
+}
+
+export interface AssetSavedFilter {
+  id: string
+  name: string
+  query: string
+  folder: string
+  assetType: AssetType | 'all'
+}
+
+export interface AssetImportPreset {
+  id: string
+  name: string
+  assetType: AssetType | 'all'
+  settings: AssetImportSettings
+}
+
+export interface AssetDatabaseSettings {
+  version: 1
+  favorites: string[]
+  savedFilters: AssetSavedFilter[]
+  importPresets: AssetImportPreset[]
 }
 
 export interface ScriptAssetMetadata {
@@ -104,7 +129,7 @@ export const DEFAULT_ASSET_FOLDERS = [
   'Assets/Atlases', 'Assets/Shaders', 'Assets/Localization', 'Assets/UI Themes', 'Assets/Packages', 'ProjectSettings',
   'Assets/AI', 'Assets/TilePalettes', 'Assets/BrushPresets', 'Assets/TerrainRules',
   'Assets/Data', 'Assets/Data/Schemas', 'Assets/Data/Tables', 'Assets/Replays',
-  '.nova/cache', '.nova/imported'
+  '.nova/cache', '.nova/imported', '.nova/user'
 ] as const
 
 export function defaultImportSettings(): AssetImportSettings {

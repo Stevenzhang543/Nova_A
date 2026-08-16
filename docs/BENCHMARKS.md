@@ -1,6 +1,6 @@
 # Nova_A 3.0 benchmark methodology and results
 
-Nova_A publishes machine-readable evidence in `release-audits/v3.0.0-benchmarks.json`. Run `pnpm references`, a production build, and then `pnpm benchmark:v3` on the target machine.
+Nova_A publishes general machine-readable evidence in `release-audits/v3.2.0-benchmarks.json` and the schema-23 50,000-asset index/search result in `release-audits/v3.2.0-large-project-benchmark.json`. Run `pnpm references`, a production build, and then `pnpm benchmark:v3` plus `pnpm benchmark:v3.2` on the target machine.
 
 Measured headless metrics are physics throughput, Rhai language-analysis/hot-reload latency, deterministic asset decode/hash/compression time, deterministic platformer export time, and available artifact sizes. Web evidence includes the JavaScript file count, aggregate raw/gzip bytes, and largest production chunk so a bundler advisory is visible instead of hidden. The report includes OS, architecture, Node version, CPU count, memory, exact workload, samples, median/p95 where applicable, and exceptions.
 

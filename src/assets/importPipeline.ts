@@ -11,6 +11,16 @@ export interface AssetImportJob {
   progress: number
   status: 'queued' | 'reading' | 'processing' | 'writing' | 'complete' | 'cancelled' | 'failed'
   error: string
+  logs: string[]
+  retryable: boolean
+}
+
+export interface ExternalAssetChange {
+  id: string
+  uuid: string
+  name: string
+  detectedAt: number
+  file: File
 }
 
 export interface ImportedArtifact {
@@ -24,8 +34,9 @@ let running = 0
 const waiting: Array<() => void> = []
 const controllers = new Map<number, AbortController>()
 const memoryCache = new Map<string, Blob>()
+const retryInputs = new Map<number, { file: File; settings: AssetImportSettings }>()
 
-export const importPipelineState = reactive({ jobs: [] as AssetImportJob[] })
+export const importPipelineState = reactive({ jobs: [] as AssetImportJob[], externalChanges: [] as ExternalAssetChange[] })
 
 function platform(): AssetPipelineMetadata['platform'] {
   const value = navigator.userAgent.toLowerCase()
@@ -130,37 +141,38 @@ async function atomicCacheWrite(key: string, blob: Blob): Promise<void> {
 }
 
 export async function processAssetImport(file: File, settings: AssetImportSettings): Promise<ImportedArtifact> {
-  const job = reactive<AssetImportJob>({ id: nextJobId++, name: file.name, progress: 0, status: 'queued', error: '' })
+  const job = reactive<AssetImportJob>({ id: nextJobId++, name: file.name, progress: 0, status: 'queued', error: '', logs: ['Queued import'], retryable: false })
   importPipelineState.jobs.push(job)
   const controller = new AbortController()
   controllers.set(job.id, controller)
   let acquired = false
   try {
     await acquire(controller.signal); acquired = true
-    job.status = 'reading'
+    job.status = 'reading'; job.logs.push('Reading source bytes')
     const bytes = await readBytes(file, job, controller.signal)
     if (controller.signal.aborted) throw new DOMException('Import cancelled', 'AbortError')
-    job.status = 'processing'; job.progress = .7
+    job.status = 'processing'; job.progress = .7; job.logs.push(`Processing with importer ${ASSET_IMPORTER_VERSION}`)
     const target = platform()
     const hashes = await hashInWorker(bytes.slice(0), settings, target, controller.signal)
     if (controller.signal.aborted) throw new DOMException('Import cancelled', 'AbortError')
-    job.status = 'writing'; job.progress = .88
+    job.status = 'writing'; job.progress = .88; job.logs.push('Writing verified generated artifact')
     const blob = new Blob([bytes], { type: file.type || 'application/octet-stream' })
     const cached = await cachedArtifact(hashes.cacheKey)
     const artifact = cached ?? blob
     if (!cached) await atomicCacheWrite(hashes.cacheKey, blob)
     const source = await dataUrl(artifact)
-    job.status = 'complete'; job.progress = 1
+    job.status = 'complete'; job.progress = 1; job.logs.push(cached ? 'Reused matching cached artifact' : 'Imported artifact verified')
     return {
       bytes, source,
       metadata: {
-        importerVersion: ASSET_IMPORTER_VERSION, platform: target, contentHash: hashes.sourceHash,
-        cacheKey: hashes.cacheKey, status: 'ready', lastValidSource: source, error: '', dependencies: [], cacheHit: cached !== null
+        importerVersion: ASSET_IMPORTER_VERSION, platform: target, sourceHash: hashes.sourceHash, artifactHash: hashes.sourceHash, contentHash: hashes.sourceHash,
+        cacheKey: hashes.cacheKey, status: 'ready', lastValidSource: source, error: '', dependencies: [], reverseDependencies: [], cacheHit: cached !== null
       }
     }
   } catch (error) {
     job.status = error instanceof DOMException && error.name === 'AbortError' ? 'cancelled' : 'failed'
     job.error = error instanceof Error ? error.message : String(error)
+    job.logs.push(job.error); job.retryable = job.status === 'failed'; if (job.retryable) retryInputs.set(job.id, { file, settings: JSON.parse(JSON.stringify(settings)) as AssetImportSettings })
     throw error
   } finally {
     controllers.delete(job.id)
@@ -175,10 +187,30 @@ export async function processAssetImport(file: File, settings: AssetImportSettin
 
 export function cancelAssetImport(jobId: number): void { controllers.get(jobId)?.abort() }
 
+export async function retryAssetImport(jobId: number): Promise<{ file: File; settings: AssetImportSettings; artifact: ImportedArtifact } | null> {
+  const input = retryInputs.get(jobId)
+  if (!input) return null
+  retryInputs.delete(jobId)
+  return { file: input.file, settings: input.settings, artifact: await processAssetImport(input.file, input.settings) }
+}
+
+export function notifyExternalAssetChange(uuid: string, file: File): ExternalAssetChange {
+  const previous = importPipelineState.externalChanges.findIndex(change => change.uuid === uuid)
+  const change: ExternalAssetChange = { id: crypto.randomUUID(), uuid, name: file.name, detectedAt: Date.now(), file }
+  if (previous >= 0) importPipelineState.externalChanges.splice(previous, 1, change)
+  else importPipelineState.externalChanges.push(change)
+  return change
+}
+
+export function dismissExternalAssetChange(id: string): void {
+  const index = importPipelineState.externalChanges.findIndex(change => change.id === id)
+  if (index >= 0) importPipelineState.externalChanges.splice(index, 1)
+}
+
 type WatchedHandle = { getFile(): Promise<File> }
 const watchers = new Map<string, { handle: WatchedHandle; modified: number; timer: number }>()
 
-export function watchAssetSource(uuid: string, handle: WatchedHandle, onChange: (file: File) => Promise<void>): void {
+export function watchAssetSource(uuid: string, handle: WatchedHandle, onChange: (file: File) => Promise<boolean>): void {
   stopWatchingAsset(uuid)
   let debounce = 0
   const entry = { handle, modified: 0, timer: 0 }
@@ -189,7 +221,10 @@ export function watchAssetSource(uuid: string, handle: WatchedHandle, onChange: 
       if (file.lastModified === entry.modified) return
       entry.modified = file.lastModified
       window.clearTimeout(debounce)
-      debounce = window.setTimeout(() => { void onChange(file) }, 250)
+      debounce = window.setTimeout(() => {
+        const change = notifyExternalAssetChange(uuid, file)
+        void onChange(file).then(reimported => { if (reimported) dismissExternalAssetChange(change.id) }).catch(() => undefined)
+      }, 250)
     } catch { stopWatchingAsset(uuid) }
   }, 1000)
   watchers.set(uuid, entry)

@@ -24,7 +24,7 @@ for (const callable of ['entity_handle', 'find_entity_handle', 'component_handle
   assert(rust.includes(`"${callable}"`), `Rust registration missing ${callable}`)
 }
 for (const localeMarker of ['Object.assign(en', 'Object.assign(de', 'Object.assign(zh']) assert(translations.includes(localeMarker), `translation block missing ${localeMarker}`)
-assert(format.includes('CURRENT_FORMAT_VERSION: u32 = 22'), 'current schema is not active')
+assert(format.includes('CURRENT_FORMAT_VERSION: u32 = 23'), 'current schema is not active')
 assert(format.includes('validate_script_asset'), 'script metadata validation is not active')
 assert(packageWriter.includes('delete asset.script') && packageWriter.includes('debuggerEnabled = false'), 'release packages do not strip script debug metadata')
 assert(studio.includes('@media(max-width:1000px)') && studio.includes('@media(max-width:800px)') && studio.includes('@media(max-width:620px)'), 'responsive layouts missing')

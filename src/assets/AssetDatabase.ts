@@ -7,16 +7,19 @@ import {
   defaultImportSettings,
   defaultScriptMetadata,
   type AssetImportSettings,
+  type AssetDatabaseSettings,
+  type AssetImportPreset,
   type AssetRecord,
+  type AssetSavedFilter,
   type AssetType,
   type TextureAtlasPage
 } from './types'
 import type { TextureRegion } from '../renderer'
-import { processAssetImport } from './importPipeline'
-import { stopWatchingAsset } from './importPipeline'
-import { repairAssetPathReferences } from './assetGraph'
+import { dismissExternalAssetChange, importPipelineState, processAssetImport, retryAssetImport, stopWatchingAsset, watchAssetSource, type ImportedArtifact } from './importPipeline'
+import { buildAssetDependencyGraph, repairAssetPathReferences } from './assetGraph'
+import { assetSourceBytes, sha256Bytes } from './contentHash'
 
-interface AssetDatabaseState {
+export interface AssetDatabaseState {
   records: AssetRecord[]
   folders: string[]
   atlasPages: TextureAtlasPage[]
@@ -27,6 +30,11 @@ interface AssetDatabaseState {
   currentFolder: string
   search: string
   typeFilter: AssetType | 'all'
+  favoritesOnly: boolean
+  favorites: string[]
+  savedFilters: AssetSavedFilter[]
+  importPresets: AssetImportPreset[]
+  indexSize: number
 }
 
 export const assetState = reactive<AssetDatabaseState>({
@@ -39,11 +47,32 @@ export const assetState = reactive<AssetDatabaseState>({
   selectedGuid: null,
   currentFolder: 'Assets',
   search: '',
-  typeFilter: 'all'
+  typeFilter: 'all',
+  favoritesOnly: false,
+  favorites: [],
+  savedFilters: [],
+  importPresets: [],
+  indexSize: 0
 })
 
 const imageCache = new Map<string, HTMLImageElement>()
 let atlasRevision = 0
+let indexRevision = -1
+let indexedRecords: AssetRecord[] = []
+let recordsByUuid = new Map<string, AssetRecord>()
+
+function inlinePipeline(source: string) {
+  const hash = sha256Bytes(assetSourceBytes(source))
+  return { importerVersion: 'inline-1', platform: 'web' as const, sourceHash: hash, artifactHash: hash, contentHash: hash, cacheKey: hash, status: 'ready' as const, lastValidSource: source, error: '', dependencies: [] as string[], reverseDependencies: [] as string[], cacheHit: false }
+}
+
+function ensureIndex(): void {
+  if (indexRevision === assetState.generation) return
+  indexedRecords = [...assetState.records].sort((a, b) => a.path.localeCompare(b.path) || a.uuid.localeCompare(b.uuid))
+  recordsByUuid = new Map(indexedRecords.map(record => [record.uuid, record]))
+  assetState.indexSize = indexedRecords.length
+  indexRevision = assetState.generation
+}
 
 export function inferAssetType(file: Pick<File, 'name' | 'type'>): AssetType {
   const mime = file.type.toLowerCase()
@@ -157,6 +186,25 @@ function installFont(record: AssetRecord): void {
   void face.load().then(loaded => document.fonts.add(loaded)).catch(() => undefined)
 }
 
+async function recordImportedArtifact(file: File, settings: AssetImportSettings, artifact: ImportedArtifact, requestedFolder?: string): Promise<AssetRecord> {
+  const assetType = inferAssetType(file), source = artifact.source
+  const metadata = assetType === 'image' ? await imageMetadata(source) : { width: 0, height: 0 }
+  const uuid = normalizeUuid(undefined)
+  const record: AssetRecord = {
+    uuid, name: sanitizedName(file.name), path: uniquePath(requestedFolder || defaultFolder(assetType), file.name), assetType,
+    mimeType: file.type || 'application/octet-stream', byteLength: file.size, source, sourceModified: file.lastModified, importedAt: Date.now(),
+    width: metadata.width, height: metadata.height, duration: assetType === 'audio' ? await audioMetadata(source) : 0,
+    fontFamily: assetType === 'font' ? fontFamilyFor(uuid) : '', settings,
+    script: assetType === 'script' ? defaultScriptMetadata() : undefined,
+    animationImport: assetType === 'animation' ? defaultAnimationImportMetadata() : undefined,
+    pipeline: artifact.metadata
+  }
+  assetState.records.push(record); installFont(record)
+  const folder = record.path.slice(0, record.path.lastIndexOf('/'))
+  if (folder && !assetState.folders.includes(folder)) assetState.folders.push(folder)
+  return record
+}
+
 export async function importAssetFiles(files: Iterable<File>, requestedFolder?: string): Promise<AssetRecord[]> {
   assetState.importing = true
   const imported: AssetRecord[] = []
@@ -166,33 +214,8 @@ export async function importAssetFiles(files: Iterable<File>, requestedFolder?: 
       const settings = defaultImportSettings()
       if (assetType === 'image' && /(?:^|[-_.])pixel(?:[-_.]|$)/i.test(file.name)) settings.filterMode = 'Nearest'
       const artifact = await processAssetImport(file, settings)
-      const source = artifact.source
-      const metadata = assetType === 'image' ? await imageMetadata(source) : { width: 0, height: 0 }
-      const uuid = normalizeUuid(undefined)
-      const record: AssetRecord = {
-        uuid,
-        name: sanitizedName(file.name),
-        path: uniquePath(requestedFolder || defaultFolder(assetType), file.name),
-        assetType,
-        mimeType: file.type || 'application/octet-stream',
-        byteLength: file.size,
-        source,
-        sourceModified: file.lastModified,
-        importedAt: Date.now(),
-        width: metadata.width,
-        height: metadata.height,
-        duration: assetType === 'audio' ? await audioMetadata(source) : 0,
-        fontFamily: assetType === 'font' ? fontFamilyFor(uuid) : '',
-        settings,
-        script: assetType === 'script' ? defaultScriptMetadata() : undefined,
-        animationImport: assetType === 'animation' ? defaultAnimationImportMetadata() : undefined,
-        pipeline: artifact.metadata
-      }
-      assetState.records.push(record)
+      const record = await recordImportedArtifact(file, settings, artifact, requestedFolder)
       imported.push(record)
-      installFont(record)
-      const folder = record.path.slice(0, record.path.lastIndexOf('/'))
-      if (folder && !assetState.folders.includes(folder)) assetState.folders.push(folder)
     }
     assetState.records.sort((first, second) => first.path.localeCompare(second.path))
     assetState.generation++
@@ -211,7 +234,7 @@ export function registerEmbeddedImage(source: string, name = 'Legacy texture'): 
     uuid, name: sanitizedName(name), path: uniquePath('Assets/Sprites/Imported', `${sanitizedName(name)}.png`),
     assetType: 'image', mimeType: source.slice(5, source.indexOf(';')) || 'image/png', byteLength: source.length,
     source, sourceModified: 0, importedAt: Date.now(), width: 0, height: 0, duration: 0, fontFamily: '',
-    settings: defaultImportSettings()
+    settings: defaultImportSettings(), pipeline: inlinePipeline(source)
   }
   assetState.records.push(record)
   if (!assetState.folders.includes('Assets/Sprites/Imported')) assetState.folders.push('Assets/Sprites/Imported')
@@ -250,7 +273,8 @@ export function createTextAsset(
     fontFamily: '',
     settings: defaultImportSettings(),
     script: assetType === 'script' ? defaultScriptMetadata() : undefined,
-    animationImport: assetType === 'animation' ? defaultAnimationImportMetadata() : undefined
+    animationImport: assetType === 'animation' ? defaultAnimationImportMetadata() : undefined,
+    pipeline: inlinePipeline(source)
   }
   assetState.records.push(record)
   const folder = record.path.slice(0, record.path.lastIndexOf('/'))
@@ -280,11 +304,15 @@ export function readTextAsset(reference: string | null | undefined): string | nu
 
 export function updateTextAsset(uuid: string, source: string): boolean {
   const record = assetState.records.find(asset => asset.uuid === uuid)
-  if (!record || !['script', 'prefab', 'scene', 'material', 'animation', 'controller', 'animationMask', 'rig', 'skin', 'timeline', 'tileset', 'atlas', 'shader', 'localization', 'uiTheme', 'behaviorTree', 'stateMachine', 'tilePalette', 'brushPreset', 'terrainRules', 'dataSchema', 'dataTable', 'replay'].includes(record.assetType)) return false
+  if (!record || record.path.startsWith('.nova/') || !['script', 'prefab', 'scene', 'material', 'animation', 'controller', 'animationMask', 'rig', 'skin', 'timeline', 'tileset', 'atlas', 'shader', 'localization', 'uiTheme', 'behaviorTree', 'stateMachine', 'tilePalette', 'brushPreset', 'terrainRules', 'dataSchema', 'dataTable', 'replay'].includes(record.assetType)) return false
   record.source = textDataUrl(source, record.mimeType || 'text/plain')
   record.byteLength = new TextEncoder().encode(source).byteLength
   record.sourceModified = Date.now()
   record.importedAt = Date.now()
+  const metadata = inlinePipeline(record.source)
+  metadata.dependencies = record.pipeline?.dependencies ?? []
+  metadata.reverseDependencies = record.pipeline?.reverseDependencies ?? []
+  record.pipeline = metadata
   assetState.generation++
   return true
 }
@@ -299,7 +327,32 @@ export function serializeAssets(): AssetRecord[] {
 }
 
 export function serializeAssetFolders(): string[] {
-  return [...assetState.folders]
+  return [...assetState.folders].sort((a, b) => a.localeCompare(b))
+}
+
+export function serializeAssetDatabaseSettings(): AssetDatabaseSettings {
+  return {
+    version: 1,
+    favorites: [...new Set(assetState.favorites)].filter(uuid => assetState.records.some(record => record.uuid === uuid)).sort(),
+    savedFilters: assetState.savedFilters.map(filter => ({ ...filter })).sort((a, b) => a.name.localeCompare(b.name)),
+    importPresets: assetState.importPresets.map(preset => ({ ...preset, settings: JSON.parse(JSON.stringify(preset.settings)) as AssetImportSettings })).sort((a, b) => a.name.localeCompare(b.name))
+  }
+}
+
+function loadAssetDatabaseSettings(source: unknown): void {
+  const value = source && typeof source === 'object' ? source as Partial<AssetDatabaseSettings> : {}
+  assetState.favorites.splice(0, assetState.favorites.length, ...(Array.isArray(value.favorites) ? [...new Set(value.favorites.filter(item => typeof item === 'string'))].slice(0, 10_000) : []))
+  const filters = Array.isArray(value.savedFilters) ? value.savedFilters.flatMap(raw => {
+    if (!raw || typeof raw !== 'object' || typeof raw.id !== 'string' || typeof raw.name !== 'string') return []
+    const type = raw.assetType === 'all' || typeof raw.assetType === 'string' ? raw.assetType as AssetType | 'all' : 'all'
+    return [{ id: raw.id.slice(0, 80), name: raw.name.trim().slice(0, 80) || 'Filter', query: String(raw.query ?? '').slice(0, 200), folder: normalizeFolder(String(raw.folder ?? 'Assets')), assetType: type }]
+  }).slice(0, 128) : []
+  assetState.savedFilters.splice(0, assetState.savedFilters.length, ...filters)
+  const presets = Array.isArray(value.importPresets) ? value.importPresets.flatMap(raw => {
+    if (!raw || typeof raw !== 'object' || typeof raw.id !== 'string' || typeof raw.name !== 'string' || !raw.settings || typeof raw.settings !== 'object') return []
+    return [{ id: raw.id.slice(0, 80), name: raw.name.trim().slice(0, 80) || 'Preset', assetType: raw.assetType === 'all' || typeof raw.assetType === 'string' ? raw.assetType as AssetType | 'all' : 'all', settings: { ...defaultImportSettings(), ...raw.settings } as AssetImportSettings }]
+  }).slice(0, 128) : []
+  assetState.importPresets.splice(0, assetState.importPresets.length, ...presets)
 }
 
 function sourceFolder(path: unknown, type: AssetType): string {
@@ -308,7 +361,7 @@ function sourceFolder(path: unknown, type: AssetType): string {
   return separator > 0 ? normalizeFolder(path.slice(0, separator)) : defaultFolder(type)
 }
 
-export function loadAssets(source: unknown, folderSource?: unknown): void {
+export function loadAssets(source: unknown, folderSource?: unknown, databaseSource?: unknown): void {
   assetState.records.splice(0)
   imageCache.clear()
   const records = Array.isArray(source) ? source : []
@@ -377,11 +430,13 @@ export function loadAssets(source: unknown, folderSource?: unknown): void {
       pipeline: item.pipeline && typeof item.pipeline === 'object' ? {
         importerVersion: String(item.pipeline.importerVersion || '1.0.0').slice(0, 40),
         platform: ['windows', 'linux', 'macos', 'web'].includes(String(item.pipeline.platform)) ? item.pipeline.platform : 'web',
-        contentHash: String(item.pipeline.contentHash || '').slice(0, 128), cacheKey: String(item.pipeline.cacheKey || '').slice(0, 128),
+        sourceHash: String(item.pipeline.sourceHash || item.pipeline.contentHash || '').slice(0, 128), artifactHash: String(item.pipeline.artifactHash || item.pipeline.cacheKey || '').slice(0, 128),
+        contentHash: String(item.pipeline.contentHash || item.pipeline.sourceHash || '').slice(0, 128), cacheKey: String(item.pipeline.cacheKey || item.pipeline.artifactHash || '').slice(0, 128),
         status: item.pipeline.status === 'failed' ? 'failed' : 'ready', lastValidSource: typeof item.pipeline.lastValidSource === 'string' ? item.pipeline.lastValidSource : (typeof item.source === 'string' ? item.source : ''),
         error: String(item.pipeline.error || '').slice(0, 500), dependencies: Array.isArray(item.pipeline.dependencies) ? item.pipeline.dependencies.filter(value => typeof value === 'string').slice(0, 2048) : [],
+        reverseDependencies: Array.isArray(item.pipeline.reverseDependencies) ? item.pipeline.reverseDependencies.filter(value => typeof value === 'string').slice(0, 2048) : [],
         cacheHit: item.pipeline.cacheHit === true
-      } : undefined,
+      } : inlinePipeline(typeof item.source === 'string' ? item.source : ''),
       unknownFields: Object.keys(unknownFields).length ? unknownFields : undefined
     })
   }
@@ -399,6 +454,7 @@ export function loadAssets(source: unknown, folderSource?: unknown): void {
     installFont(record)
   })
   assetState.folders.splice(0, assetState.folders.length, ...[...folders].sort())
+  loadAssetDatabaseSettings(databaseSource)
   assetState.generation++
   queueTextureAtlasRebuild()
 }
@@ -450,8 +506,9 @@ export async function reimportAsset(uuid: string, file: File): Promise<boolean> 
     record.source = record.pipeline?.lastValidSource || previous
     record.pipeline = {
       importerVersion: record.pipeline?.importerVersion || '2.0.0', platform: record.pipeline?.platform || 'web',
+      sourceHash: record.pipeline?.sourceHash || record.pipeline?.contentHash || '', artifactHash: record.pipeline?.artifactHash || record.pipeline?.cacheKey || '',
       contentHash: record.pipeline?.contentHash || '', cacheKey: record.pipeline?.cacheKey || '', status: 'failed',
-      lastValidSource: record.source, error: error instanceof Error ? error.message : String(error), dependencies: record.pipeline?.dependencies ?? [], cacheHit: record.pipeline?.cacheHit === true
+      lastValidSource: record.source, error: error instanceof Error ? error.message : String(error), dependencies: record.pipeline?.dependencies ?? [], reverseDependencies: record.pipeline?.reverseDependencies ?? [], cacheHit: record.pipeline?.cacheHit === true
     }
     return false
   }
@@ -479,6 +536,91 @@ export function deleteAsset(uuid: string): boolean {
   return true
 }
 
+export function toggleAssetFavorite(uuid: string): boolean {
+  const index = assetState.favorites.indexOf(uuid)
+  if (index >= 0) { assetState.favorites.splice(index, 1); return false }
+  if (assetState.records.some(record => record.uuid === uuid)) assetState.favorites.push(uuid)
+  return true
+}
+
+export function saveCurrentAssetFilter(name: string): AssetSavedFilter | null {
+  const safe = name.trim().slice(0, 80)
+  if (!safe) return null
+  const filter: AssetSavedFilter = { id: normalizeUuid(undefined), name: safe, query: assetState.search.slice(0, 200), folder: assetState.currentFolder, assetType: assetState.typeFilter }
+  assetState.savedFilters.push(filter)
+  return filter
+}
+
+export function applyAssetFilter(id: string): boolean {
+  const filter = assetState.savedFilters.find(item => item.id === id)
+  if (!filter) return false
+  assetState.search = filter.query; assetState.currentFolder = filter.folder; assetState.typeFilter = filter.assetType
+  return true
+}
+
+export function deleteAssetFilter(id: string): boolean {
+  const index = assetState.savedFilters.findIndex(item => item.id === id)
+  if (index < 0) return false
+  assetState.savedFilters.splice(index, 1); return true
+}
+
+export function saveImportPreset(name: string, assetType: AssetType | 'all', settings: AssetImportSettings): AssetImportPreset | null {
+  const safe = name.trim().slice(0, 80)
+  if (!safe) return null
+  const preset: AssetImportPreset = { id: normalizeUuid(undefined), name: safe, assetType, settings: JSON.parse(JSON.stringify(settings)) as AssetImportSettings }
+  assetState.importPresets.push(preset); return preset
+}
+
+export function applyImportPreset(id: string, asset: AssetRecord): boolean {
+  const preset = assetState.importPresets.find(item => item.id === id && (item.assetType === 'all' || item.assetType === asset.assetType))
+  if (!preset) return false
+  asset.settings = JSON.parse(JSON.stringify(preset.settings)) as AssetImportSettings
+  assetState.generation++; queueTextureAtlasRebuild(); return true
+}
+
+export function synchronizeAssetDependencyMetadata(project?: unknown): void {
+  const graph = buildAssetDependencyGraph(assetState.records, project)
+  for (const record of assetState.records) {
+    record.pipeline ??= inlinePipeline(record.source)
+    record.pipeline.dependencies = [...(graph.dependencies.get(record.uuid) ?? [])].sort()
+    record.pipeline.reverseDependencies = [...(graph.reverseDependencies.get(record.uuid) ?? [])].sort()
+  }
+}
+
+export async function retryFailedAssetImport(jobId: number, requestedFolder?: string): Promise<AssetRecord | null> {
+  const result = await retryAssetImport(jobId)
+  if (!result) return null
+  const record = await recordImportedArtifact(result.file, result.settings, result.artifact, requestedFolder)
+  assetState.records.sort((a, b) => a.path.localeCompare(b.path)); assetState.generation++; queueTextureAtlasRebuild()
+  return record
+}
+
+type SourceFileHandle = { getFile(): Promise<File> }
+
+export async function linkAssetSource(uuid: string): Promise<'linked' | 'cancelled' | 'unsupported'> {
+  const picker = (window as unknown as { showOpenFilePicker?: (options?: { multiple: boolean }) => Promise<SourceFileHandle[]> }).showOpenFilePicker
+  if (!picker) return 'unsupported'
+  let handles: SourceFileHandle[]
+  try { handles = await picker({ multiple: false }) } catch (error) { if (error instanceof DOMException && error.name === 'AbortError') return 'cancelled'; throw error }
+  const handle = handles[0]
+  if (!handle || !assetState.records.some(record => record.uuid === uuid)) return 'cancelled'
+  const initial = await handle.getFile()
+  watchAssetSource(uuid, handle, async file => reimportAsset(uuid, file))
+  const record = assetState.records.find(asset => asset.uuid === uuid)
+  if (record) record.sourceModified = initial.lastModified
+  return 'linked'
+}
+
+export async function resolveExternalAssetChange(changeId: string, choice: 'reimport' | 'keep' | 'duplicate'): Promise<boolean> {
+  const change = importPipelineState.externalChanges.find(item => item.id === changeId)
+  if (!change) return false
+  let success = true
+  if (choice === 'reimport') success = await reimportAsset(change.uuid, change.file)
+  else if (choice === 'duplicate') success = (await importAssetFiles([change.file])).length > 0
+  dismissExternalAssetChange(change.id)
+  return success
+}
+
 export function assetReference(uuid: string): string { return `asset://${normalizeUuid(uuid)}` }
 export function assetGuid(reference: string | null | undefined): string | null {
   if (!reference?.startsWith('asset://')) return null
@@ -486,7 +628,8 @@ export function assetGuid(reference: string | null | undefined): string | null {
 }
 export function resolveAsset(reference: string | null | undefined): AssetRecord | null {
   const guid = assetGuid(reference) ?? reference
-  return guid ? assetState.records.find(record => record.uuid === guid) ?? null : null
+  ensureIndex()
+  return guid ? recordsByUuid.get(guid) ?? null : null
 }
 
 export function resolveTexture(reference: string | null | undefined, filterOverride?: 'Nearest' | 'Linear'): TextureRegion | null {
@@ -567,12 +710,14 @@ export function queueTextureAtlasRebuild(): void {
 }
 
 export function filteredAssets(): AssetRecord[] {
+  ensureIndex()
   const query = assetState.search.trim().toLowerCase()
   const folder = `${assetState.currentFolder}/`
-  return assetState.records.filter(record => {
+  const favorites = new Set(assetState.favorites)
+  return indexedRecords.filter(record => {
     const inFolder = record.path.startsWith(folder) && !record.path.slice(folder.length).includes('/')
     const typeMatches = assetState.typeFilter === 'all' || record.assetType === assetState.typeFilter
     const queryMatches = !query || record.name.toLowerCase().includes(query) || record.path.toLowerCase().includes(query)
-    return (query || inFolder) && typeMatches && queryMatches
+    return (query || inFolder) && typeMatches && queryMatches && (!assetState.favoritesOnly || favorites.has(record.uuid))
   })
 }

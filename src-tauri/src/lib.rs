@@ -658,7 +658,7 @@ fn export_game(request: ExportRequest) -> Result<ExportResult, String> {
     }
 
     let platform_config = serde_json::to_vec_pretty(&serde_json::json!({
-        "format": "nova-platform-config", "version": 1, "engineVersion": "3.0.0",
+        "format": "nova-platform-config", "version": 1, "engineVersion": "3.2.0",
         "target": request.target, "architecture": request.architecture, "profile": request.profile,
         "application": request.platform, "structuredLogs": request.delivery.structured_logs,
         "crashCapture": request.delivery.crash_reports,
@@ -674,7 +674,7 @@ fn export_game(request: ExportRequest) -> Result<ExportResult, String> {
         &mut changed_files,
     )?;
     if request.development_build {
-        let build_info = serde_json::to_vec_pretty(&serde_json::json!({ "engineVersion": "3.0.0", "buildId": build_id, "target": request.target, "architecture": request.architecture, "packageBytes": pack.len() })).map_err(|error| error.to_string())?;
+        let build_info = serde_json::to_vec_pretty(&serde_json::json!({ "engineVersion": "3.2.0", "buildId": build_id, "target": request.target, "architecture": request.architecture, "packageBytes": pack.len() })).map_err(|error| error.to_string())?;
         tracked_write(
             &root,
             "build-info.json",
@@ -687,7 +687,7 @@ fn export_game(request: ExportRequest) -> Result<ExportResult, String> {
     }
     if request.delivery.crash_reports {
         let symbols = serde_json::to_vec_pretty(&serde_json::json!({
-            "format": "nova-symbol-map", "version": 1, "engineVersion": "3.0.0", "buildId": build_id,
+            "format": "nova-symbol-map", "version": 1, "engineVersion": "3.2.0", "buildId": build_id,
             "binary": files.iter().find(|path| path.ends_with(".exe") || path.ends_with(".app")).cloned(),
             "workflow": "Archive matching PDB, dSYM, or unstripped ELF symbols under this build ID; symbolicate crash addresses with the platform toolchain."
         })).map_err(|error| error.to_string())?;
@@ -758,7 +758,7 @@ fn export_game(request: ExportRequest) -> Result<ExportResult, String> {
     let report = BuildReport {
         format: "nova-build-report".into(),
         version: 1,
-        engine_version: "3.0.0".into(),
+        engine_version: "3.2.0".into(),
         build_id: build_id.clone(),
         created_at: if request.delivery.deterministic {
             0
@@ -947,7 +947,7 @@ fn write_log(contents: &str) -> Result<String, String> {
 
 #[tauri::command]
 fn write_crash_log(payload: CrashPayload) -> Result<String, String> {
-    write_log(&format!("Nova_A version: 3.0.0\nOS: {} {}\nRenderer: {}\nProject: {}\nScene: {}\nError: {}\n\nStack trace:\n{}\n", std::env::consts::OS, std::env::consts::ARCH, payload.renderer, payload.project, payload.scene, payload.message, payload.stack))
+    write_log(&format!("Nova_A version: 3.2.0\nOS: {} {}\nRenderer: {}\nProject: {}\nScene: {}\nError: {}\n\nStack trace:\n{}\n", std::env::consts::OS, std::env::consts::ARCH, payload.renderer, payload.project, payload.scene, payload.message, payload.stack))
 }
 
 fn install_panic_logger() {
@@ -963,7 +963,7 @@ fn install_panic_logger() {
             .or_else(|| panic.payload().downcast_ref::<String>().map(String::as_str))
             .unwrap_or("unknown panic");
         let _ = write_log(&format!(
-            "Nova_A version: 3.0.0\nOS: {} {}\nFatal Rust panic at {location}\n{message}\n",
+            "Nova_A version: 3.2.0\nOS: {} {}\nFatal Rust panic at {location}\n{message}\n",
             std::env::consts::OS,
             std::env::consts::ARCH
         ));

@@ -2,7 +2,7 @@
   <Teleport to="body">
     <section v-if="state.visible" class="studio-overlay" role="dialog" aria-modal="true" :aria-label="t('studioStatus')" @keydown.esc="closeStudioStatus">
       <article>
-        <header><div><strong>Nova_A Studio 3.0.0</strong><small>{{ t('stableContractHint') }}</small></div><button :title="t('close')" @click="closeStudioStatus">×</button></header>
+        <header><div><strong>Nova_A Studio 3.2.0</strong><small>{{ t('stableContractHint') }}</small></div><button :title="t('close')" @click="closeStudioStatus">×</button></header>
         <div class="contracts"><section v-for="contract in NOVA_STABLE_CONTRACTS" :key="contract.id"><span>{{ t(`contract_${contract.id}`) }}</span><strong>v{{ contract.version }}</strong><small>{{ contract.compatibility }}</small></section></div>
         <aside><strong>{{ t('compatibilityPromise') }}</strong><p>{{ t('compatibilityPromiseHint') }}</p></aside>
         <footer><button @click="copy">{{ copied ? t('copied') : t('copyDiagnostics') }}</button><button @click="openManual">{{ t('manual') }}</button><button class="primary" @click="closeStudioStatus">{{ t('done') }}</button></footer>

@@ -1,6 +1,6 @@
 {
   "productName": "Nova_A",
-  "version": "3.0.0",
+  "version": "3.2.0",
   "identifier": "top.whitelists.novaa",
   "build": {
     "beforeDevCommand": "pnpm dev",
@@ -15,6 +15,9 @@
         "width": 1280,
         "height": 720,
         "center": true,
+        "fullscreen": false,
+        "maximized": true,
+        "decorations": true,
         "resizable": true,
         "minWidth": 900,
         "minHeight": 600

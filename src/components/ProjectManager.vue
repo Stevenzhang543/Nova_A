@@ -5,7 +5,7 @@
       <nav aria-label="Project manager utilities">
         <select v-model="prefs.locale" :aria-label="t('language')"><option value="en">English</option><option value="de">Deutsch</option><option value="zh">中文</option></select>
         <button class="manual-link" type="button" @click="openBundledManual">{{ t('manual') }}</button>
-        <span class="version">3.0.0</span>
+        <span class="version">3.2.0</span>
       </nav>
     </header>
 
@@ -57,12 +57,22 @@
       <section class="upgrade-dialog">
         <header><div><span class="eyebrow">{{ t('projectUpgrade') }}</span><h2>{{ t('upgradePreview') }}</h2></div><button :aria-label="t('cancel')" @click="cancelPendingProjectUpgrade">×</button></header>
         <div class="upgrade-flow"><strong>Schema {{ state.pendingUpgrade.preview.sourceSchema }}</strong><span>→</span><strong>Schema {{ state.pendingUpgrade.preview.targetSchema }}</strong></div>
+        <div class="compatibility-summary"><strong>{{ state.pendingUpgrade.preview.projectName }}</strong><small>{{ state.pendingUpgrade.preview.projectFormat }} · Engine {{ state.pendingUpgrade.preview.engineCompatibility }}</small></div>
         <div class="upgrade-stats"><span>{{ t('scenes') }} <b>{{ state.pendingUpgrade.preview.sceneCount }}</b></span><span>{{ t('entities') }} <b>{{ state.pendingUpgrade.preview.entityCount }}</b></span><span>{{ t('assets') }} <b>{{ state.pendingUpgrade.preview.assetCount }}</b></span></div>
         <ul v-if="state.pendingUpgrade.preview.warnings.length"><li v-for="warning in state.pendingUpgrade.preview.warnings" :key="warning">{{ warning }}</li></ul>
         <section v-if="state.pendingUpgrade.preview.packageProblems.length" class="package-audit"><strong>{{ t('packageAudit') }}</strong><p v-for="problem in state.pendingUpgrade.preview.packageProblems" :key="problem">{{ problem }}</p></section>
+        <details v-if="state.pendingUpgrade.preview.migrationSteps.length" class="migration-steps"><summary>{{ t('migrationPlan') }} · {{ state.pendingUpgrade.preview.migrationSteps.length }}</summary><ol><li v-for="step in state.pendingUpgrade.preview.migrationSteps" :key="step.fromSchema">{{ step.fromSchema }} → {{ step.toSchema }} · {{ step.name }}</li></ol></details>
         <label class="backup-choice"><input v-model="state.backupBeforeUpgrade" type="checkbox"><span>{{ t('backupBeforeUpgrade') }}</span></label>
         <p>{{ t('upgradeAtomicHint') }}</p>
-        <footer><button @click="cancelPendingProjectUpgrade">{{ t('cancel') }}</button><button class="primary" @click="applyPendingProjectUpgrade">{{ t('migrateAndOpen') }}</button></footer>
+        <footer><button @click="cancelPendingProjectUpgrade">{{ t('cancel') }}</button><button class="primary" @click="migrateAndOpen">{{ t('migrateAndOpen') }}</button></footer>
+      </section>
+    </div>
+    <div v-if="state.readOnlyDocument" class="upgrade-scrim" role="dialog" aria-modal="true" :aria-label="t('readOnlyCompatibility')">
+      <section class="upgrade-dialog read-only-dialog">
+        <header><div><span class="eyebrow">{{ t('readOnlyCompatibility') }}</span><h2>{{ state.readOnlyDocument.preview.projectName }}</h2></div><button :aria-label="t('cancel')" @click="closeReadOnlyDocument">×</button></header>
+        <p>{{ t('readOnlyCompatibilityHint', { schema: state.readOnlyDocument.preview.sourceSchema, supported: state.readOnlyDocument.preview.targetSchema }) }}</p>
+        <textarea readonly :value="state.readOnlyDocument.source"></textarea>
+        <footer><button @click="closeReadOnlyDocument">{{ t('close') }}</button><button class="primary" @click="downloadReadOnlyDocument">{{ t('downloadOriginal') }}</button></footer>
       </section>
     </div>
     <input ref="openInput" hidden type="file" accept=".nova,.json,application/json" @change="readFile($event, false)">
@@ -74,9 +84,10 @@
 import { ref } from 'vue'
 import { t } from '../i18n'
 import { preferencesState as prefs } from '../store/preferences'
-import { applyPendingProjectUpgrade, cancelPendingProjectUpgrade, continueCurrentProject, createNewProject, downloadLastUpgradeRollback, openProjectDocument, openRecentProject, projectManagerState as state, removeRecentProject } from '../projects/projectManager'
+import { applyPendingProjectUpgrade, cancelPendingProjectUpgrade, closeReadOnlyDocument, continueCurrentProject, createNewProject, downloadLastUpgradeRollback, downloadReadOnlyDocument, openProjectDocument, openRecentProject, projectManagerState as state, removeRecentProject } from '../projects/projectManager'
 import { PROJECT_TEMPLATES as templates, type ProjectTemplateId } from '../projects/templates'
 import { openBundledManual } from '../runtime/openManual'
+import { completeTask, failTask, startTask } from '../runtime/editorFeedback'
 
 const projectName = ref('My Game')
 const selectedTemplate = ref<ProjectTemplateId>('empty')
@@ -87,6 +98,15 @@ const icons: Record<ProjectTemplateId, string> = { empty: '◇', platformer: '�
 function templateName(id: ProjectTemplateId, fallback: string): string { return t(`template_${id}_name`) || fallback }
 function templateDescription(id: ProjectTemplateId, fallback: string): string { return t(`template_${id}_description`) || fallback }
 function create(): void { void createNewProject(projectName.value, selectedTemplate.value) }
+async function migrateAndOpen(): Promise<void> {
+  const pending = state.pendingUpgrade
+  if (!pending) return
+  const task = startTask(t('projectUpgrade'), { detail: `Schema ${pending.preview.sourceSchema} → ${pending.preview.targetSchema}` })
+  try {
+    if (!await applyPendingProjectUpgrade()) throw new Error(state.error || t('operationFailed'))
+    completeTask(task, t('upgradeComplete'))
+  } catch (error) { failTask(task, error) }
+}
 function formatDate(value: string): string { const date = new Date(value); return Number.isNaN(date.getTime()) ? value : date.toLocaleString(prefs.locale === 'zh' ? 'zh-CN' : prefs.locale) }
 
 function readFile(event: Event, asCopy: boolean): void {
@@ -120,4 +140,5 @@ function readFile(event: Event, asCopy: boolean): void {
 .recents-card header small, .recent-main small, .recent-main em { font-size:11px; }.recent-main { min-height: 52px; }.recent-main strong { font-size: 11px; }
 .empty-recents, .project-manager footer { font-size: 11px; }
 .upgrade-scrim{position:fixed;inset:0;z-index:40;padding:20px;display:grid;place-items:center;background:var(--scrim);backdrop-filter:blur(10px)}.upgrade-dialog{width:min(620px,100%);max-height:min(720px,calc(100vh - 40px));padding:20px;overflow:auto;border:1px solid var(--border-strong);border-radius:18px;background:var(--surface-1);box-shadow:var(--shadow-lg)}.upgrade-dialog>header{display:flex;align-items:flex-start;justify-content:space-between}.upgrade-dialog h2{margin:5px 0 0;font-size:20px}.upgrade-dialog>header button{width:32px;height:32px;border:0;border-radius:8px;background:var(--surface-3)}.upgrade-flow{margin:18px 0;padding:18px;display:flex;align-items:center;justify-content:center;gap:18px;border:1px solid var(--border-subtle);border-radius:12px;background:var(--surface-2)}.upgrade-flow span{color:var(--accent);font-size:22px}.upgrade-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}.upgrade-stats span{padding:9px;display:flex;justify-content:space-between;border-radius:9px;background:var(--surface-2);color:var(--text-muted)}.upgrade-dialog ul,.upgrade-dialog>p,.package-audit p{color:var(--text-muted);font-size:11px;line-height:1.5}.package-audit{margin-top:12px;padding:10px;border:1px solid var(--warning);border-radius:10px}.package-audit p{margin:5px 0}.backup-choice{min-height:42px;margin-top:12px;padding:9px;display:flex;align-items:center;gap:8px;border-radius:9px;background:var(--accent-soft)}.upgrade-dialog>footer{margin-top:16px;padding:0;display:flex;justify-content:flex-end;gap:8px;border:0}.upgrade-dialog>footer button{min-height:36px;padding:0 14px;border:1px solid var(--border-subtle);border-radius:9px;background:var(--surface-3)}.upgrade-dialog>footer .primary{color:var(--accent-contrast);border-color:var(--accent);background:var(--accent)}
+.compatibility-summary{padding:9px;display:grid;gap:3px;border:1px solid var(--border-subtle);border-radius:9px;background:var(--surface-2)}.compatibility-summary small{color:var(--text-muted)}.migration-steps{margin-top:12px;padding:9px;border:1px solid var(--border-subtle);border-radius:9px}.migration-steps summary{cursor:pointer}.migration-steps li{margin:4px 0;color:var(--text-muted);font-size:11px}.read-only-dialog{width:min(820px,100%)}.read-only-dialog textarea{width:100%;min-height:340px;margin-top:10px;resize:vertical;font:11px/1.45 ui-monospace,SFMono-Regular,Consolas,monospace}
 </style>

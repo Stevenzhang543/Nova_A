@@ -4,7 +4,7 @@ import { mkdir, readFile, writeFile, copyFile, stat, unlink } from 'node:fs/prom
 import { dirname, join, resolve } from 'node:path'
 import { gzipSync } from 'node:zlib'
 
-const ENGINE_VERSION = '3.0.0'
+const ENGINE_VERSION = '3.2.0'
 const HEADER_BYTES = 16
 
 function argumentsMap(values) {
@@ -61,7 +61,7 @@ async function assetBytes(asset) {
 
 const project = JSON.parse(await readFile(projectPath, 'utf8'))
 const schema = Number(project.formatVersion ?? 1)
-if (!Number.isFinite(schema) || schema > 22) throw new Error(`Project schema ${schema} is newer than this exporter`)
+if (!Number.isFinite(schema) || schema > 23) throw new Error(`Project schema ${schema} is newer than this exporter`)
 if (!Array.isArray(project.scenes) || !project.scenes.length) throw new Error('Project must contain at least one scene')
 const build = project.projectSettings?.build ?? {}
 build.target = target; build.profile = profile; build.architecture = architecture; build.runtimeMode = runtimeMode; build.developmentBuild = profile === 'debug'; build.outputDirectory = ''

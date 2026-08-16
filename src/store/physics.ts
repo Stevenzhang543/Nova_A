@@ -33,7 +33,7 @@ import { SceneManager } from '../world/SceneManager'
 import { translateEntityTree, worldTransform } from '../world/hierarchy'
 import { CommandHistory, DocumentMutationCommand } from '../editor/commands'
 import { subtreeEntities, updateSelection, type SelectionMode } from '../editor/selection'
-import { assetReference, assetState, loadAssets, readTextAsset, registerEmbeddedImage, serializeAssetFolders, serializeAssets, updateTextAsset } from '../assets/AssetDatabase'
+import { assetReference, assetState, loadAssets, readTextAsset, registerEmbeddedImage, serializeAssetDatabaseSettings, serializeAssetFolders, serializeAssets, synchronizeAssetDependencyMetadata, updateTextAsset } from '../assets/AssetDatabase'
 import { defaultInputMap, normalizeInputMap, type InputAction } from '../runtime/input'
 import { defaultAudioSettings, normalizeAudioSettings, type AudioProjectSettings } from '../runtime/audio'
 import { normalizeParticleEmitter } from '../runtime/particles'
@@ -42,6 +42,9 @@ import { buildSettings, normalizeBuildSettings, serializeBuildSettings } from '.
 import { normalizeScriptSettings, scriptProjectSettings, serializeScriptSettings } from '../runtime/scriptSettings'
 import { hydrateProjectMetadata, serializeProjectMetadata } from '../projects/projectSession'
 import { NOVA_PROJECT_FORMAT, NOVA_PROJECT_FORMAT_MAJOR, projectCompatibility } from '../projects/projectFormat'
+import { hydrateProjectManifest, serializeProjectManifest } from '../projects/projectManifest'
+import { canonicalProjectText } from '../projects/projectData'
+import { recordManualSave, storeRecoverySnapshot } from '../runtime/recovery'
 import { loadPluginManifests, serializePluginManifests } from '../runtime/plugins'
 import { useSaveProject } from '../runtime/saveGame'
 import { loadRenderingSettings, serializeRenderingSettings } from '../renderer/renderSettings'
@@ -94,6 +97,8 @@ export interface SceneEntityData {
   prefabInstanceUuid?: string | null
   prefabSourceUuid?: string | null
   prefabOverrides?: Record<string, unknown>
+  prefabLayers?: Array<{ asset?: string; instanceUuid?: string; sourceUuid?: string; overrides?: Record<string, unknown> }>
+  sceneLayers?: Array<{ asset?: string; instanceUuid?: string; sourceUuid?: string }>
   components?: SceneComponentData[]
 }
 
@@ -292,6 +297,8 @@ export function serializeEntity(entity: Entity): Record<string, unknown> {
     prefabInstanceUuid: entity.prefabInstanceUuid,
     prefabSourceUuid: entity.prefabSourceUuid,
     prefabOverrides: JSON.parse(JSON.stringify(entity.prefabOverrides)) as Record<string, unknown>,
+    prefabLayers: JSON.parse(JSON.stringify(entity.prefabLayers)) as typeof entity.prefabLayers,
+    sceneLayers: JSON.parse(JSON.stringify(entity.sceneLayers)) as typeof entity.sceneLayers,
     entityType: entity.entityType,
     components: [...entity.componentMap.values()].map(serializeComponent)
   }
@@ -324,6 +331,7 @@ function serializeActiveScene(): Record<string, unknown> {
 
 function projectSource(): Record<string, unknown> {
   sceneManager.captureActive(serializeActiveScene())
+  synchronizeAssetDependencyMetadata({ scenes: sceneManager.serialize() })
   return {
     projectFormat: NOVA_PROJECT_FORMAT,
     projectFormatMajor: NOVA_PROJECT_FORMAT_MAJOR,
@@ -331,8 +339,10 @@ function projectSource(): Record<string, unknown> {
     engineVersion: physicsState.world.projectEngineVersion,
     compatibility: projectCompatibility(),
     projectMetadata: serializeProjectMetadata(),
+    manifest: serializeProjectManifest(),
     assets: serializeAssets(),
     assetFolders: serializeAssetFolders(),
+    assetDatabase: serializeAssetDatabaseSettings(),
     plugins: serializePluginManifests(),
     packages: serializePackageState(),
     projectSettings: { inputMap: normalizeInputMap(physicsState.inputMap), audio: normalizeAudioSettings(physicsState.audioSettings), build: serializeBuildSettings(), scripting: serializeScriptSettings(), rendering: serializeRenderingSettings(), world: serializeWorldGameplaySettings(), presentation: { localization: serializeLocalizationSettings(), accessibility: serializeRuntimeAccessibilitySettings() }, production: serializeProductionSettings() },
@@ -346,7 +356,7 @@ function projectSource(): Record<string, unknown> {
 
 export function getSceneJSON(): string {
   const source = JSON.stringify(projectSource())
-  return physicsState.world.formatProjectJson(source)
+  return canonicalProjectText(physicsState.world.formatProjectJson(source))
 }
 
 const ASSET_COMPONENT_FIELDS: Partial<Record<ComponentKind, string[]>> = {
@@ -1065,6 +1075,14 @@ export function createEntityFromData(item: SceneEntityData, forcedId?: number): 
   entity.prefabOverrides = item.prefabOverrides && typeof item.prefabOverrides === 'object' && !Array.isArray(item.prefabOverrides)
     ? JSON.parse(JSON.stringify(item.prefabOverrides)) as Record<string, unknown>
     : {}
+  entity.prefabLayers = Array.isArray(item.prefabLayers) ? item.prefabLayers.flatMap(layer => {
+    if (!layer || typeof layer.asset !== 'string' || typeof layer.instanceUuid !== 'string' || typeof layer.sourceUuid !== 'string') return []
+    return [{ asset: layer.asset, instanceUuid: normalizeUuid(layer.instanceUuid), sourceUuid: normalizeUuid(layer.sourceUuid), overrides: layer.overrides && typeof layer.overrides === 'object' ? JSON.parse(JSON.stringify(layer.overrides)) as Record<string, unknown> : {} }]
+  }).slice(0, 32) : []
+  entity.sceneLayers = Array.isArray(item.sceneLayers) ? item.sceneLayers.flatMap(layer => {
+    if (!layer || typeof layer.asset !== 'string' || typeof layer.instanceUuid !== 'string' || typeof layer.sourceUuid !== 'string') return []
+    return [{ asset: layer.asset, instanceUuid: normalizeUuid(layer.instanceUuid), sourceUuid: normalizeUuid(layer.sourceUuid) }]
+  }).slice(0, 32) : []
 
   if (entity.isStatic) entity.isKinematic = false
   normalizeEntity(entity)
@@ -1200,6 +1218,7 @@ export function instantiateEntityBundle(
   const sourceToRuntimeId = new Map<number, number>()
   const pendingParents = new Map<Entity, string | null>()
   const clonedPrefabInstances = new Map<string, string>()
+  const clonedSceneInstances = new Map<string, string>()
   for (const record of clipboard.entities) {
     const sourceUuid = normalizeUuid(record.uuid)
     const sourceRuntimeId = typeof record.id === 'number' ? record.id : null
@@ -1219,6 +1238,16 @@ export function instantiateEntityBundle(
       }
       clone.prefabInstanceUuid = instanceUuid
     }
+    clone.prefabLayers = clone.prefabLayers.map(layer => {
+      let instanceUuid = clonedPrefabInstances.get(layer.instanceUuid)
+      if (!instanceUuid) { instanceUuid = normalizeUuid(undefined); clonedPrefabInstances.set(layer.instanceUuid, instanceUuid) }
+      return { ...layer, instanceUuid }
+    })
+    clone.sceneLayers = clone.sceneLayers.map(layer => {
+      let instanceUuid = clonedSceneInstances.get(layer.instanceUuid)
+      if (!instanceUuid) { instanceUuid = normalizeUuid(undefined); clonedSceneInstances.set(layer.instanceUuid, instanceUuid) }
+      return { ...layer, instanceUuid }
+    })
     sourceToClone.set(sourceUuid, clone)
     if (sourceRuntimeId !== null) sourceToRuntimeId.set(sourceRuntimeId, clone.id)
     pendingParents.set(clone, sourceParent)
@@ -1411,8 +1440,9 @@ export function loadProject(jsonString: string, preserveRuntimeSession = false):
     if (!root || typeof root !== 'object') throw new Error(t('invalidProjectRoot'))
     const project = root as Record<string, unknown>
     hydrateProjectMetadata(project.projectMetadata)
+    hydrateProjectManifest(project.manifest)
     useSaveProject()
-    loadAssets(project.assets, project.assetFolders)
+    loadAssets(project.assets, project.assetFolders, project.assetDatabase)
     loadPluginManifests(project.plugins)
     loadPackageState(project.packages)
     const projectSettings = project.projectSettings && typeof project.projectSettings === 'object'
@@ -1498,8 +1528,10 @@ function reloadSceneManagerProject(preserveRuntimeSession = false): boolean {
     engineVersion: physicsState.world.projectEngineVersion,
     compatibility: projectCompatibility(),
     projectMetadata: serializeProjectMetadata(),
+    manifest: serializeProjectManifest(),
     assets: serializeAssets(),
     assetFolders: serializeAssetFolders(),
+    assetDatabase: serializeAssetDatabaseSettings(),
     plugins: serializePluginManifests(),
     packages: serializePackageState(),
     projectSettings: { inputMap: normalizeInputMap(physicsState.inputMap), audio: normalizeAudioSettings(physicsState.audioSettings), build: serializeBuildSettings(), scripting: serializeScriptSettings(), rendering: serializeRenderingSettings(), world: serializeWorldGameplaySettings(), presentation: { localization: serializeLocalizationSettings(), accessibility: serializeRuntimeAccessibilitySettings() }, production: serializeProductionSettings() },
@@ -1641,23 +1673,27 @@ export function hasRuntimeSession(): boolean {
 
 export async function saveProject(): Promise<boolean> {
   const jsonString = stableProjectText(getSceneJSON())
+  let staged: { write: (value: string) => Promise<void>; close: () => Promise<void>; abort?: () => Promise<void> } | null = null
   try {
     if ('showSaveFilePicker' in window) {
       const handle = await (window as unknown as {
         showSaveFilePicker: (options: unknown) => Promise<{
-          createWritable: () => Promise<{ write: (value: string) => Promise<void>; close: () => Promise<void> }>
+          createWritable: () => Promise<{ write: (value: string) => Promise<void>; close: () => Promise<void>; abort?: () => Promise<void> }>
         }>
       }).showSaveFilePicker({
           suggestedName: 'project.nova',
           types: [{ description: 'Nova_A Project', accept: { 'application/json': ['.nova', '.json'] } }]
       })
-      const writable = await handle.createWritable()
-      await writable.write(jsonString)
-      await writable.close()
+      staged = await handle.createWritable()
+      await staged.write(jsonString)
+      await staged.close()
+      staged = null
       markSourceBaseline(jsonString)
+      recordManualSave()
       return true
     }
   } catch (error) {
+    if (staged?.abort) try { await staged.abort() } catch { /* Preserve the original save error. */ }
     if (error instanceof DOMException && error.name === 'AbortError') return false
     console.warn('File System API failed', error)
   }
@@ -1670,6 +1706,7 @@ export async function saveProject(): Promise<boolean> {
   anchor.click()
   window.setTimeout(() => URL.revokeObjectURL(url), 0)
   markSourceBaseline(jsonString)
+  recordManualSave()
   return true
 }
 
@@ -1744,6 +1781,7 @@ export function duplicateEntity(id: number): Entity | null {
 const commandHistory = new CommandHistory(100)
 let historyBaseline: string | null = null
 let applyingHistory = false
+let activeHistoryTransaction: { label: string; mergeKey: string | null; before: string } | null = null
 export const historyState = reactive({
   length: 0,
   index: -1,
@@ -1772,7 +1810,9 @@ function scheduleAutosave(): void {
   if (autosaveTimer !== null) window.clearTimeout(autosaveTimer)
   autosaveTimer = window.setTimeout(() => {
     try {
-      localStorage.setItem(AUTOSAVE_KEY, getSceneJSON())
+      const source = getSceneJSON()
+      localStorage.setItem(AUTOSAVE_KEY, source)
+      storeRecoverySnapshot(source, 'autosave')
       autosaveState.available = true
     } catch (error) {
       console.warn('Nova_A could not write the local autosave.', error)
@@ -1819,6 +1859,7 @@ function applyHistoryDocument(document: string): void {
 export function pushHistory(label = 'Edit scene', mergeKey: string | null = null): void {
   if (physicsState.playMode !== 'editing' || applyingHistory) return
   const stateString = getSceneJSON()
+  if (activeHistoryTransaction) { historyBaseline = stateString; scheduleAutosave(); return }
   if (historyBaseline === null) {
     historyBaseline = stateString
     syncHistoryState()
@@ -1837,6 +1878,28 @@ export function pushHistory(label = 'Edit scene', mergeKey: string | null = null
   syncHistoryState()
   scheduleAutosave()
   window.setTimeout(() => refreshSourceStatus(getSceneJSON()), 0)
+}
+
+/** Groups any number of document mutations into one named, reversible command. */
+export function beginHistoryTransaction(label: string, mergeKey: string | null = null): boolean {
+  if (activeHistoryTransaction || physicsState.playMode !== 'editing' || applyingHistory) return false
+  const before = getSceneJSON(); if (historyBaseline === null) historyBaseline = before
+  activeHistoryTransaction = { label: label.trim().slice(0, 160) || 'Edit scene', mergeKey, before }
+  return true
+}
+
+export function commitHistoryTransaction(): boolean {
+  const transaction = activeHistoryTransaction; if (!transaction) return false
+  activeHistoryTransaction = null
+  const after = getSceneJSON(); historyBaseline = after
+  if (after === transaction.before) { syncHistoryState(); return false }
+  commandHistory.commit(new DocumentMutationCommand({ label: transaction.label, before: transaction.before, after, apply: applyHistoryDocument, mergeKey: transaction.mergeKey }), true)
+  syncHistoryState(); scheduleAutosave(); window.setTimeout(() => refreshSourceStatus(getSceneJSON()), 0); return true
+}
+
+export function cancelHistoryTransaction(): boolean {
+  const transaction = activeHistoryTransaction; if (!transaction) return false
+  activeHistoryTransaction = null; applyHistoryDocument(transaction.before); historyBaseline = transaction.before; syncHistoryState(); return true
 }
 
 export function undo(): void {

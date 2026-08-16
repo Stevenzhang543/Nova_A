@@ -43,6 +43,7 @@ export const projectManagerState = reactive({
   recents: readRecents() as RecentProject[],
   currentSnapshot: null as string | null,
   pendingUpgrade: null as null | { source: string; fileName: string; importAsCopy: boolean; preview: UpgradePreview },
+  readOnlyDocument: null as null | { source: string; fileName: string; preview: UpgradePreview },
   backupBeforeUpgrade: true
   ,rollbackAvailable: readUpgradeRollback() !== null
 })
@@ -68,6 +69,12 @@ export async function createNewProject(name: string, template: ProjectTemplateId
 export async function openProjectDocument(source: string, fileName = 'project.nova', importAsCopy = false): Promise<boolean> {
   try {
     const preview = analyzeProjectUpgrade(source)
+    if (!preview.supported && preview.sourceSchema > preview.targetSchema) {
+      projectManagerState.readOnlyDocument = { source, fileName, preview }
+      projectManagerState.visible = true
+      projectManagerState.error = ''
+      return false
+    }
     if (!preview.supported) throw new Error(preview.warnings[0] || 'This project cannot be opened safely by this Nova_A version.')
     if (preview.requiresMigration) {
       projectManagerState.pendingUpgrade = { source, fileName, importAsCopy, preview }
@@ -87,12 +94,17 @@ async function openProjectDocumentNow(source: string, fileName = 'project.nova',
   projectManagerState.error = ''
   try {
     await physicsState.world.wasmReady
+    let previousProject: string | null = null
+    try { previousProject = getSceneJSON() } catch { previousProject = null }
     let existingMetadata = false
     try {
       const parsed = JSON.parse(source) as Record<string, unknown>
       existingMetadata = !!parsed?.projectMetadata
     } catch { /* The canonical loader reports the useful parse error. */ }
-    if (!loadProject(source)) throw new Error('The project is invalid, unsupported, or newer than this Nova_A version.')
+    if (!loadProject(source)) {
+      if (previousProject) loadProject(previousProject)
+      throw new Error('The project is invalid, unsupported, or newer than this Nova_A version. The previous project was restored.')
+    }
     if (importAsCopy || !existingMetadata) {
       const baseName = fileName.replace(/\.(nova|json)$/i, '')
       beginProjectSession(newProjectMetadata(`${safeProjectName(baseName)}${importAsCopy ? ' (Imported)' : ''}`, 'imported'))
@@ -106,6 +118,16 @@ async function openProjectDocumentNow(source: string, fileName = 'project.nova',
     projectManagerState.error = error instanceof Error ? error.message : String(error)
     return false
   } finally { projectManagerState.busy = false }
+}
+
+export function closeReadOnlyDocument(): void { projectManagerState.readOnlyDocument = null }
+
+export function downloadReadOnlyDocument(): void {
+  const document = projectManagerState.readOnlyDocument
+  if (!document) return
+  const url = URL.createObjectURL(new Blob([document.source], { type: 'application/json' }))
+  const anchor = window.document.createElement('a'); anchor.href = url; anchor.download = document.fileName; anchor.click()
+  window.setTimeout(() => URL.revokeObjectURL(url), 0)
 }
 
 export async function applyPendingProjectUpgrade(): Promise<boolean> {

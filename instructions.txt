@@ -1,407 +1,2594 @@
-# Nova_A 2.1.0 -> 3.0.0 Product and Engineering Roadmap
-
-Document status: authoritative roadmap
-Last reviewed: 2026-08-12
-Product owner: Whitelist
-Project: https://github.com/Stevenzhang543/Nova_A
-
-## 1. Product decision
-
-Nova_A is a professional, 2D-first game engine and editor. Its goal is not to copy every subsystem in Unity or Unreal Engine. Literal feature parity would require 3D rendering, ray tracing, VR/XR, cinematic virtual production, terrain, foliage, and AAA content pipelines, which would destroy Nova_A's lightweight identity.
-
-The target is instead:
-
-- Complete feature coverage for building, debugging, profiling, exporting, and extending serious 2D games.
-- Familiar workflows for users coming from Unity, Unreal, Godot, GameMaker, or Defold.
-- A small, fast core whose optional systems are loaded only when a project uses them.
-- Precise world units and persistent Rust physics as first-class advantages.
-- An open extension API so specialized capabilities do not have to become permanent core weight.
-- Backward-compatible projects, explicit migrations, and no silent data loss.
-
-Nova_A 3.0 must be better than broad engines in measurable, focused ways: editor startup time, empty-player size, iteration latency, deterministic 2D simulation, clarity of the 2D workflow, and the amount of functionality available without installing a large toolchain. It does not claim to be universally better at workloads outside its 2D scope.
-
-## 2. What Nova_A already provides at 2.0.0
-
-### Architecture and project data
-
-- Vue 3 editor, Tauri desktop shell, WebAssembly bridge, and modular Rust workspace.
-- Separate `nova_math`, `nova_physics`, `nova_runtime`, `nova_script`, `nova_format`, and `nova_wasm` crates.
-- Persistent Rust physics world with stable runtime handles and a compact typed-array state bridge.
-- Format 2 / schema 14 project documents, centralized validation and migration from older schemas.
-- Project Manager, recent projects, autosave, templates, scenes, entities, components, hierarchy, parenting, UUIDs, prefabs, and overrides.
-- Asset database with stable GUID references and import metadata.
-
-### Runtime and gameplay
-
-- Fixed-timestep runtime, time scale, pause, single-step, scene lifecycle, and collision/trigger events.
-- Rhai scripting with lifecycle callbacks, input, entity, transform, physics, scene, audio, UI, save-data, and event APIs.
-- Named keyboard, mouse, wheel, and gamepad input actions.
-- Runtime UI components, event callbacks, focusable text input, and game-view interaction.
-- Save slots and project-local runtime state.
-
-### Physics
-
-- Dynamic, kinematic, and static rigid bodies.
-- Mass/density/inertia, forces, impulses, torque, gravity, damping, sleep, freeze rotation, and CCD settings.
-- Convex polygon, ellipse, and editor shape collision with GJK/EPA/contact solving.
-- Restitution, static/dynamic friction, sensors, one-way collision, physics layers, and masks.
-- Fixed, distance, revolute, prismatic, and spring joints.
-- Physical strings with bend/stretch constraints, collisions, anchor forces, and breakage.
-- Rigid compound binding and separation.
-- Layer isolation: objects on separate logical layers do not physically interact.
-- Physics queries, diagnostics, collider overlays, contacts, and runtime statistics.
-
-### Rendering and content
-
-- WebGL2 renderer with Canvas2D fallback, batching, culling, editor overlays, ordering, cameras, sprites, shapes, and text.
-- Texture import, tint, opacity, filtering, custom fonts, and layer-specific default colors.
-- Sprite/property animation clips and animator controllers.
-- Audio sources/listeners and audio buses.
-- Particles and tilemaps.
-- Editor Scene and Game views, move/rotate/scale gizmos, snapping, grids, axes, zoom, and selection.
-
-### Production tools
-
-- Assets, Console, Animation, Profiler, Tilemap, Project Settings, and Build Settings panels.
-- Windows and web-oriented build/player pipeline, packed `.nova-pak` content, build reports, crash logs, and diagnostics.
-- Initial sandboxed WASM plugin runtime.
-- English, German, and Chinese UI and manuals.
-
-## 3. Research comparison and lessons
-
-The roadmap is based on official documentation reviewed in August 2026.
-
-| Engine | Strongest workflow ideas | Expansion model | Trade-off Nova_A should avoid |
-| --- | --- | --- | --- |
-| Unity | Project/Hierarchy/Scene/Game/Inspector mental model; component composition; searchable Package Manager; UI Toolkit and visual authoring | Registry, Git, disk, and embedded packages; custom editor windows and inspectors | Large installation and many packages/subsystems visible even in small projects |
-| Unreal Engine | Task-specific editors; World Outliner + Details; dockable layouts; Content Drawer stays hidden until needed | Code/data plugins, editor modes, utility widgets, menu/toolbar tools | 3D-first complexity and an intimidating number of specialized panels |
-| Godot | Clear 2D/3D/Script workspaces; contextual docks; bottom panels folded by default; integrated docs and script editor | Editor/import plugins and GDExtension | A single inspector can still become long when nodes gain many capabilities |
-| GameMaker | Multiple workspaces and pop-out layouts; direct room/object/sprite editors | Marketplace/extensions | Proprietary workflow and less general low-level control |
-| Defold | Small editor; assets plus focused editors; compact runtime and reusable collections | Editor scripts and native extensions | Native extensions can require rebuilding a project-specific engine |
-
-Sources:
-
-- Unity Editor: https://docs.unity.cn/6000.2/Documentation/Manual/unity-editor.html
-- Unity Package Manager: https://docs.unity3d.com/Manual/upm-ui.html
-- Unity UI Toolkit: https://docs.unity3d.com/2023.2/Documentation/Manual/UIElements.html
-- Unity Visual Scripting: https://docs.unity.cn/6000.1/Documentation/Manual/com.unity.visualscripting.html
-- Unreal Editor interface: https://dev.epicgames.com/documentation/en-us/unreal-engine/unreal-editor-interface
-- Unreal layout customization: https://dev.epicgames.com/documentation/en-us/unreal-engine/layout-customization
-- Unreal plugins: https://dev.epicgames.com/documentation/en-us/unreal-engine/plugins-in-unreal-engine
-- Unreal tools and editors: https://dev.epicgames.com/documentation/en-us/unreal-engine/tools-and-editors-in-unreal-engine
-- Godot editor overview: https://docs.godotengine.org/en/stable/getting_started/introduction/first_look_at_the_editor.html
-- Godot editor plugins: https://docs.godotengine.org/en/stable/tutorials/plugins/editor/index.html
-- Godot feature list: https://docs.godotengine.org/en/stable/about/list_of_features.html
-- Defold editor: https://defold.com/manuals/editor/
-- Defold editor scripts: https://defold.com/manuals/editor-scripts/
-- Defold native extensions: https://defold.com/manuals/extensions/
-- GameMaker workspaces: https://manual.gamemaker.io/beta/en/Introduction/Workspaces.htm
-
-The main lesson is not to place every capability in one permanent inspector. Nova_A must use stable global navigation, task workspaces, contextual editors, a searchable component picker, a folded bottom drawer, and user-persisted panel choices.
-
-## 4. Feature gaps to close before 3.0
-
-### Editor workflow gaps
+# Nova_A 3.0.0 Product Capability Audit and Development Roadmap
 
-- No task-focused workspaces or saved panel arrangements.
-- No command palette or global command/search system.
-- The inspector is a single long stream; adding components requires scrolling.
-- No general dock/floating-panel model or user-named layouts.
-- Asset types do not consistently open dedicated contextual editors.
-- Limited keyboard-only navigation and editor accessibility.
-
-### Scripting and gameplay gaps
-
-- Script editor lacks language-service completion, symbol navigation, safe rename, breakpoints, watches, and a real debugger.
-- Script modules, dependency declarations, coroutines/tasks, signals, and typed generated API documentation are incomplete.
-- No optional visual scripting/state-graph gameplay system.
-- Navigation, agents, behavior tools, and a production character controller are missing.
-- Networking is missing; it should be optional rather than core weight.
+## Version 3.1.0 through Version 4.0.0
 
-### Rendering, animation, and content gaps
-
-- No 2D lighting/shadows, normal maps, material graph, user shaders, render textures, camera stacks, or post-processing stack.
-- Animation lacks curve editing, events, blend trees, skeletal rigs, IK, and a general timeline/sequencer.
-- Asset importing lacks a dependency graph, content-addressed cache, background import workers, hot reimport, and platform variants.
-- Tilemap workflow needs palettes, rule tiles, terrain painting, streaming chunks, and navigation/collision baking.
-
-### Audio, UI, and world gaps
+**Document ID:** NOVA-A-PLAN-3.1-4.0
+**Status:** Development Planning Baseline
+**Prepared for:** Code Department
+**Prepared by:** Chief Development Planner
+**Date:** 16 August 2026
+**Product reviewed:** Nova_A 3.0.0, project format 2, schema 22
 
-- No audio mixer effects, snapshots, ducking, streaming, or spatial attenuation authoring.
-- UI needs responsive containers, style/theme resources, localization-aware layout, full focus navigation, and reusable UI scenes.
-- No localization database, plural rules, fallback fonts, or translation preview.
-- No world partition/chunk streaming or origin-management tools for large 2D worlds.
 
-### Extensibility and shipping gaps
+## Document Purpose
 
-- Plugin API 1 is runtime-only and too small. It lacks editor commands, panels, importers, custom components, inspectors, settings, and build hooks.
-- No package registry/client, dependency lockfile, compatibility resolver, signing, or permission review UI.
-- Native desktop export is host-oriented; Android and polished platform templates are absent.
-- Source-control status/diff/merge workflows and team-safe scene files need improvement.
-- Automated scene/runtime tests, deterministic replay, memory budgets, and frame-trace capture are incomplete.
-
-## 5. Non-negotiable engineering rules for every release
+This document has four purposes:
 
-1. Preserve features and project data. When a workflow is replaced, the replacement must expose the same capability before the old UI is removed.
-2. Never silently discard unknown components, fields, assets, plugin data, or newer project data.
-3. Every persisted format change requires validation, migration, round-trip tests, corruption tests, and an explicit schema bump.
-4. Every user-visible string must exist in English, German, and Chinese. Layout tests must include all three languages.
-5. Physics uses finite `f64` values and exact world units. One configured metre equals one world metre; viewport zoom never changes simulation values.
-6. Runtime physics remains in Rust. The frontend does not become a second authoritative physics implementation.
-7. Rendering may interpolate visual transforms but must not write interpolated state back into physics.
-8. Optional systems must be lazy or package-based. A project pays runtime and distribution cost only for features it uses.
-9. No unbounded per-frame allocations, DOM growth, event listeners, timers, asset caches, logs, or script work queues.
-10. Keyboard, mouse, gamepad, narrow-window, high-DPI, light/dark theme, reduced-motion, and all-language behavior must be audited.
-11. Build gates are `cargo fmt --check`, `cargo clippy --workspace --all-targets -- -D warnings`, `cargo test --workspace --all-targets`, `vue-tsc --noEmit`, production web build, manual audit, and release-specific audits.
-12. Each feature must have a visible UI entry, a saved representation when applicable, a runtime/calculation binding, error handling, undo/redo where applicable, documentation, and tests.
+1. Identify the functionality that is visibly present in Nova_A 3.0.0.
+2. Identify the technical, workflow, usability, stability, and product gaps between the current engine and a mature developer-facing 2D engine.
+3. Identify low-value, duplicated, misplaced, or confusing features that should be removed, merged, relocated, or redesigned.
+4. Convert the findings into an implementable release plan from version 3.1.0 through version 4.0.0.
 
-## 6. Performance and size budgets
+The plan deliberately prioritizes complete development workflows, project safety, and engineering quality over adding more visible panels. A mature engine is not defined by the number of buttons it displays. It is defined by whether a developer can create, debug, version, export, maintain, and upgrade a real game without losing work or fighting the tool.
 
-These are release targets, not claims until measured on the documented reference machine.
 
-- Editor cold start to usable Project Manager: <= 3 seconds.
-- Existing-project open to editable scene for a medium project: <= 2 seconds excluding first-time external asset decoding.
-- Empty standalone player executable and engine code: <= 15 MB before game assets and OS web-runtime prerequisites.
-- Editor idle working set: <= 300 MB for an empty project.
-- Inspector or workspace switch response: <= 100 ms at the 95th percentile.
-- Script edit to hot-reload result: <= 500 ms for a small project.
-- 10,000 visible static sprites at 60 FPS on the published integrated-GPU reference profile, with a documented benchmark scene.
-- Physics produces no NaN/Infinity for any accepted finite input and remains stable across supported tick rates.
-- A deterministic replay test produces identical checksums on repeated runs of the same engine build and platform.
+# 1. Executive Assessment
 
-Performance work may not reduce visual quality by silently lowering sampling, disabling animation, removing collision, or changing configured precision. Explicit quality levels are allowed only when user-selectable and documented.
+## 1.1 Overall conclusion
 
-## 7. Release plan
+Nova_A 3.0.0 presents a broad and visually coherent editor surface. The screenshots show project templates, a scene editor, an object hierarchy, an inspector, an asset browser, a package manager, a Rhai script editor, an embedded game view, a console, physics settings, animation tooling, rendering and shader tooling, tilemap tooling, UI tooling, profiling, build configuration, localization-related controls, input mapping, save-data inspection, plugin security controls, and optional networking concepts.
 
-### 2.1.0 - Workspace and Editor UX Foundation
+That breadth is a strong foundation. It also creates the largest product risk: the editor currently appears to expose more systems than can be verified as complete, integrated, and production-safe. The main requirement for the 3.x roadmap is therefore not “add every missing feature immediately.” It is “turn the current breadth into reliable end-to-end workflows.”
 
-Goal: make every existing feature discoverable without making users search through one long right panel.
+Based on the screenshots alone, Nova_A should be treated as an **advanced prototype or early alpha editor platform**, not yet as a production-grade engine. This classification does not mean the underlying implementation is poor. It means the screenshots do not demonstrate the durability requirements expected from a mature engine: deterministic project serialization, safe migrations, complete undo and redo, dependency-preserving asset operations, debugging depth, platform export validation, crash recovery, long-duration stability, API compatibility policy, extensive documentation, and automated release evidence.
 
-Implement:
+## 1.2 Strongest current areas
 
-1. Add a persistent workspace model with Design, Script, Animation, Interface, and Debug presets.
-2. Add a workspace bar that switches page, hierarchy visibility, inspector visibility, bottom drawer tab, bottom drawer height, and focus mode as one reversible layout transaction.
-3. Preserve the user's latest layout in local storage. Reject malformed stored values and provide Reset Layout.
-4. Keep the bottom drawer collapsed in the default Design workspace. Never hide its tabs when it is available.
-5. Add explicit Hierarchy, Inspector, Bottom Panel, and Focus Mode controls. Focus Mode is temporary and must not erase the saved layout.
-6. Add a global command palette on `Ctrl/Cmd+K` and `Ctrl/Cmd+Shift+P`. Commands must be searchable by localized label and keywords, keyboard navigable, and usable without a mouse.
-7. Include commands for workspaces, Scene/Game views, settings, every bottom tool, panel toggles, and layout reset.
-8. Redesign the inspector header as a sticky control area with search, category filters, and an always-visible Add Component button.
-9. Replace the bottom-of-inspector component list with a searchable, categorized component picker. This relocates the feature; it does not remove any component type.
-10. Filter both core and optional/runtime components by category and translated name. A zero-result state must explain how to clear the filter.
-11. Add responsive rules so the workspace bar, inspector picker, and command palette remain usable at the minimum 900 x 600 desktop size and in all three languages.
-12. Update all version metadata to 2.1.0 and document the new navigation in all manuals.
+The strongest visible areas are:
 
-Implementation boundaries:
+- A consistent dark visual system and recognizable editor structure.
+- Template-based project creation for blank 2D, platformer, top-down, physics, UI, and networking use cases.
+- A multi-workspace editor that separates design, scripting, animation, UI, and debugging.
+- An integrated asset browser with many declared asset types.
+- A package manager with offline mode, compatibility states, a lock concept, and plugin security controls.
+- A built-in Rhai editor with lifecycle functions, exported values, input access, physics calls, diagnostics, and tests.
+- Physics-oriented settings, a 32-layer collision matrix, rigid-body controls, and debug visualization concepts.
+- A profiler-like “Production Lab” with frame timing, memory, render, script, physics, animation, and audio categories.
+- Rendering diagnostics and custom GLSL ES shader editing.
+- Dedicated tilemap, animation, UI, input, build, and settings surfaces.
+- A release-oriented build panel rather than a single opaque “Export” button.
 
-- Workspace/layout state belongs in `src/editor`, not in physics or project documents.
-- User layout preferences are machine-local and must never dirty or alter the game project.
-- Existing editor page, bottom panel, inspector editing, undo/redo, and runtime-isolation behavior must remain unchanged.
-- Workspace changes must call the existing resize/reconfigure path so the canvas never stretches or disappears.
+## 1.3 Highest-risk gaps
 
-Acceptance tests:
+The highest-risk gaps are:
 
-- Switch through every workspace and return to Design; no panel overlaps and viewport bounds remain valid.
-- Reload the editor; layout preferences restore, while a corrupt preference falls back safely.
-- Open every existing bottom panel through the command palette.
-- Select an entity with every component; locate, edit, reset, copy/paste, and remove components with filters active.
-- Add every allowed component without scrolling to the inspector bottom.
-- Test keyboard-only palette/picker operation, Escape handling, three languages, both themes, high contrast, reduced motion, and 900 x 600.
+- The project, scene, resource, and reference model is not visibly defined well enough for large projects or source control.
+- Undo, redo, crash recovery, autosave restoration, file migration, and corruption recovery are not visibly complete.
+- Asset import, reimport, metadata, thumbnails, dependency tracking, rename-safe references, and hot reload are not demonstrated.
+- The scene and object workflow is too shallow in the screenshots: basic object creation is visible, but robust multi-object editing, prefab overrides, scene instancing, property reset, property validation, and complex gizmos are not.
+- The scripting editor shows a useful shell, but not a production debugger with breakpoints, stack frames, locals, watches, conditional breakpoints, hot reload rules, or a stable API contract.
+- Rendering appears tied to WebGL2 in project information. A mature desktop editor needs a defined native runtime path, renderer capability tiers, robust shader validation, sprite batching, texture and font pipelines, render targets, and cross-GPU regression testing.
+- The animation, tilemap, UI, navigation, AI, streaming, networking, audio, and package systems are visibly broad but not proven deep.
+- Build support appears centered on Windows x86-64. Build reproducibility, command-line export, signing, symbols, CI, Linux, macOS, web validation, and clean-machine tests are not demonstrated.
+- There is no visible API lifecycle, compatibility policy, long-term support policy, or systematic migration process.
+- Many advanced or diagnostic functions are placed in general settings or permanent navigation, creating clutter and confusing information architecture.
 
-### 2.2.0 - Script Studio and Gameplay Events
+## 1.4 Product direction for version 4.0.0
 
-Goal: make scripting a first-class, debuggable workflow rather than a text field.
+Nova_A 4.0.0 should not attempt to match every feature in every competing engine. It should establish a clear production baseline:
 
-Implement:
+- A stable, documented 2D runtime.
+- A deterministic, migration-safe, version-control-friendly project format.
+- A complete scene, resource, prefab, and asset pipeline.
+- A productive 2D editor with strong inspector, hierarchy, gizmo, camera, sprite, tilemap, animation, UI, physics, input, audio, and debugging workflows.
+- One Tier-1 native desktop target and one Tier-1 web target, with additional targets clearly labeled by support level.
+- A stable Rhai API and a real debugger.
+- A package and plugin system with dependency resolution, permissions, signatures, lockfiles, and rollback.
+- Automated quality gates and evidence for every release.
+- No unresolved severity-0 or severity-1 defects at release.
 
-- A dedicated Script workspace with tabbed files, project search, find/replace, line/column status, diagnostics, generated engine API reference, completion, signature help, hover documentation, symbol list, go-to definition, and safe rename.
-- A parser/language service for the supported Rhai subset. Analysis runs in a worker and is cancellable.
-- Compile-on-save and hot reload at a safe frame boundary. Keep previous valid bytecode if a new edit fails.
-- Breakpoints, pause/continue/step, call stack, locals, watches, and bounded console inspection.
-- Script modules, explicit exports, read-only project package dependencies, and circular-dependency diagnostics.
-- Typed engine handles and consistent error values instead of silent null behavior.
-- A signal/event system for editor-authored custom events, collision/trigger events, UI events, animation events, and scene lifecycle events.
-- Coroutine/task primitives tied to scene/entity lifetime so destroyed owners cancel pending work.
-- A script test runner with headless lifecycle, event, and error-isolation tests.
+## 1.5 Immediate planning decisions
 
-Do not allow script failures to crash physics, rendering, the editor, or unrelated entities. Debug-only facilities must be stripped from release players unless enabled.
+The following decisions should be approved before 3.1.0 development begins:
 
-### 2.3.0 - 2D Rendering, Materials, and Lighting
+1. **Feature freeze for unsupported surfaces.** Networking, AI, world streaming, object pooling, and advanced material tooling must be labeled Experimental until they pass end-to-end tests.
+2. **Core-before-breadth policy.** Project safety, scene and resource integrity, undo and redo, migration, import, debugging, and export reliability receive priority over new visible subsystems.
+3. **Information architecture reset.** Duplicate workspaces and misplaced diagnostics must be merged or relocated.
+4. **Tiered platform policy.** The team must name Tier-1, Tier-2, and Experimental platforms rather than implying equal support.
+5. **Release evidence as a mandatory artifact.** A release is not complete when binaries are built; it is complete when tests, provenance, checksums, migration evidence, and clean-machine validation are captured.
 
-Goal: deliver modern 2D visuals while keeping the default renderer compact.
 
-Implement:
+# 2. Review Method and Evidence Limits
 
-- A render graph separating world, lighting, UI, editor overlays, and post-process passes.
-- 2D point, spot, directional, and area lights; light layers/masks; ambient light; normal maps; shadow casters; soft-shadow quality levels.
-- Material resources with shader, textures, uniforms, blend mode, sampling, and render-state data.
-- A safe GLSL ES shader editor with compile diagnostics, preview, fallback material, and documented limits.
-- Render textures, multiple cameras, camera stacks, viewport rectangles, pixel-perfect camera mode, and screenshots.
-- Post-processing as optional passes: color adjustment, vignette, bloom, blur, and user shader pass.
-- Nine-slice sprites, sprite atlases, texture compression/variants, and explicit sRGB/linear handling.
-- GPU timing when supported, pass/batch/texture statistics, overdraw view, and render-debug captures.
+## 2.1 Evidence basis
 
-Canvas2D remains a compatibility fallback. Projects that do not use lights or effects must not allocate their framebuffers or shader variants.
+This assessment is based on nineteen screenshots of Nova_A 3.0.0. The screenshots cover the project manager, design workspace, resource browser, package manager, embedded run view, console, animation panel, profiler, rendering panel, tilemap panel, world tools, project information, build settings, script editor, general settings, input mappings, engine diagnostics, collision matrix, plugin and save-data settings, and UI workspace.
 
-### 2.4.0 - Animation, Rigging, and Timeline
+No source code, executable, project files, crash logs, profiler captures, export outputs, API reference, schema specification, package manifest, or automated test report was supplied. Therefore:
 
-Goal: support character animation, procedural transitions, and scripted sequences.
+- A visible button is treated as **UI-exposed functionality**, not proof that the workflow is complete.
+- A status label is treated as **declared capability**, not proof of runtime correctness.
+- Stability, performance, determinism, backward compatibility, and security cannot be confirmed from screenshots.
+- Features not visible in the screenshots are classified as “not evidenced,” not automatically “absent.”
+
+## 2.2 Capability confidence labels
+
+This document uses three confidence labels:
+
+- **Observed:** the screenshot directly shows the function or control.
+- **Implied:** the interface strongly suggests the function, but the complete workflow is not visible.
+- **Not evidenced:** the screenshots do not establish that the capability exists.
+
+## 2.3 Competitive benchmark
+
+The benchmark is category-based rather than a one-to-one imitation of another product. Current mature 2D engines publicly document broad support for scene and asset editing, scripting and debugging, profiling, physics, input, audio, animation, tilemaps, GUI systems, localization, package or extension systems, platform export, and automation. The benchmark for Nova_A is therefore the completeness and reliability of these workflows, not visual similarity to a specific editor.
+
+
+# 3. Screenshot Evidence Map
+
+- **S1 — Project Manager:** language selector, manual, version badge, recent project, open and import actions, six project templates, local snapshots, project naming.
+- **S2 — Design Workspace:** scene list, hierarchy, layers, 2D viewport, transform tools, snapping controls, object inspector, quick UI object creation, bottom tool docks.
+- **S3 — Resource Browser:** project file tree, import, new script, new folder, export project folder, resource-type filters, search, unused report, missing-reference count.
+- **S4 — Package Manager:** installed, project, updatable, incompatible, and disabled package states; offline mode; browse; manifest import; plugin security mode; lock entries.
+- **S5 — Embedded Run and Console:** game preview in the editor, console search, severity and category filters, clear action.
+- **S6 — Animation Dock:** animation clip, state machine, skeleton, skin, timeline, animation mask, asset selector, save action.
+- **S7 — Production Lab:** frame timing, subsystem timing, frame rate, memory, GPU passes, rendered-object count, graph, tracking settings, physics debug toggles.
+- **S8 — Rendering Dock:** 2D lighting controls, ambient light, shadow quality, color space, debug view, post-processing, material selection, shader editor, shader preview, render diagnostics.
+- **S9 — Tilemap Dock:** create tilemap, source image, tile size, create tile set, tile palette, brush presets, terrain rules, painting and selection tools.
+- **S10 — World Tools:** character, area effects, navigation, AI, streaming, object pool, create 2D character body.
+- **S11 — Project Information:** engine version, project format and schema, scene count, asset count, rendering backend.
+- **S12 — Build Settings:** overview, platform, delivery, team, target platform, architecture, configuration, run mode, output directory, packed executable option, scene list, build status, build and build-and-run.
+- **S13/S14 — Script Workspace:** Rhai file tree, code editor, export annotations, lifecycle methods, input calls, physics calls, collision and UI callbacks, save, find and replace, completion, go-to-definition, tests, diagnostics.
+- **S15 — General Settings:** dark and light theme, language, UI scale, compact controls, reduced motion, contrast, physics settings, audio buses and sample rate.
+- **S16 — Input Map:** named actions, button and axis actions, keyboard and gamepad bindings, values, binding addition and removal.
+- **S17 — Engine Diagnostics and Collision Matrix:** rigid-body and joint counts, frame and physics step counts, interpolation, dropped simulation time, pause state, 32-by-32 collision matrix.
+- **S18 — Canvas, Plugins, Save Data, Defaults:** grid and snap settings, connection display, pixel-density cap, project version information, WASM plugin model, save-slot inspection, autosave, default physical values.
+- **S19 — UI Workspace and Inspector:** selected object, component search, object settings, rigid-body component, UI responsive tools, localization, audio mixer, accessibility, canvas creation, layout containers, focusable controls, reusable UI scenes, theme selector.
+
+
+# 4. Functional Inventory of Nova_A 3.0.0
+
+## 4.1 Project creation and project management
+
+### Observed
+
+- Open an existing project.
+- Import a project.
+- Create a project by name.
+- Display recent projects with a local snapshot indicator and timestamp.
+- Remove a recent project entry.
+- Select interface language.
+- Open a user manual.
+- Access a GitHub entry point.
+- Create projects from six templates:
+  - Blank 2D.
+  - Platformer.
+  - Top-down game.
+  - Physics sandbox.
+  - UI demo.
+  - Optional networking.
+- Communicate project format and engine version in the project manager.
+
+### Implied
+
+- Migration from an older Nova_A project format.
+- Template-specific dependency installation.
+- Project-local snapshots.
+- Recent-project health checks.
+
+### Not evidenced
+
+- Project duplication, rename, archive, repair, validation, or safe deletion.
+- Upgrade preview and rollback.
+- Template version pinning.
+- Per-project engine version selection.
+- Recovery from an incompatible or partially migrated project.
+
+## 4.2 Editor workspaces and general layout
+
+### Observed
+
+- Top-level workspaces for Design, Script, Animation, UI, and Debug.
+- Left-side navigation for Scene, Game, and Script.
+- Bottom docks for Resources, Packages, Console, Animation, Production Lab, Rendering, Tilemap, World Tools, Presentation, Project Settings, and Build Settings.
+- Scene list, hierarchy, layer control, central viewport, object inspector, and status bar.
+- Dark theme with a consistent blue accent.
+- Dock collapse control.
+- Menus for File, Edit, Project, Debug, View, and Help.
+
+### Implied
+
+- Context switching between editing and running.
+- Dock persistence.
+- Multiple editor modes.
+
+### Not evidenced
+
+- User-defined workspaces.
+- Arbitrary docking, tab tearing, floating panels, multiple monitors, or layout profiles.
+- Command palette.
+- Global search across scenes, resources, settings, and scripts.
+- Shortcut customization.
+- Complete keyboard-only operation.
+- Per-project layout persistence and recovery.
+
+## 4.3 Scene, hierarchy, layers, and object editing
+
+### Observed
+
+- A scene list.
+- A hierarchy containing at least a camera and a box object.
+- Layer selection and layer creation.
+- Search in the hierarchy.
+- Object enable and editor-visibility controls.
+- Selection and transform tools.
+- World and local transform modes.
+- Axis and center modes.
+- Grid spacing and angle snapping.
+- Primitive creation tools for basic geometric forms.
+- An inspector with object settings, tags, UUID display, component creation, and a rigid-body component.
+- Rigid-body controls such as dynamic mode, quality mode, collision detection mode, sleeping, and rotation lock.
+
+### Implied
+
+- Component-based object configuration.
+- Persistent UUID-based object identity.
+- Multiple component categories.
+- Scene serialization.
+
+### Not evidenced
+
+- Multi-selection and batch property editing.
+- Parent and child transform rules.
+- Reparenting behavior and transform preservation.
+- Prefab or scene-instance overrides in the editor.
+- Drag-and-drop object creation.
+- Copy and paste of components and property paths.
+- Property reset, revert, pinning, validation, and override indicators.
+- Gizmos for camera, collider, light, path, joint, navigation, or audio range.
+- Grouping, locking, hiding, soloing, isolate mode, and search by component or tag.
+- Scene inheritance, nested scenes, variants, and reusable subscenes.
+- Robust undo and redo transactions.
+
+## 4.4 Resource and asset management
+
+### Observed
+
+- Project file tree.
+- Import resources.
+- Create scripts and folders.
+- Export a project folder.
+- Search resources.
+- Filter by numerous declared types, including images, audio, fonts, scenes, prefabs, scripts, materials, animations, controllers, animation masks, skeletons, skins, timelines, tile sets, atlases, shaders, localization, UI themes, data models, data tables, and recycled assets.
+- Unused-resource report.
+- Missing-reference count.
+
+### Implied
+
+- Asset typing and asset metadata.
+- Reference tracking.
+- Asset recycling or a recycle bin.
+- Previews for some resource classes.
+
+### Not evidenced
+
+- Import settings per asset.
+- Source-to-imported artifact separation.
+- Automatic reimport when source files change.
+- Dependency graph and reverse dependency view.
+- Rename-safe and move-safe references.
+- GUID or metadata sidecar policy.
+- Thumbnail generation and invalidation.
+- Import errors, retry, cancel, queue, or background processing.
+- Texture, audio, font, shader, and atlas compression settings.
+- Duplicate detection.
+- Large-project performance.
+- Source-control-friendly deterministic serialization.
+
+## 4.5 Embedded runtime preview and console
+
+### Observed
+
+- The game can run inside the editor.
+- The console supports search, severity filter, category filter, message count, and clear.
+- A visible run state is indicated in the editor.
+- Top-right controls suggest run, pause, stop, or frame controls.
+
+### Implied
+
+- Editor and runtime are separate enough to switch contexts.
+- Runtime output is routed to the editor console.
+
+### Not evidenced
+
+- Remote scene inspection.
+- Live property editing.
+- Pause-tree inspection.
+- Frame advance with deterministic behavior.
+- Multiple simultaneous instances.
+- Networked client and server test launches.
+- Console source links, stack traces, grouping, repetition collapse, and export.
+- Runtime error recovery.
+
+## 4.6 Scripting and Rhai integration
+
+### Observed
+
+- Built-in Rhai script editor.
+- Project script tree.
+- Exported variables.
+- Lifecycle functions: awake, start, fixed update, update, and late update.
+- Collision callback.
+- UI or interaction callbacks.
+- Input axis and pressed-action queries.
+- Physics force and impulse calls.
+- Save script, find and replace, code completion, go-to-definition, and run tests.
+- Problems, symbols, modules, debug, test, signal, and API tabs.
+- Parser diagnostic status.
+
+### Implied
+
+- Scripts can attach to entities.
+- Exported properties can appear in the inspector.
+- Script API modules and signals exist or are planned.
+- A test runner exists in some form.
+
+### Not evidenced
+
+- Breakpoints, call stack, locals, watches, expression evaluation, step in, step over, and step out.
+- Conditional breakpoints or logpoints.
+- Safe hot reload and state preservation.
+- Refactoring beyond basic navigation.
+- Static typing or schema-aware exported values.
+- Script package management.
+- Async tasks, timers, coroutines, and cancellation.
+- Threading policy and thread safety.
+- Stable API versioning and deprecation policy.
+- External editor support and language-server protocol.
+- API reference completeness and examples.
+- Sandboxed script permissions.
+
+## 4.7 Physics
+
+### Observed
+
+- Global gravity, air drag, time scale, physics update frequency, custom frequency, and catch-up step settings.
+- Rigid-body component in the inspector.
+- Dynamic body mode.
+- Collision detection mode.
+- Sleeping and rotation lock.
+- Default density and restitution-like defaults.
+- Physics counts and timing in diagnostics.
+- Physics debugger toggles for colliders, contacts, normals, sleeping bodies, bounding boxes, constraints, and exposed nodes.
+- A 32-layer collision matrix.
+- Physics sandbox project template.
+- Rope2D and joints named in template descriptions.
+
+### Implied
+
+- Rigid bodies, materials, joints, ropes, and collision events are implemented at some level.
+- Physics interpolation is tracked.
+- Collision layers are stored in the project.
+
+### Not evidenced
+
+- Complete body-type set: static, kinematic or animatable, character, rigid, and area or trigger.
+- Complete shape set and shape editing.
+- Ray casts, shape casts, overlap queries, and contact queries.
+- One-way platforms.
+- Robust character controller behavior for slopes, steps, floors, walls, and moving platforms.
+- Continuous collision quality and limits.
+- Joint type coverage and editor gizmos.
+- Determinism guarantees.
+- Broad-phase and narrow-phase performance.
+- Serialization of physics state.
+- Cross-platform behavior parity.
+
+## 4.8 Animation
+
+### Observed
+
+- Animation clip creation or editing.
+- Animation state machine.
+- Skeleton.
+- Skin.
+- Timeline.
+- Animation mask.
+- Animation resource selector and save action.
+- Animator named in the platformer template.
+
+### Implied
+
+- Multiple animation resource types.
+- Object animation and skeletal animation concepts.
+
+### Not evidenced
+
+- Dope sheet and curve editor depth.
+- Property, method, event, audio, and nested animation tracks.
+- Interpolation modes and easing controls.
+- Blend trees, transition conditions, parameters, and debugging.
+- Bone editing, weights, inverse kinematics, and constraints.
+- Onion skinning and sprite frame preview.
+- Animation import, retargeting, and reusable animation libraries.
+- Runtime state-machine inspection.
+
+## 4.9 Rendering, materials, shaders, and diagnostics
+
+### Observed
+
+- 2D lighting toggle.
+- Ambient light intensity and color.
+- Shadow quality.
+- Color space selection.
+- Debug view and post-processing toggle.
+- Material selection, creation, validation, and save action.
+- Blend mode, texture filtering, color space, and color-write control.
+- Text shader editor using a GLSL ES-like function.
+- JSON areas for uniforms and textures.
+- Shader preview.
+- Render diagnostics for world, lighting, post-process, editor overlay, UI, GPU time, rendered objects, triangle count, overdraw estimate, render targets, and pass count.
+- Project information reports WebGL2 as the rendering backend.
+
+### Implied
+
+- Materials can be assets.
+- Custom shaders can run in the editor and runtime.
+- Rendering passes and render targets exist.
+
+### Not evidenced
+
+- Native desktop renderer architecture.
+- Renderer capability tiers and fallback behavior.
+- Sprite batching, texture atlasing, draw-order controls, render layers, and canvas layers.
+- Multiple cameras and viewports.
+- Render-to-texture workflows.
+- 2D particles.
+- Normal maps, light occluders, soft shadow controls, and light masks.
+- Font rendering and text shaping pipeline.
+- Shader includes, variants, error mapping, source locations, reflection, and typed uniforms.
+- Material inheritance and instances.
+- Cross-GPU golden-image regression testing.
+- Device loss recovery and shader cache behavior.
+
+## 4.10 Tilemaps
+
+### Observed
+
+- Create tilemap.
+- Select source image.
+- Configure tile pixel dimensions.
+- Create tile set.
+- Tile palette.
+- Brush presets.
+- Terrain rules.
+- Brush, rectangle, eraser, fill, eyedropper, and selection tools.
+
+### Implied
+
+- Grid-based map painting.
+- Tile-set assets.
+- Terrain or auto-tiling logic.
+
+### Not evidenced
+
+- Multiple tile layers.
+- Animated tiles.
+- Collision, navigation, occlusion, and metadata per tile.
+- Scene tiles or object tiles.
+- Terrain transitions and validation.
+- Tile transformations and random variants.
+- Large-map chunking and streaming.
+- Copy, paste, stamp, pattern library, and selection transforms.
+- Tilemap runtime editing.
+
+## 4.11 UI and presentation
+
+### Observed
+
+- Dedicated UI workspace.
+- Responsive UI section.
+- Localization, audio mixer, and accessibility subareas.
+- Create canvas.
+- Layout containers.
+- Focusable controls.
+- Reusable UI scenes.
+- UI theme creation and selection.
+- Quick creation of canvas, panel, image, text, button, slider, progress bar, checkbox, and text input.
+- UI demo project template.
+- Settings for UI scale, compact controls, reduced motion, and high contrast.
+
+### Implied
+
+- Runtime UI controls are scene objects or components.
+- Theme and localization assets exist.
+- Focus navigation is planned.
+
+### Not evidenced
+
+- Anchors, margins, minimum size, content size, safe areas, and aspect-ratio rules.
+- Automatic container layouts such as row, column, grid, flow, overlay, and split.
+- Responsive breakpoints and device preview.
+- Nine-patch styling and state-specific style resources.
+- Full keyboard and gamepad navigation.
+- Screen-reader semantics, labels, roles, and live regions.
+- Runtime theme inspector and theme inheritance.
+- Text shaping, right-to-left layout, plural rules, translation context, and pseudolocalization.
+
+## 4.12 Input mapping
+
+### Observed
+
+- Named input actions.
+- Button and axis action types.
+- Keyboard and gamepad bindings.
+- Multiple bindings per action.
+- Positive and negative axis values.
+- Add and remove binding controls.
+- Example actions for left, right, jump, and horizontal axis.
+
+### Implied
+
+- Action-based input API.
+- Gamepad button support.
+
+### Not evidenced
+
+- Mouse, wheel, touch, pen, gesture, and controller-axis configuration.
+- Dead zones, response curves, chorded input, modifiers, and conflict detection.
+- Device hot-plugging and controller identification.
+- Runtime rebinding UI and persistence.
+- Physical-key versus layout-dependent-key modes.
+- Input recording and replay for tests.
+
+## 4.13 Audio
+
+### Observed
+
+- Master, music, sound-effect, and UI volume buses.
+- Sample-rate selection.
+- Audio mixer concept in the UI workspace.
+- Audio resources in the asset browser.
+- Audio named in a project template.
+
+### Implied
+
+- Multiple audio buses.
+- Runtime playback.
+
+### Not evidenced
+
+- Audio import settings, compression, streaming, loop points, waveform preview, and trimming.
+- 2D positional audio and listeners.
+- Bus routing graph and effects.
+- Voice limits, priority, polyphony, and virtual voices.
+- Pitch and volume randomization.
+- Device change handling and latency diagnostics.
+- Platform codec behavior.
+
+## 4.14 Navigation, AI, world streaming, and object pooling
+
+### Observed
+
+- Tabs for character, area effects, navigation, AI, streaming, and object pool.
+- Create 2D character body action.
+- Navigation and AI are exposed as first-class editor concepts.
+
+### Implied
+
+- Character-oriented components.
+- Navigation and streaming subsystems.
+- Object pooling utilities.
+
+### Not evidenced
+
+- Navigation data model, baking, dynamic obstacles, steering, avoidance, path debugging, and runtime updates.
+- AI model, behavior trees, state machines, utility AI, or blackboards.
+- Streaming cell format, loading rules, async behavior, memory budgets, and persistence.
+- Object-pool ownership, reset semantics, lifetime, and diagnostics.
+- Integration between these tools and scenes or prefabs.
+
+## 4.15 Networking
+
+### Observed
+
+- Optional networking project template.
+- Template text mentions replication, prediction, diagnostics, and headless operation.
+- Networking appears to be packaged as optional functionality.
+
+### Implied
+
+- An experimental multiplayer package or prototype exists.
+
+### Not evidenced
+
+- Transport support.
+- RPC model.
+- Ownership and authority rules.
+- Replication schema.
+- Prediction, rollback, reconciliation, and interpolation behavior.
+- Lobby, session, discovery, authentication, encryption, and NAT behavior.
+- Bandwidth profiler and packet simulation.
+- Server build and deployment workflow.
+
+## 4.16 Save data and runtime data
+
+### Observed
+
+- Save-slot name field.
+- Load, submit or commit, and clear actions.
+- Count of saved values and unsaved changes.
+- Support text mentions booleans, numbers, strings, arrays, and maps.
+- Save API named in a template.
+- Data model and data table resource categories.
+
+### Implied
+
+- Typed key-value save system.
+- Save slots.
+- Editor inspection of save data.
+
+### Not evidenced
+
+- Save schema versioning and migration.
+- Atomic writes, journaling, corruption recovery, backups, and checksums.
+- Cloud-save hooks.
+- Encryption or tamper policy.
+- Async operations and cancellation.
+- Platform save locations.
+- Serialization limits and custom types.
+
+## 4.17 Profiling, diagnostics, and debugging
+
+### Observed
+
+- Per-frame timing and subsystem categories.
+- Frame-rate, memory, GPU pass, rendered object, physics body, joint, lifecycle, and resource task metrics.
+- History graph and configurable tracking capacity.
+- Physics debug visualization.
+- Rendering diagnostics.
+- Engine diagnostics for interpolation, dropped simulation time, events, and configuration rebuilds.
+- Script problem and debug tabs.
+
+### Implied
+
+- A central instrumentation layer.
+- Runtime counters are available to the editor.
+
+### Not evidenced
+
+- Hierarchical CPU profiler and flame chart.
+- Per-function script profiler.
+- Memory allocation, retention, and leak profiler.
+- GPU markers and per-pass detail.
+- Capture, save, compare, and export.
+- Remote profiling.
+- User-defined counters.
+- Sampling versus instrumentation modes.
+- Crash dump generation and symbol handling.
+
+## 4.18 Packages, plugins, and security
+
+### Observed
+
+- Package states: installed, project, updatable, incompatible, and disabled.
+- Offline mode.
+- Package browsing.
+- Manifest import.
+- Plugin security mode.
+- Lock-entry count.
+- WASM API 2 label.
+- Plugin sandbox text states no filesystem, process, or network access.
+
+### Implied
+
+- Package metadata and compatibility rules.
+- A lock mechanism.
+- Sandboxed WebAssembly plugins.
+
+### Not evidenced
+
+- Dependency resolver and semantic version rules.
+- Registry protocol.
+- Signed package verification.
+- Permission manifest and user consent.
+- Separate editor-plugin and runtime-plugin capabilities.
+- Package rollback, cache integrity, and quarantine.
+- Native extension policy.
+- API compatibility across engine versions.
+- Package documentation, samples, tests, and quality rating.
+
+## 4.19 Build and export
+
+### Observed
+
+- Build tabs for Overview, Platform, Delivery, and Team.
+- Game name, target platform, architecture, build configuration, run mode, and output directory.
+- Windows x86-64 target.
+- Option to include game data in an executable.
+- Build-scene and start-scene areas.
+- Build readiness status.
+- Cache hit, changed-file, and host indicators.
+- Build and Build-and-Run actions.
+- Web distribution is part of the required release artifacts supplied by management.
+
+### Implied
+
+- Incremental build cache.
+- Separate debug and release configurations.
+- Scene inclusion rules.
+
+### Not evidenced
+
+- Command-line build and headless automation.
+- Reproducible builds.
+- Platform signing, notarization, icons, metadata, permissions, and installer customization.
+- Debug symbols and crash-symbol archive.
+- Linux and macOS editor or runtime support.
+- Web browser compatibility matrix.
+- Asset stripping, compression, and dependency analysis.
+- Build logs with source-linked errors.
+- Continuous integration templates.
+- Clean-machine installation, update, and uninstall tests.
+
+
+# 5. Maturity Gap Analysis
+
+## 5.1 Product architecture and subsystem boundaries
+
+### Current issue
+
+The current interface exposes core engine systems, editor utilities, debug tools, optional packages, and experimental features at nearly the same visual level. “World Tools,” networking, profiler functions, save-data inspection, plugin configuration, and static project information all compete for permanent navigation space.
+
+### Why it matters
+
+When the distinction between core runtime, editor-only tooling, optional packages, and experimental modules is unclear, users cannot judge what is stable. Internally, this usually creates coupling: systems depend on editor state, packages assume privileged access, and project formats accumulate special cases.
+
+### Required direction
+
+Nova_A needs four explicit product layers:
+
+1. **Core runtime:** scene graph, resources, rendering, physics, audio, input, scripting, UI, and lifecycle.
+2. **Editor:** authoring, import, inspection, debugging, profiling, and build orchestration.
+3. **Official packages:** networking, behavior tools, advanced post-processing, platform integrations, and optional templates.
+4. **Third-party extensions:** permissioned and versioned plugins using a documented extension API.
+
+Every feature must declare its layer, stability level, serialization impact, API surface, and test owner.
+
+## 5.2 Project format, serialization, migration, and compatibility
 
-Implement:
+### Current issue
+
+The screenshots display project format 2 and schema 22, but not the format specification, migration path, backup strategy, deterministic save rules, or compatibility policy.
+
+### Missing capabilities
+
+- Human-readable or diffable scene and resource representation.
+- Stable object and asset identifiers.
+- Deterministic ordering and numeric formatting.
+- Schema migration registry.
+- Dry-run migration report.
+- Automatic backup before migration.
+- Rollback on failed migration.
+- Read-only open for newer or incompatible projects.
+- Reference repair and missing-asset resolution.
+- Project validator and corruption diagnostics.
+
+### Required 4.0 standard
+
+A project saved twice without changes must produce byte-identical serialized files except for explicitly documented volatile metadata. Every supported 3.x project must upgrade through a tested migration chain. A failed migration must never overwrite the only working copy.
+
+## 5.3 Scene, prefab, and object model
 
-- A dedicated animation workspace with dope sheet, curve editor, key tangent modes, box selection, snapping, copy/paste, and multi-track editing.
-- Animation events routed through the signal system.
-- Animator blend trees, transition interruption, exit time, layers, masks, state-machine subgraphs, and live runtime preview.
-- 2D skeletal rigs, bones, weighted sprite deformation, skin resources, IK chains, constraints, and pose tools.
-- A general Timeline/Sequencer for animation, audio, camera, events, visibility, and script-call tracks.
-- Recording of inspector/gizmo changes into keyframes with an explicit record mode.
-- Animation import/reimport mapping and deterministic sampling independent of render FPS.
+### Current issue
 
-Old clips/controllers must migrate without visual changes. Timeline and rigging stay out of players that do not reference them.
+The editor shows a hierarchy and components, but not the rules that make large scenes manageable.
 
-### 2.5.0 - Asset Pipeline, Packages, and Plugin API 2
+### Missing capabilities
+
+- Scene instancing and nested scenes.
+- Prefabs with nested prefabs.
+- Override tracking, apply, revert, unpack, and conflict handling.
+- Stable local IDs and global asset IDs.
+- Component dependency validation.
+- Required and mutually exclusive components.
+- Entity duplication with safe reference remapping.
+- Tags, groups, layers, and queries with clear semantics.
+- Scene ownership, activation, pause, and lifecycle order.
+- Batch editing and multi-selection.
+- Runtime scene inspection.
+
+### Required 4.0 standard
+
+A designer must be able to build a game from reusable scene and prefab units without hidden reference breakage. The editor must make overrides explicit and reversible.
+
+## 5.4 Asset import and resource pipeline
 
-Goal: make large projects fast to iterate and make Nova_A safely extensible.
+### Current issue
 
-Implement:
+The resource browser declares many asset classes, but the import workflow is not visible.
 
-- Content-addressed import cache keyed by source bytes, importer version, platform, and settings.
-- Background import workers, progress/cancellation, atomic cache writes, file watching, debounced hot reimport, and failure fallback to the last valid artifact.
-- Asset dependency/reverse-dependency graph, reference finder, unused-asset report, move/rename repair, missing-reference repair, and build inclusion explanation.
-- Dedicated import settings and previews for images, atlases, fonts, audio, tile data, scripts, shaders, animations, and localization files.
-- Package manifests, semantic-version resolution, lockfile, local/Git/registry sources, offline cache, update preview, compatibility report, and uninstall impact analysis.
-- Plugin API 2 with versioned editor commands, menus, workspace panels, importers, asset editors, custom components, custom inspectors, gizmos, settings pages, build hooks, runtime systems, and events.
-- Capability permissions, per-project enablement, signature/hash verification, time/memory limits for sandboxed extensions, crash isolation, and a Safe Mode startup.
-- A package/plugin management UI that clearly separates installed, project, update, incompatible, and disabled packages.
+### Missing capabilities
 
-Native extensions are optional advanced packages and must never be silently downloaded or executed. Standard plugins remain sandboxed WASM.
+- Importers for images, spritesheets, audio, fonts, shaders, localization files, and data files.
+- Per-asset import settings and presets.
+- Generated-artifact cache separated from source assets.
+- Background import queue with progress and cancellation.
+- Reimport when source content or importer version changes.
+- Dependency and reverse-dependency views.
+- Move and rename operations that preserve references.
+- File-watch conflict handling when external tools modify assets.
+- Import error recovery and retry.
+- Thumbnail and preview cache.
+- Platform-specific compression profiles.
+
+### Required 4.0 standard
 
-### 2.6.0 - Worlds, Navigation, and Gameplay Tools
+The asset pipeline must be deterministic, incremental, cacheable, and scriptable from the command line. Importer version changes must trigger controlled reimport without corrupting project references.
 
-Goal: make complete platformers, top-down games, simulations, and large 2D worlds practical.
+## 5.5 Undo, redo, autosave, recovery, and destructive operations
 
-Implement:
+### Current issue
 
-- CharacterBody2D/controller with slopes, steps, floor/wall/ceiling state, moving-platform velocity, one-way platforms, coyote-time helpers, and exact-unit motion APIs.
-- Area2D/effectors for gravity zones, wind, drag, buoyancy, damage, and custom signals.
-- Navigation regions, polygons, grid navigation, obstacles, agents, A*/flow-field options, avoidance, path smoothing, dynamic rebaking, and debug overlays.
-- Behavior tree and hierarchical state-machine assets as optional gameplay tooling.
-- Tile palettes, brush presets, rule/terrain tiles, layers, chunk streaming, collision/navigation/occluder baking, and large-map editing.
-- World chunks, asynchronous scene streaming, portals, preload priorities, memory budgets, and origin shifting for large coordinates.
-- Object pooling and spawn/despawn tools integrated with prefabs and lifecycle events.
+These safety features are not visibly established, although autosave settings exist.
 
-Navigation and AI are separate runtime packages. A physics-only project must not carry them.
+### Missing capabilities
 
-### 2.7.0 - UI, Audio, Localization, and Accessibility
+- Transactional undo and redo across hierarchy, inspector, resources, tilemap, animation, and UI tools.
+- Operation grouping and clear action names.
+- Autosave snapshots separate from normal saves.
+- Crash-recovery session selection.
+- Recovery diff or timestamp preview.
+- Confirmation for destructive operations.
+- Safe project close when background tasks are active.
+- Atomic writes and temporary files.
+- Automatic recovery from partial save.
 
-Goal: support polished menus, HUDs, dialogue, audio mixes, and international releases.
+### Required 4.0 standard
 
-Implement:
+A forced editor termination during a save, import, asset move, or scene edit must not destroy the last valid project state. Undo and redo must be reliable enough that users trust experimentation.
 
-- Layout containers, anchors, size policies, safe areas, aspect constraints, responsive breakpoints, reusable UI scenes, clipping, masks, and scroll views.
-- Theme/style resources with states, inheritance, variables, preview, and per-control overrides.
-- Complete keyboard/gamepad focus navigation, focus visualization, screen-reader metadata export where the platform permits, and runtime input remapping widgets.
-- Localization tables, locales, plural/select rules, variable formatting, fallback chains, pseudolocalization, font fallback, right-to-left layout, and live locale preview.
-- Audio mixer graph with buses, sends, mute/solo, effects, meters, snapshots, ducking, spatial attenuation curves, streaming music, and voice limits.
-- Audio waveform preview, loop markers, import normalization options, and profiler voice/buffer reporting.
+## 5.6 Editor productivity and discoverability
 
-Editor and runtime accessibility settings remain distinct. Localization data is stripped to selected build locales.
+### Current issue
 
-### 2.8.0 - Performance, Testing, Data, and Optional Networking
+The editor contains many workspaces and docks but lacks visible global navigation aids. Advanced tools are permanently exposed, while common editing actions are not obvious.
 
-Goal: make correctness and scale repeatable rather than dependent on manual testing.
+### Missing capabilities
 
-Implement:
+- Command palette.
+- Global search.
+- Customizable shortcuts.
+- Context-sensitive object and component creation.
+- Dock presets and user workspaces.
+- Searchable settings.
+- Breadcrumbs and recent navigation history.
+- Inspector search, pinning, reset, revert, copy path, and multi-edit.
+- Drag and drop between asset browser, hierarchy, viewport, and inspector.
+- Consistent context menus.
+- Inline documentation and examples.
+- Progress, cancellation, retry, and background-task center.
 
-- Frame trace recorder correlating input, scripts, animation, physics, audio, rendering, asset work, allocations, and GPU passes.
-- Memory/asset budget tools, leak detection, object lifetime views, and capture comparison.
-- Deterministic input recording/replay, physics checksums, fixed random seeds, and regression playback.
-- Unit, scene, integration, and headless game tests with assertions, timeouts, screenshots, and CI-readable reports.
-- Data resources, schema validation, generated typed accessors, database/CSV/JSON import, and migrations for save data.
-- A bounded job/task scheduler with worker availability detection and a single-thread fallback.
-- Optional networking package: transport abstraction, WebSocket and UDP-capable native transports, connection lifecycle, RPCs, replicated properties, snapshots, interpolation, prediction, rollback helpers, bandwidth limits, and multiplayer diagnostics.
-- Authoritative-server/headless export mode and deterministic simulation tests for supported gameplay patterns.
+### Required 4.0 standard
 
-Networking is disabled and excluded by default. Nova_A does not promise that arbitrary scripts or floating-point worlds are automatically deterministic across all hardware.
+A common action should be discoverable by menu, command palette, shortcut, context menu, or direct manipulation. Users should not need to know which of several overlapping workspaces contains a function.
 
-### 2.9.0 - Platform Export, Team Workflow, and Ecosystem
+## 5.7 2D rendering and visual content pipeline
 
-Goal: make shipping and collaborating reliable before the 3.0 stability promise.
+### Current issue
 
-Implement:
+Rendering diagnostics and shader editing are visible, but the basic 2D content pipeline is not demonstrated at production depth.
 
-- Reproducible export templates for Windows, Linux, macOS, web, and an optional Android package where toolchain support is available.
-- Platform presets, icons/splash, permissions, orientation, signing/notarization guidance, architecture selection, debug/release profiles, and validation before build.
-- Incremental builds, build cache, package compression, patch/delta manifests, content hashes, deterministic build reports, and command-line/headless export.
-- Player crash capture, symbol mapping workflow, structured logs, opt-in telemetry adapter, and privacy controls.
-- Source-control status overlays, ignore-file generator, external diff/merge hooks, text-stable scene/prefab output, conflict detection, and safe lock files.
-- Package registry client polish, publisher identity, permissions review, ratings/security links, and offline/local mirrors. No arbitrary extension executes during package browsing.
-- Project upgrade preview, full backup option, compatibility analyzer, package audit, and rollback instructions.
-- Example projects and templates exercising platformer, top-down, UI-heavy, physics-puzzle, and networked-optional workflows.
+### Missing capabilities
 
-Console exports are not a 3.0 requirement because they require vendor programs and restricted SDKs. The public extension/build architecture must not block a future authorized backend.
+- Sprite and animated-sprite components.
+- Texture region, pivot, trim, border, and nine-slice tools.
+- Texture atlases and batch-friendly import.
+- Polygon, line, path, and shape rendering.
+- Parallax layers.
+- Camera limits, smoothing, drag margins, and pixel-perfect modes.
+- Canvas layers, render layers, sorting groups, and explicit draw order.
+- Multiple viewports and render textures.
+- 2D lights, masks, occluders, normal maps, and shadow controls.
+- Particle system.
+- Font import, fallback, shaping, outlines, and resolution-independent rendering.
+- Color management and gamma correctness.
+- Native renderer capability model.
 
-### 3.0.0 - Nova_A Studio Stable
+### Required 4.0 standard
 
-Goal: ship a stable, professional 2D engine whose full creation loop is coherent and supported.
+Nova_A must provide a predictable 2D rendering model that supports pixel art and resolution-independent UI without accidental blur, ordering errors, or platform-specific color differences.
 
-Required end-to-end workflow:
+## 5.8 Physics completeness and trust
 
-Create project -> import assets -> build scenes/prefabs -> author input/scripts/animation/audio/UI -> run and debug -> profile/test -> save/load -> export -> launch a standalone player without editing engine source.
+### Current issue
 
-Release requirements:
+Nova_A visibly invests in physics, but a mature physics system is judged by edge cases, editor support, deterministic update rules, and long-running stability.
 
-1. Freeze and document the supported project schema, runtime API, Plugin API 2, package manifest, build CLI, and compatibility policy.
-2. Provide automatic migration from every project format Nova_A has publicly shipped. Migration is previewable, backed up, atomic, and covered by golden files.
-3. Run full audits of every component, property, button, selection, menu, shortcut, calculation, renderer binding, serialization path, localization, and manual anchor.
-4. Publish benchmark methodology and measured results for startup, memory, build size, frame time, physics throughput, asset import, script reload, and export.
-5. Meet the budgets in section 6 or publish the measured exception and corrective plan; never fabricate a passing result.
-6. Run 24-hour stability tests, repeated play/stop cycles, scene streaming stress, asset reimport stress, corrupted-input fuzzing, and plugin fault isolation.
-7. Verify Windows, Linux, macOS, web, and supported Android export on documented clean machines or CI runners.
-8. Complete English, German, and Chinese UI/manual coverage, keyboard navigation, contrast, reduced motion, scalable UI, and minimum-resolution tests.
-9. Ship reference games and source projects demonstrating platformer, top-down, UI, animation, audio, lighting, tilemap, save, plugin, and build workflows.
-10. Publish clear known limitations: Nova_A remains a 2D engine and does not include built-in 3D, ray tracing, VR/XR, AAA terrain/foliage, cinematic virtual-production, or console SDKs.
+### Missing capabilities
 
-The 3.0 core should include only the systems needed by most 2D games. Lighting, rigging, behavior tools, networking, Android support, and third-party integrations may be official optional packages. Removing an unused package must never make a project that does not reference it larger or slower.
+- Full body and shape taxonomy.
+- Queries, casts, sensors, one-way collision, and moving-platform behavior.
+- Character controller.
+- Joint editor and constraints.
+- Named collision layers rather than only numeric matrix indices.
+- Stable collision event ordering.
+- Clear ownership of physics transform versus visual transform.
+- Fixed-step behavior during pause, slow motion, and catch-up.
+- Stress, stacking, tunneling, and sleep regression suites.
+- Same-platform determinism statement.
 
-## 8. Permanent release audit checklist
+### Required 4.0 standard
 
-For every feature release, the coder must produce an edit ledger and answer all of these with evidence:
+Physics behavior must be documented, testable, and debuggable. The collision matrix must become a readable layer-management tool rather than an unlabelled 32-by-32 grid.
 
-### UI and interaction
+## 5.9 Scripting, API design, and debugging
 
-- Does every visible control execute a real command or update a real persisted/runtime property?
-- Is disabled state accurate and explained where necessary?
-- Are focus, hover, pressed, selected, validation, loading, empty, error, and success states visible?
-- Does it work with mouse, keyboard, trackpad/wheel, and at minimum window size?
-- Does it work in English, German, and Chinese, light/dark themes, high contrast, and reduced motion?
-- Are dialogs inside the Nova_A UI rather than native browser confirm/prompt windows?
+### Current issue
 
-### Data and history
+The Rhai editor demonstrates syntax and API calls, but not a complete professional programming workflow.
 
-- Does save/load round-trip the feature without numeric or reference drift?
-- Does undo/redo include it and coalesce continuous edits correctly?
-- Are old projects migrated and unknown/newer fields preserved or rejected safely?
-- Do duplicate, prefab, scene switch, play/stop isolation, build, and import/export paths preserve it?
+### Missing capabilities
 
-### Runtime and calculations
+- Stable public API namespace and versioning.
+- Generated API reference.
+- Rich diagnostics with source ranges and fix suggestions.
+- Breakpoints, stepping, stack, locals, watches, and expression evaluation.
+- Hot reload with explicit limitations.
+- Refactoring and symbol indexing.
+- Modules, packages, dependency boundaries, and cyclic-dependency diagnostics.
+- Async and timer model.
+- Signal or event model with editor connection tooling.
+- Script performance profiler.
+- Test discovery, assertions, fixtures, and CI output.
+- External editor and language-server integration.
 
-- Is the editor property connected to the authoritative runtime/calculation path?
-- Are units, clamping, finite-value validation, defaults, and edge cases documented and tested?
-- Does renderer output match runtime state without one-frame stale data or scale conversion errors?
-- Are different render/physics layers handled deliberately?
-- Are allocation, cache, event-listener, and destruction lifetimes bounded?
+### Required 4.0 standard
 
-### Verification
+Script errors must never crash the editor. Every public API must be documented and covered by compatibility tests. The debugger must support the ordinary inspect-and-step loop expected by programmers.
 
-- Rust format, clippy, tests, TypeScript check, production build, manual audit, and release audit pass.
-- Browser smoke tests cover Project Manager, Scene, Game, Settings, all workspaces, all bottom panels, inspector filters/picker, save/load, play/stop, and representative build settings.
-- The edit ledger lists every file added, modified, deleted, and mechanically regenerated, with functional consequences and known limitations.
+## 5.10 Animation workflow
 
-## 9. Versioning policy
+### Current issue
 
-- `x.0.0` is a major compatibility or product-identity release.
-- `x.y.0` is a planned feature release.
-- `x.y.z` is a bug-fix or contained feature-adjustment release.
-- Project schema, package API, and plugin API versions are independent from application SemVer. They change only when their data/contracts change.
-- A version number is updated only after implementation and release checks pass; development builds may display a prerelease suffix.
+The animation dock lists advanced resource types, but the operational editor is not shown.
+
+### Missing capabilities
+
+- Keyframe insertion from inspector properties.
+- Dope sheet and curve editor.
+- Property, method, event, audio, and nested animation tracks.
+- State-machine parameters, transitions, conditions, blending, and live debug.
+- Skeleton editing, bone weights, IK, constraints, and skin preview.
+- Sprite-frame animation and onion skinning.
+- Animation library reuse and retargeting rules.
+- Timeline snapping and markers.
+
+### Required 4.0 standard
+
+A designer must be able to animate properties without writing code and understand exactly which animation, state, transition, and track controls the final value.
+
+## 5.11 UI, localization, and accessibility
+
+### Current issue
+
+The UI workspace has promising categories, but the layout and accessibility model is not visible.
+
+### Missing capabilities
+
+- Anchors, containers, minimum sizes, safe areas, and scale policy.
+- Reusable UI components and inheritance.
+- Theme hierarchy and state styles.
+- Focus navigation graph and device-independent activation.
+- Responsive preview for common aspect ratios and DPI values.
+- Localization extraction, string tables, context, pluralization, fallback, and pseudolocalization.
+- Right-to-left layout and text shaping.
+- Runtime accessibility roles, names, descriptions, focus, contrast, and reduced-motion behavior.
+- Keyboard-only editor accessibility and screen-reader support.
+
+### Required 4.0 standard
+
+The UI system must support mouse, keyboard, controller, and touch workflows without separate layouts for each device. Localization and accessibility must be testable rather than represented only by settings toggles.
+
+## 5.12 Tilemap, navigation, and large-world workflows
+
+### Current issue
+
+Tilemap and world tools are present, but their data depth and runtime behavior are not established.
+
+### Missing capabilities
+
+- Multi-layer tilemaps.
+- Tile animation and variation.
+- Collision, navigation, occlusion, metadata, and scene placement per tile.
+- Terrain validation and auto-tiling diagnostics.
+- Chunked editing, streaming, and large-map performance.
+- Navigation mesh or grid baking.
+- Dynamic obstacles, avoidance, and path debugging.
+- Streaming ownership, save-state integration, and memory budgets.
+
+### Required 4.0 standard
+
+Tilemap and navigation must work together. Large maps must remain editable and streamable without freezing the editor or producing untraceable path errors.
+
+## 5.13 Audio workflow
+
+### Current issue
+
+Volume buses are visible, but professional audio authoring is not.
+
+### Missing capabilities
+
+- Asset preview and waveform.
+- Compression and streaming profiles.
+- Loop points and trimming.
+- 2D positional audio and listeners.
+- Bus routing and effects.
+- Polyphony, voice priority, and limits.
+- Device and latency diagnostics.
+- Audio events in animation.
+
+### Required 4.0 standard
+
+Audio must be predictable across the editor, embedded preview, and exported builds. Audio import settings and bus behavior must be project assets, not hidden global state.
+
+## 5.14 Build, deployment, automation, and platforms
+
+### Current issue
+
+The build panel is promising, but the screenshots show only one concrete desktop target and no automation path.
+
+### Missing capabilities
+
+- CLI build, validate, import, test, and export commands.
+- Headless operation.
+- Build presets committed to the project.
+- Reproducible clean builds.
+- Debug and release symbols.
+- Installer signing and verification.
+- Web browser and graphics capability checks.
+- Linux and macOS support policy.
+- Asset stripping and build-size report.
+- CI templates.
+- Version metadata, icons, permissions, and platform manifests.
+- Clean-machine install, run, update, uninstall, and portable execution tests.
+
+### Required 4.0 standard
+
+A release engineer must be able to build the same tagged source in CI and obtain the documented artifacts without clicking through the editor.
+
+## 5.15 Packages and extension ecosystem
+
+### Current issue
+
+The package manager contains useful concepts, but package trust, dependency resolution, and permissions are not visible.
+
+### Missing capabilities
+
+- Semantic version resolver.
+- Deterministic lockfile.
+- Signed package manifests and archives.
+- Capability-based permissions.
+- Clear distinction between editor extensions and runtime plugins.
+- Quarantine and safe mode.
+- Rollback and cache verification.
+- Package API compatibility range.
+- Package test and documentation requirements.
+- Registry outage and offline behavior.
+
+### Required 4.0 standard
+
+Installing a package must not silently grant broad access or destabilize the project. Package resolution must be reproducible from the lockfile.
+
+## 5.16 Collaboration and source control
+
+### Current issue
+
+A Team build tab exists, but collaboration workflows are not demonstrated.
+
+### Missing capabilities
+
+- Deterministic text assets suitable for Git.
+- External-change detection and conflict handling.
+- Diffable scene, prefab, and resource formats.
+- Merge strategy and conflict markers.
+- File locking for binary assets.
+- Change-list view.
+- Version-control ignore templates.
+- Shared versus user-local editor settings.
+- Project validation in pre-commit and CI.
+
+### Required 4.0 standard
+
+A team must be able to work in branches without routine scene corruption or unexplained generated-file changes.
+
+## 5.17 Documentation, onboarding, and supportability
+
+### Current issue
+
+A manual button exists, but the screenshots do not establish searchable offline documentation, API coverage, tutorials, migration guidance, or diagnostic help.
+
+### Missing capabilities
+
+- Context-sensitive documentation.
+- Searchable API reference.
+- Guided first project.
+- Reference projects that cover complete workflows.
+- Error-code knowledge base.
+- Migration guides for every schema change.
+- Package authoring guide.
+- Build and CI guide.
+- Performance guide.
+- Security and permissions guide.
+- Release notes with known issues and workarounds.
+
+### Required 4.0 standard
+
+A new user must be able to complete a small game using official documentation without needing private team knowledge.
+
+## 5.18 Stability, performance, security, and release engineering
+
+### Current issue
+
+The interface includes metrics and security language, but no quality evidence was supplied.
+
+### Missing capabilities
+
+- Unit, integration, editor end-to-end, export, installer, migration, performance, soak, fuzz, accessibility, and security test suites.
+- Crash dump and symbol pipeline.
+- Memory leak detection.
+- Performance baselines and regression budgets.
+- Dependency inventory and software bill of materials.
+- Package signature verification.
+- Path traversal, archive bomb, malformed project, malformed shader, and malformed asset tests.
+- Release provenance and reproducibility records.
+
+### Required 4.0 standard
+
+No release may be approved solely because the editor opens and a sample runs. Each release must contain auditable evidence that the required test matrix passed.
+
+
+# 6. User-Experience Audit
+
+## 6.1 What should be retained
+
+The following concepts are valuable and should be retained:
+
+- The overall dark visual language and blue accent.
+- Template-based project creation.
+- A central 2D viewport with hierarchy and inspector.
+- Dedicated script, animation, UI, and debug workspaces.
+- An integrated resource browser.
+- Embedded game preview.
+- Package security and offline concepts.
+- A profiler and render diagnostics.
+- Separate project and build configuration.
+- Input-action mapping.
+- Collision-layer management.
+- Responsive UI, localization, and accessibility as explicit product areas.
+
+The problem is not that these concepts exist. The problem is that their current grouping, naming, and depth are inconsistent.
+
+## 6.2 Features or panels that are low-value in their current form
+
+1. **“Production Lab”**
+   - **User problem:** The name is promotional and does not communicate profiling or diagnostics. It overlaps Debug.
+   - **Recommended action:** Rename it to **Profiler** and integrate it into the Debug workspace.
+   - **Target:** 3.1.0.
+
+2. **“Presentation” bottom dock plus “UI” top workspace**
+   - **User problem:** Two labels appear to cover UI, themes, localization, audio, and accessibility. Users cannot predict which one to open.
+   - **Recommended action:** Merge them into one **UI** workspace with contextual subpanels.
+   - **Target:** 3.1.0 and 3.6.0.
+
+3. **“World Tools” monolithic dock**
+   - **User problem:** Character, navigation, AI, streaming, and pooling are unrelated workflows and are permanently visible.
+   - **Recommended action:** Split them into components and optional packages. Keep Navigation core; move AI, streaming helpers, and object-pool tools behind packages or project capabilities.
+   - **Target:** 3.1.0 and 3.8.0.
+
+4. **Project information cards as a full dock**
+   - **User problem:** Engine version, schema, scene count, asset count, and backend do not justify a permanent large panel.
+   - **Recommended action:** Move them to the Project Settings header and a compact Project Health page.
+   - **Target:** 3.1.0.
+
+5. **Save-data inspector inside general Settings**
+   - **User problem:** Runtime save inspection is a debugging workflow, not an editor preference.
+   - **Recommended action:** Move it to Debug > Data Inspector.
+   - **Target:** 3.1.0.
+
+6. **Live engine diagnostics inside Settings**
+   - **User problem:** Runtime counters are not configuration.
+   - **Recommended action:** Move them to Profiler > Runtime Diagnostics.
+   - **Target:** 3.1.0.
+
+7. **Plugin controls duplicated between Package Manager and Settings**
+   - **User problem:** The user must search two places for package and plugin state.
+   - **Recommended action:** Centralize installation, enablement, permissions, lockfile, and security in Package Manager.
+   - **Target:** 3.1.0 and 3.9.0.
+
+8. **Unlabelled 32-by-32 collision matrix**
+   - **User problem:** A large numeric grid is difficult to understand and easy to misconfigure.
+   - **Recommended action:** Add named layers, row and column labels, presets, search, symmetric editing, and a compact pair editor. Keep the full matrix as an advanced view.
+   - **Target:** 3.4.0.
+
+9. **Single-letter top controls such as H, I, and B**
+   - **User problem:** Their meaning is not discoverable and may be language-dependent.
+   - **Recommended action:** Replace them with standard icons, text tooltips, and configurable shortcuts.
+   - **Target:** 3.1.0.
+
+10. **Long horizontal row of resource-type chips**
+    - **User problem:** The row consumes space, wraps poorly, and becomes harder to scan as types grow.
+    - **Recommended action:** Replace it with a searchable filter menu, favorites, and saved filters.
+    - **Target:** 3.2.0.
+
+11. **Raw JSON for shader uniforms and textures**
+    - **User problem:** It is error-prone for ordinary users and duplicates information the shader compiler can infer.
+    - **Recommended action:** Keep JSON as an advanced mode; generate a typed uniform inspector by default.
+    - **Target:** 3.7.0.
+
+12. **Networking template presented equally with core templates**
+    - **User problem:** It may imply production readiness even if the package is experimental.
+    - **Recommended action:** Add an Experimental badge, compatibility notice, and explicit package version. Hide it unless experimental templates are enabled.
+    - **Target:** 3.1.0.
+
+13. **AI and object-pool tabs permanently exposed**
+    - **User problem:** These are not universal engine-authoring tasks.
+    - **Recommended action:** Move them to optional official packages and component search.
+    - **Target:** 3.8.0.
+
+14. **Empty inspector offering only UI object creation**
+    - **User problem:** It incorrectly suggests UI is the primary object category and omits common game objects.
+    - **Recommended action:** Replace it with a universal Create Object or Add Component palette.
+    - **Target:** 3.3.0.
+
+## 6.3 Layout and visual hierarchy problems
+
+### Excessive permanent navigation
+
+The interface has top workspaces, a left rail, a bottom dock row, scene tabs, and object inspector categories. Each is individually reasonable, but together they create too many simultaneous navigation systems. A user should not have to distinguish “Debug workspace,” “Game section,” “Console dock,” “Production Lab,” “Engine Diagnostics,” and “Rendering Diagnostics” before they can inspect a problem.
+
+### Flat priority hierarchy
+
+Many controls use similar border weight, background value, and blue selection states. Major actions, current workspace, selected object, active tool, focused field, and toggled option can appear visually similar. The editor needs a stricter semantic color and elevation system:
+
+- Accent blue for primary selection and primary action.
+- Neutral focus ring for keyboard focus.
+- Green only for confirmed success.
+- Amber for warnings and experimental features.
+- Red for destructive or failed state.
+- Distinct disabled styling with sufficient contrast.
+
+### Dense settings cards
+
+The settings pages contain many large cards with long vertical scrolling but no visible search, category tree, “modified only” filter, or reset-to-default workflow. Settings should be searchable and support project-level versus editor-level scope.
+
+### Imbalanced space usage
+
+Several screenshots show a large empty game viewport while high-density controls are compressed into the bottom or right edge. Docks should be resizable, collapsible, and detachable. Empty states should use the space to teach the next action rather than leaving a blank area.
+
+### Small labels and control targets
+
+At the shown resolution, many controls and labels are visually small. UI scale exists, which is good, but the default must be validated at 1366-by-768, 1920-by-1080, high-DPI 4K, and 125/150/200 percent operating-system scaling. Click targets and focus indicators must remain usable.
+
+### Mixed terminology
+
+The interface mixes standard engine terms with product-specific terms. Product-specific names can be retained only when they improve understanding. “Profiler,” “Scene,” “Inspector,” “Asset Browser,” “Animation,” “Tilemap,” “Build,” and “Package Manager” should remain conventional. Promotional names should not replace operational names.
+
+## 6.4 First-launch window behavior
+
+Management requires the first roadmap release to open the application at full size. The implementation should be:
+
+- On first launch, the editor opens in **borderless fullscreen on the active monitor**.
+- A setting named **Launch editor in fullscreen** is enabled by default.
+- F11 toggles between borderless fullscreen and the last valid windowed state.
+- After the first successful session, the editor restores the last valid monitor, window state, size, and position.
+- If the stored monitor no longer exists, the window is moved to the primary monitor and reopened in borderless fullscreen.
+- The default fullscreen implementation must be borderless rather than exclusive so task switching, dialogs, multiple monitors, and accessibility tools continue to work.
+
+This implements the required full-screen default while avoiding the usability problems of an exclusive game-style display mode.
+
+## 6.5 Critical user workflows that must become first-class
+
+### Beginner workflow
+
+Create a platformer from a template, replace art, edit a level, change input, run, diagnose an error, and export a Windows or web build. Every step must have a visible next action and official documentation.
+
+### Programmer workflow
+
+Create a component, write Rhai code, inspect API documentation, set a breakpoint, run, inspect locals, hot reload safely, write a test, and use the same test in CI.
+
+### Designer workflow
+
+Create reusable prefabs, instantiate them, override values, edit tilemaps, connect triggers, set collision layers, animate objects, and validate missing references.
+
+### UI workflow
+
+Build a responsive menu, preview multiple resolutions, navigate by keyboard and controller, localize strings, test pseudolocalization, and verify accessibility labels and focus order.
+
+### Release-engineer workflow
+
+Validate the project, run tests, build from the CLI, produce signed artifacts, verify checksums, install on a clean machine, run reference projects, and archive release evidence.
+
+
+# 7. Product and Engineering Principles for the 3.x Roadmap
+
+1. **Complete workflows before additional panels.** A feature is not complete until it can be created, edited, saved, reopened, duplicated, migrated, undone, debugged, documented, and tested.
+2. **Core and optional features must be separated.** Experimental networking, AI, streaming helpers, and specialized utilities should not appear as stable core features.
+3. **All persistent data must be versioned.** Scenes, resources, settings, packages, saves, and build presets require schema versions and migrations.
+4. **Editor operations must be transactional.** A multi-file operation must either complete or roll back.
+5. **Every reference must survive normal project organization.** Renaming or moving assets must not silently break scenes.
+6. **Every public API requires documentation and compatibility tests.** API design is a product contract.
+7. **Every release requires evidence.** The release folder is incomplete without test and provenance artifacts.
+8. **Performance must be measured against reference projects.** “Feels fast” is not an acceptance criterion.
+9. **Accessibility and localization are workflows, not toggles.** They require test assets, navigation tests, and layout validation.
+10. **The editor must be recoverable.** Safe mode, layout reset, package disable, autosave restore, and migration rollback are mandatory.
+
+
+# 8. Common Test and Release Standard
+
+## 8.1 Defect severity
+
+- **S0 — Release blocker:** data loss, security compromise, project corruption, installer failure, unusable editor startup, or widespread export failure.
+- **S1 — Critical:** crash in a common workflow, broken migration, major reference loss, debugger unusable, or a Tier-1 platform unable to run a reference project.
+- **S2 — Major:** incorrect behavior with a workaround, serious UX regression, substantial performance regression, or incomplete documentation for a core feature.
+- **S3 — Minor:** cosmetic defect, uncommon edge case, wording issue, or small inconsistency.
+
+No stable minor or major release may ship with open S0 or S1 defects.
+
+## 8.2 Required test layers
+
+Every planned release must use the applicable layers below:
+
+1. Unit tests for runtime and editor logic.
+2. Serialization round-trip tests.
+3. Migration tests using archived projects.
+4. Integration tests across scene, resource, script, physics, render, audio, input, and build boundaries.
+5. Editor end-to-end automation for common user tasks.
+6. Golden-image rendering tests with explicit tolerance.
+7. Performance benchmarks and regression budgets.
+8. Long-duration soak tests.
+9. Fuzz tests for parsers, project files, scripts, shaders, package manifests, and imported assets.
+10. Accessibility, keyboard navigation, high-contrast, reduced-motion, and scaling tests.
+11. Localization and pseudolocalization tests.
+12. Clean-machine installer, portable, web, and export tests.
+13. Package permission and supply-chain tests.
+14. Manual exploratory tests on reference projects.
+
+## 8.3 Reference environment
+
+At minimum, testing must include:
+
+- Windows 11 x86-64 on a mainstream six-core CPU, 16 GB RAM, SSD, and integrated graphics.
+- Windows 11 x86-64 on a discrete GPU from each supported vendor family.
+- High-DPI and standard-DPI displays.
+- 1366-by-768, 1920-by-1080, 2560-by-1440, and 3840-by-2160 editor layouts.
+- Current supported Chromium, Firefox, and WebKit-based browsers for web exports.
+- Offline package and documentation operation.
+- Clean user profile and upgraded user profile.
+
+Linux and macOS must be added to the matrix when they become supported tiers.
+
+## 8.4 Common release folder and mandatory artifacts
+
+Every release must be stored in:
+
+```text
+.\releases\vx.x.x
+```
+
+The folder must contain exactly named mandatory top-level artifacts:
+
+```text
+EDIT_LEDGER.md
+LICENSE.md
+Nova_A-vx.x.x-reference-projects.zip
+Nova_A-vx.x.x-release-evidence.zip
+Nova_A-vx.x.x-source.zip
+Nova_A-vx.x.x-web.zip
+Nova_A-vx.x.x-windows-x64.msi
+Nova_A-vx.x.x-windows-x64-portable.exe
+Nova_A-vx.x.x-windows-x64-setup.exe
+RELEASE_NOTES.md
+SHA256SUMS.txt
+```
+
+Additional evidence such as a software bill of materials, third-party notices, benchmark CSV files, signatures, symbol archives, screenshots, and CI logs should be placed inside `Nova_A-vx.x.x-release-evidence.zip` unless management later approves more top-level artifacts.
+
+## 8.5 Artifact content requirements
+
+### EDIT_LEDGER.md
+
+Must include:
+
+- Release version and source tag.
+- Changed files or generated change summary.
+- Schema changes.
+- Public API additions, changes, deprecations, and removals.
+- Migration steps.
+- Known compatibility impact.
+- Third-party dependency changes.
+
+### Nova_A-vx.x.x-reference-projects.zip
+
+Must include version-pinned reference projects relevant to the release. Each project must contain a README, expected output, test controls, and a validation command.
+
+### Nova_A-vx.x.x-release-evidence.zip
+
+Must include:
+
+- CI summary.
+- Unit and integration test results.
+- Editor end-to-end results.
+- Migration results.
+- Performance comparison.
+- Installer and clean-machine test report.
+- Security and package-permission test report when applicable.
+- Accessibility and localization report when applicable.
+- Known-issue disposition.
+- Source tag and build environment metadata.
+- Software bill of materials and third-party license inventory.
+
+### Nova_A-vx.x.x-source.zip
+
+Must be generated from the signed release tag, exclude unrelated local files, and contain build instructions.
+
+### Nova_A-vx.x.x-web.zip
+
+Must be a deployable web package with version metadata, integrity checks, and a README describing hosting requirements.
+
+### Windows artifacts
+
+The MSI, portable executable, and setup executable must be built from the same source tag. Stable releases must be code-signed when signing infrastructure is available. The installer and uninstaller must be tested on a clean machine.
+
+### RELEASE_NOTES.md
+
+Must include highlights, user-visible changes, breaking changes, migration notes, known issues, supported platforms, package API compatibility, and upgrade and rollback instructions.
+
+### SHA256SUMS.txt
+
+Must contain checksums for every mandatory artifact except itself. Checksums must be generated after final signing and packaging.
+
+## 8.6 Patch-release policy
+
+A patch release such as 3.1.1 may contain defect fixes, security fixes, performance corrections, documentation corrections, and compatibility restorations. It must not introduce a new project schema, new public API family, new asset type, or major workflow. Emergency migration repair is allowed only when it restores compatibility and is fully tested.
+
+
+# 9. Detailed Development Roadmap
+
+The roadmap is dependency-driven rather than feature-count-driven. Each release closes a complete production workflow and establishes contracts required by the next release. A version must not move forward merely because its interface exists; it must meet the test, evidence, migration, documentation, and release gates defined in Sections 8 and 11.
+
+Planned sequence:
+
+1. **3.1.0 — Editor foundation:** fullscreen-first launch, workspace simplification, undo, autosave, recovery, discoverability, and consistent feedback.
+2. **3.2.0 — Data foundation:** project schema, deterministic serialization, scenes, prefabs, stable IDs, asset imports, dependencies, and migration.
+3. **3.3.0 — Core authoring:** complete 2D object creation, viewport tools, inspector, camera, sprites, and hierarchy productivity.
+4. **3.4.0 — Physics:** complete body and shape model, queries, events, character controller, layers, joints, and deterministic validation.
+5. **3.5.0 — Scripting:** Rhai API v1, code intelligence, debugger, safe hot reload, tests, and API compatibility policy.
+6. **3.6.0 — Interaction:** animation, responsive UI, input, localization, and accessibility as integrated production workflows.
+7. **3.7.0 — Presentation:** renderer architecture, 2D rendering, materials, shaders, particles, fonts, color management, and audio.
+8. **3.8.0 — Worlds and data:** Tilemap 2.0, navigation, large-world streaming, save migration, and optional world packages.
+9. **3.9.0 — Productization:** reproducible builds, platform tiers, package trust, source-control workflows, documentation, and the 4.0 release candidate.
+10. **4.0.0 — Stable baseline:** compatibility freeze, migration safety, final quality gates, reference content, and production support policy.
+
+# 9.1 Nova_A 3.1.0 — Editor Usability, Safety, and Workspace Baseline
+
+## Release objective
+
+Make the editor predictable, recoverable, and understandable before expanding engine functionality. This release establishes the user-experience and safety foundation for all later work.
+
+## Remove or deprecate
+
+- Remove unlabelled single-letter toolbar controls. Replace them with standard controls, tooltips, and documented shortcuts.
+- Deprecate the “Production Lab” name. Use **Profiler**.
+- Remove the separate “Presentation” bottom-dock identity. Begin migration into the UI workspace.
+- Remove runtime save-data inspection and live engine counters from general Settings. Relocate them to Debug.
+- Remove the duplicate plugin enable and security workflow from Settings. Redirect to Package Manager.
+- Hide AI, streaming, object-pool, and networking tools by default unless the relevant experimental package or project capability is enabled.
+- Remove the read-only project-information dock as a permanent workspace. Retain information in a compact Project Health page.
+
+## Add functionality
+
+### First-launch and window behavior
+
+- Open the editor in borderless fullscreen on the active monitor by default.
+- Add **Launch editor in fullscreen**, enabled by default.
+- Add F11 toggle between borderless fullscreen and the last valid windowed state.
+- Persist the last valid monitor, window state, size, and position.
+- Recover safely when a stored monitor no longer exists.
+
+### Workspace system
+
+- Add resizable, collapsible, dockable panels.
+- Add workspace presets: Design, Script, Animation, UI, Debug, and Custom.
+- Add save, duplicate, rename, export, import, and reset workspace actions.
+- Persist layout per user and optionally per project.
+- Add a safe-layout startup flag.
+
+### Navigation and discoverability
+
+- Add a command palette.
+- Add global search across commands, settings, assets, scenes, objects, components, and scripts.
+- Add keyboard shortcut viewer and editor.
+- Add recent navigation history and back and forward commands.
+- Add consistent tooltips with shortcut and documentation links.
+- Add searchable Settings with scope indicators for Editor, Project, and Runtime.
+
+### Safety and recovery
+
+- Implement transactional undo and redo infrastructure used by all editor tools.
+- Add operation names and grouped transactions.
+- Add autosave snapshots separate from normal project saves.
+- Add crash-recovery startup page with timestamp, project, and snapshot selection.
+- Add safe mode that disables third-party packages, restores default layout, and opens the project read-only if required.
+- Add atomic save behavior and temporary-file cleanup.
+- Add background task center with progress, cancel, retry, and error details.
+
+### Feedback and diagnostics
+
+- Add consistent toast, banner, modal, and inline-error rules.
+- Add a status center for imports, builds, package operations, migrations, and saves.
+- Add “Copy diagnostic details” for user reports.
+
+## Modify and improve
+
+- Simplify permanent navigation to one top workspace row, one context-sensitive side panel, one central editor area, and optional bottom tools.
+- Merge Game preview and Debug run controls into a single coherent run workflow.
+- Clarify selection, active tool, keyboard focus, success, warning, error, disabled, and experimental visual states.
+- Increase default minimum click targets and validate all layouts at supported UI scales.
+- Improve empty states so each panel explains the next action.
+- Standardize terminology: Scene, Hierarchy, Inspector, Assets, Console, Profiler, Rendering, Tilemap, UI, Project Settings, Build, and Packages.
+- Make all panels keyboard reachable and add visible focus indicators.
+
+## Testing process
+
+1. Build automated editor navigation and layout tests.
+2. Run a thirty-task usability script with beginner, programmer, designer, UI, and release personas.
+3. Test first launch, second launch, monitor removal, DPI change, and multi-monitor movement.
+4. Force termination during edit, save, import, package operation, and layout change.
+5. Validate autosave and recovery against corrupted latest snapshots.
+6. Run keyboard-only navigation and high-contrast tests.
+7. Test Chinese and English UI strings for clipping and missing labels.
+8. Run a one-hundred-hour aggregate editor soak with automated open, edit, save, run, and close cycles.
+
+## Testing and acceptance requirements
+
+- First launch opens in borderless fullscreen on the active monitor.
+- No editor panel is inaccessible at 1366-by-768 and 100 percent UI scale.
+- All core commands are reachable through menus and the command palette.
+- A forced termination does not destroy the last valid manual save.
+- At least one valid autosave can be restored after forced termination.
+- One hundred consecutive undo and redo operations across mixed editor actions complete without corruption.
+- Keyboard-only users can open a project, navigate the hierarchy, edit a property, save, run, stop, and inspect the console.
+- No S0 or S1 defects remain open.
+
+## Release requirements
+
+- Include all common mandatory artifacts in `.\releases\v3.1.0`.
+- `Nova_A-v3.1.0-reference-projects.zip` must include a workspace and recovery validation project.
+- Release evidence must include layout screenshots for all reference resolutions, crash-recovery logs, undo and redo automation results, keyboard-navigation results, and the first-launch borderless-fullscreen test.
+- Release notes must explain renamed and relocated panels and how to reset a workspace.
+
+
+# 9.2 Nova_A 3.2.0 — Project Data, Scene, Resource, and Prefab Foundation
+
+## Release objective
+
+Establish the authoritative project data model. All later editor and runtime features depend on reliable scenes, resources, references, imports, and migrations.
+
+## Remove or deprecate
+
+- Deprecate path-only persistent references.
+- Deprecate nondeterministic serialization and volatile ordering.
+- Deprecate ad-hoc project folder scanning as the primary asset database.
+- Remove direct editing of generated import artifacts.
+- Deprecate any scene or resource format that cannot represent stable IDs and schema versions.
+
+## Add functionality
+
+### Project manifest and identity
+
+- Add a versioned project manifest with project UUID, engine compatibility range, schema version, package lockfile reference, and build preset references.
+- Add stable asset IDs and stable object-local IDs.
+- Define user-local, project-shared, generated, cache, and source directories.
+
+### Deterministic serialization
+
+- Define text-based canonical formats for scenes, prefabs, resources, settings, and build presets where practical.
+- Specify ordering, whitespace, numeric formatting, encoding, line endings, and unknown-field behavior.
+- Add canonical serializer tests.
+
+### Scene and prefab model
+
+- Add scene instancing and nested scenes.
+- Add prefabs with nested prefab support.
+- Add override indicators and workflows: apply, revert, reset, unpack, and compare.
+- Add reference remapping when duplicating a scene or prefab hierarchy.
+- Add component dependency validation.
+- Add project-wide scene dependency graph.
+
+### Asset database and import pipeline
+
+- Add asset metadata records, importer version, source hash, imported artifact hash, dependencies, and reverse dependencies.
+- Add background import queue with progress, cancellation, retry, and logs.
+- Add automatic reimport on external source change.
+- Add per-asset import settings and presets.
+- Add thumbnail and preview cache.
+- Add move and rename through the editor with reference preservation.
+- Add missing-reference resolver and dependency viewer.
+- Add unused-resource report with safe-delete preview.
+- Add external file-change notification and conflict choices.
+
+### Migration and repair
+
+- Add migration registry from every supported schema to the current schema.
+- Add dry-run migration report.
+- Create a complete project backup before migration.
+- Add rollback when migration validation fails.
+- Add read-only compatibility mode.
+- Add Project Validate and Project Repair commands.
+
+## Modify and improve
+
+- Redesign the resource browser around search, folder tree, saved filters, favorites, asset previews, status badges, and dependency information.
+- Replace the long resource-type chip row with a searchable filter menu.
+- Improve project manager import and migration messaging.
+- Display package and engine compatibility before opening a project.
+- Mark generated files clearly and exclude them from normal editing.
+- Add asset operation previews for move, rename, delete, and replace.
+
+## Testing process
+
+1. Create a project corpus covering schema versions and malformed states.
+2. Run save, reopen, save round-trip tests.
+3. Run deterministic serialization tests across repeated saves and clean machines.
+4. Randomly create, rename, move, duplicate, delete, and restore assets and scenes.
+5. Test fifty-thousand-asset indexing and search.
+6. Test concurrent external changes while the editor is open.
+7. Test interrupted migration and interrupted import.
+8. Test nested prefab overrides and reference remapping.
+9. Test source-control diffs for no-op saves.
+
+## Testing and acceptance requirements
+
+- A no-op save produces no project-content changes.
+- Moving or renaming an asset through the editor preserves all valid references.
+- Deleting a referenced asset shows all known dependents before confirmation.
+- All supported project corpus entries migrate successfully or fail without modifying the original.
+- Interrupted migration restores the pre-migration project.
+- The asset browser remains usable with fifty thousand indexed assets on reference hardware.
+- Nested prefab overrides survive save, reopen, duplicate, and migration.
+- No S0 or S1 defects remain open.
+
+## Release requirements
+
+- Include all common mandatory artifacts in `.\releases\v3.2.0`.
+- Release evidence must contain the project format specification, migration matrix, deterministic serialization report, asset move and rename report, and large-project benchmark.
+- Reference projects must include nested scenes, nested prefabs, overridden properties, missing-reference repair, and imported assets.
+- Release notes must describe schema changes, backup behavior, compatibility boundaries, and rollback.
+
+
+# 9.3 Nova_A 3.3.0 — Core 2D Authoring, Inspector, Camera, and Sprite Workflow
+
+## Release objective
+
+Make ordinary 2D scene construction fast and direct. This release turns the viewport, hierarchy, inspector, and asset browser into a complete authoring loop.
+
+## Remove or deprecate
+
+- Remove UI-only object shortcuts from the generic empty inspector.
+- Deprecate object creation that bypasses the scene transaction and undo system.
+- Remove duplicate object property controls from unrelated docks.
+- Deprecate inspector properties without validation, units, ranges, reset, and documentation metadata.
+
+## Add functionality
+
+### Create-object and component palette
+
+- Add searchable Create Object and Add Component palettes.
+- Group by Core, 2D, Physics, UI, Audio, Camera, Navigation, Script, and Packages.
+- Show compatibility, required components, and experimental status.
+- Support favorites and recently used types.
+
+### 2D object set
+
+- Add sprite, animated sprite, text, polygon, line, path, camera, canvas layer, parallax layer, and basic shape objects.
+- Add pivot, origin, texture region, flip, modulation, z order, render layer, visibility, and sorting controls.
+- Add camera limits, zoom, smoothing, drag margins, preview, and pixel-perfect options.
+
+### Viewport editing
+
+- Add move, rotate, scale, pivot, rectangle, path-point, polygon-point, and collider gizmos.
+- Add ruler and measurement overlay.
+- Add align, distribute, mirror, rotate ninety degrees, frame selection, isolate selection, and focus camera.
+- Add vertex, edge, center, pixel, grid, angle, and object snapping.
+- Add multi-selection, box selection, selection filters, lock, hide, solo, and grouping.
+- Add camera-frame and common-resolution overlays.
+
+### Inspector
+
+- Add property search and category filter.
+- Add multi-object editing with mixed-value display.
+- Add reset to default, revert override, copy value, paste value, copy property path, and keyframe property actions.
+- Add validation messages, units, ranges, enum documentation, and inline help.
+- Add component copy, paste, reorder, enable, disable, reset, and remove.
+- Add property pinning and a modified-only view.
+
+### Sprite and image workflow
+
+- Add sprite sheet slicing.
+- Add atlas region editing.
+- Add transparent trim, pivot presets, borders, and nine-slice metadata.
+- Add import preview for filtering, compression, color space, and pixel-art mode.
+- Add drag and drop from Assets into the viewport to create the appropriate object.
+
+## Modify and improve
+
+- Make hierarchy rename, duplicate, reparent, reorder, group, and delete transactional.
+- Preserve world transform when reparenting by default, with an alternate local-transform option.
+- Add breadcrumb path and object context menu.
+- Add component and tag search in the hierarchy.
+- Display scene-instance and prefab-override status in the hierarchy and inspector.
+- Improve selection outline visibility without obscuring pixel art.
+- Add viewport performance mode for large scenes.
+
+## Testing process
+
+1. Automate creation of each core 2D object type.
+2. Test multi-selection and mixed-value edits.
+3. Test reparenting, duplication, undo, redo, and prefab overrides.
+4. Test pixel-art import and rendering at multiple zoom values.
+5. Test camera preview and aspect-ratio overlays.
+6. Test five-thousand-object scenes for navigation and selection responsiveness.
+7. Run a timed platformer-scene authoring study from a blank project.
+8. Test every inspector property action with undo and redo.
+
+## Testing and acceptance requirements
+
+- A user can create a camera, sprite, collider, script, and light without leaving the Design workspace.
+- Dragging a supported asset into the viewport creates the expected object and one undo step.
+- Multi-object editing does not overwrite unrelated mixed values.
+- Reparenting preserves the chosen transform mode and is fully undoable.
+- A five-thousand-object reference scene remains interactive on reference hardware.
+- A trained tester can assemble the supplied basic platformer scene from a blank project in fifteen minutes or less using documented tools.
+- No S0 or S1 defects remain open.
+
+## Release requirements
+
+- Include all common mandatory artifacts in `.\releases\v3.3.0`.
+- Reference projects must include pixel-art, resolution-independent art, parallax, multiple cameras, nested prefabs, and a five-thousand-object stress scene.
+- Release evidence must include timed workflow results, viewport performance, inspector transaction tests, and pixel-perfect visual comparisons.
+- Release notes must document new object types, inspector changes, and any renamed properties.
+
+
+# 9.4 Nova_A 3.4.0 — Production-Grade 2D Physics and Character Workflow
+
+## Release objective
+
+Convert the existing physics surface into a complete, documented, and testable 2D physics workflow suitable for platformers, top-down games, puzzles, and physics simulations.
+
+## Remove or deprecate
+
+- Deprecate the unlabelled numeric collision matrix as the default interface.
+- Remove ambiguous physics property names and undocumented units.
+- Deprecate direct transform writes on physics-controlled bodies when they violate simulation rules.
+- Remove unsupported joint or rope entries from templates until their behavior passes the conformance suite.
+
+## Add functionality
+
+### Physics object model
+
+- Add static body, animatable or kinematic body, character body, rigid body, and area or trigger.
+- Add box, circle, capsule, segment, chain, convex polygon, and concave polygon shapes where supported.
+- Add multiple shapes per body and shape-local transforms.
+- Add collision material assets with friction, restitution, density, and combine modes.
+
+### Queries and events
+
+- Add ray cast, shape cast, point query, overlap query, and contact query.
+- Add trigger enter, stay, and exit events.
+- Add collision enter, stay, and exit events with contact data.
+- Define stable event ordering and disabled-object behavior.
+- Add one-way collision and one-way platform settings.
+
+### Character controller
+
+- Add floor, wall, and ceiling classification.
+- Add slope limit, snap-to-floor, step handling, moving-platform transfer, and safe margin.
+- Add velocity and move-and-slide style APIs.
+- Add character debug overlay.
+
+### Joints and constraints
+
+- Add distance, revolute, prismatic, weld, spring, rope, and motor options as supported by the runtime.
+- Add editor gizmos, limits, motors, break threshold, and diagnostics.
+
+### Collision layers
+
+- Add named layers with descriptions and optional colors.
+- Add layer presets and search.
+- Add compact pair editor and keep the full matrix as an advanced mode.
+- Display object layer and mask names in the inspector.
+
+### Simulation quality
+
+- Add continuous collision settings with documented cost.
+- Add interpolation controls.
+- Add sleep thresholds and diagnostics.
+- Add fixed-step and catch-up diagnostics.
+- Add physics scene test runner and replay capture.
+
+## Modify and improve
+
+- Move project physics settings into a dedicated Project Settings > Physics page.
+- Add unit labels and validation for gravity, density, mass, force, impulse, speed, and time.
+- Integrate physics debug visualization into the Debug workspace.
+- Integrate physics metrics into Profiler captures.
+- Update the Physics Sandbox and Platformer templates to use the production APIs.
+- Document transform ownership and teleport operations.
+
+## Testing process
+
+1. Run body and shape conformance tests.
+2. Run stable-stack, friction, restitution, joint, sleep, and wake tests.
+3. Run fast-body tunneling tests with and without continuous collision.
+4. Run character tests on slopes, steps, moving platforms, edges, and ceilings.
+5. Run collision-layer and event-order tests.
+6. Run same-build determinism replay tests.
+7. Run stress tests at one hundred, one thousand, and ten thousand bodies.
+8. Run a twelve-hour physics soak.
+9. Compare physics behavior in editor preview and exported runtime.
+
+## Testing and acceptance requirements
+
+- The defined continuous-collision reference cases do not tunnel at supported settings.
+- A one-thousand-dynamic-body benchmark maintains the documented target update rate on reference hardware.
+- A stable-stack reference scene remains within the documented positional and energy tolerance.
+- Character movement passes slope, step, moving-platform, floor-snap, and ceiling tests.
+- Collision events are repeatable for the same build and input replay.
+- Named layers survive migration, rename, copy, package import, and export.
+- No S0 or S1 defects remain open.
+
+## Release requirements
+
+- Include all common mandatory artifacts in `.\releases\v3.4.0`.
+- Reference projects must include platformer character, top-down character, joint showcase, trigger showcase, CCD test, stacking test, and physics sandbox.
+- Release evidence must include performance graphs, determinism results, tunneling results, character-controller matrix, and twelve-hour soak report.
+- Release notes must document behavior changes from 3.0.0 physics and migration of collision layers.
+
+
+# 9.5 Nova_A 3.5.0 — Rhai Scripting API v1, Debugger, Hot Reload, and Test Runner
+
+## Release objective
+
+Provide a professional programming workflow and freeze the first stable Rhai API contract for Nova_A 4.0.
+
+## Remove or deprecate
+
+- Remove lifecycle callback templates that are not actually supported.
+- Deprecate undocumented global functions and inconsistent naming.
+- Remove duplicate diagnostics that show the same error in multiple tabs without added context.
+- Deprecate APIs that expose unsafe editor internals or unstable object handles.
+- Remove silent script failure; all runtime script errors must be surfaced.
+
+## Add functionality
+
+### API v1
+
+- Define namespaces for lifecycle, scene, object, component, transform, input, physics, UI, audio, animation, navigation, save data, timing, logging, and resources.
+- Add stable object and resource handle rules.
+- Add exported property metadata: type, default, range, step, enum, resource type, group, tooltip, and serialization rules.
+- Add signals or events with editor-visible connection metadata.
+- Add timers, deferred calls, coroutines or async tasks, cancellation, and error propagation.
+- Add module imports and project script packages.
+- Add API deprecation annotations and compatibility warnings.
+
+### Code intelligence
+
+- Add symbol index, semantic completion, parameter hints, hover documentation, go-to-definition, find references, rename, document symbols, workspace symbols, formatting, and code actions.
+- Add source-linked diagnostics with ranges and stable error codes.
+- Add API browser and examples.
+- Add external editor integration through a language-server-compatible process or documented protocol.
+
+### Debugger
+
+- Add line breakpoints, function breakpoints where practical, conditional breakpoints, hit counts, and logpoints.
+- Add pause, continue, step in, step over, step out, and restart.
+- Add call stack, locals, watches, expression evaluation, and object inspection.
+- Add source mapping between runtime and editor.
+- Add breakpoint persistence.
+- Add debugger behavior for fixed update and event callbacks.
+
+### Hot reload
+
+- Add safe script recompilation.
+- Define which state is preserved and which state is recreated.
+- Add pre-reload validation and rollback on compile failure.
+- Add opt-out for scripts with unsafe reload state.
+
+### Test runner
+
+- Add test discovery, assertions, setup, teardown, parameterized tests, timeout, skip, tags, and deterministic seed.
+- Add editor results, console output, and machine-readable CI output.
+- Add headless test command.
+
+### Script profiler
+
+- Add per-script and per-function timing, call count, and allocation estimate where available.
+- Add capture export and comparison.
+
+## Modify and improve
+
+- Redesign the Script workspace around files, editor, problems, outline, debugger, tests, and API.
+- Make parser, semantic, runtime, and test errors visually distinct.
+- Add unsaved-change indicators and recovery.
+- Add code templates for component, UI control, physics body, animation event, and test.
+- Add documentation links from completion and errors.
+- Update all templates and reference projects to API v1.
+
+## Testing process
+
+1. Run parser and semantic fuzz tests.
+2. Run API binding unit tests for every public function and property.
+3. Run debugger tests through all lifecycle callbacks.
+4. Run hot-reload success, compile-failure, state-preservation, and rollback tests.
+5. Run test-runner discovery, timeout, isolation, and headless output tests.
+6. Run API compatibility tests against archived 3.5 projects.
+7. Run script error storms and ensure the editor remains responsive.
+8. Run script performance benchmarks.
+9. Validate external editor protocol with at least one supported editor configuration.
+
+## Testing and acceptance requirements
+
+- Every public API symbol has generated documentation.
+- At least ninety percent of public API symbols include an example or reference-project usage.
+- Script compile and runtime errors do not crash the editor or corrupt the project.
+- Breakpoints, stepping, locals, watches, and call stack work in update, fixed update, input, collision, and UI callbacks.
+- Failed hot reload leaves the last valid script active.
+- Headless tests produce a documented nonzero exit code on failure.
+- API compatibility tests detect accidental breaking changes.
+- No S0 or S1 defects remain open.
+
+## Release requirements
+
+- Include all common mandatory artifacts in `.\releases\v3.5.0`.
+- Release evidence must include API coverage, debugger automation, hot-reload rollback, fuzzing summary, test-runner CI output, and compatibility report.
+- Reference projects must include script lifecycle, signals, async or timer behavior, debugger scenarios, script tests, and API examples.
+- Release notes must contain the API v1 contract, deprecations, migration examples, and debugger limitations.
+
+
+# 9.6 Nova_A 3.6.0 — Animation, UI, Input, Localization, and Accessibility
+
+## Release objective
+
+Complete the presentation layer needed for menus, HUDs, responsive layouts, animation-driven behavior, multiple input devices, localization, and accessible interaction.
+
+## Remove or deprecate
+
+- Remove the remaining separate Presentation dock.
+- Deprecate fixed-position UI layouts that ignore scale and safe areas.
+- Remove input bindings that cannot identify device, axis, modifiers, or dead zone.
+- Deprecate localization fields stored as unstructured strings in scene files.
+- Remove accessibility toggles that do not connect to runtime behavior.
+
+## Add functionality
+
+### Animation editor
+
+- Add dope sheet and curve editor.
+- Add property, method, event, audio, and nested animation tracks.
+- Add keyframe insertion from the inspector.
+- Add interpolation, easing, tangents, snapping, markers, looping, and speed controls.
+- Add animation state-machine parameters, conditions, transitions, blend times, and live debug.
+- Add sprite-frame animation and onion skinning.
+- Add skeleton, bone, skin, weight, IK, and constraint workflows where supported.
+- Add animation library and reusable clip support.
+
+### UI layout system
+
+- Add anchors, offsets, minimum and preferred size, size flags, aspect ratio, and safe-area constraints.
+- Add row, column, grid, flow, overlay, center, margin, aspect, and split containers.
+- Add responsive preview for common resolutions, aspect ratios, DPI values, and safe areas.
+- Add reusable UI scenes and component variants.
+- Add theme inheritance, style states, nine-patch resources, typography, spacing tokens, and color tokens.
+- Add focus order visualization and gamepad navigation.
+- Add modal, popup, tooltip, drag-and-drop, and scroll behavior.
+
+### Input system
+
+- Add keyboard, physical-key, mouse button, wheel, mouse motion, gamepad button, gamepad axis, touch, and gesture bindings.
+- Add dead zone, threshold, inversion, response curve, modifiers, and chord support.
+- Add binding conflict detection.
+- Add runtime rebinding API and reusable rebind UI.
+- Add device hot-plug events and controller identity.
+- Add input recording and replay for tests.
+
+### Localization
+
+- Add string-table assets and CSV or structured import.
+- Add keys, context, plural forms, fallback locale, and locale metadata.
+- Add extraction from UI and scripts.
+- Add pseudolocalization and missing-string report.
+- Add right-to-left layout and text-direction controls.
+- Add locale preview in the UI editor.
+
+### Accessibility
+
+- Add accessible name, description, role, state, and value metadata for UI controls.
+- Add keyboard focus, focus visibility, logical reading order, and skip-navigation support.
+- Add high-contrast and reduced-motion theme hooks.
+- Add scalable text and minimum target-size guidance.
+- Add screen-reader integration hooks on Tier-1 platforms.
+- Add accessibility audit panel for missing labels, unreachable controls, insufficient contrast, and invalid focus order.
+
+## Modify and improve
+
+- Merge responsive UI, themes, localization, audio UI, and accessibility into one coherent UI workspace.
+- Keep project audio mixing in the Audio system; expose only UI-related audio references in the UI workspace.
+- Redesign Input Map with searchable actions, device filters, duplicate detection, and compact binding rows.
+- Add animation preview and runtime state inspection to Debug.
+- Update UI Demo and Platformer templates with responsive and accessible UI.
+- Add clear editor-level versus game-level accessibility settings.
+
+## Testing process
+
+1. Run animation track, curve, state-machine, skeleton, and event tests.
+2. Run UI layout tests across resolution, aspect ratio, DPI, safe area, and localization combinations.
+3. Run keyboard-only, controller-only, mouse-only, and touch input workflows.
+4. Test device hot-plug and rebinding persistence.
+5. Run pseudolocalization with expansion, diacritics, and bidirectional text.
+6. Run right-to-left layout tests.
+7. Run automated contrast and focus-order checks.
+8. Test reduced motion and high contrast.
+9. Run editor UI scaling and keyboard-navigation tests.
+
+## Testing and acceptance requirements
+
+- UI reference scenes render without clipped or overlapping content in the approved resolution matrix.
+- Pseudolocalization expansion does not hide required controls.
+- Right-to-left reference scenes mirror as specified.
+- All interactive reference controls are reachable by keyboard and gamepad.
+- Runtime rebinding detects conflicts and persists safely.
+- Animation state transitions can be inspected while the game runs.
+- Accessibility audit reports known missing metadata with source locations.
+- No S0 or S1 defects remain open.
+
+## Release requirements
+
+- Include all common mandatory artifacts in `.\releases\v3.6.0`.
+- Reference projects must include responsive menu, HUD, controller navigation, runtime rebinding, localization, pseudolocalization, right-to-left layout, animation state machine, and skeletal or sprite animation examples.
+- Release evidence must include layout screenshots, input device matrix, localization report, accessibility audit, and animation regression results.
+- Release notes must document UI migration, localization format, input changes, and accessibility support boundaries.
+
+
+# 9.7 Nova_A 3.7.0 — Rendering, Materials, Shaders, Particles, Fonts, and Audio
+
+## Release objective
+
+Establish a reliable, measurable visual and audio pipeline for desktop and web targets. Replace low-level-only authoring with typed, asset-driven workflows while retaining advanced control.
+
+## Remove or deprecate
+
+- Deprecate raw JSON as the default interface for shader uniforms and textures.
+- Remove renderer settings that are unsupported by the active backend.
+- Deprecate implicit color-space conversion and undocumented texture filtering defaults.
+- Remove template claims for lighting, post-processing, or audio features that are not supported consistently across Tier-1 targets.
+
+## Add functionality
+
+### Renderer architecture
+
+- Define one Tier-1 native renderer and one Tier-1 WebGL2-compatible renderer path.
+- Add renderer capability query and project compatibility report.
+- Add shader and material fallback rules.
+- Add device-loss recovery and renderer reset where supported.
+
+### 2D rendering
+
+- Add sprite batching, texture atlasing, canvas layers, render layers, sorting groups, and stable draw-order rules.
+- Add multiple cameras, viewports, viewport scaling, and render textures.
+- Add parallax, polygon, line, path, and primitive rendering.
+- Add pixel-perfect camera and snap policies.
+- Add 2D lights, masks, occluders, shadows, normal maps, and ambient controls.
+- Add particle systems with editor preview, curves, gradients, shape emission, subemitters if supported, and performance budget display.
+
+### Materials and shaders
+
+- Add typed uniform reflection from compiled shaders.
+- Generate inspector fields for numbers, vectors, colors, textures, enums, ranges, and toggles.
+- Add shader includes or shared functions, variants, compile cache, source-linked errors, and live preview.
+- Add material instances and inheritance.
+- Add shader safety limits for loops, resource use, and unsupported features.
+- Keep advanced text and JSON views behind an Advanced mode.
+
+### Texture, font, and color pipeline
+
+- Add texture import profiles for pixel art, UI, normal maps, and general sprites.
+- Add atlas packing report and batch-break diagnostics.
+- Add font import, fallback chains, bitmap fonts, scalable fonts, outlines, and text shaping.
+- Add sRGB and linear workflow documentation and validation.
+
+### Audio
+
+- Add waveform preview, trim, loop points, normalization option, compression, and streaming profiles.
+- Add 2D positional audio, listeners, distance attenuation, and panning.
+- Add audio bus graph and effects.
+- Add polyphony, random pitch and volume, voice priority, voice limits, and virtual voices.
+- Add device-change handling, latency display, and underrun diagnostics.
+- Add animation audio tracks and UI sound themes.
+
+## Modify and improve
+
+- Redesign Rendering dock into Lighting, Materials, Shaders, Diagnostics, and Quality sections.
+- Replace static diagnostic values with captures that can be saved and compared.
+- Add render-overdraw and batch-break overlays.
+- Add GPU and browser capability summary to Project Health.
+- Add audio asset preview to Assets and audio runtime metrics to Profiler.
+- Add platform-specific quality presets with visible differences.
+
+## Testing process
+
+1. Run golden-image tests on the supported GPU and browser matrix.
+2. Run pixel-art and resolution-independent rendering tests.
+3. Run shader compiler fuzzing and malformed-shader tests.
+4. Run material serialization and fallback tests.
+5. Run ten-thousand-sprite, light, particle, text, and overdraw benchmarks.
+6. Run device-loss and context-loss recovery tests.
+7. Run audio import, streaming, loop, bus, effect, voice-limit, and device-change tests.
+8. Run long-duration audio and rendering soak tests.
+9. Compare editor preview and exported output.
+
+## Testing and acceptance requirements
+
+- Golden-image differences remain within the documented tolerance on Tier-1 targets.
+- Unsupported shader features produce source-linked errors rather than silent fallback.
+- Typed uniforms round-trip through save, reopen, duplicate, and package export.
+- Ten-thousand-sprite reference scenes meet the documented frame-time budget on reference hardware.
+- Context or device loss does not corrupt the project or permanently disable the editor.
+- Audio loops do not introduce an audible gap in the supplied reference files within documented codec limits.
+- Voice limits behave deterministically by priority policy.
+- No S0 or S1 defects remain open.
+
+## Release requirements
+
+- Include all common mandatory artifacts in `.\releases\v3.7.0`.
+- Reference projects must include pixel-art, lighting and shadows, particles, shader uniforms, render textures, fonts and multilingual text, positional audio, bus effects, and streaming audio.
+- Release evidence must include golden images, GPU and browser matrix, shader fuzzing summary, performance captures, audio latency and underrun report, and editor-versus-export comparison.
+- Release notes must list renderer capabilities, unsupported features, fallback behavior, and audio codec limitations.
+
+
+# 9.8 Nova_A 3.8.0 — Tilemap 2.0, Navigation, Large Worlds, Save Data, and Optional World Packages
+
+## Release objective
+
+Complete level-authoring and large-world workflows while separating universally required engine functions from optional AI, streaming, and pooling packages.
+
+## Remove or deprecate
+
+- Remove the monolithic World Tools dock.
+- Deprecate AI, streaming, and object-pool editor tabs as permanent core UI.
+- Deprecate unversioned save values.
+- Remove tile assets that cannot store collision, navigation, occlusion, or metadata consistently.
+- Deprecate synchronous large-world loading on the main thread for supported streaming workflows.
+
+## Add functionality
+
+### Tilemap 2.0
+
+- Add multiple tilemap layers with visibility, lock, blend, parallax, z order, and collision settings.
+- Add tile-set source management and atlas slicing.
+- Add animated tiles, variants, weights, transforms, and randomization.
+- Add terrain sets, transition rules, validation, and preview.
+- Add collision, navigation, occlusion, custom metadata, and scene or prefab placement per tile.
+- Add stamp, pattern, line, rectangle, fill, replace, selection, copy, paste, rotate, mirror, and random brush tools.
+- Add chunked editing and runtime chunk access.
+- Add tilemap diagnostics for invalid terrain, missing tile, overdraw, collision, and navigation.
+
+### Navigation
+
+- Add grid and polygonal 2D navigation as supported by the runtime.
+- Add bake, rebake, clear, and source selection.
+- Add dynamic obstacles, navigation layers, costs, links, and regions.
+- Add A-star path API and path debug visualization.
+- Add agent radius, avoidance, and path-following helpers where supported.
+- Add navigation profiling.
+
+### World streaming
+
+- Add streaming cells or chunks with explicit bounds and ownership.
+- Add asynchronous load, activate, deactivate, and unload lifecycle.
+- Add dependency prefetch and memory budget.
+- Add editor preview of loaded and unloaded regions.
+- Add save-state handoff for streamed scenes.
+- Add streaming profiler and event log.
+
+### Save data
+
+- Add save schema version and migration hooks.
+- Add atomic write, journal or temporary file, checksum, backup, and recovery.
+- Add async save and load with cancellation and progress.
+- Add slot metadata and platform save-location abstraction.
+- Add structured custom serialization API.
+- Move Save Data Inspector into Debug.
+
+### Optional official packages
+
+- Publish Object Pool as an optional runtime package with reset contracts, capacity, lifetime, and diagnostics.
+- Publish AI Tools as an optional package only if behavior model, serialization, debug, and documentation are complete.
+- Keep Networking as Experimental unless it passes the 3.9.0 package and headless-build gates.
+
+## Modify and improve
+
+- Add Tilemap workspace context when a tilemap is selected rather than exposing the full tool permanently.
+- Integrate navigation data into tile-set and scene workflows.
+- Replace “World Tools” with searchable components and package-provided panels.
+- Add world-size, tile-count, navigation-region, and streaming-memory information to Project Health.
+- Update Top-down and Platformer templates to demonstrate tilemap and navigation integration.
+
+## Testing process
+
+1. Run tile painting, terrain, animation, metadata, collision, navigation, and scene-tile tests.
+2. Run one-million-tile edit, save, reopen, and runtime tests.
+3. Run chunk streaming with randomized player movement and memory pressure.
+4. Run navigation bake, dynamic obstacle, cost, and avoidance tests.
+5. Run save migration, interrupted write, corruption, checksum, backup, and recovery tests.
+6. Run object-pool reset and leak tests.
+7. Run package enable, disable, upgrade, and removal tests for optional world packages.
+8. Run long-duration streamed-world soak.
+
+## Testing and acceptance requirements
+
+- A one-million-tile reference world opens and remains editable within the documented memory and latency budget.
+- Terrain validation identifies invalid or incomplete rule sets before runtime.
+- Tile collision and navigation data match visual transforms after rotate and mirror operations.
+- Streaming does not leak objects or retain unloaded assets beyond the documented cache policy.
+- Interrupted save preserves the last valid slot and offers recovery.
+- Save migration is deterministic and tested across all supported save schemas.
+- Optional packages can be removed without corrupting unrelated project data.
+- No S0 or S1 defects remain open.
+
+## Release requirements
+
+- Include all common mandatory artifacts in `.\releases\v3.8.0`.
+- Reference projects must include multi-layer tilemap, terrain rules, animated tiles, navigation, streamed world, save migration, and optional object-pool package examples.
+- Release evidence must include million-tile benchmark, navigation tests, streaming memory capture, save-corruption recovery, and optional-package removal tests.
+- Release notes must document tilemap migration, save schema, optional package status, and large-world limitations.
+
+
+# 9.9 Nova_A 3.9.0 — Build System, Platforms, Package Ecosystem, Collaboration, and 4.0 Release Candidate
+
+## Release objective
+
+Turn Nova_A into a reproducible, automatable, package-extensible, team-ready product and freeze functionality for the 4.0 stabilization cycle.
+
+## Remove or deprecate
+
+- Remove platform entries that do not have a declared support tier and passing reference-project matrix.
+- Disable unsigned or unverifiable package installation by default in Stable channel.
+- Deprecate package manifests without semantic version, engine compatibility, permissions, dependency hashes, and entry-point type.
+- Remove editor-only configuration from project-shared files unless explicitly marked.
+- Deprecate build operations that cannot be invoked from the command line.
+- Freeze new feature work after the 3.9.0 beta cut except approved release blockers.
+
+## Add functionality
+
+### Build and automation
+
+- Add command-line commands for validate, import, test, build, export, package, and version information.
+- Add headless mode.
+- Add project build presets and platform profiles.
+- Add clean, incremental, and reproducible build modes.
+- Add content inclusion and exclusion rules, asset stripping, compression, build-size report, and dependency report.
+- Add debug symbols, crash-symbol packaging, version metadata, icons, and platform manifest settings.
+- Add CI examples and machine-readable logs.
+- Add build cache validation and invalidation diagnostics.
+
+### Platform support policy
+
+- Declare Windows x86-64 editor and runtime as Tier 1.
+- Declare Web runtime as Tier 1 after browser matrix validation.
+- Add Linux x86-64 as Tier 1 or Tier 2 only after clean-machine, driver, audio, input, and export tests pass.
+- Add macOS as Tier 2 or Experimental only when dedicated hardware, signing, notarization, and test capacity exist.
+- Defer mobile and console support until after 4.0 unless a separately funded platform project is approved.
+
+### Package ecosystem
+
+- Add registry protocol and local-registry support.
+- Add semantic version resolver and deterministic lockfile.
+- Add signed package manifests and archive verification.
+- Add capability permissions with user review.
+- Separate editor extensions, build extensions, importers, runtime packages, and templates.
+- Add package rollback, cache verification, quarantine, and safe mode.
+- Add package API compatibility range and deprecation warnings.
+- Add package authoring template, tests, documentation, and publish validation.
+
+### Collaboration and source control
+
+- Add Git-oriented ignore template and repository initialization option.
+- Add external-change detection and reload or compare choices.
+- Add scene, prefab, resource, and settings diff viewer.
+- Add deterministic generated-file policy.
+- Add shared versus user-local settings separation.
+- Add optional binary-file lock integration.
+- Add pre-commit validation command and CI validation template.
+- Add change summary for project operations.
+
+### Documentation and support
+
+- Add searchable offline manual and API reference.
+- Add context help from inspector, errors, build settings, and packages.
+- Add guided first project and role-based tutorials.
+- Add migration center, known-issue viewer, and diagnostic bundle export.
+- Add opt-in crash report creation with privacy review.
+
+### Experimental networking package gate
+
+- Define transport, RPC, authority, replication, prediction, diagnostics, and headless-server interfaces.
+- Keep the package Experimental unless all security, bandwidth, packet-loss, multiple-instance, and headless build tests pass.
+- Do not make networking a 4.0 core-stability blocker.
+
+## Modify and improve
+
+- Redesign Build Settings around presets, validation, output, signing, diagnostics, and history.
+- Add clear support badges for Tier 1, Tier 2, Experimental, and Unsupported.
+- Display package permissions before installation and when permissions change.
+- Add lockfile changes to the project change summary.
+- Add build and package operations to the background task center.
+- Add diagnostic-bundle generation for user bug reports.
+- Freeze project schema and public API except approved 4.0 blockers.
+
+## Testing process
+
+1. Build every mandatory artifact from a clean tagged checkout using CI.
+2. Compare clean builds for reproducibility.
+3. Test MSI, setup executable, portable executable, and web package on clean systems.
+4. Test install, repair, update, rollback, uninstall, and portable isolation.
+5. Run all reference projects on every declared Tier-1 platform.
+6. Test package dependency resolution, lockfile, offline cache, signature failure, permission escalation, rollback, and quarantine.
+7. Test malicious package archives and malformed manifests.
+8. Test source-control branch, merge, external-change, and no-op save behavior.
+9. Run public or controlled beta telemetry and issue triage.
+10. Run full migration corpus and API compatibility suite.
+
+## Testing and acceptance requirements
+
+- All mandatory artifacts are generated from the same signed source tag.
+- Clean builds are reproducible within the documented non-deterministic exceptions.
+- Installers and portable builds pass clean-machine tests.
+- Every Tier-1 reference project launches and behaves as specified.
+- Package resolution from a lockfile is deterministic online and from a valid offline cache.
+- Invalid signatures, changed permissions, and incompatible engine ranges block installation with clear diagnostics.
+- No-op saves do not create source-control noise.
+- Public API and project schema are frozen for 4.0 except approved blocker fixes.
+- No S0 or S1 defects remain open at the release-candidate cut.
+
+## Release requirements
+
+- Include all common mandatory artifacts in `.\releases\v3.9.0`.
+- Release evidence must include reproducible-build report, clean-machine matrix, installer lifecycle tests, Tier-1 platform matrix, package security tests, lockfile tests, source-control workflow tests, migration corpus, and API freeze report.
+- Reference projects must include build automation, package authoring, source-control workflow, web deployment, and optional headless networking tests if the networking package is included.
+- Release notes must identify 3.9.0 as the feature-complete 4.0 release candidate and list all frozen interfaces.
+
+
+# 9.10 Nova_A 4.0.0 — Production-Stable 2D Engine Baseline
+
+## Release objective
+
+Deliver a stable, documented, migration-safe, and reproducible engine release. Version 4.0.0 is a quality and compatibility release, not a final opportunity to add large features.
+
+## Remove or deprecate
+
+- Remove all 3.x APIs whose deprecation period has completed and whose migration path is documented.
+- Remove legacy project write paths that bypass the 4.0 schema.
+- Remove unsupported templates and panels that imply unavailable functionality.
+- Remove hidden compatibility modes that cannot be maintained safely.
+- Remove packages from the default template set if they remain Experimental.
+
+## Add functionality
+
+### Upgrade and compatibility
+
+- Add 4.0 Upgrade Assistant with preflight report, backup, migration, validation, and rollback.
+- Add archived engine compatibility guidance for teams that cannot upgrade immediately.
+- Add project and package compatibility summary before open.
+
+### Stability and support
+
+- Add documented stable, beta, and development channels.
+- Add 4.0 support and patch policy.
+- Add opt-in crash report packaging and privacy notice.
+- Add known-issues feed and workaround documentation.
+- Add release-health dashboard generation for the team.
+
+### Documentation and reference content
+
+- Publish complete user manual, API reference, migration guide, package authoring guide, build and CI guide, performance guide, security guide, accessibility guide, and troubleshooting guide.
+- Include polished reference projects for blank 2D, platformer, top-down, physics sandbox, UI demo, rendering, tilemap, scripting, package authoring, and build automation.
+- Add an official “Create and export a small game” guided path.
+
+### Final quality work
+
+- Complete performance, memory, startup, import, save, build, and package optimization against established budgets.
+- Complete UI text, tooltips, focus, scaling, localization, and accessibility review.
+- Complete dependency and license review.
+- Complete installer signing and artifact provenance where infrastructure allows.
+
+## Modify and improve
+
+- Apply final consistency pass to naming, menus, shortcuts, context menus, error messages, and documentation links.
+- Reduce default workspace clutter and preserve optional advanced tools through packages and custom workspaces.
+- Improve first-run onboarding and project-template descriptions.
+- Tune default settings for safe behavior rather than maximum visual effects.
+- Lock 4.0 project schema and public API for patch-release compatibility.
+
+## Testing process
+
+1. Run the complete automated test suite from clean source.
+2. Run the complete project and save migration corpus.
+3. Run all reference projects on all Tier-1 platforms and supported browsers.
+4. Run installer, portable, web, update, rollback, and uninstall tests.
+5. Run package registry, permissions, signature, lockfile, offline, and safe-mode tests.
+6. Run security review and malformed-input fuzzing.
+7. Run performance regression comparison against 3.9.0.
+8. Run at least one thousand aggregate hours of editor and runtime soak across automation and beta users.
+9. Run keyboard, scaling, contrast, reduced-motion, screen-reader-hook, localization, pseudolocalization, and right-to-left tests.
+10. Run documentation link, sample code, tutorial, and API-example validation.
+11. Perform final release-candidate sign-off by engineering, QA, documentation, release engineering, and product ownership.
+
+## Testing and acceptance requirements
+
+- Zero open S0 and S1 defects.
+- All accepted S2 defects are documented with a workaround, owner, and patch target.
+- One hundred percent of the supported 3.x project corpus either migrates successfully or is rejected safely before modification with a clear reason.
+- All Tier-1 reference projects pass on all Tier-1 targets.
+- Public API documentation coverage is complete for supported APIs.
+- All mandatory artifacts are built from one signed tag and pass checksum verification.
+- Crash-free rate meets the internal 4.0 target during the final beta and soak period.
+- Performance does not regress beyond approved budgets from 3.9.0.
+- Installer, portable, and web packages pass clean-machine validation.
+- No known data-loss defect is accepted.
+
+## Release requirements
+
+- Create `.\releases\v4.0.0` with all common mandatory artifacts and exact filenames.
+- `Nova_A-v4.0.0-reference-projects.zip` must contain the complete official reference-project set and validation instructions.
+- `Nova_A-v4.0.0-release-evidence.zip` must include final CI reports, migration corpus, platform matrix, browser matrix, performance comparison, thousand-hour aggregate soak summary, security report, accessibility report, documentation validation, package security report, clean-machine installer tests, provenance, software bill of materials, and sign-off record.
+- `EDIT_LEDGER.md` must clearly separate additions, changes, removals, schema changes, API changes, and migrations from 3.9.0.
+- `RELEASE_NOTES.md` must include support policy, upgrade and rollback instructions, known issues, platform tiers, package compatibility, and patch-release expectations.
+- `SHA256SUMS.txt` must verify every final artifact after signing and packaging.
+
+
+# 10. Priority Order Across the Roadmap
+
+## Priority 0 — Must be solved before more breadth
+
+- Editor recovery, autosave, atomic saves, undo and redo.
+- Project format, scene and resource serialization, migrations, stable IDs, and references.
+- Asset import and dependency tracking.
+- Core build reproducibility and release evidence.
+- Stable scripting errors and diagnostics.
+- Test infrastructure.
+
+## Priority 1 — Core developer productivity
+
+- Scene, prefab, hierarchy, viewport, inspector, camera, sprite, and physics workflows.
+- Debugger and API v1.
+- UI, input, animation, tilemap, and navigation fundamentals.
+- Context-sensitive workspaces and command palette.
+
+## Priority 2 — Production content systems
+
+- Renderer and material depth.
+- Particles, fonts, audio, large worlds, save migration, and package ecosystem.
+- Cross-platform build support.
+- Source-control integration.
+
+## Priority 3 — Optional or differentiating systems
+
+- Networking replication and prediction.
+- AI authoring tools.
+- Advanced streaming helpers.
+- Specialized object-pool editors.
+- Additional platforms beyond the approved support matrix.
+
+Priority 3 work must not delay the 4.0 production baseline.
+
+
+# 11. Definition of Done for Any User-Facing Feature
+
+A feature is complete only when all applicable conditions are true:
+
+- It can be created through the editor or documented API.
+- It can be configured and validated.
+- It can be saved, closed, reopened, and migrated.
+- It supports undo and redo.
+- It has stable references.
+- It has clear errors and recovery behavior.
+- It is represented in documentation.
+- It has unit and integration tests.
+- It has an editor end-to-end test if editor-facing.
+- It has performance expectations if performance-sensitive.
+- It works in embedded preview and exported runtime.
+- It is covered by the declared platform matrix.
+- It has an ownership and deprecation policy.
+- It is included in release notes and release evidence.
+
+A panel with controls but without these properties is not considered a completed engine feature.
+
+
+# 12. Final Product Recommendation
+
+Nova_A should not compete by presenting every possible subsystem at once. It should compete by being a focused, dependable 2D engine with a coherent editing model, strong physics, a productive Rhai workflow, modern UI and tilemap tools, transparent packages, and unusually strong release discipline.
+
+The existing 3.0.0 interface already communicates ambition. The 3.1.0-to-4.0.0 plan must convert that ambition into trust. Trust comes from four outcomes:
+
+1. The user does not lose work.
+2. The project remains understandable and versionable as it grows.
+3. Errors are inspectable and fixable.
+4. The same tagged project can be built and validated repeatedly.
+
+If the team follows the roadmap order, version 4.0.0 can be a credible production baseline. If the team continues adding visible modules before establishing project integrity, debugging, import, migration, and release automation, the editor will become broader but harder to finish.
+
+
+# Appendix A — Recommended 4.0 Workspace Structure
+
+## Top workspaces
+
+- Design
+- Script
+- Animation
+- UI
+- Debug
+
+## Shared left panel
+
+Context-sensitive tabs:
+
+- Scenes and Hierarchy
+- Assets
+- Scripts
+- Packages when relevant
+
+## Shared right panel
+
+- Inspector
+- Node or component documentation
+- Runtime remote inspector in Debug
+
+## Bottom tools
+
+Context-sensitive and user-configurable:
+
+- Console
+- Profiler
+- Animation timeline
+- Shader output
+- Tile palette
+- Build output
+- Search results
+- Test results
+
+## Project-level pages
+
+- Project Settings
+- Input Map
+- Physics Layers
+- Localization
+- Build Presets
+- Packages and Permissions
+- Project Health
+
+## Optional package panels
+
+- Networking
+- AI Tools
+- World Streaming
+- Object Pool
+- Platform integrations
+
+
+# Appendix B — Recommended Stability Labels
+
+- **Stable:** covered by compatibility policy, migration policy, documentation, platform matrix, and release tests.
+- **Beta:** feature-complete but may change based on feedback; project migration is provided.
+- **Experimental:** API, format, or behavior may change; disabled by default; not a blocker for stable release.
+- **Internal:** hidden from normal users and excluded from release claims.
+- **Deprecated:** supported temporarily with migration guidance and a scheduled removal version.
+
+
+# Appendix C — External Benchmark Sources
+
+- Godot Engine stable documentation, “List of features,” current stable documentation branch at the time of planning.
+- GameMaker official feature overview.
+- GameMaker official manual, “Keyboard Shortcuts,” used as evidence of the breadth of mature editor subsystems and workflows.
+
+These sources are used only to define benchmark categories. The roadmap is based on Nova_A’s own product scope and the screenshots supplied for version 3.0.0.

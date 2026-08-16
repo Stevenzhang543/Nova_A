@@ -26,7 +26,11 @@ foreach ($source in @($artifacts.Keys) + @($notesPath, $ledgerPath, $benchmarkPa
   }
 }
 
-New-Item -ItemType Directory -Path $releaseDirectory -Force | Out-Null
+$releaseRoot = [System.IO.Path]::GetFullPath((Join-Path $projectRoot 'releases'))
+$resolvedRelease = [System.IO.Path]::GetFullPath($releaseDirectory)
+if (-not $resolvedRelease.StartsWith(($releaseRoot + [System.IO.Path]::DirectorySeparatorChar), [System.StringComparison]::OrdinalIgnoreCase)) { throw "Unsafe release target: $resolvedRelease" }
+if (Test-Path -LiteralPath $resolvedRelease) { Remove-Item -LiteralPath $resolvedRelease -Recurse -Force }
+New-Item -ItemType Directory -Path $resolvedRelease -Force | Out-Null
 foreach ($entry in $artifacts.GetEnumerator()) {
   Copy-Item -LiteralPath $entry.Key -Destination (Join-Path $releaseDirectory $entry.Value) -Force
 }
@@ -35,13 +39,45 @@ Copy-Item -LiteralPath $ledgerPath -Destination (Join-Path $releaseDirectory 'ED
 Copy-Item -LiteralPath (Join-Path $projectRoot 'LICENSE.md') -Destination (Join-Path $releaseDirectory 'LICENSE.md') -Force
 
 $webArchive = Join-Path $releaseDirectory "Nova_A-v$Version-web.zip"
-Compress-Archive -Path (Join-Path $projectRoot 'dist\*') -DestinationPath $webArchive -CompressionLevel Optimal -Force
+$webStage = Join-Path ([System.IO.Path]::GetTempPath()) ("nova-a-web-" + [guid]::NewGuid().ToString('N'))
+New-Item -ItemType Directory -Path $webStage | Out-Null
+try {
+  Copy-Item -Path (Join-Path $projectRoot 'dist\*') -Destination $webStage -Recurse -Force
+  $webReadme = @"
+# Nova_A $Version Web Package
+
+Serve this directory from an HTTP(S) origin. Do not open `index.html` with `file://`; WebAssembly modules, workers, ES modules, and the bundled manual require a web server. `index.html` opens the editor and `player.html` opens the standalone player. Preserve file names and MIME types, especially `application/wasm` for `.wasm` files. HTTPS is required for production networking and other secure browser APIs.
+
+Verify every packaged file against `SHA256SUMS.txt`. Release metadata is in `release-metadata.json`.
+"@
+  [IO.File]::WriteAllText((Join-Path $webStage 'README.md'), $webReadme, [Text.UTF8Encoding]::new($false))
+  $webMetadata = [ordered]@{ product = 'Nova_A'; version = $Version; format = 'nova-web-release'; projectFormat = 2; schema = 23; generatedAt = [DateTime]::UtcNow.ToString('o'); entrypoints = @('index.html','player.html'); hosting = [ordered]@{ protocol = 'http-or-https'; wasmMime = 'application/wasm'; spaFallbackRequired = $false } } | ConvertTo-Json -Depth 6
+  [IO.File]::WriteAllText((Join-Path $webStage 'release-metadata.json'), "$webMetadata`n", [Text.UTF8Encoding]::new($false))
+  $webChecksums = Get-ChildItem -LiteralPath $webStage -File -Recurse | Where-Object Name -ne 'SHA256SUMS.txt' | Sort-Object FullName | ForEach-Object { $relative = $_.FullName.Substring($webStage.Length).TrimStart('\').Replace('\','/'); "{0}  {1}" -f (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant(), $relative }
+  [IO.File]::WriteAllLines((Join-Path $webStage 'SHA256SUMS.txt'), $webChecksums, [Text.UTF8Encoding]::new($false))
+  Compress-Archive -Path (Join-Path $webStage '*') -DestinationPath $webArchive -CompressionLevel Optimal -Force
+}
+finally {
+  if (Test-Path -LiteralPath $webStage) { Remove-Item -LiteralPath $webStage -Recurse -Force }
+}
 
 $referenceArchive = Join-Path $releaseDirectory "Nova_A-v$Version-reference-projects.zip"
 Compress-Archive -Path (Join-Path $projectRoot 'reference-projects\*') -DestinationPath $referenceArchive -CompressionLevel Optimal -Force
 
 $evidenceArchive = Join-Path $releaseDirectory "Nova_A-v$Version-release-evidence.zip"
-Compress-Archive -LiteralPath @($benchmarkPath, $stabilityPath, $ledgerPath, (Join-Path $projectRoot 'docs\BENCHMARKS.md'), (Join-Path $projectRoot 'docs\STABILITY.md'), (Join-Path $projectRoot 'docs\PLATFORM_VERIFICATION.md')) -DestinationPath $evidenceArchive -CompressionLevel Optimal -Force
+$evidenceStage = Join-Path ([System.IO.Path]::GetTempPath()) ("nova-a-evidence-" + [guid]::NewGuid().ToString('N'))
+New-Item -ItemType Directory -Path $evidenceStage | Out-Null
+try {
+  Get-ChildItem -LiteralPath (Join-Path $projectRoot 'release-audits') -File -Filter "v$Version-*" | Copy-Item -Destination $evidenceStage -Force
+  $screenshotSource = Join-Path $projectRoot "release-audits\screenshots\v$Version"
+  if (Test-Path -LiteralPath $screenshotSource) { Copy-Item -LiteralPath $screenshotSource -Destination (Join-Path $evidenceStage 'screenshots') -Recurse -Force }
+  foreach ($source in @($notesPath, $ledgerPath, (Join-Path $projectRoot 'package.json'), (Join-Path $projectRoot 'pnpm-lock.yaml'), (Join-Path $projectRoot 'Cargo.toml'), (Join-Path $projectRoot 'Cargo.lock'), (Join-Path $projectRoot 'README.md'), (Join-Path $projectRoot 'README.zh-CN.md'))) { Copy-Item -LiteralPath $source -Destination $evidenceStage -Force }
+  foreach ($name in @('BENCHMARKS.md','STABILITY.md','PLATFORM_VERIFICATION.md','COMPATIBILITY.md','STABLE_CONTRACTS.md','KNOWN_LIMITATIONS.md')) { Copy-Item -LiteralPath (Join-Path $projectRoot "docs\$name") -Destination $evidenceStage -Force }
+  Compress-Archive -Path (Join-Path $evidenceStage '*') -DestinationPath $evidenceArchive -CompressionLevel Optimal -Force
+}
+finally {
+  if (Test-Path -LiteralPath $evidenceStage) { Remove-Item -LiteralPath $evidenceStage -Recurse -Force }
+}
 
 $sourceArchive = Join-Path $releaseDirectory "Nova_A-v$Version-source.zip"
 $sourceStage = Join-Path ([System.IO.Path]::GetTempPath()) ("nova-a-source-" + [guid]::NewGuid().ToString('N'))

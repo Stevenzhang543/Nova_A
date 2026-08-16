@@ -47,6 +47,12 @@ function prepareBundleForPrefab(bundle: EntityBundle): EntityBundle {
   const prepared = clone(bundle)
   const rootSet = new Set(prepared.rootUuids)
   for (const record of prepared.entities) {
+    if (record.prefabAsset && record.prefabInstanceUuid && record.prefabSourceUuid) {
+      record.prefabLayers = [
+        ...(Array.isArray(record.prefabLayers) ? record.prefabLayers : []),
+        { asset: record.prefabAsset, instanceUuid: record.prefabInstanceUuid, sourceUuid: record.prefabSourceUuid, overrides: clone(record.prefabOverrides ?? {}) }
+      ]
+    }
     delete record.prefabAsset
     delete record.prefabInstanceUuid
     delete record.prefabSourceUuid
@@ -69,6 +75,9 @@ export function createPrefabFromEntities(entityIds: number[], requestedName?: st
   const reference = assetReference(asset.uuid)
   const instanceUuid = normalizeUuid(undefined)
   for (const entity of subtreeEntities(entityIds, physicsState.world.entities)) {
+    if (entity.prefabAsset && entity.prefabInstanceUuid && entity.prefabSourceUuid) {
+      entity.prefabLayers.push({ asset: entity.prefabAsset, instanceUuid: entity.prefabInstanceUuid, sourceUuid: entity.prefabSourceUuid, overrides: clone(entity.prefabOverrides) })
+    }
     entity.prefabAsset = reference
     entity.prefabInstanceUuid = instanceUuid
     entity.prefabSourceUuid = entity.uuid
@@ -307,8 +316,44 @@ export function unpackPrefabInstance(entity: Entity): boolean {
     candidate.prefabInstanceUuid = null
     candidate.prefabSourceUuid = null
     candidate.prefabOverrides = {}
+    const nested = candidate.prefabLayers.pop()
+    if (nested) {
+      candidate.prefabAsset = nested.asset
+      candidate.prefabInstanceUuid = nested.instanceUuid
+      candidate.prefabSourceUuid = nested.sourceUuid
+      candidate.prefabOverrides = clone(nested.overrides)
+    }
   }
   pushHistory('Unpack prefab')
+  return true
+}
+
+export function comparePrefabInstance(entity: Entity): Array<{ path: string; value: unknown }> {
+  return Object.entries(capturePrefabOverrides(entity)).sort(([left], [right]) => left.localeCompare(right)).map(([path, value]) => ({ path, value: clone(value) }))
+}
+
+export function resetPrefabOverride(entity: Entity, path: string): boolean {
+  const prefab = prefabRecord(entity.prefabAsset)
+  const source = prefab ? sourceRecord(prefab.document, entity.prefabSourceUuid) : null
+  if (!source || !Object.prototype.hasOwnProperty.call(capturePrefabOverrides(entity), path)) return false
+  const baseline = canonicalRecord(source, [])
+  const segments = path.split('.').filter(Boolean)
+  let value: unknown = baseline
+  for (const segment of segments) {
+    if (!value || typeof value !== 'object') return false
+    value = (value as Record<string, unknown>)[segment]
+  }
+  const current = serializeEntity(entity) as SceneEntityData
+  applyOverride(current as Record<string, unknown>, path, value)
+  const replacement = createEntityFromData(current, entity.id)
+  const index = physicsState.world.entities.findIndex(candidate => candidate.id === entity.id)
+  if (index < 0) return false
+  replacement.prefabOverrides = { ...entity.prefabOverrides }
+  delete replacement.prefabOverrides[path]
+  physicsState.world.entities.splice(index, 1, replacement)
+  selectEntities([replacement.id], 'replace')
+  physicsState.world.invalidateRuntime()
+  pushHistory('Reset prefab override')
   return true
 }
 

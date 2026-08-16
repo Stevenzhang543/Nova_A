@@ -1,0 +1,15 @@
+{
+  "engineVersion": "3.2.0",
+  "schema": 23,
+  "projectName": "Nova_A Networked Optional Reference",
+  "minimumScenes": 1,
+  "minimumEntities": 5,
+  "expectedValidation": "pass",
+  "demonstrates": [
+    "Optional package",
+    "Replication",
+    "Prediction",
+    "Diagnostics",
+    "Headless"
+  ]
+}

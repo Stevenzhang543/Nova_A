@@ -1,0 +1,74 @@
+{
+  "format": "nova-editor-foundation-verification",
+  "version": 1,
+  "engineVersion": "3.1.0",
+  "generatedAt": "2026-08-16T11:19:42.822Z",
+  "status": "passed",
+  "assertions": [
+    {
+      "name": "History stays bounded",
+      "status": "passed",
+      "detail": "length=100; index=99"
+    },
+    {
+      "name": "One hundred mixed undo operations",
+      "status": "passed",
+      "detail": "undoCount=100; restoredValue=20"
+    },
+    {
+      "name": "One hundred mixed redo operations",
+      "status": "passed",
+      "detail": "redoCount=100; restoredValue=120"
+    },
+    {
+      "name": "Grouped transaction undo and redo",
+      "status": "passed",
+      "detail": "length=1; undo=0; redo=2"
+    },
+    {
+      "name": "Crash recovery selects a valid autosave",
+      "status": "passed",
+      "detail": "invalid=1; valid=1; visible=true"
+    },
+    {
+      "name": "Bounded recovery snapshots",
+      "status": "passed",
+      "detail": "retained=12; newest=18"
+    },
+    {
+      "name": "Manual save and autosave separation",
+      "status": "passed",
+      "detail": "manualSave=2026-08-16T11:19:42.471Z; session=clean"
+    },
+    {
+      "name": "Keyboard command route coverage",
+      "status": "passed",
+      "detail": "Menus, shortcuts, command palette, and semantic workspace toolbar are present."
+    },
+    {
+      "name": "Keyboard shortcut editor",
+      "status": "passed",
+      "detail": "Shortcut editor records bindings and rejects conflicts."
+    },
+    {
+      "name": "Recovery selection semantics",
+      "status": "passed",
+      "detail": "Recovery exposes verified selection, safe mode, and read-only actions."
+    },
+    {
+      "name": "Visible keyboard focus",
+      "status": "passed",
+      "detail": "Global stylesheet contains visible focus indicators."
+    },
+    {
+      "name": "Maximized resizable first-launch configuration",
+      "status": "passed",
+      "detail": "{\"fullscreen\":false,\"maximized\":true,\"decorations\":true,\"resizable\":true}"
+    },
+    {
+      "name": "Windowed-state and monitor recovery implementation",
+      "status": "passed",
+      "detail": "Window lifecycle persists and validates the previous monitor and bounds; F11 routes through the global shortcut audit."
+    }
+  ]
+}

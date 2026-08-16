@@ -1,0 +1,7 @@
+{
+  "open": "Project Manager > Open Project > project.nova",
+  "run": "Top action bar > Play; Pause; Step; Stop",
+  "validate": "Project Health must report no blocking project-format error",
+  "export": "Build Settings > Overview > Build",
+  "command": "pnpm export -- --project ./reference-projects/projects/physics-sandbox/project.nova --target web --profile release --output ./Builds/reference-physics-sandbox"
+}

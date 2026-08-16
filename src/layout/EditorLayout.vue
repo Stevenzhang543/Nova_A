@@ -1,29 +1,37 @@
 <template>
-  <div class="editor-root" @contextmenu.prevent @click="closeContextMenu">
+  <div class="editor-root" :class="{ 'read-only': recoveryState.readOnly }" @contextmenu.prevent @click="closeContextMenu">
+    <div v-if="recoveryState.readOnly" class="read-only-banner" role="status">{{ t('readOnlyRecoveryBanner') }}</div>
     <TopBar />
     <div class="workspace-control-row">
       <WorkspaceBar />
       <ActionBar />
     </div>
-    <ToolBar v-if="state.currentPage === 'scene'" class="scene-toolbar-row" />
+    <ToolBar v-if="state.currentPage === 'scene' && state.activeWorkspace !== 'ui'" class="scene-toolbar-row" />
 
     <div class="editor-main">
       <SideBar v-if="!state.distractionFree" />
-      <SceneSideBar v-if="(state.currentPage === 'scene' || state.currentPage === 'game') && state.hierarchyVisible && !state.distractionFree" />
+      <div v-if="!state.distractionFree" class="dock-group left-dock">
+        <SceneSideBar v-if="showHierarchy && state.hierarchyDock === 'left'" dock="left" />
+        <ConfigPanel v-if="showInspector && state.inspectorDock === 'left'" dock="left" />
+      </div>
       <div class="editor-workspace">
         <div class="editor-content">
-          <div :class="['persistent-viewport', `${state.currentPage}-view`, { inactive: state.currentPage === 'settings' || state.currentPage === 'script' }]">
+          <div :class="['persistent-viewport', `${state.currentPage}-view`, { inactive: state.currentPage === 'settings' || state.currentPage === 'script' || state.activeWorkspace === 'ui' }]">
             <LayerBar v-if="state.currentPage === 'scene'" />
             <WorldCanvas />
           </div>
           <Transition name="page" mode="out-in">
             <SettingsPanel v-if="state.currentPage === 'settings'" key="settings" class="settings-host" />
             <ScriptStudio v-else-if="state.currentPage === 'script'" key="script" />
+            <PresentationPanel v-else-if="state.activeWorkspace === 'ui'" key="ui" class="ui-workspace" />
           </Transition>
         </div>
         <EditorBottomPanel v-if="state.currentPage !== 'settings' && state.currentPage !== 'script' && state.bottomPanelVisible && !state.distractionFree" />
       </div>
-      <ConfigPanel v-if="state.currentPage === 'scene' && state.inspectorVisible && !state.distractionFree" />
+      <div v-if="!state.distractionFree" class="dock-group right-dock">
+        <SceneSideBar v-if="showHierarchy && state.hierarchyDock === 'right'" dock="right" />
+        <ConfigPanel v-if="showInspector && state.inspectorDock === 'right'" dock="right" />
+      </div>
       <Transition name="physics-panel">
         <PhysicsRuntimePanel v-if="physicsState.playMode !== 'editing' && state.currentPage !== 'settings' && state.currentPage !== 'script' && !state.distractionFree" />
       </Transition>
@@ -56,20 +64,28 @@ import SettingsPanel from "../panels/SettingsPanel.vue"
 import WorldCanvas from "../components/WorldCanvas.vue"
 import LayerBar from "../components/LayerBar.vue"
 import PhysicsRuntimePanel from "../components/PhysicsRuntimePanel.vue"
+import PresentationPanel from "../components/PresentationPanel.vue"
 
+import { computed } from 'vue'
 import { editorState as state, closeContextMenu } from "../store/editor"
 import { physicsState } from '../store/physics'
 import { initializeEditorWorkspaces } from '../editor/workspaces'
+import { recoveryState } from '../runtime/recovery'
+import { t } from '../i18n'
 
 initializeEditorWorkspaces()
+const showHierarchy = computed(() => (state.currentPage === 'scene' || state.currentPage === 'game') && state.hierarchyVisible)
+const showInspector = computed(() => state.currentPage === 'scene' && state.inspectorVisible && state.activeWorkspace !== 'ui')
 </script>
 
 <style scoped>
 .editor-root { display: flex; flex-direction: column; height: 100vh; min-height: 0; background: var(--bg-base); color: var(--text-primary); }
-.workspace-control-row { min-width: 0; flex: 0 0 38px; display: flex; align-items: stretch; border-bottom: 1px solid var(--border-subtle); background: color-mix(in srgb, var(--surface-1) 94%, var(--bg-base)); isolation: isolate; }
+.read-only-banner{min-height:28px;flex:0 0 28px;display:grid;place-items:center;color:var(--warning);background:color-mix(in srgb,var(--warning) 12%,var(--surface-1));border-bottom:1px solid var(--warning);font-size:12px}.read-only :deep(.config-wrapper),.read-only .persistent-viewport{pointer-events:none;filter:saturate(.72)}
+.workspace-control-row { min-width: 0; flex: 0 0 42px; display: flex; align-items: stretch; border-bottom: 1px solid var(--border-subtle); background: color-mix(in srgb, var(--surface-1) 94%, var(--bg-base)); isolation: isolate; }
 .workspace-control-row :deep(.workspace-bar) { min-width: 0; flex: 1; border-bottom: 0; }
 .workspace-control-row :deep(.actionbar) { flex: 0 0 auto; }
 .editor-main { position: relative; flex: 1; display: flex; min-height: 0; }
+.dock-group { min-width: 0; display: flex; flex: 0 0 auto; }
 .scene-toolbar-row { flex: 0 0 auto; }
 .editor-workspace { min-width: 0; flex: 1; display: flex; flex-direction: column; }
 .editor-content { min-height: 0; flex: 1; position: relative; overflow: hidden; background: var(--bg-canvas); }
@@ -78,6 +94,7 @@ initializeEditorWorkspaces()
 .persistent-viewport.game-view { animation: viewport-game-reveal 170ms cubic-bezier(.2,.8,.2,1); }
 .persistent-viewport.inactive { visibility: hidden; pointer-events: none; }
 .settings-host { position: absolute; inset: 0; z-index: 2; }
+.ui-workspace { position: absolute; inset: 0; z-index: 2; background: var(--surface-1); }
 @keyframes viewport-scene-reveal { from { opacity: .88; transform: translateY(2px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes viewport-game-reveal { from { opacity: .88; transform: translateY(2px); } to { opacity: 1; transform: translateY(0); } }
 .page-enter-active, .page-leave-active { transition: opacity 150ms ease, transform 180ms cubic-bezier(.2,.8,.2,1); }

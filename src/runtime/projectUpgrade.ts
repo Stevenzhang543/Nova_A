@@ -13,6 +13,10 @@ export interface UpgradePreview {
   assetCount: number
   packageProblems: string[]
   warnings: string[]
+  projectName: string
+  projectFormat: string
+  engineCompatibility: string
+  migrationSteps: Array<{ fromSchema: number; toSchema: number; name: string }>
 }
 
 const ROLLBACK_KEY = 'nova_a.project_upgrade_rollback.v1'
@@ -42,6 +46,13 @@ export function analyzeProjectUpgrade(source: string): UpgradePreview {
   if (sourceSchema < NOVA_MINIMUM_SCHEMA_VERSION) warnings.push(`Schema ${sourceSchema} predates the guaranteed migration range; the legacy importer will validate every recovered record.`)
   if (sourceSchema > NOVA_PROJECT_SCHEMA_VERSION) warnings.push('This project is newer than this Nova_A build and cannot be downgraded safely.')
   if (packageProblems.length) warnings.push('One or more packages require attention after migration.')
+  const manifest = project.manifest && typeof project.manifest === 'object' ? project.manifest as Record<string, unknown> : {}
+  const metadata = project.projectMetadata && typeof project.projectMetadata === 'object' ? project.projectMetadata as Record<string, unknown> : {}
+  const engineRange = manifest.engineCompatibility && typeof manifest.engineCompatibility === 'object' ? manifest.engineCompatibility as Record<string, unknown> : {}
+  const migrationSteps = Array.from({ length: Math.max(0, NOVA_PROJECT_SCHEMA_VERSION - Math.max(sourceSchema, 1)) }, (_, index) => {
+    const fromSchema = Math.max(sourceSchema, 1) + index
+    return { fromSchema, toSchema: fromSchema + 1, name: fromSchema === 22 ? 'Authoritative project data, assets, scenes, and prefabs' : `Legacy schema ${fromSchema} projection` }
+  })
   return {
     sourceSchema, targetSchema: NOVA_PROJECT_SCHEMA_VERSION, sourceEngine: String(project.engineVersion ?? 'legacy'), targetEngine: NOVA_ENGINE_VERSION,
     requiresMigration: sourceSchema !== NOVA_PROJECT_SCHEMA_VERSION,
@@ -49,7 +60,11 @@ export function analyzeProjectUpgrade(source: string): UpgradePreview {
     sceneCount: scenes.length || (legacyEntities.length ? 1 : 0),
     entityCount: scenes.reduce((count, scene) => count + (Array.isArray(scene.entities) ? scene.entities.length : 0), legacyEntities.length),
     assetCount: Array.isArray(project.assets) ? project.assets.length : 0,
-    packageProblems: packageProblems.slice(0, 256), warnings
+    packageProblems: packageProblems.slice(0, 256), warnings,
+    projectName: String(manifest.name ?? metadata.name ?? 'Unnamed project').slice(0, 80),
+    projectFormat: String(project.projectFormat ?? 'Legacy Nova_A project'),
+    engineCompatibility: `${String(engineRange.minimum ?? project.engineVersion ?? 'legacy')} – <${String(engineRange.maximumExclusive ?? '4.0.0')}`,
+    migrationSteps
   }
 }
 
@@ -72,6 +87,13 @@ export function readUpgradeRollback(): { savedAt: string; fileName: string; sour
     return value && typeof value.source === 'string' && typeof value.savedAt === 'string' && typeof value.fileName === 'string'
       ? { savedAt: value.savedAt, fileName: value.fileName, source: value.source } : null
   } catch { return null }
+}
+
+export function downloadLastUpgradeRollback(): boolean {
+  const rollback = readUpgradeRollback()
+  if (!rollback) return false
+  downloadProjectBackup(rollback.source, `${rollback.fileName}.rollback`)
+  return true
 }
 
 export function clearUpgradeRollback(): void { if (typeof localStorage !== 'undefined') localStorage.removeItem(ROLLBACK_KEY) }

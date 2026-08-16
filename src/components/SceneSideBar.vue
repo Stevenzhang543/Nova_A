@@ -1,5 +1,5 @@
 <template>
-  <aside class="sidebar-container" :style="{ width: isCollapsed ? '0px' : `${panelWidth}px` }" :class="{ 'jelly-slide': !isDragging, 'no-transition': isDragging }">
+  <aside class="sidebar-container" :style="{ width: isCollapsed ? '0px' : `${panelWidth}px` }" :class="[dock, { 'jelly-slide': !isDragging, 'no-transition': isDragging }]">
     <button v-if="isCollapsed" class="expand" :title="t('expandPanel')" @click="expandPanel">›</button>
     <div v-show="!isCollapsed" class="scene-sidebar">
       <section class="scene-manager">
@@ -75,7 +75,9 @@ import type { Entity } from '../world/Entity'
 import { setParent } from '../world/hierarchy'
 import { selectionRoots } from '../editor/selection'
 
-const panelWidth = ref(236)
+const props = withDefaults(defineProps<{ dock?: 'left' | 'right' }>(), { dock: 'left' })
+const dock = computed(() => props.dock)
+const panelWidth = ref(editorState.hierarchyWidth)
 const isCollapsed = ref(false)
 const isDragging = ref(false)
 const editingId = ref<number | null>(null)
@@ -203,14 +205,14 @@ const collapseThreshold = 118
 let startX = 0
 let startWidth = 0
 function startDrag(event: MouseEvent) { isDragging.value = true; startX = event.clientX; startWidth = panelWidth.value; document.addEventListener('mousemove', onDrag); document.addEventListener('mouseup', stopDrag); document.body.style.cursor = 'ew-resize' }
-function onDrag(event: MouseEvent) { if (!isDragging.value) return; const width = startWidth + event.clientX - startX; panelWidth.value = width < collapseThreshold ? 0 : Math.min(Math.max(width, collapseThreshold), 500) }
-function stopDrag() { isDragging.value = false; document.removeEventListener('mousemove', onDrag); document.removeEventListener('mouseup', stopDrag); document.body.style.cursor = 'default'; if (panelWidth.value < collapseThreshold) isCollapsed.value = true }
-function expandPanel() { isCollapsed.value = false; panelWidth.value = 236 }
+function onDrag(event: MouseEvent) { if (!isDragging.value) return; const delta = event.clientX - startX; const width = startWidth + (props.dock === 'left' ? delta : -delta); panelWidth.value = width < collapseThreshold ? 0 : Math.min(Math.max(width, collapseThreshold), 500) }
+function stopDrag() { isDragging.value = false; document.removeEventListener('mousemove', onDrag); document.removeEventListener('mouseup', stopDrag); document.body.style.cursor = 'default'; if (panelWidth.value < collapseThreshold) isCollapsed.value = true; else editorState.hierarchyWidth = panelWidth.value }
+function expandPanel() { isCollapsed.value = false; panelWidth.value = editorState.hierarchyWidth || 236 }
 onUnmounted(() => { document.removeEventListener('mousemove', onDrag); document.removeEventListener('mouseup', stopDrag) })
 </script>
 
 <style scoped>
-.sidebar-container { position: relative; height: 100%; flex-shrink: 0; display: flex; border-right: 1px solid var(--border-subtle); background: var(--surface-1); backdrop-filter: var(--glass-blur); z-index: 130; }
+.sidebar-container { position: relative; height: 100%; flex-shrink: 0; display: flex; background: var(--surface-1); backdrop-filter: var(--glass-blur); z-index: 130; }.sidebar-container.left{border-right:1px solid var(--border-subtle)}.sidebar-container.right{border-left:1px solid var(--border-subtle)}
 .scene-sidebar { min-width: 0; flex: 1; display: flex; flex-direction: column; overflow: hidden; }
 .scene-manager { flex: 0 0 auto; border-bottom: 1px solid var(--border-subtle); }
 .list-header, .hierarchy-header > div { height: 35px; padding: 0 10px; display: flex; align-items: center; justify-content: space-between; color: var(--text-muted); font-size:11px; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; }
@@ -222,5 +224,5 @@ onUnmounted(() => { document.removeEventListener('mousemove', onDrag); document.
 .entity-list { min-height: 0; flex: 1; padding: 5px; overflow: auto; }.entity-item { position: relative; height: 29px; display: flex; align-items: center; gap: 4px; border: 1px solid transparent; border-radius: 7px; color: var(--text-secondary); font-size:11px; }.entity-item:hover { background: var(--surface-hover); }.entity-item.selected { background: var(--accent-soft); }.entity-item.primary { border-color: color-mix(in srgb, var(--accent) 42%, transparent); }.entity-item.disabled { opacity: .5; }.entity-item.hidden .name { text-decoration: line-through; opacity: .6; }.entity-item.locked .shape-icon { color: var(--warning); }.entity-item.drop-target { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
 .disclosure, .state-button { width: 19px; height: 22px; padding: 0; flex: 0 0 19px; display: grid; place-items: center; border: 0; border-radius: 5px; color: var(--text-muted); background: transparent; font-size:11px; }.disclosure:hover, .state-button:hover { color: var(--accent); background: var(--surface-3); }.disclosure.placeholder { pointer-events: none; }.shape-icon { width: 15px; flex: 0 0 15px; color: var(--accent); text-align: center; }.name { min-width: 0; flex: 1; display: flex; align-items: center; gap: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }.name small { color: var(--text-muted); font-size:11px; }.edit-input { min-width: 0; height: 23px; min-height: 23px; flex: 1; padding: 2px 5px; }.state-button { opacity: .25; }.entity-item:hover .state-button, .entity-item.selected .state-button, .entity-item.hidden .state-button, .entity-item.locked .state-button, .entity-item.disabled .power { opacity: .9; }.power { color: var(--success); }
 .empty-state { padding: 18px 8px; color: var(--text-muted); font-size:11px; text-align: center; }.root-drop { width: calc(100% - 8px); min-height: 31px; margin: 6px 4px; border: 1px dashed var(--accent); border-radius: 8px; color: var(--accent); background: var(--accent-soft); font-size:11px; }
-.resize-handle { position: absolute; inset: 0 -4px 0 auto; width: 8px; cursor: ew-resize; z-index: 4; }.expand { position: absolute; left: 0; top: 48%; z-index: 5; width: 20px; height: 54px; border: 1px solid var(--border-subtle); border-left: 0; border-radius: 0 9px 9px 0; color: var(--accent); background: var(--surface-1); }
+.resize-handle { position: absolute; inset: 0 -4px 0 auto; width: 8px; cursor: ew-resize; z-index: 4; }.right .resize-handle{inset:0 auto 0 -4px}.expand { position: absolute; left: 0; top: 48%; z-index: 5; width: 20px; height: 54px; border: 1px solid var(--border-subtle); border-left: 0; border-radius: 0 9px 9px 0; color: var(--accent); background: var(--surface-1); }.right .expand{left:auto;right:0;transform:scaleX(-1)}
 </style>

@@ -34,7 +34,7 @@ assert(webgl.includes('EXT_disjoint_timer_query_webgl2') && webgl.includes('poll
 assert(panel.includes('debugView') && lighting.includes("debugView === 'Overdraw'"), 'render debug visualization is not bound')
 assert(webgl.includes('ensureEffectsTarget') && webgl.includes('effectsTargetActive') && !/readonly framebuffer: WebGLFramebuffer/.test(webgl), 'optional framebuffer allocation is not lazy')
 assert(canvas.includes("backend: 'Canvas2D'") && canvas.includes('drawNineSlice'), 'Canvas2D fallback is incomplete')
-assert(format.includes('CURRENT_FORMAT_VERSION: u32 = 22') && format.includes('projectSettings.rendering'), 'current-schema rendering settings are not validated')
+assert(format.includes('CURRENT_FORMAT_VERSION: u32 = 23') && format.includes('projectSettings.rendering'), 'current-schema rendering settings are not validated')
 assert(panel.includes('renderMaterialPreview') && panel.includes('requestRenderCapture'), 'Rendering panel preview/capture controls are not connected')
 assert(worldCanvas.includes('contain: strict') && worldCanvas.includes('ctx.clearRect(0, 0, cvs.width, cvs.height)'), 'canvas surfaces are not isolated and cleared in backing-store pixels')
 assert(ui.includes('context.clip()') && !ui.includes("fillStyle = '#f7fbff'"), 'editor UI overlays can escape the viewport or resemble retained white pixels')

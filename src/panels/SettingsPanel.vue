@@ -2,7 +2,7 @@
   <div class="settings-page">
     <header class="page-header">
       <div>
-        <span class="eyebrow">Nova_A 3.0.0</span>
+        <span class="eyebrow">Nova_A 3.2.0</span>
         <h1>{{ t('settings') }}</h1>
       </div>
       <div class="theme-switch" :aria-label="t('theme')">
@@ -11,8 +11,13 @@
       </div>
     </header>
 
+    <section class="settings-search" aria-label="Settings search">
+      <label><span>⌕</span><input v-model="editorState.settingsSearch" type="search" :placeholder="t('searchSettings')"></label>
+      <nav :aria-label="t('settingScope')"><button v-for="scope in settingScopes" :key="scope.id" :class="{ active: editorState.settingsScope === scope.id }" @click="editorState.settingsScope = scope.id">{{ t(scope.label) }}</button></nav>
+    </section>
+
     <div class="settings-grid">
-      <section class="settings-card">
+      <section v-show="showCard('appearanceSettings language interfaceScale compactMode reduceMotion highContrast launchMaximized workspaceLayoutScope shortcutEditor', 'editor')" class="settings-card">
         <div class="card-heading"><span class="card-icon">◐</span><h2>{{ t('appearanceSettings') }}</h2></div>
         <SettingRow :label="t('language')">
           <select v-model="prefs.locale">
@@ -27,9 +32,13 @@
         <SettingRow :label="t('compactMode')"><ToggleSwitch v-model="prefs.compactMode" /></SettingRow>
         <SettingRow :label="t('reduceMotion')"><ToggleSwitch v-model="prefs.reduceMotion" /></SettingRow>
         <SettingRow :label="t('highContrast')"><ToggleSwitch v-model="prefs.highContrast" /></SettingRow>
+        <SettingRow :label="t('launchMaximized')"><ToggleSwitch v-model="prefs.launchMaximized" /></SettingRow>
+        <SettingRow :label="t('workspaceLayoutScope')"><select v-model="prefs.workspaceLayoutScope"><option value="user">{{ t('editorScope') }}</option><option value="project">{{ t('projectScope') }}</option></select></SettingRow>
+        <SettingRow :label="t('experimentalFeatures')"><ToggleSwitch v-model="prefs.experimentalFeatures" /></SettingRow>
+        <button class="secondary-action" @click="editorState.shortcutEditorOpen = true">{{ t('shortcutEditor') }}</button>
       </section>
 
-      <section class="settings-card" @change="applyPhysicsSettings">
+      <section v-show="showCard('physicsSettings globalGravity globalAirDamping timeScale physicsTickRate maxCatchUpSteps', 'project')" class="settings-card" @change="applyPhysicsSettings">
         <div class="card-heading"><span class="card-icon">⌁</span><h2>{{ t('physicsSettings') }}</h2></div>
         <p>{{ t('physicsDescription') }}</p>
         <SettingRow :label="t('globalGravity')"><input v-model.number="physics.globalSettings.gravity" type="number" step="0.1"></SettingRow>
@@ -45,7 +54,7 @@
         <SettingRow :label="t('maxCatchUpSteps')"><input v-model.number="physics.globalSettings.maxCatchUpSteps" type="number" min="1" max="240" step="1"></SettingRow>
       </section>
 
-      <section class="settings-card" @change="commitAudioSettings">
+      <section v-show="showCard('audioSettings masterVolume musicVolume sfxVolume uiVolume sampleRate', 'project')" class="settings-card" @change="commitAudioSettings">
         <div class="card-heading"><span class="card-icon">♫</span><h2>{{ t('audioSettings') }}</h2></div>
         <SettingRow :label="t('masterVolume')"><div class="value-control"><input v-model.number="physics.audioSettings.masterVolume" type="range" min="0" max="1" step="0.01"><output>{{ Math.round(physics.audioSettings.masterVolume * 100) }}%</output></div></SettingRow>
         <SettingRow :label="t('musicVolume')"><div class="value-control"><input v-model.number="physics.audioSettings.buses.Music" type="range" min="0" max="1" step="0.01"><output>{{ Math.round(physics.audioSettings.buses.Music * 100) }}%</output></div></SettingRow>
@@ -54,7 +63,7 @@
         <SettingRow :label="t('sampleRate')"><select v-model.number="physics.audioSettings.sampleRate"><option :value="44100">44.1 kHz</option><option :value="48000">48 kHz</option><option :value="96000">96 kHz</option></select></SettingRow>
       </section>
 
-      <section class="settings-card input-map-card">
+      <section v-show="showCard('inputMap inputDevice bindingCode gamepad keyboard', 'project')" class="settings-card input-map-card">
         <div class="card-heading"><span class="card-icon">⌨</span><h2>{{ t('inputMap') }}</h2></div>
         <p>{{ t('inputMapDescription') }}</p>
         <div class="input-actions">
@@ -92,22 +101,7 @@
         <button class="secondary-action" @click="addInputAction">+ {{ t('addInputAction') }}</button>
       </section>
 
-      <section class="settings-card diagnostics-card">
-        <div class="card-heading"><span class="card-icon">⌁</span><h2>{{ t('engineDiagnostics') }}</h2></div>
-        <div class="metric-grid">
-          <div><span>{{ t('runtimeBodies') }}</span><strong>{{ physics.engineDiagnostics.bodyCount }}</strong></div>
-          <div><span>{{ t('runtimeConnections') }}</span><strong>{{ physics.engineDiagnostics.connectionCount }}</strong></div>
-          <div><span>{{ t('stepsLastFrame') }}</span><strong>{{ physics.engineDiagnostics.stepsLastFrame }}</strong></div>
-          <div><span>{{ t('totalPhysicsSteps') }}</span><strong>{{ physics.engineDiagnostics.totalPhysicsSteps }}</strong></div>
-          <div><span>{{ t('interpolationAlpha') }}</span><strong>{{ physics.engineDiagnostics.interpolationAlpha.toFixed(3) }}</strong></div>
-          <div><span>{{ t('droppedTime') }}</span><strong>{{ physics.engineDiagnostics.droppedSeconds.toFixed(4) }} s</strong></div>
-          <div><span>{{ t('pendingEvents') }}</span><strong>{{ physics.engineDiagnostics.eventCount }}</strong></div>
-          <div><span>{{ t('configurationRebuilds') }}</span><strong>{{ physics.engineDiagnostics.configurationRebuilds }}</strong></div>
-          <div><span>{{ t('paused') }}</span><strong>{{ physics.simulationRunning ? t('no') : t('yes') }}</strong></div>
-        </div>
-      </section>
-
-      <section class="settings-card matrix-card">
+      <section v-show="showCard('collisionMatrix collisionMatrixDescription physicsLayer', 'project')" class="settings-card matrix-card">
         <div class="card-heading"><span class="card-icon">#</span><h2>{{ t('collisionMatrix') }}</h2></div>
         <p>{{ t('collisionMatrixDescription') }}</p>
         <div class="matrix-scroll">
@@ -119,7 +113,7 @@
         </div>
       </section>
 
-      <section class="settings-card">
+      <section v-show="showCard('canvasSettings gridSize snapToGrid zoomSensitivity showConnections renderQuality', 'editor')" class="settings-card">
         <div class="card-heading"><span class="card-icon">⌗</span><h2>{{ t('canvasSettings') }}</h2></div>
         <SettingRow :label="t('gridSize')"><input v-model.number="prefs.gridSize" type="number" min="0.000001" step="1"></SettingRow>
         <SettingRow :label="t('snapToGrid')"><ToggleSwitch v-model="prefs.snapToGrid" /></SettingRow>
@@ -136,23 +130,15 @@
         </SettingRow>
       </section>
 
-      <section class="settings-card">
-        <div class="card-heading"><span class="card-icon">ⓘ</span><h2>{{ t('projectInformation') }}</h2></div>
-        <SettingRow :label="t('formatVersion')"><output>{{ t('projectFormatTwo') }} · schema {{ physics.world.projectFormatVersion }}</output></SettingRow>
-        <SettingRow :label="t('engineVersion')"><output>{{ physics.world.projectEngineVersion }}</output></SettingRow>
+      <section v-show="showCard('packages plugins saveData engineDiagnostics projectHealth', 'all')" class="settings-card related-tools">
+        <div class="card-heading"><span class="card-icon">↗</span><h2>{{ t('relatedTools') }}</h2></div>
+        <p>{{ t('settingsRelocationHint') }}</p>
+        <button class="secondary-action" @click="openTool('packages')">{{ t('openPackageManager') }}</button>
+        <button class="secondary-action" @click="openTool('profiler')">{{ t('openDebugTools') }}</button>
+        <button class="secondary-action" @click="openTool('project')">{{ t('openProjectHealth') }}</button>
       </section>
 
-      <section class="settings-card">
-        <div class="card-heading"><span class="card-icon">W</span><h2>{{ t('plugins') }}</h2></div>
-        <PluginSettings />
-      </section>
-
-      <section class="settings-card">
-        <div class="card-heading"><span class="card-icon">S</span><h2>{{ t('saveData') }}</h2></div>
-        <SaveDataSettings />
-      </section>
-
-      <section class="settings-card">
+      <section v-show="showCard('projectSettings autosave autosaveInterval confirmDestructive restoreAutosave', 'project')" class="settings-card">
         <div class="card-heading"><span class="card-icon">↻</span><h2>{{ t('projectSettings') }}</h2></div>
         <SettingRow :label="t('autosave')"><ToggleSwitch v-model="prefs.autosave" /></SettingRow>
         <SettingRow :label="t('autosaveInterval')"><input v-model.number="prefs.autosaveInterval" type="number" min="5" max="600" step="5"></SettingRow>
@@ -160,7 +146,7 @@
         <button class="secondary-action" :disabled="!autosaveAvailable" @click="restoreSavedScene">{{ t('restoreAutosave') }}</button>
       </section>
 
-      <section class="settings-card">
+      <section v-show="showCard('defaultsSettings defaultDensity defaultRestitution defaultFriction', 'editor')" class="settings-card">
         <div class="card-heading"><span class="card-icon">◇</span><h2>{{ t('defaultsSettings') }}</h2></div>
         <SettingRow :label="t('defaultDensity')"><input v-model.number="prefs.defaultDensity" type="number" min="0.000001" step="0.1"></SettingRow>
         <SettingRow :label="t('defaultRestitution')"><input v-model.number="prefs.defaultRestitution" type="number" min="0" max="1" step="0.05"></SettingRow>
@@ -180,8 +166,7 @@ import { preferencesState as prefs, resetPreferences } from '../store/preference
 import type { ThemeMode } from '../store/preferences'
 import { createInputBinding, normalizeInputMap, type InputBinding } from '../runtime/input'
 import { normalizeAudioSettings } from '../runtime/audio'
-import PluginSettings from '../components/PluginSettings.vue'
-import SaveDataSettings from '../components/SaveDataSettings.vue'
+import { openEditorTool } from '../editor/workspaces'
 
 function setTheme(theme: ThemeMode) {
   prefs.theme = theme
@@ -211,7 +196,16 @@ const ToggleSwitch = defineComponent({
 const autosaveAvailable = computed(() => autosaveState.available)
 const isCustomTickRate = computed(() => ![30, 60, 120].includes(physics.globalSettings.tickRate))
 const physicsLayers = Array.from({ length: 32 }, (_, index) => index)
+const settingScopes = [{ id: 'all' as const, label: 'all' }, { id: 'editor' as const, label: 'editorScope' }, { id: 'project' as const, label: 'projectScope' }, { id: 'runtime' as const, label: 'runtimeScope' }]
 watch(() => prefs.locale, () => { editorState.statusText = t('ready') })
+
+function showCard(keys: string, scope: 'all' | 'editor' | 'project' | 'runtime'): boolean {
+  if (editorState.settingsScope !== 'all' && scope !== 'all' && editorState.settingsScope !== scope) return false
+  const needle = editorState.settingsSearch.trim().toLocaleLowerCase()
+  if (!needle) return true
+  return keys.split(' ').some(key => t(key).toLocaleLowerCase().includes(needle) || key.toLocaleLowerCase().includes(needle))
+}
+function openTool(tab: 'packages' | 'profiler' | 'project') { openEditorTool(tab) }
 
 function layerBit(layer: number): number { return (2 ** layer) >>> 0 }
 function layersCollide(first: number, second: number): boolean {
@@ -290,6 +284,7 @@ function resetExperience() {
 <style scoped>
 .settings-page { height: 100%; overflow: auto; padding: clamp(22px, 4vw, 48px); background: radial-gradient(circle at 88% 0%, var(--accent-soft), transparent 32%), var(--bg-base); }
 .page-header { width: min(1040px, 100%); margin: 0 auto 26px; display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; }
+.settings-search{width:min(1040px,100%);margin:0 auto 16px;padding:8px;display:flex;align-items:center;gap:8px;border:1px solid var(--border-subtle);border-radius:12px;background:var(--surface-1)}.settings-search>label{min-width:220px;flex:1;display:flex;align-items:center;gap:7px;padding:0 8px;border:1px solid var(--border-subtle);border-radius:8px;background:var(--input-bg)}.settings-search input{min-width:0;flex:1;border:0;background:transparent}.settings-search nav{display:flex;gap:4px;flex-wrap:wrap}.settings-search button{min-height:34px;padding:0 10px;border:1px solid transparent;border-radius:8px;background:transparent}.settings-search button.active{color:var(--accent);border-color:var(--accent);background:var(--accent-soft)}
 .eyebrow { display: block; color: var(--accent); font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; margin-bottom: 5px; }
 h1 { margin: 0; font-size: clamp(26px, 4vw, 38px); font-weight: 620; letter-spacing: -.035em; }
 .theme-switch { display: flex; gap: 4px; padding: 4px; border: 1px solid var(--border-subtle); background: var(--surface-1); backdrop-filter: var(--glass-blur); border-radius: 999px; box-shadow: var(--shadow-sm); }
@@ -298,7 +293,7 @@ h1 { margin: 0; font-size: clamp(26px, 4vw, 38px); font-weight: 620; letter-spac
 .settings-grid { width: min(1040px, 100%); margin: 0 auto; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; padding-bottom: 30px; }
 .settings-card { align-self: start; display: flex; flex-direction: column; padding: 18px; border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); background: var(--surface-1); backdrop-filter: var(--glass-blur); box-shadow: var(--shadow-sm); transition: transform 180ms ease, border-color 180ms ease; }
 .settings-card:hover { transform: translateY(-2px); border-color: var(--border-strong); }
-.matrix-card { grid-column: 1 / -1; }
+.matrix-card { grid-column: 1 / -1; }.related-tools .secondary-action{margin-top:6px}.related-tools p{margin-left:40px}
 .input-map-card { grid-column: 1 / -1; }
 .input-actions { display: flex; flex-direction: column; gap: 9px; }
 .input-action { padding: 9px; border: 1px solid var(--border-subtle); border-radius: 10px; background: var(--surface-2); }
@@ -341,5 +336,5 @@ p { margin: 0 0 8px 40px; color: var(--text-muted); font-size: 12px; line-height
 .secondary-action:hover { border-color: var(--accent); background: var(--accent-soft); }
 .danger-action { color: var(--danger); background: var(--danger-soft); }
 .danger-action:hover { border-color: var(--danger); }
-@media (max-width: 800px) { .settings-grid { grid-template-columns: 1fr; } .page-header { align-items: flex-start; flex-direction: column; } .input-action-heading, .input-binding { grid-template-columns: repeat(2, minmax(0, 1fr)) 28px; } .input-action-heading > input, .input-action-heading > select { grid-column: auto; } }
+@media (max-width: 800px) { .settings-grid { grid-template-columns: 1fr; } .page-header,.settings-search { align-items: flex-start; flex-direction: column; }.settings-search>label{width:100%}.settings-search nav{width:100%} .input-action-heading, .input-binding { grid-template-columns: repeat(2, minmax(0, 1fr)) 28px; } .input-action-heading > input, .input-action-heading > select { grid-column: auto; } }
 </style>

@@ -12,7 +12,7 @@ const [state, workspaces, layout, actionBar, palette, inspector, runtimeInspecto
 
 function assert(condition, message) { if (!condition) throw new Error(message) }
 
-for (const workspace of ['design', 'script', 'animation', 'interface', 'debug']) {
+for (const workspace of ['design', 'script', 'animation', 'ui', 'debug', 'custom']) {
   assert(workspaces.includes(`id: '${workspace}'`), `Missing ${workspace} workspace preset`)
 }
 for (const panel of ['hierarchyVisible', 'inspectorVisible', 'bottomPanelVisible', 'distractionFree']) {
@@ -25,7 +25,7 @@ for (const tab of ['assets', 'packages', 'console', 'animation', 'tilemap', 'wor
   assert(palette.includes(`toolCommand('${tab}'`), `Command palette cannot open ${tab}`)
 }
 assert(workspaces.includes("'rendering'"), 'Rendering panel cannot be restored from saved workspace state')
-assert(palette.includes("key !== 'k'") && palette.includes("key === 'p'"), 'Command palette shortcuts are incomplete')
+assert(palette.includes('shortcutMatches') && palette.includes("key === 'p'"), 'Command palette shortcuts are incomplete')
 assert(workspaces.includes('nova-a-editor-layout-v1') && workspaces.includes('try {') && workspaces.includes('localStorage'), 'Layout persistence is not guarded')
 assert(inspector.includes('searchInspector') && inspector.includes('inspectorCategories') && inspector.includes('filteredAddableComponents'), 'Inspector discovery controls are incomplete')
 assert(!inspector.includes('class="add-components"'), 'Legacy bottom-of-inspector component pile still exists')
@@ -42,6 +42,6 @@ const versions = await Promise.all([
   read('package.json'), read('Cargo.toml'), read('src-tauri/Cargo.toml'), read('src-tauri/tauri.conf.json'),
   read('crates/nova_format/src/lib.rs'), read('src/projects/projectFormat.ts')
 ])
-for (const source of versions) assert(source.includes('3.0.0'), 'A primary release metadata file does not identify 3.0.0')
+for (const source of versions) assert(source.includes('3.2.0'), 'A primary release metadata file does not identify 3.2.0')
 
-console.log('Editor shell audit passed: 5 workspaces, persistent panel layout, command coverage, and searchable component inspector.')
+console.log('Editor shell audit passed: 6 workspace targets, persistent panel layout, command coverage, and searchable component inspector.')

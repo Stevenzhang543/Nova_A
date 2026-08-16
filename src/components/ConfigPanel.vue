@@ -1,5 +1,5 @@
 <template>
-  <div class="config-wrapper" :style="{ width: `${panelWidth}px` }">
+  <div class="config-wrapper" :class="dock" :style="{ width: `${panelWidth}px` }">
     <div class="resize-handle" @mousedown="startResize"></div>
     <aside class="config-panel" :class="{ runtime: !canEdit }">
       <div v-if="selectedEntities.length" class="inspector-sticky">
@@ -36,6 +36,10 @@
           <template v-if="selectedEntity.prefabAsset">
             <DiagnosticRow :label="t('prefabInstance')" :value="selectedEntity.prefabAsset" active />
             <DiagnosticRow :label="t('prefabOverrides')" :value="String(prefabOverrideCount)" />
+            <details v-if="prefabComparison.length" class="prefab-compare">
+              <summary>{{ t('comparePrefabOverrides') }}</summary>
+              <article v-for="override in prefabComparison" :key="override.path"><code>{{ override.path }}</code><button @click="resetSelectedPrefabOverride(override.path)">{{ t('resetOverride') }}</button></article>
+            </details>
             <div class="prefab-actions">
               <button @click="applySelectedPrefab">{{ t('applyPrefab') }}</button>
               <button @click="revertSelectedPrefab">{{ t('revertPrefab') }}</button>
@@ -43,6 +47,10 @@
             </div>
           </template>
           <button v-else class="secondary-action" @click="createSelectedPrefab">{{ t('createPrefab') }}</button>
+          <template v-if="selectedEntity.sceneLayers.length">
+            <DiagnosticRow :label="t('sceneInstance')" :value="selectedEntity.sceneLayers[selectedEntity.sceneLayers.length - 1]?.asset ?? ''" active />
+            <button class="secondary-action" @click="unpackSelectedScene">{{ t('unpackScene') }}</button>
+          </template>
         </InspectorSection>
 
         <InspectorSection v-if="selectedEntity.hasComponent('RigidBody2D')" :title="t('rigidBody2D')" category="physics" open>
@@ -268,7 +276,8 @@ import { selectionCenter } from '../editor/selection'
 import { assetReference, assetState, importAssetFiles } from '../assets/AssetDatabase'
 import { gameplayRuntime } from '../runtime/GameplayRuntime'
 import { recordEntityProperties } from '../editor/animationStudioState'
-import { applyPrefabFromInstance, capturePrefabOverrides, createPrefabFromEntities, revertPrefabInstance, unpackPrefabInstance } from '../runtime/prefabs'
+import { applyPrefabFromInstance, capturePrefabOverrides, comparePrefabInstance, createPrefabFromEntities, resetPrefabOverride, revertPrefabInstance, unpackPrefabInstance } from '../runtime/prefabs'
+import { unpackSceneInstance } from '../runtime/sceneInstances'
 
 const InspectorSection = defineComponent({ props: { title: { type: String, required: true }, category: { type: String, default: 'general' }, open: Boolean }, setup(props, { slots }) { return () => h('details', { class: 'inspector-section', open: props.open, style: { display: inspectorSectionVisible(props.title, props.category as InspectorCategory) ? '' : 'none' } }, [h('summary', [h('span', props.title), h('i', '⌄')]), h('div', { class: 'section-body' }, slots.default?.())]) } })
 const PropertyRow = defineComponent({ props: { label: { type: String, required: true } }, setup(props, { slots }) { return () => h('label', { class: 'property-row' }, [h('span', props.label), h('div', { class: 'property-control' }, slots.default?.())]) } })
@@ -304,7 +313,9 @@ const entityColor = computed(() => selectedEntity.value ? `rgb(${selectedEntity.
 const selectedEntityArea = computed(() => selectedEntity.value ? entityArea(selectedEntity.value) : 0)
 const effectiveEntityInertia = computed(() => selectedEntity.value ? effectiveInertia(selectedEntity.value) : 0)
 const componentClipboard = ref<{ kind: ComponentKind; values: Record<string, unknown> } | null>(null)
-const panelWidth = ref(292)
+const props = withDefaults(defineProps<{ dock?: 'left' | 'right' }>(), { dock: 'right' })
+const dock = computed(() => props.dock)
+const panelWidth = ref(estate.inspectorWidth)
 const imageAssets = computed(() => assetState.records.filter(asset => asset.assetType === 'image'))
 const fontAssets = computed(() => assetState.records.filter(asset => asset.assetType === 'font'))
 const scriptAssets = computed(() => assetState.records.filter(asset => asset.assetType === 'script'))
@@ -392,6 +403,7 @@ const tagsText = computed({
   }
 })
 const prefabOverrideCount = computed(() => selectedEntity.value ? Object.keys(selectedEntity.value.prefabOverrides).length : 0)
+const prefabComparison = computed(() => selectedEntity.value?.prefabAsset ? comparePrefabInstance(selectedEntity.value) : [])
 
 function componentTitle(kind: ComponentKind): string {
   if (kind === 'Transform2D') return t('transform2D')
@@ -592,6 +604,8 @@ function createSelectedPrefab() {
 function applySelectedPrefab() { if (selectedEntity.value && applyPrefabFromInstance(selectedEntity.value)) estate.statusText = t('prefabApplied') }
 function revertSelectedPrefab() { if (selectedEntity.value && revertPrefabInstance(selectedEntity.value)) estate.statusText = t('prefabReverted') }
 function unpackSelectedPrefab() { if (selectedEntity.value && unpackPrefabInstance(selectedEntity.value)) estate.statusText = t('prefabUnpacked') }
+function resetSelectedPrefabOverride(path: string) { if (selectedEntity.value && resetPrefabOverride(selectedEntity.value, path)) estate.statusText = t('prefabOverrideReset') }
+function unpackSelectedScene() { if (selectedEntity.value && unpackSceneInstance(selectedEntity.value)) estate.statusText = t('sceneUnpacked') }
 function onLayerChange() { if (selectedEntity.value) estate.activeLayer = selectedEntity.value.layer }
 const bodyType = computed({ get: () => !selectedEntity.value ? 'Dynamic' : selectedEntity.value.isStatic ? 'Static' : selectedEntity.value.isKinematic ? 'Kinematic' : 'Dynamic', set: value => { if (!selectedEntity.value) return; selectedEntity.value.isStatic = value === 'Static'; selectedEntity.value.isKinematic = value === 'Kinematic'; normalizeEntity(selectedEntity.value) } })
 function onDensityChange() { if (selectedEntity.value) { selectedEntity.value.rigidBody.massMode = 'Automatic'; syncMassFromDensity(selectedEntity.value) } }
@@ -680,14 +694,15 @@ const multiPositionY = computed({ get: () => Number(selectionCenter(selectedEnti
 let resizeStartX = 0
 let resizeStartWidth = 0
 function startResize(event: MouseEvent) { resizeStartX = event.clientX; resizeStartWidth = panelWidth.value; document.addEventListener('mousemove', resizePanel); document.addEventListener('mouseup', stopResize); document.body.style.cursor = 'ew-resize' }
-function resizePanel(event: MouseEvent) { panelWidth.value = Math.min(480, Math.max(252, resizeStartWidth + resizeStartX - event.clientX)) }
-function stopResize() { document.removeEventListener('mousemove', resizePanel); document.removeEventListener('mouseup', stopResize); document.body.style.cursor = 'default' }
+function resizePanel(event: MouseEvent) { const delta = event.clientX - resizeStartX; panelWidth.value = Math.min(480, Math.max(252, resizeStartWidth + (props.dock === 'right' ? -delta : delta))) }
+function stopResize() { document.removeEventListener('mousemove', resizePanel); document.removeEventListener('mouseup', stopResize); document.body.style.cursor = 'default'; estate.inspectorWidth = panelWidth.value }
 onBeforeUnmount(stopResize)
 </script>
 
 <style scoped>
-.config-wrapper { position: relative; min-width: 252px; max-width: 38vw; flex: 0 0 auto; z-index: 180; border-left: 1px solid var(--border-subtle); background: var(--surface-1); }
+.config-wrapper { position: relative; min-width: 252px; max-width: 38vw; flex: 0 0 auto; z-index: 180; background: var(--surface-1); }.config-wrapper.right{border-left:1px solid var(--border-subtle)}.config-wrapper.left{border-right:1px solid var(--border-subtle)}
 .resize-handle { position: absolute; inset: 0 auto 0 -4px; width: 8px; cursor: ew-resize; z-index: 6; }
+.config-wrapper.left .resize-handle { inset: 0 -4px 0 auto; }
 .config-panel { position: absolute; inset: 0; overflow: auto; color: var(--text-secondary); background: var(--surface-1); backdrop-filter: var(--glass-blur); font-family: inherit; font-size: 11px; }
 .config-panel :deep(button), .config-panel :deep(input), .config-panel :deep(select), .config-panel :deep(textarea) { font-family: inherit; font-size:11px; }
 .config-panel.runtime { pointer-events: none; opacity: .72; }
@@ -720,11 +735,12 @@ onBeforeUnmount(stopResize)
 .prefab-actions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 5px; }
 .prefab-actions button { min-width: 0; min-height: 30px; padding: 4px 5px; overflow: hidden; border: 1px solid var(--border-subtle); border-radius: 7px; color: var(--text-secondary); background: var(--surface-3); font-size:11px; text-overflow: ellipsis; white-space: nowrap; }
 .prefab-actions button:hover { color: var(--accent); border-color: var(--accent); }
+.prefab-compare{padding:6px;border:1px solid var(--border-subtle);border-radius:8px}.prefab-compare summary{cursor:pointer;color:var(--text-secondary)}.prefab-compare article{min-width:0;display:flex;align-items:center;gap:5px;padding-top:5px}.prefab-compare code{min-width:0;flex:1;overflow:hidden;color:var(--accent);font-size:11px;text-overflow:ellipsis;white-space:nowrap}.prefab-compare button{min-height:24px;border:1px solid var(--border-subtle);border-radius:6px;background:var(--surface-3);color:var(--text-secondary);font-size:11px}
 .script-error { margin: 0; padding: 8px; overflow-wrap: anywhere; border: 1px solid color-mix(in srgb, var(--danger) 50%, var(--border-subtle)); border-radius: 7px; color: var(--danger); background: var(--danger-soft); font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size:11px; line-height: 1.45; }
 .inspector-no-results { margin: 14px 4px; padding: 18px 10px; border: 1px dashed var(--border-strong); border-radius: 10px; color: var(--text-muted); text-align: center; font-size:11px; line-height: 1.45; }
 .empty-state { margin: 5px 0; color: var(--text-muted); font-size: 11px; text-align: center; }.connection-list { display: flex; flex-direction: column; gap: 6px; }.connection-item { display: flex; align-items: center; border: 1px solid var(--border-subtle); border-radius: 9px; background: var(--surface-1); }.connection-main { min-width: 0; flex: 1; padding: 7px; display: flex; align-items: center; gap: 8px; border: 0; background: transparent; text-align: left; }.connection-main > span:last-child { min-width: 0; display: flex; flex-direction: column; }.connection-main strong, .connection-main small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }.connection-main strong { color: var(--text-primary); font-size: 11px; }.connection-main small { color: var(--text-muted); font-size:11px; }.connection-dot { width: 8px; height: 8px; flex: 0 0 8px; border-radius: 50%; background: var(--connection); box-shadow: 0 0 7px var(--connection); }.connection-item.snapped .connection-dot, .connection-item.torn .connection-dot { background: var(--connection-broken); box-shadow: 0 0 7px var(--connection-broken); }.mini-button { width: 26px; height: 28px; border: 0; background: transparent; color: var(--text-muted); }.mini-button:hover { color: var(--accent); }.mini-button.danger:hover { color: var(--danger); }
 .modal-scrim { position: fixed; inset: 0; z-index: 1300; display: grid; place-items: center; background: var(--scrim); pointer-events: auto; backdrop-filter: blur(6px); }.color-modal { width: 250px; padding: 18px; display: flex; flex-direction: column; align-items: center; gap: 14px; border: 1px solid var(--border-subtle); border-radius: 16px; background: var(--surface-2); box-shadow: var(--shadow-lg); }.color-modal h4 { margin: 0; }.color-modal input { width: 100px; height: 76px; border: 0; background: transparent; }.color-modal > div { width: 100%; display: flex; gap: 8px; }.color-modal button { flex: 1; min-height: 34px; border: 1px solid var(--border-subtle); border-radius: 8px; background: var(--surface-3); }.color-modal button.primary { color: var(--accent-contrast); border-color: var(--accent); background: var(--accent); }
-.component-picker-scrim { z-index: 1400; }.component-picker { width: min(520px, calc(100vw - 30px)); max-height: min(620px, calc(100vh - 60px)); padding: 12px; display: flex; flex-direction: column; gap: 10px; overflow: hidden; border: 1px solid var(--border-strong); border-radius: 16px; background: var(--surface-1); box-shadow: var(--shadow-lg); }.component-picker > header { display: flex; align-items: center; justify-content: space-between; }.component-picker > header h4 { margin: 3px 0 0; font-size: 14px; }.component-picker > header > button { width: 30px; height: 30px; border: 0; border-radius: 7px; color: var(--text-muted); background: transparent; }.component-picker > header > button:hover { color: var(--text-primary); background: var(--surface-hover); }.component-picker > input { width: 100%; }.component-picker-list { min-height: 60px; overflow: auto; display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }.component-picker-list > button { min-width: 0; min-height: 48px; padding: 6px 8px; display: grid; grid-template-columns: 29px 1fr 18px; align-items: center; gap: 7px; border: 1px solid var(--border-subtle); border-radius: 9px; color: var(--text-secondary); background: var(--surface-2); text-align: left; }.component-picker-list > button:hover { border-color: color-mix(in srgb, var(--accent) 55%, var(--border-subtle)); background: var(--accent-soft); }.component-picker-list > button > span:first-child { width: 28px; height: 28px; display: grid; place-items: center; border-radius: 7px; color: var(--accent); background: var(--surface-3); font: 600 9px/1 ui-monospace, SFMono-Regular, Consolas, monospace; }.component-picker-list > button > span:nth-child(2) { min-width: 0; display: flex; flex-direction: column; gap: 2px; }.component-picker-list strong { overflow: hidden; font-size:11px; text-overflow: ellipsis; white-space: nowrap; }.component-picker-list small { color: var(--text-muted); font-size:11px; }.component-picker-list i { color: var(--accent); font-size: 15px; font-style: normal; }.component-picker-list > p { grid-column: 1 / -1; padding: 24px; color: var(--text-muted); text-align: center; font-size:11px; }
+.component-picker-scrim { z-index: 1400; }.component-picker { width: min(520px, calc(100vw - 30px)); max-height: min(620px, calc(100vh - 60px)); padding: 12px; display: flex; flex-direction: column; gap: 10px; overflow: hidden; border: 1px solid var(--border-strong); border-radius: 16px; background: var(--surface-1); box-shadow: var(--shadow-lg); }.component-picker > header { display: flex; align-items: center; justify-content: space-between; }.component-picker > header h4 { margin: 3px 0 0; font-size: 14px; }.component-picker > header > button { width: 30px; height: 30px; border: 0; border-radius: 7px; color: var(--text-muted); background: transparent; }.component-picker > header > button:hover { color: var(--text-primary); background: var(--surface-hover); }.component-picker > input { width: 100%; }.component-picker-list { min-height: 60px; overflow: auto; display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }.component-picker-list > button { min-width: 0; min-height: 48px; padding: 6px 8px; display: grid; grid-template-columns: 29px 1fr 18px; align-items: center; gap: 7px; border: 1px solid var(--border-subtle); border-radius: 9px; color: var(--text-secondary); background: var(--surface-2); text-align: left; }.component-picker-list > button:hover { border-color: color-mix(in srgb, var(--accent) 55%, var(--border-subtle)); background: var(--accent-soft); }.component-picker-list > button > span:first-child { width: 28px; height: 28px; display: grid; place-items: center; border-radius: 7px; color: var(--accent); background: var(--surface-3); font: 600 11px/1 ui-monospace, SFMono-Regular, Consolas, monospace; }.component-picker-list > button > span:nth-child(2) { min-width: 0; display: flex; flex-direction: column; gap: 2px; }.component-picker-list strong { overflow: hidden; font-size:11px; text-overflow: ellipsis; white-space: nowrap; }.component-picker-list small { color: var(--text-muted); font-size:11px; }.component-picker-list i { color: var(--accent); font-size: 15px; font-style: normal; }.component-picker-list > p { grid-column: 1 / -1; padding: 24px; color: var(--text-muted); text-align: center; font-size:11px; }
 @media (max-width: 760px) { .config-wrapper { max-width: 46vw; } }
 @media (max-width: 560px) { .component-picker-list { grid-template-columns: 1fr; } }
 </style>

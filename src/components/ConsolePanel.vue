@@ -53,6 +53,6 @@ header button, header input, header select { min-height: 30px; border: 1px solid
 .console-list { min-height: 0; flex: 1; overflow: auto; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; }
 .log-entry { width: 100%; min-width: 0; min-height: 31px; padding: 4px 9px; display: grid; grid-template-columns: 76px 62px 78px minmax(0, 1fr) minmax(0, auto); gap: 7px; align-items: center; overflow: hidden; border: 0; border-bottom: 1px solid var(--border-subtle); border-radius: 0; color: var(--text-secondary); background: transparent; text-align: left; font-size: 11px; }
 .log-entry:hover { background: var(--surface-hover); }.log-entry time, .log-entry code, .log-entry b, .log-entry strong, .log-entry span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }.log-entry time, .log-entry code { color: var(--text-muted); }.log-entry b { color: var(--text-muted); }.log-entry strong { color: var(--accent); }.log-entry.warning b, .log-entry.warning strong { color: var(--warning); }.log-entry.error b, .log-entry.error strong, .log-entry.fatal b, .log-entry.fatal strong { color: var(--danger); }.log-entry.fatal { background: var(--danger-soft); }
-.empty { padding: 18px; color: var(--text-muted); font: 10px Nunito Sans, sans-serif; }
+.empty { padding: 18px; color: var(--text-muted); font: 11px Nunito Sans, sans-serif; }
 @media (max-width: 760px) { .log-entry { grid-template-columns: 58px 48px 58px minmax(120px, 1fr); }.log-entry code { display: none; } }
 </style>

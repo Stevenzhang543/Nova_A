@@ -28,15 +28,23 @@
             <div class="asset-actions-row">
               <button class="primary" :disabled="assets.importing" @click="assetInput?.click()">＋ {{ t('importAssets') }}</button>
               <button @click="createScriptAsset">+ {{ t('newScript') }}</button>
+              <button :disabled="!state.selectedEntityIds.length" @click="createSceneAssetFromSelection">+ {{ t('createSceneAsset') }}</button>
               <button @click="creatingFolder = !creatingFolder">{{ t('newFolder') }}</button>
               <button @click="exportFolder">{{ t('exportProjectFolder') }}</button>
               <input v-if="creatingFolder" v-model="newFolderName" class="folder-input" :placeholder="t('folderName')" @keydown.enter="createFolder" @keydown.escape="creatingFolder = false">
               <span class="path" :title="assets.currentFolder">{{ assets.currentFolder }}</span>
               <input v-model="assets.search" type="search" :placeholder="t('searchAssets')">
             </div>
-            <nav class="asset-filters" :aria-label="t('assetType')">
-              <button v-for="filter in assetFilters" :key="filter.type" :class="{ active: assets.typeFilter === filter.type }" @click="assets.typeFilter = filter.type">{{ t(filter.label) }}</button>
-            </nav>
+            <div class="filter-menu" :aria-label="t('assetType')">
+              <button :class="{ active: assets.typeFilter !== 'all' || assets.favoritesOnly }" @click="filterMenuOpen = !filterMenuOpen">⌕ {{ activeFilterLabel }} ▾</button>
+              <section v-if="filterMenuOpen" class="filter-popover">
+                <input v-model="filterQuery" type="search" :placeholder="t('searchFilters')">
+                <button v-for="filter in filteredTypeFilters" :key="filter.type" :class="{ active: assets.typeFilter === filter.type }" @click="assets.typeFilter = filter.type; filterMenuOpen = false">{{ t(filter.label) }}</button>
+                <button :class="{ active: assets.favoritesOnly }" @click="assets.favoritesOnly = !assets.favoritesOnly">★ {{ t('favoritesOnly') }}</button>
+                <select :value="''" @change="applySavedFilter(($event.target as HTMLSelectElement).value)"><option value="">{{ t('savedFilters') }}</option><option v-for="filter in assets.savedFilters" :key="filter.id" :value="filter.id">{{ filter.name }}</option></select>
+                <div><input v-model="savedFilterName" :placeholder="t('filterName')" @keydown.enter="saveFilter"><button @click="saveFilter">＋</button></div>
+              </section>
+            </div>
             <div class="asset-diagnostics">
               <button @click="reportUnusedAssets">{{ t('unusedAssetReport') }}</button>
               <button :disabled="!assetGraph.missingReferences.length" @click="openMissingRepair">{{ t('missingReferences') }} <span>{{ assetGraph.missingReferences.length }}</span></button>
@@ -45,12 +53,17 @@
             <input ref="assetInput" hidden type="file" multiple accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml,audio/wav,audio/ogg,audio/mpeg,font/ttf,font/otf,font/woff,font/woff2,.ttf,.otf,.woff,.woff2,.rhai,.nova-prefab,.nova-scene,.nova-material,.nova-anim,.nova-controller,.nova-mask,.nova-rig,.nova-skin,.nova-timeline,.nova-tileset,.nova-atlas,.glsl,.frag,.vert,.nova-shader,.csv,.po,.arb,.nova-locale,.nova-theme" @change="importFiles">
           </header>
 
+          <section v-if="externalChanges.length" class="external-changes" aria-live="polite">
+            <article v-for="change in externalChanges" :key="change.id"><span><strong>{{ t('externalAssetChanged') }}</strong><small>{{ change.name }}</small></span><button @click="resolveExternal(change.id, 'reimport')">{{ t('reimportAsset') }}</button><button @click="resolveExternal(change.id, 'keep')">{{ t('keepCurrent') }}</button><button @click="resolveExternal(change.id, 'duplicate')">{{ t('importAsCopy') }}</button></article>
+          </section>
+
           <div v-if="importJobs.length" class="import-queue" aria-live="polite">
             <article v-for="job in importJobs" :key="job.id">
               <span><strong>{{ job.name }}</strong><small>{{ t(`importStatus_${job.status}`) }}</small></span>
               <progress :value="job.progress" max="1"></progress>
               <button v-if="!['complete','cancelled','failed'].includes(job.status)" @click="cancelAssetImport(job.id)">{{ t('cancel') }}</button>
-              <em v-else-if="job.error" :title="job.error">{{ job.error }}</em>
+              <button v-else-if="job.retryable" @click="retryImport(job.id)">{{ t('retry') }}</button>
+              <details v-if="job.logs.length"><summary>{{ t('importLog') }}</summary><code v-for="(line,index) in job.logs" :key="index">{{ line }}</code></details>
             </article>
           </div>
 
@@ -81,6 +94,7 @@
               <span v-if="asset.assetType === 'image'" class="asset-preview" :style="{ backgroundImage: `url(${asset.source})`, imageRendering: asset.settings.filterMode === 'Nearest' ? 'pixelated' : 'auto' }"></span>
               <span v-else class="asset-preview asset-icon">{{ assetIcon(asset.assetType) }}</span>
               <span v-if="assetSourceStatus(asset.uuid)" :class="['source-badge', assetSourceStatus(asset.uuid)]">{{ assetSourceStatus(asset.uuid)?.slice(0, 1).toUpperCase() }}</span>
+              <button class="favorite-button" :class="{ active: assets.favorites.includes(asset.uuid) }" :title="t('favorite')" @click.stop="toggleAssetFavorite(asset.uuid)">★</button>
               <input v-if="renamingGuid === asset.uuid" v-model="renameValue" @click.stop @keydown.enter="commitRename" @keydown.escape="renamingGuid = null" @blur="commitRename">
               <strong v-else>{{ asset.name }}</strong>
               <small>{{ asset.assetType }} · {{ formatBytes(asset.byteLength) }}</small>
@@ -96,8 +110,10 @@
           <div v-else-if="selectedAsset.assetType === 'font'" class="font-preview" :style="{ fontFamily: selectedAsset.fontFamily }">Nova_A Aa 123</div>
           <label><span>GUID</span><code>{{ selectedAsset.uuid.slice(0, 13) }}…</code></label>
           <label><span>{{ t('assetPath') }}</span><code>{{ selectedAsset.path }}</code></label>
+          <label v-if="selectedAsset.path.startsWith('.nova/')"><span>{{ t('generatedArtifact') }}</span><b>{{ t('readOnly') }}</b></label>
           <label v-if="selectedAsset.pipeline"><span>{{ t('importCache') }}</span><code>{{ selectedAsset.pipeline.cacheHit ? t('cacheHit') : t('cacheWritten') }}</code></label>
-          <label v-if="selectedAsset.pipeline"><span>SHA-256</span><code :title="selectedAsset.pipeline.contentHash">{{ selectedAsset.pipeline.contentHash.slice(0, 13) }}…</code></label>
+          <label v-if="selectedAsset.pipeline"><span>{{ t('sourceHash') }}</span><code :title="selectedAsset.pipeline.sourceHash">{{ selectedAsset.pipeline.sourceHash.slice(0, 13) }}…</code></label>
+          <label v-if="selectedAsset.pipeline"><span>{{ t('artifactHash') }}</span><code :title="selectedAsset.pipeline.artifactHash">{{ selectedAsset.pipeline.artifactHash.slice(0, 13) }}…</code></label>
           <p v-if="selectedAsset.pipeline?.status === 'failed'" class="pipeline-error">{{ selectedAsset.pipeline.error }}</p>
           <template v-if="selectedAsset.assetType === 'image'">
             <label><span>{{ t('dimensions') }}</span><b>{{ selectedAsset.width }} × {{ selectedAsset.height }}</b></label>
@@ -159,14 +175,23 @@
             <button class="save-script" @click="reimportAnimation">{{ t('reimportAnimation') }}</button>
           </template>
           <button v-else-if="selectedAsset.assetType === 'prefab'" class="save-script" @click="instantiateSelectedPrefab">{{ t('instantiatePrefabAction') }}</button>
+          <button v-else-if="selectedAsset.assetType === 'scene'" class="save-script" @click="instantiateSelectedScene">{{ t('instantiateScene') }}</button>
+          <section class="import-presets">
+            <strong>{{ t('importPresets') }}</strong>
+            <select :value="''" @change="applySelectedPreset(($event.target as HTMLSelectElement).value)"><option value="">{{ t('choosePreset') }}</option><option v-for="preset in compatibleImportPresets" :key="preset.id" :value="preset.id">{{ preset.name }}</option></select>
+            <div><input v-model="presetName" :placeholder="t('presetName')" @keydown.enter="saveSelectedPreset"><button @click="saveSelectedPreset">＋</button></div>
+          </section>
           <section class="reference-summary">
             <strong>{{ t('assetReferences') }}</strong>
             <p>{{ t('referenceCount', { count: selectedReferences.length }) }}</p>
             <ul v-if="selectedReferences.length"><li v-for="owner in selectedReferences.slice(0, 8)" :key="owner">{{ referenceName(owner) }}</li></ul>
+            <p>{{ t('dependencies') }}: {{ selectedAsset.pipeline?.dependencies.length ?? 0 }} · {{ t('reverseDependencies') }}: {{ selectedAsset.pipeline?.reverseDependencies.length ?? 0 }}</p>
+            <ul v-if="selectedAsset.pipeline?.dependencies.length"><li v-for="dependency in selectedAsset.pipeline.dependencies.slice(0,8)" :key="dependency">→ {{ referenceName(dependency) }}</li></ul>
+            <ul v-if="selectedAsset.pipeline?.reverseDependencies.length"><li v-for="dependency in selectedAsset.pipeline.reverseDependencies.slice(0,8)" :key="dependency">← {{ referenceName(dependency) }}</li></ul>
             <p v-if="selectedInclusion.length">{{ selectedInclusion.join(' · ') }}</p>
             <p v-else>{{ t('excludedFromBuild') }}</p>
           </section>
-          <div class="asset-actions"><button @click="reimportInput?.click()">{{ t('reimportAsset') }}</button><button @click="revealAsset">{{ t('revealAsset') }}</button><button class="danger" @click="removeSelectedAsset">{{ t('deleteAsset') }}</button></div>
+          <div class="asset-actions"><button @click="reimportInput?.click()">{{ t('reimportAsset') }}</button><button @click="linkSelectedSource">{{ t('linkSource') }}</button><button @click="revealAsset">{{ t('revealAsset') }}</button><button class="danger" @click="removeSelectedAsset">{{ t('deleteAsset') }}</button></div>
           <input ref="reimportInput" hidden type="file" @change="reimportSelectedAsset">
           <p class="drag-hint">{{ t('dragAssetHint') }}</p>
         </aside>
@@ -180,16 +205,7 @@
       <AnimationPanel v-else-if="estate.bottomPanelTab === 'animation'" />
       <TilemapPanel v-else-if="estate.bottomPanelTab === 'tilemap'" />
       <WorldToolsPanel v-else-if="estate.bottomPanelTab === 'world'" />
-      <PresentationPanel v-else-if="estate.bottomPanelTab === 'presentation'" />
-
-      <div v-else-if="estate.bottomPanelTab === 'project'" class="project-summary">
-        <article><span>{{ t('engineVersion') }}</span><strong>3.0.0</strong></article>
-        <article><span>{{ t('formatVersion') }}</span><strong>{{ t('projectFormatTwo') }} · schema 22</strong></article>
-        <article><span>{{ t('scenes') }}</span><strong>{{ sceneManager.scenes.length }}</strong></article>
-        <article><span>{{ t('assets') }}</span><strong>{{ assets.records.length }}</strong></article>
-        <article><span>{{ t('rendererBackend') }}</span><strong>{{ estate.rendererStats.backend }}</strong></article>
-        <p>{{ t('runtimeIsolation') }}</p>
-      </div>
+      <ProjectHealthPanel v-else-if="estate.bottomPanelTab === 'project'" />
 
       <BuildSettingsPanel v-else />
     </div>
@@ -200,11 +216,12 @@
 import { computed, nextTick, onBeforeUnmount, ref } from 'vue'
 import { t } from '../i18n'
 import { addEditorLog, editorState as estate } from '../store/editor'
-import { clearAssetReferences, countAssetReferences, getSceneJSON, physicsState as state, pushHistory, replaceAssetReferences, sceneManager } from '../store/physics'
+import { clearAssetReferences, countAssetReferences, getSceneJSON, physicsState as state, pushHistory, replaceAssetReferences } from '../store/physics'
 import { requestConfirmation } from '../store/dialog'
 import {
-  assetReference, assetState as assets, createAssetFolder, createTextAsset, deleteAsset, filteredAssets, importAssetFiles,
-  moveAsset, queueTextureAtlasRebuild, readTextAsset, reimportAsset, renameAsset
+  applyAssetFilter, applyImportPreset, assetReference, assetState as assets, createAssetFolder, createTextAsset, deleteAsset, filteredAssets, importAssetFiles,
+  linkAssetSource, moveAsset, queueTextureAtlasRebuild, readTextAsset, reimportAsset, renameAsset, resolveExternalAssetChange, retryFailedAssetImport,
+  saveCurrentAssetFilter, saveImportPreset, toggleAssetFavorite
 } from '../assets/AssetDatabase'
 import type { AssetType } from '../assets/types'
 import { exportProjectFolder } from '../assets/projectFolder'
@@ -212,6 +229,7 @@ import { DEFAULT_SCRIPT_SOURCE } from '../runtime/GameplayRuntime'
 import { openScriptAsset } from '../editor/scriptStudioState'
 import { applyEditorWorkspace } from '../editor/workspaces'
 import { instantiatePrefab } from '../runtime/prefabs'
+import { createSceneAssetFromEntities, instantiateSceneAsset } from '../runtime/sceneInstances'
 import { reimportAnimationClip } from '../runtime/animation'
 import AnimationPanel from './AnimationPanel.vue'
 import BuildSettingsPanel from './BuildSettingsPanel.vue'
@@ -221,19 +239,18 @@ import RenderingPanel from './RenderingPanel.vue'
 import TilemapPanel from './TilemapPanel.vue'
 import WorldToolsPanel from './WorldToolsPanel.vue'
 import PackageManagerPanel from './PackageManagerPanel.vue'
-import PresentationPanel from './PresentationPanel.vue'
+import ProjectHealthPanel from './ProjectHealthPanel.vue'
 import { buildAssetDependencyGraph, explainAssetBuildInclusion, findAssetReferences, repairMissingAssetReference, unusedAssetReport } from '../assets/assetGraph'
 import { cancelAssetImport, importPipelineState } from '../assets/importPipeline'
 import { sourceStatusFor } from '../runtime/teamWorkflow'
 
 const tabs = [
   { id: 'assets' as const, label: 'assets' as const }, { id: 'packages' as const, label: 'packages' as const }, { id: 'console' as const, label: 'console' as const },
-  { id: 'animation' as const, label: 'animation' as const }, { id: 'profiler' as const, label: 'productionLab' as const },
+  { id: 'animation' as const, label: 'animation' as const }, { id: 'profiler' as const, label: 'profiler' as const },
   { id: 'rendering' as const, label: 'renderingStudio' as const },
   { id: 'tilemap' as const, label: 'tilemap' as const },
   { id: 'world' as const, label: 'worldTools' as const },
-  { id: 'presentation' as const, label: 'presentationStudio' as const },
-  { id: 'project' as const, label: 'projectPanel' as const }, { id: 'build' as const, label: 'buildPanel' as const }
+  { id: 'project' as const, label: 'projectHealth' as const }, { id: 'build' as const, label: 'buildPanel' as const }
 ]
 const assetFilters: Array<{ type: AssetType | 'all'; label: Parameters<typeof t>[0] }> = [
   { type: 'all', label: 'allAssets' }, { type: 'image', label: 'images' }, { type: 'audio', label: 'audioAssets' },
@@ -255,6 +272,7 @@ const selectedReferences = computed(() => selectedAsset.value ? findAssetReferen
 const selectedInclusion = computed(() => selectedAsset.value ? explainAssetBuildInclusion(selectedAsset.value.uuid, assets.records, projectSnapshot.value) : [])
 const selectedTextSource = computed(() => selectedAsset.value ? readTextAsset(selectedAsset.value.uuid) ?? '' : '')
 const importJobs = computed(() => importPipelineState.jobs)
+const externalChanges = computed(() => importPipelineState.externalChanges)
 const missingReferenceIds = computed(() => [...new Set(assetGraph.value.missingReferences.map(item => item.reference))])
 const animationSources = computed(() => assets.records.filter(asset => asset.assetType === 'animation' && asset.uuid !== selectedAsset.value?.uuid))
 const assetInput = ref<HTMLInputElement | null>(null)
@@ -262,6 +280,10 @@ const reimportInput = ref<HTMLInputElement | null>(null)
 const creatingFolder = ref(false), newFolderName = ref('')
 const renamingGuid = ref<string | null>(null), renameValue = ref('')
 const repairMode = ref(false), selectedMissingReference = ref(''), replacementAssetGuid = ref('')
+const filterMenuOpen = ref(false), filterQuery = ref(''), savedFilterName = ref(''), presetName = ref('')
+const filteredTypeFilters = computed(() => assetFilters.filter(filter => t(filter.label).toLowerCase().includes(filterQuery.value.trim().toLowerCase())))
+const activeFilterLabel = computed(() => t(assetFilters.find(filter => filter.type === assets.typeFilter)?.label ?? 'allAssets'))
+const compatibleImportPresets = computed(() => selectedAsset.value ? assets.importPresets.filter(preset => preset.assetType === 'all' || preset.assetType === selectedAsset.value?.assetType) : [])
 function openTab(id: typeof tabs[number]['id']) { estate.bottomPanelTab = id; estate.bottomPanelOpen = true }
 async function importFiles(event: Event) {
   const input = event.target as HTMLInputElement
@@ -277,13 +299,26 @@ async function importFiles(event: Event) {
   input.value = ''
 }
 function dragAsset(event: DragEvent, guid: string) { event.dataTransfer?.setData('application/x-nova-asset-guid', guid); if (event.dataTransfer) event.dataTransfer.effectAllowed = 'copyMove' }
-function dropOnFolder(event: DragEvent, folder: string) { const guid = event.dataTransfer?.getData('application/x-nova-asset-guid'); if (guid && moveAsset(guid, folder)) { pushHistory('Move asset'); addEditorLog(t('assetMoved'), 'Assets') } }
+async function dropOnFolder(event: DragEvent, folder: string) {
+  const guid = event.dataTransfer?.getData('application/x-nova-asset-guid'), asset = assets.records.find(record => record.uuid === guid)
+  if (!guid || !asset || asset.path.startsWith('.nova/')) return
+  const references = findAssetReferences(guid, assets.records, projectSnapshot.value)
+  const approved = await requestConfirmation({ title: t('moveAssetPreview'), message: `${asset.path}\n→ ${folder}/${asset.name}\n\n${t('referencesPreserved', { count: references.length })}\n${references.slice(0,8).map(referenceName).join('\n')}`, confirmLabel: t('moveAsset'), cancelLabel: t('cancel'), destructive: false })
+  if (approved && moveAsset(guid, folder)) { pushHistory('Move asset'); addEditorLog(t('assetMoved'), 'Assets') }
+}
 function createFolder() { if (createAssetFolder(assets.currentFolder, newFolderName.value)) { addEditorLog(t('folderCreated'), 'Assets'); newFolderName.value = ''; creatingFolder.value = false; pushHistory('Create asset folder') } }
 function createScriptAsset() {
   const asset = createTextAsset(t('newScriptName'), 'script', DEFAULT_SCRIPT_SOURCE, 'Assets/Scripts')
   assets.selectedGuid = asset.uuid
   pushHistory('Create script asset')
   addEditorLog(t('scriptCreated', { name: asset.name }), 'Assets')
+}
+function createSceneAssetFromSelection() {
+  const reference = createSceneAssetFromEntities(state.selectedEntityIds, t('newSceneAssetName'))
+  if (!reference) return
+  assets.selectedGuid = reference.slice('asset://'.length)
+  assets.currentFolder = 'Assets/Scenes'
+  addEditorLog(t('sceneAssetCreated'), 'Assets')
 }
 function openInScriptStudio(uuid: string) { openScriptAsset(uuid); applyEditorWorkspace('script') }
 function instantiateSelectedPrefab() {
@@ -299,13 +334,33 @@ function instantiateSelectedPrefab() {
   pushHistory('Instantiate prefab')
   addEditorLog(t('prefabInstantiated', { name: asset.name }), 'Assets')
 }
+function instantiateSelectedScene() {
+  const asset = selectedAsset.value
+  if (!asset || asset.assetType !== 'scene' || state.playMode !== 'editing') return
+  const canvas = document.querySelector<HTMLElement>('.canvas-container')
+  const rect = canvas?.getBoundingClientRect()
+  const point = rect ? state.camera.screenToWorld({ x: rect.width / 2, y: rect.height / 2 }) : { x: 0, y: 0 }
+  const entities = instantiateSceneAsset(assetReference(asset.uuid), point)
+  if (!entities.length) return
+  pushHistory('Instantiate scene')
+  addEditorLog(t('sceneInstantiated', { name: asset.name }), 'Assets')
+}
 function startRename(guid: string, name: string) { renamingGuid.value = guid; renameValue.value = name; void nextTick(() => document.querySelector<HTMLInputElement>('.asset-grid article input')?.select()) }
-function commitRename() { if (!renamingGuid.value) return; if (renameAsset(renamingGuid.value, renameValue.value)) { pushHistory('Rename asset'); addEditorLog(t('assetRenamed'), 'Assets') } renamingGuid.value = null }
+async function commitRename() {
+  const guid = renamingGuid.value, asset = assets.records.find(record => record.uuid === guid)
+  if (!guid || !asset) return
+  renamingGuid.value = null
+  if (asset.path.startsWith('.nova/') || renameValue.value.trim() === asset.name) return
+  const references = findAssetReferences(guid, assets.records, projectSnapshot.value)
+  const approved = await requestConfirmation({ title: t('renameAssetPreview'), message: `${asset.name} → ${renameValue.value.trim()}\n\n${t('referencesPreserved', { count: references.length })}\n${references.slice(0,8).map(referenceName).join('\n')}`, confirmLabel: t('renameAsset'), cancelLabel: t('cancel'), destructive: false })
+  if (approved && renameAsset(guid, renameValue.value)) { pushHistory('Rename asset'); addEditorLog(t('assetRenamed'), 'Assets') }
+}
 async function removeSelectedAsset() {
   const asset = selectedAsset.value
   if (!asset) return
   const referenceCount = countAssetReferences(asset.uuid)
-  const approved = await requestConfirmation({ title: t('deleteAsset'), message: t('deleteAssetConfirm', { name: asset.name, count: referenceCount }), confirmLabel: t('deleteAsset'), cancelLabel: t('cancel'), destructive: true })
+  const owners = findAssetReferences(asset.uuid, assets.records, projectSnapshot.value)
+  const approved = await requestConfirmation({ title: t('deleteAsset'), message: `${t('deleteAssetConfirm', { name: asset.name, count: referenceCount })}\n\n${owners.slice(0,12).map(referenceName).join('\n') || t('noReferences')}`, confirmLabel: t('deleteAsset'), cancelLabel: t('cancel'), destructive: true })
   if (!approved) return
   clearAssetReferences(asset.uuid)
   deleteAsset(asset.uuid); pushHistory('Delete asset'); addEditorLog(t('assetDeleted'), 'Assets', 'warning')
@@ -360,6 +415,13 @@ function repairSelectedMissingReference() {
   repairMode.value = missingReferenceIds.value.length > 0
 }
 function referenceName(owner: string): string { return owner === 'project' ? t('project') : assets.records.find(asset => asset.uuid === owner)?.path ?? owner }
+function saveFilter() { const saved = saveCurrentAssetFilter(savedFilterName.value); if (saved) { savedFilterName.value = ''; addEditorLog(t('filterSaved', { name: saved.name }), 'Assets') } }
+function applySavedFilter(id: string) { if (id) applyAssetFilter(id) }
+function saveSelectedPreset() { const asset = selectedAsset.value; if (!asset) return; const preset = saveImportPreset(presetName.value, asset.assetType, asset.settings); if (preset) { presetName.value = ''; addEditorLog(t('presetSaved', { name: preset.name }), 'Assets') } }
+function applySelectedPreset(id: string) { const asset = selectedAsset.value; if (asset && id && applyImportPreset(id, asset)) { pushHistory('Apply import preset', `asset:${asset.uuid}`); addEditorLog(t('presetApplied'), 'Assets') } }
+async function linkSelectedSource() { const asset = selectedAsset.value; if (!asset) return; const result = await linkAssetSource(asset.uuid); estate.statusText = t(result === 'linked' ? 'sourceLinked' : result === 'unsupported' ? 'sourceLinkUnsupported' : 'saveCancelled') }
+async function resolveExternal(id: string, choice: 'reimport' | 'keep' | 'duplicate') { if (await resolveExternalAssetChange(id, choice)) addEditorLog(t('externalChangeResolved'), 'Assets') }
+async function retryImport(id: number) { const asset = await retryFailedAssetImport(id, assets.currentFolder); addEditorLog(t(asset ? 'assetReimported' : 'assetReimportFailed', { name: asset?.name ?? '' }), 'Assets', asset ? 'info' : 'error') }
 async function exportFolder() {
   try {
     const result = await exportProjectFolder(getSceneJSON(), assets.records, assets.folders)
@@ -394,8 +456,8 @@ onBeforeUnmount(stopResize)
 .import-queue{position:absolute;z-index:6;top:87px;right:8px;width:min(360px,calc(100% - 16px));padding:6px;display:grid;gap:4px;border:1px solid var(--border-strong);border-radius:9px;background:var(--surface-1);box-shadow:var(--shadow-md)}.import-queue article{min-width:0;display:grid;grid-template-columns:minmax(80px,1fr) 90px auto;align-items:center;gap:6px}.import-queue article>span{min-width:0;display:grid}.import-queue strong,.import-queue small,.import-queue em{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.import-queue small,.import-queue em{color:var(--text-muted);font-size:11px}.import-queue progress{width:100%;accent-color:var(--accent)}.import-queue button{min-height:25px}
 .missing-repair{margin:7px 8px 0;padding:6px;display:flex;align-items:center;gap:6px;border:1px solid var(--warning);border-radius:8px;background:color-mix(in srgb,var(--warning) 7%,var(--surface-2));font-size:11px}.missing-repair strong{flex:0 0 auto}.missing-repair select{min-width:0;min-height:28px;flex:1;font-size:11px}.missing-repair button{min-height:28px;padding:0 8px;white-space:nowrap}.missing-repair button.primary{color:var(--accent-contrast);border-color:var(--accent);background:var(--accent)}
 .asset-grid { min-height: 0; flex: 1; padding: 9px; display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); grid-auto-rows: 58px; gap: 7px; overflow: auto; }.asset-grid article { position: relative; min-width: 0; padding: 7px; display: grid; grid-template-columns: 42px 1fr; grid-template-rows: 1fr 1fr; column-gap: 7px; border: 1px solid var(--border-subtle); border-radius: 9px; background: var(--surface-2); cursor: grab; }.asset-grid article:hover, .asset-grid article.selected { border-color: color-mix(in srgb, var(--accent) 60%, var(--border-subtle)); background: var(--accent-soft); }.asset-preview { grid-row: 1 / 3; width: 42px; height: 42px; border-radius: 7px; background-color: var(--surface-3); background-position: center; background-repeat: no-repeat; background-size: contain; }.asset-icon { display: grid; place-items: center; color: var(--accent); font-size: 17px; font-weight: 650; }.asset-grid strong, .asset-grid small, .asset-grid input { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }.asset-grid strong { align-self: end; font-size: 11px; }.asset-grid small { color: var(--text-muted); font-size:11px; }.asset-grid input { width: 100%; height: 22px; min-height: 22px; font-size:11px; }.source-badge{position:absolute;top:4px;right:4px;width:18px;height:18px;display:grid;place-items:center;border-radius:5px;font-size:11px;font-weight:750;box-shadow:0 2px 8px rgba(0,0,0,.2)}.source-badge.added{color:var(--success);background:color-mix(in srgb,var(--success) 18%,var(--surface-1))}.source-badge.modified{color:var(--warning);background:color-mix(in srgb,var(--warning) 18%,var(--surface-1))}.source-badge.deleted,.source-badge.conflict{color:var(--danger);background:color-mix(in srgb,var(--danger) 18%,var(--surface-1))}
-.asset-inspector { border-left: 1px solid var(--border-subtle); }.asset-inspector header { padding: 2px 2px 8px; display: flex; flex-direction: column; gap: 2px; }.asset-inspector header span { color: var(--accent); font-size:11px; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; }.asset-inspector header strong { overflow: hidden; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }.large-preview { width: 100%; aspect-ratio: 16 / 9; margin-bottom: 7px; border: 1px solid var(--border-subtle); border-radius: 8px; background-color: var(--surface-3); background-position: center; background-repeat: no-repeat; background-size: contain; }.asset-media-preview{width:100%;height:34px;margin-bottom:7px}.font-preview{min-height:60px;margin-bottom:7px;padding:10px;display:grid;place-items:center;border:1px solid var(--border-subtle);border-radius:8px;background:var(--surface-3);font-size:20px}.asset-inspector label { min-height: 29px; display: flex; align-items: center; justify-content: space-between; gap: 7px; border-bottom: 1px solid var(--border-subtle); color: var(--text-muted); font-size:11px; }.asset-inspector label > *:last-child { max-width: 58%; }.asset-inspector label code { overflow: hidden; color: var(--accent); font-size:11px; text-overflow: ellipsis; white-space: nowrap; }.asset-inspector label input:not([type='checkbox']), .asset-inspector label select { width: 105px; min-height: 24px; font-size:11px; }.asset-inspector label div { display: flex; gap: 3px; }.asset-inspector label div input { width: 50%; }.asset-actions { margin-top: 8px; display: flex; gap: 5px; }.asset-actions button { min-width:0;min-height:32px;padding:0 4px;flex:1;overflow:hidden;border:1px solid var(--border-subtle);border-radius:7px;color:var(--text-secondary);background:var(--surface-3);font-size:11px;text-overflow:ellipsis;white-space:nowrap}.asset-actions button.danger { color: var(--danger); }.drag-hint { color: var(--text-muted); font-size:11px; line-height: 1.45; }.text-preview{width:100%;min-height:82px;margin:7px 0;resize:vertical;font:9px/1.45 ui-monospace,SFMono-Regular,Consolas,monospace}.pipeline-error{padding:6px;border:1px solid var(--danger);border-radius:7px;color:var(--danger);font-size:11px}.reference-summary{margin-top:8px;padding:7px;border:1px solid var(--border-subtle);border-radius:8px;background:var(--surface-3)}.reference-summary strong{font-size:11px}.reference-summary p,.reference-summary li{margin:4px 0;color:var(--text-muted);font-size:11px;line-height:1.35}.reference-summary ul{margin:3px 0;padding-left:16px}
-.script-source { padding: 6px 0; flex-direction: column; align-items: stretch !important; }.script-source textarea { width: 100%; min-height: 130px; resize: vertical; font: 9px/1.5 ui-monospace, SFMono-Regular, Consolas, monospace; white-space: pre; }.script-validation { margin: 5px 0; color: var(--success); font-size:11px; }.script-validation.error { color: var(--danger); }.save-script { width: 100%; min-height: 32px; border: 1px solid var(--accent); border-radius: 7px; color: var(--accent); background: var(--accent-soft); font-size:11px; }
+.asset-inspector { border-left: 1px solid var(--border-subtle); }.asset-inspector header { padding: 2px 2px 8px; display: flex; flex-direction: column; gap: 2px; }.asset-inspector header span { color: var(--accent); font-size:11px; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; }.asset-inspector header strong { overflow: hidden; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }.large-preview { width: 100%; aspect-ratio: 16 / 9; margin-bottom: 7px; border: 1px solid var(--border-subtle); border-radius: 8px; background-color: var(--surface-3); background-position: center; background-repeat: no-repeat; background-size: contain; }.asset-media-preview{width:100%;height:34px;margin-bottom:7px}.font-preview{min-height:60px;margin-bottom:7px;padding:10px;display:grid;place-items:center;border:1px solid var(--border-subtle);border-radius:8px;background:var(--surface-3);font-size:20px}.asset-inspector label { min-height: 29px; display: flex; align-items: center; justify-content: space-between; gap: 7px; border-bottom: 1px solid var(--border-subtle); color: var(--text-muted); font-size:11px; }.asset-inspector label > *:last-child { max-width: 58%; }.asset-inspector label code { overflow: hidden; color: var(--accent); font-size:11px; text-overflow: ellipsis; white-space: nowrap; }.asset-inspector label input:not([type='checkbox']), .asset-inspector label select { width: 105px; min-height: 24px; font-size:11px; }.asset-inspector label div { display: flex; gap: 3px; }.asset-inspector label div input { width: 50%; }.asset-actions { margin-top: 8px; display: flex; gap: 5px; }.asset-actions button { min-width:0;min-height:32px;padding:0 4px;flex:1;overflow:hidden;border:1px solid var(--border-subtle);border-radius:7px;color:var(--text-secondary);background:var(--surface-3);font-size:11px;text-overflow:ellipsis;white-space:nowrap}.asset-actions button.danger { color: var(--danger); }.drag-hint { color: var(--text-muted); font-size:11px; line-height: 1.45; }.text-preview{width:100%;min-height:82px;margin:7px 0;resize:vertical;font:11px/1.45 ui-monospace,SFMono-Regular,Consolas,monospace}.pipeline-error{padding:6px;border:1px solid var(--danger);border-radius:7px;color:var(--danger);font-size:11px}.reference-summary{margin-top:8px;padding:7px;border:1px solid var(--border-subtle);border-radius:8px;background:var(--surface-3)}.reference-summary strong{font-size:11px}.reference-summary p,.reference-summary li{margin:4px 0;color:var(--text-muted);font-size:11px;line-height:1.35}.reference-summary ul{margin:3px 0;padding-left:16px}
+.script-source { padding: 6px 0; flex-direction: column; align-items: stretch !important; }.script-source textarea { width: 100%; min-height: 130px; resize: vertical; font: 11px/1.5 ui-monospace, SFMono-Regular, Consolas, monospace; white-space: pre; }.script-validation { margin: 5px 0; color: var(--success); font-size:11px; }.script-validation.error { color: var(--danger); }.save-script { width: 100%; min-height: 32px; border: 1px solid var(--accent); border-radius: 7px; color: var(--accent); background: var(--accent-soft); font-size:11px; }
 .mapping-editor{margin:7px 0}.mapping-editor label{display:grid;grid-template-columns:1fr 1fr 24px}.mapping-editor input{width:100%!important}.mapping-editor button{min-height:26px;border:1px solid var(--border-subtle);border-radius:6px;background:var(--surface-3);color:var(--text-secondary)}
 :global(html[lang='zh-CN']) .asset-toolbar, :global(html[lang='zh-CN']) .panel-tabs { line-height: 1; writing-mode: horizontal-tb; }
 .console-list { min-width: 600px; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size:11px; }.log-entry { min-height: 29px; padding: 4px 10px; display: grid; grid-template-columns: 72px 70px 1fr; gap: 8px; align-items: center; border-bottom: 1px solid var(--border-subtle); }.log-entry time { color: var(--text-muted); }.log-entry strong { color: var(--accent); }.log-entry.warning strong { color: var(--warning); }.log-entry.error strong { color: var(--danger); }
@@ -414,4 +476,5 @@ onBeforeUnmount(stopResize)
   .asset-browser.inspecting { grid-template-columns: 92px minmax(130px, 1fr); }
   .asset-inspector { position: absolute; inset: 0 0 0 auto; z-index: 4; display: block; width: min(230px, 70%); box-shadow: var(--shadow-lg); }
 }
+.filter-menu{position:relative;align-self:start}.filter-menu>button.active,.filter-popover button.active{color:var(--accent);border-color:var(--accent);background:var(--accent-soft)}.filter-popover{position:absolute;z-index:20;top:34px;left:0;width:250px;max-height:290px;padding:7px;display:grid;grid-template-columns:1fr 1fr;gap:4px;overflow:auto;border:1px solid var(--border-strong);border-radius:10px;background:var(--surface-1);box-shadow:var(--shadow-lg)}.filter-popover>input,.filter-popover>select,.filter-popover>div{grid-column:1/-1;width:100%;min-height:29px}.filter-popover>button{height:27px}.filter-popover>div{display:flex;gap:4px}.filter-popover>div input{min-width:0;flex:1}.external-changes{padding:5px 8px;display:grid;gap:4px;border-bottom:1px solid var(--warning);background:color-mix(in srgb,var(--warning) 7%,var(--surface-1))}.external-changes article{display:flex;align-items:center;gap:5px}.external-changes article>span{min-width:0;display:grid;flex:1}.external-changes small{overflow:hidden;color:var(--text-muted);text-overflow:ellipsis;white-space:nowrap}.external-changes button{min-height:27px;border:1px solid var(--border-subtle);border-radius:6px;background:var(--surface-2);color:var(--text-secondary);font-size:11px}.import-queue{width:min(420px,calc(100% - 16px))}.import-queue details{grid-column:1/-1;max-height:90px;overflow:auto;color:var(--text-muted);font-size:11px}.import-queue details code{display:block;white-space:normal}.favorite-button{position:absolute;top:2px;left:2px;width:20px!important;height:20px!important;padding:0!important;border:0!important;background:transparent!important;color:var(--text-muted);opacity:.35}.favorite-button:hover,.favorite-button.active{color:var(--warning);opacity:1}.import-presets{margin-top:8px;padding:7px;display:grid;gap:5px;border:1px solid var(--border-subtle);border-radius:8px}.import-presets>div{display:flex;gap:4px}.import-presets input,.import-presets select{min-width:0;width:100%;min-height:28px}.import-presets button{width:30px;border:1px solid var(--border-subtle);border-radius:6px;background:var(--surface-3);color:var(--accent)}
 </style>

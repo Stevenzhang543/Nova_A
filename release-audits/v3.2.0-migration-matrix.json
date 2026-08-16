@@ -1,0 +1,161 @@
+{
+  "format": "nova-migration-matrix",
+  "version": 1,
+  "engineVersion": "3.2.0",
+  "targetSchema": 23,
+  "generatedAt": "2026-08-16T11:19:48.395Z",
+  "entries": [
+    {
+      "sourceSchema": 5,
+      "targetSchema": 23,
+      "migration": "legacy-schema-5-projection",
+      "backupRequired": true,
+      "rollbackOnFailure": true,
+      "status": "covered-by-nova_format-golden-test"
+    },
+    {
+      "sourceSchema": 6,
+      "targetSchema": 23,
+      "migration": "legacy-schema-6-projection",
+      "backupRequired": true,
+      "rollbackOnFailure": true,
+      "status": "covered-by-nova_format-golden-test"
+    },
+    {
+      "sourceSchema": 7,
+      "targetSchema": 23,
+      "migration": "legacy-schema-7-projection",
+      "backupRequired": true,
+      "rollbackOnFailure": true,
+      "status": "covered-by-nova_format-golden-test"
+    },
+    {
+      "sourceSchema": 8,
+      "targetSchema": 23,
+      "migration": "legacy-schema-8-projection",
+      "backupRequired": true,
+      "rollbackOnFailure": true,
+      "status": "covered-by-nova_format-golden-test"
+    },
+    {
+      "sourceSchema": 9,
+      "targetSchema": 23,
+      "migration": "legacy-schema-9-projection",
+      "backupRequired": true,
+      "rollbackOnFailure": true,
+      "status": "covered-by-nova_format-golden-test"
+    },
+    {
+      "sourceSchema": 10,
+      "targetSchema": 23,
+      "migration": "legacy-schema-10-projection",
+      "backupRequired": true,
+      "rollbackOnFailure": true,
+      "status": "covered-by-nova_format-golden-test"
+    },
+    {
+      "sourceSchema": 11,
+      "targetSchema": 23,
+      "migration": "legacy-schema-11-projection",
+      "backupRequired": true,
+      "rollbackOnFailure": true,
+      "status": "covered-by-nova_format-golden-test"
+    },
+    {
+      "sourceSchema": 12,
+      "targetSchema": 23,
+      "migration": "legacy-schema-12-projection",
+      "backupRequired": true,
+      "rollbackOnFailure": true,
+      "status": "covered-by-nova_format-golden-test"
+    },
+    {
+      "sourceSchema": 13,
+      "targetSchema": 23,
+      "migration": "legacy-schema-13-projection",
+      "backupRequired": true,
+      "rollbackOnFailure": true,
+      "status": "covered-by-nova_format-golden-test"
+    },
+    {
+      "sourceSchema": 14,
+      "targetSchema": 23,
+      "migration": "legacy-schema-14-projection",
+      "backupRequired": true,
+      "rollbackOnFailure": true,
+      "status": "covered-by-nova_format-golden-test"
+    },
+    {
+      "sourceSchema": 15,
+      "targetSchema": 23,
+      "migration": "legacy-schema-15-projection",
+      "backupRequired": true,
+      "rollbackOnFailure": true,
+      "status": "covered-by-nova_format-golden-test"
+    },
+    {
+      "sourceSchema": 16,
+      "targetSchema": 23,
+      "migration": "legacy-schema-16-projection",
+      "backupRequired": true,
+      "rollbackOnFailure": true,
+      "status": "covered-by-nova_format-golden-test"
+    },
+    {
+      "sourceSchema": 17,
+      "targetSchema": 23,
+      "migration": "legacy-schema-17-projection",
+      "backupRequired": true,
+      "rollbackOnFailure": true,
+      "status": "covered-by-nova_format-golden-test"
+    },
+    {
+      "sourceSchema": 18,
+      "targetSchema": 23,
+      "migration": "legacy-schema-18-projection",
+      "backupRequired": true,
+      "rollbackOnFailure": true,
+      "status": "covered-by-nova_format-golden-test"
+    },
+    {
+      "sourceSchema": 19,
+      "targetSchema": 23,
+      "migration": "legacy-schema-19-projection",
+      "backupRequired": true,
+      "rollbackOnFailure": true,
+      "status": "covered-by-nova_format-golden-test"
+    },
+    {
+      "sourceSchema": 20,
+      "targetSchema": 23,
+      "migration": "legacy-schema-20-projection",
+      "backupRequired": true,
+      "rollbackOnFailure": true,
+      "status": "covered-by-nova_format-golden-test"
+    },
+    {
+      "sourceSchema": 21,
+      "targetSchema": 23,
+      "migration": "legacy-schema-21-projection",
+      "backupRequired": true,
+      "rollbackOnFailure": true,
+      "status": "covered-by-nova_format-golden-test"
+    },
+    {
+      "sourceSchema": 22,
+      "targetSchema": 23,
+      "migration": "authoritative-project-data",
+      "backupRequired": true,
+      "rollbackOnFailure": true,
+      "status": "covered-by-nova_format-golden-test"
+    },
+    {
+      "sourceSchema": 23,
+      "targetSchema": 23,
+      "migration": "no-op canonical validation",
+      "backupRequired": false,
+      "rollbackOnFailure": true,
+      "status": "covered-by-nova_format-golden-test"
+    }
+  ]
+}

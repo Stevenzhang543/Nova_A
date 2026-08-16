@@ -6,7 +6,7 @@ import type { PivotMode, TransformSpace } from '../editor/gizmo'
 import { scriptProjectSettings } from '../runtime/scriptSettings'
 
 export type EditorPage = 'scene' | 'game' | 'script' | 'settings'
-export type EditorWorkspace = 'design' | 'script' | 'animation' | 'interface' | 'debug'
+export type EditorWorkspace = 'design' | 'script' | 'animation' | 'ui' | 'debug' | 'custom'
 export type BottomPanelTab = 'assets' | 'packages' | 'console' | 'animation' | 'tilemap' | 'world' | 'presentation' | 'profiler' | 'rendering' | 'project' | 'build'
 export type InspectorCategory = 'all' | 'general' | 'transform' | 'render' | 'physics' | 'gameplay' | 'ui'
 type ContextMenuType = 'sidebar-entity' | 'layer' | 'grid-entity' | 'none'
@@ -42,7 +42,16 @@ export const editorState = reactive({
   bottomPanelVisible: true,
   distractionFree: false,
   commandPaletteOpen: false,
+  workspaceManagerOpen: false,
+  shortcutEditorOpen: false,
+  statusCenterOpen: false,
+  hierarchyWidth: 236,
+  inspectorWidth: 292,
+  hierarchyDock: 'left' as 'left' | 'right',
+  inspectorDock: 'right' as 'left' | 'right',
   inspectorSearch: '',
+  settingsSearch: '',
+  settingsScope: 'all' as 'all' | 'editor' | 'project' | 'runtime',
   inspectorCategory: 'all' as InspectorCategory,
   componentPickerOpen: false,
   bottomPanelOpen: false,

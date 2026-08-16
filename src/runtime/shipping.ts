@@ -30,7 +30,7 @@ export async function flushTelemetry(): Promise<boolean> {
   try {
     const response = await fetch(buildSettings.delivery.telemetryEndpoint, {
       method: 'POST', keepalive: true, headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ format: 'nova-telemetry', version: 1, engineVersion: '3.0.0', events })
+      body: JSON.stringify({ format: 'nova-telemetry', version: 1, engineVersion: '3.2.0', events })
     })
     if (!response.ok) throw new Error(`Telemetry endpoint returned ${response.status}`)
     shippingState.telemetryQueue.splice(0, events.length); shippingState.telemetryStatus = 'sent'; return true

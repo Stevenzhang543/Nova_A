@@ -28,7 +28,7 @@ for (const feature of ['busInputs', 'sends', 'mute', 'solo', 'createEffect', 'bu
 for (const feature of ['waveform', 'loopStart', 'loopEnd', 'normalizationGain', 'targetPeakDb', 'activeVoices', 'bufferedVoices']) assert(`${panel}${assets}${audio}`.includes(feature), `audio authoring/profiler lacks ${feature}`)
 assert(audio.includes('effect.wet') && audio.includes('effect.feedback'), 'visible effect wet/feedback settings are not applied')
 
-assert(editor.includes("'presentation'") && workspaces.includes("'presentation'") && bottom.includes('PresentationPanel') && palette.includes("toolCommand('presentation'"), 'Presentation tools cannot be opened or restored')
+assert(editor.includes("'presentation'") && workspaces.includes("id: 'ui'") && workspaces.includes("tab === 'presentation'") && !bottom.includes('PresentationPanel') && palette.includes("workspaceCommand('ui'"), 'Presentation tools were not safely migrated into the UI workspace')
 for (const locale of ['Object.assign(en', 'Object.assign(de', 'Object.assign(zh']) assert(i18n.split(locale).slice(1).some(block => block.slice(0, 18_000).includes('presentationStudio') && block.slice(0, 18_000).includes('audioMixer')), `${locale} lacks v2.7 editor localization`)
 
 assert(manualOpen.includes('manualViewerState.visible = true') && !manualOpen.includes('WebviewWindow') && !manualOpen.includes('openUrl('), 'manual still uses a Tauri URL-opening path')
@@ -36,8 +36,8 @@ assert(manualViewer.includes('./manual/index.html') && app.includes('<ManualView
 assert(!capability.includes('nova-manual'), 'obsolete manual-window capability remains')
 assert(!/[.]prompt\(|[.]confirm\(|[.]alert\(/.test(`${panel}${manualViewer}`), 'v2.7 UI uses browser-native dialogs')
 
-assert(format.includes('CURRENT_FORMAT_VERSION: u32 = 22') && project.includes('NOVA_PROJECT_SCHEMA_VERSION = 22') && format.includes('projectSettings.presentation') && format.includes('audio.mixer'), 'current-schema presentation/audio settings are not authoritative')
+assert(format.includes('CURRENT_FORMAT_VERSION: u32 = 23') && project.includes('NOVA_PROJECT_SCHEMA_VERSION = 23') && format.includes('projectSettings.presentation') && format.includes('audio.mixer'), 'current-schema presentation/audio settings are not authoritative')
 for (const manual of [manualEn, manualDe, manualZh]) for (const topic of ['2.7', 'Audio', 'Accessibility']) assert(manual.includes(topic), `localized manual lacks ${topic}`)
-assert(manualHtml.includes('<title>Nova_A 3.0 Manual</title>') && manualHtml.includes('data-section="presentation"'), 'HTML manual lacks presentation documentation')
+assert(manualHtml.includes('<title>Nova_A 3.2 Manual</title>') && manualHtml.includes('data-section="presentation"'), 'HTML manual lacks migrated UI-workspace documentation')
 
 console.log('v2.7 audit passed: responsive UI, themes, focus/remapping, localization, mixer/audio tooling, accessibility, same-origin manual, persistence, editor discovery, localization, and docs are connected.')

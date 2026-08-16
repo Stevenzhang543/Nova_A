@@ -22,7 +22,7 @@ for (const key of ['versionSatisfies', 'resolvePackageLockfile', 'offlineCache',
 for (const status of ['installed', 'project', 'updates', 'incompatible', 'disabled']) assert(packagePanel.includes(`'${status}'`), `package UI lacks ${status} view`)
 for (const kind of ['commands', 'menus', 'panels', 'importers', 'assetEditors', 'components', 'inspectors', 'gizmos', 'settings', 'buildHooks', 'runtimeSystems', 'events']) assert(plugins.includes(kind), `Plugin API 2 lacks ${kind}`)
 for (const safety of ['permissions', 'sha256', 'signature', 'MAX_PLUGIN_CALL_MS', 'MAX_PLUGIN_BYTES', 'safeMode', 'projectEnabled', 'entryType']) assert(plugins.includes(safety), `plugin safety lacks ${safety}`)
-assert(format.includes('Some(1 | 2)') && format.includes('validate_packages') && format.includes('CURRENT_FORMAT_VERSION: u32 = 22'), 'authoritative schema does not validate legacy/API 2 plugins and packages')
+assert(format.includes('Some(1 | 2)') && format.includes('validate_packages') && format.includes('CURRENT_FORMAT_VERSION: u32 = 23'), 'authoritative schema does not validate legacy/API 2 plugins and packages')
 
 for (const value of ['directionDegrees', 'speed', 'acceleration', 'forceMagnitude', 'kineticEnergy', 'contactCount']) assert(monitor.includes(value), `body telemetry lacks ${value}`)
 for (const value of ['initialRelativeVelocity', 'normalImpulse', 'tangentImpulse', 'normalForce', 'tangentForce', 'directionChangeDegrees']) assert(`${monitor}${world}${runtime}`.includes(value), `collision telemetry lacks ${value}`)

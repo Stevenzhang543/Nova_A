@@ -4,23 +4,33 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE.md)
 [![Platforms](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey)](https://v2.tauri.app/start/prerequisites/)
-[![Release](https://img.shields.io/badge/release-3.0.0-63c6ff)]()
+[![Release](https://img.shields.io/badge/release-3.2.0-63c6ff)]()
 
 Nova_A is an open-source 2D game engine and desktop editor built with Rust, WebAssembly, Vue 3, and Tauri.
 
-Version **3.0.0** stabilizes Nova_A's complete 2D creation loop. Project Format 2 remains schema 22; Runtime API 1, Plugin API 2, Package Manifest 1, and Build CLI 1 are now documented compatibility contracts. The release adds all-public-version migration goldens, generated source projects, qualification workflows, honest benchmark/stability evidence, readable typography, and contained fatal-error recovery.
+Version **3.2.0** establishes the authoritative project-data foundation for the 3.x roadmap. Project Format 2 advances to schema 23 with a versioned manifest, deterministic canonical text, stable UUID references, nested scenes and prefabs, dependency-aware assets, import recovery, migration/repair commands, and a read-only future-schema viewer. Schema 5–22 projects receive a preview, complete backup, validation-before-replacement, and rollback on failure.
 
 **Manual:** [interactive English/German/Chinese webpage](./manual/index.html) · [English Markdown](./manual/MANUAL.en.md) · [Deutsch](./manual/MANUAL.de.md) · [中文](./manual/MANUAL.zh-CN.md)
 
-## What is new in v3.0.0
+## What is new in v3.2.0
 
-- **Frozen public contracts:** Help → Studio Status exposes project, runtime, plugin, package, and CLI versions. The [contract](./docs/STABLE_CONTRACTS.md) and [compatibility policy](./docs/COMPATIBILITY.md) define the 3.x promise.
-- **Every public migration is tested:** schemas 5–22 migrate through preview, backup, in-memory validation, atomic session replacement, unknown-field preservation, and Rust golden/corruption tests.
-- **Reference source projects:** six generated `.nova` projects and a permission-free Plugin API 2 sample cover platformer, top-down, UI, animation, audio, lighting, tilemap, save, plugin, tests, networking, and build workflows.
-- **Release evidence without invented passes:** benchmark, stability, clean-runner platform, and 24-hour qualification tooling publish measured results or an explicit pending exception and corrective plan.
-- **Safer failure behavior:** Vue, animation frame, promise, optional package, opener, and atlas failures are contained by a bounded in-app diagnostic/recovery surface with Safe Mode.
-- **Friendlier text:** the scalable multilingual rounded system stack now uses a 16 px base and an 11 px absolute UI floor while retaining compact mode, contrast, and reduced-motion support.
-- **Scope is explicit:** read the [benchmark policy](./docs/BENCHMARKS.md), [stability gate](./docs/STABILITY.md), [platform matrix](./docs/PLATFORM_VERIFICATION.md), and [known limitations](./docs/KNOWN_LIMITATIONS.md).
+- **Authoritative project manifest:** project UUID, engine range, schema, package lockfile, build presets, and source/shared/generated/cache/user-local directory ownership are explicit and validated.
+- **Deterministic text data:** canonical JSON uses sorted keys, policy-sorted set arrays, preserved authoring order, finite normalized numbers, two-space indentation, UTF-8-compatible text, and one final LF. No-op saves are byte-identical.
+- **Scenes and prefabs:** scene instancing, nested scenes, nested prefab layers, stable source identities, Apply/Revert/Reset/Compare/Unpack workflows, component-dependency validation, and a project-wide scene dependency graph are persisted.
+- **Production asset workflow:** source and artifact hashes, importer versions, dependencies and reverse dependencies, background progress/cancel/retry/logs, external-change choices, import presets, previews, favorites, saved filters, missing-resource repair, unused reports, and dependent previews are connected.
+- **Safe migration and repair:** every supported schema has a registry entry. Project Manager shows engine/package compatibility and the dry-run migration plan; backups and rollback protect the current session. Future schemas open only in a non-mutating compatibility viewer.
+- **Window behavior:** the desktop editor starts maximized with normal decorations and remains resizable/restorable. F11 is the explicit true-fullscreen toggle.
+- **Measured evidence:** the v3.2 release includes deterministic/no-op reports, the schema migration matrix, move/rename UUID evidence, a 50,000-asset benchmark, reference coverage, source/binary packages, and checksums.
+
+### Retained v3.1 editor-safety foundation
+
+- **Recoverable windowing:** F11 preserves and restores the last valid maximized or windowed state, and disconnected-monitor positions recover safely.
+- **Professional workspaces:** Design, Script, Animation, UI, Debug, and Custom support collapse, resize, left/right docking, per-user or per-project persistence, save/duplicate/rename/update, import/export, reset, and safe-layout startup.
+- **Faster navigation:** the command palette globally searches commands, settings, assets, scenes, objects, components, and scripts. Back/Forward and a conflict-safe shortcut editor make every core command discoverable without hunting through panels.
+- **Project safety:** named transactional history retains 100 mixed operations. Checksummed, bounded autosaves stay separate from manual saves; crash startup offers snapshot selection, corrupt-entry skipping, read-only recovery, and Safe Mode.
+- **One status surface:** Task Center combines imports, builds, package work, migrations, and saves with progress, cancellation, retry, error details, and copyable diagnostics. App-styled toast/banner/modal/inline feedback replaces browser dialogs.
+- **Cleaner terminology and placement:** Presentation becomes the central UI workspace, Production Lab is Profiler, runtime/save diagnostics move to Debug, plugin management moves to Packages, and project metadata becomes Project Health. Optional AI/world/network tools stay hidden until relevant.
+- **Auditable delivery:** the release evidence includes multi-resolution layouts, first-launch configuration, keyboard coverage, crash recovery, 100-step Undo/Redo automation, benchmarks, stability smoke, build logs, checksums, and explicit pending qualifications.
 
 ### Retained v2.9 shipping and collaboration foundation
 
@@ -112,7 +122,7 @@ Version **3.0.0** stabilizes Nova_A's complete 2D creation loop. Project Format 
 
 - Nova_A starts in a Project Manager with New, Open, Import, Continue and local recent-project workflows.
 - Four self-auditing templates are included: Empty 2D, Platformer, Top-down and Physics Sandbox. They refuse to open if a subsystem required by their tutorial is missing.
-- **Nova_A Project Format 2** (schema 22) records compatibility/project identity and migrates every supported legacy schema from 5 onward.
+- **Nova_A Project Format 2** (currently schema 23) records compatibility/project identity and migrates every supported legacy schema from 5 onward.
 - Stable Component API 2.0 documents every built-in component and keeps rendering, collision, editor and runtime responsibilities separate.
 - Rhai scripts can persist finite booleans, numbers, strings, arrays and maps through isolated named save slots.
 - WASM Plugin API 1 validates manifests/modules, exposes only log/event capabilities, and provides no filesystem, network or process access.
@@ -249,10 +259,10 @@ The Tauri build invokes `pnpm build` automatically before packaging. Result loca
 After the native build succeeds, assemble the complete versioned release set:
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\package-release.ps1 -Version 3.0.0
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\package-release.ps1 -Version 3.2.0
 ```
 
-This creates `releases/v3.0.0/` with a portable executable, MSI, NSIS setup executable, web ZIP, source ZIP, reference-project ZIP, release-evidence ZIP, release notes, exhaustive edit ledger, license, and `SHA256SUMS.txt`.
+This creates `releases/v3.2.0/` with a portable executable, MSI, NSIS setup executable, web ZIP, source ZIP, reference-project ZIP, release-evidence ZIP, release notes, exhaustive edit ledger, license, and `SHA256SUMS.txt`.
 
 ### Headless export
 
@@ -286,7 +296,7 @@ Configuration changes cross Vue → `nova_wasm` as explicit retained-world comma
 
 ## Project compatibility
 
-- New saves use **Nova_A Project Format 2**, schema 22, and engine version `3.0.0`.
+- New saves use **Nova_A Project Format 2**, schema 23, and engine version `3.2.0`.
 - Persisted scenes, entities, components, and connections use UUIDs; runtime handles are never written to disk.
 - Format migration and validation are centralized in `nova_format`, not scattered through editor components.
 - v1.9 format-13 files, v1.8 format-12 files, v1.7 format-11 files, v1.6 format-10 files, v1.5 format-9 files, v1.4 format-8 files, v1.3 format-7 files, v1.2 format-6 files, v1.1.2 format-5 files, older object roots, and legacy top-level entity arrays continue to load. A migrated project is only written in Format 2 when the user saves it.

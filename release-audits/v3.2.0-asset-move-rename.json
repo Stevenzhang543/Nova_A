@@ -1,0 +1,18 @@
+{
+  "format": "nova-asset-operation-report",
+  "version": 1,
+  "engineVersion": "3.2.0",
+  "generatedAt": "2026-08-16T11:19:48.393Z",
+  "operations": [
+    "rename imported marker",
+    "move to Assets/QA",
+    "resolve UUID reference"
+  ],
+  "stableUuid": "d3200000-0000-4000-8000-000000000011",
+  "referenceBefore": "asset://d3200000-0000-4000-8000-000000000011",
+  "referenceAfter": "asset://d3200000-0000-4000-8000-000000000011",
+  "dependentsShownBeforeDelete": [
+    "project.assetOperationProbe"
+  ],
+  "status": "passed"
+}

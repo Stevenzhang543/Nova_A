@@ -1,0 +1,32 @@
+<template>
+  <Teleport to="body">
+    <div v-if="feedback.banner" class="feedback-banner" role="status"><span>{{ feedback.banner }}</span><button :title="t('close')" @click="feedback.banner = ''">×</button></div>
+    <div class="toast-stack" aria-live="polite" aria-atomic="false"><article v-for="toast in feedback.toasts" :key="toast.id" :class="toast.kind"><span>{{ toast.message }}</span><button v-if="toast.action" @click="toast.action(); dismissToast(toast.id)">{{ toast.actionLabel }}</button><button :title="t('close')" @click="dismissToast(toast.id)">×</button></article></div>
+    <section v-if="state.statusCenterOpen" class="status-center" role="dialog" :aria-label="t('statusCenter')">
+      <header><div><strong>{{ t('statusCenter') }}</strong><small>{{ activeCount }} {{ t('activeTasks') }}</small></div><button :title="t('close')" @click="state.statusCenterOpen = false">×</button></header>
+      <div class="task-list">
+        <article v-if="build.phase !== 'idle'" :class="build.phase"><div><strong>{{ t('build') }}</strong><small>{{ build.message }}</small></div><progress :value="build.percent" max="100"></progress><span>{{ build.percent }}%</span></article>
+        <article v-for="job in imports.jobs" :key="`import-${job.id}`" :class="job.status"><div><strong>{{ job.name }}</strong><small>{{ t(`importStatus_${job.status}`) }}</small></div><progress :value="job.progress" max="1"></progress><button v-if="!['complete','failed','cancelled'].includes(job.status)" @click="cancelAssetImport(job.id)">{{ t('cancel') }}</button><code v-else-if="job.error">{{ job.error }}</code></article>
+        <article v-for="task in feedback.tasks" :key="task.id" :class="task.status"><div><strong>{{ task.title }}</strong><small>{{ task.detail || task.status }}</small></div><progress v-if="task.progress !== null" :value="task.progress" max="1"></progress><span v-else class="spinner"></span><div class="task-actions"><button v-if="task.cancel && ['queued','running'].includes(task.status)" @click="cancelTask(task.id)">{{ t('cancel') }}</button><button v-if="task.retry && task.status === 'failed'" @click="retryTask(task.id)">{{ t('retry') }}</button></div><details v-if="task.error"><summary>{{ t('errorDetails') }}</summary><code>{{ task.error }}</code></details></article>
+        <p v-if="!hasTasks">{{ t('noBackgroundTasks') }}</p>
+      </div>
+      <footer><button @click="copy">{{ copied ? t('copied') : t('copyDiagnostics') }}</button><button @click="clearFinishedTasks">{{ t('clearFinished') }}</button></footer>
+    </section>
+  </Teleport>
+</template>
+<script setup lang="ts">
+import { computed, ref } from 'vue'
+import { t } from '../i18n'
+import { editorState as state } from '../store/editor'
+import { importPipelineState as imports, cancelAssetImport } from '../assets/importPipeline'
+import { buildProgress as build } from '../runtime/buildSettings'
+import { cancelTask, clearFinishedTasks, dismissToast, feedbackDiagnostics, feedbackState as feedback, retryTask } from '../runtime/editorFeedback'
+import { faultDiagnostics, reportRecoverableError } from '../runtime/faultCenter'
+const copied = ref(false)
+const activeCount = computed(() => feedback.tasks.filter(item => ['running','queued'].includes(item.status)).length + imports.jobs.filter(item => !['complete','failed','cancelled'].includes(item.status)).length + (['validating','packing','exporting'].includes(build.phase) ? 1 : 0))
+const hasTasks = computed(() => feedback.tasks.length > 0 || imports.jobs.length > 0 || build.phase !== 'idle')
+async function copy() { try { await navigator.clipboard.writeText(`${feedbackDiagnostics()}\n\n${faultDiagnostics()}`); copied.value = true; setTimeout(() => { copied.value = false }, 1500) } catch (error) { reportRecoverableError(error, 'Copy status diagnostics') } }
+</script>
+<style scoped>
+.feedback-banner{position:fixed;top:42px;left:50%;z-index:2250;width:min(760px,calc(100vw - 28px));min-height:40px;padding:6px 8px 6px 13px;display:flex;align-items:center;gap:8px;border:1px solid var(--warning);border-radius:0 0 10px 10px;background:var(--warning-soft);box-shadow:var(--shadow-md);transform:translateX(-50%)}.feedback-banner span{min-width:0;flex:1}.feedback-banner button{min-width:32px;min-height:32px;border:1px solid var(--border-subtle);border-radius:7px;background:var(--surface-2)}.toast-stack{position:fixed;right:14px;bottom:42px;z-index:2200;width:min(390px,calc(100vw - 28px));display:grid;gap:7px;pointer-events:none}.toast-stack article{min-height:45px;padding:8px 9px 8px 12px;display:flex;align-items:center;gap:8px;border:1px solid var(--border-strong);border-left:3px solid var(--accent);border-radius:10px;background:var(--surface-1);box-shadow:var(--shadow-md);pointer-events:auto}.toast-stack article.success{border-left-color:var(--success)}.toast-stack article.warning{border-left-color:var(--warning)}.toast-stack article.error{border-left-color:var(--danger)}.toast-stack span{min-width:0;flex:1}.toast-stack button,.status-center button{min-height:32px;border:1px solid var(--border-subtle);border-radius:7px;background:var(--surface-2)}.status-center{position:fixed;right:12px;bottom:36px;z-index:2100;width:min(540px,calc(100vw - 24px));max-height:min(680px,calc(100vh - 70px));display:flex;flex-direction:column;border:1px solid var(--border-strong);border-radius:14px;background:var(--surface-1);box-shadow:var(--shadow-lg)}.status-center>header{min-height:55px;padding:8px 11px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border-subtle)}.status-center>header div{display:grid}.status-center small{color:var(--text-muted)}.task-list{min-height:100px;padding:7px;overflow:auto}.task-list>article{padding:9px;display:grid;grid-template-columns:minmax(0,1fr) 125px auto;gap:8px;align-items:center;border-bottom:1px solid var(--border-subtle)}.task-list>article>div:first-child{min-width:0;display:grid}.task-list small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.task-list progress{width:100%;accent-color:var(--accent)}.task-list code,.task-list details{grid-column:1/-1;overflow-wrap:anywhere;color:var(--danger)}.task-list>p{padding:24px;color:var(--text-muted);text-align:center}.spinner{width:17px;height:17px;border:2px solid var(--border-strong);border-top-color:var(--accent);border-radius:50%;animation:spin 1s linear infinite}.status-center>footer{padding:8px 10px;display:flex;justify-content:flex-end;gap:7px;border-top:1px solid var(--border-subtle)}@keyframes spin{to{transform:rotate(360deg)}}
+</style>

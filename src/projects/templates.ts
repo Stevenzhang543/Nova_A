@@ -2,6 +2,7 @@ import { defaultAudioSettings } from '../runtime/audio'
 import { defaultInputMap } from '../runtime/input'
 import { defaultCollisionMatrix } from '../world/World'
 import { newProjectMetadata } from './projectSession'
+import { normalizeProjectManifest } from './projectManifest'
 import {
   NOVA_ENGINE_VERSION, NOVA_PROJECT_FORMAT, NOVA_PROJECT_FORMAT_MAJOR,
   NOVA_PROJECT_SCHEMA_VERSION, projectCompatibility
@@ -144,15 +145,18 @@ function scene(seed: string, name: string, entities: JsonRecord[], connections: 
 
 function project(name: string, template: ProjectTemplateId, scenes: JsonRecord[], assets: JsonRecord[] = []): JsonRecord {
   const sceneIds = scenes.map(value => String(value.uuid))
+  const metadata = newProjectMetadata(name, template)
   return {
     projectFormat: NOVA_PROJECT_FORMAT,
     projectFormatMajor: NOVA_PROJECT_FORMAT_MAJOR,
     formatVersion: NOVA_PROJECT_SCHEMA_VERSION,
     engineVersion: NOVA_ENGINE_VERSION,
     compatibility: projectCompatibility(),
-    projectMetadata: newProjectMetadata(name, template),
+    projectMetadata: metadata,
+    manifest: normalizeProjectManifest(null, metadata),
     assets,
     assetFolders: ['Assets', 'Assets/Scenes', 'Assets/Sprites', 'Assets/Audio', 'Assets/Scripts', 'Assets/Fonts', 'Assets/Prefabs', 'Assets/Tiles', 'Assets/TileSets', 'Assets/Materials', 'Assets/Animations', 'Assets/Controllers', 'ProjectSettings', '.nova/cache', '.nova/imported'],
+    assetDatabase: { version: 1, favorites: [], savedFilters: [], importPresets: [] },
     plugins: [],
     packages: { manifestVersion: 1, installed: [], lockfile: [], offlineCache: [], offlineMode: true },
     projectSettings: {

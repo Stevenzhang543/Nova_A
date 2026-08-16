@@ -31,7 +31,7 @@ function download(): void {
   window.setTimeout(() => URL.revokeObjectURL(url), 0)
 }
 function safeRestart(): void {
-  const url = new URL(location.href); url.searchParams.set('safe-mode', '1'); location.assign(url.toString())
+  const url = new URL(location.href); url.searchParams.set('safe-mode', '1'); url.searchParams.set('safe-layout', '1'); location.assign(url.toString())
 }
 </script>
 

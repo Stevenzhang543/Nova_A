@@ -174,7 +174,7 @@ function normalizeSource(value: unknown): PackageSource {
   }
 }
 
-export function packageCompatibility(item: InstalledPackage, engineVersion = '3.0.0', candidates: readonly InstalledPackage[] = packageState.installed): string[] {
+export function packageCompatibility(item: InstalledPackage, engineVersion = '3.2.0', candidates: readonly InstalledPackage[] = packageState.installed): string[] {
   const problems: string[] = []
   if (!versionSatisfies(engineVersion, item.manifest.engine)) problems.push(`Requires Nova_A ${item.manifest.engine}`)
   if (item.manifest.pluginApi !== null && item.manifest.pluginApi !== 2) problems.push(`Requires Plugin API ${item.manifest.pluginApi}`)

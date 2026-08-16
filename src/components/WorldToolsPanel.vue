@@ -75,10 +75,18 @@ import { t } from '../i18n'
 import { physicsState, pushHistory, sceneManager } from '../store/physics'
 import { Area2D, AreaEffector2D, BehaviorTree2D, CharacterBody2D, NavigationAgent2D, NavigationObstacle2D, NavigationRegion2D, ObjectPool2D, Portal2D, StateMachine2D, WorldChunk2D, type AreaEffectKind2D, type Component2D } from '../world/components'
 import { OFFICIAL_AI_PACKAGE_ID, OFFICIAL_NAVIGATION_PACKAGE_ID, enableOfficialPackage, packageEnabled } from '../runtime/packages'
+import { preferencesState } from '../store/preferences'
 import { worldGameplayState } from '../runtime/worldGameplay'
 
 type Tab = 'character' | 'areas' | 'navigation' | 'ai' | 'streaming' | 'pooling'
-const tabs: Tab[] = ['character', 'areas', 'navigation', 'ai', 'streaming', 'pooling']
+const tabs = computed<Tab[]>(() => {
+  const values: Tab[] = ['character', 'areas']
+  if (packageEnabled(OFFICIAL_NAVIGATION_PACKAGE_ID) || physicsState.world.entities.some(entity => entity.hasComponent('NavigationRegion2D') || entity.hasComponent('NavigationAgent2D'))) values.push('navigation')
+  if (packageEnabled(OFFICIAL_AI_PACKAGE_ID) || physicsState.world.entities.some(entity => entity.hasComponent('BehaviorTree2D') || entity.hasComponent('StateMachine2D'))) values.push('ai')
+  if (preferencesState.experimentalFeatures || physicsState.world.entities.some(entity => entity.hasComponent('WorldChunk2D') || entity.hasComponent('Portal2D'))) values.push('streaming')
+  if (preferencesState.experimentalFeatures || physicsState.world.entities.some(entity => entity.hasComponent('ObjectPool2D'))) values.push('pooling')
+  return values
+})
 const activeTab = ref<Tab>('character')
 const selectedEntity = computed(() => physicsState.world.entities.find(entity => entity.id === physicsState.selectedEntityId) ?? null)
 const character = computed(() => selectedEntity.value?.getComponent<CharacterBody2D>('CharacterBody2D'))

@@ -2,6 +2,7 @@ import { reactive, watch } from 'vue'
 
 export type ThemeMode = 'dark' | 'light'
 export type Locale = 'en' | 'de' | 'zh'
+export type WorkspaceLayoutScope = 'user' | 'project'
 
 export interface Preferences {
   theme: ThemeMode
@@ -20,6 +21,11 @@ export interface Preferences {
   autosave: boolean
   autosaveInterval: number
   confirmDestructiveActions: boolean
+  launchMaximized: boolean
+  /** Retained only to migrate v3.1 preferences. */
+  launchFullscreen: boolean
+  workspaceLayoutScope: WorkspaceLayoutScope
+  experimentalFeatures: boolean
   defaultDensity: number
   defaultRestitution: number
   defaultFriction: number
@@ -45,6 +51,10 @@ const defaults: Preferences = {
   autosave: true,
   autosaveInterval: 30,
   confirmDestructiveActions: true,
+  launchMaximized: true,
+  launchFullscreen: false,
+  workspaceLayoutScope: 'user',
+  experimentalFeatures: false,
   defaultDensity: 1,
   defaultRestitution: 0,
   defaultFriction: 0.25
@@ -87,6 +97,10 @@ function normalizedPreferences(parsed: Partial<Preferences>, resetLegacyLightCon
     autosave: storedBoolean(parsed.autosave, defaults.autosave),
     autosaveInterval: finiteRange(parsed.autosaveInterval, defaults.autosaveInterval, 5, 600),
     confirmDestructiveActions: storedBoolean(parsed.confirmDestructiveActions, defaults.confirmDestructiveActions),
+    launchMaximized: storedBoolean(parsed.launchMaximized, storedBoolean(parsed.launchFullscreen, defaults.launchMaximized)),
+    launchFullscreen: false,
+    workspaceLayoutScope: parsed.workspaceLayoutScope === 'project' ? 'project' : 'user',
+    experimentalFeatures: storedBoolean(parsed.experimentalFeatures, defaults.experimentalFeatures),
     defaultDensity: finiteRange(parsed.defaultDensity, defaults.defaultDensity, 0.000001, 1e50),
     defaultRestitution: finiteRange(parsed.defaultRestitution, defaults.defaultRestitution, 0, 1),
     defaultFriction: finiteRange(parsed.defaultFriction, defaults.defaultFriction, 0, 1e6)

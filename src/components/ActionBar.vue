@@ -62,7 +62,7 @@ function restoreSimulation() {
 
 <style scoped>
 .actionbar { min-width: 0; height: 38px; padding: 4px 8px 4px 6px; display: flex; align-items: center; justify-content: center; gap: 3px; border-left: 1px solid var(--border-subtle); background: transparent; }
-button { width: 32px; height: 26px; display: grid; place-items: center; border: 1px solid transparent; border-radius: 7px; background: transparent; }
+button { width: 34px; height: 34px; display: grid; place-items: center; border: 1px solid transparent; border-radius: 7px; background: transparent; }
 button:hover { background: var(--surface-hover); }
 button.active { border-color: color-mix(in srgb, var(--accent) 24%, transparent); background: var(--accent-soft); }
 button img { width: 15px; height: 15px; opacity: .7; filter: var(--icon-filter); }

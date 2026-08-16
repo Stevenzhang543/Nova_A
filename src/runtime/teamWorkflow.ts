@@ -1,4 +1,5 @@
 import { reactive } from 'vue'
+import { canonicalProjectText } from '../projects/projectData'
 
 export type SourceChangeKind = 'added' | 'modified' | 'deleted' | 'conflict'
 export type SourceEntryKind = 'scene' | 'asset' | 'prefab' | 'project'
@@ -47,8 +48,7 @@ function normalized(value: unknown): unknown {
 
 /** Stable text keeps scene/prefab diffs reviewable without changing array order. */
 export function stableProjectText(source: string | unknown): string {
-  const value = typeof source === 'string' ? JSON.parse(source) : source
-  return `${JSON.stringify(normalized(value), null, 2)}\n`
+  return canonicalProjectText(source)
 }
 
 function fingerprint(value: unknown): string {

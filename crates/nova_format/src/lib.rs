@@ -8,9 +8,9 @@ use serde_json::{json, Map, Value};
 
 pub const PROJECT_FORMAT_NAME: &str = "Nova_A Project Format 2";
 pub const PROJECT_FORMAT_MAJOR: u32 = 2;
-pub const CURRENT_FORMAT_VERSION: u32 = 22;
+pub const CURRENT_FORMAT_VERSION: u32 = 23;
 pub const MINIMUM_SUPPORTED_FORMAT_VERSION: u32 = 5;
-pub const CURRENT_ENGINE_VERSION: &str = "3.0.0";
+pub const CURRENT_ENGINE_VERSION: &str = "3.2.0";
 
 fn default_true() -> bool {
     true
@@ -24,6 +24,7 @@ pub struct ProjectFile {
     pub format_version: u32,
     pub engine_version: String,
     pub compatibility: CompatibilityFile,
+    pub manifest: ProjectManifestFile,
     #[serde(default)]
     pub active_scene_uuid: String,
     #[serde(default)]
@@ -32,6 +33,61 @@ pub struct ProjectFile {
     pub assets: Vec<AssetReference>,
     #[serde(default, flatten)]
     pub extra: BTreeMap<String, Value>,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ProjectManifestFile {
+    pub manifest_version: u32,
+    pub project_uuid: String,
+    pub name: String,
+    pub engine_compatibility: EngineCompatibilityFile,
+    pub schema_version: u32,
+    pub package_lockfile: String,
+    #[serde(default)]
+    pub build_presets: Vec<String>,
+    pub directories: ProjectDirectoriesFile,
+    #[serde(default, flatten)]
+    pub extra: BTreeMap<String, Value>,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct EngineCompatibilityFile {
+    pub minimum: String,
+    pub maximum_exclusive: String,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ProjectDirectoriesFile {
+    pub source: String,
+    pub shared: String,
+    pub generated: String,
+    pub cache: String,
+    pub user_local: String,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MigrationDescriptor {
+    pub from_schema: u32,
+    pub to_schema: u32,
+    pub name: String,
+}
+
+pub fn migration_registry() -> Vec<MigrationDescriptor> {
+    (MINIMUM_SUPPORTED_FORMAT_VERSION..CURRENT_FORMAT_VERSION)
+        .map(|from_schema| MigrationDescriptor {
+            from_schema,
+            to_schema: from_schema + 1,
+            name: if from_schema == 22 {
+                "authoritative-project-data".into()
+            } else {
+                format!("legacy-schema-{from_schema}-projection")
+            },
+        })
+        .collect()
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -132,6 +188,7 @@ pub fn migrate_project_str(source: &str) -> Result<String, FormatError> {
         .map_err(|error| FormatError(format!("invalid project JSON: {error}")))?;
     let migrated = migrate_project_value(value)?;
     serde_json::to_string_pretty(&migrated)
+        .map(|text| format!("{text}\n"))
         .map_err(|error| FormatError(format!("could not serialize project: {error}")))
 }
 
@@ -222,6 +279,102 @@ pub fn migrate_project_value(value: Value) -> Result<ProjectFile, FormatError> {
             "template": "imported"
         })
     });
+    let metadata = root
+        .get("projectMetadata")
+        .and_then(Value::as_object)
+        .cloned()
+        .unwrap_or_default();
+    let project_uuid = metadata
+        .get("id")
+        .and_then(Value::as_str)
+        .filter(|value| is_uuid(value))
+        .map(str::to_owned)
+        .unwrap_or_else(|| deterministic_uuid("nova-a-project:imported"));
+    let project_name = metadata
+        .get("name")
+        .and_then(Value::as_str)
+        .filter(|value| !value.trim().is_empty())
+        .unwrap_or("Imported Project")
+        .to_owned();
+    root.entry("manifest").or_insert_with(|| {
+        json!({
+            "manifestVersion": 1,
+            "projectUuid": project_uuid.clone(),
+            "name": project_name.clone(),
+            "engineCompatibility": {"minimum":"3.0.0","maximumExclusive":"4.0.0"},
+            "schemaVersion": CURRENT_FORMAT_VERSION,
+            "packageLockfile": "Packages.lock",
+            "buildPresets": ["ProjectSettings/build.presets.json"],
+            "directories": {"source":"Assets","shared":"ProjectSettings","generated":".nova/imported","cache":".nova/cache","userLocal":".nova/user"}
+        })
+    });
+    if let Some(manifest) = root.get_mut("manifest").and_then(Value::as_object_mut) {
+        manifest.insert("manifestVersion".into(), json!(1));
+        manifest.insert("projectUuid".into(), json!(project_uuid));
+        manifest.insert("name".into(), json!(project_name));
+        manifest.insert("schemaVersion".into(), json!(CURRENT_FORMAT_VERSION));
+        manifest
+            .entry("engineCompatibility")
+            .or_insert_with(|| json!({"minimum":"3.0.0","maximumExclusive":"4.0.0"}));
+        manifest
+            .entry("packageLockfile")
+            .or_insert_with(|| json!("Packages.lock"));
+        manifest
+            .entry("buildPresets")
+            .or_insert_with(|| json!(["ProjectSettings/build.presets.json"]));
+        manifest.entry("directories").or_insert_with(|| json!({"source":"Assets","shared":"ProjectSettings","generated":".nova/imported","cache":".nova/cache","userLocal":".nova/user"}));
+    }
+    root.entry("assetDatabase").or_insert_with(
+        || json!({"version":1,"favorites":[],"savedFilters":[],"importPresets":[]}),
+    );
+    if let Some(assets) = root.get_mut("assets").and_then(Value::as_array_mut) {
+        for (index, asset) in assets.iter_mut().enumerate() {
+            let Some(asset) = asset.as_object_mut() else {
+                continue;
+            };
+            let uuid = asset
+                .get("uuid")
+                .and_then(Value::as_str)
+                .unwrap_or("")
+                .to_owned();
+            let source = asset
+                .get("source")
+                .and_then(Value::as_str)
+                .unwrap_or("")
+                .to_owned();
+            let legacy_hash = format!(
+                "legacy-unverified:{}",
+                deterministic_uuid(&format!("asset-metadata:{index}:{uuid}:{source}"))
+            );
+            asset.entry("pipeline").or_insert_with(|| json!({
+                "importerVersion":"legacy-1","platform":"web","sourceHash":legacy_hash.clone(),"artifactHash":legacy_hash.clone(),
+                "contentHash":legacy_hash.clone(),"cacheKey":legacy_hash.clone(),"status":"ready","lastValidSource":source.clone(),
+                "error":"","dependencies":[],"reverseDependencies":[],"cacheHit":false
+            }));
+            if let Some(pipeline) = asset.get_mut("pipeline").and_then(Value::as_object_mut) {
+                let source_hash = pipeline
+                    .get("sourceHash")
+                    .or_else(|| pipeline.get("contentHash"))
+                    .and_then(Value::as_str)
+                    .filter(|value| valid_content_hash(value))
+                    .unwrap_or(&legacy_hash)
+                    .to_owned();
+                let artifact_hash = pipeline
+                    .get("artifactHash")
+                    .or_else(|| pipeline.get("cacheKey"))
+                    .and_then(Value::as_str)
+                    .filter(|value| valid_content_hash(value))
+                    .unwrap_or(&legacy_hash)
+                    .to_owned();
+                pipeline.insert("sourceHash".into(), json!(source_hash));
+                pipeline.insert("artifactHash".into(), json!(artifact_hash));
+                pipeline.entry("dependencies").or_insert_with(|| json!([]));
+                pipeline
+                    .entry("reverseDependencies")
+                    .or_insert_with(|| json!([]));
+            }
+        }
+    }
     root.entry("projectSettings")
         .or_insert_with(|| json!({ "inputMap": [] }));
     if let Some(settings) = root
@@ -363,6 +516,20 @@ pub fn migrate_project_value(value: Value) -> Result<ProjectFile, FormatError> {
             "minimumSchemaVersion": MINIMUM_SUPPORTED_FORMAT_VERSION
         }),
     );
+    if let Some(assets) = root.get_mut("assets").and_then(Value::as_array_mut) {
+        assets.sort_by(|left, right| {
+            left.get("path")
+                .and_then(Value::as_str)
+                .unwrap_or("")
+                .cmp(right.get("path").and_then(Value::as_str).unwrap_or(""))
+                .then_with(|| {
+                    left.get("uuid")
+                        .and_then(Value::as_str)
+                        .unwrap_or("")
+                        .cmp(right.get("uuid").and_then(Value::as_str).unwrap_or(""))
+                })
+        });
+    }
     let project: ProjectFile = serde_json::from_value(Value::Object(root))
         .map_err(|error| FormatError(format!("project schema is invalid: {error}")))?;
     validate_project(&project)?;
@@ -387,6 +554,65 @@ pub fn validate_project(project: &ProjectFile) -> Result<(), FormatError> {
             CURRENT_FORMAT_VERSION, project.format_version
         )));
     }
+    if project.manifest.manifest_version != 1
+        || project.manifest.schema_version != CURRENT_FORMAT_VERSION
+        || !is_uuid(&project.manifest.project_uuid)
+        || project.manifest.name.trim().is_empty()
+        || project.manifest.package_lockfile != "Packages.lock"
+    {
+        return Err(FormatError(
+            "project manifest identity or schema is invalid".into(),
+        ));
+    }
+    let engine = parse_semver(CURRENT_ENGINE_VERSION).expect("current engine version is valid");
+    let minimum =
+        parse_semver(&project.manifest.engine_compatibility.minimum).ok_or_else(|| {
+            FormatError("project manifest has an invalid minimum engine version".into())
+        })?;
+    let maximum = parse_semver(&project.manifest.engine_compatibility.maximum_exclusive)
+        .ok_or_else(|| {
+            FormatError("project manifest has an invalid maximum engine version".into())
+        })?;
+    if minimum >= maximum || engine < minimum || engine >= maximum {
+        return Err(FormatError(
+            "current engine is outside the project manifest compatibility range".into(),
+        ));
+    }
+    if project
+        .extra
+        .get("projectMetadata")
+        .and_then(|value| value.get("id"))
+        .and_then(Value::as_str)
+        != Some(project.manifest.project_uuid.as_str())
+    {
+        return Err(FormatError(
+            "project manifest UUID does not match project metadata".into(),
+        ));
+    }
+    for path in [
+        project.manifest.directories.source.as_str(),
+        project.manifest.directories.shared.as_str(),
+        project.manifest.directories.generated.as_str(),
+        project.manifest.directories.cache.as_str(),
+        project.manifest.directories.user_local.as_str(),
+    ] {
+        if path.is_empty() || path.split(['/', '\\']).any(|part| part == "..") {
+            return Err(FormatError(format!(
+                "project manifest contains unsafe directory: {path}"
+            )));
+        }
+    }
+    if project.manifest.build_presets.len() > 64
+        || project
+            .manifest
+            .build_presets
+            .iter()
+            .any(|path| path.is_empty() || path.split(['/', '\\']).any(|part| part == ".."))
+    {
+        return Err(FormatError(
+            "project manifest contains invalid build preset references".into(),
+        ));
+    }
     if project.scenes.is_empty() {
         return Err(FormatError(
             "project must contain at least one scene".into(),
@@ -409,6 +635,33 @@ pub fn validate_project(project: &ProjectFile) -> Result<(), FormatError> {
             )));
         }
         asset_types.insert(asset.uuid.as_str(), asset.asset_type.as_str());
+        let pipeline = asset
+            .extra
+            .get("pipeline")
+            .and_then(Value::as_object)
+            .ok_or_else(|| FormatError(format!("asset {} has no import metadata", asset.uuid)))?;
+        if pipeline
+            .get("importerVersion")
+            .and_then(Value::as_str)
+            .map_or(true, str::is_empty)
+        {
+            return Err(FormatError(format!(
+                "asset {} has invalid importerVersion metadata",
+                asset.uuid
+            )));
+        }
+        for field in ["sourceHash", "artifactHash"] {
+            if !pipeline
+                .get(field)
+                .and_then(Value::as_str)
+                .is_some_and(valid_content_hash)
+            {
+                return Err(FormatError(format!(
+                    "asset {} has invalid {field} metadata",
+                    asset.uuid
+                )));
+            }
+        }
         if asset.asset_type == "script" {
             validate_script_asset(asset)?;
         }
@@ -591,7 +844,26 @@ pub fn validate_project(project: &ProjectFile) -> Result<(), FormatError> {
                     entity.uuid
                 )));
             }
+            if component_kinds.contains("CharacterBody2D")
+                && !component_kinds.contains("RigidBody2D")
+            {
+                return Err(FormatError(format!(
+                    "entity {} CharacterBody2D requires RigidBody2D",
+                    entity.uuid
+                )));
+            }
+            if component_kinds.contains("Area2D")
+                && !component_kinds
+                    .iter()
+                    .any(|kind| kind.ends_with("Collider2D"))
+            {
+                return Err(FormatError(format!(
+                    "entity {} Area2D requires a Collider2D",
+                    entity.uuid
+                )));
+            }
             validate_asset_reference(entity.extra.get("prefabAsset"), "prefab", &asset_types)?;
+            validate_asset_reference(entity.extra.get("sceneAsset"), "scene", &asset_types)?;
         }
         for connection in &scene.connections {
             if !is_uuid(&connection.uuid) || !identities.insert(connection.uuid.as_str()) {
@@ -1877,6 +2149,22 @@ fn migrate_legacy_components(scene: &mut Map<String, Value>) -> Result<(), Forma
                 component.entry("removed").or_insert(Value::Bool(false));
                 component.entry("data").or_insert_with(|| json!({}));
             }
+            let component_kinds = components
+                .iter()
+                .filter_map(|component| component.get("kind").and_then(Value::as_str))
+                .collect::<std::collections::HashSet<_>>();
+            let requires_rigid_body = component_kinds.contains("CharacterBody2D")
+                && !component_kinds.contains("RigidBody2D");
+            let requires_collider = component_kinds.contains("Area2D")
+                && !component_kinds
+                    .iter()
+                    .any(|kind| kind.ends_with("Collider2D"));
+            if requires_rigid_body {
+                components.push(component_value(&entity_uuid, "RigidBody2D", json!({})));
+            }
+            if requires_collider {
+                components.push(component_value(&entity_uuid, "BoxCollider2D", json!({})));
+            }
         } else {
             let shape_type = entity
                 .get("shapeType")
@@ -2040,6 +2328,23 @@ fn is_uuid(value: &str) -> bool {
                 byte.is_ascii_hexdigit()
             }
         })
+}
+
+fn parse_semver(value: &str) -> Option<(u64, u64, u64)> {
+    let mut parts = value.split('-').next()?.split('.');
+    let version = (
+        parts.next()?.parse().ok()?,
+        parts.next()?.parse().ok()?,
+        parts.next()?.parse().ok()?,
+    );
+    parts.next().is_none().then_some(version)
+}
+
+fn valid_content_hash(value: &str) -> bool {
+    (value.len() == 64 && value.bytes().all(|byte| byte.is_ascii_hexdigit()))
+        || value
+            .strip_prefix("legacy-unverified:")
+            .is_some_and(is_uuid)
 }
 
 #[cfg(test)]
@@ -2845,7 +3150,7 @@ mod tests {
         });
         let migrated = migrate_project_value(source).unwrap();
         validate_project(&migrated).unwrap();
-        assert_eq!(migrated.format_version, 22);
+        assert_eq!(migrated.format_version, CURRENT_FORMAT_VERSION);
         assert_eq!(migrated.engine_version, CURRENT_ENGINE_VERSION);
         assert_eq!(
             migrated.extra["projectSettings"]["build"]["profile"],

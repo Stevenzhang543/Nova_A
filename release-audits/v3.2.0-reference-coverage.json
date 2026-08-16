@@ -1,0 +1,14 @@
+{
+  "format": "nova-v3.2-reference-coverage",
+  "version": 1,
+  "generatedAt": "2026-08-16T11:19:48.396Z",
+  "project": "reference-projects/projects/data-foundation-validation.nova",
+  "coverage": {
+    "nestedScenes": true,
+    "nestedPrefabs": true,
+    "overriddenProperties": true,
+    "importedAssets": true,
+    "missingReferenceRepair": true
+  },
+  "status": "passed"
+}

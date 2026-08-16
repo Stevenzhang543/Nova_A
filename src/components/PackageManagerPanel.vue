@@ -3,16 +3,18 @@
     <header class="package-header">
       <div><strong>{{ t('packageManager') }}</strong><small>{{ t('packageManagerHint') }}</small></div>
       <label class="offline"><input v-model="packages.offlineMode" type="checkbox">{{ t('offlineMode') }}</label>
-      <button :class="{ active: registryOpen }" @click="registryOpen = !registryOpen">{{ t('browsePackages') }}</button>
+      <button :class="{ active: registryOpen }" @click="pluginToolsOpen = false; registryOpen = !registryOpen">{{ t('browsePackages') }}</button>
+      <button :class="{ active: pluginToolsOpen }" @click="pluginToolsOpen = !pluginToolsOpen; registryOpen = false">{{ t('pluginApi') }}</button>
       <button @click="manifestInput?.click()">+ {{ t('importPackageManifest') }}</button>
       <input ref="manifestInput" hidden type="file" accept=".json,application/json" @change="importManifest">
     </header>
-    <nav v-if="!registryOpen" class="package-tabs" role="tablist">
+    <PluginSettings v-if="pluginToolsOpen" class="plugin-manager-tools" />
+    <nav v-if="!registryOpen && !pluginToolsOpen" class="package-tabs" role="tablist">
       <button v-for="tab in statuses" :key="tab" :class="{ active: packages.selectedStatus === tab }" @click="packages.selectedStatus = tab">
         {{ t(`packageStatus_${tab}`) }} <span>{{ count(tab) }}</span>
       </button>
     </nav>
-    <div v-if="registryOpen" class="registry-layout">
+    <div v-if="registryOpen && !pluginToolsOpen" class="registry-layout">
       <section class="registry-list">
         <header><select v-model="packages.selectedRegistry"><option v-for="registry in packages.registries" :key="registry.id" :value="registry.id">{{ registry.name }}</option></select><input v-model="packages.registryQuery" type="search" :placeholder="t('searchRegistry')"></header>
         <article v-for="manifest in catalog" :key="`${manifest.id}:${manifest.version}`" :class="{ selected: selectedRegistryId === manifest.id }" @click="selectedRegistryId = manifest.id">
@@ -30,7 +32,7 @@
         <button class="install" :disabled="installedRegistry" @click="installSelectedRegistry">{{ installedRegistry ? t('installed') : t('installPackage') }}</button>
       </aside>
     </div>
-    <div v-else class="package-layout">
+    <div v-else-if="!pluginToolsOpen" class="package-layout">
       <div class="package-list">
         <article v-for="item in visiblePackages" :key="item.manifest.id" :class="{ selected: selectedId === item.manifest.id }" @click="selectedId = item.manifest.id">
           <div class="package-mark">{{ item.manifest.native ? 'N' : item.manifest.pluginApi === 2 ? 'P' : 'A' }}</div>
@@ -85,10 +87,13 @@ import { requestConfirmation } from '../store/dialog'
 import { pushHistory } from '../store/physics'
 import { applyPackageUpdate, installPackageManifest, installRegistryPackage, packageCompatibility, packageState as packages, packageUninstallImpact, packageUpdate, registryPackages, uninstallPackage, type InstalledPackage } from '../runtime/packages'
 import { normalizePluginManifest, pluginState as plugins, setPluginSafeMode } from '../runtime/plugins'
+import { completeTask, failTask, startTask } from '../runtime/editorFeedback'
+import PluginSettings from './PluginSettings.vue'
 
 const statuses = ['installed', 'project', 'updates', 'incompatible', 'disabled'] as const
 const selectedId = ref(''), manifestInput = ref<HTMLInputElement | null>(null)
 const registryOpen = ref(false), selectedRegistryId = ref('')
+const pluginToolsOpen = ref(false)
 const selected = computed(() => packages.installed.find(item => item.manifest.id === selectedId.value) ?? null)
 const compatibility = computed(() => selected.value ? packageCompatibility(selected.value) : [])
 const update = computed(() => selected.value ? packageUpdate(selected.value) : null)
@@ -108,6 +113,7 @@ function count(status: typeof statuses[number]): number { return packages.instal
 async function importManifest(event: Event): Promise<void> {
   const input = event.target as HTMLInputElement, file = input.files?.[0]; input.value = ''
   if (!file) return
+  const task = startTask(t('importPackageManifest'), { detail: file.name })
   try {
     const raw = JSON.parse(await file.text()) as Record<string, unknown>
     const item = installPackageManifest(raw.package ?? raw, raw.source)
@@ -115,14 +121,20 @@ async function importManifest(event: Event): Promise<void> {
       const plugin = normalizePluginManifest(raw.plugin), index = plugins.manifests.findIndex(candidate => candidate.id === plugin.id)
       if (index >= 0) plugins.manifests.splice(index, 1, plugin); else plugins.manifests.push(plugin)
     }
-    selectedId.value = item.manifest.id; pushHistory('Install package')
-  } catch (error) { packages.errors.push(error instanceof Error ? error.message : String(error)) }
+    selectedId.value = item.manifest.id; pushHistory('Install package'); completeTask(task, item.manifest.name)
+  } catch (error) { packages.errors.push(error instanceof Error ? error.message : String(error)); failTask(task, error) }
 }
 async function requestUninstall(): Promise<void> {
   if (!selected.value) return
   const impact = packageUninstallImpact(selected.value.manifest.id)
   const approved = await requestConfirmation({ title: t('uninstallPackage'), message: impact.length ? `${t('uninstallImpact')}: ${impact.join('; ')}` : t('uninstallNoImpact'), confirmLabel: t('uninstallPackage'), cancelLabel: t('cancel'), destructive: true })
-  if (approved && uninstallPackage(selected.value.manifest.id)) { selectedId.value = ''; pushHistory('Uninstall package') }
+  if (!approved) return
+  const packageName = selected.value.manifest.name
+  const task = startTask(t('uninstallPackage'), { detail: packageName })
+  try {
+    if (!uninstallPackage(selected.value.manifest.id)) throw new Error(t('operationFailed'))
+    selectedId.value = ''; pushHistory('Uninstall package'); completeTask(task, packageName)
+  } catch (error) { failTask(task, error) }
 }
 function setEnabled(item: InstalledPackage, enabled: boolean): void {
   item.enabled = enabled
@@ -131,12 +143,19 @@ function setEnabled(item: InstalledPackage, enabled: boolean): void {
   pushHistory(enabled ? 'Enable package' : 'Disable package', `package:${item.manifest.id}`)
 }
 function applyUpdate(): void {
-  if (!selected.value || !applyPackageUpdate(selected.value.manifest.id)) return
+  if (!selected.value) return
+  const task = startTask(t('applyPackageUpdate'), { detail: selected.value.manifest.name })
+  if (!applyPackageUpdate(selected.value.manifest.id)) { failTask(task, new Error(t('operationFailed'))); return }
   const plugin = plugins.manifests.find(candidate => candidate.id === selected.value?.manifest.id)
   if (plugin) plugin.version = selected.value.manifest.version
-  pushHistory('Update package', `package:${selected.value.manifest.id}`)
+  pushHistory('Update package', `package:${selected.value.manifest.id}`); completeTask(task, selected.value.manifest.version)
 }
-function installSelectedRegistry(): void { if (!selectedRegistry.value) return; const item = installRegistryPackage(selectedRegistry.value.id); selectedId.value = item.manifest.id; pushHistory('Install registry package') }
+function installSelectedRegistry(): void {
+  if (!selectedRegistry.value) return
+  const task = startTask(t('installPackage'), { detail: selectedRegistry.value.name })
+  try { const item = installRegistryPackage(selectedRegistry.value.id); selectedId.value = item.manifest.id; pushHistory('Install registry package'); completeTask(task, item.manifest.name) }
+  catch (error) { failTask(task, error) }
+}
 async function openPackageUrl(url: string): Promise<void> {
   if (!/^https:\/\//i.test(url)) return
   if ('__TAURI_INTERNALS__' in window) { try { const { openUrl } = await import('@tauri-apps/plugin-opener'); await openUrl(url); return } catch (error) { packages.errors.push(error instanceof Error ? error.message : String(error)); return } }
@@ -145,6 +164,7 @@ async function openPackageUrl(url: string): Promise<void> {
 </script>
 
 <style scoped>
+.plugin-manager-tools{min-height:0;flex:1;padding:12px;overflow:auto}
 .package-manager{height:100%;min-width:0;display:flex;flex-direction:column;overflow:hidden}.package-header{min-height:48px;padding:7px 10px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border-subtle)}.package-header>div{min-width:0;flex:1;display:grid}.package-header strong{font-size:12px}.package-header small{overflow:hidden;color:var(--text-muted);font-size:11px;text-overflow:ellipsis;white-space:nowrap}.package-header button{height:31px;padding:0 10px;flex:0 0 auto}.offline{display:flex;align-items:center;gap:5px;color:var(--text-muted);white-space:nowrap}.package-tabs{min-height:36px;padding:4px 8px 0;display:flex;gap:3px;overflow-x:auto;border-bottom:1px solid var(--border-subtle);scrollbar-width:thin}.package-tabs button{min-width:max-content;padding:0 10px;border:0;border-bottom:2px solid transparent;background:transparent;color:var(--text-muted)}.package-tabs button.active{border-bottom-color:var(--accent);color:var(--accent)}.package-tabs span{margin-left:4px;color:var(--text-muted)}.package-layout{min-height:0;flex:1;display:grid;grid-template-columns:minmax(300px,1fr) minmax(260px,32%)}.package-list,.package-inspector{min-height:0;overflow:auto;scrollbar-gutter:stable}.package-list{padding:8px}.package-list article{min-width:0;min-height:53px;padding:7px;display:grid;grid-template-columns:38px minmax(0,1fr) auto auto;align-items:center;gap:8px;border:1px solid transparent;border-radius:9px}.package-list article:hover,.package-list article.selected{border-color:var(--border-strong);background:var(--surface-2)}.package-mark{width:34px;height:34px;display:grid;place-items:center;border-radius:8px;background:var(--accent-soft);color:var(--accent);font-weight:750}.package-name{min-width:0;display:grid}.package-name strong,.package-name small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.package-name strong{font-size:11px}.package-name small{color:var(--text-muted);font-size:11px}.source{padding:3px 6px;border-radius:999px;background:var(--surface-3);color:var(--text-muted);font-size:11px}.package-list label{display:flex;align-items:center;gap:4px;white-space:nowrap}.package-inspector{padding:12px;border-left:1px solid var(--border-subtle);background:var(--surface-2)}.package-title{display:flex;justify-content:space-between;gap:8px}.package-title span{color:var(--accent)}.package-inspector>p,.package-inspector section p{color:var(--text-muted);line-height:1.45}.package-inspector section{margin-top:12px;padding-top:10px;border-top:1px solid var(--border-subtle)}.package-inspector section>strong{font-size:11px;text-transform:uppercase;letter-spacing:.06em}.package-inspector dl{margin:10px 0 0}.package-inspector dl div{min-width:0;padding:5px 0;display:grid;grid-template-columns:95px minmax(0,1fr);gap:8px;border-bottom:1px solid var(--border-subtle)}.package-inspector dt{color:var(--text-muted)}.package-inspector dd{margin:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.package-inspector ul{padding-left:17px}.package-inspector li{margin:5px 0}.package-inspector li span{float:right;color:var(--text-muted)}.problem{color:var(--danger)!important}.success{color:var(--success)!important}.chips{margin-top:7px;display:flex;flex-wrap:wrap;gap:4px}.chips span{padding:3px 6px;border-radius:999px;background:var(--surface-3);color:var(--text-muted);font-size:11px}.danger{width:100%;min-height:32px;margin-top:12px;color:var(--danger)}.safety label{margin-top:12px;display:flex;align-items:center;gap:6px}.empty{padding:25px;color:var(--text-muted);text-align:center}@media(max-width:800px){.package-layout{grid-template-columns:1fr}.package-inspector{position:absolute;right:0;bottom:0;width:min(320px,75vw);height:calc(100% - 84px);box-shadow:var(--shadow-lg)}.package-header small{display:none}}
 .primary-action{width:100%;min-height:30px;color:var(--accent);border-color:var(--accent);background:var(--accent-soft)}
 .registry-layout{min-height:0;flex:1;display:grid;grid-template-columns:minmax(300px,1fr) minmax(260px,34%);overflow:hidden}.registry-list,.registry-inspector{min-height:0;overflow:auto;scrollbar-gutter:stable}.registry-list{padding:8px}.registry-list>header{padding-bottom:7px;display:grid;grid-template-columns:minmax(130px,220px) minmax(140px,1fr);gap:6px}.registry-list>header>*{min-width:0}.registry-list>article{min-width:0;padding:9px;display:grid;grid-template-columns:38px minmax(0,1fr) auto;align-items:start;gap:8px;border:1px solid transparent;border-radius:10px}.registry-list>article:hover,.registry-list>article.selected{border-color:var(--accent);background:var(--accent-soft)}.registry-list>article>div:nth-child(2){min-width:0;display:grid}.registry-list strong,.registry-list small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.registry-list small,.registry-list p,.registry-inspector p{color:var(--text-muted);font-size:11px}.registry-list p{margin:3px 0 0;line-height:1.4}.verified{color:var(--success);font-size:11px;white-space:nowrap}.registry-inspector{padding:12px;border-left:1px solid var(--border-subtle);background:var(--surface-2)}.registry-inspector>header{display:flex;justify-content:space-between;gap:8px}.registry-inspector>header>div{min-width:0;display:grid}.registry-inspector>header small{overflow:hidden;color:var(--text-muted);font-size:11px;text-overflow:ellipsis}.registry-inspector>header>span{color:var(--warning)}.registry-inspector dl div{padding:5px 0;display:grid;grid-template-columns:90px minmax(0,1fr);gap:6px;border-bottom:1px solid var(--border-subtle)}.registry-inspector dt{color:var(--text-muted)}.registry-inspector dd{margin:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.registry-inspector dd b{color:var(--success)}.registry-inspector section{margin-top:11px;padding-top:9px;border-top:1px solid var(--border-subtle)}.registry-links{display:grid;grid-template-columns:1fr 1fr;gap:5px}.registry-links strong{grid-column:1/-1}.registry-links button,.registry-inspector>.install{min-height:30px;border:1px solid var(--border-subtle);border-radius:7px;background:var(--surface-3)}.registry-inspector>.install{width:100%;margin-top:10px;color:var(--accent-contrast);border-color:var(--accent);background:var(--accent)}

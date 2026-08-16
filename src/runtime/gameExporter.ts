@@ -125,7 +125,7 @@ async function webBuildMetadata(pack: Uint8Array, webFiles: ExportFile[]): Promi
     files.push({ path: file.path, sha256: await sha256(bytes), bytes: bytes.byteLength })
   }
   files.sort((a, b) => a.path.localeCompare(b.path))
-  const report = { format: 'nova-build-report', version: 1, engineVersion: '3.0.0', buildId: packHash, createdAt: buildSettings.delivery.deterministic ? '1970-01-01T00:00:00.000Z' : new Date().toISOString(), target: buildSettings.target, architecture: buildSettings.architecture, profile: buildSettings.profile, projectId: projectSessionState.id, files }
+  const report = { format: 'nova-build-report', version: 1, engineVersion: '3.2.0', buildId: packHash, createdAt: buildSettings.delivery.deterministic ? '1970-01-01T00:00:00.000Z' : new Date().toISOString(), target: buildSettings.target, architecture: buildSettings.architecture, profile: buildSettings.profile, projectId: projectSessionState.id, files }
   const patch = { format: 'nova-patch-manifest', version: 1, fromBuild: null, toBuild: packHash, added: files.map(file => file.path), changed: [], removed: [], files }
   const encode = (path: string, value: unknown): ExportFile => ({ path, dataBase64: bytesToBase64(new TextEncoder().encode(`${JSON.stringify(value, null, 2)}\n`)) })
   return [encode('nova-build-report.json', report), ...(buildSettings.delivery.patchManifest ? [encode('nova-patch-manifest.json', patch)] : [])]
