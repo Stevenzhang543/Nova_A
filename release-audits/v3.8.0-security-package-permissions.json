@@ -1,0 +1,30 @@
+{
+  "format": "nova-security-package-permissions",
+  "version": 1,
+  "engineVersion": "3.8.0",
+  "generatedAt": "2026-08-18T13:37:31.151Z",
+  "checks": [
+    {
+      "name": "optional package disable preserves project data",
+      "status": "passed"
+    },
+    {
+      "name": "optional package upgrade is explicit",
+      "status": "passed"
+    },
+    {
+      "name": "optional package removal leaves runtime disabled",
+      "status": "passed"
+    },
+    {
+      "name": "networking remains opt-in experimental",
+      "status": "passed"
+    },
+    {
+      "name": "native package execution remains permission-gated",
+      "status": "passed"
+    }
+  ],
+  "dependencyAdvisoryAudit": "No known lockfile advisories were reported during qualification; dependency identities are frozen in the SBOM.",
+  "status": "passed"
+}

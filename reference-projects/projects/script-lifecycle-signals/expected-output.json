@@ -1,0 +1,13 @@
+{
+  "engineVersion": "4.0.0",
+  "schema": 29,
+  "projectName": "Nova_A Lifecycle and Signals",
+  "minimumScenes": 1,
+  "minimumEntities": 9,
+  "expectedValidation": "pass",
+  "demonstrates": [
+    "all lifecycle callbacks",
+    "typed exported property metadata",
+    "editor-visible signals"
+  ]
+}

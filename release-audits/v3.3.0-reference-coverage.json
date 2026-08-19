@@ -1,0 +1,45 @@
+{
+  "format": "nova-v3.3-reference-coverage",
+  "version": 1,
+  "engineVersion": "3.3.0",
+  "generatedAt": "2026-08-19T13:51:10.449Z",
+  "projects": [
+    {
+      "slug": "authoring-pixel-art",
+      "valid": true,
+      "issues": [],
+      "entities": 25
+    },
+    {
+      "slug": "authoring-resolution-independent",
+      "valid": true,
+      "issues": [],
+      "entities": 16
+    },
+    {
+      "slug": "authoring-parallax",
+      "valid": true,
+      "issues": [],
+      "entities": 32
+    },
+    {
+      "slug": "authoring-multiple-cameras",
+      "valid": true,
+      "issues": [],
+      "entities": 39
+    },
+    {
+      "slug": "authoring-nested-prefabs",
+      "valid": true,
+      "issues": [],
+      "entities": 10
+    },
+    {
+      "slug": "authoring-5000-stress",
+      "valid": true,
+      "issues": [],
+      "entities": 5001
+    }
+  ],
+  "status": "passed"
+}

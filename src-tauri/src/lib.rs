@@ -52,6 +52,10 @@ struct BuildPlatformOptions {
     signing_mode: String,
     signing_identity: String,
     notarization_profile: String,
+    #[serde(default)]
+    manifest_asset: Option<String>,
+    #[serde(default)]
+    version_metadata: BTreeMap<String, String>,
 }
 
 #[derive(Deserialize, Serialize)]
@@ -66,6 +70,22 @@ struct BuildDeliveryOptions {
     telemetry_enabled: bool,
     telemetry_endpoint: String,
     privacy_policy_url: String,
+    #[serde(default)]
+    cache_mode: String,
+    #[serde(default)]
+    include: Vec<String>,
+    #[serde(default)]
+    exclude: Vec<String>,
+    #[serde(default)]
+    strip_unused_assets: bool,
+    #[serde(default)]
+    size_report: bool,
+    #[serde(default)]
+    dependency_report: bool,
+    #[serde(default)]
+    debug_symbols: bool,
+    #[serde(default)]
+    crash_symbols: bool,
 }
 
 #[derive(Serialize)]
@@ -108,6 +128,10 @@ struct BuildReport {
     architecture: String,
     profile: String,
     project_id: String,
+    #[serde(default)]
+    cache_mode: String,
+    #[serde(default)]
+    total_bytes: u64,
     files: Vec<BuildFileRecord>,
 }
 
@@ -284,16 +308,13 @@ fn android_template() -> Option<PathBuf> {
 
 #[tauri::command]
 fn export_capabilities() -> ExportCapabilities {
-    let android_available = android_template().is_some();
     ExportCapabilities {
         host: std::env::consts::OS.to_string(),
         architecture: std::env::consts::ARCH.to_string(),
-        android_available,
-        android_reason: if android_available {
-            "Android SDK, JDK, and Nova Android template detected.".into()
-        } else {
-            "Install the optional Nova Android package, set ANDROID_HOME and JAVA_HOME, and configure NOVA_A_ANDROID_TEMPLATE.".into()
-        },
+        android_available: false,
+        android_reason:
+            "Android export is deferred and cannot be selected in the Nova_A 3.9 Stable channel."
+                .into(),
     }
 }
 
@@ -503,17 +524,14 @@ fn build_file_records(root: &Path, files: &[String]) -> Result<Vec<BuildFileReco
 fn export_game(request: ExportRequest) -> Result<ExportResult, String> {
     if !matches!(
         request.target.as_str(),
-        "windows" | "linux" | "macos" | "web" | "android"
+        "windows" | "linux" | "macos" | "web"
     ) {
         return Err("unsupported export target".into());
     }
     if !matches!(request.architecture.as_str(), "x86_64" | "aarch64") {
         return Err("unsupported export architecture".into());
     }
-    if request.target != "web"
-        && request.target != "android"
-        && request.architecture != std::env::consts::ARCH
-    {
+    if request.target != "web" && request.architecture != std::env::consts::ARCH {
         return Err(format!(
             "{} export requires a matching {} player template",
             request.architecture, request.architecture
@@ -539,9 +557,23 @@ fn export_game(request: ExportRequest) -> Result<ExportResult, String> {
     build_digest.update(request.profile.as_bytes());
     build_digest.update(serde_json::to_vec(&request.platform).map_err(|error| error.to_string())?);
     let build_id = format!("{:x}", build_digest.finalize());
-    let previous_report = fs::read(root.join("nova-build-report.json"))
+    let mut previous_report = fs::read(root.join("nova-build-report.json"))
         .ok()
         .and_then(|bytes| serde_json::from_slice::<BuildReport>(&bytes).ok());
+    let mut cache_invalidated = Vec::new();
+    if request.delivery.cache_mode == "validate" {
+        if let Some(previous) = previous_report.as_ref() {
+            for record in &previous.files {
+                let path = root.join(safe_relative_path(&record.path)?);
+                if !path.is_file() || file_hash(&path)? != record.sha256 {
+                    cache_invalidated.push(record.path.clone());
+                }
+            }
+        }
+        if !cache_invalidated.is_empty() {
+            previous_report = None;
+        }
+    }
 
     if request.target == "web" {
         for file in &request.web_files {
@@ -658,7 +690,7 @@ fn export_game(request: ExportRequest) -> Result<ExportResult, String> {
     }
 
     let platform_config = serde_json::to_vec_pretty(&serde_json::json!({
-        "format": "nova-platform-config", "version": 1, "engineVersion": "3.2.0",
+        "format": "nova-platform-config", "version": 1, "engineVersion": "3.9.0",
         "target": request.target, "architecture": request.architecture, "profile": request.profile,
         "application": request.platform, "structuredLogs": request.delivery.structured_logs,
         "crashCapture": request.delivery.crash_reports,
@@ -674,7 +706,7 @@ fn export_game(request: ExportRequest) -> Result<ExportResult, String> {
         &mut changed_files,
     )?;
     if request.development_build {
-        let build_info = serde_json::to_vec_pretty(&serde_json::json!({ "engineVersion": "3.2.0", "buildId": build_id, "target": request.target, "architecture": request.architecture, "packageBytes": pack.len() })).map_err(|error| error.to_string())?;
+        let build_info = serde_json::to_vec_pretty(&serde_json::json!({ "engineVersion": "3.9.0", "buildId": build_id, "target": request.target, "architecture": request.architecture, "packageBytes": pack.len() })).map_err(|error| error.to_string())?;
         tracked_write(
             &root,
             "build-info.json",
@@ -685,9 +717,9 @@ fn export_game(request: ExportRequest) -> Result<ExportResult, String> {
             &mut changed_files,
         )?;
     }
-    if request.delivery.crash_reports {
+    if request.delivery.crash_symbols || request.delivery.debug_symbols {
         let symbols = serde_json::to_vec_pretty(&serde_json::json!({
-            "format": "nova-symbol-map", "version": 1, "engineVersion": "3.2.0", "buildId": build_id,
+            "format": "nova-symbol-map", "version": 1, "engineVersion": "3.9.0", "buildId": build_id,
             "binary": files.iter().find(|path| path.ends_with(".exe") || path.ends_with(".app")).cloned(),
             "workflow": "Archive matching PDB, dSYM, or unstripped ELF symbols under this build ID; symbolicate crash addresses with the platform toolchain."
         })).map_err(|error| error.to_string())?;
@@ -702,7 +734,19 @@ fn export_game(request: ExportRequest) -> Result<ExportResult, String> {
         )?;
     }
 
-    let records = build_file_records(&root, &files)?;
+    let cache_diagnostics = serde_json::to_vec_pretty(&serde_json::json!({ "format": "nova-build-cache-diagnostics", "version": 1, "engineVersion": "3.9.0", "mode": request.delivery.cache_mode, "status": if cache_invalidated.is_empty() { "valid" } else { "invalidated" }, "invalidated": cache_invalidated })).map_err(|error| error.to_string())?;
+    tracked_write(&root, "nova-build-cache-diagnostics.json", &cache_diagnostics, request.delivery.incremental, &mut files, &mut cache_hits, &mut changed_files)?;
+    let mut records = build_file_records(&root, &files)?;
+    if request.delivery.size_report {
+        let total_bytes: u64 = records.iter().map(|record| record.bytes).sum();
+        let size_report = serde_json::to_vec_pretty(&serde_json::json!({ "format": "nova-build-size-report", "version": 1, "engineVersion": "3.9.0", "totalBytes": total_bytes, "files": records })).map_err(|error| error.to_string())?;
+        tracked_write(&root, "nova-build-size-report.json", &size_report, request.delivery.incremental, &mut files, &mut cache_hits, &mut changed_files)?;
+    }
+    if request.delivery.dependency_report {
+        let dependency_report = serde_json::to_vec_pretty(&serde_json::json!({ "format": "nova-dependency-report", "version": 1, "engineVersion": "3.9.0", "package": { "path": "game.nova-pak", "sha256": sha256_hex(&pack), "bytes": pack.len() }, "application": request.platform.identifier, "permissions": request.platform.permissions, "contentPolicy": { "include": request.delivery.include, "exclude": request.delivery.exclude, "stripUnusedAssets": request.delivery.strip_unused_assets } })).map_err(|error| error.to_string())?;
+        tracked_write(&root, "nova-dependency-report.json", &dependency_report, request.delivery.incremental, &mut files, &mut cache_hits, &mut changed_files)?;
+    }
+    records = build_file_records(&root, &files)?;
     let current_by_path: BTreeMap<_, _> = records
         .iter()
         .map(|record| (record.path.clone(), record.sha256.clone()))
@@ -757,8 +801,8 @@ fn export_game(request: ExportRequest) -> Result<ExportResult, String> {
     }
     let report = BuildReport {
         format: "nova-build-report".into(),
-        version: 1,
-        engine_version: "3.2.0".into(),
+        version: 2,
+        engine_version: "3.9.0".into(),
         build_id: build_id.clone(),
         created_at: if request.delivery.deterministic {
             0
@@ -772,6 +816,8 @@ fn export_game(request: ExportRequest) -> Result<ExportResult, String> {
         architecture: request.architecture.clone(),
         profile: request.profile.clone(),
         project_id: request.project_id.clone(),
+        cache_mode: request.delivery.cache_mode.clone(),
+        total_bytes: records.iter().map(|record| record.bytes).sum(),
         files: records,
     };
     let report_bytes = serde_json::to_vec_pretty(&report).map_err(|error| error.to_string())?;
@@ -947,7 +993,53 @@ fn write_log(contents: &str) -> Result<String, String> {
 
 #[tauri::command]
 fn write_crash_log(payload: CrashPayload) -> Result<String, String> {
-    write_log(&format!("Nova_A version: 3.2.0\nOS: {} {}\nRenderer: {}\nProject: {}\nScene: {}\nError: {}\n\nStack trace:\n{}\n", std::env::consts::OS, std::env::consts::ARCH, payload.renderer, payload.project, payload.scene, payload.message, payload.stack))
+    write_log(&format!("Nova_A version: 3.9.0\nOS: {} {}\nRenderer: {}\nProject: {}\nScene: {}\nError: {}\n\nStack trace:\n{}\n", std::env::consts::OS, std::env::consts::ARCH, payload.renderer, payload.project, payload.scene, payload.message, payload.stack))
+}
+
+#[tauri::command]
+fn initialize_git_repository(
+    project_directory: String,
+    ignore_contents: String,
+    pre_commit_contents: String,
+    ci_contents: String,
+) -> Result<String, String> {
+    let root = PathBuf::from(project_directory)
+        .canonicalize()
+        .map_err(|error| format!("Project directory is unavailable: {error}"))?;
+    if !root.is_dir() {
+        return Err("Project directory must be an existing directory".into());
+    }
+    let output = Command::new("git")
+        .arg("-C")
+        .arg(&root)
+        .arg("init")
+        .output()
+        .map_err(|error| format!("Could not start Git: {error}"))?;
+    if !output.status.success() {
+        return Err(String::from_utf8_lossy(&output.stderr).trim().to_owned());
+    }
+    let write_new = |path: &Path, contents: &str| -> Result<(), String> {
+        if path.exists() {
+            return Ok(());
+        }
+        if let Some(parent) = path.parent() {
+            fs::create_dir_all(parent).map_err(|error| error.to_string())?;
+        }
+        fs::write(path, contents).map_err(|error| error.to_string())
+    };
+    write_new(&root.join(".gitignore"), &ignore_contents)?;
+    write_new(&root.join(".githooks/pre-commit"), &pre_commit_contents)?;
+    write_new(&root.join(".github/workflows/nova-validation.yml"), &ci_contents)?;
+    let config = Command::new("git")
+        .arg("-C")
+        .arg(&root)
+        .args(["config", "core.hooksPath", ".githooks"])
+        .output()
+        .map_err(|error| format!("Could not configure Git hooks: {error}"))?;
+    if !config.status.success() {
+        return Err(String::from_utf8_lossy(&config.stderr).trim().to_owned());
+    }
+    Ok(root.to_string_lossy().into_owned())
 }
 
 fn install_panic_logger() {
@@ -963,7 +1055,7 @@ fn install_panic_logger() {
             .or_else(|| panic.payload().downcast_ref::<String>().map(String::as_str))
             .unwrap_or("unknown panic");
         let _ = write_log(&format!(
-            "Nova_A version: 3.2.0\nOS: {} {}\nFatal Rust panic at {location}\n{message}\n",
+            "Nova_A version: 3.9.0\nOS: {} {}\nFatal Rust panic at {location}\n{message}\n",
             std::env::consts::OS,
             std::env::consts::ARCH
         ));
@@ -983,6 +1075,7 @@ pub fn run() {
             export_game,
             open_external_diff,
             open_external_merge,
+            initialize_git_repository,
             write_crash_log,
             udp_open,
             udp_send,

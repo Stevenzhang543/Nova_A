@@ -11,7 +11,7 @@ export interface ReplayFrame {
 export interface ReplayDocument {
   format: 'nova-replay'
   version: 1
-  engineVersion: '3.2.0'
+  engineVersion: '4.0.0'
   seed: number
   tickRate: number
   initialProject: string
@@ -36,7 +36,7 @@ function cloneInput(input: InputSnapshot): InputSnapshot {
   return {
     down: { ...input.down }, pressed: { ...input.pressed }, released: { ...input.released }, axes: { ...input.axes },
     vectors: Object.fromEntries(Object.entries(input.vectors).map(([key, value]) => [key, [value[0], value[1]] as [number, number]])),
-    mousePosition: [input.mousePosition[0], input.mousePosition[1]], wheel: [input.wheel[0], input.wheel[1]]
+    mousePosition: [input.mousePosition[0], input.mousePosition[1]], wheel: [input.wheel[0], input.wheel[1]], pointerDelta: [input.pointerDelta[0], input.pointerDelta[1]], touches: input.touches, devices: input.devices.map(device => ({ ...device }))
   }
 }
 
@@ -100,7 +100,7 @@ export function completeReplayFixedStep(physicsChecksum: string): void {
 
 export function exportReplay(tickRate: number): ReplayDocument {
   return {
-    format: 'nova-replay', version: 1, engineVersion: '3.2.0', seed: replayState.seed,
+    format: 'nova-replay', version: 1, engineVersion: '4.0.0', seed: replayState.seed,
     tickRate: Math.min(1_000, Math.max(1, Number.isFinite(tickRate) ? tickRate : 60)), initialProject: replayState.initialProject,
     frames: replayState.frames.slice(0, productionSettings.replay.capacity).map(frame => ({ ...frame, input: cloneInput(frame.input) }))
   }
@@ -115,7 +115,7 @@ export function normalizeReplayDocument(value: unknown): ReplayDocument {
     return { tick: index, input: cloneInput(input as InputSnapshot), physicsChecksum: typeof item.physicsChecksum === 'string' ? item.physicsChecksum.slice(0, 32) : '' }
   })
   return {
-    format: 'nova-replay', version: 1, engineVersion: '3.2.0', seed: Number.isFinite(source.seed) ? Number(source.seed) >>> 0 : productionSettings.replay.seed,
+    format: 'nova-replay', version: 1, engineVersion: '4.0.0', seed: Number.isFinite(source.seed) ? Number(source.seed) >>> 0 : productionSettings.replay.seed,
     tickRate: Math.min(1_000, Math.max(1, Number(source.tickRate) || 60)), initialProject: source.initialProject.slice(0, 50_000_000), frames
   }
 }

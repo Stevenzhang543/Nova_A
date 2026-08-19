@@ -1,0 +1,117 @@
+{
+  "format": "nova-v4-production-baseline-audit",
+  "version": 1,
+  "engineVersion": "4.0.0",
+  "projectSchema": 29,
+  "generatedAt": "2026-08-19T15:07:35.356Z",
+  "severity0Open": 0,
+  "severity1Open": 0,
+  "checks": [
+    {
+      "name": "version authorities",
+      "status": "passed",
+      "detail": "Package, TypeScript and Rust engine authorities agree."
+    },
+    {
+      "name": "schema/API freeze",
+      "status": "passed",
+      "detail": "Schema 29 and stable public versions remain locked."
+    },
+    {
+      "name": "upgrade preflight",
+      "status": "passed",
+      "detail": "Pre-open compatibility report covers engine, format, packages and validation."
+    },
+    {
+      "name": "mandatory backup and atomic validation",
+      "status": "passed",
+      "detail": "Migration backs up first, validates in memory, and only then replaces the session."
+    },
+    {
+      "name": "3.9 boundary migration",
+      "status": "passed",
+      "detail": "Frozen-schema engine compatibility is migrated safely."
+    },
+    {
+      "name": "release channels and crash privacy",
+      "status": "passed",
+      "detail": "Channels, health and local opt-in crash packaging are connected."
+    },
+    {
+      "name": "stable template set",
+      "status": "passed",
+      "detail": "Experimental networking is removed from defaults but retained for compatibility/reference."
+    },
+    {
+      "name": "4.0 package compatibility",
+      "status": "passed",
+      "detail": "Official package ranges include the stable 4.0 engine."
+    },
+    {
+      "name": "manual and onboarding",
+      "status": "passed",
+      "detail": "Multilingual manual and guided path are published."
+    },
+    {
+      "name": "documentation MIGRATION_4_0.md",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "name": "documentation SUPPORT_POLICY_4_0.md",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "name": "documentation ARCHIVED_ENGINE_GUIDANCE_4_0.md",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "name": "documentation BUILD_CI_GUIDE_4_0.md",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "name": "documentation PERFORMANCE_GUIDE_4_0.md",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "name": "documentation SECURITY_GUIDE_4_0.md",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "name": "documentation ACCESSIBILITY_GUIDE_4_0.md",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "name": "documentation TROUBLESHOOTING_4_0.md",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "name": "documentation API_REFERENCE_4_0.md",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "name": "documentation CREATE_EXPORT_SMALL_GAME_4_0.md",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "name": "documentation KNOWN_ISSUES_4_0.md",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "name": "documentation DEPENDENCY_LICENSE_REVIEW_4_0.md",
+      "status": "passed",
+      "detail": "Present."
+    }
+  ],
+  "status": "passed"
+}

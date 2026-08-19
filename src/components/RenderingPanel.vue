@@ -1,95 +1,127 @@
 <template>
-  <div class="rendering-panel">
-    <aside class="render-settings">
-      <header><strong>{{ t('renderingStudio') }}</strong><small>{{ t('renderingStudioHint') }}</small></header>
-      <label><span>{{ t('lightingEnabled') }}</span><input v-model="settings.lightingEnabled" type="checkbox"></label>
-      <label><span>{{ t('ambientIntensity') }}</span><input v-model.number="settings.ambientIntensity" type="range" min="0" max="2" step="0.05"></label>
-      <label><span>{{ t('ambientColor') }}</span><input type="color" :value="hex(settings.ambientColor)" @input="setColor(settings.ambientColor, $event)"></label>
-      <label><span>{{ t('shadowQuality') }}</span><select v-model="settings.shadowQuality"><option>Off</option><option>Hard</option><option>Soft</option><option>Ultra</option></select></label>
-      <label><span>{{ t('colorSpace') }}</span><select v-model="settings.colorSpace"><option>sRGB</option><option>Linear</option></select></label>
-      <label><span>{{ t('debugView') }}</span><select v-model="settings.debugView"><option>None</option><option>Overdraw</option><option>Lighting</option><option>Normals</option></select></label>
-      <label><span>{{ t('postProcessing') }}</span><input v-model="settings.postProcessing.enabled" type="checkbox"></label>
-      <template v-if="settings.postProcessing.enabled">
-        <label><span>{{ t('postMaterial') }}</span><select v-model="settings.postProcessing.userMaterial"><option :value="null">{{ t('none') }}</option><option v-for="asset in materialAssets" :key="asset.uuid" :value="assetReference(asset.uuid)">{{ asset.name }}</option></select></label>
-        <label><span>{{ t('exposure') }}</span><input v-model.number="settings.postProcessing.exposure" type="number" min="-8" max="8" step="0.1"></label>
-        <label><span>{{ t('contrast') }}</span><input v-model.number="settings.postProcessing.contrast" type="number" min="0" max="4" step="0.05"></label>
-        <label><span>{{ t('saturation') }}</span><input v-model.number="settings.postProcessing.saturation" type="number" min="0" max="4" step="0.05"></label>
-        <label><span>{{ t('vignette') }}</span><input v-model.number="settings.postProcessing.vignette" type="range" min="0" max="1" step="0.05"></label>
-        <label><span>{{ t('bloom') }}</span><input v-model.number="settings.postProcessing.bloom" type="range" min="0" max="2" step="0.05"></label>
-        <label><span>{{ t('blur') }}</span><input v-model.number="settings.postProcessing.blur" type="range" min="0" max="16" step="0.25"></label>
-      </template>
-    </aside>
+  <section class="rendering-studio">
+    <header class="studio-header">
+      <div><strong>{{ t('renderingStudio') }}</strong><small>{{ t('renderingStudioHint') }}</small></div>
+      <nav aria-label="Rendering sections"><button v-for="section in sections" :key="section.id" :class="{ active: activeSection === section.id }" @click="activeSection = section.id">{{ t(section.label) }}</button></nav>
+    </header>
 
-    <main class="material-editor">
-      <div class="material-toolbar">
-        <select v-model="selectedGuid"><option value="">{{ t('selectMaterial') }}</option><option v-for="asset in materialAssets" :key="asset.uuid" :value="asset.uuid">{{ asset.name }}</option></select>
-        <button @click="createMaterial">+ {{ t('newMaterial') }}</button>
-        <button :disabled="!selectedGuid || hasErrors" class="primary" @click="saveMaterial">{{ t('validateAndSave') }}</button>
-      </div>
-      <div class="material-grid">
-        <section class="shader-source">
-          <div class="material-properties">
-            <label><span>{{ t('blendMode') }}</span><select v-model="material.blendMode"><option>Alpha</option><option>Additive</option><option>Multiply</option><option>Screen</option></select></label>
-            <label><span>{{ t('filterMode') }}</span><select v-model="material.sampling"><option>Linear</option><option>Nearest</option></select></label>
-            <label><span>{{ t('colorSpace') }}</span><select v-model="material.colorSpace"><option>sRGB</option><option>Linear</option></select></label>
-            <label><span>{{ t('colorWrite') }}</span><input v-model="material.writeColor" type="checkbox"></label>
-          </div>
-          <textarea v-model="material.fragment" spellcheck="false" @input="schedulePreview"></textarea>
+    <div v-if="activeSection === 'lighting'" class="section-scroll studio-grid">
+      <article class="card">
+        <header><strong>{{ t('lighting') }}</strong><input v-model="settings.lightingEnabled" type="checkbox"></header>
+        <label><span>{{ t('ambientIntensity') }}</span><input v-model.number="settings.ambientIntensity" type="range" min="0" max="2" step="0.05"></label>
+        <label><span>{{ t('ambientColor') }}</span><input type="color" :value="hex(settings.ambientColor)" @input="setColor(settings.ambientColor, $event)"></label>
+        <label><span>{{ t('shadowQuality') }}</span><select v-model="settings.shadowQuality"><option>Off</option><option>Hard</option><option>Soft</option><option>Ultra</option></select></label>
+        <p>{{ t('lightingWorkflowHint') }}</p>
+      </article>
+      <article class="card">
+        <header><strong>{{ t('lightingCapabilities') }}</strong><span :class="capability.tier === 'Tier 1' ? 'good' : 'warning'">{{ capability.tier }}</span></header>
+        <dl><div><dt>{{ t('rendererBackend') }}</dt><dd>{{ capability.backend }}</dd></div><div><dt>{{ t('maximumTextureSize') }}</dt><dd>{{ capability.maximumTextureSize || 'n/a' }}</dd></div><div><dt>{{ t('normalMaps') }}</dt><dd>{{ capability.backend === 'WebGL2' ? t('supported') : t('fallback') }}</dd></div><div><dt>{{ t('contextRecovery') }}</dt><dd>{{ capability.contextRecovery ? t('supported') : t('unsupported') }}</dd></div></dl>
+      </article>
+    </div>
+
+    <div v-else-if="activeSection === 'materials'" class="section-scroll material-layout">
+      <aside class="card material-list"><header><strong>{{ t('materials') }}</strong><button @click="createMaterial">＋</button></header><button v-for="asset in materialAssets" :key="asset.uuid" :class="{ active: selectedGuid === asset.uuid }" @click="selectedGuid = asset.uuid">{{ asset.name }}</button><p v-if="!materialAssets.length">{{ t('noMaterials') }}</p></aside>
+      <main class="card material-properties">
+        <header><strong>{{ material.name }}</strong><button class="primary" :disabled="!selectedGuid || hasErrors" @click="saveMaterial">{{ t('validateAndSave') }}</button></header>
+        <div class="property-grid">
+          <label><span>{{ t('parentMaterial') }}</span><select v-model="material.parentMaterial"><option :value="null">{{ t('none') }}</option><option v-for="asset in parentMaterialAssets" :key="asset.uuid" :value="assetReference(asset.uuid)">{{ asset.name }}</option></select></label>
+          <label><span>{{ t('blendMode') }}</span><select v-model="material.blendMode"><option>Alpha</option><option>Additive</option><option>Multiply</option><option>Screen</option></select></label>
+          <label><span>{{ t('filterMode') }}</span><select v-model="material.sampling"><option>Linear</option><option>Nearest</option></select></label>
+          <label><span>{{ t('colorSpace') }}</span><select v-model="material.colorSpace"><option>sRGB</option><option>Linear</option></select></label>
+          <label><span>{{ t('variant') }}</span><select v-model="material.activeVariant"><option value="">{{ t('default') }}</option><option v-for="(_,name) in material.variants" :key="name" :value="name">{{ name }}</option></select></label>
+          <label><span>{{ t('colorWrite') }}</span><input v-model="material.writeColor" type="checkbox"></label>
+        </div>
+        <section class="typed-uniforms">
+          <header><strong>{{ t('typedUniforms') }}</strong><span>{{ material.uniformSchema.length }}</span></header><p v-if="!material.uniformSchema.length">{{ t('noReflectedUniforms') }}</p>
+          <label v-for="field in material.uniformSchema" :key="field.name"><span :title="field.name">{{ field.label }}</span>
+            <input v-if="field.type === 'toggle'" :checked="Boolean(material.uniforms[field.name])" type="checkbox" @change="setToggle(field.name, $event)">
+            <select v-else-if="field.type === 'texture'" :value="material.textures[field.name] ?? ''" @change="setTexture(field.name, $event)"><option value="">{{ t('none') }}</option><option v-for="asset in imageAssets" :key="asset.uuid" :value="assetReference(asset.uuid)">{{ asset.name }}</option></select>
+            <select v-else-if="field.type === 'enum'" :value="Number(material.uniforms[field.name] ?? 0)" @change="setScalar(field.name, $event, true)"><option v-for="(option,index) in field.options ?? []" :key="option" :value="index">{{ option }}</option></select>
+            <input v-else-if="field.type === 'color'" type="color" :value="uniformColor(field.name)" @input="setUniformColor(field.name, $event)">
+            <div v-else-if="field.type.startsWith('vector')" class="vector-inputs"><input v-for="index in vectorLength(field.type)" :key="index" type="number" step="0.01" :value="uniformComponent(field.name,index-1)" @input="setUniformComponent(field.name,index-1,$event)"></div>
+            <input v-else :type="field.type === 'range' ? 'range' : 'number'" :min="field.minimum" :max="field.maximum" :step="field.step ?? (field.type === 'integer' ? 1 : .01)" :value="Number(material.uniforms[field.name] ?? 0)" @input="setScalar(field.name,$event,field.type === 'integer')">
+          </label>
         </section>
-        <aside class="shader-preview">
-          <canvas ref="previewCanvas" width="420" height="240"></canvas>
-          <div class="uniforms">
-            <label>{{ t('uniformsJson') }}<textarea v-model="uniformsJson" rows="5" @change="applyUniforms"></textarea></label>
-            <label>{{ t('texturesJson') }}<textarea v-model="texturesJson" rows="4" @change="applyTextures"></textarea></label>
-          </div>
-          <div class="diagnostics" :class="{ error: hasErrors }"><p v-if="!diagnostics.length">{{ t('shaderReady') }}</p><p v-for="item in diagnostics" :key="`${item.line}:${item.message}`">{{ item.severity.toUpperCase() }} · L{{ item.line }} · {{ item.message }}</p></div>
-        </aside>
-      </div>
-    </main>
+      </main>
+      <aside class="card preview-card"><header><strong>{{ t('livePreview') }}</strong></header><canvas ref="previewCanvas" width="480" height="280"></canvas><p :class="hasErrors ? 'error' : 'good'">{{ hasErrors ? t('shaderHasErrors') : t('shaderReady') }}</p></aside>
+    </div>
 
-    <aside class="render-diagnostics">
-      <header><strong>{{ t('renderDiagnostics') }}</strong><button @click="requestRenderCapture">{{ t('captureFrame') }}</button></header>
-      <dl><template v-for="pass in graph.passes" :key="pass.name"><dt>{{ pass.name }}</dt><dd>{{ pass.enabled ? `${pass.durationMs.toFixed(2)} ms` : t('disabled') }}</dd></template></dl>
-      <dl><dt>GPU</dt><dd>{{ stats.gpuMs === null ? 'n/a' : `${stats.gpuMs.toFixed(2)} ms` }}</dd><dt>{{ t('drawCalls') }}</dt><dd>{{ stats.drawCalls }}</dd><dt>{{ t('triangles') }}</dt><dd>{{ stats.triangles }}</dd><dt>{{ t('overdraw') }}</dt><dd>{{ stats.overdraw }}</dd><dt>{{ t('renderTargets') }}</dt><dd>{{ stats.renderTargets }}</dd></dl>
-      <p class="allocation">{{ advancedRenderingActive() ? t('advancedPassesActive') : t('compactRenderPath') }}</p>
-      <a v-for="capture in graph.captures" :key="capture.id" :href="capture.dataUrl" :download="`nova-frame-${capture.id}.png`">{{ capture.createdAt }} · {{ capture.width }}×{{ capture.height }}</a>
-    </aside>
-  </div>
+    <div v-else-if="activeSection === 'shaders'" class="section-scroll shader-layout">
+      <section class="card shader-editor"><header><strong>{{ t('shaderSource') }}</strong><label class="advanced-toggle"><input v-model="advancedMode" type="checkbox">{{ t('advanced') }}</label></header><div class="shader-options"><label><span>{{ t('sharedIncludes') }}</span><span><label v-for="(_,name) in includeLibrary" :key="name" class="check"><input type="checkbox" :checked="material.includes.includes(name)" @change="toggleInclude(name)">{{ name }}</label></span></label></div><textarea v-model="material.fragment" spellcheck="false" @input="schedulePreview"></textarea></section>
+      <aside class="card shader-side"><canvas ref="shaderPreviewCanvas" width="420" height="240"></canvas><div class="diagnostics" :class="{ error: hasErrors }"><p v-if="!diagnostics.length">{{ t('shaderReady') }}</p><button v-for="item in diagnostics" :key="`${item.line}:${item.message}`" @click="focusShaderLine(item.line)">{{ item.severity.toUpperCase() }} · L{{ item.line }} · {{ item.message }}</button></div><details v-if="advancedMode" open><summary>{{ t('advancedJsonViews') }}</summary><label>{{ t('uniformsJson') }}<textarea v-model="uniformsJson" rows="5" @change="applyUniforms"></textarea></label><label>{{ t('texturesJson') }}<textarea v-model="texturesJson" rows="4" @change="applyTextures"></textarea></label></details></aside>
+    </div>
+
+    <div v-else-if="activeSection === 'particles'" class="section-scroll studio-grid">
+      <article class="card"><header><strong>{{ t('particleBudget') }}</strong><span :class="particles.budgetExceeded ? 'error' : 'good'">{{ particles.activeParticles }} / {{ particles.budget }}</span></header><label><span>{{ t('projectParticleBudget') }}</span><input v-model.number="settings.particleBudget" type="number" min="100" max="100000"></label><dl><div><dt>{{ t('emitters') }}</dt><dd>{{ particles.emitterCount }}</dd></div><div><dt>{{ t('particleUpdateTime') }}</dt><dd>{{ particles.updateMs.toFixed(2) }} ms</dd></div><div><dt>{{ t('subemitters') }}</dt><dd>{{ particles.subemissions }}</dd></div></dl><p>{{ t('particleEditorHint') }}</p></article>
+      <article class="card"><header><strong>{{ t('particleWorkflow') }}</strong></header><p>{{ t('particleWorkflowDescription') }}</p><button @click="openParticleInspector">{{ t('selectParticleEmitter') }}</button></article>
+    </div>
+
+    <div v-else-if="activeSection === 'diagnostics'" class="section-scroll diagnostics-layout">
+      <article class="card"><header><strong>{{ t('renderDiagnostics') }}</strong><button @click="requestRenderCapture">{{ t('captureFrame') }}</button></header><label><span>{{ t('debugView') }}</span><select v-model="settings.debugView"><option>None</option><option>Overdraw</option><option>BatchBreaks</option><option>Lighting</option><option>Normals</option></select></label><div class="metric-grid"><span>GPU<strong>{{ stats.gpuMs === null ? 'n/a' : `${stats.gpuMs.toFixed(2)} ms` }}</strong></span><span>{{ t('drawCalls') }}<strong>{{ stats.drawCalls }}</strong></span><span>{{ t('renderBatches') }}<strong>{{ stats.batches }}</strong></span><span>{{ t('batchBreaks') }}<strong>{{ stats.batchBreaks }}</strong></span><span>{{ t('triangles') }}<strong>{{ stats.triangles }}</strong></span><span>{{ t('overdraw') }}<strong>{{ stats.overdraw }}</strong></span><span>{{ t('atlasPages') }}<strong>{{ stats.atlasPages }}</strong></span><span>{{ t('renderTargets') }}<strong>{{ stats.renderTargets }}</strong></span></div><dl><div v-for="pass in graph.passes" :key="pass.name"><dt>{{ pass.name }}</dt><dd>{{ pass.enabled ? `${pass.durationMs.toFixed(2)} ms` : t('disabled') }}</dd></div></dl></article>
+      <article class="card"><header><strong>{{ t('capabilityReport') }}</strong><button @click="requestRendererReset">{{ t('resetRenderer') }}</button></header><p>{{ capability.target }} · {{ capability.backend }} · {{ capability.tier }}</p><ul><li v-for="feature in capability.features" :key="feature">✓ {{ feature }}</li><li v-for="feature in capability.unsupported" :key="feature" class="warning">— {{ feature }}</li></ul><small>{{ capabilityState.lastEvent }} · {{ capabilityState.contextLosses }} / {{ capabilityState.recoveries }}</small></article>
+      <article class="card capture-list"><header><strong>{{ t('savedCaptures') }}</strong></header><div class="capture-compare"><select v-model.number="captureA"><option :value="0">A</option><option v-for="capture in graph.captures" :key="capture.id" :value="capture.id">{{ capture.createdAt }}</option></select><select v-model.number="captureB"><option :value="0">B</option><option v-for="capture in graph.captures" :key="capture.id" :value="capture.id">{{ capture.createdAt }}</option></select><button :disabled="!captureA || !captureB || captureA === captureB" @click="compareCaptures">{{ t('compareCaptures') }}</button></div><p v-if="lastDifference !== null">{{ t('pixelDifference') }}: {{ (lastDifference * 100).toFixed(4) }}%</p><a v-for="capture in graph.captures" :key="capture.id" :href="capture.dataUrl" :download="`nova-frame-${capture.id}.png`">{{ capture.createdAt }} · {{ capture.width }}×{{ capture.height }}</a></article>
+    </div>
+
+    <div v-else class="section-scroll studio-grid">
+      <article class="card"><header><strong>{{ t('qualityPreset') }}</strong></header><div class="preset-grid"><button v-for="preset in qualityPresets" :key="preset" :class="{ active: settings.qualityPreset === preset }" @click="applyQualityPreset(preset)">{{ preset }}</button></div><label><span>{{ t('pixelPerfect') }}</span><input v-model="settings.pixelSnap" type="checkbox"></label><label><span>{{ t('renderQuality') }}</span><input v-model.number="settings.maximumPixelRatio" type="number" min="1" max="4" step=".25"></label><label><span>{{ t('colorSpace') }}</span><select v-model="settings.colorSpace"><option>sRGB</option><option>Linear</option></select></label><p>{{ t('qualityPresetHint') }}</p></article>
+      <article v-if="capability.backend === 'WebGL2'" class="card"><header><strong>{{ t('postProcessing') }}</strong><input v-model="settings.postProcessing.enabled" type="checkbox"></header><label><span>{{ t('postMaterial') }}</span><select v-model="settings.postProcessing.userMaterial"><option :value="null">{{ t('none') }}</option><option v-for="asset in materialAssets" :key="asset.uuid" :value="assetReference(asset.uuid)">{{ asset.name }}</option></select></label><label><span>{{ t('exposure') }}</span><input v-model.number="settings.postProcessing.exposure" type="number" min="-8" max="8" step="0.1"></label><label><span>{{ t('contrast') }}</span><input v-model.number="settings.postProcessing.contrast" type="number" min="0" max="4" step="0.05"></label><label><span>{{ t('saturation') }}</span><input v-model.number="settings.postProcessing.saturation" type="number" min="0" max="4" step="0.05"></label><label><span>{{ t('vignette') }}</span><input v-model.number="settings.postProcessing.vignette" type="range" min="0" max="1" step="0.05"></label><label><span>{{ t('bloom') }}</span><input v-model.number="settings.postProcessing.bloom" type="range" min="0" max="2" step="0.05"></label><label><span>{{ t('blur') }}</span><input v-model.number="settings.postProcessing.blur" type="range" min="0" max="16" step="0.25"></label></article>
+      <article v-else class="card warning-card"><strong>{{ t('fallbackRendererActive') }}</strong><p>{{ t('fallbackRendererDescription') }}</p></article>
+    </div>
+  </section>
 </template>
 
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from 'vue'
 import { assetReference, assetState, createTextAsset, readTextAsset, updateTextAsset } from '../assets/AssetDatabase'
 import { t } from '../i18n'
-import { defaultMaterial, normalizeMaterial, renderMaterialPreview, serializeMaterial, type Material2DResource, type ShaderDiagnostic } from '../renderer/materials'
-import { advancedRenderingActive, renderingSettings as settings } from '../renderer/renderSettings'
-import { renderGraphState as graph, requestRenderCapture } from '../renderer/renderGraph'
+import { MATERIAL_INCLUDE_LIBRARY, defaultMaterial, normalizeMaterial, renderMaterialPreview, serializeMaterial, type Material2DResource, type MaterialUniformType, type ShaderDiagnostic } from '../renderer/materials'
+import { applyQualityPreset, renderingSettings as settings, type RenderQualityPreset } from '../renderer/renderSettings'
+import { compareRenderCaptures, renderGraphState as graph, requestRenderCapture } from '../renderer/renderGraph'
+import { queryRendererCapabilities, rendererCapabilityState as capabilityState, requestRendererReset } from '../renderer/capabilities'
+import { particleDiagnostics as particles } from '../runtime/particles'
 import { editorState } from '../store/editor'
-import { pushHistory } from '../store/physics'
+import { physicsState, pushHistory } from '../store/physics'
 
-const previewCanvas = ref<HTMLCanvasElement | null>(null)
-const materialAssets = computed(() => assetState.records.filter(asset => asset.assetType === 'material'))
+type SectionId = 'lighting' | 'materials' | 'shaders' | 'particles' | 'diagnostics' | 'quality'
+const sections = [{ id: 'lighting' as const, label: 'lighting' }, { id: 'materials' as const, label: 'materials' }, { id: 'shaders' as const, label: 'shaders' }, { id: 'particles' as const, label: 'particles' }, { id: 'diagnostics' as const, label: 'diagnostics' }, { id: 'quality' as const, label: 'quality' }]
+const activeSection = ref<SectionId>('lighting'), advancedMode = ref(false)
+const previewCanvas = ref<HTMLCanvasElement | null>(null), shaderPreviewCanvas = ref<HTMLCanvasElement | null>(null)
+const materialAssets = computed(() => assetState.records.filter(asset => asset.assetType === 'material')), imageAssets = computed(() => assetState.records.filter(asset => asset.assetType === 'image'))
 const selectedGuid = ref(assetState.selectedGuid && materialAssets.value.some(asset => asset.uuid === assetState.selectedGuid) ? assetState.selectedGuid : materialAssets.value[0]?.uuid ?? '')
-const material = ref<Material2DResource>(defaultMaterial())
-const diagnostics = ref<ShaderDiagnostic[]>([])
-const uniformsJson = ref('{}'), texturesJson = ref('{}')
-const stats = computed(() => editorState.rendererStats)
-const hasErrors = computed(() => diagnostics.value.some(item => item.severity === 'error'))
+const parentMaterialAssets = computed(() => materialAssets.value.filter(asset => asset.uuid !== selectedGuid.value))
+const material = ref<Material2DResource>(defaultMaterial()), diagnostics = ref<ShaderDiagnostic[]>([])
+const uniformsJson = ref('{}'), texturesJson = ref('{}'), captureA = ref(0), captureB = ref(0), lastDifference = ref<number | null>(null)
+const stats = computed(() => editorState.rendererStats), hasErrors = computed(() => diagnostics.value.some(item => item.severity === 'error'))
+const includeLibrary = MATERIAL_INCLUDE_LIBRARY, qualityPresets: RenderQualityPreset[] = ['Performance', 'Balanced', 'High', 'Ultra', 'PixelArt']
+const capability = computed(() => capabilityState.report ?? queryRendererCapabilities(stats.value.backend))
 let timer = 0
 
-watch(selectedGuid, loadMaterial, { immediate: true })
-function loadMaterial(guid: string) { const source = readTextAsset(guid); try { material.value = normalizeMaterial(source ? JSON.parse(source) : defaultMaterial()) } catch { material.value = defaultMaterial() } uniformsJson.value = JSON.stringify(material.value.uniforms, null, 2); texturesJson.value = JSON.stringify(material.value.textures, null, 2); schedulePreview() }
-function schedulePreview() { clearTimeout(timer); timer = window.setTimeout(() => void nextTick(renderPreview), 120) }
-function renderPreview() { diagnostics.value = previewCanvas.value ? renderMaterialPreview(previewCanvas.value, material.value) : [] }
+watch(selectedGuid, loadMaterial, { immediate: true }); watch(activeSection, () => void nextTick(renderPreview))
+function loadMaterial(guid: string) { const source = readTextAsset(guid); try { material.value = normalizeMaterial(source ? JSON.parse(source) : defaultMaterial()) } catch { material.value = defaultMaterial() } syncAdvanced(); schedulePreview() }
+function syncAdvanced() { uniformsJson.value = JSON.stringify(material.value.uniforms, null, 2); texturesJson.value = JSON.stringify(material.value.textures, null, 2) }
+function schedulePreview() { clearTimeout(timer); material.value = normalizeMaterial(material.value); syncAdvanced(); timer = window.setTimeout(() => void nextTick(renderPreview), 120) }
+function renderPreview() { const canvas = activeSection.value === 'shaders' ? shaderPreviewCanvas.value : previewCanvas.value; diagnostics.value = canvas ? renderMaterialPreview(canvas, material.value) : diagnostics.value }
 function parseObject(source: string): Record<string, unknown> | null { try { const value = JSON.parse(source); return value && typeof value === 'object' && !Array.isArray(value) ? value : null } catch { return null } }
 function applyUniforms() { const value = parseObject(uniformsJson.value); if (!value) { diagnostics.value = [{ line: 1, severity: 'error', message: 'Uniforms must be a JSON object.' }]; return } material.value = normalizeMaterial({ ...material.value, uniforms: value }); schedulePreview() }
 function applyTextures() { const value = parseObject(texturesJson.value); if (!value) { diagnostics.value = [{ line: 1, severity: 'error', message: 'Textures must be a JSON object.' }]; return } material.value = normalizeMaterial({ ...material.value, textures: value }); schedulePreview() }
 function createMaterial() { const asset = createTextAsset(t('newMaterial'), 'material', serializeMaterial(defaultMaterial()), 'Assets/Materials'); selectedGuid.value = asset.uuid; assetState.selectedGuid = asset.uuid; pushHistory('Create material') }
 function saveMaterial() { renderPreview(); if (!selectedGuid.value || hasErrors.value) return; updateTextAsset(selectedGuid.value, serializeMaterial(material.value)); assetState.selectedGuid = selectedGuid.value; pushHistory('Save material') }
+function setToggle(name: string, event: Event) { material.value.uniforms[name] = (event.target as HTMLInputElement).checked; schedulePreview() }
+function setTexture(name: string, event: Event) { material.value.textures[name] = (event.target as HTMLSelectElement).value || null; schedulePreview() }
+function setScalar(name: string, event: Event, integer = false) { const value = Number((event.target as HTMLInputElement | HTMLSelectElement).value); material.value.uniforms[name] = integer ? Math.round(value) : value; schedulePreview() }
+function vectorLength(type: MaterialUniformType) { return type === 'vector2' ? 2 : type === 'vector3' ? 3 : 4 }
+function uniformComponent(name: string, index: number) { const value = material.value.uniforms[name]; return Array.isArray(value) ? value[index] ?? 0 : 0 }
+function setUniformComponent(name: string, index: number, event: Event) { const current = material.value.uniforms[name], value = Array.isArray(current) ? [...current] : [0, 0, 0, 0]; value[index] = Number((event.target as HTMLInputElement).value); material.value.uniforms[name] = value; schedulePreview() }
+function uniformColor(name: string) { const value = material.value.uniforms[name], channels = Array.isArray(value) ? value : [1, 1, 1, 1]; return `#${channels.slice(0, 3).map(channel => Math.round(Math.min(1, Math.max(0, channel)) * 255).toString(16).padStart(2, '0')).join('')}` }
+function setUniformColor(name: string, event: Event) { const value = (event.target as HTMLInputElement).value; material.value.uniforms[name] = [1, 3, 5].map(index => parseInt(value.slice(index, index + 2), 16) / 255).concat([1]); schedulePreview() }
+function toggleInclude(name: string) { const index = material.value.includes.indexOf(name); if (index >= 0) material.value.includes.splice(index, 1); else material.value.includes.push(name); schedulePreview() }
+function focusShaderLine(line: number) { editorState.statusText = `${t('shaderSource')} · L${line}` }
 function hex(color: { r: number; g: number; b: number }) { return `#${[color.r, color.g, color.b].map(value => Math.round(value).toString(16).padStart(2, '0')).join('')}` }
 function setColor(target: { r: number; g: number; b: number }, event: Event) { const value = (event.target as HTMLInputElement).value; target.r = parseInt(value.slice(1, 3), 16); target.g = parseInt(value.slice(3, 5), 16); target.b = parseInt(value.slice(5, 7), 16) }
+async function compareCaptures() { lastDifference.value = await compareRenderCaptures(captureA.value, captureB.value) }
+function openParticleInspector() { const emitter = physicsState.world.entities.find(entity => entity.hasComponent('ParticleEmitter2D')); if (emitter) { physicsState.selectedEntityIds.splice(0, physicsState.selectedEntityIds.length, emitter.id); physicsState.selectedEntityId = emitter.id; editorState.bottomPanelOpen = false } else editorState.statusText = t('noParticleEmitter') }
 </script>
 
 <style scoped>
-.rendering-panel{height:100%;min-height:170px;display:grid;grid-template-columns:minmax(180px,22%) minmax(360px,1fr) minmax(190px,24%);overflow:hidden}.render-settings,.render-diagnostics{min-width:0;padding:10px;overflow:auto;background:var(--surface-2)}.render-settings{border-right:1px solid var(--border-subtle)}.render-diagnostics{border-left:1px solid var(--border-subtle)}.render-settings header,.render-diagnostics header{display:flex;flex-direction:column;gap:3px;margin-bottom:8px}.render-settings header small{color:var(--text-muted);font-size:11px;line-height:1.35}.render-settings label,.material-properties label{min-height:31px;display:flex;align-items:center;justify-content:space-between;gap:7px;color:var(--text-muted);font-size:11px}.render-settings input:not([type=checkbox]):not([type=color]),.render-settings select{width:48%;min-width:0}.material-editor{min-width:0;display:flex;flex-direction:column;overflow:hidden}.material-toolbar{padding:7px;display:flex;gap:6px;border-bottom:1px solid var(--border-subtle)}.material-toolbar select{min-width:110px;flex:1}.material-toolbar button,.render-diagnostics button{min-height:30px;padding:0 9px;border:1px solid var(--border-subtle);border-radius:7px;color:var(--text-secondary);background:var(--surface-3);font-size:11px}.material-toolbar button.primary{color:var(--accent);border-color:var(--accent);background:var(--accent-soft)}.material-grid{min-height:0;flex:1;display:grid;grid-template-columns:minmax(250px,1fr) minmax(210px,40%)}.shader-source,.shader-preview{min-width:0;min-height:0;padding:8px;overflow:auto}.shader-source{display:flex;flex-direction:column}.material-properties{display:grid;grid-template-columns:repeat(3,1fr);gap:5px}.material-properties label{display:grid;gap:2px}.shader-source>textarea{min-height:120px;flex:1;resize:none;font:11px/1.55 ui-monospace,SFMono-Regular,Consolas,monospace}.shader-preview canvas{width:100%;aspect-ratio:7/4;display:block;border:1px solid var(--border-subtle);border-radius:8px;background:#161b23}.uniforms{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:7px}.uniforms label{color:var(--text-muted);font-size:11px}.uniforms textarea{width:100%;resize:vertical;font:11px/1.4 ui-monospace,monospace}.diagnostics{margin-top:7px;padding:6px;border:1px solid var(--success);border-radius:7px;color:var(--success);font-size:11px}.diagnostics.error{border-color:var(--danger);color:var(--danger)}.diagnostics p{margin:2px;line-height:1.4}.render-diagnostics header{flex-direction:row;align-items:center;justify-content:space-between}.render-diagnostics dl{margin:0 0 7px;display:grid;grid-template-columns:1fr auto;gap:4px 8px;font-size:11px}.render-diagnostics dt{color:var(--text-muted)}.render-diagnostics dd{margin:0;color:var(--accent)}.render-diagnostics a{display:block;margin-top:5px;overflow:hidden;color:var(--accent);font-size:11px;text-overflow:ellipsis;white-space:nowrap}.allocation{padding:6px;border-radius:7px;color:var(--text-muted);background:var(--surface-3);font-size:11px;line-height:1.4}@media(max-width:900px){.rendering-panel{grid-template-columns:170px minmax(330px,1fr)}.render-diagnostics{display:none}.material-grid{grid-template-columns:1fr}.shader-preview{display:none}}
+.rendering-studio{height:100%;min-height:170px;display:flex;flex-direction:column;overflow:hidden;background:var(--surface-1)}.studio-header{min-height:46px;padding:6px 10px;display:flex;align-items:center;gap:14px;border-bottom:1px solid var(--border-subtle);background:var(--surface-2)}.studio-header>div{min-width:175px;display:grid;gap:2px}.studio-header small{overflow:hidden;color:var(--text-muted);font-size:11px;text-overflow:ellipsis;white-space:nowrap}.studio-header nav{min-width:0;display:flex;gap:4px;overflow-x:auto}.studio-header button,.card button{min-height:30px;padding:0 10px;border:1px solid var(--border-subtle);border-radius:7px;color:var(--text-secondary);background:var(--surface-3);font-size:11px;white-space:nowrap}.studio-header button.active,.card button.active,.card button.primary{color:var(--accent);border-color:var(--accent);background:var(--accent-soft)}.section-scroll{min-height:0;flex:1;padding:9px;overflow:auto}.studio-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));align-content:start;gap:8px}.card{min-width:0;padding:9px;border:1px solid var(--border-subtle);border-radius:10px;background:var(--surface-2)}.card>header{min-height:32px;display:flex;align-items:center;justify-content:space-between;gap:7px}.card>label,.property-grid label,.typed-uniforms>label{min-height:32px;display:flex;align-items:center;justify-content:space-between;gap:8px;border-bottom:1px solid var(--border-subtle);color:var(--text-muted);font-size:11px}.card label input:not([type=checkbox]):not([type=color]),.card label select{width:min(160px,55%);min-width:0}.card p,.card li,.card small{color:var(--text-muted);font-size:11px;line-height:1.45}.card dl{display:grid;gap:5px}.card dl div{display:flex;justify-content:space-between;gap:8px}.card dt{color:var(--text-muted)}.card dd{margin:0;color:var(--accent)}.good{color:var(--success)!important}.warning{color:var(--warning)!important}.error{color:var(--danger)!important}.material-layout{display:grid;grid-template-columns:minmax(145px,18%) minmax(360px,1fr) minmax(220px,28%);gap:8px}.material-list{display:flex;flex-direction:column;gap:4px}.material-list>button{overflow:hidden;text-align:left;text-overflow:ellipsis}.property-grid{display:grid;grid-template-columns:1fr 1fr;column-gap:12px}.typed-uniforms{margin-top:8px}.typed-uniforms>header{min-height:30px;display:flex;justify-content:space-between}.typed-uniforms p{color:var(--text-muted);font-size:11px}.typed-uniforms>label>span:first-child{min-width:100px;overflow:hidden;text-overflow:ellipsis}.vector-inputs{max-width:180px;display:flex;gap:3px}.vector-inputs input{width:25%!important}.preview-card canvas,.shader-side canvas{width:100%;display:block;aspect-ratio:12/7;border:1px solid var(--border-subtle);border-radius:8px;background:#151a22}.shader-layout{display:grid;grid-template-columns:minmax(380px,1fr) minmax(260px,35%);gap:8px}.shader-editor{min-height:0;display:flex;flex-direction:column}.shader-editor>textarea{min-height:150px;flex:1;resize:none;font:11px/1.55 ui-monospace,SFMono-Regular,Consolas,monospace}.shader-options>label{display:grid;gap:5px;color:var(--text-muted);font-size:11px}.shader-options>label>span:last-child{display:flex;gap:8px;flex-wrap:wrap}.check{display:flex!important;align-items:center;gap:3px}.advanced-toggle{display:flex;align-items:center;gap:4px;color:var(--text-muted);font-size:11px}.shader-side{overflow:auto}.diagnostics{margin-top:7px;padding:6px;border:1px solid var(--success);border-radius:7px}.diagnostics.error{border-color:var(--danger)}.diagnostics p{margin:2px}.diagnostics button{width:100%;height:auto;margin:2px 0;padding:5px;text-align:left;white-space:normal}.shader-side details{margin-top:7px}.shader-side details>label{display:grid;margin-top:5px;color:var(--text-muted);font-size:11px}.shader-side textarea{width:100%;resize:vertical;font:11px/1.4 ui-monospace,monospace}.diagnostics-layout{display:grid;grid-template-columns:repeat(3,minmax(240px,1fr));align-content:start;gap:8px}.metric-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:5px}.metric-grid span{padding:6px;display:flex;justify-content:space-between;border-radius:6px;color:var(--text-muted);background:var(--surface-3);font-size:11px}.metric-grid strong{color:var(--accent)}.card ul{max-height:145px;margin:5px 0;padding-left:18px;overflow:auto}.capture-compare{display:flex;gap:4px}.capture-compare select{min-width:0;flex:1}.capture-list a{display:block;margin-top:4px;overflow:hidden;color:var(--accent);font-size:11px;text-overflow:ellipsis;white-space:nowrap}.preset-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:5px}.warning-card{border-color:var(--warning)}@media(max-width:980px){.material-layout{grid-template-columns:125px minmax(340px,1fr)}.preview-card{display:none}.diagnostics-layout{grid-template-columns:1fr 1fr}}@media(max-width:680px){.studio-header{align-items:flex-start;flex-direction:column}.studio-header>div{width:100%}.studio-header nav{width:100%}.material-layout,.shader-layout,.diagnostics-layout{grid-template-columns:1fr}.material-list{max-height:100px;overflow:auto}.property-grid{grid-template-columns:1fr}}
 </style>

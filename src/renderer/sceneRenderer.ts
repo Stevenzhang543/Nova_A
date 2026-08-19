@@ -10,6 +10,7 @@ import { particleRuntime } from '../runtime/particles'
 import { resolveMaterial } from './materials'
 import type { TextureFilter } from './types'
 import { deformSkin } from '../runtime/rigging'
+import { renderingSettings } from './renderSettings'
 
 export interface SceneRenderOptions {
   width: number
@@ -22,6 +23,7 @@ export interface SceneRenderOptions {
   canvasColor: string
   connections: Connection[]
   editorGrid?: { enabled: boolean; step: number; color: string }
+  performanceMode?: boolean
 }
 
 export interface ActiveCamera {
@@ -43,6 +45,8 @@ function parseCssColor(value: string): RenderColor {
   return { r: 17, g: 21, b: 27, a: 1 }
 }
 
+const smoothedCameraPositions = new WeakMap<Camera2D, { x: number; y: number }>()
+
 export function activeGameCameras(entities: Entity[], width: number, height: number): ActiveCamera[] {
   return entities
     .flatMap(entity => {
@@ -51,10 +55,24 @@ export function activeGameCameras(entities: Entity[], width: number, height: num
       const transform = worldTransform(entity, entities)
       const viewportHeight = height * component.viewport.height
       const rawScale = viewportHeight / (2 * Math.max(.000001, component.orthographicSize)) * Math.max(.000001, component.zoom)
-      const scale = component.pixelPerfect ? Math.max(1, Math.round(rawScale)) : rawScale
-      const position = component.pixelPerfect
-        ? { x: Math.round(transform.position.x * scale) / scale, y: Math.round(transform.position.y * scale) / scale }
-        : { ...transform.position }
+      const pixelPerfect = component.pixelPerfect || renderingSettings.pixelSnap
+      const scale = pixelPerfect ? Math.max(1, Math.round(rawScale)) : rawScale
+      const followed = component.followTargetUuid ? entities.find(candidate => candidate.uuid === component.followTargetUuid) : null
+      let desired = followed ? { ...worldTransform(followed, entities).position } : { ...transform.position }
+      const previous = smoothedCameraPositions.get(component) ?? { ...desired }
+      if (component.dragMargins.enabled && followed) {
+        const halfHeight = component.orthographicSize, halfWidth = halfHeight * width / Math.max(1, height)
+        const minX = previous.x - halfWidth * (1 - component.dragMargins.left), maxX = previous.x + halfWidth * (1 - component.dragMargins.right)
+        const minY = previous.y - halfHeight * (1 - component.dragMargins.bottom), maxY = previous.y + halfHeight * (1 - component.dragMargins.top)
+        desired = { x: desired.x < minX ? previous.x + desired.x - minX : desired.x > maxX ? previous.x + desired.x - maxX : previous.x, y: desired.y < minY ? previous.y + desired.y - minY : desired.y > maxY ? previous.y + desired.y - maxY : previous.y }
+      }
+      if (component.limits.enabled) desired = { x: Math.min(component.limits.right, Math.max(component.limits.left, desired.x)), y: Math.min(component.limits.top, Math.max(component.limits.bottom, desired.y)) }
+      const blend = component.smoothing.enabled ? 1 - Math.exp(-Math.max(0, component.smoothing.speed) / 60) : 1
+      const smoothed = { x: previous.x + (desired.x - previous.x) * blend, y: previous.y + (desired.y - previous.y) * blend }
+      smoothedCameraPositions.set(component, smoothed)
+      const position = pixelPerfect
+        ? { x: Math.round(smoothed.x * scale) / scale, y: Math.round(smoothed.y * scale) / scale }
+        : smoothed
       return [{ entity, component, view: { scale, offset: { x: width * .5, y: height * .5 }, position, rotation: transform.rotation, viewport: { ...component.viewport } }, background: rgba(component.backgroundColor) }]
     })
     .sort((first, second) => first.component.priority - second.component.priority || first.component.stackOrder - second.component.stackOrder || first.entity.id - second.entity.id)
@@ -84,33 +102,60 @@ function visibleWorldBounds(view: CameraRenderView, width: number, height: numbe
   return { minX: center.x - extentX, maxX: center.x + extentX, minY: center.y - extentY, maxY: center.y + extentY }
 }
 
-function submitSprite(renderer: Renderer2D, entity: Entity, sprite: SpriteRenderer2D, entities: Entity[]): void {
+function authoringPosition(entity: Entity, position: { x: number; y: number }, entities: Entity[], view: CameraRenderView): { x: number; y: number } {
+  let current: Entity | undefined = entity, canvasLayer: Entity | undefined, parallaxLayer: Entity | undefined
+  const visited = new Set<string>()
+  while (current && !visited.has(current.uuid)) {
+    visited.add(current.uuid)
+    if (!canvasLayer && current.authoring.kind === 'CanvasLayer') canvasLayer = current
+    if (!parallaxLayer && current.authoring.kind === 'ParallaxLayer') parallaxLayer = current
+    current = current.parentUuid ? entities.find(candidate => candidate.uuid === current!.parentUuid) : undefined
+  }
+  const cameraPosition = view.position ?? { x: 0, y: 0 }
+  if (canvasLayer?.authoring.canvasLayer.screenSpace) return { x: position.x + cameraPosition.x, y: position.y + cameraPosition.y }
+  if (parallaxLayer) return { x: position.x + cameraPosition.x * (1 - parallaxLayer.authoring.parallax.motionScale.x), y: position.y + cameraPosition.y * (1 - parallaxLayer.authoring.parallax.motionScale.y) }
+  return position
+}
+function authoredOrder(entity: Entity, base: number, entities: Entity[]): number { return base + entity.authoring.zOrder + (entity.authoring.sortMode === 'YSort' ? -worldTransform(entity, entities).position.y * .000001 : 0) }
+
+function cssFontFamily(value: string): string {
+  const family = value.trim()
+  if (!family) return ''
+  if (/^(serif|sans-serif|monospace|cursive|fantasy|system-ui|ui-serif|ui-sans-serif|ui-monospace)$/i.test(family)) return family
+  return `"${family.replace(/["\\]/g, '')}"`
+}
+
+function submitSprite(renderer: Renderer2D, entity: Entity, sprite: SpriteRenderer2D, entities: Entity[], view: CameraRenderView): void {
   if (!sprite.enabled || sprite.removed || !sprite.spriteAsset) return
   const state = renderState(sprite.material, sprite.filterMode)
   const texture = resolveTexture(sprite.spriteAsset, state.sampling)
   if (!texture) return
   const transform = worldTransform(entity, entities)
   renderer.submitSprite({
-    position: transform.position, rotation: transform.rotation, scale: transform.scale,
+    position: authoringPosition(entity, transform.position, entities, view), rotation: transform.rotation, scale: transform.scale,
     size: sprite.size, pivot: sprite.pivot, flipX: sprite.flipX, flipY: sprite.flipY,
     tint: rgba(sprite.tint, sprite.opacity), texture,
-    sortingLayer: sprite.sortingLayer, orderInLayer: sprite.orderInLayer,
+    sortingLayer: sprite.sortingLayer, orderInLayer: authoredOrder(entity, sprite.orderInLayer, entities),
     material: sprite.material, blendMode: state.blendMode,
     nineSlice: sprite.nineSlice.enabled ? { left: sprite.nineSlice.left, top: sprite.nineSlice.top, right: sprite.nineSlice.right, bottom: sprite.nineSlice.bottom } : null,
     mesh: deformSkin(entity, sprite)
   })
 }
 
-function submitText(renderer: Renderer2D, entity: Entity, text: TextRenderer2D, entities: Entity[]): void {
+function submitText(renderer: Renderer2D, entity: Entity, text: TextRenderer2D, entities: Entity[], view: CameraRenderView): void {
   if (!text.enabled || text.removed || !text.text) return
   const transform = worldTransform(entity, entities)
   const fontAsset = resolveAsset(text.fontAsset)
+  const importedFont = fontAsset?.assetType === 'font' ? fontAsset : null
+  const fallbacks = importedFont?.settings.fontSettings.fallbackFamilies.map(cssFontFamily).filter(Boolean) ?? []
+  const primaryFamily = cssFontFamily(importedFont?.fontFamily || text.fontFamily) || 'sans-serif'
+  const outlineWidth = importedFont?.settings.fontSettings.outlineWidth ?? 0
   renderer.submitText({
-    position: transform.position, rotation: transform.rotation, scale: transform.scale,
-    text: text.text, fontFamily: fontAsset?.fontFamily || text.fontFamily,
+    position: authoringPosition(entity, transform.position, entities, view), rotation: transform.rotation, scale: transform.scale,
+    text: text.text, fontFamily: [primaryFamily, ...fallbacks].join(', '),
     fontSize: text.fontSize, fontWeight: text.fontWeight, lineHeight: text.lineHeight,
-    align: text.align, color: rgba(text.color, text.opacity), maxWidth: text.maxWidth,
-    sortingLayer: text.sortingLayer, orderInLayer: text.orderInLayer, material: text.material
+    align: text.align, color: rgba(text.color, text.opacity), outlineColor: { r: 0, g: 0, b: 0, a: outlineWidth > 0 ? text.opacity / 100 : 0 }, outlineWidth, maxWidth: text.maxWidth,
+    sortingLayer: text.sortingLayer, orderInLayer: authoredOrder(entity, text.orderInLayer, entities), material: text.material
   })
 }
 
@@ -134,31 +179,37 @@ export function renderWorld(renderer: Renderer2D, entities: Entity[], options: S
     const far = camera.component?.farSortingLayer ?? Infinity
     const cullingMask = camera.component?.cullingMask ?? 0xffff_ffff
     const visible = entities
-      .filter(entity => entity.enabled && (options.gameView || entity.editorVisible))
+      .filter(entity => entity.enabled && entity.authoring.visible && (options.gameView || entity.editorVisible))
       .filter(entity => options.gameView || entity.layer === options.activeLayer)
       .filter(entity => options.renderLayer === 'all' || entity.layer === options.renderLayer)
       .filter(entity => (cullingMask & (1 << (entity.layer & 31))) !== 0)
       .filter(entity => sortingLayer(entity) >= near && sortingLayer(entity) <= far)
-      .sort((first, second) => sortingLayer(first) - sortingLayer(second) || first.renderer.orderInLayer - second.renderer.orderInLayer || first.id - second.id)
+      .filter(entity => {
+        if (!options.performanceMode) return true
+        const position = worldTransform(entity, entities).position
+        const margin = 4
+        return position.x >= visibleBounds.minX - margin && position.x <= visibleBounds.maxX + margin && position.y >= visibleBounds.minY - margin && position.y <= visibleBounds.maxY + margin
+      })
+      .sort((first, second) => sortingLayer(first) - sortingLayer(second) || authoredOrder(first, first.renderer.orderInLayer, entities) - authoredOrder(second, second.renderer.orderInLayer, entities) || first.id - second.id)
     for (const entity of visible) {
       const tileMap = entity.getComponent<TileMap2D>('TileMap2D')
-      if (tileMap) for (const chunk of tileChunkCommands(entity, tileMap, entities, visibleBounds)) renderer.submitTileChunk(chunk)
+      if (tileMap) for (const chunk of tileChunkCommands(entity, tileMap, entities, visibleBounds, camera.view.position)) renderer.submitTileChunk(chunk)
       const shape = entity.getComponent<ShapeRenderer2D>('ShapeRenderer2D')
       if (shape) {
         const transform = worldTransform(entity, entities)
         const materialState = renderState(shape.material, shape.filterMode)
         renderer.submitShape({
-          shape: shape.shape, position: transform.position, rotation: transform.rotation, scale: transform.scale,
+          shape: shape.shape, position: authoringPosition(entity, transform.position, entities, camera.view), rotation: transform.rotation, scale: transform.scale,
           vertices: shape.vertices, radiusX: shape.radiusX, radiusY: shape.radiusY,
           fill: rgba(shape.color, shape.opacity), stroke: rgba(shape.strokeColor, compoundMembers.has(entity.id) ? 0 : shape.strokeOpacity),
           strokeWidth: shape.strokeWidth, texture: resolveTexture(shape.textureAsset, materialState.sampling),
-          sortingLayer: shape.sortingLayer, orderInLayer: shape.orderInLayer, material: shape.material, blendMode: materialState.blendMode
+          sortingLayer: shape.sortingLayer, orderInLayer: authoredOrder(entity, shape.orderInLayer, entities), material: shape.material, blendMode: materialState.blendMode
         })
       }
       const sprite = entity.getComponent<SpriteRenderer2D>('SpriteRenderer2D')
-      if (sprite) submitSprite(renderer, entity, sprite, entities)
+      if (sprite) submitSprite(renderer, entity, sprite, entities, camera.view)
       const text = entity.getComponent<TextRenderer2D>('TextRenderer2D')
-      if (text) submitText(renderer, entity, text, entities)
+      if (text) submitText(renderer, entity, text, entities, camera.view)
     }
     particleRuntime.submit(renderer, visible)
     for (const compound of compounds) {

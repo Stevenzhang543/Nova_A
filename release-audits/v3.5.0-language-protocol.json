@@ -1,0 +1,144 @@
+{
+  "format": "nova-rhai-language-protocol-test",
+  "version": 1,
+  "engineVersion": "3.5.0",
+  "protocol": "nova-rhai-language/1",
+  "generatedAt": "2026-08-19T13:53:15.839Z",
+  "methods": [
+    "analyze",
+    "completion",
+    "hover",
+    "definition",
+    "references",
+    "workspace symbols",
+    "formatting",
+    "shutdown"
+  ],
+  "directPassed": true,
+  "externalProcessExitCode": 0,
+  "externalResponses": [
+    {
+      "event": "ready",
+      "protocol": "nova-rhai-language/1",
+      "apiVersion": 1
+    },
+    {
+      "id": 1,
+      "result": {
+        "diagnostics": [],
+        "symbols": [
+          {
+            "name": "update",
+            "kind": "function",
+            "line": 1,
+            "column": 4,
+            "endLine": 1,
+            "endColumn": 40,
+            "signature": "fn update(dt)",
+            "documentation": ""
+          }
+        ],
+        "dependencies": [],
+        "functions": {
+          "update": {
+            "line": 1,
+            "endLine": 1,
+            "parameters": [
+              "dt"
+            ]
+          }
+        },
+        "references": [
+          {
+            "name": "update",
+            "line": 1,
+            "column": 4,
+            "declaration": true
+          },
+          {
+            "name": "update",
+            "line": 1,
+            "column": 4,
+            "declaration": false
+          },
+          {
+            "name": "log_info",
+            "line": 1,
+            "column": 17,
+            "declaration": false
+          }
+        ],
+        "tests": [],
+        "semanticTokens": [
+          {
+            "line": 1,
+            "column": 4,
+            "length": 6,
+            "kind": "function"
+          },
+          {
+            "line": 1,
+            "column": 4,
+            "length": 6,
+            "kind": "api"
+          },
+          {
+            "line": 1,
+            "column": 17,
+            "length": 8,
+            "kind": "api"
+          },
+          {
+            "line": 1,
+            "column": 26,
+            "length": 10,
+            "kind": "string"
+          },
+          {
+            "line": 1,
+            "column": 1,
+            "length": 2,
+            "kind": "keyword"
+          }
+        ],
+        "apiUsage": [
+          "update",
+          "log_info"
+        ]
+      }
+    },
+    {
+      "id": 2,
+      "result": [
+        {
+          "label": "scene_load",
+          "detail": "scene_load(scene)",
+          "documentation": "Queues a scene switch.\n\nscene_load(\"Level 2\");",
+          "insertText": "scene_load",
+          "deprecated": false
+        },
+        {
+          "label": "scene_reload",
+          "detail": "scene_reload()",
+          "documentation": "Queues active-scene reload.\n\nscene_reload();",
+          "insertText": "scene_reload",
+          "deprecated": false
+        },
+        {
+          "label": "scene_quit",
+          "detail": "scene_quit()",
+          "documentation": "Requests clean runtime shutdown.\n\nscene_quit();",
+          "insertText": "scene_quit",
+          "deprecated": false
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "result": null
+    }
+  ],
+  "stderr": "",
+  "supportedConfiguration": "JSON-lines stdio adapter; sample in docs/RHAI_LANGUAGE_PROTOCOL.md",
+  "status": "passed"
+}

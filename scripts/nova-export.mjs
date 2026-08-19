@@ -4,7 +4,7 @@ import { mkdir, readFile, writeFile, copyFile, stat, unlink } from 'node:fs/prom
 import { dirname, join, resolve } from 'node:path'
 import { gzipSync } from 'node:zlib'
 
-const ENGINE_VERSION = '3.2.0'
+const ENGINE_VERSION = '4.0.0'
 const HEADER_BYTES = 16
 
 function argumentsMap(values) {
@@ -26,7 +26,9 @@ const profile = String(args.get('profile') ?? 'release')
 const architecture = String(args.get('architecture') ?? (process.arch === 'arm64' ? 'aarch64' : 'x86_64'))
 const runtimeMode = String(args.get('runtime') ?? 'game')
 const compression = String(args.get('compression') ?? 'balanced')
-const incremental = !args.has('no-incremental') && String(args.get('incremental') ?? 'true') !== 'false'
+const cacheMode = String(args.get('cache') ?? (args.has('clean') ? 'clean' : 'incremental'))
+if (!['clean', 'incremental', 'validate'].includes(cacheMode)) throw new Error('Cache mode must be clean, incremental, or validate')
+const incremental = cacheMode !== 'clean' && !args.has('no-incremental') && String(args.get('incremental') ?? 'true') !== 'false'
 const patchEnabled = !args.has('no-patch') && String(args.get('patch') ?? 'true') !== 'false'
 if (!['windows', 'linux', 'macos', 'web'].includes(target)) throw new Error(`Unsupported CLI target ${target}`)
 if (!['debug', 'release'].includes(profile)) throw new Error('Profile must be debug or release')
@@ -46,6 +48,10 @@ function safeRelative(path) {
   if (!normalized || normalized.split('/').some(part => part === '..')) throw new Error(`Unsafe output path ${path}`)
   return normalized
 }
+function globMatches(path, pattern) {
+  const expression = pattern.replace(/[.+^${}()|[\]\\]/g, '\\$&').replace(/\*\*/g, '\u0000').replace(/\*/g, '[^/]*').replace(/\?/g, '[^/]').replace(/\u0000/g, '.*')
+  return new RegExp(`^${expression}$`, 'i').test(path.replaceAll('\\', '/'))
+}
 const INLINE_TEXT_ASSET_TYPES = new Set(['script', 'prefab', 'scene', 'material', 'animation', 'controller', 'animationMask', 'rig', 'skin', 'timeline', 'tileset', 'atlas', 'shader', 'localization', 'uiTheme', 'behaviorTree', 'stateMachine', 'tilePalette', 'brushPreset', 'terrainRules', 'dataSchema', 'dataTable', 'replay'])
 async function writeIncremental(path, bytes) {
   try { if (incremental && sha(await readFile(path)) === sha(bytes)) return false } catch { /* New file. */ }
@@ -61,14 +67,25 @@ async function assetBytes(asset) {
 
 const project = JSON.parse(await readFile(projectPath, 'utf8'))
 const schema = Number(project.formatVersion ?? 1)
-if (!Number.isFinite(schema) || schema > 23) throw new Error(`Project schema ${schema} is newer than this exporter`)
+if (!Number.isFinite(schema) || schema > 29) throw new Error(`Project schema ${schema} is newer than this exporter`)
 if (!Array.isArray(project.scenes) || !project.scenes.length) throw new Error('Project must contain at least one scene')
 const build = project.projectSettings?.build ?? {}
 build.target = target; build.profile = profile; build.architecture = architecture; build.runtimeMode = runtimeMode; build.developmentBuild = profile === 'debug'; build.outputDirectory = ''
-build.delivery = { ...(build.delivery ?? {}), deterministic: true, incremental, compression, patchManifest: patchEnabled }
+build.delivery = { ...(build.delivery ?? {}), deterministic: true, incremental, cacheMode, compression, patchManifest: patchEnabled }
 project.projectSettings ??= {}; project.projectSettings.build = build
 const entries = [{ path: 'project.nova', bytes: null, mimeType: 'application/x-nova-project' }]
-for (const asset of Array.isArray(project.assets) ? project.assets : []) {
+const includePatterns = String(args.get('include') ?? '').split(',').map(value => value.trim()).filter(Boolean).concat(Array.isArray(build.delivery.include) ? build.delivery.include : [])
+const excludePatterns = String(args.get('exclude') ?? '').split(',').map(value => value.trim()).filter(Boolean).concat(Array.isArray(build.delivery.exclude) ? build.delivery.exclude : [])
+const stripUnused = args.has('strip-unused') || build.delivery.stripUnusedAssets === true
+const allAssets = Array.isArray(project.assets) ? project.assets : [], referencedText = JSON.stringify({ ...project, assets: [] }), includedIds = new Set(allAssets.filter(asset => !stripUnused || referencedText.includes(String(asset.uuid))).map(asset => String(asset.uuid)))
+let closureChanged = true
+while (closureChanged) { closureChanged = false; for (const asset of allAssets) if (includedIds.has(String(asset.uuid))) for (const dependency of asset.pipeline?.dependencies ?? []) if (!includedIds.has(String(dependency))) { includedIds.add(String(dependency)); closureChanged = true } }
+const selectedAssets = allAssets.filter(asset => {
+  const path = String(asset.path ?? '').replaceAll('\\', '/')
+  return (!stripUnused || includedIds.has(String(asset.uuid))) && (!includePatterns.length || includePatterns.some(pattern => globMatches(path, pattern))) && !excludePatterns.some(pattern => globMatches(path, pattern))
+})
+project.assets = selectedAssets
+for (const asset of selectedAssets) {
   const bytes = await assetBytes(asset)
   entries.push({ path: safeRelative(String(asset.path)), bytes, mimeType: String(asset.mimeType || 'application/octet-stream'), asset })
   delete asset.source
@@ -118,6 +135,8 @@ const before = new Map((previous?.files ?? []).map(file => [file.path, file.sha2
 const patch = { format: 'nova-patch-manifest', version: 1, fromBuild: previous?.buildId ?? null, toBuild: buildId, added: [...after.keys()].filter(path => !before.has(path)), changed: [...after].filter(([path, hash]) => before.has(path) && before.get(path) !== hash).map(([path]) => path), removed: [...before.keys()].filter(path => !after.has(path)), files: records }
 if (patchEnabled) await emit('nova-patch-manifest.json', Buffer.from(`${JSON.stringify(patch, null, 2)}\n`))
 else try { await unlink(join(output, 'nova-patch-manifest.json')) } catch { /* No stale patch manifest. */ }
-const report = { format: 'nova-build-report', version: 1, engineVersion: ENGINE_VERSION, buildId, createdAt: 0, target, architecture, profile, projectId: String(project.projectMetadata?.id ?? ''), files: records }
+const report = { format: 'nova-build-report', version: 2, engineVersion: ENGINE_VERSION, buildId, createdAt: 0, target, architecture, profile, cacheMode, projectId: String(project.projectMetadata?.id ?? ''), totalBytes: records.reduce((sum, file) => sum + file.bytes, 0), files: records }
 await emit('nova-build-report.json', Buffer.from(`${JSON.stringify(report, null, 2)}\n`))
+if (build.delivery?.sizeReport !== false) await emit('nova-build-size-report.json', Buffer.from(`${JSON.stringify({ format: 'nova-build-size-report', version: 1, engineVersion: ENGINE_VERSION, totalBytes: report.totalBytes, files: [...records].sort((a, b) => b.bytes - a.bytes) }, null, 2)}\n`))
+if (build.delivery?.dependencyReport !== false) await emit('nova-dependency-report.json', Buffer.from(`${JSON.stringify({ format: 'nova-dependency-report', version: 1, engineVersion: ENGINE_VERSION, packages: project.packages?.lockfile ?? [], assets: entries.filter(entry => entry.asset).map(entry => ({ uuid: entry.asset.uuid, path: entry.path, type: entry.asset.assetType })) }, null, 2)}\n`))
 console.log(JSON.stringify({ output, buildId, changedFiles, cacheHits, files: outputs.length + 2 }, null, 2))

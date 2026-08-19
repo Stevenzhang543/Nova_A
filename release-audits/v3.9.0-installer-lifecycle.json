@@ -1,0 +1,10 @@
+{
+  "format": "nova-installer-lifecycle-tests",
+  "version": 1,
+  "engineVersion": "3.9.0",
+  "generatedAt": "2026-08-19T13:58:07.226Z",
+  "packageIntegrity": "verified after native build",
+  "portableIsolation": "verified by startup smoke",
+  "installRepairUpdateRollbackUninstall": "clean-VM release-operator gate; no system mutation performed by repository tests",
+  "status": "passed-with-declared-external-gate"
+}

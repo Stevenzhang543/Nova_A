@@ -182,6 +182,32 @@ impl WasmRuntimeWorld {
             .map_err(JsValue::from_str)
     }
 
+    pub fn teleport_body(
+        &mut self,
+        handle: u32,
+        x: f64,
+        y: f64,
+        angle: f64,
+    ) -> Result<(), JsValue> {
+        self.inner
+            .physics_mut()
+            .set_transform(handle, x, y, angle)
+            .map_err(JsValue::from_str)
+    }
+
+    pub fn set_body_velocity(
+        &mut self,
+        handle: u32,
+        x: f64,
+        y: f64,
+        angular: f64,
+    ) -> Result<(), JsValue> {
+        self.inner
+            .physics_mut()
+            .set_velocity(handle, x, y, angular)
+            .map_err(JsValue::from_str)
+    }
+
     pub fn clear(&mut self) {
         self.inner.clear();
     }

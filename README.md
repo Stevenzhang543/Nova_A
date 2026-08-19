@@ -4,15 +4,44 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE.md)
 [![Platforms](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey)](https://v2.tauri.app/start/prerequisites/)
-[![Release](https://img.shields.io/badge/release-3.2.0-63c6ff)]()
+[![Release](https://img.shields.io/badge/release-4.0.0-63c6ff)]()
 
 Nova_A is an open-source 2D game engine and desktop editor built with Rust, WebAssembly, Vue 3, and Tauri.
 
-Version **3.2.0** establishes the authoritative project-data foundation for the 3.x roadmap. Project Format 2 advances to schema 23 with a versioned manifest, deterministic canonical text, stable UUID references, nested scenes and prefabs, dependency-aware assets, import recovery, migration/repair commands, and a read-only future-schema viewer. Schema 5–22 projects receive a preview, complete backup, validation-before-replacement, and rollback on failure.
+Version **4.0.0** is Nova_A's production-stable 2D baseline: Project Format 2 schema 29 and Runtime API 1, Plugin API 2, Package Manifest 1, and Build CLI 1 are locked for compatible 4.0.x patches. The complete editor, physics, rendering, animation, audio, scripting, UI, world-data, build, package, and collaboration systems remain available.
 
 **Manual:** [interactive English/German/Chinese webpage](./manual/index.html) · [English Markdown](./manual/MANUAL.en.md) · [Deutsch](./manual/MANUAL.de.md) · [中文](./manual/MANUAL.zh-CN.md)
 
-## What is new in v3.2.0
+## What is new in v4.0.0
+
+- **Upgrade Assistant:** every external project receives a pre-open format/engine/content/package report. Supported 3.x upgrades require a full backup, retain rollback data, migrate in memory, validate and canonicalize the entire result, and never replace the session on failure. Schema 29 remains frozen.
+- **Stable support contract:** Studio Status declares Stable/Beta/Development channels, an offline known-issues feed, patch policy, archived-engine guidance, release health, and opt-in local crash-report packages with privacy review. Nothing uploads automatically.
+- **Production documentation:** the multilingual complete manual now links the supported API, migration, build/CI, package, performance, security, accessibility, troubleshooting, support, license, and guided small-game/export paths.
+- **Stable defaults:** Experimental networking remains available as an optional package and reference but is removed from the default project-template set. Safe, qualified defaults take precedence over maximum visual effects.
+- **Final qualification:** the v4 evidence set records the migration corpus, Tier-1/browser/layout/reference matrices, package security, malformed-input tests, performance comparison, accessibility, documentation, SBOM/licenses, provenance, release health, installer gates, and sign-off state without claiming external gates that did not run.
+
+### Retained v3.9 productization
+
+- **Build automation:** validate/import/test/build/export/package/version commands, headless operation, presets, clean/incremental/validated cache modes, include/exclude and stripping, compression, size/dependency reports, symbols, manifests, metadata, CI and JSONL logs.
+- **Honest platform policy:** Windows x86-64 editor/runtime and Web runtime are Tier 1. Linux and macOS stay Experimental until their matching-host matrices pass. Mobile and console are explicitly Unsupported until after 4.0.
+- **Secure packages:** Stable requires SemVer, engine/API ranges, dependency hashes, entry type, archive identity and a verified signature. Permissions appear before install and on escalation; failures quarantine; lockfiles, offline cache, rollback and Safe Mode are deterministic.
+- **Team workflows:** structured scene/prefab/resource/settings/package diffs, external reload/compare, canonical no-op saves, shared/local separation, Git initialization, optional locks, pre-commit/CI templates and operation summaries.
+- **Support and freeze:** the offline manual is searchable, context links route to focused help, Studio Status provides migration/known-issue views and a privacy-reviewed diagnostic bundle, and schema 29 plus Runtime API 1, Plugin API 2, Package Manifest 1 and Build CLI 1 are frozen for 4.0 stabilization.
+- **Retained world data:** Tilemap 2.0, navigation, streaming cells, save recovery and optional pools from schema 28 remain fully supported and migrate losslessly to schema 29.
+- **Experimental networking gate:** bounded transport, RPC, authority, replication, prediction, diagnostics and headless interfaces remain optional and are not a 4.0 core blocker.
+
+See [guided first game](./docs/CREATE_EXPORT_SMALL_GAME_4_0.md), [migration](./docs/MIGRATION_4_0.md), [API index](./docs/API_REFERENCE_4_0.md), [Rhai API v1](./docs/RHAI_API_V1.md), [build/CI](./docs/BUILD_CI_GUIDE_4_0.md), [support](./docs/SUPPORT_POLICY_4_0.md), [security](./docs/SECURITY_GUIDE_4_0.md), [accessibility](./docs/ACCESSIBILITY_GUIDE_4_0.md), and [troubleshooting](./docs/TROUBLESHOOTING_4_0.md).
+
+### Retained v3.3 authoring foundation
+
+- **Universal creation:** Shift+A or Create Object opens a searchable Core/2D/Physics/UI/Audio/Camera/Navigation/Script/Packages palette with compatibility, requirements, favorites, and recents. Camera, sprite, collider, script, and light creation never leaves Design and every creation is one undo step.
+- **Complete viewport editing:** move, rotate, scale, pivot, rectangle, path, polygon, collider, and ruler tools join align/distribute/mirror/90° rotation, frame, isolate, grouping, box/multi-selection, filters, and grid/pixel/vertex/edge/center/angle/object snapping.
+- **Professional inspector:** search and categories work with multi-selection and mixed values. Reset, revert override, copy/paste value, copy path, keyframe, help, pin, and modified-only actions use validation metadata; components support enable, copy/paste, reorder, reset, and removal.
+- **Sprite and camera workflow:** sprites expose pivot, region, flips, tint/modulation, sizing, nine-slice borders, sorting, layer and visibility. Imports add trim, sprite-sheet slicing, preview/filter/compression/color/pixel settings. Cameras add zoom, limits, smoothing, drag margins, follow, preview, pixel-perfect, and common-resolution overlays.
+- **Hierarchy productivity:** rename, duplicate, reparent, reorder, group, and delete remain transactional. Normal drag preserves world transform; Alt-drag keeps local transform; Shift-drag reorders. Breadcrumbs, component/tag search, status badges, lock/hide/isolate, and large-scene mode reduce navigation time.
+- **Measured release evidence:** six new source references cover pixel art, resolution-independent art, parallax, multiple cameras, nested prefabs, and 5,000 objects. Reports cover object creation/round trips, inspector transactions, pixel-perfect zooms, viewport latency, and the documented platformer workflow.
+
+### Retained v3.2 project-data foundation
 
 - **Authoritative project manifest:** project UUID, engine range, schema, package lockfile, build presets, and source/shared/generated/cache/user-local directory ownership are explicit and validated.
 - **Deterministic text data:** canonical JSON uses sorted keys, policy-sorted set arrays, preserved authoring order, finite normalized numbers, two-space indentation, UTF-8-compatible text, and one final LF. No-op saves are byte-identical.
@@ -122,7 +151,7 @@ Version **3.2.0** establishes the authoritative project-data foundation for the 
 
 - Nova_A starts in a Project Manager with New, Open, Import, Continue and local recent-project workflows.
 - Four self-auditing templates are included: Empty 2D, Platformer, Top-down and Physics Sandbox. They refuse to open if a subsystem required by their tutorial is missing.
-- **Nova_A Project Format 2** (currently schema 23) records compatibility/project identity and migrates every supported legacy schema from 5 onward.
+- **Nova_A Project Format 2** (currently schema 29) records compatibility/project identity and migrates every supported legacy schema from 5 onward.
 - Stable Component API 2.0 documents every built-in component and keeps rendering, collision, editor and runtime responsibilities separate.
 - Rhai scripts can persist finite booleans, numbers, strings, arrays and maps through isolated named save slots.
 - WASM Plugin API 1 validates manifests/modules, exposes only log/event capabilities, and provides no filesystem, network or process access.
@@ -179,7 +208,7 @@ Nova_A is currently a desktop/web editor. Android and iOS application targets ar
 
 - Node.js 18 or newer (`.node-version` records the tested Node release).
 - pnpm 9 or newer (`package.json` pins the project package-manager release).
-- Stable Rust with Cargo.
+- Rust 1.88 or newer with Cargo (the standalone core crates retain a 1.77 MSRV; the security-patched desktop dependency graph requires 1.88).
 - The `wasm32-unknown-unknown` Rust target.
 - `wasm-pack` 0.14.0 or newer.
 - Git and the native prerequisites for your operating system.
@@ -259,10 +288,10 @@ The Tauri build invokes `pnpm build` automatically before packaging. Result loca
 After the native build succeeds, assemble the complete versioned release set:
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\package-release.ps1 -Version 3.2.0
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\package-release.ps1 -Version 4.0.0
 ```
 
-This creates `releases/v3.2.0/` with a portable executable, MSI, NSIS setup executable, web ZIP, source ZIP, reference-project ZIP, release-evidence ZIP, release notes, exhaustive edit ledger, license, and `SHA256SUMS.txt`.
+This creates `releases/v4.0.0/` with the eleven mandatory top-level artifacts: portable executable, MSI, NSIS setup executable, web ZIP, source ZIP, reference-project ZIP, release-evidence ZIP, release notes, exhaustive edit ledger, license, and `SHA256SUMS.txt`. The SBOM, third-party notices, reproducibility, platform/package/source-control/migration/API-freeze evidence, test reports, release health, sign-off record, and screenshots are contained in the release-evidence ZIP.
 
 ### Headless export
 
@@ -296,7 +325,7 @@ Configuration changes cross Vue → `nova_wasm` as explicit retained-world comma
 
 ## Project compatibility
 
-- New saves use **Nova_A Project Format 2**, schema 23, and engine version `3.2.0`.
+- New saves use **Nova_A Project Format 2**, schema 29, and engine version `4.0.0`.
 - Persisted scenes, entities, components, and connections use UUIDs; runtime handles are never written to disk.
 - Format migration and validation are centralized in `nova_format`, not scattered through editor components.
 - v1.9 format-13 files, v1.8 format-12 files, v1.7 format-11 files, v1.6 format-10 files, v1.5 format-9 files, v1.4 format-8 files, v1.3 format-7 files, v1.2 format-6 files, v1.1.2 format-5 files, older object roots, and legacy top-level entity arrays continue to load. A migrated project is only written in Format 2 when the user saves it.

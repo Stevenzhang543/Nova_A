@@ -1,0 +1,49 @@
+{
+  "format": "nova-v3.5-script-reference-coverage",
+  "version": 1,
+  "engineVersion": "3.5.0",
+  "generatedAt": "2026-08-19T13:54:40.126Z",
+  "projects": [
+    {
+      "slug": "script-lifecycle-signals",
+      "engineVersion": "4.0.0",
+      "schema": 29,
+      "scripts": 1,
+      "apiV1": true,
+      "valid": true
+    },
+    {
+      "slug": "script-async-tasks",
+      "engineVersion": "4.0.0",
+      "schema": 29,
+      "scripts": 1,
+      "apiV1": true,
+      "valid": true
+    },
+    {
+      "slug": "script-debugger-scenarios",
+      "engineVersion": "4.0.0",
+      "schema": 29,
+      "scripts": 1,
+      "apiV1": true,
+      "valid": true
+    },
+    {
+      "slug": "script-test-runner",
+      "engineVersion": "4.0.0",
+      "schema": 29,
+      "scripts": 1,
+      "apiV1": true,
+      "valid": true
+    },
+    {
+      "slug": "script-api-v1-examples",
+      "engineVersion": "4.0.0",
+      "schema": 29,
+      "scripts": 1,
+      "apiV1": true,
+      "valid": true
+    }
+  ],
+  "status": "passed"
+}

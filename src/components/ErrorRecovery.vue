@@ -1,6 +1,6 @@
 <template>
   <Teleport to="body">
-    <section v-if="fault" class="fault-overlay" role="alertdialog" aria-modal="true" :aria-label="t('fatalErrorTitle')" @keydown.esc="dismissActiveFault">
+    <section v-if="fault" class="fault-overlay" data-doc="manual/recovery" role="alertdialog" aria-modal="true" :aria-label="t('fatalErrorTitle')" @keydown.esc="dismissActiveFault">
       <article>
         <header><span>!</span><div><strong>{{ t('fatalErrorTitle') }}</strong><small>{{ t('fatalErrorContained') }}</small></div></header>
         <p>{{ fault.message }}</p><code>{{ fault.context }} · {{ timestamp }}</code>

@@ -1,11 +1,13 @@
 import { reactive } from 'vue'
 import { physicsState, sceneManager } from '../store/physics'
 import type { Entity } from '../world/Entity'
-import type { Area2D, AreaEffector2D, CharacterBody2D, Portal2D, WorldChunk2D } from '../world/components'
+import type { Area2D, AreaEffector2D, CharacterBody2D, Portal2D } from '../world/components'
 import { finiteNumber } from '../world/geometry'
 import { worldTransform } from '../world/hierarchy'
-import { OFFICIAL_AI_PACKAGE_ID, OFFICIAL_NAVIGATION_PACKAGE_ID, packageEnabled } from './packages'
-import { prepareObjectPools, resetObjectPools, setPoolSignalEmitter } from './objectPool'
+import { OFFICIAL_AI_PACKAGE_ID, OFFICIAL_OBJECT_POOL_PACKAGE_ID, packageEnabled } from './packages'
+import { prepareObjectPools, resetObjectPools, setPoolSignalEmitter, updateObjectPools } from './objectPool'
+import * as navigationRuntime from './navigation2d'
+import { resetWorldStreaming, updateWorldStreaming as updateWorldStreamingRuntime, worldStreamingState } from './worldStreaming'
 
 export const worldGameplayState = reactive({
   navigationDebug: false,
@@ -40,23 +42,17 @@ export function loadWorldGameplaySettings(value: unknown): void {
   worldGameplayState.originShiftThreshold = Math.min(1e12, Math.max(1, finiteNumber(source.originShiftThreshold, 10_000)))
 }
 
-let navigationModule: typeof import('./navigation2d') | null = null
 let aiModule: typeof import('./aiTools') | null = null
-let loadingNavigation: Promise<void> | null = null
 let loadingAi: Promise<void> | null = null
 const areaOccupants = new Map<string, Set<string>>()
-const chunkLoaded = new Map<string, boolean>()
 const sceneStreamQueue = new Map<string, boolean>()
 const activePortals = new Set<string>()
 
 async function ensureOptionalPackages(): Promise<void> {
-  if (packageEnabled(OFFICIAL_NAVIGATION_PACKAGE_ID) && !navigationModule && !loadingNavigation) {
-    loadingNavigation = import('./navigation2d').then(module => { navigationModule = module }).catch(error => { worldGameplayState.lastError = String(error) }).finally(() => { loadingNavigation = null })
-  }
   if (packageEnabled(OFFICIAL_AI_PACKAGE_ID) && !aiModule && !loadingAi) {
     loadingAi = import('./aiTools').then(module => { aiModule = module }).catch(error => { worldGameplayState.lastError = String(error) }).finally(() => { loadingAi = null })
   }
-  await Promise.all([loadingNavigation, loadingAi].filter(Boolean))
+  await Promise.all([loadingAi].filter(Boolean))
 }
 
 function colliderSize(entity: Entity): { x: number; y: number } {
@@ -173,20 +169,14 @@ function scheduleSceneStream(uuid: string, loaded: boolean): void {
 }
 
 function updateWorldStreaming(): void {
-  const focus = focusPosition(), chunks = physicsState.world.entities.flatMap(entity => { const chunk = entity.getComponent<WorldChunk2D>('WorldChunk2D'); return entity.enabled && chunk?.enabled ? [{ entity, chunk }] : [] })
-  let memory = 0, loaded = 0
-  for (const { entity, chunk } of chunks.sort((a, b) => b.chunk.preloadPriority - a.chunk.preloadPriority)) {
-    const position = worldTransform(entity, physicsState.world.entities).position, distance = Math.hypot(position.x - focus.x, position.y - focus.y)
-    const wasLoaded = chunkLoaded.get(entity.uuid) ?? chunk.initiallyLoaded
-    const shouldLoad = !worldGameplayState.streamingEnabled || distance <= chunk.loadDistance || wasLoaded && distance <= chunk.unloadDistance
-    const fitsBudget = memory + chunk.memoryEstimateMb <= worldGameplayState.memoryBudgetMb
-    const nextLoaded = shouldLoad && fitsBudget
-    chunkLoaded.set(entity.uuid, nextLoaded)
-    for (const member of physicsState.world.entities) if (member.parentUuid === entity.uuid) member.enabled = nextLoaded
-    if (chunk.sceneUuid) scheduleSceneStream(chunk.sceneUuid, nextLoaded)
-    if (nextLoaded) { loaded++; memory += chunk.memoryEstimateMb }
-  }
-  worldGameplayState.loadedChunks = loaded; worldGameplayState.usedMemoryMb = memory
+  const focus = focusPosition()
+  updateWorldStreamingRuntime(physicsState.world.entities, focus, worldGameplayState.memoryBudgetMb, worldGameplayState.streamingEnabled, (sceneUuid, loaded) => {
+    const scene = sceneManager.scenes.find(candidate => candidate.uuid === sceneUuid)
+    if (scene && scene.uuid !== sceneManager.activeSceneUuid) scene.loaded = loaded
+  })
+  worldGameplayState.loadedChunks = worldStreamingState.loaded
+  worldGameplayState.usedMemoryMb = worldStreamingState.memoryMb
+  worldGameplayState.pendingStreams = worldStreamingState.pending
   if (Math.hypot(focus.x, focus.y) >= worldGameplayState.originShiftThreshold) {
     worldGameplayState.originOffset.x += focus.x; worldGameplayState.originOffset.y += focus.y
     for (const entity of physicsState.world.entities.filter(candidate => !candidate.parentUuid)) { entity.transform.position.x -= focus.x; entity.transform.position.y -= focus.y }
@@ -198,21 +188,22 @@ export async function beginWorldGameplay(emitSignal: (name: string, payload: unk
   await ensureOptionalPackages()
   if (aiModule) aiModule.setAiSignalEmitter((name, entity) => { if (name) emitSignal(name, null, entity.uuid, 'ai') })
   setPoolSignalEmitter((name, entity) => emitSignal(name, null, entity.uuid, 'pool'))
-  prepareObjectPools()
+  if (packageEnabled(OFFICIAL_OBJECT_POOL_PACKAGE_ID)) prepareObjectPools()
 }
 
 export function beforeWorldPhysicsStep(fixedDelta: number, nowSeconds: number, frame: number, emitSignal: (name: string, payload: unknown, target: string, source: string) => void, requestSceneLoad: (scene: string) => void = () => {}): void {
   moveCharacters(fixedDelta)
   applyAreaEffects(fixedDelta, emitSignal)
-  if (navigationModule) navigationModule.updateNavigation(physicsState.world.entities, fixedDelta, nowSeconds)
+  navigationRuntime.updateNavigation(physicsState.world.entities, fixedDelta, nowSeconds)
   if (aiModule) aiModule.updateAi(physicsState.world.entities, fixedDelta, frame)
+  if (packageEnabled(OFFICIAL_OBJECT_POOL_PACKAGE_ID)) updateObjectPools(nowSeconds)
   updateWorldStreaming()
   updatePortals(requestSceneLoad, emitSignal)
 }
 
 export function resetWorldGameplay(): void {
-  areaOccupants.clear(); chunkLoaded.clear(); sceneStreamQueue.clear(); activePortals.clear(); navigationModule?.resetNavigation(); aiModule?.resetAi(); resetObjectPools()
+  areaOccupants.clear(); sceneStreamQueue.clear(); activePortals.clear(); navigationRuntime.resetNavigation(); aiModule?.resetAi(); resetObjectPools(); resetWorldStreaming()
   worldGameplayState.loadedChunks = 0; worldGameplayState.usedMemoryMb = 0; worldGameplayState.pendingStreams = 0; worldGameplayState.originOffset = { x: 0, y: 0 }
 }
 
-export function navigationPaths(): readonly import('./navigation2d').NavigationDebugPath[] { return navigationModule ? [...navigationModule.navigationDebugPaths.values()] : [] }
+export function navigationPaths(): readonly import('./navigation2d').NavigationDebugPath[] { return [...navigationRuntime.navigationDebugPaths.values()] }

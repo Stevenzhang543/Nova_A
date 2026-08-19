@@ -79,6 +79,8 @@ export interface TextRenderCommand extends RenderOrder {
   lineHeight: number
   align: CanvasTextAlign
   color: RenderColor
+  outlineColor: RenderColor
+  outlineWidth: number
   maxWidth: number
 }
 
@@ -99,6 +101,8 @@ export interface RendererStats {
   passes: number
   renderTargets: number
   overdraw: number
+  batchBreaks: number
+  atlasPages: number
 }
 
 export interface Renderer2D {

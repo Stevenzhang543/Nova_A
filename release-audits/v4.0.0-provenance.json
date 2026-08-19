@@ -1,0 +1,36 @@
+{
+  "format": "nova-v4-release-provenance",
+  "version": 1,
+  "engineVersion": "4.0.0",
+  "generatedAt": "2026-08-19T15:07:52.339Z",
+  "sourceCommit": "94437c325c027688c38d55366646bdb06328da07",
+  "sourceDescription": "Release3.0.0(2026.08.16)-1-g94437c3-dirty",
+  "workingTreeDirty": true,
+  "signedSourceTag": null,
+  "publisherSignature": null,
+  "buildInputs": {
+    "packageJsonSha256": "281a9c0f15e788f32ca7affc3c5efe35f38d7d883da8370a0d39f147209c3751",
+    "pnpmLockSha256": "cbc8c63eabe19cc4d64f2f934291714d40b81012fbdab39644c437d824dc5324",
+    "cargoLockSha256": "cb33c52300458fc6576dd88783a2efa327a5bf09d670e840e1046d52e53d7b12",
+    "tauriCargoLockSha256": "17e3db55a0a5b89d4b3efa99afce4f6350dc9cabb35dad080db3f5669c38092f"
+  },
+  "artifacts": {
+    "portable": {
+      "path": "src-tauri/target/release/nova_a.exe",
+      "bytes": 10726400,
+      "sha256": "254b220262267b4219af4905f3463b99adda721f2c7cd714caf3afc2fe8710ff"
+    },
+    "msi": {
+      "path": "src-tauri/target/release/bundle/msi/Nova_A_4.0.0_x64_en-US.msi",
+      "bytes": 4411392,
+      "sha256": "5c8e2d34cb9469ce584f54dec6c24350a1176fd18b4f146a54d09e3ea1d3a3a7"
+    },
+    "setup": {
+      "path": "src-tauri/target/release/bundle/nsis/Nova_A_4.0.0_x64-setup.exe",
+      "bytes": 3309498,
+      "sha256": "cecd86e990c31256337862b944df265878a0cec48744dabd5e916a25593fe818"
+    }
+  },
+  "status": "pending-external-signing",
+  "note": "This identifies the qualified working-tree artifacts. A signed tag and Whitelist publisher certificate were not supplied and are not falsely asserted."
+}

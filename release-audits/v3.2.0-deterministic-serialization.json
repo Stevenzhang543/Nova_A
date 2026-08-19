@@ -2,7 +2,7 @@
   "format": "nova-deterministic-serialization-report",
   "version": 1,
   "engineVersion": "3.2.0",
-  "generatedAt": "2026-08-16T11:19:48.375Z",
+  "generatedAt": "2026-08-19T13:50:29.348Z",
   "checks": [
     {
       "name": "no-op save byte identity",

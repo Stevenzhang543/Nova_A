@@ -1,0 +1,16 @@
+{
+  "format": "nova-v4-browser-matrix",
+  "version": 1,
+  "engineVersion": "4.0.0",
+  "generatedAt": "2026-08-19T15:07:52.339Z",
+  "browser": "Edg/147.0.3912.72",
+  "languages": [
+    "en",
+    "de",
+    "zh"
+  ],
+  "states": 286,
+  "screenshots": 12,
+  "consoleErrors": [],
+  "status": "passed"
+}

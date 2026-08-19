@@ -16,6 +16,9 @@ if (sha256Text('') !== 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b
 const source = await readJson('reference-projects/projects/data-foundation-validation.nova')
 const first = canonical(source), second = canonical(JSON.parse(first)), reordered = canonical(Object.fromEntries(Object.entries(source).reverse()))
 const corruptRepairable = structuredClone(source)
+// Keep this retained repair test focused on corrupt fields rather than the intentionally archived
+// engine ceiling in the schema-23 migration fixture.
+corruptRepairable.manifest.engineCompatibility.maximumExclusive = '5.0.0'
 delete corruptRepairable.missingResourceDemo
 corruptRepairable.projectMetadata.id = 'invalid-project-id'
 corruptRepairable.manifest.projectUuid = 'different-invalid-id'

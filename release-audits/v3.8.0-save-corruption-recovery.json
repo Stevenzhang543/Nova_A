@@ -1,0 +1,29 @@
+{
+  "format": "nova-save-corruption-recovery",
+  "version": 1,
+  "engineVersion": "3.8.0",
+  "generatedAt": "2026-08-19T13:56:03.926Z",
+  "firstCommit": true,
+  "secondCommit": true,
+  "corruptedRejected": true,
+  "backupRecovered": true,
+  "recoveredValues": {
+    "migrated": true,
+    "points": 10
+  },
+  "cancellationSafe": true,
+  "slotMetadata": [
+    {
+      "slot": "slot1",
+      "projectId": "v3.8-evidence",
+      "schemaVersion": 1,
+      "savedAt": "2026-08-19T13:56:43.330Z",
+      "bytes": 388,
+      "checksum": "ecd0764abda2e16c0000009c",
+      "valid": true,
+      "backupAvailable": true,
+      "location": "Web Storage · headless-runtime · v3.8-evidence"
+    }
+  ],
+  "status": "passed"
+}

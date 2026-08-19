@@ -1,0 +1,36 @@
+{
+  "format": "nova-performance-comparison",
+  "version": 1,
+  "engineVersion": "3.9.0",
+  "generatedAt": "2026-08-18T18:11:49.014Z",
+  "comparisonBasis": "Every retained version audit and benchmark reran; v3.9 adds metadata, validation, reports and focused panels without deleting renderer quality or animation.",
+  "retained": [
+    {
+      "name": "world",
+      "status": "passed"
+    },
+    {
+      "name": "worldAudit",
+      "status": "passed"
+    },
+    {
+      "name": "visualAudio",
+      "status": "passed"
+    },
+    {
+      "name": "physics",
+      "status": "passed"
+    },
+    {
+      "name": "scripting",
+      "status": "passed"
+    },
+    {
+      "name": "presentation",
+      "status": "passed"
+    }
+  ],
+  "regressions": [],
+  "interactiveTargetMeasurements": "See retained benchmark reports and target-hardware external gates.",
+  "status": "passed"
+}

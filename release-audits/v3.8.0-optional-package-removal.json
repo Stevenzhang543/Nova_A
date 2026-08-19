@@ -1,0 +1,18 @@
+{
+  "format": "nova-optional-package-removal",
+  "version": 1,
+  "engineVersion": "3.8.0",
+  "generatedAt": "2026-08-19T13:56:03.926Z",
+  "enabled": true,
+  "disabled": true,
+  "upgraded": true,
+  "removed": true,
+  "packageDisabled": true,
+  "prefabCreated": true,
+  "allocated": 1,
+  "released": true,
+  "resetApplied": true,
+  "leakRecorded": true,
+  "serializedDataPreserved": true,
+  "status": "passed"
+}

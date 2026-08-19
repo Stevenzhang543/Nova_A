@@ -13,11 +13,11 @@ const [pkg, projectFormat, rustFormat, tauri, contracts, app, crash, faults, tra
   read('src/runtime/stableContracts.ts'), read('src/App.vue'), read('src/runtime/crashReporter.ts'), read('src/runtime/faultCenter.ts'), read('src/i18n.ts'), read('src/runtime/packages.ts'), read('src/projects/templates.ts'), read('scripts/nova-export.mjs')
 ])
 
-assert(pkg.version === '3.2.0' && tauri.version === '3.2.0', 'Application/Tauri version is not 3.2.0.')
-assert(projectFormat.includes("NOVA_ENGINE_VERSION = '3.2.0'") && projectFormat.includes('NOVA_PROJECT_SCHEMA_VERSION = 23') && projectFormat.includes('NOVA_MINIMUM_SCHEMA_VERSION = 5'), 'TypeScript format authority must expose schema 23 / schemas 5–23 / engine 3.2.0.')
-assert(rustFormat.includes('CURRENT_ENGINE_VERSION: &str = "3.2.0"') && rustFormat.includes('CURRENT_FORMAT_VERSION: u32 = 23') && rustFormat.includes('MINIMUM_SUPPORTED_FORMAT_VERSION: u32 = 5'), 'Rust format authority does not match the v3.2 data contract.')
+assert(pkg.version === '4.0.0' && tauri.version === '4.0.0', 'Application/Tauri version is not 4.0.0.')
+assert(projectFormat.includes("NOVA_ENGINE_VERSION = '4.0.0'") && projectFormat.includes('NOVA_PROJECT_SCHEMA_VERSION = 29') && projectFormat.includes('NOVA_MINIMUM_SCHEMA_VERSION = 5'), 'TypeScript format authority must expose frozen schema 29 / schemas 5–29 / engine 4.0.0.')
+assert(rustFormat.includes('CURRENT_ENGINE_VERSION: &str = "4.0.0"') && rustFormat.includes('CURRENT_FORMAT_VERSION: u32 = 29') && rustFormat.includes('MINIMUM_SUPPORTED_FORMAT_VERSION: u32 = 5'), 'Rust format authority does not match the current data contract.')
 for (const value of ['NOVA_RUNTIME_API_VERSION = 1', 'NOVA_PLUGIN_API_VERSION = 2', 'NOVA_PACKAGE_MANIFEST_VERSION = 1', 'NOVA_BUILD_CLI_VERSION = 1']) assert(contracts.includes(value), `Stable contract missing ${value}.`)
-assert(cli.includes("const ENGINE_VERSION = '3.2.0'") && cli.includes("['windows', 'linux', 'macos', 'web']"), 'Build CLI 1 is not current or lacks the documented targets.')
+assert(cli.includes("const ENGINE_VERSION = '4.0.0'") && cli.includes("['windows', 'linux', 'macos', 'web']"), 'Build CLI 1 is not current or lacks the documented targets.')
 
 for (const component of ['ErrorRecovery', 'StudioStatusDialog']) assert(app.includes(`<${component}`), `${component} is not mounted globally.`)
 assert(crash.includes("addEventListener('error'") && crash.includes("addEventListener('unhandledrejection'") && crash.includes('ResizeObserver loop'), 'Global fault capture/filtering is incomplete.')
@@ -29,14 +29,14 @@ assert(!/\b(?:window\.)?(?:confirm|prompt|alert)\s*\(/.test((await collectSource
 
 const inputs = JSON.parse(await read('tests/fixtures/migrations/public-schema-inputs.json'))
 const expected = JSON.parse(await read('tests/fixtures/migrations/public-schema-expected.json'))
-assert(JSON.stringify(inputs.publicSchemas) === JSON.stringify(Array.from({ length: 19 }, (_, index) => index + 5)), 'Migration golden inputs do not cover every schema 5–23.')
-assert(expected.targetSchema === 23 && expected.targetEngine === '3.2.0', 'Migration golden output is not schema 23 / engine 3.2.0.')
+assert(JSON.stringify(inputs.publicSchemas) === JSON.stringify(Array.from({ length: 25 }, (_, index) => index + 5)), 'Migration golden inputs do not cover every schema 5–29.')
+assert(expected.targetSchema === 29 && expected.targetEngine === '4.0.0', 'Migration golden output is not frozen schema 29 / engine 4.0.0.')
 assert(rustFormat.includes('every_public_schema_matches_the_v3_golden_projection') && rustFormat.includes('corrupted_input_fuzz_cases_never_panic'), 'Rust golden migration/corruption tests are missing.')
 
 for (const kind of ['Light2D', 'ShadowCaster2D', 'TileMap2D', 'Animator', 'AudioSource', 'TextInput', 'ParticleEmitter2D', 'DistanceJoint2D']) assert(templates.includes(`'${kind}'`), `Reference templates do not exercise ${kind}.`)
 for (const project of ['empty', 'platformer', 'top-down', 'physics-sandbox', 'ui-showcase', 'networked-optional']) assert(existsSync(join(root, 'reference-projects', 'projects', `${project}.nova`)), `Generated reference project ${project}.nova is missing.`)
 assert(existsSync(join(root, 'reference-projects', 'plugins', 'hello-plugin', 'plugin.json')) && existsSync(join(root, 'reference-projects', 'plugins', 'hello-plugin', 'hello-plugin.wasm')), 'Plugin API 2 reference package is missing.')
-assert(packages.includes("engine: '>=2.9.0 <4.0.0'") && packages.includes("engineVersion = '3.2.0'"), 'Official optional packages are not compatible with the v3 engine range.')
+assert(packages.includes("engine: '>=2.9.0 <5.0.0'") && packages.includes("PACKAGE_ENGINE_VERSION = '4.0.0'"), 'Official optional packages are not compatible with the v4 engine range.')
 
 for (const document of ['STABLE_CONTRACTS.md', 'COMPATIBILITY.md', 'BENCHMARKS.md', 'STABILITY.md', 'PLATFORM_VERIFICATION.md', 'KNOWN_LIMITATIONS.md']) assert(existsSync(join(root, 'docs', document)), `Required v3 document ${document} is missing.`)
 for (const workflow of ['release-matrix.yml', 'stability-24h.yml']) assert(existsSync(join(root, '.github', 'workflows', workflow)), `Qualification workflow ${workflow} is missing.`)

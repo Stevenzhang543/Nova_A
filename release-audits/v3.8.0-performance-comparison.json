@@ -1,0 +1,23 @@
+{
+  "format": "nova-performance-comparison",
+  "version": 1,
+  "engineVersion": "3.8.0",
+  "generatedAt": "2026-08-18T13:37:31.151Z",
+  "comparisonBasis": "New 3.8 world-data workloads are compared with published acceptance budgets; retained v3.7 workloads reran in pnpm run audit.",
+  "measurements": {
+    "millionTileMilliseconds": 250.64419999999518,
+    "millionTileBudgetMilliseconds": 5000,
+    "millionTileHeapMb": 83.24520874023438,
+    "millionTileHeapBudgetMb": 256,
+    "streamingPeakMb": 16,
+    "streamingBudgetMb": 20,
+    "worldData": "passed"
+  },
+  "regressions": [],
+  "unmeasured": [
+    "target GPU frame-time",
+    "clean-machine cold start",
+    "24-hour wall-clock soak"
+  ],
+  "status": "passed"
+}

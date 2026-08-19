@@ -33,7 +33,7 @@ for (const file of manuals) {
 
 const html = await readFile(resolve(root, 'manual', 'index.html'), 'utf8')
 assert(!/Vervollst\?ndigung|g\?ltige|\?{3,}/.test(html), 'localized HTML contains encoding replacement characters')
-assert(html.includes('<title>Nova_A 3.2 Manual</title>') && html.includes('3.2 Documentation') && html.includes('Engine 3.2.0'), 'HTML manual metadata is stale')
+assert(html.includes('<title>Nova_A 4.0 Manual</title>') && html.includes('4.0 Documentation') && html.includes('Engine 4.0.0') && ['en-v40', 'de-v40', 'zh-CN-v40', 'en-v39', 'de-v39', 'zh-CN-v39', 'en-v38', 'de-v38', 'zh-CN-v38', 'en-v37', 'de-v37', 'zh-CN-v37', 'en-v36', 'de-v36', 'zh-CN-v36', 'en-v35', 'de-v35', 'zh-CN-v35', 'en-v34', 'de-v34', 'zh-CN-v34'].every(value => html.includes(value)), 'HTML manual metadata, v4.0 upgrade/support content, and retained build, world-data, visual/audio, presentation, scripting, or physics coverage is stale')
 for (const language of ['en', 'de', 'zh-CN']) assert(html.includes(`data-lang="${language}"`), `HTML manual is missing ${language}`)
 for (const file of manuals) assert(html.includes(file), `HTML manual does not link ${file}`)
 assert((html.match(/<section id=/g) ?? []).length >= 50, 'HTML manual does not expose enough bookmarkable sections')

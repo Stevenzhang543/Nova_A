@@ -1,7 +1,7 @@
-export const NOVA_ENGINE_VERSION = '3.2.0'
+export const NOVA_ENGINE_VERSION = '4.0.0'
 export const NOVA_PROJECT_FORMAT = 'Nova_A Project Format 2'
 export const NOVA_PROJECT_FORMAT_MAJOR = 2
-export const NOVA_PROJECT_SCHEMA_VERSION = 23
+export const NOVA_PROJECT_SCHEMA_VERSION = 29
 export const NOVA_MINIMUM_SCHEMA_VERSION = 5
 
 export interface ProjectCompatibility {

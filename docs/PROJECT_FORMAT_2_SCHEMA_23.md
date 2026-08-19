@@ -1,6 +1,6 @@
 # Nova_A Project Format 2 — Schema 23
 
-Status: authoritative for Nova_A 3.2.0. The Rust `nova_format` crate owns compatibility validation and migrations; the TypeScript project-data module owns editor-side canonical text emission and repair previews.
+Status: authoritative for Nova_A 3.3.0 (introduced in 3.2.0). The Rust `nova_format` crate owns compatibility validation and migrations; the TypeScript project-data module owns editor-side canonical text emission and repair previews.
 
 ## Identity and compatibility
 

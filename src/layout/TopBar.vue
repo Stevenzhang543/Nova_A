@@ -76,7 +76,7 @@
     </nav>
     <div class="top-spacer"></div>
     <span v-if="recoveryState.safeMode" class="safe-pill">{{ t('safeMode') }}</span>
-    <span class="release-pill">3.2.0</span>
+    <span class="release-pill">4.0.0</span>
     <input ref="fileInput" type="file" hidden accept="application/json,.nova,.json" @change="handleFileSelected">
   </header>
 </template>

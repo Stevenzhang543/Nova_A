@@ -188,6 +188,40 @@ mod tests {
     }
 
     #[test]
+    fn material_combine_modes_change_pair_restitution_deterministically() {
+        let collide = |mode: f64| {
+            let mut first = ellipse_record(1.0, -0.95, 0.0, 1.0, 1.0);
+            first[4] = 1.0;
+            first[10] = 1.0;
+            first[27] = 0.0;
+            first[55] = mode;
+            let mut second = ellipse_record(2.0, 0.95, 0.0, 1.0, 1.0);
+            second[4] = -1.0;
+            second[10] = 0.0;
+            second[27] = 0.0;
+            second[55] = mode;
+            first.extend(second);
+            step_physics(&first, 1.0 / 240.0, 0.0, 0.0)
+        };
+        let minimum = collide(1.0);
+        let maximum = collide(3.0);
+        assert!(minimum[4].abs() < 1.0e-8 && minimum[STRIDE + 4].abs() < 1.0e-8);
+        assert!(maximum[4] < -0.99 && maximum[STRIDE + 4] > 0.99);
+    }
+
+    #[test]
+    fn v3_3_body_records_upgrade_and_downgrade_without_shape_or_motion_loss() {
+        let mut current = ellipse_record(7.0, 2.0, -3.0, 0.75, 1.25);
+        current[4] = 4.0;
+        current.truncate(V3_3_STRIDE);
+        let output = step_physics(&current, 0.25, 0.0, 0.0);
+        assert_eq!(output.len(), V3_3_STRIDE);
+        assert!((output[2] - 3.0).abs() < 1.0e-10);
+        assert!((output[12] - 0.75).abs() < 1.0e-10);
+        assert!((output[13] - 1.25).abs() < 1.0e-10);
+    }
+
+    #[test]
     fn restitution_threshold_suppresses_low_speed_bounce() {
         let mut input = ellipse_record(1.0, -0.95, 0.0, 1.0, 1.0);
         input[4] = 0.1;
@@ -238,6 +272,27 @@ mod tests {
             .for_each(|value| *value = 0.0);
         let body = Body::from_data(&input, 0);
         assert!((body.shape.area() - 6.0).abs() < 1.0e-10);
+        assert!(body.inertia.is_finite());
+    }
+
+    #[test]
+    fn capsule_shape_uses_a_finite_deterministic_convex_approximation() {
+        let mut input = box_record(1.0, 0.0, 0.0, 2.0, 6.0);
+        input[1] = 2.0;
+        let body = Body::from_data(&input, 0);
+        let Shape::Polygon { ref vertices } = body.shape else { panic!("capsule must be convex") };
+        assert_eq!(vertices.len(), 12);
+        assert!(vertices.iter().all(|vertex| vertex.x.is_finite() && vertex.y.is_finite()));
+        assert!(Shape::Polygon { vertices: vertices.clone() }.area() > 8.0);
+        assert!(body.inertia.is_finite());
+    }
+
+    #[test]
+    fn finite_segment_preserves_explicit_thickness() {
+        let mut input = box_record(1.0, 0.0, 0.0, 8.0, 0.125);
+        input[1] = 3.0;
+        let body = Body::from_data(&input, 0);
+        assert!((body.shape.area() - 1.0).abs() < 1.0e-10);
         assert!(body.inertia.is_finite());
     }
 

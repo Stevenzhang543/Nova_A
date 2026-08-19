@@ -1,0 +1,14 @@
+{
+  "engineVersion": "4.0.0",
+  "schema": 29,
+  "projectName": "Grid and Polygon Navigation",
+  "minimumScenes": 1,
+  "minimumEntities": 4,
+  "expectedValidation": "pass",
+  "demonstrates": [
+    "grid and polygon navigation",
+    "costs, links and regions",
+    "dynamic obstacles and avoidance",
+    "navigation profiling"
+  ]
+}

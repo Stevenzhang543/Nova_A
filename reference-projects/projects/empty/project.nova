@@ -1,31 +1,31 @@
 {
   "projectFormat": "Nova_A Project Format 2",
   "projectFormatMajor": 2,
-  "formatVersion": 23,
-  "engineVersion": "3.2.0",
+  "formatVersion": 29,
+  "engineVersion": "4.0.0",
   "compatibility": {
     "format": "Nova_A Project Format 2",
     "major": 2,
-    "schemaVersion": 23,
+    "schemaVersion": 29,
     "minimumSchemaVersion": 5
   },
   "projectMetadata": {
-    "id": "a171e698-0545-4c9a-81ed-8cea98ec13c0",
+    "id": "55452405-7199-43b2-897a-bb85c8fbbbf1",
     "name": "Nova_A Empty 2D Reference",
-    "createdAt": "2026-08-16T10:58:32.056Z",
-    "updatedAt": "2026-08-16T10:58:32.056Z",
+    "createdAt": "2026-08-19T13:34:54.515Z",
+    "updatedAt": "2026-08-19T13:34:54.515Z",
     "format": "Nova_A Project Format 2",
     "template": "empty"
   },
   "manifest": {
     "manifestVersion": 1,
-    "projectUuid": "a171e698-0545-4c9a-81ed-8cea98ec13c0",
+    "projectUuid": "55452405-7199-43b2-897a-bb85c8fbbbf1",
     "name": "Nova_A Empty 2D Reference",
     "engineCompatibility": {
-      "minimum": "3.0.0",
-      "maximumExclusive": "4.0.0"
+      "minimum": "3.9.0",
+      "maximumExclusive": "5.0.0"
     },
-    "schemaVersion": 23,
+    "schemaVersion": 29,
     "packageLockfile": "Packages.lock",
     "buildPresets": [
       "ProjectSettings/build.presets.json"
@@ -83,7 +83,13 @@
             "x": 1,
             "y": 0,
             "gamepad": 0,
-            "deadzone": 0.18
+            "deviceId": "",
+            "deadzone": 0.18,
+            "threshold": 0.0001,
+            "invert": false,
+            "responseCurve": "linear",
+            "modifiers": [],
+            "chord": []
           },
           {
             "device": "keyboard",
@@ -92,7 +98,13 @@
             "x": 1,
             "y": 0,
             "gamepad": 0,
-            "deadzone": 0.18
+            "deviceId": "",
+            "deadzone": 0.18,
+            "threshold": 0.0001,
+            "invert": false,
+            "responseCurve": "linear",
+            "modifiers": [],
+            "chord": []
           }
         ]
       },
@@ -107,7 +119,13 @@
             "x": 1,
             "y": 0,
             "gamepad": 0,
-            "deadzone": 0.18
+            "deviceId": "",
+            "deadzone": 0.18,
+            "threshold": 0.0001,
+            "invert": false,
+            "responseCurve": "linear",
+            "modifiers": [],
+            "chord": []
           },
           {
             "device": "keyboard",
@@ -116,7 +134,13 @@
             "x": 1,
             "y": 0,
             "gamepad": 0,
-            "deadzone": 0.18
+            "deviceId": "",
+            "deadzone": 0.18,
+            "threshold": 0.0001,
+            "invert": false,
+            "responseCurve": "linear",
+            "modifiers": [],
+            "chord": []
           }
         ]
       },
@@ -131,7 +155,13 @@
             "x": 1,
             "y": 0,
             "gamepad": 0,
-            "deadzone": 0.18
+            "deviceId": "",
+            "deadzone": 0.18,
+            "threshold": 0.0001,
+            "invert": false,
+            "responseCurve": "linear",
+            "modifiers": [],
+            "chord": []
           },
           {
             "device": "gamepad-button",
@@ -140,7 +170,13 @@
             "x": 1,
             "y": 0,
             "gamepad": 0,
-            "deadzone": 0.18
+            "deviceId": "",
+            "deadzone": 0.18,
+            "threshold": 0.0001,
+            "invert": false,
+            "responseCurve": "linear",
+            "modifiers": [],
+            "chord": []
           }
         ]
       },
@@ -155,7 +191,13 @@
             "x": 1,
             "y": 0,
             "gamepad": 0,
-            "deadzone": 0.18
+            "deviceId": "",
+            "deadzone": 0.18,
+            "threshold": 0.0001,
+            "invert": false,
+            "responseCurve": "linear",
+            "modifiers": [],
+            "chord": []
           },
           {
             "device": "keyboard",
@@ -164,7 +206,13 @@
             "x": 1,
             "y": 0,
             "gamepad": 0,
-            "deadzone": 0.18
+            "deviceId": "",
+            "deadzone": 0.18,
+            "threshold": 0.0001,
+            "invert": false,
+            "responseCurve": "linear",
+            "modifiers": [],
+            "chord": []
           },
           {
             "device": "keyboard",
@@ -173,7 +221,13 @@
             "x": 1,
             "y": 0,
             "gamepad": 0,
-            "deadzone": 0.18
+            "deviceId": "",
+            "deadzone": 0.18,
+            "threshold": 0.0001,
+            "invert": false,
+            "responseCurve": "linear",
+            "modifiers": [],
+            "chord": []
           },
           {
             "device": "keyboard",
@@ -182,7 +236,13 @@
             "x": 1,
             "y": 0,
             "gamepad": 0,
-            "deadzone": 0.18
+            "deviceId": "",
+            "deadzone": 0.18,
+            "threshold": 0.0001,
+            "invert": false,
+            "responseCurve": "linear",
+            "modifiers": [],
+            "chord": []
           },
           {
             "device": "gamepad-axis",
@@ -191,7 +251,13 @@
             "x": 1,
             "y": 0,
             "gamepad": 0,
-            "deadzone": 0.18
+            "deviceId": "",
+            "deadzone": 0.18,
+            "threshold": 0.0001,
+            "invert": false,
+            "responseCurve": "linear",
+            "modifiers": [],
+            "chord": []
           }
         ]
       },
@@ -206,7 +272,13 @@
             "x": -1,
             "y": 0,
             "gamepad": 0,
-            "deadzone": 0.18
+            "deviceId": "",
+            "deadzone": 0.18,
+            "threshold": 0.0001,
+            "invert": false,
+            "responseCurve": "linear",
+            "modifiers": [],
+            "chord": []
           },
           {
             "device": "keyboard",
@@ -215,7 +287,13 @@
             "x": 1,
             "y": 0,
             "gamepad": 0,
-            "deadzone": 0.18
+            "deviceId": "",
+            "deadzone": 0.18,
+            "threshold": 0.0001,
+            "invert": false,
+            "responseCurve": "linear",
+            "modifiers": [],
+            "chord": []
           },
           {
             "device": "keyboard",
@@ -224,7 +302,13 @@
             "x": 0,
             "y": 1,
             "gamepad": 0,
-            "deadzone": 0.18
+            "deviceId": "",
+            "deadzone": 0.18,
+            "threshold": 0.0001,
+            "invert": false,
+            "responseCurve": "linear",
+            "modifiers": [],
+            "chord": []
           },
           {
             "device": "keyboard",
@@ -233,7 +317,13 @@
             "x": 0,
             "y": -1,
             "gamepad": 0,
-            "deadzone": 0.18
+            "deviceId": "",
+            "deadzone": 0.18,
+            "threshold": 0.0001,
+            "invert": false,
+            "responseCurve": "linear",
+            "modifiers": [],
+            "chord": []
           },
           {
             "device": "gamepad-axis",
@@ -242,7 +332,13 @@
             "x": 1,
             "y": 0,
             "gamepad": 0,
-            "deadzone": 0.18
+            "deviceId": "",
+            "deadzone": 0.18,
+            "threshold": 0.0001,
+            "invert": false,
+            "responseCurve": "linear",
+            "modifiers": [],
+            "chord": []
           },
           {
             "device": "gamepad-axis",
@@ -251,7 +347,13 @@
             "x": 0,
             "y": -1,
             "gamepad": 0,
-            "deadzone": 0.18
+            "deviceId": "",
+            "deadzone": 0.18,
+            "threshold": 0.0001,
+            "invert": false,
+            "responseCurve": "linear",
+            "modifiers": [],
+            "chord": []
           }
         ]
       }
@@ -331,9 +433,14 @@
       }
     },
     "scripting": {
+      "apiVersion": 1,
       "customSignals": [],
       "maxConsoleEntries": 2000,
-      "debuggerEnabled": true
+      "debuggerEnabled": true,
+      "hotReloadEnabled": true,
+      "breakOnRuntimeError": true,
+      "deterministicTestSeed": 1,
+      "externalEditorProtocol": true
     },
     "rendering": {
       "lightingEnabled": false,
@@ -420,7 +527,7 @@
       "activeLayer": 1,
       "renderLayer": "all",
       "globalSettings": {
-        "gravity": 9.8,
+        "gravity": 9.80665,
         "airFriction": 0.01,
         "timeScale": 1,
         "tickRate": 60,
@@ -458,6 +565,201 @@
           536870912,
           1073741824,
           2147483648
+        ],
+        "interpolation": "Interpolate",
+        "layers": [
+          {
+            "id": 0,
+            "name": "Default",
+            "description": "Default world collision",
+            "color": "#62a8ff"
+          },
+          {
+            "id": 1,
+            "name": "Layer 1",
+            "description": "",
+            "color": "#ff8c62"
+          },
+          {
+            "id": 2,
+            "name": "Layer 2",
+            "description": "",
+            "color": "#7bd88f"
+          },
+          {
+            "id": 3,
+            "name": "Layer 3",
+            "description": "",
+            "color": "#d994ff"
+          },
+          {
+            "id": 4,
+            "name": "Layer 4",
+            "description": "",
+            "color": "#ffd166"
+          },
+          {
+            "id": 5,
+            "name": "Layer 5",
+            "description": "",
+            "color": "#5ed4d4"
+          },
+          {
+            "id": 6,
+            "name": "Layer 6",
+            "description": "",
+            "color": "#ff6b96"
+          },
+          {
+            "id": 7,
+            "name": "Layer 7",
+            "description": "",
+            "color": "#a9b7c9"
+          },
+          {
+            "id": 8,
+            "name": "Layer 8",
+            "description": "",
+            "color": "#62a8ff"
+          },
+          {
+            "id": 9,
+            "name": "Layer 9",
+            "description": "",
+            "color": "#ff8c62"
+          },
+          {
+            "id": 10,
+            "name": "Layer 10",
+            "description": "",
+            "color": "#7bd88f"
+          },
+          {
+            "id": 11,
+            "name": "Layer 11",
+            "description": "",
+            "color": "#d994ff"
+          },
+          {
+            "id": 12,
+            "name": "Layer 12",
+            "description": "",
+            "color": "#ffd166"
+          },
+          {
+            "id": 13,
+            "name": "Layer 13",
+            "description": "",
+            "color": "#5ed4d4"
+          },
+          {
+            "id": 14,
+            "name": "Layer 14",
+            "description": "",
+            "color": "#ff6b96"
+          },
+          {
+            "id": 15,
+            "name": "Layer 15",
+            "description": "",
+            "color": "#a9b7c9"
+          },
+          {
+            "id": 16,
+            "name": "Layer 16",
+            "description": "",
+            "color": "#62a8ff"
+          },
+          {
+            "id": 17,
+            "name": "Layer 17",
+            "description": "",
+            "color": "#ff8c62"
+          },
+          {
+            "id": 18,
+            "name": "Layer 18",
+            "description": "",
+            "color": "#7bd88f"
+          },
+          {
+            "id": 19,
+            "name": "Layer 19",
+            "description": "",
+            "color": "#d994ff"
+          },
+          {
+            "id": 20,
+            "name": "Layer 20",
+            "description": "",
+            "color": "#ffd166"
+          },
+          {
+            "id": 21,
+            "name": "Layer 21",
+            "description": "",
+            "color": "#5ed4d4"
+          },
+          {
+            "id": 22,
+            "name": "Layer 22",
+            "description": "",
+            "color": "#ff6b96"
+          },
+          {
+            "id": 23,
+            "name": "Layer 23",
+            "description": "",
+            "color": "#a9b7c9"
+          },
+          {
+            "id": 24,
+            "name": "Layer 24",
+            "description": "",
+            "color": "#62a8ff"
+          },
+          {
+            "id": 25,
+            "name": "Layer 25",
+            "description": "",
+            "color": "#ff8c62"
+          },
+          {
+            "id": 26,
+            "name": "Layer 26",
+            "description": "",
+            "color": "#7bd88f"
+          },
+          {
+            "id": 27,
+            "name": "Layer 27",
+            "description": "",
+            "color": "#d994ff"
+          },
+          {
+            "id": 28,
+            "name": "Layer 28",
+            "description": "",
+            "color": "#ffd166"
+          },
+          {
+            "id": 29,
+            "name": "Layer 29",
+            "description": "",
+            "color": "#5ed4d4"
+          },
+          {
+            "id": 30,
+            "name": "Layer 30",
+            "description": "",
+            "color": "#ff6b96"
+          },
+          {
+            "id": 31,
+            "name": "Layer 31",
+            "description": "",
+            "color": "#a9b7c9"
+          }
         ]
       },
       "entities": [

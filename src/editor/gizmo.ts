@@ -3,7 +3,7 @@ import { setWorldTransform, worldTransform } from '../world/hierarchy'
 import type { Vec2 } from '../world/types'
 import { selectionCenter, selectionRoots } from './selection'
 
-export type TransformTool = 'select' | 'move' | 'rotate' | 'scale'
+export type TransformTool = 'select' | 'move' | 'rotate' | 'scale' | 'pivot' | 'rect' | 'path' | 'polygon' | 'collider' | 'measure'
 export type TransformSpace = 'local' | 'world'
 export type PivotMode = 'pivot' | 'center'
 export type GizmoAxis = 'x' | 'y' | 'xy'

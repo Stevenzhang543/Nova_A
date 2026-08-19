@@ -1,0 +1,87 @@
+{
+  "format": "nova-v3.6-presentation-audit",
+  "version": 1,
+  "engineVersion": "3.6.0",
+  "projectSchema": 26,
+  "generatedAt": "2026-08-19T13:55:21.971Z",
+  "severity0Open": 0,
+  "severity1Open": 0,
+  "checks": [
+    {
+      "name": "release/schema authority",
+      "status": "passed",
+      "evidence": "Engine 4.0.0 and Project Format 2 frozen schema 29 agree while retaining v3.6 presentation workflows."
+    },
+    {
+      "name": "input device matrix",
+      "status": "passed",
+      "evidence": "All required device families normalize and sample."
+    },
+    {
+      "name": "advanced input semantics",
+      "status": "passed",
+      "evidence": "Deadzone, threshold, inversion, curves, modifiers/chords, identity and conflicts are connected."
+    },
+    {
+      "name": "runtime rebinding/hotplug/replay",
+      "status": "passed",
+      "evidence": "Editor and runtime rebinding workflows include hotplug identity and record/replay."
+    },
+    {
+      "name": "structured localization",
+      "status": "passed",
+      "evidence": "CSV, context, plurals, extraction and missing reports passed."
+    },
+    {
+      "name": "pseudo/RTL/locale preview",
+      "status": "passed",
+      "evidence": "Pseudo expansion and RTL previews are user-facing."
+    },
+    {
+      "name": "responsive layout system",
+      "status": "passed",
+      "evidence": "Anchors, offsets, policies, containers, DPI, aspect and safe areas are connected."
+    },
+    {
+      "name": "reusable themes and UI audio",
+      "status": "passed",
+      "evidence": "Theme inheritance/variants/tokens and UI-only audio references share the UI workspace."
+    },
+    {
+      "name": "modal popup tooltip drag/drop scroll",
+      "status": "passed",
+      "evidence": "Interactive container behaviors are active at runtime."
+    },
+    {
+      "name": "focus/gamepad/a11y runtime",
+      "status": "passed",
+      "evidence": "Focus, gamepad navigation and Tier-1 metadata are runtime-connected."
+    },
+    {
+      "name": "source-linked accessibility audit",
+      "status": "passed",
+      "evidence": "Audit reports labels, reachability, contrast and order at source paths."
+    },
+    {
+      "name": "animation authoring completeness",
+      "status": "passed",
+      "evidence": "Dope sheet, curves, command tracks, sprite/skeletal tooling and state machines are retained."
+    },
+    {
+      "name": "audio workspace boundary",
+      "status": "passed",
+      "evidence": "Project mixer is in Audio; UI audio references remain in UI."
+    },
+    {
+      "name": "responsive UI references",
+      "status": "passed",
+      "evidence": "responsive-menu:valid, accessible-hud:valid, controller-navigation:valid, runtime-rebinding:valid, localization-workflow:valid, pseudoloc-stress:valid, rtl-interface:valid, animator-state-machine:valid, sprite-animation:valid"
+    },
+    {
+      "name": "no release-critical findings",
+      "status": "passed",
+      "evidence": "Generated evidence passed; S0=0, S1=0."
+    }
+  ],
+  "status": "passed"
+}

@@ -147,6 +147,8 @@ struct Body {
     restitution_threshold: f64,
     static_friction: f64,
     dynamic_friction: f64,
+    friction_combine: u8,
+    restitution_combine: u8,
     is_static: bool,
     is_kinematic: bool,
     is_sensor: bool,
@@ -165,18 +167,55 @@ struct Body {
 
 impl Body {
     fn from_data(data: &[f64], data_index: usize) -> Self {
-        let is_ellipse = finite_or(data[data_index + 1], 0.0).round() == 1.0;
+        // Shape codes are part of the stable editor/native ABI: 0 polygon/box,
+        // 1 circle/ellipse, 2 capsule, and 3 finite segment.  Higher-level
+        // chain and concave shapes remain query-only and are not submitted to
+        // the dynamic solver by the editor.
+        let shape_code = finite_or(data[data_index + 1], 0.0).round() as i32;
         let is_static = data[data_index + 9] > 0.5;
         let is_kinematic = !is_static && data[data_index + 24] > 0.5;
         let mass = positive(data[data_index + 8], 1.0);
         let scale_width = positive(data[data_index + 12].abs(), 1.0);
         let scale_height = positive(data[data_index + 13].abs(), 1.0);
 
-        let shape = if is_ellipse {
+        let shape = if shape_code == 1 {
             Shape::Ellipse {
                 radius_x: scale_width,
                 radius_y: scale_height,
             }
+        } else if shape_code == 2 {
+            // The current native shape representation is convex polygonal, so
+            // capsules use a fixed-sample approximation.  A fixed sample count
+            // keeps collision ordering and replays deterministic on every host.
+            let width = scale_width.max(MIN_DIMENSION);
+            let height = scale_height.max(MIN_DIMENSION);
+            let radius = (width.min(height) * 0.5).max(MIN_DIMENSION * 0.5);
+            let vertical = height >= width;
+            let straight = ((if vertical { height } else { width }) * 0.5 - radius).max(0.0);
+            let mut vertices = Vec::with_capacity(12);
+            for sample in 0..12 {
+                let angle = std::f64::consts::TAU * sample as f64 / 12.0;
+                let direction = Vec2::new(angle.cos(), angle.sin());
+                let center = if vertical {
+                    Vec2::new(0.0, if direction.y >= 0.0 { straight } else { -straight })
+                } else {
+                    Vec2::new(if direction.x >= 0.0 { straight } else { -straight }, 0.0)
+                };
+                vertices.push(center.add(direction.mul(radius)));
+            }
+            Shape::Polygon { vertices: convex_hull(vertices) }
+        } else if shape_code == 3 {
+            // A zero-area mathematical segment cannot produce a stable contact
+            // manifold.  Nova_A therefore models it as a finite, explicitly
+            // sized segment whose minor axis is never below MIN_DIMENSION.
+            let half_width = scale_width.max(MIN_DIMENSION) * 0.5;
+            let half_height = scale_height.max(MIN_DIMENSION) * 0.5;
+            Shape::Polygon { vertices: vec![
+                Vec2::new(-half_width, -half_height),
+                Vec2::new(half_width, -half_height),
+                Vec2::new(half_width, half_height),
+                Vec2::new(-half_width, half_height),
+            ] }
         } else {
             let mut vertices = Vec::new();
             for vertex_index in 0..4 {
@@ -275,6 +314,8 @@ impl Body {
             restitution_threshold: non_negative(data[data_index + 27], 1.0),
             static_friction: non_negative(data[data_index + 20], 0.0),
             dynamic_friction: non_negative(data[data_index + 11], 0.0),
+            friction_combine: finite_or(data[data_index + 54], 0.0).round().clamp(0.0, 3.0) as u8,
+            restitution_combine: finite_or(data[data_index + 55], 3.0).round().clamp(0.0, 3.0) as u8,
             is_static,
             is_kinematic,
             is_sensor: data[data_index + 28] > 0.5,

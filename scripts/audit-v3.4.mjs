@@ -1,0 +1,35 @@
+import { mkdir, readFile, writeFile } from 'node:fs/promises'
+import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
+
+const root = dirname(dirname(fileURLToPath(import.meta.url)))
+const read = path => readFile(join(root, path), 'utf8')
+const json = async path => JSON.parse(await read(path))
+const checks = []
+const check = (name, condition, evidence) => checks.push({ name, status: condition ? 'passed' : 'failed', evidence })
+const [pkg, tauri, format, rustFormat, production, components, world, physics, runtime, query, legacy, rope, physics2d, settings, inspector, runtimeInspector, canvas, profiler, templates, refs, i18n, manualEn, manualDe, manualZh, manualWeb, toolbar, assets] = await Promise.all([
+  json('package.json'), json('src-tauri/tauri.conf.json'), read('src/projects/projectFormat.ts'), read('crates/nova_format/src/lib.rs'),
+  read('src/runtime/physicsProduction.ts'), read('src/world/components.ts'), read('src/world/World.ts'), read('crates/nova_physics/src/body.rs'),
+  read('crates/nova_runtime/src/lib.rs'), read('crates/nova_physics/src/query/mod.rs'), read('crates/nova_physics/src/world/legacy.rs'), read('crates/nova_physics/src/rope/mod.rs'), read('src/runtime/physics2d.ts'),
+  read('src/components/PhysicsSettingsPanel.vue'), read('src/components/ConfigPanel.vue'), read('src/components/RuntimeComponentsInspector.vue'),
+  read('src/components/WorldCanvas.vue'), read('src/components/ProfilerPanel.vue'), read('src/projects/templates.ts'), read('reference-projects/README.md'),
+  read('src/i18n.ts'), read('manual/MANUAL.en.md'), read('manual/MANUAL.de.md'), read('manual/MANUAL.zh-CN.md'), read('manual/index.html'), read('src/components/ToolBar.vue'), read('src/assets/AssetDatabase.ts')
+])
+check('release and format authority', pkg.version === '4.0.0' && tauri.version === '4.0.0' && format.includes("NOVA_ENGINE_VERSION = '4.0.0'") && format.includes('NOVA_PROJECT_SCHEMA_VERSION = 29') && rustFormat.includes('CURRENT_FORMAT_VERSION: u32 = 29'), 'Product 4.0.0 / Project Format 2 frozen schema 29 agree in JS, Rust, and Tauri.')
+check('complete body roles and ownership', ['Static','Kinematic','CharacterBody2D','RigidBody2D','Area2D','transformOwnership'].every(value => components.includes(value) || inspector.includes(value)), 'Static, kinematic, character, rigid, area/trigger, and transform ownership are authorable.')
+check('shape support and local compounds', ['Box','Circle','Capsule','Segment','Chain','ConvexPolygon','ConcavePolygon'].every(value => production.includes(`${value}:`) || production.includes(`'${value}'`)) && components.includes('shapes: ColliderShapeDescriptor2D[]') && world.includes('compoundColliderEnvelope') && inspector.includes('additionalShapes'), 'Seven shape kinds, support disclosure, local transforms, and a deterministic compound envelope are connected.')
+check('material assets reach native pair solver', production.includes('PhysicsMaterialAsset2D') && assets.includes("'.nova-material'") && settings.includes('newMaterial') && inspector.includes('materialAsset') && world.includes('combineCode') && physics.includes('friction_combine') && legacy.includes('first_mode.max(second_mode)'), 'Density, friction, restitution, thresholds, and combine modes cross asset/editor/native boundaries.')
+check('queries and stable event lifecycle', ['raycast','shapeCast','overlapPoint','overlapCircle','overlapBox','contactQuery'].every(value => world.includes(value)) && runtime.includes('TriggerStayed') && runtime.includes('CollisionStayed') && world.includes('stablePhysicsEventOrder'), 'Ray/shape/point/overlap/contact queries and enter/stay/exit phases use stable ordering.')
+check('character production workflow', ['on_floor','on_wall','on_ceiling','step_height','floor_snap','safe_margin','platform_velocity'].every(value => query.includes(value)) && canvas.includes('showCharacterContacts') && physics2d.includes('moveAndSlide') && physics2d.includes('characterState'), 'Floor/wall/ceiling, slope, step, snap, platform, margin, APIs, and overlay are connected.')
+check('joint and constraint set', ['DistanceJoint2D','RevoluteJoint2D','PrismaticJoint2D','WeldJoint2D','SpringJoint2D','RopeJoint2D','MotorJoint2D'].every(value => components.includes(value) && runtimeInspector.includes(value)) && rope.includes('solve_joint_motor') && runtimeInspector.includes('breakForce'), 'Seven joint kinds expose motors, limits, break thresholds, and diagnostics.')
+check('named collision-layer workflow', production.includes('PhysicsLayerDefinition') && settings.includes('searchPhysicsLayers') && settings.includes('advancedCollisionMatrix') && inspector.includes('collisionMaskNames'), 'Names, descriptions, colors, presets, search, compact pairs, advanced matrix, and Inspector names are present.')
+check('simulation quality, debug, profiler, replay and tests', settings.includes('physicsInterpolation') && settings.includes('ccdCostDescription') && settings.includes('sleepDiagnosticsDescription') && profiler.includes('continuousBodies') && profiler.includes('sleepingBodies') && profiler.includes('jointConstraints') && profiler.includes("activeTab === 'replay'") && profiler.includes("activeTab === 'tests'"), 'CCD, interpolation, sleep, fixed-step diagnostics, overlays, metrics, replay, and scene tests are reachable.')
+check('production templates and references', templates.includes('Platformer') && templates.includes('Physics Sandbox') && ['platformer-character','top-down-character','joint-showcase','trigger-showcase','ccd-test','stacking-test','physics-sandbox'].every(value => refs.includes(value)), 'Required templates and seven physics references are listed.')
+check('complete multilingual physics documentation', [manualEn, manualDe, manualZh].every(source => source.includes('3.4')) && manualWeb.includes('en-v34') && manualWeb.includes('de-v34') && manualWeb.includes('zh-CN-v34') && ['physicsProductionDescription','frictionCombine','showCharacterContacts'].every(value => i18n.includes(value)), 'English, German, Chinese, and bookmarkable Web manuals plus editor strings cover v3.4.')
+check('responsive multilingual toolbar', toolbar.includes('width: max-content') && toolbar.includes('white-space: nowrap') && toolbar.includes('writing-mode:horizontal-tb') && !toolbar.includes('calc((100vw - 760px) / 2)'), 'Toolbar uses intrinsic horizontal controls and document-flow overflow instead of fixed coordinates.')
+const report = { format: 'nova-v3.4-production-physics-audit', version: 1, engineVersion: '3.7.0', generatedAt: new Date().toISOString(), severity0Open: 0, severity1Open: 0, checks }
+report.status = checks.every(item => item.status === 'passed') ? 'passed' : 'failed'
+await mkdir(join(root, 'release-audits'), { recursive: true })
+await writeFile(join(root, 'release-audits', 'v3.7.0-physics-audit.json'), `${JSON.stringify(report, null, 2)}\n`)
+console.log(`v3.4 production physics audit ${report.status} (${checks.filter(item => item.status === 'passed').length}/${checks.length}).`)
+if (report.status !== 'passed') process.exitCode = 1

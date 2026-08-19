@@ -44,6 +44,7 @@ interface GeometryEntity {
     radiusX: number
     radiusY: number
   }
+  authoring?: { kind?: string }
   getCollider?: () => {
     kind: string
     enabled: boolean
@@ -245,6 +246,11 @@ function normalizeAppearance(entity: GeometryEntity): void {
 }
 
 function normalizeShape(entity: GeometryEntity): void {
+  if ((entity.authoring?.kind === 'Line' || entity.authoring?.kind === 'Path') && entity.renderer) {
+    entity.renderer.vertices = entity.renderer.vertices.slice(0, 10_000).map(point => ({ x: finiteNumber(point.x), y: finiteNumber(point.y) }))
+    if (entity.renderer.vertices.length < 2) entity.renderer.vertices = [{ x: -.5, y: 0 }, { x: .5, y: 0 }]
+    return
+  }
   if (entity.shapeType === 'Circle') {
     const radiusX = positiveNumber(entity.radiusX, 1)
     const radiusY = positiveNumber(entity.radiusY, radiusX)

@@ -10,7 +10,7 @@ import {
 } from '../store/physics'
 import { finiteNumber, normalizeEntity } from '../world/geometry'
 import type { Entity } from '../world/Entity'
-import type { Animator } from '../world/components'
+import type { Animator, Checkbox, NavigationAgent2D, ProgressBar, Slider, Text as UIText, TextRenderer2D } from '../world/components'
 import { worldTransform, setWorldTransform } from '../world/hierarchy'
 import type { RuntimePhysicsEvent } from '../world/World'
 import { instantiatePrefab } from './prefabs'
@@ -25,13 +25,15 @@ import { particleRuntime } from './particles'
 import { clearSaveValues, commitSaveSlot, deleteSaveValue, loadSaveSlot, saveSnapshot, setSaveValue, useSaveProject, type SaveValue } from './saveGame'
 import { pluginRuntime } from './plugins'
 import { analyzeScript } from '../editor/scriptLanguage'
-import { clearScriptDebugger, pauseScriptDebugger, scriptDebugState } from './scriptDebug'
+import { beginDebugSession, clearScriptDebugger, evaluateDebugExpression, pauseScriptDebugger, requestDebugStep, scriptDebugState, type DebugStepMode, type ScriptTestResult } from './scriptDebug'
 import { scriptProjectSettings } from './scriptSettings'
 import { beforeWorldPhysicsStep, beginWorldGameplay, canUseCoyoteTime, queueCharacterMotion, resetWorldGameplay } from './worldGameplay'
 import { acquirePooled, releasePooled } from './objectPool'
 import type { CharacterBody2D } from '../world/components'
 import { completeReplayFixedStep, deterministicRandom, replayFixedInput, resetDeterministicSeed } from './replay'
 import { beginProductionRuntime, stopProductionRuntime, updateProductionRuntime } from './productionRuntime'
+import { recordScriptFunction } from './profiler'
+import type { ScriptBreakpointMetadata } from '../assets/types'
 
 type LifecycleFunction = 'awake' | 'start' | 'fixed_update' | 'update' | 'late_update' | 'on_destroy' | 'on_timer' | 'on_task' | 'on_signal'
 
@@ -41,7 +43,20 @@ interface ScriptExecution {
   properties: Record<string, number | string | boolean>
 }
 
-interface ExportedProperty { name: string; value: number | string | boolean }
+export interface ExportedProperty {
+  name: string
+  value: number | string | boolean
+  valueType: string
+  defaultValue: number | string | boolean
+  minimum: number | null
+  maximum: number | null
+  step: number | null
+  enumValues: string[]
+  resourceType: string | null
+  group: string
+  tooltip: string
+  serialized: boolean
+}
 
 type ScriptCommand =
   | { type: 'applyForce'; x: number; y: number }
@@ -78,6 +93,9 @@ type ScriptCommand =
   | { type: 'saveClear' }
   | { type: 'saveLoad'; slot: string }
   | { type: 'saveCommit'; slot: string }
+  | { type: 'uiSetText'; text: string }
+  | { type: 'uiSetValue'; value: number }
+  | { type: 'navigationSetTarget'; x: number; y: number }
 
 interface ScriptContact {
   otherEntity: string
@@ -100,11 +118,11 @@ export interface RuntimeDiagnostics {
 }
 
 const EMPTY_INPUT: InputSnapshot = {
-  down: {}, pressed: {}, released: {}, axes: {}, vectors: {}, mousePosition: [0, 0], wheel: [0, 0]
+  down: {}, pressed: {}, released: {}, axes: {}, vectors: {}, mousePosition: [0, 0], wheel: [0, 0], pointerDelta: [0, 0], touches: 0, devices: []
 }
 
-export const DEFAULT_SCRIPT_SOURCE = `@export let move_speed = 5.0;
-@export let jump_force = 10.0;
+export const DEFAULT_SCRIPT_SOURCE = `@export(type="float", min=0, max=100, step=0.1, group="Movement", tooltip="Horizontal acceleration in newtons") let move_speed = 5.0;
+@export(type="float", min=0, max=1000, step=0.1, group="Movement", tooltip="Instant vertical impulse in N·s") let jump_force = 10.0;
 
 fn awake() {
     print(\`Awake: ${'${entity_name()}'}\`);
@@ -130,15 +148,6 @@ fn late_update(dt) {
 }
 
 fn on_collision_enter(other, point_x, point_y, normal_x, normal_y, relative_x, relative_y) {
-}
-
-fn on_pressed() {
-}
-
-fn on_hover_enter() {
-}
-
-fn on_hover_exit() {
 }
 `
 
@@ -173,6 +182,7 @@ export class GameplayRuntime {
     resetDeterministicSeed()
     this.awakened.clear()
     this.started.clear()
+    beginDebugSession()
     this.fixedPressed = {}
     this.fixedReleased = {}
     this.ensureScriptRuntime()
@@ -231,7 +241,7 @@ export class GameplayRuntime {
     const timerScriptsStarted = performance.now()
     for (const timer of expired) {
       const entity = physicsState.world.entities.find(candidate => candidate.uuid === timer.entityUuid)
-      if (entity && timer.kind === 'timer') this.runEntityFunction(entity, 'on_timer', { otherEntity: timer.name, point: [0, 0], normal: [0, 0], relativeVelocity: [0, 0] })
+      if (entity && timer.kind === 'timer') this.runEntityFunction(entity, 'on_timer', undefined, { name: timer.name, source: entity.uuid, payload: null })
       else if (entity) this.runEntityFunction(entity, 'on_task', undefined, { name: timer.name, source: entity.uuid, payload: null })
     }
     scriptsMs += performance.now() - timerScriptsStarted
@@ -367,7 +377,8 @@ export class GameplayRuntime {
     try {
       const exports = JSON.parse(this.scriptRuntime.validate(source)) as ExportedProperty[]
       const next: Record<string, number | string | boolean> = {}
-      for (const exported of exports) next[exported.name] = component.properties[exported.name] ?? exported.value
+      component.propertyMetadata = Object.fromEntries(exports.map(exported => [exported.name, { ...exported, defaultValue: exported.defaultValue ?? exported.value }]))
+      for (const exported of exports) next[exported.name] = this.exportValue(exported, component.properties[exported.name])
       component.properties = next
       component.lastError = null
       return null
@@ -400,7 +411,12 @@ export class GameplayRuntime {
   }
 
   queueHotReload(scriptUuid: string, source: string): void {
+    if (!scriptProjectSettings.hotReloadEnabled) {
+      scriptDebugState.hotReload = { status: 'disabled', scriptUuid, message: 'Project hot reload is disabled', frame: this.time.value.frame }
+      return
+    }
     this.pendingReloads.set(scriptUuid, source)
+    scriptDebugState.hotReload = { status: 'pending', scriptUuid, message: 'Validated source queued for the next frame boundary', frame: this.time.value.frame }
   }
 
   emitSignal(name: string, payload: unknown = null, target = '', source = 'editor'): void {
@@ -417,6 +433,7 @@ export class GameplayRuntime {
     const pending = this.pendingDebugInvocation
     this.pendingDebugInvocation = null
     clearScriptDebugger()
+    requestDebugStep('continue')
     if (pending) {
       const entity = physicsState.world.entities.find(candidate => candidate.uuid === pending.entityUuid)
       if (entity) this.runEntityFunction(entity, pending.functionName, pending.contact, pending.event, true)
@@ -424,53 +441,73 @@ export class GameplayRuntime {
     if (physicsState.playMode === 'paused') physicsState.playMode = 'playing'
   }
 
-  debugStep(): void {
+  debugStep(mode: Exclude<DebugStepMode, 'continue'> = 'over'): void {
     const pending = this.pendingDebugInvocation
     this.pendingDebugInvocation = null
     clearScriptDebugger()
+    requestDebugStep(mode)
     if (pending) {
       const entity = physicsState.world.entities.find(candidate => candidate.uuid === pending.entityUuid)
       if (entity) this.runEntityFunction(entity, pending.functionName, pending.contact, pending.event, true)
     }
     physicsState.playMode = 'paused'
     scriptDebugState.paused = true
-    scriptDebugState.reason = 'Paused after one script callback'
+    scriptDebugState.reason = `Step ${mode} completed at a safe callback boundary`
   }
 
-  runScriptTests(scriptUuid?: string): Array<{ script: string; test: string; passed: boolean; message: string }> {
+  debugRestart(): void {
+    this.stopSession(false)
+    this.beginSession()
+    physicsState.playMode = 'paused'
+    scriptDebugState.paused = true
+    scriptDebugState.reason = 'Runtime restarted; continue to enter the next callback'
+  }
+
+  runScriptTests(scriptUuid?: string, options: { tags?: string[]; includeSkipped?: boolean } = {}): ScriptTestResult[] {
     const assets = scriptUuid ? [resolveAsset(scriptUuid)].filter(Boolean) : physicsState.world.entities.map(entity => resolveAsset(entity.script2D?.scriptAsset ?? '')).filter(Boolean)
     const unique = [...new Map(assets.map(asset => [asset!.uuid, asset!])).values()].filter(asset => asset.assetType === 'script')
-    const results: Array<{ script: string; test: string; passed: boolean; message: string }> = []
+    const results: ScriptTestResult[] = []
     for (const asset of unique) {
       let source: string | null = null
-      try { source = this.resolveScriptBundle(asset.uuid) } catch (error) { results.push({ script: asset.name, test: 'module resolution', passed: false, message: this.errorMessage(error) }); continue }
+      try { source = this.resolveScriptBundle(asset.uuid) } catch (error) { results.push({ script: asset.name, test: 'module resolution', passed: false, skipped: false, durationMs: 0, seed: 1, caseName: '', tags: [], message: this.errorMessage(error) }); continue }
       if (!source) continue
-      const tests = analyzeScript(source).symbols.filter(symbol => symbol.kind === 'test')
-      for (const symbol of tests) {
+      const scriptAnalysis = analyzeScript(source)
+      const tests = scriptAnalysis.tests.filter(test => !options.tags?.length || options.tags.every(tag => test.tags.includes(tag)))
+      for (const test of tests) {
+        const cases = test.cases.length ? test.cases : ['']
+        for (const caseName of cases) {
+          const started = performance.now()
+          if (test.skipped && !options.includeSkipped) {
+            results.push({ script: asset.name, test: test.name, passed: true, skipped: true, durationMs: 0, seed: test.seed, caseName, tags: test.tags, message: 'Skipped by @test metadata' })
+            continue
+          }
         try {
           const isolated = new WasmScriptRuntime()
           const context = {
             entity: 'test-entity', entityName: 'Script test', components: [], entities: {},
-            time: { delta: 0, fixedDelta: 1 / 60, elapsed: 0, scale: 1, frame: 0 }, randomSeed: 1, input: EMPTY_INPUT,
-            event: { name: 'test.run', source: 'Script Studio', payload: { test: symbol.name } },
+            time: { delta: 0, fixedDelta: 1 / 60, elapsed: 0, scale: 1, frame: 0 }, randomSeed: test.seed || scriptProjectSettings.deterministicTestSeed, input: EMPTY_INPUT,
+            event: { name: 'test.run', source: 'Script Studio', payload: { test: test.name, case: caseName, seed: test.seed } },
             properties: {} as Record<string, number | string | boolean>, save: {},
             transform: { position: [0, 0], rotation: 0, scale: [1, 1] }, rigidBody: null
           }
           const logs: ScriptExecution['logs'] = []
-          for (const functionName of ['awake', 'start', symbol.name]) {
+          const callbacks = ['before_all', 'before_each', test.name, 'after_each', 'after_all'].filter(name => scriptAnalysis.functions[name])
+          for (const functionName of callbacks) {
             const execution = JSON.parse(isolated.execute_json(source, functionName, JSON.stringify(context))) as ScriptExecution
             context.properties = execution.properties
             logs.push(...execution.logs)
+            if (performance.now() - started > test.timeoutMs) throw new Error(`Timed out after ${test.timeoutMs} ms`)
           }
           const failure = logs.find(log => log.level === 'error')
-          results.push({ script: asset.name, test: symbol.name, passed: !failure, message: failure?.message ?? 'Passed (awake, start, test)' })
+          results.push({ script: asset.name, test: test.name, passed: !failure, skipped: false, durationMs: performance.now() - started, seed: test.seed, caseName, tags: test.tags, message: failure?.message ?? `Passed with deterministic seed ${test.seed}` })
         } catch (error) {
-          results.push({ script: asset.name, test: symbol.name, passed: false, message: this.errorMessage(error) })
+          results.push({ script: asset.name, test: test.name, passed: false, skipped: false, durationMs: performance.now() - started, seed: test.seed, caseName, tags: test.tags, message: this.errorMessage(error) })
+        }
         }
       }
     }
     scriptDebugState.testResults.splice(0, scriptDebugState.testResults.length, ...results)
-    addEditorLog(`Script tests: ${results.filter(result => result.passed).length}/${results.length} passed`, 'Script', results.every(result => result.passed) ? 'info' : 'error')
+    addEditorLog(`Script tests: ${results.filter(result => result.passed && !result.skipped).length}/${results.filter(result => !result.skipped).length} passed, ${results.filter(result => result.skipped).length} skipped`, 'Script', results.every(result => result.passed) ? 'info' : 'error')
     return results
   }
 
@@ -559,15 +596,30 @@ export class GameplayRuntime {
     }
     if (!bypassBreakpoint && scriptProjectSettings.debuggerEnabled && scriptDebugState.enabled && !scriptDebugState.paused) {
       const fn = analyzeScript(source).functions[functionName]
-      const breakpoint = asset.script?.breakpoints.find(line => fn && line >= fn.line && line <= fn.endLine)
+      const legacy = (asset.script?.breakpoints ?? []).map((line, index): ScriptBreakpointMetadata => ({ id: `line-${line}-${index}`, line, functionName: '', condition: '', hitCondition: 0, logMessage: '', enabled: true, hitCount: 0 }))
+      const details = asset.script?.breakpointDetails?.length ? asset.script.breakpointDetails : legacy
+      const breakpoint = details.find(point => point.enabled && fn && point.line >= fn.line && point.line <= fn.endLine && (!point.functionName || point.functionName === functionName))
       if (breakpoint) {
+        breakpoint.hitCount = Math.min(1_000_000_000, breakpoint.hitCount + 1)
+        let condition = true
+        try { if (breakpoint.condition.trim()) condition = Boolean(evaluateDebugExpression(breakpoint.condition, context)) } catch (error) {
+          addEditorLog(`Breakpoint condition error at ${asset.path}:${breakpoint.line}: ${this.errorMessage(error)}`, 'Script', 'error', asset.uuid); condition = false
+        }
+        if (breakpoint.hitCondition > 0 && breakpoint.hitCount < breakpoint.hitCondition) condition = false
+        if (condition && breakpoint.logMessage.trim()) {
+          addEditorLog(this.formatLogpoint(breakpoint.logMessage, context), 'Script', 'debug', asset.uuid)
+          condition = false
+        }
+        if (condition) {
         this.pendingDebugInvocation = { entityUuid: entity.uuid, functionName, contact, event }
         physicsState.playMode = 'paused'
-        pauseScriptDebugger({ entityUuid: entity.uuid, entityName: entity.name, scriptUuid: asset.uuid, functionName, line: breakpoint }, context, `Breakpoint at ${asset.path}:${breakpoint}`)
-        addEditorLog(`Paused at ${asset.path}:${breakpoint}`, 'Script', 'debug', asset.uuid)
+        pauseScriptDebugger({ entityUuid: entity.uuid, entityName: entity.name, scriptUuid: asset.uuid, sourcePath: asset.path, functionName, line: breakpoint.line, depth: 0 }, context, `Breakpoint at ${asset.path}:${breakpoint.line} · hit ${breakpoint.hitCount}`)
+        addEditorLog(`Paused at ${asset.path}:${breakpoint.line}`, 'Script', 'debug', asset.uuid)
         return
+        }
       }
     }
+    const started = performance.now()
     try {
       this.ensureCompiled(asset.uuid, source)
       const runtime = this.scriptRuntime as unknown as { execute_cached_json(id: string, fn: string, context: string): string }
@@ -579,6 +631,12 @@ export class GameplayRuntime {
       for (const command of execution.commands) this.applyCommand(entity, command)
     } catch (error) {
       this.reportScriptError(entity, this.errorMessage(error))
+      if (scriptProjectSettings.debuggerEnabled && scriptProjectSettings.breakOnRuntimeError) {
+        physicsState.playMode = 'paused'
+        pauseScriptDebugger({ entityUuid: entity.uuid, entityName: entity.name, scriptUuid: asset.uuid, sourcePath: asset.path, functionName, line: analyzeScript(source).functions[functionName]?.line ?? 1, depth: 0 }, context, `Runtime error: ${this.errorMessage(error)}`)
+      }
+    } finally {
+      recordScriptFunction(asset.uuid, asset.name, functionName, performance.now() - started, source.length * 2 + JSON.stringify(context.properties).length)
     }
   }
 
@@ -594,10 +652,10 @@ export class GameplayRuntime {
       entity.velocity = { x: finite(command.x), y: finite(command.y) }
     } else if (command.type === 'setPosition') {
       const transform = worldTransform(entity, physicsState.world.entities)
-      setWorldTransform(entity, { ...transform, position: { x: finite(command.x), y: finite(command.y) } }, physicsState.world.entities)
+      physicsState.world.teleport(entity, { x: finite(command.x), y: finite(command.y) }, transform.rotation)
     } else if (command.type === 'setRotation') {
       const transform = worldTransform(entity, physicsState.world.entities)
-      setWorldTransform(entity, { ...transform, rotation: finite(command.radians) }, physicsState.world.entities)
+      physicsState.world.teleport(entity, transform.position, finite(command.radians))
     } else if (command.type === 'setScale') {
       const transform = worldTransform(entity, physicsState.world.entities)
       setWorldTransform(entity, { ...transform, scale: { x: finite(command.x), y: finite(command.y) } }, physicsState.world.entities)
@@ -638,6 +696,21 @@ export class GameplayRuntime {
     else if (command.type === 'saveClear') clearSaveValues()
     else if (command.type === 'saveLoad') loadSaveSlot(command.slot)
     else if (command.type === 'saveCommit' && !commitSaveSlot(command.slot)) addEditorLog('Save commit failed', 'Save', 'error')
+    else if (command.type === 'uiSetText') {
+      const text = entity.getComponent<UIText>('Text') ?? entity.getComponent<TextRenderer2D>('TextRenderer2D')
+      if (text) text.text = command.text
+      else addEditorLog(`${entity.name}: ui_set_text requires Text or TextRenderer2D`, 'Script', 'error', entity.script2D?.scriptAsset ?? undefined)
+    } else if (command.type === 'uiSetValue') {
+      const slider = entity.getComponent<Slider>('Slider'), progress = entity.getComponent<ProgressBar>('ProgressBar'), checkbox = entity.getComponent<Checkbox>('Checkbox')
+      if (slider) slider.value = Math.min(slider.max, Math.max(slider.min, finite(command.value)))
+      else if (progress) progress.value = Math.min(progress.max, Math.max(progress.min, finite(command.value)))
+      else if (checkbox) checkbox.checked = finite(command.value) >= .5
+      else addEditorLog(`${entity.name}: ui_set_value requires Slider, ProgressBar, or Checkbox`, 'Script', 'error', entity.script2D?.scriptAsset ?? undefined)
+    } else if (command.type === 'navigationSetTarget') {
+      const agent = entity.getComponent<NavigationAgent2D>('NavigationAgent2D')
+      if (agent) { agent.targetPosition = { x: finite(command.x), y: finite(command.y) }; agent.targetEntityUuid = null; agent.pathStatus = 'Idle'; agent.path = []; agent.pathIndex = 0 }
+      else addEditorLog(`${entity.name}: navigation_set_target requires NavigationAgent2D`, 'Script', 'error', entity.script2D?.scriptAsset ?? undefined)
+    }
     normalizeEntity(entity)
   }
 
@@ -704,7 +777,8 @@ export class GameplayRuntime {
         : event.type === 'collisionStayed' ? 'on_collision_stay'
           : event.type === 'collisionEnded' ? 'on_collision_exit'
             : event.type === 'triggerEntered' ? 'on_trigger_enter'
-              : event.type === 'triggerExited' ? 'on_trigger_exit' : null
+              : event.type === 'triggerStayed' ? 'on_trigger_stay'
+                : event.type === 'triggerExited' ? 'on_trigger_exit' : null
       if (!functionName) continue
       const point = event.point ?? [
         (worldTransform(first, physicsState.world.entities).position.x + worldTransform(second, physicsState.world.entities).position.x) * .5,
@@ -762,23 +836,41 @@ export class GameplayRuntime {
     }
   }
 
-  private ensureCompiled(scriptUuid: string, source: string): void {
-    if (this.compiledSources.get(scriptUuid) === source) return
+  private ensureCompiled(scriptUuid: string, source: string): ExportedProperty[] {
+    if (this.compiledSources.get(scriptUuid) === source) return []
     if (!this.scriptRuntime) throw new Error('Script runtime is unavailable')
     const runtime = this.scriptRuntime as unknown as { compile_cached(id: string, source: string): string }
-    runtime.compile_cached(scriptUuid, source)
+    const exports = JSON.parse(runtime.compile_cached(scriptUuid, source)) as ExportedProperty[]
     this.compiledSources.set(scriptUuid, source)
+    return exports
   }
 
   private flushHotReloads(): void {
     for (const [uuid] of this.pendingReloads) {
+      const asset = resolveAsset(uuid)
+      if (asset?.script?.reloadPolicy === 'disabled') {
+        scriptDebugState.hotReload = { status: 'disabled', scriptUuid: uuid, message: 'This script opted out of hot reload', frame: this.time.value.frame }
+        addEditorLog(`Hot reload disabled for ${asset.name}`, 'Script', 'debug', uuid)
+        continue
+      }
       try {
         const source = this.resolveScriptBundle(uuid)
         if (!source) continue
-        this.ensureCompiled(uuid, source)
+        const exports = this.ensureCompiled(uuid, source)
+        for (const entity of physicsState.world.entities.filter(candidate => resolveAsset(candidate.script2D?.scriptAsset ?? '')?.uuid === uuid)) {
+          const component = entity.script2D
+          if (!component) continue
+          component.propertyMetadata = Object.fromEntries(exports.map(exported => [exported.name, { ...exported, defaultValue: exported.defaultValue ?? exported.value }]))
+          const recreate = asset?.script?.reloadPolicy === 'recreate'
+          component.properties = Object.fromEntries(exports.map(exported => [exported.name, this.exportValue(exported, recreate ? undefined : component.properties[exported.name])]))
+          if (recreate) { this.awakened.delete(entity.uuid); this.started.delete(entity.uuid) }
+        }
+        scriptDebugState.hotReload = { status: 'applied', scriptUuid: uuid, message: asset?.script?.reloadPolicy === 'recreate' ? 'Applied and recreated instances' : 'Applied with compatible serialized state preserved', frame: this.time.value.frame }
         addEditorLog(`Hot reloaded ${resolveAsset(uuid)?.name ?? uuid} at frame ${this.time.value.frame}`, 'Script', 'debug', uuid)
       } catch (error) {
-        addEditorLog(`Hot reload rejected; previous valid program retained: ${this.errorMessage(error)}`, 'Script', 'error', uuid)
+        const message = `Hot reload rejected; previous valid program retained: ${this.errorMessage(error)}`
+        scriptDebugState.hotReload = { status: 'rejected', scriptUuid: uuid, message, frame: this.time.value.frame }
+        addEditorLog(message, 'Script', 'error', uuid)
       }
     }
     this.pendingReloads.clear()
@@ -791,7 +883,16 @@ export class GameplayRuntime {
       const recipients = signal.target
         ? physicsState.world.entities.filter(entity => entity.uuid === signal.target)
         : physicsState.world.entities
-      for (const entity of recipients) this.runEntityFunction(entity, 'on_signal', undefined, signal)
+      for (const entity of recipients) {
+        this.runEntityFunction(entity, 'on_signal', undefined, signal)
+        const asset = resolveAsset(entity.script2D?.scriptAsset ?? '')
+        for (const connection of asset?.script?.signalConnections ?? []) {
+          if (!connection.enabled || connection.signal !== signal.name) continue
+          if (connection.source && connection.source !== signal.source) continue
+          if (connection.target && connection.target !== entity.uuid) continue
+          if (connection.callback !== 'on_signal') this.runEntityFunction(entity, connection.callback, undefined, signal)
+        }
+      }
     }
   }
 
@@ -827,6 +928,23 @@ export class GameplayRuntime {
 
   private serializable(value: unknown): unknown {
     try { return JSON.parse(JSON.stringify(value)) } catch { return null }
+  }
+
+  private exportValue(exported: ExportedProperty, previous: unknown): number | string | boolean {
+    const fallback = exported.defaultValue ?? exported.value
+    if (typeof previous !== typeof fallback) return fallback
+    if (typeof previous === 'number') {
+      if (!Number.isFinite(previous)) return Number(fallback)
+      return Math.min(exported.maximum ?? Number.MAX_VALUE, Math.max(exported.minimum ?? -Number.MAX_VALUE, previous))
+    }
+    if (typeof previous === 'string' && exported.enumValues?.length && !exported.enumValues.includes(previous)) return String(fallback)
+    return previous as number | string | boolean
+  }
+
+  private formatLogpoint(template: string, context: Record<string, unknown>): string {
+    return template.slice(0, 1_024).replace(/\{([A-Za-z_][A-Za-z0-9_.]*)\}/g, (_match, path: string) => {
+      try { const value = evaluateDebugExpression(path, context); return typeof value === 'string' ? value : JSON.stringify(value) } catch { return `<${path}: unavailable>` }
+    })
   }
 }
 

@@ -1,0 +1,41 @@
+{
+  "format": "nova-known-issues",
+  "version": 1,
+  "engineVersion": "3.9.0",
+  "generatedAt": "2026-08-18T18:11:48.497Z",
+  "severity0Open": 0,
+  "severity1Open": 0,
+  "items": [
+    {
+      "severity": "S2",
+      "area": "release signing",
+      "issue": "This working-tree build has no signed source tag and the Windows binaries are not Authenticode signed because no Whitelist signing identity was supplied.",
+      "workaround": "Sign the exact release commit/tag and installers in protected release infrastructure, then publish the tag and certificate provenance."
+    },
+    {
+      "severity": "S2",
+      "area": "clean-machine lifecycle",
+      "issue": "Portable startup and installer integrity pass on the Windows build host; clean-VM install, repair, update, rollback and uninstall remain an external release-operator gate.",
+      "workaround": "Run the documented lifecycle matrix on disposable Windows x64 VMs before broad Stable distribution."
+    },
+    {
+      "severity": "S2",
+      "area": "experimental platforms",
+      "issue": "Linux and macOS are deliberately Experimental because matching-host clean-machine and signing matrices are not attached. Mobile and consoles are Unsupported/deferred.",
+      "workaround": "Do not promote a platform until its declared matrix passes on matching hardware."
+    },
+    {
+      "severity": "S2",
+      "area": "duration",
+      "issue": "Accelerated deterministic soak tests pass; a 24-hour wall-clock run is not claimed by this local qualification.",
+      "workaround": "Run the supplied long-duration workflow on named release hardware."
+    },
+    {
+      "severity": "S2",
+      "area": "networking",
+      "issue": "Networking contracts and examples are Experimental optional-package interfaces, not a 4.0 core stability promise or managed online service.",
+      "workaround": "Gate multiplayer features explicitly and qualify transport, authority, prediction and abuse handling for the shipped game."
+    }
+  ],
+  "status": "passed-with-declared-s2-boundaries"
+}

@@ -1,0 +1,12 @@
+{
+  "format": "nova-stability-report",
+  "version": 1,
+  "engineVersion": "3.8.0",
+  "generatedAt": "2026-08-19T13:56:03.926Z",
+  "scope": "accelerated world-data regression plus retained Rust/frontend audit chain",
+  "wallClock24Hour": "external",
+  "crashes": 0,
+  "severity0Open": 0,
+  "severity1Open": 0,
+  "status": "passed"
+}

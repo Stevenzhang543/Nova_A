@@ -7,7 +7,7 @@ import { scriptProjectSettings } from '../runtime/scriptSettings'
 
 export type EditorPage = 'scene' | 'game' | 'script' | 'settings'
 export type EditorWorkspace = 'design' | 'script' | 'animation' | 'ui' | 'debug' | 'custom'
-export type BottomPanelTab = 'assets' | 'packages' | 'console' | 'animation' | 'tilemap' | 'world' | 'presentation' | 'profiler' | 'rendering' | 'project' | 'build'
+export type BottomPanelTab = 'assets' | 'packages' | 'console' | 'animation' | 'audio' | 'tilemap' | 'presentation' | 'profiler' | 'rendering' | 'project' | 'build'
 export type InspectorCategory = 'all' | 'general' | 'transform' | 'render' | 'physics' | 'gameplay' | 'ui'
 type ContextMenuType = 'sidebar-entity' | 'layer' | 'grid-entity' | 'none'
 export type EditorLogLevel = 'trace' | 'debug' | 'info' | 'warning' | 'error' | 'fatal'
@@ -53,7 +53,12 @@ export const editorState = reactive({
   settingsSearch: '',
   settingsScope: 'all' as 'all' | 'editor' | 'project' | 'runtime',
   inspectorCategory: 'all' as InspectorCategory,
+  inspectorModifiedOnly: false,
+  inspectorPinnedOnly: false,
+  pinnedInspectorProperties: [] as string[],
   componentPickerOpen: false,
+  createObjectPaletteOpen: false,
+  lastCanvasWorldPoint: { x: 0, y: 0 } as Vec2,
   bottomPanelOpen: false,
   bottomPanelHeight: 240,
   bottomPanelTab: 'assets' as BottomPanelTab,
@@ -71,7 +76,9 @@ export const editorState = reactive({
     gpuMs: null as number | null,
     passes: 1,
     renderTargets: 0,
-    overdraw: 0
+    overdraw: 0,
+    batchBreaks: 0,
+    atlasPages: 0
   },
   manualConnectionId: null as number | null,
   manualConnectionPoints: [] as Vec2[],

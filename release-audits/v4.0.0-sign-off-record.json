@@ -1,0 +1,35 @@
+{
+  "format": "nova-v4-sign-off",
+  "version": 1,
+  "engineVersion": "4.0.0",
+  "generatedAt": "2026-08-19T15:07:52.339Z",
+  "engineering": {
+    "status": "passed-automated-local",
+    "evidence": "v4 production audit, typecheck, Rust tests, builds"
+  },
+  "qa": {
+    "status": "passed-local-with-external-gates",
+    "evidence": "browser/layout/reference/security/native smoke"
+  },
+  "documentation": {
+    "status": "passed",
+    "evidence": "manual and documentation validation"
+  },
+  "releaseEngineering": {
+    "status": "pending",
+    "requires": [
+      "signed tag",
+      "publisher signing",
+      "clean VM",
+      "1000 aggregate hours"
+    ]
+  },
+  "productOwnership": {
+    "status": "pending",
+    "requires": [
+      "owner review and publication decision"
+    ]
+  },
+  "stablePublicationApproved": false,
+  "status": "pending-external-sign-off"
+}

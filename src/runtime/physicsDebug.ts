@@ -8,5 +8,7 @@ export const physicsDebugState = reactive({
   showSleepingBodies: true,
   showAabbs: false,
   showJointConstraints: true,
-  showRopeNodes: true
+  showRopeNodes: true,
+  showCharacterContacts: true,
+  colorByPhysicsLayer: false
 })

@@ -1,0 +1,24 @@
+{
+  "format": "nova-tilemap-2-validation",
+  "version": 1,
+  "engineVersion": "3.8.0",
+  "generatedAt": "2026-08-19T13:56:03.926Z",
+  "tileSetVersion": 2,
+  "sources": 1,
+  "animationFrames": 2,
+  "weightedVariants": 1,
+  "terrainMissingMasks": 1,
+  "navigationPolygonPoints": 3,
+  "occlusionPolygonPoints": 3,
+  "metadata": {
+    "biome": "ground"
+  },
+  "scenePlacement": "asset://scene-evidence",
+  "prefabPlacement": "asset://prefab-evidence",
+  "transformedPoint": {
+    "x": 0.7,
+    "y": 0.8
+  },
+  "chunkTransformRoundTrip": true,
+  "status": "passed"
+}

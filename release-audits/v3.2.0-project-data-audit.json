@@ -1,8 +1,8 @@
 {
-  "format": "nova-v3.2-audit",
+  "format": "nova-v3.2-regression-audit",
   "version": 1,
-  "engineVersion": "3.2.0",
-  "generatedAt": "2026-08-16T11:19:43.927Z",
+  "engineVersion": "3.7.0",
+  "generatedAt": "2026-08-19T13:50:26.298Z",
   "status": "passed",
   "severity0Open": 0,
   "severity1Open": 0,
@@ -10,7 +10,7 @@
     {
       "name": "release and schema authorities",
       "status": "passed",
-      "evidence": "Product 3.2.0 / Project Format 2 schema 23"
+      "evidence": "Product 4.0.0 / Project Format 2 frozen schema 29"
     },
     {
       "name": "versioned manifest and directory policy",
@@ -25,7 +25,7 @@
     {
       "name": "migration and repair safety",
       "status": "passed",
-      "evidence": "Schemas 5–23 registry, backup/rollback, read-only future-schema viewer"
+      "evidence": "Schemas 5–24 registry, backup/rollback, read-only future-schema viewer"
     },
     {
       "name": "nested prefab and scene identities",
@@ -63,14 +63,14 @@
       "evidence": "Decorated maximized startup; user can restore/resize; F11 remains explicit fullscreen"
     },
     {
-      "name": "headless exporter accepts schema 23",
+      "name": "headless exporter accepts schema 29",
       "status": "passed",
-      "evidence": "Build CLI 1 accepts the current schema and continues rejecting future schemas"
+      "evidence": "Build CLI 1 accepts the frozen schema and continues rejecting future schemas"
     },
     {
       "name": "reference coverage",
       "status": "passed",
-      "evidence": "Nested scene/prefab, override, verified imported-artifact hashes and missing-resource repair fixture"
+      "evidence": "Deliberate schema-23 migration fixture with nested scene/prefab data, verified imported-artifact hashes, and missing-resource repair"
     }
   ]
 }

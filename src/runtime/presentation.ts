@@ -7,8 +7,13 @@ export interface RuntimeAccessibilitySettings {
   focusRingColor: string
   focusRingWidth: number
   reducedMotion: boolean
+  highContrast: boolean
+  textScale: number
+  minimumTargetSize: number
   announceFocusChanges: boolean
 }
+
+export interface UiAudioSettings { hover: string | null; press: string | null; focus: string | null; cancel: string | null; bus: string }
 
 export const runtimeAccessibilitySettings = reactive<RuntimeAccessibilitySettings>({
   keyboardNavigation: true,
@@ -16,9 +21,11 @@ export const runtimeAccessibilitySettings = reactive<RuntimeAccessibilitySetting
   screenReaderMetadata: true,
   focusRingColor: '#79b2ff',
   focusRingWidth: 3,
-  reducedMotion: false,
+  reducedMotion: false, highContrast: false, textScale: 1, minimumTargetSize: 44,
   announceFocusChanges: true
 })
+
+export const uiAudioSettings = reactive<UiAudioSettings>({ hover: null, press: null, focus: null, cancel: null, bus: 'UI' })
 
 export function normalizeRuntimeAccessibilitySettings(source: unknown): RuntimeAccessibilitySettings {
   const item = source && typeof source === 'object' ? source as Partial<RuntimeAccessibilitySettings> : {}
@@ -31,6 +38,9 @@ export function normalizeRuntimeAccessibilitySettings(source: unknown): RuntimeA
     focusRingColor: color,
     focusRingWidth: width,
     reducedMotion: item.reducedMotion === true,
+    highContrast: item.highContrast === true,
+    textScale: typeof item.textScale === 'number' && Number.isFinite(item.textScale) ? Math.min(3, Math.max(.75, item.textScale)) : 1,
+    minimumTargetSize: typeof item.minimumTargetSize === 'number' && Number.isFinite(item.minimumTargetSize) ? Math.min(128, Math.max(24, item.minimumTargetSize)) : 44,
     announceFocusChanges: item.announceFocusChanges !== false
   }
 }
@@ -42,3 +52,7 @@ export function loadRuntimeAccessibilitySettings(source: unknown): void {
 export function serializeRuntimeAccessibilitySettings(): RuntimeAccessibilitySettings {
   return normalizeRuntimeAccessibilitySettings(runtimeAccessibilitySettings)
 }
+
+export function normalizeUiAudioSettings(source: unknown): UiAudioSettings { const item = source && typeof source === 'object' ? source as Partial<UiAudioSettings> : {}; const reference = (value: unknown) => typeof value === 'string' && value.length <= 160 ? value : null; return { hover: reference(item.hover), press: reference(item.press), focus: reference(item.focus), cancel: reference(item.cancel), bus: typeof item.bus === 'string' && item.bus.trim() ? item.bus.trim().slice(0, 80) : 'UI' } }
+export function loadUiAudioSettings(source: unknown): void { Object.assign(uiAudioSettings, normalizeUiAudioSettings(source)) }
+export function serializeUiAudioSettings(): UiAudioSettings { return normalizeUiAudioSettings(uiAudioSettings) }

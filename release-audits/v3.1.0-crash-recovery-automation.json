@@ -2,7 +2,7 @@
   "format": "nova-crash-recovery-verification",
   "version": 1,
   "engineVersion": "3.1.0",
-  "generatedAt": "2026-08-16T11:19:42.822Z",
+  "generatedAt": "2026-08-19T13:50:24.992Z",
   "status": "passed",
   "assertions": [
     {
@@ -18,7 +18,7 @@
     {
       "name": "Manual save marker remains separate",
       "status": "passed",
-      "detail": "manualSave=2026-08-16T11:19:42.471Z; session=clean"
+      "detail": "manualSave=2026-08-19T13:50:24.968Z; session=clean"
     }
   ]
 }

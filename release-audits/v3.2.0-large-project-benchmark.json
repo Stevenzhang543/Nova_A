@@ -2,41 +2,41 @@
   "format": "nova-large-project-benchmark",
   "version": 1,
   "engineVersion": "3.2.0",
-  "generatedAt": "2026-08-16T11:19:49.301Z",
+  "generatedAt": "2026-08-19T13:50:29.955Z",
   "referenceHardware": "win32/x64 Node v22.22.2",
   "assetCount": 50000,
-  "totalSetupMs": 268.6309,
-  "indexMs": 102.9545,
-  "lookup50kMs": 8.250200000000007,
+  "totalSetupMs": 163.9384,
+  "indexMs": 61.146100000000004,
+  "lookup50kMs": 3.545000000000016,
   "searchTimes": [
     {
       "query": "asset 00042",
-      "durationMs": 16.06790000000001,
+      "durationMs": 10.152500000000003,
       "results": 1
     },
     {
       "query": "group-19",
-      "durationMs": 18.052699999999987,
+      "durationMs": 10.6905,
       "results": 2750
     },
     {
       "query": "49999",
-      "durationMs": 14.058300000000003,
+      "durationMs": 8.842800000000011,
       "results": 1
     },
     {
       "query": "missing",
-      "durationMs": 13.600500000000011,
+      "durationMs": 7.270700000000005,
       "results": 0
     },
     {
       "query": ".png",
-      "durationMs": 15.183600000000013,
+      "durationMs": 9.335300000000018,
       "results": 50000
     }
   ],
-  "maxSearchMs": 18.052699999999987,
-  "serializeMs": 49.07510000000002,
+  "maxSearchMs": 10.6905,
+  "serializeMs": 32.6576,
   "canonicalBytes": 11061388,
   "thresholds": {
     "maxIndexMs": 2500,

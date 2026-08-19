@@ -1,0 +1,13 @@
+{
+  "engineVersion": "4.0.0",
+  "schema": 29,
+  "projectName": "Shader and Typed Uniforms",
+  "minimumScenes": 1,
+  "minimumEntities": 10,
+  "expectedValidation": "pass",
+  "demonstrates": [
+    "typed reflected shader uniforms",
+    "includes, variants and compile cache",
+    "source-linked safe-shader diagnostics and material serialization"
+  ]
+}

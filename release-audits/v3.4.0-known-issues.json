@@ -1,0 +1,22 @@
+{
+  "format": "nova-known-issues",
+  "version": 1,
+  "engineVersion": "3.4.0",
+  "generatedAt": "2026-08-16T16:56:09.394Z",
+  "severity0Open": 0,
+  "severity1Open": 0,
+  "items": [
+    {
+      "severity": "S2",
+      "area": "physics qualification",
+      "issue": "The supplied 12-hour report advances twelve simulated hours in accelerated native time; a twelve wall-clock-hour host soak remains an external qualification.",
+      "workaround": "Run the documented wall-clock physics soak on named reference hardware before claiming wall-clock endurance."
+    },
+    {
+      "severity": "S2",
+      "area": "platform qualification",
+      "issue": "Clean Linux and macOS installer qualification remains external release engineering.",
+      "workaround": "Run the supplied platform procedure on matching hosts."
+    }
+  ]
+}

@@ -10,6 +10,9 @@
         <button :disabled="!canEdit" @click="handleEntity('lock')">{{ targetEntity?.editorLocked ? t('unlockEntity') : t('lockEntity') }}</button>
         <button :disabled="!canEdit" @click="handleEntity('enabled')">{{ targetEntity?.enabled ? t('disableEntity') : t('enableEntity') }}</button>
         <button :disabled="!canEdit || !targetEntity?.parentUuid" @click="handleEntity('root')">{{ t('reparentToRoot') }}</button>
+        <button :disabled="!canEdit || physicsState.selectedEntityIds.length < 1" @click="handleEntity('group')">{{ t('groupSelection') }}</button>
+        <button @click="handleEntity('frame')">{{ t('frameSelection') }}</button>
+        <button @click="handleEntity('isolate')">{{ authoringState.isolateActive ? t('exitIsolation') : t('isolateSelection') }}</button>
         <hr>
         <button :disabled="!canEdit" @click="handleEntity('front')">{{ t('moveFront') }}</button>
         <button :disabled="!canEdit" @click="handleEntity('back')">{{ t('moveBack') }}</button>
@@ -36,6 +39,7 @@ import { preferencesState } from '../store/preferences'
 import { requestConfirmation } from '../store/dialog'
 import { selectionRoots } from '../editor/selection'
 import { setParent } from '../world/hierarchy'
+import { authoringState, groupSelection, requestViewport, toggleIsolateSelection } from '../editor/authoring2d'
 
 const position = computed(() => ({ top: `${Math.min(state.contextMenu.y, window.innerHeight - 390)}px`, left: `${Math.min(state.contextMenu.x, window.innerWidth - 220)}px` }))
 const targetEntity = computed(() => physicsState.world.entities.find(entity => entity.id === state.contextMenu.targetId) ?? null)
@@ -62,6 +66,9 @@ async function handleEntity(action: string) {
   else if (action === 'visibility') { entity.editorVisible = !entity.editorVisible; pushHistory('Toggle editor visibility') }
   else if (action === 'lock') { entity.editorLocked = !entity.editorLocked; pushHistory('Toggle editor lock') }
   else if (action === 'enabled') { entity.enabled = !entity.enabled; pushHistory('Toggle entity') }
+  else if (action === 'group') groupSelection()
+  else if (action === 'frame') requestViewport('frame')
+  else if (action === 'isolate') toggleIsolateSelection()
   else if (action === 'root') {
     for (const selected of selectionRoots(physicsState.selectedEntityIds, physicsState.world.entities)) setParent(selected, null, physicsState.world.entities)
     pushHistory('Reparent entities')

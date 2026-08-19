@@ -2,9 +2,11 @@ import { reactive } from 'vue'
 
 export type ShadowQuality = 'Off' | 'Hard' | 'Soft' | 'Ultra'
 export type ColorSpace2D = 'sRGB' | 'Linear'
-export type RenderDebugView = 'None' | 'Overdraw' | 'Lighting' | 'Normals'
+export type RenderDebugView = 'None' | 'Overdraw' | 'BatchBreaks' | 'Lighting' | 'Normals'
+export type RenderQualityPreset = 'Performance' | 'Balanced' | 'High' | 'Ultra' | 'PixelArt'
 
 export interface RenderingSettings {
+  qualityPreset: RenderQualityPreset
   lightingEnabled: boolean
   ambientColor: { r: number; g: number; b: number }
   ambientIntensity: number
@@ -21,16 +23,20 @@ export interface RenderingSettings {
     userMaterial: string | null
   }
   debugView: RenderDebugView
+  pixelSnap: boolean
+  maximumPixelRatio: number
+  particleBudget: number
 }
 
 export const DEFAULT_RENDERING_SETTINGS: RenderingSettings = {
+  qualityPreset: 'Balanced',
   lightingEnabled: false,
   ambientColor: { r: 255, g: 255, b: 255 },
   ambientIntensity: 1,
   shadowQuality: 'Soft',
   colorSpace: 'sRGB',
   postProcessing: { enabled: false, exposure: 0, contrast: 1, saturation: 1, vignette: 0, bloom: 0, blur: 0, userMaterial: null },
-  debugView: 'None'
+  debugView: 'None', pixelSnap: false, maximumPixelRatio: 2, particleBudget: 10_000
 }
 
 function finite(value: unknown, fallback: number, min: number, max: number): number {
@@ -51,8 +57,10 @@ export function normalizeRenderingSettings(value: unknown): RenderingSettings {
   const source = value && typeof value === 'object' ? value as Record<string, unknown> : {}
   const post = source.postProcessing && typeof source.postProcessing === 'object' ? source.postProcessing as Record<string, unknown> : {}
   const shadowQuality = ['Off', 'Hard', 'Soft', 'Ultra'].includes(String(source.shadowQuality)) ? source.shadowQuality as ShadowQuality : DEFAULT_RENDERING_SETTINGS.shadowQuality
-  const debugView = ['None', 'Overdraw', 'Lighting', 'Normals'].includes(String(source.debugView)) ? source.debugView as RenderDebugView : 'None'
+  const debugView = ['None', 'Overdraw', 'BatchBreaks', 'Lighting', 'Normals'].includes(String(source.debugView)) ? source.debugView as RenderDebugView : 'None'
+  const qualityPreset = ['Performance', 'Balanced', 'High', 'Ultra', 'PixelArt'].includes(String(source.qualityPreset)) ? source.qualityPreset as RenderQualityPreset : 'Balanced'
   return {
+    qualityPreset,
     lightingEnabled: source.lightingEnabled === true,
     ambientColor: color(source.ambientColor, DEFAULT_RENDERING_SETTINGS.ambientColor),
     ambientIntensity: finite(source.ambientIntensity, 1, 0, 8),
@@ -64,7 +72,10 @@ export function normalizeRenderingSettings(value: unknown): RenderingSettings {
       vignette: finite(post.vignette, 0, 0, 1), bloom: finite(post.bloom, 0, 0, 2), blur: finite(post.blur, 0, 0, 32),
       userMaterial: typeof post.userMaterial === 'string' ? post.userMaterial.slice(0, 512) : null
     },
-    debugView
+    debugView,
+    pixelSnap: source.pixelSnap === true,
+    maximumPixelRatio: finite(source.maximumPixelRatio, 2, 1, 4),
+    particleBudget: Math.round(finite(source.particleBudget, 10_000, 100, 100_000))
   }
 }
 
@@ -74,4 +85,13 @@ export function loadRenderingSettings(value: unknown): void { Object.assign(rend
 export function serializeRenderingSettings(): RenderingSettings { return JSON.parse(JSON.stringify(normalizeRenderingSettings(renderingSettings))) as RenderingSettings }
 export function advancedRenderingActive(): boolean {
   return renderingSettings.lightingEnabled || renderingSettings.postProcessing.enabled || renderingSettings.debugView !== 'None'
+}
+
+export function applyQualityPreset(preset: RenderQualityPreset): void {
+  renderingSettings.qualityPreset = preset
+  if (preset === 'Performance') { Object.assign(renderingSettings, { shadowQuality: 'Off', maximumPixelRatio: 1, particleBudget: 2_500, pixelSnap: false }); Object.assign(renderingSettings.postProcessing, { enabled: false, bloom: 0, blur: 0 }) }
+  else if (preset === 'Balanced') Object.assign(renderingSettings, { shadowQuality: 'Soft', maximumPixelRatio: 1.5, particleBudget: 10_000, pixelSnap: false })
+  else if (preset === 'High') Object.assign(renderingSettings, { shadowQuality: 'Soft', maximumPixelRatio: 2, particleBudget: 25_000, pixelSnap: false })
+  else if (preset === 'Ultra') Object.assign(renderingSettings, { shadowQuality: 'Ultra', maximumPixelRatio: 3, particleBudget: 50_000, pixelSnap: false })
+  else if (preset === 'PixelArt') Object.assign(renderingSettings, { shadowQuality: 'Hard', maximumPixelRatio: 1, particleBudget: 10_000, pixelSnap: true, colorSpace: 'sRGB' })
 }

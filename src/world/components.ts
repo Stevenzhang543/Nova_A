@@ -1,14 +1,17 @@
 import { normalizeUuid } from './identity'
 import type { Vec2 } from './types'
+import type { ColliderShapeDescriptor2D, PhysicsShapeKind } from '../runtime/physicsProduction'
 
 export type BodyType2D = 'Dynamic' | 'Kinematic' | 'Static'
 export type MassMode2D = 'Automatic' | 'Manual'
 export type CollisionMode2D = 'Discrete' | 'Continuous'
 export type TileCollision2D = 'None' | 'Box' | 'Polygon' | 'OneWay'
+export type TileBlendMode2D = 'Alpha' | 'Additive' | 'Multiply' | 'Screen'
+export type TileCellTransform2D = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15
 export type AreaEffectKind2D = 'Gravity' | 'Wind' | 'Drag' | 'Buoyancy' | 'Damage' | 'Signal'
 export type NavigationAlgorithm2D = 'AStar' | 'FlowField'
-export type JointKind2D = 'FixedJoint2D' | 'DistanceJoint2D' | 'RevoluteJoint2D' | 'PrismaticJoint2D' | 'SpringJoint2D'
-export type RendererShape2D = 'Rectangle' | 'Ellipse' | 'Polygon'
+export type JointKind2D = 'FixedJoint2D' | 'WeldJoint2D' | 'DistanceJoint2D' | 'RopeJoint2D' | 'RevoluteJoint2D' | 'MotorJoint2D' | 'PrismaticJoint2D' | 'SpringJoint2D'
+export type RendererShape2D = 'Rectangle' | 'Ellipse' | 'Polygon' | 'Line'
 export type LightKind2D = 'Point' | 'Spot' | 'Directional' | 'Area'
 export type ColliderKind2D = 'BoxCollider2D' | 'EllipseCollider2D' | 'PolygonCollider2D'
 export type ComponentKind =
@@ -81,7 +84,10 @@ export class ShapeRenderer2D extends ComponentBase {
   opacity = 100
   strokeColor = { r: 0, g: 90, b: 155 }
   strokeOpacity = 100
-  strokeWidth = 1
+  // World-space width chosen to remain a crisp, unobtrusive outline at the
+  // default editor zoom. Older value 1 produced the large dark border shown
+  // around newly drawn primitives.
+  strokeWidth = 0.04
   material = 'Default'
   filterMode: 'Nearest' | 'Linear' = 'Linear'
   textureAsset: string | null = null
@@ -145,6 +151,11 @@ export class Camera2D extends ComponentBase {
   farSortingLayer = 1_000_000
   pixelPerfect = false
   zoom = 1
+  smoothing = { enabled: false, speed: 5 }
+  limits = { enabled: false, left: -100, right: 100, bottom: -100, top: 100 }
+  dragMargins = { enabled: false, left: .1, right: .1, top: .1, bottom: .1 }
+  previewInEditor = true
+  followTargetUuid: string | null = null
   priority = 0
   stackOrder = 0
   cullingMask = 0xffff_ffff
@@ -156,10 +167,25 @@ export class Camera2D extends ComponentBase {
 
 export type ScriptPropertyValue = number | string | boolean
 
+export interface ScriptPropertyMetadata {
+  name: string
+  valueType: string
+  defaultValue: ScriptPropertyValue
+  minimum: number | null
+  maximum: number | null
+  step: number | null
+  enumValues: string[]
+  resourceType: string | null
+  group: string
+  tooltip: string
+  serialized: boolean
+}
+
 export class Script2D extends ComponentBase {
   readonly kind = 'Script2D' as const
   scriptAsset: string | null = null
   properties: Record<string, ScriptPropertyValue> = {}
+  propertyMetadata: Record<string, ScriptPropertyMetadata> = {}
   lastError: string | null = null
 
   constructor(uuid?: string) { super(uuid) }
@@ -225,6 +251,10 @@ export class AudioSource extends ComponentBase {
   attenuationCurve: AudioAttenuationCurve = 'Linear'
   customAttenuation: Array<{ distance: number; gain: number }> = [{ distance: 0, gain: 1 }, { distance: 1, gain: 0 }]
   voicePriority = 50
+  polyphony = 1
+  randomPitch = 0
+  randomVolume = 0
+  virtualizeWhenLimited = true
   streamOverride: 'ImportSetting' | 'Stream' | 'Buffer' = 'ImportSetting'
 
   constructor(uuid?: string) { super(uuid) }
@@ -249,7 +279,10 @@ export class Canvas extends ComponentBase {
   sortingOrder = 0
   safeArea = false
   safeAreaInsets = { left: 0, top: 0, right: 0, bottom: 0 }
+  dpiScale = 1
+  localePreview = ''
   themeAsset: string | null = null
+  themeVariant = 'default'
 
   constructor(uuid?: string) { super(uuid) }
 }
@@ -260,6 +293,10 @@ export class RectTransform extends ComponentBase {
   pivot: Vec2 = { x: .5, y: .5 }
   position: Vec2 = { x: 0, y: 0 }
   size: Vec2 = { x: 240, y: 80 }
+  preferredSize: Vec2 = { x: 240, y: 80 }
+  anchorMin: Vec2 = { x: .5, y: .5 }
+  anchorMax: Vec2 = { x: .5, y: .5 }
+  offsets = { left: 0, top: 0, right: 0, bottom: 0 }
   margins = { left: 0, top: 0, right: 0, bottom: 0 }
   horizontalPolicy: 'Fixed' | 'Fill' | 'Content' = 'Fixed'
   verticalPolicy: 'Fixed' | 'Fill' | 'Content' = 'Fixed'
@@ -277,7 +314,12 @@ export class RectTransform extends ComponentBase {
   accessibilityRole = ''
   accessibilityLabel = ''
   accessibilityDescription = ''
+  accessibilityState = ''
+  accessibilityValue = ''
+  accessibilityLive: 'Off' | 'Polite' | 'Assertive' = 'Off'
   accessibilityHidden = false
+  readingOrder = 0
+  skipNavigation = false
   remapAction = ''
   remapBindingIndex = 0
 
@@ -289,7 +331,7 @@ export class Panel extends ComponentBase {
   color = { r: 35, g: 41, b: 52 }
   opacity = 92
   cornerRadius = 14
-  layout: 'None' | 'Horizontal' | 'Vertical' | 'Grid' = 'None'
+  layout: 'None' | 'Row' | 'Column' | 'Grid' | 'Flow' | 'Overlay' | 'Center' | 'Margin' | 'Aspect' | 'Split' | 'Horizontal' | 'Vertical' = 'None'
   gap = 8
   padding = { left: 0, top: 0, right: 0, bottom: 0 }
   columns = 2
@@ -304,6 +346,13 @@ export class Panel extends ComponentBase {
   contentSize: Vec2 = { x: 0, y: 0 }
   showScrollbars = true
   scrollSpeed = 42
+  behavior: 'Normal' | 'Modal' | 'Popup' | 'Tooltip' = 'Normal'
+  visible = true
+  closeOnOutside = true
+  draggable = false
+  dropGroup = ''
+  tooltipText = ''
+  tooltipDelay = .45
   styleClass = 'panel'
   styleOverrides: Record<string, string | number> = {}
 
@@ -350,6 +399,9 @@ export class Button extends ComponentBase {
   onPressed = 'on_pressed'
   onHoverEnter = 'on_hover_enter'
   onHoverExit = 'on_hover_exit'
+  pressAudio: string | null = null
+  hoverAudio: string | null = null
+  focusAudio: string | null = null
   styleClass = 'button'
   styleOverrides: Record<string, string | number> = {}
 
@@ -423,8 +475,22 @@ export class TileMap2D extends ComponentBase {
   filterMode: 'Nearest' | 'Linear' = 'Nearest'
   physicsLayer = 0
   collisionMask = 1
-  layers: Array<{ id: string; name: string; visible: boolean; locked: boolean; opacity: number; tiles: number[] }> = [
-    { id: 'base', name: 'Base', visible: true, locked: false, opacity: 1, tiles: this.tiles }
+  layers: Array<{
+    id: string
+    name: string
+    visible: boolean
+    locked: boolean
+    opacity: number
+    blendMode: TileBlendMode2D
+    parallax: Vec2
+    zOrder: number
+    collisionEnabled: boolean
+    navigationEnabled: boolean
+    occlusionEnabled: boolean
+    tiles: number[]
+    transforms: TileCellTransform2D[]
+  }> = [
+    { id: 'base', name: 'Base', visible: true, locked: false, opacity: 1, blendMode: 'Alpha', parallax: { x: 1, y: 1 }, zOrder: 0, collisionEnabled: true, navigationEnabled: true, occlusionEnabled: true, tiles: this.tiles, transforms: Array(32 * 18).fill(0) }
   ]
   activeLayer = 0
   streamingEnabled = false
@@ -499,12 +565,19 @@ export class NavigationRegion2D extends ComponentBase {
   readonly kind = 'NavigationRegion2D' as const
   polygon: Vec2[] = [{ x: -5, y: -5 }, { x: 5, y: -5 }, { x: 5, y: 5 }, { x: -5, y: 5 }]
   cellSize = 0.5
+  navigationMode: 'Grid' | 'Polygon' = 'Grid'
   algorithm: NavigationAlgorithm2D = 'AStar'
   allowDiagonal = true
   dynamic = false
   rebakeInterval = 0.5
   navigationLayer = 1
+  navigationMask = 1
   traversalCost = 1
+  source: 'SceneGeometry' | 'TileMap' | 'Manual' = 'Manual'
+  sourceEntityUuid: string | null = null
+  agentRadius = 0.4
+  links: Array<{ id: string; start: Vec2; end: Vec2; bidirectional: boolean; cost: number; enabled: boolean }> = []
+  bakedRevision = 0
 
   constructor(uuid?: string) { super(uuid) }
 }
@@ -516,6 +589,7 @@ export class NavigationObstacle2D extends ComponentBase {
   radius = 0.5
   dynamic = true
   navigationLayer = 1
+  avoidanceVelocity: Vec2 = { x: 0, y: 0 }
 
   constructor(uuid?: string) { super(uuid) }
 }
@@ -533,6 +607,8 @@ export class NavigationAgent2D extends ComponentBase {
   pathSmoothing = true
   repathInterval = 0.25
   navigationLayer = 1
+  navigationMask = 1
+  avoidancePriority = 0.5
   path: Vec2[] = []
   pathIndex = 0
   velocity: Vec2 = { x: 0, y: 0 }
@@ -567,6 +643,11 @@ export class WorldChunk2D extends ComponentBase {
   memoryEstimateMb = 8
   sceneUuid = ''
   initiallyLoaded = true
+  ownership = 'scene'
+  dependencies: string[] = []
+  prefetchDistance = 160
+  cachePolicy: 'Release' | 'Retain' | 'LRU' = 'LRU'
+  saveStateKey = ''
 
   constructor(uuid?: string) { super(uuid) }
 }
@@ -587,7 +668,12 @@ export class ObjectPool2D extends ComponentBase {
   prewarm = 8
   capacity = 32
   autoExpand = true
+  resetContract: 'TransformAndPhysics' | 'FullSerializedState' | 'CustomSignal' = 'TransformAndPhysics'
+  maximumLifetime = 0
   activeCount = 0
+  createdCount = 0
+  reusedCount = 0
+  leakedCount = 0
 
   constructor(uuid?: string) { super(uuid) }
 }
@@ -619,6 +705,14 @@ export class ParticleEmitter2D extends ComponentBase {
   orderInLayer = 0
   material = 'Particles'
   blendMode: 'Alpha' | 'Additive' = 'Alpha'
+  emissionShape: 'Point' | 'Box' | 'Circle' | 'Edge' = 'Point'
+  shapeSize: Vec2 = { x: 1, y: 1 }
+  shapeRadius = 0.5
+  scaleCurve: Array<{ time: number; value: number }> = [{ time: 0, value: 1 }, { time: 1, value: 1 }]
+  colorGradient: Array<{ time: number; color: { r: number; g: number; b: number }; opacity: number }> = []
+  subEmitterUuid: string | null = null
+  subEmitterCount = 1
+  previewInEditor = true
 
   constructor(uuid?: string) { super(uuid) }
 }
@@ -661,6 +755,11 @@ export class Joint2D extends ComponentBase {
   limitsEnabled = false
   lowerLimit = -1
   upperLimit = 1
+  motorEnabled = false
+  motorSpeed = 0
+  maxMotorForce = 1000
+  breakForce = Number.POSITIVE_INFINITY
+  breakTorque = Number.POSITIVE_INFINITY
   referenceOffset: Vec2 = { x: 0, y: 0 }
   referenceAngle = 0
   initialized = false
@@ -693,6 +792,7 @@ export class RigidBody2D extends ComponentBase {
   sleeping = false
   sleepTimer = 0
   freezeRotation = false
+  transformOwnership: 'Physics' | 'Animation' = 'Physics'
   contactCount = 0
   contactNormal: Vec2 = { x: 0, y: 0 }
   penetrationDepth = 0
@@ -707,6 +807,9 @@ export interface PhysicsMaterial2D {
   restitutionThreshold: number
   staticFriction: number
   dynamicFriction: number
+  density: number
+  frictionCombine: 'Average' | 'Minimum' | 'Maximum' | 'Multiply'
+  restitutionCombine: 'Average' | 'Minimum' | 'Maximum' | 'Multiply'
 }
 
 export class Collider2D extends ComponentBase {
@@ -717,21 +820,30 @@ export class Collider2D extends ComponentBase {
   radiusX = 1
   radiusY = 1
   vertices: Vec2[] = []
+  shapeModel: PhysicsShapeKind
+  /** Supplementary local shapes. The stable solver treats the set as one
+   * deterministic convex envelope so one body retains one transform/velocity. */
+  shapes: ColliderShapeDescriptor2D[] = []
   sensor = false
   physicsLayer = 0
   collisionMask = 1
   oneWay = false
   oneWayNormal: Vec2 = { x: 0, y: 1 }
+  materialAsset: string | null = null
   material: PhysicsMaterial2D = {
     restitution: 0,
     restitutionThreshold: 1,
     staticFriction: 0,
     dynamicFriction: 0
+    , density: 1
+    , frictionCombine: 'Average'
+    , restitutionCombine: 'Maximum'
   }
 
   constructor(kind: ColliderKind2D, uuid?: string) {
     super(uuid)
     this.kind = kind
+    this.shapeModel = kind === 'EllipseCollider2D' ? 'Circle' : kind === 'PolygonCollider2D' ? 'ConvexPolygon' : 'Box'
   }
 }
 

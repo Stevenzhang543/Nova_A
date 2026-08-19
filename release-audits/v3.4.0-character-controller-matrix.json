@@ -1,0 +1,50 @@
+{
+  "format": "nova-character-conformance",
+  "version": 1,
+  "engineVersion": "3.4.0",
+  "generatedAt": "2026-08-19T13:53:02.292Z",
+  "source": "cargo test --workspace (required before evidence generation)",
+  "cases": [
+    {
+      "name": "wall and exact-unit motion",
+      "nativeTest": "character_motion_uses_exact_units_and_excludes_its_own_collider",
+      "status": "passed"
+    },
+    {
+      "name": "floor classification",
+      "nativeTest": "character_classifies_floor_ceiling_and_moving_platform_velocity",
+      "status": "passed"
+    },
+    {
+      "name": "ceiling classification",
+      "nativeTest": "character_classifies_floor_ceiling_and_moving_platform_velocity",
+      "status": "passed"
+    },
+    {
+      "name": "moving-platform transfer",
+      "nativeTest": "character_classifies_floor_ceiling_and_moving_platform_velocity",
+      "status": "passed"
+    },
+    {
+      "name": "floor snap",
+      "nativeTest": "character_floor_snap_and_step_height_are_applied_in_world_units",
+      "status": "passed"
+    },
+    {
+      "name": "step handling",
+      "nativeTest": "character_floor_snap_and_step_height_are_applied_in_world_units",
+      "status": "passed"
+    },
+    {
+      "name": "slope limit",
+      "nativeTest": "character_accepts_a_rotated_surface_inside_the_slope_limit",
+      "status": "passed"
+    },
+    {
+      "name": "one-way platform",
+      "nativeTest": "one_way_platform_blocks_above_and_allows_passage_from_below",
+      "status": "passed"
+    }
+  ],
+  "status": "passed"
+}

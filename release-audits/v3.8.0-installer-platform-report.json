@@ -1,0 +1,11 @@
+{
+  "format": "nova-installer-platform-report",
+  "version": 1,
+  "engineVersion": "3.8.0",
+  "generatedAt": "2026-08-18T13:37:30.677Z",
+  "host": "win32",
+  "windowsArtifactsBuilt": true,
+  "linuxCleanMachine": "pending",
+  "macosCleanMachine": "pending",
+  "note": "Only the current Windows host is qualified by this release run; cross-platform claims require matching-host runners."
+}

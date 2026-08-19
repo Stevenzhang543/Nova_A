@@ -8,6 +8,10 @@ export type AssetType =
   | 'dataSchema' | 'dataTable' | 'replay'
 export type TextAssetType = Extract<AssetType, 'script' | 'prefab' | 'scene' | 'material' | 'animation' | 'controller' | 'animationMask' | 'rig' | 'skin' | 'timeline' | 'tileset' | 'atlas' | 'shader' | 'localization' | 'uiTheme' | 'behaviorTree' | 'stateMachine' | 'tilePalette' | 'brushPreset' | 'terrainRules' | 'dataSchema' | 'dataTable' | 'replay'>
 export type AssetCompression = 'None' | 'Lossless' | 'Optimized'
+export type TextureImportProfile = 'General' | 'PixelArt' | 'UI' | 'NormalMap'
+export type AudioImportProfile = 'SoundEffect' | 'Music' | 'Voice' | 'Streaming'
+export type AudioCodecProfile = 'Original' | 'PCM' | 'Vorbis' | 'MP3'
+export type FontRenderMode = 'Scalable' | 'Bitmap'
 
 export interface SpriteRegion {
   x: number
@@ -17,6 +21,7 @@ export interface SpriteRegion {
 }
 
 export interface AssetImportSettings {
+  textureProfile: TextureImportProfile
   filterMode: TextureFilter
   compression: AssetCompression
   pixelsPerUnit: number
@@ -26,7 +31,11 @@ export interface AssetImportSettings {
   colorSpace: 'sRGB' | 'Linear'
   platformVariants: Partial<Record<'windows' | 'linux' | 'macos' | 'web', AssetCompression>>
   atlasSettings: { maxSize: number; padding: number; trim: boolean }
-  audioSettings: { normalize: boolean; normalizationGain: number; targetPeakDb: number; streaming: boolean; sampleRate: number; loopStart: number; loopEnd: number }
+  spriteSheet: { enabled: boolean; columns: number; rows: number; margin: number; spacing: number }
+  transparentTrim: boolean
+  borders: { left: number; top: number; right: number; bottom: number }
+  audioSettings: { profile: AudioImportProfile; codec: AudioCodecProfile; quality: number; trimStart: number; trimEnd: number; normalize: boolean; normalizationGain: number; targetPeakDb: number; streaming: boolean; sampleRate: number; loopStart: number; loopEnd: number }
+  fontSettings: { renderMode: FontRenderMode; fallbackFamilies: string[]; bitmapSize: number; outlineWidth: number; shaping: boolean }
   tileSettings: { tileWidth: number; tileHeight: number; margin: number; spacing: number }
   scriptSettings: { encoding: 'utf-8'; module: boolean }
   shaderSettings: { stage: 'fragment' | 'vertex'; entry: string }
@@ -72,9 +81,35 @@ export interface AssetDatabaseSettings {
 
 export interface ScriptAssetMetadata {
   version: 1
+  apiVersion: 1
   breakpoints: number[]
+  breakpointDetails: ScriptBreakpointMetadata[]
   tests: string[]
   packageDependencies: string[]
+  packageName: string
+  reloadPolicy: 'preserve' | 'recreate' | 'disabled'
+  signalConnections: ScriptSignalConnection[]
+  recoverySource: string
+  lastSavedHash: string
+}
+
+export interface ScriptBreakpointMetadata {
+  id: string
+  line: number
+  functionName: string
+  condition: string
+  hitCondition: number
+  logMessage: string
+  enabled: boolean
+  hitCount: number
+}
+
+export interface ScriptSignalConnection {
+  signal: string
+  source: string
+  target: string
+  callback: string
+  enabled: boolean
 }
 
 export interface AnimationImportMetadata {
@@ -109,7 +144,10 @@ export interface AssetRecord {
 }
 
 export function defaultScriptMetadata(): ScriptAssetMetadata {
-  return { version: 1, breakpoints: [], tests: [], packageDependencies: [] }
+  return {
+    version: 1, apiVersion: 1, breakpoints: [], breakpointDetails: [], tests: [], packageDependencies: [],
+    packageName: '', reloadPolicy: 'preserve', signalConnections: [], recoverySource: '', lastSavedHash: ''
+  }
 }
 
 export function defaultAnimationImportMetadata(): AnimationImportMetadata {
@@ -134,10 +172,13 @@ export const DEFAULT_ASSET_FOLDERS = [
 
 export function defaultImportSettings(): AssetImportSettings {
   return {
-    filterMode: 'Linear', compression: 'Lossless', pixelsPerUnit: 100,
+    textureProfile: 'General', filterMode: 'Linear', compression: 'Lossless', pixelsPerUnit: 100,
     spriteRegion: null, pivot: { x: .5, y: .5 }, atlas: true, colorSpace: 'sRGB', platformVariants: {},
     atlasSettings: { maxSize: 2048, padding: 2, trim: true },
-    audioSettings: { normalize: false, normalizationGain: 1, targetPeakDb: -1, streaming: false, sampleRate: 48_000, loopStart: 0, loopEnd: 0 },
+    spriteSheet: { enabled: false, columns: 1, rows: 1, margin: 0, spacing: 0 }, transparentTrim: false,
+    borders: { left: 0, top: 0, right: 0, bottom: 0 },
+    audioSettings: { profile: 'SoundEffect', codec: 'Original', quality: .8, trimStart: 0, trimEnd: 0, normalize: false, normalizationGain: 1, targetPeakDb: -1, streaming: false, sampleRate: 48_000, loopStart: 0, loopEnd: 0 },
+    fontSettings: { renderMode: 'Scalable', fallbackFamilies: ['Segoe UI Variable Text', 'Noto Sans', 'sans-serif'], bitmapSize: 32, outlineWidth: 0, shaping: true },
     tileSettings: { tileWidth: 32, tileHeight: 32, margin: 0, spacing: 0 },
     scriptSettings: { encoding: 'utf-8', module: true },
     shaderSettings: { stage: 'fragment', entry: 'main' },

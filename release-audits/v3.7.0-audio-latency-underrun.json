@@ -1,0 +1,103 @@
+{
+  "format": "nova-audio-latency-underrun",
+  "version": 1,
+  "engineVersion": "3.7.0",
+  "generatedAt": "2026-08-19T13:55:22.680Z",
+  "normalizedMixer": {
+    "masterVolume": 1,
+    "sampleRate": 48000,
+    "buses": {
+      "Master": 1,
+      "Music": 1,
+      "SFX": 0.8,
+      "UI": 1
+    },
+    "mixer": {
+      "buses": [
+        {
+          "id": "Master",
+          "name": "Master",
+          "gain": 1,
+          "mute": false,
+          "solo": false,
+          "parent": null,
+          "voiceLimit": 8,
+          "sends": [],
+          "effects": []
+        },
+        {
+          "id": "SFX",
+          "name": "SFX",
+          "gain": 0.8,
+          "mute": false,
+          "solo": false,
+          "parent": "Master",
+          "voiceLimit": 4,
+          "sends": [],
+          "effects": [
+            {
+              "id": "delay",
+              "kind": "Delay",
+              "enabled": true,
+              "wet": 0.2,
+              "frequency": 1200,
+              "q": 0.7,
+              "threshold": -24,
+              "ratio": 4,
+              "time": 0.12,
+              "feedback": 0.25
+            }
+          ]
+        },
+        {
+          "id": "Music",
+          "name": "Music",
+          "gain": 1,
+          "mute": false,
+          "solo": false,
+          "parent": "Master",
+          "voiceLimit": 4,
+          "sends": [],
+          "effects": []
+        },
+        {
+          "id": "UI",
+          "name": "UI",
+          "gain": 1,
+          "mute": false,
+          "solo": false,
+          "parent": "Master",
+          "voiceLimit": 32,
+          "sends": [],
+          "effects": []
+        }
+      ],
+      "snapshots": [
+        {
+          "id": "default",
+          "name": "Default",
+          "masterVolume": 1,
+          "busGains": {
+            "Master": 1,
+            "Music": 1,
+            "SFX": 1,
+            "UI": 1
+          }
+        }
+      ],
+      "activeSnapshot": null,
+      "ducking": [],
+      "masterVoiceLimit": 12
+    }
+  },
+  "referenceFixture": "reference-projects/projects/audio-streaming/project.nova",
+  "loopGapBudgetsMs": {
+    "PCM": 8,
+    "Vorbis": 35,
+    "MP3": 80
+  },
+  "measurementMethod": "Runtime Profiler records AudioContext base/output latency and detected wall-clock/context-time stalls; codec loop limits are qualified in the browser reference project.",
+  "deterministicVoicePolicy": "lowest numeric priority first; existing voice retained at component/bus/master cap",
+  "deviceChangeHandling": true,
+  "status": "passed"
+}

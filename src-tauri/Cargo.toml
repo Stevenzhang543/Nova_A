@@ -1,11 +1,11 @@
 [package]
 name = "nova_a"
-version = "3.2.0"
+version = "4.0.0"
 description = "Nova_A open-source 2D physics and rendering engine."
 authors = ["Whitelist"]
 repository = "https://github.com/Stevenzhang543/Nova_A"
 edition = "2021"
-rust-version = "1.77"
+rust-version = "1.88"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -17,10 +17,10 @@ name = "nova_a_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]
-tauri-build = { version = "=2.5.3", features = [] }
+tauri-build = { version = "=2.6.3", features = [] }
 
 [dependencies]
-tauri = { version = "=2.9.5", features = [] }
+tauri = { version = "=2.11.5", features = [] }
 tauri-plugin-opener = "=2.5.3"
 base64 = "0.22"
 serde = { version = "1", features = ["derive"] }

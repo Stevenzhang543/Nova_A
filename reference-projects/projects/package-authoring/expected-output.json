@@ -1,0 +1,14 @@
+{
+  "engineVersion": "4.0.0",
+  "schema": 29,
+  "projectName": "Package Authoring Reference",
+  "minimumScenes": 1,
+  "minimumEntities": 2,
+  "expectedValidation": "pass",
+  "demonstrates": [
+    "manifest types and API range",
+    "permission review and escalation",
+    "signature failure and quarantine",
+    "offline lock and verified rollback"
+  ]
+}

@@ -1,0 +1,54 @@
+{
+  "format": "nova-ci-summary",
+  "version": 1,
+  "engineVersion": "3.9.0",
+  "generatedAt": "2026-08-18T18:11:49.014Z",
+  "source": "local release-equivalent Windows x64 runner",
+  "gates": [
+    {
+      "name": "cargo fmt --all -- --check",
+      "status": "passed"
+    },
+    {
+      "name": "cargo test --workspace --all-targets",
+      "status": "passed"
+    },
+    {
+      "name": "cargo test --manifest-path src-tauri/Cargo.toml",
+      "status": "passed"
+    },
+    {
+      "name": "pnpm run check",
+      "status": "passed"
+    },
+    {
+      "name": "pnpm run audit",
+      "status": "passed"
+    },
+    {
+      "name": "pnpm verify:v3.9:cli",
+      "status": "passed"
+    },
+    {
+      "name": "pnpm run build",
+      "status": "passed"
+    },
+    {
+      "name": "pnpm qualify:v3.9:layout",
+      "status": "passed"
+    },
+    {
+      "name": "pnpm tauri build",
+      "status": "passed"
+    }
+  ],
+  "externalGates": [
+    "signed clean source tag",
+    "publisher signing",
+    "clean-VM installer lifecycle",
+    "matching-host Experimental platform promotion"
+  ],
+  "severity0Open": 0,
+  "severity1Open": 0,
+  "status": "passed"
+}

@@ -1,0 +1,27 @@
+{
+  "format": "nova-material-roundtrip",
+  "version": 1,
+  "engineVersion": "3.7.0",
+  "generatedAt": "2026-08-19T13:55:22.680Z",
+  "reflectedTypes": [
+    {
+      "name": "gain",
+      "type": "range"
+    },
+    {
+      "name": "mode",
+      "type": "enum"
+    },
+    {
+      "name": "enabled",
+      "type": "toggle"
+    },
+    {
+      "name": "tint",
+      "type": "color"
+    }
+  ],
+  "serializedBytes": 1151,
+  "uniformRoundTrip": true,
+  "status": "passed"
+}

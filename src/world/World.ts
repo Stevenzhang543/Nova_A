@@ -22,12 +22,13 @@ import init, {
   migrate_project_json
 } from '../../nova_core/pkg/nova_core.js'
 import { setWorldTransform, worldTransform } from './hierarchy'
-import { TileMap2D } from './components'
+import { Collider2D, TileMap2D } from './components'
 import { buildTileColliderDescriptors } from '../runtime/tilemap'
-import { assetState } from '../assets/AssetDatabase'
+import { assetState, readTextAsset } from '../assets/AssetDatabase'
 import { recordPhysicsTelemetry } from '../runtime/physicsMonitor'
+import { defaultPhysicsLayers, normalizePhysicsMaterial, stablePhysicsEventOrder, type PhysicsInterpolationMode, type PhysicsLayerDefinition, type PhysicsShapeKind } from '../runtime/physicsProduction'
 
-export const PHYSICS_STRIDE = 54
+export const PHYSICS_STRIDE = 56
 export const PHYSICS_LAYER_COUNT = 32
 
 export function defaultCollisionMatrix(): number[] {
@@ -41,6 +42,8 @@ export interface GlobalPhysicsSettings {
   tickRate: number
   maxCatchUpSteps: number
   collisionMatrix: number[]
+  interpolation: PhysicsInterpolationMode
+  layers: PhysicsLayerDefinition[]
 }
 
 export interface EngineDiagnostics {
@@ -55,7 +58,7 @@ export interface EngineDiagnostics {
 }
 
 export interface RuntimePhysicsEvent {
-  type: 'collisionStarted' | 'collisionStayed' | 'collisionEnded' | 'triggerEntered' | 'triggerExited' | string
+  type: 'collisionStarted' | 'collisionStayed' | 'collisionEnded' | 'triggerEntered' | 'triggerStayed' | 'triggerExited' | string
   first?: number
   second?: number
   firstEntityUuid?: string
@@ -102,14 +105,49 @@ interface ConnectionRecord {
   bodyB: number
 }
 
+function compoundColliderEnvelope(collider: Collider2D): Vec2[] | null {
+  const supplementary = collider.shapes.filter(shape => shape.enabled)
+  if (!supplementary.length) return null
+  const points: Vec2[] = []
+  const add = (kind: PhysicsShapeKind, offset: Vec2, angle: number, size: Vec2, radius: number, authored: Vec2[] = []) => {
+    const width = Math.max(1e-9, Math.abs(size.x || radius * 2))
+    const height = Math.max(1e-9, Math.abs(size.y || radius * 2))
+    const local = (kind === 'ConvexPolygon' || kind === 'ConcavePolygon' || kind === 'Chain') && authored.length >= 2
+      ? authored
+      : [{ x: -width * .5, y: -height * .5 }, { x: width * .5, y: -height * .5 }, { x: width * .5, y: height * .5 }, { x: -width * .5, y: height * .5 }]
+    const cosine = Math.cos(angle), sine = Math.sin(angle)
+    for (const point of local) points.push({ x: offset.x + point.x * cosine - point.y * sine, y: offset.y + point.x * sine + point.y * cosine })
+  }
+  const primarySize = collider.kind === 'EllipseCollider2D'
+    ? { x: collider.radiusX * 2, y: collider.radiusY * 2 }
+    : collider.size
+  add(collider.shapeModel, collider.offset, collider.rotation, primarySize, Math.min(primarySize.x, primarySize.y) * .5, collider.vertices)
+  for (const shape of supplementary) add(shape.kind, shape.offset, shape.rotation, shape.size, shape.radius, shape.points)
+  const xs = points.map(point => point.x), ys = points.map(point => point.y)
+  const left = Math.min(...xs), right = Math.max(...xs), bottom = Math.min(...ys), top = Math.max(...ys)
+  return [{ x: left, y: bottom }, { x: right, y: bottom }, { x: right, y: top }, { x: left, y: top }]
+}
+
 /** Writes one entity into the stable Float64 ABI shared with nova_core. */
 function writeEntityRecord(data: Float64Array, entityIndex: number, entity: Entity, entities: Entity[], settings: GlobalPhysicsSettings, runtimeHandle = entity.id): void {
+  const materialSource = readTextAsset(entity.collider.materialAsset)
+  if (materialSource) {
+    try {
+      const value = JSON.parse(materialSource) as Record<string, unknown>
+      if (value.format === 'nova-physics-material') {
+        const material = normalizePhysicsMaterial(value)
+        Object.assign(entity.collider.material, material)
+        if (entity.rigidBody.massMode === 'Automatic') entity.rigidBody.density = material.density
+      }
+    } catch { /* A malformed optional asset is ignored; project validation reports it. */ }
+  }
   normalizeEntity(entity)
   const transform = worldTransform(entity, entities)
   const collider = entity.collider
+  const compoundEnvelope = compoundColliderEnvelope(collider)
   const index = entityIndex * PHYSICS_STRIDE
   data[index] = runtimeHandle
-  data[index + 1] = collider.kind === 'EllipseCollider2D' ? 1 : 0
+  data[index + 1] = compoundEnvelope ? 0 : collider.shapeModel === 'Circle' ? 1 : collider.shapeModel === 'Capsule' ? 2 : collider.shapeModel === 'Segment' ? 3 : 0
   data[index + 2] = transform.position.x
   data[index + 3] = transform.position.y
   data[index + 4] = entity.velocity.x
@@ -121,9 +159,14 @@ function writeEntityRecord(data: Float64Array, entityIndex: number, entity: Enti
   data[index + 10] = entity.restitution
   data[index + 11] = entity.dynamicFriction
 
-  if (collider.kind === 'EllipseCollider2D') {
-    data[index + 12] = collider.radiusX * transform.scale.x
-    data[index + 13] = collider.radiusY * transform.scale.y
+  if (compoundEnvelope) {
+    const xs = compoundEnvelope.map(vertex => vertex.x * transform.scale.x)
+    const ys = compoundEnvelope.map(vertex => vertex.y * transform.scale.y)
+    data[index + 12] = Math.max(...xs) - Math.min(...xs)
+    data[index + 13] = Math.max(...ys) - Math.min(...ys)
+  } else if (collider.shapeModel === 'Circle') {
+    data[index + 12] = (collider.kind === 'EllipseCollider2D' ? collider.radiusX : collider.size.x * .5) * transform.scale.x
+    data[index + 13] = (collider.kind === 'EllipseCollider2D' ? collider.radiusY : collider.size.y * .5) * transform.scale.y
   } else {
     const xs = collider.vertices.map(vertex => vertex.x * transform.scale.x)
     const ys = collider.vertices.map(vertex => vertex.y * transform.scale.y)
@@ -149,9 +192,9 @@ function writeEntityRecord(data: Float64Array, entityIndex: number, entity: Enti
   data[index + 33] = collider.physicsLayer
   const matrixMask = settings.collisionMatrix[collider.physicsLayer] ?? (1 << collider.physicsLayer)
   data[index + 42] = (collider.collisionMask & matrixMask) >>> 0
-  data[index + 43] = collider.offset.x * transform.scale.x
-  data[index + 44] = collider.offset.y * transform.scale.y
-  data[index + 45] = collider.rotation
+  data[index + 43] = compoundEnvelope ? 0 : collider.offset.x * transform.scale.x
+  data[index + 44] = compoundEnvelope ? 0 : collider.offset.y * transform.scale.y
+  data[index + 45] = compoundEnvelope ? 0 : collider.rotation
   data[index + 46] = entity.rigidBody.freezeRotation ? 1 : 0
   data[index + 47] = entity.rigidBody.continuousCollision === 'Continuous' ? 1 : 0
   data[index + 48] = entity.rigidBody.sleepingAllowed ? 1 : 0
@@ -160,16 +203,20 @@ function writeEntityRecord(data: Float64Array, entityIndex: number, entity: Enti
   data[index + 51] = collider.oneWay ? 1 : 0
   data[index + 52] = collider.oneWayNormal.x
   data[index + 53] = collider.oneWayNormal.y
+  const combineCode = (mode: 'Average' | 'Minimum' | 'Maximum' | 'Multiply') => mode === 'Minimum' ? 1 : mode === 'Multiply' ? 2 : mode === 'Maximum' ? 3 : 0
+  data[index + 54] = combineCode(collider.material.frictionCombine)
+  data[index + 55] = combineCode(collider.material.restitutionCombine)
 
-  if (collider.kind !== 'EllipseCollider2D') {
-    for (let vertexIndex = 0; vertexIndex < collider.vertices.length && vertexIndex < 4; vertexIndex++) {
-      const vertex = collider.vertices[vertexIndex]
+  const recordVertices = compoundEnvelope ?? (collider.kind !== 'EllipseCollider2D' ? collider.vertices : [])
+  if (recordVertices.length) {
+    for (let vertexIndex = 0; vertexIndex < recordVertices.length && vertexIndex < 4; vertexIndex++) {
+      const vertex = recordVertices[vertexIndex]
       data[index + 34 + vertexIndex * 2] = vertex.x * transform.scale.x
       data[index + 35 + vertexIndex * 2] = vertex.y * transform.scale.y
     }
-    if (collider.vertices.length === 3) {
-      data[index + 40] = collider.vertices[2].x * transform.scale.x
-      data[index + 41] = collider.vertices[2].y * transform.scale.y
+    if (recordVertices.length === 3) {
+      data[index + 40] = recordVertices[2].x * transform.scale.x
+      data[index + 41] = recordVertices[2].y * transform.scale.y
     }
   }
 }
@@ -247,9 +294,9 @@ function writeConnectionRecord(data: Float64Array, recordIndex: number, record: 
   data[index + 15] = connection.style === 'curved' ? Math.abs(connection.curvature) : manualBend
   data[index + 16] = 1
   data[index + 17] = connection.breakState === 'snapped' ? 1 : connection.breakState === 'torn' ? 2 : 0
-  data[index + 18] = connection.componentType === 'FixedJoint2D' ? 1
-    : connection.componentType === 'DistanceJoint2D' ? 2
-      : connection.componentType === 'RevoluteJoint2D' ? 3
+  data[index + 18] = connection.componentType === 'FixedJoint2D' || connection.componentType === 'WeldJoint2D' ? 1
+    : connection.componentType === 'DistanceJoint2D' || connection.componentType === 'RopeJoint2D' ? 2
+      : connection.componentType === 'RevoluteJoint2D' || connection.componentType === 'MotorJoint2D' ? 3
         : connection.componentType === 'PrismaticJoint2D' ? 4
           : connection.componentType === 'SpringJoint2D' ? 5 : 0
   data[index + 20] = connection.binding ? 1 : 0
@@ -269,6 +316,11 @@ function writeConnectionRecord(data: Float64Array, recordIndex: number, record: 
     data[index + 32] = connection.lowerLimit
     data[index + 33] = connection.upperLimit
     data[index + 34] = connection.collideConnected ? 1 : 0
+    data[index + 35] = connection.motorEnabled ? 1 : 0
+    data[index + 36] = connection.motorSpeed
+    data[index + 37] = connection.maxMotorForce
+    data[index + 38] = connection.breakForce
+    data[index + 39] = connection.breakTorque
   }
   for (let nodeIndex = 0; nodeIndex < nodeCount; nodeIndex++) {
     const node = connection.ropeNodes[nodeIndex]
@@ -324,7 +376,7 @@ export class World {
   private tileCollisionSignature = ''
   private activeConnectionRecords: ConnectionRecord[] = []
   private timingSignature = ''
-  private lastSettings: GlobalPhysicsSettings = { gravity: 9.8, airFriction: .01, timeScale: 1, tickRate: 60, maxCatchUpSteps: 8, collisionMatrix: defaultCollisionMatrix() }
+  private lastSettings: GlobalPhysicsSettings = { gravity: 9.8, airFriction: .01, timeScale: 1, tickRate: 60, maxCatchUpSteps: 8, collisionMatrix: defaultCollisionMatrix(), interpolation: 'Interpolate', layers: defaultPhysicsLayers() }
   wasmError: Error | null = null
   readonly wasmReady: Promise<void>
   diagnostics: EngineDiagnostics = {
@@ -332,10 +384,17 @@ export class World {
     interpolationAlpha: 0, droppedSeconds: 0, eventCount: 0, configurationRebuilds: 0
   }
   events: RuntimePhysicsEvent[] = []
-  projectFormatVersion = 23
-  projectEngineVersion = '3.2.0'
+  projectFormatVersion = 24
+  projectEngineVersion = '4.0.0'
 
   constructor() {
+    // Vite's Node-side audit loader has no browser fetch implementation for file: WASM URLs.
+    // Keep its deliberate headless fallback quiet; browsers and Tauri still initialize normally.
+    const nodeRuntime = (globalThis as typeof globalThis & { process?: { versions?: { node?: string } } }).process?.versions?.node
+    if (nodeRuntime || typeof document === 'undefined') {
+      this.wasmReady = Promise.resolve()
+      return
+    }
     this.wasmReady = init()
       .then(() => {
         this.runtime = new WasmRuntimeWorld()
@@ -497,6 +556,23 @@ export class World {
     return this.mapQueryHit(JSON.parse(this.runtime.shape_cast_json(center.x, center.y, size.x, size.y, angle, direction.x, direction.y, distance, mask >>> 0)) as WasmQueryHit | null)
   }
 
+  contactQuery(entityUuid: string): RuntimePhysicsEvent[] {
+    return this.events.filter(event => event.firstEntityUuid === entityUuid || event.secondEntityUuid === entityUuid)
+  }
+
+  teleport(entity: Entity, position: Vec2, angle = worldTransform(entity, this.entities).rotation): boolean {
+    const transform = worldTransform(entity, this.entities)
+    const target = { x: finiteNumber(position.x, transform.position.x), y: finiteNumber(position.y, transform.position.y) }
+    setWorldTransform(entity, { ...transform, position: target, rotation: finiteNumber(angle, transform.rotation) }, this.entities)
+    const handle = this.bodyHandles.get(entity.id)
+    if (!this.runtime || handle === undefined) return true
+    try {
+      const runtime = this.runtime as unknown as { teleport_body: (handle: number, x: number, y: number, angle: number) => void }
+      runtime.teleport_body(handle, target.x, target.y, finiteNumber(angle, transform.rotation))
+      return true
+    } catch { return false }
+  }
+
   moveCharacterBox(
     entity: Entity,
     size: Vec2,
@@ -588,7 +664,8 @@ export class World {
     this.rebuildTileCollisionBodies()
     this.activeBodies = this.entities.filter(entity => entity.enabled
       && entity.hasComponent('RigidBody2D') && entity.rigidBody.enabled
-      && entity.getCollider() !== null && entity.collider.enabled).concat(this.tileCollisionBodies)
+      && entity.getCollider() !== null && entity.collider.enabled
+      && entity.collider.shapeModel !== 'Chain' && entity.collider.shapeModel !== 'ConcavePolygon').concat(this.tileCollisionBodies)
     const liveBodies = new Set<number>()
     this.activeBodies.forEach((entity, order) => {
       let handle = this.bodyHandles.get(entity.id)
@@ -708,7 +785,7 @@ export class World {
     const previousLength = this.runtime.copy_previous_body_state(this.previousBodyBuffer)
     this.activeBodies.forEach((entity, index) => {
       readEntityRecord(this.stateBuffer, index, entity, this.entities)
-      if (previousLength === bodyLength && alpha < 1) {
+      if (settings.interpolation === 'Interpolate' && previousLength === bodyLength && alpha < 1) {
         const offset = index * PHYSICS_STRIDE
         const transform = worldTransform(entity, this.entities)
         setWorldTransform(entity, {
@@ -748,11 +825,11 @@ export class World {
         const handle = this.bodyHandles.get(entity.id)
         if (handle !== undefined) entityByHandle.set(handle, this.tileCollisionOwners.get(entity.id) ?? entity)
       }
-      this.events = rawEvents.map(event => ({
+      this.events = stablePhysicsEventOrder(rawEvents.map(event => ({
         ...event,
         firstEntityUuid: typeof event.first === 'number' ? entityByHandle.get(event.first)?.uuid : undefined,
         secondEntityUuid: typeof event.second === 'number' ? entityByHandle.get(event.second)?.uuid : undefined
-      }))
+      })))
       recordPhysicsTelemetry(this.entities, this.events, this.diagnostics, this.lastSettings.tickRate)
     } catch (error) {
       console.warn('Nova_A received malformed runtime diagnostics', error)

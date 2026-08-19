@@ -22,7 +22,7 @@ jobs:
           cache: pnpm
       - uses: dtolnay/rust-toolchain@stable
         with:
-          toolchain: 1.77.0
+          toolchain: 1.88.0
           targets: wasm32-unknown-unknown
           components: clippy
       - name: Install Linux desktop prerequisites

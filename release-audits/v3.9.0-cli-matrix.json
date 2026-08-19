@@ -1,0 +1,305 @@
+{
+  "format": "nova-build-cli-matrix",
+  "version": 1,
+  "engineVersion": "3.9.0",
+  "generatedAt": "2026-08-19T13:58:06.489Z",
+  "commands": [
+    {
+      "command": "version",
+      "args": [],
+      "exitCode": 0,
+      "expected": 0,
+      "stderr": "",
+      "events": [
+        {
+          "format": "nova-cli-log",
+          "version": 1,
+          "engineVersion": "4.0.0",
+          "level": "info",
+          "event": "version",
+          "message": "Nova_A 4.0.0",
+          "cliVersion": 1,
+          "projectSchema": 29,
+          "runtimeApi": 1,
+          "pluginApi": 2,
+          "packageManifest": 1
+        }
+      ]
+    },
+    {
+      "command": "validate",
+      "args": [
+        "--project",
+        "C:\\Users\\steve\\OneDrive\\Desktop\\Nova_A\\reference-projects\\projects\\build-automation\\project.nova"
+      ],
+      "exitCode": 0,
+      "expected": 0,
+      "stderr": "",
+      "events": [
+        {
+          "format": "nova-cli-log",
+          "version": 1,
+          "engineVersion": "4.0.0",
+          "level": "info",
+          "event": "validation-complete",
+          "message": "Project validation passed.",
+          "project": "C:\\Users\\steve\\OneDrive\\Desktop\\Nova_A\\reference-projects\\projects\\build-automation\\project.nova",
+          "sha256": "9d7b6e1d56639c926aab80430d04a4e9031faed5e4c3c0106d5127506e75cca8",
+          "schema": 29,
+          "errors": 0,
+          "warnings": 0
+        }
+      ]
+    },
+    {
+      "command": "test",
+      "args": [
+        "--project",
+        "C:\\Users\\steve\\OneDrive\\Desktop\\Nova_A\\reference-projects\\projects\\build-automation\\project.nova"
+      ],
+      "exitCode": 0,
+      "expected": 0,
+      "stderr": "",
+      "events": [
+        {
+          "format": "nova-cli-log",
+          "version": 1,
+          "engineVersion": "4.0.0",
+          "level": "info",
+          "event": "test-complete",
+          "message": "Headless project tests and preflight passed.",
+          "project": "C:\\Users\\steve\\OneDrive\\Desktop\\Nova_A\\reference-projects\\projects\\build-automation\\project.nova",
+          "discovered": 0,
+          "results": [],
+          "failed": 0
+        }
+      ]
+    },
+    {
+      "command": "import",
+      "args": [
+        "--source",
+        "C:\\Users\\steve\\OneDrive\\Desktop\\Nova_A\\README.md",
+        "--output",
+        "C:\\Users\\steve\\AppData\\Local\\Temp\\nova-a-v3.9-cli-9JqWfk\\import-record.json",
+        "--reproducible"
+      ],
+      "exitCode": 0,
+      "expected": 0,
+      "stderr": "",
+      "events": [
+        {
+          "format": "nova-import-record",
+          "version": 1,
+          "engineVersion": "4.0.0",
+          "level": "info",
+          "event": "import-complete",
+          "message": "Asset import record created.",
+          "source": "README.md",
+          "extension": ".md",
+          "bytes": 37868,
+          "sha256": "4947ac6fc6ced16719edcc2c4ffb517cadab74d30a6be6d9d59d0822b9f2383a",
+          "importedAt": "1970-01-01T00:00:00.000Z"
+        }
+      ]
+    },
+    {
+      "command": "package",
+      "args": [
+        "--manifest",
+        "C:\\Users\\steve\\OneDrive\\Desktop\\Nova_A\\templates\\package-authoring\\manifest.json"
+      ],
+      "exitCode": 2,
+      "expected": 2,
+      "stderr": "",
+      "events": [
+        {
+          "format": "nova-cli-log",
+          "version": 1,
+          "engineVersion": "4.0.0",
+          "level": "error",
+          "event": "failure",
+          "message": "Publish validation requires a verified publisher and registry signature",
+          "command": "package"
+        }
+      ]
+    },
+    {
+      "command": "package",
+      "args": [
+        "--manifest",
+        "C:\\Users\\steve\\AppData\\Local\\Temp\\nova-a-v3.9-cli-9JqWfk\\trusted-manifest.json",
+        "--output",
+        "C:\\Users\\steve\\AppData\\Local\\Temp\\nova-a-v3.9-cli-9JqWfk\\validated.nova-package"
+      ],
+      "exitCode": 0,
+      "expected": 0,
+      "stderr": "",
+      "events": [
+        {
+          "format": "nova-cli-log",
+          "version": 1,
+          "engineVersion": "4.0.0",
+          "level": "info",
+          "event": "package-validated",
+          "message": "Package publish validation passed.",
+          "id": "com.example.nova-package",
+          "packageVersion": "1.0.0",
+          "archiveSha256": "f51d7016ff97d3f27687eca051fe61509e3fcb022b42295880adab2968670bde",
+          "permissions": [],
+          "entryPointType": "runtime"
+        }
+      ]
+    },
+    {
+      "command": "build",
+      "args": [
+        "--project",
+        "C:\\Users\\steve\\OneDrive\\Desktop\\Nova_A\\reference-projects\\projects\\build-automation\\project.nova",
+        "--target",
+        "web",
+        "--output",
+        "C:\\Users\\steve\\AppData\\Local\\Temp\\nova-a-v3.9-cli-9JqWfk\\build-a",
+        "--cache-mode",
+        "clean"
+      ],
+      "exitCode": 0,
+      "expected": 0,
+      "stderr": "",
+      "events": [
+        {
+          "format": "nova-cli-log",
+          "version": 1,
+          "engineVersion": "4.0.0",
+          "level": "info",
+          "event": "build-start",
+          "message": "Starting headless deterministic export.",
+          "mode": "build"
+        },
+        {
+          "format": "nova-cli-log",
+          "version": 1,
+          "engineVersion": "4.0.0",
+          "level": "info",
+          "event": "build-complete",
+          "message": "Headless export completed."
+        }
+      ]
+    },
+    {
+      "command": "build",
+      "args": [
+        "--project",
+        "C:\\Users\\steve\\OneDrive\\Desktop\\Nova_A\\reference-projects\\projects\\build-automation\\project.nova",
+        "--target",
+        "web",
+        "--output",
+        "C:\\Users\\steve\\AppData\\Local\\Temp\\nova-a-v3.9-cli-9JqWfk\\build-b",
+        "--cache-mode",
+        "clean"
+      ],
+      "exitCode": 0,
+      "expected": 0,
+      "stderr": "",
+      "events": [
+        {
+          "format": "nova-cli-log",
+          "version": 1,
+          "engineVersion": "4.0.0",
+          "level": "info",
+          "event": "build-start",
+          "message": "Starting headless deterministic export.",
+          "mode": "build"
+        },
+        {
+          "format": "nova-cli-log",
+          "version": 1,
+          "engineVersion": "4.0.0",
+          "level": "info",
+          "event": "build-complete",
+          "message": "Headless export completed."
+        }
+      ]
+    },
+    {
+      "command": "export",
+      "args": [
+        "--project",
+        "C:\\Users\\steve\\OneDrive\\Desktop\\Nova_A\\reference-projects\\projects\\build-automation\\project.nova",
+        "--target",
+        "web",
+        "--output",
+        "C:\\Users\\steve\\AppData\\Local\\Temp\\nova-a-v3.9-cli-9JqWfk\\export",
+        "--cache-mode",
+        "validate"
+      ],
+      "exitCode": 0,
+      "expected": 0,
+      "stderr": "",
+      "events": [
+        {
+          "format": "nova-cli-log",
+          "version": 1,
+          "engineVersion": "4.0.0",
+          "level": "info",
+          "event": "build-start",
+          "message": "Starting headless deterministic export.",
+          "mode": "export"
+        },
+        {
+          "format": "nova-cli-log",
+          "version": 1,
+          "engineVersion": "4.0.0",
+          "level": "info",
+          "event": "build-complete",
+          "message": "Headless export completed."
+        }
+      ]
+    },
+    {
+      "command": "validate",
+      "args": [
+        "--project",
+        "C:\\Users\\steve\\AppData\\Local\\Temp\\nova-a-v3.9-cli-9JqWfk\\future.nova"
+      ],
+      "exitCode": 1,
+      "expected": 1,
+      "stderr": "",
+      "events": [
+        {
+          "format": "nova-cli-log",
+          "version": 1,
+          "engineVersion": "4.0.0",
+          "level": "error",
+          "event": "validation-issue",
+          "message": "Project schema must be between 5 and 29.",
+          "code": "project-schema",
+          "project": "C:\\Users\\steve\\AppData\\Local\\Temp\\nova-a-v3.9-cli-9JqWfk\\future.nova"
+        },
+        {
+          "format": "nova-cli-log",
+          "version": 1,
+          "engineVersion": "4.0.0",
+          "level": "error",
+          "event": "validation-complete",
+          "message": "Project validation failed.",
+          "project": "C:\\Users\\steve\\AppData\\Local\\Temp\\nova-a-v3.9-cli-9JqWfk\\future.nova",
+          "sha256": "9d91567c4ddb7ea45cf34d35605d84846e8fd4cf73bc667529cf93f932fed946",
+          "schema": 30,
+          "errors": 1,
+          "warnings": 0
+        }
+      ]
+    }
+  ],
+  "deterministicBuildHashes": {
+    "first": "63aea109879040635aa69cfbc31da19f5fe8447df50ccba7a4da8fbf7ece6aa3",
+    "second": "63aea109879040635aa69cfbc31da19f5fe8447df50ccba7a4da8fbf7ece6aa3",
+    "identical": true
+  },
+  "reportsPresent": true,
+  "invalidSchemaRejected": true,
+  "unsignedPublishRejected": true,
+  "signedPublishValidated": true,
+  "status": "passed"
+}

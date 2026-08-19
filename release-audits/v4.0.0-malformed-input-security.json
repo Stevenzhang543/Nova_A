@@ -1,0 +1,11 @@
+{
+  "format": "nova-v4-malformed-input-security",
+  "version": 1,
+  "engineVersion": "4.0.0",
+  "generatedAt": "2026-08-19T15:06:45.128Z",
+  "malformedProjectRejected": true,
+  "futureSchemaRejectedBeforeMutation": true,
+  "stablePackageVerification": true,
+  "pathTraversalAndCorruption": "retained Rust/CLI/package audit chain",
+  "status": "passed"
+}

@@ -56,7 +56,7 @@ type PanelName = 'hierarchy' | 'inspector' | 'bottom'
 const USER_STORAGE_KEY = 'nova-a-editor-workspaces-v2'
 const LEGACY_STORAGE_KEY = 'nova-a-editor-layout-v1'
 const PAGES = new Set<EditorPage>(['scene', 'game', 'script', 'settings'])
-const BOTTOM_TABS = new Set<BottomPanelTab>(['assets', 'packages', 'console', 'animation', 'tilemap', 'world', 'presentation', 'profiler', 'rendering', 'project', 'build'])
+const BOTTOM_TABS = new Set<BottomPanelTab>(['assets', 'packages', 'console', 'animation', 'audio', 'tilemap', 'presentation', 'profiler', 'rendering', 'project', 'build'])
 let initialized = false
 
 function storageKey(): string {
@@ -71,7 +71,8 @@ function clamp(value: unknown, fallback: number, minimum: number, maximum: numbe
 function normalizeLayout(value: unknown, fallback: WorkspaceLayout = safeDesignLayout): WorkspaceLayout {
   const source = value && typeof value === 'object' ? value as Partial<WorkspaceLayout> : {}
   const page = typeof source.page === 'string' && PAGES.has(source.page as EditorPage) ? source.page as EditorPage : fallback.page
-  let tab = typeof source.bottomPanelTab === 'string' && BOTTOM_TABS.has(source.bottomPanelTab as BottomPanelTab) ? source.bottomPanelTab as BottomPanelTab : fallback.bottomPanelTab
+  const legacyTab = (source as { bottomPanelTab?: string }).bottomPanelTab
+  let tab = legacyTab === 'world' ? 'project' : typeof source.bottomPanelTab === 'string' && BOTTOM_TABS.has(source.bottomPanelTab as BottomPanelTab) ? source.bottomPanelTab as BottomPanelTab : fallback.bottomPanelTab
   if (tab === 'presentation') tab = 'assets'
   return {
     page,

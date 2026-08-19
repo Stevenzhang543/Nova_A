@@ -144,7 +144,7 @@ export function recordPhysicsTelemetry(
 
   const names = new Map(entities.map(entity => [entity.uuid, entity.name]))
   for (const event of events) {
-    if (!['collisionStarted', 'collisionStayed', 'collisionEnded', 'triggerEntered', 'triggerExited'].includes(event.type)) continue
+    if (!['collisionStarted', 'collisionStayed', 'collisionEnded', 'triggerEntered', 'triggerStayed', 'triggerExited'].includes(event.type)) continue
     // Start/end events stay permanently useful in the timeline. A contact may
     // stay active for hundreds of fixed steps, so retain only the latest row
     // for that pair instead of allowing duplicate DOM/history growth.

@@ -1,0 +1,71 @@
+{
+  "format": "nova-v3.4-production-physics-audit",
+  "version": 1,
+  "engineVersion": "3.6.0",
+  "generatedAt": "2026-08-17T11:41:59.129Z",
+  "severity0Open": 0,
+  "severity1Open": 0,
+  "checks": [
+    {
+      "name": "release and format authority",
+      "status": "passed",
+      "evidence": "Product 3.6.0 / Project Format 2 schema 26 agree in JS, Rust, and Tauri."
+    },
+    {
+      "name": "complete body roles and ownership",
+      "status": "passed",
+      "evidence": "Static, kinematic, character, rigid, area/trigger, and transform ownership are authorable."
+    },
+    {
+      "name": "shape support and local compounds",
+      "status": "passed",
+      "evidence": "Seven shape kinds, support disclosure, local transforms, and a deterministic compound envelope are connected."
+    },
+    {
+      "name": "material assets reach native pair solver",
+      "status": "passed",
+      "evidence": "Density, friction, restitution, thresholds, and combine modes cross asset/editor/native boundaries."
+    },
+    {
+      "name": "queries and stable event lifecycle",
+      "status": "passed",
+      "evidence": "Ray/shape/point/overlap/contact queries and enter/stay/exit phases use stable ordering."
+    },
+    {
+      "name": "character production workflow",
+      "status": "passed",
+      "evidence": "Floor/wall/ceiling, slope, step, snap, platform, margin, APIs, and overlay are connected."
+    },
+    {
+      "name": "joint and constraint set",
+      "status": "passed",
+      "evidence": "Seven joint kinds expose motors, limits, break thresholds, and diagnostics."
+    },
+    {
+      "name": "named collision-layer workflow",
+      "status": "passed",
+      "evidence": "Names, descriptions, colors, presets, search, compact pairs, advanced matrix, and Inspector names are present."
+    },
+    {
+      "name": "simulation quality, debug, profiler, replay and tests",
+      "status": "passed",
+      "evidence": "CCD, interpolation, sleep, fixed-step diagnostics, overlays, metrics, replay, and scene tests are reachable."
+    },
+    {
+      "name": "production templates and references",
+      "status": "passed",
+      "evidence": "Required templates and seven physics references are listed."
+    },
+    {
+      "name": "complete multilingual physics documentation",
+      "status": "passed",
+      "evidence": "English, German, Chinese, and bookmarkable Web manuals plus editor strings cover v3.4."
+    },
+    {
+      "name": "responsive multilingual toolbar",
+      "status": "passed",
+      "evidence": "Toolbar uses intrinsic horizontal controls and document-flow overflow instead of fixed coordinates."
+    }
+  ],
+  "status": "passed"
+}

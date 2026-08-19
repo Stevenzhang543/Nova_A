@@ -1,0 +1,14 @@
+{
+  "engineVersion": "4.0.0",
+  "schema": 29,
+  "projectName": "Nested Prefab Authoring",
+  "minimumScenes": 1,
+  "minimumEntities": 10,
+  "expectedValidation": "pass",
+  "demonstrates": [
+    "nested prefab layers",
+    "per-property overrides",
+    "status badges",
+    "world/local reparent modes"
+  ]
+}

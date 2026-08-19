@@ -8,7 +8,7 @@ const root = dirname(dirname(fileURLToPath(import.meta.url)))
 const value = name => process.argv.find(argument => argument.startsWith(`--${name}=`))?.split('=').slice(1).join('=')
 const requestedHours = Math.max(0, Number(value('duration-hours') ?? 0))
 const requestedCycles = Math.max(1, Math.min(100_000, Number(value('cycles') ?? 500)))
-const output = value('output') || join(root, 'release-audits', 'v3.2.0-stability-smoke.json')
+const output = value('output') || join(root, 'release-audits', 'v3.9.0-stability-smoke.json')
 const projects = ['empty', 'platformer', 'top-down', 'physics-sandbox', 'ui-showcase', 'networked-optional']
 const loaded = await Promise.all(projects.map(name => readFile(join(root, 'reference-projects', 'projects', `${name}.nova`), 'utf8').then(JSON.parse)))
 const goodPlugin = await readFile(join(root, 'reference-projects', 'plugins', 'hello-plugin', 'hello-plugin.wasm'))
@@ -62,7 +62,7 @@ do {
 
 const elapsedHours = (performance.now() - started) / 3_600_000
 const report = {
-  format: 'nova-stability-report', version: 1, engineVersion: '3.2.0', generatedAt: new Date().toISOString(),
+  format: 'nova-stability-report', version: 1, engineVersion: '3.9.0', generatedAt: new Date().toISOString(),
   requestedHours, requestedCycles, elapsedHours, qualified24Hours: requestedHours >= 24 && elapsedHours >= 23.99,
   cycles, playStopCycles, sceneStreamingOperations, assetReimports, corruptInputs, isolatedPluginFaults, peakHeapBytes,
   status: 'passed', note: requestedHours >= 24 && elapsedHours >= 23.99 ? '24-hour qualification completed.' : 'Bounded local smoke completed; this is not represented as a 24-hour pass.'

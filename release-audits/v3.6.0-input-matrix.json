@@ -1,0 +1,69 @@
+{
+  "format": "nova-input-matrix",
+  "version": 1,
+  "engineVersion": "3.6.0",
+  "generatedAt": "2026-08-19T13:54:40.838Z",
+  "devices": [
+    {
+      "device": "keyboard",
+      "normalized": true
+    },
+    {
+      "device": "physical-key",
+      "normalized": true
+    },
+    {
+      "device": "mouse-button",
+      "normalized": true
+    },
+    {
+      "device": "mouse-wheel",
+      "normalized": true
+    },
+    {
+      "device": "mouse-motion",
+      "normalized": true
+    },
+    {
+      "device": "gamepad-button",
+      "normalized": true
+    },
+    {
+      "device": "gamepad-axis",
+      "normalized": true
+    },
+    {
+      "device": "touch",
+      "normalized": true
+    },
+    {
+      "device": "gesture",
+      "normalized": true
+    }
+  ],
+  "modifiers": [
+    "Control",
+    "Shift",
+    "Alt",
+    "Meta"
+  ],
+  "curves": [
+    "linear",
+    "square",
+    "cubic",
+    "exponential"
+  ],
+  "hotplugIdentity": true,
+  "runtimeRebinding": true,
+  "recordReplay": true,
+  "conflicts": [
+    {
+      "signature": "keyboard:0:Space::",
+      "action": "ConflictB",
+      "bindingIndex": 0,
+      "conflictsWithAction": "ConflictA",
+      "conflictsWithBindingIndex": 0
+    }
+  ],
+  "status": "passed"
+}

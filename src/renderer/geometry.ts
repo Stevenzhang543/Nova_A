@@ -111,25 +111,50 @@ export function strokeGeometry(command: ShapeRenderCommand): GeometryData | null
   const local = shapeLocalPoints(command)
   if (local.length < 2) return null
   const closed = command.shape !== 'Line'
+  const world = local.map(point => worldPoint(point, command.position, command.rotation, command.scale))
+  const points = world.filter((point, index) => index === 0 || Math.hypot(point.x - world[index - 1].x, point.y - world[index - 1].y) > 1e-9)
+  if (closed && points.length > 2 && Math.hypot(points[0].x - points[points.length - 1].x, points[0].y - points[points.length - 1].y) <= 1e-9) points.pop()
+  if (points.length < (closed ? 3 : 2)) return null
+
+  // Build one joined ring instead of one uncapped quad per edge. Independent
+  // edge quads protrude past rectangle corners and produce the dark "plus"
+  // outline seen around newly drawn primitives. A bounded miter keeps the
+  // outside and inside edges continuous under rotation and non-uniform scale.
+  const halfWidth = command.strokeWidth * .5
+  const normal = (start: Vec2, end: Vec2): Vec2 => {
+    const dx = end.x - start.x, dy = end.y - start.y
+    const length = Math.max(1e-9, Math.hypot(dx, dy))
+    return { x: -dy / length, y: dx / length }
+  }
   const positions: Vec2[] = []
   const uvs: Vec2[] = []
-  const indices: number[] = []
-  const segmentCount = closed ? local.length : local.length - 1
-  for (let index = 0; index < segmentCount; index++) {
-    const start = worldPoint(local[index], command.position, command.rotation, command.scale)
-    const end = worldPoint(local[(index + 1) % local.length], command.position, command.rotation, command.scale)
-    const dx = end.x - start.x, dy = end.y - start.y
-    const length = Math.hypot(dx, dy)
-    if (length <= 1e-9) continue
-    const nx = -dy / length * command.strokeWidth * .5
-    const ny = dx / length * command.strokeWidth * .5
-    const base = positions.length
+  for (let index = 0; index < points.length; index++) {
+    const current = points[index]
+    const incoming = index > 0 ? normal(points[index - 1], current) : closed ? normal(points[points.length - 1], current) : normal(current, points[1])
+    const outgoing = index < points.length - 1 ? normal(current, points[index + 1]) : closed ? normal(current, points[0]) : normal(points[index - 1], current)
+    const sumX = incoming.x + outgoing.x, sumY = incoming.y + outgoing.y
+    const sumLength = Math.hypot(sumX, sumY)
+    let offsetX = outgoing.x * halfWidth, offsetY = outgoing.y * halfWidth
+    if (sumLength > 1e-6) {
+      const miterX = sumX / sumLength, miterY = sumY / sumLength
+      const denominator = miterX * outgoing.x + miterY * outgoing.y
+      const miterLength = Math.min(halfWidth * 4, halfWidth / Math.max(.25, Math.abs(denominator)))
+      offsetX = miterX * miterLength
+      offsetY = miterY * miterLength
+    }
     positions.push(
-      { x: start.x + nx, y: start.y + ny }, { x: end.x + nx, y: end.y + ny },
-      { x: end.x - nx, y: end.y - ny }, { x: start.x - nx, y: start.y - ny }
+      { x: current.x + offsetX, y: current.y + offsetY },
+      { x: current.x - offsetX, y: current.y - offsetY }
     )
-    uvs.push({ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 1, y: 1 }, { x: 0, y: 1 })
-    indices.push(base, base + 1, base + 2, base, base + 2, base + 3)
+    const progress = closed ? index / points.length : index / Math.max(1, points.length - 1)
+    uvs.push({ x: progress, y: 0 }, { x: progress, y: 1 })
+  }
+  const indices: number[] = []
+  const segmentCount = closed ? points.length : points.length - 1
+  for (let index = 0; index < segmentCount; index++) {
+    const next = (index + 1) % points.length
+    const outer = index * 2, inner = outer + 1, nextOuter = next * 2, nextInner = nextOuter + 1
+    indices.push(outer, nextOuter, nextInner, outer, nextInner, inner)
   }
   return { positions, uvs, indices }
 }

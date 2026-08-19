@@ -1,9 +1,9 @@
 {
-  "engineVersion": "3.2.0",
-  "schema": 23,
+  "engineVersion": "4.0.0",
+  "schema": 29,
   "projectName": "Nova_A Top-down Reference",
   "minimumScenes": 2,
-  "minimumEntities": 9,
+  "minimumEntities": 11,
   "expectedValidation": "pass",
   "demonstrates": [
     "Prefabs",

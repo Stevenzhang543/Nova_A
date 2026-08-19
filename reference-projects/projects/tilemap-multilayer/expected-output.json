@@ -1,0 +1,14 @@
+{
+  "engineVersion": "4.0.0",
+  "schema": 29,
+  "projectName": "Multi-layer Tilemap 2.0",
+  "minimumScenes": 1,
+  "minimumEntities": 4,
+  "expectedValidation": "pass",
+  "demonstrates": [
+    "multi-layer tilemap",
+    "blend, parallax and z order",
+    "collision/navigation/occlusion masks",
+    "rotate and mirror transforms"
+  ]
+}

@@ -40,6 +40,7 @@
     <ContextMenu />
     <ConfirmDialog />
     <CommandPalette />
+    <CreateObjectPalette />
 
     <StatusBar />
   </div>
@@ -58,6 +59,7 @@ import ActionBar from "../components/ActionBar.vue"
 import ContextMenu from "../components/ContextMenu.vue" // NEW
 import ConfirmDialog from "../components/ConfirmDialog.vue"
 import CommandPalette from "../components/CommandPalette.vue"
+import CreateObjectPalette from "../components/CreateObjectPalette.vue"
 import ScriptStudio from "../components/ScriptStudio.vue"
 
 import SettingsPanel from "../panels/SettingsPanel.vue"

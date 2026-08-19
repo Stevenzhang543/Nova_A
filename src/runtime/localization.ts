@@ -3,16 +3,21 @@ import { assetReference, assetState, createTextAsset, readTextAsset, resolveAsse
 import { finiteNumber } from '../world/geometry'
 
 export type TextDirection = 'ltr' | 'rtl'
+export type PseudolocalizationMode = 'accented' | 'expanded' | 'bidi'
 export type LocalizationVariable = string | number | boolean
 export type LocalizationValue = string | Record<string, string>
 
+export interface LocaleMetadata { displayName: string; nativeName: string; region: string; script: string }
+
 export interface LocalizationTable {
-  version: 1
+  version: 2
   locale: string
   fallbackLocale: string
   direction: TextDirection
+  metadata: LocaleMetadata
   fontFallbacks: string[]
   entries: Record<string, LocalizationValue>
+  contexts: Record<string, string>
 }
 
 export interface LocalizationProjectSettings {
@@ -20,11 +25,16 @@ export interface LocalizationProjectSettings {
   previewLocale: string
   fallbackChain: string[]
   pseudolocalization: boolean
+  pseudolocalizationMode: PseudolocalizationMode
+  expansionRatio: number
   buildLocales: string[]
 }
 
+export interface LocalizationExtraction { key: string; context: string; source: string }
+export interface MissingLocalizationEntry { key: string; locale: string; source: string; context: string }
+
 export const localizationSettings = reactive<LocalizationProjectSettings>({
-  sourceLocale: 'en', previewLocale: 'en', fallbackChain: ['en'], pseudolocalization: false, buildLocales: ['en']
+  sourceLocale: 'en', previewLocale: 'en', fallbackChain: ['en'], pseudolocalization: false, pseudolocalizationMode: 'expanded', expansionRatio: .35, buildLocales: ['en']
 })
 
 const RTL_PREFIXES = new Set(['ar', 'fa', 'he', 'ur'])
@@ -51,12 +61,14 @@ function cleanValue(value: unknown): LocalizationValue | null {
 export function defaultLocalizationTable(locale = 'en'): LocalizationTable {
   const normalized = cleanLocale(locale)
   return {
-    version: 1,
+    version: 2,
     locale: normalized,
     fallbackLocale: normalized === 'en' ? '' : 'en',
     direction: RTL_PREFIXES.has(normalized.split('-')[0].toLowerCase()) ? 'rtl' : 'ltr',
+    metadata: { displayName: normalized, nativeName: normalized, region: normalized.split('-')[1] ?? '', script: '' },
     fontFallbacks: [],
-    entries: { 'game.title': 'My Game', 'menu.play': 'Play', 'menu.quit': 'Quit' }
+    entries: { 'game.title': 'My Game', 'menu.play': 'Play', 'menu.quit': 'Quit' },
+    contexts: { 'game.title': 'Window and menu title', 'menu.play': 'Primary menu action', 'menu.quit': 'Exit action' }
   }
 }
 
@@ -64,21 +76,31 @@ export function normalizeLocalizationTable(source: unknown, localeHint = 'en'): 
   const item = source && typeof source === 'object' ? source as Partial<LocalizationTable> : {}
   const locale = cleanLocale(item.locale, cleanLocale(localeHint))
   const entries: Record<string, LocalizationValue> = {}
+  const contexts: Record<string, string> = {}
   if (item.entries && typeof item.entries === 'object' && !Array.isArray(item.entries)) {
     for (const [key, raw] of Object.entries(item.entries).slice(0, MAX_TABLE_ENTRIES)) {
       const clean = cleanValue(raw)
       if (key.trim() && clean !== null) entries[key.trim().slice(0, 240)] = clean
     }
   }
+  if (item.contexts && typeof item.contexts === 'object' && !Array.isArray(item.contexts)) for (const [key, context] of Object.entries(item.contexts).slice(0, MAX_TABLE_ENTRIES)) if (typeof context === 'string' && entries[key] !== undefined) contexts[key] = context.slice(0, 2_000)
+  const rawMetadata = item.metadata && typeof item.metadata === 'object' ? item.metadata as Partial<LocaleMetadata> : {}
   return {
-    version: 1,
+    version: 2,
     locale,
     fallbackLocale: item.fallbackLocale ? cleanLocale(item.fallbackLocale) : '',
     direction: item.direction === 'rtl' || RTL_PREFIXES.has(locale.split('-')[0].toLowerCase()) ? 'rtl' : 'ltr',
+    metadata: {
+      displayName: typeof rawMetadata.displayName === 'string' ? rawMetadata.displayName.slice(0, 120) : locale,
+      nativeName: typeof rawMetadata.nativeName === 'string' ? rawMetadata.nativeName.slice(0, 120) : locale,
+      region: typeof rawMetadata.region === 'string' ? rawMetadata.region.slice(0, 32) : locale.split('-')[1] ?? '',
+      script: typeof rawMetadata.script === 'string' ? rawMetadata.script.slice(0, 32) : ''
+    },
     fontFallbacks: Array.isArray(item.fontFallbacks)
       ? item.fontFallbacks.map(cleanReference).filter((value): value is string => value !== null).filter((value, index, list) => list.indexOf(value) === index).slice(0, MAX_FALLBACKS)
       : [],
-    entries
+    entries,
+    contexts
   }
 }
 
@@ -121,7 +143,8 @@ export function normalizeLocalizationSettings(source: unknown): LocalizationProj
     .map(locale => cleanLocale(locale, sourceLocale)).filter((locale, index, list) => list.indexOf(locale) === index).slice(0, 64)
   if (!fallbackChain.includes(sourceLocale)) fallbackChain.push(sourceLocale)
   if (!buildLocales.includes(sourceLocale)) buildLocales.push(sourceLocale)
-  return { sourceLocale, previewLocale, fallbackChain, pseudolocalization: item.pseudolocalization === true, buildLocales }
+  const modes: PseudolocalizationMode[] = ['accented', 'expanded', 'bidi']
+  return { sourceLocale, previewLocale, fallbackChain, pseudolocalization: item.pseudolocalization === true, pseudolocalizationMode: modes.includes(item.pseudolocalizationMode as PseudolocalizationMode) ? item.pseudolocalizationMode as PseudolocalizationMode : 'expanded', expansionRatio: Math.min(2, Math.max(0, finiteNumber(item.expansionRatio, .35))), buildLocales }
 }
 
 export function loadLocalizationSettings(source: unknown): void {
@@ -167,9 +190,13 @@ function formatVariables(text: string, variables: Record<string, LocalizationVar
   })
 }
 
-export function pseudolocalize(text: string): string {
+export function pseudolocalize(text: string, mode: PseudolocalizationMode = localizationSettings.pseudolocalizationMode, expansionRatio = localizationSettings.expansionRatio): string {
   const expansion: Record<string, string> = { a: 'àá', e: 'ëé', i: 'ïí', o: 'öó', u: 'üú', A: 'ÀÁ', E: 'ËÉ', I: 'ÏÍ', O: 'ÖÓ', U: 'ÜÚ' }
-  return `［${[...text].map(character => expansion[character] ?? character).join('')}］`
+  const accented = [...text].map(character => expansion[character]?.[0] ?? character).join('')
+  if (mode === 'bidi') return `\u202e⟦${accented}\u202c⟧`
+  if (mode === 'accented') return `［${accented}］`
+  const padding = '~'.repeat(Math.min(2_000, Math.ceil([...text].length * Math.min(2, Math.max(0, expansionRatio)))))
+  return `［${accented}${padding}］`
 }
 
 export function localize(key: string, variables: Record<string, LocalizationVariable> = {}, fallback = ''): string {
@@ -187,6 +214,41 @@ export function localize(key: string, variables: Record<string, LocalizationVari
   }
   const formatted = formatVariables(value === undefined ? fallback || key : variant(value, variables, locale), variables, locale)
   return localizationSettings.pseudolocalization ? pseudolocalize(formatted) : formatted
+}
+
+function csvCell(value: string): string { return /[",\r\n]/.test(value) ? `"${value.replace(/"/g, '""')}"` : value }
+function parseCsv(source: string): string[][] {
+  const rows: string[][] = []; let row: string[] = [], cell = '', quoted = false
+  for (let index = 0; index < source.length; index++) { const character = source[index]; if (quoted) { if (character === '"' && source[index + 1] === '"') { cell += '"'; index++ } else if (character === '"') quoted = false; else cell += character } else if (character === '"') quoted = true; else if (character === ',') { row.push(cell); cell = '' } else if (character === '\n') { row.push(cell.replace(/\r$/, '')); rows.push(row); row = []; cell = '' } else cell += character }
+  if (cell || row.length) { row.push(cell.replace(/\r$/, '')); rows.push(row) }
+  return rows
+}
+
+export function exportLocalizationCsv(table: LocalizationTable): string {
+  const normalized = normalizeLocalizationTable(table)
+  return [['key', 'context', 'value'], ...Object.keys(normalized.entries).sort().map(key => [key, normalized.contexts[key] ?? '', typeof normalized.entries[key] === 'string' ? normalized.entries[key] : JSON.stringify(normalized.entries[key])])].map(row => row.map(csvCell).join(',')).join('\r\n') + '\r\n'
+}
+
+export function importLocalizationCsv(source: string, locale = 'en', base?: LocalizationTable): LocalizationTable {
+  const table = normalizeLocalizationTable(base ?? defaultLocalizationTable(locale), locale), rows = parseCsv(source)
+  const header = rows.shift()?.map(value => value.trim().toLowerCase()) ?? [], keyIndex = header.indexOf('key'), valueIndex = header.indexOf('value'), contextIndex = header.indexOf('context')
+  if (keyIndex < 0 || valueIndex < 0) throw new Error('Localization CSV requires key and value columns.')
+  for (const row of rows.slice(0, MAX_TABLE_ENTRIES)) { const key = String(row[keyIndex] ?? '').trim().slice(0, 240), raw = String(row[valueIndex] ?? ''); if (!key) continue; try { const parsed = JSON.parse(raw) as unknown; table.entries[key] = parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed as Record<string, string> : raw } catch { table.entries[key] = raw }; const context = String(row[contextIndex] ?? '').trim(); if (context) table.contexts[key] = context.slice(0, 2_000) }
+  return normalizeLocalizationTable(table, locale)
+}
+
+/** Extracts structured localization keys from serialized UI components and Rhai calls. */
+export function extractLocalizationKeys(project: unknown, scripts: Array<{ path: string; source: string }> = []): LocalizationExtraction[] {
+  const found = new Map<string, LocalizationExtraction>()
+  const visit = (value: unknown, path: string): void => { if (Array.isArray(value)) value.forEach((item, index) => visit(item, `${path}[${index}]`)); else if (value && typeof value === 'object') for (const [key, child] of Object.entries(value)) { if (key === 'localizationKey' && typeof child === 'string' && child.trim()) found.set(child.trim(), { key: child.trim(), context: 'UI component', source: path }); visit(child, `${path}.${key}`) } }
+  visit(project, 'project')
+  const pattern = /(?:localize|tr)\(\s*["']([^"']+)["']/g
+  for (const script of scripts) for (const match of script.source.matchAll(pattern)) if (match[1]) found.set(match[1], { key: match[1], context: 'Script call', source: `${script.path}:${script.source.slice(0, match.index).split('\n').length}` })
+  return [...found.values()].sort((a, b) => a.key.localeCompare(b.key))
+}
+
+export function missingLocalizationReport(extracted: LocalizationExtraction[], tables: LocalizationTable[]): MissingLocalizationEntry[] {
+  return extracted.flatMap(item => tables.flatMap(table => table.entries[item.key] === undefined ? [{ key: item.key, locale: table.locale, source: item.source, context: item.context }] : [])).sort((a, b) => a.key.localeCompare(b.key) || a.locale.localeCompare(b.locale))
 }
 
 export function activeTextDirection(): TextDirection {

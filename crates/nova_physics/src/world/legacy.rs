@@ -124,14 +124,40 @@ fn contact_from_manifold(
     let threshold = body_a
         .restitution_threshold
         .max(body_b.restitution_threshold);
+    let combine = |first: f64, second: f64, first_mode: u8, second_mode: u8| {
+        // Mode priority mirrors the editor contract: Maximum > Multiply >
+        // Minimum > Average. Mixed material pairs therefore remain stable.
+        match first_mode.max(second_mode) {
+            1 => first.min(second),
+            2 => first * second,
+            3 => first.max(second),
+            _ => (first + second) * 0.5,
+        }
+    };
+    let restitution = combine(
+        body_a.restitution,
+        body_b.restitution,
+        body_a.restitution_combine,
+        body_b.restitution_combine,
+    )
+    .clamp(0.0, 1.0);
     let restitution_bias = if initial_normal_velocity < -threshold {
-        -body_a.restitution.max(body_b.restitution) * initial_normal_velocity
+        -restitution * initial_normal_velocity
     } else {
         0.0
     };
-    let dynamic_friction = (body_a.dynamic_friction * body_b.dynamic_friction).sqrt();
-    let static_friction = (body_a.static_friction * body_b.static_friction)
-        .sqrt()
+    let dynamic_friction = combine(
+        body_a.dynamic_friction,
+        body_b.dynamic_friction,
+        body_a.friction_combine,
+        body_b.friction_combine,
+    );
+    let static_friction = combine(
+        body_a.static_friction,
+        body_b.static_friction,
+        body_a.friction_combine,
+        body_b.friction_combine,
+    )
         .max(dynamic_friction);
     Contact {
         body_a: body_a_index,
@@ -444,6 +470,8 @@ pub fn step_physics_with_connections(
 ) -> Vec<f64> {
     let source_stride = if input.is_empty() || input.len() % STRIDE == 0 {
         STRIDE
+    } else if input.len() % V3_3_STRIDE == 0 {
+        V3_3_STRIDE
     } else if input.len() % V1_2_STRIDE == 0 {
         V1_2_STRIDE
     } else if input.len() % LEGACY_STRIDE == 0 {
@@ -463,6 +491,10 @@ pub fn step_physics_with_connections(
             }
             target[47] = 1.0;
             target[48] = 1.0;
+            if source_stride <= V3_3_STRIDE {
+                target[54] = 0.0;
+                target[55] = 3.0;
+            }
         }
         records
     } else {

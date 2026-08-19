@@ -4,8 +4,16 @@ import type { Vec2 } from '../world/types'
 import { setWorldTransform, worldTransform } from '../world/hierarchy'
 import { physicsState } from '../store/physics'
 import { instantiatePrefab } from './prefabs'
+import { copyComponentValues, pasteComponentValues } from '../world/components'
 
-interface PooledInstance { ownerUuid: string; prefab: string; entities: Entity[]; active: boolean }
+interface PooledInstance {
+  ownerUuid: string
+  prefab: string
+  entities: Entity[]
+  active: boolean
+  acquiredAt: number
+  initial: Array<{ entityUuid: string; transform: ReturnType<typeof worldTransform>; components: Record<string, Record<string, unknown>> }>
+}
 const instances: PooledInstance[] = []
 export let emitPoolSignal: (name: string, entity: Entity) => void = () => undefined
 export function setPoolSignalEmitter(emitter: typeof emitPoolSignal): void { emitPoolSignal = emitter }
@@ -19,7 +27,11 @@ function create(owner: Entity, pool: ObjectPool2D): PooledInstance | null {
   const entities = instantiatePrefab(pool.prefabAsset, worldTransform(owner, physicsState.world.entities).position, false)
   if (!entities.length) return null
   entities.forEach(entity => { entity.enabled = false })
-  const item = { ownerUuid: owner.uuid, prefab: pool.prefabAsset, entities, active: false }; instances.push(item); return item
+  const item: PooledInstance = {
+    ownerUuid: owner.uuid, prefab: pool.prefabAsset, entities, active: false, acquiredAt: 0,
+    initial: entities.map(entity => ({ entityUuid: entity.uuid, transform: worldTransform(entity, physicsState.world.entities), components: Object.fromEntries(entity.components.map(component => [component.kind, copyComponentValues(component)])) }))
+  }
+  instances.push(item); pool.createdCount++; return item
 }
 
 export function prepareObjectPools(): void {
@@ -29,9 +41,11 @@ export function prepareObjectPools(): void {
 export function acquirePooled(prefab: string, position: Vec2): Entity[] | null {
   const owner = poolOwners().find(item => item.pool.prefabAsset === prefab)
   if (!owner) return null
-  const item = instances.find(candidate => candidate.ownerUuid === owner.entity.uuid && !candidate.active) ?? (owner.pool.autoExpand ? create(owner.entity, owner.pool) : null)
+  const reusable = instances.find(candidate => candidate.ownerUuid === owner.entity.uuid && !candidate.active)
+  const item = reusable ?? (owner.pool.autoExpand ? create(owner.entity, owner.pool) : null)
   if (!item) return null
-  item.active = true; item.entities.forEach(entity => { entity.enabled = true })
+  if (reusable) owner.pool.reusedCount++
+  item.active = true; item.acquiredAt = performance.now() / 1_000; item.entities.forEach(entity => { entity.enabled = true })
   const roots = item.entities.filter(entity => !entity.parentUuid || !item.entities.some(candidate => candidate.uuid === entity.parentUuid))
   const origin = roots[0] ? worldTransform(roots[0], physicsState.world.entities).position : position
   for (const root of roots) { const transform = worldTransform(root, physicsState.world.entities); setWorldTransform(root, { ...transform, position: { x: transform.position.x + position.x - origin.x, y: transform.position.y + position.y - origin.y } }, physicsState.world.entities) }
@@ -43,10 +57,35 @@ export function acquirePooled(prefab: string, position: Vec2): Entity[] | null {
 
 export function releasePooled(entity: Entity): boolean {
   const item = instances.find(candidate => candidate.active && candidate.entities.some(member => member.uuid === entity.uuid)); if (!item) return false
-  item.active = false; item.entities.forEach(member => { member.enabled = false; member.velocity = { x: 0, y: 0 }; member.angularVelocity = 0 })
-  const owner = poolOwners().find(candidate => candidate.entity.uuid === item.ownerUuid); if (owner) owner.pool.activeCount = instances.filter(candidate => candidate.ownerUuid === item.ownerUuid && candidate.active).length
+  const owner = poolOwners().find(candidate => candidate.entity.uuid === item.ownerUuid)
+  item.active = false; item.entities.forEach(member => {
+    member.velocity = { x: 0, y: 0 }; member.angularVelocity = 0
+    const initial = item.initial.find(candidate => candidate.entityUuid === member.uuid)
+    if (owner?.pool.resetContract === 'FullSerializedState' && initial) {
+      setWorldTransform(member, initial.transform, physicsState.world.entities)
+      for (const component of member.components) if (initial.components[component.kind]) pasteComponentValues(component, initial.components[component.kind])
+    } else if (owner?.pool.resetContract === 'CustomSignal') emitPoolSignal('pool.reset', member)
+    member.enabled = false
+  })
+  if (owner) owner.pool.activeCount = instances.filter(candidate => candidate.ownerUuid === item.ownerUuid && candidate.active).length
   emitPoolSignal('pool.despawned', entity); physicsState.world.invalidateRuntime(); return true
 }
 
-export function resetObjectPools(): void { instances.splice(0) }
+export function updateObjectPools(nowSeconds = performance.now() / 1_000): void {
+  for (const item of [...instances]) {
+    const owner = poolOwners().find(candidate => candidate.entity.uuid === item.ownerUuid)
+    if (item.active && owner && owner.pool.maximumLifetime > 0 && nowSeconds - item.acquiredAt >= owner.pool.maximumLifetime && item.entities[0]) releasePooled(item.entities[0])
+  }
+}
 
+export function objectPoolDiagnostics(): Array<{ ownerUuid: string; capacity: number; allocated: number; active: number; inactive: number; created: number; reused: number; leaked: number; resetContract: ObjectPool2D['resetContract'] }> {
+  return poolOwners().map(({ entity, pool }) => {
+    const owned = instances.filter(item => item.ownerUuid === entity.uuid), active = owned.filter(item => item.active).length
+    return { ownerUuid: entity.uuid, capacity: pool.capacity, allocated: owned.length, active, inactive: owned.length - active, created: pool.createdCount, reused: pool.reusedCount, leaked: pool.leakedCount, resetContract: pool.resetContract }
+  })
+}
+
+export function resetObjectPools(): void {
+  for (const { entity, pool } of poolOwners()) pool.leakedCount += instances.filter(item => item.ownerUuid === entity.uuid && item.active).length
+  instances.splice(0)
+}

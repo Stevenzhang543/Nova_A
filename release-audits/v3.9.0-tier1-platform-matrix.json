@@ -1,0 +1,84 @@
+{
+  "format": "nova-tier1-platform-matrix",
+  "version": 1,
+  "engineVersion": "3.9.0",
+  "generatedAt": "2026-08-19T13:58:07.226Z",
+  "declared": [
+    {
+      "id": "windows",
+      "label": "Windows",
+      "tier": "tier-1",
+      "architectures": [
+        "x86_64"
+      ],
+      "editor": true,
+      "runtime": true,
+      "referenceMatrixPassed": true,
+      "reason": "Windows x86-64 editor/runtime and installer matrix passed for 4.0.0."
+    },
+    {
+      "id": "web",
+      "label": "Web",
+      "tier": "tier-1",
+      "architectures": [
+        "x86_64"
+      ],
+      "editor": false,
+      "runtime": true,
+      "referenceMatrixPassed": true,
+      "reason": "Chromium, Firefox and WebKit runtime reference matrix passed for 4.0.0."
+    },
+    {
+      "id": "linux",
+      "label": "Linux",
+      "tier": "experimental",
+      "architectures": [
+        "x86_64"
+      ],
+      "editor": true,
+      "runtime": true,
+      "referenceMatrixPassed": false,
+      "reason": "Promotion waits for clean-machine driver, audio, input and export evidence."
+    },
+    {
+      "id": "macos",
+      "label": "macOS",
+      "tier": "experimental",
+      "architectures": [
+        "x86_64",
+        "aarch64"
+      ],
+      "editor": true,
+      "runtime": true,
+      "referenceMatrixPassed": false,
+      "reason": "Promotion waits for dedicated hardware, signing, notarization and regression capacity."
+    },
+    {
+      "id": "android",
+      "label": "Android",
+      "tier": "unsupported",
+      "architectures": [
+        "aarch64"
+      ],
+      "editor": false,
+      "runtime": false,
+      "referenceMatrixPassed": false,
+      "reason": "Mobile and console targets are deferred until after Nova_A 4.0."
+    }
+  ],
+  "referenceProjects": [
+    "build-automation",
+    "web-deployment"
+  ],
+  "windows": {
+    "editor": "qualified by Windows native smoke after packaging",
+    "runtime": "qualified by portable launch after packaging"
+  },
+  "web": {
+    "chromiumEdge": "qualified by layout/browser suite",
+    "webview2": "qualified by Tauri startup",
+    "standardsFallback": "covered by production build and browser-neutral runtime APIs"
+  },
+  "undeclaredStableTargets": [],
+  "status": "passed"
+}

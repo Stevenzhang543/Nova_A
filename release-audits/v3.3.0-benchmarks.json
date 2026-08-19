@@ -1,0 +1,92 @@
+{
+  "format": "nova-v3.3-authoring-benchmark",
+  "version": 1,
+  "engineVersion": "3.3.0",
+  "generatedAt": "2026-08-19T13:51:40.474Z",
+  "machine": {
+    "platform": "win32",
+    "architecture": "x64",
+    "node": "v22.22.2",
+    "cpu": "AMD Ryzen 9 8945HX with Radeon Graphics        ",
+    "logicalCpuCount": 32,
+    "totalMemoryBytes": 34142187520
+  },
+  "methodology": "5,000 deterministic authoring records; 200 navigation and 100 selection/search/visibility samples; warm in-process JavaScript timings.",
+  "entityCount": 5000,
+  "measurements": {
+    "hierarchyNavigation": {
+      "medianMs": 0.00009999999999976694,
+      "p95Ms": 0.0002000000000030866,
+      "maximumMs": 0.008300000000001972
+    },
+    "boxSelection": {
+      "medianMs": 0.026299999999999102,
+      "p95Ms": 0.09779999999999944,
+      "maximumMs": 0.1781999999999968
+    },
+    "componentSearch": {
+      "medianMs": 0.7843000000000018,
+      "p95Ms": 0.8286999999999978,
+      "maximumMs": 2.072800000000001
+    },
+    "performanceVisibilityPass": {
+      "medianMs": 0.04070000000000107,
+      "p95Ms": 0.08799999999999386,
+      "maximumMs": 0.19930000000000803
+    },
+    "serialization": {
+      "durationMs": 2.4166000000000025,
+      "bytes": 939327
+    }
+  },
+  "thresholds": {
+    "hierarchyP95Ms": 8,
+    "boxSelectionP95Ms": 20,
+    "searchP95Ms": 20,
+    "visibilityP95Ms": 12,
+    "serializationMs": 100
+  },
+  "timedPlatformerWorkflow": {
+    "trainedTesterBudgetSeconds": 900,
+    "documentedMedianSeconds": 360,
+    "steps": [
+      {
+        "name": "Create camera",
+        "seconds": 35
+      },
+      {
+        "name": "Create player sprite",
+        "seconds": 45
+      },
+      {
+        "name": "Add collider",
+        "seconds": 30
+      },
+      {
+        "name": "Add script",
+        "seconds": 35
+      },
+      {
+        "name": "Create ground",
+        "seconds": 30
+      },
+      {
+        "name": "Duplicate platforms",
+        "seconds": 80
+      },
+      {
+        "name": "Configure camera",
+        "seconds": 45
+      },
+      {
+        "name": "Play and validate",
+        "seconds": 60
+      }
+    ],
+    "status": "passed",
+    "note": "Procedure timing is the supplied trained-workflow baseline; it is not an unobserved human study."
+  },
+  "severity0Open": 0,
+  "severity1Open": 0,
+  "status": "passed"
+}

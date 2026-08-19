@@ -1,5 +1,5 @@
 <template>
-  <div class="config-wrapper" :class="dock" :style="{ width: `${panelWidth}px` }">
+  <div class="config-wrapper" data-doc="manual/inspector" :class="dock" :style="{ width: `${panelWidth}px` }">
     <div class="resize-handle" @mousedown="startResize"></div>
     <aside class="config-panel" :class="{ runtime: !canEdit }">
       <div v-if="selectedEntities.length" class="inspector-sticky">
@@ -14,6 +14,7 @@
         <nav class="inspector-categories" :aria-label="t('inspectorCategories')">
           <button v-for="category in inspectorCategories" :key="category.id" :class="{ active: estate.inspectorCategory === category.id }" @click="estate.inspectorCategory = category.id">{{ t(category.label) }}</button>
         </nav>
+        <div class="inspector-view-controls"><button :class="{ active: estate.inspectorModifiedOnly }" @click="estate.inspectorModifiedOnly = !estate.inspectorModifiedOnly">{{ t('modifiedOnly') }}</button><button :class="{ active: estate.inspectorPinnedOnly }" @click="estate.inspectorPinnedOnly = !estate.inspectorPinnedOnly">★ {{ t('pinnedOnly') }}</button></div>
       </div>
       <div v-if="selectedEntities.length > 1" class="settings-content multi-inspector">
         <InspectorSection :title="t('sharedProperties')" category="general" open>
@@ -27,9 +28,22 @@
       </div>
       <div v-else-if="selectedEntity" class="settings-content" @change="onConfigChange">
         <InspectorSection :title="t('entitySettings')" category="general" open>
-          <PropertyRow :label="t('entityEnabled')"><ToggleSwitch v-model="selectedEntity.enabled" /></PropertyRow>
+          <PropertyRow :label="t('entityEnabled')" path="Entity.enabled"><ToggleSwitch v-model="selectedEntity.enabled" /></PropertyRow>
           <PropertyRow :label="t('entityVisible')"><ToggleSwitch v-model="selectedEntity.editorVisible" /></PropertyRow>
+          <PropertyRow :label="t('renderVisibility')" path="Entity.visible"><ToggleSwitch v-model="selectedEntity.authoring.visible" /></PropertyRow>
           <PropertyRow :label="t('entityLocked')"><ToggleSwitch v-model="selectedEntity.editorLocked" /></PropertyRow>
+          <PropertyRow :label="t('zOrder')" path="Authoring.zOrder"><input :value="selectedEntity.authoring.zOrder" type="number" step="1" @input="setAuthoringOrder(Number(($event.target as HTMLInputElement).value))"></PropertyRow>
+          <PropertyRow :label="t('renderLayer')" path="Authoring.renderLayer"><select :value="selectedEntity.layer" @change="setAuthoringLayer(Number(($event.target as HTMLSelectElement).value))"><option v-for="layer in estate.layers" :key="layer" :value="layer">{{ t('layer') }} {{ layer }}</option></select></PropertyRow>
+          <PropertyRow :label="t('sortingMode')" path="Authoring.sortMode"><select v-model="selectedEntity.authoring.sortMode"><option value="LayerThenOrder">{{ t('explicitOrder') }}</option><option value="YSort">{{ t('ySort') }}</option></select></PropertyRow>
+          <PropertyRow v-if="!selectedEntity.spriteRenderer" :label="t('objectOrigin')" path="Authoring.origin"><div class="pair"><input v-model.number="selectedEntity.authoring.origin.x" type="number" step="0.01"><input v-model.number="selectedEntity.authoring.origin.y" type="number" step="0.01"></div></PropertyRow>
+          <template v-if="selectedEntity.authoring.kind === 'CanvasLayer'">
+            <PropertyRow :label="t('screenSpaceCanvas')" path="Canvas.screenSpace"><ToggleSwitch v-model="selectedEntity.authoring.canvasLayer.screenSpace" /></PropertyRow>
+            <PropertyRow :label="t('followCamera')" path="Canvas.followCamera"><ToggleSwitch v-model="selectedEntity.authoring.canvasLayer.followCamera" /></PropertyRow>
+          </template>
+          <template v-if="selectedEntity.authoring.kind === 'ParallaxLayer'">
+            <PropertyRow :label="t('parallaxMotionScale')" path="Parallax.motionScale"><div class="pair"><input v-model.number="selectedEntity.authoring.parallax.motionScale.x" type="number" step="0.05"><input v-model.number="selectedEntity.authoring.parallax.motionScale.y" type="number" step="0.05"></div></PropertyRow>
+            <PropertyRow :label="t('parallaxRepeat')" path="Parallax.repeat"><div class="pair"><input v-model.number="selectedEntity.authoring.parallax.repeat.x" type="number" min="0" step="0.1"><input v-model.number="selectedEntity.authoring.parallax.repeat.y" type="number" min="0" step="0.1"></div></PropertyRow>
+          </template>
           <PropertyRow :label="t('persistentEntity')"><ToggleSwitch v-model="selectedEntity.persistentAcrossScenes" /></PropertyRow>
           <PropertyRow :label="t('entityTags')"><input v-model="tagsText" type="text"></PropertyRow>
           <DiagnosticRow label="UUID" :value="selectedEntity.uuid" />
@@ -58,6 +72,7 @@
           <select v-model="bodyType"><option value="Dynamic">{{ t('dynamic') }}</option><option value="Kinematic">{{ t('kinematic') }}</option><option value="Static">{{ t('static') }}</option></select>
           <PropertyRow :label="t('massMode')"><select v-model="selectedEntity.rigidBody.massMode"><option value="Automatic">{{ t('automatic') }}</option><option value="Manual">{{ t('manualMass') }}</option></select></PropertyRow>
           <PropertyRow :label="t('continuousCollision')"><select v-model="selectedEntity.rigidBody.continuousCollision"><option value="Discrete">{{ t('discreteMode') }}</option><option value="Continuous">{{ t('continuousMode') }}</option></select></PropertyRow>
+          <PropertyRow :label="t('transformOwnership')"><select v-model="selectedEntity.rigidBody.transformOwnership"><option value="Physics">{{ t('physicsOwned') }}</option><option value="Animation">{{ t('animationOwned') }}</option></select></PropertyRow>
           <PropertyRow :label="t('sleepingAllowed')"><ToggleSwitch v-model="selectedEntity.rigidBody.sleepingAllowed" /></PropertyRow>
           <PropertyRow :label="t('freezeRotation')"><ToggleSwitch v-model="selectedEntity.rigidBody.freezeRotation" /></PropertyRow>
         </InspectorSection>
@@ -105,11 +120,11 @@
           <ComponentTools kind="SpriteRenderer2D" />
           <PropertyRow :label="t('spriteAsset')"><select v-model="selectedEntity.spriteRenderer.spriteAsset"><option :value="null">{{ t('none') }}</option><option v-for="asset in imageAssets" :key="asset.uuid" :value="assetReference(asset.uuid)">{{ asset.name }}</option></select></PropertyRow>
           <PropertyRow :label="t('tint')"><input type="color" :value="rgbHex(selectedEntity.spriteRenderer.tint)" @input="setRgb(selectedEntity.spriteRenderer!.tint, $event)"></PropertyRow>
-          <PropertyRow :label="t('opacity')"><NumberRange v-model="selectedEntity.spriteRenderer.opacity" :min="0" :max="100" :step="1" /></PropertyRow>
-          <PropertyRow :label="t('spriteSize')"><div class="pair"><input v-model.number="selectedEntity.spriteRenderer.size.x" type="number" min="0.000001" step="0.1"><input v-model.number="selectedEntity.spriteRenderer.size.y" type="number" min="0.000001" step="0.1"></div></PropertyRow>
-          <PropertyRow :label="t('pivot')"><div class="pair"><input v-model.number="selectedEntity.spriteRenderer.pivot.x" type="number" step="0.05"><input v-model.number="selectedEntity.spriteRenderer.pivot.y" type="number" step="0.05"></div></PropertyRow>
-          <PropertyRow :label="t('flipX')"><ToggleSwitch v-model="selectedEntity.spriteRenderer.flipX" /></PropertyRow>
-          <PropertyRow :label="t('flipY')"><ToggleSwitch v-model="selectedEntity.spriteRenderer.flipY" /></PropertyRow>
+          <PropertyRow :label="t('opacity')" path="Sprite.opacity"><NumberRange v-model="selectedEntity.spriteRenderer.opacity" :min="0" :max="100" :step="1" /></PropertyRow>
+          <PropertyRow :label="t('spriteSize')" path="Sprite.size"><div class="pair"><input v-model.number="selectedEntity.spriteRenderer.size.x" type="number" min="0.000001" step="0.1"><input v-model.number="selectedEntity.spriteRenderer.size.y" type="number" min="0.000001" step="0.1"></div></PropertyRow>
+          <PropertyRow :label="t('pivot')" path="Sprite.pivot"><div class="pair"><input v-model.number="selectedEntity.spriteRenderer.pivot.x" type="number" min="0" max="1" step="0.05"><input v-model.number="selectedEntity.spriteRenderer.pivot.y" type="number" min="0" max="1" step="0.05"></div></PropertyRow>
+          <PropertyRow :label="t('flipX')" path="Sprite.flipX"><ToggleSwitch v-model="selectedEntity.spriteRenderer.flipX" /></PropertyRow>
+          <PropertyRow :label="t('flipY')" path="Sprite.flipY"><ToggleSwitch v-model="selectedEntity.spriteRenderer.flipY" /></PropertyRow>
           <PropertyRow :label="t('sortingLayer')"><select v-model.number="selectedEntity.spriteRenderer.sortingLayer"><option v-for="layer in estate.layers" :key="layer" :value="layer">{{ t('layer') }} {{ layer }}</option></select></PropertyRow>
           <PropertyRow :label="t('orderInLayer')"><input v-model.number="selectedEntity.spriteRenderer.orderInLayer" type="number" step="1"></PropertyRow>
           <PropertyRow :label="t('material')"><select v-model="selectedEntity.spriteRenderer.material"><option value="Default">{{ t('default') }}</option><option v-for="asset in materialAssets" :key="asset.uuid" :value="assetReference(asset.uuid)">{{ asset.name }}</option></select></PropertyRow>
@@ -138,10 +153,20 @@
         <InspectorSection v-if="selectedEntity.camera2D" :title="t('camera2D')" category="render" open>
           <ComponentTools kind="Camera2D" />
           <PropertyRow :label="t('activeCamera')"><ToggleSwitch v-model="selectedEntity.camera2D.active" /></PropertyRow>
-          <PropertyRow :label="t('orthographicSize')"><input v-model.number="selectedEntity.camera2D.orthographicSize" type="number" min="0.000001" step="0.1"></PropertyRow>
-          <PropertyRow :label="t('cameraZoom')"><input v-model.number="selectedEntity.camera2D.zoom" type="number" min="0.000001" step="0.1"></PropertyRow>
+          <PropertyRow :label="t('orthographicSize')" path="Camera.orthographicSize"><input v-model.number="selectedEntity.camera2D.orthographicSize" type="number" min="0.000001" step="0.1"></PropertyRow>
+          <PropertyRow :label="t('cameraZoom')" path="Camera.zoom"><input v-model.number="selectedEntity.camera2D.zoom" type="number" min="0.000001" step="0.1"></PropertyRow>
           <PropertyRow :label="t('backgroundColor')"><input type="color" :value="rgbHex(selectedEntity.camera2D.backgroundColor)" @input="setRgb(selectedEntity.camera2D!.backgroundColor, $event)"></PropertyRow>
-          <PropertyRow :label="t('pixelPerfect')"><ToggleSwitch v-model="selectedEntity.camera2D.pixelPerfect" /></PropertyRow>
+          <PropertyRow :label="t('pixelPerfect')" path="Camera.pixelPerfect"><ToggleSwitch v-model="selectedEntity.camera2D.pixelPerfect" /></PropertyRow>
+          <PropertyRow :label="t('cameraPreview')"><ToggleSwitch v-model="selectedEntity.camera2D.previewInEditor" /></PropertyRow>
+          <PropertyRow :label="t('cameraFollowTarget')"><select v-model="selectedEntity.camera2D.followTargetUuid"><option :value="null">{{ t('none') }}</option><option v-for="entity in state.world.entities.filter(entity => entity !== selectedEntity)" :key="entity.uuid" :value="entity.uuid">{{ entity.name }}</option></select></PropertyRow>
+          <PropertyRow :label="t('cameraSmoothing')"><ToggleSwitch v-model="selectedEntity.camera2D.smoothing.enabled" /></PropertyRow>
+          <PropertyRow v-if="selectedEntity.camera2D.smoothing.enabled" :label="t('smoothingSpeed')" path="Camera.smoothingSpeed"><input v-model.number="selectedEntity.camera2D.smoothing.speed" type="number" min="0" step="0.1"></PropertyRow>
+          <PropertyRow :label="t('cameraLimits')"><ToggleSwitch v-model="selectedEntity.camera2D.limits.enabled" /></PropertyRow>
+          <PropertyRow v-if="selectedEntity.camera2D.limits.enabled" :label="t('limitLeftRight')"><div class="pair"><input v-model.number="selectedEntity.camera2D.limits.left" type="number"><input v-model.number="selectedEntity.camera2D.limits.right" type="number"></div></PropertyRow>
+          <PropertyRow v-if="selectedEntity.camera2D.limits.enabled" :label="t('limitBottomTop')"><div class="pair"><input v-model.number="selectedEntity.camera2D.limits.bottom" type="number"><input v-model.number="selectedEntity.camera2D.limits.top" type="number"></div></PropertyRow>
+          <PropertyRow :label="t('dragMargins')"><ToggleSwitch v-model="selectedEntity.camera2D.dragMargins.enabled" /></PropertyRow>
+          <PropertyRow v-if="selectedEntity.camera2D.dragMargins.enabled" :label="t('dragMarginLeftRight')"><div class="pair"><input v-model.number="selectedEntity.camera2D.dragMargins.left" type="number" min="0" max="1" step="0.01"><input v-model.number="selectedEntity.camera2D.dragMargins.right" type="number" min="0" max="1" step="0.01"></div></PropertyRow>
+          <PropertyRow v-if="selectedEntity.camera2D.dragMargins.enabled" :label="t('dragMarginTopBottom')"><div class="pair"><input v-model.number="selectedEntity.camera2D.dragMargins.top" type="number" min="0" max="1" step="0.01"><input v-model.number="selectedEntity.camera2D.dragMargins.bottom" type="number" min="0" max="1" step="0.01"></div></PropertyRow>
           <PropertyRow :label="t('viewportOrigin')"><div class="pair"><input v-model.number="selectedEntity.camera2D.viewport.x" type="number" min="0" max="1" step="0.05"><input v-model.number="selectedEntity.camera2D.viewport.y" type="number" min="0" max="1" step="0.05"></div></PropertyRow>
           <PropertyRow :label="t('viewportSize')"><div class="pair"><input v-model.number="selectedEntity.camera2D.viewport.width" type="number" min="0.01" max="1" step="0.05"><input v-model.number="selectedEntity.camera2D.viewport.height" type="number" min="0.01" max="1" step="0.05"></div></PropertyRow>
           <PropertyRow :label="t('sortingRange')"><div class="pair"><input v-model.number="selectedEntity.camera2D.nearSortingLayer" type="number" step="1"><input v-model.number="selectedEntity.camera2D.farSortingLayer" type="number" step="1"></div></PropertyRow>
@@ -154,11 +179,19 @@
           <ComponentTools kind="Script2D" />
           <PropertyRow :label="t('scriptAsset')"><select v-model="selectedEntity.script2D.scriptAsset" @change="synchronizeScriptProperties"><option :value="null">{{ t('none') }}</option><option v-for="asset in scriptAssets" :key="asset.uuid" :value="assetReference(asset.uuid)">{{ asset.name }}</option></select></PropertyRow>
           <button class="secondary-action" @click="synchronizeScriptProperties">{{ t('refreshScriptProperties') }}</button>
-          <PropertyRow v-for="(value, name) in selectedEntity.script2D.properties" :key="name" :label="String(name)">
-            <ToggleSwitch v-if="typeof value === 'boolean'" :model-value="value" @update:model-value="setScriptProperty(String(name), $event)" />
-            <input v-else-if="typeof value === 'number'" :value="value" type="number" step="0.01" @change="setScriptProperty(String(name), Number(($event.target as HTMLInputElement).value))">
-            <input v-else :value="value" type="text" @change="setScriptProperty(String(name), ($event.target as HTMLInputElement).value)">
-          </PropertyRow>
+          <div v-for="group in scriptPropertyGroups" :key="group.name" class="script-property-group">
+            <h4>{{ group.name }}</h4>
+            <div v-for="property in group.properties" :key="property.name" :title="property.metadata?.tooltip || property.name">
+              <PropertyRow :label="property.name" :path="`Script.${property.name}`">
+                <ToggleSwitch v-if="typeof property.value === 'boolean'" :model-value="property.value" @update:model-value="setScriptProperty(property.name, $event)" />
+                <select v-else-if="property.metadata?.enumValues.length" :value="property.value" @change="setScriptProperty(property.name, ($event.target as HTMLSelectElement).value)"><option v-for="option in property.metadata.enumValues" :key="option" :value="option">{{ option }}</option></select>
+                <select v-else-if="property.metadata?.resourceType" :value="property.value" @change="setScriptProperty(property.name, ($event.target as HTMLSelectElement).value)"><option value="">{{ t('none') }}</option><option v-for="asset in compatibleScriptResources(property.metadata.resourceType)" :key="asset.uuid" :value="assetReference(asset.uuid)">{{ asset.name }}</option></select>
+                <input v-else-if="typeof property.value === 'number'" :value="property.value" type="number" :min="property.metadata?.minimum ?? undefined" :max="property.metadata?.maximum ?? undefined" :step="property.metadata?.step ?? 0.01" @change="setScriptProperty(property.name, Number(($event.target as HTMLInputElement).value))">
+                <input v-else :value="property.value" type="text" @change="setScriptProperty(property.name, ($event.target as HTMLInputElement).value)">
+              </PropertyRow>
+              <small v-if="property.metadata?.tooltip" class="script-property-help">{{ property.metadata.tooltip }}</small>
+            </div>
+          </div>
           <p v-if="selectedEntity.script2D.lastError" class="script-error">{{ selectedEntity.script2D.lastError }}</p>
         </InspectorSection>
 
@@ -169,8 +202,9 @@
         <InspectorSection :title="t('transform2D')" category="transform" open>
           <ComponentTools kind="Transform2D" />
           <PropertyRow :label="t('parentEntity')"><select v-model="selectedParentUuid"><option value="">{{ t('noParent') }}</option><option v-for="entity in parentCandidates" :key="entity.uuid" :value="entity.uuid">{{ entity.name }}_{{ entity.id }}</option></select></PropertyRow>
-          <PropertyRow :label="t('position')"><div class="pair"><input v-model.number="selectedEntity.transform.position.x" type="number" step="0.01"><input v-model.number="selectedEntity.transform.position.y" type="number" step="0.01"></div></PropertyRow>
-          <PropertyRow :label="t('rotationDegrees')"><NumberRange v-model="rotationDegrees" :min="-180" :max="180" :step="1" /></PropertyRow>
+          <PropertyRow :label="t('position')" path="Transform.position"><div class="pair"><input v-model.number="selectedEntity.transform.position.x" type="number" step="0.01"><input v-model.number="selectedEntity.transform.position.y" type="number" step="0.01"></div></PropertyRow>
+          <PropertyRow :label="t('rotationDegrees')" path="Transform.rotation"><NumberRange v-model="rotationDegrees" :min="-180" :max="180" :step="1" /></PropertyRow>
+          <PropertyRow :label="t('scale')" path="Transform.scale"><div class="pair"><input v-model.number="selectedEntity.transform.scale.x" type="number" min="0.000001" step="0.01"><input v-model.number="selectedEntity.transform.scale.y" type="number" min="0.000001" step="0.01"></div></PropertyRow>
         </InspectorSection>
 
         <InspectorSection v-if="selectedEntity.hasComponent('RigidBody2D')" :title="t('transformMotion')" category="physics">
@@ -211,18 +245,33 @@
 
         <InspectorSection v-if="selectedEntity.getCollider()" :title="t('collider2D')" category="physics">
           <ComponentTools :kind="selectedEntity.collider.kind" />
+          <PropertyRow :label="t('colliderShape')"><select v-model="selectedEntity.collider.shapeModel"><option v-for="kind in colliderShapeKinds" :key="kind" :value="kind">{{ kind }}</option></select></PropertyRow>
+          <p class="physics-support-note">{{ colliderShapeSupport }}</p>
+          <details class="compound-shapes">
+            <summary><span>{{ t('additionalShapes') }} ({{ selectedEntity.collider.shapes.length }})</span><button type="button" :disabled="selectedEntity.collider.shapes.length >= 7" @click.prevent="addColliderShape">＋</button></summary>
+            <article v-for="(shape, index) in selectedEntity.collider.shapes" :key="shape.id">
+              <header><select v-model="shape.kind"><option v-for="kind in colliderShapeKinds" :key="kind">{{ kind }}</option></select><label><input v-model="shape.enabled" type="checkbox">{{ t('componentEnabled') }}</label><button type="button" @click="removeColliderShape(index)">×</button></header>
+              <label><span>{{ t('colliderOffset') }}</span><div class="pair"><input v-model.number="shape.offset.x" type="number" step="0.01"><input v-model.number="shape.offset.y" type="number" step="0.01"></div></label>
+              <label><span>{{ t('colliderSize') }}</span><div class="pair"><input v-model.number="shape.size.x" type="number" min="0.000001" step="0.1"><input v-model.number="shape.size.y" type="number" min="0.000001" step="0.1"></div></label>
+              <label><span>{{ t('colliderRotation') }}</span><input v-model.number="shape.rotation" type="number" step="0.01"></label>
+            </article>
+            <p>{{ t('compoundShapeHint') }}</p>
+          </details>
           <PropertyRow :label="t('colliderOffset')"><div class="pair"><input v-model.number="selectedEntity.collider.offset.x" type="number" step="0.01"><input v-model.number="selectedEntity.collider.offset.y" type="number" step="0.01"></div></PropertyRow>
           <PropertyRow :label="t('colliderSize')"><div class="pair"><input v-model.number="colliderSizeX" type="number" min="0.000001" step="0.1"><input v-model.number="colliderSizeY" type="number" min="0.000001" step="0.1"></div></PropertyRow>
           <PropertyRow :label="t('colliderRotation')"><input v-model.number="colliderRotationDegrees" type="number" step="1"></PropertyRow>
-          <PropertyRow :label="t('physicsLayer')"><input v-model.number="selectedEntity.collider.physicsLayer" type="number" min="0" max="31" step="1"></PropertyRow>
-          <PropertyRow :label="t('collisionMask')"><input v-model.number="selectedEntity.collider.collisionMask" type="number" min="0" max="4294967295" step="1"></PropertyRow>
+          <PropertyRow :label="t('physicsLayer')"><select v-model.number="selectedEntity.collider.physicsLayer"><option v-for="layer in state.globalSettings.layers" :key="layer.id" :value="layer.id">{{ layer.name }}</option></select></PropertyRow>
+          <PropertyRow :label="t('collisionMask')"><input v-model.number="selectedEntity.collider.collisionMask" type="number" min="0" max="4294967295" step="1" :title="collisionMaskNames"></PropertyRow>
           <PropertyRow :label="t('isSensor')"><ToggleSwitch v-model="selectedEntity.isSensor" /></PropertyRow>
           <PropertyRow :label="t('oneWayCollider')"><ToggleSwitch v-model="selectedEntity.collider.oneWay" /></PropertyRow>
           <PropertyRow v-if="selectedEntity.collider.oneWay" :label="t('oneWayNormal')"><div class="field-pair"><input v-model.number="selectedEntity.collider.oneWayNormal.x" type="number" step="0.1"><input v-model.number="selectedEntity.collider.oneWayNormal.y" type="number" step="0.1"></div></PropertyRow>
+          <PropertyRow :label="t('physicsMaterial')"><select v-model="selectedEntity.collider.materialAsset" @change="applySelectedPhysicsMaterial"><option :value="null">{{ t('inlineMaterial') }}</option><option v-for="asset in physicsMaterialAssets" :key="asset.uuid" :value="assetReference(asset.uuid)">{{ physicsMaterialName(asset.uuid) }}</option></select></PropertyRow>
           <PropertyRow :label="t('restitution')"><NumberRange v-model="selectedEntity.restitution" :min="0" :max="1" :step="0.01" /></PropertyRow>
           <PropertyRow :label="t('restitutionThreshold')"><input v-model.number="selectedEntity.restitutionThreshold" type="number" min="0" step="0.1"></PropertyRow>
           <PropertyRow :label="t('staticFriction')"><NumberRange v-model="selectedEntity.staticFriction" :min="0" :max="Math.max(1, selectedEntity.staticFriction)" :step="0.01" /></PropertyRow>
           <PropertyRow :label="t('dynamicFriction')"><NumberRange v-model="selectedEntity.dynamicFriction" :min="0" :max="Math.max(1, selectedEntity.dynamicFriction)" :step="0.01" /></PropertyRow>
+          <PropertyRow :label="t('frictionCombine')"><select v-model="selectedEntity.collider.material.frictionCombine"><option v-for="mode in materialCombineModes" :key="mode">{{ mode }}</option></select></PropertyRow>
+          <PropertyRow :label="t('restitutionCombine')"><select v-model="selectedEntity.collider.material.restitutionCombine"><option v-for="mode in materialCombineModes" :key="mode">{{ mode }}</option></select></PropertyRow>
         </InspectorSection>
 
         <InspectorSection v-if="prefs.showDiagnostics && selectedEntity.hasComponent('RigidBody2D')" :title="t('collisionDiagnostics')" category="physics">
@@ -232,9 +281,10 @@
         </InspectorSection>
 
         <RuntimeComponentsInspector :entity="selectedEntity" :search-query="estate.inspectorSearch" :category="estate.inspectorCategory" />
+        <WorldComponentsInspector :entity="selectedEntity" />
         <p v-if="!inspectorHasMatches" class="inspector-no-results">{{ t('noInspectorResults') }}</p>
       </div>
-      <div v-else class="empty-inspector"><span class="eyebrow">{{ t('entitySettings') }}</span><p>{{ t('noEntitiesFound') }}</p><strong>{{ t('createGameUi') }}</strong><div class="empty-ui-actions"><button v-for="kind in uiKinds" :key="kind" @click="createUiEntity(kind)">+ {{ t(`create${kind}`) }}</button></div></div>
+      <div v-else class="empty-inspector"><span class="eyebrow">{{ t('entitySettings') }}</span><p>{{ t('noEntitiesFound') }}</p><button class="primary empty-create" @click="estate.createObjectPaletteOpen = true">＋ {{ t('createObject') }}</button></div>
     </aside>
 
     <div v-if="showColorPicker" class="modal-scrim" @mousedown.self="showColorPicker = false"><div class="color-modal"><h4>{{ t('selectColor') }}</h4><input v-model="tempColor" type="color"><div><button @click="showColorPicker = false">{{ t('cancel') }}</button><button class="primary" @click="applyColor">{{ t('apply') }}</button></div></div></div>
@@ -244,21 +294,22 @@
           <header><div><span class="eyebrow">{{ t('addComponent') }}</span><h4>{{ selectedEntity.name }}</h4></div><button :aria-label="t('cancel')" @click="closeComponentPicker">×</button></header>
           <input ref="componentSearchInput" v-model="componentSearch" type="search" :placeholder="t('searchComponents')">
           <div class="component-picker-list">
-            <button v-for="kind in filteredAddableComponents" :key="kind" @click="chooseComponent(kind)"><span>{{ componentGlyph(kind) }}</span><span><strong>{{ componentTitle(kind) }}</strong><small>{{ t(componentCategoryLabel(componentCategory(kind))) }}</small></span><i>+</i></button>
-            <p v-if="!filteredAddableComponents.length">{{ t('noComponentsFound') }}</p>
+            <section v-for="group in componentGroups" :key="group.name"><h5>{{ group.name }} <small>{{ group.kinds.length }}</small></h5><article v-for="kind in group.kinds" :key="kind"><button class="component-main" @click="chooseComponent(kind)"><span>{{ componentGlyph(kind) }}</span><span><strong>{{ componentTitle(kind) }}</strong><small>{{ componentPaletteMetadata(kind).category }} · {{ t(`compatibility${componentPaletteMetadata(kind).compatibility}`) }}<template v-if="componentPaletteMetadata(kind).required.length"> · {{ t('requires') }} {{ componentPaletteMetadata(kind).required.join(', ') }}</template></small></span><i>＋</i></button><button class="component-favorite" :class="{ active: componentPaletteState.favorites.includes(kind) }" :title="t('favorite')" @click="toggleComponentFavorite(kind)">★</button></article></section>
+            <p v-if="!componentGroups.length">{{ t('noComponentsFound') }}</p>
           </div>
         </section>
       </div>
+      <div v-if="propertyMenu.visible" class="property-menu" :style="{ left: `${propertyMenu.x}px`, top: `${propertyMenu.y}px` }"><strong>{{ propertyMenu.path }}</strong><button @click="resetPropertyValue">↻ {{ t('resetProperty') }}</button><button @click="revertPropertyOverride">↩ {{ t('revertOverride') }}</button><button @click="copyPropertyValue">{{ t('copyValue') }}</button><button :disabled="!propertyClipboard" @click="pastePropertyValue">{{ t('pasteValue') }}</button><button @click="copyPropertyPath">{{ t('copyPropertyPath') }}</button><button @click="keyframeProperty">◆ {{ t('keyframeProperty') }}</button><button @click="togglePropertyPin">★ {{ isCurrentPropertyPinned ? t('unpinProperty') : t('pinProperty') }}</button><p v-if="currentPropertyMetadata">{{ currentPropertyMetadata.help }}<template v-if="currentPropertyMetadata.unit"> · {{ currentPropertyMetadata.unit }}</template><template v-if="currentPropertyMetadata.minimum !== undefined"> · {{ currentPropertyMetadata.minimum }}…{{ currentPropertyMetadata.maximum ?? '∞' }}</template></p></div>
     </Teleport>
     <ConnectionBuilder v-if="selectedEntity && builderOpen" :selected-id="selectedEntity.id" :connection-id="editingConnectionId" @close="builderOpen = false" />
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, defineComponent, h, nextTick, onBeforeUnmount, ref, watch } from 'vue'
+import { computed, defineComponent, h, nextTick, onBeforeUnmount, reactive, ref, watch } from 'vue'
 import { t } from '../i18n'
 import { editorState as estate, type InspectorCategory } from '../store/editor'
-import { createUiEntity, deleteConnection, physicsState as state, pushHistory, repairConnection, type UiElementKind } from '../store/physics'
+import { deleteConnection, physicsState as state, pushHistory, repairConnection } from '../store/physics'
 import { preferencesState as prefs } from '../store/preferences'
 import { requestConfirmation } from '../store/dialog'
 import { BoxEntity } from '../world/BoxEntity'
@@ -267,20 +318,31 @@ import { TriangleEntity } from '../world/TriangleEntity'
 import { effectiveInertia, entityArea, finiteNumber, MIN_AREA, MIN_SIZE, normalizeEntity, syncDensityFromMass, syncMassFromDensity } from '../world/geometry'
 import ConnectionBuilder from './ConnectionBuilder.vue'
 import RuntimeComponentsInspector from './RuntimeComponentsInspector.vue'
+import WorldComponentsInspector from './WorldComponentsInspector.vue'
 import { connectionSharesLayer } from '../world/Connection'
-import { Animator, Area2D, AreaEffector2D, AudioListener, AudioSource, BehaviorTree2D, Button, Camera2D, Canvas, CharacterBody2D, Checkbox, Collider2D, Image as UIImage, Joint2D, Light2D, NavigationAgent2D, NavigationObstacle2D, NavigationRegion2D, ObjectPool2D, Panel, ParticleEmitter2D, Portal2D, ProgressBar, RectTransform, RigidBody2D, Script2D, ShadowCaster2D, ShapeRenderer2D, Skeleton2D, Slider, SpriteRenderer2D, StateMachine2D, Text as UIText, TextInput, TextRenderer2D, TileMap2D, TimelinePlayer, WorldChunk2D, copyComponentValues, pasteComponentValues, type Component2D, type ComponentKind, type JointKind2D, type ScriptPropertyValue } from '../world/components'
+import { Animator, Area2D, AreaEffector2D, AudioListener, AudioSource, BehaviorTree2D, Button, Camera2D, Canvas, CharacterBody2D, Checkbox, Collider2D, Image as UIImage, Joint2D, Light2D, NavigationAgent2D, NavigationObstacle2D, NavigationRegion2D, ObjectPool2D, Panel, ParticleEmitter2D, Portal2D, ProgressBar, RectTransform, RigidBody2D, Script2D, ShadowCaster2D, ShapeRenderer2D, Skeleton2D, Slider, SpriteRenderer2D, StateMachine2D, Text as UIText, TextInput, TextRenderer2D, TileMap2D, TimelinePlayer, WorldChunk2D, copyComponentValues, pasteComponentValues, type Component2D, type ComponentKind, type JointKind2D, type ScriptPropertyMetadata, type ScriptPropertyValue } from '../world/components'
 import { Transform } from '../world/Transform'
 import { setParent, wouldCreateParentCycle } from '../world/hierarchy'
 import { applyTranslation, captureTransforms } from '../editor/gizmo'
 import { selectionCenter } from '../editor/selection'
-import { assetReference, assetState, importAssetFiles } from '../assets/AssetDatabase'
+import { assetReference, assetState, importAssetFiles, readTextAsset } from '../assets/AssetDatabase'
+import { normalizePhysicsMaterial, PHYSICS_SHAPE_SUPPORT, type PhysicsShapeKind } from '../runtime/physicsProduction'
+import { createUuid } from '../world/identity'
 import { gameplayRuntime } from '../runtime/GameplayRuntime'
 import { recordEntityProperties } from '../editor/animationStudioState'
 import { applyPrefabFromInstance, capturePrefabOverrides, comparePrefabInstance, createPrefabFromEntities, resetPrefabOverride, revertPrefabInstance, unpackPrefabInstance } from '../runtime/prefabs'
 import { unpackSceneInstance } from '../runtime/sceneInstances'
+import { propertyMetadata, type PropertyMetadata } from '../editor/propertyMetadata'
+import { componentPaletteMetadata, componentPaletteState, markComponentRecent, toggleComponentFavorite, type ComponentPaletteCategory } from '../editor/componentPalette'
+import { OFFICIAL_AI_PACKAGE_ID, OFFICIAL_OBJECT_POOL_PACKAGE_ID, packageEnabled } from '../runtime/packages'
 
 const InspectorSection = defineComponent({ props: { title: { type: String, required: true }, category: { type: String, default: 'general' }, open: Boolean }, setup(props, { slots }) { return () => h('details', { class: 'inspector-section', open: props.open, style: { display: inspectorSectionVisible(props.title, props.category as InspectorCategory) ? '' : 'none' } }, [h('summary', [h('span', props.title), h('i', '⌄')]), h('div', { class: 'section-body' }, slots.default?.())]) } })
-const PropertyRow = defineComponent({ props: { label: { type: String, required: true } }, setup(props, { slots }) { return () => h('label', { class: 'property-row' }, [h('span', props.label), h('div', { class: 'property-control' }, slots.default?.())]) } })
+const PropertyRow = defineComponent({ props: { label: { type: String, required: true }, path: { type: String, default: '' } }, setup(props, { slots }) { return () => {
+  if (estate.inspectorPinnedOnly && (!props.path || !estate.pinnedInspectorProperties.includes(props.path))) return null
+  if (estate.inspectorModifiedOnly && (!props.path || !modifiedPropertyPaths.value.has(props.path))) return null
+  const metadata = props.path ? propertyMetadata(props.path) : undefined
+  return h('label', { class: ['property-row', { modified: props.path && modifiedPropertyPaths.value.has(props.path), pinned: props.path && estate.pinnedInspectorProperties.includes(props.path) }], 'data-property-path': props.path || undefined, title: metadata?.help, onContextmenu: props.path ? (event: MouseEvent) => openPropertyMenu(event, props.path) : undefined }, [h('span', [props.path && estate.pinnedInspectorProperties.includes(props.path) ? h('i', '★') : null, props.label, metadata?.unit ? h('small', metadata.unit) : null]), h('div', { class: 'property-control' }, slots.default?.())])
+} } })
 const DiagnosticRow = defineComponent({ props: { label: { type: String, required: true }, value: { type: String, required: true }, active: Boolean }, setup(props) { return () => h('div', { class: ['diagnostic-row', { active: props.active }] }, [h('span', props.label), h('code', props.value)]) } })
 const ToggleSwitch = defineComponent({ props: { modelValue: { type: Boolean, required: true } }, emits: ['update:modelValue'], setup(props, { emit }) { return () => h('button', { class: ['toggle', { active: props.modelValue }], role: 'switch', 'aria-checked': props.modelValue, onClick: () => { emit('update:modelValue', !props.modelValue); onConfigChange() } }, h('i')) } })
 const NumberRange = defineComponent({ props: { modelValue: { type: Number, required: true }, min: { type: Number, required: true }, max: { type: Number, required: true }, step: { type: Number, required: true } }, emits: ['update:modelValue'], setup(props, { emit }) { const update = (event: Event) => emit('update:modelValue', Number((event.target as HTMLInputElement).value)); return () => h('div', { class: 'number-range' }, [h('input', { type: 'range', value: props.modelValue, min: props.min, max: props.max, step: props.step, onInput: update }), h('input', { type: 'number', value: props.modelValue, step: props.step, onChange: update })]) } })
@@ -296,6 +358,8 @@ const ComponentTools = defineComponent({
         h('button', { title: t('resetComponent'), onClick: () => resetComponent(kind) }, '↻'),
         h('button', { title: t('copyComponent'), onClick: () => copyComponent(kind) }, 'Copy'),
         h('button', { disabled: componentClipboard.value?.kind !== kind, title: t('pasteComponent'), onClick: () => pasteComponent(kind) }, 'Paste'),
+        kind === 'Transform2D' ? null : h('button', { title: t('moveComponentUp'), onClick: () => reorderComponent(kind, -1) }, '↑'),
+        kind === 'Transform2D' ? null : h('button', { title: t('moveComponentDown'), onClick: () => reorderComponent(kind, 1) }, '↓'),
         kind === 'Transform2D' ? null : h('button', { class: 'danger', title: t('removeComponent'), onClick: () => removeComponent(kind) }, '×')
       ])
     }
@@ -307,21 +371,48 @@ const selectedEntities = computed(() => {
   return state.world.entities.filter(entity => ids.has(entity.id))
 })
 const selectedEntity = computed(() => state.selectedEntityId === null ? null : state.world.entities.find(entity => entity.id === state.selectedEntityId) ?? null)
+const physicsMaterialAssets = computed(() => assetState.records.filter(asset => asset.assetType === 'material' && physicsMaterialDocument(asset.uuid)))
+const colliderShapeKinds: PhysicsShapeKind[] = ['Box', 'Circle', 'Capsule', 'Segment', 'Chain', 'ConvexPolygon', 'ConcavePolygon']
+const materialCombineModes = ['Average', 'Minimum', 'Maximum', 'Multiply'] as const
+const colliderShapeSupport = computed(() => { const model = selectedEntity.value?.collider.shapeModel ?? 'Box'; const support = PHYSICS_SHAPE_SUPPORT[model]; return `${support.simulation}: ${support.note}` })
+function addColliderShape() { const collider = selectedEntity.value?.getCollider(); if (!collider || collider.shapes.length >= 7) return; collider.shapes.push({ id: createUuid(), kind: 'Box', offset: { x: 0, y: 0 }, rotation: 0, size: { x: 1, y: 1 }, radius: .5, points: [], enabled: true }); pushHistory('Add collider shape') }
+function removeColliderShape(index: number) { const collider = selectedEntity.value?.getCollider(); if (!collider || index < 0 || index >= collider.shapes.length) return; collider.shapes.splice(index, 1); pushHistory('Remove collider shape') }
+const collisionMaskNames = computed(() => { const mask = selectedEntity.value?.collider.collisionMask ?? 0; return state.globalSettings.layers.filter(layer => (mask & ((2 ** layer.id) >>> 0)) !== 0).map(layer => layer.name).join(', ') })
 const canEdit = computed(() => state.playMode === 'editing')
 const selectedConnections = computed(() => selectedEntity.value ? state.world.connections.filter(connection => connection.anchors.some(anchor => anchor.entityId === selectedEntity.value!.id)) : [])
 const entityColor = computed(() => selectedEntity.value ? `rgb(${selectedEntity.value.color.r}, ${selectedEntity.value.color.g}, ${selectedEntity.value.color.b})` : 'transparent')
 const selectedEntityArea = computed(() => selectedEntity.value ? entityArea(selectedEntity.value) : 0)
 const effectiveEntityInertia = computed(() => selectedEntity.value ? effectiveInertia(selectedEntity.value) : 0)
 const componentClipboard = ref<{ kind: ComponentKind; values: Record<string, unknown> } | null>(null)
+const modifiedPropertyPaths = ref(new Set<string>())
+const propertyClipboard = ref<Array<string | number | boolean> | null>(null)
+const propertyMenu = reactive({ visible: false, x: 0, y: 0, path: '', row: null as HTMLElement | null })
+const currentPropertyMetadata = computed<PropertyMetadata | undefined>(() => propertyMetadata(propertyMenu.path))
+const isCurrentPropertyPinned = computed(() => estate.pinnedInspectorProperties.includes(propertyMenu.path))
 const props = withDefaults(defineProps<{ dock?: 'left' | 'right' }>(), { dock: 'right' })
 const dock = computed(() => props.dock)
 const panelWidth = ref(estate.inspectorWidth)
 const imageAssets = computed(() => assetState.records.filter(asset => asset.assetType === 'image'))
 const fontAssets = computed(() => assetState.records.filter(asset => asset.assetType === 'font'))
 const scriptAssets = computed(() => assetState.records.filter(asset => asset.assetType === 'script'))
+const scriptPropertyGroups = computed(() => {
+  const script = selectedEntity.value?.script2D
+  if (!script) return []
+  const groups = new Map<string, Array<{ name: string; value: ScriptPropertyValue; metadata: ScriptPropertyMetadata | null }>>()
+  for (const [name, value] of Object.entries(script.properties)) {
+    const metadata = script.propertyMetadata[name] ?? null, group = metadata?.group || t('script2D')
+    groups.set(group, [...(groups.get(group) ?? []), { name, value, metadata }])
+  }
+  return [...groups].map(([name, properties]) => ({ name, properties }))
+})
 const materialAssets = computed(() => assetState.records.filter(asset => asset.assetType === 'material'))
+
+function compatibleScriptResources(resourceType: string) {
+  const expected: Record<string, string[]> = { Texture2D: ['image'], AudioClip: ['audio'], Font: ['font'], Scene: ['scene'], Prefab: ['prefab'], AnimationClip: ['animation'], AnimatorController: ['controller'], Material: ['material'], Script: ['script'] }
+  const types = expected[resourceType] ?? []
+  return types.length ? assetState.records.filter(asset => types.includes(asset.assetType)) : assetState.records
+}
 const optionalComponents: ComponentKind[] = ['SpriteRenderer2D', 'TextRenderer2D', 'Camera2D', 'Light2D', 'ShadowCaster2D', 'Script2D', 'Animator', 'Skeleton2D', 'TimelinePlayer', 'AudioSource', 'AudioListener', 'Canvas', 'RectTransform', 'Panel', 'Image', 'Text', 'Button', 'Slider', 'ProgressBar', 'Checkbox', 'TextInput', 'TileMap2D', 'ParticleEmitter2D', 'CharacterBody2D', 'Area2D', 'AreaEffector2D', 'NavigationRegion2D', 'NavigationObstacle2D', 'NavigationAgent2D', 'BehaviorTree2D', 'StateMachine2D', 'WorldChunk2D', 'Portal2D', 'ObjectPool2D', 'FixedJoint2D', 'DistanceJoint2D', 'RevoluteJoint2D', 'PrismaticJoint2D', 'SpringJoint2D']
-const uiKinds: UiElementKind[] = ['Canvas', 'Panel', 'Image', 'Text', 'Button', 'Slider', 'ProgressBar', 'Checkbox', 'TextInput']
 const inspectorCategories = [
   { id: 'all' as const, label: 'all' as const }, { id: 'general' as const, label: 'categoryGeneral' as const },
   { id: 'transform' as const, label: 'categoryTransform' as const }, { id: 'render' as const, label: 'categoryRendering' as const },
@@ -333,12 +424,20 @@ const componentSearchInput = ref<HTMLInputElement | null>(null)
 const addableComponents = computed(() => {
   if (!selectedEntity.value) return []
   const removed = [...selectedEntity.value.componentMap.values()].filter(component => component.removed && component.kind !== 'Transform2D').map(component => component.kind)
-  const missing = optionalComponents.filter(kind => !selectedEntity.value!.componentMap.has(kind))
+  const packageAvailable = (kind: ComponentKind) => !['BehaviorTree2D', 'StateMachine2D'].includes(kind) ? kind !== 'ObjectPool2D' || packageEnabled(OFFICIAL_OBJECT_POOL_PACKAGE_ID) : packageEnabled(OFFICIAL_AI_PACKAGE_ID)
+  const missing = optionalComponents.filter(kind => packageAvailable(kind) && !selectedEntity.value!.componentMap.has(kind))
   return [...new Set([...removed, ...missing])]
 })
 const filteredAddableComponents = computed(() => {
   const needle = componentSearch.value.trim().toLocaleLowerCase()
   return addableComponents.value.filter(kind => !needle || `${componentTitle(kind)} ${kind} ${t(componentCategoryLabel(componentCategory(kind)))}`.toLocaleLowerCase().includes(needle))
+})
+const componentGroups = computed(() => {
+  const groups: Array<{ name: string; kinds: ComponentKind[] }> = []
+  const append = (name: string, source: ComponentKind[]) => { const kinds = source.filter(kind => filteredAddableComponents.value.includes(kind)); if (kinds.length) groups.push({ name, kinds }) }
+  if (!componentSearch.value.trim()) { append(t('favorites'), componentPaletteState.favorites); append(t('recentlyUsed'), componentPaletteState.recent.filter(kind => !componentPaletteState.favorites.includes(kind))) }
+  for (const category of ['Core', '2D', 'Physics', 'UI', 'Audio', 'Camera', 'Navigation', 'Script', 'Packages'] as ComponentPaletteCategory[]) append(category, filteredAddableComponents.value.filter(kind => componentPaletteMetadata(kind).category === category))
+  return groups
 })
 const coreInspectorSections = computed(() => {
   if (!selectedEntity.value) return []
@@ -384,7 +483,7 @@ function openComponentPicker(): void {
   void nextTick(() => componentSearchInput.value?.focus())
 }
 function closeComponentPicker(): void { estate.componentPickerOpen = false }
-function chooseComponent(kind: ComponentKind): void { addComponent(kind); closeComponentPicker() }
+function chooseComponent(kind: ComponentKind): void { addComponent(kind); markComponentRecent(kind); closeComponentPicker() }
 const parentCandidates = computed(() => selectedEntity.value
   ? state.world.entities.filter(entity => entity !== selectedEntity.value && !wouldCreateParentCycle(selectedEntity.value!, entity.uuid, state.world.entities))
   : [])
@@ -487,6 +586,39 @@ function toggleComponent(kind: ComponentKind) {
   component.enabled = !component.enabled
   pushHistory()
 }
+function reorderComponent(kind: ComponentKind, direction: -1 | 1) {
+  const entity = selectedEntity.value; if (!entity || kind === 'Transform2D') return
+  const entries = [...entity.componentMap.entries()], index = entries.findIndex(([candidate]) => candidate === kind), destination = index + direction
+  if (index < 0 || destination < 1 || destination >= entries.length) return
+  const [entry] = entries.splice(index, 1); entries.splice(destination, 0, entry)
+  entity.componentMap.clear(); for (const [entryKind, component] of entries) entity.componentMap.set(entryKind, component)
+  pushHistory('Reorder component', `components:${entity.uuid}`)
+}
+
+function propertyControls(row: HTMLElement | null): Array<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement | HTMLButtonElement> {
+  return row ? [...row.querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement | HTMLButtonElement>('input,select,textarea,button[role="switch"]')] : []
+}
+function readControl(control: HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement | HTMLButtonElement): string | number | boolean {
+  if (control instanceof HTMLButtonElement) return control.getAttribute('aria-checked') === 'true'
+  if (control instanceof HTMLInputElement && control.type === 'checkbox') return control.checked
+  if (control instanceof HTMLInputElement && (control.type === 'number' || control.type === 'range')) return Number(control.value)
+  return control.value
+}
+function writeControl(control: HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement | HTMLButtonElement, value: string | number | boolean): void {
+  if (control instanceof HTMLButtonElement) { if ((control.getAttribute('aria-checked') === 'true') !== Boolean(value)) control.click(); return }
+  if (control instanceof HTMLInputElement && control.type === 'checkbox') control.checked = Boolean(value)
+  else control.value = String(value)
+  control.dispatchEvent(new Event('input', { bubbles: true })); control.dispatchEvent(new Event('change', { bubbles: true }))
+}
+function openPropertyMenu(event: MouseEvent, path: string) { event.preventDefault(); propertyMenu.visible = true; propertyMenu.x = Math.min(event.clientX, window.innerWidth - 230); propertyMenu.y = Math.min(event.clientY, window.innerHeight - 330); propertyMenu.path = path; propertyMenu.row = event.currentTarget as HTMLElement }
+function closePropertyMenu() { propertyMenu.visible = false; propertyMenu.row = null }
+function resetPropertyValue() { const metadata = currentPropertyMetadata.value, controls = propertyControls(propertyMenu.row); if (!metadata) return; controls.forEach((control, index) => writeControl(control, metadata.defaults[Math.min(index, metadata.defaults.length - 1)])); modifiedPropertyPaths.value.delete(propertyMenu.path); modifiedPropertyPaths.value = new Set(modifiedPropertyPaths.value); pushHistory('Reset property', `property:${propertyMenu.path}`); closePropertyMenu() }
+function revertPropertyOverride() { const entity = selectedEntity.value; if (entity?.prefabAsset) resetPrefabOverride(entity, propertyMenu.path); modifiedPropertyPaths.value.delete(propertyMenu.path); modifiedPropertyPaths.value = new Set(modifiedPropertyPaths.value); pushHistory('Revert property override', `property:${propertyMenu.path}`); closePropertyMenu() }
+function copyPropertyValue() { propertyClipboard.value = propertyControls(propertyMenu.row).map(readControl); closePropertyMenu() }
+function pastePropertyValue() { const values = propertyClipboard.value; if (!values) return; propertyControls(propertyMenu.row).forEach((control, index) => writeControl(control, values[Math.min(index, values.length - 1)])); modifiedPropertyPaths.value.add(propertyMenu.path); modifiedPropertyPaths.value = new Set(modifiedPropertyPaths.value); pushHistory('Paste property value', `property:${propertyMenu.path}`); closePropertyMenu() }
+function copyPropertyPath() { void navigator.clipboard?.writeText(propertyMenu.path).catch(() => undefined); estate.statusText = propertyMenu.path; closePropertyMenu() }
+function keyframeProperty() { if (selectedEntity.value) { recordEntityProperties([selectedEntity.value]); estate.bottomPanelTab = 'animation'; estate.bottomPanelOpen = true; estate.statusText = t('propertyKeyframed') } closePropertyMenu() }
+function togglePropertyPin() { const index = estate.pinnedInspectorProperties.indexOf(propertyMenu.path); if (index >= 0) estate.pinnedInspectorProperties.splice(index, 1); else estate.pinnedInspectorProperties.push(propertyMenu.path); closePropertyMenu() }
 function copyComponent(kind: ComponentKind) {
   const component = selectedEntity.value?.getComponent(kind, true)
   if (!component) return
@@ -584,7 +716,12 @@ async function removeConnection(id: number) { if (!await confirmConnectionAction
 async function separate(id: number) { if (!await confirmConnectionAction(t('separateBindingTitle'), t('confirmSeparateBinding'))) return; deleteConnection(id); pushHistory(); estate.statusText = t('bindingSeparated') }
 function repair(id: number) { repairConnection(id); pushHistory() }
 
-function onConfigChange() { if (!canEdit.value || !selectedEntity.value) return; if (selectedEntity.value.isStatic) selectedEntity.value.isKinematic = false; normalizeEntity(selectedEntity.value); if (selectedEntity.value.prefabAsset) capturePrefabOverrides(selectedEntity.value); recordEntityProperties([selectedEntity.value]); pushHistory('Set property', `property:${selectedEntity.value.uuid}`) }
+function onConfigChange(event?: Event) { if (!canEdit.value || !selectedEntity.value) return; const path = (event?.target as HTMLElement | null)?.closest<HTMLElement>('[data-property-path]')?.dataset.propertyPath; if (path) { modifiedPropertyPaths.value.add(path); modifiedPropertyPaths.value = new Set(modifiedPropertyPaths.value) } if (selectedEntity.value.isStatic) selectedEntity.value.isKinematic = false; normalizeEntity(selectedEntity.value); if (selectedEntity.value.prefabAsset) capturePrefabOverrides(selectedEntity.value); recordEntityProperties([selectedEntity.value]); pushHistory('Set property', `property:${selectedEntity.value.uuid}`) }
+function physicsMaterialDocument(uuid: string) { const source = readTextAsset(uuid); if (!source) return null; try { const value = JSON.parse(source) as Record<string, unknown>; return value.format === 'nova-physics-material' ? normalizePhysicsMaterial(value) : null } catch { return null } }
+function physicsMaterialName(uuid: string) { return physicsMaterialDocument(uuid)?.name ?? t('physicsMaterial') }
+function applySelectedPhysicsMaterial() { const entity = selectedEntity.value; if (!entity?.collider.materialAsset) return; const material = physicsMaterialDocument(entity.collider.materialAsset.replace(/^asset:\/\//, '')); if (!material) return; Object.assign(entity.collider.material, material); if (entity.rigidBody.massMode === 'Automatic') entity.rigidBody.density = material.density; onConfigChange() }
+function setAuthoringOrder(value: number) { const entity = selectedEntity.value; if (!entity || !Number.isFinite(value)) return; entity.authoring.zOrder = Math.trunc(value) }
+function setAuthoringLayer(value: number) { const entity = selectedEntity.value; if (!entity || !estate.layers.includes(value)) return; entity.layer = value; entity.authoring.renderLayer = value; estate.activeLayer = value }
 function synchronizeScriptProperties() {
   if (!selectedEntity.value?.script2D) return
   const error = gameplayRuntime.synchronizeExports(selectedEntity.value)
@@ -710,6 +847,7 @@ onBeforeUnmount(stopResize)
 .inspector-sticky { position: sticky; top: 0; z-index: 12; padding: 10px 11px 7px; border-bottom: 1px solid var(--border-subtle); background: color-mix(in srgb, var(--surface-1) 96%, transparent); backdrop-filter: var(--glass-blur); }
 .inspector-search-row { display: flex; gap: 6px; }.inspector-search-row input { min-width: 0; height: 30px; min-height: 30px; flex: 1; }.add-component-trigger { min-width: 96px; min-height: 30px; padding: 0 8px; border: 1px solid var(--accent); border-radius: 7px; color: var(--accent-contrast); background: var(--accent); font-size:11px !important; white-space: nowrap; }
 .inspector-categories { margin-top: 7px; display: flex; gap: 3px; overflow-x: auto; scrollbar-width: none; }.inspector-categories::-webkit-scrollbar { display: none; }.inspector-categories button { height: 24px; padding: 0 8px; flex: 0 0 auto; border: 1px solid transparent; border-radius: 999px; color: var(--text-muted); background: transparent; font-size:11px !important; white-space: nowrap; }.inspector-categories button:hover, .inspector-categories button.active { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 35%, transparent); background: var(--accent-soft); }
+.inspector-view-controls{margin-top:5px;display:flex;gap:4px}.inspector-view-controls button{min-height:25px;padding:0 7px;border:1px solid var(--border-subtle);border-radius:6px;color:var(--text-muted);background:transparent;font-size:11px!important}.inspector-view-controls button.active{color:var(--accent);border-color:var(--accent);background:var(--accent-soft)}
 .empty-inspector { height: 100%; padding: 18px; display: flex; flex-direction: column; justify-content: center; align-items: center; color: var(--text-muted); text-align: center; }.empty-inspector p { font-size: 11px; }.empty-inspector > strong { margin-top: 12px; color: var(--text-secondary); font-size:11px; }.empty-ui-actions { width: 100%; margin-top: 7px; display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }.empty-ui-actions button { min-height: 28px; overflow: hidden; border: 1px solid var(--border-subtle); border-radius: 7px; color: var(--accent); background: var(--surface-3); font-size:11px; text-overflow: ellipsis; white-space: nowrap; }.runtime-note { color: var(--text-muted); font-size:11px; line-height: 1.45; }
 .batch-toggle { min-width: 76px; height: 28px; border: 1px solid var(--border-subtle); border-radius: 7px; color: var(--accent); background: var(--surface-3); }
 .inspector-header { padding: 0 3px 8px; }.eyebrow { color: var(--accent); font-size:11px; font-weight: 720; letter-spacing: .11em; text-transform: uppercase; }h3 { margin: 3px 0 0; color: var(--text-primary); font-family: inherit; font-size: 14px; font-weight: 650; line-height: 1.2; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }h3 small { color: var(--text-muted); font-size: 11px; font-weight: 500; }
@@ -724,8 +862,11 @@ onBeforeUnmount(stopResize)
 :deep(.component-tools button.danger:hover) { color: var(--danger); border-color: var(--danger); }
 :deep(.component-tools button:disabled) { opacity: .36; }
 :deep(.property-row) { min-height: 37px; display: flex; align-items: center; justify-content: space-between; gap: 9px; border-bottom: 1px solid var(--border-subtle); color: var(--text-secondary); font-family: inherit; font-size: 11px; font-weight: 450; }
+:deep(.property-row.modified>span::after){content:'•';margin-left:5px;color:var(--warning);font-size:11px}:deep(.property-row>span i){margin-right:4px;color:#f4c95d;font-style:normal}:deep(.property-row>span small){margin-left:4px;color:var(--text-muted);font-size:11px}
 :deep(.property-row:last-child) { border-bottom: 0; }:deep(.property-control) { width: 58%; display: flex; justify-content: flex-end; }:deep(.property-control > input), :deep(.property-control > select) { width: 100%; min-width: 0; }
 .pair { width: 100%; display: flex; gap: 6px; }.pair input { width: 50%; min-width: 0; }
+.physics-support-note { margin: -2px 0 2px; padding: 7px 8px; overflow-wrap: anywhere; border: 1px solid var(--border-subtle); border-radius: 7px; color: var(--text-muted); background: var(--surface-1); font-size: 11px; line-height: 1.4; }
+.compound-shapes { border: 1px solid var(--border-subtle); border-radius: 8px; background: var(--surface-1); }.compound-shapes>summary{min-height:31px;padding:3px 5px 3px 8px;display:flex;align-items:center;justify-content:space-between;list-style:none;color:var(--text-secondary);cursor:pointer}.compound-shapes>summary::-webkit-details-marker{display:none}.compound-shapes>summary button,.compound-shapes article header button{width:25px;min-width:25px;height:25px;border:1px solid var(--border-subtle);border-radius:6px;color:var(--accent);background:var(--surface-3)}.compound-shapes article{margin:6px;padding:7px;display:grid;gap:6px;border:1px solid var(--border-subtle);border-radius:7px}.compound-shapes article header{display:grid;grid-template-columns:minmax(0,1fr) auto 25px;align-items:center;gap:5px}.compound-shapes article header label{display:flex;align-items:center;gap:4px;white-space:nowrap}.compound-shapes article>label{display:grid;grid-template-columns:minmax(70px,.8fr) minmax(0,1.2fr);align-items:center;gap:6px}.compound-shapes article input{min-width:0;width:100%}.compound-shapes>p{margin:6px 8px 8px;color:var(--text-muted);font-size:11px;line-height:1.4}
 :deep(.number-range) { width: 100%; display: flex; align-items: center; gap: 7px; }:deep(.number-range input[type='range']) { min-width: 0; flex: 1; accent-color: var(--accent); }:deep(.number-range input[type='number']) { width: 72px; min-width: 60px; }
 :deep(.toggle) { width: 38px; height: 22px; padding: 3px; border: 0; border-radius: 99px; background: var(--surface-3); }:deep(.toggle i) { display: block; width: 16px; height: 16px; border-radius: 50%; background: var(--text-muted); transition: transform 180ms ease; }:deep(.toggle.active) { background: var(--accent); }:deep(.toggle.active i) { transform: translateX(16px); background: var(--accent-contrast); }
 :deep(.diagnostic-row) { min-height: 30px; display: flex; align-items: center; justify-content: space-between; gap: 8px; color: var(--text-muted); font-family: inherit; font-size:11px; }:deep(.diagnostic-row code) { color: var(--accent); font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size:11px; }:deep(.diagnostic-row.active code) { color: var(--warning); }
@@ -737,10 +878,12 @@ onBeforeUnmount(stopResize)
 .prefab-actions button:hover { color: var(--accent); border-color: var(--accent); }
 .prefab-compare{padding:6px;border:1px solid var(--border-subtle);border-radius:8px}.prefab-compare summary{cursor:pointer;color:var(--text-secondary)}.prefab-compare article{min-width:0;display:flex;align-items:center;gap:5px;padding-top:5px}.prefab-compare code{min-width:0;flex:1;overflow:hidden;color:var(--accent);font-size:11px;text-overflow:ellipsis;white-space:nowrap}.prefab-compare button{min-height:24px;border:1px solid var(--border-subtle);border-radius:6px;background:var(--surface-3);color:var(--text-secondary);font-size:11px}
 .script-error { margin: 0; padding: 8px; overflow-wrap: anywhere; border: 1px solid color-mix(in srgb, var(--danger) 50%, var(--border-subtle)); border-radius: 7px; color: var(--danger); background: var(--danger-soft); font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size:11px; line-height: 1.45; }
+.script-property-group{display:grid;gap:6px;padding-top:4px}.script-property-group h4{margin:0;padding:7px 2px 3px;border-bottom:1px solid var(--border-subtle);color:var(--text-muted);font-size:11px;font-weight:750;letter-spacing:.04em;text-transform:uppercase}.script-property-help{display:block;margin:-2px 4px 5px;color:var(--text-muted);font-size:11px;line-height:1.35;overflow-wrap:anywhere}
 .inspector-no-results { margin: 14px 4px; padding: 18px 10px; border: 1px dashed var(--border-strong); border-radius: 10px; color: var(--text-muted); text-align: center; font-size:11px; line-height: 1.45; }
 .empty-state { margin: 5px 0; color: var(--text-muted); font-size: 11px; text-align: center; }.connection-list { display: flex; flex-direction: column; gap: 6px; }.connection-item { display: flex; align-items: center; border: 1px solid var(--border-subtle); border-radius: 9px; background: var(--surface-1); }.connection-main { min-width: 0; flex: 1; padding: 7px; display: flex; align-items: center; gap: 8px; border: 0; background: transparent; text-align: left; }.connection-main > span:last-child { min-width: 0; display: flex; flex-direction: column; }.connection-main strong, .connection-main small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }.connection-main strong { color: var(--text-primary); font-size: 11px; }.connection-main small { color: var(--text-muted); font-size:11px; }.connection-dot { width: 8px; height: 8px; flex: 0 0 8px; border-radius: 50%; background: var(--connection); box-shadow: 0 0 7px var(--connection); }.connection-item.snapped .connection-dot, .connection-item.torn .connection-dot { background: var(--connection-broken); box-shadow: 0 0 7px var(--connection-broken); }.mini-button { width: 26px; height: 28px; border: 0; background: transparent; color: var(--text-muted); }.mini-button:hover { color: var(--accent); }.mini-button.danger:hover { color: var(--danger); }
 .modal-scrim { position: fixed; inset: 0; z-index: 1300; display: grid; place-items: center; background: var(--scrim); pointer-events: auto; backdrop-filter: blur(6px); }.color-modal { width: 250px; padding: 18px; display: flex; flex-direction: column; align-items: center; gap: 14px; border: 1px solid var(--border-subtle); border-radius: 16px; background: var(--surface-2); box-shadow: var(--shadow-lg); }.color-modal h4 { margin: 0; }.color-modal input { width: 100px; height: 76px; border: 0; background: transparent; }.color-modal > div { width: 100%; display: flex; gap: 8px; }.color-modal button { flex: 1; min-height: 34px; border: 1px solid var(--border-subtle); border-radius: 8px; background: var(--surface-3); }.color-modal button.primary { color: var(--accent-contrast); border-color: var(--accent); background: var(--accent); }
-.component-picker-scrim { z-index: 1400; }.component-picker { width: min(520px, calc(100vw - 30px)); max-height: min(620px, calc(100vh - 60px)); padding: 12px; display: flex; flex-direction: column; gap: 10px; overflow: hidden; border: 1px solid var(--border-strong); border-radius: 16px; background: var(--surface-1); box-shadow: var(--shadow-lg); }.component-picker > header { display: flex; align-items: center; justify-content: space-between; }.component-picker > header h4 { margin: 3px 0 0; font-size: 14px; }.component-picker > header > button { width: 30px; height: 30px; border: 0; border-radius: 7px; color: var(--text-muted); background: transparent; }.component-picker > header > button:hover { color: var(--text-primary); background: var(--surface-hover); }.component-picker > input { width: 100%; }.component-picker-list { min-height: 60px; overflow: auto; display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }.component-picker-list > button { min-width: 0; min-height: 48px; padding: 6px 8px; display: grid; grid-template-columns: 29px 1fr 18px; align-items: center; gap: 7px; border: 1px solid var(--border-subtle); border-radius: 9px; color: var(--text-secondary); background: var(--surface-2); text-align: left; }.component-picker-list > button:hover { border-color: color-mix(in srgb, var(--accent) 55%, var(--border-subtle)); background: var(--accent-soft); }.component-picker-list > button > span:first-child { width: 28px; height: 28px; display: grid; place-items: center; border-radius: 7px; color: var(--accent); background: var(--surface-3); font: 600 11px/1 ui-monospace, SFMono-Regular, Consolas, monospace; }.component-picker-list > button > span:nth-child(2) { min-width: 0; display: flex; flex-direction: column; gap: 2px; }.component-picker-list strong { overflow: hidden; font-size:11px; text-overflow: ellipsis; white-space: nowrap; }.component-picker-list small { color: var(--text-muted); font-size:11px; }.component-picker-list i { color: var(--accent); font-size: 15px; font-style: normal; }.component-picker-list > p { grid-column: 1 / -1; padding: 24px; color: var(--text-muted); text-align: center; font-size:11px; }
+.component-picker-scrim { z-index: 1400; }.component-picker { width: min(620px, calc(100vw - 30px)); max-height: min(700px, calc(100vh - 60px)); padding: 12px; display: flex; flex-direction: column; gap: 10px; overflow: hidden; border: 1px solid var(--border-strong); border-radius: 16px; background: var(--surface-1); box-shadow: var(--shadow-lg); }.component-picker > header { display: flex; align-items: center; justify-content: space-between; }.component-picker > header h4 { margin: 3px 0 0; font-size: 14px; }.component-picker > header > button { width: 30px; height: 30px; border: 0; border-radius: 7px; color: var(--text-muted); background: transparent; }.component-picker > header > button:hover { color: var(--text-primary); background: var(--surface-hover); }.component-picker > input { width: 100%; }.component-picker-list { min-height: 60px;overflow:auto;display:block}.component-picker-list>section{display:grid;grid-template-columns:1fr 1fr;gap:5px}.component-picker-list h5{grid-column:1/-1;margin:9px 3px 3px;color:var(--text-muted);font-size:11px;letter-spacing:.08em;text-transform:uppercase}.component-picker-list h5 small{padding:1px 5px;border-radius:20px;background:var(--surface-3)}.component-picker-list article{position:relative;min-width:0}.component-main{width:100%;min-width:0;min-height:52px;padding:6px 31px 6px 8px;display:grid;grid-template-columns:29px 1fr 18px;align-items:center;gap:7px;border:1px solid var(--border-subtle);border-radius:9px;color:var(--text-secondary);background:var(--surface-2);text-align:left}.component-main:hover{border-color:color-mix(in srgb,var(--accent) 55%,var(--border-subtle));background:var(--accent-soft)}.component-main>span:first-child{width:28px;height:28px;display:grid;place-items:center;border-radius:7px;color:var(--accent);background:var(--surface-3);font:600 11px/1 ui-monospace,SFMono-Regular,Consolas,monospace}.component-main>span:nth-child(2){min-width:0;display:flex;flex-direction:column;gap:2px}.component-main strong{overflow:hidden;font-size:11px;text-overflow:ellipsis;white-space:nowrap}.component-main small{color:var(--text-muted);font-size:11px;line-height:1.25}.component-main i{color:var(--accent);font-size:15px;font-style:normal}.component-favorite{position:absolute;right:3px;top:3px;width:25px;height:25px;border:0;color:var(--text-muted);background:transparent;opacity:.4}.component-favorite.active{color:#f4c95d;opacity:1}.component-picker-list>p{padding:24px;color:var(--text-muted);text-align:center;font-size:11px}
+.property-menu{position:fixed;z-index:1600;width:220px;padding:7px;display:flex;flex-direction:column;gap:3px;border:1px solid var(--border-strong);border-radius:10px;background:var(--surface-1);box-shadow:0 16px 36px rgba(0,0,0,.34)}.property-menu>strong{padding:5px 7px;color:var(--accent);font:600 11px/1.3 ui-monospace,Consolas,monospace;overflow-wrap:anywhere}.property-menu>button{min-height:28px;padding:0 7px;text-align:left;border:0;border-radius:6px;color:var(--text-secondary);background:transparent;font-size:11px}.property-menu>button:hover{background:var(--surface-hover)}.property-menu>button:disabled{opacity:.4}.property-menu>p{margin:4px;padding:7px;border-top:1px solid var(--border-subtle);color:var(--text-muted);font-size:11px;line-height:1.4}
 @media (max-width: 760px) { .config-wrapper { max-width: 46vw; } }
-@media (max-width: 560px) { .component-picker-list { grid-template-columns: 1fr; } }
+@media (max-width: 560px) { .component-picker-list>section { grid-template-columns: 1fr; } }
 </style>

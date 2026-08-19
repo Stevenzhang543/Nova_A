@@ -4,15 +4,43 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE.md)
 [![Platforms](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey)](https://v2.tauri.app/start/prerequisites/)
-[![Release](https://img.shields.io/badge/release-3.2.0-63c6ff)]()
+[![Release](https://img.shields.io/badge/release-4.0.0-63c6ff)]()
 
 Nova_A 是一款开源 2D 游戏引擎与桌面编辑器，使用 Rust、WebAssembly、Vue 3 与 Tauri 构建。
 
-版本 **3.2.0** 建立了权威项目数据基础。Project Format 2 升级到 Schema 23，新增版本化项目清单、确定性文本序列化、稳定 UUID 引用、嵌套场景与预制体、依赖感知资源库、可恢复导入、迁移／修复命令及未来架构只读查看器。Schema 5–22 项目会先显示计划并完整备份，只有验证成功后才替换当前会话，失败时自动回滚。
+版本 **4.0.0** 是 Nova_A 的生产稳定二维基线：Project Format 2 模式 29、Runtime API 1、Plugin API 2、Package Manifest 1 与 Build CLI 1 已锁定，并在 4.0.x 补丁中保持兼容。完整的编辑器、物理、渲染、动画、音频、脚本、UI、世界数据、构建、软件包与协作功能均保留。
 
 **手册：** [中英德三语交互网页](./manual/index.html) · [中文 Markdown](./manual/MANUAL.zh-CN.md) · [English](./manual/MANUAL.en.md) · [Deutsch](./manual/MANUAL.de.md)
 
-## v3.2.0 更新内容
+## v4.0.0 更新内容
+
+- **升级助手：**所有外部项目打开前都会显示格式／引擎／内容／软件包预检。受支持的 3.x 升级必须完整备份并保留回滚数据，在内存中迁移、完整验证和规范化；失败时不会替换当前会话。模式 29 保持冻结。
+- **稳定支持契约：**Studio Status 提供 Stable／Beta／Development 渠道、离线已知问题、补丁政策、存档引擎指南、发布健康状态，以及需要隐私审查和明确选择加入的本地崩溃报告；不会自动上传。
+- **生产文档：**三语完整手册连接 API、迁移、构建／CI、软件包、性能、安全、无障碍、故障排除、支持、许可证及小游戏创建／导出指南。
+- **稳定默认值：**实验性联网继续作为可选软件包和参考工程提供，但不再属于默认项目模板。
+- **最终验证：**v4 证据记录迁移、Tier-1／浏览器／布局／参考项目矩阵、软件包安全、异常输入、性能、无障碍、文档、SBOM／许可证、来源、发布健康、安装程序门槛与签字状态，绝不伪报未执行的外部门槛。
+
+### 保留的 v3.9 产品化能力
+
+- **构建自动化：** 验证／导入／测试／构建／导出／打包／版本命令、无界面模式、预设、清洁／增量／验证缓存、包含排除、资源剔除、压缩、大小／依赖报告、符号、平台清单、CI 与 JSONL。
+- **真实的平台等级：** Windows x86-64 编辑器／运行时和 Web 运行时为 Tier 1；Linux、macOS 在同平台矩阵通过前保持实验级；移动与主机平台在 4.0 后再考虑。
+- **安全软件包：** Stable 要求语义版本、引擎/API 范围、依赖哈希、入口类型、归档身份与可验证签名；权限在安装及变更前显示，失败项目进入隔离区，并支持确定性锁、离线缓存、回滚与安全模式。
+- **团队协作：** 场景／预制体／资源／设置／锁文件差异、外部重新加载／比较、无变化保存、共享与本机设置、Git 初始化、可选锁、提交前／CI 模板与操作摘要。
+- **支持与冻结：** 离线手册可搜索；Studio Status 提供迁移、已知问题及隐私审查后的诊断包；Schema 29、Runtime API 1、Plugin API 2、Package Manifest 1 与 Build CLI 1 已为 4.0 稳定周期冻结。
+- **实验网络门槛：** 传输、RPC、权限、同步、预测、诊断和无界面接口保持可选实验状态，不阻塞 4.0 核心稳定性。
+
+参阅[世界数据架构](./docs/WORLD_DATA_3_8.md)、[Schema 28 迁移说明](./docs/PROJECT_FORMAT_2_SCHEMA_28.md)、[视觉／音频管线](./docs/VISUAL_AUDIO_PIPELINE_3_7.md)和[Rhai API v1](./docs/RHAI_API_V1.md)。
+
+### 保留的 v3.3 创作基础
+
+- **通用创建：** 按 Shift+A 或“创建对象”打开可搜索的 Core／2D／Physics／UI／Audio／Camera／Navigation／Script／Packages 面板，显示兼容性、依赖、收藏与最近使用；每次创建只产生一个撤销步骤。
+- **完整视口编辑：** 移动、旋转、缩放、枢轴、矩形、路径、多边形、碰撞体与标尺工具，配合对齐／分布／镜像／旋转 90°／聚焦／隔离／分组、框选和七类吸附。
+- **专业检查器：** 搜索、分类、多选混合值、重置、恢复预制体覆盖、复制／粘贴值、复制路径、关键帧、帮助、固定与仅显示修改项均已连接；组件支持启停、复制／粘贴、排序、重置和移除。
+- **精灵与相机：** 支持枢轴、区域、翻转、调制、九宫格边框、排序与可见性；资源导入支持透明裁剪、精灵表切片、过滤／压缩／色彩／像素画预览；相机支持限制、缩放、平滑、拖动边距、跟随、预览与像素对齐。
+- **高效层级：** 重命名、重复、重设父级、排序、分组和删除均可撤销。普通拖动保留世界变换，Alt 保留局部变换，Shift 调整顺序；面包屑、组件／标签搜索、状态标记和性能模式适用于大型场景。
+- **发布证据：** 新增像素画、分辨率无关、视差、多相机、嵌套预制体和 5,000 对象六个参考工程，并记录创建／往返、检查器事务、像素对齐、视口性能与平台跳跃流程结果。
+
+### 保留的 v3.2 项目数据基础
 
 - **权威项目清单：** 明确项目 UUID、引擎范围、Schema、包锁文件、构建预设以及源码／共享／生成／缓存／用户目录。
 - **确定性项目文本：** 统一键顺序、集合数组顺序、有限数值、两空格缩进与 LF 行尾；未修改项目的重复保存字节完全一致。
@@ -121,7 +149,7 @@ Nova_A 是一款开源 2D 游戏引擎与桌面编辑器，使用 Rust、WebAsse
 
 - 启动时显示项目管理器，提供新建、打开、导入、继续和本地最近项目。
 - 包含四个自审计模板：空白 2D、平台跳跃、俯视角、物理沙盒；教程所需系统缺失时会明确拒绝加载。
-- **Nova_A Project Format 2**（当前 Schema 23）保存明确兼容信息和项目身份，并迁移从 Schema 5 开始的所有受支持格式。
+- **Nova_A Project Format 2**（当前 Schema 28）保存明确兼容信息和项目身份，并迁移从 Schema 5 开始的所有受支持格式。
 - 稳定组件 API 2.0 文档覆盖全部内置组件，并继续分离渲染、碰撞、编辑器与运行时职责。
 - Rhai 脚本可在按项目和槽位隔离的存档中保存有限数字、布尔、字符串、数组与 Map。
 - WASM Plugin API 1 校验清单／模块，只开放日志／事件，不提供文件系统、网络或进程权限。
@@ -178,7 +206,7 @@ Nova_A 当前是桌面/网页编辑器；仓库尚未配置 Android 与 iOS 应�
 
 - Node.js 18 或更高版本（`.node-version` 记录了测试版本）。
 - pnpm 9 或更高版本（`package.json` 固定了项目使用的包管理器版本）。
-- 稳定版 Rust 与 Cargo。
+- Rust 1.88 或更高版本与 Cargo（独立核心 crate 仍保留 1.77 MSRV；安全修复后的桌面依赖图需要 1.88）。
 - Rust 的 `wasm32-unknown-unknown` 目标。
 - `wasm-pack` 0.14.0 或更高版本。
 - Git 以及当前系统需要的原生开发依赖。
@@ -258,10 +286,10 @@ Tauri 打包前会自动执行 `pnpm build`。不同系统的结果通常位于 
 原生构建成功后，使用以下命令整理完整的版本发布文件：
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\package-release.ps1 -Version 3.0.0
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\package-release.ps1 -Version 4.0.0
 ```
 
-该命令会在 `releases/v3.0.0/` 生成便携版 EXE、MSI、NSIS 安装程序、Web ZIP、源码 ZIP、参考项目 ZIP、发布证据 ZIP、发布说明、完整编辑清单、许可证和 `SHA256SUMS.txt`。
+该命令会在 `releases/v4.0.0/` 生成规定的十一项顶层产物：便携版 EXE、MSI、NSIS 安装程序、Web ZIP、源码 ZIP、参考项目 ZIP、发布证据 ZIP、发布说明、完整编辑清单、许可证和 `SHA256SUMS.txt`。可复现性、平台、软件包、源码、迁移、API 冻结、SBOM、测试、发布健康、签字记录与截图证据均包含在发布证据 ZIP 中。
 
 ### 无界面导出
 
@@ -295,7 +323,7 @@ Windows 与 Linux 可勾选“将游戏数据打包进可执行文件”，生�
 
 ## 项目兼容性
 
-- 新存档使用 **Nova_A Project Format 2**、Schema 23 与引擎版本 `3.2.0`。
+- 新存档使用 **Nova_A Project Format 2**、Schema 29 与引擎版本 `4.0.0`。
 - 持久化场景、对象、组件和连接使用 UUID；运行时句柄绝不会写入磁盘。
 - 格式迁移与验证集中在 `nova_format`，不会散落在各个编辑器组件中。
 - v1.9 格式 13、v1.8 格式 12、v1.7 格式 11、v1.6 格式 10、v1.5 格式 9、v1.4 格式 8、v1.3 格式 7、v1.2 格式 6、v1.1.2 格式 5、更早的对象根节点和旧顶层实体数组仍能加载；只有用户再次保存时才会写成 Format 2。

@@ -1,0 +1,14 @@
+{
+  "engineVersion": "4.0.0",
+  "schema": 29,
+  "projectName": "Save Migration and Recovery",
+  "minimumScenes": 1,
+  "minimumEntities": 2,
+  "expectedValidation": "pass",
+  "demonstrates": [
+    "deterministic save migrations",
+    "checksum and transaction journal",
+    "backup and corruption recovery",
+    "async progress and cancellation"
+  ]
+}

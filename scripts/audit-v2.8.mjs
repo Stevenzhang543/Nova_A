@@ -59,21 +59,21 @@ assert((await read('src-tauri/tauri.conf.json')).includes('wss:'), 'native conte
 assert(productionRuntime.includes('lifecycleGeneration'), 'async networking lifecycle is not cancellation-safe')
 
 assert(buildSettings.includes("'headless-server'") && buildPanel.includes('headless-server') && exporter.includes("runtimeMode === 'headless-server'") && player.includes('setInterval'), 'authoritative headless export is not wired end to end')
-assert(packages.includes("version: '2.9.0'") && packages.includes('novaa.networking') && packages.includes("engineVersion = '3.2.0'"), 'official optional networking package is not versioned or v3 compatible')
+assert(packages.includes("version: '2.9.0'") && packages.includes('novaa.networking') && packages.includes("PACKAGE_ENGINE_VERSION = '4.0.0'"), 'official optional networking package is not versioned or v4 compatible')
 
 assert(webgl.includes('antialias: true') && materials.includes('antialias: true'), 'WebGL and material previews do not request multisampling')
 assert(canvas2d.includes("imageSmoothingQuality = 'high'") && canvas.includes("imageSmoothingQuality = 'high'"), 'Canvas render paths do not use high-quality interpolation')
 assert(css.includes('font-kerning: normal') && css.includes('font-optical-sizing: auto'), 'UI text rasterization does not enable kerning and optical sizing')
 
-assert(format.includes('CURRENT_FORMAT_VERSION: u32 = 23') && format.includes('CURRENT_ENGINE_VERSION: &str = "3.2.0"'), 'Rust format authority is not schema 23 / current engine 3.2')
-assert(project.includes('NOVA_PROJECT_SCHEMA_VERSION = 23') && project.includes("NOVA_ENGINE_VERSION = '3.2.0'"), 'frontend format authority is not schema 23 / current engine 3.2')
+assert(format.includes('CURRENT_FORMAT_VERSION: u32 = 29') && format.includes('CURRENT_ENGINE_VERSION: &str = "4.0.0"'), 'Rust format authority is not frozen schema 29 / engine 4.0')
+assert(project.includes('NOVA_PROJECT_SCHEMA_VERSION = 29') && project.includes("NOVA_ENGINE_VERSION = '4.0.0'"), 'frontend format authority is not frozen schema 29 / engine 4.0')
 assert(format.includes('projectSettings.production') && format.includes('runtimeMode'), 'current schema does not migrate and validate production/headless settings')
-assert(packageJson.includes('"version": "3.2.0"') && packageJson.includes('audit:v2.8'), 'package metadata/audit chain does not preserve v2.8')
+assert(packageJson.includes('"version": "4.0.0"') && packageJson.includes('audit:v2.8'), 'package metadata/audit chain does not preserve v2.8')
 
-for (const manual of [manualEn, manualDe, manualZh]) for (const topic of ['3.2.0', 'Profiler', 'Replay', 'Networking']) {
+for (const manual of [manualEn, manualDe, manualZh]) for (const topic of ['3.9.0', 'Profiler', 'Replay', 'Networking']) {
   assert(manual.includes(topic), `localized manual lacks ${topic}`)
 }
-assert(manualHtml.includes('<title>Nova_A 3.2 Manual</title>') && manualHtml.includes('data-section="production"'), 'bookmarkable HTML manual lacks Profiler documentation')
-assert(readme.includes('3.2.0') && readmeZh.includes('3.2.0'), 'release README metadata is stale')
+assert(manualHtml.includes('<title>Nova_A 4.0 Manual</title>') && manualHtml.includes('data-section="production"'), 'bookmarkable HTML manual lacks Profiler documentation')
+assert(readme.includes('4.0.0') && readmeZh.includes('4.0.0'), 'release README metadata is stale')
 
 console.log('v2.8 audit passed: traces, budgets, replay/RNG, tests, data/migrations, bounded jobs, opt-in networking, headless export, antialiasing, schema, discovery, and localized documentation are connected.')

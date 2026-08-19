@@ -1,0 +1,18 @@
+{
+  "format": "nova-migration-results",
+  "version": 1,
+  "engineVersion": "3.8.0",
+  "projectSchema": 28,
+  "generatedAt": "2026-08-18T13:37:31.151Z",
+  "supportedInputs": "Project Format 2 schemas 5-28 plus retained legacy importers",
+  "projectMigrationTests": 35,
+  "runtimeSaveCases": {
+    "deterministicMigration": true,
+    "interruptedWritePreserved": true,
+    "checksumRejected": true,
+    "backupRecovered": true,
+    "cancellationSafe": true
+  },
+  "optionalPackageDataPreserved": true,
+  "status": "passed"
+}

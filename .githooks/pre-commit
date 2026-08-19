@@ -1,0 +1,5 @@
+#!/bin/sh
+set -eu
+pnpm nova version --jsonl
+pnpm check
+git diff --check

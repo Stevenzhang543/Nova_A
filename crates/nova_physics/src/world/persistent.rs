@@ -328,14 +328,18 @@ impl PhysicsWorld {
                 }
             }
         }
-        for (pair, contact) in &current {
+        let mut current_contacts = current.iter().collect::<Vec<_>>();
+        current_contacts.sort_by_key(|(pair, _)| **pair);
+        for (pair, contact) in current_contacts {
             self.events.push(if self.contacts.contains_key(pair) {
                 PhysicsEvent::ContactStayed(*contact)
             } else {
                 PhysicsEvent::ContactStarted(*contact)
             });
         }
-        for (pair, contact) in &self.contacts {
+        let mut ended_contacts = self.contacts.iter().collect::<Vec<_>>();
+        ended_contacts.sort_by_key(|(pair, _)| **pair);
+        for (pair, contact) in ended_contacts {
             if !current.contains_key(pair) {
                 self.events.push(PhysicsEvent::ContactEnded(*contact));
             }
@@ -442,5 +446,28 @@ mod persistent_world_tests {
             .drain_events()
             .iter()
             .any(|event| matches!(event, PhysicsEvent::ContactStayed(_))));
+    }
+
+    #[test]
+    fn simultaneous_contacts_are_emitted_in_stable_handle_order() {
+        let mut world = PhysicsWorld::new();
+        for (order, handle, x) in [(0, 30, -0.2), (1, 10, 0.0), (2, 20, 0.2)] {
+            let mut record = body_record();
+            record[0] = handle as f64;
+            record[2] = x;
+            record[9] = 1.0;
+            record[28] = 1.0;
+            record[42] = 1.0;
+            world.create_body(handle, order, &record).unwrap();
+        }
+        world.drain_events();
+        world.step(1.0 / 60.0, 0.0, 0.0);
+        let pairs = world.drain_events().into_iter().filter_map(|event| match event {
+            PhysicsEvent::ContactStarted(contact) => Some((contact.first.min(contact.second), contact.first.max(contact.second))),
+            _ => None,
+        }).collect::<Vec<_>>();
+        let mut sorted = pairs.clone();
+        sorted.sort_unstable();
+        assert_eq!(pairs, sorted);
     }
 }

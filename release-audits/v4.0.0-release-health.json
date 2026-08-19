@@ -1,0 +1,154 @@
+{
+  "format": "nova-release-health-dashboard",
+  "version": 1,
+  "engineVersion": "4.0.0",
+  "generatedAt": "2026-08-19T15:08:07.060Z",
+  "reports": [
+    {
+      "name": "v4.0.0-accessibility-localization.json",
+      "format": "nova-accessibility-localization",
+      "status": "passed"
+    },
+    {
+      "name": "v4.0.0-accessibility-report.json",
+      "format": "nova-v4-accessibility-report",
+      "status": "passed"
+    },
+    {
+      "name": "v4.0.0-api-compatibility.json",
+      "format": "nova-v4-api-compatibility",
+      "status": "passed"
+    },
+    {
+      "name": "v4.0.0-benchmarks.json",
+      "format": "nova-v4-benchmarks",
+      "status": "passed"
+    },
+    {
+      "name": "v4.0.0-browser-matrix.json",
+      "format": "nova-v4-browser-matrix",
+      "status": "passed"
+    },
+    {
+      "name": "v4.0.0-build-environment.json",
+      "format": "nova-build-environment",
+      "status": "unknown"
+    },
+    {
+      "name": "v4.0.0-ci-final.json",
+      "format": "nova-v4-final-ci",
+      "status": "passed-with-declared-external-gates"
+    },
+    {
+      "name": "v4.0.0-clean-machine-installer-tests.json",
+      "format": "nova-clean-machine-installer-tests",
+      "status": "passed-with-declared-external-gates"
+    },
+    {
+      "name": "v4.0.0-documentation-validation.json",
+      "format": "nova-v4-documentation-validation",
+      "status": "passed"
+    },
+    {
+      "name": "v4.0.0-installer-platform-report.json",
+      "format": "nova-installer-platform-report",
+      "status": "unknown"
+    },
+    {
+      "name": "v4.0.0-known-issues.json",
+      "format": "nova-v4-known-issues",
+      "status": "passed-with-declared-s2-boundaries"
+    },
+    {
+      "name": "v4.0.0-layout-browser.json",
+      "format": "nova-v4.0-layout-qualification",
+      "status": "passed"
+    },
+    {
+      "name": "v4.0.0-malformed-input-security.json",
+      "format": "nova-v4-malformed-input-security",
+      "status": "passed"
+    },
+    {
+      "name": "v4.0.0-migration-corpus.json",
+      "format": "nova-v4-migration-corpus",
+      "status": "passed"
+    },
+    {
+      "name": "v4.0.0-package-compatibility.json",
+      "format": "nova-v4-package-compatibility",
+      "status": "passed"
+    },
+    {
+      "name": "v4.0.0-package-security-report.json",
+      "format": "nova-v4-package-security-report",
+      "status": "passed"
+    },
+    {
+      "name": "v4.0.0-performance-comparison.json",
+      "format": "nova-v4-performance-comparison",
+      "status": "passed"
+    },
+    {
+      "name": "v4.0.0-production-baseline-audit.json",
+      "format": "nova-v4-production-baseline-audit",
+      "status": "passed"
+    },
+    {
+      "name": "v4.0.0-provenance.json",
+      "format": "nova-v4-release-provenance",
+      "status": "pending-external-signing"
+    },
+    {
+      "name": "v4.0.0-reference-project-matrix.json",
+      "format": "nova-v4-reference-project-matrix",
+      "status": "passed"
+    },
+    {
+      "name": "v4.0.0-security-review.json",
+      "format": "nova-v4-security-review",
+      "status": "passed-with-documented-informational-warnings"
+    },
+    {
+      "name": "v4.0.0-sign-off-record.json",
+      "format": "nova-v4-sign-off",
+      "status": "pending-external-sign-off"
+    },
+    {
+      "name": "v4.0.0-software-bill-of-materials.spdx.json",
+      "format": "",
+      "status": "unknown"
+    },
+    {
+      "name": "v4.0.0-stability-smoke.json",
+      "format": "nova-v4-stability",
+      "status": "passed-with-declared-external-gates"
+    },
+    {
+      "name": "v4.0.0-thousand-hour-aggregate-soak.json",
+      "format": "nova-thousand-hour-aggregate-soak",
+      "status": "pending-external-gate"
+    },
+    {
+      "name": "v4.0.0-tier1-platform-matrix.json",
+      "format": "nova-v4-tier1-platform-matrix",
+      "status": "passed-with-declared-external-gates"
+    },
+    {
+      "name": "v4.0.0-upgrade-assistant.json",
+      "format": "nova-upgrade-assistant-tests",
+      "status": "passed"
+    },
+    {
+      "name": "v4.0.0-windows-smoke.json",
+      "format": "nova-windows-smoke",
+      "status": "passed"
+    }
+  ],
+  "passed": 28,
+  "failed": 0,
+  "externalGates": 7,
+  "severity0Open": 0,
+  "severity1Open": 0,
+  "status": "healthy-with-declared-external-gates"
+}

@@ -1,0 +1,97 @@
+{
+  "format": "nova-v3.5-programming-workflow-audit",
+  "version": 1,
+  "engineVersion": "3.5.0",
+  "projectSchema": 25,
+  "generatedAt": "2026-08-19T13:54:40.126Z",
+  "severity0Open": 0,
+  "severity1Open": 0,
+  "checks": [
+    {
+      "name": "release and schema authority",
+      "status": "passed",
+      "evidence": "Current engine 4.0.0 / frozen schema 29 retains the v3.5 Rhai API v1 contract."
+    },
+    {
+      "name": "complete generated API v1",
+      "status": "passed",
+      "evidence": "108 symbols; 108 documented; 108 examples; no missing host binding."
+    },
+    {
+      "name": "stable handles and typed export metadata",
+      "status": "passed",
+      "evidence": "Versioned stable handles and all type/default/range/step/enum/resource/group/tooltip/serialization fields reach Rust, schema, Inspector, and serialization."
+    },
+    {
+      "name": "signals timers tasks and safe modules",
+      "status": "passed",
+      "evidence": "Cancellable timers/deferred tasks, bounded signals with visible connections, and project-only module graphs are connected."
+    },
+    {
+      "name": "deprecation and compatibility warnings",
+      "status": "passed",
+      "evidence": "Deprecated aliases keep replacements/warnings and archived API-v1 compatibility has no breaking change."
+    },
+    {
+      "name": "semantic code intelligence",
+      "status": "passed",
+      "evidence": "Symbols, semantics, completion, signatures, hover, definition, references, rename, formatting, actions, and coded/ranged diagnostics are implemented."
+    },
+    {
+      "name": "API browser and external language process",
+      "status": "passed",
+      "evidence": "API examples/docs and the tested JSON-lines external editor protocol are available."
+    },
+    {
+      "name": "persistent callback-safe debugger",
+      "status": "passed",
+      "evidence": "13 lifecycle/fixed/input/collision/UI/signal/task paths passed stack, locals, watches, evaluation, inspection, mapping, and four step modes."
+    },
+    {
+      "name": "atomic configurable hot reload",
+      "status": "passed",
+      "evidence": "Complete graph prevalidation, compatible-state/recreate/opt-out policies, atomic AST swap, and compile-failure rollback passed native automation."
+    },
+    {
+      "name": "editor and headless test runner",
+      "status": "passed",
+      "evidence": "Discovery, assertions, setup/teardown, cases, timeout, skip, tags, seed, editor results, JSON, JUnit, and documented exit codes passed."
+    },
+    {
+      "name": "script profiler capture and comparison",
+      "status": "passed",
+      "evidence": "Per-script/function timing, calls, allocation estimate, bounded capture, JSON export, and A/B comparison are user-facing."
+    },
+    {
+      "name": "professional workspace and recovery",
+      "status": "passed",
+      "evidence": "Files/editor/problems/outline/debug/tests/API/modules/signals, unsaved indication/recovery, and responsive layout are present."
+    },
+    {
+      "name": "supported templates and upgraded project templates",
+      "status": "passed",
+      "evidence": "Five supported code templates and every generated project script use API v1 metadata."
+    },
+    {
+      "name": "fuzzing diagnostics and error storms",
+      "status": "passed",
+      "evidence": "10000 fuzz cases and 5000 source-line error storm passed without duplicate diagnostics or editor failure."
+    },
+    {
+      "name": "multilingual complete documentation",
+      "status": "passed",
+      "evidence": "English, German, Chinese Markdown/Web manuals, generated API, protocol, schema, and README guides retain v3.5 API v1 coverage."
+    },
+    {
+      "name": "required script reference projects",
+      "status": "passed",
+      "evidence": "script-lifecycle-signals:API-v1, script-async-tasks:API-v1, script-debugger-scenarios:API-v1, script-test-runner:API-v1, script-api-v1-examples:API-v1"
+    },
+    {
+      "name": "no open release-critical defect",
+      "status": "passed",
+      "evidence": "All generated scripting evidence passed; S0=0 and S1=0."
+    }
+  ],
+  "status": "passed"
+}

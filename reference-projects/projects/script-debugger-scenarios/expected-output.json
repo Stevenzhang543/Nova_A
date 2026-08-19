@@ -1,0 +1,13 @@
+{
+  "engineVersion": "4.0.0",
+  "schema": 29,
+  "projectName": "Nova_A Debugger Scenarios",
+  "minimumScenes": 1,
+  "minimumEntities": 9,
+  "expectedValidation": "pass",
+  "demonstrates": [
+    "line/function/conditional/hit-count breakpoints",
+    "logpoints",
+    "locals, watches and callback stacks"
+  ]
+}

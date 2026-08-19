@@ -7,19 +7,28 @@ import type { Animator, AnimatorParameterValue } from '../world/components'
 export type AnimatableProperty = 'Transform.position.x' | 'Transform.position.y' | 'Transform.rotation' | 'Transform.scale.x' | 'Transform.scale.y' | 'SpriteRenderer.opacity' | 'UI.opacity'
 export type AnimatorParameterType = 'Bool' | 'Float' | 'Integer' | 'Trigger'
 export type KeyTangentMode = 'Auto' | 'Linear' | 'Constant' | 'Free'
+export type KeyEasing = 'Linear' | 'EaseIn' | 'EaseOut' | 'EaseInOut'
+export type AnimationCommandKind = 'Method' | 'Audio' | 'NestedAnimation'
 
-export interface AnimationKeyframe { time: number; value: number; tangentMode: KeyTangentMode; inTangent: number; outTangent: number }
+export interface AnimationKeyframe { time: number; value: number; tangentMode: KeyTangentMode; inTangent: number; outTangent: number; easing?: KeyEasing }
 export interface AnimationTrack { property: AnimatableProperty; targetEntityUuid: string | null; keyframes: AnimationKeyframe[] }
 export interface SpriteAnimationFrame { spriteAsset: string | null; duration: number }
 export interface AnimationEvent { time: number; signal: string; payload: string }
+export interface AnimationMarker { time: number; name: string }
+export interface AnimationCommand { time: number; value: string; payload: string }
+export interface AnimationCommandTrack { kind: AnimationCommandKind; targetEntityUuid: string | null; commands: AnimationCommand[] }
 export interface AnimationClipDocument {
-  version: 3
+  version: 4
   name: string
   loop: boolean
   frameRate: number
+  playbackSpeed: number
+  onionSkin: boolean
   spriteFrames: SpriteAnimationFrame[]
   tracks: AnimationTrack[]
   events: AnimationEvent[]
+  markers: AnimationMarker[]
+  commandTracks: AnimationCommandTrack[]
 }
 export interface AnimatorParameter { name: string; type: AnimatorParameterType; defaultValue: AnimatorParameterValue }
 export interface BlendTreeChild { clipAsset: string | null; threshold: number; speed: number }
@@ -45,6 +54,8 @@ const TRACKS = new Set<AnimatableProperty>(['Transform.position.x', 'Transform.p
 const PARAMETER_TYPES = new Set<AnimatorParameterType>(['Bool', 'Float', 'Integer', 'Trigger'])
 const OPERATORS = new Set<TransitionCondition['operator']>(['==', '!=', '>', '<', '>=', '<=', 'trigger'])
 const TANGENTS = new Set<KeyTangentMode>(['Auto', 'Linear', 'Constant', 'Free'])
+const EASINGS = new Set<KeyEasing>(['Linear', 'EaseIn', 'EaseOut', 'EaseInOut'])
+const COMMAND_KINDS = new Set<AnimationCommandKind>(['Method', 'Audio', 'NestedAnimation'])
 const INTERRUPTIONS = new Set<TransitionInterruption>(['None', 'Source', 'Destination', 'SourceThenDestination'])
 
 function id(value: unknown, fallback: string): string {
@@ -59,7 +70,7 @@ function parameterValue(value: unknown, type: AnimatorParameterType): AnimatorPa
 }
 
 export function defaultAnimationClip(name = 'New Animation'): AnimationClipDocument {
-  return { version: 3, name, loop: true, frameRate: 12, spriteFrames: [], tracks: [], events: [] }
+  return { version: 4, name, loop: true, frameRate: 12, playbackSpeed: 1, onionSkin: false, spriteFrames: [], tracks: [], events: [], markers: [], commandTracks: [] }
 }
 
 export function defaultAnimatorController(name = 'New Controller'): AnimatorControllerDocument {
@@ -76,10 +87,12 @@ export function defaultAnimationMask(name = 'New Animation Mask'): AnimationMask
 export function normalizeAnimationClip(source: unknown): AnimationClipDocument {
   const item = source && typeof source === 'object' ? source as Partial<AnimationClipDocument> : {}
   return {
-    version: 3,
+    version: 4,
     name: typeof item.name === 'string' ? item.name.slice(0, 120) : 'Animation',
     loop: item.loop !== false,
     frameRate: Math.min(240, Math.max(1, finiteNumber(item.frameRate, 12))),
+    playbackSpeed: Math.min(100, Math.max(0.001, finiteNumber(item.playbackSpeed, 1))),
+    onionSkin: item.onionSkin === true,
     spriteFrames: (Array.isArray(item.spriteFrames) ? item.spriteFrames : []).slice(0, 10_000).map(frame => ({
       spriteAsset: typeof frame?.spriteAsset === 'string' ? frame.spriteAsset : null,
       duration: Math.min(3600, Math.max(1 / 1000, finiteNumber(frame?.duration, 1 / 12)))
@@ -89,14 +102,23 @@ export function normalizeAnimationClip(source: unknown): AnimationClipDocument {
       const keyframes = (Array.isArray(track.keyframes) ? track.keyframes : []).slice(0, 10_000).map(frame => ({
         time: Math.max(0, finiteNumber(frame?.time)), value: finiteNumber(frame?.value),
         tangentMode: TANGENTS.has(frame?.tangentMode as KeyTangentMode) ? frame!.tangentMode as KeyTangentMode : 'Auto',
-        inTangent: finiteNumber(frame?.inTangent), outTangent: finiteNumber(frame?.outTangent)
+        inTangent: finiteNumber(frame?.inTangent), outTangent: finiteNumber(frame?.outTangent),
+        easing: EASINGS.has(frame?.easing as KeyEasing) ? frame!.easing as KeyEasing : 'Linear'
       })).sort((first, second) => first.time - second.time)
       return [{ property: track.property as AnimatableProperty, targetEntityUuid: typeof track.targetEntityUuid === 'string' ? track.targetEntityUuid : null, keyframes }]
     }),
     events: (Array.isArray(item.events) ? item.events : []).slice(0, 1000).flatMap(event => {
       if (!event || typeof event.signal !== 'string' || !event.signal.trim()) return []
       return [{ time: Math.max(0, finiteNumber(event.time)), signal: event.signal.trim().slice(0, 128), payload: typeof event.payload === 'string' ? event.payload.slice(0, 4096) : '' }]
-    }).sort((first, second) => first.time - second.time)
+    }).sort((first, second) => first.time - second.time),
+    markers: (Array.isArray(item.markers) ? item.markers : []).slice(0, 1000).flatMap(marker => marker && typeof marker.name === 'string' && marker.name.trim()
+      ? [{ time: Math.max(0, finiteNumber(marker.time)), name: marker.name.trim().slice(0, 128) }] : []).sort((first, second) => first.time - second.time),
+    commandTracks: (Array.isArray(item.commandTracks) ? item.commandTracks : []).slice(0, 256).flatMap(track => {
+      if (!track || !COMMAND_KINDS.has(track.kind as AnimationCommandKind)) return []
+      const commands = (Array.isArray(track.commands) ? track.commands : []).slice(0, 10_000).flatMap(command => command && typeof command.value === 'string' && command.value.trim()
+        ? [{ time: Math.max(0, finiteNumber(command.time)), value: command.value.trim().slice(0, 512), payload: typeof command.payload === 'string' ? command.payload.slice(0, 4096) : '' }] : []).sort((first, second) => first.time - second.time)
+      return [{ kind: track.kind as AnimationCommandKind, targetEntityUuid: typeof track.targetEntityUuid === 'string' ? track.targetEntityUuid : null, commands }]
+    })
   }
 }
 
@@ -250,7 +272,17 @@ export function reimportAnimationClip(asset: AssetRecord): AnimationClipDocument
 export function animationClipLength(clip: AnimationClipDocument): number {
   const sprite = clip.spriteFrames.reduce((sum, frame) => sum + frame.duration, 0)
   const tracks = clip.tracks.reduce((maximum, track) => Math.max(maximum, track.keyframes[track.keyframes.length - 1]?.time ?? 0), 0)
-  return Math.max(sprite, tracks, 1 / clip.frameRate)
+  const markers = clip.markers.reduce((maximum, marker) => Math.max(maximum, marker.time), 0)
+  const commands = clip.commandTracks.reduce((maximum, track) => Math.max(maximum, track.commands[track.commands.length - 1]?.time ?? 0), 0)
+  const events = clip.events.reduce((maximum, event) => Math.max(maximum, event.time), 0)
+  return Math.max(sprite, tracks, markers, commands, events, 1 / clip.frameRate)
+}
+
+function easeRatio(ratio: number, easing: KeyEasing | undefined): number {
+  if (easing === 'EaseIn') return ratio * ratio
+  if (easing === 'EaseOut') return 1 - (1 - ratio) * (1 - ratio)
+  if (easing === 'EaseInOut') return ratio < .5 ? 2 * ratio * ratio : 1 - Math.pow(-2 * ratio + 2, 2) / 2
+  return ratio
 }
 
 export function sampleAnimationTrack(keyframes: AnimationKeyframe[], time: number): number | null {
@@ -263,7 +295,7 @@ export function sampleAnimationTrack(keyframes: AnimationKeyframe[], time: numbe
     if (time > next.time) continue
     const previous = keyframes[index - 1]
     const range = Math.max(1e-9, next.time - previous.time)
-    const ratio = (time - previous.time) / range
+    const ratio = easeRatio((time - previous.time) / range, previous.easing)
     if (previous.tangentMode === 'Constant') return previous.value
     if (previous.tangentMode === 'Linear' || next.tangentMode === 'Linear') return previous.value + (next.value - previous.value) * ratio
     const slope = (next.value - previous.value) / range
@@ -293,6 +325,7 @@ interface SampledClip { values: Map<string, { property: AnimatableProperty; targ
 class AnimationRuntime {
   private runtime = new Map<string, AnimatorRuntimeState>()
   onEvent: ((entity: Entity, event: AnimationEvent) => void) | null = null
+  onCommand: ((entity: Entity, track: AnimationCommandTrack, command: AnimationCommand) => void) | null = null
 
   reset(): void { this.runtime.clear() }
 
@@ -345,12 +378,13 @@ class AnimationRuntime {
         const clip = this.stateClip(activeState, animator)
         const length = clip ? animationClipLength(clip) : 0
         const previousTime = layerState.time
-        const scaledDelta = Math.max(0, delta) * animator.speed * activeState.speed
+        const scaledDelta = Math.max(0, delta) * animator.speed * activeState.speed * (clip?.playbackSpeed ?? 1)
         layerState.time += scaledDelta
         if (clip && length > 0) {
           if (clip.loop) layerState.time = ((layerState.time % length) + length) % length
           else layerState.time = Math.min(length, Math.max(0, layerState.time))
           this.emitEvents(entity, clip, previousTime, layerState.time)
+          this.emitCommands(entity, clip, previousTime, layerState.time)
           let sampled = this.sampleState(activeState, animator, layerState.time)
           if (layerState.previousStateId && layerState.blendDuration > 0) {
             const previousState = controller.states.find(candidate => candidate.id === layerState!.previousStateId)
@@ -460,6 +494,13 @@ class AnimationRuntime {
   private emitEvents(entity: Entity, clip: AnimationClipDocument, previousTime: number, time: number): void {
     const wrapped = clip.loop && time < previousTime
     for (const event of clip.events) if ((wrapped && (event.time > previousTime || event.time <= time)) || (!wrapped && event.time > previousTime && event.time <= time)) this.onEvent?.(entity, event)
+  }
+
+  private emitCommands(entity: Entity, clip: AnimationClipDocument, previousTime: number, time: number): void {
+    const wrapped = clip.loop && time < previousTime
+    for (const track of clip.commandTracks) for (const command of track.commands) {
+      if ((wrapped && (command.time > previousTime || command.time <= time)) || (!wrapped && command.time > previousTime && command.time <= time)) this.onCommand?.(entity, track, command)
+    }
   }
 }
 

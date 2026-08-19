@@ -1,0 +1,58 @@
+{
+  "format": "nova-v4-final-ci",
+  "version": 1,
+  "engineVersion": "4.0.0",
+  "generatedAt": "2026-08-19T15:07:52.339Z",
+  "gates": [
+    {
+      "name": "cargo fmt --all -- --check",
+      "status": "passed"
+    },
+    {
+      "name": "cargo test --workspace --all-targets",
+      "status": "passed"
+    },
+    {
+      "name": "cargo test --manifest-path src-tauri/Cargo.toml",
+      "status": "passed"
+    },
+    {
+      "name": "pnpm check",
+      "status": "passed"
+    },
+    {
+      "name": "pnpm audit --audit-level high",
+      "status": "passed"
+    },
+    {
+      "name": "cargo audit (core and desktop lockfiles)",
+      "status": "passed-with-documented-informational-warnings"
+    },
+    {
+      "name": "pnpm build",
+      "status": "passed"
+    },
+    {
+      "name": "pnpm qualify:v4:layout",
+      "status": "passed"
+    },
+    {
+      "name": "pnpm tauri build",
+      "status": "passed"
+    },
+    {
+      "name": "pnpm verify:v4:windows",
+      "status": "passed"
+    }
+  ],
+  "externalGates": [
+    "signed Git tag",
+    "publisher signing",
+    "clean-VM installer/update/rollback/uninstall",
+    "matching-host Experimental platform promotion",
+    "1000 aggregate beta/automation wall-clock hours"
+  ],
+  "severity0Open": 0,
+  "severity1Open": 0,
+  "status": "passed-with-declared-external-gates"
+}

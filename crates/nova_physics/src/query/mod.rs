@@ -145,7 +145,9 @@ fn query_shape(shape: Shape, position: Vec2, angle: f64) -> Body {
         restitution: 0.0,
         restitution_threshold: 0.0,
         static_friction: 0.0,
-        dynamic_friction: 0.0,
+       dynamic_friction: 0.0,
+        friction_combine: 0,
+        restitution_combine: 3,
         is_static: true,
         is_kinematic: false,
         is_sensor: true,
@@ -275,7 +277,8 @@ impl PhysicsWorld {
                 collide(&query, &body).into_iter().next()
             };
             if let Some(manifold) = collides_at(0.0) {
-                let hit = PhysicsQueryHit { handle, point: [manifold.point.x, manifold.point.y], normal: [manifold.normal.x, manifold.normal.y], distance: 0.0 };
+                let surface_normal = manifold.normal.neg();
+                let hit = PhysicsQueryHit { handle, point: [manifold.point.x, manifold.point.y], normal: [surface_normal.x, surface_normal.y], distance: 0.0 };
                 if best.map_or(true, |current| hit.distance < current.distance) { best = Some(hit); }
                 continue;
             }
@@ -292,7 +295,8 @@ impl PhysicsWorld {
                     let middle = (low + high) * 0.5;
                     if let Some(value) = collides_at(middle) { high = middle; manifold = value; } else { low = middle; }
                 }
-                let hit = PhysicsQueryHit { handle, point: [manifold.point.x, manifold.point.y], normal: [manifold.normal.x, manifold.normal.y], distance: high };
+                let surface_normal = manifold.normal.neg();
+                let hit = PhysicsQueryHit { handle, point: [manifold.point.x, manifold.point.y], normal: [surface_normal.x, surface_normal.y], distance: high };
                 if best.map_or(true, |current| hit.distance < current.distance) { best = Some(hit); }
                 break;
             }
@@ -459,5 +463,56 @@ mod query_tests {
         assert!(moved.on_wall);
         assert!((moved.position[0] - 2.0).abs() < 1.0e-4);
         assert!((moved.applied_motion[0] - 2.0).abs() < 1.0e-4);
+    }
+
+    #[test]
+    fn character_classifies_floor_ceiling_and_moving_platform_velocity() {
+        let mut world = PhysicsWorld::new();
+        world.create_body(1, 0, &box_record(0.0, 0.0, 0)).unwrap();
+        let mut floor = box_record(0.0, -3.0, 0);
+        floor[4] = 2.5;
+        world.create_body(2, 1, &floor).unwrap();
+        world.create_body(3, 2, &box_record(0.0, 3.0, 0)).unwrap();
+        let down = world.move_character_box(1, [2.0, 2.0], [0.0, -10.0], std::f64::consts::FRAC_PI_4, 0.0, 0.0, 4, 1.0e-5, 1).unwrap();
+        assert!(down.on_floor && down.floor_normal[1] > 0.99);
+        assert!((down.platform_velocity[0] - 2.5).abs() < 1.0e-10);
+        world.set_transform(1, 0.0, 0.0, 0.0).unwrap();
+        let up = world.move_character_box(1, [2.0, 2.0], [0.0, 10.0], std::f64::consts::FRAC_PI_4, 0.0, 0.0, 4, 1.0e-5, 1).unwrap();
+        assert!(up.on_ceiling && up.ceiling_normal[1] < -0.99);
+    }
+
+    #[test]
+    fn character_floor_snap_and_step_height_are_applied_in_world_units() {
+        let mut snap_world = PhysicsWorld::new();
+        snap_world.create_body(1, 0, &box_record(0.0, 0.2, 0)).unwrap();
+        snap_world.create_body(2, 1, &box_record(0.0, -2.0, 0)).unwrap();
+        let snapped = snap_world.move_character_box(1, [2.0, 2.0], [0.25, 0.0], std::f64::consts::FRAC_PI_4, 0.0, 0.5, 4, 1.0e-5, 1).unwrap();
+        assert!(snapped.on_floor);
+        assert!((snapped.position[1]).abs() < 1.0e-4);
+
+        let mut step_world = PhysicsWorld::new();
+        step_world.create_body(1, 0, &box_record(0.0, 0.0, 0)).unwrap();
+        step_world.create_body(2, 1, &box_record(4.0, 0.0, 0)).unwrap();
+        let stepped = step_world.move_character_box(1, [2.0, 2.0], [8.0, 0.0], std::f64::consts::FRAC_PI_4, 3.0, 0.0, 4, 1.0e-5, 1).unwrap();
+        assert!(stepped.position[0] > 7.9);
+        assert!((stepped.position[1] - 3.0).abs() < 1.0e-4);
+    }
+
+    #[test]
+    fn character_accepts_a_rotated_surface_inside_the_slope_limit() {
+        let mut world = PhysicsWorld::new();
+        world.create_body(1, 0, &box_record(0.0, 4.0, 0)).unwrap();
+        let mut slope = box_record(0.0, 0.0, 0);
+        slope[12] = 10.0;
+        slope[13] = 1.0;
+        slope[14] = 0.25;
+        for (index, (x, y)) in [(-5.0, -0.5), (5.0, -0.5), (5.0, 0.5), (-5.0, 0.5)].iter().enumerate() {
+            slope[34 + index * 2] = *x;
+            slope[35 + index * 2] = *y;
+        }
+        world.create_body(2, 1, &slope).unwrap();
+        let result = world.move_character_box(1, [1.0, 2.0], [0.0, -8.0], 0.5, 0.0, 0.0, 4, 1.0e-5, 1).unwrap();
+        assert!(result.on_floor);
+        assert!(result.floor_normal[1] >= 0.5_f64.cos());
     }
 }

@@ -4,6 +4,7 @@ import { beginProjectSession, newProjectMetadata, projectSessionState, safeProje
 import { createTemplateProjectJson, type ProjectTemplateId } from './templates'
 import { analyzeProjectUpgrade, downloadProjectBackup, readUpgradeRollback, storeUpgradeRollback, type UpgradePreview } from '../runtime/projectUpgrade'
 import { markSourceBaseline } from '../runtime/teamWorkflow'
+import { canonicalProjectText, validateProjectDocument, type ProjectValidationReport } from './projectData'
 
 const RECENT_KEY = 'nova_a.recent_projects.v2'
 const MAX_RECENT_PROJECTS = 8
@@ -44,7 +45,8 @@ export const projectManagerState = reactive({
   currentSnapshot: null as string | null,
   pendingUpgrade: null as null | { source: string; fileName: string; importAsCopy: boolean; preview: UpgradePreview },
   readOnlyDocument: null as null | { source: string; fileName: string; preview: UpgradePreview },
-  backupBeforeUpgrade: true
+  backupBeforeUpgrade: true,
+  lastUpgradeValidation: null as ProjectValidationReport | null
   ,rollbackAvailable: readUpgradeRollback() !== null
 })
 
@@ -76,12 +78,10 @@ export async function openProjectDocument(source: string, fileName = 'project.no
       return false
     }
     if (!preview.supported) throw new Error(preview.warnings[0] || 'This project cannot be opened safely by this Nova_A version.')
-    if (preview.requiresMigration) {
-      projectManagerState.pendingUpgrade = { source, fileName, importAsCopy, preview }
-      projectManagerState.visible = true
-      projectManagerState.error = ''
-      return false
-    }
+    projectManagerState.pendingUpgrade = { source, fileName, importAsCopy, preview }
+    projectManagerState.visible = true
+    projectManagerState.error = ''
+    return false
   } catch (error) {
     projectManagerState.error = error instanceof Error ? error.message : String(error)
     return false
@@ -133,11 +133,27 @@ export function downloadReadOnlyDocument(): void {
 export async function applyPendingProjectUpgrade(): Promise<boolean> {
   const pending = projectManagerState.pendingUpgrade
   if (!pending) return false
-  if (projectManagerState.backupBeforeUpgrade) downloadProjectBackup(pending.source, pending.fileName.replace(/\.(nova|json)$/i, ''))
-  storeUpgradeRollback(pending.source, pending.fileName)
-  projectManagerState.rollbackAvailable = true
-  projectManagerState.pendingUpgrade = null
-  return openProjectDocumentNow(pending.source, pending.fileName, pending.importAsCopy)
+  projectManagerState.busy = true
+  projectManagerState.error = ''
+  try {
+    await physicsState.world.wasmReady
+    if (pending.preview.requiresMigration) {
+      downloadProjectBackup(pending.source, pending.fileName.replace(/\.(nova|json)$/i, ''))
+      storeUpgradeRollback(pending.source, pending.fileName)
+      projectManagerState.rollbackAvailable = true
+    }
+    const migrated = physicsState.world.formatProjectJson(pending.source)
+    const validation = validateProjectDocument(migrated)
+    projectManagerState.lastUpgradeValidation = validation
+    const blocking = validation.issues.filter(issue => issue.severity === 'error')
+    if (blocking.length) throw new Error(`Migration validation failed: ${blocking[0].path || '<project>'}: ${blocking[0].message}`)
+    const canonical = canonicalProjectText(migrated)
+    projectManagerState.pendingUpgrade = null
+    return await openProjectDocumentNow(canonical, pending.fileName, pending.importAsCopy)
+  } catch (error) {
+    projectManagerState.error = error instanceof Error ? error.message : String(error)
+    return false
+  } finally { projectManagerState.busy = false }
 }
 
 export function cancelPendingProjectUpgrade(): void { projectManagerState.pendingUpgrade = null }

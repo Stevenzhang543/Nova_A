@@ -1,0 +1,75 @@
+{
+  "format": "nova-v4-security-review",
+  "version": 1,
+  "engineVersion": "4.0.0",
+  "generatedAt": "2026-08-19T15:07:52.339Z",
+  "malformedInput": {
+    "format": "nova-v4-malformed-input-security",
+    "version": 1,
+    "engineVersion": "4.0.0",
+    "generatedAt": "2026-08-19T15:06:45.128Z",
+    "malformedProjectRejected": true,
+    "futureSchemaRejectedBeforeMutation": true,
+    "stablePackageVerification": true,
+    "pathTraversalAndCorruption": "retained Rust/CLI/package audit chain",
+    "status": "passed"
+  },
+  "packageTrust": {
+    "format": "nova-v4-package-compatibility",
+    "version": 1,
+    "engineVersion": "4.0.0",
+    "generatedAt": "2026-08-19T15:06:45.128Z",
+    "stableInstalled": true,
+    "experimentalNetworkingInstallable": true,
+    "experimentalNetworkingNotDefault": true,
+    "deterministicLockfile": true,
+    "installed": [
+      {
+        "id": "top.whitelists.novaa.object-pool",
+        "engine": ">=3.8.0 <5.0.0",
+        "status": "verified"
+      },
+      {
+        "id": "top.whitelists.novaa.networking",
+        "engine": ">=2.9.0 <5.0.0",
+        "status": "verified"
+      }
+    ],
+    "status": "passed"
+  },
+  "retainedPackageAttackSuite": {
+    "name": "v3.9.0-package-security.json",
+    "format": "nova-package-security-tests",
+    "status": "passed",
+    "sha256": "ce634830dbef22ca6db3e2b681c6a7a439aff204ebf879bc5d50221d26926d3a"
+  },
+  "privacy": {
+    "telemetryDefault": false,
+    "crashUploadAutomatic": false,
+    "consentRequired": true,
+    "pathRedactionDefault": true
+  },
+  "dependencyReview": "docs/DEPENDENCY_LICENSE_REVIEW_4_0.md plus SPDX SBOM",
+  "advisories": {
+    "npm": {
+      "command": "pnpm audit --audit-level high",
+      "vulnerabilities": 0,
+      "status": "passed"
+    },
+    "rustsec": {
+      "tool": "cargo-audit 0.22.2",
+      "databaseAdvisories": 1217,
+      "coreVulnerabilities": 0,
+      "desktopVulnerabilities": 0,
+      "patched": [
+        "bytes >=1.11.1",
+        "quick-xml >=0.41.0 through plist >=1.10.0",
+        "time >=0.3.47",
+        "Tauri 2.11 family"
+      ],
+      "allowedInformationalNotices": 18,
+      "noticeBoundary": "Unmaintained/unsound transitive notices are documented as S2 maintenance debt; Experimental Linux GTK3 warnings do not enter the Windows Tier-1 binary."
+    }
+  },
+  "status": "passed-with-documented-informational-warnings"
+}

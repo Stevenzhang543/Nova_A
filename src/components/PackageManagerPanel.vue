@@ -1,5 +1,5 @@
 <template>
-  <section class="package-manager">
+  <section class="package-manager" data-doc="manual/package-security">
     <header class="package-header">
       <div><strong>{{ t('packageManager') }}</strong><small>{{ t('packageManagerHint') }}</small></div>
       <label class="offline"><input v-model="packages.offlineMode" type="checkbox">{{ t('offlineMode') }}</label>
@@ -25,7 +25,8 @@
       <aside v-if="selectedRegistry" class="registry-inspector">
         <header><div><strong>{{ selectedRegistry.name }}</strong><small>{{ selectedRegistry.id }}</small></div><span>{{ selectedRegistry.rating ?? '—' }} / 5</span></header>
         <p>{{ selectedRegistry.description }}</p>
-        <dl><div><dt>{{ t('publisher') }}</dt><dd>{{ selectedRegistry.publisher }} <b v-if="selectedRegistry.publisherVerified">✓</b></dd></div><div><dt>{{ t('engineVersion') }}</dt><dd>{{ selectedRegistry.engine }}</dd></div><div><dt>SHA-256</dt><dd>{{ selectedRegistry.sha256 }}</dd></div></dl>
+        <dl><div><dt>{{ t('publisher') }}</dt><dd>{{ selectedRegistry.publisher }} <b v-if="selectedRegistry.publisherVerified">✓</b></dd></div><div><dt>{{ t('engineVersion') }}</dt><dd>{{ selectedRegistry.engine }}</dd></div><div><dt>{{ t('packageType') }}</dt><dd>{{ selectedRegistry.entryPointType }}</dd></div><div><dt>SHA-256</dt><dd>{{ selectedRegistry.sha256 }}</dd></div></dl>
+        <p :class="reviewRegistry.status === 'verified' ? 'success' : 'problem'">{{ reviewRegistry.status }}<template v-if="reviewRegistry.blocking.length"> · {{ reviewRegistry.blocking.join(' ') }}</template></p>
         <section><strong>{{ t('permissionReview') }}</strong><div class="chips"><span v-for="permission in selectedRegistry.permissions" :key="permission">{{ permission }}</span><p v-if="!selectedRegistry.permissions.length">{{ t('none') }}</p></div></section>
         <section class="registry-links"><strong>{{ t('security') }} / {{ t('documentation') }}</strong><button :disabled="!selectedRegistry.securityUrl" @click="openPackageUrl(selectedRegistry.securityUrl)">{{ t('security') }}</button><button :disabled="!selectedRegistry.documentationUrl" @click="openPackageUrl(selectedRegistry.documentationUrl)">{{ t('documentation') }}</button></section>
         <p>{{ t('packageBrowsingSafety') }}</p>
@@ -49,6 +50,8 @@
           <div><dt>{{ t('source') }}</dt><dd :title="selected.source.location">{{ selected.source.kind }} · {{ selected.source.location }}</dd></div>
           <div><dt>{{ t('engineVersion') }}</dt><dd>{{ selected.manifest.engine }}</dd></div>
           <div><dt>{{ t('pluginApi') }}</dt><dd>{{ selected.manifest.pluginApi ?? t('none') }}</dd></div>
+          <div><dt>{{ t('packageType') }}</dt><dd>{{ selected.manifest.entryPointType }}</dd></div>
+          <div><dt>{{ t('security') }}</dt><dd :class="selected.securityStatus === 'verified' ? 'success' : 'problem'">{{ selected.securityStatus }}</dd></div>
           <div><dt>SHA-256</dt><dd>{{ selected.manifest.sha256 ? `${selected.manifest.sha256.slice(0, 14)}…` : t('unsigned') }}</dd></div>
         </dl>
         <section>
@@ -66,7 +69,8 @@
           <div class="chips"><span v-for="permission in pluginManifest?.permissions ?? []" :key="permission">{{ permission }}</span></div>
           <p v-if="pluginManifest?.entryType === 'native'" class="problem">{{ t('nativeExtensionBlocked') }}</p>
         </section>
-        <section v-if="update"><strong>{{ t('updatePreview') }}</strong><p>{{ selected.manifest.version }} → {{ update.version }}</p><button class="primary-action" @click="applyUpdate">{{ t('applyPackageUpdate') }}</button></section>
+        <section v-if="update"><strong>{{ t('updatePreview') }}</strong><p>{{ selected.manifest.version }} → {{ update.version }}</p><p v-if="updatePermissions.length" class="problem">{{ t('permissionChanges') }}: {{ updatePermissions.join(', ') }}</p><button class="primary-action" @click="applyUpdate">{{ t('applyPackageUpdate') }}</button></section>
+        <section v-if="rollbackAvailable"><strong>{{ t('packageRollback') }}</strong><button class="primary-action" @click="performRollback">{{ t('rollback') }}</button></section>
         <button class="danger" @click="requestUninstall">{{ t('uninstallPackage') }}</button>
       </aside>
       <aside v-else class="package-inspector safety">
@@ -74,7 +78,8 @@
         <label><input :checked="plugins.safeMode" type="checkbox" @change="setPluginSafeMode(($event.target as HTMLInputElement).checked)">{{ t('pluginSafeMode') }}</label>
         <p>{{ t('pluginSafeModeHint') }}</p>
         <p v-if="plugins.safeModeRecommended" class="problem">{{ t('safeModeRecommended') }}</p>
-        <dl><div><dt>{{ t('packageLockfile') }}</dt><dd>{{ packages.lockfile.length }}</dd></div><div><dt>{{ t('offlineCache') }}</dt><dd>{{ packages.offlineCache.length }}</dd></div></dl>
+        <dl><div><dt>{{ t('packageLockfile') }}</dt><dd>{{ packages.lockfile.length }}</dd></div><div><dt>{{ t('offlineCache') }}</dt><dd>{{ packages.offlineCache.length }}</dd></div><div><dt>{{ t('quarantine') }}</dt><dd>{{ packages.quarantine.length }}</dd></div></dl>
+        <button class="primary-action" @click="verifyCache">{{ t('verifyCache') }}</button><p v-if="cacheProblems.length" class="problem">{{ cacheProblems.join(' ') }}</p>
       </aside>
     </div>
   </section>
@@ -85,7 +90,7 @@ import { computed, ref } from 'vue'
 import { t } from '../i18n'
 import { requestConfirmation } from '../store/dialog'
 import { pushHistory } from '../store/physics'
-import { applyPackageUpdate, installPackageManifest, installRegistryPackage, packageCompatibility, packageState as packages, packageUninstallImpact, packageUpdate, registryPackages, uninstallPackage, type InstalledPackage } from '../runtime/packages'
+import { approvePackageUpdatePermissions, installPackageManifest, installRegistryPackage, normalizePackageManifest, packageCompatibility, packageState as packages, packageUninstallImpact, packageUpdate, registryPackages, reviewPackageSecurity, rollbackPackage, uninstallPackage, verifyPackageCache, type InstalledPackage } from '../runtime/packages'
 import { normalizePluginManifest, pluginState as plugins, setPluginSafeMode } from '../runtime/plugins'
 import { completeTask, failTask, startTask } from '../runtime/editorFeedback'
 import PluginSettings from './PluginSettings.vue'
@@ -94,6 +99,7 @@ const statuses = ['installed', 'project', 'updates', 'incompatible', 'disabled']
 const selectedId = ref(''), manifestInput = ref<HTMLInputElement | null>(null)
 const registryOpen = ref(false), selectedRegistryId = ref('')
 const pluginToolsOpen = ref(false)
+const cacheProblems = ref<string[]>([])
 const selected = computed(() => packages.installed.find(item => item.manifest.id === selectedId.value) ?? null)
 const compatibility = computed(() => selected.value ? packageCompatibility(selected.value) : [])
 const update = computed(() => selected.value ? packageUpdate(selected.value) : null)
@@ -101,6 +107,9 @@ const pluginManifest = computed(() => plugins.manifests.find(item => item.id ===
 const catalog = computed(() => registryPackages())
 const selectedRegistry = computed(() => catalog.value.find(item => item.id === selectedRegistryId.value) ?? catalog.value[0] ?? null)
 const installedRegistry = computed(() => packages.installed.some(item => item.manifest.id === selectedRegistry.value?.id))
+const reviewRegistry = computed(() => selectedRegistry.value ? reviewPackageSecurity(selectedRegistry.value) : { status: 'unverified', blocking: [], warnings: [] })
+const updatePermissions = computed(() => selected.value && update.value ? update.value.permissions.filter(permission => !selected.value!.grantedPermissions.includes(permission)) : [])
+const rollbackAvailable = computed(() => Boolean(selected.value && packages.rollback[selected.value.manifest.id]?.length))
 function matches(item: InstalledPackage, status: typeof statuses[number]): boolean {
   if (status === 'project') return item.project
   if (status === 'updates') return packageUpdate(item) !== null
@@ -116,6 +125,10 @@ async function importManifest(event: Event): Promise<void> {
   const task = startTask(t('importPackageManifest'), { detail: file.name })
   try {
     const raw = JSON.parse(await file.text()) as Record<string, unknown>
+    const preview = normalizePackageManifest(raw.package ?? raw), review = reviewPackageSecurity(preview)
+    if (review.status !== 'verified') throw new Error(review.blocking.join(' '))
+    const approved = await requestConfirmation({ title: t('permissionReview'), message: `${preview.name} · ${preview.entryPointType}\n${preview.permissions.length ? preview.permissions.join(', ') : t('none')}\nSHA-256 ${preview.sha256}`, confirmLabel: t('installPackage'), cancelLabel: t('cancel'), destructive: false })
+    if (!approved) { completeTask(task, t('cancel')); return }
     const item = installPackageManifest(raw.package ?? raw, raw.source)
     if (item.manifest.pluginApi === 2 && raw.plugin) {
       const plugin = normalizePluginManifest(raw.plugin), index = plugins.manifests.findIndex(candidate => candidate.id === plugin.id)
@@ -142,20 +155,28 @@ function setEnabled(item: InstalledPackage, enabled: boolean): void {
   if (plugin) plugin.projectEnabled = enabled
   pushHistory(enabled ? 'Enable package' : 'Disable package', `package:${item.manifest.id}`)
 }
-function applyUpdate(): void {
+async function applyUpdate(): Promise<void> {
   if (!selected.value) return
   const task = startTask(t('applyPackageUpdate'), { detail: selected.value.manifest.name })
-  if (!applyPackageUpdate(selected.value.manifest.id)) { failTask(task, new Error(t('operationFailed'))); return }
+  if (updatePermissions.value.length) {
+    const approved = await requestConfirmation({ title: t('permissionChanges'), message: updatePermissions.value.join(', '), confirmLabel: t('approve'), cancelLabel: t('cancel'), destructive: false })
+    if (!approved) { completeTask(task, t('cancel')); return }
+  }
+  if (!approvePackageUpdatePermissions(selected.value.manifest.id, updatePermissions.value)) { failTask(task, new Error(t('operationFailed'))); return }
   const plugin = plugins.manifests.find(candidate => candidate.id === selected.value?.manifest.id)
   if (plugin) plugin.version = selected.value.manifest.version
   pushHistory('Update package', `package:${selected.value.manifest.id}`); completeTask(task, selected.value.manifest.version)
 }
-function installSelectedRegistry(): void {
+async function installSelectedRegistry(): Promise<void> {
   if (!selectedRegistry.value) return
   const task = startTask(t('installPackage'), { detail: selectedRegistry.value.name })
+  const approved = await requestConfirmation({ title: t('permissionReview'), message: `${selectedRegistry.value.name} · ${selectedRegistry.value.entryPointType}\n${selectedRegistry.value.permissions.length ? selectedRegistry.value.permissions.join(', ') : t('none')}\nSHA-256 ${selectedRegistry.value.sha256}`, confirmLabel: t('installPackage'), cancelLabel: t('cancel'), destructive: false })
+  if (!approved) { completeTask(task, t('cancel')); return }
   try { const item = installRegistryPackage(selectedRegistry.value.id); selectedId.value = item.manifest.id; pushHistory('Install registry package'); completeTask(task, item.manifest.name) }
   catch (error) { failTask(task, error) }
 }
+function performRollback(): void { if (!selected.value || !rollbackPackage(selected.value.manifest.id)) return; pushHistory('Rollback package', `package:${selected.value.manifest.id}`) }
+function verifyCache(): void { cacheProblems.value = verifyPackageCache() }
 async function openPackageUrl(url: string): Promise<void> {
   if (!/^https:\/\//i.test(url)) return
   if ('__TAURI_INTERNALS__' in window) { try { const { openUrl } = await import('@tauri-apps/plugin-opener'); await openUrl(url); return } catch (error) { packages.errors.push(error instanceof Error ? error.message : String(error)); return } }

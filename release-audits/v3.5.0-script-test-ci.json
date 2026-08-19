@@ -1,0 +1,90 @@
+{
+  "format": "nova-script-test-ci",
+  "version": 1,
+  "engineVersion": "3.5.0",
+  "generatedAt": "2026-08-19T13:53:15.839Z",
+  "discovery": true,
+  "setupTeardown": true,
+  "parameterized": true,
+  "timeout": true,
+  "skip": true,
+  "tags": true,
+  "deterministicSeed": true,
+  "passingExitCode": 0,
+  "failingExitCode": 1,
+  "invalidRunnerExitCode": 2,
+  "passingReport": {
+    "durationMs": 38.678200000000004,
+    "engineVersion": "4.0.0",
+    "failed": 0,
+    "format": "nova-script-test-report",
+    "passed": 2,
+    "results": [
+      {
+        "caseName": "first",
+        "durationMs": 19.7535,
+        "file": "tests/fixtures/scripting/headless-pass.rhai",
+        "message": "Passed with deterministic seed 42",
+        "name": "test_parameterized_arithmetic",
+        "seed": 42,
+        "status": "passed",
+        "tags": [
+          "unit",
+          "fast"
+        ]
+      },
+      {
+        "caseName": "second",
+        "durationMs": 18.5256,
+        "file": "tests/fixtures/scripting/headless-pass.rhai",
+        "message": "Passed with deterministic seed 42",
+        "name": "test_parameterized_arithmetic",
+        "seed": 42,
+        "status": "passed",
+        "tags": [
+          "unit",
+          "fast"
+        ]
+      },
+      {
+        "caseName": "",
+        "durationMs": 0,
+        "file": "tests/fixtures/scripting/headless-pass.rhai",
+        "message": "Skipped by @test metadata",
+        "name": "test_skipped_example",
+        "seed": 7,
+        "status": "skipped",
+        "tags": [
+          "manual"
+        ]
+      }
+    ],
+    "skipped": 1,
+    "version": 1
+  },
+  "expectedFailureReport": {
+    "durationMs": 11.3929,
+    "engineVersion": "4.0.0",
+    "failed": 1,
+    "format": "nova-script-test-report",
+    "passed": 0,
+    "results": [
+      {
+        "caseName": "",
+        "durationMs": 11.1981,
+        "file": "tests/fixtures/scripting/headless-fail.rhai",
+        "message": "Expectation failed: intentional failure used to verify exit code 1",
+        "name": "test_expected_failure",
+        "seed": 99,
+        "status": "failed",
+        "tags": [
+          "ci-failure"
+        ]
+      }
+    ],
+    "skipped": 0,
+    "version": 1
+  },
+  "junit": "<?xml version=\"1.0\" encoding=\"UTF-8\"?><testsuite name=\"Nova_A Rhai\" tests=\"3\" failures=\"0\" time=\"0.035765\"><testcase classname=\"tests/fixtures/scripting/headless-pass.rhai\" name=\"test_parameterized_arithmetic [first]\" time=\"0.018372\"></testcase><testcase classname=\"tests/fixtures/scripting/headless-pass.rhai\" name=\"test_parameterized_arithmetic [second]\" time=\"0.017178\"></testcase><testcase classname=\"tests/fixtures/scripting/headless-pass.rhai\" name=\"test_skipped_example\" time=\"0.000000\"><skipped/></testcase></testsuite>\n",
+  "status": "passed"
+}

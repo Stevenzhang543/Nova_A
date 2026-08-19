@@ -9,7 +9,8 @@ export const renderGraphState = reactive({
   frame: 0,
   passes: [] as RenderPassSample[],
   captures: [] as Array<{ id: number; createdAt: string; dataUrl: string; width: number; height: number }>,
-  captureRequested: false
+  captureRequested: false,
+  comparisons: [] as Array<{ first: number; second: number; difference: number; comparedAt: string }>
 })
 
 export function beginRenderGraph(): number { renderGraphState.frame++; renderGraphState.passes.splice(0); return performance.now() }
@@ -41,3 +42,17 @@ export function captureRenderSurface(canvas: HTMLCanvasElement, overlay?: HTMLCa
   } catch { /* A tainted imported image must not break the render loop. */ }
 }
 export function renderGraphAllocatesEffects(): boolean { return advancedRenderingActive() }
+
+export async function compareRenderCaptures(firstId: number, secondId: number): Promise<number | null> {
+  const first = renderGraphState.captures.find(item => item.id === firstId), second = renderGraphState.captures.find(item => item.id === secondId)
+  if (!first || !second || typeof document === 'undefined') return null
+  const load = (source: string) => new Promise<HTMLImageElement>((resolve, reject) => { const image = new Image(); image.onload = () => resolve(image); image.onerror = reject; image.src = source })
+  const [a, b] = await Promise.all([load(first.dataUrl), load(second.dataUrl)]), width = Math.min(a.width, b.width), height = Math.min(a.height, b.height)
+  const canvas = document.createElement('canvas'); canvas.width = width; canvas.height = height; const context = canvas.getContext('2d', { willReadFrequently: true })
+  if (!context || width * height > 16_777_216) return null
+  context.drawImage(a, 0, 0, width, height); const one = context.getImageData(0, 0, width, height).data; context.clearRect(0, 0, width, height); context.drawImage(b, 0, 0, width, height); const two = context.getImageData(0, 0, width, height).data
+  let sum = 0; for (let index = 0; index < one.length; index++) sum += Math.abs(one[index] - two[index])
+  const difference = sum / Math.max(1, one.length * 255)
+  renderGraphState.comparisons.unshift({ first: firstId, second: secondId, difference, comparedAt: new Date().toISOString() }); if (renderGraphState.comparisons.length > 20) renderGraphState.comparisons.length = 20
+  return difference
+}

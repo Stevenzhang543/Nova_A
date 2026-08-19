@@ -1,0 +1,69 @@
+{
+  "format": "nova-pixel-perfect-comparison",
+  "version": 1,
+  "engineVersion": "3.3.0",
+  "generatedAt": "2026-08-19T13:51:10.462Z",
+  "cases": [
+    {
+      "zoom": 0.75,
+      "rawScale": 7.5,
+      "quantizedScale": 8,
+      "position": {
+        "x": 1.25,
+        "y": -4.375
+      },
+      "stable": true
+    },
+    {
+      "zoom": 1,
+      "rawScale": 10,
+      "quantizedScale": 10,
+      "position": {
+        "x": 1.2,
+        "y": -4.3
+      },
+      "stable": true
+    },
+    {
+      "zoom": 1.25,
+      "rawScale": 12.5,
+      "quantizedScale": 13,
+      "position": {
+        "x": 1.2307692307692308,
+        "y": -4.3076923076923075
+      },
+      "stable": true
+    },
+    {
+      "zoom": 2,
+      "rawScale": 20,
+      "quantizedScale": 20,
+      "position": {
+        "x": 1.25,
+        "y": -4.3
+      },
+      "stable": true
+    },
+    {
+      "zoom": 3.5,
+      "rawScale": 35,
+      "quantizedScale": 35,
+      "position": {
+        "x": 1.2285714285714286,
+        "y": -4.314285714285714
+      },
+      "stable": true
+    },
+    {
+      "zoom": 8,
+      "rawScale": 80,
+      "quantizedScale": 80,
+      "position": {
+        "x": 1.2375,
+        "y": -4.325
+      },
+      "stable": true
+    }
+  ],
+  "status": "passed"
+}

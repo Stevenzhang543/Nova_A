@@ -249,6 +249,16 @@ pub enum ScriptCommand {
     SaveCommit {
         slot: String,
     },
+    UiSetText {
+        text: String,
+    },
+    UiSetValue {
+        value: f64,
+    },
+    NavigationSetTarget {
+        x: f64,
+        y: f64,
+    },
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize)]
@@ -263,6 +273,16 @@ pub struct ScriptLog {
 pub struct ExportedProperty {
     pub name: String,
     pub value: Value,
+    pub value_type: String,
+    pub default_value: Value,
+    pub minimum: Option<f64>,
+    pub maximum: Option<f64>,
+    pub step: Option<f64>,
+    pub enum_values: Vec<String>,
+    pub resource_type: Option<String>,
+    pub group: String,
+    pub tooltip: String,
+    pub serialized: bool,
 }
 
 #[derive(Clone, Debug, Default, Serialize)]
@@ -283,6 +303,7 @@ struct HostOutput {
 struct PreparedScript {
     source: String,
     exports: Vec<ExportedProperty>,
+    compatibility_warnings: Vec<String>,
 }
 
 struct CompiledScript {
@@ -377,6 +398,12 @@ fn execute_prepared(
 
     let properties = collect_properties(&scope, &prepared.exports, &context.properties);
     let mut output = output.borrow_mut();
+    for warning in &prepared.compatibility_warnings {
+        output.logs.push(ScriptLog {
+            level: "warning".into(),
+            message: warning.clone(),
+        });
+    }
     Ok(ScriptExecution {
         commands: std::mem::take(&mut output.commands),
         logs: std::mem::take(&mut output.logs),
@@ -407,6 +434,10 @@ fn engine_with_host(context: &ScriptContext, output: Rc<RefCell<HostOutput>>) ->
 
     let entity = context.entity.clone();
     engine.register_fn("entity", move || entity.clone());
+    engine.register_fn("api_version", || 1 as INT);
+    engine.register_fn("api_namespace", |symbol: &str| {
+        symbol.split('_').next().unwrap_or(symbol).to_owned()
+    });
     let entity = context.entity.clone();
     engine.register_fn("entity_handle", move || {
         handle_map(true, "Entity", &entity, "")
@@ -451,6 +482,22 @@ fn engine_with_host(context: &ScriptContext, output: Rc<RefCell<HostOutput>>) ->
             handle_map(false, kind, "", "Component not found")
         }
     });
+    engine.register_fn("resource_handle", |reference: &str, resource_type: &str| {
+        let valid = reference.starts_with("asset://")
+            && reference.len() > "asset://".len()
+            && !reference.contains("..")
+            && !resource_type.trim().is_empty();
+        handle_map(
+            valid,
+            resource_type.trim(),
+            if valid { reference } else { "" },
+            if valid {
+                ""
+            } else {
+                "Invalid resource reference"
+            },
+        )
+    });
     register_entity_api(&mut engine, context);
 
     register_time_api(&mut engine, context);
@@ -491,6 +538,14 @@ fn handle_map(valid: bool, kind: &str, id: &str, error: &str) -> Map {
     map.insert("kind".into(), Dynamic::from(kind.to_owned()));
     map.insert("id".into(), Dynamic::from(id.to_owned()));
     map.insert("error".into(), Dynamic::from(error.to_owned()));
+    map.insert("api_version".into(), Dynamic::from_int(1));
+    let generation = id.bytes().fold(2_166_136_261_u32, |hash, byte| {
+        hash.wrapping_mul(16_777_619) ^ u32::from(byte)
+    });
+    map.insert(
+        "generation".into(),
+        Dynamic::from_int(INT::from(generation)),
+    );
     map
 }
 
@@ -789,6 +844,20 @@ fn register_command_api(
     context: &ScriptContext,
     output: Rc<RefCell<HostOutput>>,
 ) {
+    for (name, level) in [
+        ("log_debug", "debug"),
+        ("log_info", "info"),
+        ("log_warning", "warning"),
+        ("log_error", "error"),
+    ] {
+        let logs = Rc::clone(&output);
+        engine.register_fn(name, move |message: &str| {
+            logs.borrow_mut().logs.push(ScriptLog {
+                level: level.into(),
+                message: message.chars().take(4_096).collect(),
+            });
+        });
+    }
     let assertions = Rc::clone(&output);
     engine.register_fn("expect", move |condition: bool, message: &str| {
         if !condition {
@@ -961,6 +1030,43 @@ fn register_command_api(
             .push(ScriptCommand::AudioStop)
     });
     let commands = Rc::clone(&output);
+    engine.register_fn("ui_set_text", move |text: &str| {
+        commands
+            .borrow_mut()
+            .commands
+            .push(ScriptCommand::UiSetText {
+                text: text.chars().take(16_384).collect(),
+            });
+    });
+    let commands = Rc::clone(&output);
+    engine.register_fn("ui_set_value", move |value: FLOAT| {
+        if value.is_finite() {
+            commands
+                .borrow_mut()
+                .commands
+                .push(ScriptCommand::UiSetValue { value });
+        } else {
+            commands.borrow_mut().logs.push(ScriptLog {
+                level: "error".into(),
+                message: "ui_set_value rejected a non-finite value".into(),
+            });
+        }
+    });
+    let commands = Rc::clone(&output);
+    engine.register_fn("navigation_set_target", move |x: FLOAT, y: FLOAT| {
+        if x.is_finite() && y.is_finite() {
+            commands
+                .borrow_mut()
+                .commands
+                .push(ScriptCommand::NavigationSetTarget { x, y });
+        } else {
+            commands.borrow_mut().logs.push(ScriptLog {
+                level: "error".into(),
+                message: "navigation_set_target rejected a non-finite target".into(),
+            });
+        }
+    });
+    let commands = Rc::clone(&output);
     engine.register_fn("destroy", move || {
         commands.borrow_mut().commands.push(ScriptCommand::Destroy)
     });
@@ -1002,12 +1108,20 @@ fn register_command_api(
     engine.register_fn(
         "timer_start",
         move |name: &str, seconds: FLOAT, repeat: bool| {
+            if name.trim().is_empty() || !seconds.is_finite() || seconds < 0.0 {
+                commands.borrow_mut().logs.push(ScriptLog {
+                    level: "error".into(),
+                    message: "timer_start requires a name and a finite non-negative duration"
+                        .into(),
+                });
+                return;
+            }
             commands
                 .borrow_mut()
                 .commands
                 .push(ScriptCommand::StartTimer {
                     name: name.chars().take(128).collect(),
-                    seconds: seconds.max(0.0),
+                    seconds,
                     repeat,
                 });
         },
@@ -1041,12 +1155,19 @@ fn register_command_api(
     });
     let commands = Rc::clone(&output);
     engine.register_fn("task_wait", move |name: &str, seconds: FLOAT| {
+        if name.trim().is_empty() || !seconds.is_finite() || seconds < 0.0 {
+            commands.borrow_mut().logs.push(ScriptLog {
+                level: "error".into(),
+                message: "task_wait requires a name and a finite non-negative duration".into(),
+            });
+            return;
+        }
         commands
             .borrow_mut()
             .commands
             .push(ScriptCommand::StartTask {
                 name: name.chars().take(128).collect(),
-                seconds: seconds.max(0.0),
+                seconds,
             });
     });
     let commands = Rc::clone(&output);
@@ -1117,9 +1238,15 @@ fn call_lifecycle(
         }
         "on_timer" => {
             let name = context
-                .contact
+                .event
                 .as_ref()
-                .map(|contact| contact.other_entity.clone())
+                .map(|event| event.name.clone())
+                .or_else(|| {
+                    context
+                        .contact
+                        .as_ref()
+                        .map(|contact| contact.other_entity.clone())
+                })
                 .unwrap_or_default();
             engine.call_fn::<Dynamic>(scope, ast, function, (name,))
         }
@@ -1137,7 +1264,7 @@ fn call_lifecycle(
             engine.call_fn::<Dynamic>(scope, ast, function, (event.name, payload, event.source))
         }
         "on_collision_enter" | "on_collision_stay" | "on_collision_exit" | "on_trigger_enter"
-        | "on_trigger_exit" => {
+        | "on_trigger_stay" | "on_trigger_exit" => {
             let contact = context.contact.clone().unwrap_or_default();
             engine.call_fn::<Dynamic>(
                 scope,
@@ -1231,15 +1358,16 @@ fn prepare_script(source: &str) -> Result<PreparedScript, String> {
         return Err("script source exceeds the 1 MB safety limit".into());
     }
     let mut exports = Vec::new();
+    let mut compatibility_warnings = Vec::new();
     let mut output = String::with_capacity(source.len());
     for line in source.lines() {
         let trimmed = line.trim();
-        let declaration = if let Some(value) = trimmed.strip_prefix("@export ") {
-            Some(value)
-        } else {
-            trimmed.strip_prefix("// @export ")
-        };
-        if let Some(declaration) = declaration {
+        let export_line = trimmed
+            .strip_prefix("// ")
+            .unwrap_or(trimmed)
+            .strip_prefix("@export");
+        if let Some(raw_declaration) = export_line {
+            let (metadata, declaration) = split_export_metadata(raw_declaration.trim())?;
             let declaration = declaration.strip_prefix("let ").unwrap_or(declaration);
             let Some((name, value)) = declaration.trim_end_matches(';').split_once('=') else {
                 return Err(format!("invalid exported property declaration: {trimmed}"));
@@ -1251,9 +1379,57 @@ fn prepare_script(source: &str) -> Result<PreparedScript, String> {
             let expression = value.trim();
             let parsed = parse_export_value(expression)
                 .ok_or_else(|| format!("unsupported exported property value: {expression}"))?;
+            let value_type = metadata
+                .get("type")
+                .cloned()
+                .unwrap_or_else(|| value_type_name(&parsed).to_owned());
+            let minimum = metadata_number(&metadata, "min")?;
+            let maximum = metadata_number(&metadata, "max")?;
+            let step = metadata_number(&metadata, "step")?;
+            if minimum
+                .zip(maximum)
+                .is_some_and(|(minimum, maximum)| minimum > maximum)
+            {
+                return Err(format!("exported property {name} has min greater than max"));
+            }
+            if step.is_some_and(|step| !step.is_finite() || step <= 0.0) {
+                return Err(format!("exported property {name} has an invalid step"));
+            }
+            let enum_values = metadata
+                .get("enum")
+                .map(|value| {
+                    value
+                        .split('|')
+                        .map(str::trim)
+                        .filter(|value| !value.is_empty())
+                        .take(128)
+                        .map(|value| value.chars().take(128).collect())
+                        .collect()
+                })
+                .unwrap_or_default();
+            let serialized = metadata
+                .get("serialize")
+                .map(|value| value != "false")
+                .unwrap_or(true);
             exports.push(ExportedProperty {
                 name: name.to_owned(),
-                value: parsed,
+                value: parsed.clone(),
+                value_type,
+                default_value: parsed,
+                minimum,
+                maximum,
+                step,
+                enum_values,
+                resource_type: metadata
+                    .get("resource")
+                    .cloned()
+                    .filter(|value| !value.is_empty()),
+                group: metadata
+                    .get("group")
+                    .cloned()
+                    .unwrap_or_else(|| "Script".into()),
+                tooltip: metadata.get("tooltip").cloned().unwrap_or_default(),
+                serialized,
             });
             output.push_str(&format!(
                 "let {name} = export_value(\"{name}\", {expression});\n"
@@ -1263,9 +1439,144 @@ fn prepare_script(source: &str) -> Result<PreparedScript, String> {
             output.push('\n');
         }
     }
+    for (legacy, replacement) in [
+        ("is_down", "input_down"),
+        ("was_pressed", "input_pressed"),
+        ("was_released", "input_released"),
+        ("axis", "input_axis"),
+        ("vector", "input_vector"),
+        ("get_component", "component_handle"),
+        ("animator", "animator_handle"),
+        ("audio_source", "audio_source_handle"),
+        ("character_can_coyote_jump", "can_coyote_jump"),
+    ] {
+        if source_contains_call(source, legacy) {
+            compatibility_warnings.push(format!(
+                "NOVA-SCRIPT-DEPRECATED: {legacy}() is retained for compatibility; use {replacement}() before API v2"
+            ));
+        }
+    }
     Ok(PreparedScript {
         source: output,
         exports,
+        compatibility_warnings,
+    })
+}
+
+fn split_export_metadata(value: &str) -> Result<(BTreeMap<String, String>, &str), String> {
+    if !value.starts_with('(') {
+        return Ok((BTreeMap::new(), value));
+    }
+    let mut quoted = false;
+    let mut escaped = false;
+    let mut closing = None;
+    for (index, character) in value.char_indices().skip(1) {
+        if escaped {
+            escaped = false;
+            continue;
+        }
+        if character == '\\' && quoted {
+            escaped = true;
+        } else if character == '"' {
+            quoted = !quoted;
+        } else if character == ')' && !quoted {
+            closing = Some(index);
+            break;
+        }
+    }
+    let closing = closing.ok_or_else(|| "unterminated @export metadata".to_owned())?;
+    let mut metadata = BTreeMap::new();
+    for field in split_metadata_fields(&value[1..closing]) {
+        let (key, raw) = field
+            .split_once('=')
+            .ok_or_else(|| format!("invalid @export metadata field: {field}"))?;
+        let key = key.trim();
+        if !matches!(
+            key,
+            "type"
+                | "min"
+                | "max"
+                | "step"
+                | "enum"
+                | "resource"
+                | "group"
+                | "tooltip"
+                | "serialize"
+        ) {
+            return Err(format!("unknown @export metadata field: {key}"));
+        }
+        let raw = raw.trim();
+        let decoded = if raw.starts_with('"') {
+            serde_json::from_str::<String>(raw)
+                .map_err(|_| format!("invalid string metadata value for {key}"))?
+        } else {
+            raw.to_owned()
+        };
+        metadata.insert(key.to_owned(), decoded);
+    }
+    Ok((metadata, value[closing + 1..].trim()))
+}
+
+fn split_metadata_fields(value: &str) -> Vec<&str> {
+    let mut fields = Vec::new();
+    let mut start = 0;
+    let mut quoted = false;
+    let mut escaped = false;
+    for (index, character) in value.char_indices() {
+        if escaped {
+            escaped = false;
+        } else if character == '\\' && quoted {
+            escaped = true;
+        } else if character == '"' {
+            quoted = !quoted;
+        } else if character == ',' && !quoted {
+            fields.push(value[start..index].trim());
+            start = index + 1;
+        }
+    }
+    if start < value.len() {
+        fields.push(value[start..].trim());
+    }
+    fields
+        .into_iter()
+        .filter(|field| !field.is_empty())
+        .collect()
+}
+
+fn metadata_number(metadata: &BTreeMap<String, String>, key: &str) -> Result<Option<f64>, String> {
+    metadata
+        .get(key)
+        .map(|value| {
+            value
+                .parse::<f64>()
+                .ok()
+                .filter(|value| value.is_finite())
+                .ok_or_else(|| format!("invalid numeric @export metadata for {key}"))
+        })
+        .transpose()
+}
+
+fn value_type_name(value: &Value) -> &'static str {
+    match value {
+        Value::Bool(_) => "bool",
+        Value::Number(number) if number.is_i64() => "integer",
+        Value::Number(_) => "float",
+        Value::String(_) => "string",
+        Value::Array(_) => "array",
+        Value::Object(_) => "map",
+        Value::Null => "null",
+    }
+}
+
+fn source_contains_call(source: &str, name: &str) -> bool {
+    source.lines().any(|line| {
+        let code = line.split("//").next().unwrap_or_default();
+        code.match_indices(name).any(|(index, _)| {
+            let before = code[..index].chars().next_back();
+            let after = code[index + name.len()..].trim_start().chars().next();
+            !before.is_some_and(|character| character == '_' || character.is_ascii_alphanumeric())
+                && after == Some('(')
+        })
     })
 }
 
@@ -1560,5 +1871,134 @@ mod tests {
             Some(ScriptCommand::SetPosition { x, y })
                 if (0.0..1.0).contains(x) && (-4.0..9.0).contains(y)
         ));
+    }
+
+    #[test]
+    fn api_v1_export_metadata_is_complete_and_validated() {
+        let source = r#"
+            @export(type="float", min=0, max=20, step=0.25, group="Movement", tooltip="Meters per second", serialize=true) let speed = 5.0;
+            @export(type="resource", resource="Texture2D", group="Visual", serialize=false) let icon = "asset://texture";
+        "#;
+        let exports = ScriptRuntime::new().validate(source).unwrap();
+        assert_eq!(exports.len(), 2);
+        assert_eq!(exports[0].value_type, "float");
+        assert_eq!(exports[0].minimum, Some(0.0));
+        assert_eq!(exports[0].maximum, Some(20.0));
+        assert_eq!(exports[0].step, Some(0.25));
+        assert_eq!(exports[0].group, "Movement");
+        assert!(exports[0].serialized);
+        assert_eq!(exports[1].resource_type.as_deref(), Some("Texture2D"));
+        assert!(!exports[1].serialized);
+        assert!(ScriptRuntime::new()
+            .validate("@export(min=10,max=1) let broken = 2.0;")
+            .is_err());
+    }
+
+    #[test]
+    fn stable_handles_and_new_api_v1_domains_are_sandboxed_commands() {
+        let mut script_context = context();
+        script_context
+            .components
+            .extend(["Text".into(), "NavigationAgent2D".into()]);
+        let source = r#"
+            fn update(dt) {
+                let current = entity_handle();
+                let texture = resource_handle("asset://texture", "Texture2D");
+                expect(api_version() == 1 && current.generation > 0 && texture.valid, "v1 handles");
+                log_info("ready");
+                ui_set_text("Score: 3");
+                ui_set_value(0.75);
+                navigation_set_target(4.0, 6.0);
+            }
+        "#;
+        let execution = ScriptRuntime::new()
+            .execute(source, "update", script_context)
+            .unwrap();
+        assert_eq!(execution.logs[0].message, "ready");
+        assert!(matches!(
+            execution.commands[0],
+            ScriptCommand::UiSetText { .. }
+        ));
+        assert!(
+            matches!(execution.commands[1], ScriptCommand::UiSetValue { value } if value == 0.75)
+        );
+        assert!(
+            matches!(execution.commands[2], ScriptCommand::NavigationSetTarget { x, y } if x == 4.0 && y == 6.0)
+        );
+    }
+
+    #[test]
+    fn deprecated_aliases_emit_one_compatibility_warning() {
+        let execution = ScriptRuntime::new()
+            .execute(
+                "fn update(dt) { if is_down(\"Jump\") { print(\"held\"); } }",
+                "update",
+                context(),
+            )
+            .unwrap();
+        assert_eq!(execution.logs.len(), 1);
+        assert!(execution.logs[0].message.contains("NOVA-SCRIPT-DEPRECATED"));
+        assert!(execution.logs[0].message.contains("input_down"));
+    }
+
+    #[test]
+    fn every_api_v1_host_binding_executes_inside_the_sandbox() {
+        let mut script_context = context();
+        script_context.components = vec![
+            "RigidBody2D".into(),
+            "Animator".into(),
+            "AudioSource".into(),
+            "CharacterBody2D".into(),
+            "Text".into(),
+            "NavigationAgent2D".into(),
+        ];
+        script_context
+            .entities
+            .insert("Player".into(), "entity-1".into());
+        script_context.input.down.insert("Move".into(), true);
+        script_context.input.released.insert("Move".into(), true);
+        script_context.input.axes.insert("Move".into(), 0.5);
+        script_context
+            .input
+            .vectors
+            .insert("Move".into(), [0.5, -0.25]);
+        script_context.rigid_body = Some(RigidBodySnapshot {
+            velocity: [1.0, 2.0],
+            angular_velocity: 0.25,
+            mass: 2.0,
+            body_type: "Dynamic".into(),
+        });
+        script_context.character = Some(CharacterSnapshot {
+            on_floor: true,
+            can_coyote_jump: true,
+            floor_normal: [0.0, -1.0],
+            platform_velocity: [1.0, 0.0],
+            ..CharacterSnapshot::default()
+        });
+        let source = r#"
+            fn update(dt) {
+                let h0 = entity_handle(); let h1 = find_entity_handle("Player"); let h2 = component_handle("RigidBody2D");
+                let h3 = animator_handle(); let h4 = audio_source_handle(); let h5 = resource_handle("asset://texture", "Texture2D");
+                expect(api_version() == 1 && api_namespace("scene_load") == "scene" && h0.valid && h1.valid && h2.valid && h3.valid && h4.valid && h5.valid, "handles");
+                entity(); entity_name(); find_entity("Player"); has_component("RigidBody2D"); get_component("RigidBody2D"); transform(); rigid_body(); animator(); audio_source();
+                input_down("Move"); input_pressed("Jump"); input_released("Move"); input_axis("Move"); input_vector("Move"); input_vector_x("Move"); input_vector_y("Move"); mouse_x(); mouse_y(); wheel_x(); wheel_y();
+                time(); time_delta(); time_fixed_delta(); time_elapsed(); time_scale(); time_frame(); random(); random_range(0.0, 1.0);
+                apply_force(1.0, 2.0); apply_impulse(1.0, 2.0); set_velocity(1.0, 2.0); set_position(1.0, 2.0); set_rotation(0.5); set_scale(1.0, 1.0); set_angular_velocity(0.5);
+                character_is_on_floor(); character_is_on_wall(); character_is_on_ceiling(); can_coyote_jump(); character_floor_normal_x(); character_floor_normal_y(); character_floor_normal(); character_platform_velocity_x(); character_platform_velocity_y(); character_platform_velocity(); move_character(1.0, 0.0);
+                animator_set_bool("moving", true); animator_set_float("speed", 1.0); animator_set_integer("state", 1); animator_trigger("jump"); animator_play("Run");
+                audio_play(); audio_pause(); audio_stop(); ui_set_text("Ready"); ui_set_value(0.5); navigation_set_target(4.0, 2.0);
+                instantiate("asset://prefab"); timer_start("timer", 0.1, false); timer_pause("timer"); timer_resume("timer"); timer_cancel("timer"); task_wait("task", 0.1); task_cancel("task");
+                signal_emit("ready", true); signal_emit_to(entity(), "ready", #{ value: 1 });
+                save_has("score"); save_get("score", 0); save_set("score", 1); save_delete("score"); save_clear(); save_load("slot"); save_commit("slot");
+                log_debug("debug"); log_info("info"); log_warning("warning"); log_error("expected diagnostic");
+                scene_load("Main"); scene_reload(); scene_quit(); despawn(); destroy();
+            }
+        "#;
+        let execution = ScriptRuntime::new()
+            .execute(source, "update", script_context)
+            .unwrap();
+        assert!(execution.commands.len() > 30);
+        assert!(execution.logs.iter().any(|log| log.level == "debug"));
+        assert!(execution.logs.iter().any(|log| log.level == "warning"));
     }
 }

@@ -1,0 +1,436 @@
+{
+  "format": "nova-v3.8-world-data-audit",
+  "version": 1,
+  "engineVersion": "3.8.0",
+  "projectSchema": 28,
+  "generatedAt": "2026-08-19T13:58:04.649Z",
+  "status": "passed",
+  "severity0Open": 0,
+  "severity1Open": 0,
+  "references": [
+    {
+      "slug": "tilemap-multilayer",
+      "valid": true,
+      "engineVersion": "4.0.0",
+      "schema": 29
+    },
+    {
+      "slug": "tilemap-terrain-rules",
+      "valid": true,
+      "engineVersion": "4.0.0",
+      "schema": 29
+    },
+    {
+      "slug": "tilemap-animated",
+      "valid": true,
+      "engineVersion": "4.0.0",
+      "schema": 29
+    },
+    {
+      "slug": "navigation-world",
+      "valid": true,
+      "engineVersion": "4.0.0",
+      "schema": 29
+    },
+    {
+      "slug": "streamed-world",
+      "valid": true,
+      "engineVersion": "4.0.0",
+      "schema": 29
+    },
+    {
+      "slug": "save-migration",
+      "valid": true,
+      "engineVersion": "4.0.0",
+      "schema": 29
+    },
+    {
+      "slug": "optional-object-pool",
+      "valid": true,
+      "engineVersion": "4.0.0",
+      "schema": 29
+    }
+  ],
+  "evidence": [
+    {
+      "name": "million-tile-benchmark",
+      "status": "passed"
+    },
+    {
+      "name": "tilemap-validation",
+      "status": "passed"
+    },
+    {
+      "name": "navigation-tests",
+      "status": "passed"
+    },
+    {
+      "name": "streaming-memory",
+      "status": "passed"
+    },
+    {
+      "name": "save-corruption-recovery",
+      "status": "passed"
+    },
+    {
+      "name": "optional-package-removal",
+      "status": "passed"
+    },
+    {
+      "name": "world-data-soak",
+      "status": "passed"
+    }
+  ],
+  "checks": [
+    {
+      "name": "release/schema authority",
+      "status": "passed",
+      "detail": "TypeScript, Rust, package and Tauri authorities agree on current 4.0.0/frozen schema 29 while retaining v3.8 world data."
+    },
+    {
+      "name": "tile layer blendMode",
+      "status": "passed",
+      "detail": "blendMode is persisted and consumed."
+    },
+    {
+      "name": "tile layer parallax",
+      "status": "passed",
+      "detail": "parallax is persisted and consumed."
+    },
+    {
+      "name": "tile layer zOrder",
+      "status": "passed",
+      "detail": "zOrder is persisted and consumed."
+    },
+    {
+      "name": "tile layer collisionEnabled",
+      "status": "passed",
+      "detail": "collisionEnabled is persisted and consumed."
+    },
+    {
+      "name": "tile layer navigationEnabled",
+      "status": "passed",
+      "detail": "navigationEnabled is persisted and consumed."
+    },
+    {
+      "name": "tile layer occlusionEnabled",
+      "status": "passed",
+      "detail": "occlusionEnabled is persisted and consumed."
+    },
+    {
+      "name": "tile layer transforms",
+      "status": "passed",
+      "detail": "transforms is persisted and consumed."
+    },
+    {
+      "name": "tileset sources",
+      "status": "passed",
+      "detail": "sources is normalized and editable."
+    },
+    {
+      "name": "tileset region",
+      "status": "passed",
+      "detail": "region is normalized and editable."
+    },
+    {
+      "name": "tileset animation",
+      "status": "passed",
+      "detail": "animation is normalized and editable."
+    },
+    {
+      "name": "tileset variants",
+      "status": "passed",
+      "detail": "variants is normalized and editable."
+    },
+    {
+      "name": "tileset navigationPolygon",
+      "status": "passed",
+      "detail": "navigationPolygon is normalized and editable."
+    },
+    {
+      "name": "tileset occlusionPolygon",
+      "status": "passed",
+      "detail": "occlusionPolygon is normalized and editable."
+    },
+    {
+      "name": "tileset metadata",
+      "status": "passed",
+      "detail": "metadata is normalized and editable."
+    },
+    {
+      "name": "tileset sceneAsset",
+      "status": "passed",
+      "detail": "sceneAsset is normalized and editable."
+    },
+    {
+      "name": "tileset prefabAsset",
+      "status": "passed",
+      "detail": "prefabAsset is normalized and editable."
+    },
+    {
+      "name": "tile tool stamp",
+      "status": "passed",
+      "detail": "stamp is connected to the contextual editor."
+    },
+    {
+      "name": "tile tool pattern",
+      "status": "passed",
+      "detail": "pattern is connected to the contextual editor."
+    },
+    {
+      "name": "tile tool line",
+      "status": "passed",
+      "detail": "line is connected to the contextual editor."
+    },
+    {
+      "name": "tile tool rectangle",
+      "status": "passed",
+      "detail": "rectangle is connected to the contextual editor."
+    },
+    {
+      "name": "tile tool fill",
+      "status": "passed",
+      "detail": "fill is connected to the contextual editor."
+    },
+    {
+      "name": "tile tool replace",
+      "status": "passed",
+      "detail": "replace is connected to the contextual editor."
+    },
+    {
+      "name": "tile tool selection",
+      "status": "passed",
+      "detail": "selection is connected to the contextual editor."
+    },
+    {
+      "name": "tile tool copyTileSelection",
+      "status": "passed",
+      "detail": "copyTileSelection is connected to the contextual editor."
+    },
+    {
+      "name": "tile tool pasteTileClipboard",
+      "status": "passed",
+      "detail": "pasteTileClipboard is connected to the contextual editor."
+    },
+    {
+      "name": "tile tool transformTileSelection",
+      "status": "passed",
+      "detail": "transformTileSelection is connected to the contextual editor."
+    },
+    {
+      "name": "tile tool randomizeVariants",
+      "status": "passed",
+      "detail": "randomizeVariants is connected to the contextual editor."
+    },
+    {
+      "name": "terrain/chunk diagnostics",
+      "status": "passed",
+      "detail": "Terrain, bake coverage, bounded runtime chunk, placement and metadata APIs are present."
+    },
+    {
+      "name": "navigation navigationMode",
+      "status": "passed",
+      "detail": "navigationMode is represented in data, runtime or Inspector."
+    },
+    {
+      "name": "navigation polygonPath",
+      "status": "passed",
+      "detail": "polygonPath is represented in data, runtime or Inspector."
+    },
+    {
+      "name": "navigation aStar",
+      "status": "passed",
+      "detail": "aStar is represented in data, runtime or Inspector."
+    },
+    {
+      "name": "navigation agentRadius",
+      "status": "passed",
+      "detail": "agentRadius is represented in data, runtime or Inspector."
+    },
+    {
+      "name": "navigation navigationMask",
+      "status": "passed",
+      "detail": "navigationMask is represented in data, runtime or Inspector."
+    },
+    {
+      "name": "navigation links",
+      "status": "passed",
+      "detail": "links is represented in data, runtime or Inspector."
+    },
+    {
+      "name": "navigation avoidancePairs",
+      "status": "passed",
+      "detail": "avoidancePairs is represented in data, runtime or Inspector."
+    },
+    {
+      "name": "navigation tileNavigationSample",
+      "status": "passed",
+      "detail": "tileNavigationSample is represented in data, runtime or Inspector."
+    },
+    {
+      "name": "navigation transformNormalizedTilePoint",
+      "status": "passed",
+      "detail": "transformNormalizedTilePoint is represented in data, runtime or Inspector."
+    },
+    {
+      "name": "navigation rebakeNavigation",
+      "status": "passed",
+      "detail": "rebakeNavigation is represented in data, runtime or Inspector."
+    },
+    {
+      "name": "navigation clearNavigationData",
+      "status": "passed",
+      "detail": "clearNavigationData is represented in data, runtime or Inspector."
+    },
+    {
+      "name": "navigation navigationProfileSnapshot",
+      "status": "passed",
+      "detail": "navigationProfileSnapshot is represented in data, runtime or Inspector."
+    },
+    {
+      "name": "streaming StreamCellStatus",
+      "status": "passed",
+      "detail": "StreamCellStatus participates in the core streaming workflow."
+    },
+    {
+      "name": "streaming dependencies",
+      "status": "passed",
+      "detail": "dependencies participates in the core streaming workflow."
+    },
+    {
+      "name": "streaming prefetchDistance",
+      "status": "passed",
+      "detail": "prefetchDistance participates in the core streaming workflow."
+    },
+    {
+      "name": "streaming cachePolicy",
+      "status": "passed",
+      "detail": "cachePolicy participates in the core streaming workflow."
+    },
+    {
+      "name": "streaming AbortController",
+      "status": "passed",
+      "detail": "AbortController participates in the core streaming workflow."
+    },
+    {
+      "name": "streaming memoryBudgetMb",
+      "status": "passed",
+      "detail": "memoryBudgetMb participates in the core streaming workflow."
+    },
+    {
+      "name": "streaming handoffStreamedSaveState",
+      "status": "passed",
+      "detail": "handoffStreamedSaveState participates in the core streaming workflow."
+    },
+    {
+      "name": "streaming consumeStreamedSaveState",
+      "status": "passed",
+      "detail": "consumeStreamedSaveState participates in the core streaming workflow."
+    },
+    {
+      "name": "streaming worldStreamingState",
+      "status": "passed",
+      "detail": "worldStreamingState participates in the core streaming workflow."
+    },
+    {
+      "name": "save envelopeVersion: 2",
+      "status": "passed",
+      "detail": "envelopeVersion: 2 is connected to save runtime or Debug Inspector."
+    },
+    {
+      "name": "save checksum",
+      "status": "passed",
+      "detail": "checksum is connected to save runtime or Debug Inspector."
+    },
+    {
+      "name": "save .journal",
+      "status": "passed",
+      "detail": ".journal is connected to save runtime or Debug Inspector."
+    },
+    {
+      "name": "save .tmp",
+      "status": "passed",
+      "detail": ".tmp is connected to save runtime or Debug Inspector."
+    },
+    {
+      "name": "save .backup",
+      "status": "passed",
+      "detail": ".backup is connected to save runtime or Debug Inspector."
+    },
+    {
+      "name": "save recoverSaveSlot",
+      "status": "passed",
+      "detail": "recoverSaveSlot is connected to save runtime or Debug Inspector."
+    },
+    {
+      "name": "save commitSaveSlotAsync",
+      "status": "passed",
+      "detail": "commitSaveSlotAsync is connected to save runtime or Debug Inspector."
+    },
+    {
+      "name": "save AbortSignal",
+      "status": "passed",
+      "detail": "AbortSignal is connected to save runtime or Debug Inspector."
+    },
+    {
+      "name": "save registerSaveSerializer",
+      "status": "passed",
+      "detail": "registerSaveSerializer is connected to save runtime or Debug Inspector."
+    },
+    {
+      "name": "save listSaveSlots",
+      "status": "passed",
+      "detail": "listSaveSlots is connected to save runtime or Debug Inspector."
+    },
+    {
+      "name": "save platformSaveLocation",
+      "status": "passed",
+      "detail": "platformSaveLocation is connected to save runtime or Debug Inspector."
+    },
+    {
+      "name": "optional package contracts",
+      "status": "passed",
+      "detail": "AI, Object Pool and Streaming Tools remain explicit optional packages with pool diagnostics."
+    },
+    {
+      "name": "focused editor architecture",
+      "status": "passed",
+      "detail": "Monolithic World Tools is absent, Tilemap is contextual, and old layouts migrate."
+    },
+    {
+      "name": "project health metrics",
+      "status": "passed",
+      "detail": "World-data scale/health values appear in Project Health."
+    },
+    {
+      "name": "integrated templates",
+      "status": "passed",
+      "detail": "Platformer and Top-down create real TileSet/TileMap/navigation content."
+    },
+    {
+      "name": "documentation and migration",
+      "status": "passed",
+      "detail": "README, compatibility policy and all manual languages document v3.8."
+    },
+    {
+      "name": "reference projects",
+      "status": "passed",
+      "detail": "Seven source references declare engine 3.8/schema 28."
+    },
+    {
+      "name": "runtime evidence",
+      "status": "passed",
+      "detail": "Million-tile, tilemap, navigation, streaming, save recovery, package removal and soak evidence passed."
+    },
+    {
+      "name": "docs/WORLD_DATA_3_8.md",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "name": "docs/PROJECT_FORMAT_2_SCHEMA_28.md",
+      "status": "passed",
+      "detail": "Present."
+    }
+  ]
+}

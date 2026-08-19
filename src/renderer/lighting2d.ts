@@ -212,6 +212,11 @@ export function renderDebugView2D(context: CanvasRenderingContext2D, entities: E
       const points = entityBoundaryPoints(entity, 32, entities).map(point => worldToScreen(point, camera, options.width, options.height)); if (points.length < 3) continue
       context.beginPath(); context.moveTo(points[0].x, points[0].y); points.slice(1).forEach(point => context.lineTo(point.x, point.y)); context.closePath()
       if (renderingSettings.debugView === 'Overdraw') { context.fillStyle = 'rgba(255,55,70,.18)'; context.fill() }
+      else if (renderingSettings.debugView === 'BatchBreaks') {
+        const material = entity.spriteRenderer?.material ?? entity.textRenderer?.material ?? entity.renderer.material
+        let hash = 0; for (const character of material) hash = (Math.imul(hash, 31) + character.charCodeAt(0)) >>> 0
+        context.strokeStyle = `hsl(${hash % 360} 85% 66%)`; context.lineWidth = 2; context.setLineDash([5, 3]); context.stroke(); context.setLineDash([])
+      }
       else if (entity.spriteRenderer?.normalMapAsset) { context.strokeStyle = '#73d9ff'; context.lineWidth = 2; context.stroke() }
     }
   }

@@ -1,0 +1,67 @@
+{
+  "format": "nova-v4-known-issues",
+  "version": 1,
+  "engineVersion": "4.0.0",
+  "generatedAt": "2026-08-19T15:07:52.339Z",
+  "severity0Open": 0,
+  "severity1Open": 0,
+  "items": [
+    {
+      "severity": "S2",
+      "area": "signing",
+      "issue": "The working-tree artifacts and source are not publisher/signed-tag signed.",
+      "workaround": "Sign the exact qualified commit and final binaries in protected release infrastructure.",
+      "owner": "Release engineering",
+      "patchTarget": "4.0.0 publication gate"
+    },
+    {
+      "severity": "S2",
+      "area": "clean-machine lifecycle",
+      "issue": "Build-host portable smoke passed; clean-VM install/repair/update/rollback/uninstall remains external.",
+      "workaround": "Run the supplied matrix on disposable Windows x64 VMs.",
+      "owner": "Release engineering",
+      "patchTarget": "4.0.0 publication gate"
+    },
+    {
+      "severity": "S2",
+      "area": "aggregate soak",
+      "issue": "One thousand aggregate wall-clock beta/automation hours are not present in this local workspace.",
+      "workaround": "Collect signed, deduplicated session evidence before Stable approval.",
+      "owner": "QA/Product",
+      "patchTarget": "4.0.0 publication gate"
+    },
+    {
+      "severity": "S2",
+      "area": "dependency maintenance",
+      "issue": "RustSec reports allowed unmaintained/unsound notices in transitive crates although both lockfiles have zero known vulnerabilities.",
+      "workaround": "Keep the Windows Tier-1 graph patched, retain Linux as Experimental, and replace affected upstream chains when compatible releases exist.",
+      "owner": "Platform/security maintainers",
+      "patchTarget": "4.0.x maintenance"
+    },
+    {
+      "severity": "S2",
+      "area": "bundle optimization",
+      "issue": "Vite reports shared static/dynamic modules and two chunks above its advisory threshold.",
+      "workaround": "Use the qualified bundles; profile before splitting these tightly shared editor/recovery paths.",
+      "owner": "Performance maintainers",
+      "patchTarget": "profiled 4.0.x optimization"
+    },
+    {
+      "severity": "S2",
+      "area": "Experimental platforms",
+      "issue": "Linux/macOS are not promoted without matching-host evidence.",
+      "workaround": "Keep their Experimental badges and build on matching hosts.",
+      "owner": "Platform engineering",
+      "patchTarget": "post-4.0 promotion"
+    },
+    {
+      "severity": "S2",
+      "area": "Networking",
+      "issue": "Networking remains an optional Experimental package.",
+      "workaround": "Do not treat it as a 4.0 core guarantee.",
+      "owner": "Package maintainers",
+      "patchTarget": "post-4.0 qualification"
+    }
+  ],
+  "status": "passed-with-declared-s2-boundaries"
+}

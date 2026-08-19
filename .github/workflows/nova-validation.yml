@@ -1,0 +1,19 @@
+name: Nova_A validation
+on: [push, pull_request]
+jobs:
+  validate:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.30.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm nova version --jsonl
+      - run: pnpm check
+      - run: cargo test --workspace --all-targets
+      - run: pnpm audit:v3.9

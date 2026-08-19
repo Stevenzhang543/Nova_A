@@ -1,0 +1,13 @@
+{
+  "engineVersion": "4.0.0",
+  "schema": 29,
+  "projectName": "Render Textures and Cameras",
+  "minimumScenes": 1,
+  "minimumEntities": 22,
+  "expectedValidation": "pass",
+  "demonstrates": [
+    "multiple cameras and viewports",
+    "named render-texture target",
+    "post-processing render graph and fallback"
+  ]
+}

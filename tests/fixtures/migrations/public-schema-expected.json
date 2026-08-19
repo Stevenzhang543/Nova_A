@@ -1,8 +1,8 @@
 {
   "targetProjectFormat": "Nova_A Project Format 2",
   "targetMajor": 2,
-  "targetSchema": 23,
-  "targetEngine": "3.2.0",
+  "targetSchema": 29,
+  "targetEngine": "4.0.0",
   "minimumSchema": 5,
   "sceneCount": 1,
   "entityCount": 0,

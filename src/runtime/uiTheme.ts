@@ -20,10 +20,11 @@ export interface UiThemeClass {
 }
 
 export interface UiThemeDocument {
-  version: 1
+  version: 2
   name: string
   parentTheme: string | null
   variables: Record<string, string | number>
+  variants: Record<string, Record<string, string | number>>
   classes: Record<string, UiThemeClass>
 }
 
@@ -32,10 +33,11 @@ const MAX_VARIABLES = 512
 
 export function defaultUiTheme(): UiThemeDocument {
   return {
-    version: 1,
+    version: 2,
     name: 'Nova UI',
     parentTheme: null,
-    variables: { accent: '#4f96ff', surface: '#232934', text: '#f5f7fb', muted: '#8d98aa', radius: 10 },
+    variables: { accent: '#4f96ff', surface: '#232934', text: '#f5f7fb', muted: '#8d98aa', radius: 10, spacing: 8, fontSize: 16, fontFamily: 'Nunito Sans' },
+    variants: { default: {}, compact: { spacing: 5, radius: 7 }, highContrast: { surface: '#000000', text: '#ffffff', accent: '#74b4ff' } },
     classes: {
       button: {
         normal: { background: '$accent', foreground: '$text', cornerRadius: 10 },
@@ -71,10 +73,12 @@ export function normalizeUiTheme(source: unknown): UiThemeDocument {
     classes[key.slice(0, 80)] = { normal: cleanStyle(value.normal), hovered: cleanStyle(value.hovered), pressed: cleanStyle(value.pressed), disabled: cleanStyle(value.disabled), focused: cleanStyle(value.focused) }
   }
   const defaults = defaultUiTheme()
+  const variants: Record<string, Record<string, string | number>> = {}
+  if (item.variants && typeof item.variants === 'object') for (const [name, raw] of Object.entries(item.variants).slice(0, 64)) if (raw && typeof raw === 'object' && !Array.isArray(raw)) variants[name.slice(0, 80)] = Object.fromEntries(Object.entries(raw).slice(0, MAX_VARIABLES).flatMap(([key, value]) => typeof value === 'string' || typeof value === 'number' && Number.isFinite(value) ? [[key.slice(0, 80), typeof value === 'string' ? value.slice(0, 120) : value]] : []))
   return {
-    version: 1, name: typeof item.name === 'string' ? item.name.slice(0, 120) : defaults.name,
+    version: 2, name: typeof item.name === 'string' ? item.name.slice(0, 120) : defaults.name,
     parentTheme: typeof item.parentTheme === 'string' ? item.parentTheme.slice(0, 160) : null,
-    variables: { ...defaults.variables, ...variables }, classes: Object.keys(classes).length ? classes : defaults.classes
+    variables: { ...defaults.variables, ...variables }, variants: { ...defaults.variants, ...variants }, classes: Object.keys(classes).length ? classes : defaults.classes
   }
 }
 
@@ -91,7 +95,7 @@ export function readUiTheme(reference: string | null | undefined, visited = new 
   try {
     const current = normalizeUiTheme(JSON.parse(text) as unknown)
     const parent = current.parentTheme ? readUiTheme(current.parentTheme, visited) : null
-    return parent ? { ...current, variables: { ...parent.variables, ...current.variables }, classes: { ...parent.classes, ...current.classes } } : current
+    return parent ? { ...current, variables: { ...parent.variables, ...current.variables }, variants: { ...parent.variants, ...current.variants }, classes: { ...parent.classes, ...current.classes } } : current
   } catch { return null }
 }
 
@@ -108,3 +112,5 @@ export function themeStyle(theme: UiThemeDocument | null, className: string, sta
   const resolve = (value: unknown): unknown => typeof value === 'string' && value.startsWith('$') ? theme.variables[value.slice(1)] ?? value : value
   return Object.fromEntries(Object.entries(raw).map(([key, value]) => [key, resolve(value)])) as UiThemeStyle
 }
+
+export function themeVariant(theme: UiThemeDocument | null, variant = 'default'): UiThemeDocument | null { return theme ? { ...theme, variables: { ...theme.variables, ...(theme.variants[variant] ?? {}) } } : null }

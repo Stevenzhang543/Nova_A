@@ -117,24 +117,41 @@
           <p v-if="selectedAsset.pipeline?.status === 'failed'" class="pipeline-error">{{ selectedAsset.pipeline.error }}</p>
           <template v-if="selectedAsset.assetType === 'image'">
             <label><span>{{ t('dimensions') }}</span><b>{{ selectedAsset.width }} × {{ selectedAsset.height }}</b></label>
+            <label><span>{{ t('importProfile') }}</span><select :value="selectedAsset.settings.textureProfile" @change="setTextureProfile"><option>General</option><option>PixelArt</option><option>UI</option><option>NormalMap</option></select></label>
             <label><span>{{ t('filterMode') }}</span><select v-model="selectedAsset.settings.filterMode"><option value="Linear">{{ t('linear') }}</option><option value="Nearest">{{ t('nearest') }}</option></select></label>
             <label><span>{{ t('pixelArtMode') }}</span><input :checked="selectedAsset.settings.filterMode === 'Nearest'" type="checkbox" @change="setPixelArtMode"></label>
             <label><span>{{ t('compression') }}</span><select v-model="selectedAsset.settings.compression"><option value="None">{{ t('none') }}</option><option value="Lossless">{{ t('lossless') }}</option><option value="Optimized">{{ t('optimized') }}</option></select></label>
             <label><span>{{ t('colorSpace') }}</span><select v-model="selectedAsset.settings.colorSpace"><option>sRGB</option><option>Linear</option></select></label>
             <label><span>{{ t('pixelsPerUnit') }}</span><input v-model.number="selectedAsset.settings.pixelsPerUnit" type="number" min="0.000001" step="1"></label>
             <label><span>{{ t('pivot') }} X/Y</span><div><input v-model.number="selectedAsset.settings.pivot.x" type="number" min="0" max="1" step="0.05"><input v-model.number="selectedAsset.settings.pivot.y" type="number" min="0" max="1" step="0.05"></div></label>
+            <label><span>{{ t('pivotPreset') }}</span><select :value="''" @change="applyPivotPreset(($event.target as HTMLSelectElement).value)"><option value="">{{ t('custom') }}</option><option v-for="preset in pivotPresets" :key="preset.id" :value="preset.id">{{ t(preset.label) }}</option></select></label>
             <label><span>{{ t('useSpriteRegion') }}</span><input :checked="selectedAsset.settings.spriteRegion !== null" type="checkbox" @change="toggleSpriteRegion"></label>
             <label v-if="selectedAsset.settings.spriteRegion" class="region-field"><span>{{ t('spriteRegion') }} X/Y/W/H</span><div><input v-model.number="selectedAsset.settings.spriteRegion.x" type="number" min="0" step="1"><input v-model.number="selectedAsset.settings.spriteRegion.y" type="number" min="0" step="1"><input v-model.number="selectedAsset.settings.spriteRegion.width" type="number" min="1" step="1"><input v-model.number="selectedAsset.settings.spriteRegion.height" type="number" min="1" step="1"></div></label>
+            <label><span>{{ t('trimTransparent') }}</span><button type="button" @click="trimSelectedImage">{{ t('trimNow') }}</button></label>
+            <label><span>{{ t('spriteSheetSlicing') }}</span><input v-model="selectedAsset.settings.spriteSheet.enabled" type="checkbox"></label>
+            <template v-if="selectedAsset.settings.spriteSheet.enabled"><label><span>{{ t('sheetColumnsRows') }}</span><div><input v-model.number="selectedAsset.settings.spriteSheet.columns" type="number" min="1" max="256"><input v-model.number="selectedAsset.settings.spriteSheet.rows" type="number" min="1" max="256"></div></label><label><span>{{ t('marginSpacing') }}</span><div><input v-model.number="selectedAsset.settings.spriteSheet.margin" type="number" min="0"><input v-model.number="selectedAsset.settings.spriteSheet.spacing" type="number" min="0"></div></label><button class="save-script" type="button" @click="sliceSelectedSheet">{{ t('createSpriteSlices') }}</button></template>
+            <label class="region-field"><span>{{ t('sliceBorders') }} L/T/R/B</span><div><input v-model.number="selectedAsset.settings.borders.left" type="number" min="0"><input v-model.number="selectedAsset.settings.borders.top" type="number" min="0"><input v-model.number="selectedAsset.settings.borders.right" type="number" min="0"><input v-model.number="selectedAsset.settings.borders.bottom" type="number" min="0"></div></label>
             <label><span>{{ t('useTextureAtlas') }}</span><input v-model="selectedAsset.settings.atlas" type="checkbox"></label>
             <label v-for="platform in compressionPlatforms" :key="platform"><span>{{ t(platform) }} {{ t('compression') }}</span><select v-model="selectedAsset.settings.platformVariants[platform]"><option :value="undefined">{{ t('inherit') }}</option><option>None</option><option>Lossless</option><option>Optimized</option></select></label>
           </template>
           <template v-else-if="selectedAsset.assetType === 'audio'">
             <label><span>{{ t('duration') }}</span><b>{{ selectedAsset.duration.toFixed(2) }}s</b></label>
+            <label><span>{{ t('importProfile') }}</span><select :value="selectedAsset.settings.audioSettings.profile" @change="setAudioProfile"><option>SoundEffect</option><option>Music</option><option>Voice</option><option>Streaming</option></select></label>
+            <label><span>{{ t('audioCodec') }}</span><select v-model="selectedAsset.settings.audioSettings.codec"><option>Original</option><option>PCM</option><option>Vorbis</option><option>MP3</option></select></label>
+            <label><span>{{ t('audioQuality') }}</span><input v-model.number="selectedAsset.settings.audioSettings.quality" type="range" min="0" max="1" step="0.01"></label>
+            <label><span>{{ t('trimRange') }}</span><div><input v-model.number="selectedAsset.settings.audioSettings.trimStart" type="number" min="0" :max="selectedAsset.duration" step="0.01"><input v-model.number="selectedAsset.settings.audioSettings.trimEnd" type="number" min="0" :max="selectedAsset.duration" step="0.01"></div></label>
             <label><span>{{ t('normalizeAudio') }}</span><input v-model="selectedAsset.settings.audioSettings.normalize" type="checkbox"></label>
             <label><span>{{ t('streamAudio') }}</span><input v-model="selectedAsset.settings.audioSettings.streaming" type="checkbox"></label>
             <label><span>{{ t('sampleRate') }}</span><select v-model.number="selectedAsset.settings.audioSettings.sampleRate"><option :value="22050">22050</option><option :value="44100">44100</option><option :value="48000">48000</option><option :value="96000">96000</option></select></label>
           </template>
-          <label v-else-if="selectedAsset.assetType === 'font'"><span>{{ t('fontFamily') }}</span><b :style="{ fontFamily: selectedAsset.fontFamily }">Nova_A</b></label>
+          <template v-else-if="selectedAsset.assetType === 'font'">
+            <label><span>{{ t('fontFamily') }}</span><b :style="{ fontFamily: selectedAsset.fontFamily }">Nova_A</b></label>
+            <label><span>{{ t('fontRenderMode') }}</span><select v-model="selectedAsset.settings.fontSettings.renderMode"><option>Scalable</option><option>Bitmap</option></select></label>
+            <label v-if="selectedAsset.settings.fontSettings.renderMode === 'Bitmap'"><span>{{ t('bitmapSize') }}</span><input v-model.number="selectedAsset.settings.fontSettings.bitmapSize" type="number" min="6" max="512"></label>
+            <label><span>{{ t('fontOutline') }}</span><input v-model.number="selectedAsset.settings.fontSettings.outlineWidth" type="number" min="0" max="32" step="0.25"></label>
+            <label><span>{{ t('textShaping') }}</span><input v-model="selectedAsset.settings.fontSettings.shaping" type="checkbox"></label>
+            <label class="region-field"><span>{{ t('fontFallbacks') }}</span><input :value="selectedAsset.settings.fontSettings.fallbackFamilies.join(', ')" @change="setFontFallbacks"></label>
+          </template>
           <template v-else-if="selectedAsset.assetType === 'script'">
             <p class="drag-hint">{{ t('scriptStudioAssetHint') }}</p>
             <label><span>{{ t('module') }}</span><input v-model="selectedAsset.settings.scriptSettings.module" type="checkbox"></label>
@@ -203,11 +220,11 @@
       <RenderingPanel v-else-if="estate.bottomPanelTab === 'rendering'" />
 
       <AnimationPanel v-else-if="estate.bottomPanelTab === 'animation'" />
+      <AudioSystemPanel v-else-if="estate.bottomPanelTab === 'audio'" />
       <TilemapPanel v-else-if="estate.bottomPanelTab === 'tilemap'" />
-      <WorldToolsPanel v-else-if="estate.bottomPanelTab === 'world'" />
       <ProjectHealthPanel v-else-if="estate.bottomPanelTab === 'project'" />
-
-      <BuildSettingsPanel v-else />
+      <BuildSettingsPanel v-else-if="estate.bottomPanelTab === 'build'" />
+      <div v-else class="empty">{{ t('selectObject') }}</div>
     </div>
   </section>
 </template>
@@ -221,37 +238,42 @@ import { requestConfirmation } from '../store/dialog'
 import {
   applyAssetFilter, applyImportPreset, assetReference, assetState as assets, createAssetFolder, createTextAsset, deleteAsset, filteredAssets, importAssetFiles,
   linkAssetSource, moveAsset, queueTextureAtlasRebuild, readTextAsset, reimportAsset, renameAsset, resolveExternalAssetChange, retryFailedAssetImport,
-  saveCurrentAssetFilter, saveImportPreset, toggleAssetFavorite
+  saveCurrentAssetFilter, saveImportPreset, sliceSpriteSheet, toggleAssetFavorite, trimTransparentImage
 } from '../assets/AssetDatabase'
 import type { AssetType } from '../assets/types'
+import type { AudioImportProfile, TextureImportProfile } from '../assets/types'
+import { applyAudioImportProfile, applyTextureImportProfile, normalizedFontFallbacks } from '../assets/importProfiles'
 import { exportProjectFolder } from '../assets/projectFolder'
-import { DEFAULT_SCRIPT_SOURCE } from '../runtime/GameplayRuntime'
+import { DEFAULT_SCRIPT_SOURCE } from '../editor/scriptTemplates'
 import { openScriptAsset } from '../editor/scriptStudioState'
 import { applyEditorWorkspace } from '../editor/workspaces'
 import { instantiatePrefab } from '../runtime/prefabs'
 import { createSceneAssetFromEntities, instantiateSceneAsset } from '../runtime/sceneInstances'
 import { reimportAnimationClip } from '../runtime/animation'
 import AnimationPanel from './AnimationPanel.vue'
+import AudioSystemPanel from './AudioSystemPanel.vue'
 import BuildSettingsPanel from './BuildSettingsPanel.vue'
 import ConsolePanel from './ConsolePanel.vue'
 import ProfilerPanel from './ProfilerPanel.vue'
 import RenderingPanel from './RenderingPanel.vue'
 import TilemapPanel from './TilemapPanel.vue'
-import WorldToolsPanel from './WorldToolsPanel.vue'
 import PackageManagerPanel from './PackageManagerPanel.vue'
 import ProjectHealthPanel from './ProjectHealthPanel.vue'
 import { buildAssetDependencyGraph, explainAssetBuildInclusion, findAssetReferences, repairMissingAssetReference, unusedAssetReport } from '../assets/assetGraph'
 import { cancelAssetImport, importPipelineState } from '../assets/importPipeline'
 import { sourceStatusFor } from '../runtime/teamWorkflow'
 
-const tabs = [
+const permanentTabs = [
   { id: 'assets' as const, label: 'assets' as const }, { id: 'packages' as const, label: 'packages' as const }, { id: 'console' as const, label: 'console' as const },
-  { id: 'animation' as const, label: 'animation' as const }, { id: 'profiler' as const, label: 'profiler' as const },
+  { id: 'animation' as const, label: 'animation' as const }, { id: 'audio' as const, label: 'audioMixer' as const }, { id: 'profiler' as const, label: 'profiler' as const },
   { id: 'rendering' as const, label: 'renderingStudio' as const },
-  { id: 'tilemap' as const, label: 'tilemap' as const },
-  { id: 'world' as const, label: 'worldTools' as const },
   { id: 'project' as const, label: 'projectHealth' as const }, { id: 'build' as const, label: 'buildPanel' as const }
 ]
+const tabs = computed(() => {
+  const selected = state.world.entities.find(entity => entity.id === state.selectedEntityId)
+  const contextual = selected?.hasComponent('TileMap2D') ? [{ id: 'tilemap' as const, label: 'tilemap' as const }] : []
+  return [...permanentTabs.slice(0, 7), ...contextual, ...permanentTabs.slice(7)]
+})
 const assetFilters: Array<{ type: AssetType | 'all'; label: Parameters<typeof t>[0] }> = [
   { type: 'all', label: 'allAssets' }, { type: 'image', label: 'images' }, { type: 'audio', label: 'audioAssets' },
   { type: 'font', label: 'fontAssets' }, { type: 'scene', label: 'scenes' }, { type: 'prefab', label: 'prefabs' },
@@ -262,6 +284,11 @@ const assetFilters: Array<{ type: AssetType | 'all'; label: Parameters<typeof t>
   { type: 'dataSchema', label: 'dataSchema' }, { type: 'dataTable', label: 'dataTable' }, { type: 'replay', label: 'replayAssets' }, { type: 'other', label: 'otherAssets' }
 ]
 const compressionPlatforms = ['windows', 'linux', 'macos', 'web'] as const
+const pivotPresets = [
+  { id: 'top-left', label: 'pivotTopLeft', value: { x: 0, y: 0 } }, { id: 'top', label: 'pivotTop', value: { x: .5, y: 0 } }, { id: 'top-right', label: 'pivotTopRight', value: { x: 1, y: 0 } },
+  { id: 'left', label: 'pivotLeft', value: { x: 0, y: .5 } }, { id: 'center', label: 'center', value: { x: .5, y: .5 } }, { id: 'right', label: 'pivotRight', value: { x: 1, y: .5 } },
+  { id: 'bottom-left', label: 'pivotBottomLeft', value: { x: 0, y: 1 } }, { id: 'bottom', label: 'pivotBottom', value: { x: .5, y: 1 } }, { id: 'bottom-right', label: 'pivotBottomRight', value: { x: 1, y: 1 } }
+] as const
 const panelStyle = computed(() => ({ height: estate.bottomPanelOpen ? `min(${estate.bottomPanelHeight}px, 42vh)` : '34px' }))
 const displayedAssets = computed(() => { void assets.generation; return filteredAssets() })
 const visibleFolders = computed(() => assets.folders.filter(folder => !folder.startsWith('.nova/')))
@@ -284,7 +311,7 @@ const filterMenuOpen = ref(false), filterQuery = ref(''), savedFilterName = ref(
 const filteredTypeFilters = computed(() => assetFilters.filter(filter => t(filter.label).toLowerCase().includes(filterQuery.value.trim().toLowerCase())))
 const activeFilterLabel = computed(() => t(assetFilters.find(filter => filter.type === assets.typeFilter)?.label ?? 'allAssets'))
 const compatibleImportPresets = computed(() => selectedAsset.value ? assets.importPresets.filter(preset => preset.assetType === 'all' || preset.assetType === selectedAsset.value?.assetType) : [])
-function openTab(id: typeof tabs[number]['id']) { estate.bottomPanelTab = id; estate.bottomPanelOpen = true }
+function openTab(id: (typeof permanentTabs)[number]['id'] | 'tilemap') { estate.bottomPanelTab = id; estate.bottomPanelOpen = true }
 async function importFiles(event: Event) {
   const input = event.target as HTMLInputElement
   if (!input.files?.length) return
@@ -367,6 +394,9 @@ async function removeSelectedAsset() {
 }
 function revealAsset() { const asset = selectedAsset.value; if (!asset) return; assets.currentFolder = asset.path.slice(0, asset.path.lastIndexOf('/')); estate.statusText = asset.path }
 function setPixelArtMode(event: Event) { if (selectedAsset.value?.assetType === 'image') selectedAsset.value.settings.filterMode = (event.target as HTMLInputElement).checked ? 'Nearest' : 'Linear' }
+function setTextureProfile(event: Event) { const asset = selectedAsset.value; if (asset?.assetType === 'image') applyTextureImportProfile(asset.settings, (event.target as HTMLSelectElement).value as TextureImportProfile) }
+function setAudioProfile(event: Event) { const asset = selectedAsset.value; if (asset?.assetType === 'audio') applyAudioImportProfile(asset.settings, (event.target as HTMLSelectElement).value as AudioImportProfile) }
+function setFontFallbacks(event: Event) { const asset = selectedAsset.value; if (asset?.assetType === 'font') asset.settings.fontSettings.fallbackFamilies = normalizedFontFallbacks((event.target as HTMLInputElement).value) }
 function toggleSpriteRegion(event: Event) {
   const asset = selectedAsset.value
   if (!asset || asset.assetType !== 'image') return
@@ -383,6 +413,9 @@ function reimportAnimation() {
   pushHistory('Reimport animation', `asset:${asset.uuid}`)
   addEditorLog(t('animationReimported', { name: asset.name }), 'Assets')
 }
+function applyPivotPreset(id: string) { const asset = selectedAsset.value, preset = pivotPresets.find(candidate => candidate.id === id); if (!asset || !preset) return; asset.settings.pivot = { ...preset.value }; pushHistory('Set sprite pivot preset', `asset:${asset.uuid}`) }
+async function trimSelectedImage() { const asset = selectedAsset.value; if (!asset) return; if (await trimTransparentImage(asset)) { pushHistory('Trim transparent sprite', `asset:${asset.uuid}`); addEditorLog(t('transparentTrimApplied'), 'Assets') } }
+function sliceSelectedSheet() { const asset = selectedAsset.value; if (!asset) return; const generated = sliceSpriteSheet(asset); if (generated.length) { assets.selectedGuid = generated[0].uuid; pushHistory('Slice sprite sheet'); addEditorLog(t('spriteSlicesCreated', { count: generated.length }), 'Assets') } }
 async function reimportSelectedAsset(event: Event) {
   const input = event.target as HTMLInputElement, file = input.files?.[0]; input.value = ''
   const asset = selectedAsset.value

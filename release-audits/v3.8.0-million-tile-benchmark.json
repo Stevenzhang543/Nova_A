@@ -1,0 +1,16 @@
+{
+  "format": "nova-million-tile-benchmark",
+  "version": 1,
+  "engineVersion": "3.8.0",
+  "generatedAt": "2026-08-19T13:56:03.926Z",
+  "tiles": 1000000,
+  "chunksRead": 1024,
+  "edited": true,
+  "savedBytes": 6000733,
+  "reopenedValid": true,
+  "milliseconds": 199.1771000000008,
+  "budgetMilliseconds": 5000,
+  "heapDeltaMb": 82.30315399169922,
+  "heapBudgetMb": 256,
+  "status": "passed"
+}

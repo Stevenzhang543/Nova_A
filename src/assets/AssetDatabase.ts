@@ -226,6 +226,43 @@ export async function importAssetFiles(files: Iterable<File>, requestedFolder?: 
   }
 }
 
+/** Creates independently addressable sprite-region assets without duplicating source pixels. */
+export function sliceSpriteSheet(record: AssetRecord): AssetRecord[] {
+  if (record.assetType !== 'image') return []
+  const sheet = record.settings.spriteSheet
+  const columns = Math.min(256, Math.max(1, Math.trunc(sheet.columns))), rows = Math.min(256, Math.max(1, Math.trunc(sheet.rows)))
+  const margin = Math.max(0, Math.trunc(sheet.margin)), spacing = Math.max(0, Math.trunc(sheet.spacing))
+  const width = Math.floor((record.width - margin * 2 - spacing * (columns - 1)) / columns)
+  const height = Math.floor((record.height - margin * 2 - spacing * (rows - 1)) / rows)
+  if (width < 1 || height < 1 || columns * rows > 4096) return []
+  const stem = record.name.replace(/\.[^.]+$/, ''), extension = record.name.match(/\.[^.]+$/)?.[0] ?? '.png'
+  const generated: AssetRecord[] = []
+  for (let row = 0; row < rows; row++) for (let column = 0; column < columns; column++) {
+    const name = `${stem}_${String(row * columns + column).padStart(3, '0')}${extension}`
+    generated.push({
+      ...record, uuid: normalizeUuid(undefined), name, path: uniquePath(record.path.slice(0, record.path.lastIndexOf('/')), name), importedAt: Date.now(),
+      settings: { ...record.settings, spriteRegion: { x: margin + column * (width + spacing), y: margin + row * (height + spacing), width, height }, spriteSheet: { ...sheet, enabled: false }, pivot: { ...record.settings.pivot }, borders: { ...record.settings.borders }, platformVariants: { ...record.settings.platformVariants } },
+      pipeline: record.pipeline ? { ...record.pipeline, dependencies: [...record.pipeline.dependencies], reverseDependencies: [] } : undefined,
+      unknownFields: record.unknownFields ? { ...record.unknownFields } : undefined
+    })
+  }
+  assetState.records.push(...generated); assetState.records.sort((first, second) => first.path.localeCompare(second.path)); assetState.generation++; queueTextureAtlasRebuild()
+  return generated
+}
+
+/** Finds the non-transparent pixel bounds and stores them as the active sprite region. */
+export async function trimTransparentImage(record: AssetRecord): Promise<boolean> {
+  if (record.assetType !== 'image' || !record.source || record.width < 1 || record.height < 1) return false
+  const image = await new Promise<HTMLImageElement>((resolve, reject) => { const value = new Image(); value.onload = () => resolve(value); value.onerror = () => reject(new Error('Image preview failed')); value.src = record.source })
+  const canvas = document.createElement('canvas'); canvas.width = record.width; canvas.height = record.height
+  const context = canvas.getContext('2d', { willReadFrequently: true }); if (!context) return false
+  context.drawImage(image, 0, 0); const pixels = context.getImageData(0, 0, record.width, record.height).data
+  let left = record.width, top = record.height, right = -1, bottom = -1
+  for (let y = 0; y < record.height; y++) for (let x = 0; x < record.width; x++) if (pixels[(y * record.width + x) * 4 + 3] > 0) { left = Math.min(left, x); right = Math.max(right, x); top = Math.min(top, y); bottom = Math.max(bottom, y) }
+  if (right < left || bottom < top) return false
+  record.settings.spriteRegion = { x: left, y: top, width: right - left + 1, height: bottom - top + 1 }; record.settings.transparentTrim = true; assetState.generation++; queueTextureAtlasRebuild(); return true
+}
+
 export function registerEmbeddedImage(source: string, name = 'Legacy texture'): AssetRecord {
   const existing = assetState.records.find(record => record.assetType === 'image' && record.source === source)
   if (existing) return existing
@@ -378,13 +415,32 @@ export function loadAssets(source: unknown, folderSource?: unknown, databaseSour
       ...defaults,
       ...(item.settings ?? {}),
       atlasSettings: { ...defaults.atlasSettings, ...(item.settings?.atlasSettings ?? {}) },
+      spriteSheet: { ...defaults.spriteSheet, ...(item.settings?.spriteSheet ?? {}) },
+      borders: { ...defaults.borders, ...(item.settings?.borders ?? {}) },
       audioSettings: { ...defaults.audioSettings, ...(item.settings?.audioSettings ?? {}) },
+      fontSettings: { ...defaults.fontSettings, ...(item.settings?.fontSettings ?? {}) },
       tileSettings: { ...defaults.tileSettings, ...(item.settings?.tileSettings ?? {}) },
       scriptSettings: { ...defaults.scriptSettings, ...(item.settings?.scriptSettings ?? {}) },
       shaderSettings: { ...defaults.shaderSettings, ...(item.settings?.shaderSettings ?? {}) },
       localizationSettings: { ...defaults.localizationSettings, ...(item.settings?.localizationSettings ?? {}) }
     }
     settings.audioSettings.normalizationGain = Math.min(16, Math.max(.01, Number(settings.audioSettings.normalizationGain) || 1))
+    settings.textureProfile = ['General', 'PixelArt', 'UI', 'NormalMap'].includes(String(settings.textureProfile)) ? settings.textureProfile : 'General'
+    settings.audioSettings.profile = ['SoundEffect', 'Music', 'Voice', 'Streaming'].includes(String(settings.audioSettings.profile)) ? settings.audioSettings.profile : 'SoundEffect'
+    settings.audioSettings.codec = ['Original', 'PCM', 'Vorbis', 'MP3'].includes(String(settings.audioSettings.codec)) ? settings.audioSettings.codec : 'Original'
+    settings.audioSettings.quality = Math.min(1, Math.max(0, Number(settings.audioSettings.quality) || .8))
+    settings.audioSettings.trimStart = Math.max(0, Number(settings.audioSettings.trimStart) || 0)
+    settings.audioSettings.trimEnd = Math.max(0, Number(settings.audioSettings.trimEnd) || 0)
+    settings.fontSettings.renderMode = settings.fontSettings.renderMode === 'Bitmap' ? 'Bitmap' : 'Scalable'
+    settings.fontSettings.fallbackFamilies = Array.isArray(settings.fontSettings.fallbackFamilies) ? settings.fontSettings.fallbackFamilies.map(String).map(value => value.trim()).filter(Boolean).slice(0, 16) : defaults.fontSettings.fallbackFamilies
+    settings.fontSettings.bitmapSize = Math.min(512, Math.max(6, Math.round(Number(settings.fontSettings.bitmapSize) || 32)))
+    settings.fontSettings.outlineWidth = Math.min(32, Math.max(0, Number(settings.fontSettings.outlineWidth) || 0))
+    settings.fontSettings.shaping = settings.fontSettings.shaping !== false
+    settings.spriteSheet.columns = Math.min(256, Math.max(1, Math.trunc(Number(settings.spriteSheet.columns) || 1)))
+    settings.spriteSheet.rows = Math.min(256, Math.max(1, Math.trunc(Number(settings.spriteSheet.rows) || 1)))
+    settings.spriteSheet.margin = Math.max(0, Math.trunc(Number(settings.spriteSheet.margin) || 0))
+    settings.spriteSheet.spacing = Math.max(0, Math.trunc(Number(settings.spriteSheet.spacing) || 0))
+    for (const side of ['left', 'top', 'right', 'bottom'] as const) settings.borders[side] = Math.max(0, Number(settings.borders[side]) || 0)
     settings.audioSettings.targetPeakDb = Math.min(0, Math.max(-24, Number(settings.audioSettings.targetPeakDb) || -1))
     settings.audioSettings.loopStart = Math.max(0, Number(settings.audioSettings.loopStart) || 0)
     settings.audioSettings.loopEnd = Math.max(0, Number(settings.audioSettings.loopEnd) || 0)
@@ -412,8 +468,29 @@ export function loadAssets(source: unknown, folderSource?: unknown, databaseSour
         ...defaultScriptMetadata(),
         ...(item.script ?? {}),
         breakpoints: Array.isArray(item.script?.breakpoints) ? [...new Set(item.script.breakpoints.map(Number).filter(value => Number.isInteger(value) && value > 0))].slice(0, 1000) : [],
+        breakpointDetails: Array.isArray(item.script?.breakpointDetails) ? item.script.breakpointDetails.flatMap((point, index) => {
+          if (!point || typeof point !== 'object') return []
+          const line = Math.round(Number(point.line))
+          if (!Number.isFinite(line) || line < 1 || line > 1_000_000) return []
+          return [{
+            id: String(point.id || `breakpoint-${line}-${index}`).slice(0, 128), line,
+            functionName: String(point.functionName || '').slice(0, 80), condition: String(point.condition || '').slice(0, 512),
+            hitCondition: Math.min(1_000_000, Math.max(0, Math.round(Number(point.hitCondition) || 0))),
+            logMessage: String(point.logMessage || '').slice(0, 1_024), enabled: point.enabled !== false,
+            hitCount: Math.min(1_000_000_000, Math.max(0, Math.round(Number(point.hitCount) || 0)))
+          }]
+        }).slice(0, 1000) : [],
         tests: Array.isArray(item.script?.tests) ? item.script.tests.filter(value => typeof value === 'string').map(value => value.slice(0, 80)).slice(0, 256) : [],
-        packageDependencies: Array.isArray(item.script?.packageDependencies) ? item.script.packageDependencies.filter(value => typeof value === 'string').map(value => value.slice(0, 256)).slice(0, 128) : []
+        packageDependencies: Array.isArray(item.script?.packageDependencies) ? item.script.packageDependencies.filter(value => typeof value === 'string').map(value => value.slice(0, 256)).slice(0, 128) : [],
+        packageName: String(item.script?.packageName || '').slice(0, 128),
+        reloadPolicy: ['preserve', 'recreate', 'disabled'].includes(String(item.script?.reloadPolicy)) ? item.script!.reloadPolicy : 'preserve',
+        signalConnections: Array.isArray(item.script?.signalConnections) ? item.script.signalConnections.flatMap(connection => {
+          if (!connection || typeof connection !== 'object') return []
+          const signal = String(connection.signal || '').trim().slice(0, 128), callback = String(connection.callback || '').trim().slice(0, 80)
+          return signal && callback ? [{ signal, callback, source: String(connection.source || '').slice(0, 128), target: String(connection.target || '').slice(0, 128), enabled: connection.enabled !== false }] : []
+        }).slice(0, 512) : [],
+        recoverySource: String(item.script?.recoverySource || '').slice(0, 1_000_000),
+        lastSavedHash: String(item.script?.lastSavedHash || '').slice(0, 128)
       } : undefined,
       animationImport: assetType === 'animation' ? {
         ...defaultAnimationImportMetadata(),

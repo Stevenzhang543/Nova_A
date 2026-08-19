@@ -1,0 +1,14 @@
+{
+  "engineVersion": "4.0.0",
+  "schema": 29,
+  "projectName": "Optional Object Pool Package",
+  "minimumScenes": 1,
+  "minimumEntities": 2,
+  "expectedValidation": "pass",
+  "demonstrates": [
+    "optional package enable/disable/removal",
+    "reset contracts",
+    "capacity and lifetime",
+    "reuse and leak diagnostics"
+  ]
+}

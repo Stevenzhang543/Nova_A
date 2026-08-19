@@ -1,0 +1,22 @@
+{
+  "format": "nova-editor-e2e",
+  "version": 1,
+  "engineVersion": "3.9.0",
+  "generatedAt": "2026-08-18T18:11:49.014Z",
+  "browser": "Edg/147.0.3912.72",
+  "languages": [
+    "en",
+    "de",
+    "zh"
+  ],
+  "states": 286,
+  "screenshots": 12,
+  "consoleErrors": [],
+  "contextHelp": [
+    "manual/inspector",
+    "manual/recovery",
+    "manual/builds",
+    "manual/package-security"
+  ],
+  "status": "passed"
+}

@@ -119,6 +119,13 @@ pub enum EngineEvent {
         normal: [f64; 2],
         relative_velocity: [f64; 2],
     },
+    TriggerStayed {
+        first: u32,
+        second: u32,
+        point: [f64; 2],
+        normal: [f64; 2],
+        relative_velocity: [f64; 2],
+    },
     TriggerExited {
         first: u32,
         second: u32,
@@ -614,7 +621,15 @@ impl RuntimeWorld {
                         relative_velocity: contact.relative_velocity,
                     }
                 }
-                PhysicsEvent::ContactStayed(contact) if contact.sensor => continue,
+                PhysicsEvent::ContactStayed(contact) if contact.sensor => {
+                    EngineEvent::TriggerStayed {
+                        first: contact.first,
+                        second: contact.second,
+                        point: contact.point,
+                        normal: contact.normal,
+                        relative_velocity: contact.relative_velocity,
+                    }
+                }
                 PhysicsEvent::ContactEnded(contact) if contact.sensor => {
                     EngineEvent::TriggerExited {
                         first: contact.first,
@@ -800,5 +815,54 @@ mod tests {
         assert!(events
             .iter()
             .any(|event| matches!(event, EngineEvent::SceneUnloaded { uuid } if uuid == "one")));
+    }
+
+    #[test]
+    fn sensors_forward_enter_stay_and_exit_phases() {
+        let mut sensor = moving_body();
+        sensor[4] = 0.0;
+        sensor[9] = 1.0;
+        sensor[28] = 1.0;
+        sensor[42] = 1.0;
+        let mut visitor = moving_body();
+        visitor[0] = 2.0;
+        visitor[4] = 0.0;
+        visitor[42] = 1.0;
+        visitor[2] = 0.25;
+        let mut runtime = RuntimeWorld::new();
+        runtime.physics_mut().upsert_body(1, 0, &sensor).unwrap();
+        runtime.physics_mut().upsert_body(2, 1, &visitor).unwrap();
+        runtime.drain_events();
+        runtime.single_step(0.0, 0.0);
+        assert!(runtime.drain_events().iter().any(|event| matches!(
+            event,
+            EngineEvent::TriggerEntered {
+                first: 1,
+                second: 2,
+                ..
+            }
+        )));
+        runtime.single_step(0.0, 0.0);
+        assert!(runtime.drain_events().iter().any(|event| matches!(
+            event,
+            EngineEvent::TriggerStayed {
+                first: 1,
+                second: 2,
+                ..
+            }
+        )));
+        runtime
+            .physics_mut()
+            .set_transform(2, 10.0, 0.0, 0.0)
+            .unwrap();
+        runtime.single_step(0.0, 0.0);
+        assert!(runtime.drain_events().iter().any(|event| matches!(
+            event,
+            EngineEvent::TriggerExited {
+                first: 1,
+                second: 2,
+                ..
+            }
+        )));
     }
 }

@@ -3,7 +3,7 @@
   "name": "Hello Plugin API 2",
   "version": "1.0.0",
   "apiVersion": 2,
-  "engine": ">=3.0.0 <4.0.0",
+  "engine": ">=3.0.0 <5.0.0",
   "entry": "hello-plugin.wasm",
   "entryType": "wasm",
   "permissions": [],

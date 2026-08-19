@@ -1,0 +1,17 @@
+{
+  "format": "nova-reproducible-build-report",
+  "version": 1,
+  "engineVersion": "3.9.0",
+  "generatedAt": "2026-08-19T13:58:07.226Z",
+  "canonicalProjectSha256": "7666aba8f7c7460bd35e8f2dd49d53d4c8e0958d2d17a8b9346296bcc4c71375",
+  "repeatedCanonicalSha256": "7666aba8f7c7460bd35e8f2dd49d53d4c8e0958d2d17a8b9346296bcc4c71375",
+  "fixedTimestampPolicy": true,
+  "sortedArchivePolicy": true,
+  "documentedExceptions": [
+    "platform executable signatures",
+    "notarization tickets",
+    "installer container metadata"
+  ],
+  "cleanTaggedCheckout": "requires release tag in release CI",
+  "status": "passed"
+}

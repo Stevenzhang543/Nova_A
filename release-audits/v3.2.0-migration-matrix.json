@@ -3,7 +3,7 @@
   "version": 1,
   "engineVersion": "3.2.0",
   "targetSchema": 23,
-  "generatedAt": "2026-08-16T11:19:48.395Z",
+  "generatedAt": "2026-08-19T13:50:29.361Z",
   "entries": [
     {
       "sourceSchema": 5,
@@ -154,6 +154,54 @@
       "targetSchema": 23,
       "migration": "no-op canonical validation",
       "backupRequired": false,
+      "rollbackOnFailure": true,
+      "status": "covered-by-nova_format-golden-test"
+    },
+    {
+      "sourceSchema": 24,
+      "targetSchema": 23,
+      "migration": "legacy-schema-24-projection",
+      "backupRequired": true,
+      "rollbackOnFailure": true,
+      "status": "covered-by-nova_format-golden-test"
+    },
+    {
+      "sourceSchema": 25,
+      "targetSchema": 23,
+      "migration": "legacy-schema-25-projection",
+      "backupRequired": true,
+      "rollbackOnFailure": true,
+      "status": "covered-by-nova_format-golden-test"
+    },
+    {
+      "sourceSchema": 26,
+      "targetSchema": 23,
+      "migration": "legacy-schema-26-projection",
+      "backupRequired": true,
+      "rollbackOnFailure": true,
+      "status": "covered-by-nova_format-golden-test"
+    },
+    {
+      "sourceSchema": 27,
+      "targetSchema": 23,
+      "migration": "legacy-schema-27-projection",
+      "backupRequired": true,
+      "rollbackOnFailure": true,
+      "status": "covered-by-nova_format-golden-test"
+    },
+    {
+      "sourceSchema": 28,
+      "targetSchema": 23,
+      "migration": "legacy-schema-28-projection",
+      "backupRequired": true,
+      "rollbackOnFailure": true,
+      "status": "covered-by-nova_format-golden-test"
+    },
+    {
+      "sourceSchema": 29,
+      "targetSchema": 23,
+      "migration": "legacy-schema-29-projection",
+      "backupRequired": true,
       "rollbackOnFailure": true,
       "status": "covered-by-nova_format-golden-test"
     }

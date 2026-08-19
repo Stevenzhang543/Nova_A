@@ -1,0 +1,13 @@
+{
+  "engineVersion": "4.0.0",
+  "schema": 29,
+  "projectName": "Lighting and Shadows",
+  "minimumScenes": 1,
+  "minimumEntities": 9,
+  "expectedValidation": "pass",
+  "demonstrates": [
+    "ambient and point lighting",
+    "layer masks, occluders and soft shadows",
+    "quality presets and renderer fallback"
+  ]
+}

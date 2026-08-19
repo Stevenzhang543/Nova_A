@@ -1,15 +1,14 @@
 {
-  "engineVersion": "3.2.0",
-  "schema": 23,
+  "engineVersion": "4.0.0",
+  "schema": 29,
   "projectName": "Nova_A Networked Optional Reference",
   "minimumScenes": 1,
   "minimumEntities": 5,
   "expectedValidation": "pass",
   "demonstrates": [
-    "Optional package",
-    "Replication",
-    "Prediction",
-    "Diagnostics",
-    "Headless"
+    "opt-in Experimental networking package",
+    "replication and prediction",
+    "diagnostics",
+    "headless configuration"
   ]
 }

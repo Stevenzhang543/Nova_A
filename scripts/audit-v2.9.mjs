@@ -39,13 +39,13 @@ assert(bottom.includes('compact-tab-select') && bottom.includes('@container(max-
 assert(panel.includes('@container(max-width:720px)') && teamPanel.includes('@container(max-width:620px)'), 'shipping/team layouts are not panel-responsive')
 for (const locale of ['Object.assign(en', 'Object.assign(de', 'Object.assign(zh']) assert(i18n.split(locale).slice(1).some(block => block.slice(0, 24_000).includes('sourceControl') && block.slice(0, 24_000).includes('optInTelemetry')), `${locale} lacks v2.9 shipping/team localization`)
 
-assert(format.includes('CURRENT_FORMAT_VERSION: u32 = 23') && format.includes('CURRENT_ENGINE_VERSION: &str = "3.2.0"'), 'Rust format authority is not schema 23 / current engine 3.2')
-assert(project.includes('NOVA_PROJECT_SCHEMA_VERSION = 23') && project.includes("NOVA_ENGINE_VERSION = '3.2.0'"), 'frontend format authority is not schema 23 / current engine 3.2')
+assert(format.includes('CURRENT_FORMAT_VERSION: u32 = 29') && format.includes('CURRENT_ENGINE_VERSION: &str = "4.0.0"'), 'Rust format authority is not frozen schema 29 / engine 4.0')
+assert(project.includes('NOVA_PROJECT_SCHEMA_VERSION = 29') && project.includes("NOVA_ENGINE_VERSION = '4.0.0'"), 'frontend format authority is not frozen schema 29 / engine 4.0')
 assert(format.includes('projectSettings.build.delivery') && format.includes('bounded HTTPS URL'), 'schema 22 does not validate delivery/privacy settings')
-for (const metadata of [packageJson, cargo, tauriCargo, tauriConfig]) assert(metadata.includes('3.2.0'), 'release metadata is not synchronized to 3.2.0')
+for (const metadata of [packageJson, cargo, tauriCargo, tauriConfig]) assert(metadata.includes('4.0.0'), 'release metadata is not synchronized to 4.0.0')
 
-for (const [manual, topics] of [[manualEn, ['3.2.0', 'Build Settings', 'telemetry', 'rollback']], [manualDe, ['3.2.0', 'Build Settings', 'Telemetrie', 'Rückrollkopie']], [manualZh, ['3.2.0', '构建设置', '遥测', '回滚']]]) for (const topic of topics) assert(manual.toLocaleLowerCase().includes(topic.toLocaleLowerCase()), `localized manual lacks ${topic}`)
-assert(manualHtml.includes('<title>Nova_A 3.2 Manual</title>') && manualHtml.includes('data-section="shipping"') && manualHtml.includes('#en-v29'), 'bookmarkable multilingual HTML manual lacks v2.9 shipping documentation')
-assert(readme.includes('3.2.0') && readme.includes('schema 23') && readmeZh.includes('3.2.0') && readmeZh.includes('Schema 23'), 'release README metadata/documentation is stale')
+for (const [manual, topics] of [[manualEn, ['3.9.0', 'Build Settings', 'telemetry', 'rollback']], [manualDe, ['3.9.0', 'Build Settings', 'Telemetrie', 'Rückrollkopie']], [manualZh, ['3.9.0', '构建设置', '遥测', '回滚']]]) for (const topic of topics) assert(manual.toLocaleLowerCase().includes(topic.toLocaleLowerCase()), `localized manual lacks ${topic}`)
+assert(manualHtml.includes('<title>Nova_A 4.0 Manual</title>') && manualHtml.includes('data-section="shipping"') && manualHtml.includes('#en-v29'), 'bookmarkable multilingual HTML manual lacks v2.9 shipping documentation')
+assert(readme.includes('4.0.0') && readme.includes('schema 29') && readmeZh.includes('4.0.0') && readmeZh.includes('Schema 29'), 'release README metadata/documentation is stale')
 
 console.log('v2.9 audit passed: platform exports, deterministic cache/deltas/CLI, operations/privacy, team workflow, registry safety, upgrades, templates, responsive layout, schema 22, localization, and documentation are connected.')

@@ -1,4 +1,66 @@
-# Nova_A 3.2.0 – Vollständiges Handbuch
+# Nova_A 4.0.0 – Vollständiges Handbuch
+
+## Nova_A 4.0 – Produktionsbasis
+
+Nova_A 4.0 ist die stabile Basis für Project Format 2, Schema 29. Vor dem Öffnen externer Projekte zeigt die Vorabprüfung Engine/Schema, Inhalte, Pakete und Migrationsschritte. Unterstützte 3.x-Projekte erhalten ein Pflicht-Backup und eine lokale Rollback-Kopie, werden im Speicher migriert, vollständig validiert und erst danach in die Sitzung übernommen. Neuere Schemas bleiben schreibgeschützt. Siehe [Migration](../docs/MIGRATION_4_0.md) und [archivierte Engines](../docs/ARCHIVED_ENGINE_GUIDANCE_4_0.md).
+
+Studio Status erklärt Stable-, Beta- und Development-Kanal, Offline-Problemliste, feste Verträge und datenschutzgeprüfte Diagnosen. Absturzpakete sind freiwillig und bleiben lokal. Experimentelles Networking ist weiterhin als optionales Paket/Referenz verfügbar, jedoch keine Stable-Startvorlage. Der Einstieg [Kleines Spiel erstellen und exportieren](../docs/CREATE_EXPORT_SMALL_GAME_4_0.md) führt durch Autoring, Test und Export.
+
+## Nova_A 3.8 – Weltdaten
+
+Bei ausgewählter TileMap2D erscheint das kontextbezogene **Tilemap**-Werkzeug. TileSet-v2-Quellen unterstützen Atlasrand/-abstand, explizite Bereiche, Animation, gewichtete Varianten, Terrainregeln sowie Kollision-, Navigation-, Verdeckungs-, Metadaten- und Szenen-/Prefab-Daten pro Kachel. Pinsel, Stempel, Muster, Linie, Rechteck, Füllen, Ersetzen, Auswahl, Kopieren, Drehen und Spiegeln aktualisieren Chunks. Ebenen besitzen Sichtbarkeit, Sperre, Deckkraft, Mischung, Parallaxe, Z-Reihenfolge und getrennte Bake-Schalter. **Prüfen** und **Backen** melden beziehungsweise erzeugen die verwendeten Daten.
+
+NavigationRegion2D bietet Grid- oder Polygon-A*, Quelle, Maske, Kosten, Agentenradius und Links. Hindernisse, Agenten, dynamische Neuplanung, Ausweichen, Debugpfade und Profile verwenden dieselben Daten. WorldChunk2D definiert Grenzen, Besitzer, Szene, Abhängigkeiten, Vorladen, Entfernungen, Speicherwert, Cache und Speicherübergabe; der Laufzeit-Streamer lädt, aktiviert, deaktiviert und entlädt abbrechbar innerhalb des Budgets. Der Viewport und Profiler zeigen Zustand, Zeit und Speicher.
+
+Der **Debug-Speicherinspektor** zeigt Schema, Prüfsumme, Zeit, Größe, Plattformort, Fortschritt und Wiederherstellung. Schema-2-Speicherstände verwenden Migration, Journal, temporäre Prüfung, atomaren Commit und Backup. Object Pool und KI sind optionale Pakete: deaktivierte Pakete verbergen die Erstellung, behalten aber serialisierte Daten.
+
+## Nova_A 3.7: Visueller und Audio-Workflow
+
+Das untere Werkzeug **Rendering** trennt **Beleuchtung**, **Materialien**, **Shader**, **Partikel**, **Diagnose** und **Qualität**. Beleuchtung steuert Umgebung, Schatten und Ebenenmasken für Light2D/ShadowCaster2D. Materialien erzeugen typisierte Felder für Zahlen, Ganzzahlen, Bereiche, Enums, Schalter, Vektoren, Farben und Texturen sowie Vererbung, Blend, Sampling, Farbraum und Variante. Shader bietet begrenzten GLSL-ES-Quelltext, Includes, Live-Vorschau und anklickbare Quellfehler; rohe JSON-Felder liegen nur unter Erweitert. Partikel besitzt Vorschau, Budget, Formen, Burst/Rate, Bewegung, Kurven, Verläufe, Material und Subemitter.
+
+Diagnose zeigt GPU-Zeit (falls verfügbar), Draw Calls, Batches, Unterbrechungen, Dreiecke, Overdraw, Atlasseiten, Renderziele und Passzeiten. Frame-Captures können als A/B verglichen werden. Der Capability-Bericht unterscheidet WebGL2 Tier 1 und Canvas2D-Fallback und bietet Renderer-Reset/Context-Recovery. Qualitätsvorgaben ändern Schatten, Pixeldichte, Partikelbudget, Pixel-Snap und Post-Processing; nicht ausführbare Canvas2D-Optionen werden ausgeblendet und in Project Health erklärt.
+
+Assets bietet General-, Pixel-Art-, UI- und Normal-Map-Profile sowie skalierbare/Bitmap-Schrift, Ersatzfamilien, Outline und Textformung. Audio bietet Vorschau, Sound/Musik/Sprache/Streaming, Codec/Qualität, Normalisierung, Schnitt und Loop. AudioSource unterstützt 2D-Pan/Abstand, Bus, Priorität, Polyphonie, deterministische Variation, Limits und Virtualisierung. Busse besitzen Sends, Effekte, Snapshots, Ducking und Meter; der Profiler zeigt Stimmen, Latenz, Aussetzer und Gerätewechsel. Für kurze zeitkritische Loops PCM und Nulldurchgänge verwenden. Neue Formen nutzen eine verbundene 0,04-Einheiten-Kontur ohne hervorstehende Ecken.
+
+## Nova_A 3.6: Präsentationsworkflow
+
+Der Arbeitsbereich **UI** enthält responsive Spieloberflächen, Themes, Lokalisierung, UI-Klangreferenzen und Barrierefreiheit im Spiel. Projektweite Busse und Mischungen bleiben im unteren System **Audio**. Canvas konfiguriert DPI, Sprachvorschau, Safe Area und Theme-Variante. RectTransform unterstützt Ankerbereiche, Offsets, minimale/bevorzugte/maximale Größe, Seitenverhältnis, Größenflags, Lesereihenfolge, Skip-Navigation sowie zugänglichen Namen, Beschreibung, Rolle, Zustand, Wert und Live-Region. Panel bietet Row, Column, Grid, Flow, Overlay, Center, Margin, Aspect und Split sowie Scroll-, Modal-, Popup-, Tooltip-, Drag-and-drop-Verhalten. Telefon-, Tablet-, Desktop- und Ultrawide-Vorschauen prüfen Auflösung, DPI, Safe Area und RTL.
+
+Die **Input Map** unterstützt logische und physische Tasten, Maustasten, Rad und Bewegung, Gamepad-Tasten und -Achsen, Touch und Gesten. Suche, Gerätefilter, Duplizieren, Aufzeichnung und Konfliktliste erleichtern die Bearbeitung. Eine Bindung speichert Controlleridentität, Totzone, Schwelle, Invertierung, Reaktionskurve, Modifikatoren und Akkord. Laufzeit-Rebinding bleibt beim Speichern erhalten; Aufnahme/Wiedergabe enthält Zeigerbewegung, Touchpunkte und angeschlossene Geräte.
+
+Die Lokalisierung importiert/exportiert CSV, verwaltet Schlüssel, Kontext, Pluralformen, Fallback-Sprachen, Metadaten und Schrift-Fallbacks, extrahiert UI- sowie `localize(...)`/`tr(...)`-Aufrufe und erzeugt einen Fehlbericht. Akzent-, Erweiterungs- und BiDi-Pseudolokalisierung sowie RTL-Vorschau decken Clipping auf. Die Barrierefreiheitsprüfung verbindet hohen Kontrast, reduzierte Bewegung, Textskalierung und Mindestzielgröße mit der Spiel-Laufzeit und meldet Beschriftung, Erreichbarkeit, Kontrast und Fokus-/Lesereihenfolge mit Quellort.
+
+Animation behält Dope Sheet, Kurven, Inspector-Keyframes, Snapping, Tangenten, Loop, Animator-Übergänge/Blends/Live-Debug, Sprite-Onion-Skin und Skeleton/Skin/IK/Constraints. Neu persistieren Geschwindigkeit, Easing, Marker sowie Property-, Method-, Event-, Audio- und Nested-Animation-Tracks und wiederverwendbare Clip-Bibliotheken.
+
+## Neu in 3.5: Rhai API v1 und professioneller Skript-Arbeitsbereich
+
+**Skript** öffnet Dateien und Projektsuche links, Dateireiter/Breakpoint-Rand/Find-Ersetzen/semantische Vervollständigung/Parameterhilfe/Editor in der Mitte und getrennte Seiten für **Probleme**, **Gliederung**, **Debug**, **Tests**, **API**, **Module** und **Signale** rechts. **Speichern** prüft den vollständigen Modulgraphen, **Formatieren** nutzt das deterministische Format, Definition/Referenzen/Umbenennen verwenden den Projektindex. Diagnosen unterscheiden Parser, Semantik, Kompatibilität, Laufzeit und Test, besitzen `NOVA-*`-Code, Bereich, Hilfelink und sichere Code-Aktion. Ungespeicherter Quelltext und letzter gespeicherter Hash sind getrennt wiederherstellbar.
+
+Die Vorlagen Component, UI, Physics, Animation Event und Test enthalten nur unterstützte Callbacks. `use "Module.rhai"` löst ausschließlich Projekt-Skriptassets auf und weist Pfadflucht/Zyklen ab. API v1 dokumentiert 108 Symbole in Lebenszyklus, Szene, Objekt, Komponente, Transformation, Eingabe, Physik, UI, Audio, Animation, Navigation, Speichern, Zeit, Logging, Ressourcen, Signalen, Aufgaben und Tests. Jeder Eintrag hat ein Beispiel. Versionierte Handles tragen Gültigkeit, Typ, stabile ID, Fehler, API-Version und deterministische Generation; rohe Editor-Interna werden nicht ausgegeben.
+
+`@export(...)` unterstützt Typ/Standard, Minimum/Maximum, Schritt, Enum, Ressourcentyp, Gruppe, Tooltip und Serialisierung und steuert damit direkt den Inspektor. Signale besitzen sichtbare Quelle/Ziel/Callback-Verbindungen. Timer können gestartet, pausiert, fortgesetzt und abgebrochen werden; aufgeschobene Tasks sind abbrechbar. Ungültige Argumente und Runtimefehler werden sichtbar gemeldet. Line-/Funktions-/Bedingungs-/Trefferzahl-Breakpoints und Logpoints bleiben im Projekt. Pause, Fortsetzen, Schritt hinein/über/heraus, Neustart, Stack, Locals, Watches, Ausdrucksauswertung und Objektprüfung funktionieren an sicheren Callback-Grenzen. API v1 hält nicht an beliebigen Anweisungen innerhalb eines einzelnen Rhai-Callbacks.
+
+Hot Reload hat **kompatiblen Zustand behalten**, **Instanzen neu erstellen** und **deaktiviert**. Der komplette Graph wird vorgeprüft und atomar getauscht; Fehler behalten AST, Zustand und laufende Instanzen. Tests verwenden `test_*`, `// @test tags=… timeout=… seed=… cases=a|b`, `skip=true`, Setup/Teardown und `expect`. `pnpm test:scripts:headless -- … --format json|junit` liefert Exit 0/1/2 für Erfolg/Testfehler/Runnerfehler. **Debug → Profiler → Skripte** zeigt Aufrufe, Gesamt-/Maximalzeit, Allokationsschätzung, Captures, JSON-Export und Vergleich. `pnpm script:lsp` startet das dokumentierte JSON-Lines-Protokoll für externe Editoren. Vollständige API: `docs/RHAI_API_V1.md`; Protokoll: `docs/RHAI_LANGUAGE_PROTOCOL.md`.
+
+## Neu in 3.4: produktionsreife 2D-Physik
+
+**Projekteinstellungen → Physik** enthält Simulation, Kollisionsschichten, Materialien und Konformität. Hier werden Schwerkraft, Dämpfung, Zeitfaktor, feste Tickrate, Aufhollimit und Interpolation mit Einheiten und Validierung eingestellt. Die 32 stabilen Kollisionsbits besitzen eindeutige Namen, Beschreibungen, Farben, Vorgaben, Suche, einen kompakten Paar-Editor und die vollständige Matrix unter „Erweitert“. Umbenennen verändert niemals das Kollisionsbit.
+
+`.nova-material`-Assets verbinden Dichte, Haft-/Gleitreibung, Restitution, Schwelle und Kombinationsmodus direkt mit dem nativen Solver. Collider2D bietet Box, Kreis/Ellipse, Kapsel, endliches Segment, Kette, konvexes und konkaves Polygon und zeigt den jeweiligen Supportstatus. Bis zu sieben zusätzliche lokale Formen besitzen eigenen Versatz, Drehung und Größe und bewegen sich als ein Körper über eine deterministische konvexe Kollisionshülle. Kette und konkave Form sind bewusst nur abfragbar, solange keine stabile Zerlegung verfügbar ist.
+
+Statische, kinematische/animationsgesteuerte, Charakter-, dynamische/physikgesteuerte und Area-/Trigger-Körper haben klare Transformationshoheit. Für dynamische Sprünge dient `Physics2D.teleport`; Ray-, Shape-, Punkt-, Überlappungs- und Kontaktabfragen sowie `moveAndSlide` stehen öffentlich bereit. Charaktere klassifizieren Boden, Wand und Decke und berücksichtigen Neigung, Stufen, Bodeneinrastung, Sicherheitsabstand und bewegte Plattformen. Trigger und Kollisionen liefern Enter, Stay und Exit in stabiler Reihenfolge.
+
+Distanz-, Dreh-, Schiebe-, Schweiß-, Feder-, Seil- und Motorgelenke bieten Anker, Grenzen, Motor, Bruchschwellen und Diagnose. Debug zeichnet Collider, Kontakte, Normalen, AABBs, Schlafzustand, Gelenke, Seilknoten, Charakterkontakte und Schichtfarben. Der Profiler zählt Physikzeit, Körper, Kontakte, schlafende/CCD-Körper, Gelenke, Schritte, verlorene Zeit und Neuaufbauten. Sieben Physik-Referenzprojekte sowie Determinismus-, Tunnel-, Charakter-, Leistungs-, Stapel- und Soak-Nachweise gehören zur Version.
+
+## Neu in 3.3: vollständige 2D-Bearbeitung
+
+**Umschalt+A**, **Objekt erstellen**, das **+** der Hierarchie und der leere Inspektor öffnen dieselbe transaktionale Palette. Sie durchsucht Typen, Komponenten und Core/2D/Physik/UI/Audio/Kamera/Navigation/Skript/Pakete, zeigt Abhängigkeiten und Stabilität und speichert Favoriten sowie zuletzt verwendete Typen. Leer, Sprite, animiertes Sprite, Text, Polygon, Linie, Pfad, Grundformen, Collider, Canvas-/Parallax-Ebene, Kamera, Audioquelle, Licht, Navigationsregion und Skriptobjekt entstehen jeweils in genau einem Undo-Schritt.
+
+Die Werkzeugleiste enthält Auswahl, Verschieben, Drehen, Skalieren, Pivot, Rechteck, Pfad-/Polygonpunkte, Collider und Messlineal. Ausrichten, Verteilen, Spiegeln, 90°-Drehung, Gruppieren, Einrahmen, Isolieren und Kamera-Fokus sind transaktional. Raster-, Pixel-, Vertex-, Kanten-, Zentrum-, Winkel- und Objekt-Snapping sind getrennt. Kamera-Overlays bieten Aus, 16:9, 16:10, 4:3, 9:16 und benutzerdefinierte Auflösung. Rahmen-/Mehrfachauswahl, Sperren, Ausblenden, Filter und 5.000-Objekt-Performance-Modus verändern keine Spieldaten unnötig.
+
+Der Inspektor unterstützt Suche, Kategorien, Mehrfachauswahl und gemischte Werte. Das Kontextmenü einer Eigenschaft bietet Standard zurücksetzen, Prefab-Override zurücksetzen, Wert kopieren/einfügen, Pfad kopieren, Keyframe, Anheften und Hilfe mit Einheit/Bereich. Komponenten lassen sich aktivieren, kopieren, einfügen, umordnen, zurücksetzen und nach App-Bestätigung entfernen. Sprite-Import bietet Region, Pivot-Vorgaben, transparentes Trimmen, Sprite-Sheet-Spalten/-Zeilen/-Rand/-Abstand, Filter, Kompression, Farbraum, Pixelmodus und Nine-Slice-Ränder. Asset-Drop erzeugt Sprite/Prefab mit einem Undo-Schritt.
+
+Camera2D bietet Größe, Zoom, Grenzen, Glättung, Drag-Ränder, Zielverfolgung, Vorschau, Pixel-Perfect, Viewport, Sortierbereich, Priorität, Maske und Rendertextur. Hierarchiesuche umfasst Name, ID, Tags und Komponenten; Breadcrumb und Prefab-/Szenen-/Override-Status sind sichtbar. Ziehen erhält die Welttransformation, **Alt** die lokale Transformation, **Umschalt** ändert die Reihenfolge. Alle Änderungen bleiben Undo/Redo-fähig.
 
 ## Neu in 3.1: Arbeitsbereiche, Navigation und sichere Wiederherstellung
 
@@ -92,7 +154,7 @@ Vorlagen:
 - Raster schaltet nur parallele Rasterlinien. X-, Y- und alle Achsen verändern das Raster nicht.
 - Kamera zurücksetzen stellt Schwenken/Zoom des Editors zurück.
 - Konsole, Profiler, Projekt und Build-Einstellungen öffnen das jeweilige untere Werkzeug.
-- Hilfe öffnet das Handbuch innerhalb der App oder GitHub; das Versionsfeld zeigt 3.2.0.
+- Hilfe öffnet das Handbuch innerhalb der App oder GitHub; das Versionsfeld zeigt 3.8.0.
 
 ### Arbeitsbereiche, Panels und Befehlspalette
 
@@ -401,3 +463,12 @@ Nova_A 3.2 schreibt Project Format 2, Schema 23. Das Manifest enthält Projekt-U
 Das suchbare Assetmenü unterstützt Favoriten und gespeicherte Filter. Metadaten zeigen Importerversion, Quell-/Artefakt-Hash, Cache und Abhängigkeiten. Die Hintergrundwarteschlange bietet Fortschritt, Abbruch, Wiederholung und Logs. Verknüpfte externe Quellen melden Änderungen mit Reimportieren/Behalten/Als Kopie. Verschieben, Umbenennen und Löschen zeigen bekannte Abhängigkeiten; fehlende UUIDs lassen sich reparieren.
 
 **Projekt prüfen** und **Projekt reparieren** stehen in Palette und Projektzustand. Reparaturen werden angezeigt, vollständig gesichert und erneut geprüft; Fehler stellen die vorige Sitzung wieder her. Schema 5–22 zeigt vorab Engine-/Paketkompatibilität und jeden Migrationsschritt. Zukünftige Schemata werden nur schreibgeschützt angezeigt. Das Desktopfenster startet maximiert, dekoriert und größenveränderbar; F11 aktiviert echtes Vollbild.
+## Nova_A 3.9 — Build, Pakete, Zusammenarbeit und 4.0-RC
+
+Diese Ausgabe dokumentiert Engine 3.9.0 und Project Format 2, Schema 29.
+
+Build-Einstellungen bieten Vorgaben, Plattformprofile, Ausgabe/Signatur, Auslieferung, Diagnose/Verlauf und Team. Windows x86-64 und Web sind Tier 1; Linux und macOS bleiben experimentell; Mobilgeräte und Konsolen werden erst nach 4.0 unterstützt. Die Headless-CLI führt Validierung, Import, Test, Build, Export, Paketierung und Version aus und schreibt JSONL, Cache-, Größen-, Abhängigkeits- und Symbolberichte.
+
+Stable installiert nur Manifeste mit SemVer, Engine/API-Bereich, Berechtigungen, Pakettyp, Abhängigkeitshashes, Archiv-SHA-256 und verifizierter Signatur. Neue Berechtigungen benötigen Prüfung; Fehler gelangen in Quarantäne. Cache-Prüfung, deterministische Lockdatei, Rollback und Sicherheitsmodus sind verbunden.
+
+Team zeigt Projekt-, Einstellungs-, Paket-, Szenen-, Prefab- und Ressourcendiffs, externe Neu-Laden/Vergleichen-Auswahl, kanonische No-op-Ausgabe, lokale und gemeinsame Einstellungen, Git-Initialisierung, Sperren sowie Hook/CI-Vorlagen. Studio-Status exportiert Diagnosen erst nach Datenschutzprüfung und lädt nichts automatisch hoch. Schema 29 und Runtime API 1, Plugin API 2, Package Manifest 1 sowie Build CLI 1 sind für 4.0 eingefroren.

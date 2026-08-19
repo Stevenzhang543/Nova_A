@@ -1,0 +1,19 @@
+{
+  "format": "nova-stability-report",
+  "version": 1,
+  "engineVersion": "3.8.0",
+  "generatedAt": "2026-08-18T13:21:01.247Z",
+  "requestedHours": 0,
+  "requestedCycles": 500,
+  "elapsedHours": 0.00012629472222222223,
+  "qualified24Hours": false,
+  "cycles": 500,
+  "playStopCycles": 500,
+  "sceneStreamingOperations": 1166,
+  "assetReimports": 500,
+  "corruptInputs": 500,
+  "isolatedPluginFaults": 500,
+  "peakHeapBytes": 24587312,
+  "status": "passed",
+  "note": "Bounded local smoke completed; this is not represented as a 24-hour pass."
+}

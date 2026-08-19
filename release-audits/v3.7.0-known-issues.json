@@ -1,0 +1,40 @@
+{
+  "format": "nova-known-issues",
+  "version": 1,
+  "engineVersion": "3.7.0",
+  "generatedAt": "2026-08-18T10:12:31.136Z",
+  "severity0Open": 0,
+  "severity1Open": 0,
+  "items": [
+    {
+      "severity": "S2",
+      "area": "platform qualification",
+      "issue": "This release run builds and qualifies Windows/WebView2 and Chromium on the named Windows host; clean Linux and macOS package qualification remains an external matching-host task.",
+      "workaround": "Run the documented platform matrix on Linux and macOS before making matching-host installer claims."
+    },
+    {
+      "severity": "S2",
+      "area": "audio codecs",
+      "issue": "Exact loop latency is codec, decoder and output-device dependent. PCM has the tightest loop budget; Vorbis/MP3 may contain encoder delay and streaming seeks use the browser media pipeline.",
+      "workaround": "Use PCM for timing-critical short loops, place loop points at zero crossings, and inspect Audio latency/underrun metrics on each target device."
+    },
+    {
+      "severity": "S2",
+      "area": "renderer fallback",
+      "issue": "Canvas2D fallback cannot execute custom GLSL, GPU timings, normal-map lighting or post-process render targets.",
+      "workaround": "Project Health reports the fallback. Use base materials and supported lighting, or deploy to a WebGL2-capable target."
+    },
+    {
+      "severity": "S2",
+      "area": "long-duration qualification",
+      "issue": "A 24-hour wall-clock visual/audio soak is supplied as a procedure but is not falsely claimed by this local accelerated release run.",
+      "workaround": "Run the stability workflow on named release hardware before claiming 24-hour wall-clock endurance."
+    },
+    {
+      "severity": "S3",
+      "area": "optional Tauri updater",
+      "issue": "The Windows bundler reports that its package-type marker is unavailable because the local Tauri CLI 2.9.6 and pinned Rust crate 2.9.5 differ by one patch. Nova_A does not enable the updater plugin; portable, MSI and NSIS launch/install paths are unaffected.",
+      "workaround": "If an updater is added later, align the Tauri CLI/Rust crate patches and requalify updater packages before enabling it."
+    }
+  ]
+}

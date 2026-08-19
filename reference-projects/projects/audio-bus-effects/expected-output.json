@@ -1,0 +1,13 @@
+{
+  "engineVersion": "4.0.0",
+  "schema": 29,
+  "projectName": "Audio Bus Effects",
+  "minimumScenes": 1,
+  "minimumEntities": 4,
+  "expectedValidation": "pass",
+  "demonstrates": [
+    "bus routing, compressor and delay effects",
+    "snapshots, sends, meters and ducking",
+    "deterministic voice limits"
+  ]
+}

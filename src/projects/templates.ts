@@ -1,6 +1,7 @@
 import { defaultAudioSettings } from '../runtime/audio'
 import { defaultInputMap } from '../runtime/input'
 import { defaultCollisionMatrix } from '../world/World'
+import { defaultPhysicsLayers } from '../runtime/physicsProduction'
 import { newProjectMetadata } from './projectSession'
 import { normalizeProjectManifest } from './projectManifest'
 import {
@@ -23,7 +24,6 @@ export const PROJECT_TEMPLATES: readonly ProjectTemplateDescriptor[] = [
   { id: 'top-down', name: 'Top-down', description: 'A two-scene action template with triggers, enemies, prefabs, particles, and save data.', features: ['Prefabs', 'Scene switch', 'Triggers', 'Particles', 'Save API'] },
   { id: 'physics-sandbox', name: 'Physics Sandbox', description: 'A playground for materials, ropes, joints, and collision behavior.', features: ['Rigid bodies', 'Materials', 'Rope2D', 'Joints', 'Debugger'] }
   ,{ id: 'ui-showcase', name: 'UI Showcase', description: 'A responsive menu and HUD demonstrating themes, localization, focus, and audio.', features: ['Responsive UI', 'Themes', 'Localization', 'Focus', 'Audio mixer'] }
-  ,{ id: 'networked-optional', name: 'Networked Optional', description: 'An opt-in multiplayer sample with bounded replication and authoritative roles.', features: ['Optional package', 'Replication', 'Prediction', 'Diagnostics', 'Headless'] }
 ] as const
 
 type JsonRecord = Record<string, unknown>
@@ -94,7 +94,7 @@ function canvasWithLabel(seed: string, text: string): JsonRecord[] {
   return [canvas, label]
 }
 
-function textAsset(seed: string, name: string, assetType: 'script' | 'animation' | 'controller' | 'prefab' | 'localization' | 'uiTheme', path: string, source: string, mimeType: string): JsonRecord {
+function textAsset(seed: string, name: string, assetType: 'script' | 'animation' | 'controller' | 'prefab' | 'localization' | 'uiTheme' | 'tileset', path: string, source: string, mimeType: string): JsonRecord {
   return {
     uuid: stableUuid(`asset:${seed}`), name, path, assetType,
     mimeType, byteLength: source.length, source, sourceModified: 0, importedAt: 0,
@@ -104,7 +104,7 @@ function textAsset(seed: string, name: string, assetType: 'script' | 'animation'
 }
 
 function scriptAsset(seed: string, name: string, source: string): JsonRecord {
-  return { ...textAsset(seed, `${name}.rhai`, 'script', `Assets/Scripts/${name}.rhai`, source, 'text/x-rhai'), script: { version: 1, breakpoints: [], tests: [], packageDependencies: [] } }
+  return { ...textAsset(seed, `${name}.rhai`, 'script', `Assets/Scripts/${name}.rhai`, source, 'text/x-rhai'), script: { version: 1, apiVersion: 1, breakpoints: [], breakpointDetails: [], tests: [], packageDependencies: [], packageName: '', reloadPolicy: 'preserve', signalConnections: [], recoverySource: '', lastSavedHash: '' } }
 }
 
 function imageAsset(seed: string, name: string, color: string): JsonRecord {
@@ -114,6 +114,20 @@ function imageAsset(seed: string, name: string, color: string): JsonRecord {
     assetType: 'image', width: 128, height: 128,
     settings: { filterMode: 'Linear', compression: 'Lossless', pixelsPerUnit: 100, spriteRegion: null, pivot: { x: .5, y: .5 }, atlas: true }
   }
+}
+
+function worldTileAssets(seed: string): JsonRecord[] {
+  const imageUuid = stableUuid(`asset:${seed}-atlas`), tileSetUuid = stableUuid(`asset:${seed}-tileset`)
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="96" height="32"><rect width="32" height="32" fill="#4f8d62"/><rect x="32" width="32" height="32" fill="#6b5642"/><rect x="64" width="32" height="32" fill="#6ba7d6"/><path d="M35 5h26v22H35z" fill="none" stroke="#9a8061" stroke-width="3"/></svg>`
+  const image = { ...textAsset(`${seed}-atlas`, `${seed} Atlas.svg`, 'prefab', `Assets/Tiles/${seed}-atlas.svg`, `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`, 'image/svg+xml'), uuid: imageUuid, assetType: 'image', width: 96, height: 32 }
+  const tiles = [
+    { index: 0, name: 'Ground', collision: 'None', polygon: [], terrain: 'Ground', navigationCost: 1, occluder: false, navigationPolygon: [], occlusionPolygon: [], metadata: { biome: 'ground' }, sceneAsset: null, prefabAsset: null, sourceId: 'primary', region: null, animation: null, variants: [{ tile: 1, weight: .08 }] },
+    { index: 1, name: 'Wall', collision: 'Box', polygon: [], terrain: 'Wall', navigationCost: 0, occluder: true, navigationPolygon: [], occlusionPolygon: [], metadata: { solid: true }, sceneAsset: null, prefabAsset: null, sourceId: 'primary', region: null, animation: null, variants: [] },
+    { index: 2, name: 'Water', collision: 'None', polygon: [], terrain: 'Water', navigationCost: 4, occluder: false, navigationPolygon: [], occlusionPolygon: [], metadata: { surface: 'water' }, sceneAsset: null, prefabAsset: null, sourceId: 'primary', region: null, animation: { frames: [2, 0], framesPerSecond: 2, mode: 'PingPong' }, variants: [] }
+  ]
+  const document = { version: 2, textureAsset: `asset://${imageUuid}`, sources: [{ id: 'primary', name: 'Template atlas', textureAsset: `asset://${imageUuid}`, margin: 0, spacing: 0 }], tileWidth: 32, tileHeight: 32, columns: 3, rows: 1, tiles }
+  const tileSet = { ...textAsset(`${seed}-tileset`, `${seed}.nova-tileset`, 'tileset', `Assets/TileSets/${seed}.nova-tileset`, JSON.stringify(document), 'application/x-nova-tileset'), uuid: tileSetUuid }
+  return [image, tileSet]
 }
 
 function beepAsset(seed: string, name: string): JsonRecord {
@@ -138,7 +152,7 @@ function beepAsset(seed: string, name: string): JsonRecord {
 function scene(seed: string, name: string, entities: JsonRecord[], connections: JsonRecord[] = []): JsonRecord {
   return {
     uuid: stableUuid(`scene:${seed}`), name, loaded: true, layers: [1], activeLayer: 1, renderLayer: 'all',
-    globalSettings: { gravity: 9.8, airFriction: .01, timeScale: 1, tickRate: 60, maxCatchUpSteps: 8, collisionMatrix: defaultCollisionMatrix() },
+    globalSettings: { gravity: 9.80665, airFriction: .01, timeScale: 1, tickRate: 60, maxCatchUpSteps: 8, collisionMatrix: defaultCollisionMatrix(), interpolation: 'Interpolate', layers: defaultPhysicsLayers() },
     entities, connections
   }
 }
@@ -160,7 +174,7 @@ function project(name: string, template: ProjectTemplateId, scenes: JsonRecord[]
     plugins: [],
     packages: { manifestVersion: 1, installed: [], lockfile: [], offlineCache: [], offlineMode: true },
     projectSettings: {
-      inputMap: defaultInputMap(), audio: defaultAudioSettings(), scripting: { customSignals: [], maxConsoleEntries: 2000, debuggerEnabled: true },
+      inputMap: defaultInputMap(), audio: defaultAudioSettings(), scripting: { apiVersion: 1, customSignals: [], maxConsoleEntries: 2000, debuggerEnabled: true, hotReloadEnabled: true, breakOnRuntimeError: true, deterministicTestSeed: 1, externalEditorProtocol: true },
       rendering: { lightingEnabled: false, ambientColor: { r: 255, g: 255, b: 255 }, ambientIntensity: 1, shadowQuality: 'Soft', colorSpace: 'sRGB', postProcessing: { enabled: false, exposure: 0, contrast: 1, saturation: 1, vignette: 0, bloom: 0, blur: 0, userMaterial: null }, debugView: 'None' },
       build: {
         gameName: name, target: 'windows', architecture: 'x86_64', runtimeMode: 'game', profile: 'debug', sceneOrder: sceneIds, startupSceneUuid: sceneIds[0], packageIntoExecutable: false, developmentBuild: true, outputDirectory: '',
@@ -184,7 +198,8 @@ function platformerTemplate(name: string): JsonRecord {
   const audioId = stableUuid('asset:platformer-jump-audio')
   const clipId = stableUuid('asset:platformer-idle-clip')
   const controllerId = stableUuid('asset:platformer-animator-controller')
-  const source = `@export let speed = 8.0;\n@export let gravity = -22.0;\n@export let jump_speed = 12.0;\nfn fixed_update(dt) {\n  let move = input_axis("MoveHorizontal");\n  let vertical = rigid_body().velocity_y + gravity * dt;\n  if input_pressed("Jump") && can_coyote_jump() { vertical = jump_speed; audio_play(); }\n  move_character(move * speed * dt, vertical * dt);\n}`
+  const tileSetId = stableUuid('asset:platformer-world-tileset')
+  const source = `@export(type="float", min=0, max=30, step=0.1, group="Movement", tooltip="Horizontal speed in world units per second") let speed = 8.0;\n@export(type="float", min=-100, max=0, step=0.1, group="Movement", tooltip="Vertical acceleration") let gravity = -22.0;\n@export(type="float", min=0, max=50, step=0.1, group="Movement", tooltip="Jump speed") let jump_speed = 12.0;\nfn fixed_update(dt) {\n  let move = input_axis("MoveHorizontal");\n  let vertical = rigid_body().velocity_y + gravity * dt;\n  if input_pressed("Jump") && can_coyote_jump() { vertical = jump_speed; audio_play(); }\n  move_character(move * speed * dt, vertical * dt);\n}`
   const clip = JSON.stringify({ version: 1, name: 'Player Idle', loop: true, frameRate: 4, spriteFrames: [{ spriteAsset: `asset://${spriteId}`, duration: .25 }], tracks: [{ property: 'SpriteRenderer.opacity', keyframes: [{ time: 0, value: 82 }, { time: .5, value: 100 }, { time: 1, value: 82 }] }] })
   const controller = JSON.stringify({ version: 1, name: 'Player Controller', defaultState: 'idle', parameters: [], states: [{ id: 'idle', name: 'Idle', clipAsset: `asset://${clipId}`, speed: 1, x: 80, y: 80 }], transitions: [] })
   const player = shape('platformer-player', 'Player', [-4, -2], [1.1, 1.8], { color: [105, 168, 255], body: 'Kinematic', scriptAsset: scriptId, extra: [
@@ -196,12 +211,15 @@ function platformerTemplate(name: string): JsonRecord {
   const ground = shape('platformer-ground', 'Ground', [0, -4], [18, 1], { body: 'Static', color: [87, 107, 94], friction: .8, extra: [component('platformer-ground', 'ShadowCaster2D', { layerMask: 0xffffffff, selfShadows: false, opacity: .82 })] })
   const platform = shape('platformer-platform', 'Platform', [3, -1], [5, .7], { body: 'Static', color: [112, 137, 120], friction: .8, extra: [component('platformer-platform', 'ShadowCaster2D', { layerMask: 0xffffffff, selfShadows: false, opacity: .82 })] })
   const light = entity('platformer-light', 'Level Light', [-2, -1], [component('platformer-light', 'Light2D', { lightType: 'Point', color: { r: 255, g: 226, b: 178 }, intensity: .9, range: 10, innerAngle: 30, outerAngle: 55, areaSize: { x: 4, y: 2 }, layerMask: 0xffffffff, castsShadows: true, shadowSoftness: .58 })])
-  const tileMap = entity('platformer-tilemap', 'World TileMap', [0, 0], [component('platformer-tilemap', 'TileMap2D', { width: 32, height: 18, tileSize: 1, chunkSize: 32, cells: [], tileSetAsset: null })])
-  const tutorialScene = scene('platformer-main', 'Level 01', [camera('platformer-camera'), tileMap, light, ground, platform, player, ...canvasWithLabel('platformer-ui', 'Move, jump, and inspect every component in this template.')])
+  const platformTiles = Array(32 * 18).fill(-1).map((_, index) => Math.floor(index / 32) < 2 ? 1 : index % 19 === 0 && Math.floor(index / 32) === 2 ? 0 : -1)
+  const tileMap = entity('platformer-tilemap', 'World TileMap', [0, 0], [component('platformer-tilemap', 'TileMap2D', { width: 32, height: 18, tileSize: { x: 1, y: 1 }, chunkSize: 16, tiles: platformTiles, tileSetAsset: `asset://${tileSetId}`, layers: [{ id: 'terrain', name: 'Terrain', visible: true, locked: false, opacity: 1, blendMode: 'Alpha', parallax: { x: 1, y: 1 }, zOrder: 0, collisionEnabled: true, navigationEnabled: true, occlusionEnabled: true, tiles: platformTiles, transforms: Array(32 * 18).fill(0) }], activeLayer: 0, streamingEnabled: true, streamingRadius: 3, bakeCollision: true, bakeNavigation: true, bakeOccluders: true })])
+  const navigation = entity('platformer-navigation', 'Platform Navigation', [0, 0], [component('platformer-navigation', 'NavigationRegion2D', { polygon: [{ x: -16, y: -9 }, { x: 16, y: -9 }, { x: 16, y: 9 }, { x: -16, y: 9 }], navigationMode: 'Grid', source: 'TileMap', sourceEntityUuid: stableUuid('entity:platformer-tilemap'), cellSize: .5, agentRadius: .4, navigationLayer: 1, navigationMask: 1, traversalCost: 1 })])
+  const tutorialScene = scene('platformer-main', 'Level 01', [camera('platformer-camera'), tileMap, navigation, light, ground, platform, player, ...canvasWithLabel('platformer-ui', 'Move, jump, and inspect the integrated Tilemap 2.0 and navigation workflow.')])
   const result = project(name, 'platformer', [tutorialScene], [
     scriptAsset('platformer-controller', 'PlayerController', source), imageAsset('platformer-player-sprite', 'Player', '#69a8ff'), beepAsset('platformer-jump-audio', 'Jump'),
     textAsset('platformer-idle-clip', 'PlayerIdle.nova-anim', 'animation', 'Assets/Animations/PlayerIdle.nova-anim', clip, 'application/x-nova-animation'),
-    textAsset('platformer-animator-controller', 'Player.controller', 'controller', 'Assets/Controllers/Player.controller', controller, 'application/x-nova-controller')
+    textAsset('platformer-animator-controller', 'Player.controller', 'controller', 'Assets/Controllers/Player.controller', controller, 'application/x-nova-controller'),
+    ...worldTileAssets('platformer-world')
   ])
   ;((result.projectSettings as JsonRecord).inputMap as JsonRecord[]) = [
     { name: 'MoveHorizontal', kind: 'axis', bindings: [{ device: 'keyboard', code: 'KeyA', scale: -1, x: -1, y: 0, gamepad: 0, deadzone: .15 }, { device: 'keyboard', code: 'KeyD', scale: 1, x: 1, y: 0, gamepad: 0, deadzone: .15 }] },
@@ -217,18 +235,23 @@ function topDownTemplate(name: string): JsonRecord {
   const scriptId = stableUuid('asset:top-down-controller')
   const enemyScriptId = stableUuid('asset:top-down-enemy')
   const enemyPrefabId = stableUuid('asset:top-enemy-prefab')
-  const source = `@export let speed = 7.0;\nfn update(dt) {\n  let move = input_vector("Move");\n  set_velocity(move.x * speed, move.y * speed);\n  if input_pressed("Spawn") { instantiate("asset://${enemyPrefabId}"); }\n}\nfn on_trigger_enter(other, px, py, nx, ny, rvx, rvy) {\n  save_set("last_trigger", other);\n  save_set("checkpoint", [px, py]);\n  save_commit("slot1");\n  scene_load("Main Menu");\n}`
-  const enemySource = `@export let patrol_speed = 2.0;\nfn fixed_update(dt) {\n  let pose = transform();\n  let body = rigid_body();\n  if pose.position_x > 7.0 { set_velocity(-patrol_speed, body.velocity_y); }\n  else if pose.position_x < 2.0 { set_velocity(patrol_speed, body.velocity_y); }\n  else if body.velocity_x == 0.0 { set_velocity(patrol_speed, body.velocity_y); }\n}`
+  const tileSetId = stableUuid('asset:top-down-world-tileset')
+  const source = `@export(type="float", min=0, max=30, step=0.1, group="Movement", tooltip="Top-down movement speed") let speed = 7.0;\nfn update(dt) {\n  let move = input_vector("Move");\n  set_velocity(move.x * speed, move.y * speed);\n  if input_pressed("Spawn") { instantiate("asset://${enemyPrefabId}"); }\n}\nfn on_trigger_enter(other, px, py, nx, ny, rvx, rvy) {\n  save_set("last_trigger", other);\n  save_set("checkpoint", [px, py]);\n  save_commit("slot1");\n  scene_load("Main Menu");\n}`
+  const enemySource = `@export(type="float", min=0, max=20, step=0.1, group="AI", tooltip="Patrol movement speed") let patrol_speed = 2.0;\nfn fixed_update(dt) {\n  let pose = transform();\n  let body = rigid_body();\n  if pose.position_x > 7.0 { set_velocity(-patrol_speed, body.velocity_y); }\n  else if pose.position_x < 2.0 { set_velocity(patrol_speed, body.velocity_y); }\n  else if body.velocity_x == 0.0 { set_velocity(patrol_speed, body.velocity_y); }\n}`
   const player = shape('top-player', 'Player', [0, 0], [1.2, 1.2], { type: 'Circle', color: [94, 203, 181], scriptAsset: scriptId, extra: [component('top-player', 'ParticleEmitter2D', { emissionRate: 12, burst: 0, lifetime: 1, maxParticles: 128, velocityMin: { x: -.5, y: -.5 }, velocityMax: { x: .5, y: .5 }, colorStart: { r: 94, g: 203, b: 181 }, colorEnd: { r: 94, g: 203, b: 181 }, opacityStart: .7, opacityEnd: 0 })] })
   const enemy = shape('top-enemy', 'Enemy', [5, 0], [1.4, 1.4], { color: [242, 118, 118], body: 'Kinematic', scriptAsset: enemyScriptId })
   const trigger = shape('top-trigger', 'Exit Trigger', [8, 0], [2, 4], { color: [239, 190, 92], body: 'Static', sensor: true })
-  const level = scene('top-level', 'World', [camera('top-camera'), player, enemy, trigger, ...canvasWithLabel('top-ui', 'Explore prefabs, triggers, particles, scene changes, and Save data.')])
+  const topTiles = Array(40 * 24).fill(0).map((value, index) => index % 40 === 0 || index % 40 === 39 || Math.floor(index / 40) === 0 || Math.floor(index / 40) === 23 ? 1 : value)
+  const topMap = entity('top-down-tilemap', 'World TileMap', [0, 0], [component('top-down-tilemap', 'TileMap2D', { width: 40, height: 24, tileSize: { x: 1, y: 1 }, chunkSize: 16, tiles: topTiles, tileSetAsset: `asset://${tileSetId}`, layers: [{ id: 'ground', name: 'Ground', visible: true, locked: false, opacity: 1, blendMode: 'Alpha', parallax: { x: 1, y: 1 }, zOrder: -10, collisionEnabled: true, navigationEnabled: true, occlusionEnabled: true, tiles: topTiles, transforms: Array(40 * 24).fill(0) }], activeLayer: 0, streamingEnabled: true, streamingRadius: 3, bakeCollision: true, bakeNavigation: true, bakeOccluders: true })])
+  const topNavigation = entity('top-down-navigation', 'World Navigation', [0, 0], [component('top-down-navigation', 'NavigationRegion2D', { polygon: [{ x: -19, y: -11 }, { x: 19, y: -11 }, { x: 19, y: 11 }, { x: -19, y: 11 }], navigationMode: 'Grid', source: 'TileMap', sourceEntityUuid: stableUuid('entity:top-down-tilemap'), cellSize: .5, agentRadius: .5, navigationLayer: 1, navigationMask: 1, traversalCost: 1, links: [] })])
+  const level = scene('top-level', 'World', [camera('top-camera'), topMap, topNavigation, player, enemy, trigger, ...canvasWithLabel('top-ui', 'Explore Tilemap 2.0, navigation, prefabs, triggers, particles, scene changes, and resilient Save data.')])
   ;(level.globalSettings as JsonRecord).gravity = 0
   const menu = scene('top-menu', 'Main Menu', [camera('top-menu-camera'), ...canvasWithLabel('top-menu-ui', 'Top-down template — switch to the World scene to play.')])
   ;(menu.globalSettings as JsonRecord).gravity = 0
   const result = project(name, 'top-down', [level, menu], [
     scriptAsset('top-down-controller', 'TopDownController', source), scriptAsset('top-down-enemy', 'EnemyPatrol', enemySource),
-    textAsset('top-enemy-prefab', 'Enemy.nova-prefab', 'prefab', 'Assets/Prefabs/Enemy.nova-prefab', JSON.stringify(enemy), 'application/x-nova-prefab')
+    textAsset('top-enemy-prefab', 'Enemy.nova-prefab', 'prefab', 'Assets/Prefabs/Enemy.nova-prefab', JSON.stringify(enemy), 'application/x-nova-prefab'),
+    ...worldTileAssets('top-down-world')
   ])
   ;((result.projectSettings as JsonRecord).inputMap as JsonRecord[]) = [{ name: 'Move', kind: 'vector2', bindings: [
     { device: 'keyboard', code: 'KeyW', scale: 1, x: 0, y: -1, gamepad: 0, deadzone: .15 }, { device: 'keyboard', code: 'KeyS', scale: 1, x: 0, y: 1, gamepad: 0, deadzone: .15 },
@@ -294,7 +317,7 @@ function networkedOptionalTemplate(name: string): JsonRecord {
   const second = shape('network-player-two', 'Remote Player', [3, 0], [1.4, 1.4], { type: 'Circle', color: [242, 153, 92], body: 'Kinematic' })
   const result = project(name, 'networked-optional', [scene('network-arena', 'Network Arena', [camera('network-camera'), first, second, ...canvasWithLabel('network-ui', 'Open Production Lab → Networking to connect, replicate, and inspect bandwidth.')])])
   result.packages = { manifestVersion: 1, installed: [{
-    manifest: { manifestVersion: 1, id: 'top.whitelists.novaa.networking', name: 'Nova Optional Networking', version: '2.9.0', description: 'Bounded replication and authoritative multiplayer tools.', engine: '>=2.9.0 <4.0.0', dependencies: {}, pluginApi: null, native: false, sha256: 'official-networking-2.9.0', signature: 'nova-a-official', publisher: 'Whitelist', publisherVerified: true, permissions: ['network.client', 'network.listen'], rating: 5, securityUrl: 'https://github.com/Stevenzhang543/Nova_A/security', documentationUrl: 'https://github.com/Stevenzhang543/Nova_A/' },
+    manifest: { manifestVersion: 1, id: 'top.whitelists.novaa.networking', name: 'Nova Optional Networking', version: '2.9.0', description: 'Bounded replication and authoritative multiplayer tools.', engine: '>=2.9.0 <5.0.0', dependencies: {}, pluginApi: null, native: false, sha256: 'official-networking-2.9.0', signature: 'nova-a-official', publisher: 'Whitelist', publisherVerified: true, permissions: ['network.client', 'network.listen'], rating: 5, securityUrl: 'https://github.com/Stevenzhang543/Nova_A/security', documentationUrl: 'https://github.com/Stevenzhang543/Nova_A/' },
     source: { kind: 'registry', location: 'Nova_A official offline package' }, enabled: true, project: true, installedAt: 0
   }], lockfile: [{ id: 'top.whitelists.novaa.networking', version: '2.9.0', source: { kind: 'registry', location: 'Nova_A official offline package' }, sha256: 'official-networking-2.9.0' }], offlineCache: [], offlineMode: true }
   ;((result.projectSettings as JsonRecord).production as JsonRecord) = {

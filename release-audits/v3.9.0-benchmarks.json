@@ -1,0 +1,102 @@
+{
+  "format": "nova-v3.9-benchmarks",
+  "version": 1,
+  "engineVersion": "3.9.0",
+  "generatedAt": "2026-08-18T18:11:49.014Z",
+  "scope": "Retained v3.3 authoring, v3.4 physics, v3.5 scripting, v3.6 presentation, v3.7 visual/audio, v3.8 world data plus v3.9 deterministic build/package/collaboration checks.",
+  "retainedReports": [
+    {
+      "name": "world",
+      "format": "nova-v3.8-benchmarks",
+      "status": "passed"
+    },
+    {
+      "name": "worldAudit",
+      "format": "nova-v3.8-world-data-audit",
+      "status": "passed"
+    },
+    {
+      "name": "visualAudio",
+      "format": "nova-v3.7-visual-audio-audit",
+      "status": "passed"
+    },
+    {
+      "name": "physics",
+      "format": "nova-v3.4-production-physics-audit",
+      "status": "passed"
+    },
+    {
+      "name": "scripting",
+      "format": "nova-v3.5-programming-workflow-audit",
+      "status": "passed"
+    },
+    {
+      "name": "presentation",
+      "format": "nova-v3.6-presentation-audit",
+      "status": "passed"
+    }
+  ],
+  "reproducibility": {
+    "format": "nova-reproducible-build-report",
+    "version": 1,
+    "engineVersion": "3.9.0",
+    "generatedAt": "2026-08-18T18:07:36.469Z",
+    "canonicalProjectSha256": "22ce511f030a797b76ebd93d0a19e9e1d60235ec2407f0b9b217dc4c338f5b66",
+    "repeatedCanonicalSha256": "22ce511f030a797b76ebd93d0a19e9e1d60235ec2407f0b9b217dc4c338f5b66",
+    "fixedTimestampPolicy": true,
+    "sortedArchivePolicy": true,
+    "documentedExceptions": [
+      "platform executable signatures",
+      "notarization tickets",
+      "installer container metadata"
+    ],
+    "cleanTaggedCheckout": "requires release tag in release CI",
+    "status": "passed"
+  },
+  "packageSecurity": {
+    "format": "nova-package-security-tests",
+    "version": 1,
+    "engineVersion": "3.9.0",
+    "generatedAt": "2026-08-18T18:07:36.469Z",
+    "installed": true,
+    "deterministicLock": true,
+    "permissionBlocked": true,
+    "permissionApproved": true,
+    "rolledBack": true,
+    "archiveVerified": true,
+    "modifiedArchiveRejected": true,
+    "missingDependencyBlocked": true,
+    "dependencyConflictBlocked": true,
+    "incompatibleEngineBlocked": true,
+    "deprecatedManifestBlocked": true,
+    "legacyPackageDataPreserved": true,
+    "circularDependencyBlocked": true,
+    "malformedBlocked": true,
+    "signatureBlocked": true,
+    "cacheProblems": [
+      "com.example.hostile@1.0.0: Package signature is missing or cannot be verified by the Stable trust store. Package is quarantined: Package signature is missing or cannot be verified by the Stable trust store."
+    ],
+    "quarantine": [
+      {
+        "id": "test.deprecated-manifest",
+        "version": "1.0.0",
+        "reason": "Package archive SHA-256 is missing or malformed. Package signature is missing or cannot be verified by the Stable trust store.",
+        "quarantinedAt": 1787076461044
+      },
+      {
+        "id": "com.example.hostile",
+        "version": "1.0.0",
+        "reason": "Package signature is missing or cannot be verified by the Stable trust store.",
+        "quarantinedAt": 1787076461045
+      }
+    ],
+    "status": "passed"
+  },
+  "regressions": [],
+  "externalMetrics": [
+    "clean-machine cold start",
+    "target GPU frame time",
+    "24-hour wall-clock endurance"
+  ],
+  "status": "passed"
+}

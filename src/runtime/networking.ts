@@ -9,12 +9,25 @@ type NetworkMessage =
   | { type: 'rpc'; id: number; name: string; payload: unknown }
   | { type: 'snapshot'; tick: number; sentAt: number; entities: Array<{ uuid: string; position?: [number, number]; rotation?: number; velocity?: [number, number] }> }
 
-interface NetworkTransport {
+export interface NetworkTransport {
   readonly kind: 'websocket' | 'native-udp'
   connect(onMessage: (source: string) => void, onState: (state: string) => void): Promise<void>
   send(source: string): Promise<void>
   close(): Promise<void>
 }
+
+export interface NetworkRpcContract { name: string; direction: 'client-to-server' | 'server-to-client' | 'bidirectional'; maximumPayloadBytes: number; authority: 'server' | 'owner' | 'any' }
+export interface NetworkReplicationContract { entityUuid: string; authority: 'server' | 'owner'; properties: Array<'transform' | 'rotation' | 'velocity'>; interpolate: boolean; predict: boolean }
+export interface NetworkPredictionContract { rollbackFrames: number; interpolationMs: number; reconciliationThreshold: number }
+export interface NetworkHeadlessContract { runtimeMode: 'headless-server'; fixedTick: true; renderer: false; roles: readonly ['server', 'host'] }
+export interface NetworkDiagnosticsContract { sentBytes: number; receivedBytes: number; droppedPackets: number; pingMs: number | null; predictionCorrections: number; rollbacks: number }
+
+export const NETWORKING_PACKAGE_GATE = Object.freeze({
+  maturity: 'experimental' as const, coreStabilityBlocker: false,
+  requiredSuites: Object.freeze(['security', 'bandwidth', 'packet-loss', 'multiple-instance', 'headless-build']),
+  passedSuites: Object.freeze(['message-bounds', 'bandwidth-budget', 'headless-interface']),
+  missingSuites: Object.freeze(['hostile-network-security', 'sustained-packet-loss', 'multiple-native-instance'])
+})
 
 export const networkingState = reactive({
   status: 'disabled' as 'disabled' | 'connecting' | 'connected' | 'reconnecting' | 'error',

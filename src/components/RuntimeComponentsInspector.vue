@@ -36,6 +36,10 @@
     <label><span>{{ t('distanceRange') }}</span><div><input v-model.number="audioSource.minDistance" type="number" min="0" step="0.1"><input v-model.number="audioSource.maxDistance" type="number" min="0" step="1"></div></label>
     <label><span>{{ t('attenuationCurve') }}</span><select v-model="audioSource.attenuationCurve"><option>Linear</option><option>Inverse</option><option>Exponential</option><option>Custom</option></select></label>
     <label><span>{{ t('voicePriority') }}</span><input v-model.number="audioSource.voicePriority" type="number" min="0" max="255"></label>
+    <label><span>Polyphony</span><input v-model.number="audioSource.polyphony" type="number" min="1" max="32"></label>
+    <label><span>Random pitch</span><input v-model.number="audioSource.randomPitch" type="number" min="0" max="1" step="0.01"></label>
+    <label><span>Random volume</span><input v-model.number="audioSource.randomVolume" type="number" min="0" max="1" step="0.01"></label>
+    <label><span>Virtualize when limited</span><input v-model="audioSource.virtualizeWhenLimited" type="checkbox"></label>
     <label><span>{{ t('streamingMode') }}</span><select v-model="audioSource.streamOverride"><option>ImportSetting</option><option>Stream</option><option>Buffer</option></select></label>
   </section>
 
@@ -63,6 +67,9 @@
     <header><strong>{{ t('particleEmitter2D') }}</strong><button @click="remove('ParticleEmitter2D')">×</button></header>
     <label><span>{{ t('particleTexture') }}</span><select v-model="particleEmitter.textureAsset"><option :value="null">{{ t('none') }}</option><option v-for="asset in imageAssets" :key="asset.uuid" :value="assetReference(asset.uuid)">{{ asset.name }}</option></select></label>
     <label><span>{{ t('emissionRate') }}</span><input v-model.number="particleEmitter.emissionRate" type="number" min="0"></label>
+    <label><span>Emission shape</span><select v-model="particleEmitter.emissionShape"><option>Point</option><option>Box</option><option>Circle</option><option>Edge</option></select></label>
+    <label v-if="particleEmitter.emissionShape === 'Box' || particleEmitter.emissionShape === 'Edge'"><span>Shape size</span><div><input v-model.number="particleEmitter.shapeSize.x" type="number" min="0"><input v-model.number="particleEmitter.shapeSize.y" type="number" min="0"></div></label>
+    <label v-if="particleEmitter.emissionShape === 'Circle'"><span>Shape radius</span><input v-model.number="particleEmitter.shapeRadius" type="number" min="0"></label>
     <label><span>{{ t('burst') }}</span><input v-model.number="particleEmitter.burst" type="number" min="0"></label>
     <label><span>{{ t('lifetime') }}</span><input v-model.number="particleEmitter.lifetime" type="number" min="0.0001" step="0.1"></label>
     <label><span>{{ t('velocityMin') }}</span><div><input v-model.number="particleEmitter.initialVelocityMin.x" type="number"><input v-model.number="particleEmitter.initialVelocityMin.y" type="number"></div></label>
@@ -74,6 +81,9 @@
     <label><span>{{ t('colorOverLifetime') }}</span><div><input type="color" :value="rgbHex(particleEmitter.startColor)" @input="setColor(particleEmitter.startColor, $event)"><input type="color" :value="rgbHex(particleEmitter.endColor)" @input="setColor(particleEmitter.endColor, $event)"></div></label>
     <label><span>{{ t('opacityOverLifetime') }}</span><div><input v-model.number="particleEmitter.startOpacity" type="number" min="0" max="100"><input v-model.number="particleEmitter.endOpacity" type="number" min="0" max="100"></div></label>
     <label><span>{{ t('maxParticles') }}</span><input v-model.number="particleEmitter.maxParticles" type="number" min="0" max="100000"></label>
+    <label><span>Editor preview</span><input v-model="particleEmitter.previewInEditor" type="checkbox"></label>
+    <label><span>Subemitter UUID</span><input v-model="particleEmitter.subEmitterUuid" placeholder="optional component UUID"></label>
+    <label><span>Subemitter count</span><input v-model.number="particleEmitter.subEmitterCount" type="number" min="0" max="1000"></label>
     <label><span>{{ t('autoplay') }}</span><input v-model="particleEmitter.autoplay" type="checkbox"></label>
     <label><span>{{ t('loop') }}</span><input v-model="particleEmitter.looping" type="checkbox"></label>
     <label><span>{{ t('worldSpace') }}</span><input v-model="particleEmitter.worldSpace" type="checkbox"></label>
@@ -106,12 +116,17 @@
     <label><span>{{ t('anchor') }}</span><div><input v-model.number="joint.anchor.x" type="number"><input v-model.number="joint.anchor.y" type="number"></div></label>
     <label><span>{{ t('connectedAnchor') }}</span><div><input v-model.number="joint.connectedAnchor.x" type="number"><input v-model.number="joint.connectedAnchor.y" type="number"></div></label>
     <label><span>{{ t('collideConnected') }}</span><input v-model="joint.collideConnected" type="checkbox"></label>
-    <label v-if="joint.kind === 'DistanceJoint2D' || joint.kind === 'SpringJoint2D'"><span>{{ t('jointDistance') }}</span><input v-model.number="joint.distance" type="number" min="0"></label>
+    <label v-if="joint.kind === 'DistanceJoint2D' || joint.kind === 'RopeJoint2D' || joint.kind === 'SpringJoint2D'"><span>{{ t('jointDistance') }}</span><input v-model.number="joint.distance" type="number" min="0"></label>
     <label v-if="joint.kind === 'SpringJoint2D'"><span>{{ t('stiffness') }}</span><input v-model.number="joint.stiffness" type="number" min="0"></label>
     <label v-if="joint.kind === 'SpringJoint2D'"><span>{{ t('connectionDamping') }}</span><input v-model.number="joint.damping" type="number" min="0"></label>
     <label v-if="joint.kind === 'PrismaticJoint2D'"><span>{{ t('jointAxis') }}</span><div><input v-model.number="joint.axis.x" type="number"><input v-model.number="joint.axis.y" type="number"></div></label>
     <label v-if="joint.kind === 'PrismaticJoint2D'"><span>{{ t('jointLimits') }}</span><input v-model="joint.limitsEnabled" type="checkbox"></label>
     <label v-if="joint.kind === 'PrismaticJoint2D' && joint.limitsEnabled"><span>{{ t('limitRange') }}</span><div><input v-model.number="joint.lowerLimit" type="number"><input v-model.number="joint.upperLimit" type="number"></div></label>
+    <label v-if="joint.kind === 'RevoluteJoint2D' || joint.kind === 'MotorJoint2D'"><span>{{ t('jointMotor') }}</span><input v-model="joint.motorEnabled" type="checkbox"></label>
+    <label v-if="joint.motorEnabled"><span>{{ t('motorSpeed') }}</span><input v-model.number="joint.motorSpeed" type="number" step="0.1"></label>
+    <label v-if="joint.motorEnabled"><span>{{ t('maxMotorForce') }}</span><input v-model.number="joint.maxMotorForce" type="number" min="0"></label>
+    <label><span>{{ t('breakForce') }}</span><input v-model.number="joint.breakForce" type="number" min="0"></label>
+    <label><span>{{ t('breakTorque') }}</span><input v-model.number="joint.breakTorque" type="number" min="0"></label>
   </section>
 
   <section v-if="rectTransform && componentVisible('RectTransform', t('rectTransform'))" class="runtime-component">
@@ -120,6 +135,9 @@
     <label><span>{{ t('pivot') }}</span><div><input v-model.number="rectTransform.pivot.x" type="number" min="0" max="1" step="0.05"><input v-model.number="rectTransform.pivot.y" type="number" min="0" max="1" step="0.05"></div></label>
     <label><span>{{ t('uiPosition') }}</span><div><input v-model.number="rectTransform.position.x" type="number" step="1"><input v-model.number="rectTransform.position.y" type="number" step="1"></div></label>
     <label><span>{{ t('uiSize') }}</span><div><input v-model.number="rectTransform.size.x" type="number" min="0" step="1"><input v-model.number="rectTransform.size.y" type="number" min="0" step="1"></div></label>
+    <label><span>{{ t('preferredSize') }}</span><div><input v-model.number="rectTransform.preferredSize.x" type="number" min="0" step="1"><input v-model.number="rectTransform.preferredSize.y" type="number" min="0" step="1"></div></label>
+    <label><span>{{ t('anchorRange') }}</span><div class="quad"><input v-model.number="rectTransform.anchorMin.x" type="number" min="0" max="1" step="0.05"><input v-model.number="rectTransform.anchorMin.y" type="number" min="0" max="1" step="0.05"><input v-model.number="rectTransform.anchorMax.x" type="number" min="0" max="1" step="0.05"><input v-model.number="rectTransform.anchorMax.y" type="number" min="0" max="1" step="0.05"></div></label>
+    <label><span>{{ t('offsets') }}</span><div class="quad"><input v-model.number="rectTransform.offsets.left" type="number"><input v-model.number="rectTransform.offsets.top" type="number"><input v-model.number="rectTransform.offsets.right" type="number"><input v-model.number="rectTransform.offsets.bottom" type="number"></div></label>
     <label v-if="rectTransform.anchorPreset === 'stretch'"><span>{{ t('margins') }}</span><div class="quad"><input v-model.number="rectTransform.margins.left" type="number"><input v-model.number="rectTransform.margins.top" type="number"><input v-model.number="rectTransform.margins.right" type="number"><input v-model.number="rectTransform.margins.bottom" type="number"></div></label>
     <label><span>{{ t('sizePolicy') }}</span><div><select v-model="rectTransform.horizontalPolicy"><option>Fixed</option><option>Fill</option><option>Content</option></select><select v-model="rectTransform.verticalPolicy"><option>Fixed</option><option>Fill</option><option>Content</option></select></div></label>
     <label><span>{{ t('minimumSize') }}</span><div><input v-model.number="rectTransform.minSize.x" type="number" min="0"><input v-model.number="rectTransform.minSize.y" type="number" min="0"></div></label>
@@ -131,6 +149,11 @@
     <label><span>{{ t('accessibilityRole') }}</span><input v-model="rectTransform.accessibilityRole"></label>
     <label><span>{{ t('accessibilityLabel') }}</span><input v-model="rectTransform.accessibilityLabel"></label>
     <label><span>{{ t('accessibilityDescription') }}</span><input v-model="rectTransform.accessibilityDescription"></label>
+    <label><span>{{ t('accessibilityState') }}</span><input v-model="rectTransform.accessibilityState"></label>
+    <label><span>{{ t('accessibilityValue') }}</span><input v-model="rectTransform.accessibilityValue"></label>
+    <label><span>{{ t('liveRegion') }}</span><select v-model="rectTransform.accessibilityLive"><option>Off</option><option>Polite</option><option>Assertive</option></select></label>
+    <label><span>{{ t('readingOrder') }}</span><input v-model.number="rectTransform.readingOrder" type="number" min="0"></label>
+    <label><span>{{ t('skipNavigation') }}</span><input v-model="rectTransform.skipNavigation" type="checkbox"></label>
     <label><span>{{ t('screenReaderHidden') }}</span><input v-model="rectTransform.accessibilityHidden" type="checkbox"></label>
     <label><span>{{ t('remapAction') }}</span><div><input v-model="rectTransform.remapAction" :placeholder="t('inputAction')"><input v-model.number="rectTransform.remapBindingIndex" type="number" min="0" max="31"></div></label>
     <div class="breakpoint-editor"><strong>{{ t('responsiveBreakpoints') }}</strong><article v-for="(point,index) in rectTransform.breakpoints" :key="index"><input v-model.number="point.minWidth" type="number" min="0"><input v-model.number="point.maxWidth" type="number" min="0"><input v-model="point.visible" type="checkbox"><button @click="rectTransform.breakpoints.splice(index,1)">×</button></article><button @click="addBreakpoint">+ {{ t('breakpoint') }}</button></div>
@@ -140,10 +163,13 @@
     <header><strong>{{ t('uiCanvas') }}</strong><button @click="remove('Canvas')">×</button></header>
     <label><span>{{ t('referenceSize') }}</span><div><input v-model.number="canvas.referenceSize.x" type="number" min="1"><input v-model.number="canvas.referenceSize.y" type="number" min="1"></div></label>
     <label><span>{{ t('scaleWithScreen') }}</span><input v-model="canvas.scaleWithScreen" type="checkbox"></label>
+    <label><span>DPI</span><input v-model.number="canvas.dpiScale" type="number" min="0.5" max="4" step="0.25"></label>
+    <label><span>{{ t('liveLocalePreview') }}</span><input v-model="canvas.localePreview" placeholder="en-US / ar"></label>
     <label><span>{{ t('sortingOrder') }}</span><input v-model.number="canvas.sortingOrder" type="number"></label>
     <label><span>{{ t('safeArea') }}</span><input v-model="canvas.safeArea" type="checkbox"></label>
     <label v-if="canvas.safeArea"><span>{{ t('safeAreaInsets') }}</span><div class="quad"><input v-model.number="canvas.safeAreaInsets.left" type="number" min="0"><input v-model.number="canvas.safeAreaInsets.top" type="number" min="0"><input v-model.number="canvas.safeAreaInsets.right" type="number" min="0"><input v-model.number="canvas.safeAreaInsets.bottom" type="number" min="0"></div></label>
     <label><span>{{ t('uiTheme') }}</span><select v-model="canvas.themeAsset"><option :value="null">{{ t('none') }}</option><option v-for="asset in themeAssets" :key="asset.uuid" :value="assetReference(asset.uuid)">{{ asset.name }}</option></select></label>
+    <label><span>{{ t('variant') }}</span><input v-model="canvas.themeVariant" placeholder="default / compact / highContrast"></label>
   </section>
 
   <section v-if="panel && componentVisible('Panel', t('uiPanel'))" class="runtime-component">
@@ -151,16 +177,22 @@
     <label><span>{{ t('color') }}</span><input type="color" :value="rgbHex(panel.color)" @input="setColor(panel.color, $event)"></label>
     <label><span>{{ t('opacity') }}</span><input v-model.number="panel.opacity" type="number" min="0" max="100"></label>
     <label><span>{{ t('cornerRadius') }}</span><input v-model.number="panel.cornerRadius" type="number" min="0"></label>
-    <label><span>{{ t('layoutContainer') }}</span><select v-model="panel.layout"><option>None</option><option>Horizontal</option><option>Vertical</option><option>Grid</option></select></label>
+    <label><span>{{ t('layoutContainer') }}</span><select v-model="panel.layout"><option>None</option><option>Row</option><option>Column</option><option>Grid</option><option>Flow</option><option>Overlay</option><option>Center</option><option>Margin</option><option>Aspect</option><option>Split</option></select></label>
     <label v-if="panel.layout !== 'None'"><span>{{ t('gapColumns') }}</span><div><input v-model.number="panel.gap" type="number" min="0"><input v-model.number="panel.columns" type="number" min="1" max="64"></div></label>
     <label v-if="panel.layout !== 'None'"><span>{{ t('padding') }}</span><div class="quad"><input v-model.number="panel.padding.left" type="number"><input v-model.number="panel.padding.top" type="number"><input v-model.number="panel.padding.right" type="number"><input v-model.number="panel.padding.bottom" type="number"></div></label>
     <label><span>{{ t('wrap') }}</span><input v-model="panel.wrap" type="checkbox"></label>
+    <label><span>{{ t('alignment') }}</span><div><select v-model="panel.align"><option>Start</option><option>Center</option><option>End</option><option>Stretch</option></select><select v-model="panel.justify"><option>Start</option><option>Center</option><option>End</option><option>SpaceBetween</option></select></div></label>
     <label><span>{{ t('clipMask') }}</span><div><input v-model="panel.clipChildren" type="checkbox"><input v-model="panel.maskChildren" type="checkbox"></div></label>
     <label><span>{{ t('scrollView') }}</span><div><input v-model="panel.scrollHorizontal" type="checkbox"><input v-model="panel.scrollVertical" type="checkbox"></div></label>
     <label v-if="panel.scrollHorizontal || panel.scrollVertical"><span>{{ t('scrollOffset') }}</span><div><input v-model.number="panel.scrollOffset.x" type="number"><input v-model.number="panel.scrollOffset.y" type="number"></div></label>
     <label v-if="panel.scrollHorizontal || panel.scrollVertical"><span>{{ t('scrollContentSize') }}</span><div><input v-model.number="panel.contentSize.x" type="number" min="0"><input v-model.number="panel.contentSize.y" type="number" min="0"></div></label>
     <label v-if="panel.scrollHorizontal || panel.scrollVertical"><span>{{ t('scrollSpeed') }}</span><input v-model.number="panel.scrollSpeed" type="number" min="0"></label>
     <label v-if="panel.scrollHorizontal || panel.scrollVertical"><span>{{ t('showScrollbars') }}</span><input v-model="panel.showScrollbars" type="checkbox"></label>
+    <label><span>{{ t('uiBehavior') }}</span><select v-model="panel.behavior"><option>Normal</option><option>Modal</option><option>Popup</option><option>Tooltip</option></select></label>
+    <label><span>{{ t('visible') }}</span><input v-model="panel.visible" type="checkbox"></label>
+    <label v-if="panel.behavior === 'Modal' || panel.behavior === 'Popup'"><span>{{ t('closeOnOutside') }}</span><input v-model="panel.closeOnOutside" type="checkbox"></label>
+    <label><span>{{ t('dragAndDrop') }}</span><div><input v-model="panel.draggable" type="checkbox"><input v-model="panel.dropGroup" :placeholder="t('group')"></div></label>
+    <label v-if="panel.behavior === 'Tooltip'"><span>{{ t('tooltip') }}</span><div><input v-model="panel.tooltipText"><input v-model.number="panel.tooltipDelay" type="number" min="0" step="0.05"></div></label>
     <label><span>{{ t('uiStyleClass') }}</span><input v-model="panel.styleClass"></label><label><span>{{ t('overrideBackground') }}</span><input v-model="panel.styleOverrides.background" placeholder="#232934 / $surface"></label>
   </section>
 
@@ -173,7 +205,7 @@
     <label v-if="image.nineSlice.enabled"><span>{{ t('sliceBorders') }}</span><div><input v-model.number="image.nineSlice.left" type="number" min="0"><input v-model.number="image.nineSlice.top" type="number" min="0"><input v-model.number="image.nineSlice.right" type="number" min="0"><input v-model.number="image.nineSlice.bottom" type="number" min="0"></div></label>
   </section>
   <section v-if="text && componentVisible('Text', t('uiText'))" class="runtime-component"><header><strong>{{ t('uiText') }}</strong><button @click="remove('Text')">×</button></header><label class="stacked"><span>{{ t('textContent') }}</span><textarea v-model="text.text" rows="2"></textarea></label><label><span>{{ t('localizationKey') }}</span><input v-model="text.localizationKey"></label><label><span>{{ t('fontAsset') }}</span><select v-model="text.fontAsset"><option :value="null">{{ t('defaultFont') }}</option><option v-for="asset in fontAssets" :key="asset.uuid" :value="assetReference(asset.uuid)">{{ asset.name }}</option></select></label><label><span>{{ t('textColor') }}</span><input type="color" :value="rgbHex(text.color)" @input="setColor(text.color, $event)"></label><label><span>{{ t('opacity') }}</span><input v-model.number="text.opacity" type="number" min="0" max="100"></label><label><span>{{ t('fontSize') }}</span><input v-model.number="text.fontSize" type="number" min="1"></label><label><span>{{ t('fontWeight') }}</span><input v-model.number="text.fontWeight" type="number" min="100" max="900" step="100"></label><label><span>{{ t('alignment') }}</span><select v-model="text.align"><option value="left">{{ t('left') }}</option><option value="center">{{ t('center') }}</option><option value="right">{{ t('right') }}</option></select></label></section>
-  <section v-if="button && componentVisible('Button', t('uiButton'))" class="runtime-component"><header><strong>{{ t('uiButton') }}</strong><button @click="remove('Button')">×</button></header><label><span>{{ t('interactable') }}</span><input v-model="button.interactable" type="checkbox"></label><label><span>on_pressed</span><input v-model="button.onPressed"></label><label><span>on_hover_enter</span><input v-model="button.onHoverEnter"></label><label><span>on_hover_exit</span><input v-model="button.onHoverExit"></label><label><span>{{ t('normalColor') }}</span><input type="color" :value="rgbHex(button.normalColor)" @input="setColor(button.normalColor, $event)"></label><label><span>{{ t('hoveredColor') }}</span><input type="color" :value="rgbHex(button.hoveredColor)" @input="setColor(button.hoveredColor, $event)"></label><label><span>{{ t('pressedColor') }}</span><input type="color" :value="rgbHex(button.pressedColor)" @input="setColor(button.pressedColor, $event)"></label><label><span>{{ t('disabledColor') }}</span><input type="color" :value="rgbHex(button.disabledColor)" @input="setColor(button.disabledColor, $event)"></label><label><span>{{ t('uiStyleClass') }}</span><input v-model="button.styleClass"></label><label><span>{{ t('overrideBackground') }}</span><input v-model="button.styleOverrides.background" placeholder="#4f96ff / $accent"></label></section>
+  <section v-if="button && componentVisible('Button', t('uiButton'))" class="runtime-component"><header><strong>{{ t('uiButton') }}</strong><button @click="remove('Button')">×</button></header><label><span>{{ t('interactable') }}</span><input v-model="button.interactable" type="checkbox"></label><label><span>on_pressed</span><input v-model="button.onPressed"></label><label><span>on_hover_enter</span><input v-model="button.onHoverEnter"></label><label><span>on_hover_exit</span><input v-model="button.onHoverExit"></label><label><span>{{ t('normalColor') }}</span><input type="color" :value="rgbHex(button.normalColor)" @input="setColor(button.normalColor, $event)"></label><label><span>{{ t('hoveredColor') }}</span><input type="color" :value="rgbHex(button.hoveredColor)" @input="setColor(button.hoveredColor, $event)"></label><label><span>{{ t('pressedColor') }}</span><input type="color" :value="rgbHex(button.pressedColor)" @input="setColor(button.pressedColor, $event)"></label><label><span>{{ t('disabledColor') }}</span><input type="color" :value="rgbHex(button.disabledColor)" @input="setColor(button.disabledColor, $event)"></label><label><span>{{ t('pressAudio') }}</span><select v-model="button.pressAudio"><option :value="null">{{ t('none') }}</option><option v-for="asset in audioAssets" :key="asset.uuid" :value="assetReference(asset.uuid)">{{ asset.name }}</option></select></label><label><span>{{ t('hoverAudio') }}</span><select v-model="button.hoverAudio"><option :value="null">{{ t('none') }}</option><option v-for="asset in audioAssets" :key="asset.uuid" :value="assetReference(asset.uuid)">{{ asset.name }}</option></select></label><label><span>{{ t('focusAudio') }}</span><select v-model="button.focusAudio"><option :value="null">{{ t('none') }}</option><option v-for="asset in audioAssets" :key="asset.uuid" :value="assetReference(asset.uuid)">{{ asset.name }}</option></select></label><label><span>{{ t('uiStyleClass') }}</span><input v-model="button.styleClass"></label><label><span>{{ t('overrideBackground') }}</span><input v-model="button.styleOverrides.background" placeholder="#4f96ff / $accent"></label></section>
   <section v-if="slider && componentVisible('Slider', t('uiSlider'))" class="runtime-component"><header><strong>{{ t('uiSlider') }}</strong><button @click="remove('Slider')">×</button></header><ValueRange :component="slider" /><label><span>{{ t('wholeNumbers') }}</span><input v-model="slider.wholeNumbers" type="checkbox"></label><label><span>{{ t('interactable') }}</span><input v-model="slider.interactable" type="checkbox"></label><label><span>{{ t('uiStyleClass') }}</span><input v-model="slider.styleClass"></label></section>
   <section v-if="progress && componentVisible('ProgressBar', t('uiProgressBar'))" class="runtime-component"><header><strong>{{ t('uiProgressBar') }}</strong><button @click="remove('ProgressBar')">×</button></header><ValueRange :component="progress" /><label><span>{{ t('fillColor') }}</span><input type="color" :value="rgbHex(progress.fillColor)" @input="setColor(progress.fillColor, $event)"></label><label><span>{{ t('backgroundColor') }}</span><input type="color" :value="rgbHex(progress.backgroundColor)" @input="setColor(progress.backgroundColor, $event)"></label><label><span>{{ t('uiStyleClass') }}</span><input v-model="progress.styleClass"></label></section>
   <section v-if="checkbox && componentVisible('Checkbox', t('uiCheckbox'))" class="runtime-component"><header><strong>{{ t('uiCheckbox') }}</strong><button @click="remove('Checkbox')">×</button></header><label><span>{{ t('label') }}</span><input v-model="checkbox.label"></label><label><span>{{ t('localizationKey') }}</span><input v-model="checkbox.localizationKey"></label><label><span>{{ t('checked') }}</span><input v-model="checkbox.checked" type="checkbox"></label><label><span>{{ t('interactable') }}</span><input v-model="checkbox.interactable" type="checkbox"></label><label><span>{{ t('uiStyleClass') }}</span><input v-model="checkbox.styleClass"></label></section>
@@ -208,8 +240,8 @@ const ValueRange = defineComponent({ props: { component: { type: Object as PropT
 const anchorPresets = ['top-left', 'top', 'top-right', 'left', 'center', 'right', 'bottom-left', 'bottom', 'bottom-right', 'stretch'] as const
 const uiKinds: UiElementKind[] = ['Canvas', 'Panel', 'Image', 'Text', 'Button', 'Slider', 'ProgressBar', 'Checkbox', 'TextInput']
 const imageAssets = computed(() => assetState.records.filter(asset => asset.assetType === 'image'))
-const fontAssets = computed(() => assetState.records.filter(asset => asset.assetType === 'font'))
 const audioAssets = computed(() => assetState.records.filter(asset => asset.assetType === 'audio'))
+const fontAssets = computed(() => assetState.records.filter(asset => asset.assetType === 'font'))
 const themeAssets = computed(() => assetState.records.filter(asset => asset.assetType === 'uiTheme'))
 const controllerAssets = computed(() => assetState.records.filter(asset => asset.assetType === 'controller'))
 const rigAssets = computed(() => assetState.records.filter(asset => asset.assetType === 'rig'))
@@ -235,7 +267,7 @@ const tileMap = computed(() => props.entity.getComponent<TileMap2D>('TileMap2D')
 const particleEmitter = computed(() => props.entity.getComponent<ParticleEmitter2D>('ParticleEmitter2D'))
 const light = computed(() => props.entity.getComponent<Light2D>('Light2D'))
 const shadowCaster = computed(() => props.entity.getComponent<ShadowCaster2D>('ShadowCaster2D'))
-const jointKinds = ['FixedJoint2D', 'DistanceJoint2D', 'RevoluteJoint2D', 'PrismaticJoint2D', 'SpringJoint2D'] as const
+const jointKinds = ['FixedJoint2D', 'WeldJoint2D', 'DistanceJoint2D', 'RopeJoint2D', 'RevoluteJoint2D', 'MotorJoint2D', 'PrismaticJoint2D', 'SpringJoint2D'] as const
 const joints = computed(() => jointKinds.flatMap(kind => { const component = props.entity.getComponent<Joint2D>(kind); return component ? [component] : [] }))
 const visibleJoints = computed(() => joints.value.filter(joint => componentVisible(joint.kind, t(joint.kind))))
 const jointTargets = computed(() => physicsState.world.entities.filter(entity => entity !== props.entity && entity.hasComponent('RigidBody2D') && entity.getCollider()))

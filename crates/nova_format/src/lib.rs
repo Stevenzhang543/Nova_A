@@ -8,9 +8,27 @@ use serde_json::{json, Map, Value};
 
 pub const PROJECT_FORMAT_NAME: &str = "Nova_A Project Format 2";
 pub const PROJECT_FORMAT_MAJOR: u32 = 2;
-pub const CURRENT_FORMAT_VERSION: u32 = 23;
+pub const CURRENT_FORMAT_VERSION: u32 = 29;
 pub const MINIMUM_SUPPORTED_FORMAT_VERSION: u32 = 5;
-pub const CURRENT_ENGINE_VERSION: &str = "3.2.0";
+pub const CURRENT_ENGINE_VERSION: &str = "4.0.0";
+
+fn default_named_physics_layers() -> Value {
+    let colors = [
+        "#62a8ff", "#ff8c62", "#7bd88f", "#d994ff", "#ffd166", "#5ed4d4", "#ff6b96", "#a9b7c9",
+    ];
+    Value::Array(
+        (0..32)
+            .map(|id| {
+                json!({
+                    "id": id,
+                    "name": if id == 0 { "Default".into() } else { format!("Layer {id}") },
+                    "description": if id == 0 { "Default world collision" } else { "" },
+                    "color": colors[id % colors.len()]
+                })
+            })
+            .collect(),
+    )
+}
 
 fn default_true() -> bool {
     true
@@ -81,7 +99,19 @@ pub fn migration_registry() -> Vec<MigrationDescriptor> {
         .map(|from_schema| MigrationDescriptor {
             from_schema,
             to_schema: from_schema + 1,
-            name: if from_schema == 22 {
+            name: if from_schema == 28 {
+                "build-package-collaboration-freeze".into()
+            } else if from_schema == 27 {
+                "world-data-foundation".into()
+            } else if from_schema == 26 {
+                "visual-audio-pipeline".into()
+            } else if from_schema == 25 {
+                "presentation-layer-foundation".into()
+            } else if from_schema == 24 {
+                "scripting-api-v1".into()
+            } else if from_schema == 23 {
+                "production-physics-layers".into()
+            } else if from_schema == 22 {
                 "authoritative-project-data".into()
             } else {
                 format!("legacy-schema-{from_schema}-projection")
@@ -213,6 +243,11 @@ pub fn migrate_project_value(value: Value) -> Result<ProjectFile, FormatError> {
         .get("formatVersion")
         .and_then(Value::as_u64)
         .unwrap_or(1) as u32;
+    let source_engine_version = root
+        .get("engineVersion")
+        .and_then(Value::as_str)
+        .unwrap_or("legacy")
+        .to_owned();
     let source_major = root
         .get("projectFormatMajor")
         .and_then(Value::as_u64)
@@ -301,7 +336,7 @@ pub fn migrate_project_value(value: Value) -> Result<ProjectFile, FormatError> {
             "manifestVersion": 1,
             "projectUuid": project_uuid.clone(),
             "name": project_name.clone(),
-            "engineCompatibility": {"minimum":"3.0.0","maximumExclusive":"4.0.0"},
+            "engineCompatibility": {"minimum":"3.9.0","maximumExclusive":"5.0.0"},
             "schemaVersion": CURRENT_FORMAT_VERSION,
             "packageLockfile": "Packages.lock",
             "buildPresets": ["ProjectSettings/build.presets.json"],
@@ -315,7 +350,21 @@ pub fn migrate_project_value(value: Value) -> Result<ProjectFile, FormatError> {
         manifest.insert("schemaVersion".into(), json!(CURRENT_FORMAT_VERSION));
         manifest
             .entry("engineCompatibility")
-            .or_insert_with(|| json!({"minimum":"3.0.0","maximumExclusive":"4.0.0"}));
+            .or_insert_with(|| json!({"minimum":"3.9.0","maximumExclusive":"5.0.0"}));
+        if parse_semver(&source_engine_version).map_or(true, |version| version.0 < 4) {
+            if let Some(compatibility) = manifest
+                .get_mut("engineCompatibility")
+                .and_then(Value::as_object_mut)
+            {
+                if compatibility
+                    .get("maximumExclusive")
+                    .and_then(Value::as_str)
+                    == Some("4.0.0")
+                {
+                    compatibility.insert("maximumExclusive".into(), json!("5.0.0"));
+                }
+            }
+        }
         manifest
             .entry("packageLockfile")
             .or_insert_with(|| json!("Packages.lock"));
@@ -373,6 +422,42 @@ pub fn migrate_project_value(value: Value) -> Result<ProjectFile, FormatError> {
                     .entry("reverseDependencies")
                     .or_insert_with(|| json!([]));
             }
+            let import_settings = asset.entry("settings").or_insert_with(|| json!({}));
+            if let Some(import_settings) = import_settings.as_object_mut() {
+                import_settings
+                    .entry("textureProfile")
+                    .or_insert_with(|| json!("General"));
+                import_settings
+                    .entry("audioSettings")
+                    .or_insert_with(|| json!({}));
+                if let Some(audio) = import_settings
+                    .get_mut("audioSettings")
+                    .and_then(Value::as_object_mut)
+                {
+                    audio
+                        .entry("profile")
+                        .or_insert_with(|| json!("SoundEffect"));
+                    audio.entry("codec").or_insert_with(|| json!("Original"));
+                    audio.entry("quality").or_insert_with(|| json!(0.8));
+                    audio.entry("trimStart").or_insert_with(|| json!(0.0));
+                    audio.entry("trimEnd").or_insert_with(|| json!(0.0));
+                }
+                import_settings
+                    .entry("fontSettings")
+                    .or_insert_with(|| json!({}));
+                if let Some(font) = import_settings
+                    .get_mut("fontSettings")
+                    .and_then(Value::as_object_mut)
+                {
+                    font.entry("renderMode")
+                        .or_insert_with(|| json!("Scalable"));
+                    font.entry("fallbackFamilies").or_insert_with(|| json!([]));
+                    font.entry("bitmapSize").or_insert_with(|| json!(32));
+                    font.entry("outlineWidth").or_insert_with(|| json!(0.0));
+                    font.entry("shaping").or_insert_with(|| json!(true));
+                }
+            }
+            migrate_tileset_asset(asset)?;
         }
     }
     root.entry("projectSettings")
@@ -424,17 +509,60 @@ pub fn migrate_project_value(value: Value) -> Result<ProjectFile, FormatError> {
             build.entry("delivery").or_insert_with(|| json!({"deterministic":true,"incremental":true,"compression":"balanced","patchManifest":true,"structuredLogs":true,"crashReports":true,"telemetryEnabled":false,"telemetryEndpoint":"","privacyPolicyUrl":""}));
         }
         settings.entry("scripting").or_insert_with(
-            || json!({ "customSignals": [], "maxConsoleEntries": 2000, "debuggerEnabled": true }),
+            || json!({ "apiVersion": 1, "customSignals": [], "maxConsoleEntries": 2000, "debuggerEnabled": true, "hotReloadEnabled": true, "breakOnRuntimeError": true, "deterministicTestSeed": 1, "externalEditorProtocol": true }),
         );
+        if let Some(scripting) = settings.get_mut("scripting").and_then(Value::as_object_mut) {
+            scripting.insert("apiVersion".into(), json!(1));
+            scripting
+                .entry("customSignals")
+                .or_insert_with(|| json!([]));
+            scripting
+                .entry("maxConsoleEntries")
+                .or_insert_with(|| json!(2000));
+            scripting
+                .entry("debuggerEnabled")
+                .or_insert_with(|| json!(true));
+            scripting
+                .entry("hotReloadEnabled")
+                .or_insert_with(|| json!(true));
+            scripting
+                .entry("breakOnRuntimeError")
+                .or_insert_with(|| json!(true));
+            scripting
+                .entry("deterministicTestSeed")
+                .or_insert_with(|| json!(1));
+            scripting
+                .entry("externalEditorProtocol")
+                .or_insert_with(|| json!(true));
+        }
         settings.entry("rendering").or_insert_with(|| json!({
+            "qualityPreset": "Balanced",
             "lightingEnabled": false,
             "ambientColor": { "r": 255, "g": 255, "b": 255 },
             "ambientIntensity": 1.0,
             "shadowQuality": "Soft",
             "colorSpace": "sRGB",
             "postProcessing": { "enabled": false, "exposure": 0.0, "contrast": 1.0, "saturation": 1.0, "vignette": 0.0, "bloom": 0.0, "blur": 0.0, "userMaterial": null },
-            "debugView": "None"
+            "debugView": "None",
+            "pixelSnap": false,
+            "maximumPixelRatio": 2.0,
+            "particleBudget": 10000
         }));
+        if let Some(rendering) = settings.get_mut("rendering").and_then(Value::as_object_mut) {
+            rendering
+                .entry("qualityPreset")
+                .or_insert_with(|| json!("Balanced"));
+            rendering.entry("pixelSnap").or_insert_with(|| json!(false));
+            rendering
+                .entry("maximumPixelRatio")
+                .or_insert_with(|| json!(2.0));
+            rendering
+                .entry("particleBudget")
+                .or_insert_with(|| json!(10000));
+            rendering
+                .entry("colorSpace")
+                .or_insert_with(|| json!("sRGB"));
+        }
         settings.entry("world").or_insert_with(|| {
             json!({
                 "navigationDebug": false, "areaDebug": false, "chunkDebug": false,
@@ -443,10 +571,50 @@ pub fn migrate_project_value(value: Value) -> Result<ProjectFile, FormatError> {
         });
         settings.entry("presentation").or_insert_with(|| {
             json!({
-                "localization": {"sourceLocale":"en","previewLocale":"en","fallbackChain":["en"],"pseudolocalization":false,"buildLocales":["en"]},
-                "accessibility": {"keyboardNavigation":true,"gamepadNavigation":true,"screenReaderMetadata":true,"focusRingColor":"#79b2ff","focusRingWidth":3.0,"reducedMotion":false,"announceFocusChanges":true}
+                "localization": {"sourceLocale":"en","previewLocale":"en","fallbackChain":["en"],"pseudolocalization":false,"pseudolocalizationMode":"expanded","expansionRatio":0.35,"buildLocales":["en"]},
+                "accessibility": {"keyboardNavigation":true,"gamepadNavigation":true,"screenReaderMetadata":true,"focusRingColor":"#79b2ff","focusRingWidth":3.0,"reducedMotion":false,"highContrast":false,"textScale":1.0,"minimumTargetSize":44.0,"announceFocusChanges":true},
+                "uiAudio": {"hover":null,"press":null,"focus":null,"cancel":null,"bus":"UI"}
             })
         });
+        if let Some(presentation) = settings
+            .get_mut("presentation")
+            .and_then(Value::as_object_mut)
+        {
+            presentation
+                .entry("localization")
+                .or_insert_with(|| json!({}));
+            if let Some(localization) = presentation
+                .get_mut("localization")
+                .and_then(Value::as_object_mut)
+            {
+                localization
+                    .entry("pseudolocalizationMode")
+                    .or_insert_with(|| json!("expanded"));
+                localization
+                    .entry("expansionRatio")
+                    .or_insert_with(|| json!(0.35));
+            }
+            presentation
+                .entry("accessibility")
+                .or_insert_with(|| json!({}));
+            if let Some(accessibility) = presentation
+                .get_mut("accessibility")
+                .and_then(Value::as_object_mut)
+            {
+                accessibility
+                    .entry("highContrast")
+                    .or_insert_with(|| json!(false));
+                accessibility
+                    .entry("textScale")
+                    .or_insert_with(|| json!(1.0));
+                accessibility
+                    .entry("minimumTargetSize")
+                    .or_insert_with(|| json!(44.0));
+            }
+            presentation.entry("uiAudio").or_insert_with(
+                || json!({"hover":null,"press":null,"focus":null,"cancel":null,"bus":"UI"}),
+            );
+        }
         settings.entry("production").or_insert_with(|| {
             json!({
                 "performance": {"traceCapacity":600,"memoryBudgetMb":300.0,"assetBudgetMb":512.0,"leakWindowFrames":600,"lifetimeCapacity":2000},
@@ -490,8 +658,25 @@ pub fn migrate_project_value(value: Value) -> Result<ProjectFile, FormatError> {
             .entry("name")
             .or_insert_with(|| json!(format!("Scene {}", scene_index + 1)));
         scene.entry("loaded").or_insert(Value::Bool(true));
+        let settings = scene.entry("globalSettings").or_insert_with(|| {
+            json!({
+                "gravity": 9.80665, "airFriction": 0.01, "timeScale": 1.0,
+                "tickRate": 60, "maxCatchUpSteps": 8,
+                "collisionMatrix": (0..32).map(|layer| 1_u64 << layer).collect::<Vec<_>>()
+            })
+        });
+        if let Some(settings) = settings.as_object_mut() {
+            settings
+                .entry("interpolation")
+                .or_insert_with(|| json!("Interpolate"));
+            settings
+                .entry("layers")
+                .or_insert_with(default_named_physics_layers);
+        }
         migrate_legacy_identities(scene)?;
         migrate_legacy_components(scene)?;
+        migrate_visual_audio_pipeline(scene, source_version)?;
+        migrate_world_data_components(scene)?;
     }
 
     let active_is_valid = requested_active_scene.as_deref().is_some_and(|active| {
@@ -517,6 +702,39 @@ pub fn migrate_project_value(value: Value) -> Result<ProjectFile, FormatError> {
         }),
     );
     if let Some(assets) = root.get_mut("assets").and_then(Value::as_array_mut) {
+        for asset in assets.iter_mut() {
+            let Some(asset) = asset.as_object_mut() else {
+                continue;
+            };
+            if asset.get("assetType").and_then(Value::as_str) != Some("script") {
+                continue;
+            }
+            let metadata = asset.entry("script").or_insert_with(|| json!({}));
+            let Some(metadata) = metadata.as_object_mut() else {
+                continue;
+            };
+            metadata.insert("version".into(), json!(1));
+            metadata.entry("apiVersion").or_insert_with(|| json!(1));
+            metadata.entry("breakpoints").or_insert_with(|| json!([]));
+            metadata
+                .entry("breakpointDetails")
+                .or_insert_with(|| json!([]));
+            metadata.entry("tests").or_insert_with(|| json!([]));
+            metadata
+                .entry("packageDependencies")
+                .or_insert_with(|| json!([]));
+            metadata.entry("packageName").or_insert_with(|| json!(""));
+            metadata
+                .entry("reloadPolicy")
+                .or_insert_with(|| json!("preserve"));
+            metadata
+                .entry("signalConnections")
+                .or_insert_with(|| json!([]));
+            metadata
+                .entry("recoverySource")
+                .or_insert_with(|| json!(""));
+            metadata.entry("lastSavedHash").or_insert_with(|| json!(""));
+        }
         assets.sort_by(|left, right| {
             left.get("path")
                 .and_then(Value::as_str)
@@ -819,8 +1037,11 @@ pub fn validate_project(project: &ProjectFile) -> Result<(), FormatError> {
                 } else if matches!(
                     component.kind.as_str(),
                     "FixedJoint2D"
+                        | "WeldJoint2D"
                         | "DistanceJoint2D"
+                        | "RopeJoint2D"
                         | "RevoluteJoint2D"
+                        | "MotorJoint2D"
                         | "PrismaticJoint2D"
                         | "SpringJoint2D"
                 ) {
@@ -941,8 +1162,11 @@ fn is_standard_component_kind(kind: &str) -> bool {
             | "EllipseCollider2D"
             | "PolygonCollider2D"
             | "FixedJoint2D"
+            | "WeldJoint2D"
             | "DistanceJoint2D"
+            | "RopeJoint2D"
             | "RevoluteJoint2D"
+            | "MotorJoint2D"
             | "PrismaticJoint2D"
             | "SpringJoint2D"
             | "Rope2D"
@@ -1559,6 +1783,21 @@ fn validate_project_settings(value: Option<&Value>) -> Result<(), FormatError> {
                 )));
             }
         }
+        if !matches!(
+            localization
+                .get("pseudolocalizationMode")
+                .and_then(Value::as_str),
+            Some("accented" | "expanded" | "bidi")
+        ) || !localization
+            .get("expansionRatio")
+            .and_then(Value::as_f64)
+            .is_some_and(|value| value.is_finite() && (0.0..=2.0).contains(&value))
+        {
+            return Err(FormatError(
+                "projectSettings.presentation localization pseudolocalization settings are invalid"
+                    .into(),
+            ));
+        }
         for key in ["fallbackChain", "buildLocales"] {
             if !localization
                 .get(key)
@@ -1579,6 +1818,7 @@ fn validate_project_settings(value: Option<&Value>) -> Result<(), FormatError> {
             "gamepadNavigation",
             "screenReaderMetadata",
             "reducedMotion",
+            "highContrast",
             "announceFocusChanges",
         ] {
             if !accessibility.get(key).is_some_and(Value::is_boolean) {
@@ -1593,6 +1833,34 @@ fn validate_project_settings(value: Option<&Value>) -> Result<(), FormatError> {
             .is_some_and(|value| value.is_finite() && (1.0..=12.0).contains(&value))
         {
             return Err(FormatError("projectSettings.presentation.accessibility.focusRingWidth must be between 1 and 12".into()));
+        }
+        if !accessibility
+            .get("textScale")
+            .and_then(Value::as_f64)
+            .is_some_and(|value| value.is_finite() && (0.75..=3.0).contains(&value))
+            || !accessibility
+                .get("minimumTargetSize")
+                .and_then(Value::as_f64)
+                .is_some_and(|value| value.is_finite() && (24.0..=128.0).contains(&value))
+        {
+            return Err(FormatError(
+                "projectSettings.presentation accessibility scale or target size is invalid".into(),
+            ));
+        }
+        let ui_audio = presentation
+            .get("uiAudio")
+            .and_then(Value::as_object)
+            .ok_or_else(|| {
+                FormatError("projectSettings.presentation.uiAudio must be an object".into())
+            })?;
+        if !ui_audio
+            .get("bus")
+            .and_then(Value::as_str)
+            .is_some_and(|value| !value.trim().is_empty() && value.len() <= 80)
+        {
+            return Err(FormatError(
+                "projectSettings.presentation.uiAudio.bus is invalid".into(),
+            ));
         }
     }
     if let Some(production) = settings.get("production") {
@@ -1946,7 +2214,15 @@ fn validate_project_settings(value: Option<&Value>) -> Result<(), FormatError> {
             if !matches!(
                 binding.get("device").and_then(Value::as_str),
                 Some(
-                    "keyboard" | "mouse-button" | "mouse-wheel" | "gamepad-button" | "gamepad-axis"
+                    "keyboard"
+                        | "physical-key"
+                        | "mouse-button"
+                        | "mouse-wheel"
+                        | "mouse-motion"
+                        | "gamepad-button"
+                        | "gamepad-axis"
+                        | "touch"
+                        | "gesture"
                 )
             ) {
                 return Err(FormatError(format!(
@@ -1977,6 +2253,12 @@ fn validate_script_asset(asset: &AssetReference) -> Result<(), FormatError> {
     if metadata.get("version").and_then(Value::as_u64) != Some(1) {
         return Err(FormatError(format!(
             "script metadata version is unsupported: {}",
+            asset.path
+        )));
+    }
+    if metadata.get("apiVersion").and_then(Value::as_u64) != Some(1) {
+        return Err(FormatError(format!(
+            "script API version is unsupported: {}",
             asset.path
         )));
     }
@@ -2016,6 +2298,115 @@ fn validate_script_asset(asset: &AssetReference) -> Result<(), FormatError> {
                 asset.path
             )));
         }
+    }
+    let details = metadata
+        .get("breakpointDetails")
+        .and_then(Value::as_array)
+        .ok_or_else(|| {
+            FormatError(format!(
+                "script breakpointDetails must be an array: {}",
+                asset.path
+            ))
+        })?;
+    if details.len() > 1000
+        || details.iter().any(|entry| {
+            let Some(entry) = entry.as_object() else {
+                return true;
+            };
+            !entry
+                .get("line")
+                .and_then(Value::as_u64)
+                .is_some_and(|line| line > 0 && line <= 1_000_000)
+                || !entry
+                    .get("id")
+                    .and_then(Value::as_str)
+                    .is_some_and(|value| !value.is_empty() && value.len() <= 128)
+                || !entry
+                    .get("functionName")
+                    .and_then(Value::as_str)
+                    .is_some_and(|value| value.len() <= 80)
+                || !entry
+                    .get("condition")
+                    .and_then(Value::as_str)
+                    .is_some_and(|value| value.len() <= 512)
+                || !entry
+                    .get("logMessage")
+                    .and_then(Value::as_str)
+                    .is_some_and(|value| value.len() <= 1024)
+                || entry
+                    .get("hitCondition")
+                    .and_then(Value::as_u64)
+                    .map_or(true, |value| value > 1_000_000)
+                || entry.get("enabled").and_then(Value::as_bool).is_none()
+        })
+    {
+        return Err(FormatError(format!(
+            "script breakpointDetails are invalid: {}",
+            asset.path
+        )));
+    }
+    if !matches!(
+        metadata.get("reloadPolicy").and_then(Value::as_str),
+        Some("preserve" | "recreate" | "disabled")
+    ) {
+        return Err(FormatError(format!(
+            "script reloadPolicy is invalid: {}",
+            asset.path
+        )));
+    }
+    for (key, maximum) in [
+        ("packageName", 128),
+        ("lastSavedHash", 128),
+        ("recoverySource", 1_000_000),
+    ] {
+        if !metadata
+            .get(key)
+            .and_then(Value::as_str)
+            .is_some_and(|value| value.len() <= maximum)
+        {
+            return Err(FormatError(format!(
+                "script {key} is invalid: {}",
+                asset.path
+            )));
+        }
+    }
+    let connections = metadata
+        .get("signalConnections")
+        .and_then(Value::as_array)
+        .ok_or_else(|| {
+            FormatError(format!(
+                "script signalConnections must be an array: {}",
+                asset.path
+            ))
+        })?;
+    if connections.len() > 512
+        || connections.iter().any(|entry| {
+            let Some(entry) = entry.as_object() else {
+                return true;
+            };
+            !entry
+                .get("signal")
+                .and_then(Value::as_str)
+                .is_some_and(|value| !value.is_empty() && value.len() <= 128)
+                || !entry
+                    .get("callback")
+                    .and_then(Value::as_str)
+                    .is_some_and(|value| !value.is_empty() && value.len() <= 80)
+                || !entry
+                    .get("source")
+                    .and_then(Value::as_str)
+                    .is_some_and(|value| value.len() <= 128)
+                || !entry
+                    .get("target")
+                    .and_then(Value::as_str)
+                    .is_some_and(|value| value.len() <= 128)
+                || entry.get("enabled").and_then(Value::as_bool).is_none()
+        })
+    {
+        return Err(FormatError(format!(
+            "script signalConnections are invalid: {}",
+            asset.path
+        )));
     }
     Ok(())
 }
@@ -2099,6 +2490,205 @@ fn migrate_legacy_identities(root: &mut Map<String, Value>) -> Result<(), Format
                     }
                 }
                 anchor.remove("entityId");
+            }
+        }
+    }
+    Ok(())
+}
+
+fn migrate_tileset_asset(asset: &mut Map<String, Value>) -> Result<(), FormatError> {
+    if asset.get("assetType").and_then(Value::as_str) != Some("tileset") {
+        return Ok(());
+    }
+    let Some(source) = asset.get("source").and_then(Value::as_str) else {
+        return Ok(());
+    };
+    let Ok(mut document) = serde_json::from_str::<Value>(source) else {
+        return Ok(());
+    };
+    let Some(document) = document.as_object_mut() else {
+        return Ok(());
+    };
+    document.insert("version".into(), json!(2));
+    let texture = document.get("textureAsset").cloned().unwrap_or(Value::Null);
+    document.entry("sources").or_insert_with(|| {
+        json!([{
+            "id":"primary", "name":"Primary atlas", "textureAsset":texture, "margin":0, "spacing":0
+        }])
+    });
+    if let Some(tiles) = document.get_mut("tiles").and_then(Value::as_array_mut) {
+        for tile in tiles {
+            let Some(tile) = tile.as_object_mut() else {
+                continue;
+            };
+            tile.entry("navigationPolygon").or_insert_with(|| json!([]));
+            tile.entry("occlusionPolygon").or_insert_with(|| json!([]));
+            tile.entry("metadata").or_insert_with(|| json!({}));
+            tile.entry("sceneAsset").or_insert(Value::Null);
+            tile.entry("prefabAsset").or_insert(Value::Null);
+            tile.entry("sourceId").or_insert_with(|| json!("primary"));
+            tile.entry("region").or_insert(Value::Null);
+            tile.entry("animation").or_insert(Value::Null);
+            tile.entry("variants").or_insert_with(|| json!([]));
+        }
+    }
+    asset.insert(
+        "source".into(),
+        Value::String(
+            serde_json::to_string(document).map_err(|error| FormatError(error.to_string()))?,
+        ),
+    );
+    Ok(())
+}
+
+fn migrate_world_data_components(scene: &mut Map<String, Value>) -> Result<(), FormatError> {
+    let Some(entities) = scene.get_mut("entities").and_then(Value::as_array_mut) else {
+        return Ok(());
+    };
+    for entity in entities {
+        let Some(components) = entity.get_mut("components").and_then(Value::as_array_mut) else {
+            continue;
+        };
+        for component in components {
+            let Some(component) = component.as_object_mut() else {
+                continue;
+            };
+            let kind = component
+                .get("kind")
+                .and_then(Value::as_str)
+                .unwrap_or("")
+                .to_owned();
+            let Some(data) = component.get_mut("data").and_then(Value::as_object_mut) else {
+                continue;
+            };
+            match kind.as_str() {
+                "TileMap2D" => {
+                    let width = data
+                        .get("width")
+                        .and_then(Value::as_u64)
+                        .unwrap_or(32)
+                        .clamp(1, 2048) as usize;
+                    let height = data
+                        .get("height")
+                        .and_then(Value::as_u64)
+                        .unwrap_or(18)
+                        .clamp(1, 2048) as usize;
+                    if let Some(layers) = data.get_mut("layers").and_then(Value::as_array_mut) {
+                        for (index, layer) in layers.iter_mut().enumerate() {
+                            let Some(layer) = layer.as_object_mut() else {
+                                continue;
+                            };
+                            layer.entry("blendMode").or_insert_with(|| json!("Alpha"));
+                            layer
+                                .entry("parallax")
+                                .or_insert_with(|| json!({"x":1.0,"y":1.0}));
+                            layer.entry("zOrder").or_insert_with(|| json!(index));
+                            layer
+                                .entry("collisionEnabled")
+                                .or_insert_with(|| json!(true));
+                            layer
+                                .entry("navigationEnabled")
+                                .or_insert_with(|| json!(true));
+                            layer
+                                .entry("occlusionEnabled")
+                                .or_insert_with(|| json!(true));
+                            layer
+                                .entry("transforms")
+                                .or_insert_with(|| json!(vec![0_u8; width.saturating_mul(height)]));
+                        }
+                    }
+                }
+                "NavigationRegion2D" => {
+                    data.entry("navigationMode")
+                        .or_insert_with(|| json!("Grid"));
+                    data.entry("navigationMask").or_insert_with(|| json!(1));
+                    data.entry("source").or_insert_with(|| json!("Manual"));
+                    data.entry("sourceEntityUuid").or_insert(Value::Null);
+                    data.entry("agentRadius").or_insert_with(|| json!(0.4));
+                    data.entry("links").or_insert_with(|| json!([]));
+                }
+                "NavigationObstacle2D" => {
+                    data.entry("avoidanceVelocity")
+                        .or_insert_with(|| json!({"x":0.0,"y":0.0}));
+                }
+                "NavigationAgent2D" => {
+                    data.entry("navigationMask").or_insert_with(|| json!(1));
+                    data.entry("avoidancePriority")
+                        .or_insert_with(|| json!(0.5));
+                }
+                "WorldChunk2D" => {
+                    data.entry("ownership").or_insert_with(|| json!("scene"));
+                    data.entry("dependencies").or_insert_with(|| json!([]));
+                    data.entry("prefetchDistance")
+                        .or_insert_with(|| json!(160.0));
+                    data.entry("cachePolicy").or_insert_with(|| json!("LRU"));
+                    data.entry("saveStateKey").or_insert_with(|| json!(""));
+                }
+                "ObjectPool2D" => {
+                    data.entry("resetContract")
+                        .or_insert_with(|| json!("TransformAndPhysics"));
+                    data.entry("maximumLifetime").or_insert_with(|| json!(0.0));
+                }
+                _ => {}
+            }
+        }
+    }
+    Ok(())
+}
+
+fn migrate_visual_audio_pipeline(
+    scene: &mut Map<String, Value>,
+    source_version: u32,
+) -> Result<(), FormatError> {
+    let Some(entities) = scene.get_mut("entities").and_then(Value::as_array_mut) else {
+        return Ok(());
+    };
+    for entity in entities {
+        let Some(components) = entity.get_mut("components").and_then(Value::as_array_mut) else {
+            continue;
+        };
+        for component in components {
+            let Some(component) = component.as_object_mut() else {
+                continue;
+            };
+            let kind = component
+                .get("kind")
+                .and_then(Value::as_str)
+                .unwrap_or("")
+                .to_owned();
+            let Some(data) = component.get_mut("data").and_then(Value::as_object_mut) else {
+                continue;
+            };
+            if kind == "ShapeRenderer2D" {
+                let legacy_default_stroke = source_version < 27
+                    && data.get("strokeWidth").and_then(Value::as_f64) == Some(1.0)
+                    && data
+                        .get("strokeOpacity")
+                        .and_then(Value::as_f64)
+                        .unwrap_or(100.0)
+                        == 100.0
+                    && data.get("strokeColor").map_or(true, |color| {
+                        color.get("r").and_then(Value::as_f64).unwrap_or(0.0) == 0.0
+                            && color.get("g").and_then(Value::as_f64).unwrap_or(90.0) == 90.0
+                            && color.get("b").and_then(Value::as_f64).unwrap_or(155.0) == 155.0
+                    });
+                if legacy_default_stroke {
+                    data.insert("strokeWidth".into(), json!(0.04));
+                } else {
+                    data.entry("strokeWidth").or_insert_with(|| json!(0.04));
+                }
+                data.entry("strokeColor")
+                    .or_insert_with(|| json!({"r":0,"g":90,"b":155}));
+                data.entry("strokeOpacity").or_insert_with(|| json!(100));
+            } else if kind == "AudioSource" {
+                data.entry("polyphony").or_insert_with(|| json!(1));
+                data.entry("voicePriority").or_insert_with(|| json!(128));
+                data.entry("virtualizeWhenLimited")
+                    .or_insert_with(|| json!(true));
+                data.entry("randomPitch").or_insert_with(|| json!(0.0));
+                data.entry("randomVolume").or_insert_with(|| json!(0.0));
+                data.entry("streamOverride")
+                    .or_insert_with(|| json!("ImportSetting"));
             }
         }
     }
@@ -2919,6 +3509,23 @@ mod tests {
             2000
         );
         assert_eq!(migrated.assets[0].extra["script"]["breakpoints"][1], 8);
+        assert_eq!(migrated.assets[0].extra["script"]["apiVersion"], 1);
+        assert_eq!(
+            migrated.assets[0].extra["script"]["reloadPolicy"],
+            "preserve"
+        );
+        assert_eq!(
+            migrated.assets[0].extra["script"]["breakpointDetails"],
+            json!([])
+        );
+        assert_eq!(
+            migrated.extra["projectSettings"]["scripting"]["hotReloadEnabled"],
+            true
+        );
+        assert_eq!(
+            migrated.extra["projectSettings"]["scripting"]["externalEditorProtocol"],
+            true
+        );
         assert_eq!(
             migrated.extra["projectSettings"]["rendering"]["lightingEnabled"],
             false
@@ -3183,5 +3790,128 @@ mod tests {
         delivery["privacyPolicyUrl"] = json!("https://example.invalid/privacy");
         let error = validate_project(&migrated).unwrap_err();
         assert!(error.0.contains("bounded HTTPS URL"));
+    }
+
+    #[test]
+    fn schema_24_adds_named_physics_layers_without_changing_collision_bits() {
+        let source = json!({
+            "formatVersion": 23,
+            "entities": [],
+            "globalSettings": {
+                "gravity": 9.8,
+                "airFriction": 0.01,
+                "timeScale": 1.0,
+                "tickRate": 60,
+                "maxCatchUpSteps": 8,
+                "collisionMatrix": (0..32).map(|layer| 1_u64 << layer).collect::<Vec<_>>()
+            }
+        });
+        let migrated = migrate_project_value(source).expect("schema 23 project migrates");
+        let value = serde_json::to_value(migrated).expect("project serializes");
+        let settings = &value["scenes"][0]["globalSettings"];
+        assert_eq!(settings["layers"].as_array().map(Vec::len), Some(32));
+        assert_eq!(settings["layers"][0]["name"], "Default");
+        assert_eq!(settings["interpolation"], "Interpolate");
+        assert_eq!(settings["collisionMatrix"][0], 1);
+    }
+
+    #[test]
+    fn schema_27_adds_visual_audio_profiles_and_repairs_only_the_legacy_default_outline() {
+        let entity = "10000000-0000-4000-8000-000000000001";
+        let component = "20000000-0000-4000-8000-000000000001";
+        let transform = "20000000-0000-4000-8000-000000000002";
+        let asset = "30000000-0000-4000-8000-000000000001";
+        let migrated = migrate_project_value(json!({
+            "formatVersion": 26,
+            "projectSettings": {"inputMap": []},
+            "assets": [{"uuid":asset,"assetType":"font","source":"data:font/woff2;base64,AA==","settings":{}}],
+            "entities": [{"uuid":entity,"name":"Legacy box","components":[
+                {"uuid":transform,"kind":"Transform2D","enabled":true,"removed":false,"data":{"parentUuid":null}},
+                {"uuid":component,"kind":"ShapeRenderer2D","enabled":true,"removed":false,
+                 "data":{"strokeWidth":1.0,"strokeColor":{"r":0,"g":90,"b":155},"strokeOpacity":100}}
+            ]}]
+        })).expect("schema 26 project migrates");
+        let value = serde_json::to_value(migrated).expect("project serializes");
+        assert_eq!(value["formatVersion"], CURRENT_FORMAT_VERSION);
+        assert_eq!(
+            value["scenes"][0]["entities"][0]["components"][1]["data"]["strokeWidth"],
+            0.04
+        );
+        assert_eq!(
+            value["projectSettings"]["rendering"]["qualityPreset"],
+            "Balanced"
+        );
+        assert_eq!(
+            value["projectSettings"]["rendering"]["particleBudget"],
+            10000
+        );
+        assert_eq!(
+            value["assets"][0]["settings"]["fontSettings"]["renderMode"],
+            "Scalable"
+        );
+        assert_eq!(value["assets"][0]["settings"]["textureProfile"], "General");
+    }
+
+    #[test]
+    fn schema_28_adds_world_data_without_discarding_authored_content() {
+        let entity = "10000000-0000-4000-8000-000000000001";
+        let transform = "20000000-0000-4000-8000-000000000001";
+        let tilemap = "20000000-0000-4000-8000-000000000002";
+        let tileset = "30000000-0000-4000-8000-000000000001";
+        let migrated = migrate_project_value(json!({
+            "formatVersion": 27,
+            "projectSettings": {"inputMap": []},
+            "assets": [{
+                "uuid": tileset,
+                "assetType": "tileset",
+                "source": "{\"version\":1,\"textureAsset\":null,\"tileWidth\":16,\"tileHeight\":16,\"columns\":1,\"rows\":1,\"tiles\":[{\"index\":0,\"name\":\"Ground\",\"collision\":\"Box\",\"polygon\":[],\"terrain\":\"Ground\",\"navigationCost\":1,\"occluder\":false}]}",
+                "settings": {}
+            }],
+            "entities": [{"uuid":entity,"name":"World","components":[
+                {"uuid":transform,"kind":"Transform2D","enabled":true,"removed":false,"data":{"parentUuid":null}},
+                {"uuid":tilemap,"kind":"TileMap2D","enabled":true,"removed":false,"data":{"width":1,"height":1,"tiles":[0],"layers":[{"id":"base","name":"Base","visible":true,"locked":false,"opacity":1,"tiles":[0]}]}}
+            ]}]
+        })).expect("schema 27 project migrates");
+        let value = serde_json::to_value(migrated).expect("project serializes");
+        assert_eq!(value["formatVersion"], CURRENT_FORMAT_VERSION);
+        assert_eq!(value["engineVersion"], CURRENT_ENGINE_VERSION);
+        assert_eq!(
+            value["scenes"][0]["entities"][0]["components"][1]["data"]["layers"][0]["tiles"][0],
+            0
+        );
+        assert_eq!(
+            value["scenes"][0]["entities"][0]["components"][1]["data"]["layers"][0]["blendMode"],
+            "Alpha"
+        );
+        let tileset_source = value["assets"][0]["source"]
+            .as_str()
+            .expect("tileset source");
+        let document: Value =
+            serde_json::from_str(tileset_source).expect("migrated tileset parses");
+        assert_eq!(document["version"], 2);
+        assert_eq!(document["tiles"][0]["terrain"], "Ground");
+        assert_eq!(document["tiles"][0]["metadata"], json!({}));
+    }
+
+    #[test]
+    fn v4_upgrades_the_v39_engine_boundary_without_changing_schema_29() {
+        let fixture: Value = serde_json::from_str(include_str!(
+            "../../../tests/fixtures/migrations/public-schema-inputs.json"
+        ))
+        .expect("migration fixture parses");
+        let mut source = fixture["baseProject"].clone();
+        source["formatVersion"] = json!(29);
+        source["engineVersion"] = json!("3.9.0");
+        source["manifest"]["schemaVersion"] = json!(29);
+        source["manifest"]["engineCompatibility"] =
+            json!({"minimum":"3.0.0","maximumExclusive":"4.0.0"});
+        let migrated = migrate_project_value(source).expect("3.9 release candidate migrates");
+        assert_eq!(migrated.format_version, 29);
+        assert_eq!(migrated.engine_version, "4.0.0");
+        assert_eq!(
+            migrated.manifest.engine_compatibility.maximum_exclusive,
+            "5.0.0"
+        );
+        validate_project(&migrated).expect("4.0 compatibility seal validates");
     }
 }

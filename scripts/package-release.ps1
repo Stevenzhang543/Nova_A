@@ -51,7 +51,7 @@ Serve this directory from an HTTP(S) origin. Do not open `index.html` with `file
 Verify every packaged file against `SHA256SUMS.txt`. Release metadata is in `release-metadata.json`.
 "@
   [IO.File]::WriteAllText((Join-Path $webStage 'README.md'), $webReadme, [Text.UTF8Encoding]::new($false))
-  $webMetadata = [ordered]@{ product = 'Nova_A'; version = $Version; format = 'nova-web-release'; projectFormat = 2; schema = 23; generatedAt = [DateTime]::UtcNow.ToString('o'); entrypoints = @('index.html','player.html'); hosting = [ordered]@{ protocol = 'http-or-https'; wasmMime = 'application/wasm'; spaFallbackRequired = $false } } | ConvertTo-Json -Depth 6
+  $webMetadata = [ordered]@{ product = 'Nova_A'; version = $Version; format = 'nova-web-release'; projectFormat = 2; schema = 29; generatedAt = [DateTime]::UtcNow.ToString('o'); entrypoints = @('index.html','player.html'); hosting = [ordered]@{ protocol = 'http-or-https'; wasmMime = 'application/wasm'; spaFallbackRequired = $false } } | ConvertTo-Json -Depth 6
   [IO.File]::WriteAllText((Join-Path $webStage 'release-metadata.json'), "$webMetadata`n", [Text.UTF8Encoding]::new($false))
   $webChecksums = Get-ChildItem -LiteralPath $webStage -File -Recurse | Where-Object Name -ne 'SHA256SUMS.txt' | Sort-Object FullName | ForEach-Object { $relative = $_.FullName.Substring($webStage.Length).TrimStart('\').Replace('\','/'); "{0}  {1}" -f (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant(), $relative }
   [IO.File]::WriteAllLines((Join-Path $webStage 'SHA256SUMS.txt'), $webChecksums, [Text.UTF8Encoding]::new($false))

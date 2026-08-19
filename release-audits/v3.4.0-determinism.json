@@ -1,0 +1,11 @@
+{
+  "format": "nova-physics-determinism",
+  "version": 1,
+  "engineVersion": "3.4.0",
+  "generatedAt": "2026-08-19T13:53:02.292Z",
+  "methodology": "Two independent 64-body, 600-tick retained worlds with identical binary inputs; authoritative f64 state bits and tick count are hashed.",
+  "first": "41f5a6b6fbf5f395",
+  "second": "41f5a6b6fbf5f395",
+  "matched": true,
+  "status": "passed"
+}

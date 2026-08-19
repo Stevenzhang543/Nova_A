@@ -81,6 +81,7 @@ const toolCommand = (tab: BottomPanelTab, label: TranslationKey, icon: string): 
   id: `tool-${tab}`, label, group: 'tools', icon, keywords: `${tab} panel tool bottom`, run: () => openEditorTool(tab)
 })
 const commands = computed<EditorCommand[]>(() => [
+  { id: 'create-object', label: 'createObject', group: 'edit', icon: '＋', keywords: 'add create object sprite camera text collider script light', shortcut: 'Shift+A', run: () => { state.createObjectPaletteOpen = true } },
   { id: 'project-save', label: 'saveProject', group: 'file', icon: 'SV', keywords: 'save atomic project file', shortcut: 'Ctrl+S', run: () => { void saveFromPalette() } },
   { id: 'project-validate', label: 'validateProject', group: 'file', icon: '✓', keywords: 'validate project format references schema repair', run: validateFromPalette },
   { id: 'project-repair', label: 'repairProject', group: 'file', icon: '↺', keywords: 'repair project format schema dependencies backup rollback', run: () => { void repairFromPalette() } },
@@ -97,7 +98,9 @@ const commands = computed<EditorCommand[]>(() => [
   { id: 'scene', label: 'sceneView', group: 'navigation', icon: 'S', keywords: 'scene edit view', run: () => { state.currentPage = 'scene' } },
   { id: 'game', label: 'gameView', group: 'navigation', icon: 'G', keywords: 'game play view', run: () => { state.currentPage = 'game' } },
   { id: 'settings', label: 'settings', group: 'navigation', icon: '⚙', keywords: 'settings preferences', run: () => { state.currentPage = 'settings' } },
-  toolCommand('assets', 'assets', '▧'), toolCommand('packages', 'packages', '◇'), toolCommand('console', 'console', '>_'), toolCommand('animation', 'animation', '◆'), toolCommand('tilemap', 'tilemap', '▦'), toolCommand('world', 'worldTools', '◎'), toolCommand('profiler', 'profiler', '⌁'), toolCommand('rendering', 'renderingStudio', '◈'), toolCommand('project', 'projectHealth', '✓'), toolCommand('build', 'buildPanel', '▶'),
+  toolCommand('assets', 'assets', '▧'), toolCommand('packages', 'packages', '◇'), toolCommand('console', 'console', '>_'), toolCommand('animation', 'animation', '◆'),
+  { id: 'tool-tilemap', label: 'tilemap', group: 'tools', icon: '▦', keywords: 'tilemap contextual selected map terrain paint', run: () => { const map = physicsState.world.entities.find(entity => entity.hasComponent('TileMap2D')); if (map) { selectEntities([map.id]); openEditorTool('tilemap') } } },
+  toolCommand('profiler', 'profiler', '⌁'), toolCommand('rendering', 'renderingStudio', '◈'), toolCommand('project', 'projectHealth', '✓'), toolCommand('build', 'buildPanel', '▶'),
   { id: 'toggle-hierarchy', label: 'toggleHierarchy', group: 'layoutPanels', icon: 'H', keywords: 'panel hierarchy outliner', run: () => toggleEditorPanel('hierarchy') },
   { id: 'toggle-inspector', label: 'toggleInspector', group: 'layoutPanels', icon: 'I', keywords: 'panel inspector properties', run: () => toggleEditorPanel('inspector') },
   { id: 'toggle-bottom', label: 'toggleBottomPanel', group: 'layoutPanels', icon: 'B', keywords: 'drawer panel bottom', run: () => toggleEditorPanel('bottom') },

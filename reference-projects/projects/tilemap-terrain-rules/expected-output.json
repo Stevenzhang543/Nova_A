@@ -1,0 +1,13 @@
+{
+  "engineVersion": "4.0.0",
+  "schema": 29,
+  "projectName": "Terrain Rules and Validation",
+  "minimumScenes": 1,
+  "minimumEntities": 4,
+  "expectedValidation": "pass",
+  "demonstrates": [
+    "complete 16-mask terrain rules",
+    "weighted deterministic variants",
+    "terrain validation and preview"
+  ]
+}

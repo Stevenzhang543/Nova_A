@@ -1,0 +1,14 @@
+{
+  "engineVersion": "4.0.0",
+  "schema": 29,
+  "projectName": "Source Control Workflow",
+  "minimumScenes": 2,
+  "minimumEntities": 2,
+  "expectedValidation": "pass",
+  "demonstrates": [
+    "scene, prefab, resource, settings and package diffs",
+    "external reload and compare",
+    "canonical no-op saves",
+    "Git, pre-commit, CI and optional locks"
+  ]
+}

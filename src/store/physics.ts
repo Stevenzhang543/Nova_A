@@ -1,7 +1,7 @@
 import { reactive, markRaw } from 'vue'
 import { World, defaultCollisionMatrix, PHYSICS_LAYER_COUNT, type EngineDiagnostics, type GlobalPhysicsSettings } from '../world/World'
 import { Camera } from '../world/Camera'
-import { Entity } from '../world/Entity'
+import { Entity, type AuthoringMetadata2D } from '../world/Entity'
 import { BoxEntity } from '../world/BoxEntity'
 import { CircleEntity } from '../world/CircleEntity'
 import { TriangleEntity } from '../world/TriangleEntity'
@@ -53,9 +53,10 @@ import { beginPhysicsMonitorSession } from '../runtime/physicsMonitor'
 import { loadPackageState, serializePackageState } from '../runtime/packages'
 import { loadWorldGameplaySettings, serializeWorldGameplaySettings } from '../runtime/worldGameplay'
 import { loadLocalizationSettings, serializeLocalizationSettings } from '../runtime/localization'
-import { loadRuntimeAccessibilitySettings, serializeRuntimeAccessibilitySettings } from '../runtime/presentation'
+import { loadRuntimeAccessibilitySettings, loadUiAudioSettings, serializeRuntimeAccessibilitySettings, serializeUiAudioSettings } from '../runtime/presentation'
 import { loadProductionSettings, serializeProductionSettings } from '../runtime/production'
 import { markSourceBaseline, refreshSourceStatus, stableProjectText } from '../runtime/teamWorkflow'
+import { defaultPhysicsLayers, normalizePhysicsLayers } from '../runtime/physicsProduction'
 
 interface PhysicsState {
   world: World
@@ -63,7 +64,7 @@ interface PhysicsState {
   selectedEntityId: number | null
   selectedEntityIds: number[]
   focusEntityID: number | null
-  activeTool: 'select' | 'move' | 'rotate' | 'scale' | 'rectangle' | 'circle' | 'triangle'
+  activeTool: 'select' | 'move' | 'rotate' | 'scale' | 'pivot' | 'rect' | 'path' | 'polygon' | 'collider' | 'measure' | 'rectangle' | 'circle' | 'triangle'
   globalSettings: GlobalPhysicsSettings
   simulationRunning: boolean
   playMode: 'editing' | 'playing' | 'paused'
@@ -99,6 +100,7 @@ export interface SceneEntityData {
   prefabOverrides?: Record<string, unknown>
   prefabLayers?: Array<{ asset?: string; instanceUuid?: string; sourceUuid?: string; overrides?: Record<string, unknown> }>
   sceneLayers?: Array<{ asset?: string; instanceUuid?: string; sourceUuid?: string }>
+  authoring?: Partial<AuthoringMetadata2D>
   components?: SceneComponentData[]
 }
 
@@ -136,7 +138,9 @@ export const physicsState = reactive<PhysicsState>({
     timeScale: 1,
     tickRate: 60,
     maxCatchUpSteps: 8,
-    collisionMatrix: defaultCollisionMatrix()
+    collisionMatrix: defaultCollisionMatrix(),
+    interpolation: 'Interpolate',
+    layers: defaultPhysicsLayers()
   },
   simulationRunning: false,
   playMode: 'editing',
@@ -153,6 +157,8 @@ export function normalizeGlobalSettings(): void {
   physicsState.globalSettings.timeScale = Math.max(0, finiteNumber(physicsState.globalSettings.timeScale, 1))
   physicsState.globalSettings.tickRate = Math.min(1000, Math.max(1, finiteNumber(physicsState.globalSettings.tickRate, 60)))
   physicsState.globalSettings.maxCatchUpSteps = Math.min(240, Math.max(1, Math.round(finiteNumber(physicsState.globalSettings.maxCatchUpSteps, 8))))
+  physicsState.globalSettings.interpolation = physicsState.globalSettings.interpolation === 'None' ? 'None' : 'Interpolate'
+  physicsState.globalSettings.layers = normalizePhysicsLayers(physicsState.globalSettings.layers)
   const source = Array.isArray(physicsState.globalSettings.collisionMatrix)
     ? physicsState.globalSettings.collisionMatrix
     : defaultCollisionMatrix()
@@ -232,6 +238,9 @@ function serializeComponent(component: Component2D): Record<string, unknown> {
       viewport: { ...component.viewport }, backgroundColor: { ...component.backgroundColor },
       nearSortingLayer: component.nearSortingLayer, farSortingLayer: component.farSortingLayer,
       pixelPerfect: component.pixelPerfect, zoom: component.zoom,
+      smoothing: { ...component.smoothing }, limits: { ...component.limits },
+      dragMargins: { ...component.dragMargins }, previewInEditor: component.previewInEditor,
+      followTargetUuid: component.followTargetUuid,
       priority: component.priority, stackOrder: component.stackOrder,
       cullingMask: component.cullingMask >>> 0, clearColor: component.clearColor,
       renderTexture: component.renderTexture
@@ -239,7 +248,7 @@ function serializeComponent(component: Component2D): Record<string, unknown> {
   } else if (component instanceof Script2D) {
     Object.assign(data, {
       scriptAsset: component.scriptAsset,
-      properties: JSON.parse(JSON.stringify(component.properties)) as Record<string, unknown>
+      properties: Object.fromEntries(Object.entries(component.properties).filter(([name]) => component.propertyMetadata[name]?.serialized !== false))
     })
   } else if (component instanceof RigidBody2D) {
     Object.assign(data, {
@@ -260,7 +269,8 @@ function serializeComponent(component: Component2D): Record<string, unknown> {
       torque: component.torque,
       continuousCollision: component.continuousCollision,
       sleepingAllowed: component.sleepingAllowed,
-      freezeRotation: component.freezeRotation
+      freezeRotation: component.freezeRotation,
+      transformOwnership: component.transformOwnership
     })
   } else if (component instanceof Collider2D) {
     Object.assign(data, {
@@ -270,11 +280,14 @@ function serializeComponent(component: Component2D): Record<string, unknown> {
       radiusX: component.radiusX,
       radiusY: component.radiusY,
       vertices: component.vertices.map(vertex => ({ ...vertex })),
+      shapeModel: component.shapeModel,
+      shapes: component.shapes.map(shape => ({ ...shape, offset: { ...shape.offset }, size: { ...shape.size }, points: shape.points.map(point => ({ ...point })) })),
       sensor: component.sensor,
       physicsLayer: component.physicsLayer,
       collisionMask: component.collisionMask >>> 0,
       oneWay: component.oneWay,
       oneWayNormal: { ...component.oneWayNormal },
+      materialAsset: component.materialAsset,
       material: { ...component.material }
     })
   } else {
@@ -299,6 +312,7 @@ export function serializeEntity(entity: Entity): Record<string, unknown> {
     prefabOverrides: JSON.parse(JSON.stringify(entity.prefabOverrides)) as Record<string, unknown>,
     prefabLayers: JSON.parse(JSON.stringify(entity.prefabLayers)) as typeof entity.prefabLayers,
     sceneLayers: JSON.parse(JSON.stringify(entity.sceneLayers)) as typeof entity.sceneLayers,
+    authoring: JSON.parse(JSON.stringify(entity.authoring)) as AuthoringMetadata2D,
     entityType: entity.entityType,
     components: [...entity.componentMap.values()].map(serializeComponent)
   }
@@ -345,7 +359,7 @@ function projectSource(): Record<string, unknown> {
     assetDatabase: serializeAssetDatabaseSettings(),
     plugins: serializePluginManifests(),
     packages: serializePackageState(),
-    projectSettings: { inputMap: normalizeInputMap(physicsState.inputMap), audio: normalizeAudioSettings(physicsState.audioSettings), build: serializeBuildSettings(), scripting: serializeScriptSettings(), rendering: serializeRenderingSettings(), world: serializeWorldGameplaySettings(), presentation: { localization: serializeLocalizationSettings(), accessibility: serializeRuntimeAccessibilitySettings() }, production: serializeProductionSettings() },
+    projectSettings: { inputMap: normalizeInputMap(physicsState.inputMap), audio: normalizeAudioSettings(physicsState.audioSettings), build: serializeBuildSettings(sceneManager.scenes.map(scene => scene.uuid)), scripting: serializeScriptSettings(), rendering: serializeRenderingSettings(), world: serializeWorldGameplaySettings(), presentation: { localization: serializeLocalizationSettings(), accessibility: serializeRuntimeAccessibilitySettings(), uiAudio: serializeUiAudioSettings() }, production: serializeProductionSettings() },
     projectStructure: {
       assetsRoot: 'Assets', settingsRoot: 'ProjectSettings', cacheRoot: '.nova/cache', importedRoot: '.nova/imported'
     },
@@ -566,7 +580,7 @@ const EXTENDED_COMPONENT_KINDS = [
   'Text', 'Button', 'Slider', 'ProgressBar', 'Checkbox', 'TextInput', 'TileMap2D', 'ParticleEmitter2D', 'Light2D', 'ShadowCaster2D',
   'CharacterBody2D', 'Area2D', 'AreaEffector2D', 'NavigationRegion2D', 'NavigationObstacle2D', 'NavigationAgent2D', 'BehaviorTree2D', 'StateMachine2D',
   'WorldChunk2D', 'Portal2D', 'ObjectPool2D',
-  'FixedJoint2D', 'DistanceJoint2D', 'RevoluteJoint2D', 'PrismaticJoint2D', 'SpringJoint2D'
+  'FixedJoint2D', 'WeldJoint2D', 'DistanceJoint2D', 'RopeJoint2D', 'RevoluteJoint2D', 'MotorJoint2D', 'PrismaticJoint2D', 'SpringJoint2D'
 ] as const
 
 function createExtendedComponent(kind: typeof EXTENDED_COMPONENT_KINDS[number], uuid?: string): Component2D {
@@ -675,16 +689,23 @@ function normalizeExtendedComponent(component: Component2D): void {
     component.referenceSize.x = clamp(component.referenceSize.x, 1920, 1, 100_000)
     component.referenceSize.y = clamp(component.referenceSize.y, 1080, 1, 100_000)
     component.sortingOrder = Math.round(clamp(component.sortingOrder, 0, -1_000_000, 1_000_000))
+    component.dpiScale = clamp(component.dpiScale, 1, .25, 8)
+    component.localePreview = typeof component.localePreview === 'string' ? component.localePreview.slice(0, 35) : ''
     if (!component.safeAreaInsets || typeof component.safeAreaInsets !== 'object') component.safeAreaInsets = { left: 0, top: 0, right: 0, bottom: 0 }
     for (const side of ['left', 'top', 'right', 'bottom'] as const) component.safeAreaInsets[side] = clamp(component.safeAreaInsets[side], 0, 0, 100_000)
     component.themeAsset = typeof component.themeAsset === 'string' ? component.themeAsset.slice(0, 160) : null
+    component.themeVariant = typeof component.themeVariant === 'string' && component.themeVariant.trim() ? component.themeVariant.trim().slice(0, 80) : 'default'
   } else if (component instanceof RectTransform) {
     if (!['top-left', 'top', 'top-right', 'left', 'center', 'right', 'bottom-left', 'bottom', 'bottom-right', 'stretch'].includes(component.anchorPreset)) component.anchorPreset = 'center'
-    component.pivot = safeVector(component.pivot, { x: .5, y: .5 }); component.position = safeVector(component.position, { x: 0, y: 0 }); component.size = safeVector(component.size, { x: 240, y: 80 })
+    component.pivot = safeVector(component.pivot, { x: .5, y: .5 }); component.position = safeVector(component.position, { x: 0, y: 0 }); component.size = safeVector(component.size, { x: 240, y: 80 }); component.preferredSize = safeVector(component.preferredSize, component.size); component.anchorMin = safeVector(component.anchorMin, { x: .5, y: .5 }); component.anchorMax = safeVector(component.anchorMax, { x: .5, y: .5 })
     component.pivot.x = clamp(component.pivot.x, .5, 0, 1); component.pivot.y = clamp(component.pivot.y, .5, 0, 1)
+    component.anchorMin.x = clamp(component.anchorMin.x, .5, 0, 1); component.anchorMin.y = clamp(component.anchorMin.y, .5, 0, 1); component.anchorMax.x = clamp(component.anchorMax.x, .5, component.anchorMin.x, 1); component.anchorMax.y = clamp(component.anchorMax.y, .5, component.anchorMin.y, 1)
     component.size.x = clamp(component.size.x, 240, 0, 1e9); component.size.y = clamp(component.size.y, 80, 0, 1e9)
+    component.preferredSize.x = clamp(component.preferredSize.x, component.size.x, 0, 1e9); component.preferredSize.y = clamp(component.preferredSize.y, component.size.y, 0, 1e9)
     if (!component.margins || typeof component.margins !== 'object') component.margins = { left: 0, top: 0, right: 0, bottom: 0 }
     for (const side of ['left', 'top', 'right', 'bottom'] as const) component.margins[side] = finiteNumber(component.margins[side])
+    if (!component.offsets || typeof component.offsets !== 'object') component.offsets = { left: 0, top: 0, right: 0, bottom: 0 }
+    for (const side of ['left', 'top', 'right', 'bottom'] as const) component.offsets[side] = finiteNumber(component.offsets[side])
     if (!['Fixed', 'Fill', 'Content'].includes(component.horizontalPolicy)) component.horizontalPolicy = 'Fixed'
     if (!['Fixed', 'Fill', 'Content'].includes(component.verticalPolicy)) component.verticalPolicy = 'Fixed'
     component.minSize = safeVector(component.minSize, { x: 0, y: 0 }); component.maxSize = safeVector(component.maxSize, { x: 100_000, y: 100_000 })
@@ -698,15 +719,23 @@ function normalizeExtendedComponent(component: Component2D): void {
     component.accessibilityRole = typeof component.accessibilityRole === 'string' ? component.accessibilityRole.slice(0, 80) : ''
     component.accessibilityLabel = typeof component.accessibilityLabel === 'string' ? component.accessibilityLabel.slice(0, 500) : ''
     component.accessibilityDescription = typeof component.accessibilityDescription === 'string' ? component.accessibilityDescription.slice(0, 1000) : ''
+    component.accessibilityState = typeof component.accessibilityState === 'string' ? component.accessibilityState.slice(0, 500) : ''
+    component.accessibilityValue = typeof component.accessibilityValue === 'string' ? component.accessibilityValue.slice(0, 500) : ''
+    if (!['Off', 'Polite', 'Assertive'].includes(component.accessibilityLive)) component.accessibilityLive = 'Off'
+    component.readingOrder = Math.round(clamp(component.readingOrder, component.tabIndex, 0, 100_000))
     component.remapAction = typeof component.remapAction === 'string' ? component.remapAction.slice(0, 80) : ''
   } else if (component instanceof Panel) {
     component.color = safeColor(component.color, { r: 35, g: 41, b: 52 })
     component.opacity = clamp(component.opacity, 92, 0, 100); component.cornerRadius = clamp(component.cornerRadius, 14, 0, 1e6)
-    if (!['None', 'Horizontal', 'Vertical', 'Grid'].includes(component.layout)) component.layout = 'None'
+    if (!['None', 'Row', 'Column', 'Grid', 'Flow', 'Overlay', 'Center', 'Margin', 'Aspect', 'Split', 'Horizontal', 'Vertical'].includes(component.layout)) component.layout = 'None'
     component.gap = clamp(component.gap, 8, 0, 1e6); component.columns = Math.round(clamp(component.columns, 2, 1, 64)); component.scrollSpeed = clamp(component.scrollSpeed, 42, 0, 1e6)
     if (!component.padding || typeof component.padding !== 'object') component.padding = { left: 0, top: 0, right: 0, bottom: 0 }
     for (const side of ['left', 'top', 'right', 'bottom'] as const) component.padding[side] = finiteNumber(component.padding[side])
     component.scrollOffset = safeVector(component.scrollOffset, { x: 0, y: 0 }); component.contentSize = safeVector(component.contentSize, { x: 0, y: 0 })
+    if (!['Normal', 'Modal', 'Popup', 'Tooltip'].includes(component.behavior)) component.behavior = 'Normal'
+    component.dropGroup = typeof component.dropGroup === 'string' ? component.dropGroup.slice(0, 80) : ''
+    component.tooltipText = typeof component.tooltipText === 'string' ? component.tooltipText.slice(0, 2000) : ''
+    component.tooltipDelay = clamp(component.tooltipDelay, .45, 0, 10)
     component.styleClass = typeof component.styleClass === 'string' ? component.styleClass.slice(0, 80) : 'panel'
     component.styleOverrides = safeStyleOverrides(component.styleOverrides)
   } else if (component instanceof UIImage) {
@@ -726,6 +755,7 @@ function normalizeExtendedComponent(component: Component2D): void {
     component.normalColor = safeColor(component.normalColor, { r: 45, g: 106, b: 214 }); component.hoveredColor = safeColor(component.hoveredColor, { r: 61, g: 126, b: 235 }); component.pressedColor = safeColor(component.pressedColor, { r: 31, g: 82, b: 174 }); component.disabledColor = safeColor(component.disabledColor, { r: 90, g: 97, b: 110 })
     component.state = component.interactable ? 'Normal' : 'Disabled'
     component.onPressed = typeof component.onPressed === 'string' ? component.onPressed.slice(0, 80) : 'on_pressed'; component.onHoverEnter = typeof component.onHoverEnter === 'string' ? component.onHoverEnter.slice(0, 80) : 'on_hover_enter'; component.onHoverExit = typeof component.onHoverExit === 'string' ? component.onHoverExit.slice(0, 80) : 'on_hover_exit'
+    component.pressAudio = typeof component.pressAudio === 'string' ? component.pressAudio.slice(0, 160) : null; component.hoverAudio = typeof component.hoverAudio === 'string' ? component.hoverAudio.slice(0, 160) : null; component.focusAudio = typeof component.focusAudio === 'string' ? component.focusAudio.slice(0, 160) : null
     component.styleClass = typeof component.styleClass === 'string' ? component.styleClass.slice(0, 80) : 'button'
     component.styleOverrides = safeStyleOverrides(component.styleOverrides)
   } else if (component instanceof Slider || component instanceof ProgressBar) {
@@ -802,6 +832,8 @@ function normalizeExtendedComponent(component: Component2D): void {
     component.distance = clamp(component.distance, 1, 0, 1e9); component.stiffness = clamp(component.stiffness, 1200, 0, 1e12); component.damping = clamp(component.damping, 35, 0, 1e9)
     component.lowerLimit = finiteNumber(component.lowerLimit, -1); component.upperLimit = Math.max(component.lowerLimit, finiteNumber(component.upperLimit, 1))
     component.referenceOffset = safeVector(component.referenceOffset, { x: 0, y: 0 }); component.referenceAngle = finiteNumber(component.referenceAngle)
+    component.motorSpeed = finiteNumber(component.motorSpeed); component.maxMotorForce = clamp(component.maxMotorForce, 1000, 0, 1e12)
+    component.breakForce = clamp(component.breakForce, Number.MAX_VALUE, 0, Number.MAX_VALUE); component.breakTorque = clamp(component.breakTorque, Number.MAX_VALUE, 0, Number.MAX_VALUE)
   }
 }
 
@@ -825,7 +857,7 @@ function applyStoredComponents(entity: Entity, item: SceneEntityData): void {
   const rendererSource = storedComponent(item, 'ShapeRenderer2D')
   if (rendererSource) {
     const data = recordData(rendererSource)
-    const shape = data.shape === 'Ellipse' || data.shape === 'Polygon' ? data.shape : 'Rectangle'
+    const shape = data.shape === 'Ellipse' || data.shape === 'Polygon' || data.shape === 'Line' ? data.shape : 'Rectangle'
     const renderer = new ShapeRenderer2D(shape, rendererSource.uuid)
     applyComponentMetadata(renderer, rendererSource)
     const vertices = normalizedVertices(data.vertices as SceneEntityData['vertices'])
@@ -931,6 +963,11 @@ function applyStoredComponents(entity: Entity, item: SceneEntityData): void {
     camera.cullingMask = Math.round(clamp(data.cullingMask, 0xffff_ffff, 0, 0xffff_ffff)) >>> 0
     camera.clearColor = data.clearColor !== false
     camera.renderTexture = typeof data.renderTexture === 'string' ? data.renderTexture.slice(0, 120) : ''
+    camera.previewInEditor = data.previewInEditor !== false
+    camera.followTargetUuid = typeof data.followTargetUuid === 'string' ? data.followTargetUuid : null
+    if (data.smoothing && typeof data.smoothing === 'object') { const value = data.smoothing as Record<string, unknown>; camera.smoothing = { enabled: value.enabled === true, speed: Math.max(0, finiteNumber(value.speed, 5)) } }
+    if (data.limits && typeof data.limits === 'object') { const value = data.limits as Record<string, unknown>; camera.limits = { enabled: value.enabled === true, left: finiteNumber(value.left, -100), right: finiteNumber(value.right, 100), bottom: finiteNumber(value.bottom, -100), top: finiteNumber(value.top, 100) } }
+    if (data.dragMargins && typeof data.dragMargins === 'object') { const value = data.dragMargins as Record<string, unknown>; camera.dragMargins = { enabled: value.enabled === true, left: Math.min(1, Math.max(0, finiteNumber(value.left, .1))), right: Math.min(1, Math.max(0, finiteNumber(value.right, .1))), top: Math.min(1, Math.max(0, finiteNumber(value.top, .1))), bottom: Math.min(1, Math.max(0, finiteNumber(value.bottom, .1))) } }
     entity.componentMap.set('Camera2D', camera)
   }
 
@@ -976,6 +1013,7 @@ function applyStoredComponents(entity: Entity, item: SceneEntityData): void {
     body.continuousCollision = data.continuousCollision === 'Continuous' ? 'Continuous' : 'Discrete'
     if (typeof data.sleepingAllowed === 'boolean') body.sleepingAllowed = data.sleepingAllowed
     if (typeof data.freezeRotation === 'boolean') body.freezeRotation = data.freezeRotation
+    body.transformOwnership = data.transformOwnership === 'Animation' ? 'Animation' : 'Physics'
     entity.componentMap.set('RigidBody2D', body)
   } else {
     entity.removeComponent('RigidBody2D')
@@ -994,13 +1032,29 @@ function applyStoredComponents(entity: Entity, item: SceneEntityData): void {
     collider.radiusY = Math.max(1e-9, finiteNumber(data.radiusY, collider.radiusY))
     const vertices = normalizedVertices(data.vertices as SceneEntityData['vertices'])
     if (vertices) collider.vertices = vertices
+    const shapeModels = ['Box', 'Circle', 'Capsule', 'Segment', 'Chain', 'ConvexPolygon', 'ConcavePolygon'] as const
+    if (shapeModels.includes(data.shapeModel as typeof shapeModels[number])) collider.shapeModel = data.shapeModel as typeof collider.shapeModel
+    collider.shapes = Array.isArray(data.shapes) ? data.shapes.slice(0, 7).flatMap((value, index) => {
+      if (!value || typeof value !== 'object') return []
+      const raw = value as Record<string, unknown>
+      const kind = shapeModels.includes(raw.kind as typeof shapeModels[number]) ? raw.kind as typeof collider.shapeModel : 'Box'
+      const offset = { x: 0, y: 0 }, size = { x: 1, y: 1 }
+      copyVector(offset, raw.offset); copyVector(size, raw.size)
+      size.x = Math.max(1e-9, Math.abs(size.x)); size.y = Math.max(1e-9, Math.abs(size.y))
+      return [{ id: typeof raw.id === 'string' && raw.id ? raw.id : `shape-${index + 1}`, kind, offset, rotation: finiteNumber(raw.rotation), size, radius: Math.max(1e-9, finiteNumber(raw.radius, .5)), points: normalizedVertices(raw.points as SceneEntityData['vertices']) ?? [], enabled: raw.enabled !== false }]
+    }) : []
     collider.sensor = data.sensor === true
     collider.physicsLayer = Math.min(31, Math.max(0, Math.round(finiteNumber(data.physicsLayer))))
     collider.collisionMask = Math.min(0xffff_ffff, Math.max(0, Math.round(finiteNumber(data.collisionMask, 1 << collider.physicsLayer)))) >>> 0
     collider.oneWay = data.oneWay === true
+    collider.materialAsset = typeof data.materialAsset === 'string' ? data.materialAsset : null
     copyVector(collider.oneWayNormal, data.oneWayNormal)
     const oneWayLength = Math.hypot(collider.oneWayNormal.x, collider.oneWayNormal.y)
     collider.oneWayNormal = oneWayLength > 1e-9 ? { x: collider.oneWayNormal.x / oneWayLength, y: collider.oneWayNormal.y / oneWayLength } : { x: 0, y: 1 }
+    const material = data.material && typeof data.material === 'object' ? data.material as Record<string, unknown> : {}
+    collider.material.density = Math.max(1e-9, finiteNumber(material.density, 1))
+    collider.material.frictionCombine = ['Average', 'Minimum', 'Maximum', 'Multiply'].includes(String(material.frictionCombine)) ? material.frictionCombine as typeof collider.material.frictionCombine : 'Average'
+    collider.material.restitutionCombine = ['Average', 'Minimum', 'Maximum', 'Multiply'].includes(String(material.restitutionCombine)) ? material.restitutionCombine as typeof collider.material.restitutionCombine : 'Maximum'
     if (data.material && typeof data.material === 'object') {
       const material = data.material as Record<string, unknown>
       collider.material.restitution = finiteNumber(material.restitution, collider.material.restitution)
@@ -1083,6 +1137,36 @@ export function createEntityFromData(item: SceneEntityData, forcedId?: number): 
     if (!layer || typeof layer.asset !== 'string' || typeof layer.instanceUuid !== 'string' || typeof layer.sourceUuid !== 'string') return []
     return [{ asset: layer.asset, instanceUuid: normalizeUuid(layer.instanceUuid), sourceUuid: normalizeUuid(layer.sourceUuid) }]
   }).slice(0, 32) : []
+  if (!item.authoring) {
+    if (entity.camera2D) entity.authoring.kind = 'Camera'
+    else if (entity.spriteRenderer) entity.authoring.kind = entity.hasComponent('Animator') ? 'AnimatedSprite' : 'Sprite'
+    else if (entity.textRenderer) entity.authoring.kind = 'WorldText'
+  }
+  if (item.authoring && typeof item.authoring === 'object') {
+    const authoring = item.authoring
+    const knownKinds = new Set(['Empty', 'Sprite', 'AnimatedSprite', 'WorldText', 'Polygon', 'Line', 'Path', 'Camera', 'CanvasLayer', 'ParallaxLayer', 'Rectangle', 'Circle', 'Triangle', 'Collider', 'ScriptHost', 'AudioEmitter', 'Light', 'NavigationRegion', 'PackageObject'])
+    if (typeof authoring.kind === 'string' && knownKinds.has(authoring.kind)) entity.authoring.kind = authoring.kind as AuthoringMetadata2D['kind']
+    if (authoring.origin) copyVector(entity.authoring.origin, authoring.origin)
+    entity.authoring.visible = authoring.visible !== false
+    entity.authoring.zOrder = Math.trunc(finiteNumber(authoring.zOrder, entity.authoring.zOrder))
+    entity.authoring.renderLayer = Math.max(0, Math.trunc(finiteNumber(authoring.renderLayer, entity.layer)))
+    entity.authoring.sortMode = authoring.sortMode === 'YSort' ? 'YSort' : 'LayerThenOrder'
+    if (authoring.canvasLayer) entity.authoring.canvasLayer = {
+      screenSpace: authoring.canvasLayer.screenSpace === true,
+      followCamera: authoring.canvasLayer.followCamera !== false
+    }
+    if (authoring.parallax) {
+      copyVector(entity.authoring.parallax.motionScale, authoring.parallax.motionScale)
+      copyVector(entity.authoring.parallax.repeat, authoring.parallax.repeat)
+    }
+    if (authoring.path) {
+      entity.authoring.path.closed = authoring.path.closed === true
+      entity.authoring.path.smoothing = Math.min(1, Math.max(0, finiteNumber(authoring.path.smoothing, entity.authoring.path.smoothing)))
+      entity.authoring.path.points = Array.isArray(authoring.path.points)
+        ? authoring.path.points.slice(0, 10_000).map(point => ({ x: finiteNumber(point.x), y: finiteNumber(point.y) }))
+        : entity.authoring.path.points
+    }
+  }
 
   if (entity.isStatic) entity.isKinematic = false
   normalizeEntity(entity)
@@ -1426,6 +1510,8 @@ function loadGlobalSettings(scene: Record<string, unknown>): void {
   physicsState.globalSettings.timeScale = finiteNumber(settings.timeScale, physicsState.globalSettings.timeScale)
   physicsState.globalSettings.tickRate = finiteNumber(settings.tickRate, physicsState.globalSettings.tickRate)
   physicsState.globalSettings.maxCatchUpSteps = finiteNumber(settings.maxCatchUpSteps, physicsState.globalSettings.maxCatchUpSteps)
+  physicsState.globalSettings.interpolation = settings.interpolation === 'None' ? 'None' : 'Interpolate'
+  physicsState.globalSettings.layers = normalizePhysicsLayers(settings.layers)
   if (Array.isArray(settings.collisionMatrix)) {
     physicsState.globalSettings.collisionMatrix = settings.collisionMatrix.map(value => finiteNumber(value))
   }
@@ -1457,6 +1543,7 @@ export function loadProject(jsonString: string, preserveRuntimeSession = false):
     const presentation = projectSettings.presentation && typeof projectSettings.presentation === 'object' ? projectSettings.presentation as Record<string, unknown> : {}
     loadLocalizationSettings(presentation.localization)
     loadRuntimeAccessibilitySettings(presentation.accessibility)
+    loadUiAudioSettings(presentation.uiAudio)
     const sceneRecords = Array.isArray(project.scenes)
       ? project.scenes
       : [{ uuid: normalizeUuid(undefined), name: 'Main Scene', ...project }]
@@ -1534,7 +1621,7 @@ function reloadSceneManagerProject(preserveRuntimeSession = false): boolean {
     assetDatabase: serializeAssetDatabaseSettings(),
     plugins: serializePluginManifests(),
     packages: serializePackageState(),
-    projectSettings: { inputMap: normalizeInputMap(physicsState.inputMap), audio: normalizeAudioSettings(physicsState.audioSettings), build: serializeBuildSettings(), scripting: serializeScriptSettings(), rendering: serializeRenderingSettings(), world: serializeWorldGameplaySettings(), presentation: { localization: serializeLocalizationSettings(), accessibility: serializeRuntimeAccessibilitySettings() }, production: serializeProductionSettings() },
+    projectSettings: { inputMap: normalizeInputMap(physicsState.inputMap), audio: normalizeAudioSettings(physicsState.audioSettings), build: serializeBuildSettings(sceneManager.scenes.map(scene => scene.uuid)), scripting: serializeScriptSettings(), rendering: serializeRenderingSettings(), world: serializeWorldGameplaySettings(), presentation: { localization: serializeLocalizationSettings(), accessibility: serializeRuntimeAccessibilitySettings(), uiAudio: serializeUiAudioSettings() }, production: serializeProductionSettings() },
     activeSceneUuid: sceneManager.activeSceneUuid,
     scenes: sceneManager.serialize()
   })

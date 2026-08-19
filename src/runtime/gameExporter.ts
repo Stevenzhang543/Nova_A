@@ -1,7 +1,8 @@
 import { assetState } from '../assets/AssetDatabase'
 import { addEditorLog, editorState } from '../store/editor'
 import { getSceneJSON, sceneManager } from '../store/physics'
-import { buildProgress, buildSettings, synchronizeBuildScenes, validateBuildSettings } from './buildSettings'
+import { buildProgress, buildSettings, recordBuildHistory, synchronizeBuildScenes, validateBuildSettings } from './buildSettings'
+import { NOVA_ENGINE_VERSION } from '../projects/projectFormat'
 import { createNovaPak, packageBase64 } from './novaPak'
 import { OFFICIAL_AI_PACKAGE_ID, OFFICIAL_NAVIGATION_PACKAGE_ID, OFFICIAL_NETWORKING_PACKAGE_ID, packageEnabled } from './packages'
 import { productionSettings } from './production'
@@ -27,6 +28,20 @@ async function sha256(bytes: Uint8Array): Promise<string> { return bytesToHex(ne
 
 function sanitizeGameName(value: string): string {
   return value.replace(/[<>:"/\\|?*\x00-\x1f]/g, '').trim().slice(0, 80) || 'MyGame'
+}
+
+function globMatches(path: string, pattern: string): boolean {
+  const expression = pattern.replace(/[.+^${}()|[\]\\]/g, '\\$&').replace(/\*\*/g, '\u0000').replace(/\*/g, '[^/]*').replace(/\?/g, '[^/]').replace(/\u0000/g, '.*')
+  return new RegExp(`^${expression}$`, 'i').test(path.replace(/\\/g, '/'))
+}
+
+function assetsForBuild() {
+  const included = buildSettings.delivery.include, excluded = buildSettings.delivery.exclude
+  return assetState.records.filter(asset => {
+    const path = asset.path.replace(/\\/g, '/')
+    if (excluded.some(pattern => globMatches(path, pattern))) return false
+    return !included.length || included.some(pattern => globMatches(path, pattern))
+  })
 }
 
 function projectForBuild(projectJson: string): string {
@@ -125,13 +140,16 @@ async function webBuildMetadata(pack: Uint8Array, webFiles: ExportFile[]): Promi
     files.push({ path: file.path, sha256: await sha256(bytes), bytes: bytes.byteLength })
   }
   files.sort((a, b) => a.path.localeCompare(b.path))
-  const report = { format: 'nova-build-report', version: 1, engineVersion: '3.2.0', buildId: packHash, createdAt: buildSettings.delivery.deterministic ? '1970-01-01T00:00:00.000Z' : new Date().toISOString(), target: buildSettings.target, architecture: buildSettings.architecture, profile: buildSettings.profile, projectId: projectSessionState.id, files }
+  const report = { format: 'nova-build-report', version: 2, engineVersion: NOVA_ENGINE_VERSION, buildId: packHash, createdAt: buildSettings.delivery.deterministic ? '1970-01-01T00:00:00.000Z' : new Date().toISOString(), target: buildSettings.target, architecture: buildSettings.architecture, profile: buildSettings.profile, projectId: projectSessionState.id, totalBytes: files.reduce((sum, file) => sum + file.bytes, 0), cacheMode: buildSettings.delivery.cacheMode, files }
   const patch = { format: 'nova-patch-manifest', version: 1, fromBuild: null, toBuild: packHash, added: files.map(file => file.path), changed: [], removed: [], files }
+  const dependencies = { format: 'nova-dependency-report', version: 1, engineVersion: NOVA_ENGINE_VERSION, packages: JSON.parse(projectForBuild(getSceneJSON())).packages?.lockfile ?? [], assets: assetsForBuild().map(asset => ({ uuid: asset.uuid, path: asset.path, type: asset.assetType })) }
+  const size = { format: 'nova-build-size-report', version: 1, engineVersion: NOVA_ENGINE_VERSION, totalBytes: files.reduce((sum, file) => sum + file.bytes, 0), files: [...files].sort((a, b) => b.bytes - a.bytes) }
   const encode = (path: string, value: unknown): ExportFile => ({ path, dataBase64: bytesToBase64(new TextEncoder().encode(`${JSON.stringify(value, null, 2)}\n`)) })
-  return [encode('nova-build-report.json', report), ...(buildSettings.delivery.patchManifest ? [encode('nova-patch-manifest.json', patch)] : [])]
+  return [encode('nova-build-report.json', report), ...(buildSettings.delivery.sizeReport ? [encode('nova-build-size-report.json', size)] : []), ...(buildSettings.delivery.dependencyReport ? [encode('nova-dependency-report.json', dependencies)] : []), ...(buildSettings.delivery.patchManifest ? [encode('nova-patch-manifest.json', patch)] : [])]
 }
 
 export async function buildGame(run = false): Promise<NativeBuildResult> {
+  const startedAt = new Date().toISOString()
   synchronizeBuildScenes(sceneManager.scenes.map(scene => scene.uuid))
   const validationErrors = validateBuildSettings(buildSettings).filter(issue => issue.severity === 'error')
   if (validationErrors.length) throw new Error(validationErrors.map(issue => issue.message).join(' '))
@@ -144,7 +162,8 @@ export async function buildGame(run = false): Promise<NativeBuildResult> {
   buildProgress.phase = 'validating'; buildProgress.percent = 8; buildProgress.message = 'Validating scenes and asset references…'; buildProgress.outputPath = ''
   const projectJson = projectForBuild(getSceneJSON())
   buildProgress.phase = 'packing'; buildProgress.percent = 32; buildProgress.message = 'Creating indexed game.nova-pak…'
-  const pack = await createNovaPak(projectJson, assetState.records, buildSettings.startupSceneUuid, { deterministic: buildSettings.delivery.deterministic, compression: buildSettings.delivery.compression })
+  const selectedAssets = assetsForBuild()
+  const pack = await createNovaPak(projectJson, selectedAssets, buildSettings.startupSceneUuid, { deterministic: buildSettings.delivery.deterministic, compression: buildSettings.delivery.compression })
   buildProgress.phase = 'exporting'; buildProgress.percent = 66; buildProgress.message = 'Writing Nova Player export…'
   const webFiles = buildSettings.target === 'web' ? await collectWebPlayerFiles() : []
   if (buildSettings.target === 'web' && !('__TAURI_INTERNALS__' in window)) webFiles.push(...await webBuildMetadata(pack, webFiles))
@@ -167,6 +186,7 @@ export async function buildGame(run = false): Promise<NativeBuildResult> {
   buildProgress.phase = 'complete'; buildProgress.percent = 100; buildProgress.message = `Build complete: ${result.outputPath}`; buildProgress.outputPath = result.outputPath; buildProgress.cacheHits = result.cacheHits ?? 0; buildProgress.changedFiles = result.changedFiles ?? result.files.length
   editorState.statusText = buildProgress.message
   addEditorLog(buildProgress.message, 'Project', 'info', result.outputPath)
+  recordBuildHistory({ id: crypto.randomUUID(), startedAt, finishedAt: new Date().toISOString(), target: buildSettings.target, profile: buildSettings.profile, status: 'complete', outputPath: result.outputPath, buildId: result.buildId ?? '', sizeBytes: pack.byteLength, message: `${selectedAssets.length} assets; ${result.changedFiles ?? result.files.length} changed files` })
   return result
 }
 

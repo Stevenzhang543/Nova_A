@@ -1,0 +1,40 @@
+{
+  "format": "nova-known-issues",
+  "version": 1,
+  "engineVersion": "3.8.0",
+  "generatedAt": "2026-08-18T13:37:30.677Z",
+  "severity0Open": 0,
+  "severity1Open": 0,
+  "items": [
+    {
+      "severity": "S2",
+      "area": "large worlds",
+      "issue": "Tilemaps are bounded to 4,194,304 cells per component and 65,536 definitions; platform GPU/memory limits can be lower than the one-million-tile headless reference.",
+      "workaround": "Split worlds into cells, enable chunk streaming, use Project Health/Profiler, and qualify the target GPU before shipping."
+    },
+    {
+      "severity": "S2",
+      "area": "streaming budgets",
+      "issue": "WorldChunk memoryEstimateMb is an author-provided planning estimate, not an operating-system allocation measurement.",
+      "workaround": "Use conservative estimates and compare them with Profiler memory captures on every target."
+    },
+    {
+      "severity": "S2",
+      "area": "save storage",
+      "issue": "The built-in web save backend is bounded to 10 MB per envelope and inherits browser/WebView storage quotas.",
+      "workaround": "Use compact structured state and a custom serializer/backend for larger databases."
+    },
+    {
+      "severity": "S2",
+      "area": "platform qualification",
+      "issue": "This release run builds and qualifies Windows/WebView2 and Chromium on the named Windows host; clean Linux and macOS packaging remains a matching-host task.",
+      "workaround": "Run the supplied release matrix on Linux and macOS before making matching-host installer claims."
+    },
+    {
+      "severity": "S2",
+      "area": "long-duration qualification",
+      "issue": "The automated world-data soak is accelerated; a 24-hour wall-clock game session is not falsely claimed.",
+      "workaround": "Run the documented 24-hour workflow on named release hardware."
+    }
+  ]
+}

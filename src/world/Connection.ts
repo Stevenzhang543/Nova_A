@@ -59,6 +59,11 @@ export interface Connection {
   lowerLimit: number
   upperLimit: number
   collideConnected: boolean
+  motorEnabled: boolean
+  motorSpeed: number
+  maxMotorForce: number
+  breakForce: number
+  breakTorque: number
 }
 
 export const ROPE_NODE_CAPACITY = 32
@@ -464,6 +469,11 @@ export function createConnection(
     , lowerLimit: -1
     , upperLimit: 1
     , collideConnected: false
+    , motorEnabled: false
+    , motorSpeed: 0
+    , maxMotorForce: 1000
+    , breakForce: Number.POSITIVE_INFINITY
+    , breakTorque: Number.POSITIVE_INFINITY
   }
 }
 
@@ -541,7 +551,7 @@ export function normalizeConnection(connection: Connection, entities: Entity[]):
   connection.name = typeof connection.name === 'string' && connection.name.trim()
     ? connection.name.trim().slice(0, 80)
     : `Connection ${connection.id}`
-  const componentTypes: Connection['componentType'][] = ['Rope2D', 'FixedJoint2D', 'DistanceJoint2D', 'RevoluteJoint2D', 'PrismaticJoint2D', 'SpringJoint2D']
+  const componentTypes: Connection['componentType'][] = ['Rope2D', 'FixedJoint2D', 'WeldJoint2D', 'DistanceJoint2D', 'RopeJoint2D', 'RevoluteJoint2D', 'MotorJoint2D', 'PrismaticJoint2D', 'SpringJoint2D']
   connection.componentType = connection.binding === true ? 'FixedJoint2D' : componentTypes.includes(connection.componentType) ? connection.componentType : 'Rope2D'
   connection.enabled = connection.enabled !== false
   connection.style = connection.style === 'curved' || connection.style === 'manual' ? connection.style : 'straight'
@@ -572,6 +582,11 @@ export function normalizeConnection(connection: Connection, entities: Entity[]):
   connection.lowerLimit = finiteNumber(connection.lowerLimit, -1)
   connection.upperLimit = Math.max(connection.lowerLimit, finiteNumber(connection.upperLimit, 1))
   connection.collideConnected = connection.collideConnected === true
+  connection.motorEnabled = connection.motorEnabled === true
+  connection.motorSpeed = finiteNumber(connection.motorSpeed)
+  connection.maxMotorForce = Math.max(0, finiteNumber(connection.maxMotorForce, 1000))
+  connection.breakForce = Math.max(0, finiteNumber(connection.breakForce, Number.MAX_VALUE))
+  connection.breakTorque = Math.max(0, finiteNumber(connection.breakTorque, Number.MAX_VALUE))
   connection.anchors = (Array.isArray(connection.anchors) ? connection.anchors : [])
     .filter(anchor => entities.some(entity => entity.id === anchor.entityId))
   if (connection.anchors.length < 2) return false
@@ -600,7 +615,7 @@ export function connectionsFromJointComponents(entities: Entity[]): Connection[]
         component.referenceAngle = normalizeAngle(transformB.rotation - transformA.rotation)
         const anchorA = localPointToWorld(entity, component.anchor, entities)
         const anchorB = localPointToWorld(target, component.connectedAnchor, entities)
-        if (component.kind === 'DistanceJoint2D' || component.kind === 'SpringJoint2D') component.distance = Math.max(1e-6, Math.hypot(anchorB.x - anchorA.x, anchorB.y - anchorA.y))
+        if (component.kind === 'DistanceJoint2D' || component.kind === 'RopeJoint2D' || component.kind === 'SpringJoint2D') component.distance = Math.max(1e-6, Math.hypot(anchorB.x - anchorA.x, anchorB.y - anchorA.y))
         component.initialized = true
       }
       const connection = createConnection(-Math.max(1, entity.id), entities, [entity.id, target.id], ['center', 'center'])
@@ -612,7 +627,7 @@ export function connectionsFromJointComponents(entities: Entity[]): Connection[]
         { entityId: entity.id, mode: 'local', localPoint: { ...component.anchor }, index: 0, sideT: .5 },
         { entityId: target.id, mode: 'local', localPoint: { ...component.connectedAnchor }, index: 0, sideT: .5 }
       ]
-      connection.restLengths = [component.kind === 'RevoluteJoint2D' ? 1e-6 : component.distance]
+      connection.restLengths = [component.kind === 'RevoluteJoint2D' || component.kind === 'MotorJoint2D' ? 1e-6 : component.distance]
       connection.stretchable = component.kind === 'SpringJoint2D'
       connection.bendable = false
       connection.stiffness = component.stiffness
@@ -626,6 +641,11 @@ export function connectionsFromJointComponents(entities: Entity[]): Connection[]
       connection.lowerLimit = component.lowerLimit
       connection.upperLimit = component.upperLimit
       connection.collideConnected = component.collideConnected
+      connection.motorEnabled = component.motorEnabled || component.kind === 'MotorJoint2D'
+      connection.motorSpeed = component.motorSpeed
+      connection.maxMotorForce = component.maxMotorForce
+      connection.breakForce = component.breakForce
+      connection.breakTorque = component.breakTorque
       result.push(connection)
     }
   }

@@ -1,0 +1,13 @@
+{
+  "engineVersion": "4.0.0",
+  "schema": 29,
+  "projectName": "Nova_A Async Tasks",
+  "minimumScenes": 1,
+  "minimumEntities": 9,
+  "expectedValidation": "pass",
+  "demonstrates": [
+    "cancellable tasks",
+    "timers",
+    "error propagation and ownership"
+  ]
+}

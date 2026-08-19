@@ -1,6 +1,7 @@
 import { nineSliceGeometry, shapeGeometry, spriteGeometry, strokeGeometry, type GeometryData } from './geometry'
 import { assetState, resolveTexture as resolveTextureAsset } from '../assets/AssetDatabase'
-import { analyzeMaterialShader, resolveMaterial, type Material2DResource } from './materials'
+import { analyzeMaterialShader, reflectShaderUniforms, resolvedMaterialFragment, resolveMaterial, type Material2DResource } from './materials'
+import { reportRendererContextLost, reportRendererContextRestored } from './capabilities'
 import { renderingSettings } from './renderSettings'
 import {
   normalizedColor,
@@ -126,10 +127,12 @@ interface PostProgramState { program: WebGLProgram; texture: WebGLUniformLocatio
 interface TimerQueryExtension { TIME_ELAPSED_EXT: number; GPU_DISJOINT_EXT: number }
 
 function materialFragment(material: Material2DResource): string {
-  const uniforms = Object.entries(material.uniforms).map(([name, value]) => Array.isArray(value)
+  const resolved = resolvedMaterialFragment(material)
+  const declared = new Set(reflectShaderUniforms(resolved.source).map(field => field.name))
+  const uniforms = Object.entries(material.uniforms).filter(([name]) => !declared.has(name)).map(([name, value]) => Array.isArray(value)
     ? `uniform vec${value.length} ${name};`
     : typeof value === 'boolean' ? `uniform bool ${name};` : `uniform float ${name};`).join('\n')
-  const textures = Object.keys(material.textures).map(name => `uniform sampler2D ${name};`).join('\n')
+  const textures = Object.keys(material.textures).filter(name => !declared.has(name)).map(name => `uniform sampler2D ${name};`).join('\n')
   const converted = material.colorSpace === 'Linear' ? `vec4(pow(max(result.rgb, vec3(0.0)), vec3(1.0 / 2.2)), result.a)` : 'result'
   return `#version 300 es
 precision highp float;
@@ -139,16 +142,18 @@ uniform sampler2D u_texture;
 uniform bool u_linearTexture;
 ${uniforms}
 ${textures}
-${material.fragment}
+${resolved.source}
 out vec4 outputColor;
 void main(){ vec4 sampled=texture(u_texture,v_uv); if(u_linearTexture) sampled=vec4(pow(max(sampled.rgb,vec3(0.0)),vec3(1.0/2.2)),sampled.a); vec4 shaded=nova_material(sampled * v_color,v_uv); vec4 result=u_writeColor ? shaded : vec4(sampled.rgb * v_color.rgb, shaded.a); outputColor = ${converted}; }`
 }
 
 function postMaterialFragment(material: Material2DResource): string {
-  const uniforms = Object.entries(material.uniforms).map(([name, value]) => Array.isArray(value)
+  const resolved = resolvedMaterialFragment(material)
+  const declared = new Set(reflectShaderUniforms(resolved.source).map(field => field.name))
+  const uniforms = Object.entries(material.uniforms).filter(([name]) => !declared.has(name)).map(([name, value]) => Array.isArray(value)
     ? `uniform vec${value.length} ${name};`
     : typeof value === 'boolean' ? `uniform bool ${name};` : `uniform float ${name};`).join('\n')
-  const textures = Object.keys(material.textures).map(name => `uniform sampler2D ${name};`).join('\n')
+  const textures = Object.keys(material.textures).filter(name => !declared.has(name)).map(name => `uniform sampler2D ${name};`).join('\n')
   const converted = material.colorSpace === 'Linear' ? 'vec4(pow(max(result.rgb,vec3(0.0)),vec3(1.0/2.2)),result.a)' : 'result'
   return `#version 300 es
 precision highp float;
@@ -156,7 +161,7 @@ in vec2 v_uv;
 uniform sampler2D u_texture;
 ${uniforms}
 ${textures}
-${material.fragment}
+${resolved.source}
 out vec4 outputColor;
 void main(){ vec4 result=nova_material(texture(u_texture,v_uv),v_uv); outputColor=${converted}; }`
 }
@@ -180,7 +185,7 @@ function textureDimensions(source: TexImageSource): { width: number; height: num
 }
 
 export class WebGL2Renderer implements Renderer2D {
-  readonly stats: RendererStats = { backend: 'WebGL2', drawCalls: 0, batches: 0, triangles: 0, sprites: 0, shapes: 0, text: 0, textures: 0, gpuMs: null, passes: 1, renderTargets: 1, overdraw: 0 }
+  readonly stats: RendererStats = { backend: 'WebGL2', drawCalls: 0, batches: 0, triangles: 0, sprites: 0, shapes: 0, text: 0, textures: 0, gpuMs: null, passes: 1, renderTargets: 1, overdraw: 0, batchBreaks: 0, atlasPages: 0 }
   private readonly gl: WebGL2RenderingContext
   private readonly program: WebGLProgram
   private readonly vao: WebGLVertexArrayObject
@@ -212,11 +217,26 @@ export class WebGL2Renderer implements Renderer2D {
   private effectsTargetActive = false
   private effectsWidth = 0
   private effectsHeight = 0
+  private contextLost = false
+  private readonly onContextLost = (event: Event) => {
+    event.preventDefault()
+    this.contextLost = true
+    this.activeTimer = null
+    this.pendingTimers = []
+    reportRendererContextLost()
+  }
+  private readonly onContextRestored = () => {
+    this.contextLost = false
+    reportRendererContextRestored()
+    window.dispatchEvent(new CustomEvent('nova-renderer-reset-request'))
+  }
 
   constructor(private readonly canvas: HTMLCanvasElement) {
     const gl = canvas.getContext('webgl2', { alpha: false, antialias: true, depth: false, premultipliedAlpha: true, powerPreference: 'high-performance' })
     if (!gl) throw new Error('WebGL2 is unavailable')
     this.gl = gl
+    canvas.addEventListener('webglcontextlost', this.onContextLost)
+    canvas.addEventListener('webglcontextrestored', this.onContextRestored)
     this.program = createProgram(gl)
     const vao = gl.createVertexArray(), vertexBuffer = gl.createBuffer(), indexBuffer = gl.createBuffer()
     if (!vao || !vertexBuffer || !indexBuffer) throw new Error('Could not allocate WebGL buffers')
@@ -267,10 +287,11 @@ export class WebGL2Renderer implements Renderer2D {
     this.packets = []
     this.sequence = 0
     this.cameraIndex = -1
+    if (this.contextLost || this.gl.isContextLost()) return
     this.effectsTargetActive = Boolean(renderingSettings.postProcessing.enabled && renderingSettings.postProcessing.userMaterial)
     if (this.effectsTargetActive) this.ensureEffectsTarget()
     this.pollGpuTimers()
-    Object.assign(this.stats, { drawCalls: 0, batches: 0, triangles: 0, sprites: 0, shapes: 0, text: 0, textures: 0, gpuMs: this.lastGpuMs, passes: 1, renderTargets: this.effectsTargetActive ? 1 : 0, overdraw: 0 })
+    Object.assign(this.stats, { drawCalls: 0, batches: 0, triangles: 0, sprites: 0, shapes: 0, text: 0, textures: 0, gpuMs: this.lastGpuMs, passes: 1, renderTargets: this.effectsTargetActive ? 1 : 0, overdraw: 0, batchBreaks: 0, atlasPages: assetState.atlasPages.length })
     const gl = this.gl
     gl.bindFramebuffer(gl.FRAMEBUFFER, this.effectsTargetActive ? this.framebuffer : null)
     const [r, g, b, a] = normalizedColor(options.clearColor)
@@ -322,6 +343,7 @@ export class WebGL2Renderer implements Renderer2D {
   endCamera(): void { /* Commands are flushed at endFrame to preserve global sorting. */ }
 
   endFrame(): RendererStats {
+    if (this.contextLost || this.gl.isContextLost()) return { ...this.stats }
     this.packets.sort((first, second) => first.cameraIndex - second.cameraIndex || first.layer - second.layer || first.order - second.order || first.material.localeCompare(second.material) || first.sequence - second.sequence)
     let batch: GeometryPacket[] = []
     const flush = () => {
@@ -342,6 +364,7 @@ export class WebGL2Renderer implements Renderer2D {
       batch.push(packet)
     }
     flush()
+    this.stats.batchBreaks = Math.max(0, this.stats.batches - 1)
     const gl = this.gl
     const postMaterial = this.effectsTargetActive ? renderingSettings.postProcessing.userMaterial : null
     if (postMaterial && !this.drawPostMaterial(postMaterial)) {
@@ -364,6 +387,8 @@ export class WebGL2Renderer implements Renderer2D {
   }
 
   destroy(): void {
+    this.canvas.removeEventListener('webglcontextlost', this.onContextLost)
+    this.canvas.removeEventListener('webglcontextrestored', this.onContextRestored)
     const gl = this.gl
     gl.deleteBuffer(this.vertexBuffer)
     gl.deleteBuffer(this.indexBuffer)
@@ -472,7 +497,7 @@ export class WebGL2Renderer implements Renderer2D {
     if (!reference || reference === 'Default' || reference === 'Particles' || reference.startsWith('__')) return this.baseProgramState
     if (this.materialPrograms.has(reference)) return this.materialPrograms.get(reference) ?? this.baseProgramState
     const material = resolveMaterial(reference)
-    if (analyzeMaterialShader(material.fragment).some(item => item.severity === 'error')) { this.materialPrograms.set(reference, null); return this.baseProgramState }
+    if (analyzeMaterialShader(material.fragment, material.includes).some(item => item.severity === 'error')) { this.materialPrograms.set(reference, null); return this.baseProgramState }
     try {
       const program = createProgram(this.gl, materialFragment(material))
       const camera = this.gl.getUniformLocation(program, 'u_camera'), texture = this.gl.getUniformLocation(program, 'u_texture'), rotation = this.gl.getUniformLocation(program, 'u_rotation')
@@ -514,7 +539,7 @@ export class WebGL2Renderer implements Renderer2D {
   private drawPostMaterial(reference: string): boolean {
     if (!this.colorTarget) return false
     const material = resolveMaterial(reference)
-    if (analyzeMaterialShader(material.fragment).some(item => item.severity === 'error')) return false
+    if (analyzeMaterialShader(material.fragment, material.includes).some(item => item.severity === 'error')) return false
     if (!this.postProgram || this.postProgram.reference !== reference || this.postProgram.generation !== assetState.generation) {
       if (this.postProgram) this.gl.deleteProgram(this.postProgram.program)
       try {
@@ -594,11 +619,12 @@ export class WebGL2Renderer implements Renderer2D {
   }
 
   private textTexture(command: TextRenderCommand): CachedText {
-    const key = [command.text, command.fontFamily, command.fontWeight, command.lineHeight].join('|')
+    const key = [command.text, command.fontFamily, command.fontWeight, command.lineHeight, command.outlineWidth, command.outlineColor.r, command.outlineColor.g, command.outlineColor.b, command.outlineColor.a].join('|')
     const existing = this.textCache.get(key)
     if (existing) return existing
     const fontPixels = 64
-    const padding = 8
+    const rasterOutline = Math.max(0, command.outlineWidth / Math.max(1, command.fontSize) * fontPixels)
+    const padding = Math.ceil(8 + rasterOutline * 2)
     const lines = command.text.split('\n').slice(0, 64)
     const measureCanvas = document.createElement('canvas')
     const measure = measureCanvas.getContext('2d')!
@@ -613,7 +639,16 @@ export class WebGL2Renderer implements Renderer2D {
     context.fillStyle = 'white'
     context.font = `${command.fontWeight} ${fontPixels}px ${command.fontFamily}`
     context.textBaseline = 'top'
-    lines.forEach((line, index) => context.fillText(line, padding, padding + index * fontPixels * command.lineHeight))
+    if (rasterOutline > 0 && command.outlineColor.a > 0) {
+      context.strokeStyle = `rgba(${command.outlineColor.r}, ${command.outlineColor.g}, ${command.outlineColor.b}, ${command.outlineColor.a})`
+      context.lineWidth = rasterOutline * 2
+      context.lineJoin = 'round'
+    }
+    lines.forEach((line, index) => {
+      const y = padding + index * fontPixels * command.lineHeight
+      if (rasterOutline > 0 && command.outlineColor.a > 0) context.strokeText(line, padding, y)
+      context.fillText(line, padding, y)
+    })
     const cached: CachedText = {
       region: { key: `text:${key}`, source: canvas, uv: { x: 0, y: 0, width: 1, height: 1 }, filter: 'Linear' },
       aspect: canvas.width / Math.max(1, canvas.height)

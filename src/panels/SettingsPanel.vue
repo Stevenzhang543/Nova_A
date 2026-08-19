@@ -2,7 +2,7 @@
   <div class="settings-page">
     <header class="page-header">
       <div>
-        <span class="eyebrow">Nova_A 3.2.0</span>
+        <span class="eyebrow">Nova_A 4.0.0</span>
         <h1>{{ t('settings') }}</h1>
       </div>
       <div class="theme-switch" :aria-label="t('theme')">
@@ -38,21 +38,7 @@
         <button class="secondary-action" @click="editorState.shortcutEditorOpen = true">{{ t('shortcutEditor') }}</button>
       </section>
 
-      <section v-show="showCard('physicsSettings globalGravity globalAirDamping timeScale physicsTickRate maxCatchUpSteps', 'project')" class="settings-card" @change="applyPhysicsSettings">
-        <div class="card-heading"><span class="card-icon">⌁</span><h2>{{ t('physicsSettings') }}</h2></div>
-        <p>{{ t('physicsDescription') }}</p>
-        <SettingRow :label="t('globalGravity')"><input v-model.number="physics.globalSettings.gravity" type="number" step="0.1"></SettingRow>
-        <SettingRow :label="t('globalAirDamping')"><input v-model.number="physics.globalSettings.airFriction" type="number" min="0" step="0.01"></SettingRow>
-        <SettingRow :label="t('timeScale')"><input v-model.number="physics.globalSettings.timeScale" type="number" min="0" step="0.1"></SettingRow>
-        <SettingRow :label="t('physicsTickRate')">
-          <select v-model.number="physics.globalSettings.tickRate">
-            <option :value="30">30 Hz</option><option :value="60">60 Hz</option><option :value="120">120 Hz</option>
-            <option v-if="isCustomTickRate" :value="physics.globalSettings.tickRate">{{ t('customTickRate') }} · {{ physics.globalSettings.tickRate }} Hz</option>
-          </select>
-        </SettingRow>
-        <SettingRow :label="t('customTickRate')"><input v-model.number="physics.globalSettings.tickRate" type="number" min="1" max="1000" step="1"></SettingRow>
-        <SettingRow :label="t('maxCatchUpSteps')"><input v-model.number="physics.globalSettings.maxCatchUpSteps" type="number" min="1" max="240" step="1"></SettingRow>
-      </section>
+      <PhysicsSettingsPanel v-show="showCard('physicsSettings globalGravity collisionLayers physicsMaterials conformance', 'project')" />
 
       <section v-show="showCard('audioSettings masterVolume musicVolume sfxVolume uiVolume sampleRate', 'project')" class="settings-card" @change="commitAudioSettings">
         <div class="card-heading"><span class="card-icon">♫</span><h2>{{ t('audioSettings') }}</h2></div>
@@ -66,8 +52,11 @@
       <section v-show="showCard('inputMap inputDevice bindingCode gamepad keyboard', 'project')" class="settings-card input-map-card">
         <div class="card-heading"><span class="card-icon">⌨</span><h2>{{ t('inputMap') }}</h2></div>
         <p>{{ t('inputMapDescription') }}</p>
+        <div class="input-map-toolbar"><input v-model="inputSearch" type="search" :placeholder="t('searchActions')"><select v-model="inputDeviceFilter"><option value="all">{{ t('allDevices') }}</option><option v-for="device in inputDevices" :key="device">{{ device }}</option></select><label><input v-model="compactInputMap" type="checkbox"> {{ t('compactMode') }}</label><button :class="{ active: inputRecording }" @click="toggleInputRecording">{{ inputRecording ? t('stop') : t('record') }}</button><button :disabled="!lastInputRecording" @click="replayInputRecording">▶ {{ t('replay') }}</button></div>
+        <div class="connected-devices"><span v-for="device in connectedInputDevices" :key="`${device.kind}:${device.index}`">{{ device.kind }} {{ device.index }} · {{ device.mapping }}</span></div>
+        <div v-if="inputConflicts.length" class="input-conflicts" role="alert"><strong>{{ t('bindingConflicts') }} · {{ inputConflicts.length }}</strong><span v-for="conflict in inputConflicts" :key="`${conflict.signature}:${conflict.action}`">{{ conflict.conflictsWithAction }} ↔ {{ conflict.action }} · {{ conflict.signature }}</span></div>
         <div class="input-actions">
-          <article v-for="(action, actionIndex) in physics.inputMap" :key="`${action.name}-${actionIndex}`" class="input-action">
+          <article v-for="({ action, actionIndex }) in visibleInputActions" :key="`${action.name}-${actionIndex}`" class="input-action" :class="{ compact: compactInputMap }">
             <div class="input-action-heading">
               <input v-model.trim="action.name" :aria-label="t('actionName')" maxlength="80" @change="commitInputMap">
               <select v-model="action.kind" :aria-label="t('actionType')" @change="commitInputMap">
@@ -76,14 +65,11 @@
                 <option value="vector2">{{ t('inputVector') }}</option>
               </select>
               <button class="icon-action danger" :title="t('removeInputAction')" @click="removeInputAction(actionIndex)">×</button>
+              <button class="icon-action" :title="t('duplicate')" @click="duplicateInputAction(actionIndex)">⧉</button>
             </div>
             <div v-for="(binding, bindingIndex) in action.bindings" :key="bindingIndex" class="input-binding">
               <select v-model="binding.device" :aria-label="t('inputDevice')" @change="setBindingDevice(binding); commitInputMap()">
-                <option value="keyboard">{{ t('keyboard') }}</option>
-                <option value="mouse-button">{{ t('mouseButton') }}</option>
-                <option value="mouse-wheel">{{ t('mouseWheel') }}</option>
-                <option value="gamepad-button">{{ t('gamepadButton') }}</option>
-                <option value="gamepad-axis">{{ t('gamepadAxis') }}</option>
+                <option v-for="device in inputDevices" :key="device" :value="device">{{ device }}</option>
               </select>
               <input v-model.trim="binding.code" :aria-label="t('bindingCode')" maxlength="80" @change="commitInputMap">
               <template v-if="action.kind === 'vector2'">
@@ -94,23 +80,12 @@
               <input v-if="binding.device.startsWith('gamepad')" v-model.number="binding.gamepad" :aria-label="t('gamepadIndex')" type="number" min="0" max="15" step="1" @change="commitInputMap">
               <input v-if="binding.device === 'gamepad-axis'" v-model.number="binding.deadzone" :aria-label="t('deadzone')" type="number" min="0" max="0.99" step="0.01" @change="commitInputMap">
               <button class="icon-action danger" :title="t('removeBinding')" @click="removeInputBinding(actionIndex, bindingIndex)">×</button>
+              <details v-if="!compactInputMap" class="binding-advanced"><summary>{{ t('advanced') }}</summary><label>{{ t('threshold') }}<input v-model.number="binding.threshold" type="number" min="0" max="1" step="0.01" @change="commitInputMap"></label><label>{{ t('invert') }}<input v-model="binding.invert" type="checkbox" @change="commitInputMap"></label><label>{{ t('responseCurve') }}<select v-model="binding.responseCurve" @change="commitInputMap"><option>linear</option><option>square</option><option>cubic</option><option>exponential</option></select></label><label>{{ t('deviceIdentity') }}<input v-model="binding.deviceId" @change="commitInputMap"></label><label>{{ t('modifiers') }}<input :value="binding.modifiers.join(', ')" @change="setBindingList(binding,'modifiers',$event)"></label><label>{{ t('chord') }}<input :value="binding.chord.join(', ')" @change="setBindingList(binding,'chord',$event)"></label></details>
             </div>
             <button class="secondary-action compact-action" @click="addInputBinding(actionIndex)">+ {{ t('addBinding') }}</button>
           </article>
         </div>
         <button class="secondary-action" @click="addInputAction">+ {{ t('addInputAction') }}</button>
-      </section>
-
-      <section v-show="showCard('collisionMatrix collisionMatrixDescription physicsLayer', 'project')" class="settings-card matrix-card">
-        <div class="card-heading"><span class="card-icon">#</span><h2>{{ t('collisionMatrix') }}</h2></div>
-        <p>{{ t('collisionMatrixDescription') }}</p>
-        <div class="matrix-scroll">
-          <div class="matrix-header"><span></span><b v-for="column in physicsLayers" :key="column">{{ column }}</b></div>
-          <div v-for="row in physicsLayers" :key="row" class="matrix-row">
-            <b>{{ row }}</b>
-            <button v-for="column in physicsLayers" :key="column" :class="{ active: layersCollide(row, column) }" :aria-label="`${row} / ${column}`" @click="toggleLayerCollision(row, column)"></button>
-          </div>
-        </div>
       </section>
 
       <section v-show="showCard('canvasSettings gridSize snapToGrid zoomSensitivity showConnections renderQuality', 'editor')" class="settings-card">
@@ -158,15 +133,17 @@
 </template>
 
 <script setup lang="ts">
-import { computed, defineComponent, h, watch } from 'vue'
+import { computed, defineComponent, h, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { t } from '../i18n'
 import { editorState } from '../store/editor'
-import { autosaveState, normalizeGlobalSettings, physicsState as physics, pushHistory, restoreAutosave } from '../store/physics'
+import { autosaveState, physicsState as physics, pushHistory, restoreAutosave } from '../store/physics'
 import { preferencesState as prefs, resetPreferences } from '../store/preferences'
 import type { ThemeMode } from '../store/preferences'
-import { createInputBinding, normalizeInputMap, type InputBinding } from '../runtime/input'
+import { createInputBinding, detectInputConflicts, normalizeInputMap, type InputBinding, type InputDevice, type InputDeviceIdentity, type InputModifier, type InputRecording } from '../runtime/input'
+import { gameplayRuntime } from '../runtime/GameplayRuntime'
 import { normalizeAudioSettings } from '../runtime/audio'
 import { openEditorTool } from '../editor/workspaces'
+import PhysicsSettingsPanel from '../components/PhysicsSettingsPanel.vue'
 
 function setTheme(theme: ThemeMode) {
   prefs.theme = theme
@@ -194,8 +171,16 @@ const ToggleSwitch = defineComponent({
 })
 
 const autosaveAvailable = computed(() => autosaveState.available)
-const isCustomTickRate = computed(() => ![30, 60, 120].includes(physics.globalSettings.tickRate))
-const physicsLayers = Array.from({ length: 32 }, (_, index) => index)
+const inputDevices: InputDevice[] = ['keyboard', 'physical-key', 'mouse-button', 'mouse-wheel', 'mouse-motion', 'gamepad-button', 'gamepad-axis', 'touch', 'gesture']
+const inputSearch = ref(''), inputDeviceFilter = ref<InputDevice | 'all'>('all'), compactInputMap = ref(false), inputRecording = ref(false), lastInputRecording = ref<InputRecording | null>(null), connectedInputDevices = ref<InputDeviceIdentity[]>([])
+const inputConflicts = computed(() => detectInputConflicts(physics.inputMap))
+const visibleInputActions = computed(() => physics.inputMap.map((action, actionIndex) => ({ action, actionIndex })).filter(({ action }) => {
+  const matchesSearch = !inputSearch.value.trim() || action.name.toLocaleLowerCase().includes(inputSearch.value.trim().toLocaleLowerCase()) || action.bindings.some(binding => `${binding.device} ${binding.code}`.toLocaleLowerCase().includes(inputSearch.value.trim().toLocaleLowerCase()))
+  return matchesSearch && (inputDeviceFilter.value === 'all' || action.bindings.some(binding => binding.device === inputDeviceFilter.value))
+}))
+let inputDeviceTimer = 0
+onMounted(() => { connectedInputDevices.value = gameplayRuntime.input.connectedDevices(); inputDeviceTimer = window.setInterval(() => { connectedInputDevices.value = gameplayRuntime.input.connectedDevices() }, 1000) })
+onBeforeUnmount(() => window.clearInterval(inputDeviceTimer))
 const settingScopes = [{ id: 'all' as const, label: 'all' }, { id: 'editor' as const, label: 'editorScope' }, { id: 'project' as const, label: 'projectScope' }, { id: 'runtime' as const, label: 'runtimeScope' }]
 watch(() => prefs.locale, () => { editorState.statusText = t('ready') })
 
@@ -206,29 +191,6 @@ function showCard(keys: string, scope: 'all' | 'editor' | 'project' | 'runtime')
   return keys.split(' ').some(key => t(key).toLocaleLowerCase().includes(needle) || key.toLocaleLowerCase().includes(needle))
 }
 function openTool(tab: 'packages' | 'profiler' | 'project') { openEditorTool(tab) }
-
-function layerBit(layer: number): number { return (2 ** layer) >>> 0 }
-function layersCollide(first: number, second: number): boolean {
-  return (physics.globalSettings.collisionMatrix[first] & layerBit(second)) !== 0
-    && (physics.globalSettings.collisionMatrix[second] & layerBit(first)) !== 0
-}
-function toggleLayerCollision(first: number, second: number) {
-  const enabled = !layersCollide(first, second)
-  const firstBit = layerBit(second)
-  const secondBit = layerBit(first)
-  physics.globalSettings.collisionMatrix[first] = enabled
-    ? (physics.globalSettings.collisionMatrix[first] | firstBit) >>> 0
-    : (physics.globalSettings.collisionMatrix[first] & ~firstBit) >>> 0
-  physics.globalSettings.collisionMatrix[second] = enabled
-    ? (physics.globalSettings.collisionMatrix[second] | secondBit) >>> 0
-    : (physics.globalSettings.collisionMatrix[second] & ~secondBit) >>> 0
-  pushHistory()
-}
-
-function applyPhysicsSettings() {
-  normalizeGlobalSettings()
-  pushHistory()
-}
 
 function commitAudioSettings() {
   Object.assign(physics.audioSettings, normalizeAudioSettings(physics.audioSettings))
@@ -249,6 +211,12 @@ function addInputAction() {
   pushHistory('Add input action')
 }
 
+function duplicateInputAction(index: number) {
+  const source = physics.inputMap[index]; if (!source || physics.inputMap.length >= 128) return
+  const names = new Set(physics.inputMap.map(action => action.name)); let suffix = 2, name = `${source.name} Copy`; while (names.has(name)) name = `${source.name} Copy ${suffix++}`
+  physics.inputMap.splice(index + 1, 0, { ...source, name, bindings: source.bindings.map(binding => ({ ...binding, modifiers: [...binding.modifiers], chord: [...binding.chord] })) }); pushHistory('Duplicate input action')
+}
+
 function removeInputAction(index: number) {
   physics.inputMap.splice(index, 1)
   pushHistory('Remove input action')
@@ -265,8 +233,12 @@ function removeInputBinding(actionIndex: number, bindingIndex: number) {
 }
 
 function setBindingDevice(binding: InputBinding) {
-  binding.code = binding.device === 'keyboard' ? 'Space' : binding.device === 'mouse-wheel' ? 'y' : '0'
+  binding.code = binding.device === 'keyboard' || binding.device === 'physical-key' ? 'Space' : binding.device === 'mouse-wheel' || binding.device === 'mouse-motion' ? 'y' : binding.device === 'touch' ? 'pressed' : binding.device === 'gesture' ? 'tap' : '0'
 }
+
+function setBindingList(binding: InputBinding, property: 'modifiers' | 'chord', event: Event) { const values = (event.target as HTMLInputElement).value.split(',').map(value => value.trim()).filter(Boolean); if (property === 'modifiers') binding.modifiers = values.filter((value): value is InputModifier => ['Control','Shift','Alt','Meta'].includes(value)).slice(0, 4); else binding.chord = [...new Set(values)].slice(0, 8); commitInputMap() }
+function toggleInputRecording() { if (!inputRecording.value) { gameplayRuntime.input.beginRecording(); inputRecording.value = true } else { lastInputRecording.value = gameplayRuntime.input.endRecording(); inputRecording.value = false } }
+function replayInputRecording() { if (lastInputRecording.value) gameplayRuntime.input.playRecording(lastInputRecording.value) }
 
 function restoreSavedScene() {
   if (restoreAutosave()) {
@@ -336,5 +308,7 @@ p { margin: 0 0 8px 40px; color: var(--text-muted); font-size: 12px; line-height
 .secondary-action:hover { border-color: var(--accent); background: var(--accent-soft); }
 .danger-action { color: var(--danger); background: var(--danger-soft); }
 .danger-action:hover { border-color: var(--danger); }
-@media (max-width: 800px) { .settings-grid { grid-template-columns: 1fr; } .page-header,.settings-search { align-items: flex-start; flex-direction: column; }.settings-search>label{width:100%}.settings-search nav{width:100%} .input-action-heading, .input-binding { grid-template-columns: repeat(2, minmax(0, 1fr)) 28px; } .input-action-heading > input, .input-action-heading > select { grid-column: auto; } }
+.input-map-toolbar{margin-bottom:8px;display:flex;gap:6px;align-items:center;flex-wrap:wrap}.input-map-toolbar>input{min-width:160px;flex:1}.input-map-toolbar label{display:flex;align-items:center;gap:5px}.input-map-toolbar button.active{color:#fff;border-color:#d53b4c;background:#b92537}.connected-devices{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:8px}.connected-devices span{padding:3px 7px;border:1px solid var(--border-subtle);border-radius:99px;color:var(--text-muted);font-size:11px}.input-conflicts{margin-bottom:8px;padding:8px;display:grid;gap:3px;border:1px solid var(--warning);border-radius:8px;background:color-mix(in srgb,var(--warning) 8%,transparent);font-size:11px}.input-conflicts span{overflow-wrap:anywhere;color:var(--text-muted)}.input-action-heading{grid-template-columns:minmax(120px,3fr) minmax(100px,2fr) 28px 28px}.input-binding{grid-template-columns:minmax(120px,1.25fr) minmax(100px,1fr) repeat(4,minmax(64px,.6fr)) 28px}.binding-advanced{grid-column:1/-1;padding:5px;border:1px solid var(--border-subtle);border-radius:7px}.binding-advanced summary{cursor:pointer;color:var(--accent)}.binding-advanced>label{display:grid;grid-template-columns:100px minmax(100px,1fr);gap:6px;align-items:center;margin-top:4px;color:var(--text-muted);font-size:11px}.input-action.compact .input-binding{padding-block:2px}.input-action.compact .compact-action{margin-top:2px}
+.binding-advanced summary{min-height:20px;display:flex;align-items:center;line-height:18px}
+@media (max-width: 800px) { .settings-grid { grid-template-columns: 1fr; } .page-header,.settings-search { align-items: flex-start; flex-direction: column; }.settings-search>label{width:100%}.settings-search nav{width:100%} .input-action-heading, .input-binding { grid-template-columns: repeat(2, minmax(0, 1fr)) 28px; } .input-action-heading > input, .input-action-heading > select { grid-column: auto; }.binding-advanced{grid-column:1/-1}.input-map-toolbar>*{flex:1 1 130px} }
 </style>

@@ -1,0 +1,19 @@
+{
+  "format": "nova-v3.5-stability-smoke",
+  "version": 1,
+  "engineVersion": "3.5.0",
+  "generatedAt": "2026-08-19T13:53:15.839Z",
+  "checks": {
+    "parserFuzz": true,
+    "diagnosticsDeduplicated": true,
+    "errorStormResponsive": true,
+    "debuggerContained": true,
+    "hotReloadRollback": true,
+    "headlessExitCodes": true,
+    "protocolProcess": true,
+    "apiCompatible": true
+  },
+  "severity0Open": 0,
+  "severity1Open": 0,
+  "status": "passed"
+}

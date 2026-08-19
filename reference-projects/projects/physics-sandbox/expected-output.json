@@ -1,6 +1,6 @@
 {
-  "engineVersion": "3.2.0",
-  "schema": 23,
+  "engineVersion": "4.0.0",
+  "schema": 29,
   "projectName": "Nova_A Physics Sandbox Reference",
   "minimumScenes": 1,
   "minimumEntities": 8,

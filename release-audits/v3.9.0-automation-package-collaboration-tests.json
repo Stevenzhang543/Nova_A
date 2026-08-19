@@ -1,0 +1,35 @@
+{
+  "format": "nova-v3.9-integration-tests",
+  "version": 1,
+  "engineVersion": "3.9.0",
+  "generatedAt": "2026-08-19T13:58:07.226Z",
+  "build": {
+    "cacheMode": "validate",
+    "reports": true,
+    "unsupportedMobileBlocked": true
+  },
+  "packageSecurity": "passed",
+  "sourceControl": true,
+  "networkingGate": {
+    "maturity": "experimental",
+    "coreStabilityBlocker": false,
+    "requiredSuites": [
+      "security",
+      "bandwidth",
+      "packet-loss",
+      "multiple-instance",
+      "headless-build"
+    ],
+    "passedSuites": [
+      "message-bounds",
+      "bandwidth-budget",
+      "headless-interface"
+    ],
+    "missingSuites": [
+      "hostile-network-security",
+      "sustained-packet-loss",
+      "multiple-native-instance"
+    ]
+  },
+  "status": "passed"
+}

@@ -1,0 +1,44 @@
+{
+  "format": "nova-timed-workflow",
+  "version": 1,
+  "engineVersion": "3.3.0",
+  "generatedAt": "2026-08-19T13:51:40.474Z",
+  "trainedTesterBudgetSeconds": 900,
+  "documentedMedianSeconds": 360,
+  "steps": [
+    {
+      "name": "Create camera",
+      "seconds": 35
+    },
+    {
+      "name": "Create player sprite",
+      "seconds": 45
+    },
+    {
+      "name": "Add collider",
+      "seconds": 30
+    },
+    {
+      "name": "Add script",
+      "seconds": 35
+    },
+    {
+      "name": "Create ground",
+      "seconds": 30
+    },
+    {
+      "name": "Duplicate platforms",
+      "seconds": 80
+    },
+    {
+      "name": "Configure camera",
+      "seconds": 45
+    },
+    {
+      "name": "Play and validate",
+      "seconds": 60
+    }
+  ],
+  "status": "passed",
+  "note": "Procedure timing is the supplied trained-workflow baseline; it is not an unobserved human study."
+}

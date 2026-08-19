@@ -16,9 +16,10 @@ import { compoundGeometries } from '../world/compoundGeometry'
 import { localPointToWorld, worldPointToLocal, worldTransform } from '../world/hierarchy'
 import { applyRotation, applyScale, applyTranslation, axisVector, captureTransforms, gizmoPivot, gizmoRotation, projectedDelta, type GizmoAxis, type TransformSnapshot } from '../editor/gizmo'
 import { createRenderer2D, type Renderer2D } from '../renderer'
+import { reportRendererReset } from '../renderer/capabilities'
 import { renderWorld } from '../renderer/sceneRenderer'
 import { assetReference, resolveAsset } from '../assets/AssetDatabase'
-import { SpriteRenderer2D, type Joint2D, type TextInput, type TileMap2D } from '../world/components'
+import { type CharacterBody2D, type Joint2D, type TextInput, type TileMap2D } from '../world/components'
 import { gameplayRuntime } from '../runtime/GameplayRuntime'
 import { gameUiRuntime, type UiAccessibilityNode } from '../runtime/gameUi'
 import { rebindInputAction } from '../runtime/input'
@@ -35,6 +36,8 @@ import { activeGameCameras } from '../renderer/sceneRenderer'
 import { renderingSettings } from '../renderer/renderSettings'
 import { recordEntityProperties } from '../editor/animationStudioState'
 import { navigationPaths, worldGameplayState } from '../runtime/worldGameplay'
+import { worldStreamingState } from '../runtime/worldStreaming'
+import { authoringState, createAuthoringObject } from '../editor/authoring2d'
 
 const canvasRef = ref<HTMLCanvasElement | null>(null)
 const renderCanvasRef = ref<HTMLCanvasElement | null>(null)
@@ -61,7 +64,7 @@ let isDragging = false; let isPanning = false; let isVertexDragging = false; let
 let dragStart: Vec2 | null = null; let dragNow: Vec2 | null = null; let lastMouseScreen: Vec2 | null = null
 let raf = 0; let resizeRaf = 0; let lastTime = performance.now(); let resizeObserver: ResizeObserver | null = null
 
-let hoveredVertex: { entityId: number, index: number, virtualPos?: Vec2 } | null = null
+let hoveredVertex: { entityId: number, index: number, target: 'shape' | 'renderer' | 'collider', virtualPos?: Vec2 } | null = null
 let dragMeta: { initialScaleX: number, initialScaleY: number, initialDist: number } | null = null
 let dragEntityId: number | null = null; 
 let canvasDragMode: 'none' | 'draw' | 'marquee' = 'none'
@@ -81,6 +84,25 @@ let tileHover: { x: number; y: number } | null = null
 
 let savedCameraState: { scale: number, offset: Vec2 } | null = null;
 let hasMovedEntity = false;
+
+watch(() => authoringState.viewportRequest?.id, () => {
+  const request = authoringState.viewportRequest
+  if (!request || editorState.currentPage !== 'scene') return
+  const selected = world.entities.filter(entity => state.selectedEntityIds.includes(entity.id))
+  const cameraEntity = request.action === 'focus-camera'
+    ? selected.find(entity => entity.camera2D) ?? world.entities.find(entity => entity.camera2D?.active)
+    : null
+  const targets = cameraEntity ? [cameraEntity] : selected
+  if (!targets.length) return
+  const points = targets.flatMap(entity => entityBoundaryPoints(entity, 64, world.entities))
+  if (!points.length) points.push(...targets.map(entity => worldTransform(entity, world.entities).position))
+  const minX = Math.min(...points.map(point => point.x)), maxX = Math.max(...points.map(point => point.x))
+  const minY = Math.min(...points.map(point => point.y)), maxY = Math.max(...points.map(point => point.y))
+  const width = canvasRef.value?.clientWidth ?? 800, height = canvasRef.value?.clientHeight ?? 600
+  const scale = Math.min(width * .72 / Math.max(maxX - minX, 1), height * .72 / Math.max(maxY - minY, 1))
+  camera.targetScale = Math.min(1000, Math.max(.05, scale))
+  camera.targetOffset = { x: width / 2 - (minX + maxX) / 2 * camera.targetScale, y: height / 2 + (minY + maxY) / 2 * camera.targetScale }
+})
 
 watch(() => state.focusEntityID, (newId) => {
   if (editorState.currentPage !== 'scene') return;
@@ -153,7 +175,7 @@ function closeNativeInput() {
 
 function resize() {
   const canvas = canvasRef.value; if (!canvas) return
-  canvasPixelRatio = Math.min(window.devicePixelRatio || 1, prefs.maxPixelRatio)
+  canvasPixelRatio = Math.min(window.devicePixelRatio || 1, prefs.maxPixelRatio, renderingSettings.maximumPixelRatio)
   const dpr = canvasPixelRatio; const r = canvas.getBoundingClientRect()
   const oldWidth = canvas.width / dpr; const oldHeight = canvas.height / dpr
   const nextWidth = Math.max(1, Math.round(r.width * dpr)); const nextHeight = Math.max(1, Math.round(r.height * dpr))
@@ -244,6 +266,7 @@ onMounted(() => {
     if (rebindInputAction(physicsState.inputMap, action, bindingIndex, binding)) pushHistory('Remap runtime input')
   })
   if (renderCanvasRef.value) renderer = createRenderer2D(renderCanvasRef.value)
+  window.addEventListener('nova-renderer-reset-request', resetRenderer)
   world.connections.filter(connection => connection.breakState !== 'intact').forEach(connection => knownBrokenConnections.add(connection.id))
   resize()
   if (canvasRef.value) {
@@ -255,7 +278,15 @@ onMounted(() => {
     if (world.wasmError) editorState.statusText = t('physicsUnavailable', { message: world.wasmError.message })
   }).catch(error => { editorState.statusText = t('physicsUnavailable', { message: error instanceof Error ? error.message : String(error) }); reportRecoverableError(error, 'Physics WebAssembly initialization', 'Physics') })
 })
-onBeforeUnmount(() => { if (raf) cancelAnimationFrame(raf); if (resizeRaf) cancelAnimationFrame(resizeRaf); window.removeEventListener('resize', scheduleResize); window.removeEventListener('mouseup', onMouseUp); window.removeEventListener('keydown', onKeyDown); if (resizeObserver) resizeObserver.disconnect(); gameUiRuntime.reset(); renderer?.destroy(); renderer = null })
+onBeforeUnmount(() => { if (raf) cancelAnimationFrame(raf); if (resizeRaf) cancelAnimationFrame(resizeRaf); window.removeEventListener('resize', scheduleResize); window.removeEventListener('mouseup', onMouseUp); window.removeEventListener('keydown', onKeyDown); window.removeEventListener('nova-renderer-reset-request', resetRenderer); if (resizeObserver) resizeObserver.disconnect(); gameUiRuntime.reset(); renderer?.destroy(); renderer = null })
+
+function resetRenderer() {
+  if (!renderCanvasRef.value) return
+  renderer?.destroy()
+  renderer = createRenderer2D(renderCanvasRef.value)
+  renderer.resize(renderCanvasRef.value.clientWidth, renderCanvasRef.value.clientHeight, canvasPixelRatio)
+  reportRendererReset()
+}
 
 function screenPos(e: MouseEvent): Vec2 { const r = canvasRef.value!.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top } }
 function onWheel(e: WheelEvent) { e.preventDefault(); if (editorState.currentPage === 'game') { gameUiRuntime.wheel(screenPos(e), e.deltaX, e.deltaY); return } const factor = Math.pow(1.1, prefs.zoomSensitivity); camera.zoomAt(screenPos(e), e.deltaY < 0 ? factor : 1 / factor) }
@@ -279,25 +310,75 @@ function onAssetDrop(event: DragEvent) {
   const importedHeight = asset.settings.spriteRegion?.height || asset.height
   const width = Math.max(.1, (importedWidth || pixelsPerUnit) / pixelsPerUnit)
   const height = Math.max(.1, (importedHeight || pixelsPerUnit) / pixelsPerUnit)
-  const entity = world.addBox(point, { x: width, y: height })
+  const entity = createAuthoringObject('Sprite', point, false)
   entity.name = asset.name.replace(/\.[^.]+$/, '').slice(0, 80) || 'Sprite'
-  entity.renderer.enabled = false
-  const sprite = entity.addComponent(new SpriteRenderer2D())
+  const sprite = entity.spriteRenderer!
   sprite.spriteAsset = assetReference(asset.uuid)
   sprite.size = { x: width, y: height }
   sprite.pivot = { ...asset.settings.pivot }
   sprite.filterMode = asset.settings.filterMode
+  sprite.nineSlice = { enabled: Object.values(asset.settings.borders).some(value => value > 0), ...asset.settings.borders }
   sprite.sortingLayer = editorState.activeLayer
   entity.layer = editorState.activeLayer
   selectEntities([entity.id], 'replace')
   pushHistory('Create sprite from asset')
   addEditorLog(t('assetDropped', { name: asset.name }), 'Assets')
 }
-function snapPoint(point: Vec2): Vec2 { if (!prefs.snapToGrid) return point; const step = Math.max(0.000001, prefs.gridSize); return { x: Math.round(point.x / step) * step, y: Math.round(point.y / step) * step } }
+function snapPoint(point: Vec2): Vec2 {
+  let result = { ...point }
+  if (prefs.snapToGrid && authoringState.snap.grid) {
+    const step = Math.max(0.000001, prefs.gridSize)
+    result = { x: Math.round(result.x / step) * step, y: Math.round(result.y / step) * step }
+  }
+  if (authoringState.snap.pixel) result = { x: Math.round(result.x * 100) / 100, y: Math.round(result.y * 100) / 100 }
+  if (!authoringState.snap.vertex && !authoringState.snap.edge && !authoringState.snap.center && !authoringState.snap.object) return result
+  const threshold = 10 / Math.max(camera.scale, 1e-9)
+  const selected = new Set(state.selectedEntityIds)
+  const candidates = (authoringState.performanceMode ? world.entities.slice(0, 5_000) : world.entities).filter(entity => !selected.has(entity.id) && entity.editorVisible && entity.layer === editorState.activeLayer)
+  let nearest = threshold
+  const consider = (candidate: Vec2) => { const distance = Math.hypot(candidate.x - point.x, candidate.y - point.y); if (distance < nearest) { nearest = distance; result = { ...candidate } } }
+  for (const entity of candidates) {
+    const center = worldTransform(entity, world.entities).position
+    if (authoringState.snap.center) consider(center)
+    const boundary = entityBoundaryPoints(entity, authoringState.performanceMode ? 8 : 32, world.entities)
+    if (authoringState.snap.vertex) boundary.forEach(consider)
+    if (authoringState.snap.edge) for (let index = 0; index < boundary.length; index++) {
+      const start = boundary[index], end = boundary[(index + 1) % boundary.length]
+      const dx = end.x - start.x, dy = end.y - start.y, lengthSquared = dx * dx + dy * dy
+      const amount = lengthSquared ? Math.max(0, Math.min(1, ((point.x - start.x) * dx + (point.y - start.y) * dy) / lengthSquared)) : 0
+      consider({ x: start.x + dx * amount, y: start.y + dy * amount })
+    }
+    if (authoringState.snap.object) {
+      if (Math.abs(center.x - point.x) < nearest) { nearest = Math.abs(center.x - point.x); result.x = center.x }
+      if (Math.abs(center.y - point.y) < nearest) { nearest = Math.abs(center.y - point.y); result.y = center.y }
+    }
+  }
+  return result
+}
+
+function editorBoundaryPoints(entity: Entity, samples = 48): Vec2[] {
+  const sprite = entity.spriteRenderer
+  if (sprite) {
+    const left = -sprite.pivot.x * sprite.size.x, right = (1 - sprite.pivot.x) * sprite.size.x
+    const bottom = -(1 - sprite.pivot.y) * sprite.size.y, top = sprite.pivot.y * sprite.size.y
+    return [{ x: left, y: bottom }, { x: right, y: bottom }, { x: right, y: top }, { x: left, y: top }].map(point => localPointToWorld(entity, point, world.entities))
+  }
+  if ((entity.renderer.shape === 'Line' || entity.authoring.kind === 'Path' || entity.authoring.kind === 'Polygon') && entity.hasComponent('ShapeRenderer2D')) return entity.renderer.vertices.map(point => localPointToWorld(entity, point, world.entities))
+  if (entity.textRenderer) {
+    const width = Math.max(entity.textRenderer.maxWidth || entity.textRenderer.text.length * entity.textRenderer.fontSize * .58, .2), height = entity.textRenderer.fontSize * entity.textRenderer.lineHeight
+    return [{ x: -width / 2, y: -height / 2 }, { x: width / 2, y: -height / 2 }, { x: width / 2, y: height / 2 }, { x: -width / 2, y: height / 2 }].map(point => localPointToWorld(entity, point, world.entities))
+  }
+  return entityBoundaryPoints(entity, samples, world.entities)
+}
 
 function onKeyDown(event: KeyboardEvent) {
   if (focusedUiInput.value && (document.activeElement === nativeInputRef.value || event.isComposing)) return
   if (editorState.currentPage === 'game' && gameUiRuntime.keyDown(event)) { event.preventDefault(); return }
+  if ((event.key === 'Delete' || event.key === 'Backspace') && hoveredVertex && (hoveredVertex.target === 'renderer')) {
+    const entity = world.entities.find(candidate => candidate.id === hoveredVertex!.entityId), minimum = entity?.renderer.shape === 'Line' ? 2 : 3
+    if (entity && entity.renderer.vertices.length > minimum) { entity.renderer.vertices.splice(hoveredVertex.index, 1); entity.authoring.path.points = entity.renderer.vertices.map(point => ({ ...point })); pushHistory('Delete shape point', `vertices:${entity.uuid}`); hoveredVertex = null; event.preventDefault() }
+    return
+  }
   if (event.key !== 'Escape') return
   if (editorState.manualConnectionId !== null) {
     editorState.manualConnectionId = null
@@ -371,13 +452,13 @@ function currentGizmo() {
 }
 function hitGizmo(point: Vec2): GizmoAxis | null {
   const gizmo = currentGizmo()
-  if (!gizmo || state.activeTool === 'select' || isDrawTool()) return null
+  if (!gizmo || state.activeTool === 'select' || isDrawTool() || ['pivot', 'path', 'polygon', 'collider', 'measure'].includes(state.activeTool)) return null
   const unit = 1 / camera.scale
   const x = axisVector('x', gizmo.rotation); const y = axisVector('y', gizmo.rotation)
   const xEnd = { x: gizmo.pivot.x + x.x * 72 * unit, y: gizmo.pivot.y + x.y * 72 * unit }
   const yEnd = { x: gizmo.pivot.x + y.x * 72 * unit, y: gizmo.pivot.y + y.y * 72 * unit }
   if (state.activeTool === 'rotate') return Math.abs(Math.hypot(point.x - gizmo.pivot.x, point.y - gizmo.pivot.y) - 52 * unit) <= 9 * unit ? 'xy' : null
-  if (state.activeTool === 'scale') {
+  if (state.activeTool === 'scale' || state.activeTool === 'rect') {
     if (Math.hypot(point.x - xEnd.x, point.y - xEnd.y) <= 10 * unit) return 'x'
     if (Math.hypot(point.x - yEnd.x, point.y - yEnd.y) <= 10 * unit) return 'y'
     if (Math.hypot(point.x - gizmo.pivot.x, point.y - gizmo.pivot.y) <= 10 * unit) return 'xy'
@@ -391,10 +472,10 @@ function hitGizmo(point: Vec2): GizmoAxis | null {
 function beginGizmoDrag(axis: GizmoAxis, point: Vec2) {
   const gizmo = currentGizmo()
   const tool = state.activeTool
-  if (!gizmo || (tool !== 'move' && tool !== 'rotate' && tool !== 'scale')) return
+  if (!gizmo || (tool !== 'move' && tool !== 'rotate' && tool !== 'scale' && tool !== 'rect')) return
   const local = rotateVector({ x: point.x - gizmo.pivot.x, y: point.y - gizmo.pivot.y }, -gizmo.rotation)
   gizmoDrag = {
-    tool,
+    tool: tool === 'rect' ? 'scale' : tool,
     axis,
     pivot: gizmo.pivot,
     rotation: gizmo.rotation,
@@ -441,7 +522,23 @@ function onMouseDown(e: MouseEvent) {
       return
     }
   }
-  if (state.activeTool === 'select') checkHoverVertex(wPos)
+  if (state.activeTool === 'measure' && e.button === 0 && state.playMode === 'editing') {
+    const point = snapPoint(wPos); authoringState.measurement = { active: true, start: point, end: point }; return
+  }
+  if (state.activeTool === 'pivot' && e.button === 0 && state.playMode === 'editing') {
+    const entity = world.entities.find(candidate => candidate.id === state.selectedEntityId)
+    if (entity && !entity.editorLocked) {
+      const local = worldPointToLocal(entity, snapPoint(wPos), world.entities)
+      const sprite = entity.spriteRenderer
+      if (sprite) {
+        const pivot = { x: Math.max(0, Math.min(1, local.x / Math.max(sprite.size.x, 1e-9) + .5)), y: Math.max(0, Math.min(1, local.y / Math.max(sprite.size.y, 1e-9) + .5)) }
+        sprite.pivot = pivot; entity.authoring.origin = { ...pivot }
+      } else entity.authoring.origin = { ...local }
+      pushHistory('Set object pivot', `pivot:${entity.uuid}`)
+    }
+    return
+  }
+  if (vertexToolActive()) checkHoverVertex(wPos)
   if (e.button === 2 && hoveredVertex && beginVertexDrag(hoveredVertex.entityId, wPos, e.button)) return
   if (e.button === 2) { const hitId = hitTest(wPos); if (hitId !== null) openContextMenu(e, 'grid-entity', hitId); else { isPanning = true; lastMouseScreen = sPos } return }
   if (e.button === 1) { isPanning = true; lastMouseScreen = sPos; return }
@@ -453,7 +550,7 @@ function onMouseDown(e: MouseEvent) {
     return
   }
 
-  if (state.activeTool === 'select' && state.playMode === 'editing' && hoveredVertex) {
+  if (vertexToolActive() && state.playMode === 'editing' && hoveredVertex) {
     if (beginVertexDrag(hoveredVertex.entityId, wPos, e.button)) return
   }
 
@@ -475,8 +572,22 @@ function onMouseDown(e: MouseEvent) {
   canvasDragMode = 'marquee'; isDragging = true; dragStart = wPos; dragNow = wPos
 }
 
+function onDoubleClick(event: MouseEvent) {
+  if (!['path', 'polygon'].includes(state.activeTool) || state.selectedEntityId === null || state.playMode !== 'editing') return
+  const entity = world.entities.find(candidate => candidate.id === state.selectedEntityId)
+  if (!entity?.hasComponent('ShapeRenderer2D') || entity.editorLocked) return
+  const point = worldPointToLocal(entity, snapPoint(camera.screenToWorld(screenPos(event))), world.entities), vertices = entity.renderer.vertices
+  let insertion = vertices.length
+  if (vertices.length > 1) {
+    let nearest = Number.POSITIVE_INFINITY, segmentCount = entity.renderer.shape === 'Line' ? vertices.length - 1 : vertices.length
+    for (let index = 0; index < segmentCount; index++) { const distance = distanceToSegment(point, vertices[index], vertices[(index + 1) % vertices.length]); if (distance < nearest) { nearest = distance; insertion = index + 1 } }
+  }
+  vertices.splice(insertion, 0, point); entity.authoring.path.points = vertices.map(vertex => ({ ...vertex })); pushHistory('Add shape point', `vertices:${entity.uuid}`)
+}
+
 function onMouseMove(e: MouseEvent) {
   const sPos = screenPos(e); const wPos = camera.screenToWorld(sPos)
+  editorState.lastCanvasWorldPoint = { ...wPos }
   if (editorState.currentPage === 'game') { gameUiRuntime.pointerMove(sPos); return }
   if (tilemapEditorState.active) {
     const tileEntity = tileStroke?.entity ?? world.entities.find(entity => entity.uuid === tilemapEditorState.selectedEntityUuid) ?? null
@@ -487,6 +598,7 @@ function onMouseMove(e: MouseEvent) {
     if (tileStroke) return
   }
   if (isManualDrawing) { const points = editorState.manualConnectionPoints; const previous = points[points.length - 1]; if (!previous || Math.hypot(previous.x - wPos.x, previous.y - wPos.y) > 3 / camera.scale) points.push(wPos); return }
+  if (authoringState.measurement.active && authoringState.measurement.start) { authoringState.measurement.end = snapPoint(wPos); return }
   if (isPanning && lastMouseScreen) { camera.targetScale = null; camera.targetOffset = null; camera.offset.x += sPos.x - lastMouseScreen.x; camera.offset.y += sPos.y - lastMouseScreen.y; lastMouseScreen = sPos; return }
 
   if (gizmoDrag) {
@@ -513,13 +625,25 @@ function onMouseMove(e: MouseEvent) {
     return
   }
 
-  if (!isDragging && !isVertexDragging && state.activeTool === 'select') checkHoverVertex(wPos)
+  if (!isDragging && !isVertexDragging && vertexToolActive()) checkHoverVertex(wPos)
   if (isVertexDragging && dragEntityId && dragMeta) {
     hasMovedEntity = true
     const entity = world.entities.find(candidate => candidate.id === dragEntityId); if (!entity || !hoveredVertex || entity.editorLocked) return
     const transform = worldTransform(entity, world.entities)
     if (dragButton === 2) { const scaleFactor = Math.hypot(wPos.x - transform.position.x, wPos.y - transform.position.y) / dragMeta.initialDist; entity.transform.scale.x = Math.max(MIN_SIZE, dragMeta.initialScaleX * scaleFactor); entity.transform.scale.y = Math.max(MIN_SIZE, dragMeta.initialScaleY * scaleFactor) }
-    else { const local = worldPointToLocal(entity, wPos, world.entities); if (entity instanceof BoxEntity || entity instanceof TriangleEntity) { const candidate = entity.vertices.map(vertex => ({ ...vertex })); candidate[hoveredVertex.index] = local; if (isValidConvexPolygon(candidate)) entity.vertices = candidate } else if (entity instanceof CircleEntity) { entity.radiusX = Math.max(0.1, Math.abs(local.x)); entity.radiusY = Math.max(0.1, Math.abs(local.y)) } }
+    else {
+      const local = worldPointToLocal(entity, snapPoint(wPos), world.entities)
+      if (hoveredVertex.target === 'renderer') {
+        const candidate = entity.renderer.vertices.map(vertex => ({ ...vertex })); candidate[hoveredVertex.index] = local
+        if (entity.renderer.shape === 'Line' || isValidConvexPolygon(candidate)) { entity.renderer.vertices = candidate; entity.authoring.path.points = candidate.map(point => ({ ...point })) }
+      } else if (hoveredVertex.target === 'collider') {
+        const collider = entity.getCollider(); if (!collider) return
+        if (collider.kind === 'EllipseCollider2D') { collider.radiusX = Math.max(.01, Math.abs(local.x - collider.offset.x)); collider.radiusY = Math.max(.01, Math.abs(local.y - collider.offset.y)) }
+        else { const candidate = collider.vertices.map(vertex => ({ ...vertex })); candidate[hoveredVertex.index] = { x: local.x - collider.offset.x, y: local.y - collider.offset.y }; if (isValidConvexPolygon(candidate)) collider.vertices = candidate }
+      } else if (entity instanceof BoxEntity || entity instanceof TriangleEntity) {
+        const candidate = entity.vertices.map(vertex => ({ ...vertex })); candidate[hoveredVertex.index] = local; if (isValidConvexPolygon(candidate)) entity.vertices = candidate
+      } else if (entity instanceof CircleEntity) { entity.radiusX = Math.max(0.1, Math.abs(local.x)); entity.radiusY = Math.max(0.1, Math.abs(local.y)) }
+    }
     return
   }
   if (isDragging && dragStart) dragNow = wPos
@@ -528,8 +652,8 @@ function onMouseMove(e: MouseEvent) {
 function selectMarqueeEntities(start: Vec2, end: Vec2) {
   const left = Math.min(start.x, end.x); const right = Math.max(start.x, end.x); const bottom = Math.min(start.y, end.y); const top = Math.max(start.y, end.y)
   const ids = world.entities.flatMap(entity => {
-    if (!entity.enabled || !entity.editorVisible || entity.editorLocked || entity.layer !== editorState.activeLayer || entity.hasComponent('RectTransform')) return []
-    const boundary = entityBoundaryPoints(entity, 48, world.entities)
+    if (!entity.enabled || !entity.editorVisible || entity.editorLocked || entity.layer !== editorState.activeLayer || entity.hasComponent('RectTransform') || !matchesSelectionFilter(entity)) return []
+    const boundary = editorBoundaryPoints(entity, 48)
     if (!boundary.length) return []
     const xs = boundary.map(point => point.x); const ys = boundary.map(point => point.y)
     return Math.max(...xs) >= left && Math.min(...xs) <= right && Math.max(...ys) >= bottom && Math.min(...ys) <= top ? [entity.id] : []
@@ -547,6 +671,7 @@ function onMouseUp(event?: MouseEvent) {
     if (event && canvasRef.value) gameUiRuntime.pointerUp(screenPos(event))
     return
   }
+  if (authoringState.measurement.active) { authoringState.measurement.active = false; return }
   if (tileStroke) {
     const point = event && canvasRef.value ? camera.screenToWorld(screenPos(event)) : null
     const cell = point ? worldToTile(tileStroke.entity, tileStroke.component, point, world.entities) : tileStroke.stroke.previous
@@ -589,13 +714,42 @@ function onMouseUp(event?: MouseEvent) {
   finishCanvasDrag()
 }
 
+function vertexToolActive(): boolean { return state.activeTool === 'select' || state.activeTool === 'path' || state.activeTool === 'polygon' || state.activeTool === 'collider' }
 function checkHoverVertex(p: Vec2) {
   if (!state.selectedEntityId) { hoveredVertex = null; document.body.style.cursor = 'default'; return }
   const ent = world.entities.find(e => e.id === state.selectedEntityId)
   if (!ent || ent.editorLocked || ent.hasComponent('RectTransform')) { hoveredVertex = null; document.body.style.cursor = 'default'; return }
   const threshold = 12 / camera.scale 
   
-  if (ent instanceof BoxEntity || ent instanceof TriangleEntity) {
+  if ((state.activeTool === 'path' || state.activeTool === 'polygon') && ent.hasComponent('ShapeRenderer2D')) {
+    const vertices = ent.renderer.vertices
+    let minDist = threshold; let foundIndex = -1
+    for (let index = 0; index < vertices.length; index++) {
+      const point = localPointToWorld(ent, vertices[index], world.entities), distance = Math.hypot(p.x - point.x, p.y - point.y)
+      if (distance < minDist) { minDist = distance; foundIndex = index }
+    }
+    if (foundIndex !== -1) { hoveredVertex = { entityId: ent.id, index: foundIndex, target: 'renderer' }; document.body.style.cursor = 'crosshair'; return }
+  } else if (state.activeTool === 'collider') {
+    const collider = ent.getCollider()
+    if (collider) {
+      if (collider.kind === 'EllipseCollider2D') {
+        const local = worldPointToLocal(ent, p, world.entities), relative = { x: local.x - collider.offset.x, y: local.y - collider.offset.y }
+        const magnitude = Math.hypot(relative.x / Math.max(collider.radiusX, 1e-9), relative.y / Math.max(collider.radiusY, 1e-9))
+        if (magnitude > 0) {
+          const virtualPos = { x: collider.offset.x + relative.x / magnitude, y: collider.offset.y + relative.y / magnitude }
+          const point = localPointToWorld(ent, virtualPos, world.entities)
+          if (Math.hypot(p.x - point.x, p.y - point.y) < threshold) { hoveredVertex = { entityId: ent.id, index: -1, target: 'collider', virtualPos }; document.body.style.cursor = 'crosshair'; return }
+        }
+      } else {
+        let minDist = threshold; let foundIndex = -1
+        for (let index = 0; index < collider.vertices.length; index++) {
+          const point = localPointToWorld(ent, { x: collider.vertices[index].x + collider.offset.x, y: collider.vertices[index].y + collider.offset.y }, world.entities), distance = Math.hypot(p.x - point.x, p.y - point.y)
+          if (distance < minDist) { minDist = distance; foundIndex = index }
+        }
+        if (foundIndex !== -1) { hoveredVertex = { entityId: ent.id, index: foundIndex, target: 'collider' }; document.body.style.cursor = 'crosshair'; return }
+      }
+    }
+  } else if (ent instanceof BoxEntity || ent instanceof TriangleEntity) {
     let minDist = threshold; let foundIndex = -1
     for (let i = 0; i < ent.vertices.length; i++) {
       const point = localPointToWorld(ent, ent.vertices[i], world.entities)
@@ -603,7 +757,7 @@ function checkHoverVertex(p: Vec2) {
       const dist = Math.sqrt((p.x - vx)**2 + (p.y - vy)**2)
       if (dist < minDist) { minDist = dist; foundIndex = i }
     }
-    if (foundIndex !== -1) { hoveredVertex = { entityId: ent.id, index: foundIndex }; document.body.style.cursor = 'crosshair'; return }
+    if (foundIndex !== -1) { hoveredVertex = { entityId: ent.id, index: foundIndex, target: 'shape' }; document.body.style.cursor = 'crosshair'; return }
   } 
   else if (ent instanceof CircleEntity) {
     const local = worldPointToLocal(ent, p, world.entities)
@@ -614,7 +768,7 @@ function checkHoverVertex(p: Vec2) {
       const point = localPointToWorld(ent, { x: ex, y: ey }, world.entities)
       const wx = point.x; const wy = point.y
       const dist = Math.sqrt((p.x - wx)**2 + (p.y - wy)**2)
-      if (dist < threshold) { hoveredVertex = { entityId: ent.id, index: -1, virtualPos: { x: ex, y: ey } }; document.body.style.cursor = 'crosshair'; return }
+      if (dist < threshold) { hoveredVertex = { entityId: ent.id, index: -1, target: 'shape', virtualPos: { x: ex, y: ey } }; document.body.style.cursor = 'crosshair'; return }
     }
   }
   hoveredVertex = null; document.body.style.cursor = 'default'
@@ -624,10 +778,12 @@ function hitTest(p: Vec2): number | null {
   const ordered = [...world.entities].sort((a, b) => a.layer - b.layer || a.renderer.orderInLayer - b.renderer.orderInLayer || world.entities.indexOf(a) - world.entities.indexOf(b))
   for (let i = ordered.length - 1; i >= 0; i--) {
     const e = ordered[i]
-    if (!e.enabled || e.hasComponent('RectTransform') || !e.hasComponent('ShapeRenderer2D') || !e.renderer.enabled) continue
+    const selectable = e.spriteRenderer || e.textRenderer || e.camera2D || e.hasComponent('ShapeRenderer2D') && e.renderer.enabled
+    if (!e.enabled || e.hasComponent('RectTransform') || !selectable || !matchesSelectionFilter(e)) continue
     if (editorState.currentPage === 'scene' && (!e.editorVisible || e.editorLocked)) continue
     if (editorState.currentPage === 'scene' && e.layer !== editorState.activeLayer) continue;
-    const polygon = entityBoundaryPoints(e, 64, world.entities)
+    const polygon = editorBoundaryPoints(e, 64)
+    if (e.renderer.shape === 'Line' && polygon.some((point, index) => index > 0 && distanceToSegment(p, polygon[index - 1], point) < 7 / camera.scale)) return e.id
     let inside = false
     for (let j = 0, k = polygon.length - 1; j < polygon.length; k = j++) {
       const a = polygon[j]; const b = polygon[k]
@@ -636,6 +792,11 @@ function hitTest(p: Vec2): number | null {
     if (inside) return e.id
   }
   return null
+}
+
+function matchesSelectionFilter(entity: Entity): boolean {
+  const filter = authoringState.selectionFilter
+  return filter === 'All' || filter === 'Visible' && entity.editorVisible || filter === 'Unlocked' && !entity.editorLocked || filter === 'Sprites' && Boolean(entity.spriteRenderer) || filter === 'Cameras' && Boolean(entity.camera2D) || filter === 'Physics' && entity.hasComponent('RigidBody2D')
 }
 
 function renderTransformGizmo(context: CanvasRenderingContext2D) {
@@ -677,6 +838,67 @@ function renderTransformGizmo(context: CanvasRenderingContext2D) {
   context.restore()
 }
 
+function renderPointGizmo(context: CanvasRenderingContext2D) {
+  if (!['path', 'polygon', 'collider', 'pivot'].includes(state.activeTool) || state.selectedEntityId === null) return
+  const entity = world.entities.find(candidate => candidate.id === state.selectedEntityId)
+  if (!entity) return
+  const unit = 1 / camera.scale
+  let points: Vec2[] = []
+  if (state.activeTool === 'path' || state.activeTool === 'polygon') points = entity.renderer.vertices.map(point => localPointToWorld(entity, point, world.entities))
+  else if (state.activeTool === 'collider') {
+    const collider = entity.getCollider()
+    if (collider?.kind === 'EllipseCollider2D') points = [{ x: collider.offset.x + collider.radiusX, y: collider.offset.y }, { x: collider.offset.x, y: collider.offset.y + collider.radiusY }, { x: collider.offset.x - collider.radiusX, y: collider.offset.y }, { x: collider.offset.x, y: collider.offset.y - collider.radiusY }].map(point => localPointToWorld(entity, point, world.entities))
+    else points = (collider?.vertices ?? []).map(point => localPointToWorld(entity, { x: point.x + (collider?.offset.x ?? 0), y: point.y + (collider?.offset.y ?? 0) }, world.entities))
+  }
+  else {
+    const sprite = entity.spriteRenderer
+    const local = sprite ? { x: (sprite.pivot.x - .5) * sprite.size.x, y: (sprite.pivot.y - .5) * sprite.size.y } : entity.authoring.origin
+    points = [localPointToWorld(entity, local, world.entities)]
+  }
+  context.save()
+  for (let index = 0; index < points.length; index++) {
+    const point = points[index], active = hoveredVertex?.entityId === entity.id && hoveredVertex.index === index
+    context.beginPath(); context.arc(point.x, point.y, (active ? 6 : 4.5) * unit, 0, Math.PI * 2)
+    context.fillStyle = active ? palette.handle : '#ffffff'; context.fill()
+    context.lineWidth = 2 * unit; context.strokeStyle = palette.selection; context.stroke()
+  }
+  context.restore()
+}
+
+function cameraAspectRatio(): number | null {
+  if (authoringState.cameraOverlay === 'Off') return null
+  if (authoringState.cameraOverlay === 'Custom') return Math.max(1, authoringState.cameraResolution.width) / Math.max(1, authoringState.cameraResolution.height)
+  const [width, height] = authoringState.cameraOverlay.split(':').map(Number)
+  return width / height
+}
+
+function renderAuthoringOverlays(context: CanvasRenderingContext2D, width: number, height: number) {
+  const unit = 1 / camera.scale
+  const aspect = cameraAspectRatio()
+  if (aspect) {
+    const availableWidth = Math.max(80, width - 56), availableHeight = Math.max(80, height - 56)
+    const frameWidth = Math.min(availableWidth, availableHeight * aspect), frameHeight = frameWidth / aspect
+    const left = (width - frameWidth) / 2, top = (height - frameHeight) / 2
+    const first = camera.screenToWorld({ x: left, y: top }), second = camera.screenToWorld({ x: left + frameWidth, y: top + frameHeight })
+    context.save(); context.strokeStyle = 'rgba(126,180,255,.82)'; context.lineWidth = 1.5 * unit; context.setLineDash([7 * unit, 5 * unit]); context.strokeRect(first.x, second.y, second.x - first.x, first.y - second.y); context.setLineDash([]); context.restore()
+  }
+  for (const entity of world.entities) {
+    const cameraComponent = entity.camera2D
+    if (!cameraComponent?.previewInEditor || entity.layer !== editorState.activeLayer) continue
+    const transform = worldTransform(entity, world.entities), frameHeight = cameraComponent.orthographicSize * 2 / Math.max(cameraComponent.zoom, .0001), frameWidth = frameHeight * (aspect ?? 16 / 9)
+    context.save(); context.strokeStyle = state.selectedEntityIds.includes(entity.id) ? palette.selection : 'rgba(111,170,255,.46)'; context.lineWidth = (state.selectedEntityIds.includes(entity.id) ? 2 : 1) * unit; context.strokeRect(transform.position.x - frameWidth / 2, transform.position.y - frameHeight / 2, frameWidth, frameHeight); context.restore()
+  }
+  const measurement = authoringState.measurement
+  if (measurement.start && measurement.end) {
+    const dx = measurement.end.x - measurement.start.x, dy = measurement.end.y - measurement.start.y, distance = Math.hypot(dx, dy)
+    const middle = { x: (measurement.start.x + measurement.end.x) / 2, y: (measurement.start.y + measurement.end.y) / 2 }
+    context.save(); context.strokeStyle = '#66d4b0'; context.fillStyle = '#66d4b0'; context.lineWidth = 2 * unit
+    context.beginPath(); context.moveTo(measurement.start.x, measurement.start.y); context.lineTo(measurement.end.x, measurement.end.y); context.stroke()
+    for (const point of [measurement.start, measurement.end]) { context.beginPath(); context.arc(point.x, point.y, 4 * unit, 0, Math.PI * 2); context.fill() }
+    context.translate(middle.x, middle.y); context.scale(unit, -unit); context.font = '600 12px Segoe UI, sans-serif'; context.textAlign = 'center'; context.fillText(`${distance.toFixed(3)} m  Δ ${dx.toFixed(3)}, ${dy.toFixed(3)}`, 0, -8); context.restore()
+  }
+}
+
 function rotateLocal(point: Vec2, angle: number): Vec2 {
   const cosine = Math.cos(angle), sine = Math.sin(angle)
   return { x: point.x * cosine - point.y * sine, y: point.x * sine + point.y * cosine }
@@ -712,7 +934,7 @@ function drawPhysicsDebug(context: CanvasRenderingContext2D) {
     }
     if (physicsDebugState.showColliders) {
       context.beginPath(); context.moveTo(points[0].x, points[0].y); points.slice(1).forEach(point => context.lineTo(point.x, point.y))
-      context.strokeStyle = entity.collider.sensor ? '#f2b45f' : entity.rigidBody.sleeping ? '#669ce8' : '#62d8a0'; context.stroke()
+      context.strokeStyle = physicsDebugState.colorByPhysicsLayer ? (state.globalSettings.layers[entity.collider.physicsLayer]?.color ?? '#62d8a0') : entity.collider.sensor ? '#f2b45f' : entity.rigidBody.sleeping ? '#669ce8' : '#62d8a0'; context.stroke()
     }
     if (physicsDebugState.showAabbs) {
       const xs = points.map(point => point.x), ys = points.map(point => point.y)
@@ -721,7 +943,7 @@ function drawPhysicsDebug(context: CanvasRenderingContext2D) {
     }
   }
   if (physicsDebugState.showJointConstraints) {
-    const jointKinds = ['FixedJoint2D', 'DistanceJoint2D', 'RevoluteJoint2D', 'PrismaticJoint2D', 'SpringJoint2D'] as const
+    const jointKinds = ['FixedJoint2D', 'WeldJoint2D', 'DistanceJoint2D', 'RopeJoint2D', 'RevoluteJoint2D', 'MotorJoint2D', 'PrismaticJoint2D', 'SpringJoint2D'] as const
     context.strokeStyle = '#e6b35a'; context.setLineDash([5 / camera.scale, 3 / camera.scale])
     for (const entity of world.entities) for (const kind of jointKinds) {
       const joint = entity.getComponent<Joint2D>(kind)
@@ -731,6 +953,18 @@ function drawPhysicsDebug(context: CanvasRenderingContext2D) {
       context.beginPath(); context.moveTo(first.x, first.y); context.lineTo(second.x, second.y); context.stroke()
     }
     context.setLineDash([])
+  }
+  if (physicsDebugState.showCharacterContacts) {
+    for (const entity of world.entities) {
+      const character = entity.getComponent<CharacterBody2D>('CharacterBody2D')
+      if (!character?.enabled) continue
+      const position = worldTransform(entity, world.entities).position
+      const states = [[character.onFloor, character.floorNormal, '#70df9d'], [character.onWall, character.wallNormal, '#6cb5ff'], [character.onCeiling, character.ceilingNormal, '#ffbc68']] as const
+      for (const [active, normal, color] of states) {
+        if (!active) continue
+        context.beginPath(); context.moveTo(position.x, position.y); context.lineTo(position.x + normal.x * 30 / camera.scale, position.y + normal.y * 30 / camera.scale); context.strokeStyle = color; context.stroke()
+      }
+    }
   }
   if (physicsDebugState.showRopeNodes) {
     context.fillStyle = '#8bb8ff'
@@ -762,7 +996,8 @@ function render() {
       renderLayer: editorState.currentPage === 'game' ? editorState.renderLayer : editorState.activeLayer,
       canvasColor: palette.canvas,
       connections: world.connections,
-      editorGrid: { enabled: editorState.showGrid, step: prefs.gridSize, color: palette.grid }
+      editorGrid: { enabled: editorState.showGrid, step: prefs.gridSize, color: palette.grid },
+      performanceMode: authoringState.performanceMode
     }))
   }
   passStarted = recordRenderPass('World', passStarted, true, editorState.rendererStats.drawCalls)
@@ -809,21 +1044,15 @@ function render() {
   for (const compound of compounds) for (const member of compound.members) compoundByMember.set(member.id, compound)
   const renderEntities = [...world.entities].sort((a, b) => a.layer - b.layer || a.renderer.orderInLayer - b.renderer.orderInLayer || world.entities.indexOf(a) - world.entities.indexOf(b))
   for (const e of renderEntities) {
-    if (!e.enabled) continue
+    if (!e.enabled || !e.authoring.visible) continue
     if (e.hasComponent('RectTransform')) continue
     if (!isGameView && !e.editorVisible) continue
     if (editorState.currentPage === 'scene' && e.layer !== editorState.activeLayer) continue;
     const compound = compoundByMember.get(e.id)
     const transform = worldTransform(e, world.entities)
     const pos = transform.position; const isSelected = !isGameView && (compound ? [...compound.memberIds].some(id => selectedIds.has(id)) : selectedIds.has(e.id))
-    const maxRadius = e instanceof CircleEntity
-      ? Math.max(e.radiusX * transform.scale.x, e.radiusY * transform.scale.y)
-      : e instanceof BoxEntity || e instanceof TriangleEntity
-        ? Math.max(...e.vertices.map(vertex => Math.hypot(
-          vertex.x * transform.scale.x,
-          vertex.y * transform.scale.y
-        )), MIN_SIZE)
-        : MIN_SIZE
+    const selectionBoundary = editorBoundaryPoints(e, 48)
+    const maxRadius = selectionBoundary.length ? Math.max(...selectionBoundary.map(point => Math.hypot(point.x - pos.x, point.y - pos.y)), MIN_SIZE) : MIN_SIZE
     if (pos.x + maxRadius < viewL || pos.x - maxRadius > viewR || pos.y + maxRadius < viewB || pos.y - maxRadius > viewT) continue; 
     if (!isSelected) continue
     
@@ -831,24 +1060,12 @@ function render() {
     ctx.fillStyle = palette.selectionFill
     ctx.strokeStyle = palette.selection
     
-    ctx.save(); ctx.translate(pos.x, pos.y); ctx.rotate(transform.rotation)
     ctx.beginPath()
-
-    if (e instanceof BoxEntity || e instanceof TriangleEntity) {
-      const v = e.vertices
-      if (v.length > 0) {
-        ctx.moveTo(v[0].x * transform.scale.x, v[0].y * transform.scale.y)
-        for (let i = 1; i < v.length; i++) ctx.lineTo(v[i].x * transform.scale.x, v[i].y * transform.scale.y)
-        ctx.closePath()
-      }
-    } else if (e instanceof CircleEntity) {
-      const safeRx = Math.max(0.1, e.radiusX) * transform.scale.x; const safeRy = Math.max(0.1, e.radiusY) * transform.scale.y
-      ctx.ellipse(0, 0, safeRx, safeRy, 0, 0, Math.PI * 2)
-    }
+    if (selectionBoundary.length) { ctx.moveTo(selectionBoundary[0].x, selectionBoundary[0].y); for (const point of selectionBoundary.slice(1)) ctx.lineTo(point.x, point.y); if (e.renderer.shape !== 'Line') ctx.closePath() }
     
-    ctx.fill(); if (!compound || compound.members.length === 1) ctx.stroke()
-
-    ctx.restore() 
+    // Sprite selection stays as an outside-only outline so pixel art remains unobscured.
+    if (!e.spriteRenderer) ctx.fill()
+    if (!compound || compound.members.length === 1) ctx.stroke()
 
     if (prefs.showDiagnostics && isSelected && !isVertexDragging && !isDragging && hoveredVertex && hoveredVertex.entityId === e.id) {
       let vx = 0, vy = 0; const cosR = Math.cos(transform.rotation); const sinR = Math.sin(transform.rotation)
@@ -925,6 +1142,8 @@ function render() {
     ctx.stroke()
   }
   renderTransformGizmo(ctx)
+  renderPointGizmo(ctx)
+  if (!isGameView) renderAuthoringOverlays(ctx, width, height)
   if (!isGameView && isDragging && canvasDragMode !== 'none' && dragStart && dragNow) {
     ctx.strokeStyle = palette.selection; ctx.lineWidth = 1 / camera.scale; ctx.setLineDash([5/camera.scale, 5/camera.scale])
     const x = Math.min(dragStart.x, dragNow.x), y = Math.min(dragStart.y, dragNow.y)
@@ -989,7 +1208,13 @@ function drawWorldGameplayDebug(context: CanvasRenderingContext2D): void {
       context.stroke(); context.setLineDash([])
     }
     const chunk = entity.getComponent<import('../world/components').WorldChunk2D>('WorldChunk2D')
-    if (worldGameplayState.chunkDebug && chunk?.enabled) { context.strokeStyle = '#c28cff'; context.strokeRect(transform.position.x - chunk.size.x / 2, transform.position.y - chunk.size.y / 2, chunk.size.x, chunk.size.y) }
+    if (worldGameplayState.chunkDebug && chunk?.enabled) {
+      const snapshot = worldStreamingState.cells.find(cell => cell.entityUuid === entity.uuid), status = snapshot?.status ?? (chunk.initiallyLoaded ? 'Active' : 'Unloaded')
+      const active = status === 'Active', pending = ['Loading', 'Activating', 'Deactivating', 'Unloading'].includes(status)
+      context.strokeStyle = active ? '#63d6a3' : pending ? '#ffd166' : '#c28cff'; context.fillStyle = active ? 'rgba(99,214,163,.08)' : pending ? 'rgba(255,209,102,.08)' : 'rgba(194,140,255,.06)'
+      context.setLineDash(pending ? [5 / camera.scale, 4 / camera.scale] : []); context.fillRect(transform.position.x - chunk.size.x / 2, transform.position.y - chunk.size.y / 2, chunk.size.x, chunk.size.y); context.strokeRect(transform.position.x - chunk.size.x / 2, transform.position.y - chunk.size.y / 2, chunk.size.x, chunk.size.y); context.setLineDash([])
+      context.font = `${11 / camera.scale}px ui-rounded, system-ui`; context.fillStyle = context.strokeStyle; context.fillText(`${chunk.ownership || entity.name} · ${status}`, transform.position.x - chunk.size.x / 2 + 5 / camera.scale, transform.position.y - chunk.size.y / 2 + 14 / camera.scale)
+    }
   }
   context.restore()
 }
@@ -1053,7 +1278,7 @@ function drawTilemapOverlay(context: CanvasRenderingContext2D, view: { minX: num
 <template>
   <div class="canvas-container" @dragover="onAssetDragOver" @drop="onAssetDrop">
     <canvas ref="renderCanvasRef" class="render-canvas" :style="{ filter: worldPostProcessFilter() }" aria-hidden="true" />
-    <canvas ref="canvasRef" class="overlay-canvas" @mousedown="onMouseDown" @mousemove="onMouseMove" @mouseup="onMouseUp" @wheel="onWheel" @contextmenu.prevent />
+    <canvas ref="canvasRef" class="overlay-canvas" @mousedown="onMouseDown" @mousemove="onMouseMove" @mouseup="onMouseUp" @dblclick="onDoubleClick" @wheel="onWheel" @contextmenu.prevent />
     <div v-if="editorState.currentPage === 'game' && accessibilityNodes.length" class="game-ui-a11y" aria-label="Game UI">
       <div
         v-for="node in accessibilityNodes"
@@ -1063,6 +1288,9 @@ function drawTilemapOverlay(context: CanvasRenderingContext2D, view: { minX: num
         :role="node.role"
         :aria-label="node.label"
         :aria-description="node.description || undefined"
+        :aria-valuetext="node.value || undefined"
+        :aria-live="node.live"
+        :data-accessibility-state="node.state || undefined"
         :aria-disabled="node.disabled"
         :aria-current="node.focused ? 'true' : undefined"
         :tabindex="node.disabled ? -1 : node.tabIndex"

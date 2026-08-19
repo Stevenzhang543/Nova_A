@@ -70,12 +70,8 @@
         "artifactHash": "4c4b6a3be1314ab86138bef4314dde022e600960d8689a2c8f8631802d20dab6",
         "contentHash": "4c4b6a3be1314ab86138bef4314dde022e600960d8689a2c8f8631802d20dab6",
         "cacheKey": "4c4b6a3be1314ab86138bef4314dde022e600960d8689a2c8f8631802d20dab6",
-        "status": "ready",
-        "lastValidSource": "data:image/png;base64,iVBORw0KGgo=",
-        "error": "",
         "dependencies": [],
-        "reverseDependencies": [],
-        "cacheHit": false
+        "reverseDependencies": []
       }
     },
     {
@@ -92,14 +88,10 @@
         "artifactHash": "1775d7ad901d2c51604d6c89006e91bd93f7c9047a3a5841e764b41c063bd497",
         "contentHash": "1775d7ad901d2c51604d6c89006e91bd93f7c9047a3a5841e764b41c063bd497",
         "cacheKey": "1775d7ad901d2c51604d6c89006e91bd93f7c9047a3a5841e764b41c063bd497",
-        "status": "ready",
-        "lastValidSource": "",
-        "error": "",
         "dependencies": [],
         "reverseDependencies": [
           "d3200000-0000-4000-8000-000000000013"
-        ],
-        "cacheHit": false
+        ]
       }
     },
     {
@@ -116,14 +108,10 @@
         "artifactHash": "7b64bac32d0063686022e784fcf99302f81663b5e361058b174be398644f3254",
         "contentHash": "7b64bac32d0063686022e784fcf99302f81663b5e361058b174be398644f3254",
         "cacheKey": "7b64bac32d0063686022e784fcf99302f81663b5e361058b174be398644f3254",
-        "status": "ready",
-        "lastValidSource": "",
-        "error": "",
         "dependencies": [
           "d3200000-0000-4000-8000-000000000012"
         ],
-        "reverseDependencies": [],
-        "cacheHit": false
+        "reverseDependencies": []
       }
     },
     {
@@ -140,12 +128,8 @@
         "artifactHash": "4352917df9feef9a3f51a5463a77d00e00a1d83dda982e1e95051d1a18ae5440",
         "contentHash": "4352917df9feef9a3f51a5463a77d00e00a1d83dda982e1e95051d1a18ae5440",
         "cacheKey": "4352917df9feef9a3f51a5463a77d00e00a1d83dda982e1e95051d1a18ae5440",
-        "status": "ready",
-        "lastValidSource": "",
-        "error": "",
         "dependencies": [],
-        "reverseDependencies": [],
-        "cacheHit": false
+        "reverseDependencies": []
       }
     }
   ],

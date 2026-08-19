@@ -27,6 +27,33 @@ export interface SceneInstanceLayer {
   sourceUuid: string
 }
 
+export type AuthoringObjectKind =
+  | 'Empty' | 'Sprite' | 'AnimatedSprite' | 'WorldText' | 'Polygon' | 'Line' | 'Path' | 'Camera'
+  | 'CanvasLayer' | 'ParallaxLayer' | 'Rectangle' | 'Circle' | 'Triangle' | 'Collider'
+  | 'ScriptHost' | 'AudioEmitter' | 'Light' | 'NavigationRegion' | 'PackageObject'
+
+export interface AuthoringMetadata2D {
+  kind: AuthoringObjectKind
+  origin: Vec2
+  visible: boolean
+  zOrder: number
+  renderLayer: number
+  sortMode: 'LayerThenOrder' | 'YSort'
+  canvasLayer: { screenSpace: boolean; followCamera: boolean }
+  parallax: { motionScale: Vec2; repeat: Vec2 }
+  path: { points: Vec2[]; closed: boolean; smoothing: number }
+}
+
+export function defaultAuthoringMetadata(entityType: 'Box' | 'Circle' | 'Triangle'): AuthoringMetadata2D {
+  return {
+    kind: entityType === 'Circle' ? 'Circle' : entityType === 'Triangle' ? 'Triangle' : 'Rectangle',
+    origin: { x: 0, y: 0 }, visible: true, zOrder: 0, renderLayer: 1, sortMode: 'LayerThenOrder',
+    canvasLayer: { screenSpace: false, followCamera: true },
+    parallax: { motionScale: { x: .5, y: .5 }, repeat: { x: 0, y: 0 } },
+    path: { points: [], closed: false, smoothing: .5 }
+  }
+}
+
 /** A scene identity with capabilities supplied entirely by components. */
 export abstract class Entity {
   readonly id: number
@@ -44,6 +71,7 @@ export abstract class Entity {
   prefabOverrides: Record<string, unknown> = {}
   prefabLayers: PrefabInstanceLayer[] = []
   sceneLayers: SceneInstanceLayer[] = []
+  authoring: AuthoringMetadata2D
   readonly componentMap = new Map<ComponentKind, Component2D>()
 
   constructor(id: number, entityType: 'Box' | 'Circle' | 'Triangle', uuid?: string) {
@@ -51,6 +79,7 @@ export abstract class Entity {
     this.uuid = normalizeUuid(uuid)
     this.entityType = entityType
     this.name = entityType
+    this.authoring = defaultAuthoringMetadata(entityType)
     this.addComponent(new Transform())
   }
 

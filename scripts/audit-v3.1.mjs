@@ -15,7 +15,7 @@ const [pkg, tauri, capability, workspaces, windowing, recovery, feedback, palett
   read('src/store/physics.ts'), read('src/i18n.ts'), read('scripts/export-reference-projects.mjs')
 ])
 
-assert(pkg.version === '3.2.0' && tauri.version === '3.2.0', 'Product and Tauri versions must be 3.2.0.')
+assert(pkg.version === '4.0.0' && tauri.version === '4.0.0', 'Product and Tauri versions must be 4.0.0.')
 assert(tauri.app.windows[0].fullscreen === false && tauri.app.windows[0].maximized === true && tauri.app.windows[0].decorations === true && tauri.app.windows[0].resizable === true, 'Desktop first launch is not a maximized, decorated, resizable window.')
 for (const permission of ['allow-set-fullscreen', 'allow-set-size', 'allow-set-position', 'allow-center']) assert(capability.includes(permission), `Native window capability is missing ${permission}.`)
 for (const value of ['launchMaximized', 'toggleEditorFullscreen', 'availableMonitors', 'lastWindowedState', 'onMoved', 'onResized']) assert(windowing.includes(value), `Window lifecycle is missing ${value}.`)

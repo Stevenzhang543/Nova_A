@@ -33,6 +33,12 @@ struct ConnectionConstraint {
     lower_limit: f64,
     upper_limit: f64,
     collide_connected: bool,
+    motor_enabled: bool,
+    motor_speed: f64,
+    max_motor_force: f64,
+    break_force: f64,
+    break_torque: f64,
+    motor_torque: f64,
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -125,6 +131,20 @@ impl ConnectionConstraint {
             upper_limit: finite_or(data[data_index + 33], 1.0)
                 .max(finite_or(data[data_index + 32], -1.0)),
             collide_connected: data[data_index + 34] > 0.5,
+            motor_enabled: data[data_index + 35] > 0.5,
+            motor_speed: finite_or(data[data_index + 36], 0.0),
+            max_motor_force: non_negative(data[data_index + 37], 1000.0),
+            break_force: if data[data_index + 38].is_finite() && data[data_index + 38] > 0.0 {
+                data[data_index + 38]
+            } else {
+                f64::MAX
+            },
+            break_torque: if data[data_index + 39].is_finite() && data[data_index + 39] > 0.0 {
+                data[data_index + 39]
+            } else {
+                f64::MAX
+            },
+            motor_torque: 0.0,
         })
     }
 
@@ -219,8 +239,14 @@ impl ConnectionConstraint {
     }
 
     fn evaluate_failure(&mut self, bodies: &[Body]) {
-        // Joint components do not use Rope2D's tear/snap thresholds.
-        if !self.active || self.broken_code != 0 || self.binding || self.joint_kind > 0 {
+        if !self.active || self.broken_code != 0 || self.binding {
+            return;
+        }
+        if self.joint_kind > 0 {
+            if self.tension > self.break_force || self.motor_torque > self.break_torque {
+                self.broken_code = 1;
+                self.active = false;
+            }
             return;
         }
         let physical_rope = self.collision_enabled && !self.rope_nodes.is_empty();
@@ -540,7 +566,9 @@ fn rope_collision_body(
         restitution: 0.0,
         restitution_threshold: 0.0,
         static_friction: 0.4,
-        dynamic_friction: 0.25,
+       dynamic_friction: 0.25,
+        friction_combine: 0,
+        restitution_combine: 3,
         is_static: false,
         is_kinematic: false,
         is_sensor: false,
@@ -1017,6 +1045,27 @@ fn synchronize_binding_motion(bodies: &mut [Body], constraint: &ConnectionConstr
     b.angular_velocity = finite_or(angular_velocity, 0.0);
 }
 
+fn solve_joint_motor(bodies: &mut [Body], constraint: &mut ConnectionConstraint, dt: f64) {
+    if !constraint.motor_enabled || constraint.max_motor_force <= 0.0 || dt <= 0.0 {
+        constraint.motor_torque = 0.0;
+        return;
+    }
+    let a = &bodies[constraint.body_a];
+    let b = &bodies[constraint.body_b];
+    let inverse = a.inv_inertia + b.inv_inertia;
+    if inverse <= 0.0 {
+        constraint.motor_torque = 0.0;
+        return;
+    }
+    let requested = (constraint.motor_speed - (b.angular_velocity - a.angular_velocity)) / inverse;
+    let limit = constraint.max_motor_force * dt;
+    let impulse = requested.clamp(-limit, limit);
+    let (a, b) = two_bodies_mut(bodies, constraint.body_a, constraint.body_b);
+    a.angular_velocity -= impulse * a.inv_inertia;
+    b.angular_velocity += impulse * b.inv_inertia;
+    constraint.motor_torque = impulse.abs() / dt;
+}
+
 fn solve_anchor_point_velocity(bodies: &mut [Body], constraint: &mut ConnectionConstraint, dt: f64) {
     let (radius_a, radius_b, error, relative_velocity, k11, k12, k22) = {
         let a = &bodies[constraint.body_a];
@@ -1152,6 +1201,7 @@ fn solve_connection_velocity(bodies: &mut [Body], constraint: &mut ConnectionCon
     if !constraint.active || (constraint.broken_code != 0 && !simulating_fragments) || dt <= 0.0 {
         return;
     }
+    solve_joint_motor(bodies, constraint, dt);
     if constraint.binding || constraint.joint_kind == 1 {
         solve_binding_velocity(bodies, constraint, dt);
         return;

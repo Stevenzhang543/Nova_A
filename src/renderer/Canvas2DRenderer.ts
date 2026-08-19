@@ -31,7 +31,7 @@ function textureDimensions(source: TexImageSource): { width: number; height: num
 }
 
 export class Canvas2DRenderer implements Renderer2D {
-  readonly stats: RendererStats = { backend: 'Canvas2D', drawCalls: 0, batches: 0, triangles: 0, sprites: 0, shapes: 0, text: 0, textures: 0, gpuMs: null, passes: 1, renderTargets: 0, overdraw: 0 }
+  readonly stats: RendererStats = { backend: 'Canvas2D', drawCalls: 0, batches: 0, triangles: 0, sprites: 0, shapes: 0, text: 0, textures: 0, gpuMs: null, passes: 1, renderTargets: 0, overdraw: 0, batchBreaks: 0, atlasPages: 0 }
   private readonly context: CanvasRenderingContext2D
   private commands: QueuedCommand[] = []
   private tintedTextures = new WeakMap<object, Map<string, HTMLCanvasElement>>()
@@ -56,7 +56,7 @@ export class Canvas2DRenderer implements Renderer2D {
     this.resize(options.width, options.height, options.pixelRatio)
     this.commands = []
     this.cameraIndex = -1
-    Object.assign(this.stats, { drawCalls: 0, batches: 0, triangles: 0, sprites: 0, shapes: 0, text: 0, textures: 0, gpuMs: null, passes: 1, renderTargets: 0, overdraw: 0 })
+    Object.assign(this.stats, { drawCalls: 0, batches: 0, triangles: 0, sprites: 0, shapes: 0, text: 0, textures: 0, gpuMs: null, passes: 1, renderTargets: 0, overdraw: 0, batchBreaks: 0, atlasPages: 0 })
     this.context.setTransform(options.pixelRatio, 0, 0, options.pixelRatio, 0, 0)
     this.context.imageSmoothingEnabled = true
     this.context.imageSmoothingQuality = 'high'
@@ -102,6 +102,7 @@ export class Canvas2DRenderer implements Renderer2D {
     }
     if (cameraSaved) context.restore()
     this.stats.batches = this.stats.drawCalls
+    this.stats.batchBreaks = Math.max(0, this.stats.batches - 1)
     return { ...this.stats }
   }
   destroy(): void { this.commands = []; this.tintedTextures = new WeakMap() }
@@ -202,6 +203,12 @@ export class Canvas2DRenderer implements Renderer2D {
     context.font = `${command.fontWeight} ${command.fontSize}px ${command.fontFamily}`
     context.textAlign = command.align
     context.textBaseline = 'middle'
+    if (command.outlineWidth > 0 && command.outlineColor.a > 0) {
+      context.strokeStyle = cssColor(command.outlineColor)
+      context.lineWidth = command.outlineWidth * 2
+      context.lineJoin = 'round'
+      context.strokeText(command.text, 0, 0, command.maxWidth > 0 ? command.maxWidth : undefined)
+    }
     context.fillText(command.text, 0, 0, command.maxWidth > 0 ? command.maxWidth : undefined)
   }
 

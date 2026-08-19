@@ -1,0 +1,13 @@
+{
+  "engineVersion": "4.0.0",
+  "schema": 29,
+  "projectName": "Nova_A Script Test Runner",
+  "minimumScenes": 1,
+  "minimumEntities": 9,
+  "expectedValidation": "pass",
+  "demonstrates": [
+    "setup and teardown",
+    "parameterized cases",
+    "tags, skip, timeout, deterministic seed and CI output"
+  ]
+}

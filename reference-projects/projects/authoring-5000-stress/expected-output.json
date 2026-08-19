@@ -1,0 +1,14 @@
+{
+  "engineVersion": "4.0.0",
+  "schema": 29,
+  "projectName": "5,000 Object Authoring Stress",
+  "minimumScenes": 1,
+  "minimumEntities": 5001,
+  "expectedValidation": "pass",
+  "demonstrates": [
+    "5,000 objects",
+    "performance mode",
+    "component and tag search",
+    "box selection"
+  ]
+}
