@@ -1,0 +1,74 @@
+{
+  "format": "nova-v4.4-importer-comparisons",
+  "version": 1,
+  "generatedAt": "2026-08-23T16:59:50.218Z",
+  "settingsHashes": [
+    "8dfc9dd8cb7fcc89c0a2770f644dd4a70d8e86394b12bc56c624e86e7e294974",
+    "8dfc9dd8cb7fcc89c0a2770f644dd4a70d8e86394b12bc56c624e86e7e294974"
+  ],
+  "atlasKeys": [
+    "9f51b970bf8a2725d4301d7e6c672f5cc3a75a4d9727ffad8bd75ef3c30ad968",
+    "9f51b970bf8a2725d4301d7e6c672f5cc3a75a4d9727ffad8bd75ef3c30ad968"
+  ],
+  "comparison": [
+    {
+      "field": "importerId",
+      "before": "nova.image",
+      "after": "nova.image",
+      "changed": false
+    },
+    {
+      "field": "importerVersion",
+      "before": "3.0.0",
+      "after": "3.0.1",
+      "changed": true
+    },
+    {
+      "field": "presetId",
+      "before": "General",
+      "after": "General",
+      "changed": false
+    },
+    {
+      "field": "platform",
+      "before": "windows",
+      "after": "windows",
+      "changed": false
+    },
+    {
+      "field": "sourceHash",
+      "before": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "after": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "changed": false
+    },
+    {
+      "field": "settingsHash",
+      "before": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "after": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "changed": false
+    },
+    {
+      "field": "artifactSettingsHash",
+      "before": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "after": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "changed": false
+    },
+    {
+      "field": "artifactHash",
+      "before": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "after": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "changed": true
+    },
+    {
+      "field": "cacheKey",
+      "before": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "after": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "changed": false
+    }
+  ],
+  "twoMachine": {
+    "machineA": "passed-local",
+    "machineB": "pending-external-matching-host"
+  },
+  "status": "passed-local"
+}

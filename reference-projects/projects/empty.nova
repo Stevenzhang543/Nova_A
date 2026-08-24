@@ -2,7 +2,7 @@
   "projectFormat": "Nova_A Project Format 2",
   "projectFormatMajor": 2,
   "formatVersion": 29,
-  "engineVersion": "4.0.0",
+  "engineVersion": "4.4.0",
   "compatibility": {
     "format": "Nova_A Project Format 2",
     "major": 2,
@@ -10,16 +10,16 @@
     "minimumSchemaVersion": 5
   },
   "projectMetadata": {
-    "id": "55452405-7199-43b2-897a-bb85c8fbbbf1",
+    "id": "f5d75cf4-9495-40da-aa27-c364e2a2c30c",
     "name": "Nova_A Empty 2D Reference",
-    "createdAt": "2026-08-19T13:34:54.515Z",
-    "updatedAt": "2026-08-19T13:34:54.515Z",
+    "createdAt": "2026-08-23T17:16:25.294Z",
+    "updatedAt": "2026-08-23T17:16:25.294Z",
     "format": "Nova_A Project Format 2",
     "template": "empty"
   },
   "manifest": {
     "manifestVersion": 1,
-    "projectUuid": "55452405-7199-43b2-897a-bb85c8fbbbf1",
+    "projectUuid": "f5d75cf4-9495-40da-aa27-c364e2a2c30c",
     "name": "Nova_A Empty 2D Reference",
     "engineCompatibility": {
       "minimum": "3.9.0",
@@ -38,9 +38,47 @@
       "userLocal": ".nova/user"
     }
   },
-  "assets": [],
+  "assets": [
+    {
+      "uuid": "2b5e3219-bdcd-450d-8b5e-3219bdcd750d",
+      "name": "Getting Started.md",
+      "path": "Assets/Tutorials/Getting Started.md",
+      "assetType": "other",
+      "mimeType": "text/markdown",
+      "byteLength": 298,
+      "source": "---\ndismissible: true\ntemplate: empty\n---\n# Welcome to Nova_A Empty 2D Reference\n\nThis project was created from the **empty** template. Open the Scene, Assets, Script, Debug, and Manage workspaces to explore the configured systems. Dismiss this tutorial from its Asset Inspector when you are ready.",
+      "sourceModified": 0,
+      "importedAt": 0,
+      "width": 0,
+      "height": 0,
+      "duration": 0,
+      "fontFamily": "",
+      "settings": {
+        "filterMode": "Linear",
+        "compression": "Lossless",
+        "pixelsPerUnit": 100,
+        "spriteRegion": null,
+        "pivot": {
+          "x": 0.5,
+          "y": 0.5
+        },
+        "atlas": false
+      },
+      "pipeline": {
+        "importerVersion": "template-4.2",
+        "platform": "web",
+        "sourceHash": "c12b8261370f4e2f6ace9e01108da54a7bee5c2b3edd712be69eeae53c27d2f1",
+        "artifactHash": "c12b8261370f4e2f6ace9e01108da54a7bee5c2b3edd712be69eeae53c27d2f1",
+        "contentHash": "c12b8261370f4e2f6ace9e01108da54a7bee5c2b3edd712be69eeae53c27d2f1",
+        "cacheKey": "c12b8261370f4e2f6ace9e01108da54a7bee5c2b3edd712be69eeae53c27d2f1",
+        "dependencies": [],
+        "reverseDependencies": []
+      }
+    }
+  ],
   "assetFolders": [
     "Assets",
+    "Assets/Tutorials",
     "Assets/Scenes",
     "Assets/Sprites",
     "Assets/Audio",
@@ -57,10 +95,21 @@
     ".nova/imported"
   ],
   "assetDatabase": {
-    "version": 1,
+    "version": 2,
     "favorites": [],
     "savedFilters": [],
-    "importPresets": []
+    "importPresets": [],
+    "collections": [],
+    "contentGroups": [
+      {
+        "id": "main",
+        "name": "Main",
+        "mode": "embedded",
+        "optional": false
+      }
+    ],
+    "viewMode": "grid",
+    "thumbnailSize": 112
   },
   "plugins": [],
   "packages": {
@@ -497,7 +546,14 @@
         "crashReports": true,
         "telemetryEnabled": false,
         "telemetryEndpoint": "",
-        "privacyPolicyUrl": ""
+        "privacyPolicyUrl": "",
+        "include": [
+          "Assets/**"
+        ],
+        "exclude": [
+          ".nova/**"
+        ],
+        "stripUnusedAssets": false
       }
     },
     "world": {

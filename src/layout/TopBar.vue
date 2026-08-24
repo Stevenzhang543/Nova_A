@@ -19,6 +19,7 @@
         <Transition name="menu"><div v-if="activeMenu === 'edit'" class="dropdown">
           <button :disabled="!isEditing || !historyState.canUndo" @click="handleUndo"><span>{{ historyState.undoLabel ? `${t('undo')} · ${historyState.undoLabel}` : t('undo') }}</span><kbd>Ctrl Z</kbd></button>
           <button :disabled="!isEditing || !historyState.canRedo" @click="handleRedo"><span>{{ historyState.redoLabel ? `${t('redo')} · ${historyState.redoLabel}` : t('redo') }}</span><kbd>Ctrl Y</kbd></button>
+          <button @click="handleUndoHistory"><span>{{ t('undoHistory') }}</span><kbd>Ctrl Alt H</kbd></button>
           <hr><button :disabled="!isEditing || !physicsState.selectedEntityIds.length" @click="handleCopy"><span>{{ t('copy') }}</span><kbd>Ctrl C</kbd></button>
           <button :disabled="!isEditing" @click="handlePaste"><span>{{ t('paste') }}</span><kbd>Ctrl V</kbd></button>
           <button :disabled="!isEditing || !physicsState.selectedEntityIds.length" @click="handleDuplicate"><span>{{ t('duplicate') }}</span><kbd>Ctrl D</kbd></button>
@@ -76,7 +77,8 @@
     </nav>
     <div class="top-spacer"></div>
     <span v-if="recoveryState.safeMode" class="safe-pill">{{ t('safeMode') }}</span>
-    <span class="release-pill">4.0.0</span>
+    <span v-if="historyState.dirty" class="dirty-pill" :title="projectTransactionState.unsavedScopes.join(', ')">● {{ t('unsavedChanges') }}</span>
+    <span class="release-pill">4.4.0</span>
     <input ref="fileInput" type="file" hidden accept="application/json,.nova,.json" @change="handleFileSelected">
   </header>
 </template>
@@ -97,6 +99,7 @@ import { openStudioStatus } from '../runtime/stableContracts'
 import { recoveryState } from '../runtime/recovery'
 import { completeTask, failTask, startTask } from '../runtime/editorFeedback'
 import { toggleEditorFullscreen } from '../runtime/editorWindow'
+import { projectTransactionState } from '../runtime/projectTransactions'
 
 const activeMenu = ref<string | null>(null)
 const fileInput = ref<HTMLInputElement | null>(null)
@@ -122,10 +125,10 @@ async function handleSave() {
 function triggerLoad() { fileInput.value?.click(); activeMenu.value = null }
 async function handleClearScene() {
   if (!isEditing.value) return
-  if (!await confirmDestructive(t('clearSceneTitle'), t('confirmClear'))) return
+  if (!await confirmDestructive(t('clearSceneTitle'), t('confirmClearCount', { objects: physicsState.world.entities.length, connections: physicsState.world.connections.length }))) return
   clearScene(); pushHistory(); activeMenu.value = null
 }
-async function handleDelete() { if (!isEditing.value || !physicsState.selectedEntityIds.length) return; if (!await confirmDestructive(t('deleteObjectTitle'), t('confirmDeleteObject'))) return; deleteSelected(); pushHistory('Delete entities'); activeMenu.value = null }
+async function handleDelete() { if (!isEditing.value || !physicsState.selectedEntityIds.length) return; if (!await confirmDestructive(t('deleteObjectTitle'), t('confirmDeleteObjectCount', { count: physicsState.selectedEntityIds.length }))) return; deleteSelected(); pushHistory('Delete entities'); activeMenu.value = null }
 function handleDeleteAll() { void handleClearScene() }
 function handleDeselect() { selectEntities([], 'replace'); activeMenu.value = null }
 function handleCopy() { const count = copySelectedEntities(); if (count) addEditorLog(`Copied ${count} ${count === 1 ? 'entity' : 'entities'}`); activeMenu.value = null }
@@ -154,6 +157,7 @@ function handleResetLayout() { resetEditorLayout(); activeMenu.value = null }
 function handleWorkspaceManager() { editorState.workspaceManagerOpen = true; activeMenu.value = null }
 function handleShortcutEditor() { editorState.shortcutEditorOpen = true; activeMenu.value = null }
 function handleStatusCenter() { editorState.statusCenterOpen = true; activeMenu.value = null }
+function handleUndoHistory() { editorState.undoHistoryOpen = true; activeMenu.value = null }
 function handleCommandPalette() { editorState.commandPaletteOpen = true; activeMenu.value = null }
 function handleFullscreen() { activeMenu.value = null; void toggleEditorFullscreen() }
 async function handleAbout() {
@@ -201,6 +205,7 @@ function handleKeyDown(event: KeyboardEvent) {
   else if (commandKey && event.shiftKey && event.key.toLowerCase() === 'z') { event.preventDefault(); handleRedo() }
   else if (commandKey && event.key.toLowerCase() === 'z') { event.preventDefault(); handleUndo() }
   else if (commandKey && event.key.toLowerCase() === 'y') { event.preventDefault(); handleRedo() }
+  else if (commandKey && event.altKey && event.key.toLowerCase() === 'h') { event.preventDefault(); handleUndoHistory() }
   else if (commandKey && event.key.toLowerCase() === 'c') { event.preventDefault(); handleCopy() }
   else if (commandKey && event.key.toLowerCase() === 'v') { event.preventDefault(); handlePaste() }
   else if (commandKey && event.key.toLowerCase() === 'd') { event.preventDefault(); handleDuplicate() }
@@ -233,6 +238,7 @@ kbd { color: var(--text-muted); font-family: inherit; font-size:11px; }
 .top-spacer { flex: 1; }
 .release-pill { padding: 3px 8px; border: 1px solid var(--border-subtle); border-radius: 999px; color: var(--text-muted); font-size:11px; }
 .safe-pill{padding:3px 8px;border:1px solid var(--warning);border-radius:999px;color:var(--warning);font-size:11px}
+.dirty-pill{padding:3px 8px;border:1px solid color-mix(in srgb,var(--warning) 60%,var(--border-subtle));border-radius:999px;color:var(--warning);font-size:11px;white-space:nowrap}
 .menu-enter-active, .menu-leave-active { transition: opacity 130ms ease, transform 130ms ease; transform-origin: top left; }
 .menu-enter-from, .menu-leave-to { opacity: 0; transform: translateY(-4px) scale(.98); }
 </style>

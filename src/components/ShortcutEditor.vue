@@ -13,7 +13,8 @@
           <p v-if="!visible.length">{{ t('noCommandsFound') }}</p>
         </div>
         <p v-if="conflict" class="conflict" role="alert">{{ conflict }}</p>
-        <footer><button @click="resetShortcuts">{{ t('resetAllShortcuts') }}</button><button class="primary" @click="close">{{ t('done') }}</button></footer>
+        <input ref="importInput" hidden type="file" accept="application/json,.json" @change="loadShortcuts">
+        <footer><button @click="importInput?.click()">{{ t('importShortcuts') }}</button><button @click="saveShortcuts">{{ t('exportShortcuts') }}</button><button @click="resetShortcuts">{{ t('resetAllShortcuts') }}</button><button class="primary" @click="close">{{ t('done') }}</button></footer>
       </article>
     </section>
   </Teleport>
@@ -22,11 +23,14 @@
 import { computed, ref } from 'vue'
 import { t } from '../i18n'
 import { editorState as state } from '../store/editor'
-import { resetShortcuts, setShortcut, shortcutConflicts, shortcutFromEvent, shortcutState, type ShortcutCommand } from '../editor/shortcuts'
+import { exportShortcuts, importShortcuts, resetShortcuts, setShortcut, shortcutConflicts, shortcutFromEvent, shortcutState, type ShortcutCommand } from '../editor/shortcuts'
 const query = ref(''), recording = ref<ShortcutCommand | null>(null), conflict = ref('')
+const importInput = ref<HTMLInputElement | null>(null)
 const visible = computed(() => { const needle = query.value.trim().toLocaleLowerCase(); return shortcutState.definitions.filter(item => !needle || `${t(item.label)} ${item.binding} ${item.defaultBinding}`.toLocaleLowerCase().includes(needle)) })
 function close() { recording.value = null; state.shortcutEditorOpen = false }
 function capture(event: KeyboardEvent, id: ShortcutCommand) { event.preventDefault(); event.stopPropagation(); const binding = shortcutFromEvent(event); if (!binding || ['Ctrl', 'Alt', 'Shift'].includes(binding)) return; const duplicates = shortcutConflicts(binding, id); if (duplicates.length) { conflict.value = t('shortcutConflict', { command: t(duplicates[0].label) }); return } setShortcut(id, binding); recording.value = null; conflict.value = '' }
+function saveShortcuts() { const url = URL.createObjectURL(new Blob([exportShortcuts()], { type: 'application/json' })); const link = document.createElement('a'); link.href = url; link.download = 'nova-shortcuts.json'; link.click(); URL.revokeObjectURL(url) }
+async function loadShortcuts(event: Event) { const input = event.target as HTMLInputElement; const file = input.files?.[0]; if (!file) return; try { const count = importShortcuts(await file.text()); conflict.value = t('shortcutsImported', { count }) } catch (error) { conflict.value = error instanceof Error ? error.message : String(error) } finally { input.value = '' } }
 </script>
 <style scoped>
 .scrim{position:fixed;inset:0;z-index:1850;padding:20px;display:grid;place-items:center;background:var(--scrim);backdrop-filter:blur(8px)}article{width:min(650px,100%);max-height:90vh;display:flex;flex-direction:column;overflow:hidden;border:1px solid var(--border-strong);border-radius:16px;background:var(--surface-1);box-shadow:var(--shadow-lg)}header{min-height:58px;padding:10px 14px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border-subtle)}header div{display:grid;gap:3px}header strong{font-size:15px}header small,.shortcut-list small{color:var(--text-muted);font-size:12px}button{min-height:34px;padding:0 10px;border:1px solid var(--border-subtle);border-radius:8px;background:var(--surface-2)}.search{margin:10px 12px;padding:0 9px;display:flex;align-items:center;gap:7px;border:1px solid var(--border-subtle);border-radius:9px;background:var(--input-bg)}.search input{min-width:0;flex:1;border:0;background:transparent}.shortcut-list{min-height:0;padding:0 12px;overflow:auto}.shortcut-list section{min-height:55px;display:grid;grid-template-columns:minmax(0,1fr) 145px 36px;gap:7px;align-items:center;border-top:1px solid var(--border-subtle)}.shortcut-list section>span{min-width:0;display:grid;gap:3px}.shortcut-list button.recording{color:var(--accent);border-color:var(--accent);background:var(--accent-soft)}.conflict{margin:8px 12px;color:var(--danger)}footer{padding:10px 12px;display:flex;justify-content:flex-end;gap:7px;border-top:1px solid var(--border-subtle)}button.primary{color:var(--accent-contrast);border-color:var(--accent);background:var(--accent)}

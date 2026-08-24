@@ -1,0 +1,57 @@
+{
+  "format": "nova-test-environments",
+  "version": 1,
+  "release": "4.2.0",
+  "executed": [
+    {
+      "id": "NOVA-WIN-BUILD-HOST",
+      "generatedAt": "2026-08-23T04:36:26.502Z",
+      "host": {
+        "platform": "win32",
+        "release": "10.0.26200",
+        "arch": "x64",
+        "cpu": "AMD Ryzen 9 8945HX with Radeon Graphics        ",
+        "logicalCpus": 32,
+        "memoryBytes": 34142187520
+      },
+      "tools": {
+        "node": "v22.22.2",
+        "pnpm": "pnpm@10.30.0",
+        "rustc": "rustc 1.92.0 (ded5c06cf 2025-12-08)",
+        "cargo": "cargo 1.92.0 (344c4567c 2025-10-21)",
+        "wasmPack": "wasm-pack 0.14.0",
+        "vite": "^6.4.3",
+        "tauri": "2.11.4"
+      },
+      "source": {
+        "commit": "7f753cb065aff42cef63361765cfefedbd5f72e1",
+        "branch": "main",
+        "describe": "Release3.0.0(2026.08.16)-2-g7f753cb-dirty",
+        "dirty": true,
+        "signedTag": null
+      }
+    }
+  ],
+  "external": [
+    {
+      "id": "NOVA-WIN-CLEAN",
+      "status": "pending-clean-machine-gate"
+    },
+    {
+      "id": "NOVA-WIN-HIDPI",
+      "status": "pending-physical-monitor-gate"
+    },
+    {
+      "id": "NOVA-WEB-FIREFOX",
+      "status": "pending-browser-gate"
+    },
+    {
+      "id": "NOVA-LINUX-REF",
+      "status": "pending-experimental-target"
+    },
+    {
+      "id": "NOVA-MAC-REF",
+      "status": "pending-experimental-target"
+    }
+  ]
+}

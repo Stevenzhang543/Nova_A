@@ -2,7 +2,7 @@
   "projectFormat": "Nova_A Project Format 2",
   "projectFormatMajor": 2,
   "formatVersion": 29,
-  "engineVersion": "4.0.0",
+  "engineVersion": "4.4.0",
   "compatibility": {
     "format": "Nova_A Project Format 2",
     "major": 2,
@@ -10,16 +10,16 @@
     "minimumSchemaVersion": 5
   },
   "projectMetadata": {
-    "id": "983bdbbd-aa4b-45cd-aff9-0241fd5f1067",
+    "id": "9eab9828-3aff-413e-9759-a3ce267a4724",
     "name": "Nova_A RTL Interface",
-    "createdAt": "2026-08-19T13:34:54.967Z",
-    "updatedAt": "2026-08-19T13:34:54.967Z",
+    "createdAt": "2026-08-23T17:16:25.888Z",
+    "updatedAt": "2026-08-23T17:16:25.888Z",
     "format": "Nova_A Project Format 2",
     "template": "ui-showcase"
   },
   "manifest": {
     "manifestVersion": 1,
-    "projectUuid": "983bdbbd-aa4b-45cd-aff9-0241fd5f1067",
+    "projectUuid": "9eab9828-3aff-413e-9759-a3ce267a4724",
     "name": "Nova_A RTL Interface",
     "engineCompatibility": {
       "minimum": "3.9.0",
@@ -39,6 +39,42 @@
     }
   },
   "assets": [
+    {
+      "uuid": "1c4762a0-14a3-487c-8c47-62a014a3d87c",
+      "name": "Getting Started.md",
+      "path": "Assets/Tutorials/Getting Started.md",
+      "assetType": "other",
+      "mimeType": "text/markdown",
+      "byteLength": 305,
+      "source": "---\ndismissible: true\ntemplate: ui-showcase\n---\n# Welcome to Nova_A RTL Interface\n\nThis project was created from the **ui-showcase** template. Open the Scene, Assets, Script, Debug, and Manage workspaces to explore the configured systems. Dismiss this tutorial from its Asset Inspector when you are ready.",
+      "sourceModified": 0,
+      "importedAt": 0,
+      "width": 0,
+      "height": 0,
+      "duration": 0,
+      "fontFamily": "",
+      "settings": {
+        "filterMode": "Linear",
+        "compression": "Lossless",
+        "pixelsPerUnit": 100,
+        "spriteRegion": null,
+        "pivot": {
+          "x": 0.5,
+          "y": 0.5
+        },
+        "atlas": false
+      },
+      "pipeline": {
+        "importerVersion": "template-4.2",
+        "platform": "web",
+        "sourceHash": "cf4d55bcf4d7028d9c7eec47c39c7e2c02892e678b359b514058d9d132f3129d",
+        "artifactHash": "cf4d55bcf4d7028d9c7eec47c39c7e2c02892e678b359b514058d9d132f3129d",
+        "contentHash": "cf4d55bcf4d7028d9c7eec47c39c7e2c02892e678b359b514058d9d132f3129d",
+        "cacheKey": "cf4d55bcf4d7028d9c7eec47c39c7e2c02892e678b359b514058d9d132f3129d",
+        "dependencies": [],
+        "reverseDependencies": []
+      }
+    },
     {
       "uuid": "5c108876-2349-4fe2-8c10-88762349efe2",
       "name": "en.nova-locale",
@@ -60,7 +96,7 @@
         }
       },
       "pipeline": {
-        "importerVersion": "nova-localization-3.5",
+        "importerVersion": "template-4.2",
         "platform": "web",
         "sourceHash": "a31b4b568a52a318fc4c2ddf3e8d5c183ce9bb7c5e00ece2e1d88bb6199b210b",
         "artifactHash": "a31b4b568a52a318fc4c2ddf3e8d5c183ce9bb7c5e00ece2e1d88bb6199b210b",
@@ -96,7 +132,7 @@
         "atlas": false
       },
       "pipeline": {
-        "importerVersion": "nova-uiTheme-3.5",
+        "importerVersion": "template-4.2",
         "platform": "web",
         "sourceHash": "4513ebcc2b53c376806889acb428866a67e7bdd5ca58755470e49988937d384b",
         "artifactHash": "4513ebcc2b53c376806889acb428866a67e7bdd5ca58755470e49988937d384b",
@@ -132,12 +168,12 @@
         "atlas": false
       },
       "pipeline": {
-        "importerVersion": "nova-audio-3.5",
+        "importerVersion": "template-4.2",
         "platform": "web",
-        "sourceHash": "6086fac24845e0083b9b7532558846202a105b22154b772b3b509e574ddf69d5",
-        "artifactHash": "6086fac24845e0083b9b7532558846202a105b22154b772b3b509e574ddf69d5",
-        "contentHash": "6086fac24845e0083b9b7532558846202a105b22154b772b3b509e574ddf69d5",
-        "cacheKey": "6086fac24845e0083b9b7532558846202a105b22154b772b3b509e574ddf69d5",
+        "sourceHash": "4d66f04dfb036f62fc5454410967f970a638f38c0d67049407b30d0977929956",
+        "artifactHash": "4d66f04dfb036f62fc5454410967f970a638f38c0d67049407b30d0977929956",
+        "contentHash": "4d66f04dfb036f62fc5454410967f970a638f38c0d67049407b30d0977929956",
+        "cacheKey": "4d66f04dfb036f62fc5454410967f970a638f38c0d67049407b30d0977929956",
         "dependencies": [],
         "reverseDependencies": []
       }
@@ -145,6 +181,7 @@
   ],
   "assetFolders": [
     "Assets",
+    "Assets/Tutorials",
     "Assets/Scenes",
     "Assets/Sprites",
     "Assets/Audio",
@@ -161,10 +198,21 @@
     ".nova/imported"
   ],
   "assetDatabase": {
-    "version": 1,
+    "version": 2,
     "favorites": [],
     "savedFilters": [],
-    "importPresets": []
+    "importPresets": [],
+    "collections": [],
+    "contentGroups": [
+      {
+        "id": "main",
+        "name": "Main",
+        "mode": "embedded",
+        "optional": false
+      }
+    ],
+    "viewMode": "grid",
+    "thumbnailSize": 112
   },
   "plugins": [],
   "packages": {
@@ -601,7 +649,14 @@
         "crashReports": true,
         "telemetryEnabled": false,
         "telemetryEndpoint": "",
-        "privacyPolicyUrl": ""
+        "privacyPolicyUrl": "",
+        "include": [
+          "Assets/**"
+        ],
+        "exclude": [
+          ".nova/**"
+        ],
+        "stripUnusedAssets": false
       }
     },
     "world": {

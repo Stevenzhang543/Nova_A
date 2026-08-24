@@ -2,7 +2,7 @@
   "projectFormat": "Nova_A Project Format 2",
   "projectFormatMajor": 2,
   "formatVersion": 29,
-  "engineVersion": "4.0.0",
+  "engineVersion": "4.4.0",
   "compatibility": {
     "format": "Nova_A Project Format 2",
     "major": 2,
@@ -10,16 +10,16 @@
     "minimumSchemaVersion": 5
   },
   "projectMetadata": {
-    "id": "55452405-7199-43b2-897a-bb85c8fbbbf1",
+    "id": "f5d75cf4-9495-40da-aa27-c364e2a2c30c",
     "name": "Animated and Metadata Tiles",
-    "createdAt": "2026-08-19T13:34:54.515Z",
-    "updatedAt": "2026-08-19T13:34:54.515Z",
+    "createdAt": "2026-08-23T17:16:25.294Z",
+    "updatedAt": "2026-08-23T17:16:25.294Z",
     "format": "Nova_A Project Format 2",
     "template": "tilemap-animated"
   },
   "manifest": {
     "manifestVersion": 1,
-    "projectUuid": "55452405-7199-43b2-897a-bb85c8fbbbf1",
+    "projectUuid": "f5d75cf4-9495-40da-aa27-c364e2a2c30c",
     "name": "Animated and Metadata Tiles",
     "engineCompatibility": {
       "minimum": "3.9.0",
@@ -294,6 +294,7 @@
   ],
   "assetFolders": [
     "Assets",
+    "Assets/Tutorials",
     "Assets/Scenes",
     "Assets/Sprites",
     "Assets/Audio",
@@ -310,10 +311,21 @@
     ".nova/imported"
   ],
   "assetDatabase": {
-    "version": 1,
+    "version": 2,
     "favorites": [],
     "savedFilters": [],
-    "importPresets": []
+    "importPresets": [],
+    "collections": [],
+    "contentGroups": [
+      {
+        "id": "main",
+        "name": "Main",
+        "mode": "embedded",
+        "optional": false
+      }
+    ],
+    "viewMode": "grid",
+    "thumbnailSize": 112
   },
   "plugins": [],
   "packages": {
@@ -750,7 +762,14 @@
         "crashReports": true,
         "telemetryEnabled": false,
         "telemetryEndpoint": "",
-        "privacyPolicyUrl": ""
+        "privacyPolicyUrl": "",
+        "include": [
+          "Assets/**"
+        ],
+        "exclude": [
+          ".nova/**"
+        ],
+        "stripUnusedAssets": false
       }
     },
     "world": {

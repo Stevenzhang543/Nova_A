@@ -1,0 +1,11 @@
+{
+  "format": "nova-v4.2-release-signoff",
+  "version": 1,
+  "generatedAt": "2026-08-23T04:36:26.502Z",
+  "engineering": "passed-local-automation",
+  "qa": "pending-independent-soak/accessibility/visual",
+  "releaseEngineering": "pending-signing/clean-machine/reproducibility",
+  "productOwner": "pending-publication-decision",
+  "stablePublicationApproved": false,
+  "status": "pending-external-sign-off"
+}

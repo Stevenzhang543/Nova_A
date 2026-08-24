@@ -1,0 +1,8 @@
+{
+  "format": "nova-stable-control-inventory",
+  "version": 1,
+  "generatedAt": "2026-08-23T04:36:26.502Z",
+  "count": 0,
+  "controls": [],
+  "status": "pending-browser-qualification"
+}

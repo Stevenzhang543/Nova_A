@@ -1,0 +1,42 @@
+{
+  "format": "nova-v4.4-release-signoff",
+  "version": 1,
+  "generatedAt": "2026-08-23T17:11:51.165Z",
+  "engineering": "passed-local-automation",
+  "productOwner": "pending-publication-decision",
+  "externalGates": [
+    {
+      "id": "second-matching-machine-determinism",
+      "status": "pending-external-gate"
+    },
+    {
+      "id": "five-clean-reproducible-builds",
+      "status": "pending-external-gate"
+    },
+    {
+      "id": "signed-source-and-binaries",
+      "status": "pending-external-gate"
+    },
+    {
+      "id": "independent-security-malware-review",
+      "status": "pending-external-gate"
+    },
+    {
+      "id": "clean-machine-installer-lifecycle",
+      "status": "pending-external-gate"
+    },
+    {
+      "id": "24-hour-soak",
+      "status": "pending-external-gate"
+    },
+    {
+      "id": "physical-dpi-accessibility-visual-signoff",
+      "status": "pending-external-gate"
+    },
+    {
+      "id": "firefox-linux-macos-font-and-layout-hosts",
+      "status": "pending-external-gate"
+    }
+  ],
+  "stablePublicationApproved": false
+}

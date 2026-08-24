@@ -1,0 +1,15 @@
+{
+  "format": "nova-v4.2-interaction-regression",
+  "version": 1,
+  "generatedAt": "2026-08-23T04:36:26.502Z",
+  "operations": [
+    "10,000 command history",
+    "deterministic serialization",
+    "transaction staging",
+    "recovery preview",
+    "migration dry run"
+  ],
+  "regressions": [],
+  "namedHardwareComparison": "pending external reference hardware",
+  "status": "passed-local-algorithmic-with-external-hardware-gate"
+}

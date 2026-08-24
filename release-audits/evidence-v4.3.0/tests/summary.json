@@ -1,0 +1,44 @@
+{
+  "format": "nova-v4.3-test-summary",
+  "version": 1,
+  "generatedAt": "2026-08-23T11:41:11.002Z",
+  "reports": [
+    {
+      "format": "nova-v4.3-authoring-audit",
+      "status": "passed"
+    },
+    {
+      "format": "nova-v4.3-authoring-verification",
+      "status": "passed"
+    },
+    {
+      "format": "nova-v4.3-hierarchy-performance",
+      "status": "passed-local"
+    },
+    {
+      "format": "nova-v4.3-prefab-conflicts",
+      "status": "passed"
+    },
+    {
+      "format": "nova-v4.3-multi-inspector",
+      "status": "passed"
+    },
+    {
+      "format": "nova-v4.3-determinism",
+      "status": "passed"
+    },
+    {
+      "format": "nova-v4.3-layout-qualification",
+      "status": "passed"
+    },
+    {
+      "format": "nova-windows-smoke",
+      "status": "passed"
+    }
+  ],
+  "checks": 98,
+  "failed": 0,
+  "severity0Open": 0,
+  "severity1Open": 0,
+  "status": "passed-local"
+}

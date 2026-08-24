@@ -1,0 +1,30 @@
+{
+  "format": "nova-v4.3-prefab-conflicts",
+  "version": 1,
+  "generatedAt": "2026-08-23T11:26:39.627Z",
+  "cases": [
+    "nested source layer",
+    "variantOf base",
+    "missing source",
+    "orphan source entity",
+    "checksum mismatch",
+    "override path",
+    "circular graph rejection"
+  ],
+  "writeFaultInjection": [
+    {
+      "phase": "after-write",
+      "priorSourceRestored": true
+    },
+    {
+      "phase": "after-verify",
+      "priorSourceRestored": true
+    }
+  ],
+  "repeatedLifecycle": {
+    "cycles": 3,
+    "applyRevertUnpack": true,
+    "undoRedo": true
+  },
+  "status": "passed"
+}

@@ -1,0 +1,11 @@
+{
+  "format": "nova-v4.1-24-hour-soak",
+  "version": 1,
+  "generatedAt": "2026-08-20T08:57:17.225Z",
+  "requiredWallClockHours": 24,
+  "recordedWallClockHours": 0,
+  "acceleratedTimeNotCounted": true,
+  "status": "pending-external-gate",
+  "owner": "QA",
+  "remediation": "Run editor, player, import/build and workspace switching for 24 continuous wall-clock hours on named release hardware."
+}

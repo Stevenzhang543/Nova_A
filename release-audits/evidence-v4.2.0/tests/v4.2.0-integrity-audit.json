@@ -1,0 +1,501 @@
+{
+  "format": "nova-v4.2-integrity-audit",
+  "version": 1,
+  "engineVersion": "4.2.0",
+  "generatedAt": "2026-08-23T04:31:30.768Z",
+  "checks": [
+    {
+      "id": "V420-VERSION",
+      "status": "passed",
+      "detail": "Web and desktop authorities report 4.2.0."
+    },
+    {
+      "id": "V420-TRANSACTION-SCOPES",
+      "status": "passed",
+      "detail": "The central transaction service declares every required mutation scope."
+    },
+    {
+      "id": "V420-TRANSACTION-ATOMIC",
+      "status": "passed",
+      "detail": "Journaled temporary-write, native atomic replacement, rollback, checksums, and error state are present."
+    },
+    {
+      "id": "V420-SAVE-ROUTE",
+      "status": "passed",
+      "detail": "Manual save uses native folder transactions when available and the same validated service on browser fallback."
+    },
+    {
+      "id": "V420-CANONICAL",
+      "status": "passed",
+      "detail": "Canonical numeric/identity/reference rules, authored/generated separation, and semantic diffs exist."
+    },
+    {
+      "id": "V420-UNDO",
+      "status": "passed",
+      "detail": "Central named/grouped/nested/budgeted history and stable-control routing are connected."
+    },
+    {
+      "id": "V420-UNDO-UI",
+      "status": "passed",
+      "detail": "Undo History exposes names, resources, timestamps, undo, redo, and explicit clearing."
+    },
+    {
+      "id": "V420-RECOVERY",
+      "status": "passed",
+      "detail": "Verified autosaves are separate and the Recovery Browser supports preview/diff/restore/discard/open-copy."
+    },
+    {
+      "id": "V420-MIGRATION",
+      "status": "passed",
+      "detail": "Migration dry run, estimates, logs, backup checksum, deterministic rerun, and rollback are present."
+    },
+    {
+      "id": "V420-REPAIR",
+      "status": "passed",
+      "detail": "Project Health fronts read-only repair, missing-reference mapping, cache rebuild, and rollback."
+    },
+    {
+      "id": "V420-LOCKS",
+      "status": "passed",
+      "detail": "Concurrent project locking has a clear read-only launch route."
+    },
+    {
+      "id": "V420-EXTERNAL",
+      "status": "passed",
+      "detail": "Watcher self-suppression, source-control/large-update classification, compare, reload, keep-editor, and keep-disk paths exist."
+    },
+    {
+      "id": "V420-LAUNCHER",
+      "status": "passed",
+      "detail": "Guided launcher workflows and bounded traversal-safe archive import are connected."
+    },
+    {
+      "id": "V420-TRASH",
+      "status": "passed",
+      "detail": "Recoverable project trash is serialized and reversible; permanent purge remains explicit."
+    },
+    {
+      "id": "V420-DIAGNOSTICS",
+      "status": "passed",
+      "detail": "Integrity summaries are included in local diagnostic bundles."
+    },
+    {
+      "id": "V420-DOC-SERIALIZATION_SPECIFICATION_4_2.md",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "id": "V420-DOC-SCHEMA_COMPATIBILITY_MATRIX_4_2.md",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "id": "V420-DOC-PROJECT_TRANSACTIONS_4_2.md",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "id": "V420-DOC-UNDO_COVERAGE_4_2.md",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "id": "V420-DOC-RECOVERY_4_2.md",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "id": "V420-DOC-MIGRATION_AND_ROLLBACK_4_2.md",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "id": "V420-DOC-EXTERNAL_CHANGES_4_2.md",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "id": "V420-DOC-KNOWN_ISSUES_4_2.md",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "id": "V420-MIG-5-pre-migration.nova",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "id": "V420-MIG-5-expected-migrated.nova",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "id": "V420-MIG-5-README.md",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "id": "V420-MIG-6-pre-migration.nova",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "id": "V420-MIG-6-expected-migrated.nova",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "id": "V420-MIG-6-README.md",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "id": "V420-MIG-7-pre-migration.nova",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "id": "V420-MIG-7-expected-migrated.nova",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "id": "V420-MIG-7-README.md",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "id": "V420-MIG-8-pre-migration.nova",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "id": "V420-MIG-8-expected-migrated.nova",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "id": "V420-MIG-8-README.md",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "id": "V420-MIG-9-pre-migration.nova",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "id": "V420-MIG-9-expected-migrated.nova",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "id": "V420-MIG-9-README.md",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "id": "V420-MIG-10-pre-migration.nova",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "id": "V420-MIG-10-expected-migrated.nova",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "id": "V420-MIG-10-README.md",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "id": "V420-MIG-11-pre-migration.nova",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "id": "V420-MIG-11-expected-migrated.nova",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "id": "V420-MIG-11-README.md",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "id": "V420-MIG-12-pre-migration.nova",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "id": "V420-MIG-12-expected-migrated.nova",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "id": "V420-MIG-12-README.md",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "id": "V420-MIG-13-pre-migration.nova",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "id": "V420-MIG-13-expected-migrated.nova",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "id": "V420-MIG-13-README.md",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "id": "V420-MIG-14-pre-migration.nova",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "id": "V420-MIG-14-expected-migrated.nova",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "id": "V420-MIG-14-README.md",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "id": "V420-MIG-15-pre-migration.nova",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "id": "V420-MIG-15-expected-migrated.nova",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "id": "V420-MIG-15-README.md",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "id": "V420-MIG-16-pre-migration.nova",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "id": "V420-MIG-16-expected-migrated.nova",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "id": "V420-MIG-16-README.md",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "id": "V420-MIG-17-pre-migration.nova",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "id": "V420-MIG-17-expected-migrated.nova",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "id": "V420-MIG-17-README.md",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "id": "V420-MIG-18-pre-migration.nova",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "id": "V420-MIG-18-expected-migrated.nova",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "id": "V420-MIG-18-README.md",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "id": "V420-MIG-19-pre-migration.nova",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "id": "V420-MIG-19-expected-migrated.nova",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "id": "V420-MIG-19-README.md",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "id": "V420-MIG-20-pre-migration.nova",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "id": "V420-MIG-20-expected-migrated.nova",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "id": "V420-MIG-20-README.md",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "id": "V420-MIG-21-pre-migration.nova",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "id": "V420-MIG-21-expected-migrated.nova",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "id": "V420-MIG-21-README.md",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "id": "V420-MIG-22-pre-migration.nova",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "id": "V420-MIG-22-expected-migrated.nova",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "id": "V420-MIG-22-README.md",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "id": "V420-MIG-23-pre-migration.nova",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "id": "V420-MIG-23-expected-migrated.nova",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "id": "V420-MIG-23-README.md",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "id": "V420-MIG-24-pre-migration.nova",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "id": "V420-MIG-24-expected-migrated.nova",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "id": "V420-MIG-24-README.md",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "id": "V420-MIG-25-pre-migration.nova",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "id": "V420-MIG-25-expected-migrated.nova",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "id": "V420-MIG-25-README.md",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "id": "V420-MIG-26-pre-migration.nova",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "id": "V420-MIG-26-expected-migrated.nova",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "id": "V420-MIG-26-README.md",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "id": "V420-MIG-27-pre-migration.nova",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "id": "V420-MIG-27-expected-migrated.nova",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "id": "V420-MIG-27-README.md",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "id": "V420-MIG-28-pre-migration.nova",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "id": "V420-MIG-28-expected-migrated.nova",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "id": "V420-MIG-28-README.md",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "id": "V420-MIG-29-pre-migration.nova",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "id": "V420-MIG-29-expected-migrated.nova",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "id": "V420-MIG-29-README.md",
+      "status": "passed",
+      "detail": "Present."
+    }
+  ],
+  "severity0Open": 0,
+  "severity1Open": 0,
+  "status": "passed"
+}

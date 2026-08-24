@@ -1,0 +1,106 @@
+{
+  "format": "nova-v4.4-asset-pipeline-audit",
+  "version": 1,
+  "engineVersion": "4.4.0",
+  "generatedAt": "2026-08-23T16:59:29.458Z",
+  "checks": [
+    {
+      "id": "V440-VERSION",
+      "status": "passed",
+      "detail": "Web, desktop, and project authorities report 4.4.0."
+    },
+    {
+      "id": "V440-IMPORTER",
+      "status": "passed",
+      "detail": "Importer 3 validates signatures/decoding and records exact cache decisions without silent fallback."
+    },
+    {
+      "id": "V440-PROVENANCE",
+      "status": "passed",
+      "detail": "Versioned presets and reproducible source/artifact provenance are serialized."
+    },
+    {
+      "id": "V440-GRAPH",
+      "status": "passed",
+      "detail": "Inbound/outbound graph, cycles, duplicates, missing references, ownership, and inclusion closure exist."
+    },
+    {
+      "id": "V440-ASSET-SCALE",
+      "status": "passed",
+      "detail": "Tags, collections, groups, list/grid, thumbnails, and bounded incremental asset windows are connected."
+    },
+    {
+      "id": "V440-IMPORTER-UI",
+      "status": "passed",
+      "detail": "Five-tab importer, compare/revert, batch reimport, and platform overrides are connected."
+    },
+    {
+      "id": "V440-SPRITES",
+      "status": "passed",
+      "detail": "Production sprite, slicing, collision, atlas, SVG, and platform controls are connected."
+    },
+    {
+      "id": "V440-TILEMAP",
+      "status": "passed",
+      "detail": "Search, world coordinates, chunk boundaries, deterministic storage, and TileMap history are connected."
+    },
+    {
+      "id": "V440-COMPOSITION",
+      "status": "passed",
+      "detail": "Camera-retained composition adds repeating/mirrored parallax and reusable tangent paths with followers."
+    },
+    {
+      "id": "V440-FONTS",
+      "status": "passed",
+      "detail": "Runtime/editor font ownership and actionable multilingual glyph coverage are connected."
+    },
+    {
+      "id": "V440-SECURITY",
+      "status": "passed",
+      "detail": "Malicious/corrupt/path/archive-style inputs receive explicit blocking diagnostics."
+    },
+    {
+      "id": "V440-TRANSACTIONS",
+      "status": "passed",
+      "detail": "Folder/TileSet writes and external conflicts are transactional or explicit."
+    },
+    {
+      "id": "V440-PRIMARY-TOOLBAR",
+      "status": "passed",
+      "detail": "Export Folder left the primary toolbar but remains in overflow."
+    },
+    {
+      "id": "V440-VISUAL",
+      "status": "passed",
+      "detail": "Rounded bundled fonts, quiet materials, purposeful motion, and reduced motion are defined."
+    },
+    {
+      "id": "V440-I18N",
+      "status": "passed",
+      "detail": "New workflows are translated in English, German, and Chinese."
+    },
+    {
+      "id": "V440-MANUAL",
+      "status": "passed",
+      "detail": "Bookmarkable multilingual v4.4 manual sections are present."
+    },
+    {
+      "id": "V440-DOC-ASSET_PIPELINE_4_4.md",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "id": "V440-DOC-SPRITE_TILEMAP_FONT_4_4.md",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "id": "V440-DOC-KNOWN_ISSUES_4_4.md",
+      "status": "passed",
+      "detail": "Present."
+    }
+  ],
+  "severity0Open": 0,
+  "severity1Open": 0,
+  "status": "passed"
+}

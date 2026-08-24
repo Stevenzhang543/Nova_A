@@ -12,6 +12,9 @@ await mkdir(projectsDirectory, { recursive: true })
 await mkdir(pluginsDirectory, { recursive: true })
 
 function normalizeProjectAssets(project) {
+  project.engineVersion = '4.4.0'
+  project.assetDatabase = { ...(project.assetDatabase ?? {}), version: 2, collections: project.assetDatabase?.collections ?? [], contentGroups: [{ id: 'main', name: 'Main', mode: 'embedded', optional: false }], viewMode: project.assetDatabase?.viewMode ?? 'grid', thumbnailSize: project.assetDatabase?.thumbnailSize ?? 112 }
+  project.projectSettings = { ...(project.projectSettings ?? {}), build: { ...(project.projectSettings?.build ?? {}), delivery: { ...(project.projectSettings?.build?.delivery ?? {}), include: ['Assets/**'], exclude: ['.nova/**'], stripUnusedAssets: false } } }
   for (const asset of project.assets ?? []) {
     const source = typeof asset.source === 'string' ? asset.source : ''
     const hash = createHash('sha256').update(source).digest('hex')
@@ -36,9 +39,12 @@ async function writeProjectBundle(slug, project, demonstrates) {
   const source = `${JSON.stringify(project, null, 2)}\n`
   await writeFile(join(directory, 'project.nova'), source, 'utf8')
   const entityCount = (project.scenes ?? []).reduce((total, scene) => total + (scene.entities?.length ?? 0), 0)
-  await writeFile(join(directory, 'expected-output.json'), `${JSON.stringify({ engineVersion: '4.0.0', schema: 29, projectName: project.projectMetadata?.name ?? project.name ?? slug, minimumScenes: project.scenes?.length ?? 0, minimumEntities: entityCount, expectedValidation: slug === 'data-foundation-validation' ? 'repair-required' : 'pass', demonstrates }, null, 2)}\n`, 'utf8')
+  await writeFile(join(directory, 'expected-output.json'), `${JSON.stringify({ engineVersion: '4.4.0', schema: 29, projectName: project.projectMetadata?.name ?? project.name ?? slug, minimumScenes: project.scenes?.length ?? 0, minimumEntities: entityCount, expectedValidation: slug === 'data-foundation-validation' ? 'repair-required' : 'pass', demonstrates }, null, 2)}\n`, 'utf8')
   await writeFile(join(directory, 'test-controls.json'), `${JSON.stringify({ open: 'Project Manager > Open Project > project.nova', run: 'Top action bar > Play; Pause; Step; Stop', validate: 'Project Health must report no blocking project-format error', export: 'Build Settings > Overview > Build', command: `pnpm nova export --project ./reference-projects/projects/${slug}/project.nova --target web --profile release --output ./Builds/reference-${slug} --cache validate --jsonl` }, null, 2)}\n`, 'utf8')
-  await writeFile(join(directory, 'README.md'), `# ${project.projectMetadata?.name ?? slug}\n\nEngine **4.0.0**, Project Format 2, schema 29.\n\nDemonstrates: ${demonstrates.join(', ')}.\n\n1. Open \`project.nova\` from Project Manager and review the compatibility preflight.\n2. Confirm Project Health has no blocking project-format error.\n3. Use Play, Pause, Step, and Stop; compare the scene/entity minimums with \`expected-output.json\`.\n4. Run the validation export:\n\n\`\`\`powershell\npnpm nova export --project ./reference-projects/projects/${slug}/project.nova --target web --profile release --output ./Builds/reference-${slug} --cache validate --jsonl\n\`\`\`\n\nThe exact keyboard and UI controls are recorded in \`test-controls.json\`.\n`, 'utf8')
+  const requiredPackages = project.packages?.installed?.filter(item => item.enabled).map(item => `${item.manifest.id}@${item.manifest.version}`) ?? []
+  await writeFile(join(directory, 'README.md'), `# ${project.projectMetadata?.name ?? slug}\n\nEngine **4.3.0**, Project Format 2, schema 29.\n\n## Expected behavior\n\nDemonstrates: ${demonstrates.join(', ')}. Open the project, run Play/Pause/Step/Stop, and compare the scene/entity minimums and diagnostics with \`expected-output.json\`.\n\n## Test procedure and IDs\n\n1. Open \`project.nova\` from Project Manager and review the compatibility preflight.\n2. Confirm Project Health has no blocking project-format error.\n3. Run every entry in \`test-controls.json\`; that file is the authoritative UI/keyboard test-ID map.\n4. Run the validation export:\n\n\`\`\`powershell\npnpm nova export --project ./reference-projects/projects/${slug}/project.nova --target web --profile release --output ./Builds/reference-${slug} --cache validate --jsonl\n\`\`\`\n\n## Requirements\n\n- Required packages: ${requiredPackages.length ? requiredPackages.join(', ') : 'None; Nova_A core only'}.\n- Target platforms: Windows x86-64 editor/runtime and the supported Chromium web runtime.\n- Project identity: version-pinned \`project.nova\`, expected output, and stable control IDs ship together.\n\n## Known limitations\n\nThis focused fixture proves only the behavior listed above. It does not substitute for external GPU, audio-device, network, signing, clean-machine installer, physical mixed-DPI-monitor, accessibility-operator, or long-duration soak gates where those gates apply.\n`, 'utf8')
+  const readmePath = join(directory, 'README.md')
+  await writeFile(readmePath, (await readFile(readmePath, 'utf8')).replace('Engine **4.3.0**', 'Engine **4.4.0**'), 'utf8')
 }
 
 if (!globalThis.btoa) globalThis.btoa = value => Buffer.from(value, 'binary').toString('base64')
@@ -362,7 +368,7 @@ await writeFile(join(output, 'workspace-recovery-validation.nova-workspaces'), `
   workspaces: [{ id: 'validation-layout', name: 'Recovery Validation', page: 'scene', hierarchyVisible: true, inspectorVisible: true, bottomPanelVisible: true, bottomPanelOpen: true, bottomPanelTab: 'project', bottomPanelHeight: 300, hierarchyWidth: 260, inspectorWidth: 310, hierarchyDock: 'left', inspectorDock: 'right' }]
 }, null, 2)}\n`, 'utf8')
 
-await writeFile(join(output, 'README.md'), `# Nova_A 4.0 reference projects
+await writeFile(join(output, 'README.md'), `# Nova_A 4.1 reference projects
 
 These are generated, schema-valid source projects. Open any \`.nova\` file through **File → Import Project**, inspect it, press **Play**, run its project tests, and export it from **Build Settings**.
 

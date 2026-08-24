@@ -1,0 +1,9 @@
+{
+  "format": "nova-v4.1-fault-report",
+  "version": 1,
+  "generatedAt": "2026-08-20T08:57:17.225Z",
+  "seriousBrowserConsoleErrors": [],
+  "severity0Open": 0,
+  "severity1Open": 0,
+  "status": "passed"
+}

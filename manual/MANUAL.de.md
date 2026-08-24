@@ -1,4 +1,32 @@
-# Nova_A 4.0.0 – Vollständiges Handbuch
+# Nova_A 4.4.0 – Vollständiges Handbuch
+
+## Nova_A 4.4 – Produktions-Assets, Sprites, TileMap, Pfade und Fonts
+
+Im unteren Dock öffnet **Assets** den täglichen Import-, Skript-, Szenen- und Ordnerablauf; **•••** enthält Ordnerexport und geprüften Stapelimport. Raster/Liste, Suche, Typ, Tag, Favoriten, gespeicherte Filter und Sammlungen navigieren auch große Projekte inkrementell.
+
+Der Asset-Importer besitzt **Quelle**, **Import**, **Abhängigkeiten**, **Herkunft** und **Plattform**. Quelle verwaltet Pfad, Quellstatus, Tags, Sammlungen, Inhaltsgruppe und Nur-Editor. Import enthält formatspezifische Einstellungen und versionierte Vorgaben. Abhängigkeiten zeigt Ein-/Ausgänge, Build-Abschluss, Zyklen, Duplikate und fehlende Referenzen. Herkunft zeigt vollständige kopierbare Hashes, Importer/Vorgabe/Version/Einstellungen/Cache-Entscheidung, Vergleich, Diagnose und Wiederherstellung. Plattform legt Kompression, Maximalgröße und Format ausdrücklich fest. Ungültige Daten schlagen mit Diagnose fehl; das letzte geprüfte Artefakt bleibt erhalten.
+
+Bildimport bietet Filter, Mipmaps, Farbraum, Transparenz, Kompression, PPU, Pivot, Trimmen, manuelles/Raster-/Auto-Slicing, Animation, Nine-Slice, Polygon/Kollision, Atlas und SVG. TileMap bietet Suche, alle Mal-/Auswahlwerkzeuge, Ebenenphysik, Weltkoordinaten, Streaming-Grenzen, Baking, Verlauf, Diagnose und deterministische Speicherung. Kameras behalten Grenzen, Glättung, Ränder, Vorschau und Safe Frames. Parallax ergänzt Wiederholung/Spiegelung/Tiefe; Pfade ergänzen Punkte, Tangenten, geschlossene Splines, `.nova-path` und Laufzeitfolger. Fontimport bietet Fallbacks, Shaping, OpenType, Hinting, Oversampling, Bitmap/SDF/MSDF und Glyphenberichte für CJK, RTL, Kombinationszeichen und Emoji.
+
+## Nova_A 4.3 – Szenen, Hierarchie, Inspektor, Komponenten und Prefabs
+
+Die Szenen-Tabs über Design zeigen ungespeicherte, externe, geprüfte und Prefab-Zustände. Zurück/Vorwärts folgt dem Szenenverlauf; **+** erstellt Leere-2D-, Gameplay-2D-, UI-Overlay- oder Kamera-Vorlagen. Das Zahnrad verwaltet Laufzeit-Laden, Vererbung, Tags, benannte Ebenen, Sichtbarkeit/Sperre und Abhängigkeiten. Zyklen werden abgewiesen.
+
+Die Hierarchie virtualisiert 10.000 Objekte. Suche umfasst Name, ID, Tags und Komponenten; Typ- und eigene Tag-Filter, gespeicherte Suchen, Pins, Auswahl Zurück/Vorwärts, Breadcrumbs, Isolation, Sichtbarkeit, Sperre, Aktivierung, Bereichsauswahl, Umhängen und Sortieren bleiben verfügbar. Der Inspektor bietet gemischte Mehrfachwerte, Tags/Gruppen/Ebenen, Eigentum, Nur-Editor/Persistenz, sichere Rechenausdrücke, Pins/Änderungsfilter, Vorgaben und vollständige Komponentenwerkzeuge mit Abhängigkeits-/Konfliktprüfung.
+
+Prefabs unterstützen Erstellen, Instanziieren, Anwenden, Zurücksetzen, Eigenschafts-Reset, Vergleich, Entpacken, Varianten, Quellnavigation, Konflikte, Verschachtelung, Zyklusschutz und sicheren Auswahlersatz. Ansichts-Ausrichtung, Messung, Kamera-Rahmen, Lineale, Hilfslinien und sieben Snap-Ziele verwenden exakte Welteinheiten. Siehe [Schema](../docs/SCENE_PREFAB_SCHEMA_4_3.md), [Komponenten](../docs/COMPONENT_AUTHORING_4_3.md) und [Hierarchie/Inspektor](../docs/HIERARCHY_INSPECTOR_4_3.md).
+
+## Nova_A 4.2 – Projektintegrität
+
+Alle Änderungen an Projektdaten verwenden das zentrale Rückgängig-Modell und einen sichtbaren Ungespeichert-Zustand. **Bearbeiten → Rückgängig-Verlauf** zeigt Aktion, Ressource, Bereich, Zeitpunkt, angewendeten/Redo-Zustand und Speicherbedarf. Speichern validiert und serialisiert deterministisch; erst danach werden Projekt, Szenen, Asset-/Skript-/Animations-/UI-Metadaten, Einstellungen, Build-Daten und `Packages.lock` protokolliert, temporär geschrieben, geprüft und atomar übernommen. Fehler lassen den letzten manuellen Speicherstand unverändert.
+
+Der Projektmanager führt durch Öffnen, Vorhandenes hinzufügen, älteres Projekt migrieren und sicheren Archivimport. Schemas 5–29 erhalten Probelauf, Kompatibilitäts-/Änderungsbericht, Backup, Task-Center-Protokoll, deterministische Wiederholung, Vollprüfung und Rollback. Projektzustand bündelt schreibgeschützte Reparaturvorschau, Referenzzuordnung, Cache-Neuaufbau, Transaktionen, Wiederherstellung, Migration, Rollback und Papierkorb. Nach Absturz oder externer Änderung muss der Benutzer Vorschau/Vergleich sowie Wiederherstellen, Verwerfen, als Kopie öffnen, Datenträger oder Editor ausdrücklich wählen.
+
+## Nova_A 4.1 – moderner Editor
+
+Die sechs Arbeitsbereiche sind **Design**, **Skript**, **Animation**, **UI**, **Debug** und **Verwalten**. Die linke Leiste ist kontextbezogen. Verwalten enthält Einstellungen, Pakete, Projektzustand, globale Darstellung und Build; das untere Dock enthält kontextbezogene Assets, Konsole, Animation, Audio und Profiler. Strg+Umschalt+P öffnet alle stabilen Befehle, Strg+P Assets, Strg+Umschalt+F die globale und Strg+K die Kontextsuche. Arbeitsbereichsprofile, benannte Layouts, Docking, Teilung, schwebende Fenster, Anheften, Auto-Ausblenden, Tab-Sortierung, Import/Export und Reset bleiben deterministisch gespeichert.
+
+Nunito Sans Variable, Noto Sans SC Variable und JetBrains Mono werden lokal mitgeliefert. Der Projektmanager erzwingt genau eine Vorlage, prüft Name/Pfad, zeigt Details und legt Anleitung als ausblendbares Tutorial-Asset ab. Physics Monitor liegt nur in Debug; Projektzustand und vier Build-Bereitschaftsstufen liegen in Verwalten. Das Task Center bündelt Fortschritt, Abbruch, Wiederholung, Details, Protokolle und Ressourcen.
 
 ## Nova_A 4.0 – Produktionsbasis
 

@@ -1,10 +1,13 @@
 import { reactive } from 'vue'
-import { getSceneJSON, loadProject, physicsState } from '../store/physics'
+import { clearEditorHistory, getSceneJSON, loadProject, physicsState } from '../store/physics'
 import { beginProjectSession, newProjectMetadata, projectSessionState, safeProjectName, touchProjectMetadata } from './projectSession'
 import { createTemplateProjectJson, type ProjectTemplateId } from './templates'
-import { analyzeProjectUpgrade, downloadProjectBackup, readUpgradeRollback, storeUpgradeRollback, type UpgradePreview } from '../runtime/projectUpgrade'
-import { markSourceBaseline } from '../runtime/teamWorkflow'
+import { analyzeProjectUpgrade, downloadProjectBackup, dryRunProjectMigration, readUpgradeRollback, recordMigrationApplied, storeUpgradeRollback, type UpgradePreview } from '../runtime/projectUpgrade'
+import { acquireProjectLock, inspectProjectLock, markSourceBaseline, releaseProjectLock } from '../runtime/teamWorkflow'
 import { canonicalProjectText, validateProjectDocument, type ProjectValidationReport } from './projectData'
+import { recoveryState } from '../runtime/recovery'
+import { appendTaskLog, completeTask, failTask, startTask } from '../runtime/editorFeedback'
+import { markProjectDirty, setProjectTransactionDirectory } from '../runtime/projectTransactions'
 
 const RECENT_KEY = 'nova_a.recent_projects.v2'
 const MAX_RECENT_PROJECTS = 8
@@ -15,6 +18,7 @@ export interface RecentProject {
   name: string
   updatedAt: string
   template: string
+  location: string
   snapshot: string | null
 }
 
@@ -27,7 +31,7 @@ function readRecents(): RecentProject[] {
       if (!value || typeof value !== 'object') return []
       const item = value as Partial<RecentProject>
       if (typeof item.id !== 'string' || typeof item.name !== 'string' || typeof item.updatedAt !== 'string') return []
-      return [{ id: item.id.slice(0, 128), name: safeProjectName(item.name), updatedAt: item.updatedAt, template: typeof item.template === 'string' ? item.template.slice(0, 40) : 'imported', snapshot: typeof item.snapshot === 'string' ? item.snapshot : null }]
+      return [{ id: item.id.slice(0, 128), name: safeProjectName(item.name), updatedAt: item.updatedAt, template: typeof item.template === 'string' ? item.template.slice(0, 40) : 'imported', location: typeof item.location === 'string' ? item.location.slice(0, 500) : '', snapshot: typeof item.snapshot === 'string' ? item.snapshot : null }]
     }).slice(0, MAX_RECENT_PROJECTS)
   } catch { return [] }
 }
@@ -43,22 +47,29 @@ export const projectManagerState = reactive({
   error: '',
   recents: readRecents() as RecentProject[],
   currentSnapshot: null as string | null,
+  currentLocation: '',
   pendingUpgrade: null as null | { source: string; fileName: string; importAsCopy: boolean; preview: UpgradePreview },
   readOnlyDocument: null as null | { source: string; fileName: string; preview: UpgradePreview },
   backupBeforeUpgrade: true,
   lastUpgradeValidation: null as ProjectValidationReport | null
-  ,rollbackAvailable: readUpgradeRollback() !== null
+  ,rollbackAvailable: readUpgradeRollback() !== null,
+  lockConflict: null as null | { projectId:string; owner:string; expiresAt:number }
 })
 
-export async function createNewProject(name: string, template: ProjectTemplateId): Promise<boolean> {
+export async function createNewProject(name: string, template: ProjectTemplateId, location = ''): Promise<boolean> {
   projectManagerState.busy = true
   projectManagerState.error = ''
   try {
     await physicsState.world.wasmReady
     const source = createTemplateProjectJson(template, safeProjectName(name))
+    const previousId = projectSessionState.id
     if (!loadProject(source)) throw new Error('The selected template did not pass project validation.')
+    releaseProjectLock(previousId); recoveryState.readOnly = !acquireProjectLock(projectSessionState.id, 'Nova_A Editor')
     projectManagerState.currentSnapshot = getSceneJSON()
+    projectManagerState.currentLocation = location.trim().slice(0, 500)
+    setProjectTransactionDirectory(projectManagerState.currentLocation)
     markSourceBaseline(projectManagerState.currentSnapshot)
+    clearEditorHistory('new-project', projectManagerState.currentSnapshot, false); markProjectDirty('project')
     rememberCurrentProject(projectManagerState.currentSnapshot)
     projectManagerState.visible = false
     return true
@@ -68,8 +79,10 @@ export async function createNewProject(name: string, template: ProjectTemplateId
   } finally { projectManagerState.busy = false }
 }
 
-export async function openProjectDocument(source: string, fileName = 'project.nova', importAsCopy = false): Promise<boolean> {
+export async function openProjectDocument(source: string, fileName = 'project.nova', importAsCopy = false, projectDirectory = ''): Promise<boolean> {
   try {
+    projectManagerState.currentLocation = projectDirectory.trim().slice(0, 500)
+    setProjectTransactionDirectory(projectManagerState.currentLocation)
     const preview = analyzeProjectUpgrade(source)
     if (!preview.supported && preview.sourceSchema > preview.targetSchema) {
       projectManagerState.readOnlyDocument = { source, fileName, preview }
@@ -78,6 +91,10 @@ export async function openProjectDocument(source: string, fileName = 'project.no
       return false
     }
     if (!preview.supported) throw new Error(preview.warnings[0] || 'This project cannot be opened safely by this Nova_A version.')
+    let sourceProjectId=''
+    try { const parsed=JSON.parse(source) as Record<string,unknown>, metadata=parsed.projectMetadata as Record<string,unknown>|undefined; sourceProjectId=String(metadata?.id??'') } catch { /* analyzeProjectUpgrade already parsed safely. */ }
+    const lock=sourceProjectId&&!importAsCopy?inspectProjectLock(sourceProjectId):{locked:false,owner:'',expiresAt:0}
+    projectManagerState.lockConflict=lock.locked?{projectId:sourceProjectId,owner:lock.owner,expiresAt:lock.expiresAt}:null
     projectManagerState.pendingUpgrade = { source, fileName, importAsCopy, preview }
     projectManagerState.visible = true
     projectManagerState.error = ''
@@ -89,7 +106,7 @@ export async function openProjectDocument(source: string, fileName = 'project.no
   return openProjectDocumentNow(source, fileName, importAsCopy)
 }
 
-async function openProjectDocumentNow(source: string, fileName = 'project.nova', importAsCopy = false): Promise<boolean> {
+async function openProjectDocumentNow(source: string, fileName = 'project.nova', importAsCopy = false, forceReadOnly = false): Promise<boolean> {
   projectManagerState.busy = true
   projectManagerState.error = ''
   try {
@@ -101,6 +118,7 @@ async function openProjectDocumentNow(source: string, fileName = 'project.nova',
       const parsed = JSON.parse(source) as Record<string, unknown>
       existingMetadata = !!parsed?.projectMetadata
     } catch { /* The canonical loader reports the useful parse error. */ }
+    const previousId = projectSessionState.id
     if (!loadProject(source)) {
       if (previousProject) loadProject(previousProject)
       throw new Error('The project is invalid, unsupported, or newer than this Nova_A version. The previous project was restored.')
@@ -109,8 +127,11 @@ async function openProjectDocumentNow(source: string, fileName = 'project.nova',
       const baseName = fileName.replace(/\.(nova|json)$/i, '')
       beginProjectSession(newProjectMetadata(`${safeProjectName(baseName)}${importAsCopy ? ' (Imported)' : ''}`, 'imported'))
     }
+    if (projectSessionState.id !== previousId) releaseProjectLock(previousId)
+    recoveryState.readOnly = forceReadOnly || !acquireProjectLock(projectSessionState.id, 'Nova_A Editor')
     projectManagerState.currentSnapshot = getSceneJSON()
     markSourceBaseline(projectManagerState.currentSnapshot)
+    clearEditorHistory('project-open', projectManagerState.currentSnapshot)
     rememberCurrentProject(projectManagerState.currentSnapshot)
     projectManagerState.visible = false
     return true
@@ -130,33 +151,42 @@ export function downloadReadOnlyDocument(): void {
   window.setTimeout(() => URL.revokeObjectURL(url), 0)
 }
 
-export async function applyPendingProjectUpgrade(): Promise<boolean> {
+export async function applyPendingProjectUpgrade(forceReadOnly = false): Promise<boolean> {
   const pending = projectManagerState.pendingUpgrade
   if (!pending) return false
   projectManagerState.busy = true
   projectManagerState.error = ''
+  const task = startTask('Project migration', { detail: `Schema ${pending.preview.sourceSchema} → ${pending.preview.targetSchema}`, progress: .05, logs: ['Dry run started'], resources: [{ label: pending.preview.projectName, href: pending.fileName }] })
   try {
     await physicsState.world.wasmReady
+    const dryRun = dryRunProjectMigration(pending.source, value => physicsState.world.formatProjectJson(value))
+    for (const entry of dryRun.log) appendTaskLog(task, `${entry.status.toUpperCase()} · ${entry.message}`)
+    if (!dryRun.valid) throw new Error(dryRun.log.find(item => item.status === 'blocked')?.message || 'Migration dry run failed before mutation.')
     if (pending.preview.requiresMigration) {
       downloadProjectBackup(pending.source, pending.fileName.replace(/\.(nova|json)$/i, ''))
       storeUpgradeRollback(pending.source, pending.fileName)
       projectManagerState.rollbackAvailable = true
     }
-    const migrated = physicsState.world.formatProjectJson(pending.source)
+    const migrated = dryRun.output
     const validation = validateProjectDocument(migrated)
     projectManagerState.lastUpgradeValidation = validation
     const blocking = validation.issues.filter(issue => issue.severity === 'error')
     if (blocking.length) throw new Error(`Migration validation failed: ${blocking[0].path || '<project>'}: ${blocking[0].message}`)
     const canonical = canonicalProjectText(migrated)
     projectManagerState.pendingUpgrade = null
-    return await openProjectDocumentNow(canonical, pending.fileName, pending.importAsCopy)
+    if (projectManagerState.lockConflict && !forceReadOnly) throw new Error(`Project is locked by ${projectManagerState.lockConflict.owner}. Open it read-only or close the other editor.`)
+    const opened = await openProjectDocumentNow(canonical, pending.fileName, pending.importAsCopy, forceReadOnly)
+    if (!opened) throw new Error(projectManagerState.error || 'Migrated project could not be opened.')
+    recordMigrationApplied(dryRun); projectManagerState.lockConflict=null; completeTask(task, `Migration ${dryRun.id} committed; rollback retained.`)
+    return true
   } catch (error) {
     projectManagerState.error = error instanceof Error ? error.message : String(error)
+    failTask(task, error)
     return false
   } finally { projectManagerState.busy = false }
 }
 
-export function cancelPendingProjectUpgrade(): void { projectManagerState.pendingUpgrade = null }
+export function cancelPendingProjectUpgrade(): void { projectManagerState.pendingUpgrade = null; projectManagerState.lockConflict = null }
 
 export function downloadLastUpgradeRollback(): boolean {
   const rollback = readUpgradeRollback()
@@ -166,13 +196,21 @@ export function downloadLastUpgradeRollback(): boolean {
   return true
 }
 
+export async function restoreLastUpgradeRollback(): Promise<boolean> {
+  const rollback = readUpgradeRollback()
+  if (!rollback) return false
+  const validation = validateProjectDocument(rollback.source)
+  if (!validation.valid) { projectManagerState.error = validation.issues.find(item => item.severity === 'error')?.message ?? 'Rollback is invalid.'; return false }
+  return openProjectDocumentNow(canonicalProjectText(rollback.source), rollback.fileName, false)
+}
+
 export async function openRecentProject(id: string): Promise<boolean> {
   const recent = projectManagerState.recents.find(item => item.id === id)
   if (!recent?.snapshot) {
     projectManagerState.error = 'This recent project is too large for a local snapshot. Choose Open Project and select its .nova file.'
     return false
   }
-  return openProjectDocument(recent.snapshot, `${recent.name}.nova`)
+  return openProjectDocument(recent.snapshot, `${recent.name}.nova`, false, recent.location)
 }
 
 export function rememberCurrentProject(source = getSceneJSON()): void {
@@ -184,6 +222,7 @@ export function rememberCurrentProject(source = getSceneJSON()): void {
     name: projectSessionState.name,
     updatedAt: new Date().toISOString(),
     template: projectSessionState.template,
+    location: projectManagerState.currentLocation,
     snapshot
   }
   projectManagerState.recents.splice(0, projectManagerState.recents.length,

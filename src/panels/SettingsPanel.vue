@@ -2,7 +2,7 @@
   <div class="settings-page">
     <header class="page-header">
       <div>
-        <span class="eyebrow">Nova_A 4.0.0</span>
+        <span class="eyebrow">Nova_A 4.4.0</span>
         <h1>{{ t('settings') }}</h1>
       </div>
       <div class="theme-switch" :aria-label="t('theme')">
@@ -27,7 +27,7 @@
           </select>
         </SettingRow>
         <SettingRow :label="t('interfaceScale')">
-          <div class="value-control"><input v-model.number="prefs.uiScale" type="range" min="0.85" max="1.25" step="0.05"><output>{{ Math.round(prefs.uiScale * 100) }}%</output></div>
+          <div class="value-control"><input v-model.number="prefs.uiScale" type="range" min="1" max="2" step="0.05"><output>{{ Math.round(prefs.uiScale * 100) }}%</output></div>
         </SettingRow>
         <SettingRow :label="t('compactMode')"><ToggleSwitch v-model="prefs.compactMode" /></SettingRow>
         <SettingRow :label="t('reduceMotion')"><ToggleSwitch v-model="prefs.reduceMotion" /></SettingRow>

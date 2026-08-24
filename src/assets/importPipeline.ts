@@ -1,8 +1,9 @@
 import { reactive } from 'vue'
 import type { AssetImportSettings, AssetPipelineMetadata } from './types'
+import { assetSettingsHash, stableAssetSettings, validateImportSource } from './assetProduction'
 
-export const ASSET_IMPORTER_VERSION = '2.0.0'
-const CACHE_NAME = 'nova-a-imports-v2'
+export const ASSET_IMPORTER_VERSION = '3.0.0'
+const CACHE_NAME = 'nova-a-imports-v3'
 const MAX_PARALLEL_IMPORTS = Math.max(1, Math.min(4, navigator.hardwareConcurrency ? Math.floor(navigator.hardwareConcurrency / 2) : 2))
 
 export interface AssetImportJob {
@@ -140,6 +141,14 @@ async function atomicCacheWrite(key: string, blob: Blob): Promise<void> {
   await cache.delete(temporary)
 }
 
+async function verifyDecodedArtifact(file: File, blob: Blob): Promise<void> {
+  if (!(file.type.startsWith('image/') || /\.(?:png|jpe?g|webp|gif|svg)$/i.test(file.name))) return
+  if (typeof createImageBitmap !== 'function') return
+  const bitmap = await createImageBitmap(blob).catch(() => null)
+  if (!bitmap || bitmap.width < 1 || bitmap.height < 1) throw new Error('IMAGE_DECODE: Source bytes passed signature checks but could not be decoded.')
+  bitmap.close()
+}
+
 export async function processAssetImport(file: File, settings: AssetImportSettings): Promise<ImportedArtifact> {
   const job = reactive<AssetImportJob>({ id: nextJobId++, name: file.name, progress: 0, status: 'queued', error: '', logs: ['Queued import'], retryable: false })
   importPipelineState.jobs.push(job)
@@ -151,12 +160,16 @@ export async function processAssetImport(file: File, settings: AssetImportSettin
     job.status = 'reading'; job.logs.push('Reading source bytes')
     const bytes = await readBytes(file, job, controller.signal)
     if (controller.signal.aborted) throw new DOMException('Import cancelled', 'AbortError')
+    const diagnostics = validateImportSource(file.name, file.type, bytes, settings)
+    const blocking = diagnostics.filter(diagnostic => diagnostic.severity === 'error')
+    if (blocking.length) throw new Error(blocking.map(diagnostic => `${diagnostic.code}: ${diagnostic.message}`).join('\n'))
     job.status = 'processing'; job.progress = .7; job.logs.push(`Processing with importer ${ASSET_IMPORTER_VERSION}`)
     const target = platform()
     const hashes = await hashInWorker(bytes.slice(0), settings, target, controller.signal)
     if (controller.signal.aborted) throw new DOMException('Import cancelled', 'AbortError')
     job.status = 'writing'; job.progress = .88; job.logs.push('Writing verified generated artifact')
     const blob = new Blob([bytes], { type: file.type || 'application/octet-stream' })
+    await verifyDecodedArtifact(file, blob)
     const cached = await cachedArtifact(hashes.cacheKey)
     const artifact = cached ?? blob
     if (!cached) await atomicCacheWrite(hashes.cacheKey, blob)
@@ -165,8 +178,13 @@ export async function processAssetImport(file: File, settings: AssetImportSettin
     return {
       bytes, source,
       metadata: {
-        importerVersion: ASSET_IMPORTER_VERSION, platform: target, sourceHash: hashes.sourceHash, artifactHash: hashes.sourceHash, contentHash: hashes.sourceHash,
-        cacheKey: hashes.cacheKey, status: 'ready', lastValidSource: source, error: '', dependencies: [], reverseDependencies: [], cacheHit: cached !== null
+        importerId: file.type === 'image/svg+xml' || file.name.toLowerCase().endsWith('.svg') ? 'nova.svg' : file.type.startsWith('image/') ? 'nova.image' : file.type.startsWith('audio/') ? 'nova.audio' : file.type.startsWith('font/') ? 'nova.font' : 'nova.source',
+        importerVersion: ASSET_IMPORTER_VERSION, presetId: settings.textureProfile || 'Default', platform: target, sourceHash: hashes.sourceHash, artifactHash: hashes.sourceHash, contentHash: hashes.sourceHash,
+        cacheKey: hashes.cacheKey, status: 'ready', lastValidSource: source, error: '', dependencies: [], reverseDependencies: [], cacheHit: cached !== null,
+        settingsHash: assetSettingsHash(settings), artifactSettingsHash: assetSettingsHash({ ...settings, platformVariants: settings.platformVariants[target] ?? settings.compression }),
+        invalidationReason: cached ? 'Verified source, importer, settings, and platform cache key matched.' : 'No verified artifact matched this source/importer/settings/platform cache key.',
+        sourceSettings: stableAssetSettings(settings), artifactSettings: stableAssetSettings({ target, compression: settings.platformOverrides[target] ?? settings.platformVariants[target] ?? settings.compression }),
+        diagnostics, reproducible: true, deprecatedSettings: []
       }
     }
   } catch (error) {

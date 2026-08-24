@@ -9,6 +9,8 @@ import { preview } from 'vite'
 const root = dirname(dirname(fileURLToPath(import.meta.url)))
 const qualificationVersion = process.env.NOVA_LAYOUT_VERSION || '3.3.0'
 const qualificationTag = qualificationVersion.split('.').slice(0, 2).join('.')
+const [qualificationMajor, qualificationMinor] = qualificationVersion.split('.').map(Number)
+const isV41 = qualificationMajor > 4 || (qualificationMajor === 4 && qualificationMinor >= 1)
 const evidenceRoot = join(root, 'release-audits')
 const screenshotRoot = join(evidenceRoot, 'screenshots', `v${qualificationVersion}`)
 const edgeCandidates = ['C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', 'C:/Program Files/Microsoft/Edge/Application/msedge.exe']
@@ -40,8 +42,30 @@ try {
     await evaluate(client, `(() => { let value={}; try { value=JSON.parse(localStorage.getItem('nova_a.preferences.v1')||'{}') } catch {} value.locale='${locale}'; value.reduceMotion=true; value.uiScale=1; localStorage.setItem('nova_a.preferences.v1',JSON.stringify(value)); location.reload(); return true })()`)
     await waitForExpression(client, "document.readyState === 'complete' && Boolean(document.querySelector('.project-manager,.editor-root'))", 20_000)
     if (await evaluate(client, "Boolean(document.querySelector('.project-manager'))")) {
+      if (isV41 && locale === 'en') await captureSurface(client, screenshotRoot, screenshots, 'launcher-en-1920x1080.png', locale, 1920, 1080)
       await evaluate(client, "document.querySelector('.create-button')?.click(); true")
       await waitForExpression(client, "Boolean(document.querySelector('.editor-root'))", 25_000)
+    }
+
+    if (isV41) {
+      const workspaceCount = await evaluate(client, "document.querySelectorAll('.workspace-list button').length")
+      for (const scale of [1, 1.25, 1.5, 1.75, 2]) {
+        for (const [width, height] of [[1366,768],[1920,1080],[2560,1440],[3840,2160]]) {
+          await setViewport(client,width,height,scale)
+          for (let index=0;index<workspaceCount;index++) { await clickIndex(client,'.workspace-list button',index); await recordLayout(client,results,`${locale} SHELL workspace ${index+1}/${workspaceCount} ${width}x${height} ${Math.round(scale*100)}%`) }
+        }
+      }
+      await setViewport(client,1920,1080)
+      if (locale === 'en') {
+        const names=['design','script','animation','ui','debug','manage']
+        for(let index=0;index<workspaceCount;index++){await clickIndex(client,'.workspace-list button',index);await captureSurface(client,screenshotRoot,screenshots,`workspace-${names[index]||index}-en-1920x1080.png`,locale,1920,1080)}
+        await clickIndex(client,'.workspace-list button',5)
+        const manageCount=await evaluate(client,"document.querySelectorAll('.manage-body>nav button').length")
+        const sections=['settings','packages','project-health','rendering','build']
+        for(let index=0;index<manageCount;index++){await clickIndex(client,'.manage-body>nav button',index);await recordLayout(client,results,`en Manage ${sections[index]||index}`);await captureSurface(client,screenshotRoot,screenshots,`manage-${sections[index]||index}-en-1920x1080.png`,locale,1920,1080)}
+        await evaluate(client,"document.querySelector('.command-trigger')?.click(); true");await waitForExpression(client,"Boolean(document.querySelector('.command-palette'))",5000);await captureSurface(client,screenshotRoot,screenshots,'command-palette-en-1920x1080.png',locale,1920,1080);await evaluate(client,"document.querySelector('.command-palette input')?.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true})); true")
+        await evaluate(client,"document.querySelector('.task-status')?.click(); true");await waitForExpression(client,"Boolean(document.querySelector('.status-center'))",5000);await captureSurface(client,screenshotRoot,screenshots,'task-center-en-1920x1080.png',locale,1920,1080);await evaluate(client,"document.querySelector('.status-center>header button')?.click(); true")
+      }
     }
 
     for (const [width, height] of [[1024, 768], [1280, 800], [1600, 900], [1920, 1080]]) {
@@ -62,7 +86,7 @@ try {
       await clickIndex(client, '.workspace-list button', index)
       await recordLayout(client, results, `${locale} workspace ${index + 1}/${workspaceCount}`)
     }
-    if (['3.5.0', '3.6.0', '3.7.0', '3.8.0', '3.9.0', '4.0.0'].includes(qualificationVersion)) {
+    if (isV41 || ['3.5.0', '3.6.0', '3.7.0', '3.8.0', '3.9.0', '4.0.0'].includes(qualificationVersion)) {
       await clickIndex(client, '.workspace-list button', 1)
       for (const [width, height] of [[800, 720], [1024, 768], [1280, 800], [1600, 900], [1920, 1080]]) {
         await setViewport(client, width, height)
@@ -84,7 +108,7 @@ try {
         await clickIndex(client, '.production-header nav button', tab)
         await recordLayout(client, results, `${locale} Profiler section ${tab + 1}/${profilerTabs}`)
       }
-      if (['3.6.0', '3.7.0', '3.8.0', '3.9.0', '4.0.0'].includes(qualificationVersion)) {
+      if (isV41 || ['3.6.0', '3.7.0', '3.8.0', '3.9.0', '4.0.0'].includes(qualificationVersion)) {
         await clickIndex(client, '.workspace-list button', 3)
         const uiTabs = await evaluate(client, "document.querySelectorAll('.presentation-header nav button').length")
         for (let tab = 0; tab < uiTabs; tab++) { await clickIndex(client, '.presentation-header nav button', tab); await recordLayout(client, results, `${locale} UI workspace ${tab + 1}/${uiTabs}`) }
@@ -98,7 +122,7 @@ try {
     for (let index = 0; index < bottomCount; index++) {
       await clickIndex(client, '.panel-tabs .panel-tab', index)
       await recordLayout(client, results, `${locale} bottom panel ${index + 1}/${bottomCount}`)
-      if (['3.7.0', '3.8.0', '3.9.0', '4.0.0'].includes(qualificationVersion) && await evaluate(client, "Boolean(document.querySelector('.rendering-studio'))")) {
+      if ((isV41 || ['3.7.0', '3.8.0', '3.9.0', '4.0.0'].includes(qualificationVersion)) && await evaluate(client, "Boolean(document.querySelector('.rendering-studio'))")) {
         const renderingTabs = await evaluate(client, "document.querySelectorAll('.rendering-studio>.studio-header nav button').length")
         for (let tab = 0; tab < renderingTabs; tab++) { await clickIndex(client, '.rendering-studio>.studio-header nav button', tab); await recordLayout(client, results, `${locale} rendering section ${tab + 1}/${renderingTabs}`) }
         const renderingCapture = await client.send('Page.captureScreenshot', { format: 'png', fromSurface: true, captureBeyondViewport: false })
@@ -110,7 +134,7 @@ try {
     for (let index = 0; index < sidebarCount; index++) {
       await clickIndex(client, '.sidebar button', index)
       await recordLayout(client, results, `${locale} page ${index + 1}/${sidebarCount}`)
-      if (['3.4.0', '3.5.0', '3.6.0', '3.7.0', '3.8.0', '3.9.0', '4.0.0'].includes(qualificationVersion) && await evaluate(client, "Boolean(document.querySelector('.settings-page'))")) {
+      if ((isV41 || ['3.4.0', '3.5.0', '3.6.0', '3.7.0', '3.8.0', '3.9.0', '4.0.0'].includes(qualificationVersion)) && await evaluate(client, "Boolean(document.querySelector('.settings-page'))")) {
         const scopeCount = await evaluate(client, "document.querySelectorAll('.settings-search nav button').length")
         for (let scope = 0; scope < scopeCount; scope++) {
           await clickIndex(client, '.settings-search nav button', scope)
@@ -127,8 +151,12 @@ try {
   }
 
   const seriousConsoleErrors = consoleErrors.filter(message => !/favicon|ResizeObserver loop/i.test(message))
+  const stableControls = isV41 ? await evaluate(client, `([...document.querySelectorAll('[data-testid]')].map(node=>({testId:node.getAttribute('data-testid'),surface:node.getAttribute('data-surface')||'',label:node.getAttribute('aria-label')||node.getAttribute('title')||(node.textContent||'').trim().slice(0,120),disabled:node.matches(':disabled'),disabledReason:node.getAttribute('data-disabled-reason')||''})))`) : []
+  const controlIds = new Set(stableControls.map(item=>item.testId))
+  const controlsPassed = !isV41 || stableControls.length > 0 && controlIds.size === stableControls.length && stableControls.every(item => item.testId && item.surface && item.label && (!item.disabled || item.disabledReason))
+  results.push({name:'Stable control inventory',status:controlsPassed?'passed':'failed',detail:{count:stableControls.length,unique:controlIds.size}})
   results.push({ name: 'Browser console and fatal surface', status: seriousConsoleErrors.length === 0 && !await evaluate(client, "Boolean(document.querySelector('.error-recovery,[data-fatal=true]'))") ? 'passed' : 'failed', detail: JSON.stringify(seriousConsoleErrors) })
-  const report = { format: `nova-v${qualificationTag}-layout-qualification`, version: 1, engineVersion: qualificationVersion, generatedAt: new Date().toISOString(), browser: browser.product, languages: ['en','de','zh'], screenshots, results, consoleErrors: seriousConsoleErrors }
+  const report = { format: `nova-v${qualificationTag}-layout-qualification`, version: 1, engineVersion: qualificationVersion, generatedAt: new Date().toISOString(), browser: browser.product, languages: ['en','de','zh'], matrix:isV41?{viewports:['1366x768','1920x1080','2560x1440','3840x2160'],scales:[100,125,150,175,200],catalogs:['SHELL','LCH','HLT','BLD']}:undefined,stableControls,screenshots,results,consoleErrors: seriousConsoleErrors }
   report.status = results.every(result => result.status === 'passed') ? 'passed' : 'failed'
   await writeFile(join(evidenceRoot, `v${qualificationVersion}-layout-browser.json`), `${JSON.stringify(report, null, 2)}\n`, 'utf8')
   if (report.status !== 'passed') throw new Error(`Layout qualification failed: ${results.filter(result => result.status !== 'passed').map(result => result.name).join(', ')}`)
@@ -162,7 +190,23 @@ async function recordLayout(cdp, collection, name) {
   const passed = detail.contained && detail.overflow.length === 0 && detail.overlap.length === 0 && detail.verticalText.length === 0 && (!detail.toolbarState || detail.toolbarState.childOverflows === 0)
   collection.push({ name, status: passed ? 'passed' : 'failed', detail })
 }
-async function setViewport(cdp, width, height) { await cdp.send('Emulation.setDeviceMetricsOverride', { width, height, screenWidth: width, screenHeight: height, deviceScaleFactor: 1, mobile: false }); await new Promise(resolve => setTimeout(resolve, 180)) }
+async function setViewport(cdp, width, height, deviceScaleFactor = 1) {
+  await cdp.send('Emulation.clearDeviceMetricsOverride')
+  await cdp.send('Emulation.setDeviceMetricsOverride', { width, height, screenWidth: width, screenHeight: height, deviceScaleFactor, mobile: false })
+  const deadline = Date.now() + 2_500
+  while (Date.now() < deadline) {
+    const viewport = await evaluate(cdp, `({ width: innerWidth, height: innerHeight, scale: devicePixelRatio })`)
+    if (viewport.width === width && viewport.height === height && Math.abs(viewport.scale - deviceScaleFactor) < 0.01) {
+      // Chromium updates viewport metrics before repainting vw-sized app roots.
+      // Leave one bounded repaint window before recording shell containment.
+      await new Promise(resolve => setTimeout(resolve, 480))
+      return
+    }
+    await new Promise(resolve => setTimeout(resolve, 80))
+  }
+  throw new Error(`Viewport did not settle at ${width}x${height} @ ${Math.round(deviceScaleFactor * 100)}%`)
+}
+async function captureSurface(cdp, directory, collection, name, locale, width, height) { await setViewport(cdp,width,height); const capture=await cdp.send('Page.captureScreenshot',{format:'png',fromSurface:true,captureBeyondViewport:false}); await writeFile(join(directory,name),Buffer.from(capture.data,'base64')); collection.push({name,locale,width,height}) }
 async function clickIndex(cdp, selector, index) { await evaluate(cdp, `(() => { const node=document.querySelectorAll(${JSON.stringify(selector)})[${index}]; if(!node)return false; node.click(); return true })()`); await new Promise(resolve => setTimeout(resolve, 120)) }
 async function freePort() { const server=createNetServer(); await new Promise((resolve,reject)=>{server.once('error',reject);server.listen(0,'127.0.0.1',resolve)}); const address=server.address(),port=typeof address==='object'&&address?address.port:0; await new Promise(resolve=>server.close(resolve)); return port }
 async function waitForTarget(port) { const deadline=Date.now()+15_000; while(Date.now()<deadline){try{const targets=await fetch(`http://127.0.0.1:${port}/json/list`).then(response=>response.json()),target=targets.find(item=>item.type==='page');if(target)return target}catch{}await new Promise(resolve=>setTimeout(resolve,100))}throw new Error('Timed out connecting to Edge DevTools.') }

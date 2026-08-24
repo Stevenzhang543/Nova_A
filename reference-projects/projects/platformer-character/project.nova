@@ -2,7 +2,7 @@
   "projectFormat": "Nova_A Project Format 2",
   "projectFormatMajor": 2,
   "formatVersion": 29,
-  "engineVersion": "4.0.0",
+  "engineVersion": "4.4.0",
   "compatibility": {
     "format": "Nova_A Project Format 2",
     "major": 2,
@@ -10,16 +10,16 @@
     "minimumSchemaVersion": 5
   },
   "projectMetadata": {
-    "id": "ee94a1da-2f31-40fa-a16c-0db372fd7d16",
+    "id": "a8b19f25-8460-4fdc-be8d-df08c230b9cb",
     "name": "Nova_A Platformer Character",
-    "createdAt": "2026-08-19T13:34:54.655Z",
-    "updatedAt": "2026-08-19T13:34:54.655Z",
+    "createdAt": "2026-08-23T17:16:25.511Z",
+    "updatedAt": "2026-08-23T17:16:25.511Z",
     "format": "Nova_A Project Format 2",
     "template": "platformer"
   },
   "manifest": {
     "manifestVersion": 1,
-    "projectUuid": "ee94a1da-2f31-40fa-a16c-0db372fd7d16",
+    "projectUuid": "a8b19f25-8460-4fdc-be8d-df08c230b9cb",
     "name": "Nova_A Platformer Character",
     "engineCompatibility": {
       "minimum": "3.9.0",
@@ -39,6 +39,42 @@
     }
   },
   "assets": [
+    {
+      "uuid": "effcfd50-56bb-4964-8ffc-fd5056bb1964",
+      "name": "Getting Started.md",
+      "path": "Assets/Tutorials/Getting Started.md",
+      "assetType": "other",
+      "mimeType": "text/markdown",
+      "byteLength": 310,
+      "source": "---\ndismissible: true\ntemplate: platformer\n---\n# Welcome to Nova_A Platformer Character\n\nThis project was created from the **platformer** template. Open the Scene, Assets, Script, Debug, and Manage workspaces to explore the configured systems. Dismiss this tutorial from its Asset Inspector when you are ready.",
+      "sourceModified": 0,
+      "importedAt": 0,
+      "width": 0,
+      "height": 0,
+      "duration": 0,
+      "fontFamily": "",
+      "settings": {
+        "filterMode": "Linear",
+        "compression": "Lossless",
+        "pixelsPerUnit": 100,
+        "spriteRegion": null,
+        "pivot": {
+          "x": 0.5,
+          "y": 0.5
+        },
+        "atlas": false
+      },
+      "pipeline": {
+        "importerVersion": "template-4.2",
+        "platform": "web",
+        "sourceHash": "a52a1105aaebbc964fe274bf611d52145ea02c569a294664b649e248d96a5796",
+        "artifactHash": "a52a1105aaebbc964fe274bf611d52145ea02c569a294664b649e248d96a5796",
+        "contentHash": "a52a1105aaebbc964fe274bf611d52145ea02c569a294664b649e248d96a5796",
+        "cacheKey": "a52a1105aaebbc964fe274bf611d52145ea02c569a294664b649e248d96a5796",
+        "dependencies": [],
+        "reverseDependencies": []
+      }
+    },
     {
       "uuid": "f239103a-24ff-4666-8239-103a24ff5666",
       "name": "PlayerController.rhai",
@@ -64,6 +100,16 @@
         },
         "atlas": false
       },
+      "pipeline": {
+        "importerVersion": "template-4.2",
+        "platform": "web",
+        "sourceHash": "46d6a4f2383c61d7f0cbdcbc7f46553bd95e2b8d096b6b7e7e70ea417fa5aa95",
+        "artifactHash": "46d6a4f2383c61d7f0cbdcbc7f46553bd95e2b8d096b6b7e7e70ea417fa5aa95",
+        "contentHash": "46d6a4f2383c61d7f0cbdcbc7f46553bd95e2b8d096b6b7e7e70ea417fa5aa95",
+        "cacheKey": "46d6a4f2383c61d7f0cbdcbc7f46553bd95e2b8d096b6b7e7e70ea417fa5aa95",
+        "dependencies": [],
+        "reverseDependencies": []
+      },
       "script": {
         "version": 1,
         "apiVersion": 1,
@@ -76,16 +122,6 @@
         "signalConnections": [],
         "recoverySource": "",
         "lastSavedHash": ""
-      },
-      "pipeline": {
-        "importerVersion": "nova-script-3.5",
-        "platform": "web",
-        "sourceHash": "46d6a4f2383c61d7f0cbdcbc7f46553bd95e2b8d096b6b7e7e70ea417fa5aa95",
-        "artifactHash": "46d6a4f2383c61d7f0cbdcbc7f46553bd95e2b8d096b6b7e7e70ea417fa5aa95",
-        "contentHash": "46d6a4f2383c61d7f0cbdcbc7f46553bd95e2b8d096b6b7e7e70ea417fa5aa95",
-        "cacheKey": "46d6a4f2383c61d7f0cbdcbc7f46553bd95e2b8d096b6b7e7e70ea417fa5aa95",
-        "dependencies": [],
-        "reverseDependencies": []
       }
     },
     {
@@ -114,12 +150,12 @@
         "atlas": true
       },
       "pipeline": {
-        "importerVersion": "nova-image-3.5",
+        "importerVersion": "template-4.2",
         "platform": "web",
-        "sourceHash": "e195230c278892ef5f1effd1bd889627e7847bb304c1388ca542e5eddb484aa3",
-        "artifactHash": "e195230c278892ef5f1effd1bd889627e7847bb304c1388ca542e5eddb484aa3",
-        "contentHash": "e195230c278892ef5f1effd1bd889627e7847bb304c1388ca542e5eddb484aa3",
-        "cacheKey": "e195230c278892ef5f1effd1bd889627e7847bb304c1388ca542e5eddb484aa3",
+        "sourceHash": "727695409abb4996bb021f570365e9372df67ce2328c382b12894fdfa15559c9",
+        "artifactHash": "727695409abb4996bb021f570365e9372df67ce2328c382b12894fdfa15559c9",
+        "contentHash": "727695409abb4996bb021f570365e9372df67ce2328c382b12894fdfa15559c9",
+        "cacheKey": "727695409abb4996bb021f570365e9372df67ce2328c382b12894fdfa15559c9",
         "dependencies": [],
         "reverseDependencies": []
       }
@@ -150,12 +186,12 @@
         "atlas": false
       },
       "pipeline": {
-        "importerVersion": "nova-audio-3.5",
+        "importerVersion": "template-4.2",
         "platform": "web",
-        "sourceHash": "6086fac24845e0083b9b7532558846202a105b22154b772b3b509e574ddf69d5",
-        "artifactHash": "6086fac24845e0083b9b7532558846202a105b22154b772b3b509e574ddf69d5",
-        "contentHash": "6086fac24845e0083b9b7532558846202a105b22154b772b3b509e574ddf69d5",
-        "cacheKey": "6086fac24845e0083b9b7532558846202a105b22154b772b3b509e574ddf69d5",
+        "sourceHash": "4d66f04dfb036f62fc5454410967f970a638f38c0d67049407b30d0977929956",
+        "artifactHash": "4d66f04dfb036f62fc5454410967f970a638f38c0d67049407b30d0977929956",
+        "contentHash": "4d66f04dfb036f62fc5454410967f970a638f38c0d67049407b30d0977929956",
+        "cacheKey": "4d66f04dfb036f62fc5454410967f970a638f38c0d67049407b30d0977929956",
         "dependencies": [],
         "reverseDependencies": []
       }
@@ -186,7 +222,7 @@
         "atlas": false
       },
       "pipeline": {
-        "importerVersion": "nova-animation-3.5",
+        "importerVersion": "template-4.2",
         "platform": "web",
         "sourceHash": "ef2d6b56713d6df38f7a8c7e8f380045a564f59f4168cb6f075ab625b4c95a05",
         "artifactHash": "ef2d6b56713d6df38f7a8c7e8f380045a564f59f4168cb6f075ab625b4c95a05",
@@ -222,7 +258,7 @@
         "atlas": false
       },
       "pipeline": {
-        "importerVersion": "nova-controller-3.5",
+        "importerVersion": "template-4.2",
         "platform": "web",
         "sourceHash": "c2f7e70f68a4d098126bf16a689e70204594e9ed48546ce55645cca9c7ce952a",
         "artifactHash": "c2f7e70f68a4d098126bf16a689e70204594e9ed48546ce55645cca9c7ce952a",
@@ -258,12 +294,12 @@
         "atlas": false
       },
       "pipeline": {
-        "importerVersion": "nova-image-3.5",
+        "importerVersion": "template-4.2",
         "platform": "web",
-        "sourceHash": "a6f465002246e2cf9da7e14bb744c2b1caf087ffec15d3e34e733ffa8b55aaac",
-        "artifactHash": "a6f465002246e2cf9da7e14bb744c2b1caf087ffec15d3e34e733ffa8b55aaac",
-        "contentHash": "a6f465002246e2cf9da7e14bb744c2b1caf087ffec15d3e34e733ffa8b55aaac",
-        "cacheKey": "a6f465002246e2cf9da7e14bb744c2b1caf087ffec15d3e34e733ffa8b55aaac",
+        "sourceHash": "559cd78070dc85f4d232236bccaf7d2b46d6f6cb94773819565c1e7ab1608dad",
+        "artifactHash": "559cd78070dc85f4d232236bccaf7d2b46d6f6cb94773819565c1e7ab1608dad",
+        "contentHash": "559cd78070dc85f4d232236bccaf7d2b46d6f6cb94773819565c1e7ab1608dad",
+        "cacheKey": "559cd78070dc85f4d232236bccaf7d2b46d6f6cb94773819565c1e7ab1608dad",
         "dependencies": [],
         "reverseDependencies": []
       }
@@ -294,7 +330,7 @@
         "atlas": false
       },
       "pipeline": {
-        "importerVersion": "nova-tileset-3.5",
+        "importerVersion": "template-4.2",
         "platform": "web",
         "sourceHash": "fc6d4a4f5dbf221d2b26ab0e49efdbb4b75a50807ced5def42ad124b98f38684",
         "artifactHash": "fc6d4a4f5dbf221d2b26ab0e49efdbb4b75a50807ced5def42ad124b98f38684",
@@ -307,6 +343,7 @@
   ],
   "assetFolders": [
     "Assets",
+    "Assets/Tutorials",
     "Assets/Scenes",
     "Assets/Sprites",
     "Assets/Audio",
@@ -323,10 +360,21 @@
     ".nova/imported"
   ],
   "assetDatabase": {
-    "version": 1,
+    "version": 2,
     "favorites": [],
     "savedFilters": [],
-    "importPresets": []
+    "importPresets": [],
+    "collections": [],
+    "contentGroups": [
+      {
+        "id": "main",
+        "name": "Main",
+        "mode": "embedded",
+        "optional": false
+      }
+    ],
+    "viewMode": "grid",
+    "thumbnailSize": 112
   },
   "plugins": [],
   "packages": {
@@ -517,7 +565,14 @@
         "crashReports": true,
         "telemetryEnabled": false,
         "telemetryEndpoint": "",
-        "privacyPolicyUrl": ""
+        "privacyPolicyUrl": "",
+        "include": [
+          "Assets/**"
+        ],
+        "exclude": [
+          ".nova/**"
+        ],
+        "stripUnusedAssets": false
       }
     },
     "world": {
@@ -3378,7 +3433,7 @@
         },
         {
           "uuid": "94649fc5-2fb8-4961-8464-9fc52fb8f961",
-          "name": "Tutorial Hint",
+          "name": "Scene Title",
           "enabled": true,
           "editorVisible": true,
           "editorLocked": false,
@@ -3432,7 +3487,7 @@
               "enabled": true,
               "removed": false,
               "data": {
-                "text": "Move, jump, and inspect the integrated Tilemap 2.0 and navigation workflow.",
+                "text": "Platformer",
                 "fontSize": 26,
                 "fontWeight": 650,
                 "align": "center",

@@ -1,4 +1,4 @@
-import { markRaw, reactive } from 'vue'
+import { markRaw, reactive, watch } from 'vue'
 import { normalizeUuid } from '../world/identity'
 import { buildTextureAtlases } from './TextureAtlas'
 import {
@@ -9,6 +9,8 @@ import {
   type AssetImportSettings,
   type AssetDatabaseSettings,
   type AssetImportPreset,
+  type AssetCollection,
+  type AssetContentGroup,
   type AssetRecord,
   type AssetSavedFilter,
   type AssetType,
@@ -31,10 +33,17 @@ export interface AssetDatabaseState {
   search: string
   typeFilter: AssetType | 'all'
   favoritesOnly: boolean
+  tagFilter: string
+  selectedCollectionId: string
   favorites: string[]
   savedFilters: AssetSavedFilter[]
   importPresets: AssetImportPreset[]
+  collections: AssetCollection[]
+  contentGroups: AssetContentGroup[]
+  viewMode: 'grid' | 'list'
+  thumbnailSize: number
   indexSize: number
+  recentGuids: string[]
 }
 
 export const assetState = reactive<AssetDatabaseState>({
@@ -49,10 +58,22 @@ export const assetState = reactive<AssetDatabaseState>({
   search: '',
   typeFilter: 'all',
   favoritesOnly: false,
+  tagFilter: '',
+  selectedCollectionId: '',
   favorites: [],
   savedFilters: [],
   importPresets: [],
-  indexSize: 0
+  collections: [],
+  contentGroups: [{ id: 'main', name: 'Main', mode: 'embedded', optional: false }],
+  viewMode: 'grid',
+  thumbnailSize: 112,
+  indexSize: 0,
+  recentGuids: []
+})
+
+watch(() => assetState.selectedGuid, guid => {
+  if (!guid) return
+  assetState.recentGuids.splice(0, assetState.recentGuids.length, guid, ...assetState.recentGuids.filter(value => value !== guid).slice(0, 19))
 })
 
 const imageCache = new Map<string, HTMLImageElement>()
@@ -63,7 +84,7 @@ let recordsByUuid = new Map<string, AssetRecord>()
 
 function inlinePipeline(source: string) {
   const hash = sha256Bytes(assetSourceBytes(source))
-  return { importerVersion: 'inline-1', platform: 'web' as const, sourceHash: hash, artifactHash: hash, contentHash: hash, cacheKey: hash, status: 'ready' as const, lastValidSource: source, error: '', dependencies: [] as string[], reverseDependencies: [] as string[], cacheHit: false }
+  return { importerId: 'nova.inline', importerVersion: '1.0.0', presetId: 'inline', platform: 'web' as const, sourceHash: hash, artifactHash: hash, contentHash: hash, cacheKey: hash, status: 'ready' as const, lastValidSource: source, error: '', dependencies: [] as string[], reverseDependencies: [] as string[], cacheHit: false, settingsHash: hash, artifactSettingsHash: hash, invalidationReason: 'Inline asset', sourceSettings: '{}', artifactSettings: '{}', diagnostics: [] as Array<{ severity: 'info' | 'warning' | 'error'; code: string; message: string }>, reproducible: true, deprecatedSettings: [] as string[] }
 }
 
 function ensureIndex(): void {
@@ -86,6 +107,7 @@ export function inferAssetType(file: Pick<File, 'name' | 'type'>): AssetType {
   if (extension === 'nova-schema') return 'dataSchema'
   if (extension === 'nova-data' || extension === 'csv') return 'dataTable'
   if (extension === 'nova-replay') return 'replay'
+  if (extension === 'nova-path') return 'path'
   if (extension === 'nova-material' || extension === 'material') return 'material'
   if (extension === 'nova-anim') return 'animation'
   if (extension === 'nova-controller') return 'controller'
@@ -123,6 +145,7 @@ function defaultFolder(type: AssetType): string {
   if (type === 'dataSchema') return 'Assets/Data/Schemas'
   if (type === 'dataTable') return 'Assets/Data/Tables'
   if (type === 'replay') return 'Assets/Replays'
+  if (type === 'path') return 'Assets/Paths'
   if (type === 'behaviorTree' || type === 'stateMachine') return 'Assets/AI'
   if (type === 'tilePalette') return 'Assets/TilePalettes'
   if (type === 'brushPreset') return 'Assets/BrushPresets'
@@ -286,12 +309,12 @@ function textDataUrl(source: string, mimeType: string): string {
 
 export function createTextAsset(
   name: string,
-  assetType: 'script' | 'prefab' | 'scene' | 'material' | 'animation' | 'controller' | 'animationMask' | 'rig' | 'skin' | 'timeline' | 'tileset' | 'atlas' | 'shader' | 'localization' | 'uiTheme' | 'behaviorTree' | 'stateMachine' | 'tilePalette' | 'brushPreset' | 'terrainRules' | 'dataSchema' | 'dataTable' | 'replay',
+  assetType: 'script' | 'prefab' | 'scene' | 'material' | 'animation' | 'controller' | 'animationMask' | 'rig' | 'skin' | 'timeline' | 'tileset' | 'atlas' | 'shader' | 'localization' | 'uiTheme' | 'behaviorTree' | 'stateMachine' | 'tilePalette' | 'brushPreset' | 'terrainRules' | 'dataSchema' | 'dataTable' | 'replay' | 'path',
   source: string,
   requestedFolder?: string
 ): AssetRecord {
   const uuid = normalizeUuid(undefined)
-  const extension = assetType === 'script' ? '.rhai' : assetType === 'prefab' ? '.nova-prefab' : assetType === 'scene' ? '.nova-scene' : assetType === 'material' ? '.nova-material' : assetType === 'animation' ? '.nova-anim' : assetType === 'controller' ? '.nova-controller' : assetType === 'animationMask' ? '.nova-mask' : assetType === 'rig' ? '.nova-rig' : assetType === 'skin' ? '.nova-skin' : assetType === 'timeline' ? '.nova-timeline' : assetType === 'tileset' ? '.nova-tileset' : assetType === 'atlas' ? '.nova-atlas' : assetType === 'shader' ? '.nova-shader' : assetType === 'uiTheme' ? '.nova-theme' : assetType === 'behaviorTree' ? '.nova-behavior' : assetType === 'stateMachine' ? '.nova-state' : assetType === 'tilePalette' ? '.nova-palette' : assetType === 'brushPreset' ? '.nova-brush' : assetType === 'terrainRules' ? '.nova-terrain' : assetType === 'dataSchema' ? '.nova-schema' : assetType === 'dataTable' ? '.nova-data' : assetType === 'replay' ? '.nova-replay' : '.nova-locale'
+  const extension = assetType === 'script' ? '.rhai' : assetType === 'prefab' ? '.nova-prefab' : assetType === 'scene' ? '.nova-scene' : assetType === 'material' ? '.nova-material' : assetType === 'animation' ? '.nova-anim' : assetType === 'controller' ? '.nova-controller' : assetType === 'animationMask' ? '.nova-mask' : assetType === 'rig' ? '.nova-rig' : assetType === 'skin' ? '.nova-skin' : assetType === 'timeline' ? '.nova-timeline' : assetType === 'tileset' ? '.nova-tileset' : assetType === 'atlas' ? '.nova-atlas' : assetType === 'shader' ? '.nova-shader' : assetType === 'uiTheme' ? '.nova-theme' : assetType === 'behaviorTree' ? '.nova-behavior' : assetType === 'stateMachine' ? '.nova-state' : assetType === 'tilePalette' ? '.nova-palette' : assetType === 'brushPreset' ? '.nova-brush' : assetType === 'terrainRules' ? '.nova-terrain' : assetType === 'dataSchema' ? '.nova-schema' : assetType === 'dataTable' ? '.nova-data' : assetType === 'replay' ? '.nova-replay' : assetType === 'path' ? '.nova-path' : '.nova-locale'
   const safeName = sanitizedName(name).endsWith(extension) ? sanitizedName(name) : `${sanitizedName(name)}${extension}`
   const mimeType = assetType === 'script' ? 'text/x-rhai' : `application/x-nova-${assetType}`
   const record: AssetRecord = {
@@ -354,6 +377,29 @@ export function updateTextAsset(uuid: string, source: string): boolean {
   return true
 }
 
+/**
+ * Applies an in-memory text-asset write as a verified transaction. The prior
+ * record and generation are restored if writing, verification, or an injected
+ * qualification fault fails, so prefab sources never remain half-authored.
+ */
+export function updateTextAssetTransactional(uuid: string, source: string, faultAt?: 'after-write' | 'after-verify'): boolean {
+  const record = assetState.records.find(asset => asset.uuid === uuid)
+  if (!record) return false
+  const before = JSON.parse(JSON.stringify(record)) as AssetRecord
+  const generation = assetState.generation
+  try {
+    if (!updateTextAsset(uuid, source)) return false
+    if (faultAt === 'after-write') throw new Error('Injected text-asset interruption after write.')
+    if (readTextAsset(uuid) !== source) throw new Error('Text-asset verification failed.')
+    if (faultAt === 'after-verify') throw new Error('Injected text-asset interruption after verification.')
+    return true
+  } catch {
+    Object.assign(record, before)
+    assetState.generation = generation
+    return false
+  }
+}
+
 export function serializeAssets(): AssetRecord[] {
   return assetState.records.map(record => {
     const copy = JSON.parse(JSON.stringify(record)) as AssetRecord
@@ -369,10 +415,14 @@ export function serializeAssetFolders(): string[] {
 
 export function serializeAssetDatabaseSettings(): AssetDatabaseSettings {
   return {
-    version: 1,
+    version: 2,
     favorites: [...new Set(assetState.favorites)].filter(uuid => assetState.records.some(record => record.uuid === uuid)).sort(),
     savedFilters: assetState.savedFilters.map(filter => ({ ...filter })).sort((a, b) => a.name.localeCompare(b.name)),
-    importPresets: assetState.importPresets.map(preset => ({ ...preset, settings: JSON.parse(JSON.stringify(preset.settings)) as AssetImportSettings })).sort((a, b) => a.name.localeCompare(b.name))
+    importPresets: assetState.importPresets.map(preset => ({ ...preset, settings: JSON.parse(JSON.stringify(preset.settings)) as AssetImportSettings })).sort((a, b) => a.name.localeCompare(b.name)),
+    collections: assetState.collections.map(collection => ({ ...collection, assetUuids: [...new Set(collection.assetUuids)].sort() })).sort((a, b) => a.name.localeCompare(b.name)),
+    contentGroups: assetState.contentGroups.map(group => ({ ...group })).sort((a, b) => a.name.localeCompare(b.name)),
+    viewMode: assetState.viewMode,
+    thumbnailSize: assetState.thumbnailSize
   }
 }
 
@@ -382,7 +432,7 @@ function loadAssetDatabaseSettings(source: unknown): void {
   const filters = Array.isArray(value.savedFilters) ? value.savedFilters.flatMap(raw => {
     if (!raw || typeof raw !== 'object' || typeof raw.id !== 'string' || typeof raw.name !== 'string') return []
     const type = raw.assetType === 'all' || typeof raw.assetType === 'string' ? raw.assetType as AssetType | 'all' : 'all'
-    return [{ id: raw.id.slice(0, 80), name: raw.name.trim().slice(0, 80) || 'Filter', query: String(raw.query ?? '').slice(0, 200), folder: normalizeFolder(String(raw.folder ?? 'Assets')), assetType: type }]
+    return [{ id: raw.id.slice(0, 80), name: raw.name.trim().slice(0, 80) || 'Filter', query: String(raw.query ?? '').slice(0, 200), folder: normalizeFolder(String(raw.folder ?? 'Assets')), assetType: type, tags: Array.isArray(raw.tags) ? raw.tags.map(String).map(tag => tag.trim()).filter(Boolean).slice(0, 32) : [], collectionId: String(raw.collectionId ?? '').slice(0, 80) }]
   }).slice(0, 128) : []
   assetState.savedFilters.splice(0, assetState.savedFilters.length, ...filters)
   const presets = Array.isArray(value.importPresets) ? value.importPresets.flatMap(raw => {
@@ -390,6 +440,19 @@ function loadAssetDatabaseSettings(source: unknown): void {
     return [{ id: raw.id.slice(0, 80), name: raw.name.trim().slice(0, 80) || 'Preset', assetType: raw.assetType === 'all' || typeof raw.assetType === 'string' ? raw.assetType as AssetType | 'all' : 'all', settings: { ...defaultImportSettings(), ...raw.settings } as AssetImportSettings }]
   }).slice(0, 128) : []
   assetState.importPresets.splice(0, assetState.importPresets.length, ...presets)
+  const collections = Array.isArray(value.collections) ? value.collections.flatMap(raw => {
+    if (!raw || typeof raw !== 'object' || typeof raw.id !== 'string' || typeof raw.name !== 'string') return []
+    return [{ id: raw.id.slice(0, 80), name: raw.name.trim().slice(0, 80) || 'Collection', color: /^#[0-9a-f]{6}$/i.test(String(raw.color)) ? String(raw.color) : '#6ea8fe', assetUuids: Array.isArray(raw.assetUuids) ? [...new Set(raw.assetUuids.map(String))].slice(0, 20_000) : [] }]
+  }).slice(0, 256) : []
+  assetState.collections.splice(0, assetState.collections.length, ...collections)
+  const groups = Array.isArray(value.contentGroups) ? value.contentGroups.flatMap(raw => {
+    if (!raw || typeof raw !== 'object' || typeof raw.id !== 'string' || typeof raw.name !== 'string') return []
+    const mode = ['embedded', 'downloadable', 'excluded'].includes(String(raw.mode)) ? raw.mode as AssetContentGroup['mode'] : 'embedded'
+    return [{ id: raw.id.slice(0, 80), name: raw.name.trim().slice(0, 80) || 'Content', mode, optional: raw.optional === true }]
+  }).slice(0, 128) : []
+  assetState.contentGroups.splice(0, assetState.contentGroups.length, ...(groups.length ? groups : [{ id: 'main', name: 'Main', mode: 'embedded' as const, optional: false }]))
+  assetState.viewMode = value.viewMode === 'list' ? 'list' : 'grid'
+  assetState.thumbnailSize = Math.min(192, Math.max(72, Number(value.thumbnailSize) || 112))
 }
 
 function sourceFolder(path: unknown, type: AssetType): string {
@@ -405,7 +468,7 @@ export function loadAssets(source: unknown, folderSource?: unknown, databaseSour
   for (const value of records) {
     if (!value || typeof value !== 'object') continue
     const item = value as Partial<AssetRecord>
-    const knownFields = new Set(['uuid', 'name', 'path', 'assetType', 'mimeType', 'byteLength', 'source', 'sourceModified', 'importedAt', 'width', 'height', 'duration', 'fontFamily', 'settings', 'script', 'animationImport', 'pipeline', 'unknownFields'])
+    const knownFields = new Set(['uuid', 'name', 'path', 'assetType', 'mimeType', 'byteLength', 'source', 'sourceModified', 'importedAt', 'width', 'height', 'duration', 'fontFamily', 'settings', 'script', 'animationImport', 'pipeline', 'tags', 'collectionIds', 'contentGroup', 'editorOnly', 'sourceControlStatus', 'thumbnailKey', 'unknownFields'])
     const inheritedUnknown = item.unknownFields && typeof item.unknownFields === 'object' ? item.unknownFields : {}
     const unknownFields = { ...inheritedUnknown, ...Object.fromEntries(Object.entries(value).filter(([key]) => !knownFields.has(key))) }
     const assetType = ['image', 'audio', 'font', 'scene', 'prefab', 'script', 'material', 'animation', 'controller', 'animationMask', 'rig', 'skin', 'timeline', 'tileset', 'atlas', 'shader', 'localization', 'uiTheme', 'behaviorTree', 'stateMachine', 'tilePalette', 'brushPreset', 'terrainRules', 'dataSchema', 'dataTable', 'replay', 'other'].includes(String(item.assetType)) ? item.assetType as AssetType : 'other'
@@ -417,6 +480,9 @@ export function loadAssets(source: unknown, folderSource?: unknown, databaseSour
       atlasSettings: { ...defaults.atlasSettings, ...(item.settings?.atlasSettings ?? {}) },
       spriteSheet: { ...defaults.spriteSheet, ...(item.settings?.spriteSheet ?? {}) },
       borders: { ...defaults.borders, ...(item.settings?.borders ?? {}) },
+      platformOverrides: { ...defaults.platformOverrides, ...(item.settings?.platformOverrides ?? {}) },
+      collisionGeneration: { ...defaults.collisionGeneration, ...(item.settings?.collisionGeneration ?? {}) },
+      svgSettings: { ...defaults.svgSettings, ...(item.settings?.svgSettings ?? {}) },
       audioSettings: { ...defaults.audioSettings, ...(item.settings?.audioSettings ?? {}) },
       fontSettings: { ...defaults.fontSettings, ...(item.settings?.fontSettings ?? {}) },
       tileSettings: { ...defaults.tileSettings, ...(item.settings?.tileSettings ?? {}) },
@@ -436,6 +502,14 @@ export function loadAssets(source: unknown, folderSource?: unknown, databaseSour
     settings.fontSettings.bitmapSize = Math.min(512, Math.max(6, Math.round(Number(settings.fontSettings.bitmapSize) || 32)))
     settings.fontSettings.outlineWidth = Math.min(32, Math.max(0, Number(settings.fontSettings.outlineWidth) || 0))
     settings.fontSettings.shaping = settings.fontSettings.shaping !== false
+    settings.fontSettings.fallbackAssetUuids = Array.isArray(settings.fontSettings.fallbackAssetUuids) ? [...new Set(settings.fontSettings.fallbackAssetUuids.map(String))].slice(0, 32) : []
+    settings.fontSettings.openTypeFeatures = Array.isArray(settings.fontSettings.openTypeFeatures) ? [...new Set(settings.fontSettings.openTypeFeatures.map(String).filter(value => /^[a-z0-9]{4}$/i.test(value)))].slice(0, 64) : defaults.fontSettings.openTypeFeatures
+    settings.fontSettings.hinting = ['Auto', 'None', 'Light', 'Full'].includes(String(settings.fontSettings.hinting)) ? settings.fontSettings.hinting : 'Auto'
+    settings.fontSettings.oversampling = Math.min(8, Math.max(1, Number(settings.fontSettings.oversampling) || 1))
+    settings.fontSettings.distanceField = ['SDF', 'MSDF'].includes(String(settings.fontSettings.distanceField)) ? settings.fontSettings.distanceField : 'None'
+    settings.fontSettings.distanceRange = Math.min(64, Math.max(1, Number(settings.fontSettings.distanceRange) || 8))
+    settings.fontSettings.declaredLanguages = Array.isArray(settings.fontSettings.declaredLanguages) ? [...new Set(settings.fontSettings.declaredLanguages.map(String).map(value => value.trim()).filter(Boolean))].slice(0, 32) : ['en']
+    settings.fontSettings.editorFont = settings.fontSettings.editorFont === true
     settings.spriteSheet.columns = Math.min(256, Math.max(1, Math.trunc(Number(settings.spriteSheet.columns) || 1)))
     settings.spriteSheet.rows = Math.min(256, Math.max(1, Math.trunc(Number(settings.spriteSheet.rows) || 1)))
     settings.spriteSheet.margin = Math.max(0, Math.trunc(Number(settings.spriteSheet.margin) || 0))
@@ -445,6 +519,17 @@ export function loadAssets(source: unknown, folderSource?: unknown, databaseSour
     settings.audioSettings.loopStart = Math.max(0, Number(settings.audioSettings.loopStart) || 0)
     settings.audioSettings.loopEnd = Math.max(0, Number(settings.audioSettings.loopEnd) || 0)
     settings.colorSpace = settings.colorSpace === 'Linear' ? 'Linear' : 'sRGB'
+    settings.generateMipmaps = settings.generateMipmaps === true
+    settings.transparency = ['Premultiply', 'Discard'].includes(String(settings.transparency)) ? settings.transparency : 'Preserve'
+    settings.atlasSettings.rotationPolicy = settings.atlasSettings.rotationPolicy === 'Allow' ? 'Allow' : 'Never'
+    settings.atlasSettings.trimPolicy = settings.atlasSettings.trimPolicy === 'None' ? 'None' : 'Transparent'
+    settings.atlasSettings.group = String(settings.atlasSettings.group || 'Default').trim().slice(0, 80) || 'Default'
+    settings.polygonOutline = Array.isArray(settings.polygonOutline) ? settings.polygonOutline.flatMap(point => point && typeof point === 'object' ? [{ x: Math.max(0, Number(point.x) || 0), y: Math.max(0, Number(point.y) || 0) }] : []).slice(0, 1024) : []
+    settings.collisionGeneration.mode = ['Box', 'Polygon'].includes(String(settings.collisionGeneration.mode)) ? settings.collisionGeneration.mode : 'None'
+    settings.collisionGeneration.tolerance = Math.min(64, Math.max(.01, Number(settings.collisionGeneration.tolerance) || 1))
+    settings.extractedAnimationFrames = Array.isArray(settings.extractedAnimationFrames) ? settings.extractedAnimationFrames.flatMap(frame => frame && typeof frame === 'object' ? [{ x: Math.max(0, Number(frame.x) || 0), y: Math.max(0, Number(frame.y) || 0), width: Math.max(1, Number(frame.width) || 1), height: Math.max(1, Number(frame.height) || 1) }] : []).slice(0, 4096) : []
+    settings.svgSettings.rasterization = ['Runtime', 'Disabled'].includes(String(settings.svgSettings.rasterization)) ? settings.svgSettings.rasterization : 'ImportTime'
+    settings.svgSettings.scale = Math.min(16, Math.max(.01, Number(settings.svgSettings.scale) || 1)); settings.svgSettings.allowExternalResources = settings.svgSettings.allowExternalResources === true
     const variants = settings.platformVariants && typeof settings.platformVariants === 'object' ? settings.platformVariants : {}
     settings.platformVariants = Object.fromEntries(Object.entries(variants).filter(([platform, compression]) => ['windows', 'linux', 'macos', 'web'].includes(platform) && ['None', 'Lossless', 'Optimized'].includes(String(compression)))) as AssetImportSettings['platformVariants']
     settings.pixelsPerUnit = Math.min(1_000_000, Math.max(.000001, Number(settings.pixelsPerUnit) || 100))
@@ -505,15 +590,23 @@ export function loadAssets(source: unknown, folderSource?: unknown, databaseSour
         lastImportedAt: Math.max(0, Number(item.animationImport?.lastImportedAt) || 0)
       } : undefined,
       pipeline: item.pipeline && typeof item.pipeline === 'object' ? {
+        importerId: String(item.pipeline.importerId || 'nova.legacy').slice(0, 80),
         importerVersion: String(item.pipeline.importerVersion || '1.0.0').slice(0, 40),
+        presetId: String(item.pipeline.presetId || 'legacy').slice(0, 80),
         platform: ['windows', 'linux', 'macos', 'web'].includes(String(item.pipeline.platform)) ? item.pipeline.platform : 'web',
         sourceHash: String(item.pipeline.sourceHash || item.pipeline.contentHash || '').slice(0, 128), artifactHash: String(item.pipeline.artifactHash || item.pipeline.cacheKey || '').slice(0, 128),
         contentHash: String(item.pipeline.contentHash || item.pipeline.sourceHash || '').slice(0, 128), cacheKey: String(item.pipeline.cacheKey || item.pipeline.artifactHash || '').slice(0, 128),
         status: item.pipeline.status === 'failed' ? 'failed' : 'ready', lastValidSource: typeof item.pipeline.lastValidSource === 'string' ? item.pipeline.lastValidSource : (typeof item.source === 'string' ? item.source : ''),
         error: String(item.pipeline.error || '').slice(0, 500), dependencies: Array.isArray(item.pipeline.dependencies) ? item.pipeline.dependencies.filter(value => typeof value === 'string').slice(0, 2048) : [],
         reverseDependencies: Array.isArray(item.pipeline.reverseDependencies) ? item.pipeline.reverseDependencies.filter(value => typeof value === 'string').slice(0, 2048) : [],
-        cacheHit: item.pipeline.cacheHit === true
+        cacheHit: item.pipeline.cacheHit === true,
+        settingsHash: String(item.pipeline.settingsHash || item.pipeline.cacheKey || '').slice(0, 128), artifactSettingsHash: String(item.pipeline.artifactSettingsHash || item.pipeline.cacheKey || '').slice(0, 128),
+        invalidationReason: String(item.pipeline.invalidationReason || 'Legacy metadata upgraded').slice(0, 500), sourceSettings: String(item.pipeline.sourceSettings || '{}').slice(0, 100_000), artifactSettings: String(item.pipeline.artifactSettings || '{}').slice(0, 100_000),
+        diagnostics: Array.isArray(item.pipeline.diagnostics) ? item.pipeline.diagnostics.flatMap(diagnostic => diagnostic && typeof diagnostic === 'object' ? [{ severity: ['warning','error'].includes(String(diagnostic.severity)) ? diagnostic.severity as 'warning'|'error' : 'info' as const, code: String(diagnostic.code || 'IMPORT').slice(0, 80), message: String(diagnostic.message || '').slice(0, 1000) }] : []).slice(0, 256) : [],
+        reproducible: item.pipeline.reproducible !== false, deprecatedSettings: Array.isArray(item.pipeline.deprecatedSettings) ? item.pipeline.deprecatedSettings.map(String).slice(0, 128) : []
       } : inlinePipeline(typeof item.source === 'string' ? item.source : ''),
+      tags: Array.isArray(item.tags) ? [...new Set(item.tags.map(String).map(tag => tag.trim()).filter(Boolean))].slice(0, 64) : [], collectionIds: Array.isArray(item.collectionIds) ? [...new Set(item.collectionIds.map(String))].slice(0, 64) : [],
+      contentGroup: String(item.contentGroup || 'main').slice(0, 80), editorOnly: item.editorOnly === true, sourceControlStatus: ['clean','added','modified','conflict','untracked'].includes(String(item.sourceControlStatus)) ? item.sourceControlStatus : 'clean', thumbnailKey: String(item.thumbnailKey || '').slice(0, 128),
       unknownFields: Object.keys(unknownFields).length ? unknownFields : undefined
     })
   }
@@ -581,11 +674,12 @@ export async function reimportAsset(uuid: string, file: File): Promise<boolean> 
     return true
   } catch (error) {
     record.source = record.pipeline?.lastValidSource || previous
-    record.pipeline = {
-      importerVersion: record.pipeline?.importerVersion || '2.0.0', platform: record.pipeline?.platform || 'web',
+    record.pipeline = { ...inlinePipeline(record.source), ...record.pipeline,
+      importerVersion: record.pipeline?.importerVersion || '3.0.0', platform: record.pipeline?.platform || 'web',
       sourceHash: record.pipeline?.sourceHash || record.pipeline?.contentHash || '', artifactHash: record.pipeline?.artifactHash || record.pipeline?.cacheKey || '',
       contentHash: record.pipeline?.contentHash || '', cacheKey: record.pipeline?.cacheKey || '', status: 'failed',
-      lastValidSource: record.source, error: error instanceof Error ? error.message : String(error), dependencies: record.pipeline?.dependencies ?? [], reverseDependencies: record.pipeline?.reverseDependencies ?? [], cacheHit: record.pipeline?.cacheHit === true
+      lastValidSource: record.source, error: error instanceof Error ? error.message : String(error), dependencies: record.pipeline?.dependencies ?? [], reverseDependencies: record.pipeline?.reverseDependencies ?? [], cacheHit: record.pipeline?.cacheHit === true,
+      invalidationReason: 'Source reimport failed; previous verified artifact retained', diagnostics: [{ severity: 'error', code: 'IMPORT_FAILED', message: error instanceof Error ? error.message : String(error) }], reproducible: false
     }
     return false
   }
@@ -613,6 +707,20 @@ export function deleteAsset(uuid: string): boolean {
   return true
 }
 
+/** Restores a recoverable project-trash record without changing its stable GUID. */
+export function restoreAssetRecord(value: AssetRecord): boolean {
+  if (!value || assetState.records.some(record => record.uuid === value.uuid)) return false
+  const restored = JSON.parse(JSON.stringify(value)) as AssetRecord
+  assetState.records.push(restored)
+  assetState.records.sort((a, b) => a.path.localeCompare(b.path) || a.uuid.localeCompare(b.uuid))
+  const folder = restored.path.slice(0, restored.path.lastIndexOf('/')) || 'Assets'
+  if (!assetState.folders.includes(folder)) assetState.folders.push(folder)
+  assetState.selectedGuid = restored.uuid
+  assetState.generation++
+  queueTextureAtlasRebuild()
+  return true
+}
+
 export function toggleAssetFavorite(uuid: string): boolean {
   const index = assetState.favorites.indexOf(uuid)
   if (index >= 0) { assetState.favorites.splice(index, 1); return false }
@@ -623,7 +731,7 @@ export function toggleAssetFavorite(uuid: string): boolean {
 export function saveCurrentAssetFilter(name: string): AssetSavedFilter | null {
   const safe = name.trim().slice(0, 80)
   if (!safe) return null
-  const filter: AssetSavedFilter = { id: normalizeUuid(undefined), name: safe, query: assetState.search.slice(0, 200), folder: assetState.currentFolder, assetType: assetState.typeFilter }
+  const filter: AssetSavedFilter = { id: normalizeUuid(undefined), name: safe, query: assetState.search.slice(0, 200), folder: assetState.currentFolder, assetType: assetState.typeFilter, tags: assetState.tagFilter ? [assetState.tagFilter] : [], collectionId: assetState.selectedCollectionId }
   assetState.savedFilters.push(filter)
   return filter
 }
@@ -631,7 +739,7 @@ export function saveCurrentAssetFilter(name: string): AssetSavedFilter | null {
 export function applyAssetFilter(id: string): boolean {
   const filter = assetState.savedFilters.find(item => item.id === id)
   if (!filter) return false
-  assetState.search = filter.query; assetState.currentFolder = filter.folder; assetState.typeFilter = filter.assetType
+  assetState.search = filter.query; assetState.currentFolder = filter.folder; assetState.typeFilter = filter.assetType; assetState.tagFilter = filter.tags[0] ?? ''; assetState.selectedCollectionId = filter.collectionId
   return true
 }
 
@@ -639,6 +747,21 @@ export function deleteAssetFilter(id: string): boolean {
   const index = assetState.savedFilters.findIndex(item => item.id === id)
   if (index < 0) return false
   assetState.savedFilters.splice(index, 1); return true
+}
+
+export function createAssetCollection(name: string, color = '#6ea8fe'): AssetCollection | null {
+  const safe = name.trim().slice(0, 80); if (!safe) return null
+  const collection: AssetCollection = { id: normalizeUuid(undefined), name: safe, color: /^#[0-9a-f]{6}$/i.test(color) ? color : '#6ea8fe', assetUuids: [] }
+  assetState.collections.push(collection); assetState.collections.sort((a, b) => a.name.localeCompare(b.name)); return collection
+}
+
+export function toggleAssetInCollection(assetUuid: string, collectionId: string): boolean {
+  const asset = assetState.records.find(record => record.uuid === assetUuid), collection = assetState.collections.find(item => item.id === collectionId)
+  if (!asset || !collection) return false
+  const included = collection.assetUuids.includes(assetUuid)
+  collection.assetUuids = included ? collection.assetUuids.filter(uuid => uuid !== assetUuid) : [...collection.assetUuids, assetUuid].sort()
+  asset.collectionIds = included ? (asset.collectionIds ?? []).filter(id => id !== collectionId) : [...new Set([...(asset.collectionIds ?? []), collectionId])].sort()
+  return !included
 }
 
 export function saveImportPreset(name: string, assetType: AssetType | 'all', settings: AssetImportSettings): AssetImportPreset | null {
@@ -791,10 +914,12 @@ export function filteredAssets(): AssetRecord[] {
   const query = assetState.search.trim().toLowerCase()
   const folder = `${assetState.currentFolder}/`
   const favorites = new Set(assetState.favorites)
+  const collection = assetState.collections.find(item => item.id === assetState.selectedCollectionId), collectionAssets = collection ? new Set(collection.assetUuids) : null
   return indexedRecords.filter(record => {
     const inFolder = record.path.startsWith(folder) && !record.path.slice(folder.length).includes('/')
     const typeMatches = assetState.typeFilter === 'all' || record.assetType === assetState.typeFilter
-    const queryMatches = !query || record.name.toLowerCase().includes(query) || record.path.toLowerCase().includes(query)
-    return (query || inFolder) && typeMatches && queryMatches && (!assetState.favoritesOnly || favorites.has(record.uuid))
+    const queryMatches = !query || record.name.toLowerCase().includes(query) || record.path.toLowerCase().includes(query) || (record.tags ?? []).some(tag => tag.toLowerCase().includes(query))
+    const tagMatches = !assetState.tagFilter || (record.tags ?? []).includes(assetState.tagFilter)
+    return (query || collectionAssets || inFolder) && typeMatches && queryMatches && tagMatches && (!collectionAssets || collectionAssets.has(record.uuid)) && (!assetState.favoritesOnly || favorites.has(record.uuid))
   })
 }

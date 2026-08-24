@@ -40,7 +40,7 @@ export async function buildTextureAtlases(records: AssetRecord[], pageSize = 204
     try { return { record, image: await loadImage(record.source) } as LoadedImage }
     catch { return null }
   }))).filter((value): value is LoadedImage => value !== null)
-  loaded.sort((first, second) => second.image.naturalHeight - first.image.naturalHeight || second.image.naturalWidth - first.image.naturalWidth)
+  loaded.sort((first, second) => first.record.settings.atlasSettings.group.localeCompare(second.record.settings.atlasSettings.group) || second.image.naturalHeight - first.image.naturalHeight || second.image.naturalWidth - first.image.naturalWidth || first.record.uuid.localeCompare(second.record.uuid))
 
   const pages: TextureAtlasPage[] = []
   let page: TextureAtlasPage | null = null
@@ -58,7 +58,7 @@ export async function buildTextureAtlases(records: AssetRecord[], pageSize = 204
   }
 
   for (const item of loaded) {
-    const padding = 2
+    const padding = Math.min(32, Math.max(0, Math.trunc(item.record.settings.atlasSettings.padding)))
     const scale = Math.min(1, (pageSize - padding * 2) / Math.max(item.image.naturalWidth, item.image.naturalHeight))
     const width = Math.max(1, Math.round(item.image.naturalWidth * scale))
     const height = Math.max(1, Math.round(item.image.naturalHeight * scale))

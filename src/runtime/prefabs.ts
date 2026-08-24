@@ -1,4 +1,4 @@
-import { assetGuid, assetReference, createTextAsset, readTextAsset, resolveAsset, updateTextAsset } from '../assets/AssetDatabase'
+import { assetGuid, assetReference, createTextAsset, readTextAsset, resolveAsset, updateTextAssetTransactional } from '../assets/AssetDatabase'
 import { subtreeEntities } from '../editor/selection'
 import {
   captureEntityBundle,
@@ -12,27 +12,34 @@ import {
   type SceneEntityData
 } from '../store/physics'
 import type { Entity } from '../world/Entity'
-import { translateEntityTree, worldTransform } from '../world/hierarchy'
+import { setParent, translateEntityTree, worldTransform } from '../world/hierarchy'
 import { normalizeUuid } from '../world/identity'
 import { normalizeConnection, type Connection } from '../world/Connection'
 import type { Vec2 } from '../world/types'
+import { canonicalProjectText } from '../projects/projectData'
 
 export interface PrefabDocument {
-  prefabVersion: 1
+  prefabVersion: 2
   name: string
   bundle: EntityBundle
+  variantOf: string | null
+  sourceChecksum: string
+  createdAt: string
 }
 
 function clone<T>(value: T): T { return JSON.parse(JSON.stringify(value)) as T }
+function checksum(value: unknown): string { const source = canonicalProjectText(value); let hash = 0x811c9dc5; for (let index = 0; index < source.length; index++) hash = Math.imul(hash ^ source.charCodeAt(index), 0x01000193) >>> 0; return hash.toString(16).padStart(8, '0') }
+function deterministicPrefabText(document: PrefabDocument): string { const value = clone(document); value.sourceChecksum = checksum(value.bundle); return canonicalProjectText(value) }
 
 function prefabRecord(assetRef: string | null | undefined): { reference: string; document: PrefabDocument } | null {
   const asset = resolveAsset(assetRef)
   const source = readTextAsset(assetRef)
   if (!asset || asset.assetType !== 'prefab' || !source) return null
   try {
-    const document = JSON.parse(source) as Partial<PrefabDocument>
-    if (document.prefabVersion !== 1 || !document.bundle || !Array.isArray(document.bundle.entities) || !Array.isArray(document.bundle.rootUuids)) return null
-    return { reference: assetReference(asset.uuid), document: document as PrefabDocument }
+    const document = JSON.parse(source) as Partial<PrefabDocument> & { prefabVersion?: number }
+    if (![1, 2].includes(document.prefabVersion ?? 0) || !document.bundle || !Array.isArray(document.bundle.entities) || !Array.isArray(document.bundle.rootUuids)) return null
+    const normalized: PrefabDocument = { prefabVersion: 2, name: String(document.name ?? asset.name).slice(0, 80), bundle: document.bundle, variantOf: typeof document.variantOf === 'string' ? document.variantOf : null, sourceChecksum: typeof document.sourceChecksum === 'string' ? document.sourceChecksum : checksum(document.bundle), createdAt: typeof document.createdAt === 'string' ? document.createdAt : new Date(0).toISOString() }
+    return { reference: assetReference(asset.uuid), document: normalized }
   } catch {
     return null
   }
@@ -70,8 +77,9 @@ export function createPrefabFromEntities(entityIds: number[], requestedName?: st
   if (!bundle) return null
   const root = physicsState.world.entities.find(entity => entity.uuid === bundle.rootUuids[0])
   const name = (requestedName?.trim() || root?.name || 'Prefab').slice(0, 80)
-  const document: PrefabDocument = { prefabVersion: 1, name, bundle: prepareBundleForPrefab(bundle) }
-  const asset = createTextAsset(name, 'prefab', JSON.stringify(document, null, 2), 'Assets/Prefabs')
+  const prepared = prepareBundleForPrefab(bundle)
+  const document: PrefabDocument = { prefabVersion: 2, name, bundle: prepared, variantOf: null, sourceChecksum: checksum(prepared), createdAt: new Date().toISOString() }
+  const asset = createTextAsset(name, 'prefab', deterministicPrefabText(document), 'Assets/Prefabs')
   const reference = assetReference(asset.uuid)
   const instanceUuid = normalizeUuid(undefined)
   for (const entity of subtreeEntities(entityIds, physicsState.world.entities)) {
@@ -82,6 +90,8 @@ export function createPrefabFromEntities(entityIds: number[], requestedName?: st
     entity.prefabInstanceUuid = instanceUuid
     entity.prefabSourceUuid = entity.uuid
     entity.prefabOverrides = {}
+    entity.ownership = 'Prefab'
+    entity.ownerUuid = root?.uuid ?? null
   }
   pushHistory('Create prefab')
   return reference
@@ -101,7 +111,10 @@ export function instantiatePrefab(
     entity.prefabInstanceUuid = instanceUuid
     entity.prefabSourceUuid = sourceUuid
     entity.prefabOverrides = {}
+    entity.ownership = 'Prefab'
   }
+  const instanceRootUuid = instance.roots[0]?.uuid ?? null
+  for (const entity of instance.entities) entity.ownerUuid = instanceRootUuid
   if (position && instance.roots.length) {
     const origin = worldTransform(instance.roots[0], physicsState.world.entities).position
     const delta = { x: position.x - origin.x, y: position.y - origin.y }
@@ -300,8 +313,10 @@ export function applyPrefabFromInstance(entity: Entity): boolean {
   }
   bundle.rootUuids = bundle.rootUuids.map(uuid => sourceByCurrent.get(uuid) ?? uuid)
   for (const connection of bundle.connections) connection.anchorUuids = connection.anchorUuids.map(uuid => sourceByCurrent.get(uuid) ?? uuid)
-  const document: PrefabDocument = { prefabVersion: 1, name: prefab.document.name, bundle: prepareBundleForPrefab(bundle) }
-  if (!updateTextAsset(guid, JSON.stringify(document, null, 2))) return false
+  const prepared = prepareBundleForPrefab(bundle)
+  if (prefabBundleCreatesCycle(prefab.reference, prepared)) return false
+  const document: PrefabDocument = { ...prefab.document, prefabVersion: 2, name: prefab.document.name, bundle: prepared, sourceChecksum: checksum(prepared) }
+  if (!updateTextAssetTransactional(guid, deterministicPrefabText(document))) return false
   for (const candidate of sourceInstance) candidate.prefabOverrides = {}
   for (const entities of otherInstances.values()) replacePrefabInstance(entities, document, true)
   pushHistory('Apply prefab')
@@ -322,6 +337,10 @@ export function unpackPrefabInstance(entity: Entity): boolean {
       candidate.prefabInstanceUuid = nested.instanceUuid
       candidate.prefabSourceUuid = nested.sourceUuid
       candidate.prefabOverrides = clone(nested.overrides)
+      candidate.ownership = 'Prefab'
+    } else {
+      candidate.ownership = 'Scene'
+      candidate.ownerUuid = null
     }
   }
   pushHistory('Unpack prefab')
@@ -370,4 +389,78 @@ export function refreshPrefabAssetInstances(assetRef: string): number {
   let count = 0
   for (const values of instances.values()) count += replacePrefabInstance(values, prefab.document, true).length
   return count
+}
+
+function bundlePrefabReferences(bundle: EntityBundle): string[] {
+  const references = new Set<string>()
+  for (const entity of bundle.entities) {
+    if (typeof entity.prefabAsset === 'string') references.add(entity.prefabAsset)
+    for (const layer of entity.prefabLayers ?? []) if (typeof layer.asset === 'string') references.add(layer.asset)
+  }
+  return [...references].sort((a, b) => a.localeCompare(b))
+}
+
+function prefabDependsOn(reference: string, target: string, visited = new Set<string>()): boolean {
+  if (reference === target) return true
+  if (visited.has(reference) || visited.size > 256) return false
+  visited.add(reference)
+  const prefab = prefabRecord(reference)
+  return Boolean(prefab && bundlePrefabReferences(prefab.document.bundle).some(child => prefabDependsOn(child, target, visited)))
+}
+
+export function prefabBundleCreatesCycle(targetReference: string, bundle: EntityBundle): boolean {
+  return bundlePrefabReferences(bundle).some(reference => prefabDependsOn(reference, targetReference))
+}
+
+export interface PrefabConflict { code: 'missing-source' | 'circular-dependency' | 'orphan-source' | 'stale-source' | 'override'; severity: 'error' | 'warning' | 'info'; message: string; path?: string }
+export function prefabConflictReport(entity: Entity): PrefabConflict[] {
+  if (!entity.prefabAsset) return []
+  const prefab = prefabRecord(entity.prefabAsset)
+  if (!prefab) return [{ code: 'missing-source', severity: 'error', message: 'Prefab source is missing or invalid.' }]
+  const source = sourceRecord(prefab.document, entity.prefabSourceUuid)
+  const output: PrefabConflict[] = []
+  if (!source) output.push({ code: 'orphan-source', severity: 'error', message: 'Prefab source entity no longer exists.' })
+  if (prefabBundleCreatesCycle(prefab.reference, prefab.document.bundle)) output.push({ code: 'circular-dependency', severity: 'error', message: 'Prefab dependency graph is circular.' })
+  if (prefab.document.sourceChecksum !== checksum(prefab.document.bundle)) output.push({ code: 'stale-source', severity: 'warning', message: 'Prefab checksum does not match its authored bundle.' })
+  for (const [path] of Object.entries(capturePrefabOverrides(entity))) output.push({ code: 'override', severity: 'info', message: `Instance overrides ${path}.`, path })
+  return output.sort((left, right) => left.severity.localeCompare(right.severity) || (left.path ?? '').localeCompare(right.path ?? ''))
+}
+
+export function createPrefabVariantFromInstance(entity: Entity, requestedName?: string): string | null {
+  const base = prefabRecord(entity.prefabAsset)
+  const entities = prefabInstanceEntities(entity)
+  if (!base || !entities.length) return null
+  const bundle = captureEntityBundle(entities.map(candidate => candidate.id))
+  if (!bundle) return null
+  const prepared = prepareBundleForPrefab(bundle)
+  // A variant is expected to retain a direct layer/reference to its base.
+  // The new asset has no identity yet, so the existing graph cannot point
+  // back to it; treating the base edge as a cycle rejects every valid variant.
+  const name = (requestedName?.trim() || `${base.document.name} Variant`).slice(0, 80)
+  const document: PrefabDocument = { prefabVersion: 2, name, bundle: prepared, variantOf: base.reference, sourceChecksum: checksum(prepared), createdAt: new Date().toISOString() }
+  const asset = createTextAsset(name, 'prefab', deterministicPrefabText(document), 'Assets/Prefabs')
+  const reference = assetReference(asset.uuid), instanceUuid = normalizeUuid(undefined)
+  for (const candidate of entities) { candidate.prefabLayers.push({ asset: candidate.prefabAsset!, instanceUuid: candidate.prefabInstanceUuid!, sourceUuid: candidate.prefabSourceUuid!, overrides: clone(candidate.prefabOverrides) }); candidate.prefabAsset = reference; candidate.prefabInstanceUuid = instanceUuid; candidate.prefabSourceUuid = candidate.uuid; candidate.prefabOverrides = {}; candidate.ownership = 'Prefab' }
+  pushHistory('Create prefab variant', `prefab:${asset.uuid}`)
+  return reference
+}
+
+export function replaceEntitiesWithPrefab(entityIds: number[], assetRef: string): Entity[] {
+  const roots = physicsState.world.entities.filter(entity => entityIds.includes(entity.id))
+  if (!roots.length || !prefabRecord(assetRef)) return []
+  const selected = subtreeEntities(roots.map(entity => entity.id), physicsState.world.entities)
+  const center = roots.reduce((value, entity) => { const point = worldTransform(entity, physicsState.world.entities).position; value.x += point.x / roots.length; value.y += point.y / roots.length; return value }, { x: 0, y: 0 })
+  const selectedSet = new Set(selected.map(entity => entity.id)), selectedUuids = new Set(selected.map(entity => entity.uuid))
+  const externalChildren = physicsState.world.entities.filter(entity => entity.parentUuid && selectedUuids.has(entity.parentUuid) && !selectedSet.has(entity.id))
+  const sharedParent = roots.every(entity => entity.parentUuid === roots[0].parentUuid) ? roots[0].parentUuid : null
+  for (let index = physicsState.world.connections.length - 1; index >= 0; index--) if (physicsState.world.connections[index].anchors.some(anchor => selectedSet.has(anchor.entityId))) physicsState.world.connections.splice(index, 1)
+  for (let index = physicsState.world.entities.length - 1; index >= 0; index--) if (selectedSet.has(physicsState.world.entities[index].id)) physicsState.world.entities.splice(index, 1)
+  const replacements = instantiatePrefab(assetRef, center, true)
+  const replacementRoot = replacements.find(entity => !entity.parentUuid || !replacements.some(candidate => candidate.uuid === entity.parentUuid)) ?? replacements[0]
+  if (replacementRoot) {
+    if (sharedParent && physicsState.world.entities.some(entity => entity.uuid === sharedParent)) setParent(replacementRoot, sharedParent, physicsState.world.entities, true)
+    for (const child of externalChildren) setParent(child, replacementRoot.uuid, physicsState.world.entities, true)
+    pushHistory('Replace selection with prefab')
+  }
+  return replacements
 }

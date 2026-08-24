@@ -1,4 +1,36 @@
-# Nova_A 4.0.0 Complete Manual
+# Nova_A 4.4.0 Complete Manual
+
+## Nova_A 4.4 production assets, sprites, TileMap, paths, and fonts
+
+Open **Assets** in the bottom dock. Import, New Script, Create Scene Asset, and New Folder are daily actions; **•••** contains Export Folder and validated batch reimport. Use grid/list view, search, type, tag, favorites, saved filters, and collections. Asset windows load incrementally when a project contains thousands of files.
+
+Select an asset and use the five Asset Importer tabs. **Source** owns path, source-control state, tags, collections, content group, and editor-only status. **Import** owns format-specific settings and versioned presets. **Dependencies** shows inbound/outbound references, build closure, cycles, duplicate sources, and missing references. **Provenance** shows full copyable hashes, importer/preset/version/settings/cache decisions, Compare, diagnostics, and Revert. **Platform Overrides** explicitly controls target compression, maximum size, and format. Reimport rejects invalid bytes and retains the last verified artifact; it never silently substitutes content.
+
+Image Import controls filtering, mipmaps, color space, transparency, compression, PPU, pivot, trim, manual/grid/automatic slicing, animation extraction, nine-slice, polygon/collision, atlas group/rotation/trim, SVG rasterization, and target overrides. TileMap adds searchable TileSet palettes, complete paint/selection tools, per-layer collision/navigation/occlusion, world-coordinate readout, streaming boundaries, baking, bounded history, diagnostics, and copyable deterministic storage. Camera composition retains bounds, smoothing, drag margins, safe frames, previews, priorities, stacks, viewports, textures, and culling. Parallax adds repeat/mirror/depth. Paths add points, tangents, closed smoothing, `.nova-path` assets, and runtime followers.
+
+Font Import controls scalable/bitmap output, fallbacks, shaping, OpenType, hinting, oversampling, outline, SDF/MSDF, distance range, declared languages, editor/game ownership, and glyph reports for CJK, RTL, combining marks, and emoji. Missing coverage always has an action. See `docs/ASSET_PIPELINE_4_4.md`, `docs/SPRITE_TILEMAP_FONT_4_4.md`, and `docs/KNOWN_ISSUES_4_4.md`.
+
+## Nova_A 4.3 scene, hierarchy, Inspector, component, and prefab authoring
+
+Use the loaded-scene tabs above Design to inspect dirty, external-change, validation, and prefab state. Back/Forward revisits scene history. **+** creates Empty 2D, Gameplay 2D, UI Overlay, or Camera Stage templates. The gear edits runtime loading policy, inheritance, tags, named layers, visibility/lock, and dependencies. Inheritance and hierarchy cycles are rejected.
+
+The Hierarchy virtualizes 10,000-object scenes. Search matches names, IDs, tags, and component types; type and dedicated tag filters, saved searches, pins, selection Back/Forward, breadcrumbs, isolate, visibility, lock, enabled state, range selection, reparenting, and sibling reorder remain available. The Inspector supports multi-edit mixed values, tags/groups/layers, ownership, owner, editor-only and persistence policy, safe numeric expressions, property pins/modified-only, presets, component enable/reset/copy/paste/reorder/remove, and inline dependency/conflict validation.
+
+Prefab workflows provide Create, Instantiate, Apply, Revert, per-property Reset, Compare, Unpack, Variant, source navigation, conflict status, nesting, circular-dependency prevention, and safe selection replacement. Viewport Arrange, measure, camera frame, rulers, guides, and seven documented snap targets share exact world units. See [scene/prefab schema](../docs/SCENE_PREFAB_SCHEMA_4_3.md), [component authoring](../docs/COMPONENT_AUTHORING_4_3.md), and [Hierarchy/Inspector](../docs/HIERARCHY_INSPECTOR_4_3.md).
+
+## Nova_A 4.2 project-integrity workflow
+
+All authored changes enter the central undo model and dirty scope. **Edit → Undo History** shows operation, affected resource, scope, timestamp, applied/redo state, and memory use; groups and nested operations remain one named action. Save validates and deterministically serializes before a journaled transaction stages, verifies, and commits project, scene, asset/script/animation/UI metadata, settings, build data, and `Packages.lock`. Failed writes preserve the last manual save.
+
+Project Manager guides **Open**, **Add existing**, **Migrate older project**, and traversal-safe bounded **Import archive**. Older schemas 5–29 receive dry-run compatibility and impact reports, a backup, Task Center log, deterministic rerun, complete validation, and rollback. A lock conflict offers a clear read-only route. **Manage → Project Health** covers validation, deterministic re-save, read-only repair preview, missing-reference mapping, stale-cache rebuild, transaction journals, recovery checkpoints, migration status, rollback, and recoverable project trash.
+
+After abnormal exit, Recovery Browser previews valid checkpoints against the manual baseline and requires Restore, Discard, or Open as copy; it never silently overwrites a manual file. External file/branch changes likewise require Compare, Reload/Keep disk, or Keep editor. See [serialization](../docs/SERIALIZATION_SPECIFICATION_4_2.md), [transactions](../docs/PROJECT_TRANSACTIONS_4_2.md), [recovery](../docs/RECOVERY_4_2.md), and [migration/rollback](../docs/MIGRATION_AND_ROLLBACK_4_2.md).
+
+## Nova_A 4.1 editor modernization
+
+Nova_A now has six top-level workspaces: **Design**, **Script**, **Animation**, **UI**, **Debug**, and **Manage**. The left rail is contextual. Manage contains Settings, Packages, Project Health, global Rendering policy, and Build; the bottom dock keeps contextual Assets, Console, Animation, Audio, and Profiler tools. Use Ctrl/Cmd+Shift+P for every stable command, Ctrl/Cmd+P for assets, Ctrl/Cmd+Shift+F for global search, and Ctrl/Cmd+K for context search. Workspace Manager provides six role profiles, named layouts, drag/split/floating docks, panel pinning, auto-hide, tab rearrangement, import/export, reset, and safe recovery.
+
+The editor bundles Nunito Sans Variable, Noto Sans SC Variable, and JetBrains Mono. Density never shrinks text below the readable role floor. Project Manager requires one visibly selected template, validates project name/path, exposes details, and stores guidance as a dismissible tutorial asset. Debug owns the virtualized Physics Monitor; Manage owns the summary/table/detail Project Health view and four-state build readiness. Task Center unifies long-running progress, cancellation, retry, details, logs, and resource links. See [navigation](../docs/NAVIGATION_4_1.md), [design tokens](../docs/UI_DESIGN_TOKENS_4_1.md), and [keyboard accessibility](../docs/KEYBOARD_ACCESSIBILITY_4_1.md).
 
 ## Nova_A 4.0 production baseline
 

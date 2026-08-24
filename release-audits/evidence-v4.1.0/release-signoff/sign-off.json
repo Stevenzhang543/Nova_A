@@ -1,0 +1,12 @@
+{
+  "format": "nova-v4.1-release-signoff",
+  "version": 1,
+  "generatedAt": "2026-08-20T08:57:17.225Z",
+  "engineering": "passed-local-automation",
+  "documentation": "passed-local",
+  "qa": "pending-independent-visual-keyboard-dpi-soak",
+  "releaseEngineering": "pending-signing-clean-machine-reproducibility",
+  "productOwner": "pending-publication-decision",
+  "stablePublicationApproved": false,
+  "status": "pending-external-sign-off"
+}

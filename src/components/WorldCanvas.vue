@@ -874,6 +874,14 @@ function cameraAspectRatio(): number | null {
 
 function renderAuthoringOverlays(context: CanvasRenderingContext2D, width: number, height: number) {
   const unit = 1 / camera.scale
+  if (authoringState.guidesVisible) {
+    const left = -camera.offset.x / camera.scale, right = left + width / camera.scale
+    const top = camera.offset.y / camera.scale, bottom = top - height / camera.scale
+    context.save(); context.strokeStyle = 'rgba(70, 171, 255, .9)'; context.lineWidth = unit; context.setLineDash([5 * unit, 3 * unit])
+    for (const x of authoringState.guides.vertical) { context.beginPath(); context.moveTo(x, bottom); context.lineTo(x, top); context.stroke() }
+    for (const y of authoringState.guides.horizontal) { context.beginPath(); context.moveTo(left, y); context.lineTo(right, y); context.stroke() }
+    context.restore()
+  }
   const aspect = cameraAspectRatio()
   if (aspect) {
     const availableWidth = Math.max(80, width - 56), availableHeight = Math.max(80, height - 56)
@@ -895,8 +903,20 @@ function renderAuthoringOverlays(context: CanvasRenderingContext2D, width: numbe
     context.save(); context.strokeStyle = '#66d4b0'; context.fillStyle = '#66d4b0'; context.lineWidth = 2 * unit
     context.beginPath(); context.moveTo(measurement.start.x, measurement.start.y); context.lineTo(measurement.end.x, measurement.end.y); context.stroke()
     for (const point of [measurement.start, measurement.end]) { context.beginPath(); context.arc(point.x, point.y, 4 * unit, 0, Math.PI * 2); context.fill() }
-    context.translate(middle.x, middle.y); context.scale(unit, -unit); context.font = '600 12px Segoe UI, sans-serif'; context.textAlign = 'center'; context.fillText(`${distance.toFixed(3)} m  Δ ${dx.toFixed(3)}, ${dy.toFixed(3)}`, 0, -8); context.restore()
+    context.translate(middle.x, middle.y); context.scale(unit, -unit); context.font = '600 12px "JetBrains Mono Variable", "Noto Sans SC Variable", monospace'; context.textAlign = 'center'; context.fillText(`${distance.toFixed(3)} m  Δ ${dx.toFixed(3)}, ${dy.toFixed(3)}`, 0, -8); context.restore()
   }
+}
+
+function renderScreenRulers(context: CanvasRenderingContext2D, width: number, height: number): void {
+  if (!authoringState.rulersVisible || editorState.currentPage === 'game') return
+  const size = 18, step = Math.max(.000001, prefs.gridSize), worldLeft = -camera.offset.x / camera.scale, worldTop = camera.offset.y / camera.scale
+  let tick = step
+  while (tick * camera.scale < 42) tick *= 10
+  context.save(); context.fillStyle = 'rgba(21, 27, 37, .9)'; context.fillRect(0, 0, width, size); context.fillRect(0, 0, size, height)
+  context.strokeStyle = 'rgba(132, 151, 178, .5)'; context.fillStyle = 'rgba(214, 225, 240, .78)'; context.font = '9px "JetBrains Mono Variable", monospace'; context.lineWidth = 1
+  for (let value = Math.floor(worldLeft / tick) * tick; value <= worldLeft + width / camera.scale; value += tick) { const x = camera.offset.x + value * camera.scale; context.beginPath(); context.moveTo(x, size - 5); context.lineTo(x, size); context.stroke(); context.fillText(Number(value.toFixed(4)).toString(), x + 2, 9) }
+  for (let value = Math.ceil((worldTop - height / camera.scale) / tick) * tick; value <= worldTop; value += tick) { const y = camera.offset.y - value * camera.scale; context.beginPath(); context.moveTo(size - 5, y); context.lineTo(size, y); context.stroke(); context.save(); context.translate(8, y - 2); context.rotate(-Math.PI / 2); context.fillText(Number(value.toFixed(4)).toString(), 0, 0); context.restore() }
+  context.restore()
 }
 
 function rotateLocal(point: Vec2, angle: number): Vec2 {
@@ -1170,6 +1190,7 @@ function render() {
   passStarted = recordRenderPass('EditorOverlay', passStarted, !isGameView, 1)
   const uiEntities = isGameView ? world.entities : world.entities.filter(entity => entity.layer === editorState.activeLayer)
   gameUiRuntime.render(ctx, width, height, uiEntities, { editor: !isGameView, selectedEntityIds: selectedIds })
+  renderScreenRulers(ctx, width, height)
   const nodes = isGameView ? gameUiRuntime.accessibilityNodes() : []
   const nextAccessibilitySignature = nodes.map(node => `${node.uuid}:${node.rect.x.toFixed(1)}:${node.rect.y.toFixed(1)}:${node.rect.width.toFixed(1)}:${node.rect.height.toFixed(1)}:${node.label}:${node.focused}:${node.disabled}`).join('|')
   if (nextAccessibilitySignature !== accessibilitySignature) { accessibilitySignature = nextAccessibilitySignature; accessibilityNodes.value = nodes }
@@ -1319,7 +1340,7 @@ function drawTilemapOverlay(context: CanvasRenderingContext2D, view: { minX: num
 canvas { position: absolute; inset: 0; display: block; width: 100%; height: 100%; touch-action: none; }
 .render-canvas { z-index: 0; pointer-events: none; image-rendering: auto; }
 .overlay-canvas { z-index: 1; image-rendering: auto; }
-.native-ui-input { position: absolute; z-index: 8; min-width: 0; min-height: 0; padding: 0 12px; border: 2px solid #4f96ff; border-radius: 8px; outline: 0; color: #f5f7fb; background: #151b24; box-shadow: 0 0 0 3px rgba(79,150,255,.18); font: 500 16px/1.2 Nunito Sans, Segoe UI, sans-serif; }
+.native-ui-input { position: absolute; z-index: 8; min-width: 0; min-height: 0; padding: 0 12px; border: 2px solid #4f96ff; border-radius: 8px; outline: 0; color: #f5f7fb; background: #151b24; box-shadow: 0 0 0 3px rgba(79,150,255,.18); font: 500 16px/1.2 var(--font-ui); }
 .game-ui-a11y { position: absolute; inset: 0; z-index: 7; pointer-events: none; }
 .game-ui-a11y-node { position: absolute; overflow: hidden; opacity: .001; pointer-events: none; }
 </style>

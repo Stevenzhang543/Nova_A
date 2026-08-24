@@ -1,5 +1,8 @@
 import { NOVA_ENGINE_VERSION, NOVA_MINIMUM_SCHEMA_VERSION, NOVA_PROJECT_SCHEMA_VERSION } from '../projects/projectFormat'
 import { compareVersions, normalizePackageManifest, packageCompatibility, parseVersion, reviewPackageSecurity } from './packages'
+import { reactive } from 'vue'
+import { canonicalProjectText, semanticProjectDiff, validateProjectDocument, type SemanticProjectChange } from '../projects/projectData'
+import { projectChecksum } from './projectTransactions'
 
 export interface UpgradePreview {
   sourceSchema: number
@@ -19,6 +22,24 @@ export interface UpgradePreview {
   migrationSteps: Array<{ fromSchema: number; toSchema: number; name: string }>
   preflight: Array<{ id: string; status: 'passed' | 'warning' | 'blocked' | 'pending'; label: string; detail: string }>
 }
+
+export interface MigrationDryRun {
+  format: 'nova-migration-dry-run'
+  version: 1
+  id: string
+  generatedAt: string
+  preview: UpgradePreview
+  sourceChecksum: string
+  outputChecksum: string
+  estimatedChangedBytes: number
+  semanticChanges: SemanticProjectChange[]
+  log: Array<{ step: number; status: 'passed' | 'warning' | 'blocked'; message: string }>
+  deterministic: boolean
+  valid: boolean
+  output: string
+}
+
+export const migrationState = reactive({ active: false, lastDryRun: null as MigrationDryRun | null, lastReport: null as MigrationDryRun | null, logs: [] as MigrationDryRun['log'], rollbackAvailable: false })
 
 const ROLLBACK_KEY = 'nova_a.project_upgrade_rollback.v1'
 const MAX_ROLLBACK_BYTES = 4_000_000
@@ -94,6 +115,35 @@ export function analyzeProjectUpgrade(source: string): UpgradePreview {
   }
 }
 
+/** Runs the complete migration chain without mutating the editor or source file. */
+export function dryRunProjectMigration(source: string, migrate: (source: string) => string): MigrationDryRun {
+  const preview = analyzeProjectUpgrade(source), id = crypto.randomUUID?.() ?? `migration-${Date.now()}`
+  const log: MigrationDryRun['log'] = preview.preflight.map((item, index) => ({ step: index + 1, status: item.status === 'blocked' ? 'blocked' : item.status === 'warning' ? 'warning' : 'passed', message: `${item.label}: ${item.detail}` }))
+  if (!preview.supported) {
+    const report: MigrationDryRun = { format: 'nova-migration-dry-run', version: 1, id, generatedAt: new Date().toISOString(), preview, sourceChecksum: projectChecksum(source), outputChecksum: '', estimatedChangedBytes: 0, semanticChanges: [], log, deterministic: false, valid: false, output: '' }
+    migrationState.lastDryRun = report; migrationState.logs.splice(0, migrationState.logs.length, ...log); return report
+  }
+  let output = '', second = '', valid = false, semanticChanges: SemanticProjectChange[] = []
+  try {
+    output = canonicalProjectText(migrate(source)); second = canonicalProjectText(migrate(source))
+    const validation = validateProjectDocument(output); valid = validation.valid
+    semanticChanges = semanticProjectDiff(source, output)
+    log.push({ step: log.length + 1, status: valid ? 'passed' : 'blocked', message: valid ? `Schema ${preview.sourceSchema} migrated and passed complete validation.` : `Migration output contains ${validation.issues.filter(item => item.severity === 'error').length} blocking issue(s).` })
+    log.push({ step: log.length + 1, status: output === second ? 'passed' : 'blocked', message: output === second ? 'A deterministic re-run produced identical bytes.' : 'The migration produced different bytes on a deterministic re-run.' })
+  } catch (error) { log.push({ step: log.length + 1, status: 'blocked', message: error instanceof Error ? error.message : String(error) }) }
+  const report: MigrationDryRun = {
+    format: 'nova-migration-dry-run', version: 1, id, generatedAt: new Date().toISOString(), preview,
+    sourceChecksum: projectChecksum(source), outputChecksum: output ? projectChecksum(output) : '', estimatedChangedBytes: Math.abs(new TextEncoder().encode(output).byteLength - new TextEncoder().encode(source).byteLength),
+    semanticChanges, log, deterministic: Boolean(output && output === second), valid: valid && output === second, output
+  }
+  migrationState.lastDryRun = report; migrationState.logs.splice(0, migrationState.logs.length, ...log)
+  return report
+}
+
+export function recordMigrationApplied(report: MigrationDryRun): void {
+  migrationState.lastReport = { ...report, output: '' }; migrationState.logs.splice(0, migrationState.logs.length, ...report.log); migrationState.rollbackAvailable = readUpgradeRollback() !== null
+}
+
 export function downloadProjectBackup(source: string, fileName = 'project'): void {
   const safeName = fileName.replace(/[^a-z0-9._-]+/gi, '-').replace(/^-+|-+$/g, '') || 'project'
   const url = URL.createObjectURL(new Blob([source], { type: 'application/json' }))
@@ -103,7 +153,7 @@ export function downloadProjectBackup(source: string, fileName = 'project'): voi
 
 export function storeUpgradeRollback(source: string, fileName: string): boolean {
   if (typeof localStorage === 'undefined' || source.length > MAX_ROLLBACK_BYTES) return false
-  try { localStorage.setItem(ROLLBACK_KEY, JSON.stringify({ savedAt: new Date().toISOString(), fileName: fileName.slice(0, 180), source })); return true } catch { return false }
+  try { localStorage.setItem(ROLLBACK_KEY, JSON.stringify({ savedAt: new Date().toISOString(), fileName: fileName.slice(0, 180), checksum: projectChecksum(source), source })); migrationState.rollbackAvailable = true; return true } catch { return false }
 }
 
 export function readUpgradeRollback(): { savedAt: string; fileName: string; source: string } | null {

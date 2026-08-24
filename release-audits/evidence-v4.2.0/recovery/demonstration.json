@@ -1,0 +1,15 @@
+{
+  "format": "nova-v4.2-recovery-demonstration",
+  "version": 1,
+  "generatedAt": "2026-08-23T04:36:26.502Z",
+  "steps": [
+    "record manual checksum",
+    "verify checkpoint checksum/schema",
+    "preview semantic diff",
+    "surface conflict",
+    "restore as unsaved or open with new project identity"
+  ],
+  "manualSaveOverwritten": false,
+  "automaticConflictChoice": false,
+  "status": "passed"
+}

@@ -4,15 +4,35 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE.md)
 [![Platforms](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey)](https://v2.tauri.app/start/prerequisites/)
-[![Release](https://img.shields.io/badge/release-4.0.0-63c6ff)]()
+[![Release](https://img.shields.io/badge/release-4.4.0-63c6ff)]()
 
 Nova_A 是一款开源 2D 游戏引擎与桌面编辑器，使用 Rust、WebAssembly、Vue 3 与 Tauri 构建。
 
-版本 **4.0.0** 是 Nova_A 的生产稳定二维基线：Project Format 2 模式 29、Runtime API 1、Plugin API 2、Package Manifest 1 与 Build CLI 1 已锁定，并在 4.0.x 补丁中保持兼容。完整的编辑器、物理、渲染、动画、音频、脚本、UI、世界数据、构建、软件包与协作功能均保留。
+版本 **4.4.0** 在保留 Project Format 2 模式 29、Runtime API 1、Plugin API 2、Package Manifest 1 与 Build CLI 1 稳定契约的同时，交付日常 2D 内容生产管线：确定性导入器 3.0 来源、依赖／内容闭包、大型资源浏览、生产级精灵／图集／图块地图、摄像机／视差／路径构图、多语言运行时字体，以及更安静的 iOS 风格界面。没有删除原有功能或动画。
 
 **手册：** [中英德三语交互网页](./manual/index.html) · [中文 Markdown](./manual/MANUAL.zh-CN.md) · [English](./manual/MANUAL.en.md) · [Deutsch](./manual/MANUAL.de.md)
 
-## v4.0.0 更新内容
+## v4.4.0 更新内容
+
+- **确定性资源数据库：**导入器／版本／预设／设置／哈希来源、依赖循环与修复、重复源、构建闭包、内容组、标签、收藏、集合、保存搜索、网格／列表、20,000 资源增量浏览、源代码状态、外部冲突、事务文件夹移动、比较、还原与批量重新导入。
+- **生产级精灵与图集：**过滤、Mipmap、色彩／透明／压缩、PPU、轴心、裁剪、网格／自动切片、九宫格、多边形／碰撞、动画提取、SVG、确定性图集报告与平台覆盖。
+- **图块地图与构图：**可搜索 TileSet、完整绘制／选择工具、逐层物理／导航／遮挡、流式边界、确定性存储／历史、多摄像机、视差重复／镜像／深度，以及可复用切线路径与跟随对象。
+- **运行时字体：**塑形、OpenType、微调、过采样、位图／SDF／MSDF、回退链、平台设置、编辑器／游戏所有权，以及中日韩／RTL／组合字符／Emoji 字形报告。
+- **界面改进：**内置圆润 Nunito／Noto 字体、统一控件字号、更柔和的材质与圆角、有目的的变换／透明动画、清晰焦点和完整减少动态支持。
+
+参阅[资源管线契约](./docs/ASSET_PIPELINE_4_4.md)、[精灵／图块地图／字体指南](./docs/SPRITE_TILEMAP_FONT_4_4.md)和[已知问题](./docs/KNOWN_ISSUES_4_4.md)。
+
+### 保留的 v4.2 数据完整性基础
+
+- **原子项目事务：**保存前完整校验和规范化，为场景、资源、脚本、动画、UI、设置、锁文件与构建数据记录日志、临时写入和校验和；任何中断都不会破坏上次手动存档。
+- **确定性数据：**固定字段顺序、UTF-8/LF、有限最短往返数值、小写 UUID 引用、创作／生成数据分离、完整校验、确定性重存与按身份语义差异。
+- **统一撤销与恢复：**命名／分组／嵌套历史记录资源、时间和内存预算；恢复点与手动存档分离，恢复浏览器明确预览、比较、恢复、丢弃或作为新 UUID 副本打开。
+- **安全迁移与修复：**模式 5–29 使用预演、兼容／影响报告、任务日志、备份、完整验证、确定性重跑和回滚；项目健康统一只读修复、缺失引用映射、缓存重建、事务／恢复／迁移和可恢复项目回收站。
+- **外部与团队安全：**引导式打开／添加／迁移／归档导入、项目锁与只读打开、自产更改抑制、分支／大量变更分类，以及比较／重载／保留编辑器／保留磁盘选择。
+
+参阅[序列化规范](./docs/SERIALIZATION_SPECIFICATION_4_2.md)、[模式兼容矩阵](./docs/SCHEMA_COMPATIBILITY_MATRIX_4_2.md)、[项目事务](./docs/PROJECT_TRANSACTIONS_4_2.md)、[撤销覆盖](./docs/UNDO_COVERAGE_4_2.md)、[恢复指南](./docs/RECOVERY_4_2.md)与[迁移／回滚](./docs/MIGRATION_AND_ROLLBACK_4_2.md)。
+
+### 保留的 v4.0 生产稳定基线
 
 - **升级助手：**所有外部项目打开前都会显示格式／引擎／内容／软件包预检。受支持的 3.x 升级必须完整备份并保留回滚数据，在内存中迁移、完整验证和规范化；失败时不会替换当前会话。模式 29 保持冻结。
 - **稳定支持契约：**Studio Status 提供 Stable／Beta／Development 渠道、离线已知问题、补丁政策、存档引擎指南、发布健康状态，以及需要隐私审查和明确选择加入的本地崩溃报告；不会自动上传。
@@ -286,10 +306,10 @@ Tauri 打包前会自动执行 `pnpm build`。不同系统的结果通常位于 
 原生构建成功后，使用以下命令整理完整的版本发布文件：
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\package-release.ps1 -Version 4.0.0
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\package-release.ps1 -Version 4.2.0
 ```
 
-该命令会在 `releases/v4.0.0/` 生成规定的十一项顶层产物：便携版 EXE、MSI、NSIS 安装程序、Web ZIP、源码 ZIP、参考项目 ZIP、发布证据 ZIP、发布说明、完整编辑清单、许可证和 `SHA256SUMS.txt`。可复现性、平台、软件包、源码、迁移、API 冻结、SBOM、测试、发布健康、签字记录与截图证据均包含在发布证据 ZIP 中。
+该命令会在 `releases/v4.2.0/` 生成规定的十一项顶层产物：便携版 EXE、MSI、NSIS 安装程序、Web ZIP、源码 ZIP、参考项目 ZIP、发布证据 ZIP、发布说明、完整编辑清单、许可证和 `SHA256SUMS.txt`。发布证据 ZIP 保留环境、工具、源码、测试、覆盖率、视觉基线／差异、日志、截图、已知问题及签字门槛的机器可读层级。
 
 ### 无界面导出
 
@@ -323,7 +343,7 @@ Windows 与 Linux 可勾选“将游戏数据打包进可执行文件”，生�
 
 ## 项目兼容性
 
-- 新存档使用 **Nova_A Project Format 2**、Schema 29 与引擎版本 `4.0.0`。
+- 新存档使用 **Nova_A Project Format 2**、Schema 29 与引擎版本 `4.2.0`。
 - 持久化场景、对象、组件和连接使用 UUID；运行时句柄绝不会写入磁盘。
 - 格式迁移与验证集中在 `nova_format`，不会散落在各个编辑器组件中。
 - v1.9 格式 13、v1.8 格式 12、v1.7 格式 11、v1.6 格式 10、v1.5 格式 9、v1.4 格式 8、v1.3 格式 7、v1.2 格式 6、v1.1.2 格式 5、更早的对象根节点和旧顶层实体数组仍能加载；只有用户再次保存时才会写成 Format 2。

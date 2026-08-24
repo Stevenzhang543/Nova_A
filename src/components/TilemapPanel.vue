@@ -33,6 +33,7 @@
           <select v-model="paletteRef" @change="applyPalette"><option value="">{{ t('allTiles') }}</option><option v-for="asset in palettes" :key="asset.uuid" :value="assetReference(asset.uuid)">{{ asset.name }}</option></select>
           <select v-model="brushRef" @change="applyBrush"><option value="">{{ t('defaultBrush') }}</option><option v-for="asset in brushes" :key="asset.uuid" :value="assetReference(asset.uuid)">{{ asset.name }}</option></select>
           <select v-model="terrainRef" @change="applyTerrain"><option value="">{{ t('noTerrainRules') }}</option><option v-for="asset in terrains" :key="asset.uuid" :value="assetReference(asset.uuid)">{{ asset.name }}</option></select>
+          <input v-model="tileSearch" type="search" :placeholder="t('searchTiles')">
         </div>
         <div class="palette-grid" :style="{ gridTemplateColumns: `repeat(${Math.min(tileSet.columns, 12)}, 30px)` }">
           <button v-for="tile in visibleTiles" :key="tile.index" :class="{ selected: tilemapEditorState.tileIndex === tile.index }" :title="tile.name" @click="tilemapEditorState.tileIndex = tile.index">
@@ -60,9 +61,10 @@
         <label class="stacked"><span>{{ t('occlusionPolygon') }}</span><textarea :value="occlusionPolygonText" rows="3" placeholder="0,0 1,0 1,1 0,1" @change="updateTypedPolygon('occlusionPolygon', $event)"></textarea></label>
         <p class="terrain-preview"><b>{{ t('terrainPreview') }}</b><span>{{ terrainPreview }}</span></p>
         <p>{{ t('tilePaintHint') }}</p>
-        <p v-if="tilemapEditorState.selection">{{ t('tileSelection') }}: {{ tilemapEditorState.selection.start.x }},{{ tilemapEditorState.selection.start.y }} → {{ tilemapEditorState.selection.end.x }},{{ tilemapEditorState.selection.end.y }}</p>
+        <p v-if="tilemapEditorState.selection">{{ t('tileSelection') }}: {{ tilemapEditorState.selection.start.x }},{{ tilemapEditorState.selection.start.y }} → {{ tilemapEditorState.selection.end.x }},{{ tilemapEditorState.selection.end.y }}<template v-if="selectionWorld"> · {{ t('worldCoordinates') }} {{ selectionWorld.x.toFixed(2) }}, {{ selectionWorld.y.toFixed(2) }}</template></p>
         <section class="layers"><strong>{{ t('tileLayers') }}</strong><button v-for="(layer, index) in tileMap.layers" :key="layer.id" :class="{ active: index === tileMap.activeLayer }" @click="activateLayer(index)"><input v-model="layer.visible" type="checkbox" @click.stop><input v-model="layer.name" @change="changedLayer"><span>{{ layer.locked ? '🔒' : '' }}</span></button><div><button @click="addLayer">+</button><button @click="duplicateLayer">⧉</button><button :disabled="tileMap.layers.length <= 1" @click="removeLayer">−</button></div><template v-if="activeLayer"><label><span>{{ t('locked') }}</span><input v-model="activeLayer.locked" type="checkbox"></label><label><span>{{ t('blendMode') }}</span><select v-model="activeLayer.blendMode" @change="changedLayer"><option>Alpha</option><option>Additive</option><option>Multiply</option><option>Screen</option></select></label><label><span>{{ t('parallax') }}</span><div><input v-model.number="activeLayer.parallax.x" type="number" step="0.05" @change="changedLayer"><input v-model.number="activeLayer.parallax.y" type="number" step="0.05" @change="changedLayer"></div></label><label><span>{{ t('zOrder') }}</span><input v-model.number="activeLayer.zOrder" type="number" @change="changedLayer"></label><label><span>{{ t('tileCollision') }}</span><input v-model="activeLayer.collisionEnabled" type="checkbox"></label><label><span>{{ t('navigation') }}</span><input v-model="activeLayer.navigationEnabled" type="checkbox"></label><label><span>{{ t('occluders') }}</span><input v-model="activeLayer.occlusionEnabled" type="checkbox"></label></template></section>
-        <section class="baking"><strong>{{ t('tileBaking') }}</strong><label><span>{{ t('tileCollision') }}</span><input v-model="tileMap.bakeCollision" type="checkbox"></label><label><span>{{ t('navigation') }}</span><input v-model="tileMap.bakeNavigation" type="checkbox"></label><label><span>{{ t('occluders') }}</span><input v-model="tileMap.bakeOccluders" type="checkbox"></label><label><span>{{ t('streamingEnabled') }}</span><input v-model="tileMap.streamingEnabled" type="checkbox"></label><button @click="bake">{{ t('bakeTileMap') }}</button><p v-if="bakeResult">{{ bakeResult }}</p></section>
+        <section class="baking"><strong>{{ t('tileBaking') }}</strong><label><span>{{ t('tileCollision') }}</span><input v-model="tileMap.bakeCollision" type="checkbox"></label><label><span>{{ t('navigation') }}</span><input v-model="tileMap.bakeNavigation" type="checkbox"></label><label><span>{{ t('occluders') }}</span><input v-model="tileMap.bakeOccluders" type="checkbox"></label><label><span>{{ t('streamingEnabled') }}</span><input v-model="tileMap.streamingEnabled" type="checkbox"></label><p>{{ t('streamingBoundaries') }}: {{ streamingBoundaryCount }}</p><button @click="bake">{{ t('bakeTileMap') }}</button><button @click="copyDeterministicStorage">{{ t('copyDeterministicStorage') }}</button><p v-if="bakeResult">{{ bakeResult }}</p></section>
+        <section class="tile-history"><strong>{{ t('changeHistory') }}</strong><p v-if="!tilemapEditorState.history.length">{{ t('noChangesYet') }}</p><ol v-else><li v-for="change in tilemapEditorState.history.slice(-8).reverse()" :key="change.id"><b>{{ t(`tileTool_${change.tool}`) }}</b><span>{{ change.start.x }},{{ change.start.y }} → {{ change.end.x }},{{ change.end.y }}</span></li></ol></section>
         <section class="diagnostics"><strong>{{ t('diagnostics') }}</strong><button @click="runDiagnostics">{{ t('validate') }}</button><article v-for="(issue,index) in diagnostics" :key="`${issue.code}-${index}`" :class="issue.severity"><b>{{ issue.code }}</b><span>{{ issue.message }}</span></article></section>
       </section>
     </div>
@@ -83,6 +85,7 @@ import {
   createTerrainRules,
   createTilePalette,
   createTileSet,
+  deterministicTileMapStorage,
   duplicateTileLayer,
   diagnoseTileMap,
   invalidateTileMap,
@@ -92,6 +95,8 @@ import {
   saveTileSet,
   setActiveTileLayer,
   tilemapEditorState,
+  tileStreamingBoundaries,
+  tileWorldCoordinate,
   transformTileSelection,
   type TilemapDiagnostic,
   type TileTool
@@ -100,7 +105,7 @@ import {
 const tools: TileTool[] = ['brush', 'stamp', 'pattern', 'line', 'rectangle', 'eraser', 'fill', 'replace', 'eyedropper', 'selection']
 const sourceImageUuid = ref('')
 const tilePixels = reactive({ x: 32, y: 32 })
-const paletteRef = ref(''), brushRef = ref(''), terrainRef = ref(''), bakeResult = ref('')
+const paletteRef = ref(''), brushRef = ref(''), terrainRef = ref(''), bakeResult = ref(''), tileSearch = ref('')
 const diagnostics = ref<TilemapDiagnostic[]>([])
 const selectedEntity = computed(() => physicsState.world.entities.find(entity => entity.id === physicsState.selectedEntityId) ?? null)
 const tileMap = computed(() => selectedEntity.value?.getComponent<TileMap2D>('TileMap2D') ?? null)
@@ -124,12 +129,20 @@ const occlusionPolygonText = computed(() => selectedDefinition.value?.occlusionP
 const metadataText = computed(() => JSON.stringify(selectedDefinition.value?.metadata ?? {}, null, 2))
 const animationFrames = computed(() => selectedDefinition.value?.animation?.frames.join(',') ?? '')
 const variantsText = computed(() => selectedDefinition.value?.variants.map(variant => `${variant.tile}:${variant.weight}`).join(', ') ?? '')
-const visibleTiles = computed(() => { const palette = readTilePalette(paletteRef.value); return palette ? tileSet.value?.tiles.filter(tile => palette.tiles.includes(tile.index)) ?? [] : tileSet.value?.tiles ?? [] })
+const visibleTiles = computed(() => {
+  const palette = readTilePalette(paletteRef.value), query = tileSearch.value.trim().toLocaleLowerCase()
+  const candidates = palette ? tileSet.value?.tiles.filter(tile => palette.tiles.includes(tile.index)) ?? [] : tileSet.value?.tiles ?? []
+  return query ? candidates.filter(tile => tile.name.toLocaleLowerCase().includes(query) || String(tile.index).includes(query) || tile.terrain.toLocaleLowerCase().includes(query)) : candidates
+})
 const brushRotation = computed(() => tilemapEditorState.transform & 3)
 const brushMirrorX = computed(() => (tilemapEditorState.transform & 4) !== 0)
 const brushMirrorY = computed(() => (tilemapEditorState.transform & 8) !== 0)
 const autoRegion = computed(() => ({ x: (tilemapEditorState.tileIndex % (tileSet.value?.columns ?? 1)) * (tileSet.value?.tileWidth ?? 1), y: Math.floor(tilemapEditorState.tileIndex / (tileSet.value?.columns ?? 1)) * (tileSet.value?.tileHeight ?? 1) }))
 const terrainPreview = computed(() => selectedDefinition.value?.terrain ? `${selectedDefinition.value.terrain} · ${diagnostics.value.some(issue => issue.code === 'invalid-terrain') ? t('terrainRulesInvalid') : t('terrainRulesReady')}` : t('noTerrainRules'))
+const selectionWorld = computed(() => selectedEntity.value && tileMap.value && tilemapEditorState.selection
+  ? tileWorldCoordinate(selectedEntity.value, tileMap.value, tilemapEditorState.selection.start, physicsState.world.entities)
+  : null)
+const streamingBoundaryCount = computed(() => tileMap.value ? tileStreamingBoundaries(tileMap.value).length : 0)
 
 watch(selectedEntity, entity => {
   tilemapEditorState.selectedEntityUuid = entity?.getComponent<TileMap2D>('TileMap2D') ? entity.uuid : null
@@ -155,6 +168,7 @@ function duplicateLayer() { if (!tileMap.value) return; duplicateTileLayer(tileM
 function removeLayer() { if (tileMap.value && removeTileLayer(tileMap.value)) pushHistory('Remove tile layer') }
 function changedLayer() { if (!tileMap.value) return; tileMap.value.revision++; invalidateTileMap(tileMap.value); pushHistory('Edit tile layer') }
 function bake() { if (!tileMap.value) return; const result = bakeTileMap(tileMap.value); bakeResult.value = `${result.collision} collision · ${result.navigation} navigation · ${result.occluders} occluders · ${result.chunks} chunks` }
+async function copyDeterministicStorage() { if (!tileMap.value) return; const text = deterministicTileMapStorage(tileMap.value); try { await navigator.clipboard.writeText(text); bakeResult.value = t('deterministicStorageCopied') } catch { bakeResult.value = text } }
 function selectTileSet(event: Event) {
   if (!tileMap.value) return
   tileMap.value.tileSetAsset = (event.target as HTMLSelectElement).value || null
@@ -208,7 +222,7 @@ onBeforeUnmount(() => { tilemapEditorState.active = false })
 </script>
 
 <style scoped>
-.asset-selects { margin: 7px 0; display: grid; gap: 4px; }.asset-selects select { min-width: 0; }.layers, .baking,.animation-settings,.diagnostics { margin-top: 12px; padding-top: 8px; display: grid; gap: 4px; border-top: 1px solid var(--border-subtle); }.layers > button { min-height: 28px; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; border: 1px solid transparent; border-radius: 6px; background: transparent; }.layers > button.active { border-color: var(--accent); background: var(--accent-soft); }.layers > button input:not([type=checkbox]) { width: 100%; min-width: 0; border: 0; background: transparent; }.layers > div { display: flex; gap: 4px; }.baking > button,.diagnostics>button { min-height: 30px; }.diagnostics article{padding:5px;display:grid;gap:2px;border-left:3px solid var(--text-muted);background:var(--surface-2)}.diagnostics article.error{border-color:var(--danger)}.diagnostics article.warning{border-color:var(--warning)}.diagnostics article.info{border-color:var(--success)}.diagnostics article span{overflow-wrap:anywhere;color:var(--text-muted)}
+.asset-selects { margin: 7px 0; display: grid; gap: 4px; }.asset-selects select,.asset-selects input { min-width: 0; width:100%; }.layers, .baking,.animation-settings,.diagnostics,.tile-history { margin-top: 12px; padding-top: 8px; display: grid; gap: 4px; border-top: 1px solid var(--border-subtle); }.layers > button { min-height: 28px; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; border: 1px solid transparent; border-radius: 6px; background: transparent; }.layers > button.active { border-color: var(--accent); background: var(--accent-soft); }.layers > button input:not([type=checkbox]) { width: 100%; min-width: 0; border: 0; background: transparent; }.layers > div { display: flex; gap: 4px; }.baking > button,.diagnostics>button { min-height: 30px; }.diagnostics article{padding:5px;display:grid;gap:2px;border-left:3px solid var(--text-muted);background:var(--surface-2)}.diagnostics article.error{border-color:var(--danger)}.diagnostics article.warning{border-color:var(--warning)}.diagnostics article.info{border-color:var(--success)}.diagnostics article span{overflow-wrap:anywhere;color:var(--text-muted)}.tile-history ol{margin:0;padding-left:18px}.tile-history li{display:grid;grid-template-columns:minmax(70px,1fr) auto;gap:6px;color:var(--text-muted);font-size:var(--type-caption)}
 .tilemap-panel { height: 100%; min-width: 0; display: flex; flex-direction: column; }.tilemap-toolbar { min-height: 42px; padding: 5px 7px; display: flex; align-items: center; flex-wrap: wrap; gap: 5px; border-bottom: 1px solid var(--border-subtle); }.tilemap-toolbar > span { flex: 1; }.tilemap-toolbar button, .tilemap-toolbar select, .tilemap-toolbar input { min-height: 30px; border: 1px solid var(--border-subtle); border-radius: 7px; background: var(--surface-2); color: var(--text-secondary); font-size: 11px; }.tilemap-toolbar button { padding: 0 8px; }.tilemap-toolbar button.primary { color: var(--accent-contrast); border-color: var(--accent); background: var(--accent); }.tilemap-toolbar button.active { color: var(--accent); border-color: var(--accent); background: var(--accent-soft); }.tilemap-toolbar label { display: flex; align-items: center; gap: 4px; color: var(--text-muted); font-size:11px; }.tilemap-toolbar label input { width: 54px; padding: 0 4px; }.tilemap-workspace { min-height: 0; flex: 1; display: grid; grid-template-columns: minmax(180px, 1fr) 260px; }.tilemap-workspace aside { min-width: 0; padding: 8px; overflow: auto; }.tilemap-workspace strong { color: var(--text-primary); font-size: 12px; }.palette-grid { margin-top: 7px; display: grid; gap: 3px; }.palette-grid button { width: 32px; height: 32px; padding: 2px; border: 1px solid var(--border-subtle); border-radius: 5px; background: var(--surface-3); }.palette-grid button.selected { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }.palette-grid span { width: 100%; height: 100%; display: block; background-repeat: no-repeat; image-rendering: pixelated; }.tile-properties { padding: 8px 10px; overflow: auto; border-left: 1px solid var(--border-subtle); }.tile-properties label { min-height: 34px; display: flex; align-items: center; justify-content: space-between; gap: 8px; border-bottom: 1px solid var(--border-subtle); color: var(--text-muted); font-size: 11px; }.tile-properties label.stacked { padding: 6px 0; align-items: stretch; flex-direction: column; }.tile-properties input, .tile-properties select, .tile-properties textarea { width: 140px; min-width: 0; }.tile-properties textarea { width: 100%; resize: vertical; }.tile-properties p, .empty { color: var(--text-muted); font-size: 11px; line-height: 1.5; }.empty { margin: auto; padding: 18px; text-align: center; }.empty p { margin: 5px 0 0; }
 .atlas-settings,.region-settings { margin-top:12px; padding-top:8px; display:grid; gap:4px; border-top:1px solid var(--border-subtle); }.region-settings label>div { display:flex; gap:4px; }.region-settings label>div input { width:66px; }.terrain-preview { display:grid; gap:3px; padding:6px; border-radius:6px; background:var(--surface-2); }.tilemap-toolbar .compact-toggle input { width:16px; min-height:16px; padding:0; }
 @media (max-width: 700px) { .tilemap-workspace { grid-template-columns: minmax(150px, 1fr) minmax(180px, 220px); }.tilemap-toolbar > span { display: none; } }

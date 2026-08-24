@@ -1,0 +1,41 @@
+{
+  "format": "nova-v4.1-build-report",
+  "version": 1,
+  "generatedAt": "2026-08-20T08:57:17.225Z",
+  "readinessStates": [
+    "Blocked",
+    "Ready with warnings",
+    "Ready",
+    "In progress"
+  ],
+  "commands": [
+    "pnpm check",
+    "cargo fmt --all -- --check",
+    "cargo clippy --workspace --all-targets -- -D warnings",
+    "cargo test --workspace --all-targets",
+    "cargo test --manifest-path src-tauri/Cargo.toml",
+    "pnpm build",
+    "pnpm qualify:v4.1:layout",
+    "pnpm tauri build",
+    "pnpm verify:v4.1:windows"
+  ],
+  "nativeArtifacts": {
+    "portable": {
+      "path": "src-tauri/target/release/nova_a.exe",
+      "bytes": 15492096,
+      "sha256": "760e5d4e7708ae5d1f23af1fa434356ac6090ffd5b98891b999e4da9c56c0b87"
+    },
+    "msi": {
+      "path": "src-tauri/target/release/bundle/msi/Nova_A_4.1.0_x64_en-US.msi",
+      "bytes": 9179136,
+      "sha256": "b22340bd656ffffa6959b1a21ed0087930826093c29de87797d20a344280cf7d"
+    },
+    "setup": {
+      "path": "src-tauri/target/release/bundle/nsis/Nova_A_4.1.0_x64-setup.exe",
+      "bytes": 8114185,
+      "sha256": "a7922301dc5e1c49fc5366a0826fc574f6510c1981ce26d09161040b4bf7df9a"
+    }
+  },
+  "fiveCleanBuilds": 0,
+  "status": "passed-local-with-external-reproducibility-gate"
+}

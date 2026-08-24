@@ -83,7 +83,7 @@ function normalizedPreferences(parsed: Partial<Preferences>, resetLegacyLightCon
     ...defaults,
     theme: normalizedTheme(parsed.theme),
     locale: normalizedLocale(parsed.locale),
-    uiScale: finiteRange(parsed.uiScale, defaults.uiScale, 0.85, 1.25),
+    uiScale: finiteRange(parsed.uiScale, defaults.uiScale, 1, 2),
     compactMode: storedBoolean(parsed.compactMode, defaults.compactMode),
     reduceMotion: storedBoolean(parsed.reduceMotion, defaults.reduceMotion),
     highContrast: resetLegacyLightContrast ? false : storedBoolean(parsed.highContrast, defaults.highContrast),
@@ -130,6 +130,7 @@ export function applyPreferences(): void {
   root.dataset.reduceMotion = String(preferencesState.reduceMotion)
   root.dataset.highContrast = String(preferencesState.highContrast)
   root.style.setProperty('--ui-scale', String(preferencesState.uiScale))
+  root.dataset.uiScale = preferencesState.uiScale > 1.25 ? 'large' : 'standard'
   root.lang = preferencesState.locale === 'zh' ? 'zh-CN' : preferencesState.locale
 }
 

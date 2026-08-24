@@ -1,13 +1,14 @@
 import { reactive } from "vue"
-import { cloneEntity, deleteEntity, duplicateConnections, physicsState, pushHistory } from "./physics"
+import { cloneEntity, deleteEntity, duplicateConnections, physicsState, pushHistory, sceneManager } from "./physics"
 import type { Vec2 } from '../world/types'
 import { t } from '../i18n'
 import type { PivotMode, TransformSpace } from '../editor/gizmo'
 import { scriptProjectSettings } from '../runtime/scriptSettings'
 
-export type EditorPage = 'scene' | 'game' | 'script' | 'settings'
-export type EditorWorkspace = 'design' | 'script' | 'animation' | 'ui' | 'debug' | 'custom'
+export type EditorPage = 'scene' | 'game' | 'script' | 'settings' | 'manage'
+export type EditorWorkspace = 'design' | 'script' | 'animation' | 'ui' | 'debug' | 'manage' | 'custom'
 export type BottomPanelTab = 'assets' | 'packages' | 'console' | 'animation' | 'audio' | 'tilemap' | 'presentation' | 'profiler' | 'rendering' | 'project' | 'build'
+export type ManageSection = 'settings' | 'packages' | 'project' | 'rendering' | 'build'
 export type InspectorCategory = 'all' | 'general' | 'transform' | 'render' | 'physics' | 'gameplay' | 'ui'
 type ContextMenuType = 'sidebar-entity' | 'layer' | 'grid-entity' | 'none'
 export type EditorLogLevel = 'trace' | 'debug' | 'info' | 'warning' | 'error' | 'fatal'
@@ -37,13 +38,16 @@ export const editorState = reactive({
   angleSnapEnabled: true,
   angleSnapDegrees: 15,
   activeWorkspace: 'design' as EditorWorkspace,
+  manageSection: 'settings' as ManageSection,
   hierarchyVisible: true,
   inspectorVisible: true,
   bottomPanelVisible: true,
   distractionFree: false,
   commandPaletteOpen: false,
+  commandPaletteMode: 'commands' as 'commands' | 'quick' | 'global' | 'context',
   workspaceManagerOpen: false,
   shortcutEditorOpen: false,
+  undoHistoryOpen: false,
   statusCenterOpen: false,
   hierarchyWidth: 236,
   inspectorWidth: 292,
@@ -62,6 +66,8 @@ export const editorState = reactive({
   bottomPanelOpen: false,
   bottomPanelHeight: 240,
   bottomPanelTab: 'assets' as BottomPanelTab,
+  bottomPanelPinned: true,
+  physicsMonitorOpen: false,
   renameRequestId: null as number | null,
   logs: [] as EditorLogEntry[],
   rendererStats: {
@@ -107,6 +113,7 @@ export function addLayer() {
     return
   }
   editorState.layers.push(newLayer)
+  sceneManager.activeScene.settings.namedLayers.push({ id: newLayer, name: `Layer ${newLayer}`, visible: true, locked: false })
   editorState.activeLayer = newLayer
   editorState.statusText = t('createdLayer', { layer: newLayer })
   pushHistory()
@@ -140,6 +147,7 @@ export function deleteLayer(layerId: number) {
   const layerIndex = editorState.layers.indexOf(layerId)
   if (layerIndex === -1) return
   editorState.layers.splice(layerIndex, 1)
+  sceneManager.activeScene.settings.namedLayers = sceneManager.activeScene.settings.namedLayers.filter(layer => layer.id !== layerId)
   if (editorState.activeLayer === layerId) editorState.activeLayer = editorState.layers[0]
   if (editorState.renderLayer === layerId) editorState.renderLayer = 'all'
   const ids = physicsState.world.entities.filter(entity => entity.layer === layerId).map(entity => entity.id)
@@ -155,6 +163,8 @@ export function duplicateLayer(layerId: number) {
     return
   }
   editorState.layers.push(newLayerId)
+  const sourceLayer = sceneManager.activeScene.settings.namedLayers.find(layer => layer.id === layerId)
+  sceneManager.activeScene.settings.namedLayers.push({ id: newLayerId, name: `${sourceLayer?.name ?? `Layer ${layerId}`} copy`, visible: sourceLayer?.visible !== false, locked: false })
   const toClone = physicsState.world.entities.filter(e => e.layer === layerId)
   const entityIdMap = new Map<number, number>()
   const entityUuidMap = new Map<string, string>()

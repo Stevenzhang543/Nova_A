@@ -4,6 +4,7 @@ import { reportRecoverableError } from './faultCenter'
 
 interface SavedWindowState { x: number; y: number; width: number; height: number; monitorName: string; scaleFactor: number; maximized: boolean }
 const STORAGE_KEY = 'nova-a-window-state-v1'
+const FIRST_LAUNCH_KEY = 'nova-a-window-first-launch-v4.1'
 let initialized = false
 let unlisteners: Array<() => void> = []
 
@@ -23,33 +24,44 @@ export async function initializeEditorWindow(): Promise<void> {
   if (initialized || !('__TAURI_INTERNALS__' in window)) return
   initialized = true; editorWindowState.native = true
   try {
-    const { availableMonitors, currentMonitor, getCurrentWindow, PhysicalPosition, PhysicalSize } = await import('@tauri-apps/api/window')
+    const { availableMonitors, currentMonitor, getCurrentWindow, LogicalSize, PhysicalPosition, PhysicalSize } = await import('@tauri-apps/api/window')
     const appWindow = getCurrentWindow()
+    await appWindow.setMinSize(new LogicalSize(1024, 640))
     editorWindowState.fullscreen = await appWindow.isFullscreen()
     editorWindowState.maximized = await appWindow.isMaximized()
     const saved = readState(); editorWindowState.lastWindowedState = saved
+    const firstLaunch = localStorage.getItem(FIRST_LAUNCH_KEY) !== 'complete'
     if (editorWindowState.fullscreen) await appWindow.setFullscreen(false)
-    if (!preferencesState.launchMaximized && saved) {
+    if (firstLaunch) {
+      await appWindow.setDecorations(false)
+      await appWindow.maximize()
+      localStorage.setItem(FIRST_LAUNCH_KEY, 'complete')
+      editorWindowState.fullscreen = false; editorWindowState.maximized = true
+    } else if (saved) {
+      await appWindow.setDecorations(true)
       const monitors = await availableMonitors()
       const intersects = monitors.some(monitor => {
         const left = monitor.position.x, top = monitor.position.y, right = left + monitor.size.width, bottom = top + monitor.size.height
         return saved.x + Math.min(saved.width, 160) > left && saved.x < right && saved.y + Math.min(saved.height, 80) > top && saved.y < bottom
       })
-      await appWindow.unmaximize()
-      if (intersects) { await appWindow.setSize(new PhysicalSize(saved.width, saved.height)); await appWindow.setPosition(new PhysicalPosition(saved.x, saved.y)) }
-      else { editorWindowState.monitorRecovered = true; await appWindow.center() }
-      editorWindowState.fullscreen = false; editorWindowState.maximized = false
+      if (saved.maximized) { await appWindow.maximize(); editorWindowState.maximized = true }
+      else if (intersects) { await appWindow.unmaximize(); await appWindow.setSize(new PhysicalSize(saved.width, saved.height)); await appWindow.setPosition(new PhysicalPosition(saved.x, saved.y)); editorWindowState.maximized = false }
+      else { await appWindow.unmaximize(); editorWindowState.monitorRecovered = true; await appWindow.center(); editorWindowState.maximized = false }
+      editorWindowState.fullscreen = false
     } else if (preferencesState.launchMaximized) {
+      await appWindow.setDecorations(true)
       await appWindow.maximize(); editorWindowState.fullscreen = false; editorWindowState.maximized = true
     }
     const save = async () => {
       const [fullscreen, maximized] = await Promise.all([appWindow.isFullscreen(), appWindow.isMaximized()])
       editorWindowState.fullscreen = fullscreen; editorWindowState.maximized = maximized
-      if (fullscreen || maximized) return
+      if (fullscreen) return
+      if (maximized && editorWindowState.lastWindowedState) { persistState({ ...editorWindowState.lastWindowedState, maximized: true }); return }
       const [position, size, monitor, scaleFactor] = await Promise.all([appWindow.outerPosition(), appWindow.outerSize(), currentMonitor(), appWindow.scaleFactor()])
-      persistState({ x: position.x, y: position.y, width: size.width, height: size.height, monitorName: monitor?.name ?? '', scaleFactor, maximized: false })
+      persistState({ x: position.x, y: position.y, width: size.width, height: size.height, monitorName: monitor?.name ?? '', scaleFactor, maximized })
     }
     unlisteners.push(await appWindow.onMoved(() => { void save() }), await appWindow.onResized(() => { void save() }))
+    unlisteners.push(await appWindow.onScaleChanged(() => { window.requestAnimationFrame(() => window.dispatchEvent(new Event('resize'))); void save() }))
   } catch (error) { reportRecoverableError(error, 'Initialize editor window') }
 }
 

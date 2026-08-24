@@ -3,11 +3,14 @@ import { canonicalProjectText, repairProjectDocument, validateProjectDocument, t
 import { projectSessionState } from '../projects/projectSession'
 import { getSceneJSON, loadProject, pushHistory } from '../store/physics'
 import { downloadProjectBackup, storeUpgradeRollback } from './projectUpgrade'
+import { deterministicResave, refreshTransactionDiff } from './projectTransactions'
 
 export const projectIntegrityState = reactive({
   validation: null as ProjectValidationReport | null,
   repairPreview: null as ProjectRepairReport | null,
-  lastAction: ''
+  lastAction: '',
+  repairReadOnly: true,
+  missingReferenceMappings: {} as Record<string, string>
 })
 
 export function validateCurrentProject(): ProjectValidationReport {
@@ -15,6 +18,16 @@ export function validateCurrentProject(): ProjectValidationReport {
   projectIntegrityState.validation = report
   projectIntegrityState.lastAction = report.valid ? 'validated' : 'validation-failed'
   return report
+}
+
+export function deterministicCurrentProjectResave(): { changed: boolean; checksum: string } {
+  const before = getSceneJSON(), result = deterministicResave(before)
+  projectIntegrityState.lastAction = result.changed ? 'deterministic-resave-preview' : 'deterministic-resave-no-op'
+  if (!result.changed) return { changed: false, checksum: result.checksum }
+  downloadProjectBackup(before, projectSessionState.name); storeUpgradeRollback(before, `${projectSessionState.name}.nova`)
+  if (!loadProject(result.source)) { loadProject(before); projectIntegrityState.lastAction = 'deterministic-resave-rolled-back'; return { changed: false, checksum: result.checksum } }
+  pushHistory('Deterministic project re-save', 'project:canonical', 'project.nova'); refreshTransactionDiff(getSceneJSON()); projectIntegrityState.lastAction = 'deterministic-resaved'
+  return { changed: true, checksum: result.checksum }
 }
 
 export function previewCurrentProjectRepair(): ProjectRepairReport {

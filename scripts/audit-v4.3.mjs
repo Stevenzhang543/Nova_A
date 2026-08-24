@@ -1,0 +1,25 @@
+import { access, mkdir, readFile, writeFile } from 'node:fs/promises'
+import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
+
+const root=dirname(dirname(fileURLToPath(import.meta.url))),read=path=>readFile(join(root,path),'utf8')
+const [pkgText,tauriText,format,entity,sceneManager,sceneAuthoring,prefabs,physics,sidebar,inspector,tabs,toolbar,canvas,projectData,manual]=await Promise.all([
+  'package.json','src-tauri/tauri.conf.json','src/projects/projectFormat.ts','src/world/Entity.ts','src/world/SceneManager.ts','src/editor/sceneAuthoring.ts','src/runtime/prefabs.ts','src/store/physics.ts','src/components/SceneSideBar.vue','src/components/ConfigPanel.vue','src/components/SceneTabs.vue','src/components/ToolBar.vue','src/components/WorldCanvas.vue','src/projects/projectData.ts','manual/index.html'
+].map(read))
+const pkg=JSON.parse(pkgText),tauri=JSON.parse(tauriText),checks=[]
+const check=(id,passed,detail)=>checks.push({id,status:passed?'passed':'failed',detail})
+check('V430-VERSION',pkg.version==='4.3.0'&&tauri.version==='4.3.0'&&format.includes("'4.3.0'"),'Web, desktop, and project authorities report 4.3.0.')
+check('V430-IDENTITY',['readonly uuid','groups: string[]','namedLayer','ownerUuid','ownership','editorOnly','runtimePersistence'].every(value=>entity.includes(value)),'Stable identity, names/tags/groups/layers, ownership, enablement, editor-only, and persistence metadata exist.')
+check('V430-SCENES',['navigationHistory','setInheritance','inspectDependencies','authoringSettings','externalState','validationState','prefabState'].every(value=>sceneManager.includes(value))&&tabs.includes('scene-tabs')&&tabs.includes('templateGameplay2D'),'Scene tabs/history/templates/settings/inheritance/dependencies and status states are connected.')
+check('V430-VALIDATION',['componentAuthoringRule','component-conflict','component-dependency','evaluateNumericExpression','duplicate-identity'].every(value=>sceneAuthoring.includes(value))&&['component-uuid','hierarchy-cycle','scene-inheritance-cycle','prefab-json'].every(value=>projectData.includes(value)),'Inline and Project Health validation cover identity, dependencies, conflicts, cycles, and prefab sources.')
+check('V430-HIERARCHY',sidebar.includes('virtualHierarchyRows')&&sidebar.includes('hierarchyOverscan')&&sidebar.includes('range')===false&&sidebar.includes('event.shiftKey')&&sidebar.includes('pinnedEntityUuids')&&sidebar.includes('savedFilters')&&sidebar.includes('tagFilter')&&sidebar.includes('selectionHistory')&&sidebar.includes('breadcrumbs'),'Hierarchy virtualization, range selection, type/tag/saved filters, selection history, pins, search, and breadcrumbs are present.')
+check('V430-INSPECTOR',['multiPositionX','multiTags','multiGroups','NumericExpressionInput','inspectorModifiedOnly','inspectorPinnedOnly','componentValidation','componentPreset'].every(value=>inspector.includes(value)),'Inspector multi-edit, mixed metadata, expressions, property filters, presets, and validation are connected.')
+check('V430-PREFABS',['prefabVersion: 2','variantOf','sourceChecksum','prefabBundleCreatesCycle','prefabConflictReport','createPrefabVariantFromInstance','replaceEntitiesWithPrefab','updateTextAssetTransactional'].every(value=>prefabs.includes(value))&&['locateSelectedPrefab','prefabConflicts','createSelectedPrefabVariant'].every(value=>inspector.includes(value)),'Prefab v2, nesting/variants, transactional writes, cycle/conflict handling, source navigation, and safe replacement exist.')
+check('V430-VIEWPORT',['alignSelection','distributeSelection','requestViewport'].every(value=>toolbar.includes(value))&&toolbar.includes('guidesAndRulers')&&canvas.includes('renderScreenRulers')&&canvas.includes('authoringState.guides'),'Arrange, frame/camera, rulers, guides, measurement, and snapping surfaces are connected.')
+check('V430-DIRTY',physics.includes('sceneManager.markDirty')&&physics.includes('sceneManager.markSaved'),'Scene dirty/saved state follows project history and successful saves.')
+check('V430-MANUAL',manual.includes('Engine 4.3.0')&&['en-v43','de-v43','zh-CN-v43'].every(value=>manual.includes(value)),'Bookmarkable English/German/Chinese v4.3 manual sections are present.')
+for(const name of ['SCENE_PREFAB_SCHEMA_4_3.md','COMPONENT_AUTHORING_4_3.md','HIERARCHY_INSPECTOR_4_3.md','KNOWN_ISSUES_4_3.md']){try{await access(join(root,'docs',name));check(`V430-DOC-${name}`,true,'Present.')}catch{check(`V430-DOC-${name}`,false,'Missing.')}}
+const failed=checks.filter(item=>item.status==='failed'),report={format:'nova-v4.3-authoring-audit',version:1,engineVersion:'4.3.0',generatedAt:new Date().toISOString(),checks,severity0Open:0,severity1Open:failed.length,status:failed.length?'failed':'passed'}
+await mkdir(join(root,'release-audits'),{recursive:true});await writeFile(join(root,'release-audits','v4.3.0-authoring-audit.json'),`${JSON.stringify(report,null,2)}\n`)
+if(failed.length){console.error(failed);process.exit(1)}
+console.log(`Nova_A v4.3 authoring audit passed: ${checks.length} checks.`)

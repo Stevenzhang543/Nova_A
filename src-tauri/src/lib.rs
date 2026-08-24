@@ -164,6 +164,31 @@ struct CrashPayload {
     renderer: String,
 }
 
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct ProjectTransactionFile {
+    path: String,
+    data_base64: String,
+    checksum: String,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct ProjectTransactionRequest {
+    project_directory: String,
+    transaction_id: String,
+    files: Vec<ProjectTransactionFile>,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ProjectTransactionResult {
+    transaction_id: String,
+    committed_files: usize,
+    committed_bytes: u64,
+    journal_path: String,
+}
+
 #[derive(Default)]
 struct UdpSockets {
     next_id: AtomicU32,
@@ -361,6 +386,137 @@ fn safe_relative_path(path: &str) -> Result<PathBuf, String> {
         return Err(format!("unsafe export path: {path}"));
     }
     Ok(candidate.to_path_buf())
+}
+
+#[tauri::command]
+fn commit_project_transaction(
+    request: ProjectTransactionRequest,
+) -> Result<ProjectTransactionResult, String> {
+    if request.files.is_empty() || request.files.len() > 20_000 {
+        return Err("project transaction must contain between 1 and 20,000 files".into());
+    }
+    let transaction_id: String = request
+        .transaction_id
+        .chars()
+        .filter(|value| value.is_ascii_alphanumeric() || *value == '-')
+        .take(80)
+        .collect();
+    if transaction_id.is_empty() {
+        return Err("project transaction ID is invalid".into());
+    }
+    let root = PathBuf::from(&request.project_directory);
+    if !root.is_absolute() {
+        return Err("project transaction directory must be absolute".into());
+    }
+    fs::create_dir_all(&root).map_err(|error| format!("permission preflight failed: {error}"))?;
+    let root = root
+        .canonicalize()
+        .map_err(|error| format!("project path preflight failed: {error}"))?;
+    let transaction_root = root
+        .join(".nova")
+        .join("transactions")
+        .join(&transaction_id);
+    let staging = transaction_root.join("staging");
+    let backup = transaction_root.join("backup");
+    fs::create_dir_all(&staging)
+        .map_err(|error| format!("transaction staging preflight failed: {error}"))?;
+    fs::create_dir_all(&backup)
+        .map_err(|error| format!("transaction backup preflight failed: {error}"))?;
+    let journal_path = transaction_root.join("journal.json");
+    let manifest: Vec<serde_json::Value> = request
+        .files
+        .iter()
+        .map(|file| serde_json::json!({"path":file.path,"checksum":file.checksum}))
+        .collect();
+    fs::write(&journal_path, serde_json::to_vec_pretty(&serde_json::json!({"format":"nova-native-project-transaction","version":1,"transactionId":transaction_id,"phase":"prepared","files":manifest})).map_err(|error| error.to_string())?).map_err(|error| error.to_string())?;
+    let mut staged = Vec::with_capacity(request.files.len());
+    let mut total_bytes = 0_u64;
+    for item in &request.files {
+        let relative = safe_relative_path(&item.path)?;
+        let bytes = decode_base64(&item.data_base64)?;
+        total_bytes = total_bytes
+            .checked_add(bytes.len() as u64)
+            .ok_or("transaction size overflow")?;
+        if total_bytes > 2 * 1024 * 1024 * 1024 {
+            return Err("project transaction exceeds the 2 GiB safety limit".into());
+        }
+        if sha256_hex(&bytes) != item.checksum.to_ascii_lowercase() {
+            return Err(format!("checksum preflight failed for {}", item.path));
+        }
+        let staged_path = staging.join(&relative);
+        if let Some(parent) = staged_path.parent() {
+            fs::create_dir_all(parent).map_err(|error| error.to_string())?;
+        }
+        fs::write(&staged_path, &bytes)
+            .map_err(|error| format!("staging write failed for {}: {error}", item.path))?;
+        if file_hash(&staged_path)? != item.checksum.to_ascii_lowercase() {
+            return Err(format!("staged checksum failed for {}", item.path));
+        }
+        staged.push((relative, staged_path));
+    }
+    fs::write(&journal_path, serde_json::to_vec_pretty(&serde_json::json!({"format":"nova-native-project-transaction","version":1,"transactionId":transaction_id,"phase":"committing","files":manifest})).map_err(|error| error.to_string())?).map_err(|error| error.to_string())?;
+    let mut committed: Vec<(PathBuf, Option<PathBuf>)> = Vec::new();
+    for (relative, staged_path) in &staged {
+        let destination = root.join(relative);
+        if let Some(parent) = destination.parent() {
+            if let Err(error) = fs::create_dir_all(parent) {
+                rollback_project_files(&committed);
+                return Err(format!("destination preflight failed: {error}"));
+            }
+        }
+        let previous = if destination.exists() {
+            let previous = backup.join(relative);
+            if let Some(parent) = previous.parent() {
+                if let Err(error) = fs::create_dir_all(parent) {
+                    rollback_project_files(&committed);
+                    return Err(format!("backup preflight failed: {error}"));
+                }
+            }
+            if let Err(error) = fs::rename(&destination, &previous) {
+                rollback_project_files(&committed);
+                return Err(format!(
+                    "file-in-use or antivirus delay at {}: {error}",
+                    relative.display()
+                ));
+            }
+            Some(previous)
+        } else {
+            None
+        };
+        if let Err(error) = fs::rename(staged_path, &destination) {
+            if let Some(previous) = &previous {
+                let _ = fs::rename(previous, &destination);
+            }
+            rollback_project_files(&committed);
+            return Err(format!(
+                "atomic replacement failed at {}: {error}",
+                relative.display()
+            ));
+        }
+        committed.push((destination, previous));
+    }
+    let committed_journal = serde_json::to_vec_pretty(&serde_json::json!({"format":"nova-native-project-transaction","version":1,"transactionId":transaction_id,"phase":"committed","files":manifest,"bytes":total_bytes})).map_err(|error| error.to_string())?;
+    if let Err(error) = fs::write(&journal_path, committed_journal) {
+        rollback_project_files(&committed);
+        return Err(format!(
+            "commit journal finalization failed; project rolled back: {error}"
+        ));
+    }
+    Ok(ProjectTransactionResult {
+        transaction_id,
+        committed_files: committed.len(),
+        committed_bytes: total_bytes,
+        journal_path: journal_path.to_string_lossy().into_owned(),
+    })
+}
+
+fn rollback_project_files(committed: &[(PathBuf, Option<PathBuf>)]) {
+    for (destination, previous) in committed.iter().rev() {
+        let _ = fs::remove_file(destination);
+        if let Some(previous) = previous {
+            let _ = fs::rename(previous, destination);
+        }
+    }
 }
 
 fn write_export_file(
@@ -690,7 +846,7 @@ fn export_game(request: ExportRequest) -> Result<ExportResult, String> {
     }
 
     let platform_config = serde_json::to_vec_pretty(&serde_json::json!({
-        "format": "nova-platform-config", "version": 1, "engineVersion": "3.9.0",
+        "format": "nova-platform-config", "version": 1, "engineVersion": "4.4.0",
         "target": request.target, "architecture": request.architecture, "profile": request.profile,
         "application": request.platform, "structuredLogs": request.delivery.structured_logs,
         "crashCapture": request.delivery.crash_reports,
@@ -706,7 +862,7 @@ fn export_game(request: ExportRequest) -> Result<ExportResult, String> {
         &mut changed_files,
     )?;
     if request.development_build {
-        let build_info = serde_json::to_vec_pretty(&serde_json::json!({ "engineVersion": "3.9.0", "buildId": build_id, "target": request.target, "architecture": request.architecture, "packageBytes": pack.len() })).map_err(|error| error.to_string())?;
+        let build_info = serde_json::to_vec_pretty(&serde_json::json!({ "engineVersion": "4.4.0", "buildId": build_id, "target": request.target, "architecture": request.architecture, "packageBytes": pack.len() })).map_err(|error| error.to_string())?;
         tracked_write(
             &root,
             "build-info.json",
@@ -719,7 +875,7 @@ fn export_game(request: ExportRequest) -> Result<ExportResult, String> {
     }
     if request.delivery.crash_symbols || request.delivery.debug_symbols {
         let symbols = serde_json::to_vec_pretty(&serde_json::json!({
-            "format": "nova-symbol-map", "version": 1, "engineVersion": "3.9.0", "buildId": build_id,
+            "format": "nova-symbol-map", "version": 1, "engineVersion": "4.4.0", "buildId": build_id,
             "binary": files.iter().find(|path| path.ends_with(".exe") || path.ends_with(".app")).cloned(),
             "workflow": "Archive matching PDB, dSYM, or unstripped ELF symbols under this build ID; symbolicate crash addresses with the platform toolchain."
         })).map_err(|error| error.to_string())?;
@@ -734,17 +890,41 @@ fn export_game(request: ExportRequest) -> Result<ExportResult, String> {
         )?;
     }
 
-    let cache_diagnostics = serde_json::to_vec_pretty(&serde_json::json!({ "format": "nova-build-cache-diagnostics", "version": 1, "engineVersion": "3.9.0", "mode": request.delivery.cache_mode, "status": if cache_invalidated.is_empty() { "valid" } else { "invalidated" }, "invalidated": cache_invalidated })).map_err(|error| error.to_string())?;
-    tracked_write(&root, "nova-build-cache-diagnostics.json", &cache_diagnostics, request.delivery.incremental, &mut files, &mut cache_hits, &mut changed_files)?;
+    let cache_diagnostics = serde_json::to_vec_pretty(&serde_json::json!({ "format": "nova-build-cache-diagnostics", "version": 1, "engineVersion": "4.4.0", "mode": request.delivery.cache_mode, "status": if cache_invalidated.is_empty() { "valid" } else { "invalidated" }, "invalidated": cache_invalidated })).map_err(|error| error.to_string())?;
+    tracked_write(
+        &root,
+        "nova-build-cache-diagnostics.json",
+        &cache_diagnostics,
+        request.delivery.incremental,
+        &mut files,
+        &mut cache_hits,
+        &mut changed_files,
+    )?;
     let mut records = build_file_records(&root, &files)?;
     if request.delivery.size_report {
         let total_bytes: u64 = records.iter().map(|record| record.bytes).sum();
-        let size_report = serde_json::to_vec_pretty(&serde_json::json!({ "format": "nova-build-size-report", "version": 1, "engineVersion": "3.9.0", "totalBytes": total_bytes, "files": records })).map_err(|error| error.to_string())?;
-        tracked_write(&root, "nova-build-size-report.json", &size_report, request.delivery.incremental, &mut files, &mut cache_hits, &mut changed_files)?;
+        let size_report = serde_json::to_vec_pretty(&serde_json::json!({ "format": "nova-build-size-report", "version": 1, "engineVersion": "4.4.0", "totalBytes": total_bytes, "files": records })).map_err(|error| error.to_string())?;
+        tracked_write(
+            &root,
+            "nova-build-size-report.json",
+            &size_report,
+            request.delivery.incremental,
+            &mut files,
+            &mut cache_hits,
+            &mut changed_files,
+        )?;
     }
     if request.delivery.dependency_report {
-        let dependency_report = serde_json::to_vec_pretty(&serde_json::json!({ "format": "nova-dependency-report", "version": 1, "engineVersion": "3.9.0", "package": { "path": "game.nova-pak", "sha256": sha256_hex(&pack), "bytes": pack.len() }, "application": request.platform.identifier, "permissions": request.platform.permissions, "contentPolicy": { "include": request.delivery.include, "exclude": request.delivery.exclude, "stripUnusedAssets": request.delivery.strip_unused_assets } })).map_err(|error| error.to_string())?;
-        tracked_write(&root, "nova-dependency-report.json", &dependency_report, request.delivery.incremental, &mut files, &mut cache_hits, &mut changed_files)?;
+        let dependency_report = serde_json::to_vec_pretty(&serde_json::json!({ "format": "nova-dependency-report", "version": 1, "engineVersion": "4.4.0", "package": { "path": "game.nova-pak", "sha256": sha256_hex(&pack), "bytes": pack.len() }, "application": request.platform.identifier, "permissions": request.platform.permissions, "contentPolicy": { "include": request.delivery.include, "exclude": request.delivery.exclude, "stripUnusedAssets": request.delivery.strip_unused_assets } })).map_err(|error| error.to_string())?;
+        tracked_write(
+            &root,
+            "nova-dependency-report.json",
+            &dependency_report,
+            request.delivery.incremental,
+            &mut files,
+            &mut cache_hits,
+            &mut changed_files,
+        )?;
     }
     records = build_file_records(&root, &files)?;
     let current_by_path: BTreeMap<_, _> = records
@@ -802,7 +982,7 @@ fn export_game(request: ExportRequest) -> Result<ExportResult, String> {
     let report = BuildReport {
         format: "nova-build-report".into(),
         version: 2,
-        engine_version: "3.9.0".into(),
+        engine_version: "4.4.0".into(),
         build_id: build_id.clone(),
         created_at: if request.delivery.deterministic {
             0
@@ -993,7 +1173,7 @@ fn write_log(contents: &str) -> Result<String, String> {
 
 #[tauri::command]
 fn write_crash_log(payload: CrashPayload) -> Result<String, String> {
-    write_log(&format!("Nova_A version: 3.9.0\nOS: {} {}\nRenderer: {}\nProject: {}\nScene: {}\nError: {}\n\nStack trace:\n{}\n", std::env::consts::OS, std::env::consts::ARCH, payload.renderer, payload.project, payload.scene, payload.message, payload.stack))
+    write_log(&format!("Nova_A version: 4.4.0\nOS: {} {}\nRenderer: {}\nProject: {}\nScene: {}\nError: {}\n\nStack trace:\n{}\n", std::env::consts::OS, std::env::consts::ARCH, payload.renderer, payload.project, payload.scene, payload.message, payload.stack))
 }
 
 #[tauri::command]
@@ -1029,7 +1209,10 @@ fn initialize_git_repository(
     };
     write_new(&root.join(".gitignore"), &ignore_contents)?;
     write_new(&root.join(".githooks/pre-commit"), &pre_commit_contents)?;
-    write_new(&root.join(".github/workflows/nova-validation.yml"), &ci_contents)?;
+    write_new(
+        &root.join(".github/workflows/nova-validation.yml"),
+        &ci_contents,
+    )?;
     let config = Command::new("git")
         .arg("-C")
         .arg(&root)
@@ -1055,7 +1238,7 @@ fn install_panic_logger() {
             .or_else(|| panic.payload().downcast_ref::<String>().map(String::as_str))
             .unwrap_or("unknown panic");
         let _ = write_log(&format!(
-            "Nova_A version: 3.9.0\nOS: {} {}\nFatal Rust panic at {location}\n{message}\n",
+            "Nova_A version: 4.4.0\nOS: {} {}\nFatal Rust panic at {location}\n{message}\n",
             std::env::consts::OS,
             std::env::consts::ARCH
         ));
@@ -1076,6 +1259,7 @@ pub fn run() {
             open_external_diff,
             open_external_merge,
             initialize_git_repository,
+            commit_project_transaction,
             write_crash_log,
             udp_open,
             udp_send,
@@ -1139,5 +1323,67 @@ mod tests {
     fn build_hashes_are_stable_and_sensitive_to_content() {
         assert_eq!(sha256_hex(b"Nova_A"), sha256_hex(b"Nova_A"));
         assert_ne!(sha256_hex(b"Nova_A"), sha256_hex(b"Nova_B"));
+    }
+
+    #[test]
+    fn project_transaction_stages_every_file_before_replacing_the_manual_save() {
+        let unique = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
+        let directory = std::env::temp_dir().join(format!(
+            "nova-a-transaction-test-{}-{unique}",
+            std::process::id()
+        ));
+        fs::create_dir_all(&directory).unwrap();
+        let project_path = directory.join("project.nova");
+        fs::write(&project_path, b"last-manual-save").unwrap();
+        let encoded = |bytes: &[u8]| base64::engine::general_purpose::STANDARD.encode(bytes);
+        let invalid = ProjectTransactionRequest {
+            project_directory: directory.to_string_lossy().into_owned(),
+            transaction_id: "fault-before-commit".into(),
+            files: vec![
+                ProjectTransactionFile {
+                    path: "project.nova".into(),
+                    data_base64: encoded(b"new-project"),
+                    checksum: sha256_hex(b"new-project"),
+                },
+                ProjectTransactionFile {
+                    path: "ProjectSettings/project.json".into(),
+                    data_base64: encoded(b"settings"),
+                    checksum: sha256_hex(b"wrong"),
+                },
+            ],
+        };
+        assert!(commit_project_transaction(invalid).is_err());
+        assert_eq!(fs::read(&project_path).unwrap(), b"last-manual-save");
+
+        let valid = ProjectTransactionRequest {
+            project_directory: directory.to_string_lossy().into_owned(),
+            transaction_id: "verified-commit".into(),
+            files: vec![
+                ProjectTransactionFile {
+                    path: "project.nova".into(),
+                    data_base64: encoded(b"new-project"),
+                    checksum: sha256_hex(b"new-project"),
+                },
+                ProjectTransactionFile {
+                    path: "ProjectSettings/project.json".into(),
+                    data_base64: encoded(b"settings"),
+                    checksum: sha256_hex(b"settings"),
+                },
+            ],
+        };
+        let result = commit_project_transaction(valid).unwrap();
+        assert_eq!(result.committed_files, 2);
+        assert_eq!(fs::read(&project_path).unwrap(), b"new-project");
+        assert_eq!(
+            fs::read(directory.join("ProjectSettings/project.json")).unwrap(),
+            b"settings"
+        );
+        assert!(fs::read_to_string(result.journal_path)
+            .unwrap()
+            .contains("\"phase\": \"committed\""));
+        fs::remove_dir_all(directory).unwrap();
     }
 }

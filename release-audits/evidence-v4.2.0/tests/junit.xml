@@ -1,0 +1,219 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="Nova_A 4.2" tests="216" failures="0" timestamp="2026-08-23T04:36:26.502Z">
+  <testcase classname="NovaA.v4.2" name="V420-VERSION"></testcase>
+  <testcase classname="NovaA.v4.2" name="V420-TRANSACTION-SCOPES"></testcase>
+  <testcase classname="NovaA.v4.2" name="V420-TRANSACTION-ATOMIC"></testcase>
+  <testcase classname="NovaA.v4.2" name="V420-SAVE-ROUTE"></testcase>
+  <testcase classname="NovaA.v4.2" name="V420-CANONICAL"></testcase>
+  <testcase classname="NovaA.v4.2" name="V420-UNDO"></testcase>
+  <testcase classname="NovaA.v4.2" name="V420-UNDO-UI"></testcase>
+  <testcase classname="NovaA.v4.2" name="V420-RECOVERY"></testcase>
+  <testcase classname="NovaA.v4.2" name="V420-MIGRATION"></testcase>
+  <testcase classname="NovaA.v4.2" name="V420-REPAIR"></testcase>
+  <testcase classname="NovaA.v4.2" name="V420-LOCKS"></testcase>
+  <testcase classname="NovaA.v4.2" name="V420-EXTERNAL"></testcase>
+  <testcase classname="NovaA.v4.2" name="V420-LAUNCHER"></testcase>
+  <testcase classname="NovaA.v4.2" name="V420-TRASH"></testcase>
+  <testcase classname="NovaA.v4.2" name="V420-DIAGNOSTICS"></testcase>
+  <testcase classname="NovaA.v4.2" name="V420-DOC-SERIALIZATION_SPECIFICATION_4_2.md"></testcase>
+  <testcase classname="NovaA.v4.2" name="V420-DOC-SCHEMA_COMPATIBILITY_MATRIX_4_2.md"></testcase>
+  <testcase classname="NovaA.v4.2" name="V420-DOC-PROJECT_TRANSACTIONS_4_2.md"></testcase>
+  <testcase classname="NovaA.v4.2" name="V420-DOC-UNDO_COVERAGE_4_2.md"></testcase>
+  <testcase classname="NovaA.v4.2" name="V420-DOC-RECOVERY_4_2.md"></testcase>
+  <testcase classname="NovaA.v4.2" name="V420-DOC-MIGRATION_AND_ROLLBACK_4_2.md"></testcase>
+  <testcase classname="NovaA.v4.2" name="V420-DOC-EXTERNAL_CHANGES_4_2.md"></testcase>
+  <testcase classname="NovaA.v4.2" name="V420-DOC-KNOWN_ISSUES_4_2.md"></testcase>
+  <testcase classname="NovaA.v4.2" name="V420-MIG-5-pre-migration.nova"></testcase>
+  <testcase classname="NovaA.v4.2" name="V420-MIG-5-expected-migrated.nova"></testcase>
+  <testcase classname="NovaA.v4.2" name="V420-MIG-5-README.md"></testcase>
+  <testcase classname="NovaA.v4.2" name="V420-MIG-6-pre-migration.nova"></testcase>
+  <testcase classname="NovaA.v4.2" name="V420-MIG-6-expected-migrated.nova"></testcase>
+  <testcase classname="NovaA.v4.2" name="V420-MIG-6-README.md"></testcase>
+  <testcase classname="NovaA.v4.2" name="V420-MIG-7-pre-migration.nova"></testcase>
+  <testcase classname="NovaA.v4.2" name="V420-MIG-7-expected-migrated.nova"></testcase>
+  <testcase classname="NovaA.v4.2" name="V420-MIG-7-README.md"></testcase>
+  <testcase classname="NovaA.v4.2" name="V420-MIG-8-pre-migration.nova"></testcase>
+  <testcase classname="NovaA.v4.2" name="V420-MIG-8-expected-migrated.nova"></testcase>
+  <testcase classname="NovaA.v4.2" name="V420-MIG-8-README.md"></testcase>
+  <testcase classname="NovaA.v4.2" name="V420-MIG-9-pre-migration.nova"></testcase>
+  <testcase classname="NovaA.v4.2" name="V420-MIG-9-expected-migrated.nova"></testcase>
+  <testcase classname="NovaA.v4.2" name="V420-MIG-9-README.md"></testcase>
+  <testcase classname="NovaA.v4.2" name="V420-MIG-10-pre-migration.nova"></testcase>
+  <testcase classname="NovaA.v4.2" name="V420-MIG-10-expected-migrated.nova"></testcase>
+  <testcase classname="NovaA.v4.2" name="V420-MIG-10-README.md"></testcase>
+  <testcase classname="NovaA.v4.2" name="V420-MIG-11-pre-migration.nova"></testcase>
+  <testcase classname="NovaA.v4.2" name="V420-MIG-11-expected-migrated.nova"></testcase>
+  <testcase classname="NovaA.v4.2" name="V420-MIG-11-README.md"></testcase>
+  <testcase classname="NovaA.v4.2" name="V420-MIG-12-pre-migration.nova"></testcase>
+  <testcase classname="NovaA.v4.2" name="V420-MIG-12-expected-migrated.nova"></testcase>
+  <testcase classname="NovaA.v4.2" name="V420-MIG-12-README.md"></testcase>
+  <testcase classname="NovaA.v4.2" name="V420-MIG-13-pre-migration.nova"></testcase>
+  <testcase classname="NovaA.v4.2" name="V420-MIG-13-expected-migrated.nova"></testcase>
+  <testcase classname="NovaA.v4.2" name="V420-MIG-13-README.md"></testcase>
+  <testcase classname="NovaA.v4.2" name="V420-MIG-14-pre-migration.nova"></testcase>
+  <testcase classname="NovaA.v4.2" name="V420-MIG-14-expected-migrated.nova"></testcase>
+  <testcase classname="NovaA.v4.2" name="V420-MIG-14-README.md"></testcase>
+  <testcase classname="NovaA.v4.2" name="V420-MIG-15-pre-migration.nova"></testcase>
+  <testcase classname="NovaA.v4.2" name="V420-MIG-15-expected-migrated.nova"></testcase>
+  <testcase classname="NovaA.v4.2" name="V420-MIG-15-README.md"></testcase>
+  <testcase classname="NovaA.v4.2" name="V420-MIG-16-pre-migration.nova"></testcase>
+  <testcase classname="NovaA.v4.2" name="V420-MIG-16-expected-migrated.nova"></testcase>
+  <testcase classname="NovaA.v4.2" name="V420-MIG-16-README.md"></testcase>
+  <testcase classname="NovaA.v4.2" name="V420-MIG-17-pre-migration.nova"></testcase>
+  <testcase classname="NovaA.v4.2" name="V420-MIG-17-expected-migrated.nova"></testcase>
+  <testcase classname="NovaA.v4.2" name="V420-MIG-17-README.md"></testcase>
+  <testcase classname="NovaA.v4.2" name="V420-MIG-18-pre-migration.nova"></testcase>
+  <testcase classname="NovaA.v4.2" name="V420-MIG-18-expected-migrated.nova"></testcase>
+  <testcase classname="NovaA.v4.2" name="V420-MIG-18-README.md"></testcase>
+  <testcase classname="NovaA.v4.2" name="V420-MIG-19-pre-migration.nova"></testcase>
+  <testcase classname="NovaA.v4.2" name="V420-MIG-19-expected-migrated.nova"></testcase>
+  <testcase classname="NovaA.v4.2" name="V420-MIG-19-README.md"></testcase>
+  <testcase classname="NovaA.v4.2" name="V420-MIG-20-pre-migration.nova"></testcase>
+  <testcase classname="NovaA.v4.2" name="V420-MIG-20-expected-migrated.nova"></testcase>
+  <testcase classname="NovaA.v4.2" name="V420-MIG-20-README.md"></testcase>
+  <testcase classname="NovaA.v4.2" name="V420-MIG-21-pre-migration.nova"></testcase>
+  <testcase classname="NovaA.v4.2" name="V420-MIG-21-expected-migrated.nova"></testcase>
+  <testcase classname="NovaA.v4.2" name="V420-MIG-21-README.md"></testcase>
+  <testcase classname="NovaA.v4.2" name="V420-MIG-22-pre-migration.nova"></testcase>
+  <testcase classname="NovaA.v4.2" name="V420-MIG-22-expected-migrated.nova"></testcase>
+  <testcase classname="NovaA.v4.2" name="V420-MIG-22-README.md"></testcase>
+  <testcase classname="NovaA.v4.2" name="V420-MIG-23-pre-migration.nova"></testcase>
+  <testcase classname="NovaA.v4.2" name="V420-MIG-23-expected-migrated.nova"></testcase>
+  <testcase classname="NovaA.v4.2" name="V420-MIG-23-README.md"></testcase>
+  <testcase classname="NovaA.v4.2" name="V420-MIG-24-pre-migration.nova"></testcase>
+  <testcase classname="NovaA.v4.2" name="V420-MIG-24-expected-migrated.nova"></testcase>
+  <testcase classname="NovaA.v4.2" name="V420-MIG-24-README.md"></testcase>
+  <testcase classname="NovaA.v4.2" name="V420-MIG-25-pre-migration.nova"></testcase>
+  <testcase classname="NovaA.v4.2" name="V420-MIG-25-expected-migrated.nova"></testcase>
+  <testcase classname="NovaA.v4.2" name="V420-MIG-25-README.md"></testcase>
+  <testcase classname="NovaA.v4.2" name="V420-MIG-26-pre-migration.nova"></testcase>
+  <testcase classname="NovaA.v4.2" name="V420-MIG-26-expected-migrated.nova"></testcase>
+  <testcase classname="NovaA.v4.2" name="V420-MIG-26-README.md"></testcase>
+  <testcase classname="NovaA.v4.2" name="V420-MIG-27-pre-migration.nova"></testcase>
+  <testcase classname="NovaA.v4.2" name="V420-MIG-27-expected-migrated.nova"></testcase>
+  <testcase classname="NovaA.v4.2" name="V420-MIG-27-README.md"></testcase>
+  <testcase classname="NovaA.v4.2" name="V420-MIG-28-pre-migration.nova"></testcase>
+  <testcase classname="NovaA.v4.2" name="V420-MIG-28-expected-migrated.nova"></testcase>
+  <testcase classname="NovaA.v4.2" name="V420-MIG-28-README.md"></testcase>
+  <testcase classname="NovaA.v4.2" name="V420-MIG-29-pre-migration.nova"></testcase>
+  <testcase classname="NovaA.v4.2" name="V420-MIG-29-expected-migrated.nova"></testcase>
+  <testcase classname="NovaA.v4.2" name="V420-MIG-29-README.md"></testcase>
+  <testcase classname="NovaA.v4.2" name="SER-001"></testcase>
+  <testcase classname="NovaA.v4.2" name="SER-002"></testcase>
+  <testcase classname="NovaA.v4.2" name="SER-003"></testcase>
+  <testcase classname="NovaA.v4.2" name="SER-004"></testcase>
+  <testcase classname="NovaA.v4.2" name="SER-005"></testcase>
+  <testcase classname="NovaA.v4.2" name="TX-FAULT-preflight"></testcase>
+  <testcase classname="NovaA.v4.2" name="TX-FAULT-prepared"></testcase>
+  <testcase classname="NovaA.v4.2" name="TX-FAULT-writing"></testcase>
+  <testcase classname="NovaA.v4.2" name="TX-FAULT-verifying"></testcase>
+  <testcase classname="NovaA.v4.2" name="TX-FAULT-committing"></testcase>
+  <testcase classname="NovaA.v4.2" name="TX-ERROR-disk-full"></testcase>
+  <testcase classname="NovaA.v4.2" name="TX-ERROR-permission-denied"></testcase>
+  <testcase classname="NovaA.v4.2" name="TX-ERROR-file-in-use"></testcase>
+  <testcase classname="NovaA.v4.2" name="TX-ERROR-antivirus-delay"></testcase>
+  <testcase classname="NovaA.v4.2" name="TX-ERROR-path"></testcase>
+  <testcase classname="NovaA.v4.2" name="TX-ERROR-network"></testcase>
+  <testcase classname="NovaA.v4.2" name="TX-ERROR-read-only"></testcase>
+  <testcase classname="NovaA.v4.2" name="TX-CANCEL"></testcase>
+  <testcase classname="NovaA.v4.2" name="TX-FILES"></testcase>
+  <testcase classname="NovaA.v4.2" name="UNDO-10000"></testcase>
+  <testcase classname="NovaA.v4.2" name="UNDO-REDO-INVALIDATE"></testcase>
+  <testcase classname="NovaA.v4.2" name="UNDO-NESTED"></testcase>
+  <testcase classname="NovaA.v4.2" name="UNDO-BUDGET"></testcase>
+  <testcase classname="NovaA.v4.2" name="MIG-5"></testcase>
+  <testcase classname="NovaA.v4.2" name="MIG-6"></testcase>
+  <testcase classname="NovaA.v4.2" name="MIG-7"></testcase>
+  <testcase classname="NovaA.v4.2" name="MIG-8"></testcase>
+  <testcase classname="NovaA.v4.2" name="MIG-9"></testcase>
+  <testcase classname="NovaA.v4.2" name="MIG-10"></testcase>
+  <testcase classname="NovaA.v4.2" name="MIG-11"></testcase>
+  <testcase classname="NovaA.v4.2" name="MIG-12"></testcase>
+  <testcase classname="NovaA.v4.2" name="MIG-13"></testcase>
+  <testcase classname="NovaA.v4.2" name="MIG-14"></testcase>
+  <testcase classname="NovaA.v4.2" name="MIG-15"></testcase>
+  <testcase classname="NovaA.v4.2" name="MIG-16"></testcase>
+  <testcase classname="NovaA.v4.2" name="MIG-17"></testcase>
+  <testcase classname="NovaA.v4.2" name="MIG-18"></testcase>
+  <testcase classname="NovaA.v4.2" name="MIG-19"></testcase>
+  <testcase classname="NovaA.v4.2" name="MIG-20"></testcase>
+  <testcase classname="NovaA.v4.2" name="MIG-21"></testcase>
+  <testcase classname="NovaA.v4.2" name="MIG-22"></testcase>
+  <testcase classname="NovaA.v4.2" name="MIG-23"></testcase>
+  <testcase classname="NovaA.v4.2" name="MIG-24"></testcase>
+  <testcase classname="NovaA.v4.2" name="MIG-25"></testcase>
+  <testcase classname="NovaA.v4.2" name="MIG-26"></testcase>
+  <testcase classname="NovaA.v4.2" name="MIG-27"></testcase>
+  <testcase classname="NovaA.v4.2" name="MIG-28"></testcase>
+  <testcase classname="NovaA.v4.2" name="MIG-29"></testcase>
+  <testcase classname="NovaA.v4.2" name="MIG-FUTURE"></testcase>
+  <testcase classname="NovaA.v4.2" name="MIG-missing"></testcase>
+  <testcase classname="NovaA.v4.2" name="MIG-duplicate"></testcase>
+  <testcase classname="NovaA.v4.2" name="MIG-MALFORMED"></testcase>
+  <testcase classname="NovaA.v4.2" name="REC-VALID"></testcase>
+  <testcase classname="NovaA.v4.2" name="REC-COPY"></testcase>
+  <testcase classname="NovaA.v4.2" name="FUZZ-BOUNDED"></testcase>
+  <testcase classname="NovaA.v4.2" name="en Design 1024x768"></testcase>
+  <testcase classname="NovaA.v4.2" name="en Design 1280x800"></testcase>
+  <testcase classname="NovaA.v4.2" name="en Design 1600x900"></testcase>
+  <testcase classname="NovaA.v4.2" name="en Design 1920x1080"></testcase>
+  <testcase classname="NovaA.v4.2" name="en workspace 1/6"></testcase>
+  <testcase classname="NovaA.v4.2" name="en workspace 2/6"></testcase>
+  <testcase classname="NovaA.v4.2" name="en workspace 3/6"></testcase>
+  <testcase classname="NovaA.v4.2" name="en workspace 4/6"></testcase>
+  <testcase classname="NovaA.v4.2" name="en workspace 5/6"></testcase>
+  <testcase classname="NovaA.v4.2" name="en workspace 6/6"></testcase>
+  <testcase classname="NovaA.v4.2" name="en bottom panel 1/5"></testcase>
+  <testcase classname="NovaA.v4.2" name="en bottom panel 2/5"></testcase>
+  <testcase classname="NovaA.v4.2" name="en bottom panel 3/5"></testcase>
+  <testcase classname="NovaA.v4.2" name="en bottom panel 4/5"></testcase>
+  <testcase classname="NovaA.v4.2" name="en bottom panel 5/5"></testcase>
+  <testcase classname="NovaA.v4.2" name="en page 1/4"></testcase>
+  <testcase classname="NovaA.v4.2" name="en page 2/4"></testcase>
+  <testcase classname="NovaA.v4.2" name="en page 3/4"></testcase>
+  <testcase classname="NovaA.v4.2" name="en page 4/4"></testcase>
+  <testcase classname="NovaA.v4.2" name="de Design 1024x768"></testcase>
+  <testcase classname="NovaA.v4.2" name="de Design 1280x800"></testcase>
+  <testcase classname="NovaA.v4.2" name="de Design 1600x900"></testcase>
+  <testcase classname="NovaA.v4.2" name="de Design 1920x1080"></testcase>
+  <testcase classname="NovaA.v4.2" name="de workspace 1/6"></testcase>
+  <testcase classname="NovaA.v4.2" name="de workspace 2/6"></testcase>
+  <testcase classname="NovaA.v4.2" name="de workspace 3/6"></testcase>
+  <testcase classname="NovaA.v4.2" name="de workspace 4/6"></testcase>
+  <testcase classname="NovaA.v4.2" name="de workspace 5/6"></testcase>
+  <testcase classname="NovaA.v4.2" name="de workspace 6/6"></testcase>
+  <testcase classname="NovaA.v4.2" name="de bottom panel 1/5"></testcase>
+  <testcase classname="NovaA.v4.2" name="de bottom panel 2/5"></testcase>
+  <testcase classname="NovaA.v4.2" name="de bottom panel 3/5"></testcase>
+  <testcase classname="NovaA.v4.2" name="de bottom panel 4/5"></testcase>
+  <testcase classname="NovaA.v4.2" name="de bottom panel 5/5"></testcase>
+  <testcase classname="NovaA.v4.2" name="de page 1/4"></testcase>
+  <testcase classname="NovaA.v4.2" name="de page 2/4"></testcase>
+  <testcase classname="NovaA.v4.2" name="de page 3/4"></testcase>
+  <testcase classname="NovaA.v4.2" name="de page 4/4"></testcase>
+  <testcase classname="NovaA.v4.2" name="zh Design 1024x768"></testcase>
+  <testcase classname="NovaA.v4.2" name="zh Design 1280x800"></testcase>
+  <testcase classname="NovaA.v4.2" name="zh Design 1600x900"></testcase>
+  <testcase classname="NovaA.v4.2" name="zh Design 1920x1080"></testcase>
+  <testcase classname="NovaA.v4.2" name="zh workspace 1/6"></testcase>
+  <testcase classname="NovaA.v4.2" name="zh workspace 2/6"></testcase>
+  <testcase classname="NovaA.v4.2" name="zh workspace 3/6"></testcase>
+  <testcase classname="NovaA.v4.2" name="zh workspace 4/6"></testcase>
+  <testcase classname="NovaA.v4.2" name="zh workspace 5/6"></testcase>
+  <testcase classname="NovaA.v4.2" name="zh workspace 6/6"></testcase>
+  <testcase classname="NovaA.v4.2" name="zh bottom panel 1/5"></testcase>
+  <testcase classname="NovaA.v4.2" name="zh bottom panel 2/5"></testcase>
+  <testcase classname="NovaA.v4.2" name="zh bottom panel 3/5"></testcase>
+  <testcase classname="NovaA.v4.2" name="zh bottom panel 4/5"></testcase>
+  <testcase classname="NovaA.v4.2" name="zh bottom panel 5/5"></testcase>
+  <testcase classname="NovaA.v4.2" name="zh page 1/4"></testcase>
+  <testcase classname="NovaA.v4.2" name="zh page 2/4"></testcase>
+  <testcase classname="NovaA.v4.2" name="zh page 3/4"></testcase>
+  <testcase classname="NovaA.v4.2" name="zh page 4/4"></testcase>
+  <testcase classname="NovaA.v4.2" name="Stable control inventory"></testcase>
+  <testcase classname="NovaA.v4.2" name="Browser console and fatal surface"></testcase>
+  <testcase classname="NovaA.v4.2" name="artifact-portable"></testcase>
+  <testcase classname="NovaA.v4.2" name="artifact-msi"></testcase>
+  <testcase classname="NovaA.v4.2" name="artifact-setup"></testcase>
+  <testcase classname="NovaA.v4.2" name="portable-isolated-startup"></testcase>
+</testsuite>

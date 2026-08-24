@@ -4,7 +4,7 @@ import { spawn } from 'node:child_process'
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { basename, dirname, extname, resolve } from 'node:path'
 
-const ENGINE_VERSION = '4.0.0', PROJECT_SCHEMA = 29, CLI_VERSION = 1
+const ENGINE_VERSION = '4.4.0', PROJECT_SCHEMA = 29, CLI_VERSION = 1
 const commands = new Set(['validate', 'import', 'test', 'build', 'export', 'package', 'version'])
 
 function parse(values) {

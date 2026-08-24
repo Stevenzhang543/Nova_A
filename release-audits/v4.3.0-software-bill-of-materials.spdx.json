@@ -1,0 +1,23 @@
+{
+  "spdxVersion": "SPDX-2.3",
+  "dataLicense": "CC0-1.0",
+  "SPDXID": "SPDXRef-DOCUMENT",
+  "name": "Nova_A-4.3.0",
+  "documentNamespace": "https://whitelists.top/nova-a/sbom/4.3.0/25b8d4c5138dbad5903cb4fafd6128bf24baf4db1c26dda2e4761260759621f9",
+  "creationInfo": {
+    "created": "2026-08-23T11:41:11.002Z",
+    "creators": [
+      "Organization: Whitelist"
+    ]
+  },
+  "packages": [
+    {
+      "name": "Nova_A",
+      "SPDXID": "SPDXRef-Package-Nova-A",
+      "versionInfo": "4.3.0",
+      "downloadLocation": "NOASSERTION",
+      "licenseConcluded": "MIT",
+      "licenseDeclared": "MIT"
+    }
+  ]
+}

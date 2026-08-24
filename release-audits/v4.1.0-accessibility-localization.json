@@ -1,0 +1,19 @@
+{
+  "format": "nova-accessibility-localization",
+  "version": 1,
+  "engineVersion": "4.1.0",
+  "generatedAt": "2026-08-20T08:57:16.748Z",
+  "languages": [
+    "en",
+    "de",
+    "zh-CN"
+  ],
+  "checks": [
+    "physics and authoring controls localized",
+    "horizontal multilingual toolbar labels",
+    "keyboard palette and Escape close",
+    "visible focus inherited",
+    "reduced motion retained"
+  ],
+  "status": "passed"
+}

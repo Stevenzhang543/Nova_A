@@ -1,0 +1,70 @@
+{
+  "format": "nova-windows-smoke",
+  "version": 1,
+  "engineVersion": "4.2.0",
+  "generatedAt": "2026-08-23T04:35:24.366Z",
+  "host": "win32-x64",
+  "isolatedProfile": true,
+  "artifacts": {
+    "portable": {
+      "path": "src-tauri/target/release/nova_a.exe",
+      "bytes": 15523328,
+      "sha256": "554a2fc39d858e35bafb7febd433427fe227512150786cb464c634279514f343"
+    },
+    "msi": {
+      "path": "src-tauri/target/release/bundle/msi/Nova_A_4.2.0_x64_en-US.msi",
+      "bytes": 9211904,
+      "sha256": "be79cccb61cc4252e784d2b14dce69bd1e564d021f4a2552c03867814ec108d1"
+    },
+    "setup": {
+      "path": "src-tauri/target/release/bundle/nsis/Nova_A_4.2.0_x64-setup.exe",
+      "bytes": 8140456,
+      "sha256": "5439f2c3fe5fe1f6e5e2d9fdd39f22687d1591c7c422c3ee5c9ad020dbcfcbd4"
+    }
+  },
+  "launchSeconds": 10,
+  "stayedAlive": true,
+  "earlyExit": null,
+  "checks": [
+    {
+      "id": "artifact-portable",
+      "status": "passed",
+      "detail": {
+        "path": "src-tauri/target/release/nova_a.exe",
+        "bytes": 15523328,
+        "sha256": "554a2fc39d858e35bafb7febd433427fe227512150786cb464c634279514f343"
+      }
+    },
+    {
+      "id": "artifact-msi",
+      "status": "passed",
+      "detail": {
+        "path": "src-tauri/target/release/bundle/msi/Nova_A_4.2.0_x64_en-US.msi",
+        "bytes": 9211904,
+        "sha256": "be79cccb61cc4252e784d2b14dce69bd1e564d021f4a2552c03867814ec108d1"
+      }
+    },
+    {
+      "id": "artifact-setup",
+      "status": "passed",
+      "detail": {
+        "path": "src-tauri/target/release/bundle/nsis/Nova_A_4.2.0_x64-setup.exe",
+        "bytes": 8140456,
+        "sha256": "5439f2c3fe5fe1f6e5e2d9fdd39f22687d1591c7c422c3ee5c9ad020dbcfcbd4"
+      }
+    },
+    {
+      "id": "portable-isolated-startup",
+      "status": "passed",
+      "detail": {
+        "launchSeconds": 10,
+        "stayedAlive": true,
+        "earlyExit": null
+      }
+    }
+  ],
+  "cleanMachineLifecycle": "pending external disposable-VM gate",
+  "publisherSigning": "pending signing identity",
+  "systemMutationPerformedByAudit": false,
+  "status": "passed"
+}

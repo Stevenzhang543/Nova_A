@@ -4,15 +4,39 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE.md)
 [![Platforms](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey)](https://v2.tauri.app/start/prerequisites/)
-[![Release](https://img.shields.io/badge/release-4.0.0-63c6ff)]()
+[![Release](https://img.shields.io/badge/release-4.4.0-63c6ff)]()
 
 Nova_A is an open-source 2D game engine and desktop editor built with Rust, WebAssembly, Vue 3, and Tauri.
 
-Version **4.0.0** is Nova_A's production-stable 2D baseline: Project Format 2 schema 29 and Runtime API 1, Plugin API 2, Package Manifest 1, and Build CLI 1 are locked for compatible 4.0.x patches. The complete editor, physics, rendering, animation, audio, scripting, UI, world-data, build, package, and collaboration systems remain available.
+Version **4.4.0** delivers the daily 2D content-production pipeline while preserving Project Format 2 schema 29 and the frozen Runtime API 1, Plugin API 2, Package Manifest 1, and Build CLI 1 contracts. Deterministic importer 3.0 provenance, dependency/content closure, scalable asset browsing, production sprites/atlases/TileMap, camera/parallax/path composition, multilingual runtime fonts, and a quieter iOS-inspired editor visual language are integrated without removing prior features or animations.
 
 **Manual:** [interactive English/German/Chinese webpage](./manual/index.html) · [English Markdown](./manual/MANUAL.en.md) · [Deutsch](./manual/MANUAL.de.md) · [中文](./manual/MANUAL.zh-CN.md)
 
-## What is new in v4.0.0
+## What is new in v4.4.0
+
+- **Deterministic Asset Database:** importer/version/preset/settings/hash provenance, dependency cycles and repair, duplicate sources, build inclusion closure, content groups, tags, favorites, collections, saved searches, grid/list view, bounded thumbnails, incremental 20,000-asset browsing, source-control state, watcher conflict choices, transactional folder moves, Compare, Revert, and batch reimport.
+- **Production sprites and atlases:** filtering, mipmaps, color/transparency/compression, PPU, pivot, trim, grid/automatic slicing, nine-slice, polygon/collision, animation extraction, SVG, deterministic atlas packing, reports, and platform overrides.
+- **TileMap and composition:** searchable TileSet palettes, complete paint/selection tools, per-layer physics/navigation/occlusion, streaming boundaries, deterministic storage/history, camera bounds/smoothing/safe frames/multiple views, parallax repeat/mirror/depth, and reusable tangent-based paths with followers.
+- **Runtime fonts:** shaping, OpenType, hinting, oversampling, bitmap/SDF/MSDF, fallback chains, platform settings, editor/game ownership, and actionable CJK/RTL/combining/emoji glyph reports.
+- **Refined interface:** bundled rounded Nunito/Noto type, role-based control sizes, softer materials and radii, purposeful transform/opacity animations, visible focus, and complete reduced-motion handling.
+
+See the [asset pipeline contract](./docs/ASSET_PIPELINE_4_4.md), [sprite/TileMap/font guide](./docs/SPRITE_TILEMAP_FONT_4_4.md), and [known issues](./docs/KNOWN_ISSUES_4_4.md).
+
+### Retained v4.3 authoring foundation
+
+Scene tabs, stable hierarchy and component identities, multi-Inspector, prefab v2 variants/conflicts, rulers/guides, exact snapping, transactional edits, and the 10,000-object hierarchy remain unchanged and fully supported.
+
+### Retained v4.2 data-integrity foundation
+
+- **Atomic project transactions:** manual saves validate and canonicalize first, journal every affected scene/asset/script/animation/UI/settings/package/build file, stage temporary data, verify checksums, and preserve the last manual save across interruption, permission, path, disk, file-lock, antivirus-delay, and network failures.
+- **Deterministic data:** stable ordering, LF/UTF-8 text, finite shortest-round-trip numbers, lowercase UUID references, authored/generated separation, validator, deterministic re-save, and identity-based semantic scene/prefab/resource diff.
+- **Central undo and recovery:** named/grouped/nested history has timestamps, resources, count/memory bounds, redo invalidation, and a searchable Undo History surface. Verified autosaves are separate from manual saves; Recovery Browser previews conflicts and offers restore, discard, or new-identity copy without silent overwrite.
+- **Safe migration and repair:** schemas 5–29 use dry run, compatibility/impact report, Task Center log, backup, full validation, deterministic rerun, and rollback. Project Health adds read-only repair preview, missing-reference mapping, cache rebuild, manifest repair, transaction journals, recovery status, and recoverable project trash.
+- **External/team safety:** guided Open/Add existing/Migrate older/Import archive workflows, project locks/read-only open, watcher self-suppression, source-control/large-update classification, compare/reload/keep-editor/keep-disk choices, and exact-count destructive confirmations.
+
+See the [serialization specification](./docs/SERIALIZATION_SPECIFICATION_4_2.md), [schema matrix](./docs/SCHEMA_COMPATIBILITY_MATRIX_4_2.md), [transaction contract](./docs/PROJECT_TRANSACTIONS_4_2.md), [undo coverage](./docs/UNDO_COVERAGE_4_2.md), [recovery guide](./docs/RECOVERY_4_2.md), and [migration/rollback guide](./docs/MIGRATION_AND_ROLLBACK_4_2.md). The [v4.1 navigation and design-system documentation](./docs/NAVIGATION_4_1.md) remains current.
+
+### Retained v4.0 production baseline
 
 - **Upgrade Assistant:** every external project receives a pre-open format/engine/content/package report. Supported 3.x upgrades require a full backup, retain rollback data, migrate in memory, validate and canonicalize the entire result, and never replace the session on failure. Schema 29 remains frozen.
 - **Stable support contract:** Studio Status declares Stable/Beta/Development channels, an offline known-issues feed, patch policy, archived-engine guidance, release health, and opt-in local crash-report packages with privacy review. Nothing uploads automatically.
@@ -288,10 +312,10 @@ The Tauri build invokes `pnpm build` automatically before packaging. Result loca
 After the native build succeeds, assemble the complete versioned release set:
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\package-release.ps1 -Version 4.0.0
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\package-release.ps1 -Version 4.2.0
 ```
 
-This creates `releases/v4.0.0/` with the eleven mandatory top-level artifacts: portable executable, MSI, NSIS setup executable, web ZIP, source ZIP, reference-project ZIP, release-evidence ZIP, release notes, exhaustive edit ledger, license, and `SHA256SUMS.txt`. The SBOM, third-party notices, reproducibility, platform/package/source-control/migration/API-freeze evidence, test reports, release health, sign-off record, and screenshots are contained in the release-evidence ZIP.
+This creates `releases/v4.2.0/` with the eleven mandatory top-level artifacts: portable executable, MSI, NSIS setup executable, web ZIP, source ZIP, reference-project ZIP, release-evidence ZIP, release notes, exhaustive edit ledger, license, and `SHA256SUMS.txt`. The evidence ZIP keeps the required machine-readable hierarchy, environment/tool/source identity, test and coverage reports, visual baselines/diffs, logs, screenshots, known issues, and sign-off gates.
 
 ### Headless export
 
@@ -325,7 +349,7 @@ Configuration changes cross Vue → `nova_wasm` as explicit retained-world comma
 
 ## Project compatibility
 
-- New saves use **Nova_A Project Format 2**, schema 29, and engine version `4.0.0`.
+- New saves use **Nova_A Project Format 2**, schema 29, and engine version `4.2.0`.
 - Persisted scenes, entities, components, and connections use UUIDs; runtime handles are never written to disk.
 - Format migration and validation are centralized in `nova_format`, not scattered through editor components.
 - v1.9 format-13 files, v1.8 format-12 files, v1.7 format-11 files, v1.6 format-10 files, v1.5 format-9 files, v1.4 format-8 files, v1.3 format-7 files, v1.2 format-6 files, v1.1.2 format-5 files, older object roots, and legacy top-level entity arrays continue to load. A migrated project is only written in Format 2 when the user saves it.

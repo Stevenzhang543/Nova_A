@@ -1,0 +1,14 @@
+{
+  "engineVersion": "4.4.0",
+  "schema": 29,
+  "projectName": "Untitled Project",
+  "minimumScenes": 1,
+  "minimumEntities": 2,
+  "expectedValidation": "pass",
+  "demonstrates": [
+    "nested prefab source layers",
+    "ownership metadata",
+    "override comparison",
+    "circular graph rejection"
+  ]
+}

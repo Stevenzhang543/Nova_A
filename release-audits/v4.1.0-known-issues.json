@@ -1,0 +1,16 @@
+{
+  "format": "nova-known-issues",
+  "version": 1,
+  "engineVersion": "4.1.0",
+  "generatedAt": "2026-08-20T08:57:16.748Z",
+  "severity0Open": 0,
+  "severity1Open": 0,
+  "items": [
+    {
+      "severity": "S2",
+      "area": "qualification",
+      "issue": "24-hour native soak and clean Linux/macOS installer qualification remain external release-engineering tasks.",
+      "workaround": "Run the supplied stability and platform procedures on named hardware before claiming those qualifications."
+    }
+  ]
+}

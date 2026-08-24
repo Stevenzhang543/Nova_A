@@ -1,0 +1,164 @@
+{
+  "format": "nova-v4.2-migration-results",
+  "version": 1,
+  "generatedAt": "2026-08-23T04:31:31.841Z",
+  "targetSchema": 29,
+  "results": [
+    {
+      "schema": 5,
+      "valid": true,
+      "deterministic": true,
+      "outputChecksum": "bb2f95f9e19a63f8"
+    },
+    {
+      "schema": 6,
+      "valid": true,
+      "deterministic": true,
+      "outputChecksum": "bb2f95f9e19a63f8"
+    },
+    {
+      "schema": 7,
+      "valid": true,
+      "deterministic": true,
+      "outputChecksum": "bb2f95f9e19a63f8"
+    },
+    {
+      "schema": 8,
+      "valid": true,
+      "deterministic": true,
+      "outputChecksum": "bb2f95f9e19a63f8"
+    },
+    {
+      "schema": 9,
+      "valid": true,
+      "deterministic": true,
+      "outputChecksum": "bb2f95f9e19a63f8"
+    },
+    {
+      "schema": 10,
+      "valid": true,
+      "deterministic": true,
+      "outputChecksum": "bb2f95f9e19a63f8"
+    },
+    {
+      "schema": 11,
+      "valid": true,
+      "deterministic": true,
+      "outputChecksum": "bb2f95f9e19a63f8"
+    },
+    {
+      "schema": 12,
+      "valid": true,
+      "deterministic": true,
+      "outputChecksum": "bb2f95f9e19a63f8"
+    },
+    {
+      "schema": 13,
+      "valid": true,
+      "deterministic": true,
+      "outputChecksum": "bb2f95f9e19a63f8"
+    },
+    {
+      "schema": 14,
+      "valid": true,
+      "deterministic": true,
+      "outputChecksum": "bb2f95f9e19a63f8"
+    },
+    {
+      "schema": 15,
+      "valid": true,
+      "deterministic": true,
+      "outputChecksum": "bb2f95f9e19a63f8"
+    },
+    {
+      "schema": 16,
+      "valid": true,
+      "deterministic": true,
+      "outputChecksum": "bb2f95f9e19a63f8"
+    },
+    {
+      "schema": 17,
+      "valid": true,
+      "deterministic": true,
+      "outputChecksum": "bb2f95f9e19a63f8"
+    },
+    {
+      "schema": 18,
+      "valid": true,
+      "deterministic": true,
+      "outputChecksum": "bb2f95f9e19a63f8"
+    },
+    {
+      "schema": 19,
+      "valid": true,
+      "deterministic": true,
+      "outputChecksum": "bb2f95f9e19a63f8"
+    },
+    {
+      "schema": 20,
+      "valid": true,
+      "deterministic": true,
+      "outputChecksum": "bb2f95f9e19a63f8"
+    },
+    {
+      "schema": 21,
+      "valid": true,
+      "deterministic": true,
+      "outputChecksum": "bb2f95f9e19a63f8"
+    },
+    {
+      "schema": 22,
+      "valid": true,
+      "deterministic": true,
+      "outputChecksum": "bb2f95f9e19a63f8"
+    },
+    {
+      "schema": 23,
+      "valid": true,
+      "deterministic": true,
+      "outputChecksum": "bb2f95f9e19a63f8"
+    },
+    {
+      "schema": 24,
+      "valid": true,
+      "deterministic": true,
+      "outputChecksum": "bb2f95f9e19a63f8"
+    },
+    {
+      "schema": 25,
+      "valid": true,
+      "deterministic": true,
+      "outputChecksum": "bb2f95f9e19a63f8"
+    },
+    {
+      "schema": 26,
+      "valid": true,
+      "deterministic": true,
+      "outputChecksum": "bb2f95f9e19a63f8"
+    },
+    {
+      "schema": 27,
+      "valid": true,
+      "deterministic": true,
+      "outputChecksum": "bb2f95f9e19a63f8"
+    },
+    {
+      "schema": 28,
+      "valid": true,
+      "deterministic": true,
+      "outputChecksum": "bb2f95f9e19a63f8"
+    },
+    {
+      "schema": 29,
+      "valid": true,
+      "deterministic": true,
+      "outputChecksum": "bb2f95f9e19a63f8"
+    }
+  ],
+  "status": "passed",
+  "sourceFixtureAuthority": "crates/nova_format",
+  "supportedSchemas": "5–29",
+  "backup": true,
+  "rollback": true,
+  "deterministicRerun": true
+}

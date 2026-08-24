@@ -1,0 +1,71 @@
+{
+  "format": "nova-v4.2-fault-injection",
+  "version": 1,
+  "generatedAt": "2026-08-23T04:31:31.841Z",
+  "faultResults": [
+    {
+      "phase": "preflight",
+      "failed": true,
+      "preserved": true
+    },
+    {
+      "phase": "prepared",
+      "failed": true,
+      "preserved": true
+    },
+    {
+      "phase": "writing",
+      "failed": true,
+      "preserved": true
+    },
+    {
+      "phase": "verifying",
+      "failed": true,
+      "preserved": true
+    },
+    {
+      "phase": "committing",
+      "failed": true,
+      "preserved": true
+    }
+  ],
+  "errorCases": [
+    {
+      "kind": "disk-full",
+      "message": "ENOSPC: no space left",
+      "classified": "disk-full"
+    },
+    {
+      "kind": "permission-denied",
+      "message": "EACCES permission denied",
+      "classified": "permission-denied"
+    },
+    {
+      "kind": "file-in-use",
+      "message": "sharing violation file in use",
+      "classified": "file-in-use"
+    },
+    {
+      "kind": "antivirus-delay",
+      "message": "antivirus delay timed out",
+      "classified": "antivirus-delay"
+    },
+    {
+      "kind": "path",
+      "message": "ENAMETOOLONG long path",
+      "classified": "path"
+    },
+    {
+      "kind": "network",
+      "message": "network share unreachable",
+      "classified": "network"
+    },
+    {
+      "kind": "read-only",
+      "message": "EROFS read only",
+      "classified": "read-only"
+    }
+  ],
+  "lastManualPreserved": true,
+  "status": "passed"
+}

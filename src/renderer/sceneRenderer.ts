@@ -102,6 +102,13 @@ function visibleWorldBounds(view: CameraRenderView, width: number, height: numbe
   return { minX: center.x - extentX, maxX: center.x + extentX, minY: center.y - extentY, maxY: center.y + extentY }
 }
 
+function ancestorParallax(entity: Entity, entities: Entity[]): Entity | null {
+  let current: Entity | undefined = entity
+  const visited = new Set<string>()
+  while (current && !visited.has(current.uuid)) { visited.add(current.uuid); if (current.authoring.kind === 'ParallaxLayer') return current; current = current.parentUuid ? entities.find(candidate => candidate.uuid === current!.parentUuid) : undefined }
+  return null
+}
+
 function authoringPosition(entity: Entity, position: { x: number; y: number }, entities: Entity[], view: CameraRenderView): { x: number; y: number } {
   let current: Entity | undefined = entity, canvasLayer: Entity | undefined, parallaxLayer: Entity | undefined
   const visited = new Set<string>()
@@ -131,15 +138,35 @@ function submitSprite(renderer: Renderer2D, entity: Entity, sprite: SpriteRender
   const texture = resolveTexture(sprite.spriteAsset, state.sampling)
   if (!texture) return
   const transform = worldTransform(entity, entities)
-  renderer.submitSprite({
-    position: authoringPosition(entity, transform.position, entities, view), rotation: transform.rotation, scale: transform.scale,
-    size: sprite.size, pivot: sprite.pivot, flipX: sprite.flipX, flipY: sprite.flipY,
-    tint: rgba(sprite.tint, sprite.opacity), texture,
-    sortingLayer: sprite.sortingLayer, orderInLayer: authoredOrder(entity, sprite.orderInLayer, entities),
-    material: sprite.material, blendMode: state.blendMode,
-    nineSlice: sprite.nineSlice.enabled ? { left: sprite.nineSlice.left, top: sprite.nineSlice.top, right: sprite.nineSlice.right, bottom: sprite.nineSlice.bottom } : null,
-    mesh: deformSkin(entity, sprite)
-  })
+  const base = authoringPosition(entity, transform.position, entities, view), parallaxLayer = ancestorParallax(entity, entities), parallax = parallaxLayer?.authoring.parallax
+  const repeatX = parallax && parallax.repeat.x > 0 ? [-1, 0, 1] : [0], repeatY = parallax && parallax.repeat.y > 0 ? [-1, 0, 1] : [0]
+  for (const y of repeatY) for (const x of repeatX) {
+    const mirrored = parallax?.mirror === true && Math.abs(x + y) % 2 === 1
+    renderer.submitSprite({
+      position: { x: base.x + x * (parallax?.repeat.x ?? 0), y: base.y + y * (parallax?.repeat.y ?? 0) }, rotation: transform.rotation, scale: transform.scale,
+      size: sprite.size, pivot: sprite.pivot, flipX: mirrored ? !sprite.flipX : sprite.flipX, flipY: sprite.flipY,
+      tint: rgba(sprite.tint, sprite.opacity), texture,
+      sortingLayer: sprite.sortingLayer, orderInLayer: authoredOrder(entity, sprite.orderInLayer, entities) + (parallax?.depth ?? 0) * .000001,
+      material: sprite.material, blendMode: state.blendMode,
+      nineSlice: sprite.nineSlice.enabled ? { left: sprite.nineSlice.left, top: sprite.nineSlice.top, right: sprite.nineSlice.right, bottom: sprite.nineSlice.bottom } : null,
+      mesh: deformSkin(entity, sprite)
+    })
+  }
+}
+
+function renderedPathVertices(entity: Entity): Array<{ x: number; y: number }> {
+  const path = entity.authoring.path, points = path.points.length ? path.points : entity.renderer.vertices
+  if (entity.authoring.kind !== 'Path' || points.length < 2 || path.smoothing <= 0) return entity.renderer.vertices
+  const result: Array<{ x: number; y: number }> = [], segmentCount = path.closed ? points.length : points.length - 1, steps = Math.max(3, Math.round(3 + path.smoothing * 21))
+  for (let index = 0; index < segmentCount; index++) {
+    const nextIndex = (index + 1) % points.length, p0 = points[index], p3 = points[nextIndex]
+    const previous = points[(index - 1 + points.length) % points.length], following = points[(nextIndex + 1) % points.length]
+    const automaticOut = { x: (p3.x - previous.x) * path.smoothing / 6, y: (p3.y - previous.y) * path.smoothing / 6 }, automaticIn = { x: (p0.x - following.x) * path.smoothing / 6, y: (p0.y - following.y) * path.smoothing / 6 }
+    const outgoing = path.tangents[index]?.outgoing ?? automaticOut, incoming = path.tangents[nextIndex]?.incoming ?? automaticIn
+    const p1 = { x: p0.x + outgoing.x, y: p0.y + outgoing.y }, p2 = { x: p3.x + incoming.x, y: p3.y + incoming.y }
+    for (let step = index ? 1 : 0; step <= steps; step++) { const t = step / steps, inverse = 1 - t; result.push({ x: inverse ** 3 * p0.x + 3 * inverse ** 2 * t * p1.x + 3 * inverse * t ** 2 * p2.x + t ** 3 * p3.x, y: inverse ** 3 * p0.y + 3 * inverse ** 2 * t * p1.y + 3 * inverse * t ** 2 * p2.y + t ** 3 * p3.y }) }
+  }
+  return result
 }
 
 function submitText(renderer: Renderer2D, entity: Entity, text: TextRenderer2D, entities: Entity[], view: CameraRenderView): void {
@@ -200,7 +227,7 @@ export function renderWorld(renderer: Renderer2D, entities: Entity[], options: S
         const materialState = renderState(shape.material, shape.filterMode)
         renderer.submitShape({
           shape: shape.shape, position: authoringPosition(entity, transform.position, entities, camera.view), rotation: transform.rotation, scale: transform.scale,
-          vertices: shape.vertices, radiusX: shape.radiusX, radiusY: shape.radiusY,
+          vertices: renderedPathVertices(entity), radiusX: shape.radiusX, radiusY: shape.radiusY,
           fill: rgba(shape.color, shape.opacity), stroke: rgba(shape.strokeColor, compoundMembers.has(entity.id) ? 0 : shape.strokeOpacity),
           strokeWidth: shape.strokeWidth, texture: resolveTexture(shape.textureAsset, materialState.sampling),
           sortingLayer: shape.sortingLayer, orderInLayer: authoredOrder(entity, shape.orderInLayer, entities), material: shape.material, blendMode: materialState.blendMode

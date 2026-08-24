@@ -25,47 +25,31 @@
         <button v-if="monitor.activeTab === 'collisions'" :disabled="!monitor.collisions.length" @click="clearCollisionTimeline">{{ t('clear') }}</button>
       </div>
 
-      <section v-if="monitor.activeTab === 'bodies'" class="telemetry-scroll" role="tabpanel">
-        <article v-for="body in bodies" :key="body.uuid" class="telemetry-card">
-          <div class="card-title">
-            <strong>{{ body.name }}</strong>
-            <span>{{ body.bodyType }} · L{{ body.layer }}</span>
-          </div>
+      <section v-if="monitor.activeTab === 'bodies'" class="telemetry-browser" role="tabpanel">
+        <div class="virtual-list" @scroll="bodyScroll = ($event.target as HTMLElement).scrollTop">
+          <div :style="{ height: `${bodyTop}px` }"></div>
+          <button v-for="body in visibleBodies" :key="body.uuid" :class="{ active: selectedBody?.uuid === body.uuid }" @click="selectedBodyUuid = body.uuid"><span><strong>{{ body.name }}</strong><small>{{ body.bodyType }} · L{{ body.layer }}</small></span><code>{{ numberText(body.speed, 'm/s') }}</code></button>
+          <div :style="{ height: `${bodyBottom}px` }"></div>
+        </div>
+        <article v-if="selectedBody" class="telemetry-card telemetry-detail">
+          <div class="card-title"><strong>{{ selectedBody.name }}</strong><span>{{ selectedBody.bodyType }} · L{{ selectedBody.layer }}</span></div>
           <div class="metric-grid">
-            <Metric :label="t('position')" :value="vectorText(body.position.x, body.position.y, 'm')" />
-            <Metric :label="t('direction')" :value="numberText(body.directionDegrees, '°')" />
-            <Metric :label="t('speed')" :value="numberText(body.speed, 'm/s')" />
-            <Metric :label="t('velocity')" :value="vectorText(body.velocity.x, body.velocity.y, 'm/s')" />
-            <Metric :label="t('acceleration')" :value="vectorText(body.acceleration.x, body.acceleration.y, 'm/s²')" />
-            <Metric :label="t('force')" :value="vectorText(body.force.x, body.force.y, 'N')" />
-            <Metric :label="t('angularVelocity')" :value="numberText(body.angularVelocity, 'rad/s')" />
-            <Metric :label="t('kineticEnergy')" :value="numberText(body.kineticEnergy, 'J')" />
-            <Metric :label="t('contacts')" :value="String(body.contactCount)" />
-            <Metric :label="t('state')" :value="t(body.sleeping ? 'sleeping' : 'awake')" />
+            <Metric :label="t('position')" :value="vectorText(selectedBody.position.x, selectedBody.position.y, 'm')" /><Metric :label="t('direction')" :value="numberText(selectedBody.directionDegrees, '°')" /><Metric :label="t('speed')" :value="numberText(selectedBody.speed, 'm/s')" /><Metric :label="t('velocity')" :value="vectorText(selectedBody.velocity.x, selectedBody.velocity.y, 'm/s')" /><Metric :label="t('acceleration')" :value="vectorText(selectedBody.acceleration.x, selectedBody.acceleration.y, 'm/s²')" /><Metric :label="t('force')" :value="vectorText(selectedBody.force.x, selectedBody.force.y, 'N')" /><Metric :label="t('angularVelocity')" :value="numberText(selectedBody.angularVelocity, 'rad/s')" /><Metric :label="t('kineticEnergy')" :value="numberText(selectedBody.kineticEnergy, 'J')" /><Metric :label="t('contacts')" :value="String(selectedBody.contactCount)" /><Metric :label="t('state')" :value="t(selectedBody.sleeping ? 'sleeping' : 'awake')" />
           </div>
         </article>
         <p v-if="!bodies.length" class="empty">{{ t('noPhysicalObjects') }}</p>
       </section>
 
-      <section v-else class="telemetry-scroll timeline" role="tabpanel">
-        <article v-for="collision in collisions" :key="collision.id" class="timeline-event">
-          <div class="event-rail"><span></span></div>
-          <div class="event-body">
-            <div class="card-title">
-              <strong>{{ collision.firstName }} ↔ {{ collision.secondName }}</strong>
-              <span>{{ typeLabel(collision.type) }} · {{ timeText(collision.recordedAt) }}</span>
-            </div>
+      <section v-else class="telemetry-browser timeline" role="tabpanel">
+        <div class="virtual-list" @scroll="collisionScroll = ($event.target as HTMLElement).scrollTop">
+          <div :style="{ height: `${collisionTop}px` }"></div>
+          <button v-for="collision in visibleCollisions" :key="collision.id" :class="{ active: selectedCollision?.id === collision.id }" @click="selectedCollisionId = collision.id"><span><strong>{{ collision.firstName }} ↔ {{ collision.secondName }}</strong><small>{{ typeLabel(collision.type) }} · {{ timeText(collision.recordedAt) }}</small></span><code>{{ numberText(collision.forceMagnitude, 'N') }}</code></button>
+          <div :style="{ height: `${collisionBottom}px` }"></div>
+        </div>
+        <article v-if="selectedCollision" class="event-body telemetry-detail"><div class="card-title"><strong>{{ selectedCollision.firstName }} ↔ {{ selectedCollision.secondName }}</strong><span>{{ typeLabel(selectedCollision.type) }} · {{ timeText(selectedCollision.recordedAt) }}</span></div>
             <div class="metric-grid compact">
-              <Metric :label="t('impactForce')" :value="numberText(collision.forceMagnitude, 'N')" />
-              <Metric :label="t('impulse')" :value="numberText(collision.impulseMagnitude, 'N·s')" />
-              <Metric :label="t('directionChange')" :value="numberText(collision.directionChangeDegrees, '°')" />
-              <Metric :label="t('collisionPoint')" :value="vectorText(collision.point[0], collision.point[1], 'm')" />
-              <Metric :label="t('normalForce')" :value="numberText(collision.normalForce, 'N')" />
-              <Metric :label="t('frictionForce')" :value="numberText(collision.tangentForce, 'N')" />
-              <Metric :label="t('incomingVelocity')" :value="vectorText(collision.incomingRelativeVelocity[0], collision.incomingRelativeVelocity[1], 'm/s')" />
-              <Metric :label="t('resultingVelocity')" :value="vectorText(collision.resultingRelativeVelocity[0], collision.resultingRelativeVelocity[1], 'm/s')" />
+              <Metric :label="t('impactForce')" :value="numberText(selectedCollision.forceMagnitude, 'N')" /><Metric :label="t('impulse')" :value="numberText(selectedCollision.impulseMagnitude, 'N·s')" /><Metric :label="t('directionChange')" :value="numberText(selectedCollision.directionChangeDegrees, '°')" /><Metric :label="t('collisionPoint')" :value="vectorText(selectedCollision.point[0], selectedCollision.point[1], 'm')" /><Metric :label="t('normalForce')" :value="numberText(selectedCollision.normalForce, 'N')" /><Metric :label="t('frictionForce')" :value="numberText(selectedCollision.tangentForce, 'N')" /><Metric :label="t('incomingVelocity')" :value="vectorText(selectedCollision.incomingRelativeVelocity[0], selectedCollision.incomingRelativeVelocity[1], 'm/s')" /><Metric :label="t('resultingVelocity')" :value="vectorText(selectedCollision.resultingRelativeVelocity[0], selectedCollision.resultingRelativeVelocity[1], 'm/s')" />
             </div>
-          </div>
         </article>
         <p v-if="!collisions.length" class="empty">{{ t('noCollisionsRecorded') }}</p>
       </section>
@@ -74,7 +58,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, defineComponent, h } from 'vue'
+import { computed, defineComponent, h, ref } from 'vue'
 import { t } from '../i18n'
 import { physicsState } from '../store/physics'
 import { clearCollisionTimeline, physicsMonitorState as monitor } from '../runtime/physicsMonitor'
@@ -85,8 +69,16 @@ const Metric = defineComponent({
 })
 
 const query = computed(() => monitor.query.trim().toLocaleLowerCase())
-const bodies = computed(() => (query.value ? monitor.bodies.filter(body => `${body.name} ${body.bodyType} ${body.layer}`.toLocaleLowerCase().includes(query.value)) : monitor.bodies).slice(0, 500))
-const collisions = computed(() => (query.value ? monitor.collisions.filter(event => `${event.firstName} ${event.secondName} ${event.type}`.toLocaleLowerCase().includes(query.value)) : monitor.collisions).slice(0, 500))
+const bodies = computed(() => query.value ? monitor.bodies.filter(body => `${body.name} ${body.bodyType} ${body.layer}`.toLocaleLowerCase().includes(query.value)) : monitor.bodies)
+const collisions = computed(() => query.value ? monitor.collisions.filter(event => `${event.firstName} ${event.secondName} ${event.type}`.toLocaleLowerCase().includes(query.value)) : monitor.collisions)
+const bodyScroll = ref(0), collisionScroll = ref(0), selectedBodyUuid = ref(''), selectedCollisionId = ref<number | null>(null)
+const rowHeight = 46, visibleRows = 7
+const bodyStart = computed(() => Math.max(0, Math.floor(bodyScroll.value / rowHeight) - 2)), collisionStart = computed(() => Math.max(0, Math.floor(collisionScroll.value / rowHeight) - 2))
+const visibleBodies = computed(() => bodies.value.slice(bodyStart.value, bodyStart.value + visibleRows + 4)), visibleCollisions = computed(() => collisions.value.slice(collisionStart.value, collisionStart.value + visibleRows + 4))
+const bodyTop = computed(() => bodyStart.value * rowHeight), bodyBottom = computed(() => Math.max(0, (bodies.value.length - bodyStart.value - visibleBodies.value.length) * rowHeight))
+const collisionTop = computed(() => collisionStart.value * rowHeight), collisionBottom = computed(() => Math.max(0, (collisions.value.length - collisionStart.value - visibleCollisions.value.length) * rowHeight))
+const selectedBody = computed(() => bodies.value.find(body => body.uuid === selectedBodyUuid.value) ?? bodies.value[0] ?? null)
+const selectedCollision = computed(() => collisions.value.find(collision => collision.id === selectedCollisionId.value) ?? collisions.value[0] ?? null)
 const status = computed(() => `${t(physicsState.playMode === 'paused' ? 'runtimePaused' : 'live')} · ${physicsState.engineDiagnostics.totalPhysicsSteps} ${t('steps')}`)
 
 function clean(value: number): number { return Math.abs(value) < 5e-10 ? 0 : value }
@@ -115,7 +107,7 @@ header { min-height: 54px; padding: 9px 10px 9px 14px; display: flex; align-item
 .runtime-tools input { width: 100%; min-width: 0; height: 30px; padding: 0 9px; }
 .runtime-tools button { min-width: 0; height: 30px; padding: 0 9px; white-space: nowrap; }
 .runtime-tools button.active { border-color: var(--accent); background: var(--accent-soft); }
-.telemetry-scroll { min-height: 0; flex: 1; padding: 9px; overflow: auto; overscroll-behavior: contain; scrollbar-gutter: stable; }
+.telemetry-browser{min-height:0;flex:1;padding:8px;display:flex;flex-direction:column;gap:8px;overflow:hidden}.virtual-list{height:180px;flex:0 0 180px;overflow:auto;border:1px solid var(--border-subtle);border-radius:9px;background:var(--surface-2)}.virtual-list button{width:100%;height:46px;padding:5px 8px;display:flex;align-items:center;justify-content:space-between;gap:8px;border:0;border-bottom:1px solid var(--border-subtle);background:transparent;text-align:left}.virtual-list button.active{background:var(--selection-bg)}.virtual-list button>span{min-width:0;display:grid}.virtual-list strong,.virtual-list small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.virtual-list small{color:var(--text-muted)}.virtual-list code{color:var(--accent)}.telemetry-detail{min-height:0;overflow:auto}
 .telemetry-card, .event-body { min-width: 0; padding: 10px; border: 1px solid var(--border-subtle); border-radius: 11px; background: var(--surface-2); }
 .telemetry-card + .telemetry-card { margin-top: 8px; }
 .card-title { min-width: 0; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
@@ -124,7 +116,7 @@ header { min-height: 54px; padding: 9px 10px 9px 14px; display: flex; align-item
 .metric-grid { margin-top: 9px; display: grid; grid-template-columns: 1fr 1fr; gap: 7px 10px; }
 .metric { min-width: 0; display: grid; gap: 2px; }
 .metric :deep(span) { color: var(--text-muted); font-size:11px; letter-spacing: .04em; text-transform: uppercase; }
-.metric :deep(strong) { overflow: hidden; color: var(--text-secondary); font-family: ui-monospace, 'SFMono-Regular', Consolas, monospace; font-size:11px; font-weight: 550; text-overflow: ellipsis; white-space: nowrap; }
+.metric :deep(strong) { overflow: hidden; color: var(--text-secondary); font-family: var(--font-mono); font-size:11px; font-weight: 550; text-overflow: ellipsis; white-space: nowrap; }
 .timeline-event { min-width: 0; display: grid; grid-template-columns: 12px minmax(0, 1fr); gap: 5px; }
 .timeline-event + .timeline-event { margin-top: 8px; }
 .event-rail { position: relative; display: flex; justify-content: center; }

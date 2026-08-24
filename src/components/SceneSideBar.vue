@@ -22,16 +22,16 @@
       </section>
 
       <div class="hierarchy-header">
-        <div><span>{{ t('hierarchy') }}</span><span class="hierarchy-actions"><small>{{ state.world.entities.length }}</small><button :title="t('createObject')" :disabled="!canEdit" @click="editorState.createObjectPaletteOpen = true">＋</button></span></div>
+        <div><span>{{ t('hierarchy') }}</span><span class="hierarchy-actions"><small>{{ state.world.entities.length }}</small><button :title="t('previousSelection')" :disabled="selectionHistoryIndex <= 0" @click="navigateSelection(-1)">←</button><button :title="t('nextSelection')" :disabled="selectionHistoryIndex >= selectionHistory.length - 1" @click="navigateSelection(1)">→</button><button :title="t('createObject')" :disabled="!canEdit" @click="editorState.createObjectPaletteOpen = true">＋</button></span></div>
         <label class="search"><span>⌕</span><input v-model="searchQuery" type="search" :placeholder="t('searchEntities')"></label>
-        <div class="hierarchy-filters"><select v-model="authoringState.selectionFilter" :aria-label="t('selectionFilter')"><option v-for="filter in selectionFilters" :key="filter" :value="filter">{{ t(`selection${filter}`) }}</option></select><button :class="{ active: authoringState.performanceMode }" :title="t('viewportPerformanceMode')" @click="authoringState.performanceMode = !authoringState.performanceMode">⚡</button></div>
+        <div class="hierarchy-filters"><select v-model="authoringState.selectionFilter" :aria-label="t('selectionFilter')"><option v-for="filter in selectionFilters" :key="filter" :value="filter">{{ t(`selection${filter}`) }}</option></select><select v-model="authoringState.tagFilter" :aria-label="t('tagFilter')"><option value="">{{ t('allTags') }}</option><option v-for="tag in availableTags" :key="tag" :value="tag"># {{ tag }}</option></select><select v-model="selectedSavedFilter" :aria-label="t('savedFilters')" @change="applySavedFilter"><option value="">{{ t('savedFilters') }}</option><option v-for="filter in authoringState.savedFilters" :key="filter.id" :value="filter.id">{{ filter.name }}</option></select><button :title="t('saveFilter')" @click="saveCurrentFilter">☆</button><button :class="{ active: authoringState.performanceMode }" :title="t('viewportPerformanceMode')" @click="authoringState.performanceMode = !authoringState.performanceMode">⚡</button></div>
       </div>
 
       <nav v-if="breadcrumbs.length" class="breadcrumbs" :aria-label="t('hierarchyBreadcrumb')"><button v-for="(entity, index) in breadcrumbs" :key="entity.uuid" @click="selectBreadcrumb(entity)">{{ index ? '› ' : '' }}{{ entity.name }}</button></nav>
 
-      <div class="entity-list" @dragover.prevent @drop="dropOnRoot($event)">
+      <div ref="entityList" class="entity-list" :style="{ paddingTop: `${virtualPaddingTop}px`, paddingBottom: `${virtualPaddingBottom}px` }" @scroll="onHierarchyScroll" @dragover.prevent @drop="dropOnRoot($event)">
         <div
-          v-for="row in hierarchyRows"
+          v-for="row in virtualHierarchyRows"
           :key="row.entity.uuid"
           class="entity-item"
           :class="{
@@ -40,6 +40,8 @@
             disabled: !row.entity.enabled,
             hidden: !row.entity.editorVisible,
             locked: row.entity.editorLocked,
+            pinned: authoringState.pinnedEntityUuids.includes(row.entity.uuid),
+            'search-match': matchesHierarchySearch(row.entity),
             'drop-target': dropTargetUuid === row.entity.uuid
           }"
           :style="{ paddingLeft: `${6 + row.depth * 15}px` }"
@@ -55,9 +57,10 @@
         >
           <button class="disclosure" :class="{ placeholder: !row.hasChildren }" :aria-label="row.expanded ? t('collapsePanel') : t('expandPanel')" @click.stop="toggleExpanded(row.entity.uuid)">{{ row.hasChildren ? (row.expanded ? '⌄' : '›') : '' }}</button>
           <span class="shape-icon">{{ getIcon(row.entity.shapeType) }}</span>
-          <span v-if="editingId !== row.entity.id" class="name" :title="t('renameHint')" @dblclick.stop="startEdit(row.entity)">{{ row.entity.name }}<small>{{ row.entity.id }}</small></span>
-          <span v-if="row.entity.prefabAsset" class="status-mark" :title="t('prefabInstance')">P</span><span v-if="row.entity.sceneLayers.length" class="status-mark scene" :title="t('sceneInstance')">S</span><span v-if="Object.keys(row.entity.prefabOverrides).length" class="status-mark override" :title="t('prefabOverrides')">●</span>
+          <span v-if="editingId !== row.entity.id" class="name" :title="t('renameHint')" @dblclick.stop="startEdit(row.entity)"><mark v-if="searchQuery && row.entity.name.toLocaleLowerCase().includes(searchQuery.toLocaleLowerCase())">{{ row.entity.name }}</mark><template v-else>{{ row.entity.name }}</template><small>{{ row.entity.id }}</small></span>
           <input v-else v-model="editName" v-focus class="edit-input" @click.stop @blur="finishEdit(row.entity)" @keyup.enter="finishEdit(row.entity)" @keyup.escape="editingId = null">
+          <span v-if="row.entity.prefabAsset" class="status-mark" :title="t('prefabInstance')">P</span><span v-if="row.entity.sceneLayers.length" class="status-mark scene" :title="t('sceneInstance')">S</span><span v-if="Object.keys(row.entity.prefabOverrides).length" class="status-mark override" :title="t('prefabOverrides')">●</span>
+          <button class="state-button pin" :class="{ active: authoringState.pinnedEntityUuids.includes(row.entity.uuid) }" :title="t('pinEntity')" @click.stop="toggleHierarchyPin(row.entity.uuid)">◆</button>
           <button class="state-button" :title="row.entity.editorVisible ? t('hideEntity') : t('showEntity')" @click.stop="toggleVisibility(row.entity)">{{ row.entity.editorVisible ? '◉' : '○' }}</button>
           <button class="state-button" :title="row.entity.editorLocked ? t('unlockEntity') : t('lockEntity')" @click.stop="toggleLock(row.entity)">{{ row.entity.editorLocked ? '▣' : '▢' }}</button>
           <button class="state-button power" :title="row.entity.enabled ? t('disableEntity') : t('enableEntity')" @click.stop="toggleEnabled(row.entity)">●</button>
@@ -71,14 +74,14 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onUnmounted, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { t } from '../i18n'
 import { addEditorLog, editorState, openContextMenu, setActiveLayer } from '../store/editor'
 import { createScene, physicsState as state, pushHistory, reloadActiveScene, sceneManager, selectEntities, setActiveScene, setSceneLoaded, synchronizeHistoryBaseline } from '../store/physics'
 import type { Entity } from '../world/Entity'
 import { setParent } from '../world/hierarchy'
 import { selectionRoots } from '../editor/selection'
-import { authoringState } from '../editor/authoring2d'
+import { authoringState, saveHierarchyFilter, toggleHierarchyPin } from '../editor/authoring2d'
 
 const props = withDefaults(defineProps<{ dock?: 'left' | 'right' }>(), { dock: 'left' })
 const dock = computed(() => props.dock)
@@ -93,9 +96,19 @@ const searchQuery = ref('')
 const expandedUuids = ref(new Set<string>())
 const draggingIds = ref<number[]>([])
 const dropTargetUuid = ref<string | null>(null)
+const selectedSavedFilter = ref('')
+const selectionHistory = ref<Array<{ sceneUuid: string; uuids: string[]; primaryUuid: string | null }>>([])
+const selectionHistoryIndex = ref(-1)
+const entityList = ref<HTMLElement | null>(null)
+const hierarchyScrollTop = ref(0)
+const hierarchyViewportHeight = ref(400)
+const hierarchyRowHeight = 29, hierarchyOverscan = 12
+let hierarchyResizeObserver: ResizeObserver | null = null
 let lastSelectedId: number | null = null
+let applyingSelectionHistory = false
 const canEdit = computed(() => state.playMode === 'editing')
 const selectionFilters = ['All', 'Visible', 'Unlocked', 'Sprites', 'Cameras', 'Physics'] as const
+const availableTags = computed(() => [...new Set(state.world.entities.flatMap(entity => entity.tags))].sort((left, right) => left.localeCompare(right)))
 const vFocus = { mounted: (element: HTMLInputElement) => { element.focus(); element.select() } }
 
 const hierarchyRows = computed(() => {
@@ -108,6 +121,7 @@ const hierarchyRows = computed(() => {
     siblings.push(entity)
     children.set(parent, siblings)
   }
+  for (const siblings of children.values()) siblings.sort((left, right) => Number(authoringState.pinnedEntityUuids.includes(right.uuid)) - Number(authoringState.pinnedEntityUuids.includes(left.uuid)))
 
   const query = searchQuery.value.trim().toLocaleLowerCase()
   const included = new Set<string>()
@@ -125,9 +139,10 @@ const hierarchyRows = computed(() => {
   }
 
   const filter = authoringState.selectionFilter
+  const tagFilter = authoringState.tagFilter
   const filterIncluded = new Set<string>()
-  if (filter !== 'All') {
-    const matchesFilter = (entity: Entity) => filter === 'Visible' ? entity.editorVisible : filter === 'Unlocked' ? !entity.editorLocked : filter === 'Sprites' ? Boolean(entity.spriteRenderer) : filter === 'Cameras' ? Boolean(entity.camera2D) : filter === 'Physics' ? entity.hasComponent('RigidBody2D') : true
+  if (filter !== 'All' || tagFilter) {
+    const matchesFilter = (entity: Entity) => (filter === 'Visible' ? entity.editorVisible : filter === 'Unlocked' ? !entity.editorLocked : filter === 'Sprites' ? Boolean(entity.spriteRenderer) : filter === 'Cameras' ? Boolean(entity.camera2D) : filter === 'Physics' ? entity.hasComponent('RigidBody2D') : true) && (!tagFilter || entity.tags.includes(tagFilter))
     for (const entity of state.world.entities) {
       if (!matchesFilter(entity)) continue
       filterIncluded.add(entity.uuid)
@@ -140,7 +155,7 @@ const hierarchyRows = computed(() => {
   }
 
   const visit = (entity: Entity, depth: number, visited: Set<string>) => {
-    if (visited.has(entity.uuid) || (filter !== 'All' && !filterIncluded.has(entity.uuid)) || (query && !included.has(entity.uuid))) return
+    if (visited.has(entity.uuid) || ((filter !== 'All' || tagFilter) && !filterIncluded.has(entity.uuid)) || (query && !included.has(entity.uuid))) return
     visited.add(entity.uuid)
     const entityChildren = children.get(entity.uuid) ?? []
     const expanded = query ? true : expandedUuids.value.has(entity.uuid)
@@ -152,6 +167,15 @@ const hierarchyRows = computed(() => {
   for (const entity of state.world.entities) visit(entity, 0, visited)
   return rows
 })
+const virtualStart = computed(() => Math.max(0, Math.floor(hierarchyScrollTop.value / hierarchyRowHeight) - hierarchyOverscan))
+const virtualEnd = computed(() => Math.min(hierarchyRows.value.length, Math.ceil((hierarchyScrollTop.value + hierarchyViewportHeight.value) / hierarchyRowHeight) + hierarchyOverscan))
+const virtualHierarchyRows = computed(() => hierarchyRows.value.slice(virtualStart.value, virtualEnd.value))
+const virtualPaddingTop = computed(() => virtualStart.value * hierarchyRowHeight + 5)
+const virtualPaddingBottom = computed(() => Math.max(5, (hierarchyRows.value.length - virtualEnd.value) * hierarchyRowHeight + 5))
+function onHierarchyScroll(event: Event) { hierarchyScrollTop.value = (event.currentTarget as HTMLElement).scrollTop }
+function matchesHierarchySearch(entity: Entity) { const query = searchQuery.value.trim().toLocaleLowerCase(); if (!query) return false; return `${entity.name} ${entity.id} ${entity.tags.join(' ')} ${entity.components.map(component => component.kind).join(' ')}`.toLocaleLowerCase().includes(query) }
+function applySavedFilter() { const filter = authoringState.savedFilters.find(candidate => candidate.id === selectedSavedFilter.value); if (!filter) return; searchQuery.value = filter.query; authoringState.tagFilter = filter.tagFilter; authoringState.selectionFilter = filter.selectionFilter }
+function saveCurrentFilter() { selectedSavedFilter.value = saveHierarchyFilter(searchQuery.value || t(`selection${authoringState.selectionFilter}`), searchQuery.value) }
 const breadcrumbs = computed(() => {
   const selected = state.world.entities.find(entity => entity.id === state.selectedEntityId)
   if (!selected) return []
@@ -161,6 +185,16 @@ const breadcrumbs = computed(() => {
   return path
 })
 function selectBreadcrumb(entity: Entity) { selectEntities([entity.id], 'replace', entity.id) }
+function navigateSelection(offset: -1 | 1) {
+  const index = selectionHistoryIndex.value + offset, entry = selectionHistory.value[index]
+  if (!entry || entry.sceneUuid !== sceneManager.activeSceneUuid) return
+  const ids = entry.uuids.flatMap(uuid => { const entity = state.world.entities.find(candidate => candidate.uuid === uuid); return entity ? [entity.id] : [] })
+  const primary = entry.primaryUuid ? state.world.entities.find(entity => entity.uuid === entry.primaryUuid)?.id ?? null : null
+  applyingSelectionHistory = true
+  selectionHistoryIndex.value = index
+  selectEntities(ids, 'replace', primary)
+  queueMicrotask(() => { applyingSelectionHistory = false })
+}
 
 function addScene() { if (canEdit.value && createScene()) { pushHistory('Create scene'); editorState.statusText = t('sceneCreated') } }
 function reloadScene() {
@@ -240,6 +274,18 @@ function dropOnRoot(event?: DragEvent) { reparentDragged(null, !event?.altKey) }
 
 watch(() => editorState.renameRequestId, id => { if (id === null) return; const entity = state.world.entities.find(candidate => candidate.id === id); if (entity) startEdit(entity) })
 watch(() => state.world.entities.map(entity => entity.uuid), uuids => { if (!expandedUuids.value.size) expandedUuids.value = new Set(uuids) }, { immediate: true })
+watch(() => `${sceneManager.activeSceneUuid}:${state.selectedEntityIds.join(',')}:${state.selectedEntityId ?? ''}`, () => {
+  if (applyingSelectionHistory) return
+  const selected = new Set(state.selectedEntityIds)
+  const uuids = state.world.entities.filter(entity => selected.has(entity.id)).map(entity => entity.uuid)
+  const primaryUuid = state.world.entities.find(entity => entity.id === state.selectedEntityId)?.uuid ?? null
+  const entry = { sceneUuid: sceneManager.activeSceneUuid, uuids, primaryUuid }, current = selectionHistory.value[selectionHistoryIndex.value]
+  if (current?.sceneUuid === entry.sceneUuid && current.primaryUuid === entry.primaryUuid && current.uuids.join(',') === entry.uuids.join(',')) return
+  selectionHistory.value.splice(selectionHistoryIndex.value + 1)
+  selectionHistory.value.push(entry)
+  if (selectionHistory.value.length > 100) selectionHistory.value.shift()
+  selectionHistoryIndex.value = selectionHistory.value.length - 1
+}, { immediate: true })
 
 const collapseThreshold = 118
 let startX = 0
@@ -248,7 +294,8 @@ function startDrag(event: MouseEvent) { isDragging.value = true; startX = event.
 function onDrag(event: MouseEvent) { if (!isDragging.value) return; const delta = event.clientX - startX; const width = startWidth + (props.dock === 'left' ? delta : -delta); panelWidth.value = width < collapseThreshold ? 0 : Math.min(Math.max(width, collapseThreshold), 500) }
 function stopDrag() { isDragging.value = false; document.removeEventListener('mousemove', onDrag); document.removeEventListener('mouseup', stopDrag); document.body.style.cursor = 'default'; if (panelWidth.value < collapseThreshold) isCollapsed.value = true; else editorState.hierarchyWidth = panelWidth.value }
 function expandPanel() { isCollapsed.value = false; panelWidth.value = editorState.hierarchyWidth || 236 }
-onUnmounted(() => { document.removeEventListener('mousemove', onDrag); document.removeEventListener('mouseup', stopDrag) })
+onMounted(() => { if (entityList.value) { hierarchyViewportHeight.value = entityList.value.clientHeight; hierarchyResizeObserver = new ResizeObserver(entries => { hierarchyViewportHeight.value = entries[0]?.contentRect.height ?? hierarchyViewportHeight.value }); hierarchyResizeObserver.observe(entityList.value) } })
+onUnmounted(() => { document.removeEventListener('mousemove', onDrag); document.removeEventListener('mouseup', stopDrag); hierarchyResizeObserver?.disconnect() })
 </script>
 
 <style scoped>
@@ -261,9 +308,9 @@ onUnmounted(() => { document.removeEventListener('mousemove', onDrag); document.
 .scene-list { max-height: 110px; padding: 4px 6px; overflow: auto; }.scene-item { display: flex; align-items: center; border-radius: 7px; }.scene-item:hover { background: var(--surface-hover); }.scene-item.active { background: var(--accent-soft); }.scene-item.unloaded { opacity: .52; }
 .scene-main { min-width: 0; height: 28px; padding: 0 7px; flex: 1; display: flex; align-items: center; gap: 7px; color: var(--text-secondary); font-size: 11px; }.scene-main i { width: 7px; height: 7px; flex: 0 0 7px; border: 1px solid var(--accent); border-radius: 50%; }.scene-item.active .scene-main i { background: var(--accent); box-shadow: 0 0 6px var(--accent); }.scene-main span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }.scene-main input { width: 100%; min-height: 24px; }
 .hierarchy-header { flex: 0 0 auto; padding-bottom: 7px; border-bottom: 1px solid var(--border-subtle); }.search { height: 29px; margin: 0 7px; padding: 0 7px; display: flex; align-items: center; gap: 5px; border: 1px solid var(--border-subtle); border-radius: 8px; background: var(--input-bg); }.search span { color: var(--text-muted); }.search input { min-width: 0; width: 100%; min-height: 25px; padding: 0; border: 0; background: transparent; font-size:11px; }.search input:focus-visible { outline: 0; }
-.hierarchy-filters{margin:5px 7px 0;display:flex;gap:5px}.hierarchy-filters select{min-width:0;min-height:27px;flex:1}.hierarchy-filters button{width:29px;border:1px solid var(--border-subtle);border-radius:7px;color:var(--text-muted);background:var(--surface-2)}.hierarchy-filters button.active{color:var(--accent);border-color:var(--accent);background:var(--accent-soft)}.breadcrumbs{min-height:30px;padding:4px 7px;display:flex;overflow:auto;border-bottom:1px solid var(--border-subtle)}.breadcrumbs button{padding:0 3px;white-space:nowrap;border:0;color:var(--text-muted);background:transparent;font-size:11px}.breadcrumbs button:last-child{color:var(--text-primary)}
-.entity-list { min-height: 0; flex: 1; padding: 5px; overflow: auto; }.entity-item { position: relative; height: 29px; display: flex; align-items: center; gap: 4px; border: 1px solid transparent; border-radius: 7px; color: var(--text-secondary); font-size:11px; }.entity-item:hover { background: var(--surface-hover); }.entity-item.selected { background: var(--accent-soft); }.entity-item.primary { border-color: color-mix(in srgb, var(--accent) 42%, transparent); }.entity-item.disabled { opacity: .5; }.entity-item.hidden .name { text-decoration: line-through; opacity: .6; }.entity-item.locked .shape-icon { color: var(--warning); }.entity-item.drop-target { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
-.disclosure, .state-button { width: 19px; height: 22px; padding: 0; flex: 0 0 19px; display: grid; place-items: center; border: 0; border-radius: 5px; color: var(--text-muted); background: transparent; font-size:11px; }.disclosure:hover, .state-button:hover { color: var(--accent); background: var(--surface-3); }.disclosure.placeholder { pointer-events: none; }.shape-icon { width: 15px; flex: 0 0 15px; color: var(--accent); text-align: center; }.name { min-width: 0; flex: 1; display: flex; align-items: center; gap: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }.name small { color: var(--text-muted); font-size:11px; }.edit-input { min-width: 0; height: 23px; min-height: 23px; flex: 1; padding: 2px 5px; }.state-button { opacity: .25; }.entity-item:hover .state-button, .entity-item.selected .state-button, .entity-item.hidden .state-button, .entity-item.locked .state-button, .entity-item.disabled .power { opacity: .9; }.power { color: var(--success); }
+.hierarchy-filters{margin:5px 7px 0;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) 29px 29px;gap:4px}.hierarchy-filters select{min-width:0;min-height:27px}.hierarchy-filters select:nth-child(3){grid-column:1/3}.hierarchy-filters button{width:29px;border:1px solid var(--border-subtle);border-radius:7px;color:var(--text-muted);background:var(--surface-2)}.hierarchy-filters button.active{color:var(--accent);border-color:var(--accent);background:var(--accent-soft)}.breadcrumbs{min-height:30px;padding:4px 7px;display:flex;overflow:auto;border-bottom:1px solid var(--border-subtle)}.breadcrumbs button{padding:0 3px;white-space:nowrap;border:0;color:var(--text-muted);background:transparent;font-size:11px}.breadcrumbs button:last-child{color:var(--text-primary)}
+.entity-list { min-height: 0; flex: 1; padding: 5px; overflow: auto; }.entity-item { position: relative; height: 29px; display: flex; align-items: center; gap: 4px; border: 1px solid transparent; border-radius: 7px; color: var(--text-secondary); font-size:11px; }.entity-item:hover { background: var(--surface-hover); }.entity-item.search-match:not(.selected){background:color-mix(in srgb,var(--warning) 10%,transparent)}.entity-item.selected { background: var(--accent-soft); }.entity-item.primary { border-color: color-mix(in srgb, var(--accent) 42%, transparent); }.entity-item.disabled { opacity: .5; }.entity-item.hidden .name { text-decoration: line-through; opacity: .6; }.entity-item.locked .shape-icon { color: var(--warning); }.entity-item.drop-target { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+.disclosure, .state-button { width: 19px; height: 22px; padding: 0; flex: 0 0 19px; display: grid; place-items: center; border: 0; border-radius: 5px; color: var(--text-muted); background: transparent; font-size:11px; }.disclosure:hover, .state-button:hover { color: var(--accent); background: var(--surface-3); }.disclosure.placeholder { pointer-events: none; }.shape-icon { width: 15px; flex: 0 0 15px; color: var(--accent); text-align: center; }.name { min-width: 0; flex: 1; display: flex; align-items: center; gap: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }.name mark{padding:0;color:inherit;background:color-mix(in srgb,var(--warning) 28%,transparent)}.name small { color: var(--text-muted); font-size:11px; }.edit-input { min-width: 0; height: 23px; min-height: 23px; flex: 1; padding: 2px 5px; }.state-button { opacity: .25; }.state-button.pin.active,.entity-item.pinned .pin{color:var(--accent);opacity:1}.entity-item:hover .state-button, .entity-item.selected .state-button, .entity-item.hidden .state-button, .entity-item.locked .state-button, .entity-item.disabled .power { opacity: .9; }.power { color: var(--success); }
 .status-mark{width:16px;height:16px;display:grid;place-items:center;border-radius:4px;color:var(--accent);background:var(--accent-soft);font-size:11px;font-weight:800}.status-mark.scene{color:var(--success)}.status-mark.override{color:var(--warning);background:transparent}
 .empty-state { padding: 18px 8px; color: var(--text-muted); font-size:11px; text-align: center; }.root-drop { width: calc(100% - 8px); min-height: 31px; margin: 6px 4px; border: 1px dashed var(--accent); border-radius: 8px; color: var(--accent); background: var(--accent-soft); font-size:11px; }
 .resize-handle { position: absolute; inset: 0 -4px 0 auto; width: 8px; cursor: ew-resize; z-index: 4; }.right .resize-handle{inset:0 auto 0 -4px}.expand { position: absolute; left: 0; top: 48%; z-index: 5; width: 20px; height: 54px; border: 1px solid var(--border-subtle); border-left: 0; border-radius: 0 9px 9px 0; color: var(--accent); background: var(--surface-1); }.right .expand{left:auto;right:0;transform:scaleX(-1)}

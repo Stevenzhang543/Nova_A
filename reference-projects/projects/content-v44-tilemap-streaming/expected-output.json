@@ -1,0 +1,14 @@
+{
+  "format": "nova-reference-expected-output",
+  "version": 1,
+  "engineVersion": "4.4.0",
+  "workflow": "TileMap layers and streaming",
+  "contentInclusion": {
+    "group": "main",
+    "include": [
+      "Assets/**"
+    ],
+    "projectHealthWarning": false
+  },
+  "status": "expected-pass"
+}

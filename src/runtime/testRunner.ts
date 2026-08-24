@@ -15,7 +15,7 @@ export interface ProjectTestResult {
   error: string
 }
 
-export interface ProjectTestReport { format: 'nova-test-report'; version: 1; engineVersion: '4.0.0'; startedAt: string; durationMs: number; passed: number; failed: number; results: ProjectTestResult[] }
+export interface ProjectTestReport { format: 'nova-test-report'; version: 1; engineVersion: '4.4.0'; startedAt: string; durationMs: number; passed: number; failed: number; results: ProjectTestResult[] }
 
 export const testRunnerState = reactive({ running: false, activeTest: '', completed: 0, total: 0, results: [] as ProjectTestResult[], lastReport: null as ProjectTestReport | null, error: '' })
 
@@ -75,7 +75,7 @@ export async function runProjectTests(testId?: string): Promise<ProjectTestRepor
       const result = await runOne(test); testRunnerState.results.push(result); testRunnerState.completed++
     }
     const results = testRunnerState.results.map(result => ({ ...result, assertions: result.assertions.map(assertion => ({ ...assertion })) }))
-    const report: ProjectTestReport = { format: 'nova-test-report', version: 1, engineVersion: '4.0.0', startedAt, durationMs: performance.now() - started, passed: results.filter(result => result.status === 'passed').length, failed: results.filter(result => result.status !== 'passed').length, results }
+    const report: ProjectTestReport = { format: 'nova-test-report', version: 1, engineVersion: '4.4.0', startedAt, durationMs: performance.now() - started, passed: results.filter(result => result.status === 'passed').length, failed: results.filter(result => result.status !== 'passed').length, results }
     testRunnerState.lastReport = report
     return report
   } finally {

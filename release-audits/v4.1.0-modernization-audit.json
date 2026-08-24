@@ -1,0 +1,156 @@
+{
+  "format": "nova-v4.1-modernization-audit",
+  "version": 1,
+  "engineVersion": "4.1.0",
+  "generatedAt": "2026-08-20T08:56:05.131Z",
+  "severity0Open": 0,
+  "severity1Open": 0,
+  "checks": [
+    {
+      "id": "V410-VERSION",
+      "status": "passed",
+      "detail": "Package and desktop release authorities are 4.1.0."
+    },
+    {
+      "id": "V410-WINDOW",
+      "status": "passed",
+      "detail": "Per-monitor DPI and safe window minimums are declared."
+    },
+    {
+      "id": "V410-WORKSPACES",
+      "status": "passed",
+      "detail": "The six public workspaces are represented directly; named custom layouts stay in the layout manager."
+    },
+    {
+      "id": "V410-PROFILES",
+      "status": "passed",
+      "detail": "All six named default profiles are declared."
+    },
+    {
+      "id": "V410-DOCKING",
+      "status": "passed",
+      "detail": "Docking, floating, splitting, pinning, rearrangement and persistence fields are wired."
+    },
+    {
+      "id": "V410-MANAGE",
+      "status": "passed",
+      "detail": "Global policy tools moved from the transient dock to Manage."
+    },
+    {
+      "id": "V410-CONTEXT-RAIL",
+      "status": "passed",
+      "detail": "The left rail is contextual and does not duplicate Game as a global destination."
+    },
+    {
+      "id": "V410-PHYSICS-CONTEXT",
+      "status": "passed",
+      "detail": "Physics Monitor is Debug-only and uses a bounded virtualized browser/detail surface."
+    },
+    {
+      "id": "V410-HEALTH-CONTEXT",
+      "status": "passed",
+      "detail": "Project Health uses summary/table/detail instead of dense cards."
+    },
+    {
+      "id": "V410-COMPLETION",
+      "status": "passed",
+      "detail": "Completion is automatic and explicit Ctrl/Cmd+Space is unambiguous."
+    },
+    {
+      "id": "V410-TYPOGRAPHY",
+      "status": "passed",
+      "detail": "Declared variable fonts and non-danger audio controls are used."
+    },
+    {
+      "id": "V410-DESIGN-TOKENS",
+      "status": "passed",
+      "detail": "Core typography, spacing, radius, focus, selection, disabled, warning and error tokens exist."
+    },
+    {
+      "id": "V410-DISCOVERY",
+      "status": "passed",
+      "detail": "Search modes, stable command discovery and current context are connected."
+    },
+    {
+      "id": "V410-SHORTCUTS",
+      "status": "passed",
+      "detail": "Shortcut conflict detection and portable import/export are implemented."
+    },
+    {
+      "id": "V410-CONTROLS",
+      "status": "passed",
+      "detail": "A runtime stable-control inventory assigns test IDs, names and disabled reasons."
+    },
+    {
+      "id": "V410-LIFECYCLE",
+      "status": "passed",
+      "detail": "Lifecycle flags include Stable/Beta/Experimental/Internal and suppress Internal outside development."
+    },
+    {
+      "id": "V410-LAUNCHER",
+      "status": "passed",
+      "detail": "Launcher selection, path validation, Learn Nova_A and template details are visible."
+    },
+    {
+      "id": "V410-TUTORIAL",
+      "status": "passed",
+      "detail": "Template guidance is project tutorial content and can be dismissed."
+    },
+    {
+      "id": "V410-TASKS",
+      "status": "passed",
+      "detail": "Task Center records progress, cancellation, retry, logs and resource links."
+    },
+    {
+      "id": "V410-READINESS",
+      "status": "passed",
+      "detail": "All four build-readiness states are declared."
+    },
+    {
+      "id": "V410-DETAILS",
+      "status": "passed",
+      "detail": "Full paths and hashes are exposed in a copyable details pane."
+    },
+    {
+      "id": "V410-DOC-UI_DESIGN_TOKENS_4_1.md",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "id": "V410-DOC-TYPOGRAPHY_INVENTORY_4_1.md",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "id": "V410-DOC-FONT_LICENSE_VERIFICATION_4_1.md",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "id": "V410-DOC-DPI_MATRIX_4_1.md",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "id": "V410-DOC-KEYBOARD_ACCESSIBILITY_4_1.md",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "id": "V410-DOC-FEATURE_PARITY_4_1.md",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "id": "V410-DOC-NAVIGATION_4_1.md",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "id": "V410-DOC-KNOWN_ISSUES_4_1.md",
+      "status": "passed",
+      "detail": "Present."
+    }
+  ],
+  "status": "passed"
+}

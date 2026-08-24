@@ -1,5 +1,5 @@
 <template>
-  <div class="editor-root" :class="{ 'read-only': recoveryState.readOnly }" @contextmenu.prevent @click="closeContextMenu">
+  <div class="editor-root" data-control-scope="editor-shell" :class="{ 'read-only': recoveryState.readOnly }" @contextmenu.prevent @click="closeContextMenu">
     <div v-if="recoveryState.readOnly" class="read-only-banner" role="status">{{ t('readOnlyRecoveryBanner') }}</div>
     <TopBar />
     <div class="workspace-control-row">
@@ -10,30 +10,37 @@
 
     <div class="editor-main">
       <SideBar v-if="!state.distractionFree" />
-      <div v-if="!state.distractionFree" class="dock-group left-dock">
-        <SceneSideBar v-if="showHierarchy && state.hierarchyDock === 'left'" dock="left" />
-        <ConfigPanel v-if="showInspector && state.inspectorDock === 'left'" dock="left" />
+      <div v-if="!state.distractionFree" class="dock-group left-dock" :class="{ split: workspaceState.splitDocking }" :data-drop-target="dragTarget === 'left'" @dragover.prevent="dragTarget = 'left'" @dragleave="dragTarget = ''" @drop="dropPanel('left')">
+        <template v-for="panel in workspaceState.panelOrder" :key="panel">
+          <SceneSideBar v-if="panel === 'hierarchy' && showHierarchy && state.hierarchyDock === 'left' && !isFloating('hierarchy')" dock="left" draggable="true" @dragstart="startPanelDrag('hierarchy')" />
+          <ConfigPanel v-else-if="panel === 'inspector' && showInspector && state.inspectorDock === 'left' && !isFloating('inspector')" dock="left" draggable="true" @dragstart="startPanelDrag('inspector')" />
+        </template>
       </div>
-      <div class="editor-workspace">
+      <div class="editor-workspace" :data-drop-target="dragTarget === 'floating'" @dragover.prevent="dragTarget = 'floating'" @dragleave="dragTarget = ''" @drop="dropPanel('floating')">
+        <SceneTabs v-if="state.currentPage === 'scene' && state.activeWorkspace === 'design' && !state.distractionFree" />
         <div class="editor-content">
-          <div :class="['persistent-viewport', `${state.currentPage}-view`, { inactive: state.currentPage === 'settings' || state.currentPage === 'script' || state.activeWorkspace === 'ui' }]">
+          <div :class="['persistent-viewport', `${state.currentPage}-view`, { inactive: state.currentPage === 'settings' || state.currentPage === 'manage' || state.currentPage === 'script' || state.activeWorkspace === 'ui' }]">
             <LayerBar v-if="state.currentPage === 'scene'" />
             <WorldCanvas />
           </div>
           <Transition name="page" mode="out-in">
-            <SettingsPanel v-if="state.currentPage === 'settings'" key="settings" class="settings-host" />
+            <ManageWorkspace v-if="state.currentPage === 'manage' || state.currentPage === 'settings'" key="manage" />
             <ScriptStudio v-else-if="state.currentPage === 'script'" key="script" />
             <PresentationPanel v-else-if="state.activeWorkspace === 'ui'" key="ui" class="ui-workspace" />
           </Transition>
         </div>
-        <EditorBottomPanel v-if="state.currentPage !== 'settings' && state.currentPage !== 'script' && state.bottomPanelVisible && !state.distractionFree" />
+        <EditorBottomPanel v-if="state.currentPage !== 'settings' && state.currentPage !== 'manage' && state.currentPage !== 'script' && state.bottomPanelVisible && !state.distractionFree" />
       </div>
-      <div v-if="!state.distractionFree" class="dock-group right-dock">
-        <SceneSideBar v-if="showHierarchy && state.hierarchyDock === 'right'" dock="right" />
-        <ConfigPanel v-if="showInspector && state.inspectorDock === 'right'" dock="right" />
+      <div v-if="!state.distractionFree" class="dock-group right-dock" :class="{ split: workspaceState.splitDocking }" :data-drop-target="dragTarget === 'right'" @dragover.prevent="dragTarget = 'right'" @dragleave="dragTarget = ''" @drop="dropPanel('right')">
+        <template v-for="panel in workspaceState.panelOrder" :key="panel">
+          <SceneSideBar v-if="panel === 'hierarchy' && showHierarchy && state.hierarchyDock === 'right' && !isFloating('hierarchy')" dock="right" draggable="true" @dragstart="startPanelDrag('hierarchy')" />
+          <ConfigPanel v-else-if="panel === 'inspector' && showInspector && state.inspectorDock === 'right' && !isFloating('inspector')" dock="right" draggable="true" @dragstart="startPanelDrag('inspector')" />
+        </template>
       </div>
+      <section v-if="isFloating('hierarchy') && showHierarchy && !state.distractionFree" class="floating-dock hierarchy-float"><header draggable="true" @dragstart="startPanelDrag('hierarchy')"><strong>{{ t('hierarchy') }}</strong><button :title="t('dockPanel')" @click="dockEditorPanel('hierarchy','left')">↙</button></header><SceneSideBar dock="left" /></section>
+      <section v-if="isFloating('inspector') && showInspector && !state.distractionFree" class="floating-dock inspector-float"><header draggable="true" @dragstart="startPanelDrag('inspector')"><strong>{{ t('inspector') }}</strong><button :title="t('dockPanel')" @click="dockEditorPanel('inspector','right')">↘</button></header><ConfigPanel dock="right" /></section>
       <Transition name="physics-panel">
-        <PhysicsRuntimePanel v-if="physicsState.playMode !== 'editing' && state.currentPage !== 'settings' && state.currentPage !== 'script' && !state.distractionFree" />
+        <PhysicsRuntimePanel v-if="state.physicsMonitorOpen && state.activeWorkspace === 'debug' && physicsState.playMode !== 'editing' && !state.distractionFree" />
       </Transition>
     </div>
     
@@ -54,6 +61,7 @@ import StatusBar from "./StatusBar.vue"
 import ToolBar from "../components/ToolBar.vue" 
 import ConfigPanel from "../components/ConfigPanel.vue" 
 import SceneSideBar from "../components/SceneSideBar.vue"
+import SceneTabs from "../components/SceneTabs.vue"
 import EditorBottomPanel from "../components/EditorBottomPanel.vue"
 import ActionBar from "../components/ActionBar.vue"
 import ContextMenu from "../components/ContextMenu.vue" // NEW
@@ -62,22 +70,26 @@ import CommandPalette from "../components/CommandPalette.vue"
 import CreateObjectPalette from "../components/CreateObjectPalette.vue"
 import ScriptStudio from "../components/ScriptStudio.vue"
 
-import SettingsPanel from "../panels/SettingsPanel.vue"
 import WorldCanvas from "../components/WorldCanvas.vue"
 import LayerBar from "../components/LayerBar.vue"
 import PhysicsRuntimePanel from "../components/PhysicsRuntimePanel.vue"
 import PresentationPanel from "../components/PresentationPanel.vue"
+import ManageWorkspace from '../components/ManageWorkspace.vue'
 
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { editorState as state, closeContextMenu } from "../store/editor"
 import { physicsState } from '../store/physics'
-import { initializeEditorWorkspaces } from '../editor/workspaces'
+import { dockEditorPanel, initializeEditorWorkspaces, workspaceState } from '../editor/workspaces'
 import { recoveryState } from '../runtime/recovery'
 import { t } from '../i18n'
 
 initializeEditorWorkspaces()
 const showHierarchy = computed(() => (state.currentPage === 'scene' || state.currentPage === 'game') && state.hierarchyVisible)
-const showInspector = computed(() => state.currentPage === 'scene' && state.inspectorVisible && state.activeWorkspace !== 'ui')
+const showInspector = computed(() => state.currentPage === 'scene' && state.inspectorVisible && state.activeWorkspace !== 'ui' && (physicsState.selectedEntityIds.length > 0 || state.componentPickerOpen))
+const draggedPanel = ref<'hierarchy' | 'inspector' | ''>(''), dragTarget = ref('')
+function isFloating(panel: 'hierarchy' | 'inspector'): boolean { return workspaceState.floatingPanels.includes(panel) }
+function startPanelDrag(panel: 'hierarchy' | 'inspector'): void { draggedPanel.value = panel }
+function dropPanel(destination: 'left' | 'right' | 'floating'): void { if (draggedPanel.value) dockEditorPanel(draggedPanel.value, destination); draggedPanel.value = ''; dragTarget.value = '' }
 </script>
 
 <style scoped>
@@ -88,6 +100,8 @@ const showInspector = computed(() => state.currentPage === 'scene' && state.insp
 .workspace-control-row :deep(.actionbar) { flex: 0 0 auto; }
 .editor-main { position: relative; flex: 1; display: flex; min-height: 0; }
 .dock-group { min-width: 0; display: flex; flex: 0 0 auto; }
+.dock-group[data-drop-target='true'], .editor-workspace[data-drop-target='true'] { outline: 2px solid var(--drag-target); outline-offset: -3px; background: color-mix(in srgb, var(--drag-target) 7%, transparent); }
+.dock-group.split{flex-direction:column;overflow:hidden}.dock-group.split>:deep(*){min-height:0;max-height:50%;flex:1}
 .scene-toolbar-row { flex: 0 0 auto; }
 .editor-workspace { min-width: 0; flex: 1; display: flex; flex-direction: column; }
 .editor-content { min-height: 0; flex: 1; position: relative; overflow: hidden; background: var(--bg-canvas); }
@@ -97,6 +111,7 @@ const showInspector = computed(() => state.currentPage === 'scene' && state.insp
 .persistent-viewport.inactive { visibility: hidden; pointer-events: none; }
 .settings-host { position: absolute; inset: 0; z-index: 2; }
 .ui-workspace { position: absolute; inset: 0; z-index: 2; background: var(--surface-1); }
+.floating-dock{position:absolute;z-index:520;width:min(360px,35vw);height:min(620px,72vh);display:flex;flex-direction:column;overflow:hidden;border:1px solid var(--border-strong);border-radius:var(--radius-dialog);background:var(--surface-1);box-shadow:var(--shadow-lg)}.floating-dock>header{min-height:32px;padding:0 6px 0 10px;display:flex;align-items:center;justify-content:space-between;cursor:grab;border-bottom:1px solid var(--border-subtle)}.floating-dock>header button{width:26px;height:26px;border:0;border-radius:var(--radius-control-small);background:var(--surface-3)}.floating-dock>:deep(.sidebar-container),.floating-dock>:deep(.config-wrapper){width:100%!important;max-width:none;height:auto;min-height:0;flex:1}.hierarchy-float{left:82px;top:48px}.inspector-float{right:12px;top:48px}
 @keyframes viewport-scene-reveal { from { opacity: .88; transform: translateY(2px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes viewport-game-reveal { from { opacity: .88; transform: translateY(2px); } to { opacity: 1; transform: translateY(0); } }
 .page-enter-active, .page-leave-active { transition: opacity 150ms ease, transform 180ms cubic-bezier(.2,.8,.2,1); }

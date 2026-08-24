@@ -5,7 +5,7 @@ import {
   readTextAsset,
   resolveAsset,
   resolveTextureRegion,
-  updateTextAsset
+  updateTextAssetTransactional
 } from '../assets/AssetDatabase'
 import type { AssetRecord } from '../assets/types'
 import type { TileChunkRenderCommand } from '../renderer'
@@ -57,7 +57,8 @@ export const tilemapEditorState = reactive({
   selection: null as { start: { x: number; y: number }; end: { x: number; y: number } } | null,
   transform: 0 as TileCellTransform2D,
   randomizeVariants: false,
-  clipboard: null as { width: number; height: number; tiles: number[]; transforms: TileCellTransform2D[] } | null
+  clipboard: null as { width: number; height: number; tiles: number[]; transforms: TileCellTransform2D[] } | null,
+  history: [] as Array<{ id: string; at: number; tool: TileTool; layerId: string; start: { x: number; y: number }; end: { x: number; y: number }; revision: number }>
 })
 
 const MAX_TILESET_TILES = 65_536
@@ -169,7 +170,7 @@ export function createTileSet(texture: AssetRecord, tileWidth = 32, tileHeight =
 }
 
 export function saveTileSet(assetUuid: string, document: TileSetDocument): boolean {
-  return updateTextAsset(assetUuid, JSON.stringify(normalizeTileSet(document), null, 2))
+  return updateTextAssetTransactional(assetUuid, `${JSON.stringify(normalizeTileSet(document), null, 2)}\n`)
 }
 
 export function normalizeTileMap(component: TileMap2D): void {
@@ -481,7 +482,33 @@ export function endTileStroke(component: TileMap2D, stroke: TileStroke, cell: { 
     for (let index = 0; index < component.tiles.length; index++) if (component.tiles[index] === target) stroke.changed = setTile(component, { x: index % component.width, y: Math.floor(index / component.width) }, tilemapEditorState.tileIndex) || stroke.changed
   }
   if (stroke.changed) component.revision++
+  if (stroke.changed) {
+    const layerId = component.layers[component.activeLayer]?.id ?? 'base'
+    tilemapEditorState.history.unshift({ id: crypto.randomUUID(), at: Date.now(), tool: tilemapEditorState.tool, layerId, start: { ...stroke.start }, end: { ...cell }, revision: component.revision })
+    tilemapEditorState.history.splice(200)
+  }
   return stroke.changed
+}
+
+export function tileWorldCoordinate(entity: Entity, component: TileMap2D, cell: { x: number; y: number }, entities: Entity[]): Vec2 {
+  normalizeTileMap(component)
+  return localPointToWorld(entity, { x: (cell.x + .5 - component.width / 2) * component.tileSize.x, y: (component.height / 2 - cell.y - .5) * component.tileSize.y }, entities)
+}
+
+export function deterministicTileMapStorage(component: TileMap2D): string {
+  normalizeTileMap(component)
+  const runLength = (values: number[]) => { const output: Array<[number, number]> = []; for (const value of values) { const previous = output[output.length - 1]; if (previous?.[0] === value) previous[1]++; else output.push([value, 1]) } return output }
+  const value = {
+    format: 'nova-tilemap-source', version: 1, width: component.width, height: component.height, tileSize: { ...component.tileSize }, chunkSize: component.chunkSize,
+    layers: [...component.layers].sort((a, b) => a.zOrder - b.zOrder || a.id.localeCompare(b.id)).map(layer => ({ id: layer.id, name: layer.name, visible: layer.visible, locked: layer.locked, opacity: layer.opacity, blendMode: layer.blendMode, parallax: { ...layer.parallax }, zOrder: layer.zOrder, collisionEnabled: layer.collisionEnabled, navigationEnabled: layer.navigationEnabled, occlusionEnabled: layer.occlusionEnabled, tilesRle: runLength(layer.tiles), transformsRle: runLength(layer.transforms) }))
+  }
+  return `${JSON.stringify(value, null, 2)}\n`
+}
+
+export function tileStreamingBoundaries(component: TileMap2D): Array<{ chunkX: number; chunkY: number; left: number; top: number; right: number; bottom: number }> {
+  normalizeTileMap(component); const size = Math.max(1, component.chunkSize), output = []
+  for (let y = 0; y < component.height; y += size) for (let x = 0; x < component.width; x += size) output.push({ chunkX: Math.floor(x / size), chunkY: Math.floor(y / size), left: x, top: y, right: Math.min(component.width, x + size), bottom: Math.min(component.height, y + size) })
+  return output
 }
 
 function selectionBounds(component: TileMap2D): { left: number; right: number; bottom: number; top: number } | null {

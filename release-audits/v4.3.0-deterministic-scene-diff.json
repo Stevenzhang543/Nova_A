@@ -1,0 +1,11 @@
+{
+  "format": "nova-v4.3-determinism",
+  "version": 1,
+  "generatedAt": "2026-08-23T11:26:39.627Z",
+  "noOpByteIdentical": true,
+  "identityBased": true,
+  "projectSchema": 29,
+  "sceneAuthoringVersion": 2,
+  "prefabVersion": 2,
+  "status": "passed"
+}

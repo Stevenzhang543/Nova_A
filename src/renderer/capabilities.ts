@@ -4,7 +4,7 @@ export type RendererBackendName = 'WebGL2' | 'Canvas2D'
 export interface RendererCapabilityReport {
   backend: RendererBackendName
   target: 'native-windows' | 'web'
-  tier: 'Tier 1' | 'Fallback'
+  tier: 'Production qualified' | 'Compatibility fallback'
   webgl2: boolean
   canvas2d: boolean
   maximumTextureSize: number
@@ -37,13 +37,13 @@ export const rendererCapabilityState = reactive({
 function target(): 'native-windows' | 'web' { return '__TAURI_INTERNALS__' in globalThis ? 'native-windows' : 'web' }
 
 export function queryRendererCapabilities(preferred?: RendererBackendName): RendererCapabilityReport {
-  if (typeof document === 'undefined') return { backend: preferred ?? 'Canvas2D', target: 'web', tier: 'Fallback', webgl2: false, canvas2d: false, maximumTextureSize: 0, textureUnits: 0, floatRenderTargets: false, gpuTimers: false, contextRecovery: false, antialiasing: false, features: [], unsupported: ['DOM canvas unavailable'], fallbackRules }
+  if (typeof document === 'undefined') return { backend: preferred ?? 'Canvas2D', target: 'web', tier: 'Compatibility fallback', webgl2: false, canvas2d: false, maximumTextureSize: 0, textureUnits: 0, floatRenderTargets: false, gpuTimers: false, contextRecovery: false, antialiasing: false, features: [], unsupported: ['DOM canvas unavailable'], fallbackRules }
   const canvas = document.createElement('canvas')
   const gl = canvas.getContext('webgl2', { antialias: true, failIfMajorPerformanceCaveat: false })
   const canvas2d = Boolean(document.createElement('canvas').getContext('2d'))
   const backend = preferred ?? (gl ? 'WebGL2' : 'Canvas2D')
   const report: RendererCapabilityReport = {
-    backend, target: target(), tier: backend === 'WebGL2' ? 'Tier 1' : 'Fallback', webgl2: Boolean(gl), canvas2d,
+    backend, target: target(), tier: backend === 'WebGL2' ? 'Production qualified' : 'Compatibility fallback', webgl2: Boolean(gl), canvas2d,
     maximumTextureSize: gl ? Number(gl.getParameter(gl.MAX_TEXTURE_SIZE)) : 0,
     textureUnits: gl ? Number(gl.getParameter(gl.MAX_TEXTURE_IMAGE_UNITS)) : 0,
     floatRenderTargets: Boolean(gl?.getExtension('EXT_color_buffer_float')),
@@ -74,4 +74,3 @@ export function reportRendererContextRestored(): void {
 }
 export function reportRendererReset(): void { rendererCapabilityState.resetCount++; rendererCapabilityState.lastEvent = 'Renderer reset completed' }
 export function requestRendererReset(): void { if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('nova-renderer-reset-request')) }
-

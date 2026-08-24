@@ -16,6 +16,15 @@ importers:
 
   .:
     dependencies:
+      '@fontsource-variable/jetbrains-mono':
+        specifier: ^5.3.0
+        version: 5.3.0
+      '@fontsource-variable/noto-sans-sc':
+        specifier: ^5.3.0
+        version: 5.3.0
+      '@fontsource-variable/nunito-sans':
+        specifier: ^5.3.0
+        version: 5.3.0
       '@tauri-apps/api':
         specifier: 2.11.1
         version: 2.11.1
@@ -216,6 +225,15 @@ packages:
     engines: {node: '>=18'}
     cpu: [x64]
     os: [win32]
+
+  '@fontsource-variable/jetbrains-mono@5.3.0':
+    resolution: {integrity: sha512-F32xpS2NsGYoQi2ADSkKTgpJj7ozajsGgDJ8woTnqjmIB+dxDIqImjl4pXZVEExu8UFZ2ndhmX18EBS/hdz3Lw==}
+
+  '@fontsource-variable/noto-sans-sc@5.3.0':
+    resolution: {integrity: sha512-lNar1dF7Ik/lHNPo/7JWG0TolXY29LtsqYgMvEysooZ5bsO9uH4shJmRrwyJ3PjyTPljhpMJEK0jDuLSU4vJ1w==}
+
+  '@fontsource-variable/nunito-sans@5.3.0':
+    resolution: {integrity: sha512-Vk1PSfckNDwgw2yGcsvJP3o/0zEW8Rp6KzbD8Ql/6iRHQshnhhAjt+cSIfAUyp5vQuSlleGHFW2LfYaaex0diw==}
 
   '@jridgewell/sourcemap-codec@1.5.5':
     resolution: {integrity: sha512-cYQ9310grqxueWbl+WuIUIaiUaDcj7WOq5fVhEljNVgRfOUhY9fy2zTvfoqWsnebh8Sl70VScFbICvJnLKB0Og==}
@@ -740,6 +758,12 @@ snapshots:
 
   '@esbuild/win32-x64@0.25.12':
     optional: true
+
+  '@fontsource-variable/jetbrains-mono@5.3.0': {}
+
+  '@fontsource-variable/noto-sans-sc@5.3.0': {}
+
+  '@fontsource-variable/nunito-sans@5.3.0': {}
 
   '@jridgewell/sourcemap-codec@1.5.5': {}
 

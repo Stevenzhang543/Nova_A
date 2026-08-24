@@ -5,6 +5,9 @@ import { faultDiagnostics } from './faultCenter'
 import { packageState } from './packages'
 import { PLATFORM_SUPPORT_MATRIX } from './platformSupport'
 import { recoveryDiagnostics } from './recovery'
+import { transactionDiagnostics } from './projectTransactions'
+import { externalChangeDiagnostics } from './projectExternalChanges'
+import { migrationState } from './projectUpgrade'
 import { stableContractDiagnostics } from './stableContracts'
 
 export interface KnownIssue { severity: 'S2' | 'S3'; area: string; issue: string; workaround: string }
@@ -21,7 +24,7 @@ export const RELEASE_CHANNELS = Object.freeze([
   Object.freeze({ id: 'beta' as const, label: 'Beta', purpose: 'Release-candidate validation', policy: 'Feature-complete candidates with documented S2 boundaries.', cadence: 'Time-boxed before a Stable release.' }),
   Object.freeze({ id: 'development' as const, label: 'Development', purpose: 'Extension and engine contributors', policy: 'Unstable; backups required and no production compatibility promise.', cadence: 'Continuous integration snapshots.' })
 ])
-export const KNOWN_ISSUES_FEED = Object.freeze({ format: 'nova-known-issues-feed', version: 1, release: '4.0.0', updatedAt: '2026-08-19', source: 'bundled-offline', issues: KNOWN_ISSUES })
+export const KNOWN_ISSUES_FEED = Object.freeze({ format: 'nova-known-issues-feed', version: 1, release: '4.4.0', updatedAt: '2026-08-24', source: 'bundled-offline', issues: KNOWN_ISSUES })
 
 export const supportState = reactive({
   releaseChannel: 'stable' as NovaReleaseChannel,
@@ -41,17 +44,17 @@ function download(name: string, contents: string): void {
 export function diagnosticBundle(): Record<string, unknown> {
   const sanitize = (source: string) => supportState.includeFilePaths ? JSON.parse(source) : JSON.parse(source.replace(/[A-Za-z]:\\[^"\n]+|\/(?:Users|home)\/[^"\n]+/g, '[redacted-path]'))
   return {
-    format: 'nova-diagnostic-bundle', version: 2, engineVersion: '4.0.0', releaseChannel: supportState.releaseChannel, generatedAt: new Date().toISOString(), privacy: { projectIdentifiers: supportState.includeProjectIdentifiers, filePaths: supportState.includeFilePaths, uploaded: false },
+    format: 'nova-diagnostic-bundle', version: 2, engineVersion: '4.4.0', releaseChannel: supportState.releaseChannel, generatedAt: new Date().toISOString(), privacy: { projectIdentifiers: supportState.includeProjectIdentifiers, filePaths: supportState.includeFilePaths, uploaded: false },
     contracts: JSON.parse(stableContractDiagnostics()), platforms: PLATFORM_SUPPORT_MATRIX,
     build: { target: buildSettings.target, profile: buildSettings.profile, recent: buildHistory.slice(0, 10).map(item => ({ ...item, outputPath: supportState.includeFilePaths ? item.outputPath : '[redacted-path]' })) },
     packages: { installed: packageState.installed.map(item => ({ id: item.manifest.id, version: item.manifest.version, securityStatus: item.securityStatus, enabled: item.enabled })), quarantine: packageState.quarantine },
-    faults: sanitize(faultDiagnostics()), tasks: sanitize(feedbackDiagnostics()), recovery: sanitize(recoveryDiagnostics()), knownIssuesFeed: KNOWN_ISSUES_FEED
+    faults: sanitize(faultDiagnostics()), tasks: sanitize(feedbackDiagnostics()), recovery: sanitize(recoveryDiagnostics()), transactions: sanitize(transactionDiagnostics()), externalChanges: sanitize(externalChangeDiagnostics()), migration: sanitize(JSON.stringify({lastDryRun:migrationState.lastDryRun&&{...migrationState.lastDryRun,output:''},lastReport:migrationState.lastReport,logs:migrationState.logs},null,2)), knownIssuesFeed: KNOWN_ISSUES_FEED
   }
 }
 
 export function exportDiagnosticBundle(): boolean {
   if (!supportState.privacyReviewed) return false
-  const source = `${JSON.stringify(diagnosticBundle(), null, 2)}\n`, name = `Nova_A-4.0.0-diagnostics-${new Date().toISOString().slice(0, 10)}.json`
+  const source = `${JSON.stringify(diagnosticBundle(), null, 2)}\n`, name = `Nova_A-4.4.0-diagnostics-${new Date().toISOString().slice(0, 10)}.json`
   download(name, source); supportState.lastExport = name; return true
 }
 
@@ -59,7 +62,7 @@ export function releaseHealthSnapshot(): Record<string, unknown> {
   const quarantined = packageState.quarantine.length
   const fatalFaults = (JSON.parse(faultDiagnostics()) as { entries?: Array<{ severity?: string }> }).entries?.filter(item => item.severity === 'fatal').length ?? 0
   return {
-    format: 'nova-release-health', version: 1, engineVersion: '4.0.0', channel: supportState.releaseChannel,
+    format: 'nova-release-health', version: 1, engineVersion: '4.4.0', channel: supportState.releaseChannel,
     generatedAt: new Date().toISOString(), openS0: 0, openS1: fatalFaults, openS2: KNOWN_ISSUES.filter(issue => issue.severity === 'S2').length,
     packageQuarantine: quarantined, recoveryAvailable: true, status: fatalFaults ? 'attention' : 'healthy'
   }
@@ -68,9 +71,9 @@ export function releaseHealthSnapshot(): Record<string, unknown> {
 export function exportCrashReportPackage(): boolean {
   if (!supportState.crashReportingOptIn || !supportState.privacyReviewed) return false
   const report = {
-    format: 'nova-crash-report-package', version: 1, engineVersion: '4.0.0', createdAt: new Date().toISOString(),
+    format: 'nova-crash-report-package', version: 1, engineVersion: '4.4.0', createdAt: new Date().toISOString(),
     consent: { optIn: true, privacyReviewed: true, uploaded: false }, diagnostics: diagnosticBundle(), releaseHealth: releaseHealthSnapshot()
   }
-  const name = `Nova_A-4.0.0-crash-report-${new Date().toISOString().replace(/[:.]/g, '-')}.nova-crash.json`
+  const name = `Nova_A-4.4.0-crash-report-${new Date().toISOString().replace(/[:.]/g, '-')}.nova-crash.json`
   download(name, `${JSON.stringify(report, null, 2)}\n`); supportState.lastCrashExport = name; return true
 }

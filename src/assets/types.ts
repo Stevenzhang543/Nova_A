@@ -5,13 +5,23 @@ export type AssetType =
   | 'animation' | 'controller' | 'animationMask' | 'rig' | 'skin' | 'timeline'
   | 'tileset' | 'atlas' | 'shader' | 'localization' | 'uiTheme' | 'other'
   | 'behaviorTree' | 'stateMachine' | 'tilePalette' | 'brushPreset' | 'terrainRules'
-  | 'dataSchema' | 'dataTable' | 'replay'
-export type TextAssetType = Extract<AssetType, 'script' | 'prefab' | 'scene' | 'material' | 'animation' | 'controller' | 'animationMask' | 'rig' | 'skin' | 'timeline' | 'tileset' | 'atlas' | 'shader' | 'localization' | 'uiTheme' | 'behaviorTree' | 'stateMachine' | 'tilePalette' | 'brushPreset' | 'terrainRules' | 'dataSchema' | 'dataTable' | 'replay'>
+  | 'dataSchema' | 'dataTable' | 'replay' | 'path'
+export type TextAssetType = Extract<AssetType, 'script' | 'prefab' | 'scene' | 'material' | 'animation' | 'controller' | 'animationMask' | 'rig' | 'skin' | 'timeline' | 'tileset' | 'atlas' | 'shader' | 'localization' | 'uiTheme' | 'behaviorTree' | 'stateMachine' | 'tilePalette' | 'brushPreset' | 'terrainRules' | 'dataSchema' | 'dataTable' | 'replay' | 'path' | 'other'>
 export type AssetCompression = 'None' | 'Lossless' | 'Optimized'
 export type TextureImportProfile = 'General' | 'PixelArt' | 'UI' | 'NormalMap'
 export type AudioImportProfile = 'SoundEffect' | 'Music' | 'Voice' | 'Streaming'
 export type AudioCodecProfile = 'Original' | 'PCM' | 'Vorbis' | 'MP3'
 export type FontRenderMode = 'Scalable' | 'Bitmap'
+export type FontDistanceFieldMode = 'None' | 'SDF' | 'MSDF'
+export type AssetSourceControlStatus = 'clean' | 'added' | 'modified' | 'conflict' | 'untracked'
+export type AssetContentMode = 'embedded' | 'downloadable' | 'excluded'
+
+export interface AssetPlatformOverride {
+  enabled: boolean
+  compression: AssetCompression
+  maxSize: number
+  format: 'Auto' | 'RGBA8' | 'BC7' | 'ASTC' | 'ETC2'
+}
 
 export interface SpriteRegion {
   x: number
@@ -29,13 +39,20 @@ export interface AssetImportSettings {
   pivot: { x: number; y: number }
   atlas: boolean
   colorSpace: 'sRGB' | 'Linear'
+  generateMipmaps: boolean
+  transparency: 'Preserve' | 'Premultiply' | 'Discard'
   platformVariants: Partial<Record<'windows' | 'linux' | 'macos' | 'web', AssetCompression>>
-  atlasSettings: { maxSize: number; padding: number; trim: boolean }
+  platformOverrides: Partial<Record<'windows' | 'linux' | 'macos' | 'web', AssetPlatformOverride>>
+  atlasSettings: { maxSize: number; padding: number; trim: boolean; rotationPolicy: 'Never' | 'Allow'; trimPolicy: 'None' | 'Transparent'; group: string }
   spriteSheet: { enabled: boolean; columns: number; rows: number; margin: number; spacing: number }
   transparentTrim: boolean
   borders: { left: number; top: number; right: number; bottom: number }
+  polygonOutline: Array<{ x: number; y: number }>
+  collisionGeneration: { mode: 'None' | 'Box' | 'Polygon'; tolerance: number }
+  extractedAnimationFrames: SpriteRegion[]
+  svgSettings: { rasterization: 'ImportTime' | 'Runtime' | 'Disabled'; scale: number; allowExternalResources: boolean }
   audioSettings: { profile: AudioImportProfile; codec: AudioCodecProfile; quality: number; trimStart: number; trimEnd: number; normalize: boolean; normalizationGain: number; targetPeakDb: number; streaming: boolean; sampleRate: number; loopStart: number; loopEnd: number }
-  fontSettings: { renderMode: FontRenderMode; fallbackFamilies: string[]; bitmapSize: number; outlineWidth: number; shaping: boolean }
+  fontSettings: { renderMode: FontRenderMode; fallbackFamilies: string[]; fallbackAssetUuids: string[]; bitmapSize: number; outlineWidth: number; shaping: boolean; openTypeFeatures: string[]; hinting: 'Auto' | 'None' | 'Light' | 'Full'; oversampling: number; distanceField: FontDistanceFieldMode; distanceRange: number; declaredLanguages: string[]; editorFont: boolean }
   tileSettings: { tileWidth: number; tileHeight: number; margin: number; spacing: number }
   scriptSettings: { encoding: 'utf-8'; module: boolean }
   shaderSettings: { stage: 'fragment' | 'vertex'; entry: string }
@@ -43,7 +60,9 @@ export interface AssetImportSettings {
 }
 
 export interface AssetPipelineMetadata {
+  importerId: string
   importerVersion: string
+  presetId: string
   platform: 'windows' | 'linux' | 'macos' | 'web'
   sourceHash: string
   artifactHash: string
@@ -55,6 +74,14 @@ export interface AssetPipelineMetadata {
   dependencies: string[]
   reverseDependencies: string[]
   cacheHit: boolean
+  settingsHash: string
+  artifactSettingsHash: string
+  invalidationReason: string
+  sourceSettings: string
+  artifactSettings: string
+  diagnostics: Array<{ severity: 'info' | 'warning' | 'error'; code: string; message: string }>
+  reproducible: boolean
+  deprecatedSettings: string[]
 }
 
 export interface AssetSavedFilter {
@@ -63,7 +90,12 @@ export interface AssetSavedFilter {
   query: string
   folder: string
   assetType: AssetType | 'all'
+  tags: string[]
+  collectionId: string
 }
+
+export interface AssetCollection { id: string; name: string; color: string; assetUuids: string[] }
+export interface AssetContentGroup { id: string; name: string; mode: AssetContentMode; optional: boolean }
 
 export interface AssetImportPreset {
   id: string
@@ -73,10 +105,14 @@ export interface AssetImportPreset {
 }
 
 export interface AssetDatabaseSettings {
-  version: 1
+  version: 2
   favorites: string[]
   savedFilters: AssetSavedFilter[]
   importPresets: AssetImportPreset[]
+  collections: AssetCollection[]
+  contentGroups: AssetContentGroup[]
+  viewMode: 'grid' | 'list'
+  thumbnailSize: number
 }
 
 export interface ScriptAssetMetadata {
@@ -139,6 +175,12 @@ export interface AssetRecord {
   script?: ScriptAssetMetadata
   animationImport?: AnimationImportMetadata
   pipeline?: AssetPipelineMetadata
+  tags?: string[]
+  collectionIds?: string[]
+  contentGroup?: string
+  editorOnly?: boolean
+  sourceControlStatus?: AssetSourceControlStatus
+  thumbnailKey?: string
   /** Top-level fields from newer tools are emitted unchanged on the next save. */
   unknownFields?: Record<string, unknown>
 }
@@ -166,19 +208,20 @@ export const DEFAULT_ASSET_FOLDERS = [
   'Assets/Animations', 'Assets/Controllers', 'Assets/AnimationMasks', 'Assets/Rigs', 'Assets/Skins', 'Assets/Timelines',
   'Assets/Atlases', 'Assets/Shaders', 'Assets/Localization', 'Assets/UI Themes', 'Assets/Packages', 'ProjectSettings',
   'Assets/AI', 'Assets/TilePalettes', 'Assets/BrushPresets', 'Assets/TerrainRules',
-  'Assets/Data', 'Assets/Data/Schemas', 'Assets/Data/Tables', 'Assets/Replays',
+  'Assets/Data', 'Assets/Data/Schemas', 'Assets/Data/Tables', 'Assets/Replays', 'Assets/Paths',
   '.nova/cache', '.nova/imported', '.nova/user'
 ] as const
 
 export function defaultImportSettings(): AssetImportSettings {
   return {
     textureProfile: 'General', filterMode: 'Linear', compression: 'Lossless', pixelsPerUnit: 100,
-    spriteRegion: null, pivot: { x: .5, y: .5 }, atlas: true, colorSpace: 'sRGB', platformVariants: {},
-    atlasSettings: { maxSize: 2048, padding: 2, trim: true },
+    spriteRegion: null, pivot: { x: .5, y: .5 }, atlas: true, colorSpace: 'sRGB', generateMipmaps: false, transparency: 'Preserve', platformVariants: {}, platformOverrides: {},
+    atlasSettings: { maxSize: 2048, padding: 2, trim: true, rotationPolicy: 'Never', trimPolicy: 'Transparent', group: 'Default' },
     spriteSheet: { enabled: false, columns: 1, rows: 1, margin: 0, spacing: 0 }, transparentTrim: false,
-    borders: { left: 0, top: 0, right: 0, bottom: 0 },
+    borders: { left: 0, top: 0, right: 0, bottom: 0 }, polygonOutline: [], collisionGeneration: { mode: 'None', tolerance: 1 }, extractedAnimationFrames: [],
+    svgSettings: { rasterization: 'ImportTime', scale: 1, allowExternalResources: false },
     audioSettings: { profile: 'SoundEffect', codec: 'Original', quality: .8, trimStart: 0, trimEnd: 0, normalize: false, normalizationGain: 1, targetPeakDb: -1, streaming: false, sampleRate: 48_000, loopStart: 0, loopEnd: 0 },
-    fontSettings: { renderMode: 'Scalable', fallbackFamilies: ['Segoe UI Variable Text', 'Noto Sans', 'sans-serif'], bitmapSize: 32, outlineWidth: 0, shaping: true },
+    fontSettings: { renderMode: 'Scalable', fallbackFamilies: ['Nunito Sans Variable', 'Noto Sans SC Variable', 'sans-serif'], fallbackAssetUuids: [], bitmapSize: 32, outlineWidth: 0, shaping: true, openTypeFeatures: ['kern', 'liga'], hinting: 'Auto', oversampling: 1, distanceField: 'None', distanceRange: 8, declaredLanguages: ['en'], editorFont: false },
     tileSettings: { tileWidth: 32, tileHeight: 32, margin: 0, spacing: 0 },
     scriptSettings: { encoding: 'utf-8', module: true },
     shaderSettings: { stage: 'fragment', entry: 'main' },

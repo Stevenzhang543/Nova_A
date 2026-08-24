@@ -4,6 +4,7 @@ import { defaultCollisionMatrix } from '../world/World'
 import { defaultPhysicsLayers } from '../runtime/physicsProduction'
 import { newProjectMetadata } from './projectSession'
 import { normalizeProjectManifest } from './projectManifest'
+import { assetSourceBytes, sha256Bytes } from '../assets/contentHash'
 import {
   NOVA_ENGINE_VERSION, NOVA_PROJECT_FORMAT, NOVA_PROJECT_FORMAT_MAJOR,
   NOVA_PROJECT_SCHEMA_VERSION, projectCompatibility
@@ -86,7 +87,7 @@ function canvasWithLabel(seed: string, text: string): JsonRecord[] {
     component(`${seed}:canvas`, 'RectTransform', { parentUuid: null, anchorPreset: 'stretch', position: { x: 0, y: 0 }, size: { x: 1920, y: 1080 } }),
     component(`${seed}:canvas`, 'Canvas', { referenceSize: { x: 1920, y: 1080 }, scaleWithScreen: true, sortingOrder: 100 })
   ])
-  const label = entity(`${seed}:label`, 'Tutorial Hint', [0, 0], [
+  const label = entity(`${seed}:label`, 'Scene Title', [0, 0], [
     component(`${seed}:label`, 'RectTransform', { parentUuid: canvasUuid, anchorPreset: 'top', position: { x: 0, y: 48 }, size: { x: 900, y: 72 } }),
     component(`${seed}:label`, 'Text', { text, fontSize: 26, fontWeight: 650, align: 'center', color: { r: 239, g: 245, b: 255 }, opacity: 100 })
   ])
@@ -94,12 +95,14 @@ function canvasWithLabel(seed: string, text: string): JsonRecord[] {
   return [canvas, label]
 }
 
-function textAsset(seed: string, name: string, assetType: 'script' | 'animation' | 'controller' | 'prefab' | 'localization' | 'uiTheme' | 'tileset', path: string, source: string, mimeType: string): JsonRecord {
+function textAsset(seed: string, name: string, assetType: 'script' | 'animation' | 'controller' | 'prefab' | 'localization' | 'uiTheme' | 'tileset' | 'other', path: string, source: string, mimeType: string): JsonRecord {
+  const hash = sha256Bytes(assetSourceBytes(source))
   return {
     uuid: stableUuid(`asset:${seed}`), name, path, assetType,
     mimeType, byteLength: source.length, source, sourceModified: 0, importedAt: 0,
     width: 0, height: 0, duration: 0, fontFamily: '',
-    settings: { filterMode: 'Linear', compression: 'Lossless', pixelsPerUnit: 100, spriteRegion: null, pivot: { x: .5, y: .5 }, atlas: false }
+    settings: { filterMode: 'Linear', compression: 'Lossless', pixelsPerUnit: 100, spriteRegion: null, pivot: { x: .5, y: .5 }, atlas: false },
+    pipeline: { importerVersion: 'template-4.2', platform: 'web', sourceHash: hash, artifactHash: hash, contentHash: hash, cacheKey: hash, status: 'ready', lastValidSource: source, error: '', dependencies: [], reverseDependencies: [], cacheHit: false }
   }
 }
 
@@ -168,9 +171,9 @@ function project(name: string, template: ProjectTemplateId, scenes: JsonRecord[]
     compatibility: projectCompatibility(),
     projectMetadata: metadata,
     manifest: normalizeProjectManifest(null, metadata),
-    assets,
-    assetFolders: ['Assets', 'Assets/Scenes', 'Assets/Sprites', 'Assets/Audio', 'Assets/Scripts', 'Assets/Fonts', 'Assets/Prefabs', 'Assets/Tiles', 'Assets/TileSets', 'Assets/Materials', 'Assets/Animations', 'Assets/Controllers', 'ProjectSettings', '.nova/cache', '.nova/imported'],
-    assetDatabase: { version: 1, favorites: [], savedFilters: [], importPresets: [] },
+    assets: [textAsset(`tutorial-${template}`, 'Getting Started.md', 'other', 'Assets/Tutorials/Getting Started.md', `---\ndismissible: true\ntemplate: ${template}\n---\n# Welcome to ${name}\n\nThis project was created from the **${template}** template. Open the Scene, Assets, Script, Debug, and Manage workspaces to explore the configured systems. Dismiss this tutorial from its Asset Inspector when you are ready.`, 'text/markdown'), ...assets],
+    assetFolders: ['Assets', 'Assets/Tutorials', 'Assets/Scenes', 'Assets/Sprites', 'Assets/Audio', 'Assets/Scripts', 'Assets/Fonts', 'Assets/Prefabs', 'Assets/Tiles', 'Assets/TileSets', 'Assets/Materials', 'Assets/Animations', 'Assets/Controllers', 'ProjectSettings', '.nova/cache', '.nova/imported'],
+    assetDatabase: { version: 2, favorites: [], savedFilters: [], importPresets: [], collections: [], contentGroups: [{ id: 'main', name: 'Main', mode: 'embedded', optional: false }], viewMode: 'grid', thumbnailSize: 112 },
     plugins: [],
     packages: { manifestVersion: 1, installed: [], lockfile: [], offlineCache: [], offlineMode: true },
     projectSettings: {
@@ -214,7 +217,7 @@ function platformerTemplate(name: string): JsonRecord {
   const platformTiles = Array(32 * 18).fill(-1).map((_, index) => Math.floor(index / 32) < 2 ? 1 : index % 19 === 0 && Math.floor(index / 32) === 2 ? 0 : -1)
   const tileMap = entity('platformer-tilemap', 'World TileMap', [0, 0], [component('platformer-tilemap', 'TileMap2D', { width: 32, height: 18, tileSize: { x: 1, y: 1 }, chunkSize: 16, tiles: platformTiles, tileSetAsset: `asset://${tileSetId}`, layers: [{ id: 'terrain', name: 'Terrain', visible: true, locked: false, opacity: 1, blendMode: 'Alpha', parallax: { x: 1, y: 1 }, zOrder: 0, collisionEnabled: true, navigationEnabled: true, occlusionEnabled: true, tiles: platformTiles, transforms: Array(32 * 18).fill(0) }], activeLayer: 0, streamingEnabled: true, streamingRadius: 3, bakeCollision: true, bakeNavigation: true, bakeOccluders: true })])
   const navigation = entity('platformer-navigation', 'Platform Navigation', [0, 0], [component('platformer-navigation', 'NavigationRegion2D', { polygon: [{ x: -16, y: -9 }, { x: 16, y: -9 }, { x: 16, y: 9 }, { x: -16, y: 9 }], navigationMode: 'Grid', source: 'TileMap', sourceEntityUuid: stableUuid('entity:platformer-tilemap'), cellSize: .5, agentRadius: .4, navigationLayer: 1, navigationMask: 1, traversalCost: 1 })])
-  const tutorialScene = scene('platformer-main', 'Level 01', [camera('platformer-camera'), tileMap, navigation, light, ground, platform, player, ...canvasWithLabel('platformer-ui', 'Move, jump, and inspect the integrated Tilemap 2.0 and navigation workflow.')])
+  const tutorialScene = scene('platformer-main', 'Level 01', [camera('platformer-camera'), tileMap, navigation, light, ground, platform, player, ...canvasWithLabel('platformer-ui', 'Platformer')])
   const result = project(name, 'platformer', [tutorialScene], [
     scriptAsset('platformer-controller', 'PlayerController', source), imageAsset('platformer-player-sprite', 'Player', '#69a8ff'), beepAsset('platformer-jump-audio', 'Jump'),
     textAsset('platformer-idle-clip', 'PlayerIdle.nova-anim', 'animation', 'Assets/Animations/PlayerIdle.nova-anim', clip, 'application/x-nova-animation'),
@@ -244,9 +247,9 @@ function topDownTemplate(name: string): JsonRecord {
   const topTiles = Array(40 * 24).fill(0).map((value, index) => index % 40 === 0 || index % 40 === 39 || Math.floor(index / 40) === 0 || Math.floor(index / 40) === 23 ? 1 : value)
   const topMap = entity('top-down-tilemap', 'World TileMap', [0, 0], [component('top-down-tilemap', 'TileMap2D', { width: 40, height: 24, tileSize: { x: 1, y: 1 }, chunkSize: 16, tiles: topTiles, tileSetAsset: `asset://${tileSetId}`, layers: [{ id: 'ground', name: 'Ground', visible: true, locked: false, opacity: 1, blendMode: 'Alpha', parallax: { x: 1, y: 1 }, zOrder: -10, collisionEnabled: true, navigationEnabled: true, occlusionEnabled: true, tiles: topTiles, transforms: Array(40 * 24).fill(0) }], activeLayer: 0, streamingEnabled: true, streamingRadius: 3, bakeCollision: true, bakeNavigation: true, bakeOccluders: true })])
   const topNavigation = entity('top-down-navigation', 'World Navigation', [0, 0], [component('top-down-navigation', 'NavigationRegion2D', { polygon: [{ x: -19, y: -11 }, { x: 19, y: -11 }, { x: 19, y: 11 }, { x: -19, y: 11 }], navigationMode: 'Grid', source: 'TileMap', sourceEntityUuid: stableUuid('entity:top-down-tilemap'), cellSize: .5, agentRadius: .5, navigationLayer: 1, navigationMask: 1, traversalCost: 1, links: [] })])
-  const level = scene('top-level', 'World', [camera('top-camera'), topMap, topNavigation, player, enemy, trigger, ...canvasWithLabel('top-ui', 'Explore Tilemap 2.0, navigation, prefabs, triggers, particles, scene changes, and resilient Save data.')])
+  const level = scene('top-level', 'World', [camera('top-camera'), topMap, topNavigation, player, enemy, trigger, ...canvasWithLabel('top-ui', 'Top-down')])
   ;(level.globalSettings as JsonRecord).gravity = 0
-  const menu = scene('top-menu', 'Main Menu', [camera('top-menu-camera'), ...canvasWithLabel('top-menu-ui', 'Top-down template — switch to the World scene to play.')])
+  const menu = scene('top-menu', 'Main Menu', [camera('top-menu-camera'), ...canvasWithLabel('top-menu-ui', 'Top-down')])
   ;(menu.globalSettings as JsonRecord).gravity = 0
   const result = project(name, 'top-down', [level, menu], [
     scriptAsset('top-down-controller', 'TopDownController', source), scriptAsset('top-down-enemy', 'EnemyPatrol', enemySource),
@@ -274,7 +277,7 @@ function physicsTemplate(name: string): JsonRecord {
     stretchable: true, bendable: true, stiffness: 120, damping: 24, maxStretch: .45, bendTolerance: 120, stretchTolerance: 180,
     collisionEnabled: true, thickness: .18, ropeNodes: [], breakState: 'intact', breakLink: -1, tension: 0, strain: 0
   }
-  return project(name, 'physics-sandbox', [scene('sandbox', 'Physics Playground', [camera('sandbox-camera'), shape('sandbox-ground', 'Ground', [0, -5], [20, 1], { body: 'Static', color: [89, 102, 116], friction: .85 }), jointAnchor, jointedBox, ropeEnd, ropeBall, ...canvasWithLabel('sandbox-ui', 'Press Play, then inspect live collision, joint, and Rope2D telemetry.')], [rope])])
+  return project(name, 'physics-sandbox', [scene('sandbox', 'Physics Playground', [camera('sandbox-camera'), shape('sandbox-ground', 'Ground', [0, -5], [20, 1], { body: 'Static', color: [89, 102, 116], friction: .85 }), jointAnchor, jointedBox, ropeEnd, ropeBall, ...canvasWithLabel('sandbox-ui', 'Physics Sandbox')], [rope])])
 }
 
 function uiElement(seed: string, name: string, parentUuid: string, position: [number, number], size: [number, number], kind: string, data: JsonRecord): JsonRecord {
@@ -315,7 +318,7 @@ function uiShowcaseTemplate(name: string): JsonRecord {
 function networkedOptionalTemplate(name: string): JsonRecord {
   const first = shape('network-player-one', 'Server Player', [-3, 0], [1.4, 1.4], { type: 'Circle', color: [92, 181, 255], body: 'Kinematic' })
   const second = shape('network-player-two', 'Remote Player', [3, 0], [1.4, 1.4], { type: 'Circle', color: [242, 153, 92], body: 'Kinematic' })
-  const result = project(name, 'networked-optional', [scene('network-arena', 'Network Arena', [camera('network-camera'), first, second, ...canvasWithLabel('network-ui', 'Open Production Lab → Networking to connect, replicate, and inspect bandwidth.')])])
+  const result = project(name, 'networked-optional', [scene('network-arena', 'Network Arena', [camera('network-camera'), first, second, ...canvasWithLabel('network-ui', 'Network Arena')])])
   result.packages = { manifestVersion: 1, installed: [{
     manifest: { manifestVersion: 1, id: 'top.whitelists.novaa.networking', name: 'Nova Optional Networking', version: '2.9.0', description: 'Bounded replication and authoritative multiplayer tools.', engine: '>=2.9.0 <5.0.0', dependencies: {}, pluginApi: null, native: false, sha256: 'official-networking-2.9.0', signature: 'nova-a-official', publisher: 'Whitelist', publisherVerified: true, permissions: ['network.client', 'network.listen'], rating: 5, securityUrl: 'https://github.com/Stevenzhang543/Nova_A/security', documentationUrl: 'https://github.com/Stevenzhang543/Nova_A/' },
     source: { kind: 'registry', location: 'Nova_A official offline package' }, enabled: true, project: true, installedAt: 0

@@ -10,7 +10,7 @@ pub const PROJECT_FORMAT_NAME: &str = "Nova_A Project Format 2";
 pub const PROJECT_FORMAT_MAJOR: u32 = 2;
 pub const CURRENT_FORMAT_VERSION: u32 = 29;
 pub const MINIMUM_SUPPORTED_FORMAT_VERSION: u32 = 5;
-pub const CURRENT_ENGINE_VERSION: &str = "4.0.0";
+pub const CURRENT_ENGINE_VERSION: &str = "4.4.0";
 
 fn default_named_physics_layers() -> Value {
     let colors = [
@@ -3907,7 +3907,7 @@ mod tests {
             json!({"minimum":"3.0.0","maximumExclusive":"4.0.0"});
         let migrated = migrate_project_value(source).expect("3.9 release candidate migrates");
         assert_eq!(migrated.format_version, 29);
-        assert_eq!(migrated.engine_version, "4.0.0");
+        assert_eq!(migrated.engine_version, CURRENT_ENGINE_VERSION);
         assert_eq!(
             migrated.manifest.engine_compatibility.maximum_exclusive,
             "5.0.0"

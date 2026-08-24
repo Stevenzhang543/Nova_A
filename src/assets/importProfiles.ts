@@ -4,10 +4,10 @@ import type { AssetImportSettings, AudioImportProfile, TextureImportProfile } fr
  * field after choosing a profile; no renderer behavior remains implicit. */
 export function applyTextureImportProfile(settings: AssetImportSettings, profile: TextureImportProfile): void {
   settings.textureProfile = profile
-  if (profile === 'PixelArt') Object.assign(settings, { filterMode: 'Nearest', compression: 'Lossless', colorSpace: 'sRGB', atlas: true })
-  else if (profile === 'UI') Object.assign(settings, { filterMode: 'Linear', compression: 'Lossless', colorSpace: 'sRGB', atlas: true })
-  else if (profile === 'NormalMap') Object.assign(settings, { filterMode: 'Linear', compression: 'Lossless', colorSpace: 'Linear', atlas: false })
-  else Object.assign(settings, { filterMode: 'Linear', compression: 'Optimized', colorSpace: 'sRGB', atlas: true })
+  if (profile === 'PixelArt') Object.assign(settings, { filterMode: 'Nearest', compression: 'Lossless', colorSpace: 'sRGB', atlas: true, generateMipmaps: false, transparency: 'Preserve' })
+  else if (profile === 'UI') Object.assign(settings, { filterMode: 'Linear', compression: 'Lossless', colorSpace: 'sRGB', atlas: true, generateMipmaps: false, transparency: 'Premultiply' })
+  else if (profile === 'NormalMap') Object.assign(settings, { filterMode: 'Linear', compression: 'Lossless', colorSpace: 'Linear', atlas: false, generateMipmaps: true, transparency: 'Discard' })
+  else Object.assign(settings, { filterMode: 'Linear', compression: 'Optimized', colorSpace: 'sRGB', atlas: true, generateMipmaps: true, transparency: 'Preserve' })
 }
 
 /** Audio profiles define import/streaming intent while retaining explicit codec,

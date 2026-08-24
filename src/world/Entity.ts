@@ -13,6 +13,7 @@ import {
   type ComponentKind,
   type EntityComponent
 } from './components'
+import type { EntityOwnership, RuntimePersistencePolicy } from '../editor/sceneAuthoring'
 
 export interface PrefabInstanceLayer {
   asset: string
@@ -40,8 +41,8 @@ export interface AuthoringMetadata2D {
   renderLayer: number
   sortMode: 'LayerThenOrder' | 'YSort'
   canvasLayer: { screenSpace: boolean; followCamera: boolean }
-  parallax: { motionScale: Vec2; repeat: Vec2 }
-  path: { points: Vec2[]; closed: boolean; smoothing: number }
+  parallax: { motionScale: Vec2; repeat: Vec2; mirror: boolean; depth: number }
+  path: { points: Vec2[]; tangents: Array<{ incoming: Vec2; outgoing: Vec2 }>; closed: boolean; smoothing: number; asset: string | null; follower: { targetUuid: string | null; progress: number; speed: number; orient: boolean } }
 }
 
 export function defaultAuthoringMetadata(entityType: 'Box' | 'Circle' | 'Triangle'): AuthoringMetadata2D {
@@ -49,8 +50,8 @@ export function defaultAuthoringMetadata(entityType: 'Box' | 'Circle' | 'Triangl
     kind: entityType === 'Circle' ? 'Circle' : entityType === 'Triangle' ? 'Triangle' : 'Rectangle',
     origin: { x: 0, y: 0 }, visible: true, zOrder: 0, renderLayer: 1, sortMode: 'LayerThenOrder',
     canvasLayer: { screenSpace: false, followCamera: true },
-    parallax: { motionScale: { x: .5, y: .5 }, repeat: { x: 0, y: 0 } },
-    path: { points: [], closed: false, smoothing: .5 }
+    parallax: { motionScale: { x: .5, y: .5 }, repeat: { x: 0, y: 0 }, mirror: false, depth: 0 },
+    path: { points: [], tangents: [], closed: false, smoothing: .5, asset: null, follower: { targetUuid: null, progress: 0, speed: 0, orient: true } }
   }
 }
 
@@ -64,6 +65,12 @@ export abstract class Entity {
   editorVisible = true
   editorLocked = false
   tags: string[] = []
+  groups: string[] = []
+  namedLayer = 'World'
+  ownerUuid: string | null = null
+  ownership: EntityOwnership = 'Scene'
+  editorOnly = false
+  runtimePersistence: RuntimePersistencePolicy = 'Scene'
   persistentAcrossScenes = false
   prefabAsset: string | null = null
   prefabInstanceUuid: string | null = null

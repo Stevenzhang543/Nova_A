@@ -2,7 +2,7 @@
   "projectFormat": "Nova_A Project Format 2",
   "projectFormatMajor": 2,
   "formatVersion": 23,
-  "engineVersion": "3.2.0",
+  "engineVersion": "4.4.0",
   "compatibility": {
     "format": "Nova_A Project Format 2",
     "major": 2,
@@ -39,12 +39,23 @@
     "template": "validation"
   },
   "assetDatabase": {
-    "version": 1,
+    "version": 2,
     "favorites": [
       "d3200000-0000-4000-8000-000000000011"
     ],
     "savedFilters": [],
-    "importPresets": []
+    "importPresets": [],
+    "collections": [],
+    "contentGroups": [
+      {
+        "id": "main",
+        "name": "Main",
+        "mode": "embedded",
+        "optional": false
+      }
+    ],
+    "viewMode": "grid",
+    "thumbnailSize": 112
   },
   "assetFolders": [
     "Assets",
@@ -227,7 +238,18 @@
     }
   ],
   "projectSettings": {
-    "inputMap": []
+    "inputMap": [],
+    "build": {
+      "delivery": {
+        "include": [
+          "Assets/**"
+        ],
+        "exclude": [
+          ".nova/**"
+        ],
+        "stripUnusedAssets": false
+      }
+    }
   },
   "missingResourceDemo": "asset://d3200000-0000-4000-8000-000000000099"
 }

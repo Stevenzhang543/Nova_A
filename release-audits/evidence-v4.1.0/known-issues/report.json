@@ -1,0 +1,40 @@
+{
+  "format": "nova-v4.1-known-issues",
+  "version": 1,
+  "generatedAt": "2026-08-20T08:57:17.225Z",
+  "severity0Open": 0,
+  "severity1Open": 0,
+  "items": [
+    {
+      "severity": "S2",
+      "area": "release signing",
+      "status": "pending-external-gate",
+      "owner": "Release engineering"
+    },
+    {
+      "severity": "S2",
+      "area": "malware scan and independent internal security review",
+      "status": "pending-external-gate; host Defender product disabled",
+      "owner": "Security/release engineering"
+    },
+    {
+      "severity": "S2",
+      "area": "clean-machine lifecycle and five reproducible builds",
+      "status": "pending-external-gate",
+      "owner": "Release engineering"
+    },
+    {
+      "severity": "S2",
+      "area": "24-hour wall-clock soak",
+      "status": "pending-external-gate",
+      "owner": "QA"
+    },
+    {
+      "severity": "S2",
+      "area": "physical mixed-monitor DPI and human visual review",
+      "status": "pending-external-gate",
+      "owner": "QA/accessibility reviewer"
+    }
+  ],
+  "status": "passed-local-with-declared-external-gates"
+}

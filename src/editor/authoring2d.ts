@@ -43,35 +43,45 @@ export const AUTHORING_OBJECTS: readonly AuthoringObjectDescriptor[] = [
 ] as const
 
 const STORAGE_KEY = 'nova-a-authoring-palette-v1'
-function loadPreferences(): { favorites: AuthoringObjectKind[]; recent: AuthoringObjectKind[] } {
+interface SavedHierarchyFilter { id: string; name: string; query: string; tagFilter: string; selectionFilter: 'All' | 'Visible' | 'Unlocked' | 'Sprites' | 'Cameras' | 'Physics' }
+function loadPreferences(): { favorites: AuthoringObjectKind[]; recent: AuthoringObjectKind[]; pinnedEntityUuids: string[]; savedFilters: SavedHierarchyFilter[] } {
   try {
-    if (typeof localStorage === 'undefined') return { favorites: [], recent: [] }
-    const source = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '{}') as { favorites?: unknown; recent?: unknown }
+    if (typeof localStorage === 'undefined') return { favorites: [], recent: [], pinnedEntityUuids: [], savedFilters: [] }
+    const source = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '{}') as { favorites?: unknown; recent?: unknown; pinnedEntityUuids?: unknown; savedFilters?: unknown }
     const known = new Set(AUTHORING_OBJECTS.map(item => item.kind))
     const clean = (value: unknown) => Array.isArray(value) ? value.filter((item): item is AuthoringObjectKind => typeof item === 'string' && known.has(item as AuthoringObjectKind)).slice(0, 12) : []
-    return { favorites: clean(source.favorites), recent: clean(source.recent) }
-  } catch { return { favorites: [], recent: [] } }
+    const pinnedEntityUuids = Array.isArray(source.pinnedEntityUuids) ? source.pinnedEntityUuids.filter((item): item is string => typeof item === 'string').slice(0, 500) : []
+    const savedFilters = Array.isArray(source.savedFilters) ? source.savedFilters.flatMap((raw): SavedHierarchyFilter[] => { if (!raw || typeof raw !== 'object') return []; const filter = raw as Partial<SavedHierarchyFilter>; if (typeof filter.id !== 'string' || typeof filter.name !== 'string' || typeof filter.query !== 'string') return []; const selectionFilter = ['All', 'Visible', 'Unlocked', 'Sprites', 'Cameras', 'Physics'].includes(String(filter.selectionFilter)) ? filter.selectionFilter as SavedHierarchyFilter['selectionFilter'] : 'All'; return [{ id: filter.id, name: filter.name.slice(0, 80), query: filter.query.slice(0, 200), tagFilter: typeof filter.tagFilter === 'string' ? filter.tagFilter.slice(0, 80) : '', selectionFilter }] }).slice(0, 30) : []
+    return { favorites: clean(source.favorites), recent: clean(source.recent), pinnedEntityUuids, savedFilters }
+  } catch { return { favorites: [], recent: [], pinnedEntityUuids: [], savedFilters: [] } }
 }
 const loaded = loadPreferences()
 export const authoringState = reactive({
   favorites: loaded.favorites,
   recent: loaded.recent,
+  pinnedEntityUuids: loaded.pinnedEntityUuids,
+  savedFilters: loaded.savedFilters,
   category: 'All' as AuthoringCategory | 'All',
   query: '',
   snap: { grid: true, pixel: false, vertex: true, edge: true, center: true, object: true, angle: true },
   cameraOverlay: '16:9' as 'Off' | '16:9' | '16:10' | '4:3' | '9:16' | 'Custom',
   cameraResolution: { width: 1920, height: 1080 },
   measurement: { active: false, start: null as Vec2 | null, end: null as Vec2 | null },
+  rulersVisible: true,
+  guidesVisible: true,
+  guidesLocked: false,
+  guides: { horizontal: [] as number[], vertical: [] as number[] },
   isolateActive: false,
   isolatedVisibility: new Map<number, boolean>(),
   performanceMode: false,
   selectionFilter: 'All' as 'All' | 'Visible' | 'Unlocked' | 'Sprites' | 'Cameras' | 'Physics',
+  tagFilter: '',
   viewportRequest: null as null | { id: number; action: 'frame' | 'focus-camera' },
   nextRequestId: 1
 })
 
 function persistPreferences(): void {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify({ favorites: authoringState.favorites, recent: authoringState.recent })) } catch { /* Optional editor preference. */ }
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify({ favorites: authoringState.favorites, recent: authoringState.recent, pinnedEntityUuids: authoringState.pinnedEntityUuids, savedFilters: authoringState.savedFilters })) } catch { /* Optional editor preference. */ }
 }
 export function toggleAuthoringFavorite(kind: AuthoringObjectKind): void {
   const index = authoringState.favorites.indexOf(kind)
@@ -128,7 +138,7 @@ export function createAuthoringObject(kind: AuthoringObjectKind, position: Vec2 
   else if (kind === 'Light') entity.addComponent(new Light2D())
   else if (kind === 'NavigationRegion') entity.addComponent(new NavigationRegion2D())
   else if (kind === 'CanvasLayer') entity.authoring.canvasLayer = { screenSpace: false, followCamera: true }
-  else if (kind === 'ParallaxLayer') entity.authoring.parallax = { motionScale: { x: .5, y: .5 }, repeat: { x: 0, y: 0 } }
+  else if (kind === 'ParallaxLayer') entity.authoring.parallax = { motionScale: { x: .5, y: .5 }, repeat: { x: 0, y: 0 }, mirror: false, depth: 0 }
   else if (kind === 'Collider') { entity.renderer.opacity = 12; entity.rigidBody.bodyType = 'Static'; syncMassFromDensity(entity) }
 
   const duplicates = world.entities.filter(candidate => candidate !== entity && (candidate.name === entity.name || candidate.name.startsWith(`${entity.name} `))).length
@@ -191,3 +201,21 @@ export function toggleIsolateSelection(): void {
   }
 }
 export function requestViewport(action: 'frame' | 'focus-camera'): void { authoringState.viewportRequest = { id: authoringState.nextRequestId++, action } }
+
+export function addViewportGuide(axis: 'horizontal' | 'vertical', value: number): boolean {
+  if (!Number.isFinite(value) || authoringState.guidesLocked) return false
+  const guides = authoringState.guides[axis]
+  const normalized = Math.round(value * 1_000_000) / 1_000_000
+  if (!guides.includes(normalized)) guides.push(normalized)
+  guides.sort((left, right) => left - right)
+  return true
+}
+
+export function clearViewportGuides(): void {
+  if (authoringState.guidesLocked) return
+  authoringState.guides.horizontal.splice(0)
+  authoringState.guides.vertical.splice(0)
+}
+export function toggleHierarchyPin(uuid: string): void { const index = authoringState.pinnedEntityUuids.indexOf(uuid); if (index >= 0) authoringState.pinnedEntityUuids.splice(index, 1); else authoringState.pinnedEntityUuids.unshift(uuid); authoringState.pinnedEntityUuids.splice(500); persistPreferences() }
+export function saveHierarchyFilter(name: string, query: string): string { const id = crypto.randomUUID(); authoringState.savedFilters.unshift({ id, name: name.trim().slice(0, 80) || query.trim().slice(0, 80) || authoringState.tagFilter || 'Filter', query: query.slice(0, 200), tagFilter: authoringState.tagFilter.slice(0, 80), selectionFilter: authoringState.selectionFilter }); authoringState.savedFilters.splice(30); persistPreferences(); return id }
+export function removeHierarchyFilter(id: string): boolean { const index = authoringState.savedFilters.findIndex(filter => filter.id === id); if (index < 0) return false; authoringState.savedFilters.splice(index, 1); persistPreferences(); return true }

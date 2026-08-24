@@ -5,7 +5,7 @@
         <section ref="dialog" class="command-palette" role="dialog" aria-modal="true" :aria-label="t('commandPalette')">
           <header>
             <span>⌕</span>
-            <input ref="searchInput" v-model="query" type="search" :placeholder="t('searchCommands')" @keydown="onKeyDown">
+            <input ref="searchInput" v-model="query" type="search" :placeholder="palettePlaceholder" @keydown="onKeyDown">
             <kbd>Esc</kbd>
           </header>
           <div class="command-results" role="listbox">
@@ -31,7 +31,7 @@
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { t } from '../i18n'
 import { addEditorLog, editorState as state, type BottomPanelTab, type EditorWorkspace } from '../store/editor'
-import { applyEditorWorkspace, navigateHistory, openEditorTool, resetEditorLayout, toggleEditorPanel, toggleFocusMode, workspaceState } from '../editor/workspaces'
+import { applyEditorWorkspace, navigateHistory, openEditorTool, openManageSection, resetEditorLayout, toggleEditorPanel, toggleFocusMode, workspaceState } from '../editor/workspaces'
 import { pluginRuntime, pluginState } from '../runtime/plugins'
 import { assetState } from '../assets/AssetDatabase'
 import { copySelectedEntities, deleteSelected, duplicateSelectedEntities, historyState, pasteEntities, physicsState, pushHistory, redo, saveProject, sceneManager, selectEntities, setActiveScene, stopPlayMode, toggleSimulation, undo } from '../store/physics'
@@ -42,6 +42,7 @@ import { requestConfirmation } from '../store/dialog'
 import { completeTask, failTask, startTask } from '../runtime/editorFeedback'
 import { gameplayRuntime } from '../runtime/GameplayRuntime'
 import { applyCurrentProjectRepair, previewCurrentProjectRepair, validateCurrentProject } from '../runtime/projectIntegrity'
+import { focusStableControl, stableControlInventory } from '../runtime/controlRegistry'
 
 type TranslationKey = Parameters<typeof t>[0]
 interface EditorCommand { id: string; label: TranslationKey; group: TranslationKey; icon: string; shortcut?: string; keywords: string; run: () => void }
@@ -51,6 +52,7 @@ const dialog = ref<HTMLElement | null>(null)
 const query = ref('')
 const activeIndex = ref(0)
 const isEditing = computed(() => physicsState.playMode === 'editing')
+const palettePlaceholder = computed(() => t(state.commandPaletteMode === 'quick' ? 'quickOpen' : state.commandPaletteMode === 'global' ? 'globalSearch' : state.commandPaletteMode === 'context' ? 'contextSearch' : 'searchCommands'))
 
 async function saveFromPalette(): Promise<void> {
   if (!isEditing.value) return
@@ -93,11 +95,11 @@ const commands = computed<EditorCommand[]>(() => [
   { id: 'edit-delete', label: 'deleteSelected', group: 'edit', icon: '⌫', keywords: 'delete selected objects entities', shortcut: 'Delete', run: () => { void deleteFromPalette() } },
   { id: 'runtime-play', label: 'play', group: 'runtime', icon: '▶', keywords: 'play run game physics simulation', run: () => { void playFromPalette() } },
   { id: 'runtime-stop', label: 'stop', group: 'runtime', icon: '■', keywords: 'stop game physics simulation restore', run: stopFromPalette },
-  workspaceCommand('design', 'workspaceDesign', '◇'), workspaceCommand('script', 'workspaceScript', '</>'), workspaceCommand('animation', 'workspaceAnimation', '◆'), workspaceCommand('ui', 'workspaceUi', '▣'), workspaceCommand('debug', 'workspaceDebug', '◎'),
+  workspaceCommand('design', 'workspaceDesign', '◇'), workspaceCommand('script', 'workspaceScript', '</>'), workspaceCommand('animation', 'workspaceAnimation', '◆'), workspaceCommand('ui', 'workspaceUi', '▣'), workspaceCommand('debug', 'workspaceDebug', '◎'), workspaceCommand('manage', 'workspaceManage', '⚙'),
   ...(workspaceState.custom.length ? [workspaceCommand('custom', 'workspaceCustom', '✦')] : []),
   { id: 'scene', label: 'sceneView', group: 'navigation', icon: 'S', keywords: 'scene edit view', run: () => { state.currentPage = 'scene' } },
   { id: 'game', label: 'gameView', group: 'navigation', icon: 'G', keywords: 'game play view', run: () => { state.currentPage = 'game' } },
-  { id: 'settings', label: 'settings', group: 'navigation', icon: '⚙', keywords: 'settings preferences', run: () => { state.currentPage = 'settings' } },
+  { id: 'settings', label: 'settings', group: 'navigation', icon: '⚙', keywords: 'settings preferences manage', run: () => { openManageSection('settings') } },
   toolCommand('assets', 'assets', '▧'), toolCommand('packages', 'packages', '◇'), toolCommand('console', 'console', '>_'), toolCommand('animation', 'animation', '◆'),
   { id: 'tool-tilemap', label: 'tilemap', group: 'tools', icon: '▦', keywords: 'tilemap contextual selected map terrain paint', run: () => { const map = physicsState.world.entities.find(entity => entity.hasComponent('TileMap2D')); if (map) { selectEntities([map.id]); openEditorTool('tilemap') } } },
   toolCommand('profiler', 'profiler', '⌁'), toolCommand('rendering', 'renderingStudio', '◈'), toolCommand('project', 'projectHealth', '✓'), toolCommand('build', 'buildPanel', '▶'),
@@ -112,10 +114,11 @@ const commands = computed<EditorCommand[]>(() => [
   { id: 'workspace-manager', label: 'manageWorkspaces', group: 'workspaces', icon: '⚙', keywords: 'save duplicate rename import export custom layout', run: () => { state.workspaceManagerOpen = true } },
   { id: 'shortcut-editor', label: 'shortcutEditor', group: 'settings', icon: '⌨', keywords: 'keyboard shortcuts bindings edit viewer', run: () => { state.shortcutEditorOpen = true } },
   { id: 'status-center', label: 'statusCenter', group: 'tools', icon: '◴', keywords: 'tasks import build package migration save progress diagnostics', run: () => { state.statusCenterOpen = true } },
-  ...assetState.records.map(asset => ({ id: `asset-${asset.uuid}`, label: asset.name, group: asset.assetType === 'script' ? 'scripts' : 'assets', icon: asset.assetType === 'script' ? '{ }' : '▧', keywords: `${asset.path} ${asset.assetType} asset`, run: () => { assetState.selectedGuid = asset.uuid; assetState.currentFolder = asset.path.slice(0, asset.path.lastIndexOf('/')) || 'Assets'; openEditorTool('assets') } } as EditorCommand)),
+  ...[...assetState.records].sort((a, b) => { const left = assetState.recentGuids.indexOf(a.uuid), right = assetState.recentGuids.indexOf(b.uuid); return (left < 0 ? 999 : left) - (right < 0 ? 999 : right) || a.path.localeCompare(b.path) }).map(asset => ({ id: `asset-${asset.uuid}`, label: asset.name, group: asset.assetType === 'script' ? 'scripts' : 'assets', icon: asset.assetType === 'script' ? '{ }' : '▧', keywords: `${asset.path} ${asset.assetType} asset ${assetState.recentGuids.includes(asset.uuid) ? 'recent' : ''}`, run: () => { assetState.selectedGuid = asset.uuid; assetState.currentFolder = asset.path.slice(0, asset.path.lastIndexOf('/')) || 'Assets'; openEditorTool('assets') } } as EditorCommand)),
   ...sceneManager.scenes.map(scene => ({ id: `scene-${scene.uuid}`, label: scene.name, group: 'scenes', icon: '◇', keywords: 'scene navigation object', run: () => { setActiveScene(scene.uuid); state.currentPage = 'scene' } } as EditorCommand)),
   ...physicsState.world.entities.map(entity => ({ id: `entity-${entity.uuid}`, label: entity.name, group: 'entities', icon: '□', keywords: `${entity.uuid} ${entity.tags.join(' ')} ${entity.components.map(component => component.kind).join(' ')}`, run: () => { selectEntities([entity.id], 'replace', entity.id); state.currentPage = 'scene' } } as EditorCommand)),
-  ...['appearanceSettings','physicsSettings','audioSettings','inputMap','canvasSettings','collisionMatrix','projectSettings','defaultsSettings'].map(label => ({ id: `setting-${label}`, label: label as TranslationKey, group: 'settings' as TranslationKey, icon: '⚙', keywords: `${label} editor project runtime preference`, run: () => { state.currentPage = 'settings'; state.settingsSearch = t(label as TranslationKey) } })),
+  ...['appearanceSettings','physicsSettings','audioSettings','inputMap','canvasSettings','collisionMatrix','projectSettings','defaultsSettings'].map(label => ({ id: `setting-${label}`, label: label as TranslationKey, group: 'settings' as TranslationKey, icon: '⚙', keywords: `${label} editor project runtime preference`, run: () => { openManageSection('settings'); state.settingsSearch = t(label as TranslationKey) } })),
+  ...stableControlInventory().filter(control => !control.disabled).map(control => ({ id: `control-${control.testId}`, label: control.label as TranslationKey, group: 'controls' as TranslationKey, icon: '↗', keywords: `${control.surface} ${control.testId} control`, run: () => { focusStableControl(control.testId) } } as EditorCommand)),
   ...pluginState.contributions.filter(contribution => contribution.kind === 'commands').map(contribution => ({
     id: `plugin-${contribution.pluginId}-${contribution.id}`, label: contribution.label as TranslationKey, group: 'plugins' as TranslationKey,
     icon: 'PX', keywords: `plugin extension ${contribution.pluginName} ${contribution.id}`, run: () => { pluginRuntime.invokeCommand(contribution.id, contribution.pluginId) }
@@ -123,8 +126,15 @@ const commands = computed<EditorCommand[]>(() => [
 ])
 const filteredCommands = computed(() => {
   const needle = query.value.trim().toLocaleLowerCase()
-  if (!needle) return commands.value
-  return commands.value.filter(command => `${t(command.label)} ${t(command.group)} ${command.keywords}`.toLocaleLowerCase().includes(needle))
+  const mode = state.commandPaletteMode
+  const scoped = commands.value.filter(command => {
+    if (mode === 'quick') return /^(asset|scene|entity)-/.test(command.id)
+    if (mode === 'global') return /^(asset|scene|entity|setting|plugin)-/.test(command.id)
+    if (mode === 'context') return command.id.includes(state.activeWorkspace) || command.keywords.includes(state.activeWorkspace) || command.id.startsWith('control-')
+    return true
+  })
+  if (!needle) return scoped
+  return scoped.filter(command => `${t(command.label)} ${t(command.group)} ${command.keywords}`.toLocaleLowerCase().includes(needle))
 })
 
 function close(): void { state.commandPaletteOpen = false }
@@ -136,11 +146,11 @@ function onKeyDown(event: KeyboardEvent): void {
   else if (event.key === 'Escape') { event.preventDefault(); close() }
 }
 function globalShortcut(event: KeyboardEvent): void {
-  const commandKey = event.ctrlKey || event.metaKey
-  const key = event.key.toLocaleLowerCase()
-  if (!shortcutMatches(event, 'commandPalette') && !(commandKey && event.shiftKey && key === 'p')) return
+  const mode = shortcutMatches(event, 'commandPalette') ? 'commands' : shortcutMatches(event, 'quickOpen') ? 'quick' : shortcutMatches(event, 'globalSearch') ? 'global' : shortcutMatches(event, 'contextSearch') ? 'context' : null
+  if (!mode) return
   event.preventDefault()
-  state.commandPaletteOpen = !state.commandPaletteOpen
+  if (state.commandPaletteOpen && state.commandPaletteMode === mode) state.commandPaletteOpen = false
+  else { state.commandPaletteMode = mode; state.commandPaletteOpen = true }
 }
 
 watch(() => state.commandPaletteOpen, open => {
@@ -155,7 +165,7 @@ onUnmounted(() => window.removeEventListener('keydown', globalShortcut))
 .palette-scrim { position: fixed; inset: 0; z-index: 1200; padding-top: min(14vh, 110px); display: flex; justify-content: center; align-items: flex-start; background: var(--scrim); backdrop-filter: blur(5px); }
 .command-palette { width: min(620px, calc(100vw - 32px)); max-height: min(620px, calc(100vh - 130px)); display: flex; flex-direction: column; overflow: hidden; border: 1px solid var(--border-strong); border-radius: 16px; background: var(--surface-1); box-shadow: var(--shadow-lg); }
 header { min-height: 52px; padding: 7px 12px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid var(--border-subtle); }header > span { color: var(--accent); font-size: 20px; }header input { min-width: 0; flex: 1; border: 0; background: transparent; font-size: 14px; box-shadow: none; }kbd { padding: 2px 6px; border: 1px solid var(--border-subtle); border-radius: 5px; color: var(--text-muted); background: var(--surface-2); font: 11px/1.4 inherit; }
-.command-results { min-height: 80px; padding: 7px; overflow: auto; }.command-results button { width: 100%; min-height: 46px; padding: 6px 10px; display: grid; grid-template-columns: 30px 1fr auto; align-items: center; gap: 8px; border: 0; border-radius: 9px; color: var(--text-secondary); background: transparent; text-align: left; }.command-results button.active { color: var(--text-primary); background: var(--accent-soft); }.command-icon { width: 27px; height: 27px; display: grid; place-items: center; border: 1px solid var(--border-subtle); border-radius: 7px; color: var(--accent); background: var(--surface-2); font: 600 11px/1 ui-monospace, SFMono-Regular, Consolas, monospace; }.command-results button > span:nth-child(2) { min-width: 0; display: flex; flex-direction: column; gap: 2px; }.command-results strong { overflow: hidden; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }.command-results small { color: var(--text-muted); font-size:11px; }.command-results p { padding: 22px; color: var(--text-muted); text-align: center; font-size: 11px; }
+.command-results { min-height: 80px; padding: 7px; overflow: auto; }.command-results button { width: 100%; min-height: 46px; padding: 6px 10px; display: grid; grid-template-columns: 30px 1fr auto; align-items: center; gap: 8px; border: 0; border-radius: 9px; color: var(--text-secondary); background: transparent; text-align: left; }.command-results button.active { color: var(--text-primary); background: var(--accent-soft); }.command-icon { width: 27px; height: 27px; display: grid; place-items: center; border: 1px solid var(--border-subtle); border-radius: 7px; color: var(--accent); background: var(--surface-2); font: 600 11px/1 var(--font-mono); }.command-results button > span:nth-child(2) { min-width: 0; display: flex; flex-direction: column; gap: 2px; }.command-results strong { overflow: hidden; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }.command-results small { color: var(--text-muted); font-size:11px; }.command-results p { padding: 22px; color: var(--text-muted); text-align: center; font-size: 11px; }
 footer { min-height: 30px; padding: 0 12px; display: flex; align-items: center; gap: 15px; border-top: 1px solid var(--border-subtle); color: var(--text-muted); font-size:11px; }
 .palette-enter-active, .palette-leave-active { transition: opacity 130ms ease; }.palette-enter-active .command-palette, .palette-leave-active .command-palette { transition: transform 160ms cubic-bezier(.2,.8,.2,1), opacity 130ms ease; }.palette-enter-from, .palette-leave-to { opacity: 0; }.palette-enter-from .command-palette, .palette-leave-to .command-palette { opacity: 0; transform: translateY(-8px) scale(.985); }
 </style>

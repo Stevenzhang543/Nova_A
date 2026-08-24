@@ -1,0 +1,116 @@
+{
+  "format": "nova-v4.3-authoring-verification",
+  "version": 1,
+  "engineVersion": "4.3.0",
+  "generatedAt": "2026-08-23T11:26:39.627Z",
+  "checks": [
+    {
+      "id": "EXPR-10+5*2",
+      "status": "passed",
+      "detail": "10+5*2 evaluates safely to 20."
+    },
+    {
+      "id": "EXPR-(current+2)/4",
+      "status": "passed",
+      "detail": "(current+2)/4 evaluates safely to 3."
+    },
+    {
+      "id": "EXPR-pi*2",
+      "status": "passed",
+      "detail": "pi*2 evaluates safely to 6.283185307179586."
+    },
+    {
+      "id": "EXPR-1/0",
+      "status": "passed",
+      "detail": "1/0 evaluates safely to null."
+    },
+    {
+      "id": "EXPR-window.alert(1)",
+      "status": "passed",
+      "detail": "window.alert(1) evaluates safely to null."
+    },
+    {
+      "id": "IDENTITY-ROUNDTRIP",
+      "status": "passed",
+      "detail": "Entity/component identities and authoring metadata survive project round trip."
+    },
+    {
+      "id": "SCENE-NOOP",
+      "status": "passed",
+      "detail": "Scene no-op save is byte-identical."
+    },
+    {
+      "id": "ENTITY-VALIDATION",
+      "status": "passed",
+      "detail": "Valid hierarchy and component graph has no authoring errors."
+    },
+    {
+      "id": "SCENE-INHERIT",
+      "status": "passed",
+      "detail": "Scene inheritance accepts a valid edge and rejects a cycle."
+    },
+    {
+      "id": "PREFAB-CREATE",
+      "status": "passed",
+      "detail": "Prefab creation retains stable source mapping and ownership."
+    },
+    {
+      "id": "PREFAB-VARIANT",
+      "status": "passed",
+      "detail": "Variant retains its base layer and receives a new source."
+    },
+    {
+      "id": "PREFAB-CONFLICTS",
+      "status": "passed",
+      "detail": "Prefab conflict report is explicit and bounded."
+    },
+    {
+      "id": "PREFAB-WRITE-RECOVERY",
+      "status": "passed",
+      "detail": "Injected interruptions after prefab write and verification restore the exact prior source."
+    },
+    {
+      "id": "PREFAB-SAFE-REPLACE",
+      "status": "passed",
+      "detail": "Safe replacement leaves no orphan hierarchy references."
+    },
+    {
+      "id": "PREFAB-NESTED",
+      "status": "passed",
+      "detail": "A parent prefab retains the nested child prefab source layer."
+    },
+    {
+      "id": "PREFAB-LIFECYCLE-REPEAT",
+      "status": "passed",
+      "detail": "Three apply/revert/unpack cycles remain reversible through undo and redo."
+    },
+    {
+      "id": "COMPONENT-DEPENDENCY",
+      "status": "passed",
+      "detail": "Declared Collider/Character prerequisites validate."
+    },
+    {
+      "id": "COMPONENT-CONFLICT",
+      "status": "passed",
+      "detail": "Canvas/RigidBody conflict appears inline."
+    },
+    {
+      "id": "HIERARCHY-TAG-FILTER",
+      "status": "passed",
+      "detail": "Dedicated tag filters persist with saved hierarchy filters."
+    },
+    {
+      "id": "HIERARCHY-10000",
+      "status": "passed",
+      "detail": "10,000-object scene saves, reloads, filters, and mounts fewer than 60 overscanned rows at 720px."
+    },
+    {
+      "id": "HIERARCHY-PERF",
+      "status": "passed",
+      "detail": "Local timings: create 203.2ms, save 7107.6ms, reload 1542.6ms, filter 15.6ms, validate 30.0ms."
+    }
+  ],
+  "severity0Open": 0,
+  "severity1Open": 0,
+  "status": "passed"
+}

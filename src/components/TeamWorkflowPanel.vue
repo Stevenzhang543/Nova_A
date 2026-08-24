@@ -74,5 +74,5 @@ onMounted(refresh)
 </style>
 <style scoped>
 .repository-card{display:flex;flex-direction:column;gap:7px}.repository-card button{align-self:flex-start}.change-list article.selected{background:var(--accent-soft)}
-.inline-diff{margin-top:7px;border:1px solid var(--border-subtle);border-radius:8px;overflow:hidden}.inline-diff header{min-height:30px;padding:5px 7px;display:flex;justify-content:space-between;background:var(--surface-3);font-size:11px}.inline-diff>div{display:grid;grid-template-columns:1fr 1fr}.inline-diff pre{max-height:160px;margin:0;padding:7px;overflow:auto;border-right:1px solid var(--border-subtle);font:11px/1.45 ui-monospace,Consolas,monospace;white-space:pre-wrap;overflow-wrap:anywhere}.inline-diff pre:last-child{border-right:0}
+.inline-diff{margin-top:7px;border:1px solid var(--border-subtle);border-radius:8px;overflow:hidden}.inline-diff header{min-height:30px;padding:5px 7px;display:flex;justify-content:space-between;background:var(--surface-3);font-size:11px}.inline-diff>div{display:grid;grid-template-columns:1fr 1fr}.inline-diff pre{max-height:160px;margin:0;padding:7px;overflow:auto;border-right:1px solid var(--border-subtle);font:11px/1.45 var(--font-mono);white-space:pre-wrap;overflow-wrap:anywhere}.inline-diff pre:last-child{border-right:0}
 </style>

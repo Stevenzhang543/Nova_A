@@ -9,6 +9,8 @@
   <RecoveryCenter />
   <WorkspaceManager />
   <ShortcutEditor />
+  <UndoHistoryPanel />
+  <ExternalChangeDialog />
   <EditorFeedback />
 </template>
 
@@ -23,6 +25,8 @@ import ErrorRecovery from './components/ErrorRecovery.vue'
 import RecoveryCenter from './components/RecoveryCenter.vue'
 import WorkspaceManager from './components/WorkspaceManager.vue'
 import ShortcutEditor from './components/ShortcutEditor.vue'
+import UndoHistoryPanel from './components/UndoHistoryPanel.vue'
+import ExternalChangeDialog from './components/ExternalChangeDialog.vue'
 import EditorFeedback from './components/EditorFeedback.vue'
 import { projectManagerState as projectManager } from './projects/projectManager'
 import { editorState } from './store/editor'

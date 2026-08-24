@@ -227,6 +227,14 @@ interface ProjectLock { token: string; owner: string; createdAt: number; expires
 
 function lockStorageKey(projectId: string): string { return `${LOCK_KEY_PREFIX}${projectId.slice(0, 128)}` }
 
+export function inspectProjectLock(projectId: string): { locked: boolean; owner: string; expiresAt: number } {
+  if (typeof localStorage === 'undefined') return { locked:false, owner:'', expiresAt:0 }
+  try {
+    const lock=JSON.parse(localStorage.getItem(lockStorageKey(projectId))??'null') as ProjectLock|null
+    return lock&&lock.expiresAt>Date.now()&&lock.token!==teamWorkflowState.lockToken?{locked:true,owner:lock.owner,expiresAt:lock.expiresAt}:{locked:false,owner:'',expiresAt:0}
+  } catch { return {locked:false,owner:'',expiresAt:0} }
+}
+
 export function acquireProjectLock(projectId: string, owner: string, durationMinutes = 120): boolean {
   if (typeof localStorage === 'undefined') return false
   const key = lockStorageKey(projectId), now = Date.now()

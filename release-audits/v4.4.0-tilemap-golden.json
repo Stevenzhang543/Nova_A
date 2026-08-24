@@ -1,0 +1,9 @@
+{
+  "format": "nova-v4.4-tilemap-golden",
+  "version": 1,
+  "generatedAt": "2026-08-23T16:59:50.218Z",
+  "sha256": "a2dfcae52f73ce55271868866ec143356e193023d2816e708d104cf872fa8f15",
+  "bytes": 256516,
+  "boundaries": 256,
+  "status": "passed"
+}

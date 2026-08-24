@@ -1,0 +1,19 @@
+{
+  "format": "nova-v4.2-undo-coverage",
+  "version": 1,
+  "generatedAt": "2026-08-23T04:31:31.841Z",
+  "commandsExecuted": 10000,
+  "scopes": [
+    "scene",
+    "asset",
+    "animation",
+    "ui",
+    "settings",
+    "packages",
+    "build"
+  ],
+  "groupedAndNested": true,
+  "redoInvalidation": true,
+  "budgetBytes": 8388608,
+  "status": "passed"
+}

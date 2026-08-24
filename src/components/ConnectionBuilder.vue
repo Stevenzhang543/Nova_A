@@ -318,7 +318,7 @@ function drawEntity(context: CanvasRenderingContext2D, entity: Entity, selected:
   context.fill(); context.stroke()
   const center = worldToPreview(worldTransform(entity, world.entities).position)
   context.fillStyle = cssColor('--text-primary', '#fff')
-  context.font = '600 11px "Segoe UI Variable Text", sans-serif'
+  context.font = '600 11px "Nunito Sans Variable", "Noto Sans SC Variable", sans-serif'
   context.textAlign = 'center'; context.textBaseline = 'middle'
   context.fillText(`${entity.name}_${entity.id}`, center.x, center.y - 17)
 }

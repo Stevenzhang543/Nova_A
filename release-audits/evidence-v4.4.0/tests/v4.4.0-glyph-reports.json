@@ -1,0 +1,147 @@
+{
+  "format": "nova-v4.4-glyph-reports",
+  "version": 1,
+  "generatedAt": "2026-08-23T16:59:50.218Z",
+  "windows": [
+    {
+      "language": "ar",
+      "sample": "محرك نوفا",
+      "supported": false,
+      "missing": [
+        "م",
+        "ح",
+        "ر",
+        "ك",
+        " ",
+        "ن",
+        "و",
+        "ف",
+        "ا"
+      ],
+      "action": "Add ar to declared languages or assign a font fallback that covers the listed glyphs."
+    },
+    {
+      "language": "combining",
+      "sample": "Å é ñ",
+      "supported": false,
+      "missing": [
+        "A",
+        "̊",
+        " ",
+        "e",
+        "́",
+        " ",
+        "n",
+        "̃"
+      ],
+      "action": "Add combining to declared languages or assign a font fallback that covers the listed glyphs."
+    },
+    {
+      "language": "emoji",
+      "sample": "🎮 ✨ 🧭",
+      "supported": false,
+      "missing": [
+        "🎮",
+        " ",
+        "✨",
+        " ",
+        "🧭"
+      ],
+      "action": "Add emoji to declared languages or assign a font fallback that covers the listed glyphs."
+    },
+    {
+      "language": "en",
+      "sample": "Nova game engine",
+      "supported": true,
+      "missing": [],
+      "action": "Coverage declared or provided by a fallback chain."
+    },
+    {
+      "language": "zh-CN",
+      "sample": "诺瓦游戏引擎",
+      "supported": false,
+      "missing": [
+        "诺",
+        "瓦",
+        "游",
+        "戏",
+        "引",
+        "擎"
+      ],
+      "action": "Add zh-CN to declared languages or assign a font fallback that covers the listed glyphs."
+    }
+  ],
+  "webChromium": [
+    {
+      "language": "ar",
+      "sample": "محرك نوفا",
+      "supported": false,
+      "missing": [
+        "م",
+        "ح",
+        "ر",
+        "ك",
+        " ",
+        "ن",
+        "و",
+        "ف",
+        "ا"
+      ],
+      "action": "Add ar to declared languages or assign a font fallback that covers the listed glyphs."
+    },
+    {
+      "language": "combining",
+      "sample": "Å é ñ",
+      "supported": false,
+      "missing": [
+        "A",
+        "̊",
+        " ",
+        "e",
+        "́",
+        " ",
+        "n",
+        "̃"
+      ],
+      "action": "Add combining to declared languages or assign a font fallback that covers the listed glyphs."
+    },
+    {
+      "language": "emoji",
+      "sample": "🎮 ✨ 🧭",
+      "supported": false,
+      "missing": [
+        "🎮",
+        " ",
+        "✨",
+        " ",
+        "🧭"
+      ],
+      "action": "Add emoji to declared languages or assign a font fallback that covers the listed glyphs."
+    },
+    {
+      "language": "en",
+      "sample": "Nova game engine",
+      "supported": true,
+      "missing": [],
+      "action": "Coverage declared or provided by a fallback chain."
+    },
+    {
+      "language": "zh-CN",
+      "sample": "诺瓦游戏引擎",
+      "supported": false,
+      "missing": [
+        "诺",
+        "瓦",
+        "游",
+        "戏",
+        "引",
+        "擎"
+      ],
+      "action": "Add zh-CN to declared languages or assign a font fallback that covers the listed glyphs."
+    }
+  ],
+  "macos": "pending-external",
+  "linux": "pending-external",
+  "firefox": "pending-external",
+  "status": "passed-local"
+}

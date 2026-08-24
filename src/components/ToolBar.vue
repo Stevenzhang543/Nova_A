@@ -71,6 +71,17 @@
       <summary>{{ t('snapping') }}</summary>
       <div class="menu-popover checks">
         <label v-for="snap in snapOptions" :key="snap.key"><input v-model="authoringState.snap[snap.key]" type="checkbox">{{ t(snap.label) }}</label>
+        <p class="snap-explanation">{{ t('snappingExplanation') }}</p>
+      </div>
+    </details>
+    <details class="tool-menu guide-menu">
+      <summary>{{ t('guidesAndRulers') }}</summary>
+      <div class="menu-popover guide-controls">
+        <label><input v-model="authoringState.rulersVisible" type="checkbox">{{ t('showRulers') }}</label>
+        <label><input v-model="authoringState.guidesVisible" type="checkbox">{{ t('showGuides') }}</label>
+        <label><input v-model="authoringState.guidesLocked" type="checkbox">{{ t('lockGuides') }}</label>
+        <div><input v-model="guideValue" type="number" step="0.1" :placeholder="t('guidePosition')"><button @click="addGuide('horizontal')">H</button><button @click="addGuide('vertical')">V</button></div>
+        <button class="clear-guides" :disabled="authoringState.guidesLocked" @click="clearViewportGuides">{{ t('clearGuides') }}</button>
       </div>
     </details>
       <label class="camera-overlay"><span>{{ t('cameraOverlay') }}</span><select v-model="authoringState.cameraOverlay"><option v-for="ratio in overlayOptions" :key="ratio" :value="ratio">{{ ratio }}</option></select></label><div v-if="authoringState.cameraOverlay === 'Custom'" class="custom-resolution"><input v-model.number="authoringState.cameraResolution.width" type="number" min="1"><span>×</span><input v-model.number="authoringState.cameraResolution.height" type="number" min="1"></div>
@@ -79,12 +90,12 @@
 </template>
 
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted } from 'vue'
+import { onBeforeUnmount, onMounted, ref } from 'vue'
 import { t } from '../i18n'
 import { editorState as estate } from '../store/editor'
 import { physicsState as state } from '../store/physics'
 import { preferencesState as prefs } from '../store/preferences'
-import { alignSelection, authoringState, distributeSelection, groupSelection, mirrorSelection, requestViewport, rotateSelection90, toggleIsolateSelection } from '../editor/authoring2d'
+import { addViewportGuide, alignSelection, authoringState, clearViewportGuides, distributeSelection, groupSelection, mirrorSelection, requestViewport, rotateSelection90, toggleIsolateSelection } from '../editor/authoring2d'
 
 const transformTools = [
   { id: 'select' as const, title: 'selectTool' as const, key: 'q' },
@@ -107,6 +118,8 @@ const snapOptions = [
   { key: 'edge' as const, label: 'edgeSnap' }, { key: 'center' as const, label: 'centerSnap' }, { key: 'object' as const, label: 'objectSnap' }, { key: 'angle' as const, label: 'angleSnap' }
 ]
 const overlayOptions = ['Off', '16:9', '16:10', '4:3', '9:16', 'Custom'] as const
+const guideValue = ref('0')
+function addGuide(axis: 'horizontal' | 'vertical') { if (addViewportGuide(axis, Number(guideValue.value))) guideValue.value = '0' }
 
 function handleShortcut(event: KeyboardEvent) {
   if (event.shiftKey && !event.ctrlKey && !event.metaKey && !event.altKey && event.key.toLowerCase() === 'a') { estate.createObjectPaletteOpen = true; event.preventDefault(); return }
@@ -135,7 +148,7 @@ button.active { color: var(--accent); border-color: color-mix(in srgb, var(--acc
 .segmented { padding: 2px; display: flex; flex: 0 0 auto; border: 1px solid var(--border-subtle); border-radius: 8px; background: var(--surface-2); }
 .segmented button { min-width: max-content; height: 25px; padding: 0 8px; white-space: nowrap; writing-mode: horizontal-tb; }
 .snap { white-space: nowrap; }
-.create-object{display:flex;gap:4px;white-space:nowrap;writing-mode:horizontal-tb;color:var(--accent);border-color:color-mix(in srgb,var(--accent) 34%,transparent);background:var(--accent-soft)}.authoring-icon{font-size:16px}.tool-menu{position:relative;flex:0 0 auto}.tool-menu summary{height:31px;padding:0 9px;display:flex;align-items:center;list-style:none;white-space:nowrap;writing-mode:horizontal-tb;cursor:pointer;border:1px solid var(--border-subtle);border-radius:8px;color:var(--text-muted);font-size:11px;background:var(--surface-2)}.tool-menu summary::-webkit-details-marker{display:none}.menu-popover{position:fixed;z-index:1200;margin-top:5px;padding:7px;border:1px solid var(--border-strong);border-radius:10px;background:var(--surface-1);box-shadow:0 14px 34px rgba(0,0,0,.3)}.action-grid{width:280px;display:grid;grid-template-columns:1fr 1fr;gap:4px}.action-grid button{min-width:0;height:29px;display:block;text-align:left}.checks{width:180px;display:grid;gap:2px}.checks label{min-height:28px;padding:0 7px;display:flex;align-items:center;gap:8px;border-radius:6px;color:var(--text-secondary);font-size:11px}.checks label:hover{background:var(--surface-hover)}.camera-overlay{height:31px;padding:0 5px 0 9px;display:flex;align-items:center;gap:5px;flex:0 0 auto;white-space:nowrap;writing-mode:horizontal-tb;border:1px solid var(--border-subtle);border-radius:8px;color:var(--text-muted);font-size:11px;background:var(--surface-2)}.camera-overlay select{height:24px;min-height:24px;padding:0 4px;border:0;background:transparent}
+.create-object{display:flex;gap:4px;white-space:nowrap;writing-mode:horizontal-tb;color:var(--accent);border-color:color-mix(in srgb,var(--accent) 34%,transparent);background:var(--accent-soft)}.authoring-icon{font-size:16px}.tool-menu{position:relative;flex:0 0 auto}.tool-menu summary{height:31px;padding:0 9px;display:flex;align-items:center;list-style:none;white-space:nowrap;writing-mode:horizontal-tb;cursor:pointer;border:1px solid var(--border-subtle);border-radius:8px;color:var(--text-muted);font-size:11px;background:var(--surface-2)}.tool-menu summary::-webkit-details-marker{display:none}.menu-popover{position:fixed;z-index:1200;margin-top:5px;padding:7px;border:1px solid var(--border-strong);border-radius:10px;background:var(--surface-1);box-shadow:0 14px 34px rgba(0,0,0,.3)}.action-grid{width:280px;display:grid;grid-template-columns:1fr 1fr;gap:4px}.action-grid button{min-width:0;height:29px;display:block;text-align:left}.checks{width:210px;display:grid;gap:2px}.checks label,.guide-controls label{min-height:28px;padding:0 7px;display:flex;align-items:center;gap:8px;border-radius:6px;color:var(--text-secondary);font-size:11px}.checks label:hover,.guide-controls label:hover{background:var(--surface-hover)}.snap-explanation{margin:5px 7px 2px;color:var(--text-muted);font-size:11px;line-height:1.4}.guide-controls{width:220px;display:grid;gap:3px}.guide-controls>div{display:grid;grid-template-columns:minmax(0,1fr) 30px 30px;gap:4px}.guide-controls input[type=number]{min-width:0;height:29px}.guide-controls button{min-width:0;height:29px}.clear-guides{width:100%}.camera-overlay{height:31px;padding:0 5px 0 9px;display:flex;align-items:center;gap:5px;flex:0 0 auto;white-space:nowrap;writing-mode:horizontal-tb;border:1px solid var(--border-subtle);border-radius:8px;color:var(--text-muted);font-size:11px;background:var(--surface-2)}.camera-overlay select{height:24px;min-height:24px;padding:0 4px;border:0;background:transparent}
 .custom-resolution{height:31px;display:flex;align-items:center;gap:2px;flex:0 0 auto}.custom-resolution input{width:55px;min-height:27px;padding:0 4px}.custom-resolution span{color:var(--text-muted);font-size:11px}
 @media (max-width: 1120px) { .segmented { display: none; } .toolbar-content { justify-content: flex-start; } }
 @media (max-width: 900px) { .camera-overlay,.create-object span { display:none } }

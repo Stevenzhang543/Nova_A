@@ -2,7 +2,7 @@
   "projectFormat": "Nova_A Project Format 2",
   "projectFormatMajor": 2,
   "formatVersion": 29,
-  "engineVersion": "4.0.0",
+  "engineVersion": "4.4.0",
   "compatibility": {
     "format": "Nova_A Project Format 2",
     "major": 2,
@@ -57,10 +57,21 @@
     ".nova/imported"
   ],
   "assetDatabase": {
-    "version": 1,
+    "version": 2,
     "favorites": [],
     "savedFilters": [],
-    "importPresets": []
+    "importPresets": [],
+    "collections": [],
+    "contentGroups": [
+      {
+        "id": "main",
+        "name": "Main",
+        "mode": "embedded",
+        "optional": false
+      }
+    ],
+    "viewMode": "grid",
+    "thumbnailSize": 112
   },
   "plugins": [],
   "packages": {
@@ -539,7 +550,14 @@
         "crashReports": true,
         "telemetryEnabled": false,
         "telemetryEndpoint": "",
-        "privacyPolicyUrl": ""
+        "privacyPolicyUrl": "",
+        "include": [
+          "Assets/**"
+        ],
+        "exclude": [
+          ".nova/**"
+        ],
+        "stripUnusedAssets": false
       }
     },
     "world": {

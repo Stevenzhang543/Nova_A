@@ -21,7 +21,7 @@ import init, {
   engine_version,
   migrate_project_json
 } from '../../nova_core/pkg/nova_core.js'
-import { setWorldTransform, worldTransform } from './hierarchy'
+import { localPointToWorld, setWorldTransform, worldTransform } from './hierarchy'
 import { Collider2D, TileMap2D } from './components'
 import { buildTileColliderDescriptors } from '../runtime/tilemap'
 import { assetState, readTextAsset } from '../assets/AssetDatabase'
@@ -384,8 +384,8 @@ export class World {
     interpolationAlpha: 0, droppedSeconds: 0, eventCount: 0, configurationRebuilds: 0
   }
   events: RuntimePhysicsEvent[] = []
-  projectFormatVersion = 24
-  projectEngineVersion = '4.0.0'
+  projectFormatVersion = 29
+  projectEngineVersion = '4.4.0'
 
   constructor() {
     // Vite's Node-side audit loader has no browser fetch implementation for file: WASM URLs.
@@ -477,6 +477,7 @@ export class World {
         const fixedDelta = 1 / Math.min(1000, Math.max(1, finiteNumber(globalSettings.tickRate, 60)))
         for (let step = 0; step < steps; step++) {
           beforeFixedStep(fixedDelta)
+          this.updatePathFollowers(fixedDelta)
           this.synchronizeRuntime(globalSettings)
           this.runtime.advance_fixed_tick(gravity, airFriction)
           this.readRuntimeState(1, globalSettings)
@@ -484,6 +485,7 @@ export class World {
         }
         this.runtime.complete_advance()
       } else {
+        this.updatePathFollowers(frameDelta)
         this.synchronizeRuntime(globalSettings)
         this.runtime.advance(frameDelta, gravity, airFriction)
       }
@@ -498,6 +500,7 @@ export class World {
   singleStep(globalSettings: GlobalPhysicsSettings): EngineDiagnostics {
     this.lastSettings = globalSettings
     if (!this.wasmLoaded || !this.runtime) return this.diagnostics
+    this.updatePathFollowers(1 / Math.min(1000, Math.max(1, finiteNumber(globalSettings.tickRate, 60))))
     this.synchronizeRuntime(globalSettings)
     this.configureTiming(globalSettings, true)
     this.runtime.single_step(
@@ -507,6 +510,18 @@ export class World {
     this.readRuntimeState(1, globalSettings)
     this.readDiagnostics()
     return this.diagnostics
+  }
+
+  private updatePathFollowers(delta: number): void {
+    for (const pathEntity of this.entities) {
+      const path = pathEntity.authoring.path, target = pathEntity.authoring.kind === 'Path' && path.follower.targetUuid ? this.entities.find(entity => entity.uuid === path.follower.targetUuid) : null
+      if (!target || path.points.length < 2 || !Number.isFinite(delta) || delta <= 0) continue
+      const next = path.follower.progress + path.follower.speed * delta
+      path.follower.progress = path.closed ? ((next % 1) + 1) % 1 : Math.min(1, Math.max(0, next))
+      const segments = path.closed ? path.points.length : path.points.length - 1, scaled = path.follower.progress * segments, segment = Math.min(segments - 1, Math.floor(scaled)), amount = Math.min(1, scaled - segment)
+      const first = path.points[segment], second = path.points[(segment + 1) % path.points.length], local = { x: first.x + (second.x - first.x) * amount, y: first.y + (second.y - first.y) * amount }, position = localPointToWorld(pathEntity, local, this.entities), transform = worldTransform(target, this.entities)
+      setWorldTransform(target, { ...transform, position, rotation: path.follower.orient ? worldTransform(pathEntity, this.entities).rotation + Math.atan2(second.y - first.y, second.x - first.x) : transform.rotation }, this.entities)
+    }
   }
 
   stateChecksum(): string {

@@ -1,0 +1,57 @@
+{
+  "format": "nova-v4.4-test-summary",
+  "version": 1,
+  "generatedAt": "2026-08-23T17:11:51.165Z",
+  "reports": [
+    {
+      "format": "nova-v4.4-asset-pipeline-audit",
+      "status": "passed"
+    },
+    {
+      "format": "nova-v4.4-asset-verification",
+      "status": "passed"
+    },
+    {
+      "format": "nova-v4.4-content-performance",
+      "status": "passed-local"
+    },
+    {
+      "format": "nova-v4.4-importer-comparisons",
+      "status": "passed-local"
+    },
+    {
+      "format": "nova-v4.4-asset-graphs",
+      "status": "passed"
+    },
+    {
+      "format": "nova-v4.4-tilemap-golden",
+      "status": "passed"
+    },
+    {
+      "format": "nova-v4.4-glyph-reports",
+      "status": "passed-local"
+    },
+    {
+      "format": "nova-v4.4-import-security",
+      "status": "passed-local"
+    },
+    {
+      "format": "nova-v4.4-content-golden",
+      "status": "passed-local"
+    },
+    {
+      "format": "nova-v4.4-fault-injection",
+      "status": "passed-local-with-external-gate"
+    },
+    {
+      "format": "nova-v4.4-layout-qualification",
+      "status": "passed"
+    },
+    {
+      "format": "nova-windows-smoke",
+      "status": "passed"
+    }
+  ],
+  "failed": 0,
+  "status": "passed-local"
+}

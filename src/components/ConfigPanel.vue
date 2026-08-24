@@ -22,7 +22,10 @@
           <PropertyRow :label="t('entityVisible')"><button class="batch-toggle" @click="toggleAll('editorVisible')">{{ sharedBoolean('editorVisible') }}</button></PropertyRow>
           <PropertyRow :label="t('entityLocked')"><button class="batch-toggle" @click="toggleAll('editorLocked')">{{ sharedBoolean('editorLocked') }}</button></PropertyRow>
           <PropertyRow :label="t('sortingLayer')"><select v-model="multiLayer"><option value="">{{ t('mixed') }}</option><option v-for="layer in estate.layers" :key="layer" :value="String(layer)">{{ t('layer') }} {{ layer }}</option></select></PropertyRow>
-          <PropertyRow :label="t('position')"><div class="pair"><input v-model.number="multiPositionX" type="number" step="0.1"><input v-model.number="multiPositionY" type="number" step="0.1"></div></PropertyRow>
+          <PropertyRow :label="t('position')"><div class="pair"><NumericExpressionInput v-model="multiPositionX" /><NumericExpressionInput v-model="multiPositionY" /></div></PropertyRow>
+          <PropertyRow :label="t('entityTags')"><input :value="multiTags" :placeholder="t('mixed')" @change="setMultiTags(($event.target as HTMLInputElement).value)"></PropertyRow>
+          <PropertyRow :label="t('entityGroups')"><input :value="multiGroups" :placeholder="t('mixed')" @change="setMultiGroups(($event.target as HTMLInputElement).value)"></PropertyRow>
+          <p class="runtime-note">{{ t('multiInspectorCommonComponents', { count: commonComponentKinds.length }) }}</p>
         </InspectorSection>
         <p class="runtime-note">{{ t('runtimeIsolation') }}</p>
       </div>
@@ -43,9 +46,30 @@
           <template v-if="selectedEntity.authoring.kind === 'ParallaxLayer'">
             <PropertyRow :label="t('parallaxMotionScale')" path="Parallax.motionScale"><div class="pair"><input v-model.number="selectedEntity.authoring.parallax.motionScale.x" type="number" step="0.05"><input v-model.number="selectedEntity.authoring.parallax.motionScale.y" type="number" step="0.05"></div></PropertyRow>
             <PropertyRow :label="t('parallaxRepeat')" path="Parallax.repeat"><div class="pair"><input v-model.number="selectedEntity.authoring.parallax.repeat.x" type="number" min="0" step="0.1"><input v-model.number="selectedEntity.authoring.parallax.repeat.y" type="number" min="0" step="0.1"></div></PropertyRow>
+            <PropertyRow :label="t('parallaxMirror')" path="Parallax.mirror"><ToggleSwitch v-model="selectedEntity.authoring.parallax.mirror" /></PropertyRow>
+            <PropertyRow :label="t('parallaxDepth')" path="Parallax.depth"><input v-model.number="selectedEntity.authoring.parallax.depth" type="number" step="1"></PropertyRow>
+          </template>
+          <template v-if="selectedEntity.authoring.kind === 'Path'">
+            <PropertyRow :label="t('reusablePath')"><select v-model="selectedEntity.authoring.path.asset" @change="loadSelectedPathAsset"><option :value="null">{{ t('inlinePath') }}</option><option v-for="asset in pathAssets" :key="asset.uuid" :value="assetReference(asset.uuid)">{{ asset.name }}</option></select></PropertyRow>
+            <PropertyRow :label="t('pathClosed')" path="Path.closed"><ToggleSwitch v-model="selectedEntity.authoring.path.closed" /></PropertyRow>
+            <PropertyRow :label="t('pathSmoothing')" path="Path.smoothing"><NumberRange v-model="selectedEntity.authoring.path.smoothing" :min="0" :max="1" :step="0.01" /></PropertyRow>
+            <label class="stacked-field"><span>{{ t('pathPoints') }}</span><textarea :value="pathPointsText" rows="3" @change="updatePathPoints"></textarea></label>
+            <label class="stacked-field"><span>{{ t('pathTangents') }}</span><textarea :value="pathTangentsText" rows="3" :placeholder="t('pathTangentsHint')" @change="updatePathTangents"></textarea></label>
+            <PropertyRow :label="t('pathFollower')"><select v-model="selectedEntity.authoring.path.follower.targetUuid"><option :value="null">{{ t('none') }}</option><option v-for="entity in state.world.entities.filter(entity => entity !== selectedEntity)" :key="entity.uuid" :value="entity.uuid">{{ entity.name }}</option></select></PropertyRow>
+            <PropertyRow :label="t('pathProgress')"><NumberRange v-model="selectedEntity.authoring.path.follower.progress" :min="0" :max="1" :step="0.001" /></PropertyRow>
+            <PropertyRow :label="t('pathSpeed')"><input v-model.number="selectedEntity.authoring.path.follower.speed" type="number" step="0.01"></PropertyRow>
+            <PropertyRow :label="t('orientToPath')"><ToggleSwitch v-model="selectedEntity.authoring.path.follower.orient" /></PropertyRow>
+            <button class="secondary-action" @click="saveSelectedPathAsset">{{ t('saveReusablePath') }}</button>
           </template>
           <PropertyRow :label="t('persistentEntity')"><ToggleSwitch v-model="selectedEntity.persistentAcrossScenes" /></PropertyRow>
           <PropertyRow :label="t('entityTags')"><input v-model="tagsText" type="text"></PropertyRow>
+          <PropertyRow :label="t('entityGroups')"><input v-model="groupsText" type="text"></PropertyRow>
+          <PropertyRow :label="t('namedLayer')"><select v-model="selectedEntity.namedLayer"><option v-for="layer in sceneManager.activeScene.settings.namedLayers" :key="layer.id" :value="layer.name">{{ layer.name }}</option></select></PropertyRow>
+          <PropertyRow :label="t('entityOwnership')"><select v-model="selectedEntity.ownership"><option value="Scene">{{ t('sceneOwned') }}</option><option value="Prefab">{{ t('prefabOwned') }}</option><option value="Runtime">{{ t('runtimeOwned') }}</option></select></PropertyRow>
+          <PropertyRow :label="t('ownerEntity')"><select v-model="selectedEntity.ownerUuid"><option :value="null">{{ t('none') }}</option><option v-for="entity in state.world.entities.filter(entity => entity !== selectedEntity)" :key="entity.uuid" :value="entity.uuid">{{ entity.name }}</option></select></PropertyRow>
+          <PropertyRow :label="t('editorOnlyEntity')"><ToggleSwitch v-model="selectedEntity.editorOnly" /></PropertyRow>
+          <PropertyRow :label="t('runtimePersistence')"><select v-model="selectedEntity.runtimePersistence"><option value="Scene">{{ t('persistenceScene') }}</option><option value="Session">{{ t('persistenceSession') }}</option><option value="SaveGame">{{ t('persistenceSaveGame') }}</option><option value="Transient">{{ t('persistenceTransient') }}</option></select></PropertyRow>
+          <div v-if="selectedValidation.length" class="authoring-validation" role="status"><strong>{{ t('componentValidation') }}</strong><button v-for="issue in selectedValidation" :key="`${issue.code}:${issue.component}`" :class="issue.severity" :title="issue.fix">{{ issue.message }}</button></div>
           <DiagnosticRow label="UUID" :value="selectedEntity.uuid" />
           <template v-if="selectedEntity.prefabAsset">
             <DiagnosticRow :label="t('prefabInstance')" :value="selectedEntity.prefabAsset" active />
@@ -54,9 +78,15 @@
               <summary>{{ t('comparePrefabOverrides') }}</summary>
               <article v-for="override in prefabComparison" :key="override.path"><code>{{ override.path }}</code><button @click="resetSelectedPrefabOverride(override.path)">{{ t('resetOverride') }}</button></article>
             </details>
+            <details v-if="prefabConflicts.length" class="prefab-compare prefab-conflicts" open>
+              <summary>{{ t('prefabConflicts') }} · {{ prefabConflicts.length }}</summary>
+              <article v-for="conflict in prefabConflicts" :key="`${conflict.code}:${conflict.path ?? ''}`" :class="conflict.severity"><span>{{ conflict.message }}</span></article>
+            </details>
             <div class="prefab-actions">
+              <button @click="locateSelectedPrefab">{{ t('locatePrefabSource') }}</button>
               <button @click="applySelectedPrefab">{{ t('applyPrefab') }}</button>
               <button @click="revertSelectedPrefab">{{ t('revertPrefab') }}</button>
+              <button @click="createSelectedPrefabVariant">{{ t('createPrefabVariant') }}</button>
               <button @click="unpackSelectedPrefab">{{ t('unpackPrefab') }}</button>
             </div>
           </template>
@@ -202,9 +232,9 @@
         <InspectorSection :title="t('transform2D')" category="transform" open>
           <ComponentTools kind="Transform2D" />
           <PropertyRow :label="t('parentEntity')"><select v-model="selectedParentUuid"><option value="">{{ t('noParent') }}</option><option v-for="entity in parentCandidates" :key="entity.uuid" :value="entity.uuid">{{ entity.name }}_{{ entity.id }}</option></select></PropertyRow>
-          <PropertyRow :label="t('position')" path="Transform.position"><div class="pair"><input v-model.number="selectedEntity.transform.position.x" type="number" step="0.01"><input v-model.number="selectedEntity.transform.position.y" type="number" step="0.01"></div></PropertyRow>
+          <PropertyRow :label="t('position')" path="Transform.position"><div class="pair"><NumericExpressionInput v-model="selectedEntity.transform.position.x" /><NumericExpressionInput v-model="selectedEntity.transform.position.y" /></div></PropertyRow>
           <PropertyRow :label="t('rotationDegrees')" path="Transform.rotation"><NumberRange v-model="rotationDegrees" :min="-180" :max="180" :step="1" /></PropertyRow>
-          <PropertyRow :label="t('scale')" path="Transform.scale"><div class="pair"><input v-model.number="selectedEntity.transform.scale.x" type="number" min="0.000001" step="0.01"><input v-model.number="selectedEntity.transform.scale.y" type="number" min="0.000001" step="0.01"></div></PropertyRow>
+          <PropertyRow :label="t('scale')" path="Transform.scale"><div class="pair"><NumericExpressionInput v-model="selectedEntity.transform.scale.x" :minimum="0.000001" /><NumericExpressionInput v-model="selectedEntity.transform.scale.y" :minimum="0.000001" /></div></PropertyRow>
         </InspectorSection>
 
         <InspectorSection v-if="selectedEntity.hasComponent('RigidBody2D')" :title="t('transformMotion')" category="physics">
@@ -294,7 +324,7 @@
           <header><div><span class="eyebrow">{{ t('addComponent') }}</span><h4>{{ selectedEntity.name }}</h4></div><button :aria-label="t('cancel')" @click="closeComponentPicker">×</button></header>
           <input ref="componentSearchInput" v-model="componentSearch" type="search" :placeholder="t('searchComponents')">
           <div class="component-picker-list">
-            <section v-for="group in componentGroups" :key="group.name"><h5>{{ group.name }} <small>{{ group.kinds.length }}</small></h5><article v-for="kind in group.kinds" :key="kind"><button class="component-main" @click="chooseComponent(kind)"><span>{{ componentGlyph(kind) }}</span><span><strong>{{ componentTitle(kind) }}</strong><small>{{ componentPaletteMetadata(kind).category }} · {{ t(`compatibility${componentPaletteMetadata(kind).compatibility}`) }}<template v-if="componentPaletteMetadata(kind).required.length"> · {{ t('requires') }} {{ componentPaletteMetadata(kind).required.join(', ') }}</template></small></span><i>＋</i></button><button class="component-favorite" :class="{ active: componentPaletteState.favorites.includes(kind) }" :title="t('favorite')" @click="toggleComponentFavorite(kind)">★</button></article></section>
+            <section v-for="group in componentGroups" :key="group.name"><h5>{{ group.name }} <small>{{ group.kinds.length }}</small></h5><article v-for="kind in group.kinds" :key="kind"><button class="component-main" @click="chooseComponent(kind)"><span>{{ componentGlyph(kind) }}</span><span><strong>{{ componentTitle(kind) }}</strong><small>{{ componentPaletteMetadata(kind).category }} · {{ t(`compatibility${componentPaletteMetadata(kind).compatibility}`) }}<template v-if="componentAuthoringRule(kind).required.length"> · {{ t('requires') }} {{ componentAuthoringRule(kind).required.join(', ') }}</template><template v-if="componentAuthoringRule(kind).conflicts.length"> · {{ t('conflictsWith') }} {{ componentAuthoringRule(kind).conflicts.join(', ') }}</template></small><small>{{ componentPaletteMetadata(kind).summary }}</small></span><i>＋</i></button><button class="component-favorite" :class="{ active: componentPaletteState.favorites.includes(kind) }" :title="`${t('favorite')} · ${componentAuthoringRule(kind).documentation}`" @click="toggleComponentFavorite(kind)">★</button></article></section>
             <p v-if="!componentGroups.length">{{ t('noComponentsFound') }}</p>
           </div>
         </section>
@@ -309,7 +339,7 @@
 import { computed, defineComponent, h, nextTick, onBeforeUnmount, reactive, ref, watch } from 'vue'
 import { t } from '../i18n'
 import { editorState as estate, type InspectorCategory } from '../store/editor'
-import { deleteConnection, physicsState as state, pushHistory, repairConnection } from '../store/physics'
+import { deleteConnection, physicsState as state, pushHistory, repairConnection, sceneManager } from '../store/physics'
 import { preferencesState as prefs } from '../store/preferences'
 import { requestConfirmation } from '../store/dialog'
 import { BoxEntity } from '../world/BoxEntity'
@@ -325,15 +355,16 @@ import { Transform } from '../world/Transform'
 import { setParent, wouldCreateParentCycle } from '../world/hierarchy'
 import { applyTranslation, captureTransforms } from '../editor/gizmo'
 import { selectionCenter } from '../editor/selection'
-import { assetReference, assetState, importAssetFiles, readTextAsset } from '../assets/AssetDatabase'
+import { assetGuid, assetReference, assetState, createTextAsset, importAssetFiles, readTextAsset } from '../assets/AssetDatabase'
 import { normalizePhysicsMaterial, PHYSICS_SHAPE_SUPPORT, type PhysicsShapeKind } from '../runtime/physicsProduction'
 import { createUuid } from '../world/identity'
 import { gameplayRuntime } from '../runtime/GameplayRuntime'
 import { recordEntityProperties } from '../editor/animationStudioState'
-import { applyPrefabFromInstance, capturePrefabOverrides, comparePrefabInstance, createPrefabFromEntities, resetPrefabOverride, revertPrefabInstance, unpackPrefabInstance } from '../runtime/prefabs'
+import { applyPrefabFromInstance, capturePrefabOverrides, comparePrefabInstance, createPrefabFromEntities, createPrefabVariantFromInstance, prefabConflictReport, resetPrefabOverride, revertPrefabInstance, unpackPrefabInstance } from '../runtime/prefabs'
 import { unpackSceneInstance } from '../runtime/sceneInstances'
 import { propertyMetadata, type PropertyMetadata } from '../editor/propertyMetadata'
-import { componentPaletteMetadata, componentPaletteState, markComponentRecent, toggleComponentFavorite, type ComponentPaletteCategory } from '../editor/componentPalette'
+import { componentPaletteMetadata, componentPaletteState, componentPresets, markComponentRecent, saveComponentPreset, toggleComponentFavorite, type ComponentPaletteCategory } from '../editor/componentPalette'
+import { componentAuthoringRule, evaluateNumericExpression, validateEntityAuthoring } from '../editor/sceneAuthoring'
 import { OFFICIAL_AI_PACKAGE_ID, OFFICIAL_OBJECT_POOL_PACKAGE_ID, packageEnabled } from '../runtime/packages'
 
 const InspectorSection = defineComponent({ props: { title: { type: String, required: true }, category: { type: String, default: 'general' }, open: Boolean }, setup(props, { slots }) { return () => h('details', { class: 'inspector-section', open: props.open, style: { display: inspectorSectionVisible(props.title, props.category as InspectorCategory) ? '' : 'none' } }, [h('summary', [h('span', props.title), h('i', '⌄')]), h('div', { class: 'section-body' }, slots.default?.())]) } })
@@ -346,6 +377,7 @@ const PropertyRow = defineComponent({ props: { label: { type: String, required: 
 const DiagnosticRow = defineComponent({ props: { label: { type: String, required: true }, value: { type: String, required: true }, active: Boolean }, setup(props) { return () => h('div', { class: ['diagnostic-row', { active: props.active }] }, [h('span', props.label), h('code', props.value)]) } })
 const ToggleSwitch = defineComponent({ props: { modelValue: { type: Boolean, required: true } }, emits: ['update:modelValue'], setup(props, { emit }) { return () => h('button', { class: ['toggle', { active: props.modelValue }], role: 'switch', 'aria-checked': props.modelValue, onClick: () => { emit('update:modelValue', !props.modelValue); onConfigChange() } }, h('i')) } })
 const NumberRange = defineComponent({ props: { modelValue: { type: Number, required: true }, min: { type: Number, required: true }, max: { type: Number, required: true }, step: { type: Number, required: true } }, emits: ['update:modelValue'], setup(props, { emit }) { const update = (event: Event) => emit('update:modelValue', Number((event.target as HTMLInputElement).value)); return () => h('div', { class: 'number-range' }, [h('input', { type: 'range', value: props.modelValue, min: props.min, max: props.max, step: props.step, onInput: update }), h('input', { type: 'number', value: props.modelValue, step: props.step, onChange: update })]) } })
+const NumericExpressionInput = defineComponent({ props: { modelValue: { type: Number, required: true }, minimum: { type: Number, default: Number.NEGATIVE_INFINITY }, maximum: { type: Number, default: Number.POSITIVE_INFINITY } }, emits: ['update:modelValue'], setup(props, { emit }) { const draft = ref(String(props.modelValue)); watch(() => props.modelValue, value => { if (document.activeElement?.getAttribute('data-numeric-expression') !== draft.value) draft.value = String(value) }); const commit = () => { const value = evaluateNumericExpression(draft.value, props.modelValue); if (value === null) { draft.value = String(props.modelValue); return } const bounded = Math.min(props.maximum, Math.max(props.minimum, value)); draft.value = String(bounded); emit('update:modelValue', bounded) }; return () => h('input', { value: draft.value, type: 'text', inputmode: 'decimal', 'data-numeric-expression': draft.value, title: t('numericExpressionHelp'), onInput: (event: Event) => { draft.value = (event.target as HTMLInputElement).value }, onChange: commit, onBlur: commit, onKeydown: (event: KeyboardEvent) => { if (event.key === 'Enter') commit() } }) } })
 const ComponentTools = defineComponent({
   props: { kind: { type: String, required: true } },
   setup(props) {
@@ -358,6 +390,7 @@ const ComponentTools = defineComponent({
         h('button', { title: t('resetComponent'), onClick: () => resetComponent(kind) }, '↻'),
         h('button', { title: t('copyComponent'), onClick: () => copyComponent(kind) }, 'Copy'),
         h('button', { disabled: componentClipboard.value?.kind !== kind, title: t('pasteComponent'), onClick: () => pasteComponent(kind) }, 'Paste'),
+        h('button', { title: t('componentPreset'), onClick: () => useComponentPreset(kind) }, componentPresets(kind).length ? 'Preset' : '+Preset'),
         kind === 'Transform2D' ? null : h('button', { title: t('moveComponentUp'), onClick: () => reorderComponent(kind, -1) }, '↑'),
         kind === 'Transform2D' ? null : h('button', { title: t('moveComponentDown'), onClick: () => reorderComponent(kind, 1) }, '↓'),
         kind === 'Transform2D' ? null : h('button', { class: 'danger', title: t('removeComponent'), onClick: () => removeComponent(kind) }, '×')
@@ -395,6 +428,9 @@ const panelWidth = ref(estate.inspectorWidth)
 const imageAssets = computed(() => assetState.records.filter(asset => asset.assetType === 'image'))
 const fontAssets = computed(() => assetState.records.filter(asset => asset.assetType === 'font'))
 const scriptAssets = computed(() => assetState.records.filter(asset => asset.assetType === 'script'))
+const pathAssets = computed(() => assetState.records.filter(asset => asset.assetType === 'path'))
+const pathPointsText = computed(() => selectedEntity.value?.authoring.path.points.map(point => `${point.x},${point.y}`).join(' ') ?? '')
+const pathTangentsText = computed(() => selectedEntity.value?.authoring.path.tangents.map(tangent => `${tangent.incoming.x},${tangent.incoming.y}:${tangent.outgoing.x},${tangent.outgoing.y}`).join(' ') ?? '')
 const scriptPropertyGroups = computed(() => {
   const script = selectedEntity.value?.script2D
   if (!script) return []
@@ -501,8 +537,15 @@ const tagsText = computed({
     selectedEntity.value.tags = [...new Set(value.split(',').map(tag => tag.trim()).filter(Boolean))].slice(0, 32)
   }
 })
+const groupsText = computed({
+  get: () => selectedEntity.value?.groups.join(', ') ?? '',
+  set: value => { if (selectedEntity.value) selectedEntity.value.groups = cleanList(value) }
+})
+function cleanList(value: string): string[] { return [...new Set(value.split(',').map(item => item.trim()).filter(Boolean))].slice(0, 32) }
 const prefabOverrideCount = computed(() => selectedEntity.value ? Object.keys(selectedEntity.value.prefabOverrides).length : 0)
 const prefabComparison = computed(() => selectedEntity.value?.prefabAsset ? comparePrefabInstance(selectedEntity.value) : [])
+const prefabConflicts = computed(() => selectedEntity.value ? prefabConflictReport(selectedEntity.value) : [])
+const selectedValidation = computed(() => selectedEntity.value ? validateEntityAuthoring(selectedEntity.value, state.world.entities) : [])
 
 function componentTitle(kind: ComponentKind): string {
   if (kind === 'Transform2D') return t('transform2D')
@@ -633,6 +676,14 @@ function pasteComponent(kind: ComponentKind) {
   pushHistory()
   estate.statusText = t('componentPasted')
 }
+function useComponentPreset(kind: ComponentKind) {
+  const component = selectedEntity.value?.getComponent(kind, true)
+  if (!component) return
+  const existing = componentPresets(kind)[0]
+  if (existing) { pasteComponentValues(component, existing.values); normalizeEntity(selectedEntity.value!); pushHistory(`Apply ${kind} preset`, `component:${selectedEntity.value!.uuid}:${kind}`); estate.statusText = t('componentPresetApplied'); return }
+  saveComponentPreset(kind, `${selectedEntity.value?.name ?? kind} ${kind}`, copyComponentValues(component))
+  estate.statusText = t('componentPresetSaved')
+}
 function resetComponent(kind: ComponentKind) {
   const entity = selectedEntity.value
   const component = entity?.getComponent(kind, true)
@@ -687,6 +738,8 @@ function addComponent(kind: ComponentKind) {
   if (!entity) return
   const existing = entity.getComponent(kind, true)
   if (existing) { addRemovedComponent(kind); return }
+  const rule = componentAuthoringRule(kind)
+  if (rule.conflicts.some(conflict => entity.hasComponent(conflict))) { estate.statusText = t('componentConflictWarning', { component: kind, conflict: rule.conflicts.find(conflict => entity.hasComponent(conflict)) ?? '' }); return }
   if (kind === 'SpriteRenderer2D') { const component = entity.addComponent(new SpriteRenderer2D()); component.sortingLayer = entity.layer }
   else if (kind === 'TextRenderer2D') { const component = entity.addComponent(new TextRenderer2D()); component.sortingLayer = entity.layer }
   else if (kind === 'Camera2D') entity.addComponent(new Camera2D())
@@ -704,7 +757,8 @@ function addComponent(kind: ComponentKind) {
       if (collider) { collider.removed = false; collider.enabled = true; collider.sensor = true }
     }
   }
-  pushHistory('Add component')
+  for (const dependency of rule.required) if (!entity.hasComponent(dependency)) addComponent(dependency)
+  pushHistory('Add component', `component:${entity.uuid}:${kind}`)
   estate.statusText = t('componentAdded')
 }
 
@@ -722,6 +776,11 @@ function physicsMaterialName(uuid: string) { return physicsMaterialDocument(uuid
 function applySelectedPhysicsMaterial() { const entity = selectedEntity.value; if (!entity?.collider.materialAsset) return; const material = physicsMaterialDocument(entity.collider.materialAsset.replace(/^asset:\/\//, '')); if (!material) return; Object.assign(entity.collider.material, material); if (entity.rigidBody.massMode === 'Automatic') entity.rigidBody.density = material.density; onConfigChange() }
 function setAuthoringOrder(value: number) { const entity = selectedEntity.value; if (!entity || !Number.isFinite(value)) return; entity.authoring.zOrder = Math.trunc(value) }
 function setAuthoringLayer(value: number) { const entity = selectedEntity.value; if (!entity || !estate.layers.includes(value)) return; entity.layer = value; entity.authoring.renderLayer = value; estate.activeLayer = value }
+function updatePathPoints(event: Event) { const entity = selectedEntity.value; if (!entity) return; const points = (event.target as HTMLTextAreaElement).value.trim().split(/\s+/).flatMap(pair => { const [x, y] = pair.split(',').map(Number); return Number.isFinite(x) && Number.isFinite(y) ? [{ x, y }] : [] }).slice(0, 10_000); if (points.length < 2) return; entity.authoring.path.points = points; entity.renderer.vertices = points.map(point => ({ ...point })); entity.authoring.path.tangents = entity.authoring.path.tangents.slice(0, points.length); onConfigChange(event) }
+function updatePathTangents(event: Event) { const entity = selectedEntity.value; if (!entity) return; entity.authoring.path.tangents = (event.target as HTMLTextAreaElement).value.trim().split(/\s+/).flatMap(pair => { const [incoming, outgoing] = pair.split(':'); const [ix, iy] = (incoming ?? '').split(',').map(Number), [ox, oy] = (outgoing ?? '').split(',').map(Number); return [ix, iy, ox, oy].every(Number.isFinite) ? [{ incoming: { x: ix, y: iy }, outgoing: { x: ox, y: oy } }] : [] }).slice(0, entity.authoring.path.points.length); onConfigChange(event) }
+function pathDocument(source: string) { try { const value = JSON.parse(source) as Record<string, unknown>; if (value.format !== 'nova-path-2d' || value.version !== 1 || !Array.isArray(value.points)) return null; return value } catch { return null } }
+function loadSelectedPathAsset() { const entity = selectedEntity.value, source = readTextAsset(entity?.authoring.path.asset); if (!entity || !source) return; const document = pathDocument(source); if (!document) { estate.statusText = t('invalidPathAsset'); return } const points = (document.points as Array<Record<string, unknown>>).slice(0, 10_000).map(point => ({ x: finiteNumber(point.x), y: finiteNumber(point.y) })); if (points.length < 2) return; entity.authoring.path.points = points; entity.authoring.path.closed = document.closed === true; entity.authoring.path.smoothing = Math.min(1, Math.max(0, finiteNumber(document.smoothing, .5))); entity.authoring.path.tangents = Array.isArray(document.tangents) ? (document.tangents as Array<Record<string, Record<string, unknown>>>).slice(0, points.length).map(tangent => ({ incoming: { x: finiteNumber(tangent.incoming?.x), y: finiteNumber(tangent.incoming?.y) }, outgoing: { x: finiteNumber(tangent.outgoing?.x), y: finiteNumber(tangent.outgoing?.y) } })) : []; entity.renderer.vertices = points.map(point => ({ ...point })); pushHistory('Load reusable path', `path:${entity.uuid}`) }
+function saveSelectedPathAsset() { const entity = selectedEntity.value; if (!entity || entity.authoring.path.points.length < 2) return; const source = JSON.stringify({ format: 'nova-path-2d', version: 1, closed: entity.authoring.path.closed, smoothing: entity.authoring.path.smoothing, points: entity.authoring.path.points, tangents: entity.authoring.path.tangents }, null, 2); const asset = createTextAsset(`${entity.name} Path`, 'path', source, 'Assets/Paths'); entity.authoring.path.asset = assetReference(asset.uuid); assetState.selectedGuid = asset.uuid; pushHistory('Save reusable path', `path:${entity.uuid}`); estate.statusText = t('reusablePathSaved') }
 function synchronizeScriptProperties() {
   if (!selectedEntity.value?.script2D) return
   const error = gameplayRuntime.synchronizeExports(selectedEntity.value)
@@ -741,6 +800,8 @@ function createSelectedPrefab() {
 function applySelectedPrefab() { if (selectedEntity.value && applyPrefabFromInstance(selectedEntity.value)) estate.statusText = t('prefabApplied') }
 function revertSelectedPrefab() { if (selectedEntity.value && revertPrefabInstance(selectedEntity.value)) estate.statusText = t('prefabReverted') }
 function unpackSelectedPrefab() { if (selectedEntity.value && unpackPrefabInstance(selectedEntity.value)) estate.statusText = t('prefabUnpacked') }
+function createSelectedPrefabVariant() { const entity = selectedEntity.value; if (!entity) return; const reference = createPrefabVariantFromInstance(entity); estate.statusText = reference ? t('prefabVariantCreated') : t('prefabFailed') }
+function locateSelectedPrefab() { const guid = assetGuid(selectedEntity.value?.prefabAsset); if (!guid) return; assetState.selectedGuid = guid; estate.bottomPanelTab = 'assets'; estate.bottomPanelVisible = true; estate.bottomPanelOpen = true; estate.statusText = selectedEntity.value?.prefabAsset ?? '' }
 function resetSelectedPrefabOverride(path: string) { if (selectedEntity.value && resetPrefabOverride(selectedEntity.value, path)) estate.statusText = t('prefabOverrideReset') }
 function unpackSelectedScene() { if (selectedEntity.value && unpackSceneInstance(selectedEntity.value)) estate.statusText = t('sceneUnpacked') }
 function onLayerChange() { if (selectedEntity.value) estate.activeLayer = selectedEntity.value.layer }
@@ -827,6 +888,18 @@ function setMultiPosition(axis: 'x' | 'y', value: number) {
 }
 const multiPositionX = computed({ get: () => Number(selectionCenter(selectedEntities.value.map(entity => entity.id), state.world.entities).x.toFixed(4)), set: value => setMultiPosition('x', value) })
 const multiPositionY = computed({ get: () => Number(selectionCenter(selectedEntities.value.map(entity => entity.id), state.world.entities).y.toFixed(4)), set: value => setMultiPosition('y', value) })
+function sharedList(selector: (entity: typeof selectedEntities.value[number]) => string[]): string {
+  const values = selectedEntities.value.map(entity => selector(entity).join(', '))
+  return new Set(values).size === 1 ? values[0] ?? '' : ''
+}
+const multiTags = computed(() => sharedList(entity => entity.tags))
+const multiGroups = computed(() => sharedList(entity => entity.groups))
+const commonComponentKinds = computed(() => {
+  const [first, ...rest] = selectedEntities.value
+  return first ? first.components.map(component => component.kind).filter(kind => rest.every(entity => entity.hasComponent(kind))) : []
+})
+function setMultiTags(value: string) { if (!canEdit.value) return; const tags = cleanList(value); for (const entity of selectedEntities.value) entity.tags = [...tags]; pushHistory('Set shared tags', 'multi:tags') }
+function setMultiGroups(value: string) { if (!canEdit.value) return; const groups = cleanList(value); for (const entity of selectedEntities.value) entity.groups = [...groups]; pushHistory('Set shared groups', 'multi:groups') }
 
 let resizeStartX = 0
 let resizeStartWidth = 0
@@ -849,6 +922,7 @@ onBeforeUnmount(stopResize)
 .inspector-categories { margin-top: 7px; display: flex; gap: 3px; overflow-x: auto; scrollbar-width: none; }.inspector-categories::-webkit-scrollbar { display: none; }.inspector-categories button { height: 24px; padding: 0 8px; flex: 0 0 auto; border: 1px solid transparent; border-radius: 999px; color: var(--text-muted); background: transparent; font-size:11px !important; white-space: nowrap; }.inspector-categories button:hover, .inspector-categories button.active { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 35%, transparent); background: var(--accent-soft); }
 .inspector-view-controls{margin-top:5px;display:flex;gap:4px}.inspector-view-controls button{min-height:25px;padding:0 7px;border:1px solid var(--border-subtle);border-radius:6px;color:var(--text-muted);background:transparent;font-size:11px!important}.inspector-view-controls button.active{color:var(--accent);border-color:var(--accent);background:var(--accent-soft)}
 .empty-inspector { height: 100%; padding: 18px; display: flex; flex-direction: column; justify-content: center; align-items: center; color: var(--text-muted); text-align: center; }.empty-inspector p { font-size: 11px; }.empty-inspector > strong { margin-top: 12px; color: var(--text-secondary); font-size:11px; }.empty-ui-actions { width: 100%; margin-top: 7px; display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }.empty-ui-actions button { min-height: 28px; overflow: hidden; border: 1px solid var(--border-subtle); border-radius: 7px; color: var(--accent); background: var(--surface-3); font-size:11px; text-overflow: ellipsis; white-space: nowrap; }.runtime-note { color: var(--text-muted); font-size:11px; line-height: 1.45; }
+.authoring-validation{padding:7px;display:grid;gap:4px;border:1px solid color-mix(in srgb,var(--warning) 40%,var(--border-subtle));border-radius:8px;background:color-mix(in srgb,var(--warning) 7%,transparent)}.authoring-validation strong{color:var(--warning);font-size:11px}.authoring-validation button{min-height:26px;padding:4px 7px;text-align:left;border:0;border-radius:6px;color:var(--text-secondary);background:var(--surface-2);font-size:11px}.authoring-validation button.error{color:var(--danger)}
 .batch-toggle { min-width: 76px; height: 28px; border: 1px solid var(--border-subtle); border-radius: 7px; color: var(--accent); background: var(--surface-3); }
 .inspector-header { padding: 0 3px 8px; }.eyebrow { color: var(--accent); font-size:11px; font-weight: 720; letter-spacing: .11em; text-transform: uppercase; }h3 { margin: 3px 0 0; color: var(--text-primary); font-family: inherit; font-size: 14px; font-weight: 650; line-height: 1.2; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }h3 small { color: var(--text-muted); font-size: 11px; font-weight: 500; }
 :deep(.inspector-section) { border: 1px solid var(--border-subtle); border-radius: 12px; background: color-mix(in srgb, var(--surface-2) 72%, transparent); overflow: hidden; }
@@ -869,21 +943,21 @@ onBeforeUnmount(stopResize)
 .compound-shapes { border: 1px solid var(--border-subtle); border-radius: 8px; background: var(--surface-1); }.compound-shapes>summary{min-height:31px;padding:3px 5px 3px 8px;display:flex;align-items:center;justify-content:space-between;list-style:none;color:var(--text-secondary);cursor:pointer}.compound-shapes>summary::-webkit-details-marker{display:none}.compound-shapes>summary button,.compound-shapes article header button{width:25px;min-width:25px;height:25px;border:1px solid var(--border-subtle);border-radius:6px;color:var(--accent);background:var(--surface-3)}.compound-shapes article{margin:6px;padding:7px;display:grid;gap:6px;border:1px solid var(--border-subtle);border-radius:7px}.compound-shapes article header{display:grid;grid-template-columns:minmax(0,1fr) auto 25px;align-items:center;gap:5px}.compound-shapes article header label{display:flex;align-items:center;gap:4px;white-space:nowrap}.compound-shapes article>label{display:grid;grid-template-columns:minmax(70px,.8fr) minmax(0,1.2fr);align-items:center;gap:6px}.compound-shapes article input{min-width:0;width:100%}.compound-shapes>p{margin:6px 8px 8px;color:var(--text-muted);font-size:11px;line-height:1.4}
 :deep(.number-range) { width: 100%; display: flex; align-items: center; gap: 7px; }:deep(.number-range input[type='range']) { min-width: 0; flex: 1; accent-color: var(--accent); }:deep(.number-range input[type='number']) { width: 72px; min-width: 60px; }
 :deep(.toggle) { width: 38px; height: 22px; padding: 3px; border: 0; border-radius: 99px; background: var(--surface-3); }:deep(.toggle i) { display: block; width: 16px; height: 16px; border-radius: 50%; background: var(--text-muted); transition: transform 180ms ease; }:deep(.toggle.active) { background: var(--accent); }:deep(.toggle.active i) { transform: translateX(16px); background: var(--accent-contrast); }
-:deep(.diagnostic-row) { min-height: 30px; display: flex; align-items: center; justify-content: space-between; gap: 8px; color: var(--text-muted); font-family: inherit; font-size:11px; }:deep(.diagnostic-row code) { color: var(--accent); font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size:11px; }:deep(.diagnostic-row.active code) { color: var(--warning); }
+:deep(.diagnostic-row) { min-height: 30px; display: flex; align-items: center; justify-content: space-between; gap: 8px; color: var(--text-muted); font-family: inherit; font-size:11px; }:deep(.diagnostic-row code) { color: var(--accent); font-family: var(--font-mono); font-size:11px; }:deep(.diagnostic-row.active code) { color: var(--warning); }
 .stacked-field { display: flex; flex-direction: column; gap: 6px; color: var(--text-secondary); font-family: inherit; font-size: 11px; }.stacked-field input, .stacked-field textarea { width: 100%; color: var(--text-secondary); font: inherit; }.stacked-field textarea { min-height: 58px; padding: 7px; resize: vertical; border: 1px solid var(--border-subtle); border-radius: 7px; background: var(--input-bg); }
 .color-well { width: 48px; height: 25px; border: 3px solid var(--surface-3); border-radius: 8px; box-shadow: 0 0 0 1px var(--border-strong); }
 .primary-action, .secondary-action { min-height: 33px; width: 100%; display: flex; align-items: center; justify-content: center; gap: 6px; border-radius: 8px; border: 1px solid var(--accent); color: var(--accent-contrast); background: var(--accent); font-size: 11px; }.secondary-action { border-color: var(--border-subtle); color: var(--text-secondary); background: var(--surface-3); }
 .prefab-actions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 5px; }
 .prefab-actions button { min-width: 0; min-height: 30px; padding: 4px 5px; overflow: hidden; border: 1px solid var(--border-subtle); border-radius: 7px; color: var(--text-secondary); background: var(--surface-3); font-size:11px; text-overflow: ellipsis; white-space: nowrap; }
 .prefab-actions button:hover { color: var(--accent); border-color: var(--accent); }
-.prefab-compare{padding:6px;border:1px solid var(--border-subtle);border-radius:8px}.prefab-compare summary{cursor:pointer;color:var(--text-secondary)}.prefab-compare article{min-width:0;display:flex;align-items:center;gap:5px;padding-top:5px}.prefab-compare code{min-width:0;flex:1;overflow:hidden;color:var(--accent);font-size:11px;text-overflow:ellipsis;white-space:nowrap}.prefab-compare button{min-height:24px;border:1px solid var(--border-subtle);border-radius:6px;background:var(--surface-3);color:var(--text-secondary);font-size:11px}
-.script-error { margin: 0; padding: 8px; overflow-wrap: anywhere; border: 1px solid color-mix(in srgb, var(--danger) 50%, var(--border-subtle)); border-radius: 7px; color: var(--danger); background: var(--danger-soft); font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size:11px; line-height: 1.45; }
+.prefab-compare{padding:6px;border:1px solid var(--border-subtle);border-radius:8px}.prefab-compare summary{cursor:pointer;color:var(--text-secondary)}.prefab-compare article{min-width:0;display:flex;align-items:center;gap:5px;padding-top:5px}.prefab-compare code{min-width:0;flex:1;overflow:hidden;color:var(--accent);font-size:11px;text-overflow:ellipsis;white-space:nowrap}.prefab-compare button{min-height:24px;border:1px solid var(--border-subtle);border-radius:6px;background:var(--surface-3);color:var(--text-secondary);font-size:11px}.prefab-conflicts article{font-size:11px;line-height:1.35}.prefab-conflicts article.error{color:var(--danger)}.prefab-conflicts article.warning{color:var(--warning)}
+.script-error { margin: 0; padding: 8px; overflow-wrap: anywhere; border: 1px solid color-mix(in srgb, var(--danger) 50%, var(--border-subtle)); border-radius: 7px; color: var(--danger); background: var(--danger-soft); font-family: var(--font-mono); font-size:11px; line-height: 1.45; }
 .script-property-group{display:grid;gap:6px;padding-top:4px}.script-property-group h4{margin:0;padding:7px 2px 3px;border-bottom:1px solid var(--border-subtle);color:var(--text-muted);font-size:11px;font-weight:750;letter-spacing:.04em;text-transform:uppercase}.script-property-help{display:block;margin:-2px 4px 5px;color:var(--text-muted);font-size:11px;line-height:1.35;overflow-wrap:anywhere}
 .inspector-no-results { margin: 14px 4px; padding: 18px 10px; border: 1px dashed var(--border-strong); border-radius: 10px; color: var(--text-muted); text-align: center; font-size:11px; line-height: 1.45; }
 .empty-state { margin: 5px 0; color: var(--text-muted); font-size: 11px; text-align: center; }.connection-list { display: flex; flex-direction: column; gap: 6px; }.connection-item { display: flex; align-items: center; border: 1px solid var(--border-subtle); border-radius: 9px; background: var(--surface-1); }.connection-main { min-width: 0; flex: 1; padding: 7px; display: flex; align-items: center; gap: 8px; border: 0; background: transparent; text-align: left; }.connection-main > span:last-child { min-width: 0; display: flex; flex-direction: column; }.connection-main strong, .connection-main small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }.connection-main strong { color: var(--text-primary); font-size: 11px; }.connection-main small { color: var(--text-muted); font-size:11px; }.connection-dot { width: 8px; height: 8px; flex: 0 0 8px; border-radius: 50%; background: var(--connection); box-shadow: 0 0 7px var(--connection); }.connection-item.snapped .connection-dot, .connection-item.torn .connection-dot { background: var(--connection-broken); box-shadow: 0 0 7px var(--connection-broken); }.mini-button { width: 26px; height: 28px; border: 0; background: transparent; color: var(--text-muted); }.mini-button:hover { color: var(--accent); }.mini-button.danger:hover { color: var(--danger); }
 .modal-scrim { position: fixed; inset: 0; z-index: 1300; display: grid; place-items: center; background: var(--scrim); pointer-events: auto; backdrop-filter: blur(6px); }.color-modal { width: 250px; padding: 18px; display: flex; flex-direction: column; align-items: center; gap: 14px; border: 1px solid var(--border-subtle); border-radius: 16px; background: var(--surface-2); box-shadow: var(--shadow-lg); }.color-modal h4 { margin: 0; }.color-modal input { width: 100px; height: 76px; border: 0; background: transparent; }.color-modal > div { width: 100%; display: flex; gap: 8px; }.color-modal button { flex: 1; min-height: 34px; border: 1px solid var(--border-subtle); border-radius: 8px; background: var(--surface-3); }.color-modal button.primary { color: var(--accent-contrast); border-color: var(--accent); background: var(--accent); }
-.component-picker-scrim { z-index: 1400; }.component-picker { width: min(620px, calc(100vw - 30px)); max-height: min(700px, calc(100vh - 60px)); padding: 12px; display: flex; flex-direction: column; gap: 10px; overflow: hidden; border: 1px solid var(--border-strong); border-radius: 16px; background: var(--surface-1); box-shadow: var(--shadow-lg); }.component-picker > header { display: flex; align-items: center; justify-content: space-between; }.component-picker > header h4 { margin: 3px 0 0; font-size: 14px; }.component-picker > header > button { width: 30px; height: 30px; border: 0; border-radius: 7px; color: var(--text-muted); background: transparent; }.component-picker > header > button:hover { color: var(--text-primary); background: var(--surface-hover); }.component-picker > input { width: 100%; }.component-picker-list { min-height: 60px;overflow:auto;display:block}.component-picker-list>section{display:grid;grid-template-columns:1fr 1fr;gap:5px}.component-picker-list h5{grid-column:1/-1;margin:9px 3px 3px;color:var(--text-muted);font-size:11px;letter-spacing:.08em;text-transform:uppercase}.component-picker-list h5 small{padding:1px 5px;border-radius:20px;background:var(--surface-3)}.component-picker-list article{position:relative;min-width:0}.component-main{width:100%;min-width:0;min-height:52px;padding:6px 31px 6px 8px;display:grid;grid-template-columns:29px 1fr 18px;align-items:center;gap:7px;border:1px solid var(--border-subtle);border-radius:9px;color:var(--text-secondary);background:var(--surface-2);text-align:left}.component-main:hover{border-color:color-mix(in srgb,var(--accent) 55%,var(--border-subtle));background:var(--accent-soft)}.component-main>span:first-child{width:28px;height:28px;display:grid;place-items:center;border-radius:7px;color:var(--accent);background:var(--surface-3);font:600 11px/1 ui-monospace,SFMono-Regular,Consolas,monospace}.component-main>span:nth-child(2){min-width:0;display:flex;flex-direction:column;gap:2px}.component-main strong{overflow:hidden;font-size:11px;text-overflow:ellipsis;white-space:nowrap}.component-main small{color:var(--text-muted);font-size:11px;line-height:1.25}.component-main i{color:var(--accent);font-size:15px;font-style:normal}.component-favorite{position:absolute;right:3px;top:3px;width:25px;height:25px;border:0;color:var(--text-muted);background:transparent;opacity:.4}.component-favorite.active{color:#f4c95d;opacity:1}.component-picker-list>p{padding:24px;color:var(--text-muted);text-align:center;font-size:11px}
-.property-menu{position:fixed;z-index:1600;width:220px;padding:7px;display:flex;flex-direction:column;gap:3px;border:1px solid var(--border-strong);border-radius:10px;background:var(--surface-1);box-shadow:0 16px 36px rgba(0,0,0,.34)}.property-menu>strong{padding:5px 7px;color:var(--accent);font:600 11px/1.3 ui-monospace,Consolas,monospace;overflow-wrap:anywhere}.property-menu>button{min-height:28px;padding:0 7px;text-align:left;border:0;border-radius:6px;color:var(--text-secondary);background:transparent;font-size:11px}.property-menu>button:hover{background:var(--surface-hover)}.property-menu>button:disabled{opacity:.4}.property-menu>p{margin:4px;padding:7px;border-top:1px solid var(--border-subtle);color:var(--text-muted);font-size:11px;line-height:1.4}
+.component-picker-scrim { z-index: 1400; }.component-picker { width: min(620px, calc(100vw - 30px)); max-height: min(700px, calc(100vh - 60px)); padding: 12px; display: flex; flex-direction: column; gap: 10px; overflow: hidden; border: 1px solid var(--border-strong); border-radius: 16px; background: var(--surface-1); box-shadow: var(--shadow-lg); }.component-picker > header { display: flex; align-items: center; justify-content: space-between; }.component-picker > header h4 { margin: 3px 0 0; font-size: 14px; }.component-picker > header > button { width: 30px; height: 30px; border: 0; border-radius: 7px; color: var(--text-muted); background: transparent; }.component-picker > header > button:hover { color: var(--text-primary); background: var(--surface-hover); }.component-picker > input { width: 100%; }.component-picker-list { min-height: 60px;overflow:auto;display:block}.component-picker-list>section{display:grid;grid-template-columns:1fr 1fr;gap:5px}.component-picker-list h5{grid-column:1/-1;margin:9px 3px 3px;color:var(--text-muted);font-size:11px;letter-spacing:.08em;text-transform:uppercase}.component-picker-list h5 small{padding:1px 5px;border-radius:20px;background:var(--surface-3)}.component-picker-list article{position:relative;min-width:0}.component-main{width:100%;min-width:0;min-height:52px;padding:6px 31px 6px 8px;display:grid;grid-template-columns:29px 1fr 18px;align-items:center;gap:7px;border:1px solid var(--border-subtle);border-radius:9px;color:var(--text-secondary);background:var(--surface-2);text-align:left}.component-main:hover{border-color:color-mix(in srgb,var(--accent) 55%,var(--border-subtle));background:var(--accent-soft)}.component-main>span:first-child{width:28px;height:28px;display:grid;place-items:center;border-radius:7px;color:var(--accent);background:var(--surface-3);font:600 11px/1 var(--font-mono)}.component-main>span:nth-child(2){min-width:0;display:flex;flex-direction:column;gap:2px}.component-main strong{overflow:hidden;font-size:11px;text-overflow:ellipsis;white-space:nowrap}.component-main small{color:var(--text-muted);font-size:11px;line-height:1.25}.component-main i{color:var(--accent);font-size:15px;font-style:normal}.component-favorite{position:absolute;right:3px;top:3px;width:25px;height:25px;border:0;color:var(--text-muted);background:transparent;opacity:.4}.component-favorite.active{color:#f4c95d;opacity:1}.component-picker-list>p{padding:24px;color:var(--text-muted);text-align:center;font-size:11px}
+.property-menu{position:fixed;z-index:1600;width:220px;padding:7px;display:flex;flex-direction:column;gap:3px;border:1px solid var(--border-strong);border-radius:10px;background:var(--surface-1);box-shadow:0 16px 36px rgba(0,0,0,.34)}.property-menu>strong{padding:5px 7px;color:var(--accent);font:600 11px/1.3 var(--font-mono);overflow-wrap:anywhere}.property-menu>button{min-height:28px;padding:0 7px;text-align:left;border:0;border-radius:6px;color:var(--text-secondary);background:transparent;font-size:11px}.property-menu>button:hover{background:var(--surface-hover)}.property-menu>button:disabled{opacity:.4}.property-menu>p{margin:4px;padding:7px;border-top:1px solid var(--border-subtle);color:var(--text-muted);font-size:11px;line-height:1.4}
 @media (max-width: 760px) { .config-wrapper { max-width: 46vw; } }
 @media (max-width: 560px) { .component-picker-list>section { grid-template-columns: 1fr; } }
 </style>

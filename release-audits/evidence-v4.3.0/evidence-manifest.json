@@ -1,0 +1,209 @@
+{
+  "format": "nova-release-evidence-manifest",
+  "version": 1,
+  "release": "4.3.0",
+  "generatedAt": "2026-08-23T11:41:11.002Z",
+  "source": {
+    "commit": "7f753cb065aff42cef63361765cfefedbd5f72e1",
+    "branch": "main",
+    "describe": "Release3.0.0(2026.08.16)-2-g7f753cb-dirty",
+    "dirty": true,
+    "signedTag": null
+  },
+  "tool": {
+    "node": "v22.22.2",
+    "pnpm": "pnpm@10.30.0",
+    "rustc": "rustc 1.92.0 (ded5c06cf 2025-12-08)",
+    "cargo": "cargo 1.92.0 (344c4567c 2025-10-21)",
+    "wasmPack": "wasm-pack 0.14.0",
+    "vite": "^6.4.3",
+    "tauri": "2.11.4"
+  },
+  "environment": {
+    "id": "NOVA-WIN-BUILD-HOST",
+    "host": {
+      "platform": "win32",
+      "release": "10.0.26200",
+      "arch": "x64",
+      "cpu": "AMD Ryzen 9 8945HX with Radeon Graphics        ",
+      "logicalCpus": 32,
+      "memoryBytes": 34142187520
+    }
+  },
+  "entries": [
+    {
+      "path": "coverage/authoring-matrix.json",
+      "sha256": "e28ffc76d6c474af6d34850513cdf9df8673f98c3a37b4c01cd87397c59faaaf",
+      "bytes": 572,
+      "source": "7f753cb065aff42cef63361765cfefedbd5f72e1",
+      "tool": "Nova_A generate-v4.3-release-evidence.mjs",
+      "environment": "NOVA-WIN-BUILD-HOST"
+    },
+    {
+      "path": "coverage/COMPONENT_AUTHORING_4_3.md",
+      "sha256": "9307555882bde62d5f2c3e1ec449b28239927487d451987ab4c1e8556bbf2f04",
+      "bytes": 1757,
+      "source": "7f753cb065aff42cef63361765cfefedbd5f72e1",
+      "tool": "Nova_A generate-v4.3-release-evidence.mjs",
+      "environment": "NOVA-WIN-BUILD-HOST"
+    },
+    {
+      "path": "coverage/HIERARCHY_INSPECTOR_4_3.md",
+      "sha256": "1b75665e7f228658aa96b11039903bf7d60cf2f1ace0647a7b1716c0f4228d31",
+      "bytes": 2698,
+      "source": "7f753cb065aff42cef63361765cfefedbd5f72e1",
+      "tool": "Nova_A generate-v4.3-release-evidence.mjs",
+      "environment": "NOVA-WIN-BUILD-HOST"
+    },
+    {
+      "path": "coverage/KNOWN_ISSUES_4_3.md",
+      "sha256": "e5ee36aed81879b8588c3702d28b9553a4533d1b501bef03e7cf5588d27605c1",
+      "bytes": 1212,
+      "source": "7f753cb065aff42cef63361765cfefedbd5f72e1",
+      "tool": "Nova_A generate-v4.3-release-evidence.mjs",
+      "environment": "NOVA-WIN-BUILD-HOST"
+    },
+    {
+      "path": "coverage/SCENE_PREFAB_SCHEMA_4_3.md",
+      "sha256": "5255d4b2df862f2f6fec82592e8a709d92610ffa1c972b7158614463b88444b4",
+      "bytes": 2937,
+      "source": "7f753cb065aff42cef63361765cfefedbd5f72e1",
+      "tool": "Nova_A generate-v4.3-release-evidence.mjs",
+      "environment": "NOVA-WIN-BUILD-HOST"
+    },
+    {
+      "path": "environments/test-environments.json",
+      "sha256": "8f32db21775173ef2225734ef0bbd4ca2e672396a95a992e31a278c34c16072f",
+      "bytes": 1686,
+      "source": "7f753cb065aff42cef63361765cfefedbd5f72e1",
+      "tool": "Nova_A generate-v4.3-release-evidence.mjs",
+      "environment": "NOVA-WIN-BUILD-HOST"
+    },
+    {
+      "path": "logs/verification.log",
+      "sha256": "7bf9f70542a73fea3f8ff6774fffbb92cf687e5e6e912d3580bf46ccbe711cad",
+      "bytes": 383,
+      "source": "7f753cb065aff42cef63361765cfefedbd5f72e1",
+      "tool": "Nova_A generate-v4.3-release-evidence.mjs",
+      "environment": "NOVA-WIN-BUILD-HOST"
+    },
+    {
+      "path": "release-signoff/sign-off.json",
+      "sha256": "d22c91719ca271b2b4e434a097b244b99f618c1f0b56c2fc6b66be2ba77b55c4",
+      "bytes": 408,
+      "source": "7f753cb065aff42cef63361765cfefedbd5f72e1",
+      "tool": "Nova_A generate-v4.3-release-evidence.mjs",
+      "environment": "NOVA-WIN-BUILD-HOST"
+    },
+    {
+      "path": "tests/manual-signoff.md",
+      "sha256": "b77df4588df639d48c18bd16a0624f787d218c962dc4a9a7932a249917e10d34",
+      "bytes": 204,
+      "source": "7f753cb065aff42cef63361765cfefedbd5f72e1",
+      "tool": "Nova_A generate-v4.3-release-evidence.mjs",
+      "environment": "NOVA-WIN-BUILD-HOST"
+    },
+    {
+      "path": "tests/summary.json",
+      "sha256": "aa4823d5b4151ed109bad50a1505a4c7ee4d276da410800ec53990396f2d8f9f",
+      "bytes": 902,
+      "source": "7f753cb065aff42cef63361765cfefedbd5f72e1",
+      "tool": "Nova_A generate-v4.3-release-evidence.mjs",
+      "environment": "NOVA-WIN-BUILD-HOST"
+    },
+    {
+      "path": "tests/v4.3.0-authoring-audit.json",
+      "sha256": "251f6067bfc50eaee78e5948de54bfa857b886fb2987de580c0442f341859aba",
+      "bytes": 2487,
+      "source": "7f753cb065aff42cef63361765cfefedbd5f72e1",
+      "tool": "Nova_A generate-v4.3-release-evidence.mjs",
+      "environment": "NOVA-WIN-BUILD-HOST"
+    },
+    {
+      "path": "tests/v4.3.0-authoring-verification.json",
+      "sha256": "96320f4418a11b22a891d9f85e72a5f20dbbc9303a3695dc11aeb356c5d53ffc",
+      "bytes": 3303,
+      "source": "7f753cb065aff42cef63361765cfefedbd5f72e1",
+      "tool": "Nova_A generate-v4.3-release-evidence.mjs",
+      "environment": "NOVA-WIN-BUILD-HOST"
+    },
+    {
+      "path": "tests/v4.3.0-deterministic-scene-diff.json",
+      "sha256": "420b99ece8d478d5ca07e4df253ff06c3050f96b87d1348691912009ea23908a",
+      "bytes": 252,
+      "source": "7f753cb065aff42cef63361765cfefedbd5f72e1",
+      "tool": "Nova_A generate-v4.3-release-evidence.mjs",
+      "environment": "NOVA-WIN-BUILD-HOST"
+    },
+    {
+      "path": "tests/v4.3.0-hierarchy-performance.json",
+      "sha256": "e29d09fd03f432ab75f32ab5163e6b2da2637662bf322e592905085fa64a4385",
+      "bytes": 448,
+      "source": "7f753cb065aff42cef63361765cfefedbd5f72e1",
+      "tool": "Nova_A generate-v4.3-release-evidence.mjs",
+      "environment": "NOVA-WIN-BUILD-HOST"
+    },
+    {
+      "path": "tests/v4.3.0-layout-browser.json",
+      "sha256": "4a606da0bd05dd208b61c4a8c97744885b64d5dfb8781e04bf05806ea905d917",
+      "bytes": 27195,
+      "source": "7f753cb065aff42cef63361765cfefedbd5f72e1",
+      "tool": "Nova_A generate-v4.3-release-evidence.mjs",
+      "environment": "NOVA-WIN-BUILD-HOST"
+    },
+    {
+      "path": "tests/v4.3.0-multi-inspector-cases.json",
+      "sha256": "0a7194cb18de3224846d1d885e0d100dc8ea56dbcc3b9024bde57484a12f735f",
+      "bytes": 691,
+      "source": "7f753cb065aff42cef63361765cfefedbd5f72e1",
+      "tool": "Nova_A generate-v4.3-release-evidence.mjs",
+      "environment": "NOVA-WIN-BUILD-HOST"
+    },
+    {
+      "path": "tests/v4.3.0-prefab-conflict-fixtures.json",
+      "sha256": "2828ede4a4a51f3e276bff2f514f1fc6616272922b23deaadaf19f31f9ce6346",
+      "bytes": 607,
+      "source": "7f753cb065aff42cef63361765cfefedbd5f72e1",
+      "tool": "Nova_A generate-v4.3-release-evidence.mjs",
+      "environment": "NOVA-WIN-BUILD-HOST"
+    },
+    {
+      "path": "tests/v4.3.0-windows-smoke.json",
+      "sha256": "53f3b08dd837ddfbfcc5d11817034bad4c302383f894cf1299b581099591042f",
+      "bytes": 2096,
+      "source": "7f753cb065aff42cef63361765cfefedbd5f72e1",
+      "tool": "Nova_A generate-v4.3-release-evidence.mjs",
+      "environment": "NOVA-WIN-BUILD-HOST"
+    }
+  ],
+  "externalGates": [
+    {
+      "id": "signed-source-and-binaries",
+      "status": "pending-external-gate"
+    },
+    {
+      "id": "independent-malware-security-review",
+      "status": "pending-external-gate"
+    },
+    {
+      "id": "five-clean-reproducible-builds",
+      "status": "pending-external-gate"
+    },
+    {
+      "id": "clean-machine-installer-lifecycle",
+      "status": "pending-external-gate"
+    },
+    {
+      "id": "24-hour-wall-clock-soak",
+      "status": "pending-external-gate"
+    },
+    {
+      "id": "physical-dpi-keyboard-screen-reader-visual-signoff",
+      "status": "pending-external-gate"
+    },
+    {
+      "id": "firefox-linux-macos-matching-hosts",
+      "status": "pending-external-gate"
+    }
+  ]
+}

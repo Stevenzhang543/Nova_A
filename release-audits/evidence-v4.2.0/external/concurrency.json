@@ -1,0 +1,17 @@
+{
+  "format": "nova-v4.2-external-change",
+  "version": 1,
+  "generatedAt": "2026-08-23T04:36:26.502Z",
+  "scenarios": [
+    "self-change suppression",
+    "concurrent lock/read-only open",
+    "external edit",
+    "source-control branch switch",
+    "large update",
+    "keep editor",
+    "keep disk",
+    "reload/compare"
+  ],
+  "silentConflictChoice": false,
+  "status": "passed-architecture-with-native-filesystem-manual-gate"
+}

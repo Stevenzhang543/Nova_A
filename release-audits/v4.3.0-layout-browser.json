@@ -1,0 +1,1358 @@
+{
+  "format": "nova-v4.3-layout-qualification",
+  "version": 1,
+  "engineVersion": "4.3.0",
+  "generatedAt": "2026-08-23T11:40:44.171Z",
+  "browser": "Edg/147.0.3912.72",
+  "languages": [
+    "en",
+    "de",
+    "zh"
+  ],
+  "stableControls": [],
+  "screenshots": [
+    {
+      "name": "editor-design-en-1600x900.png",
+      "locale": "en",
+      "width": 1600,
+      "height": 900
+    },
+    {
+      "name": "editor-design-de-1600x900.png",
+      "locale": "de",
+      "width": 1600,
+      "height": 900
+    },
+    {
+      "name": "editor-design-zh-1600x900.png",
+      "locale": "zh",
+      "width": 1600,
+      "height": 900
+    }
+  ],
+  "results": [
+    {
+      "name": "en Design 1024x768",
+      "status": "passed",
+      "detail": {
+        "viewport": [
+          1024,
+          768
+        ],
+        "document": [
+          1024,
+          768
+        ],
+        "contained": true,
+        "overflow": [],
+        "overlap": [],
+        "verticalText": [],
+        "toolbarState": {
+          "clientWidth": 1024,
+          "scrollWidth": 1189,
+          "contentWidth": 1172.625,
+          "childOverflows": 0
+        }
+      }
+    },
+    {
+      "name": "en Design 1280x800",
+      "status": "passed",
+      "detail": {
+        "viewport": [
+          1280,
+          800
+        ],
+        "document": [
+          1280,
+          800
+        ],
+        "contained": true,
+        "overflow": [],
+        "overlap": [],
+        "verticalText": [],
+        "toolbarState": {
+          "clientWidth": 1280,
+          "scrollWidth": 1398,
+          "contentWidth": 1381.6875,
+          "childOverflows": 0
+        }
+      }
+    },
+    {
+      "name": "en Design 1600x900",
+      "status": "passed",
+      "detail": {
+        "viewport": [
+          1600,
+          900
+        ],
+        "document": [
+          1600,
+          900
+        ],
+        "contained": true,
+        "overflow": [],
+        "overlap": [],
+        "verticalText": [],
+        "toolbarState": {
+          "clientWidth": 1600,
+          "scrollWidth": 1600,
+          "contentWidth": 1584,
+          "childOverflows": 0
+        }
+      }
+    },
+    {
+      "name": "en Design 1920x1080",
+      "status": "passed",
+      "detail": {
+        "viewport": [
+          1920,
+          1080
+        ],
+        "document": [
+          1920,
+          1080
+        ],
+        "contained": true,
+        "overflow": [],
+        "overlap": [],
+        "verticalText": [],
+        "toolbarState": {
+          "clientWidth": 1920,
+          "scrollWidth": 1920,
+          "contentWidth": 1904,
+          "childOverflows": 0
+        }
+      }
+    },
+    {
+      "name": "en workspace 1/6",
+      "status": "passed",
+      "detail": {
+        "viewport": [
+          1600,
+          900
+        ],
+        "document": [
+          1600,
+          900
+        ],
+        "contained": true,
+        "overflow": [],
+        "overlap": [],
+        "verticalText": [],
+        "toolbarState": {
+          "clientWidth": 1600,
+          "scrollWidth": 1600,
+          "contentWidth": 1584,
+          "childOverflows": 0
+        }
+      }
+    },
+    {
+      "name": "en workspace 2/6",
+      "status": "passed",
+      "detail": {
+        "viewport": [
+          1600,
+          900
+        ],
+        "document": [
+          1600,
+          900
+        ],
+        "contained": true,
+        "overflow": [],
+        "overlap": [],
+        "verticalText": [],
+        "toolbarState": null
+      }
+    },
+    {
+      "name": "en workspace 3/6",
+      "status": "passed",
+      "detail": {
+        "viewport": [
+          1600,
+          900
+        ],
+        "document": [
+          1600,
+          900
+        ],
+        "contained": true,
+        "overflow": [],
+        "overlap": [],
+        "verticalText": [],
+        "toolbarState": {
+          "clientWidth": 1600,
+          "scrollWidth": 1600,
+          "contentWidth": 1584,
+          "childOverflows": 0
+        }
+      }
+    },
+    {
+      "name": "en workspace 4/6",
+      "status": "passed",
+      "detail": {
+        "viewport": [
+          1600,
+          900
+        ],
+        "document": [
+          1600,
+          900
+        ],
+        "contained": true,
+        "overflow": [],
+        "overlap": [],
+        "verticalText": [],
+        "toolbarState": null
+      }
+    },
+    {
+      "name": "en workspace 5/6",
+      "status": "passed",
+      "detail": {
+        "viewport": [
+          1600,
+          900
+        ],
+        "document": [
+          1600,
+          900
+        ],
+        "contained": true,
+        "overflow": [],
+        "overlap": [],
+        "verticalText": [],
+        "toolbarState": null
+      }
+    },
+    {
+      "name": "en workspace 6/6",
+      "status": "passed",
+      "detail": {
+        "viewport": [
+          1600,
+          900
+        ],
+        "document": [
+          1600,
+          900
+        ],
+        "contained": true,
+        "overflow": [],
+        "overlap": [],
+        "verticalText": [],
+        "toolbarState": null
+      }
+    },
+    {
+      "name": "en bottom panel 1/5",
+      "status": "passed",
+      "detail": {
+        "viewport": [
+          1600,
+          900
+        ],
+        "document": [
+          1600,
+          900
+        ],
+        "contained": true,
+        "overflow": [],
+        "overlap": [],
+        "verticalText": [],
+        "toolbarState": {
+          "clientWidth": 1600,
+          "scrollWidth": 1600,
+          "contentWidth": 1584,
+          "childOverflows": 0
+        }
+      }
+    },
+    {
+      "name": "en bottom panel 2/5",
+      "status": "passed",
+      "detail": {
+        "viewport": [
+          1600,
+          900
+        ],
+        "document": [
+          1600,
+          900
+        ],
+        "contained": true,
+        "overflow": [],
+        "overlap": [],
+        "verticalText": [],
+        "toolbarState": {
+          "clientWidth": 1600,
+          "scrollWidth": 1600,
+          "contentWidth": 1584,
+          "childOverflows": 0
+        }
+      }
+    },
+    {
+      "name": "en bottom panel 3/5",
+      "status": "passed",
+      "detail": {
+        "viewport": [
+          1600,
+          900
+        ],
+        "document": [
+          1600,
+          900
+        ],
+        "contained": true,
+        "overflow": [],
+        "overlap": [],
+        "verticalText": [],
+        "toolbarState": {
+          "clientWidth": 1600,
+          "scrollWidth": 1600,
+          "contentWidth": 1584,
+          "childOverflows": 0
+        }
+      }
+    },
+    {
+      "name": "en bottom panel 4/5",
+      "status": "passed",
+      "detail": {
+        "viewport": [
+          1600,
+          900
+        ],
+        "document": [
+          1600,
+          900
+        ],
+        "contained": true,
+        "overflow": [],
+        "overlap": [],
+        "verticalText": [],
+        "toolbarState": {
+          "clientWidth": 1600,
+          "scrollWidth": 1600,
+          "contentWidth": 1584,
+          "childOverflows": 0
+        }
+      }
+    },
+    {
+      "name": "en bottom panel 5/5",
+      "status": "passed",
+      "detail": {
+        "viewport": [
+          1600,
+          900
+        ],
+        "document": [
+          1600,
+          900
+        ],
+        "contained": true,
+        "overflow": [],
+        "overlap": [],
+        "verticalText": [],
+        "toolbarState": {
+          "clientWidth": 1600,
+          "scrollWidth": 1600,
+          "contentWidth": 1584,
+          "childOverflows": 0
+        }
+      }
+    },
+    {
+      "name": "en page 1/4",
+      "status": "passed",
+      "detail": {
+        "viewport": [
+          1600,
+          900
+        ],
+        "document": [
+          1600,
+          900
+        ],
+        "contained": true,
+        "overflow": [],
+        "overlap": [],
+        "verticalText": [],
+        "toolbarState": {
+          "clientWidth": 1600,
+          "scrollWidth": 1600,
+          "contentWidth": 1584,
+          "childOverflows": 0
+        }
+      }
+    },
+    {
+      "name": "en page 2/4",
+      "status": "passed",
+      "detail": {
+        "viewport": [
+          1600,
+          900
+        ],
+        "document": [
+          1600,
+          900
+        ],
+        "contained": true,
+        "overflow": [],
+        "overlap": [],
+        "verticalText": [],
+        "toolbarState": {
+          "clientWidth": 1600,
+          "scrollWidth": 1600,
+          "contentWidth": 1584,
+          "childOverflows": 0
+        }
+      }
+    },
+    {
+      "name": "en page 3/4",
+      "status": "passed",
+      "detail": {
+        "viewport": [
+          1600,
+          900
+        ],
+        "document": [
+          1600,
+          900
+        ],
+        "contained": true,
+        "overflow": [],
+        "overlap": [],
+        "verticalText": [],
+        "toolbarState": {
+          "clientWidth": 1600,
+          "scrollWidth": 1600,
+          "contentWidth": 1584,
+          "childOverflows": 0
+        }
+      }
+    },
+    {
+      "name": "en page 4/4",
+      "status": "passed",
+      "detail": {
+        "viewport": [
+          1600,
+          900
+        ],
+        "document": [
+          1600,
+          900
+        ],
+        "contained": true,
+        "overflow": [],
+        "overlap": [],
+        "verticalText": [],
+        "toolbarState": {
+          "clientWidth": 1600,
+          "scrollWidth": 1600,
+          "contentWidth": 1584,
+          "childOverflows": 0
+        }
+      }
+    },
+    {
+      "name": "de Design 1024x768",
+      "status": "passed",
+      "detail": {
+        "viewport": [
+          1024,
+          768
+        ],
+        "document": [
+          1024,
+          768
+        ],
+        "contained": true,
+        "overflow": [],
+        "overlap": [],
+        "verticalText": [],
+        "toolbarState": {
+          "clientWidth": 1024,
+          "scrollWidth": 1253,
+          "contentWidth": 1237.078125,
+          "childOverflows": 0
+        }
+      }
+    },
+    {
+      "name": "de Design 1280x800",
+      "status": "passed",
+      "detail": {
+        "viewport": [
+          1280,
+          800
+        ],
+        "document": [
+          1280,
+          800
+        ],
+        "contained": true,
+        "overflow": [],
+        "overlap": [],
+        "verticalText": [],
+        "toolbarState": {
+          "clientWidth": 1280,
+          "scrollWidth": 1479,
+          "contentWidth": 1462.546875,
+          "childOverflows": 0
+        }
+      }
+    },
+    {
+      "name": "de Design 1600x900",
+      "status": "passed",
+      "detail": {
+        "viewport": [
+          1600,
+          900
+        ],
+        "document": [
+          1600,
+          900
+        ],
+        "contained": true,
+        "overflow": [],
+        "overlap": [],
+        "verticalText": [],
+        "toolbarState": {
+          "clientWidth": 1600,
+          "scrollWidth": 1600,
+          "contentWidth": 1584,
+          "childOverflows": 0
+        }
+      }
+    },
+    {
+      "name": "de Design 1920x1080",
+      "status": "passed",
+      "detail": {
+        "viewport": [
+          1920,
+          1080
+        ],
+        "document": [
+          1920,
+          1080
+        ],
+        "contained": true,
+        "overflow": [],
+        "overlap": [],
+        "verticalText": [],
+        "toolbarState": {
+          "clientWidth": 1920,
+          "scrollWidth": 1920,
+          "contentWidth": 1904,
+          "childOverflows": 0
+        }
+      }
+    },
+    {
+      "name": "de workspace 1/6",
+      "status": "passed",
+      "detail": {
+        "viewport": [
+          1600,
+          900
+        ],
+        "document": [
+          1600,
+          900
+        ],
+        "contained": true,
+        "overflow": [],
+        "overlap": [],
+        "verticalText": [],
+        "toolbarState": {
+          "clientWidth": 1600,
+          "scrollWidth": 1600,
+          "contentWidth": 1584,
+          "childOverflows": 0
+        }
+      }
+    },
+    {
+      "name": "de workspace 2/6",
+      "status": "passed",
+      "detail": {
+        "viewport": [
+          1600,
+          900
+        ],
+        "document": [
+          1600,
+          900
+        ],
+        "contained": true,
+        "overflow": [],
+        "overlap": [],
+        "verticalText": [],
+        "toolbarState": null
+      }
+    },
+    {
+      "name": "de workspace 3/6",
+      "status": "passed",
+      "detail": {
+        "viewport": [
+          1600,
+          900
+        ],
+        "document": [
+          1600,
+          900
+        ],
+        "contained": true,
+        "overflow": [],
+        "overlap": [],
+        "verticalText": [],
+        "toolbarState": {
+          "clientWidth": 1600,
+          "scrollWidth": 1600,
+          "contentWidth": 1584,
+          "childOverflows": 0
+        }
+      }
+    },
+    {
+      "name": "de workspace 4/6",
+      "status": "passed",
+      "detail": {
+        "viewport": [
+          1600,
+          900
+        ],
+        "document": [
+          1600,
+          900
+        ],
+        "contained": true,
+        "overflow": [],
+        "overlap": [],
+        "verticalText": [],
+        "toolbarState": null
+      }
+    },
+    {
+      "name": "de workspace 5/6",
+      "status": "passed",
+      "detail": {
+        "viewport": [
+          1600,
+          900
+        ],
+        "document": [
+          1600,
+          900
+        ],
+        "contained": true,
+        "overflow": [],
+        "overlap": [],
+        "verticalText": [],
+        "toolbarState": null
+      }
+    },
+    {
+      "name": "de workspace 6/6",
+      "status": "passed",
+      "detail": {
+        "viewport": [
+          1600,
+          900
+        ],
+        "document": [
+          1600,
+          900
+        ],
+        "contained": true,
+        "overflow": [],
+        "overlap": [],
+        "verticalText": [],
+        "toolbarState": null
+      }
+    },
+    {
+      "name": "de bottom panel 1/5",
+      "status": "passed",
+      "detail": {
+        "viewport": [
+          1600,
+          900
+        ],
+        "document": [
+          1600,
+          900
+        ],
+        "contained": true,
+        "overflow": [],
+        "overlap": [],
+        "verticalText": [],
+        "toolbarState": {
+          "clientWidth": 1600,
+          "scrollWidth": 1600,
+          "contentWidth": 1584,
+          "childOverflows": 0
+        }
+      }
+    },
+    {
+      "name": "de bottom panel 2/5",
+      "status": "passed",
+      "detail": {
+        "viewport": [
+          1600,
+          900
+        ],
+        "document": [
+          1600,
+          900
+        ],
+        "contained": true,
+        "overflow": [],
+        "overlap": [],
+        "verticalText": [],
+        "toolbarState": {
+          "clientWidth": 1600,
+          "scrollWidth": 1600,
+          "contentWidth": 1584,
+          "childOverflows": 0
+        }
+      }
+    },
+    {
+      "name": "de bottom panel 3/5",
+      "status": "passed",
+      "detail": {
+        "viewport": [
+          1600,
+          900
+        ],
+        "document": [
+          1600,
+          900
+        ],
+        "contained": true,
+        "overflow": [],
+        "overlap": [],
+        "verticalText": [],
+        "toolbarState": {
+          "clientWidth": 1600,
+          "scrollWidth": 1600,
+          "contentWidth": 1584,
+          "childOverflows": 0
+        }
+      }
+    },
+    {
+      "name": "de bottom panel 4/5",
+      "status": "passed",
+      "detail": {
+        "viewport": [
+          1600,
+          900
+        ],
+        "document": [
+          1600,
+          900
+        ],
+        "contained": true,
+        "overflow": [],
+        "overlap": [],
+        "verticalText": [],
+        "toolbarState": {
+          "clientWidth": 1600,
+          "scrollWidth": 1600,
+          "contentWidth": 1584,
+          "childOverflows": 0
+        }
+      }
+    },
+    {
+      "name": "de bottom panel 5/5",
+      "status": "passed",
+      "detail": {
+        "viewport": [
+          1600,
+          900
+        ],
+        "document": [
+          1600,
+          900
+        ],
+        "contained": true,
+        "overflow": [],
+        "overlap": [],
+        "verticalText": [],
+        "toolbarState": {
+          "clientWidth": 1600,
+          "scrollWidth": 1600,
+          "contentWidth": 1584,
+          "childOverflows": 0
+        }
+      }
+    },
+    {
+      "name": "de page 1/4",
+      "status": "passed",
+      "detail": {
+        "viewport": [
+          1600,
+          900
+        ],
+        "document": [
+          1600,
+          900
+        ],
+        "contained": true,
+        "overflow": [],
+        "overlap": [],
+        "verticalText": [],
+        "toolbarState": {
+          "clientWidth": 1600,
+          "scrollWidth": 1600,
+          "contentWidth": 1584,
+          "childOverflows": 0
+        }
+      }
+    },
+    {
+      "name": "de page 2/4",
+      "status": "passed",
+      "detail": {
+        "viewport": [
+          1600,
+          900
+        ],
+        "document": [
+          1600,
+          900
+        ],
+        "contained": true,
+        "overflow": [],
+        "overlap": [],
+        "verticalText": [],
+        "toolbarState": {
+          "clientWidth": 1600,
+          "scrollWidth": 1600,
+          "contentWidth": 1584,
+          "childOverflows": 0
+        }
+      }
+    },
+    {
+      "name": "de page 3/4",
+      "status": "passed",
+      "detail": {
+        "viewport": [
+          1600,
+          900
+        ],
+        "document": [
+          1600,
+          900
+        ],
+        "contained": true,
+        "overflow": [],
+        "overlap": [],
+        "verticalText": [],
+        "toolbarState": {
+          "clientWidth": 1600,
+          "scrollWidth": 1600,
+          "contentWidth": 1584,
+          "childOverflows": 0
+        }
+      }
+    },
+    {
+      "name": "de page 4/4",
+      "status": "passed",
+      "detail": {
+        "viewport": [
+          1600,
+          900
+        ],
+        "document": [
+          1600,
+          900
+        ],
+        "contained": true,
+        "overflow": [],
+        "overlap": [],
+        "verticalText": [],
+        "toolbarState": {
+          "clientWidth": 1600,
+          "scrollWidth": 1600,
+          "contentWidth": 1584,
+          "childOverflows": 0
+        }
+      }
+    },
+    {
+      "name": "zh Design 1024x768",
+      "status": "passed",
+      "detail": {
+        "viewport": [
+          1024,
+          768
+        ],
+        "document": [
+          1024,
+          768
+        ],
+        "contained": true,
+        "overflow": [],
+        "overlap": [],
+        "verticalText": [],
+        "toolbarState": {
+          "clientWidth": 1024,
+          "scrollWidth": 1097,
+          "contentWidth": 1080.53125,
+          "childOverflows": 0
+        }
+      }
+    },
+    {
+      "name": "zh Design 1280x800",
+      "status": "passed",
+      "detail": {
+        "viewport": [
+          1280,
+          800
+        ],
+        "document": [
+          1280,
+          800
+        ],
+        "contained": true,
+        "overflow": [],
+        "overlap": [],
+        "verticalText": [],
+        "toolbarState": {
+          "clientWidth": 1280,
+          "scrollWidth": 1280,
+          "contentWidth": 1264,
+          "childOverflows": 0
+        }
+      }
+    },
+    {
+      "name": "zh Design 1600x900",
+      "status": "passed",
+      "detail": {
+        "viewport": [
+          1600,
+          900
+        ],
+        "document": [
+          1600,
+          900
+        ],
+        "contained": true,
+        "overflow": [],
+        "overlap": [],
+        "verticalText": [],
+        "toolbarState": {
+          "clientWidth": 1600,
+          "scrollWidth": 1600,
+          "contentWidth": 1584,
+          "childOverflows": 0
+        }
+      }
+    },
+    {
+      "name": "zh Design 1920x1080",
+      "status": "passed",
+      "detail": {
+        "viewport": [
+          1920,
+          1080
+        ],
+        "document": [
+          1920,
+          1080
+        ],
+        "contained": true,
+        "overflow": [],
+        "overlap": [],
+        "verticalText": [],
+        "toolbarState": {
+          "clientWidth": 1920,
+          "scrollWidth": 1920,
+          "contentWidth": 1904,
+          "childOverflows": 0
+        }
+      }
+    },
+    {
+      "name": "zh workspace 1/6",
+      "status": "passed",
+      "detail": {
+        "viewport": [
+          1600,
+          900
+        ],
+        "document": [
+          1600,
+          900
+        ],
+        "contained": true,
+        "overflow": [],
+        "overlap": [],
+        "verticalText": [],
+        "toolbarState": {
+          "clientWidth": 1600,
+          "scrollWidth": 1600,
+          "contentWidth": 1584,
+          "childOverflows": 0
+        }
+      }
+    },
+    {
+      "name": "zh workspace 2/6",
+      "status": "passed",
+      "detail": {
+        "viewport": [
+          1600,
+          900
+        ],
+        "document": [
+          1600,
+          900
+        ],
+        "contained": true,
+        "overflow": [],
+        "overlap": [],
+        "verticalText": [],
+        "toolbarState": null
+      }
+    },
+    {
+      "name": "zh workspace 3/6",
+      "status": "passed",
+      "detail": {
+        "viewport": [
+          1600,
+          900
+        ],
+        "document": [
+          1600,
+          900
+        ],
+        "contained": true,
+        "overflow": [],
+        "overlap": [],
+        "verticalText": [],
+        "toolbarState": {
+          "clientWidth": 1600,
+          "scrollWidth": 1600,
+          "contentWidth": 1584,
+          "childOverflows": 0
+        }
+      }
+    },
+    {
+      "name": "zh workspace 4/6",
+      "status": "passed",
+      "detail": {
+        "viewport": [
+          1600,
+          900
+        ],
+        "document": [
+          1600,
+          900
+        ],
+        "contained": true,
+        "overflow": [],
+        "overlap": [],
+        "verticalText": [],
+        "toolbarState": null
+      }
+    },
+    {
+      "name": "zh workspace 5/6",
+      "status": "passed",
+      "detail": {
+        "viewport": [
+          1600,
+          900
+        ],
+        "document": [
+          1600,
+          900
+        ],
+        "contained": true,
+        "overflow": [],
+        "overlap": [],
+        "verticalText": [],
+        "toolbarState": null
+      }
+    },
+    {
+      "name": "zh workspace 6/6",
+      "status": "passed",
+      "detail": {
+        "viewport": [
+          1600,
+          900
+        ],
+        "document": [
+          1600,
+          900
+        ],
+        "contained": true,
+        "overflow": [],
+        "overlap": [],
+        "verticalText": [],
+        "toolbarState": null
+      }
+    },
+    {
+      "name": "zh bottom panel 1/5",
+      "status": "passed",
+      "detail": {
+        "viewport": [
+          1600,
+          900
+        ],
+        "document": [
+          1600,
+          900
+        ],
+        "contained": true,
+        "overflow": [],
+        "overlap": [],
+        "verticalText": [],
+        "toolbarState": {
+          "clientWidth": 1600,
+          "scrollWidth": 1600,
+          "contentWidth": 1584,
+          "childOverflows": 0
+        }
+      }
+    },
+    {
+      "name": "zh bottom panel 2/5",
+      "status": "passed",
+      "detail": {
+        "viewport": [
+          1600,
+          900
+        ],
+        "document": [
+          1600,
+          900
+        ],
+        "contained": true,
+        "overflow": [],
+        "overlap": [],
+        "verticalText": [],
+        "toolbarState": {
+          "clientWidth": 1600,
+          "scrollWidth": 1600,
+          "contentWidth": 1584,
+          "childOverflows": 0
+        }
+      }
+    },
+    {
+      "name": "zh bottom panel 3/5",
+      "status": "passed",
+      "detail": {
+        "viewport": [
+          1600,
+          900
+        ],
+        "document": [
+          1600,
+          900
+        ],
+        "contained": true,
+        "overflow": [],
+        "overlap": [],
+        "verticalText": [],
+        "toolbarState": {
+          "clientWidth": 1600,
+          "scrollWidth": 1600,
+          "contentWidth": 1584,
+          "childOverflows": 0
+        }
+      }
+    },
+    {
+      "name": "zh bottom panel 4/5",
+      "status": "passed",
+      "detail": {
+        "viewport": [
+          1600,
+          900
+        ],
+        "document": [
+          1600,
+          900
+        ],
+        "contained": true,
+        "overflow": [],
+        "overlap": [],
+        "verticalText": [],
+        "toolbarState": {
+          "clientWidth": 1600,
+          "scrollWidth": 1600,
+          "contentWidth": 1584,
+          "childOverflows": 0
+        }
+      }
+    },
+    {
+      "name": "zh bottom panel 5/5",
+      "status": "passed",
+      "detail": {
+        "viewport": [
+          1600,
+          900
+        ],
+        "document": [
+          1600,
+          900
+        ],
+        "contained": true,
+        "overflow": [],
+        "overlap": [],
+        "verticalText": [],
+        "toolbarState": {
+          "clientWidth": 1600,
+          "scrollWidth": 1600,
+          "contentWidth": 1584,
+          "childOverflows": 0
+        }
+      }
+    },
+    {
+      "name": "zh page 1/4",
+      "status": "passed",
+      "detail": {
+        "viewport": [
+          1600,
+          900
+        ],
+        "document": [
+          1600,
+          900
+        ],
+        "contained": true,
+        "overflow": [],
+        "overlap": [],
+        "verticalText": [],
+        "toolbarState": {
+          "clientWidth": 1600,
+          "scrollWidth": 1600,
+          "contentWidth": 1584,
+          "childOverflows": 0
+        }
+      }
+    },
+    {
+      "name": "zh page 2/4",
+      "status": "passed",
+      "detail": {
+        "viewport": [
+          1600,
+          900
+        ],
+        "document": [
+          1600,
+          900
+        ],
+        "contained": true,
+        "overflow": [],
+        "overlap": [],
+        "verticalText": [],
+        "toolbarState": {
+          "clientWidth": 1600,
+          "scrollWidth": 1600,
+          "contentWidth": 1584,
+          "childOverflows": 0
+        }
+      }
+    },
+    {
+      "name": "zh page 3/4",
+      "status": "passed",
+      "detail": {
+        "viewport": [
+          1600,
+          900
+        ],
+        "document": [
+          1600,
+          900
+        ],
+        "contained": true,
+        "overflow": [],
+        "overlap": [],
+        "verticalText": [],
+        "toolbarState": {
+          "clientWidth": 1600,
+          "scrollWidth": 1600,
+          "contentWidth": 1584,
+          "childOverflows": 0
+        }
+      }
+    },
+    {
+      "name": "zh page 4/4",
+      "status": "passed",
+      "detail": {
+        "viewport": [
+          1600,
+          900
+        ],
+        "document": [
+          1600,
+          900
+        ],
+        "contained": true,
+        "overflow": [],
+        "overlap": [],
+        "verticalText": [],
+        "toolbarState": {
+          "clientWidth": 1600,
+          "scrollWidth": 1600,
+          "contentWidth": 1584,
+          "childOverflows": 0
+        }
+      }
+    },
+    {
+      "name": "Stable control inventory",
+      "status": "passed",
+      "detail": {
+        "count": 0,
+        "unique": 0
+      }
+    },
+    {
+      "name": "Browser console and fatal surface",
+      "status": "passed",
+      "detail": "[]"
+    }
+  ],
+  "consoleErrors": [],
+  "status": "passed"
+}

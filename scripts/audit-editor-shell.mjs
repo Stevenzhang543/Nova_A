@@ -12,7 +12,7 @@ const [state, workspaces, layout, actionBar, palette, inspector, runtimeInspecto
 
 function assert(condition, message) { if (!condition) throw new Error(message) }
 
-for (const workspace of ['design', 'script', 'animation', 'ui', 'debug', 'custom']) {
+for (const workspace of ['design', 'script', 'animation', 'ui', 'debug', 'manage']) {
   assert(workspaces.includes(`id: '${workspace}'`), `Missing ${workspace} workspace preset`)
 }
 for (const panel of ['hierarchyVisible', 'inspectorVisible', 'bottomPanelVisible', 'distractionFree']) {
@@ -26,7 +26,7 @@ for (const tab of ['assets', 'packages', 'console', 'animation', 'profiler', 're
 }
 assert(palette.includes("id: 'tool-tilemap'") && palette.includes("openEditorTool('tilemap')"), 'Command palette cannot select a map and open contextual Tilemap')
 assert(workspaces.includes("'rendering'"), 'Rendering panel cannot be restored from saved workspace state')
-assert(palette.includes('shortcutMatches') && palette.includes("key === 'p'"), 'Command palette shortcuts are incomplete')
+assert(palette.includes('shortcutMatches') && ['commandPalette','quickOpen','globalSearch','contextSearch'].every(command => palette.includes(`'${command}'`)), 'Command palette shortcuts are incomplete')
 assert(workspaces.includes('nova-a-editor-layout-v1') && workspaces.includes('try {') && workspaces.includes('localStorage'), 'Layout persistence is not guarded')
 assert(inspector.includes('searchInspector') && inspector.includes('inspectorCategories') && inspector.includes('filteredAddableComponents'), 'Inspector discovery controls are incomplete')
 assert(!inspector.includes('class="add-components"'), 'Legacy bottom-of-inspector component pile still exists')
@@ -43,7 +43,7 @@ const versions = await Promise.all([
   read('package.json'), read('Cargo.toml'), read('src-tauri/Cargo.toml'), read('src-tauri/tauri.conf.json'),
   read('crates/nova_format/src/lib.rs'), read('src/projects/projectFormat.ts')
 ])
-for (const source of versions) assert(source.includes('4.0.0'), 'A primary release metadata file does not identify 4.0.0')
+for (const source of versions) assert(source.includes('4.4.0'), 'A primary release metadata file does not identify 4.4.0')
 assert(!bottomPanel.includes("id: 'world'") && bottomPanel.includes("id: 'tilemap'"), 'The monolithic World Tools dock was not removed or contextual Tilemap is missing')
 
 console.log('Editor shell audit passed: 6 workspace targets, persistent panel layout, command coverage, and searchable component inspector.')

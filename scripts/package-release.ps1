@@ -43,15 +43,23 @@ $webStage = Join-Path ([System.IO.Path]::GetTempPath()) ("nova-a-web-" + [guid]:
 New-Item -ItemType Directory -Path $webStage | Out-Null
 try {
   Copy-Item -Path (Join-Path $projectRoot 'dist\*') -Destination $webStage -Recurse -Force
+  Copy-Item -LiteralPath (Join-Path $projectRoot 'LICENSE.md') -Destination (Join-Path $webStage 'LICENSE.md') -Force
+  $fontLicenseDirectory = Join-Path $webStage 'FONT_LICENSES'
+  New-Item -ItemType Directory -Path $fontLicenseDirectory -Force | Out-Null
+  Copy-Item -LiteralPath (Join-Path $projectRoot 'node_modules\@fontsource-variable\nunito-sans\LICENSE') -Destination (Join-Path $fontLicenseDirectory 'Nunito-Sans-OFL-1.1.txt') -Force
+  Copy-Item -LiteralPath (Join-Path $projectRoot 'node_modules\@fontsource-variable\noto-sans-sc\LICENSE') -Destination (Join-Path $fontLicenseDirectory 'Noto-Sans-SC-OFL-1.1.txt') -Force
+  Copy-Item -LiteralPath (Join-Path $projectRoot 'node_modules\@fontsource-variable\jetbrains-mono\LICENSE') -Destination (Join-Path $fontLicenseDirectory 'JetBrains-Mono-OFL-1.1.txt') -Force
   $webReadme = @"
 # Nova_A $Version Web Package
 
-Serve this directory from an HTTP(S) origin. Do not open `index.html` with `file://`; WebAssembly modules, workers, ES modules, and the bundled manual require a web server. `index.html` opens the editor and `player.html` opens the standalone player. Preserve file names and MIME types, especially `application/wasm` for `.wasm` files. HTTPS is required for production networking and other secure browser APIs.
+Serve this directory from an HTTP(S) origin. Do not open `index.html` with `file://`; WebAssembly modules, workers, ES modules, and the bundled manual require a web server. `index.html` opens the editor and `player.html` opens the standalone player. Preserve file names and MIME types, especially `application/wasm` for `.wasm` files. HTTPS is required for production networking and other secure browser APIs. Use immutable long-lived caching for hashed files under `assets/`, but revalidate HTML and `release-metadata.json`. Cross-origin isolation is not required by this release; if a host enables it, configure COOP/COEP consistently for every asset. The locally qualified browser is the pinned Edge/Chromium identity in the evidence archive; Firefox remains an explicit external gate.
 
 Verify every packaged file against `SHA256SUMS.txt`. Release metadata is in `release-metadata.json`.
 "@
   [IO.File]::WriteAllText((Join-Path $webStage 'README.md'), $webReadme, [Text.UTF8Encoding]::new($false))
-  $webMetadata = [ordered]@{ product = 'Nova_A'; version = $Version; format = 'nova-web-release'; projectFormat = 2; schema = 29; generatedAt = [DateTime]::UtcNow.ToString('o'); entrypoints = @('index.html','player.html'); hosting = [ordered]@{ protocol = 'http-or-https'; wasmMime = 'application/wasm'; spaFallbackRequired = $false } } | ConvertTo-Json -Depth 6
+  $sourceCommit = (& git -C $projectRoot rev-parse HEAD).Trim()
+  if ($LASTEXITCODE -ne 0) { throw 'Unable to record the source commit for web metadata.' }
+  $webMetadata = [ordered]@{ product = 'Nova_A'; version = $Version; format = 'nova-web-release'; projectFormat = 2; schema = 29; sourceCommit = $sourceCommit; generatedAt = [DateTime]::UtcNow.ToString('o'); entrypoints = @('index.html','player.html'); contentManifest = 'SHA256SUMS.txt'; runtimeCapabilities = @('2D editor','standalone player','WebAssembly physics','workers','bundled manual','local variable fonts'); hosting = [ordered]@{ protocol = 'http-or-https'; wasmMime = 'application/wasm'; hashedAssetCaching = 'immutable'; htmlCaching = 'revalidate'; crossOriginIsolationRequired = $false; spaFallbackRequired = $false } } | ConvertTo-Json -Depth 6
   [IO.File]::WriteAllText((Join-Path $webStage 'release-metadata.json'), "$webMetadata`n", [Text.UTF8Encoding]::new($false))
   $webChecksums = Get-ChildItem -LiteralPath $webStage -File -Recurse | Where-Object Name -ne 'SHA256SUMS.txt' | Sort-Object FullName | ForEach-Object { $relative = $_.FullName.Substring($webStage.Length).TrimStart('\').Replace('\','/'); "{0}  {1}" -f (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant(), $relative }
   [IO.File]::WriteAllLines((Join-Path $webStage 'SHA256SUMS.txt'), $webChecksums, [Text.UTF8Encoding]::new($false))
@@ -68,7 +76,13 @@ $evidenceArchive = Join-Path $releaseDirectory "Nova_A-v$Version-release-evidenc
 $evidenceStage = Join-Path ([System.IO.Path]::GetTempPath()) ("nova-a-evidence-" + [guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $evidenceStage | Out-Null
 try {
-  Get-ChildItem -LiteralPath (Join-Path $projectRoot 'release-audits') -File -Filter "v$Version-*" | Copy-Item -Destination $evidenceStage -Force
+  $structuredEvidence = Join-Path $projectRoot "release-audits\evidence-v$Version"
+  if (Test-Path -LiteralPath $structuredEvidence -PathType Container) {
+    Copy-Item -Path (Join-Path $structuredEvidence '*') -Destination $evidenceStage -Recurse -Force
+  }
+  else {
+    Get-ChildItem -LiteralPath (Join-Path $projectRoot 'release-audits') -File -Filter "v$Version-*" | Copy-Item -Destination $evidenceStage -Force
+  }
   $screenshotSource = Join-Path $projectRoot "release-audits\screenshots\v$Version"
   if (Test-Path -LiteralPath $screenshotSource) { Copy-Item -LiteralPath $screenshotSource -Destination (Join-Path $evidenceStage 'screenshots') -Recurse -Force }
   foreach ($source in @($notesPath, $ledgerPath, (Join-Path $projectRoot 'package.json'), (Join-Path $projectRoot 'pnpm-lock.yaml'), (Join-Path $projectRoot 'Cargo.toml'), (Join-Path $projectRoot 'Cargo.lock'), (Join-Path $projectRoot 'README.md'), (Join-Path $projectRoot 'README.zh-CN.md'))) { Copy-Item -LiteralPath $source -Destination $evidenceStage -Force }
@@ -81,12 +95,13 @@ finally {
 
 $sourceArchive = Join-Path $releaseDirectory "Nova_A-v$Version-source.zip"
 $sourceStage = Join-Path ([System.IO.Path]::GetTempPath()) ("nova-a-source-" + [guid]::NewGuid().ToString('N'))
+$sourceTemporaryArchive = Join-Path ([System.IO.Path]::GetTempPath()) ("nova-a-source-" + [guid]::NewGuid().ToString('N') + '.zip')
 New-Item -ItemType Directory -Path $sourceStage | Out-Null
 try {
   $trackedAndUntracked = & git -C $projectRoot ls-files --cached --others --exclude-standard
   if ($LASTEXITCODE -ne 0) { throw 'git ls-files failed while collecting the source release.' }
   foreach ($relativePath in $trackedAndUntracked) {
-    if ($relativePath -match '^(releases|dist|target|src-tauri/target|nova_core/target|node_modules|\.pnpm-store|\.VSCodeCounter)/') { continue }
+    if ($relativePath -match '^(releases|release-audits|dist|target|src-tauri/target|nova_core/target|node_modules|\.pnpm-store|\.VSCodeCounter)/') { continue }
     $source = Join-Path $projectRoot $relativePath
     if (-not (Test-Path -LiteralPath $source -PathType Leaf)) { continue }
     $destination = Join-Path $sourceStage $relativePath
@@ -94,7 +109,8 @@ try {
     New-Item -ItemType Directory -Path $destinationDirectory -Force | Out-Null
     Copy-Item -LiteralPath $source -Destination $destination -Force
   }
-  Compress-Archive -Path (Join-Path $sourceStage '*') -DestinationPath $sourceArchive -CompressionLevel Optimal -Force
+  Compress-Archive -Path (Join-Path $sourceStage '*') -DestinationPath $sourceTemporaryArchive -CompressionLevel Optimal -Force
+  Move-Item -LiteralPath $sourceTemporaryArchive -Destination $sourceArchive -Force
 }
 finally {
   $resolvedStage = (Resolve-Path -LiteralPath $sourceStage -ErrorAction SilentlyContinue).Path
@@ -102,6 +118,44 @@ finally {
   if ($resolvedStage -and $resolvedStage.StartsWith($temporaryRoot, [System.StringComparison]::OrdinalIgnoreCase)) {
     Remove-Item -LiteralPath $resolvedStage -Recurse -Force
   }
+  if (Test-Path -LiteralPath $sourceTemporaryArchive) { Remove-Item -LiteralPath $sourceTemporaryArchive -Force }
+}
+
+# The source archive is created after the initial evidence tree so its exact
+# hash can be embedded without creating a circular evidence-archive hash.
+$evidenceRefresh = Join-Path ([System.IO.Path]::GetTempPath()) ("nova-a-evidence-refresh-" + [guid]::NewGuid().ToString('N'))
+New-Item -ItemType Directory -Path $evidenceRefresh | Out-Null
+try {
+  Expand-Archive -LiteralPath $evidenceArchive -DestinationPath $evidenceRefresh -Force
+  $packagedArtifacts = Get-ChildItem -LiteralPath $releaseDirectory -File |
+    Where-Object Name -NotIn @((Split-Path -Leaf $evidenceArchive), 'SHA256SUMS.txt') |
+    Sort-Object Name |
+    ForEach-Object { [ordered]@{ name = $_.Name; bytes = $_.Length; sha256 = (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant() } }
+  $artifactHashReport = [ordered]@{ format = 'nova-root-artifact-hashes'; version = 1; release = $Version; generatedAt = [DateTime]::UtcNow.ToString('o'); note = 'The evidence archive and checksum manifest are excluded to avoid circular hashes.'; artifacts = @($packagedArtifacts) } | ConvertTo-Json -Depth 6
+  $artifactHashPath = Join-Path $evidenceRefresh 'build\root-artifact-hashes.json'
+  New-Item -ItemType Directory -Path (Split-Path -Parent $artifactHashPath) -Force | Out-Null
+  [IO.File]::WriteAllText($artifactHashPath, "$artifactHashReport`n", [Text.UTF8Encoding]::new($false))
+  $manifestPath = Join-Path $evidenceRefresh 'evidence-manifest.json'
+  $manifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
+  $manifest.entries = @(Get-ChildItem -LiteralPath $evidenceRefresh -File -Recurse |
+    Where-Object FullName -ne $manifestPath |
+    Sort-Object FullName |
+    ForEach-Object {
+      [pscustomobject]@{
+        path = $_.FullName.Substring($evidenceRefresh.Length).TrimStart('\').Replace('\','/')
+        sha256 = (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+        bytes = $_.Length
+        source = $manifest.source.commit
+        tool = 'Nova_A package-release.ps1'
+        environment = $manifest.environment.id
+      }
+    })
+  $manifest | ConvertTo-Json -Depth 20 | ForEach-Object { [IO.File]::WriteAllText($manifestPath, "$_`n", [Text.UTF8Encoding]::new($false)) }
+  Remove-Item -LiteralPath $evidenceArchive -Force
+  Compress-Archive -Path (Join-Path $evidenceRefresh '*') -DestinationPath $evidenceArchive -CompressionLevel Optimal -Force
+}
+finally {
+  if (Test-Path -LiteralPath $evidenceRefresh) { Remove-Item -LiteralPath $evidenceRefresh -Recurse -Force }
 }
 
 $checksumPath = Join-Path $releaseDirectory 'SHA256SUMS.txt'
@@ -110,5 +164,19 @@ $checksumLines = Get-ChildItem -LiteralPath $releaseDirectory -File |
   Sort-Object Name |
   ForEach-Object { "{0}  {1}" -f (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant(), $_.Name }
 [System.IO.File]::WriteAllLines($checksumPath, $checksumLines, [System.Text.UTF8Encoding]::new($false))
+
+$expectedNames = @(
+  'EDIT_LEDGER.md', 'LICENSE.md', "Nova_A-v$Version-reference-projects.zip", "Nova_A-v$Version-release-evidence.zip",
+  "Nova_A-v$Version-source.zip", "Nova_A-v$Version-web.zip", "Nova_A-v$Version-windows-x64.msi",
+  "Nova_A-v$Version-windows-x64-portable.exe", "Nova_A-v$Version-windows-x64-setup.exe", 'RELEASE_NOTES.md', 'SHA256SUMS.txt'
+)
+$actualNames = @(Get-ChildItem -LiteralPath $releaseDirectory -File | ForEach-Object Name | Sort-Object)
+$nameDifference = @(Compare-Object ($expectedNames | Sort-Object) $actualNames)
+if ($nameDifference.Count -gt 0) { throw "Release root does not contain the exact mandatory artifact set: $($nameDifference | Out-String)" }
+foreach ($line in Get-Content -LiteralPath $checksumPath) {
+  if ($line -notmatch '^([a-f0-9]{64})  (.+)$') { throw "Invalid checksum line: $line" }
+  $actualHash = (Get-FileHash -LiteralPath (Join-Path $releaseDirectory $Matches[2]) -Algorithm SHA256).Hash.ToLowerInvariant()
+  if ($actualHash -ne $Matches[1]) { throw "Checksum verification failed for $($Matches[2])" }
+}
 
 Get-ChildItem -LiteralPath $releaseDirectory -File | Sort-Object Name | Select-Object Name, Length, LastWriteTime

@@ -1,10 +1,18 @@
 import { normalizeUuid } from './identity'
+import { defaultSceneAuthoringSettings, normalizeSceneAuthoringSettings, type SceneAuthoringSettings, type SceneExternalState, type SceneValidationState } from '../editor/sceneAuthoring'
 
 export interface SceneDocument {
   uuid: string
   name: string
   loaded: boolean
   data: Record<string, unknown>
+  settings: SceneAuthoringSettings
+  dependencies: string[]
+  dirty: boolean
+  externalState: SceneExternalState
+  validationState: SceneValidationState
+  prefabState: 'none' | 'source' | 'instance' | 'overridden'
+  visitedAt: string
 }
 
 function cloneData(data: Record<string, unknown>): Record<string, unknown> {
@@ -27,11 +35,15 @@ function emptySceneData(): Record<string, unknown> {
 export class SceneManager {
   scenes: SceneDocument[]
   activeSceneUuid: string
+  navigationHistory: string[]
+  navigationIndex: number
 
   constructor() {
     const scene = this.createDocument('Main Scene')
     this.scenes = [scene]
     this.activeSceneUuid = scene.uuid
+    this.navigationHistory = [scene.uuid]
+    this.navigationIndex = 0
   }
 
   get activeScene(): SceneDocument {
@@ -44,8 +56,8 @@ export class SceneManager {
     return scene
   }
 
-  captureActive(data: Record<string, unknown>): void {
-    this.activeScene.data = cloneData(data)
+  captureActive(data: Record<string, unknown>, defensiveCopy = true): void {
+    this.activeScene.data = defensiveCopy ? cloneData(data) : data
   }
 
   setActive(uuid: string): SceneDocument | null {
@@ -53,7 +65,62 @@ export class SceneManager {
     if (!scene) return null
     scene.loaded = true
     this.activeSceneUuid = scene.uuid
+    scene.visitedAt = new Date().toISOString()
+    if (this.navigationHistory[this.navigationIndex] !== scene.uuid) {
+      this.navigationHistory.splice(this.navigationIndex + 1)
+      this.navigationHistory.push(scene.uuid)
+      if (this.navigationHistory.length > 100) this.navigationHistory.shift()
+      this.navigationIndex = this.navigationHistory.length - 1
+    }
     return scene
+  }
+
+  navigate(offset: -1 | 1): SceneDocument | null {
+    const index = this.navigationIndex + offset
+    if (index < 0 || index >= this.navigationHistory.length) return null
+    const scene = this.scenes.find(candidate => candidate.uuid === this.navigationHistory[index])
+    if (!scene) return null
+    this.navigationIndex = index
+    scene.loaded = true
+    scene.visitedAt = new Date().toISOString()
+    this.activeSceneUuid = scene.uuid
+    return scene
+  }
+
+  markDirty(uuid = this.activeSceneUuid): void { const scene = this.scenes.find(candidate => candidate.uuid === uuid); if (scene) scene.dirty = true }
+  markSaved(): void { for (const scene of this.scenes) { scene.dirty = false; scene.externalState = 'clean' } }
+  setExternalState(uuid: string, state: SceneExternalState): void { const scene = this.scenes.find(candidate => candidate.uuid === uuid); if (scene) scene.externalState = state }
+  setValidationState(uuid: string, state: SceneValidationState): void { const scene = this.scenes.find(candidate => candidate.uuid === uuid); if (scene) scene.validationState = state }
+  setPrefabState(uuid: string, state: SceneDocument['prefabState']): void { const scene = this.scenes.find(candidate => candidate.uuid === uuid); if (scene) scene.prefabState = state }
+
+  setInheritance(uuid: string, sourceUuid: string | null): boolean {
+    const scene = this.scenes.find(candidate => candidate.uuid === uuid)
+    if (!scene || sourceUuid === uuid || (sourceUuid && !this.scenes.some(candidate => candidate.uuid === sourceUuid))) return false
+    const visited = new Set<string>([uuid])
+    let current = sourceUuid ? this.scenes.find(candidate => candidate.uuid === sourceUuid) : undefined
+    while (current) {
+      if (visited.has(current.uuid)) return false
+      visited.add(current.uuid)
+      current = current.settings.inheritanceSourceUuid ? this.scenes.find(candidate => candidate.uuid === current!.settings.inheritanceSourceUuid) : undefined
+    }
+    scene.settings.inheritanceSourceUuid = sourceUuid
+    scene.dependencies = this.inspectDependencies(scene)
+    scene.dirty = true
+    return true
+  }
+
+  inspectDependencies(scene = this.activeScene): string[] {
+    const references = new Set<string>()
+    const visit = (value: unknown) => {
+      if (typeof value === 'string') {
+        for (const match of value.matchAll(/(?:scene|asset):\/\/([0-9a-f-]{36})/gi)) references.add(match[1].toLowerCase())
+      } else if (Array.isArray(value)) value.forEach(visit)
+      else if (value && typeof value === 'object') Object.values(value as Record<string, unknown>).forEach(visit)
+    }
+    visit(scene.data)
+    if (scene.settings.inheritanceSourceUuid) references.add(scene.settings.inheritanceSourceUuid)
+    references.delete(scene.uuid)
+    return [...references].sort((a, b) => a.localeCompare(b))
   }
 
   reloadActive(): Record<string, unknown> {
@@ -76,12 +143,20 @@ export class SceneManager {
     const scenes = records.flatMap((record, index): SceneDocument[] => {
       if (!record || typeof record !== 'object') return []
       const source = record as Record<string, unknown>
-      const { uuid: _uuid, name: _name, loaded: _loaded, ...data } = source
+      const { uuid: _uuid, name: _name, loaded: _loaded, authoringSettings: _settings, dependencies: _dependencies, ...data } = source
+      const settings = normalizeSceneAuthoringSettings(source.authoringSettings, index)
       return [{
         uuid: normalizeUuid(typeof source.uuid === 'string' ? source.uuid : undefined),
         name: typeof source.name === 'string' && source.name.trim() ? source.name.trim() : `Scene ${index + 1}`,
         loaded: source.loaded !== false,
-        data
+        data,
+        settings,
+        dependencies: Array.isArray(source.dependencies) ? [...new Set(source.dependencies.filter((item): item is string => typeof item === 'string').map(item => item.toLowerCase()))].sort((a, b) => a.localeCompare(b)) : [],
+        dirty: false,
+        externalState: 'clean',
+        validationState: 'valid',
+        prefabState: 'none',
+        visitedAt: new Date().toISOString()
       }]
     })
     this.scenes = scenes.length ? scenes : [this.createDocument('Main Scene')]
@@ -89,6 +164,8 @@ export class SceneManager {
     const active = requested ?? this.scenes.find(scene => scene.loaded) ?? this.scenes[0]
     active.loaded = true
     this.activeSceneUuid = active.uuid
+    this.navigationHistory = [active.uuid]
+    this.navigationIndex = 0
   }
 
   serialize(): Array<Record<string, unknown>> {
@@ -96,11 +173,21 @@ export class SceneManager {
       uuid: scene.uuid,
       name: scene.name,
       loaded: scene.loaded,
-      ...cloneData(scene.data)
+      authoringSettings: scene.settings,
+      dependencies: this.inspectDependencies(scene),
+      // The returned object is consumed synchronously by JSON/canonical
+      // serialization and is never mutated. captureActive already owns the
+      // defensive deep copy, so cloning every large scene again here only
+      // multiplies save memory without adding isolation.
+      ...scene.data
     }))
   }
 
   private createDocument(name: string): SceneDocument {
-    return { uuid: normalizeUuid(undefined), name, loaded: true, data: emptySceneData() }
+    return {
+      uuid: normalizeUuid(undefined), name, loaded: true, data: emptySceneData(),
+      settings: defaultSceneAuthoringSettings(this.scenes?.length ?? 0), dependencies: [], dirty: false,
+      externalState: 'clean', validationState: 'valid', prefabState: 'none', visitedAt: new Date().toISOString()
+    }
   }
 }

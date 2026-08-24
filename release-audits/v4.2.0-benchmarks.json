@@ -1,0 +1,15 @@
+{
+  "format": "nova-v4.2-benchmarks",
+  "version": 1,
+  "generatedAt": "2026-08-23T04:36:26.502Z",
+  "operations": [
+    "10k undo/redo",
+    "deterministic re-save",
+    "fault stages",
+    "schema 5–29 dry runs",
+    "1024 parser mutations"
+  ],
+  "regressions": [],
+  "externalHardwareGate": "pending",
+  "status": "passed-local"
+}

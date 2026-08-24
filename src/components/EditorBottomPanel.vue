@@ -1,10 +1,11 @@
 <template>
-  <section class="bottom-panel" :class="{ collapsed: !estate.bottomPanelOpen }" :style="panelStyle">
+  <section class="bottom-panel" data-control-scope="transient-bottom-dock" :class="{ collapsed: !estate.bottomPanelOpen, unpinned: !estate.bottomPanelPinned }" :style="panelStyle" @mouseleave="autoHide">
     <div v-if="estate.bottomPanelOpen" class="resize-handle" @mousedown="startResize"></div>
     <header class="panel-tabs">
       <select v-model="estate.bottomPanelTab" class="compact-tab-select" :aria-label="t('tools')" @change="estate.bottomPanelOpen = true"><option v-for="tab in tabs" :key="tab.id" :value="tab.id">{{ t(tab.label) }}</option></select>
-      <button v-for="tab in tabs" :key="tab.id" class="panel-tab" :class="{ active: estate.bottomPanelTab === tab.id }" @click="openTab(tab.id)">{{ t(tab.label) }}</button>
+      <button v-for="tab in tabs" :key="tab.id" class="panel-tab" :class="{ active: estate.bottomPanelTab === tab.id }" draggable="true" :aria-pressed="estate.bottomPanelTab === tab.id" @dragstart="draggedTab = tab.id" @dragover.prevent @drop="dropTab(tab.id)" @click="openTab(tab.id)">{{ t(tab.label) }}<i v-if="tabDirty(tab.id)">●</i></button>
       <span></span>
+      <button :class="{ active: estate.bottomPanelPinned }" :aria-pressed="estate.bottomPanelPinned" :title="t(estate.bottomPanelPinned ? 'unpinPanel' : 'pinPanel')" @click="estate.bottomPanelPinned = !estate.bottomPanelPinned">⌖</button>
       <button v-if="estate.bottomPanelTab === 'console' && estate.bottomPanelOpen" :title="t('clearConsole')" @click="estate.logs.splice(0)">⌫</button>
       <button :title="t(estate.bottomPanelOpen ? 'collapsePanel' : 'expandPanel')" @click="estate.bottomPanelOpen = !estate.bottomPanelOpen">{{ estate.bottomPanelOpen ? '⌄' : '⌃' }}</button>
     </header>
@@ -30,10 +31,11 @@
               <button @click="createScriptAsset">+ {{ t('newScript') }}</button>
               <button :disabled="!state.selectedEntityIds.length" @click="createSceneAssetFromSelection">+ {{ t('createSceneAsset') }}</button>
               <button @click="creatingFolder = !creatingFolder">{{ t('newFolder') }}</button>
-              <button @click="exportFolder">{{ t('exportProjectFolder') }}</button>
+              <details class="asset-overflow"><summary :title="t('moreActions')">•••</summary><button @click="exportFolder">{{ t('exportProjectFolder') }}</button><button @click="batchReimportVisible">{{ t('batchReimport') }}</button><button :disabled="!selectedAsset" @click="bulkApplyVisible">{{ t('bulkApplyVisible') }}</button></details>
               <input v-if="creatingFolder" v-model="newFolderName" class="folder-input" :placeholder="t('folderName')" @keydown.enter="createFolder" @keydown.escape="creatingFolder = false">
               <span class="path" :title="assets.currentFolder">{{ assets.currentFolder }}</span>
               <input v-model="assets.search" type="search" :placeholder="t('searchAssets')">
+              <button :class="{ active: assets.viewMode === 'grid' }" :title="t('gridView')" @click="assets.viewMode = 'grid'">▦</button><button :class="{ active: assets.viewMode === 'list' }" :title="t('listView')" @click="assets.viewMode = 'list'">☷</button>
             </div>
             <div class="filter-menu" :aria-label="t('assetType')">
               <button :class="{ active: assets.typeFilter !== 'all' || assets.favoritesOnly }" @click="filterMenuOpen = !filterMenuOpen">⌕ {{ activeFilterLabel }} ▾</button>
@@ -41,6 +43,8 @@
                 <input v-model="filterQuery" type="search" :placeholder="t('searchFilters')">
                 <button v-for="filter in filteredTypeFilters" :key="filter.type" :class="{ active: assets.typeFilter === filter.type }" @click="assets.typeFilter = filter.type; filterMenuOpen = false">{{ t(filter.label) }}</button>
                 <button :class="{ active: assets.favoritesOnly }" @click="assets.favoritesOnly = !assets.favoritesOnly">★ {{ t('favoritesOnly') }}</button>
+                <input v-model="assets.tagFilter" :placeholder="t('filterByTag')">
+                <select v-model="assets.selectedCollectionId"><option value="">{{ t('allCollections') }}</option><option v-for="collection in assets.collections" :key="collection.id" :value="collection.id">{{ collection.name }}</option></select>
                 <select :value="''" @change="applySavedFilter(($event.target as HTMLSelectElement).value)"><option value="">{{ t('savedFilters') }}</option><option v-for="filter in assets.savedFilters" :key="filter.id" :value="filter.id">{{ filter.name }}</option></select>
                 <div><input v-model="savedFilterName" :placeholder="t('filterName')" @keydown.enter="saveFilter"><button @click="saveFilter">＋</button></div>
               </section>
@@ -50,7 +54,7 @@
               <button :disabled="!assetGraph.missingReferences.length" @click="openMissingRepair">{{ t('missingReferences') }} <span>{{ assetGraph.missingReferences.length }}</span></button>
               <span v-if="assets.atlasError" class="atlas-error" :title="assets.atlasError">{{ t('atlasRebuildFailed') }}</span>
             </div>
-            <input ref="assetInput" hidden type="file" multiple accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml,audio/wav,audio/ogg,audio/mpeg,font/ttf,font/otf,font/woff,font/woff2,.ttf,.otf,.woff,.woff2,.rhai,.nova-prefab,.nova-scene,.nova-material,.nova-anim,.nova-controller,.nova-mask,.nova-rig,.nova-skin,.nova-timeline,.nova-tileset,.nova-atlas,.glsl,.frag,.vert,.nova-shader,.csv,.po,.arb,.nova-locale,.nova-theme" @change="importFiles">
+            <input ref="assetInput" hidden type="file" multiple accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml,audio/wav,audio/ogg,audio/mpeg,font/ttf,font/otf,font/woff,font/woff2,.ttf,.otf,.woff,.woff2,.rhai,.nova-prefab,.nova-scene,.nova-material,.nova-anim,.nova-controller,.nova-mask,.nova-rig,.nova-skin,.nova-timeline,.nova-tileset,.nova-atlas,.nova-path,.glsl,.frag,.vert,.nova-shader,.csv,.po,.arb,.nova-locale,.nova-theme" @change="importFiles">
           </header>
 
           <section v-if="externalChanges.length" class="external-changes" aria-live="polite">
@@ -81,7 +85,7 @@
             <button :title="t('close')" @click="repairMode = false">×</button>
           </section>
 
-          <div class="asset-grid">
+          <div class="asset-grid" :class="`asset-${assets.viewMode}`" :style="{ '--asset-size': `${assets.thumbnailSize}px` }" @scroll.passive="extendAssetWindow">
             <article
               v-for="asset in displayedAssets"
               :key="asset.uuid"
@@ -89,7 +93,7 @@
               draggable="true"
               @dragstart="dragAsset($event, asset.uuid)"
               @click="assets.selectedGuid = asset.uuid"
-              @dblclick="asset.assetType === 'script' ? openInScriptStudio(asset.uuid) : startRename(asset.uuid, asset.name)"
+              @dblclick="openAssetEditor(asset.uuid)"
             >
               <span v-if="asset.assetType === 'image'" class="asset-preview" :style="{ backgroundImage: `url(${asset.source})`, imageRendering: asset.settings.filterMode === 'Nearest' ? 'pixelated' : 'auto' }"></span>
               <span v-else class="asset-preview asset-icon">{{ assetIcon(asset.assetType) }}</span>
@@ -100,21 +104,43 @@
               <small>{{ asset.assetType }} · {{ formatBytes(asset.byteLength) }}</small>
             </article>
             <p v-if="!displayedAssets.length" class="empty">{{ t('noAssets') }}</p>
+            <p v-else-if="displayedAssets.length < filteredAssetCount" class="asset-window-status">{{ t('virtualizedAssets', { shown: displayedAssets.length, total: filteredAssetCount }) }}</p>
           </div>
         </section>
 
         <aside v-if="selectedAsset" class="asset-inspector" @change="assetSettingsChanged">
           <header><span>{{ t('assetInspector') }}</span><strong>{{ selectedAsset.name }}</strong></header>
+          <nav class="importer-tabs" :aria-label="t('assetImporter')"><button v-for="tab in importerTabs" :key="tab" :class="{ active: inspectorTab === tab }" @click="inspectorTab = tab">{{ t(`importerTab_${tab}`) }}</button></nav>
           <div v-if="selectedAsset.assetType === 'image'" class="large-preview" :style="{ backgroundImage: `url(${selectedAsset.source})`, imageRendering: selectedAsset.settings.filterMode === 'Nearest' ? 'pixelated' : 'auto' }"></div>
           <audio v-else-if="selectedAsset.assetType === 'audio'" class="asset-media-preview" :src="selectedAsset.source" controls preload="metadata"></audio>
           <div v-else-if="selectedAsset.assetType === 'font'" class="font-preview" :style="{ fontFamily: selectedAsset.fontFamily }">Nova_A Aa 123</div>
-          <label><span>GUID</span><code>{{ selectedAsset.uuid.slice(0, 13) }}…</code></label>
-          <label><span>{{ t('assetPath') }}</span><code>{{ selectedAsset.path }}</code></label>
-          <label v-if="selectedAsset.path.startsWith('.nova/')"><span>{{ t('generatedArtifact') }}</span><b>{{ t('readOnly') }}</b></label>
-          <label v-if="selectedAsset.pipeline"><span>{{ t('importCache') }}</span><code>{{ selectedAsset.pipeline.cacheHit ? t('cacheHit') : t('cacheWritten') }}</code></label>
-          <label v-if="selectedAsset.pipeline"><span>{{ t('sourceHash') }}</span><code :title="selectedAsset.pipeline.sourceHash">{{ selectedAsset.pipeline.sourceHash.slice(0, 13) }}…</code></label>
-          <label v-if="selectedAsset.pipeline"><span>{{ t('artifactHash') }}</span><code :title="selectedAsset.pipeline.artifactHash">{{ selectedAsset.pipeline.artifactHash.slice(0, 13) }}…</code></label>
+          <section v-show="inspectorTab === 'source'" class="inspector-pane">
+            <label><span>GUID</span><code>{{ selectedAsset.uuid.slice(0, 13) }}…</code></label>
+            <label><span>{{ t('assetPath') }}</span><code>{{ selectedAsset.path }}</code></label>
+            <label v-if="selectedAsset.path.startsWith('.nova/')"><span>{{ t('generatedArtifact') }}</span><b>{{ t('readOnly') }}</b></label>
+            <label><span>{{ t('sourceControl') }}</span><select v-model="selectedAsset.sourceControlStatus"><option>clean</option><option>added</option><option>modified</option><option>conflict</option><option>untracked</option></select></label>
+            <label class="region-field"><span>{{ t('tags') }}</span><input v-model="selectedAssetTags" :placeholder="t('tagsPlaceholder')"></label>
+            <label><span>{{ t('contentGroup') }}</span><select v-model="selectedAsset.contentGroup"><option v-for="group in assets.contentGroups" :key="group.id" :value="group.id">{{ group.name }} · {{ t(group.mode) }}</option></select></label>
+            <label><span>{{ t('editorOnly') }}</span><input v-model="selectedAsset.editorOnly" type="checkbox"></label>
+            <details class="collection-membership"><summary>{{ t('collections') }}</summary><button v-for="collection in assets.collections" :key="collection.id" :class="{ active: collection.assetUuids.includes(selectedAsset.uuid) }" @click="toggleSelectedCollection(collection.id)"><i :style="{ background: collection.color }"></i>{{ collection.name }}</button><div><input v-model="collectionName" :placeholder="t('newCollection')"><button @click="createCollection">＋</button></div></details>
+            <button class="save-script secondary" @click="startRename(selectedAsset.uuid, selectedAsset.name)">{{ t('renameAsset') }}</button>
+          </section>
+          <section v-show="inspectorTab === 'provenance'" class="inspector-pane provenance-pane">
+            <p v-if="!selectedAsset.pipeline" class="pipeline-error">{{ t('missingProvenance') }}</p>
+            <template v-else><label><span>{{ t('importer') }}</span><code>{{ selectedAsset.pipeline.importerId }}@{{ selectedAsset.pipeline.importerVersion }}</code></label><label><span>{{ t('preset') }}</span><code>{{ selectedAsset.pipeline.presetId }}</code></label><label><span>{{ t('importCache') }}</span><code>{{ selectedAsset.pipeline.cacheHit ? t('cacheHit') : t('cacheWritten') }}</code></label><label><span>{{ t('cacheInvalidation') }}</span><code>{{ selectedAsset.pipeline.invalidationReason }}</code></label><label><span>{{ t('reproducible') }}</span><b :class="{ dangerText: !selectedAsset.pipeline.reproducible }">{{ selectedAsset.pipeline.reproducible ? t('yes') : t('no') }}</b></label></template>
+          <details class="asset-technical">
+            <summary>{{ t('technicalDetails') }}</summary>
+            <div><span>GUID</span><code>{{ selectedAsset.uuid }}</code><button type="button" :title="t('copy')" @click="copyAssetDetail(selectedAsset.uuid)">⧉</button></div>
+            <div><span>{{ t('assetPath') }}</span><code>{{ selectedAsset.path }}</code><button type="button" :title="t('copy')" @click="copyAssetDetail(selectedAsset.path)">⧉</button></div>
+            <div v-if="selectedAsset.pipeline"><span>{{ t('sourceHash') }}</span><code>{{ selectedAsset.pipeline.sourceHash }}</code><button type="button" :title="t('copy')" @click="copyAssetDetail(selectedAsset.pipeline.sourceHash)">⧉</button></div>
+            <div v-if="selectedAsset.pipeline"><span>{{ t('artifactHash') }}</span><code>{{ selectedAsset.pipeline.artifactHash }}</code><button type="button" :title="t('copy')" @click="copyAssetDetail(selectedAsset.pipeline.artifactHash)">⧉</button></div>
+          </details>
+            <article v-for="diagnostic in selectedProvenanceDiagnostics" :key="`${diagnostic.code}-${diagnostic.message}`" :class="['provenance-diagnostic', diagnostic.severity]"><b>{{ diagnostic.code }}</b><span>{{ diagnostic.message }}</span></article>
+            <div class="provenance-actions"><button @click="compareSelectedImport">{{ t('compareImport') }}</button><button @click="revertSelectedImport">{{ t('revertImport') }}</button></div>
+            <pre v-if="importComparisonText">{{ importComparisonText }}</pre>
+          </section>
           <p v-if="selectedAsset.pipeline?.status === 'failed'" class="pipeline-error">{{ selectedAsset.pipeline.error }}</p>
+          <section v-show="inspectorTab === 'import'" class="inspector-pane import-controls">
           <template v-if="selectedAsset.assetType === 'image'">
             <label><span>{{ t('dimensions') }}</span><b>{{ selectedAsset.width }} × {{ selectedAsset.height }}</b></label>
             <label><span>{{ t('importProfile') }}</span><select :value="selectedAsset.settings.textureProfile" @change="setTextureProfile"><option>General</option><option>PixelArt</option><option>UI</option><option>NormalMap</option></select></label>
@@ -122,6 +148,8 @@
             <label><span>{{ t('pixelArtMode') }}</span><input :checked="selectedAsset.settings.filterMode === 'Nearest'" type="checkbox" @change="setPixelArtMode"></label>
             <label><span>{{ t('compression') }}</span><select v-model="selectedAsset.settings.compression"><option value="None">{{ t('none') }}</option><option value="Lossless">{{ t('lossless') }}</option><option value="Optimized">{{ t('optimized') }}</option></select></label>
             <label><span>{{ t('colorSpace') }}</span><select v-model="selectedAsset.settings.colorSpace"><option>sRGB</option><option>Linear</option></select></label>
+            <label><span>{{ t('generateMipmaps') }}</span><input v-model="selectedAsset.settings.generateMipmaps" type="checkbox"></label>
+            <label><span>{{ t('transparency') }}</span><select v-model="selectedAsset.settings.transparency"><option>Preserve</option><option>Premultiply</option><option>Discard</option></select></label>
             <label><span>{{ t('pixelsPerUnit') }}</span><input v-model.number="selectedAsset.settings.pixelsPerUnit" type="number" min="0.000001" step="1"></label>
             <label><span>{{ t('pivot') }} X/Y</span><div><input v-model.number="selectedAsset.settings.pivot.x" type="number" min="0" max="1" step="0.05"><input v-model.number="selectedAsset.settings.pivot.y" type="number" min="0" max="1" step="0.05"></div></label>
             <label><span>{{ t('pivotPreset') }}</span><select :value="''" @change="applyPivotPreset(($event.target as HTMLSelectElement).value)"><option value="">{{ t('custom') }}</option><option v-for="preset in pivotPresets" :key="preset.id" :value="preset.id">{{ t(preset.label) }}</option></select></label>
@@ -130,8 +158,15 @@
             <label><span>{{ t('trimTransparent') }}</span><button type="button" @click="trimSelectedImage">{{ t('trimNow') }}</button></label>
             <label><span>{{ t('spriteSheetSlicing') }}</span><input v-model="selectedAsset.settings.spriteSheet.enabled" type="checkbox"></label>
             <template v-if="selectedAsset.settings.spriteSheet.enabled"><label><span>{{ t('sheetColumnsRows') }}</span><div><input v-model.number="selectedAsset.settings.spriteSheet.columns" type="number" min="1" max="256"><input v-model.number="selectedAsset.settings.spriteSheet.rows" type="number" min="1" max="256"></div></label><label><span>{{ t('marginSpacing') }}</span><div><input v-model.number="selectedAsset.settings.spriteSheet.margin" type="number" min="0"><input v-model.number="selectedAsset.settings.spriteSheet.spacing" type="number" min="0"></div></label><button class="save-script" type="button" @click="sliceSelectedSheet">{{ t('createSpriteSlices') }}</button></template>
+            <button class="save-script" type="button" @click="autoSliceSelectedImage">{{ t('automaticSpriteSlicing') }}</button>
+            <label><span>{{ t('collisionGeneration') }}</span><select v-model="selectedAsset.settings.collisionGeneration.mode"><option>None</option><option>Box</option><option>Polygon</option></select></label>
+            <label v-if="selectedAsset.settings.collisionGeneration.mode === 'Polygon'"><span>{{ t('polygonTolerance') }}</span><input v-model.number="selectedAsset.settings.collisionGeneration.tolerance" type="number" min="0" max="64" step="0.25"></label>
             <label class="region-field"><span>{{ t('sliceBorders') }} L/T/R/B</span><div><input v-model.number="selectedAsset.settings.borders.left" type="number" min="0"><input v-model.number="selectedAsset.settings.borders.top" type="number" min="0"><input v-model.number="selectedAsset.settings.borders.right" type="number" min="0"><input v-model.number="selectedAsset.settings.borders.bottom" type="number" min="0"></div></label>
             <label><span>{{ t('useTextureAtlas') }}</span><input v-model="selectedAsset.settings.atlas" type="checkbox"></label>
+            <label><span>{{ t('atlasGroup') }}</span><input v-model="selectedAsset.settings.atlasSettings.group"></label>
+            <label><span>{{ t('atlasRotation') }}</span><select v-model="selectedAsset.settings.atlasSettings.rotationPolicy"><option>Never</option><option>Allow</option></select></label>
+            <label><span>{{ t('atlasTrimPolicy') }}</span><select v-model="selectedAsset.settings.atlasSettings.trimPolicy"><option>None</option><option>Transparent</option></select></label>
+            <template v-if="selectedAsset.mimeType === 'image/svg+xml'"><label><span>{{ t('svgRasterization') }}</span><select v-model="selectedAsset.settings.svgSettings.rasterization"><option>ImportTime</option><option>Runtime</option><option>Disabled</option></select></label><label><span>{{ t('svgScale') }}</span><input v-model.number="selectedAsset.settings.svgSettings.scale" type="number" min="0.01" max="64" step="0.1"></label></template>
             <label v-for="platform in compressionPlatforms" :key="platform"><span>{{ t(platform) }} {{ t('compression') }}</span><select v-model="selectedAsset.settings.platformVariants[platform]"><option :value="undefined">{{ t('inherit') }}</option><option>None</option><option>Lossless</option><option>Optimized</option></select></label>
           </template>
           <template v-else-if="selectedAsset.assetType === 'audio'">
@@ -150,7 +185,15 @@
             <label v-if="selectedAsset.settings.fontSettings.renderMode === 'Bitmap'"><span>{{ t('bitmapSize') }}</span><input v-model.number="selectedAsset.settings.fontSettings.bitmapSize" type="number" min="6" max="512"></label>
             <label><span>{{ t('fontOutline') }}</span><input v-model.number="selectedAsset.settings.fontSettings.outlineWidth" type="number" min="0" max="32" step="0.25"></label>
             <label><span>{{ t('textShaping') }}</span><input v-model="selectedAsset.settings.fontSettings.shaping" type="checkbox"></label>
+            <label><span>{{ t('fontHinting') }}</span><select v-model="selectedAsset.settings.fontSettings.hinting"><option>Auto</option><option>None</option><option>Light</option><option>Full</option></select></label>
+            <label><span>{{ t('fontOversampling') }}</span><input v-model.number="selectedAsset.settings.fontSettings.oversampling" type="number" min="1" max="8" step="0.25"></label>
+            <label><span>{{ t('distanceField') }}</span><select v-model="selectedAsset.settings.fontSettings.distanceField"><option>None</option><option>SDF</option><option>MSDF</option></select></label>
+            <label v-if="selectedAsset.settings.fontSettings.distanceField !== 'None'"><span>{{ t('distanceRange') }}</span><input v-model.number="selectedAsset.settings.fontSettings.distanceRange" type="number" min="1" max="64"></label>
+            <label class="region-field"><span>{{ t('openTypeFeatures') }}</span><input :value="selectedAsset.settings.fontSettings.openTypeFeatures.join(', ')" @change="setOpenTypeFeatures"></label>
+            <label class="region-field"><span>{{ t('declaredLanguages') }}</span><input :value="selectedAsset.settings.fontSettings.declaredLanguages.join(', ')" @change="setDeclaredLanguages"></label>
+            <label><span>{{ t('editorFont') }}</span><input v-model="selectedAsset.settings.fontSettings.editorFont" type="checkbox"></label>
             <label class="region-field"><span>{{ t('fontFallbacks') }}</span><input :value="selectedAsset.settings.fontSettings.fallbackFamilies.join(', ')" @change="setFontFallbacks"></label>
+            <section class="glyph-report"><strong>{{ t('glyphCoverage') }}</strong><article v-for="row in selectedGlyphReport" :key="row.language" :class="{ missing: !row.supported }"><b>{{ row.language }}</b><span>{{ row.sample }}</span><small>{{ row.supported ? t('covered') : `${t('missingGlyphs')}: ${row.missing.join(' ')}` }}</small></article></section>
           </template>
           <template v-else-if="selectedAsset.assetType === 'script'">
             <p class="drag-hint">{{ t('scriptStudioAssetHint') }}</p>
@@ -162,6 +205,7 @@
             <label><span>{{ t('atlasMaxSize') }}</span><select v-model.number="selectedAsset.settings.atlasSettings.maxSize"><option :value="512">512</option><option :value="1024">1024</option><option :value="2048">2048</option><option :value="4096">4096</option></select></label>
             <label><span>{{ t('atlasPadding') }}</span><input v-model.number="selectedAsset.settings.atlasSettings.padding" type="number" min="0" max="32"></label>
             <label><span>{{ t('trimTransparent') }}</span><input v-model="selectedAsset.settings.atlasSettings.trim" type="checkbox"></label>
+            <section v-if="selectedAtlasReport" class="atlas-report"><strong>{{ t('atlasPackingReport') }}</strong><p>{{ t('atlasPages') }}: {{ selectedAtlasReport.pages }} · {{ t('atlasUtilization') }}: {{ (selectedAtlasReport.utilization * 100).toFixed(1) }}%</p><code>{{ selectedAtlasReport.deterministicKey.slice(0, 20) }}…</code><small v-for="message in selectedAtlasReport.diagnostics" :key="message">{{ message }}</small></section>
             <textarea class="text-preview" readonly :value="selectedTextSource"></textarea>
           </template>
           <template v-else-if="selectedAsset.assetType === 'tileset'">
@@ -183,6 +227,9 @@
             <p class="drag-hint">{{ t('uiThemeAssetHint') }}</p>
             <textarea class="text-preview" readonly :value="selectedTextSource"></textarea>
           </template>
+          <template v-else-if="selectedAsset.assetType === 'other' && selectedAsset.path.startsWith('Assets/Tutorials/')">
+            <p class="drag-hint">{{ t('projectTutorial') }}</p><textarea class="text-preview tutorial-preview" readonly :value="selectedTextSource"></textarea><button class="save-script" @click="dismissTutorial">{{ t('dismissTutorial') }}</button>
+          </template>
           <template v-else-if="selectedAsset.assetType === 'animation' && selectedAsset.animationImport">
             <p class="drag-hint">{{ t('animationImportHint') }}</p>
             <label><span>{{ t('sourceAnimation') }}</span><select v-model="selectedAsset.animationImport.sourceAsset"><option :value="null">{{ t('none') }}</option><option v-for="asset in animationSources" :key="asset.uuid" :value="assetReference(asset.uuid)">{{ asset.name }}</option></select></label>
@@ -191,23 +238,27 @@
             <details class="mapping-editor"><summary>{{ t('trackMappings') }}</summary><label v-for="(mapping,index) in selectedAsset.animationImport.trackMappings" :key="index"><input v-model="mapping.source" :placeholder="t('sourceProperty')"><input v-model="mapping.target" :placeholder="t('targetProperty')"><button @click="selectedAsset.animationImport!.trackMappings.splice(index,1)">×</button></label><button @click="selectedAsset.animationImport.trackMappings.push({source:'Transform.position.x',target:'Transform.position.x'})">+ {{ t('trackMapping') }}</button></details>
             <button class="save-script" @click="reimportAnimation">{{ t('reimportAnimation') }}</button>
           </template>
-          <button v-else-if="selectedAsset.assetType === 'prefab'" class="save-script" @click="instantiateSelectedPrefab">{{ t('instantiatePrefabAction') }}</button>
+          <template v-else-if="selectedAsset.assetType === 'prefab'"><button class="save-script" @click="instantiateSelectedPrefab">{{ t('instantiatePrefabAction') }}</button><button v-if="state.selectedEntityIds.length" class="save-script secondary" @click="replaceSelectionWithSelectedPrefab">{{ t('replaceSelectionWithPrefab') }}</button></template>
           <button v-else-if="selectedAsset.assetType === 'scene'" class="save-script" @click="instantiateSelectedScene">{{ t('instantiateScene') }}</button>
-          <section class="import-presets">
+          </section>
+          <section v-show="inspectorTab === 'import'" class="import-presets">
             <strong>{{ t('importPresets') }}</strong>
             <select :value="''" @change="applySelectedPreset(($event.target as HTMLSelectElement).value)"><option value="">{{ t('choosePreset') }}</option><option v-for="preset in compatibleImportPresets" :key="preset.id" :value="preset.id">{{ preset.name }}</option></select>
             <div><input v-model="presetName" :placeholder="t('presetName')" @keydown.enter="saveSelectedPreset"><button @click="saveSelectedPreset">＋</button></div>
           </section>
-          <section class="reference-summary">
+          <section v-show="inspectorTab === 'dependencies'" class="reference-summary">
             <strong>{{ t('assetReferences') }}</strong>
             <p>{{ t('referenceCount', { count: selectedReferences.length }) }}</p>
-            <ul v-if="selectedReferences.length"><li v-for="owner in selectedReferences.slice(0, 8)" :key="owner">{{ referenceName(owner) }}</li></ul>
+            <ul v-if="selectedReferences.length"><li v-for="owner in selectedReferences.slice(0, 8)" :key="owner"><button v-if="owner !== 'project'" @click="navigateAssetReference(owner)">{{ referenceName(owner) }}</button><span v-else>{{ referenceName(owner) }}</span></li></ul>
             <p>{{ t('dependencies') }}: {{ selectedAsset.pipeline?.dependencies.length ?? 0 }} · {{ t('reverseDependencies') }}: {{ selectedAsset.pipeline?.reverseDependencies.length ?? 0 }}</p>
-            <ul v-if="selectedAsset.pipeline?.dependencies.length"><li v-for="dependency in selectedAsset.pipeline.dependencies.slice(0,8)" :key="dependency">→ {{ referenceName(dependency) }}</li></ul>
-            <ul v-if="selectedAsset.pipeline?.reverseDependencies.length"><li v-for="dependency in selectedAsset.pipeline.reverseDependencies.slice(0,8)" :key="dependency">← {{ referenceName(dependency) }}</li></ul>
+            <ul v-if="selectedAsset.pipeline?.dependencies.length"><li v-for="dependency in selectedAsset.pipeline.dependencies.slice(0,8)" :key="dependency">→ <button @click="navigateAssetReference(dependency)">{{ referenceName(dependency) }}</button></li></ul>
+            <ul v-if="selectedAsset.pipeline?.reverseDependencies.length"><li v-for="dependency in selectedAsset.pipeline.reverseDependencies.slice(0,8)" :key="dependency">← <button @click="navigateAssetReference(dependency)">{{ referenceName(dependency) }}</button></li></ul>
             <p v-if="selectedInclusion.length">{{ selectedInclusion.join(' · ') }}</p>
             <p v-else>{{ t('excludedFromBuild') }}</p>
+            <p>{{ t('dependencyCycles') }}: {{ productionGraph.cycles.length }} · {{ t('duplicateSources') }}: {{ productionGraph.duplicateSources.length }} · {{ t('missingReferences') }}: {{ productionGraph.missingReferences.length }}</p>
+            <details v-if="selectedContentClosure.length" class="content-closure"><summary>{{ t('contentClosure') }} · {{ selectedContentClosure.length }}</summary><article v-for="entry in selectedContentClosure.slice(0,32)" :key="entry.uuid" :class="{ invalid: entry.mode === 'excluded' }"><button @click="navigateAssetReference(entry.uuid)">{{ entry.path }}</button><small>{{ entry.groupId }} · {{ t(entry.mode) }}</small></article><p v-for="issue in selectedClosureIssues" :key="issue.uuid" class="pipeline-error">{{ issue.message }}</p></details>
           </section>
+          <section v-show="inspectorTab === 'platform'" class="platform-overrides inspector-pane"><article v-for="platform in compressionPlatforms" :key="platform"><header><strong>{{ t(platform) }}</strong><input :checked="Boolean(selectedAsset.settings.platformOverrides[platform]?.enabled)" type="checkbox" @change="togglePlatformOverride(platform, $event)"></header><template v-if="selectedAsset.settings.platformOverrides[platform]?.enabled"><label><span>{{ t('compression') }}</span><select v-model="selectedAsset.settings.platformOverrides[platform]!.compression"><option>None</option><option>Lossless</option><option>Optimized</option></select></label><label><span>{{ t('maxSize') }}</span><select v-model.number="selectedAsset.settings.platformOverrides[platform]!.maxSize"><option :value="512">512</option><option :value="1024">1024</option><option :value="2048">2048</option><option :value="4096">4096</option><option :value="8192">8192</option></select></label><label><span>{{ t('format') }}</span><select v-model="selectedAsset.settings.platformOverrides[platform]!.format"><option>Auto</option><option>RGBA8</option><option>BC7</option><option>ASTC</option><option>ETC2</option></select></label></template></article></section>
           <div class="asset-actions"><button @click="reimportInput?.click()">{{ t('reimportAsset') }}</button><button @click="linkSelectedSource">{{ t('linkSource') }}</button><button @click="revealAsset">{{ t('revealAsset') }}</button><button class="danger" @click="removeSelectedAsset">{{ t('deleteAsset') }}</button></div>
           <input ref="reimportInput" hidden type="file" @change="reimportSelectedAsset">
           <p class="drag-hint">{{ t('dragAssetHint') }}</p>
@@ -215,64 +266,58 @@
       </div>
 
       <ConsolePanel v-else-if="estate.bottomPanelTab === 'console'" />
-      <PackageManagerPanel v-else-if="estate.bottomPanelTab === 'packages'" />
       <ProfilerPanel v-else-if="estate.bottomPanelTab === 'profiler'" />
-      <RenderingPanel v-else-if="estate.bottomPanelTab === 'rendering'" />
 
       <AnimationPanel v-else-if="estate.bottomPanelTab === 'animation'" />
       <AudioSystemPanel v-else-if="estate.bottomPanelTab === 'audio'" />
       <TilemapPanel v-else-if="estate.bottomPanelTab === 'tilemap'" />
-      <ProjectHealthPanel v-else-if="estate.bottomPanelTab === 'project'" />
-      <BuildSettingsPanel v-else-if="estate.bottomPanelTab === 'build'" />
       <div v-else class="empty">{{ t('selectObject') }}</div>
     </div>
   </section>
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, ref } from 'vue'
+import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
 import { t } from '../i18n'
 import { addEditorLog, editorState as estate } from '../store/editor'
 import { clearAssetReferences, countAssetReferences, getSceneJSON, physicsState as state, pushHistory, replaceAssetReferences } from '../store/physics'
 import { requestConfirmation } from '../store/dialog'
 import {
-  applyAssetFilter, applyImportPreset, assetReference, assetState as assets, createAssetFolder, createTextAsset, deleteAsset, filteredAssets, importAssetFiles,
+  applyAssetFilter, applyImportPreset, assetReference, assetState as assets, createAssetCollection, createAssetFolder, createTextAsset, deleteAsset, filteredAssets, importAssetFiles,
   linkAssetSource, moveAsset, queueTextureAtlasRebuild, readTextAsset, reimportAsset, renameAsset, resolveExternalAssetChange, retryFailedAssetImport,
-  saveCurrentAssetFilter, saveImportPreset, sliceSpriteSheet, toggleAssetFavorite, trimTransparentImage
+  saveCurrentAssetFilter, saveImportPreset, sliceSpriteSheet, toggleAssetFavorite, toggleAssetInCollection, trimTransparentImage
 } from '../assets/AssetDatabase'
-import type { AssetType } from '../assets/types'
+import type { AssetPipelineMetadata, AssetType } from '../assets/types'
 import type { AudioImportProfile, TextureImportProfile } from '../assets/types'
+import { applyBulkAssetSettings, buildContentClosure, buildProductionAssetGraph, compareImportMetadata, detectOpaqueRegions, fontGlyphCoverage, packAtlasDeterministic, polygonOutlineForRegion, provenanceDiagnostics, revertToVerifiedArtifact, validateContentClosure } from '../assets/assetProduction'
 import { applyAudioImportProfile, applyTextureImportProfile, normalizedFontFallbacks } from '../assets/importProfiles'
 import { exportProjectFolder } from '../assets/projectFolder'
 import { DEFAULT_SCRIPT_SOURCE } from '../editor/scriptTemplates'
 import { openScriptAsset } from '../editor/scriptStudioState'
-import { applyEditorWorkspace } from '../editor/workspaces'
-import { instantiatePrefab } from '../runtime/prefabs'
+import { applyEditorWorkspace, reorderBottomTab, workspaceState } from '../editor/workspaces'
+import { instantiatePrefab, replaceEntitiesWithPrefab } from '../runtime/prefabs'
 import { createSceneAssetFromEntities, instantiateSceneAsset } from '../runtime/sceneInstances'
 import { reimportAnimationClip } from '../runtime/animation'
 import AnimationPanel from './AnimationPanel.vue'
 import AudioSystemPanel from './AudioSystemPanel.vue'
-import BuildSettingsPanel from './BuildSettingsPanel.vue'
 import ConsolePanel from './ConsolePanel.vue'
 import ProfilerPanel from './ProfilerPanel.vue'
-import RenderingPanel from './RenderingPanel.vue'
 import TilemapPanel from './TilemapPanel.vue'
-import PackageManagerPanel from './PackageManagerPanel.vue'
-import ProjectHealthPanel from './ProjectHealthPanel.vue'
 import { buildAssetDependencyGraph, explainAssetBuildInclusion, findAssetReferences, repairMissingAssetReference, unusedAssetReport } from '../assets/assetGraph'
 import { cancelAssetImport, importPipelineState } from '../assets/importPipeline'
 import { sourceStatusFor } from '../runtime/teamWorkflow'
+import { moveAssetToProjectTrash } from '../runtime/projectTrash'
+import { projectScopeDirty } from '../runtime/projectTransactions'
 
 const permanentTabs = [
-  { id: 'assets' as const, label: 'assets' as const }, { id: 'packages' as const, label: 'packages' as const }, { id: 'console' as const, label: 'console' as const },
-  { id: 'animation' as const, label: 'animation' as const }, { id: 'audio' as const, label: 'audioMixer' as const }, { id: 'profiler' as const, label: 'profiler' as const },
-  { id: 'rendering' as const, label: 'renderingStudio' as const },
-  { id: 'project' as const, label: 'projectHealth' as const }, { id: 'build' as const, label: 'buildPanel' as const }
+  { id: 'assets' as const, label: 'assets' as const }, { id: 'console' as const, label: 'console' as const },
+  { id: 'animation' as const, label: 'animation' as const }, { id: 'audio' as const, label: 'audioMixer' as const }, { id: 'profiler' as const, label: 'profiler' as const }
 ]
 const tabs = computed(() => {
   const selected = state.world.entities.find(entity => entity.id === state.selectedEntityId)
   const contextual = selected?.hasComponent('TileMap2D') ? [{ id: 'tilemap' as const, label: 'tilemap' as const }] : []
-  return [...permanentTabs.slice(0, 7), ...contextual, ...permanentTabs.slice(7)]
+  const available = [...permanentTabs, ...contextual]
+  return [...available].sort((a, b) => workspaceState.bottomTabOrder.indexOf(a.id) - workspaceState.bottomTabOrder.indexOf(b.id))
 })
 const assetFilters: Array<{ type: AssetType | 'all'; label: Parameters<typeof t>[0] }> = [
   { type: 'all', label: 'allAssets' }, { type: 'image', label: 'images' }, { type: 'audio', label: 'audioAssets' },
@@ -281,7 +326,7 @@ const assetFilters: Array<{ type: AssetType | 'all'; label: Parameters<typeof t>
   { type: 'controller', label: 'controllers' }, { type: 'animationMask', label: 'animationMasks' }, { type: 'rig', label: 'rigs' },
   { type: 'skin', label: 'skins' }, { type: 'timeline', label: 'timelines' }, { type: 'tileset', label: 'tileSets' }, { type: 'atlas', label: 'atlases' },
   { type: 'shader', label: 'shaders' }, { type: 'localization', label: 'localizationFiles' }, { type: 'uiTheme', label: 'uiThemes' },
-  { type: 'dataSchema', label: 'dataSchema' }, { type: 'dataTable', label: 'dataTable' }, { type: 'replay', label: 'replayAssets' }, { type: 'other', label: 'otherAssets' }
+  { type: 'dataSchema', label: 'dataSchema' }, { type: 'dataTable', label: 'dataTable' }, { type: 'replay', label: 'replayAssets' }, { type: 'path', label: 'pathAssets' }, { type: 'other', label: 'otherAssets' }
 ]
 const compressionPlatforms = ['windows', 'linux', 'macos', 'web'] as const
 const pivotPresets = [
@@ -290,11 +335,15 @@ const pivotPresets = [
   { id: 'bottom-left', label: 'pivotBottomLeft', value: { x: 0, y: 1 } }, { id: 'bottom', label: 'pivotBottom', value: { x: .5, y: 1 } }, { id: 'bottom-right', label: 'pivotBottomRight', value: { x: 1, y: 1 } }
 ] as const
 const panelStyle = computed(() => ({ height: estate.bottomPanelOpen ? `min(${estate.bottomPanelHeight}px, 42vh)` : '34px' }))
-const displayedAssets = computed(() => { void assets.generation; return filteredAssets() })
+const assetWindowLimit = ref(320)
+const filteredAssetRecords = computed(() => { void assets.generation; return filteredAssets() })
+const filteredAssetCount = computed(() => filteredAssetRecords.value.length)
+const displayedAssets = computed(() => filteredAssetRecords.value.slice(0, assetWindowLimit.value))
 const visibleFolders = computed(() => assets.folders.filter(folder => !folder.startsWith('.nova/')))
 const selectedAsset = computed(() => assets.records.find(asset => asset.uuid === assets.selectedGuid) ?? null)
 const projectSnapshot = computed(() => { void assets.generation; try { return JSON.parse(getSceneJSON()) as unknown } catch { return null } })
 const assetGraph = computed(() => buildAssetDependencyGraph(assets.records, projectSnapshot.value))
+const productionGraph = computed(() => buildProductionAssetGraph(assets.records, projectSnapshot.value))
 const selectedReferences = computed(() => selectedAsset.value ? findAssetReferences(selectedAsset.value.uuid, assets.records, projectSnapshot.value) : [])
 const selectedInclusion = computed(() => selectedAsset.value ? explainAssetBuildInclusion(selectedAsset.value.uuid, assets.records, projectSnapshot.value) : [])
 const selectedTextSource = computed(() => selectedAsset.value ? readTextAsset(selectedAsset.value.uuid) ?? '' : '')
@@ -307,11 +356,36 @@ const reimportInput = ref<HTMLInputElement | null>(null)
 const creatingFolder = ref(false), newFolderName = ref('')
 const renamingGuid = ref<string | null>(null), renameValue = ref('')
 const repairMode = ref(false), selectedMissingReference = ref(''), replacementAssetGuid = ref('')
-const filterMenuOpen = ref(false), filterQuery = ref(''), savedFilterName = ref(''), presetName = ref('')
+const filterMenuOpen = ref(false), filterQuery = ref(''), savedFilterName = ref(''), presetName = ref(''), collectionName = ref('')
+const importerTabs = ['source', 'import', 'dependencies', 'provenance', 'platform'] as const
+const inspectorTab = ref<(typeof importerTabs)[number]>('source')
+const previousPipeline = ref<AssetPipelineMetadata | null>(null), importComparisonText = ref('')
+const draggedTab = ref<(typeof permanentTabs)[number]['id'] | 'tilemap' | null>(null)
 const filteredTypeFilters = computed(() => assetFilters.filter(filter => t(filter.label).toLowerCase().includes(filterQuery.value.trim().toLowerCase())))
 const activeFilterLabel = computed(() => t(assetFilters.find(filter => filter.type === assets.typeFilter)?.label ?? 'allAssets'))
 const compatibleImportPresets = computed(() => selectedAsset.value ? assets.importPresets.filter(preset => preset.assetType === 'all' || preset.assetType === selectedAsset.value?.assetType) : [])
+const selectedAssetTags = computed({ get: () => selectedAsset.value?.tags?.join(', ') ?? '', set: value => { if (selectedAsset.value) selectedAsset.value.tags = [...new Set(value.split(',').map(tag => tag.trim()).filter(Boolean))].sort().slice(0, 64) } })
+const selectedProvenanceDiagnostics = computed(() => selectedAsset.value ? provenanceDiagnostics(selectedAsset.value) : [])
+const selectedGlyphReport = computed(() => selectedAsset.value?.assetType === 'font' ? fontGlyphCoverage(selectedAsset.value) : [])
+const selectedContentClosure = computed(() => selectedAsset.value ? buildContentClosure(assets.records, assets.contentGroups, [selectedAsset.value.uuid], projectSnapshot.value) : [])
+const selectedClosureIssues = computed(() => validateContentClosure(selectedContentClosure.value))
+const selectedAtlasReport = computed(() => {
+  const asset = selectedAsset.value
+  if (asset?.assetType !== 'atlas') return null
+  const group = asset.settings.atlasSettings.group || 'default'
+  return packAtlasDeterministic(assets.records.filter(candidate => candidate.assetType === 'image' && candidate.settings.atlas && (candidate.settings.atlasSettings.group || 'default') === group).map(candidate => ({ uuid: candidate.uuid, width: candidate.width, height: candidate.height, group })), { maxSize: asset.settings.atlasSettings.maxSize, padding: asset.settings.atlasSettings.padding, rotationPolicy: asset.settings.atlasSettings.rotationPolicy })
+})
+watch(() => [assets.search, assets.currentFolder, assets.typeFilter, assets.tagFilter, assets.selectedCollectionId, assets.favoritesOnly], () => { assetWindowLimit.value = 320 })
+watch(() => selectedAsset.value?.uuid, () => { inspectorTab.value = 'source'; importComparisonText.value = ''; previousPipeline.value = selectedAsset.value?.pipeline ? structuredClone(selectedAsset.value.pipeline) : null })
 function openTab(id: (typeof permanentTabs)[number]['id'] | 'tilemap') { estate.bottomPanelTab = id; estate.bottomPanelOpen = true }
+function tabDirty(id:(typeof permanentTabs)[number]['id']|'tilemap'){return id==='assets'?projectScopeDirty('asset'):id==='animation'?projectScopeDirty('animation'):id==='audio'?projectScopeDirty('settings'):id==='tilemap'?projectScopeDirty('scene'):false}
+function dropTab(target: (typeof permanentTabs)[number]['id'] | 'tilemap') {
+  if (draggedTab.value) reorderBottomTab(draggedTab.value, target)
+  draggedTab.value = null
+}
+function autoHide() {
+  if (!estate.bottomPanelPinned && !document.activeElement?.closest('.bottom-panel')) estate.bottomPanelOpen = false
+}
 async function importFiles(event: Event) {
   const input = event.target as HTMLInputElement
   if (!input.files?.length) return
@@ -348,6 +422,19 @@ function createSceneAssetFromSelection() {
   addEditorLog(t('sceneAssetCreated'), 'Assets')
 }
 function openInScriptStudio(uuid: string) { openScriptAsset(uuid); applyEditorWorkspace('script') }
+function openAssetEditor(uuid: string) {
+  const asset = assets.records.find(record => record.uuid === uuid); if (!asset) return
+  assets.selectedGuid = uuid
+  if (asset.assetType === 'script' || asset.assetType === 'shader') { openInScriptStudio(uuid); return }
+  if (asset.assetType === 'animation' || asset.assetType === 'controller' || asset.assetType === 'timeline') { estate.bottomPanelTab = 'animation'; return }
+  if (asset.assetType === 'audio') { estate.bottomPanelTab = 'audio'; return }
+  inspectorTab.value = asset.assetType === 'image' || asset.assetType === 'font' || asset.assetType === 'atlas' || asset.assetType === 'tileset' ? 'import' : 'source'
+}
+function extendAssetWindow(event: Event) { const element = event.currentTarget as HTMLElement; if (element.scrollTop + element.clientHeight >= element.scrollHeight - 240 && assetWindowLimit.value < filteredAssetCount.value) assetWindowLimit.value = Math.min(filteredAssetCount.value, assetWindowLimit.value + 320) }
+function createCollection() { const collection = createAssetCollection(collectionName.value); if (!collection) return; collectionName.value = ''; if (selectedAsset.value) toggleAssetInCollection(selectedAsset.value.uuid, collection.id); assets.generation++ }
+function toggleSelectedCollection(collectionId: string) { if (!selectedAsset.value) return; toggleAssetInCollection(selectedAsset.value.uuid, collectionId); assets.generation++ }
+function dismissTutorial() { const asset = selectedAsset.value; if (!asset || !asset.path.startsWith('Assets/Tutorials/')) return; deleteAsset(asset.uuid); assets.selectedGuid = null; addEditorLog(t('tutorialDismissed'), 'Project') }
+async function copyAssetDetail(value: string) { try { await navigator.clipboard.writeText(value); estate.statusText = t('copied') } catch { estate.statusText = value } }
 function instantiateSelectedPrefab() {
   const asset = selectedAsset.value
   if (!asset || asset.assetType !== 'prefab' || state.playMode !== 'editing') return
@@ -360,6 +447,12 @@ function instantiateSelectedPrefab() {
   if (!entities.length) return
   pushHistory('Instantiate prefab')
   addEditorLog(t('prefabInstantiated', { name: asset.name }), 'Assets')
+}
+function replaceSelectionWithSelectedPrefab() {
+  const asset = selectedAsset.value
+  if (!asset || asset.assetType !== 'prefab' || state.playMode !== 'editing' || !state.selectedEntityIds.length) return
+  const replacements = replaceEntitiesWithPrefab([...state.selectedEntityIds], assetReference(asset.uuid))
+  if (replacements.length) addEditorLog(t('selectionReplacedWithPrefab', { count: replacements.length }), 'Assets')
 }
 function instantiateSelectedScene() {
   const asset = selectedAsset.value
@@ -390,13 +483,36 @@ async function removeSelectedAsset() {
   const approved = await requestConfirmation({ title: t('deleteAsset'), message: `${t('deleteAssetConfirm', { name: asset.name, count: referenceCount })}\n\n${owners.slice(0,12).map(referenceName).join('\n') || t('noReferences')}`, confirmLabel: t('deleteAsset'), cancelLabel: t('cancel'), destructive: true })
   if (!approved) return
   clearAssetReferences(asset.uuid)
-  deleteAsset(asset.uuid); pushHistory('Delete asset'); addEditorLog(t('assetDeleted'), 'Assets', 'warning')
+  if (!moveAssetToProjectTrash(asset.uuid, referenceCount)) return
+  pushHistory('Move asset to project trash', `asset:${asset.uuid}`, asset.path); addEditorLog(t('assetMovedToTrash'), 'Assets', 'warning')
 }
 function revealAsset() { const asset = selectedAsset.value; if (!asset) return; assets.currentFolder = asset.path.slice(0, asset.path.lastIndexOf('/')); estate.statusText = asset.path }
 function setPixelArtMode(event: Event) { if (selectedAsset.value?.assetType === 'image') selectedAsset.value.settings.filterMode = (event.target as HTMLInputElement).checked ? 'Nearest' : 'Linear' }
 function setTextureProfile(event: Event) { const asset = selectedAsset.value; if (asset?.assetType === 'image') applyTextureImportProfile(asset.settings, (event.target as HTMLSelectElement).value as TextureImportProfile) }
 function setAudioProfile(event: Event) { const asset = selectedAsset.value; if (asset?.assetType === 'audio') applyAudioImportProfile(asset.settings, (event.target as HTMLSelectElement).value as AudioImportProfile) }
 function setFontFallbacks(event: Event) { const asset = selectedAsset.value; if (asset?.assetType === 'font') asset.settings.fontSettings.fallbackFamilies = normalizedFontFallbacks((event.target as HTMLInputElement).value) }
+function setOpenTypeFeatures(event: Event) { const asset = selectedAsset.value; if (asset?.assetType === 'font') asset.settings.fontSettings.openTypeFeatures = [...new Set((event.target as HTMLInputElement).value.split(',').map(value => value.trim()).filter(value => /^[a-z0-9]{4}$/i.test(value)))].sort().slice(0, 64) }
+function setDeclaredLanguages(event: Event) { const asset = selectedAsset.value; if (asset?.assetType === 'font') asset.settings.fontSettings.declaredLanguages = [...new Set((event.target as HTMLInputElement).value.split(',').map(value => value.trim()).filter(Boolean))].sort().slice(0, 64) }
+function togglePlatformOverride(platform: typeof compressionPlatforms[number], event: Event) {
+  const asset = selectedAsset.value; if (!asset) return
+  if ((event.target as HTMLInputElement).checked) asset.settings.platformOverrides[platform] = { enabled: true, compression: asset.settings.platformVariants[platform] ?? asset.settings.compression, maxSize: asset.settings.atlasSettings.maxSize, format: 'Auto' }
+  else delete asset.settings.platformOverrides[platform]
+}
+async function autoSliceSelectedImage() {
+  const asset = selectedAsset.value; if (!asset || asset.assetType !== 'image') return
+  try {
+    const blob = await (await fetch(asset.source)).blob(), bitmap = await createImageBitmap(blob), canvas = document.createElement('canvas')
+    canvas.width = bitmap.width; canvas.height = bitmap.height
+    const context = canvas.getContext('2d', { willReadFrequently: true }); if (!context) throw new Error('2D canvas is unavailable')
+    context.drawImage(bitmap, 0, 0); bitmap.close()
+    const rgba = context.getImageData(0, 0, canvas.width, canvas.height).data, alpha = new Uint8Array(canvas.width * canvas.height)
+    for (let index = 0; index < alpha.length; index++) alpha[index] = rgba[index * 4 + 3]
+    const regions = detectOpaqueRegions(canvas.width, canvas.height, alpha).slice(0, 4096)
+    asset.settings.extractedAnimationFrames = regions
+    if (regions[0]) { asset.settings.spriteRegion = regions[0]; asset.settings.polygonOutline = polygonOutlineForRegion(regions[0]) }
+    assets.generation++; pushHistory('Automatically slice sprite', `asset:${asset.uuid}`); addEditorLog(t('automaticSlicesCreated', { count: regions.length }), 'Assets', regions.length ? 'info' : 'warning')
+  } catch (error) { addEditorLog(error instanceof Error ? error.message : String(error), 'Assets', 'error') }
+}
 function toggleSpriteRegion(event: Event) {
   const asset = selectedAsset.value
   if (!asset || asset.assetType !== 'image') return
@@ -420,9 +536,25 @@ async function reimportSelectedAsset(event: Event) {
   const input = event.target as HTMLInputElement, file = input.files?.[0]; input.value = ''
   const asset = selectedAsset.value
   if (!asset || !file) return
+  previousPipeline.value = asset.pipeline ? structuredClone(asset.pipeline) : null
   const success = await reimportAsset(asset.uuid, file)
   addEditorLog(t(success ? 'assetReimported' : 'assetReimportFailed', { name: asset.name }), 'Assets', success ? 'info' : 'error')
   if (success) pushHistory('Reimport asset', `asset:${asset.uuid}`)
+}
+function compareSelectedImport() { const current = selectedAsset.value?.pipeline; importComparisonText.value = compareImportMetadata(previousPipeline.value, current).map(row => `${row.changed ? '●' : '○'} ${row.field}: ${row.before || '—'} → ${row.after || '—'}`).join('\n') }
+function revertSelectedImport() { const asset = selectedAsset.value; if (!asset || !revertToVerifiedArtifact(asset)) { addEditorLog(t('noVerifiedArtifact'), 'Assets', 'warning'); return } assets.generation++; importComparisonText.value = ''; addEditorLog(t('importReverted'), 'Assets') }
+async function batchReimportVisible() {
+  const candidates = filteredAssetRecords.value.filter(asset => asset.pipeline && /^(data:|blob:)/.test(asset.source)).slice(0, 2000); let complete = 0, failed = 0
+  for (const asset of candidates) { try { const response = await fetch(asset.source), blob = await response.blob(), file = new File([blob], asset.name, { type: asset.mimeType, lastModified: asset.sourceModified }); if (await reimportAsset(asset.uuid, file)) complete++; else failed++ } catch { failed++ } }
+  addEditorLog(t('batchReimportComplete', { complete, failed }), 'Assets', failed ? 'warning' : 'info')
+}
+async function bulkApplyVisible() {
+  const source = selectedAsset.value
+  if (!source || !filteredAssetRecords.value.length) return
+  const approved = await requestConfirmation({ title: t('bulkApplyVisible'), message: t('bulkApplyVisibleConfirm', { count: filteredAssetRecords.value.length }), confirmLabel: t('apply'), cancelLabel: t('cancel'), destructive: false })
+  if (!approved) return
+  const count = applyBulkAssetSettings(filteredAssetRecords.value, { contentGroup: source.contentGroup, editorOnly: source.editorOnly, tags: source.tags, collectionIds: source.collectionIds })
+  assets.generation++; pushHistory('Bulk edit asset production metadata'); addEditorLog(t('bulkApplyComplete', { count }), 'Assets')
 }
 function reportUnusedAssets() {
   const unused = unusedAssetReport(assets.records, projectSnapshot.value)
@@ -448,6 +580,7 @@ function repairSelectedMissingReference() {
   repairMode.value = missingReferenceIds.value.length > 0
 }
 function referenceName(owner: string): string { return owner === 'project' ? t('project') : assets.records.find(asset => asset.uuid === owner)?.path ?? owner }
+function navigateAssetReference(guid: string) { const asset = assets.records.find(candidate => candidate.uuid === guid); if (!asset) return; assets.selectedGuid = asset.uuid; const separator = asset.path.lastIndexOf('/'); assets.currentFolder = separator > 0 ? asset.path.slice(0, separator) : 'Assets' }
 function saveFilter() { const saved = saveCurrentAssetFilter(savedFilterName.value); if (saved) { savedFilterName.value = ''; addEditorLog(t('filterSaved', { name: saved.name }), 'Assets') } }
 function applySavedFilter(id: string) { if (id) applyAssetFilter(id) }
 function saveSelectedPreset() { const asset = selectedAsset.value; if (!asset) return; const preset = saveImportPreset(presetName.value, asset.assetType, asset.settings); if (preset) { presetName.value = ''; addEditorLog(t('presetSaved', { name: preset.name }), 'Assets') } }
@@ -489,11 +622,18 @@ onBeforeUnmount(stopResize)
 .import-queue{position:absolute;z-index:6;top:87px;right:8px;width:min(360px,calc(100% - 16px));padding:6px;display:grid;gap:4px;border:1px solid var(--border-strong);border-radius:9px;background:var(--surface-1);box-shadow:var(--shadow-md)}.import-queue article{min-width:0;display:grid;grid-template-columns:minmax(80px,1fr) 90px auto;align-items:center;gap:6px}.import-queue article>span{min-width:0;display:grid}.import-queue strong,.import-queue small,.import-queue em{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.import-queue small,.import-queue em{color:var(--text-muted);font-size:11px}.import-queue progress{width:100%;accent-color:var(--accent)}.import-queue button{min-height:25px}
 .missing-repair{margin:7px 8px 0;padding:6px;display:flex;align-items:center;gap:6px;border:1px solid var(--warning);border-radius:8px;background:color-mix(in srgb,var(--warning) 7%,var(--surface-2));font-size:11px}.missing-repair strong{flex:0 0 auto}.missing-repair select{min-width:0;min-height:28px;flex:1;font-size:11px}.missing-repair button{min-height:28px;padding:0 8px;white-space:nowrap}.missing-repair button.primary{color:var(--accent-contrast);border-color:var(--accent);background:var(--accent)}
 .asset-grid { min-height: 0; flex: 1; padding: 9px; display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); grid-auto-rows: 58px; gap: 7px; overflow: auto; }.asset-grid article { position: relative; min-width: 0; padding: 7px; display: grid; grid-template-columns: 42px 1fr; grid-template-rows: 1fr 1fr; column-gap: 7px; border: 1px solid var(--border-subtle); border-radius: 9px; background: var(--surface-2); cursor: grab; }.asset-grid article:hover, .asset-grid article.selected { border-color: color-mix(in srgb, var(--accent) 60%, var(--border-subtle)); background: var(--accent-soft); }.asset-preview { grid-row: 1 / 3; width: 42px; height: 42px; border-radius: 7px; background-color: var(--surface-3); background-position: center; background-repeat: no-repeat; background-size: contain; }.asset-icon { display: grid; place-items: center; color: var(--accent); font-size: 17px; font-weight: 650; }.asset-grid strong, .asset-grid small, .asset-grid input { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }.asset-grid strong { align-self: end; font-size: 11px; }.asset-grid small { color: var(--text-muted); font-size:11px; }.asset-grid input { width: 100%; height: 22px; min-height: 22px; font-size:11px; }.source-badge{position:absolute;top:4px;right:4px;width:18px;height:18px;display:grid;place-items:center;border-radius:5px;font-size:11px;font-weight:750;box-shadow:0 2px 8px rgba(0,0,0,.2)}.source-badge.added{color:var(--success);background:color-mix(in srgb,var(--success) 18%,var(--surface-1))}.source-badge.modified{color:var(--warning);background:color-mix(in srgb,var(--warning) 18%,var(--surface-1))}.source-badge.deleted,.source-badge.conflict{color:var(--danger);background:color-mix(in srgb,var(--danger) 18%,var(--surface-1))}
-.asset-inspector { border-left: 1px solid var(--border-subtle); }.asset-inspector header { padding: 2px 2px 8px; display: flex; flex-direction: column; gap: 2px; }.asset-inspector header span { color: var(--accent); font-size:11px; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; }.asset-inspector header strong { overflow: hidden; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }.large-preview { width: 100%; aspect-ratio: 16 / 9; margin-bottom: 7px; border: 1px solid var(--border-subtle); border-radius: 8px; background-color: var(--surface-3); background-position: center; background-repeat: no-repeat; background-size: contain; }.asset-media-preview{width:100%;height:34px;margin-bottom:7px}.font-preview{min-height:60px;margin-bottom:7px;padding:10px;display:grid;place-items:center;border:1px solid var(--border-subtle);border-radius:8px;background:var(--surface-3);font-size:20px}.asset-inspector label { min-height: 29px; display: flex; align-items: center; justify-content: space-between; gap: 7px; border-bottom: 1px solid var(--border-subtle); color: var(--text-muted); font-size:11px; }.asset-inspector label > *:last-child { max-width: 58%; }.asset-inspector label code { overflow: hidden; color: var(--accent); font-size:11px; text-overflow: ellipsis; white-space: nowrap; }.asset-inspector label input:not([type='checkbox']), .asset-inspector label select { width: 105px; min-height: 24px; font-size:11px; }.asset-inspector label div { display: flex; gap: 3px; }.asset-inspector label div input { width: 50%; }.asset-actions { margin-top: 8px; display: flex; gap: 5px; }.asset-actions button { min-width:0;min-height:32px;padding:0 4px;flex:1;overflow:hidden;border:1px solid var(--border-subtle);border-radius:7px;color:var(--text-secondary);background:var(--surface-3);font-size:11px;text-overflow:ellipsis;white-space:nowrap}.asset-actions button.danger { color: var(--danger); }.drag-hint { color: var(--text-muted); font-size:11px; line-height: 1.45; }.text-preview{width:100%;min-height:82px;margin:7px 0;resize:vertical;font:11px/1.45 ui-monospace,SFMono-Regular,Consolas,monospace}.pipeline-error{padding:6px;border:1px solid var(--danger);border-radius:7px;color:var(--danger);font-size:11px}.reference-summary{margin-top:8px;padding:7px;border:1px solid var(--border-subtle);border-radius:8px;background:var(--surface-3)}.reference-summary strong{font-size:11px}.reference-summary p,.reference-summary li{margin:4px 0;color:var(--text-muted);font-size:11px;line-height:1.35}.reference-summary ul{margin:3px 0;padding-left:16px}
-.script-source { padding: 6px 0; flex-direction: column; align-items: stretch !important; }.script-source textarea { width: 100%; min-height: 130px; resize: vertical; font: 11px/1.5 ui-monospace, SFMono-Regular, Consolas, monospace; white-space: pre; }.script-validation { margin: 5px 0; color: var(--success); font-size:11px; }.script-validation.error { color: var(--danger); }.save-script { width: 100%; min-height: 32px; border: 1px solid var(--accent); border-radius: 7px; color: var(--accent); background: var(--accent-soft); font-size:11px; }
+.asset-inspector { border-left: 1px solid var(--border-subtle); }.asset-inspector header { padding: 2px 2px 8px; display: flex; flex-direction: column; gap: 2px; }.asset-inspector header span { color: var(--accent); font-size:11px; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; }.asset-inspector header strong { overflow: hidden; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }.large-preview { width: 100%; aspect-ratio: 16 / 9; margin-bottom: 7px; border: 1px solid var(--border-subtle); border-radius: 8px; background-color: var(--surface-3); background-position: center; background-repeat: no-repeat; background-size: contain; }.asset-media-preview{width:100%;height:34px;margin-bottom:7px}.font-preview{min-height:60px;margin-bottom:7px;padding:10px;display:grid;place-items:center;border:1px solid var(--border-subtle);border-radius:8px;background:var(--surface-3);font-size:20px}.asset-inspector label { min-height: 29px; display: flex; align-items: center; justify-content: space-between; gap: 7px; border-bottom: 1px solid var(--border-subtle); color: var(--text-muted); font-size:11px; }.asset-inspector label > *:last-child { max-width: 58%; }.asset-inspector label code { overflow: hidden; color: var(--accent); font-size:11px; text-overflow: ellipsis; white-space: nowrap; }.asset-inspector label input:not([type='checkbox']), .asset-inspector label select { width: 105px; min-height: 24px; font-size:11px; }.asset-inspector label div { display: flex; gap: 3px; }.asset-inspector label div input { width: 50%; }.asset-actions { margin-top: 8px; display: flex; gap: 5px; }.asset-actions button { min-width:0;min-height:32px;padding:0 4px;flex:1;overflow:hidden;border:1px solid var(--border-subtle);border-radius:7px;color:var(--text-secondary);background:var(--surface-3);font-size:11px;text-overflow:ellipsis;white-space:nowrap}.asset-actions button.danger { color: var(--danger); }.drag-hint { color: var(--text-muted); font-size:11px; line-height: 1.45; }.text-preview{width:100%;min-height:82px;margin:7px 0;resize:vertical;font:11px/1.45 var(--font-mono)}.pipeline-error{padding:6px;border:1px solid var(--danger);border-radius:7px;color:var(--danger);font-size:11px}.reference-summary{margin-top:8px;padding:7px;border:1px solid var(--border-subtle);border-radius:8px;background:var(--surface-3)}.reference-summary strong{font-size:11px}.reference-summary p,.reference-summary li{margin:4px 0;color:var(--text-muted);font-size:11px;line-height:1.35}.reference-summary ul{margin:3px 0;padding-left:16px}
+.asset-technical{margin:6px 0;border:1px solid var(--border-subtle);border-radius:var(--radius-control-small);background:var(--surface-3)}.asset-technical summary{padding:7px;cursor:pointer;color:var(--text-secondary);font-size:var(--type-caption)}.asset-technical>div{display:grid;grid-template-columns:minmax(70px,auto) minmax(0,1fr) 26px;align-items:center;gap:6px;padding:5px 7px;border-top:1px solid var(--border-subtle);font-size:var(--type-caption)}.asset-technical code{max-width:none!important;overflow:auto!important;white-space:nowrap!important;text-overflow:clip!important}.asset-technical button{width:24px;min-height:24px;padding:0;border:1px solid var(--border-subtle);border-radius:var(--radius-control-small);background:var(--surface-2);color:var(--text-secondary)}
+.asset-overflow{position:relative;z-index:9}.asset-overflow>summary{width:34px;height:31px;display:grid;place-items:center;border:1px solid var(--border-subtle);border-radius:8px;background:var(--surface-2);cursor:pointer;list-style:none}.asset-overflow>summary::-webkit-details-marker{display:none}.asset-overflow[open]{filter:drop-shadow(var(--shadow-md))}.asset-overflow[open]>button{position:absolute;top:35px;right:0;z-index:10;width:max-content;min-width:180px;background:var(--surface-popover)}.asset-overflow[open]>button:nth-of-type(2){top:69px}.asset-overflow[open]>button:nth-of-type(3){top:103px}
+.asset-actions-row>button.active{color:var(--accent);border-color:color-mix(in srgb,var(--accent) 55%,var(--border-subtle));background:var(--accent-soft)}
+.asset-grid{grid-template-columns:repeat(auto-fill,minmax(var(--asset-size,112px),1fr))}.asset-grid.asset-list{display:flex;flex-direction:column;gap:4px}.asset-grid.asset-list article{min-height:52px;flex:0 0 52px;grid-template-columns:38px minmax(0,1fr) minmax(80px,auto);grid-template-rows:1fr}.asset-grid.asset-list .asset-preview{grid-row:1;width:36px;height:36px}.asset-grid.asset-list article>small{align-self:center;text-align:right}.asset-window-status{grid-column:1/-1;margin:0;padding:8px;color:var(--text-muted);font-size:var(--type-caption);text-align:center}
+.importer-tabs{margin:0 0 8px;padding:3px;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:2px;border:1px solid var(--border-subtle);border-radius:11px;background:var(--surface-3)}.importer-tabs button{min-width:0;min-height:28px;padding:0 3px;overflow:hidden;border:0;border-radius:8px;background:transparent;color:var(--text-muted);font-size:var(--type-caption);text-overflow:ellipsis;white-space:nowrap}.importer-tabs button.active{color:var(--text-primary);background:var(--surface-raised);box-shadow:var(--shadow-xs)}.inspector-pane{animation:nova-panel-in var(--motion-panel) var(--ease-spring) both}.collection-membership{margin:7px 0;padding:7px;border:1px solid var(--border-subtle);border-radius:9px}.collection-membership summary{cursor:pointer;color:var(--text-secondary)}.collection-membership>button{width:100%;min-height:28px;margin-top:4px;display:flex;align-items:center;gap:6px;border:0;border-radius:7px;background:transparent;color:var(--text-muted)}.collection-membership>button.active{color:var(--accent);background:var(--accent-soft)}.collection-membership i{width:8px;height:8px;border-radius:50%}.collection-membership>div{margin-top:5px;display:grid;grid-template-columns:1fr 30px;gap:4px}.collection-membership input{width:100%!important;max-width:none!important}
+.provenance-diagnostic{margin:4px 0;padding:7px;display:grid;gap:2px;border-left:3px solid var(--accent);border-radius:6px;background:var(--surface-3);font-size:var(--type-caption)}.provenance-diagnostic.warning{border-color:var(--warning)}.provenance-diagnostic.error{border-color:var(--danger)}.provenance-diagnostic span{overflow-wrap:anywhere;color:var(--text-muted)}.provenance-actions{display:grid;grid-template-columns:1fr 1fr;gap:5px}.provenance-actions button{min-height:30px}.provenance-pane pre{max-height:150px;overflow:auto;padding:7px;border-radius:7px;background:var(--surface-inset);font:var(--type-caption)/1.45 var(--font-mono);white-space:pre-wrap}.dangerText{color:var(--danger)}
+.glyph-report{margin-top:8px;display:grid;gap:4px}.glyph-report article{padding:6px;display:grid;grid-template-columns:auto 1fr;gap:2px 7px;border:1px solid var(--border-subtle);border-radius:7px;background:var(--surface-3);font-size:var(--type-caption)}.glyph-report article.missing{border-color:color-mix(in srgb,var(--warning) 55%,var(--border-subtle))}.glyph-report small{grid-column:1/-1;color:var(--text-muted)}.platform-overrides>article{margin-bottom:7px;padding:7px;border:1px solid var(--border-subtle);border-radius:9px;background:var(--surface-3)}.platform-overrides>article>header{padding:0;flex-direction:row;align-items:center;justify-content:space-between}
+.script-source { padding: 6px 0; flex-direction: column; align-items: stretch !important; }.script-source textarea { width: 100%; min-height: 130px; resize: vertical; font: 11px/1.5 var(--font-mono); white-space: pre; }.script-validation { margin: 5px 0; color: var(--success); font-size:11px; }.script-validation.error { color: var(--danger); }.save-script { width: 100%; min-height: 32px; border: 1px solid var(--accent); border-radius: 7px; color: var(--accent); background: var(--accent-soft); font-size:11px; }
 .mapping-editor{margin:7px 0}.mapping-editor label{display:grid;grid-template-columns:1fr 1fr 24px}.mapping-editor input{width:100%!important}.mapping-editor button{min-height:26px;border:1px solid var(--border-subtle);border-radius:6px;background:var(--surface-3);color:var(--text-secondary)}
 :global(html[lang='zh-CN']) .asset-toolbar, :global(html[lang='zh-CN']) .panel-tabs { line-height: 1; writing-mode: horizontal-tb; }
-.console-list { min-width: 600px; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size:11px; }.log-entry { min-height: 29px; padding: 4px 10px; display: grid; grid-template-columns: 72px 70px 1fr; gap: 8px; align-items: center; border-bottom: 1px solid var(--border-subtle); }.log-entry time { color: var(--text-muted); }.log-entry strong { color: var(--accent); }.log-entry.warning strong { color: var(--warning); }.log-entry.error strong { color: var(--danger); }
+.console-list { min-width: 600px; font-family: var(--font-mono); font-size:11px; }.log-entry { min-height: 29px; padding: 4px 10px; display: grid; grid-template-columns: 72px 70px 1fr; gap: 8px; align-items: center; border-bottom: 1px solid var(--border-subtle); }.log-entry time { color: var(--text-muted); }.log-entry strong { color: var(--accent); }.log-entry.warning strong { color: var(--warning); }.log-entry.error strong { color: var(--danger); }
 .metric-grid { padding: 10px; display: grid; grid-template-columns: repeat(auto-fit, minmax(145px, 1fr)); gap: 8px; }.metric-grid article, .project-summary article { padding: 9px; display: flex; justify-content: space-between; gap: 10px; border: 1px solid var(--border-subtle); border-radius: 8px; background: var(--surface-2); font-size:11px; }.metric-grid span, .project-summary span { color: var(--text-muted); }.metric-grid strong, .project-summary strong { color: var(--accent); }.project-summary { height: 100%; padding: 10px; display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 8px; overflow: auto; }.project-summary p { grid-column: 1 / -1; margin: 2px; color: var(--text-muted); font-size:11px; }.future-panel, .empty { padding: 18px; color: var(--text-muted); font-size: 11px; }.future-panel strong { color: var(--text-primary); }.future-panel p { margin: 5px 0 0; }
 @media (max-width: 1050px) {
   .asset-browser { grid-template-columns: 105px minmax(140px, 1fr); }
@@ -510,4 +650,8 @@ onBeforeUnmount(stopResize)
   .asset-inspector { position: absolute; inset: 0 0 0 auto; z-index: 4; display: block; width: min(230px, 70%); box-shadow: var(--shadow-lg); }
 }
 .filter-menu{position:relative;align-self:start}.filter-menu>button.active,.filter-popover button.active{color:var(--accent);border-color:var(--accent);background:var(--accent-soft)}.filter-popover{position:absolute;z-index:20;top:34px;left:0;width:250px;max-height:290px;padding:7px;display:grid;grid-template-columns:1fr 1fr;gap:4px;overflow:auto;border:1px solid var(--border-strong);border-radius:10px;background:var(--surface-1);box-shadow:var(--shadow-lg)}.filter-popover>input,.filter-popover>select,.filter-popover>div{grid-column:1/-1;width:100%;min-height:29px}.filter-popover>button{height:27px}.filter-popover>div{display:flex;gap:4px}.filter-popover>div input{min-width:0;flex:1}.external-changes{padding:5px 8px;display:grid;gap:4px;border-bottom:1px solid var(--warning);background:color-mix(in srgb,var(--warning) 7%,var(--surface-1))}.external-changes article{display:flex;align-items:center;gap:5px}.external-changes article>span{min-width:0;display:grid;flex:1}.external-changes small{overflow:hidden;color:var(--text-muted);text-overflow:ellipsis;white-space:nowrap}.external-changes button{min-height:27px;border:1px solid var(--border-subtle);border-radius:6px;background:var(--surface-2);color:var(--text-secondary);font-size:11px}.import-queue{width:min(420px,calc(100% - 16px))}.import-queue details{grid-column:1/-1;max-height:90px;overflow:auto;color:var(--text-muted);font-size:11px}.import-queue details code{display:block;white-space:normal}.favorite-button{position:absolute;top:2px;left:2px;width:20px!important;height:20px!important;padding:0!important;border:0!important;background:transparent!important;color:var(--text-muted);opacity:.35}.favorite-button:hover,.favorite-button.active{color:var(--warning);opacity:1}.import-presets{margin-top:8px;padding:7px;display:grid;gap:5px;border:1px solid var(--border-subtle);border-radius:8px}.import-presets>div{display:flex;gap:4px}.import-presets input,.import-presets select{min-width:0;width:100%;min-height:28px}.import-presets button{width:30px;border:1px solid var(--border-subtle);border-radius:6px;background:var(--surface-3);color:var(--accent)}
+.reference-summary button{max-width:100%;padding:0;border:0;color:var(--accent);background:transparent;font:inherit;text-align:left;overflow-wrap:anywhere}.reference-summary button:hover{text-decoration:underline}
+.atlas-report,.content-closure{margin:7px 0;padding:7px;display:grid;gap:4px;border:1px solid var(--border-subtle);border-radius:9px;background:var(--surface-3);font-size:var(--type-caption)}.atlas-report p{margin:0;color:var(--text-muted)}.atlas-report code{overflow:hidden;color:var(--accent);text-overflow:ellipsis;white-space:nowrap}.atlas-report small{color:var(--warning);overflow-wrap:anywhere}.content-closure summary{cursor:pointer;color:var(--text-secondary)}.content-closure article{padding:4px 0;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px;border-top:1px solid var(--border-subtle)}.content-closure article.invalid{color:var(--danger)}.content-closure article button{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.content-closure article small{color:var(--text-muted)}
+.atlas-report,.content-closure{margin:7px 0;padding:7px;display:grid;gap:4px;border:1px solid var(--border-subtle);border-radius:9px;background:var(--surface-3);font-size:var(--type-caption)}.atlas-report p{margin:0;color:var(--text-muted)}.atlas-report code{overflow:hidden;color:var(--accent);text-overflow:ellipsis;white-space:nowrap}.atlas-report small{color:var(--warning);overflow-wrap:anywhere}.content-closure summary{cursor:pointer;color:var(--text-secondary)}.content-closure article{padding:4px 0;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px;border-top:1px solid var(--border-subtle)}.content-closure article.invalid{color:var(--danger)}.content-closure article button{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.content-closure article small{color:var(--text-muted)}
+.atlas-report,.content-closure{margin:7px 0;padding:7px;display:grid;gap:4px;border:1px solid var(--border-subtle);border-radius:9px;background:var(--surface-3);font-size:var(--type-caption)}.atlas-report p{margin:0;color:var(--text-muted)}.atlas-report code{overflow:hidden;color:var(--accent);text-overflow:ellipsis;white-space:nowrap}.atlas-report small{color:var(--warning);overflow-wrap:anywhere}.content-closure summary{cursor:pointer;color:var(--text-secondary)}.content-closure article{padding:4px 0;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px;border-top:1px solid var(--border-subtle)}.content-closure article.invalid{color:var(--danger)}.content-closure article button{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.content-closure article small{color:var(--text-muted)}
 </style>

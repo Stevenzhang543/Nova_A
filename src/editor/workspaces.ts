@@ -1,5 +1,5 @@
 import { reactive, watch } from 'vue'
-import { editorState, reconfigureLayout, type BottomPanelTab, type EditorPage, type EditorWorkspace } from '../store/editor'
+import { editorState, reconfigureLayout, type BottomPanelTab, type EditorPage, type EditorWorkspace, type ManageSection } from '../store/editor'
 import { preferencesState } from '../store/preferences'
 import { projectSessionState } from '../projects/projectSession'
 
@@ -15,6 +15,13 @@ export interface WorkspaceLayout {
   inspectorWidth: number
   hierarchyDock: 'left' | 'right'
   inspectorDock: 'left' | 'right'
+  hierarchyPinned: boolean
+  inspectorPinned: boolean
+  bottomPanelPinned: boolean
+  panelOrder: Array<'hierarchy' | 'inspector'>
+  bottomTabOrder: BottomPanelTab[]
+  floatingPanels: Array<'hierarchy' | 'inspector'>
+  splitDocking: boolean
 }
 
 export interface WorkspacePreset extends WorkspaceLayout {
@@ -31,7 +38,10 @@ export interface CustomWorkspace extends WorkspaceLayout {
 const safeDesignLayout: WorkspaceLayout = {
   page: 'scene', hierarchyVisible: true, inspectorVisible: true, bottomPanelVisible: true,
   bottomPanelOpen: false, bottomPanelTab: 'assets', bottomPanelHeight: 240,
-  hierarchyWidth: 236, inspectorWidth: 292, hierarchyDock: 'left', inspectorDock: 'right'
+  hierarchyWidth: 236, inspectorWidth: 292, hierarchyDock: 'left', inspectorDock: 'right',
+  hierarchyPinned: true, inspectorPinned: true, bottomPanelPinned: true,
+  panelOrder: ['hierarchy', 'inspector'], bottomTabOrder: ['assets', 'console', 'animation', 'audio', 'profiler', 'tilemap'],
+  floatingPanels: [], splitDocking: false
 }
 
 export const WORKSPACE_PRESETS: readonly WorkspacePreset[] = [
@@ -40,8 +50,18 @@ export const WORKSPACE_PRESETS: readonly WorkspacePreset[] = [
   { id: 'animation', label: 'workspaceAnimation', builtIn: true, ...safeDesignLayout, bottomPanelOpen: true, bottomPanelTab: 'animation', bottomPanelHeight: 360 },
   { id: 'ui', label: 'workspaceUi', builtIn: true, ...safeDesignLayout, bottomPanelOpen: true, bottomPanelTab: 'assets', bottomPanelHeight: 250 },
   { id: 'debug', label: 'workspaceDebug', builtIn: true, ...safeDesignLayout, page: 'game', hierarchyVisible: false, inspectorVisible: false, bottomPanelOpen: true, bottomPanelTab: 'profiler', bottomPanelHeight: 320 },
+  { id: 'manage', label: 'workspaceManage', builtIn: true, ...safeDesignLayout, page: 'manage', hierarchyVisible: false, inspectorVisible: false, bottomPanelVisible: false },
   { id: 'custom', label: 'workspaceCustom', builtIn: true, ...safeDesignLayout }
 ]
+
+export const WORKSPACE_PROFILE_PRESETS = Object.freeze([
+  { id: 'beginner', label: 'profileBeginner', workspace: 'design' as EditorWorkspace, layout: { ...safeDesignLayout, bottomPanelOpen: false } },
+  { id: 'designer', label: 'profileDesigner', workspace: 'design' as EditorWorkspace, layout: { ...safeDesignLayout, bottomPanelOpen: true, bottomPanelTab: 'assets' as BottomPanelTab } },
+  { id: 'programmer', label: 'profileProgrammer', workspace: 'script' as EditorWorkspace, layout: { ...safeDesignLayout, page: 'script' as EditorPage, hierarchyVisible: false, inspectorVisible: false, bottomPanelVisible: false } },
+  { id: 'ui-designer', label: 'profileUiDesigner', workspace: 'ui' as EditorWorkspace, layout: { ...safeDesignLayout, bottomPanelOpen: true, bottomPanelTab: 'assets' as BottomPanelTab } },
+  { id: 'profiler', label: 'profileProfiler', workspace: 'debug' as EditorWorkspace, layout: { ...safeDesignLayout, page: 'game' as EditorPage, hierarchyVisible: false, inspectorVisible: false, bottomPanelOpen: true, bottomPanelTab: 'profiler' as BottomPanelTab } },
+  { id: 'release-engineer', label: 'profileReleaseEngineer', workspace: 'manage' as EditorWorkspace, layout: { ...safeDesignLayout, page: 'manage' as EditorPage, hierarchyVisible: false, inspectorVisible: false, bottomPanelVisible: false } }
+])
 
 export const workspaceState = reactive({
   custom: [] as CustomWorkspace[],
@@ -49,13 +69,19 @@ export const workspaceState = reactive({
   safeLayout: false,
   navigationBack: [] as Array<{ page: EditorPage; workspace: EditorWorkspace }>,
   navigationForward: [] as Array<{ page: EditorPage; workspace: EditorWorkspace }>,
-  restoringNavigation: false
+  restoringNavigation: false,
+  hierarchyPinned: true,
+  inspectorPinned: true,
+  panelOrder: ['hierarchy', 'inspector'] as Array<'hierarchy' | 'inspector'>,
+  bottomTabOrder: ['assets', 'console', 'animation', 'audio', 'profiler', 'tilemap'] as BottomPanelTab[],
+  floatingPanels: [] as Array<'hierarchy' | 'inspector'>,
+  splitDocking: false
 })
 
 type PanelName = 'hierarchy' | 'inspector' | 'bottom'
 const USER_STORAGE_KEY = 'nova-a-editor-workspaces-v2'
 const LEGACY_STORAGE_KEY = 'nova-a-editor-layout-v1'
-const PAGES = new Set<EditorPage>(['scene', 'game', 'script', 'settings'])
+const PAGES = new Set<EditorPage>(['scene', 'game', 'script', 'settings', 'manage'])
 const BOTTOM_TABS = new Set<BottomPanelTab>(['assets', 'packages', 'console', 'animation', 'audio', 'tilemap', 'presentation', 'profiler', 'rendering', 'project', 'build'])
 let initialized = false
 
@@ -73,7 +99,15 @@ function normalizeLayout(value: unknown, fallback: WorkspaceLayout = safeDesignL
   const page = typeof source.page === 'string' && PAGES.has(source.page as EditorPage) ? source.page as EditorPage : fallback.page
   const legacyTab = (source as { bottomPanelTab?: string }).bottomPanelTab
   let tab = legacyTab === 'world' ? 'project' : typeof source.bottomPanelTab === 'string' && BOTTOM_TABS.has(source.bottomPanelTab as BottomPanelTab) ? source.bottomPanelTab as BottomPanelTab : fallback.bottomPanelTab
-  if (tab === 'presentation') tab = 'assets'
+  if (['presentation', 'packages', 'rendering', 'project', 'build'].includes(tab)) tab = 'assets'
+  const panelOrder = Array.isArray(source.panelOrder)
+    ? [...new Set(source.panelOrder.filter(value => value === 'hierarchy' || value === 'inspector'))] as Array<'hierarchy' | 'inspector'>
+    : []
+  for (const panel of fallback.panelOrder) if (!panelOrder.includes(panel)) panelOrder.push(panel)
+  const bottomTabOrder = Array.isArray(source.bottomTabOrder)
+    ? [...new Set(source.bottomTabOrder.filter(value => BOTTOM_TABS.has(value as BottomPanelTab) && !['packages', 'rendering', 'project', 'build', 'presentation'].includes(value as string)) as BottomPanelTab[])]
+    : []
+  for (const bottomTab of fallback.bottomTabOrder) if (!bottomTabOrder.includes(bottomTab)) bottomTabOrder.push(bottomTab)
   return {
     page,
     hierarchyVisible: typeof source.hierarchyVisible === 'boolean' ? source.hierarchyVisible : fallback.hierarchyVisible,
@@ -85,7 +119,14 @@ function normalizeLayout(value: unknown, fallback: WorkspaceLayout = safeDesignL
     hierarchyWidth: clamp(source.hierarchyWidth, fallback.hierarchyWidth, 160, 500),
     inspectorWidth: clamp(source.inspectorWidth, fallback.inspectorWidth, 252, 480),
     hierarchyDock: source.hierarchyDock === 'right' ? 'right' : fallback.hierarchyDock,
-    inspectorDock: source.inspectorDock === 'left' ? 'left' : fallback.inspectorDock
+    inspectorDock: source.inspectorDock === 'left' ? 'left' : fallback.inspectorDock,
+    hierarchyPinned: typeof source.hierarchyPinned === 'boolean' ? source.hierarchyPinned : fallback.hierarchyPinned,
+    inspectorPinned: typeof source.inspectorPinned === 'boolean' ? source.inspectorPinned : fallback.inspectorPinned,
+    bottomPanelPinned: typeof source.bottomPanelPinned === 'boolean' ? source.bottomPanelPinned : fallback.bottomPanelPinned,
+    panelOrder,
+    bottomTabOrder,
+    floatingPanels: Array.isArray(source.floatingPanels) ? [...new Set(source.floatingPanels.filter(value => value === 'hierarchy' || value === 'inspector') as Array<'hierarchy' | 'inspector'>)] : [...fallback.floatingPanels],
+    splitDocking: typeof source.splitDocking === 'boolean' ? source.splitDocking : fallback.splitDocking
   }
 }
 
@@ -95,7 +136,11 @@ export function captureWorkspaceLayout(): WorkspaceLayout {
     bottomPanelVisible: editorState.bottomPanelVisible, bottomPanelOpen: editorState.bottomPanelOpen,
     bottomPanelTab: editorState.bottomPanelTab, bottomPanelHeight: editorState.bottomPanelHeight,
     hierarchyWidth: editorState.hierarchyWidth, inspectorWidth: editorState.inspectorWidth,
-    hierarchyDock: editorState.hierarchyDock, inspectorDock: editorState.inspectorDock
+    hierarchyDock: editorState.hierarchyDock, inspectorDock: editorState.inspectorDock,
+    hierarchyPinned: workspaceState.hierarchyPinned, inspectorPinned: workspaceState.inspectorPinned,
+    bottomPanelPinned: editorState.bottomPanelPinned, panelOrder: workspaceState.panelOrder,
+    bottomTabOrder: workspaceState.bottomTabOrder, floatingPanels: workspaceState.floatingPanels,
+    splitDocking: workspaceState.splitDocking
   })
 }
 
@@ -112,8 +157,15 @@ function applyLayout(layout: WorkspaceLayout): void {
     bottomPanelTab: value.bottomPanelTab, bottomPanelHeight: value.bottomPanelHeight,
     hierarchyWidth: value.hierarchyWidth, inspectorWidth: value.inspectorWidth,
     hierarchyDock: value.hierarchyDock, inspectorDock: value.inspectorDock,
+    bottomPanelPinned: value.bottomPanelPinned,
     distractionFree: false
   })
+  workspaceState.hierarchyPinned = value.hierarchyPinned
+  workspaceState.inspectorPinned = value.inspectorPinned
+  workspaceState.panelOrder.splice(0, workspaceState.panelOrder.length, ...value.panelOrder)
+  workspaceState.bottomTabOrder.splice(0, workspaceState.bottomTabOrder.length, ...value.bottomTabOrder)
+  workspaceState.floatingPanels.splice(0, workspaceState.floatingPanels.length, ...value.floatingPanels)
+  workspaceState.splitDocking = value.splitDocking
   notifyLayoutChanged()
 }
 
@@ -184,6 +236,14 @@ export function applyEditorWorkspace(workspace: EditorWorkspace): void {
   applyLayout(preset)
 }
 
+export function applyWorkspaceProfile(id: string): boolean {
+  const profile = WORKSPACE_PROFILE_PRESETS.find(item => item.id === id)
+  if (!profile) return false
+  editorState.activeWorkspace = profile.workspace
+  applyLayout(normalizeLayout(profile.layout, safeDesignLayout))
+  return true
+}
+
 export function saveCurrentWorkspace(name?: string): CustomWorkspace {
   const existing = workspaceState.custom.find(item => item.id === workspaceState.selectedCustomId)
   if (existing && !name) { Object.assign(existing, captureWorkspaceLayout()); editorState.activeWorkspace = 'custom'; return existing }
@@ -216,7 +276,32 @@ export function navigateHistory(direction: 'back' | 'forward'): boolean {
 }
 
 export function toggleEditorPanel(panel: PanelName): void { if (panel === 'hierarchy') editorState.hierarchyVisible = !editorState.hierarchyVisible; else if (panel === 'inspector') editorState.inspectorVisible = !editorState.inspectorVisible; else editorState.bottomPanelVisible = !editorState.bottomPanelVisible; notifyLayoutChanged() }
+export function dockEditorPanel(panel: 'hierarchy' | 'inspector', destination: 'left' | 'right' | 'floating'): void {
+  const floating = workspaceState.floatingPanels
+  const index = floating.indexOf(panel)
+  if (destination === 'floating') { if (index < 0) floating.push(panel) }
+  else {
+    if (index >= 0) floating.splice(index, 1)
+    if (panel === 'hierarchy') editorState.hierarchyDock = destination
+    else editorState.inspectorDock = destination
+  }
+  notifyLayoutChanged()
+}
+export function setPanelPinned(panel: 'hierarchy' | 'inspector' | 'bottom', pinned: boolean): void {
+  if (panel === 'hierarchy') workspaceState.hierarchyPinned = pinned
+  else if (panel === 'inspector') workspaceState.inspectorPinned = pinned
+  else editorState.bottomPanelPinned = pinned
+  notifyLayoutChanged()
+}
 export function toggleFocusMode(): void { editorState.distractionFree = !editorState.distractionFree; notifyLayoutChanged() }
-export function openEditorTool(tab: BottomPanelTab): void { if (editorState.currentPage === 'settings') editorState.currentPage = 'scene'; editorState.bottomPanelVisible = true; editorState.bottomPanelOpen = true; editorState.bottomPanelTab = tab === 'presentation' ? 'assets' : tab; notifyLayoutChanged() }
+const MANAGE_TABS: Partial<Record<BottomPanelTab, ManageSection>> = { packages: 'packages', project: 'project', rendering: 'rendering', build: 'build' }
+export function openManageSection(section: ManageSection): void { editorState.activeWorkspace = 'manage'; editorState.currentPage = 'manage'; editorState.manageSection = section; editorState.bottomPanelOpen = false; notifyLayoutChanged() }
+export function openEditorTool(tab: BottomPanelTab): void {
+  const manage = MANAGE_TABS[tab]
+  if (manage) { openManageSection(manage); return }
+  if (editorState.currentPage === 'settings' || editorState.currentPage === 'manage') editorState.currentPage = editorState.activeWorkspace === 'debug' ? 'game' : 'scene'
+  editorState.bottomPanelVisible = true; editorState.bottomPanelOpen = true; editorState.bottomPanelTab = tab === 'presentation' ? 'assets' : tab; notifyLayoutChanged()
+}
+export function reorderBottomTab(source: BottomPanelTab, target: BottomPanelTab): void { const order = workspaceState.bottomTabOrder; const from = order.indexOf(source), to = order.indexOf(target); if (from < 0 || to < 0 || from === to) return; order.splice(to, 0, order.splice(from, 1)[0]); notifyLayoutChanged() }
 export function resetEditorLayout(): void { if (typeof localStorage !== 'undefined') { localStorage.removeItem(storageKey()); localStorage.removeItem(LEGACY_STORAGE_KEY) }; workspaceState.safeLayout = false; applyEditorWorkspace('design') }
 export function enableSafeLayout(): void { workspaceState.safeLayout = true; editorState.activeWorkspace = 'design'; applyLayout(safeDesignLayout) }

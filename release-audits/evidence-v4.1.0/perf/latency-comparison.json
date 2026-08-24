@@ -1,0 +1,17 @@
+{
+  "format": "nova-v4.1-interaction-latency",
+  "version": 1,
+  "generatedAt": "2026-08-20T08:57:17.225Z",
+  "baseline": "4.0.0 retained browser/layout measurements",
+  "operations": [
+    "startup",
+    "workspace switch",
+    "panel open",
+    "command palette",
+    "search"
+  ],
+  "automatedBrowserTiming": "recorded by browser qualification where supported",
+  "hardwareComparison": "pending named reference-hardware review",
+  "approvedRegressions": [],
+  "status": "passed-with-external-hardware-gate"
+}

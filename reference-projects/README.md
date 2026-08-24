@@ -1,4 +1,4 @@
-# Nova_A 4.0 reference projects
+# Nova_A 4.1 reference projects
 
 These are generated, schema-valid source projects. Open any `.nova` file through **File → Import Project**, inspect it, press **Play**, run its project tests, and export it from **Build Settings**.
 

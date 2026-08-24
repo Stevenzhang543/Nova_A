@@ -1,7 +1,7 @@
 {
   "name": "nova_a",
   "private": true,
-  "version": "4.0.0",
+  "version": "4.4.0",
   "homepage": "https://github.com/Stevenzhang543/Nova_A/",
   "repository": {
     "type": "git",
@@ -78,13 +78,34 @@
     "verify:v4:windows": "node scripts/verify-v4-windows.mjs",
     "health:v4": "node scripts/generate-v4-release-health.mjs",
     "evidence:v4": "node scripts/generate-v4-release-evidence.mjs",
+    "audit:v4.1": "node scripts/audit-v4.1.mjs",
+    "verify:v4.1": "node scripts/verify-v4.1.mjs",
+    "verify:v4.1:windows": "node scripts/verify-v4.1-windows.mjs",
+    "qualify:v4.1:layout": "node scripts/qualify-layout-v4.1.mjs",
+    "evidence:v4.1": "node scripts/generate-v4.1-release-evidence.mjs",
+    "fixtures:v4.2": "node scripts/generate-v4.2-migration-fixtures.mjs",
+    "audit:v4.2": "node scripts/audit-v4.2.mjs",
+    "verify:v4.2": "node scripts/verify-v4.2.mjs",
+    "qualify:v4.2:layout": "node scripts/qualify-layout-v4.2.mjs",
+    "verify:v4.2:windows": "node scripts/verify-v4.2-windows.mjs",
+    "evidence:v4.2": "node scripts/generate-v4.2-release-evidence.mjs",
+    "audit:v4.3": "node scripts/audit-v4.3.mjs",
+    "verify:v4.3": "node scripts/verify-v4.3.mjs",
+    "qualify:v4.3:layout": "node scripts/qualify-layout-v4.3.mjs",
+    "verify:v4.3:windows": "node scripts/verify-v4.3-windows.mjs",
+    "evidence:v4.3": "node scripts/generate-v4.3-release-evidence.mjs",
+    "audit:v4.4": "node scripts/audit-v4.4.mjs",
+    "verify:v4.4": "node scripts/verify-v4.4.mjs",
+    "qualify:v4.4:layout": "node scripts/qualify-layout-v4.4.mjs",
+    "verify:v4.4:windows": "node scripts/verify-v4.4-windows.mjs",
+    "evidence:v4.4": "node scripts/generate-v4.4-release-evidence.mjs",
     "verify:v3.1": "node scripts/verify-v3.1.mjs",
     "qualify:v3.1:browser": "node scripts/qualify-editor-v3.1.mjs",
     "evidence:v3.1": "node scripts/generate-v3.1-release-evidence.mjs",
     "references": "node scripts/export-reference-projects.mjs",
     "benchmark:v3": "node scripts/benchmark-v3.mjs",
     "stability:v3": "node scripts/stability-v3.mjs",
-    "audit": "pnpm audit:manual && pnpm audit:editor && pnpm audit:scripts && pnpm audit:rendering && pnpm audit:animation && pnpm audit:v2.5 && pnpm audit:v2.6 && pnpm audit:v2.7 && pnpm audit:v2.8 && pnpm audit:v2.9 && pnpm audit:typography && pnpm audit:v3 && pnpm audit:v3.1 && pnpm verify:v3.1 && pnpm audit:v3.2 && pnpm verify:v3.2 && pnpm benchmark:v3.2 && pnpm audit:v3.3 && pnpm verify:v3.3 && pnpm benchmark:v3.3 && pnpm audit:v3.4 && pnpm verify:v3.4 && pnpm benchmark:v3.4 && pnpm api:docs && pnpm verify:v3.5 && pnpm audit:v3.5 && pnpm verify:v3.6 && pnpm audit:v3.6 && pnpm verify:v3.7 && pnpm audit:v3.7 && pnpm verify:v3.8 && pnpm audit:v3.8 && pnpm verify:v3.9:cli && pnpm verify:v3.9 && pnpm audit:v3.9 && pnpm verify:v4 && pnpm audit:v4",
+    "audit": "pnpm check && pnpm audit:manual && pnpm audit:editor && pnpm audit:scripts && pnpm audit:rendering && pnpm audit:animation && pnpm audit:typography && pnpm audit:v4.4 && pnpm verify:v4.4",
     "nova": "node scripts/nova-cli.mjs",
     "validate": "node scripts/nova-cli.mjs validate",
     "import:headless": "node scripts/nova-cli.mjs import",
@@ -98,16 +119,19 @@
     "tauri": "tauri"
   },
   "dependencies": {
-    "vue": "^3.5.13",
+    "@fontsource-variable/jetbrains-mono": "^5.3.0",
+    "@fontsource-variable/noto-sans-sc": "^5.3.0",
+    "@fontsource-variable/nunito-sans": "^5.3.0",
     "@tauri-apps/api": "2.11.1",
-    "@tauri-apps/plugin-opener": "2.5.3"
+    "@tauri-apps/plugin-opener": "2.5.3",
+    "vue": "^3.5.13"
   },
   "devDependencies": {
+    "@tauri-apps/cli": "2.11.4",
     "@vitejs/plugin-vue": "^5.2.1",
     "typescript": "~5.6.2",
     "vite": "^6.4.3",
-    "vue-tsc": "^2.1.10",
-    "@tauri-apps/cli": "2.11.4"
+    "vue-tsc": "^2.1.10"
   },
   "pnpm": {
     "overrides": {
