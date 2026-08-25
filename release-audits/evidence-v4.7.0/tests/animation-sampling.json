@@ -1,0 +1,84 @@
+{
+  "format": "nova-v4.7-animation-sampling-evidence",
+  "generatedAt": "2026-08-24T13:56:24.469Z",
+  "golden": {
+    "id": "ANM-GOLDEN-LINEAR",
+    "status": "passed",
+    "detail": "Linear animation samples match analytical values.",
+    "metrics": {
+      "golden": [
+        0,
+        2.5,
+        5,
+        7.5,
+        10
+      ],
+      "sampling": {
+        "assetUuid": "golden",
+        "sampleRate": 120,
+        "samples": 121,
+        "nonFinite": 0,
+        "maximumError": 5,
+        "events": 2,
+        "status": "passed"
+      }
+    }
+  },
+  "editing": {
+    "id": "ANM-EDITING",
+    "status": "passed",
+    "detail": "Retime/ripple, slice and deterministic key reduction passed.",
+    "metrics": {
+      "retimedEvents": [
+        {
+          "time": 0.25,
+          "signal": "quarter",
+          "payload": ""
+        },
+        {
+          "time": 1.25,
+          "signal": "three-quarter",
+          "payload": ""
+        }
+      ],
+      "slicedEvents": [
+        {
+          "time": 0.75,
+          "signal": "three-quarter",
+          "payload": ""
+        }
+      ],
+      "reduced": 2
+    }
+  },
+  "loopAndReverse": {
+    "id": "ANM-LOOP-REVERSE",
+    "status": "passed",
+    "detail": "Forward/reverse multi-loop event ordering is exact.",
+    "metrics": {
+      "forward": [
+        "quarter",
+        "three-quarter",
+        "quarter",
+        "three-quarter"
+      ],
+      "reverse": [
+        "three-quarter",
+        "quarter",
+        "three-quarter",
+        "quarter"
+      ]
+    }
+  },
+  "stress": {
+    "id": "ANM-STRESS",
+    "status": "passed",
+    "detail": "100,000 runtime samples completed in 5.04 ms.",
+    "metrics": {
+      "samples": 100000,
+      "stressMs": 5.035600000002887,
+      "checksum": 499500
+    }
+  },
+  "status": "passed"
+}

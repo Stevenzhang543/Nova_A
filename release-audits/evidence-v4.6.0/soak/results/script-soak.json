@@ -1,0 +1,7 @@
+{
+  "format": "nova-script-soak-gate",
+  "version": 1,
+  "acceleratedFuzzCases": 2000,
+  "wallClock24Hours": false,
+  "status": "pending-external-gate"
+}

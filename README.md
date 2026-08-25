@@ -3,16 +3,50 @@
 # Nova_A 2D Game Engine & Editor
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE.md)
-[![Platforms](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey)](https://v2.tauri.app/start/prerequisites/)
-[![Release](https://img.shields.io/badge/release-4.4.0-63c6ff)]()
+[![Tier 1](https://img.shields.io/badge/Tier%201-Windows%20%7C%20Web-63c6ff)](./docs/PLATFORM_BUILD_MATRIX_5_0.md)
+[![Release](https://img.shields.io/badge/release-5.0.1%20candidate-63c6ff)]()
 
 Nova_A is an open-source 2D game engine and desktop editor built with Rust, WebAssembly, Vue 3, and Tauri.
 
-Version **4.4.0** delivers the daily 2D content-production pipeline while preserving Project Format 2 schema 29 and the frozen Runtime API 1, Plugin API 2, Package Manifest 1, and Build CLI 1 contracts. Deterministic importer 3.0 provenance, dependency/content closure, scalable asset browsing, production sprites/atlases/TileMap, camera/parallax/path composition, multilingual runtime fonts, and a quieter iOS-inspired editor visual language are integrated without removing prior features or animations.
+Version **5.0.1** is the user-experience consolidation candidate on the frozen 5.x production baseline. It reorganizes editor controls, raises the readable typography floor, strengthens theme hierarchy, and completes English/German/Chinese editor-chrome and migration-preflight localization without removing any command, shortcut, animation, feature, or persisted contract. Final production certification remains withheld until the real 72-hour soak, 14-day observation, two-machine reproducibility, clean-environment lifecycle, external browser/hardware, signing, tagged-source, and independent-verifier evidence is attached.
 
 **Manual:** [interactive English/German/Chinese webpage](./manual/index.html) · [English Markdown](./manual/MANUAL.en.md) · [Deutsch](./manual/MANUAL.de.md) · [中文](./manual/MANUAL.zh-CN.md)
 
-## What is new in v4.4.0
+## What is new in v5.0.1
+
+- **Clear control hierarchy:** direct workspace, transform, history, and simulation controls remain visible; layout, command/search, authoring, drawing, snapping, guide, camera, and arrangement commands now live in named, keyboard-accessible groups.
+- **No scene-toolbar scrollbar:** the authoring surface adapts without hiding commands behind a browser-like horizontal scrolling strip.
+- **Readable multilingual chrome:** a 12 px caption floor, 13 px dense controls, larger body/heading roles, two-line context-rail labels, wider popovers, and localized migration checks protect English, German, and Chinese layouts.
+- **Refined themes and motion:** deeper dark surfaces, muted light surfaces, clearer borders, role colors for selection/creation/secondary actions, softer elevation, unified rounding, purposeful press/hover transitions, and reduced-motion preservation.
+- **Preserved contracts:** Project Format 2 stays at schema 29; Rhai API v2, Plugin API 2, Package Manifest 1, Build CLI 1, workspace document 3, shortcuts, features, and the eleven-file release contract remain unchanged.
+
+See the authoritative [v5.0.1 UX specification](./instructions.txt) and [UX guide](./docs/UX_GUIDE_5_0_1.md).
+
+### Retained v5.0.0 frozen baseline
+
+- **Tiered, reproducible builds:** Windows/web Tier-1 presets, explicit target availability, content stripping/compression, symbols/crash output, provenance, CycloneDX SBOM, safe web headers, release channels, signing/notarization hooks that never run implicitly, and comparable build history.
+- **Fail-closed packages:** trusted registry policy, pinned lock resolution, checksums/signatures, dependency constraints, offline mirror, rollback, cache verification, license/vulnerability policy and pre-install publisher/permission/provenance review.
+- **Local-first collaboration:** Git guidance, semantic scene/resource comparison, external-change handling, CODEOWNERS output, ownership, task/change notes, shared presets and advisory binary locks—with no mandatory cloud service or hidden network action.
+- **Release-ready onboarding:** versioned offline three-language manual, first-game walkthrough, package/plugin SDK, build, source-control, migration and release-engineering guides, direct health/build help links, five release reference projects and automated documentation validation.
+- **Frozen authoring contracts:** new projects use Rhai API v2, 4.x workspace layouts migrate to document 3, and incomplete Experimental targets no longer appear in the default release picker.
+- **Actionable warnings:** Launcher migration, Project Health, Package Manager, Script Studio, and Build Settings warnings open stable offline help targets.
+- **Honest certification:** local audits and candidate artifacts are separated from the still-pending time-based and independent external gates.
+
+Start with the [first-game tutorial](./docs/FIRST_GAME_5_0.md), [platform/build matrix](./docs/PLATFORM_BUILD_MATRIX_5_0.md), [build/export guide](./docs/BUILD_EXPORT_5_0.md), [package/plugin SDK](./docs/PACKAGE_PLUGIN_SDK_5_0.md), [migration guide](./docs/MIGRATION_5_0.md), and [release-engineering guide](./docs/RELEASE_ENGINEERING_5_0.md).
+
+### Retained v4.7 animation and runtime UI
+
+Production animation, 2D rigs, responsive runtime UI, themes, localization, RTL, accessibility, captions and automatic input prompts remain fully available.
+
+### Retained v4.6 programming workflow
+
+Rhai API v2, semantic Script Studio, debugger, transactional hot reload, script tests/coverage, headless CI and external-tool protocols remain fully available.
+
+### Retained v4.5 production physics
+
+Accurate/Balanced/Fast/Custom solver profiles, structured spatial/contact queries, CharacterBody2D, Area2D, production colliders/joints/Rope2D, deterministic collision events, Physics Monitor, diagnostic overlays, and measured solver evidence remain unchanged.
+
+### Retained v4.4 content-production pipeline
 
 - **Deterministic Asset Database:** importer/version/preset/settings/hash provenance, dependency cycles and repair, duplicate sources, build inclusion closure, content groups, tags, favorites, collections, saved searches, grid/list view, bounded thumbnails, incremental 20,000-asset browsing, source-control state, watcher conflict choices, transactional folder moves, Compare, Revert, and batch reimport.
 - **Production sprites and atlases:** filtering, mipmaps, color/transparency/compression, PPU, pivot, trim, grid/automatic slicing, nine-slice, polygon/collision, animation extraction, SVG, deterministic atlas packing, reports, and platform overrides.
@@ -349,7 +383,7 @@ Configuration changes cross Vue → `nova_wasm` as explicit retained-world comma
 
 ## Project compatibility
 
-- New saves use **Nova_A Project Format 2**, schema 29, and engine version `4.2.0`.
+- New saves use **Nova_A Project Format 2**, schema 29, and engine version `5.0.0`.
 - Persisted scenes, entities, components, and connections use UUIDs; runtime handles are never written to disk.
 - Format migration and validation are centralized in `nova_format`, not scattered through editor components.
 - v1.9 format-13 files, v1.8 format-12 files, v1.7 format-11 files, v1.6 format-10 files, v1.5 format-9 files, v1.4 format-8 files, v1.3 format-7 files, v1.2 format-6 files, v1.1.2 format-5 files, older object roots, and legacy top-level entity arrays continue to load. A migrated project is only written in Format 2 when the user saves it.
@@ -388,3 +422,9 @@ Configuration changes cross Vue → `nova_wasm` as explicit retained-world comma
 Nova_A uses 64-bit floating-point values across the full frontend/WASM/backend path. Non-finite input is normalized. General physics magnitudes are bounded to ±`1e50`; positive geometry, mass, and density values have a minimum of `1e-6`.
 
 Polygon collision geometry must be convex. The solver uses at least 8 adaptive substeps, up to 128 for fast motion, and 20 sequential impulse iterations per substep. These safeguards reduce tunneling and instability, but Nova_A remains a discrete real-time solver rather than symbolic or infinite-precision physics.
+
+## Nova_A 4.5 production physics
+
+Version 4.5 adds project-scoped Accurate/Balanced/Fast/Custom solver profiles, explicit dropped-time and sleep tuning, structured ray/point/overlap/sweep/nearest/contact APIs, World Boundary authoring, resolved sleep/wake and joint-break events, adjustable Rope2D segmentation, and a redesigned virtual Physics Monitor with sorting, pins, sparklines, constraint telemetry, capture export, and snapshot comparison. Project Health and Profiler now share physics budget/instability diagnostics, and viewport debug adds centre-of-mass, velocity, and force overlays.
+
+Start with [the v4.5 physics contract](docs/PHYSICS_2D_4_5.md), [character controllers](docs/CHARACTER_CONTROLLERS_4_5.md), and [diagnostics](docs/PHYSICS_DIAGNOSTICS_4_5.md). Numerical tolerances, accelerated soak results, stress captures, platform comparisons, and honest external gates ship in the release-evidence archive.

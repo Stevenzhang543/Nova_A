@@ -84,7 +84,9 @@ export const editorState = reactive({
     renderTargets: 0,
     overdraw: 0,
     batchBreaks: 0,
-    atlasPages: 0
+    atlasPages: 0,
+    textureMemoryBytes: 0,
+    batchBreakReasons: {}
   },
   manualConnectionId: null as number | null,
   manualConnectionPoints: [] as Vec2[],

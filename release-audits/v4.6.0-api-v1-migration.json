@@ -1,0 +1,104 @@
+{
+  "format": "nova-v4.6-api-v1-migration",
+  "version": 1,
+  "generatedAt": "2026-08-24T10:42:38.897Z",
+  "apiMinimum": 1,
+  "apiCurrent": 2,
+  "diagnostics": [
+    {
+      "line": 1,
+      "column": 26,
+      "endLine": 1,
+      "endColumn": 37,
+      "range": {
+        "start": {
+          "line": 1,
+          "column": 26
+        },
+        "end": {
+          "line": 1,
+          "column": 37
+        }
+      },
+      "severity": "warning",
+      "phase": "compatibility",
+      "code": "NOVA-COMPAT-001",
+      "message": "“find_entity” is deprecated; use “find_entity_handle”.",
+      "source": "Nova Rhai",
+      "documentation": "manual/index.html#diagnostic-nova-compat-001"
+    },
+    {
+      "line": 1,
+      "column": 52,
+      "endLine": 1,
+      "endColumn": 59,
+      "range": {
+        "start": {
+          "line": 1,
+          "column": 52
+        },
+        "end": {
+          "line": 1,
+          "column": 59
+        }
+      },
+      "severity": "warning",
+      "phase": "compatibility",
+      "code": "NOVA-COMPAT-001",
+      "message": "“is_down” is deprecated; use “input_down”.",
+      "source": "Nova Rhai",
+      "documentation": "manual/index.html#diagnostic-nova-compat-001"
+    },
+    {
+      "line": 1,
+      "column": 1,
+      "endLine": 1,
+      "endColumn": 2,
+      "range": {
+        "start": {
+          "line": 1,
+          "column": 1
+        },
+        "end": {
+          "line": 1,
+          "column": 2
+        }
+      },
+      "severity": "info",
+      "phase": "compatibility",
+      "code": "NOVA-COMPAT-V1",
+      "message": "This asset uses the API v1 compatibility adapter. Use code actions to migrate deprecated calls before selecting API v2.",
+      "source": "Nova Rhai",
+      "documentation": "manual/index.html#diagnostic-nova-compat-v1"
+    }
+  ],
+  "actions": [
+    {
+      "title": "Replace find_entity with find_entity_handle",
+      "code": "NOVA-COMPAT-001",
+      "line": 1,
+      "replacement": "find_entity_handle"
+    },
+    {
+      "title": "Replace is_down with input_down",
+      "code": "NOVA-COMPAT-001",
+      "line": 1,
+      "replacement": "input_down"
+    }
+  ],
+  "mappings": {
+    "find_entity": "find_entity_handle",
+    "get_component": "component_handle",
+    "is_down": "input_down",
+    "was_pressed": "input_pressed",
+    "was_released": "input_released",
+    "axis": "input_axis",
+    "vector": "input_vector",
+    "character_can_coyote_jump": "can_coyote_jump",
+    "animator": "animator_handle",
+    "audio_source": "audio_source_handle"
+  },
+  "sourceUnchanged": "fn update(dt) { let id = find_entity(\"Player\"); if is_down(\"Move\") { } }\n",
+  "automaticRewrite": false,
+  "status": "passed"
+}

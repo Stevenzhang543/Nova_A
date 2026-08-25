@@ -46,6 +46,7 @@ export interface Connection {
   collisionEnabled: boolean
   collisionRadius: number
   linearDensity: number
+  segmentCount: number
   ropeNodes: RopeNode[]
   breakLink: number
   binding: boolean
@@ -456,6 +457,7 @@ export function createConnection(
     collisionEnabled: true,
     collisionRadius: 0.2,
     linearDensity: 0.08,
+    segmentCount: 12,
     ropeNodes: [],
     breakLink: -1,
     binding: false,
@@ -564,6 +566,7 @@ export function normalizeConnection(connection: Connection, entities: Entity[]):
   connection.collisionEnabled = connection.collisionEnabled === true && connection.binding !== true
   connection.collisionRadius = Math.min(1e6, Math.max(1e-6, finiteNumber(connection.collisionRadius, 0.2)))
   connection.linearDensity = Math.min(1e50, Math.max(1e-6, finiteNumber(connection.linearDensity, 0.08)))
+  connection.segmentCount = Math.min(ROPE_NODE_CAPACITY, Math.max(3, Math.round(finiteNumber(connection.segmentCount, 12))))
   normalizeRopeState(connection)
   connection.binding = connection.binding === true
   const rawBindOffset = connection.bindOffset as Vec2 | undefined
@@ -715,7 +718,8 @@ export function initializeRopeNodes(connection: Connection, entities: Entity[]):
   if (!path || path.length < 2) { connection.ropeNodes = []; return }
   const length = Math.max(1e-6, polylineLength(path))
   const targetSpacing = Math.max(connection.collisionRadius * 1.25, length / (ROPE_NODE_CAPACITY + 1), 0.05)
-  const count = Math.min(ROPE_NODE_CAPACITY, Math.max(3, Math.ceil(length / targetSpacing) - 1))
+  const automaticCount = Math.min(ROPE_NODE_CAPACITY, Math.max(3, Math.ceil(length / targetSpacing) - 1))
+  const count = Math.min(ROPE_NODE_CAPACITY, Math.max(3, Math.round(connection.segmentCount || automaticCount)))
   connection.ropeNodes = Array.from({ length: count }, (_, index) => ({
     position: samplePolyline(path, (index + 1) / (count + 1)),
     velocity: { x: 0, y: 0 }

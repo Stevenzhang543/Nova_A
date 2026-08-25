@@ -1,0 +1,32 @@
+{
+  "format": "nova-language-budget",
+  "version": 1,
+  "interactiveP95Ms": 50,
+  "largeProjectScripts": 5000,
+  "measured": {
+    "format": "nova-v4.6-language-performance",
+    "version": 1,
+    "generatedAt": "2026-08-24T10:42:38.897Z",
+    "scripts": 5000,
+    "symbols": 9999,
+    "indexMs": 160.92020000000002,
+    "p95DocumentMs": 0.06290000000035434,
+    "repeatedEditMs": 0.05040000000008149,
+    "interactiveBudgetMs": 50,
+    "restoredCount": 5000,
+    "protocolMethods": [
+      "textDocument/completion",
+      "textDocument/hover",
+      "textDocument/signatureHelp",
+      "textDocument/definition",
+      "textDocument/references",
+      "textDocument/rename",
+      "textDocument/moduleAssistance",
+      "textDocument/formatting"
+    ],
+    "cancellationRevision": 90,
+    "latestRevision": 91,
+    "status": "passed"
+  },
+  "status": "passed"
+}

@@ -1,0 +1,19 @@
+{
+  "engineVersion": "5.0.1",
+  "open": "Project Manager > Open project.nova",
+  "manage": "Manage > Rendering / Presentation / Profiler",
+  "health": "Manage > Project Health",
+  "build": "Build Settings > Diagnostics",
+  "capture": "Profiler > Capture performance > Export capture + CI result",
+  "validate": [
+    "listener",
+    "attenuation",
+    "pan",
+    "streaming",
+    "preload",
+    "loop markers",
+    "fades",
+    "playlists",
+    "voice stealing"
+  ]
+}

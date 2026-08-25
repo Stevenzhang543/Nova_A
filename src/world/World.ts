@@ -26,7 +26,7 @@ import { Collider2D, TileMap2D } from './components'
 import { buildTileColliderDescriptors } from '../runtime/tilemap'
 import { assetState, readTextAsset } from '../assets/AssetDatabase'
 import { recordPhysicsTelemetry } from '../runtime/physicsMonitor'
-import { defaultPhysicsLayers, normalizePhysicsMaterial, stablePhysicsEventOrder, type PhysicsInterpolationMode, type PhysicsLayerDefinition, type PhysicsShapeKind } from '../runtime/physicsProduction'
+import { defaultPhysicsLayers, defaultPhysicsProfile, normalizePhysicsMaterial, normalizePhysicsProfile, stablePhysicsEventOrder, type PhysicsInterpolationMode, type PhysicsLayerDefinition, type PhysicsShapeKind, type PhysicsSimulationProfile2D } from '../runtime/physicsProduction'
 
 export const PHYSICS_STRIDE = 56
 export const PHYSICS_LAYER_COUNT = 32
@@ -44,6 +44,7 @@ export interface GlobalPhysicsSettings {
   collisionMatrix: number[]
   interpolation: PhysicsInterpolationMode
   layers: PhysicsLayerDefinition[]
+  profile: PhysicsSimulationProfile2D
 }
 
 export interface EngineDiagnostics {
@@ -72,6 +73,13 @@ export interface RuntimePhysicsEvent {
   normalForce?: number
   tangentForce?: number
   penetration?: number
+  handle?: number
+  jointKind?: number
+  link?: number
+  tension?: number
+  strain?: number
+  entityUuid?: string
+  connectionUuid?: string
   [key: string]: unknown
 }
 
@@ -147,7 +155,7 @@ function writeEntityRecord(data: Float64Array, entityIndex: number, entity: Enti
   const compoundEnvelope = compoundColliderEnvelope(collider)
   const index = entityIndex * PHYSICS_STRIDE
   data[index] = runtimeHandle
-  data[index + 1] = compoundEnvelope ? 0 : collider.shapeModel === 'Circle' ? 1 : collider.shapeModel === 'Capsule' ? 2 : collider.shapeModel === 'Segment' ? 3 : 0
+  data[index + 1] = compoundEnvelope ? 0 : collider.shapeModel === 'Circle' ? 1 : collider.shapeModel === 'Capsule' ? 2 : collider.shapeModel === 'Segment' || collider.shapeModel === 'WorldBoundary' ? 3 : 0
   data[index + 2] = transform.position.x
   data[index + 3] = transform.position.y
   data[index + 4] = entity.velocity.x
@@ -155,7 +163,7 @@ function writeEntityRecord(data: Float64Array, entityIndex: number, entity: Enti
   data[index + 6] = entity.acceleration.x
   data[index + 7] = entity.acceleration.y
   data[index + 8] = entity.mass
-  data[index + 9] = entity.isStatic ? 1 : 0
+  data[index + 9] = entity.isStatic || collider.shapeModel === 'WorldBoundary' ? 1 : 0
   data[index + 10] = entity.restitution
   data[index + 11] = entity.dynamicFriction
 
@@ -376,7 +384,7 @@ export class World {
   private tileCollisionSignature = ''
   private activeConnectionRecords: ConnectionRecord[] = []
   private timingSignature = ''
-  private lastSettings: GlobalPhysicsSettings = { gravity: 9.8, airFriction: .01, timeScale: 1, tickRate: 60, maxCatchUpSteps: 8, collisionMatrix: defaultCollisionMatrix(), interpolation: 'Interpolate', layers: defaultPhysicsLayers() }
+  private lastSettings: GlobalPhysicsSettings = { gravity: 9.8, airFriction: .01, timeScale: 1, tickRate: 60, maxCatchUpSteps: 8, collisionMatrix: defaultCollisionMatrix(), interpolation: 'Interpolate', layers: defaultPhysicsLayers(), profile: defaultPhysicsProfile() }
   wasmError: Error | null = null
   readonly wasmReady: Promise<void>
   diagnostics: EngineDiagnostics = {
@@ -385,7 +393,7 @@ export class World {
   }
   events: RuntimePhysicsEvent[] = []
   projectFormatVersion = 29
-  projectEngineVersion = '4.4.0'
+  projectEngineVersion = '5.0.1'
 
   constructor() {
     // Vite's Node-side audit loader has no browser fetch implementation for file: WASM URLs.
@@ -571,6 +579,18 @@ export class World {
     return this.mapQueryHit(JSON.parse(this.runtime.shape_cast_json(center.x, center.y, size.x, size.y, angle, direction.x, direction.y, distance, mask >>> 0)) as WasmQueryHit | null)
   }
 
+  nearest(center: Vec2, maximumDistance: number, mask = 0xffff_ffff, samples = 64): PhysicsQueryHit2D | null {
+    const distance = Math.max(0, finiteNumber(maximumDistance, 0))
+    const count = Math.min(256, Math.max(8, Math.round(finiteNumber(samples, 64))))
+    let best: PhysicsQueryHit2D | null = null
+    for (let index = 0; index < count; index++) {
+      const angle = index * Math.PI * 2 / count
+      const hit = this.raycast(center, { x: Math.cos(angle), y: Math.sin(angle) }, distance, mask)
+      if (hit && (!best || hit.distance < best.distance || (hit.distance === best.distance && hit.entityUuid < best.entityUuid))) best = hit
+    }
+    return best
+  }
+
   contactQuery(entityUuid: string): RuntimePhysicsEvent[] {
     return this.events.filter(event => event.firstEntityUuid === entityUuid || event.secondEntityUuid === entityUuid)
   }
@@ -737,12 +757,20 @@ export class World {
 
   private configureTiming(settings: GlobalPhysicsSettings, paused: boolean): void {
     if (!this.runtime) return
-    const tickRate = Math.min(1000, Math.max(1, finiteNumber(settings.tickRate, 60)))
-    const catchUp = Math.min(240, Math.max(1, Math.round(finiteNumber(settings.maxCatchUpSteps, 8))))
+    const profile = normalizePhysicsProfile(settings.profile ?? defaultPhysicsProfile())
+    const tickRate = Math.min(1000, Math.max(1, finiteNumber(settings.tickRate, profile.tickRate)))
+    const catchUp = Math.min(240, Math.max(1, Math.round(finiteNumber(settings.maxCatchUpSteps, profile.maxCatchUpSteps))))
     const timeScale = Math.min(100, Math.max(0, finiteNumber(settings.timeScale, 1)))
-    const signature = `${tickRate}:${catchUp}:${timeScale}:${paused}`
+    const dropCode = profile.droppedTimePolicy === 'PreserveBacklog' ? 1 : profile.droppedTimePolicy === 'SlowMotion' ? 2 : 0
+    const solverIterations = Math.max(profile.velocityIterations, profile.positionIterations)
+    const signature = `${tickRate}:${catchUp}:${timeScale}:${paused}:${dropCode}:${profile.minimumSubsteps}:${solverIterations}:${profile.sleepLinearThreshold}:${profile.sleepAngularThreshold}:${profile.timeToSleep}`
     if (signature === this.timingSignature) return
-    this.runtime.set_timing(tickRate, catchUp, timeScale, paused)
+    const runtime = this.runtime as unknown as {
+      set_timing: (tickRate: number, catchUp: number, scale: number, paused: boolean, droppedPolicy: number) => void
+      set_physics_quality: (substeps: number, iterations: number, sleepLinear: number, sleepAngular: number, timeToSleep: number) => void
+    }
+    runtime.set_timing(tickRate, catchUp, timeScale, paused, dropCode)
+    runtime.set_physics_quality(profile.minimumSubsteps, solverIterations, profile.sleepLinearThreshold, profile.sleepAngularThreshold, profile.timeToSleep)
     this.timingSignature = signature
   }
 
@@ -840,12 +868,19 @@ export class World {
         const handle = this.bodyHandles.get(entity.id)
         if (handle !== undefined) entityByHandle.set(handle, this.tileCollisionOwners.get(entity.id) ?? entity)
       }
+      const connectionByHandle = new Map<number, Connection>()
+      for (const record of this.activeConnectionRecords) {
+        const handle = this.connectionHandles.get(`${record.connection.uuid}:${record.segment}`)
+        if (handle !== undefined) connectionByHandle.set(handle, record.connection)
+      }
       this.events = stablePhysicsEventOrder(rawEvents.map(event => ({
         ...event,
         firstEntityUuid: typeof event.first === 'number' ? entityByHandle.get(event.first)?.uuid : undefined,
-        secondEntityUuid: typeof event.second === 'number' ? entityByHandle.get(event.second)?.uuid : undefined
+        secondEntityUuid: typeof event.second === 'number' ? entityByHandle.get(event.second)?.uuid : undefined,
+        entityUuid: typeof event.handle === 'number' && (event.type === 'bodySleeping' || event.type === 'bodyWoke') ? entityByHandle.get(event.handle)?.uuid : undefined,
+        connectionUuid: typeof event.handle === 'number' && event.type === 'jointBroken' ? connectionByHandle.get(event.handle)?.uuid : undefined
       })))
-      recordPhysicsTelemetry(this.entities, this.events, this.diagnostics, this.lastSettings.tickRate)
+      recordPhysicsTelemetry(this.entities, this.connections, this.events, this.diagnostics, this.lastSettings.tickRate, this.lastSettings.profile)
     } catch (error) {
       console.warn('Nova_A received malformed runtime diagnostics', error)
     }

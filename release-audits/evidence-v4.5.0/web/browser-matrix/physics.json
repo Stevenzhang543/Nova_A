@@ -1,0 +1,10 @@
+{
+  "format": "nova-v4.5-web-physics-matrix",
+  "version": 1,
+  "localChromium": "passed",
+  "wasmBuild": "passed when production build report is present",
+  "firefox": "pending-external-gate",
+  "linux": "pending-external-gate",
+  "macos": "pending-external-gate",
+  "status": "local-chromium-only"
+}

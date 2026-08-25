@@ -1,0 +1,506 @@
+{
+  "format": "nova-v4.6-programming-verification",
+  "version": 1,
+  "engineVersion": "4.6.0",
+  "generatedAt": "2026-08-24T10:42:38.897Z",
+  "checks": [
+    {
+      "id": "SCR-LANGUAGE-5000",
+      "status": "passed",
+      "detail": "Indexed/restored 5,000 scripts; p95 0.063 ms; edit 0.050 ms.",
+      "metrics": {
+        "format": "nova-v4.6-language-performance",
+        "version": 1,
+        "generatedAt": "2026-08-24T10:42:38.897Z",
+        "scripts": 5000,
+        "symbols": 9999,
+        "indexMs": 160.92020000000002,
+        "p95DocumentMs": 0.06290000000035434,
+        "repeatedEditMs": 0.05040000000008149,
+        "interactiveBudgetMs": 50,
+        "restoredCount": 5000,
+        "protocolMethods": [
+          "textDocument/completion",
+          "textDocument/hover",
+          "textDocument/signatureHelp",
+          "textDocument/definition",
+          "textDocument/references",
+          "textDocument/rename",
+          "textDocument/moduleAssistance",
+          "textDocument/formatting"
+        ],
+        "cancellationRevision": 90,
+        "latestRevision": 91,
+        "status": "passed"
+      }
+    },
+    {
+      "id": "SCR-LANGUAGE-FUZZ",
+      "status": "passed",
+      "detail": "2,000 malformed parser/formatter/protocol and 500 malformed source-map cases completed; max 1.083 ms.",
+      "metrics": {
+        "format": "nova-v4.6-language-fuzz",
+        "version": 1,
+        "generatedAt": "2026-08-24T10:42:38.897Z",
+        "cases": 2000,
+        "seed": 1120,
+        "failures": 0,
+        "maximumCaseMs": 1.0832000000000335,
+        "malformedSourceMaps": {
+          "cases": 500,
+          "failures": 0
+        },
+        "status": "passed"
+      }
+    },
+    {
+      "id": "DBG-PROTOCOL",
+      "status": "passed",
+      "detail": "Authentication negatives, stack, scopes, evaluation and stepping passed.",
+      "metrics": {
+        "format": "nova-v4.6-debug-protocol",
+        "version": 2,
+        "generatedAt": "2026-08-24T10:42:38.897Z",
+        "rejectedDisabled": true,
+        "rejectedNonLocal": true,
+        "rejectedToken": true,
+        "accepted": {
+          "protocol": "nova-rhai-debug",
+          "version": 2,
+          "capabilities": [
+            "breakpoints",
+            "conditionalBreakpoints",
+            "hitCounts",
+            "logpoints",
+            "stackTrace",
+            "scopes",
+            "evaluate",
+            "tasks",
+            "hotReload"
+          ]
+        },
+        "stack": [
+          {
+            "id": 0,
+            "entityUuid": "entity",
+            "entityName": "Debugger fixture",
+            "scriptUuid": "script",
+            "functionName": "recursive",
+            "line": 12,
+            "depth": 3
+          }
+        ],
+        "scopes": [
+          {
+            "name": "Locals",
+            "variables": {
+              "counter": 4,
+              "object": {
+                "alive": true
+              }
+            }
+          },
+          {
+            "name": "Watches",
+            "variables": [
+              {
+                "id": 1,
+                "expression": "counter >= 3",
+                "value": "true",
+                "error": null
+              }
+            ]
+          }
+        ],
+        "evaluated": true,
+        "stepped": {
+          "accepted": true,
+          "mode": "over"
+        },
+        "auditEntries": 4,
+        "status": "passed"
+      }
+    },
+    {
+      "id": "SCR-HOT-RELOAD",
+      "status": "passed",
+      "detail": "Compatible/recreate/type/remove/syntax/disabled classification and rollback passed.",
+      "metrics": {
+        "format": "nova-v4.6-hot-reload-fixtures",
+        "version": 1,
+        "generatedAt": "2026-08-24T10:42:38.897Z",
+        "fixtures": [
+          {
+            "id": "compatible",
+            "classification": "compatible",
+            "reasons": [
+              "Function bodies and exported property layout are compatible."
+            ],
+            "transfer": [
+              {
+                "property": "speed",
+                "action": "preserve"
+              }
+            ]
+          },
+          {
+            "id": "recreate",
+            "classification": "recreate-instances",
+            "reasons": [
+              "The script requests instance recreation."
+            ],
+            "transfer": [
+              {
+                "property": "speed",
+                "action": "preserve"
+              }
+            ]
+          },
+          {
+            "id": "type",
+            "classification": "restart-required",
+            "reasons": [
+              "Export speed changed type or serialization lifetime."
+            ],
+            "transfer": [
+              {
+                "property": "speed",
+                "action": "initialize"
+              }
+            ]
+          },
+          {
+            "id": "removed",
+            "classification": "restart-required",
+            "reasons": [
+              "Serialized export speed was removed."
+            ],
+            "transfer": [
+              {
+                "property": "speed",
+                "action": "drop"
+              }
+            ]
+          },
+          {
+            "id": "syntax",
+            "classification": "rejected",
+            "reasons": [
+              "Parser or semantic analysis failed."
+            ],
+            "transfer": [
+              {
+                "property": "speed",
+                "action": "preserve"
+              }
+            ]
+          },
+          {
+            "id": "disabled",
+            "classification": "rejected",
+            "reasons": [
+              "Reload policy is disabled for this script."
+            ],
+            "transfer": [
+              {
+                "property": "speed",
+                "action": "preserve"
+              }
+            ]
+          }
+        ],
+        "rollbackMatched": true,
+        "validRuntimePreservedForRejected": true,
+        "status": "passed"
+      }
+    },
+    {
+      "id": "TST-COVERAGE",
+      "status": "passed",
+      "detail": "Coverage function 50.0%, line 50.0%.",
+      "metrics": {
+        "format": "nova-rhai-coverage",
+        "version": 2,
+        "engineVersion": "4.6.0",
+        "generatedAt": "2026-08-24T10:42:42.522Z",
+        "lineRate": 0.5,
+        "functionRate": 0.5,
+        "bindingRate": 0.04,
+        "files": [
+          {
+            "scriptUuid": "coverage-fixture",
+            "sourceHash": "027f1dfb",
+            "executableFunctions": [
+              "update",
+              "unused"
+            ],
+            "coveredFunctions": [
+              "update"
+            ],
+            "executableLines": [
+              1,
+              2
+            ],
+            "coveredLines": [
+              1
+            ],
+            "apiBindings": [
+              "update",
+              "log_info",
+              "time_delta",
+              "scene_reload"
+            ],
+            "functionHits": {
+              "update": 1
+            },
+            "lineHits": {
+              "1": 1
+            }
+          }
+        ],
+        "coveredBindings": [
+          "update",
+          "scene_reload",
+          "time_delta",
+          "log_info"
+        ],
+        "missingBindings": [
+          "awake",
+          "start",
+          "fixed_update",
+          "late_update",
+          "on_destroy",
+          "on_timer",
+          "on_task",
+          "on_signal",
+          "on_collision_enter",
+          "on_collision_stay",
+          "on_collision_exit",
+          "on_trigger_enter",
+          "on_trigger_stay",
+          "on_trigger_exit",
+          "entity_handle",
+          "find_entity_handle",
+          "entity",
+          "entity_name",
+          "component_handle",
+          "has_component",
+          "transform",
+          "set_position",
+          "set_rotation",
+          "set_scale",
+          "input_down",
+          "input_pressed",
+          "input_released",
+          "input_axis",
+          "input_vector",
+          "input_vector_x",
+          "input_vector_y",
+          "mouse_x",
+          "mouse_y",
+          "wheel_x",
+          "wheel_y",
+          "rigid_body",
+          "apply_force",
+          "apply_impulse",
+          "set_velocity",
+          "set_angular_velocity",
+          "character_is_on_floor",
+          "character_is_on_wall",
+          "character_is_on_ceiling",
+          "can_coyote_jump",
+          "character_floor_normal",
+          "character_platform_velocity",
+          "move_character",
+          "ui_set_text",
+          "ui_set_value",
+          "animator_handle",
+          "animator_set_bool",
+          "animator_set_float",
+          "animator_set_integer",
+          "animator_trigger",
+          "animator_play",
+          "audio_source_handle",
+          "audio_play",
+          "audio_pause",
+          "audio_stop",
+          "navigation_set_target",
+          "instantiate",
+          "destroy",
+          "despawn",
+          "scene_load",
+          "scene_quit",
+          "time",
+          "time_fixed_delta",
+          "time_elapsed",
+          "time_scale",
+          "time_frame",
+          "random",
+          "random_range",
+          "timer_start",
+          "timer_pause",
+          "timer_resume",
+          "timer_cancel",
+          "task_wait",
+          "task_cancel",
+          "signal_emit",
+          "signal_emit_to",
+          "save_has",
+          "save_get",
+          "save_set",
+          "save_delete",
+          "save_clear",
+          "save_load",
+          "save_commit",
+          "log_debug",
+          "log_warning",
+          "log_error",
+          "resource_handle",
+          "api_version",
+          "api_current_version",
+          "api_minimum_version",
+          "api_namespace",
+          "expect"
+        ],
+        "lcovLines": 10,
+        "junitProduced": true,
+        "jsonProduced": true,
+        "categories": [
+          "unit",
+          "integration",
+          "scene",
+          "ui",
+          "physics",
+          "animation",
+          "regression"
+        ],
+        "stableExitCodes": {
+          "pass": 0,
+          "failure": 1,
+          "infrastructure": 2
+        },
+        "status": "passed"
+      }
+    },
+    {
+      "id": "API-V1-MIGRATION",
+      "status": "passed",
+      "detail": "3 compatibility diagnostics and 2 migration actions; source retained.",
+      "metrics": {
+        "format": "nova-v4.6-api-v1-migration",
+        "version": 1,
+        "generatedAt": "2026-08-24T10:42:38.897Z",
+        "apiMinimum": 1,
+        "apiCurrent": 2,
+        "diagnostics": [
+          {
+            "line": 1,
+            "column": 26,
+            "endLine": 1,
+            "endColumn": 37,
+            "range": {
+              "start": {
+                "line": 1,
+                "column": 26
+              },
+              "end": {
+                "line": 1,
+                "column": 37
+              }
+            },
+            "severity": "warning",
+            "phase": "compatibility",
+            "code": "NOVA-COMPAT-001",
+            "message": "“find_entity” is deprecated; use “find_entity_handle”.",
+            "source": "Nova Rhai",
+            "documentation": "manual/index.html#diagnostic-nova-compat-001"
+          },
+          {
+            "line": 1,
+            "column": 52,
+            "endLine": 1,
+            "endColumn": 59,
+            "range": {
+              "start": {
+                "line": 1,
+                "column": 52
+              },
+              "end": {
+                "line": 1,
+                "column": 59
+              }
+            },
+            "severity": "warning",
+            "phase": "compatibility",
+            "code": "NOVA-COMPAT-001",
+            "message": "“is_down” is deprecated; use “input_down”.",
+            "source": "Nova Rhai",
+            "documentation": "manual/index.html#diagnostic-nova-compat-001"
+          },
+          {
+            "line": 1,
+            "column": 1,
+            "endLine": 1,
+            "endColumn": 2,
+            "range": {
+              "start": {
+                "line": 1,
+                "column": 1
+              },
+              "end": {
+                "line": 1,
+                "column": 2
+              }
+            },
+            "severity": "info",
+            "phase": "compatibility",
+            "code": "NOVA-COMPAT-V1",
+            "message": "This asset uses the API v1 compatibility adapter. Use code actions to migrate deprecated calls before selecting API v2.",
+            "source": "Nova Rhai",
+            "documentation": "manual/index.html#diagnostic-nova-compat-v1"
+          }
+        ],
+        "actions": [
+          {
+            "title": "Replace find_entity with find_entity_handle",
+            "code": "NOVA-COMPAT-001",
+            "line": 1,
+            "replacement": "find_entity_handle"
+          },
+          {
+            "title": "Replace is_down with input_down",
+            "code": "NOVA-COMPAT-001",
+            "line": 1,
+            "replacement": "input_down"
+          }
+        ],
+        "mappings": {
+          "find_entity": "find_entity_handle",
+          "get_component": "component_handle",
+          "is_down": "input_down",
+          "was_pressed": "input_pressed",
+          "was_released": "input_released",
+          "axis": "input_axis",
+          "vector": "input_vector",
+          "character_can_coyote_jump": "can_coyote_jump",
+          "animator": "animator_handle",
+          "audio_source": "audio_source_handle"
+        },
+        "sourceUnchanged": "fn update(dt) { let id = find_entity(\"Player\"); if is_down(\"Move\") { } }\n",
+        "automaticRewrite": false,
+        "status": "passed"
+      }
+    },
+    {
+      "id": "API-V2-CONTRACT",
+      "status": "passed",
+      "detail": "110 stable entries have manifest metadata, docs and examples.",
+      "metrics": {
+        "entries": 110
+      }
+    }
+  ],
+  "severity0Open": 0,
+  "severity1Open": 0,
+  "status": "passed"
+}

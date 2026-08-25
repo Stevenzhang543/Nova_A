@@ -2,7 +2,7 @@
   "projectFormat": "Nova_A Project Format 2",
   "projectFormatMajor": 2,
   "formatVersion": 29,
-  "engineVersion": "4.4.0",
+  "engineVersion": "5.0.1",
   "compatibility": {
     "format": "Nova_A Project Format 2",
     "major": 2,
@@ -10,20 +10,20 @@
     "minimumSchemaVersion": 5
   },
   "projectMetadata": {
-    "id": "9eab9828-3aff-413e-9759-a3ce267a4724",
+    "id": "a32760a9-3cde-4897-89d2-cd26464eec88",
     "name": "Nova_A RTL Interface",
-    "createdAt": "2026-08-23T17:16:25.888Z",
-    "updatedAt": "2026-08-23T17:16:25.888Z",
+    "createdAt": "2026-08-24T10:35:51.175Z",
+    "updatedAt": "2026-08-24T10:35:51.175Z",
     "format": "Nova_A Project Format 2",
     "template": "ui-showcase"
   },
   "manifest": {
     "manifestVersion": 1,
-    "projectUuid": "9eab9828-3aff-413e-9759-a3ce267a4724",
+    "projectUuid": "a32760a9-3cde-4897-89d2-cd26464eec88",
     "name": "Nova_A RTL Interface",
     "engineCompatibility": {
       "minimum": "3.9.0",
-      "maximumExclusive": "5.0.0"
+      "maximumExclusive": "6.0.0"
     },
     "schemaVersion": 29,
     "packageLockfile": "Packages.lock",
@@ -675,20 +675,37 @@
           "en"
         ],
         "pseudolocalization": false,
+        "pseudolocalizationMode": "bidi",
+        "expansionRatio": 0.35,
         "buildLocales": [
           "en"
         ],
-        "pseudolocalizationMode": "bidi",
-        "expansionRatio": 0.35
+        "numberStyle": "decimal",
+        "currency": "USD",
+        "dateStyle": "medium",
+        "timeZone": "local"
       },
       "accessibility": {
         "keyboardNavigation": true,
         "gamepadNavigation": true,
         "screenReaderMetadata": true,
+        "announceFocusChanges": true,
         "focusRingColor": "#79b2ff",
         "focusRingWidth": 3,
         "reducedMotion": false,
-        "announceFocusChanges": true
+        "highContrast": false,
+        "textScale": 1,
+        "minimumTargetSize": 44,
+        "subtitles": true,
+        "captions": true,
+        "captionBackground": true,
+        "captionScale": 1
+      }
+    },
+    "production": {
+      "performance": {
+        "animationBudgetMs": 2,
+        "uiBudgetMs": 2
       }
     }
   },
@@ -1043,6 +1060,11 @@
               "enabled": true,
               "removed": false,
               "data": {
+                "layoutMode": "Responsive",
+                "mirrorInRtl": true,
+                "zOrder": 0,
+                "componentSource": null,
+                "componentVariant": "default",
                 "parentUuid": null,
                 "anchorPreset": "stretch",
                 "position": {
@@ -1120,6 +1142,11 @@
               "enabled": true,
               "removed": false,
               "data": {
+                "layoutMode": "Responsive",
+                "mirrorInRtl": true,
+                "zOrder": 0,
+                "componentSource": null,
+                "componentVariant": "default",
                 "parentUuid": "be81b5bb-6d50-4cd7-8e81-b5bb6d50bcd7",
                 "anchorPreset": "center",
                 "position": {
@@ -1202,6 +1229,11 @@
               "enabled": true,
               "removed": false,
               "data": {
+                "layoutMode": "Responsive",
+                "mirrorInRtl": true,
+                "zOrder": 0,
+                "componentSource": null,
+                "componentVariant": "default",
                 "parentUuid": "81daef97-0ac5-4abb-81da-ef970ac58abb",
                 "anchorPreset": "center",
                 "position": {
@@ -1230,6 +1262,10 @@
               "enabled": true,
               "removed": false,
               "data": {
+                "wrap": "Word",
+                "overflow": "Clip",
+                "inputPromptAction": "",
+                "captionCategory": "None",
                 "text": "{menu.title}",
                 "fontSize": 38,
                 "fontWeight": 700,
@@ -1283,6 +1319,11 @@
               "enabled": true,
               "removed": false,
               "data": {
+                "layoutMode": "Responsive",
+                "mirrorInRtl": true,
+                "zOrder": 0,
+                "componentSource": null,
+                "componentVariant": "default",
                 "parentUuid": "81daef97-0ac5-4abb-81da-ef970ac58abb",
                 "anchorPreset": "center",
                 "position": {
@@ -1360,6 +1401,11 @@
               "enabled": true,
               "removed": false,
               "data": {
+                "layoutMode": "Responsive",
+                "mirrorInRtl": true,
+                "zOrder": 0,
+                "componentSource": null,
+                "componentVariant": "default",
                 "parentUuid": "81daef97-0ac5-4abb-81da-ef970ac58abb",
                 "anchorPreset": "center",
                 "position": {
@@ -1436,6 +1482,11 @@
               "enabled": true,
               "removed": false,
               "data": {
+                "layoutMode": "Responsive",
+                "mirrorInRtl": true,
+                "zOrder": 0,
+                "componentSource": null,
+                "componentVariant": "default",
                 "parentUuid": "81daef97-0ac5-4abb-81da-ef970ac58abb",
                 "anchorPreset": "center",
                 "position": {
@@ -1512,6 +1563,11 @@
               "enabled": true,
               "removed": false,
               "data": {
+                "layoutMode": "Responsive",
+                "mirrorInRtl": true,
+                "zOrder": 0,
+                "componentSource": null,
+                "componentVariant": "default",
                 "parentUuid": "81daef97-0ac5-4abb-81da-ef970ac58abb",
                 "anchorPreset": "center",
                 "position": {
@@ -1586,6 +1642,11 @@
               "enabled": true,
               "removed": false,
               "data": {
+                "layoutMode": "Responsive",
+                "mirrorInRtl": true,
+                "zOrder": 0,
+                "componentSource": null,
+                "componentVariant": "default",
                 "parentUuid": "81daef97-0ac5-4abb-81da-ef970ac58abb",
                 "anchorPreset": "center",
                 "position": {

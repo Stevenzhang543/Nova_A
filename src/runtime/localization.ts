@@ -28,13 +28,18 @@ export interface LocalizationProjectSettings {
   pseudolocalizationMode: PseudolocalizationMode
   expansionRatio: number
   buildLocales: string[]
+  numberStyle: 'decimal' | 'percent' | 'currency'
+  currency: string
+  dateStyle: 'short' | 'medium' | 'long' | 'full'
+  timeZone: string
 }
 
 export interface LocalizationExtraction { key: string; context: string; source: string }
 export interface MissingLocalizationEntry { key: string; locale: string; source: string; context: string }
+export interface LocalizationDiagnostic { code: string; severity: 'error' | 'warning' | 'info'; key: string; locale: string; message: string }
 
 export const localizationSettings = reactive<LocalizationProjectSettings>({
-  sourceLocale: 'en', previewLocale: 'en', fallbackChain: ['en'], pseudolocalization: false, pseudolocalizationMode: 'expanded', expansionRatio: .35, buildLocales: ['en']
+  sourceLocale: 'en', previewLocale: 'en', fallbackChain: ['en'], pseudolocalization: false, pseudolocalizationMode: 'expanded', expansionRatio: .35, buildLocales: ['en'], numberStyle: 'decimal', currency: 'USD', dateStyle: 'medium', timeZone: 'local'
 })
 
 const RTL_PREFIXES = new Set(['ar', 'fa', 'he', 'ur'])
@@ -144,7 +149,11 @@ export function normalizeLocalizationSettings(source: unknown): LocalizationProj
   if (!fallbackChain.includes(sourceLocale)) fallbackChain.push(sourceLocale)
   if (!buildLocales.includes(sourceLocale)) buildLocales.push(sourceLocale)
   const modes: PseudolocalizationMode[] = ['accented', 'expanded', 'bidi']
-  return { sourceLocale, previewLocale, fallbackChain, pseudolocalization: item.pseudolocalization === true, pseudolocalizationMode: modes.includes(item.pseudolocalizationMode as PseudolocalizationMode) ? item.pseudolocalizationMode as PseudolocalizationMode : 'expanded', expansionRatio: Math.min(2, Math.max(0, finiteNumber(item.expansionRatio, .35))), buildLocales }
+  const numberStyle = item.numberStyle === 'percent' || item.numberStyle === 'currency' ? item.numberStyle : 'decimal'
+  const dateStyle = item.dateStyle === 'short' || item.dateStyle === 'long' || item.dateStyle === 'full' ? item.dateStyle : 'medium'
+  const currency = typeof item.currency === 'string' && /^[A-Z]{3}$/.test(item.currency) ? item.currency : 'USD'
+  const timeZone = typeof item.timeZone === 'string' && item.timeZone.length <= 80 ? item.timeZone : 'local'
+  return { sourceLocale, previewLocale, fallbackChain, pseudolocalization: item.pseudolocalization === true, pseudolocalizationMode: modes.includes(item.pseudolocalizationMode as PseudolocalizationMode) ? item.pseudolocalizationMode as PseudolocalizationMode : 'expanded', expansionRatio: Math.min(2, Math.max(0, finiteNumber(item.expansionRatio, .35))), buildLocales, numberStyle, currency, dateStyle, timeZone }
 }
 
 export function loadLocalizationSettings(source: unknown): void {
@@ -181,13 +190,25 @@ function formatVariables(text: string, variables: Record<string, LocalizationVar
   return text.replace(/\{([A-Za-z0-9_.-]+)(?:,\s*(number|date))?\}/g, (_match, name: string, kind?: string) => {
     const value = variables[name]
     if (value === undefined) return `{${name}}`
-    if (kind === 'number' && typeof value === 'number') return new Intl.NumberFormat(locale).format(value)
+    if (kind === 'number' && typeof value === 'number') return formatLocalizedNumber(value, locale)
     if (kind === 'date') {
       const date = new Date(typeof value === 'number' ? value : String(value))
-      return Number.isFinite(date.getTime()) ? new Intl.DateTimeFormat(locale).format(date) : String(value)
+      return Number.isFinite(date.getTime()) ? formatLocalizedDate(date, locale) : String(value)
     }
     return String(value)
   })
+}
+
+export function formatLocalizedNumber(value: number, locale = localizationSettings.previewLocale): string {
+  const options: Intl.NumberFormatOptions = localizationSettings.numberStyle === 'currency' ? { style: 'currency', currency: localizationSettings.currency } : { style: localizationSettings.numberStyle }
+  try { return new Intl.NumberFormat(locale, options).format(value) } catch { return String(value) }
+}
+
+export function formatLocalizedDate(value: Date | number | string, locale = localizationSettings.previewLocale): string {
+  const date = value instanceof Date ? value : new Date(value)
+  if (!Number.isFinite(date.getTime())) return String(value)
+  const options: Intl.DateTimeFormatOptions = { dateStyle: localizationSettings.dateStyle, ...(localizationSettings.timeZone !== 'local' ? { timeZone: localizationSettings.timeZone } : {}) }
+  try { return new Intl.DateTimeFormat(locale, options).format(date) } catch { return date.toISOString().slice(0, 10) }
 }
 
 export function pseudolocalize(text: string, mode: PseudolocalizationMode = localizationSettings.pseudolocalizationMode, expansionRatio = localizationSettings.expansionRatio): string {
@@ -235,6 +256,48 @@ export function importLocalizationCsv(source: string, locale = 'en', base?: Loca
   if (keyIndex < 0 || valueIndex < 0) throw new Error('Localization CSV requires key and value columns.')
   for (const row of rows.slice(0, MAX_TABLE_ENTRIES)) { const key = String(row[keyIndex] ?? '').trim().slice(0, 240), raw = String(row[valueIndex] ?? ''); if (!key) continue; try { const parsed = JSON.parse(raw) as unknown; table.entries[key] = parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed as Record<string, string> : raw } catch { table.entries[key] = raw }; const context = String(row[contextIndex] ?? '').trim(); if (context) table.contexts[key] = context.slice(0, 2_000) }
   return normalizeLocalizationTable(table, locale)
+}
+
+function poQuote(value: string): string { return `"${value.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\r/g, '\\r').replace(/\n/g, '\\n')}"` }
+function poUnquote(value: string): string { try { return JSON.parse(value.trim()) as string } catch { return '' } }
+
+export function exportLocalizationPo(table: LocalizationTable): string {
+  const normalized = normalizeLocalizationTable(table)
+  const header = `msgid ""\nmsgstr ""\n"Language: ${normalized.locale}\\n"\n"Content-Type: text/plain; charset=UTF-8\\n"\n`
+  const rows = Object.keys(normalized.entries).sort().map(key => {
+    const raw = normalized.entries[key], context = normalized.contexts[key], value = typeof raw === 'string' ? raw : raw.other ?? Object.values(raw)[0] ?? ''
+    return `${context ? `#. ${context.replace(/[\r\n]+/g, ' ').slice(0, 2_000)}\n` : ''}msgctxt ${poQuote(key)}\nmsgid ${poQuote(key)}\nmsgstr ${poQuote(value)}\n`
+  })
+  return `${header}\n${rows.join('\n')}`
+}
+
+export function importLocalizationPo(source: string, locale = 'en', base?: LocalizationTable): LocalizationTable {
+  if (source.length > 20_000_000) throw new Error('Localization PO file is too large.')
+  const table = normalizeLocalizationTable(base ?? defaultLocalizationTable(locale), locale), blocks = source.split(/\r?\n\s*\r?\n/).slice(0, MAX_TABLE_ENTRIES + 1)
+  for (const block of blocks) {
+    const context = block.match(/^msgctxt\s+(".*")$/m), id = block.match(/^msgid\s+(".*")$/m), value = block.match(/^msgstr\s+(".*")$/m)
+    const key = poUnquote(context?.[1] ?? id?.[1] ?? '').trim().slice(0, 240)
+    if (!key || !value) continue
+    table.entries[key] = poUnquote(value[1]).slice(0, 100_000)
+    const comment = block.match(/^#\.\s*(.*)$/m)?.[1]?.trim(); if (comment) table.contexts[key] = comment.slice(0, 2_000)
+  }
+  return normalizeLocalizationTable(table, locale)
+}
+
+export function localizationDiagnostics(extracted: LocalizationExtraction[], tables: LocalizationTable[]): LocalizationDiagnostic[] {
+  const diagnostics: LocalizationDiagnostic[] = missingLocalizationReport(extracted, tables).map(item => ({ code: 'NOVA-LOC-MISSING', severity: 'error', key: item.key, locale: item.locale, message: `Missing ${item.key} in ${item.locale}.` }))
+  for (const table of tables) {
+    for (const [key, value] of Object.entries(table.entries)) {
+      if (!/^[A-Za-z0-9][A-Za-z0-9_.-]{0,239}$/.test(key)) diagnostics.push({ code: 'NOVA-LOC-KEY', severity: 'warning', key, locale: table.locale, message: 'Localization key is not stable identifier syntax.' })
+      const variants = typeof value === 'string' ? null : value
+      if (variants && !Object.prototype.hasOwnProperty.call(variants, 'other')) diagnostics.push({ code: 'NOVA-LOC-PLURAL-OTHER', severity: 'error', key, locale: table.locale, message: 'Plural/select entry requires an other variant.' })
+      const text = typeof value === 'string' ? value : Object.values(value).join(' ')
+      if (/\uFFFD/.test(text)) diagnostics.push({ code: 'NOVA-LOC-GLYPH', severity: 'error', key, locale: table.locale, message: 'Replacement glyph detected in localized text.' })
+      const isolates = [...text].reduce((depth, character) => depth + (/\u2066|\u2067|\u2068/.test(character) ? 1 : character === '\u2069' ? -1 : 0), 0)
+      if (isolates !== 0) diagnostics.push({ code: 'NOVA-LOC-BIDI', severity: 'warning', key, locale: table.locale, message: 'Bidirectional isolate controls are unbalanced.' })
+    }
+  }
+  return diagnostics.sort((a, b) => a.locale.localeCompare(b.locale) || a.key.localeCompare(b.key) || a.code.localeCompare(b.code))
 }
 
 /** Extracts structured localization keys from serialized UI components and Rhai calls. */

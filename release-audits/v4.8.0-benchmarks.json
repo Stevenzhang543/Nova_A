@@ -1,0 +1,273 @@
+{
+  "format": "nova-v4.8-benchmarks",
+  "engineVersion": "4.8.0",
+  "generatedAt": "2026-08-24T16:51:00.501Z",
+  "renderer": {
+    "id": "REN-SETTINGS-BOUNDS",
+    "status": "passed",
+    "detail": "Renderer path, fallback policy and every budget normalize to documented bounds.",
+    "metrics": {
+      "rendererPath": "Native",
+      "unsupportedPolicy": "Block",
+      "qualityPreset": "Balanced",
+      "lightingEnabled": false,
+      "ambientColor": {
+        "r": 255,
+        "g": 255,
+        "b": 255
+      },
+      "ambientIntensity": 1,
+      "shadowQuality": "Soft",
+      "colorSpace": "sRGB",
+      "postProcessing": {
+        "enabled": false,
+        "exposure": 0,
+        "contrast": 1,
+        "saturation": 1,
+        "vignette": 0,
+        "bloom": 0,
+        "blur": 0,
+        "userMaterial": null
+      },
+      "debugView": "None",
+      "pixelSnap": false,
+      "maximumPixelRatio": 4,
+      "particleBudget": 10000,
+      "budgets": {
+        "drawCalls": 1,
+        "textureMemoryMb": 65536,
+        "overdraw": 1,
+        "gpuMs": 0.1,
+        "particleMs": 100
+      }
+    }
+  },
+  "shaders": {
+    "id": "REN-SHADER-DIAGNOSTICS",
+    "status": "passed",
+    "detail": "Valid shaders pass; invalid/platform-divergent shaders fail visibly and fallback is recorded.",
+    "metrics": {
+      "validDiagnostics": [],
+      "invalidDiagnostics": [
+        {
+          "line": 1,
+          "severity": "error",
+          "source": "missing",
+          "message": "Unknown shader include “missing”."
+        }
+      ],
+      "platformDiagnostics": [
+        {
+          "line": 1,
+          "severity": "error",
+          "source": "missing",
+          "message": "Unknown shader include “missing”."
+        },
+        {
+          "line": 1,
+          "severity": "warning",
+          "source": "web",
+          "message": "Custom shader output is unsupported on Canvas2D and will use the explicit base-material fallback."
+        }
+      ]
+    }
+  },
+  "particles": {
+    "id": "REN-PARTICLE-NORMALIZATION",
+    "status": "passed",
+    "detail": "Particle rates, lifetime and collision settings remain finite and bounded.",
+    "metrics": {
+      "emissionRate": 20,
+      "lifetime": 0.0001,
+      "collisionMode": "None",
+      "restitution": 1,
+      "mask": 0
+    }
+  },
+  "audio": {
+    "id": "AUD-GRAPH-NORMALIZATION",
+    "status": "passed",
+    "detail": "Audio device, limiter, graph-cycle and automation inputs normalize deterministically.",
+    "metrics": {
+      "buses": [
+        {
+          "id": "Master",
+          "name": "Master",
+          "gain": 1,
+          "mute": false,
+          "solo": false,
+          "parent": null,
+          "voiceLimit": 32,
+          "sends": [],
+          "effects": [],
+          "automation": [
+            {
+              "time": 1,
+              "gain": 0
+            },
+            {
+              "time": 4,
+              "gain": 1
+            }
+          ],
+          "automationLoopSeconds": 0
+        },
+        {
+          "id": "Loop",
+          "name": "Loop",
+          "gain": 1,
+          "mute": false,
+          "solo": false,
+          "parent": "Master",
+          "voiceLimit": 32,
+          "sends": [],
+          "effects": [],
+          "automation": [],
+          "automationLoopSeconds": 0
+        },
+        {
+          "id": "Music",
+          "name": "Music",
+          "gain": 1,
+          "mute": false,
+          "solo": false,
+          "parent": "Master",
+          "voiceLimit": 4,
+          "sends": [],
+          "effects": [],
+          "automation": [],
+          "automationLoopSeconds": 0
+        },
+        {
+          "id": "SFX",
+          "name": "SFX",
+          "gain": 1,
+          "mute": false,
+          "solo": false,
+          "parent": "Master",
+          "voiceLimit": 32,
+          "sends": [],
+          "effects": [],
+          "automation": [],
+          "automationLoopSeconds": 0
+        },
+        {
+          "id": "UI",
+          "name": "UI",
+          "gain": 1,
+          "mute": false,
+          "solo": false,
+          "parent": "Master",
+          "voiceLimit": 32,
+          "sends": [],
+          "effects": [],
+          "automation": [],
+          "automationLoopSeconds": 0
+        }
+      ],
+      "snapshots": [
+        {
+          "id": "default",
+          "name": "Default",
+          "masterVolume": 1,
+          "busGains": {
+            "Master": 1,
+            "Music": 1,
+            "SFX": 1,
+            "UI": 1
+          }
+        }
+      ],
+      "activeSnapshot": null,
+      "ducking": [],
+      "masterVoiceLimit": 1024,
+      "outputDeviceId": "fixture",
+      "limiterEnabled": true,
+      "limiterCeilingDb": 0
+    }
+  },
+  "profiler": {
+    "id": "PRF-CAPTURE-CI",
+    "status": "passed",
+    "detail": "Captures save, compare and export deterministic CI budget results.",
+    "metrics": {
+      "ci": {
+        "status": "passed",
+        "engineVersion": "4.8.0",
+        "checks": [
+          {
+            "id": "frame.average",
+            "actual": 5,
+            "limit": 16.667,
+            "unit": "ms",
+            "passed": true
+          },
+          {
+            "id": "render.average",
+            "actual": 2,
+            "limit": 8,
+            "unit": "ms",
+            "passed": true
+          },
+          {
+            "id": "audio.average",
+            "actual": 0.2,
+            "limit": 2,
+            "unit": "ms",
+            "passed": true
+          },
+          {
+            "id": "gpu.frame",
+            "actual": 1,
+            "limit": 8,
+            "unit": "ms",
+            "passed": true
+          },
+          {
+            "id": "renderer.drawCalls",
+            "actual": 2,
+            "limit": 500,
+            "unit": "calls",
+            "passed": true
+          },
+          {
+            "id": "renderer.textureMemory",
+            "actual": 0.0009765625,
+            "limit": 256,
+            "unit": "MB",
+            "passed": true
+          },
+          {
+            "id": "particles.update",
+            "actual": 0,
+            "limit": 2,
+            "unit": "ms",
+            "passed": true
+          },
+          {
+            "id": "profiler.overhead",
+            "actual": 0,
+            "limit": 5,
+            "unit": "%",
+            "passed": true
+          }
+        ]
+      },
+      "comparison": {
+        "first": "capture-mt7gw8ht-0",
+        "second": "capture-mt7gw8ht-1",
+        "averageFrameDeltaMs": 0,
+        "peakFrameDeltaMs": 0,
+        "memoryDeltaMb": null,
+        "assetDeltaMb": 0,
+        "entityDelta": 0,
+        "gpuDeltaMs": 0,
+        "drawCallDelta": 1,
+        "textureMemoryDeltaMb": 0,
+        "budgetRegressions": []
+      }
+    }
+  },
+  "externalGpuAndAudioBenchmarks": "declared in structured evidence",
+  "status": "passed-local"
+}

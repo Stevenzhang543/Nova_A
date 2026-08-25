@@ -21,7 +21,6 @@ struct ExportFile {
     path: String,
     data_base64: String,
 }
-
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct ExportRequest {
@@ -86,6 +85,26 @@ struct BuildDeliveryOptions {
     debug_symbols: bool,
     #[serde(default)]
     crash_symbols: bool,
+    #[serde(default)]
+    release_channel: String,
+    #[serde(default)]
+    export_template: String,
+    #[serde(default)]
+    provenance: bool,
+    #[serde(default)]
+    sbom: bool,
+    #[serde(default)]
+    web_headers: bool,
+    #[serde(default)]
+    deployment_mode: String,
+    #[serde(default)]
+    deployment_destination: String,
+    #[serde(default)]
+    signing_hook: String,
+    #[serde(default)]
+    notarization_hook: String,
+    #[serde(default)]
+    clean_machine_job: bool,
 }
 
 #[derive(Serialize)]
@@ -846,7 +865,7 @@ fn export_game(request: ExportRequest) -> Result<ExportResult, String> {
     }
 
     let platform_config = serde_json::to_vec_pretty(&serde_json::json!({
-        "format": "nova-platform-config", "version": 1, "engineVersion": "4.4.0",
+        "format": "nova-platform-config", "version": 1, "engineVersion": "5.0.1",
         "target": request.target, "architecture": request.architecture, "profile": request.profile,
         "application": request.platform, "structuredLogs": request.delivery.structured_logs,
         "crashCapture": request.delivery.crash_reports,
@@ -862,7 +881,7 @@ fn export_game(request: ExportRequest) -> Result<ExportResult, String> {
         &mut changed_files,
     )?;
     if request.development_build {
-        let build_info = serde_json::to_vec_pretty(&serde_json::json!({ "engineVersion": "4.4.0", "buildId": build_id, "target": request.target, "architecture": request.architecture, "packageBytes": pack.len() })).map_err(|error| error.to_string())?;
+        let build_info = serde_json::to_vec_pretty(&serde_json::json!({ "engineVersion": "5.0.1", "buildId": build_id, "target": request.target, "architecture": request.architecture, "packageBytes": pack.len() })).map_err(|error| error.to_string())?;
         tracked_write(
             &root,
             "build-info.json",
@@ -875,7 +894,7 @@ fn export_game(request: ExportRequest) -> Result<ExportResult, String> {
     }
     if request.delivery.crash_symbols || request.delivery.debug_symbols {
         let symbols = serde_json::to_vec_pretty(&serde_json::json!({
-            "format": "nova-symbol-map", "version": 1, "engineVersion": "4.4.0", "buildId": build_id,
+            "format": "nova-symbol-map", "version": 1, "engineVersion": "5.0.1", "buildId": build_id,
             "binary": files.iter().find(|path| path.ends_with(".exe") || path.ends_with(".app")).cloned(),
             "workflow": "Archive matching PDB, dSYM, or unstripped ELF symbols under this build ID; symbolicate crash addresses with the platform toolchain."
         })).map_err(|error| error.to_string())?;
@@ -890,7 +909,7 @@ fn export_game(request: ExportRequest) -> Result<ExportResult, String> {
         )?;
     }
 
-    let cache_diagnostics = serde_json::to_vec_pretty(&serde_json::json!({ "format": "nova-build-cache-diagnostics", "version": 1, "engineVersion": "4.4.0", "mode": request.delivery.cache_mode, "status": if cache_invalidated.is_empty() { "valid" } else { "invalidated" }, "invalidated": cache_invalidated })).map_err(|error| error.to_string())?;
+    let cache_diagnostics = serde_json::to_vec_pretty(&serde_json::json!({ "format": "nova-build-cache-diagnostics", "version": 1, "engineVersion": "5.0.1", "mode": request.delivery.cache_mode, "status": if cache_invalidated.is_empty() { "valid" } else { "invalidated" }, "invalidated": cache_invalidated })).map_err(|error| error.to_string())?;
     tracked_write(
         &root,
         "nova-build-cache-diagnostics.json",
@@ -903,7 +922,7 @@ fn export_game(request: ExportRequest) -> Result<ExportResult, String> {
     let mut records = build_file_records(&root, &files)?;
     if request.delivery.size_report {
         let total_bytes: u64 = records.iter().map(|record| record.bytes).sum();
-        let size_report = serde_json::to_vec_pretty(&serde_json::json!({ "format": "nova-build-size-report", "version": 1, "engineVersion": "4.4.0", "totalBytes": total_bytes, "files": records })).map_err(|error| error.to_string())?;
+        let size_report = serde_json::to_vec_pretty(&serde_json::json!({ "format": "nova-build-size-report", "version": 1, "engineVersion": "5.0.1", "totalBytes": total_bytes, "files": records })).map_err(|error| error.to_string())?;
         tracked_write(
             &root,
             "nova-build-size-report.json",
@@ -915,11 +934,102 @@ fn export_game(request: ExportRequest) -> Result<ExportResult, String> {
         )?;
     }
     if request.delivery.dependency_report {
-        let dependency_report = serde_json::to_vec_pretty(&serde_json::json!({ "format": "nova-dependency-report", "version": 1, "engineVersion": "4.4.0", "package": { "path": "game.nova-pak", "sha256": sha256_hex(&pack), "bytes": pack.len() }, "application": request.platform.identifier, "permissions": request.platform.permissions, "contentPolicy": { "include": request.delivery.include, "exclude": request.delivery.exclude, "stripUnusedAssets": request.delivery.strip_unused_assets } })).map_err(|error| error.to_string())?;
+        let dependency_report = serde_json::to_vec_pretty(&serde_json::json!({ "format": "nova-dependency-report", "version": 1, "engineVersion": "5.0.1", "package": { "path": "game.nova-pak", "sha256": sha256_hex(&pack), "bytes": pack.len() }, "application": request.platform.identifier, "permissions": request.platform.permissions, "contentPolicy": { "include": request.delivery.include, "exclude": request.delivery.exclude, "stripUnusedAssets": request.delivery.strip_unused_assets } })).map_err(|error| error.to_string())?;
         tracked_write(
             &root,
             "nova-dependency-report.json",
             &dependency_report,
+            request.delivery.incremental,
+            &mut files,
+            &mut cache_hits,
+            &mut changed_files,
+        )?;
+    }
+    records = build_file_records(&root, &files)?;
+    let content_manifest = serde_json::to_vec_pretty(&serde_json::json!({
+        "format": "nova-content-manifest", "version": 1, "engineVersion": "5.0.1", "buildId": build_id,
+        "include": request.delivery.include, "exclude": request.delivery.exclude,
+        "stripUnusedAssets": request.delivery.strip_unused_assets, "compression": request.delivery.compression,
+        "files": records
+    })).map_err(|error| error.to_string())?;
+    tracked_write(
+        &root,
+        "nova-content-manifest.json",
+        &content_manifest,
+        request.delivery.incremental,
+        &mut files,
+        &mut cache_hits,
+        &mut changed_files,
+    )?;
+    records = build_file_records(&root, &files)?;
+    let output_digest = {
+        let mut digest = Sha256::new();
+        for record in &records {
+            digest.update(record.path.as_bytes());
+            digest.update(record.sha256.as_bytes());
+            digest.update(record.bytes.to_le_bytes());
+        }
+        format!("{:x}", digest.finalize())
+    };
+    if request.delivery.provenance {
+        let provenance = serde_json::to_vec_pretty(&serde_json::json!({
+            "format": "nova-build-provenance", "version": 1, "engineVersion": "5.0.1", "buildId": build_id,
+            "projectId": request.project_id, "target": request.target, "architecture": request.architecture,
+            "profile": request.profile, "releaseChannel": request.delivery.release_channel,
+            "exportTemplate": request.delivery.export_template, "inputsHash": build_id, "outputsHash": output_digest,
+            "deterministic": request.delivery.deterministic, "sourceCommit": "working-tree",
+            "toolchain": { "builder": "Nova_A Desktop Export 1", "host": std::env::consts::OS, "architecture": std::env::consts::ARCH },
+            "generatedAt": if request.delivery.deterministic { "1970-01-01T00:00:00.000Z" } else { "runtime" },
+            "files": records
+        })).map_err(|error| error.to_string())?;
+        tracked_write(
+            &root,
+            "nova-build-provenance.json",
+            &provenance,
+            request.delivery.incremental,
+            &mut files,
+            &mut cache_hits,
+            &mut changed_files,
+        )?;
+    }
+    if request.delivery.sbom {
+        let sbom = serde_json::to_vec_pretty(&serde_json::json!({
+            "bomFormat": "CycloneDX", "specVersion": "1.5", "version": 1,
+            "metadata": { "component": { "type": "application", "name": game_name, "version": request.platform.version }, "properties": [{ "name": "nova.engine", "value": "5.0.1" }, { "name": "nova.build", "value": build_id }] },
+            "components": [{ "type": "file", "name": "game.nova-pak", "hashes": [{ "alg": "SHA-256", "content": sha256_hex(&pack) }] }]
+        })).map_err(|error| error.to_string())?;
+        tracked_write(
+            &root,
+            "nova-sbom.cdx.json",
+            &sbom,
+            request.delivery.incremental,
+            &mut files,
+            &mut cache_hits,
+            &mut changed_files,
+        )?;
+    }
+    let deployment = serde_json::to_vec_pretty(&serde_json::json!({
+        "format": "nova-deployment-manifest", "version": 1, "engineVersion": "5.0.1", "buildId": build_id,
+        "mode": request.delivery.deployment_mode, "destination": request.delivery.deployment_destination,
+        "releaseChannel": request.delivery.release_channel, "implicitNetworkOperation": false,
+        "signing": { "mode": request.platform.signing_mode, "hookConfigured": !request.delivery.signing_hook.trim().is_empty(), "notarizationHookConfigured": !request.delivery.notarization_hook.trim().is_empty(), "execution": "external-explicit" },
+        "cleanMachineJob": request.delivery.clean_machine_job
+    })).map_err(|error| error.to_string())?;
+    tracked_write(
+        &root,
+        "nova-deployment-manifest.json",
+        &deployment,
+        request.delivery.incremental,
+        &mut files,
+        &mut cache_hits,
+        &mut changed_files,
+    )?;
+    if request.target == "web" && request.delivery.web_headers {
+        let headers = b"/*\n  X-Content-Type-Options: nosniff\n  Referrer-Policy: strict-origin-when-cross-origin\n  Permissions-Policy: camera=(), microphone=(), geolocation=()\n\n/assets/*\n  Cache-Control: public, max-age=31536000, immutable\n\n/index.html\n  Cache-Control: no-cache\n/player.html\n  Cache-Control: no-cache\n";
+        tracked_write(
+            &root,
+            "_headers",
+            headers,
             request.delivery.incremental,
             &mut files,
             &mut cache_hits,
@@ -982,7 +1092,7 @@ fn export_game(request: ExportRequest) -> Result<ExportResult, String> {
     let report = BuildReport {
         format: "nova-build-report".into(),
         version: 2,
-        engine_version: "4.4.0".into(),
+        engine_version: "5.0.1".into(),
         build_id: build_id.clone(),
         created_at: if request.delivery.deterministic {
             0
@@ -1173,7 +1283,7 @@ fn write_log(contents: &str) -> Result<String, String> {
 
 #[tauri::command]
 fn write_crash_log(payload: CrashPayload) -> Result<String, String> {
-    write_log(&format!("Nova_A version: 4.4.0\nOS: {} {}\nRenderer: {}\nProject: {}\nScene: {}\nError: {}\n\nStack trace:\n{}\n", std::env::consts::OS, std::env::consts::ARCH, payload.renderer, payload.project, payload.scene, payload.message, payload.stack))
+    write_log(&format!("Nova_A version: 5.0.1\nOS: {} {}\nRenderer: {}\nProject: {}\nScene: {}\nError: {}\n\nStack trace:\n{}\n", std::env::consts::OS, std::env::consts::ARCH, payload.renderer, payload.project, payload.scene, payload.message, payload.stack))
 }
 
 #[tauri::command]
@@ -1238,7 +1348,7 @@ fn install_panic_logger() {
             .or_else(|| panic.payload().downcast_ref::<String>().map(String::as_str))
             .unwrap_or("unknown panic");
         let _ = write_log(&format!(
-            "Nova_A version: 4.4.0\nOS: {} {}\nFatal Rust panic at {location}\n{message}\n",
+            "Nova_A version: 5.0.1\nOS: {} {}\nFatal Rust panic at {location}\n{message}\n",
             std::env::consts::OS,
             std::env::consts::ARCH
         ));

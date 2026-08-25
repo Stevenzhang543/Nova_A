@@ -1,0 +1,64 @@
+{
+  "format": "nova-renderer-feature-matrix",
+  "engineVersion": "4.8.0",
+  "generatedAt": "2026-08-24T16:51:00.501Z",
+  "paths": {
+    "nativeWindows": {
+      "host": "Tauri WebView2 / ANGLE WebGL2",
+      "status": "supported-local",
+      "fallback": "Compatibility WebGL2, then diagnostic Canvas2D"
+    },
+    "compatibilityWeb": {
+      "host": "WebGL2",
+      "status": "supported-local-chromium",
+      "fallback": "diagnostic Canvas2D"
+    },
+    "canvas2D": {
+      "status": "diagnostic-only"
+    }
+  },
+  "features": [
+    {
+      "id": "sprite batching",
+      "status": "supported",
+      "unsupportedBehavior": "visible actionable diagnostic"
+    },
+    {
+      "id": "atlases/layers/blends",
+      "status": "supported",
+      "unsupportedBehavior": "visible actionable diagnostic"
+    },
+    {
+      "id": "pixel snap/filter/mipmaps/import compression",
+      "status": "supported",
+      "unsupportedBehavior": "visible actionable diagnostic"
+    },
+    {
+      "id": "render targets/camera composition",
+      "status": "supported-webgl2",
+      "unsupportedBehavior": "visible actionable diagnostic"
+    },
+    {
+      "id": "lights/occluders/shadows/normals/post",
+      "status": "supported-webgl2",
+      "unsupportedBehavior": "visible actionable diagnostic"
+    },
+    {
+      "id": "custom materials/shaders",
+      "status": "supported-webgl2",
+      "unsupportedBehavior": "visible actionable diagnostic"
+    },
+    {
+      "id": "GPU timing",
+      "status": "limited-extension",
+      "unsupportedBehavior": "visible actionable diagnostic"
+    },
+    {
+      "id": "Doppler",
+      "status": "limited-stereo-web-audio",
+      "unsupportedBehavior": "visible actionable diagnostic"
+    }
+  ],
+  "auditStatus": "passed",
+  "status": "passed-local"
+}

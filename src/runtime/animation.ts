@@ -8,9 +8,10 @@ export type AnimatableProperty = 'Transform.position.x' | 'Transform.position.y'
 export type AnimatorParameterType = 'Bool' | 'Float' | 'Integer' | 'Trigger'
 export type KeyTangentMode = 'Auto' | 'Linear' | 'Constant' | 'Free'
 export type KeyEasing = 'Linear' | 'EaseIn' | 'EaseOut' | 'EaseInOut'
-export type AnimationCommandKind = 'Method' | 'Audio' | 'NestedAnimation'
+export type AnimationInterpolation = 'Step' | 'Linear' | 'Cubic'
+export type AnimationCommandKind = 'Method' | 'Audio' | 'NestedAnimation' | 'Custom'
 
-export interface AnimationKeyframe { time: number; value: number; tangentMode: KeyTangentMode; inTangent: number; outTangent: number; easing?: KeyEasing }
+export interface AnimationKeyframe { time: number; value: number; tangentMode: KeyTangentMode; inTangent: number; outTangent: number; easing?: KeyEasing; interpolation?: AnimationInterpolation }
 export interface AnimationTrack { property: AnimatableProperty; targetEntityUuid: string | null; keyframes: AnimationKeyframe[] }
 export interface SpriteAnimationFrame { spriteAsset: string | null; duration: number }
 export interface AnimationEvent { time: number; signal: string; payload: string }
@@ -55,7 +56,8 @@ const PARAMETER_TYPES = new Set<AnimatorParameterType>(['Bool', 'Float', 'Intege
 const OPERATORS = new Set<TransitionCondition['operator']>(['==', '!=', '>', '<', '>=', '<=', 'trigger'])
 const TANGENTS = new Set<KeyTangentMode>(['Auto', 'Linear', 'Constant', 'Free'])
 const EASINGS = new Set<KeyEasing>(['Linear', 'EaseIn', 'EaseOut', 'EaseInOut'])
-const COMMAND_KINDS = new Set<AnimationCommandKind>(['Method', 'Audio', 'NestedAnimation'])
+const INTERPOLATIONS = new Set<AnimationInterpolation>(['Step', 'Linear', 'Cubic'])
+const COMMAND_KINDS = new Set<AnimationCommandKind>(['Method', 'Audio', 'NestedAnimation', 'Custom'])
 const INTERRUPTIONS = new Set<TransitionInterruption>(['None', 'Source', 'Destination', 'SourceThenDestination'])
 
 function id(value: unknown, fallback: string): string {
@@ -103,7 +105,8 @@ export function normalizeAnimationClip(source: unknown): AnimationClipDocument {
         time: Math.max(0, finiteNumber(frame?.time)), value: finiteNumber(frame?.value),
         tangentMode: TANGENTS.has(frame?.tangentMode as KeyTangentMode) ? frame!.tangentMode as KeyTangentMode : 'Auto',
         inTangent: finiteNumber(frame?.inTangent), outTangent: finiteNumber(frame?.outTangent),
-        easing: EASINGS.has(frame?.easing as KeyEasing) ? frame!.easing as KeyEasing : 'Linear'
+        easing: EASINGS.has(frame?.easing as KeyEasing) ? frame!.easing as KeyEasing : 'Linear',
+        interpolation: INTERPOLATIONS.has(frame?.interpolation as AnimationInterpolation) ? frame!.interpolation as AnimationInterpolation : frame?.tangentMode === 'Constant' ? 'Step' : frame?.tangentMode === 'Linear' ? 'Linear' : 'Cubic'
       })).sort((first, second) => first.time - second.time)
       return [{ property: track.property as AnimatableProperty, targetEntityUuid: typeof track.targetEntityUuid === 'string' ? track.targetEntityUuid : null, keyframes }]
     }),
@@ -255,13 +258,13 @@ export function reimportAnimationClip(asset: AssetRecord): AnimationClipDocument
     for (let index = 0; index <= Math.ceil(length * sampleRate); index++) {
       const time = Math.min(length, index / sampleRate)
       const value = sampleAnimationTrack(track.keyframes, time)
-      if (value !== null) keyframes.push({ time, value, tangentMode: 'Linear', inTangent: 0, outTangent: 0 })
+      if (value !== null) keyframes.push({ time, value, tangentMode: 'Linear', inTangent: 0, outTangent: 0, interpolation: 'Linear' })
     }
-    return { property, targetEntityUuid: track.targetEntityUuid, keyframes }
+    return { property, targetEntityUuid: track.targetEntityUuid, keyframes: reduceAnimationKeys(keyframes, settings.compressionTolerance) }
   })
   const imported = normalizeAnimationClip({
     ...source, name: asset.name.replace(/\.nova-anim$/i, ''), frameRate: sampleRate, tracks,
-    events: source.events.map(event => ({ ...event })), spriteFrames: source.spriteFrames.map(frame => ({ ...frame }))
+    events: settings.preserveEvents ? source.events.map(event => ({ ...event })) : [], spriteFrames: source.spriteFrames.map(frame => ({ ...frame }))
   })
   settings.sourceFrameRate = source.frameRate
   settings.sampleRate = sampleRate
@@ -296,8 +299,9 @@ export function sampleAnimationTrack(keyframes: AnimationKeyframe[], time: numbe
     const previous = keyframes[index - 1]
     const range = Math.max(1e-9, next.time - previous.time)
     const ratio = easeRatio((time - previous.time) / range, previous.easing)
-    if (previous.tangentMode === 'Constant') return previous.value
-    if (previous.tangentMode === 'Linear' || next.tangentMode === 'Linear') return previous.value + (next.value - previous.value) * ratio
+    const interpolation = previous.interpolation ?? (previous.tangentMode === 'Constant' ? 'Step' : previous.tangentMode === 'Linear' ? 'Linear' : 'Cubic')
+    if (interpolation === 'Step') return previous.value
+    if (interpolation === 'Linear') return previous.value + (next.value - previous.value) * ratio
     const slope = (next.value - previous.value) / range
     const m0 = (previous.tangentMode === 'Free' ? previous.outTangent : slope) * range
     const m1 = (next.tangentMode === 'Free' ? next.inTangent : slope) * range
@@ -306,6 +310,58 @@ export function sampleAnimationTrack(keyframes: AnimationKeyframe[], time: numbe
   }
   return last.value
 }
+
+export function reduceAnimationKeys(keyframes: AnimationKeyframe[], tolerance = .0001): AnimationKeyframe[] {
+  const safeTolerance = Math.min(1e9, Math.max(0, finiteNumber(tolerance, .0001)))
+  if (keyframes.length < 3) return keyframes.map(key => ({ ...key }))
+  const result: AnimationKeyframe[] = [{ ...keyframes[0] }]
+  for (let index = 1; index < keyframes.length - 1; index++) {
+    const previous = result[result.length - 1], current = keyframes[index], next = keyframes[index + 1]
+    if ((current.interpolation ?? 'Cubic') === 'Step' || current.tangentMode === 'Free') { result.push({ ...current }); continue }
+    const ratio = (current.time - previous.time) / Math.max(1e-9, next.time - previous.time), expected = previous.value + (next.value - previous.value) * ratio
+    if (Math.abs(current.value - expected) > safeTolerance) result.push({ ...current })
+  }
+  result.push({ ...keyframes[keyframes.length - 1] }); return result
+}
+
+export function retimeAnimationClip(clip: AnimationClipDocument, start: number, end: number, timeScale: number, ripple = true): AnimationClipDocument {
+  const value = normalizeAnimationClip(clip), from = Math.max(0, Math.min(start, end)), to = Math.max(from, Math.max(start, end)), scale = Math.min(1_000, Math.max(.001, finiteNumber(timeScale, 1))), oldRange = to - from, delta = oldRange * (scale - 1)
+  const retime = (time: number) => time < from ? time : time <= to ? from + (time - from) * scale : ripple ? time + delta : time
+  value.tracks.forEach(track => track.keyframes.forEach(key => { key.time = retime(key.time) }))
+  value.events.forEach(event => { event.time = retime(event.time) }); value.markers.forEach(marker => { marker.time = retime(marker.time) })
+  value.commandTracks.forEach(track => track.commands.forEach(command => { command.time = retime(command.time) }))
+  return normalizeAnimationClip(value)
+}
+
+export function sliceAnimationClip(clip: AnimationClipDocument, start: number, end: number, name = `${clip.name} Slice`): AnimationClipDocument {
+  const from = Math.max(0, Math.min(start, end)), to = Math.max(from + 1e-6, Math.max(start, end)), value = normalizeAnimationClip(clip)
+  value.name = name.slice(0, 120)
+  value.tracks.forEach(track => { track.keyframes = track.keyframes.filter(key => key.time >= from && key.time <= to).map(key => ({ ...key, time: key.time - from })) })
+  value.events = value.events.filter(event => event.time >= from && event.time <= to).map(event => ({ ...event, time: event.time - from }))
+  value.markers = value.markers.filter(marker => marker.time >= from && marker.time <= to).map(marker => ({ ...marker, time: marker.time - from }))
+  value.commandTracks.forEach(track => { track.commands = track.commands.filter(command => command.time >= from && command.time <= to).map(command => ({ ...command, time: command.time - from })) })
+  const spriteFrames: SpriteAnimationFrame[] = []; let cursor = 0
+  for (const frame of value.spriteFrames) { const frameEnd = cursor + frame.duration, overlap = Math.max(0, Math.min(to, frameEnd) - Math.max(from, cursor)); if (overlap > 0) spriteFrames.push({ ...frame, duration: overlap }); cursor = frameEnd }
+  value.spriteFrames = spriteFrames
+  return normalizeAnimationClip(value)
+}
+
+function occurrences<T extends { time: number }>(items: T[], previous: number, rawNext: number, length: number, loop: boolean): T[] {
+  if (!items.length || length <= 0 || rawNext === previous) return []
+  const result: Array<{ item: T; crossed: number }> = [], forward = rawNext > previous, lower = Math.min(previous, rawNext), upper = Math.max(previous, rawNext)
+  if (!loop) return items.filter(item => forward ? item.time > lower && item.time <= upper : item.time >= lower && item.time < upper).sort((a, b) => forward ? a.time - b.time : b.time - a.time)
+  for (const item of items) {
+    const firstCycle = Math.ceil((lower - item.time) / length), lastCycle = Math.floor((upper - item.time) / length)
+    for (let cycle = firstCycle; cycle <= lastCycle && result.length < 10_000; cycle++) {
+      const crossed = item.time + cycle * length
+      if (forward ? crossed > previous && crossed <= rawNext : crossed >= rawNext && crossed < previous) result.push({ item, crossed })
+    }
+  }
+  return result.sort((a, b) => forward ? a.crossed - b.crossed : b.crossed - a.crossed).map(entry => entry.item)
+}
+
+export function animationEventsBetween(clip: AnimationClipDocument, previous: number, rawNext: number): AnimationEvent[] { return occurrences(clip.events, previous, rawNext, animationClipLength(clip), clip.loop) }
+export function animationCommandsBetween(track: AnimationCommandTrack, clip: AnimationClipDocument, previous: number, rawNext: number): AnimationCommand[] { return occurrences(track.commands, previous, rawNext, animationClipLength(clip), clip.loop) }
 
 function conditionMatches(value: AnimatorParameterValue, condition: TransitionCondition): boolean {
   if (condition.operator === 'trigger') return value === true
@@ -321,6 +377,7 @@ function conditionMatches(value: AnimatorParameterValue, condition: TransitionCo
 interface LayerRuntimeState { stateId: string; time: number; previousStateId: string | null; previousTime: number; blendTime: number; blendDuration: number }
 interface AnimatorRuntimeState { controllerAsset: string | null; layers: Map<string, LayerRuntimeState> }
 interface SampledClip { values: Map<string, { property: AnimatableProperty; targetEntityUuid: string | null; value: number }>; spriteAsset: string | null }
+export interface AnimatorRuntimeInspection { entityUuid: string; controllerAsset: string | null; layers: Array<{ layerId: string; stateId: string; time: number; previousStateId: string | null; blendProgress: number }> }
 
 class AnimationRuntime {
   private runtime = new Map<string, AnimatorRuntimeState>()
@@ -328,6 +385,9 @@ class AnimationRuntime {
   onCommand: ((entity: Entity, track: AnimationCommandTrack, command: AnimationCommand) => void) | null = null
 
   reset(): void { this.runtime.clear() }
+  inspect(entityUuid?: string): AnimatorRuntimeInspection[] {
+    return [...this.runtime.entries()].filter(([uuid]) => !entityUuid || uuid === entityUuid).map(([uuid, state]) => ({ entityUuid: uuid, controllerAsset: state.controllerAsset, layers: [...state.layers.entries()].map(([layerId, layer]) => ({ layerId, stateId: layer.stateId, time: layer.time, previousStateId: layer.previousStateId, blendProgress: layer.blendDuration > 0 ? Math.min(1, layer.blendTime / layer.blendDuration) : 1 })) }))
+  }
 
   update(entities: Entity[], delta: number): void {
     const alive = new Set(entities.map(entity => entity.uuid))
@@ -379,12 +439,13 @@ class AnimationRuntime {
         const length = clip ? animationClipLength(clip) : 0
         const previousTime = layerState.time
         const scaledDelta = Math.max(0, delta) * animator.speed * activeState.speed * (clip?.playbackSpeed ?? 1)
-        layerState.time += scaledDelta
+        const rawTime = layerState.time + scaledDelta
+        layerState.time = rawTime
         if (clip && length > 0) {
           if (clip.loop) layerState.time = ((layerState.time % length) + length) % length
           else layerState.time = Math.min(length, Math.max(0, layerState.time))
-          this.emitEvents(entity, clip, previousTime, layerState.time)
-          this.emitCommands(entity, clip, previousTime, layerState.time)
+          this.emitEvents(entity, clip, previousTime, clip.loop ? rawTime : layerState.time)
+          this.emitCommands(entity, clip, previousTime, clip.loop ? rawTime : layerState.time)
           let sampled = this.sampleState(activeState, animator, layerState.time)
           if (layerState.previousStateId && layerState.blendDuration > 0) {
             const previousState = controller.states.find(candidate => candidate.id === layerState!.previousStateId)
@@ -491,16 +552,12 @@ class AnimationRuntime {
     else if (property === 'UI.opacity') for (const kind of ['Panel', 'Image', 'Text'] as const) { const component = entity.getComponent<{ opacity: number } & { readonly kind: typeof kind; enabled: boolean; removed: boolean; uuid: string }>(kind); if (component) component.opacity = Math.min(100, Math.max(0, value)) }
   }
 
-  private emitEvents(entity: Entity, clip: AnimationClipDocument, previousTime: number, time: number): void {
-    const wrapped = clip.loop && time < previousTime
-    for (const event of clip.events) if ((wrapped && (event.time > previousTime || event.time <= time)) || (!wrapped && event.time > previousTime && event.time <= time)) this.onEvent?.(entity, event)
+  private emitEvents(entity: Entity, clip: AnimationClipDocument, previousTime: number, rawTime: number): void {
+    for (const event of animationEventsBetween(clip, previousTime, rawTime)) this.onEvent?.(entity, event)
   }
 
-  private emitCommands(entity: Entity, clip: AnimationClipDocument, previousTime: number, time: number): void {
-    const wrapped = clip.loop && time < previousTime
-    for (const track of clip.commandTracks) for (const command of track.commands) {
-      if ((wrapped && (command.time > previousTime || command.time <= time)) || (!wrapped && command.time > previousTime && command.time <= time)) this.onCommand?.(entity, track, command)
-    }
+  private emitCommands(entity: Entity, clip: AnimationClipDocument, previousTime: number, rawTime: number): void {
+    for (const track of clip.commandTracks) for (const command of animationCommandsBetween(track, clip, previousTime, rawTime)) this.onCommand?.(entity, track, command)
   }
 }
 

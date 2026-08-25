@@ -7,6 +7,9 @@ pub enum PhysicsEvent {
     ContactStarted(PhysicsContact),
     ContactStayed(PhysicsContact),
     ContactEnded(PhysicsContact),
+    BodySleeping { handle: u32 },
+    BodyWoke { handle: u32 },
+    ConstraintBroken { handle: u32, joint_kind: u8, link: i32, tension: f64, strain: f64 },
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -61,10 +64,32 @@ pub struct PhysicsWorld {
     solver: Option<SolverWorld>,
     configuration_rebuilds: u64,
     physics_steps: u64,
+    quality: SolverQuality,
 }
 
 impl PhysicsWorld {
-    pub fn new() -> Self { Self::default() }
+    pub fn new() -> Self { Self { quality: SolverQuality::default(), ..Self::default() } }
+
+    pub fn set_quality(
+        &mut self,
+        minimum_substeps: usize,
+        solver_iterations: usize,
+        sleep_linear_threshold: f64,
+        sleep_angular_threshold: f64,
+        time_to_sleep: f64,
+    ) {
+        let quality = SolverQuality {
+            minimum_substeps,
+            solver_iterations,
+            sleep_linear_threshold,
+            sleep_angular_threshold,
+            time_to_sleep,
+        }.normalized();
+        if quality != self.quality {
+            self.quality = quality;
+            self.configuration_dirty = true;
+        }
+    }
 
     pub fn body_count(&self) -> usize { self.bodies.len() }
     pub fn connection_count(&self) -> usize { self.connections.len() }
@@ -236,6 +261,7 @@ impl PhysicsWorld {
         write_bodies(&mut solver.data, &solver.bodies);
         self.physics_steps = self.physics_steps.saturating_add(1);
         solver.copy_state(&mut self.dense_bodies, &mut self.dense_connections);
+        self.collect_state_events();
         self.copy_dense_to_records();
         self.collect_contact_events();
         self.state_buffer.clear();
@@ -277,7 +303,7 @@ impl PhysicsWorld {
         for record in &self.bodies { self.dense_bodies.extend_from_slice(&record.values); }
         self.dense_connections.clear();
         for record in &self.connections { self.dense_connections.extend_from_slice(&record.values); }
-        self.solver = Some(SolverWorld::new(&self.dense_bodies, &self.dense_connections));
+        self.solver = Some(SolverWorld::new(&self.dense_bodies, &self.dense_connections, self.quality));
         self.configuration_rebuilds = self.configuration_rebuilds.saturating_add(1);
         self.state_buffer.clear();
         self.state_buffer.extend_from_slice(&self.dense_bodies);
@@ -291,6 +317,30 @@ impl PhysicsWorld {
         }
         for (index, record) in self.connections.iter_mut().enumerate() {
             record.values.copy_from_slice(&self.dense_connections[index * CONNECTION_STRIDE..(index + 1) * CONNECTION_STRIDE]);
+        }
+    }
+
+    fn collect_state_events(&mut self) {
+        for (index, record) in self.bodies.iter().enumerate() {
+            let before = record.values[49] > 0.5;
+            let after = self.dense_bodies.get(index * STRIDE + 49).copied().unwrap_or(0.0) > 0.5;
+            if before != after {
+                self.events.push(if after { PhysicsEvent::BodySleeping { handle: record.handle } } else { PhysicsEvent::BodyWoke { handle: record.handle } });
+            }
+        }
+        for (index, record) in self.connections.iter().enumerate() {
+            let base = index * CONNECTION_STRIDE;
+            let before = record.values[17];
+            let after = self.dense_connections.get(base + 17).copied().unwrap_or(before);
+            if before <= 0.5 && after > 0.5 {
+                self.events.push(PhysicsEvent::ConstraintBroken {
+                    handle: record.handle,
+                    joint_kind: finite_or(record.values[18], 0.0).round().clamp(0.0, 255.0) as u8,
+                    link: finite_or(self.dense_connections.get(base + 28).copied().unwrap_or(-1.0), -1.0).round() as i32,
+                    tension: non_negative(self.dense_connections.get(base + 18).copied().unwrap_or(0.0), 0.0),
+                    strain: non_negative(self.dense_connections.get(base + 19).copied().unwrap_or(0.0), 0.0),
+                });
+            }
         }
     }
 

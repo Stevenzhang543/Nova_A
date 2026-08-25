@@ -2,7 +2,7 @@
   "projectFormat": "Nova_A Project Format 2",
   "projectFormatMajor": 2,
   "formatVersion": 29,
-  "engineVersion": "4.4.0",
+  "engineVersion": "5.0.1",
   "compatibility": {
     "format": "Nova_A Project Format 2",
     "major": 2,
@@ -10,20 +10,20 @@
     "minimumSchemaVersion": 5
   },
   "projectMetadata": {
-    "id": "f5d75cf4-9495-40da-aa27-c364e2a2c30c",
+    "id": "c2c96f56-2c30-4438-8847-dad79ead47f0",
     "name": "Web Deployment Reference",
-    "createdAt": "2026-08-23T17:16:25.294Z",
-    "updatedAt": "2026-08-23T17:16:25.294Z",
+    "createdAt": "2026-08-24T10:35:50.498Z",
+    "updatedAt": "2026-08-24T10:35:50.498Z",
     "format": "Nova_A Project Format 2",
     "template": "web-deployment"
   },
   "manifest": {
     "manifestVersion": 1,
-    "projectUuid": "f5d75cf4-9495-40da-aa27-c364e2a2c30c",
+    "projectUuid": "c2c96f56-2c30-4438-8847-dad79ead47f0",
     "name": "Web Deployment Reference",
     "engineCompatibility": {
       "minimum": "3.9.0",
-      "maximumExclusive": "5.0.0"
+      "maximumExclusive": "6.0.0"
     },
     "schemaVersion": 29,
     "packageLockfile": "Packages.lock",
@@ -536,6 +536,50 @@
       "streamingEnabled": true,
       "memoryBudgetMb": 256,
       "originShiftThreshold": 10000
+    },
+    "presentation": {
+      "localization": {
+        "sourceLocale": "en",
+        "previewLocale": "en",
+        "fallbackChain": [
+          "en"
+        ],
+        "pseudolocalization": false,
+        "pseudolocalizationMode": "expanded",
+        "expansionRatio": 0.35,
+        "buildLocales": [
+          "en",
+          "de",
+          "zh-CN",
+          "ar"
+        ],
+        "numberStyle": "decimal",
+        "currency": "USD",
+        "dateStyle": "medium",
+        "timeZone": "local"
+      },
+      "accessibility": {
+        "keyboardNavigation": true,
+        "gamepadNavigation": true,
+        "screenReaderMetadata": true,
+        "announceFocusChanges": true,
+        "focusRingColor": "#ffffff",
+        "focusRingWidth": 3,
+        "reducedMotion": false,
+        "highContrast": false,
+        "textScale": 1,
+        "minimumTargetSize": 44,
+        "subtitles": true,
+        "captions": true,
+        "captionBackground": true,
+        "captionScale": 1
+      }
+    },
+    "production": {
+      "performance": {
+        "animationBudgetMs": 2,
+        "uiBudgetMs": 2
+      }
     }
   },
   "projectStructure": {

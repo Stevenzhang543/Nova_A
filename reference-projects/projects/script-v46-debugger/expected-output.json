@@ -1,0 +1,9 @@
+{
+  "engineVersion": "5.0.1",
+  "schema": 29,
+  "projectName": "Script v4.6 Debugger",
+  "expectedValidation": "pass",
+  "breakpoints": 2,
+  "deterministicSeed": 460,
+  "remoteDebugDefault": "disabled"
+}

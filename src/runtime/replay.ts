@@ -7,11 +7,10 @@ export interface ReplayFrame {
   input: InputSnapshot
   physicsChecksum: string
 }
-
 export interface ReplayDocument {
   format: 'nova-replay'
   version: 1
-  engineVersion: '4.4.0'
+  engineVersion: '5.0.1'
   seed: number
   tickRate: number
   initialProject: string
@@ -100,7 +99,7 @@ export function completeReplayFixedStep(physicsChecksum: string): void {
 
 export function exportReplay(tickRate: number): ReplayDocument {
   return {
-    format: 'nova-replay', version: 1, engineVersion: '4.4.0', seed: replayState.seed,
+    format: 'nova-replay', version: 1, engineVersion: '5.0.1', seed: replayState.seed,
     tickRate: Math.min(1_000, Math.max(1, Number.isFinite(tickRate) ? tickRate : 60)), initialProject: replayState.initialProject,
     frames: replayState.frames.slice(0, productionSettings.replay.capacity).map(frame => ({ ...frame, input: cloneInput(frame.input) }))
   }
@@ -115,7 +114,7 @@ export function normalizeReplayDocument(value: unknown): ReplayDocument {
     return { tick: index, input: cloneInput(input as InputSnapshot), physicsChecksum: typeof item.physicsChecksum === 'string' ? item.physicsChecksum.slice(0, 32) : '' }
   })
   return {
-    format: 'nova-replay', version: 1, engineVersion: '4.4.0', seed: Number.isFinite(source.seed) ? Number(source.seed) >>> 0 : productionSettings.replay.seed,
+    format: 'nova-replay', version: 1, engineVersion: '5.0.1', seed: Number.isFinite(source.seed) ? Number(source.seed) >>> 0 : productionSettings.replay.seed,
     tickRate: Math.min(1_000, Math.max(1, Number(source.tickRate) || 60)), initialProject: source.initialProject.slice(0, 50_000_000), frames
   }
 }

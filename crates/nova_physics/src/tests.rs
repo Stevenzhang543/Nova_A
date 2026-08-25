@@ -894,18 +894,18 @@ mod tests {
         let mut continuous = ellipse_record(1.0, 0.0, 0.0, 0.1, 0.1);
         continuous[4] = 1_000.0;
         let continuous_body = Body::from_data(&continuous, 0);
-        assert!(determine_sub_steps(&[continuous_body], 0.1, 0.0) > BASE_SUB_STEPS);
+        assert!(determine_sub_steps(&[continuous_body], 0.1, 0.0, BASE_SUB_STEPS) > BASE_SUB_STEPS);
 
         continuous[47] = 0.0;
         let discrete_body = Body::from_data(&continuous, 0);
-        assert_eq!(determine_sub_steps(&[discrete_body], 0.1, 0.0), BASE_SUB_STEPS);
+        assert_eq!(determine_sub_steps(&[discrete_body], 0.1, 0.0, BASE_SUB_STEPS), BASE_SUB_STEPS);
     }
 
     #[test]
     fn sleeping_body_wakes_when_an_impulse_arrives() {
         let data = ellipse_record(1.0, 0.0, 0.0, 1.0, 1.0);
         let mut body = Body::from_data(&data, 0);
-        body.update_sleep_state(0.6, true);
+        body.update_sleep_state(0.6, true, 1.0e-3, 1.0e-3, 0.5);
         assert!(body.sleeping);
         body.apply_impulse(Vec2::new(1.0, 0.0), Vec2::ZERO);
         assert!(!body.sleeping);
@@ -916,7 +916,7 @@ mod tests {
     fn motionless_body_sleeps_without_requiring_a_contact() {
         let data = ellipse_record(1.0, 0.0, 0.0, 1.0, 1.0);
         let mut body = Body::from_data(&data, 0);
-        body.update_sleep_state(0.6, false);
+        body.update_sleep_state(0.6, false, 1.0e-3, 1.0e-3, 0.5);
         assert!(body.sleeping);
     }
 

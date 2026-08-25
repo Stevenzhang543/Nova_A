@@ -1,0 +1,103 @@
+{
+  "format": "nova-v5.0.1-benchmark-summary",
+  "version": 1,
+  "engineVersion": "5.0.1",
+  "generatedAt": "2026-08-25T17:22:05.333Z",
+  "performance": {
+    "format": "nova-benchmark-report",
+    "version": 1,
+    "engineVersion": "5.0.1",
+    "generatedAt": "2026-08-25T17:21:18.481Z",
+    "machine": {
+      "platform": "win32",
+      "architecture": "x64",
+      "node": "v22.22.2",
+      "cpuCount": 32,
+      "totalMemoryBytes": 34142187520
+    },
+    "methodology": {
+      "physics": "Release-mode legacy bridge, 2,000 separated dynamic bodies, 240 fixed 60 Hz steps; includes record decode/encode and finite-value validation.",
+      "scriptReload": "Rhai editor language analysis of a representative gameplay source, 1,000 warm iterations; p95 reported.",
+      "assetImportCore": "Decode/hash/compress a deterministic 16 MiB source buffer 20 times; p95 reported. Browser image decode is intentionally excluded.",
+      "export": "Headless deterministic web export of the platformer reference project against the production dist.",
+      "artifactSize": "On-disk bytes of available native executable and production web assets."
+    },
+    "measurements": {
+      "physics": {
+        "bodyCount": 2000,
+        "steps": 240,
+        "bodySteps": 480000,
+        "elapsedMs": 2343.999,
+        "bodyStepsPerSecond": 204778,
+        "finite": true
+      },
+      "scriptReload": {
+        "iterations": 1000,
+        "medianMs": 0.0749999999998181,
+        "p95Ms": 0.11460000000079162,
+        "maximumMs": 2.1099999999996726
+      },
+      "assetImportCore": {
+        "sourceBytes": 16777216,
+        "iterations": 20,
+        "medianMs": 56.478800000000774,
+        "p95Ms": 58.675899999999274
+      },
+      "export": {
+        "elapsedMs": 202.57120000000032,
+        "report": {
+          "output": "C:\\Users\\steve\\AppData\\Local\\Temp\\nova-v3-benchmark-1xuCP2",
+          "buildId": "002674616b2dbc712585b946df2a7ed3a716092c2860ae21b6e19d21bac4d19e",
+          "changedFiles": 17,
+          "cacheHits": 0,
+          "files": 19
+        }
+      },
+      "artifactSize": {
+        "nativeWindows": 15714816,
+        "webIndex": 994,
+        "webPlayer": 658,
+        "webJavascriptFiles": 13,
+        "webJavascriptBytes": 2085852,
+        "webJavascriptGzipBytes": 620543,
+        "largestWebJavascript": {
+          "name": "crashReporter-DqOx8UTY.js",
+          "bytes": 1085987,
+          "gzipBytes": 345618
+        }
+      },
+      "editorColdStartMs": null,
+      "editorIdleWorkingSetBytes": null,
+      "frameTimeP95Ms": null,
+      "workspaceSwitchP95Ms": null
+    },
+    "exceptions": [
+      {
+        "metric": "editorColdStartMs",
+        "reason": "Requires an instrumented interactive native/GPU session; the headless benchmark does not invent a result.",
+        "plan": "Capture on the published reference machine and attach the JSON result to the release evidence."
+      },
+      {
+        "metric": "editorIdleWorkingSetBytes",
+        "reason": "Requires an instrumented interactive native/GPU session; the headless benchmark does not invent a result.",
+        "plan": "Capture on the published reference machine and attach the JSON result to the release evidence."
+      },
+      {
+        "metric": "frameTimeP95Ms",
+        "reason": "Requires an instrumented interactive native/GPU session; the headless benchmark does not invent a result.",
+        "plan": "Capture on the published reference machine and attach the JSON result to the release evidence."
+      },
+      {
+        "metric": "workspaceSwitchP95Ms",
+        "reason": "Requires an instrumented interactive native/GPU session; the headless benchmark does not invent a result.",
+        "plan": "Capture on the published reference machine and attach the JSON result to the release evidence."
+      }
+    ],
+    "qualificationScope": "Pinned headless physics/script/import/export and artifact-size baselines; interactive native/GPU metrics remain explicit external exceptions.",
+    "status": "passed"
+  },
+  "runtimeAudit": "passed",
+  "layout": "passed",
+  "independentHostPerformance": "pending-external",
+  "status": "passed"
+}

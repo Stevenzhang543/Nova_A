@@ -1,12 +1,13 @@
 import { reactive } from 'vue'
 import { NOVA_PACKAGE_MANIFEST_VERSION } from './stableContracts'
 
-const PACKAGE_ENGINE_VERSION = '4.4.0'
+const PACKAGE_ENGINE_VERSION = '5.0.1'
 
 export { NOVA_PACKAGE_MANIFEST_VERSION }
 export type PackageSourceKind = 'local' | 'git' | 'registry'
 export type PackageEntryPointType = 'editor' | 'build' | 'importer' | 'runtime' | 'template'
 export type PackageSecurityStatus = 'verified' | 'unverified' | 'quarantined'
+export type PluginApiCertification = 'certified' | 'compatible' | 'uncertified'
 
 export interface PackageSource { kind: PackageSourceKind; location: string }
 export interface PackageManifest {
@@ -30,6 +31,11 @@ export interface PackageManifest {
   rating: number | null
   securityUrl: string
   documentationUrl: string
+  license: string
+  licenseUrl: string
+  provenance: string
+  certification: PluginApiCertification
+  vulnerabilityPolicy: string
 }
 export interface InstalledPackage {
   manifest: PackageManifest
@@ -58,10 +64,12 @@ export const packageState = reactive({
   registryQuery: '',
   selectedRegistry: 'official',
   registries: [
-    { id: 'official', name: 'Nova_A Official', location: 'https://packages.nova-a.dev/v1', trusted: true, offlineMirror: true },
-    { id: 'local', name: 'Local mirror', location: '', trusted: false, offlineMirror: true }
+    { id: 'official', name: 'Nova_A Official', location: 'https://packages.nova-a.dev/v1', trusted: true, offlineMirror: true, policy: 'pinned-publisher-and-sha256', allowStable: true },
+    { id: 'local', name: 'Local mirror', location: '', trusted: false, offlineMirror: true, policy: 'local-review-required', allowStable: false }
   ],
-  registryCatalog: [] as PackageManifest[]
+  registryCatalog: [] as PackageManifest[],
+  vulnerabilityPolicy: 'block-critical-high' as 'block-critical-high' | 'warn-only',
+  lastCacheVerification: ''
 })
 
 export const OFFICIAL_NAVIGATION_PACKAGE_ID = 'top.whitelists.novaa.navigation'
@@ -74,9 +82,11 @@ export const OFFICIAL_ANDROID_PACKAGE_ID = 'top.whitelists.novaa.android'
 const OFFICIAL_METADATA = {
   publisher: 'Whitelist', publisherVerified: true, permissions: [] as string[], rating: 5,
   securityUrl: 'https://github.com/Stevenzhang543/Nova_A/security',
-  documentationUrl: 'https://github.com/Stevenzhang543/Nova_A/'
+  documentationUrl: 'https://github.com/Stevenzhang543/Nova_A/',
+  license: 'MIT', licenseUrl: 'https://github.com/Stevenzhang543/Nova_A/blob/main/LICENSE.md',
+  provenance: 'nova-official-v1', certification: 'certified' as PluginApiCertification,
+  vulnerabilityPolicy: 'Report privately through the Nova_A security policy; Critical/High findings block Stable installation.'
 }
-
 function officialSecurity(type: PackageEntryPointType, sha256: string, dependencyHashes: Record<string, string> = {}) {
   return { entryPointType: type, apiCompatibility: '>=1 <2', dependencyHashes, sha256, signature: `nova-official-v1:${sha256}` }
 }
@@ -84,33 +94,33 @@ function officialSecurity(type: PackageEntryPointType, sha256: string, dependenc
 const OFFICIAL_PACKAGES: Record<string, PackageManifest> = {
   [OFFICIAL_NAVIGATION_PACKAGE_ID]: {
     manifestVersion: NOVA_PACKAGE_MANIFEST_VERSION, id: OFFICIAL_NAVIGATION_PACKAGE_ID, name: 'Nova Navigation 2D', version: '2.6.0',
-    description: 'Grid/polygon navigation, agents, flow fields, avoidance, and dynamic rebaking.', engine: '>=2.6.0 <5.0.0', dependencies: {},
+    description: 'Grid/polygon navigation, agents, flow fields, avoidance, and dynamic rebaking.', engine: '>=2.6.0 <6.0.0', dependencies: {},
     pluginApi: null, native: false, ...officialSecurity('runtime', '26434adf10b122a8708afc496f682242d7f634a344bbd00f4699ff71b2e3a9ae'), ...OFFICIAL_METADATA
   },
   [OFFICIAL_AI_PACKAGE_ID]: {
     manifestVersion: NOVA_PACKAGE_MANIFEST_VERSION, id: OFFICIAL_AI_PACKAGE_ID, name: 'Nova AI Tools', version: '3.8.0',
-    description: 'Optional serialized behavior trees and hierarchical state machines with deterministic debug traces.', engine: '>=3.8.0 <5.0.0', dependencies: {},
+    description: 'Optional serialized behavior trees and hierarchical state machines with deterministic debug traces.', engine: '>=3.8.0 <6.0.0', dependencies: {},
     pluginApi: null, native: false, ...officialSecurity('runtime', '11c75ccdc9f2037548e9eef31bd3ee34134a365e9eaeef741ee8e7917a69ac4e'), ...OFFICIAL_METADATA
   },
   [OFFICIAL_OBJECT_POOL_PACKAGE_ID]: {
     manifestVersion: NOVA_PACKAGE_MANIFEST_VERSION, id: OFFICIAL_OBJECT_POOL_PACKAGE_ID, name: 'Nova Object Pool', version: '3.8.0',
-    description: 'Optional runtime object pools with reset contracts, bounded capacity, lifetime policies, reuse counters, and leak diagnostics.', engine: '>=3.8.0 <5.0.0', dependencies: {},
+    description: 'Optional runtime object pools with reset contracts, bounded capacity, lifetime policies, reuse counters, and leak diagnostics.', engine: '>=3.8.0 <6.0.0', dependencies: {},
     pluginApi: null, native: false, ...officialSecurity('runtime', '1bb0707fffc9aa16790924146797791413754147129750608f29360bd2ee4e86'), ...OFFICIAL_METADATA
   },
   [OFFICIAL_STREAMING_TOOLS_PACKAGE_ID]: {
     manifestVersion: NOVA_PACKAGE_MANIFEST_VERSION, id: OFFICIAL_STREAMING_TOOLS_PACKAGE_ID, name: 'Nova Streaming Tools', version: '3.8.0',
-    description: 'Optional authoring helpers and diagnostics for the core asynchronous world-cell runtime.', engine: '>=3.8.0 <5.0.0', dependencies: {},
+    description: 'Optional authoring helpers and diagnostics for the core asynchronous world-cell runtime.', engine: '>=3.8.0 <6.0.0', dependencies: {},
     pluginApi: null, native: false, ...officialSecurity('editor', 'fbd228b8e1b6f780487885dea93276958c978d2f13f117a7c654c78d630cb047'), ...OFFICIAL_METADATA
   },
   [OFFICIAL_NETWORKING_PACKAGE_ID]: {
     manifestVersion: NOVA_PACKAGE_MANIFEST_VERSION, id: OFFICIAL_NETWORKING_PACKAGE_ID, name: 'Nova Optional Networking', version: '2.9.0',
-    description: 'Bounded WebSocket/native UDP transports, RPCs, snapshots, prediction, interpolation, rollback helpers, and multiplayer diagnostics.', engine: '>=2.9.0 <5.0.0', dependencies: {},
+    description: 'Bounded WebSocket/native UDP transports, RPCs, snapshots, prediction, interpolation, rollback helpers, and multiplayer diagnostics.', engine: '>=2.9.0 <6.0.0', dependencies: {},
     pluginApi: null, native: false, ...officialSecurity('runtime', 'fd048525377499fbd054cb74b69d5369c57d11431951695d413ec1e14cfe3424'),
     ...OFFICIAL_METADATA, permissions: ['network.client', 'network.listen']
   },
   [OFFICIAL_ANDROID_PACKAGE_ID]: {
     manifestVersion: NOVA_PACKAGE_MANIFEST_VERSION, id: OFFICIAL_ANDROID_PACKAGE_ID, name: 'Nova Android Export', version: '2.9.0',
-    description: 'Optional Android export templates and validation. Requires a local Android SDK/JDK toolchain.', engine: '>=2.9.0 <5.0.0', dependencies: {},
+    description: 'Optional Android export templates and validation. Requires a local Android SDK/JDK toolchain.', engine: '>=2.9.0 <6.0.0', dependencies: {},
     pluginApi: null, native: false, ...officialSecurity('build', 'cb2f4c6efb9bf972451cf545a4854878f8515ca327417424975ad2756349a5ca'),
     ...OFFICIAL_METADATA, permissions: ['build.android-sdk']
   }
@@ -205,7 +215,11 @@ export function normalizePackageManifest(value: unknown): PackageManifest {
     publisher: text(source.publisher, 120) || 'Unknown publisher', publisherVerified: source.publisherVerified === true,
     permissions: stringList(source.permissions), rating: Number.isFinite(Number(source.rating)) ? Math.min(5, Math.max(0, Number(source.rating))) : null,
     securityUrl: /^https:\/\//i.test(text(source.securityUrl, 500)) ? text(source.securityUrl, 500) : '',
-    documentationUrl: /^https:\/\//i.test(text(source.documentationUrl, 500)) ? text(source.documentationUrl, 500) : ''
+    documentationUrl: /^https:\/\//i.test(text(source.documentationUrl, 500)) ? text(source.documentationUrl, 500) : '',
+    license: text(source.license, 80), licenseUrl: /^https:\/\//i.test(text(source.licenseUrl, 500)) ? text(source.licenseUrl, 500) : '',
+    provenance: text(source.provenance, 160),
+    certification: source.certification === 'certified' || source.certification === 'compatible' ? source.certification : 'uncertified',
+    vulnerabilityPolicy: text(source.vulnerabilityPolicy, 500)
   }
 }
 
@@ -216,6 +230,8 @@ export function packageManifestDeprecations(value: unknown): string[] {
     !text(source.engine, 80) ? 'Missing engine compatibility.' : '',
     !text(source.apiCompatibility, 80) ? 'Missing API compatibility.' : '',
     !Array.isArray(source.permissions) ? 'Missing permissions declaration.' : '',
+    !text(source.license, 80) ? 'Missing package license.' : '',
+    !text(source.provenance, 160) ? 'Missing package provenance.' : '',
     !(source.dependencyHashes && typeof source.dependencyHashes === 'object' && !Array.isArray(source.dependencyHashes)) ? 'Missing dependency hashes.' : '',
     !['editor', 'build', 'importer', 'runtime', 'template'].includes(String(source.entryPointType ?? '')) ? 'Missing or invalid entry-point type.' : ''
   ].filter(Boolean)
@@ -228,6 +244,10 @@ export function reviewPackageSecurity(manifest: PackageManifest, candidates: rea
   if (!manifest.engine) blocking.push('Package manifest must declare engine compatibility.')
   if (!manifest.apiCompatibility) blocking.push('Package manifest must declare a package API compatibility range.')
   if (!manifest.sha256) blocking.push('Package archive SHA-256 is missing or malformed.')
+  if (!manifest.license) blocking.push('Package license is missing.')
+  if (!manifest.provenance) blocking.push('Package provenance is missing.')
+  if (!manifest.vulnerabilityPolicy) warnings.push('Publisher vulnerability policy is not documented.')
+  if (manifest.pluginApi !== null && manifest.certification === 'uncertified') warnings.push('Plugin API compatibility is not certified for this release.')
   const trustedRegistryEntry = packageState.registryCatalog.find(candidate =>
     candidate.id === manifest.id
     && candidate.version === manifest.version
@@ -289,7 +309,45 @@ export function registryPackages(query = packageState.registryQuery): PackageMan
 export function installRegistryPackage(id: string): InstalledPackage {
   const manifest = packageState.registryCatalog.find(item => item.id === id)
   if (!manifest) throw new Error(`Package ${id} is not available in the selected registry or offline mirror.`)
+  const registry = packageState.registries.find(item => item.id === packageState.selectedRegistry)
+  if (!registry) throw new Error('The selected package registry is not configured.')
+  if (packageState.releaseChannel === 'stable' && (!registry.trusted || !registry.allowStable)) throw new Error(`Stable installs are blocked by registry policy ${registry.policy}. Use a trusted pinned registry or remain in an isolated preview project.`)
+  if (packageState.offlineMode && !registry.offlineMirror) throw new Error('Offline mode requires a verified local registry mirror.')
   return installPackageManifest(manifest, { kind: 'registry', location: packageState.selectedRegistry })
+}
+
+export interface PackageInstallReview {
+  id: string
+  version: string
+  publisher: string
+  publisherVerified: boolean
+  sourcePolicy: string
+  archiveSha256: string
+  signature: string
+  license: string
+  provenance: string
+  pluginApiCompatibility: string
+  certification: PluginApiCertification
+  permissions: string[]
+  dependencies: Array<{ id: string; range: string; sha256: string }>
+  blocking: string[]
+  warnings: string[]
+  executionAllowed: boolean
+}
+
+export function packageInstallReview(manifest: PackageManifest): PackageInstallReview {
+  const security = reviewPackageSecurity(manifest)
+  const registry = packageState.registries.find(item => item.id === packageState.selectedRegistry)
+  const registryBlocked = packageState.releaseChannel === 'stable' && (!registry?.trusted || !registry.allowStable)
+  const blocking = [...security.blocking, ...(registryBlocked ? [`Registry policy ${registry?.policy ?? 'missing'} does not permit Stable installation.`] : [])]
+  return {
+    id: manifest.id, version: manifest.version, publisher: manifest.publisher, publisherVerified: manifest.publisherVerified,
+    sourcePolicy: registry?.policy ?? 'manifest-import', archiveSha256: manifest.sha256, signature: manifest.signature,
+    license: manifest.license, provenance: manifest.provenance, pluginApiCompatibility: manifest.pluginApi === null ? manifest.apiCompatibility : `Plugin API ${manifest.pluginApi}`,
+    certification: manifest.certification, permissions: [...manifest.permissions],
+    dependencies: Object.entries(manifest.dependencies).map(([id, range]) => ({ id, range, sha256: manifest.dependencyHashes[id] ?? '' })).sort((a, b) => a.id.localeCompare(b.id)),
+    blocking, warnings: [...security.warnings], executionAllowed: !blocking.length && !manifest.native
+  }
 }
 
 export function addOfflineRegistryManifest(value: unknown): PackageManifest {
@@ -400,6 +458,7 @@ export function verifyPackageCache(): string[] {
     const review = reviewPackageSecurity(manifest)
     if (review.status !== 'verified') { problems.push(`${manifest.id}@${manifest.version}: ${review.blocking.join(' ')}`); quarantinePackage(manifest, review.blocking.join(' ')) }
   }
+  packageState.lastCacheVerification = new Date().toISOString()
   return problems
 }
 

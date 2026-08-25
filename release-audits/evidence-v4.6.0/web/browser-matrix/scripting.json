@@ -1,0 +1,9 @@
+{
+  "format": "nova-v4.6-web-scripting-matrix",
+  "version": 1,
+  "localChromium": "passed",
+  "wasmBuild": "passed when production build report is present",
+  "firefox": "pending-external-gate",
+  "webkit": "pending-external-gate",
+  "status": "local-chromium-only"
+}

@@ -25,12 +25,13 @@
       <aside v-if="selectedRegistry" class="registry-inspector">
         <header><div><strong>{{ selectedRegistry.name }}</strong><small>{{ selectedRegistry.id }}</small></div><span>{{ selectedRegistry.rating ?? '—' }} / 5</span></header>
         <p>{{ selectedRegistry.description }}</p>
-        <dl><div><dt>{{ t('publisher') }}</dt><dd>{{ selectedRegistry.publisher }} <b v-if="selectedRegistry.publisherVerified">✓</b></dd></div><div><dt>{{ t('engineVersion') }}</dt><dd>{{ selectedRegistry.engine }}</dd></div><div><dt>{{ t('packageType') }}</dt><dd>{{ selectedRegistry.entryPointType }}</dd></div><div><dt>SHA-256</dt><dd>{{ selectedRegistry.sha256 }}</dd></div></dl>
-        <p :class="reviewRegistry.status === 'verified' ? 'success' : 'problem'">{{ reviewRegistry.status }}<template v-if="reviewRegistry.blocking.length"> · {{ reviewRegistry.blocking.join(' ') }}</template></p>
+        <dl><div><dt>{{ t('publisher') }}</dt><dd>{{ selectedRegistry.publisher }} <b v-if="selectedRegistry.publisherVerified">✓</b></dd></div><div><dt>{{ t('engineVersion') }}</dt><dd>{{ selectedRegistry.engine }}</dd></div><div><dt>{{ t('packageType') }}</dt><dd>{{ selectedRegistry.entryPointType }}</dd></div><div><dt>{{ t('pluginApiCompatibility') }}</dt><dd>{{ installReviewRegistry.pluginApiCompatibility }} · {{ installReviewRegistry.certification }}</dd></div><div><dt>{{ t('license') }}</dt><dd>{{ installReviewRegistry.license }}</dd></div><div><dt>{{ t('provenance') }}</dt><dd>{{ installReviewRegistry.provenance }}</dd></div><div><dt>SHA-256</dt><dd>{{ selectedRegistry.sha256 }}</dd></div></dl>
+        <p :class="reviewRegistry.status === 'verified' ? 'success' : 'problem'">{{ reviewRegistry.status }}<template v-if="reviewRegistry.blocking.length"> · {{ reviewRegistry.blocking.join(' ') }}</template><template v-if="reviewRegistry.warnings.length"> · {{ reviewRegistry.warnings.join(' ') }}</template> <button v-if="reviewRegistry.blocking.length || reviewRegistry.warnings.length" @click="openBundledManual('package-sdk')">{{ t('documentation') }}</button></p>
         <section><strong>{{ t('permissionReview') }}</strong><div class="chips"><span v-for="permission in selectedRegistry.permissions" :key="permission">{{ permission }}</span><p v-if="!selectedRegistry.permissions.length">{{ t('none') }}</p></div></section>
         <section class="registry-links"><strong>{{ t('security') }} / {{ t('documentation') }}</strong><button :disabled="!selectedRegistry.securityUrl" @click="openPackageUrl(selectedRegistry.securityUrl)">{{ t('security') }}</button><button :disabled="!selectedRegistry.documentationUrl" @click="openPackageUrl(selectedRegistry.documentationUrl)">{{ t('documentation') }}</button></section>
         <p>{{ t('packageBrowsingSafety') }}</p>
-        <button class="install" :disabled="installedRegistry" @click="installSelectedRegistry">{{ installedRegistry ? t('installed') : t('installPackage') }}</button>
+        <p v-if="!installReviewRegistry.executionAllowed" class="problem">{{ installReviewRegistry.blocking.join(' ') }}</p>
+        <button class="install" :disabled="installedRegistry || !installReviewRegistry.executionAllowed" @click="installSelectedRegistry">{{ installedRegistry ? t('installed') : t('installPackage') }}</button>
       </aside>
     </div>
     <div v-else-if="!pluginToolsOpen" class="package-layout">
@@ -50,7 +51,10 @@
           <div><dt>{{ t('source') }}</dt><dd :title="selected.source.location">{{ selected.source.kind }} · {{ selected.source.location }}</dd></div>
           <div><dt>{{ t('engineVersion') }}</dt><dd>{{ selected.manifest.engine }}</dd></div>
           <div><dt>{{ t('pluginApi') }}</dt><dd>{{ selected.manifest.pluginApi ?? t('none') }}</dd></div>
+          <div><dt>{{ t('pluginApiCompatibility') }}</dt><dd>{{ selected.manifest.certification }} · {{ selected.manifest.apiCompatibility }}</dd></div>
           <div><dt>{{ t('packageType') }}</dt><dd>{{ selected.manifest.entryPointType }}</dd></div>
+          <div><dt>{{ t('license') }}</dt><dd>{{ selected.manifest.license }}</dd></div>
+          <div><dt>{{ t('provenance') }}</dt><dd>{{ selected.manifest.provenance }}</dd></div>
           <div><dt>{{ t('security') }}</dt><dd :class="selected.securityStatus === 'verified' ? 'success' : 'problem'">{{ selected.securityStatus }}</dd></div>
           <div><dt>SHA-256</dt><dd>{{ selected.manifest.sha256 ? `${selected.manifest.sha256.slice(0, 14)}…` : t('unsigned') }}</dd></div>
         </dl>
@@ -90,9 +94,10 @@ import { computed, ref } from 'vue'
 import { t } from '../i18n'
 import { requestConfirmation } from '../store/dialog'
 import { pushHistory } from '../store/physics'
-import { approvePackageUpdatePermissions, installPackageManifest, installRegistryPackage, normalizePackageManifest, packageCompatibility, packageState as packages, packageUninstallImpact, packageUpdate, registryPackages, reviewPackageSecurity, rollbackPackage, uninstallPackage, verifyPackageCache, type InstalledPackage } from '../runtime/packages'
+import { approvePackageUpdatePermissions, installPackageManifest, installRegistryPackage, normalizePackageManifest, packageCompatibility, packageInstallReview, packageState as packages, packageUninstallImpact, packageUpdate, registryPackages, reviewPackageSecurity, rollbackPackage, uninstallPackage, verifyPackageCache, type InstalledPackage } from '../runtime/packages'
 import { normalizePluginManifest, pluginState as plugins, setPluginSafeMode } from '../runtime/plugins'
 import { completeTask, failTask, startTask } from '../runtime/editorFeedback'
+import { openBundledManual } from '../runtime/openManual'
 import PluginSettings from './PluginSettings.vue'
 
 const statuses = ['installed', 'project', 'updates', 'incompatible', 'disabled'] as const
@@ -108,6 +113,7 @@ const catalog = computed(() => registryPackages())
 const selectedRegistry = computed(() => catalog.value.find(item => item.id === selectedRegistryId.value) ?? catalog.value[0] ?? null)
 const installedRegistry = computed(() => packages.installed.some(item => item.manifest.id === selectedRegistry.value?.id))
 const reviewRegistry = computed(() => selectedRegistry.value ? reviewPackageSecurity(selectedRegistry.value) : { status: 'unverified', blocking: [], warnings: [] })
+const installReviewRegistry = computed(() => selectedRegistry.value ? packageInstallReview(selectedRegistry.value) : { pluginApiCompatibility: '', certification: 'uncertified', license: '', provenance: '', executionAllowed: false, blocking: [], warnings: [] })
 const updatePermissions = computed(() => selected.value && update.value ? update.value.permissions.filter(permission => !selected.value!.grantedPermissions.includes(permission)) : [])
 const rollbackAvailable = computed(() => Boolean(selected.value && packages.rollback[selected.value.manifest.id]?.length))
 function matches(item: InstalledPackage, status: typeof statuses[number]): boolean {
@@ -170,7 +176,9 @@ async function applyUpdate(): Promise<void> {
 async function installSelectedRegistry(): Promise<void> {
   if (!selectedRegistry.value) return
   const task = startTask(t('installPackage'), { detail: selectedRegistry.value.name })
-  const approved = await requestConfirmation({ title: t('permissionReview'), message: `${selectedRegistry.value.name} · ${selectedRegistry.value.entryPointType}\n${selectedRegistry.value.permissions.length ? selectedRegistry.value.permissions.join(', ') : t('none')}\nSHA-256 ${selectedRegistry.value.sha256}`, confirmLabel: t('installPackage'), cancelLabel: t('cancel'), destructive: false })
+  const review = packageInstallReview(selectedRegistry.value)
+  if (!review.executionAllowed) { failTask(task, new Error(review.blocking.join(' '))); return }
+  const approved = await requestConfirmation({ title: t('permissionReview'), message: `${selectedRegistry.value.name} · ${selectedRegistry.value.entryPointType}\n${t('publisher')}: ${review.publisher}\n${t('license')}: ${review.license}\n${t('provenance')}: ${review.provenance}\n${t('permissions')}: ${review.permissions.length ? review.permissions.join(', ') : t('none')}\nSHA-256 ${review.archiveSha256}`, confirmLabel: t('installPackage'), cancelLabel: t('cancel'), destructive: false })
   if (!approved) { completeTask(task, t('cancel')); return }
   try { const item = installRegistryPackage(selectedRegistry.value.id); selectedId.value = item.manifest.id; pushHistory('Install registry package'); completeTask(task, item.manifest.name) }
   catch (error) { failTask(task, error) }

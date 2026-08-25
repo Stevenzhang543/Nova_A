@@ -1,6 +1,6 @@
 import { reactive } from 'vue'
 
-export type TestKind = 'unit' | 'scene' | 'integration' | 'headless'
+export type TestKind = 'unit' | 'integration' | 'scene' | 'ui' | 'physics' | 'animation' | 'regression' | 'headless'
 export type TestAssertionKind = 'entityCountAtLeast' | 'entityExists' | 'finitePhysics' | 'checksumEquals' | 'noRuntimeErrors'
 export type NetworkRole = 'client' | 'server' | 'host'
 export type NetworkTransportKind = 'websocket' | 'native-udp'
@@ -19,6 +19,13 @@ export interface ProjectTestDefinition {
   steps: number
   timeoutMs: number
   captureScreenshot: boolean
+  tags: string[]
+  fixture: string
+  setup: string
+  teardown: string
+  seed: number
+  retries: number
+  flakyInfrastructure: boolean
   assertions: ProjectTestAssertion[]
 }
 
@@ -43,6 +50,16 @@ export interface ProductionProjectSettings {
     traceCapacity: number
     memoryBudgetMb: number
     assetBudgetMb: number
+    animationBudgetMs: number
+    uiBudgetMs: number
+    frameBudgetMs: number
+    renderingBudgetMs: number
+    audioBudgetMs: number
+    gpuBudgetMs: number
+    drawCallBudget: number
+    textureBudgetMb: number
+    particleBudgetMs: number
+    profilerOverheadBudgetPercent: number
     leakWindowFrames: number
     lifetimeCapacity: number
   }
@@ -80,7 +97,7 @@ export interface ProductionProjectSettings {
 }
 
 const DEFAULTS: ProductionProjectSettings = {
-  performance: { traceCapacity: 600, memoryBudgetMb: 300, assetBudgetMb: 512, leakWindowFrames: 600, lifetimeCapacity: 2_000 },
+  performance: { traceCapacity: 600, memoryBudgetMb: 300, assetBudgetMb: 512, animationBudgetMs: 2, uiBudgetMs: 2, frameBudgetMs: 16.667, renderingBudgetMs: 8, audioBudgetMs: 2, gpuBudgetMs: 8, drawCallBudget: 500, textureBudgetMb: 256, particleBudgetMs: 2, profilerOverheadBudgetPercent: 5, leakWindowFrames: 600, lifetimeCapacity: 2_000 },
   replay: { seed: 0x4e4f5641, capacity: 3_600, strictChecksums: true },
   testing: { defaultTimeoutMs: 10_000, tests: [] },
   data: { saveSchemaVersion: 1, saveMigrations: [] },
@@ -104,13 +121,18 @@ function id(value: unknown, fallback: string): string { return text(value, fallb
 
 function normalizeTest(value: unknown, index: number): ProjectTestDefinition {
   const source = object(value)
-  const kinds: TestKind[] = ['unit', 'scene', 'integration', 'headless']
+  const kinds: TestKind[] = ['unit', 'integration', 'scene', 'ui', 'physics', 'animation', 'regression', 'headless']
   const assertionKinds: TestAssertionKind[] = ['entityCountAtLeast', 'entityExists', 'finitePhysics', 'checksumEquals', 'noRuntimeErrors']
   return {
     id: id(source.id, `test-${index + 1}`), name: text(source.name, `Test ${index + 1}`, 120),
     kind: kinds.includes(source.kind as TestKind) ? source.kind as TestKind : 'scene', sceneUuid: text(source.sceneUuid, '', 128),
     steps: bounded(source.steps, 60, 0, 60_000, true), timeoutMs: bounded(source.timeoutMs, 10_000, 100, 120_000, true),
     captureScreenshot: source.captureScreenshot === true,
+    tags: [...new Set((Array.isArray(source.tags) ? source.tags : []).flatMap(value => typeof value === 'string' ? [id(value, '')] : []).filter(Boolean))].slice(0, 32),
+    fixture: text(source.fixture, '', 256), setup: text(source.setup, '', 80), teardown: text(source.teardown, '', 80),
+    seed: bounded(source.seed, 1, 0, 0xffff_ffff, true) >>> 0,
+    retries: source.flakyInfrastructure === true ? bounded(source.retries, 0, 0, 3, true) : 0,
+    flakyInfrastructure: source.flakyInfrastructure === true,
     assertions: (Array.isArray(source.assertions) ? source.assertions : []).slice(0, 64).flatMap(raw => {
       const assertion = object(raw), kind = assertionKinds.includes(assertion.kind as TestAssertionKind) ? assertion.kind as TestAssertionKind : null
       return kind ? [{ kind, target: text(assertion.target, '', 128), expected: text(assertion.expected, '', 256) }] : []
@@ -150,6 +172,16 @@ export function normalizeProductionSettings(value: unknown): ProductionProjectSe
       traceCapacity: bounded(performance.traceCapacity, DEFAULTS.performance.traceCapacity, 60, 10_000, true),
       memoryBudgetMb: bounded(performance.memoryBudgetMb, DEFAULTS.performance.memoryBudgetMb, 16, 65_536),
       assetBudgetMb: bounded(performance.assetBudgetMb, DEFAULTS.performance.assetBudgetMb, 1, 1_048_576),
+      animationBudgetMs: bounded(performance.animationBudgetMs, DEFAULTS.performance.animationBudgetMs, .05, 100),
+      uiBudgetMs: bounded(performance.uiBudgetMs, DEFAULTS.performance.uiBudgetMs, .05, 100),
+      frameBudgetMs: bounded(performance.frameBudgetMs, DEFAULTS.performance.frameBudgetMs, 1, 1000),
+      renderingBudgetMs: bounded(performance.renderingBudgetMs, DEFAULTS.performance.renderingBudgetMs, .05, 1000),
+      audioBudgetMs: bounded(performance.audioBudgetMs, DEFAULTS.performance.audioBudgetMs, .05, 1000),
+      gpuBudgetMs: bounded(performance.gpuBudgetMs, DEFAULTS.performance.gpuBudgetMs, .05, 1000),
+      drawCallBudget: bounded(performance.drawCallBudget, DEFAULTS.performance.drawCallBudget, 1, 100_000, true),
+      textureBudgetMb: bounded(performance.textureBudgetMb, DEFAULTS.performance.textureBudgetMb, 1, 65_536),
+      particleBudgetMs: bounded(performance.particleBudgetMs, DEFAULTS.performance.particleBudgetMs, .05, 1000),
+      profilerOverheadBudgetPercent: bounded(performance.profilerOverheadBudgetPercent, DEFAULTS.performance.profilerOverheadBudgetPercent, 0, 100),
       leakWindowFrames: bounded(performance.leakWindowFrames, DEFAULTS.performance.leakWindowFrames, 60, 60_000, true),
       lifetimeCapacity: bounded(performance.lifetimeCapacity, DEFAULTS.performance.lifetimeCapacity, 100, 20_000, true)
     },

@@ -432,17 +432,27 @@ impl Body {
         }
     }
 
-    fn update_sleep_state(&mut self, dt: f64, _has_contact: bool) {
+    fn update_sleep_state(
+        &mut self,
+        dt: f64,
+        _has_contact: bool,
+        linear_threshold: f64,
+        angular_threshold: f64,
+        time_to_sleep: f64,
+    ) {
         if !self.sleeping_allowed || self.is_static || self.is_kinematic {
             self.sleeping = false;
             self.sleep_timer = 0.0;
             return;
         }
-        let slow = self.velocity.length_squared() <= 1.0e-6
-            && self.angular_velocity.abs() <= 1.0e-3;
+        let linear_threshold = non_negative(linear_threshold, 1.0e-3);
+        let angular_threshold = non_negative(angular_threshold, 1.0e-3);
+        let time_to_sleep = non_negative(time_to_sleep, 0.5);
+        let slow = self.velocity.length_squared() <= linear_threshold * linear_threshold
+            && self.angular_velocity.abs() <= angular_threshold;
         if slow {
             self.sleep_timer += dt;
-            if self.sleep_timer >= 0.5 {
+            if self.sleep_timer >= time_to_sleep {
                 self.sleeping = true;
                 self.velocity = Vec2::ZERO;
                 self.angular_velocity = 0.0;

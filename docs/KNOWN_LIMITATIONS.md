@@ -1,4 +1,4 @@
-# Nova_A 4.0 known limitations
+# Nova_A 5.0 candidate known limitations
 
 Nova_A is deliberately a professional 2D-first engine. It does not include built-in 3D rendering/physics, ray tracing, VR/XR, AAA terrain or foliage, cinematic virtual-production tools, or proprietary console SDKs.
 
@@ -8,13 +8,14 @@ Other release boundaries:
 
 - Native packages are never downloaded or executed by the package browser; users install trusted native tools externally.
 - API 1 plugins are compatibility-only and cannot request API 2 editor/runtime capabilities.
-- Native export is host-oriented. Cross-platform bundles are built on their target OS in the release matrix.
+- Windows and web are Tier 1. Cross-platform templates are modeled explicitly, but native Linux/macOS outputs require matching-host CI and remain Experimental until their clean-machine matrices pass; unavailable targets cannot be selected as if they worked.
 - macOS distribution still needs publisher signing/notarization. Linux and macOS remain Experimental until matching-host clean-machine matrices pass.
 - The locally produced Windows EXE/MSI/NSIS artifacts are not Authenticode-signed because no Whitelist publisher certificate was provided. Their SHA-256 hashes are published, but Windows may show a SmartScreen/unverified-publisher prompt until the release is signed.
 - Console export needs the platform holder's SDK and agreement and is not included.
 - Web performance depends on browser/WebGL2/WebAssembly support; Canvas2D is a functional fallback with different throughput.
 - The included networking sample is opt-in infrastructure, not a managed matchmaking, relay, anti-cheat, or account service.
-- Nova_A 4.0 does not integrate Tauri's updater plugin or publish updater signatures. Windows releases use the complete MSI/NSIS installers; automatic update remains unavailable until its signing and rollback lifecycle is qualified.
+- Nova_A 5.0 does not integrate Tauri's updater plugin or publish updater signatures. Windows releases use the complete MSI/NSIS installers; signing/notarization values are explicit external hooks and automatic update remains unavailable until its signing and rollback lifecycle is qualified.
+- The 5.0 release-candidate observation began on 25 August 2026. Its minimum 14-day gate, independent-machine reproducibility, disposable clean-machine lifecycle and publisher signing cannot be satisfied by a same-day local run and are never reported as complete without attached external evidence.
 - Stable package installation trusts exact manifests from the configured verified registry snapshot. Arbitrary self-asserted publisher flags or matching-looking signature text are rejected and quarantined.
 - Tier-1 web game accessibility uses DOM/ARIA names, descriptions, roles, states, values, focus, and live-region hooks. Native operating-system screen-reader bridges still require adapters and qualification per desktop target.
 - The v3 headless benchmark does not claim interactive native startup, memory, or GPU frame-time results until reference-machine evidence is attached.

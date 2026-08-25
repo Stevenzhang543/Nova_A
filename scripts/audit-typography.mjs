@@ -28,7 +28,7 @@ for (const path of checked) {
 }
 
 const main = await readFile(join(sourceRoot, 'assets', 'main.css'), 'utf8')
-if (!main.includes('--type-body: calc(13px * var(--ui-scale))') || !main.includes('--type-caption: calc(11px * var(--ui-scale))')) failures.push('The declared 13px UI body and 11px metadata floor are missing.')
+if (!main.includes('--type-body: calc(14px * var(--ui-scale))') || !main.includes('--type-dense: calc(13px * var(--ui-scale))') || !main.includes('--type-caption: calc(12px * var(--ui-scale))')) failures.push('The declared 14px body, 13px dense-control and 12px caption floor are missing.')
 for (const family of ['Nunito Sans Variable', 'Noto Sans SC Variable', 'JetBrains Mono Variable']) if (!main.includes(family)) failures.push(`The bundled v4.1 typography stack is missing ${family}.`)
 for (const rule of ['-webkit-font-smoothing: antialiased', '-moz-osx-font-smoothing: grayscale', 'text-rendering: optimizeLegibility']) if (!main.includes(rule)) failures.push(`Font rendering rule is missing: ${rule}.`)
 if (!main.includes("[data-reduce-motion='true']")) failures.push('Reduced-motion support is missing.')
@@ -37,4 +37,4 @@ if (failures.length) {
   console.error(`Typography audit failed (${failures.length}):\n- ${failures.join('\n- ')}`)
   process.exit(1)
 }
-console.log(`Typography audit passed: ${checked.length} UI styles, 13px scalable body, 11px absolute floor, bundled variable multilingual/code stacks, and reduced-motion rendering.`)
+console.log(`Typography audit passed: ${checked.length} UI styles, 14px body, 13px dense controls, 12px captions, bundled variable multilingual/code stacks, and reduced-motion rendering.`)

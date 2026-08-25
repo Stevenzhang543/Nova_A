@@ -1,0 +1,17 @@
+{
+  "engineVersion": "5.0.1",
+  "schema": 29,
+  "projectName": "Nova_A 4.5 Physics Diagnostics",
+  "minimumScenes": 1,
+  "minimumEntities": 8,
+  "expectedValidation": "pass",
+  "demonstrates": [
+    "virtual body monitor, sorting, pins and sparklines",
+    "collision and constraint timelines",
+    "capture export and snapshot comparison"
+  ],
+  "testIds": [
+    "PHY-DIAG-001",
+    "PHY-DIAG-004"
+  ]
+}

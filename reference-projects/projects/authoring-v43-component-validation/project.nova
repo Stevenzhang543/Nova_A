@@ -583,7 +583,7 @@
     "minimumSchemaVersion": 5,
     "schemaVersion": 29
   },
-  "engineVersion": "4.4.0",
+  "engineVersion": "5.0.1",
   "formatVersion": 29,
   "manifest": {
     "buildPresets": [
@@ -597,8 +597,8 @@
       "userLocal": ".nova/user"
     },
     "engineCompatibility": {
-      "maximumExclusive": "5.0.0",
-      "minimum": "3.9.0"
+      "minimum": "3.9.0",
+      "maximumExclusive": "6.0.0"
     },
     "manifestVersion": 1,
     "name": "Untitled Project",
@@ -1043,29 +1043,37 @@
     ],
     "presentation": {
       "accessibility": {
+        "keyboardNavigation": true,
+        "gamepadNavigation": true,
+        "screenReaderMetadata": true,
         "announceFocusChanges": true,
         "focusRingColor": "#79b2ff",
         "focusRingWidth": 3,
-        "gamepadNavigation": true,
-        "highContrast": false,
-        "keyboardNavigation": true,
-        "minimumTargetSize": 44,
         "reducedMotion": false,
-        "screenReaderMetadata": true,
-        "textScale": 1
+        "highContrast": false,
+        "textScale": 1,
+        "minimumTargetSize": 44,
+        "subtitles": true,
+        "captions": true,
+        "captionBackground": true,
+        "captionScale": 1
       },
       "localization": {
-        "buildLocales": [
-          "en"
-        ],
-        "expansionRatio": 0.35,
+        "sourceLocale": "en",
+        "previewLocale": "en",
         "fallbackChain": [
           "en"
         ],
-        "previewLocale": "en",
         "pseudolocalization": false,
         "pseudolocalizationMode": "expanded",
-        "sourceLocale": "en"
+        "expansionRatio": 0.35,
+        "buildLocales": [
+          "en"
+        ],
+        "numberStyle": "decimal",
+        "currency": "USD",
+        "dateStyle": "medium",
+        "timeZone": "local"
       },
       "uiAudio": {
         "bus": "UI",
@@ -1103,7 +1111,9 @@
         "leakWindowFrames": 600,
         "lifetimeCapacity": 2000,
         "memoryBudgetMb": 300,
-        "traceCapacity": 600
+        "traceCapacity": 600,
+        "animationBudgetMs": 2,
+        "uiBudgetMs": 2
       },
       "replay": {
         "capacity": 3600,

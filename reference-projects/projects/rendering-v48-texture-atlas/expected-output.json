@@ -1,0 +1,16 @@
+{
+  "engineVersion": "5.0.1",
+  "schema": 29,
+  "projectName": "Rendering 4.8 Texture and Atlas",
+  "expectedValidation": "pass",
+  "featureMatrix": [
+    "atlas batching",
+    "filtering",
+    "mipmaps",
+    "compression",
+    "texture memory",
+    "batch breaks"
+  ],
+  "budgetsPass": true,
+  "unsupportedFeaturesAreActionable": true
+}

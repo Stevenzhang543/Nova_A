@@ -1,5 +1,10 @@
-fn determine_sub_steps(bodies: &[Body], dt: f64, global_gravity: f64) -> usize {
-    let mut required = BASE_SUB_STEPS;
+fn determine_sub_steps(
+    bodies: &[Body],
+    dt: f64,
+    global_gravity: f64,
+    minimum_substeps: usize,
+) -> usize {
+    let mut required = minimum_substeps.clamp(1, MAX_SUB_STEPS);
     for body in bodies {
         if body.is_static || !body.continuous_collision {
             continue;
@@ -17,7 +22,7 @@ fn determine_sub_steps(bodies: &[Body], dt: f64, global_gravity: f64) -> usize {
             required = required.max((travel / permitted_travel).ceil() as usize);
         }
     }
-    required.clamp(BASE_SUB_STEPS, MAX_SUB_STEPS)
+    required.clamp(minimum_substeps.clamp(1, MAX_SUB_STEPS), MAX_SUB_STEPS)
 }
 
 fn reset_contact_diagnostics(data: &mut [f64], body_count: usize) {
@@ -257,6 +262,7 @@ fn simulate_sub_step(
     bound_pairs: &HashSet<(usize, usize)>,
     data: &mut [f64],
     context: SubStepContext,
+    solver_iterations: usize,
 ) -> Vec<SolverContactSnapshot> {
     for body in bodies.iter_mut() {
         body.integrate(context.dt, context.global_gravity, context.air_friction);
@@ -274,7 +280,7 @@ fn simulate_sub_step(
     for constraint in constraints.iter_mut() {
         resolve_rope_collisions(bodies, constraint);
     }
-    for _ in 0..SOLVER_ITERATIONS {
+    for _ in 0..solver_iterations.clamp(1, 128) {
         for constraint in constraints.iter_mut() {
             solve_connection_velocity(bodies, constraint, context.dt);
         }
@@ -370,6 +376,40 @@ struct SolverWorld {
     bodies: Vec<Body>,
     constraints: Vec<ConnectionConstraint>,
     contacts: Vec<SolverContactSnapshot>,
+    quality: SolverQuality,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+struct SolverQuality {
+    minimum_substeps: usize,
+    solver_iterations: usize,
+    sleep_linear_threshold: f64,
+    sleep_angular_threshold: f64,
+    time_to_sleep: f64,
+}
+
+impl Default for SolverQuality {
+    fn default() -> Self {
+        Self {
+            minimum_substeps: BASE_SUB_STEPS,
+            solver_iterations: SOLVER_ITERATIONS,
+            sleep_linear_threshold: 1.0e-3,
+            sleep_angular_threshold: 1.0e-3,
+            time_to_sleep: 0.5,
+        }
+    }
+}
+
+impl SolverQuality {
+    fn normalized(self) -> Self {
+        Self {
+            minimum_substeps: self.minimum_substeps.clamp(1, MAX_SUB_STEPS),
+            solver_iterations: self.solver_iterations.clamp(1, 128),
+            sleep_linear_threshold: finite_or(self.sleep_linear_threshold, 1.0e-3).clamp(0.0, 1.0e6),
+            sleep_angular_threshold: finite_or(self.sleep_angular_threshold, 1.0e-3).clamp(0.0, 1.0e6),
+            time_to_sleep: finite_or(self.time_to_sleep, 0.5).clamp(0.0, 3_600.0),
+        }
+    }
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -389,14 +429,14 @@ struct SolverContactSnapshot {
 }
 
 impl SolverWorld {
-    fn new(input: &[f64], connection_input: &[f64]) -> Self {
+    fn new(input: &[f64], connection_input: &[f64], quality: SolverQuality) -> Self {
         let mut data = input.to_vec();
         let connection_data = connection_input.to_vec();
         let body_count = data.len() / STRIDE;
         reset_contact_diagnostics(&mut data, body_count);
         let bodies = read_bodies(&data, body_count);
         let constraints = read_constraints(&connection_data, body_count, &bodies);
-        Self { data, connection_data, bodies, constraints, contacts: Vec::new() }
+        Self { data, connection_data, bodies, constraints, contacts: Vec::new(), quality: quality.normalized() }
     }
 
     fn step(&mut self, dt: f64, global_gravity: f64, air_friction: f64) {
@@ -412,7 +452,7 @@ impl SolverWorld {
         let global_gravity = finite_or(global_gravity, 0.0);
         let air_friction = non_negative(air_friction, 0.0);
         let bound_pairs = active_bound_pairs(&self.constraints, self.bodies.len());
-        let sub_steps = determine_sub_steps(&self.bodies, dt, global_gravity);
+        let sub_steps = determine_sub_steps(&self.bodies, dt, global_gravity, self.quality.minimum_substeps);
         let sub_dt = dt / sub_steps as f64;
         for sub_step in 0..sub_steps {
             let contacts = simulate_sub_step(
@@ -426,6 +466,7 @@ impl SolverWorld {
                     air_friction,
                     record_diagnostics: sub_step + 1 == sub_steps,
                 },
+                self.quality.solver_iterations,
             );
             if sub_step + 1 == sub_steps {
                 self.contacts = contacts;
@@ -433,7 +474,13 @@ impl SolverWorld {
         }
         for body in &mut self.bodies {
             let has_contact = self.data[body.data_index + 29] > 0.0;
-            body.update_sleep_state(dt, has_contact);
+            body.update_sleep_state(
+                dt,
+                has_contact,
+                self.quality.sleep_linear_threshold,
+                self.quality.sleep_angular_threshold,
+                self.quality.time_to_sleep,
+            );
         }
         write_bodies(&mut self.data, &self.bodies);
         write_constraints(&mut self.connection_data, &self.constraints);
@@ -500,7 +547,7 @@ pub fn step_physics_with_connections(
     } else {
         input.to_vec()
     };
-    let mut world = SolverWorld::new(&upgraded, connection_input);
+    let mut world = SolverWorld::new(&upgraded, connection_input, SolverQuality::default());
     world.step(dt, global_gravity, air_friction);
     let output = world.into_output();
     if !legacy {

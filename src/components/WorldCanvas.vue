@@ -262,6 +262,7 @@ function loop(time?: number) {
 onMounted(() => {
   readPalette()
   gameUiRuntime.setCallback((entity, functionName) => gameplayRuntime.invokeUiCallback(entity, functionName))
+  gameUiRuntime.setInputActions(physicsState.inputMap)
   gameUiRuntime.setRemapCallback((action, bindingIndex, binding) => {
     if (rebindInputAction(physicsState.inputMap, action, bindingIndex, binding)) pushHistory('Remap runtime input')
   })
@@ -960,6 +961,22 @@ function drawPhysicsDebug(context: CanvasRenderingContext2D) {
       const xs = points.map(point => point.x), ys = points.map(point => point.y)
       const left = Math.min(...xs), right = Math.max(...xs), bottom = Math.min(...ys), top = Math.max(...ys)
       context.setLineDash([4 / camera.scale, 4 / camera.scale]); context.strokeStyle = '#b786f5'; context.strokeRect(left, bottom, right - left, top - bottom); context.setLineDash([])
+    }
+    const center = worldTransform(entity, world.entities).position
+    if (physicsDebugState.showCentersOfMass) {
+      const radius = 5 / camera.scale
+      context.beginPath(); context.arc(center.x, center.y, radius, 0, Math.PI * 2); context.strokeStyle = '#ffffff'; context.stroke()
+      context.beginPath(); context.moveTo(center.x - radius, center.y); context.lineTo(center.x + radius, center.y); context.moveTo(center.x, center.y - radius); context.lineTo(center.x, center.y + radius); context.strokeStyle = '#ff9f57'; context.stroke()
+    }
+    if (physicsDebugState.showVelocities && Math.hypot(entity.velocity.x, entity.velocity.y) > 1e-9) {
+      const scale = Math.min(80 / camera.scale, 12 / camera.scale * Math.log2(2 + Math.hypot(entity.velocity.x, entity.velocity.y)))
+      const length = Math.hypot(entity.velocity.x, entity.velocity.y), dx = entity.velocity.x / length * scale, dy = entity.velocity.y / length * scale
+      context.beginPath(); context.moveTo(center.x, center.y); context.lineTo(center.x + dx, center.y + dy); context.strokeStyle = '#55c8ff'; context.stroke()
+    }
+    if (physicsDebugState.showForces && Math.hypot(entity.force.x, entity.force.y) > 1e-9) {
+      const scale = Math.min(80 / camera.scale, 10 / camera.scale * Math.log2(2 + Math.hypot(entity.force.x, entity.force.y)))
+      const length = Math.hypot(entity.force.x, entity.force.y), dx = entity.force.x / length * scale, dy = entity.force.y / length * scale
+      context.beginPath(); context.moveTo(center.x, center.y); context.lineTo(center.x + dx, center.y + dy); context.strokeStyle = '#ff7f8a'; context.stroke()
     }
   }
   if (physicsDebugState.showJointConstraints) {

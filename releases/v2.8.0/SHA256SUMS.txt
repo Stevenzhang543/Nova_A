@@ -1,7 +1,0 @@
-ac508c08efa9cabe33458993cbfdf7490459a4cb0601bd0f5dd057b2158035cf  LICENSE.md
-84ebc4728a3f97f40d158e51d8fa0b400807a2769b3c9cb61c30684e0e3437a2  Nova_A-v2.8.0-source.zip
-512894462ebd1f27bd77e0c5aaa0eac93f6a73495a393e9f6bf8f26697cade8f  Nova_A-v2.8.0-web.zip
-352025b2eedb5fb79559273d5e3ff7930bf6e1b5d8389c8c58c02debfe1079f0  Nova_A-v2.8.0-windows-x64.msi
-d29666d9d9af424a0e5518b2c7c34b39150ce70d6c8f54adbdcf23ca8aa66bad  Nova_A-v2.8.0-windows-x64-portable.exe
-9811ec037bc772be282bd4c09d727ee5a1e8aefebd90a3210b82d6124cb484a2  Nova_A-v2.8.0-windows-x64-setup.exe
-6abdc55b0b25766e854822621ec9ba4557236a685f49a89cc3bf2fa8bd8cd97e  RELEASE_NOTES.md

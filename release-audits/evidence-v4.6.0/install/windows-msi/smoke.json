@@ -1,0 +1,13 @@
+{
+  "format": "nova-install-smoke",
+  "version": 1,
+  "artifact": "msi",
+  "localArtifact": {
+    "path": "src-tauri/target/release/bundle/msi/Nova_A_4.6.0_x64_en-US.msi",
+    "bytes": 9265152,
+    "sha256": "0ac0d328476f5d45db955006b7e4889574aeb73c0cf42af14ebaef1c2a1e76a8"
+  },
+  "isolatedPortableStartup": null,
+  "cleanMachineLifecycle": "pending-external-gate",
+  "status": "passed"
+}

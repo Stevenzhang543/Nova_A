@@ -14,7 +14,6 @@ function safeValues(values: Record<string, unknown>): Record<string, string | nu
   }
   return output
 }
-
 /** Telemetry is inert until both consent and an HTTPS endpoint are configured. */
 export function recordTelemetry(name: string, values: Record<string, unknown> = {}): boolean {
   if (!buildSettings.delivery.telemetryEnabled || !/^https:\/\//i.test(buildSettings.delivery.telemetryEndpoint)) return false
@@ -30,7 +29,7 @@ export async function flushTelemetry(): Promise<boolean> {
   try {
     const response = await fetch(buildSettings.delivery.telemetryEndpoint, {
       method: 'POST', keepalive: true, headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ format: 'nova-telemetry', version: 1, engineVersion: '4.4.0', events })
+      body: JSON.stringify({ format: 'nova-telemetry', version: 1, engineVersion: '5.0.1', events })
     })
     if (!response.ok) throw new Error(`Telemetry endpoint returned ${response.status}`)
     shippingState.telemetryQueue.splice(0, events.length); shippingState.telemetryStatus = 'sent'; return true

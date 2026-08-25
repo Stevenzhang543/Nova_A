@@ -4,11 +4,12 @@ import { getSceneJSON, sceneManager } from '../store/physics'
 import { buildProgress, buildSettings, recordBuildHistory, synchronizeBuildScenes, validateBuildSettings } from './buildSettings'
 import { NOVA_ENGINE_VERSION } from '../projects/projectFormat'
 import { createNovaPak, packageBase64 } from './novaPak'
-import { OFFICIAL_AI_PACKAGE_ID, OFFICIAL_NAVIGATION_PACKAGE_ID, OFFICIAL_NETWORKING_PACKAGE_ID, packageEnabled } from './packages'
+import { OFFICIAL_AI_PACKAGE_ID, OFFICIAL_NAVIGATION_PACKAGE_ID, OFFICIAL_NETWORKING_PACKAGE_ID, packageEnabled, packageState } from './packages'
 import { productionSettings } from './production'
 import { OFFICIAL_ANDROID_PACKAGE_ID } from './packages'
 import { projectSessionState } from '../projects/projectSession'
-import { stableProjectText } from './teamWorkflow'
+import { stableProjectText, teamWorkflowMetadata } from './teamWorkflow'
+import { createBuildProvenance, releaseEngineeringState, webDeploymentHeaders } from './releaseEngineering'
 
 interface ExportFile { path: string; dataBase64: string }
 interface NativeBuildResult { outputPath: string; files: string[]; launched: boolean; cacheHits?: number; changedFiles?: number; buildId?: string }
@@ -56,6 +57,7 @@ function projectForBuild(projectJson: string): string {
     ? project.projectSettings as Record<string, unknown>
     : {}
   settings.build = { ...buildSettings, sceneOrder: [...buildSettings.sceneOrder], outputDirectory: '' }
+  settings.team = teamWorkflowMetadata()
   project.projectSettings = settings
   return stableProjectText(project)
 }
@@ -143,13 +145,33 @@ async function webBuildMetadata(pack: Uint8Array, webFiles: ExportFile[]): Promi
   const report = { format: 'nova-build-report', version: 2, engineVersion: NOVA_ENGINE_VERSION, buildId: packHash, createdAt: buildSettings.delivery.deterministic ? '1970-01-01T00:00:00.000Z' : new Date().toISOString(), target: buildSettings.target, architecture: buildSettings.architecture, profile: buildSettings.profile, projectId: projectSessionState.id, totalBytes: files.reduce((sum, file) => sum + file.bytes, 0), cacheMode: buildSettings.delivery.cacheMode, files }
   const patch = { format: 'nova-patch-manifest', version: 1, fromBuild: null, toBuild: packHash, added: files.map(file => file.path), changed: [], removed: [], files }
   const dependencies = { format: 'nova-dependency-report', version: 1, engineVersion: NOVA_ENGINE_VERSION, packages: JSON.parse(projectForBuild(getSceneJSON())).packages?.lockfile ?? [], assets: assetsForBuild().map(asset => ({ uuid: asset.uuid, path: asset.path, type: asset.assetType })) }
+  const contentManifest = { format: 'nova-content-manifest', version: 1, engineVersion: NOVA_ENGINE_VERSION, buildId: packHash, include: [...buildSettings.delivery.include], exclude: [...buildSettings.delivery.exclude], stripUnusedAssets: buildSettings.delivery.stripUnusedAssets, compression: buildSettings.delivery.compression, files }
   const size = { format: 'nova-build-size-report', version: 1, engineVersion: NOVA_ENGINE_VERSION, totalBytes: files.reduce((sum, file) => sum + file.bytes, 0), files: [...files].sort((a, b) => b.bytes - a.bytes) }
+  const provenance = createBuildProvenance({
+    engineVersion: NOVA_ENGINE_VERSION, buildId: packHash, projectId: projectSessionState.id, target: buildSettings.target,
+    architecture: buildSettings.architecture, profile: buildSettings.profile, releaseChannel: buildSettings.delivery.releaseChannel,
+    settings: buildSettings, packages: packageState.lockfile, files, deterministic: buildSettings.delivery.deterministic,
+    toolchain: { builder: 'Nova_A Web Export 1', packageManager: 'pnpm 10.30.0', projectFormat: '2.29' }
+  })
+  const sbom = { format: 'CycloneDX', specVersion: '1.5', serialNumber: `urn:uuid:${crypto.randomUUID()}`, version: 1, metadata: { component: { type: 'application', name: buildSettings.gameName, version: buildSettings.platform.version }, properties: [{ name: 'nova.engine', value: NOVA_ENGINE_VERSION }, { name: 'nova.build', value: packHash }] }, components: packageState.lockfile.map(entry => ({ type: 'library', 'bom-ref': `${entry.id}@${entry.version}`, name: entry.id, version: entry.version, hashes: [{ alg: 'SHA-256', content: entry.sha256 }], properties: [{ name: 'nova.source', value: `${entry.source.kind}:${entry.source.location}` }] })) }
+  const deployment = { format: 'nova-deployment-manifest', version: 1, engineVersion: NOVA_ENGINE_VERSION, buildId: packHash, mode: buildSettings.delivery.deploymentMode, destination: buildSettings.delivery.deploymentDestination || 'local', releaseChannel: buildSettings.delivery.releaseChannel, implicitNetworkOperation: false, headers: buildSettings.delivery.webHeaders ? '_headers' : null }
   const encode = (path: string, value: unknown): ExportFile => ({ path, dataBase64: bytesToBase64(new TextEncoder().encode(`${JSON.stringify(value, null, 2)}\n`)) })
-  return [encode('nova-build-report.json', report), ...(buildSettings.delivery.sizeReport ? [encode('nova-build-size-report.json', size)] : []), ...(buildSettings.delivery.dependencyReport ? [encode('nova-dependency-report.json', dependencies)] : []), ...(buildSettings.delivery.patchManifest ? [encode('nova-patch-manifest.json', patch)] : [])]
+  return [
+    encode('nova-build-report.json', report),
+    encode('nova-content-manifest.json', contentManifest),
+    ...(buildSettings.delivery.provenance ? [encode('nova-build-provenance.json', provenance)] : []),
+    ...(buildSettings.delivery.sbom ? [encode('nova-sbom.cdx.json', sbom)] : []),
+    encode('nova-deployment-manifest.json', deployment),
+    ...(buildSettings.delivery.webHeaders ? [{ path: '_headers', dataBase64: bytesToBase64(new TextEncoder().encode(webDeploymentHeaders())) }] : []),
+    ...(buildSettings.delivery.sizeReport ? [encode('nova-build-size-report.json', size)] : []),
+    ...(buildSettings.delivery.dependencyReport ? [encode('nova-dependency-report.json', dependencies)] : []),
+    ...(buildSettings.delivery.patchManifest ? [encode('nova-patch-manifest.json', patch)] : [])
+  ]
 }
 
 export async function buildGame(run = false): Promise<NativeBuildResult> {
   const startedAt = new Date().toISOString()
+  const startedClock = performance.now()
   synchronizeBuildScenes(sceneManager.scenes.map(scene => scene.uuid))
   const validationErrors = validateBuildSettings(buildSettings).filter(issue => issue.severity === 'error')
   if (validationErrors.length) throw new Error(validationErrors.map(issue => issue.message).join(' '))
@@ -166,7 +188,7 @@ export async function buildGame(run = false): Promise<NativeBuildResult> {
   const pack = await createNovaPak(projectJson, selectedAssets, buildSettings.startupSceneUuid, { deterministic: buildSettings.delivery.deterministic, compression: buildSettings.delivery.compression })
   buildProgress.phase = 'exporting'; buildProgress.percent = 66; buildProgress.message = 'Writing Nova Player export…'
   const webFiles = buildSettings.target === 'web' ? await collectWebPlayerFiles() : []
-  if (buildSettings.target === 'web' && !('__TAURI_INTERNALS__' in window)) webFiles.push(...await webBuildMetadata(pack, webFiles))
+  if (buildSettings.target === 'web') webFiles.push(...await webBuildMetadata(pack, webFiles))
   let result: NativeBuildResult
   if ('__TAURI_INTERNALS__' in window) {
     const { invoke } = await import('@tauri-apps/api/core')
@@ -186,7 +208,24 @@ export async function buildGame(run = false): Promise<NativeBuildResult> {
   buildProgress.phase = 'complete'; buildProgress.percent = 100; buildProgress.message = `Build complete: ${result.outputPath}`; buildProgress.outputPath = result.outputPath; buildProgress.cacheHits = result.cacheHits ?? 0; buildProgress.changedFiles = result.changedFiles ?? result.files.length
   editorState.statusText = buildProgress.message
   addEditorLog(buildProgress.message, 'Project', 'info', result.outputPath)
-  recordBuildHistory({ id: crypto.randomUUID(), startedAt, finishedAt: new Date().toISOString(), target: buildSettings.target, profile: buildSettings.profile, status: 'complete', outputPath: result.outputPath, buildId: result.buildId ?? '', sizeBytes: pack.byteLength, message: `${selectedAssets.length} assets; ${result.changedFiles ?? result.files.length} changed files` })
+  if (!releaseEngineeringState.lastManifest || releaseEngineeringState.lastManifest.buildId !== (result.buildId || await sha256(pack))) {
+    createBuildProvenance({
+      engineVersion: NOVA_ENGINE_VERSION, buildId: result.buildId || await sha256(pack), projectId: projectSessionState.id,
+      target: buildSettings.target, architecture: buildSettings.architecture, profile: buildSettings.profile,
+      releaseChannel: buildSettings.delivery.releaseChannel, settings: buildSettings, packages: packageState.lockfile,
+      files: [{ path: 'game.nova-pak', sha256: await sha256(pack), bytes: pack.byteLength }], deterministic: buildSettings.delivery.deterministic,
+      toolchain: { builder: '__TAURI_INTERNALS__' in window ? 'Nova_A Desktop Export 1' : 'Nova_A Web Export 1', projectFormat: '2.29' }
+    })
+  }
+  const manifest = releaseEngineeringState.lastManifest
+  recordBuildHistory({
+    id: crypto.randomUUID(), startedAt, finishedAt: new Date().toISOString(), target: buildSettings.target, profile: buildSettings.profile,
+    status: 'complete', outputPath: result.outputPath, buildId: result.buildId ?? '', sizeBytes: pack.byteLength,
+    message: `${selectedAssets.length} assets; ${result.changedFiles ?? result.files.length} changed files`, durationMs: Math.max(0, performance.now() - startedClock),
+    inputsHash: manifest?.inputsHash, outputsHash: manifest?.outputsHash, cacheKey: manifest?.cacheKey,
+    manifestPath: `${result.outputPath}/nova-build-provenance.json`, log: [`target=${buildSettings.target}`, `profile=${buildSettings.profile}`, `template=${buildSettings.delivery.exportTemplate}`, `cache=${buildSettings.delivery.cacheMode}`],
+    evidenceStatus: buildSettings.delivery.releaseChannel === 'stable' && buildSettings.platform.signingMode === 'none' ? 'warning' : 'passed'
+  })
   return result
 }
 

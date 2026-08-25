@@ -1,0 +1,87 @@
+{
+  "format": "nova-v4.9-documentation-validation",
+  "engineVersion": "4.9.0",
+  "generatedAt": "2026-08-24T19:18:17.486Z",
+  "audit": "passed",
+  "manualFiles": [
+    {
+      "path": "manual/index.html",
+      "exists": true,
+      "bytes": 109547
+    },
+    {
+      "path": "manual/MANUAL.en.md",
+      "exists": true,
+      "bytes": 107610
+    },
+    {
+      "path": "manual/MANUAL.de.md",
+      "exists": true,
+      "bytes": 74879
+    },
+    {
+      "path": "manual/MANUAL.zh-CN.md",
+      "exists": true,
+      "bytes": 77509
+    }
+  ],
+  "guides": [
+    {
+      "path": "docs/FIRST_GAME_4_9.md",
+      "exists": true,
+      "bytes": 1241
+    },
+    {
+      "path": "docs/BUILD_EXPORT_4_9.md",
+      "exists": true,
+      "bytes": 1403
+    },
+    {
+      "path": "docs/PACKAGE_PLUGIN_SDK_4_9.md",
+      "exists": true,
+      "bytes": 1837
+    },
+    {
+      "path": "docs/SOURCE_CONTROL_4_9.md",
+      "exists": true,
+      "bytes": 1092
+    },
+    {
+      "path": "docs/MIGRATION_4_9.md",
+      "exists": true,
+      "bytes": 1164
+    },
+    {
+      "path": "docs/RELEASE_ENGINEERING_4_9.md",
+      "exists": true,
+      "bytes": 1478
+    },
+    {
+      "path": "docs/TROUBLESHOOTING_4_0.md",
+      "exists": true,
+      "bytes": 1571
+    },
+    {
+      "path": "docs/ACCESSIBILITY_GUIDE_4_0.md",
+      "exists": true,
+      "bytes": 1010
+    },
+    {
+      "path": "docs/API_REFERENCE_4_0.md",
+      "exists": true,
+      "bytes": 1342
+    }
+  ],
+  "contextHelp": [
+    "Inspector",
+    "Problems",
+    "Project Health",
+    "Build warnings",
+    "Package errors"
+  ],
+  "referenceProjectCi": "passed",
+  "referenceProjects": 99,
+  "tier1ReferenceExports": 198,
+  "codeSamples": "validated by static audit and clean Windows/Web exports recorded in the reference CI report",
+  "status": "passed-local"
+}

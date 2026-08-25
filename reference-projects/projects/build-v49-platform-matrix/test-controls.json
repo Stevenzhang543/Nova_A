@@ -1,0 +1,20 @@
+{
+  "engineVersion": "5.0.1",
+  "open": "Project Manager > Open project.nova",
+  "verify": [
+    "Manage > Project Health > Release readiness",
+    "Build Settings > Evidence",
+    "Packages > Plugin API compatibility"
+  ],
+  "build": [
+    "pnpm nova -- build --preset windows-release",
+    "pnpm nova -- build --preset web-release"
+  ],
+  "expected": [
+    "Windows Tier 1",
+    "Web Tier 1",
+    "explicit unavailable targets",
+    "export presets",
+    "content manifest"
+  ]
+}

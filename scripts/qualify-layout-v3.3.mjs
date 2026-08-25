@@ -156,11 +156,11 @@ try {
   const controlsPassed = !isV41 || stableControls.length > 0 && controlIds.size === stableControls.length && stableControls.every(item => item.testId && item.surface && item.label && (!item.disabled || item.disabledReason))
   results.push({name:'Stable control inventory',status:controlsPassed?'passed':'failed',detail:{count:stableControls.length,unique:controlIds.size}})
   results.push({ name: 'Browser console and fatal surface', status: seriousConsoleErrors.length === 0 && !await evaluate(client, "Boolean(document.querySelector('.error-recovery,[data-fatal=true]'))") ? 'passed' : 'failed', detail: JSON.stringify(seriousConsoleErrors) })
-  const report = { format: `nova-v${qualificationTag}-layout-qualification`, version: 1, engineVersion: qualificationVersion, generatedAt: new Date().toISOString(), browser: browser.product, languages: ['en','de','zh'], matrix:isV41?{viewports:['1366x768','1920x1080','2560x1440','3840x2160'],scales:[100,125,150,175,200],catalogs:['SHELL','LCH','HLT','BLD']}:undefined,stableControls,screenshots,results,consoleErrors: seriousConsoleErrors }
+  const report = { format: `nova-v${qualificationVersion}-layout-qualification`, version: 1, engineVersion: qualificationVersion, generatedAt: new Date().toISOString(), browser: browser.product, languages: ['en','de','zh'], matrix:isV41?{viewports:['1366x768','1920x1080','2560x1440','3840x2160'],scales:[100,125,150,175,200],catalogs:['SHELL','LCH','HLT','BLD']}:undefined,stableControls,screenshots,results,consoleErrors: seriousConsoleErrors }
   report.status = results.every(result => result.status === 'passed') ? 'passed' : 'failed'
   await writeFile(join(evidenceRoot, `v${qualificationVersion}-layout-browser.json`), `${JSON.stringify(report, null, 2)}\n`, 'utf8')
   if (report.status !== 'passed') throw new Error(`Layout qualification failed: ${results.filter(result => result.status !== 'passed').map(result => result.name).join(', ')}`)
-  console.log(`Nova_A v${qualificationTag} layout qualification passed: ${results.length - 1} panel/viewport states in three languages; ${screenshots.length} captures.`)
+  console.log(`Nova_A v${qualificationVersion} layout qualification passed: ${results.length - 1} panel/viewport states in three languages; ${screenshots.length} captures.`)
 } finally {
   try { await client?.send('Browser.close') } catch { /* process cleanup below */ }
   await new Promise(resolve => setTimeout(resolve, 300))

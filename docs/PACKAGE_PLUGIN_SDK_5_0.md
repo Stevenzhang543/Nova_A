@@ -1,0 +1,9 @@
+# Nova_A 5.0 package and plugin SDK
+
+The frozen public contracts are Package Manifest 1 and WASM Plugin API 2. A package declares identity, semantic version, Nova_A engine range, entry-point type, API compatibility, publisher, license, provenance, SHA-256, signature record, permissions, dependencies, dependency hashes, certification state, documentation, security policy, and optional native status. Stable installation is fail-closed: compatibility, provenance, checksum/trust record, dependencies, license, certification, and requested permissions are reviewed before execution.
+
+Plugin API 2 uses a sandboxed WebAssembly module. It must export `nova_plugin_api_version` returning `2` and `nova_plugin_init`. Host capabilities are permission-scoped. Package browsing never executes package code; Safe Mode skips third-party startup. Native entry points remain disabled by the package browser and require an explicit external review and installation process.
+
+The lockfile is authoritative for release builds. Mutable unpinned resolution, missing dependency hashes, circular dependencies, permission escalation without approval, and a changed archive hash are errors. Offline mirrors are verified before use; invalid entries are quarantined. Updates record rollback material, and new permissions block application until the user reviews them.
+
+For a new extension, copy the reference plugin, choose a globally unique reverse-domain ID, pin the supported engine range to `>=5.0.0 <6.0.0`, declare the smallest possible permission set, build the WASM deterministically, calculate SHA-256, add documentation and a security contact, then run package validation and the reference-project matrix. API v1 remains readable only where migration policy promises it; it is not a new-project authoring option.

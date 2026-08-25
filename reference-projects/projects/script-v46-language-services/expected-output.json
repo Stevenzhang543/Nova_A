@@ -1,0 +1,9 @@
+{
+  "engineVersion": "5.0.1",
+  "schema": 29,
+  "projectName": "Script v4.6 Language Services",
+  "expectedValidation": "pass",
+  "minimumSymbols": 502,
+  "interactiveBudgetMs": 50,
+  "persistedIndex": true
+}

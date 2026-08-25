@@ -1,0 +1,210 @@
+{
+  "format": "nova-v5.0-release-pipeline-run",
+  "version": 1,
+  "engineVersion": "5.0.0",
+  "generatedAt": "2026-08-25T12:47:21.2268308Z",
+  "status": "passed-local",
+  "stages": [
+    {
+      "name": "Generate v5.0 references",
+      "program": "pnpm",
+      "arguments": [
+        "run",
+        "references:v5.0"
+      ],
+      "startedAt": "2026-08-25T12:36:12.7294007Z",
+      "finishedAt": "2026-08-25T12:36:14.2783474Z",
+      "exitCode": 0
+    },
+    {
+      "name": "Complete BLD/PKG/HLT/regression catalog",
+      "program": "pnpm",
+      "arguments": [
+        "run",
+        "audit"
+      ],
+      "startedAt": "2026-08-25T12:36:14.2862721Z",
+      "finishedAt": "2026-08-25T12:36:32.4744491Z",
+      "exitCode": 0
+    },
+    {
+      "name": "Rust formatting",
+      "program": "cargo",
+      "arguments": [
+        "fmt",
+        "--all",
+        "--",
+        "--check"
+      ],
+      "startedAt": "2026-08-25T12:36:32.4758173Z",
+      "finishedAt": "2026-08-25T12:36:33.1349582Z",
+      "exitCode": 0
+    },
+    {
+      "name": "Rust lint",
+      "program": "cargo",
+      "arguments": [
+        "clippy",
+        "--workspace",
+        "--all-targets",
+        "--",
+        "-D",
+        "warnings"
+      ],
+      "startedAt": "2026-08-25T12:36:33.1349582Z",
+      "finishedAt": "2026-08-25T12:36:33.6865713Z",
+      "exitCode": 0
+    },
+    {
+      "name": "Rust tests",
+      "program": "cargo",
+      "arguments": [
+        "test",
+        "--workspace",
+        "--all-targets"
+      ],
+      "startedAt": "2026-08-25T12:36:33.6865713Z",
+      "finishedAt": "2026-08-25T12:36:35.8746487Z",
+      "exitCode": 0
+    },
+    {
+      "name": "Web/WASM production build",
+      "program": "pnpm",
+      "arguments": [
+        "build"
+      ],
+      "startedAt": "2026-08-25T12:36:35.8746487Z",
+      "finishedAt": "2026-08-25T12:37:27.9161362Z",
+      "exitCode": 0
+    },
+    {
+      "name": "Pinned Chromium layout qualification",
+      "program": "pnpm",
+      "arguments": [
+        "run",
+        "qualify:v5.0:layout"
+      ],
+      "startedAt": "2026-08-25T12:37:27.9161362Z",
+      "finishedAt": "2026-08-25T12:43:06.7951643Z",
+      "exitCode": 0
+    },
+    {
+      "name": "Windows native installers",
+      "program": "pnpm",
+      "arguments": [
+        "tauri",
+        "build"
+      ],
+      "startedAt": "2026-08-25T12:43:06.7951643Z",
+      "finishedAt": "2026-08-25T12:44:55.8233378Z",
+      "exitCode": 0
+    },
+    {
+      "name": "Windows isolated startup",
+      "program": "pnpm",
+      "arguments": [
+        "run",
+        "verify:v5.0:windows"
+      ],
+      "startedAt": "2026-08-25T12:44:55.8233378Z",
+      "finishedAt": "2026-08-25T12:45:09.9393999Z",
+      "exitCode": 0
+    },
+    {
+      "name": "All reference projects on Tier-1 targets",
+      "program": "pnpm",
+      "arguments": [
+        "run",
+        "references:verify:v5.0"
+      ],
+      "startedAt": "2026-08-25T12:45:09.9393999Z",
+      "finishedAt": "2026-08-25T12:46:06.3507457Z",
+      "exitCode": 0
+    },
+    {
+      "name": "Ten consecutive clean Tier-1 payload builds",
+      "program": "pnpm",
+      "arguments": [
+        "run",
+        "reproducibility:v5.0"
+      ],
+      "startedAt": "2026-08-25T12:46:06.3507457Z",
+      "finishedAt": "2026-08-25T12:46:10.9757428Z",
+      "exitCode": 0
+    },
+    {
+      "name": "Pinned performance baselines",
+      "program": "pnpm",
+      "arguments": [
+        "run",
+        "benchmark:v5.0"
+      ],
+      "startedAt": "2026-08-25T12:46:10.9757428Z",
+      "finishedAt": "2026-08-25T12:46:17.5466312Z",
+      "exitCode": 0
+    },
+    {
+      "name": "Bounded stability/fault smoke",
+      "program": "pnpm",
+      "arguments": [
+        "run",
+        "stability:v5.0"
+      ],
+      "startedAt": "2026-08-25T12:46:17.5466312Z",
+      "finishedAt": "2026-08-25T12:46:19.0982659Z",
+      "exitCode": 0
+    },
+    {
+      "name": "Structured release evidence",
+      "program": "pnpm",
+      "arguments": [
+        "run",
+        "evidence:v5.0"
+      ],
+      "startedAt": "2026-08-25T12:46:19.0982659Z",
+      "finishedAt": "2026-08-25T12:46:19.8900318Z",
+      "exitCode": 0
+    },
+    {
+      "name": "Exact eleven-file package",
+      "program": "powershell",
+      "arguments": [
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "C:\\Users\\steve\\OneDrive\\Desktop\\Nova_A\\scripts\\package-release.ps1",
+        "-Version",
+        "5.0.0"
+      ],
+      "startedAt": "2026-08-25T12:46:19.8910620Z",
+      "finishedAt": "2026-08-25T12:46:54.9934998Z",
+      "exitCode": 0
+    },
+    {
+      "name": "Packaged release verification",
+      "program": "powershell",
+      "arguments": [
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "C:\\Users\\steve\\OneDrive\\Desktop\\Nova_A\\scripts\\verify-release-package.ps1",
+        "-Version",
+        "5.0.0"
+      ],
+      "startedAt": "2026-08-25T12:46:54.9934998Z",
+      "finishedAt": "2026-08-25T12:47:21.1810449Z",
+      "exitCode": 0
+    }
+  ],
+  "externalGates": [
+    "minimum 14-day release-candidate observation",
+    "72-hour soak",
+    "two-machine reproducibility",
+    "clean-machine install lifecycle",
+    "publisher signing/notarization",
+    "external browser/hardware matrix",
+    "independent verifier"
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "engineVersion": "5.0.1",
+  "schema": 29,
+  "projectName": "Build 5.0 Platform Matrix",
+  "expectedValidation": "pass",
+  "features": [
+    "Windows Tier 1",
+    "Web Tier 1",
+    "explicit unavailable targets",
+    "export presets",
+    "content manifest"
+  ],
+  "tier1": [
+    "windows",
+    "web"
+  ],
+  "externalGatesMayRemainPending": true,
+  "untrustedPackagesExecute": false
+}

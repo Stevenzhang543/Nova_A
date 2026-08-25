@@ -9,12 +9,21 @@ use serde::Serialize;
 pub const DEFAULT_TICK_RATE: f64 = 60.0;
 pub const DEFAULT_MAX_CATCH_UP_STEPS: u32 = 8;
 
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum DroppedTimePolicy {
+    #[default]
+    Drop,
+    PreserveBacklog,
+    SlowMotion,
+}
+
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct FixedTimeSettings {
     pub tick_rate: f64,
     pub max_catch_up_steps: u32,
     pub time_scale: f64,
     pub paused: bool,
+    pub dropped_time_policy: DroppedTimePolicy,
 }
 
 impl Default for FixedTimeSettings {
@@ -24,6 +33,7 @@ impl Default for FixedTimeSettings {
             max_catch_up_steps: DEFAULT_MAX_CATCH_UP_STEPS,
             time_scale: 1.0,
             paused: true,
+            dropped_time_policy: DroppedTimePolicy::Drop,
         }
     }
 }
@@ -138,6 +148,19 @@ pub enum EngineEvent {
     },
     EntityDestroyed {
         handle: u32,
+    },
+    BodySleeping {
+        handle: u32,
+    },
+    BodyWoke {
+        handle: u32,
+    },
+    JointBroken {
+        handle: u32,
+        joint_kind: u8,
+        link: i32,
+        tension: f64,
+        strain: f64,
     },
     SceneLoaded {
         uuid: String,
@@ -340,6 +363,22 @@ impl RuntimeWorld {
     }
     pub fn physics_mut(&mut self) -> &mut PhysicsWorld {
         &mut self.physics
+    }
+    pub fn set_physics_quality(
+        &mut self,
+        minimum_substeps: usize,
+        solver_iterations: usize,
+        sleep_linear_threshold: f64,
+        sleep_angular_threshold: f64,
+        time_to_sleep: f64,
+    ) {
+        self.physics.set_quality(
+            minimum_substeps,
+            solver_iterations,
+            sleep_linear_threshold,
+            sleep_angular_threshold,
+            time_to_sleep,
+        );
     }
     pub fn timing(&self) -> FixedTimeSettings {
         self.timing
@@ -553,9 +592,24 @@ impl RuntimeWorld {
                 report.steps += 1;
             }
             if self.accumulator >= fixed_delta {
-                let retained = self.accumulator % fixed_delta;
-                report.dropped_seconds = self.accumulator - retained;
-                self.accumulator = retained;
+                match settings.dropped_time_policy {
+                    DroppedTimePolicy::Drop => {
+                        let retained = self.accumulator % fixed_delta;
+                        report.dropped_seconds = self.accumulator - retained;
+                        self.accumulator = retained;
+                    }
+                    DroppedTimePolicy::PreserveBacklog => {
+                        let maximum_backlog = fixed_delta * f64::from(settings.max_catch_up_steps);
+                        if self.accumulator > maximum_backlog {
+                            report.dropped_seconds = self.accumulator - maximum_backlog;
+                            self.accumulator = maximum_backlog;
+                        }
+                    }
+                    DroppedTimePolicy::SlowMotion => {
+                        report.dropped_seconds = (self.accumulator - fixed_delta).max(0.0);
+                        self.accumulator = self.accumulator.min(fixed_delta);
+                    }
+                }
             }
         }
         report.interpolation_alpha = (self.accumulator / fixed_delta).clamp(0.0, 1.0);
@@ -612,6 +666,21 @@ impl RuntimeWorld {
             let event = match event {
                 PhysicsEvent::BodyCreated { handle } => EngineEvent::EntityCreated { handle },
                 PhysicsEvent::BodyDestroyed { handle } => EngineEvent::EntityDestroyed { handle },
+                PhysicsEvent::BodySleeping { handle } => EngineEvent::BodySleeping { handle },
+                PhysicsEvent::BodyWoke { handle } => EngineEvent::BodyWoke { handle },
+                PhysicsEvent::ConstraintBroken {
+                    handle,
+                    joint_kind,
+                    link,
+                    tension,
+                    strain,
+                } => EngineEvent::JointBroken {
+                    handle,
+                    joint_kind,
+                    link,
+                    tension,
+                    strain,
+                },
                 PhysicsEvent::ContactStarted(contact) if contact.sensor => {
                     EngineEvent::TriggerEntered {
                         first: contact.first,

@@ -1,7 +1,7 @@
 <template>
   <section class="team-workflow" data-doc="manual/source-control">
-    <header><div><strong>{{ t('sourceControl') }}</strong><small>{{ t('sourceControlHint') }}</small></div><span :class="['status-pill', changes.length ? 'dirty' : 'clean']">{{ changes.length ? t('changesCount', { count: changes.length }) : t('workingTreeClean') }}</span></header>
-    <div class="team-grid">
+    <header><div><strong>{{ t('sourceControl') }}</strong><small>{{ t('sourceControlHint') }}</small></div><label class="workflow-toggle"><input v-model="team.enabled" type="checkbox" @change="persistTeamWorkflowSettings"><span>{{ t('optionalTeamWorkflow') }}</span></label><span :class="['status-pill', changes.length ? 'dirty' : 'clean']">{{ changes.length ? t('changesCount', { count: changes.length }) : t('workingTreeClean') }}</span></header>
+    <div v-if="team.enabled" class="team-grid">
       <section class="changes-card">
         <div class="card-title"><strong>{{ t('sourceStatus') }}</strong><button @click="refresh">{{ t('refresh') }}</button></div>
         <div class="change-list">
@@ -31,7 +31,18 @@
         <p>{{ t('lockFileHint') }}</p>
       </section>
       <section class="format-card"><strong>{{ t('teamSafeFormat') }}</strong><ul><li>{{ t('stableTextOutput') }}</li><li>{{ t('conflictDetection') }}</li><li>{{ t('cacheIgnored') }}</li></ul></section>
+      <section class="metadata-card">
+        <strong>{{ t('ownershipAndTasks') }}</strong>
+        <div class="metadata-row"><input v-model="ownershipPath" placeholder="Assets/Scenes/**"><input v-model="ownershipOwners" placeholder="owner, reviewer"><button @click="addOwnership">{{ t('add') }}</button></div>
+        <ul><li v-for="rule in team.ownership" :key="rule.path"><code>{{ rule.path }}</code><span>{{ rule.owners.map(owner => `@${owner}`).join(' ') }}</span></li></ul>
+        <button :disabled="!team.ownership.length" @click="downloadCodeOwnersFile">{{ t('downloadCodeOwners') }}</button>
+        <div class="metadata-row"><input v-model="taskId" placeholder="NOVA-123"><input v-model="taskUrl" placeholder="https://…"><button @click="addTask">{{ t('addTaskLink') }}</button></div>
+        <div class="metadata-row"><input v-model="changeOwner" :placeholder="t('lockOwner')"><input v-model="changeNote" :placeholder="t('changeNote')"><button @click="addNote">{{ t('add') }}</button></div>
+      </section>
+      <section class="network-card"><strong>{{ t('localFirstWorkflow') }}</strong><label><input v-model="team.networkOperations" type="checkbox" @change="persistTeamWorkflowSettings"><span>{{ t('allowExplicitNetworkOperations') }}</span></label><p>{{ t('teamNetworkTransparency') }}</p><dl><div><dt>{{ t('localFiles') }}</dt><dd>project.nova · Packages.lock · CODEOWNERS · .nova-lock</dd></div><div><dt>{{ t('network') }}</dt><dd>{{ team.networkOperations ? t('explicitOnly') : t('disabled') }}</dd></div></dl></section>
+      <section class="binary-card"><strong>{{ t('binaryAssetLocks') }}</strong><div class="metadata-row"><input v-model="binaryPath" placeholder="Assets/Art/hero.png"><input v-model="binaryOwner" :placeholder="t('lockOwner')"><button @click="lockBinary">{{ t('acquireLock') }}</button></div><ul><li v-for="lock in team.binaryLocks" :key="lock.token"><code>{{ lock.path }}</code><span>{{ lock.owner }} · {{ new Date(lock.expiresAt).toLocaleTimeString() }}</span></li></ul><p>{{ t('binaryLockGuidance') }}</p></section>
     </div>
+    <div v-else class="team-disabled"><strong>{{ t('teamWorkflowDisabled') }}</strong><p>{{ t('teamWorkflowDisabledHint') }}</p></div>
   </section>
 </template>
 
@@ -40,11 +51,12 @@ import { computed, onMounted, ref } from 'vue'
 import { t } from '../i18n'
 import { getSceneJSON, loadProject } from '../store/physics'
 import { projectSessionState as project } from '../projects/projectSession'
-import { acquireProjectLock, downloadCiValidationTemplate, downloadNovaIgnoreFile, downloadPreCommitHook, downloadProjectLock, incomingProjectSource, initializeGitRepository, openExternalDiff, openExternalMerge, persistTeamWorkflowSettings, refreshSourceStatus, releaseProjectLock, setIncomingProject, sourceDiffFor, teamWorkflowState as team } from '../runtime/teamWorkflow'
+import { acquireBinaryAssetLock, acquireProjectLock, addOwnershipRule, addTeamChangeNote, addTeamTaskLink, downloadCiValidationTemplate, downloadCodeOwnersFile, downloadNovaIgnoreFile, downloadPreCommitHook, downloadProjectLock, incomingProjectSource, initializeGitRepository, openExternalDiff, openExternalMerge, persistTeamWorkflowSettings, refreshSourceStatus, releaseProjectLock, setIncomingProject, sourceDiffFor, teamWorkflowState as team } from '../runtime/teamWorkflow'
 
 const lockOwner = ref('Whitelist')
 const incomingInput = ref<HTMLInputElement | null>(null)
 const selectedChange = ref(''), repositoryPath = ref(''), repositoryStatus = ref('')
+const ownershipPath = ref('Assets/**'), ownershipOwners = ref('Whitelist'), taskId = ref(''), taskUrl = ref(''), changeOwner = ref('Whitelist'), changeNote = ref(''), binaryPath = ref(''), binaryOwner = ref('Whitelist')
 const changes = computed(() => team.changes)
 const selectedDiff = computed(() => selectedChange.value ? sourceDiffFor(selectedChange.value, getSceneJSON()) : null)
 const lockSummary = computed(() => team.lockToken ? `${t('lockedUntil')} ${new Date(team.lockExpiresAt).toLocaleTimeString()}` : t('unlocked'))
@@ -66,6 +78,10 @@ function acquireLock(): void { acquireProjectLock(project.id, lockOwner.value) }
 function releaseLock(): void { releaseProjectLock(project.id) }
 function reloadIncoming(): void { const source = incomingProjectSource(); if (source && loadProject(source)) { team.incomingSource = ''; team.incomingFileName = ''; refresh() } }
 async function initializeRepository(): Promise<void> { try { repositoryStatus.value = await initializeGitRepository(repositoryPath.value) } catch (error) { repositoryStatus.value = error instanceof Error ? error.message : String(error) } }
+function addOwnership(): void { if (addOwnershipRule(ownershipPath.value, ownershipOwners.value)) ownershipPath.value = '' }
+function addTask(): void { if (addTeamTaskLink(taskId.value, taskUrl.value, '')) { taskId.value = ''; taskUrl.value = '' } }
+function addNote(): void { if (addTeamChangeNote(changeOwner.value, changeNote.value)) changeNote.value = '' }
+function lockBinary(): void { if (acquireBinaryAssetLock(binaryPath.value, binaryOwner.value)) binaryPath.value = '' }
 onMounted(refresh)
 </script>
 
@@ -75,4 +91,5 @@ onMounted(refresh)
 <style scoped>
 .repository-card{display:flex;flex-direction:column;gap:7px}.repository-card button{align-self:flex-start}.change-list article.selected{background:var(--accent-soft)}
 .inline-diff{margin-top:7px;border:1px solid var(--border-subtle);border-radius:8px;overflow:hidden}.inline-diff header{min-height:30px;padding:5px 7px;display:flex;justify-content:space-between;background:var(--surface-3);font-size:11px}.inline-diff>div{display:grid;grid-template-columns:1fr 1fr}.inline-diff pre{max-height:160px;margin:0;padding:7px;overflow:auto;border-right:1px solid var(--border-subtle);font:11px/1.45 var(--font-mono);white-space:pre-wrap;overflow-wrap:anywhere}.inline-diff pre:last-child{border-right:0}
+.workflow-toggle{display:flex;align-items:center;gap:5px;color:var(--text-muted);font-size:11px}.team-disabled{margin:auto;width:min(520px,calc(100% - 24px));padding:22px;border:1px solid var(--border-subtle);border-radius:12px;background:var(--surface-2);text-align:center}.team-disabled p{color:var(--text-muted)}.metadata-card,.network-card,.binary-card{display:flex;flex-direction:column;gap:7px}.metadata-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto;gap:5px}.metadata-row>*{min-width:0}.metadata-card ul,.binary-card ul{max-height:100px;margin:0;padding:0;overflow:auto;list-style:none}.metadata-card li,.binary-card li{padding:4px 0;display:flex;justify-content:space-between;gap:6px;border-bottom:1px solid var(--border-subtle);font-size:11px}.network-card dl{margin:0}.network-card dl div{display:grid;grid-template-columns:80px minmax(0,1fr);gap:6px}.network-card dt{color:var(--text-muted)}.network-card dd{margin:0;overflow-wrap:anywhere}
 </style>

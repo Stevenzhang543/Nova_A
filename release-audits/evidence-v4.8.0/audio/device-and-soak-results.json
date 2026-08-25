@@ -1,0 +1,128 @@
+{
+  "format": "nova-audio-device-soak-results",
+  "engineVersion": "4.8.0",
+  "generatedAt": "2026-08-24T16:51:00.501Z",
+  "graphNormalization": {
+    "id": "AUD-GRAPH-NORMALIZATION",
+    "status": "passed",
+    "detail": "Audio device, limiter, graph-cycle and automation inputs normalize deterministically.",
+    "metrics": {
+      "buses": [
+        {
+          "id": "Master",
+          "name": "Master",
+          "gain": 1,
+          "mute": false,
+          "solo": false,
+          "parent": null,
+          "voiceLimit": 32,
+          "sends": [],
+          "effects": [],
+          "automation": [
+            {
+              "time": 1,
+              "gain": 0
+            },
+            {
+              "time": 4,
+              "gain": 1
+            }
+          ],
+          "automationLoopSeconds": 0
+        },
+        {
+          "id": "Loop",
+          "name": "Loop",
+          "gain": 1,
+          "mute": false,
+          "solo": false,
+          "parent": "Master",
+          "voiceLimit": 32,
+          "sends": [],
+          "effects": [],
+          "automation": [],
+          "automationLoopSeconds": 0
+        },
+        {
+          "id": "Music",
+          "name": "Music",
+          "gain": 1,
+          "mute": false,
+          "solo": false,
+          "parent": "Master",
+          "voiceLimit": 4,
+          "sends": [],
+          "effects": [],
+          "automation": [],
+          "automationLoopSeconds": 0
+        },
+        {
+          "id": "SFX",
+          "name": "SFX",
+          "gain": 1,
+          "mute": false,
+          "solo": false,
+          "parent": "Master",
+          "voiceLimit": 32,
+          "sends": [],
+          "effects": [],
+          "automation": [],
+          "automationLoopSeconds": 0
+        },
+        {
+          "id": "UI",
+          "name": "UI",
+          "gain": 1,
+          "mute": false,
+          "solo": false,
+          "parent": "Master",
+          "voiceLimit": 32,
+          "sends": [],
+          "effects": [],
+          "automation": [],
+          "automationLoopSeconds": 0
+        }
+      ],
+      "snapshots": [
+        {
+          "id": "default",
+          "name": "Default",
+          "masterVolume": 1,
+          "busGains": {
+            "Master": 1,
+            "Music": 1,
+            "SFX": 1,
+            "UI": 1
+          }
+        }
+      ],
+      "activeSnapshot": null,
+      "ducking": [],
+      "masterVoiceLimit": 1024,
+      "outputDeviceId": "fixture",
+      "limiterEnabled": true,
+      "limiterCeilingDb": 0
+    }
+  },
+  "localDefaultDevice": {
+    "nativeStartup": "passed",
+    "selection": "host setSinkId where available",
+    "hotPlug": "devicechange recovery implemented"
+  },
+  "safety": {
+    "voiceLimits": "bounded per bus/source/master with stealing or virtualization",
+    "failureHistory": "bounded",
+    "persistentDeviceLock": "not observed in local startup smoke"
+  },
+  "externalGates": {
+    "disconnectReconnect": "required on supported physical devices",
+    "sampleRates": [
+      44100,
+      48000,
+      96000
+    ],
+    "streamingLoop": "required physical output capture",
+    "wallClock24Hour": "not run on this host"
+  },
+  "status": "passed-local-with-explicit-external-gates"
+}

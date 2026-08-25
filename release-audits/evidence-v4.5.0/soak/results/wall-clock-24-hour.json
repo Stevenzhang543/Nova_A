@@ -1,0 +1,7 @@
+{
+  "format": "nova-wall-clock-soak-gate",
+  "version": 1,
+  "requiredHours": 24,
+  "completed": false,
+  "status": "pending-external-gate"
+}

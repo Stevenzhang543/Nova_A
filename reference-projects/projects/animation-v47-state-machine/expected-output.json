@@ -1,0 +1,8 @@
+{
+  "engineVersion": "5.0.1",
+  "schema": 29,
+  "projectName": "Animation v4.7 State Machine",
+  "expectedValidation": "pass",
+  "purpose": "Layered state graph, parameters, transition conditions, blending, interruption, events and live runtime inspection.",
+  "windowsWebParity": true
+}

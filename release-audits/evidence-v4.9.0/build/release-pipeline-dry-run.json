@@ -1,0 +1,24 @@
+{
+  "format": "nova-v4.9-release-pipeline-dry-run",
+  "engineVersion": "4.9.0",
+  "generatedAt": "2026-08-24T19:18:17.486Z",
+  "command": "pnpm release:v4.9",
+  "packageCommand": "scripts/package-release.ps1 -Version 4.9.0",
+  "expectedArtifacts": [
+    "EDIT_LEDGER.md",
+    "LICENSE.md",
+    "Nova_A-v4.9.0-reference-projects.zip",
+    "Nova_A-v4.9.0-release-evidence.zip",
+    "Nova_A-v4.9.0-source.zip",
+    "Nova_A-v4.9.0-web.zip",
+    "Nova_A-v4.9.0-windows-x64.msi",
+    "Nova_A-v4.9.0-windows-x64-portable.exe",
+    "Nova_A-v4.9.0-windows-x64-setup.exe",
+    "RELEASE_NOTES.md",
+    "SHA256SUMS.txt"
+  ],
+  "exactRootFileCount": 11,
+  "manualReplacementAllowed": false,
+  "checksumsRequired": true,
+  "status": "ready-for-package-stage"
+}

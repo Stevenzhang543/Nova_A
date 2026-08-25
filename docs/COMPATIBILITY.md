@@ -1,6 +1,6 @@
 # Compatibility and migration policy
 
-Nova_A 4.0.0 writes Project Format 2, schema 29, engine version 4.0.0. It accepts every publicly supported schema from 5 through 29. Schema 29 remains the 3.9 release-candidate schema; 4.0 upgrades the former `<4.0.0` engine/package boundary to the stable `<5.0.0` contract without adding schema fields. Migration preserves collision bits, masks, scripts, presentation, authored strokes, tile data, packages and compatible unknown fields; older readers must use the pre-migration backup.
+Nova_A 5.0.0 writes Project Format 2, schema 29, engine version 5.0.0. It accepts every publicly supported schema from 5 through 29. Schema 29 remains frozen; 5.0 seals the former `<4.0.0` and `<5.0.0` boundaries to the 5.x `<6.0.0` contract without adding schema fields. Migration preserves collision bits, masks, scripts, presentation, authored strokes, tile data, packages and compatible unknown fields; older readers must use the pre-migration backup.
 
 Import is transactional:
 

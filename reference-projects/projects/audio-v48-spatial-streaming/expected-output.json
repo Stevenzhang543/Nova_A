@@ -1,0 +1,19 @@
+{
+  "engineVersion": "5.0.1",
+  "schema": 29,
+  "projectName": "Audio 4.8 Spatial and Streaming",
+  "expectedValidation": "pass",
+  "featureMatrix": [
+    "listener",
+    "attenuation",
+    "pan",
+    "streaming",
+    "preload",
+    "loop markers",
+    "fades",
+    "playlists",
+    "voice stealing"
+  ],
+  "budgetsPass": true,
+  "unsupportedFeaturesAreActionable": true
+}

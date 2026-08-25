@@ -1,0 +1,29 @@
+{
+  "format": "nova-v4.9-source-control-fixtures",
+  "engineVersion": "4.9.0",
+  "generatedAt": "2026-08-24T19:18:17.486Z",
+  "local": {
+    "optionalWorkflow": "passed-static-and-runtime",
+    "semanticKeyOrderComparison": "passed",
+    "gitignore": "generated",
+    "codeowners": "generated",
+    "externalChanges": "covered-by-regression-catalog",
+    "advisoryBinaryLock": "covered"
+  },
+  "external": [
+    {
+      "name": "branch switch with real repository host",
+      "status": "pending-fixture-host"
+    },
+    {
+      "name": "three-way merge conflict tool",
+      "status": "pending-fixture-host"
+    },
+    {
+      "name": "host-enforced binary locking",
+      "status": "pending-fixture-host"
+    }
+  ],
+  "cloudRequired": false,
+  "hiddenNetworkOperations": false
+}

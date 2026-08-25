@@ -1,0 +1,31 @@
+{
+  "changed": [],
+  "durationMs": 12.8468,
+  "engineVersion": "4.6.0",
+  "failed": 1,
+  "format": "nova-script-test-report",
+  "passed": 0,
+  "results": [
+    {
+      "attempt": 1,
+      "caseName": "",
+      "durationMs": 12.6189,
+      "file": "tests/fixtures/scripting/v4.6-failure\\deliberate-failure.rhai",
+      "fixture": "exit-code",
+      "message": "Expectation failed: deliberate failure proves exit code 1",
+      "name": "test_deliberate_failure",
+      "seed": 462,
+      "status": "failed",
+      "tags": [
+        "negative",
+        "regression"
+      ]
+    }
+  ],
+  "shard": {
+    "count": 1,
+    "index": 0
+  },
+  "skipped": 0,
+  "version": 2
+}

@@ -1,0 +1,8 @@
+{
+  "engineVersion": "5.0.1",
+  "schema": 29,
+  "projectName": "Animation v4.7 Rig and Sprite",
+  "expectedValidation": "pass",
+  "purpose": "Sprite-frame animation, a 2D bone rig, skin weights, constraints, IK, attachments and retarget aliases.",
+  "windowsWebParity": true
+}

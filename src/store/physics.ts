@@ -56,7 +56,7 @@ import { loadLocalizationSettings, serializeLocalizationSettings } from '../runt
 import { loadRuntimeAccessibilitySettings, loadUiAudioSettings, serializeRuntimeAccessibilitySettings, serializeUiAudioSettings } from '../runtime/presentation'
 import { loadProductionSettings, serializeProductionSettings } from '../runtime/production'
 import { markSourceBaseline, refreshSourceStatus, stableProjectText } from '../runtime/teamWorkflow'
-import { defaultPhysicsLayers, normalizePhysicsLayers } from '../runtime/physicsProduction'
+import { defaultPhysicsLayers, defaultPhysicsProfile, normalizePhysicsLayers, normalizePhysicsProfile } from '../runtime/physicsProduction'
 import { commitProjectTransaction, createNativeProjectTransactionSink, markProjectDirty, markTransactionBaseline, projectChecksum, projectTransactionState, type ProjectMutationScope } from '../runtime/projectTransactions'
 import { loadProjectTrash, serializeProjectTrash } from '../runtime/projectTrash'
 
@@ -148,7 +148,8 @@ export const physicsState = reactive<PhysicsState>({
     maxCatchUpSteps: 8,
     collisionMatrix: defaultCollisionMatrix(),
     interpolation: 'Interpolate',
-    layers: defaultPhysicsLayers()
+    layers: defaultPhysicsLayers(),
+    profile: defaultPhysicsProfile()
   },
   simulationRunning: false,
   playMode: 'editing',
@@ -166,6 +167,12 @@ export function normalizeGlobalSettings(): void {
   physicsState.globalSettings.tickRate = Math.min(1000, Math.max(1, finiteNumber(physicsState.globalSettings.tickRate, 60)))
   physicsState.globalSettings.maxCatchUpSteps = Math.min(240, Math.max(1, Math.round(finiteNumber(physicsState.globalSettings.maxCatchUpSteps, 8))))
   physicsState.globalSettings.interpolation = physicsState.globalSettings.interpolation === 'None' ? 'None' : 'Interpolate'
+  physicsState.globalSettings.profile = normalizePhysicsProfile({
+    ...(physicsState.globalSettings.profile ?? defaultPhysicsProfile()),
+    tickRate: physicsState.globalSettings.tickRate,
+    maxCatchUpSteps: physicsState.globalSettings.maxCatchUpSteps,
+    interpolation: physicsState.globalSettings.interpolation
+  })
   physicsState.globalSettings.layers = normalizePhysicsLayers(physicsState.globalSettings.layers)
   const source = Array.isArray(physicsState.globalSettings.collisionMatrix)
     ? physicsState.globalSettings.collisionMatrix
@@ -342,7 +349,8 @@ function serializeActiveScene(): Record<string, unknown> {
     globalSettings: {
       ...physicsState.globalSettings,
       collisionMatrix: [...physicsState.globalSettings.collisionMatrix],
-      layers: physicsState.globalSettings.layers.map(layer => ({ ...layer }))
+      layers: physicsState.globalSettings.layers.map(layer => ({ ...layer })),
+      profile: { ...physicsState.globalSettings.profile }
     },
     entities: physicsState.world.entities.map(serializeEntity),
     connections: physicsState.world.connections.map(connection => {
@@ -382,7 +390,7 @@ function projectSource(): Record<string, unknown> {
     plugins: serializePluginManifests(),
     packages: serializePackageState(),
     projectTrash: serializeProjectTrash(),
-    projectSettings: { inputMap: normalizeInputMap(physicsState.inputMap), audio: normalizeAudioSettings(physicsState.audioSettings), build: serializeBuildSettings(sceneManager.scenes.map(scene => scene.uuid)), scripting: serializeScriptSettings(), rendering: serializeRenderingSettings(), world: serializeWorldGameplaySettings(), presentation: { localization: serializeLocalizationSettings(), accessibility: serializeRuntimeAccessibilitySettings(), uiAudio: serializeUiAudioSettings() }, production: serializeProductionSettings() },
+    projectSettings: { inputMap: normalizeInputMap(physicsState.inputMap), audio: normalizeAudioSettings(physicsState.audioSettings), physics: serializePhysicsProjectSettings(), build: serializeBuildSettings(sceneManager.scenes.map(scene => scene.uuid)), scripting: serializeScriptSettings(), rendering: serializeRenderingSettings(), world: serializeWorldGameplaySettings(), presentation: { localization: serializeLocalizationSettings(), accessibility: serializeRuntimeAccessibilitySettings(), uiAudio: serializeUiAudioSettings() }, production: serializeProductionSettings() },
     projectStructure: {
       assetsRoot: 'Assets', settingsRoot: 'ProjectSettings', cacheRoot: '.nova/cache', importedRoot: '.nova/imported'
     },
@@ -1554,10 +1562,42 @@ function loadGlobalSettings(scene: Record<string, unknown>): void {
   physicsState.globalSettings.tickRate = finiteNumber(settings.tickRate, physicsState.globalSettings.tickRate)
   physicsState.globalSettings.maxCatchUpSteps = finiteNumber(settings.maxCatchUpSteps, physicsState.globalSettings.maxCatchUpSteps)
   physicsState.globalSettings.interpolation = settings.interpolation === 'None' ? 'None' : 'Interpolate'
+  physicsState.globalSettings.profile = normalizePhysicsProfile(settings.profile ?? {
+    tickRate: physicsState.globalSettings.tickRate,
+    maxCatchUpSteps: physicsState.globalSettings.maxCatchUpSteps,
+    interpolation: physicsState.globalSettings.interpolation
+  })
   physicsState.globalSettings.layers = normalizePhysicsLayers(settings.layers)
   if (Array.isArray(settings.collisionMatrix)) {
     physicsState.globalSettings.collisionMatrix = settings.collisionMatrix.map(value => finiteNumber(value))
   }
+  normalizeGlobalSettings()
+}
+
+function serializePhysicsProjectSettings(): Record<string, unknown> {
+  normalizeGlobalSettings()
+  return {
+    gravity: physicsState.globalSettings.gravity,
+    airFriction: physicsState.globalSettings.airFriction,
+    timeScale: physicsState.globalSettings.timeScale,
+    profile: { ...physicsState.globalSettings.profile },
+    layers: physicsState.globalSettings.layers.map(layer => ({ ...layer })),
+    collisionMatrix: [...physicsState.globalSettings.collisionMatrix]
+  }
+}
+
+function loadPhysicsProjectSettings(value: unknown): void {
+  if (!value || typeof value !== 'object') return
+  const settings = value as Record<string, unknown>
+  physicsState.globalSettings.gravity = finiteNumber(settings.gravity, physicsState.globalSettings.gravity)
+  physicsState.globalSettings.airFriction = finiteNumber(settings.airFriction, physicsState.globalSettings.airFriction)
+  physicsState.globalSettings.timeScale = finiteNumber(settings.timeScale, physicsState.globalSettings.timeScale)
+  physicsState.globalSettings.profile = normalizePhysicsProfile(settings.profile)
+  physicsState.globalSettings.tickRate = physicsState.globalSettings.profile.tickRate
+  physicsState.globalSettings.maxCatchUpSteps = physicsState.globalSettings.profile.maxCatchUpSteps
+  physicsState.globalSettings.interpolation = physicsState.globalSettings.profile.interpolation
+  physicsState.globalSettings.layers = normalizePhysicsLayers(settings.layers)
+  if (Array.isArray(settings.collisionMatrix)) physicsState.globalSettings.collisionMatrix = settings.collisionMatrix.map(value => finiteNumber(value, 0) >>> 0)
   normalizeGlobalSettings()
 }
 
@@ -1584,6 +1624,7 @@ export function loadProject(jsonString: string, preserveRuntimeSession = false):
       : {}
     physicsState.inputMap.splice(0, physicsState.inputMap.length, ...normalizeInputMap(projectSettings.inputMap))
     Object.assign(physicsState.audioSettings, normalizeAudioSettings(projectSettings.audio))
+    loadPhysicsProjectSettings(projectSettings.physics)
     Object.assign(scriptProjectSettings, normalizeScriptSettings(projectSettings.scripting))
     loadRenderingSettings(projectSettings.rendering)
     loadWorldGameplaySettings(projectSettings.world)
@@ -1678,7 +1719,7 @@ function reloadSceneManagerProject(preserveRuntimeSession = false): boolean {
     assetDatabase: serializeAssetDatabaseSettings(),
     plugins: serializePluginManifests(),
     packages: serializePackageState(),
-    projectSettings: { inputMap: normalizeInputMap(physicsState.inputMap), audio: normalizeAudioSettings(physicsState.audioSettings), build: serializeBuildSettings(sceneManager.scenes.map(scene => scene.uuid)), scripting: serializeScriptSettings(), rendering: serializeRenderingSettings(), world: serializeWorldGameplaySettings(), presentation: { localization: serializeLocalizationSettings(), accessibility: serializeRuntimeAccessibilitySettings(), uiAudio: serializeUiAudioSettings() }, production: serializeProductionSettings() },
+    projectSettings: { inputMap: normalizeInputMap(physicsState.inputMap), audio: normalizeAudioSettings(physicsState.audioSettings), physics: serializePhysicsProjectSettings(), build: serializeBuildSettings(sceneManager.scenes.map(scene => scene.uuid)), scripting: serializeScriptSettings(), rendering: serializeRenderingSettings(), world: serializeWorldGameplaySettings(), presentation: { localization: serializeLocalizationSettings(), accessibility: serializeRuntimeAccessibilitySettings(), uiAudio: serializeUiAudioSettings() }, production: serializeProductionSettings() },
     activeSceneUuid: sceneManager.activeSceneUuid,
     scenes: sceneManager.serialize()
   })

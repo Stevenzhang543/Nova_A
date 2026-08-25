@@ -1,0 +1,40 @@
+{
+  "format": "nova-texture-particle-benchmarks",
+  "engineVersion": "4.8.0",
+  "generatedAt": "2026-08-24T16:51:00.501Z",
+  "texture": {
+    "projectBudgetMb": 256,
+    "fixture": "rendering-v48-texture-atlas",
+    "measurement": "runtime capture field textureMemoryBytes",
+    "physicalGpuUploadBenchmark": "external"
+  },
+  "particles": {
+    "fixture": "rendering-v48-particles",
+    "normalization": {
+      "id": "REN-PARTICLE-NORMALIZATION",
+      "status": "passed",
+      "detail": "Particle rates, lifetime and collision settings remain finite and bounded.",
+      "metrics": {
+        "emissionRate": 20,
+        "lifetime": 0.0001,
+        "collisionMode": "None",
+        "restitution": 1,
+        "mask": 0
+      }
+    },
+    "projectBudget": 10000,
+    "updateBudgetMs": 2
+  },
+  "batching": {
+    "drawCallBudget": 500,
+    "batchBreakCounters": [
+      "camera",
+      "texture",
+      "filter",
+      "material",
+      "blend",
+      "vertex-limit"
+    ]
+  },
+  "status": "passed-local-with-external-gpu-gate"
+}

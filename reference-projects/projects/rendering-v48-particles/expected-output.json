@@ -1,0 +1,17 @@
+{
+  "engineVersion": "5.0.1",
+  "schema": 29,
+  "projectName": "Rendering 4.8 Particles",
+  "expectedValidation": "pass",
+  "featureMatrix": [
+    "particle assets",
+    "bursts",
+    "curves",
+    "gradients",
+    "collision",
+    "subemitters",
+    "budget"
+  ],
+  "budgetsPass": true,
+  "unsupportedFeaturesAreActionable": true
+}

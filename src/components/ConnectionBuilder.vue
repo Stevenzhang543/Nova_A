@@ -76,6 +76,8 @@
                 <label class="collision-toggle"><span><strong>{{ t('stringCollisions') }}</strong><small>{{ t('stringCollisionsDescription') }}</small></span><input v-model="collisionEnabled" type="checkbox"></label>
                 <label v-if="collisionEnabled"><span>{{ t('stringRadius') }}</span><input v-model.number="collisionRadius" type="number" min="0.000001" max="1000000" step="0.01"></label>
                 <label v-if="collisionEnabled"><span>{{ t('stringDensity') }}</span><input v-model.number="linearDensity" type="number" min="0.000001" max="1e50" step="0.01"></label>
+                <label><span>{{ t('ropeSegments') }}</span><input v-model.number="segmentCount" type="number" min="3" max="32" step="1"></label>
+                <label><span>{{ t('collideConnected') }}</span><input v-model="collideConnected" type="checkbox"></label>
                 <label><span>{{ t('stretchable') }}</span><input v-model="stretchable" type="checkbox"></label>
                 <label><span>{{ t('bendable') }}</span><input v-model="bendable" type="checkbox"></label>
                 <label><span>{{ t('stiffness') }}</span><input v-model.number="stiffness" type="number" min="0" max="1000000000000" step="1"></label>
@@ -84,6 +86,7 @@
                 <label><span>{{ t('bendTolerance') }}</span><input v-model.number="bendingToleranceMass" type="number" min="0" max="1e50" step="0.1"></label>
                 <label><span>{{ t('stretchTolerance') }}</span><input v-model.number="stretchingToleranceMass" type="number" min="0" max="1e50" step="0.1"></label>
               </div>
+              <p v-if="segmentCount >= 28 || (collisionEnabled && segmentCount >= 20)" class="rope-warning">{{ t('ropePerformanceWarning') }}</p>
             </details>
           </section>
         </Transition>
@@ -153,6 +156,8 @@ const stretchingToleranceMass = ref(existing?.stretchingToleranceMass ?? 1e12)
 const collisionEnabled = ref(existing?.collisionEnabled ?? true)
 const collisionRadius = ref(existing?.collisionRadius ?? 0.2)
 const linearDensity = ref(existing?.linearDensity ?? 0.08)
+const segmentCount = ref(existing?.segmentCount ?? 12)
+const collideConnected = ref(existing?.collideConnected ?? false)
 const availableEntities = computed(() => world.entities.filter(entity => entity.id !== props.selectedId && entity.getCollider()?.physicsLayer === selectedEntity.value?.getCollider()?.physicsLayer))
 const partnerEntity = computed(() => partnerId.value === null ? null : world.entities.find(entity => entity.id === partnerId.value) ?? null)
 const overlapping = computed(() => Boolean(selectedEntity.value && partnerEntity.value && entitiesOverlap(selectedEntity.value, partnerEntity.value, world.entities)))
@@ -212,6 +217,8 @@ function copyHiddenPhysics(target: Connection): void {
   target.collisionEnabled = collisionEnabled.value
   target.collisionRadius = collisionRadius.value
   target.linearDensity = linearDensity.value
+  target.segmentCount = Math.min(32, Math.max(3, Math.round(segmentCount.value)))
+  target.collideConnected = collideConnected.value
 }
 
 function createDraftConnection(): Connection | null {
@@ -527,6 +534,7 @@ h2 { margin: 2px 0 0; font-size: 18px; letter-spacing: -.02em; }
 .preview-shell { min-height: 320px; position: relative; flex: 1; overflow: hidden; border: 1px solid var(--border-strong); border-radius: 15px; background: var(--bg-canvas); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--surface-1) 40%, transparent); }.preview-shell.complete { border-color: color-mix(in srgb, var(--accent) 60%, var(--border-strong)); }.preview-shell canvas { display: block; width: 100%; height: 100%; min-height: 320px; touch-action: none; cursor: crosshair; }.preview-instruction, .preview-success { position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); padding: 7px 11px; display: flex; align-items: center; gap: 6px; border: 1px solid var(--border-strong); border-radius: 999px; background: var(--surface-1); color: var(--text-secondary); box-shadow: var(--shadow-sm); font-size:11px; pointer-events: none; white-space: nowrap; }.preview-instruction span { color: var(--accent); }.preview-success { color: var(--success); }.preview-success span { width: 16px; height: 16px; display: grid; place-items: center; border-radius: 50%; color: var(--accent-contrast); background: var(--success); }
 .preview-footer { min-height: 30px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }.preview-footer p { margin: 0; color: var(--text-muted); font-size:11px; }.preview-footer p.error { color: var(--danger); }.redraw-button { padding: 6px 10px; border: 1px solid var(--border-subtle); border-radius: 8px; color: var(--text-secondary); background: var(--surface-3); font-size:11px; }
 .advanced-physics { border: 1px solid var(--border-subtle); border-radius: 12px; background: var(--surface-1); overflow: hidden; }.advanced-physics summary { padding: 10px 12px; color: var(--text-secondary); cursor: pointer; font-size:11px; font-weight: 700; }.physics-grid { padding: 2px 12px 12px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 12px; }.physics-grid label { min-width: 0; display: flex; align-items: center; justify-content: space-between; gap: 8px; color: var(--text-muted); font-size:11px; }.physics-grid label.collision-toggle { grid-column: 1 / -1; padding: 8px 0; border-bottom: 1px solid var(--border-subtle); }.collision-toggle > span { display: flex; flex-direction: column; gap: 2px; }.collision-toggle strong { color: var(--text-secondary); font-size:11px; }.collision-toggle small { max-width: 470px; font-size:11px; font-weight: 400; line-height: 1.4; }.physics-grid input[type='number'] { width: 92px; min-width: 0; }.physics-grid input[type='checkbox'] { accent-color: var(--accent); }
+.rope-warning { margin: 0 12px 12px; padding: 8px 10px; border: 1px solid color-mix(in srgb, var(--warning) 45%, var(--border-subtle)); border-radius: 9px; color: var(--warning); background: color-mix(in srgb, var(--warning) 8%, transparent); font-size: 11px; line-height: 1.45; }
 footer button { min-height: 35px; padding: 0 14px; border: 1px solid var(--border-subtle); border-radius: 9px; background: var(--surface-3); color: var(--text-secondary); font-size: 11px; }footer button.primary { min-width: 140px; color: var(--accent-contrast); border-color: var(--accent); background: var(--accent); }
 .step-enter-active, .step-leave-active { transition: opacity 180ms ease, transform 220ms cubic-bezier(.2,.8,.2,1); }.step-enter-from { opacity: 0; transform: translateX(24px); }.step-leave-to { opacity: 0; transform: translateX(-18px); }
 @media (max-width: 680px) { .path-picker, .object-picker { grid-template-columns: 1fr; }.path-picker button { min-height: 108px; }.step-indicator { display: none; }.center-toggle { align-self: flex-start; }.compact-copy { flex-wrap: wrap; }.preview-shell, .preview-shell canvas { min-height: 280px; } }

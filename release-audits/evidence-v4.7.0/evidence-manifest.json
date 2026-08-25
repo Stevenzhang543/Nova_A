@@ -1,0 +1,305 @@
+{
+  "format": "nova-release-evidence-manifest",
+  "version": 1,
+  "release": "4.7.0",
+  "generatedAt": "2026-08-24T13:56:24.469Z",
+  "source": {
+    "commit": "6fdc5de4e632b528b0008c3e640ed49f234c3e3f",
+    "worktree": "release candidate includes the documented v4.7 edits"
+  },
+  "environment": {
+    "id": "win32-x64-node-v22.22.2",
+    "os": "win32",
+    "architecture": "x64",
+    "node": "v22.22.2"
+  },
+  "entries": [
+    {
+      "path": "accessibility/audit.json",
+      "sha256": "f709b4f7830273b67b8252264d1b9af43d887728420c003f172ce3abea9b6a4b",
+      "bytes": 784,
+      "source": "6fdc5de4e632b528b0008c3e640ed49f234c3e3f",
+      "tool": "pnpm evidence:v4.7",
+      "environment": "win32-x64-node-v22.22.2"
+    },
+    {
+      "path": "accessibility/focus-traversal.json",
+      "sha256": "d8dc1402f303340ca130ea456352f903a762ef8d21d80113e504aaa8685b7d38",
+      "bytes": 607,
+      "source": "6fdc5de4e632b528b0008c3e640ed49f234c3e3f",
+      "tool": "pnpm evidence:v4.7",
+      "environment": "win32-x64-node-v22.22.2"
+    },
+    {
+      "path": "evidence-manifest.json",
+      "sha256": "a0626a27c34b7303fa9047ce8dc27c39aac979c0cb8a6e396b6d9458d3509ec5",
+      "bytes": 11718,
+      "source": "6fdc5de4e632b528b0008c3e640ed49f234c3e3f",
+      "tool": "pnpm evidence:v4.7",
+      "environment": "win32-x64-node-v22.22.2"
+    },
+    {
+      "path": "export-comparison/windows-web.json",
+      "sha256": "67463ad49e42e48d7625cec75c3e8c063e176a6b78104678f278f70cb924601d",
+      "bytes": 2819,
+      "source": "6fdc5de4e632b528b0008c3e640ed49f234c3e3f",
+      "tool": "pnpm evidence:v4.7",
+      "environment": "win32-x64-node-v22.22.2"
+    },
+    {
+      "path": "localization/fixtures.json",
+      "sha256": "5dd36b7e437d0f41fc890e83fe50ed66cfefc2fda9b4824ef2559a17d139d031",
+      "bytes": 778,
+      "source": "6fdc5de4e632b528b0008c3e640ed49f234c3e3f",
+      "tool": "pnpm evidence:v4.7",
+      "environment": "win32-x64-node-v22.22.2"
+    },
+    {
+      "path": "logs/commands.md",
+      "sha256": "6ea3bc3cb2d2738c03d5b6f09fc35c50cfba8e362d2f85d73d7253ea508d4d4e",
+      "bytes": 298,
+      "source": "6fdc5de4e632b528b0008c3e640ed49f234c3e3f",
+      "tool": "pnpm evidence:v4.7",
+      "environment": "win32-x64-node-v22.22.2"
+    },
+    {
+      "path": "references/index.json",
+      "sha256": "e6811c2e68f549a1f6cde3538a28337e71a36fbfbd4feee9c5012b903a375838",
+      "bytes": 301,
+      "source": "6fdc5de4e632b528b0008c3e640ed49f234c3e3f",
+      "tool": "pnpm evidence:v4.7",
+      "environment": "win32-x64-node-v22.22.2"
+    },
+    {
+      "path": "responsive/matrix.json",
+      "sha256": "b8d285c9e5d0ff8dcbf759673546f41834de8466e827fe612d51fc7841a1a291",
+      "bytes": 298858,
+      "source": "6fdc5de4e632b528b0008c3e640ed49f234c3e3f",
+      "tool": "pnpm evidence:v4.7",
+      "environment": "win32-x64-node-v22.22.2"
+    },
+    {
+      "path": "responsive/screenshots/command-palette-en-1920x1080.png",
+      "sha256": "794489f3d2bc448e5832a0ffa79ac5af62f5448db66e6f2407784a46996f0b8c",
+      "bytes": 205397,
+      "source": "6fdc5de4e632b528b0008c3e640ed49f234c3e3f",
+      "tool": "pnpm evidence:v4.7",
+      "environment": "win32-x64-node-v22.22.2"
+    },
+    {
+      "path": "responsive/screenshots/editor-design-de-1600x900.png",
+      "sha256": "110caa201095d4e0e57cee12172f1fa5a11f98b6061aee6faaf2b72ba09b73ac",
+      "bytes": 94687,
+      "source": "6fdc5de4e632b528b0008c3e640ed49f234c3e3f",
+      "tool": "pnpm evidence:v4.7",
+      "environment": "win32-x64-node-v22.22.2"
+    },
+    {
+      "path": "responsive/screenshots/editor-design-en-1600x900.png",
+      "sha256": "cc3a59e05c8c4caad57f6659761ce6095785a783f4fe186effc18943950690bd",
+      "bytes": 93112,
+      "source": "6fdc5de4e632b528b0008c3e640ed49f234c3e3f",
+      "tool": "pnpm evidence:v4.7",
+      "environment": "win32-x64-node-v22.22.2"
+    },
+    {
+      "path": "responsive/screenshots/editor-design-zh-1600x900.png",
+      "sha256": "6da5c42605369a22b879997436458bf03998c27eb65065a8eb1524d41cda603f",
+      "bytes": 94278,
+      "source": "6fdc5de4e632b528b0008c3e640ed49f234c3e3f",
+      "tool": "pnpm evidence:v4.7",
+      "environment": "win32-x64-node-v22.22.2"
+    },
+    {
+      "path": "responsive/screenshots/launcher-en-1920x1080.png",
+      "sha256": "d1b8b7ae3f113ac288c50e2ce63821138d404fd7b59d256e83536fc9b666010a",
+      "bytes": 511092,
+      "source": "6fdc5de4e632b528b0008c3e640ed49f234c3e3f",
+      "tool": "pnpm evidence:v4.7",
+      "environment": "win32-x64-node-v22.22.2"
+    },
+    {
+      "path": "responsive/screenshots/manage-build-en-1920x1080.png",
+      "sha256": "0f3b07efa5104161b7cca121fc90a7bf2eb99d38e07d2fb1ea284d711890ce2d",
+      "bytes": 150206,
+      "source": "6fdc5de4e632b528b0008c3e640ed49f234c3e3f",
+      "tool": "pnpm evidence:v4.7",
+      "environment": "win32-x64-node-v22.22.2"
+    },
+    {
+      "path": "responsive/screenshots/manage-packages-en-1920x1080.png",
+      "sha256": "8de787914c03c0a759d45be91a1dca612c436f26dac0b9cbc406b93b09756be9",
+      "bytes": 120275,
+      "source": "6fdc5de4e632b528b0008c3e640ed49f234c3e3f",
+      "tool": "pnpm evidence:v4.7",
+      "environment": "win32-x64-node-v22.22.2"
+    },
+    {
+      "path": "responsive/screenshots/manage-project-health-en-1920x1080.png",
+      "sha256": "75bd7adc9f9b933cf5fb819dd7d7fbdb49396c157cd6942278bdefaea181f9a0",
+      "bytes": 161021,
+      "source": "6fdc5de4e632b528b0008c3e640ed49f234c3e3f",
+      "tool": "pnpm evidence:v4.7",
+      "environment": "win32-x64-node-v22.22.2"
+    },
+    {
+      "path": "responsive/screenshots/manage-rendering-en-1920x1080.png",
+      "sha256": "e4f92a6bb708dcd53ca66d87baec739613f5ac447a9731fb067822557a4235e7",
+      "bytes": 117061,
+      "source": "6fdc5de4e632b528b0008c3e640ed49f234c3e3f",
+      "tool": "pnpm evidence:v4.7",
+      "environment": "win32-x64-node-v22.22.2"
+    },
+    {
+      "path": "responsive/screenshots/manage-settings-en-1920x1080.png",
+      "sha256": "b900a0ad727450c9abdf7f30fd67b1b4d1af9cf72d53b221655e7a89fca4e2e1",
+      "bytes": 296471,
+      "source": "6fdc5de4e632b528b0008c3e640ed49f234c3e3f",
+      "tool": "pnpm evidence:v4.7",
+      "environment": "win32-x64-node-v22.22.2"
+    },
+    {
+      "path": "responsive/screenshots/responsive-ui-de-1600x900.png",
+      "sha256": "2006b6b0279f502ce5fdfa4d1d32a3894f6b9d98ea70721ad3338eff0b1924bb",
+      "bytes": 144184,
+      "source": "6fdc5de4e632b528b0008c3e640ed49f234c3e3f",
+      "tool": "pnpm evidence:v4.7",
+      "environment": "win32-x64-node-v22.22.2"
+    },
+    {
+      "path": "responsive/screenshots/responsive-ui-en-1600x900.png",
+      "sha256": "55d4cbb717a87bdf5e3336c26a02e0dd17dea97d03bfd4507fdef91b58ebb81a",
+      "bytes": 137040,
+      "source": "6fdc5de4e632b528b0008c3e640ed49f234c3e3f",
+      "tool": "pnpm evidence:v4.7",
+      "environment": "win32-x64-node-v22.22.2"
+    },
+    {
+      "path": "responsive/screenshots/responsive-ui-zh-1600x900.png",
+      "sha256": "714e1e6764a3e7d6469a728a86079e9de59fa21470279cf4a0ea6d54e6036988",
+      "bytes": 141355,
+      "source": "6fdc5de4e632b528b0008c3e640ed49f234c3e3f",
+      "tool": "pnpm evidence:v4.7",
+      "environment": "win32-x64-node-v22.22.2"
+    },
+    {
+      "path": "responsive/screenshots/script-studio-de-1600x900.png",
+      "sha256": "242cba471ce7fd5c52e9760384f1985351d537109b7e6ebfbd15ae7d07b97373",
+      "bytes": 136382,
+      "source": "6fdc5de4e632b528b0008c3e640ed49f234c3e3f",
+      "tool": "pnpm evidence:v4.7",
+      "environment": "win32-x64-node-v22.22.2"
+    },
+    {
+      "path": "responsive/screenshots/script-studio-en-1600x900.png",
+      "sha256": "e3443610200c801af444449abe98d1ef0dcb6754e1e3bd5310b5c952d2694802",
+      "bytes": 131235,
+      "source": "6fdc5de4e632b528b0008c3e640ed49f234c3e3f",
+      "tool": "pnpm evidence:v4.7",
+      "environment": "win32-x64-node-v22.22.2"
+    },
+    {
+      "path": "responsive/screenshots/script-studio-zh-1600x900.png",
+      "sha256": "5705a7f9b54360ad15bc1d90eacee0854fa7aae36c7ba953ce59609ae70e6152",
+      "bytes": 135705,
+      "source": "6fdc5de4e632b528b0008c3e640ed49f234c3e3f",
+      "tool": "pnpm evidence:v4.7",
+      "environment": "win32-x64-node-v22.22.2"
+    },
+    {
+      "path": "responsive/screenshots/task-center-en-1920x1080.png",
+      "sha256": "126298b62196cbba7050f54e7ee79a6877fffbdc811b58f4efe1f3298b4dcb1a",
+      "bytes": 168383,
+      "source": "6fdc5de4e632b528b0008c3e640ed49f234c3e3f",
+      "tool": "pnpm evidence:v4.7",
+      "environment": "win32-x64-node-v22.22.2"
+    },
+    {
+      "path": "responsive/screenshots/workspace-animation-en-1920x1080.png",
+      "sha256": "d4d9848249362458c94bc11b052f043e1cb4f8202cb55d264ef7354743a1a56c",
+      "bytes": 111324,
+      "source": "6fdc5de4e632b528b0008c3e640ed49f234c3e3f",
+      "tool": "pnpm evidence:v4.7",
+      "environment": "win32-x64-node-v22.22.2"
+    },
+    {
+      "path": "responsive/screenshots/workspace-debug-en-1920x1080.png",
+      "sha256": "a04fbca269001a9c2e5806c64e6e2d2dc896b8ff7a9ad74c4033e34e091a061e",
+      "bytes": 112164,
+      "source": "6fdc5de4e632b528b0008c3e640ed49f234c3e3f",
+      "tool": "pnpm evidence:v4.7",
+      "environment": "win32-x64-node-v22.22.2"
+    },
+    {
+      "path": "responsive/screenshots/workspace-design-en-1920x1080.png",
+      "sha256": "08fce5591966f2f431a24a16c43d6a4456692dd411bb962349dfb4c82010fa9a",
+      "bytes": 99332,
+      "source": "6fdc5de4e632b528b0008c3e640ed49f234c3e3f",
+      "tool": "pnpm evidence:v4.7",
+      "environment": "win32-x64-node-v22.22.2"
+    },
+    {
+      "path": "responsive/screenshots/workspace-manage-en-1920x1080.png",
+      "sha256": "7873147bb69c42f429d27bb2e10049548209f84cd558fc4eb5d12b4767356e64",
+      "bytes": 296459,
+      "source": "6fdc5de4e632b528b0008c3e640ed49f234c3e3f",
+      "tool": "pnpm evidence:v4.7",
+      "environment": "win32-x64-node-v22.22.2"
+    },
+    {
+      "path": "responsive/screenshots/workspace-script-en-1920x1080.png",
+      "sha256": "91ad4bc7c8b54da228fdf8d84ad172eadf1d0560faca7f06bd46b86f4a631030",
+      "bytes": 99460,
+      "source": "6fdc5de4e632b528b0008c3e640ed49f234c3e3f",
+      "tool": "pnpm evidence:v4.7",
+      "environment": "win32-x64-node-v22.22.2"
+    },
+    {
+      "path": "responsive/screenshots/workspace-ui-en-1920x1080.png",
+      "sha256": "12251e3f5cb664deaaa94673e39dd97ef548c4ee5c1405eb18acba8693c59274",
+      "bytes": 214176,
+      "source": "6fdc5de4e632b528b0008c3e640ed49f234c3e3f",
+      "tool": "pnpm evidence:v4.7",
+      "environment": "win32-x64-node-v22.22.2"
+    },
+    {
+      "path": "tests/animation-sampling.json",
+      "sha256": "f2b9eae267622b6527418eee7faaa5910f120b6f2c6d9be1389530cde20d3c97",
+      "bytes": 1790,
+      "source": "6fdc5de4e632b528b0008c3e640ed49f234c3e3f",
+      "tool": "pnpm evidence:v4.7",
+      "environment": "win32-x64-node-v22.22.2"
+    },
+    {
+      "path": "tests/requirements-audit.json",
+      "sha256": "4e05305215c8cb3115a0ad925afcb5434354a398974366898f463c00044f71dc",
+      "bytes": 5532,
+      "source": "6fdc5de4e632b528b0008c3e640ed49f234c3e3f",
+      "tool": "pnpm evidence:v4.7",
+      "environment": "win32-x64-node-v22.22.2"
+    },
+    {
+      "path": "tests/verification.json",
+      "sha256": "69c03a8434fb550632d90aaffb290d9d6f85a4f6cd8d185bd3ed11a78d179d91",
+      "bytes": 2896,
+      "source": "6fdc5de4e632b528b0008c3e640ed49f234c3e3f",
+      "tool": "pnpm evidence:v4.7",
+      "environment": "win32-x64-node-v22.22.2"
+    },
+    {
+      "path": "themes/token-tests.json",
+      "sha256": "7d68232de897c0166ee1adcfdfe955f6f763b0ec178a3e4b6b948e3ed22f8cf2",
+      "bytes": 538,
+      "source": "6fdc5de4e632b528b0008c3e640ed49f234c3e3f",
+      "tool": "pnpm evidence:v4.7",
+      "environment": "win32-x64-node-v22.22.2"
+    }
+  ],
+  "externalGates": [
+    "native screen-reader speech on supported clean machines",
+    "clean-machine Windows install/launch",
+    "Firefox and WebKit parity",
+    "24-hour wall-clock soak"
+  ],
+  "status": "passed-local-with-honest-external-gates"
+}

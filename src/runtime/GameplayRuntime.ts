@@ -1,4 +1,4 @@
-import { readTextAsset, resolveAsset } from '../assets/AssetDatabase'
+import { readTextAsset, resolveAsset, updateTextAsset } from '../assets/AssetDatabase'
 import { addEditorLog, editorState } from '../store/editor'
 import {
   deleteEntity,
@@ -25,7 +25,7 @@ import { particleRuntime } from './particles'
 import { clearSaveValues, commitSaveSlot, deleteSaveValue, loadSaveSlot, saveSnapshot, setSaveValue, useSaveProject, type SaveValue } from './saveGame'
 import { pluginRuntime } from './plugins'
 import { analyzeScript } from '../editor/scriptLanguage'
-import { beginDebugSession, clearScriptDebugger, evaluateDebugExpression, pauseScriptDebugger, requestDebugStep, scriptDebugState, type DebugStepMode, type ScriptTestResult } from './scriptDebug'
+import { beginDebugSession, clearScriptDebugger, evaluateDebugExpression, pauseScriptDebugger, requestDebugStep, scriptDebugState, updateDebugTask, type DebugStepMode, type ScriptTestResult } from './scriptDebug'
 import { scriptProjectSettings } from './scriptSettings'
 import { beforeWorldPhysicsStep, beginWorldGameplay, canUseCoyoteTime, queueCharacterMotion, resetWorldGameplay } from './worldGameplay'
 import { acquirePooled, releasePooled } from './objectPool'
@@ -34,6 +34,8 @@ import { completeReplayFixedStep, deterministicRandom, replayFixedInput, resetDe
 import { beginProductionRuntime, stopProductionRuntime, updateProductionRuntime } from './productionRuntime'
 import { recordScriptFunction } from './profiler'
 import type { ScriptBreakpointMetadata } from '../assets/types'
+import { commitHotReload, prepareHotReload, rejectHotReload, rollbackHotReload as restoreHotReloadSource } from './scriptHotReload'
+import { recordScriptCoverage, resetScriptCoverage } from './scriptCoverage'
 
 type LifecycleFunction = 'awake' | 'start' | 'fixed_update' | 'update' | 'late_update' | 'on_destroy' | 'on_timer' | 'on_task' | 'on_signal'
 
@@ -183,6 +185,7 @@ export class GameplayRuntime {
     this.awakened.clear()
     this.started.clear()
     beginDebugSession()
+    scriptDebugState.exceptionPolicy = scriptProjectSettings.exceptionPolicy
     this.fixedPressed = {}
     this.fixedReleased = {}
     this.ensureScriptRuntime()
@@ -242,7 +245,7 @@ export class GameplayRuntime {
     for (const timer of expired) {
       const entity = physicsState.world.entities.find(candidate => candidate.uuid === timer.entityUuid)
       if (entity && timer.kind === 'timer') this.runEntityFunction(entity, 'on_timer', undefined, { name: timer.name, source: entity.uuid, payload: null })
-      else if (entity) this.runEntityFunction(entity, 'on_task', undefined, { name: timer.name, source: entity.uuid, payload: null })
+      else if (entity) { updateDebugTask({ id: `${entity.uuid}:${timer.name}`, name: timer.name, state: 'completed', entityUuid: entity.uuid, detail: `Completed at frame ${this.time.value.frame}` }); this.runEntityFunction(entity, 'on_task', undefined, { name: timer.name, source: entity.uuid, payload: null }) }
     }
     scriptsMs += performance.now() - timerScriptsStarted
 
@@ -415,8 +418,21 @@ export class GameplayRuntime {
       scriptDebugState.hotReload = { status: 'disabled', scriptUuid, message: 'Project hot reload is disabled', frame: this.time.value.frame }
       return
     }
+    const validation = this.validateModuleSource(scriptUuid, source)
+    if (validation.error) {
+      scriptDebugState.hotReload = { status: 'rejected', scriptUuid, message: `Candidate rejected before apply: ${validation.error}`, frame: this.time.value.frame }
+      return
+    }
     this.pendingReloads.set(scriptUuid, source)
-    scriptDebugState.hotReload = { status: 'pending', scriptUuid, message: 'Validated source queued for the next frame boundary', frame: this.time.value.frame }
+    scriptDebugState.hotReload = { status: 'pending', scriptUuid, message: 'Analyzed candidate queued for a transactional frame-boundary swap', frame: this.time.value.frame }
+  }
+
+  rollbackHotReload(scriptUuid: string): boolean {
+    const source = restoreHotReloadSource(scriptUuid)
+    if (!source || !updateTextAsset(scriptUuid, source)) return false
+    this.pendingReloads.set(scriptUuid, source)
+    scriptDebugState.hotReload = { status: 'pending', scriptUuid, message: 'Rollback source queued for transactional apply', frame: this.time.value.frame }
+    return true
   }
 
   emitSignal(name: string, payload: unknown = null, target = '', source = 'editor'): void {
@@ -463,7 +479,8 @@ export class GameplayRuntime {
     scriptDebugState.reason = 'Runtime restarted; continue to enter the next callback'
   }
 
-  runScriptTests(scriptUuid?: string, options: { tags?: string[]; includeSkipped?: boolean } = {}): ScriptTestResult[] {
+  runScriptTests(scriptUuid?: string, options: { tags?: string[]; includeSkipped?: boolean; testNames?: string[] } = {}): ScriptTestResult[] {
+    if (scriptProjectSettings.testing.coverageEnabled) resetScriptCoverage()
     const assets = scriptUuid ? [resolveAsset(scriptUuid)].filter(Boolean) : physicsState.world.entities.map(entity => resolveAsset(entity.script2D?.scriptAsset ?? '')).filter(Boolean)
     const unique = [...new Map(assets.map(asset => [asset!.uuid, asset!])).values()].filter(asset => asset.assetType === 'script')
     const results: ScriptTestResult[] = []
@@ -472,7 +489,11 @@ export class GameplayRuntime {
       try { source = this.resolveScriptBundle(asset.uuid) } catch (error) { results.push({ script: asset.name, test: 'module resolution', passed: false, skipped: false, durationMs: 0, seed: 1, caseName: '', tags: [], message: this.errorMessage(error) }); continue }
       if (!source) continue
       const scriptAnalysis = analyzeScript(source)
-      const tests = scriptAnalysis.tests.filter(test => !options.tags?.length || options.tags.every(tag => test.tags.includes(tag)))
+      const selectedNames = new Set(options.testNames ?? [])
+      const tests = scriptAnalysis.tests.filter(test =>
+        (!options.tags?.length || options.tags.every(tag => test.tags.includes(tag))) &&
+        (!options.testNames || selectedNames.has(test.name))
+      )
       for (const test of tests) {
         const cases = test.cases.length ? test.cases : ['']
         for (const caseName of cases) {
@@ -484,6 +505,7 @@ export class GameplayRuntime {
         try {
           const isolated = new WasmScriptRuntime()
           const context = {
+            apiVersion: asset.script?.apiVersion ?? scriptProjectSettings.apiVersion,
             entity: 'test-entity', entityName: 'Script test', components: [], entities: {},
             time: { delta: 0, fixedDelta: 1 / 60, elapsed: 0, scale: 1, frame: 0 }, randomSeed: test.seed || scriptProjectSettings.deterministicTestSeed, input: EMPTY_INPUT,
             event: { name: 'test.run', source: 'Script Studio', payload: { test: test.name, case: caseName, seed: test.seed } },
@@ -494,6 +516,7 @@ export class GameplayRuntime {
           const callbacks = ['before_all', 'before_each', test.name, 'after_each', 'after_all'].filter(name => scriptAnalysis.functions[name])
           for (const functionName of callbacks) {
             const execution = JSON.parse(isolated.execute_json(source, functionName, JSON.stringify(context))) as ScriptExecution
+            if (scriptProjectSettings.testing.coverageEnabled) recordScriptCoverage(asset.uuid, source, functionName)
             context.properties = execution.properties
             logs.push(...execution.logs)
             if (performance.now() - started > test.timeoutMs) throw new Error(`Timed out after ${test.timeoutMs} ms`)
@@ -563,6 +586,7 @@ export class GameplayRuntime {
     if (!this.scriptRuntime) return
     const runtimeTransform = worldTransform(entity, physicsState.world.entities)
     const context = {
+      apiVersion: asset.script?.apiVersion ?? scriptProjectSettings.apiVersion,
       entity: entity.uuid,
       entityName: entity.name,
       components: entity.components.map(value => value.kind),
@@ -624,6 +648,7 @@ export class GameplayRuntime {
       this.ensureCompiled(asset.uuid, source)
       const runtime = this.scriptRuntime as unknown as { execute_cached_json(id: string, fn: string, context: string): string }
       const execution = JSON.parse(runtime.execute_cached_json(asset.uuid, functionName, JSON.stringify(context))) as ScriptExecution
+      if (scriptProjectSettings.testing.coverageEnabled) recordScriptCoverage(asset.uuid, source, functionName)
       component.properties = execution.properties
       component.lastError = null
       this.diagnostics.lifecycleCalls++
@@ -631,7 +656,7 @@ export class GameplayRuntime {
       for (const command of execution.commands) this.applyCommand(entity, command)
     } catch (error) {
       this.reportScriptError(entity, this.errorMessage(error))
-      if (scriptProjectSettings.debuggerEnabled && scriptProjectSettings.breakOnRuntimeError) {
+      if (scriptProjectSettings.debuggerEnabled && scriptProjectSettings.breakOnRuntimeError && scriptProjectSettings.exceptionPolicy !== 'never') {
         physicsState.playMode = 'paused'
         pauseScriptDebugger({ entityUuid: entity.uuid, entityName: entity.name, scriptUuid: asset.uuid, sourcePath: asset.path, functionName, line: analyzeScript(source).functions[functionName]?.line ?? 1, depth: 0 }, context, `Runtime error: ${this.errorMessage(error)}`)
       }
@@ -688,8 +713,8 @@ export class GameplayRuntime {
     else if (command.type === 'pauseTimer') this.time.pause(entity.uuid, command.name)
     else if (command.type === 'resumeTimer') this.time.resume(entity.uuid, command.name)
     else if (command.type === 'cancelTimer') this.time.cancel(entity.uuid, command.name)
-    else if (command.type === 'startTask') this.time.startTask(entity.uuid, command.name, command.seconds)
-    else if (command.type === 'cancelTask') this.time.cancelTask(entity.uuid, command.name)
+    else if (command.type === 'startTask') { this.time.startTask(entity.uuid, command.name, command.seconds); updateDebugTask({ id: `${entity.uuid}:${command.name}`, name: command.name, state: 'waiting', entityUuid: entity.uuid, detail: `Waiting ${command.seconds.toFixed(3)} s` }) }
+    else if (command.type === 'cancelTask') { this.time.cancelTask(entity.uuid, command.name); updateDebugTask({ id: `${entity.uuid}:${command.name}`, name: command.name, state: 'cancelled', entityUuid: entity.uuid, detail: 'Cancelled by script' }) }
     else if (command.type === 'emitSignal') this.emitSignal(command.name, command.payload, command.target, entity.uuid)
     else if (command.type === 'saveSet') setSaveValue(command.key, command.value)
     else if (command.type === 'saveDelete') deleteSaveValue(command.key)
@@ -853,9 +878,22 @@ export class GameplayRuntime {
         addEditorLog(`Hot reload disabled for ${asset.name}`, 'Script', 'debug', uuid)
         continue
       }
+      let plan: ReturnType<typeof prepareHotReload> | null = null
       try {
         const source = this.resolveScriptBundle(uuid)
         if (!source) continue
+        const previousSource = this.compiledSources.get(uuid) ?? source
+        const previousValidation = this.validateSource(previousSource)
+        const candidateValidation = this.validateSource(source)
+        if (candidateValidation.error) throw new Error(candidateValidation.error)
+        plan = prepareHotReload(uuid, previousSource, source, previousValidation.exports, candidateValidation.exports, asset?.script?.reloadPolicy ?? 'preserve')
+        if (plan.classification === 'rejected' || plan.classification === 'restart-required') {
+          const message = plan.classification === 'restart-required' ? `Restart required: ${plan.reasons.join(' ')}` : plan.reasons.join(' ')
+          rejectHotReload(plan, message)
+          scriptDebugState.hotReload = { status: 'rejected', scriptUuid: uuid, message, frame: this.time.value.frame }
+          addEditorLog(message, 'Script', plan.classification === 'restart-required' ? 'warning' : 'error', uuid)
+          continue
+        }
         const exports = this.ensureCompiled(uuid, source)
         for (const entity of physicsState.world.entities.filter(candidate => resolveAsset(candidate.script2D?.scriptAsset ?? '')?.uuid === uuid)) {
           const component = entity.script2D
@@ -865,10 +903,12 @@ export class GameplayRuntime {
           component.properties = Object.fromEntries(exports.map(exported => [exported.name, this.exportValue(exported, recreate ? undefined : component.properties[exported.name])]))
           if (recreate) { this.awakened.delete(entity.uuid); this.started.delete(entity.uuid) }
         }
+        commitHotReload(plan)
         scriptDebugState.hotReload = { status: 'applied', scriptUuid: uuid, message: asset?.script?.reloadPolicy === 'recreate' ? 'Applied and recreated instances' : 'Applied with compatible serialized state preserved', frame: this.time.value.frame }
         addEditorLog(`Hot reloaded ${resolveAsset(uuid)?.name ?? uuid} at frame ${this.time.value.frame}`, 'Script', 'debug', uuid)
       } catch (error) {
         const message = `Hot reload rejected; previous valid program retained: ${this.errorMessage(error)}`
+        if (plan) rejectHotReload(plan, message)
         scriptDebugState.hotReload = { status: 'rejected', scriptUuid: uuid, message, frame: this.time.value.frame }
         addEditorLog(message, 'Script', 'error', uuid)
       }

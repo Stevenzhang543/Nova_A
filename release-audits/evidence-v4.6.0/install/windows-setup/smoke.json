@@ -1,0 +1,13 @@
+{
+  "format": "nova-install-smoke",
+  "version": 1,
+  "artifact": "setup",
+  "localArtifact": {
+    "path": "src-tauri/target/release/bundle/nsis/Nova_A_4.6.0_x64-setup.exe",
+    "bytes": 8197370,
+    "sha256": "d556e4293dbbd0134772ea583461f1d203d62f399327b176b5a46f466095010a"
+  },
+  "isolatedPortableStartup": null,
+  "cleanMachineLifecycle": "pending-external-gate",
+  "status": "passed"
+}

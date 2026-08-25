@@ -1,0 +1,24 @@
+# Nova_A 5.0.0 candidate release notes
+
+## Frozen production baseline; certification pending
+
+Nova_A 5.0.0 freezes Project Format 2 schema 29, Rhai API v2, Plugin API 2, Package Manifest 1, Build CLI 1, Workspace document 3, platform tiers and the eleven-file artifact format. New projects use API v2, 4.x layouts migrate safely, incomplete Experimental targets are hidden from default release authoring, and warnings have stable offline help. The observation opened on 25 August 2026; final approval is withheld until every external and time-based gate is attached.
+
+## Supported tiers
+
+- Windows x86-64: Tier 1. Local editor/player/portable/MSI/setup production checks are included; publisher signing and disposable clean-machine lifecycle remain external gates.
+- Web: Tier 1. WebAssembly/ES2022/WebGL2 Chromium path is locally qualified; Firefox, WebKit and remote HTTPS hosting remain explicit jobs.
+- Linux/macOS: Experimental, matching-host CI only. They are not presented as locally available stable cross-targets.
+- Android/mobile: Experimental and unavailable until its complete matrix passes.
+
+## Compatibility baseline
+
+Project Format 2 schema 29, Rhai API v2, Plugin API 2, Package Manifest 1 and Build CLI 1. Legacy shims remain read-only only where migration policy promises them. Packages are pinned and cannot execute before provenance, compatibility, integrity and permission review.
+
+## Highlights
+
+Pinned platform presets; content stripping/compression; build manifests/provenance/SBOM/web headers; rich build history and comparisons; registry/license/vulnerability/cache/rollback policy; Plugin API compatibility/certification; optional local-first ownership/tasks/CODEOWNERS/binary locks; complete offline docs; Project Health release gates; one exact-artifact pipeline; privacy-reviewed diagnostics.
+
+## Remaining known issues and external gates
+
+The 14-day RC window, 72-hour soak, independent-machine reproducibility, disposable clean install/upgrade/repair/uninstall, publisher signing/notarization, Firefox/WebKit and representative hardware matrices remain pending until real evidence is attached. Linux/macOS/mobile are not promoted. See `docs/KNOWN_LIMITATIONS.md` and the evidence archive. No result is fabricated from a same-machine run.

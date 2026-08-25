@@ -1,6 +1,6 @@
 //! The only `wasm_bindgen` boundary in the Nova_A workspace.
 
-use nova_runtime::{FixedTimeSettings, RuntimeWorld};
+use nova_runtime::{DroppedTimePolicy, FixedTimeSettings, RuntimeWorld};
 use nova_script::{ScriptContext, ScriptRuntime};
 use wasm_bindgen::prelude::*;
 
@@ -218,13 +218,36 @@ impl WasmRuntimeWorld {
         max_catch_up_steps: u32,
         time_scale: f64,
         paused: bool,
+        dropped_time_policy: u8,
     ) {
         self.inner.set_timing(FixedTimeSettings {
             tick_rate,
             max_catch_up_steps,
             time_scale,
             paused,
+            dropped_time_policy: match dropped_time_policy {
+                1 => DroppedTimePolicy::PreserveBacklog,
+                2 => DroppedTimePolicy::SlowMotion,
+                _ => DroppedTimePolicy::Drop,
+            },
         });
+    }
+
+    pub fn set_physics_quality(
+        &mut self,
+        minimum_substeps: usize,
+        solver_iterations: usize,
+        sleep_linear_threshold: f64,
+        sleep_angular_threshold: f64,
+        time_to_sleep: f64,
+    ) {
+        self.inner.set_physics_quality(
+            minimum_substeps,
+            solver_iterations,
+            sleep_linear_threshold,
+            sleep_angular_threshold,
+            time_to_sleep,
+        );
     }
 
     pub fn advance(&mut self, frame_delta: f64, gravity: f64, air_friction: f64) -> u32 {

@@ -5,14 +5,14 @@
   --font-ui: "Nunito Sans Variable", "Noto Sans SC Variable", system-ui, sans-serif;
   --font-cjk: "Noto Sans SC Variable", "Microsoft YaHei UI", sans-serif;
   --font-mono: "JetBrains Mono Variable", "Noto Sans Mono CJK SC", ui-monospace, SFMono-Regular, Consolas, monospace;
-  --type-caption: calc(11px * var(--ui-scale));
-  --type-dense: calc(12px * var(--ui-scale));
-  --type-body: calc(13px * var(--ui-scale));
-  --type-section: calc(15px * var(--ui-scale));
-  --type-page: calc(20px * var(--ui-scale));
-  --line-caption: calc(15px * var(--ui-scale));
-  --line-dense: calc(17px * var(--ui-scale));
-  --line-body: calc(19px * var(--ui-scale));
+  --type-caption: calc(12px * var(--ui-scale));
+  --type-dense: calc(13px * var(--ui-scale));
+  --type-body: calc(14px * var(--ui-scale));
+  --type-section: calc(16px * var(--ui-scale));
+  --type-page: calc(22px * var(--ui-scale));
+  --line-caption: calc(16px * var(--ui-scale));
+  --line-dense: calc(18px * var(--ui-scale));
+  --line-body: calc(20px * var(--ui-scale));
   --line-control: calc(18px * var(--ui-scale));
   --line-section: calc(20px * var(--ui-scale));
   --line-page: calc(26px * var(--ui-scale));
@@ -25,34 +25,38 @@
   --space-7: 28px;
   --space-8: 32px;
   --control-compact: 28px;
-  --control-default: 34px;
-  --control-comfortable: 36px;
-  --control-launcher: 40px;
+  --control-default: 36px;
+  --control-comfortable: 38px;
+  --control-launcher: 42px;
   --control-height-compact: var(--control-compact);
   --control-height-default: var(--control-default);
   --control-height-large: var(--control-launcher);
-  --bg-base: #0f1115;
-  --bg-canvas: #11151b;
-  --surface-1: rgba(23, 27, 35, 0.92);
-  --surface-2: #1d222c;
-  --surface-3: #262c37;
-  --surface-hover: #2d3441;
-  --surface-raised: #303744;
-  --surface-popover: rgba(31, 37, 47, 0.98);
-  --surface-inset: #10141a;
-  --input-bg: #11151b;
-  --field-bg: #11151b;
-  --text-primary: #f4f6f8;
-  --text-secondary: #e1e6ed;
-  --text-muted: #b8c0cc;
-  --border-subtle: rgba(255, 255, 255, 0.16);
-  --border-strong: rgba(255, 255, 255, 0.16);
-  --accent: #6ea8fe;
-  --accent-strong: #4c8df6;
-  --accent-soft: rgba(110, 168, 254, 0.16);
-  --selection-bg: rgba(110, 168, 254, 0.16);
+  --bg-base: #0b0f16;
+  --bg-canvas: #0d131c;
+  --surface-1: rgba(19, 25, 35, 0.94);
+  --surface-2: #19212e;
+  --surface-3: #222c3b;
+  --surface-hover: #2b3748;
+  --surface-raised: #303d50;
+  --surface-popover: rgba(24, 31, 43, 0.985);
+  --surface-inset: #090e15;
+  --surface-glass: rgba(20, 27, 38, 0.82);
+  --input-bg: #0d141e;
+  --field-bg: #0d141e;
+  --text-primary: #f5f8fc;
+  --text-secondary: #dce4ee;
+  --text-muted: #aeb9c8;
+  --border-subtle: rgba(190, 207, 229, 0.17);
+  --border-strong: rgba(198, 216, 240, 0.29);
+  --accent: #78a9ff;
+  --accent-strong: #5790f5;
+  --accent-secondary: #9a8cff;
+  --accent-soft: rgba(120, 169, 255, 0.16);
+  --creation: #58c8b1;
+  --creation-soft: rgba(88, 200, 177, 0.15);
+  --selection-bg: rgba(120, 169, 255, 0.18);
   --selection-text: var(--text-primary);
-  --focus-ring: #a7cbff;
+  --focus-ring: #afd0ff;
   --drag-target: #6fd6c3;
   --disabled-opacity: 0.5;
   --accent-contrast: #07111f;
@@ -61,10 +65,10 @@
   --success: #61d095;
   --warning: #f6c760;
   --scrim: rgba(0, 0, 0, 0.62);
-  --shadow-sm: 0 8px 24px rgba(0, 0, 0, 0.28);
-  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.24), 0 4px 12px rgba(0, 0, 0, 0.12);
-  --shadow-md: 0 14px 38px rgba(0, 0, 0, 0.34);
-  --shadow-lg: 0 24px 64px rgba(0, 0, 0, 0.4);
+  --shadow-sm: 0 10px 28px rgba(0, 0, 0, 0.25);
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.22), 0 5px 15px rgba(0, 0, 0, 0.12);
+  --shadow-md: 0 16px 42px rgba(0, 0, 0, 0.32);
+  --shadow-lg: 0 28px 74px rgba(0, 0, 0, 0.42);
   --glass-blur: blur(18px) saturate(125%);
   --icon-filter: none;
   --canvas-grid: #202630;
@@ -76,11 +80,11 @@
   --canvas-handle: #ff7a59;
   --connection: #63c6ff;
   --connection-broken: #ff6b6b;
-  --radius-control-small: 8px;
-  --radius-input: 10px;
+  --radius-control-small: 9px;
+  --radius-input: 11px;
   --radius-control: var(--radius-input);
-  --radius-panel: 14px;
-  --radius-dialog: 18px;
+  --radius-panel: 16px;
+  --radius-dialog: 20px;
   --radius-sm: var(--radius-input);
   --radius-md: var(--radius-panel);
   --radius-lg: var(--radius-dialog);
@@ -96,25 +100,29 @@
 
 :root[data-theme='light'] {
   color-scheme: light;
-  --bg-base: #d5dbe4;
-  --bg-canvas: #e2e7ed;
-  --surface-1: rgba(239, 242, 246, 0.94);
-  --surface-2: #eef1f5;
-  --surface-3: #d8dee7;
-  --surface-hover: #ccd4df;
-  --surface-raised: #ffffff;
-  --surface-popover: rgba(248, 250, 253, 0.98);
-  --surface-inset: #d7dde6;
-  --input-bg: #e7ebf0;
-  --field-bg: #e7ebf0;
+  --bg-base: #cbd4e1;
+  --bg-canvas: #d8e0ea;
+  --surface-1: rgba(242, 246, 250, 0.96);
+  --surface-2: #e9eef5;
+  --surface-3: #d6deea;
+  --surface-hover: #c7d2e0;
+  --surface-raised: #f8fafc;
+  --surface-popover: rgba(247, 250, 253, 0.99);
+  --surface-inset: #cfd8e4;
+  --surface-glass: rgba(238, 243, 248, 0.86);
+  --input-bg: #e2e8f0;
+  --field-bg: #e2e8f0;
   --text-primary: #18202c;
   --text-secondary: #2c394a;
-  --text-muted: #4d5b6d;
-  --border-subtle: rgba(24, 32, 44, 0.18);
-  --border-strong: rgba(24, 32, 44, 0.18);
-  --accent: #2563eb;
-  --accent-strong: #174fc2;
+  --text-muted: #46566a;
+  --border-subtle: rgba(31, 48, 70, 0.2);
+  --border-strong: rgba(31, 48, 70, 0.32);
+  --accent: #2868df;
+  --accent-strong: #174fb8;
+  --accent-secondary: #6554cf;
   --accent-soft: rgba(37, 99, 235, 0.11);
+  --creation: #087d6b;
+  --creation-soft: rgba(8, 125, 107, 0.11);
   --accent-contrast: #ffffff;
   --danger: #c93944;
   --danger-soft: rgba(201, 57, 68, 0.1);
@@ -214,6 +222,10 @@ body,
 }
 
 body {
+  background:
+    radial-gradient(1000px 540px at 10% -8%, color-mix(in srgb, var(--accent) 8%, transparent), transparent 67%),
+    radial-gradient(800px 500px at 100% 15%, color-mix(in srgb, var(--accent-secondary) 5%, transparent), transparent 72%),
+    var(--bg-base);
   transition: background-color 180ms ease, color 180ms ease;
 }
 
@@ -275,7 +287,7 @@ button {
 }
 
 button:active:not(:disabled) {
-  transform: scale(0.96);
+  transform: translateY(0) scale(0.975);
 }
 
 button:disabled {
@@ -392,6 +404,7 @@ button[aria-pressed='true'],
 
 :where(button:hover:not(:disabled), [role='button']:hover) {
   filter: brightness(1.04);
+  transform: translateY(-1px);
 }
 
 :where(button:active:not(:disabled), [role='button']:active) {
@@ -411,6 +424,27 @@ button[aria-pressed='true'],
 :where(.top-bar, .workspace-control-row, .panel-tabs, .bottom-panel, .side-bar, .scene-sidebar, .config-panel, .floating-dock) {
   background-image: linear-gradient(180deg, color-mix(in srgb, var(--text-primary) 2.2%, transparent), transparent 48%);
   backdrop-filter: var(--glass-blur);
+}
+
+/* v5.0.1 readable type floor. Scoped legacy rules may define smaller values,
+   so stable UI roles are normalized here without scaling the canvas. */
+html body #app :where(button, input, select, textarea, summary, label, .control-label) {
+  font-size: var(--type-dense) !important;
+  line-height: var(--line-dense);
+}
+html body #app :where(small, figcaption, caption, .caption, .hint, .meta, kbd, code, pre, .telemetry, [data-telemetry]) {
+  font-size: var(--type-caption) !important;
+}
+html body #app :where(p, li, td, th, .body-copy) {
+  line-height: var(--line-body);
+}
+
+:where(.workspace-control-row, .toolbar, .status-bar, .top-bar) {
+  box-shadow: inset 0 -1px 0 color-mix(in srgb, var(--text-primary) 3%, transparent);
+}
+
+:where(.primary, button.primary, .create-object, .create) {
+  box-shadow: inset 0 1px 0 color-mix(in srgb, white 16%, transparent), 0 7px 18px color-mix(in srgb, var(--accent) 14%, transparent);
 }
 
 :where(.panel, .dialog, .popover, .menu, .floating-dock, .asset-inspector, .folder-tree) {

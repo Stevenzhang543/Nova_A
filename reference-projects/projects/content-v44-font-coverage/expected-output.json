@@ -1,7 +1,7 @@
 {
   "format": "nova-reference-expected-output",
   "version": 1,
-  "engineVersion": "4.4.0",
+  "engineVersion": "5.0.1",
   "workflow": "Multilingual runtime fonts",
   "contentInclusion": {
     "group": "main",

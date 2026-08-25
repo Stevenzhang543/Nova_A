@@ -1,0 +1,20 @@
+{
+  "engineVersion": "5.0.1",
+  "schema": 29,
+  "projectName": "Build 5.0 Release Pipeline",
+  "expectedValidation": "pass",
+  "features": [
+    "provenance",
+    "SBOM",
+    "web headers",
+    "release channel",
+    "clean-machine job",
+    "build comparison"
+  ],
+  "tier1": [
+    "windows",
+    "web"
+  ],
+  "externalGatesMayRemainPending": true,
+  "untrustedPackagesExecute": false
+}

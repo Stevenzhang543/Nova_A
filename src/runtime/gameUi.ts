@@ -5,6 +5,8 @@ import { activeFontFallbackFamilies, activeTextDirection, localize } from './loc
 import { runtimeAccessibilitySettings, uiAudioSettings } from './presentation'
 import { audioRuntime } from './audio'
 import { readUiTheme, themeStyle, themeVariant as applyThemeVariant, type UiThemeDocument } from './uiTheme'
+import type { InputAction } from './input'
+import { formatInputPrompt, inputPromptForAction, setInputModality } from './inputModality'
 
 export interface UiRect { x: number; y: number; width: number; height: number }
 interface ResolvedUi { entity: Entity; rect: UiRect; order: number; clips: Array<{ rect: UiRect; rounded: number }>; scale: number; theme: UiThemeDocument | null }
@@ -59,9 +61,11 @@ class GameUiRuntime {
   private previousGamepadDirection = ''
   private dragged: { entity: Entity; start: { x: number; y: number }; origin: { x: number; y: number } } | null = null
   private tooltip: { entity: Entity; since: number } | null = null
+  private inputActions: InputAction[] = []
 
   setCallback(callback: UiCallback): void { this.callback = callback }
   setRemapCallback(callback: RemapCallback): void { this.remapCallback = callback }
+  setInputActions(actions: InputAction[]): void { this.inputActions = actions }
 
   render(context: CanvasRenderingContext2D, width: number, height: number, entities: Entity[], options: GameUiRenderOptions = {}): void {
     const resolved = this.resolve(width, height, entities)
@@ -108,6 +112,7 @@ class GameUiRuntime {
   }
 
   focusByUuid(uuid: string): boolean { const entity = this.resolved.find(item => item.entity.uuid === uuid)?.entity; return entity ? this.setFocus(entity) : false }
+  layoutSnapshot(): Array<{ entityUuid: string; rect: UiRect; order: number }> { return this.resolved.map(item => ({ entityUuid: item.entity.uuid, rect: { ...item.rect }, order: item.order })) }
 
   focusedTextInput(): { entity: Entity; rect: UiRect; input: TextInput } | null {
     if (!this.focusedInput) return null
@@ -118,6 +123,7 @@ class GameUiRuntime {
   blurTextInput(): void { this.focusedInput = null }
 
   wheel(point: { x: number; y: number }, deltaX: number, deltaY: number): boolean {
+    setInputModality('mouse')
     for (let index = this.resolved.length - 1; index >= 0; index--) {
       const item = this.resolved[index], panel = item.entity.getComponent<Panel>('Panel')
       if (!panel || (!panel.scrollHorizontal && !panel.scrollVertical)) continue
@@ -134,6 +140,7 @@ class GameUiRuntime {
   }
 
   pointerDown(point: { x: number; y: number }): boolean {
+    setInputModality('mouse')
     const raw = this.rawEntityAt(point), rawPanel = raw?.getComponent<Panel>('Panel')
     const openOverlay = [...this.resolved].reverse().find(item => { const behavior = item.entity.getComponent<Panel>('Panel')?.behavior; return behavior === 'Modal' || behavior === 'Popup' })
     if (openOverlay && (!raw || !this.isDescendantOf(raw, openOverlay.entity))) { const overlay = openOverlay.entity.getComponent<Panel>('Panel')!; if (overlay.closeOnOutside) overlay.visible = false; return true }
@@ -161,7 +168,7 @@ class GameUiRuntime {
     if (previous && previousButton) this.callback?.(previous, previousButton.onHoverExit || 'on_hover_exit')
     const button = entity?.getComponent<Button>('Button')
     if (button && entity !== this.pressed) button.state = button.interactable ? 'Hovered' : 'Disabled'
-    if (entity && button) { this.callback?.(entity, button.onHoverEnter || 'on_hover_enter'); audioRuntime.playUiClip(button.hoverAudio ?? uiAudioSettings.hover, uiAudioSettings.bus) }
+    if (entity && button) { this.callback?.(entity, button.onHoverEnter || 'on_hover_enter'); audioRuntime.playUiClip(button.hoverAudio ?? this.themeSound(entity, 'hover') ?? uiAudioSettings.hover, uiAudioSettings.bus) }
     return Boolean(entity)
   }
 
@@ -179,6 +186,7 @@ class GameUiRuntime {
   }
 
   keyDown(event: KeyboardEvent): boolean {
+    setInputModality('keyboard')
     if (this.awaitingRemap && event.key !== 'Escape') { this.applyRemap({ device: 'keyboard', code: event.code || event.key }); return true }
     if (event.key === 'Escape' && this.awaitingRemap) { this.awaitingRemap = null; audioRuntime.playUiClip(uiAudioSettings.cancel, uiAudioSettings.bus); return true }
     const input = this.focusedInput?.getComponent<TextInput>('TextInput')
@@ -267,6 +275,7 @@ class GameUiRuntime {
         }
       }
       if (parentPanel && (parentPanel.scrollHorizontal || parentPanel.scrollVertical)) { result.x -= (parentPanel.scrollHorizontal ? parentPanel.scrollOffset.x : 0) * scale; result.y -= (parentPanel.scrollVertical ? parentPanel.scrollOffset.y : 0) * scale }
+      if (direction === 'rtl' && rect.mirrorInRtl && (!parentPanel || parentPanel.layout === 'None')) result.x = parentRect.x + parentRect.width - (result.x - parentRect.x) - result.width
       resolving.delete(entity.uuid); cache.set(entity.uuid, result); scaleCache.set(entity.uuid, scale); orderCache.set(entity.uuid, canvas?.sortingOrder ?? parentOrder)
       const inheritedTheme = parent ? themeCache.get(parent.uuid) ?? null : null; themeCache.set(entity.uuid, canvas?.themeAsset ? applyThemeVariant(readUiTheme(canvas.themeAsset), canvas.themeVariant) : inheritedTheme)
       return result
@@ -282,7 +291,8 @@ class GameUiRuntime {
         if (panel && parentBounds && (panel.clipChildren || panel.maskChildren || panel.scrollHorizontal || panel.scrollVertical)) clips.unshift({ rect: parentBounds, rounded: panel.maskChildren ? panel.cornerRadius * (scaleCache.get(parent.uuid) ?? 1) : 0 })
         parent = parent.parentUuid ? byUuid.get(parent.parentUuid) : null
       }
-      return [{ entity, rect, clips, scale: scaleCache.get(entity.uuid) ?? 1, theme: themeCache.get(entity.uuid) ?? null, order: (orderCache.get(entity.uuid) ?? 0) * 1_000_000 + entity.layer * 1000 + index }]
+      const zOrder = entity.getComponent<RectTransform>('RectTransform')?.zOrder ?? 0
+      return [{ entity, rect, clips, scale: scaleCache.get(entity.uuid) ?? 1, theme: themeCache.get(entity.uuid) ?? null, order: (orderCache.get(entity.uuid) ?? 0) * 1_000_000 + entity.layer * 1000 + zOrder * 10 + index }]
     }).sort((first, second) => first.order - second.order)
   }
 
@@ -336,7 +346,7 @@ class GameUiRuntime {
     }
     const text = entity.getComponent<Text>('Text')
     if (text) {
-      const fontAsset = resolveAsset(text.fontAsset), importedFallbacks = fontAsset?.assetType === 'font' ? fontAsset.settings.fontSettings.fallbackFamilies : [], fallbacks = [...new Set([...importedFallbacks, ...activeFontFallbackFamilies()])], displayText = localize(text.localizationKey, text.localizationVariables, text.text), rtl = activeTextDirection() === 'rtl'
+      const fontAsset = resolveAsset(text.fontAsset), importedFallbacks = fontAsset?.assetType === 'font' ? fontAsset.settings.fontSettings.fallbackFamilies : [], fallbacks = [...new Set([...importedFallbacks, ...activeFontFallbackFamilies()])], localizedText = localize(text.localizationKey, text.localizationVariables, text.text), displayText = text.inputPromptAction ? formatInputPrompt(inputPromptForAction(text.inputPromptAction, this.inputActions)) : localizedText, rtl = activeTextDirection() === 'rtl'
       context.fillStyle = runtimeAccessibilitySettings.highContrast ? '#ffffff' : color(text.color, text.opacity); context.font = `${text.fontWeight} ${Math.max(1, text.fontSize * item.scale * runtimeAccessibilitySettings.textScale)}px ${fontAsset?.assetType === 'font' && fontAsset.fontFamily ? `"${fontAsset.fontFamily}"` : text.fontFamily}${fallbacks.length ? `, ${fallbacks.map(family => `"${family.replace(/["\\]/g, '')}"`).join(', ')}` : ''}`
       const align = rtl && text.align === 'left' ? 'right' : rtl && text.align === 'right' ? 'left' : text.align; context.textAlign = align; context.direction = rtl ? 'rtl' : 'ltr'; context.textBaseline = 'middle'
       const x = align === 'left' || align === 'start' ? rect.x : align === 'right' || align === 'end' ? rect.x + rect.width : rect.x + rect.width / 2
@@ -369,7 +379,7 @@ class GameUiRuntime {
   }
 
   private focusableItems(includeNonInteractive = false): ResolvedUi[] { return this.resolved.filter(item => { const rect = item.entity.getComponent<RectTransform>('RectTransform'); return rect?.focusable && !rect.skipNavigation && !rect.accessibilityHidden && (includeNonInteractive || interactive(item.entity)) && !isDisabled(item.entity) }).sort((first, second) => (first.entity.getComponent<RectTransform>('RectTransform')?.readingOrder ?? 0) - (second.entity.getComponent<RectTransform>('RectTransform')?.readingOrder ?? 0) || first.order - second.order) }
-  private setFocus(entity: Entity): boolean { const item = this.resolved.find(candidate => candidate.entity === entity), rect = entity.getComponent<RectTransform>('RectTransform'); if (!item || !rect?.focusable || rect.skipNavigation || rect.accessibilityHidden || isDisabled(entity)) return false; this.focused = entity; if (runtimeAccessibilitySettings.announceFocusChanges) this.callback?.(entity, 'on_focus_enter'); audioRuntime.playUiClip(entity.getComponent<Button>('Button')?.focusAudio ?? uiAudioSettings.focus, uiAudioSettings.bus); return true }
+  private setFocus(entity: Entity): boolean { const item = this.resolved.find(candidate => candidate.entity === entity), rect = entity.getComponent<RectTransform>('RectTransform'); if (!item || !rect?.focusable || rect.skipNavigation || rect.accessibilityHidden || isDisabled(entity)) return false; this.focused = entity; if (runtimeAccessibilitySettings.announceFocusChanges) this.callback?.(entity, 'on_focus_enter'); audioRuntime.playUiClip(entity.getComponent<Button>('Button')?.focusAudio ?? this.themeSound(entity, 'focus') ?? uiAudioSettings.focus, uiAudioSettings.bus); return true }
   private focusNext(direction: -1 | 1): void { const items = this.focusableItems(); if (!items.length) return; const current = items.findIndex(item => item.entity === this.focused), next = current < 0 ? (direction > 0 ? 0 : items.length - 1) : (current + direction + items.length) % items.length; this.setFocus(items[next].entity) }
   private focusDirection(direction: 'up' | 'down' | 'left' | 'right'): void {
     const currentItem = this.resolved.find(item => item.entity === this.focused); if (!currentItem) { this.focusNext(1); return }
@@ -382,12 +392,13 @@ class GameUiRuntime {
 
   private activate(entity: Entity): void {
     const button = entity.getComponent<Button>('Button'), checkbox = entity.getComponent<Checkbox>('Checkbox'), input = entity.getComponent<TextInput>('TextInput'), rect = entity.getComponent<RectTransform>('RectTransform')
-    if (button?.interactable) { audioRuntime.playUiClip(button.pressAudio ?? uiAudioSettings.press, uiAudioSettings.bus); if (rect?.remapAction) this.awaitingRemap = { entity, action: rect.remapAction, bindingIndex: Math.max(0, Math.round(rect.remapBindingIndex)) }; else this.callback?.(entity, button.onPressed || 'on_pressed') }
+    if (button?.interactable) { audioRuntime.playUiClip(button.pressAudio ?? this.themeSound(entity, 'press') ?? uiAudioSettings.press, uiAudioSettings.bus); if (rect?.remapAction) this.awaitingRemap = { entity, action: rect.remapAction, bindingIndex: Math.max(0, Math.round(rect.remapBindingIndex)) }; else this.callback?.(entity, button.onPressed || 'on_pressed') }
     else if (checkbox?.interactable) { checkbox.checked = !checkbox.checked; this.callback?.(entity, 'on_pressed') }
     else if (input?.interactable) this.focusedInput = entity
   }
 
   private adjustSlider(slider: Slider, direction: number): void { const step = slider.wholeNumbers ? 1 : Math.max((slider.max - slider.min) / 100, 1e-9); slider.value = Math.min(slider.max, Math.max(slider.min, slider.value + direction * step)); if (slider.wholeNumbers) slider.value = Math.round(slider.value) }
+  private themeSound(entity: Entity, slot: 'hover' | 'press' | 'focus' | 'cancel'): string | null { const value = this.resolved.find(item => item.entity === entity)?.theme?.tokens.sounds[slot]; return typeof value === 'string' && value ? value : null }
   private updateSlider(entity: Entity, point: { x: number; y: number }): void { const slider = entity.getComponent<Slider>('Slider'), item = this.resolved.find(candidate => candidate.entity === entity); if (!slider || !item) return; const ratio = Math.min(1, Math.max(0, (point.x - item.rect.x) / Math.max(1, item.rect.width))), value = slider.min + (slider.max - slider.min) * ratio; slider.value = slider.wholeNumbers ? Math.round(value) : value }
   private applyRemap(binding: { device: 'keyboard' | 'gamepad-button' | 'gamepad-axis'; code: string }): void { const pending = this.awaitingRemap; if (!pending) return; this.remapCallback?.(pending.action, pending.bindingIndex, binding); this.callback?.(pending.entity, 'on_input_remapped'); this.awaitingRemap = null }
 
@@ -396,6 +407,7 @@ class GameUiRuntime {
     const nextButtons = new Set<string>(), gamepads = navigator.getGamepads()
     for (let gamepadIndex = 0; gamepadIndex < gamepads.length; gamepadIndex++) {
       const gamepad = gamepads[gamepadIndex]; if (!gamepad) continue
+      if (gamepad.buttons.some(button => button.pressed) || gamepad.axes.some(axis => Math.abs(axis) > .35)) setInputModality('gamepad', gamepad.id)
       for (let index = 0; index < gamepad.buttons.length; index++) if (gamepad.buttons[index].pressed) {
         const key = `${gamepadIndex}:${index}`; nextButtons.add(key)
         if (!this.previousGamepadButtons.has(key)) {

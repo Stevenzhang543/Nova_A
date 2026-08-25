@@ -1,0 +1,54 @@
+{
+  "format": "nova-test-environments",
+  "version": 1,
+  "release": "4.5.0",
+  "executed": [
+    {
+      "id": "NOVA-WIN-V45-LOCAL",
+      "generatedAt": "2026-08-24T07:19:58.205Z",
+      "host": {
+        "platform": "win32",
+        "release": "10.0.26200",
+        "arch": "x64",
+        "cpu": "AMD Ryzen 9 8945HX with Radeon Graphics        ",
+        "logicalCpus": 32,
+        "memoryBytes": 34142187520
+      },
+      "tools": {
+        "node": "v22.22.2",
+        "pnpm": "pnpm@10.30.0",
+        "rustc": "rustc 1.92.0 (ded5c06cf 2025-12-08)",
+        "cargo": "cargo 1.92.0 (344c4567c 2025-10-21)",
+        "wasmPack": "wasm-pack 0.14.0",
+        "vite": "^6.4.3",
+        "tauri": "2.11.4"
+      }
+    }
+  ],
+  "external": [
+    {
+      "id": "wall-clock-24-hour-qualified-player-soak",
+      "status": "pending-external-gate"
+    },
+    {
+      "id": "second-matching-machine-determinism",
+      "status": "pending-external-gate"
+    },
+    {
+      "id": "clean-disposable-vm-msi-setup-portable-lifecycle",
+      "status": "pending-external-gate"
+    },
+    {
+      "id": "publisher-signing-and-independent-malware-review",
+      "status": "pending-external-gate"
+    },
+    {
+      "id": "firefox-linux-macos-cross-platform-physics",
+      "status": "pending-external-gate"
+    },
+    {
+      "id": "exported-player-monitor-api-live-comparison",
+      "status": "pending-clean-player-gate"
+    }
+  ]
+}

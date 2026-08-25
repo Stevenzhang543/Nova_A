@@ -1,0 +1,18 @@
+{
+  "engineVersion": "5.0.1",
+  "schema": 29,
+  "projectName": "Performance 4.8 Capture",
+  "expectedValidation": "pass",
+  "featureMatrix": [
+    "frame timeline",
+    "flame view",
+    "markers",
+    "counters",
+    "annotations",
+    "budget CI",
+    "capture comparison",
+    "remote-player field"
+  ],
+  "budgetsPass": true,
+  "unsupportedFeaturesAreActionable": true
+}

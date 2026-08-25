@@ -43,7 +43,7 @@ const versions = await Promise.all([
   read('package.json'), read('Cargo.toml'), read('src-tauri/Cargo.toml'), read('src-tauri/tauri.conf.json'),
   read('crates/nova_format/src/lib.rs'), read('src/projects/projectFormat.ts')
 ])
-for (const source of versions) assert(source.includes('4.4.0'), 'A primary release metadata file does not identify 4.4.0')
+for (const source of versions) assert(source.includes('5.0.1'), 'A primary release metadata file does not identify 5.0.1')
 assert(!bottomPanel.includes("id: 'world'") && bottomPanel.includes("id: 'tilemap'"), 'The monolithic World Tools dock was not removed or contextual Tilemap is missing')
 
 console.log('Editor shell audit passed: 6 workspace targets, persistent panel layout, command coverage, and searchable component inspector.')

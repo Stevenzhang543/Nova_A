@@ -1,0 +1,50 @@
+{
+  "format": "nova-test-environments",
+  "version": 1,
+  "release": "4.6.0",
+  "executed": [
+    {
+      "id": "NOVA-WIN-V46-LOCAL",
+      "generatedAt": "2026-08-24T10:47:22.813Z",
+      "host": {
+        "platform": "win32",
+        "release": "10.0.26200",
+        "arch": "x64",
+        "cpu": "AMD Ryzen 9 8945HX with Radeon Graphics        ",
+        "logicalCpus": 32,
+        "memoryBytes": 34142187520
+      },
+      "tools": {
+        "node": "v22.22.2",
+        "pnpm": "pnpm@10.30.0",
+        "rustc": "rustc 1.92.0 (ded5c06cf 2025-12-08)",
+        "cargo": "cargo 1.92.0 (344c4567c 2025-10-21)",
+        "wasmPack": "wasm-pack 0.14.0",
+        "vite": "^6.4.3",
+        "tauri": "2.11.4"
+      }
+    }
+  ],
+  "external": [
+    {
+      "id": "clean-disposable-vm-msi-setup-portable-lifecycle",
+      "status": "pending-external-gate"
+    },
+    {
+      "id": "real-exported-player-authenticated-remote-debug",
+      "status": "pending-external-gate"
+    },
+    {
+      "id": "firefox-webkit-linux-macos-language-debug-matrix",
+      "status": "pending-external-gate"
+    },
+    {
+      "id": "wall-clock-24-hour-script-debug-hot-reload-soak",
+      "status": "pending-external-gate"
+    },
+    {
+      "id": "publisher-signing-and-independent-security-review",
+      "status": "pending-external-gate"
+    }
+  ]
+}

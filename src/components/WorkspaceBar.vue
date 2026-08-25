@@ -12,17 +12,29 @@
     </div>
     <div class="context-title" :title="contextTitle"><small>{{ t('currentContext') }}</small><strong>{{ contextTitle }}</strong></div>
     <span class="workspace-spacer"></span>
-    <div class="panel-controls" :aria-label="t('layoutPanels')">
+    <div class="history-controls" :aria-label="t('navigationHistory')">
       <button :disabled="!workspaceState.navigationBack.length" :title="`${t('navigateBack')} (Alt+←)`" data-doc="manual/navigation-history" @click="navigateHistory('back')"><span aria-hidden="true">←</span><span class="control-label">{{ t('back') }}</span></button>
       <button :disabled="!workspaceState.navigationForward.length" :title="`${t('navigateForward')} (Alt+→)`" data-doc="manual/navigation-history" @click="navigateHistory('forward')"><span aria-hidden="true">→</span><span class="control-label">{{ t('forward') }}</span></button>
-      <button :class="{ active: state.hierarchyVisible && !state.distractionFree }" :title="t('toggleHierarchy')" data-doc="manual/hierarchy" @click="toggleEditorPanel('hierarchy')"><span aria-hidden="true">☷</span><span class="control-label">{{ t('hierarchy') }}</span></button>
-      <button :class="{ active: state.inspectorVisible && !state.distractionFree }" :title="t('toggleInspector')" data-doc="manual/inspector" @click="toggleEditorPanel('inspector')"><span aria-hidden="true">◫</span><span class="control-label">{{ t('inspector') }}</span></button>
-      <button :class="{ active: state.bottomPanelVisible && !state.distractionFree }" :title="t('toggleBottomPanel')" data-doc="manual/bottom-panel" @click="toggleEditorPanel('bottom')"><span aria-hidden="true">▤</span><span class="control-label">{{ t('bottomPanel') }}</span></button>
-      <button :class="{ active: state.distractionFree }" :title="t('focusMode')" data-doc="manual/focus-mode" @click="toggleFocusMode"><span aria-hidden="true">⛶</span><span class="control-label">{{ t('focusMode') }}</span></button>
-      <button :title="`${t('manageWorkspaces')} (Ctrl+Alt+W)`" data-doc="manual/workspaces" @click="state.workspaceManagerOpen = true"><span aria-hidden="true">⚙</span><span class="control-label">{{ t('manage') }}</span></button>
-      <button class="quick-trigger" :title="`${t('quickOpen')} (Ctrl+P)`" data-shortcut="Ctrl+P" @click="openPalette('quick')"><span>⌕</span>P</button>
-      <button class="command-trigger" :title="`${t('commandPalette')} (Ctrl+Shift+P)`" data-shortcut="Ctrl+Shift+P" @click="openPalette('commands')"><span>⌘</span>P</button>
     </div>
+    <details class="workspace-menu layout-menu">
+      <summary :title="t('layoutPanels')"><span aria-hidden="true">◫</span><span>{{ t('layout') }}</span></summary>
+      <div class="workspace-popover" role="group" :aria-label="t('layoutPanels')">
+        <h3>{{ t('layoutPanels') }}</h3>
+        <button :class="{ active: state.hierarchyVisible && !state.distractionFree }" :title="t('toggleHierarchy')" data-doc="manual/hierarchy" @click="toggleEditorPanel('hierarchy')"><span aria-hidden="true">☷</span><span>{{ t('hierarchy') }}</span><i>{{ state.hierarchyVisible && !state.distractionFree ? '✓' : '' }}</i></button>
+        <button :class="{ active: state.inspectorVisible && !state.distractionFree }" :title="t('toggleInspector')" data-doc="manual/inspector" @click="toggleEditorPanel('inspector')"><span aria-hidden="true">◫</span><span>{{ t('inspector') }}</span><i>{{ state.inspectorVisible && !state.distractionFree ? '✓' : '' }}</i></button>
+        <button :class="{ active: state.bottomPanelVisible && !state.distractionFree }" :title="t('toggleBottomPanel')" data-doc="manual/bottom-panel" @click="toggleEditorPanel('bottom')"><span aria-hidden="true">▤</span><span>{{ t('bottomPanel') }}</span><i>{{ state.bottomPanelVisible && !state.distractionFree ? '✓' : '' }}</i></button>
+        <button :class="{ active: state.distractionFree }" :title="t('focusMode')" data-doc="manual/focus-mode" @click="toggleFocusMode"><span aria-hidden="true">⛶</span><span>{{ t('focusMode') }}</span><i>{{ state.distractionFree ? '✓' : '' }}</i></button>
+        <button :title="`${t('manageWorkspaces')} (Ctrl+Alt+W)`" data-doc="manual/workspaces" @click="state.workspaceManagerOpen = true"><span aria-hidden="true">⚙</span><span>{{ t('manageWorkspaces') }}</span><i></i></button>
+      </div>
+    </details>
+    <details class="workspace-menu command-menu">
+      <summary :title="t('commands')"><span aria-hidden="true">⌕</span><span>{{ t('commands') }}</span></summary>
+      <div class="workspace-popover command-popover" role="group" :aria-label="t('commands')">
+        <h3>{{ t('commandsAndSearch') }}</h3>
+        <button class="quick-trigger" data-shortcut="Ctrl+P" @click="openPalette('quick')"><span aria-hidden="true">⌕</span><span>{{ t('quickOpen') }}</span><kbd>Ctrl P</kbd></button>
+        <button class="command-trigger" data-shortcut="Ctrl+Shift+P" @click="openPalette('commands')"><span aria-hidden="true">⌘</span><span>{{ t('commandPalette') }}</span><kbd>Ctrl Shift P</kbd></button>
+      </div>
+    </details>
   </nav>
 </template>
 
@@ -55,18 +67,18 @@ function selectWorkspace(workspace: EditorWorkspace): void {
 </script>
 
 <style scoped>
-.workspace-bar { min-height: 42px; flex: 0 0 42px; padding: 4px 8px; display: flex; align-items: center; gap: 6px; overflow: hidden; background: transparent; z-index: 250; }
-.workspace-list, .panel-controls { min-width: 0; display: flex; align-items: center; gap: 3px; }
-.workspace-list { overflow-x: auto; scrollbar-width: none; }.workspace-list::-webkit-scrollbar { display: none; }
+.workspace-bar { min-height: 48px; flex: 0 0 48px; padding: 5px 9px; display: flex; align-items: center; gap: 7px; overflow: visible; border-bottom:1px solid var(--border-subtle); background:color-mix(in srgb,var(--surface-1) 92%,transparent); z-index: 350; }
+.workspace-list, .history-controls { min-width: 0; display: flex; align-items: center; gap: 3px; }
+.workspace-list { padding:3px; overflow-x:auto; border:1px solid var(--border-subtle); border-radius:var(--radius-control); background:var(--surface-2); scrollbar-width:none; }.workspace-list::-webkit-scrollbar { display: none; }
 .workspace-spacer { flex: 1; }
-.context-title{min-width:0;max-width:min(300px,24vw);display:grid;align-content:center;padding:0 9px;border-left:1px solid var(--border-subtle)}.context-title small,.context-title strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.context-title small{color:var(--text-muted);font-size:var(--type-caption);font-weight:400}.context-title strong{font-size:var(--type-dense)}
-button { min-height: 34px; padding: 0 10px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; flex: 0 0 auto; border: 1px solid transparent; border-radius: 8px; color: var(--text-muted); background: transparent; font-size:11px; white-space: nowrap; }
+.context-title{min-width:140px;max-width:min(290px,23vw);display:grid;align-content:center;padding:0 10px;border-left:1px solid var(--border-subtle)}.context-title small,.context-title strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.context-title small{color:var(--text-muted);font-size:var(--type-caption);font-weight:500}.context-title strong{font-size:var(--type-dense)}
+button,summary { min-height: 34px; padding: 0 10px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; flex: 0 0 auto; border: 1px solid transparent; border-radius: 9px; color: var(--text-muted); background: transparent; font-size:var(--type-caption); white-space: nowrap; }
 button:hover { color: var(--text-primary); background: var(--surface-hover); }
 button.active { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 30%, transparent); background: var(--accent-soft); }
-.workspace-list button span { min-width: 15px; color: currentColor; font: 600 11px/1 var(--font-mono); }
+.workspace-list button span:first-child { min-width: 15px; color: currentColor; font: 600 var(--type-caption)/1 var(--font-mono); }
 .workspace-list button i.dirty{width:6px;height:6px;min-width:6px;border-radius:50%;background:var(--warning);font-size:0;font-style:normal;box-shadow:0 0 0 2px color-mix(in srgb,var(--warning) 18%,transparent)}
-.panel-controls { flex: 0 0 auto; padding-left: 6px; border-left: 1px solid var(--border-subtle); }.panel-controls button { padding: 0 7px; font-size:var(--type-caption); font-weight:600; }.panel-controls .command-trigger,.panel-controls .quick-trigger { padding: 0 8px; font-weight:600; }.command-trigger span,.quick-trigger span { color: var(--text-muted); }
-@media (max-width: 1280px) { .control-label { position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%); }.panel-controls button { width:34px;padding:0; } }
-@media (max-width: 900px) { .workspace-list .label { position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%); }.workspace-list button{width:34px;padding:0}.panel-controls button:nth-child(3),.panel-controls button:nth-child(4),.panel-controls button:nth-child(5){display:none} }
-@media(max-width:1100px){.context-title{display:none}}
+.history-controls { flex:0 0 auto; padding-left:6px; border-left:1px solid var(--border-subtle) }.history-controls button{padding:0 8px}.workspace-menu{position:relative;flex:0 0 auto}.workspace-menu summary{min-width:82px;list-style:none;cursor:pointer;border-color:var(--border-subtle);background:var(--surface-2);font-weight:650}.workspace-menu summary::-webkit-details-marker{display:none}.workspace-menu[open] summary{color:var(--accent);border-color:color-mix(in srgb,var(--accent) 40%,var(--border-strong));background:var(--accent-soft)}.workspace-popover{position:absolute;top:calc(100% + 7px);right:0;width:260px;padding:8px;display:grid;gap:3px;border:1px solid var(--border-strong);border-radius:var(--radius-panel);background:var(--surface-1);box-shadow:var(--shadow-float)}.workspace-popover h3{margin:2px 7px 6px;color:var(--text-muted);font-size:var(--type-caption);font-weight:750;letter-spacing:.035em;text-transform:uppercase}.workspace-popover button{width:100%;justify-content:flex-start}.workspace-popover button span:nth-child(2){min-width:0;overflow:hidden;text-overflow:ellipsis}.workspace-popover button i{margin-left:auto;font-style:normal}.command-popover{width:300px}.command-popover kbd{margin-left:auto;padding:2px 6px;border:1px solid var(--border-subtle);border-radius:5px;color:var(--text-muted);background:var(--surface-2);font:500 11px/1.2 var(--font-mono)}
+@media (max-width: 1280px) { .control-label { position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%); }.history-controls button { width:34px;padding:0; }.context-title{max-width:180px}.workspace-menu summary{min-width:44px;padding:0 9px}.workspace-menu summary span:last-child{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)} }
+@media (max-width: 920px) { .workspace-list .label { position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%); }.workspace-list button{width:34px;padding:0}.context-title{display:none} }
+@media(max-width:680px){.workspace-list button{width:31px;min-height:31px}.workspace-bar{gap:4px;padding-inline:5px}.history-controls{display:none}}
 </style>

@@ -1,0 +1,22 @@
+{
+  "format": "nova-v5.0-known-issues",
+  "engineVersion": "5.0.0",
+  "generatedAt": "2026-08-25T12:55:52.406Z",
+  "source": "docs/KNOWN_ISSUES_5_0.md",
+  "acceptedSeverity2": [
+    {
+      "id": "platform-linux-macos",
+      "owner": "Release engineering",
+      "workaround": "Use Windows/Web Tier 1.",
+      "patchTarget": "post-5.0 platform qualification"
+    },
+    {
+      "id": "external-browser-matrix",
+      "owner": "Web runtime",
+      "workaround": "Use pinned Chromium or run the browser matrix.",
+      "patchTarget": "5.0 certification evidence"
+    }
+  ],
+  "severity0Open": 0,
+  "severity1Open": 0
+}

@@ -2,7 +2,7 @@
   <div class="settings-page">
     <header class="page-header">
       <div>
-        <span class="eyebrow">Nova_A 4.4.0</span>
+      <span class="eyebrow">Nova_A 5.0.1</span>
         <h1>{{ t('settings') }}</h1>
       </div>
       <div class="theme-switch" :aria-label="t('theme')">
@@ -34,11 +34,30 @@
         <SettingRow :label="t('highContrast')"><ToggleSwitch v-model="prefs.highContrast" /></SettingRow>
         <SettingRow :label="t('launchMaximized')"><ToggleSwitch v-model="prefs.launchMaximized" /></SettingRow>
         <SettingRow :label="t('workspaceLayoutScope')"><select v-model="prefs.workspaceLayoutScope"><option value="user">{{ t('editorScope') }}</option><option value="project">{{ t('projectScope') }}</option></select></SettingRow>
-        <SettingRow :label="t('experimentalFeatures')"><ToggleSwitch v-model="prefs.experimentalFeatures" /></SettingRow>
         <button class="secondary-action" @click="editorState.shortcutEditorOpen = true">{{ t('shortcutEditor') }}</button>
       </section>
 
       <PhysicsSettingsPanel v-show="showCard('physicsSettings globalGravity collisionLayers physicsMaterials conformance', 'project')" />
+
+      <section v-show="showCard('scriptingSettings scriptApiVersion debugger hotReload formatting lint indexing testing remoteDebugging', 'project')" class="settings-card">
+        <div class="card-heading"><span class="card-icon">{ }</span><h2>{{ t('scriptingSettings') }}</h2></div>
+        <SettingRow :label="t('scriptApiVersion')"><select v-model.number="scriptSettings.apiVersion"><option :value="2">API v2</option><option :value="1">API v1 · {{ t('compatibilityMode') }}</option></select></SettingRow>
+        <SettingRow :label="t('scriptDebugger')"><ToggleSwitch v-model="scriptSettings.debuggerEnabled" /></SettingRow>
+        <SettingRow :label="t('exceptionPolicy')"><select v-model="scriptSettings.exceptionPolicy"><option value="never">{{ t('never') }}</option><option value="uncaught">{{ t('uncaught') }}</option><option value="all">{{ t('allExceptions') }}</option></select></SettingRow>
+        <SettingRow :label="t('hotReloadPolicy')"><ToggleSwitch v-model="scriptSettings.hotReloadEnabled" /></SettingRow>
+        <SettingRow :label="t('formatIndent')"><select v-model.number="scriptSettings.formatting.indentSize"><option :value="2">2</option><option :value="4">4</option></select></SettingRow>
+        <SettingRow :label="t('formatLineWidth')"><input v-model.number="scriptSettings.formatting.lineWidth" type="number" min="60" max="240"></SettingRow>
+        <SettingRow :label="t('deprecatedLint')"><select v-model="scriptSettings.lint.deprecatedApi"><option value="off">{{ t('disabled') }}</option><option value="warning">{{ t('warning') }}</option><option value="error">{{ t('error') }}</option></select></SettingRow>
+        <SettingRow :label="t('persistLanguageIndex')"><ToggleSwitch v-model="scriptSettings.indexing.persist" /></SettingRow>
+        <SettingRow :label="t('languageBudget')"><input v-model.number="scriptSettings.indexing.interactiveBudgetMs" type="number" min="10" max="500"></SettingRow>
+        <SettingRow :label="t('testParallelism')"><input v-model.number="scriptSettings.testing.parallelism" type="number" min="1" max="16"></SettingRow>
+        <SettingRow :label="t('coverage')"><ToggleSwitch v-model="scriptSettings.testing.coverageEnabled" /></SettingRow>
+        <SettingRow :label="t('remoteDebugging')"><ToggleSwitch v-model="scriptSettings.remoteDebug.enabled" /></SettingRow>
+        <SettingRow :label="t('remoteDebugPort')"><input v-model.number="scriptSettings.remoteDebug.port" type="number" min="1024" max="65535"></SettingRow>
+        <SettingRow :label="t('allowExportedPlayers')"><ToggleSwitch v-model="scriptSettings.remoteDebug.allowExportedPlayers" /></SettingRow>
+        <SettingRow :label="t('authenticationTokenHash')"><input v-model="scriptSettings.remoteDebug.tokenHash" maxlength="128" autocomplete="off" spellcheck="false" placeholder="SHA-256"></SettingRow>
+        <p>{{ t('remoteDebugSecurityHint') }}</p>
+      </section>
 
       <section v-show="showCard('audioSettings masterVolume musicVolume sfxVolume uiVolume sampleRate', 'project')" class="settings-card" @change="commitAudioSettings">
         <div class="card-heading"><span class="card-icon">♫</span><h2>{{ t('audioSettings') }}</h2></div>
@@ -144,6 +163,7 @@ import { gameplayRuntime } from '../runtime/GameplayRuntime'
 import { normalizeAudioSettings } from '../runtime/audio'
 import { openEditorTool } from '../editor/workspaces'
 import PhysicsSettingsPanel from '../components/PhysicsSettingsPanel.vue'
+import { scriptProjectSettings as scriptSettings } from '../runtime/scriptSettings'
 
 function setTheme(theme: ThemeMode) {
   prefs.theme = theme

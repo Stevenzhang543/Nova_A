@@ -1,8 +1,8 @@
 {
   "projectFormat": "Nova_A Project Format 2",
   "projectFormatMajor": 2,
-  "formatVersion": 23,
-  "engineVersion": "4.4.0",
+  "formatVersion": 29,
+  "engineVersion": "5.0.1",
   "compatibility": {
     "format": "Nova_A Project Format 2",
     "major": 2,
@@ -14,10 +14,10 @@
     "projectUuid": "d3200000-0000-4000-8000-000000000001",
     "name": "Data Foundation Validation",
     "engineCompatibility": {
-      "minimum": "3.0.0",
-      "maximumExclusive": "4.0.0"
+      "minimum": "3.9.0",
+      "maximumExclusive": "6.0.0"
     },
-    "schemaVersion": 23,
+    "schemaVersion": 29,
     "packageLockfile": "Packages.lock",
     "buildPresets": [
       "ProjectSettings/build.presets.json"
@@ -248,6 +248,50 @@
           ".nova/**"
         ],
         "stripUnusedAssets": false
+      }
+    },
+    "presentation": {
+      "localization": {
+        "sourceLocale": "en",
+        "previewLocale": "en",
+        "fallbackChain": [
+          "en"
+        ],
+        "pseudolocalization": false,
+        "pseudolocalizationMode": "expanded",
+        "expansionRatio": 0.35,
+        "buildLocales": [
+          "en",
+          "de",
+          "zh-CN",
+          "ar"
+        ],
+        "numberStyle": "decimal",
+        "currency": "USD",
+        "dateStyle": "medium",
+        "timeZone": "local"
+      },
+      "accessibility": {
+        "keyboardNavigation": true,
+        "gamepadNavigation": true,
+        "screenReaderMetadata": true,
+        "announceFocusChanges": true,
+        "focusRingColor": "#ffffff",
+        "focusRingWidth": 3,
+        "reducedMotion": false,
+        "highContrast": false,
+        "textScale": 1,
+        "minimumTargetSize": 44,
+        "subtitles": true,
+        "captions": true,
+        "captionBackground": true,
+        "captionScale": 1
+      }
+    },
+    "production": {
+      "performance": {
+        "animationBudgetMs": 2,
+        "uiBudgetMs": 2
       }
     }
   },

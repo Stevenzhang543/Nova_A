@@ -4,8 +4,8 @@ import { spawn } from 'node:child_process'
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { basename, dirname, extname, resolve } from 'node:path'
 
-const ENGINE_VERSION = '4.4.0', PROJECT_SCHEMA = 29, CLI_VERSION = 1
-const commands = new Set(['validate', 'import', 'test', 'build', 'export', 'package', 'version'])
+const ENGINE_VERSION = '5.0.1', PROJECT_SCHEMA = 29, CLI_VERSION = 1
+const commands = new Set(['validate', 'import', 'test', 'script-test', 'build', 'export', 'package', 'version'])
 
 function parse(values) {
   const flags = new Map(), positionals = []
@@ -61,6 +61,14 @@ async function runChild(script, values) {
   })
 }
 
+async function runProcess(executable, values) {
+  await new Promise((accept, reject) => {
+    const child = spawn(executable, values, { stdio: ['ignore', 'pipe', 'pipe'], windowsHide: true })
+    child.stdout.on('data', bytes => process.stdout.write(bytes)); child.stderr.on('data', bytes => process.stderr.write(bytes))
+    child.once('error', reject); child.once('exit', code => code === 0 ? accept() : reject(Object.assign(new Error(`${executable} exited with code ${code}`), { exitCode: code })))
+  })
+}
+
 async function validateCommand() {
   const { path, bytes, project } = await projectFromFlag(), issues = validateProject(project)
   for (const issue of issues) emit(issue.severity, 'validation-issue', issue.message, { code: issue.code, project: path })
@@ -78,11 +86,22 @@ async function importCommand() {
 }
 
 async function testCommand() {
-  const { project, path } = await projectFromFlag(), issues = validateProject(project), tests = Array.isArray(project.projectSettings?.tests) ? project.projectSettings.tests : []
+  const { project, path } = await projectFromFlag(), issues = validateProject(project), tests = Array.isArray(project.projectSettings?.production?.testing?.tests) ? project.projectSettings.production.testing.tests : []
   const results = tests.map(test => ({ name: String(test.name ?? 'Unnamed test'), kind: String(test.kind ?? 'unit'), status: test.enabled === false ? 'skipped' : 'validated' }))
   const failed = issues.filter(item => item.severity === 'error').length
   emit(failed ? 'error' : 'info', 'test-complete', failed ? 'Headless project preflight failed.' : 'Headless project tests and preflight passed.', { project: path, discovered: tests.length, results, failed })
   if (failed) process.exitCode = 1
+}
+
+async function scriptTestCommand() {
+  const paths = positionals.slice(1)
+  const values = ['run', '-p', 'nova_script', '--example', 'nova_script_test', '--', ...(paths.length ? paths : ['tests/fixtures/scripting'])]
+  const append = (flag, target = flag) => { if (flags.has(flag)) values.push(`--${target}`, String(flags.get(flag))) }
+  append('format'); append('output'); append('coverage-output'); append('tag'); append('changed'); append('shard-index'); append('shard-count')
+  if (flags.has('include-skipped')) values.push('--include-skipped')
+  emit('info', 'script-test-start', 'Starting sandboxed Rhai tests.', { apiVersion: 2, paths: paths.length ? paths : ['tests/fixtures/scripting'] })
+  await runProcess('cargo', values)
+  emit('info', 'script-test-complete', 'Rhai tests completed.', { apiVersion: 2 })
 }
 
 async function exportCommand() {
@@ -94,7 +113,7 @@ async function exportCommand() {
 
 function normalizePackageManifest(value) {
   const manifest = value.package ?? value
-  const required = ['id', 'name', 'version', 'engine', 'permissions', 'dependencyHashes', 'entryPointType', 'apiCompatibility', 'sha256', 'signature']
+  const required = ['id', 'name', 'version', 'engine', 'permissions', 'dependencyHashes', 'entryPointType', 'apiCompatibility', 'sha256', 'signature', 'publisher', 'license', 'provenance', 'vulnerabilityPolicy']
   const missing = required.filter(key => manifest[key] === undefined || manifest[key] === '')
   if (missing.length) throw new Error(`Package manifest is missing: ${missing.join(', ')}`)
   if (!/^\d+\.\d+\.\d+(?:[-+].*)?$/.test(manifest.version)) throw new Error('Package version must use semantic versioning')
@@ -116,14 +135,15 @@ async function packageCommand() {
 
 async function main() {
   if (!commands.has(command) || flags.has('help')) {
-    process.stdout.write(`Nova_A Build CLI ${CLI_VERSION}\n\nCommands:\n  validate --project <project.nova>\n  import --source <asset> [--output <record.json>]\n  test --project <project.nova>\n  build|export --project <project.nova> --target <web|windows|linux|macos> --output <directory>\n  package --manifest <manifest.json> [--output <package.nova-package>]\n  version [--json]\n\nCommon: --jsonl emits machine-readable logs.\n`)
+    process.stdout.write(`Nova_A Build CLI ${CLI_VERSION}\n\nCommands:\n  validate --project <project.nova>\n  import --source <asset> [--output <record.json>]\n  test --project <project.nova>\n  script-test [path ...] [--format json|junit] [--output report] [--coverage-output report]\n  build|export --project <project.nova> --target <web|windows|linux|macos> --output <directory>\n  package --manifest <manifest.json> [--output <package.nova-package>]\n  version [--json]\n\nCommon: --jsonl emits machine-readable logs. Native targets require their matching host; Windows and web are Tier 1.\n`)
     if (!flags.has('help')) process.exitCode = 2
     return
   }
-  if (command === 'version') { emit('info', 'version', `Nova_A ${ENGINE_VERSION}`, { cliVersion: CLI_VERSION, projectSchema: PROJECT_SCHEMA, runtimeApi: 1, pluginApi: 2, packageManifest: 1 }); return }
+  if (command === 'version') { emit('info', 'version', `Nova_A ${ENGINE_VERSION}`, { cliVersion: CLI_VERSION, projectSchema: PROJECT_SCHEMA, runtimeApi: 2, minimumRuntimeApi: 1, pluginApi: 2, packageManifest: 1 }); return }
   if (command === 'validate') return validateCommand()
   if (command === 'import') return importCommand()
   if (command === 'test') return testCommand()
+  if (command === 'script-test') return scriptTestCommand()
   if (command === 'build' || command === 'export') return exportCommand()
   return packageCommand()
 }

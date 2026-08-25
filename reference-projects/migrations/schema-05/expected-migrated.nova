@@ -2,7 +2,7 @@
   "projectFormat": "Nova_A Project Format 2",
   "projectFormatMajor": 2,
   "formatVersion": 29,
-  "engineVersion": "4.2.0",
+  "engineVersion": "5.0.0",
   "compatibility": {
     "format": "Nova_A Project Format 2",
     "major": 2,
@@ -15,7 +15,7 @@
     "name": "Imported Project",
     "engineCompatibility": {
       "minimum": "3.9.0",
-      "maximumExclusive": "5.0.0"
+      "maximumExclusive": "6.0.0"
     },
     "schemaVersion": 29,
     "packageLockfile": "Packages.lock",

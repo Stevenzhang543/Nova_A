@@ -1,0 +1,71 @@
+{
+  "format": "nova-windows-smoke",
+  "version": 1,
+  "engineVersion": "4.6.0",
+  "generatedAt": "2026-08-24T10:46:50.614Z",
+  "host": "win32-x64",
+  "isolatedProfile": true,
+  "artifacts": {
+    "portable": {
+      "path": "src-tauri/target/release/nova_a.exe",
+      "bytes": 15579648,
+      "sha256": "3988431f735bb6c6676fa9ac814c054e9c7695c79fe3b4f35767a78e8c0d2636"
+    },
+    "msi": {
+      "path": "src-tauri/target/release/bundle/msi/Nova_A_4.6.0_x64_en-US.msi",
+      "bytes": 9265152,
+      "sha256": "0ac0d328476f5d45db955006b7e4889574aeb73c0cf42af14ebaef1c2a1e76a8"
+    },
+    "setup": {
+      "path": "src-tauri/target/release/bundle/nsis/Nova_A_4.6.0_x64-setup.exe",
+      "bytes": 8197370,
+      "sha256": "d556e4293dbbd0134772ea583461f1d203d62f399327b176b5a46f466095010a"
+    }
+  },
+  "launchSeconds": 10,
+  "stayedAlive": true,
+  "earlyExit": null,
+  "checks": [
+    {
+      "id": "artifact-portable",
+      "status": "passed",
+      "detail": {
+        "path": "src-tauri/target/release/nova_a.exe",
+        "bytes": 15579648,
+        "sha256": "3988431f735bb6c6676fa9ac814c054e9c7695c79fe3b4f35767a78e8c0d2636"
+      }
+    },
+    {
+      "id": "artifact-msi",
+      "status": "passed",
+      "detail": {
+        "path": "src-tauri/target/release/bundle/msi/Nova_A_4.6.0_x64_en-US.msi",
+        "bytes": 9265152,
+        "sha256": "0ac0d328476f5d45db955006b7e4889574aeb73c0cf42af14ebaef1c2a1e76a8"
+      }
+    },
+    {
+      "id": "artifact-setup",
+      "status": "passed",
+      "detail": {
+        "path": "src-tauri/target/release/bundle/nsis/Nova_A_4.6.0_x64-setup.exe",
+        "bytes": 8197370,
+        "sha256": "d556e4293dbbd0134772ea583461f1d203d62f399327b176b5a46f466095010a"
+      }
+    },
+    {
+      "id": "portable-isolated-startup",
+      "status": "passed",
+      "detail": {
+        "launchSeconds": 10,
+        "stayedAlive": true,
+        "earlyExit": null
+      }
+    }
+  ],
+  "cleanMachineLifecycle": "pending external disposable-VM gate",
+  "publisherSigning": "pending signing identity",
+  "realExportedPlayerRemoteDebug": "pending explicit external-player gate",
+  "systemMutationPerformedByAudit": false,
+  "status": "passed"
+}

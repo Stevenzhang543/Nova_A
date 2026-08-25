@@ -13,6 +13,12 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 pub const MAX_SCRIPT_OPERATIONS: u64 = 100_000;
+pub const CURRENT_SCRIPT_API_VERSION: u8 = 2;
+pub const MINIMUM_SCRIPT_API_VERSION: u8 = 1;
+
+fn current_script_api_version() -> u8 {
+    CURRENT_SCRIPT_API_VERSION
+}
 
 #[derive(Clone, Debug, Default, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -116,6 +122,8 @@ pub struct CharacterSnapshot {
 #[derive(Clone, Debug, Default, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ScriptContext {
+    #[serde(default = "current_script_api_version")]
+    pub api_version: u8,
     pub entity: String,
     #[serde(default)]
     pub entity_name: String,
@@ -434,7 +442,16 @@ fn engine_with_host(context: &ScriptContext, output: Rc<RefCell<HostOutput>>) ->
 
     let entity = context.entity.clone();
     engine.register_fn("entity", move || entity.clone());
-    engine.register_fn("api_version", || 1 as INT);
+    let api_version = if context.api_version == 0 {
+        CURRENT_SCRIPT_API_VERSION
+    } else {
+        context
+            .api_version
+            .clamp(MINIMUM_SCRIPT_API_VERSION, CURRENT_SCRIPT_API_VERSION)
+    };
+    engine.register_fn("api_version", move || api_version as INT);
+    engine.register_fn("api_current_version", || CURRENT_SCRIPT_API_VERSION as INT);
+    engine.register_fn("api_minimum_version", || MINIMUM_SCRIPT_API_VERSION as INT);
     engine.register_fn("api_namespace", |symbol: &str| {
         symbol.split('_').next().unwrap_or(symbol).to_owned()
     });
@@ -1874,7 +1891,7 @@ mod tests {
     }
 
     #[test]
-    fn api_v1_export_metadata_is_complete_and_validated() {
+    fn api_v2_export_metadata_is_complete_and_validated() {
         let source = r#"
             @export(type="float", min=0, max=20, step=0.25, group="Movement", tooltip="Meters per second", serialize=true) let speed = 5.0;
             @export(type="resource", resource="Texture2D", group="Visual", serialize=false) let icon = "asset://texture";
@@ -1895,7 +1912,7 @@ mod tests {
     }
 
     #[test]
-    fn stable_handles_and_new_api_v1_domains_are_sandboxed_commands() {
+    fn stable_handles_and_api_v2_domains_are_sandboxed_commands() {
         let mut script_context = context();
         script_context
             .components
@@ -1904,7 +1921,7 @@ mod tests {
             fn update(dt) {
                 let current = entity_handle();
                 let texture = resource_handle("asset://texture", "Texture2D");
-                expect(api_version() == 1 && current.generation > 0 && texture.valid, "v1 handles");
+                expect(api_version() == 2 && api_current_version() == 2 && api_minimum_version() == 1 && current.generation > 0 && texture.valid, "v2 handles");
                 log_info("ready");
                 ui_set_text("Score: 3");
                 ui_set_value(0.75);
@@ -1942,7 +1959,7 @@ mod tests {
     }
 
     #[test]
-    fn every_api_v1_host_binding_executes_inside_the_sandbox() {
+    fn every_api_v2_host_binding_executes_inside_the_sandbox() {
         let mut script_context = context();
         script_context.components = vec![
             "RigidBody2D".into(),
@@ -1979,7 +1996,7 @@ mod tests {
             fn update(dt) {
                 let h0 = entity_handle(); let h1 = find_entity_handle("Player"); let h2 = component_handle("RigidBody2D");
                 let h3 = animator_handle(); let h4 = audio_source_handle(); let h5 = resource_handle("asset://texture", "Texture2D");
-                expect(api_version() == 1 && api_namespace("scene_load") == "scene" && h0.valid && h1.valid && h2.valid && h3.valid && h4.valid && h5.valid, "handles");
+                expect(api_version() == 2 && api_current_version() == 2 && api_minimum_version() == 1 && api_namespace("scene_load") == "scene" && h0.valid && h1.valid && h2.valid && h3.valid && h4.valid && h5.valid, "handles");
                 entity(); entity_name(); find_entity("Player"); has_component("RigidBody2D"); get_component("RigidBody2D"); transform(); rigid_body(); animator(); audio_source();
                 input_down("Move"); input_pressed("Jump"); input_released("Move"); input_axis("Move"); input_vector("Move"); input_vector_x("Move"); input_vector_y("Move"); mouse_x(); mouse_y(); wheel_x(); wheel_y();
                 time(); time_delta(); time_fixed_delta(); time_elapsed(); time_scale(); time_frame(); random(); random_range(0.0, 1.0);
@@ -2000,5 +2017,19 @@ mod tests {
         assert!(execution.commands.len() > 30);
         assert!(execution.logs.iter().any(|log| log.level == "debug"));
         assert!(execution.logs.iter().any(|log| log.level == "warning"));
+    }
+
+    #[test]
+    fn api_v1_context_remains_available_through_the_v2_adapter() {
+        let mut script_context = context();
+        script_context.api_version = 1;
+        let execution = ScriptRuntime::new()
+            .execute(
+                "fn update(dt) { expect(api_version() == 1 && api_current_version() == 2, \"v1 adapter\"); input_down(\"Move\"); }",
+                "update",
+                script_context,
+            )
+            .unwrap();
+        assert!(!execution.logs.iter().any(|log| log.level == "error"));
     }
 }

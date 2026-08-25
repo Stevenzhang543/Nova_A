@@ -1,0 +1,12 @@
+{
+  "format": "nova-build-physics-profile-manifest",
+  "version": 1,
+  "source": "projectSettings.physics.profile and nova-pak index.physicsProfile",
+  "profiles": [
+    "Accurate",
+    "Balanced",
+    "Fast",
+    "Custom"
+  ],
+  "status": "passed-static"
+}

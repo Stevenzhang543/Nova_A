@@ -1,0 +1,57 @@
+{
+  "format": "nova-v5.0-platform-matrix",
+  "engineVersion": "5.0.0",
+  "generatedAt": "2026-08-25T12:55:52.406Z",
+  "platforms": [
+    {
+      "id": "windows",
+      "tier": "tier-1",
+      "availability": "available",
+      "local": "passed",
+      "external": [
+        "disposable clean install/upgrade/repair/uninstall",
+        "publisher signing",
+        "representative GPU/audio"
+      ]
+    },
+    {
+      "id": "web",
+      "tier": "tier-1",
+      "availability": "available",
+      "local": "passed",
+      "external": [
+        "Firefox",
+        "WebKit",
+        "remote HTTPS host"
+      ]
+    },
+    {
+      "id": "linux",
+      "tier": "experimental",
+      "availability": "matching-host-ci-only",
+      "external": [
+        "Linux clean-machine job"
+      ]
+    },
+    {
+      "id": "macos",
+      "tier": "experimental",
+      "availability": "matching-host-ci-only",
+      "external": [
+        "macOS hardware",
+        "signing",
+        "notarization",
+        "clean-machine job"
+      ]
+    },
+    {
+      "id": "android",
+      "tier": "experimental",
+      "availability": "unavailable",
+      "external": [
+        "complete SDK/template/sign/install/runtime matrix"
+      ]
+    }
+  ],
+  "status": "passed-local-with-external-gates"
+}

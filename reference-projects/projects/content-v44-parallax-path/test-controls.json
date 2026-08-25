@@ -1,7 +1,7 @@
 {
   "format": "nova-reference-controls",
   "version": 1,
-  "engineVersion": "4.4.0",
+  "engineVersion": "5.0.1",
   "controls": [
     {
       "id": "project-health",

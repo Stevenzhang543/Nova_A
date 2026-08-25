@@ -34,13 +34,16 @@ export interface RigConstraint2D {
   maximum: Vec2
   weight: number
 }
+export interface RigAttachment2D { id: string; name: string; boneId: string; position: Vec2; rotation: number; allowedAssetTypes: string[] }
 
 export interface RigDocument {
-  version: 1
+  version: 2
   name: string
   bones: RigBone2D[]
   ikChains: RigIkChain2D[]
   constraints: RigConstraint2D[]
+  attachments: RigAttachment2D[]
+  retargetAliases: Record<string, string>
 }
 
 export interface SkinWeight2D { boneId: string; weight: number }
@@ -67,11 +70,11 @@ function vector(value: unknown, fallback: Vec2): Vec2 {
 
 export function defaultRig(name = 'New Rig'): RigDocument {
   return {
-    version: 1,
+    version: 2,
     name,
     bones: [{ id: 'root', name: 'Root', parentId: null, position: { x: 0, y: 0 }, rotation: 0, scale: { x: 1, y: 1 }, length: 1 }],
     ikChains: [],
-    constraints: []
+    constraints: [], attachments: [], retargetAliases: { root: 'root' }
   }
 }
 
@@ -127,7 +130,11 @@ export function normalizeRig(source: unknown): RigDocument {
       weight: Math.min(1, Math.max(0, finiteNumber(constraint.weight, 1)))
     }]
   })
-  return { version: 1, name: typeof item.name === 'string' ? item.name.slice(0, 120) : 'Rig', bones, ikChains, constraints }
+  const attachments = (Array.isArray(item.attachments) ? item.attachments : []).slice(0, 256).flatMap((attachment, index) => attachment && used.has(String(attachment.boneId)) ? [{ id: safeId(attachment.id, `attachment_${index + 1}`), name: typeof attachment.name === 'string' ? attachment.name.slice(0, 80) : `Attachment ${index + 1}`, boneId: String(attachment.boneId), position: vector(attachment.position, { x: 0, y: 0 }), rotation: finiteNumber(attachment.rotation), allowedAssetTypes: [...new Set((Array.isArray(attachment.allowedAssetTypes) ? attachment.allowedAssetTypes : ['image', 'prefab']).flatMap(value => typeof value === 'string' ? [value.slice(0, 40)] : []))].slice(0, 16) }] : [])
+  const retargetAliases: Record<string, string> = {}
+  if (item.retargetAliases && typeof item.retargetAliases === 'object' && !Array.isArray(item.retargetAliases)) for (const [alias, boneId] of Object.entries(item.retargetAliases).slice(0, 512)) if (typeof boneId === 'string' && used.has(boneId)) retargetAliases[safeId(alias, '')] = boneId
+  for (const bone of bones) if (!Object.values(retargetAliases).includes(bone.id)) retargetAliases[safeId(bone.name.toLowerCase(), bone.id)] = bone.id
+  return { version: 2, name: typeof item.name === 'string' ? item.name.slice(0, 120) : 'Rig', bones, ikChains, constraints, attachments, retargetAliases }
 }
 
 export function normalizeSkin(source: unknown): SkinDocument {
@@ -270,4 +277,25 @@ export function deformSkin(entity: Entity, sprite: SpriteRenderer2D): SkinnedMes
     return total > 0 ? { x: x / total, y: y / total } : source
   })
   return { positions, uvs: skin.vertices.map(vertex => ({ ...vertex.uv })), indices: [...skin.triangles] }
+}
+
+export function retargetPose(sourceRig: RigDocument, targetRig: RigDocument, sourcePose: Skeleton2D['pose'], explicitMapping: Record<string, string> = {}): Skeleton2D['pose'] {
+  const source = normalizeRig(sourceRig), target = normalizeRig(targetRig), sourcePoseById = new Map(sourcePose.map(pose => [pose.boneId, pose]))
+  const targetByAlias = new Map(Object.entries(target.retargetAliases).map(([alias, id]) => [alias.toLowerCase(), id]))
+  const sourceAliases = new Map<string, string>(); for (const [alias, id] of Object.entries(source.retargetAliases)) sourceAliases.set(id, alias.toLowerCase())
+  return source.bones.flatMap(sourceBone => {
+    const mapped = explicitMapping[sourceBone.id] ?? targetByAlias.get(sourceAliases.get(sourceBone.id) ?? sourceBone.name.toLowerCase())
+    const targetBone = target.bones.find(bone => bone.id === mapped); if (!targetBone) return []
+    const pose = sourcePoseById.get(sourceBone.id), sourceLength = Math.max(1e-9, sourceBone.length), lengthScale = targetBone.length / sourceLength
+    return [{ boneId: targetBone.id, position: pose ? { x: pose.position.x * lengthScale, y: pose.position.y * lengthScale } : { ...targetBone.position }, rotation: pose?.rotation ?? targetBone.rotation, scale: pose ? { ...pose.scale } : { ...targetBone.scale } }]
+  })
+}
+
+export function resolveRigAttachments(rig: RigDocument, skeleton: Skeleton2D): Array<RigAttachment2D & { worldPosition: Vec2; worldRotation: number }> {
+  const normalized = normalizeRig(rig), world = poseWorld(normalized, skeleton)
+  return normalized.attachments.flatMap(attachment => {
+    const bone = world.get(attachment.boneId); if (!bone) return []
+    const cosine = Math.cos(bone.rotation), sine = Math.sin(bone.rotation), x = attachment.position.x * bone.scale.x, y = attachment.position.y * bone.scale.y
+    return [{ ...attachment, worldPosition: { x: bone.position.x + x * cosine - y * sine, y: bone.position.y + x * sine + y * cosine }, worldRotation: bone.rotation + attachment.rotation }]
+  })
 }

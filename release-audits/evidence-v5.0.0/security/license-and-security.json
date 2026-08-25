@@ -1,0 +1,18 @@
+{
+  "format": "nova-v5.0-security-license",
+  "engineVersion": "5.0.0",
+  "generatedAt": "2026-08-25T12:55:52.406Z",
+  "packageFailClosed": "passed",
+  "dependencyAudit": "passed",
+  "dependencyAuditEvidence": "release-audits/v5.0.0-dependency-audit.json",
+  "licenses": [
+    "LICENSE.md",
+    "Nunito Sans OFL-1.1",
+    "Noto Sans SC OFL-1.1",
+    "JetBrains Mono OFL-1.1"
+  ],
+  "secretsIncluded": false,
+  "signingIdentityIncluded": false,
+  "diagnosticPrivacyReview": "required in UI",
+  "status": "passed-local-with-online-advisory-gate"
+}

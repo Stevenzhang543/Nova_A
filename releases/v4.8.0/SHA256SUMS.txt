@@ -1,0 +1,10 @@
+e9f46cae076be7c0a312491772e76f074273bd9b77f053949885f18d2c2986b0  EDIT_LEDGER.md
+30c69fec6f9947004ee71f91537b69c9d1345f6c57aba4fd1a74b57b3c0aee75  LICENSE.md
+f1faf9ea6cbfc8e4edf1818c269cb6a8130ff95796538262008d65fedd2cf03e  Nova_A-v4.8.0-reference-projects.zip
+76da02ebab2424bf70a95a8b5d263f25d3d5ff10e0418bf3f27ca98629bec517  Nova_A-v4.8.0-release-evidence.zip
+23244caa02907830812fb50424e86ac9947acae8cf005c008c61b6ccda9e6a11  Nova_A-v4.8.0-source.zip
+3f270f72c591a1df753e018708c3d7b48188097b82e09bce65d78da1f1fb582f  Nova_A-v4.8.0-web.zip
+13a0426b98b4443cea2c7c830c52e7ec2e2ff8feec374d82f6fd6a0a40ae4e0f  Nova_A-v4.8.0-windows-x64-portable.exe
+0c08321c15b171bd177c064b853ef5667802867588e3ff0aafbe3ac121b697af  Nova_A-v4.8.0-windows-x64-setup.exe
+f953ad0f3ba4f00c239000bd60666def9148fb8e3b51c3871cfd1b2ca095c7f1  Nova_A-v4.8.0-windows-x64.msi
+f931f5dbdf0c47ffb18320250914ef6003e6864f4b2ca96b4a14ec3c403beb68  RELEASE_NOTES.md

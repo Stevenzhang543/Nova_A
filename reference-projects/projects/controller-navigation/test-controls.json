@@ -3,5 +3,6 @@
   "run": "Top action bar > Play; Pause; Step; Stop",
   "validate": "Project Health must report no blocking project-format error",
   "export": "Build Settings > Overview > Build",
-  "command": "pnpm nova export --project ./reference-projects/projects/controller-navigation/project.nova --target web --profile release --output ./Builds/reference-controller-navigation --cache validate --jsonl"
+  "command": "pnpm nova export --project ./reference-projects/projects/controller-navigation/project.nova --target web --profile release --output ./Builds/reference-controller-navigation --cache validate --jsonl",
+  "engineVersion": "5.0.1"
 }

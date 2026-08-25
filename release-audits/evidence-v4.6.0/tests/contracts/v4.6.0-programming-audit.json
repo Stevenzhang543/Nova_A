@@ -1,0 +1,267 @@
+{
+  "format": "nova-v4.6-programming-workflow-audit",
+  "version": 1,
+  "engineVersion": "4.6.0",
+  "generatedAt": "2026-08-24T10:42:38.471Z",
+  "catalog": [
+    "SCR",
+    "API",
+    "DBG",
+    "TST"
+  ],
+  "checks": [
+    {
+      "id": "SCR460-VERSION",
+      "status": "passed",
+      "detail": "Web and Tauri authorities report 4.6.0."
+    },
+    {
+      "id": "SCR460-API-MANIFEST",
+      "status": "passed",
+      "detail": "API v2 manifest has typed module, result, lifetime, thread, determinism, permission and deprecation metadata."
+    },
+    {
+      "id": "SCR460-API-DOMAINS",
+      "status": "passed",
+      "detail": "Every required stable API domain is catalogued."
+    },
+    {
+      "id": "SCR460-SANDBOX",
+      "status": "passed",
+      "detail": "Host registration and execution bounds are explicit; no process execution binding is present."
+    },
+    {
+      "id": "SCR460-LANGUAGE",
+      "status": "passed",
+      "detail": "Semantic editing and workspace index operations are implemented."
+    },
+    {
+      "id": "SCR460-LANGUAGE-SAFETY",
+      "status": "passed",
+      "detail": "Cancellation, stale-result prevention, atomic persistence, checksum and restart behavior are implemented."
+    },
+    {
+      "id": "SCR460-DEBUGGER",
+      "status": "passed",
+      "detail": "Persistent breakpoints, stack/frame, source maps, locals/watches/eval, exceptions, tasks and protocol are connected."
+    },
+    {
+      "id": "SCR460-REMOTE-SECURITY",
+      "status": "passed",
+      "detail": "Remote debug is explicit, authenticated and loopback-only."
+    },
+    {
+      "id": "SCR460-HOT-RELOAD",
+      "status": "passed",
+      "detail": "Hot reload validates, classifies, commits transactionally and retains rollback."
+    },
+    {
+      "id": "SCR460-TESTS",
+      "status": "passed",
+      "detail": "All categories, selection, sharding, cancellation, deterministic seeds and infrastructure-only retries are represented."
+    },
+    {
+      "id": "SCR460-CLI",
+      "status": "passed",
+      "detail": "Headless CLI exposes reports, coverage, changed selection, sharding and stable process status."
+    },
+    {
+      "id": "SCR460-COVERAGE",
+      "status": "passed",
+      "detail": "Function, line and API binding coverage is connected."
+    },
+    {
+      "id": "SCR460-STUDIO-LAYOUT",
+      "status": "passed",
+      "detail": "Script Studio has Explorer, Editor, dockable detail and all run scopes."
+    },
+    {
+      "id": "SCR460-PROJECT-INTEGRATION",
+      "status": "passed",
+      "detail": "Project settings and Project Health expose API/lint/index/debug/test state."
+    },
+    {
+      "id": "SCR460-EXTERNAL",
+      "status": "passed",
+      "detail": "External editor protocol covers language navigation, editing, cancellation and persistence."
+    },
+    {
+      "id": "SCR460-I18N",
+      "status": "passed",
+      "detail": "The v4.6 workflow labels exist in all locale tables."
+    },
+    {
+      "id": "SCR460-MANUAL",
+      "status": "passed",
+      "detail": "The searchable multilingual manual has bookmarkable v4.6 sections."
+    },
+    {
+      "id": "SCR460-DOC-RHAI_API_V2.md",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "id": "SCR460-DOC-RHAI_API_V2_MANIFEST.json",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "id": "SCR460-DOC-RHAI_V1_TO_V2.json",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "id": "SCR460-DOC-NOVA_RHAI_API_V2_STUBS.rhai",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "id": "SCR460-DOC-RHAI_DEBUG_PROTOCOL_V2.md",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "id": "SCR460-DOC-RHAI_HOT_RELOAD_4_6.md",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "id": "SCR460-DOC-RHAI_TESTING_COVERAGE_4_6.md",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "id": "SCR460-DOC-RHAI_EXTERNAL_TOOLS_4_6.md",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "id": "SCR460-DOC-KNOWN_ISSUES_4_6.md",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "id": "SCR460-REF-script-v46-api-contract-project.nova",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "id": "SCR460-REF-script-v46-api-contract-README.md",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "id": "SCR460-REF-script-v46-api-contract-expected-output.json",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "id": "SCR460-REF-script-v46-api-contract-test-controls.json",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "id": "SCR460-REF-script-v46-language-services-project.nova",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "id": "SCR460-REF-script-v46-language-services-README.md",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "id": "SCR460-REF-script-v46-language-services-expected-output.json",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "id": "SCR460-REF-script-v46-language-services-test-controls.json",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "id": "SCR460-REF-script-v46-debugger-project.nova",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "id": "SCR460-REF-script-v46-debugger-README.md",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "id": "SCR460-REF-script-v46-debugger-expected-output.json",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "id": "SCR460-REF-script-v46-debugger-test-controls.json",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "id": "SCR460-REF-script-v46-hot-reload-project.nova",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "id": "SCR460-REF-script-v46-hot-reload-README.md",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "id": "SCR460-REF-script-v46-hot-reload-expected-output.json",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "id": "SCR460-REF-script-v46-hot-reload-test-controls.json",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "id": "SCR460-REF-script-v46-tests-coverage-project.nova",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "id": "SCR460-REF-script-v46-tests-coverage-README.md",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "id": "SCR460-REF-script-v46-tests-coverage-expected-output.json",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "id": "SCR460-REF-script-v46-tests-coverage-test-controls.json",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "id": "SCR460-REF-script-v46-external-tools-project.nova",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "id": "SCR460-REF-script-v46-external-tools-README.md",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "id": "SCR460-REF-script-v46-external-tools-expected-output.json",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "id": "SCR460-REF-script-v46-external-tools-test-controls.json",
+      "status": "passed",
+      "detail": "Present."
+    }
+  ],
+  "severity0Open": 0,
+  "severity1Open": 0,
+  "status": "passed"
+}

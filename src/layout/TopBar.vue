@@ -69,7 +69,10 @@
       <div class="menu-item">
         <button @click="toggleMenu('help')" :class="{ active: activeMenu === 'help' }">{{ t('help') }}</button>
         <Transition name="menu"><div v-if="activeMenu === 'help'" class="dropdown dropdown-right">
-          <button @click="handleManual"><span>{{ t('manual') }}</span></button>
+          <button @click="handleManual"><span>{{ t('manual') }}</span><kbd>5.0 · {{ t('offline') }}</kbd></button>
+          <button @click="handleManualSection('first-game')"><span>{{ t('firstGameTutorial') }}</span></button>
+          <button @click="handleManualSection('package-sdk')"><span>{{ t('packageSdk') }}</span></button>
+          <button @click="handleManualSection('release-engineering')"><span>{{ t('releaseEngineeringGuide') }}</span></button>
           <button @click="handleStudioStatus"><span>{{ t('studioStatus') }}</span></button>
           <button @click="handleAbout"><span>{{ t('about') }}</span></button>
         </div></Transition>
@@ -78,7 +81,7 @@
     <div class="top-spacer"></div>
     <span v-if="recoveryState.safeMode" class="safe-pill">{{ t('safeMode') }}</span>
     <span v-if="historyState.dirty" class="dirty-pill" :title="projectTransactionState.unsavedScopes.join(', ')">● {{ t('unsavedChanges') }}</span>
-    <span class="release-pill">4.4.0</span>
+    <span class="release-pill">5.0.1 · {{ t('releaseCandidate') }}</span>
     <input ref="fileInput" type="file" hidden accept="application/json,.nova,.json" @change="handleFileSelected">
   </header>
 </template>
@@ -168,6 +171,7 @@ async function handleAbout() {
   } catch (error) { reportRecoverableError(error, t('openProjectWebsite'), 'Editor'); editorState.statusText = t('openWebsiteFailed') }
 }
 function handleManual() { activeMenu.value = null; void openBundledManual() }
+function handleManualSection(section: string) { activeMenu.value = null; void openBundledManual(section) }
 function handleStudioStatus() { activeMenu.value = null; openStudioStatus() }
 function handleProjectManager() { activeMenu.value = null; showProjectManager() }
 function handleUndo() { if (isEditing.value) undo(); activeMenu.value = null }
@@ -219,26 +223,28 @@ onUnmounted(() => { window.removeEventListener('keydown', handleKeyDown); if (me
 </script>
 
 <style scoped>
-.top-bar { height: 42px; flex: 0 0 42px; display: flex; align-items: center; gap: 12px; padding: 0 12px; color: var(--text-secondary); background: var(--surface-1); border-bottom: 1px solid var(--border-subtle); backdrop-filter: var(--glass-blur); position: relative; z-index: 300; }
-.brand { display: flex; align-items: center; gap: 8px; color: var(--text-primary); text-decoration: none; font-size: 12px; font-weight: 670; letter-spacing: -.01em; }
-.brand-mark { display: grid; place-items: center; width: 23px; height: 23px; border-radius: 7px; color: var(--accent-contrast); background: linear-gradient(145deg, var(--accent), var(--accent-strong)); font-size: 11px; box-shadow: 0 4px 12px var(--accent-soft); }
+.top-bar { height: 44px; flex: 0 0 44px; display: flex; align-items: center; gap: 12px; padding: 0 12px; color: var(--text-secondary); background: color-mix(in srgb,var(--surface-1) 96%,var(--bg-base)); border-bottom: 1px solid var(--border-subtle); box-shadow:inset 0 -1px color-mix(in srgb,var(--accent) 4%,transparent); backdrop-filter: var(--glass-blur); position: relative; z-index: 500; }
+.brand { display: flex; align-items: center; gap: 8px; color: var(--text-primary); text-decoration: none; font-size: var(--type-dense); font-weight: 700; letter-spacing: -.01em; }
+.brand-mark { display: grid; place-items: center; width: 25px; height: 25px; border-radius: 8px; color: var(--accent-contrast); background: linear-gradient(145deg, var(--accent), var(--accent-secondary)); font-size: var(--type-caption); box-shadow: 0 5px 16px var(--accent-soft); }
 .menu-container { height: 100%; display: flex; align-items: center; gap: 2px; }
 .menu-item { height: 100%; position: relative; display: flex; align-items: center; }
-.menu-item > button { height: 28px; padding: 0 10px; border: 0; border-radius: 8px; color: var(--text-secondary); background: transparent; font-size: 12px; }
+.menu-item > button { height: 30px; padding: 0 10px; border: 0; border-radius: 8px; color: var(--text-secondary); background: transparent; font-size: var(--type-caption); }
 .menu-item > button:hover, .menu-item > button.active { color: var(--text-primary); background: var(--surface-hover); }
-.dropdown { position: absolute; top: 36px; left: 0; min-width: 230px; padding: 6px; display: flex; flex-direction: column; border: 1px solid var(--border-subtle); border-radius: var(--radius-md); background: var(--surface-1); backdrop-filter: var(--glass-blur); box-shadow: var(--shadow-lg); }
+.dropdown { position: absolute; top: 38px; left: 0; min-width: 250px; padding: 7px; display: flex; flex-direction: column; border: 1px solid var(--border-strong); border-radius: var(--radius-panel); background: var(--surface-1); backdrop-filter: var(--glass-blur); box-shadow: var(--shadow-float); }
 .dropdown-right { right: 0; left: auto; }
-.dropdown button { min-height: 34px; padding: 0 9px; display: flex; align-items: center; justify-content: space-between; gap: 18px; border: 0; border-radius: 7px; background: transparent; color: var(--text-secondary); text-align: left; font-size: 12px; }
+.dropdown button { min-height: 36px; padding: 0 10px; display: flex; align-items: center; justify-content: space-between; gap: 18px; border: 0; border-radius: 8px; background: transparent; color: var(--text-secondary); text-align: left; font-size: var(--type-caption); }
 .dropdown button:hover { color: var(--text-primary); background: var(--accent-soft); }
 .dropdown button.danger { color: var(--danger); }
 .dropdown button.danger:hover { background: var(--danger-soft); }
 .dropdown hr { width: 100%; margin: 5px 0; border: 0; border-top: 1px solid var(--border-subtle); }
-kbd { color: var(--text-muted); font-family: inherit; font-size:11px; }
+kbd { color: var(--text-muted); font-family: inherit; font-size:var(--type-caption); }
 .check { color: var(--accent); }
 .top-spacer { flex: 1; }
-.release-pill { padding: 3px 8px; border: 1px solid var(--border-subtle); border-radius: 999px; color: var(--text-muted); font-size:11px; }
-.safe-pill{padding:3px 8px;border:1px solid var(--warning);border-radius:999px;color:var(--warning);font-size:11px}
-.dirty-pill{padding:3px 8px;border:1px solid color-mix(in srgb,var(--warning) 60%,var(--border-subtle));border-radius:999px;color:var(--warning);font-size:11px;white-space:nowrap}
+.release-pill { padding: 3px 8px; border: 1px solid var(--border-subtle); border-radius: 999px; color: var(--text-muted); font-size:var(--type-caption); white-space:nowrap }
+.safe-pill{padding:3px 8px;border:1px solid var(--warning);border-radius:999px;color:var(--warning);font-size:var(--type-caption)}
+.dirty-pill{padding:3px 8px;border:1px solid color-mix(in srgb,var(--warning) 60%,var(--border-subtle));border-radius:999px;color:var(--warning);font-size:var(--type-caption);white-space:nowrap}
+@media(max-width:980px){.release-pill{display:none}.top-bar{gap:7px}.menu-item>button{padding-inline:7px}}
+@media(max-width:720px){.brand>span:last-child{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}.brand{gap:0}.top-bar{padding-inline:7px}.menu-container{min-width:0;overflow-x:auto;scrollbar-width:none}.menu-container::-webkit-scrollbar{display:none}}
 .menu-enter-active, .menu-leave-active { transition: opacity 130ms ease, transform 130ms ease; transform-origin: top left; }
 .menu-enter-from, .menu-leave-to { opacity: 0; transform: translateY(-4px) scale(.98); }
 </style>

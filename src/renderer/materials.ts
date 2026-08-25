@@ -34,7 +34,8 @@ export const MATERIAL_INCLUDE_LIBRARY: Readonly<Record<string, string>> = Object
 })
 
 const compileCache = new Map<string, ShaderDiagnostic[]>()
-export const materialRuntimeDiagnostics = { compileCacheHits: 0, compileCacheMisses: 0, fallbackCount: 0, lastFallback: '' }
+export interface MaterialFallbackEvent { reference: string; reason: string; occurredAt: string; actionableFix: string }
+export const materialRuntimeDiagnostics = { compileCacheHits: 0, compileCacheMisses: 0, fallbackCount: 0, lastFallback: '', fallbackEvents: [] as MaterialFallbackEvent[] }
 
 export function defaultMaterial(name = 'New Material'): Material2DResource {
   return { version: 2, name, fragment: DEFAULT_MATERIAL_FRAGMENT, textures: {}, uniforms: {}, uniformSchema: [], includes: [], variants: {}, activeVariant: '', parentMaterial: null, blendMode: 'Alpha', sampling: 'Linear', colorSpace: 'sRGB', writeColor: true }
@@ -168,7 +169,18 @@ export function renderMaterialPreview(canvas: HTMLCanvasElement, materialInput: 
   return diagnostics
 }
 
-function noteFallback(reference: string, reason: string): Material2DResource { materialRuntimeDiagnostics.fallbackCount++; materialRuntimeDiagnostics.lastFallback = `${reference}: ${reason}`; return defaultMaterial(`Fallback · ${reference}`) }
+function noteFallback(reference: string, reason: string): Material2DResource {
+  materialRuntimeDiagnostics.fallbackCount++; materialRuntimeDiagnostics.lastFallback = `${reference}: ${reason}`
+  const event = { reference, reason, occurredAt: new Date().toISOString(), actionableFix: reason.includes('not found') ? 'Assign an existing material asset.' : reason.includes('cycle') ? 'Remove the cyclic parent material reference.' : 'Open the shader diagnostics, correct the material source, then save it.' }
+  materialRuntimeDiagnostics.fallbackEvents.unshift(event); materialRuntimeDiagnostics.fallbackEvents.splice(32)
+  return defaultMaterial(`Fallback · ${reference}`)
+}
+export function reportMaterialFallback(reference: string, reason: string): void { noteFallback(reference, reason) }
+export function validateMaterialForPlatform(material: Material2DResource, platform: 'native-windows' | 'web', backend: 'WebGL2' | 'Canvas2D'): ShaderDiagnostic[] {
+  const diagnostics = analyzeMaterialShader(material.fragment, material.includes)
+  if (backend === 'Canvas2D' && material.fragment.trim() !== DEFAULT_MATERIAL_FRAGMENT.trim()) diagnostics.push({ line: 1, severity: 'warning', source: platform, message: 'Custom shader output is unsupported on Canvas2D and will use the explicit base-material fallback.' })
+  return diagnostics
+}
 export function resolveMaterial(reference: string | null | undefined, visited = new Set<string>()): Material2DResource {
   if (!reference || reference === 'Default' || reference === 'Particles' || reference.startsWith('__')) return defaultMaterial(reference || 'Default')
   if (visited.has(reference)) return noteFallback(reference, 'inheritance cycle')

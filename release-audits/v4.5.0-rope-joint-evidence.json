@@ -1,0 +1,55 @@
+{
+  "format": "nova-v4.5-rope-joint-evidence",
+  "version": 1,
+  "generatedAt": "2026-08-24T07:03:15.927Z",
+  "fixtures": [
+    {
+      "id": "distance",
+      "restLength": 3,
+      "tolerance": {
+        "id": "joint",
+        "absolute": 0.00005,
+        "relative": 0.0001,
+        "unit": "m",
+        "rationale": "Iterative joint positional correction."
+      }
+    },
+    {
+      "id": "revolute",
+      "anchorDrift": 0,
+      "tolerance": {
+        "id": "joint",
+        "absolute": 0.00005,
+        "relative": 0.0001,
+        "unit": "m",
+        "rationale": "Iterative joint positional correction."
+      }
+    },
+    {
+      "id": "prismatic",
+      "lower": -2,
+      "upper": 2
+    },
+    {
+      "id": "weld",
+      "relativeAngle": 0
+    },
+    {
+      "id": "spring",
+      "force": -25
+    },
+    {
+      "id": "motor",
+      "targetSpeed": 2
+    },
+    {
+      "id": "rope",
+      "segments": 12,
+      "strain": 0.25,
+      "breakLink": 6
+    }
+  ],
+  "endpointOwnerCollision": "excluded",
+  "thirdBodyCollision": "enabled-by-layer-and-setting",
+  "status": "passed-contract-and-rust-tests"
+}

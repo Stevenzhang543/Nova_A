@@ -1,0 +1,17 @@
+{
+  "engineVersion": "5.0.1",
+  "schema": 29,
+  "projectName": "Nova_A 4.5 Top-down Physics",
+  "minimumScenes": 2,
+  "minimumEntities": 11,
+  "expectedValidation": "pass",
+  "demonstrates": [
+    "normalized two-axis character velocity",
+    "named-layer interaction",
+    "fixed-profile consistency"
+  ],
+  "testIds": [
+    "PHY-CHAR-006",
+    "PHY-PROFILE-001"
+  ]
+}

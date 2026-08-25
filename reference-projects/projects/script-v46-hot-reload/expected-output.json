@@ -1,0 +1,14 @@
+{
+  "engineVersion": "5.0.1",
+  "schema": 29,
+  "projectName": "Script v4.6 Hot Reload",
+  "expectedValidation": "pass",
+  "fixtures": [
+    "compatible-property",
+    "function-added",
+    "removed-state",
+    "syntax-error",
+    "runtime-exception"
+  ],
+  "failedCandidateReplacesRuntime": false
+}

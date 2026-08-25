@@ -6,7 +6,8 @@ export type AssetType =
   | 'tileset' | 'atlas' | 'shader' | 'localization' | 'uiTheme' | 'other'
   | 'behaviorTree' | 'stateMachine' | 'tilePalette' | 'brushPreset' | 'terrainRules'
   | 'dataSchema' | 'dataTable' | 'replay' | 'path'
-export type TextAssetType = Extract<AssetType, 'script' | 'prefab' | 'scene' | 'material' | 'animation' | 'controller' | 'animationMask' | 'rig' | 'skin' | 'timeline' | 'tileset' | 'atlas' | 'shader' | 'localization' | 'uiTheme' | 'behaviorTree' | 'stateMachine' | 'tilePalette' | 'brushPreset' | 'terrainRules' | 'dataSchema' | 'dataTable' | 'replay' | 'path' | 'other'>
+  | 'particleSystem'
+export type TextAssetType = Extract<AssetType, 'script' | 'prefab' | 'scene' | 'material' | 'animation' | 'controller' | 'animationMask' | 'rig' | 'skin' | 'timeline' | 'tileset' | 'atlas' | 'shader' | 'localization' | 'uiTheme' | 'behaviorTree' | 'stateMachine' | 'tilePalette' | 'brushPreset' | 'terrainRules' | 'dataSchema' | 'dataTable' | 'replay' | 'path' | 'particleSystem' | 'other'>
 export type AssetCompression = 'None' | 'Lossless' | 'Optimized'
 export type TextureImportProfile = 'General' | 'PixelArt' | 'UI' | 'NormalMap'
 export type AudioImportProfile = 'SoundEffect' | 'Music' | 'Voice' | 'Streaming'
@@ -51,7 +52,7 @@ export interface AssetImportSettings {
   collisionGeneration: { mode: 'None' | 'Box' | 'Polygon'; tolerance: number }
   extractedAnimationFrames: SpriteRegion[]
   svgSettings: { rasterization: 'ImportTime' | 'Runtime' | 'Disabled'; scale: number; allowExternalResources: boolean }
-  audioSettings: { profile: AudioImportProfile; codec: AudioCodecProfile; quality: number; trimStart: number; trimEnd: number; normalize: boolean; normalizationGain: number; targetPeakDb: number; streaming: boolean; sampleRate: number; loopStart: number; loopEnd: number }
+  audioSettings: { profile: AudioImportProfile; codec: AudioCodecProfile; quality: number; trimStart: number; trimEnd: number; normalize: boolean; normalizationGain: number; targetPeakDb: number; streaming: boolean; preload: 'Auto' | 'Preload' | 'Metadata' | 'None'; sampleRate: number; loopStart: number; loopEnd: number }
   fontSettings: { renderMode: FontRenderMode; fallbackFamilies: string[]; fallbackAssetUuids: string[]; bitmapSize: number; outlineWidth: number; shaping: boolean; openTypeFeatures: string[]; hinting: 'Auto' | 'None' | 'Light' | 'Full'; oversampling: number; distanceField: FontDistanceFieldMode; distanceRange: number; declaredLanguages: string[]; editorFont: boolean }
   tileSettings: { tileWidth: number; tileHeight: number; margin: number; spacing: number }
   scriptSettings: { encoding: 'utf-8'; module: boolean }
@@ -116,8 +117,8 @@ export interface AssetDatabaseSettings {
 }
 
 export interface ScriptAssetMetadata {
-  version: 1
-  apiVersion: 1
+  version: 2
+  apiVersion: 1 | 2
   breakpoints: number[]
   breakpointDetails: ScriptBreakpointMetadata[]
   tests: string[]
@@ -138,6 +139,7 @@ export interface ScriptBreakpointMetadata {
   logMessage: string
   enabled: boolean
   hitCount: number
+  group?: string
 }
 
 export interface ScriptSignalConnection {
@@ -149,11 +151,13 @@ export interface ScriptSignalConnection {
 }
 
 export interface AnimationImportMetadata {
-  version: 1
+  version: 2
   sourceAsset: string | null
   sourceFrameRate: number
   sampleRate: number
   trackMappings: Array<{ source: string; target: string }>
+  compressionTolerance: number
+  preserveEvents: boolean
   lastImportedAt: number
 }
 
@@ -187,13 +191,13 @@ export interface AssetRecord {
 
 export function defaultScriptMetadata(): ScriptAssetMetadata {
   return {
-    version: 1, apiVersion: 1, breakpoints: [], breakpointDetails: [], tests: [], packageDependencies: [],
+    version: 2, apiVersion: 2, breakpoints: [], breakpointDetails: [], tests: [], packageDependencies: [],
     packageName: '', reloadPolicy: 'preserve', signalConnections: [], recoverySource: '', lastSavedHash: ''
   }
 }
 
 export function defaultAnimationImportMetadata(): AnimationImportMetadata {
-  return { version: 1, sourceAsset: null, sourceFrameRate: 60, sampleRate: 60, trackMappings: [], lastImportedAt: 0 }
+  return { version: 2, sourceAsset: null, sourceFrameRate: 60, sampleRate: 60, trackMappings: [], compressionTolerance: .0001, preserveEvents: true, lastImportedAt: 0 }
 }
 
 export interface TextureAtlasPage {
@@ -209,6 +213,7 @@ export const DEFAULT_ASSET_FOLDERS = [
   'Assets/Atlases', 'Assets/Shaders', 'Assets/Localization', 'Assets/UI Themes', 'Assets/Packages', 'ProjectSettings',
   'Assets/AI', 'Assets/TilePalettes', 'Assets/BrushPresets', 'Assets/TerrainRules',
   'Assets/Data', 'Assets/Data/Schemas', 'Assets/Data/Tables', 'Assets/Replays', 'Assets/Paths',
+  'Assets/Particles',
   '.nova/cache', '.nova/imported', '.nova/user'
 ] as const
 
@@ -220,7 +225,7 @@ export function defaultImportSettings(): AssetImportSettings {
     spriteSheet: { enabled: false, columns: 1, rows: 1, margin: 0, spacing: 0 }, transparentTrim: false,
     borders: { left: 0, top: 0, right: 0, bottom: 0 }, polygonOutline: [], collisionGeneration: { mode: 'None', tolerance: 1 }, extractedAnimationFrames: [],
     svgSettings: { rasterization: 'ImportTime', scale: 1, allowExternalResources: false },
-    audioSettings: { profile: 'SoundEffect', codec: 'Original', quality: .8, trimStart: 0, trimEnd: 0, normalize: false, normalizationGain: 1, targetPeakDb: -1, streaming: false, sampleRate: 48_000, loopStart: 0, loopEnd: 0 },
+    audioSettings: { profile: 'SoundEffect', codec: 'Original', quality: .8, trimStart: 0, trimEnd: 0, normalize: false, normalizationGain: 1, targetPeakDb: -1, streaming: false, preload: 'Auto', sampleRate: 48_000, loopStart: 0, loopEnd: 0 },
     fontSettings: { renderMode: 'Scalable', fallbackFamilies: ['Nunito Sans Variable', 'Noto Sans SC Variable', 'sans-serif'], fallbackAssetUuids: [], bitmapSize: 32, outlineWidth: 0, shaping: true, openTypeFeatures: ['kern', 'liga'], hinting: 'Auto', oversampling: 1, distanceField: 'None', distanceRange: 8, declaredLanguages: ['en'], editorFont: false },
     tileSettings: { tileWidth: 32, tileHeight: 32, margin: 0, spacing: 0 },
     scriptSettings: { encoding: 'utf-8', module: true },

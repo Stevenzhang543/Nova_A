@@ -1,0 +1,97 @@
+{
+  "format": "nova-profiler-comparison-evidence",
+  "engineVersion": "4.8.0",
+  "generatedAt": "2026-08-24T16:51:00.501Z",
+  "result": {
+    "id": "PRF-CAPTURE-CI",
+    "status": "passed",
+    "detail": "Captures save, compare and export deterministic CI budget results.",
+    "metrics": {
+      "ci": {
+        "status": "passed",
+        "engineVersion": "4.8.0",
+        "checks": [
+          {
+            "id": "frame.average",
+            "actual": 5,
+            "limit": 16.667,
+            "unit": "ms",
+            "passed": true
+          },
+          {
+            "id": "render.average",
+            "actual": 2,
+            "limit": 8,
+            "unit": "ms",
+            "passed": true
+          },
+          {
+            "id": "audio.average",
+            "actual": 0.2,
+            "limit": 2,
+            "unit": "ms",
+            "passed": true
+          },
+          {
+            "id": "gpu.frame",
+            "actual": 1,
+            "limit": 8,
+            "unit": "ms",
+            "passed": true
+          },
+          {
+            "id": "renderer.drawCalls",
+            "actual": 2,
+            "limit": 500,
+            "unit": "calls",
+            "passed": true
+          },
+          {
+            "id": "renderer.textureMemory",
+            "actual": 0.0009765625,
+            "limit": 256,
+            "unit": "MB",
+            "passed": true
+          },
+          {
+            "id": "particles.update",
+            "actual": 0,
+            "limit": 2,
+            "unit": "ms",
+            "passed": true
+          },
+          {
+            "id": "profiler.overhead",
+            "actual": 0,
+            "limit": 5,
+            "unit": "%",
+            "passed": true
+          }
+        ]
+      },
+      "comparison": {
+        "first": "capture-mt7gw8ht-0",
+        "second": "capture-mt7gw8ht-1",
+        "averageFrameDeltaMs": 0,
+        "peakFrameDeltaMs": 0,
+        "memoryDeltaMb": null,
+        "assetDeltaMb": 0,
+        "entityDelta": 0,
+        "gpuDeltaMs": 0,
+        "drawCallDelta": 1,
+        "textureMemoryDeltaMb": 0,
+        "budgetRegressions": []
+      }
+    }
+  },
+  "independentMarkers": [
+    "frame category boundaries",
+    "draw calls",
+    "texture bytes",
+    "particle count",
+    "audio voices"
+  ],
+  "overheadBudgetPercent": 5,
+  "remoteExportedPlayer": "identity and capture field implemented; remote transport exercised only when authenticated player is attached",
+  "status": "passed"
+}

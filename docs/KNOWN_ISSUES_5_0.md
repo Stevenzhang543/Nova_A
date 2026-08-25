@@ -1,0 +1,7 @@
+# Nova_A 5.0 known issues and external gates
+
+There are no accepted local Severity 0 or Severity 1 defects at the start of the candidate audit. Final production sign-off is nevertheless blocked until the 72-hour soak, minimum 14-day candidate observation, two-machine unsigned reproducibility comparison, disposable Windows install/upgrade/repair/uninstall matrix, Firefox/WebKit hosted-player matrix, representative GPU/audio hardware, publisher signing, exact tagged-source verification, and independent verifier signature are attached.
+
+Linux and macOS remain Experimental matching-host CI records and are hidden from the default release target picker. Android is unavailable. Web must be served over HTTP(S), not `file://`. Rhai API v1 is read-only migration compatibility, not a new-project option. If a Severity 2 issue is accepted later, this file must state its identifier, impact, workaround, owner, and patch target before release packaging is approved.
+
+Accepted S3 performance debt: the editor and crash-report entry chunks exceed Vite's 500 KB advisory threshold. Exported players retain a separate small entry, gzip sizes are archived in the performance report, and minimum-system launch is tested. Workaround: use the production build and monitor target hardware. Owner: Editor performance. Patch target: a compatibility-safe 5.0.x code-splitting pass; it is intentionally not attempted during the frozen 5.0 candidate.

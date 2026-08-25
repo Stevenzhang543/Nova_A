@@ -1,0 +1,38 @@
+{
+  "format": "nova-v4.7-localization-fixtures",
+  "generatedAt": "2026-08-24T13:56:24.469Z",
+  "locales": [
+    "en",
+    "de",
+    "zh-CN",
+    "ar",
+    "pseudo"
+  ],
+  "fixtures": {
+    "plural": [
+      "one",
+      "other"
+    ],
+    "bidirectional": "⁧واجهة Nova_A⁩ 123",
+    "emoji": "👩🏽‍🚀",
+    "combining": "é",
+    "cjk": "中文",
+    "pseudolocalized": "［Ňövä_Å··］"
+  },
+  "csvPoRoundTrip": {
+    "id": "LOC-ROUNDTRIP",
+    "status": "passed",
+    "detail": "CSV preserves plurals and PO preserves Unicode/combining content.",
+    "metrics": {
+      "csvBytes": 105,
+      "poBytes": 190
+    }
+  },
+  "fontFallbacks": [
+    "Nunito Sans",
+    "Noto Sans SC",
+    "Segoe UI Emoji",
+    "system sans-serif"
+  ],
+  "status": "passed"
+}

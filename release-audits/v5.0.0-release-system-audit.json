@@ -1,0 +1,247 @@
+{
+  "format": "nova-v5.0-release-system-audit",
+  "version": 1,
+  "engineVersion": "5.0.0",
+  "generatedAt": "2026-08-25T12:55:51.859Z",
+  "catalogs": [
+    "BLD",
+    "PKG",
+    "HLT",
+    "REGRESSION"
+  ],
+  "checks": [
+    {
+      "id": "BLD-VERSION",
+      "status": "passed",
+      "detail": "Web, workspace and native authorities identify 5.0.0."
+    },
+    {
+      "id": "BLD-TIERS",
+      "status": "passed",
+      "detail": "Platform tiers, host requirements, availability and evidence are explicit."
+    },
+    {
+      "id": "BLD-EXPORT",
+      "status": "passed",
+      "detail": "Export templates, content, delivery, crash/symbol and external hook settings are connected."
+    },
+    {
+      "id": "BLD-PROVENANCE",
+      "status": "passed",
+      "detail": "Build provenance, SBOM, manifests, web headers and deterministic comparison are implemented."
+    },
+    {
+      "id": "PKG-FAIL-CLOSED",
+      "status": "passed",
+      "detail": "Package execution is gated by compatibility, provenance, integrity and permissions."
+    },
+    {
+      "id": "PKG-ECOSYSTEM",
+      "status": "passed",
+      "detail": "Registry, lock, offline, cache, license, vulnerability, dependency and certification metadata exist."
+    },
+    {
+      "id": "HLT-TEAM",
+      "status": "passed",
+      "detail": "Optional local-first source-control/team workflow is wired."
+    },
+    {
+      "id": "HLT-RELEASE",
+      "status": "passed",
+      "detail": "Project Health exposes the release-readiness gates and direct fixes."
+    },
+    {
+      "id": "REL-PIPELINE",
+      "status": "passed",
+      "detail": "The release pipeline and package scripts are declared."
+    },
+    {
+      "id": "BLD-CLI",
+      "status": "passed",
+      "detail": "Build CLI 1 is current, host-safe and emits release metadata."
+    },
+    {
+      "id": "REL-PRIVACY",
+      "status": "passed",
+      "detail": "Diagnostic export requires privacy review and never uploads automatically."
+    },
+    {
+      "id": "I18N-V50",
+      "status": "passed",
+      "detail": "The v5.0 vocabulary is present in English, German and Chinese."
+    },
+    {
+      "id": "DOC-PLATFORM_BUILD_MATRIX_5_0.md",
+      "status": "passed",
+      "detail": "PLATFORM_BUILD_MATRIX_5_0.md is substantive and offline."
+    },
+    {
+      "id": "DOC-PACKAGE_PLUGIN_SDK_5_0.md",
+      "status": "passed",
+      "detail": "PACKAGE_PLUGIN_SDK_5_0.md is substantive and offline."
+    },
+    {
+      "id": "DOC-BUILD_EXPORT_5_0.md",
+      "status": "passed",
+      "detail": "BUILD_EXPORT_5_0.md is substantive and offline."
+    },
+    {
+      "id": "DOC-FIRST_GAME_5_0.md",
+      "status": "passed",
+      "detail": "FIRST_GAME_5_0.md is substantive and offline."
+    },
+    {
+      "id": "DOC-SOURCE_CONTROL_5_0.md",
+      "status": "passed",
+      "detail": "SOURCE_CONTROL_5_0.md is substantive and offline."
+    },
+    {
+      "id": "DOC-MIGRATION_5_0.md",
+      "status": "passed",
+      "detail": "MIGRATION_5_0.md is substantive and offline."
+    },
+    {
+      "id": "DOC-RELEASE_ENGINEERING_5_0.md",
+      "status": "passed",
+      "detail": "RELEASE_ENGINEERING_5_0.md is substantive and offline."
+    },
+    {
+      "id": "DOC-TROUBLESHOOTING_4_0.md",
+      "status": "passed",
+      "detail": "TROUBLESHOOTING_4_0.md is substantive and offline."
+    },
+    {
+      "id": "DOC-ACCESSIBILITY_GUIDE_4_0.md",
+      "status": "passed",
+      "detail": "ACCESSIBILITY_GUIDE_4_0.md is substantive and offline."
+    },
+    {
+      "id": "DOC-API_REFERENCE_4_0.md",
+      "status": "passed",
+      "detail": "API_REFERENCE_4_0.md is substantive and offline."
+    },
+    {
+      "id": "REF-build-v50-platform-matrix-project.nova",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "id": "REF-build-v50-platform-matrix-README.md",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "id": "REF-build-v50-platform-matrix-expected-output.json",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "id": "REF-build-v50-platform-matrix-test-controls.json",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "id": "REF-build-v50-release-pipeline-project.nova",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "id": "REF-build-v50-release-pipeline-README.md",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "id": "REF-build-v50-release-pipeline-expected-output.json",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "id": "REF-build-v50-release-pipeline-test-controls.json",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "id": "REF-package-v50-extension-sdk-project.nova",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "id": "REF-package-v50-extension-sdk-README.md",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "id": "REF-package-v50-extension-sdk-expected-output.json",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "id": "REF-package-v50-extension-sdk-test-controls.json",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "id": "REF-collaboration-v50-local-team-project.nova",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "id": "REF-collaboration-v50-local-team-README.md",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "id": "REF-collaboration-v50-local-team-expected-output.json",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "id": "REF-collaboration-v50-local-team-test-controls.json",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "id": "REF-first-game-v50-tier1-project.nova",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "id": "REF-first-game-v50-tier1-README.md",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "id": "REF-first-game-v50-tier1-expected-output.json",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "id": "REF-first-game-v50-tier1-test-controls.json",
+      "status": "passed",
+      "detail": "Present."
+    },
+    {
+      "id": "MANUAL-MANUAL.en.md",
+      "status": "passed",
+      "detail": "Versioned offline manual is substantive."
+    },
+    {
+      "id": "MANUAL-MANUAL.de.md",
+      "status": "passed",
+      "detail": "Versioned offline manual is substantive."
+    },
+    {
+      "id": "MANUAL-MANUAL.zh-CN.md",
+      "status": "passed",
+      "detail": "Versioned offline manual is substantive."
+    },
+    {
+      "id": "MANUAL-index.html",
+      "status": "passed",
+      "detail": "Versioned offline manual is substantive."
+    }
+  ],
+  "severity0Open": 0,
+  "severity1Open": 0,
+  "status": "passed"
+}

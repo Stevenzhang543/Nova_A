@@ -1,7 +1,7 @@
 {
-  "format": "nova-v4.2-migration-fixtures",
+  "format": "nova-v5.0-migration-fixtures",
   "version": 1,
-  "generatedAt": "2026-08-23T03:54:55.572Z",
+  "generatedAt": "2026-08-25T12:00:56.456Z",
   "sourceSchemas": [
     5,
     6,
@@ -30,7 +30,8 @@
     29
   ],
   "targetSchema": 29,
-  "targetEngine": "4.2.0",
+  "targetEngine": "5.0.0",
+  "maximumEngineExclusive": "6.0.0",
   "results": [
     {
       "schema": 5,

@@ -1,0 +1,5 @@
+# Nova_A 5.0 performance evidence contract
+
+Performance reports pin OS, architecture, Node/Rust/toolchain, CPU count, memory, source identity, project fixture, warmup, iteration count, and percentile method. Required measures are editor startup, project ready/open/save, scene load, play start/stop, script analysis/hot reload, deterministic import throughput and cache hit, build/export duration, representative frame/physics/render/script/animation/audio/editor budgets, workspace/search/hierarchy/Inspector latency, and memory after repeated play/import/scene cycles.
+
+The local benchmark records only measurements it actually performs and leaves unavailable interactive/GPU values as explicit exceptions. Baselines may not be promoted by using a faster machine. Ten clean builds and two-machine comparison use the documented unsigned payload exclusions. The 72-hour stability report must record actual elapsed wall time; a bounded cycle smoke remains a smoke and cannot set the qualification flag.

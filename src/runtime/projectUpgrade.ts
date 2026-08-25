@@ -74,20 +74,22 @@ export function analyzeProjectUpgrade(source: string): UpgradePreview {
   const sourceEngine = String(project.engineVersion ?? 'legacy')
   const projectFormat = String(project.projectFormat ?? 'Legacy Nova_A project')
   const minimumEngine = String(engineRange.minimum ?? project.engineVersion ?? 'legacy')
-  const maximumEngine = String(engineRange.maximumExclusive ?? '5.0.0')
+  const maximumEngine = String(engineRange.maximumExclusive ?? '6.0.0')
   const hasDeclaredEngineRange = engineRange.minimum !== undefined || engineRange.maximumExclusive !== undefined
   const validEngineRange = !hasDeclaredEngineRange || Boolean(parseVersion(minimumEngine) && parseVersion(maximumEngine) && compareVersions(minimumEngine, maximumEngine) < 0)
   const currentEngineInRange = validEngineRange && (!hasDeclaredEngineRange || (compareVersions(NOVA_ENGINE_VERSION, minimumEngine) >= 0 && compareVersions(NOVA_ENGINE_VERSION, maximumEngine) < 0))
   const v39BoundarySeal = validEngineRange && parseVersion(sourceEngine) !== null && compareVersions(sourceEngine, '4.0.0') < 0 && maximumEngine === '4.0.0' && compareVersions(NOVA_ENGINE_VERSION, minimumEngine) >= 0
-  const engineRangeSupported = currentEngineInRange || v39BoundarySeal
-  if (v39BoundarySeal) warnings.push('This 3.x project has the archived <4.0.0 ceiling; the 4.0 migration will seal it to <5.0.0 without changing schema 29.')
+  const v49BoundarySeal = validEngineRange && parseVersion(sourceEngine) !== null && compareVersions(sourceEngine, '5.0.0') < 0 && maximumEngine === '5.0.0' && compareVersions(NOVA_ENGINE_VERSION, minimumEngine) >= 0
+  const engineRangeSupported = currentEngineInRange || v39BoundarySeal || v49BoundarySeal
+  if (v39BoundarySeal) warnings.push('This 3.x project has the archived <4.0.0 ceiling; the 5.0 migration will seal it to the frozen <6.0.0 5.x baseline without changing schema 29.')
+  if (v49BoundarySeal) warnings.push('This 4.x project has the archived <5.0.0 ceiling; the 5.0 migration will seal it to the frozen <6.0.0 5.x baseline without changing schema 29.')
   if (!engineRangeSupported) warnings.push(validEngineRange ? `This project does not declare compatibility with Nova_A ${NOVA_ENGINE_VERSION}.` : 'The project engine compatibility range is malformed.')
-  const engineUpgradeRequired = sourceEngine !== NOVA_ENGINE_VERSION || v39BoundarySeal
+  const engineUpgradeRequired = sourceEngine !== NOVA_ENGINE_VERSION || v39BoundarySeal || v49BoundarySeal
   const migrationSteps = Array.from({ length: Math.max(0, NOVA_PROJECT_SCHEMA_VERSION - Math.max(sourceSchema, 1)) }, (_, index) => {
     const fromSchema = Math.max(sourceSchema, 1) + index
     return { fromSchema, toSchema: fromSchema + 1, name: fromSchema === 22 ? 'Authoritative project data, assets, scenes, and prefabs' : `Legacy schema ${fromSchema} projection` }
   })
-  if (engineUpgradeRequired && sourceSchema === NOVA_PROJECT_SCHEMA_VERSION) migrationSteps.push({ fromSchema: sourceSchema, toSchema: sourceSchema, name: '4.0 compatibility metadata seal (schema remains frozen)' })
+  if (engineUpgradeRequired && sourceSchema === NOVA_PROJECT_SCHEMA_VERSION) migrationSteps.push({ fromSchema: sourceSchema, toSchema: sourceSchema, name: '5.0 compatibility metadata seal (schema remains frozen)' })
   const schemaSupported = Number.isFinite(sourceSchema) && sourceSchema >= 1 && sourceSchema <= NOVA_PROJECT_SCHEMA_VERSION
   const formatSupported = !project.projectFormat || projectFormat === 'Nova_A Project Format 2'
   const supported = schemaSupported && formatSupported && engineRangeSupported

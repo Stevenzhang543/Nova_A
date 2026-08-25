@@ -8,10 +8,11 @@ import { performance } from 'node:perf_hooks'
 import { createServer } from 'vite'
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)))
+const engineVersion = process.argv.find(value => value.startsWith('--engine-version='))?.slice(17) || '3.2.0'
 const output = process.argv.find(value => value.startsWith('--output='))?.slice(9) || join(root, 'release-audits', 'v3.2.0-benchmarks.json')
 const percentile = (values, fraction) => [...values].sort((a, b) => a - b)[Math.min(values.length - 1, Math.floor(values.length * fraction))]
 const result = {
-  format: 'nova-benchmark-report', version: 1, engineVersion: '3.2.0', generatedAt: new Date().toISOString(),
+  format: 'nova-benchmark-report', version: 1, engineVersion, generatedAt: new Date().toISOString(),
   machine: { platform: process.platform, architecture: process.arch, node: process.version, cpuCount: (await import('node:os')).cpus().length, totalMemoryBytes: (await import('node:os')).totalmem() },
   methodology: {
     physics: 'Release-mode legacy bridge, 2,000 separated dynamic bodies, 240 fixed 60 Hz steps; includes record decode/encode and finite-value validation.',
@@ -81,5 +82,7 @@ for (const metric of ['editorColdStartMs', 'editorIdleWorkingSetBytes', 'frameTi
   result.measurements[metric] = null
   result.exceptions.push({ metric, reason: 'Requires an instrumented interactive native/GPU session; the headless benchmark does not invent a result.', plan: 'Capture on the published reference machine and attach the JSON result to the release evidence.' })
 }
+result.qualificationScope = 'Pinned headless physics/script/import/export and artifact-size baselines; interactive native/GPU metrics remain explicit external exceptions.'
+result.status = ['physics', 'scriptReload', 'assetImportCore', 'export'].every(metric => result.measurements[metric]) ? 'passed' : 'failed'
 await writeFile(output, `${JSON.stringify(result, null, 2)}\n`, 'utf8')
 console.log(`Wrote honest v3 benchmark evidence to ${output}`)

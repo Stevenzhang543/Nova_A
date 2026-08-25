@@ -1,0 +1,88 @@
+{
+  "format": "nova-v4.6-hot-reload-fixtures",
+  "version": 1,
+  "generatedAt": "2026-08-24T10:42:38.897Z",
+  "fixtures": [
+    {
+      "id": "compatible",
+      "classification": "compatible",
+      "reasons": [
+        "Function bodies and exported property layout are compatible."
+      ],
+      "transfer": [
+        {
+          "property": "speed",
+          "action": "preserve"
+        }
+      ]
+    },
+    {
+      "id": "recreate",
+      "classification": "recreate-instances",
+      "reasons": [
+        "The script requests instance recreation."
+      ],
+      "transfer": [
+        {
+          "property": "speed",
+          "action": "preserve"
+        }
+      ]
+    },
+    {
+      "id": "type",
+      "classification": "restart-required",
+      "reasons": [
+        "Export speed changed type or serialization lifetime."
+      ],
+      "transfer": [
+        {
+          "property": "speed",
+          "action": "initialize"
+        }
+      ]
+    },
+    {
+      "id": "removed",
+      "classification": "restart-required",
+      "reasons": [
+        "Serialized export speed was removed."
+      ],
+      "transfer": [
+        {
+          "property": "speed",
+          "action": "drop"
+        }
+      ]
+    },
+    {
+      "id": "syntax",
+      "classification": "rejected",
+      "reasons": [
+        "Parser or semantic analysis failed."
+      ],
+      "transfer": [
+        {
+          "property": "speed",
+          "action": "preserve"
+        }
+      ]
+    },
+    {
+      "id": "disabled",
+      "classification": "rejected",
+      "reasons": [
+        "Reload policy is disabled for this script."
+      ],
+      "transfer": [
+        {
+          "property": "speed",
+          "action": "preserve"
+        }
+      ]
+    }
+  ],
+  "rollbackMatched": true,
+  "validRuntimePreservedForRejected": true,
+  "status": "passed"
+}

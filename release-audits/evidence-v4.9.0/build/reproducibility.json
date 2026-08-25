@@ -1,0 +1,17 @@
+{
+  "format": "nova-v4.9-reproducibility",
+  "engineVersion": "4.9.0",
+  "generatedAt": "2026-08-24T19:18:17.486Z",
+  "model": "Canonical input manifests and unsigned payload files are sorted and compared by SHA-256; timestamps, signatures, installer metadata and evidence archives are excluded.",
+  "localDeterministicComparison": "passed",
+  "independentMachineA": {
+    "status": "pending",
+    "required": true
+  },
+  "independentMachineB": {
+    "status": "pending",
+    "required": true
+  },
+  "finalStatus": "pending-independent-machine-evidence",
+  "claim": "No two-machine reproducibility claim is made by this local run."
+}

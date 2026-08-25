@@ -1,0 +1,20 @@
+{
+  "format": "nova-v4.9-migration-matrix",
+  "engineVersion": "4.9.0",
+  "generatedAt": "2026-08-24T19:18:17.486Z",
+  "compatibility": {
+    "format": "Nova_A Project Format 2",
+    "supportedSchemas": "5-29",
+    "currentSchema": 29,
+    "legacyApi": "read-only migration where promised"
+  },
+  "localRegression": "passed",
+  "explicitFixtures": [
+    "reference-projects/projects/save-migration/project.nova",
+    "release-audits/fixtures-v4.2"
+  ],
+  "clean40To49": "pending-release-host-run",
+  "clean49Open": "passed",
+  "rollback": "documented; never promised where unsafe",
+  "status": "passed-local-with-clean-host-gate"
+}

@@ -1,0 +1,24 @@
+{
+  "format": "nova-v4.7-theme-token-evidence",
+  "generatedAt": "2026-08-24T13:56:24.469Z",
+  "groups": [
+    "colors",
+    "typography",
+    "spacing",
+    "radii",
+    "states",
+    "icons",
+    "sounds",
+    "animation"
+  ],
+  "inheritance": "deterministic parent-first merge with cycle diagnostics",
+  "compareAndUnused": {
+    "id": "UI-THEME",
+    "status": "passed",
+    "detail": "Theme comparison and unused-token inspection execute deterministically.",
+    "metrics": {
+      "differences": 1
+    }
+  },
+  "status": "passed"
+}

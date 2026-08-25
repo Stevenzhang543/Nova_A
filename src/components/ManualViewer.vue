@@ -2,18 +2,19 @@
   <Teleport to="body">
     <section v-if="state.visible" class="manual-viewer" role="dialog" aria-modal="true" :aria-label="t('manual')" @keydown.esc="closeBundledManual">
       <header><div><strong>{{ t('manual') }}</strong><span>{{ t('bundledManual') }}</span></div><nav><button @click="reloadBundledManual">{{ t('reload') }}</button><button class="close" :title="t('close')" @click="closeBundledManual">×</button></nav></header>
-      <iframe :key="state.reloadToken" src="./manual/index.html" :title="t('manual')" @load="loaded = true"></iframe>
+      <iframe :key="state.reloadToken" :src="manualSource" :title="t('manual')" @load="loaded = true"></iframe>
       <div v-if="!loaded" class="manual-loading">{{ t('loadingManual') }}</div>
     </section>
   </Teleport>
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { t } from '../i18n'
 import { closeBundledManual, manualViewerState as state, reloadBundledManual } from '../runtime/openManual'
 
 const loaded = ref(false)
+const manualSource = computed(() => `./manual/index.html${state.section ? `#${state.section}` : ''}`)
 watch(() => state.reloadToken, () => { loaded.value = false })
 </script>
 

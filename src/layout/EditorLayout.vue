@@ -95,7 +95,7 @@ function dropPanel(destination: 'left' | 'right' | 'floating'): void { if (dragg
 <style scoped>
 .editor-root { display: flex; flex-direction: column; height: 100vh; min-height: 0; background: var(--bg-base); color: var(--text-primary); }
 .read-only-banner{min-height:28px;flex:0 0 28px;display:grid;place-items:center;color:var(--warning);background:color-mix(in srgb,var(--warning) 12%,var(--surface-1));border-bottom:1px solid var(--warning);font-size:12px}.read-only :deep(.config-wrapper),.read-only .persistent-viewport{pointer-events:none;filter:saturate(.72)}
-.workspace-control-row { min-width: 0; flex: 0 0 42px; display: flex; align-items: stretch; border-bottom: 1px solid var(--border-subtle); background: color-mix(in srgb, var(--surface-1) 94%, var(--bg-base)); isolation: isolate; }
+.workspace-control-row { position:relative; z-index:600; min-width: 0; flex: 0 0 48px; display: flex; align-items: stretch; overflow:visible; border-bottom: 1px solid var(--border-subtle); background: color-mix(in srgb, var(--surface-1) 94%, var(--bg-base)); isolation: isolate; }
 .workspace-control-row :deep(.workspace-bar) { min-width: 0; flex: 1; border-bottom: 0; }
 .workspace-control-row :deep(.actionbar) { flex: 0 0 auto; }
 .editor-main { position: relative; flex: 1; display: flex; min-height: 0; }

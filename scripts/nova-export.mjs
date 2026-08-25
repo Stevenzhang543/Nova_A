@@ -4,7 +4,7 @@ import { mkdir, readFile, writeFile, copyFile, stat, unlink } from 'node:fs/prom
 import { dirname, join, resolve } from 'node:path'
 import { gzipSync } from 'node:zlib'
 
-const ENGINE_VERSION = '4.0.0'
+const ENGINE_VERSION = '5.0.1'
 const HEADER_BYTES = 16
 
 function argumentsMap(values) {
@@ -36,6 +36,9 @@ if (!['x86_64', 'aarch64'].includes(architecture)) throw new Error('Architecture
 if (!['game', 'headless-server'].includes(runtimeMode)) throw new Error('Runtime must be game or headless-server')
 if (!['store', 'balanced', 'maximum'].includes(compression)) throw new Error('Compression must be store, balanced, or maximum')
 if (target === 'web' && runtimeMode === 'headless-server') throw new Error('Authoritative headless runtime requires a native target')
+const hostTarget = process.platform === 'win32' ? 'windows' : process.platform === 'darwin' ? 'macos' : process.platform === 'linux' ? 'linux' : 'unknown'
+if (target !== 'web' && target !== hostTarget) throw new Error(`${target} export requires a matching ${target} host or CI runner; Nova_A does not create mislabeled cross-target bundles`)
+if (target !== 'web' && !args.has('player') && ((process.arch === 'arm64' ? 'aarch64' : 'x86_64') !== architecture)) throw new Error(`${architecture} native export requires an explicit matching player template`)
 
 function stable(value) {
   if (Array.isArray(value)) return value.map(stable)
@@ -60,7 +63,11 @@ async function writeIncremental(path, bytes) {
 async function assetBytes(asset) {
   const source = String(asset.source ?? '')
   if (source.startsWith('data:')) return Buffer.from(source.slice(source.indexOf(',') + 1), source.slice(0, source.indexOf(',')).includes(';base64') ? 'base64' : 'utf8')
-  if (source && INLINE_TEXT_ASSET_TYPES.has(String(asset.assetType))) return Buffer.from(source, 'utf8')
+  const embeddedText = INLINE_TEXT_ASSET_TYPES.has(String(asset.assetType))
+    || String(asset.mimeType ?? '').startsWith('text/')
+    || String(asset.mimeType ?? '').includes('json')
+    || String(asset.mimeType ?? '').startsWith('application/x-nova-')
+  if (Object.hasOwn(asset, 'source') && (embeddedText || (source === '' && Number(asset.byteLength ?? 0) === 0))) return Buffer.from(source, 'utf8')
   const diskPath = resolve(dirname(projectPath), safeRelative(String(asset.path ?? '')))
   return readFile(diskPath)
 }
@@ -72,6 +79,16 @@ if (!Array.isArray(project.scenes) || !project.scenes.length) throw new Error('P
 const build = project.projectSettings?.build ?? {}
 build.target = target; build.profile = profile; build.architecture = architecture; build.runtimeMode = runtimeMode; build.developmentBuild = profile === 'debug'; build.outputDirectory = ''
 build.delivery = { ...(build.delivery ?? {}), deterministic: true, incremental, cacheMode, compression, patchManifest: patchEnabled }
+build.delivery.releaseChannel = String(args.get('channel') ?? build.delivery.releaseChannel ?? (profile === 'release' ? 'beta' : 'development'))
+if (!['stable', 'beta', 'development'].includes(build.delivery.releaseChannel)) throw new Error('Release channel must be stable, beta, or development')
+if (build.delivery.releaseChannel === 'stable' && profile !== 'release') throw new Error('Stable channel output requires the release profile')
+build.delivery.exportTemplate = String(args.get('template') ?? build.delivery.exportTemplate ?? `${target}-${architecture}-v1`)
+build.delivery.provenance = String(args.get('provenance') ?? build.delivery.provenance ?? 'true') !== 'false'
+build.delivery.sbom = String(args.get('sbom') ?? build.delivery.sbom ?? 'true') !== 'false'
+build.delivery.webHeaders = String(args.get('web-headers') ?? build.delivery.webHeaders ?? 'true') !== 'false'
+build.delivery.deploymentMode = String(args.get('deployment') ?? build.delivery.deploymentMode ?? 'local')
+build.delivery.deploymentDestination = String(args.get('deployment-destination') ?? build.delivery.deploymentDestination ?? '')
+if (build.delivery.deploymentMode === 'remote-hook' && !/^https:\/\//i.test(build.delivery.deploymentDestination)) throw new Error('Remote deployment requires an explicit HTTPS destination; Nova_A never deploys implicitly')
 project.projectSettings ??= {}; project.projectSettings.build = build
 const entries = [{ path: 'project.nova', bytes: null, mimeType: 'application/x-nova-project' }]
 const includePatterns = String(args.get('include') ?? '').split(',').map(value => value.trim()).filter(Boolean).concat(Array.isArray(build.delivery.include) ? build.delivery.include : [])
@@ -137,6 +154,23 @@ if (patchEnabled) await emit('nova-patch-manifest.json', Buffer.from(`${JSON.str
 else try { await unlink(join(output, 'nova-patch-manifest.json')) } catch { /* No stale patch manifest. */ }
 const report = { format: 'nova-build-report', version: 2, engineVersion: ENGINE_VERSION, buildId, createdAt: 0, target, architecture, profile, cacheMode, projectId: String(project.projectMetadata?.id ?? ''), totalBytes: records.reduce((sum, file) => sum + file.bytes, 0), files: records }
 await emit('nova-build-report.json', Buffer.from(`${JSON.stringify(report, null, 2)}\n`))
+const contentManifest = { format: 'nova-content-manifest', version: 1, engineVersion: ENGINE_VERSION, buildId, include: includePatterns, exclude: excludePatterns, stripUnusedAssets: stripUnused, compression, files: records }
+await emit('nova-content-manifest.json', Buffer.from(`${JSON.stringify(contentManifest, null, 2)}\n`))
+if (build.delivery.provenance) {
+  const inputsHash = sha(Buffer.from(JSON.stringify(stable({ build, packages: project.packages?.lockfile ?? [], projectId: project.projectMetadata?.id ?? '' }))))
+  const outputsHash = sha(Buffer.from(JSON.stringify(stable(records))))
+  const provenance = { format: 'nova-build-provenance', version: 1, engineVersion: ENGINE_VERSION, buildId, projectId: String(project.projectMetadata?.id ?? ''), target, architecture, profile, releaseChannel: build.delivery.releaseChannel, sourceCommit: String(args.get('source-commit') ?? 'working-tree').slice(0, 80), toolchain: { builder: 'Nova_A Build CLI 1', node: process.version, host: process.platform, architecture: process.arch }, inputsHash, outputsHash, cacheKey: sha(Buffer.from(`${ENGINE_VERSION}:${target}:${architecture}:${profile}:${inputsHash}`)), deterministic: true, generatedAt: '1970-01-01T00:00:00.000Z', files: records }
+  await emit('nova-build-provenance.json', Buffer.from(`${JSON.stringify(provenance, null, 2)}\n`))
+}
+if (build.delivery.sbom) {
+  const components = (project.packages?.lockfile ?? []).map(entry => ({ type: 'library', 'bom-ref': `${entry.id}@${entry.version}`, name: entry.id, version: entry.version, hashes: [{ alg: 'SHA-256', content: entry.sha256 }], properties: [{ name: 'nova.source', value: `${entry.source?.kind ?? 'unknown'}:${entry.source?.location ?? ''}` }] }))
+  const sbom = { bomFormat: 'CycloneDX', specVersion: '1.5', serialNumber: `urn:sha256:${buildId}`, version: 1, metadata: { component: { type: 'application', name: String(build.gameName ?? 'MyGame'), version: String(build.platform?.version ?? '1.0.0') }, properties: [{ name: 'nova.engine', value: ENGINE_VERSION }, { name: 'nova.build', value: buildId }] }, components }
+  await emit('nova-sbom.cdx.json', Buffer.from(`${JSON.stringify(sbom, null, 2)}\n`))
+}
+const deployment = { format: 'nova-deployment-manifest', version: 1, engineVersion: ENGINE_VERSION, buildId, mode: build.delivery.deploymentMode, destination: build.delivery.deploymentDestination || 'local', releaseChannel: build.delivery.releaseChannel, implicitNetworkOperation: false, signing: { hookConfigured: Boolean(build.delivery.signingHook), notarizationHookConfigured: Boolean(build.delivery.notarizationHook), execution: 'external-explicit' }, cleanMachineJob: build.delivery.cleanMachineJob === true }
+await emit('nova-deployment-manifest.json', Buffer.from(`${JSON.stringify(deployment, null, 2)}\n`))
+if (target === 'web' && build.delivery.webHeaders) await emit('_headers', Buffer.from('/*\n  X-Content-Type-Options: nosniff\n  Referrer-Policy: strict-origin-when-cross-origin\n  Permissions-Policy: camera=(), microphone=(), geolocation=()\n\n/assets/*\n  Cache-Control: public, max-age=31536000, immutable\n\n/index.html\n  Cache-Control: no-cache\n/player.html\n  Cache-Control: no-cache\n'))
+if (target !== 'web' && (build.delivery.debugSymbols !== false || build.delivery.crashSymbols !== false)) await emit('symbols/nova-symbol-map.json', Buffer.from(`${JSON.stringify({ format: 'nova-symbol-map', version: 1, engineVersion: ENGINE_VERSION, buildId, workflow: 'Archive matching PDB, dSYM, or unstripped ELF symbols under this build ID.' }, null, 2)}\n`))
 if (build.delivery?.sizeReport !== false) await emit('nova-build-size-report.json', Buffer.from(`${JSON.stringify({ format: 'nova-build-size-report', version: 1, engineVersion: ENGINE_VERSION, totalBytes: report.totalBytes, files: [...records].sort((a, b) => b.bytes - a.bytes) }, null, 2)}\n`))
 if (build.delivery?.dependencyReport !== false) await emit('nova-dependency-report.json', Buffer.from(`${JSON.stringify({ format: 'nova-dependency-report', version: 1, engineVersion: ENGINE_VERSION, packages: project.packages?.lockfile ?? [], assets: entries.filter(entry => entry.asset).map(entry => ({ uuid: entry.asset.uuid, path: entry.path, type: entry.asset.assetType })) }, null, 2)}\n`))
 console.log(JSON.stringify({ output, buildId, changedFiles, cacheHits, files: outputs.length + 2 }, null, 2))

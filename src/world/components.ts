@@ -256,6 +256,13 @@ export class AudioSource extends ComponentBase {
   randomVolume = 0
   virtualizeWhenLimited = true
   streamOverride: 'ImportSetting' | 'Stream' | 'Buffer' = 'ImportSetting'
+  startOffsetSeconds = 0
+  fadeInSeconds = 0
+  fadeOutSeconds = 0
+  dopplerScale = 0
+  playlist: string[] = []
+  playlistMode: 'Single' | 'Sequential' | 'Random' = 'Single'
+  playlistIndex = 0
 
   constructor(uuid?: string) { super(uuid) }
 }
@@ -289,6 +296,7 @@ export class Canvas extends ComponentBase {
 
 export class RectTransform extends ComponentBase {
   readonly kind = 'RectTransform' as const
+  layoutMode: 'Responsive' | 'Fixed' = 'Responsive'
   anchorPreset: AnchorPreset = 'center'
   pivot: Vec2 = { x: .5, y: .5 }
   position: Vec2 = { x: 0, y: 0 }
@@ -305,6 +313,10 @@ export class RectTransform extends ComponentBase {
   aspectRatio = 0
   aspectConstraint: 'None' | 'Fit' | 'WidthControlsHeight' | 'HeightControlsWidth' = 'None'
   breakpoints: Array<{ minWidth: number; maxWidth: number; visible: boolean; position: Vec2; size: Vec2 }> = []
+  mirrorInRtl = true
+  zOrder = 0
+  componentSource: string | null = null
+  componentVariant = 'default'
   focusable = true
   tabIndex = 0
   focusUp: string | null = null
@@ -382,6 +394,10 @@ export class Text extends ComponentBase {
   opacity = 100
   localizationKey = ''
   localizationVariables: Record<string, string | number | boolean> = {}
+  wrap: 'None' | 'Word' | 'Character' = 'Word'
+  overflow: 'Clip' | 'Ellipsis' | 'Visible' = 'Clip'
+  inputPromptAction = ''
+  captionCategory: 'None' | 'Dialogue' | 'Effects' | 'Music' = 'None'
 
   constructor(uuid?: string) { super(uuid) }
 }
@@ -680,6 +696,7 @@ export class ObjectPool2D extends ComponentBase {
 
 export class ParticleEmitter2D extends ComponentBase {
   readonly kind = 'ParticleEmitter2D' as const
+  particleSystemAsset: string | null = null
   textureAsset: string | null = null
   emissionRate = 20
   burst = 0
@@ -713,6 +730,9 @@ export class ParticleEmitter2D extends ComponentBase {
   subEmitterUuid: string | null = null
   subEmitterCount = 1
   previewInEditor = true
+  collisionMode: 'None' | 'Bounce' | 'Stop' = 'None'
+  collisionRestitution = 0.5
+  collisionLayerMask = 0xffff_ffff
 
   constructor(uuid?: string) { super(uuid) }
 }

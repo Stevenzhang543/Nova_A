@@ -1,0 +1,13 @@
+{
+  "format": "nova-install-smoke",
+  "version": 1,
+  "artifact": "portable",
+  "localArtifact": {
+    "path": "src-tauri/target/release/nova_a.exe",
+    "bytes": 15579648,
+    "sha256": "3988431f735bb6c6676fa9ac814c054e9c7695c79fe3b4f35767a78e8c0d2636"
+  },
+  "isolatedPortableStartup": true,
+  "cleanMachineLifecycle": "pending-external-gate",
+  "status": "passed"
+}

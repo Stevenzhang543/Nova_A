@@ -6,6 +6,30 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
+
+function Invoke-WithTransientFileRetry {
+  param(
+    [Parameter(Mandatory = $true)]
+    [string]$Operation,
+    [Parameter(Mandatory = $true)]
+    [scriptblock]$Action,
+    [int]$MaximumAttempts = 6
+  )
+
+  for ($attempt = 1; $attempt -le $MaximumAttempts; $attempt++) {
+    try {
+      & $Action
+      return
+    }
+    catch {
+      if ($attempt -eq $MaximumAttempts) {
+        throw "$Operation failed after $MaximumAttempts attempts: $($_.Exception.Message)"
+      }
+      Start-Sleep -Milliseconds (250 * $attempt)
+    }
+  }
+}
+
 $projectRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $releaseDirectory = Join-Path $projectRoot "releases\v$Version"
 $notesPath = Join-Path $projectRoot "release-audits\v$Version-release-notes.md"
@@ -70,7 +94,10 @@ finally {
 }
 
 $referenceArchive = Join-Path $releaseDirectory "Nova_A-v$Version-reference-projects.zip"
-Compress-Archive -Path (Join-Path $projectRoot 'reference-projects\*') -DestinationPath $referenceArchive -CompressionLevel Optimal -Force
+Invoke-WithTransientFileRetry -Operation 'Reference-project archive creation' -Action {
+  if (Test-Path -LiteralPath $referenceArchive) { Remove-Item -LiteralPath $referenceArchive -Force }
+  Compress-Archive -Path (Join-Path $projectRoot 'reference-projects\*') -DestinationPath $referenceArchive -CompressionLevel Optimal -Force
+}
 
 $evidenceArchive = Join-Path $releaseDirectory "Nova_A-v$Version-release-evidence.zip"
 $evidenceStage = Join-Path ([System.IO.Path]::GetTempPath()) ("nova-a-evidence-" + [guid]::NewGuid().ToString('N'))

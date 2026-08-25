@@ -1,0 +1,57 @@
+{
+  "format": "nova-v4.5-physics-tolerances",
+  "version": 1,
+  "generatedAt": "2026-08-24T07:03:15.927Z",
+  "tolerances": {
+    "gravity": {
+      "id": "gravity",
+      "absolute": 1e-9,
+      "relative": 1e-8,
+      "unit": "m",
+      "rationale": "Semi-implicit Euler fixed-step position fixture."
+    },
+    "velocity": {
+      "id": "velocity",
+      "absolute": 1e-10,
+      "relative": 1e-9,
+      "unit": "m/s",
+      "rationale": "Fixed-step velocity integration."
+    },
+    "momentum": {
+      "id": "momentum",
+      "absolute": 1e-8,
+      "relative": 1e-7,
+      "unit": "kg·m/s",
+      "rationale": "Impulse/contact rounding across supported Tier-1 runtimes."
+    },
+    "energy": {
+      "id": "energy",
+      "absolute": 1e-7,
+      "relative": 0.00005,
+      "unit": "J",
+      "rationale": "Iterative contact and constraint solver tolerance."
+    },
+    "query": {
+      "id": "query",
+      "absolute": 1e-7,
+      "relative": 1e-7,
+      "unit": "m",
+      "rationale": "Bounded convex query and sweep binary search."
+    },
+    "joint": {
+      "id": "joint",
+      "absolute": 0.00005,
+      "relative": 0.0001,
+      "unit": "m",
+      "rationale": "Iterative joint positional correction."
+    },
+    "rope": {
+      "id": "rope",
+      "absolute": 0.0001,
+      "relative": 0.0005,
+      "unit": "m",
+      "rationale": "Compliant segmented Rope2D constraint."
+    }
+  },
+  "versioned": true
+}

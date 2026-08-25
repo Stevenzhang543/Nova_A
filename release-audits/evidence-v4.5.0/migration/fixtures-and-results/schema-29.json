@@ -1,0 +1,9 @@
+{
+  "format": "nova-migration-result",
+  "version": 1,
+  "release": "4.5.0",
+  "schema": 29,
+  "migrationRequired": false,
+  "profileFallback": "Legacy physics settings normalize to Balanced and serialize on next save.",
+  "status": "passed-contract"
+}

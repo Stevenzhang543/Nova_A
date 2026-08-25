@@ -1,0 +1,17 @@
+{
+  "engineVersion": "5.0.1",
+  "schema": 29,
+  "projectName": "Audio 4.8 Routing and Effects",
+  "expectedValidation": "pass",
+  "featureMatrix": [
+    "bus graph",
+    "effects",
+    "sends",
+    "snapshots",
+    "automation",
+    "limiter",
+    "peak/RMS/clipping"
+  ],
+  "budgetsPass": true,
+  "unsupportedFeaturesAreActionable": true
+}

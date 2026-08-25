@@ -1,0 +1,298 @@
+{
+  "format": "nova-v4.5-physics-verification",
+  "version": 1,
+  "engineVersion": "4.5.0",
+  "generatedAt": "2026-08-24T07:03:15.927Z",
+  "checks": [
+    {
+      "id": "PHY-AN-gravity",
+      "status": "passed",
+      "detail": "gravity: expected 491.1497208333333, actual 491.1497208333316.",
+      "metrics": {
+        "id": "gravity",
+        "expected": 491.1497208333333,
+        "actual": 491.1497208333316,
+        "absoluteError": 1.6484591469634324e-12,
+        "relativeError": 3.3563271585831166e-15,
+        "tolerance": {
+          "id": "gravity",
+          "absolute": 1e-9,
+          "relative": 1e-8,
+          "unit": "m",
+          "rationale": "Semi-implicit Euler fixed-step position fixture."
+        },
+        "passed": true
+      }
+    },
+    {
+      "id": "PHY-AN-velocity",
+      "status": "passed",
+      "detail": "velocity: expected 3.5250924038823945, actual 3.5250924038823945.",
+      "metrics": {
+        "id": "velocity",
+        "expected": 3.5250924038823945,
+        "actual": 3.5250924038823945,
+        "absoluteError": 0,
+        "relativeError": 0,
+        "tolerance": {
+          "id": "velocity",
+          "absolute": 1e-10,
+          "relative": 1e-9,
+          "unit": "m/s",
+          "rationale": "Fixed-step velocity integration."
+        },
+        "passed": true
+      }
+    },
+    {
+      "id": "PHY-AN-restitution",
+      "status": "passed",
+      "detail": "restitution: expected 4.2, actual 4.199999999999999.",
+      "metrics": {
+        "id": "restitution",
+        "expected": 4.2,
+        "actual": 4.199999999999999,
+        "absoluteError": 8.881784197001252e-16,
+        "relativeError": 2.1147105230955362e-16,
+        "tolerance": {
+          "id": "velocity",
+          "absolute": 1e-10,
+          "relative": 1e-9,
+          "unit": "m/s",
+          "rationale": "Fixed-step velocity integration."
+        },
+        "passed": true
+      }
+    },
+    {
+      "id": "PHY-AN-momentum-x",
+      "status": "passed",
+      "detail": "momentum-x: expected 7.5, actual 7.5.",
+      "metrics": {
+        "id": "momentum-x",
+        "expected": 7.5,
+        "actual": 7.5,
+        "absoluteError": 0,
+        "relativeError": 0,
+        "tolerance": {
+          "id": "momentum",
+          "absolute": 1e-8,
+          "relative": 1e-7,
+          "unit": "kg·m/s",
+          "rationale": "Impulse/contact rounding across supported Tier-1 runtimes."
+        },
+        "passed": true
+      }
+    },
+    {
+      "id": "PHY-AN-momentum-y",
+      "status": "passed",
+      "detail": "momentum-y: expected -10, actual -10.",
+      "metrics": {
+        "id": "momentum-y",
+        "expected": -10,
+        "actual": -10,
+        "absoluteError": 0,
+        "relativeError": 0,
+        "tolerance": {
+          "id": "momentum",
+          "absolute": 1e-8,
+          "relative": 1e-7,
+          "unit": "kg·m/s",
+          "rationale": "Impulse/contact rounding across supported Tier-1 runtimes."
+        },
+        "passed": true
+      }
+    },
+    {
+      "id": "PHY-AN-energy",
+      "status": "passed",
+      "detail": "energy: expected 25, actual 25.",
+      "metrics": {
+        "id": "energy",
+        "expected": 25,
+        "actual": 25,
+        "absoluteError": 0,
+        "relativeError": 0,
+        "tolerance": {
+          "id": "energy",
+          "absolute": 1e-7,
+          "relative": 0.00005,
+          "unit": "J",
+          "rationale": "Iterative contact and constraint solver tolerance."
+        },
+        "passed": true
+      }
+    },
+    {
+      "id": "PHY-AN-friction",
+      "status": "passed",
+      "detail": "friction: expected 6, actual 6.",
+      "metrics": {
+        "id": "friction",
+        "expected": 6,
+        "actual": 6,
+        "absoluteError": 0,
+        "relativeError": 0,
+        "tolerance": {
+          "id": "momentum",
+          "absolute": 1e-8,
+          "relative": 1e-7,
+          "unit": "kg·m/s",
+          "rationale": "Impulse/contact rounding across supported Tier-1 runtimes."
+        },
+        "passed": true
+      }
+    },
+    {
+      "id": "PHY-AN-rope-strain",
+      "status": "passed",
+      "detail": "rope-strain: expected 0.25, actual 0.25.",
+      "metrics": {
+        "id": "rope-strain",
+        "expected": 0.25,
+        "actual": 0.25,
+        "absoluteError": 0,
+        "relativeError": 0,
+        "tolerance": {
+          "id": "rope",
+          "absolute": 0.0001,
+          "relative": 0.0005,
+          "unit": "m",
+          "rationale": "Compliant segmented Rope2D constraint."
+        },
+        "passed": true
+      }
+    },
+    {
+      "id": "PHY-AN-spring-force",
+      "status": "passed",
+      "detail": "spring-force: expected -25, actual -25.",
+      "metrics": {
+        "id": "spring-force",
+        "expected": -25,
+        "actual": -25,
+        "absoluteError": 0,
+        "relativeError": 0,
+        "tolerance": {
+          "id": "joint",
+          "absolute": 0.00005,
+          "relative": 0.0001,
+          "unit": "m",
+          "rationale": "Iterative joint positional correction."
+        },
+        "passed": true
+      }
+    },
+    {
+      "id": "PHY-EVENT-ORDER",
+      "status": "passed",
+      "detail": "Pair ordering and enter/stay/exit phase ordering are stable.",
+      "metrics": {
+        "order": [
+          "collisionStarted",
+          "collisionStayed",
+          "collisionEnded",
+          "triggerEntered"
+        ]
+      }
+    },
+    {
+      "id": "PHY-EDGE-NUMBERS",
+      "status": "passed",
+      "detail": "Non-finite and out-of-range profile values normalize to documented safe bounds.",
+      "metrics": {
+        "id": "Custom",
+        "name": "Balanced",
+        "tickRate": 60,
+        "maxCatchUpSteps": 1,
+        "minimumSubsteps": 128,
+        "velocityIterations": 1,
+        "positionIterations": 16,
+        "interpolation": "Interpolate",
+        "droppedTimePolicy": "Drop",
+        "sleepLinearThreshold": 0,
+        "sleepAngularThreshold": 0.001,
+        "timeToSleep": 0.5,
+        "physicsBudgetMs": 1000
+      }
+    },
+    {
+      "id": "PHY-PROFILES",
+      "status": "passed",
+      "detail": "Accurate, Balanced, and Fast profiles retain documented settings.",
+      "metrics": {}
+    },
+    {
+      "id": "PHY-QUERY-CATALOG",
+      "status": "passed",
+      "detail": "Every documented stable query is cataloged.",
+      "metrics": {}
+    },
+    {
+      "id": "PHY-SHAPE-CATALOG",
+      "status": "passed",
+      "detail": "All stable authoring shapes declare solver support rather than silently substituting.",
+      "metrics": {}
+    },
+    {
+      "id": "PHY-PROFILE-ROUNDTRIP",
+      "status": "passed",
+      "detail": "Physics profile JSON round-trip is deterministic.",
+      "metrics": {}
+    },
+    {
+      "id": "PHY-CHARACTER-FIXTURES",
+      "status": "passed",
+      "detail": "Slope, step, snap, ceiling, platform, and fixed-rate fixtures are explicit.",
+      "metrics": {
+        "count": 8
+      }
+    },
+    {
+      "id": "PHY-JOINT-ROPE-FIXTURES",
+      "status": "passed",
+      "detail": "All stable joint families and segmented Rope2D have evidence fixtures.",
+      "metrics": {
+        "count": 7
+      }
+    },
+    {
+      "id": "PHY-STRESS-20000",
+      "status": "passed",
+      "detail": "20,000 body telemetry calculations completed in 6.05 ms.",
+      "metrics": {
+        "bodyCount": 20000,
+        "contactBudget": 20000,
+        "constraintBudget": 2000,
+        "stressMs": 6.04509999999982,
+        "peakEnergy": 125.61500000000001,
+        "checksum": 2121547131,
+        "memory": "bounded-by-generated-fixture"
+      }
+    },
+    {
+      "id": "PHY-ACCELERATED-SOAK",
+      "status": "passed",
+      "detail": "Accelerated deterministic 24-hour-equivalent step soak remained finite; wall-clock claim remains false.",
+      "metrics": {
+        "format": "nova-v4.5-physics-soak",
+        "version": 1,
+        "generatedAt": "2026-08-24T07:03:15.927Z",
+        "simulatedSteps": 5184000,
+        "simulatedSeconds": 86400,
+        "equivalentHours": 24,
+        "wallClockSeconds": 0.020569499999999834,
+        "wallClock24Hours": false,
+        "maximumEnergy": 0.0005339238444414804,
+        "finalPosition": 0,
+        "finalVelocity": 0.027233128425615358,
+        "status": "passed-accelerated",
+        "externalGate": "real wall-clock 24-hour qualified-player soak pending"
+      }
+    }
+  ],
+  "severity0Open": 0,
+  "severity1Open": 0,
+  "status": "passed"
+}

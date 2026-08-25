@@ -1,0 +1,8 @@
+{
+  "engineVersion": "5.0.1",
+  "schema": 29,
+  "projectName": "UI v4.7 Responsive HUD",
+  "expectedValidation": "pass",
+  "purpose": "Responsive anchors, containers, safe areas, breakpoints, clipping, scrolling and reusable HUD controls.",
+  "windowsWebParity": true
+}

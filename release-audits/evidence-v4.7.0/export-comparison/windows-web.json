@@ -1,0 +1,84 @@
+{
+  "format": "nova-v4.7-export-comparison",
+  "generatedAt": "2026-08-24T13:56:24.469Z",
+  "editorPreviewContract": "shared runtime UI resolver, animation sampler, localization table, theme resolver and input prompt resolver",
+  "windows": {
+    "format": "nova-v4.7-windows-smoke",
+    "version": 1,
+    "engineVersion": "4.7.0",
+    "generatedAt": "2026-08-24T13:55:55.046Z",
+    "host": "win32-x64",
+    "isolatedProfile": true,
+    "artifacts": {
+      "portable": {
+        "path": "src-tauri/target/release/nova_a.exe",
+        "bytes": 15595520,
+        "sha256": "8dbffbcee6cae2b974ab96ea54b1cb05a0ccffbc6152a4373c250bc98aa6967b"
+      },
+      "msi": {
+        "path": "src-tauri/target/release/bundle/msi/Nova_A_4.7.0_x64_en-US.msi",
+        "bytes": 9277440,
+        "sha256": "83cd33449a8a53a453103c59b0348472c541edf8238aa9ca79ef0f61abd7796a"
+      },
+      "setup": {
+        "path": "src-tauri/target/release/bundle/nsis/Nova_A_4.7.0_x64-setup.exe",
+        "bytes": 8215255,
+        "sha256": "9bf1ec0b05f213b2b6911d954b1898dfdfd1a5c10768a2e56fff965dddd708da"
+      }
+    },
+    "launchSeconds": 10,
+    "stayedAlive": true,
+    "earlyExit": null,
+    "checks": [
+      {
+        "id": "artifact-portable",
+        "status": "passed",
+        "detail": {
+          "path": "src-tauri/target/release/nova_a.exe",
+          "bytes": 15595520,
+          "sha256": "8dbffbcee6cae2b974ab96ea54b1cb05a0ccffbc6152a4373c250bc98aa6967b"
+        }
+      },
+      {
+        "id": "artifact-msi",
+        "status": "passed",
+        "detail": {
+          "path": "src-tauri/target/release/bundle/msi/Nova_A_4.7.0_x64_en-US.msi",
+          "bytes": 9277440,
+          "sha256": "83cd33449a8a53a453103c59b0348472c541edf8238aa9ca79ef0f61abd7796a"
+        }
+      },
+      {
+        "id": "artifact-setup",
+        "status": "passed",
+        "detail": {
+          "path": "src-tauri/target/release/bundle/nsis/Nova_A_4.7.0_x64-setup.exe",
+          "bytes": 8215255,
+          "sha256": "9bf1ec0b05f213b2b6911d954b1898dfdfd1a5c10768a2e56fff965dddd708da"
+        }
+      },
+      {
+        "id": "portable-isolated-startup",
+        "status": "passed",
+        "detail": {
+          "launchSeconds": 10,
+          "stayedAlive": true,
+          "earlyExit": null
+        }
+      }
+    ],
+    "cleanMachineLifecycle": "pending external disposable-VM gate",
+    "publisherSigning": "pending signing identity",
+    "screenReaderSpeech": "pending supported clean-machine manual gate",
+    "systemMutationPerformedByAudit": false,
+    "status": "passed"
+  },
+  "web": {
+    "productionViteWasm": "passed",
+    "browserLayout": "passed"
+  },
+  "deterministicContractChecks": "passed",
+  "cleanMachineWindows": "external gate",
+  "firefoxAndWebKit": "external gates",
+  "status": "passed-local-with-external-platform-gates"
+}

@@ -1,0 +1,11 @@
+{
+  "format": "nova-v4.9-benchmarks",
+  "engineVersion": "4.9.0",
+  "generatedAt": "2026-08-24T19:18:17.486Z",
+  "scope": "Release-system overhead and deterministic contract checks",
+  "runtime": "passed",
+  "layout": "passed",
+  "nativeStartup": "passed",
+  "independentHostPerformance": "pending-external",
+  "status": "passed-local"
+}

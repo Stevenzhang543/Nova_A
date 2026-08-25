@@ -107,7 +107,7 @@ function textAsset(seed: string, name: string, assetType: 'script' | 'animation'
 }
 
 function scriptAsset(seed: string, name: string, source: string): JsonRecord {
-  return { ...textAsset(seed, `${name}.rhai`, 'script', `Assets/Scripts/${name}.rhai`, source, 'text/x-rhai'), script: { version: 1, apiVersion: 1, breakpoints: [], breakpointDetails: [], tests: [], packageDependencies: [], packageName: '', reloadPolicy: 'preserve', signalConnections: [], recoverySource: '', lastSavedHash: '' } }
+  return { ...textAsset(seed, `${name}.rhai`, 'script', `Assets/Scripts/${name}.rhai`, source, 'text/x-rhai'), script: { version: 1, apiVersion: 2, breakpoints: [], breakpointDetails: [], tests: [], packageDependencies: [], packageName: '', reloadPolicy: 'preserve', signalConnections: [], recoverySource: '', lastSavedHash: '' } }
 }
 
 function imageAsset(seed: string, name: string, color: string): JsonRecord {
@@ -177,7 +177,7 @@ function project(name: string, template: ProjectTemplateId, scenes: JsonRecord[]
     plugins: [],
     packages: { manifestVersion: 1, installed: [], lockfile: [], offlineCache: [], offlineMode: true },
     projectSettings: {
-      inputMap: defaultInputMap(), audio: defaultAudioSettings(), scripting: { apiVersion: 1, customSignals: [], maxConsoleEntries: 2000, debuggerEnabled: true, hotReloadEnabled: true, breakOnRuntimeError: true, deterministicTestSeed: 1, externalEditorProtocol: true },
+      inputMap: defaultInputMap(), audio: defaultAudioSettings(), scripting: { apiVersion: 2, customSignals: [], maxConsoleEntries: 2000, debuggerEnabled: true, hotReloadEnabled: true, breakOnRuntimeError: true, deterministicTestSeed: 1, externalEditorProtocol: true },
       rendering: { lightingEnabled: false, ambientColor: { r: 255, g: 255, b: 255 }, ambientIntensity: 1, shadowQuality: 'Soft', colorSpace: 'sRGB', postProcessing: { enabled: false, exposure: 0, contrast: 1, saturation: 1, vignette: 0, bloom: 0, blur: 0, userMaterial: null }, debugView: 'None' },
       build: {
         gameName: name, target: 'windows', architecture: 'x86_64', runtimeMode: 'game', profile: 'debug', sceneOrder: sceneIds, startupSceneUuid: sceneIds[0], packageIntoExecutable: false, developmentBuild: true, outputDirectory: '',
@@ -320,7 +320,7 @@ function networkedOptionalTemplate(name: string): JsonRecord {
   const second = shape('network-player-two', 'Remote Player', [3, 0], [1.4, 1.4], { type: 'Circle', color: [242, 153, 92], body: 'Kinematic' })
   const result = project(name, 'networked-optional', [scene('network-arena', 'Network Arena', [camera('network-camera'), first, second, ...canvasWithLabel('network-ui', 'Network Arena')])])
   result.packages = { manifestVersion: 1, installed: [{
-    manifest: { manifestVersion: 1, id: 'top.whitelists.novaa.networking', name: 'Nova Optional Networking', version: '2.9.0', description: 'Bounded replication and authoritative multiplayer tools.', engine: '>=2.9.0 <5.0.0', dependencies: {}, pluginApi: null, native: false, sha256: 'official-networking-2.9.0', signature: 'nova-a-official', publisher: 'Whitelist', publisherVerified: true, permissions: ['network.client', 'network.listen'], rating: 5, securityUrl: 'https://github.com/Stevenzhang543/Nova_A/security', documentationUrl: 'https://github.com/Stevenzhang543/Nova_A/' },
+    manifest: { manifestVersion: 1, id: 'top.whitelists.novaa.networking', name: 'Nova Optional Networking', version: '2.9.0', description: 'Bounded replication and authoritative multiplayer tools.', engine: '>=2.9.0 <6.0.0', dependencies: {}, dependencyHashes: {}, entryPointType: 'runtime', apiCompatibility: '>=1 <2', pluginApi: null, native: false, sha256: 'fd048525377499fbd054cb74b69d5369c57d11431951695d413ec1e14cfe3424', signature: 'nova-official-v1:fd048525377499fbd054cb74b69d5369c57d11431951695d413ec1e14cfe3424', publisher: 'Whitelist', publisherVerified: true, permissions: ['network.client', 'network.listen'], rating: 5, securityUrl: 'https://github.com/Stevenzhang543/Nova_A/security', documentationUrl: 'https://github.com/Stevenzhang543/Nova_A/', license: 'MIT', licenseUrl: 'https://github.com/Stevenzhang543/Nova_A/blob/main/LICENSE.md', provenance: 'nova-official-v1', certification: 'certified', vulnerabilityPolicy: 'Critical and High findings block Stable installation.' },
     source: { kind: 'registry', location: 'Nova_A official offline package' }, enabled: true, project: true, installedAt: 0
   }], lockfile: [{ id: 'top.whitelists.novaa.networking', version: '2.9.0', source: { kind: 'registry', location: 'Nova_A official offline package' }, sha256: 'official-networking-2.9.0' }], offlineCache: [], offlineMode: true }
   ;((result.projectSettings as JsonRecord).production as JsonRecord) = {

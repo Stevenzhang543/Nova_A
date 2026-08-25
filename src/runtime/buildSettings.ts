@@ -10,6 +10,8 @@ export type BuildOrientation = 'auto' | 'landscape' | 'portrait'
 export type BuildCompression = 'store' | 'balanced' | 'maximum'
 export type SigningMode = 'none' | 'manual'
 export type BuildCacheMode = 'clean' | 'incremental' | 'validate'
+export type BuildReleaseChannel = 'stable' | 'beta' | 'development'
+export type BuildDeploymentMode = 'local' | 'remote-hook'
 
 export interface BuildPlatformOptions {
   identifier: string
@@ -43,6 +45,16 @@ export interface BuildDeliveryOptions {
   dependencyReport: boolean
   debugSymbols: boolean
   crashSymbols: boolean
+  releaseChannel: BuildReleaseChannel
+  exportTemplate: string
+  provenance: boolean
+  sbom: boolean
+  webHeaders: boolean
+  deploymentMode: BuildDeploymentMode
+  deploymentDestination: string
+  signingHook: string
+  notarizationHook: string
+  cleanMachineJob: boolean
 }
 
 export interface BuildSettings {
@@ -62,7 +74,14 @@ export interface BuildSettings {
 }
 
 export type BuildIssueSeverity = 'error' | 'warning' | 'info'
-export interface BuildIssue { code: string; severity: BuildIssueSeverity; message: string }
+export interface BuildIssue { code: string; severity: BuildIssueSeverity; message: string; helpTarget: string }
+
+export function buildIssueHelpTarget(code: string): string {
+  if (code.startsWith('platform-') || ['android', 'android-package', 'host', 'architecture'].includes(code)) return 'platform-support'
+  if (code.startsWith('telemetry') || code === 'privacy') return 'security-privacy'
+  if (code === 'scene' || code === 'include-rules') return 'project-health'
+  return 'build-export'
+}
 
 export interface ExportCapabilities {
   host: 'windows' | 'linux' | 'macos' | 'unknown'
@@ -80,14 +99,16 @@ export interface BuildProgress {
   changedFiles: number
 }
 
-export interface BuildPreset { id: string; name: string; target: BuildTarget; profile: BuildProfile; runtimeMode: BuildRuntimeMode; cacheMode: BuildCacheMode; compression: BuildCompression; stripUnusedAssets: boolean }
-export interface BuildHistoryEntry { id: string; startedAt: string; finishedAt: string; target: BuildTarget; profile: BuildProfile; status: 'complete' | 'failed'; outputPath: string; buildId: string; sizeBytes: number; message: string }
+export interface BuildPreset { id: string; name: string; target: BuildTarget; profile: BuildProfile; runtimeMode: BuildRuntimeMode; cacheMode: BuildCacheMode; compression: BuildCompression; stripUnusedAssets: boolean; releaseChannel?: BuildReleaseChannel; exportTemplate?: string }
+export interface BuildHistoryEntry { id: string; startedAt: string; finishedAt: string; target: BuildTarget; profile: BuildProfile; status: 'complete' | 'failed'; outputPath: string; buildId: string; sizeBytes: number; message: string; durationMs?: number; inputsHash?: string; outputsHash?: string; cacheKey?: string; manifestPath?: string; log?: string[]; evidenceStatus?: 'passed' | 'warning' | 'blocked' }
 
 export const BUILTIN_BUILD_PRESETS: readonly BuildPreset[] = Object.freeze([
-  Object.freeze({ id: 'windows-release', name: 'Windows release', target: 'windows', profile: 'release', runtimeMode: 'game', cacheMode: 'validate', compression: 'maximum', stripUnusedAssets: true }),
-  Object.freeze({ id: 'web-release', name: 'Web release', target: 'web', profile: 'release', runtimeMode: 'game', cacheMode: 'validate', compression: 'maximum', stripUnusedAssets: true }),
-  Object.freeze({ id: 'desktop-debug', name: 'Desktop debug', target: 'windows', profile: 'debug', runtimeMode: 'game', cacheMode: 'incremental', compression: 'store', stripUnusedAssets: false }),
-  Object.freeze({ id: 'headless-server', name: 'Headless server', target: 'windows', profile: 'release', runtimeMode: 'headless-server', cacheMode: 'clean', compression: 'maximum', stripUnusedAssets: true })
+  Object.freeze({ id: 'windows-release', name: 'Windows Tier-1 release', target: 'windows', profile: 'release', runtimeMode: 'game', cacheMode: 'validate', compression: 'maximum', stripUnusedAssets: true, releaseChannel: 'stable', exportTemplate: 'windows-x64-v1' }),
+  Object.freeze({ id: 'web-release', name: 'Web Tier-1 release', target: 'web', profile: 'release', runtimeMode: 'game', cacheMode: 'validate', compression: 'maximum', stripUnusedAssets: true, releaseChannel: 'stable', exportTemplate: 'web-es2022-v1' }),
+  Object.freeze({ id: 'desktop-debug', name: 'Windows development', target: 'windows', profile: 'debug', runtimeMode: 'game', cacheMode: 'incremental', compression: 'store', stripUnusedAssets: false, releaseChannel: 'development', exportTemplate: 'windows-x64-v1' }),
+  Object.freeze({ id: 'headless-server', name: 'Windows headless server', target: 'windows', profile: 'release', runtimeMode: 'headless-server', cacheMode: 'clean', compression: 'maximum', stripUnusedAssets: true, releaseChannel: 'beta', exportTemplate: 'windows-headless-x64-v1' }),
+  Object.freeze({ id: 'linux-ci', name: 'Linux matching-host CI', target: 'linux', profile: 'release', runtimeMode: 'game', cacheMode: 'clean', compression: 'maximum', stripUnusedAssets: true, releaseChannel: 'beta', exportTemplate: 'linux-x64-experimental-v1' }),
+  Object.freeze({ id: 'macos-ci', name: 'macOS matching-host CI', target: 'macos', profile: 'release', runtimeMode: 'game', cacheMode: 'clean', compression: 'maximum', stripUnusedAssets: true, releaseChannel: 'beta', exportTemplate: 'macos-universal-experimental-v1' })
 ])
 
 function loadBuildHistory(): BuildHistoryEntry[] {
@@ -134,7 +155,9 @@ export const buildSettings = reactive<BuildSettings>({
     deterministic: true, incremental: true, compression: 'balanced', patchManifest: true,
     structuredLogs: true, crashReports: false, telemetryEnabled: false, telemetryEndpoint: '', privacyPolicyUrl: '',
     cacheMode: 'incremental', include: ['Assets/**'], exclude: ['**/*.psd', '**/*.kra', '.nova/**'], stripUnusedAssets: false,
-    sizeReport: true, dependencyReport: true, debugSymbols: true, crashSymbols: true
+    sizeReport: true, dependencyReport: true, debugSymbols: true, crashSymbols: true,
+    releaseChannel: 'development', exportTemplate: 'windows-x64-v1', provenance: true, sbom: true, webHeaders: true,
+    deploymentMode: 'local', deploymentDestination: '', signingHook: '', notarizationHook: '', cleanMachineJob: false
   }
 })
 
@@ -198,7 +221,13 @@ export function normalizeBuildSettings(source: unknown, availableSceneUuids: str
       cacheMode: delivery.cacheMode === 'clean' || delivery.cacheMode === 'validate' ? delivery.cacheMode : 'incremental',
       include: stringList(delivery.include, 128), exclude: stringList(delivery.exclude, 128),
       stripUnusedAssets: bool(delivery.stripUnusedAssets, false), sizeReport: bool(delivery.sizeReport, true), dependencyReport: bool(delivery.dependencyReport, true),
-      debugSymbols: bool(delivery.debugSymbols, true), crashSymbols: bool(delivery.crashSymbols, true)
+      debugSymbols: bool(delivery.debugSymbols, true), crashSymbols: bool(delivery.crashSymbols, true),
+      releaseChannel: delivery.releaseChannel === 'stable' || delivery.releaseChannel === 'beta' ? delivery.releaseChannel : 'development',
+      exportTemplate: text(delivery.exportTemplate, 160) || `${target}-${item.architecture === 'aarch64' ? 'aarch64' : 'x86_64'}-v1`,
+      provenance: bool(delivery.provenance, true), sbom: bool(delivery.sbom, true), webHeaders: bool(delivery.webHeaders, true),
+      deploymentMode: delivery.deploymentMode === 'remote-hook' ? 'remote-hook' : 'local',
+      deploymentDestination: text(delivery.deploymentDestination, 500), signingHook: text(delivery.signingHook, 500), notarizationHook: text(delivery.notarizationHook, 500),
+      cleanMachineJob: bool(delivery.cleanMachineJob, false)
     }
   }
 }
@@ -228,6 +257,8 @@ export function applyBuildPreset(id: string): boolean {
   buildSettings.presetName = preset.id; buildSettings.target = preset.target; buildSettings.runtimeMode = preset.runtimeMode
   buildSettings.delivery.cacheMode = preset.cacheMode; buildSettings.delivery.incremental = preset.cacheMode !== 'clean'
   buildSettings.delivery.compression = preset.compression; buildSettings.delivery.stripUnusedAssets = preset.stripUnusedAssets
+  buildSettings.delivery.releaseChannel = preset.releaseChannel ?? (preset.profile === 'release' ? 'beta' : 'development')
+  buildSettings.delivery.exportTemplate = preset.exportTemplate ?? `${preset.target}-${buildSettings.architecture}-v1`
   setBuildProfile(preset.profile); return true
 }
 
@@ -238,10 +269,12 @@ export function recordBuildHistory(entry: BuildHistoryEntry): void {
 }
 
 export function validateBuildSettings(settings: BuildSettings, capabilities = exportCapabilities): BuildIssue[] {
-  const issues: BuildIssue[] = []
+  const issues: Array<Omit<BuildIssue, 'helpTarget'>> = []
   const support = platformSupport(settings.target)
   if (support.tier === 'unsupported') issues.push({ code: 'platform-unsupported', severity: 'error', message: `${support.label} is Unsupported: ${support.reason}` })
   else if (support.tier === 'experimental') issues.push({ code: 'platform-experimental', severity: 'warning', message: `${support.label} is Experimental: ${support.reason}` })
+  if (support.availability === 'unavailable') issues.push({ code: 'platform-unavailable', severity: 'error', message: `${support.label} export is explicitly unavailable: ${support.reason}` })
+  if (support.availability === 'ci-only' && settings.delivery.releaseChannel === 'stable') issues.push({ code: 'platform-not-tier1', severity: 'error', message: `${support.label} is matching-host CI-only and cannot use the Stable release channel until ${support.evidence} passes.` })
   if (!support.architectures.includes(settings.architecture)) issues.push({ code: 'platform-architecture', severity: 'error', message: `${support.label} does not declare ${settings.architecture} support.` })
   if (!settings.sceneOrder.length || !settings.startupSceneUuid) issues.push({ code: 'scene', severity: 'error', message: 'Add at least one scene and choose a startup scene.' })
   if (!/^[a-z0-9]+(?:[.-][a-z0-9]+)+$/.test(settings.platform.identifier)) issues.push({ code: 'identifier', severity: 'error', message: 'Application identifier must use reverse-domain format.' })
@@ -259,9 +292,15 @@ export function validateBuildSettings(settings: BuildSettings, capabilities = ex
   }
   if (settings.profile === 'release' && settings.developmentBuild) issues.push({ code: 'profile', severity: 'error', message: 'Release profile cannot include development diagnostics.' })
   if (!settings.delivery.deterministic) issues.push({ code: 'reproducibility', severity: 'warning', message: 'Deterministic build metadata is disabled.' })
+  if (settings.profile === 'release' && !settings.delivery.provenance) issues.push({ code: 'provenance', severity: 'error', message: 'Release builds require a provenance manifest.' })
+  if (settings.profile === 'release' && !settings.delivery.sbom) issues.push({ code: 'sbom', severity: 'warning', message: 'Enable the software bill of materials for auditable release dependencies.' })
+  if (settings.delivery.deploymentMode === 'remote-hook' && !/^https:\/\//i.test(settings.delivery.deploymentDestination)) issues.push({ code: 'remote-deploy', severity: 'error', message: 'Remote deployment requires an explicit HTTPS destination. Nova_A never deploys implicitly.' })
+  if (settings.target === 'web' && settings.profile === 'release' && !settings.delivery.webHeaders) issues.push({ code: 'web-headers', severity: 'warning', message: 'Enable generated deployment headers for safe MIME, caching and browser policy defaults.' })
+  if (settings.delivery.releaseChannel === 'stable' && settings.profile !== 'release') issues.push({ code: 'stable-debug', severity: 'error', message: 'Stable channel outputs must use the Release profile.' })
+  if (!settings.delivery.exportTemplate.trim()) issues.push({ code: 'export-template', severity: 'error', message: 'Choose a version-pinned export template.' })
   if (settings.profile === 'release' && settings.delivery.cacheMode === 'incremental' && !settings.delivery.deterministic) issues.push({ code: 'release-cache', severity: 'error', message: 'Release incremental builds require deterministic output or a validated clean cache.' })
   if (!settings.delivery.include.length) issues.push({ code: 'include-rules', severity: 'warning', message: 'No explicit content inclusion rule is configured.' })
-  return issues
+  return issues.map(issue => ({ ...issue, helpTarget: buildIssueHelpTarget(issue.code) }))
 }
 
 export async function detectExportCapabilities(): Promise<void> {

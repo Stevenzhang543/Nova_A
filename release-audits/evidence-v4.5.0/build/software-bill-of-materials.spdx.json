@@ -1,0 +1,112 @@
+{
+  "spdxVersion": "SPDX-2.3",
+  "dataLicense": "CC0-1.0",
+  "SPDXID": "SPDXRef-DOCUMENT",
+  "name": "Nova_A-4.5.0",
+  "documentNamespace": "https://whitelists.top/nova-a/spdx/4.5.0/6fdc5de4e632b528b0008c3e640ed49f234c3e3f",
+  "creationInfo": {
+    "created": "2026-08-24T07:19:58.205Z",
+    "creators": [
+      "Tool: Nova_A generate-v4.5-release-evidence.mjs"
+    ]
+  },
+  "packages": [
+    {
+      "name": "Nova_A",
+      "SPDXID": "SPDXRef-Package-Nova-A",
+      "versionInfo": "4.5.0",
+      "downloadLocation": "https://github.com/Stevenzhang543/Nova_A/",
+      "licenseConcluded": "MIT",
+      "licenseDeclared": "MIT"
+    },
+    {
+      "name": "@fontsource-variable/jetbrains-mono",
+      "SPDXID": "SPDXRef-Npm-0",
+      "versionInfo": "^5.3.0",
+      "downloadLocation": "NOASSERTION",
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "name": "@fontsource-variable/noto-sans-sc",
+      "SPDXID": "SPDXRef-Npm-1",
+      "versionInfo": "^5.3.0",
+      "downloadLocation": "NOASSERTION",
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "name": "@fontsource-variable/nunito-sans",
+      "SPDXID": "SPDXRef-Npm-2",
+      "versionInfo": "^5.3.0",
+      "downloadLocation": "NOASSERTION",
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "name": "@tauri-apps/api",
+      "SPDXID": "SPDXRef-Npm-3",
+      "versionInfo": "2.11.1",
+      "downloadLocation": "NOASSERTION",
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "name": "@tauri-apps/plugin-opener",
+      "SPDXID": "SPDXRef-Npm-4",
+      "versionInfo": "2.5.3",
+      "downloadLocation": "NOASSERTION",
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "name": "vue",
+      "SPDXID": "SPDXRef-Npm-5",
+      "versionInfo": "^3.5.13",
+      "downloadLocation": "NOASSERTION",
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "name": "@tauri-apps/cli",
+      "SPDXID": "SPDXRef-Npm-6",
+      "versionInfo": "2.11.4",
+      "downloadLocation": "NOASSERTION",
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "name": "@vitejs/plugin-vue",
+      "SPDXID": "SPDXRef-Npm-7",
+      "versionInfo": "^5.2.1",
+      "downloadLocation": "NOASSERTION",
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "name": "typescript",
+      "SPDXID": "SPDXRef-Npm-8",
+      "versionInfo": "~5.6.2",
+      "downloadLocation": "NOASSERTION",
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "name": "vite",
+      "SPDXID": "SPDXRef-Npm-9",
+      "versionInfo": "^6.4.3",
+      "downloadLocation": "NOASSERTION",
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    },
+    {
+      "name": "vue-tsc",
+      "SPDXID": "SPDXRef-Npm-10",
+      "versionInfo": "^2.1.10",
+      "downloadLocation": "NOASSERTION",
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    }
+  ],
+  "comment": "Pinned transitive versions are authoritative in pnpm-lock.yaml and Cargo.lock; independent license review remains an external release gate."
+}

@@ -1,0 +1,143 @@
+{
+  "format": "nova-v4.5-analytical-results",
+  "version": 1,
+  "generatedAt": "2026-08-24T07:03:15.927Z",
+  "results": [
+    {
+      "id": "gravity",
+      "expected": 491.1497208333333,
+      "actual": 491.1497208333316,
+      "absoluteError": 1.6484591469634324e-12,
+      "relativeError": 3.3563271585831166e-15,
+      "tolerance": {
+        "id": "gravity",
+        "absolute": 1e-9,
+        "relative": 1e-8,
+        "unit": "m",
+        "rationale": "Semi-implicit Euler fixed-step position fixture."
+      },
+      "passed": true
+    },
+    {
+      "id": "velocity",
+      "expected": 3.5250924038823945,
+      "actual": 3.5250924038823945,
+      "absoluteError": 0,
+      "relativeError": 0,
+      "tolerance": {
+        "id": "velocity",
+        "absolute": 1e-10,
+        "relative": 1e-9,
+        "unit": "m/s",
+        "rationale": "Fixed-step velocity integration."
+      },
+      "passed": true
+    },
+    {
+      "id": "restitution",
+      "expected": 4.2,
+      "actual": 4.199999999999999,
+      "absoluteError": 8.881784197001252e-16,
+      "relativeError": 2.1147105230955362e-16,
+      "tolerance": {
+        "id": "velocity",
+        "absolute": 1e-10,
+        "relative": 1e-9,
+        "unit": "m/s",
+        "rationale": "Fixed-step velocity integration."
+      },
+      "passed": true
+    },
+    {
+      "id": "momentum-x",
+      "expected": 7.5,
+      "actual": 7.5,
+      "absoluteError": 0,
+      "relativeError": 0,
+      "tolerance": {
+        "id": "momentum",
+        "absolute": 1e-8,
+        "relative": 1e-7,
+        "unit": "kg·m/s",
+        "rationale": "Impulse/contact rounding across supported Tier-1 runtimes."
+      },
+      "passed": true
+    },
+    {
+      "id": "momentum-y",
+      "expected": -10,
+      "actual": -10,
+      "absoluteError": 0,
+      "relativeError": 0,
+      "tolerance": {
+        "id": "momentum",
+        "absolute": 1e-8,
+        "relative": 1e-7,
+        "unit": "kg·m/s",
+        "rationale": "Impulse/contact rounding across supported Tier-1 runtimes."
+      },
+      "passed": true
+    },
+    {
+      "id": "energy",
+      "expected": 25,
+      "actual": 25,
+      "absoluteError": 0,
+      "relativeError": 0,
+      "tolerance": {
+        "id": "energy",
+        "absolute": 1e-7,
+        "relative": 0.00005,
+        "unit": "J",
+        "rationale": "Iterative contact and constraint solver tolerance."
+      },
+      "passed": true
+    },
+    {
+      "id": "friction",
+      "expected": 6,
+      "actual": 6,
+      "absoluteError": 0,
+      "relativeError": 0,
+      "tolerance": {
+        "id": "momentum",
+        "absolute": 1e-8,
+        "relative": 1e-7,
+        "unit": "kg·m/s",
+        "rationale": "Impulse/contact rounding across supported Tier-1 runtimes."
+      },
+      "passed": true
+    },
+    {
+      "id": "rope-strain",
+      "expected": 0.25,
+      "actual": 0.25,
+      "absoluteError": 0,
+      "relativeError": 0,
+      "tolerance": {
+        "id": "rope",
+        "absolute": 0.0001,
+        "relative": 0.0005,
+        "unit": "m",
+        "rationale": "Compliant segmented Rope2D constraint."
+      },
+      "passed": true
+    },
+    {
+      "id": "spring-force",
+      "expected": -25,
+      "actual": -25,
+      "absoluteError": 0,
+      "relativeError": 0,
+      "tolerance": {
+        "id": "joint",
+        "absolute": 0.00005,
+        "relative": 0.0001,
+        "unit": "m",
+        "rationale": "Iterative joint positional correction."
+      },
+      "passed": true
+    }
+  ],
+  "status": "passed"
+}

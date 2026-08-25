@@ -15,13 +15,13 @@ export interface NovaPakEntry {
   assetUuid?: string
   assetType?: string
 }
-
 export interface NovaPakIndex {
   format: 'nova-pak'
   version: number
   engineVersion: string
   createdAt: string
   startupSceneUuid: string
+  physicsProfile?: Record<string, unknown>
   entries: NovaPakEntry[]
 }
 
@@ -154,10 +154,15 @@ export async function createNovaPak(projectJson: string, assets: AssetRecord[], 
     offset += block.byteLength
   }
 
+  const physicsProfile = projectSettings.physics && typeof projectSettings.physics === 'object'
+    ? (projectSettings.physics as { profile?: unknown }).profile
+    : undefined
   const index: NovaPakIndex = {
     format: 'nova-pak', version: NOVA_PAK_VERSION,
-    engineVersion: String(project.engineVersion ?? '4.4.0'),
-    createdAt: options.deterministic === false ? new Date().toISOString() : '1970-01-01T00:00:00.000Z', startupSceneUuid, entries
+    engineVersion: String(project.engineVersion ?? '5.0.1'),
+    createdAt: options.deterministic === false ? new Date().toISOString() : '1970-01-01T00:00:00.000Z', startupSceneUuid,
+    physicsProfile: physicsProfile && typeof physicsProfile === 'object' ? structuredClone(physicsProfile as Record<string, unknown>) : undefined,
+    entries
   }
   const indexBytes = new TextEncoder().encode(JSON.stringify(index))
   const header = new Uint8Array(HEADER_BYTES)

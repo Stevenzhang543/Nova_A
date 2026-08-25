@@ -6,6 +6,8 @@ export type RenderDebugView = 'None' | 'Overdraw' | 'BatchBreaks' | 'Lighting' |
 export type RenderQualityPreset = 'Performance' | 'Balanced' | 'High' | 'Ultra' | 'PixelArt'
 
 export interface RenderingSettings {
+  rendererPath: 'Auto' | 'Native' | 'Compatibility'
+  unsupportedPolicy: 'Block' | 'WarnAndFallback'
   qualityPreset: RenderQualityPreset
   lightingEnabled: boolean
   ambientColor: { r: number; g: number; b: number }
@@ -26,9 +28,11 @@ export interface RenderingSettings {
   pixelSnap: boolean
   maximumPixelRatio: number
   particleBudget: number
+  budgets: { drawCalls: number; textureMemoryMb: number; overdraw: number; gpuMs: number; particleMs: number }
 }
 
 export const DEFAULT_RENDERING_SETTINGS: RenderingSettings = {
+  rendererPath: 'Auto', unsupportedPolicy: 'WarnAndFallback',
   qualityPreset: 'Balanced',
   lightingEnabled: false,
   ambientColor: { r: 255, g: 255, b: 255 },
@@ -36,7 +40,8 @@ export const DEFAULT_RENDERING_SETTINGS: RenderingSettings = {
   shadowQuality: 'Soft',
   colorSpace: 'sRGB',
   postProcessing: { enabled: false, exposure: 0, contrast: 1, saturation: 1, vignette: 0, bloom: 0, blur: 0, userMaterial: null },
-  debugView: 'None', pixelSnap: false, maximumPixelRatio: 2, particleBudget: 10_000
+  debugView: 'None', pixelSnap: false, maximumPixelRatio: 2, particleBudget: 10_000,
+  budgets: { drawCalls: 500, textureMemoryMb: 256, overdraw: 4, gpuMs: 8, particleMs: 2 }
 }
 
 function finite(value: unknown, fallback: number, min: number, max: number): number {
@@ -56,10 +61,13 @@ function color(value: unknown, fallback: { r: number; g: number; b: number }) {
 export function normalizeRenderingSettings(value: unknown): RenderingSettings {
   const source = value && typeof value === 'object' ? value as Record<string, unknown> : {}
   const post = source.postProcessing && typeof source.postProcessing === 'object' ? source.postProcessing as Record<string, unknown> : {}
+  const budgets = source.budgets && typeof source.budgets === 'object' ? source.budgets as Record<string, unknown> : {}
   const shadowQuality = ['Off', 'Hard', 'Soft', 'Ultra'].includes(String(source.shadowQuality)) ? source.shadowQuality as ShadowQuality : DEFAULT_RENDERING_SETTINGS.shadowQuality
   const debugView = ['None', 'Overdraw', 'BatchBreaks', 'Lighting', 'Normals'].includes(String(source.debugView)) ? source.debugView as RenderDebugView : 'None'
   const qualityPreset = ['Performance', 'Balanced', 'High', 'Ultra', 'PixelArt'].includes(String(source.qualityPreset)) ? source.qualityPreset as RenderQualityPreset : 'Balanced'
   return {
+    rendererPath: ['Auto', 'Native', 'Compatibility'].includes(String(source.rendererPath)) ? source.rendererPath as RenderingSettings['rendererPath'] : 'Auto',
+    unsupportedPolicy: source.unsupportedPolicy === 'Block' ? 'Block' : 'WarnAndFallback',
     qualityPreset,
     lightingEnabled: source.lightingEnabled === true,
     ambientColor: color(source.ambientColor, DEFAULT_RENDERING_SETTINGS.ambientColor),
@@ -75,7 +83,8 @@ export function normalizeRenderingSettings(value: unknown): RenderingSettings {
     debugView,
     pixelSnap: source.pixelSnap === true,
     maximumPixelRatio: finite(source.maximumPixelRatio, 2, 1, 4),
-    particleBudget: Math.round(finite(source.particleBudget, 10_000, 100, 100_000))
+    particleBudget: Math.round(finite(source.particleBudget, 10_000, 100, 100_000)),
+    budgets: { drawCalls: Math.round(finite(budgets.drawCalls, 500, 1, 100_000)), textureMemoryMb: finite(budgets.textureMemoryMb, 256, 1, 65_536), overdraw: finite(budgets.overdraw, 4, 1, 128), gpuMs: finite(budgets.gpuMs, 8, .1, 100), particleMs: finite(budgets.particleMs, 2, .05, 100) }
   }
 }
 

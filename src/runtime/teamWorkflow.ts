@@ -11,19 +11,25 @@ export interface SourceChange {
   change: SourceChangeKind
 }
 
+export interface TeamOwnershipRule { path: string; owners: string[] }
+export interface TeamTaskLink { id: string; url: string; summary: string }
+export interface TeamChangeNote { id: string; owner: string; note: string; createdAt: string }
+export interface TeamBuildPreset { id: string; name: string; target: string; profile: string; settings: string }
+export interface BinaryAssetLock { path: string; owner: string; token: string; expiresAt: number }
+
 interface SnapshotEntry { path: string; kind: SourceEntryKind; fingerprint: string }
 
 const SETTINGS_KEY = 'nova_a.team_workflow.v1'
 const LOCK_KEY_PREFIX = 'nova_a.project_lock.'
 const MAX_CHANGES = 5_000
 
-function storedSettings(): { diffTool: string; mergeTool: string; diffArguments: string; mergeArguments: string } {
-  if (typeof localStorage === 'undefined') return { diffTool: '', mergeTool: '', diffArguments: '{left} {right}', mergeArguments: '{base} {ours} {theirs} {output}' }
+function storedSettings(): { enabled: boolean; networkOperations: boolean; diffTool: string; mergeTool: string; diffArguments: string; mergeArguments: string } {
+  if (typeof localStorage === 'undefined') return { enabled: false, networkOperations: false, diffTool: '', mergeTool: '', diffArguments: '{left} {right}', mergeArguments: '{base} {ours} {theirs} {output}' }
   try {
     const value = JSON.parse(localStorage.getItem(SETTINGS_KEY) ?? '{}') as Record<string, unknown>
     const read = (key: string, fallback = '') => typeof value[key] === 'string' ? String(value[key]).slice(0, 1_024) : fallback
-    return { diffTool: read('diffTool'), mergeTool: read('mergeTool'), diffArguments: read('diffArguments', '{left} {right}'), mergeArguments: read('mergeArguments', '{base} {ours} {theirs} {output}') }
-  } catch { return { diffTool: '', mergeTool: '', diffArguments: '{left} {right}', mergeArguments: '{base} {ours} {theirs} {output}' } }
+    return { enabled: value.enabled === true, networkOperations: value.networkOperations === true, diffTool: read('diffTool'), mergeTool: read('mergeTool'), diffArguments: read('diffArguments', '{left} {right}'), mergeArguments: read('mergeArguments', '{base} {ours} {theirs} {output}') }
+  } catch { return { enabled: false, networkOperations: false, diffTool: '', mergeTool: '', diffArguments: '{left} {right}', mergeArguments: '{base} {ours} {theirs} {output}' } }
 }
 
 export const teamWorkflowState = reactive({
@@ -36,7 +42,14 @@ export const teamWorkflowState = reactive({
   lockToken: '' as string,
   lockExpiresAt: 0,
   status: '',
-  operationSummary: [] as string[]
+  operationSummary: [] as string[],
+  ownership: [] as TeamOwnershipRule[],
+  taskLinks: [] as TeamTaskLink[],
+  changeNotes: [] as TeamChangeNote[],
+  sharedBuildPresets: [] as TeamBuildPreset[],
+  binaryLocks: [] as BinaryAssetLock[],
+  repositoryBranch: '',
+  repositoryRoot: ''
 })
 
 function normalized(value: unknown): unknown {
@@ -53,7 +66,7 @@ export function stableProjectText(source: string | unknown): string {
 }
 
 function fingerprint(value: unknown): string {
-  const source = JSON.stringify(normalized(value))
+  const source = JSON.stringify(normalized(value)) ?? 'null'
   let first = 0x811c9dc5, second = 0x9e3779b9
   for (let index = 0; index < source.length; index++) {
     const code = source.charCodeAt(index)
@@ -143,9 +156,85 @@ export function detectIncomingConflicts(currentSource: string, incomingSource: s
 export function persistTeamWorkflowSettings(): void {
   if (typeof localStorage === 'undefined') return
   localStorage.setItem(SETTINGS_KEY, JSON.stringify({
+    enabled: teamWorkflowState.enabled, networkOperations: teamWorkflowState.networkOperations,
     diffTool: teamWorkflowState.diffTool.slice(0, 1_024), mergeTool: teamWorkflowState.mergeTool.slice(0, 1_024),
     diffArguments: teamWorkflowState.diffArguments.slice(0, 1_024), mergeArguments: teamWorkflowState.mergeArguments.slice(0, 1_024)
   }))
+}
+
+export function teamWorkflowMetadata(): Record<string, unknown> {
+  return {
+    format: 'nova-team-workflow', version: 1, optional: true, cloudRequired: false,
+    networkOperationsEnabled: teamWorkflowState.networkOperations,
+    ownership: teamWorkflowState.ownership.map(rule => ({ path: rule.path, owners: [...rule.owners] })),
+    taskLinks: teamWorkflowState.taskLinks.map(link => ({ ...link })),
+    changeNotes: teamWorkflowState.changeNotes.map(note => ({ ...note })),
+    sharedBuildPresets: teamWorkflowState.sharedBuildPresets.map(preset => ({ ...preset })),
+    binaryLocks: teamWorkflowState.binaryLocks.map(lock => ({ path: lock.path, owner: lock.owner, expiresAt: new Date(lock.expiresAt).toISOString() }))
+  }
+}
+
+export function addOwnershipRule(path: string, owners: string): boolean {
+  const cleanPath = path.trim().replace(/\\/g, '/').slice(0, 500)
+  const cleanOwners = [...new Set(owners.split(/[\s,]+/).map(owner => owner.trim().replace(/^@/, '')).filter(Boolean))].slice(0, 32)
+  if (!cleanPath || !cleanOwners.length) return false
+  const existing = teamWorkflowState.ownership.find(rule => rule.path === cleanPath)
+  if (existing) existing.owners = cleanOwners; else teamWorkflowState.ownership.push({ path: cleanPath, owners: cleanOwners })
+  return true
+}
+
+export function addTeamTaskLink(id: string, url: string, summary: string): boolean {
+  const cleanId = id.trim().slice(0, 80), cleanUrl = url.trim().slice(0, 500), cleanSummary = summary.trim().slice(0, 240)
+  if (!cleanId || !/^(https?:\/\/|[A-Za-z]+-\d+$)/.test(cleanUrl || cleanId)) return false
+  const entry = { id: cleanId, url: cleanUrl, summary: cleanSummary }
+  const index = teamWorkflowState.taskLinks.findIndex(item => item.id === cleanId)
+  if (index >= 0) teamWorkflowState.taskLinks.splice(index, 1, entry); else teamWorkflowState.taskLinks.unshift(entry)
+  return true
+}
+
+export function addTeamChangeNote(owner: string, note: string): boolean {
+  const cleanOwner = owner.trim().slice(0, 120), cleanNote = note.trim().slice(0, 1_000)
+  if (!cleanOwner || !cleanNote) return false
+  teamWorkflowState.changeNotes.unshift({ id: crypto.randomUUID(), owner: cleanOwner, note: cleanNote, createdAt: new Date().toISOString() })
+  if (teamWorkflowState.changeNotes.length > 256) teamWorkflowState.changeNotes.splice(256)
+  return true
+}
+
+export function shareTeamBuildPreset(name: string, target: string, profile: string, settings: unknown): TeamBuildPreset | null {
+  const cleanName = name.trim().slice(0, 120), cleanTarget = target.trim().slice(0, 40), cleanProfile = profile.trim().slice(0, 40)
+  if (!cleanName || !cleanTarget || !cleanProfile) return null
+  const preset = { id: crypto.randomUUID(), name: cleanName, target: cleanTarget, profile: cleanProfile, settings: `${JSON.stringify(normalized(settings), null, 2)}\n` }
+  teamWorkflowState.sharedBuildPresets.unshift(preset)
+  if (teamWorkflowState.sharedBuildPresets.length > 64) teamWorkflowState.sharedBuildPresets.splice(64)
+  return preset
+}
+
+export function acquireBinaryAssetLock(path: string, owner: string, durationMinutes = 120): BinaryAssetLock | null {
+  const cleanPath = path.trim().replace(/\\/g, '/').slice(0, 500), cleanOwner = owner.trim().slice(0, 120), now = Date.now()
+  if (!cleanPath || !cleanOwner) return null
+  const existing = teamWorkflowState.binaryLocks.find(lock => lock.path === cleanPath && lock.expiresAt > now)
+  if (existing && existing.owner !== cleanOwner) return null
+  const lock = { path: cleanPath, owner: cleanOwner, token: crypto.randomUUID(), expiresAt: now + Math.min(1_440, Math.max(5, durationMinutes)) * 60_000 }
+  const index = teamWorkflowState.binaryLocks.findIndex(item => item.path === cleanPath)
+  if (index >= 0) teamWorkflowState.binaryLocks.splice(index, 1, lock); else teamWorkflowState.binaryLocks.push(lock)
+  return lock
+}
+
+export function releaseBinaryAssetLock(path: string, owner: string): boolean {
+  const index = teamWorkflowState.binaryLocks.findIndex(lock => lock.path === path && lock.owner === owner)
+  if (index < 0) return false
+  teamWorkflowState.binaryLocks.splice(index, 1); return true
+}
+
+export function codeOwnersFile(): string {
+  return teamWorkflowState.ownership.map(rule => `${rule.path} ${rule.owners.map(owner => `@${owner}`).join(' ')}`).join('\n') + (teamWorkflowState.ownership.length ? '\n' : '')
+}
+
+export function semanticProjectComparison(currentSource: string, incomingSource: string): Record<string, unknown> {
+  const before = snapshot(currentSource), after = snapshot(incomingSource), added: string[] = [], removed: string[] = [], changed: string[] = []
+  for (const [id, entry] of after) { const previous = before.get(id); if (!previous) added.push(entry.path); else if (previous.fingerprint !== entry.fingerprint) changed.push(entry.path) }
+  for (const [id, entry] of before) if (!after.has(id)) removed.push(entry.path)
+  return { format: 'nova-semantic-project-comparison', version: 1, added: added.sort(), removed: removed.sort(), changed: changed.sort(), binaryFilesComparedByIdentityOnly: true }
 }
 
 export function novaIgnoreFile(): string {
@@ -176,6 +265,7 @@ function textBase64(value: string): string {
 export function downloadNovaIgnoreFile(): void { download('.gitignore', novaIgnoreFile()) }
 export function downloadPreCommitHook(): void { download('pre-commit', novaPreCommitHook()) }
 export function downloadCiValidationTemplate(): void { download('nova-validation.yml', novaCiValidationTemplate(), 'text/yaml') }
+export function downloadCodeOwnersFile(): void { download('CODEOWNERS', codeOwnersFile()) }
 
 export async function initializeGitRepository(projectDirectory: string): Promise<string> {
   const directory = projectDirectory.trim()

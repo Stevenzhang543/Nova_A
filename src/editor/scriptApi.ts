@@ -1,4 +1,5 @@
-export const SCRIPT_API_VERSION = 1 as const
+export const SCRIPT_API_VERSION = 2 as const
+export const SCRIPT_API_MINIMUM_VERSION = 1 as const
 
 export type ScriptApiNamespace =
   | 'lifecycle' | 'scene' | 'object' | 'component' | 'transform' | 'input' | 'physics'
@@ -12,9 +13,31 @@ export interface ScriptApiEntry {
   category: string
   detail: string
   example: string
-  since: '1.0'
-  deprecated?: { replacement: string; removal: 'API v2'; reason: string }
+  since: '1.0' | '2.0'
+  deprecated?: { replacement: string; removal: 'API v3'; reason: string }
   documentation: string
+}
+
+export type ScriptApiThreadRule = 'main-thread' | 'fixed-step' | 'callback-boundary' | 'worker-safe'
+export type ScriptApiDeterminism = 'deterministic' | 'seeded' | 'host-dependent'
+export interface ScriptApiV2Binding extends ScriptApiEntry {
+  id: string
+  module: ScriptApiNamespace
+  callable: string
+  resultConvention: 'value' | 'result' | 'queued-command' | 'lifecycle'
+  lifetime: 'callback' | 'scene' | 'project' | 'persistent-save'
+  threadRule: ScriptApiThreadRule
+  determinism: ScriptApiDeterminism
+  permissions: readonly string[]
+}
+
+export interface ScriptApiV2Manifest {
+  format: 'nova-rhai-api-manifest'
+  version: 2
+  minimumCompatibleVersion: 1
+  errorModel: 'Result values are explicit; queued host mutations fail through diagnostics and never expose host exceptions.'
+  handleModel: 'Handles are typed, versioned, copied values whose validity must be checked at each callback boundary.'
+  entries: readonly ScriptApiV2Binding[]
 }
 
 type Spec = readonly [name: string, signature: string, namespace: ScriptApiNamespace, detail: string, example: string, replacement?: string]
@@ -127,16 +150,49 @@ const SPECS: readonly Spec[] = [
   ['log_warning', 'log_warning(message)', 'logging', 'Writes a bounded Warning console event.', 'log_warning("low health");'],
   ['log_error', 'log_error(message)', 'logging', 'Writes a bounded Error event without crashing.', 'log_error("missing target");'],
   ['resource_handle', 'resource_handle(reference, type) -> Handle<Resource>', 'resources', 'Validates an asset URI and returns a stable typed handle.', 'let texture = resource_handle("asset://texture", "Texture2D");'],
-  ['api_version', 'api_version() -> int', 'resources', 'Returns the stable scripting API version.', 'expect(api_version() == 1, "API v1");'],
+  ['api_version', 'api_version() -> int', 'resources', 'Returns the API version selected for this script asset.', 'expect(api_version() >= 1, "supported API");'],
+  ['api_current_version', 'api_current_version() -> int', 'resources', 'Returns the newest API implemented by this engine.', 'expect(api_current_version() == 2, "API v2 engine");'],
+  ['api_minimum_version', 'api_minimum_version() -> int', 'resources', 'Returns the oldest API version supported by the compatibility adapter.', 'expect(api_minimum_version() == 1, "API v1 adapter");'],
   ['api_namespace', 'api_namespace(symbol) -> string', 'resources', 'Returns the documentation namespace of a flat symbol.', 'let group = api_namespace("scene_load");'],
   ['expect', 'expect(condition, message) -> bool', 'testing', 'Records a test assertion without corrupting another instance.', 'expect(2 + 2 == 4, "math");']
 ] as const
 
 export const SCRIPT_API: readonly ScriptApiEntry[] = SPECS.map(([name, signature, namespace, detail, example, replacement]) => ({
   name, signature, namespace, category: namespace[0].toUpperCase() + namespace.slice(1), detail, example, since: '1.0',
-  deprecated: replacement ? { replacement, removal: 'API v2', reason: 'The replacement is explicit and consistent with the API v1 namespace.' } : undefined,
+  deprecated: replacement ? { replacement, removal: 'API v3', reason: 'API v2 keeps the API v1 adapter while directing new code to the typed canonical binding.' } : undefined,
   documentation: `manual/index.html#api-${name.replace(/_/g, '-')}`
 }))
+
+const FIXED_STEP_BINDINGS = new Set(['fixed_update', 'apply_force', 'apply_impulse', 'set_velocity', 'set_angular_velocity', 'move_character'])
+const SEEDED_BINDINGS = new Set(['random', 'random_range'])
+const HOST_DEPENDENT_BINDINGS = new Set(['mouse_x', 'mouse_y', 'wheel_x', 'wheel_y'])
+const PERSISTENT_BINDINGS = new Set(['save_has', 'save_get', 'save_set', 'save_delete', 'save_clear', 'save_load', 'save_commit'])
+const VALUE_PREFIXES = ['input_', 'character_', 'can_', 'time_', 'random', 'entity', 'find_', 'has_', 'get_', 'resource_', 'component_', 'transform', 'rigid_body', 'animator_handle', 'audio_source_handle', 'save_has', 'save_get', 'api_']
+
+export const SCRIPT_API_V2_MANIFEST: ScriptApiV2Manifest = {
+  format: 'nova-rhai-api-manifest',
+  version: 2,
+  minimumCompatibleVersion: 1,
+  errorModel: 'Result values are explicit; queued host mutations fail through diagnostics and never expose host exceptions.',
+  handleModel: 'Handles are typed, versioned, copied values whose validity must be checked at each callback boundary.',
+  entries: SCRIPT_API.map(entry => ({
+    ...entry,
+    id: `${entry.namespace}.${entry.name}`,
+    module: entry.namespace,
+    callable: entry.name,
+    resultConvention: entry.namespace === 'lifecycle' || entry.name.startsWith('on_') ? 'lifecycle' : VALUE_PREFIXES.some(prefix => entry.name.startsWith(prefix)) ? 'value' : entry.namespace === 'resources' ? 'result' : 'queued-command',
+    lifetime: PERSISTENT_BINDINGS.has(entry.name) ? 'persistent-save' : entry.namespace === 'resources' ? 'project' : entry.name.endsWith('_handle') ? 'scene' : 'callback',
+    threadRule: FIXED_STEP_BINDINGS.has(entry.name) ? 'fixed-step' : entry.namespace === 'logging' || entry.namespace === 'testing' ? 'worker-safe' : 'callback-boundary',
+    determinism: SEEDED_BINDINGS.has(entry.name) ? 'seeded' : HOST_DEPENDENT_BINDINGS.has(entry.name) ? 'host-dependent' : 'deterministic',
+    permissions: entry.namespace === 'save' ? ['save-data'] : entry.namespace === 'resources' ? ['asset-read'] : entry.namespace === 'logging' ? ['console-write'] : []
+  }))
+}
+
+export const SCRIPT_API_V1_TO_V2 = Object.freeze(Object.fromEntries(
+  SCRIPT_API.filter(entry => entry.deprecated).map(entry => [entry.name, entry.deprecated!.replacement])
+)) as Readonly<Record<string, string>>
+
+export function scriptApiManifestJson(): string { return `${JSON.stringify(SCRIPT_API_V2_MANIFEST, null, 2)}\n` }
 
 // Compatibility markers retained for archived static release audits:
 // name: 'entity_handle'; name: 'find_entity_handle'; name: 'component_handle';

@@ -10,8 +10,8 @@ const activeTasks = computed(() => feedbackState.tasks.filter(item => ['running'
 const failedTasks = computed(() => feedbackState.tasks.filter(item => item.status === 'failed').length + importPipelineState.jobs.filter(item => item.status === 'failed').length + (buildProgress.phase === 'failed' ? 1 : 0))
 </script>
 <style scoped>
-.status-bar { height: 27px; flex: 0 0 27px; padding: 0 11px; display: flex; align-items: center; justify-content: space-between; color: var(--text-muted); background: var(--surface-1); border-top: 1px solid var(--border-subtle); font-size:11px; z-index: 200; }
+.status-bar { height: 30px; flex: 0 0 30px; padding: 0 12px; display: flex; align-items: center; justify-content: space-between; color: var(--text-muted); background: color-mix(in srgb,var(--surface-1) 96%,var(--bg-base)); border-top: 1px solid var(--border-subtle); font-size:var(--type-caption); z-index: 200; }
 .status { min-width: 0; display: flex; align-items: center; gap: 7px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .status i { width: 6px; height: 6px; flex: 0 0 6px; border-radius: 50%; background: var(--success); box-shadow: 0 0 8px color-mix(in srgb, var(--success) 60%, transparent); }
-.task-status{min-height:22px;margin-left:auto;padding:0 7px;display:flex;align-items:center;gap:5px;border:0;border-radius:6px;color:var(--text-muted);background:transparent;font-size:11px}.task-status:hover,.task-status.busy{color:var(--accent);background:var(--accent-soft)}.task-status b{min-width:16px;padding:1px 4px;border-radius:99px;color:white;background:var(--danger);font-size:11px}.tag { margin-left:8px; opacity: .78; }
+.task-status{min-height:24px;margin-left:auto;padding:0 8px;display:flex;align-items:center;gap:5px;border:0;border-radius:7px;color:var(--text-muted);background:transparent;font-size:var(--type-caption)}.task-status:hover,.task-status.busy{color:var(--accent);background:var(--accent-soft)}.task-status b{min-width:17px;padding:1px 4px;border-radius:99px;color:white;background:var(--danger);font-size:var(--type-caption)}.tag { margin-left:8px; opacity: .78; }
 </style>

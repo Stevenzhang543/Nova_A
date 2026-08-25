@@ -1,0 +1,15 @@
+{
+  "format": "nova-v4.8-reference-index",
+  "engineVersion": "4.8.0",
+  "generatedAt": "2026-08-24T16:51:00.501Z",
+  "projects": [
+    "rendering-v48-lighting-materials",
+    "rendering-v48-shader-platform",
+    "rendering-v48-particles",
+    "rendering-v48-texture-atlas",
+    "audio-v48-routing-effects",
+    "audio-v48-spatial-streaming",
+    "performance-v48-capture"
+  ],
+  "status": "generated-and-audited"
+}

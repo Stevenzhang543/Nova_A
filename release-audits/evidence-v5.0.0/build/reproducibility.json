@@ -1,0 +1,190 @@
+{
+  "format": "nova-v5.0-reproducibility",
+  "engineVersion": "5.0.0",
+  "generatedAt": "2026-08-25T12:55:52.406Z",
+  "model": "Canonical input manifests and unsigned payload files are sorted and compared by SHA-256; timestamps, signatures, installer metadata and evidence archives are excluded.",
+  "localDeterministicComparison": "passed",
+  "tenConsecutiveCleanBuilds": {
+    "format": "nova-v5.0-clean-build-reproducibility",
+    "version": 1,
+    "engineVersion": "5.0.0",
+    "generatedAt": "2026-08-25T12:46:10.923Z",
+    "sourceProject": "reference-projects/projects/first-game-v50-tier1/project.nova",
+    "model": "Ten fresh output directories per Tier-1 target; every unsigned payload and manifest byte is SHA-256 inventoried and the sorted inventory is hashed.",
+    "cycles": 10,
+    "targets": [
+      "windows",
+      "web"
+    ],
+    "baselines": {
+      "windows": "e55a59eee4b856cd0681ccc5d2018d08b1c19574528a75f0fbe5f6626e4f5692",
+      "web": "ca5bc3a8eac06360ef1b654ee65528714eb7902b2a878edd361b0a5ff485b145"
+    },
+    "runs": [
+      {
+        "cycle": 1,
+        "targets": [
+          {
+            "target": "windows",
+            "digest": "e55a59eee4b856cd0681ccc5d2018d08b1c19574528a75f0fbe5f6626e4f5692",
+            "files": 11
+          },
+          {
+            "target": "web",
+            "digest": "ca5bc3a8eac06360ef1b654ee65528714eb7902b2a878edd361b0a5ff485b145",
+            "files": 17
+          }
+        ]
+      },
+      {
+        "cycle": 2,
+        "targets": [
+          {
+            "target": "windows",
+            "digest": "e55a59eee4b856cd0681ccc5d2018d08b1c19574528a75f0fbe5f6626e4f5692",
+            "files": 11
+          },
+          {
+            "target": "web",
+            "digest": "ca5bc3a8eac06360ef1b654ee65528714eb7902b2a878edd361b0a5ff485b145",
+            "files": 17
+          }
+        ]
+      },
+      {
+        "cycle": 3,
+        "targets": [
+          {
+            "target": "windows",
+            "digest": "e55a59eee4b856cd0681ccc5d2018d08b1c19574528a75f0fbe5f6626e4f5692",
+            "files": 11
+          },
+          {
+            "target": "web",
+            "digest": "ca5bc3a8eac06360ef1b654ee65528714eb7902b2a878edd361b0a5ff485b145",
+            "files": 17
+          }
+        ]
+      },
+      {
+        "cycle": 4,
+        "targets": [
+          {
+            "target": "windows",
+            "digest": "e55a59eee4b856cd0681ccc5d2018d08b1c19574528a75f0fbe5f6626e4f5692",
+            "files": 11
+          },
+          {
+            "target": "web",
+            "digest": "ca5bc3a8eac06360ef1b654ee65528714eb7902b2a878edd361b0a5ff485b145",
+            "files": 17
+          }
+        ]
+      },
+      {
+        "cycle": 5,
+        "targets": [
+          {
+            "target": "windows",
+            "digest": "e55a59eee4b856cd0681ccc5d2018d08b1c19574528a75f0fbe5f6626e4f5692",
+            "files": 11
+          },
+          {
+            "target": "web",
+            "digest": "ca5bc3a8eac06360ef1b654ee65528714eb7902b2a878edd361b0a5ff485b145",
+            "files": 17
+          }
+        ]
+      },
+      {
+        "cycle": 6,
+        "targets": [
+          {
+            "target": "windows",
+            "digest": "e55a59eee4b856cd0681ccc5d2018d08b1c19574528a75f0fbe5f6626e4f5692",
+            "files": 11
+          },
+          {
+            "target": "web",
+            "digest": "ca5bc3a8eac06360ef1b654ee65528714eb7902b2a878edd361b0a5ff485b145",
+            "files": 17
+          }
+        ]
+      },
+      {
+        "cycle": 7,
+        "targets": [
+          {
+            "target": "windows",
+            "digest": "e55a59eee4b856cd0681ccc5d2018d08b1c19574528a75f0fbe5f6626e4f5692",
+            "files": 11
+          },
+          {
+            "target": "web",
+            "digest": "ca5bc3a8eac06360ef1b654ee65528714eb7902b2a878edd361b0a5ff485b145",
+            "files": 17
+          }
+        ]
+      },
+      {
+        "cycle": 8,
+        "targets": [
+          {
+            "target": "windows",
+            "digest": "e55a59eee4b856cd0681ccc5d2018d08b1c19574528a75f0fbe5f6626e4f5692",
+            "files": 11
+          },
+          {
+            "target": "web",
+            "digest": "ca5bc3a8eac06360ef1b654ee65528714eb7902b2a878edd361b0a5ff485b145",
+            "files": 17
+          }
+        ]
+      },
+      {
+        "cycle": 9,
+        "targets": [
+          {
+            "target": "windows",
+            "digest": "e55a59eee4b856cd0681ccc5d2018d08b1c19574528a75f0fbe5f6626e4f5692",
+            "files": 11
+          },
+          {
+            "target": "web",
+            "digest": "ca5bc3a8eac06360ef1b654ee65528714eb7902b2a878edd361b0a5ff485b145",
+            "files": 17
+          }
+        ]
+      },
+      {
+        "cycle": 10,
+        "targets": [
+          {
+            "target": "windows",
+            "digest": "e55a59eee4b856cd0681ccc5d2018d08b1c19574528a75f0fbe5f6626e4f5692",
+            "files": 11
+          },
+          {
+            "target": "web",
+            "digest": "ca5bc3a8eac06360ef1b654ee65528714eb7902b2a878edd361b0a5ff485b145",
+            "files": 17
+          }
+        ]
+      }
+    ],
+    "mismatches": [],
+    "qualificationScope": "same-machine ten-build payload equality",
+    "independentMachineComparison": "pending-external",
+    "status": "passed"
+  },
+  "independentMachineA": {
+    "status": "pending",
+    "required": true
+  },
+  "independentMachineB": {
+    "status": "pending",
+    "required": true
+  },
+  "finalStatus": "pending-independent-machine-evidence",
+  "claim": "No two-machine reproducibility claim is made by this local run."
+}

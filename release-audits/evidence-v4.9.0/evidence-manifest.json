@@ -1,0 +1,183 @@
+{
+  "format": "nova-release-evidence-manifest",
+  "version": 1,
+  "release": "4.9.0",
+  "generatedAt": "2026-08-24T19:18:17.486Z",
+  "source": {
+    "commit": "6fdc5de4e632b528b0008c3e640ed49f234c3e3f",
+    "worktree": "Release candidate may include documented uncommitted v4.9 changes; source archive is authoritative."
+  },
+  "environment": {
+    "id": "win32-x64-node-v22.22.2",
+    "os": "win32",
+    "architecture": "x64",
+    "node": "v22.22.2"
+  },
+  "entries": [
+    {
+      "path": "build/clean-machine-matrix.json",
+      "sha256": "2104d4956c840b53e89ec1eea6ca60adc6ca42a107e51c107d66cf8257e9d80f",
+      "bytes": 1074,
+      "source": "6fdc5de4e632b528b0008c3e640ed49f234c3e3f",
+      "tool": "pnpm evidence:v4.9",
+      "environment": "win32-x64-node-v22.22.2"
+    },
+    {
+      "path": "build/release-pipeline-dry-run.json",
+      "sha256": "a7617ac6a3aa2000d5779b38bb9d2e54818b859f30b91914578717e05e571d7d",
+      "bytes": 747,
+      "source": "6fdc5de4e632b528b0008c3e640ed49f234c3e3f",
+      "tool": "pnpm evidence:v4.9",
+      "environment": "win32-x64-node-v22.22.2"
+    },
+    {
+      "path": "build/reproducibility.json",
+      "sha256": "ec5f86ec1249b02e39cd0fe3f214230930cb2cce18e18415db120aa669de1984",
+      "bytes": 634,
+      "source": "6fdc5de4e632b528b0008c3e640ed49f234c3e3f",
+      "tool": "pnpm evidence:v4.9",
+      "environment": "win32-x64-node-v22.22.2"
+    },
+    {
+      "path": "documentation/validation.json",
+      "sha256": "9a6049fdf803e29e7d150633ed369d30babfdc5954f85fd88a464451df465fc4",
+      "bytes": 1812,
+      "source": "6fdc5de4e632b528b0008c3e640ed49f234c3e3f",
+      "tool": "pnpm evidence:v4.9",
+      "environment": "win32-x64-node-v22.22.2"
+    },
+    {
+      "path": "logs/commands.md",
+      "sha256": "0e530a5ac17df3207da2380793130dc72d24ef3c8f3efacc537ee8097d4213cf",
+      "bytes": 498,
+      "source": "6fdc5de4e632b528b0008c3e640ed49f234c3e3f",
+      "tool": "pnpm evidence:v4.9",
+      "environment": "win32-x64-node-v22.22.2"
+    },
+    {
+      "path": "migration/matrix.json",
+      "sha256": "2c1dcc2143519f3baef350da487973e3bdc4756498a7e4b2732b054453acfe84",
+      "bytes": 632,
+      "source": "6fdc5de4e632b528b0008c3e640ed49f234c3e3f",
+      "tool": "pnpm evidence:v4.9",
+      "environment": "win32-x64-node-v22.22.2"
+    },
+    {
+      "path": "packages/security-matrix.json",
+      "sha256": "617e26b68c661847fbebe3d5b84111917076c48199d256dd9d7ea9f84ea12dc5",
+      "bytes": 1776,
+      "source": "6fdc5de4e632b528b0008c3e640ed49f234c3e3f",
+      "tool": "pnpm evidence:v4.9",
+      "environment": "win32-x64-node-v22.22.2"
+    },
+    {
+      "path": "platform/support-matrix.json",
+      "sha256": "7c028076de4a7cbe21299cea523baf922cccd1b3f015095a79a151e648a56ec2",
+      "bytes": 1268,
+      "source": "6fdc5de4e632b528b0008c3e640ed49f234c3e3f",
+      "tool": "pnpm evidence:v4.9",
+      "environment": "win32-x64-node-v22.22.2"
+    },
+    {
+      "path": "qualification/audit.json",
+      "sha256": "6a9968c9bcbc1452ed38e06a686cc6438fa34c72249c76ee1dc55907b682aebc",
+      "bytes": 6745,
+      "source": "6fdc5de4e632b528b0008c3e640ed49f234c3e3f",
+      "tool": "pnpm evidence:v4.9",
+      "environment": "win32-x64-node-v22.22.2"
+    },
+    {
+      "path": "qualification/dependencyAudit.json",
+      "sha256": "c56b4ab1cdf407274f157f336c8448cc7cee629678d50946635161f0b3a56095",
+      "bytes": 678,
+      "source": "6fdc5de4e632b528b0008c3e640ed49f234c3e3f",
+      "tool": "pnpm evidence:v4.9",
+      "environment": "win32-x64-node-v22.22.2"
+    },
+    {
+      "path": "qualification/layout.json",
+      "sha256": "c774eb5e93ffe63858388e973123d802931eec65c116fbb613cba0c4a7bfb6f5",
+      "bytes": 272013,
+      "source": "6fdc5de4e632b528b0008c3e640ed49f234c3e3f",
+      "tool": "pnpm evidence:v4.9",
+      "environment": "win32-x64-node-v22.22.2"
+    },
+    {
+      "path": "qualification/manual.json",
+      "sha256": "62a2ec7ea23aed9b55d5588aa911617482704992eeb912b0d6c9a87ea7f781a1",
+      "bytes": 25,
+      "source": "6fdc5de4e632b528b0008c3e640ed49f234c3e3f",
+      "tool": "pnpm evidence:v4.9",
+      "environment": "win32-x64-node-v22.22.2"
+    },
+    {
+      "path": "qualification/pipelineRun.json",
+      "sha256": "bc38b0de8f9c19784a98d4506bb334f7845969c8d98aa7bd791431ae67f69457",
+      "bytes": 5063,
+      "source": "6fdc5de4e632b528b0008c3e640ed49f234c3e3f",
+      "tool": "pnpm evidence:v4.9",
+      "environment": "win32-x64-node-v22.22.2"
+    },
+    {
+      "path": "qualification/referenceCi.json",
+      "sha256": "1873bc94f391cf0438005ef9631ba01819de90fb84156ee7fab5a181af1a864e",
+      "bytes": 98573,
+      "source": "6fdc5de4e632b528b0008c3e640ed49f234c3e3f",
+      "tool": "pnpm evidence:v4.9",
+      "environment": "win32-x64-node-v22.22.2"
+    },
+    {
+      "path": "qualification/runtime.json",
+      "sha256": "defbfb33569cfd892b041f29d5652a0cef74ce811ca2fb337a025354baa9c8fc",
+      "bytes": 9286,
+      "source": "6fdc5de4e632b528b0008c3e640ed49f234c3e3f",
+      "tool": "pnpm evidence:v4.9",
+      "environment": "win32-x64-node-v22.22.2"
+    },
+    {
+      "path": "qualification/windows.json",
+      "sha256": "269d94fd62355e53159365dffc92c180ab7c1029ea895a7973fc273733cb10a2",
+      "bytes": 2306,
+      "source": "6fdc5de4e632b528b0008c3e640ed49f234c3e3f",
+      "tool": "pnpm evidence:v4.9",
+      "environment": "win32-x64-node-v22.22.2"
+    },
+    {
+      "path": "release/rc-signoff.json",
+      "sha256": "669cde97fe60ccbc3e2f6b7952c0a21253b3d98b573fb2026908dd0b88e34f87",
+      "bytes": 880,
+      "source": "6fdc5de4e632b528b0008c3e640ed49f234c3e3f",
+      "tool": "pnpm evidence:v4.9",
+      "environment": "win32-x64-node-v22.22.2"
+    },
+    {
+      "path": "security/license-and-security.json",
+      "sha256": "0dc451831c7af2a4a2a9b9ebf8e211ce107ceccce43b6361a7ae2a143fb0e7c3",
+      "bytes": 546,
+      "source": "6fdc5de4e632b528b0008c3e640ed49f234c3e3f",
+      "tool": "pnpm evidence:v4.9",
+      "environment": "win32-x64-node-v22.22.2"
+    },
+    {
+      "path": "source-control/fixtures.json",
+      "sha256": "b6dc5dfe5176f7ad058ec09a68a80f85162e155a5320635b6bccec8f481d8f98",
+      "bytes": 781,
+      "source": "6fdc5de4e632b528b0008c3e640ed49f234c3e3f",
+      "tool": "pnpm evidence:v4.9",
+      "environment": "win32-x64-node-v22.22.2"
+    }
+  ],
+  "localStatus": "passed",
+  "rcStatus": "candidate-observation-open",
+  "externalGates": [
+    "14-day RC observation",
+    "24-hour soak",
+    "two independent machines",
+    "disposable clean-machine install lifecycle",
+    "publisher signing/notarization",
+    "Firefox/WebKit",
+    "representative hardware",
+    "independent verifier"
+  ],
+  "status": "passed-local-with-honest-external-gates"
+}

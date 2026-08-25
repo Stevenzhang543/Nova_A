@@ -1,0 +1,25 @@
+{
+  "format": "nova-v4.7-benchmarks",
+  "generatedAt": "2026-08-24T13:56:24.469Z",
+  "animation": {
+    "id": "ANM-STRESS",
+    "status": "passed",
+    "detail": "100,000 runtime samples completed in 5.04 ms.",
+    "metrics": {
+      "samples": 100000,
+      "stressMs": 5.035600000002887,
+      "checksum": 499500
+    }
+  },
+  "ui": {
+    "id": "UI-RESPONSIVE-MATRIX",
+    "status": "passed",
+    "detail": "Six device classes render finite LTR and RTL matrices.",
+    "metrics": {
+      "matrices": 12,
+      "issues": 64
+    }
+  },
+  "regressions": 0,
+  "status": "passed-local"
+}

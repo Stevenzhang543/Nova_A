@@ -14,6 +14,7 @@ import {
   type AssetRecord,
   type AssetSavedFilter,
   type AssetType,
+  type TextAssetType,
   type TextureAtlasPage
 } from './types'
 import type { TextureRegion } from '../renderer'
@@ -108,6 +109,7 @@ export function inferAssetType(file: Pick<File, 'name' | 'type'>): AssetType {
   if (extension === 'nova-data' || extension === 'csv') return 'dataTable'
   if (extension === 'nova-replay') return 'replay'
   if (extension === 'nova-path') return 'path'
+  if (extension === 'nova-particle') return 'particleSystem'
   if (extension === 'nova-material' || extension === 'material') return 'material'
   if (extension === 'nova-anim') return 'animation'
   if (extension === 'nova-controller') return 'controller'
@@ -146,6 +148,7 @@ function defaultFolder(type: AssetType): string {
   if (type === 'dataTable') return 'Assets/Data/Tables'
   if (type === 'replay') return 'Assets/Replays'
   if (type === 'path') return 'Assets/Paths'
+  if (type === 'particleSystem') return 'Assets/Particles'
   if (type === 'behaviorTree' || type === 'stateMachine') return 'Assets/AI'
   if (type === 'tilePalette') return 'Assets/TilePalettes'
   if (type === 'brushPreset') return 'Assets/BrushPresets'
@@ -309,12 +312,12 @@ function textDataUrl(source: string, mimeType: string): string {
 
 export function createTextAsset(
   name: string,
-  assetType: 'script' | 'prefab' | 'scene' | 'material' | 'animation' | 'controller' | 'animationMask' | 'rig' | 'skin' | 'timeline' | 'tileset' | 'atlas' | 'shader' | 'localization' | 'uiTheme' | 'behaviorTree' | 'stateMachine' | 'tilePalette' | 'brushPreset' | 'terrainRules' | 'dataSchema' | 'dataTable' | 'replay' | 'path',
+  assetType: Exclude<TextAssetType, 'other'>,
   source: string,
   requestedFolder?: string
 ): AssetRecord {
   const uuid = normalizeUuid(undefined)
-  const extension = assetType === 'script' ? '.rhai' : assetType === 'prefab' ? '.nova-prefab' : assetType === 'scene' ? '.nova-scene' : assetType === 'material' ? '.nova-material' : assetType === 'animation' ? '.nova-anim' : assetType === 'controller' ? '.nova-controller' : assetType === 'animationMask' ? '.nova-mask' : assetType === 'rig' ? '.nova-rig' : assetType === 'skin' ? '.nova-skin' : assetType === 'timeline' ? '.nova-timeline' : assetType === 'tileset' ? '.nova-tileset' : assetType === 'atlas' ? '.nova-atlas' : assetType === 'shader' ? '.nova-shader' : assetType === 'uiTheme' ? '.nova-theme' : assetType === 'behaviorTree' ? '.nova-behavior' : assetType === 'stateMachine' ? '.nova-state' : assetType === 'tilePalette' ? '.nova-palette' : assetType === 'brushPreset' ? '.nova-brush' : assetType === 'terrainRules' ? '.nova-terrain' : assetType === 'dataSchema' ? '.nova-schema' : assetType === 'dataTable' ? '.nova-data' : assetType === 'replay' ? '.nova-replay' : assetType === 'path' ? '.nova-path' : '.nova-locale'
+  const extension = assetType === 'script' ? '.rhai' : assetType === 'prefab' ? '.nova-prefab' : assetType === 'scene' ? '.nova-scene' : assetType === 'material' ? '.nova-material' : assetType === 'animation' ? '.nova-anim' : assetType === 'controller' ? '.nova-controller' : assetType === 'animationMask' ? '.nova-mask' : assetType === 'rig' ? '.nova-rig' : assetType === 'skin' ? '.nova-skin' : assetType === 'timeline' ? '.nova-timeline' : assetType === 'tileset' ? '.nova-tileset' : assetType === 'atlas' ? '.nova-atlas' : assetType === 'shader' ? '.nova-shader' : assetType === 'uiTheme' ? '.nova-theme' : assetType === 'behaviorTree' ? '.nova-behavior' : assetType === 'stateMachine' ? '.nova-state' : assetType === 'tilePalette' ? '.nova-palette' : assetType === 'brushPreset' ? '.nova-brush' : assetType === 'terrainRules' ? '.nova-terrain' : assetType === 'dataSchema' ? '.nova-schema' : assetType === 'dataTable' ? '.nova-data' : assetType === 'replay' ? '.nova-replay' : assetType === 'path' ? '.nova-path' : assetType === 'particleSystem' ? '.nova-particle' : '.nova-locale'
   const safeName = sanitizedName(name).endsWith(extension) ? sanitizedName(name) : `${sanitizedName(name)}${extension}`
   const mimeType = assetType === 'script' ? 'text/x-rhai' : `application/x-nova-${assetType}`
   const record: AssetRecord = {
@@ -471,7 +474,7 @@ export function loadAssets(source: unknown, folderSource?: unknown, databaseSour
     const knownFields = new Set(['uuid', 'name', 'path', 'assetType', 'mimeType', 'byteLength', 'source', 'sourceModified', 'importedAt', 'width', 'height', 'duration', 'fontFamily', 'settings', 'script', 'animationImport', 'pipeline', 'tags', 'collectionIds', 'contentGroup', 'editorOnly', 'sourceControlStatus', 'thumbnailKey', 'unknownFields'])
     const inheritedUnknown = item.unknownFields && typeof item.unknownFields === 'object' ? item.unknownFields : {}
     const unknownFields = { ...inheritedUnknown, ...Object.fromEntries(Object.entries(value).filter(([key]) => !knownFields.has(key))) }
-    const assetType = ['image', 'audio', 'font', 'scene', 'prefab', 'script', 'material', 'animation', 'controller', 'animationMask', 'rig', 'skin', 'timeline', 'tileset', 'atlas', 'shader', 'localization', 'uiTheme', 'behaviorTree', 'stateMachine', 'tilePalette', 'brushPreset', 'terrainRules', 'dataSchema', 'dataTable', 'replay', 'other'].includes(String(item.assetType)) ? item.assetType as AssetType : 'other'
+    const assetType = ['image', 'audio', 'font', 'scene', 'prefab', 'script', 'material', 'animation', 'controller', 'animationMask', 'rig', 'skin', 'timeline', 'tileset', 'atlas', 'shader', 'localization', 'uiTheme', 'behaviorTree', 'stateMachine', 'tilePalette', 'brushPreset', 'terrainRules', 'dataSchema', 'dataTable', 'replay', 'path', 'particleSystem', 'other'].includes(String(item.assetType)) ? item.assetType as AssetType : 'other'
     const uuid = normalizeUuid(item.uuid)
     const defaults = defaultImportSettings()
     const settings: AssetImportSettings = {
@@ -497,6 +500,7 @@ export function loadAssets(source: unknown, folderSource?: unknown, databaseSour
     settings.audioSettings.quality = Math.min(1, Math.max(0, Number(settings.audioSettings.quality) || .8))
     settings.audioSettings.trimStart = Math.max(0, Number(settings.audioSettings.trimStart) || 0)
     settings.audioSettings.trimEnd = Math.max(0, Number(settings.audioSettings.trimEnd) || 0)
+    settings.audioSettings.preload = ['Preload', 'Metadata', 'None'].includes(String(settings.audioSettings.preload)) ? settings.audioSettings.preload : 'Auto'
     settings.fontSettings.renderMode = settings.fontSettings.renderMode === 'Bitmap' ? 'Bitmap' : 'Scalable'
     settings.fontSettings.fallbackFamilies = Array.isArray(settings.fontSettings.fallbackFamilies) ? settings.fontSettings.fallbackFamilies.map(String).map(value => value.trim()).filter(Boolean).slice(0, 16) : defaults.fontSettings.fallbackFamilies
     settings.fontSettings.bitmapSize = Math.min(512, Math.max(6, Math.round(Number(settings.fontSettings.bitmapSize) || 32)))
@@ -552,6 +556,8 @@ export function loadAssets(source: unknown, folderSource?: unknown, databaseSour
       script: assetType === 'script' ? {
         ...defaultScriptMetadata(),
         ...(item.script ?? {}),
+        version: 2,
+        apiVersion: item.script?.apiVersion === undefined || Number(item.script.apiVersion) === 1 ? 1 : 2,
         breakpoints: Array.isArray(item.script?.breakpoints) ? [...new Set(item.script.breakpoints.map(Number).filter(value => Number.isInteger(value) && value > 0))].slice(0, 1000) : [],
         breakpointDetails: Array.isArray(item.script?.breakpointDetails) ? item.script.breakpointDetails.flatMap((point, index) => {
           if (!point || typeof point !== 'object') return []
@@ -562,7 +568,8 @@ export function loadAssets(source: unknown, folderSource?: unknown, databaseSour
             functionName: String(point.functionName || '').slice(0, 80), condition: String(point.condition || '').slice(0, 512),
             hitCondition: Math.min(1_000_000, Math.max(0, Math.round(Number(point.hitCondition) || 0))),
             logMessage: String(point.logMessage || '').slice(0, 1_024), enabled: point.enabled !== false,
-            hitCount: Math.min(1_000_000_000, Math.max(0, Math.round(Number(point.hitCount) || 0)))
+            hitCount: Math.min(1_000_000_000, Math.max(0, Math.round(Number(point.hitCount) || 0))),
+            group: String(point.group || 'Default').trim().slice(0, 80) || 'Default'
           }]
         }).slice(0, 1000) : [],
         tests: Array.isArray(item.script?.tests) ? item.script.tests.filter(value => typeof value === 'string').map(value => value.slice(0, 80)).slice(0, 256) : [],
@@ -583,6 +590,8 @@ export function loadAssets(source: unknown, folderSource?: unknown, databaseSour
         sourceAsset: typeof item.animationImport?.sourceAsset === 'string' ? item.animationImport.sourceAsset : null,
         sourceFrameRate: Math.min(240, Math.max(1, Number(item.animationImport?.sourceFrameRate) || 60)),
         sampleRate: Math.min(240, Math.max(1, Number(item.animationImport?.sampleRate) || 60)),
+        compressionTolerance: Math.min(1e6, Math.max(0, Number(item.animationImport?.compressionTolerance) || .0001)),
+        preserveEvents: item.animationImport?.preserveEvents !== false,
         trackMappings: Array.isArray(item.animationImport?.trackMappings) ? item.animationImport.trackMappings.flatMap(mapping => {
           if (!mapping || typeof mapping.source !== 'string' || typeof mapping.target !== 'string') return []
           return [{ source: mapping.source.slice(0, 256), target: mapping.target.slice(0, 256) }]

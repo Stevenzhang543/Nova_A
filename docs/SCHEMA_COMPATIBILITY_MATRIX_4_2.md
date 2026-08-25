@@ -1,5 +1,7 @@
 # Nova_A 4.2 schema compatibility matrix
 
+> Historical 4.2 matrix. The current 4.9 authority remains Project Format 2/schema 29, Rhai API v2, Plugin API 2, Package Manifest 1 and Build CLI 1, with engine compatibility sealed to `>=3.9.0,<6.0.0`. See [MIGRATION_4_9.md](./MIGRATION_4_9.md).
+
 | Input | Open policy | Mutation policy | Result |
 | --- | --- | --- | --- |
 | Schemas 5–28 | Guided migration only | Dry run → report → backup → verified transaction | Schema 29 / engine 4.2.0 |

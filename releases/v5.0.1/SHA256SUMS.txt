@@ -1,0 +1,10 @@
+001bf35d7f73b5026f233bf22e9ecedcbc502257dfa991bdf6125e656ca97445  EDIT_LEDGER.md
+30c69fec6f9947004ee71f91537b69c9d1345f6c57aba4fd1a74b57b3c0aee75  LICENSE.md
+dced462d95b778e5e3ab18a1bae7067de74f4b6239dfd188820a79b85788169a  Nova_A-v5.0.1-reference-projects.zip
+dc137099c152d6be471febde13a750d822b85bb07c6df9ab63fe0728209a04bb  Nova_A-v5.0.1-release-evidence.zip
+6d3d8bd9bf43a4571cc4057d82a2ad429a8a88879fc9fa8c2942a006f0e1b945  Nova_A-v5.0.1-source.zip
+bd72d68565dd0d233ad5a717d29a576e37b2f06a8d3c50bc068c20115a0f22fe  Nova_A-v5.0.1-web.zip
+ca1aff970614bf9c489edf8937658a7d5ead5ee29ca08f42e448426a3a714320  Nova_A-v5.0.1-windows-x64.msi
+a75d8844c7cd1fafd82bf251b5fe5036684f26be4dce61655f2aad80371b54b1  Nova_A-v5.0.1-windows-x64-portable.exe
+63f36e3fd1fa82698705c6a63e3b879b67d36503a46365f0bf23c0df97c3c303  Nova_A-v5.0.1-windows-x64-setup.exe
+f2076bc89eb87ed79fc7b169ae25950f446606ff95ab7b8b409c78cb111c2c27  RELEASE_NOTES.md

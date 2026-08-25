@@ -31,6 +31,8 @@ export interface AudioMixerBusSettings {
   voiceLimit: number
   sends: AudioMixerSend[]
   effects: AudioMixerEffect[]
+  automation: Array<{ time: number; gain: number }>
+  automationLoopSeconds: number
 }
 
 export interface AudioMixerSnapshot {
@@ -56,6 +58,9 @@ export interface AudioMixerSettings {
   activeSnapshot: string | null
   ducking: AudioDuckingRule[]
   masterVoiceLimit: number
+  outputDeviceId: string
+  limiterEnabled: boolean
+  limiterCeilingDb: number
 }
 
 export interface AudioProjectSettings {
@@ -79,6 +84,14 @@ export interface AudioRuntimeDiagnostics {
   underruns: number
   deviceChanges: number
   lastDeviceChange: string
+  busMeterDetails: Record<string, { rms: number; peak: number; rmsDb: number; peakDb: number; clipped: boolean }>
+  clippingEvents: number
+  loudnessDb: number
+  stolenVoices: number
+  failures: Array<{ at: string; operation: string; message: string; recovery: string }>
+  outputDevices: Array<{ id: string; label: string }>
+  selectedOutputDevice: string
+  recoveryCount: number
 }
 
 const DEFAULT_BUS_IDS = ['Master', 'Music', 'SFX', 'UI'] as const
@@ -89,7 +102,7 @@ const MAX_SNAPSHOTS = 32
 const MAX_DUCKING_RULES = 32
 
 function defaultBus(id: string, parent: string | null): AudioMixerBusSettings {
-  return { id, name: id, gain: 1, mute: false, solo: false, parent, voiceLimit: id === 'Music' ? 4 : 32, sends: [], effects: [] }
+  return { id, name: id, gain: 1, mute: false, solo: false, parent, voiceLimit: id === 'Music' ? 4 : 32, sends: [], effects: [], automation: [], automationLoopSeconds: 0 }
 }
 
 export function defaultAudioSettings(): AudioProjectSettings {
@@ -100,7 +113,7 @@ export function defaultAudioSettings(): AudioProjectSettings {
     mixer: {
       buses: [defaultBus('Master', null), defaultBus('Music', 'Master'), defaultBus('SFX', 'Master'), defaultBus('UI', 'Master')],
       snapshots: [{ id: 'default', name: 'Default', masterVolume: 1, busGains: { Master: 1, Music: 1, SFX: 1, UI: 1 } }],
-      activeSnapshot: null, ducking: [], masterVoiceLimit: 128
+      activeSnapshot: null, ducking: [], masterVoiceLimit: 128, outputDeviceId: 'default', limiterEnabled: true, limiterCeilingDb: -1
     }
   }
 }
@@ -158,6 +171,8 @@ export function normalizeAudioSettings(source: unknown): AudioProjectSettings {
         target: safeId(send?.target, 'Master'), gain: gain(send?.gain), enabled: send?.enabled !== false
       })) : [],
       effects: Array.isArray(value.effects) ? value.effects.slice(0, MAX_EFFECTS_PER_BUS).map(normalizeEffect) : []
+      ,automation: (Array.isArray(value.automation) ? value.automation : []).slice(0, 64).map(point => ({ time: clamp(point?.time, 0, 0, 3_600), gain: gain(point?.gain) })).sort((a, b) => a.time - b.time),
+      automationLoopSeconds: clamp(value.automationLoopSeconds, 0, 0, 3_600)
     })
   }
   if (!ids.has('Master')) { ids.add('Master'); buses.unshift(defaultBus('Master', null)) }
@@ -194,7 +209,7 @@ export function normalizeAudioSettings(source: unknown): AudioProjectSettings {
   for (const id of DEFAULT_BUS_IDS) { const bus = buses.find(candidate => candidate.id === id); if (bus) bus.gain = busesLegacy[id] }
   return {
     masterVolume: gain(item.masterVolume), sampleRate, buses: busesLegacy,
-    mixer: { buses, snapshots, activeSnapshot: typeof mixerSource.activeSnapshot === 'string' && snapshots.some(snapshot => snapshot.id === mixerSource.activeSnapshot) ? mixerSource.activeSnapshot : null, ducking, masterVoiceLimit: Math.round(clamp(mixerSource.masterVoiceLimit, 128, 1, 1024)) }
+    mixer: { buses, snapshots, activeSnapshot: typeof mixerSource.activeSnapshot === 'string' && snapshots.some(snapshot => snapshot.id === mixerSource.activeSnapshot) ? mixerSource.activeSnapshot : null, ducking, masterVoiceLimit: Math.round(clamp(mixerSource.masterVoiceLimit, 128, 1, 1024)), outputDeviceId: typeof mixerSource.outputDeviceId === 'string' ? mixerSource.outputDeviceId.slice(0, 256) || 'default' : 'default', limiterEnabled: mixerSource.limiterEnabled !== false, limiterCeilingDb: clamp(mixerSource.limiterCeilingDb, -1, -24, 0) }
   }
 }
 
@@ -218,6 +233,8 @@ interface ActiveAudio {
 class AudioRuntime {
   private context: AudioContext | null = null
   private master: GainNode | null = null
+  private limiter: DynamicsCompressorNode | null = null
+  private limiterEnabledApplied: boolean | null = null
   private busInputs = new Map<string, GainNode>()
   private busOutputs = new Map<string, GainNode>()
   private busMeters = new Map<string, AnalyserNode>()
@@ -234,11 +251,30 @@ class AudioRuntime {
   private lastUnderrunAt = 0
   private voiceSerial = 0
   private manualLimitedVoices = 0
-  readonly diagnostics: AudioRuntimeDiagnostics = { activeVoices: 0, streamingVoices: 0, bufferedVoices: 0, contextState: 'unavailable', busMeters: {}, limitedVoices: 0, virtualVoices: 0, baseLatencyMs: null, outputLatencyMs: null, underruns: 0, deviceChanges: 0, lastDeviceChange: '' }
+  readonly diagnostics: AudioRuntimeDiagnostics = { activeVoices: 0, streamingVoices: 0, bufferedVoices: 0, contextState: 'unavailable', busMeters: {}, limitedVoices: 0, virtualVoices: 0, baseLatencyMs: null, outputLatencyMs: null, underruns: 0, deviceChanges: 0, lastDeviceChange: '', busMeterDetails: {}, clippingEvents: 0, loudnessDb: -120, stolenVoices: 0, failures: [], outputDevices: [], selectedOutputDevice: 'default', recoveryCount: 0 }
 
   begin(settings: AudioProjectSettings): void {
     this.settings = normalizeAudioSettings(settings)
-    this.refreshContextForSampleRate(); this.ensureContext(); void this.context?.resume().catch(() => undefined); this.applyMix()
+    this.refreshContextForSampleRate(); this.ensureContext(); void this.recover(); this.applyMix()
+  }
+
+  async refreshOutputDevices(): Promise<void> {
+    if (typeof navigator === 'undefined' || !navigator.mediaDevices?.enumerateDevices) { this.diagnostics.outputDevices = [{ id: 'default', label: 'System default' }]; return }
+    try { const devices = await navigator.mediaDevices.enumerateDevices(); this.diagnostics.outputDevices = [{ id: 'default', label: 'System default' }, ...devices.filter(device => device.kind === 'audiooutput' && device.deviceId !== 'default').map((device, index) => ({ id: device.deviceId, label: device.label || `Audio output ${index + 1}` }))] }
+    catch (error) { this.reportFailure('enumerate devices', error, 'Grant media-device permission or keep the system default output.') }
+  }
+
+  async selectOutputDevice(deviceId: string): Promise<boolean> {
+    this.settings.mixer.outputDeviceId = deviceId || 'default'
+    const context = this.context as (AudioContext & { setSinkId?: (id: string) => Promise<void> }) | null
+    if (!context?.setSinkId) { this.diagnostics.selectedOutputDevice = 'default'; if (deviceId !== 'default') this.reportFailure('select output device', new Error('This runtime does not expose AudioContext.setSinkId.'), 'Use the system default output or a Chromium/WebView build with output routing support.'); return deviceId === 'default' }
+    try { await context.setSinkId(deviceId); this.diagnostics.selectedOutputDevice = deviceId; return true } catch (error) { this.reportFailure('select output device', error, 'Reconnect the device, choose System default, then retry.'); return false }
+  }
+
+  async recover(): Promise<boolean> {
+    this.ensureContext(); if (!this.context) return false
+    try { if (this.context.state === 'suspended') await this.context.resume(); await this.selectOutputDevice(this.settings.mixer.outputDeviceId); this.diagnostics.recoveryCount++; return this.context.state === 'running' }
+    catch (error) { this.reportFailure('resume audio context', error, 'Interact with the document once, then press Recover audio.'); return false }
   }
 
   update(entities: Entity[], settings: AudioProjectSettings, playing: boolean): void {
@@ -252,14 +288,14 @@ class AudioRuntime {
     const listenerPosition = listener ? worldTransform(listener, entities).position : { x: 0, y: 0 }
     const sources = entities.flatMap(entity => {
       const component = entity.getComponent<AudioSource>('AudioSource')
-      return entity.enabled && component?.enabled && component.audioClip ? [{ entity, component }] : []
+      return entity.enabled && component?.enabled && (component.audioClip || component.playlist.length) ? [{ entity, component }] : []
     }).sort((first, second) => first.component.voicePriority - second.component.voicePriority)
     for (const { entity, component } of sources) {
       const busSettings = this.settings.mixer.buses.find(bus => bus.id === component.bus) ?? this.settings.mixer.buses.find(bus => bus.id === 'SFX')!
       const busVoices = voicesByBus.get(busSettings.id) ?? 0
       if (voiceCount >= this.settings.mixer.masterVoiceLimit || busVoices >= busSettings.voiceLimit) { this.release(component.uuid); limited++; if (component.virtualizeWhenLimited) virtual++; continue }
       voiceCount++; voicesByBus.set(busSettings.id, busVoices + 1); live.add(component.uuid)
-      const reference = component.audioClip
+      const reference = this.sourceReference(component)
       if (!reference) continue
       const asset = resolveAsset(reference)
       if (!asset || asset.assetType !== 'audio' || !asset.source) { this.release(component.uuid); continue }
@@ -271,9 +307,9 @@ class AudioRuntime {
       let audio = this.active.get(component.uuid)
       if (!audio || audio.reference !== reference || audio.streaming !== streaming) {
         this.release(component.uuid)
-        const element = new Audio(asset.source); element.preload = streaming ? 'metadata' : 'auto'
+        const element = new Audio(asset.source); element.preload = streaming || asset.settings.audioSettings.preload === 'Metadata' ? 'metadata' : asset.settings.audioSettings.preload === 'None' ? 'none' : 'auto'
         let created: ActiveAudio
-        const timeUpdate = () => this.enforceLoopBounds(created)
+        const timeUpdate = () => { this.enforceLoopBounds(created); if (created.element.ended && component.playlist.length && !component.loop) { component.playlistIndex = component.playlistMode === 'Random' ? Math.abs(Math.round(seededVariation(`${component.uuid}:${this.voiceSerial++}`) * 1_000_000)) % component.playlist.length : (component.playlistIndex + 1) % component.playlist.length; this.release(component.uuid) } }
         element.addEventListener('timeupdate', timeUpdate)
         const pitchVariation = seededVariation(`${component.uuid}:pitch:${this.diagnostics.activeVoices}`), volumeVariation = seededVariation(`${component.uuid}:volume:${this.diagnostics.activeVoices}`)
         created = { reference, bus: busSettings.id, element, source: null, gain: null, panner: null, started: false, manuallyPaused: false, streaming, loopStart, loopEnd, timeUpdate, pitchVariation, volumeVariation }
@@ -289,7 +325,7 @@ class AudioRuntime {
       const min = Math.max(0, finiteNumber(component.minDistance, 1)), max = Math.max(min + 1e-6, finiteNumber(component.maxDistance, 50))
       const attenuation = this.attenuation(component, distance, min, max)
       const normalizeGain = asset.settings.audioSettings.normalize ? clamp(asset.settings.audioSettings.normalizationGain, 1, .01, 16) : 1
-      const volume = clamp(component.volume * (1 + component.randomVolume * audio.volumeVariation), 1, 0, 1) * normalizeGain * ((1 - spatial) + spatial * attenuation)
+      const volume = clamp(component.volume * (1 + component.randomVolume * audio.volumeVariation), 1, 0, 1) * normalizeGain * ((1 - spatial) + spatial * attenuation) * this.fadeEnvelope(component, audio)
       if (audio.gain) audio.gain.gain.value = volume
       else audio.element.volume = clamp(volume * this.settings.masterVolume * (this.settings.buses[component.bus as keyof typeof this.settings.buses] ?? 1), 1, 0, 1)
       if (audio.panner) audio.panner.pan.value = spatial * Math.min(1, Math.max(-1, (sourcePosition.x - listenerPosition.x) / max))
@@ -297,14 +333,14 @@ class AudioRuntime {
         voice.loopStart = loopStart; voice.loopEnd = loopEnd; voice.element.loop = component.loop
         this.enforceLoopBounds(voice)
         voice.element.playbackRate = clamp(component.pitch * (1 + component.randomPitch * voice.pitchVariation), 1, .25, 4)
-        const voiceVolume = clamp(component.volume * (1 + component.randomVolume * voice.volumeVariation), 1, 0, 1) * normalizeGain * ((1 - spatial) + spatial * attenuation)
+        const voiceVolume = clamp(component.volume * (1 + component.randomVolume * voice.volumeVariation), 1, 0, 1) * normalizeGain * ((1 - spatial) + spatial * attenuation) * this.fadeEnvelope(component, voice)
         if (voice.gain) voice.gain.gain.value = voiceVolume
         else voice.element.volume = clamp(voiceVolume * this.settings.masterVolume * (this.settings.buses[component.bus as keyof typeof this.settings.buses] ?? 1), 1, 0, 1)
         if (voice.panner) voice.panner.pan.value = spatial * Math.min(1, Math.max(-1, (sourcePosition.x - listenerPosition.x) / max))
         if (playing && voice.started && voice.element.paused && !voice.manuallyPaused) void voice.element.play().catch(() => undefined)
         if (!playing && !voice.element.paused) voice.element.pause()
       }
-      if (playing && component.autoplay && !audio.started) { audio.started = true; if (loopStart > 0) audio.element.currentTime = loopStart; void audio.element.play().catch(() => { audio!.started = false }) }
+      if (playing && component.autoplay && !audio.started) { audio.started = true; audio.element.currentTime = Math.min(loopEnd || Number.POSITIVE_INFINITY, loopStart + Math.max(0, finiteNumber(component.startOffsetSeconds, 0))); void audio.element.play().catch(error => { audio!.started = false; this.reportFailure('autoplay source', error, 'Interact with the game view or disable autoplay and trigger playback from input.') }) }
       if (playing && audio.started && audio.element.paused && !audio.manuallyPaused) void audio.element.play().catch(() => undefined)
       if (!playing && !audio.element.paused) audio.element.pause()
     }
@@ -326,8 +362,8 @@ class AudioRuntime {
       this.playPolyphonic(component, active)
       return
     }
-    active.started = true; active.manuallyPaused = false; if (active.loopStart > 0) active.element.currentTime = active.loopStart
-    void this.context?.resume().catch(() => undefined); void active.element.play().catch(() => { active.started = false })
+    active.started = true; active.manuallyPaused = false; active.element.currentTime = active.loopStart + Math.max(0, finiteNumber(component.startOffsetSeconds, 0))
+    void this.recover(); void active.element.play().catch(error => { active.started = false; this.reportFailure('play source', error, 'Verify the imported audio asset and browser autoplay permission, then retry.') })
   }
 
   pause(entity: Entity): void { const component = entity.getComponent<AudioSource>('AudioSource'); const active = component ? this.active.get(component.uuid) : null; if (active) { active.manuallyPaused = true; active.element.pause() }; if (component) for (const voice of this.polyphonic.get(component.uuid) ?? []) { voice.manuallyPaused = true; voice.element.pause() } }
@@ -343,8 +379,8 @@ class AudioRuntime {
 
   private ensureContext(): void {
     if (this.context || typeof AudioContext === 'undefined') return
-    try { this.context = new AudioContext({ sampleRate: this.settings.sampleRate }); this.master = this.context.createGain(); this.master.connect(this.context.destination); this.mixerSignature = ''; this.configureMixerGraph(); this.installDeviceListener() }
-    catch { this.context = null; this.master = null; this.destroyMixerGraph() }
+    try { this.context = new AudioContext({ sampleRate: this.settings.sampleRate }); this.master = this.context.createGain(); this.limiter = this.context.createDynamicsCompressor(); this.limiter.knee.value = 0; this.limiter.ratio.value = 20; this.limiter.attack.value = .001; this.limiter.release.value = .05; this.configureMasterOutput(); this.mixerSignature = ''; this.configureMixerGraph(); this.installDeviceListener(); void this.refreshOutputDevices(); void this.selectOutputDevice(this.settings.mixer.outputDeviceId) }
+    catch (error) { this.reportFailure('create audio context', error, 'Check the output device and browser audio permissions, then press Recover audio.'); this.context = null; this.master = null; this.limiter = null; this.destroyMixerGraph() }
   }
 
   private configureMixerGraph(): void {
@@ -407,12 +443,13 @@ class AudioRuntime {
 
   private applyMix(): void {
     if (!this.master || !this.context) return
+    this.configureMasterOutput()
     const snapshot = this.settings.mixer.snapshots.find(candidate => candidate.id === this.settings.mixer.activeSnapshot)
     this.master.gain.setTargetAtTime(this.settings.masterVolume * (snapshot?.masterVolume ?? 1), this.context.currentTime, .02)
     const anySolo = this.settings.mixer.buses.some(bus => bus.solo)
     for (const bus of this.settings.mixer.buses) {
       const output = this.busOutputs.get(bus.id); if (!output) continue
-      const requested = snapshot?.busGains[bus.id] ?? bus.gain
+      const requested = (snapshot?.busGains[bus.id] ?? bus.gain) * this.automationGain(bus)
       const audible = !bus.mute && (!anySolo || bus.solo || bus.id === 'Master')
       output.gain.setTargetAtTime(audible ? requested : 0, this.context.currentTime, .015)
     }
@@ -457,9 +494,9 @@ class AudioRuntime {
     this.diagnostics.baseLatencyMs = this.context && Number.isFinite(this.context.baseLatency) ? this.context.baseLatency * 1000 : null
     const outputLatency = this.context && 'outputLatency' in this.context ? Number((this.context as AudioContext & { outputLatency: number }).outputLatency) : Number.NaN
     this.diagnostics.outputLatencyMs = Number.isFinite(outputLatency) ? outputLatency * 1000 : null
-    const samples = new Float32Array(128), meters: Record<string, number> = {}
-    for (const [id, analyser] of this.busMeters) { analyser.getFloatTimeDomainData(samples); let energy = 0; for (const sample of samples) energy += sample * sample; meters[id] = Math.min(1, Math.sqrt(energy / samples.length)) }
-    this.diagnostics.busMeters = meters
+    const samples = new Float32Array(128), meters: Record<string, number> = {}, details: AudioRuntimeDiagnostics['busMeterDetails'] = {}; let masterLoudness = -120
+    for (const [id, analyser] of this.busMeters) { analyser.getFloatTimeDomainData(samples); let energy = 0, peak = 0; for (const sample of samples) { energy += sample * sample; peak = Math.max(peak, Math.abs(sample)) } const rms = Math.min(1, Math.sqrt(energy / samples.length)), rmsDb = 20 * Math.log10(Math.max(1e-6, rms)), peakDb = 20 * Math.log10(Math.max(1e-6, peak)), clipped = peak >= .999; meters[id] = rms; details[id] = { rms, peak, rmsDb, peakDb, clipped }; if (clipped) this.diagnostics.clippingEvents++; if (id === 'Master') masterLoudness = rmsDb }
+    this.diagnostics.busMeters = meters; this.diagnostics.busMeterDetails = details; this.diagnostics.loudnessDb = masterLoudness
   }
 
   private installDeviceListener(): void {
@@ -467,7 +504,7 @@ class AudioRuntime {
     navigator.mediaDevices.addEventListener('devicechange', () => {
       this.diagnostics.deviceChanges++
       this.diagnostics.lastDeviceChange = new Date().toISOString()
-      this.applyMix()
+      void this.refreshOutputDevices(); void this.recover(); this.applyMix()
     })
     this.deviceListenerInstalled = true
   }
@@ -493,9 +530,45 @@ class AudioRuntime {
     active.element.currentTime = active.loopStart + overrun % span
   }
 
+  private fadeEnvelope(component: AudioSource, active: ActiveAudio): number {
+    const current = Math.max(0, active.element.currentTime - active.loopStart), remaining = active.loopEnd > active.loopStart ? active.loopEnd - active.element.currentTime : Number.POSITIVE_INFINITY
+    const fadeIn = component.fadeInSeconds > 0 ? Math.min(1, current / component.fadeInSeconds) : 1
+    const fadeOut = component.fadeOutSeconds > 0 ? Math.min(1, Math.max(0, remaining) / component.fadeOutSeconds) : 1
+    return Math.min(fadeIn, fadeOut)
+  }
+
+  private sourceReference(component: AudioSource): string | null {
+    if (component.playlistMode === 'Single' || !component.playlist.length) return component.audioClip
+    const playlist = component.playlist.filter(reference => typeof reference === 'string' && reference).slice(0, 256)
+    if (!playlist.length) return component.audioClip
+    component.playlistIndex = Math.max(0, Math.min(playlist.length - 1, Math.round(finiteNumber(component.playlistIndex, 0))))
+    return playlist[component.playlistIndex]
+  }
+
+  private automationGain(bus: AudioMixerBusSettings): number {
+    if (!this.context || !bus.automation.length) return 1
+    const duration = bus.automationLoopSeconds > 0 ? bus.automationLoopSeconds : bus.automation[bus.automation.length - 1].time, time = duration > 0 ? this.context.currentTime % duration : 0
+    if (time <= bus.automation[0].time) return bus.automation[0].gain
+    for (let index = 1; index < bus.automation.length; index++) if (time <= bus.automation[index].time) { const first = bus.automation[index - 1], second = bus.automation[index], amount = (time - first.time) / Math.max(1e-6, second.time - first.time); return first.gain + (second.gain - first.gain) * amount }
+    return bus.automation[bus.automation.length - 1].gain
+  }
+
+  private configureMasterOutput(): void {
+    if (!this.master || !this.context || !this.limiter) return
+    this.limiter.threshold.value = this.settings.mixer.limiterCeilingDb
+    if (this.limiterEnabledApplied === this.settings.mixer.limiterEnabled) return
+    try { this.master.disconnect(); this.limiter.disconnect() } catch { /* graph was not connected */ }
+    if (this.settings.mixer.limiterEnabled) this.master.connect(this.limiter).connect(this.context.destination)
+    else this.master.connect(this.context.destination)
+    this.limiterEnabledApplied = this.settings.mixer.limiterEnabled
+  }
+
+  private reportFailure(operation: string, error: unknown, recovery: string): void { const message = error instanceof Error ? error.message : String(error); this.diagnostics.failures.unshift({ at: new Date().toISOString(), operation, message, recovery }); this.diagnostics.failures.splice(32) }
+
   private playPolyphonic(component: AudioSource, template: ActiveAudio): void {
     const maximum = Math.round(clamp(component.polyphony, 1, 1, 64)), voices = this.polyphonic.get(component.uuid) ?? []
-    if (1 + voices.length >= maximum) { this.manualLimitedVoices++; return }
+    if (1 + voices.length >= maximum && voices.length) { this.releasePolyphonicVoice(component.uuid, voices[0]); this.diagnostics.stolenVoices++ }
+    else if (1 + voices.length >= maximum) { this.manualLimitedVoices++; return }
     const bus = this.settings.mixer.buses.find(item => item.id === template.bus) ?? this.settings.mixer.buses.find(item => item.id === 'SFX')!
     const busCount = [...this.active.values(), ...[...this.polyphonic.values()].flat()].filter(voice => voice.bus === bus.id).length
     if (this.active.size + this.polyphonicVoiceCount() + this.uiVoices.size >= this.settings.mixer.masterVoiceLimit || busCount >= bus.voiceLimit) { this.manualLimitedVoices++; return }

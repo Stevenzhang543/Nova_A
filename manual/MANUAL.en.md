@@ -1,4 +1,40 @@
-# Nova_A 4.4.0 Complete Manual
+# Nova_A 5.0.1 Complete Manual
+
+## Nova_A 5.0.1 editor organization
+
+The 5.0.1 patch keeps every 5.0 command, shortcut, workflow, animation, and data contract while reorganizing the editor around frequency and context. Workspaces, transform tools, navigation history, and simulation stay direct. **Layout** contains panel visibility and focus-mode controls. **Commands** contains Quick Open and the Command Palette. **Authoring tools** contains pivot, rectangle-transform, path, polygon, collider, measure, and shape drawing. **View settings** contains transform reference, pivot reference, grid/angle snapping, guides/rulers, and camera framing. Every item remains keyboard accessible and searchable.
+
+The editor uses a 12 px caption minimum, 13 px dense-control minimum, rounded multilingual UI fonts, stronger panel separation, role-colored creation actions, and responsive named popovers instead of a horizontally scrolling scene toolbar. English, German, and Chinese are qualified at compact, default, and comfortable scales in both themes; reduced motion removes nonessential transitions without hiding state changes.
+
+## Nova_A 5.0 production baseline and certification status
+
+Nova_A 5.0 freezes Project Format 2 schema 29, Rhai API v2, Plugin API 2, Package Manifest 1, Build CLI 1, workspace document 3, and the eleven-file artifact contract for the 5.x line. New projects and scripts use Rhai v2; imported v1 scripts remain read-only compatibility records until migrated. Default release authoring shows only evidence-backed Tier-1 targets, Windows x86-64 and Web. Linux/macOS stay Experimental matching-host records and Android is unavailable.
+
+Warnings in Launcher migration, Project Health, Package Manager, Script Studio, and Build Settings now have stable bundled help targets. Four.x workspace layouts are normalized and migrated without dropping custom profiles. The final policies, API index, migration, package SDK, build/export, troubleshooting, accessibility, performance, security, support, deprecation, known-issues, first-game, and release-engineering guides live under `docs/`.
+
+The local 5.0 package remains a candidate until its 72-hour soak, 14-day observation, two-machine reproducibility, disposable install lifecycle, external browser/hardware matrix, signing, exact tagged source, and independent verifier evidence are attached. Nova_A never converts an unexecuted external gate into a passing result.
+
+## Nova_A 4.9 build, packages, collaboration and release candidate
+
+Nova_A 4.9 freezes Project Format 2/schema 29, Rhai API v2, Plugin API 2, package manifest 1, Build CLI 1, platform tiers and the eleven-file release format for the 5.0 release candidate. Feature development is closed; only release-blocking corrections, documentation and evidence fixes are accepted during the minimum 14-day observation.
+
+Build Settings now presents presets, actual target availability, platform identity, content rules, symbols, signing/notarization hooks, local or explicit remote delivery, history, cache/input/output hashes, provenance, CycloneDX SBOM and evidence. Windows and web are Tier 1. Linux/macOS are matching-host Experimental CI targets. Android is visible but unavailable until its complete matrix passes. Unsupported actions fail before output mutation.
+
+Packages are verified before execution: trusted registry policy, publisher, license, provenance, archive/dependency hashes, signature, engine/API range, certification and permissions are shown before approval. Stable uses the exact lock and verified offline cache. Tampering, conflicts, permission denial, malicious paths and missing trust quarantine the package; updates retain rollback and Safe Mode bypasses third-party startup.
+
+The Team tab is optional and local-first. It provides semantic project comparison, generated ignore/hooks/CI, explicit external diff/merge, CODEOWNERS, task links, change notes, shared build presets and advisory binary locks. No Nova_A cloud service is required and network actions are disabled by default.
+
+Use **Help → Build your first game** for launcher-to-Windows/web export, **Package & Plugin SDK** for extension contracts, and **Release engineering guide** for the unified eleven-artifact pipeline, privacy-reviewed diagnostics, clean-machine/browser/migration/security/license matrices and RC sign-off.
+
+## Nova_A 4.8 renderer, materials, particles, audio, and profiler
+
+Open **Manage → Rendering** to choose Auto, Native, or Compatibility, inspect the actual device/driver/API/extensions/limits, review every supported/limited/unsupported feature, and apply its direct fix. Quality settings include pixel density, color space and draw-call/texture/overdraw/GPU/particle budgets. Diagnostics show texture memory, frame capture, context state, and each batch-break reason. Canvas2D is an explicit diagnostic fallback and cannot silently stand in for shaders, normal lighting, GPU timing, or post-processing.
+
+The Material view edits reusable assets, parent inheritance, textures/blend, typed uniforms, include declarations and shader source. Compiler or platform failure records an actionable fallback event and blocks production validation. The Particle view can create a `.nova-particle` asset from an emitter and reapply it. Emitter controls include rates, bursts, shape, velocity/gravity, lifetime curves, gradients, sorting, material, preview, collision mode/layer/restitution, subemitters and bounded budgets.
+
+Open **Manage → Presentation → Audio** for buses, effects, sends, snapshots, ducking, automation, limiter/ceiling and semantic peak/RMS/dB/clipping meters. AudioSource supports routing, polyphony/priority, voice stealing/virtualization, streaming/preload, seek, fades, loop, playlists/randomization and positional attenuation/pan. Choose an output device where supported; hot-plug, suspension and playback failures appear in diagnostics with **Recover audio**. Doppler is marked limited on the stereo Web Audio path.
+
+The **Profiler** captures frames, renderer/audio/particle state, markers, counters, annotations, remote-player identity and overhead mode. Compare baselines and export a versioned capture plus CI result. Project Health and Build Diagnostics enforce project-owned frame/render/audio/GPU/draw/texture/particle/overhead budgets. See `docs/RENDERER_CAPABILITY_PATHS.md`, `MATERIAL_SHADER_WORKFLOW.md`, `PARTICLE_SYSTEMS.md`, `AUDIO_PRODUCTION.md`, and `PERFORMANCE_CAPTURES.md` for exact platform boundaries.
 
 ## Nova_A 4.4 production assets, sprites, TileMap, paths, and fonts
 
@@ -724,3 +760,35 @@ Build Settings is organized around presets, platform profiles, output/signing, D
 Stable package installation requires SemVer, engine/API ranges, permissions, one package type, dependency hashes, archive SHA-256 and a verified signature. The Inspector shows permissions before install and on changes. Failures are quarantined; offline cache verification, deterministic lock resolution, verified rollback and Safe Mode are available. Package types are editor, build, importer, runtime and template.
 
 Team shows project/settings/package/scene/prefab/resource diffs, operation and lockfile changes, reload/compare choices, canonical no-op output, shared versus local settings, Git initialization, optional locks, and pre-commit/CI templates. Studio Status contains migration/known-issue views and a privacy-reviewed local diagnostic bundle. Nothing uploads automatically. Networking remains an optional Experimental package and is not a 4.0 core blocker. Project Format 2 schema 29 and Runtime API 1, Plugin API 2, Package Manifest 1 and Build CLI 1 are frozen for the 4.0 stabilization cycle.
+
+## Nova_A 4.5 — production physics and character workflow
+
+Project Settings → Physics starts with Accurate, Balanced, Fast, or Custom. A profile controls fixed rate, catch-up, interpolation, dropped-time policy, minimum substeps, solver iterations, sleeping, and the diagnostic time budget. Settings, named collision layers, and the advanced matrix are project data and enter build manifests. The Advanced section contains the raw 32×32 matrix; everyday work uses named layers and pair controls.
+
+RigidBody2D explicitly identifies Static, Dynamic, or Kinematic ownership. CharacterBody2D and Area2D make Character and Trigger roles visible. Collider shape offers rectangle, circle, capsule, segment, polygon, chain, world boundary, and compound children; the Inspector states any dynamic-solver limitation. World Boundary always becomes static. Mass, density, inertia, local centre, friction, restitution, gravity scale, damping, sleep, fixed rotation, and CCD are shown with units.
+
+Use `Physics2D.rayQuery`, `pointQuery`, `overlapQuery`, `sweep`, `nearest`, and `contactQuery` for structured filtered results. Collision/trigger enter, stay, and exit have stable pair/phase order; body sleep/wake and joint/Rope break events resolve to stable UUIDs. Character controllers keep frame input separate from fixed-step movement. Platformer uses floor/slope/step/snap/platform/jump state; top-down normalizes two-axis input and submits velocity once per fixed step.
+
+Distance, revolute, prismatic, weld, spring, motor, and Rope2D show anchors, limits, damping, connected collision, break thresholds, and telemetry. Rope2D also exposes 3–32 segments, compliance/stretch, bend behavior, density, radius, collision, endpoints, and break link. Endpoint owners are excluded from Rope node collision; compatible third bodies still collide.
+
+The Physics Monitor is a virtual list plus detail pane. Sort bodies, reverse ordering, pin a body, inspect a 60-step speed sparkline/delta, review collision forces, inspect joints/Rope, capture, compare, and export JSON. Profiler overlays colliders, contacts, normals, AABBs, sleep, centre of mass, velocity, force, character contacts, joints, and Rope nodes. Project Health reports physics-budget, dropped-time, and scale warnings. See `docs/PHYSICS_2D_4_5.md`, `docs/CHARACTER_CONTROLLERS_4_5.md`, and `docs/PHYSICS_DIAGNOSTICS_4_5.md`.
+
+## Nova_A 4.6 — complete programming workflow
+
+The **Script** workspace is divided into Explorer, multi-file Editor, and a dockable Problems/Tests/Debug detail region. Create a supported template, edit with semantic completion, signature help and hover, inspect parser/semantic/API diagnostics, format with project rules, and use Outline, Definition, References, Rename and code actions. Modules shows dependencies, per-asset API v1/v2 selection and transactional hot-reload history. The checksum-validated workspace index restores after a crash and rebuilds after API changes.
+
+Rhai API v2 has 110 documented stable entries across lifecycle, scene/entity/component/transform, input, physics, animation, UI, audio, save, navigation, logging, time, tasks, signals, resources and tests. Project Health reports API version, v1 assets and deprecated uses. API v1 remains selectable for imported assets; diagnostics offer v2 replacements and no 4.x save silently rewrites source. The generated reference, manifest, migration map and metadata stubs are in `docs/RHAI_API_V2*`, `docs/RHAI_V1_TO_V2.json`, and `docs/NOVA_RHAI_API_V2_STUBS.rhai`.
+
+The debugger supports persistent grouped line/function breakpoints, conditions, hit counts, logpoints, stack/frame selection, locals, watches/evaluation, exception policy, tasks, source navigation and callback-safe stepping. Exported-player debugging is off by default, loopback-only, explicitly enabled and token-authenticated. A save is compiled and classified before hot reload; incompatible/syntax-failed candidates cannot replace the valid runtime, and each accepted change retains rollback history.
+
+Run tests for the file, project, tags or prior failures. Unit, integration, scene, UI, physics, animation and regression metadata supports fixtures, setup/teardown, cases, timeout, cancellation and captured deterministic seed. The CLI produces JSON, JUnit and JSON/LCOV coverage, supports changed selection and deterministic sharding, and returns 0 pass, 1 test failure or 2 infrastructure/usage failure. Shared-world editor tests remain serial; independent CLI shards are the supported parallel policy. See `docs/RHAI_TESTING_COVERAGE_4_6.md`, `docs/RHAI_DEBUG_PROTOCOL_V2.md`, `docs/RHAI_HOT_RELOAD_4_6.md`, and `docs/RHAI_EXTERNAL_TOOLS_4_6.md`.
+
+## Nova_A 4.7 — animation and runtime UI production
+
+Open **Animation** and select an animation asset before authoring controls become available. Add property, event, method, audio, nested-clip, marker, sprite-frame or custom tracks; set each key to Step, Linear or Cubic; then use Retime, Ripple, Reduce or Slice for structural edits. Track targets are checked against scene properties, Script Studio symbols and audio resources. The state view exposes layers, parameters, conditions, transition duration, blend trees, interruption rules and the current runtime state/time. The rig view stores bones, skins, masks, constraints, IK, attachment points and explicit retarget aliases. Import mapping, event-preserving compression and runtime sampling diagnostics are in the asset pipeline.
+
+Open **UI** for one shared hierarchy, selection and Inspector workflow. RectTransform supports responsive anchors, container/fixed layout, breakpoints, safe area, clipping, scrolling, z-order, reusable component sources and variants. Six preview presets cover desktop 16:9, laptop 16:10, ultrawide, 4:3, mobile portrait and mobile landscape; every issue selects the affected control. Fixed pixel coordinates require explicit Fixed mode. Runtime text wrap/overflow, locale mirroring, input-action prompts, captions and focus order are component data, so preview and exported players use the same contract.
+
+Theme tokens cover colors, typography, spacing, radii, states, icons, sounds and animation. Parent themes merge deterministically; cycles, differences and unused tokens are reported. Localization supports stable keys, script/UI extraction, tables, CSV and PO interchange, plural forms, fallbacks, number/currency/date/time-zone policy, pseudolocalization, missing/replacement-glyph diagnostics, RTL/bidirectional text and locale font fallback. Project Health and Build Settings expose animation/UI budgets, localization status, semantic labels/roles/states, focus order, contrast, text scaling, reduced motion, and subtitle/caption readiness. Keyboard, mouse, gamepad and touch prompts change automatically with the last active input modality.
+
+Use `docs/ANIMATION_UI_4_7.md`, `docs/ANIMATION_IMPORT_4_7.md`, and `docs/UI_LOCALIZATION_ACCESSIBILITY_4_7.md` for data contracts, validation rules, supported behavior and evidence commands. The five `*-v47-*` reference projects cover state machines, rigs, responsive HUD, multilingual RTL and accessibility.

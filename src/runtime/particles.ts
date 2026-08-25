@@ -25,7 +25,7 @@ interface EmitterState {
 }
 
 const states = new Map<string, EmitterState>()
-export const particleDiagnostics = reactive({ activeParticles: 0, emitterCount: 0, updateMs: 0, budget: 10_000, budgetExceeded: false, subemissions: 0 })
+export const particleDiagnostics = reactive({ activeParticles: 0, emitterCount: 0, updateMs: 0, budget: 10_000, budgetExceeded: false, subemissions: 0, collisions: 0 })
 
 function clamp(value: unknown, fallback: number, minimum: number, maximum: number): number {
   return Math.min(maximum, Math.max(minimum, finiteNumber(value, fallback)))
@@ -60,6 +60,9 @@ export function normalizeParticleEmitter(component: ParticleEmitter2D): void {
   component.subEmitterUuid = typeof component.subEmitterUuid === 'string' && component.subEmitterUuid ? component.subEmitterUuid.slice(0, 128) : null
   component.subEmitterCount = Math.round(clamp(component.subEmitterCount, 1, 0, 1_000))
   component.previewInEditor = component.previewInEditor !== false
+  if (!['None', 'Bounce', 'Stop'].includes(component.collisionMode)) component.collisionMode = 'None'
+  component.collisionRestitution = clamp(component.collisionRestitution, .5, 0, 1)
+  component.collisionLayerMask = Math.round(clamp(component.collisionLayerMask, 0xffff_ffff, 0, 0xffff_ffff)) >>> 0
   for (const color of [component.startColor, component.endColor]) {
     color.r = Math.round(clamp(color.r, 255, 0, 255)); color.g = Math.round(clamp(color.g, 255, 0, 255)); color.b = Math.round(clamp(color.b, 255, 0, 255))
   }
@@ -147,12 +150,43 @@ function emit(entity: Entity, component: ParticleEmitter2D, state: EmitterState,
   return emitted
 }
 
+function collideParticle(particle: Particle, component: ParticleEmitter2D, owner: Entity, entities: Entity[]): number {
+  for (const target of entities) {
+    if (target === owner || !target.enabled) continue
+    const collider = target.getCollider()
+    if (!collider?.enabled || collider.sensor || ((component.collisionLayerMask >>> collider.physicsLayer) & 1) === 0) continue
+    const transform = worldTransform(target, entities), center = localPointToWorld(target, collider.offset, entities), rotation = transform.rotation + collider.rotation
+    const relative = rotate({ x: particle.position.x - center.x, y: particle.position.y - center.y }, -rotation)
+    let normalLocal: Vec2 | null = null, corrected: Vec2 | null = null
+    if (collider.shapeModel === 'Circle') {
+      const radiusX = Math.max(1e-6, Math.abs(collider.radiusX * transform.scale.x)), radiusY = Math.max(1e-6, Math.abs(collider.radiusY * transform.scale.y))
+      const normalized = relative.x * relative.x / (radiusX * radiusX) + relative.y * relative.y / (radiusY * radiusY)
+      if (normalized >= 1) continue
+      if (normalized <= 1e-12) { normalLocal = { x: 0, y: 1 }; corrected = { x: 0, y: radiusY } }
+      else { const factor = 1 / Math.sqrt(normalized); corrected = { x: relative.x * factor, y: relative.y * factor }; const nx = corrected.x / (radiusX * radiusX), ny = corrected.y / (radiusY * radiusY), length = Math.hypot(nx, ny) || 1; normalLocal = { x: nx / length, y: ny / length } }
+    } else {
+      let halfX = Math.max(1e-6, Math.abs(collider.size.x * transform.scale.x) * .5), halfY = Math.max(1e-6, Math.abs(collider.size.y * transform.scale.y) * .5)
+      if (collider.shapeModel === 'ConvexPolygon' && collider.vertices.length) { halfX = Math.max(halfX, ...collider.vertices.map(point => Math.abs(point.x * transform.scale.x))); halfY = Math.max(halfY, ...collider.vertices.map(point => Math.abs(point.y * transform.scale.y))) }
+      if (Math.abs(relative.x) >= halfX || Math.abs(relative.y) >= halfY) continue
+      const penetrationX = halfX - Math.abs(relative.x), penetrationY = halfY - Math.abs(relative.y)
+      if (penetrationX < penetrationY) { normalLocal = { x: relative.x < 0 ? -1 : 1, y: 0 }; corrected = { x: normalLocal.x * halfX, y: relative.y } }
+      else { normalLocal = { x: 0, y: relative.y < 0 ? -1 : 1 }; corrected = { x: relative.x, y: normalLocal.y * halfY } }
+    }
+    const normal = rotate(normalLocal, rotation), worldPoint = rotate(corrected, rotation)
+    particle.position = { x: center.x + worldPoint.x, y: center.y + worldPoint.y }
+    if (component.collisionMode === 'Stop') particle.velocity = { x: 0, y: 0 }
+    else { const inward = particle.velocity.x * normal.x + particle.velocity.y * normal.y; if (inward < 0) { particle.velocity.x -= (1 + component.collisionRestitution) * inward * normal.x; particle.velocity.y -= (1 + component.collisionRestitution) * inward * normal.y } }
+    return 1
+  }
+  return 0
+}
+
 export class ParticleRuntime {
   update(entities: Entity[], delta: number, playing: boolean): void {
     const started = performance.now()
     const dt = clamp(delta, 0, 0, .25)
     const live = new Set<string>()
-    let activeParticles = [...states.values()].reduce((total, state) => total + state.particles.length, 0), emitterCount = 0, subemissions = 0
+    let activeParticles = [...states.values()].reduce((total, state) => total + state.particles.length, 0), emitterCount = 0, subemissions = 0, collisions = 0
     const globalBudget = renderingSettings.particleBudget
     for (const entity of entities) {
       const component = entity.getComponent<ParticleEmitter2D>('ParticleEmitter2D')
@@ -174,6 +208,7 @@ export class ParticleRuntime {
         particle.velocity.y += component.gravity.y * dt
         particle.position.x += particle.velocity.x * dt
         particle.position.y += particle.velocity.y * dt
+        if (component.worldSpace && component.collisionMode !== 'None') collisions += collideParticle(particle, component, entity, entities)
         particle.rotation += particle.angularVelocity * dt
       }
       const expired = state.particles.filter(particle => particle.age >= particle.lifetime)
@@ -185,7 +220,7 @@ export class ParticleRuntime {
     }
     for (const uuid of [...states.keys()]) if (!live.has(uuid)) states.delete(uuid)
     activeParticles = [...states.values()].reduce((total, state) => total + state.particles.length, 0)
-    Object.assign(particleDiagnostics, { activeParticles, emitterCount, updateMs: performance.now() - started, budget: globalBudget, budgetExceeded: activeParticles >= globalBudget, subemissions })
+    Object.assign(particleDiagnostics, { activeParticles, emitterCount, updateMs: performance.now() - started, budget: globalBudget, budgetExceeded: activeParticles >= globalBudget, subemissions, collisions })
   }
 
   submit(renderer: Renderer2D, entities: Entity[]): void {

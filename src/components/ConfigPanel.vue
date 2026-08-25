@@ -275,7 +275,7 @@
 
         <InspectorSection v-if="selectedEntity.getCollider()" :title="t('collider2D')" category="physics">
           <ComponentTools :kind="selectedEntity.collider.kind" />
-          <PropertyRow :label="t('colliderShape')"><select v-model="selectedEntity.collider.shapeModel"><option v-for="kind in colliderShapeKinds" :key="kind" :value="kind">{{ kind }}</option></select></PropertyRow>
+          <PropertyRow :label="t('colliderShape')"><select v-model="colliderShapeModel"><option v-for="kind in colliderShapeKinds" :key="kind" :value="kind">{{ kind }}</option></select></PropertyRow>
           <p class="physics-support-note">{{ colliderShapeSupport }}</p>
           <details class="compound-shapes">
             <summary><span>{{ t('additionalShapes') }} ({{ selectedEntity.collider.shapes.length }})</span><button type="button" :disabled="selectedEntity.collider.shapes.length >= 7" @click.prevent="addColliderShape">＋</button></summary>
@@ -405,9 +405,10 @@ const selectedEntities = computed(() => {
 })
 const selectedEntity = computed(() => state.selectedEntityId === null ? null : state.world.entities.find(entity => entity.id === state.selectedEntityId) ?? null)
 const physicsMaterialAssets = computed(() => assetState.records.filter(asset => asset.assetType === 'material' && physicsMaterialDocument(asset.uuid)))
-const colliderShapeKinds: PhysicsShapeKind[] = ['Box', 'Circle', 'Capsule', 'Segment', 'Chain', 'ConvexPolygon', 'ConcavePolygon']
+const colliderShapeKinds: PhysicsShapeKind[] = ['Box', 'Circle', 'Capsule', 'Segment', 'Chain', 'WorldBoundary', 'ConvexPolygon', 'ConcavePolygon']
 const materialCombineModes = ['Average', 'Minimum', 'Maximum', 'Multiply'] as const
 const colliderShapeSupport = computed(() => { const model = selectedEntity.value?.collider.shapeModel ?? 'Box'; const support = PHYSICS_SHAPE_SUPPORT[model]; return `${support.simulation}: ${support.note}` })
+const colliderShapeModel = computed({ get: () => selectedEntity.value?.collider.shapeModel ?? 'Box', set: (kind: PhysicsShapeKind) => { const entity = selectedEntity.value; if (!entity) return; entity.collider.shapeModel = kind; if (kind === 'WorldBoundary') { entity.rigidBody.bodyType = 'Static'; entity.collider.sensor = false; entity.rigidBody.freezeRotation = true } normalizeEntity(entity); pushHistory('Change collider shape') } })
 function addColliderShape() { const collider = selectedEntity.value?.getCollider(); if (!collider || collider.shapes.length >= 7) return; collider.shapes.push({ id: createUuid(), kind: 'Box', offset: { x: 0, y: 0 }, rotation: 0, size: { x: 1, y: 1 }, radius: .5, points: [], enabled: true }); pushHistory('Add collider shape') }
 function removeColliderShape(index: number) { const collider = selectedEntity.value?.getCollider(); if (!collider || index < 0 || index >= collider.shapes.length) return; collider.shapes.splice(index, 1); pushHistory('Remove collider shape') }
 const collisionMaskNames = computed(() => { const mask = selectedEntity.value?.collider.collisionMask ?? 0; return state.globalSettings.layers.filter(layer => (mask & ((2 ** layer.id) >>> 0)) !== 0).map(layer => layer.name).join(', ') })

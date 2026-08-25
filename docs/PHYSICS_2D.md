@@ -1,4 +1,6 @@
-# Nova_A 3.4 production 2D physics
+# Nova_A production 2D physics
+
+The current v4.5 contract, profiles, structured query APIs, Rope2D behavior, and numerical qualification are documented in [PHYSICS_2D_4_5.md](PHYSICS_2D_4_5.md). This file retains the original stable 3.4 contract for compatibility context.
 
 Nova_A uses a retained Rust `f64` physics world at a fixed project tick rate. Rendering may interpolate between completed physics states; interpolation never changes the authoritative simulation. One world unit is one metre by default.
 

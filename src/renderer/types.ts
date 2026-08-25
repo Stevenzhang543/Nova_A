@@ -103,6 +103,8 @@ export interface RendererStats {
   overdraw: number
   batchBreaks: number
   atlasPages: number
+  textureMemoryBytes: number
+  batchBreakReasons: Record<string, number>
 }
 
 export interface Renderer2D {

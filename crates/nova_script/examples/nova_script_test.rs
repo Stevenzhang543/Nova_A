@@ -1,4 +1,4 @@
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::env;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -16,6 +16,9 @@ struct TestMetadata {
     tags: Vec<String>,
     seed: u64,
     cases: Vec<String>,
+    fixture: String,
+    retries: u8,
+    flaky_infrastructure: bool,
 }
 
 #[derive(Debug, Serialize)]
@@ -28,6 +31,8 @@ struct TestResult {
     duration_ms: f64,
     seed: u64,
     tags: Vec<String>,
+    fixture: String,
+    attempt: u8,
     message: String,
 }
 
@@ -44,7 +49,7 @@ fn main() -> ExitCode {
 fn run() -> Result<bool, String> {
     let args: Vec<String> = env::args().skip(1).collect();
     if args.iter().any(|value| value == "--help") {
-        println!("Nova_A Rhai test runner\n\n  cargo run -p nova_script --example nova_script_test -- [path ...] [--format json|junit] [--output report] [--tag name] [--include-skipped]");
+        println!("Nova_A Rhai test runner v2\n\n  cargo run -p nova_script --example nova_script_test -- [path ...] [--format json|junit] [--output report] [--coverage-output coverage.json] [--tag name] [--changed path1,path2] [--shard-index n --shard-count n] [--include-skipped]\n\n  Metadata: // @test tags=unit fixture=name timeout=1000 seed=42 cases=a|b retries=2 flaky=infrastructure\n  Retries are ignored unless flaky=infrastructure is explicit.");
         return Ok(false);
     }
     let option = |name: &str| {
@@ -57,7 +62,22 @@ fn run() -> Result<bool, String> {
         return Err("--format must be json or junit".into());
     }
     let output = option("--output").map(PathBuf::from);
+    let coverage_output = option("--coverage-output").map(PathBuf::from);
     let required_tag = option("--tag");
+    let changed: BTreeSet<String> = option("--changed")
+        .unwrap_or_default()
+        .split(',')
+        .filter(|value| !value.is_empty())
+        .map(|value| value.replace('\\', "/"))
+        .collect();
+    let shard_count = option("--shard-count")
+        .and_then(|value| value.parse::<u64>().ok())
+        .unwrap_or(1)
+        .clamp(1, 256);
+    let shard_index = option("--shard-index")
+        .and_then(|value| value.parse::<u64>().ok())
+        .unwrap_or(0)
+        .min(shard_count - 1);
     let include_skipped = args.iter().any(|value| value == "--include-skipped");
     let paths: Vec<PathBuf> = args
         .iter()
@@ -65,7 +85,16 @@ fn run() -> Result<bool, String> {
         .filter(|(index, value)| {
             !value.starts_with('-')
                 && (*index == 0
-                    || !matches!(args[*index - 1].as_str(), "--format" | "--output" | "--tag"))
+                    || !matches!(
+                        args[*index - 1].as_str(),
+                        "--format"
+                            | "--output"
+                            | "--coverage-output"
+                            | "--tag"
+                            | "--changed"
+                            | "--shard-index"
+                            | "--shard-count"
+                    ))
         })
         .map(|(_, value)| PathBuf::from(value))
         .collect();
@@ -86,11 +115,25 @@ fn run() -> Result<bool, String> {
 
     let started = Instant::now();
     let mut results = Vec::new();
+    let mut coverage_files = Vec::new();
     for path in files {
+        let normalized_path = path.display().to_string().replace('\\', "/");
+        if !changed.is_empty()
+            && !changed
+                .iter()
+                .any(|item| normalized_path.ends_with(item) || normalized_path.contains(item))
+        {
+            continue;
+        }
         let source =
             fs::read_to_string(&path).map_err(|error| format!("{}: {error}", path.display()))?;
         let tests = discover_tests(&source);
+        let executable_functions = discover_functions(&source);
+        let mut covered_functions = BTreeSet::new();
         for (name, metadata) in tests {
+            if stable_hash(&format!("{}::{name}", path.display())) % shard_count != shard_index {
+                continue;
+            }
             if required_tag
                 .as_ref()
                 .is_some_and(|tag| !metadata.tags.contains(tag))
@@ -112,13 +155,33 @@ fn run() -> Result<bool, String> {
                         duration_ms: 0.0,
                         seed: metadata.seed,
                         tags: metadata.tags.clone(),
+                        fixture: metadata.fixture.clone(),
+                        attempt: 1,
                         message: "Skipped by @test metadata".into(),
                     });
                     continue;
                 }
-                results.push(run_test(&path, &source, &name, &case_name, &metadata));
+                let mut result = run_test(&path, &source, &name, &case_name, &metadata, 1);
+                if metadata.flaky_infrastructure {
+                    for attempt in 2..=metadata.retries.saturating_add(1) {
+                        if !matches!(result.status, "failed" | "timeout") {
+                            break;
+                        }
+                        result = run_test(&path, &source, &name, &case_name, &metadata, attempt);
+                    }
+                }
+                if result.status != "skipped" {
+                    covered_functions.insert(name.clone());
+                    for hook in ["before_all", "before_each", "after_each", "after_all"] {
+                        if executable_functions.contains(hook) {
+                            covered_functions.insert(hook.to_owned());
+                        }
+                    }
+                }
+                results.push(result);
             }
         }
+        coverage_files.push(json!({"file":normalized_path,"executableFunctions":executable_functions,"coveredFunctions":covered_functions}));
     }
     let passed = results
         .iter()
@@ -136,8 +199,9 @@ fn run() -> Result<bool, String> {
         junit(&results, started.elapsed().as_secs_f64())
     } else {
         serde_json::to_string_pretty(&json!({
-        "format": "nova-script-test-report", "version": 1, "engineVersion": env!("CARGO_PKG_VERSION"),
-        "durationMs": started.elapsed().as_secs_f64() * 1_000.0, "passed": passed, "failed": failed, "skipped": skipped, "results": results
+        "format": "nova-script-test-report", "version": 2, "engineVersion": env!("CARGO_PKG_VERSION"),
+        "durationMs": started.elapsed().as_secs_f64() * 1_000.0, "shard":{"index":shard_index,"count":shard_count}, "changed":changed,
+        "passed": passed, "failed": failed, "skipped": skipped, "results": results
     })).map_err(|error| error.to_string())?
     };
     if let Some(path) = output {
@@ -148,7 +212,48 @@ fn run() -> Result<bool, String> {
     } else {
         println!("{report}");
     }
+    if let Some(path) = coverage_output {
+        if let Some(parent) = path.parent() {
+            fs::create_dir_all(parent).map_err(|error| error.to_string())?;
+        }
+        let executable: usize = coverage_files
+            .iter()
+            .map(|file| file["executableFunctions"].as_array().map_or(0, Vec::len))
+            .sum();
+        let covered: usize = coverage_files
+            .iter()
+            .map(|file| file["coveredFunctions"].as_array().map_or(0, Vec::len))
+            .sum();
+        let coverage = json!({"format":"nova-rhai-coverage","version":2,"engineVersion":env!("CARGO_PKG_VERSION"),"functionRate":if executable == 0 {1.0} else {covered as f64 / executable as f64},"files":coverage_files});
+        fs::write(
+            path,
+            format!(
+                "{}\n",
+                serde_json::to_string_pretty(&coverage).map_err(|error| error.to_string())?
+            ),
+        )
+        .map_err(|error| error.to_string())?;
+    }
     Ok(failed > 0)
+}
+
+fn stable_hash(value: &str) -> u64 {
+    value.bytes().fold(2_166_136_261_u64, |hash, byte| {
+        (hash ^ u64::from(byte)).wrapping_mul(16_777_619)
+    })
+}
+
+fn discover_functions(source: &str) -> BTreeSet<String> {
+    source
+        .lines()
+        .filter_map(|line| {
+            line.trim()
+                .strip_prefix("fn ")
+                .and_then(|rest| rest.split('(').next())
+                .filter(|name| !name.is_empty())
+                .map(str::to_owned)
+        })
+        .collect()
 }
 
 fn collect_scripts(path: &Path, output: &mut Vec<PathBuf>) -> Result<(), String> {
@@ -232,6 +337,20 @@ fn parse_metadata(fields: &str) -> TestMetadata {
                     .collect()
             })
             .unwrap_or_default(),
+        fixture: values
+            .get("fixture")
+            .copied()
+            .unwrap_or_default()
+            .chars()
+            .take(128)
+            .collect(),
+        retries: values
+            .get("retries")
+            .and_then(|value| value.parse().ok())
+            .unwrap_or(0)
+            .min(3),
+        flaky_infrastructure: values.get("flaky").copied() == Some("infrastructure")
+            || values.get("flakyInfrastructure").copied() == Some("true"),
     }
 }
 
@@ -241,6 +360,7 @@ fn run_test(
     name: &str,
     case_name: &str,
     metadata: &TestMetadata,
+    attempt: u8,
 ) -> TestResult {
     let started = Instant::now();
     let mut context = ScriptContext {
@@ -297,6 +417,8 @@ fn run_test(
         duration_ms,
         seed: metadata.seed,
         tags: metadata.tags.clone(),
+        fixture: metadata.fixture.clone(),
+        attempt,
         message: failure
             .unwrap_or_else(|| format!("Passed with deterministic seed {}", metadata.seed)),
     }

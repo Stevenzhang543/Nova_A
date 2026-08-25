@@ -1,0 +1,61 @@
+{
+  "changed": [],
+  "durationMs": 56.9406,
+  "engineVersion": "4.6.0",
+  "failed": 0,
+  "format": "nova-script-test-report",
+  "passed": 3,
+  "results": [
+    {
+      "attempt": 1,
+      "caseName": "first",
+      "durationMs": 19.6751,
+      "file": "tests/fixtures/scripting/v4.6\\pass.rhai",
+      "fixture": "counter",
+      "message": "Passed with deterministic seed 460",
+      "name": "test_api_v2_contract",
+      "seed": 460,
+      "status": "passed",
+      "tags": [
+        "unit",
+        "contract"
+      ]
+    },
+    {
+      "attempt": 1,
+      "caseName": "second",
+      "durationMs": 18.5681,
+      "file": "tests/fixtures/scripting/v4.6\\pass.rhai",
+      "fixture": "counter",
+      "message": "Passed with deterministic seed 460",
+      "name": "test_api_v2_contract",
+      "seed": 460,
+      "status": "passed",
+      "tags": [
+        "unit",
+        "contract"
+      ]
+    },
+    {
+      "attempt": 1,
+      "caseName": "",
+      "durationMs": 18.3402,
+      "file": "tests/fixtures/scripting/v4.6\\pass.rhai",
+      "fixture": "runtime",
+      "message": "Passed with deterministic seed 461",
+      "name": "test_deterministic_runtime",
+      "seed": 461,
+      "status": "passed",
+      "tags": [
+        "integration",
+        "fast"
+      ]
+    }
+  ],
+  "shard": {
+    "count": 1,
+    "index": 0
+  },
+  "skipped": 0,
+  "version": 2
+}

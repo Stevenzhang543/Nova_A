@@ -1,0 +1,173 @@
+{
+  "format": "nova-v5.0.1-clean-build-reproducibility",
+  "version": 1,
+  "engineVersion": "5.0.1",
+  "generatedAt": "2026-08-25T17:20:55.814Z",
+  "sourceProject": "reference-projects/projects/first-game-v50-tier1/project.nova",
+  "model": "Ten fresh output directories per Tier-1 target; every unsigned payload and manifest byte is SHA-256 inventoried and the sorted inventory is hashed.",
+  "cycles": 10,
+  "targets": [
+    "windows",
+    "web"
+  ],
+  "baselines": {
+    "windows": "4483d2ed85bc52f1e95e5bc102300fd6da16b9ba79a74d137991da9f9bd0faa7",
+    "web": "5c898fb5fdd15b89335f243dbcc7358693a1cb3f16398ca41ec9830f63ee1052"
+  },
+  "runs": [
+    {
+      "cycle": 1,
+      "targets": [
+        {
+          "target": "windows",
+          "digest": "4483d2ed85bc52f1e95e5bc102300fd6da16b9ba79a74d137991da9f9bd0faa7",
+          "files": 11
+        },
+        {
+          "target": "web",
+          "digest": "5c898fb5fdd15b89335f243dbcc7358693a1cb3f16398ca41ec9830f63ee1052",
+          "files": 17
+        }
+      ]
+    },
+    {
+      "cycle": 2,
+      "targets": [
+        {
+          "target": "windows",
+          "digest": "4483d2ed85bc52f1e95e5bc102300fd6da16b9ba79a74d137991da9f9bd0faa7",
+          "files": 11
+        },
+        {
+          "target": "web",
+          "digest": "5c898fb5fdd15b89335f243dbcc7358693a1cb3f16398ca41ec9830f63ee1052",
+          "files": 17
+        }
+      ]
+    },
+    {
+      "cycle": 3,
+      "targets": [
+        {
+          "target": "windows",
+          "digest": "4483d2ed85bc52f1e95e5bc102300fd6da16b9ba79a74d137991da9f9bd0faa7",
+          "files": 11
+        },
+        {
+          "target": "web",
+          "digest": "5c898fb5fdd15b89335f243dbcc7358693a1cb3f16398ca41ec9830f63ee1052",
+          "files": 17
+        }
+      ]
+    },
+    {
+      "cycle": 4,
+      "targets": [
+        {
+          "target": "windows",
+          "digest": "4483d2ed85bc52f1e95e5bc102300fd6da16b9ba79a74d137991da9f9bd0faa7",
+          "files": 11
+        },
+        {
+          "target": "web",
+          "digest": "5c898fb5fdd15b89335f243dbcc7358693a1cb3f16398ca41ec9830f63ee1052",
+          "files": 17
+        }
+      ]
+    },
+    {
+      "cycle": 5,
+      "targets": [
+        {
+          "target": "windows",
+          "digest": "4483d2ed85bc52f1e95e5bc102300fd6da16b9ba79a74d137991da9f9bd0faa7",
+          "files": 11
+        },
+        {
+          "target": "web",
+          "digest": "5c898fb5fdd15b89335f243dbcc7358693a1cb3f16398ca41ec9830f63ee1052",
+          "files": 17
+        }
+      ]
+    },
+    {
+      "cycle": 6,
+      "targets": [
+        {
+          "target": "windows",
+          "digest": "4483d2ed85bc52f1e95e5bc102300fd6da16b9ba79a74d137991da9f9bd0faa7",
+          "files": 11
+        },
+        {
+          "target": "web",
+          "digest": "5c898fb5fdd15b89335f243dbcc7358693a1cb3f16398ca41ec9830f63ee1052",
+          "files": 17
+        }
+      ]
+    },
+    {
+      "cycle": 7,
+      "targets": [
+        {
+          "target": "windows",
+          "digest": "4483d2ed85bc52f1e95e5bc102300fd6da16b9ba79a74d137991da9f9bd0faa7",
+          "files": 11
+        },
+        {
+          "target": "web",
+          "digest": "5c898fb5fdd15b89335f243dbcc7358693a1cb3f16398ca41ec9830f63ee1052",
+          "files": 17
+        }
+      ]
+    },
+    {
+      "cycle": 8,
+      "targets": [
+        {
+          "target": "windows",
+          "digest": "4483d2ed85bc52f1e95e5bc102300fd6da16b9ba79a74d137991da9f9bd0faa7",
+          "files": 11
+        },
+        {
+          "target": "web",
+          "digest": "5c898fb5fdd15b89335f243dbcc7358693a1cb3f16398ca41ec9830f63ee1052",
+          "files": 17
+        }
+      ]
+    },
+    {
+      "cycle": 9,
+      "targets": [
+        {
+          "target": "windows",
+          "digest": "4483d2ed85bc52f1e95e5bc102300fd6da16b9ba79a74d137991da9f9bd0faa7",
+          "files": 11
+        },
+        {
+          "target": "web",
+          "digest": "5c898fb5fdd15b89335f243dbcc7358693a1cb3f16398ca41ec9830f63ee1052",
+          "files": 17
+        }
+      ]
+    },
+    {
+      "cycle": 10,
+      "targets": [
+        {
+          "target": "windows",
+          "digest": "4483d2ed85bc52f1e95e5bc102300fd6da16b9ba79a74d137991da9f9bd0faa7",
+          "files": 11
+        },
+        {
+          "target": "web",
+          "digest": "5c898fb5fdd15b89335f243dbcc7358693a1cb3f16398ca41ec9830f63ee1052",
+          "files": 17
+        }
+      ]
+    }
+  ],
+  "mismatches": [],
+  "qualificationScope": "same-machine ten-build payload equality",
+  "independentMachineComparison": "pending-external",
+  "status": "passed"
+}

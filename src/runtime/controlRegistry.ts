@@ -19,10 +19,15 @@ function slug(value: string): string {
   return normalized.slice(0, 56) || 'control'
 }
 
-function visibleText(element: HTMLElement): string {
+function derivedVisibleText(element: HTMLElement): string {
   if (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement) return element.labels?.[0]?.innerText.trim() || element.placeholder || element.name || element.type
   if (element instanceof HTMLSelectElement) return element.labels?.[0]?.innerText.trim() || element.name || 'Select'
-  return element.getAttribute('aria-label') || element.getAttribute('title') || element.innerText.trim().replace(/\s+/g, ' ')
+  return element.getAttribute('title') || element.innerText.trim().replace(/\s+/g, ' ')
+}
+
+function visibleText(element: HTMLElement): string {
+  const authoredAriaLabel = element.dataset.generatedAriaLabel === 'true' ? '' : element.getAttribute('aria-label')
+  return authoredAriaLabel || derivedVisibleText(element)
 }
 
 function surfaceName(element: HTMLElement): string {
@@ -54,13 +59,32 @@ function assignStableIdentity(element: HTMLElement): void {
     while (document.querySelector(`[data-testid="${CSS.escape(id)}"]`)) id = `${base}-${suffix++}`
     element.dataset.testid = id
   }
-  if (!element.getAttribute('aria-label') && !element.getAttribute('aria-labelledby') && !label) element.setAttribute('aria-label', kindOf(element))
-  else if (!element.getAttribute('aria-label') && !element.getAttribute('aria-labelledby') && !element.innerText.trim()) element.setAttribute('aria-label', label)
+  if (!element.getAttribute('aria-labelledby')) {
+    const generatedLabel = derivedVisibleText(element) || kindOf(element)
+    if (element.dataset.generatedAriaLabel === 'true') {
+      if (element.getAttribute('aria-label') !== generatedLabel) element.setAttribute('aria-label', generatedLabel)
+    } else if (!element.getAttribute('aria-label') && (!label || !element.innerText.trim())) {
+      element.dataset.generatedAriaLabel = 'true'
+      element.setAttribute('aria-label', generatedLabel)
+    }
+  }
   if ((element as HTMLButtonElement).disabled) {
-    const reason = element.dataset.disabledReason || element.getAttribute('title') || 'Unavailable in the current context'
-    element.dataset.disabledReason = reason
+    const generatedReason = element.getAttribute('title') || 'Unavailable in the current context'
+    if (!element.dataset.disabledReason || element.dataset.generatedDisabledReason === 'true') {
+      element.dataset.generatedDisabledReason = 'true'
+      element.dataset.disabledReason = generatedReason
+    }
+    const reason = element.dataset.disabledReason
     if (!element.getAttribute('title')) element.setAttribute('title', reason)
   }
+}
+
+function refreshTextOwner(node: Node): void {
+  const parent = node instanceof HTMLElement ? node : node.parentElement
+  if (!parent) return
+  if (parent.matches(SELECTOR)) assignStableIdentity(parent)
+  const label = parent.closest('label')
+  label?.querySelectorAll<HTMLElement>(SELECTOR).forEach(assignStableIdentity)
 }
 
 function scan(root: ParentNode = document): void {
@@ -74,10 +98,11 @@ export function installStableControlRegistry(): void {
   observer = new MutationObserver(records => {
     for (const record of records) {
       if (record.type === 'attributes' && record.target instanceof HTMLElement) assignStableIdentity(record.target)
+      if (record.type === 'characterData' || record.type === 'childList') refreshTextOwner(record.target)
       record.addedNodes.forEach(node => { if (node instanceof HTMLElement) scan(node) })
     }
   })
-  observer.observe(document.documentElement, { subtree: true, childList: true, attributes: true, attributeFilter: ['disabled', 'aria-label', 'title'] })
+  observer.observe(document.documentElement, { subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: ['disabled', 'aria-label', 'title'] })
 }
 
 export function stableControlInventory(root: ParentNode = document): StableControlRecord[] {

@@ -79,17 +79,15 @@ export const workspaceState = reactive({
 })
 
 type PanelName = 'hierarchy' | 'inspector' | 'bottom'
-const USER_STORAGE_KEY = 'nova-a-editor-workspaces-v2'
+const USER_STORAGE_KEY = 'nova-a-editor-workspaces-v3'
+const V4_STORAGE_KEY = 'nova-a-editor-workspaces-v2'
 const LEGACY_STORAGE_KEY = 'nova-a-editor-layout-v1'
 const PAGES = new Set<EditorPage>(['scene', 'game', 'script', 'settings', 'manage'])
 const BOTTOM_TABS = new Set<BottomPanelTab>(['assets', 'packages', 'console', 'animation', 'audio', 'tilemap', 'presentation', 'profiler', 'rendering', 'project', 'build'])
 let initialized = false
 
-function storageKey(): string {
-  return preferencesState.workspaceLayoutScope === 'project'
-    ? `${USER_STORAGE_KEY}:project:${projectSessionState.id}`
-    : USER_STORAGE_KEY
-}
+function scopedStorageKey(base: string): string { return preferencesState.workspaceLayoutScope === 'project' ? `${base}:project:${projectSessionState.id}` : base }
+function storageKey(): string { return scopedStorageKey(USER_STORAGE_KEY) }
 
 function flags(): URLSearchParams { return typeof location === 'undefined' ? new URLSearchParams() : new URLSearchParams(location.search) }
 function clamp(value: unknown, fallback: number, minimum: number, maximum: number): number { return typeof value === 'number' && Number.isFinite(value) ? Math.min(maximum, Math.max(minimum, value)) : fallback }
@@ -184,7 +182,7 @@ function readStored(): void {
   workspaceState.safeLayout = flags().get('safe-layout') === '1' || flags().get('safe-mode') === '1'
   if (workspaceState.safeLayout) { editorState.activeWorkspace = 'design'; applyLayout(safeDesignLayout); return }
   try {
-    const parsed = JSON.parse(localStorage.getItem(storageKey()) ?? 'null') as Record<string, unknown> | null
+    const parsed = JSON.parse(localStorage.getItem(storageKey()) ?? localStorage.getItem(scopedStorageKey(V4_STORAGE_KEY)) ?? 'null') as Record<string, unknown> | null
     if (parsed?.layout) {
       const rawWorkspace = parsed.activeWorkspace === 'interface' ? 'ui' : parsed.activeWorkspace
       if (WORKSPACE_PRESETS.some(item => item.id === rawWorkspace)) editorState.activeWorkspace = rawWorkspace as EditorWorkspace
@@ -204,7 +202,7 @@ function readStored(): void {
 function persist(): void {
   if (typeof localStorage === 'undefined' || workspaceState.safeLayout) return
   try {
-    localStorage.setItem(storageKey(), JSON.stringify({ version: 2, activeWorkspace: editorState.activeWorkspace, selectedCustomId: workspaceState.selectedCustomId, layout: captureWorkspaceLayout(), custom: workspaceState.custom }))
+    localStorage.setItem(storageKey(), JSON.stringify({ version: 3, migratedFrom: localStorage.getItem(scopedStorageKey(V4_STORAGE_KEY)) ? 2 : null, activeWorkspace: editorState.activeWorkspace, selectedCustomId: workspaceState.selectedCustomId, layout: captureWorkspaceLayout(), custom: workspaceState.custom }))
   } catch { /* Layout persistence is optional; editor operation is not. */ }
 }
 
@@ -261,8 +259,8 @@ export function duplicateWorkspace(id: string, name?: string): CustomWorkspace |
 
 export function renameWorkspace(id: string, name: string): boolean { const item = workspaceState.custom.find(candidate => candidate.id === id); const safe = name.trim().slice(0, 48); if (!item || !safe) return false; item.name = safe; return true }
 export function removeWorkspace(id: string): boolean { const index = workspaceState.custom.findIndex(item => item.id === id); if (index < 0) return false; workspaceState.custom.splice(index, 1); workspaceState.selectedCustomId = workspaceState.custom[0]?.id ?? ''; if (!workspaceState.selectedCustomId) applyEditorWorkspace('design'); return true }
-export function exportWorkspaces(): string { return JSON.stringify({ format: 'nova-workspaces', version: 2, workspaces: workspaceState.custom }, null, 2) }
-export function importWorkspaces(source: string): number { const parsed = JSON.parse(source) as Record<string, unknown>; if (parsed.format !== 'nova-workspaces' || parsed.version !== 2) throw new Error('Unsupported Nova_A workspace document.'); const imported = normalizeCustomList(parsed.workspaces); const ids = new Set(workspaceState.custom.map(item => item.id)); for (const item of imported) { if (ids.has(item.id)) item.id = crypto.randomUUID?.() ?? `custom-${Date.now()}-${ids.size}`; ids.add(item.id); workspaceState.custom.push(item) } return imported.length }
+export function exportWorkspaces(): string { return JSON.stringify({ format: 'nova-workspaces', version: 3, engineLine: '5.x', workspaces: workspaceState.custom }, null, 2) }
+export function importWorkspaces(source: string): number { const parsed = JSON.parse(source) as Record<string, unknown>; if (parsed.format !== 'nova-workspaces' || (parsed.version !== 2 && parsed.version !== 3)) throw new Error('Unsupported Nova_A workspace document.'); const imported = normalizeCustomList(parsed.workspaces); const ids = new Set(workspaceState.custom.map(item => item.id)); for (const item of imported) { if (ids.has(item.id)) item.id = crypto.randomUUID?.() ?? `custom-${Date.now()}-${ids.size}`; ids.add(item.id); workspaceState.custom.push(item) } return imported.length }
 
 export function navigateHistory(direction: 'back' | 'forward'): boolean {
   const source = direction === 'back' ? workspaceState.navigationBack : workspaceState.navigationForward
@@ -303,5 +301,5 @@ export function openEditorTool(tab: BottomPanelTab): void {
   editorState.bottomPanelVisible = true; editorState.bottomPanelOpen = true; editorState.bottomPanelTab = tab === 'presentation' ? 'assets' : tab; notifyLayoutChanged()
 }
 export function reorderBottomTab(source: BottomPanelTab, target: BottomPanelTab): void { const order = workspaceState.bottomTabOrder; const from = order.indexOf(source), to = order.indexOf(target); if (from < 0 || to < 0 || from === to) return; order.splice(to, 0, order.splice(from, 1)[0]); notifyLayoutChanged() }
-export function resetEditorLayout(): void { if (typeof localStorage !== 'undefined') { localStorage.removeItem(storageKey()); localStorage.removeItem(LEGACY_STORAGE_KEY) }; workspaceState.safeLayout = false; applyEditorWorkspace('design') }
+export function resetEditorLayout(): void { if (typeof localStorage !== 'undefined') { localStorage.removeItem(storageKey()); localStorage.removeItem(scopedStorageKey(V4_STORAGE_KEY)); localStorage.removeItem(LEGACY_STORAGE_KEY) }; workspaceState.safeLayout = false; applyEditorWorkspace('design') }
 export function enableSafeLayout(): void { workspaceState.safeLayout = true; editorState.activeWorkspace = 'design'; applyLayout(safeDesignLayout) }

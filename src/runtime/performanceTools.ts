@@ -2,8 +2,10 @@ import { reactive } from 'vue'
 import { assetState } from '../assets/AssetDatabase'
 import type { RendererStats } from '../renderer'
 import { productionSettings } from './production'
-import { profilerState, type FrameProfile } from './profiler'
+import { profilerState, type FrameProfile, type ProfilerAnnotation, type ProfilerCounter, type ProfilerMarker } from './profiler'
 import { jobSchedulerState } from './jobScheduler'
+import { audioRuntime } from './audio'
+import { particleDiagnostics } from './particles'
 
 export interface LifetimeEvent {
   frame: number
@@ -12,8 +14,10 @@ export interface LifetimeEvent {
   id: string
   action: 'created' | 'retained' | 'released'
 }
-
 export interface PerformanceCapture {
+  format: 'nova-performance-capture'
+  version: 2
+  engineVersion: '5.0.1'
   id: string
   name: string
   createdAt: string
@@ -22,7 +26,17 @@ export interface PerformanceCapture {
   assetMb: number
   liveEntities: number
   renderer: RendererStats
+  markers: ProfilerMarker[]
+  counters: ProfilerCounter[]
+  annotations: ProfilerAnnotation[]
+  mode: 'Full' | 'Low overhead' | 'Off'
+  estimatedOverheadPercent: number
+  remotePeer: string
+  audio: { activeVoices: number; underruns: number; clippingEvents: number }
+  particles: { active: number; updateMs: number; budgetExceeded: boolean }
+  budget: CaptureBudgetResult
 }
+export interface CaptureBudgetResult { passed: boolean; evaluatedAt: string; checks: Array<{ id: string; actual: number | null; limit: number; unit: string; passed: boolean }> }
 
 export interface CaptureComparison {
   first: string
@@ -32,6 +46,10 @@ export interface CaptureComparison {
   memoryDeltaMb: number | null
   assetDeltaMb: number
   entityDelta: number
+  gpuDeltaMs: number | null
+  drawCallDelta: number
+  textureMemoryDeltaMb: number
+  budgetRegressions: string[]
 }
 
 export const performanceToolsState = reactive({
@@ -52,8 +70,21 @@ export const performanceToolsState = reactive({
 const knownEntities = new Set<string>()
 const memoryWindow: Array<{ frame: number; value: number }> = []
 
-function cloneStats(stats: RendererStats): RendererStats { return { ...stats } }
+function cloneStats(stats: RendererStats): RendererStats { return { ...stats, batchBreakReasons: { ...stats.batchBreakReasons } } }
 function finiteAverage(values: number[]): number { return values.length ? values.reduce((total, value) => total + value, 0) / values.length : 0 }
+function evaluateCapture(frames: FrameProfile[], renderer: RendererStats): CaptureBudgetResult {
+  const checks: CaptureBudgetResult['checks'] = [
+    { id: 'frame.average', actual: finiteAverage(frames.map(frame => frame.frameMs)), limit: productionSettings.performance.frameBudgetMs, unit: 'ms', passed: finiteAverage(frames.map(frame => frame.frameMs)) <= productionSettings.performance.frameBudgetMs },
+    { id: 'render.average', actual: finiteAverage(frames.map(frame => frame.renderingMs)), limit: productionSettings.performance.renderingBudgetMs, unit: 'ms', passed: finiteAverage(frames.map(frame => frame.renderingMs)) <= productionSettings.performance.renderingBudgetMs },
+    { id: 'audio.average', actual: finiteAverage(frames.map(frame => frame.audioMs)), limit: productionSettings.performance.audioBudgetMs, unit: 'ms', passed: finiteAverage(frames.map(frame => frame.audioMs)) <= productionSettings.performance.audioBudgetMs },
+    { id: 'gpu.frame', actual: renderer.gpuMs, limit: productionSettings.performance.gpuBudgetMs, unit: 'ms', passed: renderer.gpuMs === null || renderer.gpuMs <= productionSettings.performance.gpuBudgetMs },
+    { id: 'renderer.drawCalls', actual: renderer.drawCalls, limit: productionSettings.performance.drawCallBudget, unit: 'calls', passed: renderer.drawCalls <= productionSettings.performance.drawCallBudget },
+    { id: 'renderer.textureMemory', actual: renderer.textureMemoryBytes / 1048576, limit: productionSettings.performance.textureBudgetMb, unit: 'MB', passed: renderer.textureMemoryBytes / 1048576 <= productionSettings.performance.textureBudgetMb },
+    { id: 'particles.update', actual: particleDiagnostics.updateMs, limit: productionSettings.performance.particleBudgetMs, unit: 'ms', passed: particleDiagnostics.updateMs <= productionSettings.performance.particleBudgetMs },
+    { id: 'profiler.overhead', actual: profilerState.estimatedOverheadPercent, limit: productionSettings.performance.profilerOverheadBudgetPercent, unit: '%', passed: profilerState.estimatedOverheadPercent <= productionSettings.performance.profilerOverheadBudgetPercent }
+  ]
+  return { passed: checks.every(check => check.passed), evaluatedAt: new Date().toISOString(), checks }
+}
 
 function recordLifetime(frame: number, kind: LifetimeEvent['kind'], id: string, action: LifetimeEvent['action']): void {
   performanceToolsState.lifetimeEvents.push({ frame, timestamp: performance.now(), kind, id: id.slice(0, 160), action })
@@ -95,11 +126,14 @@ export function samplePerformanceTools(frame: number, entityUuids: string[], ren
 
 export function capturePerformance(name = `Capture ${performanceToolsState.captures.length + 1}`, renderer: RendererStats): PerformanceCapture {
   const capture: PerformanceCapture = {
+    format: 'nova-performance-capture', version: 2, engineVersion: '5.0.1',
     id: `capture-${Date.now().toString(36)}-${performanceToolsState.captures.length}`,
     name: name.trim().slice(0, 120) || 'Capture', createdAt: new Date().toISOString(),
     frames: profilerState.samples.slice(-productionSettings.performance.traceCapacity).map(frame => ({ ...frame })),
     memoryMb: performanceToolsState.memoryMb, assetMb: performanceToolsState.assetMb,
-    liveEntities: performanceToolsState.liveEntities, renderer: cloneStats(renderer)
+    liveEntities: performanceToolsState.liveEntities, renderer: cloneStats(renderer),
+    markers: profilerState.markers.map(marker => ({ ...marker })), counters: profilerState.counters.map(counter => ({ ...counter })), annotations: profilerState.annotations.map(annotation => ({ ...annotation })), mode: profilerState.overheadMode, estimatedOverheadPercent: profilerState.estimatedOverheadPercent, remotePeer: profilerState.remotePeer,
+    audio: { activeVoices: audioRuntime.diagnostics.activeVoices, underruns: audioRuntime.diagnostics.underruns, clippingEvents: audioRuntime.diagnostics.clippingEvents }, particles: { active: particleDiagnostics.activeParticles, updateMs: particleDiagnostics.updateMs, budgetExceeded: particleDiagnostics.budgetExceeded }, budget: evaluateCapture(profilerState.samples, renderer)
   }
   performanceToolsState.captures.push(capture)
   if (performanceToolsState.captures.length > 16) performanceToolsState.captures.splice(0, performanceToolsState.captures.length - 16)
@@ -116,11 +150,18 @@ export function comparePerformanceCaptures(firstId: string, secondId: string): C
     averageFrameDeltaMs: finiteAverage(secondFrames) - finiteAverage(firstFrames),
     peakFrameDeltaMs: Math.max(0, ...secondFrames) - Math.max(0, ...firstFrames),
     memoryDeltaMb: first.memoryMb === null || second.memoryMb === null ? null : second.memoryMb - first.memoryMb,
-    assetDeltaMb: second.assetMb - first.assetMb, entityDelta: second.liveEntities - first.liveEntities
+    assetDeltaMb: second.assetMb - first.assetMb, entityDelta: second.liveEntities - first.liveEntities,
+    gpuDeltaMs: first.renderer.gpuMs === null || second.renderer.gpuMs === null ? null : second.renderer.gpuMs - first.renderer.gpuMs,
+    drawCallDelta: second.renderer.drawCalls - first.renderer.drawCalls,
+    textureMemoryDeltaMb: (second.renderer.textureMemoryBytes - first.renderer.textureMemoryBytes) / 1048576,
+    budgetRegressions: second.budget.checks.filter(check => !check.passed && first.budget.checks.find(item => item.id === check.id)?.passed !== false).map(check => check.id)
   }
   performanceToolsState.comparison = comparison
   return comparison
 }
+
+export function serializePerformanceCapture(capture: PerformanceCapture): string { return JSON.stringify(capture, null, 2) }
+export function performanceCaptureCiReport(capture: PerformanceCapture): { status: 'passed' | 'failed'; engineVersion: string; checks: CaptureBudgetResult['checks'] } { return { status: capture.budget.passed ? 'passed' : 'failed', engineVersion: capture.engineVersion, checks: capture.budget.checks } }
 
 export function clearPerformanceTools(): void {
   knownEntities.clear(); memoryWindow.splice(0)

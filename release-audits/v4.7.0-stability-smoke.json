@@ -1,0 +1,12 @@
+{
+  "format": "nova-v4.7-stability",
+  "generatedAt": "2026-08-24T13:56:24.469Z",
+  "animationAndUiVerification": "passed",
+  "browserLayout": "passed",
+  "crashes": 0,
+  "severity0Open": 0,
+  "severity1Open": 0,
+  "wallClock24Hours": false,
+  "cleanMachine": false,
+  "status": "passed-local-with-external-gates"
+}

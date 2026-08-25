@@ -29,6 +29,9 @@ export interface ScriptReference { name: string; line: number; column: number; d
 export interface ScriptTestMetadata { name: string; line: number; timeoutMs: number; skipped: boolean; tags: string[]; seed: number; cases: string[] }
 export interface ScriptSemanticToken { line: number; column: number; length: number; kind: 'keyword' | 'function' | 'variable' | 'api' | 'string' | 'comment' | 'number' | 'deprecated' }
 export interface ScriptAnalysis {
+  apiVersion: 1 | 2
+  revision: number
+  elapsedMs: number
   diagnostics: ScriptDiagnostic[]
   symbols: ScriptSymbol[]
   dependencies: string[]
@@ -72,7 +75,8 @@ function parseTestDirective(line: string): Omit<ScriptTestMetadata, 'name' | 'li
   }
 }
 
-export function analyzeScript(source: string): ScriptAnalysis {
+export function analyzeScript(source: string, apiVersion: 1 | 2 = 2, revision = 0): ScriptAnalysis {
+  const started = typeof performance === 'undefined' ? Date.now() : performance.now()
   const diagnostics: ScriptDiagnostic[] = [], symbols: ScriptSymbol[] = [], dependencies: string[] = [], references: ScriptReference[] = [], tests: ScriptTestMetadata[] = [], semanticTokens: ScriptSemanticToken[] = []
   const functions: ScriptAnalysis['functions'] = {}, declarations = new Map<string, ScriptSymbol>(), calls: Array<{ name: string; line: number; column: number }> = []
   const lines = source.split(/\r?\n/)
@@ -135,11 +139,25 @@ export function analyzeScript(source: string): ScriptAnalysis {
     }
   })
   if (braces > 0) diagnostics.push(diagnostic(lines.length, Math.max(1, (lines[lines.length - 1]?.length ?? 0) + 1), 1, 'error', 'parser', 'NOVA-PARSE-003', `${braces} closing brace${braces === 1 ? '' : 's'} missing.`))
+  if (apiVersion === 1) diagnostics.push(diagnostic(1, 1, 1, 'info', 'compatibility', 'NOVA-COMPAT-V1', 'This asset uses the API v1 compatibility adapter. Use code actions to migrate deprecated calls before selecting API v2.'))
   for (const dependency of dependencies) if (dependency.includes('..') || /^[a-z]+:/i.test(dependency)) diagnostics.push(diagnostic(1, 1, dependency.length, 'error', 'semantic', 'NOVA-MODULE-001', `Module path may not escape Assets: ${dependency}`))
   const known = new Set([...declarations.keys(), ...API_NAMES, ...BUILTINS])
   for (const call of calls) if (!known.has(call.name)) diagnostics.push(diagnostic(call.line, call.column, call.name.length, 'error', 'semantic', 'NOVA-SEM-003', `Unknown function “${call.name}”.`))
+  const lifecycle = new Set(['awake', 'start', 'fixed_update', 'update', 'late_update', 'on_destroy', 'on_timer', 'on_task', 'on_signal', 'on_collision_enter', 'on_collision_stay', 'on_collision_exit', 'on_trigger_enter', 'on_trigger_stay', 'on_trigger_exit', 'before_all', 'before_each', 'after_each', 'after_all'])
+  for (const symbol of symbols) if (symbol.kind === 'function' && !lifecycle.has(symbol.name) && !symbol.name.startsWith('test_') && !calls.some(call => call.name === symbol.name)) diagnostics.push(diagnostic(symbol.line, symbol.column, symbol.name.length, 'warning', 'semantic', 'NOVA-LINT-UNUSED', `Function “${symbol.name}” is never called in this workspace document.`))
   const uniqueDiagnostics = [...new Map(diagnostics.map(item => [`${item.code}:${item.line}:${item.column}:${item.message}`, item])).values()]
-  return { diagnostics: uniqueDiagnostics, symbols, dependencies: [...new Set(dependencies)], functions, references, tests, semanticTokens, apiUsage: [...new Set(calls.map(call => call.name).filter(name => API_NAMES.has(name)))] }
+  const elapsedMs = (typeof performance === 'undefined' ? Date.now() : performance.now()) - started
+  return { apiVersion, revision, elapsedMs, diagnostics: uniqueDiagnostics, symbols, dependencies: [...new Set(dependencies)], functions, references, tests, semanticTokens, apiUsage: [...new Set(calls.map(call => call.name).filter(name => API_NAMES.has(name)))] }
+}
+
+export function applyScriptLintPolicy(analysis: ScriptAnalysis, policy: { deprecatedApi: 'off' | 'warning' | 'error'; shadowing: 'off' | 'warning'; unusedSymbols: 'off' | 'warning' }): ScriptAnalysis {
+  const diagnostics = analysis.diagnostics.flatMap(item => {
+    if (item.code === 'NOVA-COMPAT-001') return policy.deprecatedApi === 'off' ? [] : [{ ...item, severity: policy.deprecatedApi as 'warning' | 'error' }]
+    if (item.code === 'NOVA-SEM-002' && policy.shadowing === 'off') return []
+    if (item.code === 'NOVA-LINT-UNUSED' && policy.unusedSymbols === 'off') return []
+    return [item]
+  })
+  return { ...analysis, diagnostics }
 }
 
 export function completionDetails(prefix: string, analysis?: ScriptAnalysis): ScriptCompletion[] {
@@ -160,18 +178,27 @@ export function renameScriptSymbol(source: string, name: string, replacement: st
   if (!IDENTIFIER.test(replacement)) throw new Error('Replacement is not a valid Rhai identifier')
   return source.replace(new RegExp(`\\b${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'g'), replacement)
 }
-export function formatScript(source: string): string {
+export function formatScript(source: string, options: { indentSize?: 2 | 4; lineWidth?: number; finalNewline?: boolean } = {}): string {
+  const indent = ' '.repeat(options.indentSize === 4 ? 4 : 2)
+  const lineWidth = Math.min(240, Math.max(60, Math.round(options.lineWidth ?? 100)))
   let depth = 0
-  return source.replace(/\r\n/g, '\n').split('\n').map(line => {
+  const formatted = source.replace(/\r\n/g, '\n').split('\n').map(line => {
     const trimmed = line.trimEnd().trimStart()
     if (!trimmed) return ''
     if (trimmed.startsWith('}')) depth = Math.max(0, depth - 1)
-    const output = `${'  '.repeat(depth)}${trimmed}`
+    let output = `${indent.repeat(depth)}${trimmed}`
+    if (output.length > lineWidth && trimmed.startsWith('// ') && !trimmed.startsWith('///') && !trimmed.startsWith('// @')) {
+      const prefix = `${indent.repeat(depth)}// `, words = trimmed.slice(3).split(/\s+/), wrapped: string[] = []
+      let current = prefix
+      for (const word of words) { if (current.length > prefix.length && current.length + word.length + 1 > lineWidth) { wrapped.push(current); current = `${prefix}${word}` } else current += `${current.length > prefix.length ? ' ' : ''}${word}` }
+      wrapped.push(current); output = wrapped.join('\n')
+    }
     const code = trimmed.replace(/\/\/.*$/, '').replace(/"(?:\\.|[^"\\])*"/g, '')
     const opens = [...code].filter(character => character === '{').length, closes = [...code].filter(character => character === '}').length
     depth = Math.max(0, depth + opens - closes + (trimmed.startsWith('}') ? 1 : 0))
     return output
-  }).join('\n').replace(/\n{3,}/g, '\n\n').replace(/\s+$/, '') + '\n'
+  }).join('\n').replace(/\n{3,}/g, '\n\n').replace(/\s+$/, '')
+  return options.finalNewline === false ? formatted : `${formatted}\n`
 }
 export function scriptCodeActions(analysis: ScriptAnalysis): ScriptCodeAction[] {
   return analysis.diagnostics.flatMap(item => {
@@ -186,7 +213,11 @@ export function scriptCodeActions(analysis: ScriptAnalysis): ScriptCodeAction[] 
 
 export class ScriptWorkspaceIndex {
   private documents = new Map<string, WorkspaceScriptDocument>()
-  update(uri: string, source: string): ScriptAnalysis { const analysis = analyzeScript(source); this.documents.set(uri, { uri, source, analysis }); return analysis }
+  update(uri: string, source: string, apiVersion: 1 | 2 = 2, revision = 0): ScriptAnalysis {
+    const current = this.documents.get(uri)
+    if (current?.source === source && current.analysis.apiVersion === apiVersion && current.analysis.revision === revision) return current.analysis
+    const analysis = analyzeScript(source, apiVersion, revision); this.documents.set(uri, { uri, source, analysis }); return analysis
+  }
   remove(uri: string): void { this.documents.delete(uri) }
   document(uri: string): WorkspaceScriptDocument | null { return this.documents.get(uri) ?? null }
   documentSymbols(uri: string): ScriptSymbol[] { return [...(this.documents.get(uri)?.analysis.symbols ?? [])] }
@@ -194,6 +225,23 @@ export class ScriptWorkspaceIndex {
   definition(name: string): WorkspaceSymbol | null { return this.workspaceSymbols(name).find(symbol => symbol.name === name) ?? null }
   references(name: string): Array<ScriptReference & { uri: string }> { return [...this.documents.values()].flatMap(document => document.analysis.references.filter(reference => reference.name === name).map(reference => ({ ...reference, uri: document.uri }))) }
   rename(name: string, replacement: string): Map<string, string> { return new Map([...this.documents.values()].filter(document => document.analysis.references.some(reference => reference.name === name)).map(document => [document.uri, renameScriptSymbol(document.source, name, replacement)])) }
+  moduleAssistance(uri: string): Array<{ module: string; status: 'resolved' | 'missing'; candidates: string[] }> {
+    const document = this.documents.get(uri)
+    if (!document) return []
+    const uris = [...this.documents.keys()]
+    return document.analysis.dependencies.map(module => ({ module, status: uris.some(candidate => candidate.endsWith(module) || candidate.endsWith(`${module}.rhai`)) ? 'resolved' : 'missing', candidates: uris.filter(candidate => candidate.toLowerCase().includes(module.split('/').pop()?.toLowerCase() ?? '')).slice(0, 8) }))
+  }
+  snapshot(): string {
+    return JSON.stringify({ format: 'nova-script-index', version: 2, documents: [...this.documents.values()].map(document => ({ uri: document.uri, source: document.source, apiVersion: document.analysis.apiVersion, revision: document.analysis.revision })) })
+  }
+  restore(snapshot: string, maximumDocuments = 10_000): number {
+    const value = JSON.parse(snapshot) as { format?: string; version?: number; documents?: Array<{ uri?: unknown; source?: unknown; apiVersion?: unknown; revision?: unknown }> }
+    if (value.format !== 'nova-script-index' || value.version !== 2 || !Array.isArray(value.documents)) throw new Error('Unsupported or corrupt script index')
+    this.documents.clear()
+    for (const item of value.documents.slice(0, Math.max(1, maximumDocuments))) if (typeof item.uri === 'string' && typeof item.source === 'string') this.update(item.uri.slice(0, 1_024), item.source.slice(0, 2_000_000), Number(item.apiVersion) === 1 ? 1 : 2, Math.max(0, Math.round(Number(item.revision) || 0)))
+    return this.documents.size
+  }
+  get size(): number { return this.documents.size }
   clear(): void { this.documents.clear() }
 }
 
@@ -201,6 +249,10 @@ export type ScriptProtocolRequest =
   | { id: string | number; method: 'textDocument/analyze'; params: { uri: string; text: string } }
   | { id: string | number; method: 'textDocument/completion'; params: { uri: string; prefix: string } }
   | { id: string | number; method: 'textDocument/hover'; params: { uri: string; symbol: string } }
+  | { id: string | number; method: 'textDocument/signatureHelp'; params: { symbol: string; activeParameter: number } }
+  | { id: string | number; method: 'textDocument/codeAction'; params: { uri: string } }
+  | { id: string | number; method: 'textDocument/rename'; params: { symbol: string; replacement: string } }
+  | { id: string | number; method: 'textDocument/moduleAssistance'; params: { uri: string } }
   | { id: string | number; method: 'textDocument/definition'; params: { symbol: string } }
   | { id: string | number; method: 'textDocument/references'; params: { symbol: string } }
   | { id: string | number; method: 'workspace/symbol'; params: { query: string } }
@@ -211,6 +263,10 @@ export function handleScriptProtocol(index: ScriptWorkspaceIndex, request: Scrip
     if (request.method === 'textDocument/analyze') return { id: request.id, result: index.update(request.params.uri, request.params.text) }
     if (request.method === 'textDocument/completion') return { id: request.id, result: completionDetails(request.params.prefix, index.document(request.params.uri)?.analysis) }
     if (request.method === 'textDocument/hover') return { id: request.id, result: hoverInfo(request.params.symbol) }
+    if (request.method === 'textDocument/signatureHelp') return { id: request.id, result: parameterHint(request.params.symbol, request.params.activeParameter) }
+    if (request.method === 'textDocument/codeAction') return { id: request.id, result: scriptCodeActions(index.document(request.params.uri)?.analysis ?? analyzeScript('')) }
+    if (request.method === 'textDocument/rename') return { id: request.id, result: Object.fromEntries(index.rename(request.params.symbol, request.params.replacement)) }
+    if (request.method === 'textDocument/moduleAssistance') return { id: request.id, result: index.moduleAssistance(request.params.uri) }
     if (request.method === 'textDocument/definition') return { id: request.id, result: index.definition(request.params.symbol) }
     if (request.method === 'textDocument/references') return { id: request.id, result: index.references(request.params.symbol) }
     if (request.method === 'workspace/symbol') return { id: request.id, result: index.workspaceSymbols(request.params.query) }
@@ -223,19 +279,24 @@ interface WorkerReply { id: number; analysis: ScriptAnalysis }
 export class ScriptLanguageService {
   private worker: Worker | null = null
   private requestId = 0
-  private pending = new Map<number, (analysis: ScriptAnalysis) => void>()
+  private pending = new Map<number, { resolve: (analysis: ScriptAnalysis) => void; source: string; apiVersion: 1 | 2; revision: number }>()
   constructor() {
     if (typeof Worker === 'undefined') return
     try {
       this.worker = new Worker(new URL('./scriptLanguage.worker.ts', import.meta.url), { type: 'module', name: 'nova-script-language' })
-      this.worker.onmessage = (event: MessageEvent<WorkerReply>) => { const resolve = this.pending.get(event.data.id); if (!resolve) return; this.pending.delete(event.data.id); resolve(event.data.analysis) }
+      this.worker.onmessage = (event: MessageEvent<WorkerReply>) => { const pending = this.pending.get(event.data.id); if (!pending) return; this.pending.delete(event.data.id); pending.resolve(event.data.analysis) }
     } catch { this.worker = null }
   }
-  analyze(source: string): Promise<ScriptAnalysis> {
+  analyze(source: string, options: { apiVersion?: 1 | 2; revision?: number; signal?: AbortSignal } = {}): Promise<ScriptAnalysis> {
+    const apiVersion = options.apiVersion ?? 2, revision = Math.max(0, Math.round(options.revision ?? 0))
     const id = ++this.requestId
-    for (const [pendingId, resolve] of this.pending) if (pendingId < id) { this.pending.delete(pendingId); resolve(analyzeScript(source)) }
-    if (!this.worker) return Promise.resolve(analyzeScript(source))
-    return new Promise(resolve => { this.pending.set(id, resolve); this.worker?.postMessage({ id, source }) })
+    for (const [pendingId, pending] of this.pending) if (pendingId < id) { this.pending.delete(pendingId); pending.resolve(analyzeScript(pending.source, pending.apiVersion, pending.revision)) }
+    if (options.signal?.aborted || !this.worker) return Promise.resolve(analyzeScript(source, apiVersion, revision))
+    return new Promise(resolve => {
+      this.pending.set(id, { resolve, source, apiVersion, revision })
+      options.signal?.addEventListener('abort', () => { const pending = this.pending.get(id); if (!pending) return; this.pending.delete(id); pending.resolve(analyzeScript(source, apiVersion, revision)) }, { once: true })
+      this.worker?.postMessage({ id, source, apiVersion, revision })
+    })
   }
   dispose(): void { this.worker?.terminate(); this.worker = null; this.pending.clear() }
 }

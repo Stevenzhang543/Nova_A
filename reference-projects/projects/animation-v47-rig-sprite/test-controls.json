@@ -1,0 +1,19 @@
+{
+  "open": "Project Manager > Open project.nova",
+  "workspace": "Animation",
+  "inspect": "Animation > Validation and Runtime inspection",
+  "health": "Manage > Project Health",
+  "devices": [
+    "desktop-hd",
+    "laptop",
+    "ultrawide",
+    "classic",
+    "mobile-portrait",
+    "mobile-landscape"
+  ],
+  "directions": [
+    "ltr",
+    "rtl"
+  ],
+  "engineVersion": "5.0.1"
+}
