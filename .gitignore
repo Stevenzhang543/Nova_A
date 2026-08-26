@@ -24,3 +24,6 @@ nova_core/target/
 *.njsproj
 *.sln
 *.sw?
+
+/releases/
+/instructions.txt
