@@ -1,0 +1,16 @@
+{
+  "format": "nova-v5.4.0-benchmark-summary",
+  "version": 1,
+  "engineVersion": "5.4.0",
+  "generatedAt": "2026-08-26T14:38:38.636Z",
+  "scope": "Local bounded-gameplay, reference-project and responsive-layout qualification; independent-host performance certification remains external.",
+  "gameplayComponents": 11,
+  "referenceProjects": 5,
+  "layoutStates": 217,
+  "productAudit": "passed",
+  "gameplayVerification": "passed",
+  "browserLayout": "passed",
+  "localBuilds": "passed",
+  "independentHostPerformance": "pending-external",
+  "status": "passed"
+}

@@ -1,0 +1,125 @@
+{
+  "format": "nova-v5.3.0-graph-production-verification",
+  "version": 1,
+  "engineVersion": "5.3.0",
+  "generatedAt": "2026-08-26T11:56:11.346Z",
+  "checks": [
+    {
+      "id": "V530-GRAPH-ASSETS",
+      "status": "passed",
+      "detail": "Every repository graph parses, canonically round-trips, compiles and passes static Rhai API-v2 analysis.",
+      "metrics": {
+        "count": 7,
+        "failed": []
+      }
+    },
+    {
+      "id": "V530-PRODUCTION-SCOPES",
+      "status": "passed",
+      "detail": "Function, macro, subgraph, event, interface and local fixture compiles.",
+      "metrics": {
+        "diagnostics": []
+      }
+    },
+    {
+      "id": "V530-GRAPH-TEXT-PARITY",
+      "status": "passed",
+      "detail": "Generated source is transparent, traced and accepted by the same Rhai API-v2 analyzer.",
+      "metrics": {
+        "mappings": 37
+      }
+    },
+    {
+      "id": "V530-HOT-RELOAD",
+      "status": "passed",
+      "detail": "Hot reload preserves compatible UUID/type/lifetime state and rejects serialized-lifetime changes.",
+      "metrics": {
+        "compatiblePlan": {
+          "compatible": true,
+          "reasons": [
+            "Stable identities and serialized variable layouts are compatible."
+          ],
+          "preserved": {
+            "bonus_multiplier": 7
+          },
+          "initialized": [],
+          "dropped": []
+        },
+        "incompatiblePlan": {
+          "compatible": false,
+          "reasons": [
+            "Variable bonus_multiplier changed type or lifetime."
+          ],
+          "preserved": {},
+          "initialized": [
+            "bonus_multiplier"
+          ],
+          "dropped": []
+        }
+      }
+    },
+    {
+      "id": "V530-MERGE",
+      "status": "passed",
+      "detail": "Semantic three-way merge finds one true identity conflict, remains deterministic and compiles after explicit resolution.",
+      "metrics": {
+        "conflicts": [
+          {
+            "identity": "53000000-0000-4000-8000-000000000009",
+            "path": "graph/variables/53000000-0000-4000-8000-000000000009/tooltip"
+          }
+        ],
+        "changes": 2
+      }
+    },
+    {
+      "id": "V530-DEBUGGER",
+      "status": "passed",
+      "detail": "Ordered trace playback yields deterministic breakpoint, coverage, timing-call and active-wire state.",
+      "metrics": {
+        "active": "53000000-0000-4000-8000-000000000053",
+        "activeEdge": "53000000-0000-4000-8000-000000000066",
+        "sequence": 3,
+        "coverage": {
+          "53000000-0000-4000-8000-000000000002": 1,
+          "53000000-0000-4000-8000-000000000053": 1
+        },
+        "calls": {
+          "53000000-0000-4000-8000-000000000002": 1,
+          "53000000-0000-4000-8000-000000000053": 1
+        },
+        "paused": true,
+        "reasons": [
+          "",
+          "",
+          "Visual breakpoint at node 53000000-0000-4000-8000-000000000053 · hit 1"
+        ]
+      }
+    },
+    {
+      "id": "V530-PACKAGE-NODES",
+      "status": "passed",
+      "detail": "Package Manifest 1 visual nodes expose only an exact Rhai API-v2 callable signature and compile through the shared command path.",
+      "metrics": {
+        "type": "package.top.whitelists.novaa.visual-fixture.comfortable-log",
+        "diagnostics": []
+      }
+    },
+    {
+      "id": "V530-REFACTOR",
+      "status": "passed",
+      "detail": "Rename/find references and Extract Function preserve identities and produce a valid graph.",
+      "metrics": {
+        "references": 1,
+        "diagnostics": []
+      }
+    },
+    {
+      "id": "V530-REDUCED-MOTION",
+      "status": "passed",
+      "detail": "Active execution remains visible while animation is removed for reduced-motion users.",
+      "metrics": {}
+    }
+  ],
+  "status": "passed"
+}

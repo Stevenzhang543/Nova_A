@@ -68,7 +68,11 @@ const INLINE_TEXT_ASSET_TYPES = new Set(['script', 'prefab', 'scene', 'material'
 
 async function assetBytes(asset: AssetRecord): Promise<Uint8Array> {
   if (!asset.source) throw new Error(`Asset ${asset.name} has no imported source data`)
-  if (INLINE_TEXT_ASSET_TYPES.has(asset.assetType) && !/^(?:data:|blob:|https?:)/i.test(asset.source)) return new TextEncoder().encode(asset.source)
+  const inlineText = INLINE_TEXT_ASSET_TYPES.has(asset.assetType)
+    || asset.mimeType?.startsWith('text/')
+    || asset.mimeType?.includes('json')
+    || asset.mimeType?.startsWith('application/x-nova-')
+  if (inlineText && !/^(?:data:|blob:|https?:)/i.test(asset.source)) return new TextEncoder().encode(asset.source)
   const response = await fetch(asset.source)
   if (!response.ok && !asset.source.startsWith('data:') && !asset.source.startsWith('blob:')) throw new Error(`Could not read ${asset.path}`)
   return new Uint8Array(await response.arrayBuffer())
@@ -112,7 +116,7 @@ export async function createNovaPak(projectJson: string, assets: AssetRecord[], 
   project.assets = projectAssets
   for (const asset of projectAssets) {
     delete asset.source
-    if (!developmentBuild && asset.assetType === 'script') delete asset.script
+    if (!developmentBuild && (asset.assetType === 'script' || asset.assetType === 'visualScript')) delete asset.script
   }
   if (!developmentBuild) {
     const settings = project.projectSettings as { scripting?: Record<string, unknown> } | undefined
@@ -159,7 +163,7 @@ export async function createNovaPak(projectJson: string, assets: AssetRecord[], 
     : undefined
   const index: NovaPakIndex = {
     format: 'nova-pak', version: NOVA_PAK_VERSION,
-    engineVersion: String(project.engineVersion ?? '5.0.1'),
+    engineVersion: String(project.engineVersion ?? '6.1.0'),
     createdAt: options.deterministic === false ? new Date().toISOString() : '1970-01-01T00:00:00.000Z', startupSceneUuid,
     physicsProfile: physicsProfile && typeof physicsProfile === 'object' ? structuredClone(physicsProfile as Record<string, unknown>) : undefined,
     entries

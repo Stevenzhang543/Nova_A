@@ -1,0 +1,76 @@
+{
+  "format": "nova-release-evidence-manifest",
+  "version": 1,
+  "release": "5.9.0",
+  "generatedAt": "2026-08-27T08:35:44.197Z",
+  "source": {
+    "commit": "af1d173b71e02630562513cd9b7bfd6f593d6947",
+    "dirty": true,
+    "note": "Current working candidate; tagged-source verification remains pending."
+  },
+  "environment": {
+    "id": "win32-x64-node22.22.2",
+    "os": "win32",
+    "architecture": "x64",
+    "node": "22.22.2"
+  },
+  "externalCertificationComplete": false,
+  "entries": [
+    {
+      "path": "build/local-builds.json",
+      "sha256": "bd78a7ec8245f1e2e345cbf1a3f84b1847a4ff65d90bdd28a2ac077b5ed1b81b",
+      "bytes": 780,
+      "source": "af1d173b71e02630562513cd9b7bfd6f593d6947",
+      "tool": "generate-v5.9.0-release-evidence.mjs",
+      "environment": "win32-x64-node22.22.2"
+    },
+    {
+      "path": "documentation/EXTENSIONS_PLATFORM_DELIVERY_5_9.md",
+      "sha256": "2244c81b7c285d7081aef6520a127ccfbe249744c7221baa113fd8b093baa357",
+      "bytes": 6712,
+      "source": "af1d173b71e02630562513cd9b7bfd6f593d6947",
+      "tool": "generate-v5.9.0-release-evidence.mjs",
+      "environment": "win32-x64-node22.22.2"
+    },
+    {
+      "path": "documentation/instructions.txt",
+      "sha256": "16b8ebd59a41fb6c07fd2437bcb1a2fa6c0f4f1597e463363b34af75554246a3",
+      "bytes": 33369,
+      "source": "af1d173b71e02630562513cd9b7bfd6f593d6947",
+      "tool": "generate-v5.9.0-release-evidence.mjs",
+      "environment": "win32-x64-node22.22.2"
+    },
+    {
+      "path": "external/gates.json",
+      "sha256": "c25f328a970e7d26be6a3018cfa8a92e245e3730bdcbd7ec7e16390b427aeb71",
+      "bytes": 1015,
+      "source": "af1d173b71e02630562513cd9b7bfd6f593d6947",
+      "tool": "generate-v5.9.0-release-evidence.mjs",
+      "environment": "win32-x64-node22.22.2"
+    },
+    {
+      "path": "runtime/ecosystem-verification.json",
+      "sha256": "ab86eccfff594d30b729d8418fdf188a1455ba7a08404d0313577602a44516bf",
+      "bytes": 2751,
+      "source": "af1d173b71e02630562513cd9b7bfd6f593d6947",
+      "tool": "generate-v5.9.0-release-evidence.mjs",
+      "environment": "win32-x64-node22.22.2"
+    },
+    {
+      "path": "runtime/layout-browser.json",
+      "sha256": "f518ca2039ba10c2181318391535c3c416428a25efd1412cde75021ef2b94a12",
+      "bytes": 127390,
+      "source": "af1d173b71e02630562513cd9b7bfd6f593d6947",
+      "tool": "generate-v5.9.0-release-evidence.mjs",
+      "environment": "win32-x64-node22.22.2"
+    },
+    {
+      "path": "runtime/product-audit.json",
+      "sha256": "2a28500c731de630fce68162e5b07e50dad0225572fda73a1a8db609bc4e2f03",
+      "bytes": 3208,
+      "source": "af1d173b71e02630562513cd9b7bfd6f593d6947",
+      "tool": "generate-v5.9.0-release-evidence.mjs",
+      "environment": "win32-x64-node22.22.2"
+    }
+  ]
+}

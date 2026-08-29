@@ -7,12 +7,12 @@ import { scriptProjectSettings } from '../runtime/scriptSettings'
 
 export type EditorPage = 'scene' | 'game' | 'script' | 'settings' | 'manage'
 export type EditorWorkspace = 'design' | 'script' | 'animation' | 'ui' | 'debug' | 'manage' | 'custom'
-export type BottomPanelTab = 'assets' | 'packages' | 'console' | 'animation' | 'audio' | 'tilemap' | 'presentation' | 'profiler' | 'rendering' | 'project' | 'build'
-export type ManageSection = 'settings' | 'packages' | 'project' | 'rendering' | 'build'
+export type BottomPanelTab = 'assets' | 'packages' | 'console' | 'animation' | 'audio' | 'worldProduction' | 'networkStudio' | 'ecosystem' | 'tilemap' | 'presentation' | 'profiler' | 'rendering' | 'project' | 'build'
+export type ManageSection = 'learn' | 'settings' | 'packages' | 'project' | 'rendering' | 'build'
 export type InspectorCategory = 'all' | 'general' | 'transform' | 'render' | 'physics' | 'gameplay' | 'ui'
 type ContextMenuType = 'sidebar-entity' | 'layer' | 'grid-entity' | 'none'
 export type EditorLogLevel = 'trace' | 'debug' | 'info' | 'warning' | 'error' | 'fatal'
-export type EditorLogCategory = 'Editor' | 'Physics' | 'Project' | 'Renderer' | 'Assets' | 'Audio' | 'Engine' | 'Runtime' | 'Script' | 'Save' | 'Plugin'
+export type EditorLogCategory = 'Editor' | 'Physics' | 'Project' | 'Renderer' | 'Assets' | 'Audio' | 'Engine' | 'Runtime' | 'Script' | 'Save' | 'Plugin' | 'Input'
 
 export interface EditorLogEntry {
   id: number

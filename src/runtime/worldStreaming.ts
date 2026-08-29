@@ -49,6 +49,16 @@ const snapshots = new Map<string, StreamCellSnapshot>()
 const saveHandoffs = new Map<string, unknown>()
 let eventId = 1
 
+interface StreamedEntityState {
+  uuid: string
+  enabled: boolean
+  position: Vec2
+  rotation: number
+  scale: Vec2
+  velocity: Vec2
+  angularVelocity: number
+}
+
 function event(cell: string, action: StreamEvent['action'], started: number, memoryMb: number, message: string): void {
   worldStreamingState.events.unshift({ id: eventId++, at: new Date().toISOString(), cell, action, milliseconds: performance.now() - started, memoryMb, message })
   worldStreamingState.events.splice(500)
@@ -185,7 +195,14 @@ export function updateWorldStreaming(
   // Retained cells are considered only after requested/prefetched groups and
   // can never force the runtime above the configured budget.
   for (const candidate of candidates.filter(item => item.chunk.cachePolicy === 'Retain' && item.snapshot.status !== 'Unloaded' && desired.get(item.entity.uuid) === 'Unloaded').sort((a, b) => b.snapshot.lastUsedAt - a.snapshot.lastUsedAt)) reserve(candidate, 'Loaded')
-  const memberSetter = (cellUuid: string, active: boolean) => { for (const entity of entities) if (entity.parentUuid === cellUuid) entity.enabled = active }
+  const memberSetter = (cellUuid: string, active: boolean) => {
+    if (active) {
+      if (!restoreStreamCellState(cellUuid, entities)) for (const entity of cellMembers(cellUuid, entities)) entity.enabled = true
+    } else {
+      captureStreamCellState(cellUuid, entities)
+      for (const entity of cellMembers(cellUuid, entities)) entity.enabled = false
+    }
+  }
   for (const candidate of candidates) {
     const target = desired.get(candidate.entity.uuid) ?? 'Unloaded'
     const previousTarget = desiredTargets.get(candidate.entity.uuid)
@@ -207,6 +224,62 @@ export function handoffStreamedSaveState(cellUuid: string, value: unknown): void
 }
 export function consumeStreamedSaveState(cellUuid: string): unknown {
   const value = saveHandoffs.get(cellUuid); saveHandoffs.delete(cellUuid); return value === undefined ? undefined : structuredClone(value)
+}
+
+function cellMembers(cellUuid: string, entities: Entity[]): Entity[] {
+  const result: Entity[] = [], queued = [cellUuid], visited = new Set<string>()
+  while (queued.length) {
+    const parent = queued.shift()!
+    if (visited.has(parent)) continue
+    visited.add(parent)
+    for (const entity of entities) if (entity.parentUuid === parent) { result.push(entity); queued.push(entity.uuid) }
+  }
+  return result.sort((a, b) => a.uuid.localeCompare(b.uuid))
+}
+
+export function captureStreamCellState(cellUuid: string, entities: Entity[]): StreamedEntityState[] {
+  const state = cellMembers(cellUuid, entities).map(entity => ({
+    uuid: entity.uuid, enabled: entity.enabled, position: { ...entity.transform.position }, rotation: entity.transform.rotation, scale: { ...entity.transform.scale },
+    velocity: { ...entity.velocity }, angularVelocity: entity.angularVelocity
+  }))
+  handoffStreamedSaveState(cellUuid, state)
+  return structuredClone(state)
+}
+
+export function restoreStreamCellState(cellUuid: string, entities: Entity[]): boolean {
+  const value = consumeStreamedSaveState(cellUuid)
+  if (!Array.isArray(value)) return false
+  const byUuid = new Map(entities.map(entity => [entity.uuid, entity]))
+  for (const raw of value.slice(0, 100_000)) {
+    if (!raw || typeof raw !== 'object') continue
+    const state = raw as Partial<StreamedEntityState>, entity = typeof state.uuid === 'string' ? byUuid.get(state.uuid) : undefined
+    if (!entity) continue
+    entity.enabled = state.enabled !== false
+    if (state.position && Number.isFinite(state.position.x) && Number.isFinite(state.position.y)) entity.transform.position = { ...state.position }
+    if (Number.isFinite(state.rotation)) entity.transform.rotation = state.rotation!
+    if (state.scale && Number.isFinite(state.scale.x) && Number.isFinite(state.scale.y)) entity.transform.scale = { ...state.scale }
+    if (state.velocity && Number.isFinite(state.velocity.x) && Number.isFinite(state.velocity.y)) entity.velocity = { ...state.velocity }
+    if (Number.isFinite(state.angularVelocity)) entity.angularVelocity = state.angularVelocity!
+  }
+  return true
+}
+
+function stableValue(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(stableValue)
+  if (value && typeof value === 'object') return Object.fromEntries(Object.entries(value as Record<string, unknown>).sort(([a], [b]) => a.localeCompare(b)).map(([key, entry]) => [key, stableValue(entry)]))
+  return value
+}
+
+export function exportWorldStreamingHandoffs(): string {
+  return JSON.stringify([...saveHandoffs.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([uuid, value]) => [uuid, stableValue(value)]))
+}
+
+export function importWorldStreamingHandoffs(source: string): number {
+  const parsed: unknown = JSON.parse(source)
+  if (!Array.isArray(parsed)) throw new Error('Streamed save handoff must be an array.')
+  saveHandoffs.clear()
+  for (const entry of parsed.slice(0, 100_000)) if (Array.isArray(entry) && typeof entry[0] === 'string') saveHandoffs.set(entry[0], structuredClone(entry[1]))
+  return saveHandoffs.size
 }
 export function cancelWorldStreaming(cellUuid?: string): void { if (cellUuid) controllers.get(cellUuid)?.abort(); else for (const controller of controllers.values()) controller.abort() }
 export function resetWorldStreaming(): void {

@@ -1,6 +1,8 @@
 import { reactive } from 'vue'
-import { OFFICIAL_ANDROID_PACKAGE_ID, packageEnabled } from './packages'
+import { OFFICIAL_ANDROID_PACKAGE_ID, OFFICIAL_NETWORKING_PACKAGE_ID, packageEnabled } from './packages'
 import { platformSupport } from './platformSupport'
+import { productionSettings } from './production'
+import { defaultExportTemplateId, exportTemplateIssues, resolveExportTemplateId } from './exportTemplates'
 
 export type BuildTarget = 'windows' | 'linux' | 'macos' | 'web' | 'android'
 export type BuildArchitecture = 'x86_64' | 'aarch64'
@@ -55,6 +57,11 @@ export interface BuildDeliveryOptions {
   signingHook: string
   notarizationHook: string
   cleanMachineJob: boolean
+  contentCache: boolean
+  deltaBuilds: boolean
+  ciMatrixVersion: number
+  deploymentConnectorId: string
+  deploymentPermissionGranted: boolean
 }
 
 export interface BuildSettings {
@@ -142,7 +149,7 @@ export const buildSettings = reactive<BuildSettings>({
   profile: 'debug',
   sceneOrder: [],
   startupSceneUuid: '',
-  packageIntoExecutable: false,
+  packageIntoExecutable: DEFAULT_CAPABILITIES.host === 'windows' || DEFAULT_CAPABILITIES.host === 'linux',
   developmentBuild: true,
   outputDirectory: buildLocal.outputDirectory,
   presetName: 'desktop-debug',
@@ -157,7 +164,8 @@ export const buildSettings = reactive<BuildSettings>({
     cacheMode: 'incremental', include: ['Assets/**'], exclude: ['**/*.psd', '**/*.kra', '.nova/**'], stripUnusedAssets: false,
     sizeReport: true, dependencyReport: true, debugSymbols: true, crashSymbols: true,
     releaseChannel: 'development', exportTemplate: 'windows-x64-v1', provenance: true, sbom: true, webHeaders: true,
-    deploymentMode: 'local', deploymentDestination: '', signingHook: '', notarizationHook: '', cleanMachineJob: false
+    deploymentMode: 'local', deploymentDestination: '', signingHook: '', notarizationHook: '', cleanMachineJob: false,
+    contentCache: true, deltaBuilds: true, ciMatrixVersion: 1, deploymentConnectorId: 'local', deploymentPermissionGranted: false
   }
 })
 
@@ -188,17 +196,19 @@ export function normalizeBuildSettings(source: unknown, availableSceneUuids: str
   for (const uuid of availableSceneUuids) if (!ordered.includes(uuid)) ordered.push(uuid)
   const startup = typeof item.startupSceneUuid === 'string' && available.has(item.startupSceneUuid) ? item.startupSceneUuid : ordered[0] ?? ''
   const target: BuildTarget = item.target === 'windows' || item.target === 'linux' || item.target === 'macos' || item.target === 'web' || item.target === 'android' ? item.target : buildSettings.target
+  const architecture: BuildArchitecture = item.architecture === 'aarch64' ? 'aarch64' : 'x86_64'
+  const runtimeMode: BuildRuntimeMode = item.runtimeMode === 'headless-server' ? 'headless-server' : 'game'
   const metadata: Record<string, string> = {}
   if (platform.versionMetadata && typeof platform.versionMetadata === 'object' && !Array.isArray(platform.versionMetadata)) for (const [key, value] of Object.entries(platform.versionMetadata)) if (typeof value === 'string' && key.trim()) metadata[key.trim().slice(0, 80)] = value.trim().slice(0, 300)
   const gameName = safeName(item.gameName)
   const developmentBuild = item.profile === 'release' ? false : item.profile === 'debug' ? true : item.developmentBuild !== false
   return {
     gameName, target,
-    architecture: item.architecture === 'aarch64' ? 'aarch64' : 'x86_64',
-    runtimeMode: item.runtimeMode === 'headless-server' ? 'headless-server' : 'game',
+    architecture,
+    runtimeMode,
     profile: developmentBuild ? 'debug' : 'release',
     sceneOrder: ordered, startupSceneUuid: startup,
-    packageIntoExecutable: item.packageIntoExecutable === true,
+    packageIntoExecutable: typeof item.packageIntoExecutable === 'boolean' ? item.packageIntoExecutable : target === 'windows' || target === 'linux',
     developmentBuild,
     outputDirectory: text(item.outputDirectory, 1024) || buildLocal.outputDirectory, presetName: text(item.presetName, 80) || 'custom',
     platform: {
@@ -223,11 +233,12 @@ export function normalizeBuildSettings(source: unknown, availableSceneUuids: str
       stripUnusedAssets: bool(delivery.stripUnusedAssets, false), sizeReport: bool(delivery.sizeReport, true), dependencyReport: bool(delivery.dependencyReport, true),
       debugSymbols: bool(delivery.debugSymbols, true), crashSymbols: bool(delivery.crashSymbols, true),
       releaseChannel: delivery.releaseChannel === 'stable' || delivery.releaseChannel === 'beta' ? delivery.releaseChannel : 'development',
-      exportTemplate: text(delivery.exportTemplate, 160) || `${target}-${item.architecture === 'aarch64' ? 'aarch64' : 'x86_64'}-v1`,
+      exportTemplate: resolveExportTemplateId(text(delivery.exportTemplate, 160), target, architecture, runtimeMode),
       provenance: bool(delivery.provenance, true), sbom: bool(delivery.sbom, true), webHeaders: bool(delivery.webHeaders, true),
       deploymentMode: delivery.deploymentMode === 'remote-hook' ? 'remote-hook' : 'local',
       deploymentDestination: text(delivery.deploymentDestination, 500), signingHook: text(delivery.signingHook, 500), notarizationHook: text(delivery.notarizationHook, 500),
-      cleanMachineJob: bool(delivery.cleanMachineJob, false)
+      cleanMachineJob: bool(delivery.cleanMachineJob, false), contentCache: bool(delivery.contentCache, true), deltaBuilds: bool(delivery.deltaBuilds, true),
+      ciMatrixVersion: Number(delivery.ciMatrixVersion) === 1 ? 1 : 1, deploymentConnectorId: text(delivery.deploymentConnectorId, 80) || 'local', deploymentPermissionGranted: bool(delivery.deploymentPermissionGranted, false)
     }
   }
 }
@@ -258,7 +269,8 @@ export function applyBuildPreset(id: string): boolean {
   buildSettings.delivery.cacheMode = preset.cacheMode; buildSettings.delivery.incremental = preset.cacheMode !== 'clean'
   buildSettings.delivery.compression = preset.compression; buildSettings.delivery.stripUnusedAssets = preset.stripUnusedAssets
   buildSettings.delivery.releaseChannel = preset.releaseChannel ?? (preset.profile === 'release' ? 'beta' : 'development')
-  buildSettings.delivery.exportTemplate = preset.exportTemplate ?? `${preset.target}-${buildSettings.architecture}-v1`
+  buildSettings.delivery.exportTemplate = preset.exportTemplate ?? defaultExportTemplateId(preset.target, buildSettings.architecture, preset.runtimeMode)
+  buildSettings.packageIntoExecutable = preset.target === 'windows' || preset.target === 'linux'
   setBuildProfile(preset.profile); return true
 }
 
@@ -282,9 +294,15 @@ export function validateBuildSettings(settings: BuildSettings, capabilities = ex
   if (settings.target === 'android' && !capabilities.androidAvailable) issues.push({ code: 'android', severity: 'error', message: capabilities.androidReason || 'Android export is unavailable on this machine.' })
   if (settings.target === 'android' && !packageEnabled(OFFICIAL_ANDROID_PACKAGE_ID)) issues.push({ code: 'android-package', severity: 'error', message: 'Install and enable the optional Nova Android Export package.' })
   if (settings.target !== 'web' && settings.target !== 'android' && capabilities.host !== 'unknown' && settings.target !== capabilities.host) issues.push({ code: 'host', severity: 'error', message: `${settings.target} export requires a ${settings.target} host or matching CI runner.` })
-  if (settings.target !== 'web' && capabilities.architecture !== 'unknown' && settings.architecture !== capabilities.architecture) issues.push({ code: 'architecture', severity: 'error', message: `${settings.architecture} export requires a matching player template; this editor is ${capabilities.architecture}.` })
+  if (settings.target !== 'web' && settings.target !== 'android' && capabilities.architecture !== 'unknown' && settings.architecture !== capabilities.architecture) issues.push({ code: 'architecture', severity: 'error', message: `${settings.architecture} export requires a matching player template; this editor is ${capabilities.architecture}.` })
   if (settings.runtimeMode === 'headless-server' && (settings.target === 'web' || settings.target === 'android')) issues.push({ code: 'headless', severity: 'error', message: 'Headless authoritative servers require a desktop target.' })
+  if (productionSettings.networking.enabled && !packageEnabled(OFFICIAL_NETWORKING_PACKAGE_ID)) issues.push({ code: 'network-package', severity: 'error', message: 'Networked builds require the reviewed optional Nova Networking package.' })
+  if (productionSettings.networking.enabled && !productionSettings.networking.permissionGranted) issues.push({ code: 'network-permission', severity: 'error', message: 'Networked builds require an explicit project network permission.' })
+  if (settings.runtimeMode === 'headless-server' && !productionSettings.networking.enabled) issues.push({ code: 'headless-network', severity: 'error', message: 'The headless server preset requires networking to be enabled explicitly.' })
+  if (settings.runtimeMode === 'headless-server' && !['server', 'host'].includes(productionSettings.networking.role)) issues.push({ code: 'headless-authority', severity: 'error', message: 'Headless servers require the Server or Host authority role.' })
+  if (settings.runtimeMode === 'headless-server' && productionSettings.networking.transport !== 'native-udp') issues.push({ code: 'headless-transport', severity: 'error', message: 'Authoritative headless servers require the native UDP transport.' })
   if (settings.packageIntoExecutable && (settings.target === 'web' || settings.target === 'macos' || settings.target === 'android')) issues.push({ code: 'single-file', severity: 'error', message: 'Single-file packaging is unavailable for this target.' })
+  if (!settings.packageIntoExecutable && (settings.target === 'windows' || settings.target === 'linux')) issues.push({ code: 'sidecar-player', severity: 'info', message: 'This desktop build will contain a player and a separate game.nova-pak. Enable single-file packaging for one portable application.' })
   if (settings.platform.signingMode === 'manual' && !settings.platform.signingIdentity) issues.push({ code: 'signing', severity: 'warning', message: 'Signing is enabled but no certificate/profile identity is configured.' })
   if (settings.delivery.telemetryEnabled) {
     if (!/^https:\/\//i.test(settings.delivery.telemetryEndpoint)) issues.push({ code: 'telemetry-endpoint', severity: 'error', message: 'Opt-in telemetry requires an HTTPS endpoint.' })
@@ -295,9 +313,12 @@ export function validateBuildSettings(settings: BuildSettings, capabilities = ex
   if (settings.profile === 'release' && !settings.delivery.provenance) issues.push({ code: 'provenance', severity: 'error', message: 'Release builds require a provenance manifest.' })
   if (settings.profile === 'release' && !settings.delivery.sbom) issues.push({ code: 'sbom', severity: 'warning', message: 'Enable the software bill of materials for auditable release dependencies.' })
   if (settings.delivery.deploymentMode === 'remote-hook' && !/^https:\/\//i.test(settings.delivery.deploymentDestination)) issues.push({ code: 'remote-deploy', severity: 'error', message: 'Remote deployment requires an explicit HTTPS destination. Nova_A never deploys implicitly.' })
+  if (settings.delivery.deploymentMode === 'remote-hook' && !settings.delivery.deploymentPermissionGranted) issues.push({ code: 'remote-deploy-permission', severity: 'error', message: 'Remote deployment requires an explicit project permission; configuring a URL never triggers a network request.' })
   if (settings.target === 'web' && settings.profile === 'release' && !settings.delivery.webHeaders) issues.push({ code: 'web-headers', severity: 'warning', message: 'Enable generated deployment headers for safe MIME, caching and browser policy defaults.' })
   if (settings.delivery.releaseChannel === 'stable' && settings.profile !== 'release') issues.push({ code: 'stable-debug', severity: 'error', message: 'Stable channel outputs must use the Release profile.' })
   if (!settings.delivery.exportTemplate.trim()) issues.push({ code: 'export-template', severity: 'error', message: 'Choose a version-pinned export template.' })
+  for (const [index, message] of exportTemplateIssues(settings.delivery.exportTemplate, settings.target, settings.architecture, settings.runtimeMode, capabilities).entries()) issues.push({ code: `export-template-${index}`, severity: 'error', message })
+  if (settings.delivery.deltaBuilds && !settings.delivery.patchManifest) issues.push({ code: 'delta-manifest', severity: 'warning', message: 'Delta builds require the patch manifest to describe added, changed and removed content.' })
   if (settings.profile === 'release' && settings.delivery.cacheMode === 'incremental' && !settings.delivery.deterministic) issues.push({ code: 'release-cache', severity: 'error', message: 'Release incremental builds require deterministic output or a validated clean cache.' })
   if (!settings.delivery.include.length) issues.push({ code: 'include-rules', severity: 'warning', message: 'No explicit content inclusion rule is configured.' })
   return issues.map(issue => ({ ...issue, helpTarget: buildIssueHelpTarget(issue.code) }))

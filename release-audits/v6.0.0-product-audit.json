@@ -1,0 +1,84 @@
+{
+  "format": "nova-v6.0.0-product-audit",
+  "version": 1,
+  "engineVersion": "6.0.0",
+  "generatedAt": "2026-08-27T10:45:20.974Z",
+  "perspectives": [
+    "programmer",
+    "creator",
+    "runtime",
+    "accessibility",
+    "localization",
+    "layout",
+    "release"
+  ],
+  "checks": [
+    {
+      "id": "V600-VERSION",
+      "status": "passed",
+      "detail": "Frontend, native and Rust authorities identify v6.0.0.",
+      "metrics": {}
+    },
+    {
+      "id": "V600-FREEZE",
+      "status": "passed",
+      "detail": "All seven contracts have a frozen compatibility and fail-closed migration path.",
+      "metrics": {}
+    },
+    {
+      "id": "V600-ONBOARDING",
+      "status": "passed",
+      "detail": "First-run onboarding, task learning and command discovery are integrated.",
+      "metrics": {}
+    },
+    {
+      "id": "V600-TEACHING",
+      "status": "passed",
+      "detail": "The source catalog covers every required lesson field and all twelve complete tasks.",
+      "metrics": {}
+    },
+    {
+      "id": "V600-PERFORMANCE",
+      "status": "passed",
+      "detail": "Large-project qualifications and map-backed Hierarchy ancestor lookup are present.",
+      "metrics": {}
+    },
+    {
+      "id": "V600-A11Y-I18N",
+      "status": "passed",
+      "detail": "New UI is trilingual, semantic, keyboard reachable and reduced-motion aware.",
+      "metrics": {}
+    },
+    {
+      "id": "V600-MANUAL",
+      "status": "passed",
+      "detail": "HTML and three Markdown manuals contain the generated task-oriented manual and bookmarks.",
+      "metrics": {}
+    },
+    {
+      "id": "V600-VERIFICATION",
+      "status": "passed",
+      "detail": "Creator/lifecycle verification passes while every external gate remains honestly pending.",
+      "metrics": {
+        "checks": 10
+      }
+    },
+    {
+      "id": "V600-LAYOUT",
+      "status": "passed",
+      "detail": "EN/DE/ZH browser layout matrix passes four release viewports.",
+      "metrics": {
+        "matrix": 12
+      }
+    },
+    {
+      "id": "V600-RELEASE",
+      "status": "passed",
+      "detail": "Generic packaging and independent verification enforce the exact eleven v6 artifacts.",
+      "metrics": {}
+    }
+  ],
+  "severity0Open": 0,
+  "severity1Open": 0,
+  "status": "passed"
+}

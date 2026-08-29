@@ -8,10 +8,11 @@ export const MAX_PLUGIN_BYTES = 16 * 1024 * 1024
 export const MAX_PLUGIN_CALL_MS = 8
 export type PluginPermission =
   | 'log' | 'events' | 'editor.commands' | 'editor.menus' | 'editor.panels' | 'editor.importers'
-  | 'editor.assets' | 'editor.components' | 'editor.inspectors' | 'editor.gizmos' | 'editor.settings'
-  | 'build.hooks' | 'runtime.systems'
-export type PluginContributionKind = 'commands' | 'menus' | 'panels' | 'importers' | 'assetEditors' | 'components' | 'inspectors' | 'gizmos' | 'settings' | 'buildHooks' | 'runtimeSystems' | 'events'
-export interface PluginContribution { id: string; label: string; kind: PluginContributionKind }
+  | 'editor.docks' | 'editor.assets' | 'editor.components' | 'editor.inspectors' | 'editor.gizmos' | 'editor.settings' | 'editor.graph-nodes'
+  | 'render.passes' | 'build.hooks' | 'build.steps' | 'project.templates' | 'runtime.systems'
+export type PluginContributionKind = 'commands' | 'menus' | 'panels' | 'docks' | 'importers' | 'assetEditors' | 'components' | 'inspectors' | 'gizmos' | 'settings' | 'graphNodes' | 'renderPasses' | 'buildHooks' | 'buildSteps' | 'templates' | 'runtimeSystems' | 'events'
+export interface PluginContributionDescriptor { id: string; label: string; description?: string; entry?: string; slot?: string; order?: number }
+export interface PluginContribution extends PluginContributionDescriptor { kind: PluginContributionKind }
 
 export interface PluginManifest {
   id: string
@@ -28,21 +29,35 @@ export interface PluginManifest {
   sha256: string
   signature: string
   publicKey: string
-  contributions: Partial<Record<PluginContributionKind, Array<{ id: string; label: string }>>>
+  contributions: Partial<Record<PluginContributionKind, PluginContributionDescriptor[]>>
 }
 
 interface ActivePlugin { manifest: PluginManifest; instance: WebAssembly.Instance }
-const allowedPermissions = new Set<PluginPermission>(['log', 'events', 'editor.commands', 'editor.menus', 'editor.panels', 'editor.importers', 'editor.assets', 'editor.components', 'editor.inspectors', 'editor.gizmos', 'editor.settings', 'build.hooks', 'runtime.systems'])
+const allowedPermissions = new Set<PluginPermission>(['log', 'events', 'editor.commands', 'editor.menus', 'editor.panels', 'editor.importers', 'editor.docks', 'editor.assets', 'editor.components', 'editor.inspectors', 'editor.gizmos', 'editor.settings', 'editor.graph-nodes', 'render.passes', 'build.hooks', 'build.steps', 'project.templates', 'runtime.systems'])
 const contributionPermission: Record<PluginContributionKind, PluginPermission> = {
-  commands: 'editor.commands', menus: 'editor.menus', panels: 'editor.panels', importers: 'editor.importers', assetEditors: 'editor.assets', components: 'editor.components', inspectors: 'editor.inspectors', gizmos: 'editor.gizmos', settings: 'editor.settings', buildHooks: 'build.hooks', runtimeSystems: 'runtime.systems', events: 'events'
+  commands: 'editor.commands', menus: 'editor.menus', panels: 'editor.panels', docks: 'editor.docks', importers: 'editor.importers', assetEditors: 'editor.assets', components: 'editor.components', inspectors: 'editor.inspectors', gizmos: 'editor.gizmos', settings: 'editor.settings', graphNodes: 'editor.graph-nodes', renderPasses: 'render.passes', buildHooks: 'build.hooks', buildSteps: 'build.steps', templates: 'project.templates', runtimeSystems: 'runtime.systems', events: 'events'
 }
+
+export const PLUGIN_API_MATRIX: ReadonlyArray<{ kind: PluginContributionKind; permission: PluginPermission; exportName: string; host: 'editor' | 'runtime' | 'build' | 'renderer' }> = Object.freeze([
+  { kind: 'docks', permission: 'editor.docks', exportName: 'nova_plugin_panel', host: 'editor' },
+  { kind: 'inspectors', permission: 'editor.inspectors', exportName: 'nova_plugin_inspector', host: 'editor' },
+  { kind: 'importers', permission: 'editor.importers', exportName: 'nova_plugin_importer', host: 'editor' },
+  { kind: 'components', permission: 'editor.components', exportName: 'nova_plugin_component', host: 'runtime' },
+  { kind: 'graphNodes', permission: 'editor.graph-nodes', exportName: 'nova_plugin_graph_node', host: 'editor' },
+  { kind: 'renderPasses', permission: 'render.passes', exportName: 'nova_plugin_render_pass', host: 'renderer' },
+  { kind: 'buildSteps', permission: 'build.steps', exportName: 'nova_plugin_build_step', host: 'build' },
+  { kind: 'templates', permission: 'project.templates', exportName: 'nova_plugin_template', host: 'editor' },
+  { kind: 'commands', permission: 'editor.commands', exportName: 'nova_plugin_command', host: 'editor' },
+  { kind: 'settings', permission: 'editor.settings', exportName: 'nova_plugin_settings', host: 'editor' }
+])
 
 const startupSafeMode = typeof location !== 'undefined' && new URLSearchParams(location.search).get('safe-mode') === '1'
   || typeof localStorage !== 'undefined' && localStorage.getItem('nova-a-plugin-safe-mode') === 'true'
 export const pluginState = reactive({
   manifests: [] as PluginManifest[], active: 0, errors: [] as string[], safeMode: startupSafeMode,
   safeModeRecommended: typeof localStorage !== 'undefined' && localStorage.getItem('nova-a-plugin-crashed') === 'true',
-  contributions: [] as Array<PluginContribution & { pluginId: string; pluginName: string }>
+  contributions: [] as Array<PluginContribution & { pluginId: string; pluginName: string }>,
+  generation: 0, reloads: 0, unloads: 0, isolatedFailures: 0
 })
 
 function safeText(value: unknown, maximum: number): string { return typeof value === 'string' ? value.trim().slice(0, maximum) : '' }
@@ -69,7 +84,11 @@ export function normalizePluginManifest(value: unknown): PluginManifest {
       const values = source.contributions[kind]
       if (!Array.isArray(values)) continue
       if (!permissions.includes(contributionPermission[kind])) throw new Error(`${kind} contributions require ${contributionPermission[kind]}.`)
-      contributions[kind] = values.flatMap(item => item && typeof item === 'object' && safeText(item.id, 120) ? [{ id: safeText(item.id, 120), label: safeText(item.label, 120) || safeText(item.id, 120) }] : []).slice(0, 256)
+      contributions[kind] = values.flatMap(item => item && typeof item === 'object' && safeText(item.id, 120) ? [{
+        id: safeText(item.id, 120), label: safeText(item.label, 120) || safeText(item.id, 120),
+        description: safeText(item.description, 300) || undefined, entry: safeText(item.entry, 120) || undefined,
+        slot: safeText(item.slot, 80) || undefined, order: Number.isFinite(Number(item.order)) ? Math.max(-1_000, Math.min(1_000, Number(item.order))) : undefined
+      }] : []).slice(0, 256)
     }
   }
   return {
@@ -80,10 +99,10 @@ export function normalizePluginManifest(value: unknown): PluginManifest {
   }
 }
 
-function refreshContributions(): void {
+export function refreshPluginContributions(): void {
   pluginState.contributions.splice(0)
   for (const manifest of pluginState.manifests.filter(item => item.enabled && item.projectEnabled && item.entryType === 'wasm')) {
-    for (const [kind, items] of Object.entries(manifest.contributions) as Array<[PluginContributionKind, Array<{ id: string; label: string }>]>) {
+    for (const [kind, items] of Object.entries(manifest.contributions) as Array<[PluginContributionKind, PluginContributionDescriptor[]]>) {
       for (const item of items) pluginState.contributions.push({ ...item, kind, pluginId: manifest.id, pluginName: manifest.name })
     }
   }
@@ -98,7 +117,7 @@ export function setPluginSafeMode(enabled: boolean): void {
 export function loadPluginManifests(value: unknown): void {
   const manifests = Array.isArray(value) ? value.flatMap(item => { try { return [normalizePluginManifest(item)] } catch { return [] } }) : []
   pluginState.manifests.splice(0, pluginState.manifests.length, ...new Map(manifests.map(manifest => [manifest.id, manifest])).values())
-  refreshContributions()
+  refreshPluginContributions()
 }
 
 export function serializePluginManifests(): PluginManifest[] { return pluginState.manifests.map(manifest => JSON.parse(JSON.stringify(manifest)) as PluginManifest) }
@@ -163,7 +182,7 @@ class PluginRuntime {
         this.active.push({ manifest, instance })
       } catch (error) { this.isolateFailure(manifest, error) }
     }
-    pluginState.active = this.active.length; refreshContributions()
+    pluginState.active = this.active.length; pluginState.generation = this.generation; refreshPluginContributions()
   }
   update(delta: number): void {
     const failed = new Set<ActivePlugin>()
@@ -178,15 +197,20 @@ class PluginRuntime {
     if (failed.size) this.active = this.active.filter(plugin => !failed.has(plugin)); pluginState.active = this.active.length
   }
   invokeCommand(commandId: string, pluginId?: string): boolean {
-    const contribution = pluginState.contributions.find(item => item.kind === 'commands' && item.id === commandId && (!pluginId || item.pluginId === pluginId))
+    return this.invokeContribution('commands', commandId, pluginId)
+  }
+  invokeContribution(kind: PluginContributionKind, contributionId: string, pluginId?: string): boolean {
+    const contribution = pluginState.contributions.find(item => item.kind === kind && item.id === contributionId && (!pluginId || item.pluginId === pluginId))
     const plugin = contribution && this.active.find(item => item.manifest.id === contribution.pluginId)
-    const handler = plugin?.instance.exports.nova_plugin_command
+    const exportName = PLUGIN_API_MATRIX.find(item => item.kind === kind)?.exportName
+      ?? ({ panels: 'nova_plugin_panel', menus: 'nova_plugin_menu', assetEditors: 'nova_plugin_asset_editor', gizmos: 'nova_plugin_gizmo', buildHooks: 'nova_plugin_build_hook', runtimeSystems: 'nova_plugin_runtime_system', events: 'nova_plugin_event' } as Partial<Record<PluginContributionKind, string>>)[kind]
+    const handler = exportName ? plugin?.instance.exports[exportName] : undefined
     if (!plugin || typeof handler !== 'function') return false
     try {
       const started = performance.now()
-      ;(handler as CallableFunction)(plugin.manifest.contributions.commands?.findIndex(item => item.id === commandId) ?? -1)
+      ;(handler as CallableFunction)(plugin.manifest.contributions[kind]?.findIndex(item => item.id === contributionId) ?? -1)
       assertMemory(plugin.instance)
-      if (performance.now() - started > MAX_PLUGIN_CALL_MS) throw new Error(`command call exceeded ${MAX_PLUGIN_CALL_MS} ms`)
+      if (performance.now() - started > MAX_PLUGIN_CALL_MS) throw new Error(`${kind} call exceeded ${MAX_PLUGIN_CALL_MS} ms`)
       return true
     } catch (error) {
       this.active = this.active.filter(item => item !== plugin); pluginState.active = this.active.length
@@ -196,11 +220,32 @@ class PluginRuntime {
   stop(): void {
     this.generation++
     for (const plugin of this.active) { const shutdown = plugin.instance.exports.nova_plugin_shutdown; if (typeof shutdown === 'function') try { (shutdown as CallableFunction)() } catch { /* isolated */ } }
-    this.active = []; pluginState.active = 0
+    this.active = []; pluginState.active = 0; pluginState.generation = this.generation
+  }
+  unload(pluginId: string): boolean {
+    const plugin = this.active.find(item => item.manifest.id === pluginId)
+    if (!plugin) return false
+    const shutdown = plugin.instance.exports.nova_plugin_shutdown
+    if (typeof shutdown === 'function') try { (shutdown as CallableFunction)() } catch { /* isolated */ }
+    this.active = this.active.filter(item => item !== plugin); pluginState.active = this.active.length; pluginState.unloads++; this.generation++; pluginState.generation = this.generation
+    return true
+  }
+  async reload(pluginId?: string): Promise<void> {
+    pluginState.reloads++
+    if (!pluginId) { await this.start(); return }
+    const manifest = pluginState.manifests.find(item => item.id === pluginId && item.enabled && item.projectEnabled && item.entryType === 'wasm')
+    this.unload(pluginId)
+    if (!manifest || pluginState.safeMode) return
+    const generation = this.generation
+    try {
+      const instance = await instantiateWasmPlugin(manifest, await bytesFromAsset(manifest.entryAsset))
+      if (generation !== this.generation) return
+      this.active.push({ manifest, instance }); pluginState.active = this.active.length
+    } catch (error) { this.isolateFailure(manifest, error) }
   }
   private isolateFailure(manifest: PluginManifest, error: unknown): void {
     const message = `${manifest.name}: ${error instanceof Error ? error.message : String(error)}`
-    pluginState.errors.push(message); addEditorLog(`${message}. The plugin was isolated.`, 'Plugin', 'error')
+    pluginState.errors.push(message); pluginState.isolatedFailures++; addEditorLog(`${message}. The plugin was isolated.`, 'Plugin', 'error')
     if (typeof localStorage !== 'undefined') localStorage.setItem('nova-a-plugin-crashed', 'true')
     pluginState.safeModeRecommended = true
   }

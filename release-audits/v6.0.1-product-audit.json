@@ -1,0 +1,101 @@
+{
+  "format": "nova-v6.0.1-product-audit",
+  "version": 1,
+  "engineVersion": "6.0.1",
+  "generatedAt": "2026-08-28T15:22:12.572Z",
+  "perspectives": [
+    "programmer",
+    "player",
+    "localization",
+    "physics",
+    "layout",
+    "release"
+  ],
+  "checks": [
+    {
+      "id": "V601-VERSION",
+      "status": "passed",
+      "detail": "Frontend, native, Rust and project authorities identify v6.0.1.",
+      "metrics": {}
+    },
+    {
+      "id": "V601-INPUT",
+      "status": "passed",
+      "detail": "World pointer and camera bounds are serialized and exposed through matching Rhai documentation/runtime bindings.",
+      "metrics": {}
+    },
+    {
+      "id": "V601-REPLAY",
+      "status": "passed",
+      "detail": "Replay and network-replay input preserve the new deterministic pointer data with legacy fallbacks.",
+      "metrics": {}
+    },
+    {
+      "id": "V601-TEMPLATE",
+      "status": "passed",
+      "detail": "The localized launcher template owns a native fixed-step pointer player, grouped target prefab, timer-bounded manager and UI content.",
+      "metrics": {}
+    },
+    {
+      "id": "V601-POINTER-SAFETY",
+      "status": "passed",
+      "detail": "The starter bounds pointer impulses, stops outside the Game viewport, and avoids rebuilding physics for UI-only mutations.",
+      "metrics": {}
+    },
+    {
+      "id": "V601-RUNTIME-SPAWN-BATCHING",
+      "status": "passed",
+      "detail": "Runtime prefabs and scene instances preserve editor selection and batch physics invalidation, preventing first-tick stalls.",
+      "metrics": {}
+    },
+    {
+      "id": "V601-WASM-RUNTIME",
+      "status": "passed",
+      "detail": "Script tracing uses a WebAssembly-safe clock and the bridge surfaces precise panic locations.",
+      "metrics": {}
+    },
+    {
+      "id": "V601-SCRIPT-API-COMPATIBILITY",
+      "status": "passed",
+      "detail": "Project Format 2 accepts current Rhai API v2 assets and legacy API v1 assets, protected by a native regression test.",
+      "metrics": {}
+    },
+    {
+      "id": "V601-MANUAL",
+      "status": "passed",
+      "detail": "HTML and three Markdown manuals contain a clear trilingual game tutorial and a live article controller.",
+      "metrics": {}
+    },
+    {
+      "id": "V601-LOCALIZATION",
+      "status": "passed",
+      "detail": "Template identity and release labels are complete in English, German and Chinese.",
+      "metrics": {}
+    },
+    {
+      "id": "V601-VERIFICATION",
+      "status": "passed",
+      "detail": "Game and manual verification passes while external claims remain pending.",
+      "metrics": {
+        "checks": 16
+      }
+    },
+    {
+      "id": "V601-LAYOUT",
+      "status": "passed",
+      "detail": "Responsive EN/DE/ZH layout qualification passes.",
+      "metrics": {
+        "matrix": 12
+      }
+    },
+    {
+      "id": "V601-RELEASE",
+      "status": "passed",
+      "detail": "Generic packaging and verification retain the exact eleven-artifact contract.",
+      "metrics": {}
+    }
+  ],
+  "severity0Open": 0,
+  "severity1Open": 0,
+  "status": "passed"
+}

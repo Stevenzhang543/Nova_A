@@ -1,0 +1,13 @@
+{
+  "format": "nova-build-size-report",
+  "version": 1,
+  "engineVersion": "6.0.4",
+  "totalBytes": 16120356,
+  "files": [
+    {
+      "path": "Mouse Knockout.exe",
+      "sha256": "0416dd76467ea6f0a56fc2ed52c357d2375ca50133379a715dba3420bc6631f2",
+      "bytes": 16120356
+    }
+  ]
+}

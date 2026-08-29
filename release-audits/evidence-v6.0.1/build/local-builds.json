@@ -1,0 +1,44 @@
+{
+  "format": "nova-local-build-evidence",
+  "version": 1,
+  "engineVersion": "6.0.1",
+  "generatedAt": "2026-08-28T08:15:41.679Z",
+  "artifacts": [
+    {
+      "name": "web-editor",
+      "path": "dist/index.html",
+      "bytes": 1158,
+      "sha256": "a736259f8466cc9083f598f8135c8ff052874a625a77df77f0f3eac08495b2e7",
+      "status": "passed"
+    },
+    {
+      "name": "web-player",
+      "path": "dist/player.html",
+      "bytes": 658,
+      "sha256": "3f5854a814f2f02314dacdac9819d90f62f2c058ec9dcc7f97dbe532cbc0683b",
+      "status": "passed"
+    },
+    {
+      "name": "windows-portable",
+      "path": "src-tauri/target/release/nova_a.exe",
+      "bytes": 16058368,
+      "sha256": "1278dd6113815fb9a7bbe617e53c05d63f8456c08d06929bcdea31478f014317",
+      "status": "passed"
+    },
+    {
+      "name": "windows-nsis",
+      "path": "src-tauri/target/release/bundle/nsis/Nova_A_6.0.1_x64-setup.exe",
+      "bytes": 8597199,
+      "sha256": "cc4311ee7108397e4440a31749441b1e373044965bd11c78656cc0460422cd5f",
+      "status": "passed"
+    },
+    {
+      "name": "windows-msi",
+      "path": "src-tauri/target/release/bundle/msi/Nova_A_6.0.1_x64_en-US.msi",
+      "bytes": 9662464,
+      "sha256": "99807d08b829b334a69fe41b249bc02f25c8cfa79a0f074facb1178386a8e005",
+      "status": "passed"
+    }
+  ],
+  "status": "passed"
+}

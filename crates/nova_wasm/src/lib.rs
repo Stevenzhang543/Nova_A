@@ -4,6 +4,15 @@ use nova_runtime::{DroppedTimePolicy, FixedTimeSettings, RuntimeWorld};
 use nova_script::{ScriptContext, ScriptRuntime};
 use wasm_bindgen::prelude::*;
 
+/// Surface Rust panic locations to the editor console instead of leaving users
+/// with an opaque `RuntimeError: unreachable` from the WebAssembly boundary.
+#[wasm_bindgen(start)]
+pub fn install_panic_reporter() {
+    std::panic::set_hook(Box::new(|info| {
+        wasm_bindgen::throw_str(&format!("Nova_A WebAssembly panic: {info}"));
+    }));
+}
+
 #[wasm_bindgen]
 pub struct WasmRuntimeWorld {
     inner: RuntimeWorld,

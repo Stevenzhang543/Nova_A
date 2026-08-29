@@ -22,6 +22,8 @@
     <label><span>{{ t('loop') }}</span><input v-model="timelinePlayer.loop" type="checkbox"></label>
     <label><span>{{ t('speed') }}</span><input v-model.number="timelinePlayer.speed" type="number" min="-100" max="100" step="0.1"></label>
     <label><span>{{ t('currentTime') }}</span><input v-model.number="timelinePlayer.currentTime" type="number" min="0" step="0.01"></label>
+    <label><span>{{ t('playing') }}</span><input v-model="timelinePlayer.playing" type="checkbox"></label>
+    <div class="component-actions"><button @click="timelineRuntime.skip(entity.uuid, physicsState.world.entities)">{{ t('skip') }}</button><button @click="timelineRuntime.resume(entity.uuid, physicsState.world.entities)">{{ t('resume') }}</button></div>
   </section>
 
   <section v-if="audioSource && componentVisible('AudioSource', t('audioSource'))" class="runtime-component">
@@ -246,6 +248,7 @@ import { readAnimatorController } from '../runtime/animation'
 import { requestConfirmation } from '../store/dialog'
 import { editorState } from '../store/editor'
 import { invalidateTileMap, resizeTileMap, tilemapEditorState } from '../runtime/tilemap'
+import { timelineRuntime } from '../runtime/timeline'
 
 const props = defineProps<{ entity: Entity; searchQuery?: string; category?: InspectorCategory }>()
 const uiImageInput = ref<HTMLInputElement | null>(null)

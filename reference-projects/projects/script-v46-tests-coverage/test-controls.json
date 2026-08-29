@@ -6,5 +6,5 @@
   "runTags": "Script Studio > Run tests > Selected tags",
   "inspect": "Project Health > Scripts",
   "headless": "Script Studio > Run tests > Copy headless command",
-  "engineVersion": "5.0.1"
+  "engineVersion": "5.3.0"
 }

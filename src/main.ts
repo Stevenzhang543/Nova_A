@@ -6,8 +6,6 @@ import '@fontsource-variable/jetbrains-mono/wght.css'
 import './assets/main.css'
 import { installCrashReporter } from './runtime/crashReporter'
 import { reportFatalError } from './runtime/faultCenter'
-import { installStableControlRegistry } from './runtime/controlRegistry'
-import { installProjectMutationRouter } from './runtime/projectMutationRouter'
 
 installCrashReporter('Nova_A Editor')
 const app = createApp(App)
@@ -18,5 +16,3 @@ catch (error) {
   const root = document.querySelector<HTMLElement>('#app')
   if (root) root.innerHTML = '<main class="app-loading" role="alert">Nova_A could not start. Reload with ?safe-mode=1 or inspect the local crash log.</main>'
 }
-installStableControlRegistry()
-installProjectMutationRouter()

@@ -1,0 +1,70 @@
+{
+  "format": "nova-v6.1.0-verification",
+  "version": 1,
+  "engineVersion": "6.1.0",
+  "generatedAt": "2026-08-29T14:25:27.846Z",
+  "perspectives": [
+    "environment",
+    "window",
+    "ui",
+    "performance",
+    "backend",
+    "portable-game"
+  ],
+  "checks": [
+    {
+      "id": "V610-AUTHORITY",
+      "status": "passed",
+      "detail": "Engine authority is 6.1.0 while Project Format 2/schema 29 remain unchanged.",
+      "metrics": {}
+    },
+    {
+      "id": "V610-PORTABLE-WORKSPACE",
+      "status": "passed",
+      "detail": "Active configuration is repository-relative and pnpm policy uses the current workspace format.",
+      "metrics": {}
+    },
+    {
+      "id": "V610-WINDOW",
+      "status": "passed",
+      "detail": "Launch maximization wins over saved geometry without entering exclusive fullscreen or removing window decorations.",
+      "metrics": {}
+    },
+    {
+      "id": "V610-LAZY-SHELL",
+      "status": "passed",
+      "detail": "Advanced surfaces are cached/lazy, idle-warmed, and the Inspector is retained after first use.",
+      "metrics": {}
+    },
+    {
+      "id": "V610-POINTER-PIPELINE",
+      "status": "passed",
+      "detail": "Pointer work is frame-coalesced and selected overlays do not sort or calculate unselected geometry.",
+      "metrics": {}
+    },
+    {
+      "id": "V610-DIAGNOSTICS",
+      "status": "passed",
+      "detail": "Default diagnostics avoid full-trace and per-pass reactive allocation while retaining Full and Off modes.",
+      "metrics": {}
+    },
+    {
+      "id": "V610-VISUAL-LANGUAGE",
+      "status": "passed",
+      "detail": "System-first typography, semantic materials, restrained live glass, and high-quality canvas smoothing are present.",
+      "metrics": {}
+    },
+    {
+      "id": "V610-PORTABLE-GAME",
+      "status": "passed",
+      "detail": "The moved workspace still produces one verified portable game.",
+      "metrics": {
+        "executable": "C:\\Users\\steve\\AppData\\Local\\Temp\\nova-v610-export-QxpDSo\\portable\\Mouse Knockout.exe",
+        "bytes": 10804
+      }
+    }
+  ],
+  "severity0Open": 0,
+  "severity1Open": 0,
+  "status": "passed"
+}

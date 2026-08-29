@@ -10,5 +10,5 @@
     "PHY-CHAR-004"
   ],
   "command": "pnpm nova export --project ./reference-projects/projects/physics-v45-platformer/project.nova --target web --profile release --output ./Builds/reference-physics-v45-platformer --cache validate --jsonl",
-  "engineVersion": "5.0.1"
+  "engineVersion": "5.3.0"
 }

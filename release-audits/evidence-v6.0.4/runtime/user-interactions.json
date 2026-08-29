@@ -1,0 +1,50 @@
+{
+  "format": "nova-v6.0.4-user-interaction-audit",
+  "version": 1,
+  "engineVersion": "6.0.4",
+  "generatedAt": "2026-08-29T06:17:54.8134999Z",
+  "browser": "Codex in-app Chromium browser",
+  "summary": {
+    "registeredControls": 18,
+    "clickedControls": 18,
+    "settingsMutated": 3,
+    "textEdits": 2,
+    "assetSaves": 2,
+    "consoleErrors": 0
+  },
+  "checks": [
+    {
+      "id": "V604-UI-LINK-CREATE",
+      "status": "passed",
+      "detail": "Created a visual graph, opened Generated Rhai, created its linked script, and observed the persistent linked-asset status."
+    },
+    {
+      "id": "V604-UI-CODE-TO-GRAPH",
+      "status": "passed",
+      "detail": "Changed the generated Rhai message, saved the script, returned to Visual Graph, and observed the matching node input value."
+    },
+    {
+      "id": "V604-UI-GRAPH-TO-CODE",
+      "status": "passed",
+      "detail": "Changed the visual node input, saved the graph, returned to Rhai Code, and observed regenerated source with the edited value and graph marker."
+    },
+    {
+      "id": "V604-UI-INPUT-COMMIT",
+      "status": "passed",
+      "detail": "Visual node input enabled Save asset during input and synchronized through a single save action."
+    },
+    {
+      "id": "V604-UI-LOCALIZATION",
+      "status": "passed",
+      "detail": "Launcher/project navigation and the localized script workflow were exercised in English, German, and Simplified Chinese."
+    },
+    {
+      "id": "V604-UI-CONSOLE",
+      "status": "passed",
+      "detail": "No browser console errors were recorded during creation, navigation, two-way editing, or saving."
+    }
+  ],
+  "severity0Open": 0,
+  "severity1Open": 0,
+  "status": "passed"
+}

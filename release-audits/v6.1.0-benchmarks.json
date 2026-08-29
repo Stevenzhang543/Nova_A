@@ -1,0 +1,20 @@
+{
+  "format": "nova-v6.1.0-benchmark-summary",
+  "version": 1,
+  "engineVersion": "6.1.0",
+  "generatedAt": "2026-08-29T14:31:53.553Z",
+  "scope": "Relocated startup, editor pointer path, localized layout and portable Windows output.",
+  "registeredControls": 523,
+  "layoutStates": 60,
+  "verificationChecks": 8,
+  "portableGameBytes": 16162852,
+  "optimizations": [
+    "idle workspace warmup",
+    "per-frame pointer coalescing",
+    "batched render diagnostics",
+    "adaptive profiler sampling"
+  ],
+  "localBuilds": "passed",
+  "independentHardware": "pending-external",
+  "status": "passed"
+}

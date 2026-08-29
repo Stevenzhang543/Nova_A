@@ -163,6 +163,57 @@ Use `// @test tags=unit timeout=1000 seed=42 cases=a|b` before `fn test_*`. The 
 - `find_entity(name) -> string` — Compatibility UUID lookup. **Deprecated:** use `find_entity_handle`; removal API v3.
 
   Example: `let id = find_entity("Camera");`
+- `query_tag(tag, limit) -> Array<Handle<Entity>>` — Returns at most 256 stable entity handles with a tag.
+
+  Example: `let enemies = query_tag("enemy", 32);`
+- `query_group(group, limit) -> Array<Handle<Entity>>` — Returns at most 256 stable entity handles in a group.
+
+  Example: `let actors = query_group("actors", 64);`
+- `query_component(kind, limit) -> Array<Handle<Entity>>` — Returns at most 256 entity handles owning a component kind.
+
+  Example: `let cameras = query_component("Camera2D", 8);`
+- `query_radius(x, y, radius, limit) -> Array<Handle<Entity>>` — Returns bounded handles inside a finite world-space radius.
+
+  Example: `let nearby = query_radius(0.0, 0.0, 8.0, 32);`
+- `entity_name_on(handle) -> string` — Reads the query-snapshot name for an entity handle.
+
+  Example: `let name = entity_name_on(handle);`
+- `entity_enabled_on(handle) -> bool` — Reads the query-snapshot enabled state for an entity handle.
+
+  Example: `if entity_enabled_on(handle) { }`
+- `entity_position_x_on(handle) -> float` — Reads query-snapshot world X for an entity handle.
+
+  Example: `let x = entity_position_x_on(handle);`
+- `entity_position_y_on(handle) -> float` — Reads query-snapshot world Y for an entity handle.
+
+  Example: `let y = entity_position_y_on(handle);`
+- `entity_set_position(handle, x, y)` — Queues a finite world position for a validated entity handle.
+
+  Example: `entity_set_position(target, 4.0, 2.0);`
+- `entity_set_rotation(handle, radians)` — Queues a world rotation for a validated entity handle.
+
+  Example: `entity_set_rotation(target, 1.57);`
+- `entity_set_scale(handle, x, y)` — Queues a non-zero world scale for a validated entity handle.
+
+  Example: `entity_set_scale(target, 2.0, 2.0);`
+- `entity_set_enabled(handle, enabled)` — Enables or disables a validated entity.
+
+  Example: `entity_set_enabled(target, false);`
+- `entity_add_tag(handle, tag)` — Adds one bounded tag to a validated entity.
+
+  Example: `entity_add_tag(target, "enemy");`
+- `entity_remove_tag(handle, tag)` — Removes one tag from a validated entity.
+
+  Example: `entity_remove_tag(target, "enemy");`
+- `entity_add_group(handle, group)` — Adds a validated entity to a bounded group.
+
+  Example: `entity_add_group(target, "actors");`
+- `entity_remove_group(handle, group)` — Removes a validated entity from a group.
+
+  Example: `entity_remove_group(target, "actors");`
+- `entity_destroy(handle)` — Safely destroys the validated target at the structural boundary.
+
+  Example: `entity_destroy(target);`
 
 ## component
 
@@ -175,6 +226,9 @@ Use `// @test tags=unit timeout=1000 seed=42 cases=a|b` before `fn test_*`. The 
 - `get_component(kind) -> string` — Legacy component URI lookup. **Deprecated:** use `component_handle`; removal API v3.
 
   Example: `let body = get_component("RigidBody2D");`
+- `component_set_enabled_on(handle, component, enabled)` — Enables or disables an existing target component.
+
+  Example: `component_set_enabled_on(target, "DamageHitbox2D", false);`
 
 ## transform
 
@@ -202,6 +256,42 @@ Use `// @test tags=unit timeout=1000 seed=42 cases=a|b` before `fn test_*`. The 
 - `input_released(action) -> bool` — True on an action release edge.
 
   Example: `if input_released("Fire") { }`
+- `input_performed(action) -> bool` — True when Press, Hold, Tap, or Multi-tap reaches Performed.
+
+  Example: `if input_performed("Confirm") { }`
+- `input_cancelled(action) -> bool` — True when an interaction is released before completion.
+
+  Example: `if input_cancelled("Charge") { }`
+- `input_phase(action) -> string` — Returns idle, started, performed, or cancelled.
+
+  Example: `let phase = input_phase("Charge");`
+- `input_duration(action) -> float` — Returns the current held duration in seconds.
+
+  Example: `let held = input_duration("Charge");`
+- `input_context_active(name) -> bool` — Reports whether an input context is active.
+
+  Example: `if input_context_active("Menu") { }`
+- `input_map_active(name) -> bool` — Reports whether an action map is active.
+
+  Example: `if input_map_active("Combat") { }`
+- `input_scheme() -> string` — Returns the active control scheme.
+
+  Example: `let scheme = input_scheme();`
+- `input_context_push(name, priority, consume)` — Pushes or updates a bounded input context.
+
+  Example: `input_context_push("Menu", 100, true);`
+- `input_context_pop(name)` — Removes an active non-root input context.
+
+  Example: `input_context_pop("Menu");`
+- `input_map_enable(name)` — Enables a bounded named action map.
+
+  Example: `input_map_enable("Combat");`
+- `input_map_disable(name)` — Disables a named non-default action map.
+
+  Example: `input_map_disable("Combat");`
+- `input_scheme_set(name)` — Selects a named input scheme.
+
+  Example: `input_scheme_set("Gamepad");`
 - `input_axis(action) -> float` — Reads a scalar action.
 
   Example: `let x = input_axis("Horizontal");`
@@ -220,6 +310,30 @@ Use `// @test tags=unit timeout=1000 seed=42 cases=a|b` before `fn test_*`. The 
 - `mouse_y() -> float` — Reads pointer y in the viewport.
 
   Example: `let y = mouse_y();`
+- `mouse_world_x() -> float` — Reads pointer x in game-camera world units.
+
+  Example: `set_position(mouse_world_x(), mouse_world_y());`
+- `mouse_world_y() -> float` — Reads pointer y in game-camera world units.
+
+  Example: `set_position(mouse_world_x(), mouse_world_y());`
+- `view_min_x() -> float` — Reads the active game camera left world bound.
+
+  Example: `if transform().position_x < view_min_x() { destroy(); }`
+- `view_max_x() -> float` — Reads the active game camera right world bound.
+
+  Example: `if transform().position_x > view_max_x() { destroy(); }`
+- `view_min_y() -> float` — Reads the active game camera bottom world bound.
+
+  Example: `if transform().position_y < view_min_y() { destroy(); }`
+- `view_max_y() -> float` — Reads the active game camera top world bound.
+
+  Example: `if transform().position_y > view_max_y() { destroy(); }`
+- `viewport_width() -> float` — Reads the current game viewport width in CSS pixels.
+
+  Example: `let aspect = viewport_width() / viewport_height();`
+- `viewport_height() -> float` — Reads the current game viewport height in CSS pixels.
+
+  Example: `let aspect = viewport_width() / viewport_height();`
 - `wheel_x() -> float` — Reads horizontal wheel delta.
 
   Example: `let dx = wheel_x();`
@@ -250,6 +364,12 @@ Use `// @test tags=unit timeout=1000 seed=42 cases=a|b` before `fn test_*`. The 
 - `ui_set_value(value)` — Sets Slider, ProgressBar or Checkbox value.
 
   Example: `ui_set_value(0.75);`
+- `ui_set_text_on(handle, text)` — Sets text on a validated target UI/world-text entity.
+
+  Example: `ui_set_text_on(label, "Ready");`
+- `ui_set_value_on(handle, value)` — Sets a validated target Slider, ProgressBar, or Checkbox.
+
+  Example: `ui_set_value_on(health_bar, 0.75);`
 
 ## animation
 
@@ -304,6 +424,9 @@ Use `// @test tags=unit timeout=1000 seed=42 cases=a|b` before `fn test_*`. The 
 - `instantiate(prefab)` — Queues a prefab instance.
 
   Example: `instantiate("asset://enemy-prefab");`
+- `spawn_at(prefab, x, y, rotation, scale_x, scale_y) -> Handle<Entity>` — Queues a prefab at an exact transform and returns a stable pending handle.
+
+  Example: `let enemy = spawn_at("asset://enemy", 4.0, 2.0, 0.0, 1.0, 1.0);`
 - `destroy()` — Queues safe entity destruction.
 
   Example: `destroy();`
@@ -319,6 +442,66 @@ Use `// @test tags=unit timeout=1000 seed=42 cases=a|b` before `fn test_*`. The 
 - `scene_quit()` — Requests clean runtime shutdown.
 
   Example: `scene_quit();`
+
+## gameplay
+
+- `game_pause(paused)` — Pauses or resumes scaled gameplay while input/update callbacks remain available.
+
+  Example: `game_pause(true);`
+- `game_paused() -> bool` — Reports the current gameplay pause state.
+
+  Example: `if game_paused() { }`
+- `checkpoint_set(name)` — Captures bounded scene transforms, health, score, and session state.
+
+  Example: `checkpoint_set("room-2");`
+- `checkpoint_has(name) -> bool` — Reports whether a runtime checkpoint exists.
+
+  Example: `if checkpoint_has("room-2") { }`
+- `checkpoint_restore(name)` — Restores a same-scene checkpoint or fails explicitly.
+
+  Example: `checkpoint_restore("room-2");`
+- `score_get() -> float` — Returns the bounded session score.
+
+  Example: `let score = score_get();`
+- `score_set(value)` — Sets the bounded session score.
+
+  Example: `score_set(0.0);`
+- `score_add(value)` — Adds to the bounded session score.
+
+  Example: `score_add(10.0);`
+- `session_get(key, fallback) -> value` — Reads a bounded serializable session value.
+
+  Example: `let wave = session_get("wave", 1);`
+- `session_set(key, value)` — Writes a bounded serializable session value.
+
+  Example: `session_set("wave", 2);`
+
+## network
+
+- `network_enabled() -> bool` — Reports whether reviewed project networking and explicit permission are enabled.
+
+  Example: `if network_enabled() { }`
+- `network_connected() -> bool` — Reports whether the optional runtime has an active session transport.
+
+  Example: `if network_connected() { network_rpc("ready", true); }`
+- `network_is_authority() -> bool` — Reports whether this peer owns server or host authority.
+
+  Example: `if network_is_authority() { }`
+- `network_peer_count() -> int` — Returns the bounded number of known remote peers.
+
+  Example: `let peers = network_peer_count();`
+- `network_local_peer() -> string` — Returns the current bounded local peer identifier.
+
+  Example: `let peer = network_local_peer();`
+- `network_role() -> string` — Returns client, server, or host.
+
+  Example: `if network_role() == "client" { }`
+- `network_tick() -> int` — Returns the authoritative network tick observed at this callback boundary.
+
+  Example: `let tick = network_tick();`
+- `network_rpc(name, payload)` — Queues a declared RPC through explicit permission, authority, direction, schema, rate, payload, and bandwidth checks.
+
+  Example: `network_rpc("player.ready", #{ ready: true });`
 
 ## timing
 

@@ -14,7 +14,7 @@ function rotate(point: Vec2, angle: number): Vec2 {
   return { x: point.x * cosine - point.y * sine, y: point.x * sine + point.y * cosine }
 }
 
-export function worldTransform(entity: Entity, entities: Entity[], visiting = new Set<string>()): WorldTransform2D {
+export function worldTransform(entity: Entity, entities: readonly Entity[], visiting = new Set<string>()): WorldTransform2D {
   const local: WorldTransform2D = {
     position: { x: finiteNumber(entity.transform.position.x), y: finiteNumber(entity.transform.position.y) },
     rotation: normalizeAngle(entity.transform.rotation),
@@ -47,13 +47,13 @@ export function worldTransform(entity: Entity, entities: Entity[], visiting = ne
   }
 }
 
-export function localPointToWorld(entity: Entity, point: Vec2, entities: Entity[]): Vec2 {
+export function localPointToWorld(entity: Entity, point: Vec2, entities: readonly Entity[]): Vec2 {
   const transform = worldTransform(entity, entities)
   const rotated = rotate({ x: point.x * transform.scale.x, y: point.y * transform.scale.y }, transform.rotation)
   return { x: transform.position.x + rotated.x, y: transform.position.y + rotated.y }
 }
 
-export function worldPointToLocal(entity: Entity, point: Vec2, entities: Entity[]): Vec2 {
+export function worldPointToLocal(entity: Entity, point: Vec2, entities: readonly Entity[]): Vec2 {
   const transform = worldTransform(entity, entities)
   const rotated = rotate({ x: point.x - transform.position.x, y: point.y - transform.position.y }, -transform.rotation)
   return {
@@ -62,7 +62,7 @@ export function worldPointToLocal(entity: Entity, point: Vec2, entities: Entity[
   }
 }
 
-export function setWorldTransform(entity: Entity, value: WorldTransform2D, entities: Entity[]): void {
+export function setWorldTransform(entity: Entity, value: WorldTransform2D, entities: readonly Entity[]): void {
   const parent = entity.parentUuid ? entities.find(candidate => candidate.uuid === entity.parentUuid) : null
   if (!parent) {
     entity.transform.position = { ...value.position }
@@ -86,7 +86,7 @@ export function setWorldTransform(entity: Entity, value: WorldTransform2D, entit
   }
 }
 
-export function wouldCreateParentCycle(entity: Entity, parentUuid: string | null, entities: Entity[]): boolean {
+export function wouldCreateParentCycle(entity: Entity, parentUuid: string | null, entities: readonly Entity[]): boolean {
   if (!parentUuid) return false
   if (parentUuid === entity.uuid) return true
   const visited = new Set<string>([entity.uuid])
@@ -101,7 +101,7 @@ export function wouldCreateParentCycle(entity: Entity, parentUuid: string | null
   return false
 }
 
-export function setParent(entity: Entity, parentUuid: string | null, entities: Entity[], preserveWorldTransform = true): boolean {
+export function setParent(entity: Entity, parentUuid: string | null, entities: readonly Entity[], preserveWorldTransform = true): boolean {
   if (wouldCreateParentCycle(entity, parentUuid, entities)) return false
   const nextParentUuid = parentUuid && entities.some(candidate => candidate.uuid === parentUuid) ? parentUuid : null
   if (entity.parentUuid === nextParentUuid) return false
@@ -111,7 +111,7 @@ export function setParent(entity: Entity, parentUuid: string | null, entities: E
   return true
 }
 
-export function descendantsOf(entity: Entity, entities: Entity[]): Entity[] {
+export function descendantsOf(entity: Entity, entities: readonly Entity[]): Entity[] {
   const descendants: Entity[] = []
   const pending = [entity.uuid]
   const visited = new Set<string>()
@@ -128,7 +128,7 @@ export function descendantsOf(entity: Entity, entities: Entity[]): Entity[] {
   return descendants
 }
 
-export function translateEntityTree(entity: Entity, delta: Vec2, entities: Entity[]): void {
+export function translateEntityTree(entity: Entity, delta: Vec2, entities: readonly Entity[]): void {
   const transform = worldTransform(entity, entities)
   setWorldTransform(entity, {
     ...transform,

@@ -1,6 +1,6 @@
 # First Game 5.0 Tier-1 Export
 
-Engine **5.0.1**, Project Format 2, schema 29.
+Engine **5.3.0**, Project Format 2, schema 29.
 
 Required packages: None; the package fixture may additionally load `../../plugins/hello-plugin/plugin.json` after reviewing its permissions and provenance.
 

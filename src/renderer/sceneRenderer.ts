@@ -7,10 +7,13 @@ import { worldTransform } from '../world/hierarchy'
 import type { CameraRenderView, RenderColor, Renderer2D, RendererStats } from './types'
 import { tileChunkCommands } from '../runtime/tilemap'
 import { particleRuntime } from '../runtime/particles'
-import { resolveMaterial } from './materials'
+import { canvasMaterialColor, resolveMaterial } from './materials'
 import type { TextureFilter } from './types'
 import { deformSkin } from '../runtime/rigging'
-import { renderingSettings } from './renderSettings'
+import { renderingSettings, updateActivePostProcess } from './renderSettings'
+import { visibleWorldBounds } from './cameraMath'
+
+export { gameScreenToWorld, visibleWorldBounds } from './cameraMath'
 
 export interface SceneRenderOptions {
   width: number
@@ -34,6 +37,16 @@ export interface ActiveCamera {
 }
 
 function byte(value: number): number { return Math.min(255, Math.max(0, Number.isFinite(value) ? value : 0)) }
+function finite(value: number, fallback: number): number { return Number.isFinite(value) ? value : fallback }
+function safeViewport(viewport: Camera2D['viewport']): Camera2D['viewport'] {
+  const x = Math.min(1 - 1e-6, Math.max(0, finite(viewport?.x, 0)))
+  const y = Math.min(1 - 1e-6, Math.max(0, finite(viewport?.y, 0)))
+  return {
+    x, y,
+    width: Math.max(.000001, Math.min(1 - x, finite(viewport?.width, 1))),
+    height: Math.max(.000001, Math.min(1 - y, finite(viewport?.height, 1)))
+  }
+}
 function rgba(color: { r: number; g: number; b: number }, opacity = 100): RenderColor {
   return { r: byte(color.r), g: byte(color.g), b: byte(color.b), a: Math.min(1, Math.max(0, opacity / 100)) }
 }
@@ -46,34 +59,48 @@ function parseCssColor(value: string): RenderColor {
 }
 
 const smoothedCameraPositions = new WeakMap<Camera2D, { x: number; y: number }>()
+interface TimelineCameraBlendOverride { fromEntityUuid: string | null; toEntityUuid: string; weight: number }
+let timelineCameraBlend: TimelineCameraBlendOverride | null = null
+export function setTimelineCameraBlend(value: TimelineCameraBlendOverride | null): void { timelineCameraBlend = value ? { ...value, weight: Math.min(1, Math.max(0, finite(value.weight, 0))) } : null }
 
 export function activeGameCameras(entities: Entity[], width: number, height: number): ActiveCamera[] {
+  const safeWidth = Math.max(1, finite(width, 1)), safeHeight = Math.max(1, finite(height, 1))
   return entities
     .flatMap(entity => {
       const component = entity.camera2D
       if (!entity.enabled || !component?.enabled || component.removed || !component.active) return []
       const transform = worldTransform(entity, entities)
-      const viewportHeight = height * component.viewport.height
-      const rawScale = viewportHeight / (2 * Math.max(.000001, component.orthographicSize)) * Math.max(.000001, component.zoom)
+      const blendOverride = timelineCameraBlend?.toEntityUuid === entity.uuid ? timelineCameraBlend : null
+      const sourceEntity = blendOverride?.fromEntityUuid ? entities.find(candidate => candidate.uuid === blendOverride.fromEntityUuid && candidate.camera2D?.enabled) : null
+      const sourceComponent = sourceEntity?.camera2D, sourceTransform = sourceEntity ? worldTransform(sourceEntity, entities) : null, cameraBlendWeight = blendOverride?.weight ?? 1
+      const viewport = safeViewport(component.viewport)
+      const viewportHeight = safeHeight * viewport.height
+      const orthographicSize = finite(sourceComponent ? sourceComponent.orthographicSize + (component.orthographicSize - sourceComponent.orthographicSize) * cameraBlendWeight : component.orthographicSize, 10)
+      const zoom = finite(sourceComponent ? sourceComponent.zoom + (component.zoom - sourceComponent.zoom) * cameraBlendWeight : component.zoom, 1)
+      const rawScale = viewportHeight / (2 * Math.max(.000001, orthographicSize)) * Math.max(.000001, zoom)
       const pixelPerfect = component.pixelPerfect || renderingSettings.pixelSnap
       const scale = pixelPerfect ? Math.max(1, Math.round(rawScale)) : rawScale
       const followed = component.followTargetUuid ? entities.find(candidate => candidate.uuid === component.followTargetUuid) : null
       let desired = followed ? { ...worldTransform(followed, entities).position } : { ...transform.position }
+      desired = { x: finite(desired.x, 0), y: finite(desired.y, 0) }
+      if (sourceTransform) desired = { x: sourceTransform.position.x + (desired.x - sourceTransform.position.x) * cameraBlendWeight, y: sourceTransform.position.y + (desired.y - sourceTransform.position.y) * cameraBlendWeight }
       const previous = smoothedCameraPositions.get(component) ?? { ...desired }
       if (component.dragMargins.enabled && followed) {
-        const halfHeight = component.orthographicSize, halfWidth = halfHeight * width / Math.max(1, height)
+        const halfHeight = Math.max(.000001, finite(component.orthographicSize, 10)), halfWidth = halfHeight * safeWidth / safeHeight
         const minX = previous.x - halfWidth * (1 - component.dragMargins.left), maxX = previous.x + halfWidth * (1 - component.dragMargins.right)
         const minY = previous.y - halfHeight * (1 - component.dragMargins.bottom), maxY = previous.y + halfHeight * (1 - component.dragMargins.top)
         desired = { x: desired.x < minX ? previous.x + desired.x - minX : desired.x > maxX ? previous.x + desired.x - maxX : previous.x, y: desired.y < minY ? previous.y + desired.y - minY : desired.y > maxY ? previous.y + desired.y - maxY : previous.y }
       }
-      if (component.limits.enabled) desired = { x: Math.min(component.limits.right, Math.max(component.limits.left, desired.x)), y: Math.min(component.limits.top, Math.max(component.limits.bottom, desired.y)) }
-      const blend = component.smoothing.enabled ? 1 - Math.exp(-Math.max(0, component.smoothing.speed) / 60) : 1
+      if (component.limits.enabled) desired = { x: Math.min(finite(component.limits.right, desired.x), Math.max(finite(component.limits.left, desired.x), desired.x)), y: Math.min(finite(component.limits.top, desired.y), Math.max(finite(component.limits.bottom, desired.y), desired.y)) }
+      const blend = component.smoothing.enabled ? 1 - Math.exp(-Math.max(0, finite(component.smoothing.speed, 0)) / 60) : 1
       const smoothed = { x: previous.x + (desired.x - previous.x) * blend, y: previous.y + (desired.y - previous.y) * blend }
       smoothedCameraPositions.set(component, smoothed)
       const position = pixelPerfect
         ? { x: Math.round(smoothed.x * scale) / scale, y: Math.round(smoothed.y * scale) / scale }
         : smoothed
-      return [{ entity, component, view: { scale, offset: { x: width * .5, y: height * .5 }, position, rotation: transform.rotation, viewport: { ...component.viewport } }, background: rgba(component.backgroundColor) }]
+      const rotation = finite(sourceTransform ? sourceTransform.rotation + (transform.rotation - sourceTransform.rotation) * cameraBlendWeight : transform.rotation, 0)
+      const background = sourceComponent ? { r: sourceComponent.backgroundColor.r + (component.backgroundColor.r - sourceComponent.backgroundColor.r) * cameraBlendWeight, g: sourceComponent.backgroundColor.g + (component.backgroundColor.g - sourceComponent.backgroundColor.g) * cameraBlendWeight, b: sourceComponent.backgroundColor.b + (component.backgroundColor.b - sourceComponent.backgroundColor.b) * cameraBlendWeight } : component.backgroundColor
+      return [{ entity, component, view: { scale, offset: { x: safeWidth * .5, y: safeHeight * .5 }, position, rotation, viewport }, background: rgba(background) }]
     })
     .sort((first, second) => first.component.priority - second.component.priority || first.component.stackOrder - second.component.stackOrder || first.entity.id - second.entity.id)
 }
@@ -82,24 +109,14 @@ export function activeGameCamera(entities: Entity[], width: number, height: numb
 
 function renderState(reference: string, fallbackFilter: TextureFilter) {
   const asset = resolveAsset(reference)
-  if (asset?.assetType !== 'material') return { blendMode: 'Alpha' as const, sampling: fallbackFilter }
+  if (asset?.assetType !== 'material') return { blendMode: 'Alpha' as const, sampling: fallbackFilter, material: null }
   const material = resolveMaterial(reference)
-  return { blendMode: material.blendMode, sampling: material.sampling }
+  return { blendMode: material.blendMode, sampling: material.sampling, material }
 }
 
 function sortingLayer(entity: Entity): number {
   return entity.getComponent<TileMap2D>('TileMap2D')?.sortingLayer
     ?? entity.spriteRenderer?.sortingLayer ?? entity.textRenderer?.sortingLayer ?? entity.renderer.sortingLayer
-}
-
-function visibleWorldBounds(view: CameraRenderView, width: number, height: number) {
-  const center = view.position ?? { x: (width * .5 - view.offset.x) / view.scale, y: (view.offset.y - height * .5) / view.scale }
-  const halfWidth = width / Math.max(1e-9, view.scale) * .5
-  const halfHeight = height / Math.max(1e-9, view.scale) * .5
-  const rotation = view.rotation ?? 0
-  const extentX = Math.abs(Math.cos(rotation)) * halfWidth + Math.abs(Math.sin(rotation)) * halfHeight
-  const extentY = Math.abs(Math.sin(rotation)) * halfWidth + Math.abs(Math.cos(rotation)) * halfHeight
-  return { minX: center.x - extentX, maxX: center.x + extentX, minY: center.y - extentY, maxY: center.y + extentY }
 }
 
 function ancestorParallax(entity: Entity, entities: Entity[]): Entity | null {
@@ -145,7 +162,7 @@ function submitSprite(renderer: Renderer2D, entity: Entity, sprite: SpriteRender
     renderer.submitSprite({
       position: { x: base.x + x * (parallax?.repeat.x ?? 0), y: base.y + y * (parallax?.repeat.y ?? 0) }, rotation: transform.rotation, scale: transform.scale,
       size: sprite.size, pivot: sprite.pivot, flipX: mirrored ? !sprite.flipX : sprite.flipX, flipY: sprite.flipY,
-      tint: rgba(sprite.tint, sprite.opacity), texture,
+      tint: renderer.stats.backend === 'Canvas2D' && state.material ? canvasMaterialColor(state.material, rgba(sprite.tint, sprite.opacity)) : rgba(sprite.tint, sprite.opacity), texture,
       sortingLayer: sprite.sortingLayer, orderInLayer: authoredOrder(entity, sprite.orderInLayer, entities) + (parallax?.depth ?? 0) * .000001,
       material: sprite.material, blendMode: state.blendMode,
       nineSlice: sprite.nineSlice.enabled ? { left: sprite.nineSlice.left, top: sprite.nineSlice.top, right: sprite.nineSlice.right, bottom: sprite.nineSlice.bottom } : null,
@@ -189,6 +206,7 @@ function submitText(renderer: Renderer2D, entity: Entity, text: TextRenderer2D, 
 export function renderWorld(renderer: Renderer2D, entities: Entity[], options: SceneRenderOptions): RendererStats {
   const cameras = options.gameView ? activeGameCameras(entities, options.width, options.height) : []
   const primaryCamera = cameras[0] ?? null
+  updateActivePostProcess(primaryCamera?.view.position ?? options.editorCamera.position ?? { x: 0, y: 0 })
   renderer.beginFrame({
     width: options.width,
     height: options.height,
@@ -228,7 +246,7 @@ export function renderWorld(renderer: Renderer2D, entities: Entity[], options: S
         renderer.submitShape({
           shape: shape.shape, position: authoringPosition(entity, transform.position, entities, camera.view), rotation: transform.rotation, scale: transform.scale,
           vertices: renderedPathVertices(entity), radiusX: shape.radiusX, radiusY: shape.radiusY,
-          fill: rgba(shape.color, shape.opacity), stroke: rgba(shape.strokeColor, compoundMembers.has(entity.id) ? 0 : shape.strokeOpacity),
+          fill: renderer.stats.backend === 'Canvas2D' && materialState.material ? canvasMaterialColor(materialState.material, rgba(shape.color, shape.opacity)) : rgba(shape.color, shape.opacity), stroke: rgba(shape.strokeColor, compoundMembers.has(entity.id) ? 0 : shape.strokeOpacity),
           strokeWidth: shape.strokeWidth, texture: resolveTexture(shape.textureAsset, materialState.sampling),
           sortingLayer: shape.sortingLayer, orderInLayer: authoredOrder(entity, shape.orderInLayer, entities), material: shape.material, blendMode: materialState.blendMode
         })

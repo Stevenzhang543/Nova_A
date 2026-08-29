@@ -1,0 +1,87 @@
+{
+  "format": "nova-v5.5.0-product-audit",
+  "version": 1,
+  "engineVersion": "5.5.0",
+  "generatedAt": "2026-08-26T16:23:12.347Z",
+  "perspectives": [
+    "programmer",
+    "runtime",
+    "user",
+    "layout"
+  ],
+  "checks": [
+    {
+      "id": "V550-VERSION",
+      "status": "passed",
+      "detail": "Frontend, native and Rust authorities identify 5.5.0.",
+      "metrics": {}
+    },
+    {
+      "id": "V550-ROADMAP",
+      "status": "passed",
+      "detail": "Roadmap records implementation and audit boundaries.",
+      "metrics": {}
+    },
+    {
+      "id": "V550-MATERIALS",
+      "status": "passed",
+      "detail": "Graph authoring, deterministic compilation, layers and capability preview are connected.",
+      "metrics": {}
+    },
+    {
+      "id": "V550-RUNTIME-MATERIAL",
+      "status": "passed",
+      "detail": "WebGL2 and Canvas2D material/post paths include isolated fallback.",
+      "metrics": {}
+    },
+    {
+      "id": "V550-PARTICLES",
+      "status": "passed",
+      "detail": "Particle graph, curves-compatible emitter values, events, trails and honest fallback are runtime-bound.",
+      "metrics": {}
+    },
+    {
+      "id": "V550-DIAGNOSTICS",
+      "status": "passed",
+      "detail": "Atlas/import previews, events and render recommendations are reachable.",
+      "metrics": {}
+    },
+    {
+      "id": "V550-I18N",
+      "status": "passed",
+      "detail": "Visible v5.5 controls are localized in EN/DE/ZH.",
+      "metrics": {}
+    },
+    {
+      "id": "V550-DOCS",
+      "status": "passed",
+      "detail": "README and multilingual manuals teach v5.5 workflows.",
+      "metrics": {}
+    },
+    {
+      "id": "V550-VERIFY",
+      "status": "passed",
+      "detail": "Runtime/static rendering verification passes.",
+      "metrics": {
+        "checks": 7
+      }
+    },
+    {
+      "id": "V550-LAYOUT",
+      "status": "passed",
+      "detail": "EN/DE/ZH browser matrix passes four viewports.",
+      "metrics": {
+        "matrix": 12
+      }
+    },
+    {
+      "id": "V550-RELEASE",
+      "status": "passed",
+      "detail": "Generic packager enforces exact eleven artifacts.",
+      "metrics": {}
+    }
+  ],
+  "severity0Open": 0,
+  "severity1Open": 0,
+  "status": "passed"
+}

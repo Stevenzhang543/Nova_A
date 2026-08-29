@@ -105,6 +105,7 @@ export function inferAssetType(file: Pick<File, 'name' | 'type'>): AssetType {
   if (extension === 'nova-scene' || extension === 'scene') return 'scene'
   if (extension === 'nova-prefab' || extension === 'prefab') return 'prefab'
   if (extension === 'rhai' || mime === 'text/x-rhai') return 'script'
+  if (extension === 'nova-graph') return 'visualScript'
   if (extension === 'nova-schema') return 'dataSchema'
   if (extension === 'nova-data' || extension === 'csv') return 'dataTable'
   if (extension === 'nova-replay') return 'replay'
@@ -137,6 +138,7 @@ function defaultFolder(type: AssetType): string {
   if (type === 'scene') return 'Assets/Scenes'
   if (type === 'prefab') return 'Assets/Prefabs'
   if (type === 'script') return 'Assets/Scripts'
+  if (type === 'visualScript') return 'Assets/Visual Scripts'
   if (type === 'material') return 'Assets/Materials'
   if (type === 'animation') return 'Assets/Animations'
   if (type === 'controller') return 'Assets/Controllers'
@@ -317,9 +319,9 @@ export function createTextAsset(
   requestedFolder?: string
 ): AssetRecord {
   const uuid = normalizeUuid(undefined)
-  const extension = assetType === 'script' ? '.rhai' : assetType === 'prefab' ? '.nova-prefab' : assetType === 'scene' ? '.nova-scene' : assetType === 'material' ? '.nova-material' : assetType === 'animation' ? '.nova-anim' : assetType === 'controller' ? '.nova-controller' : assetType === 'animationMask' ? '.nova-mask' : assetType === 'rig' ? '.nova-rig' : assetType === 'skin' ? '.nova-skin' : assetType === 'timeline' ? '.nova-timeline' : assetType === 'tileset' ? '.nova-tileset' : assetType === 'atlas' ? '.nova-atlas' : assetType === 'shader' ? '.nova-shader' : assetType === 'uiTheme' ? '.nova-theme' : assetType === 'behaviorTree' ? '.nova-behavior' : assetType === 'stateMachine' ? '.nova-state' : assetType === 'tilePalette' ? '.nova-palette' : assetType === 'brushPreset' ? '.nova-brush' : assetType === 'terrainRules' ? '.nova-terrain' : assetType === 'dataSchema' ? '.nova-schema' : assetType === 'dataTable' ? '.nova-data' : assetType === 'replay' ? '.nova-replay' : assetType === 'path' ? '.nova-path' : assetType === 'particleSystem' ? '.nova-particle' : '.nova-locale'
+  const extension = assetType === 'script' ? '.rhai' : assetType === 'visualScript' ? '.nova-graph' : assetType === 'prefab' ? '.nova-prefab' : assetType === 'scene' ? '.nova-scene' : assetType === 'material' ? '.nova-material' : assetType === 'animation' ? '.nova-anim' : assetType === 'controller' ? '.nova-controller' : assetType === 'animationMask' ? '.nova-mask' : assetType === 'rig' ? '.nova-rig' : assetType === 'skin' ? '.nova-skin' : assetType === 'timeline' ? '.nova-timeline' : assetType === 'tileset' ? '.nova-tileset' : assetType === 'atlas' ? '.nova-atlas' : assetType === 'shader' ? '.nova-shader' : assetType === 'uiTheme' ? '.nova-theme' : assetType === 'behaviorTree' ? '.nova-behavior' : assetType === 'stateMachine' ? '.nova-state' : assetType === 'tilePalette' ? '.nova-palette' : assetType === 'brushPreset' ? '.nova-brush' : assetType === 'terrainRules' ? '.nova-terrain' : assetType === 'dataSchema' ? '.nova-schema' : assetType === 'dataTable' ? '.nova-data' : assetType === 'replay' ? '.nova-replay' : assetType === 'path' ? '.nova-path' : assetType === 'particleSystem' ? '.nova-particle' : '.nova-locale'
   const safeName = sanitizedName(name).endsWith(extension) ? sanitizedName(name) : `${sanitizedName(name)}${extension}`
-  const mimeType = assetType === 'script' ? 'text/x-rhai' : `application/x-nova-${assetType}`
+  const mimeType = assetType === 'script' ? 'text/x-rhai' : assetType === 'visualScript' ? 'application/x-nova-graph+json' : `application/x-nova-${assetType}`
   const record: AssetRecord = {
     uuid,
     name: safeName,
@@ -351,7 +353,7 @@ export function createTextAsset(
 
 export function readTextAsset(reference: string | null | undefined): string | null {
   const record = resolveAsset(reference)
-  if (!record || !['script', 'prefab', 'scene', 'material', 'animation', 'controller', 'animationMask', 'rig', 'skin', 'timeline', 'tileset', 'atlas', 'shader', 'localization', 'uiTheme', 'behaviorTree', 'stateMachine', 'tilePalette', 'brushPreset', 'terrainRules', 'dataSchema', 'dataTable', 'replay'].includes(record.assetType)) return null
+  if (!record || !['script', 'visualScript', 'prefab', 'scene', 'material', 'animation', 'controller', 'animationMask', 'rig', 'skin', 'timeline', 'tileset', 'atlas', 'shader', 'localization', 'uiTheme', 'behaviorTree', 'stateMachine', 'tilePalette', 'brushPreset', 'terrainRules', 'dataSchema', 'dataTable', 'replay', 'path', 'particleSystem'].includes(record.assetType)) return null
   const comma = record.source.indexOf(',')
   if (!record.source.startsWith('data:') || comma < 0) return record.source || null
   try {
@@ -367,7 +369,7 @@ export function readTextAsset(reference: string | null | undefined): string | nu
 
 export function updateTextAsset(uuid: string, source: string): boolean {
   const record = assetState.records.find(asset => asset.uuid === uuid)
-  if (!record || record.path.startsWith('.nova/') || !['script', 'prefab', 'scene', 'material', 'animation', 'controller', 'animationMask', 'rig', 'skin', 'timeline', 'tileset', 'atlas', 'shader', 'localization', 'uiTheme', 'behaviorTree', 'stateMachine', 'tilePalette', 'brushPreset', 'terrainRules', 'dataSchema', 'dataTable', 'replay'].includes(record.assetType)) return false
+  if (!record || record.path.startsWith('.nova/') || !['script', 'visualScript', 'prefab', 'scene', 'material', 'animation', 'controller', 'animationMask', 'rig', 'skin', 'timeline', 'tileset', 'atlas', 'shader', 'localization', 'uiTheme', 'behaviorTree', 'stateMachine', 'tilePalette', 'brushPreset', 'terrainRules', 'dataSchema', 'dataTable', 'replay', 'path', 'particleSystem'].includes(record.assetType)) return false
   record.source = textDataUrl(source, record.mimeType || 'text/plain')
   record.byteLength = new TextEncoder().encode(source).byteLength
   record.sourceModified = Date.now()
@@ -474,7 +476,7 @@ export function loadAssets(source: unknown, folderSource?: unknown, databaseSour
     const knownFields = new Set(['uuid', 'name', 'path', 'assetType', 'mimeType', 'byteLength', 'source', 'sourceModified', 'importedAt', 'width', 'height', 'duration', 'fontFamily', 'settings', 'script', 'animationImport', 'pipeline', 'tags', 'collectionIds', 'contentGroup', 'editorOnly', 'sourceControlStatus', 'thumbnailKey', 'unknownFields'])
     const inheritedUnknown = item.unknownFields && typeof item.unknownFields === 'object' ? item.unknownFields : {}
     const unknownFields = { ...inheritedUnknown, ...Object.fromEntries(Object.entries(value).filter(([key]) => !knownFields.has(key))) }
-    const assetType = ['image', 'audio', 'font', 'scene', 'prefab', 'script', 'material', 'animation', 'controller', 'animationMask', 'rig', 'skin', 'timeline', 'tileset', 'atlas', 'shader', 'localization', 'uiTheme', 'behaviorTree', 'stateMachine', 'tilePalette', 'brushPreset', 'terrainRules', 'dataSchema', 'dataTable', 'replay', 'path', 'particleSystem', 'other'].includes(String(item.assetType)) ? item.assetType as AssetType : 'other'
+    const assetType = ['image', 'audio', 'font', 'scene', 'prefab', 'script', 'material', 'animation', 'controller', 'animationMask', 'rig', 'skin', 'timeline', 'tileset', 'atlas', 'shader', 'localization', 'uiTheme', 'behaviorTree', 'stateMachine', 'tilePalette', 'brushPreset', 'terrainRules', 'dataSchema', 'dataTable', 'replay', 'path', 'particleSystem', 'visualScript', 'other'].includes(String(item.assetType)) ? item.assetType as AssetType : 'other'
     const uuid = normalizeUuid(item.uuid)
     const defaults = defaultImportSettings()
     const settings: AssetImportSettings = {
@@ -522,6 +524,11 @@ export function loadAssets(source: unknown, folderSource?: unknown, databaseSour
     settings.audioSettings.targetPeakDb = Math.min(0, Math.max(-24, Number(settings.audioSettings.targetPeakDb) || -1))
     settings.audioSettings.loopStart = Math.max(0, Number(settings.audioSettings.loopStart) || 0)
     settings.audioSettings.loopEnd = Math.max(0, Number(settings.audioSettings.loopEnd) || 0)
+    settings.audioSettings.loopRegions = (Array.isArray(settings.audioSettings.loopRegions) ? settings.audioSettings.loopRegions : []).slice(0, 64).map((region, index) => ({
+      id: String(region?.id || `loop-${index + 1}`).replace(/[^A-Za-z0-9_.-]/g, '-').slice(0, 80), name: String(region?.name || `Loop ${index + 1}`).slice(0, 80),
+      start: Math.max(0, Number(region?.start) || 0), end: Math.max(0, Number(region?.end) || 0)
+    })).filter(region => region.end > region.start)
+    settings.audioSettings.activeLoopRegion = typeof settings.audioSettings.activeLoopRegion === 'string' && settings.audioSettings.loopRegions.some(region => region.id === settings.audioSettings.activeLoopRegion) ? settings.audioSettings.activeLoopRegion : null
     settings.colorSpace = settings.colorSpace === 'Linear' ? 'Linear' : 'sRGB'
     settings.generateMipmaps = settings.generateMipmaps === true
     settings.transparency = ['Premultiply', 'Discard'].includes(String(settings.transparency)) ? settings.transparency : 'Preserve'
@@ -582,6 +589,7 @@ export function loadAssets(source: unknown, folderSource?: unknown, databaseSour
           return signal && callback ? [{ signal, callback, source: String(connection.source || '').slice(0, 128), target: String(connection.target || '').slice(0, 128), enabled: connection.enabled !== false }] : []
         }).slice(0, 512) : [],
         recoverySource: String(item.script?.recoverySource || '').slice(0, 1_000_000),
+        linkedGraphUuid: String(item.script?.linkedGraphUuid || '').toLowerCase().slice(0, 128),
         lastSavedHash: String(item.script?.lastSavedHash || '').slice(0, 128)
       } : undefined,
       animationImport: assetType === 'animation' ? {

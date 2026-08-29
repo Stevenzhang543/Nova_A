@@ -1,0 +1,18 @@
+{
+  "format": "nova-v5.7.0-stability-summary",
+  "version": 1,
+  "engineVersion": "5.7.0",
+  "generatedAt": "2026-08-27T04:04:39.396Z",
+  "typeCheck": "passed",
+  "rustWorkspaceTests": "passed",
+  "navigationBounds": "passed",
+  "aiBounds": "passed",
+  "impossiblePaths": "passed",
+  "bakeCancellation": "passed",
+  "streamedSaveReload": "passed",
+  "deterministicTileStorage": "passed",
+  "layoutMatrix": "passed",
+  "wallClock72HourSoakComplete": false,
+  "independentCleanMachineComplete": false,
+  "status": "passed"
+}

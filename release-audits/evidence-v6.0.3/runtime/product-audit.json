@@ -1,0 +1,162 @@
+{
+  "format": "nova-v6.0.3-product-audit",
+  "version": 1,
+  "engineVersion": "6.0.3",
+  "generatedAt": "2026-08-29T03:03:28.872Z",
+  "perspectives": [
+    "programmer",
+    "user",
+    "localization",
+    "layout",
+    "accessibility",
+    "backend",
+    "game-export",
+    "release"
+  ],
+  "checks": [
+    {
+      "id": "V603-VERSION",
+      "status": "passed",
+      "detail": "Frontend, native, Rust and project authorities identify 6.0.3.",
+      "metrics": {}
+    },
+    {
+      "id": "V603-FROZEN-CONTRACTS",
+      "status": "passed",
+      "detail": "Project Format 2/schema 29 remain frozen.",
+      "metrics": {}
+    },
+    {
+      "id": "V603-TEMPLATE-RESOLUTION",
+      "status": "passed",
+      "detail": "Build normalization resolves registered manifests and migrates only known legacy IDs.",
+      "metrics": {}
+    },
+    {
+      "id": "V603-UI-SEMANTICS",
+      "status": "passed",
+      "detail": "Passive defaults and all programmatic/component authoring paths apply UI semantics.",
+      "metrics": {}
+    },
+    {
+      "id": "V603-CATALOG",
+      "status": "passed",
+      "detail": "All startup templates pass build and accessibility regression checks.",
+      "metrics": {
+        "checks": 17
+      }
+    },
+    {
+      "id": "V603-BACKEND",
+      "status": "passed",
+      "detail": "Template aliasing, package round-trip and single-file export pass.",
+      "metrics": {
+        "checks": 6
+      }
+    },
+    {
+      "id": "V603-INTERACTIONS",
+      "status": "passed",
+      "detail": "User-style clicks, settings, navigation, drags and the 1024×640/200% launcher pass in all languages.",
+      "metrics": {
+        "registeredControls": 523,
+        "clickedControls": 187,
+        "settingsMutatedAndRestored": 240,
+        "dragSurfacesPassed": 4,
+        "explicitlyBlockedOrReviewed": 336,
+        "launcherLayout": [
+          {
+            "locale": "en",
+            "scale": 2,
+            "viewport": [
+              1024,
+              640
+            ],
+            "client": [
+              1014,
+              640
+            ],
+            "scroll": [
+              1014,
+              1349
+            ],
+            "horizontal": false,
+            "scrollable": true,
+            "footerReachable": true,
+            "status": "passed"
+          },
+          {
+            "locale": "de",
+            "scale": 2,
+            "viewport": [
+              1024,
+              640
+            ],
+            "client": [
+              1014,
+              640
+            ],
+            "scroll": [
+              1014,
+              1453
+            ],
+            "horizontal": false,
+            "scrollable": true,
+            "footerReachable": true,
+            "status": "passed"
+          },
+          {
+            "locale": "zh",
+            "scale": 2,
+            "viewport": [
+              1024,
+              640
+            ],
+            "client": [
+              1014,
+              640
+            ],
+            "scroll": [
+              1014,
+              1276
+            ],
+            "horizontal": false,
+            "scrollable": true,
+            "footerReachable": true,
+            "status": "passed"
+          }
+        ]
+      }
+    },
+    {
+      "id": "V603-LAYOUT",
+      "status": "passed",
+      "detail": "EN/DE/ZH layout remains contained from minimum viewport through 200% scale.",
+      "metrics": {
+        "states": 60
+      }
+    },
+    {
+      "id": "V603-RELEASE-CONTRACT",
+      "status": "passed",
+      "detail": "Exact eleven-artifact/ten-checksum release contract remains enforced.",
+      "metrics": {}
+    },
+    {
+      "id": "V603-INSTRUCTIONS",
+      "status": "passed",
+      "detail": "The 6.0.3 specification and release entrypoints are present.",
+      "metrics": {}
+    }
+  ],
+  "severity0Open": 0,
+  "severity1Open": 0,
+  "externalGates": {
+    "publisherSigning": "pending-external",
+    "cleanMachineLifecycle": "pending-external",
+    "secondMachineReproducibility": "pending-external",
+    "independentHardwareAccessibility": "pending-external",
+    "soak72Hours": "pending-external"
+  },
+  "status": "passed"
+}

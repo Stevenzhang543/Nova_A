@@ -1,0 +1,89 @@
+{
+  "format": "nova-v6.0.2-windows-game-smoke",
+  "version": 1,
+  "engineVersion": "6.0.2",
+  "generatedAt": "2026-08-28T17:39:06.111Z",
+  "host": {
+    "platform": "win32",
+    "architecture": "x64"
+  },
+  "export": {
+    "command": [
+      "--project",
+      "C:\\Users\\steve\\OneDrive\\Desktop\\Nova_A\\reference-projects\\projects\\creator-v602-interaction-export-audit\\project.nova",
+      "--target",
+      "windows",
+      "--output",
+      "C:\\Users\\steve\\OneDrive\\Desktop\\Nova_A\\release-audits\\game-output-v6.0.2",
+      "--profile",
+      "release",
+      "--architecture",
+      "x86_64",
+      "--runtime",
+      "game",
+      "--single-file",
+      "--player",
+      "C:\\Users\\steve\\OneDrive\\Desktop\\Nova_A\\src-tauri\\target\\release\\nova_a.exe"
+    ],
+    "output": "C:\\Users\\steve\\OneDrive\\Desktop\\Nova_A\\release-audits\\game-output-v6.0.2\\Mouse Knockout.exe",
+    "packageLength": 10567,
+    "footer": "NOVAPK2!",
+    "packageSha256": "fa168e7eb9a6de44eb8a314f6fe8f45425868a9ba4a9d64cbb7f727e88e87b7e",
+    "singleFile": true
+  },
+  "gameSmoke": {
+    "path": "C:\\Users\\steve\\OneDrive\\Desktop\\Nova_A\\release-audits\\game-output-v6.0.2\\Mouse Knockout.exe",
+    "durationMs": 5017,
+    "stayedAlive": true,
+    "exit": {
+      "code": null,
+      "signal": "SIGTERM"
+    },
+    "error": "",
+    "status": "passed"
+  },
+  "editorSmoke": {
+    "path": "C:\\Users\\steve\\OneDrive\\Desktop\\Nova_A\\src-tauri\\target\\release\\nova_a.exe",
+    "durationMs": 3028,
+    "stayedAlive": true,
+    "exit": {
+      "code": null,
+      "signal": "SIGTERM"
+    },
+    "error": "",
+    "status": "passed"
+  },
+  "artifacts": [
+    {
+      "name": "editor",
+      "path": "C:\\Users\\steve\\OneDrive\\Desktop\\Nova_A\\src-tauri\\target\\release\\nova_a.exe",
+      "bytes": 16075776,
+      "sha256": "98e163c5d472d44b90e47d52c5303cf809d406fda299c3c577e42d3b405d7c9d"
+    },
+    {
+      "name": "game",
+      "path": "C:\\Users\\steve\\OneDrive\\Desktop\\Nova_A\\release-audits\\game-output-v6.0.2\\Mouse Knockout.exe",
+      "bytes": 16086391,
+      "sha256": "f342c36098db3537b4836d000469ec73ab70089831a45f7bf172af19bd700a4a"
+    },
+    {
+      "name": "msi",
+      "path": "C:\\Users\\steve\\OneDrive\\Desktop\\Nova_A\\src-tauri\\target\\release\\bundle\\msi\\Nova_A_6.0.2_x64_en-US.msi",
+      "bytes": 9678848,
+      "sha256": "49afc264e076bc4b7137dc375096351d57a2b9b824a52754f109e88249f7eaa8"
+    },
+    {
+      "name": "setup",
+      "path": "C:\\Users\\steve\\OneDrive\\Desktop\\Nova_A\\src-tauri\\target\\release\\bundle\\nsis\\Nova_A_6.0.2_x64-setup.exe",
+      "bytes": 8604226,
+      "sha256": "1640b18c04ed2c261408a9cc70b2ea8a32274c858e6e912b0efe28e31d2792cb"
+    }
+  ],
+  "externalGates": {
+    "signing": "pending-external",
+    "cleanMachineLifecycle": "pending-external",
+    "secondMachineReproducibility": "pending-external",
+    "soak72Hours": "pending-external"
+  },
+  "status": "passed"
+}

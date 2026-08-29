@@ -1,0 +1,269 @@
+# Nova_A 5.1.0–6.0.0 production roadmap and coding manual
+
+Status: authoritative implementation plan for the 5.x-to-6.0 development cycle.
+
+Product direction: a lightweight, fast, local-first 2D game engine and editor with the essential production capabilities of Godot, GameMaker, Unity and Unreal, without their 3D-first weight, mandatory online services, or duplicated expert-only workflows.
+
+## 1. Rules for every release
+
+1. Preserve user-authored project data, animations, scripts, graphics, shortcuts and interaction paths. Replacements must migrate losslessly and remain undoable where applicable.
+2. A panel or data type is not a completed feature. Completion requires connected authoring, persistence, runtime behavior, diagnostics, documentation and automated verification.
+3. Keep Project Format 2/schema 29, Rhai API v2, Plugin API 2, Package Manifest 1, Build CLI 1 and workspace document 3 compatible throughout 5.x. Additive fields use safe defaults; incompatible changes wait for 6.0 with migration.
+4. Every feature receives four audits:
+   - Programmer: types, finite-value validation, error boundaries, determinism, lifecycle, serialization and tests.
+   - Runtime: the authored value reaches the player and produces observable behavior.
+   - User: a first-time user can find, understand, use, undo and troubleshoot it.
+   - Layout: English, German and Chinese at 1024×640, 1366×768, 1920×1080, 2560×1440 and high DPI, with no overlap, clipping, hidden browser-style scroll strip or unreadable text.
+5. Every version ships the exact eleven release files: portable Windows executable, MSI, setup executable, web archive, source archive, reference-project archive, evidence archive, release notes, edit ledger, license and SHA-256 manifest.
+6. Network access, telemetry, publishing, signing and external tools remain explicit. Failed checks fail closed and explain the remedy.
+7. Prefer one discoverable workflow over several partial panels. Advanced controls use progressive disclosure, search and context help.
+
+## 2. Verified Nova_A feature inventory at 5.0.1
+
+### Project, scene and data workflow
+
+- Project launcher with Empty 2D, Platformer, Top-down, Physics Sandbox and UI Showcase templates; optional network template data.
+- `.nova` project/archive and JSON import/export, canonical JSON, schema-29 validation, compatibility reports and dry-run migration.
+- Atomic native project transactions, checksums, journals, rollback, autosaves, recovery browser, project trash and external-change conflict handling.
+- Multi-scene projects, tabs, replace/additive/overlay loading, inheritance, dependencies, stable UUIDs and runtime scene switching.
+- Hierarchy search/filter, multi-selection, rename, duplicate, group, reparent, reorder, lock/hide/isolate, breadcrumbs and large-scene mode.
+- Prefabs, nesting, variants, overrides, apply/revert/reset/compare/unpack, dependency checks, runtime instantiation and pooling.
+- Central transactional Undo/Redo, named history, bounded memory/count, history browser and deterministic no-op saves.
+
+### 2D authoring and viewport
+
+- Box, circle, triangle, polygon, path, sprite, text, camera, light, physics, UI, audio, navigation and script object creation.
+- Selection, move, rotate, scale, pivot, rectangle, path, polygon, collider and ruler tools.
+- Grid/pixel/vertex/edge/center/angle/object snapping; guides, rulers, alignment, distribution, mirror, 90-degree rotation and framing.
+- World/local transforms, numeric expressions, multi-Inspector, mixed values, property search, validation, reset, copy/paste, keyframe and help.
+- Customizable Design, Script, Animation, Interface, Debug and Manage workspaces; docks, collapse/resize, saved layouts, command palette, shortcuts and navigation history.
+
+### Rendering and graphics
+
+- Canvas2D and WebGL2 render paths with capability selection and fallback.
+- Shape, sprite, text, TileMap, UI and connection rendering with sorting layers and dynamic layer colors.
+- Sprite regions, pivots, flips, tint, nine-slice, filtering, mipmaps, color/transparency/compression, pixels-per-unit, slicing and deterministic atlases.
+- 2D lights, shadows, ambient light, materials, render graph, render textures, post-processing, shader uniforms and quality settings.
+- Particles, batching/instancing diagnostics, culling, budgets, frame/GPU profiling and renderer debug views.
+- Camera zoom, limits, smoothing, follow, drag margins, safe frames, multiple views, pixel-perfect mode, parallax and paths/followers.
+- Runtime font shaping, fallbacks, OpenType, hinting, SDF/MSDF and CJK/RTL/combining/emoji diagnostics.
+
+### Physics and world simulation
+
+- Rust/WebAssembly 2D physics with fixed timestep, interpolation, gravity, time scale, air drag and catch-up limits.
+- Dynamic, static, kinematic and CharacterBody2D bodies; mass/density/inertia, velocity, forces, impulses, friction, restitution, damping and sleep.
+- Box, ellipse, polygon, compound, sensor/Area2D, one-way and TileMap colliders; layers/masks and cross-layer isolation.
+- Collision/trigger enter, stay and exit; ray/shape/contact queries, physics monitor and collision timeline.
+- Character floor/wall/ceiling, slopes, steps, floor snap, safe margin, coyote time and moving-platform velocity.
+- Distance/revolute/prismatic/weld/spring constraints; Rope2D anchors, collision, elasticity, bending, tolerances, breakage and compound binding/separation.
+- Physics profiles, runtime property inspection, debug overlays, deterministic replay and solver evidence.
+- TileMap collision/navigation/occlusion, terrain rules, streaming chunks, world origin and navigation regions/agents/obstacles/links.
+
+### Scripting and gameplay runtime
+
+- Sandboxed Rhai scripts compiled through Rust/WASM, per-entity instances and exported Inspector properties.
+- Lifecycle: awake, start, fixed/update/late update, destroy, timer, task, signal, collision and trigger callbacks.
+- Input actions for keyboard, physical keys, mouse buttons/wheel/motion, gamepad, touch and gestures; button/axis/Vector2; dead zones, curves, modifiers, chords, conflict detection, rebinding, recording and replay.
+- Input API for held/pressed/released actions, axis/vector, mouse position and wheel.
+- Transform, physics, character, animation, audio, navigation, UI, save, timing, deterministic random, task/signal, prefab, scene and log APIs.
+- Scene load/reload/quit, safe destroy/despawn, prefab instantiation, pooling, save slots and migration.
+- Script Studio: diagnostics, completion/API browser, debugger, conditional breakpoints/logpoints, stepping/watch/evaluate, transactional hot reload, tests, coverage, headless CI and external-editor protocol.
+- Typed/versioned entity, component, animator, audio and resource handles; API manifest, adapter and deprecation metadata.
+
+### Animation, audio and presentation
+
+- Sprite/property clips, animator state machines, parameters/transitions, interpolation, key reduction, slicing and retiming.
+- 2D rigs, bones, skinning, attachments, masks, retarget aliases and timeline tracks for animation/audio/camera/events/visibility/scripts.
+- Audio clips/sources, buses, mixer, effects/limiter, spatial blend, playlists, automation, fades, preload policy and device recovery.
+- Canvas UI: panel, image, text, button, text input, checkbox, slider and progress bar.
+- Anchors, responsive constraints, layouts, clipping/scrolling, themes/classes/variants and reusable UI components.
+- Localization, fallback/pseudolocales, number/date/currency styles, RTL, captions and automatic input prompts.
+- Keyboard/gamepad focus, screen-reader metadata, target-size/contrast audits, reduced motion and device matrices.
+
+### Production, extension and shipping
+
+- Game Play/Pause/Step, runtime component inspection, console, fault center, crash reporter, recovery and Safe Mode.
+- CPU/runtime profiler, render/physics/audio/particle/script timing, memory budgets, traces, annotations and capture export.
+- Project tests, deterministic seeds, replay/checksums, screenshot/headless assertions, sharding, JUnit/JSON and coverage.
+- Asset database with provenance, dependencies, reference repair, search/tags/favorites/collections, watcher conflicts and source-control status.
+- Package manager with trusted registries, lockfiles, hashes/signatures, dependency resolution, permissions, license/vulnerability review, quarantine, offline mirror and rollback.
+- Plugin API with manifest, runtime/editor contributions, settings/commands/components/importers and compatibility/certification metadata.
+- Local-first Git helpers, semantic diff, ownership/CODEOWNERS, tasks/notes, shared presets, binary locks and external diff/merge.
+- Validated Windows/Web Tier-1 and matching-host experimental Linux/macOS builds; conditional Android infrastructure remains unavailable.
+- Native player export with embedded or sidecar `.nova-pak`, web player, Build & Run, deterministic manifests, compression/cache, size/dependency reports, provenance, SBOM, patch manifest, symbols, web headers and opt-in telemetry.
+- Offline multilingual manual, context help, Project Health, Studio Status, support diagnostics and exact release packaging.
+
+## 3. Competitive gap analysis
+
+### Already competitive
+
+- Action input, lifecycle, collision callbacks, signals, timers, prefabs, saves and scenes cover core 2D arcade, puzzle, platformer and top-down loops.
+- Deterministic project text, transactional recovery, local-first collaboration and release evidence are unusually strong for a lightweight editor.
+- The 2D physics/rope workflow, responsive multilingual UI auditing and build provenance are broader than many small 2D tools.
+- A project can currently become a web player, desktop player plus pack, or single-file Windows/Linux player on a matching host.
+
+### Important gaps versus Godot, GameMaker, Unity and Unreal
+
+1. Visual programming: Nova_A has only text Rhai. It needs an event/data/control graph generated from the same authoritative API, not a separate weaker runtime.
+2. Dynamic object API: advanced games need spawn transforms and stable returned handles, targeted entity/component/UI mutation, enable/disable and structured queries.
+3. Input expressiveness: add action contexts/maps, schemes, hold/tap/multi-tap phases, consumption/priority and event callbacks.
+4. Gameplay framework: add coherent controllers, state/behavior assets, abilities, damage, collectibles, projectiles, dialogue and game flow.
+5. Extension depth: third parties cannot yet add every dock, Inspector, importer, renderer pass, graph node, build target and native module as smoothly as mature engines.
+6. Content depth: animation, shaders, particles, audio and TileMaps need graph authoring, preview ergonomics, richer blending/sequencing and import interoperability.
+7. Platform reach: mature engines cover more desktop/mobile/console/XR. Nova_A should qualify desktop/web/mobile selectively; consoles/XR/3D stay out unless a real need exists.
+8. Ecosystem: the registry model lacks a mature public catalog, publisher workflow and broad third-party library.
+9. Learning: current docs describe panels, but do not systematically teach end-to-end tasks, choices and recovery.
+10. Production proof: external hardware/browser, long-soak, signed-build and independent clean-machine evidence remains pending.
+
+## 4. Product layout target
+
+- Six task workspaces: Design, Script, Animation, Interface, Debug and Manage.
+- Left: project/scene/assets. Center: primary editor. Right: contextual Inspector. Bottom: task-specific secondary tools.
+- Never put unrelated systems in one long Inspector. Selection data belongs in Inspector, project-wide settings in Manage, runtime evidence in Debug.
+- Complex editors use a consistent catalog / canvas / details layout, collapsing into tabs below 1180 px.
+- Direct actions remain visible; infrequent settings use named groups. Search and Command Palette access are mandatory.
+- Motion communicates entry, selection, execution and validation and honors reduced motion.
+
+## 5. Version implementation manual
+
+## 5.1.0 — First playable game and portable player
+
+Goal: make the shortest path from new project to real distributable game obvious and verified.
+
+Implementation:
+
+1. Single-file packaging becomes the default for new Windows/Linux projects. Existing explicit sidecar choices and macOS/Web behavior remain.
+2. Harden embedded-player detection with bounded package size, footer validation, integrity tests and player-only startup.
+3. Isolate exported players from editor shortcuts, recovery UI, mutation routers and editor-only services.
+4. Build Settings explains the artifact type, player/data relationship, host restriction, unsigned warning and Build & Run result.
+5. Add a playable Snake template/reference demonstrating action input, grid movement, timers, collisions, signals, deterministic random, UI score and portable export.
+6. Document keyboard/mouse/gamepad/touch API and supported game loops.
+7. Test build normalization, template integrity, player startup, embedded corruption, finite input maps and Build & Run.
+
+GUI: add an artifact preview card; call outputs Portable application, Player + data pack and Web folder; show Snake controls on its template/tutorial.
+
+Programmer audit: TypeScript, Rust fmt/clippy/tests, WASM, web build, template audit, executable embedding round-trip/corruption, version authorities and release scripts.
+
+User check: create Snake in every language, Play, steer, score, rebind, build one `.exe`, move it to a clean folder and launch without the editor.
+
+## 5.2.0 — Visual scripting foundation
+
+Goal: a real graph language executing through the same safe gameplay contract as Rhai.
+
+Implementation status (5.2.0 candidate): implemented in the versioned `.nova-graph` format, generated API-v2 node catalog, typed compiler/validator, Script2D runtime bridge and multilingual Graph Editor. The release gates below remain authoritative and must pass before packaging.
+
+Implementation:
+
+1. `.nova-graph` assets with stable node/pin/edge UUIDs, graph version, variables, events, comments and viewport state.
+2. Generate nodes from Rhai API v2: lifecycle, input, flow, math, comparison, transform, physics, UI, audio, animation, scene, save, signals, timing and debug.
+3. Typed Boolean/number/string/Vec2/entity/resource/data pins, safe conversions, execution pins, branches and bounded loops.
+4. Compile graphs into the existing validated command model.
+5. Graph Editor with searchable palette, minimap, zoom/pan, box selection, align/distribute, reroutes, comments, collapse, duplicate, Undo/Redo and keyboard creation.
+6. Attach graphs through Script2D and expose variables in Inspector.
+
+Audits: canonical graph serialization, pre-play type/cycle validation, command parity with Rhai, 1,000-node responsiveness and locale-independent IDs.
+
+## 5.3.0 — Visual scripting production
+
+Implementation status (5.3.0 candidate): implemented additively on Graph Format 1 and Rhai API v2. The graph document now persists reusable scopes, events, interfaces, libraries, debug settings and migrations; the shared runtime records deterministic node/wire traces; the editor exposes production authoring, debugging, refactoring, generated-code and semantic merge workflows. No 5.2 node, animation, shortcut, asset contract or gameplay command was removed. The audit and exact release-artifact gates below remain mandatory before packaging.
+
+- Functions, macros, subgraphs, events, interfaces, locals and graph libraries.
+- Breakpoints, stepping, active-wire animation, watches, call stack, per-node timings, node errors and coverage.
+- Graph-to-Rhai view, safe one-way code generation and package-defined visual nodes.
+- Rename/find references/extract function/replace/deprecation migrations.
+- Semantic identity-based graph diff/merge and conflict UI.
+
+Audits: graph/text parity, state-preserving hot reload, debugger determinism, merge fixtures and reduced motion. Run `pnpm references:v5.3.0`, `pnpm check`, `pnpm test:core`, `pnpm build`, `pnpm verify:v5.3.0`, `pnpm audit:v5.3.0`, the English/German/Chinese browser layout matrix, `pnpm evidence:v5.3.0`, native Tauri build and `pnpm release:v5.3.0`. The release root must contain exactly the eleven mandatory artifacts and valid SHA-256 entries.
+
+## 5.4.0 — Gameplay framework and dynamic object API
+
+- Spawn-at-transform returning stable pending/instance handles; targeted transform/component/UI operations; enable/disable; tags/groups; typed and bounded scene queries.
+- Grid mover, platform/top-down controller, health, damage/hitbox, collectible, projectile, spawner, cooldown, lifetime and camera-follow components.
+- State-machine and behavior-tree assets sharing graph debugger/profiler infrastructure.
+- Game flow: pause, restart, transition, checkpoint, score/session and quit.
+- Input contexts/action maps, schemes, hold/tap/multi-tap, consumption/priority and callbacks.
+
+Audits: Snake growth, platformer, twin-stick, menu and pooling references; stale handles fail explicitly.
+
+## 5.5.0 — Materials, shaders and effects
+
+- Visual material/shader graph with sprite/UI/light nodes, capability preview and deterministic source.
+- Layered 2D materials, masks, gradients, palettes, outlines, dissolve/distortion and blend modes.
+- Post-process presets, camera volumes and GPU cost estimates.
+- Particle graph/modules, curves, collision/events, sub-emitters, trails and CPU/GPU fallback.
+- Atlas/import previews and overdraw/batching recommendations.
+
+Audits: Canvas2D/WebGL2 parity, isolated shader failure, pixel/high-DPI references, budgets and fallback screenshots.
+
+## 5.6.0 — Animation, audio and cinematics
+
+- Blend trees, animator layers/masks, synchronized transitions, motion options and events.
+- Nested timelines, markers, audio scrubbing, camera blends, subtitles, branching and skip/resume.
+- Waveform editor, loop regions, sends, ducking, snapshots and loudness diagnostics.
+- Animation/Audio/Visual Graph interoperability and runtime recording back to clips.
+
+Audits: event ordering, crossfades, subtitle safe areas, device recovery and long-timeline performance.
+
+## 5.7.0 — Worlds, navigation and AI
+
+- Navigation baking, dynamic obstacles, links, avoidance, cost layers and hierarchical/grid pathfinding.
+- Behavior trees, blackboards, perception, utility scoring and visual debugging.
+- World composition, streaming cells/dependencies/preload/origin shift/save handoff/memory budgets.
+- TileMap rules, procedural brushes, scene tiles, previews and background baking.
+
+Audits: 10,000-agent bound, streamed save/reload, impossible paths, bake cancellation and deterministic tile storage.
+
+## 5.8.0 — Networking, replay and services
+
+- Reliable/unreliable channels, RPC, authority, replication, interpolation and bandwidth budgets.
+- Prediction/reconciliation/rollback tied to input recordings; lag/loss simulation and replay comparison.
+- Local/direct-connect lobby abstraction; no mandatory Nova_A cloud.
+- Permission prompts, payload/rate/schema bounds, secret exclusion and headless builds.
+- Versioned multiplayer saves/replays and diagnostic capture.
+
+Audits: two-process localhost, packet fuzzing, reconnect/late join, divergence detection and no implicit network.
+
+## 5.9.0 — Extension ecosystem and platform delivery
+
+- Plugin APIs for docks, Inspectors, importers, components, graph nodes, render passes, build steps, templates, commands and settings.
+- Versioned native-extension ABI, permissions, platform binaries and crash isolation where possible.
+- Package wizard, local registry tooling, publisher signing, docs/tests and certification.
+- Export-template manager; qualify Linux/macOS; add Android only when SDK/template/device gates pass.
+- CI matrix, content cache, delta builds and explicit deployment connectors.
+
+Audits: malicious package corpus, API matrix, unload/reload, clean offline install, host builds and network transparency.
+
+## 6.0.0 — Stable creator experience and teaching manual
+
+- Freeze/migrate project, script, graph, plugin, package and build contracts.
+- Test every feature through authoring→save→reload→play→build→standalone player.
+- Complete first-run onboarding, task templates, contextual learning, command discovery and progressive disclosure.
+- Optimize startup, 10,000-object hierarchy, 50,000 assets, physics, rendering, graphs, memory, packaging and low-end profiles.
+- Complete accessibility, localization, RTL, high DPI, reduced motion, keyboard-only and screen-reader metadata.
+- Obtain honest browser/hardware, 72-hour soak, two-machine reproducibility, clean lifecycle, signing and independent evidence; show unmet gates as pending.
+
+### Required 6.0 teaching manual
+
+Create one searchable/bookmarked multilingual HTML manual and three Markdown manuals. Organize by panel/workspace but teach tasks. Every feature includes:
+
+- Classification: Automatic, Manual, Assisted, Runtime, Editor-only, Destructive, Reversible, Project-wide or Per-object.
+- Purpose and when to use it.
+- Preconditions and required assets/components/packages.
+- Exact steps and expected visible/runtime result.
+- Persistence/export behavior and undo/recovery.
+- Common mistakes, validation messages and fixes.
+- Keyboard/accessible alternative.
+- Minimal and production examples.
+- Related Rhai and visual-graph APIs.
+
+Teach complete Snake, platformer, top-down, physics puzzle, localized responsive menu, animation/cutscene, TileMap world, save/checkpoint, package/plugin, network sample, Windows portable export and web deployment projects.
+
+## 6. Scope choices
+
+- Keep: 2D-first renderer/physics, qualified desktop/web/mobile, text and visual scripting, extensions, animation/audio/UI, optional networking and local-first workflow.
+- Exclude without a demonstrated need: general 3D, film virtual production, unlicensed console SDKs, XR, mandatory cloud accounts, advertising SDKs and heavyweight SCM servers.
+- “Better” means faster startup, smaller footprint, clearer 2D workflow, deterministic data, safer recovery and less panel hunting—not unsupported universal superiority.
+
+## 7. Roadmap definition of done
+
+Nova_A 6.0 is complete when a new user can create a supplied game, understand the layout, author logic in Rhai or graphs, use keyboard/mouse/gamepad/touch actions, debug/profile, save/recover, and export a verified standalone game by following the teaching manual alone.

@@ -38,6 +38,7 @@ import { recordEntityProperties } from '../editor/animationStudioState'
 import { navigationPaths, worldGameplayState } from '../runtime/worldGameplay'
 import { worldStreamingState } from '../runtime/worldStreaming'
 import { authoringState, createAuthoringObject } from '../editor/authoring2d'
+import { timelinePresentationState } from '../runtime/timeline'
 
 const canvasRef = ref<HTMLCanvasElement | null>(null)
 const renderCanvasRef = ref<HTMLCanvasElement | null>(null)
@@ -63,6 +64,8 @@ const camera = physicsState.camera
 let isDragging = false; let isPanning = false; let isVertexDragging = false; let dragButton = 0 
 let dragStart: Vec2 | null = null; let dragNow: Vec2 | null = null; let lastMouseScreen: Vec2 | null = null
 let raf = 0; let resizeRaf = 0; let lastTime = performance.now(); let resizeObserver: ResizeObserver | null = null
+let pendingMouseMove: MouseEvent | null = null
+let lastLowEndEditorFrame = 0, performanceSampleCounter = 0, profileFrameCounter = 0, cachedPerformanceSample = { allocations: 0, assetJobs: 0 }
 
 let hoveredVertex: { entityId: number, index: number, target: 'shape' | 'renderer' | 'collider', virtualPos?: Vec2 } | null = null
 let dragMeta: { initialScaleX: number, initialScaleY: number, initialDist: number } | null = null
@@ -209,6 +212,7 @@ function scheduleResize() {
 function runFrame(time?: number) {
   const now = time || performance.now(); const dt = (now - lastTime) / 1000; lastTime = now
   const frameStarted = performance.now()
+  flushPendingMouseMove()
 
   if (camera.targetScale !== null && !prefs.reduceMotion) {
     camera.scale += (camera.targetScale - camera.scale) * (1 - Math.exp(-8 * dt));
@@ -242,18 +246,26 @@ function runFrame(time?: number) {
   const frameMs = Math.max(0, dt * 1000)
   const measured = timings.physicsMs + timings.scriptsMs + timings.animationMs + timings.audioMs + timings.assetsMs + renderingMs
   const memory = (performance as Performance & { memory?: { usedJSHeapSize: number } }).memory
-  const performanceSample = samplePerformanceTools(profilerState.current.frame + 1, world.entities.map(entity => entity.uuid), editorState.rendererStats)
-  recordFrameProfile({
-    frameMs, physicsMs: timings.physicsMs, renderingMs, scriptsMs: timings.scriptsMs,
-    animationMs: timings.animationMs, audioMs: timings.audioMs, assetsMs: timings.assetsMs,
-    otherMs: Math.max(0, Math.min(performance.now() - frameStarted, frameMs || Number.POSITIVE_INFINITY) - measured),
-    fps: dt > 0 ? 1 / dt : 0, memoryMb: memory ? memory.usedJSHeapSize / (1024 * 1024) : null,
-    inputMs: timings.inputMs, allocations: performanceSample.allocations,
-    gpuPasses: renderGraphState.passes.filter(pass => pass.enabled).length, assetJobs: performanceSample.assetJobs
-  })
+  const sampleInterval = state.simulationRunning || editorState.currentPage === 'game' || prefs.performanceProfile === 'quality' ? 3 : prefs.performanceProfile === 'low-end' ? 30 : 12
+  if (performanceSampleCounter++ % sampleInterval === 0) cachedPerformanceSample = samplePerformanceTools(profilerState.current.frame + 1, world.entities.map(entity => entity.uuid), editorState.rendererStats)
+  const performanceSample = cachedPerformanceSample
+  const profileInterval = profilerState.overheadMode === 'Full' ? 1 : profilerState.overheadMode === 'Low overhead' ? 4 : Number.POSITIVE_INFINITY
+  if (Number.isFinite(profileInterval) && profileFrameCounter++ % profileInterval === 0) {
+    recordFrameProfile({
+      frameMs, physicsMs: timings.physicsMs, renderingMs, scriptsMs: timings.scriptsMs,
+      animationMs: timings.animationMs, audioMs: timings.audioMs, assetsMs: timings.assetsMs,
+      otherMs: Math.max(0, Math.min(performance.now() - frameStarted, frameMs || Number.POSITIVE_INFINITY) - measured),
+      fps: dt > 0 ? 1 / dt : 0, memoryMb: memory ? memory.usedJSHeapSize / (1024 * 1024) : null,
+      inputMs: timings.inputMs, allocations: performanceSample.allocations,
+      gpuPasses: renderGraphState.passes.filter(pass => pass.enabled).length, assetJobs: performanceSample.assetJobs
+    })
+  }
 }
 
 function loop(time?: number) {
+  const timestamp=time??performance.now()
+  if(prefs.performanceProfile==='low-end'&&editorState.currentPage==='scene'&&!state.simulationRunning&&camera.targetScale===null&&camera.targetOffset===null&&!isDragging&&!isPanning&&!isVertexDragging&&timestamp-lastLowEndEditorFrame<1000/30){raf=requestAnimationFrame(loop);return}
+  lastLowEndEditorFrame=timestamp
   try { runFrame(time) }
   catch (error) { raf = 0; reportFatalError(error, 'Scene/Game frame', 'Renderer'); return }
   raf = requestAnimationFrame(loop)
@@ -279,7 +291,7 @@ onMounted(() => {
     if (world.wasmError) editorState.statusText = t('physicsUnavailable', { message: world.wasmError.message })
   }).catch(error => { editorState.statusText = t('physicsUnavailable', { message: error instanceof Error ? error.message : String(error) }); reportRecoverableError(error, 'Physics WebAssembly initialization', 'Physics') })
 })
-onBeforeUnmount(() => { if (raf) cancelAnimationFrame(raf); if (resizeRaf) cancelAnimationFrame(resizeRaf); window.removeEventListener('resize', scheduleResize); window.removeEventListener('mouseup', onMouseUp); window.removeEventListener('keydown', onKeyDown); window.removeEventListener('nova-renderer-reset-request', resetRenderer); if (resizeObserver) resizeObserver.disconnect(); gameUiRuntime.reset(); renderer?.destroy(); renderer = null })
+onBeforeUnmount(() => { pendingMouseMove = null; if (raf) cancelAnimationFrame(raf); if (resizeRaf) cancelAnimationFrame(resizeRaf); window.removeEventListener('resize', scheduleResize); window.removeEventListener('mouseup', onMouseUp); window.removeEventListener('keydown', onKeyDown); window.removeEventListener('nova-renderer-reset-request', resetRenderer); if (resizeObserver) resizeObserver.disconnect(); gameUiRuntime.reset(); renderer?.destroy(); renderer = null })
 
 function resetRenderer() {
   if (!renderCanvasRef.value) return
@@ -397,8 +409,10 @@ function syncEditableConnections(repatchChanged: boolean) {
     currentIds.add(connection.id)
     const signature = connectionGeometrySignature(connection, world.entities)
     const previous = connectionGeometrySignatures.get(connection.id)
-    if (repatchChanged && previous !== undefined && previous !== signature) repatchConnection(connection, world.entities)
-    connectionGeometrySignatures.set(connection.id, connectionGeometrySignature(connection, world.entities))
+    if (repatchChanged && previous !== undefined && previous !== signature) {
+      repatchConnection(connection, world.entities)
+      connectionGeometrySignatures.set(connection.id, connectionGeometrySignature(connection, world.entities))
+    } else connectionGeometrySignatures.set(connection.id, signature)
   }
   for (const id of connectionGeometrySignatures.keys()) {
     if (!currentIds.has(id)) connectionGeometrySignatures.delete(id)
@@ -587,6 +601,20 @@ function onDoubleClick(event: MouseEvent) {
 }
 
 function onMouseMove(e: MouseEvent) {
+  // Browser mouse events can arrive much faster than the display can present
+  // them. Retaining only the newest sample prevents an expensive drag or snap
+  // operation from building an input backlog while still updating every frame.
+  pendingMouseMove = e
+}
+
+function flushPendingMouseMove() {
+  const event = pendingMouseMove
+  if (!event) return
+  pendingMouseMove = null
+  processMouseMove(event)
+}
+
+function processMouseMove(e: MouseEvent) {
   const sPos = screenPos(e); const wPos = camera.screenToWorld(sPos)
   editorState.lastCanvasWorldPoint = { ...wPos }
   if (editorState.currentPage === 'game') { gameUiRuntime.pointerMove(sPos); return }
@@ -668,6 +696,7 @@ function finishCanvasDrag() {
 }
 
 function onMouseUp(event?: MouseEvent) {
+  flushPendingMouseMove()
   if (editorState.currentPage === 'game') {
     if (event && canvasRef.value) gameUiRuntime.pointerUp(screenPos(event))
     return
@@ -776,7 +805,8 @@ function checkHoverVertex(p: Vec2) {
 }
 
 function hitTest(p: Vec2): number | null {
-  const ordered = [...world.entities].sort((a, b) => a.layer - b.layer || a.renderer.orderInLayer - b.renderer.orderInLayer || world.entities.indexOf(a) - world.entities.indexOf(b))
+  const sourceOrder=new Map(world.entities.map((entity,index)=>[entity.id,index]))
+  const ordered = [...world.entities].sort((a, b) => a.layer - b.layer || a.renderer.orderInLayer - b.renderer.orderInLayer || (sourceOrder.get(a.id)??0) - (sourceOrder.get(b.id)??0))
   for (let i = ordered.length - 1; i >= 0; i--) {
     const e = ordered[i]
     const selectable = e.spriteRenderer || e.textRenderer || e.camera2D || e.hasComponent('ShapeRenderer2D') && e.renderer.enabled
@@ -1076,22 +1106,24 @@ function render() {
   }
 
   const lwNormal = 1 / camera.scale; const lwSelected = 3 / camera.scale
-  const compounds = compoundGeometries(world.entities, world.connections)
+  const compounds = !isGameView && selectedIds.size > 0 && world.connections.some(connection => connection.binding)
+    ? compoundGeometries(world.entities, world.connections)
+    : []
   const compoundByMember = new Map<number, (typeof compounds)[number]>()
   for (const compound of compounds) for (const member of compound.members) compoundByMember.set(member.id, compound)
-  const renderEntities = [...world.entities].sort((a, b) => a.layer - b.layer || a.renderer.orderInLayer - b.renderer.orderInLayer || world.entities.indexOf(a) - world.entities.indexOf(b))
-  for (const e of renderEntities) {
+  for (const e of world.entities) {
     if (!e.enabled || !e.authoring.visible) continue
     if (e.hasComponent('RectTransform')) continue
     if (!isGameView && !e.editorVisible) continue
     if (editorState.currentPage === 'scene' && e.layer !== editorState.activeLayer) continue;
     const compound = compoundByMember.get(e.id)
+    const isSelected = !isGameView && (compound ? [...compound.memberIds].some(id => selectedIds.has(id)) : selectedIds.has(e.id))
+    if (!isSelected) continue
     const transform = worldTransform(e, world.entities)
-    const pos = transform.position; const isSelected = !isGameView && (compound ? [...compound.memberIds].some(id => selectedIds.has(id)) : selectedIds.has(e.id))
+    const pos = transform.position
     const selectionBoundary = editorBoundaryPoints(e, 48)
     const maxRadius = selectionBoundary.length ? Math.max(...selectionBoundary.map(point => Math.hypot(point.x - pos.x, point.y - pos.y)), MIN_SIZE) : MIN_SIZE
     if (pos.x + maxRadius < viewL || pos.x - maxRadius > viewR || pos.y + maxRadius < viewB || pos.y - maxRadius > viewT) continue; 
-    if (!isSelected) continue
     
     ctx.lineWidth = isSelected ? lwSelected : lwNormal
     ctx.fillStyle = palette.selectionFill
@@ -1335,6 +1367,9 @@ function drawTilemapOverlay(context: CanvasRenderingContext2D, view: { minX: num
         @focus="gameUiRuntime.focusByUuid(node.uuid)"
       ></div>
     </div>
+    <div v-if="editorState.currentPage === 'game' && timelinePresentationState.subtitles.length" class="timeline-subtitles" aria-live="polite">
+      <p v-for="subtitle in timelinePresentationState.subtitles" :key="`${subtitle.ownerUuid}:${subtitle.clipId}`" :class="`safe-${subtitle.safeArea}`" :lang="subtitle.locale || undefined">{{ subtitle.text }}</p>
+    </div>
     <input
       v-if="focusedUiInput && editorState.currentPage === 'game'"
       ref="nativeInputRef"
@@ -1360,4 +1395,9 @@ canvas { position: absolute; inset: 0; display: block; width: 100%; height: 100%
 .native-ui-input { position: absolute; z-index: 8; min-width: 0; min-height: 0; padding: 0 12px; border: 2px solid #4f96ff; border-radius: 8px; outline: 0; color: #f5f7fb; background: #151b24; box-shadow: 0 0 0 3px rgba(79,150,255,.18); font: 500 16px/1.2 var(--font-ui); }
 .game-ui-a11y { position: absolute; inset: 0; z-index: 7; pointer-events: none; }
 .game-ui-a11y-node { position: absolute; overflow: hidden; opacity: .001; pointer-events: none; }
+.timeline-subtitles { position: absolute; inset: 0; z-index: 9; pointer-events: none; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; }
+.timeline-subtitles p { max-width: min(80%, 860px); margin: 0 10% 7%; padding: 8px 14px; border: 1px solid rgba(255,255,255,.22); border-radius: 10px; color: #fff; background: rgba(5,8,13,.78); box-shadow: 0 5px 20px rgba(0,0,0,.28); font: 650 clamp(16px,2.15vw,28px)/1.35 var(--font-ui); text-align: center; text-wrap: balance; }
+.timeline-subtitles p.safe-TitleSafe { max-width: min(80%, 860px); margin-right: 10%; margin-left: 10%; margin-bottom: 7%; }
+.timeline-subtitles p.safe-ActionSafe { max-width: 90%; margin-right: 5%; margin-left: 5%; margin-bottom: 4%; }
+.timeline-subtitles p.safe-FullFrame { max-width: 96%; margin-right: 2%; margin-left: 2%; margin-bottom: 2%; }
 </style>

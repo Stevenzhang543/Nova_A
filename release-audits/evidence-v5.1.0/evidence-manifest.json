@@ -1,0 +1,68 @@
+{
+  "format": "nova-release-evidence-manifest",
+  "version": 1,
+  "release": "5.1.0",
+  "generatedAt": "2026-08-26T07:31:19.520Z",
+  "source": {
+    "commit": "af1d173b71e02630562513cd9b7bfd6f593d6947",
+    "dirty": true,
+    "note": "The source archive contains the current working candidate; tagged-source verification remains pending."
+  },
+  "environment": {
+    "id": "win32-x64-node22.22.2",
+    "os": "win32",
+    "architecture": "x64",
+    "node": "22.22.2"
+  },
+  "externalCertificationComplete": false,
+  "entries": [
+    {
+      "path": "documentation/FEATURE_COMPARISON_5_1.md",
+      "sha256": "f765dd5b26ca85df299f4fcc08307ad095e9de5dfd271788e6ee9e58bfd8bc47",
+      "bytes": 5736,
+      "source": "af1d173b71e02630562513cd9b7bfd6f593d6947",
+      "tool": "generate-v5.1.0-release-evidence.mjs",
+      "environment": "win32-x64-node22.22.2"
+    },
+    {
+      "path": "documentation/PORTABLE_PLAYER_AND_INPUT_5_1.md",
+      "sha256": "0cad0ebb865802bfa793acc9deb51094aa4e56f5324c3b23062074e434a86b5a",
+      "bytes": 3142,
+      "source": "af1d173b71e02630562513cd9b7bfd6f593d6947",
+      "tool": "generate-v5.1.0-release-evidence.mjs",
+      "environment": "win32-x64-node22.22.2"
+    },
+    {
+      "path": "documentation/instructions.txt",
+      "sha256": "be3b12c103272931d613001210b148984e88ef3b4c2e26de692c365063bace5f",
+      "bytes": 21255,
+      "source": "af1d173b71e02630562513cd9b7bfd6f593d6947",
+      "tool": "generate-v5.1.0-release-evidence.mjs",
+      "environment": "win32-x64-node22.22.2"
+    },
+    {
+      "path": "external/gates.json",
+      "sha256": "effeb54689205322bf71c9fe4e59afee91b1fed033927dfa88efb8d31ad154f2",
+      "bytes": 623,
+      "source": "af1d173b71e02630562513cd9b7bfd6f593d6947",
+      "tool": "generate-v5.1.0-release-evidence.mjs",
+      "environment": "win32-x64-node22.22.2"
+    },
+    {
+      "path": "runtime/layout-browser.json",
+      "sha256": "09cc0635b7fc8b8fae75e0d89d872ef86e8ecf3d898aaa89f3098952db22bf50",
+      "bytes": 1077,
+      "source": "af1d173b71e02630562513cd9b7bfd6f593d6947",
+      "tool": "generate-v5.1.0-release-evidence.mjs",
+      "environment": "win32-x64-node22.22.2"
+    },
+    {
+      "path": "runtime/product-audit.json",
+      "sha256": "90b2a3328dcea71c06152871683462aa224874d5aa2aff0eec528fe924e6ce2e",
+      "bytes": 2251,
+      "source": "af1d173b71e02630562513cd9b7bfd6f593d6947",
+      "tool": "generate-v5.1.0-release-evidence.mjs",
+      "environment": "win32-x64-node22.22.2"
+    }
+  ]
+}

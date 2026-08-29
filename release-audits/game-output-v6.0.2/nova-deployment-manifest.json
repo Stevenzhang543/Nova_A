@@ -1,0 +1,16 @@
+{
+  "format": "nova-deployment-manifest",
+  "version": 1,
+  "engineVersion": "6.0.2",
+  "buildId": "fa168e7eb9a6de44eb8a314f6fe8f45425868a9ba4a9d64cbb7f727e88e87b7e",
+  "mode": "local",
+  "destination": "local",
+  "releaseChannel": "beta",
+  "implicitNetworkOperation": false,
+  "signing": {
+    "hookConfigured": false,
+    "notarizationHookConfigured": false,
+    "execution": "external-explicit"
+  },
+  "cleanMachineJob": false
+}

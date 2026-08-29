@@ -5,7 +5,7 @@ import type { Entity } from '../world/Entity'
 import { worldTransform } from '../world/hierarchy'
 import type { Vec2 } from '../world/types'
 import { activeGameCamera, activeGameCameras } from './sceneRenderer'
-import { renderingSettings } from './renderSettings'
+import { activePostProcessing, renderingSettings } from './renderSettings'
 import type { CameraRenderView } from './types'
 
 const normalResponseCache = new Map<string, HTMLCanvasElement>()
@@ -224,8 +224,8 @@ export function renderDebugView2D(context: CanvasRenderingContext2D, entities: E
 }
 
 export function renderPostProcessOverlay(context: CanvasRenderingContext2D, width: number, height: number): number {
-  if (!renderingSettings.postProcessing.enabled || renderingSettings.postProcessing.vignette <= 0) return 0
-  const started = performance.now(), amount = renderingSettings.postProcessing.vignette
+  if (!renderingSettings.postProcessing.enabled || activePostProcessing.vignette <= 0) return 0
+  const started = performance.now(), amount = activePostProcessing.vignette
   const gradient = context.createRadialGradient(width * .5, height * .5, Math.min(width, height) * .18, width * .5, height * .5, Math.max(width, height) * .72)
   gradient.addColorStop(0, 'rgba(0,0,0,0)'); gradient.addColorStop(1, `rgba(0,0,0,${Math.min(.9, amount)})`)
   context.save(); context.fillStyle = gradient; context.fillRect(0, 0, width, height); context.restore()
@@ -234,7 +234,7 @@ export function renderPostProcessOverlay(context: CanvasRenderingContext2D, widt
 
 export function worldPostProcessFilter(): string {
   if (!renderingSettings.postProcessing.enabled) return 'none'
-  const effect = renderingSettings.postProcessing
+  const effect = activePostProcessing
   const brightness = Math.pow(2, effect.exposure)
   const bloom = effect.bloom > 0 ? ` drop-shadow(0 0 ${Math.round(effect.bloom * 8)}px rgba(130,180,255,${Math.min(.8, effect.bloom * .3)}))` : ''
   return `brightness(${brightness}) contrast(${effect.contrast}) saturate(${effect.saturation}) blur(${effect.blur}px)${bloom}`

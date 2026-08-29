@@ -32,13 +32,15 @@ export async function initializeEditorWindow(): Promise<void> {
     const saved = readState(); editorWindowState.lastWindowedState = saved
     const firstLaunch = localStorage.getItem(FIRST_LAUNCH_KEY) !== 'complete'
     if (editorWindowState.fullscreen) await appWindow.setFullscreen(false)
-    if (firstLaunch) {
-      await appWindow.setDecorations(false)
+    // The editor launches as a normal, decorated, resizable window. When the
+    // maximized-launch preference is enabled it deliberately takes precedence
+    // over a previously saved windowed size; users can still restore and resize
+    // the window normally after startup.
+    await appWindow.setDecorations(true)
+    if (preferencesState.launchMaximized) {
       await appWindow.maximize()
-      localStorage.setItem(FIRST_LAUNCH_KEY, 'complete')
       editorWindowState.fullscreen = false; editorWindowState.maximized = true
     } else if (saved) {
-      await appWindow.setDecorations(true)
       const monitors = await availableMonitors()
       const intersects = monitors.some(monitor => {
         const left = monitor.position.x, top = monitor.position.y, right = left + monitor.size.width, bottom = top + monitor.size.height
@@ -48,10 +50,8 @@ export async function initializeEditorWindow(): Promise<void> {
       else if (intersects) { await appWindow.unmaximize(); await appWindow.setSize(new PhysicalSize(saved.width, saved.height)); await appWindow.setPosition(new PhysicalPosition(saved.x, saved.y)); editorWindowState.maximized = false }
       else { await appWindow.unmaximize(); editorWindowState.monitorRecovered = true; await appWindow.center(); editorWindowState.maximized = false }
       editorWindowState.fullscreen = false
-    } else if (preferencesState.launchMaximized) {
-      await appWindow.setDecorations(true)
-      await appWindow.maximize(); editorWindowState.fullscreen = false; editorWindowState.maximized = true
     }
+    if (firstLaunch) localStorage.setItem(FIRST_LAUNCH_KEY, 'complete')
     const save = async () => {
       const [fullscreen, maximized] = await Promise.all([appWindow.isFullscreen(), appWindow.isMaximized()])
       editorWindowState.fullscreen = fullscreen; editorWindowState.maximized = maximized

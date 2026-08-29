@@ -1,0 +1,120 @@
+{
+  "format": "nova-v6.0.4-product-audit",
+  "version": 1,
+  "engineVersion": "6.0.4",
+  "generatedAt": "2026-08-29T06:20:44.001Z",
+  "perspectives": [
+    "programmer",
+    "user",
+    "localization",
+    "layout",
+    "backend",
+    "visual-scripting",
+    "performance",
+    "game-export",
+    "release"
+  ],
+  "checks": [
+    {
+      "id": "V604-VERSION",
+      "status": "passed",
+      "detail": "Frontend, native, Rust and project authorities identify 6.0.4.",
+      "metrics": {}
+    },
+    {
+      "id": "V604-FROZEN-CONTRACTS",
+      "status": "passed",
+      "detail": "Project Format 2/schema 29 remain frozen.",
+      "metrics": {}
+    },
+    {
+      "id": "V604-LOCK-SAFE",
+      "status": "passed",
+      "detail": "Windows publishing is staged, lock-aware and regression-tested without terminating the older player.",
+      "metrics": {}
+    },
+    {
+      "id": "V604-BIDIRECTIONAL",
+      "status": "passed",
+      "detail": "Visual and text editors save through the linked projection in both directions.",
+      "metrics": {}
+    },
+    {
+      "id": "V604-SOURCE-PRESERVATION",
+      "status": "passed",
+      "detail": "Custom Rhai has visible, bounded Code-node preservation instead of silent loss.",
+      "metrics": {}
+    },
+    {
+      "id": "V604-ASSET-LOAD",
+      "status": "passed",
+      "detail": "Visual-graph type and link metadata persist through project loading.",
+      "metrics": {}
+    },
+    {
+      "id": "V604-PERFORMANCE",
+      "status": "passed",
+      "detail": "Startup, graph, rendering and diagnostics avoid redundant work while retaining runtime behavior.",
+      "metrics": {}
+    },
+    {
+      "id": "V604-VERIFICATION",
+      "status": "passed",
+      "detail": "Graph round-trip, arbitrary code, performance, lock path and portable export verification passes.",
+      "metrics": {
+        "checks": 9
+      }
+    },
+    {
+      "id": "V604-CATALOG",
+      "status": "passed",
+      "detail": "All startup templates retain valid gameplay/build/accessibility behavior.",
+      "metrics": {
+        "checks": 17
+      }
+    },
+    {
+      "id": "V604-INTERACTIONS",
+      "status": "passed",
+      "detail": "User-style clicks, settings, navigation and localized launcher checks pass.",
+      "metrics": {
+        "registeredControls": 18,
+        "clickedControls": 18,
+        "settingsMutated": 3,
+        "textEdits": 2,
+        "assetSaves": 2,
+        "consoleErrors": 0
+      }
+    },
+    {
+      "id": "V604-LAYOUT",
+      "status": "passed",
+      "detail": "EN/DE/ZH layout remains contained from minimum viewport through 200% scale.",
+      "metrics": {
+        "states": 5
+      }
+    },
+    {
+      "id": "V604-RELEASE-CONTRACT",
+      "status": "passed",
+      "detail": "Exact eleven-artifact/ten-checksum release contract remains enforced.",
+      "metrics": {}
+    },
+    {
+      "id": "V604-INSTRUCTIONS",
+      "status": "passed",
+      "detail": "The 6.0.4 specification and release entrypoints are present.",
+      "metrics": {}
+    }
+  ],
+  "severity0Open": 0,
+  "severity1Open": 0,
+  "externalGates": {
+    "publisherSigning": "pending-external",
+    "cleanMachineLifecycle": "pending-external",
+    "secondMachineReproducibility": "pending-external",
+    "independentHardwareAccessibility": "pending-external",
+    "soak72Hours": "pending-external"
+  },
+  "status": "passed"
+}

@@ -207,7 +207,7 @@
 
         <InspectorSection v-if="selectedEntity.script2D" :title="t('script2D')" category="gameplay" open>
           <ComponentTools kind="Script2D" />
-          <PropertyRow :label="t('scriptAsset')"><select v-model="selectedEntity.script2D.scriptAsset" @change="synchronizeScriptProperties"><option :value="null">{{ t('none') }}</option><option v-for="asset in scriptAssets" :key="asset.uuid" :value="assetReference(asset.uuid)">{{ asset.name }}</option></select></PropertyRow>
+          <PropertyRow :label="t('scriptAsset')"><select v-model="selectedEntity.script2D.scriptAsset" @change="synchronizeScriptProperties"><option :value="null">{{ t('none') }}</option><option v-for="asset in scriptAssets" :key="asset.uuid" :value="assetReference(asset.uuid)">{{ asset.name }} · {{ asset.assetType === 'visualScript' ? t('visualGraph') : 'Rhai' }}</option></select></PropertyRow>
           <button class="secondary-action" @click="synchronizeScriptProperties">{{ t('refreshScriptProperties') }}</button>
           <div v-for="group in scriptPropertyGroups" :key="group.name" class="script-property-group">
             <h4>{{ group.name }}</h4>
@@ -216,7 +216,10 @@
                 <ToggleSwitch v-if="typeof property.value === 'boolean'" :model-value="property.value" @update:model-value="setScriptProperty(property.name, $event)" />
                 <select v-else-if="property.metadata?.enumValues.length" :value="property.value" @change="setScriptProperty(property.name, ($event.target as HTMLSelectElement).value)"><option v-for="option in property.metadata.enumValues" :key="option" :value="option">{{ option }}</option></select>
                 <select v-else-if="property.metadata?.resourceType" :value="property.value" @change="setScriptProperty(property.name, ($event.target as HTMLSelectElement).value)"><option value="">{{ t('none') }}</option><option v-for="asset in compatibleScriptResources(property.metadata.resourceType)" :key="asset.uuid" :value="assetReference(asset.uuid)">{{ asset.name }}</option></select>
+                <select v-else-if="property.metadata?.valueType === 'entity'" :value="property.value" @change="setScriptProperty(property.name, ($event.target as HTMLSelectElement).value)"><option value="">{{ t('none') }}</option><option v-for="entity in state.world.entities" :key="entity.uuid" :value="entity.uuid">{{ entity.name }}</option></select>
                 <input v-else-if="typeof property.value === 'number'" :value="property.value" type="number" :min="property.metadata?.minimum ?? undefined" :max="property.metadata?.maximum ?? undefined" :step="property.metadata?.step ?? 0.01" @change="setScriptProperty(property.name, Number(($event.target as HTMLInputElement).value))">
+                <div v-else-if="isScriptVec2(property.value)" class="pair"><input :value="property.value[0]" type="number" step="0.01" @change="setScriptVectorPart(property.name, 0, $event)"><input :value="property.value[1]" type="number" step="0.01" @change="setScriptVectorPart(property.name, 1, $event)"></div>
+                <textarea v-else-if="property.value === null || typeof property.value === 'object'" class="script-data-value" :value="scriptDataText(property.value)" rows="3" spellcheck="false" @change="setScriptDataProperty(property.name, $event)"></textarea>
                 <input v-else :value="property.value" type="text" @change="setScriptProperty(property.name, ($event.target as HTMLInputElement).value)">
               </PropertyRow>
               <small v-if="property.metadata?.tooltip" class="script-property-help">{{ property.metadata.tooltip }}</small>
@@ -312,6 +315,7 @@
 
         <RuntimeComponentsInspector :entity="selectedEntity" :search-query="estate.inspectorSearch" :category="estate.inspectorCategory" />
         <WorldComponentsInspector :entity="selectedEntity" />
+        <GameplayComponentsInspector :entity="selectedEntity" />
         <p v-if="!inspectorHasMatches" class="inspector-no-results">{{ t('noInspectorResults') }}</p>
       </div>
       <div v-else class="empty-inspector"><span class="eyebrow">{{ t('entitySettings') }}</span><p>{{ t('noEntitiesFound') }}</p><button class="primary empty-create" @click="estate.createObjectPaletteOpen = true">＋ {{ t('createObject') }}</button></div>
@@ -349,8 +353,9 @@ import { effectiveInertia, entityArea, finiteNumber, MIN_AREA, MIN_SIZE, normali
 import ConnectionBuilder from './ConnectionBuilder.vue'
 import RuntimeComponentsInspector from './RuntimeComponentsInspector.vue'
 import WorldComponentsInspector from './WorldComponentsInspector.vue'
+import GameplayComponentsInspector from './GameplayComponentsInspector.vue'
 import { connectionSharesLayer } from '../world/Connection'
-import { Animator, Area2D, AreaEffector2D, AudioListener, AudioSource, BehaviorTree2D, Button, Camera2D, Canvas, CharacterBody2D, Checkbox, Collider2D, Image as UIImage, Joint2D, Light2D, NavigationAgent2D, NavigationObstacle2D, NavigationRegion2D, ObjectPool2D, Panel, ParticleEmitter2D, Portal2D, ProgressBar, RectTransform, RigidBody2D, Script2D, ShadowCaster2D, ShapeRenderer2D, Skeleton2D, Slider, SpriteRenderer2D, StateMachine2D, Text as UIText, TextInput, TextRenderer2D, TileMap2D, TimelinePlayer, WorldChunk2D, copyComponentValues, pasteComponentValues, type Component2D, type ComponentKind, type JointKind2D, type ScriptPropertyMetadata, type ScriptPropertyValue } from '../world/components'
+import { Animator, Area2D, AreaEffector2D, AudioListener, AudioSource, BehaviorTree2D, Button, Camera2D, CameraFollow2D, Canvas, CharacterBody2D, Checkbox, Collider2D, Collectible2D, Cooldown2D, DamageHitbox2D, GridMover2D, Health2D, Image as UIImage, Joint2D, Lifetime2D, Light2D, MouseFollower2D, NavigationAgent2D, NavigationObstacle2D, NavigationRegion2D, ObjectPool2D, Panel, ParticleEmitter2D, PlatformController2D, Portal2D, ProgressBar, Projectile2D, RectTransform, RigidBody2D, Script2D, ShadowCaster2D, ShapeRenderer2D, Skeleton2D, Slider, Spawner2D, SpriteRenderer2D, StateMachine2D, Text as UIText, TextInput, TextRenderer2D, TileMap2D, TimelinePlayer, TopDownController2D, WorldChunk2D, copyComponentValues, pasteComponentValues, type Component2D, type ComponentKind, type JointKind2D, type ScriptPropertyMetadata, type ScriptPropertyValue } from '../world/components'
 import { Transform } from '../world/Transform'
 import { setParent, wouldCreateParentCycle } from '../world/hierarchy'
 import { applyTranslation, captureTransforms } from '../editor/gizmo'
@@ -366,6 +371,7 @@ import { propertyMetadata, type PropertyMetadata } from '../editor/propertyMetad
 import { componentPaletteMetadata, componentPaletteState, componentPresets, markComponentRecent, saveComponentPreset, toggleComponentFavorite, type ComponentPaletteCategory } from '../editor/componentPalette'
 import { componentAuthoringRule, evaluateNumericExpression, validateEntityAuthoring } from '../editor/sceneAuthoring'
 import { OFFICIAL_AI_PACKAGE_ID, OFFICIAL_OBJECT_POOL_PACKAGE_ID, packageEnabled } from '../runtime/packages'
+import { configureUiAccessibility } from '../runtime/uiAccessibility'
 
 const InspectorSection = defineComponent({ props: { title: { type: String, required: true }, category: { type: String, default: 'general' }, open: Boolean }, setup(props, { slots }) { return () => h('details', { class: 'inspector-section', open: props.open, style: { display: inspectorSectionVisible(props.title, props.category as InspectorCategory) ? '' : 'none' } }, [h('summary', [h('span', props.title), h('i', '⌄')]), h('div', { class: 'section-body' }, slots.default?.())]) } })
 const PropertyRow = defineComponent({ props: { label: { type: String, required: true }, path: { type: String, default: '' } }, setup(props, { slots }) { return () => {
@@ -428,7 +434,7 @@ const dock = computed(() => props.dock)
 const panelWidth = ref(estate.inspectorWidth)
 const imageAssets = computed(() => assetState.records.filter(asset => asset.assetType === 'image'))
 const fontAssets = computed(() => assetState.records.filter(asset => asset.assetType === 'font'))
-const scriptAssets = computed(() => assetState.records.filter(asset => asset.assetType === 'script'))
+const scriptAssets = computed(() => assetState.records.filter(asset => asset.assetType === 'script' || asset.assetType === 'visualScript'))
 const pathAssets = computed(() => assetState.records.filter(asset => asset.assetType === 'path'))
 const pathPointsText = computed(() => selectedEntity.value?.authoring.path.points.map(point => `${point.x},${point.y}`).join(' ') ?? '')
 const pathTangentsText = computed(() => selectedEntity.value?.authoring.path.tangents.map(tangent => `${tangent.incoming.x},${tangent.incoming.y}:${tangent.outgoing.x},${tangent.outgoing.y}`).join(' ') ?? '')
@@ -449,7 +455,7 @@ function compatibleScriptResources(resourceType: string) {
   const types = expected[resourceType] ?? []
   return types.length ? assetState.records.filter(asset => types.includes(asset.assetType)) : assetState.records
 }
-const optionalComponents: ComponentKind[] = ['SpriteRenderer2D', 'TextRenderer2D', 'Camera2D', 'Light2D', 'ShadowCaster2D', 'Script2D', 'Animator', 'Skeleton2D', 'TimelinePlayer', 'AudioSource', 'AudioListener', 'Canvas', 'RectTransform', 'Panel', 'Image', 'Text', 'Button', 'Slider', 'ProgressBar', 'Checkbox', 'TextInput', 'TileMap2D', 'ParticleEmitter2D', 'CharacterBody2D', 'Area2D', 'AreaEffector2D', 'NavigationRegion2D', 'NavigationObstacle2D', 'NavigationAgent2D', 'BehaviorTree2D', 'StateMachine2D', 'WorldChunk2D', 'Portal2D', 'ObjectPool2D', 'FixedJoint2D', 'DistanceJoint2D', 'RevoluteJoint2D', 'PrismaticJoint2D', 'SpringJoint2D']
+const optionalComponents: ComponentKind[] = ['SpriteRenderer2D', 'TextRenderer2D', 'Camera2D', 'Light2D', 'ShadowCaster2D', 'Script2D', 'Animator', 'Skeleton2D', 'TimelinePlayer', 'AudioSource', 'AudioListener', 'Canvas', 'RectTransform', 'Panel', 'Image', 'Text', 'Button', 'Slider', 'ProgressBar', 'Checkbox', 'TextInput', 'TileMap2D', 'ParticleEmitter2D', 'CharacterBody2D', 'GridMover2D', 'PlatformController2D', 'TopDownController2D', 'Health2D', 'DamageHitbox2D', 'Collectible2D', 'Projectile2D', 'Spawner2D', 'Cooldown2D', 'Lifetime2D', 'MouseFollower2D', 'CameraFollow2D', 'Area2D', 'AreaEffector2D', 'NavigationRegion2D', 'NavigationObstacle2D', 'NavigationAgent2D', 'BehaviorTree2D', 'StateMachine2D', 'WorldChunk2D', 'Portal2D', 'ObjectPool2D', 'FixedJoint2D', 'DistanceJoint2D', 'RevoluteJoint2D', 'PrismaticJoint2D', 'SpringJoint2D']
 const inspectorCategories = [
   { id: 'all' as const, label: 'all' as const }, { id: 'general' as const, label: 'categoryGeneral' as const },
   { id: 'transform' as const, label: 'categoryTransform' as const }, { id: 'render' as const, label: 'categoryRendering' as const },
@@ -473,7 +479,7 @@ const componentGroups = computed(() => {
   const groups: Array<{ name: string; kinds: ComponentKind[] }> = []
   const append = (name: string, source: ComponentKind[]) => { const kinds = source.filter(kind => filteredAddableComponents.value.includes(kind)); if (kinds.length) groups.push({ name, kinds }) }
   if (!componentSearch.value.trim()) { append(t('favorites'), componentPaletteState.favorites); append(t('recentlyUsed'), componentPaletteState.recent.filter(kind => !componentPaletteState.favorites.includes(kind))) }
-  for (const category of ['Core', '2D', 'Physics', 'UI', 'Audio', 'Camera', 'Navigation', 'Script', 'Packages'] as ComponentPaletteCategory[]) append(category, filteredAddableComponents.value.filter(kind => componentPaletteMetadata(kind).category === category))
+  for (const category of ['Core', '2D', 'Physics', 'Gameplay', 'UI', 'Audio', 'Camera', 'Navigation', 'Script', 'Packages'] as ComponentPaletteCategory[]) append(category, filteredAddableComponents.value.filter(kind => componentPaletteMetadata(kind).category === category))
   return groups
 })
 const coreInspectorSections = computed(() => {
@@ -583,6 +589,18 @@ function componentTitle(kind: ComponentKind): string {
   if (kind === 'NavigationAgent2D') return t('navigationAgent2D')
   if (kind === 'BehaviorTree2D') return t('behaviorTree2D')
   if (kind === 'StateMachine2D') return t('stateMachine2D')
+  if (kind === 'GridMover2D') return t('gridMover2D')
+  if (kind === 'PlatformController2D') return t('platformController2D')
+  if (kind === 'TopDownController2D') return t('topDownController2D')
+  if (kind === 'Health2D') return t('health2D')
+  if (kind === 'DamageHitbox2D') return t('damageHitbox2D')
+  if (kind === 'Collectible2D') return t('collectible2D')
+  if (kind === 'Projectile2D') return t('projectile2D')
+  if (kind === 'Spawner2D') return t('spawner2D')
+  if (kind === 'Cooldown2D') return t('cooldown2D')
+  if (kind === 'Lifetime2D') return t('lifetime2D')
+  if (kind === 'MouseFollower2D') return t('mouseFollower2D')
+  if (kind === 'CameraFollow2D') return t('cameraFollow2D')
   if (kind === 'WorldChunk2D') return t('worldChunk2D')
   if (kind === 'Portal2D') return t('portal2D')
   if (kind === 'ObjectPool2D') return t('objectPool2D')
@@ -618,6 +636,18 @@ function newOptionalComponent(kind: ComponentKind): Component2D | null {
   if (kind === 'NavigationAgent2D') return new NavigationAgent2D()
   if (kind === 'BehaviorTree2D') return new BehaviorTree2D()
   if (kind === 'StateMachine2D') return new StateMachine2D()
+  if (kind === 'GridMover2D') return new GridMover2D()
+  if (kind === 'PlatformController2D') return new PlatformController2D()
+  if (kind === 'TopDownController2D') return new TopDownController2D()
+  if (kind === 'Health2D') return new Health2D()
+  if (kind === 'DamageHitbox2D') return new DamageHitbox2D()
+  if (kind === 'Collectible2D') return new Collectible2D()
+  if (kind === 'Projectile2D') return new Projectile2D()
+  if (kind === 'Spawner2D') return new Spawner2D()
+  if (kind === 'Cooldown2D') return new Cooldown2D()
+  if (kind === 'Lifetime2D') return new Lifetime2D()
+  if (kind === 'MouseFollower2D') return new MouseFollower2D()
+  if (kind === 'CameraFollow2D') return new CameraFollow2D()
   if (kind === 'WorldChunk2D') return new WorldChunk2D()
   if (kind === 'Portal2D') return new Portal2D()
   if (kind === 'ObjectPool2D') return new ObjectPool2D()
@@ -759,6 +789,12 @@ function addComponent(kind: ComponentKind) {
     }
   }
   for (const dependency of rule.required) if (!entity.hasComponent(dependency)) addComponent(dependency)
+  if (kind === 'Button' || kind === 'Slider' || kind === 'Checkbox' || kind === 'TextInput') {
+    const rect = entity.getComponent<RectTransform>('RectTransform')
+    if (rect) rect.skipNavigation = false
+  }
+  configureUiAccessibility(entity, state.world.entities)
+  normalizeEntity(entity)
   pushHistory('Add component', `component:${entity.uuid}:${kind}`)
   estate.statusText = t('componentAdded')
 }
@@ -793,6 +829,10 @@ function setScriptProperty(name: string, value: ScriptPropertyValue) {
   selectedEntity.value.script2D.properties[name] = value
   onConfigChange()
 }
+function isScriptVec2(value: ScriptPropertyValue): value is [number, number] { return Array.isArray(value) && value.length === 2 && value.every(item => typeof item === 'number' && Number.isFinite(item)) }
+function scriptDataText(value: ScriptPropertyValue): string { try { return JSON.stringify(value, null, 2) } catch { return 'null' } }
+function setScriptVectorPart(name: string, index: 0 | 1, event: Event) { const value = selectedEntity.value?.script2D?.properties[name]; if (value === undefined || !isScriptVec2(value)) return; const number = Number((event.target as HTMLInputElement).value); if (!Number.isFinite(number)) return; const next: [number, number] = [value[0], value[1]]; next[index] = number; setScriptProperty(name, next) }
+function setScriptDataProperty(name: string, event: Event) { try { const value = JSON.parse((event.target as HTMLTextAreaElement).value) as ScriptPropertyValue; setScriptProperty(name, value); estate.statusText = t('scriptPropertiesUpdated') } catch { estate.statusText = t('invalidGraphData') } }
 function createSelectedPrefab() {
   if (!selectedEntity.value) return
   const reference = createPrefabFromEntities([selectedEntity.value.id], selectedEntity.value.name)
@@ -914,7 +954,7 @@ onBeforeUnmount(stopResize)
 .config-wrapper { position: relative; min-width: 252px; max-width: 38vw; flex: 0 0 auto; z-index: 180; background: var(--surface-1); }.config-wrapper.right{border-left:1px solid var(--border-subtle)}.config-wrapper.left{border-right:1px solid var(--border-subtle)}
 .resize-handle { position: absolute; inset: 0 auto 0 -4px; width: 8px; cursor: ew-resize; z-index: 6; }
 .config-wrapper.left .resize-handle { inset: 0 -4px 0 auto; }
-.config-panel { position: absolute; inset: 0; overflow: auto; color: var(--text-secondary); background: var(--surface-1); backdrop-filter: var(--glass-blur); font-family: inherit; font-size: 11px; }
+.config-panel { position: absolute; inset: 0; overflow: auto; contain: layout paint; color: var(--text-secondary); background: var(--surface-1); font-family: inherit; font-size: var(--type-dense); }
 .config-panel :deep(button), .config-panel :deep(input), .config-panel :deep(select), .config-panel :deep(textarea) { font-family: inherit; font-size:11px; }
 .config-panel.runtime { pointer-events: none; opacity: .72; }
 .settings-content { min-height: 100%; padding: 8px 11px 26px; display: flex; flex-direction: column; gap: 8px; }

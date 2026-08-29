@@ -8,11 +8,19 @@ use std::cell::RefCell;
 use std::collections::BTreeMap;
 use std::rc::Rc;
 
-use rhai::{Dynamic, Engine, Map, Scope, AST, FLOAT, INT};
+// Rhai selects `web_time::Instant` for wasm32 and `std::time::Instant` on
+// native targets. Using its portable clock keeps graph tracing from trapping
+// before any lifecycle function can run in the editor/player WebAssembly host.
+use rhai::{Array, Dynamic, Engine, Instant, Map, Scope, AST, FLOAT, INT};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 pub const MAX_SCRIPT_OPERATIONS: u64 = 100_000;
+pub const MAX_SCRIPT_STRING_SIZE: usize = 262_144;
+pub const MAX_SCRIPT_ARRAY_SIZE: usize = 8_192;
+pub const MAX_SCRIPT_MAP_SIZE: usize = 4_096;
+pub const MAX_SCRIPT_COMMANDS: usize = 4_096;
+pub const MAX_SCRIPT_LOGS: usize = 512;
 pub const CURRENT_SCRIPT_API_VERSION: u8 = 2;
 pub const MINIMUM_SCRIPT_API_VERSION: u8 = 1;
 
@@ -40,13 +48,74 @@ pub struct InputSnapshot {
     #[serde(default)]
     pub released: BTreeMap<String, bool>,
     #[serde(default)]
+    pub performed: BTreeMap<String, bool>,
+    #[serde(default)]
+    pub cancelled: BTreeMap<String, bool>,
+    #[serde(default)]
+    pub phases: BTreeMap<String, String>,
+    #[serde(default)]
+    pub durations: BTreeMap<String, f64>,
+    #[serde(default)]
     pub axes: BTreeMap<String, f64>,
     #[serde(default)]
     pub vectors: BTreeMap<String, [f64; 2]>,
     #[serde(default)]
     pub mouse_position: [f64; 2],
     #[serde(default)]
+    pub mouse_world_position: [f64; 2],
+    #[serde(default)]
+    pub view_bounds: [f64; 4],
+    #[serde(default)]
+    pub viewport_size: [f64; 2],
+    #[serde(default)]
     pub wheel: [f64; 2],
+    #[serde(default)]
+    pub contexts: Vec<String>,
+    #[serde(default)]
+    pub maps: Vec<String>,
+    #[serde(default)]
+    pub scheme: String,
+}
+
+#[derive(Clone, Debug, Default, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SceneEntitySnapshot {
+    pub uuid: String,
+    pub name: String,
+    pub enabled: bool,
+    #[serde(default)]
+    pub tags: Vec<String>,
+    #[serde(default)]
+    pub groups: Vec<String>,
+    #[serde(default)]
+    pub components: Vec<String>,
+    #[serde(default)]
+    pub position: [f64; 2],
+}
+
+#[derive(Clone, Debug, Default, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GameFlowSnapshot {
+    pub paused: bool,
+    pub score: f64,
+    #[serde(default)]
+    pub session: BTreeMap<String, Value>,
+    #[serde(default)]
+    pub checkpoints: Vec<String>,
+}
+
+#[derive(Clone, Debug, Default, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct NetworkSnapshot {
+    pub enabled: bool,
+    pub connected: bool,
+    pub authority: bool,
+    pub peer_count: u32,
+    #[serde(default)]
+    pub local_peer_id: String,
+    #[serde(default)]
+    pub role: String,
+    pub tick: u64,
 }
 
 #[derive(Clone, Debug, Default, Deserialize)]
@@ -132,6 +201,8 @@ pub struct ScriptContext {
     #[serde(default)]
     pub entities: BTreeMap<String, String>,
     #[serde(default)]
+    pub scene_entities: Vec<SceneEntitySnapshot>,
+    #[serde(default)]
     pub time: TimeSnapshot,
     #[serde(default)]
     pub random_seed: u64,
@@ -151,11 +222,28 @@ pub struct ScriptContext {
     pub rigid_body: Option<RigidBodySnapshot>,
     #[serde(default)]
     pub character: Option<CharacterSnapshot>,
+    #[serde(default)]
+    pub game_flow: GameFlowSnapshot,
+    #[serde(default)]
+    pub networking: NetworkSnapshot,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize)]
-#[serde(tag = "type", rename_all = "camelCase")]
+#[serde(
+    tag = "type",
+    rename_all = "camelCase",
+    rename_all_fields = "camelCase"
+)]
 pub enum ScriptCommand {
+    GraphTrace {
+        graph_uuid: String,
+        scope_uuid: String,
+        node_uuid: String,
+        edge_uuid: String,
+        depth: i64,
+        duration_micros: u64,
+        values: Value,
+    },
     ApplyForce {
         x: f64,
         y: f64,
@@ -212,11 +300,118 @@ pub enum ScriptCommand {
     Instantiate {
         prefab: String,
     },
+    SpawnAt {
+        pending_id: String,
+        prefab: String,
+        x: f64,
+        y: f64,
+        rotation: f64,
+        scale_x: f64,
+        scale_y: f64,
+    },
+    TargetSetPosition {
+        target: String,
+        generation: u32,
+        x: f64,
+        y: f64,
+    },
+    TargetSetRotation {
+        target: String,
+        generation: u32,
+        radians: f64,
+    },
+    TargetSetScale {
+        target: String,
+        generation: u32,
+        x: f64,
+        y: f64,
+    },
+    TargetSetEnabled {
+        target: String,
+        generation: u32,
+        enabled: bool,
+    },
+    TargetSetComponentEnabled {
+        target: String,
+        generation: u32,
+        component: String,
+        enabled: bool,
+    },
+    TargetSetUiText {
+        target: String,
+        generation: u32,
+        text: String,
+    },
+    TargetSetUiValue {
+        target: String,
+        generation: u32,
+        value: f64,
+    },
+    TargetAddTag {
+        target: String,
+        generation: u32,
+        tag: String,
+    },
+    TargetRemoveTag {
+        target: String,
+        generation: u32,
+        tag: String,
+    },
+    TargetAddGroup {
+        target: String,
+        generation: u32,
+        group: String,
+    },
+    TargetRemoveGroup {
+        target: String,
+        generation: u32,
+        group: String,
+    },
+    TargetDestroy {
+        target: String,
+        generation: u32,
+    },
     LoadScene {
         scene: String,
     },
     ReloadScene,
     Quit,
+    GamePause {
+        paused: bool,
+    },
+    CheckpointSet {
+        name: String,
+    },
+    CheckpointRestore {
+        name: String,
+    },
+    ScoreSet {
+        value: f64,
+    },
+    ScoreAdd {
+        value: f64,
+    },
+    SessionSet {
+        key: String,
+        value: Value,
+    },
+    InputContextPush {
+        name: String,
+        priority: i64,
+        consume: bool,
+    },
+    InputContextPop {
+        name: String,
+    },
+    InputMapEnable {
+        name: String,
+    },
+    InputMapDisable {
+        name: String,
+    },
+    InputSchemeSet {
+        name: String,
+    },
     StartTimer {
         name: String,
         seconds: f64,
@@ -266,6 +461,10 @@ pub enum ScriptCommand {
     NavigationSetTarget {
         x: f64,
         y: f64,
+    },
+    NetworkRpc {
+        name: String,
+        payload: Value,
     },
 }
 
@@ -399,14 +598,32 @@ fn execute_prepared(
     let output = Rc::new(RefCell::new(HostOutput::default()));
     let engine = engine_with_host(&context, Rc::clone(&output));
     let mut scope = Scope::new();
-    engine
-        .run_ast_with_scope(&mut scope, ast)
-        .map_err(|error| error.to_string())?;
-    call_lifecycle(&engine, &mut scope, ast, function, &context)?;
+    if let Err(error) = engine.run_ast_with_scope(&mut scope, ast) {
+        if let Some(limit) = host_output_limit_error(&output) {
+            return Err(limit);
+        }
+        return Err(error.to_string());
+    }
+    if let Err(error) = call_lifecycle(&engine, &mut scope, ast, function, &context) {
+        if let Some(limit) = host_output_limit_error(&output) {
+            return Err(limit);
+        }
+        return Err(error);
+    }
 
     let properties = collect_properties(&scope, &prepared.exports, &context.properties);
     let mut output = output.borrow_mut();
+    if output.commands.len() > MAX_SCRIPT_COMMANDS {
+        return Err(format!(
+            "script emitted {} host commands; the per-invocation limit is {MAX_SCRIPT_COMMANDS}",
+            output.commands.len()
+        ));
+    }
+    output.logs.truncate(MAX_SCRIPT_LOGS);
     for warning in &prepared.compatibility_warnings {
+        if output.logs.len() >= MAX_SCRIPT_LOGS {
+            break;
+        }
         output.logs.push(ScriptLog {
             level: "warning".into(),
             message: warning.clone(),
@@ -419,11 +636,27 @@ fn execute_prepared(
     })
 }
 
+fn host_output_limit_error(output: &Rc<RefCell<HostOutput>>) -> Option<String> {
+    let output = output.borrow();
+    if output.commands.len() > MAX_SCRIPT_COMMANDS {
+        Some(format!("script emitted too many host commands; the per-invocation limit is {MAX_SCRIPT_COMMANDS}"))
+    } else if output.logs.len() > MAX_SCRIPT_LOGS {
+        Some(format!(
+            "script emitted too many log entries; the per-invocation limit is {MAX_SCRIPT_LOGS}"
+        ))
+    } else {
+        None
+    }
+}
+
 fn base_engine() -> Engine {
     let mut engine = Engine::new();
     engine.set_max_operations(MAX_SCRIPT_OPERATIONS);
     engine.set_max_call_levels(32);
     engine.set_max_expr_depths(64, 32);
+    engine.set_max_string_size(MAX_SCRIPT_STRING_SIZE);
+    engine.set_max_array_size(MAX_SCRIPT_ARRAY_SIZE);
+    engine.set_max_map_size(MAX_SCRIPT_MAP_SIZE);
     engine.disable_symbol("eval");
     engine.disable_symbol("import");
     engine
@@ -432,12 +665,27 @@ fn base_engine() -> Engine {
 fn engine_with_host(context: &ScriptContext, output: Rc<RefCell<HostOutput>>) -> Engine {
     let mut engine = base_engine();
 
+    let resource_budget = Rc::clone(&output);
+    engine.on_progress(move |_| {
+        let output = resource_budget.borrow();
+        if output.commands.len() > MAX_SCRIPT_COMMANDS {
+            Some("Script emitted too many host commands".into())
+        } else if output.logs.len() > MAX_SCRIPT_LOGS {
+            Some("Script emitted too many log entries".into())
+        } else {
+            None
+        }
+    });
+
     let logs = Rc::clone(&output);
     engine.on_print(move |message| {
-        logs.borrow_mut().logs.push(ScriptLog {
-            level: "info".into(),
-            message: message.chars().take(4_096).collect(),
-        });
+        let mut logs = logs.borrow_mut();
+        if logs.logs.len() < MAX_SCRIPT_LOGS {
+            logs.logs.push(ScriptLog {
+                level: "info".into(),
+                message: message.chars().take(4_096).collect(),
+            });
+        }
     });
 
     let entity = context.entity.clone();
@@ -543,6 +791,8 @@ fn engine_with_host(context: &ScriptContext, output: Rc<RefCell<HostOutput>>) ->
         minimum + (maximum - minimum) * ((*value as f64) / (u64::MAX as f64 + 1.0))
     });
     register_input_api(&mut engine, context);
+    register_game_flow_api(&mut engine, context);
+    register_network_api(&mut engine, context);
     register_property_api(&mut engine, context);
     register_save_api(&mut engine, context, Rc::clone(&output));
     register_command_api(&mut engine, context, output);
@@ -556,14 +806,53 @@ fn handle_map(valid: bool, kind: &str, id: &str, error: &str) -> Map {
     map.insert("id".into(), Dynamic::from(id.to_owned()));
     map.insert("error".into(), Dynamic::from(error.to_owned()));
     map.insert("api_version".into(), Dynamic::from_int(1));
-    let generation = id.bytes().fold(2_166_136_261_u32, |hash, byte| {
-        hash.wrapping_mul(16_777_619) ^ u32::from(byte)
-    });
+    let generation = handle_generation(id);
     map.insert(
         "generation".into(),
         Dynamic::from_int(INT::from(generation)),
     );
     map
+}
+
+fn handle_generation(id: &str) -> u32 {
+    id.bytes().fold(2_166_136_261_u32, |hash, byte| {
+        hash.wrapping_mul(16_777_619) ^ u32::from(byte)
+    })
+}
+
+fn target_from_handle(handle: Map) -> Option<(String, u32)> {
+    let id = handle.get("id")?.clone().try_cast::<String>()?;
+    let generation = handle
+        .get("generation")
+        .and_then(|value| value.as_int().ok())
+        .and_then(|value| u32::try_from(value).ok())?;
+    if id.is_empty() {
+        None
+    } else {
+        Some((id, generation))
+    }
+}
+
+fn bounded_query_handles<'a>(
+    values: impl Iterator<Item = &'a SceneEntitySnapshot>,
+    limit: INT,
+) -> Array {
+    let maximum = usize::try_from(limit.clamp(0, 256)).unwrap_or(0);
+    values
+        .take(maximum)
+        .map(|entity| Dynamic::from_map(handle_map(true, "Entity", &entity.uuid, "")))
+        .collect()
+}
+
+fn scene_entity_from_handle(
+    handle: Map,
+    entities: &[SceneEntitySnapshot],
+) -> Option<&SceneEntitySnapshot> {
+    let (id, generation) = target_from_handle(handle)?;
+    if handle_generation(&id) != generation {
+        return None;
+    }
+    entities.iter().find(|entity| entity.uuid == id)
 }
 
 fn register_time_api(engine: &mut Engine, context: &ScriptContext) {
@@ -605,6 +894,75 @@ fn register_entity_api(engine: &mut Engine, context: &ScriptContext) {
         map.insert("scale_x".into(), Dynamic::from_float(transform.scale[0]));
         map.insert("scale_y".into(), Dynamic::from_float(transform.scale[1]));
         map
+    });
+    let entities = context.scene_entities.clone();
+    engine.register_fn("query_tag", move |tag: &str, limit: INT| {
+        bounded_query_handles(
+            entities
+                .iter()
+                .filter(|entity| entity.tags.iter().any(|value| value == tag)),
+            limit,
+        )
+    });
+    let entities = context.scene_entities.clone();
+    engine.register_fn("query_group", move |group: &str, limit: INT| {
+        bounded_query_handles(
+            entities
+                .iter()
+                .filter(|entity| entity.groups.iter().any(|value| value == group)),
+            limit,
+        )
+    });
+    let entities = context.scene_entities.clone();
+    engine.register_fn("query_component", move |kind: &str, limit: INT| {
+        bounded_query_handles(
+            entities
+                .iter()
+                .filter(|entity| entity.components.iter().any(|value| value == kind)),
+            limit,
+        )
+    });
+    let entities = context.scene_entities.clone();
+    engine.register_fn(
+        "query_radius",
+        move |x: FLOAT, y: FLOAT, radius: FLOAT, limit: INT| {
+            if !x.is_finite() || !y.is_finite() || !radius.is_finite() || radius < 0.0 {
+                return Array::new();
+            }
+            let radius_squared = radius.min(1.0e12).powi(2);
+            bounded_query_handles(
+                entities.iter().filter(|entity| {
+                    let dx = entity.position[0] - x;
+                    let dy = entity.position[1] - y;
+                    dx * dx + dy * dy <= radius_squared
+                }),
+                limit,
+            )
+        },
+    );
+    let entities = context.scene_entities.clone();
+    engine.register_fn("entity_name_on", move |handle: Map| {
+        scene_entity_from_handle(handle, &entities)
+            .map(|entity| entity.name.clone())
+            .unwrap_or_default()
+    });
+    let entities = context.scene_entities.clone();
+    engine.register_fn("entity_enabled_on", move |handle: Map| {
+        scene_entity_from_handle(handle, &entities)
+            .map(|entity| entity.enabled)
+            .unwrap_or(false)
+    });
+    let entities = context.scene_entities.clone();
+    engine.register_fn("entity_position_x_on", move |handle: Map| {
+        scene_entity_from_handle(handle, &entities)
+            .map(|entity| entity.position[0])
+            .unwrap_or(0.0)
+    });
+    let entities = context.scene_entities.clone();
+    engine.register_fn("entity_position_y_on", move |handle: Map| {
+        scene_entity_from_handle(handle, &entities)
+            .map(|entity| entity.position[1])
+            .unwrap_or(0.0)
     });
     let rigid_body = context.rigid_body.clone();
     engine.register_fn("rigid_body", move || {
@@ -698,6 +1056,36 @@ fn register_input_api(engine: &mut Engine, context: &ScriptContext) {
     engine.register_fn("input_released", move |action: &str| {
         snapshot.released.get(action).copied().unwrap_or(false)
     });
+    let snapshot = input.clone();
+    engine.register_fn("input_performed", move |action: &str| {
+        snapshot.performed.get(action).copied().unwrap_or(false)
+    });
+    let snapshot = input.clone();
+    engine.register_fn("input_cancelled", move |action: &str| {
+        snapshot.cancelled.get(action).copied().unwrap_or(false)
+    });
+    let snapshot = input.clone();
+    engine.register_fn("input_phase", move |action: &str| {
+        snapshot
+            .phases
+            .get(action)
+            .cloned()
+            .unwrap_or_else(|| "idle".into())
+    });
+    let snapshot = input.clone();
+    engine.register_fn("input_duration", move |action: &str| {
+        snapshot.durations.get(action).copied().unwrap_or(0.0)
+    });
+    let snapshot = input.clone();
+    engine.register_fn("input_context_active", move |name: &str| {
+        snapshot.contexts.iter().any(|context| context == name)
+    });
+    let snapshot = input.clone();
+    engine.register_fn("input_map_active", move |name: &str| {
+        snapshot.maps.iter().any(|map| map == name)
+    });
+    let snapshot = input.clone();
+    engine.register_fn("input_scheme", move || snapshot.scheme.clone());
     let snapshot = context.input.clone();
     engine.register_fn("was_released", move |action: &str| {
         snapshot.released.get(action).copied().unwrap_or(false)
@@ -739,6 +1127,22 @@ fn register_input_api(engine: &mut Engine, context: &ScriptContext) {
     let snapshot = input.clone();
     engine.register_fn("mouse_y", move || snapshot.mouse_position[1]);
     let snapshot = input.clone();
+    engine.register_fn("mouse_world_x", move || snapshot.mouse_world_position[0]);
+    let snapshot = input.clone();
+    engine.register_fn("mouse_world_y", move || snapshot.mouse_world_position[1]);
+    let snapshot = input.clone();
+    engine.register_fn("view_min_x", move || snapshot.view_bounds[0]);
+    let snapshot = input.clone();
+    engine.register_fn("view_max_x", move || snapshot.view_bounds[1]);
+    let snapshot = input.clone();
+    engine.register_fn("view_min_y", move || snapshot.view_bounds[2]);
+    let snapshot = input.clone();
+    engine.register_fn("view_max_y", move || snapshot.view_bounds[3]);
+    let snapshot = input.clone();
+    engine.register_fn("viewport_width", move || snapshot.viewport_size[0]);
+    let snapshot = input.clone();
+    engine.register_fn("viewport_height", move || snapshot.viewport_size[1]);
+    let snapshot = input.clone();
     engine.register_fn("wheel_x", move || snapshot.wheel[0]);
     engine.register_fn("wheel_y", move || input.wheel[1]);
 }
@@ -748,6 +1152,43 @@ fn vector_map(value: [f64; 2]) -> Map {
     map.insert("x".into(), Dynamic::from_float(value[0]));
     map.insert("y".into(), Dynamic::from_float(value[1]));
     map
+}
+
+fn register_game_flow_api(engine: &mut Engine, context: &ScriptContext) {
+    let flow = context.game_flow.clone();
+    engine.register_fn("game_paused", move || flow.paused);
+    let flow = context.game_flow.clone();
+    engine.register_fn("score_get", move || flow.score);
+    let flow = context.game_flow.clone();
+    engine.register_fn("checkpoint_has", move |name: &str| {
+        flow.checkpoints.iter().any(|checkpoint| checkpoint == name)
+    });
+    let values = context.game_flow.session.clone();
+    engine.register_fn("session_get", move |key: &str, fallback: Dynamic| {
+        values
+            .get(key)
+            .and_then(json_to_dynamic)
+            .unwrap_or(fallback)
+    });
+}
+
+fn register_network_api(engine: &mut Engine, context: &ScriptContext) {
+    let network = context.networking.clone();
+    engine.register_fn("network_enabled", move || network.enabled);
+    let network = context.networking.clone();
+    engine.register_fn("network_connected", move || network.connected);
+    let network = context.networking.clone();
+    engine.register_fn("network_is_authority", move || network.authority);
+    let network = context.networking.clone();
+    engine.register_fn("network_peer_count", move || INT::from(network.peer_count));
+    let network = context.networking.clone();
+    engine.register_fn("network_local_peer", move || network.local_peer_id.clone());
+    let network = context.networking.clone();
+    engine.register_fn("network_role", move || network.role.clone());
+    let network = context.networking.clone();
+    engine.register_fn("network_tick", move || {
+        INT::try_from(network.tick).unwrap_or(INT::MAX)
+    });
 }
 
 fn register_property_api(engine: &mut Engine, context: &ScriptContext) {
@@ -779,6 +1220,13 @@ fn register_property_api(engine: &mut Engine, context: &ScriptContext) {
             .and_then(Value::as_str)
             .unwrap_or(fallback)
             .to_owned()
+    });
+    let structured = context.properties.clone();
+    engine.register_fn("export_value", move |name: &str, fallback: Dynamic| {
+        structured
+            .get(name)
+            .and_then(json_to_dynamic)
+            .unwrap_or(fallback)
     });
 }
 
@@ -861,6 +1309,36 @@ fn register_command_api(
     context: &ScriptContext,
     output: Rc<RefCell<HostOutput>>,
 ) {
+    let traces = Rc::clone(&output);
+    let trace_clock = Rc::new(RefCell::new(Instant::now()));
+    engine.register_fn(
+        "__nova_graph_trace",
+        move |graph_uuid: &str,
+              scope_uuid: &str,
+              node_uuid: &str,
+              edge_uuid: &str,
+              depth: INT,
+              values: Dynamic| {
+            let now = Instant::now();
+            let duration_micros = now
+                .duration_since(*trace_clock.borrow())
+                .as_micros()
+                .min(u128::from(u64::MAX)) as u64;
+            *trace_clock.borrow_mut() = now;
+            traces
+                .borrow_mut()
+                .commands
+                .push(ScriptCommand::GraphTrace {
+                    graph_uuid: graph_uuid.chars().take(128).collect(),
+                    scope_uuid: scope_uuid.chars().take(128).collect(),
+                    node_uuid: node_uuid.chars().take(128).collect(),
+                    edge_uuid: edge_uuid.chars().take(128).collect(),
+                    depth: depth.clamp(0, 32),
+                    duration_micros,
+                    values: dynamic_to_json(values).unwrap_or(Value::Null),
+                });
+        },
+    );
     for (name, level) in [
         ("log_debug", "debug"),
         ("log_info", "info"),
@@ -1102,6 +1580,209 @@ fn register_command_api(
             });
     });
     let commands = Rc::clone(&output);
+    let pending_serial = Rc::new(RefCell::new(0_u64));
+    let source_entity = context.entity.clone();
+    engine.register_fn(
+        "spawn_at",
+        move |prefab: &str, x: FLOAT, y: FLOAT, rotation: FLOAT, scale_x: FLOAT, scale_y: FLOAT| {
+            let prefab = prefab.trim().chars().take(512).collect::<String>();
+            if prefab.is_empty()
+                || ![x, y, rotation, scale_x, scale_y]
+                    .iter()
+                    .all(|value| value.is_finite())
+                || scale_x.abs() < 1.0e-9
+                || scale_y.abs() < 1.0e-9
+            {
+                commands.borrow_mut().logs.push(ScriptLog {
+                    level: "error".into(),
+                    message: "spawn_at requires a prefab, finite transform, and non-zero scale"
+                        .into(),
+                });
+                return handle_map(false, "Entity", "", "Invalid spawn request");
+            }
+            let serial = {
+                let mut value = pending_serial.borrow_mut();
+                *value = value.saturating_add(1);
+                *value
+            };
+            let pending_id = format!("pending:{source_entity}:{serial}");
+            commands.borrow_mut().commands.push(ScriptCommand::SpawnAt {
+                pending_id: pending_id.clone(),
+                prefab,
+                x,
+                y,
+                rotation,
+                scale_x,
+                scale_y,
+            });
+            handle_map(true, "Entity", &pending_id, "")
+        },
+    );
+    let commands = Rc::clone(&output);
+    engine.register_fn(
+        "entity_set_position",
+        move |handle: Map, x: FLOAT, y: FLOAT| {
+            if let Some((target, generation)) = target_from_handle(handle) {
+                commands
+                    .borrow_mut()
+                    .commands
+                    .push(ScriptCommand::TargetSetPosition {
+                        target,
+                        generation,
+                        x,
+                        y,
+                    })
+            }
+        },
+    );
+    let commands = Rc::clone(&output);
+    engine.register_fn("entity_set_rotation", move |handle: Map, radians: FLOAT| {
+        if let Some((target, generation)) = target_from_handle(handle) {
+            commands
+                .borrow_mut()
+                .commands
+                .push(ScriptCommand::TargetSetRotation {
+                    target,
+                    generation,
+                    radians,
+                })
+        }
+    });
+    let commands = Rc::clone(&output);
+    engine.register_fn(
+        "entity_set_scale",
+        move |handle: Map, x: FLOAT, y: FLOAT| {
+            if let Some((target, generation)) = target_from_handle(handle) {
+                commands
+                    .borrow_mut()
+                    .commands
+                    .push(ScriptCommand::TargetSetScale {
+                        target,
+                        generation,
+                        x,
+                        y,
+                    })
+            }
+        },
+    );
+    let commands = Rc::clone(&output);
+    engine.register_fn("entity_set_enabled", move |handle: Map, enabled: bool| {
+        if let Some((target, generation)) = target_from_handle(handle) {
+            commands
+                .borrow_mut()
+                .commands
+                .push(ScriptCommand::TargetSetEnabled {
+                    target,
+                    generation,
+                    enabled,
+                })
+        }
+    });
+    let commands = Rc::clone(&output);
+    engine.register_fn(
+        "component_set_enabled_on",
+        move |handle: Map, component: &str, enabled: bool| {
+            if let Some((target, generation)) = target_from_handle(handle) {
+                commands
+                    .borrow_mut()
+                    .commands
+                    .push(ScriptCommand::TargetSetComponentEnabled {
+                        target,
+                        generation,
+                        component: component.chars().take(80).collect(),
+                        enabled,
+                    })
+            }
+        },
+    );
+    let commands = Rc::clone(&output);
+    engine.register_fn("ui_set_text_on", move |handle: Map, text: &str| {
+        if let Some((target, generation)) = target_from_handle(handle) {
+            commands
+                .borrow_mut()
+                .commands
+                .push(ScriptCommand::TargetSetUiText {
+                    target,
+                    generation,
+                    text: text.chars().take(16_384).collect(),
+                })
+        }
+    });
+    let commands = Rc::clone(&output);
+    engine.register_fn("ui_set_value_on", move |handle: Map, value: FLOAT| {
+        if let Some((target, generation)) = target_from_handle(handle) {
+            commands
+                .borrow_mut()
+                .commands
+                .push(ScriptCommand::TargetSetUiValue {
+                    target,
+                    generation,
+                    value,
+                })
+        }
+    });
+    let commands = Rc::clone(&output);
+    engine.register_fn("entity_add_tag", move |handle: Map, tag: &str| {
+        if let Some((target, generation)) = target_from_handle(handle) {
+            commands
+                .borrow_mut()
+                .commands
+                .push(ScriptCommand::TargetAddTag {
+                    target,
+                    generation,
+                    tag: tag.trim().chars().take(80).collect(),
+                })
+        }
+    });
+    let commands = Rc::clone(&output);
+    engine.register_fn("entity_remove_tag", move |handle: Map, tag: &str| {
+        if let Some((target, generation)) = target_from_handle(handle) {
+            commands
+                .borrow_mut()
+                .commands
+                .push(ScriptCommand::TargetRemoveTag {
+                    target,
+                    generation,
+                    tag: tag.trim().chars().take(80).collect(),
+                })
+        }
+    });
+    let commands = Rc::clone(&output);
+    engine.register_fn("entity_add_group", move |handle: Map, group: &str| {
+        if let Some((target, generation)) = target_from_handle(handle) {
+            commands
+                .borrow_mut()
+                .commands
+                .push(ScriptCommand::TargetAddGroup {
+                    target,
+                    generation,
+                    group: group.trim().chars().take(80).collect(),
+                })
+        }
+    });
+    let commands = Rc::clone(&output);
+    engine.register_fn("entity_remove_group", move |handle: Map, group: &str| {
+        if let Some((target, generation)) = target_from_handle(handle) {
+            commands
+                .borrow_mut()
+                .commands
+                .push(ScriptCommand::TargetRemoveGroup {
+                    target,
+                    generation,
+                    group: group.trim().chars().take(80).collect(),
+                })
+        }
+    });
+    let commands = Rc::clone(&output);
+    engine.register_fn("entity_destroy", move |handle: Map| {
+        if let Some((target, generation)) = target_from_handle(handle) {
+            commands
+                .borrow_mut()
+                .commands
+                .push(ScriptCommand::TargetDestroy { target, generation })
+        }
+    });
+    let commands = Rc::clone(&output);
     engine.register_fn("scene_load", move |scene: &str| {
         commands
             .borrow_mut()
@@ -1120,6 +1801,125 @@ fn register_command_api(
     let commands = Rc::clone(&output);
     engine.register_fn("scene_quit", move || {
         commands.borrow_mut().commands.push(ScriptCommand::Quit)
+    });
+    let commands = Rc::clone(&output);
+    engine.register_fn("game_pause", move |paused: bool| {
+        commands
+            .borrow_mut()
+            .commands
+            .push(ScriptCommand::GamePause { paused })
+    });
+    let commands = Rc::clone(&output);
+    engine.register_fn("checkpoint_set", move |name: &str| {
+        commands
+            .borrow_mut()
+            .commands
+            .push(ScriptCommand::CheckpointSet {
+                name: name.trim().chars().take(80).collect(),
+            })
+    });
+    let commands = Rc::clone(&output);
+    engine.register_fn("checkpoint_restore", move |name: &str| {
+        commands
+            .borrow_mut()
+            .commands
+            .push(ScriptCommand::CheckpointRestore {
+                name: name.trim().chars().take(80).collect(),
+            })
+    });
+    let commands = Rc::clone(&output);
+    engine.register_fn("score_set", move |value: FLOAT| {
+        if value.is_finite() {
+            commands
+                .borrow_mut()
+                .commands
+                .push(ScriptCommand::ScoreSet { value })
+        }
+    });
+    let commands = Rc::clone(&output);
+    engine.register_fn("score_add", move |value: FLOAT| {
+        if value.is_finite() {
+            commands
+                .borrow_mut()
+                .commands
+                .push(ScriptCommand::ScoreAdd { value })
+        }
+    });
+    let commands = Rc::clone(&output);
+    engine.register_fn("session_set", move |key: &str, value: Dynamic| {
+        if let Some(value) = dynamic_to_json(value) {
+            commands
+                .borrow_mut()
+                .commands
+                .push(ScriptCommand::SessionSet {
+                    key: key.trim().chars().take(80).collect(),
+                    value,
+                })
+        }
+    });
+    let commands = Rc::clone(&output);
+    engine.register_fn("network_rpc", move |name: &str, payload: Dynamic| {
+        let name: String = name.trim().chars().take(80).collect();
+        match (name.is_empty(), dynamic_to_json(payload)) {
+            (false, Some(payload)) => commands
+                .borrow_mut()
+                .commands
+                .push(ScriptCommand::NetworkRpc { name, payload }),
+            _ => commands.borrow_mut().logs.push(ScriptLog {
+                level: "error".into(),
+                message: "network_rpc requires a name and a bounded serializable payload".into(),
+            }),
+        }
+    });
+    let commands = Rc::clone(&output);
+    engine.register_fn(
+        "input_context_push",
+        move |name: &str, priority: INT, consume: bool| {
+            commands
+                .borrow_mut()
+                .commands
+                .push(ScriptCommand::InputContextPush {
+                    name: name.trim().chars().take(80).collect(),
+                    priority: priority.clamp(-10_000, 10_000),
+                    consume,
+                })
+        },
+    );
+    let commands = Rc::clone(&output);
+    engine.register_fn("input_context_pop", move |name: &str| {
+        commands
+            .borrow_mut()
+            .commands
+            .push(ScriptCommand::InputContextPop {
+                name: name.trim().chars().take(80).collect(),
+            })
+    });
+    let commands = Rc::clone(&output);
+    engine.register_fn("input_map_enable", move |name: &str| {
+        commands
+            .borrow_mut()
+            .commands
+            .push(ScriptCommand::InputMapEnable {
+                name: name.trim().chars().take(80).collect(),
+            })
+    });
+    let commands = Rc::clone(&output);
+    engine.register_fn("input_map_disable", move |name: &str| {
+        commands
+            .borrow_mut()
+            .commands
+            .push(ScriptCommand::InputMapDisable {
+                name: name.trim().chars().take(80).collect(),
+            })
+    });
+    let commands = Rc::clone(&output);
+    engine.register_fn("input_scheme_set", move |name: &str| {
+        commands
+            .borrow_mut()
+            .commands
+            .push(ScriptCommand::InputSchemeSet {
+                name: name.trim().chars().take(80).collect(),
+            })
     });
     let commands = Rc::clone(&output);
     engine.register_fn(
@@ -1607,8 +2407,17 @@ fn is_identifier(value: &str) -> bool {
 
 fn parse_export_value(value: &str) -> Option<Value> {
     match value {
+        "()" | "null" => Some(Value::Null),
         "true" => Some(Value::Bool(true)),
         "false" => Some(Value::Bool(false)),
+        _ if value.starts_with("#{") && value.ends_with('}') => {
+            serde_json::from_str(&value[1..]).ok()
+        }
+        _ if (value.starts_with('[') && value.ends_with(']'))
+            || (value.starts_with('{') && value.ends_with('}')) =>
+        {
+            serde_json::from_str(value).ok()
+        }
         _ if value.starts_with('"') && value.ends_with('"') && value.len() >= 2 => {
             serde_json::from_str(value).ok()
         }
@@ -1671,6 +2480,67 @@ mod tests {
             vec![ScriptCommand::ApplyImpulse { x: 0.0, y: 1.25 }]
         );
         assert_eq!(execution.logs[0].message, "jump Player");
+    }
+
+    #[test]
+    fn exported_graph_values_cross_the_sandbox_boundary() {
+        let source = r#"
+            @export(type="vec2") let direction = [2.0, -1.0];
+            @export(type="data") let payload = #{ "score": 7, "ready": true };
+            @export(type="data") let optional = ();
+            fn start() { }
+        "#;
+        let runtime = ScriptRuntime::new();
+        let exports = runtime.validate(source).expect("graph exports validate");
+        assert_eq!(exports.len(), 3);
+        let execution = runtime
+            .execute(source, "start", context())
+            .expect("graph exports execute");
+        assert_eq!(
+            execution.properties["direction"],
+            serde_json::json!([2.0, -1.0])
+        );
+        assert_eq!(execution.properties["payload"]["score"], 7);
+        assert_eq!(execution.properties["optional"], Value::Null);
+    }
+
+    #[test]
+    fn graph_trace_commands_are_bounded_and_use_the_camel_case_bridge() {
+        let source = r#"
+            fn start() {
+                __nova_graph_trace("graph-1", "routine-1", "node-1", "edge-1", 99, #{ score: 7, ready: true });
+            }
+        "#;
+        let execution = ScriptRuntime::new()
+            .execute(source, "start", context())
+            .expect("graph trace executes inside the sandbox");
+        assert!(matches!(
+            execution.commands.first(),
+            Some(ScriptCommand::GraphTrace {
+                graph_uuid,
+                scope_uuid,
+                node_uuid,
+                edge_uuid,
+                depth,
+                values,
+                ..
+            }) if graph_uuid == "graph-1"
+                && scope_uuid == "routine-1"
+                && node_uuid == "node-1"
+                && edge_uuid == "edge-1"
+                && *depth == 32
+                && values["score"] == 7
+                && values["ready"] == true
+        ));
+        let serialized = serde_json::to_value(&execution.commands[0])
+            .expect("graph trace serializes for the TypeScript bridge");
+        assert_eq!(serialized["type"], "graphTrace");
+        assert_eq!(serialized["graphUuid"], "graph-1");
+        assert_eq!(serialized["scopeUuid"], "routine-1");
+        assert_eq!(serialized["nodeUuid"], "node-1");
+        assert_eq!(serialized["edgeUuid"], "edge-1");
+        assert!(serialized.get("durationMicros").is_some());
+        assert!(serialized.get("graph_uuid").is_none());
     }
 
     #[test]
@@ -1945,6 +2815,72 @@ mod tests {
     }
 
     #[test]
+    fn dynamic_object_game_flow_and_advanced_input_api_are_bounded() {
+        let mut script_context = context();
+        script_context.scene_entities = vec![SceneEntitySnapshot {
+            uuid: "enemy-1".into(),
+            name: "Enemy".into(),
+            enabled: true,
+            tags: vec!["enemy".into()],
+            groups: vec!["actors".into()],
+            components: vec!["Health2D".into()],
+            position: [4.0, 2.0],
+        }];
+        script_context.input.performed.insert("Fire".into(), true);
+        script_context
+            .input
+            .phases
+            .insert("Fire".into(), "performed".into());
+        script_context.input.durations.insert("Fire".into(), 0.4);
+        script_context.input.contexts.push("Combat".into());
+        script_context.input.maps.push("Default".into());
+        script_context.input.scheme = "Gamepad".into();
+        script_context.game_flow.score = 12.0;
+        script_context.game_flow.checkpoints.push("start".into());
+        script_context
+            .game_flow
+            .session
+            .insert("wave".into(), Value::from(2));
+        let source = r#"
+            fn update(dt) {
+                let targets = query_tag("enemy", 9999);
+                expect(targets.len == 1 && input_performed("Fire") && input_phase("Fire") == "performed"
+                    && input_duration("Fire") == 0.4 && input_context_active("Combat") && input_map_active("Default")
+                    && input_scheme() == "Gamepad" && score_get() == 12.0
+                    && checkpoint_has("start") && session_get("wave", 0) == 2, "v5.4 reads");
+                let created = spawn_at("asset://bullet", 1.0, 2.0, 0.25, 1.0, 1.0);
+                entity_set_position(created, 3.0, 4.0);
+                entity_add_tag(targets[0], "targeted");
+                component_set_enabled_on(targets[0], "Health2D", false);
+                game_pause(true); score_add(5.0); checkpoint_set("combat");
+                session_set("wave", 3); input_context_push("Menu", 100, true);
+                input_context_pop("Menu"); input_map_enable("Combat"); input_map_disable("Combat"); input_scheme_set("KeyboardMouse");
+            }
+        "#;
+        let execution = ScriptRuntime::new()
+            .execute(source, "update", script_context)
+            .expect("v5.4 gameplay API executes");
+        assert!(execution.logs.is_empty());
+        assert!(
+            matches!(&execution.commands[0], ScriptCommand::SpawnAt { pending_id, prefab, .. } if pending_id == "pending:entity-1:1" && prefab == "asset://bullet")
+        );
+        assert!(
+            matches!(&execution.commands[1], ScriptCommand::TargetSetPosition { target, .. } if target == "pending:entity-1:1")
+        );
+        assert!(
+            matches!(&execution.commands[2], ScriptCommand::TargetAddTag { target, tag, .. } if target == "enemy-1" && tag == "targeted")
+        );
+        assert!(execution
+            .commands
+            .iter()
+            .any(|command| matches!(command, ScriptCommand::GamePause { paused: true })));
+        assert!(execution.commands.iter().any(|command| matches!(command, ScriptCommand::InputContextPush { name, priority: 100, consume: true } if name == "Menu")));
+        let serialized = serde_json::to_value(&execution.commands[1]).expect("command bridge");
+        assert_eq!(serialized["type"], "targetSetPosition");
+        assert!(serialized.get("generation").is_some());
+    }
+
+    #[test]
     fn deprecated_aliases_emit_one_compatibility_warning() {
         let execution = ScriptRuntime::new()
             .execute(
@@ -1979,6 +2915,9 @@ mod tests {
             .input
             .vectors
             .insert("Move".into(), [0.5, -0.25]);
+        script_context.input.mouse_world_position = [3.25, -4.5];
+        script_context.input.view_bounds = [-12.0, 12.0, -7.0, 7.0];
+        script_context.input.viewport_size = [1920.0, 1080.0];
         script_context.rigid_body = Some(RigidBodySnapshot {
             velocity: [1.0, 2.0],
             angular_velocity: 0.25,
@@ -1999,6 +2938,7 @@ mod tests {
                 expect(api_version() == 2 && api_current_version() == 2 && api_minimum_version() == 1 && api_namespace("scene_load") == "scene" && h0.valid && h1.valid && h2.valid && h3.valid && h4.valid && h5.valid, "handles");
                 entity(); entity_name(); find_entity("Player"); has_component("RigidBody2D"); get_component("RigidBody2D"); transform(); rigid_body(); animator(); audio_source();
                 input_down("Move"); input_pressed("Jump"); input_released("Move"); input_axis("Move"); input_vector("Move"); input_vector_x("Move"); input_vector_y("Move"); mouse_x(); mouse_y(); wheel_x(); wheel_y();
+                expect(mouse_world_x() == 3.25 && mouse_world_y() == -4.5 && view_min_x() == -12.0 && view_max_x() == 12.0 && view_min_y() == -7.0 && view_max_y() == 7.0 && viewport_width() == 1920.0 && viewport_height() == 1080.0, "world pointer input");
                 time(); time_delta(); time_fixed_delta(); time_elapsed(); time_scale(); time_frame(); random(); random_range(0.0, 1.0);
                 apply_force(1.0, 2.0); apply_impulse(1.0, 2.0); set_velocity(1.0, 2.0); set_position(1.0, 2.0); set_rotation(0.5); set_scale(1.0, 1.0); set_angular_velocity(0.5);
                 character_is_on_floor(); character_is_on_wall(); character_is_on_ceiling(); can_coyote_jump(); character_floor_normal_x(); character_floor_normal_y(); character_floor_normal(); character_platform_velocity_x(); character_platform_velocity_y(); character_platform_velocity(); move_character(1.0, 0.0);
@@ -2031,5 +2971,29 @@ mod tests {
             )
             .unwrap();
         assert!(!execution.logs.iter().any(|log| log.level == "error"));
+    }
+
+    #[test]
+    fn sandbox_rejects_unbounded_host_command_output() {
+        let error = ScriptRuntime::new()
+            .execute(
+                "fn update(dt) { for value in 0..5000 { score_add(1.0); } }",
+                "update",
+                context(),
+            )
+            .expect_err("command flood must stop inside the sandbox");
+        assert!(error.contains("too many host commands"), "{error}");
+    }
+
+    #[test]
+    fn sandbox_limits_script_owned_collections() {
+        let error = ScriptRuntime::new()
+            .execute(
+                "fn update(dt) { let values = []; for value in 0..9000 { values.push(value); } }",
+                "update",
+                context(),
+            )
+            .expect_err("oversized script array must be rejected");
+        assert!(error.to_lowercase().contains("array"), "{error}");
     }
 }

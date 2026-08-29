@@ -124,22 +124,37 @@ fn correct_contact_position(bodies: &mut [Body], contact: &Contact) {
     if contact.is_sensor {
         return;
     }
-    let inv_mass_sum = bodies[contact.body_a].inv_mass + bodies[contact.body_b].inv_mass;
-    if inv_mass_sum <= 0.0 {
+    let (effective_inverse_mass, cross_a, cross_b) = {
+        let a = &bodies[contact.body_a];
+        let b = &bodies[contact.body_b];
+        let cross_a = contact.radius_a.cross(contact.normal);
+        let cross_b = contact.radius_b.cross(contact.normal);
+        (
+            a.inv_mass
+                + b.inv_mass
+                + cross_a * cross_a * a.inv_inertia
+                + cross_b * cross_b * b.inv_inertia,
+            cross_a,
+            cross_b,
+        )
+    };
+    if effective_inverse_mass <= 0.0 {
         return;
     }
     let correction_magnitude =
         ((contact.depth - POSITION_SLOP).max(0.0) * POSITION_CORRECTION * contact.position_weight)
-            / inv_mass_sum;
+            / effective_inverse_mass;
     let correction = contact.normal.mul(correction_magnitude);
     let (a, b) = two_bodies_mut(bodies, contact.body_a, contact.body_b);
     a.position = a
         .position
         .sub(correction.mul(a.inv_mass))
         .finite_or(a.position);
+    a.angle = normalize_angle(a.angle - cross_a * correction_magnitude * a.inv_inertia);
     b.position = b
         .position
         .add(correction.mul(b.inv_mass))
         .finite_or(b.position);
+    b.angle = normalize_angle(b.angle + cross_b * correction_magnitude * b.inv_inertia);
 }
 

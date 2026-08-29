@@ -48,8 +48,24 @@ export interface WorkspaceSymbol extends ScriptSymbol { uri: string }
 
 const IDENTIFIER = /^[A-Za-z_][A-Za-z0-9_]*$/
 const KEYWORDS = new Set(['fn', 'let', 'const', 'if', 'else', 'for', 'while', 'loop', 'in', 'return', 'break', 'continue', 'true', 'false', 'switch', 'throw', 'try', 'catch', 'use'])
-const BUILTINS = new Set(['print', 'debug', 'type_of', 'len', 'is_def_var', 'this'])
-const API_NAMES = new Set(SCRIPT_API.map(entry => entry.name))
+const BUILTINS = new Set(['print', 'debug', 'type_of', 'len', 'is_def_var', 'to_float', 'to_int', 'to_string', 'this'])
+const API_NAMES = new Set([...SCRIPT_API.map(entry => entry.name), '__nova_graph_trace'])
+
+function splitLineComment(line: string): { code: string; commentAt: number } {
+  let quote = '', escaped = false
+  for (let index = 0; index < line.length - 1; index++) {
+    const character = line[index]
+    if (escaped) { escaped = false; continue }
+    if (character === '\\' && quote) { escaped = true; continue }
+    if (quote) {
+      if (character === quote) quote = ''
+      continue
+    }
+    if (character === '"' || character === "'") { quote = character; continue }
+    if (character === '/' && line[index + 1] === '/') return { code: line.slice(0, index), commentAt: index }
+  }
+  return { code: line, commentAt: -1 }
+}
 
 function diagnostic(line: number, column: number, length: number, severity: ScriptSeverity, phase: ScriptDiagnosticPhase, code: string, message: string): ScriptDiagnostic {
   const endColumn = Math.max(column + Math.max(1, length), column + 1)
@@ -86,11 +102,10 @@ export function analyzeScript(source: string, apiVersion: 1 | 2 = 2, revision = 
   lines.forEach((line, index) => {
     const lineNumber = index + 1, testDirective = parseTestDirective(line)
     if (testDirective) pendingTest = testDirective
-    const commentAt = line.indexOf('//')
+    const { code, commentAt } = splitLineComment(line)
     if (commentAt >= 0) semanticTokens.push({ line: lineNumber, column: commentAt + 1, length: line.length - commentAt, kind: 'comment' })
     if (/^\s*\/\/\//.test(line)) pendingDocs.push(line.replace(/^\s*\/\/\/\s?/, ''))
     else if (line.trim() && !/^\s*\/\//.test(line) && !/^\s*fn\s/.test(line)) pendingDocs = []
-    const code = line.replace(/\/\/.*$/, '')
     const dependency = code.match(/^\s*use\s+["'`]([^"'`]+)["'`]\s*;?\s*$/)
     if (dependency) dependencies.push(dependency[1])
     const fn = code.match(/^\s*fn\s+([A-Za-z_][A-Za-z0-9_]*)\s*\(([^)]*)\)/)

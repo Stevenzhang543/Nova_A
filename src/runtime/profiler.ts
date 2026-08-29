@@ -57,7 +57,10 @@ export const profilerState = reactive({
   markers: [] as ProfilerMarker[],
   counters: [] as ProfilerCounter[],
   annotations: [] as ProfilerAnnotation[],
-  overheadMode: 'Full' as 'Full' | 'Low overhead' | 'Off',
+  // Full tracing remains available on demand. The normal editor records a
+  // representative frame sample without allocating per-subsystem markers on
+  // every animation frame.
+  overheadMode: 'Low overhead' as 'Full' | 'Low overhead' | 'Off',
   estimatedOverheadPercent: 0,
   remotePeer: '' as string,
   capacity: 180
@@ -84,7 +87,7 @@ export function recordScriptFunction(scriptUuid: string, scriptName: string, fun
   profilerState.scriptFunctions.splice(0, profilerState.scriptFunctions.length, ...values)
 }
 
-export function captureScriptProfile(engineVersion = '5.0.1'): ScriptProfileCapture {
+export function captureScriptProfile(engineVersion = '6.1.0'): ScriptProfileCapture {
   const capture: ScriptProfileCapture = { format: 'nova-script-profile', version: 1, engineVersion, createdAt: new Date().toISOString(), entries: profilerState.scriptFunctions.map(item => ({ ...item })) }
   profilerState.scriptCaptures.push(capture)
   if (profilerState.scriptCaptures.length > 16) profilerState.scriptCaptures.splice(0, profilerState.scriptCaptures.length - 16)
@@ -100,7 +103,7 @@ export function compareScriptProfiles(first: ScriptProfileCapture, second: Scrip
 }
 
 export function recordFrameProfile(sample: Omit<FrameProfile, 'frame' | 'timestamp' | 'inputMs' | 'allocations' | 'gpuPasses' | 'assetJobs'> & Partial<Pick<FrameProfile, 'inputMs' | 'allocations' | 'gpuPasses' | 'assetJobs'>>): FrameProfile | null {
-  if (!profilerState.enabled || profilerState.frozen) return null
+  if (!profilerState.enabled || profilerState.frozen || profilerState.overheadMode === 'Off') return null
   const next: FrameProfile = { inputMs: 0, allocations: 0, gpuPasses: 0, assetJobs: 0, ...sample, frame: profilerState.current.frame + 1, timestamp: performance.now() }
   Object.assign(profilerState.current, next)
   profilerState.samples.push(next)
@@ -109,8 +112,8 @@ export function recordFrameProfile(sample: Omit<FrameProfile, 'frame' | 'timesta
     for (const [name, duration] of [['input', next.inputMs], ['physics', next.physicsMs], ['scripts', next.scriptsMs], ['animation', next.animationMs], ['audio', next.audioMs], ['rendering', next.renderingMs], ['assets', next.assetsMs], ['other', next.otherMs]] as Array<[string, number]>) { if (duration > 0) profilerState.markers.push({ id: markerSerial++, frame: next.frame, name, category: 'frame', startMs: cursor, durationMs: duration, detail: `Frame ${next.frame}` }); cursor += duration }
     if (profilerState.markers.length > 10_000) profilerState.markers.splice(0, profilerState.markers.length - 10_000)
   }
-  if (profilerState.overheadMode !== 'Off') { profilerState.counters.push({ frame: next.frame, name: 'fps', value: next.fps, unit: 'Hz' }, { frame: next.frame, name: 'allocations', value: next.allocations, unit: 'count' }, { frame: next.frame, name: 'gpuPasses', value: next.gpuPasses, unit: 'count' }); if (next.memoryMb !== null) profilerState.counters.push({ frame: next.frame, name: 'memory', value: next.memoryMb, unit: 'MB' }); if (profilerState.counters.length > 10_000) profilerState.counters.splice(0, profilerState.counters.length - 10_000) }
-  profilerState.estimatedOverheadPercent = profilerState.overheadMode === 'Full' ? Math.min(25, .25 + profilerState.markers.length / 50_000 + profilerState.counters.length / 100_000) : profilerState.overheadMode === 'Low overhead' ? .08 : 0
+  profilerState.counters.push({ frame: next.frame, name: 'fps', value: next.fps, unit: 'Hz' }, { frame: next.frame, name: 'allocations', value: next.allocations, unit: 'count' }, { frame: next.frame, name: 'gpuPasses', value: next.gpuPasses, unit: 'count' }); if (next.memoryMb !== null) profilerState.counters.push({ frame: next.frame, name: 'memory', value: next.memoryMb, unit: 'MB' }); if (profilerState.counters.length > 10_000) profilerState.counters.splice(0, profilerState.counters.length - 10_000)
+  profilerState.estimatedOverheadPercent = profilerState.overheadMode === 'Full' ? Math.min(25, .25 + profilerState.markers.length / 50_000 + profilerState.counters.length / 100_000) : .08
   profilerState.capacity = productionSettings.performance.traceCapacity
   if (profilerState.samples.length > profilerState.capacity) profilerState.samples.splice(0, profilerState.samples.length - profilerState.capacity)
   return next

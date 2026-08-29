@@ -12,8 +12,15 @@ use base64::Engine;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
-const EMBEDDED_MAGIC: &[u8; 8] = b"NOVAPAK!";
-const EMBEDDED_FOOTER_BYTES: u64 = 16;
+const EMBEDDED_LEGACY_MAGIC: &[u8; 8] = b"NOVAPAK!";
+const EMBEDDED_MAGIC: &[u8; 8] = b"NOVAPK2!";
+const EMBEDDED_LEGACY_FOOTER_BYTES: u64 = 16;
+const EMBEDDED_FOOTER_BYTES: u64 = 48;
+const MAX_EMBEDDED_PACKAGE_BYTES: u64 = 1024 * 1024 * 1024;
+const MAX_WEB_EXPORT_FILES: usize = 20_000;
+const MAX_WEB_EXPORT_FILE_BYTES: u64 = 256 * 1024 * 1024;
+const MAX_WEB_EXPORT_TOTAL_BYTES: u64 = 2 * 1024 * 1024 * 1024;
+const ENGINE_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -105,6 +112,23 @@ struct BuildDeliveryOptions {
     notarization_hook: String,
     #[serde(default)]
     clean_machine_job: bool,
+    #[serde(default = "default_true")]
+    content_cache: bool,
+    #[serde(default = "default_true")]
+    delta_builds: bool,
+    #[serde(default = "default_ci_matrix_version")]
+    ci_matrix_version: u32,
+    #[serde(default)]
+    deployment_connector_id: String,
+    #[serde(default)]
+    deployment_permission_granted: bool,
+}
+
+fn default_true() -> bool {
+    true
+}
+fn default_ci_matrix_version() -> u32 {
+    1
 }
 
 #[derive(Serialize)]
@@ -307,6 +331,22 @@ fn decode_base64(value: &str) -> Result<Vec<u8>, String> {
         .map_err(|error| format!("invalid build data: {error}"))
 }
 
+fn decode_base64_limited(value: &str, maximum: u64, label: &str) -> Result<Vec<u8>, String> {
+    let estimated = (value.len() as u64)
+        .checked_add(3)
+        .and_then(|length| length.checked_div(4))
+        .and_then(|groups| groups.checked_mul(3))
+        .ok_or_else(|| format!("{label} size overflow"))?;
+    if estimated > maximum.saturating_add(2) {
+        return Err(format!("{label} exceeds the {} byte safety limit", maximum));
+    }
+    let decoded = decode_base64(value)?;
+    if decoded.len() as u64 > maximum {
+        return Err(format!("{label} exceeds the {} byte safety limit", maximum));
+    }
+    Ok(decoded)
+}
+
 fn sha256_hex(bytes: &[u8]) -> String {
     format!("{:x}", Sha256::digest(bytes))
 }
@@ -332,12 +372,32 @@ fn write_incremental(path: &Path, bytes: &[u8], incremental: bool) -> Result<boo
     if let Some(parent) = path.parent() {
         fs::create_dir_all(parent).map_err(|error| error.to_string())?;
     }
-    let temporary = path.with_extension(format!("nova-write-{}", std::process::id()));
+    let nonce = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_nanos();
+    let temporary = path.with_extension(format!("nova-write-{}-{nonce}", std::process::id()));
     fs::write(&temporary, bytes).map_err(|error| error.to_string())?;
-    if path.exists() {
-        fs::remove_file(path).map_err(|error| error.to_string())?;
+    if !path.exists() {
+        return fs::rename(&temporary, path)
+            .map(|_| true)
+            .map_err(|error| error.to_string());
     }
-    fs::rename(&temporary, path).map_err(|error| error.to_string())?;
+    if !path.is_file() {
+        let _ = fs::remove_file(&temporary);
+        return Err(format!("build output is not a replaceable file: {}", path.display()));
+    }
+    let backup = path.with_extension(format!("nova-backup-{}-{nonce}", std::process::id()));
+    fs::rename(path, &backup).map_err(|error| {
+        let _ = fs::remove_file(&temporary);
+        format!("could not stage the previous build output: {error}")
+    })?;
+    if let Err(error) = fs::rename(&temporary, path) {
+        let _ = fs::rename(&backup, path);
+        let _ = fs::remove_file(&temporary);
+        return Err(format!("atomic build replacement failed; the previous output was restored: {error}"));
+    }
+    let _ = fs::remove_file(backup);
     Ok(true)
 }
 
@@ -352,13 +412,17 @@ fn android_template() -> Option<PathBuf> {
 
 #[tauri::command]
 fn export_capabilities() -> ExportCapabilities {
+    let android_available = android_template().is_some();
     ExportCapabilities {
         host: std::env::consts::OS.to_string(),
         architecture: std::env::consts::ARCH.to_string(),
-        android_available: false,
-        android_reason:
-            "Android export is deferred and cannot be selected in the Nova_A 3.9 Stable channel."
-                .into(),
+        android_available,
+        android_reason: if android_available {
+            String::new()
+        } else {
+            "Android export requires JDK 17, Android SDK/NDK, and a validated NOVA_A_ANDROID_TEMPLATE directory."
+                .into()
+        },
     }
 }
 
@@ -554,6 +618,13 @@ fn write_export_file(
 }
 
 fn append_embedded_package(executable: &Path, pack: &[u8]) -> Result<(), String> {
+    if pack.is_empty() {
+        return Err("cannot embed an empty Nova package".into());
+    }
+    if pack.len() as u64 > MAX_EMBEDDED_PACKAGE_BYTES {
+        return Err("embedded Nova packages are limited to 1 GiB".into());
+    }
+    let digest = Sha256::digest(pack);
     let mut file = OpenOptions::new()
         .append(true)
         .open(executable)
@@ -563,38 +634,79 @@ fn append_embedded_package(executable: &Path, pack: &[u8]) -> Result<(), String>
         .map_err(|error| error.to_string())?;
     file.write_all(&(pack.len() as u64).to_le_bytes())
         .map_err(|error| error.to_string())?;
+    file.write_all(&digest).map_err(|error| error.to_string())?;
     file.flush().map_err(|error| error.to_string())
 }
 
 fn embedded_package(executable: &Path) -> Result<Option<Vec<u8>>, String> {
     let mut file = File::open(executable).map_err(|error| error.to_string())?;
     let length = file.metadata().map_err(|error| error.to_string())?.len();
-    if length < EMBEDDED_FOOTER_BYTES {
+    if length < EMBEDDED_LEGACY_FOOTER_BYTES {
         return Ok(None);
     }
-    file.seek(SeekFrom::End(-(EMBEDDED_FOOTER_BYTES as i64)))
-        .map_err(|error| error.to_string())?;
-    let mut footer = [0_u8; EMBEDDED_FOOTER_BYTES as usize];
-    file.read_exact(&mut footer)
-        .map_err(|error| error.to_string())?;
-    if &footer[..8] != EMBEDDED_MAGIC {
-        return Ok(None);
+    let (footer_bytes, pack_length, expected_hash) = if length >= EMBEDDED_FOOTER_BYTES {
+        file.seek(SeekFrom::End(-(EMBEDDED_FOOTER_BYTES as i64)))
+            .map_err(|error| error.to_string())?;
+        let mut footer = [0_u8; EMBEDDED_FOOTER_BYTES as usize];
+        file.read_exact(&mut footer)
+            .map_err(|error| error.to_string())?;
+        if &footer[..8] == EMBEDDED_MAGIC {
+            let pack_length = u64::from_le_bytes(
+                footer[8..16]
+                    .try_into()
+                    .map_err(|_| "invalid embedded package footer")?,
+            );
+            (
+                EMBEDDED_FOOTER_BYTES,
+                pack_length,
+                Some(footer[16..48].to_vec()),
+            )
+        } else {
+            file.seek(SeekFrom::End(-(EMBEDDED_LEGACY_FOOTER_BYTES as i64)))
+                .map_err(|error| error.to_string())?;
+            let mut legacy = [0_u8; EMBEDDED_LEGACY_FOOTER_BYTES as usize];
+            file.read_exact(&mut legacy)
+                .map_err(|error| error.to_string())?;
+            if &legacy[..8] != EMBEDDED_LEGACY_MAGIC {
+                return Ok(None);
+            }
+            let pack_length = u64::from_le_bytes(
+                legacy[8..16]
+                    .try_into()
+                    .map_err(|_| "invalid legacy embedded package footer")?,
+            );
+            (EMBEDDED_LEGACY_FOOTER_BYTES, pack_length, None)
+        }
+    } else {
+        file.seek(SeekFrom::End(-(EMBEDDED_LEGACY_FOOTER_BYTES as i64)))
+            .map_err(|error| error.to_string())?;
+        let mut legacy = [0_u8; EMBEDDED_LEGACY_FOOTER_BYTES as usize];
+        file.read_exact(&mut legacy)
+            .map_err(|error| error.to_string())?;
+        if &legacy[..8] != EMBEDDED_LEGACY_MAGIC {
+            return Ok(None);
+        }
+        let pack_length = u64::from_le_bytes(
+            legacy[8..16]
+                .try_into()
+                .map_err(|_| "invalid legacy embedded package footer")?,
+        );
+        (EMBEDDED_LEGACY_FOOTER_BYTES, pack_length, None)
+    };
+    if pack_length == 0 || pack_length > MAX_EMBEDDED_PACKAGE_BYTES {
+        return Err("embedded Nova package has an invalid size".into());
     }
-    let pack_length = u64::from_le_bytes(
-        footer[8..16]
-            .try_into()
-            .map_err(|_| "invalid embedded package footer")?,
-    );
-    if pack_length > length - EMBEDDED_FOOTER_BYTES {
+    if pack_length > length - footer_bytes {
         return Err("embedded Nova package is truncated".into());
     }
-    file.seek(SeekFrom::Start(
-        length - EMBEDDED_FOOTER_BYTES - pack_length,
-    ))
-    .map_err(|error| error.to_string())?;
+    file.seek(SeekFrom::Start(length - footer_bytes - pack_length))
+        .map_err(|error| error.to_string())?;
     let mut pack = vec![0_u8; pack_length as usize];
     file.read_exact(&mut pack)
         .map_err(|error| error.to_string())?;
+    if expected_hash.is_some_and(|expected| Sha256::digest(&pack)[..] != expected[..]) {
+        return Err("embedded Nova package failed its SHA-256 integrity check".into());
+    }
     Ok(Some(pack))
 }
 
@@ -658,6 +770,117 @@ fn copy_file_incremental(
     Ok(true)
 }
 
+fn player_staging_path(destination: &Path, build_id: &str) -> PathBuf {
+    let parent = destination.parent().unwrap_or_else(|| Path::new("."));
+    let stem = destination
+        .file_stem()
+        .and_then(|value| value.to_str())
+        .unwrap_or("NovaPlayer");
+    let suffix = &build_id[..build_id.len().min(12)];
+    parent.join(format!(".{stem}.{suffix}.{}.nova-staging", std::process::id()))
+}
+
+fn locked_player_fallback(destination: &Path, build_id: &str, attempt: usize) -> PathBuf {
+    let parent = destination.parent().unwrap_or_else(|| Path::new("."));
+    let stem = destination
+        .file_stem()
+        .and_then(|value| value.to_str())
+        .unwrap_or("NovaPlayer");
+    let extension = destination
+        .extension()
+        .and_then(|value| value.to_str())
+        .map(|value| format!(".{value}"))
+        .unwrap_or_default();
+    let suffix = &build_id[..build_id.len().min(8)];
+    let counter = if attempt == 0 {
+        String::new()
+    } else {
+        format!("-{attempt}")
+    };
+    parent.join(format!("{stem}-{suffix}{counter}{extension}"))
+}
+
+/// Publishes a self-contained player without ever modifying the previous
+/// executable in place. Windows keeps running executables locked, so a build-ID
+/// filename is used when the preferred output cannot be replaced. The editor
+/// must not terminate a game the creator launched independently.
+fn publish_embedded_player(
+    source: &Path,
+    preferred_destination: &Path,
+    pack: &[u8],
+    build_id: &str,
+) -> Result<PathBuf, String> {
+    if let Some(parent) = preferred_destination.parent() {
+        fs::create_dir_all(parent)
+            .map_err(|error| format!("could not create the game output directory: {error}"))?;
+    }
+    let staging = player_staging_path(preferred_destination, build_id);
+    if staging.exists() {
+        fs::remove_file(&staging).map_err(|error| {
+            format!("could not clear the previous Nova Player staging file: {error}")
+        })?;
+    }
+    fs::copy(source, &staging).map_err(|error| {
+        format!(
+            "could not stage Nova Player in the selected output directory: {error}. Check folder permissions and available disk space"
+        )
+    })?;
+    if let Err(error) = append_embedded_package(&staging, pack) {
+        let _ = fs::remove_file(&staging);
+        return Err(error);
+    }
+
+    if !preferred_destination.exists() {
+        fs::rename(&staging, preferred_destination).map_err(|error| {
+            let _ = fs::remove_file(&staging);
+            format!("could not publish Nova Player: {error}")
+        })?;
+        return Ok(preferred_destination.to_path_buf());
+    }
+
+    let staged_hash = file_hash(&staging)?;
+    if file_hash(preferred_destination).ok().as_deref() == Some(staged_hash.as_str()) {
+        fs::remove_file(&staging).map_err(|error| error.to_string())?;
+        return Ok(preferred_destination.to_path_buf());
+    }
+
+    match fs::remove_file(preferred_destination) {
+        Ok(()) => {
+            fs::rename(&staging, preferred_destination).map_err(|error| {
+                let _ = fs::remove_file(&staging);
+                format!("could not publish Nova Player after replacing the previous build: {error}")
+            })?;
+            Ok(preferred_destination.to_path_buf())
+        }
+        Err(replace_error) => {
+            for attempt in 0..100 {
+                let fallback = locked_player_fallback(preferred_destination, build_id, attempt);
+                if fallback.exists() {
+                    if file_hash(&fallback).ok().as_deref() == Some(staged_hash.as_str()) {
+                        let _ = fs::remove_file(&staging);
+                        return Ok(fallback);
+                    }
+                    continue;
+                }
+                match fs::rename(&staging, &fallback) {
+                    Ok(()) => return Ok(fallback),
+                    Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => continue,
+                    Err(error) => {
+                        let _ = fs::remove_file(&staging);
+                        return Err(format!(
+                            "the previous game is locked ({replace_error}) and Nova_A could not publish a versioned fallback: {error}"
+                        ));
+                    }
+                }
+            }
+            let _ = fs::remove_file(&staging);
+            Err(format!(
+                "the previous game is locked ({replace_error}); close old game builds or choose another output directory"
+            ))
+        }
+    }
+}
+
 fn tracked_write(
     root: &Path,
     relative: &str,
@@ -699,28 +922,66 @@ fn build_file_records(root: &Path, files: &[String]) -> Result<Vec<BuildFileReco
 fn export_game(request: ExportRequest) -> Result<ExportResult, String> {
     if !matches!(
         request.target.as_str(),
-        "windows" | "linux" | "macos" | "web"
+        "windows" | "linux" | "macos" | "web" | "android"
     ) {
         return Err("unsupported export target".into());
     }
     if !matches!(request.architecture.as_str(), "x86_64" | "aarch64") {
         return Err("unsupported export architecture".into());
     }
-    if request.target != "web" && request.architecture != std::env::consts::ARCH {
+    if request.target != "web"
+        && request.target != "android"
+        && request.architecture != std::env::consts::ARCH
+    {
         return Err(format!(
             "{} export requires a matching {} player template",
             request.architecture, request.architecture
         ));
     }
+    if request.web_files.len() > MAX_WEB_EXPORT_FILES {
+        return Err(format!("web export contains more than {MAX_WEB_EXPORT_FILES} files"));
+    }
+    if request.project_id.len() > 160 || request.profile.len() > 32 {
+        return Err("export request metadata exceeds its safety limit".into());
+    }
     let game_name = safe_game_name(&request.game_name);
     let root = if request.output_directory.trim().is_empty() {
         default_output_root(&game_name)
     } else {
-        PathBuf::from(request.output_directory.trim())
+        let selected = PathBuf::from(request.output_directory.trim());
+        if !selected.is_absolute() {
+            return Err("export output directory must be an absolute path".into());
+        }
+        selected
     };
+    let pack = decode_base64_limited(
+        &request.pack_base64,
+        MAX_EMBEDDED_PACKAGE_BYTES,
+        "game package",
+    )?;
+    if pack.is_empty() {
+        return Err("game package cannot be empty".into());
+    }
+    let mut decoded_web_bytes = 0_u64;
+    for file in &request.web_files {
+        let estimated = (file.data_base64.len() as u64)
+            .checked_add(3)
+            .and_then(|length| length.checked_div(4))
+            .and_then(|groups| groups.checked_mul(3))
+            .ok_or("web export size overflow")?;
+        if estimated > MAX_WEB_EXPORT_FILE_BYTES.saturating_add(2) {
+            return Err(format!("web export file {} exceeds its safety limit", file.path));
+        }
+        decoded_web_bytes = decoded_web_bytes
+            .checked_add(estimated)
+            .ok_or("web export total size overflow")?;
+        if decoded_web_bytes > MAX_WEB_EXPORT_TOTAL_BYTES {
+            return Err("web export exceeds the 2 GiB safety limit".into());
+        }
+        safe_relative_path(&file.path)?;
+    }
     fs::create_dir_all(&root)
         .map_err(|error| format!("could not create output directory: {error}"))?;
-    let pack = decode_base64(&request.pack_base64)?;
     let mut files = Vec::new();
     let mut launch_path = None;
     let mut cache_hits = 0_usize;
@@ -832,16 +1093,22 @@ fn export_game(request: ExportRequest) -> Result<ExportResult, String> {
             changed_files += 1;
             launch_path = Some(destination);
         } else {
-            let file_name = if host == "windows" {
+            let mut file_name = if host == "windows" {
                 format!("{game_name}.exe")
             } else {
                 game_name.clone()
             };
-            let destination = root.join(&file_name);
+            let mut destination = root.join(&file_name);
+            if destination == current {
+                return Err("the game output cannot overwrite the running Nova_A editor".into());
+            }
             if request.package_into_executable {
-                fs::copy(&current, &destination)
-                    .map_err(|error| format!("could not copy Nova Player: {error}"))?;
-                append_embedded_package(&destination, &pack)?;
+                destination = publish_embedded_player(&current, &destination, &pack, &build_id)?;
+                file_name = destination
+                    .file_name()
+                    .and_then(|value| value.to_str())
+                    .unwrap_or(&file_name)
+                    .to_string();
                 changed_files += 1;
             } else {
                 if copy_file_incremental(&current, &destination, request.delivery.incremental)? {
@@ -865,7 +1132,7 @@ fn export_game(request: ExportRequest) -> Result<ExportResult, String> {
     }
 
     let platform_config = serde_json::to_vec_pretty(&serde_json::json!({
-        "format": "nova-platform-config", "version": 1, "engineVersion": "5.0.1",
+        "format": "nova-platform-config", "version": 1, "engineVersion": ENGINE_VERSION,
         "target": request.target, "architecture": request.architecture, "profile": request.profile,
         "application": request.platform, "structuredLogs": request.delivery.structured_logs,
         "crashCapture": request.delivery.crash_reports,
@@ -881,7 +1148,7 @@ fn export_game(request: ExportRequest) -> Result<ExportResult, String> {
         &mut changed_files,
     )?;
     if request.development_build {
-        let build_info = serde_json::to_vec_pretty(&serde_json::json!({ "engineVersion": "5.0.1", "buildId": build_id, "target": request.target, "architecture": request.architecture, "packageBytes": pack.len() })).map_err(|error| error.to_string())?;
+        let build_info = serde_json::to_vec_pretty(&serde_json::json!({ "engineVersion": ENGINE_VERSION, "buildId": build_id, "target": request.target, "architecture": request.architecture, "packageBytes": pack.len() })).map_err(|error| error.to_string())?;
         tracked_write(
             &root,
             "build-info.json",
@@ -894,7 +1161,7 @@ fn export_game(request: ExportRequest) -> Result<ExportResult, String> {
     }
     if request.delivery.crash_symbols || request.delivery.debug_symbols {
         let symbols = serde_json::to_vec_pretty(&serde_json::json!({
-            "format": "nova-symbol-map", "version": 1, "engineVersion": "5.0.1", "buildId": build_id,
+            "format": "nova-symbol-map", "version": 1, "engineVersion": ENGINE_VERSION, "buildId": build_id,
             "binary": files.iter().find(|path| path.ends_with(".exe") || path.ends_with(".app")).cloned(),
             "workflow": "Archive matching PDB, dSYM, or unstripped ELF symbols under this build ID; symbolicate crash addresses with the platform toolchain."
         })).map_err(|error| error.to_string())?;
@@ -909,7 +1176,7 @@ fn export_game(request: ExportRequest) -> Result<ExportResult, String> {
         )?;
     }
 
-    let cache_diagnostics = serde_json::to_vec_pretty(&serde_json::json!({ "format": "nova-build-cache-diagnostics", "version": 1, "engineVersion": "5.0.1", "mode": request.delivery.cache_mode, "status": if cache_invalidated.is_empty() { "valid" } else { "invalidated" }, "invalidated": cache_invalidated })).map_err(|error| error.to_string())?;
+    let cache_diagnostics = serde_json::to_vec_pretty(&serde_json::json!({ "format": "nova-build-cache-diagnostics", "version": 1, "engineVersion": ENGINE_VERSION, "mode": request.delivery.cache_mode, "status": if cache_invalidated.is_empty() { "valid" } else { "invalidated" }, "invalidated": cache_invalidated })).map_err(|error| error.to_string())?;
     tracked_write(
         &root,
         "nova-build-cache-diagnostics.json",
@@ -922,7 +1189,7 @@ fn export_game(request: ExportRequest) -> Result<ExportResult, String> {
     let mut records = build_file_records(&root, &files)?;
     if request.delivery.size_report {
         let total_bytes: u64 = records.iter().map(|record| record.bytes).sum();
-        let size_report = serde_json::to_vec_pretty(&serde_json::json!({ "format": "nova-build-size-report", "version": 1, "engineVersion": "5.0.1", "totalBytes": total_bytes, "files": records })).map_err(|error| error.to_string())?;
+        let size_report = serde_json::to_vec_pretty(&serde_json::json!({ "format": "nova-build-size-report", "version": 1, "engineVersion": ENGINE_VERSION, "totalBytes": total_bytes, "files": records })).map_err(|error| error.to_string())?;
         tracked_write(
             &root,
             "nova-build-size-report.json",
@@ -934,7 +1201,7 @@ fn export_game(request: ExportRequest) -> Result<ExportResult, String> {
         )?;
     }
     if request.delivery.dependency_report {
-        let dependency_report = serde_json::to_vec_pretty(&serde_json::json!({ "format": "nova-dependency-report", "version": 1, "engineVersion": "5.0.1", "package": { "path": "game.nova-pak", "sha256": sha256_hex(&pack), "bytes": pack.len() }, "application": request.platform.identifier, "permissions": request.platform.permissions, "contentPolicy": { "include": request.delivery.include, "exclude": request.delivery.exclude, "stripUnusedAssets": request.delivery.strip_unused_assets } })).map_err(|error| error.to_string())?;
+        let dependency_report = serde_json::to_vec_pretty(&serde_json::json!({ "format": "nova-dependency-report", "version": 1, "engineVersion": ENGINE_VERSION, "package": { "path": "game.nova-pak", "sha256": sha256_hex(&pack), "bytes": pack.len() }, "application": request.platform.identifier, "permissions": request.platform.permissions, "contentPolicy": { "include": request.delivery.include, "exclude": request.delivery.exclude, "stripUnusedAssets": request.delivery.strip_unused_assets } })).map_err(|error| error.to_string())?;
         tracked_write(
             &root,
             "nova-dependency-report.json",
@@ -947,7 +1214,7 @@ fn export_game(request: ExportRequest) -> Result<ExportResult, String> {
     }
     records = build_file_records(&root, &files)?;
     let content_manifest = serde_json::to_vec_pretty(&serde_json::json!({
-        "format": "nova-content-manifest", "version": 1, "engineVersion": "5.0.1", "buildId": build_id,
+        "format": "nova-content-manifest", "version": 1, "engineVersion": ENGINE_VERSION, "buildId": build_id,
         "include": request.delivery.include, "exclude": request.delivery.exclude,
         "stripUnusedAssets": request.delivery.strip_unused_assets, "compression": request.delivery.compression,
         "files": records
@@ -973,7 +1240,7 @@ fn export_game(request: ExportRequest) -> Result<ExportResult, String> {
     };
     if request.delivery.provenance {
         let provenance = serde_json::to_vec_pretty(&serde_json::json!({
-            "format": "nova-build-provenance", "version": 1, "engineVersion": "5.0.1", "buildId": build_id,
+            "format": "nova-build-provenance", "version": 1, "engineVersion": ENGINE_VERSION, "buildId": build_id,
             "projectId": request.project_id, "target": request.target, "architecture": request.architecture,
             "profile": request.profile, "releaseChannel": request.delivery.release_channel,
             "exportTemplate": request.delivery.export_template, "inputsHash": build_id, "outputsHash": output_digest,
@@ -995,7 +1262,7 @@ fn export_game(request: ExportRequest) -> Result<ExportResult, String> {
     if request.delivery.sbom {
         let sbom = serde_json::to_vec_pretty(&serde_json::json!({
             "bomFormat": "CycloneDX", "specVersion": "1.5", "version": 1,
-            "metadata": { "component": { "type": "application", "name": game_name, "version": request.platform.version }, "properties": [{ "name": "nova.engine", "value": "5.0.1" }, { "name": "nova.build", "value": build_id }] },
+            "metadata": { "component": { "type": "application", "name": game_name, "version": request.platform.version }, "properties": [{ "name": "nova.engine", "value": ENGINE_VERSION }, { "name": "nova.build", "value": build_id }] },
             "components": [{ "type": "file", "name": "game.nova-pak", "hashes": [{ "alg": "SHA-256", "content": sha256_hex(&pack) }] }]
         })).map_err(|error| error.to_string())?;
         tracked_write(
@@ -1009,9 +1276,11 @@ fn export_game(request: ExportRequest) -> Result<ExportResult, String> {
         )?;
     }
     let deployment = serde_json::to_vec_pretty(&serde_json::json!({
-        "format": "nova-deployment-manifest", "version": 1, "engineVersion": "5.0.1", "buildId": build_id,
+        "format": "nova-deployment-manifest", "version": 1, "engineVersion": ENGINE_VERSION, "buildId": build_id,
         "mode": request.delivery.deployment_mode, "destination": request.delivery.deployment_destination,
         "releaseChannel": request.delivery.release_channel, "implicitNetworkOperation": false,
+        "connectorId": request.delivery.deployment_connector_id, "permissionGranted": request.delivery.deployment_permission_granted,
+        "contentCache": request.delivery.content_cache, "deltaBuilds": request.delivery.delta_builds, "ciMatrixVersion": request.delivery.ci_matrix_version,
         "signing": { "mode": request.platform.signing_mode, "hookConfigured": !request.delivery.signing_hook.trim().is_empty(), "notarizationHookConfigured": !request.delivery.notarization_hook.trim().is_empty(), "execution": "external-explicit" },
         "cleanMachineJob": request.delivery.clean_machine_job
     })).map_err(|error| error.to_string())?;
@@ -1073,8 +1342,17 @@ fn export_game(request: ExportRequest) -> Result<ExportResult, String> {
     for relative in &removed {
         let path = root.join(safe_relative_path(relative)?);
         if path.is_file() {
-            fs::remove_file(path).map_err(|error| error.to_string())?;
-            changed_files += 1;
+            match fs::remove_file(&path) {
+                Ok(()) => changed_files += 1,
+                Err(error)
+                    if error.kind() == std::io::ErrorKind::PermissionDenied
+                        && path.extension().is_some_and(|extension| extension == "exe") =>
+                {
+                    // A creator may still be running an earlier Build & Run
+                    // artifact. Retain it instead of failing the new build.
+                }
+                Err(error) => return Err(error.to_string()),
+            }
         }
     }
     if request.delivery.patch_manifest {
@@ -1092,7 +1370,7 @@ fn export_game(request: ExportRequest) -> Result<ExportResult, String> {
     let report = BuildReport {
         format: "nova-build-report".into(),
         version: 2,
-        engine_version: "5.0.1".into(),
+        engine_version: ENGINE_VERSION.into(),
         build_id: build_id.clone(),
         created_at: if request.delivery.deterministic {
             0
@@ -1283,7 +1561,7 @@ fn write_log(contents: &str) -> Result<String, String> {
 
 #[tauri::command]
 fn write_crash_log(payload: CrashPayload) -> Result<String, String> {
-    write_log(&format!("Nova_A version: 5.0.1\nOS: {} {}\nRenderer: {}\nProject: {}\nScene: {}\nError: {}\n\nStack trace:\n{}\n", std::env::consts::OS, std::env::consts::ARCH, payload.renderer, payload.project, payload.scene, payload.message, payload.stack))
+    write_log(&format!("Nova_A version: {ENGINE_VERSION}\nOS: {} {}\nRenderer: {}\nProject: {}\nScene: {}\nError: {}\n\nStack trace:\n{}\n", std::env::consts::OS, std::env::consts::ARCH, payload.renderer, payload.project, payload.scene, payload.message, payload.stack))
 }
 
 #[tauri::command]
@@ -1348,7 +1626,7 @@ fn install_panic_logger() {
             .or_else(|| panic.payload().downcast_ref::<String>().map(String::as_str))
             .unwrap_or("unknown panic");
         let _ = write_log(&format!(
-            "Nova_A version: 5.0.1\nOS: {} {}\nFatal Rust panic at {location}\n{message}\n",
+            "Nova_A version: {ENGINE_VERSION}\nOS: {} {}\nFatal Rust panic at {location}\n{message}\n",
             std::env::consts::OS,
             std::env::consts::ARCH
         ));
@@ -1405,6 +1683,28 @@ mod tests {
     }
 
     #[test]
+    fn embedded_package_rejects_corrupted_payload() {
+        let unique = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
+        let path = std::env::temp_dir().join(format!(
+            "nova-a-player-corrupt-test-{}-{unique}.bin",
+            std::process::id()
+        ));
+        fs::write(&path, b"executable-prefix").unwrap();
+        append_embedded_package(&path, b"NOVAPAK\0payload").unwrap();
+        let mut bytes = fs::read(&path).unwrap();
+        let payload_index = b"executable-prefix".len() + 3;
+        bytes[payload_index] ^= 0xff;
+        fs::write(&path, bytes).unwrap();
+        assert!(embedded_package(&path)
+            .unwrap_err()
+            .contains("SHA-256 integrity"));
+        fs::remove_file(path).unwrap();
+    }
+
+    #[test]
     fn export_paths_cannot_escape_the_selected_directory() {
         assert!(safe_relative_path("assets/player.js").is_ok());
         assert!(safe_relative_path("../private.txt").is_err());
@@ -1427,6 +1727,88 @@ mod tests {
         assert!(write_incremental(&path, b"second", true).unwrap());
         assert_eq!(fs::read(&path).unwrap(), b"second");
         fs::remove_dir_all(directory).unwrap();
+    }
+
+    #[test]
+    fn embedded_player_publish_is_staged_before_replacing_the_previous_build() {
+        let unique = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
+        let directory = std::env::temp_dir().join(format!(
+            "nova-a-player-publish-test-{}-{unique}",
+            std::process::id()
+        ));
+        fs::create_dir_all(&directory).unwrap();
+        let source = directory.join("editor-source.bin");
+        let destination = directory.join("Game.exe");
+        fs::write(&source, b"player-prefix").unwrap();
+        let published = publish_embedded_player(
+            &source,
+            &destination,
+            b"NOVAPAK\0first",
+            "11111111111111111111111111111111",
+        )
+        .unwrap();
+        assert_eq!(published, destination);
+        assert_eq!(
+            embedded_package(&destination).unwrap().as_deref(),
+            Some(b"NOVAPAK\0first".as_slice())
+        );
+        assert!(!directory
+            .read_dir()
+            .unwrap()
+            .any(|entry| entry.unwrap().path().extension().is_some_and(|value| value == "nova-staging")));
+        fs::remove_dir_all(directory).unwrap();
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn locked_windows_player_uses_a_versioned_fallback_instead_of_failing() {
+        use std::os::windows::fs::OpenOptionsExt;
+
+        let unique = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
+        let directory = std::env::temp_dir().join(format!(
+            "nova-a-player-lock-test-{}-{unique}",
+            std::process::id()
+        ));
+        fs::create_dir_all(&directory).unwrap();
+        let source = directory.join("editor-source.bin");
+        let destination = directory.join("Game.exe");
+        fs::write(&source, b"player-prefix").unwrap();
+        fs::write(&destination, b"running-old-build").unwrap();
+        let lock = OpenOptions::new()
+            .read(true)
+            .share_mode(0)
+            .open(&destination)
+            .unwrap();
+        let published = publish_embedded_player(
+            &source,
+            &destination,
+            b"NOVAPAK\0replacement",
+            "abcdef1234567890abcdef1234567890",
+        )
+        .unwrap();
+        assert_ne!(published, destination);
+        assert_eq!(published.file_name().unwrap(), "Game-abcdef12.exe");
+        assert_eq!(
+            embedded_package(&published).unwrap().as_deref(),
+            Some(b"NOVAPAK\0replacement".as_slice())
+        );
+        drop(lock);
+        fs::remove_dir_all(directory).unwrap();
+    }
+
+    #[test]
+    fn bounded_base64_rejects_oversized_build_data_before_decoding() {
+        let oversized = base64::engine::general_purpose::STANDARD.encode([7_u8; 33]);
+        assert_eq!(decode_base64_limited(&oversized, 33, "fixture").unwrap().len(), 33);
+        assert!(decode_base64_limited(&oversized, 32, "fixture")
+            .unwrap_err()
+            .contains("safety limit"));
     }
 
     #[test]

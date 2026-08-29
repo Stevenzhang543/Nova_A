@@ -1,0 +1,231 @@
+{
+  "format": "nova-release-evidence-manifest",
+  "version": 1,
+  "release": "6.1.0",
+  "generatedAt": "2026-08-29T14:31:53.553Z",
+  "source": {
+    "commit": "af1d173b71e02630562513cd9b7bfd6f593d6947",
+    "dirty": true,
+    "note": "Current working candidate; exact tag verification remains pending."
+  },
+  "environment": {
+    "id": "win32-x64-22.22.2",
+    "platform": "win32",
+    "architecture": "x64",
+    "node": "22.22.2",
+    "rust": "rustc 1.92.0 (ded5c06cf 2025-12-08)",
+    "cargo": "cargo 1.92.0 (344c4567c 2025-10-21)"
+  },
+  "localQualificationComplete": true,
+  "externalCertificationComplete": false,
+  "entries": [
+    {
+      "path": "build/local-builds.json",
+      "sha256": "b1ac39ea883ca07b2eba872e7aab44de9fbd6e91be94d5a4de786bb0453fd2d2",
+      "bytes": 1575,
+      "source": "af1d173b71e02630562513cd9b7bfd6f593d6947",
+      "tool": "generate-v6.1.0-release-evidence.mjs",
+      "environment": "win32-x64-22.22.2"
+    },
+    {
+      "path": "build/windows-smoke.json",
+      "sha256": "76f434cbeef5a290891c228d73bf1f12392ea6fb6db0936250f4b18244ece710",
+      "bytes": 2710,
+      "source": "af1d173b71e02630562513cd9b7bfd6f593d6947",
+      "tool": "generate-v6.1.0-release-evidence.mjs",
+      "environment": "win32-x64-22.22.2"
+    },
+    {
+      "path": "external/gates.json",
+      "sha256": "51ebc99a0001ebd8cb1bfbb4ada732563d3dc447f475783893af773ad2c7df42",
+      "bytes": 967,
+      "source": "af1d173b71e02630562513cd9b7bfd6f593d6947",
+      "tool": "generate-v6.1.0-release-evidence.mjs",
+      "environment": "win32-x64-22.22.2"
+    },
+    {
+      "path": "game-output/Mouse Knockout.exe",
+      "sha256": "ca07ec2ce76993d8e6943396d26e0a1535560398531c7f55f84ce89d4b180261",
+      "bytes": 16162852,
+      "source": "af1d173b71e02630562513cd9b7bfd6f593d6947",
+      "tool": "generate-v6.1.0-release-evidence.mjs",
+      "environment": "win32-x64-22.22.2"
+    },
+    {
+      "path": "game-output/nova-build-provenance.json",
+      "sha256": "b24a8460532e27f0ef4de91f6670e2e9fe33a1abe441f2cca7d30e96e458e638",
+      "bytes": 989,
+      "source": "af1d173b71e02630562513cd9b7bfd6f593d6947",
+      "tool": "generate-v6.1.0-release-evidence.mjs",
+      "environment": "win32-x64-22.22.2"
+    },
+    {
+      "path": "game-output/nova-build-report.json",
+      "sha256": "79d527d7bf8e17f828c9fc1346ff8edb996c22bdae5ecdbfbc16bc16cccde2e7",
+      "bytes": 539,
+      "source": "af1d173b71e02630562513cd9b7bfd6f593d6947",
+      "tool": "generate-v6.1.0-release-evidence.mjs",
+      "environment": "win32-x64-22.22.2"
+    },
+    {
+      "path": "game-output/nova-build-size-report.json",
+      "sha256": "c3063129f29d7f7ad916f45f7746f563fe07448f7683182ee304ea529c0ad1df",
+      "bytes": 285,
+      "source": "af1d173b71e02630562513cd9b7bfd6f593d6947",
+      "tool": "generate-v6.1.0-release-evidence.mjs",
+      "environment": "win32-x64-22.22.2"
+    },
+    {
+      "path": "game-output/nova-content-manifest.json",
+      "sha256": "b85515725cfe174567f34386e3909d8231e5d9109a91da0eb00adf5c5576531a",
+      "bytes": 501,
+      "source": "af1d173b71e02630562513cd9b7bfd6f593d6947",
+      "tool": "generate-v6.1.0-release-evidence.mjs",
+      "environment": "win32-x64-22.22.2"
+    },
+    {
+      "path": "game-output/nova-dependency-report.json",
+      "sha256": "039abc31ba5393d7bc81c30d6a59ad0ca7167c9cc231f7288c07df1b5d17b794",
+      "bytes": 560,
+      "source": "af1d173b71e02630562513cd9b7bfd6f593d6947",
+      "tool": "generate-v6.1.0-release-evidence.mjs",
+      "environment": "win32-x64-22.22.2"
+    },
+    {
+      "path": "game-output/nova-deployment-manifest.json",
+      "sha256": "96fe2ac18205198a4e483da2e0259f89798d962af5249610f3b09966eafded73",
+      "bytes": 440,
+      "source": "af1d173b71e02630562513cd9b7bfd6f593d6947",
+      "tool": "generate-v6.1.0-release-evidence.mjs",
+      "environment": "win32-x64-22.22.2"
+    },
+    {
+      "path": "game-output/nova-patch-manifest.json",
+      "sha256": "1317e612fa6dbb35c31dffef7393052aebf969af11c400bd9d9d4da190d53722",
+      "bytes": 407,
+      "source": "af1d173b71e02630562513cd9b7bfd6f593d6947",
+      "tool": "generate-v6.1.0-release-evidence.mjs",
+      "environment": "win32-x64-22.22.2"
+    },
+    {
+      "path": "game-output/nova-sbom.cdx.json",
+      "sha256": "e0685f0571b0ccb360dbf4ea3956687728ec594a795761225dacc56def151893",
+      "bytes": 550,
+      "source": "af1d173b71e02630562513cd9b7bfd6f593d6947",
+      "tool": "generate-v6.1.0-release-evidence.mjs",
+      "environment": "win32-x64-22.22.2"
+    },
+    {
+      "path": "game-output/symbols/nova-symbol-map.json",
+      "sha256": "33abfc948078168f3727cdd9546932c7b0e7f5308d7c1c0b68e10894638c0b72",
+      "bytes": 251,
+      "source": "af1d173b71e02630562513cd9b7bfd6f593d6947",
+      "tool": "generate-v6.1.0-release-evidence.mjs",
+      "environment": "win32-x64-22.22.2"
+    },
+    {
+      "path": "layout/layout-browser.json",
+      "sha256": "b32cf135cfd41f1c595e912523ee131aca131977cad4ae41d562615867f0c12e",
+      "bytes": 8315591,
+      "source": "af1d173b71e02630562513cd9b7bfd6f593d6947",
+      "tool": "generate-v6.1.0-release-evidence.mjs",
+      "environment": "win32-x64-22.22.2"
+    },
+    {
+      "path": "manual/MANUAL.de.md",
+      "sha256": "9261f1ed01906cde9c24cf06ad1821d4ce8be29b2ae1ee1352a486eee7a07817",
+      "bytes": 990555,
+      "source": "af1d173b71e02630562513cd9b7bfd6f593d6947",
+      "tool": "generate-v6.1.0-release-evidence.mjs",
+      "environment": "win32-x64-22.22.2"
+    },
+    {
+      "path": "manual/MANUAL.en.md",
+      "sha256": "d582027896cb7b6ed64471a5f30e18e8d648032e41e1563beee4d0617b348867",
+      "bytes": 954243,
+      "source": "af1d173b71e02630562513cd9b7bfd6f593d6947",
+      "tool": "generate-v6.1.0-release-evidence.mjs",
+      "environment": "win32-x64-22.22.2"
+    },
+    {
+      "path": "manual/MANUAL.zh-CN.md",
+      "sha256": "597c2b95d334d38f31000420006e1703b38b42cb54e97f69dacd122233e6ce5e",
+      "bytes": 883374,
+      "source": "af1d173b71e02630562513cd9b7bfd6f593d6947",
+      "tool": "generate-v6.1.0-release-evidence.mjs",
+      "environment": "win32-x64-22.22.2"
+    },
+    {
+      "path": "manual/index.html",
+      "sha256": "fb08886798ca4bfd5a0fccf6593be980c496a43e521bf41e92a65570f8edabd5",
+      "bytes": 2891999,
+      "source": "af1d173b71e02630562513cd9b7bfd6f593d6947",
+      "tool": "generate-v6.1.0-release-evidence.mjs",
+      "environment": "win32-x64-22.22.2"
+    },
+    {
+      "path": "reference/README.md",
+      "sha256": "d29f5d7c1a065e22778af29fa5889a1d08cc977a4cd9ee14c14faafeb2b77da7",
+      "bytes": 1232,
+      "source": "af1d173b71e02630562513cd9b7bfd6f593d6947",
+      "tool": "generate-v6.1.0-release-evidence.mjs",
+      "environment": "win32-x64-22.22.2"
+    },
+    {
+      "path": "reference/expected-output.json",
+      "sha256": "4da58a4299859e4ecf97a43b4be33adeb6b154268a6ef60e93baf8920f462ecc",
+      "bytes": 523,
+      "source": "af1d173b71e02630562513cd9b7bfd6f593d6947",
+      "tool": "generate-v6.1.0-release-evidence.mjs",
+      "environment": "win32-x64-22.22.2"
+    },
+    {
+      "path": "reference/project.nova",
+      "sha256": "3dcaf3134ca000c82d10619f5aeb9218e39a3cf953ff92595dd927dbd006d566",
+      "bytes": 56652,
+      "source": "af1d173b71e02630562513cd9b7bfd6f593d6947",
+      "tool": "generate-v6.1.0-release-evidence.mjs",
+      "environment": "win32-x64-22.22.2"
+    },
+    {
+      "path": "reference/test-controls.json",
+      "sha256": "d91c25ed73310cc429e51f400d54bdbe813295c24f136d53edd025a44fc45bde",
+      "bytes": 867,
+      "source": "af1d173b71e02630562513cd9b7bfd6f593d6947",
+      "tool": "generate-v6.1.0-release-evidence.mjs",
+      "environment": "win32-x64-22.22.2"
+    },
+    {
+      "path": "runtime/product-audit.json",
+      "sha256": "a13205ea03d26b4850f8be9f834fe7bd1f2853546992b8c982424f81896258a5",
+      "bytes": 2693,
+      "source": "af1d173b71e02630562513cd9b7bfd6f593d6947",
+      "tool": "generate-v6.1.0-release-evidence.mjs",
+      "environment": "win32-x64-22.22.2"
+    },
+    {
+      "path": "runtime/template-catalog.json",
+      "sha256": "c6c3142e521058d79459df6743366391e96b4973399b8a3a415c6ac0b6bb78eb",
+      "bytes": 6436,
+      "source": "af1d173b71e02630562513cd9b7bfd6f593d6947",
+      "tool": "generate-v6.1.0-release-evidence.mjs",
+      "environment": "win32-x64-22.22.2"
+    },
+    {
+      "path": "runtime/user-interactions.json",
+      "sha256": "a6b7670a91fd559cfb8020267f7e8a48d10786eb5fc0606d8d3a7fc06e6c4236",
+      "bytes": 245590,
+      "source": "af1d173b71e02630562513cd9b7bfd6f593d6947",
+      "tool": "generate-v6.1.0-release-evidence.mjs",
+      "environment": "win32-x64-22.22.2"
+    },
+    {
+      "path": "runtime/verification.json",
+      "sha256": "2129da89537164d7a2c15230e56fe43f4779753e47917b7fb7bc2d02d4833ae1",
+      "bytes": 2143,
+      "source": "af1d173b71e02630562513cd9b7bfd6f593d6947",
+      "tool": "generate-v6.1.0-release-evidence.mjs",
+      "environment": "win32-x64-22.22.2"
+    }
+  ]
+}

@@ -4,7 +4,7 @@ export const SCRIPT_API_MINIMUM_VERSION = 1 as const
 export type ScriptApiNamespace =
   | 'lifecycle' | 'scene' | 'object' | 'component' | 'transform' | 'input' | 'physics'
   | 'ui' | 'audio' | 'animation' | 'navigation' | 'save' | 'timing' | 'logging'
-  | 'resources' | 'signals' | 'tasks' | 'testing'
+  | 'resources' | 'signals' | 'tasks' | 'testing' | 'gameplay' | 'network'
 
 export interface ScriptApiEntry {
   name: string
@@ -65,9 +65,27 @@ const SPECS: readonly Spec[] = [
   ['entity', 'entity() -> string', 'object', 'Returns the current entity UUID.', 'let id = entity();'],
   ['entity_name', 'entity_name() -> string', 'object', 'Returns the current entity display name.', 'log_info(entity_name());'],
   ['find_entity', 'find_entity(name) -> string', 'object', 'Compatibility UUID lookup.', 'let id = find_entity("Camera");', 'find_entity_handle'],
+  ['query_tag', 'query_tag(tag, limit) -> Array<Handle<Entity>>', 'object', 'Returns at most 256 stable entity handles with a tag.', 'let enemies = query_tag("enemy", 32);'],
+  ['query_group', 'query_group(group, limit) -> Array<Handle<Entity>>', 'object', 'Returns at most 256 stable entity handles in a group.', 'let actors = query_group("actors", 64);'],
+  ['query_component', 'query_component(kind, limit) -> Array<Handle<Entity>>', 'object', 'Returns at most 256 entity handles owning a component kind.', 'let cameras = query_component("Camera2D", 8);'],
+  ['query_radius', 'query_radius(x, y, radius, limit) -> Array<Handle<Entity>>', 'object', 'Returns bounded handles inside a finite world-space radius.', 'let nearby = query_radius(0.0, 0.0, 8.0, 32);'],
+  ['entity_name_on', 'entity_name_on(handle) -> string', 'object', 'Reads the query-snapshot name for an entity handle.', 'let name = entity_name_on(handle);'],
+  ['entity_enabled_on', 'entity_enabled_on(handle) -> bool', 'object', 'Reads the query-snapshot enabled state for an entity handle.', 'if entity_enabled_on(handle) { }'],
+  ['entity_position_x_on', 'entity_position_x_on(handle) -> float', 'object', 'Reads query-snapshot world X for an entity handle.', 'let x = entity_position_x_on(handle);'],
+  ['entity_position_y_on', 'entity_position_y_on(handle) -> float', 'object', 'Reads query-snapshot world Y for an entity handle.', 'let y = entity_position_y_on(handle);'],
+  ['entity_set_position', 'entity_set_position(handle, x, y)', 'object', 'Queues a finite world position for a validated entity handle.', 'entity_set_position(target, 4.0, 2.0);'],
+  ['entity_set_rotation', 'entity_set_rotation(handle, radians)', 'object', 'Queues a world rotation for a validated entity handle.', 'entity_set_rotation(target, 1.57);'],
+  ['entity_set_scale', 'entity_set_scale(handle, x, y)', 'object', 'Queues a non-zero world scale for a validated entity handle.', 'entity_set_scale(target, 2.0, 2.0);'],
+  ['entity_set_enabled', 'entity_set_enabled(handle, enabled)', 'object', 'Enables or disables a validated entity.', 'entity_set_enabled(target, false);'],
+  ['entity_add_tag', 'entity_add_tag(handle, tag)', 'object', 'Adds one bounded tag to a validated entity.', 'entity_add_tag(target, "enemy");'],
+  ['entity_remove_tag', 'entity_remove_tag(handle, tag)', 'object', 'Removes one tag from a validated entity.', 'entity_remove_tag(target, "enemy");'],
+  ['entity_add_group', 'entity_add_group(handle, group)', 'object', 'Adds a validated entity to a bounded group.', 'entity_add_group(target, "actors");'],
+  ['entity_remove_group', 'entity_remove_group(handle, group)', 'object', 'Removes a validated entity from a group.', 'entity_remove_group(target, "actors");'],
+  ['entity_destroy', 'entity_destroy(handle)', 'object', 'Safely destroys the validated target at the structural boundary.', 'entity_destroy(target);'],
   ['component_handle', 'component_handle(kind) -> Handle<Component>', 'component', 'Returns a stable component handle or explicit invalid handle.', 'let body = component_handle("RigidBody2D");'],
   ['has_component', 'has_component(kind) -> bool', 'component', 'Reports whether this entity owns an enabled component.', 'if has_component("Animator") { animator_play("Idle"); }'],
   ['get_component', 'get_component(kind) -> string', 'component', 'Legacy component URI lookup.', 'let body = get_component("RigidBody2D");', 'component_handle'],
+  ['component_set_enabled_on', 'component_set_enabled_on(handle, component, enabled)', 'component', 'Enables or disables an existing target component.', 'component_set_enabled_on(target, "DamageHitbox2D", false);'],
   ['transform', 'transform() -> TransformSnapshot', 'transform', 'Reads one coherent world-transform snapshot.', 'let pose = transform();'],
   ['set_position', 'set_position(x, y)', 'transform', 'Queues an exact finite world position.', 'set_position(4.0, 2.0);'],
   ['set_rotation', 'set_rotation(radians)', 'transform', 'Queues world rotation in radians.', 'set_rotation(1.57079632679);'],
@@ -75,12 +93,32 @@ const SPECS: readonly Spec[] = [
   ['input_down', 'input_down(action) -> bool', 'input', 'True while an action is held.', 'if input_down("Move") { }'],
   ['input_pressed', 'input_pressed(action) -> bool', 'input', 'True on an action press edge.', 'if input_pressed("Jump") { apply_impulse(0.0, 8.0); }'],
   ['input_released', 'input_released(action) -> bool', 'input', 'True on an action release edge.', 'if input_released("Fire") { }'],
+  ['input_performed', 'input_performed(action) -> bool', 'input', 'True when Press, Hold, Tap, or Multi-tap reaches Performed.', 'if input_performed("Confirm") { }'],
+  ['input_cancelled', 'input_cancelled(action) -> bool', 'input', 'True when an interaction is released before completion.', 'if input_cancelled("Charge") { }'],
+  ['input_phase', 'input_phase(action) -> string', 'input', 'Returns idle, started, performed, or cancelled.', 'let phase = input_phase("Charge");'],
+  ['input_duration', 'input_duration(action) -> float', 'input', 'Returns the current held duration in seconds.', 'let held = input_duration("Charge");'],
+  ['input_context_active', 'input_context_active(name) -> bool', 'input', 'Reports whether an input context is active.', 'if input_context_active("Menu") { }'],
+  ['input_map_active', 'input_map_active(name) -> bool', 'input', 'Reports whether an action map is active.', 'if input_map_active("Combat") { }'],
+  ['input_scheme', 'input_scheme() -> string', 'input', 'Returns the active control scheme.', 'let scheme = input_scheme();'],
+  ['input_context_push', 'input_context_push(name, priority, consume)', 'input', 'Pushes or updates a bounded input context.', 'input_context_push("Menu", 100, true);'],
+  ['input_context_pop', 'input_context_pop(name)', 'input', 'Removes an active non-root input context.', 'input_context_pop("Menu");'],
+  ['input_map_enable', 'input_map_enable(name)', 'input', 'Enables a bounded named action map.', 'input_map_enable("Combat");'],
+  ['input_map_disable', 'input_map_disable(name)', 'input', 'Disables a named non-default action map.', 'input_map_disable("Combat");'],
+  ['input_scheme_set', 'input_scheme_set(name)', 'input', 'Selects a named input scheme.', 'input_scheme_set("Gamepad");'],
   ['input_axis', 'input_axis(action) -> float', 'input', 'Reads a scalar action.', 'let x = input_axis("Horizontal");'],
   ['input_vector', 'input_vector(action) -> Vec2', 'input', 'Reads a Vector2 action.', 'let move = input_vector("Move");'],
   ['input_vector_x', 'input_vector_x(action) -> float', 'input', 'Reads a Vector2 x component.', 'let x = input_vector_x("Move");'],
   ['input_vector_y', 'input_vector_y(action) -> float', 'input', 'Reads a Vector2 y component.', 'let y = input_vector_y("Move");'],
   ['mouse_x', 'mouse_x() -> float', 'input', 'Reads pointer x in the viewport.', 'let x = mouse_x();'],
   ['mouse_y', 'mouse_y() -> float', 'input', 'Reads pointer y in the viewport.', 'let y = mouse_y();'],
+  ['mouse_world_x', 'mouse_world_x() -> float', 'input', 'Reads pointer x in game-camera world units.', 'set_position(mouse_world_x(), mouse_world_y());'],
+  ['mouse_world_y', 'mouse_world_y() -> float', 'input', 'Reads pointer y in game-camera world units.', 'set_position(mouse_world_x(), mouse_world_y());'],
+  ['view_min_x', 'view_min_x() -> float', 'input', 'Reads the active game camera left world bound.', 'if transform().position_x < view_min_x() { destroy(); }'],
+  ['view_max_x', 'view_max_x() -> float', 'input', 'Reads the active game camera right world bound.', 'if transform().position_x > view_max_x() { destroy(); }'],
+  ['view_min_y', 'view_min_y() -> float', 'input', 'Reads the active game camera bottom world bound.', 'if transform().position_y < view_min_y() { destroy(); }'],
+  ['view_max_y', 'view_max_y() -> float', 'input', 'Reads the active game camera top world bound.', 'if transform().position_y > view_max_y() { destroy(); }'],
+  ['viewport_width', 'viewport_width() -> float', 'input', 'Reads the current game viewport width in CSS pixels.', 'let aspect = viewport_width() / viewport_height();'],
+  ['viewport_height', 'viewport_height() -> float', 'input', 'Reads the current game viewport height in CSS pixels.', 'let aspect = viewport_width() / viewport_height();'],
   ['wheel_x', 'wheel_x() -> float', 'input', 'Reads horizontal wheel delta.', 'let dx = wheel_x();'],
   ['wheel_y', 'wheel_y() -> float', 'input', 'Reads vertical wheel delta.', 'let dy = wheel_y();'],
   ['is_down', 'is_down(action) -> bool', 'input', 'Legacy held-action alias.', 'if is_down("Move") { }', 'input_down'],
@@ -103,6 +141,8 @@ const SPECS: readonly Spec[] = [
   ['move_character', 'move_character(x, y)', 'physics', 'Queues CharacterBody2D displacement for the next fixed step.', 'move_character(2.0 * dt, 0.0);'],
   ['ui_set_text', 'ui_set_text(text)', 'ui', 'Sets Text or TextRenderer2D content on this entity.', 'ui_set_text(`Score: ${save_get("score", 0)}`);'],
   ['ui_set_value', 'ui_set_value(value)', 'ui', 'Sets Slider, ProgressBar or Checkbox value.', 'ui_set_value(0.75);'],
+  ['ui_set_text_on', 'ui_set_text_on(handle, text)', 'ui', 'Sets text on a validated target UI/world-text entity.', 'ui_set_text_on(label, "Ready");'],
+  ['ui_set_value_on', 'ui_set_value_on(handle, value)', 'ui', 'Sets a validated target Slider, ProgressBar, or Checkbox.', 'ui_set_value_on(health_bar, 0.75);'],
   ['animator_handle', 'animator_handle() -> Handle<Animator>', 'animation', 'Returns this Animator as a stable handle.', 'let animator = animator_handle();'],
   ['animator', 'animator() -> string', 'animation', 'Legacy Animator URI lookup.', 'let animator = animator();', 'animator_handle'],
   ['animator_set_bool', 'animator_set_bool(name, value)', 'animation', 'Sets a Boolean Animator parameter.', 'animator_set_bool("moving", true);'],
@@ -117,11 +157,30 @@ const SPECS: readonly Spec[] = [
   ['audio_stop', 'audio_stop()', 'audio', 'Stops this entity AudioSource.', 'audio_stop();'],
   ['navigation_set_target', 'navigation_set_target(x, y)', 'navigation', 'Sets this NavigationAgent2D world target.', 'navigation_set_target(10.0, 4.0);'],
   ['instantiate', 'instantiate(prefab)', 'scene', 'Queues a prefab instance.', 'instantiate("asset://enemy-prefab");'],
+  ['spawn_at', 'spawn_at(prefab, x, y, rotation, scale_x, scale_y) -> Handle<Entity>', 'scene', 'Queues a prefab at an exact transform and returns a stable pending handle.', 'let enemy = spawn_at("asset://enemy", 4.0, 2.0, 0.0, 1.0, 1.0);'],
   ['destroy', 'destroy()', 'scene', 'Queues safe entity destruction.', 'destroy();'],
   ['despawn', 'despawn()', 'scene', 'Returns a pooled object or safely destroys it.', 'despawn();'],
   ['scene_load', 'scene_load(scene)', 'scene', 'Queues a scene switch.', 'scene_load("Level 2");'],
   ['scene_reload', 'scene_reload()', 'scene', 'Queues active-scene reload.', 'scene_reload();'],
   ['scene_quit', 'scene_quit()', 'scene', 'Requests clean runtime shutdown.', 'scene_quit();'],
+  ['game_pause', 'game_pause(paused)', 'gameplay', 'Pauses or resumes scaled gameplay while input/update callbacks remain available.', 'game_pause(true);'],
+  ['game_paused', 'game_paused() -> bool', 'gameplay', 'Reports the current gameplay pause state.', 'if game_paused() { }'],
+  ['checkpoint_set', 'checkpoint_set(name)', 'gameplay', 'Captures bounded scene transforms, health, score, and session state.', 'checkpoint_set("room-2");'],
+  ['checkpoint_has', 'checkpoint_has(name) -> bool', 'gameplay', 'Reports whether a runtime checkpoint exists.', 'if checkpoint_has("room-2") { }'],
+  ['checkpoint_restore', 'checkpoint_restore(name)', 'gameplay', 'Restores a same-scene checkpoint or fails explicitly.', 'checkpoint_restore("room-2");'],
+  ['score_get', 'score_get() -> float', 'gameplay', 'Returns the bounded session score.', 'let score = score_get();'],
+  ['score_set', 'score_set(value)', 'gameplay', 'Sets the bounded session score.', 'score_set(0.0);'],
+  ['score_add', 'score_add(value)', 'gameplay', 'Adds to the bounded session score.', 'score_add(10.0);'],
+  ['session_get', 'session_get(key, fallback) -> value', 'gameplay', 'Reads a bounded serializable session value.', 'let wave = session_get("wave", 1);'],
+  ['session_set', 'session_set(key, value)', 'gameplay', 'Writes a bounded serializable session value.', 'session_set("wave", 2);'],
+  ['network_enabled', 'network_enabled() -> bool', 'network', 'Reports whether reviewed project networking and explicit permission are enabled.', 'if network_enabled() { }'],
+  ['network_connected', 'network_connected() -> bool', 'network', 'Reports whether the optional runtime has an active session transport.', 'if network_connected() { network_rpc("ready", true); }'],
+  ['network_is_authority', 'network_is_authority() -> bool', 'network', 'Reports whether this peer owns server or host authority.', 'if network_is_authority() { }'],
+  ['network_peer_count', 'network_peer_count() -> int', 'network', 'Returns the bounded number of known remote peers.', 'let peers = network_peer_count();'],
+  ['network_local_peer', 'network_local_peer() -> string', 'network', 'Returns the current bounded local peer identifier.', 'let peer = network_local_peer();'],
+  ['network_role', 'network_role() -> string', 'network', 'Returns client, server, or host.', 'if network_role() == "client" { }'],
+  ['network_tick', 'network_tick() -> int', 'network', 'Returns the authoritative network tick observed at this callback boundary.', 'let tick = network_tick();'],
+  ['network_rpc', 'network_rpc(name, payload)', 'network', 'Queues a declared RPC through explicit permission, authority, direction, schema, rate, payload, and bandwidth checks.', 'network_rpc("player.ready", #{ ready: true });'],
   ['time', 'time() -> TimeSnapshot', 'timing', 'Returns delta, fixed delta, elapsed, scale and frame.', 'let now = time();'],
   ['time_delta', 'time_delta() -> float', 'timing', 'Returns render delta seconds.', 'let dt = time_delta();'],
   ['time_fixed_delta', 'time_fixed_delta() -> float', 'timing', 'Returns fixed-step seconds.', 'let dt = time_fixed_delta();'],
@@ -167,8 +226,6 @@ const FIXED_STEP_BINDINGS = new Set(['fixed_update', 'apply_force', 'apply_impul
 const SEEDED_BINDINGS = new Set(['random', 'random_range'])
 const HOST_DEPENDENT_BINDINGS = new Set(['mouse_x', 'mouse_y', 'wheel_x', 'wheel_y'])
 const PERSISTENT_BINDINGS = new Set(['save_has', 'save_get', 'save_set', 'save_delete', 'save_clear', 'save_load', 'save_commit'])
-const VALUE_PREFIXES = ['input_', 'character_', 'can_', 'time_', 'random', 'entity', 'find_', 'has_', 'get_', 'resource_', 'component_', 'transform', 'rigid_body', 'animator_handle', 'audio_source_handle', 'save_has', 'save_get', 'api_']
-
 export const SCRIPT_API_V2_MANIFEST: ScriptApiV2Manifest = {
   format: 'nova-rhai-api-manifest',
   version: 2,
@@ -180,11 +237,15 @@ export const SCRIPT_API_V2_MANIFEST: ScriptApiV2Manifest = {
     id: `${entry.namespace}.${entry.name}`,
     module: entry.namespace,
     callable: entry.name,
-    resultConvention: entry.namespace === 'lifecycle' || entry.name.startsWith('on_') ? 'lifecycle' : VALUE_PREFIXES.some(prefix => entry.name.startsWith(prefix)) ? 'value' : entry.namespace === 'resources' ? 'result' : 'queued-command',
+    resultConvention: entry.namespace === 'lifecycle' || entry.name.startsWith('on_')
+      ? 'lifecycle'
+      : entry.signature.includes('->')
+        ? entry.namespace === 'resources' ? 'result' : 'value'
+        : 'queued-command',
     lifetime: PERSISTENT_BINDINGS.has(entry.name) ? 'persistent-save' : entry.namespace === 'resources' ? 'project' : entry.name.endsWith('_handle') ? 'scene' : 'callback',
     threadRule: FIXED_STEP_BINDINGS.has(entry.name) ? 'fixed-step' : entry.namespace === 'logging' || entry.namespace === 'testing' ? 'worker-safe' : 'callback-boundary',
     determinism: SEEDED_BINDINGS.has(entry.name) ? 'seeded' : HOST_DEPENDENT_BINDINGS.has(entry.name) ? 'host-dependent' : 'deterministic',
-    permissions: entry.namespace === 'save' ? ['save-data'] : entry.namespace === 'resources' ? ['asset-read'] : entry.namespace === 'logging' ? ['console-write'] : []
+    permissions: entry.namespace === 'save' ? ['save-data'] : entry.namespace === 'resources' ? ['asset-read'] : entry.namespace === 'logging' ? ['console-write'] : entry.namespace === 'network' ? ['network-rpc'] : []
   }))
 }
 

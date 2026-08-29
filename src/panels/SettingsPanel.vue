@@ -2,7 +2,7 @@
   <div class="settings-page">
     <header class="page-header">
       <div>
-      <span class="eyebrow">Nova_A 5.0.1</span>
+      <span class="eyebrow">Nova_A 6.1.0</span>
         <h1>{{ t('settings') }}</h1>
       </div>
       <div class="theme-switch" :aria-label="t('theme')">
@@ -32,6 +32,7 @@
         <SettingRow :label="t('compactMode')"><ToggleSwitch v-model="prefs.compactMode" /></SettingRow>
         <SettingRow :label="t('reduceMotion')"><ToggleSwitch v-model="prefs.reduceMotion" /></SettingRow>
         <SettingRow :label="t('highContrast')"><ToggleSwitch v-model="prefs.highContrast" /></SettingRow>
+        <SettingRow :label="t('performanceProfiles')"><select :value="prefs.performanceProfile" @change="applyCreatorPerformanceProfile(($event.target as HTMLSelectElement).value as PerformanceProfile)"><option value="balanced">Balanced</option><option value="low-end">Low-end</option><option value="quality">High quality</option></select></SettingRow>
         <SettingRow :label="t('launchMaximized')"><ToggleSwitch v-model="prefs.launchMaximized" /></SettingRow>
         <SettingRow :label="t('workspaceLayoutScope')"><select v-model="prefs.workspaceLayoutScope"><option value="user">{{ t('editorScope') }}</option><option value="project">{{ t('projectScope') }}</option></select></SettingRow>
         <button class="secondary-action" @click="editorState.shortcutEditorOpen = true">{{ t('shortcutEditor') }}</button>
@@ -86,6 +87,22 @@
               <button class="icon-action danger" :title="t('removeInputAction')" @click="removeInputAction(actionIndex)">×</button>
               <button class="icon-action" :title="t('duplicate')" @click="duplicateInputAction(actionIndex)">⧉</button>
             </div>
+            <details v-if="!compactInputMap" class="action-advanced">
+              <summary>{{ t('actionBehavior') }}</summary>
+              <div class="action-advanced-grid">
+                <label><span>{{ t('enabled') }}</span><input v-model="action.enabled" type="checkbox" @change="commitInputMap"></label>
+                <label><span>{{ t('inputContext') }}</span><input v-model.trim="action.context" maxlength="80" @change="commitInputMap"></label>
+                <label><span>{{ t('actionMap') }}</span><input v-model.trim="action.map" maxlength="80" @change="commitInputMap"></label>
+                <label><span>{{ t('controlSchemes') }}</span><input :value="action.schemes.join(', ')" :placeholder="t('allSchemes')" @change="setActionSchemes(actionIndex, $event)"></label>
+                <label><span>{{ t('interaction') }}</span><select v-model="action.interaction" @change="commitInputMap"><option value="press">{{ t('inputPress') }}</option><option value="hold">{{ t('inputHold') }}</option><option value="tap">{{ t('inputTap') }}</option><option value="multiTap">{{ t('inputMultiTap') }}</option></select></label>
+                <label v-if="action.interaction === 'hold'"><span>{{ t('holdSeconds') }}</span><input v-model.number="action.holdSeconds" type="number" min="0.001" max="60" step="0.05" @change="commitInputMap"></label>
+                <label v-if="action.interaction === 'tap' || action.interaction === 'multiTap'"><span>{{ t('tapSeconds') }}</span><input v-model.number="action.tapSeconds" type="number" min="0.001" max="10" step="0.05" @change="commitInputMap"></label>
+                <label v-if="action.interaction === 'multiTap'"><span>{{ t('tapCount') }}</span><input v-model.number="action.multiTapCount" type="number" min="2" max="16" step="1" @change="commitInputMap"></label>
+                <label><span>{{ t('consumeInput') }}</span><input v-model="action.consume" type="checkbox" @change="commitInputMap"></label>
+                <label><span>{{ t('actionPriority') }}</span><input v-model.number="action.priority" type="number" min="-10000" max="10000" step="1" @change="commitInputMap"></label>
+                <label><span>{{ t('callbackFunction') }}</span><input v-model.trim="action.callback" maxlength="80" placeholder="on_jump" @change="commitInputMap"></label>
+              </div>
+            </details>
             <div v-for="(binding, bindingIndex) in action.bindings" :key="bindingIndex" class="input-binding">
               <select v-model="binding.device" :aria-label="t('inputDevice')" @change="setBindingDevice(binding); commitInputMap()">
                 <option v-for="device in inputDevices" :key="device" :value="device">{{ device }}</option>
@@ -158,12 +175,14 @@ import { editorState } from '../store/editor'
 import { autosaveState, physicsState as physics, pushHistory, restoreAutosave } from '../store/physics'
 import { preferencesState as prefs, resetPreferences } from '../store/preferences'
 import type { ThemeMode } from '../store/preferences'
-import { createInputBinding, detectInputConflicts, normalizeInputMap, type InputBinding, type InputDevice, type InputDeviceIdentity, type InputModifier, type InputRecording } from '../runtime/input'
+import type { PerformanceProfile } from '../store/preferences'
+import { createInputAction, createInputBinding, detectInputConflicts, normalizeInputMap, type InputBinding, type InputDevice, type InputDeviceIdentity, type InputModifier, type InputRecording } from '../runtime/input'
 import { gameplayRuntime } from '../runtime/GameplayRuntime'
 import { normalizeAudioSettings } from '../runtime/audio'
 import { openEditorTool } from '../editor/workspaces'
 import PhysicsSettingsPanel from '../components/PhysicsSettingsPanel.vue'
 import { scriptProjectSettings as scriptSettings } from '../runtime/scriptSettings'
+import { applyCreatorPerformanceProfile } from '../runtime/creatorLearning'
 
 function setTheme(theme: ThemeMode) {
   prefs.theme = theme
@@ -227,14 +246,14 @@ function addInputAction() {
   const used = new Set(physics.inputMap.map(action => action.name))
   let suffix = physics.inputMap.length + 1
   while (used.has(`Action${suffix}`)) suffix++
-  physics.inputMap.push({ name: `Action${suffix}`, kind: 'button', bindings: [createInputBinding()] })
+  physics.inputMap.push(createInputAction(`Action${suffix}`))
   pushHistory('Add input action')
 }
 
 function duplicateInputAction(index: number) {
   const source = physics.inputMap[index]; if (!source || physics.inputMap.length >= 128) return
   const names = new Set(physics.inputMap.map(action => action.name)); let suffix = 2, name = `${source.name} Copy`; while (names.has(name)) name = `${source.name} Copy ${suffix++}`
-  physics.inputMap.splice(index + 1, 0, { ...source, name, bindings: source.bindings.map(binding => ({ ...binding, modifiers: [...binding.modifiers], chord: [...binding.chord] })) }); pushHistory('Duplicate input action')
+  physics.inputMap.splice(index + 1, 0, { ...source, name, schemes: [...source.schemes], bindings: source.bindings.map(binding => ({ ...binding, modifiers: [...binding.modifiers], chord: [...binding.chord] })) }); pushHistory('Duplicate input action')
 }
 
 function removeInputAction(index: number) {
@@ -257,6 +276,7 @@ function setBindingDevice(binding: InputBinding) {
 }
 
 function setBindingList(binding: InputBinding, property: 'modifiers' | 'chord', event: Event) { const values = (event.target as HTMLInputElement).value.split(',').map(value => value.trim()).filter(Boolean); if (property === 'modifiers') binding.modifiers = values.filter((value): value is InputModifier => ['Control','Shift','Alt','Meta'].includes(value)).slice(0, 4); else binding.chord = [...new Set(values)].slice(0, 8); commitInputMap() }
+function setActionSchemes(actionIndex: number, event: Event) { const action = physics.inputMap[actionIndex]; if (!action) return; action.schemes = [...new Set((event.target as HTMLInputElement).value.split(',').map(value => value.trim()).filter(Boolean))].slice(0, 16); commitInputMap() }
 function toggleInputRecording() { if (!inputRecording.value) { gameplayRuntime.input.beginRecording(); inputRecording.value = true } else { lastInputRecording.value = gameplayRuntime.input.endRecording(); inputRecording.value = false } }
 function replayInputRecording() { if (lastInputRecording.value) gameplayRuntime.input.playRecording(lastInputRecording.value) }
 
@@ -283,7 +303,7 @@ h1 { margin: 0; font-size: clamp(26px, 4vw, 38px); font-weight: 620; letter-spac
 .theme-switch button { border: 0; background: transparent; color: var(--text-secondary); padding: 8px 13px; border-radius: 999px; }
 .theme-switch button.active { color: var(--accent-contrast); background: var(--accent); box-shadow: 0 3px 10px var(--accent-soft); }
 .settings-grid { width: min(1040px, 100%); margin: 0 auto; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; padding-bottom: 30px; }
-.settings-card { align-self: start; display: flex; flex-direction: column; padding: 18px; border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); background: var(--surface-1); backdrop-filter: var(--glass-blur); box-shadow: var(--shadow-sm); transition: transform 180ms ease, border-color 180ms ease; }
+.settings-card { align-self: start; display: flex; flex-direction: column; padding: 18px; contain: layout paint; border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); background: var(--surface-1); box-shadow: var(--shadow-sm); transition: transform 180ms ease, border-color 180ms ease; }
 .settings-card:hover { transform: translateY(-2px); border-color: var(--border-strong); }
 .matrix-card { grid-column: 1 / -1; }.related-tools .secondary-action{margin-top:6px}.related-tools p{margin-left:40px}
 .input-map-card { grid-column: 1 / -1; }
@@ -311,9 +331,11 @@ h1 { margin: 0; font-size: clamp(26px, 4vw, 38px); font-weight: 620; letter-spac
 h2 { margin: 0; font-size: 15px; font-weight: 650; letter-spacing: -.01em; }
 p { margin: 0 0 8px 40px; color: var(--text-muted); font-size: 12px; line-height: 1.55; }
 :deep(.setting-row) { min-height: 47px; display: flex; align-items: center; justify-content: space-between; gap: 16px; border-top: 1px solid var(--border-subtle); color: var(--text-secondary); font-size: 12.5px; }
-:deep(.setting-control) { display: flex; justify-content: flex-end; min-width: 150px; }
-:deep(.setting-control > input[type='number']), :deep(.setting-control > select) { width: 150px; }
-.value-control { width: 190px; display: flex; align-items: center; gap: 10px; }
+:deep(.setting-row > span:first-child) { min-width: 0; flex: 1 1 auto; overflow-wrap: anywhere; line-height: 1.35; }
+:deep(.setting-control) { width: 230px; max-width: 55%; min-width: 0; flex: 0 0 min(230px, 55%); display: flex; justify-content: flex-end; }
+:deep(.setting-control > input[type='number']) { width: 150px; max-width: 100%; }
+:deep(.setting-control > select) { width: 100%; }
+.value-control { width: min(190px, 100%); min-width: 0; display: flex; align-items: center; gap: 10px; }
 .value-control input { min-width: 0; flex: 1; accent-color: var(--accent); }
 .value-control output { min-width: 46px; text-align: right; color: var(--text-primary); font-variant-numeric: tabular-nums; }
 .metric-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 4px; }
@@ -328,7 +350,9 @@ p { margin: 0 0 8px 40px; color: var(--text-muted); font-size: 12px; line-height
 .secondary-action:hover { border-color: var(--accent); background: var(--accent-soft); }
 .danger-action { color: var(--danger); background: var(--danger-soft); }
 .danger-action:hover { border-color: var(--danger); }
-.input-map-toolbar{margin-bottom:8px;display:flex;gap:6px;align-items:center;flex-wrap:wrap}.input-map-toolbar>input{min-width:160px;flex:1}.input-map-toolbar label{display:flex;align-items:center;gap:5px}.input-map-toolbar button.active{color:#fff;border-color:#d53b4c;background:#b92537}.connected-devices{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:8px}.connected-devices span{padding:3px 7px;border:1px solid var(--border-subtle);border-radius:99px;color:var(--text-muted);font-size:11px}.input-conflicts{margin-bottom:8px;padding:8px;display:grid;gap:3px;border:1px solid var(--warning);border-radius:8px;background:color-mix(in srgb,var(--warning) 8%,transparent);font-size:11px}.input-conflicts span{overflow-wrap:anywhere;color:var(--text-muted)}.input-action-heading{grid-template-columns:minmax(120px,3fr) minmax(100px,2fr) 28px 28px}.input-binding{grid-template-columns:minmax(120px,1.25fr) minmax(100px,1fr) repeat(4,minmax(64px,.6fr)) 28px}.binding-advanced{grid-column:1/-1;padding:5px;border:1px solid var(--border-subtle);border-radius:7px}.binding-advanced summary{cursor:pointer;color:var(--accent)}.binding-advanced>label{display:grid;grid-template-columns:100px minmax(100px,1fr);gap:6px;align-items:center;margin-top:4px;color:var(--text-muted);font-size:11px}.input-action.compact .input-binding{padding-block:2px}.input-action.compact .compact-action{margin-top:2px}
+.input-map-toolbar{margin-bottom:8px;display:flex;gap:6px;align-items:center;flex-wrap:wrap}.input-map-toolbar>input{min-width:160px;flex:1}.input-map-toolbar label{display:flex;align-items:center;gap:5px}.input-map-toolbar button.active{color:#fff;border-color:#d53b4c;background:#b92537}.connected-devices{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:8px}.connected-devices span{padding:3px 7px;border:1px solid var(--border-subtle);border-radius:99px;color:var(--text-muted);font-size:11px}.input-conflicts{margin-bottom:8px;padding:8px;display:grid;gap:3px;border:1px solid var(--warning);border-radius:8px;background:color-mix(in srgb,var(--warning) 8%,transparent);font-size:11px}.input-conflicts span{overflow-wrap:anywhere;color:var(--text-muted)}.input-action-heading{grid-template-columns:minmax(120px,3fr) minmax(100px,2fr) 28px 28px}.input-binding{grid-template-columns:minmax(150px,1.25fr) minmax(100px,1fr) repeat(4,minmax(64px,.6fr)) 28px}.binding-advanced{grid-column:1/-1;padding:5px;border:1px solid var(--border-subtle);border-radius:7px}.binding-advanced summary{cursor:pointer;color:var(--accent)}.binding-advanced>label{display:grid;grid-template-columns:100px minmax(100px,1fr);gap:6px;align-items:center;margin-top:4px;color:var(--text-muted);font-size:11px}.input-action.compact .input-binding{padding-block:2px}.input-action.compact .compact-action{margin-top:2px}
 .binding-advanced summary{min-height:20px;display:flex;align-items:center;line-height:18px}
-@media (max-width: 800px) { .settings-grid { grid-template-columns: 1fr; } .page-header,.settings-search { align-items: flex-start; flex-direction: column; }.settings-search>label{width:100%}.settings-search nav{width:100%} .input-action-heading, .input-binding { grid-template-columns: repeat(2, minmax(0, 1fr)) 28px; } .input-action-heading > input, .input-action-heading > select { grid-column: auto; }.binding-advanced{grid-column:1/-1}.input-map-toolbar>*{flex:1 1 130px} }
+.action-advanced{margin-bottom:7px;padding:7px;border:1px solid var(--border-subtle);border-radius:8px;background:color-mix(in srgb,var(--surface-3) 55%,transparent)}.action-advanced>summary{min-height:24px;display:flex;align-items:center;cursor:pointer;color:var(--accent);font-size:12px;font-weight:620}.action-advanced-grid{display:grid;grid-template-columns:repeat(3,minmax(150px,1fr));gap:7px;padding-top:7px}.action-advanced-grid label{min-width:0;display:grid;grid-template-columns:minmax(88px,.8fr) minmax(0,1fr);gap:7px;align-items:center;color:var(--text-muted);font-size:11.5px}.action-advanced-grid input:not([type='checkbox']),.action-advanced-grid select{width:100%;min-width:0}.action-advanced-grid input[type='checkbox']{justify-self:end}
+@media (max-width: 1400px) { .settings-grid { grid-template-columns: 1fr; } }
+@media (max-width: 800px) { .page-header,.settings-search { align-items: flex-start; flex-direction: column; }.settings-search>label{width:100%}.settings-search nav{width:100%} .input-action-heading, .input-binding { grid-template-columns: repeat(2, minmax(0, 1fr)) 28px; } .input-action-heading > input, .input-action-heading > select { grid-column: auto; }.binding-advanced{grid-column:1/-1}.input-map-toolbar>*{flex:1 1 130px}.action-advanced-grid{grid-template-columns:1fr} }
 </style>

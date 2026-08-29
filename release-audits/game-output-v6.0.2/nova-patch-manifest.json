@@ -1,0 +1,18 @@
+{
+  "format": "nova-patch-manifest",
+  "version": 1,
+  "fromBuild": null,
+  "toBuild": "fa168e7eb9a6de44eb8a314f6fe8f45425868a9ba4a9d64cbb7f727e88e87b7e",
+  "added": [
+    "Mouse Knockout.exe"
+  ],
+  "changed": [],
+  "removed": [],
+  "files": [
+    {
+      "path": "Mouse Knockout.exe",
+      "sha256": "f342c36098db3537b4836d000469ec73ab70089831a45f7bf172af19bd700a4a",
+      "bytes": 16086391
+    }
+  ]
+}

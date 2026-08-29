@@ -1,12 +1,16 @@
 import { readTextAsset, resolveAsset } from '../assets/AssetDatabase'
 import type { BlendMode2D, TextureFilter } from './types'
+import { compileMaterialGraph, compileMaterialLayers, normalizeMaterialGraph, normalizeMaterialLayers, type MaterialGraphDocument, type MaterialGraphTarget, type MaterialLayer2D } from './materialGraph'
 
 export type MaterialUniform = number | boolean | number[]
 export type MaterialUniformType = 'number' | 'integer' | 'vector2' | 'vector3' | 'vector4' | 'color' | 'texture' | 'enum' | 'range' | 'toggle'
 export interface MaterialUniformField { name: string; type: MaterialUniformType; label: string; minimum?: number; maximum?: number; step?: number; options?: string[] }
 export interface Material2DResource {
-  version: 2
+  version: 3
   name: string
+  target: MaterialGraphTarget
+  graph: MaterialGraphDocument | null
+  layers: MaterialLayer2D[]
   fragment: string
   textures: Record<string, string | null>
   uniforms: Record<string, MaterialUniform>
@@ -38,7 +42,7 @@ export interface MaterialFallbackEvent { reference: string; reason: string; occu
 export const materialRuntimeDiagnostics = { compileCacheHits: 0, compileCacheMisses: 0, fallbackCount: 0, lastFallback: '', fallbackEvents: [] as MaterialFallbackEvent[] }
 
 export function defaultMaterial(name = 'New Material'): Material2DResource {
-  return { version: 2, name, fragment: DEFAULT_MATERIAL_FRAGMENT, textures: {}, uniforms: {}, uniformSchema: [], includes: [], variants: {}, activeVariant: '', parentMaterial: null, blendMode: 'Alpha', sampling: 'Linear', colorSpace: 'sRGB', writeColor: true }
+  return { version: 3, name, target: 'Sprite', graph: null, layers: [], fragment: DEFAULT_MATERIAL_FRAGMENT, textures: {}, uniforms: {}, uniformSchema: [], includes: [], variants: {}, activeVariant: '', parentMaterial: null, blendMode: 'Alpha', sampling: 'Linear', colorSpace: 'sRGB', writeColor: true }
 }
 
 function safeUniform(value: unknown): MaterialUniform | null {
@@ -99,12 +103,23 @@ export function resolveShaderIncludes(source: string, declared: readonly string[
   return { source: output, diagnostics }
 }
 export function resolvedMaterialFragment(material: Material2DResource): { source: string; diagnostics: ShaderDiagnostic[] } {
-  const included = resolveShaderIncludes(material.fragment, material.includes), variant = material.activeVariant ? material.variants[material.activeVariant] : ''
-  return { source: variant ? `${variant}\n${included.source}` : included.source, diagnostics: included.diagnostics }
+  const graph = material.graph ? compileMaterialGraph(material.graph) : null, layers = material.layers.length ? compileMaterialLayers(material.layers) : null
+  let fragment = material.fragment
+  if (graph && layers) {
+    const graphSource = graph.source.replace(/\bnova_material\b/g, 'nova_graph_material'), layerSource = layers.source.replace(/\bnova_material\b/g, 'nova_layers_material')
+    fragment = `${graphSource}\n${layerSource}\nvec4 nova_material(vec4 baseColor,vec2 uv){return nova_layers_material(nova_graph_material(baseColor,uv),uv);}`
+  } else if (graph) fragment = graph.source
+  else if (layers) fragment = layers.source
+  const included = resolveShaderIncludes(fragment, material.includes), variant = material.activeVariant ? material.variants[material.activeVariant] : ''
+  const graphDiagnostics: ShaderDiagnostic[] = graph ? graph.diagnostics.map(item => ({ line: 1, severity: item.severity, source: item.nodeUuid, message: item.message })) : []
+  return { source: variant ? `${variant}\n${included.source}` : included.source, diagnostics: [...included.diagnostics, ...graphDiagnostics] }
 }
 
 export function normalizeMaterial(value: unknown): Material2DResource {
   const source = value && typeof value === 'object' ? value as Record<string, unknown> : {}, result = defaultMaterial(typeof source.name === 'string' ? source.name.slice(0, 80) : undefined)
+  result.target = source.target === 'UI' || source.target === 'Light' ? source.target : 'Sprite'
+  result.graph = source.graph && typeof source.graph === 'object' ? normalizeMaterialGraph(source.graph) : null
+  result.layers = normalizeMaterialLayers(source.layers)
   result.fragment = typeof source.fragment === 'string' ? source.fragment.slice(0, 32_000) : result.fragment
   result.blendMode = ['Alpha', 'Additive', 'Multiply', 'Screen'].includes(String(source.blendMode)) ? source.blendMode as BlendMode2D : 'Alpha'
   result.sampling = source.sampling === 'Nearest' ? 'Nearest' : 'Linear'; result.colorSpace = source.colorSpace === 'Linear' ? 'Linear' : 'sRGB'; result.writeColor = source.writeColor !== false
@@ -113,6 +128,7 @@ export function normalizeMaterial(value: unknown): Material2DResource {
   if (source.variants && typeof source.variants === 'object') for (const [name, definition] of Object.entries(source.variants).slice(0, 16)) { const safe = safeName(name); if (safe && typeof definition === 'string') result.variants[safe] = definition.slice(0, 2_000) }
   result.activeVariant = safeName(source.activeVariant); if (!(result.activeVariant in result.variants)) result.activeVariant = ''
   if (source.textures && typeof source.textures === 'object') for (const [name, reference] of Object.entries(source.textures).slice(0, 8)) if (safeName(name)) result.textures[name] = typeof reference === 'string' ? reference.slice(0, 512) : null
+  if (result.layers.length) Object.assign(result.textures, compileMaterialLayers(result.layers).textureBindings)
   if (source.uniforms && typeof source.uniforms === 'object') for (const [name, uniform] of Object.entries(source.uniforms).slice(0, 32)) { const safe = safeUniform(uniform); if (safe !== null && safeName(name)) result.uniforms[name] = safe }
   const reflected = reflectShaderUniforms(result.fragment), stored = Array.isArray(source.uniformSchema) ? source.uniformSchema.map(normalizeField).filter((field): field is MaterialUniformField => Boolean(field)) : []
   result.uniformSchema = [...reflected, ...stored.filter(field => !reflected.some(item => item.name === field.name))].slice(0, 32)
@@ -153,7 +169,7 @@ function declarations(material: Material2DResource, source: string) {
   }
 }
 export function renderMaterialPreview(canvas: HTMLCanvasElement, materialInput: Material2DResource): ShaderDiagnostic[] {
-  const material = normalizeMaterial(materialInput), resolved = resolvedMaterialFragment(material), diagnostics = [...resolved.diagnostics, ...analyzeMaterialShader(material.fragment, material.includes)]
+  const material = normalizeMaterial(materialInput), resolved = resolvedMaterialFragment(material), diagnostics = [...resolved.diagnostics, ...analyzeMaterialShader(resolved.source, material.includes)]
   if (diagnostics.some(item => item.severity === 'error')) return diagnostics
   const gl = canvas.getContext('webgl2', { alpha: true, antialias: true, premultipliedAlpha: true })
   if (!gl) return [...diagnostics, { line: 1, severity: 'warning', source: 'renderer', message: 'WebGL2 is unavailable; the base-material fallback remains active.' }]
@@ -176,6 +192,23 @@ function noteFallback(reference: string, reason: string): Material2DResource {
   return defaultMaterial(`Fallback · ${reference}`)
 }
 export function reportMaterialFallback(reference: string, reason: string): void { noteFallback(reference, reason) }
+export function canvasMaterialColor(material: Material2DResource, input: { r: number; g: number; b: number; a: number }): { r: number; g: number; b: number; a: number } {
+  let color = { ...input }
+  const blend = (target: [number, number, number, number], amount: number, mode: BlendMode2D) => {
+    const opacity = Math.min(1, Math.max(0, amount * target[3])), normalized = { r: target[0] * 255, g: target[1] * 255, b: target[2] * 255, a: target[3] }
+    if (mode === 'Additive') color = { r: Math.min(255, color.r + normalized.r * opacity), g: Math.min(255, color.g + normalized.g * opacity), b: Math.min(255, color.b + normalized.b * opacity), a: color.a }
+    else if (mode === 'Multiply') color = { r: color.r * (1 - opacity + target[0] * opacity), g: color.g * (1 - opacity + target[1] * opacity), b: color.b * (1 - opacity + target[2] * opacity), a: color.a }
+    else if (mode === 'Screen') color = { r: 255 - (255 - color.r) * (1 - target[0] * opacity), g: 255 - (255 - color.g) * (1 - target[1] * opacity), b: 255 - (255 - color.b) * (1 - target[2] * opacity), a: color.a }
+    else color = { r: color.r + (normalized.r - color.r) * opacity, g: color.g + (normalized.g - color.g) * opacity, b: color.b + (normalized.b - color.b) * opacity, a: color.a + (normalized.a - color.a) * opacity }
+  }
+  for (const layer of material.layers) {
+    if (!layer.enabled) continue
+    if (layer.kind === 'Tint') blend(layer.colorA, layer.opacity, layer.blendMode)
+    else if (layer.kind === 'Gradient') blend(layer.colorA.map((value, index) => (value + layer.colorB[index]) * .5) as MaterialLayer2D['colorA'], layer.opacity, layer.blendMode)
+    else if (layer.kind === 'Palette') { const steps = Math.max(2, Math.round(layer.strength)); color = { ...color, r: Math.round(color.r / 255 * steps) / steps * 255, g: Math.round(color.g / 255 * steps) / steps * 255, b: Math.round(color.b / 255 * steps) / steps * 255 } }
+  }
+  return color
+}
 export function validateMaterialForPlatform(material: Material2DResource, platform: 'native-windows' | 'web', backend: 'WebGL2' | 'Canvas2D'): ShaderDiagnostic[] {
   const diagnostics = analyzeMaterialShader(material.fragment, material.includes)
   if (backend === 'Canvas2D' && material.fragment.trim() !== DEFAULT_MATERIAL_FRAGMENT.trim()) diagnostics.push({ line: 1, severity: 'warning', source: platform, message: 'Custom shader output is unsupported on Canvas2D and will use the explicit base-material fallback.' })

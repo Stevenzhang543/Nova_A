@@ -1,0 +1,28 @@
+{
+  "format": "nova-external-certification-gates",
+  "version": 1,
+  "release": "5.3.0",
+  "generatedAt": "2026-08-26T11:54:24.487Z",
+  "gates": [
+    {
+      "name": "publisher signing",
+      "status": "pending-external",
+      "claimed": false
+    },
+    {
+      "name": "independent clean-machine install and portable launch",
+      "status": "pending-external",
+      "claimed": false
+    },
+    {
+      "name": "cross-host Linux/macOS builds",
+      "status": "pending-external",
+      "claimed": false
+    },
+    {
+      "name": "72-hour wall-clock soak",
+      "status": "pending-external",
+      "claimed": false
+    }
+  ]
+}

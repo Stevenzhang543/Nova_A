@@ -1,11 +1,13 @@
 #!/usr/bin/env node
 import { createHash } from 'node:crypto'
-import { mkdir, readFile, writeFile, copyFile, stat, unlink } from 'node:fs/promises'
-import { dirname, join, resolve } from 'node:path'
+import { mkdir, readFile, writeFile, stat, unlink } from 'node:fs/promises'
+import { dirname, isAbsolute, join, resolve } from 'node:path'
 import { gzipSync } from 'node:zlib'
 
-const ENGINE_VERSION = '5.0.1'
+const ENGINE_VERSION = '6.1.0'
 const HEADER_BYTES = 16
+const EMBEDDED_MAGIC = Buffer.from('NOVAPK2!')
+const MAX_PACKAGE_BYTES = 1024 * 1024 * 1024
 
 function argumentsMap(values) {
   const output = new Map()
@@ -15,7 +17,7 @@ function argumentsMap(values) {
 
 const args = argumentsMap(process.argv.slice(2))
 if (args.has('help') || !args.has('project')) {
-  console.log('Nova_A headless exporter\n\n  pnpm export -- --project project.nova --target web --output Builds/MyGame [--profile release] [--architecture x86_64] [--runtime game] [--compression balanced] [--no-incremental] [--no-patch] [--player path]')
+  console.log('Nova_A headless exporter\n\n  pnpm export -- --project project.nova --target web --output Builds/MyGame [--profile release] [--architecture x86_64] [--runtime game] [--compression balanced] [--single-file|--sidecar] [--no-incremental] [--no-patch] [--player path]')
   process.exit(args.has('help') ? 0 : 2)
 }
 
@@ -47,9 +49,14 @@ function stable(value) {
 }
 function sha(bytes) { return createHash('sha256').update(bytes).digest('hex') }
 function safeRelative(path) {
-  const normalized = path.replaceAll('\\', '/').replace(/^\/+/, '')
-  if (!normalized || normalized.split('/').some(part => part === '..')) throw new Error(`Unsafe output path ${path}`)
+  const normalized = String(path).replaceAll('\\', '/')
+  if (!normalized || isAbsolute(path) || normalized.startsWith('/') || /^[a-z]:/i.test(normalized) || normalized.includes('\0') || normalized.split('/').some(part => part === '..' || part === '')) throw new Error(`Unsafe output path ${path}`)
   return normalized
+}
+function embedPackage(player, packageBytes) {
+  if (!packageBytes.length || packageBytes.length > MAX_PACKAGE_BYTES) throw new Error('Embedded Nova packages must contain 1 byte to 1 GiB')
+  const length = Buffer.alloc(8); length.writeBigUInt64LE(BigInt(packageBytes.length))
+  return Buffer.concat([player, packageBytes, EMBEDDED_MAGIC, length, createHash('sha256').update(packageBytes).digest()])
 }
 function globMatches(path, pattern) {
   const expression = pattern.replace(/[.+^${}()|[\]\\]/g, '\\$&').replace(/\*\*/g, '\u0000').replace(/\*/g, '[^/]*').replace(/\?/g, '[^/]').replace(/\u0000/g, '.*')
@@ -77,7 +84,9 @@ const schema = Number(project.formatVersion ?? 1)
 if (!Number.isFinite(schema) || schema > 29) throw new Error(`Project schema ${schema} is newer than this exporter`)
 if (!Array.isArray(project.scenes) || !project.scenes.length) throw new Error('Project must contain at least one scene')
 const build = project.projectSettings?.build ?? {}
+const packageIntoExecutable = args.has('sidecar') ? false : args.has('single-file') ? true : build.packageIntoExecutable !== false && (target === 'windows' || target === 'linux')
 build.target = target; build.profile = profile; build.architecture = architecture; build.runtimeMode = runtimeMode; build.developmentBuild = profile === 'debug'; build.outputDirectory = ''
+build.packageIntoExecutable = packageIntoExecutable
 build.delivery = { ...(build.delivery ?? {}), deterministic: true, incremental, cacheMode, compression, patchManifest: patchEnabled }
 build.delivery.releaseChannel = String(args.get('channel') ?? build.delivery.releaseChannel ?? (profile === 'release' ? 'beta' : 'development'))
 if (!['stable', 'beta', 'development'].includes(build.delivery.releaseChannel)) throw new Error('Release channel must be stable, beta, or development')
@@ -116,6 +125,7 @@ const indexEntries = entries.map(entry => { const result = { path: entry.path, o
 const index = Buffer.from(JSON.stringify({ format: 'nova-pak', version: 1, engineVersion: ENGINE_VERSION, createdAt: '1970-01-01T00:00:00.000Z', startupSceneUuid: String(build.startupSceneUuid || project.activeSceneUuid || project.scenes[0].uuid), entries: indexEntries }))
 const header = Buffer.alloc(HEADER_BYTES); header.write('NOVAPAK\0'); header.writeUInt32LE(1, 8); header.writeUInt32LE(index.length, 12)
 const pack = Buffer.concat([header, index, ...entries.map(entry => entry.packedBytes)])
+if (pack.length > MAX_PACKAGE_BYTES) throw new Error('game.nova-pak exceeds the 1 GiB player safety limit')
 const buildId = sha(pack)
 await mkdir(output, { recursive: true })
 let changedFiles = 0, cacheHits = 0
@@ -127,7 +137,7 @@ if (target === 'web') {
   const manifest = JSON.parse(await readFile(join(dist, '.vite', 'manifest.json'), 'utf8'))
   const playerKey = Object.keys(manifest).find(key => key === 'player.html' || key.endsWith('/player.ts') || key.endsWith('player.ts'))
   if (!playerKey) throw new Error('Production dist has no Nova Player entry; run pnpm build first')
-  const selected = new Set(), visit = key => { const item = manifest[key]; if (!item) return; selected.add(item.file); for (const path of item.css ?? []) selected.add(path); for (const path of item.assets ?? []) selected.add(path); for (const child of item.imports ?? []) visit(child) }
+  const selected = new Set(), visit = key => { const item = manifest[key]; if (!item) return; selected.add(item.file); for (const path of item.css ?? []) selected.add(path); for (const path of item.assets ?? []) selected.add(path); for (const child of item.imports ?? []) visit(child); for (const child of item.dynamicImports ?? []) visit(child) }
   visit(playerKey)
   const html = await readFile(join(dist, 'player.html'))
   await emit('index.html', html)
@@ -138,12 +148,13 @@ if (target === 'web') {
   const extension = target === 'windows' ? '.exe' : ''
   const name = `${String(build.gameName || 'MyGame').replace(/[^a-z0-9._ -]/gi, '').trim() || 'MyGame'}${extension}`
   const destination = join(output, name)
-  let same = false
-  try { same = incremental && sha(await readFile(player)) === sha(await readFile(destination)) } catch { /* New player. */ }
-  if (same) cacheHits++; else { await copyFile(player, destination); changedFiles++ }
+  if (resolve(destination).toLocaleLowerCase() === resolve(player).toLocaleLowerCase()) throw new Error('The game output cannot overwrite its player template')
+  const playerBytes = await readFile(player)
+  const executableBytes = packageIntoExecutable ? embedPackage(playerBytes, pack) : playerBytes
+  if (await writeIncremental(destination, executableBytes)) changedFiles++; else cacheHits++
   outputs.push(name)
 }
-await emit('game.nova-pak', pack)
+if (target === 'web' || !packageIntoExecutable) await emit('game.nova-pak', pack)
 const records = []
 for (const path of [...new Set(outputs)].sort()) { const full = join(output, path); try { const info = await stat(full); if (info.isFile()) { const bytes = await readFile(full); records.push({ path, sha256: sha(bytes), bytes: info.size }) } } catch { /* Directory bundles are represented by their package. */ } }
 let previous = null
@@ -173,4 +184,4 @@ if (target === 'web' && build.delivery.webHeaders) await emit('_headers', Buffer
 if (target !== 'web' && (build.delivery.debugSymbols !== false || build.delivery.crashSymbols !== false)) await emit('symbols/nova-symbol-map.json', Buffer.from(`${JSON.stringify({ format: 'nova-symbol-map', version: 1, engineVersion: ENGINE_VERSION, buildId, workflow: 'Archive matching PDB, dSYM, or unstripped ELF symbols under this build ID.' }, null, 2)}\n`))
 if (build.delivery?.sizeReport !== false) await emit('nova-build-size-report.json', Buffer.from(`${JSON.stringify({ format: 'nova-build-size-report', version: 1, engineVersion: ENGINE_VERSION, totalBytes: report.totalBytes, files: [...records].sort((a, b) => b.bytes - a.bytes) }, null, 2)}\n`))
 if (build.delivery?.dependencyReport !== false) await emit('nova-dependency-report.json', Buffer.from(`${JSON.stringify({ format: 'nova-dependency-report', version: 1, engineVersion: ENGINE_VERSION, packages: project.packages?.lockfile ?? [], assets: entries.filter(entry => entry.asset).map(entry => ({ uuid: entry.asset.uuid, path: entry.path, type: entry.asset.assetType })) }, null, 2)}\n`))
-console.log(JSON.stringify({ output, buildId, changedFiles, cacheHits, files: outputs.length + 2 }, null, 2))
+console.log(JSON.stringify({ output, buildId, changedFiles, cacheHits, files: new Set(outputs).size, packageIntoExecutable }, null, 2))

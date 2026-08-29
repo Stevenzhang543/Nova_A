@@ -9,5 +9,5 @@
     "PHY-EVENT-001"
   ],
   "command": "pnpm nova export --project ./reference-projects/projects/physics-v45-queries-triggers/project.nova --target web --profile release --output ./Builds/reference-physics-v45-queries-triggers --cache validate --jsonl",
-  "engineVersion": "5.0.1"
+  "engineVersion": "5.3.0"
 }

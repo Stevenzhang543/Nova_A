@@ -1,0 +1,193 @@
+{
+  "format": "nova-v6.0.1-game-verification",
+  "version": 1,
+  "engineVersion": "6.0.1",
+  "generatedAt": "2026-08-28T15:22:11.923Z",
+  "checks": [
+    {
+      "id": "V601-TEMPLATE",
+      "status": "passed",
+      "detail": "Launcher exposes a self-auditing Mouse Knockout template.",
+      "metrics": {
+        "failures": []
+      }
+    },
+    {
+      "id": "V601-PROJECT-SCHEMA",
+      "status": "passed",
+      "detail": "The launcher template passes the same complete project-schema validator used by Create Project.",
+      "metrics": {
+        "issues": []
+      }
+    },
+    {
+      "id": "V601-SCRIPTS",
+      "status": "passed",
+      "detail": "The shipped manager Rhai API-v2 script passes static analysis; pointer following uses the native fixed-step component.",
+      "metrics": {
+        "scripts": 1,
+        "diagnostics": []
+      }
+    },
+    {
+      "id": "V601-PHYSICS-SOAK",
+      "status": "passed",
+      "detail": "The optimized release WASM advances the template-equivalent nine-body world for 600 fixed ticks with finite state.",
+      "metrics": {
+        "durationMs": 12.852100000000064,
+        "diagnostics": {
+          "bodyCount": 9,
+          "connectionCount": 0,
+          "stepsLastFrame": 1,
+          "totalPhysicsSteps": 600,
+          "interpolationAlpha": 0,
+          "droppedSeconds": 0,
+          "eventCount": 17,
+          "configurationRebuilds": 600
+        }
+      }
+    },
+    {
+      "id": "V601-WASM-SCRIPTS",
+      "status": "passed",
+      "detail": "The manager compiles and executes start and timer lifecycles through the same optimized WASM Rhai bridge used by Play and exported players.",
+      "metrics": {
+        "diagnostics": [],
+        "executions": [
+          {
+            "asset": "KnockoutGameManager.rhai",
+            "functionName": "start",
+            "durationMs": 23.723199999999906,
+            "commands": [
+              "scoreSet",
+              "targetSetEnabled",
+              "targetSetEnabled",
+              "targetSetUiText",
+              "spawnAt",
+              "spawnAt",
+              "spawnAt",
+              "spawnAt",
+              "spawnAt",
+              "spawnAt",
+              "spawnAt",
+              "spawnAt",
+              "startTimer"
+            ]
+          },
+          {
+            "asset": "KnockoutGameManager.rhai",
+            "functionName": "on_timer",
+            "durationMs": 3.7752000000000407,
+            "commands": [
+              "targetDestroy",
+              "scoreAdd",
+              "targetSetUiText"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "V601-GAMEPLAY-CONTRACT",
+      "status": "passed",
+      "detail": "Spawn, timer, grouped bounds, score, UI and target-destruction contracts are all bound, with exactly eight authored target spawns.",
+      "metrics": {}
+    },
+    {
+      "id": "V601-LIFECYCLE-DISPATCH",
+      "status": "passed",
+      "detail": "Runtime caches declared callbacks and never crosses the WASM bridge for absent per-frame lifecycle functions.",
+      "metrics": {}
+    },
+    {
+      "id": "V601-RUNTIME-SPAWN-BATCHING",
+      "status": "passed",
+      "detail": "Runtime prefab creation preserves editor selection and batches physics invalidation once per command flush, preventing first-tick stalls.",
+      "metrics": {}
+    },
+    {
+      "id": "V601-SCRIPT-API-COMPATIBILITY",
+      "status": "passed",
+      "detail": "The native project validator accepts current API v2 scripts while retaining the API v1 compatibility path, with a dedicated regression test.",
+      "metrics": {}
+    },
+    {
+      "id": "V601-PREFAB",
+      "status": "passed",
+      "detail": "Runtime target is a complete, grouped Prefab v2 physics object without redundant per-instance scripts.",
+      "metrics": {}
+    },
+    {
+      "id": "V601-SCENE-UI",
+      "status": "passed",
+      "detail": "Scene, physics-safe native fixed-step pointer component, physics, HUD and completion objects are complete.",
+      "metrics": {}
+    },
+    {
+      "id": "V601-WORLD-COORDINATES",
+      "status": "passed",
+      "detail": "Screen-to-world conversion and full/split viewport bounds preserve exact camera scale.",
+      "metrics": {
+        "center": {
+          "x": 0,
+          "y": 0
+        },
+        "topLeft": {
+          "x": -17.77777777777778,
+          "y": 10
+        },
+        "bounds": {
+          "minX": -17.77777777777778,
+          "maxX": 17.77777777777778,
+          "minY": -10,
+          "maxY": 10
+        },
+        "splitBounds": {
+          "minX": -17.77777777777778,
+          "maxX": 17.77777777777778,
+          "minY": -20,
+          "maxY": 20
+        }
+      }
+    },
+    {
+      "id": "V601-BUILD-CONFIG",
+      "status": "passed",
+      "detail": "Template is configured for a portable Windows x86-64 game with an explicit startup scene.",
+      "metrics": {}
+    },
+    {
+      "id": "V601-MANUAL-LOCALES",
+      "status": "passed",
+      "detail": "HTML owns every old, task and reference article dynamically; generated content is inside the document before the controller runs.",
+      "metrics": {
+        "articleCounts": {
+          "en": 3,
+          "de": 3,
+          "zh-CN": 3
+        }
+      }
+    },
+    {
+      "id": "V601-MANUAL-TASK",
+      "status": "passed",
+      "detail": "All locales contain the authored create→draw→component→code→configure→play→build tutorial and API examples.",
+      "metrics": {}
+    },
+    {
+      "id": "V601-AUTHORITY",
+      "status": "passed",
+      "detail": "Patch authority is 6.0.1 without a project schema change.",
+      "metrics": {}
+    }
+  ],
+  "severity0Open": 0,
+  "severity1Open": 0,
+  "externalGates": {
+    "publisherSigning": "pending-external",
+    "cleanMachineLifecycle": "pending-external",
+    "secondMachineReproducibility": "pending-external",
+    "soak72Hours": "pending-external"
+  },
+  "status": "passed"
+}

@@ -40,7 +40,7 @@ const safeDesignLayout: WorkspaceLayout = {
   bottomPanelOpen: false, bottomPanelTab: 'assets', bottomPanelHeight: 240,
   hierarchyWidth: 236, inspectorWidth: 292, hierarchyDock: 'left', inspectorDock: 'right',
   hierarchyPinned: true, inspectorPinned: true, bottomPanelPinned: true,
-  panelOrder: ['hierarchy', 'inspector'], bottomTabOrder: ['assets', 'console', 'animation', 'audio', 'profiler', 'tilemap'],
+  panelOrder: ['hierarchy', 'inspector'], bottomTabOrder: ['assets', 'console', 'animation', 'audio', 'worldProduction', 'networkStudio', 'ecosystem', 'profiler', 'tilemap'],
   floatingPanels: [], splitDocking: false
 }
 
@@ -73,7 +73,7 @@ export const workspaceState = reactive({
   hierarchyPinned: true,
   inspectorPinned: true,
   panelOrder: ['hierarchy', 'inspector'] as Array<'hierarchy' | 'inspector'>,
-  bottomTabOrder: ['assets', 'console', 'animation', 'audio', 'profiler', 'tilemap'] as BottomPanelTab[],
+  bottomTabOrder: ['assets', 'console', 'animation', 'audio', 'worldProduction', 'networkStudio', 'ecosystem', 'profiler', 'tilemap'] as BottomPanelTab[],
   floatingPanels: [] as Array<'hierarchy' | 'inspector'>,
   splitDocking: false
 })
@@ -83,7 +83,7 @@ const USER_STORAGE_KEY = 'nova-a-editor-workspaces-v3'
 const V4_STORAGE_KEY = 'nova-a-editor-workspaces-v2'
 const LEGACY_STORAGE_KEY = 'nova-a-editor-layout-v1'
 const PAGES = new Set<EditorPage>(['scene', 'game', 'script', 'settings', 'manage'])
-const BOTTOM_TABS = new Set<BottomPanelTab>(['assets', 'packages', 'console', 'animation', 'audio', 'tilemap', 'presentation', 'profiler', 'rendering', 'project', 'build'])
+const BOTTOM_TABS = new Set<BottomPanelTab>(['assets', 'packages', 'console', 'animation', 'audio', 'worldProduction', 'networkStudio', 'ecosystem', 'tilemap', 'presentation', 'profiler', 'rendering', 'project', 'build'])
 let initialized = false
 
 function scopedStorageKey(base: string): string { return preferencesState.workspaceLayoutScope === 'project' ? `${base}:project:${projectSessionState.id}` : base }
@@ -259,7 +259,7 @@ export function duplicateWorkspace(id: string, name?: string): CustomWorkspace |
 
 export function renameWorkspace(id: string, name: string): boolean { const item = workspaceState.custom.find(candidate => candidate.id === id); const safe = name.trim().slice(0, 48); if (!item || !safe) return false; item.name = safe; return true }
 export function removeWorkspace(id: string): boolean { const index = workspaceState.custom.findIndex(item => item.id === id); if (index < 0) return false; workspaceState.custom.splice(index, 1); workspaceState.selectedCustomId = workspaceState.custom[0]?.id ?? ''; if (!workspaceState.selectedCustomId) applyEditorWorkspace('design'); return true }
-export function exportWorkspaces(): string { return JSON.stringify({ format: 'nova-workspaces', version: 3, engineLine: '5.x', workspaces: workspaceState.custom }, null, 2) }
+export function exportWorkspaces(): string { return JSON.stringify({ format: 'nova-workspaces', version: 3, engineLine: '6.x', workspaces: workspaceState.custom }, null, 2) }
 export function importWorkspaces(source: string): number { const parsed = JSON.parse(source) as Record<string, unknown>; if (parsed.format !== 'nova-workspaces' || (parsed.version !== 2 && parsed.version !== 3)) throw new Error('Unsupported Nova_A workspace document.'); const imported = normalizeCustomList(parsed.workspaces); const ids = new Set(workspaceState.custom.map(item => item.id)); for (const item of imported) { if (ids.has(item.id)) item.id = crypto.randomUUID?.() ?? `custom-${Date.now()}-${ids.size}`; ids.add(item.id); workspaceState.custom.push(item) } return imported.length }
 
 export function navigateHistory(direction: 'back' | 'forward'): boolean {

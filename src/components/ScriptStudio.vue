@@ -70,9 +70,10 @@
 
         <footer class="editor-status">
           <span :class="validationError ? 'status-error' : 'status-ok'">{{ validationError ? t('errorsCount', { count: analysis.diagnostics.filter(item => item.severity === 'error').length || 1 }) : t('scriptValid') }}</span>
+          <span v-if="linkedGraphUuid" class="linked-graph-status">↔ {{ t('linkedVisualGraph') }}</span>
           <span :class="scriptIndexState.status === 'error' ? 'status-error' : 'status-ok'">Index {{ scriptIndexState.documentCount }} / {{ scriptIndexState.symbolCount }}</span>
           <span>{{ t('lineColumn', { line: cursor.line, column: cursor.column }) }}</span>
-      <span>Rhai API v{{ activeAsset?.script?.apiVersion ?? 2 }} · UTF-8 · {{ analysis.elapsedMs.toFixed(1) }} ms</span><span>{{ t('engineVersion') }} 5.0.1</span>
+      <span>Rhai API v{{ activeAsset?.script?.apiVersion ?? 2 }} · UTF-8 · {{ analysis.elapsedMs.toFixed(1) }} ms</span><span>{{ t('engineVersion') }} 6.1.0</span>
         </footer>
       </main>
 
@@ -177,6 +178,7 @@ import { SCRIPT_TEMPLATES, scriptTemplate, type ScriptTemplateId } from '../edit
 import { hotReloadHistory, scriptHotReloadState } from '../runtime/scriptHotReload'
 import { scriptCoverageReport, scriptCoverageState } from '../runtime/scriptCoverage'
 import { markScriptIndexApiChanged, rebuildAndPersistScriptIndex, restoreScriptIndex, scriptIndexState } from '../editor/scriptIndexPersistence'
+import { linkedScriptGraphUuid, synchronizeLinkedGraphForScript } from '../visual/graphCodeSync'
 
 const service = new ScriptLanguageService()
 const editor = ref<HTMLTextAreaElement | null>(null), findInput = ref<HTMLInputElement | null>(null), renameInput = ref<HTMLInputElement | null>(null)
@@ -199,6 +201,7 @@ const inspectorTabs = [
 const scripts = computed(() => { void assetState.generation; return assetState.records.filter(asset => asset.assetType === 'script').sort((a, b) => a.path.localeCompare(b.path)) })
 const activeAsset = computed(() => scripts.value.find(asset => asset.uuid === scriptStudioState.activeUuid) ?? null)
 const activeDirty = computed(() => !!activeAsset.value && dirtyUuids.has(activeAsset.value.uuid))
+const linkedGraphUuid = computed(() => activeAsset.value ? linkedScriptGraphUuid(activeAsset.value.uuid) : '')
 const openAssets = computed(() => scriptStudioState.openTabs.flatMap(uuid => scripts.value.find(asset => asset.uuid === uuid) ?? []))
 const filteredScripts = computed(() => { const q = projectQuery.value.trim().toLowerCase(); return q ? scripts.value.filter(asset => `${asset.name} ${asset.path}`.toLowerCase().includes(q)) : scripts.value })
 const projectMatches = computed(() => {
@@ -226,6 +229,7 @@ const canRollbackReload = computed(() => Boolean(activeAsset.value && scriptHotR
 const coverage = computed(() => { void scriptCoverageState.revision; return scriptCoverageReport() })
 
 watch(activeAsset, asset => { if (!asset) { analysis.value = emptyAnalysis(); return }; if (!(asset.uuid in drafts)) { const saved = readTextAsset(asset.uuid) ?? '', recovery = asset.script?.recoverySource ?? ''; drafts[asset.uuid] = recovery && recovery !== saved ? recovery : saved; if (recovery && recovery !== saved) dirtyUuids.add(asset.uuid) } void analyzeCurrent() }, { immediate: true })
+watch(()=>assetState.generation,()=>{const asset=activeAsset.value;if(!asset||dirtyUuids.has(asset.uuid)||!linkedScriptGraphUuid(asset.uuid))return;const saved=readTextAsset(asset.uuid);if(saved!==null&&drafts[asset.uuid]!==saved){drafts[asset.uuid]=saved;void analyzeCurrent()}})
 watch(findOpen, open => { if (open) void nextTick(() => findInput.value?.focus()) })
 onMounted(() => { restoreScriptIndex(); rebuildProjectIndex(); const selected = assetState.records.find(asset => asset.uuid === assetState.selectedGuid && asset.assetType === 'script'); if (selected) open(selected.uuid); else if (!activeAsset.value && scripts.value[0]) open(scripts.value[0].uuid) })
 onBeforeUnmount(() => service.dispose())
@@ -246,7 +250,19 @@ function requestCompletions() { completionOpen.value = true; editor.value?.focus
 function insertCompletion(name: string) { const prefix = wordBeforeCursor.value; const el = editor.value; if (!el) return; el.selectionStart -= prefix.length; replaceSelection(name); completionOpen.value = false }
 function focusLine(line: number, column = 1) { const el = editor.value; if (!el) return; const lines = draft.value.split(/\r?\n/); const pos = lines.slice(0, Math.max(0, line - 1)).reduce((sum, value) => sum + value.length + 1, 0) + Math.max(0, column - 1); el.focus(); el.setSelectionRange(pos, pos); el.scrollTop = Math.max(0, (line - 4) * 22); cursorChanged() }
 function toggleBreakpoint(line: number) { const asset = activeAsset.value; if (!asset) return; asset.script ??= defaultScriptMetadata(); const index = asset.script.breakpoints.indexOf(line); if (index >= 0) { asset.script.breakpoints.splice(index, 1); asset.script.breakpointDetails = asset.script.breakpointDetails.filter(point => point.line !== line || point.functionName) } else { asset.script.breakpoints.push(line); asset.script.breakpointDetails.push({ id: `line-${line}-${Date.now()}`, line, functionName: '', condition: '', hitCondition: 0, logMessage: '', enabled: true, hitCount: 0 }) } asset.script.breakpoints.sort((a, b) => a - b); pushHistory('Toggle script breakpoint', `script-breakpoint:${asset.uuid}`); assetState.generation++ }
-async function saveActive() { const asset = activeAsset.value; if (!asset) return; const result = runtime.validateModuleSource(asset.uuid, draft.value); validationError.value = result.error ?? ''; if (result.error) { addEditorLog(result.error, 'Script', 'error', asset.uuid); inspectorTab.value = 'problems'; return }; asset.script ??= defaultScriptMetadata(); asset.script.tests = analysis.value.tests.map(test => test.name); asset.script.recoverySource = ''; asset.script.lastSavedHash = sourceHash(draft.value); if (updateTextAsset(asset.uuid, draft.value)) { runtime.queueHotReload(asset.uuid, draft.value); dirtyUuids.delete(asset.uuid); rebuildProjectIndex(); pushHistory('Edit script asset', `script:${asset.uuid}`); addEditorLog(t('scriptSaved', { name: asset.name }), 'Script', 'info', asset.uuid) } }
+async function saveActive() {
+  const asset=activeAsset.value;if(!asset)return
+  const result=runtime.validateModuleSource(asset.uuid,draft.value);validationError.value=result.error??''
+  if(result.error){addEditorLog(result.error,'Script','error',asset.uuid);inspectorTab.value='problems';return}
+  const previousScript=readTextAsset(asset.uuid)??'',previousGraphs=new Map(assetState.records.filter(item=>item.assetType==='visualScript').map(item=>[item.uuid,readTextAsset(item.uuid)??'']))
+  asset.script??=defaultScriptMetadata();asset.script.tests=analysis.value.tests.map(test=>test.name);asset.script.recoverySource='';asset.script.lastSavedHash=sourceHash(draft.value)
+  if(!updateTextAsset(asset.uuid,draft.value))return
+  try{
+    const synchronized=synchronizeLinkedGraphForScript(asset.uuid,draft.value)
+    if(synchronized){const graphSource=readTextAsset(synchronized.graphAssetUuid)??'';runtime.queueGraphHotReload(synchronized.graphAssetUuid,graphSource,previousGraphs.get(synchronized.graphAssetUuid)??'');window.dispatchEvent(new CustomEvent('nova-linked-graph-synchronized',{detail:{graphAssetUuid:synchronized.graphAssetUuid,scriptUuid:asset.uuid}}));addEditorLog(t('linkedGraphUpdatedFromCode'),'Script','info',synchronized.graphAssetUuid)}
+  }catch(error){updateTextAsset(asset.uuid,previousScript);validationError.value=error instanceof Error?error.message:String(error);addEditorLog(validationError.value,'Script','error',asset.uuid);inspectorTab.value='problems';return}
+  runtime.queueHotReload(asset.uuid,draft.value);dirtyUuids.delete(asset.uuid);rebuildProjectIndex();pushHistory('Edit script asset',`script:${asset.uuid}`);addEditorLog(t('scriptSaved',{name:asset.name}),'Script','info',asset.uuid)
+}
 function findNext() { const el = editor.value; if (!el || !findText.value) return; const lower = draft.value.toLowerCase(), needle = findText.value.toLowerCase(); let index = lower.indexOf(needle, el.selectionEnd); if (index < 0) index = lower.indexOf(needle); if (index >= 0) { el.focus(); el.setSelectionRange(index, index + needle.length); cursorChanged() } }
 function replaceOne() { const el = editor.value; if (!el) return; if (draft.value.slice(el.selectionStart, el.selectionEnd).toLowerCase() !== findText.value.toLowerCase()) { findNext(); return }; replaceSelection(replaceText.value) }
 function replaceAll() { if (!findText.value) return; draft.value = draft.value.replace(new RegExp(escapeRegex(findText.value), 'gi'), replaceText.value); sourceChanged() }

@@ -1,13 +1,24 @@
 import { reactive } from 'vue'
 import { NOVA_PACKAGE_MANIFEST_VERSION } from './stableContracts'
 
-const PACKAGE_ENGINE_VERSION = '5.0.1'
+const PACKAGE_ENGINE_VERSION = '6.1.0'
 
 export { NOVA_PACKAGE_MANIFEST_VERSION }
 export type PackageSourceKind = 'local' | 'git' | 'registry'
 export type PackageEntryPointType = 'editor' | 'build' | 'importer' | 'runtime' | 'template'
 export type PackageSecurityStatus = 'verified' | 'unverified' | 'quarantined'
 export type PluginApiCertification = 'certified' | 'compatible' | 'uncertified'
+export type PackageVisualValueType = 'Boolean' | 'Number' | 'String' | 'Vec2' | 'Entity' | 'Resource' | 'Data'
+export interface PackageVisualNode {
+  id: string
+  title: string
+  category: string
+  description: string
+  callable: string
+  inputs: Array<{ name: string; valueType: PackageVisualValueType; defaultValue: unknown }>
+  output: { name: string; valueType: PackageVisualValueType } | null
+  deprecatedBy: string
+}
 
 export interface PackageSource { kind: PackageSourceKind; location: string }
 export interface PackageManifest {
@@ -36,6 +47,7 @@ export interface PackageManifest {
   provenance: string
   certification: PluginApiCertification
   vulnerabilityPolicy: string
+  visualNodes: PackageVisualNode[]
 }
 export interface InstalledPackage {
   manifest: PackageManifest
@@ -49,6 +61,13 @@ export interface InstalledPackage {
 }
 export interface PackageLockEntry { id: string; version: string; source: PackageSource; sha256: string; signature: string; entryPointType: PackageEntryPointType; dependencies: Record<string, string> }
 export interface QuarantinedPackage { id: string; version: string; reason: string; quarantinedAt: number }
+
+export const PACKAGE_PERMISSION_CATALOG = Object.freeze([
+  'log', 'events', 'editor.commands', 'editor.menus', 'editor.panels', 'editor.docks', 'editor.importers', 'editor.assets', 'editor.components', 'editor.inspectors', 'editor.gizmos', 'editor.settings', 'editor.graph-nodes',
+  'render.passes', 'build.hooks', 'build.steps', 'build.android-sdk', 'project.templates', 'runtime.systems',
+  'project.read', 'project.write', 'assets.read', 'assets.write', 'network.client', 'network.listen', 'process.spawn', 'gpu.render-pass'
+])
+const allowedPackagePermissions = new Set<string>(PACKAGE_PERMISSION_CATALOG)
 
 export const packageState = reactive({
   installed: [] as InstalledPackage[],
@@ -69,8 +88,20 @@ export const packageState = reactive({
   ],
   registryCatalog: [] as PackageManifest[],
   vulnerabilityPolicy: 'block-critical-high' as 'block-critical-high' | 'warn-only',
-  lastCacheVerification: ''
+  lastCacheVerification: '',
+  publisherTrust: [] as Array<{ publisher: string; fingerprint: string; packageId: string; verifiedAt: string }>
 })
+
+const verifiedPublisherPackages = new Set<string>()
+function publisherPackageKey(manifest: PackageManifest): string { return `${manifest.id}@${manifest.version}:${manifest.sha256}:${manifest.signature}:${manifest.publisher}` }
+export function markPublisherPackageVerified(manifest: PackageManifest, fingerprint: string): void {
+  if (!/^[a-f0-9]{16,64}$/.test(fingerprint) || !manifest.signature.startsWith('ed25519-v1:')) throw new Error('Publisher verification metadata is invalid.')
+  manifest.publisherVerified = true
+  verifiedPublisherPackages.add(publisherPackageKey(manifest))
+  if (!packageState.publisherTrust.some(item => item.publisher === manifest.publisher && item.fingerprint === fingerprint && item.packageId === manifest.id)) packageState.publisherTrust.push({ publisher: manifest.publisher, fingerprint, packageId: manifest.id, verifiedAt: new Date().toISOString() })
+  const cached = packageState.registryCatalog.find(item => item.id === manifest.id && item.version === manifest.version && item.sha256 === manifest.sha256)
+  if (cached) { cached.publisherVerified = true; cached.signature = manifest.signature }
+}
 
 export const OFFICIAL_NAVIGATION_PACKAGE_ID = 'top.whitelists.novaa.navigation'
 export const OFFICIAL_AI_PACKAGE_ID = 'top.whitelists.novaa.ai'
@@ -85,7 +116,7 @@ const OFFICIAL_METADATA = {
   documentationUrl: 'https://github.com/Stevenzhang543/Nova_A/',
   license: 'MIT', licenseUrl: 'https://github.com/Stevenzhang543/Nova_A/blob/main/LICENSE.md',
   provenance: 'nova-official-v1', certification: 'certified' as PluginApiCertification,
-  vulnerabilityPolicy: 'Report privately through the Nova_A security policy; Critical/High findings block Stable installation.'
+  vulnerabilityPolicy: 'Report privately through the Nova_A security policy; Critical/High findings block Stable installation.', visualNodes: [] as PackageVisualNode[]
 }
 function officialSecurity(type: PackageEntryPointType, sha256: string, dependencyHashes: Record<string, string> = {}) {
   return { entryPointType: type, apiCompatibility: '>=1 <2', dependencyHashes, sha256, signature: `nova-official-v1:${sha256}` }
@@ -94,33 +125,33 @@ function officialSecurity(type: PackageEntryPointType, sha256: string, dependenc
 const OFFICIAL_PACKAGES: Record<string, PackageManifest> = {
   [OFFICIAL_NAVIGATION_PACKAGE_ID]: {
     manifestVersion: NOVA_PACKAGE_MANIFEST_VERSION, id: OFFICIAL_NAVIGATION_PACKAGE_ID, name: 'Nova Navigation 2D', version: '2.6.0',
-    description: 'Grid/polygon navigation, agents, flow fields, avoidance, and dynamic rebaking.', engine: '>=2.6.0 <6.0.0', dependencies: {},
+    description: 'Grid/polygon navigation, agents, flow fields, avoidance, and dynamic rebaking.', engine: '>=2.6.0 <7.0.0', dependencies: {},
     pluginApi: null, native: false, ...officialSecurity('runtime', '26434adf10b122a8708afc496f682242d7f634a344bbd00f4699ff71b2e3a9ae'), ...OFFICIAL_METADATA
   },
   [OFFICIAL_AI_PACKAGE_ID]: {
     manifestVersion: NOVA_PACKAGE_MANIFEST_VERSION, id: OFFICIAL_AI_PACKAGE_ID, name: 'Nova AI Tools', version: '3.8.0',
-    description: 'Optional serialized behavior trees and hierarchical state machines with deterministic debug traces.', engine: '>=3.8.0 <6.0.0', dependencies: {},
+    description: 'Optional serialized behavior trees and hierarchical state machines with deterministic debug traces.', engine: '>=3.8.0 <7.0.0', dependencies: {},
     pluginApi: null, native: false, ...officialSecurity('runtime', '11c75ccdc9f2037548e9eef31bd3ee34134a365e9eaeef741ee8e7917a69ac4e'), ...OFFICIAL_METADATA
   },
   [OFFICIAL_OBJECT_POOL_PACKAGE_ID]: {
     manifestVersion: NOVA_PACKAGE_MANIFEST_VERSION, id: OFFICIAL_OBJECT_POOL_PACKAGE_ID, name: 'Nova Object Pool', version: '3.8.0',
-    description: 'Optional runtime object pools with reset contracts, bounded capacity, lifetime policies, reuse counters, and leak diagnostics.', engine: '>=3.8.0 <6.0.0', dependencies: {},
+    description: 'Optional runtime object pools with reset contracts, bounded capacity, lifetime policies, reuse counters, and leak diagnostics.', engine: '>=3.8.0 <7.0.0', dependencies: {},
     pluginApi: null, native: false, ...officialSecurity('runtime', '1bb0707fffc9aa16790924146797791413754147129750608f29360bd2ee4e86'), ...OFFICIAL_METADATA
   },
   [OFFICIAL_STREAMING_TOOLS_PACKAGE_ID]: {
     manifestVersion: NOVA_PACKAGE_MANIFEST_VERSION, id: OFFICIAL_STREAMING_TOOLS_PACKAGE_ID, name: 'Nova Streaming Tools', version: '3.8.0',
-    description: 'Optional authoring helpers and diagnostics for the core asynchronous world-cell runtime.', engine: '>=3.8.0 <6.0.0', dependencies: {},
+    description: 'Optional authoring helpers and diagnostics for the core asynchronous world-cell runtime.', engine: '>=3.8.0 <7.0.0', dependencies: {},
     pluginApi: null, native: false, ...officialSecurity('editor', 'fbd228b8e1b6f780487885dea93276958c978d2f13f117a7c654c78d630cb047'), ...OFFICIAL_METADATA
   },
   [OFFICIAL_NETWORKING_PACKAGE_ID]: {
     manifestVersion: NOVA_PACKAGE_MANIFEST_VERSION, id: OFFICIAL_NETWORKING_PACKAGE_ID, name: 'Nova Optional Networking', version: '2.9.0',
-    description: 'Bounded WebSocket/native UDP transports, RPCs, snapshots, prediction, interpolation, rollback helpers, and multiplayer diagnostics.', engine: '>=2.9.0 <6.0.0', dependencies: {},
+    description: 'Bounded WebSocket/native UDP transports, RPCs, snapshots, prediction, interpolation, rollback helpers, and multiplayer diagnostics.', engine: '>=2.9.0 <7.0.0', dependencies: {},
     pluginApi: null, native: false, ...officialSecurity('runtime', 'fd048525377499fbd054cb74b69d5369c57d11431951695d413ec1e14cfe3424'),
     ...OFFICIAL_METADATA, permissions: ['network.client', 'network.listen']
   },
   [OFFICIAL_ANDROID_PACKAGE_ID]: {
     manifestVersion: NOVA_PACKAGE_MANIFEST_VERSION, id: OFFICIAL_ANDROID_PACKAGE_ID, name: 'Nova Android Export', version: '2.9.0',
-    description: 'Optional Android export templates and validation. Requires a local Android SDK/JDK toolchain.', engine: '>=2.9.0 <6.0.0', dependencies: {},
+    description: 'Optional Android export templates and validation. Requires a local Android SDK/JDK toolchain.', engine: '>=2.9.0 <7.0.0', dependencies: {},
     pluginApi: null, native: false, ...officialSecurity('build', 'cb2f4c6efb9bf972451cf545a4854878f8515ca327417424975ad2756349a5ca'),
     ...OFFICIAL_METADATA, permissions: ['build.android-sdk']
   }
@@ -207,19 +238,35 @@ export function normalizePackageManifest(value: unknown): PackageManifest {
   const dependencyHashes: Record<string, string> = {}
   if (source.dependencyHashes && typeof source.dependencyHashes === 'object' && !Array.isArray(source.dependencyHashes)) for (const [dependency, digest] of Object.entries(source.dependencyHashes as Record<string, unknown>)) if (validId(dependency) && sha256(digest)) dependencyHashes[dependency] = sha256(digest)
   const entryPointType: PackageEntryPointType = source.entryPointType === 'editor' || source.entryPointType === 'build' || source.entryPointType === 'importer' || source.entryPointType === 'template' ? source.entryPointType : 'runtime'
+  const allowedVisualTypes = new Set<PackageVisualValueType>(['Boolean', 'Number', 'String', 'Vec2', 'Entity', 'Resource', 'Data'])
+  const visualNodes: PackageVisualNode[] = Array.isArray(source.visualNodes) ? source.visualNodes.slice(0, 256).flatMap((raw): PackageVisualNode[] => {
+    if (!raw || typeof raw !== 'object') return []
+    const item = raw as Record<string, unknown>, nodeId = text(item.id, 120), callable = text(item.callable, 120)
+    if (!/^[A-Za-z_][A-Za-z0-9_.-]*$/.test(nodeId) || !/^[A-Za-z_][A-Za-z0-9_]*$/.test(callable)) return []
+    const inputs = Array.isArray(item.inputs) ? item.inputs.slice(0, 32).flatMap((rawInput): PackageVisualNode['inputs'] => {
+      if (!rawInput || typeof rawInput !== 'object') return []
+      const input = rawInput as Record<string, unknown>, name = text(input.name, 80), type = String(input.valueType) as PackageVisualValueType
+      return /^[A-Za-z_][A-Za-z0-9_]*$/.test(name) && allowedVisualTypes.has(type) ? [{ name, valueType: type, defaultValue: input.defaultValue ?? null }] : []
+    }) : []
+    const rawOutput = item.output && typeof item.output === 'object' ? item.output as Record<string, unknown> : null, outputType = String(rawOutput?.valueType ?? '') as PackageVisualValueType, outputName = text(rawOutput?.name, 80)
+    const output = rawOutput && /^[A-Za-z_][A-Za-z0-9_]*$/.test(outputName) && allowedVisualTypes.has(outputType) ? { name: outputName, valueType: outputType } : null
+    return [{ id: nodeId, title: text(item.title, 120) || nodeId, category: text(item.category, 80) || 'Libraries', description: text(item.description, 500), callable, inputs, output, deprecatedBy: text(item.deprecatedBy, 160) }]
+  }) : []
+  const permissions = stringList(source.permissions, 32)
+  if (permissions.some(permission => !allowedPackagePermissions.has(permission))) throw new Error('Package requests an unsupported capability.')
   return {
     manifestVersion: NOVA_PACKAGE_MANIFEST_VERSION, id, name, version, description: text(source.description, 500),
     engine: text(source.engine, 80), dependencies, dependencyHashes, entryPointType, apiCompatibility: text(source.apiCompatibility, 80),
     pluginApi: Number(source.pluginApi) === 2 ? 2 : null, native: source.native === true,
     sha256: sha256(source.sha256), signature: text(source.signature, 1024),
     publisher: text(source.publisher, 120) || 'Unknown publisher', publisherVerified: source.publisherVerified === true,
-    permissions: stringList(source.permissions), rating: Number.isFinite(Number(source.rating)) ? Math.min(5, Math.max(0, Number(source.rating))) : null,
+    permissions, rating: Number.isFinite(Number(source.rating)) ? Math.min(5, Math.max(0, Number(source.rating))) : null,
     securityUrl: /^https:\/\//i.test(text(source.securityUrl, 500)) ? text(source.securityUrl, 500) : '',
     documentationUrl: /^https:\/\//i.test(text(source.documentationUrl, 500)) ? text(source.documentationUrl, 500) : '',
     license: text(source.license, 80), licenseUrl: /^https:\/\//i.test(text(source.licenseUrl, 500)) ? text(source.licenseUrl, 500) : '',
     provenance: text(source.provenance, 160),
     certification: source.certification === 'certified' || source.certification === 'compatible' ? source.certification : 'uncertified',
-    vulnerabilityPolicy: text(source.vulnerabilityPolicy, 500)
+    vulnerabilityPolicy: text(source.vulnerabilityPolicy, 500), visualNodes
   }
 }
 
@@ -256,7 +303,9 @@ export function reviewPackageSecurity(manifest: PackageManifest, candidates: rea
     && candidate.publisher === manifest.publisher
     && candidate.publisherVerified
   )
-  if (!manifest.signature || manifest.signature !== `nova-official-v1:${manifest.sha256}` || !manifest.publisherVerified || !trustedRegistryEntry) blocking.push('Package signature is missing or cannot be verified by the Stable trust store.')
+  const officialSignature = manifest.signature === `nova-official-v1:${manifest.sha256}` && manifest.publisherVerified && Boolean(trustedRegistryEntry)
+  const reviewedPublisherSignature = manifest.publisherVerified && manifest.signature.startsWith('ed25519-v1:') && verifiedPublisherPackages.has(publisherPackageKey(manifest))
+  if (!officialSignature && !reviewedPublisherSignature) blocking.push('Package signature is missing or cannot be verified by the Stable trust store.')
   for (const id of Object.keys(manifest.dependencies)) {
     if (!manifest.dependencyHashes[id]) blocking.push(`Dependency ${id} is missing a locked SHA-256 digest.`)
     const installed = candidates.find(item => item.manifest.id === id)

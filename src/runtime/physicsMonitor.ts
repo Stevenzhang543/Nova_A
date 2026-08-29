@@ -171,7 +171,7 @@ export function comparePhysicsSnapshots(first: PhysicsMonitorCapture, second: Ph
 }
 
 export function physicsCaptureJson(capture: PhysicsMonitorCapture): string {
-  return `${JSON.stringify({ format: 'nova-physics-capture', version: 1, engineVersion: '5.0.1', units: { position: 'm', velocity: 'm/s', acceleration: 'm/s²', force: 'N', energy: 'J' }, capture }, null, 2)}\n`
+  return `${JSON.stringify({ format: 'nova-physics-capture', version: 1, engineVersion: '6.1.0', units: { position: 'm', velocity: 'm/s', acceleration: 'm/s²', force: 'N', energy: 'J' }, capture }, null, 2)}\n`
 }
 
 export function recordPhysicsTelemetry(

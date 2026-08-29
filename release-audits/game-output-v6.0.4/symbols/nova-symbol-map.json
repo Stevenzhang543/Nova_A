@@ -1,0 +1,7 @@
+{
+  "format": "nova-symbol-map",
+  "version": 1,
+  "engineVersion": "6.0.4",
+  "buildId": "ea2b046b9da2a499698b867c63965a3885be21ad9a36f20c481a5abb5e61d4fa",
+  "workflow": "Archive matching PDB, dSYM, or unstripped ELF symbols under this build ID."
+}

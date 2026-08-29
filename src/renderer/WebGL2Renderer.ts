@@ -1,8 +1,8 @@
 import { nineSliceGeometry, shapeGeometry, spriteGeometry, strokeGeometry, type GeometryData } from './geometry'
 import { assetState, resolveTexture as resolveTextureAsset } from '../assets/AssetDatabase'
-import { analyzeMaterialShader, reflectShaderUniforms, reportMaterialFallback, resolvedMaterialFragment, resolveMaterial, type Material2DResource } from './materials'
+import { analyzeMaterialShader, defaultMaterial, reflectShaderUniforms, reportMaterialFallback, resolvedMaterialFragment, resolveMaterial, type Material2DResource } from './materials'
 import { reportRendererContextLost, reportRendererContextRestored } from './capabilities'
-import { renderingSettings } from './renderSettings'
+import { activePostProcessing, renderingSettings } from './renderSettings'
 import {
   normalizedColor,
   type CameraRenderView,
@@ -41,6 +41,14 @@ interface CachedTexture {
 interface CachedText {
   region: TextureRegion
   aspect: number
+}
+
+const MAX_PACKET_VERTICES = 65_000
+function finite(value: number, fallback: number): number { return Number.isFinite(value) ? value : fallback }
+function safeViewport(viewport: CameraRenderView['viewport']): { x: number; y: number; width: number; height: number } {
+  const x = Math.min(1 - 1e-6, Math.max(0, finite(viewport?.x ?? 0, 0)))
+  const y = Math.min(1 - 1e-6, Math.max(0, finite(viewport?.y ?? 0, 0)))
+  return { x, y, width: Math.max(1e-6, Math.min(1 - x, finite(viewport?.width ?? 1, 1))), height: Math.max(1e-6, Math.min(1 - y, finite(viewport?.height ?? 1, 1))) }
 }
 
 const VERTEX_SOURCE = `#version 300 es
@@ -126,6 +134,12 @@ interface ProgramState {
 interface PostProgramState { program: WebGLProgram; texture: WebGLUniformLocation; material: Material2DResource }
 interface TimerQueryExtension { TIME_ELAPSED_EXT: number; GPU_DISJOINT_EXT: number }
 
+function builtInPostMaterial(): Material2DResource {
+  const material = defaultMaterial('Nova built-in post process')
+  material.target = 'UI'
+  return material
+}
+
 function materialFragment(material: Material2DResource): string {
   const resolved = resolvedMaterialFragment(material)
   const declared = new Set(reflectShaderUniforms(resolved.source).map(field => field.name))
@@ -140,6 +154,7 @@ in vec2 v_uv;
 in vec4 v_color;
 uniform sampler2D u_texture;
 uniform bool u_linearTexture;
+uniform bool u_writeColor;
 ${uniforms}
 ${textures}
 ${resolved.source}
@@ -159,11 +174,23 @@ function postMaterialFragment(material: Material2DResource): string {
 precision highp float;
 in vec2 v_uv;
 uniform sampler2D u_texture;
+uniform vec4 u_nova_post;
+uniform vec2 u_nova_post_extra;
 ${uniforms}
 ${textures}
 ${resolved.source}
 out vec4 outputColor;
-void main(){ vec4 result=nova_material(texture(u_texture,v_uv),v_uv); outputColor=${converted}; }`
+void main(){
+  vec2 pixel=max(1.0,u_nova_post_extra.y)/vec2(textureSize(u_texture,0));
+  vec4 nearby=(texture(u_texture,v_uv+vec2(pixel.x,0.0))+texture(u_texture,v_uv-vec2(pixel.x,0.0))+texture(u_texture,v_uv+vec2(0.0,pixel.y))+texture(u_texture,v_uv-vec2(0.0,pixel.y)))*.25;
+  vec4 base=mix(texture(u_texture,v_uv),nearby,clamp(u_nova_post_extra.y/8.0,0.0,1.0));
+  vec4 result=nova_material(base,v_uv);
+  result.rgb*=exp2(u_nova_post.x); result.rgb=(result.rgb-.5)*u_nova_post.y+.5;
+  float luminance=dot(result.rgb,vec3(.2126,.7152,.0722)); result.rgb=mix(vec3(luminance),result.rgb,u_nova_post.z);
+  float edge=smoothstep(.18,.78,length(v_uv-.5)); result.rgb*=1.0-edge*u_nova_post.w;
+  float highlight=max(max(result.r,result.g),result.b); result.rgb+=max(0.0,highlight-.72)*u_nova_post_extra.x*.28;
+  result=clamp(result,0.0,1.0); outputColor=${converted};
+}`
 }
 
 function createPostProgram(gl: WebGL2RenderingContext, material: Material2DResource): WebGLProgram {
@@ -291,7 +318,7 @@ export class WebGL2Renderer implements Renderer2D {
     this.sequence = 0
     this.cameraIndex = -1
     if (this.contextLost || this.gl.isContextLost()) return
-    this.effectsTargetActive = Boolean(renderingSettings.postProcessing.enabled && renderingSettings.postProcessing.userMaterial)
+    this.effectsTargetActive = renderingSettings.postProcessing.enabled
     if (this.effectsTargetActive) this.ensureEffectsTarget()
     this.pollGpuTimers()
     Object.assign(this.stats, { drawCalls: 0, batches: 0, triangles: 0, sprites: 0, shapes: 0, text: 0, textures: this.textureCount, gpuMs: this.lastGpuMs, passes: 1, renderTargets: this.effectsTargetActive ? 1 : 0, overdraw: 0, batchBreaks: 0, atlasPages: assetState.atlasPages.length, textureMemoryBytes: this.textureMemoryBytes, batchBreakReasons: {} })
@@ -373,8 +400,9 @@ export class WebGL2Renderer implements Renderer2D {
     flush()
     this.stats.batchBreaks = Math.max(0, this.stats.batches - 1)
     const gl = this.gl
-    const postMaterial = this.effectsTargetActive ? renderingSettings.postProcessing.userMaterial : null
-    if (postMaterial && !this.drawPostMaterial(postMaterial)) {
+    const postReference = activePostProcessing.userMaterial
+    const postMaterial = postReference ? null : builtInPostMaterial()
+    if (this.effectsTargetActive && !this.drawPostMaterial(postReference ?? '__nova_builtin_post__', postMaterial)) {
       gl.bindFramebuffer(gl.READ_FRAMEBUFFER, this.framebuffer)
       gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, null)
       gl.blitFramebuffer(0, 0, this.canvas.width, this.canvas.height, 0, 0, this.canvas.width, this.canvas.height, gl.COLOR_BUFFER_BIT, gl.NEAREST)
@@ -418,8 +446,12 @@ export class WebGL2Renderer implements Renderer2D {
     orderOverride = order.orderInLayer
   ): void {
     if (!geometry.positions.length || !geometry.indices.length) return
+    if (geometry.positions.length > MAX_PACKET_VERTICES) return
+    if (geometry.positions.some(position => !Number.isFinite(position.x) || !Number.isFinite(position.y))) return
+    if (geometry.uvs.some(uv => !Number.isFinite(uv.x) || !Number.isFinite(uv.y))) return
+    if (geometry.indices.some(index => !Number.isInteger(index) || index < 0 || index >= geometry.positions.length)) return
     this.packets.push({
-      layer: order.sortingLayer, order: orderOverride, sequence: this.sequence++, material: order.material || 'Default',
+      layer: finite(order.sortingLayer, 0), order: finite(orderOverride, 0), sequence: this.sequence++, material: order.material || 'Default',
       blend: order.blendMode ?? 'Alpha', texture, filter: texture?.filter ?? 'Linear', color: normalizedColor(color), geometry,
       camera: this.camera, cameraIndex: this.cameraIndex
     })
@@ -441,54 +473,52 @@ export class WebGL2Renderer implements Renderer2D {
     }
 
     const camera = batch[0].camera
-    const viewport = camera.viewport ?? { x: 0, y: 0, width: 1, height: 1 }
+    const viewport = safeViewport(camera.viewport)
     const viewportX = Math.round(viewport.x * this.canvas.width)
     const viewportY = Math.round(viewport.y * this.canvas.height)
     const viewportWidth = Math.max(1, Math.round(viewport.width * this.canvas.width))
     const viewportHeight = Math.max(1, Math.round(viewport.height * this.canvas.height))
-    gl.enable(gl.SCISSOR_TEST)
-    gl.scissor(viewportX, viewportY, viewportWidth, viewportHeight)
-    gl.viewport(viewportX, viewportY, viewportWidth, viewportHeight)
-    const program = this.programFor(batch[0].material)
-    gl.useProgram(program.program)
-    gl.bindVertexArray(this.vao)
-    gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer)
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.DYNAMIC_DRAW)
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer)
-    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint32Array(indices), gl.DYNAMIC_DRAW)
+    const scale = Math.max(1e-9, Math.abs(finite(camera.scale, 1)))
     const width = this.frame.width * viewport.width
     const height = this.frame.height * viewport.height
     const center = camera.position ?? {
-      x: (this.frame.width * .5 - camera.offset.x) / camera.scale,
-      y: (camera.offset.y - this.frame.height * .5) / camera.scale
+      x: (this.frame.width * .5 - finite(camera.offset.x, this.frame.width * .5)) / scale,
+      y: (finite(camera.offset.y, this.frame.height * .5) - this.frame.height * .5) / scale
     }
-    gl.uniform4f(
-      program.camera,
-      2 * camera.scale / Math.max(1, width),
-      2 * camera.scale / Math.max(1, height),
-      center.x,
-      center.y
-    )
-    const rotation = camera.rotation ?? 0
-    gl.uniform2f(program.rotation, Math.cos(rotation), Math.sin(rotation))
-    gl.activeTexture(gl.TEXTURE0)
-    gl.bindTexture(gl.TEXTURE_2D, this.resolveTexture(batch[0].texture ?? this.whiteRegion, batch[0].filter))
-    gl.uniform1i(program.texture, 0)
-    if (program.linearTexture) gl.uniform1i(program.linearTexture, batch[0].texture?.colorSpace === 'Linear' ? 1 : 0)
-    if (program.material) this.applyMaterialUniforms(program)
-    if (program.material) { const writeColor = gl.getUniformLocation(program.program, 'u_writeColor'); if (writeColor) gl.uniform1i(writeColor, program.material.writeColor ? 1 : 0) }
-    if (batch[0].blend === 'Additive') gl.blendFunc(gl.SRC_ALPHA, gl.ONE)
-    else if (batch[0].blend === 'Multiply') gl.blendFunc(gl.DST_COLOR, gl.ONE_MINUS_SRC_ALPHA)
-    else if (batch[0].blend === 'Screen') gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_COLOR)
-    else gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
-    gl.drawElements(gl.TRIANGLES, indices.length, gl.UNSIGNED_INT, 0)
-    if (!this.validatedFirstDraw) {
-      const error = gl.getError()
-      if (error !== gl.NO_ERROR) throw new Error(`WebGL2 renderer failed its first draw (error 0x${error.toString(16)})`)
-      this.validatedFirstDraw = true
+    gl.enable(gl.SCISSOR_TEST)
+    try {
+      gl.scissor(viewportX, viewportY, viewportWidth, viewportHeight)
+      gl.viewport(viewportX, viewportY, viewportWidth, viewportHeight)
+      const program = this.programFor(batch[0].material)
+      gl.useProgram(program.program)
+      gl.bindVertexArray(this.vao)
+      gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer)
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.DYNAMIC_DRAW)
+      gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer)
+      gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint32Array(indices), gl.DYNAMIC_DRAW)
+      gl.uniform4f(program.camera, 2 * scale / Math.max(1, width), 2 * scale / Math.max(1, height), finite(center.x, 0), finite(center.y, 0))
+      const rotation = finite(camera.rotation ?? 0, 0)
+      gl.uniform2f(program.rotation, Math.cos(rotation), Math.sin(rotation))
+      gl.activeTexture(gl.TEXTURE0)
+      gl.bindTexture(gl.TEXTURE_2D, this.resolveTexture(batch[0].texture ?? this.whiteRegion, batch[0].filter))
+      gl.uniform1i(program.texture, 0)
+      if (program.linearTexture) gl.uniform1i(program.linearTexture, batch[0].texture?.colorSpace === 'Linear' ? 1 : 0)
+      if (program.material) this.applyMaterialUniforms(program)
+      if (program.material) { const writeColor = gl.getUniformLocation(program.program, 'u_writeColor'); if (writeColor) gl.uniform1i(writeColor, program.material.writeColor ? 1 : 0) }
+      if (batch[0].blend === 'Additive') gl.blendFunc(gl.SRC_ALPHA, gl.ONE)
+      else if (batch[0].blend === 'Multiply') gl.blendFunc(gl.DST_COLOR, gl.ONE_MINUS_SRC_ALPHA)
+      else if (batch[0].blend === 'Screen') gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_COLOR)
+      else gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
+      gl.drawElements(gl.TRIANGLES, indices.length, gl.UNSIGNED_INT, 0)
+      if (!this.validatedFirstDraw) {
+        const error = gl.getError()
+        if (error !== gl.NO_ERROR) throw new Error(`WebGL2 renderer failed its first draw (error 0x${error.toString(16)})`)
+        this.validatedFirstDraw = true
+      }
+    } finally {
+      gl.bindVertexArray(null)
+      gl.disable(gl.SCISSOR_TEST)
     }
-    gl.bindVertexArray(null)
-    gl.disable(gl.SCISSOR_TEST)
     this.stats.drawCalls++
     this.stats.batches++
     this.stats.triangles += indices.length / 3
@@ -505,7 +535,8 @@ export class WebGL2Renderer implements Renderer2D {
     if (!reference || reference === 'Default' || reference === 'Particles' || reference.startsWith('__')) return this.baseProgramState
     if (this.materialPrograms.has(reference)) return this.materialPrograms.get(reference) ?? this.baseProgramState
     const material = resolveMaterial(reference)
-    if (analyzeMaterialShader(material.fragment, material.includes).some(item => item.severity === 'error')) { reportMaterialFallback(reference, 'shader validation failed'); this.materialPrograms.set(reference, null); return this.baseProgramState }
+    const resolved = resolvedMaterialFragment(material)
+    if ([...resolved.diagnostics, ...analyzeMaterialShader(resolved.source, material.includes)].some(item => item.severity === 'error')) { reportMaterialFallback(reference, 'shader validation failed'); this.materialPrograms.set(reference, null); return this.baseProgramState }
     try {
       const program = createProgram(this.gl, materialFragment(material))
       const camera = this.gl.getUniformLocation(program, 'u_camera'), texture = this.gl.getUniformLocation(program, 'u_texture'), rotation = this.gl.getUniformLocation(program, 'u_rotation')
@@ -525,6 +556,8 @@ export class WebGL2Renderer implements Renderer2D {
   }
 
   private applyResourceUniforms(program: WebGLProgram, material: Material2DResource): void {
+    const time = this.gl.getUniformLocation(program, 'u_nova_time')
+    if (time) this.gl.uniform1f(time, performance.now() / 1_000)
     for (const [name, value] of Object.entries(material.uniforms)) {
       const location = this.gl.getUniformLocation(program, name)
       if (!location) continue
@@ -545,25 +578,29 @@ export class WebGL2Renderer implements Renderer2D {
     this.gl.activeTexture(this.gl.TEXTURE0)
   }
 
-  private drawPostMaterial(reference: string): boolean {
+  private drawPostMaterial(reference: string, providedMaterial: Material2DResource | null = null): boolean {
     if (!this.colorTarget) return false
-    const signature = `${reference}:${assetState.generation}`
+    const signature = providedMaterial ? `${reference}:${providedMaterial.fragment}` : `${reference}:${assetState.generation}`
     if (this.failedPostSignature === signature) return false
-    const material = resolveMaterial(reference)
-    if (analyzeMaterialShader(material.fragment, material.includes).some(item => item.severity === 'error')) { this.failedPostSignature = signature; reportMaterialFallback(reference, 'post-process validation failed'); return false }
-    if (!this.postProgram || this.postProgram.reference !== reference || this.postProgram.generation !== assetState.generation) {
+    const material = providedMaterial ?? resolveMaterial(reference), resolved = resolvedMaterialFragment(material)
+    if ([...resolved.diagnostics, ...analyzeMaterialShader(resolved.source, material.includes)].some(item => item.severity === 'error')) { this.failedPostSignature = signature; reportMaterialFallback(reference, 'post-process validation failed'); return false }
+    const generation = providedMaterial ? signature.length + [...signature].reduce((sum, character) => (sum * 31 + character.charCodeAt(0)) | 0, 0) : assetState.generation
+    if (!this.postProgram || this.postProgram.reference !== reference || this.postProgram.generation !== generation) {
       if (this.postProgram) this.gl.deleteProgram(this.postProgram.program)
       try {
         const program = createPostProgram(this.gl, material)
         const texture = this.gl.getUniformLocation(program, 'u_texture')
         if (!texture) { this.gl.deleteProgram(program); return false }
-        this.postProgram = { reference, generation: assetState.generation, program, texture, material }
+        this.postProgram = { reference, generation, program, texture, material }
       } catch (error) { this.failedPostSignature = signature; reportMaterialFallback(reference, `post-process compilation failed: ${error instanceof Error ? error.message : String(error)}`); this.postProgram = null; return false }
     }
     this.failedPostSignature = ''
     const gl = this.gl, state = this.postProgram
     gl.bindFramebuffer(gl.FRAMEBUFFER, null); gl.viewport(0, 0, this.canvas.width, this.canvas.height); gl.disable(gl.BLEND)
     gl.useProgram(state.program); gl.bindVertexArray(this.vao); gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, this.colorTarget); gl.uniform1i(state.texture, 0)
+    const post = this.gl.getUniformLocation(state.program, 'u_nova_post'), extra = this.gl.getUniformLocation(state.program, 'u_nova_post_extra')
+    if (post) gl.uniform4f(post, activePostProcessing.exposure, activePostProcessing.contrast, activePostProcessing.saturation, activePostProcessing.vignette)
+    if (extra) gl.uniform2f(extra, activePostProcessing.bloom, activePostProcessing.blur)
     this.applyResourceUniforms(state.program, state.material); gl.drawArrays(gl.TRIANGLES, 0, 3); gl.bindVertexArray(null); gl.enable(gl.BLEND)
     return gl.getError() === gl.NO_ERROR
   }

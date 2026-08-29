@@ -22,11 +22,12 @@ import { preferencesState } from './preferences'
 import { t } from '../i18n'
 import { normalizeUuid } from '../world/identity'
 import {
-  Animator, Area2D, AreaEffector2D, AudioListener, AudioSource, BehaviorTree2D, Button, Camera2D, Canvas, CharacterBody2D, Checkbox, Collider2D,
+  Animator, Area2D, AreaEffector2D, AudioListener, AudioSource, BehaviorTree2D, Button, Camera2D, CameraFollow2D, Canvas, CharacterBody2D, Checkbox, Collider2D, Collectible2D, Cooldown2D,
+  DamageHitbox2D, GridMover2D, Health2D, Lifetime2D, MouseFollower2D, PlatformController2D, Projectile2D, Spawner2D, TopDownController2D,
   Image as UIImage, Joint2D, Light2D, Panel, ParticleEmitter2D, ProgressBar, RectTransform, RigidBody2D, Script2D, ShadowCaster2D,
   NavigationAgent2D, NavigationObstacle2D, NavigationRegion2D, ObjectPool2D, Portal2D, ShapeRenderer2D, Skeleton2D, Slider, SpriteRenderer2D, StateMachine2D,
   Text as UIText, TextInput, TextRenderer2D, TileMap2D, TimelinePlayer, WorldChunk2D,
-  copyComponentValues, pasteComponentValues, type Component2D, type ComponentKind
+  copyComponentValues, pasteComponentValues, type Component2D, type ComponentKind, type ScriptPropertyValue
 } from '../world/components'
 import { Transform } from '../world/Transform'
 import { SceneManager } from '../world/SceneManager'
@@ -54,6 +55,7 @@ import { loadPackageState, serializePackageState } from '../runtime/packages'
 import { loadWorldGameplaySettings, serializeWorldGameplaySettings } from '../runtime/worldGameplay'
 import { loadLocalizationSettings, serializeLocalizationSettings } from '../runtime/localization'
 import { loadRuntimeAccessibilitySettings, loadUiAudioSettings, serializeRuntimeAccessibilitySettings, serializeUiAudioSettings } from '../runtime/presentation'
+import { configureUiAccessibility } from '../runtime/uiAccessibility'
 import { loadProductionSettings, serializeProductionSettings } from '../runtime/production'
 import { markSourceBaseline, refreshSourceStatus, stableProjectText } from '../runtime/teamWorkflow'
 import { defaultPhysicsLayers, defaultPhysicsProfile, normalizePhysicsLayers, normalizePhysicsProfile } from '../runtime/physicsProduction'
@@ -421,8 +423,9 @@ const ASSET_COMPONENT_FIELDS: Partial<Record<ComponentKind, string[]>> = {
   TileMap2D: ['tileSetAsset'],
   BehaviorTree2D: ['treeAsset'],
   StateMachine2D: ['machineAsset'],
+  Spawner2D: ['prefabAsset'],
   ObjectPool2D: ['prefabAsset'],
-  ParticleEmitter2D: ['textureAsset']
+  ParticleEmitter2D: ['particleSystemAsset', 'textureAsset', 'material']
 }
 
 function matchesAssetReference(value: unknown, uuid: string): boolean {
@@ -612,6 +615,7 @@ const EXTENDED_COMPONENT_KINDS = [
   'Animator', 'Skeleton2D', 'TimelinePlayer', 'AudioSource', 'AudioListener', 'Canvas', 'RectTransform', 'Panel', 'Image',
   'Text', 'Button', 'Slider', 'ProgressBar', 'Checkbox', 'TextInput', 'TileMap2D', 'ParticleEmitter2D', 'Light2D', 'ShadowCaster2D',
   'CharacterBody2D', 'Area2D', 'AreaEffector2D', 'NavigationRegion2D', 'NavigationObstacle2D', 'NavigationAgent2D', 'BehaviorTree2D', 'StateMachine2D',
+  'GridMover2D', 'PlatformController2D', 'TopDownController2D', 'Health2D', 'DamageHitbox2D', 'Collectible2D', 'Projectile2D', 'Spawner2D', 'Cooldown2D', 'Lifetime2D', 'MouseFollower2D', 'CameraFollow2D',
   'WorldChunk2D', 'Portal2D', 'ObjectPool2D',
   'FixedJoint2D', 'WeldJoint2D', 'DistanceJoint2D', 'RopeJoint2D', 'RevoluteJoint2D', 'MotorJoint2D', 'PrismaticJoint2D', 'SpringJoint2D'
 ] as const
@@ -641,6 +645,18 @@ function createExtendedComponent(kind: typeof EXTENDED_COMPONENT_KINDS[number], 
   if (kind === 'NavigationAgent2D') return new NavigationAgent2D(uuid)
   if (kind === 'BehaviorTree2D') return new BehaviorTree2D(uuid)
   if (kind === 'StateMachine2D') return new StateMachine2D(uuid)
+  if (kind === 'GridMover2D') return new GridMover2D(uuid)
+  if (kind === 'PlatformController2D') return new PlatformController2D(uuid)
+  if (kind === 'TopDownController2D') return new TopDownController2D(uuid)
+  if (kind === 'Health2D') return new Health2D(uuid)
+  if (kind === 'DamageHitbox2D') return new DamageHitbox2D(uuid)
+  if (kind === 'Collectible2D') return new Collectible2D(uuid)
+  if (kind === 'Projectile2D') return new Projectile2D(uuid)
+  if (kind === 'Spawner2D') return new Spawner2D(uuid)
+  if (kind === 'Cooldown2D') return new Cooldown2D(uuid)
+  if (kind === 'Lifetime2D') return new Lifetime2D(uuid)
+  if (kind === 'MouseFollower2D') return new MouseFollower2D(uuid)
+  if (kind === 'CameraFollow2D') return new CameraFollow2D(uuid)
   if (kind === 'WorldChunk2D') return new WorldChunk2D(uuid)
   if (kind === 'Portal2D') return new Portal2D(uuid)
   if (kind === 'ObjectPool2D') return new ObjectPool2D(uuid)
@@ -825,16 +841,30 @@ function normalizeExtendedComponent(component: Component2D): void {
     }))
   } else if (component instanceof NavigationRegion2D) {
     component.polygon = (Array.isArray(component.polygon) ? component.polygon : []).slice(0, 4096).map(point => safeVector(point, { x: 0, y: 0 }))
-    component.cellSize = clamp(component.cellSize, .5, .01, 1e6); component.rebakeInterval = clamp(component.rebakeInterval, .5, .02, 60); component.navigationLayer = Math.round(clamp(component.navigationLayer, 1, 1, 32)); component.traversalCost = clamp(component.traversalCost, 1, .001, 1e6)
-    if (!['AStar', 'FlowField'].includes(component.algorithm)) component.algorithm = 'AStar'
+    component.cellSize = clamp(component.cellSize, .5, .01, 1e6); component.clusterSize = Math.round(clamp(component.clusterSize, 16, 4, 64)); component.rebakeInterval = clamp(component.rebakeInterval, .5, .02, 60); component.navigationLayer = Math.round(clamp(component.navigationLayer, 1, 1, 32)); component.traversalCost = clamp(component.traversalCost, 1, .001, 1e6)
+    component.links = (Array.isArray(component.links) ? component.links : []).slice(0, 2048).map((link, index) => ({ id: typeof link.id === 'string' ? link.id.slice(0, 80) : `link-${index}`, start: safeVector(link.start, { x: 0, y: 0 }), end: safeVector(link.end, { x: 1, y: 0 }), bidirectional: link.bidirectional !== false, cost: clamp(link.cost, 1, .001, 1e6), enabled: link.enabled !== false }))
+    component.costAreas = (Array.isArray(component.costAreas) ? component.costAreas : []).slice(0, 2048).map((area, index) => ({ id: typeof area.id === 'string' ? area.id.slice(0, 80) : `cost-${index}`, name: typeof area.name === 'string' ? area.name.slice(0, 80) : `Cost ${index + 1}`, shape: area.shape === 'Circle' ? 'Circle' as const : 'Box' as const, center: safeVector(area.center, { x: 0, y: 0 }), size: safeVector(area.size, { x: 1, y: 1 }), radius: clamp(area.radius, 1, .001, 1e6), multiplier: clamp(area.multiplier, 1, .001, 1_000), navigationLayer: Math.round(clamp(area.navigationLayer, component.navigationLayer, 1, 32)), enabled: area.enabled !== false }))
+    if (!['AStar', 'HierarchicalAStar', 'FlowField'].includes(component.algorithm)) component.algorithm = 'AStar'
   } else if (component instanceof NavigationObstacle2D) {
     component.size = safeVector(component.size, { x: 1, y: 1 }); component.radius = clamp(component.radius, .5, .001, 1e6); component.navigationLayer = Math.round(clamp(component.navigationLayer, 1, 1, 32)); if (!['Box', 'Circle'].includes(component.shape)) component.shape = 'Circle'
   } else if (component instanceof NavigationAgent2D) {
     component.targetPosition = safeVector(component.targetPosition, { x: 0, y: 0 }); component.targetEntityUuid = typeof component.targetEntityUuid === 'string' ? component.targetEntityUuid : null
-    component.speed = clamp(component.speed, 4, 0, 1e6); component.acceleration = clamp(component.acceleration, 20, 0, 1e9); component.radius = clamp(component.radius, .4, .001, 1e6); component.stoppingDistance = clamp(component.stoppingDistance, .1, 0, 1e6); component.avoidanceRadius = clamp(component.avoidanceRadius, 1.2, 0, 1e6); component.repathInterval = clamp(component.repathInterval, .25, .02, 60); component.navigationLayer = Math.round(clamp(component.navigationLayer, 1, 1, 32))
+    component.speed = clamp(component.speed, 4, 0, 1e6); component.acceleration = clamp(component.acceleration, 20, 0, 1e9); component.radius = clamp(component.radius, .4, .001, 1e6); component.stoppingDistance = clamp(component.stoppingDistance, .1, 0, 1e6); component.avoidanceRadius = clamp(component.avoidanceRadius, 1.2, 0, 1e6); component.maximumAvoidanceNeighbors = Math.round(clamp(component.maximumAvoidanceNeighbors, 16, 1, 32)); component.repathInterval = clamp(component.repathInterval, .25, .02, 60); component.navigationLayer = Math.round(clamp(component.navigationLayer, 1, 1, 32))
   } else if (component instanceof BehaviorTree2D) {
-    component.treeAsset = typeof component.treeAsset === 'string' ? component.treeAsset : null; component.tickRate = clamp(component.tickRate, 10, 1, 1000)
+    component.treeAsset = typeof component.treeAsset === 'string' ? component.treeAsset : null; component.tickRate = clamp(component.tickRate, 10, 1, 1000); component.blackboardOverrides = Object.fromEntries(Object.entries(component.blackboardOverrides && typeof component.blackboardOverrides === 'object' ? component.blackboardOverrides : {}).slice(0, 256).flatMap(([key, value]) => typeof value === 'boolean' || typeof value === 'number' && Number.isFinite(value) || typeof value === 'string' ? [[key.slice(0, 80), typeof value === 'string' ? value.slice(0, 256) : value]] : []))
   } else if (component instanceof StateMachine2D) component.machineAsset = typeof component.machineAsset === 'string' ? component.machineAsset : null
+  else if (component instanceof GridMover2D) { component.action = typeof component.action === 'string' ? component.action.slice(0, 80) : 'Move'; component.cellSize = safeVector(component.cellSize, { x: 1, y: 1 }); component.cellSize.x = clamp(component.cellSize.x, 1, .000001, 1e9); component.cellSize.y = clamp(component.cellSize.y, 1, .000001, 1e9); component.repeatDelay = clamp(component.repeatDelay, .12, 0, 60) }
+  else if (component instanceof PlatformController2D) { component.moveAction = typeof component.moveAction === 'string' ? component.moveAction.slice(0, 80) : 'Horizontal'; component.jumpAction = typeof component.jumpAction === 'string' ? component.jumpAction.slice(0, 80) : 'Jump'; component.speed = clamp(component.speed, 6, 0, 1e6); component.acceleration = clamp(component.acceleration, 36, 0, 1e9); component.airControl = clamp(component.airControl, .55, 0, 1); component.jumpImpulse = clamp(component.jumpImpulse, 10, 0, 1e9); component.maximumFallSpeed = clamp(component.maximumFallSpeed, 30, 0, 1e9) }
+  else if (component instanceof TopDownController2D) { component.moveAction = typeof component.moveAction === 'string' ? component.moveAction.slice(0, 80) : 'Move'; component.speed = clamp(component.speed, 5, 0, 1e6); component.acceleration = clamp(component.acceleration, 30, 0, 1e9) }
+  else if (component instanceof Health2D) { component.maximum = clamp(component.maximum, 100, .000001, 1e12); component.current = clamp(component.current, component.maximum, 0, component.maximum); component.invulnerabilitySeconds = clamp(component.invulnerabilitySeconds, 0, 0, 86_400); component.damagedSignal = typeof component.damagedSignal === 'string' ? component.damagedSignal.slice(0, 128) : 'health.damaged'; component.diedSignal = typeof component.diedSignal === 'string' ? component.diedSignal.slice(0, 128) : 'health.died' }
+  else if (component instanceof DamageHitbox2D) { component.damage = clamp(component.damage, 10, 0, 1e12); component.knockback = clamp(component.knockback, 0, 0, 1e12); component.targetTag = typeof component.targetTag === 'string' ? component.targetTag.slice(0, 80) : 'damageable'; component.hitCooldown = clamp(component.hitCooldown, .1, 0, 86_400); component.hitSignal = typeof component.hitSignal === 'string' ? component.hitSignal.slice(0, 128) : 'damage.hit' }
+  else if (component instanceof Collectible2D) { component.collectorTag = typeof component.collectorTag === 'string' ? component.collectorTag.slice(0, 80) : 'player'; component.score = finiteNumber(component.score, 1); component.collectedSignal = typeof component.collectedSignal === 'string' ? component.collectedSignal.slice(0, 128) : 'collectible.collected' }
+  else if (component instanceof Projectile2D) { component.speed = clamp(component.speed, 12, 0, 1e9); component.direction = safeVector(component.direction, { x: 1, y: 0 }); component.damage = clamp(component.damage, 10, 0, 1e12); component.ownerUuid = typeof component.ownerUuid === 'string' ? component.ownerUuid.slice(0, 128) : ''; component.lifetime = clamp(component.lifetime, 5, 0, 86_400) }
+  else if (component instanceof Spawner2D) { component.prefabAsset = typeof component.prefabAsset === 'string' ? component.prefabAsset : null; component.interval = clamp(component.interval, 1, .000001, 86_400); component.initialDelay = clamp(component.initialDelay, 0, 0, 86_400); component.burst = Math.round(clamp(component.burst, 1, 1, 256)); component.maximumAlive = Math.round(clamp(component.maximumAlive, 32, 1, 100_000)) }
+  else if (component instanceof Cooldown2D) { component.duration = clamp(component.duration, 1, .000001, 86_400); component.readySignal = typeof component.readySignal === 'string' ? component.readySignal.slice(0, 128) : 'cooldown.ready' }
+  else if (component instanceof Lifetime2D) component.seconds = clamp(component.seconds, 5, .000001, 86_400)
+  else if (component instanceof MouseFollower2D) { component.offset = safeVector(component.offset, { x: 0, y: 0 }); component.maximumSpeed = clamp(component.maximumSpeed, 0, 0, 1e9) }
+  else if (component instanceof CameraFollow2D) { component.targetUuid = typeof component.targetUuid === 'string' ? component.targetUuid.slice(0, 128) : ''; component.targetTag = typeof component.targetTag === 'string' ? component.targetTag.slice(0, 80) : 'player'; component.offset = safeVector(component.offset, { x: 0, y: 0 }); component.smoothing = clamp(component.smoothing, 8, 0, 1e6); component.deadZone = safeVector(component.deadZone, { x: 0, y: 0 }); component.deadZone.x = clamp(component.deadZone.x, 0, 0, 1e9); component.deadZone.y = clamp(component.deadZone.y, 0, 0, 1e9) }
   else if (component instanceof WorldChunk2D) {
     component.size = safeVector(component.size, { x: 64, y: 64 }); component.loadDistance = clamp(component.loadDistance, 96, 0, 1e9); component.unloadDistance = clamp(component.unloadDistance, 128, component.loadDistance, 1e9); component.preloadPriority = Math.round(clamp(component.preloadPriority, 0, -1e6, 1e6)); component.memoryEstimateMb = clamp(component.memoryEstimateMb, 8, .001, 1e6); component.sceneUuid = typeof component.sceneUuid === 'string' ? component.sceneUuid.slice(0, 128) : ''
   } else if (component instanceof Portal2D) {
@@ -1010,10 +1040,18 @@ function applyStoredComponents(entity: Entity, item: SceneEntityData): void {
     const script = new Script2D(scriptSource.uuid)
     applyComponentMetadata(script, scriptSource)
     script.scriptAsset = typeof data.scriptAsset === 'string' ? data.scriptAsset : null
+    const safeScriptProperty = (value: unknown, depth = 0): ScriptPropertyValue | undefined => {
+      if (depth > 8) return undefined
+      if (value === null || typeof value === 'string' || typeof value === 'boolean') return value
+      if (typeof value === 'number') return Number.isFinite(value) ? value : undefined
+      if (Array.isArray(value)) return value.slice(0, 1024).flatMap(item => { const safe = safeScriptProperty(item, depth + 1); return safe === undefined ? [] : [safe] })
+      if (value && typeof value === 'object') return Object.fromEntries(Object.entries(value as Record<string, unknown>).slice(0, 1024).flatMap(([key, item]) => { const safe = safeScriptProperty(item, depth + 1); return safe === undefined ? [] : [[key.slice(0, 128), safe]] }))
+      return undefined
+    }
     if (data.properties && typeof data.properties === 'object' && !Array.isArray(data.properties)) {
       for (const [name, value] of Object.entries(data.properties as Record<string, unknown>)) {
-        if (typeof value === 'number' && Number.isFinite(value)) script.properties[name] = value
-        else if (typeof value === 'string' || typeof value === 'boolean') script.properties[name] = value
+        const safe = safeScriptProperty(value)
+        if (safe !== undefined) script.properties[name] = safe
       }
     }
     entity.componentMap.set('Script2D', script)
@@ -1221,6 +1259,10 @@ export function createEntityFromData(item: SceneEntityData, forcedId?: number): 
 
   if (entity.isStatic) entity.isKinematic = false
   normalizeEntity(entity)
+  const storedRectData = item.components?.find(component => component.kind === 'RectTransform')?.data
+  const rect = entity.getComponent<RectTransform>('RectTransform')
+  if (rect && (entity.hasComponent('Button') || entity.hasComponent('Slider') || entity.hasComponent('Checkbox') || entity.hasComponent('TextInput')) && storedRectData?.skipNavigation !== true) rect.skipNavigation = false
+  configureUiAccessibility(entity)
   syncDensityFromMass(entity)
   return entity
 }
@@ -1258,6 +1300,8 @@ export function createUiEntity(kind: UiElementKind, parentUuid: string | null = 
   else if (kind === 'ProgressBar') { entity.addComponent(new ProgressBar()); rect.size = { x: 480, y: 64 } }
   else if (kind === 'Checkbox') { entity.addComponent(new Checkbox()); rect.size = { x: 360, y: 72 } }
   else { entity.addComponent(new TextInput()); rect.size = { x: 300, y: 96 } }
+  if (kind === 'Button' || kind === 'Slider' || kind === 'Checkbox' || kind === 'TextInput') rect.skipNavigation = false
+  configureUiAccessibility(entity, physicsState.world.entities)
   if (kind !== 'Canvas') {
     const defaultPositions: Record<Exclude<UiElementKind, 'Canvas'>, { x: number; y: number }> = {
       Panel: { x: 0, y: 0 }, Image: { x: -300, y: -100 }, Text: { x: 220, y: -250 },
@@ -1347,7 +1391,9 @@ export function copySelectedEntities(): number {
 export function instantiateEntityBundle(
   clipboard: EntityBundle,
   offset: { x: number; y: number },
-  rootNameSuffix = ' copy'
+  rootNameSuffix = ' copy',
+  select = true,
+  invalidateRuntime = true
 ): EntityBundleInstance {
   const sourceToClone = new Map<string, Entity>()
   const sourceToRuntimeId = new Map<number, number>()
@@ -1425,8 +1471,8 @@ export function instantiateEntityBundle(
     const entity = sourceToClone.get(uuid)
     return entity ? [entity] : []
   })
-  selectEntities(pastedRoots.map(entity => entity.id), 'replace')
-  physicsState.world.invalidateRuntime()
+  if (select) selectEntities(pastedRoots.map(entity => entity.id), 'replace')
+  if (invalidateRuntime) physicsState.world.invalidateRuntime()
   return { entities: [...sourceToClone.values()], roots: pastedRoots, sourceToEntity: sourceToClone }
 }
 

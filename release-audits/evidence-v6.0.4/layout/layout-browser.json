@@ -1,0 +1,61 @@
+{
+  "format": "nova-v6.0.4-layout-browser-audit",
+  "version": 1,
+  "engineVersion": "6.0.4",
+  "generatedAt": "2026-08-29T06:17:54.8134999Z",
+  "browser": "Codex in-app Chromium browser",
+  "requiredMatrix": [
+    "1024x640 English launcher",
+    "1024x640 German launcher",
+    "1024x640 Chinese launcher",
+    "1920x1080 Chinese visual scripting",
+    "1024x640 compact script workspace at 200% effective scale"
+  ],
+  "matrix": [
+    {
+      "name": "1024x640 English launcher",
+      "locale": "en",
+      "viewport": "1024x640",
+      "horizontalDocumentOverflow": false,
+      "offendingElements": 0,
+      "status": "passed"
+    },
+    {
+      "name": "1024x640 German launcher",
+      "locale": "de",
+      "viewport": "1024x640",
+      "horizontalDocumentOverflow": false,
+      "offendingElements": 0,
+      "status": "passed"
+    },
+    {
+      "name": "1024x640 Chinese launcher",
+      "locale": "zh-CN",
+      "viewport": "1024x640",
+      "horizontalDocumentOverflow": false,
+      "offendingElements": 0,
+      "status": "passed"
+    },
+    {
+      "name": "1920x1080 Chinese visual scripting",
+      "locale": "zh-CN",
+      "viewport": "1920x1080",
+      "linkedControlsVisible": true,
+      "consoleErrors": 0,
+      "status": "passed"
+    },
+    {
+      "name": "1024x640 compact script workspace at 200% effective scale",
+      "locale": "zh-CN",
+      "viewport": "1024x640",
+      "toolbarWrappedInsideWorkspace": true,
+      "editorAndDiagnosticsContained": true,
+      "consoleErrors": 0,
+      "status": "passed"
+    }
+  ],
+  "consoleErrors": 0,
+  "severity0Open": 0,
+  "severity1Open": 0,
+  "status": "passed"
+}

@@ -205,6 +205,8 @@
         <button v-if="!networkPackageEnabled" class="primary" @click="installNetworking">{{ t('enableNetworkingPackage') }}</button>
         <template v-else>
           <label><span>{{ t('networkingEnabled') }}</span><input v-model="settings.networking.enabled" type="checkbox" @change="commit"></label>
+          <label><span>{{ t('networkPermission') }}</span><output>{{ settings.networking.permissionGranted ? t('granted') : t('notGranted') }}</output></label>
+          <button v-if="!settings.networking.permissionGranted" @click="grantLegacyNetworkPermission">{{ t('grantNetworkPermission') }}</button>
           <label><span>{{ t('networkRole') }}</span><select v-model="settings.networking.role" @change="commit"><option value="client">Client</option><option value="server">Server</option><option value="host">Host</option></select></label>
           <label><span>{{ t('transport') }}</span><select v-model="settings.networking.transport" @change="commit"><option value="websocket">WebSocket</option><option value="native-udp">Native UDP</option></select></label>
           <label><span>{{ t('endpoint') }}</span><input v-model="settings.networking.endpoint" maxlength="512" @change="commit"></label>
@@ -243,6 +245,7 @@ import { comparePerformanceCaptures, capturePerformance, clearPerformanceTools, 
 import { physicsDebugState } from '../runtime/physicsDebug'
 import { addProfilerAnnotation, captureScriptProfile, clearProfiler, compareScriptProfiles, profilerState } from '../runtime/profiler'
 import { loadProductionSettings, productionSettings as settings, serializeProductionSettings } from '../runtime/production'
+import { networkingModule as loadProductionNetworkingModule, startProductionNetworking, stopProductionNetworking } from '../runtime/productionRuntime'
 import { enableOfficialPackage, OFFICIAL_NETWORKING_PACKAGE_ID, packageEnabled } from '../runtime/packages'
 import { exportReplay, normalizeReplayDocument, replayState, startReplayPlayback, startReplayRecording, stopReplay } from '../runtime/replay'
 import { runProjectTests, testReportJUnit, testRunnerState } from '../runtime/testRunner'
@@ -331,11 +334,12 @@ async function importData() { if (!schemaDraft.value || !tableDraft.value) retur
 function runJob(kind: 'hash' | 'parseJson') { jobResult.value = ''; const job = scheduleJob(kind, kind === 'hash' ? getSceneJSON() : '{"nova":2.8}'); cancelJob.value = job.cancel; void job.promise.then(value => { jobResult.value = typeof value === 'string' ? value : JSON.stringify(value); cancelJob.value = null }).catch(error => { jobResult.value = error instanceof Error ? error.message : String(error); cancelJob.value = null }) }
 function cancelActiveJob() { cancelJob.value?.(); cancelJob.value = null }
 
-async function loadNetworkModule() { if (!networkModule.value) networkModule.value = await import('../runtime/networking'); networkState.value = networkModule.value.networkingState }
+async function loadNetworkModule() { if (!networkModule.value) networkModule.value = await loadProductionNetworkingModule(); networkState.value = networkModule.value.networkingState }
 async function safeLoadNetworkModule() { try { await loadNetworkModule() } catch (error) { reportRecoverableError(error, 'Load optional networking', 'Runtime') } }
 function installNetworking() { if (enableOfficialPackage(OFFICIAL_NETWORKING_PACKAGE_ID)) { commit(); void safeLoadNetworkModule() } }
-async function startNetwork() { networkBusy.value = true; try { await loadNetworkModule(); await networkModule.value?.startNetworking() } catch (error) { reportRecoverableError(error, 'Start optional networking', 'Runtime') } finally { networkBusy.value = false } }
-async function stopNetwork() { networkBusy.value = true; try { await networkModule.value?.stopNetworking() } catch (error) { reportRecoverableError(error, 'Stop optional networking', 'Runtime') } finally { networkBusy.value = false } }
+async function grantLegacyNetworkPermission() { if (!await requestConfirmation({ title: t('grantNetworkPermission'), message: t('networkPermissionPrompt'), confirmLabel: t('grant'), cancelLabel: t('cancel'), destructive: false })) return; settings.networking.permissionGranted = true; settings.networking.enabled = true; commit() }
+async function startNetwork() { networkBusy.value = true; try { networkModule.value = await startProductionNetworking(); networkState.value = networkModule.value.networkingState } catch (error) { reportRecoverableError(error, 'Start optional networking', 'Runtime') } finally { networkBusy.value = false } }
+async function stopNetwork() { networkBusy.value = true; try { await stopProductionNetworking() } catch (error) { reportRecoverableError(error, 'Stop optional networking', 'Runtime') } finally { networkBusy.value = false } }
 function replicateSelected() { const entity = physicsState.world.entities.find(item => item.id === physicsState.selectedEntityId); if (!entity || settings.networking.replicatedEntities.some(item => item.entityUuid === entity.uuid)) return; settings.networking.replicatedEntities.push({ entityUuid: entity.uuid, authority: 'server', properties: ['transform', 'velocity'], interpolate: true, predict: false }); commit() }
 function removeReplication(uuid: string) {
   const index = settings.networking.replicatedEntities.findIndex(item => item.entityUuid === uuid)

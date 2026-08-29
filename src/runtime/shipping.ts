@@ -1,5 +1,6 @@
 import { reactive } from 'vue'
 import { buildSettings } from './buildSettings'
+import { NOVA_ENGINE_VERSION } from '../projects/projectFormat'
 
 export interface TelemetryEvent { name: string; at: string; values: Record<string, string | number | boolean> }
 
@@ -29,7 +30,7 @@ export async function flushTelemetry(): Promise<boolean> {
   try {
     const response = await fetch(buildSettings.delivery.telemetryEndpoint, {
       method: 'POST', keepalive: true, headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ format: 'nova-telemetry', version: 1, engineVersion: '5.0.1', events })
+      body: JSON.stringify({ format: 'nova-telemetry', version: 1, engineVersion: NOVA_ENGINE_VERSION, events })
     })
     if (!response.ok) throw new Error(`Telemetry endpoint returned ${response.status}`)
     shippingState.telemetryQueue.splice(0, events.length); shippingState.telemetryStatus = 'sent'; return true

@@ -43,6 +43,11 @@ export interface ComponentAuthoringRule {
 
 const componentRules: Partial<Record<ComponentKind, Omit<ComponentAuthoringRule, 'documentation' | 'allowMultiple'>>> = {
   CharacterBody2D: { required: ['RigidBody2D'], conflicts: [] },
+  PlatformController2D: { required: ['CharacterBody2D'], conflicts: ['TopDownController2D'] },
+  TopDownController2D: { required: ['CharacterBody2D'], conflicts: ['PlatformController2D'] },
+  MouseFollower2D: { required: ['RigidBody2D'], conflicts: [] },
+  DamageHitbox2D: { required: ['RigidBody2D'], conflicts: [] },
+  Projectile2D: { required: ['RigidBody2D'], conflicts: [] },
   AreaEffector2D: { required: ['Area2D'], conflicts: [] },
   Area2D: { required: [], conflicts: [] },
   Button: { required: ['RectTransform'], conflicts: [] },

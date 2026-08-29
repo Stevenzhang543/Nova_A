@@ -1,0 +1,100 @@
+{
+  "format": "nova-v6.1.0-product-audit",
+  "version": 1,
+  "engineVersion": "6.1.0",
+  "generatedAt": "2026-08-29T14:21:50.232Z",
+  "perspectives": [
+    "programmer",
+    "user",
+    "localization",
+    "layout",
+    "environment",
+    "performance",
+    "game-export",
+    "release"
+  ],
+  "checks": [
+    {
+      "id": "V610-VERSION",
+      "status": "passed",
+      "detail": "Frontend, native, Rust and project authorities identify 6.1.0.",
+      "metrics": {}
+    },
+    {
+      "id": "V610-FORMAT",
+      "status": "passed",
+      "detail": "Project Format 2/schema 29 remain frozen.",
+      "metrics": {}
+    },
+    {
+      "id": "V610-WINDOW",
+      "status": "passed",
+      "detail": "Native editor is maximized, decorated and resizable rather than exclusive fullscreen.",
+      "metrics": {}
+    },
+    {
+      "id": "V610-PERFORMANCE",
+      "status": "passed",
+      "detail": "Pointer, workspace, Inspector and diagnostic hot paths retain behavior while avoiding redundant work.",
+      "metrics": {}
+    },
+    {
+      "id": "V610-DESIGN",
+      "status": "passed",
+      "detail": "Semantic system typography, geometry, materials and restrained glass are applied.",
+      "metrics": {}
+    },
+    {
+      "id": "V610-VERIFICATION",
+      "status": "passed",
+      "detail": "Relocation, window, UI, hot-path and portable game checks pass.",
+      "metrics": {
+        "checks": 8
+      }
+    },
+    {
+      "id": "V610-TEMPLATES",
+      "status": "passed",
+      "detail": "All startup templates retain valid gameplay/build/accessibility behavior.",
+      "metrics": {
+        "checks": 17
+      }
+    },
+    {
+      "id": "V610-INTERACTIONS",
+      "status": "passed",
+      "detail": "User-style interaction traversal reports no critical failure.",
+      "metrics": {
+        "registeredControls": 525,
+        "clickedControls": 187,
+        "settingsMutatedAndRestored": 240,
+        "dragSurfacesPassed": 4,
+        "explicitlyBlockedOrReviewed": 338
+      }
+    },
+    {
+      "id": "V610-LAYOUT",
+      "status": "passed",
+      "detail": "EN/DE/ZH layout remains contained through 200% scale.",
+      "metrics": {
+        "states": 60
+      }
+    },
+    {
+      "id": "V610-INSTRUCTIONS",
+      "status": "passed",
+      "detail": "The implementation and release audit contract is documented.",
+      "metrics": {}
+    }
+  ],
+  "severity0Open": 0,
+  "severity1Open": 0,
+  "externalGates": {
+    "publisherSigning": "pending-external",
+    "cleanMachineLifecycle": "pending-external",
+    "secondMachineReproducibility": "pending-external",
+    "independentHardwareAccessibility": "pending-external",
+    "soak72Hours": "pending-external"
+  },
+  "status": "passed"
+}

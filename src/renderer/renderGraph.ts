@@ -13,18 +13,21 @@ export const renderGraphState = reactive({
   comparisons: [] as Array<{ first: number; second: number; difference: number; comparedAt: string }>
 })
 
-export function beginRenderGraph(): number { renderGraphState.frame++; renderGraphState.passes.splice(0); return performance.now() }
+let framePasses: RenderPassSample[] = []
+
+export function beginRenderGraph(): number { renderGraphState.frame++; framePasses = []; return performance.now() }
 export function recordRenderPass(name: RenderPassName, startedAt: number, enabled = true, drawCalls = 0): number {
   const ended = performance.now()
-  renderGraphState.passes.push({ name, enabled, durationMs: enabled ? Math.max(0, ended - startedAt) : 0, drawCalls })
+  framePasses.push({ name, enabled, durationMs: enabled ? Math.max(0, ended - startedAt) : 0, drawCalls })
   return ended
 }
 export function completeRenderGraph(worldStarted: number, stats: RendererStats, uiStarted: number, overlayStarted: number): void {
-  if (!renderGraphState.passes.some(pass => pass.name === 'World')) recordRenderPass('World', worldStarted, true, stats.drawCalls)
-  if (!renderGraphState.passes.some(pass => pass.name === 'Lighting')) renderGraphState.passes.push({ name: 'Lighting', enabled: renderingSettings.lightingEnabled, durationMs: 0, drawCalls: 0 })
-  if (!renderGraphState.passes.some(pass => pass.name === 'UI')) recordRenderPass('UI', uiStarted, true, 1)
-  if (!renderGraphState.passes.some(pass => pass.name === 'EditorOverlay')) recordRenderPass('EditorOverlay', overlayStarted, true, 1)
-  if (!renderGraphState.passes.some(pass => pass.name === 'PostProcess')) renderGraphState.passes.push({ name: 'PostProcess', enabled: renderingSettings.postProcessing.enabled, durationMs: 0, drawCalls: 0 })
+  if (!framePasses.some(pass => pass.name === 'World')) recordRenderPass('World', worldStarted, true, stats.drawCalls)
+  if (!framePasses.some(pass => pass.name === 'Lighting')) framePasses.push({ name: 'Lighting', enabled: renderingSettings.lightingEnabled, durationMs: 0, drawCalls: 0 })
+  if (!framePasses.some(pass => pass.name === 'UI')) recordRenderPass('UI', uiStarted, true, 1)
+  if (!framePasses.some(pass => pass.name === 'EditorOverlay')) recordRenderPass('EditorOverlay', overlayStarted, true, 1)
+  if (!framePasses.some(pass => pass.name === 'PostProcess')) framePasses.push({ name: 'PostProcess', enabled: renderingSettings.postProcessing.enabled, durationMs: 0, drawCalls: 0 })
+  renderGraphState.passes.splice(0, renderGraphState.passes.length, ...framePasses)
 }
 export function requestRenderCapture(): void { renderGraphState.captureRequested = true }
 export function captureRenderSurface(canvas: HTMLCanvasElement, overlay?: HTMLCanvasElement | null, filter = 'none'): void {

@@ -134,7 +134,7 @@ export function createProjectTransactionFiles(source: string): ProjectTransactio
   for (const raw of Array.isArray(project.assets) ? project.assets : []) {
     if (!raw || typeof raw !== 'object') continue
     const asset = raw as Record<string, unknown>, id = safeSegment(asset.uuid, 'asset'), assetType = String(asset.assetType ?? '')
-    const scope: ProjectMutationScope = assetType === 'script' ? 'script' : ['animation', 'controller', 'timeline'].includes(assetType) ? 'animation' : ['uiTheme', 'localization'].includes(assetType) ? 'ui' : 'asset'
+    const scope: ProjectMutationScope = assetType === 'script' || assetType === 'visualScript' ? 'script' : ['animation', 'controller', 'timeline'].includes(assetType) ? 'animation' : ['uiTheme', 'localization'].includes(assetType) ? 'ui' : 'asset'
     files.push(file(`Assets/.nova-metadata/${id}.json`, 'authored', scope, canonicalProjectText(asset)))
   }
   files.push(file('ProjectSettings/project.json', 'authored', 'settings', canonicalProjectText(project.projectSettings ?? {})))

@@ -24,7 +24,7 @@
       <div class="hierarchy-header">
         <div><span>{{ t('hierarchy') }}</span><span class="hierarchy-actions"><small>{{ state.world.entities.length }}</small><button :title="t('previousSelection')" :disabled="selectionHistoryIndex <= 0" @click="navigateSelection(-1)">←</button><button :title="t('nextSelection')" :disabled="selectionHistoryIndex >= selectionHistory.length - 1" @click="navigateSelection(1)">→</button><button :title="t('createObject')" :disabled="!canEdit" @click="editorState.createObjectPaletteOpen = true">＋</button></span></div>
         <label class="search"><span>⌕</span><input v-model="searchQuery" type="search" :placeholder="t('searchEntities')"></label>
-        <div class="hierarchy-filters"><select v-model="authoringState.selectionFilter" :aria-label="t('selectionFilter')"><option v-for="filter in selectionFilters" :key="filter" :value="filter">{{ t(`selection${filter}`) }}</option></select><select v-model="authoringState.tagFilter" :aria-label="t('tagFilter')"><option value="">{{ t('allTags') }}</option><option v-for="tag in availableTags" :key="tag" :value="tag"># {{ tag }}</option></select><select v-model="selectedSavedFilter" :aria-label="t('savedFilters')" @change="applySavedFilter"><option value="">{{ t('savedFilters') }}</option><option v-for="filter in authoringState.savedFilters" :key="filter.id" :value="filter.id">{{ filter.name }}</option></select><button :title="t('saveFilter')" @click="saveCurrentFilter">☆</button><button :class="{ active: authoringState.performanceMode }" :title="t('viewportPerformanceMode')" @click="authoringState.performanceMode = !authoringState.performanceMode">⚡</button></div>
+        <div class="hierarchy-filters"><select class="hierarchy-filter-wide" v-model="authoringState.selectionFilter" :aria-label="t('selectionFilter')"><option v-for="filter in selectionFilters" :key="filter" :value="filter">{{ t(`selection${filter}`) }}</option></select><select class="hierarchy-filter-wide" v-model="authoringState.tagFilter" :aria-label="t('tagFilter')"><option value="">{{ t('allTags') }}</option><option v-for="tag in availableTags" :key="tag" :value="tag"># {{ tag }}</option></select><select v-model="selectedSavedFilter" :aria-label="t('savedFilters')" @change="applySavedFilter"><option value="">{{ t('savedFilters') }}</option><option v-for="filter in authoringState.savedFilters" :key="filter.id" :value="filter.id">{{ filter.name }}</option></select><button :title="t('saveFilter')" @click="saveCurrentFilter">☆</button><button :class="{ active: authoringState.performanceMode }" :title="t('viewportPerformanceMode')" @click="authoringState.performanceMode = !authoringState.performanceMode">⚡</button></div>
       </div>
 
       <nav v-if="breadcrumbs.length" class="breadcrumbs" :aria-label="t('hierarchyBreadcrumb')"><button v-for="(entity, index) in breadcrumbs" :key="entity.uuid" @click="selectBreadcrumb(entity)">{{ index ? '› ' : '' }}{{ entity.name }}</button></nav>
@@ -114,7 +114,8 @@ const vFocus = { mounted: (element: HTMLInputElement) => { element.focus(); elem
 const hierarchyRows = computed(() => {
   const rows: Array<{ entity: Entity; depth: number; hasChildren: boolean; expanded: boolean }> = []
   const children = new Map<string | null, Entity[]>()
-  const known = new Set(state.world.entities.map(entity => entity.uuid))
+  const byUuid = new Map(state.world.entities.map(entity => [entity.uuid, entity]))
+  const known = new Set(byUuid.keys())
   for (const entity of state.world.entities) {
     const parent = entity.parentUuid && known.has(entity.parentUuid) ? entity.parentUuid : null
     const siblings = children.get(parent) ?? []
@@ -133,7 +134,7 @@ const hierarchyRows = computed(() => {
       let parentUuid = entity.parentUuid
       while (parentUuid) {
         included.add(parentUuid)
-        parentUuid = state.world.entities.find(candidate => candidate.uuid === parentUuid)?.parentUuid ?? null
+        parentUuid = byUuid.get(parentUuid)?.parentUuid ?? null
       }
     }
   }
@@ -149,7 +150,7 @@ const hierarchyRows = computed(() => {
       let parentUuid = entity.parentUuid
       while (parentUuid) {
         filterIncluded.add(parentUuid)
-        parentUuid = state.world.entities.find(candidate => candidate.uuid === parentUuid)?.parentUuid ?? null
+        parentUuid = byUuid.get(parentUuid)?.parentUuid ?? null
       }
     }
   }
@@ -299,7 +300,7 @@ onUnmounted(() => { document.removeEventListener('mousemove', onDrag); document.
 </script>
 
 <style scoped>
-.sidebar-container { position: relative; height: 100%; flex-shrink: 0; display: flex; background: var(--surface-1); backdrop-filter: var(--glass-blur); z-index: 130; }.sidebar-container.left{border-right:1px solid var(--border-subtle)}.sidebar-container.right{border-left:1px solid var(--border-subtle)}
+.sidebar-container { position: relative; height: 100%; flex-shrink: 0; display: flex; contain: layout paint; background: var(--surface-1); z-index: 130; }.sidebar-container.left{border-right:1px solid var(--border-subtle)}.sidebar-container.right{border-left:1px solid var(--border-subtle)}
 .scene-sidebar { min-width: 0; flex: 1; display: flex; flex-direction: column; overflow: hidden; }
 .scene-manager { flex: 0 0 auto; border-bottom: 1px solid var(--border-subtle); }
 .list-header, .hierarchy-header > div { height: 35px; padding: 0 10px; display: flex; align-items: center; justify-content: space-between; color: var(--text-muted); font-size:11px; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; }
@@ -308,7 +309,7 @@ onUnmounted(() => { document.removeEventListener('mousemove', onDrag); document.
 .scene-list { max-height: 110px; padding: 4px 6px; overflow: auto; }.scene-item { display: flex; align-items: center; border-radius: 7px; }.scene-item:hover { background: var(--surface-hover); }.scene-item.active { background: var(--accent-soft); }.scene-item.unloaded { opacity: .52; }
 .scene-main { min-width: 0; height: 28px; padding: 0 7px; flex: 1; display: flex; align-items: center; gap: 7px; color: var(--text-secondary); font-size: 11px; }.scene-main i { width: 7px; height: 7px; flex: 0 0 7px; border: 1px solid var(--accent); border-radius: 50%; }.scene-item.active .scene-main i { background: var(--accent); box-shadow: 0 0 6px var(--accent); }.scene-main span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }.scene-main input { width: 100%; min-height: 24px; }
 .hierarchy-header { flex: 0 0 auto; padding-bottom: 7px; border-bottom: 1px solid var(--border-subtle); }.search { height: 29px; margin: 0 7px; padding: 0 7px; display: flex; align-items: center; gap: 5px; border: 1px solid var(--border-subtle); border-radius: 8px; background: var(--input-bg); }.search span { color: var(--text-muted); }.search input { min-width: 0; width: 100%; min-height: 25px; padding: 0; border: 0; background: transparent; font-size:11px; }.search input:focus-visible { outline: 0; }
-.hierarchy-filters{margin:5px 7px 0;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) 29px 29px;gap:4px}.hierarchy-filters select{min-width:0;min-height:27px}.hierarchy-filters select:nth-child(3){grid-column:1/3}.hierarchy-filters button{width:29px;border:1px solid var(--border-subtle);border-radius:7px;color:var(--text-muted);background:var(--surface-2)}.hierarchy-filters button.active{color:var(--accent);border-color:var(--accent);background:var(--accent-soft)}.breadcrumbs{min-height:30px;padding:4px 7px;display:flex;overflow:auto;border-bottom:1px solid var(--border-subtle)}.breadcrumbs button{padding:0 3px;white-space:nowrap;border:0;color:var(--text-muted);background:transparent;font-size:11px}.breadcrumbs button:last-child{color:var(--text-primary)}
+.hierarchy-header>.hierarchy-filters{height:auto;margin:5px 7px 0;padding:0;display:grid;grid-template-columns:minmax(0,1fr) 29px 29px;gap:4px;align-items:stretch;justify-content:normal;font-weight:400;letter-spacing:normal;text-transform:none}.hierarchy-filters select{min-width:0;min-height:27px}.hierarchy-filters .hierarchy-filter-wide{grid-column:1/-1}.hierarchy-filters button{width:29px;border:1px solid var(--border-subtle);border-radius:7px;color:var(--text-muted);background:var(--surface-2)}.hierarchy-filters button.active{color:var(--accent);border-color:var(--accent);background:var(--accent-soft)}.breadcrumbs{min-height:30px;padding:4px 7px;display:flex;overflow:auto;border-bottom:1px solid var(--border-subtle)}.breadcrumbs button{padding:0 3px;white-space:nowrap;border:0;color:var(--text-muted);background:transparent;font-size:11px}.breadcrumbs button:last-child{color:var(--text-primary)}
 .entity-list { min-height: 0; flex: 1; padding: 5px; overflow: auto; }.entity-item { position: relative; height: 29px; display: flex; align-items: center; gap: 4px; border: 1px solid transparent; border-radius: 7px; color: var(--text-secondary); font-size:11px; }.entity-item:hover { background: var(--surface-hover); }.entity-item.search-match:not(.selected){background:color-mix(in srgb,var(--warning) 10%,transparent)}.entity-item.selected { background: var(--accent-soft); }.entity-item.primary { border-color: color-mix(in srgb, var(--accent) 42%, transparent); }.entity-item.disabled { opacity: .5; }.entity-item.hidden .name { text-decoration: line-through; opacity: .6; }.entity-item.locked .shape-icon { color: var(--warning); }.entity-item.drop-target { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
 .disclosure, .state-button { width: 19px; height: 22px; padding: 0; flex: 0 0 19px; display: grid; place-items: center; border: 0; border-radius: 5px; color: var(--text-muted); background: transparent; font-size:11px; }.disclosure:hover, .state-button:hover { color: var(--accent); background: var(--surface-3); }.disclosure.placeholder { pointer-events: none; }.shape-icon { width: 15px; flex: 0 0 15px; color: var(--accent); text-align: center; }.name { min-width: 0; flex: 1; display: flex; align-items: center; gap: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }.name mark{padding:0;color:inherit;background:color-mix(in srgb,var(--warning) 28%,transparent)}.name small { color: var(--text-muted); font-size:11px; }.edit-input { min-width: 0; height: 23px; min-height: 23px; flex: 1; padding: 2px 5px; }.state-button { opacity: .25; }.state-button.pin.active,.entity-item.pinned .pin{color:var(--accent);opacity:1}.entity-item:hover .state-button, .entity-item.selected .state-button, .entity-item.hidden .state-button, .entity-item.locked .state-button, .entity-item.disabled .power { opacity: .9; }.power { color: var(--success); }
 .status-mark{width:16px;height:16px;display:grid;place-items:center;border-radius:4px;color:var(--accent);background:var(--accent-soft);font-size:11px;font-weight:800}.status-mark.scene{color:var(--success)}.status-mark.override{color:var(--warning);background:transparent}

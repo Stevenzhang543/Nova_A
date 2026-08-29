@@ -1,0 +1,18 @@
+{
+  "format": "nova-v5.3.0-benchmark-summary",
+  "version": 1,
+  "engineVersion": "5.3.0",
+  "generatedAt": "2026-08-26T11:54:24.487Z",
+  "scope": "Local production-graph compilation and UI qualification; independent-host performance certification remains external.",
+  "compileMetrics": {
+    "nodes": 20,
+    "edges": 18,
+    "mappings": 37,
+    "diagnostics": [],
+    "scriptErrors": []
+  },
+  "productAudit": "passed",
+  "graphAudit": "passed",
+  "browserLayout": "passed",
+  "status": "passed"
+}

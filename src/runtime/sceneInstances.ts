@@ -4,7 +4,6 @@ import {
   instantiateEntityBundle,
   physicsState,
   pushHistory,
-  selectEntities,
   type EntityBundle
 } from '../store/physics'
 import type { Entity } from '../world/Entity'
@@ -40,10 +39,10 @@ export function createSceneAssetFromEntities(entityIds: number[], requestedName 
   return assetReference(asset.uuid)
 }
 
-export function instantiateSceneAsset(reference: string, position?: Vec2, select = true): Entity[] {
+export function instantiateSceneAsset(reference: string, position?: Vec2, select = true, invalidateRuntime = true): Entity[] {
   const stored = sceneDocument(reference)
   if (!stored) return []
-  const instance = instantiateEntityBundle(stored.document.bundle, { x: 0, y: 0 }, '')
+  const instance = instantiateEntityBundle(stored.document.bundle, { x: 0, y: 0 }, '', select, invalidateRuntime)
   const instanceUuid = normalizeUuid(undefined)
   for (const [sourceUuid, entity] of instance.sourceToEntity) {
     entity.sceneLayers.push({ asset: stored.reference, instanceUuid, sourceUuid })
@@ -53,8 +52,6 @@ export function instantiateSceneAsset(reference: string, position?: Vec2, select
     const delta = { x: position.x - origin.x, y: position.y - origin.y }
     for (const root of instance.roots) translateEntityTree(root, delta, physicsState.world.entities)
   }
-  if (select) selectEntities(instance.roots.map(entity => entity.id), 'replace')
-  physicsState.world.invalidateRuntime()
   return instance.entities
 }
 

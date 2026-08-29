@@ -13,6 +13,39 @@ export interface ProjectRepairReport { source: Record<string, unknown>; changes:
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 const CONTENT_HASH = /^(?:[0-9a-f]{64}|legacy-unverified:[0-9a-f-]{36})$/i
 const ASSET_REFERENCE = /asset:\/\/([0-9a-f-]{36})/gi
+export const MAX_PROJECT_DOCUMENT_CHARACTERS = 192 * 1024 * 1024
+const MAX_PROJECT_NESTING_DEPTH = 96
+const MAX_PROJECT_VALUE_NODES = 2_000_000
+const MAX_PROJECT_SCENES = 4_096
+const MAX_PROJECT_ENTITIES = 100_000
+const MAX_PROJECT_ASSETS = 100_000
+
+function projectResourceBudgetIssue(project: Record<string, unknown>): string | null {
+  const scenes = Array.isArray(project.scenes) ? project.scenes : []
+  const assets = Array.isArray(project.assets) ? project.assets : []
+  if (scenes.length > MAX_PROJECT_SCENES) return `Project contains more than ${MAX_PROJECT_SCENES.toLocaleString()} scenes.`
+  if (assets.length > MAX_PROJECT_ASSETS) return `Project contains more than ${MAX_PROJECT_ASSETS.toLocaleString()} assets.`
+  let entities = 0
+  for (const rawScene of scenes) {
+    if (!rawScene || typeof rawScene !== 'object') continue
+    const sceneEntities = (rawScene as Record<string, unknown>).entities
+    if (Array.isArray(sceneEntities)) entities += sceneEntities.length
+    if (entities > MAX_PROJECT_ENTITIES) return `Project contains more than ${MAX_PROJECT_ENTITIES.toLocaleString()} entities.`
+  }
+  const pending: Array<{ value: unknown; depth: number }> = [{ value: project, depth: 0 }]
+  let nodes = 0
+  while (pending.length) {
+    const current = pending.pop()!
+    if (++nodes > MAX_PROJECT_VALUE_NODES) return `Project contains more than ${MAX_PROJECT_VALUE_NODES.toLocaleString()} structured values.`
+    if (current.depth > MAX_PROJECT_NESTING_DEPTH) return `Project nesting exceeds the safe depth of ${MAX_PROJECT_NESTING_DEPTH}.`
+    if (Array.isArray(current.value)) {
+      for (const value of current.value) pending.push({ value, depth: current.depth + 1 })
+    } else if (current.value && typeof current.value === 'object') {
+      for (const value of Object.values(current.value as Record<string, unknown>)) pending.push({ value, depth: current.depth + 1 })
+    }
+  }
+  return null
+}
 
 function clone<T>(value: T): T { return JSON.parse(JSON.stringify(value)) as T }
 function normalizedNumber(value: number): number { return Object.is(value, -0) ? 0 : value }
@@ -147,11 +180,16 @@ function references(value: unknown, output = new Set<string>()): Set<string> {
 export function validateProjectDocument(source: string | unknown): ProjectValidationReport {
   let project: Record<string, unknown>
   const issues: ProjectIssue[] = []
-  try { project = (typeof source === 'string' ? JSON.parse(source) : clone(source)) as Record<string, unknown> }
+  if (typeof source === 'string' && source.length > MAX_PROJECT_DOCUMENT_CHARACTERS) {
+    return { valid: false, generatedAt: new Date().toISOString(), issues: [{ severity: 'error', code: 'resource-budget', path: '', message: 'Project document exceeds the 192 MB safety limit.', repairable: false }], sceneCount: 0, entityCount: 0, assetCount: 0 }
+  }
+  try { project = (typeof source === 'string' ? JSON.parse(source) : source) as Record<string, unknown> }
   catch (error) {
     return { valid: false, generatedAt: new Date().toISOString(), issues: [{ severity: 'error', code: 'invalid-json', path: '', message: error instanceof Error ? error.message : String(error), repairable: false }], sceneCount: 0, entityCount: 0, assetCount: 0 }
   }
   const add = (severity: ProjectIssueSeverity, code: string, path: string, message: string, repairable = false) => issues.push({ severity, code, path, message, repairable })
+  const resourceBudgetIssue = projectResourceBudgetIssue(project)
+  if (resourceBudgetIssue) return { valid: false, generatedAt: new Date().toISOString(), issues: [{ severity: 'error', code: 'resource-budget', path: '', message: resourceBudgetIssue, repairable: false }], sceneCount: 0, entityCount: 0, assetCount: 0 }
   if (project.projectFormat !== NOVA_PROJECT_FORMAT || Number(project.projectFormatMajor) !== NOVA_PROJECT_FORMAT_MAJOR) add('error', 'format', 'projectFormat', 'Project format identity is missing or unsupported.', true)
   if (Number(project.formatVersion) !== NOVA_PROJECT_SCHEMA_VERSION) add(Number(project.formatVersion) > NOVA_PROJECT_SCHEMA_VERSION ? 'error' : 'warning', 'schema', 'formatVersion', `Expected schema ${NOVA_PROJECT_SCHEMA_VERSION}.`, Number(project.formatVersion) <= NOVA_PROJECT_SCHEMA_VERSION)
   const metadata = project.projectMetadata && typeof project.projectMetadata === 'object' ? project.projectMetadata as Record<string, unknown> : {}

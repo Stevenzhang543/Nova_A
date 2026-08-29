@@ -100,11 +100,12 @@ export function createPrefabFromEntities(entityIds: number[], requestedName?: st
 export function instantiatePrefab(
   assetRef: string,
   position?: Vec2,
-  select = true
+  select = true,
+  invalidateRuntime = true
 ): Entity[] {
   const prefab = prefabRecord(assetRef)
   if (!prefab) return []
-  const instance = instantiateEntityBundle(prefab.document.bundle, { x: 0, y: 0 }, '')
+  const instance = instantiateEntityBundle(prefab.document.bundle, { x: 0, y: 0 }, '', select, invalidateRuntime)
   const instanceUuid = normalizeUuid(undefined)
   for (const [sourceUuid, entity] of instance.sourceToEntity) {
     entity.prefabAsset = prefab.reference
@@ -120,8 +121,6 @@ export function instantiatePrefab(
     const delta = { x: position.x - origin.x, y: position.y - origin.y }
     for (const root of instance.roots) translateEntityTree(root, delta, physicsState.world.entities)
   }
-  if (select) selectEntities(instance.roots.map(entity => entity.id), 'replace')
-  physicsState.world.invalidateRuntime()
   return instance.entities
 }
 

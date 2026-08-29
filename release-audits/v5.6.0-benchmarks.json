@@ -1,0 +1,20 @@
+{
+  "format": "nova-v5.6.0-benchmark-summary",
+  "version": 1,
+  "engineVersion": "5.6.0",
+  "generatedAt": "2026-08-26T18:50:48.391Z",
+  "scope": "Local deterministic event/crossfade/safe-area/device-recovery/10,000-clip verification and responsive layout; independent hardware performance remains external.",
+  "references": 4,
+  "animatorStateLimit": 1000,
+  "timelineClipLimitPerTrack": 10000,
+  "nestedTimelineDepthLimit": 8,
+  "audioBusLimit": 32,
+  "audioSendLimitPerBus": 16,
+  "layoutStates": 12,
+  "productAudit": "passed",
+  "productionVerification": "passed",
+  "browserLayout": "passed",
+  "localBuilds": "passed",
+  "independentHostPerformance": "pending-external",
+  "status": "passed"
+}

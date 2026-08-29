@@ -264,7 +264,7 @@
     "minimumSchemaVersion": 5,
     "schemaVersion": 29
   },
-  "engineVersion": "5.0.1",
+  "engineVersion": "5.4.0",
   "formatVersion": 29,
   "manifest": {
     "buildPresets": [

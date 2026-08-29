@@ -56,6 +56,7 @@ export interface AudioMixerSettings {
   buses: AudioMixerBusSettings[]
   snapshots: AudioMixerSnapshot[]
   activeSnapshot: string | null
+  snapshotTransitionSeconds: number
   ducking: AudioDuckingRule[]
   masterVoiceLimit: number
   outputDeviceId: string
@@ -87,6 +88,10 @@ export interface AudioRuntimeDiagnostics {
   busMeterDetails: Record<string, { rms: number; peak: number; rmsDb: number; peakDb: number; clipped: boolean }>
   clippingEvents: number
   loudnessDb: number
+  momentaryLufs: number
+  integratedLufs: number
+  truePeakDb: number
+  crestFactorDb: number
   stolenVoices: number
   failures: Array<{ at: string; operation: string; message: string; recovery: string }>
   outputDevices: Array<{ id: string; label: string }>
@@ -113,7 +118,7 @@ export function defaultAudioSettings(): AudioProjectSettings {
     mixer: {
       buses: [defaultBus('Master', null), defaultBus('Music', 'Master'), defaultBus('SFX', 'Master'), defaultBus('UI', 'Master')],
       snapshots: [{ id: 'default', name: 'Default', masterVolume: 1, busGains: { Master: 1, Music: 1, SFX: 1, UI: 1 } }],
-      activeSnapshot: null, ducking: [], masterVoiceLimit: 128, outputDeviceId: 'default', limiterEnabled: true, limiterCeilingDb: -1
+      activeSnapshot: null, snapshotTransitionSeconds: .12, ducking: [], masterVoiceLimit: 128, outputDeviceId: 'default', limiterEnabled: true, limiterCeilingDb: -1
     }
   }
 }
@@ -209,7 +214,7 @@ export function normalizeAudioSettings(source: unknown): AudioProjectSettings {
   for (const id of DEFAULT_BUS_IDS) { const bus = buses.find(candidate => candidate.id === id); if (bus) bus.gain = busesLegacy[id] }
   return {
     masterVolume: gain(item.masterVolume), sampleRate, buses: busesLegacy,
-    mixer: { buses, snapshots, activeSnapshot: typeof mixerSource.activeSnapshot === 'string' && snapshots.some(snapshot => snapshot.id === mixerSource.activeSnapshot) ? mixerSource.activeSnapshot : null, ducking, masterVoiceLimit: Math.round(clamp(mixerSource.masterVoiceLimit, 128, 1, 1024)), outputDeviceId: typeof mixerSource.outputDeviceId === 'string' ? mixerSource.outputDeviceId.slice(0, 256) || 'default' : 'default', limiterEnabled: mixerSource.limiterEnabled !== false, limiterCeilingDb: clamp(mixerSource.limiterCeilingDb, -1, -24, 0) }
+    mixer: { buses, snapshots, activeSnapshot: typeof mixerSource.activeSnapshot === 'string' && snapshots.some(snapshot => snapshot.id === mixerSource.activeSnapshot) ? mixerSource.activeSnapshot : null, snapshotTransitionSeconds: clamp(mixerSource.snapshotTransitionSeconds, .12, 0, 30), ducking, masterVoiceLimit: Math.round(clamp(mixerSource.masterVoiceLimit, 128, 1, 1024)), outputDeviceId: typeof mixerSource.outputDeviceId === 'string' ? mixerSource.outputDeviceId.slice(0, 256) || 'default' : 'default', limiterEnabled: mixerSource.limiterEnabled !== false, limiterCeilingDb: clamp(mixerSource.limiterCeilingDb, -1, -24, 0) }
   }
 }
 
@@ -251,7 +256,9 @@ class AudioRuntime {
   private lastUnderrunAt = 0
   private voiceSerial = 0
   private manualLimitedVoices = 0
-  readonly diagnostics: AudioRuntimeDiagnostics = { activeVoices: 0, streamingVoices: 0, bufferedVoices: 0, contextState: 'unavailable', busMeters: {}, limitedVoices: 0, virtualVoices: 0, baseLatencyMs: null, outputLatencyMs: null, underruns: 0, deviceChanges: 0, lastDeviceChange: '', busMeterDetails: {}, clippingEvents: 0, loudnessDb: -120, stolenVoices: 0, failures: [], outputDevices: [], selectedOutputDevice: 'default', recoveryCount: 0 }
+  private integratedLoudnessEnergy = 0
+  private integratedLoudnessSamples = 0
+  readonly diagnostics: AudioRuntimeDiagnostics = { activeVoices: 0, streamingVoices: 0, bufferedVoices: 0, contextState: 'unavailable', busMeters: {}, limitedVoices: 0, virtualVoices: 0, baseLatencyMs: null, outputLatencyMs: null, underruns: 0, deviceChanges: 0, lastDeviceChange: '', busMeterDetails: {}, clippingEvents: 0, loudnessDb: -120, momentaryLufs: -120, integratedLufs: -120, truePeakDb: -120, crestFactorDb: 0, stolenVoices: 0, failures: [], outputDevices: [], selectedOutputDevice: 'default', recoveryCount: 0 }
 
   begin(settings: AudioProjectSettings): void {
     this.settings = normalizeAudioSettings(settings)
@@ -265,10 +272,19 @@ class AudioRuntime {
   }
 
   async selectOutputDevice(deviceId: string): Promise<boolean> {
-    this.settings.mixer.outputDeviceId = deviceId || 'default'
+    const requestedDevice = deviceId || 'default'
+    this.settings.mixer.outputDeviceId = requestedDevice
     const context = this.context as (AudioContext & { setSinkId?: (id: string) => Promise<void> }) | null
-    if (!context?.setSinkId) { this.diagnostics.selectedOutputDevice = 'default'; if (deviceId !== 'default') this.reportFailure('select output device', new Error('This runtime does not expose AudioContext.setSinkId.'), 'Use the system default output or a Chromium/WebView build with output routing support.'); return deviceId === 'default' }
-    try { await context.setSinkId(deviceId); this.diagnostics.selectedOutputDevice = deviceId; return true } catch (error) { this.reportFailure('select output device', error, 'Reconnect the device, choose System default, then retry.'); return false }
+    if (!context?.setSinkId) { this.diagnostics.selectedOutputDevice = 'default'; if (requestedDevice !== 'default') this.reportFailure('select output device', new Error('This runtime does not expose AudioContext.setSinkId.'), 'Use the system default output or a Chromium/WebView build with output routing support.'); return requestedDevice === 'default' }
+    if (requestedDevice === 'default') {
+      // The Web Audio default sink is the empty ID. Routing to it is optional:
+      // if a browser or headless host has no enumerated output, its existing
+      // implicit route remains the safest fallback and must not block builds.
+      try { await context.setSinkId('') } catch { /* Keep the browser's implicit default route. */ }
+      this.diagnostics.selectedOutputDevice = 'default'
+      return true
+    }
+    try { await context.setSinkId(requestedDevice); this.diagnostics.selectedOutputDevice = requestedDevice; return true } catch (error) { this.reportFailure('select output device', error, 'Reconnect the device, choose System default, then retry.'); return false }
   }
 
   async recover(): Promise<boolean> {
@@ -302,8 +318,9 @@ class AudioRuntime {
       const streaming = component.streamOverride === 'Stream' || component.streamOverride === 'ImportSetting' && asset.settings.audioSettings.streaming
       const trimStart = clamp(asset.settings.audioSettings.trimStart, 0, 0, Math.max(0, asset.duration))
       const trimEnd = clamp(asset.settings.audioSettings.trimEnd, 0, 0, Math.max(0, asset.duration))
-      const loopStart = Math.max(trimStart, clamp(asset.settings.audioSettings.loopStart, 0, 0, Math.max(0, asset.duration)))
-      const loopEnd = Math.min(trimEnd > trimStart ? trimEnd : Math.max(0, asset.duration), clamp(asset.settings.audioSettings.loopEnd, 0, 0, Math.max(0, asset.duration)) || Math.max(0, asset.duration))
+      const selectedLoop = asset.settings.audioSettings.loopRegions.find(region => region.id === asset.settings.audioSettings.activeLoopRegion)
+      const loopStart = Math.max(trimStart, clamp(selectedLoop?.start ?? asset.settings.audioSettings.loopStart, 0, 0, Math.max(0, asset.duration)))
+      const loopEnd = Math.min(trimEnd > trimStart ? trimEnd : Math.max(0, asset.duration), clamp(selectedLoop?.end ?? asset.settings.audioSettings.loopEnd, 0, 0, Math.max(0, asset.duration)) || Math.max(0, asset.duration))
       let audio = this.active.get(component.uuid)
       if (!audio || audio.reference !== reference || audio.streaming !== streaming) {
         this.release(component.uuid)
@@ -368,6 +385,13 @@ class AudioRuntime {
 
   pause(entity: Entity): void { const component = entity.getComponent<AudioSource>('AudioSource'); const active = component ? this.active.get(component.uuid) : null; if (active) { active.manuallyPaused = true; active.element.pause() }; if (component) for (const voice of this.polyphonic.get(component.uuid) ?? []) { voice.manuallyPaused = true; voice.element.pause() } }
   stop(entity: Entity): void { const component = entity.getComponent<AudioSource>('AudioSource'); const active = component ? this.active.get(component.uuid) : null; if (active) { active.element.pause(); active.element.currentTime = active.loopStart; active.started = false; active.manuallyPaused = false }; if (component) this.releasePolyphonic(component.uuid) }
+  scrub(entity: Entity, seconds: number): boolean {
+    const component = entity.getComponent<AudioSource>('AudioSource'), active = component ? this.active.get(component.uuid) : null
+    if (!active || !Number.isFinite(seconds)) return false
+    const maximum = active.loopEnd > active.loopStart ? active.loopEnd : Number.isFinite(active.element.duration) ? active.element.duration : Math.max(active.loopStart, seconds)
+    active.element.pause(); active.element.currentTime = Math.min(maximum, Math.max(active.loopStart, seconds)); active.manuallyPaused = true; return true
+  }
+  playbackTime(entity: Entity): number | null { const component = entity.getComponent<AudioSource>('AudioSource'), active = component ? this.active.get(component.uuid) : null; return active ? active.element.currentTime : null }
   stopAll(): void { for (const uuid of [...this.active.keys()]) this.release(uuid); for (const uuid of [...this.polyphonic.keys()]) this.releasePolyphonic(uuid); for (const voice of this.uiVoices) { voice.pause(); voice.currentTime = 0 }; this.uiVoices.clear() }
 
   playUiClip(reference: string | null | undefined, bus = 'UI'): boolean {
@@ -445,13 +469,14 @@ class AudioRuntime {
     if (!this.master || !this.context) return
     this.configureMasterOutput()
     const snapshot = this.settings.mixer.snapshots.find(candidate => candidate.id === this.settings.mixer.activeSnapshot)
-    this.master.gain.setTargetAtTime(this.settings.masterVolume * (snapshot?.masterVolume ?? 1), this.context.currentTime, .02)
+    const transition = Math.max(.001, this.settings.mixer.snapshotTransitionSeconds / 3)
+    this.master.gain.setTargetAtTime(this.settings.masterVolume * (snapshot?.masterVolume ?? 1), this.context.currentTime, transition)
     const anySolo = this.settings.mixer.buses.some(bus => bus.solo)
     for (const bus of this.settings.mixer.buses) {
       const output = this.busOutputs.get(bus.id); if (!output) continue
       const requested = (snapshot?.busGains[bus.id] ?? bus.gain) * this.automationGain(bus)
       const audible = !bus.mute && (!anySolo || bus.solo || bus.id === 'Master')
-      output.gain.setTargetAtTime(audible ? requested : 0, this.context.currentTime, .015)
+      output.gain.setTargetAtTime(audible ? requested : 0, this.context.currentTime, transition)
     }
   }
 
@@ -496,7 +521,17 @@ class AudioRuntime {
     this.diagnostics.outputLatencyMs = Number.isFinite(outputLatency) ? outputLatency * 1000 : null
     const samples = new Float32Array(128), meters: Record<string, number> = {}, details: AudioRuntimeDiagnostics['busMeterDetails'] = {}; let masterLoudness = -120
     for (const [id, analyser] of this.busMeters) { analyser.getFloatTimeDomainData(samples); let energy = 0, peak = 0; for (const sample of samples) { energy += sample * sample; peak = Math.max(peak, Math.abs(sample)) } const rms = Math.min(1, Math.sqrt(energy / samples.length)), rmsDb = 20 * Math.log10(Math.max(1e-6, rms)), peakDb = 20 * Math.log10(Math.max(1e-6, peak)), clipped = peak >= .999; meters[id] = rms; details[id] = { rms, peak, rmsDb, peakDb, clipped }; if (clipped) this.diagnostics.clippingEvents++; if (id === 'Master') masterLoudness = rmsDb }
+    const master = details.Master, masterEnergy = master ? master.rms * master.rms : 0
+    if (master && master.rmsDb > -70) {
+      if (this.integratedLoudnessSamples >= 10_000_000) { this.integratedLoudnessEnergy *= .9999999; this.integratedLoudnessSamples = 9_999_999 }
+      this.integratedLoudnessEnergy += masterEnergy; this.integratedLoudnessSamples++
+    }
+    const integratedRms = this.integratedLoudnessSamples ? Math.sqrt(this.integratedLoudnessEnergy / this.integratedLoudnessSamples) : 0
     this.diagnostics.busMeters = meters; this.diagnostics.busMeterDetails = details; this.diagnostics.loudnessDb = masterLoudness
+    this.diagnostics.momentaryLufs = master ? Math.max(-120, -0.691 + master.rmsDb) : -120
+    this.diagnostics.integratedLufs = integratedRms > 0 ? Math.max(-120, -0.691 + 20 * Math.log10(integratedRms)) : -120
+    this.diagnostics.truePeakDb = master?.peakDb ?? -120
+    this.diagnostics.crestFactorDb = master ? Math.max(0, master.peakDb - master.rmsDb) : 0
   }
 
   private installDeviceListener(): void {

@@ -2,7 +2,7 @@
   "projectFormat": "Nova_A Project Format 2",
   "projectFormatMajor": 2,
   "formatVersion": 29,
-  "engineVersion": "5.0.1",
+  "engineVersion": "5.4.0",
   "compatibility": {
     "format": "Nova_A Project Format 2",
     "major": 2,
@@ -575,7 +575,7 @@
         "stripUnusedAssets": false
       },
       "releaseEngineering": {
-        "release": "5.0.1",
+        "release": "5.4.0",
         "schema": 29,
         "rhaiApi": 2,
         "pluginApi": 2,

@@ -15,8 +15,40 @@ type QueuedCommand =
   | { type: 'sprite'; value: SpriteRenderCommand; camera: CameraRenderView; cameraIndex: number }
   | { type: 'text'; value: TextRenderCommand; camera: CameraRenderView; cameraIndex: number }
 
+const MAX_FRAME_COMMANDS = 100_000
+const MAX_SHAPE_VERTICES = 65_000
+const MAX_TEXT_LENGTH = 65_536
+const MAX_CANVAS_DIMENSION = 16_384
+
+function finite(value: number): boolean {
+  return Number.isFinite(value)
+}
+
+function finitePoint(value: { x: number; y: number }): boolean {
+  return finite(value.x) && finite(value.y)
+}
+
+function safeViewport(viewport: CameraRenderView['viewport']): { x: number; y: number; width: number; height: number } {
+  const source = viewport ?? { x: 0, y: 0, width: 1, height: 1 }
+  const x = finite(source.x) ? Math.min(1 - 1e-6, Math.max(0, source.x)) : 0
+  const y = finite(source.y) ? Math.min(1 - 1e-6, Math.max(0, source.y)) : 0
+  const width = finite(source.width) ? Math.min(1 - x, Math.max(1e-6, source.width)) : 1 - x
+  const height = finite(source.height) ? Math.min(1 - y, Math.max(1e-6, source.height)) : 1 - y
+  return { x, y, width, height }
+}
+
+function validBaseCommand(command: ShapeRenderCommand | SpriteRenderCommand | TextRenderCommand): boolean {
+  return finitePoint(command.position)
+    && finite(command.rotation)
+    && finitePoint(command.scale)
+    && finite(command.sortingLayer)
+    && finite(command.orderInLayer)
+}
+
 function cssColor(color: { r: number; g: number; b: number; a: number }): string {
-  return `rgba(${color.r},${color.g},${color.b},${Math.min(1, Math.max(0, color.a))})`
+  const channel = (value: number) => finite(value) ? Math.min(255, Math.max(0, value)) : 0
+  const alpha = finite(color.a) ? Math.min(1, Math.max(0, color.a)) : 1
+  return `rgba(${channel(color.r)},${channel(color.g)},${channel(color.b)},${alpha})`
 }
 
 function textureDimensions(source: TexImageSource): { width: number; height: number } {
@@ -25,8 +57,8 @@ function textureDimensions(source: TexImageSource): { width: number; height: num
     width?: number; height?: number; displayWidth?: number; displayHeight?: number
   }
   return {
-    width: value.naturalWidth ?? value.videoWidth ?? value.displayWidth ?? value.width ?? 1,
-    height: value.naturalHeight ?? value.videoHeight ?? value.displayHeight ?? value.height ?? 1
+    width: finite(value.naturalWidth ?? value.videoWidth ?? value.displayWidth ?? value.width ?? 1) ? Math.max(1, value.naturalWidth ?? value.videoWidth ?? value.displayWidth ?? value.width ?? 1) : 1,
+    height: finite(value.naturalHeight ?? value.videoHeight ?? value.displayHeight ?? value.height ?? 1) ? Math.max(1, value.naturalHeight ?? value.videoHeight ?? value.displayHeight ?? value.height ?? 1) : 1
   }
 }
 
@@ -46,29 +78,55 @@ export class Canvas2DRenderer implements Renderer2D {
   }
 
   resize(width: number, height: number, pixelRatio: number): void {
-    const pixelWidth = Math.max(1, Math.round(width * pixelRatio))
-    const pixelHeight = Math.max(1, Math.round(height * pixelRatio))
+    const safeWidth = finite(width) ? Math.min(MAX_CANVAS_DIMENSION, Math.max(1, width)) : 1
+    const safeHeight = finite(height) ? Math.min(MAX_CANVAS_DIMENSION, Math.max(1, height)) : 1
+    const safeRatio = finite(pixelRatio) ? Math.min(8, Math.max(0.25, pixelRatio)) : 1
+    const pixelWidth = Math.min(MAX_CANVAS_DIMENSION, Math.max(1, Math.round(safeWidth * safeRatio)))
+    const pixelHeight = Math.min(MAX_CANVAS_DIMENSION, Math.max(1, Math.round(safeHeight * safeRatio)))
     if (this.canvas.width !== pixelWidth) this.canvas.width = pixelWidth
     if (this.canvas.height !== pixelHeight) this.canvas.height = pixelHeight
   }
   beginFrame(options: FrameOptions): void {
-    this.frame = options
-    this.resize(options.width, options.height, options.pixelRatio)
+    const width = finite(options.width) ? Math.min(MAX_CANVAS_DIMENSION, Math.max(1, options.width)) : 1
+    const height = finite(options.height) ? Math.min(MAX_CANVAS_DIMENSION, Math.max(1, options.height)) : 1
+    const pixelRatio = finite(options.pixelRatio) ? Math.min(8, Math.max(0.25, options.pixelRatio)) : 1
+    this.frame = { ...options, width, height, pixelRatio }
+    this.resize(width, height, pixelRatio)
     this.commands = []
     this.cameraIndex = -1
     Object.assign(this.stats, { drawCalls: 0, batches: 0, triangles: 0, sprites: 0, shapes: 0, text: 0, textures: 0, gpuMs: null, passes: 1, renderTargets: 0, overdraw: 0, batchBreaks: 0, atlasPages: 0, textureMemoryBytes: 0, batchBreakReasons: {} })
-    this.context.setTransform(options.pixelRatio, 0, 0, options.pixelRatio, 0, 0)
+    this.context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0)
     this.context.imageSmoothingEnabled = true
     this.context.imageSmoothingQuality = 'high'
     this.context.lineCap = 'round'
     this.context.lineJoin = 'round'
     this.context.fillStyle = cssColor(options.clearColor)
-    this.context.fillRect(0, 0, options.width, options.height)
+    this.context.fillRect(0, 0, width, height)
   }
   beginCamera(camera: CameraRenderView): void { this.camera = camera; this.cameraIndex++ }
-  submitSprite(command: SpriteRenderCommand): void { this.commands.push({ type: 'sprite', value: command, camera: this.camera, cameraIndex: this.cameraIndex }); this.stats.sprites++ }
-  submitShape(command: ShapeRenderCommand): void { this.commands.push({ type: 'shape', value: command, camera: this.camera, cameraIndex: this.cameraIndex }); this.stats.shapes++ }
-  submitText(command: TextRenderCommand): void { this.commands.push({ type: 'text', value: command, camera: this.camera, cameraIndex: this.cameraIndex }); this.stats.text++ }
+  submitSprite(command: SpriteRenderCommand): void {
+    if (this.commands.length >= MAX_FRAME_COMMANDS || !validBaseCommand(command) || !finitePoint(command.size) || !finitePoint(command.pivot)) return
+    this.commands.push({ type: 'sprite', value: command, camera: this.camera, cameraIndex: this.cameraIndex }); this.stats.sprites++
+  }
+  submitShape(command: ShapeRenderCommand): void {
+    if (this.commands.length >= MAX_FRAME_COMMANDS
+      || !validBaseCommand(command)
+      || command.vertices.length > MAX_SHAPE_VERTICES
+      || command.vertices.some(vertex => !finitePoint(vertex))
+      || !finite(command.radiusX)
+      || !finite(command.radiusY)
+      || !finite(command.strokeWidth)) return
+    this.commands.push({ type: 'shape', value: command, camera: this.camera, cameraIndex: this.cameraIndex }); this.stats.shapes++
+  }
+  submitText(command: TextRenderCommand): void {
+    if (this.commands.length >= MAX_FRAME_COMMANDS
+      || !validBaseCommand(command)
+      || command.text.length > MAX_TEXT_LENGTH
+      || !finite(command.fontSize)
+      || !finite(command.outlineWidth)
+      || !finite(command.maxWidth)) return
+    this.commands.push({ type: 'text', value: command, camera: this.camera, cameraIndex: this.cameraIndex }); this.stats.text++
+  }
   submitTileChunk(command: TileChunkRenderCommand): void { for (const sprite of command.sprites) this.submitSprite({ ...sprite, sortingLayer: command.sortingLayer, orderInLayer: command.orderInLayer, material: command.material, blendMode: command.blendMode }) }
   endCamera(): void { /* Rendering is sorted and performed in endFrame. */ }
   endFrame(): RendererStats {
@@ -85,15 +143,18 @@ export class Canvas2DRenderer implements Renderer2D {
         this.applyCamera(context, command.camera)
       }
       context.save()
-      const value = command.value
-      context.translate(value.position.x, value.position.y)
-      context.rotate(value.rotation)
-      context.scale(value.scale.x, value.scale.y)
-      context.globalCompositeOperation = value.blendMode === 'Additive' ? 'lighter' : value.blendMode === 'Multiply' ? 'multiply' : value.blendMode === 'Screen' ? 'screen' : 'source-over'
-      if (command.type === 'shape') this.drawShape(context, command.value)
-      else if (command.type === 'sprite') this.drawSprite(context, command.value)
-      else this.drawText(context, command.value)
-      context.restore()
+      try {
+        const value = command.value
+        context.translate(value.position.x, value.position.y)
+        context.rotate(value.rotation)
+        context.scale(value.scale.x, value.scale.y)
+        context.globalCompositeOperation = value.blendMode === 'Additive' ? 'lighter' : value.blendMode === 'Multiply' ? 'multiply' : value.blendMode === 'Screen' ? 'screen' : 'source-over'
+        if (command.type === 'shape') this.drawShape(context, command.value)
+        else if (command.type === 'sprite') this.drawSprite(context, command.value)
+        else this.drawText(context, command.value)
+      } finally {
+        context.restore()
+      }
       this.stats.drawCalls++
       this.stats.triangles += command.type === 'shape'
         ? command.value.shape === 'Line' ? 2 : Math.max(1, command.value.shape === 'Ellipse' ? 46 : command.value.vertices.length - 2)
@@ -108,8 +169,12 @@ export class Canvas2DRenderer implements Renderer2D {
   destroy(): void { this.commands = []; this.tintedTextures = new WeakMap() }
 
   private applyCamera(context: CanvasRenderingContext2D, camera: CameraRenderView): void {
-    const center = camera.position
-    const viewport = camera.viewport ?? { x: 0, y: 0, width: 1, height: 1 }
+    const center = camera.position && finitePoint(camera.position) ? camera.position : undefined
+    const viewport = safeViewport(camera.viewport)
+    const scale = finite(camera.scale) && Math.abs(camera.scale) >= 1e-6 ? camera.scale : 1
+    const rotation = finite(camera.rotation ?? 0) ? camera.rotation ?? 0 : 0
+    const offsetX = finite(camera.offset.x) ? camera.offset.x : 0
+    const offsetY = finite(camera.offset.y) ? camera.offset.y : 0
     const viewportX = viewport.x * this.frame.width
     const viewportY = (1 - viewport.y - viewport.height) * this.frame.height
     const viewportWidth = viewport.width * this.frame.width
@@ -118,12 +183,12 @@ export class Canvas2DRenderer implements Renderer2D {
     context.rect(viewportX, viewportY, viewportWidth, viewportHeight)
     context.clip()
     context.translate(viewportX + viewportWidth * .5, viewportY + viewportHeight * .5)
-    context.scale(camera.scale, -camera.scale)
-    context.rotate(-(camera.rotation ?? 0))
+    context.scale(scale, -scale)
+    context.rotate(-rotation)
     if (center) context.translate(-center.x, -center.y)
     else context.translate(
-      -(this.frame.width * .5 - camera.offset.x) / camera.scale,
-      -(camera.offset.y - this.frame.height * .5) / camera.scale
+      -(this.frame.width * .5 - offsetX) / scale,
+      -(offsetY - this.frame.height * .5) / scale
     )
   }
 

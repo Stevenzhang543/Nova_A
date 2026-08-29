@@ -1,10 +1,10 @@
 import { reactive } from 'vue'
-import { clearEditorHistory, getSceneJSON, loadProject, physicsState } from '../store/physics'
+import { editorState } from '../store/editor'
 import { beginProjectSession, newProjectMetadata, projectSessionState, safeProjectName, touchProjectMetadata } from './projectSession'
 import { createTemplateProjectJson, type ProjectTemplateId } from './templates'
 import { analyzeProjectUpgrade, downloadProjectBackup, dryRunProjectMigration, readUpgradeRollback, recordMigrationApplied, storeUpgradeRollback, type UpgradePreview } from '../runtime/projectUpgrade'
 import { acquireProjectLock, inspectProjectLock, markSourceBaseline, releaseProjectLock } from '../runtime/teamWorkflow'
-import { canonicalProjectText, validateProjectDocument, type ProjectValidationReport } from './projectData'
+import { canonicalProjectText, MAX_PROJECT_DOCUMENT_CHARACTERS, validateProjectDocument, type ProjectValidationReport } from './projectData'
 import { recoveryState } from '../runtime/recovery'
 import { appendTaskLog, completeTask, failTask, startTask } from '../runtime/editorFeedback'
 import { markProjectDirty, setProjectTransactionDirectory } from '../runtime/projectTransactions'
@@ -12,6 +12,7 @@ import { markProjectDirty, setProjectTransactionDirectory } from '../runtime/pro
 const RECENT_KEY = 'nova_a.recent_projects.v2'
 const MAX_RECENT_PROJECTS = 8
 const MAX_SNAPSHOT_BYTES = 1_750_000
+const physicsModule = () => import('../store/physics')
 
 export interface RecentProject {
   id: string
@@ -31,7 +32,7 @@ function readRecents(): RecentProject[] {
       if (!value || typeof value !== 'object') return []
       const item = value as Partial<RecentProject>
       if (typeof item.id !== 'string' || typeof item.name !== 'string' || typeof item.updatedAt !== 'string') return []
-      return [{ id: item.id.slice(0, 128), name: safeProjectName(item.name), updatedAt: item.updatedAt, template: typeof item.template === 'string' ? item.template.slice(0, 40) : 'imported', location: typeof item.location === 'string' ? item.location.slice(0, 500) : '', snapshot: typeof item.snapshot === 'string' ? item.snapshot : null }]
+      return [{ id: item.id.slice(0, 128), name: safeProjectName(item.name), updatedAt: item.updatedAt, template: typeof item.template === 'string' ? item.template.slice(0, 40) : 'imported', location: typeof item.location === 'string' ? item.location.slice(0, 500) : '', snapshot: typeof item.snapshot === 'string' && item.snapshot.length <= MAX_SNAPSHOT_BYTES ? item.snapshot : null }]
     }).slice(0, MAX_RECENT_PROJECTS)
   } catch { return [] }
 }
@@ -60,17 +61,18 @@ export async function createNewProject(name: string, template: ProjectTemplateId
   projectManagerState.busy = true
   projectManagerState.error = ''
   try {
+    const { clearEditorHistory, getSceneJSON, loadProject, physicsState } = await physicsModule()
     await physicsState.world.wasmReady
     const source = createTemplateProjectJson(template, safeProjectName(name))
     const previousId = projectSessionState.id
-    if (!loadProject(source)) throw new Error('The selected template did not pass project validation.')
+    if (!loadProject(source)) throw new Error(editorState.statusText || 'The selected template did not pass project validation.')
     releaseProjectLock(previousId); recoveryState.readOnly = !acquireProjectLock(projectSessionState.id, 'Nova_A Editor')
     projectManagerState.currentSnapshot = getSceneJSON()
     projectManagerState.currentLocation = location.trim().slice(0, 500)
     setProjectTransactionDirectory(projectManagerState.currentLocation)
     markSourceBaseline(projectManagerState.currentSnapshot)
     clearEditorHistory('new-project', projectManagerState.currentSnapshot, false); markProjectDirty('project')
-    rememberCurrentProject(projectManagerState.currentSnapshot)
+    await rememberCurrentProject()
     projectManagerState.visible = false
     return true
   } catch (error) {
@@ -81,6 +83,7 @@ export async function createNewProject(name: string, template: ProjectTemplateId
 
 export async function openProjectDocument(source: string, fileName = 'project.nova', importAsCopy = false, projectDirectory = ''): Promise<boolean> {
   try {
+    if (source.length > MAX_PROJECT_DOCUMENT_CHARACTERS) throw new Error('This project exceeds Nova_A\'s 192 MB safe document limit. Store large media as external project assets before opening it.')
     projectManagerState.currentLocation = projectDirectory.trim().slice(0, 500)
     setProjectTransactionDirectory(projectManagerState.currentLocation)
     const preview = analyzeProjectUpgrade(source)
@@ -110,6 +113,7 @@ async function openProjectDocumentNow(source: string, fileName = 'project.nova',
   projectManagerState.busy = true
   projectManagerState.error = ''
   try {
+    const { clearEditorHistory, getSceneJSON, loadProject, physicsState } = await physicsModule()
     await physicsState.world.wasmReady
     let previousProject: string | null = null
     try { previousProject = getSceneJSON() } catch { previousProject = null }
@@ -132,7 +136,7 @@ async function openProjectDocumentNow(source: string, fileName = 'project.nova',
     projectManagerState.currentSnapshot = getSceneJSON()
     markSourceBaseline(projectManagerState.currentSnapshot)
     clearEditorHistory('project-open', projectManagerState.currentSnapshot)
-    rememberCurrentProject(projectManagerState.currentSnapshot)
+    await rememberCurrentProject()
     projectManagerState.visible = false
     return true
   } catch (error) {
@@ -158,6 +162,7 @@ export async function applyPendingProjectUpgrade(forceReadOnly = false): Promise
   projectManagerState.error = ''
   const task = startTask('Project migration', { detail: `Schema ${pending.preview.sourceSchema} → ${pending.preview.targetSchema}`, progress: .05, logs: ['Dry run started'], resources: [{ label: pending.preview.projectName, href: pending.fileName }] })
   try {
+    const { physicsState } = await physicsModule()
     await physicsState.world.wasmReady
     const dryRun = dryRunProjectMigration(pending.source, value => physicsState.world.formatProjectJson(value))
     for (const entry of dryRun.log) appendTaskLog(task, `${entry.status.toUpperCase()} · ${entry.message}`)
@@ -213,9 +218,10 @@ export async function openRecentProject(id: string): Promise<boolean> {
   return openProjectDocument(recent.snapshot, `${recent.name}.nova`, false, recent.location)
 }
 
-export function rememberCurrentProject(source = getSceneJSON()): void {
+export async function rememberCurrentProject(): Promise<void> {
+  const { getSceneJSON } = await physicsModule()
   touchProjectMetadata()
-  source = getSceneJSON()
+  const source = getSceneJSON()
   const snapshot = source.length <= MAX_SNAPSHOT_BYTES ? source : null
   const recent: RecentProject = {
     id: projectSessionState.id,
@@ -239,7 +245,7 @@ export function removeRecentProject(id: string): void {
 }
 
 export function showProjectManager(): void {
-  try { rememberCurrentProject() } catch { /* An empty startup session does not need a recent entry. */ }
+  void rememberCurrentProject().catch(() => { /* An empty startup session does not need a recent entry. */ })
   projectManagerState.visible = true
   projectManagerState.error = ''
 }

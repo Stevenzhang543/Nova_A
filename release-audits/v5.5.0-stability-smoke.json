@@ -1,0 +1,14 @@
+{
+  "format": "nova-v5.5.0-stability-summary",
+  "version": 1,
+  "engineVersion": "5.5.0",
+  "generatedAt": "2026-08-26T16:30:27.157Z",
+  "typeCheck": "passed",
+  "rustWorkspaceTests": "passed",
+  "renderingReferences": "passed",
+  "shaderIsolation": "passed",
+  "layoutMatrix": "passed",
+  "wallClock72HourSoakComplete": false,
+  "independentCleanMachineComplete": false,
+  "status": "passed"
+}

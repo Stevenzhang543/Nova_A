@@ -1,0 +1,19 @@
+{
+  "format": "nova-v5.5.0-benchmark-summary",
+  "version": 1,
+  "engineVersion": "5.5.0",
+  "generatedAt": "2026-08-26T16:30:27.157Z",
+  "scope": "Local deterministic material/particle verification, budget estimates and responsive layout; independent hardware performance remains external.",
+  "references": 4,
+  "materialGraphNodeLimit": 256,
+  "materialGraphEdgeLimit": 512,
+  "materialLayerLimit": 16,
+  "particleEventLimit": 128,
+  "layoutStates": 12,
+  "productAudit": "passed",
+  "renderingVerification": "passed",
+  "browserLayout": "passed",
+  "localBuilds": "passed",
+  "independentHostPerformance": "pending-external",
+  "status": "passed"
+}

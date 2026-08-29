@@ -1,0 +1,99 @@
+{
+  "format": "nova-v5.6.0-product-audit",
+  "version": 1,
+  "engineVersion": "5.6.0",
+  "generatedAt": "2026-08-26T18:50:37.655Z",
+  "perspectives": [
+    "programmer",
+    "runtime",
+    "user",
+    "layout"
+  ],
+  "checks": [
+    {
+      "id": "V560-VERSION",
+      "status": "passed",
+      "detail": "Frontend, native and Rust authorities identify 5.6.0.",
+      "metrics": {}
+    },
+    {
+      "id": "V560-COMPATIBILITY",
+      "status": "passed",
+      "detail": "Frozen Project Format/schema and public API boundaries remain documented.",
+      "metrics": {}
+    },
+    {
+      "id": "V560-ROADMAP",
+      "status": "passed",
+      "detail": "Roadmap records the complete implementation and evidence contract.",
+      "metrics": {}
+    },
+    {
+      "id": "V560-ANIMATOR",
+      "status": "passed",
+      "detail": "2D blends, layers/masks, synchronized transitions, motion options, events and recording are runtime/editor bound.",
+      "metrics": {}
+    },
+    {
+      "id": "V560-CINEMATICS",
+      "status": "passed",
+      "detail": "Nested timelines, markers, scrubbing, blends, subtitles, branching and skip/resume are connected and validated.",
+      "metrics": {}
+    },
+    {
+      "id": "V560-AUDIO",
+      "status": "passed",
+      "detail": "Waveforms, named loops, sends, ducking, crossfaded snapshots, loudness and device recovery are editor/runtime bound.",
+      "metrics": {}
+    },
+    {
+      "id": "V560-INTEROP",
+      "status": "passed",
+      "detail": "Animation, Audio, Timeline and Visual Graph interoperability plus recording are connected.",
+      "metrics": {}
+    },
+    {
+      "id": "V560-SUBTITLE-RENDERING",
+      "status": "passed",
+      "detail": "Localized subtitles render above gameplay in all supported safe areas.",
+      "metrics": {}
+    },
+    {
+      "id": "V560-I18N",
+      "status": "passed",
+      "detail": "Every new visible v5.6 control is localized in EN/DE/ZH.",
+      "metrics": {}
+    },
+    {
+      "id": "V560-DOCS",
+      "status": "passed",
+      "detail": "README and all multilingual manuals teach v5.6 workflows.",
+      "metrics": {}
+    },
+    {
+      "id": "V560-VERIFY",
+      "status": "passed",
+      "detail": "Production behavior verification passes.",
+      "metrics": {
+        "checks": 10
+      }
+    },
+    {
+      "id": "V560-LAYOUT",
+      "status": "passed",
+      "detail": "EN/DE/ZH browser matrix passes four viewports.",
+      "metrics": {
+        "matrix": 12
+      }
+    },
+    {
+      "id": "V560-RELEASE",
+      "status": "passed",
+      "detail": "Generic packager enforces the exact eleven artifacts.",
+      "metrics": {}
+    }
+  ],
+  "severity0Open": 0,
+  "severity1Open": 0,
+  "status": "passed"
+}

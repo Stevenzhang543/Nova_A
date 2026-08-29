@@ -8,6 +8,7 @@ import { OFFICIAL_AI_PACKAGE_ID, OFFICIAL_OBJECT_POOL_PACKAGE_ID, packageEnabled
 import { prepareObjectPools, resetObjectPools, setPoolSignalEmitter, updateObjectPools } from './objectPool'
 import * as navigationRuntime from './navigation2d'
 import { resetWorldStreaming, updateWorldStreaming as updateWorldStreamingRuntime, worldStreamingState } from './worldStreaming'
+import { resetTileSceneRuntime, tileSceneRuntimeState, updateTileSceneRuntime } from './tileSceneRuntime'
 
 export const worldGameplayState = reactive({
   navigationDebug: false,
@@ -17,6 +18,8 @@ export const worldGameplayState = reactive({
   memoryBudgetMb: 256,
   originShiftThreshold: 10_000,
   originOffset: { x: 0, y: 0 },
+  originShiftCount: 0,
+  lastOriginShift: { x: 0, y: 0 },
   loadedChunks: 0,
   usedMemoryMb: 0,
   pendingStreams: 0,
@@ -179,6 +182,7 @@ function updateWorldStreaming(): void {
   worldGameplayState.pendingStreams = worldStreamingState.pending
   if (Math.hypot(focus.x, focus.y) >= worldGameplayState.originShiftThreshold) {
     worldGameplayState.originOffset.x += focus.x; worldGameplayState.originOffset.y += focus.y
+    worldGameplayState.originShiftCount++; worldGameplayState.lastOriginShift = { ...focus }
     for (const entity of physicsState.world.entities.filter(candidate => !candidate.parentUuid)) { entity.transform.position.x -= focus.x; entity.transform.position.y -= focus.y }
     physicsState.world.invalidateRuntime()
   }
@@ -198,12 +202,14 @@ export function beforeWorldPhysicsStep(fixedDelta: number, nowSeconds: number, f
   if (aiModule) aiModule.updateAi(physicsState.world.entities, fixedDelta, frame)
   if (packageEnabled(OFFICIAL_OBJECT_POOL_PACKAGE_ID)) updateObjectPools(nowSeconds)
   updateWorldStreaming()
+  updateTileSceneRuntime(physicsState.world.entities, focusPosition())
   updatePortals(requestSceneLoad, emitSignal)
 }
 
 export function resetWorldGameplay(): void {
-  areaOccupants.clear(); sceneStreamQueue.clear(); activePortals.clear(); navigationRuntime.resetNavigation(); aiModule?.resetAi(); resetObjectPools(); resetWorldStreaming()
-  worldGameplayState.loadedChunks = 0; worldGameplayState.usedMemoryMb = 0; worldGameplayState.pendingStreams = 0; worldGameplayState.originOffset = { x: 0, y: 0 }
+  areaOccupants.clear(); sceneStreamQueue.clear(); activePortals.clear(); navigationRuntime.resetNavigation(); aiModule?.resetAi(); resetObjectPools(); resetWorldStreaming(); resetTileSceneRuntime()
+  worldGameplayState.loadedChunks = 0; worldGameplayState.usedMemoryMb = 0; worldGameplayState.pendingStreams = 0; worldGameplayState.originOffset = { x: 0, y: 0 }; worldGameplayState.originShiftCount = 0; worldGameplayState.lastOriginShift = { x: 0, y: 0 }
 }
 
 export function navigationPaths(): readonly import('./navigation2d').NavigationDebugPath[] { return [...navigationRuntime.navigationDebugPaths.values()] }
+export function tileSceneRuntimeSnapshot(): typeof tileSceneRuntimeState { return tileSceneRuntimeState }

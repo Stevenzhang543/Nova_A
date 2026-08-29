@@ -7,6 +7,23 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
+function Get-Sha256Lower {
+  param(
+    [Parameter(Mandatory = $true)]
+    [string]$LiteralPath
+  )
+
+  $stream = [IO.File]::OpenRead($LiteralPath)
+  $algorithm = [Security.Cryptography.SHA256]::Create()
+  try {
+    return ([BitConverter]::ToString($algorithm.ComputeHash($stream))).Replace('-', '').ToLowerInvariant()
+  }
+  finally {
+    $algorithm.Dispose()
+    $stream.Dispose()
+  }
+}
+
 function Invoke-WithTransientFileRetry {
   param(
     [Parameter(Mandatory = $true)]
@@ -85,7 +102,7 @@ Verify every packaged file against `SHA256SUMS.txt`. Release metadata is in `rel
   if ($LASTEXITCODE -ne 0) { throw 'Unable to record the source commit for web metadata.' }
   $webMetadata = [ordered]@{ product = 'Nova_A'; version = $Version; format = 'nova-web-release'; projectFormat = 2; schema = 29; sourceCommit = $sourceCommit; generatedAt = [DateTime]::UtcNow.ToString('o'); entrypoints = @('index.html','player.html'); contentManifest = 'SHA256SUMS.txt'; runtimeCapabilities = @('2D editor','standalone player','WebAssembly physics','workers','bundled manual','local variable fonts'); hosting = [ordered]@{ protocol = 'http-or-https'; wasmMime = 'application/wasm'; hashedAssetCaching = 'immutable'; htmlCaching = 'revalidate'; crossOriginIsolationRequired = $false; spaFallbackRequired = $false } } | ConvertTo-Json -Depth 6
   [IO.File]::WriteAllText((Join-Path $webStage 'release-metadata.json'), "$webMetadata`n", [Text.UTF8Encoding]::new($false))
-  $webChecksums = Get-ChildItem -LiteralPath $webStage -File -Recurse | Where-Object Name -ne 'SHA256SUMS.txt' | Sort-Object FullName | ForEach-Object { $relative = $_.FullName.Substring($webStage.Length).TrimStart('\').Replace('\','/'); "{0}  {1}" -f (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant(), $relative }
+  $webChecksums = Get-ChildItem -LiteralPath $webStage -File -Recurse | Where-Object Name -ne 'SHA256SUMS.txt' | Sort-Object FullName | ForEach-Object { $relative = $_.FullName.Substring($webStage.Length).TrimStart('\').Replace('\','/'); "{0}  {1}" -f (Get-Sha256Lower -LiteralPath $_.FullName), $relative }
   [IO.File]::WriteAllLines((Join-Path $webStage 'SHA256SUMS.txt'), $webChecksums, [Text.UTF8Encoding]::new($false))
   Compress-Archive -Path (Join-Path $webStage '*') -DestinationPath $webArchive -CompressionLevel Optimal -Force
 }
@@ -157,7 +174,7 @@ try {
   $packagedArtifacts = Get-ChildItem -LiteralPath $releaseDirectory -File |
     Where-Object Name -NotIn @((Split-Path -Leaf $evidenceArchive), 'SHA256SUMS.txt') |
     Sort-Object Name |
-    ForEach-Object { [ordered]@{ name = $_.Name; bytes = $_.Length; sha256 = (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant() } }
+    ForEach-Object { [ordered]@{ name = $_.Name; bytes = $_.Length; sha256 = (Get-Sha256Lower -LiteralPath $_.FullName) } }
   $artifactHashReport = [ordered]@{ format = 'nova-root-artifact-hashes'; version = 1; release = $Version; generatedAt = [DateTime]::UtcNow.ToString('o'); note = 'The evidence archive and checksum manifest are excluded to avoid circular hashes.'; artifacts = @($packagedArtifacts) } | ConvertTo-Json -Depth 6
   $artifactHashPath = Join-Path $evidenceRefresh 'build\root-artifact-hashes.json'
   New-Item -ItemType Directory -Path (Split-Path -Parent $artifactHashPath) -Force | Out-Null
@@ -170,7 +187,7 @@ try {
     ForEach-Object {
       [pscustomobject]@{
         path = $_.FullName.Substring($evidenceRefresh.Length).TrimStart('\').Replace('\','/')
-        sha256 = (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+        sha256 = (Get-Sha256Lower -LiteralPath $_.FullName)
         bytes = $_.Length
         source = $manifest.source.commit
         tool = 'Nova_A package-release.ps1'
@@ -189,7 +206,7 @@ $checksumPath = Join-Path $releaseDirectory 'SHA256SUMS.txt'
 $checksumLines = Get-ChildItem -LiteralPath $releaseDirectory -File |
   Where-Object Name -ne 'SHA256SUMS.txt' |
   Sort-Object Name |
-  ForEach-Object { "{0}  {1}" -f (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant(), $_.Name }
+  ForEach-Object { "{0}  {1}" -f (Get-Sha256Lower -LiteralPath $_.FullName), $_.Name }
 [System.IO.File]::WriteAllLines($checksumPath, $checksumLines, [System.Text.UTF8Encoding]::new($false))
 
 $expectedNames = @(
@@ -202,7 +219,7 @@ $nameDifference = @(Compare-Object ($expectedNames | Sort-Object) $actualNames)
 if ($nameDifference.Count -gt 0) { throw "Release root does not contain the exact mandatory artifact set: $($nameDifference | Out-String)" }
 foreach ($line in Get-Content -LiteralPath $checksumPath) {
   if ($line -notmatch '^([a-f0-9]{64})  (.+)$') { throw "Invalid checksum line: $line" }
-  $actualHash = (Get-FileHash -LiteralPath (Join-Path $releaseDirectory $Matches[2]) -Algorithm SHA256).Hash.ToLowerInvariant()
+  $actualHash = Get-Sha256Lower -LiteralPath (Join-Path $releaseDirectory $Matches[2])
   if ($actualHash -ne $Matches[1]) { throw "Checksum verification failed for $($Matches[2])" }
 }
 

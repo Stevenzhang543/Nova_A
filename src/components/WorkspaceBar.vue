@@ -3,9 +3,10 @@
     <div class="workspace-list">
       <button
         v-for="preset in visiblePresets"
-        :key="preset.id"
-        :class="{ active: state.activeWorkspace === preset.id }"
-        :aria-pressed="state.activeWorkspace === preset.id"
+      :key="preset.id"
+      :class="{ active: state.activeWorkspace === preset.id }"
+      :aria-pressed="state.activeWorkspace === preset.id"
+      :aria-label="`${t(preset.label)} · ${t('workspacePreset')}`"
         @click="selectWorkspace(preset.id)"
       :title="`${t(preset.label)} · ${t('workspacePreset')}`"
       ><span aria-hidden="true">{{ workspaceIcon(preset.id) }}</span><span class="label">{{ t(preset.label) }}</span><i v-if="workspaceDirty(preset.id)" class="dirty" :title="t('unsavedChanges')">●</i></button>
@@ -79,6 +80,7 @@ button.active { color: var(--accent); border-color: color-mix(in srgb, var(--acc
 .workspace-list button i.dirty{width:6px;height:6px;min-width:6px;border-radius:50%;background:var(--warning);font-size:0;font-style:normal;box-shadow:0 0 0 2px color-mix(in srgb,var(--warning) 18%,transparent)}
 .history-controls { flex:0 0 auto; padding-left:6px; border-left:1px solid var(--border-subtle) }.history-controls button{padding:0 8px}.workspace-menu{position:relative;flex:0 0 auto}.workspace-menu summary{min-width:82px;list-style:none;cursor:pointer;border-color:var(--border-subtle);background:var(--surface-2);font-weight:650}.workspace-menu summary::-webkit-details-marker{display:none}.workspace-menu[open] summary{color:var(--accent);border-color:color-mix(in srgb,var(--accent) 40%,var(--border-strong));background:var(--accent-soft)}.workspace-popover{position:absolute;top:calc(100% + 7px);right:0;width:260px;padding:8px;display:grid;gap:3px;border:1px solid var(--border-strong);border-radius:var(--radius-panel);background:var(--surface-1);box-shadow:var(--shadow-float)}.workspace-popover h3{margin:2px 7px 6px;color:var(--text-muted);font-size:var(--type-caption);font-weight:750;letter-spacing:.035em;text-transform:uppercase}.workspace-popover button{width:100%;justify-content:flex-start}.workspace-popover button span:nth-child(2){min-width:0;overflow:hidden;text-overflow:ellipsis}.workspace-popover button i{margin-left:auto;font-style:normal}.command-popover{width:300px}.command-popover kbd{margin-left:auto;padding:2px 6px;border:1px solid var(--border-subtle);border-radius:5px;color:var(--text-muted);background:var(--surface-2);font:500 11px/1.2 var(--font-mono)}
 @media (max-width: 1280px) { .control-label { position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%); }.history-controls button { width:34px;padding:0; }.context-title{max-width:180px}.workspace-menu summary{min-width:44px;padding:0 9px}.workspace-menu summary span:last-child{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)} }
-@media (max-width: 920px) { .workspace-list .label { position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%); }.workspace-list button{width:34px;padding:0}.context-title{display:none} }
+@media (max-width: 920px) { .workspace-list .label { display:none; }.workspace-list button{width:34px;padding:0}.context-title{display:none} }
+@media(max-width:1180px){.workspace-list .label{display:none}.workspace-list button{width:34px;padding:0}.context-title{display:none}}
 @media(max-width:680px){.workspace-list button{width:31px;min-height:31px}.workspace-bar{gap:4px;padding-inline:5px}.history-controls{display:none}}
 </style>

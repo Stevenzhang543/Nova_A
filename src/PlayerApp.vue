@@ -22,6 +22,13 @@ import { buildSettings } from './runtime/buildSettings'
 const ready = ref(false), headless = ref(false), errorMessage = ref('')
 let headlessTimer: number | null = null
 
+async function closePlayer(): Promise<void> {
+  if ('__TAURI_INTERNALS__' in window) {
+    const { getCurrentWindow } = await import('@tauri-apps/api/window')
+    await getCurrentWindow().close()
+  } else window.close()
+}
+
 function decodeBase64(value: string): Uint8Array {
   const binary = atob(value)
   return Uint8Array.from(binary, character => character.charCodeAt(0))
@@ -40,6 +47,7 @@ async function loadPackageBytes(): Promise<Uint8Array> {
 }
 
 onMounted(async () => {
+  window.addEventListener('nova-player-quit', closePlayer)
   try {
     const project = await projectJsonFromNovaPak(await loadPackageBytes())
     if (!loadProject(project)) throw new Error(editorState.statusText)
@@ -53,13 +61,13 @@ onMounted(async () => {
       const tickRate = Math.max(1, Math.min(1_000, physicsState.globalSettings.tickRate))
       headlessTimer = window.setInterval(() => gameplayRuntime.frame(1 / tickRate), 1_000 / tickRate)
     }
-    document.title = headless.value ? 'Nova Headless Server' : 'Nova Player'
+    document.title = headless.value ? `${buildSettings.gameName} · Server` : buildSettings.gameName
     ready.value = true
   } catch (error) {
     errorMessage.value = error instanceof Error ? error.message : String(error)
   }
 })
-onBeforeUnmount(() => { if (headlessTimer !== null) window.clearInterval(headlessTimer); gameplayRuntime.stopSession(false) })
+onBeforeUnmount(() => { window.removeEventListener('nova-player-quit', closePlayer); if (headlessTimer !== null) window.clearInterval(headlessTimer); gameplayRuntime.stopSession(false) })
 </script>
 
 <style scoped>

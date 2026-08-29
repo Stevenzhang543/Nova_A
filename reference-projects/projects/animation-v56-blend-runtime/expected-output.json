@@ -1,0 +1,10 @@
+{
+  "engineVersion": "5.6.0",
+  "status": "passed",
+  "projectFormat": 2,
+  "schema": 29,
+  "reference": "animation",
+  "deterministic": true,
+  "finite": true,
+  "externalCertification": "pending"
+}

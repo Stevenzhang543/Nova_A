@@ -6,6 +6,7 @@ import { profilerState, type FrameProfile, type ProfilerAnnotation, type Profile
 import { jobSchedulerState } from './jobScheduler'
 import { audioRuntime } from './audio'
 import { particleDiagnostics } from './particles'
+import { NOVA_ENGINE_VERSION } from '../projects/projectFormat'
 
 export interface LifetimeEvent {
   frame: number
@@ -17,7 +18,7 @@ export interface LifetimeEvent {
 export interface PerformanceCapture {
   format: 'nova-performance-capture'
   version: 2
-  engineVersion: '5.0.1'
+  engineVersion: string
   id: string
   name: string
   createdAt: string
@@ -126,7 +127,7 @@ export function samplePerformanceTools(frame: number, entityUuids: string[], ren
 
 export function capturePerformance(name = `Capture ${performanceToolsState.captures.length + 1}`, renderer: RendererStats): PerformanceCapture {
   const capture: PerformanceCapture = {
-    format: 'nova-performance-capture', version: 2, engineVersion: '5.0.1',
+    format: 'nova-performance-capture', version: 2, engineVersion: NOVA_ENGINE_VERSION,
     id: `capture-${Date.now().toString(36)}-${performanceToolsState.captures.length}`,
     name: name.trim().slice(0, 120) || 'Capture', createdAt: new Date().toISOString(),
     frames: profilerState.samples.slice(-productionSettings.performance.traceCapacity).map(frame => ({ ...frame })),

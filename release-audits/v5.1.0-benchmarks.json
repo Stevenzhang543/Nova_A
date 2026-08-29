@@ -1,0 +1,11 @@
+{
+  "format": "nova-v5.1-benchmark-summary",
+  "version": 1,
+  "engineVersion": "5.1.0",
+  "generatedAt": "2026-08-26T07:31:19.520Z",
+  "scope": "Functional release smoke; long-duration and independent-host performance certification remain external.",
+  "productAudit": "passed",
+  "browserUserAudit": "passed",
+  "productionBuild": "passed-local",
+  "status": "passed"
+}

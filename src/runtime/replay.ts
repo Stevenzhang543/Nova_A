@@ -10,7 +10,7 @@ export interface ReplayFrame {
 export interface ReplayDocument {
   format: 'nova-replay'
   version: 1
-  engineVersion: '5.0.1'
+  engineVersion: '6.1.0'
   seed: number
   tickRate: number
   initialProject: string
@@ -32,10 +32,14 @@ let pendingInput: InputSnapshot | null = null
 let randomState = productionSettings.replay.seed >>> 0
 
 function cloneInput(input: InputSnapshot): InputSnapshot {
+  const mousePosition = Array.isArray(input.mousePosition) ? input.mousePosition : [0, 0]
+  const mouseWorldPosition = Array.isArray(input.mouseWorldPosition) ? input.mouseWorldPosition : mousePosition
+  const viewBounds = Array.isArray(input.viewBounds) && input.viewBounds.length >= 4 ? input.viewBounds : [0, 0, 0, 0]
+  const viewportSize = Array.isArray(input.viewportSize) ? input.viewportSize : [0, 0]
   return {
-    down: { ...input.down }, pressed: { ...input.pressed }, released: { ...input.released }, axes: { ...input.axes },
-    vectors: Object.fromEntries(Object.entries(input.vectors).map(([key, value]) => [key, [value[0], value[1]] as [number, number]])),
-    mousePosition: [input.mousePosition[0], input.mousePosition[1]], wheel: [input.wheel[0], input.wheel[1]], pointerDelta: [input.pointerDelta[0], input.pointerDelta[1]], touches: input.touches, devices: input.devices.map(device => ({ ...device }))
+    down: { ...input.down }, pressed: { ...input.pressed }, released: { ...input.released }, performed: { ...input.performed }, cancelled: { ...input.cancelled }, phases: { ...input.phases }, durations: { ...input.durations }, tapCounts: { ...input.tapCounts }, consumed: { ...input.consumed }, axes: { ...input.axes },
+    vectors: Object.fromEntries(Object.entries(input.vectors ?? {}).map(([key, value]) => [key, [value[0], value[1]] as [number, number]])),
+    mousePosition: [mousePosition[0] ?? 0, mousePosition[1] ?? 0], mouseWorldPosition: [mouseWorldPosition[0] ?? 0, mouseWorldPosition[1] ?? 0], viewBounds: [viewBounds[0] ?? 0, viewBounds[1] ?? 0, viewBounds[2] ?? 0, viewBounds[3] ?? 0], viewportSize: [viewportSize[0] ?? 0, viewportSize[1] ?? 0], wheel: [input.wheel?.[0] ?? 0, input.wheel?.[1] ?? 0], pointerDelta: [input.pointerDelta?.[0] ?? 0, input.pointerDelta?.[1] ?? 0], touches: input.touches ?? 0, devices: (input.devices ?? []).map(device => ({ ...device })), contexts: [...(input.contexts ?? [])], maps: [...(input.maps ?? [])], scheme: input.scheme ?? 'Any'
   }
 }
 
@@ -99,7 +103,7 @@ export function completeReplayFixedStep(physicsChecksum: string): void {
 
 export function exportReplay(tickRate: number): ReplayDocument {
   return {
-    format: 'nova-replay', version: 1, engineVersion: '5.0.1', seed: replayState.seed,
+    format: 'nova-replay', version: 1, engineVersion: '6.1.0', seed: replayState.seed,
     tickRate: Math.min(1_000, Math.max(1, Number.isFinite(tickRate) ? tickRate : 60)), initialProject: replayState.initialProject,
     frames: replayState.frames.slice(0, productionSettings.replay.capacity).map(frame => ({ ...frame, input: cloneInput(frame.input) }))
   }
@@ -114,7 +118,7 @@ export function normalizeReplayDocument(value: unknown): ReplayDocument {
     return { tick: index, input: cloneInput(input as InputSnapshot), physicsChecksum: typeof item.physicsChecksum === 'string' ? item.physicsChecksum.slice(0, 32) : '' }
   })
   return {
-    format: 'nova-replay', version: 1, engineVersion: '5.0.1', seed: Number.isFinite(source.seed) ? Number(source.seed) >>> 0 : productionSettings.replay.seed,
+    format: 'nova-replay', version: 1, engineVersion: '6.1.0', seed: Number.isFinite(source.seed) ? Number(source.seed) >>> 0 : productionSettings.replay.seed,
     tickRate: Math.min(1_000, Math.max(1, Number(source.tickRate) || 60)), initialProject: source.initialProject.slice(0, 50_000_000), frames
   }
 }

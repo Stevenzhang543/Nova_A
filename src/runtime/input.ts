@@ -2,6 +2,8 @@ export type InputActionKind = 'button' | 'axis' | 'vector2'
 export type InputDevice = 'keyboard' | 'physical-key' | 'mouse-button' | 'mouse-wheel' | 'mouse-motion' | 'gamepad-button' | 'gamepad-axis' | 'touch' | 'gesture'
 export type InputModifier = 'Control' | 'Shift' | 'Alt' | 'Meta'
 export type InputResponseCurve = 'linear' | 'square' | 'cubic' | 'exponential'
+export type InputInteraction = 'press' | 'hold' | 'tap' | 'multiTap'
+export type InputPhase = 'idle' | 'started' | 'performed' | 'cancelled'
 
 export interface InputBinding {
   device: InputDevice
@@ -23,19 +25,42 @@ export interface InputAction {
   name: string
   kind: InputActionKind
   bindings: InputBinding[]
+  enabled: boolean
+  context: string
+  map: string
+  schemes: string[]
+  interaction: InputInteraction
+  holdSeconds: number
+  tapSeconds: number
+  multiTapCount: number
+  consume: boolean
+  priority: number
+  callback: string
 }
 
 export interface InputSnapshot {
   down: Record<string, boolean>
   pressed: Record<string, boolean>
   released: Record<string, boolean>
+  performed: Record<string, boolean>
+  cancelled: Record<string, boolean>
+  phases: Record<string, InputPhase>
+  durations: Record<string, number>
+  tapCounts: Record<string, number>
+  consumed: Record<string, boolean>
   axes: Record<string, number>
   vectors: Record<string, [number, number]>
   mousePosition: [number, number]
+  mouseWorldPosition: [number, number]
+  viewBounds: [number, number, number, number]
+  viewportSize: [number, number]
   wheel: [number, number]
   pointerDelta: [number, number]
   touches: number
   devices: InputDeviceIdentity[]
+  contexts: string[]
+  maps: string[]
+  scheme: string
 }
 
 export interface InputDeviceIdentity { id: string; kind: 'keyboard' | 'mouse' | 'gamepad' | 'touch'; index: number; connected: boolean; mapping: string }
@@ -49,29 +74,33 @@ export function createInputBinding(device: InputDevice = 'keyboard', code = 'Spa
 
 export function defaultInputMap(): InputAction[] {
   return [
-    { name: 'MoveLeft', kind: 'button', bindings: [createInputBinding('keyboard', 'KeyA'), createInputBinding('keyboard', 'ArrowLeft')] },
-    { name: 'MoveRight', kind: 'button', bindings: [createInputBinding('keyboard', 'KeyD'), createInputBinding('keyboard', 'ArrowRight')] },
-    { name: 'Jump', kind: 'button', bindings: [createInputBinding('keyboard', 'Space'), createInputBinding('gamepad-button', '0')] },
+    createInputAction('MoveLeft', 'button', [createInputBinding('keyboard', 'KeyA'), createInputBinding('keyboard', 'ArrowLeft')]),
+    createInputAction('MoveRight', 'button', [createInputBinding('keyboard', 'KeyD'), createInputBinding('keyboard', 'ArrowRight')]),
+    createInputAction('Jump', 'button', [createInputBinding('keyboard', 'Space'), createInputBinding('gamepad-button', '0')]),
     {
-      name: 'Horizontal', kind: 'axis', bindings: [
+      ...createInputAction('Horizontal', 'axis', [
         { ...createInputBinding('keyboard', 'KeyA'), scale: -1 },
         { ...createInputBinding('keyboard', 'ArrowLeft'), scale: -1 },
         createInputBinding('keyboard', 'KeyD'),
         createInputBinding('keyboard', 'ArrowRight'),
         createInputBinding('gamepad-axis', '0')
-      ]
+      ])
     },
     {
-      name: 'Move', kind: 'vector2', bindings: [
+      ...createInputAction('Move', 'vector2', [
         { ...createInputBinding('keyboard', 'KeyA'), x: -1 },
         { ...createInputBinding('keyboard', 'KeyD'), x: 1 },
         { ...createInputBinding('keyboard', 'KeyW'), x: 0, y: 1 },
         { ...createInputBinding('keyboard', 'KeyS'), x: 0, y: -1 },
         { ...createInputBinding('gamepad-axis', '0'), x: 1, y: 0 },
         { ...createInputBinding('gamepad-axis', '1'), x: 0, y: -1 }
-      ]
+      ])
     }
   ]
+}
+
+export function createInputAction(name: string, kind: InputActionKind = 'button', bindings: InputBinding[] = [createInputBinding()]): InputAction {
+  return { name, kind, bindings, enabled: true, context: 'Gameplay', map: 'Default', schemes: [], interaction: 'press', holdSeconds: .35, tapSeconds: .25, multiTapCount: 2, consume: false, priority: 0, callback: '' }
 }
 
 function finite(value: unknown, fallback: number): number {
@@ -112,7 +141,20 @@ export function normalizeInputMap(source: unknown): InputAction[] {
         chord: Array.isArray(binding.chord) ? [...new Set(binding.chord.filter(value => typeof value === 'string').map(value => value.slice(0, 80)).filter(Boolean))].slice(0, 8) : []
       }]
     }) : []
-    actions.push({ name, kind, bindings: bindings.slice(0, 32) })
+    const interactions: InputInteraction[] = ['press', 'hold', 'tap', 'multiTap']
+    actions.push({
+      name, kind, bindings: bindings.slice(0, 32), enabled: item.enabled !== false,
+      context: typeof item.context === 'string' ? item.context.trim().slice(0, 80) || 'Gameplay' : 'Gameplay',
+      map: typeof item.map === 'string' ? item.map.trim().slice(0, 80) || 'Default' : 'Default',
+      schemes: Array.isArray(item.schemes) ? [...new Set(item.schemes.filter(value => typeof value === 'string').map(value => value.trim().slice(0, 80)).filter(Boolean))].slice(0, 16) : [],
+      interaction: interactions.includes(item.interaction as InputInteraction) ? item.interaction as InputInteraction : 'press',
+      holdSeconds: Math.min(60, Math.max(.001, finite(item.holdSeconds, .35))),
+      tapSeconds: Math.min(10, Math.max(.001, finite(item.tapSeconds, .25))),
+      multiTapCount: Math.min(16, Math.max(2, Math.round(finite(item.multiTapCount, 2)))),
+      consume: item.consume === true,
+      priority: Math.min(10_000, Math.max(-10_000, Math.round(finite(item.priority, 0)))),
+      callback: typeof item.callback === 'string' ? item.callback.trim().slice(0, 80) : ''
+    })
   }
   return actions.length ? actions.slice(0, 128) : defaultInputMap()
 }
@@ -145,15 +187,15 @@ export function detectInputConflicts(actions: InputAction[]): InputConflict[] {
 
 function cloneSnapshot(snapshot: InputSnapshot): InputSnapshot {
   return {
-    down: { ...snapshot.down }, pressed: { ...snapshot.pressed }, released: { ...snapshot.released }, axes: { ...snapshot.axes },
+    down: { ...snapshot.down }, pressed: { ...snapshot.pressed }, released: { ...snapshot.released }, performed: { ...snapshot.performed }, cancelled: { ...snapshot.cancelled }, phases: { ...snapshot.phases }, durations: { ...snapshot.durations }, tapCounts: { ...snapshot.tapCounts }, consumed: { ...snapshot.consumed }, axes: { ...snapshot.axes },
     vectors: Object.fromEntries(Object.entries(snapshot.vectors).map(([key, value]) => [key, [...value] as [number, number]])),
-    mousePosition: [...snapshot.mousePosition], wheel: [...snapshot.wheel], pointerDelta: [...snapshot.pointerDelta], touches: snapshot.touches,
-    devices: snapshot.devices.map(device => ({ ...device }))
+    mousePosition: [...snapshot.mousePosition], mouseWorldPosition: [...snapshot.mouseWorldPosition], viewBounds: [...snapshot.viewBounds], viewportSize: [...snapshot.viewportSize], wheel: [...snapshot.wheel], pointerDelta: [...snapshot.pointerDelta], touches: snapshot.touches,
+    devices: snapshot.devices.map(device => ({ ...device })), contexts: [...snapshot.contexts], maps: [...snapshot.maps], scheme: snapshot.scheme
   }
 }
 
 function emptySnapshot(): InputSnapshot {
-  return { down: {}, pressed: {}, released: {}, axes: {}, vectors: {}, mousePosition: [0, 0], wheel: [0, 0], pointerDelta: [0, 0], touches: 0, devices: [] }
+  return { down: {}, pressed: {}, released: {}, performed: {}, cancelled: {}, phases: {}, durations: {}, tapCounts: {}, consumed: {}, axes: {}, vectors: {}, mousePosition: [0, 0], mouseWorldPosition: [0, 0], viewBounds: [0, 0, 0, 0], viewportSize: [0, 0], wheel: [0, 0], pointerDelta: [0, 0], touches: 0, devices: [], contexts: ['Gameplay'], maps: ['Default'], scheme: 'Any' }
 }
 
 export class InputManager {
@@ -164,6 +206,10 @@ export class InputManager {
   private touches = new Map<number, { x: number; y: number; startX: number; startY: number; startedAt: number }>()
   private gestures = new Map<string, number>()
   private previousDown = new Map<string, boolean>()
+  private interactionState = new Map<string, { startedAt: number; lastTapAt: number; taps: number; performed: boolean }>()
+  private contexts: Array<{ name: string; priority: number; consume: boolean }> = [{ name: 'Gameplay', priority: 0, consume: false }]
+  private maps = new Set(['Default'])
+  private scheme = 'Any'
   private wheelX = 0
   private wheelY = 0
   private clientX = 0
@@ -241,6 +287,10 @@ export class InputManager {
     this.gestures.clear()
     this.devices.clear()
     this.previousDown.clear()
+    this.interactionState.clear()
+    this.contexts = [{ name: 'Gameplay', priority: 0, consume: false }]
+    this.maps = new Set(['Default'])
+    this.scheme = 'Any'
     this.current = emptySnapshot()
     this.recording = null
     this.replay = null
@@ -257,11 +307,22 @@ export class InputManager {
     snapshot.pointerDelta = [this.movementX, this.movementY]
     snapshot.touches = this.touches.size
     snapshot.devices = this.connectedDevices()
-    for (const action of normalizeInputMap(actions)) {
+    snapshot.contexts = this.contexts.map(context => context.name)
+    snapshot.maps = [...this.maps].sort()
+    snapshot.scheme = this.scheme
+    const activeContexts = new Map(this.contexts.map(context => [context.name, context]))
+    const consumedBindings = new Set<string>()
+    const ordered = normalizeInputMap(actions).filter(action => action.enabled && this.maps.has(action.map) && activeContexts.has(action.context) && (!action.schemes.length || this.scheme === 'Any' || action.schemes.includes(this.scheme))).sort((first, second) => {
+      const contextDelta = (activeContexts.get(second.context)?.priority ?? 0) - (activeContexts.get(first.context)?.priority ?? 0)
+      return contextDelta || second.priority - first.priority || first.name.localeCompare(second.name)
+    })
+    const now = performance.now() / 1_000
+    for (const action of ordered) {
+      const values = action.bindings.map(binding => consumedBindings.has(bindingSignature(binding)) ? 0 : this.bindingValue(binding))
       if (action.kind === 'vector2') {
         let x = 0, y = 0
-        for (const binding of action.bindings) {
-          const value = this.bindingValue(binding)
+        for (const [index, binding] of action.bindings.entries()) {
+          const value = values[index]
           x += value * binding.x
           y += value * binding.y
         }
@@ -270,16 +331,46 @@ export class InputManager {
         snapshot.vectors[action.name] = [x, y]
         snapshot.axes[action.name] = Math.hypot(x, y)
       } else {
-        const value = Math.min(1, Math.max(-1, action.bindings.reduce((total, binding) => total + this.bindingValue(binding) * binding.scale, 0)))
+        const value = Math.min(1, Math.max(-1, action.bindings.reduce((total, binding, index) => total + values[index] * binding.scale, 0)))
         snapshot.axes[action.name] = value
       }
       const threshold = Math.min(...action.bindings.map(binding => binding.threshold), .0001)
       const down = Math.abs(snapshot.axes[action.name] ?? 0) > threshold
       const previous = this.previousDown.get(action.name) ?? false
+      const state = this.interactionState.get(action.name) ?? { startedAt: now, lastTapAt: -Infinity, taps: 0, performed: false }
+      let phase: InputPhase = down ? 'started' : 'idle', performed = false, cancelled = false
+      if (down && !previous) { state.startedAt = now; state.performed = false; phase = 'started' }
+      const duration = down ? Math.max(0, now - state.startedAt) : 0
+      if (action.interaction === 'press') performed = down && !previous
+      else if (action.interaction === 'hold') {
+        performed = down && !state.performed && duration >= action.holdSeconds
+        cancelled = !down && previous && !state.performed
+      } else if (!down && previous) {
+        const validTap = now - state.startedAt <= action.tapSeconds
+        if (action.interaction === 'tap') { performed = validTap; cancelled = !validTap }
+        else if (validTap) {
+          state.taps = now - state.lastTapAt <= action.tapSeconds * 2 ? state.taps + 1 : 1
+          state.lastTapAt = now
+          performed = state.taps >= action.multiTapCount
+          if (performed) state.taps = 0
+        } else { state.taps = 0; cancelled = true }
+      }
+      if (performed) { state.performed = true; phase = 'performed' }
+      else if (cancelled) phase = 'cancelled'
       snapshot.down[action.name] = down
-      snapshot.pressed[action.name] = down && !previous
+      snapshot.pressed[action.name] = action.interaction === 'press' ? down && !previous : performed
       snapshot.released[action.name] = !down && previous
+      snapshot.performed[action.name] = performed
+      snapshot.cancelled[action.name] = cancelled
+      snapshot.phases[action.name] = phase
+      snapshot.durations[action.name] = duration
+      snapshot.tapCounts[action.name] = state.taps
+      const contextConsumes = activeContexts.get(action.context)?.consume === true
+      const consumed = (action.consume || contextConsumes) && (down || performed)
+      snapshot.consumed[action.name] = consumed
+      if (consumed) action.bindings.forEach((binding, index) => { if (values[index] !== 0) consumedBindings.add(bindingSignature(binding)) })
       this.previousDown.set(action.name, down)
+      this.interactionState.set(action.name, state)
     }
     this.wheelX = 0
     this.wheelY = 0
@@ -292,6 +383,12 @@ export class InputManager {
   }
 
   snapshot(): InputSnapshot { return this.current }
+
+  pushContext(name: string, priority = 0, consume = false): boolean { const clean = name.trim().slice(0, 80); if (!clean) return false; const existing = this.contexts.find(context => context.name === clean); if (existing) { existing.priority = Math.min(10_000, Math.max(-10_000, Math.round(finite(priority, 0)))); existing.consume = consume; return true }; if (this.contexts.length >= 32) return false; this.contexts.push({ name: clean, priority: Math.min(10_000, Math.max(-10_000, Math.round(finite(priority, 0)))), consume }); return true }
+  popContext(name: string): boolean { const index = this.contexts.findIndex(context => context.name === name.trim()); if (index < 0 || (this.contexts.length === 1 && this.contexts[index].name === 'Gameplay')) return false; this.contexts.splice(index, 1); return true }
+  enableMap(name: string): boolean { const clean = name.trim().slice(0, 80); if (!clean || this.maps.size >= 32 && !this.maps.has(clean)) return false; this.maps.add(clean); return true }
+  disableMap(name: string): boolean { const clean = name.trim(); if (!clean || clean === 'Default') return false; return this.maps.delete(clean) }
+  setScheme(name: string): boolean { const clean = name.trim().slice(0, 80); if (!clean) return false; this.scheme = clean; return true }
 
   connectedDevices(): InputDeviceIdentity[] {
     if (typeof navigator !== 'undefined') for (const gamepad of Array.from(navigator.getGamepads?.() ?? [])) if (gamepad) this.devices.set(`gamepad:${gamepad.index}`, { id: gamepad.id || `gamepad:${gamepad.index}`, kind: 'gamepad', index: gamepad.index, connected: gamepad.connected, mapping: gamepad.mapping || 'unknown' })
@@ -353,7 +450,7 @@ export function normalizeInputRecording(source: unknown): InputRecording {
   const frames = (Array.isArray(item.frames) ? item.frames : []).slice(0, 100_000).flatMap(frame => {
     if (!frame || typeof frame !== 'object' || !frame.snapshot || typeof frame.snapshot !== 'object') return []
     const empty = emptySnapshot(), snapshot = frame.snapshot as Partial<InputSnapshot>
-    return [{ time: Math.max(0, finite(frame.time, 0)), snapshot: cloneSnapshot({ ...empty, ...snapshot, mousePosition: Array.isArray(snapshot.mousePosition) ? [finite(snapshot.mousePosition[0], 0), finite(snapshot.mousePosition[1], 0)] : empty.mousePosition, wheel: Array.isArray(snapshot.wheel) ? [finite(snapshot.wheel[0], 0), finite(snapshot.wheel[1], 0)] : empty.wheel, pointerDelta: Array.isArray(snapshot.pointerDelta) ? [finite(snapshot.pointerDelta[0], 0), finite(snapshot.pointerDelta[1], 0)] : empty.pointerDelta, touches: Math.max(0, Math.round(finite(snapshot.touches, 0))), devices: Array.isArray(snapshot.devices) ? snapshot.devices : [] }) }]
+    return [{ time: Math.max(0, finite(frame.time, 0)), snapshot: cloneSnapshot({ ...empty, ...snapshot, mousePosition: Array.isArray(snapshot.mousePosition) ? [finite(snapshot.mousePosition[0], 0), finite(snapshot.mousePosition[1], 0)] : empty.mousePosition, mouseWorldPosition: Array.isArray(snapshot.mouseWorldPosition) ? [finite(snapshot.mouseWorldPosition[0], 0), finite(snapshot.mouseWorldPosition[1], 0)] : empty.mouseWorldPosition, viewBounds: Array.isArray(snapshot.viewBounds) && snapshot.viewBounds.length >= 4 ? [finite(snapshot.viewBounds[0], 0), finite(snapshot.viewBounds[1], 0), finite(snapshot.viewBounds[2], 0), finite(snapshot.viewBounds[3], 0)] : empty.viewBounds, viewportSize: Array.isArray(snapshot.viewportSize) ? [Math.max(0, finite(snapshot.viewportSize[0], 0)), Math.max(0, finite(snapshot.viewportSize[1], 0))] : empty.viewportSize, wheel: Array.isArray(snapshot.wheel) ? [finite(snapshot.wheel[0], 0), finite(snapshot.wheel[1], 0)] : empty.wheel, pointerDelta: Array.isArray(snapshot.pointerDelta) ? [finite(snapshot.pointerDelta[0], 0), finite(snapshot.pointerDelta[1], 0)] : empty.pointerDelta, touches: Math.max(0, Math.round(finite(snapshot.touches, 0))), devices: Array.isArray(snapshot.devices) ? snapshot.devices : [] }) }]
   }).sort((a, b) => a.time - b.time)
   const last = frames[frames.length - 1]
   return { version: 1, duration: Math.max(finite(item.duration, last?.time ?? 0), last?.time ?? 0), frames }

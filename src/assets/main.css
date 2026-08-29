@@ -2,9 +2,10 @@
 :root[data-theme='dark'] {
   color-scheme: dark;
   --ui-scale: 1;
-  --font-ui: "Nunito Sans Variable", "Noto Sans SC Variable", system-ui, sans-serif;
-  --font-cjk: "Noto Sans SC Variable", "Microsoft YaHei UI", sans-serif;
-  --font-mono: "JetBrains Mono Variable", "Noto Sans Mono CJK SC", ui-monospace, SFMono-Regular, Consolas, monospace;
+  --font-ui: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI Variable Text", "Segoe UI", "Nunito Sans Variable", "Noto Sans SC Variable", system-ui, sans-serif;
+  --font-display: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI Variable Display", "Segoe UI", "Nunito Sans Variable", "Noto Sans SC Variable", system-ui, sans-serif;
+  --font-cjk: "PingFang SC", "Noto Sans SC Variable", "Microsoft YaHei UI", sans-serif;
+  --font-mono: "SFMono-Regular", "JetBrains Mono Variable", "Noto Sans Mono CJK SC", ui-monospace, Consolas, monospace;
   --type-caption: calc(12px * var(--ui-scale));
   --type-dense: calc(13px * var(--ui-scale));
   --type-body: calc(14px * var(--ui-scale));
@@ -31,27 +32,27 @@
   --control-height-compact: var(--control-compact);
   --control-height-default: var(--control-default);
   --control-height-large: var(--control-launcher);
-  --bg-base: #0b0f16;
-  --bg-canvas: #0d131c;
-  --surface-1: rgba(19, 25, 35, 0.94);
-  --surface-2: #19212e;
-  --surface-3: #222c3b;
-  --surface-hover: #2b3748;
-  --surface-raised: #303d50;
-  --surface-popover: rgba(24, 31, 43, 0.985);
-  --surface-inset: #090e15;
-  --surface-glass: rgba(20, 27, 38, 0.82);
-  --input-bg: #0d141e;
-  --field-bg: #0d141e;
-  --text-primary: #f5f8fc;
-  --text-secondary: #dce4ee;
-  --text-muted: #aeb9c8;
-  --border-subtle: rgba(190, 207, 229, 0.17);
-  --border-strong: rgba(198, 216, 240, 0.29);
-  --accent: #78a9ff;
-  --accent-strong: #5790f5;
-  --accent-secondary: #9a8cff;
-  --accent-soft: rgba(120, 169, 255, 0.16);
+  --bg-base: #101116;
+  --bg-canvas: #0c1118;
+  --surface-1: rgba(28, 29, 34, 0.97);
+  --surface-2: #24252b;
+  --surface-3: #2d2e35;
+  --surface-hover: #373840;
+  --surface-raised: #3d3e47;
+  --surface-popover: rgba(36, 37, 43, 0.985);
+  --surface-inset: #0d0e12;
+  --surface-glass: rgba(30, 31, 37, 0.86);
+  --input-bg: #18191f;
+  --field-bg: #18191f;
+  --text-primary: #f2f2f7;
+  --text-secondary: #d1d1d6;
+  --text-muted: #a1a1aa;
+  --border-subtle: rgba(235, 235, 245, 0.14);
+  --border-strong: rgba(235, 235, 245, 0.24);
+  --accent: #64a8ff;
+  --accent-strong: #3d8bf2;
+  --accent-secondary: #a18cff;
+  --accent-soft: rgba(100, 168, 255, 0.16);
   --creation: #58c8b1;
   --creation-soft: rgba(88, 200, 177, 0.15);
   --selection-bg: rgba(120, 169, 255, 0.18);
@@ -69,7 +70,7 @@
   --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.22), 0 5px 15px rgba(0, 0, 0, 0.12);
   --shadow-md: 0 16px 42px rgba(0, 0, 0, 0.32);
   --shadow-lg: 0 28px 74px rgba(0, 0, 0, 0.42);
-  --glass-blur: blur(18px) saturate(125%);
+  --glass-blur: blur(14px) saturate(118%);
   --icon-filter: none;
   --canvas-grid: #202630;
   --canvas-grid-label: #626c7c;
@@ -80,11 +81,11 @@
   --canvas-handle: #ff7a59;
   --connection: #63c6ff;
   --connection-broken: #ff6b6b;
-  --radius-control-small: 9px;
-  --radius-input: 11px;
+  --radius-control-small: 10px;
+  --radius-input: 10px;
   --radius-control: var(--radius-input);
-  --radius-panel: 16px;
-  --radius-dialog: 20px;
+  --radius-panel: 14px;
+  --radius-dialog: 18px;
   --radius-sm: var(--radius-input);
   --radius-md: var(--radius-panel);
   --radius-lg: var(--radius-dialog);
@@ -93,32 +94,32 @@
   --font-md: var(--type-section);
   --ease-spring: cubic-bezier(.22, 1, .36, 1);
   --ease-emphasized: cubic-bezier(.2, .8, .2, 1);
-  --motion-control: 150ms;
-  --motion-panel: 240ms;
-  --motion-dialog: 320ms;
+  --motion-control: 140ms;
+  --motion-panel: 220ms;
+  --motion-dialog: 280ms;
 }
 
 :root[data-theme='light'] {
   color-scheme: light;
-  --bg-base: #cbd4e1;
-  --bg-canvas: #d8e0ea;
-  --surface-1: rgba(242, 246, 250, 0.96);
-  --surface-2: #e9eef5;
-  --surface-3: #d6deea;
-  --surface-hover: #c7d2e0;
-  --surface-raised: #f8fafc;
-  --surface-popover: rgba(247, 250, 253, 0.99);
-  --surface-inset: #cfd8e4;
-  --surface-glass: rgba(238, 243, 248, 0.86);
-  --input-bg: #e2e8f0;
-  --field-bg: #e2e8f0;
-  --text-primary: #18202c;
-  --text-secondary: #2c394a;
-  --text-muted: #46566a;
-  --border-subtle: rgba(31, 48, 70, 0.2);
-  --border-strong: rgba(31, 48, 70, 0.32);
-  --accent: #2868df;
-  --accent-strong: #174fb8;
+  --bg-base: #e5e6eb;
+  --bg-canvas: #eceef2;
+  --surface-1: rgba(249, 249, 251, 0.975);
+  --surface-2: #f1f1f5;
+  --surface-3: #e3e3e8;
+  --surface-hover: #d6d6dc;
+  --surface-raised: #ffffff;
+  --surface-popover: rgba(252, 252, 254, 0.99);
+  --surface-inset: #dddfe5;
+  --surface-glass: rgba(246, 246, 249, 0.9);
+  --input-bg: #ffffff;
+  --field-bg: #ffffff;
+  --text-primary: #1c1c1e;
+  --text-secondary: #3a3a3c;
+  --text-muted: #636366;
+  --border-subtle: rgba(60, 60, 67, 0.2);
+  --border-strong: rgba(60, 60, 67, 0.32);
+  --accent: #176bd8;
+  --accent-strong: #0b55b7;
   --accent-secondary: #6554cf;
   --accent-soft: rgba(37, 99, 235, 0.11);
   --creation: #087d6b;
@@ -133,7 +134,7 @@
   --shadow-xs: 0 1px 2px rgba(43, 55, 74, 0.12), 0 4px 12px rgba(43, 55, 74, 0.08);
   --shadow-md: 0 14px 38px rgba(43, 55, 74, 0.16);
   --shadow-lg: 0 24px 64px rgba(43, 55, 74, 0.2);
-  --glass-blur: blur(18px) saturate(120%);
+  --glass-blur: blur(14px) saturate(115%);
   --icon-filter: invert(1) saturate(0) brightness(0.35);
   --canvas-grid: #c5ccd6;
   --canvas-grid-label: #4c5868;
@@ -352,11 +353,17 @@ button[aria-pressed='true'],
   outline-offset: -2px;
 }
 
-:root[data-ui-scale='large'] button,
-:root[data-ui-scale='large'] input,
-:root[data-ui-scale='large'] select,
-:root[data-ui-scale='large'] textarea {
+:root:is([data-ui-scale='large'], [data-ui-scale='xlarge']) button,
+:root:is([data-ui-scale='large'], [data-ui-scale='xlarge']) input,
+:root:is([data-ui-scale='large'], [data-ui-scale='xlarge']) select,
+:root:is([data-ui-scale='large'], [data-ui-scale='xlarge']) textarea {
   min-height: max(var(--control-default), 1.9em);
+}
+
+:root:is([data-ui-scale='large'], [data-ui-scale='xlarge']) body #app .learning-center button {
+  height: auto;
+  min-height: calc(38px * var(--ui-scale));
+  white-space: normal;
 }
 
 :root[data-reduce-motion='true'] *,
@@ -386,9 +393,9 @@ button[aria-pressed='true'],
 }
 
 :where(h1, h2, h3, h4, strong, b) {
-  font-family: var(--font-ui);
-  font-variation-settings: "wght" 650;
-  letter-spacing: -0.008em;
+  font-family: var(--font-display);
+  font-variation-settings: "wght" 620;
+  letter-spacing: -0.012em;
 }
 
 :where(small, figcaption, caption, .caption, .hint, .meta) {
@@ -403,7 +410,6 @@ button[aria-pressed='true'],
 }
 
 :where(button:hover:not(:disabled), [role='button']:hover) {
-  filter: brightness(1.04);
   transform: translateY(-1px);
 }
 
@@ -423,7 +429,25 @@ button[aria-pressed='true'],
 
 :where(.top-bar, .workspace-control-row, .panel-tabs, .bottom-panel, .side-bar, .scene-sidebar, .config-panel, .floating-dock) {
   background-image: linear-gradient(180deg, color-mix(in srgb, var(--text-primary) 2.2%, transparent), transparent 48%);
+}
+
+/* Live glass is reserved for navigation and floating material. Large docked
+   panes use an opaque semantic surface so canvas motion does not trigger an
+   expensive full-panel backdrop blur on every frame. */
+:where(.top-bar, .workspace-control-row, .panel-tabs, .floating-dock, .popover, .menu, [role='dialog']) {
   backdrop-filter: var(--glass-blur);
+}
+
+html body #app :where(input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='color']), select, textarea) {
+  border-radius: var(--radius-input) !important;
+}
+
+html body #app :where(button, summary, [role='button']) {
+  border-radius: var(--radius-control-small) !important;
+}
+
+html body #app :where(.theme-switch button, .toggle, [role='switch'], .pill, .chip) {
+  border-radius: 999px !important;
 }
 
 /* v5.0.1 readable type floor. Scoped legacy rules may define smaller values,
@@ -482,5 +506,179 @@ html body #app :where(p, li, td, th, .body-copy) {
       radial-gradient(900px 500px at 15% -10%, color-mix(in srgb, var(--accent) 7%, transparent), transparent 64%),
       radial-gradient(700px 440px at 95% 20%, color-mix(in srgb, var(--drag-target) 4%, transparent), transparent 70%),
       var(--bg-base);
+  }
+}
+
+/* v6.0.2 viewport containment. UI scale is a supported setting, so shell
+   chrome must grow with its text while narrow effective viewports switch to
+   the same icon-first navigation used by small windows. Content panes remain
+   independently scrollable; no control is allowed to expand the app root. */
+#app :where(.editor-root, .editor-main, .editor-workspace, .editor-content, .manage-workspace, .manage-body, .panel-content, .settings-page) {
+  min-width: 0;
+  min-height: 0;
+  max-width: 100%;
+}
+
+#app :where(.dialog, [role='dialog'], .popover, .menu-popover, .workspace-popover, .filter-popover, .floating-dock, .status-center) {
+  max-width: calc(100vw - 16px);
+  max-height: calc(100vh - 16px);
+}
+
+#app :where(.dialog, [role='dialog'], .settings-card, .manage-header, .asset-inspector, .panel-content) :where(p, li, dd, strong, small, span) {
+  overflow-wrap: anywhere;
+}
+
+:root[data-ui-scale='large'] body #app .top-bar {
+  height: 50px;
+  flex-basis: 50px;
+}
+:root[data-ui-scale='large'] body #app :where(.workspace-control-row, .workspace-bar, .actionbar) {
+  min-height: 54px;
+  height: 54px;
+  flex-basis: 54px;
+}
+:root[data-ui-scale='large'] body #app .toolbar {
+  min-height: 52px;
+}
+:root[data-ui-scale='large'] body #app .status-bar {
+  height: 36px;
+  flex-basis: 36px;
+}
+:root[data-ui-scale='large'] body #app .manage-body > nav button {
+  min-height: calc(44px * var(--ui-scale));
+}
+:root[data-ui-scale='large'] body #app :where(.settings-grid, .physics-grid) {
+  grid-template-columns: minmax(0, 1fr);
+}
+:root[data-ui-scale='large'] body #app .setting-control {
+  width: min(calc(190px * var(--ui-scale)), 55%);
+  flex-basis: min(calc(190px * var(--ui-scale)), 55%);
+}
+
+:root[data-ui-scale='xlarge'] body #app .top-bar {
+  height: 58px;
+  flex-basis: 58px;
+}
+:root[data-ui-scale='xlarge'] body #app .top-bar .menu-item > button {
+  height: 44px;
+}
+:root[data-ui-scale='xlarge'] body #app .top-bar .brand-mark {
+  width: 34px;
+  height: 34px;
+}
+:root[data-ui-scale='xlarge'] body #app :where(.workspace-control-row, .workspace-bar, .actionbar) {
+  min-height: 60px;
+  height: 60px;
+  flex-basis: 60px;
+}
+:root[data-ui-scale='xlarge'] body #app .workspace-bar :where(button, summary),
+:root[data-ui-scale='xlarge'] body #app .actionbar button {
+  min-height: 46px;
+  height: 46px;
+}
+:root[data-ui-scale='xlarge'] body #app .workspace-list button {
+  position: relative;
+  width: 56px;
+  min-width: 56px;
+}
+:root[data-ui-scale='xlarge'] body #app .workspace-list button .label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+:root[data-ui-scale='xlarge'] body #app .workspace-list button .dirty {
+  position: absolute;
+  top: 5px;
+  right: 4px;
+}
+:root[data-ui-scale='xlarge'] body #app :where(.settings-grid, .physics-grid) {
+  grid-template-columns: minmax(0, 1fr);
+}
+:root[data-ui-scale='xlarge'] body #app .toolbar {
+  min-height: 60px;
+  padding-block: 7px;
+}
+:root[data-ui-scale='xlarge'] body #app .toolbar :where(button, summary) {
+  min-height: 44px;
+  height: 44px;
+}
+:root[data-ui-scale='xlarge'] body #app .status-bar {
+  height: 44px;
+  flex-basis: 44px;
+}
+:root[data-ui-scale='xlarge'] body #app .status-bar .task-status {
+  min-height: 36px;
+}
+
+:root[data-ui-scale='xlarge'] body #app .sidebar {
+  width: 62px;
+  flex-basis: 62px;
+  padding: 6px;
+}
+:root[data-ui-scale='xlarge'] body #app .sidebar > header small,
+:root[data-ui-scale='xlarge'] body #app .sidebar button strong,
+:root[data-ui-scale='xlarge'] body #app .manage-body > nav button > span:last-child {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+:root[data-ui-scale='xlarge'] body #app .sidebar button {
+  min-height: 50px;
+}
+:root[data-ui-scale='xlarge'] body #app .manage-body {
+  grid-template-columns: 66px minmax(0, 1fr);
+}
+:root[data-ui-scale='xlarge'] body #app .manage-body > nav button {
+  min-height: 54px;
+  grid-template-columns: 1fr;
+  padding: 5px;
+}
+:root[data-ui-scale='xlarge'] body #app .manage-body > nav button > span:first-child {
+  margin: auto;
+}
+:root[data-ui-scale='xlarge'] body #app .settings-page {
+  padding: 18px;
+}
+:root[data-ui-scale='xlarge'] body #app .settings-page :where(.page-header, .settings-search) {
+  align-items: flex-start;
+  flex-direction: column;
+}
+:root[data-ui-scale='xlarge'] body #app .settings-page .settings-search > label,
+:root[data-ui-scale='xlarge'] body #app .settings-page .settings-search nav {
+  width: 100%;
+}
+:root[data-ui-scale='xlarge'] body #app .settings-page :where(.input-action-heading, .input-binding) {
+  grid-template-columns: repeat(2, minmax(0, 1fr)) 38px;
+}
+:root[data-ui-scale='xlarge'] body #app .settings-page :where(.input-action-heading > input, .input-action-heading > select) {
+  grid-column: auto;
+}
+:root[data-ui-scale='xlarge'] body #app .settings-page .action-advanced-grid {
+  grid-template-columns: 1fr;
+}
+:root[data-ui-scale='xlarge'] body #app .settings-page .binding-advanced {
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 1200px) {
+  :root[data-ui-scale='large'] body #app .workspace-list button {
+    width: 44px;
+    min-width: 44px;
+  }
+  :root[data-ui-scale='large'] body #app .sidebar {
+    width: 66px;
+    flex-basis: 66px;
+  }
+  :root[data-ui-scale='large'] body #app .sidebar > header small,
+  :root[data-ui-scale='large'] body #app .sidebar button strong {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
   }
 }

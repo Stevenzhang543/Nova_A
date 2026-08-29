@@ -1,0 +1,93 @@
+{
+  "format": "nova-v5.7.0-world-verification",
+  "version": 1,
+  "engineVersion": "5.7.0",
+  "generatedAt": "2026-08-27T03:59:55.231Z",
+  "checks": [
+    {
+      "id": "V570-REFERENCES",
+      "status": "passed",
+      "detail": "Four v5.7 references retain Project Format 2/schema 29.",
+      "metrics": {
+        "references": [
+          "navigation-v57-10000-agents",
+          "ai-v57-perception-utility",
+          "world-v57-streaming-handoff",
+          "tilemap-v57-background-bake"
+        ]
+      }
+    },
+    {
+      "id": "V570-IMPOSSIBLE-PATH",
+      "status": "passed",
+      "detail": "A solid world-height obstacle produces a finite Unreachable result instead of an invalid route.",
+      "metrics": {
+        "points": 0
+      }
+    },
+    {
+      "id": "V570-NAV-BAKE-CANCEL",
+      "status": "passed",
+      "detail": "Navigation baking accepts cancellation before the first bounded region and leaves the worker idle.",
+      "metrics": {
+        "progress": 0
+      }
+    },
+    {
+      "id": "V570-NAV-10000-BOUND",
+      "status": "passed",
+      "detail": "Navigation processes at most 10,000 agents and enforces its local avoidance-neighbor cap.",
+      "metrics": {
+        "elapsedMs": 56.196100000000115,
+        "activeAgents": 10000,
+        "droppedAgents": 1,
+        "maximumNeighbors": 0
+      }
+    },
+    {
+      "id": "V570-AI-MIGRATION",
+      "status": "passed",
+      "detail": "Behavior Tree v1 remains readable while v2 safely bounds blackboards, perception and utility data.",
+      "metrics": {}
+    },
+    {
+      "id": "V570-AI-10000-BOUND",
+      "status": "passed",
+      "detail": "AI retains 10,000 active agents and time-slices graph work to the deterministic per-frame budget.",
+      "metrics": {
+        "elapsedMs": 12.569100000000162,
+        "activeAgents": 10000,
+        "tickedAgents": 2048,
+        "deferredAgents": 7952,
+        "droppedAgents": 1
+      }
+    },
+    {
+      "id": "V570-STREAM-SAVE-RELOAD",
+      "status": "passed",
+      "detail": "Streamed descendants serialize and restore transform plus physics state across reset/reload.",
+      "metrics": {
+        "bytes": 216
+      }
+    },
+    {
+      "id": "V570-TILE-DETERMINISM",
+      "status": "passed",
+      "detail": "TileMap storage is byte-stable and run-length encoded for identical authored state.",
+      "metrics": {
+        "bytes": 649
+      }
+    },
+    {
+      "id": "V570-TILE-BAKE-CANCEL",
+      "status": "passed",
+      "detail": "Background TileMap baking cancels cleanly between bounded chunks.",
+      "metrics": {
+        "totalChunks": 32
+      }
+    }
+  ],
+  "severity0Open": 0,
+  "severity1Open": 0,
+  "status": "passed"
+}

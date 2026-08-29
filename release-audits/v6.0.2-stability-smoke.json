@@ -1,0 +1,17 @@
+{
+  "format": "nova-v6.0.2-stability-summary",
+  "version": 1,
+  "engineVersion": "6.0.2",
+  "generatedAt": "2026-08-28T17:51:22.988Z",
+  "typeCheck": "passed",
+  "rustWorkspaceTests": "passed",
+  "nativeRustTests": "passed",
+  "interactionAudit": "passed",
+  "layoutMatrix": "passed",
+  "backendExport": "passed",
+  "windowsGameLaunch": "passed",
+  "localBuilds": "passed",
+  "wallClock72HourSoakComplete": false,
+  "cleanMachineLifecycleComplete": false,
+  "status": "passed"
+}

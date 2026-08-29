@@ -1,0 +1,43 @@
+{
+  "format": "nova-external-certification-gates",
+  "version": 1,
+  "release": "5.8.0",
+  "generatedAt": "2026-08-27T06:16:03.375Z",
+  "gates": [
+    {
+      "name": "publisher signing",
+      "status": "pending-external",
+      "claimed": false
+    },
+    {
+      "name": "independent clean-machine install and portable launch",
+      "status": "pending-external",
+      "claimed": false
+    },
+    {
+      "name": "cross-host Linux/macOS builds",
+      "status": "pending-external",
+      "claimed": false
+    },
+    {
+      "name": "real wall-clock network soak",
+      "status": "pending-external",
+      "claimed": false
+    },
+    {
+      "name": "hostile public-network review",
+      "status": "pending-external",
+      "claimed": false
+    },
+    {
+      "name": "NAT traversal and relay infrastructure",
+      "status": "pending-external",
+      "claimed": false
+    },
+    {
+      "name": "production authentication and DDoS resistance",
+      "status": "pending-external",
+      "claimed": false
+    }
+  ]
+}

@@ -6,6 +6,7 @@ import type { RendererStats } from '../renderer/types'
 import type { AudioProjectSettings } from './audio'
 import { audioRuntime } from './audio'
 import { particleDiagnostics } from './particles'
+import { OFFICIAL_NETWORKING_PACKAGE_ID, packageEnabled } from './packages'
 import { productionSettings } from './production'
 
 export interface ProductionValidationIssue { code: string; severity: 'warning' | 'error'; message: string; fix: string }
@@ -29,5 +30,10 @@ export function validateProductionRuntime(assets: Pick<AssetDatabaseState, 'reco
   if (audioRuntime.diagnostics.contextState === 'suspended' && audioRuntime.diagnostics.activeVoices) issues.push({ code: 'AUD-SUSPENDED', severity: 'error', message: 'Audio output is suspended while voices are active.', fix: 'Open Presentation → Audio and press Recover audio.' })
   if (audioRuntime.diagnostics.underruns > 0) issues.push({ code: 'AUD-UNDERRUN', severity: 'warning', message: `${audioRuntime.diagnostics.underruns} audio underruns were detected.`, fix: 'Prefer streaming for long music, preload short effects, and reduce simultaneous voices.' })
   if (audioRuntime.diagnostics.failures.length) issues.push({ code: 'AUD-FAILURE', severity: 'error', message: audioRuntime.diagnostics.failures[0].message, fix: audioRuntime.diagnostics.failures[0].recovery })
+  const network = productionSettings.networking
+  if (network.enabled && !packageEnabled(OFFICIAL_NETWORKING_PACKAGE_ID)) issues.push({ code: 'NET-PACKAGE-MISSING', severity: 'error', message: 'Networking is enabled but the optional Nova Networking package is not installed.', fix: 'Open Network Studio and install the reviewed optional package.' })
+  if (network.enabled && !network.permissionGranted) issues.push({ code: 'NET-PERMISSION-DENIED', severity: 'error', message: 'Networking is enabled without an explicit project network permission.', fix: 'Review the transport and endpoint in Network Studio, then grant permission.' })
+  if (network.enabled && !network.channels.some(channel => channel.delivery === 'reliable-ordered')) issues.push({ code: 'NET-RELIABLE-MISSING', severity: 'error', message: 'Networking has no reliable ordered channel for lifecycle and RPC messages.', fix: 'Restore or create a reliable ordered channel in Network Studio → Protocol.' })
+  if (network.enabled && network.rpcContracts.some(rpc => !network.channels.some(channel => channel.id === rpc.channelId))) issues.push({ code: 'NET-RPC-CHANNEL', severity: 'error', message: 'At least one RPC references a missing channel.', fix: 'Choose an existing channel for every RPC contract.' })
   return issues.slice(0, 256)
 }

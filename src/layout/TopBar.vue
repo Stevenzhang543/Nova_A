@@ -81,7 +81,7 @@
     <div class="top-spacer"></div>
     <span v-if="recoveryState.safeMode" class="safe-pill">{{ t('safeMode') }}</span>
     <span v-if="historyState.dirty" class="dirty-pill" :title="projectTransactionState.unsavedScopes.join(', ')">● {{ t('unsavedChanges') }}</span>
-    <span class="release-pill">5.0.1 · {{ t('releaseCandidate') }}</span>
+    <span class="release-pill">6.1.0 · {{ t('releaseCandidate') }}</span>
     <input ref="fileInput" type="file" hidden accept="application/json,.nova,.json" @change="handleFileSelected">
   </header>
 </template>
@@ -122,7 +122,7 @@ async function handleSave() {
   try { saved = await saveProject(); if (saved) completeTask(task, t('atomicSaveComplete')); else completeTask(task, t('saveCancelled')) }
   catch (error) { failTask(task, error) }
   editorState.statusText = t(saved ? 'saved' : 'saveCancelled')
-  if (saved) { rememberCurrentProject(); addEditorLog(t('saved'), 'Project') }
+  if (saved) { void rememberCurrentProject(); addEditorLog(t('saved'), 'Project') }
   activeMenu.value = null
 }
 function triggerLoad() { fileInput.value?.click(); activeMenu.value = null }
@@ -173,7 +173,9 @@ async function handleAbout() {
 function handleManual() { activeMenu.value = null; void openBundledManual() }
 function handleManualSection(section: string) { activeMenu.value = null; void openBundledManual(section) }
 function handleStudioStatus() { activeMenu.value = null; openStudioStatus() }
-function handleProjectManager() { activeMenu.value = null; showProjectManager() }
+// Keep the menu mounted through the activating click. The entire TopBar unmounts when
+// the manager appears; clearing it first can expose the workspace strip to pointer-up.
+function handleProjectManager() { showProjectManager() }
 function handleUndo() { if (isEditing.value) undo(); activeMenu.value = null }
 function handleRedo() { if (isEditing.value) redo(); activeMenu.value = null }
 function toggleMenu(menu: string) { activeMenu.value = activeMenu.value === menu ? null : menu }
@@ -201,6 +203,7 @@ function handleFileSelected(event: Event) {
 }
 
 function handleKeyDown(event: KeyboardEvent) {
+  if (event.defaultPrevented) return
   if (confirmDialogState.visible) return
   const tag = document.activeElement?.tagName
   if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return

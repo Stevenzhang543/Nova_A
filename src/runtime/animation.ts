@@ -9,7 +9,7 @@ export type AnimatorParameterType = 'Bool' | 'Float' | 'Integer' | 'Trigger'
 export type KeyTangentMode = 'Auto' | 'Linear' | 'Constant' | 'Free'
 export type KeyEasing = 'Linear' | 'EaseIn' | 'EaseOut' | 'EaseInOut'
 export type AnimationInterpolation = 'Step' | 'Linear' | 'Cubic'
-export type AnimationCommandKind = 'Method' | 'Audio' | 'NestedAnimation' | 'Custom'
+export type AnimationCommandKind = 'Method' | 'Audio' | 'NestedAnimation' | 'Timeline' | 'VisualGraph' | 'Custom'
 
 export interface AnimationKeyframe { time: number; value: number; tangentMode: KeyTangentMode; inTangent: number; outTangent: number; easing?: KeyEasing; interpolation?: AnimationInterpolation }
 export interface AnimationTrack { property: AnimatableProperty; targetEntityUuid: string | null; keyframes: AnimationKeyframe[] }
@@ -32,15 +32,32 @@ export interface AnimationClipDocument {
   commandTracks: AnimationCommandTrack[]
 }
 export interface AnimatorParameter { name: string; type: AnimatorParameterType; defaultValue: AnimatorParameterValue }
-export interface BlendTreeChild { clipAsset: string | null; threshold: number; speed: number }
-export interface BlendTree1D { parameter: string; children: BlendTreeChild[] }
-export interface AnimatorState { id: string; name: string; clipAsset: string | null; speed: number; x: number; y: number; subgraph: string; blendTree: BlendTree1D | null }
+export type BlendTreeType = '1D' | '2D'
+export interface BlendTreeChild { clipAsset: string | null; threshold: number; positionX: number; positionY: number; speed: number }
+export interface BlendTree { type: BlendTreeType; parameter: string; parameterY: string; synchronizeNormalizedTime: boolean; children: BlendTreeChild[] }
+export type RootMotionMode = 'Apply' | 'Ignore'
+export interface AnimatorState {
+  id: string
+  name: string
+  clipAsset: string | null
+  speed: number
+  speedParameter: string | null
+  cycleOffset: number
+  mirrorX: boolean
+  mirrorY: boolean
+  rootMotion: RootMotionMode
+  x: number
+  y: number
+  subgraph: string
+  blendTree: BlendTree | null
+}
 export interface TransitionCondition { parameter: string; operator: '==' | '!=' | '>' | '<' | '>=' | '<=' | 'trigger'; value: AnimatorParameterValue }
 export type TransitionInterruption = 'None' | 'Source' | 'Destination' | 'SourceThenDestination'
-export interface AnimatorTransition { id: string; from: string; to: string; hasExitTime: boolean; exitTime: number; duration: number; interruption: TransitionInterruption; conditions: TransitionCondition[] }
-export interface AnimatorLayer { id: string; name: string; defaultState: string; weight: number; additive: boolean; maskAsset: string | null }
+export type TransitionSyncMode = 'None' | 'NormalizedTime' | 'Marker'
+export interface AnimatorTransition { id: string; from: string; to: string; hasExitTime: boolean; exitTime: number; duration: number; interruption: TransitionInterruption; syncMode: TransitionSyncMode; syncMarker: string; destinationOffset: number; conditions: TransitionCondition[] }
+export interface AnimatorLayer { id: string; name: string; defaultState: string; weight: number; additive: boolean; maskAsset: string | null; synchronizedLayer: string | null; synchronizedTiming: boolean }
 export interface AnimatorControllerDocument {
-  version: 2
+  version: 3
   name: string
   defaultState: string
   parameters: AnimatorParameter[]
@@ -57,8 +74,11 @@ const OPERATORS = new Set<TransitionCondition['operator']>(['==', '!=', '>', '<'
 const TANGENTS = new Set<KeyTangentMode>(['Auto', 'Linear', 'Constant', 'Free'])
 const EASINGS = new Set<KeyEasing>(['Linear', 'EaseIn', 'EaseOut', 'EaseInOut'])
 const INTERPOLATIONS = new Set<AnimationInterpolation>(['Step', 'Linear', 'Cubic'])
-const COMMAND_KINDS = new Set<AnimationCommandKind>(['Method', 'Audio', 'NestedAnimation', 'Custom'])
+const COMMAND_KINDS = new Set<AnimationCommandKind>(['Method', 'Audio', 'NestedAnimation', 'Timeline', 'VisualGraph', 'Custom'])
 const INTERRUPTIONS = new Set<TransitionInterruption>(['None', 'Source', 'Destination', 'SourceThenDestination'])
+const BLEND_TREE_TYPES = new Set<BlendTreeType>(['1D', '2D'])
+const ROOT_MOTION_MODES = new Set<RootMotionMode>(['Apply', 'Ignore'])
+const TRANSITION_SYNC_MODES = new Set<TransitionSyncMode>(['None', 'NormalizedTime', 'Marker'])
 
 function id(value: unknown, fallback: string): string {
   const safe = typeof value === 'string' ? value.trim().replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 80) : ''
@@ -78,9 +98,9 @@ export function defaultAnimationClip(name = 'New Animation'): AnimationClipDocum
 export function defaultAnimatorController(name = 'New Controller'): AnimatorControllerDocument {
   const stateId = 'idle'
   return {
-    version: 2, name, defaultState: stateId, parameters: [], transitions: [],
-    states: [{ id: stateId, name: 'Idle', clipAsset: null, speed: 1, x: 80, y: 80, subgraph: 'Base', blendTree: null }],
-    layers: [{ id: 'base', name: 'Base', defaultState: stateId, weight: 1, additive: false, maskAsset: null }]
+    version: 3, name, defaultState: stateId, parameters: [], transitions: [],
+    states: [{ id: stateId, name: 'Idle', clipAsset: null, speed: 1, speedParameter: null, cycleOffset: 0, mirrorX: false, mirrorY: false, rootMotion: 'Apply', x: 80, y: 80, subgraph: 'Base', blendTree: null }],
+    layers: [{ id: 'base', name: 'Base', defaultState: stateId, weight: 1, additive: false, maskAsset: null, synchronizedLayer: null, synchronizedTiming: false }]
   }
 }
 
@@ -137,13 +157,22 @@ export function normalizeAnimatorController(source: unknown): AnimatorController
       name: typeof state?.name === 'string' ? state.name.slice(0, 80) : `State ${index + 1}`,
       clipAsset: typeof state?.clipAsset === 'string' ? state.clipAsset : null,
       speed: Math.min(100, Math.max(-100, finiteNumber(state?.speed, 1))),
+      speedParameter: typeof state?.speedParameter === 'string' ? id(state.speedParameter, '') || null : null,
+      cycleOffset: Math.min(1, Math.max(0, finiteNumber(state?.cycleOffset))),
+      mirrorX: state?.mirrorX === true, mirrorY: state?.mirrorY === true,
+      rootMotion: ROOT_MOTION_MODES.has(state?.rootMotion as RootMotionMode) ? state!.rootMotion as RootMotionMode : 'Apply',
       x: finiteNumber(state?.x, 80 + index * 180), y: finiteNumber(state?.y, 80),
       subgraph: typeof state?.subgraph === 'string' ? state.subgraph.slice(0, 80) : 'Base',
       blendTree: state?.blendTree && typeof state.blendTree === 'object' ? {
+        type: BLEND_TREE_TYPES.has(state.blendTree.type as BlendTreeType) ? state.blendTree.type as BlendTreeType : '1D',
         parameter: id(state.blendTree.parameter, ''),
+        parameterY: id(state.blendTree.parameterY, ''),
+        synchronizeNormalizedTime: state.blendTree.synchronizeNormalizedTime !== false,
         children: (Array.isArray(state.blendTree.children) ? state.blendTree.children : []).slice(0, 64).map(child => ({
           clipAsset: typeof child?.clipAsset === 'string' ? child.clipAsset : null,
-          threshold: finiteNumber(child?.threshold), speed: Math.min(100, Math.max(-100, finiteNumber(child?.speed, 1)))
+          threshold: finiteNumber(child?.threshold),
+          positionX: finiteNumber(child?.positionX, finiteNumber(child?.threshold)), positionY: finiteNumber(child?.positionY),
+          speed: Math.min(100, Math.max(-100, finiteNumber(child?.speed, 1)))
         })).sort((first, second) => first.threshold - second.threshold)
       } : null
     }
@@ -166,6 +195,9 @@ export function normalizeAnimatorController(source: unknown): AnimatorController
       exitTime: Math.min(1, Math.max(0, finiteNumber(transition.exitTime, 1))),
       duration: Math.min(60, Math.max(0, finiteNumber(transition.duration, .1))),
       interruption: INTERRUPTIONS.has(transition.interruption as TransitionInterruption) ? transition.interruption as TransitionInterruption : 'SourceThenDestination',
+      syncMode: TRANSITION_SYNC_MODES.has(transition.syncMode as TransitionSyncMode) ? transition.syncMode as TransitionSyncMode : 'None',
+      syncMarker: typeof transition.syncMarker === 'string' ? transition.syncMarker.trim().slice(0, 128) : '',
+      destinationOffset: Math.min(1, Math.max(0, finiteNumber(transition.destinationOffset))),
       conditions: (Array.isArray(transition.conditions) ? transition.conditions : []).slice(0, 64).flatMap(condition => {
         const parameter = parameters.find(candidate => candidate.name === condition?.parameter)
         if (!parameter) return []
@@ -178,11 +210,15 @@ export function normalizeAnimatorController(source: unknown): AnimatorController
     id: id(layer?.id, index ? `layer_${index + 1}` : 'base'), name: typeof layer?.name === 'string' ? layer.name.slice(0, 80) : `Layer ${index + 1}`,
     defaultState: usedStates.has(String(layer?.defaultState)) ? String(layer?.defaultState) : states[0].id,
     weight: Math.min(1, Math.max(0, finiteNumber(layer?.weight, index ? 0 : 1))), additive: layer?.additive === true,
-    maskAsset: typeof layer?.maskAsset === 'string' ? layer.maskAsset : null
+    maskAsset: typeof layer?.maskAsset === 'string' ? layer.maskAsset : null,
+    synchronizedLayer: typeof layer?.synchronizedLayer === 'string' && String(layer.synchronizedLayer) !== String(layer?.id) ? id(layer.synchronizedLayer, '') || null : null,
+    synchronizedTiming: layer?.synchronizedTiming === true
   }))
-  if (!layers.length) layers.push({ id: 'base', name: 'Base', defaultState: usedStates.has(String(item.defaultState)) ? String(item.defaultState) : states[0].id, weight: 1, additive: false, maskAsset: null })
+  if (!layers.length) layers.push({ id: 'base', name: 'Base', defaultState: usedStates.has(String(item.defaultState)) ? String(item.defaultState) : states[0].id, weight: 1, additive: false, maskAsset: null, synchronizedLayer: null, synchronizedTiming: false })
+  const layerIds = new Set(layers.map(layer => layer.id))
+  for (const layer of layers) if (layer.synchronizedLayer && !layerIds.has(layer.synchronizedLayer)) layer.synchronizedLayer = null
   return {
-    version: 2, name: typeof item.name === 'string' ? item.name.slice(0, 120) : 'Animator Controller',
+    version: 3, name: typeof item.name === 'string' ? item.name.slice(0, 120) : 'Animator Controller',
     defaultState: usedStates.has(String(item.defaultState)) ? String(item.defaultState) : states[0].id,
     parameters, states, transitions, layers
   }
@@ -346,22 +382,35 @@ export function sliceAnimationClip(clip: AnimationClipDocument, start: number, e
   return normalizeAnimationClip(value)
 }
 
-function occurrences<T extends { time: number }>(items: T[], previous: number, rawNext: number, length: number, loop: boolean): T[] {
+interface TimedOccurrence<T> { item: T; crossed: number; itemIndex: number }
+function timedOccurrences<T extends { time: number }>(items: T[], previous: number, rawNext: number, length: number, loop: boolean): TimedOccurrence<T>[] {
   if (!items.length || length <= 0 || rawNext === previous) return []
-  const result: Array<{ item: T; crossed: number }> = [], forward = rawNext > previous, lower = Math.min(previous, rawNext), upper = Math.max(previous, rawNext)
-  if (!loop) return items.filter(item => forward ? item.time > lower && item.time <= upper : item.time >= lower && item.time < upper).sort((a, b) => forward ? a.time - b.time : b.time - a.time)
-  for (const item of items) {
+  const result: TimedOccurrence<T>[] = [], forward = rawNext > previous, lower = Math.min(previous, rawNext), upper = Math.max(previous, rawNext)
+  if (!loop) return items.map((item, itemIndex) => ({ item, itemIndex, crossed: item.time })).filter(entry => forward ? entry.crossed > lower && entry.crossed <= upper : entry.crossed >= lower && entry.crossed < upper).sort((a, b) => forward ? a.crossed - b.crossed || a.itemIndex - b.itemIndex : b.crossed - a.crossed || b.itemIndex - a.itemIndex)
+  for (let itemIndex = 0; itemIndex < items.length; itemIndex++) {
+    const item = items[itemIndex]
     const firstCycle = Math.ceil((lower - item.time) / length), lastCycle = Math.floor((upper - item.time) / length)
     for (let cycle = firstCycle; cycle <= lastCycle && result.length < 10_000; cycle++) {
       const crossed = item.time + cycle * length
-      if (forward ? crossed > previous && crossed <= rawNext : crossed >= rawNext && crossed < previous) result.push({ item, crossed })
+      if (forward ? crossed > previous && crossed <= rawNext : crossed >= rawNext && crossed < previous) result.push({ item, crossed, itemIndex })
     }
   }
-  return result.sort((a, b) => forward ? a.crossed - b.crossed : b.crossed - a.crossed).map(entry => entry.item)
+  return result.sort((a, b) => forward ? a.crossed - b.crossed || a.itemIndex - b.itemIndex : b.crossed - a.crossed || b.itemIndex - a.itemIndex)
+}
+
+function occurrences<T extends { time: number }>(items: T[], previous: number, rawNext: number, length: number, loop: boolean): T[] {
+  return timedOccurrences(items, previous, rawNext, length, loop).map(entry => entry.item)
 }
 
 export function animationEventsBetween(clip: AnimationClipDocument, previous: number, rawNext: number): AnimationEvent[] { return occurrences(clip.events, previous, rawNext, animationClipLength(clip), clip.loop) }
 export function animationCommandsBetween(track: AnimationCommandTrack, clip: AnimationClipDocument, previous: number, rawNext: number): AnimationCommand[] { return occurrences(track.commands, previous, rawNext, animationClipLength(clip), clip.loop) }
+export type AnimationDispatch = { kind: 'event'; event: AnimationEvent; crossed: number; order: number } | { kind: 'command'; track: AnimationCommandTrack; command: AnimationCommand; crossed: number; order: number }
+export function animationDispatchesBetween(clip: AnimationClipDocument, previous: number, rawNext: number): AnimationDispatch[] {
+  const length = animationClipLength(clip), forward = rawNext >= previous, result: AnimationDispatch[] = []
+  timedOccurrences(clip.events, previous, rawNext, length, clip.loop).forEach(entry => result.push({ kind: 'event', event: entry.item, crossed: entry.crossed, order: entry.itemIndex }))
+  clip.commandTracks.forEach((track, trackIndex) => timedOccurrences(track.commands, previous, rawNext, length, clip.loop).forEach(entry => result.push({ kind: 'command', track, command: entry.item, crossed: entry.crossed, order: 1_000_000 + trackIndex * 10_000 + entry.itemIndex })))
+  return result.sort((first, second) => forward ? first.crossed - second.crossed || first.order - second.order : second.crossed - first.crossed || second.order - first.order)
+}
 
 function conditionMatches(value: AnimatorParameterValue, condition: TransitionCondition): boolean {
   if (condition.operator === 'trigger') return value === true
@@ -378,13 +427,40 @@ interface LayerRuntimeState { stateId: string; time: number; previousStateId: st
 interface AnimatorRuntimeState { controllerAsset: string | null; layers: Map<string, LayerRuntimeState> }
 interface SampledClip { values: Map<string, { property: AnimatableProperty; targetEntityUuid: string | null; value: number }>; spriteAsset: string | null }
 export interface AnimatorRuntimeInspection { entityUuid: string; controllerAsset: string | null; layers: Array<{ layerId: string; stateId: string; time: number; previousStateId: string | null; blendProgress: number }> }
+export interface RuntimeAnimationRecordingStatus { active: boolean; entityUuid: string; elapsed: number; frameRate: number; samples: number; targetAssetUuid: string | null }
+interface RuntimeAnimationRecordingSession { entityUuid: string; elapsed: number; accumulator: number; frameRate: number; targetAssetUuid: string | null; tracks: Map<AnimatableProperty, AnimationKeyframe[]> }
+interface DirectClipPlayback { reference: string; time: number }
 
 class AnimationRuntime {
   private runtime = new Map<string, AnimatorRuntimeState>()
+  private recording: RuntimeAnimationRecordingSession | null = null
+  private directPlayback = new Map<string, DirectClipPlayback>()
   onEvent: ((entity: Entity, event: AnimationEvent) => void) | null = null
   onCommand: ((entity: Entity, track: AnimationCommandTrack, command: AnimationCommand) => void) | null = null
 
-  reset(): void { this.runtime.clear() }
+  reset(): void { this.runtime.clear(); this.recording = null; this.directPlayback.clear() }
+  playClipOnce(entityUuid: string, reference: string): boolean { if (!entityUuid || !readAnimationClip(reference)) return false; this.directPlayback.set(entityUuid, { reference, time: 0 }); return true }
+  recordingStatus(): RuntimeAnimationRecordingStatus {
+    const value = this.recording
+    return value ? { active: true, entityUuid: value.entityUuid, elapsed: value.elapsed, frameRate: value.frameRate, samples: value.tracks.values().next().value?.length ?? 0, targetAssetUuid: value.targetAssetUuid } : { active: false, entityUuid: '', elapsed: 0, frameRate: 60, samples: 0, targetAssetUuid: null }
+  }
+  beginRuntimeRecording(entityUuid: string, frameRate = 60, targetAssetUuid: string | null = null): boolean {
+    if (!entityUuid || this.recording) return false
+    this.recording = { entityUuid, elapsed: 0, accumulator: 0, frameRate: Math.min(240, Math.max(1, Math.round(finiteNumber(frameRate, 60)))), targetAssetUuid, tracks: new Map() }
+    return true
+  }
+  finishRuntimeRecording(name = 'Runtime Recording'): AssetRecord | null {
+    const recording = this.recording; this.recording = null
+    if (!recording || !recording.tracks.size) return null
+    const clip = normalizeAnimationClip({
+      ...defaultAnimationClip(name), frameRate: recording.frameRate, loop: false,
+      tracks: [...recording.tracks.entries()].map(([property, keyframes]) => ({ property, targetEntityUuid: null, keyframes: reduceAnimationKeys(keyframes, 1e-6) }))
+    })
+    const target = recording.targetAssetUuid ? assetState.records.find(asset => asset.uuid === recording.targetAssetUuid && asset.assetType === 'animation') : null
+    if (target && updateTextAsset(target.uuid, JSON.stringify(clip, null, 2))) return target
+    return createTextAsset(name, 'animation', JSON.stringify(clip, null, 2), 'Assets/Animations/Recordings')
+  }
+  cancelRuntimeRecording(): void { this.recording = null }
   inspect(entityUuid?: string): AnimatorRuntimeInspection[] {
     return [...this.runtime.entries()].filter(([uuid]) => !entityUuid || uuid === entityUuid).map(([uuid, state]) => ({ entityUuid: uuid, controllerAsset: state.controllerAsset, layers: [...state.layers.entries()].map(([layerId, layer]) => ({ layerId, stateId: layer.stateId, time: layer.time, previousStateId: layer.previousStateId, blendProgress: layer.blendDuration > 0 ? Math.min(1, layer.blendTime / layer.blendDuration) : 1 })) }))
   }
@@ -418,6 +494,8 @@ class AnimationRuntime {
           layerState.previousStateId = layerState.stateId; layerState.previousTime = layerState.time
           layerState.stateId = requested; layerState.time = 0; layerState.blendTime = 0; layerState.blendDuration = 0
         }
+        const synchronized = layer.synchronizedTiming && layer.synchronizedLayer ? state!.layers.get(layer.synchronizedLayer) : null
+        if (synchronized && !layerState.previousStateId) layerState.time = synchronized.time
         let activeState = controller.states.find(candidate => candidate.id === layerState!.stateId) ?? controller.states[0]
         const activeClip = this.stateClip(activeState, animator)
         const activeLength = activeClip ? animationClipLength(activeClip) : 0
@@ -431,21 +509,25 @@ class AnimationRuntime {
             const parameter = controller.parameters.find(candidate => candidate.name === condition.parameter)
             if (parameter?.type === 'Trigger') animator.parameters[parameter.name] = false
           }
+          const destination = controller.states.find(candidate => candidate.id === transition.to) ?? activeState
+          const destinationClip = this.stateClip(destination, animator)
           layerState.previousStateId = layerState.stateId; layerState.previousTime = layerState.time
-          layerState.stateId = transition.to; layerState.time = 0; layerState.blendTime = 0; layerState.blendDuration = transition.duration
-          activeState = controller.states.find(candidate => candidate.id === transition.to) ?? activeState
+          layerState.stateId = transition.to
+          layerState.time = this.synchronizedTransitionTime(transition, activeClip, destinationClip, layerState.previousTime)
+          layerState.blendTime = 0; layerState.blendDuration = transition.duration
+          activeState = destination
         }
         const clip = this.stateClip(activeState, animator)
         const length = clip ? animationClipLength(clip) : 0
         const previousTime = layerState.time
-        const scaledDelta = Math.max(0, delta) * animator.speed * activeState.speed * (clip?.playbackSpeed ?? 1)
+        const parameterSpeed = activeState.speedParameter ? finiteNumber(animator.parameters[activeState.speedParameter], 1) : 1
+        const scaledDelta = Math.max(0, delta) * animator.speed * activeState.speed * parameterSpeed * (clip?.playbackSpeed ?? 1)
         const rawTime = layerState.time + scaledDelta
         layerState.time = rawTime
         if (clip && length > 0) {
           if (clip.loop) layerState.time = ((layerState.time % length) + length) % length
           else layerState.time = Math.min(length, Math.max(0, layerState.time))
-          this.emitEvents(entity, clip, previousTime, clip.loop ? rawTime : layerState.time)
-          this.emitCommands(entity, clip, previousTime, clip.loop ? rawTime : layerState.time)
+          this.emitDispatches(entity, clip, previousTime, clip.loop ? rawTime : layerState.time)
           let sampled = this.sampleState(activeState, animator, layerState.time)
           if (layerState.previousStateId && layerState.blendDuration > 0) {
             const previousState = controller.states.find(candidate => candidate.id === layerState!.previousStateId)
@@ -462,32 +544,100 @@ class AnimationRuntime {
             if (ratio >= 1) layerState.previousStateId = null
           }
           const mask = readAnimationMask(layer.maskAsset)
-          this.applySample(entity, entities, sampled, weight, layer.additive, mask ? new Set(mask.properties) : null)
+          this.applySample(entity, entities, sampled, weight, layer.additive, mask ? new Set(mask.properties) : null, activeState)
         }
         if (layerIndex === 0) animator.currentState = activeState.id
       })
+    }
+    for (const [entityUuid, playback] of this.directPlayback) {
+      const entity = entities.find(candidate => candidate.uuid === entityUuid), clip = readAnimationClip(playback.reference)
+      if (!entity || !clip) { this.directPlayback.delete(entityUuid); continue }
+      const previous = playback.time, length = animationClipLength(clip); playback.time = Math.min(length, playback.time + Math.max(0, delta) * clip.playbackSpeed)
+      this.emitDispatches(entity, clip, previous, playback.time)
+      const state: AnimatorState = { id: 'direct', name: 'Direct', clipAsset: playback.reference, speed: 1, speedParameter: null, cycleOffset: 0, mirrorX: false, mirrorY: false, rootMotion: 'Apply', x: 0, y: 0, subgraph: 'Direct', blendTree: null }
+      this.applySample(entity, entities, this.sampleClip(clip, playback.time), 1, false, null, state)
+      if (playback.time >= length) this.directPlayback.delete(entityUuid)
+    }
+    this.captureRuntimeRecording(entities, Math.max(0, delta))
+  }
+
+  private captureRuntimeRecording(entities: Entity[], delta: number): void {
+    const recording = this.recording
+    if (!recording) return
+    const entity = entities.find(candidate => candidate.uuid === recording.entityUuid)
+    if (!entity) { this.recording = null; return }
+    recording.elapsed = Math.min(14_400, recording.elapsed + delta)
+    recording.accumulator += delta
+    const interval = 1 / recording.frameRate
+    if (recording.accumulator + 1e-9 < interval && recording.tracks.size) return
+    recording.accumulator %= interval
+    const properties: AnimatableProperty[] = ['Transform.position.x', 'Transform.position.y', 'Transform.rotation', 'Transform.scale.x', 'Transform.scale.y', 'SpriteRenderer.opacity', 'UI.opacity']
+    for (const property of properties) {
+      const value = this.propertyValue(entity, property)
+      if (value === null) continue
+      const keys = recording.tracks.get(property) ?? []
+      if (keys.length >= 240_000) continue
+      keys.push({ time: recording.elapsed, value, tangentMode: 'Linear', inTangent: 0, outTangent: 0, easing: 'Linear', interpolation: 'Linear' })
+      recording.tracks.set(property, keys)
     }
   }
 
   private stateClip(state: AnimatorState, animator: Animator): AnimationClipDocument | null {
     if (!state.blendTree?.children.length) return readAnimationClip(state.clipAsset)
-    const value = Number(animator.parameters[state.blendTree.parameter] ?? 0)
-    const nearest = [...state.blendTree.children].sort((first, second) => Math.abs(first.threshold - value) - Math.abs(second.threshold - value))[0]
+    const valueX = Number(animator.parameters[state.blendTree.parameter] ?? 0)
+    const valueY = Number(animator.parameters[state.blendTree.parameterY] ?? 0)
+    const nearest = [...state.blendTree.children].sort((first, second) => {
+      const firstDistance = state.blendTree!.type === '2D' ? Math.hypot(first.positionX - valueX, first.positionY - valueY) : Math.abs(first.threshold - valueX)
+      const secondDistance = state.blendTree!.type === '2D' ? Math.hypot(second.positionX - valueX, second.positionY - valueY) : Math.abs(second.threshold - valueX)
+      return firstDistance - secondDistance
+    })[0]
     return readAnimationClip(nearest?.clipAsset ?? state.clipAsset)
   }
 
   private sampleState(state: AnimatorState, animator: Animator, time: number, previous = false): SampledClip {
     const tree = state.blendTree
-    if (!tree?.children.length) return this.sampleClip(readAnimationClip(state.clipAsset), time)
+    const primaryClip = this.stateClip(state, animator) ?? readAnimationClip(state.clipAsset)
+    const primaryLength = primaryClip ? animationClipLength(primaryClip) : 0
+    const offsetTime = primaryLength > 0 ? time + state.cycleOffset * primaryLength : time
+    if (!tree?.children.length) return this.sampleClip(primaryClip, offsetTime)
     const parameter = Number(animator.parameters[tree.parameter] ?? 0)
     const children = tree.children
+    const sampleChild = (child: BlendTreeChild): SampledClip => {
+      const clip = readAnimationClip(child.clipAsset)
+      const length = clip ? animationClipLength(clip) : 0
+      const synchronizedTime = tree.synchronizeNormalizedTime && primaryLength > 0 && length > 0 ? offsetTime / primaryLength * length : offsetTime
+      return this.sampleClip(clip, synchronizedTime * child.speed)
+    }
+    if (tree.type === '2D') {
+      const parameterY = Number(animator.parameters[tree.parameterY] ?? 0)
+      const weighted = children.map((child, index) => ({ child, index, distance: Math.hypot(child.positionX - parameter, child.positionY - parameterY) })).sort((first, second) => first.distance - second.distance || first.index - second.index).slice(0, 4)
+      if (weighted[0]?.distance <= 1e-9) return sampleChild(weighted[0].child)
+      const weights = weighted.map(item => 1 / Math.max(1e-9, item.distance * item.distance))
+      const total = weights.reduce((sum, value) => sum + value, 0)
+      return this.blendWeighted(weighted.map((item, index) => ({ sample: sampleChild(item.child), weight: weights[index] / total })))
+    }
     let upperIndex = children.findIndex(child => child.threshold >= parameter)
     if (upperIndex < 0) upperIndex = children.length - 1
     const lowerIndex = Math.max(0, upperIndex - 1)
     const lower = children[lowerIndex], upper = children[upperIndex]
-    if (!upper || lower === upper) return this.sampleClip(readAnimationClip(lower?.clipAsset ?? null), time * (lower?.speed ?? 1))
+    if (!upper || lower === upper) return sampleChild(lower)
     const ratio = Math.min(1, Math.max(0, (parameter - lower.threshold) / Math.max(1e-9, upper.threshold - lower.threshold)))
-    return this.blendSamples(this.sampleClip(readAnimationClip(lower.clipAsset), time * lower.speed), this.sampleClip(readAnimationClip(upper.clipAsset), time * upper.speed), previous ? Math.min(.999, ratio) : ratio)
+    return this.blendSamples(sampleChild(lower), sampleChild(upper), previous ? Math.min(.999, ratio) : ratio)
+  }
+
+  private synchronizedTransitionTime(transition: AnimatorTransition, source: AnimationClipDocument | null, destination: AnimationClipDocument | null, sourceTime: number): number {
+    const destinationLength = destination ? animationClipLength(destination) : 0
+    if (destinationLength <= 0) return 0
+    let time = transition.destinationOffset * destinationLength
+    if (transition.syncMode === 'NormalizedTime' && source) {
+      const sourceLength = animationClipLength(source)
+      if (sourceLength > 0) time += sourceTime / sourceLength * destinationLength
+    } else if (transition.syncMode === 'Marker' && source && transition.syncMarker) {
+      const sourceMarker = source.markers.find(marker => marker.name === transition.syncMarker)
+      const destinationMarker = destination?.markers.find(marker => marker.name === transition.syncMarker)
+      if (sourceMarker && destinationMarker) time += destinationMarker.time + (sourceTime - sourceMarker.time)
+    }
+    return destination?.loop ? ((time % destinationLength) + destinationLength) % destinationLength : Math.min(destinationLength, Math.max(0, time))
   }
 
   private sampleClip(clip: AnimationClipDocument | null, time: number): SampledClip {
@@ -518,15 +668,35 @@ class AnimationRuntime {
     return { values, spriteAsset: ratio >= .5 ? second.spriteAsset : first.spriteAsset }
   }
 
-  private applySample(owner: Entity, entities: Entity[], sample: SampledClip, weight: number, additive: boolean, mask: Set<AnimatableProperty> | null): void {
+  private blendWeighted(samples: Array<{ sample: SampledClip; weight: number }>): SampledClip {
+    const totals = new Map<string, { property: AnimatableProperty; targetEntityUuid: string | null; value: number; weight: number }>()
+    let spriteAsset: string | null = null, spriteWeight = -1
+    for (const entry of samples) {
+      if (entry.sample.spriteAsset && entry.weight > spriteWeight) { spriteAsset = entry.sample.spriteAsset; spriteWeight = entry.weight }
+      for (const [key, sampled] of entry.sample.values) {
+        const current = totals.get(key)
+        if (current) { current.value += sampled.value * entry.weight; current.weight += entry.weight }
+        else totals.set(key, { ...sampled, value: sampled.value * entry.weight, weight: entry.weight })
+      }
+    }
+    const values = new Map<string, { property: AnimatableProperty; targetEntityUuid: string | null; value: number }>()
+    for (const [key, value] of totals) values.set(key, { property: value.property, targetEntityUuid: value.targetEntityUuid, value: value.weight > 0 ? value.value / value.weight : value.value })
+    return { values, spriteAsset }
+  }
+
+  private applySample(owner: Entity, entities: Entity[], sample: SampledClip, weight: number, additive: boolean, mask: Set<AnimatableProperty> | null, state: AnimatorState): void {
     if (sample.spriteAsset && owner.spriteRenderer && weight >= .5) owner.spriteRenderer.spriteAsset = sample.spriteAsset
     for (const sampled of sample.values.values()) {
       if (mask && !mask.has(sampled.property)) continue
       const entity = sampled.targetEntityUuid ? entities.find(candidate => candidate.uuid === sampled.targetEntityUuid) : owner
       if (!entity) continue
+      if (entity === owner && state.rootMotion === 'Ignore' && sampled.property.startsWith('Transform.')) continue
       const current = this.propertyValue(entity, sampled.property)
       if (current === null) continue
-      const value = additive ? current + sampled.value * weight : current + (sampled.value - current) * weight
+      let sampledValue = sampled.value
+      if (state.mirrorX && (sampled.property === 'Transform.position.x' || sampled.property === 'Transform.rotation')) sampledValue = -sampledValue
+      if (state.mirrorY && (sampled.property === 'Transform.position.y' || sampled.property === 'Transform.rotation')) sampledValue = -sampledValue
+      const value = additive ? current + sampledValue * weight : current + (sampledValue - current) * weight
       this.setPropertyValue(entity, sampled.property, value)
     }
   }
@@ -552,12 +722,11 @@ class AnimationRuntime {
     else if (property === 'UI.opacity') for (const kind of ['Panel', 'Image', 'Text'] as const) { const component = entity.getComponent<{ opacity: number } & { readonly kind: typeof kind; enabled: boolean; removed: boolean; uuid: string }>(kind); if (component) component.opacity = Math.min(100, Math.max(0, value)) }
   }
 
-  private emitEvents(entity: Entity, clip: AnimationClipDocument, previousTime: number, rawTime: number): void {
-    for (const event of animationEventsBetween(clip, previousTime, rawTime)) this.onEvent?.(entity, event)
-  }
-
-  private emitCommands(entity: Entity, clip: AnimationClipDocument, previousTime: number, rawTime: number): void {
-    for (const track of clip.commandTracks) for (const command of animationCommandsBetween(track, clip, previousTime, rawTime)) this.onCommand?.(entity, track, command)
+  private emitDispatches(entity: Entity, clip: AnimationClipDocument, previousTime: number, rawTime: number): void {
+    for (const dispatch of animationDispatchesBetween(clip, previousTime, rawTime)) {
+      if (dispatch.kind === 'event') this.onEvent?.(entity, dispatch.event)
+      else this.onCommand?.(entity, dispatch.track, dispatch.command)
+    }
   }
 }
 

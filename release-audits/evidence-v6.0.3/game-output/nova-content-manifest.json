@@ -1,0 +1,23 @@
+{
+  "format": "nova-content-manifest",
+  "version": 1,
+  "engineVersion": "6.0.3",
+  "buildId": "af417f5d7613eeb663b06e418466fff715bfca5d47190a396ed7b1601e874dac",
+  "include": [
+    "Assets/**"
+  ],
+  "exclude": [
+    "**/*.psd",
+    "**/*.kra",
+    ".nova/**"
+  ],
+  "stripUnusedAssets": false,
+  "compression": "balanced",
+  "files": [
+    {
+      "path": "Mouse Knockout.exe",
+      "sha256": "96284ddc09cfa1ace510851a46a300a3143b9f398d57da1ddf0fef5b5313eb7b",
+      "bytes": 16086564
+    }
+  ]
+}

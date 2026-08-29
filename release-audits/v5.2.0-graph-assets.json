@@ -1,0 +1,21 @@
+{
+  "format": "nova-v5.2.0-graph-asset-verification",
+  "version": 1,
+  "engineVersion": "5.2.0",
+  "generatedAt": "2026-08-26T09:39:17.873Z",
+  "graphCount": 1,
+  "results": [
+    {
+      "id": "reference-projects/projects/visual-scripting-v52-foundation/VisualStartup.nova-graph",
+      "status": "passed",
+      "graphUuid": "52000000-0000-4000-8000-000000000000",
+      "apiVersion": 2,
+      "canonicalBytes": 4329,
+      "nodeCount": 3,
+      "edgeCount": 2,
+      "diagnostics": [],
+      "scriptErrors": []
+    }
+  ],
+  "status": "passed"
+}

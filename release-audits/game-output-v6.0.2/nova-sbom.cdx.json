@@ -1,0 +1,24 @@
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.5",
+  "serialNumber": "urn:sha256:fa168e7eb9a6de44eb8a314f6fe8f45425868a9ba4a9d64cbb7f727e88e87b7e",
+  "version": 1,
+  "metadata": {
+    "component": {
+      "type": "application",
+      "name": "Mouse Knockout",
+      "version": "1.0.0"
+    },
+    "properties": [
+      {
+        "name": "nova.engine",
+        "value": "6.0.2"
+      },
+      {
+        "name": "nova.build",
+        "value": "fa168e7eb9a6de44eb8a314f6fe8f45425868a9ba4a9d64cbb7f727e88e87b7e"
+      }
+    ]
+  },
+  "components": []
+}

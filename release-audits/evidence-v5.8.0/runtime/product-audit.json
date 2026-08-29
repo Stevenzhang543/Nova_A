@@ -1,0 +1,111 @@
+{
+  "format": "nova-v5.8.0-product-audit",
+  "version": 1,
+  "engineVersion": "5.8.0",
+  "generatedAt": "2026-08-27T06:13:24.615Z",
+  "perspectives": [
+    "programmer",
+    "runtime",
+    "user",
+    "layout"
+  ],
+  "checks": [
+    {
+      "id": "V580-VERSION",
+      "status": "passed",
+      "detail": "Frontend, native and Rust release authorities identify 5.8.0.",
+      "metrics": {}
+    },
+    {
+      "id": "V580-COMPATIBILITY",
+      "status": "passed",
+      "detail": "Frozen document, API and package boundaries remain compatible.",
+      "metrics": {}
+    },
+    {
+      "id": "V580-ROADMAP",
+      "status": "passed",
+      "detail": "Roadmap records completion and every required v5.8 audit target.",
+      "metrics": {}
+    },
+    {
+      "id": "V580-PROTOCOL",
+      "status": "passed",
+      "detail": "Protocol 2 supplies reliable/unreliable bounds, schemas, rates, deterministic simulation and secret exclusion.",
+      "metrics": {}
+    },
+    {
+      "id": "V580-RUNTIME",
+      "status": "passed",
+      "detail": "Local/direct transports, RPC authority, replication, interpolation, prediction, reconciliation and fixed-input rollback are runtime-bound.",
+      "metrics": {}
+    },
+    {
+      "id": "V580-REPLAY-SAVE",
+      "status": "passed",
+      "detail": "Versioned replay/save documents compare divergence, validate checksums and sanitize diagnostics.",
+      "metrics": {}
+    },
+    {
+      "id": "V580-OPTIONAL",
+      "status": "passed",
+      "detail": "Networking remains optional, lazy-loaded, permission-gated and disabled by default.",
+      "metrics": {}
+    },
+    {
+      "id": "V580-SCRIPTING",
+      "status": "passed",
+      "detail": "Rhai API 2 exposes reviewed status/query/RPC bindings and Visual Graph receives matching manifest nodes without raw sockets.",
+      "metrics": {}
+    },
+    {
+      "id": "V580-HEADLESS",
+      "status": "passed",
+      "detail": "Headless/server builds and project health fail closed on package, permission, authority, channel and transport errors.",
+      "metrics": {}
+    },
+    {
+      "id": "V580-EDITOR",
+      "status": "passed",
+      "detail": "Permanent Network Studio connects every authoring stage, explicit permission prompt, bounds, replay and diagnostics.",
+      "metrics": {}
+    },
+    {
+      "id": "V580-I18N",
+      "status": "passed",
+      "detail": "Every new visible workflow is localized in English, German and Chinese.",
+      "metrics": {}
+    },
+    {
+      "id": "V580-DOCS",
+      "status": "passed",
+      "detail": "README, focused networking guide and all multilingual manuals teach v5.8 workflows and safety.",
+      "metrics": {}
+    },
+    {
+      "id": "V580-VERIFY",
+      "status": "passed",
+      "detail": "Protocol, two-process, fuzz, late-join and divergence qualification passes.",
+      "metrics": {
+        "checks": 12
+      }
+    },
+    {
+      "id": "V580-LAYOUT",
+      "status": "passed",
+      "detail": "EN/DE/ZH browser matrix passes four release viewports.",
+      "metrics": {
+        "matrix": 12
+      }
+    },
+    {
+      "id": "V580-RELEASE",
+      "status": "passed",
+      "detail": "Generic packager enforces the exact eleven artifacts.",
+      "metrics": {}
+    }
+  ],
+  "severity0Open": 0,
+  "severity1Open": 0,
+  "status": "passed"
+}

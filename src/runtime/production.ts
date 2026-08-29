@@ -4,6 +4,9 @@ export type TestKind = 'unit' | 'integration' | 'scene' | 'ui' | 'physics' | 'an
 export type TestAssertionKind = 'entityCountAtLeast' | 'entityExists' | 'finitePhysics' | 'checksumEquals' | 'noRuntimeErrors'
 export type NetworkRole = 'client' | 'server' | 'host'
 export type NetworkTransportKind = 'websocket' | 'native-udp'
+export type NetworkSessionMode = 'local' | 'direct'
+export type NetworkDelivery = 'reliable-ordered' | 'unreliable-sequenced'
+export type NetworkPayloadSchema = 'any' | 'boolean' | 'number' | 'integer' | 'string' | 'vec2' | 'object' | 'array'
 
 export interface ProjectTestAssertion {
   kind: TestAssertionKind
@@ -45,6 +48,34 @@ export interface ReplicatedEntityDefinition {
   predict: boolean
 }
 
+export interface NetworkChannelDefinition {
+  id: string
+  delivery: NetworkDelivery
+  maximumPayloadBytes: number
+  messagesPerSecond: number
+  priority: number
+}
+
+export interface NetworkRpcDefinition {
+  name: string
+  channelId: string
+  direction: 'client-to-server' | 'server-to-client' | 'bidirectional'
+  authority: 'server' | 'owner' | 'any'
+  payloadSchema: NetworkPayloadSchema
+  maximumPayloadBytes: number
+  callsPerSecond: number
+}
+
+export interface NetworkSimulationSettings {
+  enabled: boolean
+  latencyMs: number
+  jitterMs: number
+  lossPercent: number
+  duplicatePercent: number
+  reorderPercent: number
+  seed: number
+}
+
 export interface ProductionProjectSettings {
   performance: {
     traceCapacity: number
@@ -83,7 +114,13 @@ export interface ProductionProjectSettings {
   }
   networking: {
     enabled: boolean
+    permissionGranted: boolean
+    autoStart: boolean
     role: NetworkRole
+    sessionMode: NetworkSessionMode
+    sessionName: string
+    playerName: string
+    maxPeers: number
     transport: NetworkTransportKind
     endpoint: string
     bindAddress: string
@@ -92,6 +129,19 @@ export interface ProductionProjectSettings {
     rollbackFrames: number
     bandwidthKbps: number
     reconnect: boolean
+    reconnectMaxAttempts: number
+    protocolVersion: 2
+    schemaVersion: number
+    maximumPacketBytes: number
+    maximumMessagesPerSecond: number
+    maximumPendingReliable: number
+    reliableRetryMs: number
+    reliableMaximumAttempts: number
+    reconciliationThreshold: number
+    lateJoin: boolean
+    channels: NetworkChannelDefinition[]
+    rpcContracts: NetworkRpcDefinition[]
+    simulation: NetworkSimulationSettings
     replicatedEntities: ReplicatedEntityDefinition[]
   }
 }
@@ -103,8 +153,19 @@ const DEFAULTS: ProductionProjectSettings = {
   data: { saveSchemaVersion: 1, saveMigrations: [] },
   jobs: { maxWorkers: 2, maxQueued: 256, timeoutMs: 15_000 },
   networking: {
-    enabled: false, role: 'client', transport: 'websocket', endpoint: 'ws://127.0.0.1:7777', bindAddress: '127.0.0.1:0',
-    snapshotRate: 20, interpolationMs: 100, rollbackFrames: 120, bandwidthKbps: 256, reconnect: true, replicatedEntities: []
+    enabled: false, permissionGranted: false, autoStart: false, role: 'client', sessionMode: 'local', sessionName: 'Local game', playerName: 'Player', maxPeers: 8,
+    transport: 'websocket', endpoint: 'ws://127.0.0.1:7777', bindAddress: '127.0.0.1:0',
+    snapshotRate: 20, interpolationMs: 100, rollbackFrames: 120, bandwidthKbps: 256, reconnect: true, reconnectMaxAttempts: 8,
+    protocolVersion: 2, schemaVersion: 1, maximumPacketBytes: 65_507, maximumMessagesPerSecond: 240, maximumPendingReliable: 512,
+    reliableRetryMs: 120, reliableMaximumAttempts: 8, reconciliationThreshold: .05, lateJoin: true,
+    channels: [
+      { id: 'state', delivery: 'unreliable-sequenced', maximumPayloadBytes: 48_000, messagesPerSecond: 120, priority: 2 },
+      { id: 'input', delivery: 'unreliable-sequenced', maximumPayloadBytes: 16_000, messagesPerSecond: 240, priority: 3 },
+      { id: 'events', delivery: 'reliable-ordered', maximumPayloadBytes: 32_000, messagesPerSecond: 120, priority: 4 }
+    ],
+    rpcContracts: [],
+    simulation: { enabled: false, latencyMs: 0, jitterMs: 0, lossPercent: 0, duplicatePercent: 0, reorderPercent: 0, seed: 0x4e455457 },
+    replicatedEntities: []
   }
 }
 
@@ -167,6 +228,26 @@ export function normalizeProductionSettings(value: unknown): ProductionProjectSe
       interpolate: item.interpolate !== false, predict: item.predict === true
     }]
   })
+  const deliveries: NetworkDelivery[] = ['reliable-ordered', 'unreliable-sequenced']
+  const schemas: NetworkPayloadSchema[] = ['any', 'boolean', 'number', 'integer', 'string', 'vec2', 'object', 'array']
+  const channelIds = new Set<string>()
+  const channels = (Array.isArray(networking.channels) ? networking.channels : DEFAULTS.networking.channels).slice(0, 32).flatMap((raw, index) => {
+    const item = object(raw), channelId = id(item.id, `channel-${index + 1}`)
+    if (channelIds.has(channelId)) return []
+    channelIds.add(channelId)
+    return [{ id: channelId, delivery: deliveries.includes(item.delivery as NetworkDelivery) ? item.delivery as NetworkDelivery : 'reliable-ordered' as const, maximumPayloadBytes: bounded(item.maximumPayloadBytes, 16_000, 32, 65_507, true), messagesPerSecond: bounded(item.messagesPerSecond, 120, 1, 2_000, true), priority: bounded(item.priority, 0, -16, 16, true) }]
+  })
+  if (!channels.length) channels.push(...structuredClone(DEFAULTS.networking.channels))
+  const rpcNames = new Set<string>()
+  const rpcContracts = (Array.isArray(networking.rpcContracts) ? networking.rpcContracts : []).slice(0, 256).flatMap((raw, index) => {
+    const item = object(raw), name = id(item.name, `rpc-${index + 1}`)
+    if (rpcNames.has(name)) return []
+    rpcNames.add(name)
+    const direction: NetworkRpcDefinition['direction'] = item.direction === 'server-to-client' || item.direction === 'bidirectional' ? item.direction : 'client-to-server'
+    const authority: NetworkRpcDefinition['authority'] = item.authority === 'owner' || item.authority === 'any' ? item.authority : 'server'
+    return [{ name, channelId: channelIds.has(String(item.channelId)) ? String(item.channelId) : channels[0].id, direction, authority, payloadSchema: schemas.includes(item.payloadSchema as NetworkPayloadSchema) ? item.payloadSchema as NetworkPayloadSchema : 'any', maximumPayloadBytes: bounded(item.maximumPayloadBytes, 8_192, 2, 65_507, true), callsPerSecond: bounded(item.callsPerSecond, 30, 1, 1_000, true) }]
+  })
+  const simulation = object(networking.simulation)
   return {
     performance: {
       traceCapacity: bounded(performance.traceCapacity, DEFAULTS.performance.traceCapacity, 60, 10_000, true),
@@ -190,12 +271,22 @@ export function normalizeProductionSettings(value: unknown): ProductionProjectSe
     data: { saveSchemaVersion: bounded(data.saveSchemaVersion, 1, 1, 65_535, true), saveMigrations: normalizeMigrations(data.saveMigrations) },
     jobs: { maxWorkers: bounded(jobs.maxWorkers, DEFAULTS.jobs.maxWorkers, 1, 8, true), maxQueued: bounded(jobs.maxQueued, DEFAULTS.jobs.maxQueued, 8, 2_048, true), timeoutMs: bounded(jobs.timeoutMs, DEFAULTS.jobs.timeoutMs, 100, 120_000, true) },
     networking: {
-      enabled: networking.enabled === true, role: roles.includes(networking.role as NetworkRole) ? networking.role as NetworkRole : 'client',
+      enabled: networking.enabled === true, permissionGranted: networking.permissionGranted === true, autoStart: networking.autoStart === true,
+      role: roles.includes(networking.role as NetworkRole) ? networking.role as NetworkRole : 'client',
+      sessionMode: networking.sessionMode === 'direct' ? 'direct' : 'local', sessionName: text(networking.sessionName, DEFAULTS.networking.sessionName, 80), playerName: text(networking.playerName, DEFAULTS.networking.playerName, 80),
+      maxPeers: bounded(networking.maxPeers, DEFAULTS.networking.maxPeers, 1, 64, true),
       transport: transports.includes(networking.transport as NetworkTransportKind) ? networking.transport as NetworkTransportKind : 'websocket',
       endpoint: text(networking.endpoint, DEFAULTS.networking.endpoint, 512), bindAddress: text(networking.bindAddress, DEFAULTS.networking.bindAddress, 256),
       snapshotRate: bounded(networking.snapshotRate, 20, 1, 120, true), interpolationMs: bounded(networking.interpolationMs, 100, 0, 2_000, true),
       rollbackFrames: bounded(networking.rollbackFrames, 120, 0, 600, true), bandwidthKbps: bounded(networking.bandwidthKbps, 256, 8, 1_000_000, true),
-      reconnect: networking.reconnect !== false, replicatedEntities
+      reconnect: networking.reconnect !== false, reconnectMaxAttempts: bounded(networking.reconnectMaxAttempts, DEFAULTS.networking.reconnectMaxAttempts, 0, 32, true),
+      protocolVersion: 2, schemaVersion: bounded(networking.schemaVersion, 1, 1, 65_535, true), maximumPacketBytes: bounded(networking.maximumPacketBytes, DEFAULTS.networking.maximumPacketBytes, 512, 65_507, true),
+      maximumMessagesPerSecond: bounded(networking.maximumMessagesPerSecond, DEFAULTS.networking.maximumMessagesPerSecond, 1, 10_000, true), maximumPendingReliable: bounded(networking.maximumPendingReliable, DEFAULTS.networking.maximumPendingReliable, 1, 4_096, true),
+      reliableRetryMs: bounded(networking.reliableRetryMs, DEFAULTS.networking.reliableRetryMs, 10, 5_000, true), reliableMaximumAttempts: bounded(networking.reliableMaximumAttempts, DEFAULTS.networking.reliableMaximumAttempts, 1, 32, true),
+      reconciliationThreshold: bounded(networking.reconciliationThreshold, DEFAULTS.networking.reconciliationThreshold, 0, 1_000), lateJoin: networking.lateJoin !== false,
+      channels, rpcContracts,
+      simulation: { enabled: simulation.enabled === true, latencyMs: bounded(simulation.latencyMs, 0, 0, 10_000, true), jitterMs: bounded(simulation.jitterMs, 0, 0, 10_000, true), lossPercent: bounded(simulation.lossPercent, 0, 0, 100), duplicatePercent: bounded(simulation.duplicatePercent, 0, 0, 100), reorderPercent: bounded(simulation.reorderPercent, 0, 0, 100), seed: bounded(simulation.seed, DEFAULTS.networking.simulation.seed, 0, 0xffff_ffff, true) >>> 0 },
+      replicatedEntities
     }
   }
 }

@@ -32,6 +32,8 @@ export function validateAnimationProject(assets: AssetRecord[], entities: Entity
         if (track.kind === 'Method' && !functions.has(command.value)) issues.push(issue(asset, 'NOVA-ANM-METHOD-SYMBOL', 'error', path, `Method ${command.value} is not defined by a project script.`))
         if (track.kind === 'Audio' && resolveAsset(command.value)?.assetType !== 'audio') issues.push(issue(asset, 'NOVA-ANM-AUDIO-REFERENCE', 'error', path, 'Audio track reference is missing or not audio.'))
         if (track.kind === 'NestedAnimation' && resolveAsset(command.value)?.assetType !== 'animation') issues.push(issue(asset, 'NOVA-ANM-NESTED-REFERENCE', 'error', path, 'Nested track reference is missing or not an animation.'))
+        if (track.kind === 'Timeline' && resolveAsset(command.value)?.assetType !== 'timeline') issues.push(issue(asset, 'NOVA-ANM-TIMELINE-REFERENCE', 'error', path, 'Timeline command reference is missing or not a timeline.'))
+        if (track.kind === 'VisualGraph' && !command.value.trim()) issues.push(issue(asset, 'NOVA-ANM-GRAPH-SIGNAL', 'error', path, 'Visual Graph command requires a signal name.'))
       }))
       const sampling = validateAnimationSampling(asset.uuid, clip)
       if (sampling.status === 'failed') issues.push(issue(asset, 'NOVA-ANM-SAMPLING', 'error', 'tracks', `${sampling.nonFinite} non-finite runtime samples detected.`))
@@ -41,8 +43,13 @@ export function validateAnimationProject(assets: AssetRecord[], entities: Entity
       controller.states.forEach((state, index) => {
         if (state.clipAsset && !readAnimationClip(state.clipAsset)) issues.push(issue(asset, 'NOVA-ANM-STATE-CLIP', 'error', `states[${index}].clipAsset`, `State ${state.name} has a missing clip.`))
         if (state.blendTree && !controller.parameters.some(parameter => parameter.name === state.blendTree!.parameter && (parameter.type === 'Float' || parameter.type === 'Integer'))) issues.push(issue(asset, 'NOVA-ANM-BLEND-PARAMETER', 'error', `states[${index}].blendTree`, 'Blend tree requires a numeric parameter.'))
+        if (state.blendTree?.type === '2D' && !controller.parameters.some(parameter => parameter.name === state.blendTree!.parameterY && (parameter.type === 'Float' || parameter.type === 'Integer'))) issues.push(issue(asset, 'NOVA-ANM-BLEND-PARAMETER-Y', 'error', `states[${index}].blendTree.parameterY`, 'A 2D blend tree requires a second numeric parameter.'))
+        state.blendTree?.children.forEach((child, childIndex) => { if (child.clipAsset && !readAnimationClip(child.clipAsset)) issues.push(issue(asset, 'NOVA-ANM-BLEND-CLIP', 'error', `states[${index}].blendTree.children[${childIndex}]`, 'Blend-tree child clip is missing.')) })
       })
-      controller.transitions.forEach((transition, index) => { if (transition.from === transition.to && !transition.conditions.length && !transition.hasExitTime) issues.push(issue(asset, 'NOVA-ANM-TRANSITION-LOOP', 'warning', `transitions[${index}]`, 'Unconditional self-transition can restart every frame.')) })
+      controller.transitions.forEach((transition, index) => {
+        if (transition.from === transition.to && !transition.conditions.length && !transition.hasExitTime) issues.push(issue(asset, 'NOVA-ANM-TRANSITION-LOOP', 'warning', `transitions[${index}]`, 'Unconditional self-transition can restart every frame.'))
+        if (transition.syncMode === 'Marker') { const source = controller.states.find(state => state.id === transition.from), destination = controller.states.find(state => state.id === transition.to), sourceClip = source ? readAnimationClip(source.clipAsset) : null, destinationClip = destination ? readAnimationClip(destination.clipAsset) : null; if (!transition.syncMarker || !sourceClip?.markers.some(marker => marker.name === transition.syncMarker) || !destinationClip?.markers.some(marker => marker.name === transition.syncMarker)) issues.push(issue(asset, 'NOVA-ANM-SYNC-MARKER', 'warning', `transitions[${index}]`, 'Marker synchronization requires the named marker in both source and destination clips.')) }
+      })
     }
   }
   return issues.sort((a, b) => a.source.localeCompare(b.source) || a.code.localeCompare(b.code))

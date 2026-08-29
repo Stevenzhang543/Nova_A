@@ -1,0 +1,51 @@
+{
+  "format": "nova-local-build-evidence",
+  "version": 1,
+  "engineVersion": "6.0.2",
+  "generatedAt": "2026-08-28T17:51:22.988Z",
+  "artifacts": [
+    {
+      "name": "web-editor",
+      "path": "dist/index.html",
+      "bytes": 1158,
+      "sha256": "e5749b94f7401b1b88e3487425c26c786bb68c7771ba6fd322aa0267ca1459a1",
+      "status": "passed"
+    },
+    {
+      "name": "web-player",
+      "path": "dist/player.html",
+      "bytes": 658,
+      "sha256": "1f7d481dc5fe7054c0449211f39e8cd3d3262d5589c4d8eaf4d47e28ab14a8c8",
+      "status": "passed"
+    },
+    {
+      "name": "windows-editor",
+      "path": "src-tauri/target/release/nova_a.exe",
+      "bytes": 16075776,
+      "sha256": "98e163c5d472d44b90e47d52c5303cf809d406fda299c3c577e42d3b405d7c9d",
+      "status": "passed"
+    },
+    {
+      "name": "windows-game",
+      "path": "release-audits/game-output-v6.0.2/Mouse Knockout.exe",
+      "bytes": 16086391,
+      "sha256": "f342c36098db3537b4836d000469ec73ab70089831a45f7bf172af19bd700a4a",
+      "status": "passed"
+    },
+    {
+      "name": "windows-nsis",
+      "path": "src-tauri/target/release/bundle/nsis/Nova_A_6.0.2_x64-setup.exe",
+      "bytes": 8604226,
+      "sha256": "1640b18c04ed2c261408a9cc70b2ea8a32274c858e6e912b0efe28e31d2792cb",
+      "status": "passed"
+    },
+    {
+      "name": "windows-msi",
+      "path": "src-tauri/target/release/bundle/msi/Nova_A_6.0.2_x64_en-US.msi",
+      "bytes": 9678848,
+      "sha256": "49afc264e076bc4b7137dc375096351d57a2b9b824a52754f109e88249f7eaa8",
+      "status": "passed"
+    }
+  ],
+  "status": "passed"
+}

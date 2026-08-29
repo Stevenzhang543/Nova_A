@@ -1,0 +1,45 @@
+{
+  "format": "nova-v5.3.0-browser-layout-audit",
+  "version": 1,
+  "engineVersion": "5.3.0",
+  "generatedAt": "2026-08-26T11:30:00.000Z",
+  "browser": "Codex in-app Chromium browser",
+  "surface": "Script workspace / Visual Graph / production tools",
+  "method": "Rendered DOM measurements plus viewport screenshots; controls were exercised through the visible UI.",
+  "matrix": [
+    { "locale": "en", "viewport": "1024x640", "status": "passed" },
+    { "locale": "en", "viewport": "1366x768", "status": "passed" },
+    { "locale": "en", "viewport": "1920x1080", "status": "passed" },
+    { "locale": "en", "viewport": "2560x1440", "status": "passed" },
+    { "locale": "de", "viewport": "1024x640", "status": "passed" },
+    { "locale": "de", "viewport": "1366x768", "status": "passed" },
+    { "locale": "de", "viewport": "1920x1080", "status": "passed" },
+    { "locale": "de", "viewport": "2560x1440", "status": "passed" },
+    { "locale": "zh", "viewport": "1024x640", "status": "passed" },
+    { "locale": "zh", "viewport": "1366x768", "status": "passed" },
+    { "locale": "zh", "viewport": "1920x1080", "status": "passed" },
+    { "locale": "zh", "viewport": "2560x1440", "status": "passed" }
+  ],
+  "assertions": {
+    "documentOverflow": false,
+    "controlOverlap": false,
+    "productionTabTruncation": false,
+    "hiddenWorkspaceCommands": false,
+    "hiddenGraphCommands": false,
+    "detailsPanelScrollable": true,
+    "reducedMotionStylesPresent": true
+  },
+  "repairsVerified": [
+    "Production tabs use readable wrapped rows; German Diff / Merge and Generated Rhai remain complete.",
+    "Graph editing commands wrap to a second row between 761 and 1500 pixels instead of entering an invisible scroller.",
+    "All six workspace presets remain visible as labeled controls or titled compact icons at 1024 pixels.",
+    "The graph-details panel clips and scrolls its own content above the status bar."
+  ],
+  "notes": [
+    "Input text fields may scroll their editable value internally; this is expected native text-edit behavior and is not label clipping.",
+    "High-DPI coverage uses the 1920x1080 and 2560x1440 viewport passes; geometry remained pixel-contained."
+  ],
+  "severity0Open": 0,
+  "severity1Open": 0,
+  "status": "passed"
+}

@@ -1,4 +1,4 @@
-export const NOVA_ENGINE_VERSION = '5.0.1'
+export const NOVA_ENGINE_VERSION = '6.1.0'
 export const NOVA_PROJECT_FORMAT = 'Nova_A Project Format 2'
 export const NOVA_PROJECT_FORMAT_MAJOR = 2
 export const NOVA_PROJECT_SCHEMA_VERSION = 29

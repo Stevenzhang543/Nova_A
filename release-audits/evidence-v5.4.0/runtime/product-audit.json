@@ -1,0 +1,125 @@
+{
+  "format": "nova-v5.4.0-product-audit",
+  "version": 1,
+  "engineVersion": "5.4.0",
+  "generatedAt": "2026-08-26T14:38:18.280Z",
+  "perspectives": [
+    "programmer",
+    "runtime",
+    "user",
+    "layout"
+  ],
+  "checks": [
+    {
+      "id": "V540-VERSION",
+      "status": "passed",
+      "detail": "Frontend, native and Rust version authorities identify 5.4.0.",
+      "metrics": {}
+    },
+    {
+      "id": "V540-ROADMAP",
+      "status": "passed",
+      "detail": "The authoritative roadmap records the complete implementation and audit contract.",
+      "metrics": {}
+    },
+    {
+      "id": "V540-COMPONENTS",
+      "status": "passed",
+      "detail": "All eleven gameplay components have data classes, stable registry descriptors, persistence factories and normalization.",
+      "metrics": {
+        "kinds": [
+          "GridMover2D",
+          "PlatformController2D",
+          "TopDownController2D",
+          "Health2D",
+          "DamageHitbox2D",
+          "Collectible2D",
+          "Projectile2D",
+          "Spawner2D",
+          "Cooldown2D",
+          "Lifetime2D",
+          "CameraFollow2D"
+        ]
+      }
+    },
+    {
+      "id": "V540-DYNAMIC",
+      "status": "passed",
+      "detail": "Pending/instance handles, generations, targeted operations and explicit stale failures are wired through the host command boundary.",
+      "metrics": {}
+    },
+    {
+      "id": "V540-QUERIES",
+      "status": "passed",
+      "detail": "Typed scene queries and snapshot reads declare deterministic hard bounds.",
+      "metrics": {}
+    },
+    {
+      "id": "V540-RUNTIME",
+      "status": "passed",
+      "detail": "Gameplay initialization, fixed-step update and collision dispatch are connected to live runtime phases.",
+      "metrics": {}
+    },
+    {
+      "id": "V540-GAME-FLOW",
+      "status": "passed",
+      "detail": "Pause, restart, transition, checkpoint, score/session and quit share API-v2 commands.",
+      "metrics": {}
+    },
+    {
+      "id": "V540-INPUT",
+      "status": "passed",
+      "detail": "Contexts, maps, schemes, interactions, consumption, priority and callbacks persist and have authoring controls.",
+      "metrics": {}
+    },
+    {
+      "id": "V540-AI",
+      "status": "passed",
+      "detail": "Behavior trees and state machines share graph trace/error/coverage/timing and profiler infrastructure.",
+      "metrics": {}
+    },
+    {
+      "id": "V540-AUTHORING",
+      "status": "passed",
+      "detail": "Gameplay components and advanced input are reachable from responsive editor authoring surfaces.",
+      "metrics": {}
+    },
+    {
+      "id": "V540-I18N",
+      "status": "passed",
+      "detail": "All new visible controls have English, German and Chinese strings.",
+      "metrics": {}
+    },
+    {
+      "id": "V540-DOCS",
+      "status": "passed",
+      "detail": "English/Chinese README and offline EN/DE/ZH manuals teach the v5.4 workflows and link focused guides.",
+      "metrics": {}
+    },
+    {
+      "id": "V540-REFERENCES",
+      "status": "passed",
+      "detail": "Five gameplay references pass deterministic component/API/static-script verification.",
+      "metrics": {
+        "checks": 11
+      }
+    },
+    {
+      "id": "V540-LAYOUT",
+      "status": "passed",
+      "detail": "Browser layout qualification passed EN/DE/ZH at four required viewports.",
+      "metrics": {
+        "matrix": 12
+      }
+    },
+    {
+      "id": "V540-RELEASE",
+      "status": "passed",
+      "detail": "Generic packager enforces the exact eleven-file release contract.",
+      "metrics": {}
+    }
+  ],
+  "severity0Open": 0,
+  "severity1Open": 0,
+  "status": "passed"
+}

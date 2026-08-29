@@ -63,6 +63,57 @@
 // find_entity(name) -> string
 // Compatibility UUID lookup.
 // DEPRECATED: use find_entity_handle; removal API v3.
+// @nova-api module=object lifetime=callback thread=callback-boundary determinism=deterministic
+// query_tag(tag, limit) -> Array<Handle<Entity>>
+// Returns at most 256 stable entity handles with a tag.
+// @nova-api module=object lifetime=callback thread=callback-boundary determinism=deterministic
+// query_group(group, limit) -> Array<Handle<Entity>>
+// Returns at most 256 stable entity handles in a group.
+// @nova-api module=object lifetime=callback thread=callback-boundary determinism=deterministic
+// query_component(kind, limit) -> Array<Handle<Entity>>
+// Returns at most 256 entity handles owning a component kind.
+// @nova-api module=object lifetime=callback thread=callback-boundary determinism=deterministic
+// query_radius(x, y, radius, limit) -> Array<Handle<Entity>>
+// Returns bounded handles inside a finite world-space radius.
+// @nova-api module=object lifetime=callback thread=callback-boundary determinism=deterministic
+// entity_name_on(handle) -> string
+// Reads the query-snapshot name for an entity handle.
+// @nova-api module=object lifetime=callback thread=callback-boundary determinism=deterministic
+// entity_enabled_on(handle) -> bool
+// Reads the query-snapshot enabled state for an entity handle.
+// @nova-api module=object lifetime=callback thread=callback-boundary determinism=deterministic
+// entity_position_x_on(handle) -> float
+// Reads query-snapshot world X for an entity handle.
+// @nova-api module=object lifetime=callback thread=callback-boundary determinism=deterministic
+// entity_position_y_on(handle) -> float
+// Reads query-snapshot world Y for an entity handle.
+// @nova-api module=object lifetime=callback thread=callback-boundary determinism=deterministic
+// entity_set_position(handle, x, y)
+// Queues a finite world position for a validated entity handle.
+// @nova-api module=object lifetime=callback thread=callback-boundary determinism=deterministic
+// entity_set_rotation(handle, radians)
+// Queues a world rotation for a validated entity handle.
+// @nova-api module=object lifetime=callback thread=callback-boundary determinism=deterministic
+// entity_set_scale(handle, x, y)
+// Queues a non-zero world scale for a validated entity handle.
+// @nova-api module=object lifetime=callback thread=callback-boundary determinism=deterministic
+// entity_set_enabled(handle, enabled)
+// Enables or disables a validated entity.
+// @nova-api module=object lifetime=callback thread=callback-boundary determinism=deterministic
+// entity_add_tag(handle, tag)
+// Adds one bounded tag to a validated entity.
+// @nova-api module=object lifetime=callback thread=callback-boundary determinism=deterministic
+// entity_remove_tag(handle, tag)
+// Removes one tag from a validated entity.
+// @nova-api module=object lifetime=callback thread=callback-boundary determinism=deterministic
+// entity_add_group(handle, group)
+// Adds a validated entity to a bounded group.
+// @nova-api module=object lifetime=callback thread=callback-boundary determinism=deterministic
+// entity_remove_group(handle, group)
+// Removes a validated entity from a group.
+// @nova-api module=object lifetime=callback thread=callback-boundary determinism=deterministic
+// entity_destroy(handle)
+// Safely destroys the validated target at the structural boundary.
 // @nova-api module=component lifetime=scene thread=callback-boundary determinism=deterministic
 // component_handle(kind) -> Handle<Component>
 // Returns a stable component handle or explicit invalid handle.
@@ -73,6 +124,9 @@
 // get_component(kind) -> string
 // Legacy component URI lookup.
 // DEPRECATED: use component_handle; removal API v3.
+// @nova-api module=component lifetime=callback thread=callback-boundary determinism=deterministic
+// component_set_enabled_on(handle, component, enabled)
+// Enables or disables an existing target component.
 // @nova-api module=transform lifetime=callback thread=callback-boundary determinism=deterministic
 // transform() -> TransformSnapshot
 // Reads one coherent world-transform snapshot.
@@ -95,6 +149,42 @@
 // input_released(action) -> bool
 // True on an action release edge.
 // @nova-api module=input lifetime=callback thread=callback-boundary determinism=deterministic
+// input_performed(action) -> bool
+// True when Press, Hold, Tap, or Multi-tap reaches Performed.
+// @nova-api module=input lifetime=callback thread=callback-boundary determinism=deterministic
+// input_cancelled(action) -> bool
+// True when an interaction is released before completion.
+// @nova-api module=input lifetime=callback thread=callback-boundary determinism=deterministic
+// input_phase(action) -> string
+// Returns idle, started, performed, or cancelled.
+// @nova-api module=input lifetime=callback thread=callback-boundary determinism=deterministic
+// input_duration(action) -> float
+// Returns the current held duration in seconds.
+// @nova-api module=input lifetime=callback thread=callback-boundary determinism=deterministic
+// input_context_active(name) -> bool
+// Reports whether an input context is active.
+// @nova-api module=input lifetime=callback thread=callback-boundary determinism=deterministic
+// input_map_active(name) -> bool
+// Reports whether an action map is active.
+// @nova-api module=input lifetime=callback thread=callback-boundary determinism=deterministic
+// input_scheme() -> string
+// Returns the active control scheme.
+// @nova-api module=input lifetime=callback thread=callback-boundary determinism=deterministic
+// input_context_push(name, priority, consume)
+// Pushes or updates a bounded input context.
+// @nova-api module=input lifetime=callback thread=callback-boundary determinism=deterministic
+// input_context_pop(name)
+// Removes an active non-root input context.
+// @nova-api module=input lifetime=callback thread=callback-boundary determinism=deterministic
+// input_map_enable(name)
+// Enables a bounded named action map.
+// @nova-api module=input lifetime=callback thread=callback-boundary determinism=deterministic
+// input_map_disable(name)
+// Disables a named non-default action map.
+// @nova-api module=input lifetime=callback thread=callback-boundary determinism=deterministic
+// input_scheme_set(name)
+// Selects a named input scheme.
+// @nova-api module=input lifetime=callback thread=callback-boundary determinism=deterministic
 // input_axis(action) -> float
 // Reads a scalar action.
 // @nova-api module=input lifetime=callback thread=callback-boundary determinism=deterministic
@@ -112,6 +202,30 @@
 // @nova-api module=input lifetime=callback thread=callback-boundary determinism=host-dependent
 // mouse_y() -> float
 // Reads pointer y in the viewport.
+// @nova-api module=input lifetime=callback thread=callback-boundary determinism=deterministic
+// mouse_world_x() -> float
+// Reads pointer x in game-camera world units.
+// @nova-api module=input lifetime=callback thread=callback-boundary determinism=deterministic
+// mouse_world_y() -> float
+// Reads pointer y in game-camera world units.
+// @nova-api module=input lifetime=callback thread=callback-boundary determinism=deterministic
+// view_min_x() -> float
+// Reads the active game camera left world bound.
+// @nova-api module=input lifetime=callback thread=callback-boundary determinism=deterministic
+// view_max_x() -> float
+// Reads the active game camera right world bound.
+// @nova-api module=input lifetime=callback thread=callback-boundary determinism=deterministic
+// view_min_y() -> float
+// Reads the active game camera bottom world bound.
+// @nova-api module=input lifetime=callback thread=callback-boundary determinism=deterministic
+// view_max_y() -> float
+// Reads the active game camera top world bound.
+// @nova-api module=input lifetime=callback thread=callback-boundary determinism=deterministic
+// viewport_width() -> float
+// Reads the current game viewport width in CSS pixels.
+// @nova-api module=input lifetime=callback thread=callback-boundary determinism=deterministic
+// viewport_height() -> float
+// Reads the current game viewport height in CSS pixels.
 // @nova-api module=input lifetime=callback thread=callback-boundary determinism=host-dependent
 // wheel_x() -> float
 // Reads horizontal wheel delta.
@@ -184,6 +298,12 @@
 // @nova-api module=ui lifetime=callback thread=callback-boundary determinism=deterministic
 // ui_set_value(value)
 // Sets Slider, ProgressBar or Checkbox value.
+// @nova-api module=ui lifetime=callback thread=callback-boundary determinism=deterministic
+// ui_set_text_on(handle, text)
+// Sets text on a validated target UI/world-text entity.
+// @nova-api module=ui lifetime=callback thread=callback-boundary determinism=deterministic
+// ui_set_value_on(handle, value)
+// Sets a validated target Slider, ProgressBar, or Checkbox.
 // @nova-api module=animation lifetime=scene thread=callback-boundary determinism=deterministic
 // animator_handle() -> Handle<Animator>
 // Returns this Animator as a stable handle.
@@ -229,6 +349,9 @@
 // instantiate(prefab)
 // Queues a prefab instance.
 // @nova-api module=scene lifetime=callback thread=callback-boundary determinism=deterministic
+// spawn_at(prefab, x, y, rotation, scale_x, scale_y) -> Handle<Entity>
+// Queues a prefab at an exact transform and returns a stable pending handle.
+// @nova-api module=scene lifetime=callback thread=callback-boundary determinism=deterministic
 // destroy()
 // Queues safe entity destruction.
 // @nova-api module=scene lifetime=callback thread=callback-boundary determinism=deterministic
@@ -243,6 +366,60 @@
 // @nova-api module=scene lifetime=callback thread=callback-boundary determinism=deterministic
 // scene_quit()
 // Requests clean runtime shutdown.
+// @nova-api module=gameplay lifetime=callback thread=callback-boundary determinism=deterministic
+// game_pause(paused)
+// Pauses or resumes scaled gameplay while input/update callbacks remain available.
+// @nova-api module=gameplay lifetime=callback thread=callback-boundary determinism=deterministic
+// game_paused() -> bool
+// Reports the current gameplay pause state.
+// @nova-api module=gameplay lifetime=callback thread=callback-boundary determinism=deterministic
+// checkpoint_set(name)
+// Captures bounded scene transforms, health, score, and session state.
+// @nova-api module=gameplay lifetime=callback thread=callback-boundary determinism=deterministic
+// checkpoint_has(name) -> bool
+// Reports whether a runtime checkpoint exists.
+// @nova-api module=gameplay lifetime=callback thread=callback-boundary determinism=deterministic
+// checkpoint_restore(name)
+// Restores a same-scene checkpoint or fails explicitly.
+// @nova-api module=gameplay lifetime=callback thread=callback-boundary determinism=deterministic
+// score_get() -> float
+// Returns the bounded session score.
+// @nova-api module=gameplay lifetime=callback thread=callback-boundary determinism=deterministic
+// score_set(value)
+// Sets the bounded session score.
+// @nova-api module=gameplay lifetime=callback thread=callback-boundary determinism=deterministic
+// score_add(value)
+// Adds to the bounded session score.
+// @nova-api module=gameplay lifetime=callback thread=callback-boundary determinism=deterministic
+// session_get(key, fallback) -> value
+// Reads a bounded serializable session value.
+// @nova-api module=gameplay lifetime=callback thread=callback-boundary determinism=deterministic
+// session_set(key, value)
+// Writes a bounded serializable session value.
+// @nova-api module=network lifetime=callback thread=callback-boundary determinism=deterministic
+// network_enabled() -> bool
+// Reports whether reviewed project networking and explicit permission are enabled.
+// @nova-api module=network lifetime=callback thread=callback-boundary determinism=deterministic
+// network_connected() -> bool
+// Reports whether the optional runtime has an active session transport.
+// @nova-api module=network lifetime=callback thread=callback-boundary determinism=deterministic
+// network_is_authority() -> bool
+// Reports whether this peer owns server or host authority.
+// @nova-api module=network lifetime=callback thread=callback-boundary determinism=deterministic
+// network_peer_count() -> int
+// Returns the bounded number of known remote peers.
+// @nova-api module=network lifetime=callback thread=callback-boundary determinism=deterministic
+// network_local_peer() -> string
+// Returns the current bounded local peer identifier.
+// @nova-api module=network lifetime=callback thread=callback-boundary determinism=deterministic
+// network_role() -> string
+// Returns client, server, or host.
+// @nova-api module=network lifetime=callback thread=callback-boundary determinism=deterministic
+// network_tick() -> int
+// Returns the authoritative network tick observed at this callback boundary.
+// @nova-api module=network lifetime=callback thread=callback-boundary determinism=deterministic
+// network_rpc(name, payload)
+// Queues a declared RPC through explicit permission, authority, direction, schema, rate, payload, and bandwidth checks.
 // @nova-api module=timing lifetime=callback thread=callback-boundary determinism=deterministic
 // time() -> TimeSnapshot
 // Returns delta, fixed delta, elapsed, scale and frame.

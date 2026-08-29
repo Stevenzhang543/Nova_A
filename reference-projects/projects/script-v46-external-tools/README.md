@@ -1,6 +1,6 @@
 # Script v4.6 External Tools
 
-Engine **5.0.1**, Project Format 2, schema 29.
+Engine **5.3.0**, Project Format 2, schema 29.
 
 ## Purpose
 

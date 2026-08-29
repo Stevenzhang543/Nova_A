@@ -1,7 +1,7 @@
 {
   "format": "nova-reference-expected-output",
   "version": 1,
-  "engineVersion": "5.0.1",
+  "engineVersion": "5.3.0",
   "workflow": "Sprite and atlas production",
   "contentInclusion": {
     "group": "main",

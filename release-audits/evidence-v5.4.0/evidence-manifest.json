@@ -1,0 +1,92 @@
+{
+  "format": "nova-release-evidence-manifest",
+  "version": 1,
+  "release": "5.4.0",
+  "generatedAt": "2026-08-26T14:38:38.636Z",
+  "source": {
+    "commit": "af1d173b71e02630562513cd9b7bfd6f593d6947",
+    "dirty": true,
+    "note": "Current working candidate; tagged-source verification remains pending."
+  },
+  "environment": {
+    "id": "win32-x64-node22.22.2",
+    "os": "win32",
+    "architecture": "x64",
+    "node": "22.22.2"
+  },
+  "externalCertificationComplete": false,
+  "entries": [
+    {
+      "path": "build/local-builds.json",
+      "sha256": "0769f69a7e7bcc18a47884c397ed03b7af8452bf3530a0ebf9ff16517013b9db",
+      "bytes": 779,
+      "source": "af1d173b71e02630562513cd9b7bfd6f593d6947",
+      "tool": "generate-v5.4.0-release-evidence.mjs",
+      "environment": "win32-x64-node22.22.2"
+    },
+    {
+      "path": "documentation/DYNAMIC_OBJECT_API_5_4.md",
+      "sha256": "5fae09a93774e8c48333c0503ad72bb76df915403ac7727d63982a8efa049c7a",
+      "bytes": 3073,
+      "source": "af1d173b71e02630562513cd9b7bfd6f593d6947",
+      "tool": "generate-v5.4.0-release-evidence.mjs",
+      "environment": "win32-x64-node22.22.2"
+    },
+    {
+      "path": "documentation/GAMEPLAY_FRAMEWORK_5_4.md",
+      "sha256": "e9429d52de904588b5d1f1c83780cd7fd024666d742335fbddd787f59c5d9c32",
+      "bytes": 4316,
+      "source": "af1d173b71e02630562513cd9b7bfd6f593d6947",
+      "tool": "generate-v5.4.0-release-evidence.mjs",
+      "environment": "win32-x64-node22.22.2"
+    },
+    {
+      "path": "documentation/INPUT_GAME_FLOW_5_4.md",
+      "sha256": "4434dcc65ebe203171a2ecd5de8a5f1bc1eabedec0a71323997bf79e07f8e1ea",
+      "bytes": 2971,
+      "source": "af1d173b71e02630562513cd9b7bfd6f593d6947",
+      "tool": "generate-v5.4.0-release-evidence.mjs",
+      "environment": "win32-x64-node22.22.2"
+    },
+    {
+      "path": "documentation/instructions.txt",
+      "sha256": "0aa248ada12937aec2def1d2bc4c8c6064ce5f59e38f8a0aa19f306f5c5be8eb",
+      "bytes": 23698,
+      "source": "af1d173b71e02630562513cd9b7bfd6f593d6947",
+      "tool": "generate-v5.4.0-release-evidence.mjs",
+      "environment": "win32-x64-node22.22.2"
+    },
+    {
+      "path": "external/gates.json",
+      "sha256": "11b285a7258d788191a055679716c66726615a8cc4497fad02f0ebb9121ce1db",
+      "bytes": 631,
+      "source": "af1d173b71e02630562513cd9b7bfd6f593d6947",
+      "tool": "generate-v5.4.0-release-evidence.mjs",
+      "environment": "win32-x64-node22.22.2"
+    },
+    {
+      "path": "runtime/gameplay-verification.json",
+      "sha256": "026c1e90fb2c6d2231e7adfb12e8949fc4eacec5365ce354a2041b6951df8d99",
+      "bytes": 2904,
+      "source": "af1d173b71e02630562513cd9b7bfd6f593d6947",
+      "tool": "generate-v5.4.0-release-evidence.mjs",
+      "environment": "win32-x64-node22.22.2"
+    },
+    {
+      "path": "runtime/layout-browser.json",
+      "sha256": "05320131857af4bb614142355edffb2d34ff19f1234b14d337c89ffba46b3506",
+      "bytes": 124054,
+      "source": "af1d173b71e02630562513cd9b7bfd6f593d6947",
+      "tool": "generate-v5.4.0-release-evidence.mjs",
+      "environment": "win32-x64-node22.22.2"
+    },
+    {
+      "path": "runtime/product-audit.json",
+      "sha256": "d3ae1a8845d024a397cd1d0bdf328157c18fb79db089ef4baf3d39a579c3b6ea",
+      "bytes": 3636,
+      "source": "af1d173b71e02630562513cd9b7bfd6f593d6947",
+      "tool": "generate-v5.4.0-release-evidence.mjs",
+      "environment": "win32-x64-node22.22.2"
+    }
+  ]
+}

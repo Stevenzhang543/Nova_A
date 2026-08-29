@@ -3,6 +3,7 @@ import { reactive, watch } from 'vue'
 export type ThemeMode = 'dark' | 'light'
 export type Locale = 'en' | 'de' | 'zh'
 export type WorkspaceLayoutScope = 'user' | 'project'
+export type PerformanceProfile = 'balanced' | 'low-end' | 'quality'
 
 export interface Preferences {
   theme: ThemeMode
@@ -18,6 +19,7 @@ export interface Preferences {
   connectionThickness: number
   showDiagnostics: boolean
   maxPixelRatio: number
+  performanceProfile: PerformanceProfile
   autosave: boolean
   autosaveInterval: number
   confirmDestructiveActions: boolean
@@ -48,6 +50,7 @@ const defaults: Preferences = {
   connectionThickness: 2,
   showDiagnostics: true,
   maxPixelRatio: 2,
+  performanceProfile: 'balanced',
   autosave: true,
   autosaveInterval: 30,
   confirmDestructiveActions: true,
@@ -94,6 +97,7 @@ function normalizedPreferences(parsed: Partial<Preferences>, resetLegacyLightCon
     connectionThickness: finiteRange(parsed.connectionThickness, defaults.connectionThickness, 0.5, 8),
     showDiagnostics: storedBoolean(parsed.showDiagnostics, defaults.showDiagnostics),
     maxPixelRatio: finiteRange(parsed.maxPixelRatio, defaults.maxPixelRatio, 1, 3),
+    performanceProfile: parsed.performanceProfile === 'low-end' || parsed.performanceProfile === 'quality' ? parsed.performanceProfile : 'balanced',
     autosave: storedBoolean(parsed.autosave, defaults.autosave),
     autosaveInterval: finiteRange(parsed.autosaveInterval, defaults.autosaveInterval, 5, 600),
     confirmDestructiveActions: storedBoolean(parsed.confirmDestructiveActions, defaults.confirmDestructiveActions),
@@ -129,8 +133,9 @@ export function applyPreferences(): void {
   root.dataset.compact = String(preferencesState.compactMode)
   root.dataset.reduceMotion = String(preferencesState.reduceMotion)
   root.dataset.highContrast = String(preferencesState.highContrast)
+  root.dataset.performanceProfile = preferencesState.performanceProfile
   root.style.setProperty('--ui-scale', String(preferencesState.uiScale))
-  root.dataset.uiScale = preferencesState.uiScale > 1.25 ? 'large' : 'standard'
+  root.dataset.uiScale = preferencesState.uiScale > 1.75 ? 'xlarge' : preferencesState.uiScale > 1.25 ? 'large' : 'standard'
   root.lang = preferencesState.locale === 'zh' ? 'zh-CN' : preferencesState.locale
 }
 

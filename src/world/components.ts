@@ -9,7 +9,7 @@ export type TileCollision2D = 'None' | 'Box' | 'Polygon' | 'OneWay'
 export type TileBlendMode2D = 'Alpha' | 'Additive' | 'Multiply' | 'Screen'
 export type TileCellTransform2D = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15
 export type AreaEffectKind2D = 'Gravity' | 'Wind' | 'Drag' | 'Buoyancy' | 'Damage' | 'Signal'
-export type NavigationAlgorithm2D = 'AStar' | 'FlowField'
+export type NavigationAlgorithm2D = 'AStar' | 'HierarchicalAStar' | 'FlowField'
 export type JointKind2D = 'FixedJoint2D' | 'WeldJoint2D' | 'DistanceJoint2D' | 'RopeJoint2D' | 'RevoluteJoint2D' | 'MotorJoint2D' | 'PrismaticJoint2D' | 'SpringJoint2D'
 export type RendererShape2D = 'Rectangle' | 'Ellipse' | 'Polygon' | 'Line'
 export type LightKind2D = 'Point' | 'Spot' | 'Directional' | 'Area'
@@ -45,6 +45,18 @@ export type ComponentKind =
   | 'NavigationAgent2D'
   | 'BehaviorTree2D'
   | 'StateMachine2D'
+  | 'GridMover2D'
+  | 'PlatformController2D'
+  | 'TopDownController2D'
+  | 'Health2D'
+  | 'DamageHitbox2D'
+  | 'Collectible2D'
+  | 'Projectile2D'
+  | 'Spawner2D'
+  | 'Cooldown2D'
+  | 'Lifetime2D'
+  | 'MouseFollower2D'
+  | 'CameraFollow2D'
   | 'WorldChunk2D'
   | 'Portal2D'
   | 'ObjectPool2D'
@@ -165,7 +177,7 @@ export class Camera2D extends ComponentBase {
   constructor(uuid?: string) { super(uuid) }
 }
 
-export type ScriptPropertyValue = number | string | boolean
+export type ScriptPropertyValue = null | number | string | boolean | ScriptPropertyValue[] | { [key: string]: ScriptPropertyValue }
 
 export interface ScriptPropertyMetadata {
   name: string
@@ -230,6 +242,8 @@ export class TimelinePlayer extends ComponentBase {
   speed = 1
   currentTime = 0
   playing = false
+  skipped = false
+  variables: Record<string, string | number | boolean> = {}
 
   constructor(uuid?: string) { super(uuid) }
 }
@@ -317,7 +331,8 @@ export class RectTransform extends ComponentBase {
   zOrder = 0
   componentSource: string | null = null
   componentVariant = 'default'
-  focusable = true
+  // A layout rectangle is passive by default. Interactive UI components opt in explicitly.
+  focusable = false
   tabIndex = 0
   focusUp: string | null = null
   focusDown: string | null = null
@@ -331,7 +346,7 @@ export class RectTransform extends ComponentBase {
   accessibilityLive: 'Off' | 'Polite' | 'Assertive' = 'Off'
   accessibilityHidden = false
   readingOrder = 0
-  skipNavigation = false
+  skipNavigation = true
   remapAction = ''
   remapBindingIndex = 0
 
@@ -592,7 +607,9 @@ export class NavigationRegion2D extends ComponentBase {
   source: 'SceneGeometry' | 'TileMap' | 'Manual' = 'Manual'
   sourceEntityUuid: string | null = null
   agentRadius = 0.4
+  clusterSize = 16
   links: Array<{ id: string; start: Vec2; end: Vec2; bidirectional: boolean; cost: number; enabled: boolean }> = []
+  costAreas: Array<{ id: string; name: string; shape: 'Box' | 'Circle'; center: Vec2; size: Vec2; radius: number; multiplier: number; navigationLayer: number; enabled: boolean }> = []
   bakedRevision = 0
 
   constructor(uuid?: string) { super(uuid) }
@@ -625,10 +642,11 @@ export class NavigationAgent2D extends ComponentBase {
   navigationLayer = 1
   navigationMask = 1
   avoidancePriority = 0.5
+  maximumAvoidanceNeighbors = 16
   path: Vec2[] = []
   pathIndex = 0
   velocity: Vec2 = { x: 0, y: 0 }
-  pathStatus: 'Idle' | 'Ready' | 'Unreachable' = 'Idle'
+  pathStatus: 'Idle' | 'Pending' | 'Ready' | 'Unreachable' = 'Idle'
 
   constructor(uuid?: string) { super(uuid) }
 }
@@ -638,6 +656,7 @@ export class BehaviorTree2D extends ComponentBase {
   treeAsset: string | null = null
   tickRate = 10
   currentNode = ''
+  blackboardOverrides: Record<string, boolean | number | string> = {}
 
   constructor(uuid?: string) { super(uuid) }
 }
@@ -646,6 +665,148 @@ export class StateMachine2D extends ComponentBase {
   readonly kind = 'StateMachine2D' as const
   machineAsset: string | null = null
   currentState = ''
+
+  constructor(uuid?: string) { super(uuid) }
+}
+
+export class GridMover2D extends ComponentBase {
+  readonly kind = 'GridMover2D' as const
+  action = 'Move'
+  cellSize: Vec2 = { x: 1, y: 1 }
+  repeatDelay = 0.12
+  allowDiagonal = false
+  localSpace = false
+  runtimeCooldown = 0
+
+  constructor(uuid?: string) { super(uuid) }
+}
+
+export class PlatformController2D extends ComponentBase {
+  readonly kind = 'PlatformController2D' as const
+  moveAction = 'Horizontal'
+  jumpAction = 'Jump'
+  speed = 6
+  acceleration = 36
+  airControl = 0.55
+  jumpImpulse = 10
+  maximumFallSpeed = 30
+
+  constructor(uuid?: string) { super(uuid) }
+}
+
+export class TopDownController2D extends ComponentBase {
+  readonly kind = 'TopDownController2D' as const
+  moveAction = 'Move'
+  speed = 5
+  acceleration = 30
+  rotateToMovement = false
+
+  constructor(uuid?: string) { super(uuid) }
+}
+
+export class Health2D extends ComponentBase {
+  readonly kind = 'Health2D' as const
+  maximum = 100
+  current = 100
+  invulnerabilitySeconds = 0
+  destroyOnZero = true
+  damagedSignal = 'health.damaged'
+  diedSignal = 'health.died'
+  runtimeInvulnerability = 0
+
+  constructor(uuid?: string) { super(uuid) }
+}
+
+export class DamageHitbox2D extends ComponentBase {
+  readonly kind = 'DamageHitbox2D' as const
+  damage = 10
+  knockback = 0
+  targetTag = 'damageable'
+  hitCooldown = 0.1
+  destroyOnHit = false
+  hitSignal = 'damage.hit'
+
+  constructor(uuid?: string) { super(uuid) }
+}
+
+export class Collectible2D extends ComponentBase {
+  readonly kind = 'Collectible2D' as const
+  collectorTag = 'player'
+  score = 1
+  destroyOnCollect = true
+  collectedSignal = 'collectible.collected'
+
+  constructor(uuid?: string) { super(uuid) }
+}
+
+export class Projectile2D extends ComponentBase {
+  readonly kind = 'Projectile2D' as const
+  speed = 12
+  direction: Vec2 = { x: 1, y: 0 }
+  damage = 10
+  ownerUuid = ''
+  destroyOnImpact = true
+  lifetime = 5
+  runtimeLifetime = 5
+
+  constructor(uuid?: string) { super(uuid) }
+}
+
+export class Spawner2D extends ComponentBase {
+  readonly kind = 'Spawner2D' as const
+  prefabAsset: string | null = null
+  interval = 1
+  initialDelay = 0
+  burst = 1
+  maximumAlive = 32
+  autoStart = true
+  inheritRotation = true
+  runtimeRemaining = 0
+  runtimeStarted = false
+  runtimeSpawned: string[] = []
+
+  constructor(uuid?: string) { super(uuid) }
+}
+
+export class Cooldown2D extends ComponentBase {
+  readonly kind = 'Cooldown2D' as const
+  duration = 1
+  autoStart = false
+  readySignal = 'cooldown.ready'
+  runtimeRemaining = 0
+  runtimeReady = true
+
+  constructor(uuid?: string) { super(uuid) }
+}
+
+export class Lifetime2D extends ComponentBase {
+  readonly kind = 'Lifetime2D' as const
+  seconds = 5
+  useDespawn = true
+  runtimeRemaining = 5
+
+  constructor(uuid?: string) { super(uuid) }
+}
+
+/** Drives an entity toward the active Game-view pointer in world space.
+ * A maximumSpeed of zero means an exact, unrestricted pointer lock. */
+export class MouseFollower2D extends ComponentBase {
+  readonly kind = 'MouseFollower2D' as const
+  offset: Vec2 = { x: 0, y: 0 }
+  maximumSpeed = 0
+
+  constructor(uuid?: string) { super(uuid) }
+}
+
+export class CameraFollow2D extends ComponentBase {
+  readonly kind = 'CameraFollow2D' as const
+  targetUuid = ''
+  targetTag = 'player'
+  offset: Vec2 = { x: 0, y: 0 }
+  smoothing = 8
+  deadZone: Vec2 = { x: 0, y: 0 }
+  followX = true
+  followY = true
 
   constructor(uuid?: string) { super(uuid) }
 }
@@ -697,6 +858,7 @@ export class ObjectPool2D extends ComponentBase {
 export class ParticleEmitter2D extends ComponentBase {
   readonly kind = 'ParticleEmitter2D' as const
   particleSystemAsset: string | null = null
+  simulationBackend: 'Auto' | 'CPU' | 'GPU' = 'Auto'
   textureAsset: string | null = null
   emissionRate = 20
   burst = 0
@@ -733,6 +895,10 @@ export class ParticleEmitter2D extends ComponentBase {
   collisionMode: 'None' | 'Bounce' | 'Stop' = 'None'
   collisionRestitution = 0.5
   collisionLayerMask = 0xffff_ffff
+  eventSignal = 'particle.event'
+  trailEnabled = false
+  trailLength = 12
+  trailWidth = .08
 
   constructor(uuid?: string) { super(uuid) }
 }
@@ -872,7 +1038,8 @@ export type EntityComponent =
   | Animator | Skeleton2D | TimelinePlayer | AudioSource | AudioListener | Canvas | RectTransform | Panel | Image
   | Text | Button | Slider | ProgressBar | Checkbox | TextInput
   | TileMap2D | CharacterBody2D | Area2D | AreaEffector2D | NavigationRegion2D | NavigationObstacle2D | NavigationAgent2D
-  | BehaviorTree2D | StateMachine2D | WorldChunk2D | Portal2D | ObjectPool2D
+  | BehaviorTree2D | StateMachine2D | GridMover2D | PlatformController2D | TopDownController2D | Health2D | DamageHitbox2D
+  | Collectible2D | Projectile2D | Spawner2D | Cooldown2D | Lifetime2D | MouseFollower2D | CameraFollow2D | WorldChunk2D | Portal2D | ObjectPool2D
   | ParticleEmitter2D | Light2D | ShadowCaster2D | Joint2D | RigidBody2D | Collider2D
 
 function clonePersistedValue<T>(value: T): T {
@@ -884,7 +1051,7 @@ export function copyComponentValues<T extends Component2D>(component: T): Record
   const values: Record<string, unknown> = {}
   for (const [key, value] of Object.entries(component)) {
     if (key === 'uuid' || key === 'kind' || key === 'removed' || key === 'textureImage' || key === 'lastError' || key === 'state'
-      || ['requestedMotion', 'motionVelocity', 'onFloor', 'onWall', 'onCeiling', 'floorNormal', 'wallNormal', 'ceilingNormal', 'platformVelocity', 'secondsSinceFloor', 'path', 'pathIndex', 'velocity', 'pathStatus', 'currentNode', 'currentState', 'activeCount'].includes(key)) continue
+      || ['requestedMotion', 'motionVelocity', 'onFloor', 'onWall', 'onCeiling', 'floorNormal', 'wallNormal', 'ceilingNormal', 'platformVelocity', 'secondsSinceFloor', 'path', 'pathIndex', 'velocity', 'pathStatus', 'currentNode', 'currentState', 'activeCount', 'runtimeCooldown', 'runtimeInvulnerability', 'runtimeRemaining', 'runtimeStarted', 'runtimeSpawned', 'runtimeReady', 'runtimeLifetime'].includes(key)) continue
     values[key] = clonePersistedValue(value)
   }
   return values

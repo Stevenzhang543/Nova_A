@@ -136,7 +136,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', handleShortcut))
 </script>
 
 <style scoped>
-.toolbar { min-height: 46px; width: 100%; padding: 6px 9px; display: block; overflow:visible; border-bottom: 1px solid var(--border-subtle); background: color-mix(in srgb, var(--surface-1) 96%, var(--bg-base)); }
+.toolbar { min-height: 46px; width: 100%; max-width: 100%; min-width: 0; padding: 6px 9px; display: block; overflow:visible; border-bottom: 1px solid var(--border-subtle); background: color-mix(in srgb, var(--surface-1) 96%, var(--bg-base)); }
 .toolbar-content { width:100%; min-width:0; display: flex; align-items: center; justify-content: center; gap: 5px; }
 button { position: relative; min-width: 36px; height: 34px; padding: 0 8px; display: grid; place-items: center; flex: 0 0 auto; border: 1px solid transparent; border-radius: 9px; color: var(--text-muted); background: transparent; font-size:var(--type-caption); }
 button svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }

@@ -1,0 +1,20 @@
+{
+  "format": "nova-build-report",
+  "version": 2,
+  "engineVersion": "6.0.3",
+  "buildId": "af417f5d7613eeb663b06e418466fff715bfca5d47190a396ed7b1601e874dac",
+  "createdAt": 0,
+  "target": "windows",
+  "architecture": "x86_64",
+  "profile": "release",
+  "cacheMode": "incremental",
+  "projectId": "5179d53d-efd8-42f7-87e1-ee4b44c43321",
+  "totalBytes": 16086564,
+  "files": [
+    {
+      "path": "Mouse Knockout.exe",
+      "sha256": "96284ddc09cfa1ace510851a46a300a3143b9f398d57da1ddf0fef5b5313eb7b",
+      "bytes": 16086564
+    }
+  ]
+}

@@ -10,7 +10,7 @@ import {
 } from '../store/physics'
 import { finiteNumber, normalizeEntity } from '../world/geometry'
 import type { Entity } from '../world/Entity'
-import type { Animator, Checkbox, NavigationAgent2D, ProgressBar, Slider, Text as UIText, TextRenderer2D } from '../world/components'
+import type { Animator, AudioSource, Checkbox, NavigationAgent2D, ProgressBar, ScriptPropertyValue, Slider, Text as UIText, TextRenderer2D, TimelinePlayer } from '../world/components'
 import { worldTransform, setWorldTransform } from '../world/hierarchy'
 import type { RuntimePhysicsEvent } from '../world/World'
 import { instantiatePrefab } from './prefabs'
@@ -31,25 +31,57 @@ import { beforeWorldPhysicsStep, beginWorldGameplay, canUseCoyoteTime, queueChar
 import { acquirePooled, releasePooled } from './objectPool'
 import type { CharacterBody2D } from '../world/components'
 import { completeReplayFixedStep, deterministicRandom, replayFixedInput, resetDeterministicSeed } from './replay'
-import { beginProductionRuntime, stopProductionRuntime, updateProductionRuntime } from './productionRuntime'
+import { beginProductionRuntime, callProductionRpc, onProductionRpc, productionNetworkContext, stopProductionRuntime, updateProductionRuntime } from './productionRuntime'
 import { recordScriptFunction } from './profiler'
 import type { ScriptBreakpointMetadata } from '../assets/types'
 import { commitHotReload, prepareHotReload, rejectHotReload, rollbackHotReload as restoreHotReloadSource } from './scriptHotReload'
 import { recordScriptCoverage, resetScriptCoverage } from './scriptCoverage'
+import { executableGraphSource } from '../visual/graphCompiler'
+import {
+  beginGraphDebugSession,
+  clearGraphPause,
+  graphDebugState,
+  recordGraphError,
+  recordGraphTrace,
+  registerGraphDebugDocument,
+  requestGraphStep,
+  type GraphTraceCommand
+} from '../visual/graphDebugger'
+import { graphStateValues } from '../visual/graphDebugger'
+import { planGraphHotReload } from '../visual/graphProduction'
+import { applyTargetMutation, resolveRuntimeHandle, runtimeSceneEntitySnapshots, spawnRuntimePrefab, type RuntimeEntityHandle, type TargetMutation } from './dynamicObjects'
+import { addRuntimeScore, gameFlowSnapshot, resetGameFlow, restoreRuntimeCheckpoint, setGamePaused, setRuntimeCheckpoint, setRuntimeScore, setSessionValue } from './gameFlow'
+import { beginGameplayComponents, processGameplayContacts, updateGameplayComponents } from './gameplayComponents'
+import { activeGameCamera, gameScreenToWorld, visibleWorldBounds } from '../renderer/sceneRenderer'
 
 type LifecycleFunction = 'awake' | 'start' | 'fixed_update' | 'update' | 'late_update' | 'on_destroy' | 'on_timer' | 'on_task' | 'on_signal'
 
 interface ScriptExecution {
   commands: ScriptCommand[]
   logs: Array<{ level: string; message: string }>
-  properties: Record<string, number | string | boolean>
+  properties: Record<string, ScriptPropertyValue>
+}
+
+const MAX_SCRIPT_BRIDGE_BYTES = 16 * 1024 * 1024
+const MAX_SCRIPT_BRIDGE_COMMANDS = 4_096
+const MAX_SCRIPT_BRIDGE_LOGS = 512
+
+function parseScriptExecution(source: string): ScriptExecution {
+  if (source.length > MAX_SCRIPT_BRIDGE_BYTES) throw new Error('Script result exceeded the 16 MB host-bridge limit.')
+  const value = JSON.parse(source) as Partial<ScriptExecution> | null
+  if (!value || !Array.isArray(value.commands) || !Array.isArray(value.logs) || !value.properties || typeof value.properties !== 'object' || Array.isArray(value.properties)) throw new Error('Script result did not match the host-bridge contract.')
+  if (value.commands.length > MAX_SCRIPT_BRIDGE_COMMANDS) throw new Error(`Script emitted more than ${MAX_SCRIPT_BRIDGE_COMMANDS} commands in one invocation.`)
+  if (value.logs.length > MAX_SCRIPT_BRIDGE_LOGS) throw new Error(`Script emitted more than ${MAX_SCRIPT_BRIDGE_LOGS} log entries in one invocation.`)
+  if (value.commands.some(command => !command || typeof command !== 'object' || typeof (command as { type?: unknown }).type !== 'string')) throw new Error('Script emitted a malformed host command.')
+  if (value.logs.some(log => !log || typeof log !== 'object' || typeof (log as { level?: unknown }).level !== 'string' || typeof (log as { message?: unknown }).message !== 'string')) throw new Error('Script emitted a malformed log entry.')
+  return value as ScriptExecution
 }
 
 export interface ExportedProperty {
   name: string
-  value: number | string | boolean
+  value: ScriptPropertyValue
   valueType: string
-  defaultValue: number | string | boolean
+  defaultValue: ScriptPropertyValue
   minimum: number | null
   maximum: number | null
   step: number | null
@@ -61,6 +93,7 @@ export interface ExportedProperty {
 }
 
 type ScriptCommand =
+  | GraphTraceCommand
   | { type: 'applyForce'; x: number; y: number }
   | { type: 'applyImpulse'; x: number; y: number }
   | { type: 'setVelocity'; x: number; y: number }
@@ -80,9 +113,26 @@ type ScriptCommand =
   | { type: 'destroy' }
   | { type: 'despawn' }
   | { type: 'instantiate'; prefab: string }
+  | { type: 'spawnAt'; pendingId: string; prefab: string; x: number; y: number; rotation: number; scaleX: number; scaleY: number }
+  | { type: 'targetSetPosition'; target: string; generation: number; x: number; y: number }
+  | { type: 'targetSetRotation'; target: string; generation: number; radians: number }
+  | { type: 'targetSetScale'; target: string; generation: number; x: number; y: number }
+  | { type: 'targetSetEnabled'; target: string; generation: number; enabled: boolean }
+  | { type: 'targetSetComponentEnabled'; target: string; generation: number; component: string; enabled: boolean }
+  | { type: 'targetSetUiText'; target: string; generation: number; text: string }
+  | { type: 'targetSetUiValue'; target: string; generation: number; value: number }
+  | { type: 'targetAddTag' | 'targetRemoveTag'; target: string; generation: number; tag: string }
+  | { type: 'targetAddGroup' | 'targetRemoveGroup'; target: string; generation: number; group: string }
+  | { type: 'targetDestroy'; target: string; generation: number }
   | { type: 'loadScene'; scene: string }
   | { type: 'reloadScene' }
   | { type: 'quit' }
+  | { type: 'gamePause'; paused: boolean }
+  | { type: 'checkpointSet' | 'checkpointRestore'; name: string }
+  | { type: 'scoreSet' | 'scoreAdd'; value: number }
+  | { type: 'sessionSet'; key: string; value: unknown }
+  | { type: 'inputContextPush'; name: string; priority: number; consume: boolean }
+  | { type: 'inputContextPop' | 'inputMapEnable' | 'inputMapDisable' | 'inputSchemeSet'; name: string }
   | { type: 'startTimer'; name: string; seconds: number; repeat: boolean }
   | { type: 'pauseTimer'; name: string }
   | { type: 'resumeTimer'; name: string }
@@ -98,6 +148,7 @@ type ScriptCommand =
   | { type: 'uiSetText'; text: string }
   | { type: 'uiSetValue'; value: number }
   | { type: 'navigationSetTarget'; x: number; y: number }
+  | { type: 'networkRpc'; name: string; payload: unknown }
 
 interface ScriptContact {
   otherEntity: string
@@ -109,6 +160,14 @@ interface ScriptContact {
 interface ScriptEvent { name: string; source: string; payload: unknown }
 interface RuntimeSignal extends ScriptEvent { target: string }
 interface PendingDebugInvocation { entityUuid: string; functionName: string; contact?: ScriptContact; event?: ScriptEvent }
+interface PendingGraphExecution {
+  entityUuid: string
+  scriptUuid: string
+  sourcePath: string
+  functionName: string
+  commands: ScriptCommand[]
+  nextIndex: number
+}
 
 export interface RuntimeDiagnostics {
   scripts: number
@@ -120,7 +179,7 @@ export interface RuntimeDiagnostics {
 }
 
 const EMPTY_INPUT: InputSnapshot = {
-  down: {}, pressed: {}, released: {}, axes: {}, vectors: {}, mousePosition: [0, 0], wheel: [0, 0], pointerDelta: [0, 0], touches: 0, devices: []
+  down: {}, pressed: {}, released: {}, performed: {}, cancelled: {}, phases: {}, durations: {}, tapCounts: {}, consumed: {}, axes: {}, vectors: {}, mousePosition: [0, 0], mouseWorldPosition: [0, 0], viewBounds: [0, 0, 0, 0], viewportSize: [0, 0], wheel: [0, 0], pointerDelta: [0, 0], touches: 0, devices: [], contexts: ['Gameplay'], maps: ['Default'], scheme: 'Any'
 }
 
 export const DEFAULT_SCRIPT_SOURCE = `@export(type="float", min=0, max=100, step=0.1, group="Movement", tooltip="Horizontal acceleration in newtons") let move_speed = 5.0;
@@ -167,12 +226,17 @@ export class GameplayRuntime {
   private fixedReleased: Record<string, boolean> = {}
   private pendingDestroy = new Set<number>()
   private pendingPrefabs: Array<{ reference: string; position: { x: number; y: number } }> = []
+  private pendingDynamicCommands: Array<{ sourceUuid: string; command: Exclude<ScriptCommand, GraphTraceCommand> }> = []
+  private pendingHandleResolutions = new Map<string, string>()
   private pendingScene: { type: 'load'; identifier: string } | { type: 'reload' } | null = null
   private quitRequested = false
   private compiledSources = new Map<string, string>()
+  private declaredFunctions = new Map<string, { source: string; names: Set<string> }>()
   private pendingReloads = new Map<string, string>()
   private pendingSignals: RuntimeSignal[] = []
   private pendingDebugInvocation: PendingDebugInvocation | null = null
+  private pendingGraphExecution: PendingGraphExecution | null = null
+  private networkUnsubscribe: (() => void) | null = null
 
   get isActive(): boolean { return this.active }
 
@@ -182,9 +246,12 @@ export class GameplayRuntime {
     this.input.start()
     this.time.reset()
     resetDeterministicSeed()
+    resetGameFlow()
+    beginGameplayComponents(physicsState.world.entities)
     this.awakened.clear()
     this.started.clear()
     beginDebugSession()
+    beginGraphDebugSession()
     scriptDebugState.exceptionPolicy = scriptProjectSettings.exceptionPolicy
     this.fixedPressed = {}
     this.fixedReleased = {}
@@ -194,6 +261,16 @@ export class GameplayRuntime {
       let payload: unknown = event.payload
       try { payload = event.payload ? JSON.parse(event.payload) : null } catch { /* Plain text payload. */ }
       this.emitSignal(event.signal, payload, entity.uuid, `animation:${entity.uuid}`)
+    }
+    animationRuntime.onCommand = (entity, track, command) => {
+      const target = track.targetEntityUuid ? physicsState.world.entities.find(candidate => candidate.uuid === track.targetEntityUuid) ?? entity : entity
+      let payload: unknown = command.payload
+      try { payload = command.payload ? JSON.parse(command.payload) : null } catch { /* Plain text payload. */ }
+      if (track.kind === 'Method') this.runEntityFunction(target, command.value.slice(0, 80))
+      else if (track.kind === 'Audio') { const audio = target.getComponent<AudioSource>('AudioSource'); if (audio && command.value) audio.audioClip = command.value; audioRuntime.play(target, physicsState.world.entities) }
+      else if (track.kind === 'NestedAnimation') { if (!animationRuntime.playClipOnce(target.uuid, command.value)) { const animator = target.getComponent<Animator>('Animator'); if (animator) animator.currentState = command.value.slice(0, 80) } }
+      else if (track.kind === 'Timeline') { const player = target.getComponent<TimelinePlayer>('TimelinePlayer'); if (player) { if (command.value) player.timelineAsset = command.value; player.currentTime = 0; player.playing = true } }
+      else this.emitSignal(track.kind === 'VisualGraph' ? `visual.${command.value}` : command.value || 'animation.command', payload, target.uuid, `animation:${entity.uuid}`)
     }
     timelineRuntime.onEvent = (entity, clip, type) => {
       if (type === 'Animation') {
@@ -212,6 +289,8 @@ export class GameplayRuntime {
     void pluginRuntime.start()
     void beginWorldGameplay((name, payload, target, source) => this.emitSignal(name, payload, target, source))
     beginProductionRuntime()
+    this.networkUnsubscribe?.()
+    this.networkUnsubscribe = onProductionRpc((name, payload, context) => this.emitSignal(`network.${name}`, { payload, sender: context.sender, tick: context.tick }, '', context.sender))
     this.ensureLifecycle()
     this.flushStructuralCommands()
     addEditorLog('Gameplay runtime started', 'Runtime')
@@ -235,9 +314,10 @@ export class GameplayRuntime {
     this.dispatchSignals()
     this.ensureLifecycle()
     const inputStarted = performance.now()
-    const frameInput = this.input.sample(physicsState.inputMap, viewport)
+    const frameInput = this.decorateViewportInput(this.input.sample(physicsState.inputMap, viewport), viewport)
     const inputMs = performance.now() - inputStarted
     this.inputSnapshot = frameInput
+    this.dispatchInputCallbacks(frameInput)
     this.latchFixedInput(frameInput)
     const expired = this.time.beginFrame(frameDelta, physicsState.globalSettings.tickRate, physicsState.globalSettings.timeScale)
     let scriptsMs = 0
@@ -260,7 +340,7 @@ export class GameplayRuntime {
         const fixedScriptsStarted = performance.now()
         const fixedInput = firstFixedStep
           ? { ...frameInput, pressed: { ...this.fixedPressed }, released: { ...this.fixedReleased } }
-          : { ...frameInput, pressed: {}, released: {} }
+          : { ...frameInput, pressed: {}, released: {}, performed: {}, cancelled: {} }
         this.inputSnapshot = replayFixedInput(fixedInput)
         if (firstFixedStep) {
           this.fixedPressed = {}
@@ -270,13 +350,16 @@ export class GameplayRuntime {
         this.time.value.fixedDelta = fixedDelta
         this.runPhase('fixed_update')
         this.flushEntityCommands()
+        updateGameplayComponents(physicsState.world.entities, this.inputSnapshot, fixedDelta, (name, payload, target, source) => this.emitSignal(name, payload, target, source), (prefab, owner) => {
+          const transform = worldTransform(owner, physicsState.world.entities)
+          return spawnRuntimePrefab(prefab, { position: transform.position, rotation: transform.rotation, scale: { x: 1, y: 1 } })
+        }, (target, despawn) => { if (!despawn || !releasePooled(target)) this.pendingDestroy.add(target.id) })
         beforeWorldPhysicsStep(fixedDelta, this.time.value.elapsed, this.time.value.frame, (name, payload, target, source) => this.emitSignal(name, payload, target, source), scene => { this.pendingScene = { type: 'load', identifier: scene } })
         animationRuntime.update(physicsState.world.entities, fixedDelta)
         timelineRuntime.update(physicsState.world.entities, fixedDelta)
-        updateProductionRuntime(physicsState.world.entities, fixedDelta)
         fixedScriptsMs += performance.now() - fixedScriptsStarted
       },
-      () => completeReplayFixedStep(physicsState.world.stateChecksum())
+      () => { const checksum = physicsState.world.stateChecksum(); completeReplayFixedStep(checksum); updateProductionRuntime(physicsState.world.entities, this.time.value.fixedDelta, this.inputSnapshot, checksum) }
     ))
     const physicsAndFixedScriptsMs = performance.now() - physicsStarted
     scriptsMs += fixedScriptsMs
@@ -303,13 +386,15 @@ export class GameplayRuntime {
       this.stopSession()
       stopPlayMode()
       editorState.statusText = 'Runtime requested quit'
+      window.dispatchEvent(new CustomEvent('nova-player-quit'))
     }
   }
 
   stepOnce(viewport?: DOMRect): void {
     if (!this.active) this.beginSession()
     this.ensureLifecycle()
-    this.inputSnapshot = replayFixedInput(this.input.sample(physicsState.inputMap, viewport))
+    this.inputSnapshot = replayFixedInput(this.decorateViewportInput(this.input.sample(physicsState.inputMap, viewport), viewport))
+    this.dispatchInputCallbacks(this.inputSnapshot)
     this.latchFixedInput(this.inputSnapshot)
     this.inputSnapshot = {
       ...this.inputSnapshot,
@@ -321,10 +406,15 @@ export class GameplayRuntime {
     this.time.beginFrame(this.time.value.fixedDelta, physicsState.globalSettings.tickRate, physicsState.globalSettings.timeScale)
     this.runPhase('fixed_update')
     this.flushEntityCommands()
+    updateGameplayComponents(physicsState.world.entities, this.inputSnapshot, this.time.value.fixedDelta, (name, payload, target, source) => this.emitSignal(name, payload, target, source), (prefab, owner) => {
+      const transform = worldTransform(owner, physicsState.world.entities)
+      return spawnRuntimePrefab(prefab, { position: transform.position, rotation: transform.rotation, scale: { x: 1, y: 1 } })
+    }, (target, despawn) => { if (!despawn || !releasePooled(target)) this.pendingDestroy.add(target.id) })
     beforeWorldPhysicsStep(this.time.value.fixedDelta, this.time.value.elapsed, this.time.value.frame, (name, payload, target, source) => this.emitSignal(name, payload, target, source), scene => { this.pendingScene = { type: 'load', identifier: scene } })
     Object.assign(physicsState.engineDiagnostics, physicsState.world.singleStep(physicsState.globalSettings))
-    completeReplayFixedStep(physicsState.world.stateChecksum())
-    updateProductionRuntime(physicsState.world.entities, this.time.value.fixedDelta)
+    const checksum = physicsState.world.stateChecksum()
+    completeReplayFixedStep(checksum)
+    updateProductionRuntime(physicsState.world.entities, this.time.value.fixedDelta, this.inputSnapshot, checksum)
     this.dispatchPhysicsEvents(physicsState.world.events)
     this.runPhase('update')
     this.runPhase('late_update')
@@ -345,11 +435,14 @@ export class GameplayRuntime {
     this.pendingPrefabs = []
     animationRuntime.reset()
     animationRuntime.onEvent = null
+    animationRuntime.onCommand = null
     timelineRuntime.reset()
     timelineRuntime.onEvent = null
     particleRuntime.reset()
     resetWorldGameplay()
+    resetGameFlow()
     stopProductionRuntime()
+    this.networkUnsubscribe?.(); this.networkUnsubscribe = null
     pluginRuntime.stop()
     audioRuntime.stopAll()
     this.pendingScene = null
@@ -364,22 +457,41 @@ export class GameplayRuntime {
     this.pendingScene = null
     this.pendingDestroy.clear()
     this.pendingPrefabs = []
+    this.pendingDynamicCommands = []
+    this.pendingHandleResolutions.clear()
     this.pendingSignals = []
     this.pendingReloads.clear()
     this.pendingDebugInvocation = null
+    this.pendingGraphExecution = null
     clearScriptDebugger()
+    clearGraphPause()
     if (log) addEditorLog('Gameplay runtime stopped', 'Runtime')
+  }
+
+  private decorateViewportInput(snapshot: InputSnapshot, viewport?: DOMRect): InputSnapshot {
+    const width = Math.max(1, viewport?.width ?? 1), height = Math.max(1, viewport?.height ?? 1)
+    const active = activeGameCamera(physicsState.world.entities, width, height)
+    const view = active?.view ?? { scale: physicsState.camera.scale, offset: physicsState.camera.offset }
+    const world = gameScreenToWorld({ x: snapshot.mousePosition[0], y: snapshot.mousePosition[1] }, view, width, height)
+    const bounds = visibleWorldBounds(view, width, height)
+    snapshot.mouseWorldPosition = [world.x, world.y]
+    snapshot.viewBounds = [bounds.minX, bounds.maxX, bounds.minY, bounds.maxY]
+    snapshot.viewportSize = [width, height]
+    return snapshot
   }
 
   synchronizeExports(entity: Entity): string | null {
     const component = entity.script2D
-    const source = readTextAsset(component?.scriptAsset)
-    if (!component || !source) return 'Select a valid Rhai script asset'
+    const asset = resolveAsset(component?.scriptAsset)
+    const storedSource = readTextAsset(component?.scriptAsset)
+    if (!component || !asset || !storedSource || (asset.assetType !== 'script' && asset.assetType !== 'visualScript')) return 'Select a valid Rhai or visual graph asset'
+    let source: string
+    try { source = asset.assetType === 'visualScript' ? executableGraphSource(storedSource) : storedSource } catch (error) { component.lastError = this.errorMessage(error); return component.lastError }
     this.ensureScriptRuntime()
     if (!this.scriptRuntime) return 'Script runtime is still loading'
     try {
       const exports = JSON.parse(this.scriptRuntime.validate(source)) as ExportedProperty[]
-      const next: Record<string, number | string | boolean> = {}
+      const next: Record<string, ScriptPropertyValue> = {}
       component.propertyMetadata = Object.fromEntries(exports.map(exported => [exported.name, { ...exported, defaultValue: exported.defaultValue ?? exported.value }]))
       for (const exported of exports) next[exported.name] = this.exportValue(exported, component.properties[exported.name])
       component.properties = next
@@ -427,6 +539,28 @@ export class GameplayRuntime {
     scriptDebugState.hotReload = { status: 'pending', scriptUuid, message: 'Analyzed candidate queued for a transactional frame-boundary swap', frame: this.time.value.frame }
   }
 
+  queueGraphHotReload(scriptUuid: string, candidateSource: string, previousSource: string): void {
+    if (!scriptProjectSettings.hotReloadEnabled) {
+      scriptDebugState.hotReload = { status: 'disabled', scriptUuid, message: 'Project hot reload is disabled', frame: this.time.value.frame }
+      return
+    }
+    try {
+      const graphPlan = planGraphHotReload(previousSource, candidateSource, graphStateValues())
+      if (!graphPlan.compatible) {
+        const message = `Visual graph saved; runtime restart required: ${graphPlan.reasons.join(' ')}`
+        scriptDebugState.hotReload = { status: 'rejected', scriptUuid, message, frame: this.time.value.frame }
+        addEditorLog(message, 'Script', 'warning', scriptUuid)
+        return
+      }
+      const validation = this.validateModuleSource(scriptUuid, candidateSource)
+      if (validation.error) throw new Error(validation.error)
+      this.pendingReloads.set(scriptUuid, candidateSource)
+      scriptDebugState.hotReload = { status: 'pending', scriptUuid, message: `Visual graph queued with ${Object.keys(graphPlan.preserved).length} compatible state values preserved`, frame: this.time.value.frame }
+    } catch (error) {
+      scriptDebugState.hotReload = { status: 'rejected', scriptUuid, message: `Visual graph hot reload rejected: ${this.errorMessage(error)}`, frame: this.time.value.frame }
+    }
+  }
+
   rollbackHotReload(scriptUuid: string): boolean {
     const source = restoreHotReloadSource(scriptUuid)
     if (!source || !updateTextAsset(scriptUuid, source)) return false
@@ -446,6 +580,17 @@ export class GameplayRuntime {
   }
 
   debugContinue(): void {
+    if (this.pendingGraphExecution) {
+      const pending = this.pendingGraphExecution
+      this.pendingGraphExecution = null
+      clearScriptDebugger()
+      requestDebugStep('continue')
+      requestGraphStep('continue')
+      const entity = physicsState.world.entities.find(candidate => candidate.uuid === pending.entityUuid)
+      if (entity) this.processScriptCommands(entity, pending.scriptUuid, pending.sourcePath, pending.functionName, pending.commands, pending.nextIndex)
+      if (!this.pendingGraphExecution && physicsState.playMode === 'paused') physicsState.playMode = 'playing'
+      return
+    }
     const pending = this.pendingDebugInvocation
     this.pendingDebugInvocation = null
     clearScriptDebugger()
@@ -458,6 +603,23 @@ export class GameplayRuntime {
   }
 
   debugStep(mode: Exclude<DebugStepMode, 'continue'> = 'over'): void {
+    if (this.pendingGraphExecution) {
+      const pending = this.pendingGraphExecution
+      this.pendingGraphExecution = null
+      clearScriptDebugger()
+      requestDebugStep(mode)
+      requestGraphStep(mode)
+      const entity = physicsState.world.entities.find(candidate => candidate.uuid === pending.entityUuid)
+      if (entity) this.processScriptCommands(entity, pending.scriptUuid, pending.sourcePath, pending.functionName, pending.commands, pending.nextIndex)
+      physicsState.playMode = 'paused'
+      if (!this.pendingGraphExecution) {
+        graphDebugState.paused = true
+        graphDebugState.reason = `Step ${mode} completed at the visual callback boundary`
+        scriptDebugState.paused = true
+        scriptDebugState.reason = graphDebugState.reason
+      }
+      return
+    }
     const pending = this.pendingDebugInvocation
     this.pendingDebugInvocation = null
     clearScriptDebugger()
@@ -509,13 +671,13 @@ export class GameplayRuntime {
             entity: 'test-entity', entityName: 'Script test', components: [], entities: {},
             time: { delta: 0, fixedDelta: 1 / 60, elapsed: 0, scale: 1, frame: 0 }, randomSeed: test.seed || scriptProjectSettings.deterministicTestSeed, input: EMPTY_INPUT,
             event: { name: 'test.run', source: 'Script Studio', payload: { test: test.name, case: caseName, seed: test.seed } },
-            properties: {} as Record<string, number | string | boolean>, save: {},
+            properties: {} as Record<string, ScriptPropertyValue>, save: {},
             transform: { position: [0, 0], rotation: 0, scale: [1, 1] }, rigidBody: null
           }
           const logs: ScriptExecution['logs'] = []
           const callbacks = ['before_all', 'before_each', test.name, 'after_each', 'after_all'].filter(name => scriptAnalysis.functions[name])
           for (const functionName of callbacks) {
-            const execution = JSON.parse(isolated.execute_json(source, functionName, JSON.stringify(context))) as ScriptExecution
+            const execution = parseScriptExecution(isolated.execute_json(source, functionName, JSON.stringify(context)))
             if (scriptProjectSettings.testing.coverageEnabled) recordScriptCoverage(asset.uuid, source, functionName)
             context.properties = execution.properties
             logs.push(...execution.logs)
@@ -565,6 +727,16 @@ export class GameplayRuntime {
     }
   }
 
+  private dispatchInputCallbacks(snapshot: InputSnapshot): void {
+    for (const action of physicsState.inputMap) {
+      const phase = snapshot.performed[action.name] ? 'performed' : snapshot.cancelled[action.name] ? 'cancelled' : ''
+      if (!phase) continue
+      this.emitSignal(`input.${action.name}.${phase}`, { action: action.name, phase, axis: snapshot.axes[action.name] ?? 0, vector: snapshot.vectors[action.name] ?? [0, 0], duration: snapshot.durations[action.name] ?? 0 }, '', 'input')
+      if (!action.callback) continue
+      for (const entity of physicsState.world.entities.filter(candidate => this.canRun(candidate))) this.runEntityFunction(entity, action.callback)
+    }
+  }
+
   private runPhase(functionName: LifecycleFunction): void {
     for (const entity of [...physicsState.world.entities]) {
       if (scriptDebugState.paused) break
@@ -578,10 +750,19 @@ export class GameplayRuntime {
     const asset = resolveAsset(component.scriptAsset)
     let source: string | null = null
     try { source = this.resolveScriptBundle(asset?.uuid ?? '') } catch (error) { this.reportScriptError(entity, this.errorMessage(error)); return }
-    if (!asset || asset.assetType !== 'script' || !source) {
-      this.reportScriptError(entity, `Missing script asset: ${component.scriptAsset ?? 'none'}`)
+    if (!asset || (asset.assetType !== 'script' && asset.assetType !== 'visualScript') || !source) {
+      this.reportScriptError(entity, `Missing script or visual graph asset: ${component.scriptAsset ?? 'none'}`)
       return
     }
+    let declared = this.declaredFunctions.get(asset.uuid)
+    if (!declared || declared.source !== source) {
+      declared = { source, names: new Set(Object.keys(analyzeScript(source).functions)) }
+      this.declaredFunctions.set(asset.uuid, declared)
+    }
+    // A timer-only script must not cross the WASM boundary for three absent
+    // per-frame callbacks. Besides avoiding wasted work, this keeps Play
+    // responsive on projects with many narrowly scoped scripts.
+    if (!declared.names.has(functionName)) return
     this.ensureScriptRuntime()
     if (!this.scriptRuntime) return
     const runtimeTransform = worldTransform(entity, physicsState.world.entities)
@@ -591,6 +772,7 @@ export class GameplayRuntime {
       entityName: entity.name,
       components: entity.components.map(value => value.kind),
       entities: Object.fromEntries(physicsState.world.entities.map(value => [value.name, value.uuid])),
+      sceneEntities: runtimeSceneEntitySnapshots(physicsState.world.entities),
       time: { ...this.time.value },
       randomSeed: Math.floor(deterministicRandom() * 0x1_0000_0000),
       input: this.inputSnapshot,
@@ -616,7 +798,9 @@ export class GameplayRuntime {
           canCoyoteJump: canUseCoyoteTime(entity), floorNormal: [character.floorNormal.x, character.floorNormal.y],
           wallNormal: [character.wallNormal.x, character.wallNormal.y], platformVelocity: [character.platformVelocity.x, character.platformVelocity.y]
         } : null
-      })()
+      })(),
+      gameFlow: gameFlowSnapshot(),
+      networking: productionNetworkContext()
     }
     if (!bypassBreakpoint && scriptProjectSettings.debuggerEnabled && scriptDebugState.enabled && !scriptDebugState.paused) {
       const fn = analyzeScript(source).functions[functionName]
@@ -647,15 +831,17 @@ export class GameplayRuntime {
     try {
       this.ensureCompiled(asset.uuid, source)
       const runtime = this.scriptRuntime as unknown as { execute_cached_json(id: string, fn: string, context: string): string }
-      const execution = JSON.parse(runtime.execute_cached_json(asset.uuid, functionName, JSON.stringify(context))) as ScriptExecution
+      const execution = parseScriptExecution(runtime.execute_cached_json(asset.uuid, functionName, JSON.stringify(context)))
       if (scriptProjectSettings.testing.coverageEnabled) recordScriptCoverage(asset.uuid, source, functionName)
       component.properties = execution.properties
       component.lastError = null
       this.diagnostics.lifecycleCalls++
       for (const log of execution.logs) addEditorLog(`${entity.name}: ${log.message}`, 'Script', log.level === 'error' ? 'error' : log.level === 'warning' ? 'warning' : 'info')
-      for (const command of execution.commands) this.applyCommand(entity, command)
+      this.processScriptCommands(entity, asset.uuid, asset.path, functionName, execution.commands)
     } catch (error) {
-      this.reportScriptError(entity, this.errorMessage(error))
+      const message = this.errorMessage(error)
+      this.reportScriptError(entity, message)
+      if (asset.assetType === 'visualScript') recordGraphError(graphDebugState.activeGraphUuid || asset.uuid, graphDebugState.activeNodeUuid, message)
       if (scriptProjectSettings.debuggerEnabled && scriptProjectSettings.breakOnRuntimeError && scriptProjectSettings.exceptionPolicy !== 'never') {
         physicsState.playMode = 'paused'
         pauseScriptDebugger({ entityUuid: entity.uuid, entityName: entity.name, scriptUuid: asset.uuid, sourcePath: asset.path, functionName, line: analyzeScript(source).functions[functionName]?.line ?? 1, depth: 0 }, context, `Runtime error: ${this.errorMessage(error)}`)
@@ -665,7 +851,27 @@ export class GameplayRuntime {
     }
   }
 
-  private applyCommand(entity: Entity, command: ScriptCommand): void {
+  private processScriptCommands(entity: Entity, scriptUuid: string, sourcePath: string, functionName: string, commands: ScriptCommand[], startIndex = 0): boolean {
+    for (let index = Math.max(0, startIndex); index < commands.length; index++) {
+      const command = commands[index]
+      if (command.type !== 'graphTrace') {
+        this.applyCommand(entity, command)
+        continue
+      }
+      const decision = recordGraphTrace(command)
+      if (decision.logMessage) addEditorLog(`${entity.name}: ${decision.logMessage}`, 'Script', 'debug', scriptUuid)
+      if (decision.pause && (!scriptProjectSettings.debuggerEnabled || !scriptDebugState.enabled)) { clearGraphPause(); continue }
+      if (!decision.pause) continue
+      this.pendingGraphExecution = { entityUuid: entity.uuid, scriptUuid, sourcePath, functionName, commands, nextIndex: index + 1 }
+      physicsState.playMode = 'paused'
+      pauseScriptDebugger({ entityUuid: entity.uuid, entityName: entity.name, scriptUuid, sourcePath, functionName, line: 1, depth: command.depth }, command.values && typeof command.values === 'object' ? command.values as Record<string, unknown> : {}, decision.reason)
+      addEditorLog(`Paused at visual node ${command.nodeUuid}`, 'Script', 'debug', scriptUuid)
+      return false
+    }
+    return true
+  }
+
+  private applyCommand(entity: Entity, command: Exclude<ScriptCommand, GraphTraceCommand>): void {
     const finite = (value: number) => finiteNumber(value, 0)
     if (command.type === 'applyForce' && entity.hasComponent('RigidBody2D') && entity.mass > 0 && !entity.isStatic && !entity.isKinematic) {
       entity.velocity.x += finite(command.x) / entity.mass * this.time.value.fixedDelta
@@ -706,9 +912,21 @@ export class GameplayRuntime {
     else if (command.type === 'instantiate') {
       const transform = worldTransform(entity, physicsState.world.entities)
       this.pendingPrefabs.push({ reference: command.prefab, position: { ...transform.position } })
-    } else if (command.type === 'loadScene') this.pendingScene = { type: 'load', identifier: command.scene }
+    } else if (command.type === 'spawnAt' || command.type === 'targetSetPosition' || command.type === 'targetSetRotation' || command.type === 'targetSetScale' || command.type === 'targetSetEnabled' || command.type === 'targetSetComponentEnabled' || command.type === 'targetSetUiText' || command.type === 'targetSetUiValue' || command.type === 'targetAddTag' || command.type === 'targetRemoveTag' || command.type === 'targetAddGroup' || command.type === 'targetRemoveGroup' || command.type === 'targetDestroy') this.pendingDynamicCommands.push({ sourceUuid: entity.uuid, command })
+    else if (command.type === 'loadScene') this.pendingScene = { type: 'load', identifier: command.scene }
     else if (command.type === 'reloadScene') this.pendingScene = { type: 'reload' }
     else if (command.type === 'quit') this.quitRequested = true
+    else if (command.type === 'gamePause') setGamePaused(command.paused)
+    else if (command.type === 'checkpointSet') { if (!setRuntimeCheckpoint(command.name)) addEditorLog('Checkpoint requires a non-empty name', 'Runtime', 'error') }
+    else if (command.type === 'checkpointRestore') { if (!restoreRuntimeCheckpoint(command.name)) addEditorLog(`Checkpoint restore failed: ${command.name}`, 'Runtime', 'error') }
+    else if (command.type === 'scoreSet') setRuntimeScore(command.value)
+    else if (command.type === 'scoreAdd') addRuntimeScore(command.value)
+    else if (command.type === 'sessionSet') { if (!setSessionValue(command.key, command.value)) addEditorLog(`Session value rejected: ${command.key}`, 'Runtime', 'error') }
+    else if (command.type === 'inputContextPush') { if (!this.input.pushContext(command.name, command.priority, command.consume)) addEditorLog(`Input context rejected: ${command.name}`, 'Input', 'error') }
+    else if (command.type === 'inputContextPop') { if (!this.input.popContext(command.name)) addEditorLog(`Input context is not active: ${command.name}`, 'Input', 'warning') }
+    else if (command.type === 'inputMapEnable') { if (!this.input.enableMap(command.name)) addEditorLog(`Input map rejected: ${command.name}`, 'Input', 'error') }
+    else if (command.type === 'inputMapDisable') { if (!this.input.disableMap(command.name)) addEditorLog(`Input map cannot be disabled: ${command.name}`, 'Input', 'warning') }
+    else if (command.type === 'inputSchemeSet') { if (!this.input.setScheme(command.name)) addEditorLog('Input scheme requires a name', 'Input', 'error') }
     else if (command.type === 'startTimer') this.time.start(entity.uuid, command.name, command.seconds, command.repeat)
     else if (command.type === 'pauseTimer') this.time.pause(entity.uuid, command.name)
     else if (command.type === 'resumeTimer') this.time.resume(entity.uuid, command.name)
@@ -735,11 +953,46 @@ export class GameplayRuntime {
       const agent = entity.getComponent<NavigationAgent2D>('NavigationAgent2D')
       if (agent) { agent.targetPosition = { x: finite(command.x), y: finite(command.y) }; agent.targetEntityUuid = null; agent.pathStatus = 'Idle'; agent.path = []; agent.pathIndex = 0 }
       else addEditorLog(`${entity.name}: navigation_set_target requires NavigationAgent2D`, 'Script', 'error', entity.script2D?.scriptAsset ?? undefined)
-    }
+    } else if (command.type === 'networkRpc' && !callProductionRpc(command.name, command.payload)) addEditorLog(`${entity.name}: network_rpc rejected by permission, connection, authority, schema, or rate policy`, 'Runtime', 'error', entity.script2D?.scriptAsset ?? undefined)
     normalizeEntity(entity)
   }
 
+  private flushDynamicCommands(): void {
+    let spawned = false
+    for (const { sourceUuid, command } of this.pendingDynamicCommands) {
+      if (command.type === 'spawnAt') {
+        const root = spawnRuntimePrefab(command.prefab, { position: { x: command.x, y: command.y }, rotation: command.rotation, scale: { x: command.scaleX, y: command.scaleY } }, false)
+        if (!root) { addEditorLog(`Spawn failed for ${command.prefab} (requested by ${sourceUuid})`, 'Runtime', 'error'); continue }
+        spawned = true
+        if (this.pendingHandleResolutions.size >= 10_000) { const oldest = this.pendingHandleResolutions.keys().next().value; if (oldest) this.pendingHandleResolutions.delete(oldest) }
+        this.pendingHandleResolutions.set(command.pendingId, root.uuid)
+        this.emitSignal('entity.spawned', { entity: root.uuid, pending: command.pendingId }, root.uuid, sourceUuid)
+        continue
+      }
+      if (!('target' in command) || !('generation' in command)) continue
+      const handle: RuntimeEntityHandle = { id: command.target, generation: command.generation }
+      const target = resolveRuntimeHandle(handle, this.pendingHandleResolutions); if (!target) continue
+      let mutation: TargetMutation | null = null
+      if (command.type === 'targetSetPosition') mutation = { type: 'position', x: command.x, y: command.y }
+      else if (command.type === 'targetSetRotation') mutation = { type: 'rotation', radians: command.radians }
+      else if (command.type === 'targetSetScale') mutation = { type: 'scale', x: command.x, y: command.y }
+      else if (command.type === 'targetSetEnabled') mutation = { type: 'enabled', enabled: command.enabled }
+      else if (command.type === 'targetSetComponentEnabled') mutation = { type: 'componentEnabled', component: command.component, enabled: command.enabled }
+      else if (command.type === 'targetSetUiText') mutation = { type: 'uiText', text: command.text }
+      else if (command.type === 'targetSetUiValue') mutation = { type: 'uiValue', value: command.value }
+      else if (command.type === 'targetAddTag' || command.type === 'targetRemoveTag') mutation = { type: command.type === 'targetAddTag' ? 'addTag' : 'removeTag', value: command.tag }
+      else if (command.type === 'targetAddGroup' || command.type === 'targetRemoveGroup') mutation = { type: command.type === 'targetAddGroup' ? 'addGroup' : 'removeGroup', value: command.group }
+      else if (command.type === 'targetDestroy') { this.pendingDestroy.add(target.id); continue }
+      if (mutation) applyTargetMutation(target, mutation)
+    }
+    if (spawned) physicsState.world.invalidateRuntime()
+    this.pendingDynamicCommands = []
+    const living = new Set(physicsState.world.entities.map(entity => entity.uuid))
+    for (const [pending, resolved] of this.pendingHandleResolutions) if (!living.has(resolved)) this.pendingHandleResolutions.delete(pending)
+  }
+
   private flushEntityCommands(): void {
+    this.flushDynamicCommands()
     for (const id of this.pendingDestroy) {
       const entity = physicsState.world.entities.find(candidate => candidate.id === id)
       if (!entity || this.destroying.has(entity.uuid)) continue
@@ -776,6 +1029,7 @@ export class GameplayRuntime {
     }
     this.pendingDestroy.clear()
     this.pendingPrefabs = []
+    this.pendingDynamicCommands = []
     const switched = scene.type === 'reload' ? runtimeReloadScene() : runtimeLoadScene(scene.identifier)
     if (!switched) {
       for (const entity of unloading) this.destroying.delete(entity.uuid)
@@ -784,8 +1038,10 @@ export class GameplayRuntime {
     }
     for (const entity of unloading) this.destroying.delete(entity.uuid)
     const living = new Set(physicsState.world.entities.map(entity => entity.uuid))
+    for (const [pending, resolved] of this.pendingHandleResolutions) if (!living.has(resolved)) this.pendingHandleResolutions.delete(pending)
     for (const uuid of [...this.awakened]) if (!living.has(uuid)) this.awakened.delete(uuid)
     for (const uuid of [...this.started]) if (!living.has(uuid)) this.started.delete(uuid)
+    beginGameplayComponents(physicsState.world.entities)
     this.diagnostics.sceneSwitches++
     this.ensureLifecycle()
     this.emitSignal('scene.loaded', { type: scene.type }, '', 'runtime')
@@ -793,6 +1049,7 @@ export class GameplayRuntime {
   }
 
   private dispatchPhysicsEvents(events: RuntimePhysicsEvent[]): void {
+    processGameplayContacts(events, physicsState.world.entities, (name, payload, target, source) => this.emitSignal(name, payload, target, source), (target, despawn) => { if (!despawn || !releasePooled(target)) this.pendingDestroy.add(target.id) })
     for (const event of events) {
       if (!event.firstEntityUuid || !event.secondEntityUuid) continue
       const first = physicsState.world.entities.find(entity => entity.uuid === event.firstEntityUuid)
@@ -867,6 +1124,7 @@ export class GameplayRuntime {
     const runtime = this.scriptRuntime as unknown as { compile_cached(id: string, source: string): string }
     const exports = JSON.parse(runtime.compile_cached(scriptUuid, source)) as ExportedProperty[]
     this.compiledSources.set(scriptUuid, source)
+    this.declaredFunctions.set(scriptUuid, { source, names: new Set(Object.keys(analyzeScript(source).functions)) })
     return exports
   }
 
@@ -938,7 +1196,13 @@ export class GameplayRuntime {
 
   private resolveScriptBundle(scriptUuid: string, overrides = new Map<string, string>()): string | null {
     const root = resolveAsset(scriptUuid)
-    if (!root || root.assetType !== 'script') return null
+    if (!root || (root.assetType !== 'script' && root.assetType !== 'visualScript')) return null
+    if (root.assetType === 'visualScript') {
+      const graphSource = overrides.get(root.uuid) ?? readTextAsset(root.uuid)
+      if (graphSource === null) return null
+      registerGraphDebugDocument(graphSource)
+      return executableGraphSource(graphSource)
+    }
     const visiting = new Set<string>()
     const resolved = new Set<string>()
     const chunks: string[] = []
@@ -970,15 +1234,16 @@ export class GameplayRuntime {
     try { return JSON.parse(JSON.stringify(value)) } catch { return null }
   }
 
-  private exportValue(exported: ExportedProperty, previous: unknown): number | string | boolean {
+  private exportValue(exported: ExportedProperty, previous: unknown): ScriptPropertyValue {
     const fallback = exported.defaultValue ?? exported.value
-    if (typeof previous !== typeof fallback) return fallback
+    const clone = (value: ScriptPropertyValue): ScriptPropertyValue => JSON.parse(JSON.stringify(value)) as ScriptPropertyValue
+    if (previous === undefined || previous === null && fallback !== null || typeof previous !== typeof fallback || Array.isArray(previous) !== Array.isArray(fallback)) return clone(fallback)
     if (typeof previous === 'number') {
       if (!Number.isFinite(previous)) return Number(fallback)
       return Math.min(exported.maximum ?? Number.MAX_VALUE, Math.max(exported.minimum ?? -Number.MAX_VALUE, previous))
     }
     if (typeof previous === 'string' && exported.enumValues?.length && !exported.enumValues.includes(previous)) return String(fallback)
-    return previous as number | string | boolean
+    try { return clone(previous as ScriptPropertyValue) } catch { return clone(fallback) }
   }
 
   private formatLogpoint(template: string, context: Record<string, unknown>): string {

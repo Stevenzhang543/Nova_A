@@ -4,15 +4,92 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE.md)
 [![Tier 1](https://img.shields.io/badge/Tier%201-Windows%20%7C%20Web-63c6ff)](./docs/PLATFORM_BUILD_MATRIX_5_0.md)
-[![Release](https://img.shields.io/badge/release-5.0.1%20candidate-63c6ff)]()
+[![Release](https://img.shields.io/badge/release-6.1.0%20candidate-63c6ff)]()
 
 Nova_A is an open-source 2D game engine and desktop editor built with Rust, WebAssembly, Vue 3, and Tauri.
 
-Version **5.0.1** is the user-experience consolidation candidate on the frozen 5.x production baseline. It reorganizes editor controls, raises the readable typography floor, strengthens theme hierarchy, and completes English/German/Chinese editor-chrome and migration-preflight localization without removing any command, shortcut, animation, feature, or persisted contract. Final production certification remains withheld until the real 72-hour soak, 14-day observation, two-machine reproducibility, clean-environment lifecycle, external browser/hardware, signing, tagged-source, and independent-verifier evidence is attached.
+Version **6.1.0** is the portable-workspace, responsive-authoring, and refined semantic-UI release. The editor launches maximized as a normal resizable window, repository configuration remains relative after moving drives, dependency policy works with pnpm 10/11, and pointer, Inspector, workspace, profiling, and render-overlay paths avoid redundant main-thread/GPU work without removing features or animations. Project Format 2/schema 29 and the v6 creator contracts remain unchanged.
 
 **Manual:** [interactive English/German/Chinese webpage](./manual/index.html) · [English Markdown](./manual/MANUAL.en.md) · [Deutsch](./manual/MANUAL.de.md) · [中文](./manual/MANUAL.zh-CN.md)
 
-## What is new in v5.0.1
+## What is new in v6.1.0
+
+- Maximized launch now takes precedence over stale saved geometry while retaining decorations, resize/restore controls, placement recovery, and optional true fullscreen.
+- The repository is drive-independent: active build/export paths are relative, pnpm overrides live in the supported workspace configuration, and moved dependency links are rebuilt from the frozen lockfile.
+- System-first typography, semantic light/dark materials, consistent radii, gentler contrast, and compositor-friendly motion follow Apple HIG hierarchy, color, typography, layout, accessibility, and motion principles without requiring proprietary fonts.
+- Pointer events are coalesced to the newest display-frame sample; selected overlays no longer calculate every entity boundary or re-sort the scene; connection signatures, render-graph publication, and profiler diagnostics avoid duplicate work.
+- Advanced workspaces and dialogs load as cached chunks and warm during idle time. The Inspector remains mounted after first use, and large docked panels no longer live-blur the animated canvas.
+- Type, Rust, template/game, interaction, EN/DE/ZH layout, local browser, relocation, build, native packaging, and exact release-artifact gates cover 6.1.0.
+
+## Retained v6.0.4 corrections
+
+- Native Windows game export writes and verifies a same-folder staging executable before publishing it. If an older output is running and locked, Nova_A keeps it alive and emits a deterministic build-ID-suffixed `.exe` instead of failing with `Access denied (os error 5)`.
+- Visual graphs can create a linked Rhai asset. Saving the graph regenerates its linked code; saving linked code updates graph variables, literals, API-node inputs, and explicit visible Code nodes for source that has no standard-node representation.
+- Visual-graph compilation is debounced away from pointer movement, node/pin lookups and minimap bounds are indexed, and large graph dragging no longer repeatedly scans every node.
+- The launcher and player load their full workspace chunks on demand, render ordering avoids quadratic `indexOf` sorting, profiler bookkeeping is sampled adaptively while authoring, and the Low-end profile caps only an idle scene canvas while preserving active camera/tool animation and full runtime cadence.
+- Type, Rust lock regression, graph round-trip, browser interaction/layout, template, native build/game export, and exact release-artifact gates cover 6.0.4.
+
+## Retained v6.0.3 corrections
+
+- All 12 startup templates resolve a real Windows x64 player template when their build settings have not been edited.
+- Old `windows-x86_64-v1`/equivalent synthesized IDs migrate to the compatible registered template without rewriting custom IDs.
+- `RectTransform` is passive by default; buttons, sliders, checkboxes, and text inputs opt into focus with inferred roles and names.
+- Reading order `0` is automatic scene order. Duplicate warnings are reserved for conflicting explicit positive orders.
+- Template, accessibility, type, Rust, rendering, interaction, localization, native export, and release-artifact checks are part of the 6.0.3 gate.
+
+## What is new in v6.0.2
+
+- **Reachable UI at every supported scale:** shell rows grow with accessibility scale, dense navigation switches to icon-first layouts, long text wraps inside scrollable panel boundaries, and floating surfaces remain inside the window.
+- **User-style interaction audit:** automated EN/DE/ZH traversal inventories registered controls, opens every workspace and panel family, mutates and restores safe settings, exercises resizers/reordering, records blocked or destructive controls explicitly, and rejects fatal/browser errors.
+- **Safer backend export:** bounded web payloads, strict relative paths, output/source overwrite protection, atomic replacement with rollback, and accurate Android capability/architecture handling protect user data.
+- **Actual portable game output:** the CLI and native path share a SHA-256-verified embedded `.nova-pak` footer; the release smoke test launches the exported Mouse Knockout `.exe` separately from the editor.
+- **Release completeness:** the exact eleven-file release contract and ten non-circular SHA-256 entries remain enforced.
+
+## Retained v6.0.1 playable baseline
+
+- **Correct language ownership:** the web manual now discovers every article after generation, shows only the selected language, translates search/navigation controls, preserves locale-aware bookmarks, and keeps all generated content inside the HTML document.
+- **Clear first-game tutorial:** English, German, and Chinese manuals teach the exact template → Play → object drawing → physics → scripts → UI → Project Health → portable `.exe` workflow.
+- **Playable Mouse Knockout template:** move a blue kinematic block with the pointer, knock eight dynamic prefab targets outside the camera, earn one point each, and reveal the congratulations bar at 8 / 8.
+- **Precise pointer physics:** Rhai API v2 adds `mouse_world_x/y`, `view_min/max_x/y`, and viewport size. Replay/network-replay data preserves the new values with legacy fallbacks.
+- **Release integrity:** no schema, stable contract, existing template, feature, animation, shortcut, or rendering path was removed.
+
+## Retained v6.0.0 creator baseline
+
+- **Learn by doing:** first-run onboarding and **Manage → Learn** teach every public feature with exact steps, persistence, recovery, accessibility, examples and Rhai/Visual Graph links.
+- **Twelve complete projects:** Snake, platformer, top-down, physics puzzle, localized menu, cutscene, TileMap world, checkpoint, package/plugin, networking, Windows portable and web deployment.
+- **Stable contracts:** Project, Rhai, graph, plugin, package, build and workspace contracts expose compatibility and fail-closed migration behavior.
+- **Large projects:** map-backed 10,000-object hierarchy lookup, 50,000-asset and 1,000-node qualification, bounded memory and a low-end creator profile.
+- **Complete manuals:** the searchable/bookmarked HTML and three Markdown manuals are generated from the same EN/DE/ZH teaching catalog used by the editor.
+- **Honest evidence:** signing, independent clean machines, a second-machine reproduction, matching-host builds, independent browser/hardware/accessibility and a real 72-hour soak remain pending external gates.
+
+Read [creator experience](./docs/CREATOR_EXPERIENCE_6_0.md), [stable contracts](./docs/STABLE_CONTRACTS_6_0.md) and [performance/accessibility qualification](./docs/PERFORMANCE_ACCESSIBILITY_6_0.md). The [extensions and platform delivery](./docs/EXTENSIONS_PLATFORM_DELIVERY_5_9.md), [networking/replay](./docs/NETWORKING_REPLAY_5_8.md), [world/navigation/AI](./docs/WORLDS_NAVIGATION_AI_5_7.md), [animation/audio/cinematics](./docs/ANIMATION_AUDIO_CINEMATICS_5_6.md), [materials/effects](./docs/MATERIALS_EFFECTS_5_5.md), [gameplay framework](./docs/GAMEPLAY_FRAMEWORK_5_4.md) and [production visual scripting](./docs/VISUAL_SCRIPTING_5_3.md) guides remain current.
+
+### Retained v5.8.0 networking baseline
+
+Permission-gated reliable/unreliable channels, RPC contracts, bounded replication, prediction/rollback, poor-link simulation, replay/save, sanitized diagnostics and authoritative headless validation remain intact.
+
+### Retained v5.7.0 worlds baseline
+
+Hierarchical/grid navigation, 10,000-agent bounds, behavior-tree blackboards/perception/utility, streaming dependencies/state handoff and deterministic scene/prefab TileMap baking remain intact.
+
+### Retained v5.6.0 animation/audio baseline
+
+Blend trees, synchronized animation layers/transitions, runtime recording, nested/branching timelines, safe-area subtitles, waveform loop regions, mixer snapshots/ducking and loudness/device diagnostics remain intact.
+
+### Retained v5.5.0 rendering baseline
+
+Deterministic material graphs/layers, isolated shaders, post presets/volumes, modular particles, honest Canvas2D/WebGL2 fallback, real previews and rendering-budget recommendations remain intact.
+
+### Retained v5.4.0 gameplay baseline
+
+Stable dynamic-object handles, bounded queries, eleven gameplay components, game flow, production input interactions and shared AI diagnostics remain intact and compatible.
+
+### Retained v5.1.0 playable/export baseline
+
+- Matching-host Windows/Linux projects default to a SHA-256-verified single-file portable player while explicit sidecar choices remain compatible.
+- Standalone games mount player-only services, and the Snake template remains the keyboard/gamepad/input/signal/trigger/export reference.
+
+### Retained v5.0.1 UX baseline
 
 - **Clear control hierarchy:** direct workspace, transform, history, and simulation controls remain visible; layout, command/search, authoring, drawing, snapping, guide, camera, and arrangement commands now live in named, keyboard-accessible groups.
 - **No scene-toolbar scrollbar:** the authoring surface adapts without hiding commands behind a browser-like horizontal scrolling strip.
@@ -282,6 +359,8 @@ pnpm install --frozen-lockfile
 ```
 
 If `wasm-pack` 0.14.0 or newer is already installed, omit its installation command. Rust documents the WebAssembly target and installation command in the [`wasm32-unknown-unknown` target guide](https://doc.rust-lang.org/stable/rustc/platform-support/wasm32-unknown-unknown.html).
+
+When moving an existing checkout to another drive, do not reuse generated dependency links or native build metadata. Remove only `node_modules`, `target`, and `src-tauri/target` from the moved copy, then run `pnpm install --frozen-lockfile` and rebuild. Source files, projects, `pnpm-lock.yaml`, and Cargo lockfiles must remain. This prevents copied pnpm links and Tauri permission metadata from retaining the former absolute checkout path.
 
 ### Operating-system prerequisites
 

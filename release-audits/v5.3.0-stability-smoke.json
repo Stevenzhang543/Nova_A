@@ -1,0 +1,16 @@
+{
+  "format": "nova-v5.3.0-stability-summary",
+  "version": 1,
+  "engineVersion": "5.3.0",
+  "generatedAt": "2026-08-26T11:54:24.487Z",
+  "canonicalRoundTrip": "passed",
+  "graphTextParity": "passed",
+  "deterministicDebugReplay": "passed",
+  "compatibleHotReload": "passed",
+  "incompatibleHotReloadRejection": "passed",
+  "semanticMergeFixtures": "passed",
+  "reducedMotion": "passed",
+  "wallClock72HourSoakComplete": false,
+  "independentCleanMachineComplete": false,
+  "status": "passed"
+}

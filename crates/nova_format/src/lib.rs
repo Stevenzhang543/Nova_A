@@ -1,3 +1,4 @@
+#![recursion_limit = "512"]
 //! Central ownership of Nova_A's persisted project format and migrations.
 
 use std::collections::{BTreeMap, HashMap};
@@ -10,7 +11,7 @@ pub const PROJECT_FORMAT_NAME: &str = "Nova_A Project Format 2";
 pub const PROJECT_FORMAT_MAJOR: u32 = 2;
 pub const CURRENT_FORMAT_VERSION: u32 = 29;
 pub const MINIMUM_SUPPORTED_FORMAT_VERSION: u32 = 5;
-pub const CURRENT_ENGINE_VERSION: &str = "5.0.1";
+pub const CURRENT_ENGINE_VERSION: &str = "6.1.0";
 
 fn default_named_physics_layers() -> Value {
     let colors = [
@@ -336,7 +337,7 @@ pub fn migrate_project_value(value: Value) -> Result<ProjectFile, FormatError> {
             "manifestVersion": 1,
             "projectUuid": project_uuid.clone(),
             "name": project_name.clone(),
-            "engineCompatibility": {"minimum":"3.9.0","maximumExclusive":"6.0.0"},
+            "engineCompatibility": {"minimum":"3.9.0","maximumExclusive":"7.0.0"},
             "schemaVersion": CURRENT_FORMAT_VERSION,
             "packageLockfile": "Packages.lock",
             "buildPresets": ["ProjectSettings/build.presets.json"],
@@ -350,8 +351,8 @@ pub fn migrate_project_value(value: Value) -> Result<ProjectFile, FormatError> {
         manifest.insert("schemaVersion".into(), json!(CURRENT_FORMAT_VERSION));
         manifest
             .entry("engineCompatibility")
-            .or_insert_with(|| json!({"minimum":"3.9.0","maximumExclusive":"6.0.0"}));
-        if parse_semver(&source_engine_version).map_or(true, |version| version.0 < 5) {
+            .or_insert_with(|| json!({"minimum":"3.9.0","maximumExclusive":"7.0.0"}));
+        if parse_semver(&source_engine_version).map_or(true, |version| version.0 < 6) {
             if let Some(compatibility) = manifest
                 .get_mut("engineCompatibility")
                 .and_then(Value::as_object_mut)
@@ -360,9 +361,9 @@ pub fn migrate_project_value(value: Value) -> Result<ProjectFile, FormatError> {
                     compatibility
                         .get("maximumExclusive")
                         .and_then(Value::as_str),
-                    Some("4.0.0" | "5.0.0")
+                    Some("4.0.0" | "5.0.0" | "6.0.0")
                 ) {
-                    compatibility.insert("maximumExclusive".into(), json!("6.0.0"));
+                    compatibility.insert("maximumExclusive".into(), json!("7.0.0"));
                 }
             }
         }
@@ -623,7 +624,7 @@ pub fn migrate_project_value(value: Value) -> Result<ProjectFile, FormatError> {
                 "testing": {"defaultTimeoutMs":10000,"tests":[]},
                 "data": {"saveSchemaVersion":1,"saveMigrations":[]},
                 "jobs": {"maxWorkers":2,"maxQueued":256,"timeoutMs":15000},
-                "networking": {"enabled":false,"role":"client","transport":"websocket","endpoint":"ws://127.0.0.1:7777","bindAddress":"127.0.0.1:0","snapshotRate":20,"interpolationMs":100,"rollbackFrames":120,"bandwidthKbps":256,"reconnect":true,"replicatedEntities":[]}
+                "networking": {"enabled":false,"permissionGranted":false,"autoStart":false,"role":"client","sessionMode":"local","sessionName":"Nova session","playerName":"Player","maxPeers":8,"transport":"websocket","endpoint":"ws://127.0.0.1:7777","bindAddress":"127.0.0.1:0","snapshotRate":20,"interpolationMs":100,"rollbackFrames":120,"bandwidthKbps":256,"reconnect":true,"reconnectMaxAttempts":5,"protocolVersion":2,"schemaVersion":1,"maximumPacketBytes":32768,"maximumMessagesPerSecond":240,"maximumPendingReliable":256,"reliableRetryMs":150,"reliableMaximumAttempts":8,"reconciliationThreshold":0.25,"lateJoin":true,"channels":[{"id":"state","delivery":"unreliable-sequenced","maximumPayloadBytes":16384,"messagesPerSecond":120,"priority":10},{"id":"input","delivery":"unreliable-sequenced","maximumPayloadBytes":4096,"messagesPerSecond":120,"priority":20},{"id":"events","delivery":"reliable-ordered","maximumPayloadBytes":8192,"messagesPerSecond":60,"priority":30}],"rpcContracts":[],"simulation":{"enabled":false,"latencyMs":0,"jitterMs":0,"lossPercent":0.0,"duplicatePercent":0.0,"reorderPercent":0.0,"seed":1313166418_u64},"replicatedEntities":[]}
             })
         });
     }
@@ -940,9 +941,9 @@ pub fn validate_project(project: &ProjectFile) -> Result<(), FormatError> {
                         parents.insert(entity.uuid.as_str(), parent);
                     }
                 } else if component.kind == "Script2D" {
-                    validate_asset_reference(
+                    validate_asset_reference_one_of(
                         component.data.get("scriptAsset"),
-                        "script",
+                        &["script", "visualScript"],
                         &asset_types,
                     )?;
                 } else if component.kind == "SpriteRenderer2D" {
@@ -1145,6 +1146,31 @@ fn validate_asset_reference(
     if *actual_type != expected_type {
         return Err(FormatError(format!(
             "asset {uuid} has type {actual_type}, expected {expected_type}"
+        )));
+    }
+    Ok(())
+}
+
+fn validate_asset_reference_one_of(
+    value: Option<&Value>,
+    expected_types: &[&str],
+    asset_types: &HashMap<&str, &str>,
+) -> Result<(), FormatError> {
+    let Some(reference) = value.and_then(Value::as_str) else {
+        return Ok(());
+    };
+    let Some(uuid) = reference.strip_prefix("asset://") else {
+        return Err(FormatError(format!("invalid asset reference: {reference}")));
+    };
+    let Some(actual_type) = asset_types.get(uuid) else {
+        return Err(FormatError(format!(
+            "asset reference points to missing asset: {uuid}"
+        )));
+    };
+    if !expected_types.contains(actual_type) {
+        return Err(FormatError(format!(
+            "asset {uuid} has type {actual_type}, expected one of {}",
+            expected_types.join(", ")
         )));
     }
     Ok(())
@@ -2091,6 +2117,205 @@ fn validate_project_settings(value: Option<&Value>) -> Result<(), FormatError> {
                 "production networking lifecycle settings are invalid".into(),
             ));
         }
+        for key in ["permissionGranted", "autoStart", "lateJoin"] {
+            if networking.get(key).is_some_and(|value| !value.is_boolean()) {
+                return Err(FormatError(format!(
+                    "production networking {key} must be a boolean"
+                )));
+            }
+        }
+        if networking
+            .get("sessionMode")
+            .is_some_and(|value| !matches!(value.as_str(), Some("local" | "direct")))
+        {
+            return Err(FormatError(
+                "production networking sessionMode is invalid".into(),
+            ));
+        }
+        for key in ["sessionName", "playerName"] {
+            if networking.get(key).is_some_and(|value| {
+                !value
+                    .as_str()
+                    .is_some_and(|text| !text.trim().is_empty() && text.len() <= 80)
+            }) {
+                return Err(FormatError(format!(
+                    "production networking {key} is invalid"
+                )));
+            }
+        }
+        for (key, minimum, maximum) in [
+            ("maxPeers", 1, 64),
+            ("reconnectMaxAttempts", 0, 32),
+            ("protocolVersion", 2, 2),
+            ("schemaVersion", 1, 65_535),
+            ("maximumPacketBytes", 512, 65_507),
+            ("maximumMessagesPerSecond", 1, 10_000),
+            ("maximumPendingReliable", 1, 4_096),
+            ("reliableRetryMs", 10, 5_000),
+            ("reliableMaximumAttempts", 1, 32),
+        ] {
+            if networking.contains_key(key) {
+                bounded_u64(
+                    &format!("networking.{key}"),
+                    networking.get(key),
+                    minimum,
+                    maximum,
+                )?;
+            }
+        }
+        if networking.contains_key("reconciliationThreshold") {
+            bounded_f64(
+                "networking.reconciliationThreshold",
+                networking.get("reconciliationThreshold"),
+                0.0,
+                1_000.0,
+            )?;
+        }
+        if let Some(channels) = networking.get("channels") {
+            let channels = channels
+                .as_array()
+                .ok_or_else(|| FormatError("networking.channels must be an array".into()))?;
+            if channels.is_empty() || channels.len() > 32 {
+                return Err(FormatError(
+                    "networking.channels must contain 1–32 channels".into(),
+                ));
+            }
+            let mut ids = std::collections::HashSet::new();
+            for channel in channels {
+                let channel = channel
+                    .as_object()
+                    .ok_or_else(|| FormatError("every network channel must be an object".into()))?;
+                let id = channel.get("id").and_then(Value::as_str).unwrap_or("");
+                if id.is_empty()
+                    || id.len() > 80
+                    || !ids.insert(id)
+                    || !matches!(
+                        channel.get("delivery").and_then(Value::as_str),
+                        Some("reliable-ordered" | "unreliable-sequenced")
+                    )
+                {
+                    return Err(FormatError(
+                        "network channel identity or delivery is invalid".into(),
+                    ));
+                }
+                bounded_u64(
+                    "networking.channels.maximumPayloadBytes",
+                    channel.get("maximumPayloadBytes"),
+                    2,
+                    65_507,
+                )?;
+                bounded_u64(
+                    "networking.channels.messagesPerSecond",
+                    channel.get("messagesPerSecond"),
+                    1,
+                    10_000,
+                )?;
+                bounded_u64(
+                    "networking.channels.priority",
+                    channel.get("priority"),
+                    0,
+                    100,
+                )?;
+            }
+        }
+        if let Some(rpcs) = networking.get("rpcContracts") {
+            let rpcs = rpcs
+                .as_array()
+                .ok_or_else(|| FormatError("networking.rpcContracts must be an array".into()))?;
+            if rpcs.len() > 256 {
+                return Err(FormatError(
+                    "networking.rpcContracts is limited to 256 definitions".into(),
+                ));
+            }
+            let mut names = std::collections::HashSet::new();
+            for rpc in rpcs {
+                let rpc = rpc
+                    .as_object()
+                    .ok_or_else(|| FormatError("every RPC contract must be an object".into()))?;
+                let name = rpc.get("name").and_then(Value::as_str).unwrap_or("");
+                if name.is_empty()
+                    || name.len() > 80
+                    || !names.insert(name)
+                    || !rpc
+                        .get("channelId")
+                        .and_then(Value::as_str)
+                        .is_some_and(|value| !value.is_empty() && value.len() <= 80)
+                    || !matches!(
+                        rpc.get("direction").and_then(Value::as_str),
+                        Some("client-to-server" | "server-to-client" | "bidirectional")
+                    )
+                    || !matches!(
+                        rpc.get("authority").and_then(Value::as_str),
+                        Some("server" | "owner" | "any")
+                    )
+                    || !matches!(
+                        rpc.get("payloadSchema").and_then(Value::as_str),
+                        Some(
+                            "any"
+                                | "boolean"
+                                | "number"
+                                | "integer"
+                                | "string"
+                                | "vec2"
+                                | "object"
+                                | "array"
+                        )
+                    )
+                {
+                    return Err(FormatError(
+                        "network RPC contract identity or schema is invalid".into(),
+                    ));
+                }
+                bounded_u64(
+                    "networking.rpcContracts.maximumPayloadBytes",
+                    rpc.get("maximumPayloadBytes"),
+                    2,
+                    65_507,
+                )?;
+                bounded_u64(
+                    "networking.rpcContracts.callsPerSecond",
+                    rpc.get("callsPerSecond"),
+                    1,
+                    1_000,
+                )?;
+            }
+        }
+        if let Some(simulation) = networking.get("simulation") {
+            let simulation = simulation
+                .as_object()
+                .ok_or_else(|| FormatError("networking.simulation must be an object".into()))?;
+            if !simulation.get("enabled").is_some_and(Value::is_boolean) {
+                return Err(FormatError(
+                    "networking.simulation.enabled must be a boolean".into(),
+                ));
+            }
+            bounded_u64(
+                "networking.simulation.latencyMs",
+                simulation.get("latencyMs"),
+                0,
+                10_000,
+            )?;
+            bounded_u64(
+                "networking.simulation.jitterMs",
+                simulation.get("jitterMs"),
+                0,
+                10_000,
+            )?;
+            bounded_u64(
+                "networking.simulation.seed",
+                simulation.get("seed"),
+                0,
+                u32::MAX as u64,
+            )?;
+            for key in ["lossPercent", "duplicatePercent", "reorderPercent"] {
+                bounded_f64(
+                    &format!("networking.simulation.{key}"),
+                    simulation.get(key),
+                    0.0,
+                    100.0,
+                )?;
+            }
+        }
         for key in ["endpoint", "bindAddress"] {
             if !networking
                 .get(key)
@@ -2257,7 +2482,10 @@ fn validate_script_asset(asset: &AssetReference) -> Result<(), FormatError> {
             asset.path
         )));
     }
-    if metadata.get("apiVersion").and_then(Value::as_u64) != Some(1) {
+    if !matches!(
+        metadata.get("apiVersion").and_then(Value::as_u64),
+        Some(1 | 2)
+    ) {
         return Err(FormatError(format!(
             "script API version is unsupported: {}",
             asset.path
@@ -3319,6 +3547,39 @@ mod tests {
     }
 
     #[test]
+    fn accepts_visual_graph_assets_on_script_components() {
+        let scene = deterministic_uuid("visual-graph-scene");
+        let entity = deterministic_uuid("visual-graph-entity");
+        let transform = deterministic_uuid("visual-graph-transform");
+        let script_component = deterministic_uuid("visual-graph-component");
+        let graph_asset = deterministic_uuid("visual-graph-asset");
+        let source = json!({
+            "formatVersion": CURRENT_FORMAT_VERSION,
+            "activeSceneUuid": scene,
+            "projectSettings": {"inputMap":[]},
+            "assets": [{
+                "uuid":graph_asset,
+                "path":"Assets/Visual Scripts/Player.nova-graph",
+                "assetType":"visualScript",
+                "mimeType":"application/x-nova-graph+json"
+            }],
+            "scenes": [{"uuid":scene,"name":"Main Scene","entities":[{
+                "uuid":entity,"name":"Graph Host","components":[
+                    {"uuid":transform,"kind":"Transform2D","enabled":true,"data":{"parentUuid":null}},
+                    {"uuid":script_component,"kind":"Script2D","enabled":true,"data":{"scriptAsset":format!("asset://{graph_asset}"),"properties":{"speed":5.0,"direction":[1.0,0.0]}}}
+                ]
+            }],"connections":[]}]
+        });
+        let migrated = migrate_project_value(source).unwrap();
+        validate_project(&migrated).unwrap();
+        assert_eq!(migrated.assets[0].asset_type, "visualScript");
+        assert_eq!(
+            migrated.scenes[0].entities[0].components[1].data["scriptAsset"],
+            format!("asset://{graph_asset}")
+        );
+    }
+
+    #[test]
     fn rejects_invalid_v1_6_input_devices() {
         let scene = deterministic_uuid("bad-input-scene");
         let source = json!({
@@ -3531,6 +3792,32 @@ mod tests {
             migrated.extra["projectSettings"]["rendering"]["lightingEnabled"],
             false
         );
+    }
+
+    #[test]
+    fn validates_current_script_api_v2_assets() {
+        let script = deterministic_uuid("v6.0.1-api-v2-script");
+        let source = json!({
+            "formatVersion": CURRENT_FORMAT_VERSION,
+            "engineVersion": CURRENT_ENGINE_VERSION,
+            "projectSettings": {"inputMap": []},
+            "assets": [{
+                "uuid": script,
+                "path": "Assets/Scripts/CurrentApi.rhai",
+                "assetType": "script",
+                "script": {
+                    "version": 1,
+                    "apiVersion": 2,
+                    "breakpoints": [],
+                    "tests": [],
+                    "packageDependencies": []
+                }
+            }],
+            "entities": []
+        });
+        let migrated = migrate_project_value(source).expect("API v2 project migrates");
+        validate_project(&migrated).expect("API v2 script metadata validates");
+        assert_eq!(migrated.assets[0].extra["script"]["apiVersion"], 2);
     }
 
     #[test]
@@ -3911,7 +4198,7 @@ mod tests {
         assert_eq!(migrated.engine_version, CURRENT_ENGINE_VERSION);
         assert_eq!(
             migrated.manifest.engine_compatibility.maximum_exclusive,
-            "6.0.0"
+            "7.0.0"
         );
         validate_project(&migrated).expect("5.x compatibility seal validates");
 
@@ -3926,7 +4213,7 @@ mod tests {
         assert_eq!(migrated_v4.engine_version, CURRENT_ENGINE_VERSION);
         assert_eq!(
             migrated_v4.manifest.engine_compatibility.maximum_exclusive,
-            "6.0.0"
+            "7.0.0"
         );
         validate_project(&migrated_v4).expect("4.x to 5.x compatibility seal validates");
     }

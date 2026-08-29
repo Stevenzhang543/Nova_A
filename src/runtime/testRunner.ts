@@ -3,6 +3,7 @@ import { getSceneJSON, loadProject, physicsState, resetSimulation, sceneManager,
 import { gameplayRuntime } from './GameplayRuntime'
 import { productionSettings, type ProjectTestAssertion, type ProjectTestDefinition } from './production'
 import { resetScriptCoverage, scriptCoverageReport, type ScriptCoverageReport } from './scriptCoverage'
+import { NOVA_ENGINE_VERSION } from '../projects/projectFormat'
 
 export interface TestAssertionResult extends ProjectTestAssertion { passed: boolean; actual: string; message: string }
 export interface ProjectTestResult {
@@ -20,7 +21,7 @@ export interface ProjectTestResult {
   fixture: string
 }
 
-export interface ProjectTestReport { format: 'nova-test-report'; version: 2; engineVersion: '5.0.1'; startedAt: string; durationMs: number; seed: number; shard: { index: number; count: number }; filters: { tags: string[]; changed: string[] }; passed: number; failed: number; cancelled: number; coverage: ScriptCoverageReport; results: ProjectTestResult[] }
+export interface ProjectTestReport { format: 'nova-test-report'; version: 2; engineVersion: string; startedAt: string; durationMs: number; seed: number; shard: { index: number; count: number }; filters: { tags: string[]; changed: string[] }; passed: number; failed: number; cancelled: number; coverage: ScriptCoverageReport; results: ProjectTestResult[] }
 export interface ProjectTestRunOptions { tags?: string[]; changed?: string[]; shardIndex?: number; shardCount?: number; seed?: number; signal?: AbortSignal }
 
 export const testRunnerState = reactive({ running: false, activeTest: '', completed: 0, total: 0, results: [] as ProjectTestResult[], lastReport: null as ProjectTestReport | null, error: '' })
@@ -97,7 +98,7 @@ export async function runProjectTests(testId?: string, options: ProjectTestRunOp
       if (result.status === 'cancelled') break
     }
     const results = testRunnerState.results.map(result => ({ ...result, assertions: result.assertions.map(assertion => ({ ...assertion })) }))
-    const report: ProjectTestReport = { format: 'nova-test-report', version: 2, engineVersion: '5.0.1', startedAt, durationMs: performance.now() - started, seed, shard: { index: shardIndex, count: shardCount }, filters: { tags, changed }, passed: results.filter(result => result.status === 'passed').length, failed: results.filter(result => !['passed', 'cancelled'].includes(result.status)).length, cancelled: results.filter(result => result.status === 'cancelled').length, coverage: scriptCoverageReport(), results }
+    const report: ProjectTestReport = { format: 'nova-test-report', version: 2, engineVersion: NOVA_ENGINE_VERSION, startedAt, durationMs: performance.now() - started, seed, shard: { index: shardIndex, count: shardCount }, filters: { tags, changed }, passed: results.filter(result => result.status === 'passed').length, failed: results.filter(result => !['passed', 'cancelled'].includes(result.status)).length, cancelled: results.filter(result => result.status === 'cancelled').length, coverage: scriptCoverageReport(), results }
     testRunnerState.lastReport = report
     return report
   } finally {
@@ -113,5 +114,5 @@ export function testReportJUnit(report = testRunnerState.lastReport): string {
   return `<?xml version="1.0" encoding="UTF-8"?><testsuite name="Nova_A" tests="${report.results.length}" failures="${report.failed}" skipped="${report.cancelled}" time="${(report.durationMs / 1_000).toFixed(6)}">${cases}</testsuite>`
 }
 
-export function testReportJson(report = testRunnerState.lastReport): string { return `${JSON.stringify(report ?? { format: 'nova-test-report', version: 2, engineVersion: '5.0.1', results: [] }, null, 2)}\n` }
+export function testReportJson(report = testRunnerState.lastReport): string { return `${JSON.stringify(report ?? { format: 'nova-test-report', version: 2, engineVersion: NOVA_ENGINE_VERSION, results: [] }, null, 2)}\n` }
 export function cancelProjectTests(): void { activeController?.abort() }

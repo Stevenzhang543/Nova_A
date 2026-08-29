@@ -1,6 +1,6 @@
 # Performance 4.8 Capture
 
-Engine **5.0.1**, Project Format 2, schema 29.
+Engine **5.3.0**, Project Format 2, schema 29.
 
 Required packages: None; Nova_A core only.
 

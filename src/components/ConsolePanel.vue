@@ -23,7 +23,7 @@ import { t } from '../i18n'
 import { editorState, type EditorLogCategory, type EditorLogLevel } from '../store/editor'
 
 const levels: EditorLogLevel[] = ['trace', 'debug', 'info', 'warning', 'error', 'fatal']
-const categories: EditorLogCategory[] = ['Engine', 'Physics', 'Renderer', 'Script', 'Plugin', 'Save', 'Assets', 'Audio', 'Runtime', 'Project', 'Editor']
+const categories: EditorLogCategory[] = ['Engine', 'Physics', 'Renderer', 'Script', 'Input', 'Plugin', 'Save', 'Assets', 'Audio', 'Runtime', 'Project', 'Editor']
 const search = ref(''), level = ref<EditorLogLevel | 'all'>('all'), category = ref<EditorLogCategory | 'all'>('all')
 const visible = computed(() => {
   const query = search.value.trim().toLocaleLowerCase()

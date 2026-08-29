@@ -15,6 +15,7 @@ interface Particle {
   lifetime: number
   rotation: number
   angularVelocity: number
+  trail: Vec2[]
 }
 
 interface EmitterState {
@@ -25,7 +26,7 @@ interface EmitterState {
 }
 
 const states = new Map<string, EmitterState>()
-export const particleDiagnostics = reactive({ activeParticles: 0, emitterCount: 0, updateMs: 0, budget: 10_000, budgetExceeded: false, subemissions: 0, collisions: 0 })
+export const particleDiagnostics = reactive({ activeParticles: 0, emitterCount: 0, updateMs: 0, budget: 10_000, budgetExceeded: false, subemissions: 0, collisions: 0, cpuSimulated: 0, gpuRendered: 0, events: [] as Array<{ time: number; emitterUuid: string; kind: 'collision' | 'death' | 'subemit'; signal: string }> })
 
 function clamp(value: unknown, fallback: number, minimum: number, maximum: number): number {
   return Math.min(maximum, Math.max(minimum, finiteNumber(value, fallback)))
@@ -33,6 +34,7 @@ function clamp(value: unknown, fallback: number, minimum: number, maximum: numbe
 
 export function normalizeParticleEmitter(component: ParticleEmitter2D): void {
   component.textureAsset = typeof component.textureAsset === 'string' ? component.textureAsset : null
+  if (!['Auto', 'CPU', 'GPU'].includes(component.simulationBackend)) component.simulationBackend = 'Auto'
   component.emissionRate = clamp(component.emissionRate, 20, 0, 100_000)
   component.burst = Math.round(clamp(component.burst, 0, 0, 100_000))
   component.lifetime = clamp(component.lifetime, 1, 1e-4, 86_400)
@@ -63,6 +65,10 @@ export function normalizeParticleEmitter(component: ParticleEmitter2D): void {
   if (!['None', 'Bounce', 'Stop'].includes(component.collisionMode)) component.collisionMode = 'None'
   component.collisionRestitution = clamp(component.collisionRestitution, .5, 0, 1)
   component.collisionLayerMask = Math.round(clamp(component.collisionLayerMask, 0xffff_ffff, 0, 0xffff_ffff)) >>> 0
+  component.eventSignal = typeof component.eventSignal === 'string' ? component.eventSignal.slice(0, 128) : 'particle.event'
+  component.trailEnabled = component.trailEnabled === true
+  component.trailLength = Math.round(clamp(component.trailLength, 12, 2, 32))
+  component.trailWidth = clamp(component.trailWidth, .08, .001, 1e6)
   for (const color of [component.startColor, component.endColor]) {
     color.r = Math.round(clamp(color.r, 255, 0, 255)); color.g = Math.round(clamp(color.g, 255, 0, 255)); color.b = Math.round(clamp(color.b, 255, 0, 255))
   }
@@ -138,13 +144,15 @@ function emit(entity: Entity, component: ParticleEmitter2D, state: EmitterState,
       x: between(state, component.initialVelocityMin.x, component.initialVelocityMax.x),
       y: between(state, component.initialVelocityMin.y, component.initialVelocityMax.y)
     }
+    const position = component.worldSpace ? (worldOrigin ? { ...worldOrigin } : localPointToWorld(entity, offset, entities)) : offset
     state.particles.push({
-      position: component.worldSpace ? (worldOrigin ? { ...worldOrigin } : localPointToWorld(entity, offset, entities)) : offset,
+      position,
       velocity: component.worldSpace ? rotate({ x: localVelocity.x * transform.scale.x, y: localVelocity.y * transform.scale.y }, transform.rotation) : localVelocity,
       age: 0,
       lifetime: component.lifetime,
       rotation: between(state, component.rotationMin, component.rotationMax) + (component.worldSpace ? transform.rotation : 0),
-      angularVelocity: between(state, component.angularVelocityMin, component.angularVelocityMax)
+      angularVelocity: between(state, component.angularVelocityMin, component.angularVelocityMax),
+      trail: [{ ...position }]
     })
   }
   return emitted
@@ -186,7 +194,7 @@ export class ParticleRuntime {
     const started = performance.now()
     const dt = clamp(delta, 0, 0, .25)
     const live = new Set<string>()
-    let activeParticles = [...states.values()].reduce((total, state) => total + state.particles.length, 0), emitterCount = 0, subemissions = 0, collisions = 0
+    let activeParticles = [...states.values()].reduce((total, state) => total + state.particles.length, 0), emitterCount = 0, subemissions = 0, collisions = 0, cpuSimulated = 0
     const globalBudget = renderingSettings.particleBudget
     for (const entity of entities) {
       const component = entity.getComponent<ParticleEmitter2D>('ParticleEmitter2D')
@@ -196,6 +204,7 @@ export class ParticleRuntime {
       live.add(component.uuid)
       emitterCount++
       const state = emitterState(component)
+      cpuSimulated += state.particles.length
       if (component.autoplay) {
         if (!state.burstEmitted) { activeParticles += emit(entity, component, state, component.burst, entities, globalBudget - activeParticles); state.burstEmitted = true }
         state.emissionAccumulator += component.emissionRate * dt
@@ -208,22 +217,25 @@ export class ParticleRuntime {
         particle.velocity.y += component.gravity.y * dt
         particle.position.x += particle.velocity.x * dt
         particle.position.y += particle.velocity.y * dt
-        if (component.worldSpace && component.collisionMode !== 'None') collisions += collideParticle(particle, component, entity, entities)
+        if (component.worldSpace && component.collisionMode !== 'None') { const hit = collideParticle(particle, component, entity, entities); collisions += hit; if (hit) this.noteEvent(component, 'collision') }
         particle.rotation += particle.angularVelocity * dt
+        if (component.trailEnabled && (particle.trail.length === 0 || Math.hypot(particle.position.x - particle.trail[particle.trail.length - 1].x, particle.position.y - particle.trail[particle.trail.length - 1].y) > .01)) { particle.trail.push({ ...particle.position }); if (particle.trail.length > component.trailLength) particle.trail.splice(0, particle.trail.length - component.trailLength) }
       }
       const expired = state.particles.filter(particle => particle.age >= particle.lifetime)
+      if (expired.length) this.noteEvent(component, 'death')
       state.particles = state.particles.filter(particle => particle.age < particle.lifetime)
       activeParticles = Math.max(0, activeParticles - expired.length)
       const target = component.subEmitterUuid ? entities.flatMap(candidate => { const emitter = candidate.getComponent<ParticleEmitter2D>('ParticleEmitter2D'); return emitter?.uuid === component.subEmitterUuid ? [{ entity: candidate, component: emitter }] : [] })[0] : null
-      if (target && expired.length && activeParticles < globalBudget) { const targetState = emitterState(target.component); normalizeParticleEmitter(target.component); for (const particle of expired) { const amount = emit(target.entity, target.component, targetState, component.subEmitterCount, entities, globalBudget - activeParticles, component.worldSpace ? particle.position : localPointToWorld(entity, particle.position, entities)); activeParticles += amount; subemissions += amount; if (activeParticles >= globalBudget) break } }
+      if (target && expired.length && activeParticles < globalBudget) { const targetState = emitterState(target.component); normalizeParticleEmitter(target.component); for (const particle of expired) { const amount = emit(target.entity, target.component, targetState, component.subEmitterCount, entities, globalBudget - activeParticles, component.worldSpace ? particle.position : localPointToWorld(entity, particle.position, entities)); activeParticles += amount; subemissions += amount; if (amount) this.noteEvent(component, 'subemit'); if (activeParticles >= globalBudget) break } }
       if (!component.looping && state.burstEmitted) component.autoplay = false
     }
     for (const uuid of [...states.keys()]) if (!live.has(uuid)) states.delete(uuid)
     activeParticles = [...states.values()].reduce((total, state) => total + state.particles.length, 0)
-    Object.assign(particleDiagnostics, { activeParticles, emitterCount, updateMs: performance.now() - started, budget: globalBudget, budgetExceeded: activeParticles >= globalBudget, subemissions, collisions })
+    Object.assign(particleDiagnostics, { activeParticles, emitterCount, updateMs: performance.now() - started, budget: globalBudget, budgetExceeded: activeParticles >= globalBudget, subemissions, collisions, cpuSimulated, gpuRendered: 0 })
   }
 
   submit(renderer: Renderer2D, entities: Entity[]): void {
+    particleDiagnostics.gpuRendered = renderer.stats.backend === 'WebGL2' ? particleDiagnostics.activeParticles : 0
     for (const entity of entities) {
       const component = entity.getComponent<ParticleEmitter2D>('ParticleEmitter2D')
       const state = component ? states.get(component.uuid) : null
@@ -237,6 +249,10 @@ export class ParticleRuntime {
         const color = { r: gradient.color.r, g: gradient.color.g, b: gradient.color.b, a: gradient.opacity / 100 }
         const position = component.worldSpace ? particle.position : localPointToWorld(entity, particle.position, entities)
         const rotation = particle.rotation + (component.worldSpace ? 0 : transform.rotation)
+        if (component.trailEnabled && particle.trail.length > 1) {
+          const points = component.worldSpace ? particle.trail : particle.trail.map(point => localPointToWorld(entity, point, entities))
+          for (let index = 1; index < points.length; index++) renderer.submitShape({ shape: 'Line', position: { x: 0, y: 0 }, rotation: 0, scale: { x: 1, y: 1 }, vertices: [points[index - 1], points[index]], radiusX: 0, radiusY: 0, fill: { ...color, a: 0 }, stroke: { ...color, a: color.a * index / points.length }, strokeWidth: component.trailWidth * index / points.length, sortingLayer: component.sortingLayer, orderInLayer: component.orderInLayer - .001, material: component.material, blendMode: component.blendMode })
+        }
         if (texture) renderer.submitSprite({
           position, rotation, scale: { x: 1, y: 1 }, size: { x: scale, y: scale }, pivot: { x: .5, y: .5 }, flipX: false, flipY: false,
           tint: color, texture, sortingLayer: component.sortingLayer, orderInLayer: component.orderInLayer,
@@ -252,6 +268,11 @@ export class ParticleRuntime {
   }
 
   reset(): void { states.clear() }
+
+  private noteEvent(component: ParticleEmitter2D, kind: 'collision' | 'death' | 'subemit'): void {
+    particleDiagnostics.events.unshift({ time: performance.now(), emitterUuid: component.uuid, kind, signal: component.eventSignal })
+    particleDiagnostics.events.splice(128)
+  }
 }
 
 export const particleRuntime = new ParticleRuntime()

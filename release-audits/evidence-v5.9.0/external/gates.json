@@ -1,0 +1,38 @@
+{
+  "format": "nova-external-certification-gates",
+  "version": 1,
+  "release": "5.9.0",
+  "generatedAt": "2026-08-27T08:35:44.197Z",
+  "gates": [
+    {
+      "name": "publisher identity and Windows artifact signing",
+      "status": "pending-external",
+      "claimed": false
+    },
+    {
+      "name": "independent clean-machine install/launch/upgrade/repair/uninstall",
+      "status": "pending-external",
+      "claimed": false
+    },
+    {
+      "name": "matching-host Linux build and runtime matrix",
+      "status": "pending-external",
+      "claimed": false
+    },
+    {
+      "name": "matching-host macOS build/sign/notarize/runtime matrix",
+      "status": "pending-external",
+      "claimed": false
+    },
+    {
+      "name": "Android SDK/template/signing/device/install/input/audio lifecycle",
+      "status": "pending-external",
+      "claimed": false
+    },
+    {
+      "name": "real wall-clock extension reload and editor soak",
+      "status": "pending-external",
+      "claimed": false
+    }
+  ]
+}

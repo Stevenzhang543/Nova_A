@@ -61,8 +61,53 @@ try {
   if ($referenceReadmes.Count -lt 10) { throw 'Reference-project set is incomplete.' }
   foreach ($readme in $referenceReadmes) {
     $text = Get-Content -LiteralPath $readme.FullName -Raw
-    if ($text -notmatch "Engine \*\*$([regex]::Escape($Version))\*\*" -or $text -notmatch 'Required packages:' -or $text -notmatch 'Target platforms:' -or $text -notmatch 'Known limitations') { throw "Reference README metadata is incomplete: $($readme.FullName)" }
+    $engineMatch = [regex]::Match($text, 'Engine \*\*(\d+\.\d+\.\d+)\*\*')
+    if (-not $engineMatch.Success -or $text -notmatch 'Project Format 2.*schema 29') { throw "Reference README metadata is incomplete: $($readme.FullName)" }
     foreach ($required in @('project.nova', 'expected-output.json', 'test-controls.json')) { if (-not (Test-Path -LiteralPath (Join-Path $readme.DirectoryName $required) -PathType Leaf)) { throw "Reference fixture is missing $required beside $($readme.Name)" } }
+    $referenceProject = Get-Content -LiteralPath (Join-Path $readme.DirectoryName 'project.nova') -Raw | ConvertFrom-Json
+    if ($referenceProject.engineVersion -notmatch '^\d+\.\d+\.\d+$' -or $referenceProject.projectFormatMajor -ne 2 -or $referenceProject.formatVersion -ne 29) { throw "Reference project authority is invalid: $($readme.FullName)" }
+    if ($Version -eq '5.7.0' -and $readme.Directory.Name -match 'v57') {
+      if ($engineMatch.Groups[1].Value -ne $Version -or $referenceProject.engineVersion -ne $Version) { throw "Current v5.7 reference does not identify $Version`: $($readme.FullName)" }
+      if ($text -notmatch 'Required packages:' -or $text -notmatch 'Target platforms:' -or $text -notmatch 'Known limitations') { throw "Current v5.7 reference README metadata is incomplete: $($readme.FullName)" }
+    }
+    if ($Version -eq '5.8.0' -and $readme.Directory.Name -match 'v58') {
+      if ($engineMatch.Groups[1].Value -ne $Version -or $referenceProject.engineVersion -ne $Version) { throw "Current v5.8 reference does not identify $Version`: $($readme.FullName)" }
+      if ($text -notmatch 'Required packages:' -or $text -notmatch 'Target platforms:' -or $text -notmatch 'Known limitations') { throw "Current v5.8 reference README metadata is incomplete: $($readme.FullName)" }
+    }
+    if ($Version -eq '5.9.0' -and $readme.Directory.Name -match 'v59') {
+      if ($engineMatch.Groups[1].Value -ne $Version -or $referenceProject.engineVersion -ne $Version) { throw "Current v5.9 reference does not identify $Version`: $($readme.FullName)" }
+      if ($text -notmatch 'Test workflow' -or $text -notmatch 'External boundary') { throw "Current v5.9 reference README metadata is incomplete: $($readme.FullName)" }
+    }
+    if ($Version -eq '6.0.0' -and $readme.Directory.Name -match 'creator-v60') {
+      if ($engineMatch.Groups[1].Value -ne $Version -or $referenceProject.engineVersion -ne $Version) { throw "Current v6.0 reference does not identify $Version`: $($readme.FullName)" }
+      if ($text -notmatch 'Exact teaching workflow' -or $text -notmatch 'Known limitations' -or $text -notmatch 'Target platforms') { throw "Current v6.0 teaching README metadata is incomplete: $($readme.FullName)" }
+      $controls = Get-Content -LiteralPath (Join-Path $readme.DirectoryName 'test-controls.json') -Raw | ConvertFrom-Json
+      if (($controls.lifecycle -join '/') -ne 'author/save/reload/play/build/standalone-player') { throw "Current v6.0 reference lifecycle is incomplete: $($readme.FullName)" }
+    }
+    if ($Version -eq '6.0.1' -and $readme.Directory.Name -eq 'creator-v601-mouse-knockout') {
+      if ($engineMatch.Groups[1].Value -ne $Version -or $referenceProject.engineVersion -ne $Version) { throw "Current v6.0.1 reference does not identify $Version`: $($readme.FullName)" }
+      if ($text -notmatch 'world-space pointer' -or $text -notmatch 'eight orange' -or $text -notmatch 'portable Windows') { throw "Current v6.0.1 gameplay README is incomplete: $($readme.FullName)" }
+      $controls = Get-Content -LiteralPath (Join-Path $readme.DirectoryName 'test-controls.json') -Raw | ConvertFrom-Json
+      if (-not $controls.expected.playerUsesWorldPointer -or $controls.expected.targetCount -ne 8 -or -not $controls.expected.completionBanner -or -not $controls.expected.portableBuildConfigured) { throw "Current v6.0.1 gameplay controls are incomplete: $($readme.FullName)" }
+    }
+    if ($Version -eq '6.0.2' -and $readme.Directory.Name -eq 'creator-v602-interaction-export-audit') {
+      if ($engineMatch.Groups[1].Value -ne $Version -or $referenceProject.engineVersion -ne $Version) { throw "Current v6.0.2 reference does not identify $Version`: $($readme.FullName)" }
+      if ($text -notmatch '100%' -or $text -notmatch '200%' -or $text -notmatch 'embedded SHA-256') { throw "Current v6.0.2 interaction/export README is incomplete: $($readme.FullName)" }
+      $controls = Get-Content -LiteralPath (Join-Path $readme.DirectoryName 'test-controls.json') -Raw | ConvertFrom-Json
+      if ($controls.uiScales.Count -ne 5 -or -not $controls.expected.viewportContained -or -not $controls.expected.singleFilePortable -or -not $controls.expected.embeddedPackageVerified) { throw "Current v6.0.2 interaction/export controls are incomplete: $($readme.FullName)" }
+    }
+    if ($Version -eq '6.0.3' -and $readme.Directory.Name -eq 'creator-v603-template-export-accessibility') {
+      if ($engineMatch.Groups[1].Value -ne $Version -or $referenceProject.engineVersion -ne $Version) { throw "Current v6.0.3 reference does not identify $Version`: $($readme.FullName)" }
+      if ($text -notmatch 'windows-x64-v1' -or $text -notmatch 'passive visual' -or $text -notmatch '200%') { throw "Current v6.0.3 template/accessibility README is incomplete: $($readme.FullName)" }
+      $controls = Get-Content -LiteralPath (Join-Path $readme.DirectoryName 'test-controls.json') -Raw | ConvertFrom-Json
+      if ($controls.uiScales.Count -ne 5 -or $controls.expected.exportTemplate -ne 'windows-x64-v1' -or $controls.expected.accessibilityErrors -ne 0 -or -not $controls.expected.viewportContained -or -not $controls.expected.singleFilePortable) { throw "Current v6.0.3 template/accessibility controls are incomplete: $($readme.FullName)" }
+    }
+    if ($Version -eq '6.0.4' -and $readme.Directory.Name -eq 'creator-v604-linked-build-performance') {
+      if ($engineMatch.Groups[1].Value -ne $Version -or $referenceProject.engineVersion -ne $Version) { throw "Current v6.0.4 reference does not identify $Version`: $($readme.FullName)" }
+      if ($text -notmatch '@nova-graph-link' -or $text -notmatch 'build-ID suffix' -or $text -notmatch 'Low-end') { throw "Current v6.0.4 linked-build README is incomplete: $($readme.FullName)" }
+      $controls = Get-Content -LiteralPath (Join-Path $readme.DirectoryName 'test-controls.json') -Raw | ConvertFrom-Json
+      if ($controls.uiScales.Count -ne 5 -or -not $controls.expected.bidirectional -or -not $controls.expected.arbitraryCodePreserved -or -not $controls.expected.independentScriptsUnchanged -or -not $controls.expected.singleFilePortable -or $controls.expected.accessDeniedErrors -ne 0) { throw "Current v6.0.4 linked-build controls are incomplete: $($readme.FullName)" }
+    }
   }
 
   $evidence = Join-Path $temporaryRoot 'release-evidence'

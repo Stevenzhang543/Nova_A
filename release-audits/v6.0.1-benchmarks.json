@@ -1,0 +1,33 @@
+{
+  "format": "nova-v6.0.1-benchmark-summary",
+  "version": 1,
+  "engineVersion": "6.0.1",
+  "generatedAt": "2026-08-28T08:15:41.679Z",
+  "scope": "Patch regression: exact coordinate math, template creation/static script analysis, browser layout matrix and local builds.",
+  "coordinateChecks": {
+    "center": {
+      "x": 0,
+      "y": 0
+    },
+    "topLeft": {
+      "x": -17.77777777777778,
+      "y": 10
+    },
+    "bounds": {
+      "minX": -17.77777777777778,
+      "maxX": 17.77777777777778,
+      "minY": -10,
+      "maxY": 10
+    },
+    "splitBounds": {
+      "minX": -17.77777777777778,
+      "maxX": 17.77777777777778,
+      "minY": -20,
+      "maxY": 20
+    }
+  },
+  "layoutStates": 12,
+  "localBuilds": "passed",
+  "independentHardware": "pending-external",
+  "status": "passed"
+}

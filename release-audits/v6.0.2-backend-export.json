@@ -1,0 +1,118 @@
+{
+  "format": "nova-v6.0.2-backend-export-verification",
+  "version": 1,
+  "engineVersion": "6.0.2",
+  "generatedAt": "2026-08-28T17:35:35.035Z",
+  "perspectives": [
+    "backend",
+    "template",
+    "build",
+    "portable-game",
+    "security"
+  ],
+  "checks": [
+    {
+      "id": "V602-AUTHORITY",
+      "status": "passed",
+      "detail": "Version authority is 6.0.2 without a project-format or schema change.",
+      "metrics": {}
+    },
+    {
+      "id": "V602-TEMPLATES",
+      "status": "passed",
+      "detail": "Every startup template creates and passes the production template audit.",
+      "metrics": {
+        "templates": 12,
+        "failures": []
+      }
+    },
+    {
+      "id": "V602-PACK-ROUNDTRIP",
+      "status": "passed",
+      "detail": "Nova package creation, checksum validation and parsing round-trip every entry.",
+      "metrics": {
+        "bytes": 10561,
+        "entries": 4
+      }
+    },
+    {
+      "id": "V602-BUILD-VALIDATION",
+      "status": "passed",
+      "detail": "Build validation rejects incomplete configuration while allowing an installed Android cross-target template.",
+      "metrics": {
+        "invalidCodes": [
+          "scene",
+          "identifier",
+          "version",
+          "export-template-0",
+          "include-rules"
+        ],
+        "androidIssues": [
+          "platform-experimental",
+          "platform-unavailable",
+          "android-package",
+          "single-file",
+          "export-template-0",
+          "include-rules"
+        ]
+      }
+    },
+    {
+      "id": "V602-PORTABLE-FOOTER",
+      "status": "passed",
+      "detail": "Single-file CLI output embeds the package behind the player with exact length and SHA-256 footer.",
+      "metrics": {
+        "executableBytes": 10635,
+        "embeddedLength": 10555,
+        "files": [
+          "Mouse Knockout.exe",
+          "nova-build-provenance.json",
+          "nova-build-report.json",
+          "nova-build-size-report.json",
+          "nova-content-manifest.json",
+          "nova-dependency-report.json",
+          "nova-deployment-manifest.json",
+          "nova-patch-manifest.json",
+          "nova-sbom.cdx.json",
+          "symbols\\nova-symbol-map.json"
+        ]
+      }
+    },
+    {
+      "id": "V602-SIDECAR-COMPATIBILITY",
+      "status": "passed",
+      "detail": "Explicit sidecar output remains compatible.",
+      "metrics": {}
+    },
+    {
+      "id": "V602-PATH-SAFETY",
+      "status": "passed",
+      "detail": "Traversal paths fail before an output can escape the selected directory.",
+      "metrics": {
+        "exitCode": 1,
+        "message": "file:///C:/Users/steve/OneDrive/Desktop/Nova_A/scripts/nova-export.mjs:53\r\n  if (!normalized || isAbsolute(path) || normalized.startsWith('/') || /^[a-z]:/i.test(normalized) || normalized.includes('\\0') || normalized.split('/').some(part => part === '..' || part === '')) throw new Error(`Unsafe output path ${path}`)\r\n                                                                                                                                                                                     "
+      }
+    },
+    {
+      "id": "V602-NATIVE-BOUNDS",
+      "status": "passed",
+      "detail": "Native export bounds web payloads and performs rollback-capable replacement.",
+      "metrics": {}
+    },
+    {
+      "id": "V602-NATIVE-TARGETS",
+      "status": "passed",
+      "detail": "Native target validation and capability discovery agree about Android.",
+      "metrics": {}
+    },
+    {
+      "id": "V602-CLI-HARDENING",
+      "status": "passed",
+      "detail": "Headless export has bounded embedded packages, dynamic web chunk traversal and overwrite protection.",
+      "metrics": {}
+    }
+  ],
+  "severity0Open": 0,
+  "severity1Open": 0,
+  "status": "passed"
+}

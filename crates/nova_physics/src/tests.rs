@@ -339,6 +339,37 @@ mod tests {
     }
 
     #[test]
+    fn off_center_penetration_correction_respects_rotational_effective_mass() {
+        let dynamic = Body::from_data(&box_record(1.0, 0.0, 0.0, 2.0, 2.0), 0);
+        let mut static_record = box_record(2.0, 2.0, 0.0, 2.0, 2.0);
+        static_record[9] = 1.0;
+        let static_body = Body::from_data(&static_record, 0);
+        let mut bodies = vec![dynamic, static_body];
+        let contact = Contact {
+            body_a: 0,
+            body_b: 1,
+            normal: Vec2::new(1.0, 0.0),
+            tangent: Vec2::new(0.0, 1.0),
+            depth: 0.2,
+            radius_a: Vec2::new(0.0, 1.0),
+            radius_b: Vec2::ZERO,
+            initial_relative_velocity: Vec2::ZERO,
+            restitution_bias: 0.0,
+            static_friction: 0.0,
+            dynamic_friction: 0.0,
+            normal_impulse: 0.0,
+            tangent_impulse: 0.0,
+            is_sensor: false,
+            position_weight: 1.0,
+        };
+        correct_contact_position(&mut bodies, &contact);
+        assert!(bodies[0].position.x < 0.0);
+        assert!(bodies[0].angle > 0.0);
+        assert!(bodies[0].position.x.is_finite() && bodies[0].angle.is_finite());
+        assert_eq!(bodies[1].position, Vec2::new(2.0, 0.0));
+    }
+
+    #[test]
     fn exponential_air_damping_is_timestep_independent() {
         let mut input = ellipse_record(1.0, 0.0, 0.0, 1.0, 1.0);
         input[4] = 10.0;

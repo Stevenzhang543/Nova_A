@@ -1,0 +1,11 @@
+{
+  "format": "nova-native-startup-smoke",
+  "version": 1,
+  "engineVersion": "6.0.0",
+  "generatedAt": "2026-08-27T10:47:39.840Z",
+  "executable": "src-tauri/target/release/nova_a.exe",
+  "observationSeconds": 8,
+  "unexpectedExit": false,
+  "status": "passed",
+  "scope": "Local hidden launch only; independent clean-machine lifecycle remains pending-external."
+}

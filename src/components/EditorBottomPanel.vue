@@ -30,6 +30,7 @@
             <div class="asset-actions-row">
               <button class="primary" :disabled="assets.importing" @click="assetInput?.click()">＋ {{ t('importAssets') }}</button>
               <button @click="createScriptAsset">+ {{ t('newScript') }}</button>
+              <button @click="createVisualGraphAsset">+ {{ t('visualGraph') }}</button>
               <button :disabled="!state.selectedEntityIds.length" @click="createSceneAssetFromSelection">+ {{ t('createSceneAsset') }}</button>
               <button @click="creatingFolder = !creatingFolder">{{ t('newFolder') }}</button>
               <details class="asset-overflow"><summary :title="t('moreActions')">•••</summary><button @click="exportFolder">{{ t('exportProjectFolder') }}</button><button @click="batchReimportVisible">{{ t('batchReimport') }}</button><button :disabled="!selectedAsset" @click="bulkApplyVisible">{{ t('bulkApplyVisible') }}</button></details>
@@ -55,7 +56,7 @@
               <button :disabled="!assetGraph.missingReferences.length" @click="openMissingRepair">{{ t('missingReferences') }} <span>{{ assetGraph.missingReferences.length }}</span></button>
               <span v-if="assets.atlasError" class="atlas-error" :title="assets.atlasError">{{ t('atlasRebuildFailed') }}</span>
             </div>
-            <input ref="assetInput" hidden type="file" multiple accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml,audio/wav,audio/ogg,audio/mpeg,font/ttf,font/otf,font/woff,font/woff2,.ttf,.otf,.woff,.woff2,.rhai,.nova-prefab,.nova-scene,.nova-material,.nova-anim,.nova-controller,.nova-mask,.nova-rig,.nova-skin,.nova-timeline,.nova-tileset,.nova-atlas,.nova-path,.glsl,.frag,.vert,.nova-shader,.csv,.po,.arb,.nova-locale,.nova-theme" @change="importFiles">
+            <input ref="assetInput" hidden type="file" multiple accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml,audio/wav,audio/ogg,audio/mpeg,font/ttf,font/otf,font/woff,font/woff2,.ttf,.otf,.woff,.woff2,.rhai,.nova-graph,.nova-prefab,.nova-scene,.nova-material,.nova-anim,.nova-controller,.nova-mask,.nova-rig,.nova-skin,.nova-timeline,.nova-tileset,.nova-atlas,.nova-path,.glsl,.frag,.vert,.nova-shader,.csv,.po,.arb,.nova-locale,.nova-theme" @change="importFiles">
           </header>
 
           <section v-if="externalChanges.length" class="external-changes" aria-live="polite">
@@ -202,6 +203,11 @@
             <label><span>{{ t('encoding') }}</span><b>UTF-8</b></label>
             <button class="save-script" @click="openInScriptStudio(selectedAsset.uuid)">{{ t('openScriptStudio') }}</button>
           </template>
+          <template v-else-if="selectedAsset.assetType === 'visualScript'">
+            <label><span>{{ t('graphVersion') }}</span><b>1</b></label>
+            <label><span>{{ t('scriptApiVersion') }}</span><b>API v2</b></label>
+            <button class="save-script" @click="openInGraphStudio(selectedAsset.uuid)">{{ t('openVisualGraph') }}</button>
+          </template>
           <template v-else-if="selectedAsset.assetType === 'atlas'">
             <label><span>{{ t('atlasMaxSize') }}</span><select v-model.number="selectedAsset.settings.atlasSettings.maxSize"><option :value="512">512</option><option :value="1024">1024</option><option :value="2048">2048</option><option :value="4096">4096</option></select></label>
             <label><span>{{ t('atlasPadding') }}</span><input v-model.number="selectedAsset.settings.atlasSettings.padding" type="number" min="0" max="32"></label>
@@ -271,6 +277,9 @@
 
       <AnimationPanel v-else-if="estate.bottomPanelTab === 'animation'" />
       <AudioSystemPanel v-else-if="estate.bottomPanelTab === 'audio'" />
+      <WorldToolsPanel v-else-if="estate.bottomPanelTab === 'worldProduction'" />
+      <NetworkStudioPanel v-else-if="estate.bottomPanelTab === 'networkStudio'" />
+      <EcosystemStudioPanel v-else-if="estate.bottomPanelTab === 'ecosystem'" />
       <TilemapPanel v-else-if="estate.bottomPanelTab === 'tilemap'" />
       <div v-else class="empty">{{ t('selectObject') }}</div>
     </div>
@@ -295,6 +304,9 @@ import { applyAudioImportProfile, applyTextureImportProfile, normalizedFontFallb
 import { exportProjectFolder } from '../assets/projectFolder'
 import { DEFAULT_SCRIPT_SOURCE } from '../editor/scriptTemplates'
 import { openScriptAsset } from '../editor/scriptStudioState'
+import { defaultVisualGraph } from '../visual/graphCatalog'
+import { openGraphAsset } from '../visual/graphStudioState'
+import { serializeGraphDocument } from '../visual/graphTypes'
 import { applyEditorWorkspace, reorderBottomTab, workspaceState } from '../editor/workspaces'
 import { instantiatePrefab, replaceEntitiesWithPrefab } from '../runtime/prefabs'
 import { createSceneAssetFromEntities, instantiateSceneAsset } from '../runtime/sceneInstances'
@@ -303,7 +315,10 @@ import AnimationPanel from './AnimationPanel.vue'
 import AudioSystemPanel from './AudioSystemPanel.vue'
 import ConsolePanel from './ConsolePanel.vue'
 import ProfilerPanel from './ProfilerPanel.vue'
+import NetworkStudioPanel from './NetworkStudioPanel.vue'
+import EcosystemStudioPanel from './EcosystemStudioPanel.vue'
 import TilemapPanel from './TilemapPanel.vue'
+import WorldToolsPanel from './WorldToolsPanel.vue'
 import { buildAssetDependencyGraph, explainAssetBuildInclusion, findAssetReferences, repairMissingAssetReference, unusedAssetReport } from '../assets/assetGraph'
 import { cancelAssetImport, importPipelineState } from '../assets/importPipeline'
 import { sourceStatusFor } from '../runtime/teamWorkflow'
@@ -312,7 +327,7 @@ import { projectScopeDirty } from '../runtime/projectTransactions'
 
 const permanentTabs = [
   { id: 'assets' as const, label: 'assets' as const }, { id: 'console' as const, label: 'console' as const },
-  { id: 'animation' as const, label: 'animation' as const }, { id: 'audio' as const, label: 'audioMixer' as const }, { id: 'profiler' as const, label: 'profiler' as const }
+  { id: 'animation' as const, label: 'animation' as const }, { id: 'audio' as const, label: 'audioMixer' as const }, { id: 'worldProduction' as const, label: 'worldStudio' as const }, { id: 'networkStudio' as const, label: 'networkStudio' as const }, { id: 'ecosystem' as const, label: 'ecosystemStudio' as const }, { id: 'profiler' as const, label: 'profiler' as const }
 ]
 const tabs = computed(() => {
   const selected = state.world.entities.find(entity => entity.id === state.selectedEntityId)
@@ -324,6 +339,7 @@ const assetFilters: Array<{ type: AssetType | 'all'; label: Parameters<typeof t>
   { type: 'all', label: 'allAssets' }, { type: 'image', label: 'images' }, { type: 'audio', label: 'audioAssets' },
   { type: 'font', label: 'fontAssets' }, { type: 'scene', label: 'scenes' }, { type: 'prefab', label: 'prefabs' },
   { type: 'script', label: 'scripts' }, { type: 'material', label: 'materials' }, { type: 'animation', label: 'animations' },
+  { type: 'visualScript', label: 'visualGraphs' },
   { type: 'controller', label: 'controllers' }, { type: 'animationMask', label: 'animationMasks' }, { type: 'rig', label: 'rigs' },
   { type: 'skin', label: 'skins' }, { type: 'timeline', label: 'timelines' }, { type: 'tileset', label: 'tileSets' }, { type: 'atlas', label: 'atlases' },
   { type: 'shader', label: 'shaders' }, { type: 'localization', label: 'localizationFiles' }, { type: 'uiTheme', label: 'uiThemes' },
@@ -415,6 +431,14 @@ function createScriptAsset() {
   pushHistory('Create script asset')
   addEditorLog(t('scriptCreated', { name: asset.name }), 'Assets')
 }
+function createVisualGraphAsset() {
+  const graph = defaultVisualGraph(t('newVisualGraph'))
+  const asset = createTextAsset(t('newVisualGraph'), 'visualScript', serializeGraphDocument(graph), 'Assets/Visual Scripts')
+  assets.selectedGuid = asset.uuid
+  pushHistory('Create visual graph asset')
+  addEditorLog(t('visualGraphCreated', { name: asset.name }), 'Assets')
+  openInGraphStudio(asset.uuid)
+}
 function createSceneAssetFromSelection() {
   const reference = createSceneAssetFromEntities(state.selectedEntityIds, t('newSceneAssetName'))
   if (!reference) return
@@ -423,9 +447,11 @@ function createSceneAssetFromSelection() {
   addEditorLog(t('sceneAssetCreated'), 'Assets')
 }
 function openInScriptStudio(uuid: string) { openScriptAsset(uuid); applyEditorWorkspace('script') }
+function openInGraphStudio(uuid: string) { openGraphAsset(uuid); applyEditorWorkspace('script') }
 function openAssetEditor(uuid: string) {
   const asset = assets.records.find(record => record.uuid === uuid); if (!asset) return
   assets.selectedGuid = uuid
+  if (asset.assetType === 'visualScript') { openInGraphStudio(uuid); return }
   if (asset.assetType === 'script' || asset.assetType === 'shader') { openInScriptStudio(uuid); return }
   if (asset.assetType === 'animation' || asset.assetType === 'controller' || asset.assetType === 'timeline') { estate.bottomPanelTab = 'animation'; return }
   if (asset.assetType === 'audio') { estate.bottomPanelTab = 'audio'; return }
@@ -599,7 +625,7 @@ async function exportFolder() {
     addEditorLog(estate.statusText, 'Project', 'error')
   }
 }
-function assetIcon(type: AssetType): string { return type === 'audio' ? '♫' : type === 'font' ? 'Aa' : type === 'scene' ? '◇' : type === 'prefab' ? '⬡' : type === 'animation' ? '▶' : type === 'controller' ? '⌘' : type === 'animationMask' ? '◐' : type === 'rig' ? '◍' : type === 'skin' ? '▧' : type === 'timeline' ? '⏱' : type === 'material' ? '◩' : '◆' }
+function assetIcon(type: AssetType): string { return type === 'audio' ? '♫' : type === 'font' ? 'Aa' : type === 'scene' ? '◇' : type === 'prefab' ? '⬡' : type === 'visualScript' ? '⌘' : type === 'animation' ? '▶' : type === 'controller' ? '⌘' : type === 'animationMask' ? '◐' : type === 'rig' ? '◍' : type === 'skin' ? '▧' : type === 'timeline' ? '⏱' : type === 'material' ? '◩' : '◆' }
 function formatBytes(value: number): string { return value < 1024 ? `${value} B` : value < 1024 ** 2 ? `${(value / 1024).toFixed(1)} KB` : `${(value / 1024 ** 2).toFixed(1)} MB` }
 function assetSourceStatus(uuid: string) { return sourceStatusFor(uuid) }
 

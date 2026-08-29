@@ -1,0 +1,99 @@
+{
+  "format": "nova-v5.7.0-product-audit",
+  "version": 1,
+  "engineVersion": "5.7.0",
+  "generatedAt": "2026-08-27T03:59:52.868Z",
+  "perspectives": [
+    "programmer",
+    "runtime",
+    "user",
+    "layout"
+  ],
+  "checks": [
+    {
+      "id": "V570-VERSION",
+      "status": "passed",
+      "detail": "Frontend, native and Rust authorities identify 5.7.0.",
+      "metrics": {}
+    },
+    {
+      "id": "V570-COMPATIBILITY",
+      "status": "passed",
+      "detail": "Frozen project and public API boundaries remain documented.",
+      "metrics": {}
+    },
+    {
+      "id": "V570-ROADMAP",
+      "status": "passed",
+      "detail": "Roadmap records completion and every required audit fixture.",
+      "metrics": {}
+    },
+    {
+      "id": "V570-NAVIGATION",
+      "status": "passed",
+      "detail": "Hierarchical/grid paths, dynamic rebaking, links, costs, spatial avoidance and bounded cancellable baking are runtime bound.",
+      "metrics": {}
+    },
+    {
+      "id": "V570-AI",
+      "status": "passed",
+      "detail": "Behavior trees, blackboards, perception, utility scoring, deterministic scheduling and visual diagnostics are connected.",
+      "metrics": {}
+    },
+    {
+      "id": "V570-STREAMING",
+      "status": "passed",
+      "detail": "World composition connects dependencies, preloading, cache policy, memory budgets, origin shifts and streamed save handoff.",
+      "metrics": {}
+    },
+    {
+      "id": "V570-TILEMAP",
+      "status": "passed",
+      "detail": "Tile rules, procedural brushes, scene/prefab tiles, streaming previews and cancellable deterministic background baking are connected.",
+      "metrics": {}
+    },
+    {
+      "id": "V570-REACHABILITY",
+      "status": "passed",
+      "detail": "World Studio is a permanent, workspace-restorable bottom-panel destination.",
+      "metrics": {}
+    },
+    {
+      "id": "V570-I18N",
+      "status": "passed",
+      "detail": "Every new visible production control is localized in EN/DE/ZH.",
+      "metrics": {}
+    },
+    {
+      "id": "V570-DOCS",
+      "status": "passed",
+      "detail": "README, focused guide and all multilingual manuals teach v5.7 workflows.",
+      "metrics": {}
+    },
+    {
+      "id": "V570-VERIFY",
+      "status": "passed",
+      "detail": "World behavior verification passes.",
+      "metrics": {
+        "checks": 9
+      }
+    },
+    {
+      "id": "V570-LAYOUT",
+      "status": "passed",
+      "detail": "EN/DE/ZH browser matrix passes four release viewports.",
+      "metrics": {
+        "matrix": 12
+      }
+    },
+    {
+      "id": "V570-RELEASE",
+      "status": "passed",
+      "detail": "Generic packager enforces the exact eleven artifacts.",
+      "metrics": {}
+    }
+  ],
+  "severity0Open": 0,
+  "severity1Open": 0,
+  "status": "passed"
+}

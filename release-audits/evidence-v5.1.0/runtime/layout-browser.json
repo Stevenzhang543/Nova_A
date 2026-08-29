@@ -1,0 +1,34 @@
+{
+  "format": "nova-v5.1.0-browser-user-audit",
+  "version": 1,
+  "engineVersion": "5.1.0",
+  "generatedAt": "2026-08-26T07:20:00.000Z",
+  "browser": "Codex in-app Edge/Chromium",
+  "status": "passed",
+  "checks": [
+    {
+      "id": "launcher-zh-1024x640",
+      "status": "passed",
+      "rootHorizontalOverflow": false,
+      "clippedButtons": 0,
+      "detail": "Chinese launcher, template cards, project fields and recent projects remain readable and operable."
+    },
+    {
+      "id": "build-de-1366x768",
+      "status": "passed",
+      "rootHorizontalOverflow": false,
+      "rootVerticalOverflow": false,
+      "clippedControls": 0,
+      "detail": "German Manage and Build Settings layout retains complete labels and artifact preview without overlap."
+    },
+    {
+      "id": "snake-en-play-input-build",
+      "status": "passed",
+      "scriptErrors": 0,
+      "runtimeMessages": 2,
+      "buildReadyAfterPlay": true,
+      "detail": "Created Snake, played it, steered down, observed the body follow, stopped, and returned to a Ready portable build."
+    }
+  ]
+}
+

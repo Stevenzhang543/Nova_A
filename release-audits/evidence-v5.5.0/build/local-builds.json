@@ -1,0 +1,33 @@
+{
+  "format": "nova-local-build-evidence",
+  "version": 1,
+  "engineVersion": "5.5.0",
+  "generatedAt": "2026-08-26T16:30:27.157Z",
+  "artifacts": [
+    {
+      "id": "web-dist",
+      "path": "dist/index.html",
+      "status": "passed",
+      "bytes": 994
+    },
+    {
+      "id": "windows-portable",
+      "path": "src-tauri/target/release/nova_a.exe",
+      "status": "passed",
+      "bytes": 15814656
+    },
+    {
+      "id": "windows-nsis",
+      "path": "src-tauri/target/release/bundle/nsis/Nova_A_5.5.0_x64-setup.exe",
+      "status": "passed",
+      "bytes": 8359007
+    },
+    {
+      "id": "windows-msi",
+      "path": "src-tauri/target/release/bundle/msi/Nova_A_5.5.0_x64_en-US.msi",
+      "status": "passed",
+      "bytes": 9428992
+    }
+  ],
+  "status": "passed"
+}

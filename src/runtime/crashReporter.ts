@@ -1,8 +1,4 @@
-import { getSceneJSON, physicsState, sceneManager } from '../store/physics'
-import { buildSettings } from './buildSettings'
-import { recordTelemetry } from './shipping'
 import { reportFatalError } from './faultCenter'
-import { markRecoverySessionCrashed, storeRecoverySnapshot } from './recovery'
 
 interface CrashPayload {
   message: string
@@ -20,6 +16,7 @@ function isBrowserLayoutDeliveryWarning(reason: unknown): boolean {
 }
 
 async function persistCrash(payload: CrashPayload): Promise<void> {
+  const [{ recordTelemetry }, { buildSettings }] = await Promise.all([import('./shipping'), import('./buildSettings')])
   recordTelemetry('runtime.crash', { renderer: payload.renderer, scene: payload.scene, message: payload.message.slice(0, 160) })
   if (payload.renderer !== 'Nova_A Editor' && !buildSettings.delivery.crashReports) return
   if (!('__TAURI_INTERNALS__' in window)) return
@@ -34,23 +31,26 @@ async function persistCrash(payload: CrashPayload): Promise<void> {
 export function installCrashReporter(renderer = 'Editor'): void {
   if (installed) return
   installed = true
-  const report = (reason: unknown) => {
+  const report = async (reason: unknown) => {
     // Browsers dispatch this platform notification through `window.error` even
     // though it is not an application exception. Canvas resizing is coalesced
     // separately; never turn the delivery warning itself into a fatal report.
     if (isBrowserLayoutDeliveryWarning(reason)) return
     const error = reason instanceof Error ? reason : new Error(String(reason))
+    reportFatalError(error, renderer === 'Nova_A Editor' ? 'Uncaught editor error' : 'Uncaught player error')
+    let project = 'Unknown', scene = 'Unknown'
+    try {
+      const [{ physicsState, sceneManager, getSceneJSON }, { markRecoverySessionCrashed, storeRecoverySnapshot }] = await Promise.all([import('../store/physics'), import('./recovery')])
+      project = physicsState.world.projectEngineVersion
+      scene = sceneManager.activeScene?.name ?? 'Unknown'
+      markRecoverySessionCrashed()
+      if (renderer === 'Nova_A Editor') storeRecoverySnapshot(getSceneJSON(), 'crash')
+    } catch { /* The last valid autosave remains available. */ }
     const payload: CrashPayload = {
       message: error.message || 'Unknown runtime failure', stack: error.stack ?? '',
-      project: physicsState.world.projectEngineVersion,
-      scene: sceneManager.activeScene?.name ?? 'Unknown', renderer
+      project, scene, renderer
     }
-    reportFatalError(error, renderer === 'Nova_A Editor' ? 'Uncaught editor error' : 'Uncaught player error')
-    markRecoverySessionCrashed()
-    if (renderer === 'Nova_A Editor') {
-      try { storeRecoverySnapshot(getSceneJSON(), 'crash') } catch { /* The last valid autosave remains available. */ }
-    }
-    void persistCrash(payload).catch(persistError => console.error('Could not persist Nova_A crash', persistError))
+    await persistCrash(payload).catch(persistError => console.error('Could not persist Nova_A crash', persistError))
   }
   window.addEventListener('error', event => {
     const reason = event.error ?? event.message
@@ -58,8 +58,8 @@ export function installCrashReporter(renderer = 'Editor'): void {
       event.preventDefault()
       return
     }
-    report(reason)
+    void report(reason)
     event.preventDefault()
   })
-  window.addEventListener('unhandledrejection', event => { report(event.reason); event.preventDefault() })
+  window.addEventListener('unhandledrejection', event => { void report(event.reason); event.preventDefault() })
 }

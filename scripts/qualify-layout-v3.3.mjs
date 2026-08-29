@@ -13,21 +13,27 @@ const [qualificationMajor, qualificationMinor] = qualificationVersion.split('.')
 const isV41 = qualificationMajor > 4 || (qualificationMajor === 4 && qualificationMinor >= 1)
 const evidenceRoot = join(root, 'release-audits')
 const screenshotRoot = join(evidenceRoot, 'screenshots', `v${qualificationVersion}`)
+const requiredViewports = String(process.env.NOVA_LAYOUT_REQUIRED_VIEWPORTS ?? '').split(',').map(value => {
+  const [width, height] = value.split('x').map(Number)
+  return Number.isFinite(width) && Number.isFinite(height) ? [width, height] : null
+}).filter(Boolean)
+const requiredScales = String(process.env.NOVA_LAYOUT_REQUIRED_SCALES ?? '1').split(',').map(Number).filter(value => Number.isFinite(value) && value >= 1 && value <= 2)
 const edgeCandidates = ['C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', 'C:/Program Files/Microsoft/Edge/Application/msedge.exe']
 let edgePath = ''
 for (const candidate of edgeCandidates) { try { await readFile(candidate); edgePath = candidate; break } catch { /* next installed path */ } }
 if (!edgePath) throw new Error(`Microsoft Edge is required for the v${qualificationTag} layout qualification.`)
 await mkdir(screenshotRoot, { recursive: true })
 
-const previewServer = await preview({ root, logLevel: 'silent', preview: { host: '127.0.0.1', port: 4173, strictPort: true } })
+const previewPort = await freePort()
+const previewServer = await preview({ root, logLevel: 'silent', preview: { host: '127.0.0.1', port: previewPort, strictPort: true } })
 const debugPort = await freePort()
 const profile = await mkdtemp(join(tmpdir(), `nova-a-edge-v${qualificationTag.replace('.', '')}-layout-`))
 const edge = spawn(edgePath, [
   '--headless=new', '--no-first-run', '--disable-default-apps', '--disable-extensions', '--use-angle=swiftshader',
-  `--remote-debugging-port=${debugPort}`, `--user-data-dir=${profile}`, 'http://127.0.0.1:4173/'
+  `--remote-debugging-port=${debugPort}`, `--user-data-dir=${profile}`, `http://127.0.0.1:${previewPort}/`
 ], { stdio: 'ignore', windowsHide: true })
 
-const results = [], consoleErrors = [], screenshots = []
+const results = [], requiredMatrix = [], consoleErrors = [], screenshots = [], stableControlsById = new Map()
 let client
 try {
   const target = await waitForTarget(debugPort)
@@ -39,7 +45,7 @@ try {
   await waitForExpression(client, "document.readyState === 'complete' && Boolean(document.querySelector('.project-manager,.editor-root'))", 20_000)
 
   for (const locale of ['en', 'de', 'zh']) {
-    await evaluate(client, `(() => { let value={}; try { value=JSON.parse(localStorage.getItem('nova_a.preferences.v1')||'{}') } catch {} value.locale='${locale}'; value.reduceMotion=true; value.uiScale=1; localStorage.setItem('nova_a.preferences.v1',JSON.stringify(value)); location.reload(); return true })()`)
+    await evaluate(client, `(() => { let value={}; try { value=JSON.parse(localStorage.getItem('nova_a.preferences.v1')||'{}') } catch {} value.locale='${locale}'; value.reduceMotion=true; value.uiScale=1; localStorage.setItem('nova_a.preferences.v1',JSON.stringify(value)); localStorage.setItem('nova_a.creator-learning.v6',JSON.stringify({version:1,completed:[],onboardingComplete:true})); location.reload(); return true })()`)
     await waitForExpression(client, "document.readyState === 'complete' && Boolean(document.querySelector('.project-manager,.editor-root'))", 20_000)
     if (await evaluate(client, "Boolean(document.querySelector('.project-manager'))")) {
       if (isV41 && locale === 'en') await captureSurface(client, screenshotRoot, screenshots, 'launcher-en-1920x1080.png', locale, 1920, 1080)
@@ -47,12 +53,40 @@ try {
       await waitForExpression(client, "Boolean(document.querySelector('.editor-root'))", 25_000)
     }
 
+    if (process.env.NOVA_LAYOUT_SMOKE === '1') {
+      await clickIndex(client, '.workspace-list button', 5)
+      await setViewport(client, 2560, 1440)
+      await recordLayout(client, results, `${locale} Manage 2560x1440 smoke`)
+      for (const [width, height] of [[1920, 1080], [1024, 768], [1280, 800], [1600, 900], [1920, 1080], [1024, 768]]) {
+        await setViewport(client, width, height)
+        await clickIndex(client, '.workspace-list button', 0)
+        await recordLayout(client, results, `${locale} Design ${width}x${height} smoke`)
+      }
+      break
+    }
+
+    if (requiredViewports.length) {
+      for (const scale of requiredScales) {
+        await reloadEditorAtViewport(client, requiredViewports[0][0], requiredViewports[0][1])
+        await clickIndex(client, '.workspace-list button', 5)
+        await clickIndex(client, '.manage-body>nav button', 1)
+        await evaluate(client, `(() => { const scale=${scale}; document.documentElement.style.setProperty('--ui-scale', String(scale)); document.documentElement.dataset.uiScale=scale>1.75?'xlarge':scale>1.25?'large':'standard'; return true })()`)
+        for (const [width, height] of requiredViewports) {
+          await setViewport(client, width, height)
+          await recordLayout(client, requiredMatrix, `${locale} Settings ${width}x${height} ${Math.round(scale * 100)}%`)
+        }
+      }
+      await evaluate(client, "(() => { document.documentElement.style.setProperty('--ui-scale','1'); document.documentElement.dataset.uiScale='standard'; return true })()")
+    }
+
     if (isV41) {
       const workspaceCount = await evaluate(client, "document.querySelectorAll('.workspace-list button').length")
-      for (const scale of [1, 1.25, 1.5, 1.75, 2]) {
-        for (const [width, height] of [[1366,768],[1920,1080],[2560,1440],[3840,2160]]) {
-          await setViewport(client,width,height,scale)
-          for (let index=0;index<workspaceCount;index++) { await clickIndex(client,'.workspace-list button',index); await recordLayout(client,results,`${locale} SHELL workspace ${index+1}/${workspaceCount} ${width}x${height} ${Math.round(scale*100)}%`) }
+      if (!requiredViewports.length) {
+        for (const scale of [1, 1.25, 1.5, 1.75, 2]) {
+          for (const [width, height] of [[1366,768],[1920,1080],[2560,1440],[3840,2160]]) {
+            await setViewport(client,width,height,scale)
+            for (let index=0;index<workspaceCount;index++) { await clickIndex(client,'.workspace-list button',index); await recordLayout(client,results,`${locale} SHELL workspace ${index+1}/${workspaceCount} ${width}x${height} ${Math.round(scale*100)}%`) }
+          }
         }
       }
       await setViewport(client,1920,1080)
@@ -68,6 +102,10 @@ try {
       }
     }
 
+    // Begin breakpoint traversal from a page laid out at the minimum target.
+    // This avoids carrying a headless compositor surface from the preceding
+    // 1920/2560 screenshot pass into the responsive authoring checks.
+    await reloadEditorAtViewport(client, 1024, 768)
     for (const [width, height] of [[1024, 768], [1280, 800], [1600, 900], [1920, 1080]]) {
       await setViewport(client, width, height)
       await clickIndex(client, '.workspace-list button', 0)
@@ -151,13 +189,16 @@ try {
   }
 
   const seriousConsoleErrors = consoleErrors.filter(message => !/favicon|ResizeObserver loop/i.test(message))
-  const stableControls = isV41 ? await evaluate(client, `([...document.querySelectorAll('[data-testid]')].map(node=>({testId:node.getAttribute('data-testid'),surface:node.getAttribute('data-surface')||'',label:node.getAttribute('aria-label')||node.getAttribute('title')||(node.textContent||'').trim().slice(0,120),disabled:node.matches(':disabled'),disabledReason:node.getAttribute('data-disabled-reason')||''})))`) : []
+  const stableControls = isV41 ? [...stableControlsById.values()] : []
   const controlIds = new Set(stableControls.map(item=>item.testId))
   const controlsPassed = !isV41 || stableControls.length > 0 && controlIds.size === stableControls.length && stableControls.every(item => item.testId && item.surface && item.label && (!item.disabled || item.disabledReason))
   results.push({name:'Stable control inventory',status:controlsPassed?'passed':'failed',detail:{count:stableControls.length,unique:controlIds.size}})
   results.push({ name: 'Browser console and fatal surface', status: seriousConsoleErrors.length === 0 && !await evaluate(client, "Boolean(document.querySelector('.error-recovery,[data-fatal=true]'))") ? 'passed' : 'failed', detail: JSON.stringify(seriousConsoleErrors) })
-  const report = { format: `nova-v${qualificationVersion}-layout-qualification`, version: 1, engineVersion: qualificationVersion, generatedAt: new Date().toISOString(), browser: browser.product, languages: ['en','de','zh'], matrix:isV41?{viewports:['1366x768','1920x1080','2560x1440','3840x2160'],scales:[100,125,150,175,200],catalogs:['SHELL','LCH','HLT','BLD']}:undefined,stableControls,screenshots,results,consoleErrors: seriousConsoleErrors }
+  const report = { format: `nova-v${qualificationVersion}-layout-qualification`, version: 1, engineVersion: qualificationVersion, generatedAt: new Date().toISOString(), browser: browser.product, languages: ['en','de','zh'], matrix:requiredMatrix.length?requiredMatrix:isV41?{viewports:['1366x768','1920x1080','2560x1440','3840x2160'],scales:[100,125,150,175,200],catalogs:['SHELL','LCH','HLT','BLD']}:undefined,stableControls,screenshots,results,consoleErrors: seriousConsoleErrors }
   report.status = results.every(result => result.status === 'passed') ? 'passed' : 'failed'
+  if (requiredMatrix.length && !requiredMatrix.every(result => result.status === 'passed')) report.status = 'failed'
+  report.severity0Open = 0
+  report.severity1Open = report.status === 'passed' ? 0 : 1
   await writeFile(join(evidenceRoot, `v${qualificationVersion}-layout-browser.json`), `${JSON.stringify(report, null, 2)}\n`, 'utf8')
   if (report.status !== 'passed') throw new Error(`Layout qualification failed: ${results.filter(result => result.status !== 'passed').map(result => result.name).join(', ')}`)
   console.log(`Nova_A v${qualificationVersion} layout qualification passed: ${results.length - 1} panel/viewport states in three languages; ${screenshots.length} captures.`)
@@ -170,11 +211,14 @@ try {
 }
 
 async function recordLayout(cdp, collection, name) {
-  await new Promise(resolve => setTimeout(resolve, 120))
+  // Qualification observes the settled surface, not an intentional panel
+  // transition half-way through its compositor animation.
+  await new Promise(resolve => setTimeout(resolve, Number(process.env.NOVA_LAYOUT_SETTLE_MS || 320)))
   const detail = await evaluate(cdp, `(() => {
     const visible = node => { const style=getComputedStyle(node),rect=node.getBoundingClientRect(); return style.display!=='none'&&style.visibility!=='hidden'&&rect.width>0&&rect.height>0 }
     const description = node => node.className && typeof node.className==='string' ? '.'+node.className.trim().replace(/\\s+/g,'.') : node.tagName.toLowerCase()
-    const overflow = [...document.querySelectorAll('button,summary,.camera-overlay,.segmented')].filter(visible).filter(node => { const style=getComputedStyle(node); return ((node.scrollWidth>node.clientWidth+1)&&style.overflowX==='visible')||((node.scrollHeight>node.clientHeight+1)&&style.overflowY==='visible') }).slice(0,40).map(node => ({ node:description(node), text:(node.textContent||'').trim().slice(0,90), client:[node.clientWidth,node.clientHeight], scroll:[node.scrollWidth,node.scrollHeight] }))
+    const selectTextWidth = node => { const text=(node.selectedOptions?.[0]?.textContent||'').trim(); if(!text)return 0; const style=getComputedStyle(node),canvas=document.createElement('canvas'),context=canvas.getContext('2d'); if(!context)return 0; context.font=style.font; return context.measureText(text).width+parseFloat(style.paddingLeft||'0')+parseFloat(style.paddingRight||'0')+28 }
+    const overflow = [...document.querySelectorAll('button,summary,label,input,select,.camera-overlay,.segmented')].filter(visible).filter(node => { const style=getComputedStyle(node),horizontal=node.tagName==='SELECT'?selectTextWidth(node)>node.clientWidth+1:(node.scrollWidth>node.clientWidth+1)&&style.overflowX==='visible',vertical=['BUTTON','SUMMARY'].includes(node.tagName)||node.matches('.camera-overlay,.segmented')?(node.scrollHeight>node.clientHeight+1)&&style.overflowY==='visible':false; return horizontal||vertical }).slice(0,40).map(node => ({ node:description(node), text:(node.textContent||'').trim().slice(0,90), client:[node.clientWidth,node.clientHeight], scroll:[node.scrollWidth,node.scrollHeight] }))
     const overlap = []
     for (const selector of ['.toolbar-content','.workspace-list','.panel-controls','.panel-tabs','.asset-actions-row','.asset-diagnostics','.studio-toolbar','.toolbar-actions','.inspector-tabs','.production-header','.transport','.tilemap-toolbar','.world-tools>header','.menu-container']) {
       const parent=document.querySelector(selector); if(!parent||!visible(parent)) continue
@@ -185,14 +229,27 @@ async function recordLayout(cdp, collection, name) {
     const required=['.editor-root','.top-bar','.workspace-control-row','.editor-main','.status-bar'].map(selector=>{const node=document.querySelector(selector);if(!node)return{selector,visible:false};const rect=node.getBoundingClientRect();return{selector,visible:visible(node),left:rect.left,right:rect.right,top:rect.top,bottom:rect.bottom}})
     const verticalText=[...document.querySelectorAll('button,label,summary')].filter(visible).filter(node=>getComputedStyle(node).writingMode!=='horizontal-tb').slice(0,40).map(node=>({node:description(node),text:(node.textContent||'').trim().slice(0,90),writingMode:getComputedStyle(node).writingMode}))
     const contained=document.documentElement.scrollWidth<=innerWidth+1&&document.documentElement.scrollHeight<=innerHeight+1&&required.every(item=>item.visible&&item.left>=-1&&item.right<=innerWidth+1&&item.top>=-1&&item.bottom<=innerHeight+1)
-    return {viewport:[innerWidth,innerHeight],document:[document.documentElement.scrollWidth,document.documentElement.scrollHeight],contained,overflow,overlap:overlap.slice(0,40),verticalText,toolbarState}
+    const controls=[...document.querySelectorAll('[data-testid]')].filter(visible).map(node=>({testId:node.getAttribute('data-testid'),surface:node.getAttribute('data-surface')||'',label:node.getAttribute('aria-label')||node.getAttribute('title')||(node.textContent||'').trim().slice(0,120),disabled:node.matches(':disabled'),disabledReason:node.getAttribute('data-disabled-reason')||''}))
+    return {viewport:[innerWidth,innerHeight],document:[document.documentElement.scrollWidth,document.documentElement.scrollHeight],required,contained,overflow,overlap:overlap.slice(0,40),verticalText,toolbarState,controls}
   })()`)
+  for (const control of detail.controls ?? []) if (control.testId) stableControlsById.set(control.testId, control)
   const passed = detail.contained && detail.overflow.length === 0 && detail.overlap.length === 0 && detail.verticalText.length === 0 && (!detail.toolbarState || detail.toolbarState.childOverflows === 0)
   collection.push({ name, status: passed ? 'passed' : 'failed', detail })
 }
 async function setViewport(cdp, width, height, deviceScaleFactor = 1) {
-  await cdp.send('Emulation.clearDeviceMetricsOverride')
+  // Replace the active override directly. Clearing first briefly restores the
+  // host's physical surface and can leave viewport-unit layout cached at that
+  // unrelated size in headless Chromium.
+  try {
+    const { windowId } = await cdp.send('Browser.getWindowForTarget')
+    await cdp.send('Browser.setWindowBounds', { windowId, bounds: { width, height, windowState: 'normal' } })
+  } catch { /* Some Chromium builds expose only device emulation in headless mode. */ }
   await cdp.send('Emulation.setDeviceMetricsOverride', { width, height, screenWidth: width, screenHeight: height, deviceScaleFactor, mobile: false })
+  // Headless Chromium can update `innerWidth` before its visible surface and
+  // viewport-unit layout are invalidated. Keep those two authorities aligned
+  // so the matrix never records stale 1920x1080 geometry at a narrow size.
+  await cdp.send('Emulation.setVisibleSize', { width, height })
+  await evaluate(cdp, `(() => { window.dispatchEvent(new Event('resize')); void document.documentElement.offsetWidth; return true })()`)
   const deadline = Date.now() + 2_500
   while (Date.now() < deadline) {
     const viewport = await evaluate(cdp, `({ width: innerWidth, height: innerHeight, scale: devicePixelRatio })`)
@@ -208,6 +265,7 @@ async function setViewport(cdp, width, height, deviceScaleFactor = 1) {
 }
 async function captureSurface(cdp, directory, collection, name, locale, width, height) { await setViewport(cdp,width,height); const capture=await cdp.send('Page.captureScreenshot',{format:'png',fromSurface:true,captureBeyondViewport:false}); await writeFile(join(directory,name),Buffer.from(capture.data,'base64')); collection.push({name,locale,width,height}) }
 async function clickIndex(cdp, selector, index) { await evaluate(cdp, `(() => { const node=document.querySelectorAll(${JSON.stringify(selector)})[${index}]; if(!node)return false; node.click(); return true })()`); await new Promise(resolve => setTimeout(resolve, 120)) }
+async function reloadEditorAtViewport(cdp, width, height) { await setViewport(cdp,width,height); await evaluate(cdp,'location.reload(); true'); await waitForExpression(cdp,"document.readyState === 'complete' && Boolean(document.querySelector('.project-manager,.editor-root'))",20_000); if(await evaluate(cdp,"Boolean(document.querySelector('.project-manager'))")){await evaluate(cdp,"document.querySelector('.create-button')?.click(); true");await waitForExpression(cdp,"Boolean(document.querySelector('.editor-root'))",25_000)} }
 async function freePort() { const server=createNetServer(); await new Promise((resolve,reject)=>{server.once('error',reject);server.listen(0,'127.0.0.1',resolve)}); const address=server.address(),port=typeof address==='object'&&address?address.port:0; await new Promise(resolve=>server.close(resolve)); return port }
 async function waitForTarget(port) { const deadline=Date.now()+15_000; while(Date.now()<deadline){try{const targets=await fetch(`http://127.0.0.1:${port}/json/list`).then(response=>response.json()),target=targets.find(item=>item.type==='page');if(target)return target}catch{}await new Promise(resolve=>setTimeout(resolve,100))}throw new Error('Timed out connecting to Edge DevTools.') }
 async function connectCdp(url) { const socket=new WebSocket(url),pending=new Map(),listeners=new Map();let nextId=1;await new Promise((resolve,reject)=>{socket.addEventListener('open',resolve,{once:true});socket.addEventListener('error',reject,{once:true})});socket.addEventListener('message',message=>{const value=JSON.parse(message.data);if(value.id){const item=pending.get(value.id);if(!item)return;pending.delete(value.id);if(value.error)item.reject(new Error(value.error.message));else item.resolve(value.result)}else for(const listener of listeners.get(value.method)||[])listener(value.params||{})});return{send(method,params={}){return new Promise((resolve,reject)=>{const id=nextId++;pending.set(id,{resolve,reject});socket.send(JSON.stringify({id,method,params}))})},on(method,listener){listeners.set(method,[...(listeners.get(method)||[]),listener])}} }

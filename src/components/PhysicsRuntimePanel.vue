@@ -149,7 +149,7 @@ function compareLatest(): void {
 </script>
 
 <style scoped>
-.physics-runtime-panel { position: relative; z-index: 190; width: clamp(340px, 26vw, 410px); min-width: 0; display: flex; flex: 0 0 auto; flex-direction: column; overflow: hidden; border-left: 1px solid var(--border-strong); background: color-mix(in srgb, var(--surface-1) 97%, transparent); box-shadow: -12px 0 32px color-mix(in srgb, #000 16%, transparent); backdrop-filter: blur(16px); }
+.physics-runtime-panel { position: relative; z-index: 190; width: clamp(340px, 26vw, 410px); min-width: 0; display: flex; flex: 0 0 auto; flex-direction: column; overflow: hidden; contain: layout paint; border-left: 1px solid var(--border-strong); background: var(--surface-1); box-shadow: -12px 0 32px color-mix(in srgb, #000 16%, transparent); }
 .physics-runtime-panel.collapsed { width: 44px; }
 header { min-height: 54px; padding: 9px 10px 9px 14px; display: flex; align-items: center; justify-content: space-between; gap: 8px; border-bottom: 1px solid var(--border-subtle); }
 .heading { min-width: 0; display: flex; align-items: center; gap: 10px; }

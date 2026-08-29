@@ -1,4 +1,5 @@
 import { reactive } from 'vue'
+import { openCodeWorkspace } from '../visual/graphStudioState'
 
 export const scriptStudioState = reactive({
   activeUuid: null as string | null,
@@ -11,6 +12,7 @@ export function toggleScriptExplorer(): void { scriptStudioState.layout.explorer
 export function toggleScriptDetail(): void { scriptStudioState.layout.detailVisible = !scriptStudioState.layout.detailVisible }
 
 export function openScriptAsset(uuid: string): void {
+  openCodeWorkspace()
   if (!scriptStudioState.openTabs.includes(uuid)) scriptStudioState.openTabs.push(uuid)
   scriptStudioState.activeUuid = uuid
 }

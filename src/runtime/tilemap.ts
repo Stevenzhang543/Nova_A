@@ -61,6 +61,18 @@ export const tilemapEditorState = reactive({
   history: [] as Array<{ id: string; at: number; tool: TileTool; layerId: string; start: { x: number; y: number }; end: { x: number; y: number }; revision: number }>
 })
 
+export const tileBakeState = reactive({
+  active: false,
+  cancelled: false,
+  progress: 0,
+  processedChunks: 0,
+  totalChunks: 0,
+  artifactHash: '',
+  error: '',
+  result: { collision: 0, navigation: 0, occluders: 0, chunks: 0 }
+})
+let tileBakeController: AbortController | null = null
+
 const MAX_TILESET_TILES = 65_536
 const MAX_TILEMAP_CELLS = 4_194_304
 
@@ -275,6 +287,47 @@ export function bakeTileMap(component: TileMap2D): { collision: number; navigati
   const navigationTiles = component.layers.filter(layer => layer.navigationEnabled).flatMap(layer => layer.tiles).filter(tile => tile >= 0)
   const occlusionTiles = component.layers.filter(layer => layer.occlusionEnabled).flatMap(layer => layer.tiles).filter(tile => tile >= 0)
   return { collision: component.bakeCollision ? buildTileColliderDescriptors(component).length : 0, navigation: component.bakeNavigation && set ? navigationTiles.filter(tile => (set.tiles[tile]?.navigationCost ?? 0) > 0).length : 0, occluders: component.bakeOccluders && set ? occlusionTiles.filter(tile => set.tiles[tile]?.occluder).length : 0, chunks: Math.ceil(component.width / component.chunkSize) * Math.ceil(component.height / component.chunkSize) * component.layers.length }
+}
+
+function tileBakeHash(value: string): string {
+  let hash = 0x811c9dc5
+  for (let index = 0; index < value.length; index++) { hash ^= value.charCodeAt(index); hash = Math.imul(hash, 0x01000193) >>> 0 }
+  return hash.toString(16).padStart(8, '0')
+}
+
+export function cancelTileMapBake(): boolean {
+  if (!tileBakeController) return false
+  tileBakeController.abort(); tileBakeState.cancelled = true
+  return true
+}
+
+export async function requestTileMapBake(component: TileMap2D): Promise<typeof tileBakeState.result & { cancelled: boolean; artifactHash: string }> {
+  cancelTileMapBake()
+  const controller = new AbortController(); tileBakeController = controller
+  normalizeTileMap(component)
+  const chunksX = Math.ceil(component.width / component.chunkSize), chunksY = Math.ceil(component.height / component.chunkSize), totalChunks = chunksX * chunksY * component.layers.length
+  Object.assign(tileBakeState, { active: true, cancelled: false, progress: 0, processedChunks: 0, totalChunks, artifactHash: '', error: '', result: { collision: 0, navigation: 0, occluders: 0, chunks: totalChunks } })
+  try {
+    for (const layer of [...component.layers].sort((a, b) => a.id.localeCompare(b.id))) for (let chunkY = 0; chunkY < chunksY; chunkY++) for (let chunkX = 0; chunkX < chunksX; chunkX++) {
+      await new Promise<void>(resolve => setTimeout(resolve, 0))
+      if (controller.signal.aborted) return { ...tileBakeState.result, cancelled: true, artifactHash: tileBakeState.artifactHash }
+      // Reading each bounded chunk validates its deterministic runtime payload
+      // without materializing a second full-map copy.
+      readRuntimeTileChunk(component, layer.id, chunkX, chunkY)
+      tileBakeState.processedChunks++; tileBakeState.progress = tileBakeState.processedChunks / Math.max(1, totalChunks)
+    }
+    tileBakeState.result = bakeTileMap(component)
+    tileBakeState.artifactHash = tileBakeHash(`${deterministicTileMapStorage(component)}:${JSON.stringify(tileBakeState.result)}`)
+    tileBakeState.progress = 1
+    return { ...tileBakeState.result, cancelled: false, artifactHash: tileBakeState.artifactHash }
+  } catch (error) {
+    tileBakeState.error = error instanceof Error ? error.message : String(error)
+    throw error
+  } finally {
+    tileBakeState.cancelled = controller.signal.aborted
+    tileBakeState.active = false
+    if (tileBakeController === controller) tileBakeController = null
+  }
 }
 
 export interface TilemapDiagnostic { severity: 'info' | 'warning' | 'error'; code: 'invalid-terrain' | 'missing-tile' | 'overdraw' | 'collision' | 'navigation' | 'scene-placement'; message: string; layerId?: string; cell?: { x: number; y: number } }

@@ -2,7 +2,7 @@ import { reactive } from 'vue'
 import type { ComponentKind } from '../world/components'
 import { componentDescriptor } from '../world/componentRegistry'
 
-export type ComponentPaletteCategory = 'Core' | '2D' | 'Physics' | 'UI' | 'Audio' | 'Camera' | 'Navigation' | 'Script' | 'Packages'
+export type ComponentPaletteCategory = 'Core' | '2D' | 'Physics' | 'Gameplay' | 'UI' | 'Audio' | 'Camera' | 'Navigation' | 'Script' | 'Packages'
 export interface ComponentPaletteMetadata { category: ComponentPaletteCategory; compatibility: 'Stable' | 'Experimental' | 'Package'; required: ComponentKind[]; summary: string }
 export interface ComponentPreset { id: string; name: string; kind: ComponentKind; values: Record<string, unknown>; createdAt: string }
 
@@ -11,9 +11,10 @@ const ui = new Set<ComponentKind>(['Canvas', 'RectTransform', 'Panel', 'Image', 
 const audio = new Set<ComponentKind>(['AudioSource', 'AudioListener'])
 const navigation = new Set<ComponentKind>(['NavigationRegion2D', 'NavigationObstacle2D', 'NavigationAgent2D'])
 const packages = new Set<ComponentKind>(['BehaviorTree2D', 'StateMachine2D'])
+const gameplay = new Set<ComponentKind>(['CharacterBody2D', 'GridMover2D', 'PlatformController2D', 'TopDownController2D', 'Health2D', 'DamageHitbox2D', 'Collectible2D', 'Projectile2D', 'Spawner2D', 'Cooldown2D', 'Lifetime2D', 'MouseFollower2D', 'CameraFollow2D', 'ObjectPool2D'])
 
 export function componentPaletteMetadata(kind: ComponentKind): ComponentPaletteMetadata {
-  const category: ComponentPaletteCategory = kind === 'Transform2D' ? 'Core' : kind === 'Camera2D' ? 'Camera' : kind === 'Script2D' ? 'Script' : physics.has(kind) ? 'Physics' : ui.has(kind) ? 'UI' : audio.has(kind) ? 'Audio' : navigation.has(kind) ? 'Navigation' : packages.has(kind) ? 'Packages' : '2D'
+  const category: ComponentPaletteCategory = kind === 'Transform2D' ? 'Core' : kind === 'Camera2D' ? 'Camera' : kind === 'Script2D' ? 'Script' : physics.has(kind) ? 'Physics' : gameplay.has(kind) ? 'Gameplay' : ui.has(kind) ? 'UI' : audio.has(kind) ? 'Audio' : navigation.has(kind) ? 'Navigation' : packages.has(kind) ? 'Packages' : '2D'
   const required: ComponentKind[] = kind.endsWith('Joint2D') || kind === 'CharacterBody2D' ? ['RigidBody2D'] : kind === 'AreaEffector2D' ? ['Area2D'] : kind !== 'RectTransform' && ui.has(kind) && kind !== 'Canvas' ? ['RectTransform'] : []
   return { category, compatibility: packages.has(kind) ? 'Package' : ['NavigationRegion2D', 'NavigationObstacle2D', 'NavigationAgent2D'].includes(kind) ? 'Experimental' : 'Stable', required, summary: componentDescriptor(kind)?.summary ?? `${kind} component.` }
 }
