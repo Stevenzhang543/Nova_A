@@ -1,6 +1,38 @@
-# Nova_A 5.1.0–6.0.0 production roadmap and coding manual
+# Nova_A 6.2.0–7.0.0 production roadmap and coding manual
 
-Status: authoritative implementation plan for the 5.x-to-6.0 development cycle.
+Status: authoritative implementation plan for the current development cycle. The complete code-derived inventory is `docs/FEATURE_INVENTORY_6_2.md`; the full comparison, release specifications, programmer audits, user checks, UI rules, compatibility policy, and completion definition are `docs/ROADMAP_6_2_TO_7_0.md`. Those two documents are normative parts of this file and must be read before implementing any 6.2–7.0 release.
+
+Current sequence: 6.2 behavior contracts and scripting reliability; 6.3 safe editor automation/plugins; 6.4 content interoperability/resources/animation; 6.5 production physics/rendering fidelity; 6.6 multiplayer workflow; 6.7 device input/mobile/accessibility; 6.8 large-world/low-end performance; 6.9 ecosystem/collaboration/shipping; 7.0 stable creator platform and complete teaching manual.
+
+The historical 5.1–6.1 plan remains below as an implementation ledger. When a historical statement conflicts with the current roadmap, the current roadmap wins while frozen compatibility contracts remain unchanged.
+
+## 6.2.0 implementation checkpoint
+
+Implement opt-in Rhai behavior contracts for strict/deterministic mode, component/input/asset/package requirements, and bounded commands/logs per callback. Preserve old scripts and frozen formats. Connect the same diagnostics to Script Studio, runtime, Project Health, Build, templates, EN/DE/ZH teaching, tests, evidence, and the exact eleven release artifacts. Complete only when the programmer and normal-user audits in `docs/ROADMAP_6_2_TO_7_0.md` pass.
+
+## 6.3.0 implementation checkpoint
+
+Implement automatic Rhai ↔ Visual Graph pairing for every saved behavior. Default visual authoring to a Scratch-inspired Blocks view with familiar category colors and block shapes while preserving the complete advanced Nodes view, typed data flow, debugging, refactoring, package nodes, animation, and generated runtime behavior. Unsupported Rhai syntax must remain visible and lossless in Code blocks.
+
+Add **Manage → Automation Studio** as a versioned Rhai/WASM editor sandbox with read-only queries, explicit selection/scene/asset permissions, templates, origin, dry-run diff, 1,000-command cap, bounded time/source/data, cancellation at safe boundaries, single undoable transaction, exception rollback, and trace. It must have no filesystem, process, network, clock, or randomness authority.
+
+Harden Plugin API 2 without changing the frozen API version: validate WASM schema/signature/import/export without execution; default new imports to disabled and unapproved; expose individual permission review; connect command/menu/selection/Inspector/gizmo/import/asset/build contributions to their owning UI; and remove every contribution on failure, disable, unload, or uninstall. Preserve Project Format 2/schema 29, Rhai API 2, Graph Format 1, Plugin API 2, Package Manifest 1, Build CLI 1, and workspace document 3.
+
+Complete only after denial/stale-handle/hostile-WASM/command-flood tests; deterministic graph/code and automation-diff tests; exception/cancellation rollback; plugin unload/reload leak cycles; headless checks; signatures/locks/schema; user-style preview/apply/undo/deny/reload/disable/remove/failure recovery; EN/DE/ZH layout; manuals/references; native and Web builds; evidence; and the exact eleven release artifacts. External signing, independent clean-machine/hardware certification, matching-host targets, and real-duration soak remain explicitly pending until independently run.
+
+## 6.4.0 implementation checkpoint
+
+Implement deterministic, bounded Aseprite, TexturePacker/common-atlas and Tiled TMX/JSON/TSX import and reimport. Preserve asset UUIDs and stable slice identities across reordered external metadata; retain pivots, colliders, tags, frame timing, atlas references and import diagnostics. Reject malformed or oversized inputs without replacing the last valid imported source. Parse large metadata off the UI thread and cache repeated canonical results without changing authored output.
+
+Add contextual Asset tabs plus versioned reusable Resource assets for materials, animation libraries, input maps, physics materials, themes and data tables. Resources support deterministic serialization, shared parents, local overrides, reference validation, cycle rejection, Project Health/Build diagnostics and export inclusion. Add production animation authoring for skin-weight heat visualization, bounded deterministic automatic weights, rig constraints, onion skin, existing curve editing, retarget preview and root-motion preview based on the runtime sampler.
+
+Begin the measured performance program required before 7.0.0: keep importer work bounded/cached/worker-capable, avoid repeated full-resource resolution where identity is unchanged, preserve lazy workspaces and the Low-end profile, and record before/after startup/editor/runtime/large-content evidence. No feature, visual component, animation, fixed-step behavior or exported quality may be removed or degraded. The comprehensive data-oriented/worker/latency tranche remains scheduled for 6.8.0 and must build on these measurements.
+
+Complete only after golden and malformed importer tests; reimport identity and precision checks; Resource inheritance/cycle/serialization/export tests; retarget/root-motion/weight/playback checks; large-atlas/timeline benchmarks; import→slice→animate, external edit→reimport→undo, moved-source repair and shared-resource override user flows; EN/DE/ZH layout at 1024×640 through 4K and 100–200% scale; type/Rust/WASM/Web/native builds; Windows player smoke; evidence; and exactly eleven release artifacts. Signing, independent clean-machine/hardware/accessibility certification, matching-host non-Windows builds and real-duration soak remain explicitly pending until independently run.
+
+---
+
+# Historical Nova_A 5.1.0–6.1.0 production roadmap
 
 Product direction: a lightweight, fast, local-first 2D game engine and editor with the essential production capabilities of Godot, GameMaker, Unity and Unreal, without their 3D-first weight, mandatory online services, or duplicated expert-only workflows.
 

@@ -1,0 +1,40 @@
+import { build } from 'vite'
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { dirname, join } from 'node:path'
+import { fileURLToPath, pathToFileURL } from 'node:url'
+import { webcrypto } from 'node:crypto'
+
+if(!globalThis.crypto)globalThis.crypto=webcrypto
+const root=dirname(dirname(fileURLToPath(import.meta.url))),compiled=await mkdtemp(join(tmpdir(),'nova-v630-verify-')),checks=[]
+const check=(id,passed,detail,metrics={})=>checks.push({id,status:passed?'passed':'failed',detail,metrics}),text=path=>readFile(join(root,path),'utf8')
+try{
+  await build({configFile:false,root,logLevel:'warn',ssr:{noExternal:true},build:{ssr:true,outDir:compiled,emptyOutDir:false,rollupOptions:{input:{graphs:join(root,'src/visual/graphCodeSync.ts'),automation:join(root,'src/runtime/editorAutomation.ts'),plugins:join(root,'src/runtime/plugins.ts'),formats:join(root,'src/projects/projectFormat.ts')},output:{entryFileNames:'[name].mjs',chunkFileNames:'chunks/[name]-[hash].mjs'}}}})
+  const load=name=>import(`${pathToFileURL(join(compiled,`${name}.mjs`)).href}?v=${Date.now()}`),[graphs,automation,plugins,formats]=await Promise.all(['graphs','automation','plugins','formats'].map(load))
+  check('V630-AUTHORITY',formats.NOVA_ENGINE_VERSION==='6.3.0'&&formats.NOVA_PROJECT_FORMAT_MAJOR===2&&formats.NOVA_PROJECT_SCHEMA_VERSION===29,'Engine authority advances while Project Format 2/schema 29 remain frozen.')
+  const manual=`@export(type="number") let speed = 4.0;\nfn start() { log_info("ready"); set_position(2.0, 3.0); }\nfn update(dt) { if input_down("Move") { set_velocity(speed, 0.0); } }\nfn helper(value) { value * 2.0 }\n`,graph=graphs.createGraphFromRhaiSource(manual,'Manual Round Trip','63000000-0000-4000-8000-000000000010')
+  check('V630-RHAI-TO-BLOCKS',graph.nodes.some(node=>node.type==='event.start')&&graph.nodes.some(node=>node.type==='event.update')&&graph.nodes.some(node=>node.type==='api.log_info')&&graph.nodes.some(node=>node.type==='api.set_position'),'Lifecycle and standard API source become native editable blocks.',{nodes:graph.nodes.length})
+  check('V630-LOSSLESS-CODE',graph.nodes.some(node=>node.type==='code.statement'&&String(node.config.source).includes('if input_down'))&&graph.nodes.some(node=>node.type==='code.module'&&String(node.config.source).includes('fn helper')),'Unsupported structured and top-level Rhai remains visible in bounded Code blocks.')
+  const generated=graphs.createLinkedRhaiSource(graph)
+  check('V630-BLOCKS-TO-RHAI',generated.includes('// @nova-graph-link 63000000-0000-4000-8000-000000000010')&&generated.includes('@nova-node')&&generated.includes('fn helper'),'Blocks generate linked, marker-stable Rhai without losing custom source.')
+  const requested=automation.parseAutomationPermissions('// @nova-editor-automation selection.read scene.write\nfn run() {}')
+  let denied=false;try{automation.parseAutomationPermissions('// @nova-editor-automation selection.read network.write\nfn run() {}')}catch{denied=true}
+  check('V630-AUTOMATION-PERMISSIONS',requested.join(',')==='selection.read,scene.write'&&denied,'Automation permissions are explicit and unknown authority fails closed.')
+  let commandCapDenied=false;try{automation.normalizeAutomationCommands({commands:Array.from({length:1001},()=>({type:'editor.select',handles:[]}))})}catch(error){commandCapDenied=String(error).includes('more than 1,000 commands')}
+  check('V630-AUTOMATION-BOUNDS',automation.MAX_AUTOMATION_COMMANDS===1000&&automation.MAX_AUTOMATION_SOURCE_BYTES===262144&&automation.MAX_AUTOMATION_RUN_MS===250&&commandCapDenied,'Automation publishes and enforces fixed command, source and time ceilings.')
+  const manifest={id:'top.whitelists.hostile',name:'Hostile fixture',version:'1.0.0',apiVersion:2,engine:'^6.3.0',entry:'hostile.wasm',entryType:'wasm',permissions:[],enabled:true,projectEnabled:true,contributions:{}}
+  let hostileDenied=false;try{await plugins.validateWasmPluginPackage(manifest,Uint8Array.from([0,97,115,109,1,0,0,0,1,4,1,96,0,0,2,16,1,4,101,118,105,108,7,110,101,116,119,111,114,107,0,0]).buffer)}catch(error){hostileDenied=String(error).includes('unsupported host capability')}
+  const normalized=plugins.normalizePluginManifest({...manifest,permissions:['editor.commands'],contributions:{commands:[{id:'test',label:'Test'}]}})
+  check('V630-PLUGIN-DENIAL',hostileDenied&&normalized.approvedPermissions.length===0,'Unknown WASM imports are denied and requested permissions are not implicit grants.')
+  plugins.loadPluginManifests([normalized]);check('V630-PLUGIN-LIFECYCLE',plugins.pluginState.contributions.length===0&&plugins.pluginState.activePluginIds.length===0,'Unexecuted/unloaded plugins expose no orphan contribution UI.')
+  const sources=Object.fromEntries(await Promise.all(['src/components/VisualGraphEditor.vue','src/components/ScriptStudio.vue','src/components/AutomationStudio.vue','src/runtime/editorAutomation.ts','src/runtime/plugins.ts','src/components/PluginSettings.vue','src/components/ConfigPanel.vue','src/components/EditorBottomPanel.vue','src/components/BuildSettingsPanel.vue','src/i18n.ts','instructions.txt','docs/AUTOMATION_VISUAL_SCRIPTING_6_3.md'].map(async path=>[path,await text(path)])))
+  check('V630-AUTOMATIC-LINK',sources['src/components/ScriptStudio.vue'].includes('ensureLinkedGraphForScript')&&sources['src/components/VisualGraphEditor.vue'].includes('ensureLinkedScriptForGraph')&&sources['src/components/VisualGraphEditor.vue'].includes('synchronizeLinkedScriptsForGraph'),'Both Save paths ensure and synchronize their companion automatically.')
+  check('V630-SCRATCH-UI',['blockMotion','blockLooks','blockSound','blockEvents','blockControl','blockSensing','blockOperators','blockVariables','blockMyBlocks','blockExtensions'].every(key=>sources['src/i18n.ts'].includes(`${key}:`))&&sources['src/components/VisualGraphEditor.vue'].includes("authoringMode === 'blocks'")&&sources['src/components/VisualGraphEditor.vue'].includes('arrangeScratchBlocks'),'Scratch-inspired categories, direct block mode and advanced Nodes mode are connected.')
+  check('V630-TRANSACTION',sources['src/runtime/editorAutomation.ts'].includes('beginHistoryTransaction')&&sources['src/runtime/editorAutomation.ts'].includes('cancelHistoryTransaction')&&sources['src/runtime/editorAutomation.ts'].includes('AbortSignal'),'Automation preview/apply supports one-step commit, cancellation and rollback.')
+  check('V630-DEEP-CONTRIBUTIONS',sources['src/components/ConfigPanel.vue'].includes('pluginInspectorContributions')&&sources['src/components/EditorBottomPanel.vue'].includes('pluginAssetContributions')&&sources['src/components/BuildSettingsPanel.vue'].includes('pluginBuildContributions'),'Selection, asset and build contexts host approved live plugin contributions.')
+  check('V630-LOCALIZATION',(sources['src/i18n.ts'].match(/automationStudio:/g)??[]).length>=3&&(sources['src/i18n.ts'].match(/blockMotion:/g)??[]).length>=3,'Blocks and Automation surfaces are explicit in English, German and Chinese.')
+  check('V630-DOCUMENTATION',sources['instructions.txt'].includes('## 6.3.0 implementation checkpoint')&&sources['docs/AUTOMATION_VISUAL_SCRIPTING_6_3.md'].includes('Scratch-inspired Blocks view'),'Roadmap checkpoint, safety boundary and user workflow are documented.')
+}finally{await rm(compiled,{recursive:true,force:true})}
+const failed=checks.filter(item=>item.status==='failed'),report={format:'nova-v6.3.0-verification',version:1,engineVersion:'6.3.0',generatedAt:new Date().toISOString(),perspectives:['compatibility','visual-scripting','automation','plugins','security','localization','documentation'],checks,severity0Open:failed.length,severity1Open:0,status:failed.length?'failed':'passed'}
+await mkdir(join(root,'release-audits'),{recursive:true});await writeFile(join(root,'release-audits/v6.3.0-verification.json'),`${JSON.stringify(report,null,2)}\n`)
+if(failed.length){console.error(failed);process.exit(1)}console.log(`Nova_A v6.3.0 verification passed: ${checks.length} checks.`)

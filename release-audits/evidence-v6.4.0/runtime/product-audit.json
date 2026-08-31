@@ -1,0 +1,155 @@
+{
+  "format": "nova-v6.4.0-product-audit",
+  "version": 1,
+  "engineVersion": "6.4.0",
+  "generatedAt": "2026-08-31T09:50:01.507Z",
+  "perspectives": [
+    "programmer",
+    "user",
+    "compatibility",
+    "content",
+    "resources",
+    "animation",
+    "performance",
+    "runtime",
+    "build",
+    "localization",
+    "layout",
+    "release"
+  ],
+  "checks": [
+    {
+      "id": "V640-VERSION",
+      "status": "passed",
+      "detail": "Frontend, native, Rust and project authorities identify 6.4.0.",
+      "metrics": {}
+    },
+    {
+      "id": "V640-FROZEN-CONTRACTS",
+      "status": "passed",
+      "detail": "Project Format 2/schema 29 and all public 6.x contracts remain frozen.",
+      "metrics": {}
+    },
+    {
+      "id": "V640-INTERCHANGE",
+      "status": "passed",
+      "detail": "Aseprite, TexturePacker/common atlas and Tiled import/reimport are deterministic and bounded.",
+      "metrics": {}
+    },
+    {
+      "id": "V640-IDENTITY-RECOVERY",
+      "status": "passed",
+      "detail": "Reimport preserves stable slice identity and the last valid artifact on failure.",
+      "metrics": {}
+    },
+    {
+      "id": "V640-PERFORMANCE-SCHEDULING",
+      "status": "passed",
+      "detail": "Large metadata uses bounded worker parsing and repeated canonical sources use a bounded cache.",
+      "metrics": {}
+    },
+    {
+      "id": "V640-RESOURCE-MODEL",
+      "status": "passed",
+      "detail": "Six Resource kinds support shared parents, local-only overrides, deterministic resolution and cycle rejection.",
+      "metrics": {}
+    },
+    {
+      "id": "V640-CONTEXTUAL-ASSETS",
+      "status": "passed",
+      "detail": "Contextual Overview, Slices, Resource and Animation tabs are connected to the Assets panel.",
+      "metrics": {}
+    },
+    {
+      "id": "V640-ASSET-UI-SAFETY",
+      "status": "passed",
+      "detail": "Compact Asset actions remain contained and accessible, while importer history snapshots reject reactive proxies.",
+      "metrics": {}
+    },
+    {
+      "id": "V640-ANIMATION-PRODUCTION",
+      "status": "passed",
+      "detail": "Rig weights, constraints, onion skin, curves, retarget and root-motion preview are connected.",
+      "metrics": {}
+    },
+    {
+      "id": "V640-BUILD-EXPORT",
+      "status": "passed",
+      "detail": "Resources and imported content are validated and included by native/Web packaging.",
+      "metrics": {}
+    },
+    {
+      "id": "V640-MANUALS",
+      "status": "passed",
+      "detail": "English, German and Chinese teaching manuals cover the v6.4 workflows.",
+      "metrics": {
+        "bytes": 2622105
+      }
+    },
+    {
+      "id": "V640-ROADMAP",
+      "status": "passed",
+      "detail": "Implementation follows the authoritative 6.4 checkpoint and task guide.",
+      "metrics": {}
+    },
+    {
+      "id": "V640-VERIFICATION",
+      "status": "passed",
+      "detail": "Golden/malformed content, Resource, animation and performance verifier passes.",
+      "metrics": {
+        "checks": 19
+      }
+    },
+    {
+      "id": "V640-TEMPLATES",
+      "status": "passed",
+      "detail": "All startup templates retain valid gameplay, build and accessibility behavior.",
+      "metrics": {
+        "checks": 17
+      }
+    },
+    {
+      "id": "V640-INTERACTIONS",
+      "status": "passed",
+      "detail": "User-style interaction traversal reports no critical failure.",
+      "metrics": {
+        "registeredControls": 542,
+        "clickedControls": 188,
+        "settingsMutatedAndRestored": 240,
+        "dragSurfacesPassed": 4,
+        "explicitlyBlockedOrReviewed": 354
+      }
+    },
+    {
+      "id": "V640-LAYOUT",
+      "status": "passed",
+      "detail": "EN/DE/ZH layout remains contained through 200% scale.",
+      "metrics": {
+        "states": 603
+      }
+    },
+    {
+      "id": "V640-PERFORMANCE-EVIDENCE",
+      "status": "passed",
+      "detail": "The measured pre-fix baseline is retained honestly and the final physics/import/script/export benchmark passes without removing features.",
+      "metrics": {
+        "beforeStatus": "failed",
+        "afterStatus": "passed",
+        "beforeBodyStepsPerSecond": 192883,
+        "afterBodyStepsPerSecond": 222842,
+        "finalExportMs": 390.6342999999997
+      }
+    }
+  ],
+  "severity0Open": 0,
+  "severity1Open": 0,
+  "externalGates": {
+    "publisherSigning": "pending-external",
+    "cleanMachineLifecycle": "pending-external",
+    "secondMachineReproducibility": "pending-external",
+    "matchingHostTargets": "pending-external",
+    "independentHardwareAccessibility": "pending-external",
+    "soak72Hours": "pending-external"
+  },
+  "status": "passed"
+}

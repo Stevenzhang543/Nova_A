@@ -1,0 +1,18 @@
+{
+  "format": "nova-v6.3.0-benchmark-summary",
+  "version": 1,
+  "engineVersion": "6.3.0",
+  "generatedAt": "2026-08-31T07:44:49.391Z",
+  "scope": "Automatic code/block synchronization, bounded editor automation, plugin lifecycle, localized layout and portable Windows output.",
+  "verificationChecks": 14,
+  "interactionControls": 538,
+  "portableGameBytes": 16196711,
+  "limits": {
+    "automationCommands": 1000,
+    "automationSourceBytes": 262144,
+    "automationRunMs": 250
+  },
+  "localBuilds": "passed",
+  "independentHardware": "pending-external",
+  "status": "passed"
+}

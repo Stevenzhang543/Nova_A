@@ -1,0 +1,30 @@
+{
+  "format": "nova-build-provenance",
+  "version": 1,
+  "engineVersion": "6.3.0",
+  "buildId": "06193e46a2e7bf28116bffe31b3167e369b090802f3d91830e7dbabdf4d05435",
+  "projectId": "32630c7d-b836-486f-90ab-a7afeb90f77e",
+  "target": "windows",
+  "architecture": "x86_64",
+  "profile": "release",
+  "releaseChannel": "development",
+  "sourceCommit": "working-tree",
+  "toolchain": {
+    "builder": "Nova_A Build CLI 1",
+    "node": "v22.22.2",
+    "host": "win32",
+    "architecture": "x64"
+  },
+  "inputsHash": "3d6286111bd40eeca01dc9f649d576d5a30b6b072ef3e81a241c39677649c682",
+  "outputsHash": "ec0a914bd067be6ec0b4a4f74bf1dec0dda2a361282352874161a0536e864fab",
+  "cacheKey": "db2947764b3657a3743f3f18467b0b3e6eb24b89daef922f0f977eb26d0c8a36",
+  "deterministic": true,
+  "generatedAt": "1970-01-01T00:00:00.000Z",
+  "files": [
+    {
+      "path": "Automation Knockout.exe",
+      "sha256": "3b08b3ede6a70d9d89c9471933700d0813103ca3ee9c6ae6a026e774f6862edd",
+      "bytes": 16196711
+    }
+  ]
+}

@@ -64,13 +64,13 @@ export const NOVA_RELEASE_PIPELINE: readonly ReleasePipelineStage[] = Object.fre
   Object.freeze({ id: 'rust', label: 'Rust format, lint and tests', command: 'cargo test --workspace --all-targets', required: true, mutation: 'workspace' as const }),
   Object.freeze({ id: 'web', label: 'Deterministic web build', command: 'pnpm build', required: true, mutation: 'workspace' as const }),
   Object.freeze({ id: 'native', label: 'Windows release build', command: 'pnpm tauri build', required: true, mutation: 'workspace' as const }),
-  Object.freeze({ id: 'evidence', label: 'Evidence, SBOM and provenance', command: 'pnpm evidence:v6.1.0', required: true, mutation: 'workspace' as const }),
-  Object.freeze({ id: 'package', label: 'Eleven-artifact release package', command: 'pnpm release:v6.1.0', required: true, mutation: 'release-output' as const }),
+  Object.freeze({ id: 'evidence', label: 'Evidence, SBOM and provenance', command: 'pnpm evidence:v6.4.0', required: true, mutation: 'workspace' as const }),
+  Object.freeze({ id: 'package', label: 'Eleven-artifact release package', command: 'pnpm release:v6.4.0', required: true, mutation: 'release-output' as const }),
   Object.freeze({ id: 'external', label: 'Signing and clean-machine matrix', command: 'release operator workflow', required: true, mutation: 'external' as const })
 ])
 
 export const RELEASE_CANDIDATE_FREEZE = Object.freeze({
-  release: '6.1.0',
+  release: '6.4.0',
   sourceRelease: '5.1.0',
   active: true,
   openedAt: '2026-08-26T00:00:00.000Z',

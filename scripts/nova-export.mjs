@@ -4,7 +4,7 @@ import { mkdir, readFile, writeFile, stat, unlink } from 'node:fs/promises'
 import { dirname, isAbsolute, join, resolve } from 'node:path'
 import { gzipSync } from 'node:zlib'
 
-const ENGINE_VERSION = '6.1.0'
+const ENGINE_VERSION = '6.4.0'
 const HEADER_BYTES = 16
 const EMBEDDED_MAGIC = Buffer.from('NOVAPK2!')
 const MAX_PACKAGE_BYTES = 1024 * 1024 * 1024
@@ -62,7 +62,7 @@ function globMatches(path, pattern) {
   const expression = pattern.replace(/[.+^${}()|[\]\\]/g, '\\$&').replace(/\*\*/g, '\u0000').replace(/\*/g, '[^/]*').replace(/\?/g, '[^/]').replace(/\u0000/g, '.*')
   return new RegExp(`^${expression}$`, 'i').test(path.replaceAll('\\', '/'))
 }
-const INLINE_TEXT_ASSET_TYPES = new Set(['script', 'prefab', 'scene', 'material', 'animation', 'controller', 'animationMask', 'rig', 'skin', 'timeline', 'tileset', 'atlas', 'shader', 'localization', 'uiTheme', 'behaviorTree', 'stateMachine', 'tilePalette', 'brushPreset', 'terrainRules', 'dataSchema', 'dataTable', 'replay'])
+const INLINE_TEXT_ASSET_TYPES = new Set(['script', 'prefab', 'scene', 'material', 'animation', 'controller', 'animationMask', 'rig', 'skin', 'timeline', 'tileset', 'atlas', 'shader', 'localization', 'uiTheme', 'behaviorTree', 'stateMachine', 'tilePalette', 'brushPreset', 'terrainRules', 'dataSchema', 'dataTable', 'replay', 'resource'])
 async function writeIncremental(path, bytes) {
   try { if (incremental && sha(await readFile(path)) === sha(bytes)) return false } catch { /* New file. */ }
   await mkdir(dirname(path), { recursive: true }); await writeFile(path, bytes); return true
@@ -137,8 +137,19 @@ if (target === 'web') {
   const manifest = JSON.parse(await readFile(join(dist, '.vite', 'manifest.json'), 'utf8'))
   const playerKey = Object.keys(manifest).find(key => key === 'player.html' || key.endsWith('/player.ts') || key.endsWith('player.ts'))
   if (!playerKey) throw new Error('Production dist has no Nova Player entry; run pnpm build first')
-  const selected = new Set(), visit = key => { const item = manifest[key]; if (!item) return; selected.add(item.file); for (const path of item.css ?? []) selected.add(path); for (const path of item.assets ?? []) selected.add(path); for (const child of item.imports ?? []) visit(child); for (const child of item.dynamicImports ?? []) visit(child) }
-  visit(playerKey)
+  const selected = new Set(), visitedEntries = new Set(), pendingEntries = [playerKey]
+  while (pendingEntries.length) {
+    const key = pendingEntries.pop()
+    if (!key || visitedEntries.has(key)) continue
+    if (visitedEntries.size >= 100_000) throw new Error('Production manifest exceeds the 100,000-entry export safety limit')
+    visitedEntries.add(key)
+    const item = manifest[key]
+    if (!item) continue
+    if (item.file) selected.add(item.file)
+    for (const path of item.css ?? []) selected.add(path)
+    for (const path of item.assets ?? []) selected.add(path)
+    for (const child of [...(item.imports ?? []), ...(item.dynamicImports ?? [])]) if (!visitedEntries.has(child)) pendingEntries.push(child)
+  }
   const html = await readFile(join(dist, 'player.html'))
   await emit('index.html', html)
   for (const path of [...selected].sort()) await emit(path, await readFile(join(dist, safeRelative(path))))

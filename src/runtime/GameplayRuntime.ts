@@ -1,4 +1,4 @@
-import { readTextAsset, resolveAsset, updateTextAsset } from '../assets/AssetDatabase'
+import { assetState, readTextAsset, resolveAsset, updateTextAsset } from '../assets/AssetDatabase'
 import { addEditorLog, editorState } from '../store/editor'
 import {
   deleteEntity,
@@ -53,6 +53,8 @@ import { applyTargetMutation, resolveRuntimeHandle, runtimeSceneEntitySnapshots,
 import { addRuntimeScore, gameFlowSnapshot, resetGameFlow, restoreRuntimeCheckpoint, setGamePaused, setRuntimeCheckpoint, setRuntimeScore, setSessionValue } from './gameFlow'
 import { beginGameplayComponents, processGameplayContacts, updateGameplayComponents } from './gameplayComponents'
 import { activeGameCamera, gameScreenToWorld, visibleWorldBounds } from '../renderer/sceneRenderer'
+import { packageState } from './packages'
+import { parseScriptContract, validateScriptContract, type ScriptContractReport } from './scriptContracts'
 
 type LifecycleFunction = 'awake' | 'start' | 'fixed_update' | 'update' | 'late_update' | 'on_destroy' | 'on_timer' | 'on_task' | 'on_signal'
 
@@ -66,12 +68,14 @@ const MAX_SCRIPT_BRIDGE_BYTES = 16 * 1024 * 1024
 const MAX_SCRIPT_BRIDGE_COMMANDS = 4_096
 const MAX_SCRIPT_BRIDGE_LOGS = 512
 
-function parseScriptExecution(source: string): ScriptExecution {
+function parseScriptExecution(source: string, limits = { commands: MAX_SCRIPT_BRIDGE_COMMANDS, logs: MAX_SCRIPT_BRIDGE_LOGS }): ScriptExecution {
   if (source.length > MAX_SCRIPT_BRIDGE_BYTES) throw new Error('Script result exceeded the 16 MB host-bridge limit.')
   const value = JSON.parse(source) as Partial<ScriptExecution> | null
   if (!value || !Array.isArray(value.commands) || !Array.isArray(value.logs) || !value.properties || typeof value.properties !== 'object' || Array.isArray(value.properties)) throw new Error('Script result did not match the host-bridge contract.')
-  if (value.commands.length > MAX_SCRIPT_BRIDGE_COMMANDS) throw new Error(`Script emitted more than ${MAX_SCRIPT_BRIDGE_COMMANDS} commands in one invocation.`)
-  if (value.logs.length > MAX_SCRIPT_BRIDGE_LOGS) throw new Error(`Script emitted more than ${MAX_SCRIPT_BRIDGE_LOGS} log entries in one invocation.`)
+  const commandLimit = Math.min(MAX_SCRIPT_BRIDGE_COMMANDS, Math.max(1, Math.round(limits.commands)))
+  const logLimit = Math.min(MAX_SCRIPT_BRIDGE_LOGS, Math.max(1, Math.round(limits.logs)))
+  if (value.commands.length > commandLimit) throw new Error(`Script emitted more than its ${commandLimit}-command behavior budget in one invocation.`)
+  if (value.logs.length > logLimit) throw new Error(`Script emitted more than its ${logLimit}-log behavior budget in one invocation.`)
   if (value.commands.some(command => !command || typeof command !== 'object' || typeof (command as { type?: unknown }).type !== 'string')) throw new Error('Script emitted a malformed host command.')
   if (value.logs.some(log => !log || typeof log !== 'object' || typeof (log as { level?: unknown }).level !== 'string' || typeof (log as { message?: unknown }).message !== 'string')) throw new Error('Script emitted a malformed log entry.')
   return value as ScriptExecution
@@ -231,7 +235,8 @@ export class GameplayRuntime {
   private pendingScene: { type: 'load'; identifier: string } | { type: 'reload' } | null = null
   private quitRequested = false
   private compiledSources = new Map<string, string>()
-  private declaredFunctions = new Map<string, { source: string; names: Set<string> }>()
+  private declaredFunctions = new Map<string, { source: string; names: Set<string>; contract: ScriptContractReport }>()
+  private contractValidations = new Map<string, { signature: string; error: string | null }>()
   private pendingReloads = new Map<string, string>()
   private pendingSignals: RuntimeSignal[] = []
   private pendingDebugInvocation: PendingDebugInvocation | null = null
@@ -461,6 +466,7 @@ export class GameplayRuntime {
     this.pendingHandleResolutions.clear()
     this.pendingSignals = []
     this.pendingReloads.clear()
+    this.contractValidations.clear()
     this.pendingDebugInvocation = null
     this.pendingGraphExecution = null
     clearScriptDebugger()
@@ -756,13 +762,24 @@ export class GameplayRuntime {
     }
     let declared = this.declaredFunctions.get(asset.uuid)
     if (!declared || declared.source !== source) {
-      declared = { source, names: new Set(Object.keys(analyzeScript(source).functions)) }
+      declared = { source, names: new Set(Object.keys(analyzeScript(source).functions)), contract: parseScriptContract(source) }
       this.declaredFunctions.set(asset.uuid, declared)
     }
     // A timer-only script must not cross the WASM boundary for three absent
     // per-frame callbacks. Besides avoiding wasted work, this keeps Play
     // responsive on projects with many narrowly scoped scripts.
     if (!declared.names.has(functionName)) return
+    const enabledPackages = packageState.installed.filter(item => item.enabled && item.project).map(item => item.manifest.id)
+    const contractSignature = `${JSON.stringify(declared.contract.contract)}:${declared.contract.apiUsage.map(value => value.name).join(',')}:${entity.components.map(value => value.kind).sort().join(',')}:${physicsState.inputMap.map(value => value.name).sort().join(',')}:${assetState.generation}:${enabledPackages.sort().join(',')}`
+    const contractKey = `${entity.uuid}:${asset.uuid}`
+    let contractValidation = this.contractValidations.get(contractKey)
+    if (!contractValidation || contractValidation.signature !== contractSignature) {
+      const availableAssets = assetState.records.flatMap(item => [item.uuid, item.path])
+      const report = validateScriptContract(source, { components: entity.components.map(value => value.kind), inputActions: physicsState.inputMap.map(value => value.name), assets: availableAssets, packages: enabledPackages })
+      contractValidation = { signature: contractSignature, error: report.diagnostics.filter(item => item.severity === 'error').map(item => `${item.code} line ${item.line}: ${item.message}`).join(' ') || null }
+      this.contractValidations.set(contractKey, contractValidation)
+    }
+    if (contractValidation.error) { this.reportScriptError(entity, contractValidation.error); return }
     this.ensureScriptRuntime()
     if (!this.scriptRuntime) return
     const runtimeTransform = worldTransform(entity, physicsState.world.entities)
@@ -831,7 +848,7 @@ export class GameplayRuntime {
     try {
       this.ensureCompiled(asset.uuid, source)
       const runtime = this.scriptRuntime as unknown as { execute_cached_json(id: string, fn: string, context: string): string }
-      const execution = parseScriptExecution(runtime.execute_cached_json(asset.uuid, functionName, JSON.stringify(context)))
+      const execution = parseScriptExecution(runtime.execute_cached_json(asset.uuid, functionName, JSON.stringify(context)), declared.contract.contract.budgets)
       if (scriptProjectSettings.testing.coverageEnabled) recordScriptCoverage(asset.uuid, source, functionName)
       component.properties = execution.properties
       component.lastError = null
@@ -1124,7 +1141,10 @@ export class GameplayRuntime {
     const runtime = this.scriptRuntime as unknown as { compile_cached(id: string, source: string): string }
     const exports = JSON.parse(runtime.compile_cached(scriptUuid, source)) as ExportedProperty[]
     this.compiledSources.set(scriptUuid, source)
-    this.declaredFunctions.set(scriptUuid, { source, names: new Set(Object.keys(analyzeScript(source).functions)) })
+    const contract = parseScriptContract(source)
+    if (!contract.valid) throw new Error(contract.diagnostics.filter(item => item.severity === 'error').map(item => `${item.code} line ${item.line}: ${item.message}`).join(' '))
+    this.declaredFunctions.set(scriptUuid, { source, names: new Set(Object.keys(analyzeScript(source).functions)), contract })
+    for (const key of this.contractValidations.keys()) if (key.endsWith(`:${scriptUuid}`)) this.contractValidations.delete(key)
     return exports
   }
 

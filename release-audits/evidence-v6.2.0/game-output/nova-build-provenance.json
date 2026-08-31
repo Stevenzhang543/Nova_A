@@ -1,0 +1,30 @@
+{
+  "format": "nova-build-provenance",
+  "version": 1,
+  "engineVersion": "6.2.0",
+  "buildId": "3909cf87d31d022e5bed4c24e59fa3e9f84aac03cf558341a3d6001baf9958b1",
+  "projectId": "45b554d6-79bb-4a5c-a9eb-e1949b8b382e",
+  "target": "windows",
+  "architecture": "x86_64",
+  "profile": "release",
+  "releaseChannel": "development",
+  "sourceCommit": "working-tree",
+  "toolchain": {
+    "builder": "Nova_A Build CLI 1",
+    "node": "v22.22.2",
+    "host": "win32",
+    "architecture": "x64"
+  },
+  "inputsHash": "98e9cb3e06ba3f2670dcd1f6fd1f5bb99c7a819f373826ffb5392f8cfae3c1d0",
+  "outputsHash": "ff241d6e77ed214fbd40b583b9bf29e7f5371604b765dfbb2cf450f2fcea0cd7",
+  "cacheKey": "73e52acd371ed5694249ab717b9f52876dce56feab4fa6302ae7252c181ec509",
+  "deterministic": true,
+  "generatedAt": "1970-01-01T00:00:00.000Z",
+  "files": [
+    {
+      "path": "Contract Knockout.exe",
+      "sha256": "6b944ca1f54277d36e45fcfda8c7fc2fdfb3cfad31bc70a6339c1dbc372f160d",
+      "bytes": 16167021
+    }
+  ]
+}

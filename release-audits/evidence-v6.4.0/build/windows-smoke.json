@@ -1,0 +1,93 @@
+{
+  "format": "nova-v6.4.0-windows-game-smoke",
+  "version": 1,
+  "engineVersion": "6.4.0",
+  "generatedAt": "2026-08-31T09:48:20.333Z",
+  "host": {
+    "platform": "win32",
+    "architecture": "x64"
+  },
+  "relocation": {
+    "repositoryRoot": "E:\\Nova_A",
+    "legacyRootAbsentFromCommand": true
+  },
+  "export": {
+    "command": [
+      "--project",
+      "E:\\Nova_A\\reference-projects\\projects\\creator-v640-content-animation\\project.nova",
+      "--target",
+      "windows",
+      "--output",
+      "E:\\Nova_A\\release-audits\\game-output-v6.4.0",
+      "--profile",
+      "release",
+      "--architecture",
+      "x86_64",
+      "--runtime",
+      "game",
+      "--single-file",
+      "--player",
+      "E:\\Nova_A\\src-tauri\\target\\release\\nova_a.exe"
+    ],
+    "output": "E:\\Nova_A\\release-audits\\game-output-v6.4.0\\Content Motion Knockout.exe",
+    "packageLength": 16251,
+    "footer": "NOVAPK2!",
+    "packageSha256": "475261856cb18c41562eafff0b0efee07d6929c634b2aaa20ee9b983833bd998",
+    "singleFile": true
+  },
+  "gameSmoke": {
+    "path": "E:\\Nova_A\\release-audits\\game-output-v6.4.0\\Content Motion Knockout.exe",
+    "durationMs": 5032,
+    "stayedAlive": true,
+    "exit": {
+      "code": null,
+      "signal": "SIGTERM"
+    },
+    "error": "",
+    "status": "passed"
+  },
+  "editorSmoke": {
+    "path": "E:\\Nova_A\\src-tauri\\target\\release\\nova_a.exe",
+    "durationMs": 3026,
+    "stayedAlive": true,
+    "exit": {
+      "code": null,
+      "signal": "SIGTERM"
+    },
+    "error": "",
+    "status": "passed"
+  },
+  "artifacts": [
+    {
+      "name": "editor",
+      "path": "E:\\Nova_A\\src-tauri\\target\\release\\nova_a.exe",
+      "bytes": 16203776,
+      "sha256": "c97806022b43b24e977b4bd59227e25adb19952cb75f7e41efce903ff0625f5c"
+    },
+    {
+      "name": "game",
+      "path": "E:\\Nova_A\\release-audits\\game-output-v6.4.0\\Content Motion Knockout.exe",
+      "bytes": 16220075,
+      "sha256": "eef8f17350e5c1e04b4ac79a42f3c5bf6d6594c23ee8224a709a18c06f0cba3e"
+    },
+    {
+      "name": "msi",
+      "path": "E:\\Nova_A\\src-tauri\\target\\release\\bundle\\msi\\Nova_A_6.4.0_x64_en-US.msi",
+      "bytes": 9801728,
+      "sha256": "395ef9a2ffc3c3c5a86f3aefd0a3f9aca52754f1f9a2d3ff242c13c686e067a1"
+    },
+    {
+      "name": "setup",
+      "path": "E:\\Nova_A\\src-tauri\\target\\release\\bundle\\nsis\\Nova_A_6.4.0_x64-setup.exe",
+      "bytes": 8724911,
+      "sha256": "8d1b9041423da1c6fb3f057985d49d4d3e6d51d3b4d7de8c3327b29ab87af8e1"
+    }
+  ],
+  "externalGates": {
+    "signing": "pending-external",
+    "cleanMachineLifecycle": "pending-external",
+    "secondMachineReproducibility": "pending-external",
+    "soak72Hours": "pending-external"
+  },
+  "status": "passed"
+}

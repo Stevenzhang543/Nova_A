@@ -22,7 +22,7 @@ function slug(value: string): string {
 function derivedVisibleText(element: HTMLElement): string {
   if (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement) return element.labels?.[0]?.innerText.trim() || element.placeholder || element.name || element.type
   if (element instanceof HTMLSelectElement) return element.labels?.[0]?.innerText.trim() || element.name || 'Select'
-  return element.getAttribute('title') || element.innerText.trim().replace(/\s+/g, ' ')
+  return element.getAttribute('title') || element.innerText.trim().replace(/\s+/g, ' ') || element.textContent?.trim().replace(/\s+/g, ' ') || ''
 }
 
 function visibleText(element: HTMLElement): string {

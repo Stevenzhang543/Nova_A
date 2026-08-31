@@ -1,4 +1,5 @@
 import type { TextureFilter, TextureRegion } from '../renderer'
+import type { ContentInterchangeMetadata } from './contentInteroperability'
 
 export type AssetType =
   | 'image' | 'audio' | 'font' | 'scene' | 'prefab' | 'script' | 'material'
@@ -7,7 +8,8 @@ export type AssetType =
   | 'behaviorTree' | 'stateMachine' | 'tilePalette' | 'brushPreset' | 'terrainRules'
   | 'dataSchema' | 'dataTable' | 'replay' | 'path'
   | 'particleSystem' | 'visualScript'
-export type TextAssetType = Extract<AssetType, 'script' | 'visualScript' | 'prefab' | 'scene' | 'material' | 'animation' | 'controller' | 'animationMask' | 'rig' | 'skin' | 'timeline' | 'tileset' | 'atlas' | 'shader' | 'localization' | 'uiTheme' | 'behaviorTree' | 'stateMachine' | 'tilePalette' | 'brushPreset' | 'terrainRules' | 'dataSchema' | 'dataTable' | 'replay' | 'path' | 'particleSystem' | 'other'>
+  | 'resource'
+export type TextAssetType = Extract<AssetType, 'script' | 'visualScript' | 'prefab' | 'scene' | 'material' | 'animation' | 'controller' | 'animationMask' | 'rig' | 'skin' | 'timeline' | 'tileset' | 'atlas' | 'shader' | 'localization' | 'uiTheme' | 'behaviorTree' | 'stateMachine' | 'tilePalette' | 'brushPreset' | 'terrainRules' | 'dataSchema' | 'dataTable' | 'replay' | 'path' | 'particleSystem' | 'resource' | 'other'>
 export type AssetCompression = 'None' | 'Lossless' | 'Optimized'
 export type TextureImportProfile = 'General' | 'PixelArt' | 'UI' | 'NormalMap'
 export type AudioImportProfile = 'SoundEffect' | 'Music' | 'Voice' | 'Streaming'
@@ -181,6 +183,8 @@ export interface AssetRecord {
   settings: AssetImportSettings
   script?: ScriptAssetMetadata
   animationImport?: AnimationImportMetadata
+  /** Optional external-content identity; absent on native/legacy assets. */
+  interchange?: ContentInterchangeMetadata
   pipeline?: AssetPipelineMetadata
   tags?: string[]
   collectionIds?: string[]
@@ -217,6 +221,7 @@ export const DEFAULT_ASSET_FOLDERS = [
   'Assets/AI', 'Assets/TilePalettes', 'Assets/BrushPresets', 'Assets/TerrainRules',
   'Assets/Data', 'Assets/Data/Schemas', 'Assets/Data/Tables', 'Assets/Replays', 'Assets/Paths',
   'Assets/Particles', 'Assets/Visual Scripts',
+  'Assets/Resources', 'Assets/Resources/Animation Libraries', 'Assets/Resources/Input Maps', 'Assets/Resources/Physics Materials',
   '.nova/cache', '.nova/imported', '.nova/user'
 ] as const
 

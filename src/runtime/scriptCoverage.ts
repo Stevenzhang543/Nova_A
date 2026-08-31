@@ -14,7 +14,7 @@ export interface ScriptCoverageFile {
 export interface ScriptCoverageReport {
   format: 'nova-rhai-coverage'
   version: 2
-  engineVersion: '6.1.0'
+  engineVersion: '6.4.0'
   generatedAt: string
   lineRate: number
   functionRate: number
@@ -81,7 +81,7 @@ export function scriptCoverageReport(): ScriptCoverageReport {
   const stableBindings = SCRIPT_API_V2_MANIFEST.entries.filter(entry => !entry.deprecated).map(entry => entry.callable)
   const coveredBindings = stableBindings.filter(name => (scriptCoverageState.bindingHits[name] ?? 0) > 0)
   return {
-    format: 'nova-rhai-coverage', version: 2, engineVersion: '6.1.0', generatedAt: new Date().toISOString(),
+    format: 'nova-rhai-coverage', version: 2, engineVersion: '6.4.0', generatedAt: new Date().toISOString(),
     lineRate: executableLines ? coveredLines / executableLines : 1,
     functionRate: executableFunctions ? coveredFunctions / executableFunctions : 1,
     bindingRate: stableBindings.length ? coveredBindings.length / stableBindings.length : 1,

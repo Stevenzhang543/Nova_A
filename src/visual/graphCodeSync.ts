@@ -1,6 +1,7 @@
-import { assetState, readTextAsset, updateTextAsset } from '../assets/AssetDatabase'
+import { assetState, createTextAsset, readTextAsset, updateTextAsset } from '../assets/AssetDatabase'
+import { SCRIPT_API_V2_MANIFEST } from '../editor/scriptApi'
 import { compileGraph } from './graphCompiler'
-import { createGraphNode } from './graphCatalog'
+import { createGraphNode, defaultVisualGraph, graphNodeDefinition } from './graphCatalog'
 import { parseGraphDocument, serializeGraphDocument, type GraphCanvasScope, type GraphNode, type GraphPin, type GraphValue, type NovaGraphDocument } from './graphTypes'
 
 export const GRAPH_LINK_PREFIX = '// @nova-graph-link '
@@ -14,6 +15,11 @@ export interface GraphCodeSyncResult {
   changedNodes: string[]
   changedVariables: string[]
   rawModuleChanged: boolean
+}
+
+export interface EnsuredGraphCodeSyncResult extends GraphCodeSyncResult {
+  created: boolean
+  linkedScriptUuid: string
 }
 
 function graphScopes(graph: NovaGraphDocument): GraphCanvasScope[] { return [graph, ...graph.routines] }
@@ -110,6 +116,124 @@ function parseValue(source: string): GraphValue | undefined {
     return members.every(member => member !== undefined) ? members as GraphValue[] : undefined
   }
   return undefined
+}
+
+interface RhaiFunctionRegion { name: string; start: number; end: number; body: string }
+
+function matchingBrace(source: string, opening: number): number {
+  let quote = '', escaped = false, lineComment = false, blockComment = false, depth = 0
+  for (let index = opening; index < source.length; index++) {
+    const character = source[index], next = source[index + 1]
+    if (lineComment) { if (character === '\n') lineComment = false; continue }
+    if (blockComment) { if (character === '*' && next === '/') { blockComment = false; index++ }; continue }
+    if (quote) { if (escaped) escaped = false; else if (character === '\\') escaped = true; else if (character === quote) quote = ''; continue }
+    if (character === '/' && next === '/') { lineComment = true; index++; continue }
+    if (character === '/' && next === '*') { blockComment = true; index++; continue }
+    if (character === '"' || character === "'") { quote = character; continue }
+    if (character === '{') depth++
+    else if (character === '}' && --depth === 0) return index
+  }
+  return -1
+}
+
+function rhaiFunctionRegions(source: string): RhaiFunctionRegion[] {
+  const result: RhaiFunctionRegion[] = [], matcher = /\bfn\s+([A-Za-z_][A-Za-z0-9_]*)\s*\([^)]*\)\s*\{/g
+  for (let match = matcher.exec(source); match; match = matcher.exec(source)) {
+    const opening = source.indexOf('{', match.index), closing = matchingBrace(source, opening)
+    if (closing < 0) break
+    result.push({ name: match[1], start: match.index, end: closing + 1, body: source.slice(opening + 1, closing) })
+    matcher.lastIndex = closing + 1
+  }
+  return result
+}
+
+function rhaiStatements(source: string): string[] {
+  const result: string[] = []
+  let quote = '', escaped = false, lineComment = false, blockComment = false, depth = 0, start = 0
+  const push = (end: number) => { const value = source.slice(start, end).trim(); if (value) result.push(value); start = end }
+  for (let index = 0; index < source.length; index++) {
+    const character = source[index], next = source[index + 1]
+    if (lineComment) { if (character === '\n') lineComment = false; continue }
+    if (blockComment) { if (character === '*' && next === '/') { blockComment = false; index++ }; continue }
+    if (quote) { if (escaped) escaped = false; else if (character === '\\') escaped = true; else if (character === quote) quote = ''; continue }
+    if (character === '/' && next === '/') { lineComment = true; index++; continue }
+    if (character === '/' && next === '*') { blockComment = true; index++; continue }
+    if (character === '"' || character === "'") { quote = character; continue }
+    if ('([{'.includes(character)) depth++
+    else if (')]}'.includes(character)) depth = Math.max(0, depth - 1)
+    if (character === ';' && depth === 0) push(index + 1)
+    else if (character === '}' && depth === 0) {
+      const remainder = source.slice(index + 1)
+      if (!/^\s*else\b/.test(remainder)) push(index + 1)
+    }
+  }
+  push(source.length)
+  return result
+}
+
+function connectExecution(scope: GraphCanvasScope, from: GraphNode, to: GraphNode): void {
+  const output = from.pins.find(pin => pin.direction === 'output' && pin.kind === 'execution' && ['next', 'completed'].includes(pin.key))
+    ?? from.pins.find(pin => pin.direction === 'output' && pin.kind === 'execution')
+  const input = to.pins.find(pin => pin.direction === 'input' && pin.kind === 'execution')
+  if (output && input) scope.edges.push({ uuid: crypto.randomUUID().toLowerCase(), from: { nodeUuid: from.uuid, pinUuid: output.uuid }, to: { nodeUuid: to.uuid, pinUuid: input.uuid } })
+}
+
+function statementNode(statement: string, x: number, y: number, graph: NovaGraphDocument): GraphNode {
+  const callableMatch = statement.match(/^(?:let\s+[A-Za-z_][A-Za-z0-9_]*\s*=\s*)?([A-Za-z_][A-Za-z0-9_]*)\s*\(([\s\S]*)\)\s*;?$/)
+  const callable = callableMatch?.[1] ?? '', definition = callable ? graphNodeDefinition(`api.${callable}`, graph, null) : null
+  if (definition?.pins.some(pin => pin.kind === 'execution' && pin.direction === 'input')) {
+    const node = createGraphNode(definition.type, x, y, graph)
+    const inputs = node.pins.filter(pin => pin.direction === 'input' && pin.kind === 'data'), argumentsList = splitArguments(callableMatch?.[2] ?? '')
+    if (argumentsList.length === inputs.length && inputs.every((pin, index) => assignInput(graph, node, pin, argumentsList[index]))) return node
+    node.config.rhaiSourceOverride = statement.slice(0, 64_000)
+    return node
+  }
+  const node = createGraphNode('code.statement', x, y, graph)
+  node.config.source = statement.slice(0, 64_000)
+  node.title = callable && SCRIPT_API_V2_MANIFEST.entries.some(entry => entry.callable === callable) ? callable.replace(/_/g, ' ') : 'Rhai block'
+  node.category = callable ? 'Code' : 'Flow'
+  return node
+}
+
+function eraseRanges(source: string, ranges: Array<{ start: number; end: number }>): string {
+  const characters = source.split('')
+  for (const range of ranges) for (let index = range.start; index < range.end; index++) if (characters[index] !== '\n') characters[index] = ' '
+  return characters.join('')
+}
+
+/** Converts ordinary Rhai into an editable graph without discarding source.
+ * Recognized lifecycle/API statements become typed blocks; unsupported syntax
+ * remains a bounded Rhai block and therefore round-trips with the same behavior. */
+export function createGraphFromRhaiSource(sourceInput: string, name = 'Visual Script', requestedUuid = ''): NovaGraphDocument {
+  const source = sourceInput.replace(/\r\n?/g, '\n').replace(/^\/\/ @nova-graph-link [0-9a-f-]{36}\s*\n/im, '')
+  const graph = defaultVisualGraph(name)
+  graph.uuid = requestedUuid || graph.uuid; graph.nodes = []; graph.edges = []; graph.comments = []; graph.variables = []
+  const functions = rhaiFunctionRegions(source), consumed: Array<{ start: number; end: number }> = []
+  let chainIndex = 0
+  for (const region of functions) {
+    const eventType = `event.${region.name}`
+    if (!graphNodeDefinition(eventType, graph, null)) continue
+    consumed.push(region)
+    const y = 90 + chainIndex * 220, event = createGraphNode(eventType, 70, y, graph)
+    graph.nodes.push(event)
+    let previous = event, statementIndex = 0
+    for (const statement of rhaiStatements(region.body).slice(0, 2_048)) {
+      const node = statementNode(statement, 360 + statementIndex * 270, y, graph)
+      graph.nodes.push(node); connectExecution(graph, previous, node); previous = node; statementIndex++
+    }
+    chainIndex++
+  }
+  let remainder = eraseRanges(source, consumed)
+  const variables: Array<{ start: number; end: number }> = [], variableMatcher = /(?:^|\n)([ \t]*(?:@export\([^\n]*\)\s*)?let\s+([A-Za-z_][A-Za-z0-9_]*)\s*=\s*([^;\n]+);)/g
+  for (let match = variableMatcher.exec(remainder); match; match = variableMatcher.exec(remainder)) {
+    const value = parseValue(match[3]); if (value === undefined) continue
+    const declarationStart = match.index + (match[0].startsWith('\n') ? 1 : 0), exposed = /@export\(/.test(match[1])
+    graph.variables.push({ uuid: crypto.randomUUID().toLowerCase(), name: match[2], valueType: typeof value === 'boolean' ? 'Boolean' : typeof value === 'number' ? 'Number' : typeof value === 'string' ? 'String' : Array.isArray(value) && value.length === 2 && value.every(item => typeof item === 'number') ? 'Vec2' : 'Data', defaultValue: value, exposed, serialized: true, group: 'Graph', tooltip: '', minimum: null, maximum: null, step: typeof value === 'number' ? .01 : null, resourceType: null })
+    variables.push({ start: declarationStart, end: declarationStart + match[1].length })
+  }
+  remainder = eraseRanges(remainder, variables).replace(/^\/\/ (?:Generated by Nova_A Visual Scripting|Bidirectional projection:|Linked \.rhai).*$/gm, '').trim()
+  if (remainder) { const module = createGraphNode('code.module', 70, Math.max(360, 90 + chainIndex * 220), graph); module.config.source = remainder.slice(0, 64_000); graph.nodes.push(module) }
+  return parseGraphDocument(serializeGraphDocument(graph))
 }
 
 function incomingLiteral(scope: GraphCanvasScope, node: GraphNode, pin: GraphPin): GraphNode | null {
@@ -233,10 +357,37 @@ export function synchronizeLinkedGraphForScript(scriptUuid: string, source: stri
   if (!graphAsset) throw new Error(`Linked visual graph ${requestedGraph} is missing.`)
   const graphSource = readTextAsset(graphAsset.uuid)
   if (!graphSource) throw new Error('The linked visual graph source is unavailable.')
-  const synchronized = applyLinkedRhaiSource(parseGraphDocument(graphSource), source)
+  const currentGraph = parseGraphDocument(graphSource)
+  const synchronized = NODE_MARKER.test(source) || VARIABLE_MARKER.test(source)
+    ? applyLinkedRhaiSource(currentGraph, source)
+    : { graph: createGraphFromRhaiSource(source, currentGraph.name, currentGraph.uuid), changedNodes: currentGraph.nodes.map(node => node.uuid), changedVariables: currentGraph.variables.map(variable => variable.uuid), rawModuleChanged: true }
   if (!updateTextAsset(graphAsset.uuid, serializeGraphDocument(synchronized.graph))) throw new Error('The linked visual graph could not be saved.')
   script.script!.linkedGraphUuid = synchronized.graph.uuid
   return { graphAssetUuid: graphAsset.uuid, ...synchronized }
+}
+
+/** Ensures manual Rhai always has a visual companion. The source itself is not
+ * rewritten during first linkage; saving either companion afterwards creates
+ * the stable marker projection used for precise incremental synchronization. */
+export function ensureLinkedGraphForScript(scriptUuid: string, source: string): EnsuredGraphCodeSyncResult | null {
+  const existing = synchronizeLinkedGraphForScript(scriptUuid, source)
+  if (existing) return { ...existing, created: false, linkedScriptUuid: scriptUuid }
+  const script = assetState.records.find(item => item.uuid === scriptUuid && item.assetType === 'script')
+  if (!script) return null
+  const graph = createGraphFromRhaiSource(source, script.name.replace(/\.rhai$/i, ''))
+  const graphAsset = createTextAsset(`${graph.name} Visual`, 'visualScript', serializeGraphDocument(graph), 'Assets/Visual Scripts')
+  script.script ??= { version: 2, apiVersion: 2, breakpoints: [], breakpointDetails: [], tests: [], packageDependencies: [], packageName: '', reloadPolicy: 'preserve', signalConnections: [], recoverySource: '', lastSavedHash: '', linkedGraphUuid: graph.uuid }
+  script.script.linkedGraphUuid = graph.uuid
+  return { graphAssetUuid: graphAsset.uuid, graph, changedNodes: graph.nodes.map(node => node.uuid), changedVariables: graph.variables.map(variable => variable.uuid), rawModuleChanged: graph.nodes.some(node => node.type === 'code.module'), created: true, linkedScriptUuid: scriptUuid }
+}
+
+export function ensureLinkedScriptForGraph(graph: NovaGraphDocument): { scriptUuid: string; created: boolean } | null {
+  const existing = assetState.records.find(asset => asset.assetType === 'script' && linkedScriptGraphUuid(asset.uuid) === graph.uuid)
+  if (existing) { synchronizeLinkedScriptsForGraph(graph); return { scriptUuid: existing.uuid, created: false } }
+  const source = createLinkedRhaiSource(graph); if (!source) return null
+  const asset = createTextAsset(createLinkedScriptName(graph), 'script', source, 'Assets/Scripts/Generated')
+  if (!linkScriptToGraph(asset.uuid, graph)) return null
+  return { scriptUuid: asset.uuid, created: true }
 }
 
 export function linkScriptToGraph(scriptUuid: string, graph: NovaGraphDocument): boolean {

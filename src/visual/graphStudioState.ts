@@ -2,6 +2,7 @@ import { reactive } from 'vue'
 
 export const graphStudioState = reactive({
   mode: 'code' as 'code' | 'graph',
+  authoringMode: 'blocks' as 'blocks' | 'nodes',
   activeGraphUuid: '',
   paletteOpen: true,
   detailsOpen: true,

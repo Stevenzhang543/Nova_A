@@ -1,7 +1,7 @@
 import { reactive } from 'vue'
 import { NOVA_PACKAGE_MANIFEST_VERSION } from './stableContracts'
 
-const PACKAGE_ENGINE_VERSION = '6.1.0'
+const PACKAGE_ENGINE_VERSION = '6.4.0'
 
 export { NOVA_PACKAGE_MANIFEST_VERSION }
 export type PackageSourceKind = 'local' | 'git' | 'registry'

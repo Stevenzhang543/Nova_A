@@ -11,6 +11,7 @@
       <main :key="state.manageSection">
         <CreatorLearningCenter v-if="state.manageSection === 'learn'" />
         <SettingsPanel v-else-if="state.manageSection === 'settings'" />
+        <AutomationStudio v-else-if="state.manageSection === 'automation'" />
         <PackageManagerPanel v-else-if="state.manageSection === 'packages'" />
         <ProjectHealthPanel v-else-if="state.manageSection === 'project'" />
         <RenderingPanel v-else-if="state.manageSection === 'rendering'" />
@@ -30,19 +31,21 @@ import ProjectHealthPanel from './ProjectHealthPanel.vue'
 import RenderingPanel from './RenderingPanel.vue'
 import BuildSettingsPanel from './BuildSettingsPanel.vue'
 import CreatorLearningCenter from './CreatorLearningCenter.vue'
+import AutomationStudio from './AutomationStudio.vue'
 import { projectScopeDirty } from '../runtime/projectTransactions'
 
 type TranslationKey = Parameters<typeof t>[0]
 const sections: ReadonlyArray<{ id: ManageSection; label: TranslationKey; description: TranslationKey; short: TranslationKey; icon: string }> = [
   { id: 'learn', label: 'creatorLearning', description: 'creatorLearningHint', short: 'learnByBuilding', icon: '◉' },
   { id: 'settings', label: 'projectSettings', description: 'manageSettingsHint', short: 'settings', icon: '⚙' },
+  { id: 'automation', label: 'automationStudio', description: 'automationStudioHint', short: 'safeEditorAutomation', icon: '✦' },
   { id: 'packages', label: 'packages', description: 'managePackagesHint', short: 'pluginApiCompatibility', icon: '◇' },
   { id: 'project', label: 'projectHealth', description: 'projectHealthHint', short: 'projectValidation', icon: '✓' },
   { id: 'rendering', label: 'renderingStudio', description: 'manageRenderingHint', short: 'renderingQuality', icon: '◈' },
   { id: 'build', label: 'buildPanel', description: 'manageBuildHint', short: 'buildReadiness', icon: '▶' }
 ]
 const active = computed(() => sections.find(item => item.id === state.manageSection) ?? sections[0])
-function sectionDirty(id:ManageSection){return id==='learn'?false:id==='packages'?projectScopeDirty('packages'):id==='build'?projectScopeDirty('build'):id==='project'?projectScopeDirty('project'):projectScopeDirty('settings')}
+function sectionDirty(id:ManageSection){return id==='learn'||id==='automation'?false:id==='packages'?projectScopeDirty('packages'):id==='build'?projectScopeDirty('build'):id==='project'?projectScopeDirty('project'):projectScopeDirty('settings')}
 </script>
 
 <style scoped>

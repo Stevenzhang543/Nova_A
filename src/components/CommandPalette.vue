@@ -101,6 +101,7 @@ const commands = computed<EditorCommand[]>(() => [
   { id: 'game', label: 'gameView', group: 'navigation', icon: 'G', keywords: 'game play view', run: () => { state.currentPage = 'game' } },
   { id: 'settings', label: 'settings', group: 'navigation', icon: '⚙', keywords: 'settings preferences manage', run: () => { openManageSection('settings') } },
   { id: 'creator-learning', label: 'creatorLearning', group: 'navigation', icon: '◉', keywords: 'learn onboarding tutorial manual guide every feature project task', run: () => { openManageSection('learn') } },
+  { id: 'automation-studio', label: 'automationStudio', group: 'navigation', icon: '✦', keywords: 'automation batch edit dry run transaction plugin rhai', run: () => { openManageSection('automation') } },
   toolCommand('assets', 'assets', '▧'), toolCommand('packages', 'packages', '◇'), toolCommand('console', 'console', '>_'), toolCommand('animation', 'animation', '◆'),
   { id: 'tool-tilemap', label: 'tilemap', group: 'tools', icon: '▦', keywords: 'tilemap contextual selected map terrain paint', run: () => { const map = physicsState.world.entities.find(entity => entity.hasComponent('TileMap2D')); if (map) { selectEntities([map.id]); openEditorTool('tilemap') } } },
   toolCommand('profiler', 'profiler', '⌁'), toolCommand('rendering', 'renderingStudio', '◈'), toolCommand('project', 'projectHealth', '✓'), toolCommand('build', 'buildPanel', '▶'),

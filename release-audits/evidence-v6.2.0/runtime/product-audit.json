@@ -1,0 +1,99 @@
+{
+  "format": "nova-v6.2.0-product-audit",
+  "version": 1,
+  "engineVersion": "6.2.0",
+  "generatedAt": "2026-08-31T05:20:12.360Z",
+  "perspectives": [
+    "programmer",
+    "user",
+    "compatibility",
+    "scripting",
+    "runtime",
+    "build",
+    "localization",
+    "layout",
+    "release"
+  ],
+  "checks": [
+    {
+      "id": "V620-VERSION",
+      "status": "passed",
+      "detail": "Frontend, native, Rust and project authorities identify 6.2.0.",
+      "metrics": {}
+    },
+    {
+      "id": "V620-FORMAT",
+      "status": "passed",
+      "detail": "Project Format 2/schema 29 remain frozen.",
+      "metrics": {}
+    },
+    {
+      "id": "V620-CONTRACT",
+      "status": "passed",
+      "detail": "One versioned analyzer and bounded runtime enforcement are present without a second host contract.",
+      "metrics": {}
+    },
+    {
+      "id": "V620-SURFACES",
+      "status": "passed",
+      "detail": "Authoring, Project Health/Build validation and new templates share the contract system.",
+      "metrics": {}
+    },
+    {
+      "id": "V620-COMPATIBILITY",
+      "status": "passed",
+      "detail": "Legacy scripts retain frozen limits and data contracts.",
+      "metrics": {}
+    },
+    {
+      "id": "V620-ROADMAP",
+      "status": "passed",
+      "detail": "Complete inventory and current 6.2–7.0 coding manual are authoritative.",
+      "metrics": {}
+    },
+    {
+      "id": "V620-VERIFICATION",
+      "status": "passed",
+      "detail": "Contract parser, runtime, build, authoring and roadmap checks pass.",
+      "metrics": {
+        "checks": 13
+      }
+    },
+    {
+      "id": "V620-TEMPLATES",
+      "status": "passed",
+      "detail": "All startup templates retain valid gameplay/build/accessibility behavior.",
+      "metrics": {
+        "checks": 17
+      }
+    },
+    {
+      "id": "V620-INTERACTIONS",
+      "status": "passed",
+      "detail": "User-style interaction traversal reports no critical failure.",
+      "metrics": {
+        "registeredControls": 523,
+        "clickedControls": 187,
+        "settingsMutatedAndRestored": 240,
+        "dragSurfacesPassed": 4,
+        "explicitlyBlockedOrReviewed": 336
+      }
+    },
+    {
+      "id": "V620-LAYOUT",
+      "status": "passed",
+      "detail": "EN/DE/ZH layout remains contained through 200% scale.",
+      "metrics": {}
+    }
+  ],
+  "severity0Open": 0,
+  "severity1Open": 0,
+  "externalGates": {
+    "publisherSigning": "pending-external",
+    "cleanMachineLifecycle": "pending-external",
+    "secondMachineReproducibility": "pending-external",
+    "independentHardwareAccessibility": "pending-external",
+    "soak72Hours": "pending-external"
+  },
+  "status": "passed"
+}

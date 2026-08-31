@@ -91,7 +91,7 @@ function snapshot(source: string): Map<string, SnapshotEntry> {
     if (!raw || typeof raw !== 'object') continue
     const asset = raw as Record<string, unknown>, id = String(asset.uuid ?? '')
     if (!id) continue
-    const kind: SourceEntryKind = asset.assetType === 'prefab' ? 'prefab' : ['dataSchema', 'dataTable', 'material', 'localization', 'uiTheme'].includes(String(asset.assetType)) ? 'resource' : 'asset'
+    const kind: SourceEntryKind = asset.assetType === 'prefab' ? 'prefab' : ['dataSchema', 'dataTable', 'material', 'localization', 'uiTheme', 'resource'].includes(String(asset.assetType)) ? 'resource' : 'asset'
     output.set(id, { path: String(asset.path ?? id), kind, fingerprint: fingerprint({ ...asset, source: undefined }) })
   }
   return output

@@ -1,0 +1,20 @@
+{
+  "format": "nova-build-report",
+  "version": 2,
+  "engineVersion": "6.3.0",
+  "buildId": "06193e46a2e7bf28116bffe31b3167e369b090802f3d91830e7dbabdf4d05435",
+  "createdAt": 0,
+  "target": "windows",
+  "architecture": "x86_64",
+  "profile": "release",
+  "cacheMode": "incremental",
+  "projectId": "32630c7d-b836-486f-90ab-a7afeb90f77e",
+  "totalBytes": 16196711,
+  "files": [
+    {
+      "path": "Automation Knockout.exe",
+      "sha256": "3b08b3ede6a70d9d89c9471933700d0813103ca3ee9c6ae6a026e774f6862edd",
+      "bytes": 16196711
+    }
+  ]
+}

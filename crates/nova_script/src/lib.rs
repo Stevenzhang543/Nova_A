@@ -226,6 +226,10 @@ pub struct ScriptContext {
     pub game_flow: GameFlowSnapshot,
     #[serde(default)]
     pub networking: NetworkSnapshot,
+    #[serde(default)]
+    pub editor_automation: bool,
+    #[serde(default)]
+    pub editor_selection: Vec<String>,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize)]
@@ -465,6 +469,28 @@ pub enum ScriptCommand {
     NetworkRpc {
         name: String,
         payload: Value,
+    },
+    EditorSelect {
+        target: String,
+        generation: u32,
+    },
+    EditorRename {
+        target: String,
+        generation: u32,
+        name: String,
+    },
+    EditorCreateEntity {
+        shape: String,
+        name: String,
+        x: f64,
+        y: f64,
+        width: f64,
+        height: f64,
+    },
+    EditorCreateTextAsset {
+        path: String,
+        asset_type: String,
+        source: String,
     },
 }
 
@@ -795,6 +821,7 @@ fn engine_with_host(context: &ScriptContext, output: Rc<RefCell<HostOutput>>) ->
     register_network_api(&mut engine, context);
     register_property_api(&mut engine, context);
     register_save_api(&mut engine, context, Rc::clone(&output));
+    register_editor_automation_api(&mut engine, context, Rc::clone(&output));
     register_command_api(&mut engine, context, output);
     engine
 }
@@ -831,6 +858,58 @@ fn target_from_handle(handle: Map) -> Option<(String, u32)> {
     } else {
         Some((id, generation))
     }
+}
+
+fn bounded_text(value: &str, maximum: usize) -> String {
+    value.chars().filter(|character| !character.is_control() || *character == '\n' || *character == '\t').take(maximum).collect()
+}
+
+fn register_editor_automation_api(
+    engine: &mut Engine,
+    context: &ScriptContext,
+    output: Rc<RefCell<HostOutput>>,
+) {
+    let enabled = context.editor_automation;
+    engine.register_fn("editor_automation", move || enabled);
+    let selection = context.editor_selection.clone();
+    engine.register_fn("editor_selected", move || -> Array {
+        if !enabled { return Array::new(); }
+        selection.iter().take(256).map(|id| Dynamic::from_map(handle_map(true, "Entity", id, ""))).collect()
+    });
+    let selection = context.editor_selection.clone();
+    engine.register_fn("editor_selected_count", move || -> INT { if enabled { INT::try_from(selection.len()).unwrap_or(INT::MAX) } else { 0 } });
+    let commands = Rc::clone(&output);
+    engine.register_fn("editor_select", move |handle: Map| {
+        if !enabled { return false; }
+        if let Some((target, generation)) = target_from_handle(handle) {
+            commands.borrow_mut().commands.push(ScriptCommand::EditorSelect { target, generation }); true
+        } else { false }
+    });
+    let commands = Rc::clone(&output);
+    engine.register_fn("editor_rename", move |handle: Map, name: &str| {
+        if !enabled { return false; }
+        if let Some((target, generation)) = target_from_handle(handle) {
+            let name = bounded_text(name.trim(), 120); if name.is_empty() { return false; }
+            commands.borrow_mut().commands.push(ScriptCommand::EditorRename { target, generation, name }); true
+        } else { false }
+    });
+    for (function, shape) in [("editor_create_box", "Box"), ("editor_create_circle", "Circle"), ("editor_create_triangle", "Triangle")] {
+        let commands = Rc::clone(&output); let shape = shape.to_owned();
+        engine.register_fn(function, move |name: &str, x: FLOAT, y: FLOAT, width: FLOAT, height: FLOAT| {
+            if !enabled || !x.is_finite() || !y.is_finite() || !width.is_finite() || !height.is_finite() || width.abs() < 0.000_001 || height.abs() < 0.000_001 { return false; }
+            let name = bounded_text(name.trim(), 120); if name.is_empty() { return false; }
+            commands.borrow_mut().commands.push(ScriptCommand::EditorCreateEntity { shape: shape.clone(), name, x, y, width: width.abs().min(1_000_000.0), height: height.abs().min(1_000_000.0) }); true
+        });
+    }
+    let commands = Rc::clone(&output);
+    engine.register_fn("editor_create_text_asset", move |path: &str, asset_type: &str, source: &str| {
+        if !enabled { return false; }
+        let path = bounded_text(path.trim(), 240);
+        let asset_type = bounded_text(asset_type.trim(), 40);
+        let source = bounded_text(source, 64_000);
+        if path.is_empty() || source.is_empty() { return false; }
+        commands.borrow_mut().commands.push(ScriptCommand::EditorCreateTextAsset { path, asset_type, source }); true
+    });
 }
 
 fn bounded_query_handles<'a>(
@@ -2971,6 +3050,39 @@ mod tests {
             )
             .unwrap();
         assert!(!execution.logs.iter().any(|log| log.level == "error"));
+    }
+
+    #[test]
+    fn editor_automation_is_explicit_bounded_and_disabled_for_games() {
+        let source = r#"
+            fn run() {
+                expect(editor_automation(), "automation context");
+                let selected = editor_selected();
+                expect(editor_selected_count() == 1 && selected.len == 1, "selection snapshot");
+                editor_rename(selected[0], "Renamed safely");
+                editor_select(selected[0]);
+                editor_create_box("Generated box", 2.0, 3.0, 4.0, 5.0);
+                editor_create_text_asset("Assets/Automation/readme.data", "dataTable", "safe local output");
+            }
+        "#;
+        let mut automation = context();
+        automation.editor_automation = true;
+        automation.editor_selection = vec![automation.entity.clone()];
+        let execution = ScriptRuntime::new().execute(source, "run", automation).unwrap();
+        assert_eq!(execution.commands.len(), 4);
+        assert!(matches!(&execution.commands[0], ScriptCommand::EditorRename { name, .. } if name == "Renamed safely"));
+        assert!(matches!(&execution.commands[1], ScriptCommand::EditorSelect { .. }));
+        assert!(matches!(&execution.commands[2], ScriptCommand::EditorCreateEntity { shape, width, height, .. } if shape == "Box" && *width == 4.0 && *height == 5.0));
+        assert!(matches!(&execution.commands[3], ScriptCommand::EditorCreateTextAsset { path, .. } if path == "Assets/Automation/readme.data"));
+
+        let mut game = context();
+        game.editor_selection = vec![game.entity.clone()];
+        let disabled = ScriptRuntime::new().execute(
+            "fn run() { let selected = editor_selected(); expect(!editor_automation() && selected.len == 0 && !editor_create_box(\"Nope\", 0.0, 0.0, 1.0, 1.0), \"disabled\"); }",
+            "run",
+            game,
+        ).unwrap();
+        assert!(disabled.commands.is_empty());
     }
 
     #[test]

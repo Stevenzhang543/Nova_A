@@ -1,0 +1,51 @@
+{
+  "format": "nova-local-build-evidence",
+  "version": 1,
+  "engineVersion": "6.3.0",
+  "generatedAt": "2026-08-31T07:44:49.391Z",
+  "artifacts": [
+    {
+      "name": "web-editor",
+      "path": "dist/index.html",
+      "bytes": 918,
+      "sha256": "224f9564c2427fbd4ef45a5d7e3dfc4b8c234fe782402459b44d2bfbf1e6a12b",
+      "status": "passed"
+    },
+    {
+      "name": "web-player",
+      "path": "dist/player.html",
+      "bytes": 1146,
+      "sha256": "a0694afa6f679e371770a1748f311f071d0f9bce9f3a024b5517055cce3bb9a2",
+      "status": "passed"
+    },
+    {
+      "name": "windows-editor",
+      "path": "src-tauri/target/release/nova_a.exe",
+      "bytes": 16182272,
+      "sha256": "77ae7da188bc0856ead1c8f2ed3dbebd8badd03998414391679406121c93bfeb",
+      "status": "passed"
+    },
+    {
+      "name": "windows-game",
+      "path": "release-audits/game-output-v6.3.0/Automation Knockout.exe",
+      "bytes": 16196711,
+      "sha256": "3b08b3ede6a70d9d89c9471933700d0813103ca3ee9c6ae6a026e774f6862edd",
+      "status": "passed"
+    },
+    {
+      "name": "windows-nsis",
+      "path": "src-tauri/target/release/bundle/nsis/Nova_A_6.3.0_x64-setup.exe",
+      "bytes": 8706579,
+      "sha256": "8593bf02b574f1e145cf1c32dfda2bba8da2406e53301edc8f59338e0bd3106e",
+      "status": "passed"
+    },
+    {
+      "name": "windows-msi",
+      "path": "src-tauri/target/release/bundle/msi/Nova_A_6.3.0_x64_en-US.msi",
+      "bytes": 9777152,
+      "sha256": "593bb66f592c370cae31033050cf1379294b96207845b498997855e9bd284490",
+      "status": "passed"
+    }
+  ],
+  "status": "passed"
+}

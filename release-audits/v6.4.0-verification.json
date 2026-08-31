@@ -1,0 +1,158 @@
+{
+  "format": "nova-v6.4.0-verification",
+  "version": 1,
+  "engineVersion": "6.4.0",
+  "generatedAt": "2026-08-31T09:43:16.744Z",
+  "perspectives": [
+    "compatibility",
+    "content-interchange",
+    "resources",
+    "animation",
+    "performance",
+    "export",
+    "localization",
+    "documentation"
+  ],
+  "checks": [
+    {
+      "id": "V640-AUTHORITY",
+      "status": "passed",
+      "detail": "Engine authority is 6.4.0 while Project Format 2/schema 29 remain frozen.",
+      "metrics": {}
+    },
+    {
+      "id": "V640-ASEPRITE-GOLDEN",
+      "status": "passed",
+      "detail": "Aseprite frames, texture, timing and tags import into canonical atlas data.",
+      "metrics": {}
+    },
+    {
+      "id": "V640-REIMPORT-IDENTITY",
+      "status": "passed",
+      "detail": "Frame reordering preserves stable source-key identities.",
+      "metrics": {
+        "slices": 2
+      }
+    },
+    {
+      "id": "V640-PIVOT-COLLIDER-PRECISION",
+      "status": "passed",
+      "detail": "Fractional pivots and collider coordinates survive canonical import.",
+      "metrics": {}
+    },
+    {
+      "id": "V640-ATLAS-CORPUS",
+      "status": "passed",
+      "detail": "TexturePacker and common atlas variants normalize correctly.",
+      "metrics": {}
+    },
+    {
+      "id": "V640-TILED-CORPUS",
+      "status": "passed",
+      "detail": "Tiled JSON/XML normalize layers, empty cells and default opacity.",
+      "metrics": {}
+    },
+    {
+      "id": "V640-MALFORMED-BOUNDS",
+      "status": "passed",
+      "detail": "Malformed XML, oversized metadata and unsupported extensions fail closed.",
+      "metrics": {}
+    },
+    {
+      "id": "V640-RESOURCE-OVERRIDE",
+      "status": "passed",
+      "detail": "A local Resource override stores one local key and resolves inherited defaults.",
+      "metrics": {
+        "chain": 2
+      }
+    },
+    {
+      "id": "V640-RESOURCE-DETERMINISM",
+      "status": "passed",
+      "detail": "Resource serialization is deterministic and does not expand local overrides.",
+      "metrics": {}
+    },
+    {
+      "id": "V640-RESOURCE-CYCLE",
+      "status": "passed",
+      "detail": "Resource inheritance cycles fail closed and produce build-visible diagnostics.",
+      "metrics": {}
+    },
+    {
+      "id": "V640-RIG-WEIGHTS",
+      "status": "passed",
+      "detail": "Bounded auto-weights normalize every vertex and feed the skin-weight heat view.",
+      "metrics": {
+        "vertices": 4,
+        "bones": 2,
+        "influences": 8,
+        "operations": 8
+      }
+    },
+    {
+      "id": "V640-RETARGET",
+      "status": "passed",
+      "detail": "Retarget preview identifies mapped and missing aliases before playback.",
+      "metrics": {}
+    },
+    {
+      "id": "V640-ROOT-MOTION",
+      "status": "passed",
+      "detail": "Root-motion preview uses the runtime sampler and reports exact motion.",
+      "metrics": {
+        "duration": 2,
+        "delta": {
+          "x": 6,
+          "y": 8,
+          "rotation": 0
+        },
+        "distance": 9.99999999999999,
+        "samples": 121
+      }
+    },
+    {
+      "id": "V640-LARGE-CONTENT",
+      "status": "passed",
+      "detail": "Large atlas and timeline operations remain within explicit local release budgets.",
+      "metrics": {
+        "atlasFrames": 20000,
+        "atlasMs": 458.19,
+        "timelineSamples": 10000,
+        "timelineMs": 2
+      }
+    },
+    {
+      "id": "V640-CONTEXT-UI",
+      "status": "passed",
+      "detail": "Dedicated contextual Asset tabs and production animation controls are connected.",
+      "metrics": {}
+    },
+    {
+      "id": "V640-ASSET-MENU-SAFETY",
+      "status": "passed",
+      "detail": "The compact Asset menu has distinct bounded controls, reactive metadata crosses a JSON clone boundary and hidden controls retain real labels.",
+      "metrics": {}
+    },
+    {
+      "id": "V640-BUILD-EXPORT",
+      "status": "passed",
+      "detail": "Resource validation and content inclusion reach cycle-safe, bounded native/Web package paths.",
+      "metrics": {}
+    },
+    {
+      "id": "V640-LOCALIZATION",
+      "status": "passed",
+      "detail": "New Asset and animation controls are translated in English, German and Chinese.",
+      "metrics": {}
+    },
+    {
+      "id": "V640-DOCUMENTATION",
+      "status": "passed",
+      "detail": "The authoritative checkpoint and task-oriented content/animation guide are present.",
+      "metrics": {}
+    }
+  ],
+  "severity0Open": 0,
+  "severity1Open": 0,
+  "status": "passed"
+}

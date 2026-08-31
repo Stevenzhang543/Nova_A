@@ -1,0 +1,53 @@
+{
+  "format": "nova-dependency-report",
+  "version": 1,
+  "engineVersion": "6.4.0",
+  "packages": [],
+  "assets": [
+    {
+      "uuid": "64000000-0000-4000-8000-000000000006",
+      "path": "Assets/Animations/Root Motion Preview.nova-anim",
+      "type": "animation"
+    },
+    {
+      "uuid": "64000000-0000-4000-8000-000000000001",
+      "path": "Assets/Atlases/Hero Audit.atlas",
+      "type": "atlas"
+    },
+    {
+      "uuid": "69ae9ed6-1f63-48f2-89ae-9ed61f63e8f2",
+      "path": "Assets/Prefabs/Knockout Target.nova-prefab",
+      "type": "prefab"
+    },
+    {
+      "uuid": "64000000-0000-4000-8000-000000000003",
+      "path": "Assets/Resources/Physics Materials/Ice Override.nova-resource",
+      "type": "resource"
+    },
+    {
+      "uuid": "64000000-0000-4000-8000-000000000002",
+      "path": "Assets/Resources/Physics Materials/Shared Surface.nova-resource",
+      "type": "resource"
+    },
+    {
+      "uuid": "64000000-0000-4000-8000-000000000004",
+      "path": "Assets/Rigs/Hero Rig.nova-rig",
+      "type": "rig"
+    },
+    {
+      "uuid": "09dc0ff7-33c0-452b-89dc-0ff733c0b52b",
+      "path": "Assets/Scripts/KnockoutGameManager.rhai",
+      "type": "script"
+    },
+    {
+      "uuid": "64000000-0000-4000-8000-000000000005",
+      "path": "Assets/Skins/Hero Skin.nova-skin",
+      "type": "skin"
+    },
+    {
+      "uuid": "74256b62-d954-426e-8425-6b62d954e26e",
+      "path": "Assets/Tutorials/Getting Started.md",
+      "type": "other"
+    }
+  ]
+}

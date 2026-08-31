@@ -1,0 +1,22 @@
+{
+  "format": "nova-v6.4.0-benchmark-summary",
+  "version": 1,
+  "engineVersion": "6.4.0",
+  "generatedAt": "2026-08-31T09:50:14.367Z",
+  "scope": "Deterministic external content, reusable Resources, production animation and the first measured pre-7.0 performance tranche.",
+  "verificationChecks": 19,
+  "interactionControls": 542,
+  "layoutStates": 603,
+  "performanceBeforeStatus": "failed",
+  "performanceAfterStatus": "passed",
+  "largeContent": {
+    "atlasFrames": 20000,
+    "atlasMs": 458.19,
+    "timelineSamples": 10000,
+    "timelineMs": 2
+  },
+  "portableGameBytes": 16220075,
+  "localBuilds": "passed",
+  "independentHardware": "pending-external",
+  "status": "passed"
+}

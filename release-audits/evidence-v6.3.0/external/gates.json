@@ -1,0 +1,43 @@
+{
+  "format": "nova-external-certification-gates",
+  "version": 1,
+  "release": "6.3.0",
+  "generatedAt": "2026-08-31T07:44:49.391Z",
+  "gates": [
+    {
+      "name": "publisher identity and Windows artifact signing",
+      "status": "pending-external",
+      "claimed": false
+    },
+    {
+      "name": "independent publisher plugin fixture",
+      "status": "pending-external",
+      "claimed": false
+    },
+    {
+      "name": "independent clean-machine install/launch/upgrade/repair/uninstall",
+      "status": "pending-external",
+      "claimed": false
+    },
+    {
+      "name": "second-machine byte reproducibility",
+      "status": "pending-external",
+      "claimed": false
+    },
+    {
+      "name": "matching-host Linux and macOS build/runtime",
+      "status": "pending-external",
+      "claimed": false
+    },
+    {
+      "name": "independent browser, hardware and accessibility matrix",
+      "status": "pending-external",
+      "claimed": false
+    },
+    {
+      "name": "real 72-hour editor/player soak",
+      "status": "pending-external",
+      "claimed": false
+    }
+  ]
+}

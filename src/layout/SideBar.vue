@@ -25,7 +25,7 @@ const actions = computed<ContextAction[]>(() => {
     tool('console', 'console', '>_', 'console'), tool('profiler', 'profiler', '⌁', 'profiler'),
     { id: 'physics-monitor', label: 'physicsMonitor', hint: 'physicsMonitorContextHint', icon: 'ϟ', active: state.physicsMonitorOpen, run: () => { state.physicsMonitorOpen = !state.physicsMonitorOpen } }
   ]
-  if (state.activeWorkspace === 'manage') return [manage('settings', 'projectSettings', '⚙'), manage('packages', 'packages', '◇'), manage('project', 'projectHealth', '✓'), manage('rendering', 'renderingStudio', '◈'), manage('build', 'buildPanel', '▶')]
+  if (state.activeWorkspace === 'manage') return [manage('settings', 'projectSettings', '⚙'),manage('automation','automationStudio','✦'), manage('packages', 'packages', '◇'), manage('project', 'projectHealth', '✓'), manage('rendering', 'renderingStudio', '◈'), manage('build', 'buildPanel', '▶')]
   if (state.activeWorkspace === 'script') return [
     { id: 'script', label: 'workspaceScript', hint: 'scriptStudioAssetHint', icon: '{ }', active: true, run: () => applyEditorWorkspace('script') },
     { id: 'quick-open', label: 'quickOpen', hint: 'quickOpenHint', icon: '⌕', active: false, run: () => { state.commandPaletteMode = 'quick'; state.commandPaletteOpen = true } }

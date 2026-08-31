@@ -18,6 +18,7 @@ const requiredViewports = String(process.env.NOVA_LAYOUT_REQUIRED_VIEWPORTS ?? '
   return Number.isFinite(width) && Number.isFinite(height) ? [width, height] : null
 }).filter(Boolean)
 const requiredScales = String(process.env.NOVA_LAYOUT_REQUIRED_SCALES ?? '1').split(',').map(Number).filter(value => Number.isFinite(value) && value >= 1 && value <= 2)
+const requiredTextPattern = process.env.NOVA_LAYOUT_REQUIRED_TEXT ? new RegExp(process.env.NOVA_LAYOUT_REQUIRED_TEXT, 'i') : null
 const edgeCandidates = ['C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', 'C:/Program Files/Microsoft/Edge/Application/msedge.exe']
 let edgePath = ''
 for (const candidate of edgeCandidates) { try { await readFile(candidate); edgePath = candidate; break } catch { /* next installed path */ } }
@@ -33,7 +34,7 @@ const edge = spawn(edgePath, [
   `--remote-debugging-port=${debugPort}`, `--user-data-dir=${profile}`, `http://127.0.0.1:${previewPort}/`
 ], { stdio: 'ignore', windowsHide: true })
 
-const results = [], requiredMatrix = [], consoleErrors = [], screenshots = [], stableControlsById = new Map()
+const results = [], requiredMatrix = [], requiredTextResults = [], consoleErrors = [], screenshots = [], stableControlsById = new Map()
 let client
 try {
   const target = await waitForTarget(debugPort)
@@ -95,11 +96,18 @@ try {
         for(let index=0;index<workspaceCount;index++){await clickIndex(client,'.workspace-list button',index);await captureSurface(client,screenshotRoot,screenshots,`workspace-${names[index]||index}-en-1920x1080.png`,locale,1920,1080)}
         await clickIndex(client,'.workspace-list button',5)
         const manageCount=await evaluate(client,"document.querySelectorAll('.manage-body>nav button').length")
-        const sections=['settings','packages','project-health','rendering','build']
+        const sections=['learn','settings','automation','packages','project-health','rendering','build']
         for(let index=0;index<manageCount;index++){await clickIndex(client,'.manage-body>nav button',index);await recordLayout(client,results,`en Manage ${sections[index]||index}`);await captureSurface(client,screenshotRoot,screenshots,`manage-${sections[index]||index}-en-1920x1080.png`,locale,1920,1080)}
         await evaluate(client,"document.querySelector('.command-trigger')?.click(); true");await waitForExpression(client,"Boolean(document.querySelector('.command-palette'))",5000);await captureSurface(client,screenshotRoot,screenshots,'command-palette-en-1920x1080.png',locale,1920,1080);await evaluate(client,"document.querySelector('.command-palette input')?.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true})); true")
         await evaluate(client,"document.querySelector('.task-status')?.click(); true");await waitForExpression(client,"Boolean(document.querySelector('.status-center'))",5000);await captureSurface(client,screenshotRoot,screenshots,'task-center-en-1920x1080.png',locale,1920,1080);await evaluate(client,"document.querySelector('.status-center>header button')?.click(); true")
       }
+    }
+
+    if (requiredTextPattern) {
+      await clickIndex(client, '.workspace-list button', 5)
+      await clickIndex(client, '.manage-body>nav button', 2)
+      const visibleText = await evaluate(client, "(document.querySelector('.manage-workspace')?.innerText||'').replace(/\\s+/g,' ')")
+      requiredTextResults.push({ locale, pattern: requiredTextPattern.source, status: requiredTextPattern.test(visibleText) ? 'passed' : 'failed' })
     }
 
     // Begin breakpoint traversal from a page laid out at the minimum target.
@@ -194,9 +202,10 @@ try {
   const controlsPassed = !isV41 || stableControls.length > 0 && controlIds.size === stableControls.length && stableControls.every(item => item.testId && item.surface && item.label && (!item.disabled || item.disabledReason))
   results.push({name:'Stable control inventory',status:controlsPassed?'passed':'failed',detail:{count:stableControls.length,unique:controlIds.size}})
   results.push({ name: 'Browser console and fatal surface', status: seriousConsoleErrors.length === 0 && !await evaluate(client, "Boolean(document.querySelector('.error-recovery,[data-fatal=true]'))") ? 'passed' : 'failed', detail: JSON.stringify(seriousConsoleErrors) })
-  const report = { format: `nova-v${qualificationVersion}-layout-qualification`, version: 1, engineVersion: qualificationVersion, generatedAt: new Date().toISOString(), browser: browser.product, languages: ['en','de','zh'], matrix:requiredMatrix.length?requiredMatrix:isV41?{viewports:['1366x768','1920x1080','2560x1440','3840x2160'],scales:[100,125,150,175,200],catalogs:['SHELL','LCH','HLT','BLD']}:undefined,stableControls,screenshots,results,consoleErrors: seriousConsoleErrors }
+  const report = { format: `nova-v${qualificationVersion}-layout-qualification`, version: 1, engineVersion: qualificationVersion, generatedAt: new Date().toISOString(), browser: browser.product, languages: ['en','de','zh'], matrix:requiredMatrix.length?requiredMatrix:isV41?{viewports:['1366x768','1920x1080','2560x1440','3840x2160'],scales:[100,125,150,175,200],catalogs:['SHELL','LCH','HLT','BLD']}:undefined,requiredTextResults,stableControls,screenshots,results,consoleErrors: seriousConsoleErrors }
   report.status = results.every(result => result.status === 'passed') ? 'passed' : 'failed'
   if (requiredMatrix.length && !requiredMatrix.every(result => result.status === 'passed')) report.status = 'failed'
+  if (requiredTextResults.some(result => result.status !== 'passed')) report.status = 'failed'
   report.severity0Open = 0
   report.severity1Open = report.status === 'passed' ? 0 : 1
   await writeFile(join(evidenceRoot, `v${qualificationVersion}-layout-browser.json`), `${JSON.stringify(report, null, 2)}\n`, 'utf8')

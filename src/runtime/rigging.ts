@@ -57,6 +57,7 @@ export interface SkinDocument {
 }
 
 export interface SkinnedMesh2D { positions: Vec2[]; uvs: Vec2[]; indices: number[] }
+export interface AutoWeightResult { vertices: number; bones: number; influences: number; operations: number }
 
 function safeId(value: unknown, fallback: string): string {
   const normalized = typeof value === 'string' ? value.trim().replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 80) : ''
@@ -289,6 +290,46 @@ export function retargetPose(sourceRig: RigDocument, targetRig: RigDocument, sou
     const pose = sourcePoseById.get(sourceBone.id), sourceLength = Math.max(1e-9, sourceBone.length), lengthScale = targetBone.length / sourceLength
     return [{ boneId: targetBone.id, position: pose ? { x: pose.position.x * lengthScale, y: pose.position.y * lengthScale } : { ...targetBone.position }, rotation: pose?.rotation ?? targetBone.rotation, scale: pose ? { ...pose.scale } : { ...targetBone.scale } }]
   })
+}
+
+function pointSegmentDistanceSquared(point: Vec2, start: Vec2, end: Vec2): number {
+  const dx = end.x - start.x, dy = end.y - start.y, length = dx * dx + dy * dy
+  const t = length > 1e-12 ? Math.min(1, Math.max(0, ((point.x - start.x) * dx + (point.y - start.y) * dy) / length)) : 0
+  const x = start.x + dx * t - point.x, y = start.y + dy * t - point.y
+  return x * x + y * y
+}
+
+/** Deterministic bounded inverse-distance weighting; it refuses work that would stall the editor. */
+export function autoWeightSkin(rigValue: RigDocument, skinValue: SkinDocument, maximumInfluences = 4, falloff = 2): AutoWeightResult {
+  const rig = normalizeRig(rigValue), skin = normalizeSkin(skinValue), influenceLimit = Math.min(8, Math.max(1, Math.round(maximumInfluences)))
+  const operations = rig.bones.length * skin.vertices.length
+  if (operations > 2_000_000) throw new Error(`AUTO_WEIGHT_LIMIT: ${operations.toLocaleString()} bone/vertex comparisons exceed the 2,000,000-operation editor limit. Split the skin or rig before auto-weighting.`)
+  const bind = buildWorld(rig, new Map(rig.bones.map(bone => [bone.id, { position: { ...bone.position }, rotation: bone.rotation, scale: { ...bone.scale } }] as [string, BoneWorld])))
+  const segments = rig.bones.map(bone => { const world = bind.get(bone.id)!; return { id: bone.id, start: world.position, end: { x: world.position.x + Math.cos(world.rotation) * bone.length * world.scale.x, y: world.position.y + Math.sin(world.rotation) * bone.length * world.scale.x } } })
+  let influences = 0
+  for (let index = 0; index < skinValue.vertices.length; index++) {
+    const vertex = skinValue.vertices[index], position = skin.vertices[index]?.position ?? vector(vertex.position, { x: 0, y: 0 })
+    const candidates = segments.map(segment => ({ boneId: segment.id, distance: pointSegmentDistanceSquared(position, segment.start, segment.end) })).sort((a, b) => a.distance - b.distance || a.boneId.localeCompare(b.boneId)).slice(0, influenceLimit)
+    if (candidates[0]?.distance < 1e-12) vertex.weights = [{ boneId: candidates[0].boneId, weight: 1 }]
+    else {
+      const weighted = candidates.map(candidate => ({ boneId: candidate.boneId, weight: 1 / Math.pow(Math.max(1e-12, Math.sqrt(candidate.distance)), Math.min(8, Math.max(.25, finiteNumber(falloff, 2)))) }))
+      const total = weighted.reduce((sum, item) => sum + item.weight, 0)
+      vertex.weights = weighted.map(item => ({ boneId: item.boneId, weight: item.weight / total }))
+    }
+    influences += vertex.weights.length
+  }
+  return { vertices: skinValue.vertices.length, bones: rig.bones.length, influences, operations }
+}
+
+export function skinWeightHeat(skinValue: SkinDocument, boneId: string): Array<{ x: number; y: number; weight: number }> {
+  return normalizeSkin(skinValue).vertices.map(vertex => ({ x: vertex.position.x, y: vertex.position.y, weight: vertex.weights.find(weight => weight.boneId === boneId)?.weight ?? 0 }))
+}
+
+export function retargetPreviewSummary(sourceRig: RigDocument, targetRig: RigDocument): { mapped: number; sourceBones: number; targetBones: number; missing: string[] } {
+  const source = normalizeRig(sourceRig), target = normalizeRig(targetRig)
+  const pose = source.bones.map(bone => ({ boneId: bone.id, position: { ...bone.position }, rotation: bone.rotation, scale: { ...bone.scale } })), mappedPose = retargetPose(source, target, pose)
+  const mapped = new Set(mappedPose.map(item => item.boneId))
+  return { mapped: mapped.size, sourceBones: source.bones.length, targetBones: target.bones.length, missing: target.bones.filter(bone => !mapped.has(bone.id)).map(bone => bone.name) }
 }
 
 export function resolveRigAttachments(rig: RigDocument, skeleton: Skeleton2D): Array<RigAttachment2D & { worldPosition: Vec2; worldRotation: number }> {

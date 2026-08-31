@@ -24,6 +24,7 @@ export interface PluginManifest {
   entryAsset: string | null
   entryType: 'wasm' | 'native'
   permissions: PluginPermission[]
+  approvedPermissions: PluginPermission[]
   enabled: boolean
   projectEnabled: boolean
   sha256: string
@@ -55,6 +56,7 @@ const startupSafeMode = typeof location !== 'undefined' && new URLSearchParams(l
   || typeof localStorage !== 'undefined' && localStorage.getItem('nova-a-plugin-safe-mode') === 'true'
 export const pluginState = reactive({
   manifests: [] as PluginManifest[], active: 0, errors: [] as string[], safeMode: startupSafeMode,
+  activePluginIds: [] as string[],
   safeModeRecommended: typeof localStorage !== 'undefined' && localStorage.getItem('nova-a-plugin-crashed') === 'true',
   contributions: [] as Array<PluginContribution & { pluginId: string; pluginName: string }>,
   generation: 0, reloads: 0, unloads: 0, isolatedFailures: 0
@@ -94,6 +96,7 @@ export function normalizePluginManifest(value: unknown): PluginManifest {
   return {
     id, name, version, apiVersion, engine: safeText(source.engine, 40) || (apiVersion === 1 ? '^2.0.0' : '^2.6.0'), entry,
     entryAsset: typeof source.entryAsset === 'string' ? source.entryAsset : null, entryType, permissions,
+    approvedPermissions: Array.isArray(source.approvedPermissions) ? [...new Set(source.approvedPermissions.filter((permission): permission is PluginPermission => permissions.includes(permission as PluginPermission)))] : [],
     enabled: source.enabled !== false, projectEnabled: source.projectEnabled !== false,
     sha256: safeText(source.sha256, 128).toLowerCase(), signature: safeText(source.signature, 1024), publicKey: safeText(source.publicKey, 1024), contributions
   }
@@ -101,9 +104,9 @@ export function normalizePluginManifest(value: unknown): PluginManifest {
 
 export function refreshPluginContributions(): void {
   pluginState.contributions.splice(0)
-  for (const manifest of pluginState.manifests.filter(item => item.enabled && item.projectEnabled && item.entryType === 'wasm')) {
+  for (const manifest of pluginState.manifests.filter(item => item.enabled && item.projectEnabled && item.entryType === 'wasm' && pluginState.activePluginIds.includes(item.id))) {
     for (const [kind, items] of Object.entries(manifest.contributions) as Array<[PluginContributionKind, PluginContributionDescriptor[]]>) {
-      for (const item of items) pluginState.contributions.push({ ...item, kind, pluginId: manifest.id, pluginName: manifest.name })
+      if (manifest.approvedPermissions.includes(contributionPermission[kind])) for (const item of items) pluginState.contributions.push({ ...item, kind, pluginId: manifest.id, pluginName: manifest.name })
     }
   }
 }
@@ -132,23 +135,34 @@ async function verifyPlugin(manifest: PluginManifest, bytes: ArrayBuffer): Promi
   }
 }
 
-function assertMemory(instance: WebAssembly.Instance): void {
-  const memory = instance.exports.memory
-  if (memory instanceof WebAssembly.Memory && memory.buffer.byteLength > MAX_PLUGIN_BYTES) throw new Error('Plugin exceeds the 16 MB memory limit.')
-}
-
-export async function instantiateWasmPlugin(manifestValue: unknown, bytes: ArrayBuffer): Promise<WebAssembly.Instance> {
+export async function validateWasmPluginPackage(manifestValue: unknown, bytes: ArrayBuffer): Promise<PluginManifest> {
   const manifest = normalizePluginManifest(manifestValue)
   if (manifest.entryType === 'native') throw new Error('Native extensions are not downloaded or executed by Nova_A.')
   if (bytes.byteLength < 8 || bytes.byteLength > MAX_PLUGIN_BYTES) throw new Error('Plugin binary is empty or exceeds 16 MB.')
   const magic = new Uint8Array(bytes, 0, 4)
   if (magic[0] !== 0 || magic[1] !== 97 || magic[2] !== 115 || magic[3] !== 109) throw new Error('Plugin entry is not WebAssembly.')
   await verifyPlugin(manifest, bytes)
+  const module = await WebAssembly.compile(bytes)
+  const allowedImports = new Set(['nova:api_version', 'nova:log', 'nova:emit_event', 'nova:has_capability'])
+  const denied = WebAssembly.Module.imports(module).filter(item => !allowedImports.has(`${item.module}:${item.name}`))
+  if (denied.length) throw new Error(`Plugin imports an unsupported host capability: ${denied[0].module}.${denied[0].name}.`)
+  const exports = new Map(WebAssembly.Module.exports(module).map(item => [item.name, item.kind]))
+  if (exports.get('nova_plugin_api_version') !== 'function' || exports.get('nova_plugin_init') !== 'function') throw new Error('Plugin must export nova_plugin_api_version() and nova_plugin_init().')
+  return manifest
+}
+
+function assertMemory(instance: WebAssembly.Instance): void {
+  const memory = instance.exports.memory
+  if (memory instanceof WebAssembly.Memory && memory.buffer.byteLength > MAX_PLUGIN_BYTES) throw new Error('Plugin exceeds the 16 MB memory limit.')
+}
+
+export async function instantiateWasmPlugin(manifestValue: unknown, bytes: ArrayBuffer): Promise<WebAssembly.Instance> {
+  const manifest = await validateWasmPluginPackage(manifestValue, bytes)
   const imports = { nova: {
     api_version: () => manifest.apiVersion,
-    log: (level: number, code: number) => { if (manifest.permissions.includes('log')) addEditorLog(`${manifest.name}: plugin message ${code}`, 'Plugin', level >= 3 ? 'error' : level === 2 ? 'warning' : 'info') },
-    emit_event: (_event: number, _value: number) => manifest.permissions.includes('events') ? 1 : 0,
-    has_capability: (capability: number) => capability >= 0 && capability < manifest.permissions.length ? 1 : 0
+    log: (level: number, code: number) => { if (manifest.approvedPermissions.includes('log')) addEditorLog(`${manifest.name}: plugin message ${code}`, 'Plugin', level >= 3 ? 'error' : level === 2 ? 'warning' : 'info') },
+    emit_event: (_event: number, _value: number) => manifest.approvedPermissions.includes('events') ? 1 : 0,
+    has_capability: (capability: number) => capability >= 0 && capability < manifest.permissions.length && manifest.approvedPermissions.includes(manifest.permissions[capability]) ? 1 : 0
   } }
   const started = performance.now()
   const result = await WebAssembly.instantiate(bytes, imports)
@@ -172,6 +186,7 @@ async function bytesFromAsset(reference: string | null): Promise<ArrayBuffer> {
 class PluginRuntime {
   private active: ActivePlugin[] = []
   private generation = 0
+  private synchronizeState(): void { pluginState.active = this.active.length; pluginState.activePluginIds.splice(0, pluginState.activePluginIds.length, ...this.active.map(item => item.manifest.id)); pluginState.generation = this.generation; refreshPluginContributions() }
   async start(): Promise<void> {
     this.stop(); const generation = this.generation; pluginState.errors.splice(0)
     if (pluginState.safeMode) { addEditorLog('Plugin Safe Mode is active; third-party plugins were skipped.', 'Plugin', 'warning'); return }
@@ -182,7 +197,7 @@ class PluginRuntime {
         this.active.push({ manifest, instance })
       } catch (error) { this.isolateFailure(manifest, error) }
     }
-    pluginState.active = this.active.length; pluginState.generation = this.generation; refreshPluginContributions()
+    this.synchronizeState()
   }
   update(delta: number): void {
     const failed = new Set<ActivePlugin>()
@@ -194,7 +209,7 @@ class PluginRuntime {
         if (performance.now() - started > MAX_PLUGIN_CALL_MS) throw new Error(`runtime call exceeded ${MAX_PLUGIN_CALL_MS} ms`)
       } catch (error) { failed.add(plugin); this.isolateFailure(plugin.manifest, error) }
     }
-    if (failed.size) this.active = this.active.filter(plugin => !failed.has(plugin)); pluginState.active = this.active.length
+    if (failed.size) this.active = this.active.filter(plugin => !failed.has(plugin)); this.synchronizeState()
   }
   invokeCommand(commandId: string, pluginId?: string): boolean {
     return this.invokeContribution('commands', commandId, pluginId)
@@ -220,14 +235,14 @@ class PluginRuntime {
   stop(): void {
     this.generation++
     for (const plugin of this.active) { const shutdown = plugin.instance.exports.nova_plugin_shutdown; if (typeof shutdown === 'function') try { (shutdown as CallableFunction)() } catch { /* isolated */ } }
-    this.active = []; pluginState.active = 0; pluginState.generation = this.generation
+    this.active = []; this.synchronizeState()
   }
   unload(pluginId: string): boolean {
     const plugin = this.active.find(item => item.manifest.id === pluginId)
     if (!plugin) return false
     const shutdown = plugin.instance.exports.nova_plugin_shutdown
     if (typeof shutdown === 'function') try { (shutdown as CallableFunction)() } catch { /* isolated */ }
-    this.active = this.active.filter(item => item !== plugin); pluginState.active = this.active.length; pluginState.unloads++; this.generation++; pluginState.generation = this.generation
+    this.active = this.active.filter(item => item !== plugin); pluginState.unloads++; this.generation++; this.synchronizeState()
     return true
   }
   async reload(pluginId?: string): Promise<void> {
@@ -240,7 +255,7 @@ class PluginRuntime {
     try {
       const instance = await instantiateWasmPlugin(manifest, await bytesFromAsset(manifest.entryAsset))
       if (generation !== this.generation) return
-      this.active.push({ manifest, instance }); pluginState.active = this.active.length
+      this.active.push({ manifest, instance }); this.synchronizeState()
     } catch (error) { this.isolateFailure(manifest, error) }
   }
   private isolateFailure(manifest: PluginManifest, error: unknown): void {
@@ -252,4 +267,10 @@ class PluginRuntime {
 }
 
 export function attachPluginAsset(manifest: PluginManifest, uuid: string): PluginManifest { return { ...manifest, entryAsset: assetReference(uuid) } }
+export function setPluginPermission(pluginId: string, permission: PluginPermission, approved: boolean): boolean {
+  const manifest=pluginState.manifests.find(item=>item.id===pluginId)
+  if(!manifest||!manifest.permissions.includes(permission))return false
+  manifest.approvedPermissions=approved?[...new Set([...manifest.approvedPermissions,permission])]:manifest.approvedPermissions.filter(item=>item!==permission)
+  refreshPluginContributions();pluginState.generation++;return true
+}
 export const pluginRuntime = new PluginRuntime()

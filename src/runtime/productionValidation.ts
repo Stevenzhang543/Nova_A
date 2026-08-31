@@ -1,4 +1,4 @@
-import { readTextAsset, type AssetDatabaseState } from '../assets/AssetDatabase'
+import { readTextAsset, resolveAsset, type AssetDatabaseState } from '../assets/AssetDatabase'
 import { queryRendererCapabilities, rendererCapabilityState } from '../renderer/capabilities'
 import { materialRuntimeDiagnostics, normalizeMaterial, validateMaterialForPlatform } from '../renderer/materials'
 import { renderingSettings } from '../renderer/renderSettings'
@@ -6,8 +6,11 @@ import type { RendererStats } from '../renderer/types'
 import type { AudioProjectSettings } from './audio'
 import { audioRuntime } from './audio'
 import { particleDiagnostics } from './particles'
-import { OFFICIAL_NETWORKING_PACKAGE_ID, packageEnabled } from './packages'
+import { OFFICIAL_NETWORKING_PACKAGE_ID, packageEnabled, packageState } from './packages'
 import { productionSettings } from './production'
+import { physicsState } from '../store/physics'
+import { validateScriptContract } from './scriptContracts'
+import { validateResourceProject } from './resources'
 
 export interface ProductionValidationIssue { code: string; severity: 'warning' | 'error'; message: string; fix: string }
 
@@ -35,5 +38,29 @@ export function validateProductionRuntime(assets: Pick<AssetDatabaseState, 'reco
   if (network.enabled && !network.permissionGranted) issues.push({ code: 'NET-PERMISSION-DENIED', severity: 'error', message: 'Networking is enabled without an explicit project network permission.', fix: 'Review the transport and endpoint in Network Studio, then grant permission.' })
   if (network.enabled && !network.channels.some(channel => channel.delivery === 'reliable-ordered')) issues.push({ code: 'NET-RELIABLE-MISSING', severity: 'error', message: 'Networking has no reliable ordered channel for lifecycle and RPC messages.', fix: 'Restore or create a reliable ordered channel in Network Studio → Protocol.' })
   if (network.enabled && network.rpcContracts.some(rpc => !network.channels.some(channel => channel.id === rpc.channelId))) issues.push({ code: 'NET-RPC-CHANNEL', severity: 'error', message: 'At least one RPC references a missing channel.', fix: 'Choose an existing channel for every RPC contract.' })
+  const assetReferences = assets.records.flatMap(asset => [asset.uuid, asset.path])
+  const enabledPackages = packageState.installed.filter(item => item.enabled && item.project).map(item => item.manifest.id)
+  for (const asset of assets.records.filter(item => item.assetType === 'script').slice(0, 1024)) {
+    const source = readTextAsset(asset.uuid) ?? ''
+    const owners = physicsState.world.entities.filter(entity => resolveAsset(entity.script2D?.scriptAsset ?? '')?.uuid === asset.uuid)
+    const contexts = owners.length ? owners.map(entity => ({ label: entity.name, components: entity.components.map(component => component.kind) })) : [{ label: asset.name, components: undefined }]
+    for (const context of contexts) {
+      const report = validateScriptContract(source, { components: context.components, inputActions: physicsState.inputMap.map(action => action.name), assets: assetReferences, packages: enabledPackages })
+      for (const diagnostic of report.diagnostics) issues.push({ code: diagnostic.code, severity: diagnostic.severity, message: `${context.label} · ${asset.path}:${diagnostic.line}: ${diagnostic.message}`, fix: 'Open Script Studio → Contract and satisfy or correct the declared behavior requirement.' })
+    }
+  }
+  for (const resource of validateResourceProject(assets.records)) issues.push({ code: resource.code, severity: resource.severity, message: resource.message, fix: 'Open Assets → Content Studio → Resource and repair the parent, kind, or JSON overrides.' })
+  for (const asset of assets.records.filter(item => item.interchange).slice(0, 4_096)) {
+    const metadata = asset.interchange!, ids = new Set<string>(), sourceKeys = new Set<string>()
+    if (!/^[0-9a-f]{64}$/i.test(metadata.sourceHash)) issues.push({ code: 'CONTENT-SOURCE-HASH', severity: 'error', message: `${asset.path} has no deterministic external-source identity.`, fix: 'Reimport the original metadata source in Content Studio.' })
+    for (const slice of metadata.slices) {
+      if (ids.has(slice.id) || sourceKeys.has(slice.sourceKey)) { issues.push({ code: 'CONTENT-SLICE-IDENTITY', severity: 'error', message: `${asset.path} contains duplicate frame identity ${slice.sourceKey}.`, fix: 'Make frame names unique in the source tool, then reimport.' }); break }
+      ids.add(slice.id); sourceKeys.add(slice.sourceKey)
+    }
+    if (asset.assetType === 'atlas' && metadata.texturePath) {
+      const expected = metadata.texturePath.replace(/\\/g, '/').split('/').pop()?.toLowerCase()
+      if (expected && !assets.records.some(candidate => candidate.assetType === 'image' && (candidate.name.toLowerCase() === expected || candidate.path.toLowerCase().endsWith(`/${expected}`)))) issues.push({ code: 'CONTENT-TEXTURE-MISSING', severity: 'error', message: `${asset.path} references missing texture ${metadata.texturePath}.`, fix: 'Import the texture beside the metadata or repair the texture reference in Content Studio.' })
+    }
+  }
   return issues.slice(0, 256)
 }

@@ -4,15 +4,39 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE.md)
 [![Tier 1](https://img.shields.io/badge/Tier%201-Windows%20%7C%20Web-63c6ff)](./docs/PLATFORM_BUILD_MATRIX_5_0.md)
-[![Release](https://img.shields.io/badge/release-6.1.0%20candidate-63c6ff)]()
+[![Release](https://img.shields.io/badge/release-6.4.0%20candidate-63c6ff)]()
 
 Nova_A is an open-source 2D game engine and desktop editor built with Rust, WebAssembly, Vue 3, and Tauri.
 
-Version **6.1.0** is the portable-workspace, responsive-authoring, and refined semantic-UI release. The editor launches maximized as a normal resizable window, repository configuration remains relative after moving drives, dependency policy works with pnpm 10/11, and pointer, Inspector, workspace, profiling, and render-overlay paths avoid redundant main-thread/GPU work without removing features or animations. Project Format 2/schema 29 and the v6 creator contracts remain unchanged.
+Version **6.4.0** adds deterministic Aseprite, TexturePacker/common-atlas and Tiled import/reimport, reusable shared Resources, and production rig/animation previews. Large metadata is bounded, cached and parsed off the UI thread; no feature, visual component, animation or exported fidelity was removed. Frozen project, graph, Rhai, plugin, package, build and workspace contracts remain compatible.
 
 **Manual:** [interactive English/German/Chinese webpage](./manual/index.html) · [English Markdown](./manual/MANUAL.en.md) · [Deutsch](./manual/MANUAL.de.md) · [中文](./manual/MANUAL.zh-CN.md)
 
-## What is new in v6.1.0
+## What is new in v6.4.0
+
+- Import Aseprite JSON, TexturePacker/common atlases, and Tiled TMX/JSON/TSX with stable frame IDs, pivots, colliders, tags, timing, references and visible diagnostics. Failed reimports retain the last valid artifact.
+- Contextual Asset tabs show source/slices and edit six reusable Resource kinds: materials, animation libraries, input maps, physics materials, themes and data tables. Shared parents and local-only overrides resolve deterministically and cycles block Build.
+- Animation adds skin-weight heat visualization, bounded automatic weights, rig constraint context, runtime-sampled onion skin, retained curves, retarget diagnostics and exact root-motion preview.
+- Metadata above 128 KiB uses a time-bounded worker; canonical imports use a bounded cache. Before/after and large-atlas/timeline evidence starts the performance program that culminates in v6.8.0.
+- Programmer and user gates cover golden/malformed import, reimport identity, precision, Resource inheritance/cycles/export, animation playback, EN/DE/ZH layout, native/Web builds and the exact eleven release artifacts.
+
+See the [v6.4 content and animation guide](./docs/CONTENT_ANIMATION_6_4.md).
+
+## Retained v6.3.0 automation and Blocks baseline
+
+- Saving any Rhai script automatically creates or updates its linked `.nova-graph`; saving any graph creates or updates its linked `.rhai`. Recognized lifecycle/API code becomes editable typed blocks, while unsupported source stays visible and lossless in Code blocks.
+- The visual editor defaults to Scratch-style categories, colored stack/hat/reporter/boolean blocks, direct sequential placement, and an optional advanced Nodes view retaining typed wires, refactoring, diagnostics, and debugging.
+- **Manage → Automation** provides local Rhai templates, explicit permissions, dry-run diffs, bounded execution, cancellation, one-transaction apply, rollback, and a trace. It has no filesystem, process, network, clock, or randomness authority.
+- WASM plugins are schema/signature/import/export checked without initialization. Users review individual permissions before enabling; command, selection, Inspector/gizmo, asset importer/editor, and build contributions follow the live plugin lifecycle.
+- Programmer and user gates cover denial, stale handles, hostile imports, 1,000-command output, rollback, hot unload/reload, automatic graph/code round trips, EN/DE/ZH layout, native/Web builds, and the exact eleven release artifacts.
+
+## Retained v6.2.0 scripting baseline
+
+- The Script Studio **Contract** tab explains declared requirements, budgets, API modules, thread rules, determinism, permissions, and precise diagnostics.
+- New script templates opt into versioned comment-based contracts; existing scripts without a header keep the previous behavior and global sandbox limits.
+- Runtime, Project Health, and Build use one analyzer for attached components, Input Map actions, Asset Database references, enabled packages, deterministic API use, and callback budgets.
+
+## Retained v6.1.0 improvements
 
 - Maximized launch now takes precedence over stale saved geometry while retaining decorations, resize/restore controls, placement recovery, and optional true fullscreen.
 - The repository is drive-independent: active build/export paths are relative, pnpm overrides live in the supported workspace configuration, and moved dependency links are rebuilt from the frozen lockfile.
@@ -462,7 +486,7 @@ Configuration changes cross Vue → `nova_wasm` as explicit retained-world comma
 
 ## Project compatibility
 
-- New saves use **Nova_A Project Format 2**, schema 29, and engine version `5.0.0`.
+- New saves use **Nova_A Project Format 2**, schema 29, and engine version `6.4.0`.
 - Persisted scenes, entities, components, and connections use UUIDs; runtime handles are never written to disk.
 - Format migration and validation are centralized in `nova_format`, not scattered through editor components.
 - v1.9 format-13 files, v1.8 format-12 files, v1.7 format-11 files, v1.6 format-10 files, v1.5 format-9 files, v1.4 format-8 files, v1.3 format-7 files, v1.2 format-6 files, v1.1.2 format-5 files, older object roots, and legacy top-level entity arrays continue to load. A migrated project is only written in Format 2 when the user saves it.

@@ -33,7 +33,7 @@
               <button @click="createVisualGraphAsset">+ {{ t('visualGraph') }}</button>
               <button :disabled="!state.selectedEntityIds.length" @click="createSceneAssetFromSelection">+ {{ t('createSceneAsset') }}</button>
               <button @click="creatingFolder = !creatingFolder">{{ t('newFolder') }}</button>
-              <details class="asset-overflow"><summary :title="t('moreActions')">•••</summary><button @click="exportFolder">{{ t('exportProjectFolder') }}</button><button @click="batchReimportVisible">{{ t('batchReimport') }}</button><button :disabled="!selectedAsset" @click="bulkApplyVisible">{{ t('bulkApplyVisible') }}</button></details>
+              <details ref="assetOverflow" class="asset-overflow"><summary :title="t('moreActions')">•••</summary><section class="asset-overflow-menu"><strong>{{ t('newSharedResource') }}</strong><button v-for="kind in resourceKinds" :key="kind" type="button" :aria-label="`+ ${t(`resource_${kind}`)}`" @click="createSharedResource(kind); closeAssetOverflow()">+ {{ t(`resource_${kind}`) }}</button><button type="button" @click="exportFolder(); closeAssetOverflow()">{{ t('exportProjectFolder') }}</button><button type="button" @click="batchReimportVisible(); closeAssetOverflow()">{{ t('batchReimport') }}</button><button type="button" :disabled="!selectedAsset" @click="bulkApplyVisible(); closeAssetOverflow()">{{ t('bulkApplyVisible') }}</button><button v-for="item in pluginAssetContributions" :key="`${item.pluginId}:${item.kind}:${item.id}`" type="button" :title="`${item.pluginName} · ${item.description ?? ''}`" @click="pluginRuntime.invokeContribution(item.kind,item.id,item.pluginId); closeAssetOverflow()">{{ item.label }}</button></section></details>
               <input v-if="creatingFolder" v-model="newFolderName" class="folder-input" :placeholder="t('folderName')" @keydown.enter="createFolder" @keydown.escape="creatingFolder = false">
               <span class="path" :title="assets.currentFolder">{{ assets.currentFolder }}</span>
               <input v-model="assets.search" type="search" :placeholder="t('searchAssets')">
@@ -56,7 +56,7 @@
               <button :disabled="!assetGraph.missingReferences.length" @click="openMissingRepair">{{ t('missingReferences') }} <span>{{ assetGraph.missingReferences.length }}</span></button>
               <span v-if="assets.atlasError" class="atlas-error" :title="assets.atlasError">{{ t('atlasRebuildFailed') }}</span>
             </div>
-            <input ref="assetInput" hidden type="file" multiple accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml,audio/wav,audio/ogg,audio/mpeg,font/ttf,font/otf,font/woff,font/woff2,.ttf,.otf,.woff,.woff2,.rhai,.nova-graph,.nova-prefab,.nova-scene,.nova-material,.nova-anim,.nova-controller,.nova-mask,.nova-rig,.nova-skin,.nova-timeline,.nova-tileset,.nova-atlas,.nova-path,.glsl,.frag,.vert,.nova-shader,.csv,.po,.arb,.nova-locale,.nova-theme" @change="importFiles">
+            <input ref="assetInput" hidden type="file" multiple accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml,audio/wav,audio/ogg,audio/mpeg,font/ttf,font/otf,font/woff,font/woff2,.ttf,.otf,.woff,.woff2,.rhai,.nova-graph,.nova-prefab,.nova-scene,.nova-material,.nova-anim,.nova-controller,.nova-mask,.nova-rig,.nova-skin,.nova-timeline,.nova-tileset,.nova-atlas,.nova-resource,.atlas,.tpsheet,.tmx,.tmj,.tsx,.tsj,.json,.nova-path,.glsl,.frag,.vert,.nova-shader,.csv,.po,.arb,.nova-locale,.nova-theme" @change="importFiles">
           </header>
 
           <section v-if="externalChanges.length" class="external-changes" aria-live="polite">
@@ -116,6 +116,7 @@
           <div v-if="selectedAsset.assetType === 'image'" class="large-preview" :style="{ backgroundImage: `url(${selectedAsset.source})`, imageRendering: selectedAsset.settings.filterMode === 'Nearest' ? 'pixelated' : 'auto' }"></div>
           <audio v-else-if="selectedAsset.assetType === 'audio'" class="asset-media-preview" :src="selectedAsset.source" controls preload="metadata"></audio>
           <div v-else-if="selectedAsset.assetType === 'font'" class="font-preview" :style="{ fontFamily: selectedAsset.fontFamily }">Nova_A Aa 123</div>
+          <ContentAssetInspector :asset="selectedAsset" @open-animation="openAnimationAsset" @select-asset="assets.selectedGuid=$event" />
           <section v-show="inspectorTab === 'source'" class="inspector-pane">
             <label><span>GUID</span><code>{{ selectedAsset.uuid.slice(0, 13) }}…</code></label>
             <label><span>{{ t('assetPath') }}</span><code>{{ selectedAsset.path }}</code></label>
@@ -312,6 +313,7 @@ import { instantiatePrefab, replaceEntitiesWithPrefab } from '../runtime/prefabs
 import { createSceneAssetFromEntities, instantiateSceneAsset } from '../runtime/sceneInstances'
 import { reimportAnimationClip } from '../runtime/animation'
 import AnimationPanel from './AnimationPanel.vue'
+import ContentAssetInspector from './ContentAssetInspector.vue'
 import AudioSystemPanel from './AudioSystemPanel.vue'
 import ConsolePanel from './ConsolePanel.vue'
 import ProfilerPanel from './ProfilerPanel.vue'
@@ -324,11 +326,14 @@ import { cancelAssetImport, importPipelineState } from '../assets/importPipeline
 import { sourceStatusFor } from '../runtime/teamWorkflow'
 import { moveAssetToProjectTrash } from '../runtime/projectTrash'
 import { projectScopeDirty } from '../runtime/projectTransactions'
+import { pluginRuntime, pluginState } from '../runtime/plugins'
+import { createResourceAsset, type ResourceKind } from '../runtime/resources'
 
 const permanentTabs = [
   { id: 'assets' as const, label: 'assets' as const }, { id: 'console' as const, label: 'console' as const },
   { id: 'animation' as const, label: 'animation' as const }, { id: 'audio' as const, label: 'audioMixer' as const }, { id: 'worldProduction' as const, label: 'worldStudio' as const }, { id: 'networkStudio' as const, label: 'networkStudio' as const }, { id: 'ecosystem' as const, label: 'ecosystemStudio' as const }, { id: 'profiler' as const, label: 'profiler' as const }
 ]
+const pluginAssetContributions = computed(() => pluginState.contributions.filter(item => item.kind === 'importers' || item.kind === 'assetEditors'))
 const tabs = computed(() => {
   const selected = state.world.entities.find(entity => entity.id === state.selectedEntityId)
   const contextual = selected?.hasComponent('TileMap2D') ? [{ id: 'tilemap' as const, label: 'tilemap' as const }] : []
@@ -343,8 +348,9 @@ const assetFilters: Array<{ type: AssetType | 'all'; label: Parameters<typeof t>
   { type: 'controller', label: 'controllers' }, { type: 'animationMask', label: 'animationMasks' }, { type: 'rig', label: 'rigs' },
   { type: 'skin', label: 'skins' }, { type: 'timeline', label: 'timelines' }, { type: 'tileset', label: 'tileSets' }, { type: 'atlas', label: 'atlases' },
   { type: 'shader', label: 'shaders' }, { type: 'localization', label: 'localizationFiles' }, { type: 'uiTheme', label: 'uiThemes' },
-  { type: 'dataSchema', label: 'dataSchema' }, { type: 'dataTable', label: 'dataTable' }, { type: 'replay', label: 'replayAssets' }, { type: 'path', label: 'pathAssets' }, { type: 'other', label: 'otherAssets' }
+  { type: 'dataSchema', label: 'dataSchema' }, { type: 'dataTable', label: 'dataTable' }, { type: 'resource', label: 'sharedResources' }, { type: 'replay', label: 'replayAssets' }, { type: 'path', label: 'pathAssets' }, { type: 'other', label: 'otherAssets' }
 ]
+const resourceKinds:ResourceKind[]=['Material','AnimationLibrary','InputMap','PhysicsMaterial','Theme','DataTable']
 const compressionPlatforms = ['windows', 'linux', 'macos', 'web'] as const
 const pivotPresets = [
   { id: 'top-left', label: 'pivotTopLeft', value: { x: 0, y: 0 } }, { id: 'top', label: 'pivotTop', value: { x: .5, y: 0 } }, { id: 'top-right', label: 'pivotTopRight', value: { x: 1, y: 0 } },
@@ -370,6 +376,7 @@ const missingReferenceIds = computed(() => [...new Set(assetGraph.value.missingR
 const animationSources = computed(() => assets.records.filter(asset => asset.assetType === 'animation' && asset.uuid !== selectedAsset.value?.uuid))
 const assetInput = ref<HTMLInputElement | null>(null)
 const reimportInput = ref<HTMLInputElement | null>(null)
+const assetOverflow = ref<HTMLDetailsElement | null>(null)
 const creatingFolder = ref(false), newFolderName = ref('')
 const renamingGuid = ref<string | null>(null), renameValue = ref('')
 const repairMode = ref(false), selectedMissingReference = ref(''), replacementAssetGuid = ref('')
@@ -393,7 +400,13 @@ const selectedAtlasReport = computed(() => {
   return packAtlasDeterministic(assets.records.filter(candidate => candidate.assetType === 'image' && candidate.settings.atlas && (candidate.settings.atlasSettings.group || 'default') === group).map(candidate => ({ uuid: candidate.uuid, width: candidate.width, height: candidate.height, group })), { maxSize: asset.settings.atlasSettings.maxSize, padding: asset.settings.atlasSettings.padding, rotationPolicy: asset.settings.atlasSettings.rotationPolicy })
 })
 watch(() => [assets.search, assets.currentFolder, assets.typeFilter, assets.tagFilter, assets.selectedCollectionId, assets.favoritesOnly], () => { assetWindowLimit.value = 320 })
-watch(() => selectedAsset.value?.uuid, () => { inspectorTab.value = 'source'; importComparisonText.value = ''; previousPipeline.value = selectedAsset.value?.pipeline ? structuredClone(selectedAsset.value.pipeline) : null })
+function clonePipelineMetadata(value: AssetPipelineMetadata | undefined): AssetPipelineMetadata | null {
+  // Asset records are exposed through Vue's reactive database. The import
+  // metadata itself is JSON-owned project data, so clone it across that
+  // boundary without handing a Proxy to the browser structured-clone API.
+  return value ? JSON.parse(JSON.stringify(value)) as AssetPipelineMetadata : null
+}
+watch(() => selectedAsset.value?.uuid, () => { inspectorTab.value = 'source'; importComparisonText.value = ''; previousPipeline.value = clonePipelineMetadata(selectedAsset.value?.pipeline) })
 function openTab(id: (typeof permanentTabs)[number]['id'] | 'tilemap') { estate.bottomPanelTab = id; estate.bottomPanelOpen = true }
 function tabDirty(id:(typeof permanentTabs)[number]['id']|'tilemap'){return id==='assets'?projectScopeDirty('asset'):id==='animation'?projectScopeDirty('animation'):id==='audio'?projectScopeDirty('settings'):id==='tilemap'?projectScopeDirty('scene'):false}
 function dropTab(target: (typeof permanentTabs)[number]['id'] | 'tilemap') {
@@ -446,14 +459,17 @@ function createSceneAssetFromSelection() {
   assets.currentFolder = 'Assets/Scenes'
   addEditorLog(t('sceneAssetCreated'), 'Assets')
 }
+function createSharedResource(kind:ResourceKind){const label=t(`resource_${kind}` as Parameters<typeof t>[0]),asset=createResourceAsset(kind,label);assets.selectedGuid=asset.uuid;assets.currentFolder=asset.path.slice(0,asset.path.lastIndexOf('/'));pushHistory('Create shared resource',`resource:${asset.uuid}`)}
+function closeAssetOverflow(){assetOverflow.value?.removeAttribute('open')}
 function openInScriptStudio(uuid: string) { openScriptAsset(uuid); applyEditorWorkspace('script') }
 function openInGraphStudio(uuid: string) { openGraphAsset(uuid); applyEditorWorkspace('script') }
+function openAnimationAsset(uuid:string){assets.selectedGuid=uuid;estate.bottomPanelTab='animation';estate.bottomPanelOpen=true;applyEditorWorkspace('animation')}
 function openAssetEditor(uuid: string) {
   const asset = assets.records.find(record => record.uuid === uuid); if (!asset) return
   assets.selectedGuid = uuid
   if (asset.assetType === 'visualScript') { openInGraphStudio(uuid); return }
   if (asset.assetType === 'script' || asset.assetType === 'shader') { openInScriptStudio(uuid); return }
-  if (asset.assetType === 'animation' || asset.assetType === 'controller' || asset.assetType === 'timeline') { estate.bottomPanelTab = 'animation'; return }
+  if (['animation','controller','animationMask','rig','skin','timeline'].includes(asset.assetType)) { openAnimationAsset(uuid); return }
   if (asset.assetType === 'audio') { estate.bottomPanelTab = 'audio'; return }
   inspectorTab.value = asset.assetType === 'image' || asset.assetType === 'font' || asset.assetType === 'atlas' || asset.assetType === 'tileset' ? 'import' : 'source'
 }
@@ -563,7 +579,7 @@ async function reimportSelectedAsset(event: Event) {
   const input = event.target as HTMLInputElement, file = input.files?.[0]; input.value = ''
   const asset = selectedAsset.value
   if (!asset || !file) return
-  previousPipeline.value = asset.pipeline ? structuredClone(asset.pipeline) : null
+  previousPipeline.value = clonePipelineMetadata(asset.pipeline)
   const success = await reimportAsset(asset.uuid, file)
   addEditorLog(t(success ? 'assetReimported' : 'assetReimportFailed', { name: asset.name }), 'Assets', success ? 'info' : 'error')
   if (success) pushHistory('Reimport asset', `asset:${asset.uuid}`)
@@ -651,7 +667,7 @@ onBeforeUnmount(stopResize)
 .asset-grid { min-height: 0; flex: 1; padding: 9px; display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); grid-auto-rows: 58px; gap: 7px; overflow: auto; }.asset-grid article { position: relative; min-width: 0; padding: 7px; display: grid; grid-template-columns: 42px 1fr; grid-template-rows: 1fr 1fr; column-gap: 7px; border: 1px solid var(--border-subtle); border-radius: 9px; background: var(--surface-2); cursor: grab; }.asset-grid article:hover, .asset-grid article.selected { border-color: color-mix(in srgb, var(--accent) 60%, var(--border-subtle)); background: var(--accent-soft); }.asset-preview { grid-row: 1 / 3; width: 42px; height: 42px; border-radius: 7px; background-color: var(--surface-3); background-position: center; background-repeat: no-repeat; background-size: contain; }.asset-icon { display: grid; place-items: center; color: var(--accent); font-size: 17px; font-weight: 650; }.asset-grid strong, .asset-grid small, .asset-grid input { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }.asset-grid strong { align-self: end; font-size: 11px; }.asset-grid small { color: var(--text-muted); font-size:11px; }.asset-grid input { width: 100%; height: 22px; min-height: 22px; font-size:11px; }.source-badge{position:absolute;top:4px;right:4px;width:18px;height:18px;display:grid;place-items:center;border-radius:5px;font-size:11px;font-weight:750;box-shadow:0 2px 8px rgba(0,0,0,.2)}.source-badge.added{color:var(--success);background:color-mix(in srgb,var(--success) 18%,var(--surface-1))}.source-badge.modified{color:var(--warning);background:color-mix(in srgb,var(--warning) 18%,var(--surface-1))}.source-badge.deleted,.source-badge.conflict{color:var(--danger);background:color-mix(in srgb,var(--danger) 18%,var(--surface-1))}
 .asset-inspector { border-left: 1px solid var(--border-subtle); }.asset-inspector header { padding: 2px 2px 8px; display: flex; flex-direction: column; gap: 2px; }.asset-inspector header span { color: var(--accent); font-size:11px; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; }.asset-inspector header strong { overflow: hidden; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }.large-preview { width: 100%; aspect-ratio: 16 / 9; margin-bottom: 7px; border: 1px solid var(--border-subtle); border-radius: 8px; background-color: var(--surface-3); background-position: center; background-repeat: no-repeat; background-size: contain; }.asset-media-preview{width:100%;height:34px;margin-bottom:7px}.font-preview{min-height:60px;margin-bottom:7px;padding:10px;display:grid;place-items:center;border:1px solid var(--border-subtle);border-radius:8px;background:var(--surface-3);font-size:20px}.asset-inspector label { min-height: 29px; display: flex; align-items: center; justify-content: space-between; gap: 7px; border-bottom: 1px solid var(--border-subtle); color: var(--text-muted); font-size:11px; }.asset-inspector label > *:last-child { max-width: 58%; }.asset-inspector label code { overflow: hidden; color: var(--accent); font-size:11px; text-overflow: ellipsis; white-space: nowrap; }.asset-inspector label input:not([type='checkbox']), .asset-inspector label select { width: 105px; min-height: 24px; font-size:11px; }.asset-inspector label div { display: flex; gap: 3px; }.asset-inspector label div input { width: 50%; }.asset-actions { margin-top: 8px; display: flex; gap: 5px; }.asset-actions button { min-width:0;min-height:32px;padding:0 4px;flex:1;overflow:hidden;border:1px solid var(--border-subtle);border-radius:7px;color:var(--text-secondary);background:var(--surface-3);font-size:11px;text-overflow:ellipsis;white-space:nowrap}.asset-actions button.danger { color: var(--danger); }.drag-hint { color: var(--text-muted); font-size:11px; line-height: 1.45; }.text-preview{width:100%;min-height:82px;margin:7px 0;resize:vertical;font:11px/1.45 var(--font-mono)}.pipeline-error{padding:6px;border:1px solid var(--danger);border-radius:7px;color:var(--danger);font-size:11px}.reference-summary{margin-top:8px;padding:7px;border:1px solid var(--border-subtle);border-radius:8px;background:var(--surface-3)}.reference-summary strong{font-size:11px}.reference-summary p,.reference-summary li{margin:4px 0;color:var(--text-muted);font-size:11px;line-height:1.35}.reference-summary ul{margin:3px 0;padding-left:16px}
 .asset-technical{margin:6px 0;border:1px solid var(--border-subtle);border-radius:var(--radius-control-small);background:var(--surface-3)}.asset-technical summary{padding:7px;cursor:pointer;color:var(--text-secondary);font-size:var(--type-caption)}.asset-technical>div{display:grid;grid-template-columns:minmax(70px,auto) minmax(0,1fr) 26px;align-items:center;gap:6px;padding:5px 7px;border-top:1px solid var(--border-subtle);font-size:var(--type-caption)}.asset-technical code{max-width:none!important;overflow:auto!important;white-space:nowrap!important;text-overflow:clip!important}.asset-technical button{width:24px;min-height:24px;padding:0;border:1px solid var(--border-subtle);border-radius:var(--radius-control-small);background:var(--surface-2);color:var(--text-secondary)}
-.asset-overflow{position:relative;z-index:9}.asset-overflow>summary{width:34px;height:31px;display:grid;place-items:center;border:1px solid var(--border-subtle);border-radius:8px;background:var(--surface-2);cursor:pointer;list-style:none}.asset-overflow>summary::-webkit-details-marker{display:none}.asset-overflow[open]{filter:drop-shadow(var(--shadow-md))}.asset-overflow[open]>button{position:absolute;top:35px;right:0;z-index:10;width:max-content;min-width:180px;background:var(--surface-popover)}.asset-overflow[open]>button:nth-of-type(2){top:69px}.asset-overflow[open]>button:nth-of-type(3){top:103px}
+.asset-overflow{position:relative;z-index:20}.asset-overflow>summary{width:34px;height:31px;display:grid;place-items:center;border:1px solid var(--border-subtle);border-radius:8px;background:var(--surface-2);cursor:pointer;list-style:none}.asset-overflow>summary::-webkit-details-marker{display:none}.asset-overflow[open]{filter:drop-shadow(var(--shadow-md))}.asset-overflow-menu{position:absolute;top:35px;right:0;z-index:30;width:clamp(190px,24vw,280px);max-height:min(260px,calc(42vh - 48px));padding:7px;display:grid;grid-template-columns:minmax(0,1fr);gap:4px;overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;border:1px solid var(--border-strong);border-radius:10px;background:var(--surface-popover);box-shadow:var(--shadow-md)}.asset-overflow-menu>strong{padding:5px 7px;color:var(--text-muted);font-size:11px;line-height:1.3}.asset-overflow-menu>button{width:100%;min-width:0;height:auto;min-height:31px;padding:6px 8px;overflow-wrap:anywhere;white-space:normal;text-align:left;background:var(--surface-2)}
 .asset-actions-row>button.active{color:var(--accent);border-color:color-mix(in srgb,var(--accent) 55%,var(--border-subtle));background:var(--accent-soft)}
 .asset-grid{grid-template-columns:repeat(auto-fill,minmax(var(--asset-size,112px),1fr))}.asset-grid.asset-list{display:flex;flex-direction:column;gap:4px}.asset-grid.asset-list article{min-height:52px;flex:0 0 52px;grid-template-columns:38px minmax(0,1fr) minmax(80px,auto);grid-template-rows:1fr}.asset-grid.asset-list .asset-preview{grid-row:1;width:36px;height:36px}.asset-grid.asset-list article>small{align-self:center;text-align:right}.asset-window-status{grid-column:1/-1;margin:0;padding:8px;color:var(--text-muted);font-size:var(--type-caption);text-align:center}
 .importer-tabs{margin:0 0 8px;padding:3px;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:2px;border:1px solid var(--border-subtle);border-radius:11px;background:var(--surface-3)}.importer-tabs button{min-width:0;min-height:28px;padding:0 3px;overflow:hidden;border:0;border-radius:8px;background:transparent;color:var(--text-muted);font-size:var(--type-caption);text-overflow:ellipsis;white-space:nowrap}.importer-tabs button.active{color:var(--text-primary);background:var(--surface-raised);box-shadow:var(--shadow-xs)}.inspector-pane{animation:nova-panel-in var(--motion-panel) var(--ease-spring) both}.collection-membership{margin:7px 0;padding:7px;border:1px solid var(--border-subtle);border-radius:9px}.collection-membership summary{cursor:pointer;color:var(--text-secondary)}.collection-membership>button{width:100%;min-height:28px;margin-top:4px;display:flex;align-items:center;gap:6px;border:0;border-radius:7px;background:transparent;color:var(--text-muted)}.collection-membership>button.active{color:var(--accent);background:var(--accent-soft)}.collection-membership i{width:8px;height:8px;border-radius:50%}.collection-membership>div{margin-top:5px;display:grid;grid-template-columns:1fr 30px;gap:4px}.collection-membership input{width:100%!important;max-width:none!important}

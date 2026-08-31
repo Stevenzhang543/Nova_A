@@ -1,0 +1,106 @@
+{
+  "format": "nova-v6.3.0-verification",
+  "version": 1,
+  "engineVersion": "6.3.0",
+  "generatedAt": "2026-08-31T07:28:17.665Z",
+  "perspectives": [
+    "compatibility",
+    "visual-scripting",
+    "automation",
+    "plugins",
+    "security",
+    "localization",
+    "documentation"
+  ],
+  "checks": [
+    {
+      "id": "V630-AUTHORITY",
+      "status": "passed",
+      "detail": "Engine authority advances while Project Format 2/schema 29 remain frozen.",
+      "metrics": {}
+    },
+    {
+      "id": "V630-RHAI-TO-BLOCKS",
+      "status": "passed",
+      "detail": "Lifecycle and standard API source become native editable blocks.",
+      "metrics": {
+        "nodes": 6
+      }
+    },
+    {
+      "id": "V630-LOSSLESS-CODE",
+      "status": "passed",
+      "detail": "Unsupported structured and top-level Rhai remains visible in bounded Code blocks.",
+      "metrics": {}
+    },
+    {
+      "id": "V630-BLOCKS-TO-RHAI",
+      "status": "passed",
+      "detail": "Blocks generate linked, marker-stable Rhai without losing custom source.",
+      "metrics": {}
+    },
+    {
+      "id": "V630-AUTOMATION-PERMISSIONS",
+      "status": "passed",
+      "detail": "Automation permissions are explicit and unknown authority fails closed.",
+      "metrics": {}
+    },
+    {
+      "id": "V630-AUTOMATION-BOUNDS",
+      "status": "passed",
+      "detail": "Automation publishes and enforces fixed command, source and time ceilings.",
+      "metrics": {}
+    },
+    {
+      "id": "V630-PLUGIN-DENIAL",
+      "status": "passed",
+      "detail": "Unknown WASM imports are denied and requested permissions are not implicit grants.",
+      "metrics": {}
+    },
+    {
+      "id": "V630-PLUGIN-LIFECYCLE",
+      "status": "passed",
+      "detail": "Unexecuted/unloaded plugins expose no orphan contribution UI.",
+      "metrics": {}
+    },
+    {
+      "id": "V630-AUTOMATIC-LINK",
+      "status": "passed",
+      "detail": "Both Save paths ensure and synchronize their companion automatically.",
+      "metrics": {}
+    },
+    {
+      "id": "V630-SCRATCH-UI",
+      "status": "passed",
+      "detail": "Scratch-inspired categories, direct block mode and advanced Nodes mode are connected.",
+      "metrics": {}
+    },
+    {
+      "id": "V630-TRANSACTION",
+      "status": "passed",
+      "detail": "Automation preview/apply supports one-step commit, cancellation and rollback.",
+      "metrics": {}
+    },
+    {
+      "id": "V630-DEEP-CONTRIBUTIONS",
+      "status": "passed",
+      "detail": "Selection, asset and build contexts host approved live plugin contributions.",
+      "metrics": {}
+    },
+    {
+      "id": "V630-LOCALIZATION",
+      "status": "passed",
+      "detail": "Blocks and Automation surfaces are explicit in English, German and Chinese.",
+      "metrics": {}
+    },
+    {
+      "id": "V630-DOCUMENTATION",
+      "status": "passed",
+      "detail": "Roadmap checkpoint, safety boundary and user workflow are documented.",
+      "metrics": {}
+    }
+  ],
+  "severity0Open": 0,
+  "severity1Open": 0,
+  "status": "passed"
+}

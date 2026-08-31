@@ -18,7 +18,7 @@ for (const file of manuals) {
 
 const html = await readFile(resolve(root, 'manual', 'index.html'), 'utf8')
 assert(!/Vervollst\?ndigung|g\?ltige|\?{3,}/.test(html), 'Localized HTML contains encoding replacement characters')
-assert(html.includes('<title>Nova_A 6.1.0 Manual</title>') && html.includes('6.1.0 Offline Teaching Manual') && html.includes('Engine 6.1.0'), 'HTML manual metadata is stale')
+assert(html.includes('<title>Nova_A 6.4.0 Manual</title>') && html.includes('6.4.0 Offline Teaching Manual') && html.includes('Engine 6.4.0'), 'HTML manual metadata is stale')
 for (const language of ['en', 'de', 'zh-CN']) assert(html.includes(`data-lang="${language}"`) && html.includes(`${language}-v60`), `HTML manual is missing v6 ${language}`)
 for (const file of manuals) assert(html.includes(file), `HTML manual does not link ${file}`)
 for (const marker of ['first-game', 'project-health', 'script-studio', 'migration', 'package-sdk', 'build-export', 'platform-support', 'security-privacy', 'localization-accessibility', 'troubleshooting', 'release-engineering', 'en-v59', 'de-v59', 'zh-CN-v59']) assert(html.includes(marker), `HTML manual lost retained bookmark ${marker}`)

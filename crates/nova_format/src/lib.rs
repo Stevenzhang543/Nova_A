@@ -11,7 +11,7 @@ pub const PROJECT_FORMAT_NAME: &str = "Nova_A Project Format 2";
 pub const PROJECT_FORMAT_MAJOR: u32 = 2;
 pub const CURRENT_FORMAT_VERSION: u32 = 29;
 pub const MINIMUM_SUPPORTED_FORMAT_VERSION: u32 = 5;
-pub const CURRENT_ENGINE_VERSION: &str = "6.1.0";
+pub const CURRENT_ENGINE_VERSION: &str = "6.4.0";
 
 fn default_named_physics_layers() -> Value {
     let colors = [

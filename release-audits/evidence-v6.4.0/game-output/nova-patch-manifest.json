@@ -1,0 +1,18 @@
+{
+  "format": "nova-patch-manifest",
+  "version": 1,
+  "fromBuild": null,
+  "toBuild": "475261856cb18c41562eafff0b0efee07d6929c634b2aaa20ee9b983833bd998",
+  "added": [
+    "Content Motion Knockout.exe"
+  ],
+  "changed": [],
+  "removed": [],
+  "files": [
+    {
+      "path": "Content Motion Knockout.exe",
+      "sha256": "eef8f17350e5c1e04b4ac79a42f3c5bf6d6594c23ee8224a709a18c06f0cba3e",
+      "bytes": 16220075
+    }
+  ]
+}

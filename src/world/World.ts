@@ -393,7 +393,7 @@ export class World {
   }
   events: RuntimePhysicsEvent[] = []
   projectFormatVersion = 29
-  projectEngineVersion = '6.1.0'
+  projectEngineVersion = '6.4.0'
 
   constructor() {
     // Vite's Node-side audit loader has no browser fetch implementation for file: WASM URLs.

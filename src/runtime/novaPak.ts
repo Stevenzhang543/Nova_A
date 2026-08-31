@@ -64,7 +64,7 @@ function safePackagePath(value: string): string {
   return normalized
 }
 
-const INLINE_TEXT_ASSET_TYPES = new Set(['script', 'prefab', 'scene', 'material', 'animation', 'controller', 'animationMask', 'rig', 'skin', 'timeline', 'tileset', 'atlas', 'shader', 'localization', 'uiTheme', 'behaviorTree', 'stateMachine', 'tilePalette', 'brushPreset', 'terrainRules', 'dataSchema', 'dataTable', 'replay'])
+const INLINE_TEXT_ASSET_TYPES = new Set(['script', 'prefab', 'scene', 'material', 'animation', 'controller', 'animationMask', 'rig', 'skin', 'timeline', 'tileset', 'atlas', 'shader', 'localization', 'uiTheme', 'behaviorTree', 'stateMachine', 'tilePalette', 'brushPreset', 'terrainRules', 'dataSchema', 'dataTable', 'replay', 'resource'])
 
 async function assetBytes(asset: AssetRecord): Promise<Uint8Array> {
   if (!asset.source) throw new Error(`Asset ${asset.name} has no imported source data`)
@@ -163,7 +163,7 @@ export async function createNovaPak(projectJson: string, assets: AssetRecord[], 
     : undefined
   const index: NovaPakIndex = {
     format: 'nova-pak', version: NOVA_PAK_VERSION,
-    engineVersion: String(project.engineVersion ?? '6.1.0'),
+    engineVersion: String(project.engineVersion ?? '6.4.0'),
     createdAt: options.deterministic === false ? new Date().toISOString() : '1970-01-01T00:00:00.000Z', startupSceneUuid,
     physicsProfile: physicsProfile && typeof physicsProfile === 'object' ? structuredClone(physicsProfile as Record<string, unknown>) : undefined,
     entries

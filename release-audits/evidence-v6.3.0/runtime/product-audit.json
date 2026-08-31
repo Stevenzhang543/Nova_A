@@ -1,0 +1,124 @@
+{
+  "format": "nova-v6.3.0-product-audit",
+  "version": 1,
+  "engineVersion": "6.3.0",
+  "generatedAt": "2026-08-31T07:28:18.428Z",
+  "perspectives": [
+    "programmer",
+    "user",
+    "compatibility",
+    "visual-scripting",
+    "automation",
+    "plugins",
+    "security",
+    "runtime",
+    "build",
+    "localization",
+    "layout",
+    "release"
+  ],
+  "checks": [
+    {
+      "id": "V630-VERSION",
+      "status": "passed",
+      "detail": "Frontend, native, Rust and project authorities identify 6.3.0.",
+      "metrics": {}
+    },
+    {
+      "id": "V630-FROZEN-CONTRACTS",
+      "status": "passed",
+      "detail": "Project Format 2/schema 29 and public API versions remain frozen.",
+      "metrics": {}
+    },
+    {
+      "id": "V630-ROUND-TRIP",
+      "status": "passed",
+      "detail": "Manual Rhai and visual graphs ensure and update each other automatically.",
+      "metrics": {}
+    },
+    {
+      "id": "V630-SCRATCH-BLOCKS",
+      "status": "passed",
+      "detail": "Scratch-inspired Blocks is present beside the retained advanced Nodes authoring path.",
+      "metrics": {}
+    },
+    {
+      "id": "V630-AUTOMATION",
+      "status": "passed",
+      "detail": "Automation is permission-scoped, bounded, dry-run-first, transactional, cancellable and recoverable.",
+      "metrics": {}
+    },
+    {
+      "id": "V630-PLUGIN-SECURITY",
+      "status": "passed",
+      "detail": "Plugin import does not execute and live contributions require granular approval plus an active instance.",
+      "metrics": {}
+    },
+    {
+      "id": "V630-CONTEXT-HOSTS",
+      "status": "passed",
+      "detail": "Plugin commands, selection/Inspector, asset and build contributions appear in owning context.",
+      "metrics": {}
+    },
+    {
+      "id": "V630-MANUALS",
+      "status": "passed",
+      "detail": "English, German and Chinese teaching manuals cover Blocks and safe automation.",
+      "metrics": {
+        "bytes": 2490499
+      }
+    },
+    {
+      "id": "V630-ROADMAP",
+      "status": "passed",
+      "detail": "Implementation follows the authoritative 6.3 roadmap checkpoint.",
+      "metrics": {}
+    },
+    {
+      "id": "V630-VERIFICATION",
+      "status": "passed",
+      "detail": "Round-trip, denial, plugin lifecycle, bounds and localization verifier passes.",
+      "metrics": {
+        "checks": 14
+      }
+    },
+    {
+      "id": "V630-TEMPLATES",
+      "status": "passed",
+      "detail": "All startup templates retain valid gameplay/build/accessibility behavior.",
+      "metrics": {
+        "checks": 17
+      }
+    },
+    {
+      "id": "V630-INTERACTIONS",
+      "status": "passed",
+      "detail": "User-style interaction traversal reports no critical failure.",
+      "metrics": {
+        "registeredControls": 538,
+        "clickedControls": 188,
+        "settingsMutatedAndRestored": 240,
+        "dragSurfacesPassed": 4,
+        "explicitlyBlockedOrReviewed": 350
+      }
+    },
+    {
+      "id": "V630-LAYOUT",
+      "status": "passed",
+      "detail": "EN/DE/ZH layout remains contained through 200% scale.",
+      "metrics": {}
+    }
+  ],
+  "severity0Open": 0,
+  "severity1Open": 0,
+  "externalGates": {
+    "publisherSigning": "pending-external",
+    "independentPluginPublisherFixture": "pending-external",
+    "cleanMachineLifecycle": "pending-external",
+    "secondMachineReproducibility": "pending-external",
+    "matchingHostTargets": "pending-external",
+    "independentHardwareAccessibility": "pending-external",
+    "soak72Hours": "pending-external"
+  },
+  "status": "passed"
+}

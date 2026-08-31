@@ -13,7 +13,7 @@ export const NOVA_PLUGIN_API_VERSION = 2
 export const NOVA_PACKAGE_MANIFEST_VERSION = 1
 export const NOVA_BUILD_CLI_VERSION = 1
 export const NOVA_WORKSPACE_DOCUMENT_VERSION = 3
-export const NOVA_FEATURE_FREEZE = Object.freeze({ channel: '6.1-stable-contract-candidate', frozenAt: '6.0.0', lockedAt: '6.1.0', observationDays: 14, earliestApproval: '2026-09-12', externalCertificationComplete: false, exceptions: ['release-blocking correction', 'security correction', 'migration correctness', 'accessibility correction', 'performance correction', 'evidence or documentation correction'] })
+export const NOVA_FEATURE_FREEZE = Object.freeze({ channel: '6.3-stable-contract-candidate', frozenAt: '6.0.0', lockedAt: '6.2.0', observationDays: 14, earliestApproval: '2026-09-14', externalCertificationComplete: false, exceptions: ['release-blocking correction', 'security correction', 'migration correctness', 'accessibility correction', 'performance correction', 'evidence or documentation correction'] })
 
 export interface StableContract {
   id: 'project' | 'script' | 'graph' | 'plugin' | 'package' | 'build' | 'workspace'

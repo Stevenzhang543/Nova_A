@@ -81,7 +81,7 @@
     <div class="top-spacer"></div>
     <span v-if="recoveryState.safeMode" class="safe-pill">{{ t('safeMode') }}</span>
     <span v-if="historyState.dirty" class="dirty-pill" :title="projectTransactionState.unsavedScopes.join(', ')">● {{ t('unsavedChanges') }}</span>
-    <span class="release-pill">6.1.0 · {{ t('releaseCandidate') }}</span>
+    <span class="release-pill">6.4.0 · {{ t('releaseCandidate') }}</span>
     <input ref="fileInput" type="file" hidden accept="application/json,.nova,.json" @change="handleFileSelected">
   </header>
 </template>

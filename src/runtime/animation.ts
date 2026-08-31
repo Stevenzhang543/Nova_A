@@ -31,6 +31,7 @@ export interface AnimationClipDocument {
   markers: AnimationMarker[]
   commandTracks: AnimationCommandTrack[]
 }
+export interface RootMotionPreview { duration: number; delta: { x: number; y: number; rotation: number }; distance: number; samples: number }
 export interface AnimatorParameter { name: string; type: AnimatorParameterType; defaultValue: AnimatorParameterValue }
 export type BlendTreeType = '1D' | '2D'
 export interface BlendTreeChild { clipAsset: string | null; threshold: number; positionX: number; positionY: number; speed: number }
@@ -345,6 +346,16 @@ export function sampleAnimationTrack(keyframes: AnimationKeyframe[], time: numbe
     return (2 * ratio3 - 3 * ratio2 + 1) * previous.value + (ratio3 - 2 * ratio2 + ratio) * m0 + (-2 * ratio3 + 3 * ratio2) * next.value + (ratio3 - ratio2) * m1
   }
   return last.value
+}
+
+/** Samples the exact runtime interpolation used by animation playback and reports cumulative root travel. */
+export function previewRootMotion(clipValue: AnimationClipDocument, sampleRate = 60): RootMotionPreview {
+  const clip = normalizeAnimationClip(clipValue), duration = animationClipLength(clip), rate = Math.min(240, Math.max(1, Math.round(finiteNumber(sampleRate, clip.frameRate))))
+  const tracks = new Map(clip.tracks.filter(track => !track.targetEntityUuid && ['Transform.position.x', 'Transform.position.y', 'Transform.rotation'].includes(track.property)).map(track => [track.property, track]))
+  const samples = Math.max(2, Math.ceil(duration * rate) + 1), points: Array<{ x: number; y: number; rotation: number }> = []
+  for (let index = 0; index < samples; index++) { const time = duration * index / (samples - 1); points.push({ x: sampleAnimationTrack(tracks.get('Transform.position.x')?.keyframes ?? [], time) ?? 0, y: sampleAnimationTrack(tracks.get('Transform.position.y')?.keyframes ?? [], time) ?? 0, rotation: sampleAnimationTrack(tracks.get('Transform.rotation')?.keyframes ?? [], time) ?? 0 }) }
+  const first = points[0], last = points[points.length-1]!, distance = points.slice(1).reduce((total, point, index) => total + Math.hypot(point.x - points[index].x, point.y - points[index].y), 0)
+  return { duration, delta: { x: last.x - first.x, y: last.y - first.y, rotation: last.rotation - first.rotation }, distance, samples }
 }
 
 export function reduceAnimationKeys(keyframes: AnimationKeyframe[], tolerance = .0001): AnimationKeyframe[] {
