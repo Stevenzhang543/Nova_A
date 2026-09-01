@@ -1,9 +1,0 @@
-{
-  "format": "nova-v5.0-72-hour-soak",
-  "engineVersion": "5.0.0",
-  "generatedAt": "2026-08-25T12:55:52.406Z",
-  "requiredHours": 72,
-  "actualHours": 0.0002651202222222222,
-  "qualified": false,
-  "status": "pending-external-wall-clock-run"
-}

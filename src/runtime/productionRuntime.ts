@@ -10,12 +10,16 @@ let loading: Promise<void> | null = null
 let lifecycleGeneration = 0
 const rpcListeners = new Set<(name: string, payload: unknown, context: { sender: string; tick: number }) => void>()
 let rpcCleanups: Array<() => void> = []
+const sceneHandoffListeners = new Set<(sceneUuid: string, spawnTag: string, peerId: string) => void>()
+let sceneHandoffCleanup: (() => void) | null = null
 
 function bindRpcHandlers(module: NetworkingModule): void {
   for (const cleanup of rpcCleanups) cleanup()
   rpcCleanups = productionSettings.networking.rpcContracts.map(contract => module.registerRpc(contract.name, (payload, context) => {
     for (const listener of rpcListeners) listener(contract.name, payload, context)
   }))
+  sceneHandoffCleanup?.()
+  sceneHandoffCleanup = module.registerNetworkSceneHandoff((sceneUuid, spawnTag, peerId) => { for (const listener of sceneHandoffListeners) listener(sceneUuid, spawnTag, peerId) })
 }
 
 async function loadNetworkingModule(): Promise<NetworkingModule> {
@@ -63,10 +67,11 @@ export function productionNetworkContext(): { enabled: boolean; connected: boole
 }
 export function callProductionRpc(name: string, payload: unknown): boolean { return networking?.callRpc(name, payload) ?? false }
 export function onProductionRpc(listener: (name: string, payload: unknown, context: { sender: string; tick: number }) => void): () => void { rpcListeners.add(listener); return () => rpcListeners.delete(listener) }
+export function onProductionSceneHandoff(listener: (sceneUuid: string, spawnTag: string, peerId: string) => void): () => void { sceneHandoffListeners.add(listener); return () => sceneHandoffListeners.delete(listener) }
 export async function stopProductionNetworking(): Promise<void> {
   lifecycleGeneration++
   const active = networking
-  networking = null; loading = null; for (const cleanup of rpcCleanups) cleanup(); rpcCleanups = []
+  networking = null; loading = null; for (const cleanup of rpcCleanups) cleanup(); rpcCleanups = []; sceneHandoffCleanup?.(); sceneHandoffCleanup = null
   if (active) await active.stopNetworking()
 }
 
@@ -77,5 +82,6 @@ export function stopProductionRuntime(): void {
   const active = networking
   networking = null
   for (const cleanup of rpcCleanups) cleanup(); rpcCleanups = []
+  sceneHandoffCleanup?.(); sceneHandoffCleanup = null
   if (active) void active.stopNetworking().catch(error => reportRecoverableError(error, 'Optional networking shutdown', 'Runtime'))
 }

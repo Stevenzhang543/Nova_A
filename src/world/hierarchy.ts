@@ -14,6 +14,24 @@ function rotate(point: Vec2, angle: number): Vec2 {
   return { x: point.x * cosine - point.y * sine, y: point.x * sine + point.y * cosine }
 }
 
+interface HierarchyLookup { entities: readonly Entity[]; byUuid: Map<string, Entity>; length: number; first: Entity | undefined; last: Entity | undefined }
+let preparedLookup: HierarchyLookup | null = null
+
+/** Build the hierarchy identity table once for a frame or batch operation.
+ * Lookups remain exact for transform edits because entity identity and parent
+ * UUIDs are authoritative; structural array changes trigger a rebuild. */
+export function prepareHierarchyIndex(entities: readonly Entity[]): void {
+  if (preparedLookup?.entities === entities && preparedLookup.length === entities.length && preparedLookup.first === entities[0] && preparedLookup.last === entities[entities.length - 1]) return
+  preparedLookup = { entities, byUuid: new Map(entities.map(entity => [entity.uuid, entity])), length: entities.length, first: entities[0], last: entities[entities.length - 1] }
+}
+
+export function invalidateHierarchyIndex(): void { preparedLookup = null }
+
+function hierarchyLookup(entities: readonly Entity[]): Map<string, Entity> {
+  prepareHierarchyIndex(entities)
+  return preparedLookup!.byUuid
+}
+
 export function worldTransform(entity: Entity, entities: readonly Entity[], visiting = new Set<string>()): WorldTransform2D {
   const local: WorldTransform2D = {
     position: { x: finiteNumber(entity.transform.position.x), y: finiteNumber(entity.transform.position.y) },
@@ -25,7 +43,7 @@ export function worldTransform(entity: Entity, entities: readonly Entity[], visi
   }
   const parentUuid = entity.parentUuid
   if (!parentUuid || visiting.has(entity.uuid)) return local
-  const parent = entities.find(candidate => candidate.uuid === parentUuid)
+  const parent = hierarchyLookup(entities).get(parentUuid)
   if (!parent || parent === entity) return local
   visiting.add(entity.uuid)
   const parentWorld = worldTransform(parent, entities, visiting)
@@ -63,7 +81,7 @@ export function worldPointToLocal(entity: Entity, point: Vec2, entities: readonl
 }
 
 export function setWorldTransform(entity: Entity, value: WorldTransform2D, entities: readonly Entity[]): void {
-  const parent = entity.parentUuid ? entities.find(candidate => candidate.uuid === entity.parentUuid) : null
+  const parent = entity.parentUuid ? hierarchyLookup(entities).get(entity.parentUuid) : null
   if (!parent) {
     entity.transform.position = { ...value.position }
     entity.transform.rotation = normalizeAngle(value.rotation)
@@ -90,20 +108,19 @@ export function wouldCreateParentCycle(entity: Entity, parentUuid: string | null
   if (!parentUuid) return false
   if (parentUuid === entity.uuid) return true
   const visited = new Set<string>([entity.uuid])
-  let current = entities.find(candidate => candidate.uuid === parentUuid)
+  const byUuid = hierarchyLookup(entities)
+  let current = byUuid.get(parentUuid)
   while (current) {
     if (visited.has(current.uuid)) return true
     visited.add(current.uuid)
-    current = current.parentUuid
-      ? entities.find(candidate => candidate.uuid === current!.parentUuid)
-      : undefined
+    current = current.parentUuid ? byUuid.get(current.parentUuid) : undefined
   }
   return false
 }
 
 export function setParent(entity: Entity, parentUuid: string | null, entities: readonly Entity[], preserveWorldTransform = true): boolean {
   if (wouldCreateParentCycle(entity, parentUuid, entities)) return false
-  const nextParentUuid = parentUuid && entities.some(candidate => candidate.uuid === parentUuid) ? parentUuid : null
+  const nextParentUuid = parentUuid && hierarchyLookup(entities).has(parentUuid) ? parentUuid : null
   if (entity.parentUuid === nextParentUuid) return false
   const currentWorld = preserveWorldTransform ? worldTransform(entity, entities) : null
   entity.parentUuid = nextParentUuid

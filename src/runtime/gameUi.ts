@@ -14,7 +14,7 @@ type UiCallback = (entity: Entity, functionName: string) => void
 type RemapCallback = (action: string, bindingIndex: number, binding: { device: 'keyboard' | 'gamepad-button' | 'gamepad-axis'; code: string }) => void
 
 export interface GameUiRenderOptions { editor?: boolean; selectedEntityIds?: Iterable<number> }
-export interface UiAccessibilityNode { uuid: string; role: string; label: string; description: string; state: string; value: string; live: 'off' | 'polite' | 'assertive'; rect: UiRect; tabIndex: number; focused: boolean; disabled: boolean }
+export interface UiAccessibilityNode { uuid: string; role: string; label: string; description: string; state: string; value: string; valueMin?: number; valueMax?: number; valueNow?: number; checked?: boolean; live: 'off' | 'polite' | 'assertive'; rect: UiRect; tabIndex: number; focused: boolean; disabled: boolean }
 
 function color(value: { r: number; g: number; b: number }, opacity = 100): string {
   return `rgba(${Math.round(value.r)},${Math.round(value.g)},${Math.round(value.b)},${Math.min(1, Math.max(0, opacity / 100))})`
@@ -107,7 +107,7 @@ class GameUiRuntime {
       const role = rect.accessibilityRole || (item.entity.hasComponent('Button') ? 'button' : item.entity.hasComponent('Slider') ? 'slider' : item.entity.hasComponent('Checkbox') ? 'checkbox' : item.entity.hasComponent('TextInput') ? 'textbox' : 'group')
       const slider = item.entity.getComponent<Slider>('Slider'), checkboxValue = item.entity.getComponent<Checkbox>('Checkbox')?.checked, inputValue = item.entity.getComponent<TextInput>('TextInput')?.value
       const inferredValue = slider ? String(slider.value) : checkboxValue !== undefined ? String(checkboxValue) : inputValue ?? ''
-      return [{ uuid: item.entity.uuid, role, label, description: rect.accessibilityDescription, state: rect.accessibilityState || (isDisabled(item.entity) ? 'disabled' : ''), value: rect.accessibilityValue || inferredValue, live: rect.accessibilityLive.toLowerCase() as 'off' | 'polite' | 'assertive', rect: { ...item.rect }, tabIndex: rect.readingOrder, focused: item.entity === this.focused, disabled: isDisabled(item.entity) }]
+      return [{ uuid: item.entity.uuid, role, label, description: rect.accessibilityDescription, state: rect.accessibilityState || (isDisabled(item.entity) ? 'disabled' : ''), value: rect.accessibilityValue || inferredValue, valueMin: slider?.min, valueMax: slider?.max, valueNow: slider?.value, checked: checkboxValue, live: rect.accessibilityLive.toLowerCase() as 'off' | 'polite' | 'assertive', rect: { ...item.rect }, tabIndex: rect.readingOrder, focused: item.entity === this.focused, disabled: isDisabled(item.entity) }]
     })
   }
 

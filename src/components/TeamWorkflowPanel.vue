@@ -11,6 +11,8 @@
         <footer><button @click="downloadNovaIgnoreFile">{{ t('generateIgnore') }}</button><button @click="downloadPreCommitHook">{{ t('preCommitHook') }}</button><button @click="downloadCiValidationTemplate">{{ t('ciTemplate') }}</button><button @click="openDiff">{{ t('openExternalDiff') }}</button></footer>
         <label class="incoming-picker"><span>{{ t('incomingProject') }}</span><button @click="incomingInput?.click()">{{ team.incomingFileName || t('chooseFile') }}</button><input ref="incomingInput" hidden type="file" accept=".nova,.json,application/json" @change="readIncoming"></label>
         <div v-if="team.incomingSource" class="conflict-summary"><span>{{ t('conflictsFound', { count: team.conflicts.length }) }}</span><button @click="reloadIncoming">{{ t('reloadExternal') }}</button><button :disabled="!team.mergeTool.trim()" @click="openMerge">{{ t('openExternalMerge') }}</button></div>
+        <section v-if="team.semanticMerge" class="semantic-merge"><header><strong>{{ t('semanticMerge') }}</strong><span>{{ team.semanticMerge.autoMerged.length }} {{ t('autoMerged') }} · {{ unresolvedConflicts }} {{ t('unresolved') }}</span></header><article v-for="conflict in team.semanticMerge.conflicts" :key="conflict.id"><div><b>{{ conflict.kind }}</b><code>{{ conflict.path }}</code></div><button :class="{ selected: conflict.resolution === 'ours' }" @click="resolveSemanticMergeConflict(conflict.id, 'ours')">{{ t('keepOurs') }}</button><button :class="{ selected: conflict.resolution === 'theirs' }" @click="resolveSemanticMergeConflict(conflict.id, 'theirs')">{{ t('takeTheirs') }}</button></article><button class="primary" :disabled="unresolvedConflicts > 0" @click="applySemanticMerge">{{ t('applySemanticMerge') }}</button></section>
+        <section class="change-list-editor"><header><strong>{{ t('changeLists') }}</strong><span>{{ team.changeLists.length }}</span></header><div class="metadata-row"><input v-model="changeListName" :placeholder="t('changeListName')"><input v-model="changeListOwner" :placeholder="t('owner')"><button :disabled="!changes.length" @click="createChangeList">{{ t('createChangeList') }}</button></div><article v-for="list in team.changeLists.slice(0, 4)" :key="list.id"><div><b>{{ list.name }}</b><small>@{{ list.owner }} · {{ list.changes.length }} · {{ list.fingerprint }}</small></div><span :class="list.status">{{ list.status }}</span></article></section>
         <div v-if="selectedDiff" class="inline-diff"><header><strong>{{ selectedDiff.path }}</strong><span>{{ t('before') }} / {{ t('after') }}</span></header><div><pre>{{ selectedDiff.before }}</pre><pre>{{ selectedDiff.after }}</pre></div></div>
       </section>
       <section class="repository-card">
@@ -51,13 +53,15 @@ import { computed, onMounted, ref } from 'vue'
 import { t } from '../i18n'
 import { getSceneJSON, loadProject } from '../store/physics'
 import { projectSessionState as project } from '../projects/projectSession'
-import { acquireBinaryAssetLock, acquireProjectLock, addOwnershipRule, addTeamChangeNote, addTeamTaskLink, downloadCiValidationTemplate, downloadCodeOwnersFile, downloadNovaIgnoreFile, downloadPreCommitHook, downloadProjectLock, incomingProjectSource, initializeGitRepository, openExternalDiff, openExternalMerge, persistTeamWorkflowSettings, refreshSourceStatus, releaseProjectLock, setIncomingProject, sourceDiffFor, teamWorkflowState as team } from '../runtime/teamWorkflow'
+import { acquireBinaryAssetLock, acquireProjectLock, addOwnershipRule, addTeamChangeNote, addTeamTaskLink, createSemanticMergePlan, createTeamChangeList, downloadCiValidationTemplate, downloadCodeOwnersFile, downloadNovaIgnoreFile, downloadPreCommitHook, downloadProjectLock, finalizeSemanticMerge, incomingProjectSource, initializeGitRepository, openExternalDiff, openExternalMerge, persistTeamWorkflowSettings, refreshSourceStatus, releaseProjectLock, resolveSemanticMergeConflict, setIncomingProject, sourceDiffFor, teamWorkflowState as team } from '../runtime/teamWorkflow'
 
 const lockOwner = ref('Whitelist')
 const incomingInput = ref<HTMLInputElement | null>(null)
 const selectedChange = ref(''), repositoryPath = ref(''), repositoryStatus = ref('')
 const ownershipPath = ref('Assets/**'), ownershipOwners = ref('Whitelist'), taskId = ref(''), taskUrl = ref(''), changeOwner = ref('Whitelist'), changeNote = ref(''), binaryPath = ref(''), binaryOwner = ref('Whitelist')
+const changeListName = ref('Release candidate'), changeListOwner = ref('Whitelist')
 const changes = computed(() => team.changes)
+const unresolvedConflicts = computed(() => team.semanticMerge?.conflicts.filter(conflict => conflict.resolution === 'unresolved').length ?? 0)
 const selectedDiff = computed(() => selectedChange.value ? sourceDiffFor(selectedChange.value, getSceneJSON()) : null)
 const lockSummary = computed(() => team.lockToken ? `${t('lockedUntil')} ${new Date(team.lockExpiresAt).toLocaleTimeString()}` : t('unlocked'))
 function refresh(): void { refreshSourceStatus(getSceneJSON()) }
@@ -68,7 +72,7 @@ function readIncoming(event: Event): void {
   if (!file) return
   const reader = new FileReader()
   reader.onload = () => {
-    try { if (typeof reader.result === 'string') setIncomingProject(getSceneJSON(), reader.result, file.name) }
+    try { if (typeof reader.result === 'string') { const current = getSceneJSON(); setIncomingProject(current, reader.result, file.name); createSemanticMergePlan(team.baseline || current, current, reader.result) } }
     catch (error) { team.status = error instanceof Error ? error.message : String(error) }
   }
   reader.onerror = () => { team.status = reader.error?.message ?? 'Unable to read incoming project.' }
@@ -82,6 +86,8 @@ function addOwnership(): void { if (addOwnershipRule(ownershipPath.value, owners
 function addTask(): void { if (addTeamTaskLink(taskId.value, taskUrl.value, '')) { taskId.value = ''; taskUrl.value = '' } }
 function addNote(): void { if (addTeamChangeNote(changeOwner.value, changeNote.value)) changeNote.value = '' }
 function lockBinary(): void { if (acquireBinaryAssetLock(binaryPath.value, binaryOwner.value)) binaryPath.value = '' }
+function createChangeList(): void { const list = createTeamChangeList(changeListName.value, changeListOwner.value, changes.value.map(change => change.id), getSceneJSON()); if (list) changeListName.value = '' }
+function applySemanticMerge(): void { try { if (loadProject(finalizeSemanticMerge())) { team.incomingSource = ''; team.incomingFileName = ''; team.semanticMerge = null; refresh() } } catch (error) { team.status = error instanceof Error ? error.message : String(error) } }
 onMounted(refresh)
 </script>
 
@@ -92,4 +98,5 @@ onMounted(refresh)
 .repository-card{display:flex;flex-direction:column;gap:7px}.repository-card button{align-self:flex-start}.change-list article.selected{background:var(--accent-soft)}
 .inline-diff{margin-top:7px;border:1px solid var(--border-subtle);border-radius:8px;overflow:hidden}.inline-diff header{min-height:30px;padding:5px 7px;display:flex;justify-content:space-between;background:var(--surface-3);font-size:11px}.inline-diff>div{display:grid;grid-template-columns:1fr 1fr}.inline-diff pre{max-height:160px;margin:0;padding:7px;overflow:auto;border-right:1px solid var(--border-subtle);font:11px/1.45 var(--font-mono);white-space:pre-wrap;overflow-wrap:anywhere}.inline-diff pre:last-child{border-right:0}
 .workflow-toggle{display:flex;align-items:center;gap:5px;color:var(--text-muted);font-size:11px}.team-disabled{margin:auto;width:min(520px,calc(100% - 24px));padding:22px;border:1px solid var(--border-subtle);border-radius:12px;background:var(--surface-2);text-align:center}.team-disabled p{color:var(--text-muted)}.metadata-card,.network-card,.binary-card{display:flex;flex-direction:column;gap:7px}.metadata-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto;gap:5px}.metadata-row>*{min-width:0}.metadata-card ul,.binary-card ul{max-height:100px;margin:0;padding:0;overflow:auto;list-style:none}.metadata-card li,.binary-card li{padding:4px 0;display:flex;justify-content:space-between;gap:6px;border-bottom:1px solid var(--border-subtle);font-size:11px}.network-card dl{margin:0}.network-card dl div{display:grid;grid-template-columns:80px minmax(0,1fr);gap:6px}.network-card dt{color:var(--text-muted)}.network-card dd{margin:0;overflow-wrap:anywhere}
+.semantic-merge,.change-list-editor{margin-top:7px;padding:7px;border:1px solid var(--border-subtle);border-radius:8px;background:var(--surface-1)}.semantic-merge>header,.change-list-editor>header{min-height:28px;display:flex;align-items:center;justify-content:space-between;gap:7px;font-size:11px}.semantic-merge>article{min-width:0;min-height:34px;display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:center;gap:5px;border-top:1px solid var(--border-subtle)}.semantic-merge>article>div,.change-list-editor>article>div{min-width:0;display:grid}.semantic-merge code,.change-list-editor small{overflow:hidden;color:var(--text-muted);text-overflow:ellipsis;white-space:nowrap}.semantic-merge button.selected{color:var(--accent);border-color:var(--accent);background:var(--accent-soft)}.semantic-merge>.primary{width:100%;margin-top:6px;color:var(--accent-contrast);border-color:var(--accent);background:var(--accent)}.change-list-editor>article{min-height:34px;display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:6px;border-top:1px solid var(--border-subtle)}.change-list-editor>article>span{padding:3px 6px;border-radius:999px;background:var(--surface-3);font-size:11px}.change-list-editor>article>span.ready{color:var(--success)}
 </style>

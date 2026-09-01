@@ -5,6 +5,7 @@ import { localPointToWorld, worldPointToLocal, worldTransform } from '../world/h
 import type { Vec2 } from '../world/types'
 import { normalizeTileMap, readTileSet, transformNormalizedTilePoint } from './tilemap'
 import { reactive } from 'vue'
+import { performanceRuntimeSettings, performanceRuntimeState, SpatialHash2D } from './largeWorldPerformance'
 
 const MAX_GRID_CELLS = 262_144
 const EPSILON = 1e-9
@@ -442,11 +443,12 @@ export function updateNavigation(entities: Entity[], fixedDelta: number, nowSeco
   const activeAgents = allAgents.slice(0, MAX_NAVIGATION_AGENTS)
   const avoidanceEntities = entities.filter(entity => entity.enabled && (entity.hasComponent('NavigationAgent2D') || entity.hasComponent('NavigationObstacle2D')))
   const spatialCellSize = Math.max(.25, Math.min(64, activeAgents.reduce((maximum, entity) => Math.max(maximum, entity.getComponent<NavigationAgent2D>('NavigationAgent2D')?.avoidanceRadius ?? 1), 1) * 2))
-  const spatial = new Map<string, Entity[]>()
+  const spatial = new SpatialHash2D(spatialCellSize), avoidanceByUuid = new Map<string, Entity>()
   for (const entity of avoidanceEntities) {
-    const position = worldTransform(entity, entities).position, key = `${Math.floor(position.x / spatialCellSize)}:${Math.floor(position.y / spatialCellSize)}`
-    const values = spatial.get(key) ?? []; values.push(entity); spatial.set(key, values)
+    const position = worldTransform(entity, entities).position
+    spatial.upsert({ id: entity.uuid, bounds: { minX: position.x, minY: position.y, maxX: position.x, maxY: position.y } }); avoidanceByUuid.set(entity.uuid, entity)
   }
+  performanceRuntimeState.spatialEntries = spatial.size
   navigationProfile.activeAgents = activeAgents.length
   navigationProfile.droppedAgents = Math.max(0, allAgents.length - activeAgents.length)
   navigationProfile.avoidancePairs = 0
@@ -488,8 +490,7 @@ export function updateNavigation(entities: Entity[], fixedDelta: number, nowSeco
     if (!waypoint) { agent.velocity = { x: 0, y: 0 }; continue }
     const dx = waypoint.x - position.x, dy = waypoint.y - position.y, distance = Math.hypot(dx, dy)
     if (distance <= Math.max(agent.stoppingDistance, agent.radius * .25)) { agent.pathIndex++; continue }
-    const sx = Math.floor(position.x / spatialCellSize), sy = Math.floor(position.y / spatialCellSize), nearby: Entity[] = []
-    for (let oy = -1; oy <= 1; oy++) for (let ox = -1; ox <= 1; ox++) nearby.push(...(spatial.get(`${sx + ox}:${sy + oy}`) ?? []))
+    const nearby = spatial.query({ minX: position.x - spatialCellSize, minY: position.y - spatialCellSize, maxX: position.x + spatialCellSize, maxY: position.y + spatialCellSize }).flatMap(uuid => { const candidate = avoidanceByUuid.get(uuid); return candidate ? [candidate] : [] })
     const desired = avoid(entity, { x: dx / distance * agent.speed, y: dy / distance * agent.speed }, agent, nearby, entities)
     const maximumDelta = Math.max(0, agent.acceleration) * fixedDelta
     const changeX = desired.x - agent.velocity.x, changeY = desired.y - agent.velocity.y, changeLength = Math.hypot(changeX, changeY)
@@ -534,10 +535,15 @@ export async function requestNavigationBake(entities: Entity[]): Promise<{ baked
   const started = performance.now()
   const regions = entities.filter(entity => entity.enabled && entity.getComponent<NavigationRegion2D>('NavigationRegion2D')?.enabled && entity.getComponent<NavigationRegion2D>('NavigationRegion2D')?.navigationMode === 'Grid').sort((a, b) => a.uuid.localeCompare(b.uuid))
   try {
+    let sliceStarted = performance.now()
     for (let index = 0; index < regions.length; index++) {
-      await new Promise<void>(resolve => setTimeout(resolve, 0))
+      if (index === 0 || performance.now() - sliceStarted >= performanceRuntimeSettings.frameWorkBudgetMs) {
+        await new Promise<void>(resolve => setTimeout(resolve, 0))
+        sliceStarted = performance.now()
+      }
       if (controller.signal.aborted) break
       const grid = bakeNavigationGrid(regions[index], entities)
+      if (controller.signal.aborted) break
       if (grid) { navigationBakeState.regions++; navigationBakeState.cells += grid.width * grid.height }
       navigationBakeState.progress = (index + 1) / Math.max(1, regions.length)
     }

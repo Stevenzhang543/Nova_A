@@ -13,7 +13,7 @@ export const NOVA_PLUGIN_API_VERSION = 2
 export const NOVA_PACKAGE_MANIFEST_VERSION = 1
 export const NOVA_BUILD_CLI_VERSION = 1
 export const NOVA_WORKSPACE_DOCUMENT_VERSION = 3
-export const NOVA_FEATURE_FREEZE = Object.freeze({ channel: '6.3-stable-contract-candidate', frozenAt: '6.0.0', lockedAt: '6.2.0', observationDays: 14, earliestApproval: '2026-09-14', externalCertificationComplete: false, exceptions: ['release-blocking correction', 'security correction', 'migration correctness', 'accessibility correction', 'performance correction', 'evidence or documentation correction'] })
+export const NOVA_FEATURE_FREEZE = Object.freeze({ channel: '7.0-stable-creator-platform', frozenAt: '6.0.0', lockedAt: '6.2.0', certifiedAt: '7.0.0', observationDays: 14, earliestApproval: '2026-09-14', externalCertificationComplete: false, nextContractDecision: 'deferred', exceptions: ['release-blocking correction', 'security correction', 'migration correctness', 'accessibility correction', 'performance correction', 'evidence or documentation correction'] })
 
 export interface StableContract {
   id: 'project' | 'script' | 'graph' | 'plugin' | 'package' | 'build' | 'workspace'
@@ -41,7 +41,7 @@ export function contractMigrationCheck(contract: StableContract['id'], sourceVer
   const source = Number(sourceVersion), targetVersion = currentVersions[contract], minimum = minimumVersions[contract]
   if (!Number.isInteger(source) || source < minimum) return { contract, sourceVersion: Number.isFinite(source) ? source : -1, targetVersion, supported: false, action: 'blocked', message: `${contract} version is missing or older than the supported migration floor ${minimum}.` }
   if (source > targetVersion) return { contract, sourceVersion: source, targetVersion, supported: false, action: 'read-only', message: `${contract} version ${source} is newer than this editor's version ${targetVersion}.` }
-  if (source === targetVersion) return { contract, sourceVersion: source, targetVersion, supported: true, action: 'none', message: `${contract} is already on the frozen 6.0 contract.` }
+  if (source === targetVersion) return { contract, sourceVersion: source, targetVersion, supported: true, action: 'none', message: `${contract} is already on the frozen 7.0 creator-platform contract.` }
   return { contract, sourceVersion: source, targetVersion, supported: true, action: 'migrate', message: `${contract} version ${source} can migrate to ${targetVersion} through its reviewed compatibility path.` }
 }
 

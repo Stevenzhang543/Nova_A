@@ -87,6 +87,8 @@ pub enum EngineEvent {
     CollisionStarted {
         first: u32,
         second: u32,
+        first_collider: u32,
+        second_collider: u32,
         point: [f64; 2],
         normal: [f64; 2],
         relative_velocity: [f64; 2],
@@ -100,6 +102,8 @@ pub enum EngineEvent {
     CollisionStayed {
         first: u32,
         second: u32,
+        first_collider: u32,
+        second_collider: u32,
         point: [f64; 2],
         normal: [f64; 2],
         relative_velocity: [f64; 2],
@@ -113,6 +117,8 @@ pub enum EngineEvent {
     CollisionEnded {
         first: u32,
         second: u32,
+        first_collider: u32,
+        second_collider: u32,
         point: [f64; 2],
         normal: [f64; 2],
         relative_velocity: [f64; 2],
@@ -125,6 +131,8 @@ pub enum EngineEvent {
     TriggerEntered {
         first: u32,
         second: u32,
+        first_collider: u32,
+        second_collider: u32,
         point: [f64; 2],
         normal: [f64; 2],
         relative_velocity: [f64; 2],
@@ -132,6 +140,8 @@ pub enum EngineEvent {
     TriggerStayed {
         first: u32,
         second: u32,
+        first_collider: u32,
+        second_collider: u32,
         point: [f64; 2],
         normal: [f64; 2],
         relative_velocity: [f64; 2],
@@ -139,6 +149,8 @@ pub enum EngineEvent {
     TriggerExited {
         first: u32,
         second: u32,
+        first_collider: u32,
+        second_collider: u32,
         point: [f64; 2],
         normal: [f64; 2],
         relative_velocity: [f64; 2],
@@ -455,6 +467,14 @@ impl RuntimeWorld {
         removed
     }
 
+    pub fn upsert_collider_shapes(
+        &mut self,
+        handle: u32,
+        records: &[f64],
+    ) -> Result<bool, &'static str> {
+        self.physics.upsert_collider_shapes(handle, records)
+    }
+
     pub fn upsert_connection(
         &mut self,
         handle: u32,
@@ -685,6 +705,8 @@ impl RuntimeWorld {
                     EngineEvent::TriggerEntered {
                         first: contact.first,
                         second: contact.second,
+                        first_collider: contact.first_collider,
+                        second_collider: contact.second_collider,
                         point: contact.point,
                         normal: contact.normal,
                         relative_velocity: contact.relative_velocity,
@@ -694,6 +716,8 @@ impl RuntimeWorld {
                     EngineEvent::TriggerStayed {
                         first: contact.first,
                         second: contact.second,
+                        first_collider: contact.first_collider,
+                        second_collider: contact.second_collider,
                         point: contact.point,
                         normal: contact.normal,
                         relative_velocity: contact.relative_velocity,
@@ -703,6 +727,8 @@ impl RuntimeWorld {
                     EngineEvent::TriggerExited {
                         first: contact.first,
                         second: contact.second,
+                        first_collider: contact.first_collider,
+                        second_collider: contact.second_collider,
                         point: contact.point,
                         normal: contact.normal,
                         relative_velocity: contact.relative_velocity,
@@ -711,6 +737,8 @@ impl RuntimeWorld {
                 PhysicsEvent::ContactStarted(contact) => EngineEvent::CollisionStarted {
                     first: contact.first,
                     second: contact.second,
+                    first_collider: contact.first_collider,
+                    second_collider: contact.second_collider,
                     point: contact.point,
                     normal: contact.normal,
                     relative_velocity: contact.relative_velocity,
@@ -724,6 +752,8 @@ impl RuntimeWorld {
                 PhysicsEvent::ContactStayed(contact) => EngineEvent::CollisionStayed {
                     first: contact.first,
                     second: contact.second,
+                    first_collider: contact.first_collider,
+                    second_collider: contact.second_collider,
                     point: contact.point,
                     normal: contact.normal,
                     relative_velocity: contact.relative_velocity,
@@ -737,6 +767,8 @@ impl RuntimeWorld {
                 PhysicsEvent::ContactEnded(contact) => EngineEvent::CollisionEnded {
                     first: contact.first,
                     second: contact.second,
+                    first_collider: contact.first_collider,
+                    second_collider: contact.second_collider,
                     point: contact.point,
                     normal: contact.normal,
                     relative_velocity: contact.relative_velocity,

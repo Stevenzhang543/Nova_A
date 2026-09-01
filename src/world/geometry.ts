@@ -1,4 +1,6 @@
 import type { Vec2 } from './types'
+import { prepareColliderSet, solverShapeArea, solverShapeInertia } from '../runtime/physicsGeometry'
+import type { ColliderShapeDescriptor2D, PhysicsShapeKind } from '../runtime/physicsProduction'
 
 export const MIN_SIZE = 1e-6
 export const MIN_AREA = MIN_SIZE * MIN_SIZE * 1e-6
@@ -56,6 +58,11 @@ interface GeometryEntity {
     vertices: Vec2[]
     physicsLayer: number
     collisionMask: number
+    shapeModel: PhysicsShapeKind
+    shapes: ColliderShapeDescriptor2D[]
+    sensor: boolean
+    oneWay: boolean
+    oneWayNormal: Vec2
   } | null
 }
 
@@ -151,6 +158,11 @@ export function polygonArea(vertices: Vec2[], scale: Vec2 = { x: 1, y: 1 }): num
 
 export function entityArea(entity: GeometryEntity): number {
   const collider = entity.getCollider?.()
+  if (collider) {
+    const prepared = prepareColliderSet(collider, false)
+    const compoundArea = prepared.shapes.reduce((sum, shape) => sum + solverShapeArea(shape, entity.transform.scale), 0)
+    if (compoundArea > MIN_AREA) return compoundArea
+  }
   if (collider?.kind === 'EllipseCollider2D' || (!collider && entity.shapeType === 'Circle')) {
     const radiusX = positiveNumber(collider?.radiusX ?? entity.radiusX, 1) * positiveNumber(entity.transform.scale.x, 1)
     const radiusY = positiveNumber(collider?.radiusY ?? entity.radiusY, 1) * positiveNumber(entity.transform.scale.y, 1)
@@ -163,6 +175,11 @@ export function effectiveInertia(entity: GeometryEntity): number {
   const mass = clampNumber(entity.mass, MIN_MASS, MAX_MASS, 1)
   if (!entity.autoInertia) return positiveNumber(entity.inertia, mass)
   const collider = entity.getCollider?.()
+  if (collider) {
+    const shapes = prepareColliderSet(collider, false).shapes.filter(shape => !shape.sensor)
+    const areas = shapes.map(shape => solverShapeArea(shape, entity.transform.scale)), totalArea = areas.reduce((sum, area) => sum + area, 0)
+    if (totalArea > MIN_AREA) return Math.max(shapes.reduce((sum, shape, index) => sum + solverShapeInertia(shape, entity.transform.scale, mass * areas[index] / totalArea), 0), MIN_INERTIA)
+  }
 
   if (collider?.kind === 'EllipseCollider2D' || (!collider && entity.shapeType === 'Circle')) {
     const radiusX = positiveNumber(collider?.radiusX ?? entity.radiusX, 1) * positiveNumber(entity.transform.scale.x, 1)

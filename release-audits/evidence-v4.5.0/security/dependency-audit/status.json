@@ -1,9 +1,0 @@
-{
-  "format": "nova-dependency-audit",
-  "version": 1,
-  "release": "4.5.0",
-  "localBuild": "passed",
-  "networkRegistryAudit": "not-run-restricted-network",
-  "independentReview": "pending-external-gate",
-  "status": "local-only"
-}

@@ -75,6 +75,7 @@ import { editorState as state, closeContextMenu } from "../store/editor"
 import { physicsState } from '../store/physics'
 import { dockEditorPanel, initializeEditorWorkspaces, workspaceState } from '../editor/workspaces'
 import { recoveryState } from '../runtime/recovery'
+import { recordWarmStartup } from '../runtime/largeWorldPerformance'
 import { t } from '../i18n'
 
 const loadConfigPanel = () => import('../components/ConfigPanel.vue')
@@ -97,7 +98,11 @@ const inspectorLoaded = ref(showInspector.value)
 watch(showInspector, visible => { if (visible) inspectorLoaded.value = true })
 let idleWarmup = 0
 onMounted(() => {
-  const warm = () => { void Promise.allSettled([loadConfigPanel(), loadScriptWorkspace(), loadPresentationPanel(), loadManageWorkspace(), loadPhysicsRuntimePanel()]) }
+  const warm = () => {
+    const started = performance.now()
+    void Promise.allSettled([loadConfigPanel(), loadScriptWorkspace(), loadPresentationPanel(), loadManageWorkspace(), loadPhysicsRuntimePanel()])
+      .then(() => recordWarmStartup(started))
+  }
   idleWarmup = window.requestIdleCallback(warm, { timeout: 2_000 })
 })
 onBeforeUnmount(() => {

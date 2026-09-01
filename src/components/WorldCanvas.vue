@@ -13,13 +13,13 @@ import { boundCompoundEntityIds, connectionGeometrySignature, connectionSharesLa
 import { t } from '../i18n'
 import { defaultColorForLayer } from '../world/layers'
 import { compoundGeometries } from '../world/compoundGeometry'
-import { localPointToWorld, worldPointToLocal, worldTransform } from '../world/hierarchy'
+import { localPointToWorld, prepareHierarchyIndex, worldPointToLocal, worldTransform } from '../world/hierarchy'
 import { applyRotation, applyScale, applyTranslation, axisVector, captureTransforms, gizmoPivot, gizmoRotation, projectedDelta, type GizmoAxis, type TransformSnapshot } from '../editor/gizmo'
 import { createRenderer2D, type Renderer2D } from '../renderer'
 import { reportRendererReset } from '../renderer/capabilities'
 import { renderWorld } from '../renderer/sceneRenderer'
 import { assetReference, resolveAsset } from '../assets/AssetDatabase'
-import { type CharacterBody2D, type Joint2D, type TextInput, type TileMap2D } from '../world/components'
+import { type CharacterBody2D, type Joint2D, type RectTransform, type TextInput, type TileMap2D } from '../world/components'
 import { gameplayRuntime } from '../runtime/GameplayRuntime'
 import { gameUiRuntime, type UiAccessibilityNode } from '../runtime/gameUi'
 import { rebindInputAction } from '../runtime/input'
@@ -33,12 +33,15 @@ import { renderDebugView2D, renderLighting2D, renderPostProcessOverlay, worldPos
 import { beginRenderGraph, captureRenderSurface, completeRenderGraph, recordRenderPass, renderGraphState } from '../renderer/renderGraph'
 import { captureRenderTexture } from '../renderer/renderTextures'
 import { activeGameCameras } from '../renderer/sceneRenderer'
-import { renderingSettings } from '../renderer/renderSettings'
+import { activeRenderQuality, renderingSettings } from '../renderer/renderSettings'
+import { prepareColliderSet } from '../runtime/physicsGeometry'
 import { recordEntityProperties } from '../editor/animationStudioState'
 import { navigationPaths, worldGameplayState } from '../runtime/worldGameplay'
 import { worldStreamingState } from '../runtime/worldStreaming'
 import { authoringState, createAuthoringObject } from '../editor/authoring2d'
 import { timelinePresentationState } from '../runtime/timeline'
+import VirtualControlsOverlay from './VirtualControlsOverlay.vue'
+import { beginPerformanceFrame, completePerformanceFrame, markPerformanceInput, performanceRuntimeState } from '../runtime/largeWorldPerformance'
 
 const canvasRef = ref<HTMLCanvasElement | null>(null)
 const renderCanvasRef = ref<HTMLCanvasElement | null>(null)
@@ -178,7 +181,7 @@ function closeNativeInput() {
 
 function resize() {
   const canvas = canvasRef.value; if (!canvas) return
-  canvasPixelRatio = Math.min(window.devicePixelRatio || 1, prefs.maxPixelRatio, renderingSettings.maximumPixelRatio)
+  canvasPixelRatio = Math.max(.5, Math.min(window.devicePixelRatio || 1, prefs.maxPixelRatio, activeRenderQuality.maximumPixelRatio) * performanceRuntimeState.adaptivePixelRatioScale)
   const dpr = canvasPixelRatio; const r = canvas.getBoundingClientRect()
   const oldWidth = canvas.width / dpr; const oldHeight = canvas.height / dpr
   const nextWidth = Math.max(1, Math.round(r.width * dpr)); const nextHeight = Math.max(1, Math.round(r.height * dpr))
@@ -212,6 +215,7 @@ function scheduleResize() {
 function runFrame(time?: number) {
   const now = time || performance.now(); const dt = (now - lastTime) / 1000; lastTime = now
   const frameStarted = performance.now()
+  beginPerformanceFrame(frameStarted)
   flushPendingMouseMove()
 
   if (camera.targetScale !== null && !prefs.reduceMotion) {
@@ -231,6 +235,9 @@ function runFrame(time?: number) {
 
   if (editorState.currentPage === 'scene' && !state.simulationRunning) syncEditableConnections(true)
   gameplayRuntime.frame(Math.min(dt, 0.1), canvasRef.value?.getBoundingClientRect())
+  // Runtime commands may change hierarchy membership. Prepare the renderer's
+  // identity lookup after simulation so the frame cannot consume stale parents.
+  prepareHierarchyIndex(world.entities)
   if (editorState.currentPage === 'scene' && state.simulationRunning) syncEditableConnections(false)
   for (const connection of world.connections) {
     if (connection.breakState !== 'intact' && !knownBrokenConnections.has(connection.id)) {
@@ -257,9 +264,14 @@ function runFrame(time?: number) {
       otherMs: Math.max(0, Math.min(performance.now() - frameStarted, frameMs || Number.POSITIVE_INFINITY) - measured),
       fps: dt > 0 ? 1 / dt : 0, memoryMb: memory ? memory.usedJSHeapSize / (1024 * 1024) : null,
       inputMs: timings.inputMs, allocations: performanceSample.allocations,
-      gpuPasses: renderGraphState.passes.filter(pass => pass.enabled).length, assetJobs: performanceSample.assetJobs
+      gpuPasses: renderGraphState.passes.filter(pass => pass.enabled).length, assetJobs: performanceSample.assetJobs,
+      mainThreadMs: performanceRuntimeState.mainThreadMs, workerMs: performanceRuntimeState.workerMs,
+      queueWaitMs: performanceRuntimeState.queueWaitMs, cacheHitRate: performanceRuntimeState.cacheHitRate,
+      worstFrameMs: performanceRuntimeState.worstFrameMs, onePercentLowFps: performanceRuntimeState.onePercentLowFps,
+      inputToPixelMs: performanceRuntimeState.inputToPixelMs
     })
   }
+  completePerformanceFrame()
 }
 
 function loop(time?: number) {
@@ -302,7 +314,7 @@ function resetRenderer() {
 }
 
 function screenPos(e: MouseEvent): Vec2 { const r = canvasRef.value!.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top } }
-function onWheel(e: WheelEvent) { e.preventDefault(); if (editorState.currentPage === 'game') { gameUiRuntime.wheel(screenPos(e), e.deltaX, e.deltaY); return } const factor = Math.pow(1.1, prefs.zoomSensitivity); camera.zoomAt(screenPos(e), e.deltaY < 0 ? factor : 1 / factor) }
+function onWheel(e: WheelEvent) { markPerformanceInput(); e.preventDefault(); if (editorState.currentPage === 'game') { gameUiRuntime.wheel(screenPos(e), e.deltaX, e.deltaY); return } const factor = Math.pow(1.1, prefs.zoomSensitivity); camera.zoomAt(screenPos(e), e.deltaY < 0 ? factor : 1 / factor) }
 function onAssetDragOver(event: DragEvent) { if (state.playMode === 'editing' && event.dataTransfer?.types.includes('application/x-nova-asset-guid')) event.preventDefault() }
 function onAssetDrop(event: DragEvent) {
   if (state.playMode !== 'editing') return
@@ -385,6 +397,7 @@ function editorBoundaryPoints(entity: Entity, samples = 48): Vec2[] {
 }
 
 function onKeyDown(event: KeyboardEvent) {
+  markPerformanceInput()
   if (focusedUiInput.value && (document.activeElement === nativeInputRef.value || event.isComposing)) return
   if (editorState.currentPage === 'game' && gameUiRuntime.keyDown(event)) { event.preventDefault(); return }
   if ((event.key === 'Delete' || event.key === 'Backspace') && hoveredVertex && (hoveredVertex.target === 'renderer')) {
@@ -518,6 +531,7 @@ function beginVertexDrag(entityId: number, point: Vec2, button: number): boolean
 }
 
 function onMouseDown(e: MouseEvent) {
+  markPerformanceInput()
   const sPos = screenPos(e); const wPos = camera.screenToWorld(sPos); dragButton = e.button; hasMovedEntity = false
   if (editorState.currentPage === 'game') {
     if (e.button === 0) { gameUiRuntime.pointerDown(sPos); synchronizeNativeInput(true) }
@@ -601,6 +615,7 @@ function onDoubleClick(event: MouseEvent) {
 }
 
 function onMouseMove(e: MouseEvent) {
+  markPerformanceInput()
   // Browser mouse events can arrive much faster than the display can present
   // them. Retaining only the newest sample prevents an expensive drag or snap
   // operation from building an input backlog while still updating every frame.
@@ -696,6 +711,7 @@ function finishCanvasDrag() {
 }
 
 function onMouseUp(event?: MouseEvent) {
+  markPerformanceInput()
   flushPendingMouseMove()
   if (editorState.currentPage === 'game') {
     if (event && canvasRef.value) gameUiRuntime.pointerUp(screenPos(event))
@@ -955,20 +971,18 @@ function rotateLocal(point: Vec2, angle: number): Vec2 {
   return { x: point.x * cosine - point.y * sine, y: point.x * sine + point.y * cosine }
 }
 
-function colliderOutline(entity: Entity): Vec2[] {
+function colliderOutlines(entity: Entity) {
   const collider = entity.getCollider()
   if (!collider?.enabled) return []
-  const local = collider.kind === 'EllipseCollider2D'
-    ? Array.from({ length: 49 }, (_, index) => {
-      const angle = index / 48 * Math.PI * 2
-      const point = rotateLocal({ x: Math.cos(angle) * collider.radiusX, y: Math.sin(angle) * collider.radiusY }, collider.rotation)
-      return { x: collider.offset.x + point.x, y: collider.offset.y + point.y }
-    })
-    : [...collider.vertices, collider.vertices[0]].filter(Boolean).map(vertex => {
-      const point = rotateLocal(vertex, collider.rotation)
-      return { x: collider.offset.x + point.x, y: collider.offset.y + point.y }
-    })
-  return local.map(point => localPointToWorld(entity, point, world.entities))
+  const prepared = prepareColliderSet(collider, !entity.isStatic && !entity.isKinematic)
+  return prepared.shapes.map(shape => {
+    let authored = shape.points
+    if (!authored.length && shape.kind === 'Circle') authored = Array.from({ length: 49 }, (_, index) => { const angle = index / 48 * Math.PI * 2; return { x: Math.cos(angle) * shape.size.x * .5, y: Math.sin(angle) * shape.size.y * .5 } })
+    else if (!authored.length) authored = [{x:-shape.size.x*.5,y:-shape.size.y*.5},{x:shape.size.x*.5,y:-shape.size.y*.5},{x:shape.size.x*.5,y:shape.size.y*.5},{x:-shape.size.x*.5,y:shape.size.y*.5},{x:-shape.size.x*.5,y:-shape.size.y*.5}]
+    else authored = [...authored, authored[0]]
+    const points = authored.map(vertex => { const rotated=rotateLocal(vertex,shape.rotation); return localPointToWorld(entity,{x:shape.offset.x+rotated.x,y:shape.offset.y+rotated.y},world.entities) })
+    return { points, id: shape.id, sensor: shape.sensor, physicsLayer: shape.physicsLayer }
+  })
 }
 
 function drawPhysicsDebug(context: CanvasRenderingContext2D) {
@@ -977,18 +991,24 @@ function drawPhysicsDebug(context: CanvasRenderingContext2D) {
   context.lineWidth = 1.5 / camera.scale
   for (const entity of world.entities) {
     if (!entity.enabled || (editorState.currentPage === 'scene' && entity.layer !== editorState.activeLayer)) continue
-    const points = colliderOutline(entity)
-    if (points.length < 2) continue
+    const outlines = colliderOutlines(entity)
+    const allPoints = outlines.flatMap(outline => outline.points)
+    if (!allPoints.length) continue
     if (physicsDebugState.showSleepingBodies && entity.rigidBody.sleeping) {
-      context.beginPath(); context.moveTo(points[0].x, points[0].y); points.slice(1).forEach(point => context.lineTo(point.x, point.y)); context.closePath()
-      context.fillStyle = 'rgba(92,156,255,.13)'; context.fill()
+      context.fillStyle = 'rgba(92,156,255,.13)'
+      for (const { points } of outlines) { if(points.length<2)continue; context.beginPath(); context.moveTo(points[0].x, points[0].y); points.slice(1).forEach(point => context.lineTo(point.x, point.y)); context.closePath(); context.fill() }
     }
     if (physicsDebugState.showColliders) {
-      context.beginPath(); context.moveTo(points[0].x, points[0].y); points.slice(1).forEach(point => context.lineTo(point.x, point.y))
-      context.strokeStyle = physicsDebugState.colorByPhysicsLayer ? (state.globalSettings.layers[entity.collider.physicsLayer]?.color ?? '#62d8a0') : entity.collider.sensor ? '#f2b45f' : entity.rigidBody.sleeping ? '#669ce8' : '#62d8a0'; context.stroke()
+      for (const outline of outlines) {
+        const { points } = outline
+        if(points.length<2)continue
+        context.strokeStyle = physicsDebugState.colorByPhysicsLayer ? (state.globalSettings.layers[outline.physicsLayer]?.color ?? '#62d8a0') : outline.sensor ? '#f2b45f' : entity.rigidBody.sleeping ? '#669ce8' : '#62d8a0'
+        context.beginPath(); context.moveTo(points[0].x, points[0].y); points.slice(1).forEach(point => context.lineTo(point.x, point.y)); context.stroke()
+        if (outlines.length > 1) { const center = points.reduce((sum, point) => ({ x: sum.x + point.x / points.length, y: sum.y + point.y / points.length }), { x: 0, y: 0 }); context.fillStyle = context.strokeStyle; context.font = `${10 / camera.scale}px ui-monospace, monospace`; context.fillText(`#${String(outline.id).slice(-5)}`, center.x + 3 / camera.scale, center.y - 3 / camera.scale) }
+      }
     }
     if (physicsDebugState.showAabbs) {
-      const xs = points.map(point => point.x), ys = points.map(point => point.y)
+      const xs = allPoints.map(point => point.x), ys = allPoints.map(point => point.y)
       const left = Math.min(...xs), right = Math.max(...xs), bottom = Math.min(...ys), top = Math.max(...ys)
       context.setLineDash([4 / camera.scale, 4 / camera.scale]); context.strokeStyle = '#b786f5'; context.strokeRect(left, bottom, right - left, top - bottom); context.setLineDash([])
     }
@@ -1052,6 +1072,8 @@ function drawPhysicsDebug(context: CanvasRenderingContext2D) {
 
 function render() {
   if (!ctx || !canvasRef.value) return
+  const desiredPixelRatio = Math.max(.5, Math.min(window.devicePixelRatio || 1, prefs.maxPixelRatio, activeRenderQuality.maximumPixelRatio) * performanceRuntimeState.adaptivePixelRatioScale)
+  if (Math.abs(desiredPixelRatio - canvasPixelRatio) > .001) resize()
   const cvs = canvasRef.value; const width = cvs.width / canvasPixelRatio; const height = cvs.height / canvasPixelRatio
   const graphStarted = beginRenderGraph()
   let passStarted = graphStarted
@@ -1349,6 +1371,7 @@ function drawTilemapOverlay(context: CanvasRenderingContext2D, view: { minX: num
   <div class="canvas-container" @dragover="onAssetDragOver" @drop="onAssetDrop">
     <canvas ref="renderCanvasRef" class="render-canvas" :style="{ filter: worldPostProcessFilter() }" aria-hidden="true" />
     <canvas ref="canvasRef" class="overlay-canvas" @mousedown="onMouseDown" @mousemove="onMouseMove" @mouseup="onMouseUp" @dblclick="onDoubleClick" @wheel="onWheel" @contextmenu.prevent />
+    <VirtualControlsOverlay v-if="editorState.currentPage === 'game'" />
     <div v-if="editorState.currentPage === 'game' && accessibilityNodes.length" class="game-ui-a11y" aria-label="Game UI">
       <div
         v-for="node in accessibilityNodes"
@@ -1357,6 +1380,10 @@ function drawTilemapOverlay(context: CanvasRenderingContext2D, view: { minX: num
         :style="{ left: `${node.rect.x}px`, top: `${node.rect.y}px`, width: `${node.rect.width}px`, height: `${node.rect.height}px` }"
         :role="node.role"
         :aria-label="node.label"
+        :aria-valuemin="node.valueMin"
+        :aria-valuemax="node.valueMax"
+        :aria-valuenow="node.valueNow"
+        :aria-checked="node.checked"
         :aria-description="node.description || undefined"
         :aria-valuetext="node.value || undefined"
         :aria-live="node.live"
@@ -1374,6 +1401,7 @@ function drawTilemapOverlay(context: CanvasRenderingContext2D, view: { minX: num
       v-if="focusedUiInput && editorState.currentPage === 'game'"
       ref="nativeInputRef"
       class="native-ui-input"
+      :aria-label="focusedUiInput.entity.getComponent<RectTransform>('RectTransform')?.accessibilityLabel || focusedUiInput.entity.name"
       :style="nativeInputStyle()"
       :type="focusedUiInput.input.password ? 'password' : 'text'"
       :value="focusedUiInput.input.value"

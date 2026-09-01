@@ -1,9 +1,0 @@
-{
-  "format": "nova-build-script-manifest",
-  "version": 1,
-  "apiManifest": "docs/RHAI_API_V2_MANIFEST.json",
-  "apiCurrent": 2,
-  "apiMinimum": 1,
-  "debugMetadataStrippedFromReleasePlayer": true,
-  "status": "passed-static"
-}

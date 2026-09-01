@@ -1,4 +1,5 @@
 import { reactive } from 'vue'
+import { loadPerformanceRuntimeSettings } from './largeWorldPerformance'
 
 export type TestKind = 'unit' | 'integration' | 'scene' | 'ui' | 'physics' | 'animation' | 'regression' | 'headless'
 export type TestAssertionKind = 'entityCountAtLeast' | 'entityExists' | 'finitePhysics' | 'checksumEquals' | 'noRuntimeErrors'
@@ -46,6 +47,10 @@ export interface ReplicatedEntityDefinition {
   properties: string[]
   interpolate: boolean
   predict: boolean
+  ownerPeerId: string
+  alwaysRelevant: boolean
+  interestRadius: number
+  sceneUuid: string
 }
 
 export interface NetworkChannelDefinition {
@@ -76,6 +81,31 @@ export interface NetworkSimulationSettings {
   seed: number
 }
 
+export interface NetworkAuthenticationSettings {
+  mode: 'none' | 'hook'
+  providerId: string
+  requireVerifiedPeers: boolean
+  handshakeTimeoutMs: number
+}
+
+export interface NetworkSecuritySettings {
+  requireEncryption: boolean
+  maximumPacketAgeMs: number
+  replayWindow: number
+}
+
+export interface NetworkInterestSettings {
+  enabled: boolean
+  defaultRadius: number
+  maximumRadius: number
+}
+
+export interface NetworkMultiInstanceSettings {
+  peerCount: number
+  separateLogs: boolean
+  separateInspectors: boolean
+}
+
 export interface ProductionProjectSettings {
   performance: {
     traceCapacity: number
@@ -93,6 +123,12 @@ export interface ProductionProjectSettings {
     profilerOverheadBudgetPercent: number
     leakWindowFrames: number
     lifetimeCapacity: number
+    adaptiveQuality: boolean
+    frameWorkBudgetMs: number
+    streamingBudgetMs: number
+    maximumCommandsPerFrame: number
+    reactivePublishInterval: number
+    spatialCellSize: number
   }
   replay: {
     seed: number
@@ -122,6 +158,7 @@ export interface ProductionProjectSettings {
     playerName: string
     maxPeers: number
     transport: NetworkTransportKind
+    transportAdapterId: string
     endpoint: string
     bindAddress: string
     snapshotRate: number
@@ -142,19 +179,25 @@ export interface ProductionProjectSettings {
     channels: NetworkChannelDefinition[]
     rpcContracts: NetworkRpcDefinition[]
     simulation: NetworkSimulationSettings
+    authentication: NetworkAuthenticationSettings
+    security: NetworkSecuritySettings
+    interest: NetworkInterestSettings
+    multiInstance: NetworkMultiInstanceSettings
+    allowAuthorityTransfer: boolean
+    allowSceneHandoff: boolean
     replicatedEntities: ReplicatedEntityDefinition[]
   }
 }
 
 const DEFAULTS: ProductionProjectSettings = {
-  performance: { traceCapacity: 600, memoryBudgetMb: 300, assetBudgetMb: 512, animationBudgetMs: 2, uiBudgetMs: 2, frameBudgetMs: 16.667, renderingBudgetMs: 8, audioBudgetMs: 2, gpuBudgetMs: 8, drawCallBudget: 500, textureBudgetMb: 256, particleBudgetMs: 2, profilerOverheadBudgetPercent: 5, leakWindowFrames: 600, lifetimeCapacity: 2_000 },
+  performance: { traceCapacity: 600, memoryBudgetMb: 300, assetBudgetMb: 512, animationBudgetMs: 2, uiBudgetMs: 2, frameBudgetMs: 16.667, renderingBudgetMs: 8, audioBudgetMs: 2, gpuBudgetMs: 8, drawCallBudget: 500, textureBudgetMb: 256, particleBudgetMs: 2, profilerOverheadBudgetPercent: 5, leakWindowFrames: 600, lifetimeCapacity: 2_000, adaptiveQuality: true, frameWorkBudgetMs: 2.5, streamingBudgetMs: 1.5, maximumCommandsPerFrame: 2_048, reactivePublishInterval: 4, spatialCellSize: 16 },
   replay: { seed: 0x4e4f5641, capacity: 3_600, strictChecksums: true },
   testing: { defaultTimeoutMs: 10_000, tests: [] },
   data: { saveSchemaVersion: 1, saveMigrations: [] },
   jobs: { maxWorkers: 2, maxQueued: 256, timeoutMs: 15_000 },
   networking: {
     enabled: false, permissionGranted: false, autoStart: false, role: 'client', sessionMode: 'local', sessionName: 'Local game', playerName: 'Player', maxPeers: 8,
-    transport: 'websocket', endpoint: 'ws://127.0.0.1:7777', bindAddress: '127.0.0.1:0',
+    transport: 'websocket', transportAdapterId: '', endpoint: 'ws://127.0.0.1:7777', bindAddress: '127.0.0.1:0',
     snapshotRate: 20, interpolationMs: 100, rollbackFrames: 120, bandwidthKbps: 256, reconnect: true, reconnectMaxAttempts: 8,
     protocolVersion: 2, schemaVersion: 1, maximumPacketBytes: 65_507, maximumMessagesPerSecond: 240, maximumPendingReliable: 512,
     reliableRetryMs: 120, reliableMaximumAttempts: 8, reconciliationThreshold: .05, lateJoin: true,
@@ -165,6 +208,12 @@ const DEFAULTS: ProductionProjectSettings = {
     ],
     rpcContracts: [],
     simulation: { enabled: false, latencyMs: 0, jitterMs: 0, lossPercent: 0, duplicatePercent: 0, reorderPercent: 0, seed: 0x4e455457 },
+    authentication: { mode: 'none', providerId: '', requireVerifiedPeers: false, handshakeTimeoutMs: 5_000 },
+    security: { requireEncryption: false, maximumPacketAgeMs: 15_000, replayWindow: 2_048 },
+    interest: { enabled: false, defaultRadius: 64, maximumRadius: 4_096 },
+    multiInstance: { peerCount: 2, separateLogs: true, separateInspectors: true },
+    allowAuthorityTransfer: true,
+    allowSceneHandoff: true,
     replicatedEntities: []
   }
 }
@@ -225,7 +274,10 @@ export function normalizeProductionSettings(value: unknown): ProductionProjectSe
     return [{
       entityUuid, authority: item.authority === 'owner' ? 'owner' as const : 'server' as const,
       properties: [...new Set((Array.isArray(item.properties) ? item.properties : ['transform', 'velocity']).flatMap(property => typeof property === 'string' && allowedProperties.has(property) ? [property] : []))],
-      interpolate: item.interpolate !== false, predict: item.predict === true
+      interpolate: item.interpolate !== false, predict: item.predict === true,
+      ownerPeerId: text(item.ownerPeerId, '', 80), alwaysRelevant: item.alwaysRelevant === true,
+      interestRadius: bounded(item.interestRadius, DEFAULTS.networking.interest.defaultRadius, 0, DEFAULTS.networking.interest.maximumRadius),
+      sceneUuid: text(item.sceneUuid, '', 128)
     }]
   })
   const deliveries: NetworkDelivery[] = ['reliable-ordered', 'unreliable-sequenced']
@@ -247,7 +299,7 @@ export function normalizeProductionSettings(value: unknown): ProductionProjectSe
     const authority: NetworkRpcDefinition['authority'] = item.authority === 'owner' || item.authority === 'any' ? item.authority : 'server'
     return [{ name, channelId: channelIds.has(String(item.channelId)) ? String(item.channelId) : channels[0].id, direction, authority, payloadSchema: schemas.includes(item.payloadSchema as NetworkPayloadSchema) ? item.payloadSchema as NetworkPayloadSchema : 'any', maximumPayloadBytes: bounded(item.maximumPayloadBytes, 8_192, 2, 65_507, true), callsPerSecond: bounded(item.callsPerSecond, 30, 1, 1_000, true) }]
   })
-  const simulation = object(networking.simulation)
+  const simulation = object(networking.simulation), authentication = object(networking.authentication), security = object(networking.security), interest = object(networking.interest), multiInstance = object(networking.multiInstance)
   return {
     performance: {
       traceCapacity: bounded(performance.traceCapacity, DEFAULTS.performance.traceCapacity, 60, 10_000, true),
@@ -265,6 +317,12 @@ export function normalizeProductionSettings(value: unknown): ProductionProjectSe
       profilerOverheadBudgetPercent: bounded(performance.profilerOverheadBudgetPercent, DEFAULTS.performance.profilerOverheadBudgetPercent, 0, 100),
       leakWindowFrames: bounded(performance.leakWindowFrames, DEFAULTS.performance.leakWindowFrames, 60, 60_000, true),
       lifetimeCapacity: bounded(performance.lifetimeCapacity, DEFAULTS.performance.lifetimeCapacity, 100, 20_000, true)
+      , adaptiveQuality: performance.adaptiveQuality !== false
+      , frameWorkBudgetMs: bounded(performance.frameWorkBudgetMs, DEFAULTS.performance.frameWorkBudgetMs, .1, 20)
+      , streamingBudgetMs: bounded(performance.streamingBudgetMs, DEFAULTS.performance.streamingBudgetMs, .1, 20)
+      , maximumCommandsPerFrame: bounded(performance.maximumCommandsPerFrame, DEFAULTS.performance.maximumCommandsPerFrame, 32, 100_000, true)
+      , reactivePublishInterval: bounded(performance.reactivePublishInterval, DEFAULTS.performance.reactivePublishInterval, 1, 120, true)
+      , spatialCellSize: bounded(performance.spatialCellSize, DEFAULTS.performance.spatialCellSize, .01, 1_000_000)
     },
     replay: { seed: bounded(replay.seed, DEFAULTS.replay.seed, 0, 0xffff_ffff, true) >>> 0, capacity: bounded(replay.capacity, DEFAULTS.replay.capacity, 60, 60_000, true), strictChecksums: replay.strictChecksums !== false },
     testing: { defaultTimeoutMs: bounded(testing.defaultTimeoutMs, DEFAULTS.testing.defaultTimeoutMs, 100, 120_000, true), tests },
@@ -276,7 +334,7 @@ export function normalizeProductionSettings(value: unknown): ProductionProjectSe
       sessionMode: networking.sessionMode === 'direct' ? 'direct' : 'local', sessionName: text(networking.sessionName, DEFAULTS.networking.sessionName, 80), playerName: text(networking.playerName, DEFAULTS.networking.playerName, 80),
       maxPeers: bounded(networking.maxPeers, DEFAULTS.networking.maxPeers, 1, 64, true),
       transport: transports.includes(networking.transport as NetworkTransportKind) ? networking.transport as NetworkTransportKind : 'websocket',
-      endpoint: text(networking.endpoint, DEFAULTS.networking.endpoint, 512), bindAddress: text(networking.bindAddress, DEFAULTS.networking.bindAddress, 256),
+      transportAdapterId: id(networking.transportAdapterId, ''), endpoint: text(networking.endpoint, DEFAULTS.networking.endpoint, 512), bindAddress: text(networking.bindAddress, DEFAULTS.networking.bindAddress, 256),
       snapshotRate: bounded(networking.snapshotRate, 20, 1, 120, true), interpolationMs: bounded(networking.interpolationMs, 100, 0, 2_000, true),
       rollbackFrames: bounded(networking.rollbackFrames, 120, 0, 600, true), bandwidthKbps: bounded(networking.bandwidthKbps, 256, 8, 1_000_000, true),
       reconnect: networking.reconnect !== false, reconnectMaxAttempts: bounded(networking.reconnectMaxAttempts, DEFAULTS.networking.reconnectMaxAttempts, 0, 32, true),
@@ -286,11 +344,28 @@ export function normalizeProductionSettings(value: unknown): ProductionProjectSe
       reconciliationThreshold: bounded(networking.reconciliationThreshold, DEFAULTS.networking.reconciliationThreshold, 0, 1_000), lateJoin: networking.lateJoin !== false,
       channels, rpcContracts,
       simulation: { enabled: simulation.enabled === true, latencyMs: bounded(simulation.latencyMs, 0, 0, 10_000, true), jitterMs: bounded(simulation.jitterMs, 0, 0, 10_000, true), lossPercent: bounded(simulation.lossPercent, 0, 0, 100), duplicatePercent: bounded(simulation.duplicatePercent, 0, 0, 100), reorderPercent: bounded(simulation.reorderPercent, 0, 0, 100), seed: bounded(simulation.seed, DEFAULTS.networking.simulation.seed, 0, 0xffff_ffff, true) >>> 0 },
+      authentication: { mode: authentication.mode === 'hook' ? 'hook' : 'none', providerId: id(authentication.providerId, ''), requireVerifiedPeers: authentication.requireVerifiedPeers === true, handshakeTimeoutMs: bounded(authentication.handshakeTimeoutMs, DEFAULTS.networking.authentication.handshakeTimeoutMs, 250, 30_000, true) },
+      security: { requireEncryption: security.requireEncryption === true, maximumPacketAgeMs: bounded(security.maximumPacketAgeMs, DEFAULTS.networking.security.maximumPacketAgeMs, 1_000, 120_000, true), replayWindow: bounded(security.replayWindow, DEFAULTS.networking.security.replayWindow, 64, 16_384, true) },
+      interest: { enabled: interest.enabled === true, defaultRadius: bounded(interest.defaultRadius, DEFAULTS.networking.interest.defaultRadius, 0, 1_000_000), maximumRadius: bounded(interest.maximumRadius, DEFAULTS.networking.interest.maximumRadius, 1, 1_000_000) },
+      multiInstance: { peerCount: bounded(multiInstance.peerCount, DEFAULTS.networking.multiInstance.peerCount, 2, 8, true), separateLogs: multiInstance.separateLogs !== false, separateInspectors: multiInstance.separateInspectors !== false },
+      allowAuthorityTransfer: networking.allowAuthorityTransfer !== false,
+      allowSceneHandoff: networking.allowSceneHandoff !== false,
       replicatedEntities
     }
   }
 }
 
-export function loadProductionSettings(value: unknown): void { Object.assign(productionSettings, normalizeProductionSettings(value)) }
+export function loadProductionSettings(value: unknown): void {
+  Object.assign(productionSettings, normalizeProductionSettings(value))
+  loadPerformanceRuntimeSettings({
+    adaptiveQuality: productionSettings.performance.adaptiveQuality,
+    targetFrameMs: productionSettings.performance.frameBudgetMs,
+    frameWorkBudgetMs: productionSettings.performance.frameWorkBudgetMs,
+    streamingBudgetMs: productionSettings.performance.streamingBudgetMs,
+    maximumCommandsPerFrame: productionSettings.performance.maximumCommandsPerFrame,
+    reactivePublishInterval: productionSettings.performance.reactivePublishInterval,
+    spatialCellSize: productionSettings.performance.spatialCellSize
+  })
+}
 export function serializeProductionSettings(): ProductionProjectSettings { return normalizeProductionSettings(productionSettings) }
 export function resetProductionSettings(): void { Object.assign(productionSettings, structuredClone(DEFAULTS)) }

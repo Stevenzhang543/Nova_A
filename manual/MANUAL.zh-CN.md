@@ -1,4 +1,4 @@
-# Nova_A 6.2.0 完整使用手册
+# Nova_A 7.0.0 完整使用手册
 
 ## 6.2.0 行为契约
 
@@ -832,11 +832,11 @@ AI 工作流：启用官方包，添加 BehaviorTree2D 并创建 v2 资源。模
 在**交付**刷新确定性 CI 缓存键，并让差异构建配合补丁清单。创建本地、HTTPS 或外部命令连接器；远程／外部连接器必须获得项目权限。“准备计划”只验证目标和校验和，返回不可执行计划，不会访问网络。最终部署仍需外部明确执行。详见 `docs/EXTENSIONS_PLATFORM_DELIVERY_5_9.md`。
 
 <!-- NOVA_V6_TEACHING_START -->
-# Nova_A 6.4.0 任务式教学手册
+# Nova_A 7.0.0 任务式教学手册
 
 通过完成真实任务学习。以下每个公开功能均说明归属、持久化、恢复、无障碍和发布行为。
 
-- Engine: **6.4.0**
+- Engine: **7.0.0**
 - Stable contracts: Project Format 2/schema 29; Rhai API 2; Graph Format 1; Plugin API 2; Package Manifest 1; Build CLI 1; workspace document 3.
 - External signing, independent clean-machine evidence, two-machine reproduction, matching-host builds and a real 72-hour soak remain pending until independently captured.
 
@@ -994,7 +994,7 @@ AI 工作流：启用官方包，添加 BehaviorTree2D 并创建 v2 资源。模
 
 <a id="project-manager-import-archive"></a>
 
-### Import archive
+### 导入归档
 
 **分类:** Assisted · Project-wide · Reversible
 
@@ -1618,7 +1618,7 @@ AI 工作流：启用官方包，添加 BehaviorTree2D 并创建 v2 资源。模
 
 <a id="workspaces-navigation-history"></a>
 
-### Navigation history
+### 导航历史
 
 **分类:** Manual · Editor-only · Reversible
 
@@ -1662,7 +1662,7 @@ AI 工作流：启用官方包，添加 BehaviorTree2D 并创建 v2 资源。模
 
 <a id="workspaces-command-palette"></a>
 
-### Command Palette
+### 命令面板
 
 **分类:** Manual · Editor-only · Reversible
 
@@ -1885,7 +1885,7 @@ AI 工作流：启用官方包，添加 BehaviorTree2D 并创建 v2 资源。模
 
 <a id="hierarchy-rename"></a>
 
-### Rename
+### 重命名
 
 **分类:** Manual · Editor-only · Reversible · Per-object
 
@@ -1929,7 +1929,7 @@ AI 工作流：启用官方包，添加 BehaviorTree2D 并创建 v2 资源。模
 
 <a id="hierarchy-duplicate"></a>
 
-### Duplicate
+### 创建副本
 
 **分类:** Manual · Editor-only · Reversible · Per-object
 
@@ -1973,7 +1973,7 @@ AI 工作流：启用官方包，添加 BehaviorTree2D 并创建 v2 资源。模
 
 <a id="hierarchy-group"></a>
 
-### Group
+### 分组
 
 **分类:** Manual · Editor-only · Reversible · Per-object
 
@@ -2507,7 +2507,7 @@ AI 工作流：启用官方包，添加 BehaviorTree2D 并创建 v2 资源。模
 
 <a id="viewport-scale"></a>
 
-### Scale
+### 缩放
 
 **分类:** Manual · Editor-only · Reversible · Per-object
 
@@ -2552,7 +2552,7 @@ AI 工作流：启用官方包，添加 BehaviorTree2D 并创建 v2 资源。模
 
 <a id="viewport-pivot"></a>
 
-### Pivot
+### 轴心
 
 **分类:** Manual · Editor-only · Reversible · Per-object
 
@@ -3275,7 +3275,7 @@ AI 工作流：启用官方包，添加 BehaviorTree2D 并创建 v2 资源。模
 
 <a id="inspector-transform2d"></a>
 
-### Transform2D
+### 二维变换
 
 **分类:** Manual · Assisted · Reversible · Per-object
 
@@ -3539,7 +3539,7 @@ AI 工作流：启用官方包，添加 BehaviorTree2D 并创建 v2 资源。模
 
 <a id="inspector-script2d"></a>
 
-### Script2D
+### 脚本组件
 
 **分类:** Manual · Assisted · Reversible · Per-object
 
@@ -3847,7 +3847,7 @@ AI 工作流：启用官方包，添加 BehaviorTree2D 并创建 v2 资源。模
 
 <a id="inspector-keyframe-property"></a>
 
-### Keyframe property
+### 添加属性关键帧
 
 **分类:** Manual · Assisted · Reversible · Per-object
 
@@ -3891,7 +3891,7 @@ AI 工作流：启用官方包，添加 BehaviorTree2D 并创建 v2 资源。模
 
 <a id="inspector-component-validation"></a>
 
-### Component validation
+### 组件验证
 
 **分类:** Manual · Assisted · Reversible · Per-object
 
@@ -3982,7 +3982,7 @@ AI 工作流：启用官方包，添加 BehaviorTree2D 并创建 v2 资源。模
 
 <a id="assets-import-assets"></a>
 
-### Import assets
+### 导入资源
 
 **分类:** Manual · Assisted · Project-wide · Reversible
 
@@ -4297,7 +4297,7 @@ AI 工作流：启用官方包，添加 BehaviorTree2D 并创建 v2 资源。模
 
 <a id="assets-import-presets"></a>
 
-### Import presets
+### 导入预设
 
 **分类:** Manual · Assisted · Project-wide · Reversible
 
@@ -4342,7 +4342,7 @@ AI 工作流：启用官方包，添加 BehaviorTree2D 并创建 v2 资源。模
 
 <a id="assets-platform-overrides"></a>
 
-### Platform overrides
+### 平台覆盖
 
 **分类:** Manual · Assisted · Project-wide · Reversible
 
@@ -5332,7 +5332,7 @@ AI 工作流：启用官方包，添加 BehaviorTree2D 并创建 v2 资源。模
 
 <a id="assets-project-trash"></a>
 
-### Project trash
+### 项目回收站
 
 **分类:** Manual · Assisted · Project-wide · Reversible
 
@@ -5785,7 +5785,7 @@ AI 工作流：启用官方包，添加 BehaviorTree2D 并创建 v2 资源。模
 
 <a id="physics-continuous-collision"></a>
 
-### Continuous collision
+### 连续碰撞
 
 **分类:** Manual · Runtime · Per-object · Reversible
 
@@ -6235,7 +6235,7 @@ AI 工作流：启用官方包，添加 BehaviorTree2D 并创建 v2 资源。模
 
 <a id="physics-collision-timeline"></a>
 
-### Collision timeline
+### 碰撞时间线
 
 **分类:** Manual · Runtime · Per-object · Reversible
 
@@ -6643,7 +6643,7 @@ AI 工作流：启用官方包，添加 BehaviorTree2D 并创建 v2 资源。模
 
 <a id="script-modules"></a>
 
-### Modules
+### 模块
 
 **分类:** Manual · Assisted · Runtime · Project-wide · Reversible
 
@@ -6958,7 +6958,7 @@ AI 工作流：启用官方包，添加 BehaviorTree2D 并创建 v2 资源。模
 
 <a id="script-project-tests"></a>
 
-### Project tests
+### 项目测试
 
 **分类:** Manual · Assisted · Runtime · Project-wide · Reversible
 
@@ -7003,7 +7003,7 @@ AI 工作流：启用官方包，添加 BehaviorTree2D 并创建 v2 资源。模
 
 <a id="script-coverage"></a>
 
-### Coverage
+### 覆盖率
 
 **分类:** Manual · Assisted · Runtime · Project-wide · Reversible
 
@@ -7581,7 +7581,7 @@ AI 工作流：启用官方包，添加 BehaviorTree2D 并创建 v2 资源。模
 
 <a id="visual-graph-graph-libraries"></a>
 
-### Graph libraries
+### 图表库
 
 **分类:** Manual · Assisted · Automatic · Runtime · Reversible
 
@@ -8068,7 +8068,7 @@ AI 工作流：启用官方包，添加 BehaviorTree2D 并创建 v2 资源。模
 
 <a id="animation-sprite-frames"></a>
 
-### Sprite frames
+### 精灵帧
 
 **分类:** Manual · Assisted · Runtime · Reversible · Per-object
 
@@ -8640,7 +8640,7 @@ AI 工作流：启用官方包，添加 BehaviorTree2D 并创建 v2 资源。模
 
 <a id="animation-retarget-preview"></a>
 
-### Retarget preview
+### 重定向预览
 
 **分类:** Manual · Assisted · Runtime · Reversible · Per-object
 
@@ -8684,7 +8684,7 @@ AI 工作流：启用官方包，添加 BehaviorTree2D 并创建 v2 资源。模
 
 <a id="animation-root-motion-preview"></a>
 
-### Root-motion preview
+### 根运动预览
 
 **分类:** Manual · Assisted · Runtime · Reversible · Per-object
 
@@ -8728,7 +8728,7 @@ AI 工作流：启用官方包，添加 BehaviorTree2D 并创建 v2 资源。模
 
 <a id="animation-retarget-aliases"></a>
 
-### Retarget aliases
+### 重定向别名
 
 **分类:** Manual · Assisted · Runtime · Reversible · Per-object
 
@@ -8860,7 +8860,7 @@ AI 工作流：启用官方包，添加 BehaviorTree2D 并创建 v2 资源。模
 
 <a id="animation-subtitles"></a>
 
-### Subtitles
+### 字幕
 
 **分类:** Manual · Assisted · Runtime · Reversible · Per-object
 
@@ -9215,7 +9215,7 @@ AI 工作流：启用官方包，添加 BehaviorTree2D 并创建 v2 资源。模
 
 <a id="interface-layout-containers"></a>
 
-### Layout containers
+### 布局容器
 
 **分类:** Manual · Assisted · Runtime · Project-wide · Per-object · Reversible
 
@@ -10365,7 +10365,7 @@ AI 工作流：启用官方包，添加 BehaviorTree2D 并创建 v2 资源。模
 
 <a id="world-terrain-rules"></a>
 
-### Terrain rules
+### 地形规则
 
 **分类:** Manual · Assisted · Runtime · Project-wide · Per-object · Reversible
 
@@ -10497,7 +10497,7 @@ AI 工作流：启用官方包，添加 BehaviorTree2D 并创建 v2 资源。模
 
 <a id="world-navigation-regions"></a>
 
-### Navigation regions
+### 导航区域
 
 **分类:** Manual · Assisted · Runtime · Project-wide · Per-object · Reversible
 
@@ -11116,7 +11116,7 @@ AI 工作流：启用官方包，添加 BehaviorTree2D 并创建 v2 资源。模
 
 <a id="rendering-layered-2d-effects"></a>
 
-### Layered 2D effects
+### 分层二维效果
 
 **分类:** Manual · Assisted · Runtime · Project-wide · Reversible
 
@@ -11248,7 +11248,7 @@ AI 工作流：启用官方包，添加 BehaviorTree2D 并创建 v2 资源。模
 
 <a id="rendering-post-process-presets"></a>
 
-### Post-process presets
+### 后处理预设
 
 **分类:** Manual · Assisted · Runtime · Project-wide · Reversible
 
@@ -11292,7 +11292,7 @@ AI 工作流：启用官方包，添加 BehaviorTree2D 并创建 v2 资源。模
 
 <a id="rendering-camera-volumes"></a>
 
-### Camera volumes
+### 相机体积
 
 **分类:** Manual · Assisted · Runtime · Project-wide · Reversible
 
@@ -11424,7 +11424,7 @@ AI 工作流：启用官方包，添加 BehaviorTree2D 并创建 v2 资源。模
 
 <a id="rendering-color-space"></a>
 
-### Color space
+### 颜色空间
 
 **分类:** Manual · Assisted · Runtime · Project-wide · Reversible
 
@@ -12230,7 +12230,7 @@ AI 工作流：启用官方包，添加 BehaviorTree2D 并创建 v2 资源。模
 
 <a id="debug-project-tests"></a>
 
-### Project tests
+### 项目测试
 
 **分类:** Automatic · Manual · Runtime · Editor-only · Project-wide
 
@@ -12365,7 +12365,7 @@ AI 工作流：启用官方包，添加 BehaviorTree2D 并创建 v2 资源。模
 
 <a id="debug-physics-monitor"></a>
 
-### Physics Monitor
+### 物理监视器
 
 **分类:** Automatic · Manual · Runtime · Editor-only · Project-wide
 
@@ -12589,7 +12589,7 @@ AI 工作流：启用官方包，添加 BehaviorTree2D 并创建 v2 资源。模
 
 <a id="manage-input-map"></a>
 
-### Input Map
+### 输入映射
 
 **分类:** Manual · Assisted · Automatic · Project-wide · Reversible
 
@@ -12721,7 +12721,7 @@ AI 工作流：启用官方包，添加 BehaviorTree2D 并创建 v2 资源。模
 
 <a id="manage-collision-matrix"></a>
 
-### Collision matrix
+### 碰撞矩阵
 
 **分类:** Manual · Assisted · Automatic · Project-wide · Reversible
 
@@ -13482,7 +13482,7 @@ AI 工作流：启用官方包，添加 BehaviorTree2D 并创建 v2 资源。模
 
 <a id="ecosystem-package-wizard"></a>
 
-### Package wizard
+### 软件包向导
 
 **分类:** Manual · Assisted · Project-wide · Reversible
 
@@ -13662,7 +13662,7 @@ AI 工作流：启用官方包，添加 BehaviorTree2D 并创建 v2 资源。模
 
 <a id="ecosystem-export-templates"></a>
 
-### Export templates
+### 导出模板
 
 **分类:** Manual · Assisted · Project-wide · Reversible
 
@@ -13707,7 +13707,7 @@ AI 工作流：启用官方包，添加 BehaviorTree2D 并创建 v2 资源。模
 
 <a id="ecosystem-ci-matrix"></a>
 
-### CI matrix
+### CI 矩阵
 
 **分类:** Manual · Assisted · Project-wide · Reversible
 
@@ -13797,7 +13797,7 @@ AI 工作流：启用官方包，添加 BehaviorTree2D 并创建 v2 资源。模
 
 <a id="ecosystem-delta-builds"></a>
 
-### Delta builds
+### 增量差异构建
 
 **分类:** Manual · Assisted · Project-wide · Reversible
 
@@ -13842,7 +13842,7 @@ AI 工作流：启用官方包，添加 BehaviorTree2D 并创建 v2 资源。模
 
 <a id="ecosystem-deployment-connectors"></a>
 
-### Deployment connectors
+### 部署连接器
 
 **分类:** Manual · Assisted · Project-wide · Reversible
 
@@ -14250,7 +14250,7 @@ AI 工作流：启用官方包，添加 BehaviorTree2D 并创建 v2 资源。模
 
 <a id="automation-execution-trace"></a>
 
-### Execution trace
+### 执行轨迹
 
 **分类:** Manual · Assisted · Editor-only · Project-wide · Reversible
 
@@ -14388,7 +14388,7 @@ AI 工作流：启用官方包，添加 BehaviorTree2D 并创建 v2 资源。模
 
 <a id="network-local-lobby"></a>
 
-### Local lobby
+### 本地大厅
 
 **分类:** Manual · Runtime · Project-wide · Reversible
 
@@ -14433,7 +14433,7 @@ AI 工作流：启用官方包，添加 BehaviorTree2D 并创建 v2 资源。模
 
 <a id="network-direct-connect"></a>
 
-### Direct connect
+### 直接连接
 
 **分类:** Manual · Runtime · Project-wide · Reversible
 
@@ -14793,7 +14793,7 @@ AI 工作流：启用官方包，添加 BehaviorTree2D 并创建 v2 资源。模
 
 <a id="network-multiplayer-replay"></a>
 
-### Multiplayer replay
+### 多人回放
 
 **分类:** Manual · Runtime · Project-wide · Reversible
 
@@ -14838,7 +14838,7 @@ AI 工作流：启用官方包，添加 BehaviorTree2D 并创建 v2 资源。模
 
 <a id="network-multiplayer-save"></a>
 
-### Multiplayer save
+### 多人存档
 
 **分类:** Manual · Runtime · Project-wide · Reversible
 
@@ -15022,7 +15022,7 @@ AI 工作流：启用官方包，添加 BehaviorTree2D 并创建 v2 资源。模
 
 <a id="build-portable-application"></a>
 
-### Portable application
+### 便携应用程序
 
 **分类:** Manual · Assisted · Project-wide
 
@@ -15160,7 +15160,7 @@ AI 工作流：启用官方包，添加 BehaviorTree2D 并创建 v2 资源。模
 
 <a id="build-startup-scene"></a>
 
-### Startup scene
+### 启动场景
 
 **分类:** Manual · Assisted · Project-wide
 
@@ -15436,7 +15436,7 @@ AI 工作流：启用官方包，添加 BehaviorTree2D 并创建 v2 资源。模
 
 <a id="build-symbols"></a>
 
-### Symbols
+### 符号
 
 **分类:** Manual · Assisted · Project-wide
 
@@ -15528,7 +15528,7 @@ AI 工作流：启用官方包，添加 BehaviorTree2D 并创建 v2 资源。模
 
 <a id="build-export-templates"></a>
 
-### Export templates
+### 导出模板
 
 **分类:** Manual · Assisted · Project-wide
 
@@ -15939,7 +15939,7 @@ AI 工作流：启用官方包，添加 BehaviorTree2D 并创建 v2 资源。模
 
 <a id="recovery-team-recovery-preview"></a>
 
-### Recovery preview
+### 恢复预览
 
 **分类:** Automatic · Manual · Project-wide · Reversible
 
@@ -16027,7 +16027,7 @@ AI 工作流：启用官方包，添加 BehaviorTree2D 并创建 v2 资源。模
 
 <a id="recovery-team-project-trash"></a>
 
-### Project trash
+### 项目回收站
 
 **分类:** Automatic · Manual · Project-wide · Reversible
 
@@ -16865,5 +16865,21 @@ AI 工作流：启用官方包，添加 BehaviorTree2D 并创建 v2 资源。模
 **Rhai API:** N/A
 
 **可视化图 API:** N/A
+
+
+<a id="v70-stable-platform"></a>
+
+## Nova_A 7 稳定创作平台流程
+
+使用本流程学习、迁移、验证并发布完整项目，同时明确保留所有稳定契约和外部限制。
+
+1. 打开“管理 → 学习中心 → 平台就绪情况”，搜索计划使用的功能，并检查绑定、验证、撤销、持久化、运行时／导出、文档和测试。圆圈代表不适用，短横线代表仍需外部证据。
+2. 从引导项目或 creator-v700-stable-platform 参考开始，依次完成前提条件、准确步骤、预期结果、保存／重载、撤销／恢复、播放／单步、独立构建和无障碍检查。
+3. 打开 6.x 项目时先查看迁移预览，核对源／目标引擎、语义差异、备份路径和确定性校验和。7.0 只把受支持引擎上限封存为 <8.0.0，不会重写 schema 29 玩法数据。
+4. 编辑 Rhai 或可视化图中的任意一侧，保存后检查同步的另一侧并运行等价性测试。不支持的 Rhai 会无损保留在代码块中。使用运行时调用前请查阅 API 浏览器或 docs/API_REFERENCE_7_0.md。
+5. 运行“项目健康”、模板／参考检查和构建验证。在 Windows 本机构建 Windows 与 Web；Linux／macOS 需要匹配主机，Android 为工具链门禁实验目标，iOS／主机平台仍延期，不能把不可用目标伪装为通过。
+6. 在英／德／中、100–200% 界面缩放、高对比度和减少动态效果下测试键盘与指针。保存、关闭、重开，恢复一次故意输入的非法值，再检查证据和精确十一份发布文件。
+
+**撤销和恢复:** 若预览不符合预期，请取消迁移或恢复备份；文档编辑使用撤销，中断保存使用恢复浏览器，故障包／插件应停用，并保留最后一次有效构建。按症状恢复请查 docs/TROUBLESHOOTING_7_0.md。签名、干净机器生命周期、匹配主机构建、独立观察和真实长测在取得证据前仍属于外部工作。
 
 <!-- NOVA_V6_TEACHING_END -->

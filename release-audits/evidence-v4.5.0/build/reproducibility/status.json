@@ -1,9 +1,0 @@
-{
-  "format": "nova-build-reproducibility",
-  "version": 1,
-  "deterministicSourceAndWebInputs": true,
-  "localBuilds": 1,
-  "requiredCleanBuilds": 5,
-  "secondHost": false,
-  "status": "pending-external-gate"
-}

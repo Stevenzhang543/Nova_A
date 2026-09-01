@@ -4,7 +4,7 @@ import { mkdir, readFile, writeFile, stat, unlink } from 'node:fs/promises'
 import { dirname, isAbsolute, join, resolve } from 'node:path'
 import { gzipSync } from 'node:zlib'
 
-const ENGINE_VERSION = '6.4.0'
+const ENGINE_VERSION = '6.5.0'
 const HEADER_BYTES = 16
 const EMBEDDED_MAGIC = Buffer.from('NOVAPK2!')
 const MAX_PACKAGE_BYTES = 1024 * 1024 * 1024

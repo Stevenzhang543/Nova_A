@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 #[derive(Clone, Debug, PartialEq)]
 pub enum PhysicsEvent {
     BodyCreated { handle: u32 },
@@ -16,6 +14,8 @@ pub enum PhysicsEvent {
 pub struct PhysicsContact {
     pub first: u32,
     pub second: u32,
+    pub first_collider: u32,
+    pub second_collider: u32,
     pub sensor: bool,
     pub point: [f64; 2],
     pub normal: [f64; 2],
@@ -33,6 +33,7 @@ struct BodyRecord {
     handle: u32,
     order: u32,
     values: Vec<f64>,
+    collider_shapes: Vec<f64>,
 }
 
 #[derive(Clone, Debug)]
@@ -58,7 +59,7 @@ pub struct PhysicsWorld {
     previous_bodies: Vec<f64>,
     state_buffer: Vec<f64>,
     events: Vec<PhysicsEvent>,
-    contacts: HashMap<(u32, u32), PhysicsContact>,
+    contacts: HashMap<(u32, u32, u32, u32), PhysicsContact>,
     transient_forces: HashMap<u32, (f64, f64, f64)>,
     configuration_dirty: bool,
     solver: Option<SolverWorld>,
@@ -121,7 +122,7 @@ impl PhysicsWorld {
             }
             return Ok(changed);
         }
-        self.bodies.push(BodyRecord { handle, order, values: values.to_vec() });
+        self.bodies.push(BodyRecord { handle, order, values: values.to_vec(), collider_shapes: Vec::new() });
         self.rebuild_indexes();
         self.configuration_dirty = true;
         self.events.push(PhysicsEvent::BodyCreated { handle });
@@ -146,6 +147,19 @@ impl PhysicsWorld {
         self.configuration_dirty = true;
         self.events.push(PhysicsEvent::BodyDestroyed { handle });
         true
+    }
+
+    /// Additive collider-child channel. The stable body record remains 56
+    /// scalars; compound/chain/concave pieces are retained beside it.
+    pub fn upsert_collider_shapes(&mut self, handle: u32, values: &[f64]) -> Result<bool, &'static str> {
+        if values.len() % COLLIDER_CHILD_STRIDE != 0 { return Err("collider child records have the wrong length"); }
+        if values.len() / COLLIDER_CHILD_STRIDE > 128 { return Err("a body cannot have more than 128 solver collider children"); }
+        let Some(index) = self.body_index.get(&handle).copied() else { return Err("body handle does not exist"); };
+        if self.bodies[index].collider_shapes == values { return Ok(false); }
+        self.bodies[index].collider_shapes.clear();
+        self.bodies[index].collider_shapes.extend_from_slice(values);
+        self.configuration_dirty = true;
+        Ok(true)
     }
 
     pub fn set_transform(&mut self, handle: u32, x: f64, y: f64, angle: f64) -> Result<(), &'static str> {
@@ -303,7 +317,8 @@ impl PhysicsWorld {
         for record in &self.bodies { self.dense_bodies.extend_from_slice(&record.values); }
         self.dense_connections.clear();
         for record in &self.connections { self.dense_connections.extend_from_slice(&record.values); }
-        self.solver = Some(SolverWorld::new(&self.dense_bodies, &self.dense_connections, self.quality));
+        let child_shapes = self.bodies.iter().map(|record| record.collider_shapes.as_slice()).collect::<Vec<_>>();
+        self.solver = Some(SolverWorld::new_with_children(&self.dense_bodies, &self.dense_connections, self.quality, &child_shapes));
         self.configuration_rebuilds = self.configuration_rebuilds.saturating_add(1);
         self.state_buffer.clear();
         self.state_buffer.extend_from_slice(&self.dense_bodies);
@@ -345,7 +360,7 @@ impl PhysicsWorld {
     }
 
     fn collect_contact_events(&mut self) {
-        let mut current = HashMap::<(u32, u32), PhysicsContact>::new();
+        let mut current = HashMap::<(u32, u32, u32, u32), PhysicsContact>::new();
         if let Some(solver) = self.solver.as_ref() {
             for contact in solver.contacts() {
                 let (Some(first), Some(second)) = (
@@ -354,10 +369,16 @@ impl PhysicsWorld {
                 ) else {
                     continue;
                 };
-                let pair = (first.handle.min(second.handle), first.handle.max(second.handle));
+                let pair = if first.handle <= second.handle {
+                    (first.handle, second.handle, contact.child_a, contact.child_b)
+                } else {
+                    (second.handle, first.handle, contact.child_b, contact.child_a)
+                };
                 let snapshot = PhysicsContact {
                     first: first.handle,
                     second: second.handle,
+                    first_collider: contact.child_a,
+                    second_collider: contact.child_b,
                     sensor: contact.sensor,
                     point: [contact.point.x, contact.point.y],
                     normal: [contact.normal.x, contact.normal.y],

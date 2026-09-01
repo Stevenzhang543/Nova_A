@@ -1,4 +1,5 @@
 import { reactive } from 'vue'
+import { NOVA_ENGINE_VERSION } from '../projects/projectFormat'
 import type { Entity } from '../world/Entity'
 import type { Connection } from '../world/Connection'
 import type { EngineDiagnostics, RuntimePhysicsEvent } from '../world/World'
@@ -171,7 +172,7 @@ export function comparePhysicsSnapshots(first: PhysicsMonitorCapture, second: Ph
 }
 
 export function physicsCaptureJson(capture: PhysicsMonitorCapture): string {
-  return `${JSON.stringify({ format: 'nova-physics-capture', version: 1, engineVersion: '6.4.0', units: { position: 'm', velocity: 'm/s', acceleration: 'm/s²', force: 'N', energy: 'J' }, capture }, null, 2)}\n`
+  return `${JSON.stringify({ format: 'nova-physics-capture', version: 1, engineVersion: NOVA_ENGINE_VERSION, units: { position: 'm', velocity: 'm/s', acceleration: 'm/s²', force: 'N', energy: 'J' }, capture }, null, 2)}\n`
 }
 
 export function recordPhysicsTelemetry(

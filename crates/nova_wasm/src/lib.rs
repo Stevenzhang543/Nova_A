@@ -42,6 +42,16 @@ impl WasmRuntimeWorld {
         self.inner.destroy_body(handle)
     }
 
+    pub fn upsert_collider_shapes(
+        &mut self,
+        handle: u32,
+        records: &[f64],
+    ) -> Result<bool, JsValue> {
+        self.inner
+            .upsert_collider_shapes(handle, records)
+            .map_err(JsValue::from_str)
+    }
+
     pub fn upsert_connection(
         &mut self,
         handle: u32,

@@ -11,7 +11,7 @@ pub const PROJECT_FORMAT_NAME: &str = "Nova_A Project Format 2";
 pub const PROJECT_FORMAT_MAJOR: u32 = 2;
 pub const CURRENT_FORMAT_VERSION: u32 = 29;
 pub const MINIMUM_SUPPORTED_FORMAT_VERSION: u32 = 5;
-pub const CURRENT_ENGINE_VERSION: &str = "6.4.0";
+pub const CURRENT_ENGINE_VERSION: &str = "7.0.0";
 
 fn default_named_physics_layers() -> Value {
     let colors = [
@@ -337,7 +337,7 @@ pub fn migrate_project_value(value: Value) -> Result<ProjectFile, FormatError> {
             "manifestVersion": 1,
             "projectUuid": project_uuid.clone(),
             "name": project_name.clone(),
-            "engineCompatibility": {"minimum":"3.9.0","maximumExclusive":"7.0.0"},
+            "engineCompatibility": {"minimum":"3.9.0","maximumExclusive":"8.0.0"},
             "schemaVersion": CURRENT_FORMAT_VERSION,
             "packageLockfile": "Packages.lock",
             "buildPresets": ["ProjectSettings/build.presets.json"],
@@ -351,8 +351,8 @@ pub fn migrate_project_value(value: Value) -> Result<ProjectFile, FormatError> {
         manifest.insert("schemaVersion".into(), json!(CURRENT_FORMAT_VERSION));
         manifest
             .entry("engineCompatibility")
-            .or_insert_with(|| json!({"minimum":"3.9.0","maximumExclusive":"7.0.0"}));
-        if parse_semver(&source_engine_version).map_or(true, |version| version.0 < 6) {
+            .or_insert_with(|| json!({"minimum":"3.9.0","maximumExclusive":"8.0.0"}));
+        if parse_semver(&source_engine_version).map_or(true, |version| version.0 < 7) {
             if let Some(compatibility) = manifest
                 .get_mut("engineCompatibility")
                 .and_then(Value::as_object_mut)
@@ -361,9 +361,9 @@ pub fn migrate_project_value(value: Value) -> Result<ProjectFile, FormatError> {
                     compatibility
                         .get("maximumExclusive")
                         .and_then(Value::as_str),
-                    Some("4.0.0" | "5.0.0" | "6.0.0")
+                    Some("4.0.0" | "5.0.0" | "6.0.0" | "7.0.0")
                 ) {
-                    compatibility.insert("maximumExclusive".into(), json!("7.0.0"));
+                    compatibility.insert("maximumExclusive".into(), json!("8.0.0"));
                 }
             }
         }
@@ -4182,7 +4182,7 @@ mod tests {
     }
 
     #[test]
-    fn v49_seals_v39_and_v4_engine_boundaries_without_changing_schema_29() {
+    fn v70_seals_historical_engine_boundaries_without_changing_schema_29() {
         let fixture: Value = serde_json::from_str(include_str!(
             "../../../tests/fixtures/migrations/public-schema-inputs.json"
         ))
@@ -4198,7 +4198,7 @@ mod tests {
         assert_eq!(migrated.engine_version, CURRENT_ENGINE_VERSION);
         assert_eq!(
             migrated.manifest.engine_compatibility.maximum_exclusive,
-            "7.0.0"
+            "8.0.0"
         );
         validate_project(&migrated).expect("5.x compatibility seal validates");
 
@@ -4213,8 +4213,23 @@ mod tests {
         assert_eq!(migrated_v4.engine_version, CURRENT_ENGINE_VERSION);
         assert_eq!(
             migrated_v4.manifest.engine_compatibility.maximum_exclusive,
-            "7.0.0"
+            "8.0.0"
         );
         validate_project(&migrated_v4).expect("4.x to 5.x compatibility seal validates");
+
+        let mut v6_source = fixture["baseProject"].clone();
+        v6_source["formatVersion"] = json!(29);
+        v6_source["engineVersion"] = json!("6.9.0");
+        v6_source["manifest"]["schemaVersion"] = json!(29);
+        v6_source["manifest"]["engineCompatibility"] =
+            json!({"minimum":"3.9.0","maximumExclusive":"7.0.0"});
+        let migrated_v6 = migrate_project_value(v6_source).expect("6.x project migrates");
+        assert_eq!(migrated_v6.format_version, 29);
+        assert_eq!(migrated_v6.engine_version, CURRENT_ENGINE_VERSION);
+        assert_eq!(
+            migrated_v6.manifest.engine_compatibility.maximum_exclusive,
+            "8.0.0"
+        );
+        validate_project(&migrated_v6).expect("6.x to 7.x compatibility seal validates");
     }
 }

@@ -31,8 +31,9 @@ import { beforeWorldPhysicsStep, beginWorldGameplay, canUseCoyoteTime, queueChar
 import { acquirePooled, releasePooled } from './objectPool'
 import type { CharacterBody2D } from '../world/components'
 import { completeReplayFixedStep, deterministicRandom, replayFixedInput, resetDeterministicSeed } from './replay'
-import { beginProductionRuntime, callProductionRpc, onProductionRpc, productionNetworkContext, stopProductionRuntime, updateProductionRuntime } from './productionRuntime'
+import { beginProductionRuntime, callProductionRpc, onProductionRpc, onProductionSceneHandoff, productionNetworkContext, stopProductionRuntime, updateProductionRuntime } from './productionRuntime'
 import { recordScriptFunction } from './profiler'
+import { synchronizePerformanceWorld } from './largeWorldPerformance'
 import type { ScriptBreakpointMetadata } from '../assets/types'
 import { commitHotReload, prepareHotReload, rejectHotReload, rollbackHotReload as restoreHotReloadSource } from './scriptHotReload'
 import { recordScriptCoverage, resetScriptCoverage } from './scriptCoverage'
@@ -295,13 +296,16 @@ export class GameplayRuntime {
     void beginWorldGameplay((name, payload, target, source) => this.emitSignal(name, payload, target, source))
     beginProductionRuntime()
     this.networkUnsubscribe?.()
-    this.networkUnsubscribe = onProductionRpc((name, payload, context) => this.emitSignal(`network.${name}`, { payload, sender: context.sender, tick: context.tick }, '', context.sender))
+    const rpcCleanup = onProductionRpc((name, payload, context) => this.emitSignal(`network.${name}`, { payload, sender: context.sender, tick: context.tick }, '', context.sender))
+    const sceneCleanup = onProductionSceneHandoff((sceneUuid, spawnTag, peerId) => { this.pendingScene = { type: 'load', identifier: sceneUuid }; this.emitSignal('network.scene_handoff', { scene: sceneUuid, spawnTag, peer: peerId }, '', peerId) })
+    this.networkUnsubscribe = () => { rpcCleanup(); sceneCleanup() }
     this.ensureLifecycle()
     this.flushStructuralCommands()
     addEditorLog('Gameplay runtime started', 'Runtime')
   }
 
   frame(frameDelta: number, viewport?: DOMRect): void {
+    synchronizePerformanceWorld(physicsState.world.entities)
     if (physicsState.playMode !== 'playing') {
       const physicsStarted = performance.now()
       Object.assign(physicsState.engineDiagnostics, physicsState.world.update(frameDelta, false, physicsState.globalSettings))
@@ -397,6 +401,7 @@ export class GameplayRuntime {
 
   stepOnce(viewport?: DOMRect): void {
     if (!this.active) this.beginSession()
+    synchronizePerformanceWorld(physicsState.world.entities)
     this.ensureLifecycle()
     this.inputSnapshot = replayFixedInput(this.decorateViewportInput(this.input.sample(physicsState.inputMap, viewport), viewport))
     this.dispatchInputCallbacks(this.inputSnapshot)

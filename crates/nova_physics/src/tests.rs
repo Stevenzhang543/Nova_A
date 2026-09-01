@@ -348,6 +348,9 @@ mod tests {
         let contact = Contact {
             body_a: 0,
             body_b: 1,
+            child_a: 0,
+            child_b: 0,
+            feature_id: 0,
             normal: Vec2::new(1.0, 0.0),
             tangent: Vec2::new(0.0, 1.0),
             depth: 0.2,
@@ -1051,5 +1054,113 @@ mod tests {
         let passed = step_physics(&rising, 1.0 / 120.0, 0.0, 0.0);
         assert_eq!(passed[29], 0.0);
         assert!((passed[5] - 2.0).abs() < 1.0e-10);
+    }
+
+    #[test]
+    fn retained_compound_children_have_exact_contact_identity_and_inertia() {
+        let mut world = PhysicsWorld::new();
+        let first = box_record(1.0, 0.0, 0.0, 1.0, 1.0);
+        let mut second = box_record(2.0, 3.0, 0.0, 1.0, 1.0);
+        second[9] = 1.0;
+        world.create_body(10, 0, &first).unwrap();
+        world.create_body(20, 1, &second).unwrap();
+        let mut child = vec![0.0; COLLIDER_CHILD_STRIDE];
+        child[0] = 42.0; child[2] = 3.0; child[5] = 1.0; child[6] = 1.0;
+        child[8] = 1.0; child[9] = 2.0;
+        for (index, (x, y)) in [(-0.5, -0.5), (0.5, -0.5), (0.5, 0.5), (-0.5, 0.5)].into_iter().enumerate() {
+            child[10 + index * 2] = x; child[11 + index * 2] = y;
+        }
+        world.upsert_collider_shapes(10, &child).unwrap();
+        world.step(1.0 / 120.0, 0.0, 0.0);
+        let contacts = world.drain_events().into_iter().filter_map(|event| match event {
+            PhysicsEvent::ContactStarted(contact) => Some(contact), _ => None,
+        }).collect::<Vec<_>>();
+        assert!(contacts.iter().any(|contact| contact.first_collider == 42 || contact.second_collider == 42));
+        assert!(world.state()[26] > first[26], "compound inertia must include the offset child");
+    }
+
+    #[test]
+    fn touching_dynamic_bodies_sleep_as_one_island() {
+        let mut bodies = box_record(1.0, 0.0, 0.0, 1.0, 1.0);
+        bodies.extend(box_record(2.0, 1.0 - 1.0e-6, 0.0, 1.0, 1.0));
+        let mut world = SolverWorld::new(&bodies, &[], SolverQuality { time_to_sleep: 0.1, ..SolverQuality::default() });
+        for _ in 0..30 { world.step(1.0 / 120.0, 0.0, 0.0); }
+        assert_eq!(world.bodies[0].sleeping, world.bodies[1].sleeping);
+        assert!(world.bodies[0].sleeping);
+    }
+
+    #[test]
+    fn prismatic_motor_drives_linear_axis_and_revolute_limits_rotation() {
+        let mut bodies = box_record(1.0, 0.0, 0.0, 1.0, 1.0);
+        bodies[9] = 1.0;
+        bodies.extend(box_record(2.0, 0.0, 0.0, 1.0, 1.0));
+        let mut slider = connection_record(0, 1, 0.0);
+        slider[18] = 4.0; slider[29] = 1.0; slider[35] = 1.0; slider[36] = 2.0; slider[37] = 100.0;
+        let driven = step_physics_with_connections(&bodies, &slider, 1.0 / 60.0, 0.0, 0.0);
+        assert!(driven[STRIDE + 4] > 0.1, "prismatic motor must create linear velocity");
+
+        bodies[STRIDE + 14] = 1.2;
+        let mut hinge = connection_record(0, 1, 0.0);
+        hinge[18] = 3.0; hinge[31] = 1.0; hinge[32] = -0.2; hinge[33] = 0.2;
+        let mut state = bodies;
+        for _ in 0..12 { state = step_physics_with_connections(&state[..STRIDE * 2], &hinge, 1.0 / 120.0, 0.0, 0.0); state.truncate(STRIDE * 2); }
+        assert!(normalize_angle(state[STRIDE + 14] - state[14]).abs() <= 0.2001);
+    }
+
+    #[test]
+    fn sensor_children_do_not_change_compound_mass_properties() {
+        let mut body = Body::from_data(&box_record(1.0, 0.0, 0.0, 2.0, 2.0), 0);
+        let primary_inertia = body.inertia;
+        let mut sensor = vec![0.0; COLLIDER_CHILD_STRIDE];
+        sensor[0] = 99.0; sensor[2] = 100.0; sensor[5] = 20.0; sensor[6] = 20.0;
+        sensor[7] = 1.0; sensor[8] = 1.0; sensor[9] = 2.0;
+        body.apply_collider_children(&sensor);
+        assert!((body.inertia - primary_inertia).abs() < 1.0e-12);
+        assert_eq!(body.collider_children.len(), 1);
+        assert!(body.collider_children[0].is_sensor);
+    }
+
+    #[test]
+    fn rotational_compound_ccd_uses_the_farthest_child_surface() {
+        let mut record = box_record(1.0, 0.0, 0.0, 1.0, 1.0);
+        record[15] = 1.0;
+        record[47] = 1.0;
+        let primary = Body::from_data(&record, 0);
+        assert_eq!(determine_sub_steps(&[primary], 1.0 / 60.0, 0.0, 1), 1);
+
+        let mut compound = Body::from_data(&record, 0);
+        let mut child = vec![0.0; COLLIDER_CHILD_STRIDE];
+        child[0] = 7.0; child[2] = 10.0; child[5] = 1.0; child[6] = 1.0;
+        child[8] = 1.0; child[9] = 2.0;
+        compound.apply_collider_children(&child);
+        assert!(determine_sub_steps(&[compound], 1.0 / 60.0, 0.0, 1) > 1);
+    }
+
+    #[test]
+    fn gravity_velocity_is_consistent_at_30_60_and_120_hz() {
+        let simulate = |rate: usize| {
+            let mut state = ellipse_record(1.0, 0.0, 0.0, 0.5, 0.5);
+            for _ in 0..rate { state = step_physics(&state, 1.0 / rate as f64, 9.81, 0.0); }
+            state[5]
+        };
+        let velocities = [simulate(30), simulate(60), simulate(120)];
+        assert!(velocities.iter().all(|velocity| (*velocity + 9.81).abs() < 1.0e-10), "velocities={velocities:?}");
+        assert!((velocities[0] - velocities[2]).abs() < 1.0e-10);
+    }
+
+    #[test]
+    fn elastic_collision_velocity_is_invariant_under_world_scale() {
+        let collide = |scale: f64| {
+            let mut first = ellipse_record(1.0, -0.95 * scale, 0.0, scale, scale);
+            first[4] = 1.0; first[10] = 1.0; first[27] = 0.0;
+            let mut second = ellipse_record(2.0, 0.95 * scale, 0.0, scale, scale);
+            second[4] = -1.0; second[10] = 1.0; second[27] = 0.0;
+            first.extend(second);
+            step_physics(&first, 1.0 / 240.0, 0.0, 0.0)
+        };
+        let unit = collide(1.0);
+        let scaled = collide(100.0);
+        assert!((unit[4] - scaled[4]).abs() < 1.0e-10);
+        assert!((unit[STRIDE + 4] - scaled[STRIDE + 4]).abs() < 1.0e-10);
     }
 }

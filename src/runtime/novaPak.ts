@@ -163,7 +163,7 @@ export async function createNovaPak(projectJson: string, assets: AssetRecord[], 
     : undefined
   const index: NovaPakIndex = {
     format: 'nova-pak', version: NOVA_PAK_VERSION,
-    engineVersion: String(project.engineVersion ?? '6.4.0'),
+    engineVersion: String(project.engineVersion ?? '6.7.0'),
     createdAt: options.deterministic === false ? new Date().toISOString() : '1970-01-01T00:00:00.000Z', startupSceneUuid,
     physicsProfile: physicsProfile && typeof physicsProfile === 'object' ? structuredClone(physicsProfile as Record<string, unknown>) : undefined,
     entries

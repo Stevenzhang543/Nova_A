@@ -151,4 +151,4 @@ export async function applyEditorAutomation(plan:AutomationPlan,signal?:AbortSig
 }
 
 export function rollbackLastAutomation():boolean{if(!automationState.lastApplied)return false;undo();automationState.lastApplied=false;automationState.phase='idle';trace('rollback','The last automation transaction was undone.');return true}
-export function serializeAutomationEvidence(){return{format:'nova-editor-automation-evidence',version:1,engineVersion:'6.4.0',generatedAt:new Date().toISOString(),phase:automationState.phase,origin:automationState.origin,permissions:[...automationState.granted],diff:automationState.diff.map(item=>({...item})),trace:automationState.trace.map(item=>({...item})),error:automationState.error}}
+export function serializeAutomationEvidence(){return{format:'nova-editor-automation-evidence',version:1,engineVersion:'6.7.0',generatedAt:new Date().toISOString(),phase:automationState.phase,origin:automationState.origin,permissions:[...automationState.granted],diff:automationState.diff.map(item=>({...item})),trace:automationState.trace.map(item=>({...item})),error:automationState.error}}

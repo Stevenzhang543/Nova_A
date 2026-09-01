@@ -1,4 +1,4 @@
-# Nova_A 6.2.0 – Vollständiges Handbuch
+# Nova_A 7.0.0 – Vollständiges Handbuch
 
 ## 6.2.0 Verhaltensverträge
 
@@ -770,11 +770,11 @@ Im **Paketlabor** Reverse-Domain-ID, SemVer, Herausgeber, Archiv-SHA-256, Lizenz
 **Exportvorlagen** zeigt Ziel, Architektur, Laufzeit und Nachweisgrenzen. Windows/Web sind lokal verfügbar; saubere Fremdmaschine und Signatur bleiben extern. Linux/macOS benötigen den passenden Host; Android bleibt bis zu allen SDK-/Vorlagen-/Signatur-/Geräte-/Installations-/Eingabe-/Audioprüfungen blockiert. In **Auslieferung** sind Cache-Schlüssel deterministisch, Delta-Builds an Patch-Manifeste gebunden und Remote-/Befehlsverbinder berechtigungspflichtig. Plan vorbereiten führt nichts aus und greift nicht auf das Netzwerk zu. Siehe `docs/EXTENSIONS_PLATFORM_DELIVERY_5_9.md`.
 
 <!-- NOVA_V6_TEACHING_START -->
-# Nova_A 6.4.0 aufgabenorientiertes Lehrhandbuch
+# Nova_A 7.0.0 aufgabenorientiertes Lehrhandbuch
 
 Lernen durch echte Aufgaben. Jede öffentliche Funktion erklärt Zuständigkeit, Speicherung, Wiederherstellung, Barrierefreiheit und Release-Verhalten.
 
-- Engine: **6.4.0**
+- Engine: **7.0.0**
 - Stable contracts: Project Format 2/schema 29; Rhai API 2; Graph Format 1; Plugin API 2; Package Manifest 1; Build CLI 1; workspace document 3.
 - External signing, independent clean-machine evidence, two-machine reproduction, matching-host builds and a real 72-hour soak remain pending until independently captured.
 
@@ -932,7 +932,7 @@ Lernen durch echte Aufgaben. Jede öffentliche Funktion erklärt Zuständigkeit,
 
 <a id="project-manager-import-archive"></a>
 
-### Import archive
+### Archiv importieren
 
 **Klassifikation:** Assisted · Project-wide · Reversible
 
@@ -1556,7 +1556,7 @@ Lernen durch echte Aufgaben. Jede öffentliche Funktion erklärt Zuständigkeit,
 
 <a id="workspaces-navigation-history"></a>
 
-### Navigation history
+### Navigationsverlauf
 
 **Klassifikation:** Manual · Editor-only · Reversible
 
@@ -1600,7 +1600,7 @@ Lernen durch echte Aufgaben. Jede öffentliche Funktion erklärt Zuständigkeit,
 
 <a id="workspaces-command-palette"></a>
 
-### Command Palette
+### Befehlspalette
 
 **Klassifikation:** Manual · Editor-only · Reversible
 
@@ -1823,7 +1823,7 @@ Lernen durch echte Aufgaben. Jede öffentliche Funktion erklärt Zuständigkeit,
 
 <a id="hierarchy-rename"></a>
 
-### Rename
+### Umbenennen
 
 **Klassifikation:** Manual · Editor-only · Reversible · Per-object
 
@@ -1867,7 +1867,7 @@ Lernen durch echte Aufgaben. Jede öffentliche Funktion erklärt Zuständigkeit,
 
 <a id="hierarchy-duplicate"></a>
 
-### Duplicate
+### Duplizieren
 
 **Klassifikation:** Manual · Editor-only · Reversible · Per-object
 
@@ -1911,7 +1911,7 @@ Lernen durch echte Aufgaben. Jede öffentliche Funktion erklärt Zuständigkeit,
 
 <a id="hierarchy-group"></a>
 
-### Group
+### Gruppe
 
 **Klassifikation:** Manual · Editor-only · Reversible · Per-object
 
@@ -2445,7 +2445,7 @@ Lernen durch echte Aufgaben. Jede öffentliche Funktion erklärt Zuständigkeit,
 
 <a id="viewport-scale"></a>
 
-### Scale
+### Skalierung
 
 **Klassifikation:** Manual · Editor-only · Reversible · Per-object
 
@@ -2490,7 +2490,7 @@ Lernen durch echte Aufgaben. Jede öffentliche Funktion erklärt Zuständigkeit,
 
 <a id="viewport-pivot"></a>
 
-### Pivot
+### Ursprung
 
 **Klassifikation:** Manual · Editor-only · Reversible · Per-object
 
@@ -3785,7 +3785,7 @@ Lernen durch echte Aufgaben. Jede öffentliche Funktion erklärt Zuständigkeit,
 
 <a id="inspector-keyframe-property"></a>
 
-### Keyframe property
+### Eigenschaft animieren
 
 **Klassifikation:** Manual · Assisted · Reversible · Per-object
 
@@ -3829,7 +3829,7 @@ Lernen durch echte Aufgaben. Jede öffentliche Funktion erklärt Zuständigkeit,
 
 <a id="inspector-component-validation"></a>
 
-### Component validation
+### Komponentenprüfung
 
 **Klassifikation:** Manual · Assisted · Reversible · Per-object
 
@@ -3920,7 +3920,7 @@ Lernen durch echte Aufgaben. Jede öffentliche Funktion erklärt Zuständigkeit,
 
 <a id="assets-import-assets"></a>
 
-### Import assets
+### Assets importieren
 
 **Klassifikation:** Manual · Assisted · Project-wide · Reversible
 
@@ -4235,7 +4235,7 @@ Lernen durch echte Aufgaben. Jede öffentliche Funktion erklärt Zuständigkeit,
 
 <a id="assets-import-presets"></a>
 
-### Import presets
+### Importvorgaben
 
 **Klassifikation:** Manual · Assisted · Project-wide · Reversible
 
@@ -4280,7 +4280,7 @@ Lernen durch echte Aufgaben. Jede öffentliche Funktion erklärt Zuständigkeit,
 
 <a id="assets-platform-overrides"></a>
 
-### Platform overrides
+### Plattform
 
 **Klassifikation:** Manual · Assisted · Project-wide · Reversible
 
@@ -5270,7 +5270,7 @@ Lernen durch echte Aufgaben. Jede öffentliche Funktion erklärt Zuständigkeit,
 
 <a id="assets-project-trash"></a>
 
-### Project trash
+### Projektpapierkorb
 
 **Klassifikation:** Manual · Assisted · Project-wide · Reversible
 
@@ -5723,7 +5723,7 @@ Lernen durch echte Aufgaben. Jede öffentliche Funktion erklärt Zuständigkeit,
 
 <a id="physics-continuous-collision"></a>
 
-### Continuous collision
+### Kontinuierliche Kollision
 
 **Klassifikation:** Manual · Runtime · Per-object · Reversible
 
@@ -6173,7 +6173,7 @@ Lernen durch echte Aufgaben. Jede öffentliche Funktion erklärt Zuständigkeit,
 
 <a id="physics-collision-timeline"></a>
 
-### Collision timeline
+### Kollisionsverlauf
 
 **Klassifikation:** Manual · Runtime · Per-object · Reversible
 
@@ -6581,7 +6581,7 @@ Lernen durch echte Aufgaben. Jede öffentliche Funktion erklärt Zuständigkeit,
 
 <a id="script-modules"></a>
 
-### Modules
+### Module
 
 **Klassifikation:** Manual · Assisted · Runtime · Project-wide · Reversible
 
@@ -6896,7 +6896,7 @@ Lernen durch echte Aufgaben. Jede öffentliche Funktion erklärt Zuständigkeit,
 
 <a id="script-project-tests"></a>
 
-### Project tests
+### Projekttests
 
 **Klassifikation:** Manual · Assisted · Runtime · Project-wide · Reversible
 
@@ -6941,7 +6941,7 @@ Lernen durch echte Aufgaben. Jede öffentliche Funktion erklärt Zuständigkeit,
 
 <a id="script-coverage"></a>
 
-### Coverage
+### Abdeckung
 
 **Klassifikation:** Manual · Assisted · Runtime · Project-wide · Reversible
 
@@ -7519,7 +7519,7 @@ Lernen durch echte Aufgaben. Jede öffentliche Funktion erklärt Zuständigkeit,
 
 <a id="visual-graph-graph-libraries"></a>
 
-### Graph libraries
+### Graph-Bibliotheken
 
 **Klassifikation:** Manual · Assisted · Automatic · Runtime · Reversible
 
@@ -8006,7 +8006,7 @@ Lernen durch echte Aufgaben. Jede öffentliche Funktion erklärt Zuständigkeit,
 
 <a id="animation-sprite-frames"></a>
 
-### Sprite frames
+### Sprite-Frames
 
 **Klassifikation:** Manual · Assisted · Runtime · Reversible · Per-object
 
@@ -8578,7 +8578,7 @@ Lernen durch echte Aufgaben. Jede öffentliche Funktion erklärt Zuständigkeit,
 
 <a id="animation-retarget-preview"></a>
 
-### Retarget preview
+### Retarget-Vorschau
 
 **Klassifikation:** Manual · Assisted · Runtime · Reversible · Per-object
 
@@ -8622,7 +8622,7 @@ Lernen durch echte Aufgaben. Jede öffentliche Funktion erklärt Zuständigkeit,
 
 <a id="animation-root-motion-preview"></a>
 
-### Root-motion preview
+### Root-Motion-Vorschau
 
 **Klassifikation:** Manual · Assisted · Runtime · Reversible · Per-object
 
@@ -8666,7 +8666,7 @@ Lernen durch echte Aufgaben. Jede öffentliche Funktion erklärt Zuständigkeit,
 
 <a id="animation-retarget-aliases"></a>
 
-### Retarget aliases
+### Retarget-Aliase
 
 **Klassifikation:** Manual · Assisted · Runtime · Reversible · Per-object
 
@@ -8798,7 +8798,7 @@ Lernen durch echte Aufgaben. Jede öffentliche Funktion erklärt Zuständigkeit,
 
 <a id="animation-subtitles"></a>
 
-### Subtitles
+### Untertitel
 
 **Klassifikation:** Manual · Assisted · Runtime · Reversible · Per-object
 
@@ -9153,7 +9153,7 @@ Lernen durch echte Aufgaben. Jede öffentliche Funktion erklärt Zuständigkeit,
 
 <a id="interface-layout-containers"></a>
 
-### Layout containers
+### Layout-Container
 
 **Klassifikation:** Manual · Assisted · Runtime · Project-wide · Per-object · Reversible
 
@@ -10303,7 +10303,7 @@ Lernen durch echte Aufgaben. Jede öffentliche Funktion erklärt Zuständigkeit,
 
 <a id="world-terrain-rules"></a>
 
-### Terrain rules
+### Geländeregeln
 
 **Klassifikation:** Manual · Assisted · Runtime · Project-wide · Per-object · Reversible
 
@@ -10435,7 +10435,7 @@ Lernen durch echte Aufgaben. Jede öffentliche Funktion erklärt Zuständigkeit,
 
 <a id="world-navigation-regions"></a>
 
-### Navigation regions
+### Navigationsregionen
 
 **Klassifikation:** Manual · Assisted · Runtime · Project-wide · Per-object · Reversible
 
@@ -11054,7 +11054,7 @@ Lernen durch echte Aufgaben. Jede öffentliche Funktion erklärt Zuständigkeit,
 
 <a id="rendering-layered-2d-effects"></a>
 
-### Layered 2D effects
+### Geschichtete 2D-Effekte
 
 **Klassifikation:** Manual · Assisted · Runtime · Project-wide · Reversible
 
@@ -11186,7 +11186,7 @@ Lernen durch echte Aufgaben. Jede öffentliche Funktion erklärt Zuständigkeit,
 
 <a id="rendering-post-process-presets"></a>
 
-### Post-process presets
+### Post-Process-Voreinstellungen
 
 **Klassifikation:** Manual · Assisted · Runtime · Project-wide · Reversible
 
@@ -11230,7 +11230,7 @@ Lernen durch echte Aufgaben. Jede öffentliche Funktion erklärt Zuständigkeit,
 
 <a id="rendering-camera-volumes"></a>
 
-### Camera volumes
+### Kameravolumen
 
 **Klassifikation:** Manual · Assisted · Runtime · Project-wide · Reversible
 
@@ -11362,7 +11362,7 @@ Lernen durch echte Aufgaben. Jede öffentliche Funktion erklärt Zuständigkeit,
 
 <a id="rendering-color-space"></a>
 
-### Color space
+### Farbraum
 
 **Klassifikation:** Manual · Assisted · Runtime · Project-wide · Reversible
 
@@ -12168,7 +12168,7 @@ Lernen durch echte Aufgaben. Jede öffentliche Funktion erklärt Zuständigkeit,
 
 <a id="debug-project-tests"></a>
 
-### Project tests
+### Projekttests
 
 **Klassifikation:** Automatic · Manual · Runtime · Editor-only · Project-wide
 
@@ -12303,7 +12303,7 @@ Lernen durch echte Aufgaben. Jede öffentliche Funktion erklärt Zuständigkeit,
 
 <a id="debug-physics-monitor"></a>
 
-### Physics Monitor
+### Physikmonitor
 
 **Klassifikation:** Automatic · Manual · Runtime · Editor-only · Project-wide
 
@@ -12527,7 +12527,7 @@ Lernen durch echte Aufgaben. Jede öffentliche Funktion erklärt Zuständigkeit,
 
 <a id="manage-input-map"></a>
 
-### Input Map
+### Eingabebelegung
 
 **Klassifikation:** Manual · Assisted · Automatic · Project-wide · Reversible
 
@@ -12659,7 +12659,7 @@ Lernen durch echte Aufgaben. Jede öffentliche Funktion erklärt Zuständigkeit,
 
 <a id="manage-collision-matrix"></a>
 
-### Collision matrix
+### Kollisionsmatrix
 
 **Klassifikation:** Manual · Assisted · Automatic · Project-wide · Reversible
 
@@ -13420,7 +13420,7 @@ Lernen durch echte Aufgaben. Jede öffentliche Funktion erklärt Zuständigkeit,
 
 <a id="ecosystem-package-wizard"></a>
 
-### Package wizard
+### Paketassistent
 
 **Klassifikation:** Manual · Assisted · Project-wide · Reversible
 
@@ -13600,7 +13600,7 @@ Lernen durch echte Aufgaben. Jede öffentliche Funktion erklärt Zuständigkeit,
 
 <a id="ecosystem-export-templates"></a>
 
-### Export templates
+### Exportvorlagen
 
 **Klassifikation:** Manual · Assisted · Project-wide · Reversible
 
@@ -13645,7 +13645,7 @@ Lernen durch echte Aufgaben. Jede öffentliche Funktion erklärt Zuständigkeit,
 
 <a id="ecosystem-ci-matrix"></a>
 
-### CI matrix
+### CI-Matrix
 
 **Klassifikation:** Manual · Assisted · Project-wide · Reversible
 
@@ -13735,7 +13735,7 @@ Lernen durch echte Aufgaben. Jede öffentliche Funktion erklärt Zuständigkeit,
 
 <a id="ecosystem-delta-builds"></a>
 
-### Delta builds
+### Delta-Builds
 
 **Klassifikation:** Manual · Assisted · Project-wide · Reversible
 
@@ -13780,7 +13780,7 @@ Lernen durch echte Aufgaben. Jede öffentliche Funktion erklärt Zuständigkeit,
 
 <a id="ecosystem-deployment-connectors"></a>
 
-### Deployment connectors
+### Bereitstellungsverbinder
 
 **Klassifikation:** Manual · Assisted · Project-wide · Reversible
 
@@ -14188,7 +14188,7 @@ Lernen durch echte Aufgaben. Jede öffentliche Funktion erklärt Zuständigkeit,
 
 <a id="automation-execution-trace"></a>
 
-### Execution trace
+### Ausführungsspur
 
 **Klassifikation:** Manual · Assisted · Editor-only · Project-wide · Reversible
 
@@ -14326,7 +14326,7 @@ Lernen durch echte Aufgaben. Jede öffentliche Funktion erklärt Zuständigkeit,
 
 <a id="network-local-lobby"></a>
 
-### Local lobby
+### Lokale Lobby
 
 **Klassifikation:** Manual · Runtime · Project-wide · Reversible
 
@@ -14371,7 +14371,7 @@ Lernen durch echte Aufgaben. Jede öffentliche Funktion erklärt Zuständigkeit,
 
 <a id="network-direct-connect"></a>
 
-### Direct connect
+### Direktverbindung
 
 **Klassifikation:** Manual · Runtime · Project-wide · Reversible
 
@@ -14731,7 +14731,7 @@ Lernen durch echte Aufgaben. Jede öffentliche Funktion erklärt Zuständigkeit,
 
 <a id="network-multiplayer-replay"></a>
 
-### Multiplayer replay
+### Mehrspieler-Replay
 
 **Klassifikation:** Manual · Runtime · Project-wide · Reversible
 
@@ -14776,7 +14776,7 @@ Lernen durch echte Aufgaben. Jede öffentliche Funktion erklärt Zuständigkeit,
 
 <a id="network-multiplayer-save"></a>
 
-### Multiplayer save
+### Mehrspieler-Speicherstand
 
 **Klassifikation:** Manual · Runtime · Project-wide · Reversible
 
@@ -14960,7 +14960,7 @@ Lernen durch echte Aufgaben. Jede öffentliche Funktion erklärt Zuständigkeit,
 
 <a id="build-portable-application"></a>
 
-### Portable application
+### Portable Anwendung
 
 **Klassifikation:** Manual · Assisted · Project-wide
 
@@ -15098,7 +15098,7 @@ Lernen durch echte Aufgaben. Jede öffentliche Funktion erklärt Zuständigkeit,
 
 <a id="build-startup-scene"></a>
 
-### Startup scene
+### Startszene
 
 **Klassifikation:** Manual · Assisted · Project-wide
 
@@ -15374,7 +15374,7 @@ Lernen durch echte Aufgaben. Jede öffentliche Funktion erklärt Zuständigkeit,
 
 <a id="build-symbols"></a>
 
-### Symbols
+### Symbole
 
 **Klassifikation:** Manual · Assisted · Project-wide
 
@@ -15466,7 +15466,7 @@ Lernen durch echte Aufgaben. Jede öffentliche Funktion erklärt Zuständigkeit,
 
 <a id="build-export-templates"></a>
 
-### Export templates
+### Exportvorlagen
 
 **Klassifikation:** Manual · Assisted · Project-wide
 
@@ -15877,7 +15877,7 @@ Lernen durch echte Aufgaben. Jede öffentliche Funktion erklärt Zuständigkeit,
 
 <a id="recovery-team-recovery-preview"></a>
 
-### Recovery preview
+### Wiederherstellungsvorschau
 
 **Klassifikation:** Automatic · Manual · Project-wide · Reversible
 
@@ -15965,7 +15965,7 @@ Lernen durch echte Aufgaben. Jede öffentliche Funktion erklärt Zuständigkeit,
 
 <a id="recovery-team-project-trash"></a>
 
-### Project trash
+### Projektpapierkorb
 
 **Klassifikation:** Automatic · Manual · Project-wide · Reversible
 
@@ -16803,5 +16803,21 @@ Lernen durch echte Aufgaben. Jede öffentliche Funktion erklärt Zuständigkeit,
 **Rhai-API:** N/A
 
 **Visual-Graph-API:** N/A
+
+
+<a id="v70-stable-platform"></a>
+
+## Nova_A 7: Ablauf der stabilen Creator-Plattform
+
+Mit diesem Ablauf ein vollständiges Projekt lernen, migrieren, prüfen und ausliefern, ohne stabile Verträge oder externe Grenzen zu verbergen.
+
+1. Verwalten → Lernzentrum → Plattformbereitschaft öffnen. Die gewünschte Funktion suchen und Bindung, Validierung, Rückgängig, Speicherung, Laufzeit/Export, Dokumentation und Tests prüfen. Kreis bedeutet nicht anwendbar; Strich bedeutet externe Evidenz.
+2. Mit einem geführten Projekt oder creator-v700-stable-platform beginnen. Voraussetzungen, exakte Schritte, Ergebnis, Speichern/Laden, Rückgängig/Wiederherstellung, Play/Step, Standalone-Build und Barrierefreiheit der Reihe nach prüfen.
+3. Beim Öffnen eines 6.x-Projekts zuerst die Migrationsvorschau lesen. Quell-/Zielversion, semantischen Diff, Backup und deterministische Prüfsumme prüfen. Der 7.0-Siegel ändert nur die Obergrenze auf <8.0.0 und keine Schema-29-Spieldaten.
+4. Rhai oder Visual Graph bearbeiten, speichern, die synchronisierte Gegenseite und Paritätstests prüfen. Nicht unterstütztes Rhai bleibt verlustfrei im Code-Block. Vor Runtime-Aufrufen API-Browser oder docs/API_REFERENCE_7_0.md verwenden.
+5. Projektzustand, Vorlagen/Referenzen und Build-Validierung ausführen. Windows unter Windows und Web lokal bauen. Linux/macOS benötigen Matching Host, Android ist experimentell/toolchain-gebunden, iOS/Konsolen sind verschoben.
+6. Tastatur und Zeiger auf Englisch, Deutsch und Chinesisch bei 100–200 %, hohem Kontrast und reduzierter Bewegung prüfen. Speichern, neu öffnen, einen absichtlich falschen Wert beheben und elf Release-Dateien kontrollieren.
+
+**Rückgängig und Wiederherstellung:** Bei unerwarteter Vorschau abbrechen oder Backup wiederherstellen. Dokumentänderungen rückgängig machen, Recovery Browser nach unterbrochenem Speichern verwenden, fehlerhafte Pakete/Plugins deaktivieren und den letzten gültigen Build behalten. docs/TROUBLESHOOTING_7_0.md erklärt die Fehlerbehebung. Externe Nachweise bleiben offen.
 
 <!-- NOVA_V6_TEACHING_END -->

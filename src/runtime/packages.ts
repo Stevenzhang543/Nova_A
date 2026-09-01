@@ -1,7 +1,7 @@
 import { reactive } from 'vue'
 import { NOVA_PACKAGE_MANIFEST_VERSION } from './stableContracts'
 
-const PACKAGE_ENGINE_VERSION = '6.4.0'
+const PACKAGE_ENGINE_VERSION = '7.0.0'
 
 export { NOVA_PACKAGE_MANIFEST_VERSION }
 export type PackageSourceKind = 'local' | 'git' | 'registry'
@@ -61,6 +61,10 @@ export interface InstalledPackage {
 }
 export interface PackageLockEntry { id: string; version: string; source: PackageSource; sha256: string; signature: string; entryPointType: PackageEntryPointType; dependencies: Record<string, string> }
 export interface QuarantinedPackage { id: string; version: string; reason: string; quarantinedAt: number }
+export interface PackageRevocation { id: string; version: string; sha256: string; reason: string; advisoryId: string; revokedAt: string }
+export interface PackageVulnerability { advisoryId: string; id: string; affected: string; severity: 'low' | 'moderate' | 'high' | 'critical'; summary: string; fixedVersion: string; publishedAt: string }
+export interface PackageSolverStep { packageId: string; version: string; requestedBy: string; requirement: string; status: 'selected' | 'reused' | 'blocked'; detail: string }
+export interface PackageSolverDiagnostic { status: 'resolved' | 'blocked'; roots: string[]; steps: PackageSolverStep[]; errors: string[]; lockfile: PackageLockEntry[] }
 
 export const PACKAGE_PERMISSION_CATALOG = Object.freeze([
   'log', 'events', 'editor.commands', 'editor.menus', 'editor.panels', 'editor.docks', 'editor.importers', 'editor.assets', 'editor.components', 'editor.inspectors', 'editor.gizmos', 'editor.settings', 'editor.graph-nodes',
@@ -90,6 +94,10 @@ export const packageState = reactive({
   vulnerabilityPolicy: 'block-critical-high' as 'block-critical-high' | 'warn-only',
   lastCacheVerification: '',
   publisherTrust: [] as Array<{ publisher: string; fingerprint: string; packageId: string; verifiedAt: string }>
+  ,revocations: [] as PackageRevocation[]
+  ,vulnerabilities: [] as PackageVulnerability[]
+  ,lastSecurityBulletin: ''
+  ,lastSolverDiagnostic: null as PackageSolverDiagnostic | null
 })
 
 const verifiedPublisherPackages = new Set<string>()
@@ -125,33 +133,33 @@ function officialSecurity(type: PackageEntryPointType, sha256: string, dependenc
 const OFFICIAL_PACKAGES: Record<string, PackageManifest> = {
   [OFFICIAL_NAVIGATION_PACKAGE_ID]: {
     manifestVersion: NOVA_PACKAGE_MANIFEST_VERSION, id: OFFICIAL_NAVIGATION_PACKAGE_ID, name: 'Nova Navigation 2D', version: '2.6.0',
-    description: 'Grid/polygon navigation, agents, flow fields, avoidance, and dynamic rebaking.', engine: '>=2.6.0 <7.0.0', dependencies: {},
+    description: 'Grid/polygon navigation, agents, flow fields, avoidance, and dynamic rebaking.', engine: '>=2.6.0 <8.0.0', dependencies: {},
     pluginApi: null, native: false, ...officialSecurity('runtime', '26434adf10b122a8708afc496f682242d7f634a344bbd00f4699ff71b2e3a9ae'), ...OFFICIAL_METADATA
   },
   [OFFICIAL_AI_PACKAGE_ID]: {
     manifestVersion: NOVA_PACKAGE_MANIFEST_VERSION, id: OFFICIAL_AI_PACKAGE_ID, name: 'Nova AI Tools', version: '3.8.0',
-    description: 'Optional serialized behavior trees and hierarchical state machines with deterministic debug traces.', engine: '>=3.8.0 <7.0.0', dependencies: {},
+    description: 'Optional serialized behavior trees and hierarchical state machines with deterministic debug traces.', engine: '>=3.8.0 <8.0.0', dependencies: {},
     pluginApi: null, native: false, ...officialSecurity('runtime', '11c75ccdc9f2037548e9eef31bd3ee34134a365e9eaeef741ee8e7917a69ac4e'), ...OFFICIAL_METADATA
   },
   [OFFICIAL_OBJECT_POOL_PACKAGE_ID]: {
     manifestVersion: NOVA_PACKAGE_MANIFEST_VERSION, id: OFFICIAL_OBJECT_POOL_PACKAGE_ID, name: 'Nova Object Pool', version: '3.8.0',
-    description: 'Optional runtime object pools with reset contracts, bounded capacity, lifetime policies, reuse counters, and leak diagnostics.', engine: '>=3.8.0 <7.0.0', dependencies: {},
+    description: 'Optional runtime object pools with reset contracts, bounded capacity, lifetime policies, reuse counters, and leak diagnostics.', engine: '>=3.8.0 <8.0.0', dependencies: {},
     pluginApi: null, native: false, ...officialSecurity('runtime', '1bb0707fffc9aa16790924146797791413754147129750608f29360bd2ee4e86'), ...OFFICIAL_METADATA
   },
   [OFFICIAL_STREAMING_TOOLS_PACKAGE_ID]: {
     manifestVersion: NOVA_PACKAGE_MANIFEST_VERSION, id: OFFICIAL_STREAMING_TOOLS_PACKAGE_ID, name: 'Nova Streaming Tools', version: '3.8.0',
-    description: 'Optional authoring helpers and diagnostics for the core asynchronous world-cell runtime.', engine: '>=3.8.0 <7.0.0', dependencies: {},
+    description: 'Optional authoring helpers and diagnostics for the core asynchronous world-cell runtime.', engine: '>=3.8.0 <8.0.0', dependencies: {},
     pluginApi: null, native: false, ...officialSecurity('editor', 'fbd228b8e1b6f780487885dea93276958c978d2f13f117a7c654c78d630cb047'), ...OFFICIAL_METADATA
   },
   [OFFICIAL_NETWORKING_PACKAGE_ID]: {
     manifestVersion: NOVA_PACKAGE_MANIFEST_VERSION, id: OFFICIAL_NETWORKING_PACKAGE_ID, name: 'Nova Optional Networking', version: '2.9.0',
-    description: 'Bounded WebSocket/native UDP transports, RPCs, snapshots, prediction, interpolation, rollback helpers, and multiplayer diagnostics.', engine: '>=2.9.0 <7.0.0', dependencies: {},
+    description: 'Bounded WebSocket/native UDP transports, RPCs, snapshots, prediction, interpolation, rollback helpers, and multiplayer diagnostics.', engine: '>=2.9.0 <8.0.0', dependencies: {},
     pluginApi: null, native: false, ...officialSecurity('runtime', 'fd048525377499fbd054cb74b69d5369c57d11431951695d413ec1e14cfe3424'),
     ...OFFICIAL_METADATA, permissions: ['network.client', 'network.listen']
   },
   [OFFICIAL_ANDROID_PACKAGE_ID]: {
-    manifestVersion: NOVA_PACKAGE_MANIFEST_VERSION, id: OFFICIAL_ANDROID_PACKAGE_ID, name: 'Nova Android Export', version: '2.9.0',
-    description: 'Optional Android export templates and validation. Requires a local Android SDK/JDK toolchain.', engine: '>=2.9.0 <7.0.0', dependencies: {},
+    manifestVersion: NOVA_PACKAGE_MANIFEST_VERSION, id: OFFICIAL_ANDROID_PACKAGE_ID, name: 'Nova Android Export', version: '6.7.0',
+    description: 'Optional Android export templates and validation. Requires a local Android SDK/JDK toolchain.', engine: '>=2.9.0 <8.0.0', dependencies: {},
     pluginApi: null, native: false, ...officialSecurity('build', 'cb2f4c6efb9bf972451cf545a4854878f8515ca327417424975ad2756349a5ca'),
     ...OFFICIAL_METADATA, permissions: ['build.android-sdk']
   }
@@ -160,7 +168,7 @@ const OFFICIAL_PACKAGES: Record<string, PackageManifest> = {
 packageState.registryCatalog.splice(
   0,
   packageState.registryCatalog.length,
-  ...Object.values(OFFICIAL_PACKAGES).filter(manifest => manifest.id !== OFFICIAL_ANDROID_PACKAGE_ID)
+  ...Object.values(OFFICIAL_PACKAGES)
 )
 
 export function packageEnabled(id: string): boolean {
@@ -312,6 +320,13 @@ export function reviewPackageSecurity(manifest: PackageManifest, candidates: rea
     if (installed && manifest.dependencyHashes[id] && installed.manifest.sha256 !== manifest.dependencyHashes[id]) blocking.push(`Dependency ${id} digest differs from the manifest lock.`)
   }
   if (manifest.native) warnings.push('Native entry points remain disabled and require external review.')
+  const revoked = packageState.revocations.find(item => item.id === manifest.id && (item.version === manifest.version || item.sha256 === manifest.sha256))
+  if (revoked) blocking.push(`Package was revoked by ${revoked.advisoryId}: ${revoked.reason}`)
+  for (const advisory of packageState.vulnerabilities.filter(item => item.id === manifest.id && versionSatisfies(manifest.version, item.affected))) {
+    const message = `${advisory.advisoryId} ${advisory.severity}: ${advisory.summary}${advisory.fixedVersion ? `; update to ${advisory.fixedVersion}` : ''}`
+    if ((advisory.severity === 'critical' || advisory.severity === 'high') && packageState.vulnerabilityPolicy === 'block-critical-high') blocking.push(message)
+    else warnings.push(message)
+  }
   const quarantined = packageState.quarantine.find(item => item.id === manifest.id && item.version === manifest.version)
   if (quarantined) blocking.push(`Package is quarantined: ${quarantined.reason}`)
   return { status: blocking.length ? quarantined ? 'quarantined' : 'unverified' : 'verified', blocking, warnings }
@@ -325,6 +340,35 @@ export function quarantinePackage(manifest: PackageManifest, reason: string): vo
   if (!packageState.quarantine.some(item => item.id === manifest.id && item.version === manifest.version)) packageState.quarantine.push({ id: manifest.id, version: manifest.version, reason: reason.slice(0, 500), quarantinedAt: Date.now() })
   const installed = packageState.installed.find(item => item.manifest.id === manifest.id)
   if (installed) { installed.enabled = false; installed.securityStatus = 'quarantined' }
+}
+
+export function applyVerifiedPackageSecurityBulletin(value: unknown): { revoked: number; vulnerable: number; disabled: number } {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('Security bulletin must be an object.')
+  const source = value as Record<string, unknown>
+  if (source.format !== 'nova-package-security-bulletin' || source.version !== 1 || typeof source.bulletinId !== 'string') throw new Error('Unsupported package security bulletin.')
+  const bulletinId = text(source.bulletinId, 120), issuedAt = text(source.issuedAt, 40)
+  if (!bulletinId || !/^\d{4}-\d{2}-\d{2}T/.test(issuedAt)) throw new Error('Security bulletin identity or timestamp is invalid.')
+  const revocations = (Array.isArray(source.revocations) ? source.revocations : []).slice(0, 10_000).flatMap(raw => {
+    if (!raw || typeof raw !== 'object') return []
+    const item = raw as Record<string, unknown>, id = text(item.id, 120), version = text(item.version, 40), digest = sha256(item.sha256), reason = text(item.reason, 500)
+    return validId(id) && parseVersion(version) && digest && reason ? [{ id, version, sha256: digest, reason, advisoryId: bulletinId, revokedAt: issuedAt }] : []
+  })
+  const severities = new Set(['low', 'moderate', 'high', 'critical'])
+  const vulnerabilities = (Array.isArray(source.vulnerabilities) ? source.vulnerabilities : []).slice(0, 10_000).flatMap(raw => {
+    if (!raw || typeof raw !== 'object') return []
+    const item = raw as Record<string, unknown>, id = text(item.id, 120), affected = text(item.affected, 80), severity = text(item.severity, 16) as PackageVulnerability['severity'], summary = text(item.summary, 500), fixedVersion = text(item.fixedVersion, 40)
+    return validId(id) && affected && severities.has(severity) && summary && (!fixedVersion || parseVersion(fixedVersion)) ? [{ advisoryId: text(item.advisoryId, 120) || bulletinId, id, affected, severity, summary, fixedVersion, publishedAt: issuedAt }] : []
+  })
+  if (revocations.length !== (Array.isArray(source.revocations) ? source.revocations.length : 0) || vulnerabilities.length !== (Array.isArray(source.vulnerabilities) ? source.vulnerabilities.length : 0)) throw new Error('Security bulletin contains a malformed revocation or advisory.')
+  packageState.revocations.splice(0, packageState.revocations.length, ...revocations)
+  packageState.vulnerabilities.splice(0, packageState.vulnerabilities.length, ...vulnerabilities)
+  packageState.lastSecurityBulletin = `${bulletinId} · ${issuedAt}`
+  let disabled = 0
+  for (const item of packageState.installed) {
+    const review = reviewPackageSecurity(item.manifest)
+    if (review.status !== 'verified') { quarantinePackage(item.manifest, review.blocking.join(' ')); disabled++ }
+  }
+  return { revoked: revocations.length, vulnerable: vulnerabilities.length, disabled }
 }
 
 function normalizeSource(value: unknown): PackageSource {
@@ -406,24 +450,40 @@ export function addOfflineRegistryManifest(value: unknown): PackageManifest {
   return manifest
 }
 
-export function resolvePackageLockfile(): PackageLockEntry[] {
-  const projectPackages = packageState.installed.filter(item => item.project).sort((a, b) => a.manifest.id.localeCompare(b.manifest.id))
-  const seen = new Set<string>(), stack = new Set<string>(), lock: PackageLockEntry[] = []
-  const visit = (item: InstalledPackage) => {
-    if (seen.has(item.manifest.id)) return
-    if (stack.has(item.manifest.id)) throw new Error(`Circular package dependency at ${item.manifest.id}`)
-    stack.add(item.manifest.id)
-    for (const [id, range] of Object.entries(item.manifest.dependencies)) {
-      const dependency = packageState.installed.find(candidate => candidate.manifest.id === id && candidate.project && versionSatisfies(candidate.manifest.version, range))
-      if (!dependency) throw new Error(`Cannot resolve ${id} ${range}`)
-      visit(dependency)
+export function diagnosePackageResolution(candidates: readonly InstalledPackage[] = packageState.installed): PackageSolverDiagnostic {
+  const projectPackages = candidates.filter(item => item.project).sort((a, b) => a.manifest.id.localeCompare(b.manifest.id))
+  const seen = new Set<string>(), stack: string[] = [], lock: PackageLockEntry[] = [], steps: PackageSolverStep[] = [], errors: string[] = []
+  const visit = (item: InstalledPackage, requestedBy = 'project', requirement = item.manifest.version) => {
+    if (seen.has(item.manifest.id)) { steps.push({ packageId: item.manifest.id, version: item.manifest.version, requestedBy, requirement, status: 'reused', detail: 'Reused the already locked compatible package.' }); return }
+    if (stack.includes(item.manifest.id)) { const cycle = [...stack.slice(stack.indexOf(item.manifest.id)), item.manifest.id].join(' → '); errors.push(`Circular dependency: ${cycle}`); steps.push({ packageId: item.manifest.id, version: item.manifest.version, requestedBy, requirement, status: 'blocked', detail: `Circular dependency: ${cycle}` }); return }
+    const security = reviewPackageSecurity(item.manifest, candidates)
+    if (security.blocking.length) { errors.push(...security.blocking.map(problem => `${item.manifest.id}: ${problem}`)); steps.push({ packageId: item.manifest.id, version: item.manifest.version, requestedBy, requirement, status: 'blocked', detail: security.blocking.join(' ') }); return }
+    if (!versionSatisfies(PACKAGE_ENGINE_VERSION, item.manifest.engine)) { const detail = `Requires Nova_A ${item.manifest.engine}; current engine is ${PACKAGE_ENGINE_VERSION}.`; errors.push(`${item.manifest.id}: ${detail}`); steps.push({ packageId: item.manifest.id, version: item.manifest.version, requestedBy, requirement, status: 'blocked', detail }); return }
+    stack.push(item.manifest.id)
+    for (const [id, range] of Object.entries(item.manifest.dependencies).sort(([left], [right]) => left.localeCompare(right))) {
+      const matches = candidates.filter(candidate => candidate.manifest.id === id && candidate.project && versionSatisfies(candidate.manifest.version, range)).sort((a, b) => compareVersions(b.manifest.version, a.manifest.version))
+      const dependency = matches[0]
+      if (!dependency) { const detail = `No installed project package satisfies ${id} ${range}.`; errors.push(`${item.manifest.id}: ${detail}`); steps.push({ packageId: id, version: '', requestedBy: item.manifest.id, requirement: range, status: 'blocked', detail }); continue }
+      if (dependency.manifest.sha256 !== item.manifest.dependencyHashes[id]) { const detail = `Locked digest for ${id} does not match ${dependency.manifest.sha256}.`; errors.push(`${item.manifest.id}: ${detail}`); steps.push({ packageId: id, version: dependency.manifest.version, requestedBy: item.manifest.id, requirement: range, status: 'blocked', detail }); continue }
+      visit(dependency, item.manifest.id, range)
     }
-    stack.delete(item.manifest.id); seen.add(item.manifest.id)
+    stack.pop()
+    if (errors.some(error => error.startsWith(`${item.manifest.id}:`))) return
+    seen.add(item.manifest.id)
+    steps.push({ packageId: item.manifest.id, version: item.manifest.version, requestedBy, requirement, status: 'selected', detail: `${item.manifest.id}@${item.manifest.version} selected and hash pinned.` })
     lock.push({ id: item.manifest.id, version: item.manifest.version, source: { ...item.source }, sha256: item.manifest.sha256, signature: item.manifest.signature, entryPointType: item.manifest.entryPointType, dependencies: { ...item.manifest.dependencyHashes } })
   }
-  projectPackages.forEach(visit)
-  packageState.lockfile.splice(0, packageState.lockfile.length, ...lock)
-  return lock
+  projectPackages.forEach(item => visit(item))
+  const diagnostic: PackageSolverDiagnostic = { status: errors.length ? 'blocked' : 'resolved', roots: projectPackages.map(item => item.manifest.id), steps: steps.slice(0, 20_000), errors: [...new Set(errors)].slice(0, 5_000), lockfile: errors.length ? [] : lock }
+  packageState.lastSolverDiagnostic = diagnostic
+  return diagnostic
+}
+
+export function resolvePackageLockfile(): PackageLockEntry[] {
+  const diagnostic = diagnosePackageResolution()
+  if (diagnostic.status === 'blocked') throw new Error(diagnostic.errors.join(' '))
+  packageState.lockfile.splice(0, packageState.lockfile.length, ...diagnostic.lockfile)
+  return diagnostic.lockfile
 }
 
 export function installPackageManifest(value: unknown, sourceValue?: unknown): InstalledPackage {

@@ -1,8 +1,0 @@
-{
-  "format": "nova-visual-baseline-index",
-  "version": 1,
-  "engineVersion": "4.5.0",
-  "environment": "NOVA-WIN-V45-LOCAL",
-  "source": "v4.5.0 layout-browser screenshots when present",
-  "status": "passed"
-}

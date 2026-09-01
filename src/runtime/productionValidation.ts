@@ -11,6 +11,7 @@ import { productionSettings } from './production'
 import { physicsState } from '../store/physics'
 import { validateScriptContract } from './scriptContracts'
 import { validateResourceProject } from './resources'
+import { networkAuthenticationProviders, networkEncryptionGuidance, reviewedNetworkTransports } from './networkProduction'
 
 export interface ProductionValidationIssue { code: string; severity: 'warning' | 'error'; message: string; fix: string }
 
@@ -38,6 +39,22 @@ export function validateProductionRuntime(assets: Pick<AssetDatabaseState, 'reco
   if (network.enabled && !network.permissionGranted) issues.push({ code: 'NET-PERMISSION-DENIED', severity: 'error', message: 'Networking is enabled without an explicit project network permission.', fix: 'Review the transport and endpoint in Network Studio, then grant permission.' })
   if (network.enabled && !network.channels.some(channel => channel.delivery === 'reliable-ordered')) issues.push({ code: 'NET-RELIABLE-MISSING', severity: 'error', message: 'Networking has no reliable ordered channel for lifecycle and RPC messages.', fix: 'Restore or create a reliable ordered channel in Network Studio → Protocol.' })
   if (network.enabled && network.rpcContracts.some(rpc => !network.channels.some(channel => channel.id === rpc.channelId))) issues.push({ code: 'NET-RPC-CHANNEL', severity: 'error', message: 'At least one RPC references a missing channel.', fix: 'Choose an existing channel for every RPC contract.' })
+  if (network.enabled && network.transportAdapterId && !reviewedNetworkTransports().some(adapter => adapter.id === network.transportAdapterId)) issues.push({ code: 'NET-ADAPTER-MISSING', severity: 'error', message: `Reviewed transport adapter ${network.transportAdapterId} is not registered.`, fix: 'Install a reviewed adapter or choose the built-in local, WebSocket, or native UDP transport.' })
+  if (network.enabled && network.authentication.mode === 'hook' && !networkAuthenticationProviders().some(provider => provider.id === network.authentication.providerId)) issues.push({ code: 'NET-AUTH-HOOK-MISSING', severity: 'error', message: `Authentication provider ${network.authentication.providerId || '(empty)'} is not registered.`, fix: 'Register the reviewed provider before play/build or choose no authentication hook for an offline/local prototype.' })
+  if (network.enabled && network.authentication.requireVerifiedPeers && network.authentication.mode !== 'hook') issues.push({ code: 'NET-AUTH-VERIFICATION-MISSING', severity: 'error', message: 'Verified peers are required without an authentication hook.', fix: 'Choose and register a reviewed authentication provider, or disable verified-peer enforcement for trusted local development.' })
+  if (network.enabled) {
+    const selectedAdapter = reviewedNetworkTransports().find(adapter => adapter.id === network.transportAdapterId)
+    const encryption = networkEncryptionGuidance(network, selectedAdapter?.encrypted === true)
+    if (encryption.severity !== 'info') issues.push({ code: 'NET-ENCRYPTION', severity: encryption.severity, message: encryption.message, fix: 'Use a secure WebSocket/reviewed encrypted adapter, or disable the strict encryption requirement only for trusted local development.' })
+    const replicated = new Set<string>()
+    for (const definition of network.replicatedEntities) {
+      if (replicated.has(definition.entityUuid)) issues.push({ code: 'NET-REPLICATION-DUPLICATE', severity: 'error', message: `Entity ${definition.entityUuid} has more than one replication definition.`, fix: 'Keep one replication definition per entity in Network Studio → Replication.' })
+      replicated.add(definition.entityUuid)
+      if (!physicsState.world.entities.some(entity => entity.uuid === definition.entityUuid)) issues.push({ code: 'NET-REPLICATION-ENTITY', severity: 'error', message: `Replication references missing entity ${definition.entityUuid}.`, fix: 'Remove the stale row or restore the entity before building.' })
+      if (definition.authority === 'owner' && !definition.ownerPeerId.trim()) issues.push({ code: 'NET-OWNER-MISSING', severity: 'warning', message: `Owner-authoritative entity ${definition.entityUuid} has no initial peer owner.`, fix: 'Assign an initial owner or allow the host/server to own it until an explicit authority transfer.' })
+      if (!definition.alwaysRelevant && network.interest.enabled && definition.interestRadius <= 0) issues.push({ code: 'NET-INTEREST-RADIUS', severity: 'warning', message: `Entity ${definition.entityUuid} uses the global interest radius.`, fix: 'Set an entity radius when it needs a different visibility range, or keep the global radius intentionally.' })
+    }
+  }
   const assetReferences = assets.records.flatMap(asset => [asset.uuid, asset.path])
   const enabledPackages = packageState.installed.filter(item => item.enabled && item.project).map(item => item.manifest.id)
   for (const asset of assets.records.filter(item => item.assetType === 'script').slice(0, 1024)) {

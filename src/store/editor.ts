@@ -86,6 +86,10 @@ export const editorState = reactive({
     batchBreaks: 0,
     atlasPages: 0,
     textureMemoryBytes: 0,
+    textureUploads: 0,
+    shaderCompiles: 0,
+    shaderFallbacks: 0,
+    contextLosses: 0,
     batchBreakReasons: {}
   },
   manualConnectionId: null as number | null,

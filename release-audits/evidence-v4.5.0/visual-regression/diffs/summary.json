@@ -1,7 +1,0 @@
-{
-  "format": "nova-visual-diff-summary",
-  "version": 1,
-  "threshold": "layout-overlap/clipping plus screenshot baseline",
-  "status": "passed",
-  "externalReview": "pending-product-owner"
-}

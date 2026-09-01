@@ -45,11 +45,11 @@ export function normalizeRuntimeAccessibilitySettings(source: unknown): RuntimeA
     focusRingWidth: width,
     reducedMotion: item.reducedMotion === true,
     highContrast: item.highContrast === true,
-    textScale: typeof item.textScale === 'number' && Number.isFinite(item.textScale) ? Math.min(3, Math.max(.75, item.textScale)) : 1,
+    textScale: typeof item.textScale === 'number' && Number.isFinite(item.textScale) ? Math.min(4, Math.max(.75, item.textScale)) : 1,
     minimumTargetSize: typeof item.minimumTargetSize === 'number' && Number.isFinite(item.minimumTargetSize) ? Math.min(128, Math.max(24, item.minimumTargetSize)) : 44,
     announceFocusChanges: item.announceFocusChanges !== false,
     subtitles: item.subtitles !== false, captions: item.captions !== false, captionBackground: item.captionBackground !== false,
-    captionScale: typeof item.captionScale === 'number' && Number.isFinite(item.captionScale) ? Math.min(3, Math.max(.75, item.captionScale)) : 1
+    captionScale: typeof item.captionScale === 'number' && Number.isFinite(item.captionScale) ? Math.min(4, Math.max(.75, item.captionScale)) : 1
   }
 }
 

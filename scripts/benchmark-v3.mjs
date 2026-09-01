@@ -24,7 +24,20 @@ const result = {
   measurements: {}, exceptions: []
 }
 
-const physics = spawnSync('cargo', ['run', '--release', '-q', '-p', 'nova_physics', '--example', 'v3_benchmark'], { cwd: root, encoding: 'utf8' })
+let physics
+if (process.platform === 'win32') {
+  // Build and execute the probe in a unique local-temp Cargo target. This both
+  // supports relocated workspaces and prevents indexing/antivirus locks on a
+  // prior target/release/examples executable from invalidating fresh evidence.
+  const runnerDirectory = await mkdtemp(join(tmpdir(), 'nova-v3-physics-'))
+  try {
+    const targetDirectory = join(runnerDirectory, 'target')
+    const build = spawnSync('cargo', ['build', '--release', '-q', '-p', 'nova_physics', '--example', 'v3_benchmark', '--target-dir', targetDirectory], { cwd: root, encoding: 'utf8' })
+    physics = build.status === 0 ? spawnSync(join(targetDirectory, 'release', 'examples', 'v3_benchmark.exe'), [], { cwd: runnerDirectory, encoding: 'utf8' }) : build
+  } finally {
+    await rm(runnerDirectory, { recursive: true, force: true })
+  }
+} else physics = spawnSync('cargo', ['run', '--release', '-q', '-p', 'nova_physics', '--example', 'v3_benchmark'], { cwd: root, encoding: 'utf8' })
 if (physics.status === 0) result.measurements.physics = JSON.parse(physics.stdout.trim().split(/\r?\n/).at(-1))
 else result.exceptions.push({ metric: 'physics', reason: physics.stderr.trim().slice(0, 2_000), plan: 'Run the benchmark on a provisioned Rust release runner.' })
 

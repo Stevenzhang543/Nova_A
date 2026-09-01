@@ -151,7 +151,7 @@ try {
 }
 
 const failed = checks.filter(check => check.status === 'failed')
-const report = { format: 'nova-template-catalog-verification', version: 1, engineVersion: '6.4.0', generatedAt: new Date().toISOString(), checks, severity0Open: 0, severity1Open: failed.length, status: failed.length ? 'failed' : 'passed' }
+const report = { format: 'nova-template-catalog-verification', version: 1, engineVersion: '7.0.0', generatedAt: new Date().toISOString(), checks, severity0Open: 0, severity1Open: failed.length, status: failed.length ? 'failed' : 'passed' }
 await mkdir(join(root, 'release-audits'), { recursive: true })
 await writeFile(join(root, 'release-audits/template-catalog-verification.json'), `${JSON.stringify(report, null, 2)}\n`)
 if (failed.length) { console.error(failed); process.exit(1) }

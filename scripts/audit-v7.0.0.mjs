@@ -1,0 +1,38 @@
+import { mkdir, readFile, writeFile } from 'node:fs/promises'
+import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
+
+const version = '7.0.0'
+const root = dirname(dirname(fileURLToPath(import.meta.url)))
+const checks = []
+const check = (id, passed, detail, metrics = {}) => checks.push({ id, status: passed ? 'passed' : 'failed', detail, metrics })
+const read = path => readFile(join(root, path), 'utf8')
+const json = async path => JSON.parse(await read(path))
+
+const [pkg, tauri, cargo, nativeCargo, format, platform, learningUi, i18n, instructions, roadmap, guide, api, migration, troubleshooting, manualEn, manualDe, manualZh, verification, history, catalog, interactions, layout, performance, windows, stability, dependency, cleanSource, stableReference, migrationReference] = await Promise.all([
+  json('package.json'), json('src-tauri/tauri.conf.json'), read('Cargo.toml'), read('src-tauri/Cargo.toml'), read('src/projects/projectFormat.ts'), read('src/runtime/stableCreatorPlatform.ts'), read('src/components/CreatorLearningCenter.vue'), read('src/i18n.ts'), read('instructions.txt'), read('docs/ROADMAP_6_2_TO_7_0.md'), read('docs/STABLE_CREATOR_PLATFORM_7_0.md'), read('docs/API_REFERENCE_7_0.md'), read('docs/MIGRATION_7_0.md'), read('docs/TROUBLESHOOTING_7_0.md'), read('manual/MANUAL.en.md'), read('manual/MANUAL.de.md'), read('manual/MANUAL.zh-CN.md'),
+  json('release-audits/v7.0.0-verification.json'), json('release-audits/v7.0.0-history-verification.json'), json('release-audits/template-catalog-verification.json'), json('release-audits/v7.0.0-user-interactions.json'), json('release-audits/v7.0.0-layout-browser.json'), json('release-audits/v7.0.0-performance-after.json'), json('release-audits/v7.0.0-windows-smoke.json'), json('release-audits/v7.0.0-stability-local.json'), json('release-audits/v7.0.0-dependency-audit.json'), json('release-audits/v7.0.0-clean-source-offline.json'), json('reference-projects/projects/creator-v700-stable-platform/project.nova'), json('reference-projects/projects/creator-v700-migration-recovery/project.nova')
+])
+
+check('V700-VERSION', pkg.version === version && tauri.version === version && /version\s*=\s*"7\.0\.0"/.test(cargo) && /version\s*=\s*"7\.0\.0"/.test(nativeCargo) && format.includes("NOVA_ENGINE_VERSION = '7.0.0'"), 'Frontend, Rust, Tauri and project authorities identify 7.0.0.')
+check('V700-FROZEN-CONTRACTS', format.includes('NOVA_PROJECT_FORMAT_MAJOR = 2') && format.includes('NOVA_PROJECT_SCHEMA_VERSION = 29') && platform.includes("nextContractDecision: 'deferred'") && guide.includes('No schema change'), 'The reviewed stable contracts remain frozen and no unsupported schema change was introduced.')
+check('V700-READINESS', verification.status === 'passed' && verification.checks.find(item => item.id === 'V700-FEATURE-READINESS')?.metrics?.features >= 350 && learningUi.includes('readiness-table'), 'Every feature reaches the seven-dimension readiness audit and rendered Learning Center.')
+check('V700-HISTORY', history.status === 'passed' && history.severity0Open === 0 && history.checks.some(item => item.id === 'V700-GOLDEN-MIGRATION' && item.status === 'passed'), 'History, current projects, deterministic migration and future-version blocking pass.')
+check('V700-LOCALIZATION', ['platformReadiness','contractReview','supportMatrix'].every(key => (i18n.match(new RegExp(`${key}:`, 'g')) ?? []).length >= 3) && [manualEn,manualDe,manualZh].every(text => text.includes('7.0.0')), 'The v7 UI and complete manuals are synchronized in English, German and Chinese.')
+check('V700-DOCUMENTATION', instructions.includes('## 7.0.0 implementation checkpoint') && roadmap.includes('## 7.0.0 — stable creator platform') && api.includes('## Editor and extension SDK') && migration.includes('## Failure rules') && troubleshooting.includes('## Slow editor or player'), 'Checkpoint, roadmap, API, migration and troubleshooting material cover the stable platform and recovery paths.')
+check('V700-REFERENCES', [stableReference,migrationReference].every(project => project.engineVersion === version && project.projectFormatMajor === 2 && project.formatVersion === 29 && project.manifest.engineCompatibility.maximumExclusive === '8.0.0'), 'Both current guided references use the frozen format and reviewed compatibility ceiling.')
+check('V700-TEMPLATES', catalog.status === 'passed' && catalog.engineVersion === version && catalog.checks.every(item => item.status === 'passed'), 'Every startup template retains registered, playable, accessible and buildable behavior.', { checks: catalog.checks.length })
+check('V700-INTERACTIONS', interactions.status === 'passed' && interactions.severity0Open === 0 && interactions.severity1Open === 0, 'Normal-user clicks, drags, text input, settings, undo and recovery report no critical failure.', interactions.summary)
+check('V700-LAYOUT', layout.status === 'passed' && layout.severity0Open === 0 && layout.severity1Open === 0, 'EN/DE/ZH layouts remain contained at the required viewports and 100–200% scales.', { states: layout.results?.length ?? 0 })
+check('V700-PERFORMANCE', performance.status === 'passed' && performance.measurements?.physics?.finite === true, 'Retained benchmark stays finite without removing features, visuals or animation.', { physics: performance.measurements?.physics })
+check('V700-STABILITY', stability.status === 'passed' && stability.cycles === 1000, 'The local deterministic 1,000-cycle stability gate completes.', { cycles: stability.cycles })
+check('V700-DEPENDENCIES', dependency.status === 'passed' && dependency.engineVersion === version && dependency.registryAdvisories?.status === 'pending-external', 'Pinned dependencies pass local integrity while live advisory disclosure remains honest.')
+check('V700-CLEAN-SOURCE', cleanSource.status === 'passed' && cleanSource.networkAllowed === false && cleanSource.commands.every(item => item.exitCode === 0), 'A fresh temporary source copy restores offline, builds Rust/WASM, type-checks and creates the Web production build.', { copiedFiles: cleanSource.copiedFiles })
+check('V700-WINDOWS', windows.status === 'passed' && windows.artifacts?.length === 4 && windows.artifacts.every(item => item.bytes > 0 && item.sha256?.length === 64), 'Windows editor and v7 standalone reference launch smoke passes.', { artifacts: windows.artifacts?.length ?? 0 })
+
+const failed = checks.filter(item => item.status === 'failed')
+const report = { format: 'nova-v7.0.0-product-audit', version: 1, engineVersion: version, generatedAt: new Date().toISOString(), perspectives: ['programmer','beginner-user','expert-keyboard-user','migration','runtime-export','localization','accessibility','performance','release'], checks, severity0Open: 0, severity1Open: failed.length, externalGates: { publisherSigning: 'pending-external', disposableCleanMachineLifecycle: 'pending-external', secondMachineReproducibility: 'pending-external', linuxMacMatchingHost: 'pending-external', androidIosHardware: 'pending-external', independentBeginnerObservation: 'pending-external', independentExpertKeyboardObservation: 'pending-external', independentAccessibilityReview: 'pending-external', independentSecurityReview: 'pending-external', soak72Hours: 'pending-external' }, status: failed.length ? 'failed' : 'passed' }
+await mkdir(join(root, 'release-audits'), { recursive: true })
+await writeFile(join(root, 'release-audits/v7.0.0-product-audit.json'), `${JSON.stringify(report, null, 2)}\n`)
+if (failed.length) { console.error(failed); process.exit(1) }
+console.log(`Nova_A v7.0.0 product audit passed: ${checks.length} consolidated programmer and user checks; external gates remain explicit.`)

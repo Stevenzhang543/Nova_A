@@ -4,15 +4,74 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE.md)
 [![Tier 1](https://img.shields.io/badge/Tier%201-Windows%20%7C%20Web-63c6ff)](./docs/PLATFORM_BUILD_MATRIX_5_0.md)
-[![Release](https://img.shields.io/badge/release-6.4.0%20candidate-63c6ff)]()
+[![Release](https://img.shields.io/badge/release-7.0.0%20candidate-63c6ff)]()
 
 Nova_A is an open-source 2D game engine and desktop editor built with Rust, WebAssembly, Vue 3, and Tauri.
 
-Version **6.4.0** adds deterministic Aseprite, TexturePacker/common-atlas and Tiled import/reimport, reusable shared Resources, and production rig/animation previews. Large metadata is bounded, cached and parsed off the UI thread; no feature, visual component, animation or exported fidelity was removed. Frozen project, graph, Rhai, plugin, package, build and workspace contracts remain compatible.
+Version **7.0.0** completes Nova_A's stable creator-platform milestone. The Learning Center now derives a seven-dimension readiness record for every public feature: binding, validation, undo, persistence, runtime/export, documentation and tests. The reviewed 6.x contracts remain frozen at Project Format 2/schema 29; existing projects receive a previewed, backed-up and rollback-capable compatibility-ceiling seal instead of a risky schema rewrite. Complete English, German and Chinese teaching manuals, API/migration/troubleshooting references, stable-platform and recovery projects, history fixtures and exact release evidence ship together. No feature, animation, visual component or authored project value was removed.
 
 **Manual:** [interactive English/German/Chinese webpage](./manual/index.html) · [English Markdown](./manual/MANUAL.en.md) · [Deutsch](./manual/MANUAL.de.md) · [中文](./manual/MANUAL.zh-CN.md)
 
-## What is new in v6.4.0
+## What is new in v7.0.0
+
+- **Platform readiness:** Manage → Learning Center → Platform readiness audits all 358 public features across seven explicit dimensions and never disguises external work as a local pass.
+- **Stable contracts:** Project Format 2/schema 29, Rhai API 2, Graph Format 1, Plugin API 2, Package Manifest 1, Build CLI 1 and workspace document 3 remain compatible. The next breaking-contract decision is deferred pending evidence.
+- **Safe 6.x migration seal:** a dry-run preview, semantic diff, backup, deterministic canonical apply and rollback update only the historical engine ceiling to `<8.0.0`; future schemas still fail closed.
+- **Complete teaching:** every public feature has EN/DE/ZH classification, prerequisites, exact workflow, expected result, persistence/export, undo/recovery, mistakes, accessibility, examples and Rhai/Visual Graph equivalents.
+- **Honest platform support:** Windows and Web are locally qualified Tier 1. Linux/macOS remain matching-host, Android remains experimental/toolchain-gated, iOS/console remain deferred and 3D is out of scope.
+- **Release qualification:** stable-platform and migration references, history/golden fixtures, normal-user interaction and localized layout audits, retained runtime/security/performance checks, clean-source build and exact eleven artifacts form the local evidence set. Independent observation, signing, matching-host builds and real-duration soak remain external.
+
+See the [stable creator-platform contract](./docs/STABLE_CREATOR_PLATFORM_7_0.md), [API reference](./docs/API_REFERENCE_7_0.md), [migration guide](./docs/MIGRATION_7_0.md), and [troubleshooting guide](./docs/TROUBLESHOOTING_7_0.md).
+
+## Retained v6.9.0 ecosystem and shipping baseline
+
+- `pnpm package:publisher` validates, packs, reproduces, and mirrors bounded Package Manifest 1 archives locally; private keys and network publishing remain external and explicit.
+- Dependency locks include human-readable sorted solver traces. Signed bulletin sequence/fingerprint checks enforce revocations and default High/Critical vulnerability blocking.
+- Signed application updates are opt-in and plan-only: no fetch or replacement is implicit, stale/replayed/downgrade/wrong-hash input fails, and committed releases retain rollback identity.
+- Team Workflow adds deterministic change lists, CODEOWNERS matching, and three-way semantic merge for project/settings/scenes/assets/Visual Graph data with an explicit choice for each true conflict.
+- Ecosystem Studio → Shipping presents publisher commands, trust state, solver decisions, updater state, matching-host pipelines, signing hooks, and complete delivery/lifecycle guidance in English, German, and Chinese.
+- Deterministic package/security/updater/merge fixtures, two release references, programmer/user audits, Windows/Web smoke, evidence hashes, and exact eleven-file packaging provide local evidence. Signing identities, disposable clean-machine lifecycle, second-machine reproduction, non-Windows matching hosts, independent review, and real soak remain external.
+
+See the [v6.9 ecosystem, collaboration, and shipping guide](./docs/ECOSYSTEM_COLLABORATION_SHIPPING_6_9.md).
+
+## Retained v6.8.0 performance baseline
+
+The data-oriented component indices, prepared hierarchy/spatial queries, bounded worker/background/streaming paths, live latency/1%-low/startup evidence, adaptive presentation-only quality, and 10k/50k/100k fixtures remain unchanged.
+
+## Retained v6.7.0 device baseline
+
+- Author safe-area-aware virtual sticks, D-pads and buttons without code; their actions pass through the same Input Map as keyboard, mouse and gamepad input.
+- Touch events are deduplicated from compatibility mouse events, and deterministic pan, pinch, rotate, two-finger pan, tap, double-tap, long-press and swipe gestures can bind to actions.
+- Gamepads support guided remapping, dead-zone/inversion/curve calibration and device-aware prompts. Motion sensors require an explicit user gesture and permission; haptics and orientation locks degrade visibly when unsupported.
+- Device Preview rotates common presets and displays safe areas, DPI and minimum touch targets. Runtime accessibility now exports semantic role/name/state/value/focus evidence and supports 200–400% text checks.
+- The optional Android path discovers local JDK/SDK/NDK/platform tools and a reviewed Gradle template, validates least-privilege permissions and purposes, generates the manifest, supports non-secret signing environment variables, and exposes bounded install/log capture. A missing gate produces an exact blocker instead of a fake APK.
+- Two no-code references teach a touch platformer and the same project configured for gated Android delivery. English, German and Chinese manuals include the complete workflow.
+
+See the [v6.7 device, mobile and accessibility guide](./docs/DEVICE_MOBILE_ACCESSIBILITY_6_7.md).
+
+## Retained v6.6.0 multiplayer baseline
+
+- Optional reviewed adapters and authentication providers must pass bounded identity, permission, documentation, and security metadata checks before use.
+- Additive Protocol 2 envelopes provide epoch/nonce/time/proof fields; malformed, oversized, rate-limited, expired, future, replayed, schema-mismatched, and unauthenticated packets fail before gameplay dispatch.
+- Encryption guidance distinguishes local/WSS/reviewed encrypted transports from unencrypted direct UDP/WS and can block builds when encryption is required.
+- Server/owner authority can transfer safely and returns to host/server on disconnect; scene/radius interest filtering and host/server scene handoff are visible and bounded.
+- Network Studio adds explicit local lobby hosting/discovery, deterministic 2–8 peer plans, built Windows-player launch, separate log/Inspector identities, verified peers, ownership, replication diffs, rollback timeline, and bad-network controls.
+- Co-op and headless-authority references plus EN/DE/ZH teaching workflows cover play, reconnect, late join, save/replay, revoked permission, client/server export, and unchanged offline play.
+
+See the [v6.6 production multiplayer guide](./docs/MULTIPLAYER_PRODUCTION_6_6.md).
+
+## Retained v6.5.0 physics and renderer baseline
+
+- Compound bodies keep exact child geometry, stable child contact/sensor identity, layer/mask rules, and area-weighted mass/inertia instead of collapsing to a convex envelope.
+- Static/Kinematic Chain and simple Concave colliders are prepared into exact deterministic solver pieces. Unsafe dynamic Chain/Concave bodies are blocked with a recovery path to convex children.
+- CCD accounts for rotation and the full compound radius; matching manifold features warm-start; contact/constraint islands sleep and wake together; joint motors, limits and break forces use the correct linear/angular axes.
+- Rope2D excludes its two owners but collides with eligible third-party compound children, transfers impulses through anchors, and retains stretch/bend breakage.
+- The physics overlay draws authoritative child geometry. Renderer diagnostics expose passes, shaders, lights, particles, textures, uploads and context recovery; quality volumes select deterministic camera-local budgets without deleting effects.
+- Release gates cover analytical/unit-scale/manifold/compound/Chain/Concave/CCD/joint/rope/determinism/fuzz cases, renderer fallback and budgets, localized user flows, native/Web builds and the exact eleven release artifacts.
+
+See the [v6.5 production physics and renderer guide](./docs/PHYSICS_RENDERER_6_5.md).
+
+## Retained v6.4.0 content and animation baseline
 
 - Import Aseprite JSON, TexturePacker/common atlases, and Tiled TMX/JSON/TSX with stable frame IDs, pivots, colliders, tags, timing, references and visible diagnostics. Failed reimports retain the last valid artifact.
 - Contextual Asset tabs show source/slices and edit six reusable Resource kinds: materials, animation libraries, input maps, physics materials, themes and data tables. Shared parents and local-only overrides resolve deterministically and cycles block Build.
@@ -486,7 +545,7 @@ Configuration changes cross Vue → `nova_wasm` as explicit retained-world comma
 
 ## Project compatibility
 
-- New saves use **Nova_A Project Format 2**, schema 29, and engine version `6.4.0`.
+- New saves use **Nova_A Project Format 2**, schema 29, and engine version `6.9.0`.
 - Persisted scenes, entities, components, and connections use UUIDs; runtime handles are never written to disk.
 - Format migration and validation are centralized in `nova_format`, not scattered through editor components.
 - v1.9 format-13 files, v1.8 format-12 files, v1.7 format-11 files, v1.6 format-10 files, v1.5 format-9 files, v1.4 format-8 files, v1.3 format-7 files, v1.2 format-6 files, v1.1.2 format-5 files, older object roots, and legacy top-level entity arrays continue to load. A migrated project is only written in Format 2 when the user saves it.
@@ -531,3 +590,9 @@ Polygon collision geometry must be convex. The solver uses at least 8 adaptive s
 Version 4.5 adds project-scoped Accurate/Balanced/Fast/Custom solver profiles, explicit dropped-time and sleep tuning, structured ray/point/overlap/sweep/nearest/contact APIs, World Boundary authoring, resolved sleep/wake and joint-break events, adjustable Rope2D segmentation, and a redesigned virtual Physics Monitor with sorting, pins, sparklines, constraint telemetry, capture export, and snapshot comparison. Project Health and Profiler now share physics budget/instability diagnostics, and viewport debug adds centre-of-mass, velocity, and force overlays.
 
 Start with [the v4.5 physics contract](docs/PHYSICS_2D_4_5.md), [character controllers](docs/CHARACTER_CONTROLLERS_4_5.md), and [diagnostics](docs/PHYSICS_DIAGNOSTICS_4_5.md). Numerical tolerances, accelerated soak results, stress captures, platform comparisons, and honest external gates ship in the release-evidence archive.
+
+## Nova_A 6.7 device input, Android delivery, and accessibility
+
+Version 6.7 unifies touch/multi-touch gestures, safe-area-aware virtual controls, gamepad capture/calibration, haptics, orientation and explicit sensor permission under the existing saved Input Map. The Game view uses accessible virtual Button/Stick/D-pad controls; Settings adds rotated device previews and live device testing. Presentation exports semantic role/name/state/value/live/focus evidence and supports runtime text/caption scaling through 400%.
+
+Android is now a discoverable optional Experimental target. Build Settings reports each JDK/SDK 35/build-tools/NDK/adb/template gate, validates least permissions and user-facing purposes, generates the manifest/resources, runs the validated local Gradle wrapper offline, and returns a real APK only after success. Install and logcat are explicit actions; signing secrets are never serialized. iOS remains matching-host/deferred. See [the v6.7 device/mobile/accessibility guide](docs/DEVICE_MOBILE_ACCESSIBILITY_6_7.md) and the [no-code touch reference](reference-projects/projects/creator-v670-touch-platformer/README.md).

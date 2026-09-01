@@ -14,10 +14,9 @@ fn determine_sub_steps(
         let force_acceleration = body.force.length() * body.inv_mass;
         let estimated_speed = body.velocity.length()
             + (body.acceleration.length() + gravity_acceleration + force_acceleration) * dt;
-        let angular_surface_speed =
-            body.angular_velocity.abs() * body.shape.characteristic_extent();
+        let angular_surface_speed = body.angular_velocity.abs() * body.maximum_collider_radius();
         let travel = (estimated_speed + angular_surface_speed) * dt;
-        let permitted_travel = body.shape.characteristic_extent() * 0.25;
+        let permitted_travel = body.minimum_collider_extent() * 0.25;
         if permitted_travel > 0.0 {
             required = required.max((travel / permitted_travel).ceil() as usize);
         }
@@ -111,13 +110,24 @@ fn record_contact_diagnostics(data: &mut [f64], body_a: &Body, body_b: &Body, ma
     }
 }
 
-fn contact_from_manifold(
-    bodies: &[Body],
+#[derive(Clone, Copy)]
+struct ContactSource {
     body_a_index: usize,
     body_b_index: usize,
-    manifold: Manifold,
+    child_a: u32,
+    child_b: u32,
+    feature_id: u8,
     position_weight: f64,
+}
+
+fn contact_from_manifold(
+    bodies: &[Body],
+    body_a_view: &Body,
+    body_b_view: &Body,
+    manifold: Manifold,
+    source: ContactSource,
 ) -> Contact {
+    let ContactSource { body_a_index, body_b_index, child_a, child_b, feature_id, position_weight } = source;
     let body_a = &bodies[body_a_index];
     let body_b = &bodies[body_b_index];
     let radius_a = manifold.point.sub(body_a.position);
@@ -126,9 +136,9 @@ fn contact_from_manifold(
         .point_velocity(radius_b)
         .sub(body_a.point_velocity(radius_a));
     let initial_normal_velocity = initial_relative_velocity.dot(manifold.normal);
-    let threshold = body_a
+    let threshold = body_a_view
         .restitution_threshold
-        .max(body_b.restitution_threshold);
+        .max(body_b_view.restitution_threshold);
     let combine = |first: f64, second: f64, first_mode: u8, second_mode: u8| {
         // Mode priority mirrors the editor contract: Maximum > Multiply >
         // Minimum > Average. Mixed material pairs therefore remain stable.
@@ -140,10 +150,10 @@ fn contact_from_manifold(
         }
     };
     let restitution = combine(
-        body_a.restitution,
-        body_b.restitution,
-        body_a.restitution_combine,
-        body_b.restitution_combine,
+        body_a_view.restitution,
+        body_b_view.restitution,
+        body_a_view.restitution_combine,
+        body_b_view.restitution_combine,
     )
     .clamp(0.0, 1.0);
     let restitution_bias = if initial_normal_velocity < -threshold {
@@ -152,21 +162,24 @@ fn contact_from_manifold(
         0.0
     };
     let dynamic_friction = combine(
-        body_a.dynamic_friction,
-        body_b.dynamic_friction,
-        body_a.friction_combine,
-        body_b.friction_combine,
+        body_a_view.dynamic_friction,
+        body_b_view.dynamic_friction,
+        body_a_view.friction_combine,
+        body_b_view.friction_combine,
     );
     let static_friction = combine(
-        body_a.static_friction,
-        body_b.static_friction,
-        body_a.friction_combine,
-        body_b.friction_combine,
+        body_a_view.static_friction,
+        body_b_view.static_friction,
+        body_a_view.friction_combine,
+        body_b_view.friction_combine,
     )
         .max(dynamic_friction);
     Contact {
         body_a: body_a_index,
         body_b: body_b_index,
+        child_a,
+        child_b,
+        feature_id,
         normal: manifold.normal,
         tangent: manifold.normal.perp(),
         depth: manifold.depth,
@@ -178,7 +191,7 @@ fn contact_from_manifold(
         dynamic_friction,
         normal_impulse: 0.0,
         tangent_impulse: 0.0,
-        is_sensor: body_a.is_sensor || body_b.is_sensor,
+        is_sensor: body_a_view.is_sensor || body_b_view.is_sensor,
         position_weight,
     }
 }
@@ -193,10 +206,7 @@ fn collect_contacts(
         .iter()
         .enumerate()
         .map(|(index, body)| {
-            (
-                index,
-                body.shape.aabb(body.collider_position(), body.collider_angle()),
-            )
+            (index, body.compound_aabb())
         })
         .collect();
     broad_phase.sort_by(|a, b| a.1.min_x.total_cmp(&b.1.min_x));
@@ -221,27 +231,31 @@ fn collect_contacts(
             }
             let body_a = &bodies[body_a_index];
             let body_b = &bodies[body_b_index];
-            if !body_a.can_collide_with(body_b) {
-                continue;
-            }
-            let manifolds = collide(body_a, body_b);
-            let position_weight = 1.0 / manifolds.len().max(1) as f64;
-            for manifold in manifolds {
-                if !body_a.accepts_one_way_contact(body_b, manifold.normal)
-                    || !body_b.accepts_one_way_contact(body_a, manifold.normal.neg())
-                {
-                    continue;
+            let variants_a = std::iter::once(None)
+                .chain((0..body_a.collider_children.len()).map(Some));
+            for child_a_index in variants_a {
+                let proxy_a = body_a.collider_proxy(child_a_index);
+                let variants_b = std::iter::once(None)
+                    .chain((0..body_b.collider_children.len()).map(Some));
+                for child_b_index in variants_b {
+                    let proxy_b = body_b.collider_proxy(child_b_index);
+                    if !proxy_a.can_collide_with(&proxy_b) { continue; }
+                    let manifolds = collide(&proxy_a, &proxy_b);
+                    let position_weight = 1.0 / manifolds.len().max(1) as f64;
+                    for (feature_id, manifold) in manifolds.into_iter().enumerate() {
+                        if !proxy_a.accepts_one_way_contact(&proxy_b, manifold.normal)
+                            || !proxy_b.accepts_one_way_contact(&proxy_a, manifold.normal.neg()) { continue; }
+                        if record_diagnostics { record_contact_diagnostics(data, body_a, body_b, &manifold); }
+                        contacts.push(contact_from_manifold(bodies, &proxy_a, &proxy_b, manifold, ContactSource {
+                            body_a_index,
+                            body_b_index,
+                            child_a: body_a.child_id(child_a_index),
+                            child_b: body_b.child_id(child_b_index),
+                            feature_id: feature_id.min(u8::MAX as usize) as u8,
+                            position_weight,
+                        }));
+                    }
                 }
-                if record_diagnostics {
-                    record_contact_diagnostics(data, body_a, body_b, &manifold);
-                }
-                contacts.push(contact_from_manifold(
-                    bodies,
-                    body_a_index,
-                    body_b_index,
-                    manifold,
-                    position_weight,
-                ));
             }
         }
     }
@@ -263,6 +277,7 @@ fn simulate_sub_step(
     data: &mut [f64],
     context: SubStepContext,
     solver_iterations: usize,
+    impulse_cache: &mut HashMap<ContactCacheKey, (f64, f64)>,
 ) -> Vec<SolverContactSnapshot> {
     for body in bodies.iter_mut() {
         body.integrate(context.dt, context.global_gravity, context.air_friction);
@@ -277,6 +292,13 @@ fn simulate_sub_step(
     }
 
     let mut contacts = collect_contacts(bodies, bound_pairs, data, context.record_diagnostics);
+    for contact in &mut contacts {
+        if let Some((normal, tangent)) = impulse_cache.get(&contact_cache_key(contact)).copied() {
+            contact.normal_impulse = non_negative(normal, 0.0);
+            contact.tangent_impulse = finite_or(tangent, 0.0);
+            warm_start_contact(bodies, contact);
+        }
+    }
     for constraint in constraints.iter_mut() {
         resolve_rope_collisions(bodies, constraint);
     }
@@ -303,6 +325,10 @@ fn simulate_sub_step(
         }
         synchronize_binding_motion(bodies, constraint);
     }
+    impulse_cache.clear();
+    for contact in &contacts {
+        if !contact.is_sensor { impulse_cache.insert(contact_cache_key(contact), (contact.normal_impulse, contact.tangent_impulse)); }
+    }
     contacts
         .iter()
         .map(|contact| {
@@ -313,6 +339,8 @@ fn simulate_sub_step(
             SolverContactSnapshot {
                 body_a: contact.body_a,
                 body_b: contact.body_b,
+                child_a: contact.child_a,
+                child_b: contact.child_b,
                 point: point_a.add(point_b).mul(0.5),
                 normal: contact.normal,
                 relative_velocity: body_b
@@ -377,6 +405,7 @@ struct SolverWorld {
     constraints: Vec<ConnectionConstraint>,
     contacts: Vec<SolverContactSnapshot>,
     quality: SolverQuality,
+    impulse_cache: HashMap<ContactCacheKey, (f64, f64)>,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -416,6 +445,8 @@ impl SolverQuality {
 struct SolverContactSnapshot {
     body_a: usize,
     body_b: usize,
+    child_a: u32,
+    child_b: u32,
     point: Vec2,
     normal: Vec2,
     relative_velocity: Vec2,
@@ -428,15 +459,72 @@ struct SolverContactSnapshot {
     sensor: bool,
 }
 
+fn synchronize_sleep_islands(
+    bodies: &mut [Body],
+    contacts: &[SolverContactSnapshot],
+    constraints: &[ConnectionConstraint],
+    quality: SolverQuality,
+) {
+    let mut adjacency = vec![Vec::<usize>::new(); bodies.len()];
+    for contact in contacts.iter().filter(|contact| !contact.sensor) {
+        adjacency[contact.body_a].push(contact.body_b);
+        adjacency[contact.body_b].push(contact.body_a);
+    }
+    for constraint in constraints.iter().filter(|constraint| constraint.active) {
+        adjacency[constraint.body_a].push(constraint.body_b);
+        adjacency[constraint.body_b].push(constraint.body_a);
+    }
+    let mut visited = vec![false; bodies.len()];
+    for start in 0..bodies.len() {
+        if visited[start] || bodies[start].is_static || bodies[start].is_kinematic { continue; }
+        let mut pending = vec![start];
+        let mut island = Vec::new();
+        visited[start] = true;
+        while let Some(current) = pending.pop() {
+            if !bodies[current].is_static && !bodies[current].is_kinematic { island.push(current); }
+            for &next in &adjacency[current] {
+                if !visited[next] && !bodies[next].is_static && !bodies[next].is_kinematic {
+                    visited[next] = true;
+                    pending.push(next);
+                }
+            }
+        }
+        let slow = island.iter().all(|&index| {
+            let body = &bodies[index];
+            body.sleeping_allowed
+                && body.velocity.length_squared() <= quality.sleep_linear_threshold * quality.sleep_linear_threshold
+                && body.angular_velocity.abs() <= quality.sleep_angular_threshold
+        });
+        if !slow {
+            for &index in &island { bodies[index].sleeping = false; bodies[index].sleep_timer = 0.0; }
+            continue;
+        }
+        let shared_timer = island.iter().map(|&index| bodies[index].sleep_timer).fold(f64::INFINITY, f64::min);
+        let should_sleep = shared_timer >= quality.time_to_sleep;
+        for &index in &island {
+            bodies[index].sleep_timer = shared_timer;
+            bodies[index].sleeping = should_sleep;
+            if should_sleep { bodies[index].velocity = Vec2::ZERO; bodies[index].angular_velocity = 0.0; }
+        }
+    }
+}
+
 impl SolverWorld {
     fn new(input: &[f64], connection_input: &[f64], quality: SolverQuality) -> Self {
+        Self::new_with_children(input, connection_input, quality, &[])
+    }
+
+    fn new_with_children(input: &[f64], connection_input: &[f64], quality: SolverQuality, child_shapes: &[&[f64]]) -> Self {
         let mut data = input.to_vec();
         let connection_data = connection_input.to_vec();
         let body_count = data.len() / STRIDE;
         reset_contact_diagnostics(&mut data, body_count);
-        let bodies = read_bodies(&data, body_count);
+        let mut bodies = read_bodies(&data, body_count);
+        for (index, shapes) in child_shapes.iter().enumerate().take(bodies.len()) {
+            bodies[index].apply_collider_children(shapes);
+        }
         let constraints = read_constraints(&connection_data, body_count, &bodies);
-        Self { data, connection_data, bodies, constraints, contacts: Vec::new(), quality: quality.normalized() }
+        Self { data, connection_data, bodies, constraints, contacts: Vec::new(), quality: quality.normalized(), impulse_cache: HashMap::new() }
     }
 
     fn step(&mut self, dt: f64, global_gravity: f64, air_friction: f64) {
@@ -467,6 +555,7 @@ impl SolverWorld {
                     record_diagnostics: sub_step + 1 == sub_steps,
                 },
                 self.quality.solver_iterations,
+                &mut self.impulse_cache,
             );
             if sub_step + 1 == sub_steps {
                 self.contacts = contacts;
@@ -482,6 +571,7 @@ impl SolverWorld {
                 self.quality.time_to_sleep,
             );
         }
+        synchronize_sleep_islands(&mut self.bodies, &self.contacts, &self.constraints, self.quality);
         write_bodies(&mut self.data, &self.bodies);
         write_constraints(&mut self.connection_data, &self.constraints);
     }

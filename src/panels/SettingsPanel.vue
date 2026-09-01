@@ -2,7 +2,7 @@
   <div class="settings-page">
     <header class="page-header">
       <div>
-      <span class="eyebrow">Nova_A 6.4.0</span>
+      <span class="eyebrow">Nova_A 6.8.0</span>
         <h1>{{ t('settings') }}</h1>
       </div>
       <div class="theme-switch" :aria-label="t('theme')">
@@ -69,6 +69,7 @@
         <SettingRow :label="t('sampleRate')"><select v-model.number="physics.audioSettings.sampleRate"><option :value="44100">44.1 kHz</option><option :value="48000">48 kHz</option><option :value="96000">96 kHz</option></select></SettingRow>
       </section>
 
+      <DeviceInputPanel v-show="showCard('deviceInput virtualControls touch gesture gamepad calibration safeArea orientation sensors haptics mobile', 'project')" />
       <section v-show="showCard('inputMap inputDevice bindingCode gamepad keyboard', 'project')" class="settings-card input-map-card">
         <div class="card-heading"><span class="card-icon">⌨</span><h2>{{ t('inputMap') }}</h2></div>
         <p>{{ t('inputMapDescription') }}</p>
@@ -181,6 +182,7 @@ import { gameplayRuntime } from '../runtime/GameplayRuntime'
 import { normalizeAudioSettings } from '../runtime/audio'
 import { openEditorTool } from '../editor/workspaces'
 import PhysicsSettingsPanel from '../components/PhysicsSettingsPanel.vue'
+import DeviceInputPanel from '../components/DeviceInputPanel.vue'
 import { scriptProjectSettings as scriptSettings } from '../runtime/scriptSettings'
 import { applyCreatorPerformanceProfile } from '../runtime/creatorLearning'
 
@@ -210,7 +212,7 @@ const ToggleSwitch = defineComponent({
 })
 
 const autosaveAvailable = computed(() => autosaveState.available)
-const inputDevices: InputDevice[] = ['keyboard', 'physical-key', 'mouse-button', 'mouse-wheel', 'mouse-motion', 'gamepad-button', 'gamepad-axis', 'touch', 'gesture']
+const inputDevices: InputDevice[] = ['keyboard', 'physical-key', 'mouse-button', 'mouse-wheel', 'mouse-motion', 'gamepad-button', 'gamepad-axis', 'touch', 'gesture', 'sensor']
 const inputSearch = ref(''), inputDeviceFilter = ref<InputDevice | 'all'>('all'), compactInputMap = ref(false), inputRecording = ref(false), lastInputRecording = ref<InputRecording | null>(null), connectedInputDevices = ref<InputDeviceIdentity[]>([])
 const inputConflicts = computed(() => detectInputConflicts(physics.inputMap))
 const visibleInputActions = computed(() => physics.inputMap.map((action, actionIndex) => ({ action, actionIndex })).filter(({ action }) => {
@@ -272,7 +274,7 @@ function removeInputBinding(actionIndex: number, bindingIndex: number) {
 }
 
 function setBindingDevice(binding: InputBinding) {
-  binding.code = binding.device === 'keyboard' || binding.device === 'physical-key' ? 'Space' : binding.device === 'mouse-wheel' || binding.device === 'mouse-motion' ? 'y' : binding.device === 'touch' ? 'pressed' : binding.device === 'gesture' ? 'tap' : '0'
+  binding.code = binding.device === 'keyboard' || binding.device === 'physical-key' ? 'Space' : binding.device === 'mouse-wheel' || binding.device === 'mouse-motion' ? 'y' : binding.device === 'touch' ? 'pressed' : binding.device === 'gesture' ? 'tap' : binding.device === 'sensor' ? 'tilt-x' : '0'
 }
 
 function setBindingList(binding: InputBinding, property: 'modifiers' | 'chord', event: Event) { const values = (event.target as HTMLInputElement).value.split(',').map(value => value.trim()).filter(Boolean); if (property === 'modifiers') binding.modifiers = values.filter((value): value is InputModifier => ['Control','Shift','Alt','Meta'].includes(value)).slice(0, 4); else binding.chord = [...new Set(values)].slice(0, 8); commitInputMap() }

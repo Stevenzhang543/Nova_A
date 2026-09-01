@@ -18,6 +18,13 @@ export interface FrameProfile {
   allocations: number
   gpuPasses: number
   assetJobs: number
+  mainThreadMs: number
+  workerMs: number
+  queueWaitMs: number
+  cacheHitRate: number
+  worstFrameMs: number
+  onePercentLowFps: number
+  inputToPixelMs: number
 }
 export interface ScriptFunctionProfile {
   scriptUuid: string
@@ -44,7 +51,8 @@ export interface ProfilerAnnotation { frame: number; createdAt: string; text: st
 const EMPTY: FrameProfile = {
   frame: 0, timestamp: 0, frameMs: 0, physicsMs: 0, renderingMs: 0, scriptsMs: 0,
   animationMs: 0, audioMs: 0, assetsMs: 0, otherMs: 0, fps: 0, memoryMb: null,
-  inputMs: 0, allocations: 0, gpuPasses: 0, assetJobs: 0
+  inputMs: 0, allocations: 0, gpuPasses: 0, assetJobs: 0, mainThreadMs: 0, workerMs: 0,
+  queueWaitMs: 0, cacheHitRate: 1, worstFrameMs: 0, onePercentLowFps: 0, inputToPixelMs: 0
 }
 
 export const profilerState = reactive({
@@ -87,7 +95,7 @@ export function recordScriptFunction(scriptUuid: string, scriptName: string, fun
   profilerState.scriptFunctions.splice(0, profilerState.scriptFunctions.length, ...values)
 }
 
-export function captureScriptProfile(engineVersion = '6.4.0'): ScriptProfileCapture {
+export function captureScriptProfile(engineVersion = '6.8.0'): ScriptProfileCapture {
   const capture: ScriptProfileCapture = { format: 'nova-script-profile', version: 1, engineVersion, createdAt: new Date().toISOString(), entries: profilerState.scriptFunctions.map(item => ({ ...item })) }
   profilerState.scriptCaptures.push(capture)
   if (profilerState.scriptCaptures.length > 16) profilerState.scriptCaptures.splice(0, profilerState.scriptCaptures.length - 16)
@@ -102,9 +110,9 @@ export function compareScriptProfiles(first: ScriptProfileCapture, second: Scrip
   }).sort((a, b) => Math.abs(b.totalMsDelta) - Math.abs(a.totalMsDelta))
 }
 
-export function recordFrameProfile(sample: Omit<FrameProfile, 'frame' | 'timestamp' | 'inputMs' | 'allocations' | 'gpuPasses' | 'assetJobs'> & Partial<Pick<FrameProfile, 'inputMs' | 'allocations' | 'gpuPasses' | 'assetJobs'>>): FrameProfile | null {
+export function recordFrameProfile(sample: Omit<FrameProfile, 'frame' | 'timestamp' | 'inputMs' | 'allocations' | 'gpuPasses' | 'assetJobs' | 'mainThreadMs' | 'workerMs' | 'queueWaitMs' | 'cacheHitRate' | 'worstFrameMs' | 'onePercentLowFps' | 'inputToPixelMs'> & Partial<Pick<FrameProfile, 'inputMs' | 'allocations' | 'gpuPasses' | 'assetJobs' | 'mainThreadMs' | 'workerMs' | 'queueWaitMs' | 'cacheHitRate' | 'worstFrameMs' | 'onePercentLowFps' | 'inputToPixelMs'>>): FrameProfile | null {
   if (!profilerState.enabled || profilerState.frozen || profilerState.overheadMode === 'Off') return null
-  const next: FrameProfile = { inputMs: 0, allocations: 0, gpuPasses: 0, assetJobs: 0, ...sample, frame: profilerState.current.frame + 1, timestamp: performance.now() }
+  const next: FrameProfile = { inputMs: 0, allocations: 0, gpuPasses: 0, assetJobs: 0, mainThreadMs: 0, workerMs: 0, queueWaitMs: 0, cacheHitRate: 1, worstFrameMs: 0, onePercentLowFps: 0, inputToPixelMs: 0, ...sample, frame: profilerState.current.frame + 1, timestamp: performance.now() }
   Object.assign(profilerState.current, next)
   profilerState.samples.push(next)
   if (profilerState.overheadMode === 'Full') {

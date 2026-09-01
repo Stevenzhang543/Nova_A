@@ -10,7 +10,7 @@ import { particleRuntime } from '../runtime/particles'
 import { canvasMaterialColor, resolveMaterial } from './materials'
 import type { TextureFilter } from './types'
 import { deformSkin } from '../runtime/rigging'
-import { renderingSettings, updateActivePostProcess } from './renderSettings'
+import { renderingSettings, updateActivePostProcess, updateActiveRenderQuality } from './renderSettings'
 import { visibleWorldBounds } from './cameraMath'
 
 export { gameScreenToWorld, visibleWorldBounds } from './cameraMath'
@@ -206,7 +206,9 @@ function submitText(renderer: Renderer2D, entity: Entity, text: TextRenderer2D, 
 export function renderWorld(renderer: Renderer2D, entities: Entity[], options: SceneRenderOptions): RendererStats {
   const cameras = options.gameView ? activeGameCameras(entities, options.width, options.height) : []
   const primaryCamera = cameras[0] ?? null
-  updateActivePostProcess(primaryCamera?.view.position ?? options.editorCamera.position ?? { x: 0, y: 0 })
+  const qualityPosition = primaryCamera?.view.position ?? options.editorCamera.position ?? { x: 0, y: 0 }
+  updateActivePostProcess(qualityPosition)
+  updateActiveRenderQuality(qualityPosition)
   renderer.beginFrame({
     width: options.width,
     height: options.height,

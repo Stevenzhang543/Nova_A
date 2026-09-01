@@ -79,6 +79,11 @@ export interface ColliderShapeDescriptor2D {
   radius: number
   points: Vec2[]
   enabled: boolean
+  sensor: boolean
+  physicsLayer: number
+  collisionMask: number
+  oneWay: boolean
+  oneWayNormal: Vec2
 }
 
 export interface PhysicsValidationIssue {
@@ -160,15 +165,15 @@ export const PHYSICS_UNITS = Object.freeze({
   speed: 'm/s', acceleration: 'm/s²', force: 'N', impulse: 'N·s', torque: 'N·m'
 })
 
-export const PHYSICS_SHAPE_SUPPORT: Readonly<Record<PhysicsShapeKind, { simulation: 'exact' | 'convex-approximation' | 'query-only'; note: string }>> = Object.freeze({
+export const PHYSICS_SHAPE_SUPPORT: Readonly<Record<PhysicsShapeKind, { simulation: 'exact' | 'convex-approximation' | 'static-exact' | 'blocked-dynamic'; note: string }>> = Object.freeze({
   Box: { simulation: 'exact', note: 'Oriented convex box.' },
   Circle: { simulation: 'exact', note: 'Circle and non-uniform ellipse.' },
   Capsule: { simulation: 'convex-approximation', note: 'Deterministic 12-vertex convex approximation.' },
   Segment: { simulation: 'convex-approximation', note: 'Finite segment with an explicit collision thickness.' },
-  Chain: { simulation: 'query-only', note: 'Available to author and query; dynamic solver support is intentionally disabled.' },
+  Chain: { simulation: 'static-exact', note: 'Static/kinematic chains use deterministic finite edge children in the solver.' },
   WorldBoundary: { simulation: 'convex-approximation', note: 'Static finite boundary segment; editor validation prevents dynamic ownership.' },
   ConvexPolygon: { simulation: 'exact', note: 'Exact for three or four vertices in the current stable ABI.' },
-  ConcavePolygon: { simulation: 'query-only', note: 'Requires decomposition; validation prevents silent dynamic simulation.' }
+  ConcavePolygon: { simulation: 'blocked-dynamic', note: 'Static polygons are safely ear-clipped; dynamic concave ownership is rejected with recovery guidance.' }
 })
 
 export const PHYSICS_PROFILE_LIBRARY: Readonly<Record<Exclude<PhysicsProfileId, 'Custom'>, PhysicsSimulationProfile2D>> = Object.freeze({
@@ -333,14 +338,19 @@ export const PHYSICS_CONFORMANCE_CASES = Object.freeze([
   'distance-joint', 'revolute-joint', 'prismatic-joint', 'weld-joint', 'spring-joint', 'rope-joint',
   'nearest-query', 'joint-break-event', 'rope-break-event', 'sleep-wake',
   'ccd-tunneling', 'thin-obstacle', 'large-coordinate', 'tiny-object', 'compound-collider',
+  'compound-child-identity', 'static-chain', 'static-concave-decomposition', 'rotational-compound-ccd',
+  'warm-start-stack', 'sleep-island', 'revolute-motor-limit', 'prismatic-linear-motor', 'rope-owner-exclusion', 'rope-world-collision',
   'fixed-profile-roundtrip', 'dropped-time-policy', 'deterministic-event-order', 'named-layer-roundtrip'
 ])
 
-export function stablePhysicsEventOrder<T extends { type?: string; first?: number; second?: number }>(events: T[]): T[] {
+export function stablePhysicsEventOrder<T extends { type?: string; first?: number; second?: number; firstCollider?: number; secondCollider?: number }>(events: T[]): T[] {
   const phase = (type = '') => type.endsWith('Started') || type.endsWith('Entered') ? 0 : type.endsWith('Stayed') ? 1 : type.endsWith('Ended') || type.endsWith('Exited') ? 2 : 3
   return events.map((event, index) => ({ event, index })).sort((a, b) => {
     const pairA = [Math.min(a.event.first ?? -1, a.event.second ?? -1), Math.max(a.event.first ?? -1, a.event.second ?? -1)]
     const pairB = [Math.min(b.event.first ?? -1, b.event.second ?? -1), Math.max(b.event.first ?? -1, b.event.second ?? -1)]
-    return pairA[0] - pairB[0] || pairA[1] - pairB[1] || phase(a.event.type) - phase(b.event.type) || a.index - b.index
+    return pairA[0] - pairB[0] || pairA[1] - pairB[1]
+      || (a.event.firstCollider ?? 0) - (b.event.firstCollider ?? 0)
+      || (a.event.secondCollider ?? 0) - (b.event.secondCollider ?? 0)
+      || phase(a.event.type) - phase(b.event.type) || a.index - b.index
   }).map(item => item.event)
 }

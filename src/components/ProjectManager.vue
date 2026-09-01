@@ -5,7 +5,7 @@
       <nav aria-label="Project manager utilities">
         <select v-model="prefs.locale" :aria-label="t('language')"><option value="en">English</option><option value="de">Deutsch</option><option value="zh">中文</option></select>
         <button class="manual-link" type="button" @click="openBundledManual">{{ t('learnNova') }}</button>
-        <span class="version">6.4.0</span>
+        <span class="version">6.8.0</span>
       </nav>
     </header>
 

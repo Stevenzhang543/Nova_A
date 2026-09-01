@@ -3,6 +3,7 @@ import type { AssetRecord } from '../assets/types'
 import { finiteNumber } from '../world/geometry'
 import type { Entity } from '../world/Entity'
 import type { Animator, AnimatorParameterValue } from '../world/components'
+import { performanceComponentScheduler } from './largeWorldPerformance'
 
 export type AnimatableProperty = 'Transform.position.x' | 'Transform.position.y' | 'Transform.rotation' | 'Transform.scale.x' | 'Transform.scale.y' | 'SpriteRenderer.opacity' | 'UI.opacity'
 export type AnimatorParameterType = 'Bool' | 'Float' | 'Integer' | 'Trigger'
@@ -479,7 +480,9 @@ class AnimationRuntime {
   update(entities: Entity[], delta: number): void {
     const alive = new Set(entities.map(entity => entity.uuid))
     for (const uuid of this.runtime.keys()) if (!alive.has(uuid)) this.runtime.delete(uuid)
-    for (const entity of entities) {
+    const animatorIndices = performanceComponentScheduler.count === entities.length ? performanceComponentScheduler.indices('Animator') : null
+    for (let sourceIndex = 0; sourceIndex < (animatorIndices?.length ?? entities.length); sourceIndex++) {
+      const entity = entities[animatorIndices ? animatorIndices[sourceIndex] : sourceIndex]
       const animator = entity.getComponent<Animator>('Animator')
       if (!entity.enabled || !animator?.enabled) continue
       const controller = readAnimatorController(animator.controllerAsset)

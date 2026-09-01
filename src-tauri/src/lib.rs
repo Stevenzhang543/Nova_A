@@ -151,6 +151,55 @@ struct ExportCapabilities {
     android_reason: String,
 }
 
+#[derive(Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct AndroidToolchainStatus {
+    available: bool,
+    jdk_ready: bool,
+    sdk_ready: bool,
+    platform_ready: bool,
+    build_tools_ready: bool,
+    ndk_ready: bool,
+    adb_ready: bool,
+    template_ready: bool,
+    sdk_root: Option<String>,
+    java_home: Option<String>,
+    adb_path: Option<String>,
+    template_path: Option<String>,
+    missing: Vec<String>,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct AndroidDevice {
+    serial: String,
+    state: String,
+    description: String,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct AndroidDeployRequest {
+    apk_path: String,
+    device_serial: String,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct AndroidCommandResult {
+    success: bool,
+    output: String,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct NativeAccessibilityCapabilities {
+    platform: String,
+    webview_dom_bridge: bool,
+    native_custom_adapters: bool,
+    automation_provider: String,
+    notes: Vec<String>,
+}
 #[derive(Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 struct BuildFileRecord {
@@ -195,6 +244,37 @@ struct ExternalMergeRequest {
     base: String,
     ours: String,
     theirs: String,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct NetworkInstanceLaunchRequest {
+    executable: String,
+    working_directory: String,
+    session_name: String,
+    count: u8,
+    separate_logs: bool,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct NetworkInstanceLaunch {
+    id: String,
+    role: String,
+    player_name: String,
+    session_name: String,
+    log_scope: String,
+    process_id: u32,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct RuntimeOverrides {
+    network_role: Option<String>,
+    player_name: Option<String>,
+    session_name: Option<String>,
+    instance_id: Option<String>,
+    log_scope: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -385,7 +465,10 @@ fn write_incremental(path: &Path, bytes: &[u8], incremental: bool) -> Result<boo
     }
     if !path.is_file() {
         let _ = fs::remove_file(&temporary);
-        return Err(format!("build output is not a replaceable file: {}", path.display()));
+        return Err(format!(
+            "build output is not a replaceable file: {}",
+            path.display()
+        ));
     }
     let backup = path.with_extension(format!("nova-backup-{}-{nonce}", std::process::id()));
     fs::rename(path, &backup).map_err(|error| {
@@ -395,24 +478,22 @@ fn write_incremental(path: &Path, bytes: &[u8], incremental: bool) -> Result<boo
     if let Err(error) = fs::rename(&temporary, path) {
         let _ = fs::rename(&backup, path);
         let _ = fs::remove_file(&temporary);
-        return Err(format!("atomic build replacement failed; the previous output was restored: {error}"));
+        return Err(format!(
+            "atomic build replacement failed; the previous output was restored: {error}"
+        ));
     }
     let _ = fs::remove_file(backup);
     Ok(true)
 }
 
 fn android_template() -> Option<PathBuf> {
-    let sdk = std::env::var_os("ANDROID_HOME").or_else(|| std::env::var_os("ANDROID_SDK_ROOT"))?;
-    if !Path::new(&sdk).is_dir() || std::env::var_os("JAVA_HOME").is_none() {
-        return None;
-    }
-    let template = std::env::var_os("NOVA_A_ANDROID_TEMPLATE").map(PathBuf::from)?;
-    template.is_dir().then_some(template)
+    android_toolchain_status().template_path.map(PathBuf::from)
 }
 
 #[tauri::command]
 fn export_capabilities() -> ExportCapabilities {
-    let android_available = android_template().is_some();
+    let status = android_toolchain_status();
+    let android_available = status.available;
     ExportCapabilities {
         host: std::env::consts::OS.to_string(),
         architecture: std::env::consts::ARCH.to_string(),
@@ -420,12 +501,242 @@ fn export_capabilities() -> ExportCapabilities {
         android_reason: if android_available {
             String::new()
         } else {
-            "Android export requires JDK 17, Android SDK/NDK, and a validated NOVA_A_ANDROID_TEMPLATE directory."
-                .into()
+            format!(
+                "Android export is blocked by: {}.",
+                status.missing.join(", ")
+            )
         },
     }
 }
 
+fn path_display(path: &Path) -> String {
+    path.to_string_lossy().into_owned()
+}
+
+fn android_sdk_root() -> Option<PathBuf> {
+    std::env::var_os("ANDROID_SDK_ROOT")
+        .or_else(|| std::env::var_os("ANDROID_HOME"))
+        .map(PathBuf::from)
+        .filter(|path| path.is_dir())
+}
+
+fn executable_in(root: &Path, relative: &str) -> Option<PathBuf> {
+    let path = root.join(if cfg!(windows) {
+        format!("{relative}.exe")
+    } else {
+        relative.to_string()
+    });
+    path.is_file().then_some(path)
+}
+
+#[tauri::command]
+fn android_toolchain_status() -> AndroidToolchainStatus {
+    let sdk = android_sdk_root();
+    let java_home = std::env::var_os("JAVA_HOME")
+        .map(PathBuf::from)
+        .filter(|path| path.is_dir());
+    let jdk_ready = java_home
+        .as_ref()
+        .and_then(|path| executable_in(path, "bin/java"))
+        .is_some();
+    let sdk_ready = sdk.is_some();
+    let platform_ready = sdk
+        .as_ref()
+        .is_some_and(|root| root.join("platforms/android-35").is_dir());
+    let build_tools_ready = sdk.as_ref().is_some_and(|root| {
+        root.join("build-tools")
+            .read_dir()
+            .ok()
+            .is_some_and(|entries| {
+                entries
+                    .filter_map(Result::ok)
+                    .any(|entry| entry.path().is_dir())
+            })
+    });
+    let ndk_ready = sdk.as_ref().is_some_and(|root| {
+        root.join("ndk").read_dir().ok().is_some_and(|entries| {
+            entries
+                .filter_map(Result::ok)
+                .any(|entry| entry.path().is_dir())
+        })
+    });
+    let adb = sdk
+        .as_ref()
+        .and_then(|root| executable_in(root, "platform-tools/adb"));
+    let template = std::env::var_os("NOVA_A_ANDROID_TEMPLATE")
+        .map(PathBuf::from)
+        .filter(|path| {
+            path.is_dir()
+                && path
+                    .join(if cfg!(windows) {
+                        "gradlew.bat"
+                    } else {
+                        "gradlew"
+                    })
+                    .is_file()
+                && path.join("app/build.gradle").is_file()
+        });
+    let adb_ready = adb.is_some();
+    let template_ready = template.is_some();
+    let mut missing = Vec::new();
+    if !jdk_ready {
+        missing.push("JDK 17 (JAVA_HOME/bin/java)".into());
+    }
+    if !sdk_ready {
+        missing.push("Android SDK (ANDROID_SDK_ROOT or ANDROID_HOME)".into());
+    }
+    if !platform_ready {
+        missing.push("Android platform 35".into());
+    }
+    if !build_tools_ready {
+        missing.push("Android build-tools".into());
+    }
+    if !ndk_ready {
+        missing.push("Android NDK".into());
+    }
+    if !adb_ready {
+        missing.push("Android platform-tools/adb".into());
+    }
+    if !template_ready {
+        missing.push("validated NOVA_A_ANDROID_TEMPLATE with Gradle wrapper".into());
+    }
+    AndroidToolchainStatus {
+        available: jdk_ready
+            && sdk_ready
+            && platform_ready
+            && build_tools_ready
+            && ndk_ready
+            && template_ready,
+        jdk_ready,
+        sdk_ready,
+        platform_ready,
+        build_tools_ready,
+        ndk_ready,
+        adb_ready,
+        template_ready,
+        sdk_root: sdk.as_deref().map(path_display),
+        java_home: java_home.as_deref().map(path_display),
+        adb_path: adb.as_deref().map(path_display),
+        template_path: template.as_deref().map(path_display),
+        missing,
+    }
+}
+
+fn valid_android_serial(value: &str) -> bool {
+    !value.is_empty()
+        && value.len() <= 160
+        && value.chars().all(|character| {
+            character.is_ascii_alphanumeric() || matches!(character, '-' | '_' | ':' | '.')
+        })
+}
+
+fn bounded_command_text(output: &std::process::Output) -> String {
+    let combined = format!(
+        "{}{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    combined.chars().take(64_000).collect()
+}
+
+#[tauri::command]
+fn android_devices() -> Result<Vec<AndroidDevice>, String> {
+    let status = android_toolchain_status();
+    let adb = status
+        .adb_path
+        .ok_or("Android adb is unavailable; install platform-tools and refresh discovery.")?;
+    let output = Command::new(adb)
+        .arg("devices")
+        .arg("-l")
+        .output()
+        .map_err(|error| format!("could not start adb: {error}"))?;
+    if !output.status.success() {
+        return Err(bounded_command_text(&output));
+    }
+    Ok(String::from_utf8_lossy(&output.stdout)
+        .lines()
+        .skip(1)
+        .filter_map(|line| {
+            let mut fields = line.split_whitespace();
+            let serial = fields.next()?.to_string();
+            let state = fields.next()?.to_string();
+            valid_android_serial(&serial).then(|| AndroidDevice {
+                serial,
+                state,
+                description: fields
+                    .collect::<Vec<_>>()
+                    .join(" ")
+                    .chars()
+                    .take(500)
+                    .collect(),
+            })
+        })
+        .collect())
+}
+
+#[tauri::command]
+fn android_deploy_apk(request: AndroidDeployRequest) -> Result<AndroidCommandResult, String> {
+    if !valid_android_serial(&request.device_serial) {
+        return Err("Invalid Android device serial.".into());
+    }
+    let status = android_toolchain_status();
+    let adb = status.adb_path.ok_or("Android adb is unavailable.")?;
+    let apk = fs::canonicalize(&request.apk_path)
+        .map_err(|error| format!("APK path is unavailable: {error}"))?;
+    if apk
+        .extension()
+        .and_then(|value| value.to_str())
+        .map(|value| value.eq_ignore_ascii_case("apk"))
+        != Some(true)
+    {
+        return Err("Deploy accepts only an existing .apk file.".into());
+    }
+    let metadata = fs::metadata(&apk).map_err(|error| error.to_string())?;
+    if !metadata.is_file() || metadata.len() > 2 * 1024 * 1024 * 1024 {
+        return Err("APK must be a regular file no larger than 2 GiB.".into());
+    }
+    let output = Command::new(adb)
+        .args(["-s", &request.device_serial, "install", "-r"])
+        .arg(apk)
+        .output()
+        .map_err(|error| format!("could not start adb install: {error}"))?;
+    Ok(AndroidCommandResult {
+        success: output.status.success(),
+        output: bounded_command_text(&output),
+    })
+}
+
+#[tauri::command]
+fn android_logcat_snapshot(device_serial: String) -> Result<AndroidCommandResult, String> {
+    if !valid_android_serial(&device_serial) {
+        return Err("Invalid Android device serial.".into());
+    }
+    let status = android_toolchain_status();
+    let adb = status.adb_path.ok_or("Android adb is unavailable.")?;
+    let output = Command::new(adb)
+        .args(["-s", &device_serial, "logcat", "-d", "-t", "400"])
+        .output()
+        .map_err(|error| format!("could not start adb logcat: {error}"))?;
+    Ok(AndroidCommandResult {
+        success: output.status.success(),
+        output: bounded_command_text(&output),
+    })
+}
+
+#[tauri::command]
+fn native_accessibility_capabilities() -> NativeAccessibilityCapabilities {
+    let windows = cfg!(target_os = "windows");
+    NativeAccessibilityCapabilities {
+        platform: std::env::consts::OS.into(),
+        webview_dom_bridge: true,
+        native_custom_adapters: false,
+        automation_provider: if windows { "WebView2 DOM accessibility tree exposed to Microsoft UI Automation".into() } else { "System WebView DOM accessibility tree".into() },
+        notes: vec![
+            "Nova runtime controls publish role, accessible name, state, value, live-region, and focus metadata through semantic DOM overlays.".into(),
+            if windows { "WebView2 bridges standards-based HTML/ARIA semantics; custom native UI Automation providers are not claimed in 6.7.0.".into() } else { "Matching-host native adapter certification remains an external qualification gate.".into() },
+        ],
+    }
+}
 fn safe_game_name(value: &str) -> String {
     let filtered: String = value
         .chars()
@@ -737,6 +1048,98 @@ fn runtime_package() -> Result<Option<String>, String> {
         .map(|bytes| base64::engine::general_purpose::STANDARD.encode(bytes)))
 }
 
+fn bounded_environment_value(name: &str, maximum: usize) -> Option<String> {
+    std::env::var(name).ok().and_then(|value| {
+        let clean: String = value
+            .chars()
+            .filter(|character| !character.is_control())
+            .take(maximum)
+            .collect();
+        (!clean.trim().is_empty()).then_some(clean)
+    })
+}
+
+#[tauri::command]
+fn runtime_overrides() -> RuntimeOverrides {
+    RuntimeOverrides {
+        network_role: bounded_environment_value("NOVA_NETWORK_ROLE", 16)
+            .filter(|value| value == "host" || value == "client" || value == "server"),
+        player_name: bounded_environment_value("NOVA_NETWORK_PLAYER_NAME", 80),
+        session_name: bounded_environment_value("NOVA_NETWORK_SESSION", 80),
+        instance_id: bounded_environment_value("NOVA_NETWORK_INSTANCE", 32),
+        log_scope: bounded_environment_value("NOVA_LOG_SCOPE", 48),
+    }
+}
+
+#[tauri::command]
+fn launch_network_instances(
+    request: NetworkInstanceLaunchRequest,
+) -> Result<Vec<NetworkInstanceLaunch>, String> {
+    if !(2..=8).contains(&request.count) {
+        return Err("Network play requires 2–8 bounded instances".into());
+    }
+    let executable = fs::canonicalize(request.executable.trim())
+        .map_err(|error| format!("Network player executable is unavailable: {error}"))?;
+    let working_directory = fs::canonicalize(request.working_directory.trim())
+        .map_err(|error| format!("Network player working directory is unavailable: {error}"))?;
+    if !executable.is_file() || !executable.starts_with(&working_directory) {
+        return Err("Network player must be a built executable inside its output directory".into());
+    }
+    if cfg!(windows)
+        && executable
+            .extension()
+            .and_then(|value| value.to_str())
+            .is_none_or(|value| !value.eq_ignore_ascii_case("exe"))
+    {
+        return Err("Windows network play requires a built .exe player".into());
+    }
+    let session_name: String = request
+        .session_name
+        .chars()
+        .filter(|character| !character.is_control())
+        .take(80)
+        .collect();
+    if session_name.trim().is_empty() {
+        return Err("Network play session name cannot be empty".into());
+    }
+    let mut launched = Vec::with_capacity(request.count as usize);
+    for index in 0..request.count {
+        let role = if index == 0 { "host" } else { "client" };
+        let player_name = if index == 0 {
+            "Host".to_owned()
+        } else {
+            format!("Client {index}")
+        };
+        let instance_id = format!("peer-{}", index + 1);
+        let log_scope = request
+            .separate_logs
+            .then(|| format!("network-{}", index + 1))
+            .unwrap_or_default();
+        let mut command = Command::new(&executable);
+        command
+            .current_dir(&working_directory)
+            .env("NOVA_NETWORK_ROLE", role)
+            .env("NOVA_NETWORK_PLAYER_NAME", &player_name)
+            .env("NOVA_NETWORK_SESSION", &session_name)
+            .env("NOVA_NETWORK_INSTANCE", &instance_id);
+        if !log_scope.is_empty() {
+            command.env("NOVA_LOG_SCOPE", &log_scope);
+        }
+        let child = command
+            .spawn()
+            .map_err(|error| format!("Could not launch {instance_id}: {error}"))?;
+        launched.push(NetworkInstanceLaunch {
+            id: instance_id,
+            role: role.to_owned(),
+            player_name,
+            session_name: session_name.clone(),
+            log_scope,
+            process_id: child.id(),
+        });
+    }
+    Ok(launched)
+}
+
 fn copy_directory(source: &Path, destination: &Path) -> Result<(), String> {
     fs::create_dir_all(destination).map_err(|error| error.to_string())?;
     for entry in fs::read_dir(source).map_err(|error| error.to_string())? {
@@ -755,6 +1158,99 @@ fn copy_directory(source: &Path, destination: &Path) -> Result<(), String> {
     Ok(())
 }
 
+fn valid_android_identifier(value: &str) -> bool {
+    let parts: Vec<&str> = value.split('.').collect();
+    parts.len() >= 2
+        && value.len() <= 160
+        && parts.iter().all(|part| {
+            !part.is_empty()
+                && part.len() <= 63
+                && part
+                    .chars()
+                    .next()
+                    .is_some_and(|character| character.is_ascii_alphabetic())
+                && part
+                    .chars()
+                    .all(|character| character.is_ascii_alphanumeric() || character == '_')
+        })
+}
+
+fn xml_escape(value: &str) -> String {
+    value
+        .chars()
+        .flat_map(|character| match character {
+            '&' => "&amp;".chars().collect::<Vec<_>>(),
+            '<' => "&lt;".chars().collect(),
+            '>' => "&gt;".chars().collect(),
+            '"' => "&quot;".chars().collect(),
+            '\'' => "&apos;".chars().collect(),
+            _ => vec![character],
+        })
+        .collect()
+}
+
+fn generated_android_manifest(request: &ExportRequest, game_name: &str) -> Result<String, String> {
+    if !valid_android_identifier(&request.platform.identifier) {
+        return Err("Android application identifier must contain at least two dot-separated, letter-led ASCII segments.".into());
+    }
+    let mut permissions = request.platform.permissions.clone();
+    permissions.sort();
+    permissions.dedup();
+    if permissions.len() > 64
+        || permissions.iter().any(|permission| {
+            !permission.starts_with("android.permission.")
+                || permission.len() > 100
+                || !permission["android.permission.".len()..]
+                    .chars()
+                    .all(|character| {
+                        character.is_ascii_uppercase()
+                            || character.is_ascii_digit()
+                            || character == '_'
+                    })
+        })
+    {
+        return Err("Android permissions must be unique android.permission.* identifiers from the reviewed manifest list.".into());
+    }
+    let orientation = match request.platform.orientation.as_str() {
+        "portrait" => "portrait",
+        "landscape" => "landscape",
+        _ => "unspecified",
+    };
+    let permission_xml = permissions
+        .iter()
+        .map(|permission| {
+            format!(
+                "  <uses-permission android:name=\"{}\" />\n",
+                xml_escape(permission)
+            )
+        })
+        .collect::<String>();
+    Ok(format!("<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<manifest xmlns:android=\"http://schemas.android.com/apk/res/android\">\n{permission_xml}  <application android:label=\"{}\" android:icon=\"@mipmap/ic_launcher\">\n    <activity android:name=\".MainActivity\" android:screenOrientation=\"{orientation}\" android:exported=\"true\">\n      <intent-filter><action android:name=\"android.intent.action.MAIN\" /><category android:name=\"android.intent.category.LAUNCHER\" /></intent-filter>\n    </activity>\n  </application>\n</manifest>\n", xml_escape(game_name)))
+}
+
+fn collect_apks(root: &Path, depth: usize, output: &mut Vec<PathBuf>) -> Result<(), String> {
+    if depth > 8 || output.len() >= 128 {
+        return Ok(());
+    }
+    for entry in fs::read_dir(root).map_err(|error| error.to_string())? {
+        let entry = entry.map_err(|error| error.to_string())?;
+        let path = entry.path();
+        let kind = entry.file_type().map_err(|error| error.to_string())?;
+        if kind.is_dir() {
+            collect_apks(&path, depth + 1, output)?;
+        } else if path
+            .extension()
+            .and_then(|value| value.to_str())
+            .is_some_and(|value| value.eq_ignore_ascii_case("apk"))
+        {
+            output.push(path);
+        }
+        if output.len() >= 128 {
+            break;
+        }
+    }
+    Ok(())
+}
 fn copy_file_incremental(
     source: &Path,
     destination: &Path,
@@ -777,7 +1273,10 @@ fn player_staging_path(destination: &Path, build_id: &str) -> PathBuf {
         .and_then(|value| value.to_str())
         .unwrap_or("NovaPlayer");
     let suffix = &build_id[..build_id.len().min(12)];
-    parent.join(format!(".{stem}.{suffix}.{}.nova-staging", std::process::id()))
+    parent.join(format!(
+        ".{stem}.{suffix}.{}.nova-staging",
+        std::process::id()
+    ))
 }
 
 fn locked_player_fallback(destination: &Path, build_id: &str, attempt: usize) -> PathBuf {
@@ -939,7 +1438,9 @@ fn export_game(request: ExportRequest) -> Result<ExportResult, String> {
         ));
     }
     if request.web_files.len() > MAX_WEB_EXPORT_FILES {
-        return Err(format!("web export contains more than {MAX_WEB_EXPORT_FILES} files"));
+        return Err(format!(
+            "web export contains more than {MAX_WEB_EXPORT_FILES} files"
+        ));
     }
     if request.project_id.len() > 160 || request.profile.len() > 32 {
         return Err("export request metadata exceeds its safety limit".into());
@@ -970,7 +1471,10 @@ fn export_game(request: ExportRequest) -> Result<ExportResult, String> {
             .and_then(|groups| groups.checked_mul(3))
             .ok_or("web export size overflow")?;
         if estimated > MAX_WEB_EXPORT_FILE_BYTES.saturating_add(2) {
-            return Err(format!("web export file {} exceeds its safety limit", file.path));
+            return Err(format!(
+                "web export file {} exceeds its safety limit",
+                file.path
+            ));
         }
         decoded_web_bytes = decoded_web_bytes
             .checked_add(estimated)
@@ -1037,8 +1541,15 @@ fn export_game(request: ExportRequest) -> Result<ExportResult, String> {
             &mut changed_files,
         )?;
     } else if request.target == "android" {
+        let status = android_toolchain_status();
+        if !status.available {
+            return Err(format!(
+                "Android export is blocked by: {}.",
+                status.missing.join(", ")
+            ));
+        }
         let template = android_template()
-            .ok_or("Android export requires the SDK/JDK and an installed Nova Android template")?;
+            .ok_or("Validated Nova Android template disappeared after discovery")?;
         let destination = root.join(format!("{}-android", game_name));
         if destination.exists() && !request.delivery.incremental {
             fs::remove_dir_all(&destination).map_err(|error| error.to_string())?;
@@ -1054,8 +1565,127 @@ fn export_game(request: ExportRequest) -> Result<ExportResult, String> {
             &mut cache_hits,
             &mut changed_files,
         )?;
+        let manifest = generated_android_manifest(&request, &game_name)?;
+        let manifest_relative = format!("{}-android/app/src/main/AndroidManifest.xml", game_name);
+        tracked_write(
+            &root,
+            &manifest_relative,
+            manifest.as_bytes(),
+            request.delivery.incremental,
+            &mut files,
+            &mut cache_hits,
+            &mut changed_files,
+        )?;
+        for file in &request.web_files {
+            let source = safe_relative_path(&file.path)?;
+            let destination_relative = if let Ok(resource) = source.strip_prefix("nova-android") {
+                PathBuf::from(format!("{}-android/app/src/main/res", game_name)).join(resource)
+            } else {
+                PathBuf::from(format!("{}-android/app/src/main/assets/www", game_name)).join(source)
+            };
+            let destination_text = destination_relative.to_string_lossy().replace('\\', "/");
+            tracked_write(
+                &root,
+                &destination_text,
+                &decode_base64(&file.data_base64)?,
+                request.delivery.incremental,
+                &mut files,
+                &mut cache_hits,
+                &mut changed_files,
+            )?;
+        }
+        let properties = format!(
+            "nova.applicationId={}\nnova.version={}\nnova.orientation={}\nnova.development={}\n",
+            request.platform.identifier,
+            request.platform.version,
+            request.platform.orientation,
+            request.development_build
+        );
+        let properties_relative = format!("{}-android/nova-build.properties", game_name);
+        tracked_write(
+            &root,
+            &properties_relative,
+            properties.as_bytes(),
+            request.delivery.incremental,
+            &mut files,
+            &mut cache_hits,
+            &mut changed_files,
+        )?;
+        if request.platform.signing_mode == "manual" {
+            let identity = PathBuf::from(&request.platform.signing_identity);
+            if !identity.is_file()
+                || std::env::var_os("NOVA_ANDROID_KEYSTORE_PASSWORD").is_none()
+                || std::env::var_os("NOVA_ANDROID_KEY_ALIAS").is_none()
+                || std::env::var_os("NOVA_ANDROID_KEY_PASSWORD").is_none()
+            {
+                return Err("Manual Android release signing requires an existing keystore identity and NOVA_ANDROID_KEYSTORE_PASSWORD, NOVA_ANDROID_KEY_ALIAS, and NOVA_ANDROID_KEY_PASSWORD environment variables.".into());
+            }
+        }
+        let wrapper = destination.join(if cfg!(windows) {
+            "gradlew.bat"
+        } else {
+            "gradlew"
+        });
+        let task = if request.development_build || request.platform.signing_mode != "manual" {
+            "assembleDebug"
+        } else {
+            "assembleRelease"
+        };
+        let mut command = if cfg!(windows) {
+            let mut value = Command::new("cmd");
+            value.arg("/C").arg(&wrapper);
+            value
+        } else {
+            Command::new(&wrapper)
+        };
+        command
+            .current_dir(&destination)
+            .args(["--offline", "--no-daemon"]);
+        if !request.delivery.incremental {
+            command.arg("clean");
+        }
+        let output = command
+            .arg(task)
+            .env("NOVA_APPLICATION_ID", &request.platform.identifier)
+            .env("NOVA_VERSION", &request.platform.version)
+            .env("NOVA_SIGNING_IDENTITY", &request.platform.signing_identity)
+            .output()
+            .map_err(|error| format!("could not start Android Gradle wrapper: {error}"))?;
+        if !output.status.success() {
+            return Err(format!(
+                "Android Gradle build failed:\n{}",
+                bounded_command_text(&output)
+            ));
+        }
+        let mut apks = Vec::new();
+        collect_apks(&destination.join("app/build/outputs/apk"), 0, &mut apks)?;
+        apks.sort();
+        let apk = apks
+            .into_iter()
+            .find(|path| {
+                path.to_string_lossy()
+                    .to_ascii_lowercase()
+                    .contains(if task == "assembleRelease" {
+                        "release"
+                    } else {
+                        "debug"
+                    })
+            })
+            .ok_or("Gradle succeeded but produced no matching APK under app/build/outputs/apk")?;
+        let apk_name = format!(
+            "{}-{}.apk",
+            game_name,
+            if task == "assembleRelease" {
+                "release"
+            } else {
+                "debug"
+            }
+        );
+        fs::copy(&apk, root.join(&apk_name))
+            .map_err(|error| format!("could not copy built APK: {error}"))?;
+        files.push(apk_name);
         files.push(format!("{}-android", game_name));
-        changed_files += 1;
+        changed_files += 2;
     } else {
         let host = std::env::consts::OS;
         if request.target != host {
@@ -1438,14 +2068,29 @@ fn logs_directory() -> PathBuf {
     let base = std::env::var_os(if cfg!(windows) { "APPDATA" } else { "HOME" })
         .map(PathBuf::from)
         .unwrap_or_else(std::env::temp_dir);
-    if cfg!(windows) {
+    let root = if cfg!(windows) {
         base.join("Nova_A").join("Logs")
     } else {
         base.join(".local")
             .join("share")
             .join("Nova_A")
             .join("Logs")
-    }
+    };
+    bounded_environment_value("NOVA_LOG_SCOPE", 48)
+        .map(|scope| {
+            scope
+                .chars()
+                .map(|character| {
+                    if character.is_ascii_alphanumeric() || matches!(character, '.' | '-' | '_') {
+                        character
+                    } else {
+                        '_'
+                    }
+                })
+                .collect::<String>()
+        })
+        .filter(|scope| !scope.is_empty())
+        .map_or(root.clone(), |scope| root.join(scope))
 }
 
 #[tauri::command]
@@ -1642,6 +2287,13 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             runtime_mode,
             runtime_package,
+            runtime_overrides,
+            launch_network_instances,
+            android_toolchain_status,
+            android_devices,
+            android_deploy_apk,
+            android_logcat_snapshot,
+            native_accessibility_capabilities,
             export_capabilities,
             export_game,
             open_external_diff,
@@ -1755,10 +2407,11 @@ mod tests {
             embedded_package(&destination).unwrap().as_deref(),
             Some(b"NOVAPAK\0first".as_slice())
         );
-        assert!(!directory
-            .read_dir()
+        assert!(!directory.read_dir().unwrap().any(|entry| entry
             .unwrap()
-            .any(|entry| entry.unwrap().path().extension().is_some_and(|value| value == "nova-staging")));
+            .path()
+            .extension()
+            .is_some_and(|value| value == "nova-staging")));
         fs::remove_dir_all(directory).unwrap();
     }
 
@@ -1805,7 +2458,12 @@ mod tests {
     #[test]
     fn bounded_base64_rejects_oversized_build_data_before_decoding() {
         let oversized = base64::engine::general_purpose::STANDARD.encode([7_u8; 33]);
-        assert_eq!(decode_base64_limited(&oversized, 33, "fixture").unwrap().len(), 33);
+        assert_eq!(
+            decode_base64_limited(&oversized, 33, "fixture")
+                .unwrap()
+                .len(),
+            33
+        );
         assert!(decode_base64_limited(&oversized, 32, "fixture")
             .unwrap_err()
             .contains("safety limit"));
@@ -1877,5 +2535,28 @@ mod tests {
             .unwrap()
             .contains("\"phase\": \"committed\""));
         fs::remove_dir_all(directory).unwrap();
+    }
+
+    #[test]
+    fn android_identifiers_and_device_serials_fail_closed() {
+        assert!(valid_android_identifier("top.whitelists.novaa"));
+        assert!(valid_android_identifier("org.example.game_2"));
+        assert!(!valid_android_identifier("single"));
+        assert!(!valid_android_identifier("top.2game"));
+        assert!(!valid_android_identifier("top.white-lists.game"));
+        assert!(!valid_android_identifier("top..game"));
+        assert!(valid_android_serial("emulator-5554"));
+        assert!(valid_android_serial("192.168.1.5:5555"));
+        assert!(!valid_android_serial(""));
+        assert!(!valid_android_serial("device;shutdown"));
+        assert!(!valid_android_serial("device with spaces"));
+    }
+
+    #[test]
+    fn android_manifest_metadata_is_xml_escaped() {
+        assert_eq!(
+            xml_escape("Nova <A> & \"Whitelist\"'s"),
+            "Nova &lt;A&gt; &amp; &quot;Whitelist&quot;&apos;s"
+        );
     }
 }

@@ -1,6 +1,7 @@
 import { reactive } from 'vue'
 import { SCRIPT_API_V2_MANIFEST } from '../editor/scriptApi'
 import { analyzeScript } from '../editor/scriptLanguage'
+import { NOVA_ENGINE_VERSION } from '../projects/projectFormat'
 
 export interface ScriptCoverageFile {
   scriptUuid: string
@@ -14,7 +15,7 @@ export interface ScriptCoverageFile {
 export interface ScriptCoverageReport {
   format: 'nova-rhai-coverage'
   version: 2
-  engineVersion: '6.4.0'
+  engineVersion: string
   generatedAt: string
   lineRate: number
   functionRate: number
@@ -81,7 +82,7 @@ export function scriptCoverageReport(): ScriptCoverageReport {
   const stableBindings = SCRIPT_API_V2_MANIFEST.entries.filter(entry => !entry.deprecated).map(entry => entry.callable)
   const coveredBindings = stableBindings.filter(name => (scriptCoverageState.bindingHits[name] ?? 0) > 0)
   return {
-    format: 'nova-rhai-coverage', version: 2, engineVersion: '6.4.0', generatedAt: new Date().toISOString(),
+    format: 'nova-rhai-coverage', version: 2, engineVersion: NOVA_ENGINE_VERSION, generatedAt: new Date().toISOString(),
     lineRate: executableLines ? coveredLines / executableLines : 1,
     functionRate: executableFunctions ? coveredFunctions / executableFunctions : 1,
     bindingRate: stableBindings.length ? coveredBindings.length / stableBindings.length : 1,

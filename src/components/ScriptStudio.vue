@@ -73,7 +73,7 @@
           <span v-if="linkedGraphUuid" class="linked-graph-status">↔ {{ t('linkedVisualGraph') }}</span>
           <span :class="scriptIndexState.status === 'error' ? 'status-error' : 'status-ok'">Index {{ scriptIndexState.documentCount }} / {{ scriptIndexState.symbolCount }}</span>
           <span>{{ t('lineColumn', { line: cursor.line, column: cursor.column }) }}</span>
-      <span>Rhai API v{{ activeAsset?.script?.apiVersion ?? 2 }} · UTF-8 · {{ analysis.elapsedMs.toFixed(1) }} ms</span><span>{{ t('engineVersion') }} 6.4.0</span>
+      <span>Rhai API v{{ activeAsset?.script?.apiVersion ?? 2 }} · UTF-8 · {{ analysis.elapsedMs.toFixed(1) }} ms</span><span>{{ t('engineVersion') }} 6.8.0</span>
         </footer>
       </main>
 

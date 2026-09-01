@@ -1,11 +1,12 @@
 import type { NetworkChannelDefinition, NetworkDelivery, NetworkPayloadSchema } from './production'
+import type { NetworkSecurityEnvelope } from './networkProduction'
 
 export const NOVA_NETWORK_PROTOCOL = 2 as const
 export const NOVA_NETWORK_PACKET_FORMAT = 'nova-net' as const
 export const MAX_NETWORK_COLLECTION_ITEMS = 1_024
 export const MAX_NETWORK_DEPTH = 12
 
-export type NetworkPacketKind = 'hello' | 'ack' | 'rpc' | 'snapshot' | 'input' | 'ping' | 'pong' | 'join' | 'leave' | 'resync'
+export type NetworkPacketKind = 'hello' | 'ack' | 'rpc' | 'snapshot' | 'input' | 'ping' | 'pong' | 'join' | 'leave' | 'resync' | 'auth' | 'authority' | 'interest' | 'scene'
 
 export interface NetworkPacket {
   format: typeof NOVA_NETWORK_PACKET_FORMAT
@@ -20,6 +21,7 @@ export interface NetworkPacket {
   schema: number
   kind: NetworkPacketKind
   payload: unknown
+  security?: NetworkSecurityEnvelope
 }
 
 export interface NetworkProtocolLimits {
@@ -28,7 +30,7 @@ export interface NetworkProtocolLimits {
   schemaVersion: number
 }
 
-const PACKET_KINDS = new Set<NetworkPacketKind>(['hello', 'ack', 'rpc', 'snapshot', 'input', 'ping', 'pong', 'join', 'leave', 'resync'])
+const PACKET_KINDS = new Set<NetworkPacketKind>(['hello', 'ack', 'rpc', 'snapshot', 'input', 'ping', 'pong', 'join', 'leave', 'resync', 'auth', 'authority', 'interest', 'scene'])
 const SENSITIVE_KEYS = /^(?:password|passphrase|secret|token|access[_-]?token|api[_-]?key|private[_-]?key|authorization|cookie|session[_-]?key)$/i
 
 function record(value: unknown): Record<string, unknown> | null {
@@ -127,7 +129,13 @@ export function parseNetworkPacket(
   if (payloadError) return { packet: null, error: payloadError }
   const payloadBytes = utf8Bytes(stableNetworkJson(value.payload))
   if (payloadBytes > channel.maximumPayloadBytes) return { packet: null, error: `Packet payload exceeds channel ${channel.id}.` }
-  return { packet: { format: NOVA_NETWORK_PACKET_FORMAT, protocol: NOVA_NETWORK_PROTOCOL, sessionId, sender, channel: channel.id, delivery: channel.delivery, sequence, ack, tick, schema, kind: value.kind as NetworkPacketKind, payload: value.payload }, error: '' }
+  let security: NetworkSecurityEnvelope | undefined
+  if (value.security !== undefined) {
+    const envelope = record(value.security), issuedAt = finiteInteger(envelope?.issuedAt, 0, Number.MAX_SAFE_INTEGER)
+    if (!envelope || typeof envelope.epoch !== 'string' || !envelope.epoch || utf8Bytes(envelope.epoch) > 80 || typeof envelope.nonce !== 'string' || !envelope.nonce || utf8Bytes(envelope.nonce) > 120 || issuedAt === null || typeof envelope.proof !== 'string' || utf8Bytes(envelope.proof) > 512) return { packet: null, error: 'Packet security envelope is invalid.' }
+    security = { epoch: envelope.epoch, nonce: envelope.nonce, issuedAt, proof: envelope.proof }
+  }
+  return { packet: { format: NOVA_NETWORK_PACKET_FORMAT, protocol: NOVA_NETWORK_PROTOCOL, sessionId, sender, channel: channel.id, delivery: channel.delivery, sequence, ack, tick, schema, kind: value.kind as NetworkPacketKind, payload: value.payload, ...(security ? { security } : {}) }, error: '' }
 }
 
 export class NetworkRateLimiter {
@@ -161,6 +169,15 @@ export class ReliablePacketWindow {
     return due
   }
   get size(): number { return this.pending.size }
+  clearPeer(peer: string): number {
+    let removed = 0
+    for (const [key, item] of this.pending) {
+      if (item.peer !== peer) continue
+      this.pending.delete(key)
+      removed++
+    }
+    return removed
+  }
   clear(): void { this.pending.clear() }
 }
 

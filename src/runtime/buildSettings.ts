@@ -2,7 +2,9 @@ import { reactive } from 'vue'
 import { OFFICIAL_ANDROID_PACKAGE_ID, OFFICIAL_NETWORKING_PACKAGE_ID, packageEnabled } from './packages'
 import { platformSupport } from './platformSupport'
 import { productionSettings } from './production'
+import { networkAuthenticationProviders, networkEncryptionGuidance, reviewedNetworkTransports } from './networkProduction'
 import { defaultExportTemplateId, exportTemplateIssues, resolveExportTemplateId } from './exportTemplates'
+import { refreshAndroidToolchain, validateAndroidPermissions } from './mobileDelivery'
 
 export type BuildTarget = 'windows' | 'linux' | 'macos' | 'web' | 'android'
 export type BuildArchitecture = 'x86_64' | 'aarch64'
@@ -294,13 +296,23 @@ export function validateBuildSettings(settings: BuildSettings, capabilities = ex
   if (settings.target === 'android' && !capabilities.androidAvailable) issues.push({ code: 'android', severity: 'error', message: capabilities.androidReason || 'Android export is unavailable on this machine.' })
   if (settings.target === 'android' && !packageEnabled(OFFICIAL_ANDROID_PACKAGE_ID)) issues.push({ code: 'android-package', severity: 'error', message: 'Install and enable the optional Nova Android Export package.' })
   if (settings.target !== 'web' && settings.target !== 'android' && capabilities.host !== 'unknown' && settings.target !== capabilities.host) issues.push({ code: 'host', severity: 'error', message: `${settings.target} export requires a ${settings.target} host or matching CI runner.` })
+  if (settings.target === 'android') {
+    const purposes = Object.fromEntries(settings.platform.permissions.map(permission => [permission, settings.platform.versionMetadata[`permissionPurpose.${permission}`] ?? '']))
+    for (const issue of validateAndroidPermissions(settings.platform.permissions, purposes)) issues.push({ code: `android-${issue.code.toLocaleLowerCase()}`, severity: issue.severity, message: `${issue.permission}: ${issue.message}` })
+    if (settings.platform.signingMode === 'manual' && !settings.platform.signingIdentity) issues.push({ code: 'android-signing', severity: 'error', message: 'Manual Android release signing requires an existing keystore path; passwords and alias are read only from the documented environment variables.' })
+  }
+
   if (settings.target !== 'web' && settings.target !== 'android' && capabilities.architecture !== 'unknown' && settings.architecture !== capabilities.architecture) issues.push({ code: 'architecture', severity: 'error', message: `${settings.architecture} export requires a matching player template; this editor is ${capabilities.architecture}.` })
   if (settings.runtimeMode === 'headless-server' && (settings.target === 'web' || settings.target === 'android')) issues.push({ code: 'headless', severity: 'error', message: 'Headless authoritative servers require a desktop target.' })
   if (productionSettings.networking.enabled && !packageEnabled(OFFICIAL_NETWORKING_PACKAGE_ID)) issues.push({ code: 'network-package', severity: 'error', message: 'Networked builds require the reviewed optional Nova Networking package.' })
   if (productionSettings.networking.enabled && !productionSettings.networking.permissionGranted) issues.push({ code: 'network-permission', severity: 'error', message: 'Networked builds require an explicit project network permission.' })
+  if (productionSettings.networking.enabled && productionSettings.networking.transportAdapterId && !reviewedNetworkTransports().some(adapter => adapter.id === productionSettings.networking.transportAdapterId)) issues.push({ code: 'network-adapter', severity: 'error', message: `Reviewed transport adapter ${productionSettings.networking.transportAdapterId} is not registered.` })
+  if (productionSettings.networking.enabled && productionSettings.networking.authentication.mode === 'hook' && !networkAuthenticationProviders().some(provider => provider.id === productionSettings.networking.authentication.providerId)) issues.push({ code: 'network-authentication', severity: 'error', message: `Authentication provider ${productionSettings.networking.authentication.providerId || '(empty)'} is not registered.` })
+  if (productionSettings.networking.enabled && productionSettings.networking.authentication.requireVerifiedPeers && productionSettings.networking.authentication.mode !== 'hook') issues.push({ code: 'network-verification', severity: 'error', message: 'Verified peers require a reviewed authentication hook.' })
+  if (productionSettings.networking.enabled) { const selectedAdapter = reviewedNetworkTransports().find(adapter => adapter.id === productionSettings.networking.transportAdapterId), guidance = networkEncryptionGuidance(productionSettings.networking, selectedAdapter?.encrypted === true); if (guidance.severity === 'error') issues.push({ code: 'network-encryption', severity: 'error', message: guidance.message }); else if (guidance.severity === 'warning') issues.push({ code: 'network-encryption', severity: 'warning', message: guidance.message }) }
   if (settings.runtimeMode === 'headless-server' && !productionSettings.networking.enabled) issues.push({ code: 'headless-network', severity: 'error', message: 'The headless server preset requires networking to be enabled explicitly.' })
   if (settings.runtimeMode === 'headless-server' && !['server', 'host'].includes(productionSettings.networking.role)) issues.push({ code: 'headless-authority', severity: 'error', message: 'Headless servers require the Server or Host authority role.' })
-  if (settings.runtimeMode === 'headless-server' && productionSettings.networking.transport !== 'native-udp') issues.push({ code: 'headless-transport', severity: 'error', message: 'Authoritative headless servers require the native UDP transport.' })
+  if (settings.runtimeMode === 'headless-server' && productionSettings.networking.transport !== 'native-udp' && !productionSettings.networking.transportAdapterId) issues.push({ code: 'headless-transport', severity: 'error', message: 'Authoritative headless servers require native UDP or a reviewed transport adapter.' })
   if (settings.packageIntoExecutable && (settings.target === 'web' || settings.target === 'macos' || settings.target === 'android')) issues.push({ code: 'single-file', severity: 'error', message: 'Single-file packaging is unavailable for this target.' })
   if (!settings.packageIntoExecutable && (settings.target === 'windows' || settings.target === 'linux')) issues.push({ code: 'sidecar-player', severity: 'info', message: 'This desktop build will contain a player and a separate game.nova-pak. Enable single-file packaging for one portable application.' })
   if (settings.platform.signingMode === 'manual' && !settings.platform.signingIdentity) issues.push({ code: 'signing', severity: 'warning', message: 'Signing is enabled but no certificate/profile identity is configured.' })
@@ -330,4 +342,5 @@ export async function detectExportCapabilities(): Promise<void> {
     const { invoke } = await import('@tauri-apps/api/core')
     Object.assign(exportCapabilities, await invoke<ExportCapabilities>('export_capabilities'))
   } catch { /* Browser/default capabilities remain safe and conservative. */ }
+    await refreshAndroidToolchain()
 }

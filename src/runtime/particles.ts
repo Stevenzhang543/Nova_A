@@ -6,7 +6,8 @@ import { finiteNumber } from '../world/geometry'
 import { localPointToWorld, worldTransform } from '../world/hierarchy'
 import type { Vec2 } from '../world/types'
 import { reactive } from 'vue'
-import { renderingSettings } from '../renderer/renderSettings'
+import { activeRenderQuality } from '../renderer/renderSettings'
+import { performanceComponentScheduler, performanceRuntimeState } from './largeWorldPerformance'
 
 interface Particle {
   position: Vec2
@@ -195,8 +196,10 @@ export class ParticleRuntime {
     const dt = clamp(delta, 0, 0, .25)
     const live = new Set<string>()
     let activeParticles = [...states.values()].reduce((total, state) => total + state.particles.length, 0), emitterCount = 0, subemissions = 0, collisions = 0, cpuSimulated = 0
-    const globalBudget = renderingSettings.particleBudget
-    for (const entity of entities) {
+    const globalBudget = Math.max(100, Math.floor(activeRenderQuality.particleBudget * performanceRuntimeState.adaptiveParticleScale))
+    const emitterIndices = performanceComponentScheduler.count === entities.length ? performanceComponentScheduler.indices('ParticleEmitter2D') : null
+    for (let sourceIndex = 0; sourceIndex < (emitterIndices?.length ?? entities.length); sourceIndex++) {
+      const entity = entities[emitterIndices ? emitterIndices[sourceIndex] : sourceIndex]
       const component = entity.getComponent<ParticleEmitter2D>('ParticleEmitter2D')
       if (!component || !component.enabled || component.removed || !entity.enabled) continue
       normalizeParticleEmitter(component)

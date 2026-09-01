@@ -24,7 +24,7 @@ export const PLATFORM_SUPPORT_MATRIX: readonly PlatformSupportEntry[] = Object.f
   Object.freeze({ id: 'web', label: 'Web', tier: 'tier-1', architectures: ['x86_64'] as const, editor: false, runtime: true, referenceMatrixPassed: true, availability: 'available', buildHosts: ['windows', 'linux', 'macos', 'web'] as const, minimumSystem: 'WebAssembly, ES2022 and WebGL2-capable browser', evidence: 'release-audits/evidence-v5.7.0/platform/web.json', lastQualified: '5.7.0-local-candidate', reason: 'Tier-1 exported player. The pinned Chromium path is local evidence; Firefox and WebKit remain explicit matrix jobs until their artifacts are attached.' }),
   Object.freeze({ id: 'linux', label: 'Linux', tier: 'experimental', architectures: ['x86_64'] as const, editor: true, runtime: true, referenceMatrixPassed: false, availability: 'ci-only', buildHosts: ['linux'] as const, minimumSystem: 'Recent x86-64 distribution with WebKitGTK 4.1', evidence: 'external/linux-clean-machine.json', lastQualified: 'pending', reason: 'Matching-host export is exposed for CI but cannot be promoted until driver, audio, input, package and clean-machine evidence passes.' }),
   Object.freeze({ id: 'macos', label: 'macOS', tier: 'experimental', architectures: ['x86_64', 'aarch64'] as const, editor: true, runtime: true, referenceMatrixPassed: false, availability: 'ci-only', buildHosts: ['macos'] as const, minimumSystem: 'macOS 12 or later on matching architecture', evidence: 'external/macos-clean-machine.json', lastQualified: 'pending', reason: 'Matching-host export is exposed for CI. Dedicated hardware, signing, notarization, audio and regression evidence are still required.' }),
-  Object.freeze({ id: 'android', label: 'Android', tier: 'experimental', architectures: ['aarch64'] as const, editor: false, runtime: false, referenceMatrixPassed: false, availability: 'unavailable', buildHosts: [] as const, minimumSystem: 'Not declared', evidence: 'external/mobile-export-matrix.json', lastQualified: 'pending', reason: 'Mobile stays Experimental and explicitly unavailable until the complete SDK, template, signing, install and runtime matrix passes.' })
+  Object.freeze({ id: 'android', label: 'Android', tier: 'experimental', architectures: ['aarch64'] as const, editor: false, runtime: true, referenceMatrixPassed: false, availability: 'available', buildHosts: ['windows', 'linux', 'macos'] as const, minimumSystem: 'Android 10+, aarch64; local JDK 17, SDK 35, build-tools, NDK 27 and validated template', evidence: 'external/mobile-export-matrix.json', lastQualified: '6.7.0-local-toolchain-gated', reason: 'Optional Android authoring/build/deploy is exposed with live toolchain gates. Production signing, clean-device lifecycle, input/audio hardware and store review remain explicit external qualification gates.' })
 ])
 
 export function platformSupport(id: string): PlatformSupportEntry {
@@ -32,7 +32,7 @@ export function platformSupport(id: string): PlatformSupportEntry {
 }
 
 export function selectableBuildPlatforms(): PlatformSupportEntry[] {
-  return PLATFORM_SUPPORT_MATRIX.filter(item => item.availability !== 'unavailable' && item.tier !== 'experimental')
+  return PLATFORM_SUPPORT_MATRIX.filter(item => item.availability === 'available')
 }
 
 export function platformTierLabel(tier: PlatformSupportTier): string {

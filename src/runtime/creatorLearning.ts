@@ -1,6 +1,7 @@
 import { computed, reactive } from 'vue'
 import { preferencesState, type PerformanceProfile } from '../store/preferences'
 import type { Locale } from '../store/preferences'
+import { localizedUiLabel } from '../i18n'
 
 export type LearningClassification = 'Automatic' | 'Manual' | 'Assisted' | 'Runtime' | 'Editor-only' | 'Destructive' | 'Reversible' | 'Project-wide' | 'Per-object'
 
@@ -132,7 +133,7 @@ const localeText = {
 
 export function localizedLearningGuide(guide: LearningGuide, locale: Locale): LocalizedLearningGuide {
   const copy = localeText[locale]
-  return { title: guide.feature, purpose: copy.purpose(guide), whenToUse: copy.when(guide), prerequisites: [...guide.prerequisites], steps: copy.steps(guide), expectedResult: copy.expected(guide), persistence: copy.persistence(guide), undoRecovery: copy.recovery, mistakes: copy.mistakes(guide), accessibility: copy.accessibility, minimalExample: copy.minimal(guide), productionExample: copy.production(guide), relatedRhai: [...guide.relatedRhai], relatedGraph: [...guide.relatedGraph] }
+  return { title: localizedUiLabel(guide.feature, locale), purpose: copy.purpose(guide), whenToUse: copy.when(guide), prerequisites: [...guide.prerequisites], steps: copy.steps(guide), expectedResult: copy.expected(guide), persistence: copy.persistence(guide), undoRecovery: copy.recovery, mistakes: copy.mistakes(guide), accessibility: copy.accessibility, minimalExample: copy.minimal(guide), productionExample: copy.production(guide), relatedRhai: [...guide.relatedRhai], relatedGraph: [...guide.relatedGraph] }
 }
 
 export const CREATOR_PERFORMANCE_PROFILES = Object.freeze({

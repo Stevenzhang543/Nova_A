@@ -1,4 +1,4 @@
-# Nova_A 6.2.0 Complete Manual
+# Nova_A 7.0.0 Complete Manual
 
 ## 6.2.0 behavior contracts
 
@@ -1018,11 +1018,11 @@ In **Export templates**, inspect installed target/architecture/runtime templates
 In **Delivery**, refresh deterministic CI cache keys, keep delta builds with patch manifests, and create local, HTTPS or external-command connectors. Remote/external connectors require project permission. Prepare Plan validates destination and checksum but returns a non-executable plan and performs no network operation. Final deployment remains an external, explicit action. See `docs/EXTENSIONS_PLATFORM_DELIVERY_5_9.md`.
 
 <!-- NOVA_V6_TEACHING_START -->
-# Nova_A 6.4.0 task-oriented teaching manual
+# Nova_A 7.0.0 task-oriented teaching manual
 
 Learn by completing real work. Every public feature below states ownership, persistence, recovery, accessibility and release behavior.
 
-- Engine: **6.4.0**
+- Engine: **7.0.0**
 - Stable contracts: Project Format 2/schema 29; Rhai API 2; Graph Format 1; Plugin API 2; Package Manifest 1; Build CLI 1; workspace document 3.
 - External signing, independent clean-machine evidence, two-machine reproduction, matching-host builds and a real 72-hour soak remain pending until independently captured.
 
@@ -17051,5 +17051,21 @@ Learn by completing real work. Every public feature below states ownership, pers
 **Rhai API:** N/A
 
 **Visual Graph API:** N/A
+
+
+<a id="v70-stable-platform"></a>
+
+## Nova_A 7 stable creator-platform workflow
+
+Use this release workflow to learn, migrate, verify and ship a complete project while keeping every stable contract and every external limitation visible.
+
+1. Open Manage → Learning Center → Platform readiness. Search for the feature you intend to use and inspect Binding, Validation, Undo, Persistence, Runtime/export, Documentation and Tests before authoring. A circle means the dimension does not apply; a dash means external evidence is still required.
+2. Start with a guided project or the creator-v700-stable-platform reference. Follow each lesson in order: prerequisites, exact workflow, expected result, save/reload, undo/recovery, Play/Step, standalone build and accessibility checks.
+3. When opening a 6.x project, review the migration preview before applying. Confirm the source/target engines, semantic diff, backup path and deterministic checksum. The 7.0 seal changes only the supported-engine ceiling to <8.0.0; it does not rewrite schema 29 gameplay data.
+4. For code or Visual Graph behavior, edit either representation, save, inspect the synchronized counterpart and run parity/tests. Unsupported Rhai remains in a lossless Code block. Review the API browser or docs/API_REFERENCE_7_0.md before relying on a runtime call.
+5. Run Project Health, template/reference checks and Build validation. Build Windows on Windows and Web locally. Treat Linux/macOS as matching-host, Android as toolchain-gated experimental and iOS/console as deferred; do not turn an unavailable target into a false pass.
+6. Exercise keyboard and pointer paths in English, German and Chinese at 100–200% UI scale, high contrast and reduced motion. Save, close, reopen, recover from one intentional invalid value, then inspect release evidence and the exact eleven artifacts.
+
+**Undo and recovery:** Cancel a migration or restore its backup if the preview is unexpected. Undo document edits, use Recovery Browser after interrupted saves, disable a failing package/plugin, and keep the last valid build. Read docs/TROUBLESHOOTING_7_0.md for symptom-based recovery. Signing, clean-machine lifecycle, matching-host builds, independent observation and the real soak remain external until captured.
 
 <!-- NOVA_V6_TEACHING_END -->

@@ -104,6 +104,10 @@ export interface RendererStats {
   batchBreaks: number
   atlasPages: number
   textureMemoryBytes: number
+  textureUploads: number
+  shaderCompiles: number
+  shaderFallbacks: number
+  contextLosses: number
   batchBreakReasons: Record<string, number>
 }
 

@@ -1,4 +1,5 @@
 import { assetState } from '../assets/AssetDatabase'
+import { assetSourceBytes } from '../assets/contentHash'
 import { addEditorLog, editorState } from '../store/editor'
 import { getSceneJSON, sceneManager } from '../store/physics'
 import { buildProgress, buildSettings, recordBuildHistory, synchronizeBuildScenes, validateBuildSettings } from './buildSettings'
@@ -27,7 +28,7 @@ function bytesToBase64(bytes: Uint8Array): string { return packageBase64(bytes) 
 function bytesToHex(bytes: Uint8Array): string { return [...bytes].map(value => value.toString(16).padStart(2, '0')).join('') }
 async function sha256(bytes: Uint8Array): Promise<string> { return bytesToHex(new Uint8Array(await crypto.subtle.digest('SHA-256', bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer))) }
 
-function sanitizeGameName(value: string): string {
+export function sanitizeGameName(value: string): string {
   return value.replace(/[<>:"/\\|?*\x00-\x1f]/g, '').trim().slice(0, 80) || 'MyGame'
 }
 
@@ -43,6 +44,14 @@ function assetsForBuild() {
     if (excluded.some(pattern => globMatches(path, pattern))) return false
     return !included.length || included.some(pattern => globMatches(path, pattern))
   })
+}
+
+function androidImageFile(reference: string | null, path: string): ExportFile | null {
+  if (!reference) return null
+  const uuid = reference.startsWith('asset://') ? reference.slice(8) : reference
+  const asset = assetState.records.find(item => item.uuid === uuid)
+  if (!asset || asset.assetType !== 'image') return null
+  return { path, dataBase64: bytesToBase64(assetSourceBytes(asset.source)) }
 }
 
 function projectForBuild(projectJson: string): string {
@@ -187,8 +196,13 @@ export async function buildGame(run = false): Promise<NativeBuildResult> {
   const selectedAssets = assetsForBuild()
   const pack = await createNovaPak(projectJson, selectedAssets, buildSettings.startupSceneUuid, { deterministic: buildSettings.delivery.deterministic, compression: buildSettings.delivery.compression })
   buildProgress.phase = 'exporting'; buildProgress.percent = 66; buildProgress.message = 'Writing Nova Player export…'
-  const webFiles = buildSettings.target === 'web' ? await collectWebPlayerFiles() : []
+  const webFiles = buildSettings.target === 'web' || buildSettings.target === 'android' ? await collectWebPlayerFiles() : []
   if (buildSettings.target === 'web') webFiles.push(...await webBuildMetadata(pack, webFiles))
+  if (buildSettings.target === 'android') {
+    const icon = androidImageFile(buildSettings.platform.iconAsset, 'nova-android/mipmap-hdpi/ic_launcher.png')
+    const splash = androidImageFile(buildSettings.platform.splashAsset, 'nova-android/drawable/nova_splash.png')
+    if (icon) webFiles.push(icon); if (splash) webFiles.push(splash)
+  }
   let result: NativeBuildResult
   if ('__TAURI_INTERNALS__' in window) {
     const { invoke } = await import('@tauri-apps/api/core')

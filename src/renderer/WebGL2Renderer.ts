@@ -212,7 +212,7 @@ function textureDimensions(source: TexImageSource): { width: number; height: num
 }
 
 export class WebGL2Renderer implements Renderer2D {
-  readonly stats: RendererStats = { backend: 'WebGL2', drawCalls: 0, batches: 0, triangles: 0, sprites: 0, shapes: 0, text: 0, textures: 0, gpuMs: null, passes: 1, renderTargets: 1, overdraw: 0, batchBreaks: 0, atlasPages: 0, textureMemoryBytes: 0, batchBreakReasons: {} }
+  readonly stats: RendererStats = { backend: 'WebGL2', drawCalls: 0, batches: 0, triangles: 0, sprites: 0, shapes: 0, text: 0, textures: 0, gpuMs: null, passes: 1, renderTargets: 1, overdraw: 0, batchBreaks: 0, atlasPages: 0, textureMemoryBytes: 0, textureUploads: 0, shaderCompiles: 0, shaderFallbacks: 0, contextLosses: 0, batchBreakReasons: {} }
   private readonly gl: WebGL2RenderingContext
   private readonly program: WebGLProgram
   private readonly vao: WebGLVertexArrayObject
@@ -248,9 +248,11 @@ export class WebGL2Renderer implements Renderer2D {
   private effectsWidth = 0
   private effectsHeight = 0
   private contextLost = false
+  private contextLossCount = 0
   private readonly onContextLost = (event: Event) => {
     event.preventDefault()
     this.contextLost = true
+    this.contextLossCount++
     this.activeTimer = null
     this.pendingTimers = []
     reportRendererContextLost()
@@ -321,7 +323,7 @@ export class WebGL2Renderer implements Renderer2D {
     this.effectsTargetActive = renderingSettings.postProcessing.enabled
     if (this.effectsTargetActive) this.ensureEffectsTarget()
     this.pollGpuTimers()
-    Object.assign(this.stats, { drawCalls: 0, batches: 0, triangles: 0, sprites: 0, shapes: 0, text: 0, textures: this.textureCount, gpuMs: this.lastGpuMs, passes: 1, renderTargets: this.effectsTargetActive ? 1 : 0, overdraw: 0, batchBreaks: 0, atlasPages: assetState.atlasPages.length, textureMemoryBytes: this.textureMemoryBytes, batchBreakReasons: {} })
+    Object.assign(this.stats, { drawCalls: 0, batches: 0, triangles: 0, sprites: 0, shapes: 0, text: 0, textures: this.textureCount, gpuMs: this.lastGpuMs, passes: 1, renderTargets: this.effectsTargetActive ? 1 : 0, overdraw: 0, batchBreaks: 0, atlasPages: assetState.atlasPages.length, textureMemoryBytes: this.textureMemoryBytes, textureUploads: 0, shaderCompiles: 0, shaderFallbacks: 0, contextLosses: this.contextLossCount, batchBreakReasons: {} })
     const gl = this.gl
     gl.bindFramebuffer(gl.FRAMEBUFFER, this.effectsTargetActive ? this.framebuffer : null)
     const [r, g, b, a] = normalizedColor(options.clearColor)
@@ -536,9 +538,10 @@ export class WebGL2Renderer implements Renderer2D {
     if (this.materialPrograms.has(reference)) return this.materialPrograms.get(reference) ?? this.baseProgramState
     const material = resolveMaterial(reference)
     const resolved = resolvedMaterialFragment(material)
-    if ([...resolved.diagnostics, ...analyzeMaterialShader(resolved.source, material.includes)].some(item => item.severity === 'error')) { reportMaterialFallback(reference, 'shader validation failed'); this.materialPrograms.set(reference, null); return this.baseProgramState }
+    if ([...resolved.diagnostics, ...analyzeMaterialShader(resolved.source, material.includes)].some(item => item.severity === 'error')) { reportMaterialFallback(reference, 'shader validation failed'); this.stats.shaderFallbacks++; this.materialPrograms.set(reference, null); return this.baseProgramState }
     try {
       const program = createProgram(this.gl, materialFragment(material))
+      this.stats.shaderCompiles++
       const camera = this.gl.getUniformLocation(program, 'u_camera'), texture = this.gl.getUniformLocation(program, 'u_texture'), rotation = this.gl.getUniformLocation(program, 'u_rotation')
       if (!camera || !texture || !rotation) throw new Error('Material shader does not expose the renderer uniforms')
       const state = { program, camera, texture, rotation, linearTexture: this.gl.getUniformLocation(program, 'u_linearTexture'), material }
@@ -546,6 +549,7 @@ export class WebGL2Renderer implements Renderer2D {
       return state
     } catch (error) {
       reportMaterialFallback(reference, `shader compilation failed: ${error instanceof Error ? error.message : String(error)}`)
+      this.stats.shaderFallbacks++
       this.materialPrograms.set(reference, null)
       return this.baseProgramState
     }
@@ -583,16 +587,17 @@ export class WebGL2Renderer implements Renderer2D {
     const signature = providedMaterial ? `${reference}:${providedMaterial.fragment}` : `${reference}:${assetState.generation}`
     if (this.failedPostSignature === signature) return false
     const material = providedMaterial ?? resolveMaterial(reference), resolved = resolvedMaterialFragment(material)
-    if ([...resolved.diagnostics, ...analyzeMaterialShader(resolved.source, material.includes)].some(item => item.severity === 'error')) { this.failedPostSignature = signature; reportMaterialFallback(reference, 'post-process validation failed'); return false }
+    if ([...resolved.diagnostics, ...analyzeMaterialShader(resolved.source, material.includes)].some(item => item.severity === 'error')) { this.failedPostSignature = signature; reportMaterialFallback(reference, 'post-process validation failed'); this.stats.shaderFallbacks++; return false }
     const generation = providedMaterial ? signature.length + [...signature].reduce((sum, character) => (sum * 31 + character.charCodeAt(0)) | 0, 0) : assetState.generation
     if (!this.postProgram || this.postProgram.reference !== reference || this.postProgram.generation !== generation) {
       if (this.postProgram) this.gl.deleteProgram(this.postProgram.program)
       try {
         const program = createPostProgram(this.gl, material)
+        this.stats.shaderCompiles++
         const texture = this.gl.getUniformLocation(program, 'u_texture')
         if (!texture) { this.gl.deleteProgram(program); return false }
         this.postProgram = { reference, generation, program, texture, material }
-      } catch (error) { this.failedPostSignature = signature; reportMaterialFallback(reference, `post-process compilation failed: ${error instanceof Error ? error.message : String(error)}`); this.postProgram = null; return false }
+      } catch (error) { this.failedPostSignature = signature; reportMaterialFallback(reference, `post-process compilation failed: ${error instanceof Error ? error.message : String(error)}`); this.stats.shaderFallbacks++; this.postProgram = null; return false }
     }
     this.failedPostSignature = ''
     const gl = this.gl, state = this.postProgram
@@ -655,6 +660,7 @@ export class WebGL2Renderer implements Renderer2D {
       this.textureMemoryBytes -= cached.width * cached.height * 4
       gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false)
       gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, region.source)
+      this.stats.textureUploads++
       cached.width = dimensions.width
       cached.height = dimensions.height
       this.textureMemoryBytes += cached.width * cached.height * 4

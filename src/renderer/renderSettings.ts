@@ -16,11 +16,13 @@ export interface PostProcessValues {
 }
 export interface PostProcessPreset2D { id: string; name: string; values: PostProcessValues }
 export interface PostProcessVolume2D { id: string; name: string; enabled: boolean; center: { x: number; y: number }; size: { x: number; y: number }; blendDistance: number; priority: number; presetId: string }
+export interface RenderQualityVolume2D { id: string; name: string; enabled: boolean; center: { x: number; y: number }; size: { x: number; y: number }; priority: number; preset: RenderQualityPreset; maximumPixelRatio: number | null; particleBudget: number | null; shadowQuality: ShadowQuality | null }
 
 export interface RenderingSettings {
   rendererPath: 'Auto' | 'Native' | 'Compatibility'
   unsupportedPolicy: 'Block' | 'WarnAndFallback'
   qualityPreset: RenderQualityPreset
+  qualityVolumes: RenderQualityVolume2D[]
   lightingEnabled: boolean
   ambientColor: { r: number; g: number; b: number }
   ambientIntensity: number
@@ -42,6 +44,7 @@ export interface RenderingSettings {
 export const DEFAULT_RENDERING_SETTINGS: RenderingSettings = {
   rendererPath: 'Auto', unsupportedPolicy: 'WarnAndFallback',
   qualityPreset: 'Balanced',
+  qualityVolumes: [],
   lightingEnabled: false,
   ambientColor: { r: 255, g: 255, b: 255 },
   ambientIntensity: 1,
@@ -84,6 +87,12 @@ export function normalizeRenderingSettings(value: unknown): RenderingSettings {
   const shadowQuality = ['Off', 'Hard', 'Soft', 'Ultra'].includes(String(source.shadowQuality)) ? source.shadowQuality as ShadowQuality : DEFAULT_RENDERING_SETTINGS.shadowQuality
   const debugView = ['None', 'Overdraw', 'BatchBreaks', 'Lighting', 'Normals'].includes(String(source.debugView)) ? source.debugView as RenderDebugView : 'None'
   const qualityPreset = ['Performance', 'Balanced', 'High', 'Ultra', 'PixelArt'].includes(String(source.qualityPreset)) ? source.qualityPreset as RenderQualityPreset : 'Balanced'
+  const qualityVolumes = Array.isArray(source.qualityVolumes) ? source.qualityVolumes.slice(0, 64).flatMap((item, index) => {
+    if (!item || typeof item !== 'object') return []
+    const volume = item as Record<string, unknown>, center = volume.center && typeof volume.center === 'object' ? volume.center as Record<string, unknown> : {}, size = volume.size && typeof volume.size === 'object' ? volume.size as Record<string, unknown> : {}
+    const preset = ['Performance', 'Balanced', 'High', 'Ultra', 'PixelArt'].includes(String(volume.preset)) ? volume.preset as RenderQualityPreset : qualityPreset
+    return [{ id: id(volume.id, `quality-volume-${index + 1}`), name: typeof volume.name === 'string' ? volume.name.slice(0, 80) : `Quality volume ${index + 1}`, enabled: volume.enabled !== false, center: { x: finite(center.x, 0, -1e9, 1e9), y: finite(center.y, 0, -1e9, 1e9) }, size: { x: finite(size.x, 10, .001, 1e9), y: finite(size.y, 10, .001, 1e9) }, priority: Math.round(finite(volume.priority, 0, -1000, 1000)), preset, maximumPixelRatio: volume.maximumPixelRatio === null || volume.maximumPixelRatio === undefined ? null : finite(volume.maximumPixelRatio, 2, 1, 4), particleBudget: volume.particleBudget === null || volume.particleBudget === undefined ? null : Math.round(finite(volume.particleBudget, 10_000, 100, 100_000)), shadowQuality: ['Off', 'Hard', 'Soft', 'Ultra'].includes(String(volume.shadowQuality)) ? volume.shadowQuality as ShadowQuality : null }]
+  }) : []
   const normalizedPost = postValues(post)
   const hasStoredPresets = Array.isArray(post.presets) && post.presets.length > 0
   const presets = hasStoredPresets ? (post.presets as unknown[]).slice(0, 32).flatMap((item, index) => { if (!item || typeof item !== 'object') return []; const preset = item as Record<string, unknown>; return [{ id: id(preset.id, `preset-${index + 1}`), name: typeof preset.name === 'string' ? preset.name.slice(0, 80) : `Preset ${index + 1}`, values: postValues(preset.values, normalizedPost) }] }) : [{ id: 'project', name: 'Project', values: normalizedPost }, ...DEFAULT_RENDERING_SETTINGS.postProcessing.presets.map(item => ({ ...item, values: { ...item.values } }))]
@@ -94,6 +103,7 @@ export function normalizeRenderingSettings(value: unknown): RenderingSettings {
     rendererPath: ['Auto', 'Native', 'Compatibility'].includes(String(source.rendererPath)) ? source.rendererPath as RenderingSettings['rendererPath'] : 'Auto',
     unsupportedPolicy: source.unsupportedPolicy === 'Block' ? 'Block' : 'WarnAndFallback',
     qualityPreset,
+    qualityVolumes,
     lightingEnabled: source.lightingEnabled === true,
     ambientColor: color(source.ambientColor, DEFAULT_RENDERING_SETTINGS.ambientColor),
     ambientIntensity: finite(source.ambientIntensity, 1, 0, 8),
@@ -113,6 +123,7 @@ export function normalizeRenderingSettings(value: unknown): RenderingSettings {
 
 export const renderingSettings = reactive<RenderingSettings>(normalizeRenderingSettings(DEFAULT_RENDERING_SETTINGS))
 export const activePostProcessing = reactive<PostProcessValues>({ ...DEFAULT_RENDERING_SETTINGS.postProcessing })
+export const activeRenderQuality = reactive({ preset: DEFAULT_RENDERING_SETTINGS.qualityPreset, maximumPixelRatio: DEFAULT_RENDERING_SETTINGS.maximumPixelRatio, particleBudget: DEFAULT_RENDERING_SETTINGS.particleBudget, shadowQuality: DEFAULT_RENDERING_SETTINGS.shadowQuality, volumeId: null as string | null })
 
 function mix(first: number, second: number, amount: number): number { return first + (second - first) * amount }
 function blendPost(first: PostProcessValues, second: PostProcessValues, amount: number): PostProcessValues {
@@ -134,13 +145,38 @@ export function updateActivePostProcess(position = { x: 0, y: 0 }): PostProcessV
   Object.assign(activePostProcessing, postValues(result)); return activePostProcessing
 }
 
+function presetQuality(preset: RenderQualityPreset) {
+  if (preset === 'Performance') return { maximumPixelRatio: 1, particleBudget: 2_500, shadowQuality: 'Off' as ShadowQuality }
+  if (preset === 'High') return { maximumPixelRatio: 2, particleBudget: 25_000, shadowQuality: 'Soft' as ShadowQuality }
+  if (preset === 'Ultra') return { maximumPixelRatio: 3, particleBudget: 50_000, shadowQuality: 'Ultra' as ShadowQuality }
+  if (preset === 'PixelArt') return { maximumPixelRatio: 1, particleBudget: 10_000, shadowQuality: 'Hard' as ShadowQuality }
+  return { maximumPixelRatio: 1.5, particleBudget: 10_000, shadowQuality: 'Soft' as ShadowQuality }
+}
+
+export function updateActiveRenderQuality(position = { x: 0, y: 0 }) {
+  const selected = renderingSettings.qualityVolumes.filter(volume => volume.enabled
+    && Math.abs(position.x - volume.center.x) <= volume.size.x * .5
+    && Math.abs(position.y - volume.center.y) <= volume.size.y * .5)
+    .sort((first, second) => second.priority - first.priority || first.id.localeCompare(second.id))[0]
+  const preset = selected?.preset ?? renderingSettings.qualityPreset
+  const defaults = presetQuality(preset)
+  Object.assign(activeRenderQuality, {
+    preset,
+    maximumPixelRatio: selected?.maximumPixelRatio ?? (selected ? defaults.maximumPixelRatio : renderingSettings.maximumPixelRatio),
+    particleBudget: selected?.particleBudget ?? (selected ? defaults.particleBudget : renderingSettings.particleBudget),
+    shadowQuality: selected?.shadowQuality ?? (selected ? defaults.shadowQuality : renderingSettings.shadowQuality),
+    volumeId: selected?.id ?? null
+  })
+  return activeRenderQuality
+}
+
 export function estimatePostProcessCost(values: PostProcessValues = activePostProcessing) {
   const passes = 1 + (values.bloom > 0 ? 2 : 0) + (values.blur > 0 ? 2 : 0) + (values.userMaterial ? 1 : 0)
   const estimatedMsAt1080p = .08 + values.vignette * .03 + values.bloom * .32 + values.blur * .025 + (values.userMaterial ? .18 : 0)
   return { passes, estimatedMsAt1080p: Number(estimatedMsAt1080p.toFixed(3)), withinBudget: estimatedMsAt1080p <= renderingSettings.budgets.gpuMs * .35, recommendation: estimatedMsAt1080p <= renderingSettings.budgets.gpuMs * .35 ? 'Within the post-process budget.' : 'Reduce blur/bloom or switch to the Performance preset.' }
 }
 
-export function loadRenderingSettings(value: unknown): void { Object.assign(renderingSettings, normalizeRenderingSettings(value)); updateActivePostProcess() }
+export function loadRenderingSettings(value: unknown): void { Object.assign(renderingSettings, normalizeRenderingSettings(value)); updateActivePostProcess(); updateActiveRenderQuality() }
 export function serializeRenderingSettings(): RenderingSettings { return JSON.parse(JSON.stringify(normalizeRenderingSettings(renderingSettings))) as RenderingSettings }
 export function advancedRenderingActive(): boolean {
   return renderingSettings.lightingEnabled || renderingSettings.postProcessing.enabled || renderingSettings.debugView !== 'None'

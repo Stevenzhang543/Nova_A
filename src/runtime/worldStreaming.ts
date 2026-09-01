@@ -3,6 +3,7 @@ import type { Entity } from '../world/Entity'
 import type { WorldChunk2D } from '../world/components'
 import { worldTransform } from '../world/hierarchy'
 import type { Vec2 } from '../world/types'
+import { performanceRuntimeSettings, performanceRuntimeState } from './largeWorldPerformance'
 
 export type StreamCellStatus = 'Unloaded' | 'Loading' | 'Loaded' | 'Activating' | 'Active' | 'Deactivating' | 'Unloading' | 'Failed'
 
@@ -40,7 +41,10 @@ export const worldStreamingState = reactive({
   unloads: 0,
   failures: 0,
   cancelled: 0,
-  lastUpdateMilliseconds: 0
+  lastUpdateMilliseconds: 0,
+  frameBudgetMs: 0,
+  processedThisFrame: 0,
+  deferredThisFrame: 0
 })
 
 const controllers = new Map<string, AbortController>()
@@ -185,6 +189,9 @@ export function updateWorldStreaming(
     if (target === 'Active' || desired.get(candidate.entity.uuid) !== 'Active') desired.set(candidate.entity.uuid, target)
     return true
   }
+  let processedThisFrame = 0, deferredThisFrame = 0
+  const transitionStarted = performance.now()
+  const transitionLimit = Math.max(1, Math.floor(performanceRuntimeSettings.streamingBudgetMs * 8))
   for (const candidate of candidates) {
     const distance = distanceToBounds(focus, candidate.snapshot.bounds)
     const wantsActive = !enabled || distance <= candidate.chunk.loadDistance || candidate.snapshot.status === 'Active' && distance <= candidate.chunk.unloadDistance
@@ -209,7 +216,12 @@ export function updateWorldStreaming(
     desiredTargets.set(candidate.entity.uuid, target)
     const settled = target === candidate.snapshot.status || target === 'Loaded' && candidate.snapshot.status === 'Loaded'
     if (controllers.has(candidate.entity.uuid) && previousTarget && previousTarget !== target) controllers.get(candidate.entity.uuid)?.abort()
-    else if (!settled && !controllers.has(candidate.entity.uuid)) void transition(candidate.snapshot, target, setSceneLoaded, memberSetter)
+    else if (!settled && !controllers.has(candidate.entity.uuid)) {
+      if (processedThisFrame < transitionLimit && performance.now() - transitionStarted <= performanceRuntimeSettings.streamingBudgetMs) {
+        processedThisFrame++
+        void transition(candidate.snapshot, target, setSceneLoaded, memberSetter)
+      } else deferredThisFrame++
+    }
   }
   worldStreamingState.cells.splice(0, worldStreamingState.cells.length, ...candidates.map(candidate => ({ ...candidate.snapshot, bounds: { min: { ...candidate.snapshot.bounds.min }, max: { ...candidate.snapshot.bounds.max } }, dependencies: [...candidate.snapshot.dependencies] })))
   worldStreamingState.loaded = candidates.filter(candidate => candidate.snapshot.status !== 'Unloaded' && candidate.snapshot.status !== 'Failed').length
@@ -217,6 +229,11 @@ export function updateWorldStreaming(
   worldStreamingState.memoryMb = candidates.filter(candidate => !['Unloaded', 'Failed'].includes(candidate.snapshot.status)).reduce((sum, candidate) => sum + candidate.snapshot.memoryMb, 0)
   worldStreamingState.peakMemoryMb = Math.max(worldStreamingState.peakMemoryMb, worldStreamingState.memoryMb)
   worldStreamingState.lastUpdateMilliseconds = performance.now() - started
+  worldStreamingState.frameBudgetMs = performanceRuntimeSettings.streamingBudgetMs
+  worldStreamingState.processedThisFrame = processedThisFrame
+  worldStreamingState.deferredThisFrame = deferredThisFrame
+  performanceRuntimeState.streamingProcessed = processedThisFrame
+  performanceRuntimeState.streamingDeferred = deferredThisFrame
 }
 
 export function handoffStreamedSaveState(cellUuid: string, value: unknown): void {
@@ -284,5 +301,5 @@ export function importWorldStreamingHandoffs(source: string): number {
 export function cancelWorldStreaming(cellUuid?: string): void { if (cellUuid) controllers.get(cellUuid)?.abort(); else for (const controller of controllers.values()) controller.abort() }
 export function resetWorldStreaming(): void {
   cancelWorldStreaming(); controllers.clear(); desiredTargets.clear(); snapshots.clear(); saveHandoffs.clear();
-  Object.assign(worldStreamingState, { cells: [], events: [], pending: 0, loaded: 0, active: 0, memoryMb: 0, peakMemoryMb: 0, loads: 0, unloads: 0, failures: 0, cancelled: 0, lastUpdateMilliseconds: 0 })
+  Object.assign(worldStreamingState, { cells: [], events: [], pending: 0, loaded: 0, active: 0, memoryMb: 0, peakMemoryMb: 0, loads: 0, unloads: 0, failures: 0, cancelled: 0, lastUpdateMilliseconds: 0, frameBudgetMs: 0, processedThisFrame: 0, deferredThisFrame: 0 })
 }

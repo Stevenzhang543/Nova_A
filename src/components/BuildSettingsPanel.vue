@@ -44,6 +44,7 @@
             <label v-if="buildSettings.target === 'macos'"><span>{{ t('notarizationProfile') }}</span><input v-model="buildSettings.platform.notarizationProfile"></label>
           </div>
           <div class="guidance"><strong>{{ t('platformGuidance') }}</strong><p>{{ platformGuidance }}</p><p v-if="buildSettings.target === 'android'">{{ exportCapabilities.androidReason }}</p></div>
+          <AndroidDeliveryPanel v-if="buildSettings.target === 'android'" />
         </section>
 
         <section v-else-if="activeTab === 'delivery'" class="tab-page">
@@ -108,6 +109,7 @@ import { physicsState, sceneManager } from '../store/physics'
 import { telemetryPrivacySummary } from '../runtime/shipping'
 import TeamWorkflowPanel from './TeamWorkflowPanel.vue'
 import { completeTask, failTask, startTask, updateTask } from '../runtime/editorFeedback'
+import AndroidDeliveryPanel from './AndroidDeliveryPanel.vue'
 import { assetState, readTextAsset } from '../assets/AssetDatabase'
 import { extractLocalizationKeys, localizationDiagnostics, localizationSettings, readLocalizationTable } from '../runtime/localization'
 import { runtimeAccessibilitySettings } from '../runtime/presentation'

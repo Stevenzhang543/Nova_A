@@ -4,7 +4,7 @@
 //! stable handles and descriptors instead of any editor or WebAssembly types.
 
 mod engine {
-    use std::collections::HashSet;
+    use std::collections::{HashMap, HashSet};
 
     use nova_math::{
         convex_hull, finite_or, inverse_rotate, non_negative, normalize_angle, positive,
@@ -16,6 +16,7 @@ mod engine {
     pub const V1_2_STRIDE: usize = 46;
     pub const V3_3_STRIDE: usize = 54;
     pub const STRIDE: usize = 56;
+    pub const COLLIDER_CHILD_STRIDE: usize = 21;
     pub const ROPE_NODE_CAPACITY: usize = 32;
     pub const ROPE_NODE_DATA_OFFSET: usize = 29;
     pub const CONNECTION_STRIDE: usize = ROPE_NODE_DATA_OFFSET + ROPE_NODE_CAPACITY * 4;
@@ -42,8 +43,8 @@ mod engine {
 
 pub use engine::{
     step_physics, step_physics_with_connections, CharacterMoveResult, PhysicsContact, PhysicsEvent,
-    PhysicsQueryHit, PhysicsWorld, CONNECTION_STRIDE, LEGACY_STRIDE, ROPE_NODE_CAPACITY,
-    ROPE_NODE_DATA_OFFSET, STRIDE, V1_2_STRIDE, V3_3_STRIDE,
+    PhysicsQueryHit, PhysicsWorld, COLLIDER_CHILD_STRIDE, CONNECTION_STRIDE, LEGACY_STRIDE,
+    ROPE_NODE_CAPACITY, ROPE_NODE_DATA_OFFSET, STRIDE, V1_2_STRIDE, V3_3_STRIDE,
 };
 
 pub mod body {

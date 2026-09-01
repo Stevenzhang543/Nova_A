@@ -1007,8 +1007,8 @@ export class Collider2D extends ComponentBase {
   radiusY = 1
   vertices: Vec2[] = []
   shapeModel: PhysicsShapeKind
-  /** Supplementary local shapes. The stable solver treats the set as one
-   * deterministic convex envelope so one body retains one transform/velocity. */
+  /** Supplementary local shapes. The retained solver resolves every child
+   * independently while the body keeps one authoritative transform/velocity. */
   shapes: ColliderShapeDescriptor2D[] = []
   sensor = false
   physicsLayer = 0

@@ -4,6 +4,19 @@ enum Shape {
     Ellipse { radius_x: f64, radius_y: f64 },
 }
 
+#[derive(Clone, Debug)]
+struct ColliderChild {
+    id: u32,
+    shape: Shape,
+    offset: Vec2,
+    angle_offset: f64,
+    is_sensor: bool,
+    layer: u32,
+    collision_mask: u32,
+    one_way: bool,
+    one_way_normal: Vec2,
+}
+
 impl Shape {
     fn support(&self, position: Vec2, angle: f64, direction: Vec2) -> Vec2 {
         let direction = direction.normalized_or(Vec2::new(1.0, 0.0));
@@ -163,6 +176,8 @@ struct Body {
     sleep_timer: f64,
     one_way: bool,
     one_way_normal: Vec2,
+    auto_inertia: bool,
+    collider_children: Vec<ColliderChild>,
 }
 
 impl Body {
@@ -336,7 +351,121 @@ impl Body {
                 finite_or(data[data_index + 53], 1.0),
             )
             .normalized_or(Vec2::new(0.0, 1.0)),
+            auto_inertia,
+            collider_children: Vec::new(),
         }
+    }
+
+    fn apply_collider_children(&mut self, data: &[f64]) {
+        self.collider_children.clear();
+        for record in data.chunks_exact(COLLIDER_CHILD_STRIDE).take(128) {
+            let shape_code = finite_or(record[1], 0.0).round() as i32;
+            let width = positive(record[5].abs(), 1.0);
+            let height = positive(record[6].abs(), 1.0);
+            let shape = if shape_code == 1 {
+                Shape::Ellipse { radius_x: width * 0.5, radius_y: height * 0.5 }
+            } else if shape_code == 2 {
+                let radius = (width.min(height) * 0.5).max(MIN_DIMENSION * 0.5);
+                let vertical = height >= width;
+                let straight = ((if vertical { height } else { width }) * 0.5 - radius).max(0.0);
+                let mut vertices = Vec::with_capacity(12);
+                for sample in 0..12 {
+                    let angle = std::f64::consts::TAU * sample as f64 / 12.0;
+                    let direction = Vec2::new(angle.cos(), angle.sin());
+                    let center = if vertical { Vec2::new(0.0, if direction.y >= 0.0 { straight } else { -straight }) }
+                        else { Vec2::new(if direction.x >= 0.0 { straight } else { -straight }, 0.0) };
+                    vertices.push(center.add(direction.mul(radius)));
+                }
+                Shape::Polygon { vertices: convex_hull(vertices) }
+            } else if shape_code == 3 {
+                let half_width = width.max(MIN_DIMENSION) * 0.5;
+                let half_height = height.max(MIN_DIMENSION) * 0.5;
+                Shape::Polygon { vertices: vec![
+                    Vec2::new(-half_width, -half_height), Vec2::new(half_width, -half_height),
+                    Vec2::new(half_width, half_height), Vec2::new(-half_width, half_height),
+                ] }
+            } else {
+                let mut vertices = Vec::new();
+                for vertex_index in 0..4 {
+                    let vertex = Vec2::new(finite_or(record[10 + vertex_index * 2], 0.0), finite_or(record[11 + vertex_index * 2], 0.0));
+                    if !vertices.iter().any(|existing: &Vec2| existing.sub(vertex).length_squared() <= EPSILON * EPSILON) { vertices.push(vertex); }
+                }
+                let mut vertices = convex_hull(vertices);
+                if vertices.len() < 3 || (Shape::Polygon { vertices: vertices.clone() }).area() <= MIN_AREA {
+                    let half_width = width * 0.5; let half_height = height * 0.5;
+                    vertices = vec![Vec2::new(-half_width, -half_height), Vec2::new(half_width, -half_height), Vec2::new(half_width, half_height), Vec2::new(-half_width, half_height)];
+                }
+                Shape::Polygon { vertices }
+            };
+            self.collider_children.push(ColliderChild {
+                id: finite_or(record[0], 0.0).round().clamp(0.0, u32::MAX as f64) as u32,
+                shape,
+                offset: Vec2::new(finite_or(record[2], 0.0), finite_or(record[3], 0.0)),
+                angle_offset: normalize_angle(record[4]),
+                is_sensor: record[7] > 0.5,
+                layer: finite_or(record[8], 0.0).round().clamp(0.0, 31.0) as u32,
+                collision_mask: finite_or(record[9], 0.0).round().clamp(0.0, u32::MAX as f64) as u32,
+                one_way: record[18] > 0.5,
+                one_way_normal: Vec2::new(finite_or(record[19], 0.0), finite_or(record[20], 1.0)).normalized_or(Vec2::new(0.0, 1.0)),
+            });
+        }
+        if self.auto_inertia && !self.collider_children.is_empty() {
+            let primary_area = if self.is_sensor { 0.0 } else { self.shape.area() };
+            let total_area = primary_area + self.collider_children.iter().filter(|child| !child.is_sensor).map(|child| child.shape.area()).sum::<f64>();
+            if total_area > MIN_AREA {
+                let primary_mass = self.mass * primary_area / total_area;
+                let mut inertia = if primary_mass > 0.0 { self.shape.inertia(primary_mass) + primary_mass * self.collider_offset.length_squared() } else { 0.0 };
+                for child in self.collider_children.iter().filter(|child| !child.is_sensor) {
+                    let child_mass = self.mass * child.shape.area() / total_area;
+                    inertia += child.shape.inertia(child_mass) + child_mass * child.offset.length_squared();
+                }
+                self.inertia = inertia.max(MIN_INERTIA);
+                self.inv_inertia = if !self.is_static && !self.is_kinematic && !self.freeze_rotation { 1.0 / self.inertia } else { 0.0 };
+            }
+        }
+    }
+
+    fn collider_proxy(&self, child_index: Option<usize>) -> Self {
+        let mut proxy = self.clone();
+        proxy.collider_children.clear();
+        if let Some(child) = child_index.and_then(|index| self.collider_children.get(index)) {
+            proxy.shape = child.shape.clone();
+            proxy.collider_offset = child.offset;
+            proxy.collider_angle_offset = child.angle_offset;
+            proxy.is_sensor = child.is_sensor;
+            proxy.layer = child.layer;
+            proxy.collision_mask = child.collision_mask;
+            proxy.one_way = child.one_way;
+            proxy.one_way_normal = child.one_way_normal;
+        }
+        proxy
+    }
+
+    fn child_id(&self, child_index: Option<usize>) -> u32 {
+        child_index.and_then(|index| self.collider_children.get(index)).map_or(0, |child| child.id)
+    }
+
+    fn compound_aabb(&self) -> Aabb {
+        let mut bounds = self.shape.aabb(self.collider_position(), self.collider_angle());
+        for index in 0..self.collider_children.len() {
+            let child = self.collider_proxy(Some(index));
+            let child_bounds = child.shape.aabb(child.collider_position(), child.collider_angle());
+            bounds.min_x = bounds.min_x.min(child_bounds.min_x); bounds.max_x = bounds.max_x.max(child_bounds.max_x);
+            bounds.min_y = bounds.min_y.min(child_bounds.min_y); bounds.max_y = bounds.max_y.max(child_bounds.max_y);
+        }
+        bounds
+    }
+
+    fn minimum_collider_extent(&self) -> f64 {
+        self.collider_children.iter().fold(self.shape.characteristic_extent(), |extent, child| extent.min(child.shape.characteristic_extent()))
+    }
+
+    fn maximum_collider_radius(&self) -> f64 {
+        let primary = self.collider_offset.length() + self.shape.aabb(Vec2::ZERO, 0.0).max_x.abs().max(self.shape.aabb(Vec2::ZERO, 0.0).max_y.abs());
+        self.collider_children.iter().fold(primary, |radius, child| {
+            let bounds = child.shape.aabb(Vec2::ZERO, 0.0);
+            radius.max(child.offset.length() + bounds.max_x.abs().max(bounds.min_x.abs()).max(bounds.max_y.abs()).max(bounds.min_y.abs()))
+        }).max(MIN_DIMENSION)
     }
 
     fn collider_position(&self) -> Vec2 {

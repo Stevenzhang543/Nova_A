@@ -22,11 +22,12 @@ import init, {
   migrate_project_json
 } from '../../nova_core/pkg/nova_core.js'
 import { localPointToWorld, setWorldTransform, worldTransform } from './hierarchy'
-import { Collider2D, TileMap2D } from './components'
+import { TileMap2D } from './components'
 import { buildTileColliderDescriptors } from '../runtime/tilemap'
 import { assetState, readTextAsset } from '../assets/AssetDatabase'
 import { recordPhysicsTelemetry } from '../runtime/physicsMonitor'
-import { defaultPhysicsLayers, defaultPhysicsProfile, normalizePhysicsMaterial, normalizePhysicsProfile, stablePhysicsEventOrder, type PhysicsInterpolationMode, type PhysicsLayerDefinition, type PhysicsShapeKind, type PhysicsSimulationProfile2D } from '../runtime/physicsProduction'
+import { defaultPhysicsLayers, defaultPhysicsProfile, normalizePhysicsMaterial, normalizePhysicsProfile, stablePhysicsEventOrder, type PhysicsInterpolationMode, type PhysicsLayerDefinition, type PhysicsSimulationProfile2D } from '../runtime/physicsProduction'
+import { encodeColliderChildren, prepareColliderSet, type SolverColliderShape2D } from '../runtime/physicsGeometry'
 
 export const PHYSICS_STRIDE = 56
 export const PHYSICS_LAYER_COUNT = 32
@@ -64,6 +65,8 @@ export interface RuntimePhysicsEvent {
   second?: number
   firstEntityUuid?: string
   secondEntityUuid?: string
+  firstCollider?: number
+  secondCollider?: number
   point?: [number, number]
   normal?: [number, number]
   relativeVelocity?: [number, number]
@@ -113,31 +116,8 @@ interface ConnectionRecord {
   bodyB: number
 }
 
-function compoundColliderEnvelope(collider: Collider2D): Vec2[] | null {
-  const supplementary = collider.shapes.filter(shape => shape.enabled)
-  if (!supplementary.length) return null
-  const points: Vec2[] = []
-  const add = (kind: PhysicsShapeKind, offset: Vec2, angle: number, size: Vec2, radius: number, authored: Vec2[] = []) => {
-    const width = Math.max(1e-9, Math.abs(size.x || radius * 2))
-    const height = Math.max(1e-9, Math.abs(size.y || radius * 2))
-    const local = (kind === 'ConvexPolygon' || kind === 'ConcavePolygon' || kind === 'Chain') && authored.length >= 2
-      ? authored
-      : [{ x: -width * .5, y: -height * .5 }, { x: width * .5, y: -height * .5 }, { x: width * .5, y: height * .5 }, { x: -width * .5, y: height * .5 }]
-    const cosine = Math.cos(angle), sine = Math.sin(angle)
-    for (const point of local) points.push({ x: offset.x + point.x * cosine - point.y * sine, y: offset.y + point.x * sine + point.y * cosine })
-  }
-  const primarySize = collider.kind === 'EllipseCollider2D'
-    ? { x: collider.radiusX * 2, y: collider.radiusY * 2 }
-    : collider.size
-  add(collider.shapeModel, collider.offset, collider.rotation, primarySize, Math.min(primarySize.x, primarySize.y) * .5, collider.vertices)
-  for (const shape of supplementary) add(shape.kind, shape.offset, shape.rotation, shape.size, shape.radius, shape.points)
-  const xs = points.map(point => point.x), ys = points.map(point => point.y)
-  const left = Math.min(...xs), right = Math.max(...xs), bottom = Math.min(...ys), top = Math.max(...ys)
-  return [{ x: left, y: bottom }, { x: right, y: bottom }, { x: right, y: top }, { x: left, y: top }]
-}
-
 /** Writes one entity into the stable Float64 ABI shared with nova_core. */
-function writeEntityRecord(data: Float64Array, entityIndex: number, entity: Entity, entities: Entity[], settings: GlobalPhysicsSettings, runtimeHandle = entity.id): void {
+function writeEntityRecord(data: Float64Array, entityIndex: number, entity: Entity, entities: Entity[], settings: GlobalPhysicsSettings, runtimeHandle = entity.id, solverShape?: SolverColliderShape2D): void {
   const materialSource = readTextAsset(entity.collider.materialAsset)
   if (materialSource) {
     try {
@@ -150,12 +130,14 @@ function writeEntityRecord(data: Float64Array, entityIndex: number, entity: Enti
     } catch { /* A malformed optional asset is ignored; project validation reports it. */ }
   }
   normalizeEntity(entity)
+  if (entity.rigidBody.massMode === 'Automatic') syncMassFromDensity(entity)
   const transform = worldTransform(entity, entities)
   const collider = entity.collider
-  const compoundEnvelope = compoundColliderEnvelope(collider)
+  const shape = solverShape ?? prepareColliderSet(collider, !entity.isStatic && !entity.isKinematic).shapes[0]
+  if (!shape) throw new Error(`Collider '${entity.name}' has no solver-safe shape. Repair the Collider2D component before simulation.`)
   const index = entityIndex * PHYSICS_STRIDE
   data[index] = runtimeHandle
-  data[index + 1] = compoundEnvelope ? 0 : collider.shapeModel === 'Circle' ? 1 : collider.shapeModel === 'Capsule' ? 2 : collider.shapeModel === 'Segment' || collider.shapeModel === 'WorldBoundary' ? 3 : 0
+  data[index + 1] = shape.kind === 'Circle' ? 1 : shape.kind === 'Capsule' ? 2 : shape.kind === 'Segment' ? 3 : 0
   data[index + 2] = transform.position.x
   data[index + 3] = transform.position.y
   data[index + 4] = entity.velocity.x
@@ -167,19 +149,13 @@ function writeEntityRecord(data: Float64Array, entityIndex: number, entity: Enti
   data[index + 10] = entity.restitution
   data[index + 11] = entity.dynamicFriction
 
-  if (compoundEnvelope) {
-    const xs = compoundEnvelope.map(vertex => vertex.x * transform.scale.x)
-    const ys = compoundEnvelope.map(vertex => vertex.y * transform.scale.y)
-    data[index + 12] = Math.max(...xs) - Math.min(...xs)
-    data[index + 13] = Math.max(...ys) - Math.min(...ys)
-  } else if (collider.shapeModel === 'Circle') {
-    data[index + 12] = (collider.kind === 'EllipseCollider2D' ? collider.radiusX : collider.size.x * .5) * transform.scale.x
-    data[index + 13] = (collider.kind === 'EllipseCollider2D' ? collider.radiusY : collider.size.y * .5) * transform.scale.y
+  if (shape.kind === 'Circle') {
+    data[index + 12] = shape.size.x * Math.abs(transform.scale.x) * .5
+    data[index + 13] = shape.size.y * Math.abs(transform.scale.y) * .5
   } else {
-    const xs = collider.vertices.map(vertex => vertex.x * transform.scale.x)
-    const ys = collider.vertices.map(vertex => vertex.y * transform.scale.y)
-    data[index + 12] = Math.max(...xs) - Math.min(...xs)
-    data[index + 13] = Math.max(...ys) - Math.min(...ys)
+    const authored = shape.points.length ? shape.points : [{ x: -shape.size.x * .5, y: -shape.size.y * .5 }, { x: shape.size.x * .5, y: -shape.size.y * .5 }, { x: shape.size.x * .5, y: shape.size.y * .5 }, { x: -shape.size.x * .5, y: shape.size.y * .5 }]
+    const xs = authored.map(vertex => vertex.x * transform.scale.x), ys = authored.map(vertex => vertex.y * transform.scale.y)
+    data[index + 12] = Math.max(...xs) - Math.min(...xs); data[index + 13] = Math.max(...ys) - Math.min(...ys)
   }
 
   data[index + 14] = transform.rotation
@@ -196,26 +172,26 @@ function writeEntityRecord(data: Float64Array, entityIndex: number, entity: Enti
   data[index + 25] = entity.autoInertia ? 1 : 0
   data[index + 26] = entity.inertia
   data[index + 27] = entity.restitutionThreshold
-  data[index + 28] = entity.isSensor ? 1 : 0
-  data[index + 33] = collider.physicsLayer
-  const matrixMask = settings.collisionMatrix[collider.physicsLayer] ?? (1 << collider.physicsLayer)
-  data[index + 42] = (collider.collisionMask & matrixMask) >>> 0
-  data[index + 43] = compoundEnvelope ? 0 : collider.offset.x * transform.scale.x
-  data[index + 44] = compoundEnvelope ? 0 : collider.offset.y * transform.scale.y
-  data[index + 45] = compoundEnvelope ? 0 : collider.rotation
+  data[index + 28] = shape.sensor ? 1 : 0
+  data[index + 33] = shape.physicsLayer
+  const matrixMask = settings.collisionMatrix[shape.physicsLayer] ?? (1 << shape.physicsLayer)
+  data[index + 42] = (shape.collisionMask & matrixMask) >>> 0
+  data[index + 43] = shape.offset.x * transform.scale.x
+  data[index + 44] = shape.offset.y * transform.scale.y
+  data[index + 45] = shape.rotation
   data[index + 46] = entity.rigidBody.freezeRotation ? 1 : 0
   data[index + 47] = entity.rigidBody.continuousCollision === 'Continuous' ? 1 : 0
   data[index + 48] = entity.rigidBody.sleepingAllowed ? 1 : 0
   data[index + 49] = entity.rigidBody.sleeping ? 1 : 0
   data[index + 50] = entity.rigidBody.sleepTimer
-  data[index + 51] = collider.oneWay ? 1 : 0
-  data[index + 52] = collider.oneWayNormal.x
-  data[index + 53] = collider.oneWayNormal.y
+  data[index + 51] = shape.oneWay ? 1 : 0
+  data[index + 52] = shape.oneWayNormal.x
+  data[index + 53] = shape.oneWayNormal.y
   const combineCode = (mode: 'Average' | 'Minimum' | 'Maximum' | 'Multiply') => mode === 'Minimum' ? 1 : mode === 'Multiply' ? 2 : mode === 'Maximum' ? 3 : 0
   data[index + 54] = combineCode(collider.material.frictionCombine)
   data[index + 55] = combineCode(collider.material.restitutionCombine)
 
-  const recordVertices = compoundEnvelope ?? (collider.kind !== 'EllipseCollider2D' ? collider.vertices : [])
+  const recordVertices = shape.kind === 'ConvexPolygon' ? shape.points : []
   if (recordVertices.length) {
     for (let vertexIndex = 0; vertexIndex < recordVertices.length && vertexIndex < 4; vertexIndex++) {
       const vertex = recordVertices[vertexIndex]
@@ -371,6 +347,7 @@ export class World {
   private bodyHandles = new Map<number, number>()
   private connectionHandles = new Map<string, number>()
   private bodyRecords = new Map<number, Float64Array>()
+  private colliderChildRecords = new Map<number, Float64Array>()
   private connectionRecords = new Map<number, Float64Array>()
   private bodyOrders = new Map<number, number>()
   private connectionOrders = new Map<number, number>()
@@ -392,8 +369,9 @@ export class World {
     interpolationAlpha: 0, droppedSeconds: 0, eventCount: 0, configurationRebuilds: 0
   }
   events: RuntimePhysicsEvent[] = []
+  readonly colliderPreparationIssues = new Map<string, string>()
   projectFormatVersion = 29
-  projectEngineVersion = '6.4.0'
+  projectEngineVersion = '6.7.0'
 
   constructor() {
     // Vite's Node-side audit loader has no browser fetch implementation for file: WASM URLs.
@@ -655,6 +633,7 @@ export class World {
     this.bodyHandles.clear()
     this.connectionHandles.clear()
     this.bodyRecords.clear()
+    this.colliderChildRecords.clear()
     this.connectionRecords.clear()
     this.bodyOrders.clear()
     this.connectionOrders.clear()
@@ -697,10 +676,15 @@ export class World {
     const runtime = this.runtime
     if (!runtime) return
     this.rebuildTileCollisionBodies()
-    this.activeBodies = this.entities.filter(entity => entity.enabled
-      && entity.hasComponent('RigidBody2D') && entity.rigidBody.enabled
-      && entity.getCollider() !== null && entity.collider.enabled
-      && entity.collider.shapeModel !== 'Chain' && entity.collider.shapeModel !== 'ConcavePolygon').concat(this.tileCollisionBodies)
+    const colliderSets = new Map<number, ReturnType<typeof prepareColliderSet>>()
+    this.colliderPreparationIssues.clear()
+    this.activeBodies = this.entities.filter(entity => {
+      if (!entity.enabled || !entity.hasComponent('RigidBody2D') || !entity.rigidBody.enabled || entity.getCollider() === null || !entity.collider.enabled) return false
+      const prepared = prepareColliderSet(entity.collider, !entity.isStatic && !entity.isKinematic)
+      colliderSets.set(entity.id, prepared)
+      if (prepared.blockedReason) this.colliderPreparationIssues.set(entity.uuid, prepared.blockedReason)
+      return prepared.shapes.length > 0 && !prepared.blockedReason
+    }).concat(this.tileCollisionBodies)
     const liveBodies = new Set<number>()
     this.activeBodies.forEach((entity, order) => {
       let handle = this.bodyHandles.get(entity.id)
@@ -709,13 +693,21 @@ export class World {
         this.bodyHandles.set(entity.id, handle)
       }
       liveBodies.add(entity.id)
+      const prepared = colliderSets.get(entity.id) ?? prepareColliderSet(entity.collider, !entity.isStatic && !entity.isKinematic)
+      const primaryShape = prepared.shapes[0]
       this.bodyScratch.fill(0)
-      writeEntityRecord(this.bodyScratch, 0, entity, this.entities, settings, handle)
+      writeEntityRecord(this.bodyScratch, 0, entity, this.entities, settings, handle, primaryShape)
       const cached = this.bodyRecords.get(handle)
       if (!cached || this.bodyOrders.get(handle) !== order || !recordsEqual(cached, this.bodyScratch)) {
         runtime.upsert_body(handle, order, this.bodyScratch)
         this.storeRecord(this.bodyRecords, handle, this.bodyScratch)
         this.bodyOrders.set(handle, order)
+      }
+      const children = encodeColliderChildren(prepared.shapes, worldTransform(entity, this.entities).scale, settings.collisionMatrix)
+      const cachedChildren = this.colliderChildRecords.get(handle)
+      if (!cachedChildren || !recordsEqual(cachedChildren, children)) {
+        runtime.upsert_collider_shapes(handle, children)
+        this.storeRecord(this.colliderChildRecords, handle, children)
       }
     })
     for (const [entityId, handle] of [...this.bodyHandles]) {
@@ -723,6 +715,7 @@ export class World {
       runtime.destroy_body(handle)
       this.bodyHandles.delete(entityId)
       this.bodyRecords.delete(handle)
+      this.colliderChildRecords.delete(handle)
       this.bodyOrders.delete(handle)
     }
 

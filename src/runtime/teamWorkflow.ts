@@ -16,6 +16,9 @@ export interface TeamTaskLink { id: string; url: string; summary: string }
 export interface TeamChangeNote { id: string; owner: string; note: string; createdAt: string }
 export interface TeamBuildPreset { id: string; name: string; target: string; profile: string; settings: string }
 export interface BinaryAssetLock { path: string; owner: string; token: string; expiresAt: number }
+export interface TeamChangeList { id: string; name: string; owner: string; createdAt: string; status: 'open' | 'ready' | 'merged'; changes: SourceChange[]; noteIds: string[]; fingerprint: string }
+export interface SemanticMergeConflict { id: string; path: string; kind: 'scene' | 'graph' | 'asset' | 'settings' | 'project'; base: unknown; ours: unknown; theirs: unknown; resolution: 'unresolved' | 'ours' | 'theirs' }
+export interface SemanticMergePlan { format: 'nova-semantic-merge'; version: 1; merged: Record<string, unknown>; conflicts: SemanticMergeConflict[]; autoMerged: string[]; fingerprint: string }
 
 interface SnapshotEntry { path: string; kind: SourceEntryKind; fingerprint: string }
 
@@ -49,7 +52,10 @@ export const teamWorkflowState = reactive({
   sharedBuildPresets: [] as TeamBuildPreset[],
   binaryLocks: [] as BinaryAssetLock[],
   repositoryBranch: '',
-  repositoryRoot: ''
+  repositoryRoot: '',
+  changeLists: [] as TeamChangeList[],
+  activeChangeListId: '',
+  semanticMerge: null as SemanticMergePlan | null
 })
 
 function normalized(value: unknown): unknown {
@@ -198,6 +204,95 @@ export function addTeamChangeNote(owner: string, note: string): boolean {
   teamWorkflowState.changeNotes.unshift({ id: crypto.randomUUID(), owner: cleanOwner, note: cleanNote, createdAt: new Date().toISOString() })
   if (teamWorkflowState.changeNotes.length > 256) teamWorkflowState.changeNotes.splice(256)
   return true
+}
+
+function matchesOwnershipPath(pattern: string, path: string): boolean {
+  const escaped = pattern.replace(/[.+^${}()|[\]\\]/g, '\\$&').replace(/\*\*/g, '.*').replace(/\*/g, '[^/]*')
+  try { return new RegExp(`^${escaped}$`, 'i').test(path) } catch { return pattern === path }
+}
+
+export function ownershipForPath(path: string): string[] {
+  return [...new Set(teamWorkflowState.ownership.filter(rule => matchesOwnershipPath(rule.path, path)).flatMap(rule => rule.owners))]
+}
+
+export function createTeamChangeList(name: string, owner: string, changeIds: string[], currentSource: string): TeamChangeList | null {
+  refreshSourceStatus(currentSource)
+  const cleanName = name.trim().slice(0, 120), cleanOwner = owner.trim().replace(/^@/, '').slice(0, 120)
+  const selected = teamWorkflowState.changes.filter(change => changeIds.includes(change.id)).slice(0, MAX_CHANGES)
+  if (!cleanName || !cleanOwner || !selected.length) return null
+  const denied = selected.filter(change => { const owners = ownershipForPath(change.path); return owners.length > 0 && !owners.includes(cleanOwner) })
+  const changeList: TeamChangeList = {
+    id: crypto.randomUUID(), name: cleanName, owner: cleanOwner, createdAt: new Date().toISOString(), status: denied.length ? 'open' : 'ready',
+    changes: selected.map(change => ({ ...change })), noteIds: teamWorkflowState.changeNotes.filter(note => note.owner === cleanOwner).map(note => note.id),
+    fingerprint: fingerprint({ owner: cleanOwner, changes: selected.map(change => ({ id: change.id, change: change.change, path: change.path })) })
+  }
+  teamWorkflowState.changeLists.unshift(changeList); if (teamWorkflowState.changeLists.length > 256) teamWorkflowState.changeLists.splice(256)
+  teamWorkflowState.activeChangeListId = changeList.id
+  return changeList
+}
+
+function same(left: unknown, right: unknown): boolean { return JSON.stringify(normalized(left)) === JSON.stringify(normalized(right)) }
+function mergeKind(path: string): SemanticMergeConflict['kind'] { return path.startsWith('/scenes/') ? 'scene' : /(?:graph|visualGraph)/i.test(path) ? 'graph' : path.startsWith('/assets/') ? 'asset' : path.startsWith('/projectSettings') ? 'settings' : 'project' }
+function plain(value: unknown): value is Record<string, unknown> { return Boolean(value && typeof value === 'object' && !Array.isArray(value)) }
+function semanticMergeValue(base: unknown, ours: unknown, theirs: unknown, path: string, conflicts: SemanticMergeConflict[], autoMerged: string[]): unknown {
+  if (same(ours, theirs)) return ours
+  if (same(ours, base)) { autoMerged.push(path); return theirs }
+  if (same(theirs, base)) { autoMerged.push(path); return ours }
+  if (plain(ours) && plain(theirs) && (plain(base) || base === undefined)) {
+    const source = plain(base) ? base : {}, output: Record<string, unknown> = {}
+    for (const key of [...new Set([...Object.keys(source), ...Object.keys(ours), ...Object.keys(theirs)])].sort()) output[key] = semanticMergeValue(source[key], ours[key], theirs[key], `${path}/${key}`, conflicts, autoMerged)
+    return output
+  }
+  if (Array.isArray(ours) && Array.isArray(theirs) && (path === '/scenes' || path === '/assets')) {
+    const baseArray = Array.isArray(base) ? base : [], identity = (value: unknown, index: number) => plain(value) && typeof value.uuid === 'string' ? value.uuid : `#${index}`
+    const baseMap = new Map(baseArray.map((value, index) => [identity(value, index), value])), oursMap = new Map(ours.map((value, index) => [identity(value, index), value])), theirsMap = new Map(theirs.map((value, index) => [identity(value, index), value]))
+    return [...new Set([...baseMap.keys(), ...oursMap.keys(), ...theirsMap.keys()])].sort().flatMap(id => {
+      const merged = semanticMergeValue(baseMap.get(id), oursMap.get(id), theirsMap.get(id), `${path}/${id}`, conflicts, autoMerged)
+      return merged === undefined ? [] : [merged]
+    })
+  }
+  const conflict: SemanticMergeConflict = { id: fingerprint({ path, base, ours, theirs }), path, kind: mergeKind(path), base, ours, theirs, resolution: 'unresolved' }
+  conflicts.push(conflict)
+  return ours
+}
+
+export function createSemanticMergePlan(baseSource: string, oursSource: string, theirsSource: string): SemanticMergePlan {
+  const base = JSON.parse(stableProjectText(baseSource)) as Record<string, unknown>, ours = JSON.parse(stableProjectText(oursSource)) as Record<string, unknown>, theirs = JSON.parse(stableProjectText(theirsSource)) as Record<string, unknown>
+  const conflicts: SemanticMergeConflict[] = [], autoMerged: string[] = []
+  const merged = semanticMergeValue(base, ours, theirs, '', conflicts, autoMerged) as Record<string, unknown>
+  const plan: SemanticMergePlan = { format: 'nova-semantic-merge', version: 1, merged, conflicts: conflicts.slice(0, MAX_CHANGES), autoMerged: [...new Set(autoMerged)].slice(0, MAX_CHANGES), fingerprint: fingerprint({ base, ours, theirs }) }
+  teamWorkflowState.semanticMerge = plan
+  return plan
+}
+
+function assignSemanticPath(root: Record<string, unknown>, path: string, value: unknown): void {
+  const parts = path.split('/').filter(Boolean); let cursor: unknown = root
+  for (let index = 0; index < parts.length - 1; index++) {
+    const part = parts[index]
+    if (Array.isArray(cursor)) cursor = cursor.find(item => plain(item) && item.uuid === part)
+    else if (plain(cursor)) cursor = cursor[part]
+    if (cursor === undefined) throw new Error(`Semantic merge path no longer exists: ${path}`)
+  }
+  const last = parts[parts.length - 1]; if (!last) throw new Error('Cannot replace the merge root.')
+  if (Array.isArray(cursor)) { const index = cursor.findIndex(item => plain(item) && item.uuid === last); if (index < 0) throw new Error(`Semantic merge identity is missing: ${last}`); cursor[index] = value }
+  else if (plain(cursor)) cursor[last] = value
+  else throw new Error(`Semantic merge path is not assignable: ${path}`)
+}
+
+export function resolveSemanticMergeConflict(conflictId: string, resolution: 'ours' | 'theirs'): boolean {
+  const plan = teamWorkflowState.semanticMerge, conflict = plan?.conflicts.find(item => item.id === conflictId)
+  if (!plan || !conflict) return false
+  assignSemanticPath(plan.merged, conflict.path, resolution === 'ours' ? conflict.ours : conflict.theirs)
+  conflict.resolution = resolution
+  return true
+}
+
+export function finalizeSemanticMerge(): string {
+  const plan = teamWorkflowState.semanticMerge
+  if (!plan) throw new Error('No semantic merge is active.')
+  const unresolved = plan.conflicts.filter(conflict => conflict.resolution === 'unresolved')
+  if (unresolved.length) throw new Error(`${unresolved.length} semantic conflicts still require a choice.`)
+  return stableProjectText(plan.merged)
 }
 
 export function shareTeamBuildPreset(name: string, target: string, profile: string, settings: unknown): TeamBuildPreset | null {

@@ -1,4 +1,10 @@
-# Nova_A 5.0 frozen contracts
+# Nova_A 7.0 frozen creator-platform contracts
+
+Nova_A 7.0 certifies the existing seven additive contracts without changing Project Format 2/schema 29. The next contract decision is deferred until a demonstrated need, the observation window, migration/ecosystem review, and independent external evidence exist. See `STABLE_CREATOR_PLATFORM_7_0.md` for the current decision, Visual Graph and Workspace contracts, feature-readiness model, support matrix, and completion rules.
+
+The compatibility ceiling for reviewed 6.x projects is sealed from `<7.0.0` to `<8.0.0` through migration preview, complete backup, deterministic in-memory conversion, semantic diff, validation, canonical reparse, and rollback. No authored field is removed because the product version changed.
+
+## Historical 5.0 freeze record
 
 Nova_A 5.0.0 freezes these contracts for the 5.x line. Product SemVer and persisted-format versions are independent; schema 29 remains unchanged. The freeze opened on 25 August 2026 and cannot receive final production certification before 8 September 2026 or before all named external gates have evidence.
 

@@ -1,5 +1,7 @@
+import { applyGamepadAxisCalibration, sensorValue, TouchPointerDeduplicator } from './deviceInput'
+
 export type InputActionKind = 'button' | 'axis' | 'vector2'
-export type InputDevice = 'keyboard' | 'physical-key' | 'mouse-button' | 'mouse-wheel' | 'mouse-motion' | 'gamepad-button' | 'gamepad-axis' | 'touch' | 'gesture'
+export type InputDevice = 'keyboard' | 'physical-key' | 'mouse-button' | 'mouse-wheel' | 'mouse-motion' | 'gamepad-button' | 'gamepad-axis' | 'touch' | 'gesture' | 'sensor'
 export type InputModifier = 'Control' | 'Shift' | 'Alt' | 'Meta'
 export type InputResponseCurve = 'linear' | 'square' | 'cubic' | 'exponential'
 export type InputInteraction = 'press' | 'hold' | 'tap' | 'multiTap'
@@ -63,7 +65,7 @@ export interface InputSnapshot {
   scheme: string
 }
 
-export interface InputDeviceIdentity { id: string; kind: 'keyboard' | 'mouse' | 'gamepad' | 'touch'; index: number; connected: boolean; mapping: string }
+export interface InputDeviceIdentity { id: string; kind: 'keyboard' | 'mouse' | 'gamepad' | 'touch' | 'sensor'; index: number; connected: boolean; mapping: string }
 export interface InputConflict { signature: string; action: string; bindingIndex: number; conflictsWithAction: string; conflictsWithBindingIndex: number }
 export interface InputRecordingFrame { time: number; snapshot: InputSnapshot }
 export interface InputRecording { version: 1; duration: number; frames: InputRecordingFrame[] }
@@ -121,7 +123,7 @@ export function normalizeInputMap(source: unknown): InputAction[] {
     const bindings = Array.isArray(item.bindings) ? item.bindings.flatMap(rawBinding => {
       if (!rawBinding || typeof rawBinding !== 'object') return []
       const binding = rawBinding as Partial<InputBinding>
-      const devices: InputDevice[] = ['keyboard', 'physical-key', 'mouse-button', 'mouse-wheel', 'mouse-motion', 'gamepad-button', 'gamepad-axis', 'touch', 'gesture']
+      const devices: InputDevice[] = ['keyboard', 'physical-key', 'mouse-button', 'mouse-wheel', 'mouse-motion', 'gamepad-button', 'gamepad-axis', 'touch', 'gesture', 'sensor']
       const device = devices.includes(binding.device as InputDevice) ? binding.device as InputDevice : 'keyboard'
       const responseCurves: InputResponseCurve[] = ['linear', 'square', 'cubic', 'exponential']
       const allowedModifiers: InputModifier[] = ['Control', 'Shift', 'Alt', 'Meta']
@@ -162,7 +164,7 @@ export function normalizeInputMap(source: unknown): InputAction[] {
 /** Replaces one project input binding without changing the action's axis/vector semantics. */
 export function rebindInputAction(actions: InputAction[], actionName: string, bindingIndex: number, value: Pick<InputBinding, 'device' | 'code'>): boolean {
   const action = actions.find(candidate => candidate.name === actionName)
-  if (!action || bindingIndex < 0 || bindingIndex > 31 || !['keyboard', 'physical-key', 'mouse-button', 'mouse-wheel', 'mouse-motion', 'gamepad-button', 'gamepad-axis', 'touch', 'gesture'].includes(value.device)) return false
+  if (!action || bindingIndex < 0 || bindingIndex > 31 || !['keyboard', 'physical-key', 'mouse-button', 'mouse-wheel', 'mouse-motion', 'gamepad-button', 'gamepad-axis', 'touch', 'gesture', 'sensor'].includes(value.device)) return false
   while (action.bindings.length <= bindingIndex) action.bindings.push(createInputBinding(value.device, value.code))
   const previous = action.bindings[bindingIndex]
   action.bindings[bindingIndex] = { ...previous, device: value.device, code: String(value.code).slice(0, 80) }
@@ -203,8 +205,12 @@ export class InputManager {
   private logicalKeys = new Set<string>()
   private modifiers = new Set<InputModifier>()
   private mouseButtons = new Set<number>()
-  private touches = new Map<number, { x: number; y: number; startX: number; startY: number; startedAt: number }>()
+  private touches = new Map<number, { x: number; y: number; previousX: number; previousY: number; startX: number; startY: number; startedAt: number }>()
   private gestures = new Map<string, number>()
+  private pairGesture: { distance: number; angle: number; centerX: number; centerY: number } | null = null
+  private lastTouchTapAt = -Infinity
+  private pointerDeduplicator = new TouchPointerDeduplicator()
+  private virtualActions = new Map<string, number | [number, number]>()
   private previousDown = new Map<string, boolean>()
   private interactionState = new Map<string, { startedAt: number; lastTapAt: number; taps: number; performed: boolean }>()
   private contexts: Array<{ name: string; priority: number; consume: boolean }> = [{ name: 'Gameplay', priority: 0, consume: false }]
@@ -227,18 +233,34 @@ export class InputManager {
     if (!this.isTypingTarget(event.target)) { this.keyboard.add(event.code); this.logicalKeys.add(event.key); this.updateModifiers(event) }
   }
   readonly onKeyUp = (event: KeyboardEvent) => { this.keyboard.delete(event.code); this.logicalKeys.delete(event.key); this.updateModifiers(event) }
-  readonly onMouseDown = (event: MouseEvent) => { this.mouseButtons.add(event.button) }
-  readonly onMouseUp = (event: MouseEvent) => { this.mouseButtons.delete(event.button) }
-  readonly onMouseMove = (event: MouseEvent) => { this.clientX = event.clientX; this.clientY = event.clientY; this.movementX += event.movementX; this.movementY += event.movementY }
+  readonly onMouseDown = (event: MouseEvent) => { if (this.acceptMouse(event)) this.mouseButtons.add(event.button) }
+  readonly onMouseUp = (event: MouseEvent) => { if (this.acceptMouse(event)) this.mouseButtons.delete(event.button) }
+  readonly onMouseMove = (event: MouseEvent) => { if (!this.acceptMouse(event)) return; this.clientX = event.clientX; this.clientY = event.clientY; this.movementX += event.movementX; this.movementY += event.movementY }
   readonly onWheel = (event: WheelEvent) => { this.wheelX += event.deltaX; this.wheelY += event.deltaY }
-  readonly onBlur = () => { this.keyboard.clear(); this.logicalKeys.clear(); this.modifiers.clear(); this.mouseButtons.clear(); this.touches.clear(); this.gestures.clear() }
-  readonly onTouchStart = (event: TouchEvent) => { for (const touch of Array.from(event.changedTouches)) this.touches.set(touch.identifier, { x: touch.clientX, y: touch.clientY, startX: touch.clientX, startY: touch.clientY, startedAt: performance.now() }) }
+  readonly onBlur = () => { this.keyboard.clear(); this.logicalKeys.clear(); this.modifiers.clear(); this.mouseButtons.clear(); this.touches.clear(); this.gestures.clear(); this.virtualActions.clear(); this.pairGesture = null; this.pointerDeduplicator.clear() }
+  readonly onTouchStart = (event: TouchEvent) => {
+    const now = performance.now()
+    this.mouseButtons.clear()
+    for (const touch of Array.from(event.changedTouches)) { this.pointerDeduplicator.recordTouch(now, touch.clientX, touch.clientY); this.touches.set(touch.identifier, { x: touch.clientX, y: touch.clientY, previousX: touch.clientX, previousY: touch.clientY, startX: touch.clientX, startY: touch.clientY, startedAt: now }); this.clientX = touch.clientX; this.clientY = touch.clientY }
+    this.resetPairGesture()
+  }
   readonly onTouchMove = (event: TouchEvent) => {
-    for (const touch of Array.from(event.changedTouches)) { const state = this.touches.get(touch.identifier); if (state) { state.x = touch.clientX; state.y = touch.clientY } }
-    const pair = [...this.touches.values()]; if (pair.length >= 2) { const distance = Math.hypot(pair[0].x - pair[1].x, pair[0].y - pair[1].y), initial = Math.hypot(pair[0].startX - pair[1].startX, pair[0].startY - pair[1].startY); this.gestures.set('pinch', initial > 1e-6 ? distance / initial - 1 : 0) }
+    const now = performance.now()
+    for (const touch of Array.from(event.changedTouches)) { const state = this.touches.get(touch.identifier); this.pointerDeduplicator.recordTouch(now, touch.clientX, touch.clientY); if (state) { state.previousX = state.x; state.previousY = state.y; state.x = touch.clientX; state.y = touch.clientY; this.gestures.set('pan-x', Math.max(-1, Math.min(1, (state.x - state.previousX) / 48))); this.gestures.set('pan-y', Math.max(-1, Math.min(1, (state.y - state.previousY) / 48))); this.clientX = touch.clientX; this.clientY = touch.clientY } }
+    const pair = [...this.touches.values()]
+    if (pair.length >= 2) {
+      const distance = Math.hypot(pair[0].x - pair[1].x, pair[0].y - pair[1].y), angle = Math.atan2(pair[1].y - pair[0].y, pair[1].x - pair[0].x), centerX = (pair[0].x + pair[1].x) / 2, centerY = (pair[0].y + pair[1].y) / 2
+      this.pairGesture ??= { distance, angle, centerX, centerY }
+      this.gestures.set('pinch', this.pairGesture.distance > 1e-6 ? Math.max(-1, Math.min(1, distance / this.pairGesture.distance - 1)) : 0)
+      let delta = angle - this.pairGesture.angle; while (delta > Math.PI) delta -= Math.PI * 2; while (delta < -Math.PI) delta += Math.PI * 2
+      this.gestures.set('rotate', Math.max(-1, Math.min(1, delta / Math.PI)))
+      this.gestures.set('two-finger-pan-x', Math.max(-1, Math.min(1, (centerX - this.pairGesture.centerX) / 96))); this.gestures.set('two-finger-pan-y', Math.max(-1, Math.min(1, (centerY - this.pairGesture.centerY) / 96)))
+    }
   }
   readonly onTouchEnd = (event: TouchEvent) => {
-    for (const touch of Array.from(event.changedTouches)) { const state = this.touches.get(touch.identifier); if (!state) continue; const dx = touch.clientX - state.startX, dy = touch.clientY - state.startY, elapsed = performance.now() - state.startedAt; if (elapsed <= 350 && Math.hypot(dx, dy) < 18) this.gestures.set('tap', 1); else { this.gestures.set('swipe-x', Math.max(-1, Math.min(1, dx / 120))); this.gestures.set('swipe-y', Math.max(-1, Math.min(1, dy / 120))) }; this.touches.delete(touch.identifier) }
+    const now = performance.now()
+    for (const touch of Array.from(event.changedTouches)) { this.pointerDeduplicator.recordTouch(now, touch.clientX, touch.clientY); const state = this.touches.get(touch.identifier); if (!state) continue; const dx = touch.clientX - state.startX, dy = touch.clientY - state.startY, elapsed = now - state.startedAt, distance = Math.hypot(dx, dy); if (elapsed <= 350 && distance < 18) { this.gestures.set('tap', 1); if (now - this.lastTouchTapAt <= 450) this.gestures.set('double-tap', 1); this.lastTouchTapAt = now } else if (elapsed >= 500 && distance < 18) this.gestures.set('long-press', 1); else { this.gestures.set('swipe-x', Math.max(-1, Math.min(1, dx / 120))); this.gestures.set('swipe-y', Math.max(-1, Math.min(1, dy / 120))) }; this.touches.delete(touch.identifier) }
+    this.resetPairGesture()
   }
   readonly onGamepadConnected = (event: GamepadEvent) => this.updateGamepad(event.gamepad, true)
   readonly onGamepadDisconnected = (event: GamepadEvent) => this.updateGamepad(event.gamepad, false)
@@ -285,6 +307,9 @@ export class InputManager {
     this.mouseButtons.clear()
     this.touches.clear()
     this.gestures.clear()
+    this.virtualActions.clear()
+    this.pairGesture = null
+    this.pointerDeduplicator.clear()
     this.devices.clear()
     this.previousDown.clear()
     this.interactionState.clear()
@@ -317,6 +342,8 @@ export class InputManager {
       return contextDelta || second.priority - first.priority || first.name.localeCompare(second.name)
     })
     const now = performance.now() / 1_000
+    const nowMs = now * 1_000
+    for (const touch of this.touches.values()) if (nowMs - touch.startedAt >= 500 && Math.hypot(touch.x - touch.startX, touch.y - touch.startY) < 18) this.gestures.set('long-press', 1)
     for (const action of ordered) {
       const values = action.bindings.map(binding => consumedBindings.has(bindingSignature(binding)) ? 0 : this.bindingValue(binding))
       if (action.kind === 'vector2') {
@@ -328,10 +355,13 @@ export class InputManager {
         }
         const length = Math.hypot(x, y)
         if (length > 1) { x /= length; y /= length }
+        const virtual = this.virtualActions.get(action.name)
+        if (Array.isArray(virtual)) { x += virtual[0]; y += virtual[1]; const combined = Math.hypot(x, y); if (combined > 1) { x /= combined; y /= combined } }
         snapshot.vectors[action.name] = [x, y]
         snapshot.axes[action.name] = Math.hypot(x, y)
       } else {
-        const value = Math.min(1, Math.max(-1, action.bindings.reduce((total, binding, index) => total + values[index] * binding.scale, 0)))
+        const virtual = this.virtualActions.get(action.name), virtualValue = typeof virtual === 'number' ? virtual : 0
+        const value = Math.min(1, Math.max(-1, action.bindings.reduce((total, binding, index) => total + values[index] * binding.scale, 0) + virtualValue))
         snapshot.axes[action.name] = value
       }
       const threshold = Math.min(...action.bindings.map(binding => binding.threshold), .0001)
@@ -384,6 +414,15 @@ export class InputManager {
 
   snapshot(): InputSnapshot { return this.current }
 
+  setVirtualAction(actionName: string, value: number | [number, number]): boolean {
+    const name = actionName.trim().slice(0, 80); if (!name) return false
+    if (Array.isArray(value)) this.virtualActions.set(name, [Math.min(1, Math.max(-1, finite(value[0], 0))), Math.min(1, Math.max(-1, finite(value[1], 0)))])
+    else this.virtualActions.set(name, Math.min(1, Math.max(-1, finite(value, 0))))
+    return true
+  }
+  releaseVirtualAction(actionName: string): void { this.virtualActions.delete(actionName.trim()) }
+  releaseAllVirtualActions(): void { this.virtualActions.clear() }
+
   pushContext(name: string, priority = 0, consume = false): boolean { const clean = name.trim().slice(0, 80); if (!clean) return false; const existing = this.contexts.find(context => context.name === clean); if (existing) { existing.priority = Math.min(10_000, Math.max(-10_000, Math.round(finite(priority, 0)))); existing.consume = consume; return true }; if (this.contexts.length >= 32) return false; this.contexts.push({ name: clean, priority: Math.min(10_000, Math.max(-10_000, Math.round(finite(priority, 0)))), consume }); return true }
   popContext(name: string): boolean { const index = this.contexts.findIndex(context => context.name === name.trim()); if (index < 0 || (this.contexts.length === 1 && this.contexts[index].name === 'Gameplay')) return false; this.contexts.splice(index, 1); return true }
   enableMap(name: string): boolean { const clean = name.trim().slice(0, 80); if (!clean || this.maps.size >= 32 && !this.maps.has(clean)) return false; this.maps.add(clean); return true }
@@ -416,12 +455,13 @@ export class InputManager {
     else if (binding.device === 'mouse-motion') value = binding.code.toLowerCase() === 'y' ? this.movementY : this.movementX
     else if (binding.device === 'touch') { const touch = [...this.touches.values()][0]; value = binding.code === 'count' ? this.touches.size : binding.code === 'pressed' ? Number(this.touches.size > 0) : binding.code.endsWith('-y') ? touch?.y ?? 0 : touch?.x ?? 0 }
     else if (binding.device === 'gesture') value = this.gestures.get(binding.code) ?? 0
+    else if (binding.device === 'sensor') value = sensorValue(binding.code)
     else {
-      const candidates = Array.from(navigator.getGamepads?.() ?? []).filter((item): item is Gamepad => Boolean(item))
+      const candidates = typeof navigator === 'undefined' ? [] : Array.from(navigator.getGamepads?.() ?? []).filter((item): item is Gamepad => Boolean(item))
       const gamepad = binding.deviceId ? candidates.find(item => item.id === binding.deviceId) : candidates.find(item => item.index === binding.gamepad)
       if (!gamepad) return 0
       if (binding.device === 'gamepad-button') value = gamepad.buttons[Number.parseInt(binding.code, 10) || 0]?.value ?? 0
-      else value = gamepad.axes[Number.parseInt(binding.code, 10) || 0] ?? 0
+      else { const axis = Number.parseInt(binding.code, 10) || 0; value = applyGamepadAxisCalibration(gamepad.axes[axis] ?? 0, gamepad.id, axis) }
     }
     const sign = binding.invert ? -1 : 1, magnitude = Math.abs(value)
     if (magnitude <= binding.deadzone || magnitude < binding.threshold) return 0
@@ -432,6 +472,8 @@ export class InputManager {
 
   private updateModifiers(event: KeyboardEvent): void { this.modifiers.clear(); if (event.ctrlKey) this.modifiers.add('Control'); if (event.shiftKey) this.modifiers.add('Shift'); if (event.altKey) this.modifiers.add('Alt'); if (event.metaKey) this.modifiers.add('Meta') }
   private updateGamepad(gamepad: Gamepad, connected: boolean): void { const device = { id: gamepad.id || `gamepad:${gamepad.index}`, kind: 'gamepad' as const, index: gamepad.index, connected, mapping: gamepad.mapping || 'unknown' }; this.devices.set(`gamepad:${gamepad.index}`, device); for (const listener of this.deviceListeners) listener({ ...device }, connected ? 'connected' : 'disconnected') }
+  private acceptMouse(event: MouseEvent): boolean { const capabilities = (event as MouseEvent & { sourceCapabilities?: { firesTouchEvents?: boolean } }).sourceCapabilities; return this.pointerDeduplicator.acceptMouse(performance.now(), event.clientX, event.clientY, capabilities?.firesTouchEvents === true) }
+  private resetPairGesture(): void { const pair = [...this.touches.values()]; if (pair.length < 2) { this.pairGesture = null; return }; this.pairGesture = { distance: Math.hypot(pair[0].x - pair[1].x, pair[0].y - pair[1].y), angle: Math.atan2(pair[1].y - pair[0].y, pair[1].x - pair[0].x), centerX: (pair[0].x + pair[1].x) / 2, centerY: (pair[0].y + pair[1].y) / 2 } }
   private sampleReplay(): InputSnapshot | null {
     const replay = this.replay; if (!replay) return null
     let elapsed = (performance.now() - replay.startedAt) / 1000

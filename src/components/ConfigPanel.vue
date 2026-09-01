@@ -281,12 +281,18 @@
           <PropertyRow :label="t('colliderShape')"><select v-model="colliderShapeModel"><option v-for="kind in colliderShapeKinds" :key="kind" :value="kind">{{ kind }}</option></select></PropertyRow>
           <p class="physics-support-note">{{ colliderShapeSupport }}</p>
           <details class="compound-shapes">
-            <summary><span>{{ t('additionalShapes') }} ({{ selectedEntity.collider.shapes.length }})</span><button type="button" :disabled="selectedEntity.collider.shapes.length >= 7" @click.prevent="addColliderShape">＋</button></summary>
+            <summary><span>{{ t('additionalShapes') }} ({{ selectedEntity.collider.shapes.length }})</span><button type="button" :disabled="selectedEntity.collider.shapes.length >= 32" @click.prevent="addColliderShape">＋</button></summary>
             <article v-for="(shape, index) in selectedEntity.collider.shapes" :key="shape.id">
               <header><select v-model="shape.kind"><option v-for="kind in colliderShapeKinds" :key="kind">{{ kind }}</option></select><label><input v-model="shape.enabled" type="checkbox">{{ t('componentEnabled') }}</label><button type="button" @click="removeColliderShape(index)">×</button></header>
               <label><span>{{ t('colliderOffset') }}</span><div class="pair"><input v-model.number="shape.offset.x" type="number" step="0.01"><input v-model.number="shape.offset.y" type="number" step="0.01"></div></label>
               <label><span>{{ t('colliderSize') }}</span><div class="pair"><input v-model.number="shape.size.x" type="number" min="0.000001" step="0.1"><input v-model.number="shape.size.y" type="number" min="0.000001" step="0.1"></div></label>
               <label><span>{{ t('colliderRotation') }}</span><input v-model.number="shape.rotation" type="number" step="0.01"></label>
+              <label><span>{{ t('isSensor') }}</span><input v-model="shape.sensor" type="checkbox"></label>
+              <label><span>{{ t('physicsLayer') }}</span><select v-model.number="shape.physicsLayer"><option v-for="layer in state.globalSettings.layers" :key="layer.id" :value="layer.id">{{ layer.name }}</option></select></label>
+              <label><span>{{ t('collisionMask') }}</span><input v-model.number="shape.collisionMask" type="number" min="0" max="4294967295"></label>
+              <label><span>{{ t('oneWayCollider') }}</span><input v-model="shape.oneWay" type="checkbox"></label>
+              <label v-if="shape.oneWay"><span>{{ t('oneWayNormal') }}</span><div class="pair"><input v-model.number="shape.oneWayNormal.x" type="number" step="0.1"><input v-model.number="shape.oneWayNormal.y" type="number" step="0.1"></div></label>
+              <label v-if="shape.kind==='Chain'||shape.kind==='ConcavePolygon'||shape.kind==='ConvexPolygon'"><span>{{ t('vertices') }}</span><textarea :value="formatColliderPoints(shape.points)" rows="3" spellcheck="false" @change="setColliderPoints(shape, $event)"></textarea></label>
             </article>
             <p>{{ t('compoundShapeHint') }}</p>
           </details>
@@ -424,10 +430,12 @@ const selectedEntity = computed(() => state.selectedEntityId === null ? null : s
 const physicsMaterialAssets = computed(() => assetState.records.filter(asset => asset.assetType === 'material' && physicsMaterialDocument(asset.uuid)))
 const colliderShapeKinds: PhysicsShapeKind[] = ['Box', 'Circle', 'Capsule', 'Segment', 'Chain', 'WorldBoundary', 'ConvexPolygon', 'ConcavePolygon']
 const materialCombineModes = ['Average', 'Minimum', 'Maximum', 'Multiply'] as const
-const colliderShapeSupport = computed(() => { const model = selectedEntity.value?.collider.shapeModel ?? 'Box'; const support = PHYSICS_SHAPE_SUPPORT[model]; return `${support.simulation}: ${support.note}` })
+const colliderShapeSupport = computed(() => { const entity=selectedEntity.value, model = entity?.collider.shapeModel ?? 'Box'; const support = PHYSICS_SHAPE_SUPPORT[model]; const blocked=(model==='ConcavePolygon'||model==='Chain')&&entity&&!entity.isStatic&&!entity.isKinematic?' Dynamic bodies must use finite convex children.':''; return `${support.simulation}: ${support.note}${blocked}` })
 const colliderShapeModel = computed({ get: () => selectedEntity.value?.collider.shapeModel ?? 'Box', set: (kind: PhysicsShapeKind) => { const entity = selectedEntity.value; if (!entity) return; entity.collider.shapeModel = kind; if (kind === 'WorldBoundary') { entity.rigidBody.bodyType = 'Static'; entity.collider.sensor = false; entity.rigidBody.freezeRotation = true } normalizeEntity(entity); pushHistory('Change collider shape') } })
-function addColliderShape() { const collider = selectedEntity.value?.getCollider(); if (!collider || collider.shapes.length >= 7) return; collider.shapes.push({ id: createUuid(), kind: 'Box', offset: { x: 0, y: 0 }, rotation: 0, size: { x: 1, y: 1 }, radius: .5, points: [], enabled: true }); pushHistory('Add collider shape') }
+function addColliderShape() { const collider = selectedEntity.value?.getCollider(); if (!collider || collider.shapes.length >= 32) return; collider.shapes.push({ id: createUuid(), kind: 'Box', offset: { x: 0, y: 0 }, rotation: 0, size: { x: 1, y: 1 }, radius: .5, points: [], enabled: true, sensor: collider.sensor, physicsLayer: collider.physicsLayer, collisionMask: collider.collisionMask, oneWay: false, oneWayNormal: {x:0,y:1} }); pushHistory('Add collider shape') }
 function removeColliderShape(index: number) { const collider = selectedEntity.value?.getCollider(); if (!collider || index < 0 || index >= collider.shapes.length) return; collider.shapes.splice(index, 1); pushHistory('Remove collider shape') }
+function formatColliderPoints(points: Array<{x:number;y:number}>) { return points.map(point=>`${point.x}, ${point.y}`).join('\n') }
+function setColliderPoints(shape: {points:Array<{x:number;y:number}>}, event: Event) { const rows=(event.target as HTMLTextAreaElement).value.split(/[\n;]+/).flatMap(row=>{const [x,y]=row.trim().split(/[\s,]+/).map(Number);return Number.isFinite(x)&&Number.isFinite(y)?[{x,y}]:[]}).slice(0,128); if(rows.length>=2){shape.points=rows;pushHistory('Edit collider points')} }
 const collisionMaskNames = computed(() => { const mask = selectedEntity.value?.collider.collisionMask ?? 0; return state.globalSettings.layers.filter(layer => (mask & ((2 ** layer.id) >>> 0)) !== 0).map(layer => layer.name).join(', ') })
 const canEdit = computed(() => state.playMode === 'editing')
 const selectedConnections = computed(() => selectedEntity.value ? state.world.connections.filter(connection => connection.anchors.some(anchor => anchor.entityId === selectedEntity.value!.id)) : [])

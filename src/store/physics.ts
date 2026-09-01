@@ -36,6 +36,7 @@ import { CommandHistory, DocumentMutationCommand } from '../editor/commands'
 import { subtreeEntities, updateSelection, type SelectionMode } from '../editor/selection'
 import { assetReference, assetState, loadAssets, readTextAsset, registerEmbeddedImage, serializeAssetDatabaseSettings, serializeAssetFolders, serializeAssets, synchronizeAssetDependencyMetadata, updateTextAsset } from '../assets/AssetDatabase'
 import { defaultInputMap, normalizeInputMap, type InputAction } from '../runtime/input'
+import { loadDeviceInputSettings, serializeDeviceInputSettings } from '../runtime/deviceInput'
 import { defaultAudioSettings, normalizeAudioSettings, type AudioProjectSettings } from '../runtime/audio'
 import { normalizeParticleEmitter } from '../runtime/particles'
 import { invalidateTileMap, normalizeTileMap } from '../runtime/tilemap'
@@ -392,7 +393,7 @@ function projectSource(): Record<string, unknown> {
     plugins: serializePluginManifests(),
     packages: serializePackageState(),
     projectTrash: serializeProjectTrash(),
-    projectSettings: { inputMap: normalizeInputMap(physicsState.inputMap), audio: normalizeAudioSettings(physicsState.audioSettings), physics: serializePhysicsProjectSettings(), build: serializeBuildSettings(sceneManager.scenes.map(scene => scene.uuid)), scripting: serializeScriptSettings(), rendering: serializeRenderingSettings(), world: serializeWorldGameplaySettings(), presentation: { localization: serializeLocalizationSettings(), accessibility: serializeRuntimeAccessibilitySettings(), uiAudio: serializeUiAudioSettings() }, production: serializeProductionSettings() },
+    projectSettings: { inputMap: normalizeInputMap(physicsState.inputMap), deviceInput: serializeDeviceInputSettings(), audio: normalizeAudioSettings(physicsState.audioSettings), physics: serializePhysicsProjectSettings(), build: serializeBuildSettings(sceneManager.scenes.map(scene => scene.uuid)), scripting: serializeScriptSettings(), rendering: serializeRenderingSettings(), world: serializeWorldGameplaySettings(), presentation: { localization: serializeLocalizationSettings(), accessibility: serializeRuntimeAccessibilitySettings(), uiAudio: serializeUiAudioSettings() }, production: serializeProductionSettings() },
     projectStructure: {
       assetsRoot: 'Assets', settingsRoot: 'ProjectSettings', cacheRoot: '.nova/cache', importedRoot: '.nova/imported'
     },
@@ -1105,14 +1106,15 @@ function applyStoredComponents(entity: Entity, item: SceneEntityData): void {
     if (vertices) collider.vertices = vertices
     const shapeModels = ['Box', 'Circle', 'Capsule', 'Segment', 'Chain', 'ConvexPolygon', 'ConcavePolygon'] as const
     if (shapeModels.includes(data.shapeModel as typeof shapeModels[number])) collider.shapeModel = data.shapeModel as typeof collider.shapeModel
-    collider.shapes = Array.isArray(data.shapes) ? data.shapes.slice(0, 7).flatMap((value, index) => {
+    collider.shapes = Array.isArray(data.shapes) ? data.shapes.slice(0, 128).flatMap((value, index) => {
       if (!value || typeof value !== 'object') return []
       const raw = value as Record<string, unknown>
       const kind = shapeModels.includes(raw.kind as typeof shapeModels[number]) ? raw.kind as typeof collider.shapeModel : 'Box'
       const offset = { x: 0, y: 0 }, size = { x: 1, y: 1 }
       copyVector(offset, raw.offset); copyVector(size, raw.size)
       size.x = Math.max(1e-9, Math.abs(size.x)); size.y = Math.max(1e-9, Math.abs(size.y))
-      return [{ id: typeof raw.id === 'string' && raw.id ? raw.id : `shape-${index + 1}`, kind, offset, rotation: finiteNumber(raw.rotation), size, radius: Math.max(1e-9, finiteNumber(raw.radius, .5)), points: normalizedVertices(raw.points as SceneEntityData['vertices']) ?? [], enabled: raw.enabled !== false }]
+      const physicsLayer=Math.min(31,Math.max(0,Math.round(finiteNumber(raw.physicsLayer,data.physicsLayer as number)))); const oneWayNormal={x:0,y:1};copyVector(oneWayNormal,raw.oneWayNormal)
+      return [{ id: typeof raw.id === 'string' && raw.id ? raw.id : `shape-${index + 1}`, kind, offset, rotation: finiteNumber(raw.rotation), size, radius: Math.max(1e-9, finiteNumber(raw.radius, .5)), points: normalizedVertices(raw.points as SceneEntityData['vertices']) ?? [], enabled: raw.enabled !== false, sensor: typeof raw.sensor==='boolean'?raw.sensor:data.sensor===true, physicsLayer, collisionMask: Math.min(0xffff_ffff,Math.max(0,Math.round(finiteNumber(raw.collisionMask,data.collisionMask as number))))>>>0, oneWay: raw.oneWay===true, oneWayNormal }]
     }) : []
     collider.sensor = data.sensor === true
     collider.physicsLayer = Math.min(31, Math.max(0, Math.round(finiteNumber(data.physicsLayer))))
@@ -1669,6 +1671,7 @@ export function loadProject(jsonString: string, preserveRuntimeSession = false):
       ? project.projectSettings as Record<string, unknown>
       : {}
     physicsState.inputMap.splice(0, physicsState.inputMap.length, ...normalizeInputMap(projectSettings.inputMap))
+    loadDeviceInputSettings(projectSettings.deviceInput)
     Object.assign(physicsState.audioSettings, normalizeAudioSettings(projectSettings.audio))
     loadPhysicsProjectSettings(projectSettings.physics)
     Object.assign(scriptProjectSettings, normalizeScriptSettings(projectSettings.scripting))
@@ -1765,7 +1768,7 @@ function reloadSceneManagerProject(preserveRuntimeSession = false): boolean {
     assetDatabase: serializeAssetDatabaseSettings(),
     plugins: serializePluginManifests(),
     packages: serializePackageState(),
-    projectSettings: { inputMap: normalizeInputMap(physicsState.inputMap), audio: normalizeAudioSettings(physicsState.audioSettings), physics: serializePhysicsProjectSettings(), build: serializeBuildSettings(sceneManager.scenes.map(scene => scene.uuid)), scripting: serializeScriptSettings(), rendering: serializeRenderingSettings(), world: serializeWorldGameplaySettings(), presentation: { localization: serializeLocalizationSettings(), accessibility: serializeRuntimeAccessibilitySettings(), uiAudio: serializeUiAudioSettings() }, production: serializeProductionSettings() },
+    projectSettings: { inputMap: normalizeInputMap(physicsState.inputMap), deviceInput: serializeDeviceInputSettings(), audio: normalizeAudioSettings(physicsState.audioSettings), physics: serializePhysicsProjectSettings(), build: serializeBuildSettings(sceneManager.scenes.map(scene => scene.uuid)), scripting: serializeScriptSettings(), rendering: serializeRenderingSettings(), world: serializeWorldGameplaySettings(), presentation: { localization: serializeLocalizationSettings(), accessibility: serializeRuntimeAccessibilitySettings(), uiAudio: serializeUiAudioSettings() }, production: serializeProductionSettings() },
     activeSceneUuid: sceneManager.activeSceneUuid,
     scenes: sceneManager.serialize()
   })

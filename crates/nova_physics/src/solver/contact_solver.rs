@@ -2,6 +2,9 @@
 struct Contact {
     body_a: usize,
     body_b: usize,
+    child_a: u32,
+    child_b: u32,
+    feature_id: u8,
     normal: Vec2,
     tangent: Vec2,
     depth: f64,
@@ -156,5 +159,19 @@ fn correct_contact_position(bodies: &mut [Body], contact: &Contact) {
         .add(correction.mul(b.inv_mass))
         .finite_or(b.position);
     b.angle = normalize_angle(b.angle + cross_b * correction_magnitude * b.inv_inertia);
+}
+
+type ContactCacheKey = (usize, usize, u32, u32, u8);
+
+fn contact_cache_key(contact: &Contact) -> ContactCacheKey {
+    (contact.body_a, contact.body_b, contact.child_a, contact.child_b, contact.feature_id)
+}
+
+fn warm_start_contact(bodies: &mut [Body], contact: &Contact) {
+    if contact.is_sensor { return; }
+    let impulse = contact.normal.mul(contact.normal_impulse).add(contact.tangent.mul(contact.tangent_impulse));
+    if impulse.length_squared() > 0.0 {
+        apply_pair_impulse(bodies, contact.body_a, contact.body_b, impulse, contact.radius_a, contact.radius_b);
+    }
 }
 

@@ -18,9 +18,20 @@ import { projectJsonFromNovaPak } from './runtime/novaPak'
 import { editorState } from './store/editor'
 import { loadProject, physicsState, toggleSimulation } from './store/physics'
 import { buildSettings } from './runtime/buildSettings'
+import { productionSettings } from './runtime/production'
 
 const ready = ref(false), headless = ref(false), errorMessage = ref('')
 let headlessTimer: number | null = null
+interface RuntimeOverrides { networkRole: 'client' | 'server' | 'host' | null; playerName: string | null; sessionName: string | null; instanceId: string | null; logScope: string | null }
+
+async function applyRuntimeOverrides(): Promise<void> {
+  if (!('__TAURI_INTERNALS__' in window)) return
+  const { invoke } = await import('@tauri-apps/api/core'), overrides = await invoke<RuntimeOverrides>('runtime_overrides')
+  if (!overrides.instanceId) return
+  if (overrides.networkRole) productionSettings.networking.role = overrides.networkRole
+  if (overrides.playerName) productionSettings.networking.playerName = overrides.playerName
+  if (overrides.sessionName) productionSettings.networking.sessionName = overrides.sessionName
+}
 
 async function closePlayer(): Promise<void> {
   if ('__TAURI_INTERNALS__' in window) {
@@ -51,6 +62,7 @@ onMounted(async () => {
   try {
     const project = await projectJsonFromNovaPak(await loadPackageBytes())
     if (!loadProject(project)) throw new Error(editorState.statusText)
+    await applyRuntimeOverrides()
     editorState.currentPage = 'game'
     await physicsState.world.wasmReady
     if (physicsState.world.wasmError) throw physicsState.world.wasmError

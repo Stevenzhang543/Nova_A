@@ -583,6 +583,8 @@ fn rope_collision_body(
         sleep_timer: 0.0,
         one_way: false,
         one_way_normal: Vec2::new(0.0, 1.0),
+        auto_inertia: false,
+        collider_children: Vec::new(),
     }
 }
 
@@ -813,8 +815,16 @@ fn resolve_rope_sample_body(
         sample.layer,
         sample.collision_mask,
     );
-    for manifold in collide(&sample_body, &bodies[body_index]) {
-        resolve_rope_manifold(bodies, constraint, sample, body_index, manifold);
+    let variants = std::iter::once(None)
+        .chain((0..bodies[body_index].collider_children.len()).map(Some));
+    for child_index in variants {
+        let proxy = bodies[body_index].collider_proxy(child_index);
+        if proxy.is_sensor
+            || (sample.collision_mask & (1_u32 << proxy.layer)) == 0
+            || (proxy.collision_mask & (1_u32 << sample.layer)) == 0 { continue; }
+        for manifold in collide(&sample_body, &proxy) {
+            resolve_rope_manifold(bodies, constraint, sample, body_index, manifold);
+        }
     }
 }
 
@@ -1050,6 +1060,23 @@ fn solve_joint_motor(bodies: &mut [Body], constraint: &mut ConnectionConstraint,
         constraint.motor_torque = 0.0;
         return;
     }
+    if constraint.joint_kind == 4 {
+        let a = &bodies[constraint.body_a];
+        let b = &bodies[constraint.body_b];
+        let radius_a = rotate(constraint.local_anchor_a, a.angle);
+        let radius_b = rotate(constraint.local_anchor_b, b.angle);
+        let axis = rotate(constraint.joint_axis, a.angle).normalized_or(Vec2::new(1.0, 0.0));
+        let denominator = a.inv_mass + b.inv_mass
+            + radius_a.cross(axis).powi(2) * a.inv_inertia
+            + radius_b.cross(axis).powi(2) * b.inv_inertia;
+        if denominator <= 0.0 { constraint.motor_torque = 0.0; return; }
+        let relative_speed = b.point_velocity(radius_b).sub(a.point_velocity(radius_a)).dot(axis);
+        let impulse = ((constraint.motor_speed - relative_speed) / denominator)
+            .clamp(-constraint.max_motor_force * dt, constraint.max_motor_force * dt);
+        apply_pair_impulse(bodies, constraint.body_a, constraint.body_b, axis.mul(impulse), radius_a, radius_b);
+        constraint.motor_torque = impulse.abs() / dt;
+        return;
+    }
     let a = &bodies[constraint.body_a];
     let b = &bodies[constraint.body_b];
     let inverse = a.inv_inertia + b.inv_inertia;
@@ -1064,6 +1091,39 @@ fn solve_joint_motor(bodies: &mut [Body], constraint: &mut ConnectionConstraint,
     a.angular_velocity -= impulse * a.inv_inertia;
     b.angular_velocity += impulse * b.inv_inertia;
     constraint.motor_torque = impulse.abs() / dt;
+}
+
+fn solve_revolute_limit_velocity(bodies: &mut [Body], constraint: &mut ConnectionConstraint, dt: f64) {
+    if !constraint.limits_enabled || dt <= 0.0 { return; }
+    let a = &bodies[constraint.body_a];
+    let b = &bodies[constraint.body_b];
+    let inverse = a.inv_inertia + b.inv_inertia;
+    if inverse <= 0.0 { return; }
+    let angle = normalize_angle((b.angle - a.angle) - constraint.bind_angle);
+    let error = if angle < constraint.lower_limit { angle - constraint.lower_limit }
+        else if angle > constraint.upper_limit { angle - constraint.upper_limit } else { 0.0 };
+    if error == 0.0 { return; }
+    let impulse = -((b.angular_velocity - a.angular_velocity) + error * 0.2 / dt) / inverse;
+    let (a, b) = two_bodies_mut(bodies, constraint.body_a, constraint.body_b);
+    a.angular_velocity -= impulse * a.inv_inertia;
+    b.angular_velocity += impulse * b.inv_inertia;
+    constraint.motor_torque = constraint.motor_torque.max(impulse.abs() / dt);
+}
+
+fn correct_revolute_limit(bodies: &mut [Body], constraint: &ConnectionConstraint) {
+    if !constraint.limits_enabled { return; }
+    let a = &bodies[constraint.body_a];
+    let b = &bodies[constraint.body_b];
+    let inverse = a.inv_inertia + b.inv_inertia;
+    if inverse <= 0.0 { return; }
+    let angle = normalize_angle((b.angle - a.angle) - constraint.bind_angle);
+    let error = if angle < constraint.lower_limit { angle - constraint.lower_limit }
+        else if angle > constraint.upper_limit { angle - constraint.upper_limit } else { 0.0 };
+    if error.abs() <= POSITION_SLOP { return; }
+    let impulse = -error * 0.75 / inverse;
+    let (a, b) = two_bodies_mut(bodies, constraint.body_a, constraint.body_b);
+    a.angle = normalize_angle(a.angle - impulse * a.inv_inertia);
+    b.angle = normalize_angle(b.angle + impulse * b.inv_inertia);
 }
 
 fn solve_anchor_point_velocity(bodies: &mut [Body], constraint: &mut ConnectionConstraint, dt: f64) {
@@ -1208,6 +1268,7 @@ fn solve_connection_velocity(bodies: &mut [Body], constraint: &mut ConnectionCon
     }
     if constraint.joint_kind == 3 {
         solve_anchor_point_velocity(bodies, constraint, dt);
+        solve_revolute_limit_velocity(bodies, constraint, dt);
         return;
     }
     if constraint.joint_kind == 4 {
@@ -1287,6 +1348,7 @@ fn correct_connection_position(bodies: &mut [Body], constraint: &mut ConnectionC
     }
     if constraint.joint_kind == 3 {
         correct_anchor_point_position(bodies, constraint);
+        correct_revolute_limit(bodies, constraint);
         return;
     }
     if constraint.joint_kind == 4 {

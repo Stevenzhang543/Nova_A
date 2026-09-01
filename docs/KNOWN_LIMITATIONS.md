@@ -1,4 +1,21 @@
-# Nova_A 5.0 candidate known limitations
+# Nova_A 7.0 known limitations
+
+This 7.0 statement supersedes historical implementation notes later in this file:
+
+- Nova_A remains deliberately 2D-first; 3D, XR, ray tracing, AAA terrain/film systems, and proprietary console SDKs are not included.
+- Windows and Web are the locally qualified Tier-1 outputs. Linux and macOS require matching-host build/lifecycle evidence; Android is optional and toolchain/signing/device/store gated; iOS is deferred to a matching macOS host.
+- Local Windows release binaries are unsigned until a Whitelist publisher certificate is supplied. Hashes prove file identity but do not replace Authenticode reputation.
+- The signed updater architecture is disabled by default and stages only verified plans. Nova_A does not operate a mandatory hosted update, registry, account, matchmaking, relay, cloud-save, telemetry, or anti-cheat service.
+- Native extensions are declared but never downloaded or run implicitly. Third-party packages/plugins remain permission-, signature-, hash-, compatibility-, advisory-, and lifecycle-gated.
+- Tier-1 Web accessibility uses DOM/ARIA evidence. Native screen-reader adapters depend on what the Tauri/WebView and target OS expose and still need independent assistive-technology qualification.
+- Rhai callback-boundary stepping is not arbitrary VM statement suspension; the external editor protocol is not claimed as a complete LSP.
+- Interactive native cold-start, working-set, GPU frame-time, real low-end-device results, independent beginner/expert studies, and a real wall-clock soak remain external until measured.
+- Networking is optional infrastructure, not a production hosted service. Public deployment requires independently reviewed authentication, encryption/tunnel, relay/NAT, abuse, operations, and privacy design.
+- Project Format 2/schema 29 remains frozen. A future format needs an explicit preview/backup/migration/diff/rollback path; 7.0 does not promise future downgrade support.
+
+The exact current platform and evidence boundaries are in `STABLE_CREATOR_PLATFORM_7_0.md`. The remaining text is retained as a historical 5.0 candidate record and is not the current implementation inventory.
+
+## Historical 5.0 candidate record
 
 Nova_A is deliberately a professional 2D-first engine. It does not include built-in 3D rendering/physics, ray tracing, VR/XR, AAA terrain or foliage, cinematic virtual-production tools, or proprietary console SDKs.
 

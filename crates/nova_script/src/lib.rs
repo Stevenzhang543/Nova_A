@@ -861,7 +861,11 @@ fn target_from_handle(handle: Map) -> Option<(String, u32)> {
 }
 
 fn bounded_text(value: &str, maximum: usize) -> String {
-    value.chars().filter(|character| !character.is_control() || *character == '\n' || *character == '\t').take(maximum).collect()
+    value
+        .chars()
+        .filter(|character| !character.is_control() || *character == '\n' || *character == '\t')
+        .take(maximum)
+        .collect()
 }
 
 fn register_editor_automation_api(
@@ -873,43 +877,124 @@ fn register_editor_automation_api(
     engine.register_fn("editor_automation", move || enabled);
     let selection = context.editor_selection.clone();
     engine.register_fn("editor_selected", move || -> Array {
-        if !enabled { return Array::new(); }
-        selection.iter().take(256).map(|id| Dynamic::from_map(handle_map(true, "Entity", id, ""))).collect()
+        if !enabled {
+            return Array::new();
+        }
+        selection
+            .iter()
+            .take(256)
+            .map(|id| Dynamic::from_map(handle_map(true, "Entity", id, "")))
+            .collect()
     });
     let selection = context.editor_selection.clone();
-    engine.register_fn("editor_selected_count", move || -> INT { if enabled { INT::try_from(selection.len()).unwrap_or(INT::MAX) } else { 0 } });
+    engine.register_fn("editor_selected_count", move || -> INT {
+        if enabled {
+            INT::try_from(selection.len()).unwrap_or(INT::MAX)
+        } else {
+            0
+        }
+    });
     let commands = Rc::clone(&output);
     engine.register_fn("editor_select", move |handle: Map| {
-        if !enabled { return false; }
+        if !enabled {
+            return false;
+        }
         if let Some((target, generation)) = target_from_handle(handle) {
-            commands.borrow_mut().commands.push(ScriptCommand::EditorSelect { target, generation }); true
-        } else { false }
+            commands
+                .borrow_mut()
+                .commands
+                .push(ScriptCommand::EditorSelect { target, generation });
+            true
+        } else {
+            false
+        }
     });
     let commands = Rc::clone(&output);
     engine.register_fn("editor_rename", move |handle: Map, name: &str| {
-        if !enabled { return false; }
+        if !enabled {
+            return false;
+        }
         if let Some((target, generation)) = target_from_handle(handle) {
-            let name = bounded_text(name.trim(), 120); if name.is_empty() { return false; }
-            commands.borrow_mut().commands.push(ScriptCommand::EditorRename { target, generation, name }); true
-        } else { false }
+            let name = bounded_text(name.trim(), 120);
+            if name.is_empty() {
+                return false;
+            }
+            commands
+                .borrow_mut()
+                .commands
+                .push(ScriptCommand::EditorRename {
+                    target,
+                    generation,
+                    name,
+                });
+            true
+        } else {
+            false
+        }
     });
-    for (function, shape) in [("editor_create_box", "Box"), ("editor_create_circle", "Circle"), ("editor_create_triangle", "Triangle")] {
-        let commands = Rc::clone(&output); let shape = shape.to_owned();
-        engine.register_fn(function, move |name: &str, x: FLOAT, y: FLOAT, width: FLOAT, height: FLOAT| {
-            if !enabled || !x.is_finite() || !y.is_finite() || !width.is_finite() || !height.is_finite() || width.abs() < 0.000_001 || height.abs() < 0.000_001 { return false; }
-            let name = bounded_text(name.trim(), 120); if name.is_empty() { return false; }
-            commands.borrow_mut().commands.push(ScriptCommand::EditorCreateEntity { shape: shape.clone(), name, x, y, width: width.abs().min(1_000_000.0), height: height.abs().min(1_000_000.0) }); true
-        });
+    for (function, shape) in [
+        ("editor_create_box", "Box"),
+        ("editor_create_circle", "Circle"),
+        ("editor_create_triangle", "Triangle"),
+    ] {
+        let commands = Rc::clone(&output);
+        let shape = shape.to_owned();
+        engine.register_fn(
+            function,
+            move |name: &str, x: FLOAT, y: FLOAT, width: FLOAT, height: FLOAT| {
+                if !enabled
+                    || !x.is_finite()
+                    || !y.is_finite()
+                    || !width.is_finite()
+                    || !height.is_finite()
+                    || width.abs() < 0.000_001
+                    || height.abs() < 0.000_001
+                {
+                    return false;
+                }
+                let name = bounded_text(name.trim(), 120);
+                if name.is_empty() {
+                    return false;
+                }
+                commands
+                    .borrow_mut()
+                    .commands
+                    .push(ScriptCommand::EditorCreateEntity {
+                        shape: shape.clone(),
+                        name,
+                        x,
+                        y,
+                        width: width.abs().min(1_000_000.0),
+                        height: height.abs().min(1_000_000.0),
+                    });
+                true
+            },
+        );
     }
     let commands = Rc::clone(&output);
-    engine.register_fn("editor_create_text_asset", move |path: &str, asset_type: &str, source: &str| {
-        if !enabled { return false; }
-        let path = bounded_text(path.trim(), 240);
-        let asset_type = bounded_text(asset_type.trim(), 40);
-        let source = bounded_text(source, 64_000);
-        if path.is_empty() || source.is_empty() { return false; }
-        commands.borrow_mut().commands.push(ScriptCommand::EditorCreateTextAsset { path, asset_type, source }); true
-    });
+    engine.register_fn(
+        "editor_create_text_asset",
+        move |path: &str, asset_type: &str, source: &str| {
+            if !enabled {
+                return false;
+            }
+            let path = bounded_text(path.trim(), 240);
+            let asset_type = bounded_text(asset_type.trim(), 40);
+            let source = bounded_text(source, 64_000);
+            if path.is_empty() || source.is_empty() {
+                return false;
+            }
+            commands
+                .borrow_mut()
+                .commands
+                .push(ScriptCommand::EditorCreateTextAsset {
+                    path,
+                    asset_type,
+                    source,
+                });
+            true
+        },
+    );
 }
 
 fn bounded_query_handles<'a>(
@@ -3068,12 +3153,23 @@ mod tests {
         let mut automation = context();
         automation.editor_automation = true;
         automation.editor_selection = vec![automation.entity.clone()];
-        let execution = ScriptRuntime::new().execute(source, "run", automation).unwrap();
+        let execution = ScriptRuntime::new()
+            .execute(source, "run", automation)
+            .unwrap();
         assert_eq!(execution.commands.len(), 4);
-        assert!(matches!(&execution.commands[0], ScriptCommand::EditorRename { name, .. } if name == "Renamed safely"));
-        assert!(matches!(&execution.commands[1], ScriptCommand::EditorSelect { .. }));
-        assert!(matches!(&execution.commands[2], ScriptCommand::EditorCreateEntity { shape, width, height, .. } if shape == "Box" && *width == 4.0 && *height == 5.0));
-        assert!(matches!(&execution.commands[3], ScriptCommand::EditorCreateTextAsset { path, .. } if path == "Assets/Automation/readme.data"));
+        assert!(
+            matches!(&execution.commands[0], ScriptCommand::EditorRename { name, .. } if name == "Renamed safely")
+        );
+        assert!(matches!(
+            &execution.commands[1],
+            ScriptCommand::EditorSelect { .. }
+        ));
+        assert!(
+            matches!(&execution.commands[2], ScriptCommand::EditorCreateEntity { shape, width, height, .. } if shape == "Box" && *width == 4.0 && *height == 5.0)
+        );
+        assert!(
+            matches!(&execution.commands[3], ScriptCommand::EditorCreateTextAsset { path, .. } if path == "Assets/Automation/readme.data")
+        );
 
         let mut game = context();
         game.editor_selection = vec![game.entity.clone()];

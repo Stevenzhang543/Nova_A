@@ -17,6 +17,12 @@
           <article><span>{{ t('gpuPasses') }}</span><strong>{{ current.gpuPasses }}</strong></article>
           <article><span>{{ t('lifetimeChanges') }}</span><strong>{{ current.allocations }}</strong></article>
           <article><span>{{ t('assetJobs') }}</span><strong>{{ current.assetJobs }}</strong></article>
+          <article><span>{{ t('mainThreadTime') }}</span><strong>{{ current.mainThreadMs.toFixed(2) }} ms</strong></article>
+          <article><span>{{ t('workerTime') }}</span><strong>{{ current.workerMs.toFixed(2) }} ms</strong></article>
+          <article><span>{{ t('queueWaitTime') }}</span><strong>{{ current.queueWaitMs.toFixed(2) }} ms</strong></article>
+          <article><span>{{ t('cacheHitRate') }}</span><strong>{{ (current.cacheHitRate * 100).toFixed(0) }}%</strong></article>
+          <article><span>{{ t('onePercentLow') }}</span><strong>{{ current.onePercentLowFps.toFixed(0) }} FPS</strong></article>
+          <article><span>{{ t('inputToPixel') }}</span><strong>{{ current.inputToPixelMs.toFixed(2) }} ms</strong></article>
           <article><span>{{ t('drawCalls') }}</span><strong>{{ editorState.rendererStats.drawCalls }}</strong></article>
           <article><span>{{ t('runtimeBodies') }}</span><strong>{{ physicsState.engineDiagnostics.bodyCount }}</strong></article>
           <article><span>{{ t('activeContacts') }}</span><strong>{{ activeContacts }}</strong></article>
@@ -41,6 +47,13 @@
         <label><span>{{ t('animationBudget') }}</span><input v-model.number="settings.performance.animationBudgetMs" type="number" min="0.05" max="100" step="0.05" @change="commit"></label>
         <label><span>{{ t('uiBudget') }}</span><input v-model.number="settings.performance.uiBudgetMs" type="number" min="0.05" max="100" step="0.05" @change="commit"></label>
         <label><span>{{ t('frameBudget') }}</span><input v-model.number="settings.performance.frameBudgetMs" type="number" min="1" max="1000" step=".1" @change="commit"></label>
+        <label><span>{{ t('adaptivePresentationQuality') }}</span><input v-model="settings.performance.adaptiveQuality" type="checkbox" @change="commit"></label>
+        <label><span>{{ t('frameWorkBudget') }}</span><input v-model.number="settings.performance.frameWorkBudgetMs" type="number" min=".1" max="20" step=".1" @change="commit"></label>
+        <label><span>{{ t('streamingFrameBudget') }}</span><input v-model.number="settings.performance.streamingBudgetMs" type="number" min=".1" max="20" step=".1" @change="commit"></label>
+        <label><span>{{ t('commandBudget') }}</span><input v-model.number="settings.performance.maximumCommandsPerFrame" type="number" min="32" max="100000" step="32" @change="commit"></label>
+        <label><span>{{ t('reactivePublishInterval') }}</span><input v-model.number="settings.performance.reactivePublishInterval" type="number" min="1" max="120" @change="commit"></label>
+        <label><span>{{ t('spatialCellSize') }}</span><input v-model.number="settings.performance.spatialCellSize" type="number" min=".01" max="1000000" step="1" @change="commit"></label>
+        <p>{{ t('adaptiveQualityPresentationOnly') }}</p>
         <label><span>{{ t('renderGpuBudget') }}</span><div><input v-model.number="settings.performance.renderingBudgetMs" type="number" min=".05" step=".1" @change="commit"><input v-model.number="settings.performance.gpuBudgetMs" type="number" min=".05" step=".1" @change="commit"></div></label>
         <label><span>{{ t('audioParticleBudget') }}</span><div><input v-model.number="settings.performance.audioBudgetMs" type="number" min=".05" step=".1" @change="commit"><input v-model.number="settings.performance.particleBudgetMs" type="number" min=".05" step=".1" @change="commit"></div></label>
         <label><span>{{ t('profilerMode') }}</span><select v-model="profilerState.overheadMode"><option>Full</option><option>Low overhead</option><option>Off</option></select></label>
@@ -161,7 +174,11 @@
         <label><span>{{ t('maxWorkers') }}</span><input v-model.number="settings.jobs.maxWorkers" type="number" min="1" max="8" @change="commit"></label>
         <label><span>{{ t('maxQueuedJobs') }}</span><input v-model.number="settings.jobs.maxQueued" type="number" min="8" max="2048" @change="commit"></label>
         <label><span>{{ t('jobTimeout') }}</span><input v-model.number="settings.jobs.timeoutMs" type="number" min="100" max="120000" @change="commit"></label>
-        <dl><div><dt>{{ t('active') }}</dt><dd>{{ jobs.active }}</dd></div><div><dt>{{ t('queued') }}</dt><dd>{{ jobs.queued }}</dd></div><div><dt>{{ t('completed') }}</dt><dd>{{ jobs.completed }}</dd></div><div><dt>{{ t('failed') }}</dt><dd>{{ jobs.failed }}</dd></div><div><dt>{{ t('cancelled') }}</dt><dd>{{ jobs.cancelled }}</dd></div><div><dt>{{ t('averageTime') }}</dt><dd>{{ jobs.averageMs.toFixed(2) }} ms</dd></div></dl>
+        <dl><div><dt>{{ t('active') }}</dt><dd>{{ jobs.active }}</dd></div><div><dt>{{ t('queued') }}</dt><dd>{{ jobs.queued }}</dd></div><div><dt>{{ t('completed') }}</dt><dd>{{ jobs.completed }}</dd></div><div><dt>{{ t('failed') }}</dt><dd>{{ jobs.failed }}</dd></div><div><dt>{{ t('cancelled') }}</dt><dd>{{ jobs.cancelled }}</dd></div><div><dt>{{ t('staleResults') }}</dt><dd>{{ jobs.stale }}</dd></div><div><dt>{{ t('queueWaitTime') }}</dt><dd>{{ jobs.queueWaitMs.toFixed(2) }} ms</dd></div><div><dt>{{ t('workerFallbacks') }}</dt><dd>{{ jobs.fallbackCount }}</dd></div><div><dt>{{ t('averageTime') }}</dt><dd>{{ jobs.averageMs.toFixed(2) }} ms</dd></div></dl>
+      </section>
+      <section class="card">
+        <header><strong>{{ t('largeWorldRuntime') }}</strong><span>{{ runtimePerformance.entityCount }} / {{ runtimePerformance.componentCount }}</span></header>
+        <dl><div><dt>{{ t('dirtyTransforms') }}</dt><dd>{{ runtimePerformance.dirtyTransforms }}</dd></div><div><dt>{{ t('cacheHitRate') }}</dt><dd>{{ (runtimePerformance.cacheHitRate * 100).toFixed(1) }}%</dd></div><div><dt>{{ t('worstFrame') }}</dt><dd>{{ runtimePerformance.worstFrameMs.toFixed(2) }} ms</dd></div><div><dt>{{ t('onePercentLow') }}</dt><dd>{{ runtimePerformance.onePercentLowFps.toFixed(1) }} FPS</dd></div><div><dt>{{ t('inputToPixel') }}</dt><dd>{{ runtimePerformance.inputToPixelMs.toFixed(2) }} ms</dd></div><div><dt>{{ t('streamingDeferred') }}</dt><dd>{{ runtimePerformance.streamingDeferred }}</dd></div><div><dt>{{ t('adaptiveTier') }}</dt><dd>{{ runtimePerformance.adaptiveTier }}</dd></div><div><dt>{{ t('coldStartup') }}</dt><dd>{{ runtimePerformance.coldStartupMs.toFixed(1) }} ms</dd></div><div><dt>{{ t('warmStartup') }}</dt><dd>{{ runtimePerformance.warmStartupMs.toFixed(1) }} ms</dd></div></dl>
         <div class="button-row"><button @click="runJob('hash')">{{ t('testHashJob') }}</button><button @click="runJob('parseJson')">{{ t('testJsonJob') }}</button><button :disabled="!cancelJob" @click="cancelActiveJob">{{ t('cancelJob') }}</button></div>
         <p>{{ jobResult || jobs.lastError || t('jobSchedulerHint') }}</p>
       </section>
@@ -257,6 +274,7 @@ import { getSceneJSON, loadProject, physicsState, pushHistory, sceneManager, tog
 import SaveDataSettings from './SaveDataSettings.vue'
 import { feedbackDiagnostics } from '../runtime/editorFeedback'
 import { recoveryDiagnostics } from '../runtime/recovery'
+import { performanceRuntimeState as runtimePerformance } from '../runtime/largeWorldPerformance'
 
 type TabId = 'trace' | 'memory' | 'replay' | 'tests' | 'data' | 'jobs' | 'scripts' | 'runtime' | 'network'
 const activeTab = ref<TabId>('trace')
@@ -340,7 +358,7 @@ function installNetworking() { if (enableOfficialPackage(OFFICIAL_NETWORKING_PAC
 async function grantLegacyNetworkPermission() { if (!await requestConfirmation({ title: t('grantNetworkPermission'), message: t('networkPermissionPrompt'), confirmLabel: t('grant'), cancelLabel: t('cancel'), destructive: false })) return; settings.networking.permissionGranted = true; settings.networking.enabled = true; commit() }
 async function startNetwork() { networkBusy.value = true; try { networkModule.value = await startProductionNetworking(); networkState.value = networkModule.value.networkingState } catch (error) { reportRecoverableError(error, 'Start optional networking', 'Runtime') } finally { networkBusy.value = false } }
 async function stopNetwork() { networkBusy.value = true; try { await stopProductionNetworking() } catch (error) { reportRecoverableError(error, 'Stop optional networking', 'Runtime') } finally { networkBusy.value = false } }
-function replicateSelected() { const entity = physicsState.world.entities.find(item => item.id === physicsState.selectedEntityId); if (!entity || settings.networking.replicatedEntities.some(item => item.entityUuid === entity.uuid)) return; settings.networking.replicatedEntities.push({ entityUuid: entity.uuid, authority: 'server', properties: ['transform', 'velocity'], interpolate: true, predict: false }); commit() }
+function replicateSelected() { const entity = physicsState.world.entities.find(item => item.id === physicsState.selectedEntityId); if (!entity || settings.networking.replicatedEntities.some(item => item.entityUuid === entity.uuid)) return; settings.networking.replicatedEntities.push({ entityUuid: entity.uuid, authority: 'server', properties: ['transform', 'velocity'], interpolate: true, predict: false, ownerPeerId: '', alwaysRelevant: true, interestRadius: 0, sceneUuid: sceneManager.activeSceneUuid ?? '' }); commit() }
 function removeReplication(uuid: string) {
   const index = settings.networking.replicatedEntities.findIndex(item => item.entityUuid === uuid)
   if (index < 0) return

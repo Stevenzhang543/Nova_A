@@ -5,7 +5,7 @@ import type { Entity } from '../world/Entity'
 import { worldTransform } from '../world/hierarchy'
 import type { Vec2 } from '../world/types'
 import { activeGameCamera, activeGameCameras } from './sceneRenderer'
-import { activePostProcessing, renderingSettings } from './renderSettings'
+import { activePostProcessing, activeRenderQuality, renderingSettings } from './renderSettings'
 import type { CameraRenderView } from './types'
 
 const normalResponseCache = new Map<string, HTMLCanvasElement>()
@@ -96,18 +96,18 @@ function punchLight(context: CanvasRenderingContext2D, light: Light2D, position:
 }
 
 function drawShadows(context: CanvasRenderingContext2D, lightEntity: Entity, light: Light2D, entities: Entity[], camera: CameraRenderView, options: LightingOptions): void {
-  if (!light.castsShadows || renderingSettings.shadowQuality === 'Off' || light.lightType === 'Directional') return
+  if (!light.castsShadows || activeRenderQuality.shadowQuality === 'Off' || light.lightType === 'Directional') return
   const lightWorld = worldTransform(lightEntity, entities).position
   const lightScreen = worldToScreen(lightWorld, camera, options.width, options.height)
   const shadowLength = Math.max(options.width, options.height) * 1.5
   for (const casterEntity of entities) {
     const caster = casterEntity.getComponent<ShadowCaster2D>('ShadowCaster2D')
     if (!caster?.enabled || caster.removed || (caster.layerMask & light.layerMask) === 0 || (casterEntity === lightEntity && !caster.selfShadows)) continue
-    const boundary = entityBoundaryPoints(casterEntity, renderingSettings.shadowQuality === 'Ultra' ? 64 : renderingSettings.shadowQuality === 'Soft' ? 32 : 12, entities)
+    const boundary = entityBoundaryPoints(casterEntity, activeRenderQuality.shadowQuality === 'Ultra' ? 64 : activeRenderQuality.shadowQuality === 'Soft' ? 32 : 12, entities)
       .map(point => worldToScreen(point, camera, options.width, options.height))
     if (boundary.length < 2) continue
     context.save(); context.globalCompositeOperation = 'source-over'; context.fillStyle = `rgba(0,0,0,${caster.opacity})`
-    if (renderingSettings.shadowQuality === 'Soft' || renderingSettings.shadowQuality === 'Ultra') context.filter = `blur(${renderingSettings.shadowQuality === 'Ultra' ? 8 : 4}px)`
+    if (activeRenderQuality.shadowQuality === 'Soft' || activeRenderQuality.shadowQuality === 'Ultra') context.filter = `blur(${activeRenderQuality.shadowQuality === 'Ultra' ? 8 : 4}px)`
     for (let index = 0; index < boundary.length; index++) {
       const first = boundary[index], second = boundary[(index + 1) % boundary.length]
       const extend = (point: Vec2) => { const dx = point.x - lightScreen.x, dy = point.y - lightScreen.y, length = Math.max(1e-6, Math.hypot(dx, dy)); return { x: point.x + dx / length * shadowLength, y: point.y + dy / length * shadowLength } }

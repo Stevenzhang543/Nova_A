@@ -162,6 +162,8 @@ fn query_shape(shape: Shape, position: Vec2, angle: f64) -> Body {
         sleep_timer: 0.0,
         one_way: false,
         one_way_normal: Vec2::new(0.0, 1.0),
+        auto_inertia: false,
+        collider_children: Vec::new(),
     }
 }
 
