@@ -266,6 +266,8 @@ function serializeComponent(component: Component2D): Record<string, unknown> {
   } else if (component instanceof Script2D) {
     Object.assign(data, {
       scriptAsset: component.scriptAsset,
+      eventSheetAsset: component.eventSheetAsset,
+      objectBlueprintAsset: component.objectBlueprintAsset,
       properties: Object.fromEntries(Object.entries(component.properties).filter(([name]) => component.propertyMetadata[name]?.serialized !== false))
     })
   } else if (component instanceof RigidBody2D) {
@@ -413,7 +415,7 @@ const ASSET_COMPONENT_FIELDS: Partial<Record<ComponentKind, string[]>> = {
   ShapeRenderer2D: ['textureAsset'],
   SpriteRenderer2D: ['spriteAsset', 'normalMapAsset'],
   TextRenderer2D: ['fontAsset'],
-  Script2D: ['scriptAsset'],
+  Script2D: ['scriptAsset', 'eventSheetAsset', 'objectBlueprintAsset'],
   Animator: ['controllerAsset'],
   Skeleton2D: ['rigAsset', 'skinAsset'],
   TimelinePlayer: ['timelineAsset'],
@@ -1041,6 +1043,8 @@ function applyStoredComponents(entity: Entity, item: SceneEntityData): void {
     const script = new Script2D(scriptSource.uuid)
     applyComponentMetadata(script, scriptSource)
     script.scriptAsset = typeof data.scriptAsset === 'string' ? data.scriptAsset : null
+    script.eventSheetAsset = typeof data.eventSheetAsset === 'string' ? data.eventSheetAsset : null
+    script.objectBlueprintAsset = typeof data.objectBlueprintAsset === 'string' ? data.objectBlueprintAsset : null
     const safeScriptProperty = (value: unknown, depth = 0): ScriptPropertyValue | undefined => {
       if (depth > 8) return undefined
       if (value === null || typeof value === 'string' || typeof value === 'boolean') return value

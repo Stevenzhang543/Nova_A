@@ -10,10 +10,13 @@ export const ASSET_SOURCE_CATALOG = Object.freeze([
   { id: 'svg', extensions: ['svg'], importer: 'nova.svg', magic: '<svg' },
   { id: 'wave', extensions: ['wav'], importer: 'nova.audio', magic: 'RIFF/WAVE' },
   { id: 'ogg', extensions: ['ogg'], importer: 'nova.audio', magic: 'OggS' },
+  { id: 'mpeg-audio', extensions: ['mp3'], importer: 'nova.audio', magic: 'ID3/MPEG frame' },
+  { id: 'flac', extensions: ['flac'], importer: 'nova.audio', magic: 'fLaC' },
   { id: 'font-sfnt', extensions: ['ttf', 'otf'], importer: 'nova.font', magic: 'sfnt/OTTO' },
   { id: 'font-web', extensions: ['woff', 'woff2'], importer: 'nova.font', magic: 'wOFF/wOF2' },
   { id: 'nova-json', extensions: ['nova-scene', 'nova-prefab', 'nova-tileset', 'nova-atlas', 'nova-path'], importer: 'nova.document', magic: 'UTF-8' },
-  { id: 'rhai', extensions: ['rhai'], importer: 'nova.script', magic: 'UTF-8' }
+  { id: 'rhai', extensions: ['rhai'], importer: 'nova.script', magic: 'UTF-8' },
+  { id: 'localization', extensions: ['csv', 'po', 'arb', 'nova-locale'], importer: 'nova.localization', magic: 'UTF-8' }
 ])
 
 export interface ProductionAssetGraph {
@@ -170,13 +173,20 @@ export function validateImportSource(name: string, mimeType: string, bytes: Arra
   const data = new Uint8Array(bytes), extension = name.split('.').pop()?.toLowerCase() ?? '', diagnostics: AssetPipelineMetadata['diagnostics'] = []
   if (name.includes('..') || /[\\/]/.test(name) || name.startsWith('.')) diagnostics.push({ severity: 'error', code: 'UNSAFE_PATH', message: 'Source name contains an unsafe archive/path segment.' })
   if (data.byteLength > 512 * 1024 * 1024) diagnostics.push({ severity: 'error', code: 'SOURCE_TOO_LARGE', message: 'Source exceeds the 512 MiB stable importer limit.' })
-  const valid = extension === 'png' ? data[0] === 0x89 && ascii(data, 1, 3) === 'PNG' : ['jpg', 'jpeg'].includes(extension) ? data[0] === 0xff && data[1] === 0xd8 && data[2] === 0xff : extension === 'gif' ? ascii(data, 0, 4) === 'GIF8' : extension === 'webp' ? ascii(data, 0, 4) === 'RIFF' && ascii(data, 8, 4) === 'WEBP' : extension === 'wav' ? ascii(data, 0, 4) === 'RIFF' && ascii(data, 8, 4) === 'WAVE' : extension === 'ogg' ? ascii(data, 0, 4) === 'OggS' : ['woff', 'woff2'].includes(extension) ? ['wOFF', 'wOF2'].includes(ascii(data, 0, 4)) : extension === 'otf' ? ascii(data, 0, 4) === 'OTTO' : extension === 'ttf' ? data[0] === 0 && data[1] === 1 && data[2] === 0 && data[3] === 0 : true
+  const valid = extension === 'png' ? data[0] === 0x89 && ascii(data, 1, 3) === 'PNG' : ['jpg', 'jpeg'].includes(extension) ? data[0] === 0xff && data[1] === 0xd8 && data[2] === 0xff : extension === 'gif' ? ascii(data, 0, 4) === 'GIF8' : extension === 'webp' ? ascii(data, 0, 4) === 'RIFF' && ascii(data, 8, 4) === 'WEBP' : extension === 'wav' ? ascii(data, 0, 4) === 'RIFF' && ascii(data, 8, 4) === 'WAVE' : extension === 'ogg' ? ascii(data, 0, 4) === 'OggS' : extension === 'mp3' ? ascii(data, 0, 3) === 'ID3' || data[0] === 0xff && (data[1] & 0xe0) === 0xe0 : extension === 'flac' ? ascii(data, 0, 4) === 'fLaC' : ['woff', 'woff2'].includes(extension) ? ['wOFF', 'wOF2'].includes(ascii(data, 0, 4)) : extension === 'otf' ? ascii(data, 0, 4) === 'OTTO' : extension === 'ttf' ? data[0] === 0 && data[1] === 1 && data[2] === 0 && data[3] === 0 : true
   if (!valid) diagnostics.push({ severity: 'error', code: 'MAGIC_MISMATCH', message: `${name} does not match the declared ${extension || mimeType || 'source'} format.` })
   if (extension === 'svg' || mimeType === 'image/svg+xml') {
     const text = new TextDecoder().decode(data.slice(0, 4 * 1024 * 1024))
     if (!/<svg[\s>]/i.test(text)) diagnostics.push({ severity: 'error', code: 'SVG_ROOT', message: 'SVG source has no valid root element.' })
     if (/<script|\son\w+\s*=|javascript:/i.test(text)) diagnostics.push({ severity: 'error', code: 'SVG_ACTIVE_CONTENT', message: 'SVG active content is forbidden.' })
     if (!settings.svgSettings.allowExternalResources && /(?:href|src)\s*=\s*["'](?:https?:|\/\/)/i.test(text)) diagnostics.push({ severity: 'error', code: 'SVG_EXTERNAL_RESOURCE', message: 'External SVG resources are disabled by this reproducible preset.' })
+  }
+  if (['csv', 'po', 'arb', 'nova-locale'].includes(extension)) {
+    const source = new TextDecoder('utf-8', { fatal: false }).decode(data.slice(0, 16 * 1024 * 1024))
+    if (source.includes('\u0000')) diagnostics.push({ severity: 'error', code: 'LOCALIZATION_BINARY', message: 'Localization sources must be UTF-8 text without NUL bytes.' })
+    if (extension === 'arb') { try { const parsed = JSON.parse(source); if (!parsed || Array.isArray(parsed) || typeof parsed !== 'object') throw new Error() } catch { diagnostics.push({ severity: 'error', code: 'ARB_JSON', message: 'ARB localization must be a JSON object.' }) } }
+    if (extension === 'po' && !/(?:^|\n)msgid\s+"/m.test(source)) diagnostics.push({ severity: 'error', code: 'PO_MESSAGES', message: 'PO localization contains no msgid entries.' })
+    if (extension === 'csv' && !source.split(/\r?\n/, 1)[0]?.includes(',')) diagnostics.push({ severity: 'warning', code: 'CSV_COLUMNS', message: 'CSV localization should begin with at least two comma-separated columns.' })
   }
   return diagnostics
 }

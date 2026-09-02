@@ -1,0 +1,10 @@
+process.env.NOVA_LAYOUT_VERSION='26.03'
+process.env.NOVA_LAYOUT_OUTPUT='v26.03-layout-browser.json'
+process.env.NOVA_LAYOUT_SCREENSHOTS='v26.03'
+process.env.NOVA_LAYOUT_REQUIRED_VIEWPORTS='1024x640,1024x768,1366x768,1920x1080,2560x1440'
+process.env.NOVA_LAYOUT_REQUIRED_SCALES='1,1.5,2'
+process.env.NOVA_LAYOUT_REQUIRED_TEXT='Types & statements|Typen & Anweisungen|类型与语句'
+process.env.NOVA_LAYOUT_REQUIRED_WORKSPACE_INDEX='1'
+process.env.NOVA_LAYOUT_REQUIRED_CLICK='.inspector-tabs button:nth-child(3)'
+process.env.NOVA_LAYOUT_REQUIRED_ROOT='.script-studio'
+await import('./qualify-layout-v3.3.mjs')

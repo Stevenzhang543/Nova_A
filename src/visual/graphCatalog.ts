@@ -68,9 +68,12 @@ function definitionFromApi(api: ScriptApiV2Binding): GraphNodeDefinition {
 }
 
 const CORE: readonly GraphNodeDefinition[] = [
-  { type: 'code.module', title: 'Rhai Module', category: 'Code', description: 'Preserves top-level Rhai declarations that do not map to another visual node.', keywords: 'rhai code source module linked sync', color: COLORS.Code, pins: [] },
-  { type: 'code.statement', title: 'Rhai Statement', category: 'Code', description: 'Runs a validated Rhai statement inside a visual execution path.', keywords: 'rhai code statement linked sync', color: COLORS.Code, pins: [
+  { type: 'code.module', title: 'Execute Rhai Module', category: 'Code', description: 'Explicit escape block: runs sandboxed top-level Rhai declarations that cannot map to typed blocks yet.', keywords: 'execute rhai code source module escape linked sync', color: COLORS.Code, pins: [] },
+  { type: 'code.statement', title: 'Execute Rhai Statement', category: 'Code', description: 'Explicit escape block: runs one validated sandboxed Rhai statement inside an execution path.', keywords: 'execute rhai code statement escape linked sync', color: COLORS.Code, pins: [
     { key: 'exec', name: 'In', direction: 'input', kind: 'execution' }, { key: 'next', name: 'Next', direction: 'output', kind: 'execution' }
+  ] },
+  { type: 'code.expression', title: 'Execute Rhai Expression', category: 'Operators', description: 'Explicit escape block: evaluates sandboxed Rhai as a value when no typed block can preserve it.', keywords: 'execute rhai expression escape value linked lossless', color: COLORS.Values, pins: [
+    { key: 'value', name: 'Value', direction: 'output', kind: 'data', valueType: 'Data', defaultValue: null }
   ] },
   { type: 'flow.branch', title: 'Branch', category: 'Flow', description: 'Routes execution according to a Boolean condition.', keywords: 'if condition true false', color: COLORS.Flow, pins: [
     { key: 'exec', name: 'In', direction: 'input', kind: 'execution' }, { key: 'condition', name: 'Condition', direction: 'input', kind: 'data', valueType: 'Boolean' },

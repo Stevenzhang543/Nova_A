@@ -42,7 +42,7 @@ function currentManifest(metadata: ProjectMetadata = projectSessionState): Proje
     manifestVersion: NOVA_PROJECT_MANIFEST_VERSION,
     projectUuid: metadata.id,
     name: metadata.name,
-    engineCompatibility: { minimum: '3.9.0', maximumExclusive: '8.0.0' },
+    engineCompatibility: { minimum: '3.9.0', maximumExclusive: '27.0.0' },
     schemaVersion: NOVA_PROJECT_SCHEMA_VERSION,
     packageLockfile: 'Packages.lock',
     buildPresets: ['ProjectSettings/build.presets.json'],
@@ -54,7 +54,7 @@ export const projectManifestState = reactive<ProjectManifest>(currentManifest())
 
 export function normalizeProjectManifest(value: unknown, metadata: ProjectMetadata = projectSessionState): ProjectManifest {
   const source = value && typeof value === 'object' ? value as Partial<ProjectManifest> : {}
-  const compatibility = source.engineCompatibility && typeof source.engineCompatibility === 'object' ? source.engineCompatibility : { minimum: '3.9.0', maximumExclusive: '8.0.0' }
+  const compatibility = source.engineCompatibility && typeof source.engineCompatibility === 'object' ? source.engineCompatibility : { minimum: '3.9.0', maximumExclusive: '27.0.0' }
   const directories = source.directories && typeof source.directories === 'object' ? source.directories : DEFAULT_PROJECT_DIRECTORIES
   const buildPresets = Array.isArray(source.buildPresets)
     ? [...new Set(source.buildPresets.filter(item => typeof item === 'string').map(item => safePath(item, '')).filter(Boolean))].slice(0, 64)
@@ -65,7 +65,7 @@ export function normalizeProjectManifest(value: unknown, metadata: ProjectMetada
     name: metadata.name,
     engineCompatibility: {
       minimum: typeof compatibility.minimum === 'string' ? compatibility.minimum.slice(0, 40) : '3.9.0',
-      maximumExclusive: typeof compatibility.maximumExclusive === 'string' ? (['4.0.0', '5.0.0', '6.0.0', '7.0.0'].includes(compatibility.maximumExclusive) ? '8.0.0' : compatibility.maximumExclusive.slice(0, 40)) : '8.0.0'
+      maximumExclusive: typeof compatibility.maximumExclusive === 'string' ? (['4.0.0', '5.0.0', '6.0.0', '7.0.0', '8.0.0'].includes(compatibility.maximumExclusive) ? '27.0.0' : compatibility.maximumExclusive.slice(0, 40)) : '27.0.0'
     },
     schemaVersion: NOVA_PROJECT_SCHEMA_VERSION,
     packageLockfile: safePath(source.packageLockfile, 'Packages.lock'),

@@ -4,15 +4,31 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE.md)
 [![Tier 1](https://img.shields.io/badge/Tier%201-Windows%20%7C%20Web-63c6ff)](./docs/PLATFORM_BUILD_MATRIX_5_0.md)
-[![Release](https://img.shields.io/badge/release-7.0.0%20candidate-63c6ff)]()
+[![Release](https://img.shields.io/badge/release-26.04-63c6ff)]()
 
 Nova_A 是一款开源 2D 游戏引擎与桌面编辑器，使用 Rust、WebAssembly、Vue 3 与 Tauri 构建。
 
-版本 **7.0.0** 完成 Nova_A 稳定创作平台里程碑。“学习中心”现在会为全部公开功能生成七维就绪记录：绑定、验证、撤销、持久化、运行时／导出、文档与测试。经过审核的 6.x 契约继续冻结在 Project Format 2/schema 29；旧项目通过可预览、带备份且可回滚的兼容上限封存升级，不会冒险重写 schema。完整中／英／德教学手册、API／迁移／故障排除参考、稳定平台与恢复项目、历史夹具和精确发布证据一同交付。没有删除任何功能、动画、视觉组件或创作数据。
+版本 **26.04** 完成资产、2D 内容与可复用资源库生态，同时保持 Project Format 2/schema 29 与全部冻结契约。双向依赖视图、循环及缺失引用诊断、确定性缩略图、统一导入生产配置、命名资源变体、本地化导入验证和可信离线内容发现，与已有工作线程／缓存管线及全部创作动画功能共同工作。
 
 **手册：** [中英德三语交互网页](./manual/index.html) · [中文 Markdown](./manual/MANUAL.zh-CN.md) · [English](./manual/MANUAL.en.md) · [Deutsch](./manual/MANUAL.de.md)
 
-## v7.0.0 更新内容
+## 26.04 更新内容
+
+- **完整路线：** [26.01–26.10 实施手册](docs/ROADMAP_26_01_TO_26_10.md)与[竞品审查](docs/COMPETITIVE_REVIEW_26_01.md)。
+- **功能事实清单：** [完整功能与绑定清单](docs/FEATURE_INVENTORY_26_04.md)逐项记录绑定、验证、撤销、持久化、运行时／导出、文档与测试。
+- **资产与资源库生态：** [26.04 实现契约](docs/ASSET_CONTENT_LIBRARY_26_04.md)记录依赖可视化、确定性导入／重新导入、缩略图、生产配置、资源变体、可信离线发现、修复与导出闭包。
+- **26.04 布局审计：** [本地化资产工作区审计](docs/UI_LAYOUT_AUDIT_26_04.md)覆盖依赖栏、生产配置、变体、缩略图、主题、缩放、键盘焦点、滚动及窄布局。
+- **语言与调试深度：** [26.03 实现契约](docs/LANGUAGE_DEBUGGING_26_03.md)说明可选类型／数据、模块、语句映射、任务取消、监视、断点、LSP 3.17、代码↔图表覆盖率、逃生积木、差异与合并。
+- **26.03 布局审计：** [本地化脚本工作室与图表审计](docs/UI_LAYOUT_AUDIT_26_03.md)覆盖类型／语句窗格、调试任务、实时值、覆盖率卡片、“执行 Rhai”源码、主题、缩放与紧凑布局。
+- **对象事件工作流：** [事件表与对象蓝图指南](docs/OBJECT_EVENT_AUTHORING_26_02.md)记录运行时绑定、继承、验证、可复用组合和引导创建。
+- **流畅图表创作：** [可视化图表性能与交互契约](docs/VISUAL_GRAPH_PERFORMANCE_26_02.md)记录焦点缩放、直接连线、索引布局、逐帧合并、裁剪及保留的视觉反馈。
+- **26.02 布局审计：** [面板与本地化审计](docs/UI_LAYOUT_AUDIT_26_02.md)覆盖新的三列事件表工作室及保留的全局布局约束。
+- **20 个已验证模板：** 场景、测试和预制玩法支持搜索、难度、预计配置时间、能力与标签筛选；详见[模板库](docs/TEMPLATE_LIBRARY_26_01.md)。
+- **真正双向的可视化脚本：** 选择现有 `.rhai` 后切换会打开其准确关联图；变量、自定义积木、`if/else`、有界循环、运算符及 API 值／命令都会结构化转换；详见[可视化脚本契约](docs/VISUAL_SCRIPTING_26_01.md)。
+- **所有面板的布局约束：** 字段不会溢出卡片，翻译文本会换行，标签栏具有可达滚动路径，窄宽度下密集工作室会转为单列；详见[布局审计](docs/UI_LAYOUT_AUDIT_26_01.md)。
+- **版本兼容：** [2026 版本策略](docs/VERSIONING_2026.md)说明公开版本与机器版本映射；旧项目仅将兼容上限封存为 `<27.0.0`，不重写 schema。
+
+## 从 7.0.0 继承的稳定平台
 
 - **平台就绪情况：**“管理 → 学习中心 → 平台就绪情况”对全部 358 项公开功能执行七维审计，并明确区分不适用与仍需外部证据的项目。
 - **稳定契约：**Project Format 2/schema 29、Rhai API 2、Graph Format 1、Plugin API 2、Package Manifest 1、Build CLI 1 与 workspace document 3 保持兼容；下次破坏性契约决策等待证据后再进行。

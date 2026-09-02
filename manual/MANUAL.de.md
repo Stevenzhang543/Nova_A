@@ -1,4 +1,4 @@
-# Nova_A 7.0.0 – Vollständiges Handbuch
+# Nova_A 26.4.0 – Vollständiges Handbuch
 
 ## 6.2.0 Verhaltensverträge
 
@@ -770,11 +770,11 @@ Im **Paketlabor** Reverse-Domain-ID, SemVer, Herausgeber, Archiv-SHA-256, Lizenz
 **Exportvorlagen** zeigt Ziel, Architektur, Laufzeit und Nachweisgrenzen. Windows/Web sind lokal verfügbar; saubere Fremdmaschine und Signatur bleiben extern. Linux/macOS benötigen den passenden Host; Android bleibt bis zu allen SDK-/Vorlagen-/Signatur-/Geräte-/Installations-/Eingabe-/Audioprüfungen blockiert. In **Auslieferung** sind Cache-Schlüssel deterministisch, Delta-Builds an Patch-Manifeste gebunden und Remote-/Befehlsverbinder berechtigungspflichtig. Plan vorbereiten führt nichts aus und greift nicht auf das Netzwerk zu. Siehe `docs/EXTENSIONS_PLATFORM_DELIVERY_5_9.md`.
 
 <!-- NOVA_V6_TEACHING_START -->
-# Nova_A 7.0.0 aufgabenorientiertes Lehrhandbuch
+# Nova_A 26.4.0 aufgabenorientiertes Lehrhandbuch
 
 Lernen durch echte Aufgaben. Jede öffentliche Funktion erklärt Zuständigkeit, Speicherung, Wiederherstellung, Barrierefreiheit und Release-Verhalten.
 
-- Engine: **7.0.0**
+- Engine: **26.4.0**
 - Stable contracts: Project Format 2/schema 29; Rhai API 2; Graph Format 1; Plugin API 2; Package Manifest 1; Build CLI 1; workspace document 3.
 - External signing, independent clean-machine evidence, two-machine reproduction, matching-host builds and a real 72-hour soak remain pending until independently captured.
 
@@ -1110,13 +1110,13 @@ Lernen durch echte Aufgaben. Jede öffentliche Funktion erklärt Zuständigkeit,
 
 **Visual-Graph-API:** N/A
 
-<a id="project-manager-project-templates"></a>
+<a id="project-manager-20-template-library"></a>
 
-### Project templates
+### 20-template library
 
 **Klassifikation:** Assisted · Project-wide · Reversible
 
-**Zweck und Einsatz:** Project templates im Bereich Project Manager erledigt die unterstützte Autoren- oder Laufzeitaufgabe direkt im Arbeitsbereich Launcher. Verwenden, wenn das Projekt Project templates benötigt; nicht zugehörige Einstellungen bleiben in ihrem zuständigen Arbeitsbereich.
+**Zweck und Einsatz:** 20-template library im Bereich Project Manager erledigt die unterstützte Autoren- oder Laufzeitaufgabe direkt im Arbeitsbereich Launcher. Verwenden, wenn das Projekt 20-template library benötigt; nicht zugehörige Einstellungen bleiben in ihrem zuständigen Arbeitsbereich.
 
 **Voraussetzungen:**
 
@@ -1126,30 +1126,210 @@ Lernen durch echte Aufgaben. Jede öffentliche Funktion erklärt Zuständigkeit,
 **Exakter Ablauf:**
 
 1. Launcher und danach Project Manager öffnen.
-2. Project templates wählen und vor der Bearbeitung sichtbare Validierung und Berechtigungen prüfen.
+2. 20-template library wählen und vor der Bearbeitung sichtbare Validierung und Berechtigungen prüfen.
 3. Zielprojekt, Asset oder Objekt wählen und nur endliche, unterstützte Werte eingeben.
 4. Änderung anwenden oder speichern und sichtbares Ergebnis sowie Probleme/Konsole prüfen.
 5. Bei Laufzeitverhalten Play oder Vorschau starten; Pause/Einzelschritt für deterministische Prüfung verwenden.
 6. Projekt speichern, neu laden und den unveränderten Autorenwert bestätigen.
 7. Project Health und den passenden Test ausführen, Standalone-Player bauen und die sichtbare Prüfung wiederholen.
 
-**Erwartetes Ergebnis:** Project templates ist im Editor sichtbar, bleibt nach dem Neuladen erhalten und erreicht gegebenenfalls Vorschau, Play und exportierte Player.
+**Erwartetes Ergebnis:** 20-template library ist im Editor sichtbar, bleibt nach dem Neuladen erhalten und erreicht gegebenenfalls Vorschau, Play und exportierte Player.
 
-**Speicherung und Export:** Project templates wird im zuständigen Projekt, in Szene, Komponente, Asset, Arbeitsbereichseinstellung oder Build-Manifest gespeichert. Reine Editor-Daten gelangen nicht in Player.
+**Speicherung und Export:** 20-template library wird im zuständigen Projekt, in Szene, Komponente, Asset, Arbeitsbereichseinstellung oder Build-Manifest gespeichert. Reine Editor-Daten gelangen nicht in Player.
 
 **Rückgängig und Wiederherstellung:** Für Dokumentänderungen Rückgängig/Wiederholen, für Importe oder Pakete Zurücksetzen/Rollback, bei unterbrochenen Speicherungen Recovery Browser und für projektweite Wiederherstellung Quellverwaltung oder Migrations-Backup verwenden.
 
 **Häufige Fehler und Lösungen:**
 
-- Project templates mit falscher Auswahl oder im falschen Arbeitsbereich bearbeiten.
+- 20-template library mit falscher Auswahl oder im falschen Arbeitsbereich bearbeiten.
 - Berechtigungs-, Validierungs-, Referenz- oder Hostvorlagenwarnung ignorieren.
 - Nur die Editorvorschau prüfen, nicht Speichern/Neuladen und Standalone-Player.
 
 **Tastatur und Barrierefreiheit:** Command Palette oder Tastaturfokus statt reiner Zeigerbedienung verwenden. Dialoge besitzen Namen, sichtbaren Fokus, Escape/Abbrechen und reduzierte Bewegung.
 
-**Minimales Beispiel:** Minimal: ein gültiges Ziel erstellen, Project templates konfigurieren, speichern und ein sichtbares Play-Ergebnis prüfen.
+**Minimales Beispiel:** Minimal: ein gültiges Ziel erstellen, 20-template library konfigurieren, speichern und ein sichtbares Play-Ergebnis prüfen.
 
-**Produktionsbeispiel:** Produktion: Validierung, Lokalisierung/Barrierefreiheit, deterministische Tests, Budgets, Wiederherstellung und Entwicklungs-/Release-Builds für Project templates ergänzen.
+**Produktionsbeispiel:** Produktion: Validierung, Lokalisierung/Barrierefreiheit, deterministische Tests, Budgets, Wiederherstellung und Entwicklungs-/Release-Builds für 20-template library ergänzen.
+
+**Rhai-API:** N/A
+
+**Visual-Graph-API:** N/A
+
+<a id="project-manager-template-search"></a>
+
+### Template search
+
+**Klassifikation:** Assisted · Project-wide · Reversible
+
+**Zweck und Einsatz:** Template search im Bereich Project Manager erledigt die unterstützte Autoren- oder Laufzeitaufgabe direkt im Arbeitsbereich Launcher. Verwenden, wenn das Projekt Template search benötigt; nicht zugehörige Einstellungen bleiben in ihrem zuständigen Arbeitsbereich.
+
+**Voraussetzungen:**
+
+- A writable project folder
+- A supported .nova/.json document for import or migration
+
+**Exakter Ablauf:**
+
+1. Launcher und danach Project Manager öffnen.
+2. Template search wählen und vor der Bearbeitung sichtbare Validierung und Berechtigungen prüfen.
+3. Zielprojekt, Asset oder Objekt wählen und nur endliche, unterstützte Werte eingeben.
+4. Änderung anwenden oder speichern und sichtbares Ergebnis sowie Probleme/Konsole prüfen.
+5. Bei Laufzeitverhalten Play oder Vorschau starten; Pause/Einzelschritt für deterministische Prüfung verwenden.
+6. Projekt speichern, neu laden und den unveränderten Autorenwert bestätigen.
+7. Project Health und den passenden Test ausführen, Standalone-Player bauen und die sichtbare Prüfung wiederholen.
+
+**Erwartetes Ergebnis:** Template search ist im Editor sichtbar, bleibt nach dem Neuladen erhalten und erreicht gegebenenfalls Vorschau, Play und exportierte Player.
+
+**Speicherung und Export:** Template search wird im zuständigen Projekt, in Szene, Komponente, Asset, Arbeitsbereichseinstellung oder Build-Manifest gespeichert. Reine Editor-Daten gelangen nicht in Player.
+
+**Rückgängig und Wiederherstellung:** Für Dokumentänderungen Rückgängig/Wiederholen, für Importe oder Pakete Zurücksetzen/Rollback, bei unterbrochenen Speicherungen Recovery Browser und für projektweite Wiederherstellung Quellverwaltung oder Migrations-Backup verwenden.
+
+**Häufige Fehler und Lösungen:**
+
+- Template search mit falscher Auswahl oder im falschen Arbeitsbereich bearbeiten.
+- Berechtigungs-, Validierungs-, Referenz- oder Hostvorlagenwarnung ignorieren.
+- Nur die Editorvorschau prüfen, nicht Speichern/Neuladen und Standalone-Player.
+
+**Tastatur und Barrierefreiheit:** Command Palette oder Tastaturfokus statt reiner Zeigerbedienung verwenden. Dialoge besitzen Namen, sichtbaren Fokus, Escape/Abbrechen und reduzierte Bewegung.
+
+**Minimales Beispiel:** Minimal: ein gültiges Ziel erstellen, Template search konfigurieren, speichern und ein sichtbares Play-Ergebnis prüfen.
+
+**Produktionsbeispiel:** Produktion: Validierung, Lokalisierung/Barrierefreiheit, deterministische Tests, Budgets, Wiederherstellung und Entwicklungs-/Release-Builds für Template search ergänzen.
+
+**Rhai-API:** N/A
+
+**Visual-Graph-API:** N/A
+
+<a id="project-manager-template-difficulty-filter"></a>
+
+### Template difficulty filter
+
+**Klassifikation:** Assisted · Project-wide · Reversible
+
+**Zweck und Einsatz:** Template difficulty filter im Bereich Project Manager erledigt die unterstützte Autoren- oder Laufzeitaufgabe direkt im Arbeitsbereich Launcher. Verwenden, wenn das Projekt Template difficulty filter benötigt; nicht zugehörige Einstellungen bleiben in ihrem zuständigen Arbeitsbereich.
+
+**Voraussetzungen:**
+
+- A writable project folder
+- A supported .nova/.json document for import or migration
+
+**Exakter Ablauf:**
+
+1. Launcher und danach Project Manager öffnen.
+2. Template difficulty filter wählen und vor der Bearbeitung sichtbare Validierung und Berechtigungen prüfen.
+3. Zielprojekt, Asset oder Objekt wählen und nur endliche, unterstützte Werte eingeben.
+4. Änderung anwenden oder speichern und sichtbares Ergebnis sowie Probleme/Konsole prüfen.
+5. Bei Laufzeitverhalten Play oder Vorschau starten; Pause/Einzelschritt für deterministische Prüfung verwenden.
+6. Projekt speichern, neu laden und den unveränderten Autorenwert bestätigen.
+7. Project Health und den passenden Test ausführen, Standalone-Player bauen und die sichtbare Prüfung wiederholen.
+
+**Erwartetes Ergebnis:** Template difficulty filter ist im Editor sichtbar, bleibt nach dem Neuladen erhalten und erreicht gegebenenfalls Vorschau, Play und exportierte Player.
+
+**Speicherung und Export:** Template difficulty filter wird im zuständigen Projekt, in Szene, Komponente, Asset, Arbeitsbereichseinstellung oder Build-Manifest gespeichert. Reine Editor-Daten gelangen nicht in Player.
+
+**Rückgängig und Wiederherstellung:** Für Dokumentänderungen Rückgängig/Wiederholen, für Importe oder Pakete Zurücksetzen/Rollback, bei unterbrochenen Speicherungen Recovery Browser und für projektweite Wiederherstellung Quellverwaltung oder Migrations-Backup verwenden.
+
+**Häufige Fehler und Lösungen:**
+
+- Template difficulty filter mit falscher Auswahl oder im falschen Arbeitsbereich bearbeiten.
+- Berechtigungs-, Validierungs-, Referenz- oder Hostvorlagenwarnung ignorieren.
+- Nur die Editorvorschau prüfen, nicht Speichern/Neuladen und Standalone-Player.
+
+**Tastatur und Barrierefreiheit:** Command Palette oder Tastaturfokus statt reiner Zeigerbedienung verwenden. Dialoge besitzen Namen, sichtbaren Fokus, Escape/Abbrechen und reduzierte Bewegung.
+
+**Minimales Beispiel:** Minimal: ein gültiges Ziel erstellen, Template difficulty filter konfigurieren, speichern und ein sichtbares Play-Ergebnis prüfen.
+
+**Produktionsbeispiel:** Produktion: Validierung, Lokalisierung/Barrierefreiheit, deterministische Tests, Budgets, Wiederherstellung und Entwicklungs-/Release-Builds für Template difficulty filter ergänzen.
+
+**Rhai-API:** N/A
+
+**Visual-Graph-API:** N/A
+
+<a id="project-manager-template-category-browser"></a>
+
+### Template category browser
+
+**Klassifikation:** Assisted · Project-wide · Reversible
+
+**Zweck und Einsatz:** Template category browser im Bereich Project Manager erledigt die unterstützte Autoren- oder Laufzeitaufgabe direkt im Arbeitsbereich Launcher. Verwenden, wenn das Projekt Template category browser benötigt; nicht zugehörige Einstellungen bleiben in ihrem zuständigen Arbeitsbereich.
+
+**Voraussetzungen:**
+
+- A writable project folder
+- A supported .nova/.json document for import or migration
+
+**Exakter Ablauf:**
+
+1. Launcher und danach Project Manager öffnen.
+2. Template category browser wählen und vor der Bearbeitung sichtbare Validierung und Berechtigungen prüfen.
+3. Zielprojekt, Asset oder Objekt wählen und nur endliche, unterstützte Werte eingeben.
+4. Änderung anwenden oder speichern und sichtbares Ergebnis sowie Probleme/Konsole prüfen.
+5. Bei Laufzeitverhalten Play oder Vorschau starten; Pause/Einzelschritt für deterministische Prüfung verwenden.
+6. Projekt speichern, neu laden und den unveränderten Autorenwert bestätigen.
+7. Project Health und den passenden Test ausführen, Standalone-Player bauen und die sichtbare Prüfung wiederholen.
+
+**Erwartetes Ergebnis:** Template category browser ist im Editor sichtbar, bleibt nach dem Neuladen erhalten und erreicht gegebenenfalls Vorschau, Play und exportierte Player.
+
+**Speicherung und Export:** Template category browser wird im zuständigen Projekt, in Szene, Komponente, Asset, Arbeitsbereichseinstellung oder Build-Manifest gespeichert. Reine Editor-Daten gelangen nicht in Player.
+
+**Rückgängig und Wiederherstellung:** Für Dokumentänderungen Rückgängig/Wiederholen, für Importe oder Pakete Zurücksetzen/Rollback, bei unterbrochenen Speicherungen Recovery Browser und für projektweite Wiederherstellung Quellverwaltung oder Migrations-Backup verwenden.
+
+**Häufige Fehler und Lösungen:**
+
+- Template category browser mit falscher Auswahl oder im falschen Arbeitsbereich bearbeiten.
+- Berechtigungs-, Validierungs-, Referenz- oder Hostvorlagenwarnung ignorieren.
+- Nur die Editorvorschau prüfen, nicht Speichern/Neuladen und Standalone-Player.
+
+**Tastatur und Barrierefreiheit:** Command Palette oder Tastaturfokus statt reiner Zeigerbedienung verwenden. Dialoge besitzen Namen, sichtbaren Fokus, Escape/Abbrechen und reduzierte Bewegung.
+
+**Minimales Beispiel:** Minimal: ein gültiges Ziel erstellen, Template category browser konfigurieren, speichern und ein sichtbares Play-Ergebnis prüfen.
+
+**Produktionsbeispiel:** Produktion: Validierung, Lokalisierung/Barrierefreiheit, deterministische Tests, Budgets, Wiederherstellung und Entwicklungs-/Release-Builds für Template category browser ergänzen.
+
+**Rhai-API:** N/A
+
+**Visual-Graph-API:** N/A
+
+<a id="project-manager-template-setup-time-and-capability-preview"></a>
+
+### Template setup-time and capability preview
+
+**Klassifikation:** Assisted · Project-wide · Reversible
+
+**Zweck und Einsatz:** Template setup-time and capability preview im Bereich Project Manager erledigt die unterstützte Autoren- oder Laufzeitaufgabe direkt im Arbeitsbereich Launcher. Verwenden, wenn das Projekt Template setup-time and capability preview benötigt; nicht zugehörige Einstellungen bleiben in ihrem zuständigen Arbeitsbereich.
+
+**Voraussetzungen:**
+
+- A writable project folder
+- A supported .nova/.json document for import or migration
+
+**Exakter Ablauf:**
+
+1. Launcher und danach Project Manager öffnen.
+2. Template setup-time and capability preview wählen und vor der Bearbeitung sichtbare Validierung und Berechtigungen prüfen.
+3. Zielprojekt, Asset oder Objekt wählen und nur endliche, unterstützte Werte eingeben.
+4. Änderung anwenden oder speichern und sichtbares Ergebnis sowie Probleme/Konsole prüfen.
+5. Bei Laufzeitverhalten Play oder Vorschau starten; Pause/Einzelschritt für deterministische Prüfung verwenden.
+6. Projekt speichern, neu laden und den unveränderten Autorenwert bestätigen.
+7. Project Health und den passenden Test ausführen, Standalone-Player bauen und die sichtbare Prüfung wiederholen.
+
+**Erwartetes Ergebnis:** Template setup-time and capability preview ist im Editor sichtbar, bleibt nach dem Neuladen erhalten und erreicht gegebenenfalls Vorschau, Play und exportierte Player.
+
+**Speicherung und Export:** Template setup-time and capability preview wird im zuständigen Projekt, in Szene, Komponente, Asset, Arbeitsbereichseinstellung oder Build-Manifest gespeichert. Reine Editor-Daten gelangen nicht in Player.
+
+**Rückgängig und Wiederherstellung:** Für Dokumentänderungen Rückgängig/Wiederholen, für Importe oder Pakete Zurücksetzen/Rollback, bei unterbrochenen Speicherungen Recovery Browser und für projektweite Wiederherstellung Quellverwaltung oder Migrations-Backup verwenden.
+
+**Häufige Fehler und Lösungen:**
+
+- Template setup-time and capability preview mit falscher Auswahl oder im falschen Arbeitsbereich bearbeiten.
+- Berechtigungs-, Validierungs-, Referenz- oder Hostvorlagenwarnung ignorieren.
+- Nur die Editorvorschau prüfen, nicht Speichern/Neuladen und Standalone-Player.
+
+**Tastatur und Barrierefreiheit:** Command Palette oder Tastaturfokus statt reiner Zeigerbedienung verwenden. Dialoge besitzen Namen, sichtbaren Fokus, Escape/Abbrechen und reduzierte Bewegung.
+
+**Minimales Beispiel:** Minimal: ein gültiges Ziel erstellen, Template setup-time and capability preview konfigurieren, speichern und ein sichtbares Play-Ergebnis prüfen.
+
+**Produktionsbeispiel:** Produktion: Validierung, Lokalisierung/Barrierefreiheit, deterministische Tests, Budgets, Wiederherstellung und Entwicklungs-/Release-Builds für Template setup-time and capability preview ergänzen.
 
 **Rhai-API:** N/A
 
@@ -4863,6 +5043,51 @@ Lernen durch echte Aufgaben. Jede öffentliche Funktion erklärt Zuständigkeit,
 
 **Visual-Graph-API:** N/A
 
+<a id="assets-named-resource-variants"></a>
+
+### Named Resource variants
+
+**Klassifikation:** Manual · Assisted · Project-wide · Reversible
+
+**Zweck und Einsatz:** Named Resource variants im Bereich Assets erledigt die unterstützte Autoren- oder Laufzeitaufgabe direkt im Arbeitsbereich Design. Verwenden, wenn das Projekt Named Resource variants benötigt; nicht zugehörige Einstellungen bleiben in ihrem zuständigen Arbeitsbereich.
+
+**Voraussetzungen:**
+
+- An open project
+- Source files for import operations
+
+**Exakter Ablauf:**
+
+1. Design und danach Assets öffnen.
+2. Named Resource variants wählen und vor der Bearbeitung sichtbare Validierung und Berechtigungen prüfen.
+3. Zielprojekt, Asset oder Objekt wählen und nur endliche, unterstützte Werte eingeben.
+4. Änderung anwenden oder speichern und sichtbares Ergebnis sowie Probleme/Konsole prüfen.
+5. Bei Laufzeitverhalten Play oder Vorschau starten; Pause/Einzelschritt für deterministische Prüfung verwenden.
+6. Projekt speichern, neu laden und den unveränderten Autorenwert bestätigen.
+7. Project Health und den passenden Test ausführen, Standalone-Player bauen und die sichtbare Prüfung wiederholen.
+
+**Erwartetes Ergebnis:** Named Resource variants ist im Editor sichtbar, bleibt nach dem Neuladen erhalten und erreicht gegebenenfalls Vorschau, Play und exportierte Player.
+
+**Speicherung und Export:** Named Resource variants wird im zuständigen Projekt, in Szene, Komponente, Asset, Arbeitsbereichseinstellung oder Build-Manifest gespeichert. Reine Editor-Daten gelangen nicht in Player.
+
+**Rückgängig und Wiederherstellung:** Für Dokumentänderungen Rückgängig/Wiederholen, für Importe oder Pakete Zurücksetzen/Rollback, bei unterbrochenen Speicherungen Recovery Browser und für projektweite Wiederherstellung Quellverwaltung oder Migrations-Backup verwenden.
+
+**Häufige Fehler und Lösungen:**
+
+- Named Resource variants mit falscher Auswahl oder im falschen Arbeitsbereich bearbeiten.
+- Berechtigungs-, Validierungs-, Referenz- oder Hostvorlagenwarnung ignorieren.
+- Nur die Editorvorschau prüfen, nicht Speichern/Neuladen und Standalone-Player.
+
+**Tastatur und Barrierefreiheit:** Command Palette oder Tastaturfokus statt reiner Zeigerbedienung verwenden. Dialoge besitzen Namen, sichtbaren Fokus, Escape/Abbrechen und reduzierte Bewegung.
+
+**Minimales Beispiel:** Minimal: ein gültiges Ziel erstellen, Named Resource variants konfigurieren, speichern und ein sichtbares Play-Ergebnis prüfen.
+
+**Produktionsbeispiel:** Produktion: Validierung, Lokalisierung/Barrierefreiheit, deterministische Tests, Budgets, Wiederherstellung und Entwicklungs-/Release-Builds für Named Resource variants ergänzen.
+
+**Rhai-API:** N/A
+
+**Visual-Graph-API:** N/A
+
 <a id="assets-material-resources"></a>
 
 ### Material Resources
@@ -5218,6 +5443,321 @@ Lernen durch echte Aufgaben. Jede öffentliche Funktion erklärt Zuständigkeit,
 **Minimales Beispiel:** Minimal: ein gültiges Ziel erstellen, Font shaping settings konfigurieren, speichern und ein sichtbares Play-Ergebnis prüfen.
 
 **Produktionsbeispiel:** Produktion: Validierung, Lokalisierung/Barrierefreiheit, deterministische Tests, Budgets, Wiederherstellung und Entwicklungs-/Release-Builds für Font shaping settings ergänzen.
+
+**Rhai-API:** N/A
+
+**Visual-Graph-API:** N/A
+
+<a id="assets-localization-import-validation"></a>
+
+### Localization import validation
+
+**Klassifikation:** Manual · Assisted · Project-wide · Reversible
+
+**Zweck und Einsatz:** Localization import validation im Bereich Assets erledigt die unterstützte Autoren- oder Laufzeitaufgabe direkt im Arbeitsbereich Design. Verwenden, wenn das Projekt Localization import validation benötigt; nicht zugehörige Einstellungen bleiben in ihrem zuständigen Arbeitsbereich.
+
+**Voraussetzungen:**
+
+- An open project
+- Source files for import operations
+
+**Exakter Ablauf:**
+
+1. Design und danach Assets öffnen.
+2. Localization import validation wählen und vor der Bearbeitung sichtbare Validierung und Berechtigungen prüfen.
+3. Zielprojekt, Asset oder Objekt wählen und nur endliche, unterstützte Werte eingeben.
+4. Änderung anwenden oder speichern und sichtbares Ergebnis sowie Probleme/Konsole prüfen.
+5. Bei Laufzeitverhalten Play oder Vorschau starten; Pause/Einzelschritt für deterministische Prüfung verwenden.
+6. Projekt speichern, neu laden und den unveränderten Autorenwert bestätigen.
+7. Project Health und den passenden Test ausführen, Standalone-Player bauen und die sichtbare Prüfung wiederholen.
+
+**Erwartetes Ergebnis:** Localization import validation ist im Editor sichtbar, bleibt nach dem Neuladen erhalten und erreicht gegebenenfalls Vorschau, Play und exportierte Player.
+
+**Speicherung und Export:** Localization import validation wird im zuständigen Projekt, in Szene, Komponente, Asset, Arbeitsbereichseinstellung oder Build-Manifest gespeichert. Reine Editor-Daten gelangen nicht in Player.
+
+**Rückgängig und Wiederherstellung:** Für Dokumentänderungen Rückgängig/Wiederholen, für Importe oder Pakete Zurücksetzen/Rollback, bei unterbrochenen Speicherungen Recovery Browser und für projektweite Wiederherstellung Quellverwaltung oder Migrations-Backup verwenden.
+
+**Häufige Fehler und Lösungen:**
+
+- Localization import validation mit falscher Auswahl oder im falschen Arbeitsbereich bearbeiten.
+- Berechtigungs-, Validierungs-, Referenz- oder Hostvorlagenwarnung ignorieren.
+- Nur die Editorvorschau prüfen, nicht Speichern/Neuladen und Standalone-Player.
+
+**Tastatur und Barrierefreiheit:** Command Palette oder Tastaturfokus statt reiner Zeigerbedienung verwenden. Dialoge besitzen Namen, sichtbaren Fokus, Escape/Abbrechen und reduzierte Bewegung.
+
+**Minimales Beispiel:** Minimal: ein gültiges Ziel erstellen, Localization import validation konfigurieren, speichern und ein sichtbares Play-Ergebnis prüfen.
+
+**Produktionsbeispiel:** Produktion: Validierung, Lokalisierung/Barrierefreiheit, deterministische Tests, Budgets, Wiederherstellung und Entwicklungs-/Release-Builds für Localization import validation ergänzen.
+
+**Rhai-API:** N/A
+
+**Visual-Graph-API:** N/A
+
+<a id="assets-nine-patch-production-profile"></a>
+
+### Nine-patch production profile
+
+**Klassifikation:** Manual · Assisted · Project-wide · Reversible
+
+**Zweck und Einsatz:** Nine-patch production profile im Bereich Assets erledigt die unterstützte Autoren- oder Laufzeitaufgabe direkt im Arbeitsbereich Design. Verwenden, wenn das Projekt Nine-patch production profile benötigt; nicht zugehörige Einstellungen bleiben in ihrem zuständigen Arbeitsbereich.
+
+**Voraussetzungen:**
+
+- An open project
+- Source files for import operations
+
+**Exakter Ablauf:**
+
+1. Design und danach Assets öffnen.
+2. Nine-patch production profile wählen und vor der Bearbeitung sichtbare Validierung und Berechtigungen prüfen.
+3. Zielprojekt, Asset oder Objekt wählen und nur endliche, unterstützte Werte eingeben.
+4. Änderung anwenden oder speichern und sichtbares Ergebnis sowie Probleme/Konsole prüfen.
+5. Bei Laufzeitverhalten Play oder Vorschau starten; Pause/Einzelschritt für deterministische Prüfung verwenden.
+6. Projekt speichern, neu laden und den unveränderten Autorenwert bestätigen.
+7. Project Health und den passenden Test ausführen, Standalone-Player bauen und die sichtbare Prüfung wiederholen.
+
+**Erwartetes Ergebnis:** Nine-patch production profile ist im Editor sichtbar, bleibt nach dem Neuladen erhalten und erreicht gegebenenfalls Vorschau, Play und exportierte Player.
+
+**Speicherung und Export:** Nine-patch production profile wird im zuständigen Projekt, in Szene, Komponente, Asset, Arbeitsbereichseinstellung oder Build-Manifest gespeichert. Reine Editor-Daten gelangen nicht in Player.
+
+**Rückgängig und Wiederherstellung:** Für Dokumentänderungen Rückgängig/Wiederholen, für Importe oder Pakete Zurücksetzen/Rollback, bei unterbrochenen Speicherungen Recovery Browser und für projektweite Wiederherstellung Quellverwaltung oder Migrations-Backup verwenden.
+
+**Häufige Fehler und Lösungen:**
+
+- Nine-patch production profile mit falscher Auswahl oder im falschen Arbeitsbereich bearbeiten.
+- Berechtigungs-, Validierungs-, Referenz- oder Hostvorlagenwarnung ignorieren.
+- Nur die Editorvorschau prüfen, nicht Speichern/Neuladen und Standalone-Player.
+
+**Tastatur und Barrierefreiheit:** Command Palette oder Tastaturfokus statt reiner Zeigerbedienung verwenden. Dialoge besitzen Namen, sichtbaren Fokus, Escape/Abbrechen und reduzierte Bewegung.
+
+**Minimales Beispiel:** Minimal: ein gültiges Ziel erstellen, Nine-patch production profile konfigurieren, speichern und ein sichtbares Play-Ergebnis prüfen.
+
+**Produktionsbeispiel:** Produktion: Validierung, Lokalisierung/Barrierefreiheit, deterministische Tests, Budgets, Wiederherstellung und Entwicklungs-/Release-Builds für Nine-patch production profile ergänzen.
+
+**Rhai-API:** N/A
+
+**Visual-Graph-API:** N/A
+
+<a id="assets-vector-and-sdf-production-profile"></a>
+
+### Vector and SDF production profile
+
+**Klassifikation:** Manual · Assisted · Project-wide · Reversible
+
+**Zweck und Einsatz:** Vector and SDF production profile im Bereich Assets erledigt die unterstützte Autoren- oder Laufzeitaufgabe direkt im Arbeitsbereich Design. Verwenden, wenn das Projekt Vector and SDF production profile benötigt; nicht zugehörige Einstellungen bleiben in ihrem zuständigen Arbeitsbereich.
+
+**Voraussetzungen:**
+
+- An open project
+- Source files for import operations
+
+**Exakter Ablauf:**
+
+1. Design und danach Assets öffnen.
+2. Vector and SDF production profile wählen und vor der Bearbeitung sichtbare Validierung und Berechtigungen prüfen.
+3. Zielprojekt, Asset oder Objekt wählen und nur endliche, unterstützte Werte eingeben.
+4. Änderung anwenden oder speichern und sichtbares Ergebnis sowie Probleme/Konsole prüfen.
+5. Bei Laufzeitverhalten Play oder Vorschau starten; Pause/Einzelschritt für deterministische Prüfung verwenden.
+6. Projekt speichern, neu laden und den unveränderten Autorenwert bestätigen.
+7. Project Health und den passenden Test ausführen, Standalone-Player bauen und die sichtbare Prüfung wiederholen.
+
+**Erwartetes Ergebnis:** Vector and SDF production profile ist im Editor sichtbar, bleibt nach dem Neuladen erhalten und erreicht gegebenenfalls Vorschau, Play und exportierte Player.
+
+**Speicherung und Export:** Vector and SDF production profile wird im zuständigen Projekt, in Szene, Komponente, Asset, Arbeitsbereichseinstellung oder Build-Manifest gespeichert. Reine Editor-Daten gelangen nicht in Player.
+
+**Rückgängig und Wiederherstellung:** Für Dokumentänderungen Rückgängig/Wiederholen, für Importe oder Pakete Zurücksetzen/Rollback, bei unterbrochenen Speicherungen Recovery Browser und für projektweite Wiederherstellung Quellverwaltung oder Migrations-Backup verwenden.
+
+**Häufige Fehler und Lösungen:**
+
+- Vector and SDF production profile mit falscher Auswahl oder im falschen Arbeitsbereich bearbeiten.
+- Berechtigungs-, Validierungs-, Referenz- oder Hostvorlagenwarnung ignorieren.
+- Nur die Editorvorschau prüfen, nicht Speichern/Neuladen und Standalone-Player.
+
+**Tastatur und Barrierefreiheit:** Command Palette oder Tastaturfokus statt reiner Zeigerbedienung verwenden. Dialoge besitzen Namen, sichtbaren Fokus, Escape/Abbrechen und reduzierte Bewegung.
+
+**Minimales Beispiel:** Minimal: ein gültiges Ziel erstellen, Vector and SDF production profile konfigurieren, speichern und ein sichtbares Play-Ergebnis prüfen.
+
+**Produktionsbeispiel:** Produktion: Validierung, Lokalisierung/Barrierefreiheit, deterministische Tests, Budgets, Wiederherstellung und Entwicklungs-/Release-Builds für Vector and SDF production profile ergänzen.
+
+**Rhai-API:** N/A
+
+**Visual-Graph-API:** N/A
+
+<a id="assets-two-way-dependency-graph"></a>
+
+### Two-way dependency graph
+
+**Klassifikation:** Manual · Assisted · Project-wide · Reversible
+
+**Zweck und Einsatz:** Two-way dependency graph im Bereich Assets erledigt die unterstützte Autoren- oder Laufzeitaufgabe direkt im Arbeitsbereich Design. Verwenden, wenn das Projekt Two-way dependency graph benötigt; nicht zugehörige Einstellungen bleiben in ihrem zuständigen Arbeitsbereich.
+
+**Voraussetzungen:**
+
+- An open project
+- Source files for import operations
+
+**Exakter Ablauf:**
+
+1. Design und danach Assets öffnen.
+2. Two-way dependency graph wählen und vor der Bearbeitung sichtbare Validierung und Berechtigungen prüfen.
+3. Zielprojekt, Asset oder Objekt wählen und nur endliche, unterstützte Werte eingeben.
+4. Änderung anwenden oder speichern und sichtbares Ergebnis sowie Probleme/Konsole prüfen.
+5. Bei Laufzeitverhalten Play oder Vorschau starten; Pause/Einzelschritt für deterministische Prüfung verwenden.
+6. Projekt speichern, neu laden und den unveränderten Autorenwert bestätigen.
+7. Project Health und den passenden Test ausführen, Standalone-Player bauen und die sichtbare Prüfung wiederholen.
+
+**Erwartetes Ergebnis:** Two-way dependency graph ist im Editor sichtbar, bleibt nach dem Neuladen erhalten und erreicht gegebenenfalls Vorschau, Play und exportierte Player.
+
+**Speicherung und Export:** Two-way dependency graph wird im zuständigen Projekt, in Szene, Komponente, Asset, Arbeitsbereichseinstellung oder Build-Manifest gespeichert. Reine Editor-Daten gelangen nicht in Player.
+
+**Rückgängig und Wiederherstellung:** Für Dokumentänderungen Rückgängig/Wiederholen, für Importe oder Pakete Zurücksetzen/Rollback, bei unterbrochenen Speicherungen Recovery Browser und für projektweite Wiederherstellung Quellverwaltung oder Migrations-Backup verwenden.
+
+**Häufige Fehler und Lösungen:**
+
+- Two-way dependency graph mit falscher Auswahl oder im falschen Arbeitsbereich bearbeiten.
+- Berechtigungs-, Validierungs-, Referenz- oder Hostvorlagenwarnung ignorieren.
+- Nur die Editorvorschau prüfen, nicht Speichern/Neuladen und Standalone-Player.
+
+**Tastatur und Barrierefreiheit:** Command Palette oder Tastaturfokus statt reiner Zeigerbedienung verwenden. Dialoge besitzen Namen, sichtbaren Fokus, Escape/Abbrechen und reduzierte Bewegung.
+
+**Minimales Beispiel:** Minimal: ein gültiges Ziel erstellen, Two-way dependency graph konfigurieren, speichern und ein sichtbares Play-Ergebnis prüfen.
+
+**Produktionsbeispiel:** Produktion: Validierung, Lokalisierung/Barrierefreiheit, deterministische Tests, Budgets, Wiederherstellung und Entwicklungs-/Release-Builds für Two-way dependency graph ergänzen.
+
+**Rhai-API:** N/A
+
+**Visual-Graph-API:** N/A
+
+<a id="assets-cycle-and-missing-reference-visualization"></a>
+
+### Cycle and missing-reference visualization
+
+**Klassifikation:** Manual · Assisted · Project-wide · Reversible
+
+**Zweck und Einsatz:** Cycle and missing-reference visualization im Bereich Assets erledigt die unterstützte Autoren- oder Laufzeitaufgabe direkt im Arbeitsbereich Design. Verwenden, wenn das Projekt Cycle and missing-reference visualization benötigt; nicht zugehörige Einstellungen bleiben in ihrem zuständigen Arbeitsbereich.
+
+**Voraussetzungen:**
+
+- An open project
+- Source files for import operations
+
+**Exakter Ablauf:**
+
+1. Design und danach Assets öffnen.
+2. Cycle and missing-reference visualization wählen und vor der Bearbeitung sichtbare Validierung und Berechtigungen prüfen.
+3. Zielprojekt, Asset oder Objekt wählen und nur endliche, unterstützte Werte eingeben.
+4. Änderung anwenden oder speichern und sichtbares Ergebnis sowie Probleme/Konsole prüfen.
+5. Bei Laufzeitverhalten Play oder Vorschau starten; Pause/Einzelschritt für deterministische Prüfung verwenden.
+6. Projekt speichern, neu laden und den unveränderten Autorenwert bestätigen.
+7. Project Health und den passenden Test ausführen, Standalone-Player bauen und die sichtbare Prüfung wiederholen.
+
+**Erwartetes Ergebnis:** Cycle and missing-reference visualization ist im Editor sichtbar, bleibt nach dem Neuladen erhalten und erreicht gegebenenfalls Vorschau, Play und exportierte Player.
+
+**Speicherung und Export:** Cycle and missing-reference visualization wird im zuständigen Projekt, in Szene, Komponente, Asset, Arbeitsbereichseinstellung oder Build-Manifest gespeichert. Reine Editor-Daten gelangen nicht in Player.
+
+**Rückgängig und Wiederherstellung:** Für Dokumentänderungen Rückgängig/Wiederholen, für Importe oder Pakete Zurücksetzen/Rollback, bei unterbrochenen Speicherungen Recovery Browser und für projektweite Wiederherstellung Quellverwaltung oder Migrations-Backup verwenden.
+
+**Häufige Fehler und Lösungen:**
+
+- Cycle and missing-reference visualization mit falscher Auswahl oder im falschen Arbeitsbereich bearbeiten.
+- Berechtigungs-, Validierungs-, Referenz- oder Hostvorlagenwarnung ignorieren.
+- Nur die Editorvorschau prüfen, nicht Speichern/Neuladen und Standalone-Player.
+
+**Tastatur und Barrierefreiheit:** Command Palette oder Tastaturfokus statt reiner Zeigerbedienung verwenden. Dialoge besitzen Namen, sichtbaren Fokus, Escape/Abbrechen und reduzierte Bewegung.
+
+**Minimales Beispiel:** Minimal: ein gültiges Ziel erstellen, Cycle and missing-reference visualization konfigurieren, speichern und ein sichtbares Play-Ergebnis prüfen.
+
+**Produktionsbeispiel:** Produktion: Validierung, Lokalisierung/Barrierefreiheit, deterministische Tests, Budgets, Wiederherstellung und Entwicklungs-/Release-Builds für Cycle and missing-reference visualization ergänzen.
+
+**Rhai-API:** N/A
+
+**Visual-Graph-API:** N/A
+
+<a id="assets-deterministic-non-image-thumbnails"></a>
+
+### Deterministic non-image thumbnails
+
+**Klassifikation:** Manual · Assisted · Project-wide · Reversible
+
+**Zweck und Einsatz:** Deterministic non-image thumbnails im Bereich Assets erledigt die unterstützte Autoren- oder Laufzeitaufgabe direkt im Arbeitsbereich Design. Verwenden, wenn das Projekt Deterministic non-image thumbnails benötigt; nicht zugehörige Einstellungen bleiben in ihrem zuständigen Arbeitsbereich.
+
+**Voraussetzungen:**
+
+- An open project
+- Source files for import operations
+
+**Exakter Ablauf:**
+
+1. Design und danach Assets öffnen.
+2. Deterministic non-image thumbnails wählen und vor der Bearbeitung sichtbare Validierung und Berechtigungen prüfen.
+3. Zielprojekt, Asset oder Objekt wählen und nur endliche, unterstützte Werte eingeben.
+4. Änderung anwenden oder speichern und sichtbares Ergebnis sowie Probleme/Konsole prüfen.
+5. Bei Laufzeitverhalten Play oder Vorschau starten; Pause/Einzelschritt für deterministische Prüfung verwenden.
+6. Projekt speichern, neu laden und den unveränderten Autorenwert bestätigen.
+7. Project Health und den passenden Test ausführen, Standalone-Player bauen und die sichtbare Prüfung wiederholen.
+
+**Erwartetes Ergebnis:** Deterministic non-image thumbnails ist im Editor sichtbar, bleibt nach dem Neuladen erhalten und erreicht gegebenenfalls Vorschau, Play und exportierte Player.
+
+**Speicherung und Export:** Deterministic non-image thumbnails wird im zuständigen Projekt, in Szene, Komponente, Asset, Arbeitsbereichseinstellung oder Build-Manifest gespeichert. Reine Editor-Daten gelangen nicht in Player.
+
+**Rückgängig und Wiederherstellung:** Für Dokumentänderungen Rückgängig/Wiederholen, für Importe oder Pakete Zurücksetzen/Rollback, bei unterbrochenen Speicherungen Recovery Browser und für projektweite Wiederherstellung Quellverwaltung oder Migrations-Backup verwenden.
+
+**Häufige Fehler und Lösungen:**
+
+- Deterministic non-image thumbnails mit falscher Auswahl oder im falschen Arbeitsbereich bearbeiten.
+- Berechtigungs-, Validierungs-, Referenz- oder Hostvorlagenwarnung ignorieren.
+- Nur die Editorvorschau prüfen, nicht Speichern/Neuladen und Standalone-Player.
+
+**Tastatur und Barrierefreiheit:** Command Palette oder Tastaturfokus statt reiner Zeigerbedienung verwenden. Dialoge besitzen Namen, sichtbaren Fokus, Escape/Abbrechen und reduzierte Bewegung.
+
+**Minimales Beispiel:** Minimal: ein gültiges Ziel erstellen, Deterministic non-image thumbnails konfigurieren, speichern und ein sichtbares Play-Ergebnis prüfen.
+
+**Produktionsbeispiel:** Produktion: Validierung, Lokalisierung/Barrierefreiheit, deterministische Tests, Budgets, Wiederherstellung und Entwicklungs-/Release-Builds für Deterministic non-image thumbnails ergänzen.
+
+**Rhai-API:** N/A
+
+**Visual-Graph-API:** N/A
+
+<a id="assets-offline-trusted-content-discovery"></a>
+
+### Offline trusted content discovery
+
+**Klassifikation:** Manual · Assisted · Project-wide · Reversible
+
+**Zweck und Einsatz:** Offline trusted content discovery im Bereich Assets erledigt die unterstützte Autoren- oder Laufzeitaufgabe direkt im Arbeitsbereich Design. Verwenden, wenn das Projekt Offline trusted content discovery benötigt; nicht zugehörige Einstellungen bleiben in ihrem zuständigen Arbeitsbereich.
+
+**Voraussetzungen:**
+
+- An open project
+- Source files for import operations
+
+**Exakter Ablauf:**
+
+1. Design und danach Assets öffnen.
+2. Offline trusted content discovery wählen und vor der Bearbeitung sichtbare Validierung und Berechtigungen prüfen.
+3. Zielprojekt, Asset oder Objekt wählen und nur endliche, unterstützte Werte eingeben.
+4. Änderung anwenden oder speichern und sichtbares Ergebnis sowie Probleme/Konsole prüfen.
+5. Bei Laufzeitverhalten Play oder Vorschau starten; Pause/Einzelschritt für deterministische Prüfung verwenden.
+6. Projekt speichern, neu laden und den unveränderten Autorenwert bestätigen.
+7. Project Health und den passenden Test ausführen, Standalone-Player bauen und die sichtbare Prüfung wiederholen.
+
+**Erwartetes Ergebnis:** Offline trusted content discovery ist im Editor sichtbar, bleibt nach dem Neuladen erhalten und erreicht gegebenenfalls Vorschau, Play und exportierte Player.
+
+**Speicherung und Export:** Offline trusted content discovery wird im zuständigen Projekt, in Szene, Komponente, Asset, Arbeitsbereichseinstellung oder Build-Manifest gespeichert. Reine Editor-Daten gelangen nicht in Player.
+
+**Rückgängig und Wiederherstellung:** Für Dokumentänderungen Rückgängig/Wiederholen, für Importe oder Pakete Zurücksetzen/Rollback, bei unterbrochenen Speicherungen Recovery Browser und für projektweite Wiederherstellung Quellverwaltung oder Migrations-Backup verwenden.
+
+**Häufige Fehler und Lösungen:**
+
+- Offline trusted content discovery mit falscher Auswahl oder im falschen Arbeitsbereich bearbeiten.
+- Berechtigungs-, Validierungs-, Referenz- oder Hostvorlagenwarnung ignorieren.
+- Nur die Editorvorschau prüfen, nicht Speichern/Neuladen und Standalone-Player.
+
+**Tastatur und Barrierefreiheit:** Command Palette oder Tastaturfokus statt reiner Zeigerbedienung verwenden. Dialoge besitzen Namen, sichtbaren Fokus, Escape/Abbrechen und reduzierte Bewegung.
+
+**Minimales Beispiel:** Minimal: ein gültiges Ziel erstellen, Offline trusted content discovery konfigurieren, speichern und ein sichtbares Play-Ergebnis prüfen.
+
+**Produktionsbeispiel:** Produktion: Validierung, Lokalisierung/Barrierefreiheit, deterministische Tests, Budgets, Wiederherstellung und Entwicklungs-/Release-Builds für Offline trusted content discovery ergänzen.
 
 **Rhai-API:** N/A
 
@@ -7075,6 +7615,729 @@ Lernen durch echte Aufgaben. Jede öffentliche Funktion erklärt Zuständigkeit,
 **Visual-Graph-API:** `Events/Awake`, `Events/Start`, `Events/Fixed Update`, `Signals/Emit`
 
 
+## Event Sheet and Object Blueprint
+
+<a id="event-sheet-per-object-event-sheet"></a>
+
+### Per-object Event Sheet
+
+**Klassifikation:** Manual · Assisted · Runtime · Per-object · Reversible
+
+**Zweck und Einsatz:** Per-object Event Sheet im Bereich Event Sheet and Object Blueprint erledigt die unterstützte Autoren- oder Laufzeitaufgabe direkt im Arbeitsbereich Script. Verwenden, wenn das Projekt Per-object Event Sheet benötigt; nicht zugehörige Einstellungen bleiben in ihrem zuständigen Arbeitsbereich.
+
+**Voraussetzungen:**
+
+- A selected scene object
+- A Rhai or Visual Graph action asset for runtime callbacks
+
+**Exakter Ablauf:**
+
+1. Script und danach Event Sheet and Object Blueprint öffnen.
+2. Per-object Event Sheet wählen und vor der Bearbeitung sichtbare Validierung und Berechtigungen prüfen.
+3. Zielprojekt, Asset oder Objekt wählen und nur endliche, unterstützte Werte eingeben.
+4. Änderung anwenden oder speichern und sichtbares Ergebnis sowie Probleme/Konsole prüfen.
+5. Bei Laufzeitverhalten Play oder Vorschau starten; Pause/Einzelschritt für deterministische Prüfung verwenden.
+6. Projekt speichern, neu laden und den unveränderten Autorenwert bestätigen.
+7. Project Health und den passenden Test ausführen, Standalone-Player bauen und die sichtbare Prüfung wiederholen.
+
+**Erwartetes Ergebnis:** Per-object Event Sheet ist im Editor sichtbar, bleibt nach dem Neuladen erhalten und erreicht gegebenenfalls Vorschau, Play und exportierte Player.
+
+**Speicherung und Export:** Per-object Event Sheet wird im zuständigen Projekt, in Szene, Komponente, Asset, Arbeitsbereichseinstellung oder Build-Manifest gespeichert. Reine Editor-Daten gelangen nicht in Player.
+
+**Rückgängig und Wiederherstellung:** Für Dokumentänderungen Rückgängig/Wiederholen, für Importe oder Pakete Zurücksetzen/Rollback, bei unterbrochenen Speicherungen Recovery Browser und für projektweite Wiederherstellung Quellverwaltung oder Migrations-Backup verwenden.
+
+**Häufige Fehler und Lösungen:**
+
+- Per-object Event Sheet mit falscher Auswahl oder im falschen Arbeitsbereich bearbeiten.
+- Berechtigungs-, Validierungs-, Referenz- oder Hostvorlagenwarnung ignorieren.
+- Nur die Editorvorschau prüfen, nicht Speichern/Neuladen und Standalone-Player.
+
+**Tastatur und Barrierefreiheit:** Command Palette oder Tastaturfokus statt reiner Zeigerbedienung verwenden. Dialoge besitzen Namen, sichtbaren Fokus, Escape/Abbrechen und reduzierte Bewegung.
+
+**Minimales Beispiel:** Minimal: ein gültiges Ziel erstellen, Per-object Event Sheet konfigurieren, speichern und ein sichtbares Play-Ergebnis prüfen.
+
+**Produktionsbeispiel:** Produktion: Validierung, Lokalisierung/Barrierefreiheit, deterministische Tests, Budgets, Wiederherstellung und Entwicklungs-/Release-Builds für Per-object Event Sheet ergänzen.
+
+**Rhai-API:** `awake`, `start`, `update`, `fixed_update`, `on_timer`, `on_signal`, `on_collision_enter`, `on_trigger_enter`, `input_pressed`, `timer_start`, `random`
+
+**Visual-Graph-API:** `Events`, `Input`, `Timing`, `Signals`, `Physics`, `UI`, `Animation`, `Network`
+
+<a id="event-sheet-awake-start-update-and-fixed-update-events"></a>
+
+### Awake, Start, Update and Fixed Update events
+
+**Klassifikation:** Manual · Assisted · Runtime · Per-object · Reversible
+
+**Zweck und Einsatz:** Awake, Start, Update and Fixed Update events im Bereich Event Sheet and Object Blueprint erledigt die unterstützte Autoren- oder Laufzeitaufgabe direkt im Arbeitsbereich Script. Verwenden, wenn das Projekt Awake, Start, Update and Fixed Update events benötigt; nicht zugehörige Einstellungen bleiben in ihrem zuständigen Arbeitsbereich.
+
+**Voraussetzungen:**
+
+- A selected scene object
+- A Rhai or Visual Graph action asset for runtime callbacks
+
+**Exakter Ablauf:**
+
+1. Script und danach Event Sheet and Object Blueprint öffnen.
+2. Awake, Start, Update and Fixed Update events wählen und vor der Bearbeitung sichtbare Validierung und Berechtigungen prüfen.
+3. Zielprojekt, Asset oder Objekt wählen und nur endliche, unterstützte Werte eingeben.
+4. Änderung anwenden oder speichern und sichtbares Ergebnis sowie Probleme/Konsole prüfen.
+5. Bei Laufzeitverhalten Play oder Vorschau starten; Pause/Einzelschritt für deterministische Prüfung verwenden.
+6. Projekt speichern, neu laden und den unveränderten Autorenwert bestätigen.
+7. Project Health und den passenden Test ausführen, Standalone-Player bauen und die sichtbare Prüfung wiederholen.
+
+**Erwartetes Ergebnis:** Awake, Start, Update and Fixed Update events ist im Editor sichtbar, bleibt nach dem Neuladen erhalten und erreicht gegebenenfalls Vorschau, Play und exportierte Player.
+
+**Speicherung und Export:** Awake, Start, Update and Fixed Update events wird im zuständigen Projekt, in Szene, Komponente, Asset, Arbeitsbereichseinstellung oder Build-Manifest gespeichert. Reine Editor-Daten gelangen nicht in Player.
+
+**Rückgängig und Wiederherstellung:** Für Dokumentänderungen Rückgängig/Wiederholen, für Importe oder Pakete Zurücksetzen/Rollback, bei unterbrochenen Speicherungen Recovery Browser und für projektweite Wiederherstellung Quellverwaltung oder Migrations-Backup verwenden.
+
+**Häufige Fehler und Lösungen:**
+
+- Awake, Start, Update and Fixed Update events mit falscher Auswahl oder im falschen Arbeitsbereich bearbeiten.
+- Berechtigungs-, Validierungs-, Referenz- oder Hostvorlagenwarnung ignorieren.
+- Nur die Editorvorschau prüfen, nicht Speichern/Neuladen und Standalone-Player.
+
+**Tastatur und Barrierefreiheit:** Command Palette oder Tastaturfokus statt reiner Zeigerbedienung verwenden. Dialoge besitzen Namen, sichtbaren Fokus, Escape/Abbrechen und reduzierte Bewegung.
+
+**Minimales Beispiel:** Minimal: ein gültiges Ziel erstellen, Awake, Start, Update and Fixed Update events konfigurieren, speichern und ein sichtbares Play-Ergebnis prüfen.
+
+**Produktionsbeispiel:** Produktion: Validierung, Lokalisierung/Barrierefreiheit, deterministische Tests, Budgets, Wiederherstellung und Entwicklungs-/Release-Builds für Awake, Start, Update and Fixed Update events ergänzen.
+
+**Rhai-API:** `awake`, `start`, `update`, `fixed_update`, `on_timer`, `on_signal`, `on_collision_enter`, `on_trigger_enter`, `input_pressed`, `timer_start`, `random`
+
+**Visual-Graph-API:** `Events`, `Input`, `Timing`, `Signals`, `Physics`, `UI`, `Animation`, `Network`
+
+<a id="event-sheet-input-and-timer-events"></a>
+
+### Input and timer events
+
+**Klassifikation:** Manual · Assisted · Runtime · Per-object · Reversible
+
+**Zweck und Einsatz:** Input and timer events im Bereich Event Sheet and Object Blueprint erledigt die unterstützte Autoren- oder Laufzeitaufgabe direkt im Arbeitsbereich Script. Verwenden, wenn das Projekt Input and timer events benötigt; nicht zugehörige Einstellungen bleiben in ihrem zuständigen Arbeitsbereich.
+
+**Voraussetzungen:**
+
+- A selected scene object
+- A Rhai or Visual Graph action asset for runtime callbacks
+
+**Exakter Ablauf:**
+
+1. Script und danach Event Sheet and Object Blueprint öffnen.
+2. Input and timer events wählen und vor der Bearbeitung sichtbare Validierung und Berechtigungen prüfen.
+3. Zielprojekt, Asset oder Objekt wählen und nur endliche, unterstützte Werte eingeben.
+4. Änderung anwenden oder speichern und sichtbares Ergebnis sowie Probleme/Konsole prüfen.
+5. Bei Laufzeitverhalten Play oder Vorschau starten; Pause/Einzelschritt für deterministische Prüfung verwenden.
+6. Projekt speichern, neu laden und den unveränderten Autorenwert bestätigen.
+7. Project Health und den passenden Test ausführen, Standalone-Player bauen und die sichtbare Prüfung wiederholen.
+
+**Erwartetes Ergebnis:** Input and timer events ist im Editor sichtbar, bleibt nach dem Neuladen erhalten und erreicht gegebenenfalls Vorschau, Play und exportierte Player.
+
+**Speicherung und Export:** Input and timer events wird im zuständigen Projekt, in Szene, Komponente, Asset, Arbeitsbereichseinstellung oder Build-Manifest gespeichert. Reine Editor-Daten gelangen nicht in Player.
+
+**Rückgängig und Wiederherstellung:** Für Dokumentänderungen Rückgängig/Wiederholen, für Importe oder Pakete Zurücksetzen/Rollback, bei unterbrochenen Speicherungen Recovery Browser und für projektweite Wiederherstellung Quellverwaltung oder Migrations-Backup verwenden.
+
+**Häufige Fehler und Lösungen:**
+
+- Input and timer events mit falscher Auswahl oder im falschen Arbeitsbereich bearbeiten.
+- Berechtigungs-, Validierungs-, Referenz- oder Hostvorlagenwarnung ignorieren.
+- Nur die Editorvorschau prüfen, nicht Speichern/Neuladen und Standalone-Player.
+
+**Tastatur und Barrierefreiheit:** Command Palette oder Tastaturfokus statt reiner Zeigerbedienung verwenden. Dialoge besitzen Namen, sichtbaren Fokus, Escape/Abbrechen und reduzierte Bewegung.
+
+**Minimales Beispiel:** Minimal: ein gültiges Ziel erstellen, Input and timer events konfigurieren, speichern und ein sichtbares Play-Ergebnis prüfen.
+
+**Produktionsbeispiel:** Produktion: Validierung, Lokalisierung/Barrierefreiheit, deterministische Tests, Budgets, Wiederherstellung und Entwicklungs-/Release-Builds für Input and timer events ergänzen.
+
+**Rhai-API:** `awake`, `start`, `update`, `fixed_update`, `on_timer`, `on_signal`, `on_collision_enter`, `on_trigger_enter`, `input_pressed`, `timer_start`, `random`
+
+**Visual-Graph-API:** `Events`, `Input`, `Timing`, `Signals`, `Physics`, `UI`, `Animation`, `Network`
+
+<a id="event-sheet-signal-collision-and-trigger-events"></a>
+
+### Signal, collision and trigger events
+
+**Klassifikation:** Manual · Assisted · Runtime · Per-object · Reversible
+
+**Zweck und Einsatz:** Signal, collision and trigger events im Bereich Event Sheet and Object Blueprint erledigt die unterstützte Autoren- oder Laufzeitaufgabe direkt im Arbeitsbereich Script. Verwenden, wenn das Projekt Signal, collision and trigger events benötigt; nicht zugehörige Einstellungen bleiben in ihrem zuständigen Arbeitsbereich.
+
+**Voraussetzungen:**
+
+- A selected scene object
+- A Rhai or Visual Graph action asset for runtime callbacks
+
+**Exakter Ablauf:**
+
+1. Script und danach Event Sheet and Object Blueprint öffnen.
+2. Signal, collision and trigger events wählen und vor der Bearbeitung sichtbare Validierung und Berechtigungen prüfen.
+3. Zielprojekt, Asset oder Objekt wählen und nur endliche, unterstützte Werte eingeben.
+4. Änderung anwenden oder speichern und sichtbares Ergebnis sowie Probleme/Konsole prüfen.
+5. Bei Laufzeitverhalten Play oder Vorschau starten; Pause/Einzelschritt für deterministische Prüfung verwenden.
+6. Projekt speichern, neu laden und den unveränderten Autorenwert bestätigen.
+7. Project Health und den passenden Test ausführen, Standalone-Player bauen und die sichtbare Prüfung wiederholen.
+
+**Erwartetes Ergebnis:** Signal, collision and trigger events ist im Editor sichtbar, bleibt nach dem Neuladen erhalten und erreicht gegebenenfalls Vorschau, Play und exportierte Player.
+
+**Speicherung und Export:** Signal, collision and trigger events wird im zuständigen Projekt, in Szene, Komponente, Asset, Arbeitsbereichseinstellung oder Build-Manifest gespeichert. Reine Editor-Daten gelangen nicht in Player.
+
+**Rückgängig und Wiederherstellung:** Für Dokumentänderungen Rückgängig/Wiederholen, für Importe oder Pakete Zurücksetzen/Rollback, bei unterbrochenen Speicherungen Recovery Browser und für projektweite Wiederherstellung Quellverwaltung oder Migrations-Backup verwenden.
+
+**Häufige Fehler und Lösungen:**
+
+- Signal, collision and trigger events mit falscher Auswahl oder im falschen Arbeitsbereich bearbeiten.
+- Berechtigungs-, Validierungs-, Referenz- oder Hostvorlagenwarnung ignorieren.
+- Nur die Editorvorschau prüfen, nicht Speichern/Neuladen und Standalone-Player.
+
+**Tastatur und Barrierefreiheit:** Command Palette oder Tastaturfokus statt reiner Zeigerbedienung verwenden. Dialoge besitzen Namen, sichtbaren Fokus, Escape/Abbrechen und reduzierte Bewegung.
+
+**Minimales Beispiel:** Minimal: ein gültiges Ziel erstellen, Signal, collision and trigger events konfigurieren, speichern und ein sichtbares Play-Ergebnis prüfen.
+
+**Produktionsbeispiel:** Produktion: Validierung, Lokalisierung/Barrierefreiheit, deterministische Tests, Budgets, Wiederherstellung und Entwicklungs-/Release-Builds für Signal, collision and trigger events ergänzen.
+
+**Rhai-API:** `awake`, `start`, `update`, `fixed_update`, `on_timer`, `on_signal`, `on_collision_enter`, `on_trigger_enter`, `input_pressed`, `timer_start`, `random`
+
+**Visual-Graph-API:** `Events`, `Input`, `Timing`, `Signals`, `Physics`, `UI`, `Animation`, `Network`
+
+<a id="event-sheet-ui-animation-and-network-events"></a>
+
+### UI, animation and network events
+
+**Klassifikation:** Manual · Assisted · Runtime · Per-object · Reversible
+
+**Zweck und Einsatz:** UI, animation and network events im Bereich Event Sheet and Object Blueprint erledigt die unterstützte Autoren- oder Laufzeitaufgabe direkt im Arbeitsbereich Script. Verwenden, wenn das Projekt UI, animation and network events benötigt; nicht zugehörige Einstellungen bleiben in ihrem zuständigen Arbeitsbereich.
+
+**Voraussetzungen:**
+
+- A selected scene object
+- A Rhai or Visual Graph action asset for runtime callbacks
+
+**Exakter Ablauf:**
+
+1. Script und danach Event Sheet and Object Blueprint öffnen.
+2. UI, animation and network events wählen und vor der Bearbeitung sichtbare Validierung und Berechtigungen prüfen.
+3. Zielprojekt, Asset oder Objekt wählen und nur endliche, unterstützte Werte eingeben.
+4. Änderung anwenden oder speichern und sichtbares Ergebnis sowie Probleme/Konsole prüfen.
+5. Bei Laufzeitverhalten Play oder Vorschau starten; Pause/Einzelschritt für deterministische Prüfung verwenden.
+6. Projekt speichern, neu laden und den unveränderten Autorenwert bestätigen.
+7. Project Health und den passenden Test ausführen, Standalone-Player bauen und die sichtbare Prüfung wiederholen.
+
+**Erwartetes Ergebnis:** UI, animation and network events ist im Editor sichtbar, bleibt nach dem Neuladen erhalten und erreicht gegebenenfalls Vorschau, Play und exportierte Player.
+
+**Speicherung und Export:** UI, animation and network events wird im zuständigen Projekt, in Szene, Komponente, Asset, Arbeitsbereichseinstellung oder Build-Manifest gespeichert. Reine Editor-Daten gelangen nicht in Player.
+
+**Rückgängig und Wiederherstellung:** Für Dokumentänderungen Rückgängig/Wiederholen, für Importe oder Pakete Zurücksetzen/Rollback, bei unterbrochenen Speicherungen Recovery Browser und für projektweite Wiederherstellung Quellverwaltung oder Migrations-Backup verwenden.
+
+**Häufige Fehler und Lösungen:**
+
+- UI, animation and network events mit falscher Auswahl oder im falschen Arbeitsbereich bearbeiten.
+- Berechtigungs-, Validierungs-, Referenz- oder Hostvorlagenwarnung ignorieren.
+- Nur die Editorvorschau prüfen, nicht Speichern/Neuladen und Standalone-Player.
+
+**Tastatur und Barrierefreiheit:** Command Palette oder Tastaturfokus statt reiner Zeigerbedienung verwenden. Dialoge besitzen Namen, sichtbaren Fokus, Escape/Abbrechen und reduzierte Bewegung.
+
+**Minimales Beispiel:** Minimal: ein gültiges Ziel erstellen, UI, animation and network events konfigurieren, speichern und ein sichtbares Play-Ergebnis prüfen.
+
+**Produktionsbeispiel:** Produktion: Validierung, Lokalisierung/Barrierefreiheit, deterministische Tests, Budgets, Wiederherstellung und Entwicklungs-/Release-Builds für UI, animation and network events ergänzen.
+
+**Rhai-API:** `awake`, `start`, `update`, `fixed_update`, `on_timer`, `on_signal`, `on_collision_enter`, `on_trigger_enter`, `input_pressed`, `timer_start`, `random`
+
+**Visual-Graph-API:** `Events`, `Input`, `Timing`, `Signals`, `Physics`, `UI`, `Animation`, `Network`
+
+<a id="event-sheet-visible-rhai-or-visual-graph-action-asset"></a>
+
+### Visible Rhai or Visual Graph action asset
+
+**Klassifikation:** Manual · Assisted · Runtime · Per-object · Reversible
+
+**Zweck und Einsatz:** Visible Rhai or Visual Graph action asset im Bereich Event Sheet and Object Blueprint erledigt die unterstützte Autoren- oder Laufzeitaufgabe direkt im Arbeitsbereich Script. Verwenden, wenn das Projekt Visible Rhai or Visual Graph action asset benötigt; nicht zugehörige Einstellungen bleiben in ihrem zuständigen Arbeitsbereich.
+
+**Voraussetzungen:**
+
+- A selected scene object
+- A Rhai or Visual Graph action asset for runtime callbacks
+
+**Exakter Ablauf:**
+
+1. Script und danach Event Sheet and Object Blueprint öffnen.
+2. Visible Rhai or Visual Graph action asset wählen und vor der Bearbeitung sichtbare Validierung und Berechtigungen prüfen.
+3. Zielprojekt, Asset oder Objekt wählen und nur endliche, unterstützte Werte eingeben.
+4. Änderung anwenden oder speichern und sichtbares Ergebnis sowie Probleme/Konsole prüfen.
+5. Bei Laufzeitverhalten Play oder Vorschau starten; Pause/Einzelschritt für deterministische Prüfung verwenden.
+6. Projekt speichern, neu laden und den unveränderten Autorenwert bestätigen.
+7. Project Health und den passenden Test ausführen, Standalone-Player bauen und die sichtbare Prüfung wiederholen.
+
+**Erwartetes Ergebnis:** Visible Rhai or Visual Graph action asset ist im Editor sichtbar, bleibt nach dem Neuladen erhalten und erreicht gegebenenfalls Vorschau, Play und exportierte Player.
+
+**Speicherung und Export:** Visible Rhai or Visual Graph action asset wird im zuständigen Projekt, in Szene, Komponente, Asset, Arbeitsbereichseinstellung oder Build-Manifest gespeichert. Reine Editor-Daten gelangen nicht in Player.
+
+**Rückgängig und Wiederherstellung:** Für Dokumentänderungen Rückgängig/Wiederholen, für Importe oder Pakete Zurücksetzen/Rollback, bei unterbrochenen Speicherungen Recovery Browser und für projektweite Wiederherstellung Quellverwaltung oder Migrations-Backup verwenden.
+
+**Häufige Fehler und Lösungen:**
+
+- Visible Rhai or Visual Graph action asset mit falscher Auswahl oder im falschen Arbeitsbereich bearbeiten.
+- Berechtigungs-, Validierungs-, Referenz- oder Hostvorlagenwarnung ignorieren.
+- Nur die Editorvorschau prüfen, nicht Speichern/Neuladen und Standalone-Player.
+
+**Tastatur und Barrierefreiheit:** Command Palette oder Tastaturfokus statt reiner Zeigerbedienung verwenden. Dialoge besitzen Namen, sichtbaren Fokus, Escape/Abbrechen und reduzierte Bewegung.
+
+**Minimales Beispiel:** Minimal: ein gültiges Ziel erstellen, Visible Rhai or Visual Graph action asset konfigurieren, speichern und ein sichtbares Play-Ergebnis prüfen.
+
+**Produktionsbeispiel:** Produktion: Validierung, Lokalisierung/Barrierefreiheit, deterministische Tests, Budgets, Wiederherstellung und Entwicklungs-/Release-Builds für Visible Rhai or Visual Graph action asset ergänzen.
+
+**Rhai-API:** `awake`, `start`, `update`, `fixed_update`, `on_timer`, `on_signal`, `on_collision_enter`, `on_trigger_enter`, `input_pressed`, `timer_start`, `random`
+
+**Visual-Graph-API:** `Events`, `Input`, `Timing`, `Signals`, `Physics`, `UI`, `Animation`, `Network`
+
+<a id="event-sheet-event-search-and-callback-completion"></a>
+
+### Event search and callback completion
+
+**Klassifikation:** Manual · Assisted · Runtime · Per-object · Reversible
+
+**Zweck und Einsatz:** Event search and callback completion im Bereich Event Sheet and Object Blueprint erledigt die unterstützte Autoren- oder Laufzeitaufgabe direkt im Arbeitsbereich Script. Verwenden, wenn das Projekt Event search and callback completion benötigt; nicht zugehörige Einstellungen bleiben in ihrem zuständigen Arbeitsbereich.
+
+**Voraussetzungen:**
+
+- A selected scene object
+- A Rhai or Visual Graph action asset for runtime callbacks
+
+**Exakter Ablauf:**
+
+1. Script und danach Event Sheet and Object Blueprint öffnen.
+2. Event search and callback completion wählen und vor der Bearbeitung sichtbare Validierung und Berechtigungen prüfen.
+3. Zielprojekt, Asset oder Objekt wählen und nur endliche, unterstützte Werte eingeben.
+4. Änderung anwenden oder speichern und sichtbares Ergebnis sowie Probleme/Konsole prüfen.
+5. Bei Laufzeitverhalten Play oder Vorschau starten; Pause/Einzelschritt für deterministische Prüfung verwenden.
+6. Projekt speichern, neu laden und den unveränderten Autorenwert bestätigen.
+7. Project Health und den passenden Test ausführen, Standalone-Player bauen und die sichtbare Prüfung wiederholen.
+
+**Erwartetes Ergebnis:** Event search and callback completion ist im Editor sichtbar, bleibt nach dem Neuladen erhalten und erreicht gegebenenfalls Vorschau, Play und exportierte Player.
+
+**Speicherung und Export:** Event search and callback completion wird im zuständigen Projekt, in Szene, Komponente, Asset, Arbeitsbereichseinstellung oder Build-Manifest gespeichert. Reine Editor-Daten gelangen nicht in Player.
+
+**Rückgängig und Wiederherstellung:** Für Dokumentänderungen Rückgängig/Wiederholen, für Importe oder Pakete Zurücksetzen/Rollback, bei unterbrochenen Speicherungen Recovery Browser und für projektweite Wiederherstellung Quellverwaltung oder Migrations-Backup verwenden.
+
+**Häufige Fehler und Lösungen:**
+
+- Event search and callback completion mit falscher Auswahl oder im falschen Arbeitsbereich bearbeiten.
+- Berechtigungs-, Validierungs-, Referenz- oder Hostvorlagenwarnung ignorieren.
+- Nur die Editorvorschau prüfen, nicht Speichern/Neuladen und Standalone-Player.
+
+**Tastatur und Barrierefreiheit:** Command Palette oder Tastaturfokus statt reiner Zeigerbedienung verwenden. Dialoge besitzen Namen, sichtbaren Fokus, Escape/Abbrechen und reduzierte Bewegung.
+
+**Minimales Beispiel:** Minimal: ein gültiges Ziel erstellen, Event search and callback completion konfigurieren, speichern und ein sichtbares Play-Ergebnis prüfen.
+
+**Produktionsbeispiel:** Produktion: Validierung, Lokalisierung/Barrierefreiheit, deterministische Tests, Budgets, Wiederherstellung und Entwicklungs-/Release-Builds für Event search and callback completion ergänzen.
+
+**Rhai-API:** `awake`, `start`, `update`, `fixed_update`, `on_timer`, `on_signal`, `on_collision_enter`, `on_trigger_enter`, `input_pressed`, `timer_start`, `random`
+
+**Visual-Graph-API:** `Events`, `Input`, `Timing`, `Signals`, `Physics`, `UI`, `Animation`, `Network`
+
+<a id="event-sheet-event-sheet-inheritance-and-overrides"></a>
+
+### Event Sheet inheritance and overrides
+
+**Klassifikation:** Manual · Assisted · Runtime · Per-object · Reversible
+
+**Zweck und Einsatz:** Event Sheet inheritance and overrides im Bereich Event Sheet and Object Blueprint erledigt die unterstützte Autoren- oder Laufzeitaufgabe direkt im Arbeitsbereich Script. Verwenden, wenn das Projekt Event Sheet inheritance and overrides benötigt; nicht zugehörige Einstellungen bleiben in ihrem zuständigen Arbeitsbereich.
+
+**Voraussetzungen:**
+
+- A selected scene object
+- A Rhai or Visual Graph action asset for runtime callbacks
+
+**Exakter Ablauf:**
+
+1. Script und danach Event Sheet and Object Blueprint öffnen.
+2. Event Sheet inheritance and overrides wählen und vor der Bearbeitung sichtbare Validierung und Berechtigungen prüfen.
+3. Zielprojekt, Asset oder Objekt wählen und nur endliche, unterstützte Werte eingeben.
+4. Änderung anwenden oder speichern und sichtbares Ergebnis sowie Probleme/Konsole prüfen.
+5. Bei Laufzeitverhalten Play oder Vorschau starten; Pause/Einzelschritt für deterministische Prüfung verwenden.
+6. Projekt speichern, neu laden und den unveränderten Autorenwert bestätigen.
+7. Project Health und den passenden Test ausführen, Standalone-Player bauen und die sichtbare Prüfung wiederholen.
+
+**Erwartetes Ergebnis:** Event Sheet inheritance and overrides ist im Editor sichtbar, bleibt nach dem Neuladen erhalten und erreicht gegebenenfalls Vorschau, Play und exportierte Player.
+
+**Speicherung und Export:** Event Sheet inheritance and overrides wird im zuständigen Projekt, in Szene, Komponente, Asset, Arbeitsbereichseinstellung oder Build-Manifest gespeichert. Reine Editor-Daten gelangen nicht in Player.
+
+**Rückgängig und Wiederherstellung:** Für Dokumentänderungen Rückgängig/Wiederholen, für Importe oder Pakete Zurücksetzen/Rollback, bei unterbrochenen Speicherungen Recovery Browser und für projektweite Wiederherstellung Quellverwaltung oder Migrations-Backup verwenden.
+
+**Häufige Fehler und Lösungen:**
+
+- Event Sheet inheritance and overrides mit falscher Auswahl oder im falschen Arbeitsbereich bearbeiten.
+- Berechtigungs-, Validierungs-, Referenz- oder Hostvorlagenwarnung ignorieren.
+- Nur die Editorvorschau prüfen, nicht Speichern/Neuladen und Standalone-Player.
+
+**Tastatur und Barrierefreiheit:** Command Palette oder Tastaturfokus statt reiner Zeigerbedienung verwenden. Dialoge besitzen Namen, sichtbaren Fokus, Escape/Abbrechen und reduzierte Bewegung.
+
+**Minimales Beispiel:** Minimal: ein gültiges Ziel erstellen, Event Sheet inheritance and overrides konfigurieren, speichern und ein sichtbares Play-Ergebnis prüfen.
+
+**Produktionsbeispiel:** Produktion: Validierung, Lokalisierung/Barrierefreiheit, deterministische Tests, Budgets, Wiederherstellung und Entwicklungs-/Release-Builds für Event Sheet inheritance and overrides ergänzen.
+
+**Rhai-API:** `awake`, `start`, `update`, `fixed_update`, `on_timer`, `on_signal`, `on_collision_enter`, `on_trigger_enter`, `input_pressed`, `timer_start`, `random`
+
+**Visual-Graph-API:** `Events`, `Input`, `Timing`, `Signals`, `Physics`, `UI`, `Animation`, `Network`
+
+<a id="event-sheet-deterministic-event-priority-and-seed"></a>
+
+### Deterministic event priority and seed
+
+**Klassifikation:** Manual · Assisted · Runtime · Per-object · Reversible
+
+**Zweck und Einsatz:** Deterministic event priority and seed im Bereich Event Sheet and Object Blueprint erledigt die unterstützte Autoren- oder Laufzeitaufgabe direkt im Arbeitsbereich Script. Verwenden, wenn das Projekt Deterministic event priority and seed benötigt; nicht zugehörige Einstellungen bleiben in ihrem zuständigen Arbeitsbereich.
+
+**Voraussetzungen:**
+
+- A selected scene object
+- A Rhai or Visual Graph action asset for runtime callbacks
+
+**Exakter Ablauf:**
+
+1. Script und danach Event Sheet and Object Blueprint öffnen.
+2. Deterministic event priority and seed wählen und vor der Bearbeitung sichtbare Validierung und Berechtigungen prüfen.
+3. Zielprojekt, Asset oder Objekt wählen und nur endliche, unterstützte Werte eingeben.
+4. Änderung anwenden oder speichern und sichtbares Ergebnis sowie Probleme/Konsole prüfen.
+5. Bei Laufzeitverhalten Play oder Vorschau starten; Pause/Einzelschritt für deterministische Prüfung verwenden.
+6. Projekt speichern, neu laden und den unveränderten Autorenwert bestätigen.
+7. Project Health und den passenden Test ausführen, Standalone-Player bauen und die sichtbare Prüfung wiederholen.
+
+**Erwartetes Ergebnis:** Deterministic event priority and seed ist im Editor sichtbar, bleibt nach dem Neuladen erhalten und erreicht gegebenenfalls Vorschau, Play und exportierte Player.
+
+**Speicherung und Export:** Deterministic event priority and seed wird im zuständigen Projekt, in Szene, Komponente, Asset, Arbeitsbereichseinstellung oder Build-Manifest gespeichert. Reine Editor-Daten gelangen nicht in Player.
+
+**Rückgängig und Wiederherstellung:** Für Dokumentänderungen Rückgängig/Wiederholen, für Importe oder Pakete Zurücksetzen/Rollback, bei unterbrochenen Speicherungen Recovery Browser und für projektweite Wiederherstellung Quellverwaltung oder Migrations-Backup verwenden.
+
+**Häufige Fehler und Lösungen:**
+
+- Deterministic event priority and seed mit falscher Auswahl oder im falschen Arbeitsbereich bearbeiten.
+- Berechtigungs-, Validierungs-, Referenz- oder Hostvorlagenwarnung ignorieren.
+- Nur die Editorvorschau prüfen, nicht Speichern/Neuladen und Standalone-Player.
+
+**Tastatur und Barrierefreiheit:** Command Palette oder Tastaturfokus statt reiner Zeigerbedienung verwenden. Dialoge besitzen Namen, sichtbaren Fokus, Escape/Abbrechen und reduzierte Bewegung.
+
+**Minimales Beispiel:** Minimal: ein gültiges Ziel erstellen, Deterministic event priority and seed konfigurieren, speichern und ein sichtbares Play-Ergebnis prüfen.
+
+**Produktionsbeispiel:** Produktion: Validierung, Lokalisierung/Barrierefreiheit, deterministische Tests, Budgets, Wiederherstellung und Entwicklungs-/Release-Builds für Deterministic event priority and seed ergänzen.
+
+**Rhai-API:** `awake`, `start`, `update`, `fixed_update`, `on_timer`, `on_signal`, `on_collision_enter`, `on_trigger_enter`, `input_pressed`, `timer_start`, `random`
+
+**Visual-Graph-API:** `Events`, `Input`, `Timing`, `Signals`, `Physics`, `UI`, `Animation`, `Network`
+
+<a id="event-sheet-disabled-object-event-exclusion"></a>
+
+### Disabled-object event exclusion
+
+**Klassifikation:** Manual · Assisted · Runtime · Per-object · Reversible
+
+**Zweck und Einsatz:** Disabled-object event exclusion im Bereich Event Sheet and Object Blueprint erledigt die unterstützte Autoren- oder Laufzeitaufgabe direkt im Arbeitsbereich Script. Verwenden, wenn das Projekt Disabled-object event exclusion benötigt; nicht zugehörige Einstellungen bleiben in ihrem zuständigen Arbeitsbereich.
+
+**Voraussetzungen:**
+
+- A selected scene object
+- A Rhai or Visual Graph action asset for runtime callbacks
+
+**Exakter Ablauf:**
+
+1. Script und danach Event Sheet and Object Blueprint öffnen.
+2. Disabled-object event exclusion wählen und vor der Bearbeitung sichtbare Validierung und Berechtigungen prüfen.
+3. Zielprojekt, Asset oder Objekt wählen und nur endliche, unterstützte Werte eingeben.
+4. Änderung anwenden oder speichern und sichtbares Ergebnis sowie Probleme/Konsole prüfen.
+5. Bei Laufzeitverhalten Play oder Vorschau starten; Pause/Einzelschritt für deterministische Prüfung verwenden.
+6. Projekt speichern, neu laden und den unveränderten Autorenwert bestätigen.
+7. Project Health und den passenden Test ausführen, Standalone-Player bauen und die sichtbare Prüfung wiederholen.
+
+**Erwartetes Ergebnis:** Disabled-object event exclusion ist im Editor sichtbar, bleibt nach dem Neuladen erhalten und erreicht gegebenenfalls Vorschau, Play und exportierte Player.
+
+**Speicherung und Export:** Disabled-object event exclusion wird im zuständigen Projekt, in Szene, Komponente, Asset, Arbeitsbereichseinstellung oder Build-Manifest gespeichert. Reine Editor-Daten gelangen nicht in Player.
+
+**Rückgängig und Wiederherstellung:** Für Dokumentänderungen Rückgängig/Wiederholen, für Importe oder Pakete Zurücksetzen/Rollback, bei unterbrochenen Speicherungen Recovery Browser und für projektweite Wiederherstellung Quellverwaltung oder Migrations-Backup verwenden.
+
+**Häufige Fehler und Lösungen:**
+
+- Disabled-object event exclusion mit falscher Auswahl oder im falschen Arbeitsbereich bearbeiten.
+- Berechtigungs-, Validierungs-, Referenz- oder Hostvorlagenwarnung ignorieren.
+- Nur die Editorvorschau prüfen, nicht Speichern/Neuladen und Standalone-Player.
+
+**Tastatur und Barrierefreiheit:** Command Palette oder Tastaturfokus statt reiner Zeigerbedienung verwenden. Dialoge besitzen Namen, sichtbaren Fokus, Escape/Abbrechen und reduzierte Bewegung.
+
+**Minimales Beispiel:** Minimal: ein gültiges Ziel erstellen, Disabled-object event exclusion konfigurieren, speichern und ein sichtbares Play-Ergebnis prüfen.
+
+**Produktionsbeispiel:** Produktion: Validierung, Lokalisierung/Barrierefreiheit, deterministische Tests, Budgets, Wiederherstellung und Entwicklungs-/Release-Builds für Disabled-object event exclusion ergänzen.
+
+**Rhai-API:** `awake`, `start`, `update`, `fixed_update`, `on_timer`, `on_signal`, `on_collision_enter`, `on_trigger_enter`, `input_pressed`, `timer_start`, `random`
+
+**Visual-Graph-API:** `Events`, `Input`, `Timing`, `Signals`, `Physics`, `UI`, `Animation`, `Network`
+
+<a id="event-sheet-duplicate-callback-validation"></a>
+
+### Duplicate callback validation
+
+**Klassifikation:** Manual · Assisted · Runtime · Per-object · Reversible
+
+**Zweck und Einsatz:** Duplicate callback validation im Bereich Event Sheet and Object Blueprint erledigt die unterstützte Autoren- oder Laufzeitaufgabe direkt im Arbeitsbereich Script. Verwenden, wenn das Projekt Duplicate callback validation benötigt; nicht zugehörige Einstellungen bleiben in ihrem zuständigen Arbeitsbereich.
+
+**Voraussetzungen:**
+
+- A selected scene object
+- A Rhai or Visual Graph action asset for runtime callbacks
+
+**Exakter Ablauf:**
+
+1. Script und danach Event Sheet and Object Blueprint öffnen.
+2. Duplicate callback validation wählen und vor der Bearbeitung sichtbare Validierung und Berechtigungen prüfen.
+3. Zielprojekt, Asset oder Objekt wählen und nur endliche, unterstützte Werte eingeben.
+4. Änderung anwenden oder speichern und sichtbares Ergebnis sowie Probleme/Konsole prüfen.
+5. Bei Laufzeitverhalten Play oder Vorschau starten; Pause/Einzelschritt für deterministische Prüfung verwenden.
+6. Projekt speichern, neu laden und den unveränderten Autorenwert bestätigen.
+7. Project Health und den passenden Test ausführen, Standalone-Player bauen und die sichtbare Prüfung wiederholen.
+
+**Erwartetes Ergebnis:** Duplicate callback validation ist im Editor sichtbar, bleibt nach dem Neuladen erhalten und erreicht gegebenenfalls Vorschau, Play und exportierte Player.
+
+**Speicherung und Export:** Duplicate callback validation wird im zuständigen Projekt, in Szene, Komponente, Asset, Arbeitsbereichseinstellung oder Build-Manifest gespeichert. Reine Editor-Daten gelangen nicht in Player.
+
+**Rückgängig und Wiederherstellung:** Für Dokumentänderungen Rückgängig/Wiederholen, für Importe oder Pakete Zurücksetzen/Rollback, bei unterbrochenen Speicherungen Recovery Browser und für projektweite Wiederherstellung Quellverwaltung oder Migrations-Backup verwenden.
+
+**Häufige Fehler und Lösungen:**
+
+- Duplicate callback validation mit falscher Auswahl oder im falschen Arbeitsbereich bearbeiten.
+- Berechtigungs-, Validierungs-, Referenz- oder Hostvorlagenwarnung ignorieren.
+- Nur die Editorvorschau prüfen, nicht Speichern/Neuladen und Standalone-Player.
+
+**Tastatur und Barrierefreiheit:** Command Palette oder Tastaturfokus statt reiner Zeigerbedienung verwenden. Dialoge besitzen Namen, sichtbaren Fokus, Escape/Abbrechen und reduzierte Bewegung.
+
+**Minimales Beispiel:** Minimal: ein gültiges Ziel erstellen, Duplicate callback validation konfigurieren, speichern und ein sichtbares Play-Ergebnis prüfen.
+
+**Produktionsbeispiel:** Produktion: Validierung, Lokalisierung/Barrierefreiheit, deterministische Tests, Budgets, Wiederherstellung und Entwicklungs-/Release-Builds für Duplicate callback validation ergänzen.
+
+**Rhai-API:** `awake`, `start`, `update`, `fixed_update`, `on_timer`, `on_signal`, `on_collision_enter`, `on_trigger_enter`, `input_pressed`, `timer_start`, `random`
+
+**Visual-Graph-API:** `Events`, `Input`, `Timing`, `Signals`, `Physics`, `UI`, `Animation`, `Network`
+
+<a id="event-sheet-10-000-event-bounded-scheduler"></a>
+
+### 10,000-event bounded scheduler
+
+**Klassifikation:** Manual · Assisted · Runtime · Per-object · Reversible
+
+**Zweck und Einsatz:** 10,000-event bounded scheduler im Bereich Event Sheet and Object Blueprint erledigt die unterstützte Autoren- oder Laufzeitaufgabe direkt im Arbeitsbereich Script. Verwenden, wenn das Projekt 10,000-event bounded scheduler benötigt; nicht zugehörige Einstellungen bleiben in ihrem zuständigen Arbeitsbereich.
+
+**Voraussetzungen:**
+
+- A selected scene object
+- A Rhai or Visual Graph action asset for runtime callbacks
+
+**Exakter Ablauf:**
+
+1. Script und danach Event Sheet and Object Blueprint öffnen.
+2. 10,000-event bounded scheduler wählen und vor der Bearbeitung sichtbare Validierung und Berechtigungen prüfen.
+3. Zielprojekt, Asset oder Objekt wählen und nur endliche, unterstützte Werte eingeben.
+4. Änderung anwenden oder speichern und sichtbares Ergebnis sowie Probleme/Konsole prüfen.
+5. Bei Laufzeitverhalten Play oder Vorschau starten; Pause/Einzelschritt für deterministische Prüfung verwenden.
+6. Projekt speichern, neu laden und den unveränderten Autorenwert bestätigen.
+7. Project Health und den passenden Test ausführen, Standalone-Player bauen und die sichtbare Prüfung wiederholen.
+
+**Erwartetes Ergebnis:** 10,000-event bounded scheduler ist im Editor sichtbar, bleibt nach dem Neuladen erhalten und erreicht gegebenenfalls Vorschau, Play und exportierte Player.
+
+**Speicherung und Export:** 10,000-event bounded scheduler wird im zuständigen Projekt, in Szene, Komponente, Asset, Arbeitsbereichseinstellung oder Build-Manifest gespeichert. Reine Editor-Daten gelangen nicht in Player.
+
+**Rückgängig und Wiederherstellung:** Für Dokumentänderungen Rückgängig/Wiederholen, für Importe oder Pakete Zurücksetzen/Rollback, bei unterbrochenen Speicherungen Recovery Browser und für projektweite Wiederherstellung Quellverwaltung oder Migrations-Backup verwenden.
+
+**Häufige Fehler und Lösungen:**
+
+- 10,000-event bounded scheduler mit falscher Auswahl oder im falschen Arbeitsbereich bearbeiten.
+- Berechtigungs-, Validierungs-, Referenz- oder Hostvorlagenwarnung ignorieren.
+- Nur die Editorvorschau prüfen, nicht Speichern/Neuladen und Standalone-Player.
+
+**Tastatur und Barrierefreiheit:** Command Palette oder Tastaturfokus statt reiner Zeigerbedienung verwenden. Dialoge besitzen Namen, sichtbaren Fokus, Escape/Abbrechen und reduzierte Bewegung.
+
+**Minimales Beispiel:** Minimal: ein gültiges Ziel erstellen, 10,000-event bounded scheduler konfigurieren, speichern und ein sichtbares Play-Ergebnis prüfen.
+
+**Produktionsbeispiel:** Produktion: Validierung, Lokalisierung/Barrierefreiheit, deterministische Tests, Budgets, Wiederherstellung und Entwicklungs-/Release-Builds für 10,000-event bounded scheduler ergänzen.
+
+**Rhai-API:** `awake`, `start`, `update`, `fixed_update`, `on_timer`, `on_signal`, `on_collision_enter`, `on_trigger_enter`, `input_pressed`, `timer_start`, `random`
+
+**Visual-Graph-API:** `Events`, `Input`, `Timing`, `Signals`, `Physics`, `UI`, `Animation`, `Network`
+
+<a id="event-sheet-reusable-object-blueprint"></a>
+
+### Reusable Object Blueprint
+
+**Klassifikation:** Manual · Assisted · Runtime · Per-object · Reversible
+
+**Zweck und Einsatz:** Reusable Object Blueprint im Bereich Event Sheet and Object Blueprint erledigt die unterstützte Autoren- oder Laufzeitaufgabe direkt im Arbeitsbereich Script. Verwenden, wenn das Projekt Reusable Object Blueprint benötigt; nicht zugehörige Einstellungen bleiben in ihrem zuständigen Arbeitsbereich.
+
+**Voraussetzungen:**
+
+- A selected scene object
+- A Rhai or Visual Graph action asset for runtime callbacks
+
+**Exakter Ablauf:**
+
+1. Script und danach Event Sheet and Object Blueprint öffnen.
+2. Reusable Object Blueprint wählen und vor der Bearbeitung sichtbare Validierung und Berechtigungen prüfen.
+3. Zielprojekt, Asset oder Objekt wählen und nur endliche, unterstützte Werte eingeben.
+4. Änderung anwenden oder speichern und sichtbares Ergebnis sowie Probleme/Konsole prüfen.
+5. Bei Laufzeitverhalten Play oder Vorschau starten; Pause/Einzelschritt für deterministische Prüfung verwenden.
+6. Projekt speichern, neu laden und den unveränderten Autorenwert bestätigen.
+7. Project Health und den passenden Test ausführen, Standalone-Player bauen und die sichtbare Prüfung wiederholen.
+
+**Erwartetes Ergebnis:** Reusable Object Blueprint ist im Editor sichtbar, bleibt nach dem Neuladen erhalten und erreicht gegebenenfalls Vorschau, Play und exportierte Player.
+
+**Speicherung und Export:** Reusable Object Blueprint wird im zuständigen Projekt, in Szene, Komponente, Asset, Arbeitsbereichseinstellung oder Build-Manifest gespeichert. Reine Editor-Daten gelangen nicht in Player.
+
+**Rückgängig und Wiederherstellung:** Für Dokumentänderungen Rückgängig/Wiederholen, für Importe oder Pakete Zurücksetzen/Rollback, bei unterbrochenen Speicherungen Recovery Browser und für projektweite Wiederherstellung Quellverwaltung oder Migrations-Backup verwenden.
+
+**Häufige Fehler und Lösungen:**
+
+- Reusable Object Blueprint mit falscher Auswahl oder im falschen Arbeitsbereich bearbeiten.
+- Berechtigungs-, Validierungs-, Referenz- oder Hostvorlagenwarnung ignorieren.
+- Nur die Editorvorschau prüfen, nicht Speichern/Neuladen und Standalone-Player.
+
+**Tastatur und Barrierefreiheit:** Command Palette oder Tastaturfokus statt reiner Zeigerbedienung verwenden. Dialoge besitzen Namen, sichtbaren Fokus, Escape/Abbrechen und reduzierte Bewegung.
+
+**Minimales Beispiel:** Minimal: ein gültiges Ziel erstellen, Reusable Object Blueprint konfigurieren, speichern und ein sichtbares Play-Ergebnis prüfen.
+
+**Produktionsbeispiel:** Produktion: Validierung, Lokalisierung/Barrierefreiheit, deterministische Tests, Budgets, Wiederherstellung und Entwicklungs-/Release-Builds für Reusable Object Blueprint ergänzen.
+
+**Rhai-API:** `awake`, `start`, `update`, `fixed_update`, `on_timer`, `on_signal`, `on_collision_enter`, `on_trigger_enter`, `input_pressed`, `timer_start`, `random`
+
+**Visual-Graph-API:** `Events`, `Input`, `Timing`, `Signals`, `Physics`, `UI`, `Animation`, `Network`
+
+<a id="event-sheet-object-blueprint-inheritance"></a>
+
+### Object Blueprint inheritance
+
+**Klassifikation:** Manual · Assisted · Runtime · Per-object · Reversible
+
+**Zweck und Einsatz:** Object Blueprint inheritance im Bereich Event Sheet and Object Blueprint erledigt die unterstützte Autoren- oder Laufzeitaufgabe direkt im Arbeitsbereich Script. Verwenden, wenn das Projekt Object Blueprint inheritance benötigt; nicht zugehörige Einstellungen bleiben in ihrem zuständigen Arbeitsbereich.
+
+**Voraussetzungen:**
+
+- A selected scene object
+- A Rhai or Visual Graph action asset for runtime callbacks
+
+**Exakter Ablauf:**
+
+1. Script und danach Event Sheet and Object Blueprint öffnen.
+2. Object Blueprint inheritance wählen und vor der Bearbeitung sichtbare Validierung und Berechtigungen prüfen.
+3. Zielprojekt, Asset oder Objekt wählen und nur endliche, unterstützte Werte eingeben.
+4. Änderung anwenden oder speichern und sichtbares Ergebnis sowie Probleme/Konsole prüfen.
+5. Bei Laufzeitverhalten Play oder Vorschau starten; Pause/Einzelschritt für deterministische Prüfung verwenden.
+6. Projekt speichern, neu laden und den unveränderten Autorenwert bestätigen.
+7. Project Health und den passenden Test ausführen, Standalone-Player bauen und die sichtbare Prüfung wiederholen.
+
+**Erwartetes Ergebnis:** Object Blueprint inheritance ist im Editor sichtbar, bleibt nach dem Neuladen erhalten und erreicht gegebenenfalls Vorschau, Play und exportierte Player.
+
+**Speicherung und Export:** Object Blueprint inheritance wird im zuständigen Projekt, in Szene, Komponente, Asset, Arbeitsbereichseinstellung oder Build-Manifest gespeichert. Reine Editor-Daten gelangen nicht in Player.
+
+**Rückgängig und Wiederherstellung:** Für Dokumentänderungen Rückgängig/Wiederholen, für Importe oder Pakete Zurücksetzen/Rollback, bei unterbrochenen Speicherungen Recovery Browser und für projektweite Wiederherstellung Quellverwaltung oder Migrations-Backup verwenden.
+
+**Häufige Fehler und Lösungen:**
+
+- Object Blueprint inheritance mit falscher Auswahl oder im falschen Arbeitsbereich bearbeiten.
+- Berechtigungs-, Validierungs-, Referenz- oder Hostvorlagenwarnung ignorieren.
+- Nur die Editorvorschau prüfen, nicht Speichern/Neuladen und Standalone-Player.
+
+**Tastatur und Barrierefreiheit:** Command Palette oder Tastaturfokus statt reiner Zeigerbedienung verwenden. Dialoge besitzen Namen, sichtbaren Fokus, Escape/Abbrechen und reduzierte Bewegung.
+
+**Minimales Beispiel:** Minimal: ein gültiges Ziel erstellen, Object Blueprint inheritance konfigurieren, speichern und ein sichtbares Play-Ergebnis prüfen.
+
+**Produktionsbeispiel:** Produktion: Validierung, Lokalisierung/Barrierefreiheit, deterministische Tests, Budgets, Wiederherstellung und Entwicklungs-/Release-Builds für Object Blueprint inheritance ergänzen.
+
+**Rhai-API:** `awake`, `start`, `update`, `fixed_update`, `on_timer`, `on_signal`, `on_collision_enter`, `on_trigger_enter`, `input_pressed`, `timer_start`, `random`
+
+**Visual-Graph-API:** `Events`, `Input`, `Timing`, `Signals`, `Physics`, `UI`, `Animation`, `Network`
+
+<a id="event-sheet-composition-conflict-validation"></a>
+
+### Composition conflict validation
+
+**Klassifikation:** Manual · Assisted · Runtime · Per-object · Reversible
+
+**Zweck und Einsatz:** Composition conflict validation im Bereich Event Sheet and Object Blueprint erledigt die unterstützte Autoren- oder Laufzeitaufgabe direkt im Arbeitsbereich Script. Verwenden, wenn das Projekt Composition conflict validation benötigt; nicht zugehörige Einstellungen bleiben in ihrem zuständigen Arbeitsbereich.
+
+**Voraussetzungen:**
+
+- A selected scene object
+- A Rhai or Visual Graph action asset for runtime callbacks
+
+**Exakter Ablauf:**
+
+1. Script und danach Event Sheet and Object Blueprint öffnen.
+2. Composition conflict validation wählen und vor der Bearbeitung sichtbare Validierung und Berechtigungen prüfen.
+3. Zielprojekt, Asset oder Objekt wählen und nur endliche, unterstützte Werte eingeben.
+4. Änderung anwenden oder speichern und sichtbares Ergebnis sowie Probleme/Konsole prüfen.
+5. Bei Laufzeitverhalten Play oder Vorschau starten; Pause/Einzelschritt für deterministische Prüfung verwenden.
+6. Projekt speichern, neu laden und den unveränderten Autorenwert bestätigen.
+7. Project Health und den passenden Test ausführen, Standalone-Player bauen und die sichtbare Prüfung wiederholen.
+
+**Erwartetes Ergebnis:** Composition conflict validation ist im Editor sichtbar, bleibt nach dem Neuladen erhalten und erreicht gegebenenfalls Vorschau, Play und exportierte Player.
+
+**Speicherung und Export:** Composition conflict validation wird im zuständigen Projekt, in Szene, Komponente, Asset, Arbeitsbereichseinstellung oder Build-Manifest gespeichert. Reine Editor-Daten gelangen nicht in Player.
+
+**Rückgängig und Wiederherstellung:** Für Dokumentänderungen Rückgängig/Wiederholen, für Importe oder Pakete Zurücksetzen/Rollback, bei unterbrochenen Speicherungen Recovery Browser und für projektweite Wiederherstellung Quellverwaltung oder Migrations-Backup verwenden.
+
+**Häufige Fehler und Lösungen:**
+
+- Composition conflict validation mit falscher Auswahl oder im falschen Arbeitsbereich bearbeiten.
+- Berechtigungs-, Validierungs-, Referenz- oder Hostvorlagenwarnung ignorieren.
+- Nur die Editorvorschau prüfen, nicht Speichern/Neuladen und Standalone-Player.
+
+**Tastatur und Barrierefreiheit:** Command Palette oder Tastaturfokus statt reiner Zeigerbedienung verwenden. Dialoge besitzen Namen, sichtbaren Fokus, Escape/Abbrechen und reduzierte Bewegung.
+
+**Minimales Beispiel:** Minimal: ein gültiges Ziel erstellen, Composition conflict validation konfigurieren, speichern und ein sichtbares Play-Ergebnis prüfen.
+
+**Produktionsbeispiel:** Produktion: Validierung, Lokalisierung/Barrierefreiheit, deterministische Tests, Budgets, Wiederherstellung und Entwicklungs-/Release-Builds für Composition conflict validation ergänzen.
+
+**Rhai-API:** `awake`, `start`, `update`, `fixed_update`, `on_timer`, `on_signal`, `on_collision_enter`, `on_trigger_enter`, `input_pressed`, `timer_start`, `random`
+
+**Visual-Graph-API:** `Events`, `Input`, `Timing`, `Signals`, `Physics`, `UI`, `Animation`, `Network`
+
+<a id="event-sheet-shape-or-sprite-to-object-to-event-to-scene-workflow"></a>
+
+### Shape or Sprite to Object to Event to Scene workflow
+
+**Klassifikation:** Manual · Assisted · Runtime · Per-object · Reversible
+
+**Zweck und Einsatz:** Shape or Sprite to Object to Event to Scene workflow im Bereich Event Sheet and Object Blueprint erledigt die unterstützte Autoren- oder Laufzeitaufgabe direkt im Arbeitsbereich Script. Verwenden, wenn das Projekt Shape or Sprite to Object to Event to Scene workflow benötigt; nicht zugehörige Einstellungen bleiben in ihrem zuständigen Arbeitsbereich.
+
+**Voraussetzungen:**
+
+- A selected scene object
+- A Rhai or Visual Graph action asset for runtime callbacks
+
+**Exakter Ablauf:**
+
+1. Script und danach Event Sheet and Object Blueprint öffnen.
+2. Shape or Sprite to Object to Event to Scene workflow wählen und vor der Bearbeitung sichtbare Validierung und Berechtigungen prüfen.
+3. Zielprojekt, Asset oder Objekt wählen und nur endliche, unterstützte Werte eingeben.
+4. Änderung anwenden oder speichern und sichtbares Ergebnis sowie Probleme/Konsole prüfen.
+5. Bei Laufzeitverhalten Play oder Vorschau starten; Pause/Einzelschritt für deterministische Prüfung verwenden.
+6. Projekt speichern, neu laden und den unveränderten Autorenwert bestätigen.
+7. Project Health und den passenden Test ausführen, Standalone-Player bauen und die sichtbare Prüfung wiederholen.
+
+**Erwartetes Ergebnis:** Shape or Sprite to Object to Event to Scene workflow ist im Editor sichtbar, bleibt nach dem Neuladen erhalten und erreicht gegebenenfalls Vorschau, Play und exportierte Player.
+
+**Speicherung und Export:** Shape or Sprite to Object to Event to Scene workflow wird im zuständigen Projekt, in Szene, Komponente, Asset, Arbeitsbereichseinstellung oder Build-Manifest gespeichert. Reine Editor-Daten gelangen nicht in Player.
+
+**Rückgängig und Wiederherstellung:** Für Dokumentänderungen Rückgängig/Wiederholen, für Importe oder Pakete Zurücksetzen/Rollback, bei unterbrochenen Speicherungen Recovery Browser und für projektweite Wiederherstellung Quellverwaltung oder Migrations-Backup verwenden.
+
+**Häufige Fehler und Lösungen:**
+
+- Shape or Sprite to Object to Event to Scene workflow mit falscher Auswahl oder im falschen Arbeitsbereich bearbeiten.
+- Berechtigungs-, Validierungs-, Referenz- oder Hostvorlagenwarnung ignorieren.
+- Nur die Editorvorschau prüfen, nicht Speichern/Neuladen und Standalone-Player.
+
+**Tastatur und Barrierefreiheit:** Command Palette oder Tastaturfokus statt reiner Zeigerbedienung verwenden. Dialoge besitzen Namen, sichtbaren Fokus, Escape/Abbrechen und reduzierte Bewegung.
+
+**Minimales Beispiel:** Minimal: ein gültiges Ziel erstellen, Shape or Sprite to Object to Event to Scene workflow konfigurieren, speichern und ein sichtbares Play-Ergebnis prüfen.
+
+**Produktionsbeispiel:** Produktion: Validierung, Lokalisierung/Barrierefreiheit, deterministische Tests, Budgets, Wiederherstellung und Entwicklungs-/Release-Builds für Shape or Sprite to Object to Event to Scene workflow ergänzen.
+
+**Rhai-API:** `awake`, `start`, `update`, `fixed_update`, `on_timer`, `on_signal`, `on_collision_enter`, `on_trigger_enter`, `input_pressed`, `timer_start`, `random`
+
+**Visual-Graph-API:** `Events`, `Input`, `Timing`, `Signals`, `Physics`, `UI`, `Animation`, `Network`
+
+
 ## Visual Graph Editor
 
 <a id="visual-graph-scratch-style-block-mode"></a>
@@ -7380,6 +8643,314 @@ Lernen durch echte Aufgaben. Jede öffentliche Funktion erklärt Zuständigkeit,
 **Minimales Beispiel:** Minimal: ein gültiges Ziel erstellen, Typed pins and wires konfigurieren, speichern und ein sichtbares Play-Ergebnis prüfen.
 
 **Produktionsbeispiel:** Produktion: Validierung, Lokalisierung/Barrierefreiheit, deterministische Tests, Budgets, Wiederherstellung und Entwicklungs-/Release-Builds für Typed pins and wires ergänzen.
+
+**Rhai-API:** `Generated and parsed Rhai API v2 command stream`
+
+**Visual-Graph-API:** `All Rhai API v2 generated nodes`
+
+<a id="visual-graph-drag-or-click-pin-connection"></a>
+
+### Drag or click pin connection
+
+**Klassifikation:** Manual · Assisted · Automatic · Runtime · Reversible
+
+**Zweck und Einsatz:** Drag or click pin connection im Bereich Visual Graph Editor erledigt die unterstützte Autoren- oder Laufzeitaufgabe direkt im Arbeitsbereich Script. Verwenden, wenn das Projekt Drag or click pin connection benötigt; nicht zugehörige Einstellungen bleiben in ihrem zuständigen Arbeitsbereich.
+
+**Voraussetzungen:**
+
+- A .nova-graph or .rhai asset
+
+**Exakter Ablauf:**
+
+1. Script und danach Visual Graph Editor öffnen.
+2. Drag or click pin connection wählen und vor der Bearbeitung sichtbare Validierung und Berechtigungen prüfen.
+3. Zielprojekt, Asset oder Objekt wählen und nur endliche, unterstützte Werte eingeben.
+4. Änderung anwenden oder speichern und sichtbares Ergebnis sowie Probleme/Konsole prüfen.
+5. Bei Laufzeitverhalten Play oder Vorschau starten; Pause/Einzelschritt für deterministische Prüfung verwenden.
+6. Projekt speichern, neu laden und den unveränderten Autorenwert bestätigen.
+7. Project Health und den passenden Test ausführen, Standalone-Player bauen und die sichtbare Prüfung wiederholen.
+
+**Erwartetes Ergebnis:** Drag or click pin connection ist im Editor sichtbar, bleibt nach dem Neuladen erhalten und erreicht gegebenenfalls Vorschau, Play und exportierte Player.
+
+**Speicherung und Export:** Drag or click pin connection wird im zuständigen Projekt, in Szene, Komponente, Asset, Arbeitsbereichseinstellung oder Build-Manifest gespeichert. Reine Editor-Daten gelangen nicht in Player.
+
+**Rückgängig und Wiederherstellung:** Für Dokumentänderungen Rückgängig/Wiederholen, für Importe oder Pakete Zurücksetzen/Rollback, bei unterbrochenen Speicherungen Recovery Browser und für projektweite Wiederherstellung Quellverwaltung oder Migrations-Backup verwenden.
+
+**Häufige Fehler und Lösungen:**
+
+- Drag or click pin connection mit falscher Auswahl oder im falschen Arbeitsbereich bearbeiten.
+- Berechtigungs-, Validierungs-, Referenz- oder Hostvorlagenwarnung ignorieren.
+- Nur die Editorvorschau prüfen, nicht Speichern/Neuladen und Standalone-Player.
+
+**Tastatur und Barrierefreiheit:** Command Palette oder Tastaturfokus statt reiner Zeigerbedienung verwenden. Dialoge besitzen Namen, sichtbaren Fokus, Escape/Abbrechen und reduzierte Bewegung.
+
+**Minimales Beispiel:** Minimal: ein gültiges Ziel erstellen, Drag or click pin connection konfigurieren, speichern und ein sichtbares Play-Ergebnis prüfen.
+
+**Produktionsbeispiel:** Produktion: Validierung, Lokalisierung/Barrierefreiheit, deterministische Tests, Budgets, Wiederherstellung und Entwicklungs-/Release-Builds für Drag or click pin connection ergänzen.
+
+**Rhai-API:** `Generated and parsed Rhai API v2 command stream`
+
+**Visual-Graph-API:** `All Rhai API v2 generated nodes`
+
+<a id="visual-graph-focal-wheel-zoom-and-zoom-slider"></a>
+
+### Focal wheel zoom and zoom slider
+
+**Klassifikation:** Manual · Assisted · Automatic · Runtime · Reversible
+
+**Zweck und Einsatz:** Focal wheel zoom and zoom slider im Bereich Visual Graph Editor erledigt die unterstützte Autoren- oder Laufzeitaufgabe direkt im Arbeitsbereich Script. Verwenden, wenn das Projekt Focal wheel zoom and zoom slider benötigt; nicht zugehörige Einstellungen bleiben in ihrem zuständigen Arbeitsbereich.
+
+**Voraussetzungen:**
+
+- A .nova-graph or .rhai asset
+
+**Exakter Ablauf:**
+
+1. Script und danach Visual Graph Editor öffnen.
+2. Focal wheel zoom and zoom slider wählen und vor der Bearbeitung sichtbare Validierung und Berechtigungen prüfen.
+3. Zielprojekt, Asset oder Objekt wählen und nur endliche, unterstützte Werte eingeben.
+4. Änderung anwenden oder speichern und sichtbares Ergebnis sowie Probleme/Konsole prüfen.
+5. Bei Laufzeitverhalten Play oder Vorschau starten; Pause/Einzelschritt für deterministische Prüfung verwenden.
+6. Projekt speichern, neu laden und den unveränderten Autorenwert bestätigen.
+7. Project Health und den passenden Test ausführen, Standalone-Player bauen und die sichtbare Prüfung wiederholen.
+
+**Erwartetes Ergebnis:** Focal wheel zoom and zoom slider ist im Editor sichtbar, bleibt nach dem Neuladen erhalten und erreicht gegebenenfalls Vorschau, Play und exportierte Player.
+
+**Speicherung und Export:** Focal wheel zoom and zoom slider wird im zuständigen Projekt, in Szene, Komponente, Asset, Arbeitsbereichseinstellung oder Build-Manifest gespeichert. Reine Editor-Daten gelangen nicht in Player.
+
+**Rückgängig und Wiederherstellung:** Für Dokumentänderungen Rückgängig/Wiederholen, für Importe oder Pakete Zurücksetzen/Rollback, bei unterbrochenen Speicherungen Recovery Browser und für projektweite Wiederherstellung Quellverwaltung oder Migrations-Backup verwenden.
+
+**Häufige Fehler und Lösungen:**
+
+- Focal wheel zoom and zoom slider mit falscher Auswahl oder im falschen Arbeitsbereich bearbeiten.
+- Berechtigungs-, Validierungs-, Referenz- oder Hostvorlagenwarnung ignorieren.
+- Nur die Editorvorschau prüfen, nicht Speichern/Neuladen und Standalone-Player.
+
+**Tastatur und Barrierefreiheit:** Command Palette oder Tastaturfokus statt reiner Zeigerbedienung verwenden. Dialoge besitzen Namen, sichtbaren Fokus, Escape/Abbrechen und reduzierte Bewegung.
+
+**Minimales Beispiel:** Minimal: ein gültiges Ziel erstellen, Focal wheel zoom and zoom slider konfigurieren, speichern und ein sichtbares Play-Ergebnis prüfen.
+
+**Produktionsbeispiel:** Produktion: Validierung, Lokalisierung/Barrierefreiheit, deterministische Tests, Budgets, Wiederherstellung und Entwicklungs-/Release-Builds für Focal wheel zoom and zoom slider ergänzen.
+
+**Rhai-API:** `Generated and parsed Rhai API v2 command stream`
+
+**Visual-Graph-API:** `All Rhai API v2 generated nodes`
+
+<a id="visual-graph-frame-all-and-reset-zoom"></a>
+
+### Frame all and reset zoom
+
+**Klassifikation:** Manual · Assisted · Automatic · Runtime · Reversible
+
+**Zweck und Einsatz:** Frame all and reset zoom im Bereich Visual Graph Editor erledigt die unterstützte Autoren- oder Laufzeitaufgabe direkt im Arbeitsbereich Script. Verwenden, wenn das Projekt Frame all and reset zoom benötigt; nicht zugehörige Einstellungen bleiben in ihrem zuständigen Arbeitsbereich.
+
+**Voraussetzungen:**
+
+- A .nova-graph or .rhai asset
+
+**Exakter Ablauf:**
+
+1. Script und danach Visual Graph Editor öffnen.
+2. Frame all and reset zoom wählen und vor der Bearbeitung sichtbare Validierung und Berechtigungen prüfen.
+3. Zielprojekt, Asset oder Objekt wählen und nur endliche, unterstützte Werte eingeben.
+4. Änderung anwenden oder speichern und sichtbares Ergebnis sowie Probleme/Konsole prüfen.
+5. Bei Laufzeitverhalten Play oder Vorschau starten; Pause/Einzelschritt für deterministische Prüfung verwenden.
+6. Projekt speichern, neu laden und den unveränderten Autorenwert bestätigen.
+7. Project Health und den passenden Test ausführen, Standalone-Player bauen und die sichtbare Prüfung wiederholen.
+
+**Erwartetes Ergebnis:** Frame all and reset zoom ist im Editor sichtbar, bleibt nach dem Neuladen erhalten und erreicht gegebenenfalls Vorschau, Play und exportierte Player.
+
+**Speicherung und Export:** Frame all and reset zoom wird im zuständigen Projekt, in Szene, Komponente, Asset, Arbeitsbereichseinstellung oder Build-Manifest gespeichert. Reine Editor-Daten gelangen nicht in Player.
+
+**Rückgängig und Wiederherstellung:** Für Dokumentänderungen Rückgängig/Wiederholen, für Importe oder Pakete Zurücksetzen/Rollback, bei unterbrochenen Speicherungen Recovery Browser und für projektweite Wiederherstellung Quellverwaltung oder Migrations-Backup verwenden.
+
+**Häufige Fehler und Lösungen:**
+
+- Frame all and reset zoom mit falscher Auswahl oder im falschen Arbeitsbereich bearbeiten.
+- Berechtigungs-, Validierungs-, Referenz- oder Hostvorlagenwarnung ignorieren.
+- Nur die Editorvorschau prüfen, nicht Speichern/Neuladen und Standalone-Player.
+
+**Tastatur und Barrierefreiheit:** Command Palette oder Tastaturfokus statt reiner Zeigerbedienung verwenden. Dialoge besitzen Namen, sichtbaren Fokus, Escape/Abbrechen und reduzierte Bewegung.
+
+**Minimales Beispiel:** Minimal: ein gültiges Ziel erstellen, Frame all and reset zoom konfigurieren, speichern und ein sichtbares Play-Ergebnis prüfen.
+
+**Produktionsbeispiel:** Produktion: Validierung, Lokalisierung/Barrierefreiheit, deterministische Tests, Budgets, Wiederherstellung und Entwicklungs-/Release-Builds für Frame all and reset zoom ergänzen.
+
+**Rhai-API:** `Generated and parsed Rhai API v2 command stream`
+
+**Visual-Graph-API:** `All Rhai API v2 generated nodes`
+
+<a id="visual-graph-double-click-node-insertion"></a>
+
+### Double-click node insertion
+
+**Klassifikation:** Manual · Assisted · Automatic · Runtime · Reversible
+
+**Zweck und Einsatz:** Double-click node insertion im Bereich Visual Graph Editor erledigt die unterstützte Autoren- oder Laufzeitaufgabe direkt im Arbeitsbereich Script. Verwenden, wenn das Projekt Double-click node insertion benötigt; nicht zugehörige Einstellungen bleiben in ihrem zuständigen Arbeitsbereich.
+
+**Voraussetzungen:**
+
+- A .nova-graph or .rhai asset
+
+**Exakter Ablauf:**
+
+1. Script und danach Visual Graph Editor öffnen.
+2. Double-click node insertion wählen und vor der Bearbeitung sichtbare Validierung und Berechtigungen prüfen.
+3. Zielprojekt, Asset oder Objekt wählen und nur endliche, unterstützte Werte eingeben.
+4. Änderung anwenden oder speichern und sichtbares Ergebnis sowie Probleme/Konsole prüfen.
+5. Bei Laufzeitverhalten Play oder Vorschau starten; Pause/Einzelschritt für deterministische Prüfung verwenden.
+6. Projekt speichern, neu laden und den unveränderten Autorenwert bestätigen.
+7. Project Health und den passenden Test ausführen, Standalone-Player bauen und die sichtbare Prüfung wiederholen.
+
+**Erwartetes Ergebnis:** Double-click node insertion ist im Editor sichtbar, bleibt nach dem Neuladen erhalten und erreicht gegebenenfalls Vorschau, Play und exportierte Player.
+
+**Speicherung und Export:** Double-click node insertion wird im zuständigen Projekt, in Szene, Komponente, Asset, Arbeitsbereichseinstellung oder Build-Manifest gespeichert. Reine Editor-Daten gelangen nicht in Player.
+
+**Rückgängig und Wiederherstellung:** Für Dokumentänderungen Rückgängig/Wiederholen, für Importe oder Pakete Zurücksetzen/Rollback, bei unterbrochenen Speicherungen Recovery Browser und für projektweite Wiederherstellung Quellverwaltung oder Migrations-Backup verwenden.
+
+**Häufige Fehler und Lösungen:**
+
+- Double-click node insertion mit falscher Auswahl oder im falschen Arbeitsbereich bearbeiten.
+- Berechtigungs-, Validierungs-, Referenz- oder Hostvorlagenwarnung ignorieren.
+- Nur die Editorvorschau prüfen, nicht Speichern/Neuladen und Standalone-Player.
+
+**Tastatur und Barrierefreiheit:** Command Palette oder Tastaturfokus statt reiner Zeigerbedienung verwenden. Dialoge besitzen Namen, sichtbaren Fokus, Escape/Abbrechen und reduzierte Bewegung.
+
+**Minimales Beispiel:** Minimal: ein gültiges Ziel erstellen, Double-click node insertion konfigurieren, speichern und ein sichtbares Play-Ergebnis prüfen.
+
+**Produktionsbeispiel:** Produktion: Validierung, Lokalisierung/Barrierefreiheit, deterministische Tests, Budgets, Wiederherstellung und Entwicklungs-/Release-Builds für Double-click node insertion ergänzen.
+
+**Rhai-API:** `Generated and parsed Rhai API v2 command stream`
+
+**Visual-Graph-API:** `All Rhai API v2 generated nodes`
+
+<a id="visual-graph-indexed-automatic-block-layout"></a>
+
+### Indexed automatic block layout
+
+**Klassifikation:** Manual · Assisted · Automatic · Runtime · Reversible
+
+**Zweck und Einsatz:** Indexed automatic block layout im Bereich Visual Graph Editor erledigt die unterstützte Autoren- oder Laufzeitaufgabe direkt im Arbeitsbereich Script. Verwenden, wenn das Projekt Indexed automatic block layout benötigt; nicht zugehörige Einstellungen bleiben in ihrem zuständigen Arbeitsbereich.
+
+**Voraussetzungen:**
+
+- A .nova-graph or .rhai asset
+
+**Exakter Ablauf:**
+
+1. Script und danach Visual Graph Editor öffnen.
+2. Indexed automatic block layout wählen und vor der Bearbeitung sichtbare Validierung und Berechtigungen prüfen.
+3. Zielprojekt, Asset oder Objekt wählen und nur endliche, unterstützte Werte eingeben.
+4. Änderung anwenden oder speichern und sichtbares Ergebnis sowie Probleme/Konsole prüfen.
+5. Bei Laufzeitverhalten Play oder Vorschau starten; Pause/Einzelschritt für deterministische Prüfung verwenden.
+6. Projekt speichern, neu laden und den unveränderten Autorenwert bestätigen.
+7. Project Health und den passenden Test ausführen, Standalone-Player bauen und die sichtbare Prüfung wiederholen.
+
+**Erwartetes Ergebnis:** Indexed automatic block layout ist im Editor sichtbar, bleibt nach dem Neuladen erhalten und erreicht gegebenenfalls Vorschau, Play und exportierte Player.
+
+**Speicherung und Export:** Indexed automatic block layout wird im zuständigen Projekt, in Szene, Komponente, Asset, Arbeitsbereichseinstellung oder Build-Manifest gespeichert. Reine Editor-Daten gelangen nicht in Player.
+
+**Rückgängig und Wiederherstellung:** Für Dokumentänderungen Rückgängig/Wiederholen, für Importe oder Pakete Zurücksetzen/Rollback, bei unterbrochenen Speicherungen Recovery Browser und für projektweite Wiederherstellung Quellverwaltung oder Migrations-Backup verwenden.
+
+**Häufige Fehler und Lösungen:**
+
+- Indexed automatic block layout mit falscher Auswahl oder im falschen Arbeitsbereich bearbeiten.
+- Berechtigungs-, Validierungs-, Referenz- oder Hostvorlagenwarnung ignorieren.
+- Nur die Editorvorschau prüfen, nicht Speichern/Neuladen und Standalone-Player.
+
+**Tastatur und Barrierefreiheit:** Command Palette oder Tastaturfokus statt reiner Zeigerbedienung verwenden. Dialoge besitzen Namen, sichtbaren Fokus, Escape/Abbrechen und reduzierte Bewegung.
+
+**Minimales Beispiel:** Minimal: ein gültiges Ziel erstellen, Indexed automatic block layout konfigurieren, speichern und ein sichtbares Play-Ergebnis prüfen.
+
+**Produktionsbeispiel:** Produktion: Validierung, Lokalisierung/Barrierefreiheit, deterministische Tests, Budgets, Wiederherstellung und Entwicklungs-/Release-Builds für Indexed automatic block layout ergänzen.
+
+**Rhai-API:** `Generated and parsed Rhai API v2 command stream`
+
+**Visual-Graph-API:** `All Rhai API v2 generated nodes`
+
+<a id="visual-graph-animation-frame-batched-graph-gestures"></a>
+
+### Animation-frame batched graph gestures
+
+**Klassifikation:** Manual · Assisted · Automatic · Runtime · Reversible
+
+**Zweck und Einsatz:** Animation-frame batched graph gestures im Bereich Visual Graph Editor erledigt die unterstützte Autoren- oder Laufzeitaufgabe direkt im Arbeitsbereich Script. Verwenden, wenn das Projekt Animation-frame batched graph gestures benötigt; nicht zugehörige Einstellungen bleiben in ihrem zuständigen Arbeitsbereich.
+
+**Voraussetzungen:**
+
+- A .nova-graph or .rhai asset
+
+**Exakter Ablauf:**
+
+1. Script und danach Visual Graph Editor öffnen.
+2. Animation-frame batched graph gestures wählen und vor der Bearbeitung sichtbare Validierung und Berechtigungen prüfen.
+3. Zielprojekt, Asset oder Objekt wählen und nur endliche, unterstützte Werte eingeben.
+4. Änderung anwenden oder speichern und sichtbares Ergebnis sowie Probleme/Konsole prüfen.
+5. Bei Laufzeitverhalten Play oder Vorschau starten; Pause/Einzelschritt für deterministische Prüfung verwenden.
+6. Projekt speichern, neu laden und den unveränderten Autorenwert bestätigen.
+7. Project Health und den passenden Test ausführen, Standalone-Player bauen und die sichtbare Prüfung wiederholen.
+
+**Erwartetes Ergebnis:** Animation-frame batched graph gestures ist im Editor sichtbar, bleibt nach dem Neuladen erhalten und erreicht gegebenenfalls Vorschau, Play und exportierte Player.
+
+**Speicherung und Export:** Animation-frame batched graph gestures wird im zuständigen Projekt, in Szene, Komponente, Asset, Arbeitsbereichseinstellung oder Build-Manifest gespeichert. Reine Editor-Daten gelangen nicht in Player.
+
+**Rückgängig und Wiederherstellung:** Für Dokumentänderungen Rückgängig/Wiederholen, für Importe oder Pakete Zurücksetzen/Rollback, bei unterbrochenen Speicherungen Recovery Browser und für projektweite Wiederherstellung Quellverwaltung oder Migrations-Backup verwenden.
+
+**Häufige Fehler und Lösungen:**
+
+- Animation-frame batched graph gestures mit falscher Auswahl oder im falschen Arbeitsbereich bearbeiten.
+- Berechtigungs-, Validierungs-, Referenz- oder Hostvorlagenwarnung ignorieren.
+- Nur die Editorvorschau prüfen, nicht Speichern/Neuladen und Standalone-Player.
+
+**Tastatur und Barrierefreiheit:** Command Palette oder Tastaturfokus statt reiner Zeigerbedienung verwenden. Dialoge besitzen Namen, sichtbaren Fokus, Escape/Abbrechen und reduzierte Bewegung.
+
+**Minimales Beispiel:** Minimal: ein gültiges Ziel erstellen, Animation-frame batched graph gestures konfigurieren, speichern und ein sichtbares Play-Ergebnis prüfen.
+
+**Produktionsbeispiel:** Produktion: Validierung, Lokalisierung/Barrierefreiheit, deterministische Tests, Budgets, Wiederherstellung und Entwicklungs-/Release-Builds für Animation-frame batched graph gestures ergänzen.
+
+**Rhai-API:** `Generated and parsed Rhai API v2 command stream`
+
+**Visual-Graph-API:** `All Rhai API v2 generated nodes`
+
+<a id="visual-graph-large-graph-culling-and-low-detail-rendering"></a>
+
+### Large-graph culling and low-detail rendering
+
+**Klassifikation:** Manual · Assisted · Automatic · Runtime · Reversible
+
+**Zweck und Einsatz:** Large-graph culling and low-detail rendering im Bereich Visual Graph Editor erledigt die unterstützte Autoren- oder Laufzeitaufgabe direkt im Arbeitsbereich Script. Verwenden, wenn das Projekt Large-graph culling and low-detail rendering benötigt; nicht zugehörige Einstellungen bleiben in ihrem zuständigen Arbeitsbereich.
+
+**Voraussetzungen:**
+
+- A .nova-graph or .rhai asset
+
+**Exakter Ablauf:**
+
+1. Script und danach Visual Graph Editor öffnen.
+2. Large-graph culling and low-detail rendering wählen und vor der Bearbeitung sichtbare Validierung und Berechtigungen prüfen.
+3. Zielprojekt, Asset oder Objekt wählen und nur endliche, unterstützte Werte eingeben.
+4. Änderung anwenden oder speichern und sichtbares Ergebnis sowie Probleme/Konsole prüfen.
+5. Bei Laufzeitverhalten Play oder Vorschau starten; Pause/Einzelschritt für deterministische Prüfung verwenden.
+6. Projekt speichern, neu laden und den unveränderten Autorenwert bestätigen.
+7. Project Health und den passenden Test ausführen, Standalone-Player bauen und die sichtbare Prüfung wiederholen.
+
+**Erwartetes Ergebnis:** Large-graph culling and low-detail rendering ist im Editor sichtbar, bleibt nach dem Neuladen erhalten und erreicht gegebenenfalls Vorschau, Play und exportierte Player.
+
+**Speicherung und Export:** Large-graph culling and low-detail rendering wird im zuständigen Projekt, in Szene, Komponente, Asset, Arbeitsbereichseinstellung oder Build-Manifest gespeichert. Reine Editor-Daten gelangen nicht in Player.
+
+**Rückgängig und Wiederherstellung:** Für Dokumentänderungen Rückgängig/Wiederholen, für Importe oder Pakete Zurücksetzen/Rollback, bei unterbrochenen Speicherungen Recovery Browser und für projektweite Wiederherstellung Quellverwaltung oder Migrations-Backup verwenden.
+
+**Häufige Fehler und Lösungen:**
+
+- Large-graph culling and low-detail rendering mit falscher Auswahl oder im falschen Arbeitsbereich bearbeiten.
+- Berechtigungs-, Validierungs-, Referenz- oder Hostvorlagenwarnung ignorieren.
+- Nur die Editorvorschau prüfen, nicht Speichern/Neuladen und Standalone-Player.
+
+**Tastatur und Barrierefreiheit:** Command Palette oder Tastaturfokus statt reiner Zeigerbedienung verwenden. Dialoge besitzen Namen, sichtbaren Fokus, Escape/Abbrechen und reduzierte Bewegung.
+
+**Minimales Beispiel:** Minimal: ein gültiges Ziel erstellen, Large-graph culling and low-detail rendering konfigurieren, speichern und ein sichtbares Play-Ergebnis prüfen.
+
+**Produktionsbeispiel:** Produktion: Validierung, Lokalisierung/Barrierefreiheit, deterministische Tests, Budgets, Wiederherstellung und Entwicklungs-/Release-Builds für Large-graph culling and low-detail rendering ergänzen.
 
 **Rhai-API:** `Generated and parsed Rhai API v2 command stream`
 
@@ -7913,13 +9484,13 @@ Lernen durch echte Aufgaben. Jede öffentliche Funktion erklärt Zuständigkeit,
 
 **Visual-Graph-API:** `All Rhai API v2 generated nodes`
 
-<a id="visual-graph-1-000-node-authoring-profile"></a>
+<a id="visual-graph-10-000-node-bounded-document"></a>
 
-### 1,000-node authoring profile
+### 10,000-node bounded document
 
 **Klassifikation:** Manual · Assisted · Automatic · Runtime · Reversible
 
-**Zweck und Einsatz:** 1,000-node authoring profile im Bereich Visual Graph Editor erledigt die unterstützte Autoren- oder Laufzeitaufgabe direkt im Arbeitsbereich Script. Verwenden, wenn das Projekt 1,000-node authoring profile benötigt; nicht zugehörige Einstellungen bleiben in ihrem zuständigen Arbeitsbereich.
+**Zweck und Einsatz:** 10,000-node bounded document im Bereich Visual Graph Editor erledigt die unterstützte Autoren- oder Laufzeitaufgabe direkt im Arbeitsbereich Script. Verwenden, wenn das Projekt 10,000-node bounded document benötigt; nicht zugehörige Einstellungen bleiben in ihrem zuständigen Arbeitsbereich.
 
 **Voraussetzungen:**
 
@@ -7928,30 +9499,30 @@ Lernen durch echte Aufgaben. Jede öffentliche Funktion erklärt Zuständigkeit,
 **Exakter Ablauf:**
 
 1. Script und danach Visual Graph Editor öffnen.
-2. 1,000-node authoring profile wählen und vor der Bearbeitung sichtbare Validierung und Berechtigungen prüfen.
+2. 10,000-node bounded document wählen und vor der Bearbeitung sichtbare Validierung und Berechtigungen prüfen.
 3. Zielprojekt, Asset oder Objekt wählen und nur endliche, unterstützte Werte eingeben.
 4. Änderung anwenden oder speichern und sichtbares Ergebnis sowie Probleme/Konsole prüfen.
 5. Bei Laufzeitverhalten Play oder Vorschau starten; Pause/Einzelschritt für deterministische Prüfung verwenden.
 6. Projekt speichern, neu laden und den unveränderten Autorenwert bestätigen.
 7. Project Health und den passenden Test ausführen, Standalone-Player bauen und die sichtbare Prüfung wiederholen.
 
-**Erwartetes Ergebnis:** 1,000-node authoring profile ist im Editor sichtbar, bleibt nach dem Neuladen erhalten und erreicht gegebenenfalls Vorschau, Play und exportierte Player.
+**Erwartetes Ergebnis:** 10,000-node bounded document ist im Editor sichtbar, bleibt nach dem Neuladen erhalten und erreicht gegebenenfalls Vorschau, Play und exportierte Player.
 
-**Speicherung und Export:** 1,000-node authoring profile wird im zuständigen Projekt, in Szene, Komponente, Asset, Arbeitsbereichseinstellung oder Build-Manifest gespeichert. Reine Editor-Daten gelangen nicht in Player.
+**Speicherung und Export:** 10,000-node bounded document wird im zuständigen Projekt, in Szene, Komponente, Asset, Arbeitsbereichseinstellung oder Build-Manifest gespeichert. Reine Editor-Daten gelangen nicht in Player.
 
 **Rückgängig und Wiederherstellung:** Für Dokumentänderungen Rückgängig/Wiederholen, für Importe oder Pakete Zurücksetzen/Rollback, bei unterbrochenen Speicherungen Recovery Browser und für projektweite Wiederherstellung Quellverwaltung oder Migrations-Backup verwenden.
 
 **Häufige Fehler und Lösungen:**
 
-- 1,000-node authoring profile mit falscher Auswahl oder im falschen Arbeitsbereich bearbeiten.
+- 10,000-node bounded document mit falscher Auswahl oder im falschen Arbeitsbereich bearbeiten.
 - Berechtigungs-, Validierungs-, Referenz- oder Hostvorlagenwarnung ignorieren.
 - Nur die Editorvorschau prüfen, nicht Speichern/Neuladen und Standalone-Player.
 
 **Tastatur und Barrierefreiheit:** Command Palette oder Tastaturfokus statt reiner Zeigerbedienung verwenden. Dialoge besitzen Namen, sichtbaren Fokus, Escape/Abbrechen und reduzierte Bewegung.
 
-**Minimales Beispiel:** Minimal: ein gültiges Ziel erstellen, 1,000-node authoring profile konfigurieren, speichern und ein sichtbares Play-Ergebnis prüfen.
+**Minimales Beispiel:** Minimal: ein gültiges Ziel erstellen, 10,000-node bounded document konfigurieren, speichern und ein sichtbares Play-Ergebnis prüfen.
 
-**Produktionsbeispiel:** Produktion: Validierung, Lokalisierung/Barrierefreiheit, deterministische Tests, Budgets, Wiederherstellung und Entwicklungs-/Release-Builds für 1,000-node authoring profile ergänzen.
+**Produktionsbeispiel:** Produktion: Validierung, Lokalisierung/Barrierefreiheit, deterministische Tests, Budgets, Wiederherstellung und Entwicklungs-/Release-Builds für 10,000-node bounded document ergänzen.
 
 **Rhai-API:** `Generated and parsed Rhai API v2 command stream`
 
@@ -16803,21 +18374,5 @@ Lernen durch echte Aufgaben. Jede öffentliche Funktion erklärt Zuständigkeit,
 **Rhai-API:** N/A
 
 **Visual-Graph-API:** N/A
-
-
-<a id="v70-stable-platform"></a>
-
-## Nova_A 7: Ablauf der stabilen Creator-Plattform
-
-Mit diesem Ablauf ein vollständiges Projekt lernen, migrieren, prüfen und ausliefern, ohne stabile Verträge oder externe Grenzen zu verbergen.
-
-1. Verwalten → Lernzentrum → Plattformbereitschaft öffnen. Die gewünschte Funktion suchen und Bindung, Validierung, Rückgängig, Speicherung, Laufzeit/Export, Dokumentation und Tests prüfen. Kreis bedeutet nicht anwendbar; Strich bedeutet externe Evidenz.
-2. Mit einem geführten Projekt oder creator-v700-stable-platform beginnen. Voraussetzungen, exakte Schritte, Ergebnis, Speichern/Laden, Rückgängig/Wiederherstellung, Play/Step, Standalone-Build und Barrierefreiheit der Reihe nach prüfen.
-3. Beim Öffnen eines 6.x-Projekts zuerst die Migrationsvorschau lesen. Quell-/Zielversion, semantischen Diff, Backup und deterministische Prüfsumme prüfen. Der 7.0-Siegel ändert nur die Obergrenze auf <8.0.0 und keine Schema-29-Spieldaten.
-4. Rhai oder Visual Graph bearbeiten, speichern, die synchronisierte Gegenseite und Paritätstests prüfen. Nicht unterstütztes Rhai bleibt verlustfrei im Code-Block. Vor Runtime-Aufrufen API-Browser oder docs/API_REFERENCE_7_0.md verwenden.
-5. Projektzustand, Vorlagen/Referenzen und Build-Validierung ausführen. Windows unter Windows und Web lokal bauen. Linux/macOS benötigen Matching Host, Android ist experimentell/toolchain-gebunden, iOS/Konsolen sind verschoben.
-6. Tastatur und Zeiger auf Englisch, Deutsch und Chinesisch bei 100–200 %, hohem Kontrast und reduzierter Bewegung prüfen. Speichern, neu öffnen, einen absichtlich falschen Wert beheben und elf Release-Dateien kontrollieren.
-
-**Rückgängig und Wiederherstellung:** Bei unerwarteter Vorschau abbrechen oder Backup wiederherstellen. Dokumentänderungen rückgängig machen, Recovery Browser nach unterbrochenem Speichern verwenden, fehlerhafte Pakete/Plugins deaktivieren und den letzten gültigen Build behalten. docs/TROUBLESHOOTING_7_0.md erklärt die Fehlerbehebung. Externe Nachweise bleiben offen.
 
 <!-- NOVA_V6_TEACHING_END -->

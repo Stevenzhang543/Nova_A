@@ -25,6 +25,7 @@ import { particleRuntime } from './particles'
 import { clearSaveValues, commitSaveSlot, deleteSaveValue, loadSaveSlot, saveSnapshot, setSaveValue, useSaveProject, type SaveValue } from './saveGame'
 import { pluginRuntime } from './plugins'
 import { analyzeScript } from '../editor/scriptLanguage'
+import { analyzeScript26, statementAtLine } from '../editor/scriptLanguage26'
 import { beginDebugSession, clearScriptDebugger, evaluateDebugExpression, pauseScriptDebugger, requestDebugStep, scriptDebugState, updateDebugTask, type DebugStepMode, type ScriptTestResult } from './scriptDebug'
 import { scriptProjectSettings } from './scriptSettings'
 import { beforeWorldPhysicsStep, beginWorldGameplay, canUseCoyoteTime, queueCharacterMotion, resetWorldGameplay } from './worldGameplay'
@@ -56,6 +57,7 @@ import { beginGameplayComponents, processGameplayContacts, updateGameplayCompone
 import { activeGameCamera, gameScreenToWorld, visibleWorldBounds } from '../renderer/sceneRenderer'
 import { packageState } from './packages'
 import { parseScriptContract, validateScriptContract, type ScriptContractReport } from './scriptContracts'
+import { resolveEventHandlers, type ObjectEventKind } from './eventSheets'
 
 type LifecycleFunction = 'awake' | 'start' | 'fixed_update' | 'update' | 'late_update' | 'on_destroy' | 'on_timer' | 'on_task' | 'on_signal'
 
@@ -333,7 +335,7 @@ export class GameplayRuntime {
     const timerScriptsStarted = performance.now()
     for (const timer of expired) {
       const entity = physicsState.world.entities.find(candidate => candidate.uuid === timer.entityUuid)
-      if (entity && timer.kind === 'timer') this.runEntityFunction(entity, 'on_timer', undefined, { name: timer.name, source: entity.uuid, payload: null })
+      if (entity && timer.kind === 'timer') { this.runEntityFunction(entity, 'on_timer', undefined, { name: timer.name, source: entity.uuid, payload: null }); this.runEventSheetHandlers(entity, 'timer', timer.name, 'on_timer', undefined, { name: timer.name, source: entity.uuid, payload: null }) }
       else if (entity) { updateDebugTask({ id: `${entity.uuid}:${timer.name}`, name: timer.name, state: 'completed', entityUuid: entity.uuid, detail: `Completed at frame ${this.time.value.frame}` }); this.runEntityFunction(entity, 'on_task', undefined, { name: timer.name, source: entity.uuid, payload: null }) }
     }
     scriptsMs += performance.now() - timerScriptsStarted
@@ -652,6 +654,15 @@ export class GameplayRuntime {
     scriptDebugState.reason = 'Runtime restarted; continue to enter the next callback'
   }
 
+  cancelDebugTask(taskId: string): boolean {
+    const task = scriptDebugState.tasks.find(item => item.id === taskId)
+    if (!task || !['queued', 'running', 'waiting'].includes(task.state)) return false
+    this.time.cancelTask(task.entityUuid, task.name)
+    updateDebugTask({ ...task, state: 'cancelled', detail: `Cancelled from Script Studio at frame ${this.time.value.frame}` })
+    addEditorLog(`Cancelled script task ${task.name}`, 'Script', 'info', task.entityUuid)
+    return true
+  }
+
   runScriptTests(scriptUuid?: string, options: { tags?: string[]; includeSkipped?: boolean; testNames?: string[] } = {}): ScriptTestResult[] {
     if (scriptProjectSettings.testing.coverageEnabled) resetScriptCoverage()
     const assets = scriptUuid ? [resolveAsset(scriptUuid)].filter(Boolean) : physicsState.world.entities.map(entity => resolveAsset(entity.script2D?.scriptAsset ?? '')).filter(Boolean)
@@ -711,6 +722,7 @@ export class GameplayRuntime {
     if (!this.active || !functionName.trim()) return
     this.emitSignal(`ui.${functionName.trim()}`, { entity: entity.uuid }, entity.uuid, entity.uuid)
     this.runEntityFunction(entity, functionName.trim().slice(0, 80))
+    this.runEventSheetHandlers(entity, 'ui', functionName.trim().slice(0, 80), functionName.trim().slice(0, 80))
     this.flushEntityCommands()
     this.flushStructuralCommands()
   }
@@ -728,12 +740,14 @@ export class GameplayRuntime {
       if (!this.awakened.has(entity.uuid)) {
         this.awakened.add(entity.uuid)
         this.runEntityFunction(entity, 'awake')
+        this.runEventSheetHandlers(entity, 'awake', '', 'awake')
       }
     }
     for (const entity of scripted) {
       if (!this.started.has(entity.uuid)) {
         this.started.add(entity.uuid)
         this.runEntityFunction(entity, 'start')
+        this.runEventSheetHandlers(entity, 'start', '', 'start')
       }
     }
   }
@@ -746,12 +760,27 @@ export class GameplayRuntime {
       if (!action.callback) continue
       for (const entity of physicsState.world.entities.filter(candidate => this.canRun(candidate))) this.runEntityFunction(entity, action.callback)
     }
+    for (const entity of physicsState.world.entities.filter(candidate => this.canRun(candidate))) for (const action of physicsState.inputMap) {
+      if (snapshot.pressed[action.name]) this.runEventSheetHandlers(entity, 'input-pressed', action.name)
+      if (snapshot.released[action.name]) this.runEventSheetHandlers(entity, 'input-released', action.name)
+    }
   }
 
   private runPhase(functionName: LifecycleFunction): void {
     for (const entity of [...physicsState.world.entities]) {
       if (scriptDebugState.paused) break
       this.runEntityFunction(entity, functionName)
+      if (functionName === 'update') this.runEventSheetHandlers(entity, 'update', '', 'update')
+      else if (functionName === 'fixed_update') this.runEventSheetHandlers(entity, 'fixed-update', '', 'fixed_update')
+    }
+  }
+
+  private runEventSheetHandlers(entity: Entity, kind: ObjectEventKind, selector = '', canonicalCallback = '', contact?: ScriptContact, event?: ScriptEvent): void {
+    const reference = entity.script2D?.eventSheetAsset
+    if (!reference || !this.canRun(entity)) return
+    for (const handler of resolveEventHandlers(reference)) {
+      if (handler.kind !== kind || (handler.selector && handler.selector !== selector) || handler.callback === canonicalCallback) continue
+      this.runEntityFunction(entity, handler.callback, contact, event)
     }
   }
 
@@ -825,10 +854,10 @@ export class GameplayRuntime {
       networking: productionNetworkContext()
     }
     if (!bypassBreakpoint && scriptProjectSettings.debuggerEnabled && scriptDebugState.enabled && !scriptDebugState.paused) {
-      const fn = analyzeScript(source).functions[functionName]
+      const language = analyzeScript(source), fn = language.functions[functionName], rich = analyzeScript26(source)
       const legacy = (asset.script?.breakpoints ?? []).map((line, index): ScriptBreakpointMetadata => ({ id: `line-${line}-${index}`, line, functionName: '', condition: '', hitCondition: 0, logMessage: '', enabled: true, hitCount: 0 }))
       const details = asset.script?.breakpointDetails?.length ? asset.script.breakpointDetails : legacy
-      const breakpoint = details.find(point => point.enabled && fn && point.line >= fn.line && point.line <= fn.endLine && (!point.functionName || point.functionName === functionName))
+      const breakpoint = details.find(point => point.enabled && fn && point.line >= fn.line && point.line <= fn.endLine && Boolean(statementAtLine(rich, point.line, functionName)) && (!point.functionName || point.functionName === functionName))
       if (breakpoint) {
         breakpoint.hitCount = Math.min(1_000_000_000, breakpoint.hitCount + 1)
         let condition = true
@@ -1091,12 +1120,15 @@ export class GameplayRuntime {
       const normal = event.normal ?? [0, 0]
       const relative = event.relativeVelocity ?? [0, 0]
       this.runEntityFunction(first, functionName, { otherEntity: second.uuid, point, normal, relativeVelocity: relative })
+      const sheetKind = event.type === 'collisionStarted' ? 'collision-enter' : event.type === 'collisionStayed' ? 'collision-stay' : event.type === 'collisionEnded' ? 'collision-exit' : event.type === 'triggerEntered' ? 'trigger-enter' : event.type === 'triggerStayed' ? 'trigger-stay' : 'trigger-exit'
+      this.runEventSheetHandlers(first, sheetKind, '', functionName, { otherEntity: second.uuid, point, normal, relativeVelocity: relative })
       this.runEntityFunction(second, functionName, {
         otherEntity: first.uuid,
         point,
         normal: [-normal[0], -normal[1]],
         relativeVelocity: [-relative[0], -relative[1]]
       })
+      this.runEventSheetHandlers(second, sheetKind, '', functionName, { otherEntity: first.uuid, point, normal: [-normal[0], -normal[1]], relativeVelocity: [-relative[0], -relative[1]] })
       const signal = functionName.replace(/^on_/, 'physics.')
       this.emitSignal(signal, { other: second.uuid, point, normal, relativeVelocity: relative }, first.uuid, second.uuid)
       this.emitSignal(signal, { other: first.uuid, point, normal: [-normal[0], -normal[1]], relativeVelocity: [-relative[0], -relative[1]] }, second.uuid, first.uuid)
@@ -1208,6 +1240,8 @@ export class GameplayRuntime {
         : physicsState.world.entities
       for (const entity of recipients) {
         this.runEntityFunction(entity, 'on_signal', undefined, signal)
+        const eventKind: ObjectEventKind = signal.name.startsWith('ui.') ? 'ui' : signal.name.startsWith('animation.') ? 'animation' : signal.name.startsWith('network.') ? 'network' : 'signal'
+        this.runEventSheetHandlers(entity, eventKind, signal.name.replace(/^(?:ui|animation|network)\./, ''), 'on_signal', undefined, signal)
         const asset = resolveAsset(entity.script2D?.scriptAsset ?? '')
         for (const connection of asset?.script?.signalConnections ?? []) {
           if (!connection.enabled || connection.signal !== signal.name) continue

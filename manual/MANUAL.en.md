@@ -1,4 +1,4 @@
-# Nova_A 7.0.0 Complete Manual
+# Nova_A 26.4.0 Complete Manual
 
 ## 6.2.0 behavior contracts
 
@@ -1018,11 +1018,11 @@ In **Export templates**, inspect installed target/architecture/runtime templates
 In **Delivery**, refresh deterministic CI cache keys, keep delta builds with patch manifests, and create local, HTTPS or external-command connectors. Remote/external connectors require project permission. Prepare Plan validates destination and checksum but returns a non-executable plan and performs no network operation. Final deployment remains an external, explicit action. See `docs/EXTENSIONS_PLATFORM_DELIVERY_5_9.md`.
 
 <!-- NOVA_V6_TEACHING_START -->
-# Nova_A 7.0.0 task-oriented teaching manual
+# Nova_A 26.4.0 task-oriented teaching manual
 
 Learn by completing real work. Every public feature below states ownership, persistence, recovery, accessibility and release behavior.
 
-- Engine: **7.0.0**
+- Engine: **26.4.0**
 - Stable contracts: Project Format 2/schema 29; Rhai API 2; Graph Format 1; Plugin API 2; Package Manifest 1; Build CLI 1; workspace document 3.
 - External signing, independent clean-machine evidence, two-machine reproduction, matching-host builds and a real 72-hour soak remain pending until independently captured.
 
@@ -1358,13 +1358,13 @@ Learn by completing real work. Every public feature below states ownership, pers
 
 **Visual Graph API:** N/A
 
-<a id="project-manager-project-templates"></a>
+<a id="project-manager-20-template-library"></a>
 
-### Project templates
+### 20-template library
 
 **Classification:** Assisted · Project-wide · Reversible
 
-**Purpose and when to use it:** Use Project templates in Project Manager to complete its supported authoring or runtime job without leaving the Launcher workflow. Use it when the project needs project templates; keep unrelated settings in their owning workspace.
+**Purpose and when to use it:** Use 20-template library in Project Manager to complete its supported authoring or runtime job without leaving the Launcher workflow. Use it when the project needs 20-template library; keep unrelated settings in their owning workspace.
 
 **Preconditions:**
 
@@ -1374,30 +1374,210 @@ Learn by completing real work. Every public feature below states ownership, pers
 **Exact workflow:**
 
 1. Open Launcher, then open Project Manager.
-2. Choose Project templates; read its visible validation and permission state before editing.
+2. Choose 20-template library; read its visible validation and permission state before editing.
 3. Select the target project, asset or object and enter only finite, supported values.
 4. Apply or save the change, then inspect the visible result and Problems/Console output.
 5. Run Play or Preview when the feature has runtime behavior; use Pause/Step for deterministic inspection.
 6. Save, reload the project and confirm the authored value is unchanged.
 7. Run Project Health and the relevant test, then build the standalone player and repeat the observable check.
 
-**Expected result:** Project templates is visible in the editor, survives reload and reaches Preview/Play and exported players where applicable.
+**Expected result:** 20-template library is visible in the editor, survives reload and reaches Preview/Play and exported players where applicable.
 
-**Persistence and export:** Project templates is stored in the owning project, scene, component, asset, workspace preference or build manifest. Editor-only state is excluded from players.
+**Persistence and export:** 20-template library is stored in the owning project, scene, component, asset, workspace preference or build manifest. Editor-only state is excluded from players.
 
 **Undo and recovery:** Use Undo/Redo for document edits, Revert/rollback for imports or packages, Recovery Browser for interrupted saves, and source control or the migration backup for project-wide recovery.
 
 **Common mistakes and fixes:**
 
-- Editing Project templates on the wrong selection or workspace.
+- Editing 20-template library on the wrong selection or workspace.
 - Ignoring a permission, validation, missing-reference or host-template warning.
 - Checking only the editor preview and not save/reload plus the standalone player.
 
 **Keyboard and accessibility:** Use Command Palette or keyboard focus instead of pointer-only navigation. Every dialog exposes a named control, visible focus, Escape/cancel path and reduced-motion behavior.
 
-**Minimal example:** Minimal: create one valid target, configure Project templates, save and verify one visible result in Play.
+**Minimal example:** Minimal: create one valid target, configure 20-template library, save and verify one visible result in Play.
 
-**Production example:** Production: add validation, localization/accessibility, deterministic tests, budgets, recovery evidence and both development and release builds for Project templates.
+**Production example:** Production: add validation, localization/accessibility, deterministic tests, budgets, recovery evidence and both development and release builds for 20-template library.
+
+**Rhai API:** N/A
+
+**Visual Graph API:** N/A
+
+<a id="project-manager-template-search"></a>
+
+### Template search
+
+**Classification:** Assisted · Project-wide · Reversible
+
+**Purpose and when to use it:** Use Template search in Project Manager to complete its supported authoring or runtime job without leaving the Launcher workflow. Use it when the project needs template search; keep unrelated settings in their owning workspace.
+
+**Preconditions:**
+
+- A writable project folder
+- A supported .nova/.json document for import or migration
+
+**Exact workflow:**
+
+1. Open Launcher, then open Project Manager.
+2. Choose Template search; read its visible validation and permission state before editing.
+3. Select the target project, asset or object and enter only finite, supported values.
+4. Apply or save the change, then inspect the visible result and Problems/Console output.
+5. Run Play or Preview when the feature has runtime behavior; use Pause/Step for deterministic inspection.
+6. Save, reload the project and confirm the authored value is unchanged.
+7. Run Project Health and the relevant test, then build the standalone player and repeat the observable check.
+
+**Expected result:** Template search is visible in the editor, survives reload and reaches Preview/Play and exported players where applicable.
+
+**Persistence and export:** Template search is stored in the owning project, scene, component, asset, workspace preference or build manifest. Editor-only state is excluded from players.
+
+**Undo and recovery:** Use Undo/Redo for document edits, Revert/rollback for imports or packages, Recovery Browser for interrupted saves, and source control or the migration backup for project-wide recovery.
+
+**Common mistakes and fixes:**
+
+- Editing Template search on the wrong selection or workspace.
+- Ignoring a permission, validation, missing-reference or host-template warning.
+- Checking only the editor preview and not save/reload plus the standalone player.
+
+**Keyboard and accessibility:** Use Command Palette or keyboard focus instead of pointer-only navigation. Every dialog exposes a named control, visible focus, Escape/cancel path and reduced-motion behavior.
+
+**Minimal example:** Minimal: create one valid target, configure Template search, save and verify one visible result in Play.
+
+**Production example:** Production: add validation, localization/accessibility, deterministic tests, budgets, recovery evidence and both development and release builds for Template search.
+
+**Rhai API:** N/A
+
+**Visual Graph API:** N/A
+
+<a id="project-manager-template-difficulty-filter"></a>
+
+### Template difficulty filter
+
+**Classification:** Assisted · Project-wide · Reversible
+
+**Purpose and when to use it:** Use Template difficulty filter in Project Manager to complete its supported authoring or runtime job without leaving the Launcher workflow. Use it when the project needs template difficulty filter; keep unrelated settings in their owning workspace.
+
+**Preconditions:**
+
+- A writable project folder
+- A supported .nova/.json document for import or migration
+
+**Exact workflow:**
+
+1. Open Launcher, then open Project Manager.
+2. Choose Template difficulty filter; read its visible validation and permission state before editing.
+3. Select the target project, asset or object and enter only finite, supported values.
+4. Apply or save the change, then inspect the visible result and Problems/Console output.
+5. Run Play or Preview when the feature has runtime behavior; use Pause/Step for deterministic inspection.
+6. Save, reload the project and confirm the authored value is unchanged.
+7. Run Project Health and the relevant test, then build the standalone player and repeat the observable check.
+
+**Expected result:** Template difficulty filter is visible in the editor, survives reload and reaches Preview/Play and exported players where applicable.
+
+**Persistence and export:** Template difficulty filter is stored in the owning project, scene, component, asset, workspace preference or build manifest. Editor-only state is excluded from players.
+
+**Undo and recovery:** Use Undo/Redo for document edits, Revert/rollback for imports or packages, Recovery Browser for interrupted saves, and source control or the migration backup for project-wide recovery.
+
+**Common mistakes and fixes:**
+
+- Editing Template difficulty filter on the wrong selection or workspace.
+- Ignoring a permission, validation, missing-reference or host-template warning.
+- Checking only the editor preview and not save/reload plus the standalone player.
+
+**Keyboard and accessibility:** Use Command Palette or keyboard focus instead of pointer-only navigation. Every dialog exposes a named control, visible focus, Escape/cancel path and reduced-motion behavior.
+
+**Minimal example:** Minimal: create one valid target, configure Template difficulty filter, save and verify one visible result in Play.
+
+**Production example:** Production: add validation, localization/accessibility, deterministic tests, budgets, recovery evidence and both development and release builds for Template difficulty filter.
+
+**Rhai API:** N/A
+
+**Visual Graph API:** N/A
+
+<a id="project-manager-template-category-browser"></a>
+
+### Template category browser
+
+**Classification:** Assisted · Project-wide · Reversible
+
+**Purpose and when to use it:** Use Template category browser in Project Manager to complete its supported authoring or runtime job without leaving the Launcher workflow. Use it when the project needs template category browser; keep unrelated settings in their owning workspace.
+
+**Preconditions:**
+
+- A writable project folder
+- A supported .nova/.json document for import or migration
+
+**Exact workflow:**
+
+1. Open Launcher, then open Project Manager.
+2. Choose Template category browser; read its visible validation and permission state before editing.
+3. Select the target project, asset or object and enter only finite, supported values.
+4. Apply or save the change, then inspect the visible result and Problems/Console output.
+5. Run Play or Preview when the feature has runtime behavior; use Pause/Step for deterministic inspection.
+6. Save, reload the project and confirm the authored value is unchanged.
+7. Run Project Health and the relevant test, then build the standalone player and repeat the observable check.
+
+**Expected result:** Template category browser is visible in the editor, survives reload and reaches Preview/Play and exported players where applicable.
+
+**Persistence and export:** Template category browser is stored in the owning project, scene, component, asset, workspace preference or build manifest. Editor-only state is excluded from players.
+
+**Undo and recovery:** Use Undo/Redo for document edits, Revert/rollback for imports or packages, Recovery Browser for interrupted saves, and source control or the migration backup for project-wide recovery.
+
+**Common mistakes and fixes:**
+
+- Editing Template category browser on the wrong selection or workspace.
+- Ignoring a permission, validation, missing-reference or host-template warning.
+- Checking only the editor preview and not save/reload plus the standalone player.
+
+**Keyboard and accessibility:** Use Command Palette or keyboard focus instead of pointer-only navigation. Every dialog exposes a named control, visible focus, Escape/cancel path and reduced-motion behavior.
+
+**Minimal example:** Minimal: create one valid target, configure Template category browser, save and verify one visible result in Play.
+
+**Production example:** Production: add validation, localization/accessibility, deterministic tests, budgets, recovery evidence and both development and release builds for Template category browser.
+
+**Rhai API:** N/A
+
+**Visual Graph API:** N/A
+
+<a id="project-manager-template-setup-time-and-capability-preview"></a>
+
+### Template setup-time and capability preview
+
+**Classification:** Assisted · Project-wide · Reversible
+
+**Purpose and when to use it:** Use Template setup-time and capability preview in Project Manager to complete its supported authoring or runtime job without leaving the Launcher workflow. Use it when the project needs template setup-time and capability preview; keep unrelated settings in their owning workspace.
+
+**Preconditions:**
+
+- A writable project folder
+- A supported .nova/.json document for import or migration
+
+**Exact workflow:**
+
+1. Open Launcher, then open Project Manager.
+2. Choose Template setup-time and capability preview; read its visible validation and permission state before editing.
+3. Select the target project, asset or object and enter only finite, supported values.
+4. Apply or save the change, then inspect the visible result and Problems/Console output.
+5. Run Play or Preview when the feature has runtime behavior; use Pause/Step for deterministic inspection.
+6. Save, reload the project and confirm the authored value is unchanged.
+7. Run Project Health and the relevant test, then build the standalone player and repeat the observable check.
+
+**Expected result:** Template setup-time and capability preview is visible in the editor, survives reload and reaches Preview/Play and exported players where applicable.
+
+**Persistence and export:** Template setup-time and capability preview is stored in the owning project, scene, component, asset, workspace preference or build manifest. Editor-only state is excluded from players.
+
+**Undo and recovery:** Use Undo/Redo for document edits, Revert/rollback for imports or packages, Recovery Browser for interrupted saves, and source control or the migration backup for project-wide recovery.
+
+**Common mistakes and fixes:**
+
+- Editing Template setup-time and capability preview on the wrong selection or workspace.
+- Ignoring a permission, validation, missing-reference or host-template warning.
+- Checking only the editor preview and not save/reload plus the standalone player.
+
+**Keyboard and accessibility:** Use Command Palette or keyboard focus instead of pointer-only navigation. Every dialog exposes a named control, visible focus, Escape/cancel path and reduced-motion behavior.
+
+**Minimal example:** Minimal: create one valid target, configure Template setup-time and capability preview, save and verify one visible result in Play.
+
+**Production example:** Production: add validation, localization/accessibility, deterministic tests, budgets, recovery evidence and both development and release builds for Template setup-time and capability preview.
 
 **Rhai API:** N/A
 
@@ -5111,6 +5291,51 @@ Learn by completing real work. Every public feature below states ownership, pers
 
 **Visual Graph API:** N/A
 
+<a id="assets-named-resource-variants"></a>
+
+### Named Resource variants
+
+**Classification:** Manual · Assisted · Project-wide · Reversible
+
+**Purpose and when to use it:** Use Named Resource variants in Assets to complete its supported authoring or runtime job without leaving the Design workflow. Use it when the project needs named resource variants; keep unrelated settings in their owning workspace.
+
+**Preconditions:**
+
+- An open project
+- Source files for import operations
+
+**Exact workflow:**
+
+1. Open Design, then open Assets.
+2. Choose Named Resource variants; read its visible validation and permission state before editing.
+3. Select the target project, asset or object and enter only finite, supported values.
+4. Apply or save the change, then inspect the visible result and Problems/Console output.
+5. Run Play or Preview when the feature has runtime behavior; use Pause/Step for deterministic inspection.
+6. Save, reload the project and confirm the authored value is unchanged.
+7. Run Project Health and the relevant test, then build the standalone player and repeat the observable check.
+
+**Expected result:** Named Resource variants is visible in the editor, survives reload and reaches Preview/Play and exported players where applicable.
+
+**Persistence and export:** Named Resource variants is stored in the owning project, scene, component, asset, workspace preference or build manifest. Editor-only state is excluded from players.
+
+**Undo and recovery:** Use Undo/Redo for document edits, Revert/rollback for imports or packages, Recovery Browser for interrupted saves, and source control or the migration backup for project-wide recovery.
+
+**Common mistakes and fixes:**
+
+- Editing Named Resource variants on the wrong selection or workspace.
+- Ignoring a permission, validation, missing-reference or host-template warning.
+- Checking only the editor preview and not save/reload plus the standalone player.
+
+**Keyboard and accessibility:** Use Command Palette or keyboard focus instead of pointer-only navigation. Every dialog exposes a named control, visible focus, Escape/cancel path and reduced-motion behavior.
+
+**Minimal example:** Minimal: create one valid target, configure Named Resource variants, save and verify one visible result in Play.
+
+**Production example:** Production: add validation, localization/accessibility, deterministic tests, budgets, recovery evidence and both development and release builds for Named Resource variants.
+
+**Rhai API:** N/A
+
+**Visual Graph API:** N/A
+
 <a id="assets-material-resources"></a>
 
 ### Material Resources
@@ -5466,6 +5691,321 @@ Learn by completing real work. Every public feature below states ownership, pers
 **Minimal example:** Minimal: create one valid target, configure Font shaping settings, save and verify one visible result in Play.
 
 **Production example:** Production: add validation, localization/accessibility, deterministic tests, budgets, recovery evidence and both development and release builds for Font shaping settings.
+
+**Rhai API:** N/A
+
+**Visual Graph API:** N/A
+
+<a id="assets-localization-import-validation"></a>
+
+### Localization import validation
+
+**Classification:** Manual · Assisted · Project-wide · Reversible
+
+**Purpose and when to use it:** Use Localization import validation in Assets to complete its supported authoring or runtime job without leaving the Design workflow. Use it when the project needs localization import validation; keep unrelated settings in their owning workspace.
+
+**Preconditions:**
+
+- An open project
+- Source files for import operations
+
+**Exact workflow:**
+
+1. Open Design, then open Assets.
+2. Choose Localization import validation; read its visible validation and permission state before editing.
+3. Select the target project, asset or object and enter only finite, supported values.
+4. Apply or save the change, then inspect the visible result and Problems/Console output.
+5. Run Play or Preview when the feature has runtime behavior; use Pause/Step for deterministic inspection.
+6. Save, reload the project and confirm the authored value is unchanged.
+7. Run Project Health and the relevant test, then build the standalone player and repeat the observable check.
+
+**Expected result:** Localization import validation is visible in the editor, survives reload and reaches Preview/Play and exported players where applicable.
+
+**Persistence and export:** Localization import validation is stored in the owning project, scene, component, asset, workspace preference or build manifest. Editor-only state is excluded from players.
+
+**Undo and recovery:** Use Undo/Redo for document edits, Revert/rollback for imports or packages, Recovery Browser for interrupted saves, and source control or the migration backup for project-wide recovery.
+
+**Common mistakes and fixes:**
+
+- Editing Localization import validation on the wrong selection or workspace.
+- Ignoring a permission, validation, missing-reference or host-template warning.
+- Checking only the editor preview and not save/reload plus the standalone player.
+
+**Keyboard and accessibility:** Use Command Palette or keyboard focus instead of pointer-only navigation. Every dialog exposes a named control, visible focus, Escape/cancel path and reduced-motion behavior.
+
+**Minimal example:** Minimal: create one valid target, configure Localization import validation, save and verify one visible result in Play.
+
+**Production example:** Production: add validation, localization/accessibility, deterministic tests, budgets, recovery evidence and both development and release builds for Localization import validation.
+
+**Rhai API:** N/A
+
+**Visual Graph API:** N/A
+
+<a id="assets-nine-patch-production-profile"></a>
+
+### Nine-patch production profile
+
+**Classification:** Manual · Assisted · Project-wide · Reversible
+
+**Purpose and when to use it:** Use Nine-patch production profile in Assets to complete its supported authoring or runtime job without leaving the Design workflow. Use it when the project needs nine-patch production profile; keep unrelated settings in their owning workspace.
+
+**Preconditions:**
+
+- An open project
+- Source files for import operations
+
+**Exact workflow:**
+
+1. Open Design, then open Assets.
+2. Choose Nine-patch production profile; read its visible validation and permission state before editing.
+3. Select the target project, asset or object and enter only finite, supported values.
+4. Apply or save the change, then inspect the visible result and Problems/Console output.
+5. Run Play or Preview when the feature has runtime behavior; use Pause/Step for deterministic inspection.
+6. Save, reload the project and confirm the authored value is unchanged.
+7. Run Project Health and the relevant test, then build the standalone player and repeat the observable check.
+
+**Expected result:** Nine-patch production profile is visible in the editor, survives reload and reaches Preview/Play and exported players where applicable.
+
+**Persistence and export:** Nine-patch production profile is stored in the owning project, scene, component, asset, workspace preference or build manifest. Editor-only state is excluded from players.
+
+**Undo and recovery:** Use Undo/Redo for document edits, Revert/rollback for imports or packages, Recovery Browser for interrupted saves, and source control or the migration backup for project-wide recovery.
+
+**Common mistakes and fixes:**
+
+- Editing Nine-patch production profile on the wrong selection or workspace.
+- Ignoring a permission, validation, missing-reference or host-template warning.
+- Checking only the editor preview and not save/reload plus the standalone player.
+
+**Keyboard and accessibility:** Use Command Palette or keyboard focus instead of pointer-only navigation. Every dialog exposes a named control, visible focus, Escape/cancel path and reduced-motion behavior.
+
+**Minimal example:** Minimal: create one valid target, configure Nine-patch production profile, save and verify one visible result in Play.
+
+**Production example:** Production: add validation, localization/accessibility, deterministic tests, budgets, recovery evidence and both development and release builds for Nine-patch production profile.
+
+**Rhai API:** N/A
+
+**Visual Graph API:** N/A
+
+<a id="assets-vector-and-sdf-production-profile"></a>
+
+### Vector and SDF production profile
+
+**Classification:** Manual · Assisted · Project-wide · Reversible
+
+**Purpose and when to use it:** Use Vector and SDF production profile in Assets to complete its supported authoring or runtime job without leaving the Design workflow. Use it when the project needs vector and sdf production profile; keep unrelated settings in their owning workspace.
+
+**Preconditions:**
+
+- An open project
+- Source files for import operations
+
+**Exact workflow:**
+
+1. Open Design, then open Assets.
+2. Choose Vector and SDF production profile; read its visible validation and permission state before editing.
+3. Select the target project, asset or object and enter only finite, supported values.
+4. Apply or save the change, then inspect the visible result and Problems/Console output.
+5. Run Play or Preview when the feature has runtime behavior; use Pause/Step for deterministic inspection.
+6. Save, reload the project and confirm the authored value is unchanged.
+7. Run Project Health and the relevant test, then build the standalone player and repeat the observable check.
+
+**Expected result:** Vector and SDF production profile is visible in the editor, survives reload and reaches Preview/Play and exported players where applicable.
+
+**Persistence and export:** Vector and SDF production profile is stored in the owning project, scene, component, asset, workspace preference or build manifest. Editor-only state is excluded from players.
+
+**Undo and recovery:** Use Undo/Redo for document edits, Revert/rollback for imports or packages, Recovery Browser for interrupted saves, and source control or the migration backup for project-wide recovery.
+
+**Common mistakes and fixes:**
+
+- Editing Vector and SDF production profile on the wrong selection or workspace.
+- Ignoring a permission, validation, missing-reference or host-template warning.
+- Checking only the editor preview and not save/reload plus the standalone player.
+
+**Keyboard and accessibility:** Use Command Palette or keyboard focus instead of pointer-only navigation. Every dialog exposes a named control, visible focus, Escape/cancel path and reduced-motion behavior.
+
+**Minimal example:** Minimal: create one valid target, configure Vector and SDF production profile, save and verify one visible result in Play.
+
+**Production example:** Production: add validation, localization/accessibility, deterministic tests, budgets, recovery evidence and both development and release builds for Vector and SDF production profile.
+
+**Rhai API:** N/A
+
+**Visual Graph API:** N/A
+
+<a id="assets-two-way-dependency-graph"></a>
+
+### Two-way dependency graph
+
+**Classification:** Manual · Assisted · Project-wide · Reversible
+
+**Purpose and when to use it:** Use Two-way dependency graph in Assets to complete its supported authoring or runtime job without leaving the Design workflow. Use it when the project needs two-way dependency graph; keep unrelated settings in their owning workspace.
+
+**Preconditions:**
+
+- An open project
+- Source files for import operations
+
+**Exact workflow:**
+
+1. Open Design, then open Assets.
+2. Choose Two-way dependency graph; read its visible validation and permission state before editing.
+3. Select the target project, asset or object and enter only finite, supported values.
+4. Apply or save the change, then inspect the visible result and Problems/Console output.
+5. Run Play or Preview when the feature has runtime behavior; use Pause/Step for deterministic inspection.
+6. Save, reload the project and confirm the authored value is unchanged.
+7. Run Project Health and the relevant test, then build the standalone player and repeat the observable check.
+
+**Expected result:** Two-way dependency graph is visible in the editor, survives reload and reaches Preview/Play and exported players where applicable.
+
+**Persistence and export:** Two-way dependency graph is stored in the owning project, scene, component, asset, workspace preference or build manifest. Editor-only state is excluded from players.
+
+**Undo and recovery:** Use Undo/Redo for document edits, Revert/rollback for imports or packages, Recovery Browser for interrupted saves, and source control or the migration backup for project-wide recovery.
+
+**Common mistakes and fixes:**
+
+- Editing Two-way dependency graph on the wrong selection or workspace.
+- Ignoring a permission, validation, missing-reference or host-template warning.
+- Checking only the editor preview and not save/reload plus the standalone player.
+
+**Keyboard and accessibility:** Use Command Palette or keyboard focus instead of pointer-only navigation. Every dialog exposes a named control, visible focus, Escape/cancel path and reduced-motion behavior.
+
+**Minimal example:** Minimal: create one valid target, configure Two-way dependency graph, save and verify one visible result in Play.
+
+**Production example:** Production: add validation, localization/accessibility, deterministic tests, budgets, recovery evidence and both development and release builds for Two-way dependency graph.
+
+**Rhai API:** N/A
+
+**Visual Graph API:** N/A
+
+<a id="assets-cycle-and-missing-reference-visualization"></a>
+
+### Cycle and missing-reference visualization
+
+**Classification:** Manual · Assisted · Project-wide · Reversible
+
+**Purpose and when to use it:** Use Cycle and missing-reference visualization in Assets to complete its supported authoring or runtime job without leaving the Design workflow. Use it when the project needs cycle and missing-reference visualization; keep unrelated settings in their owning workspace.
+
+**Preconditions:**
+
+- An open project
+- Source files for import operations
+
+**Exact workflow:**
+
+1. Open Design, then open Assets.
+2. Choose Cycle and missing-reference visualization; read its visible validation and permission state before editing.
+3. Select the target project, asset or object and enter only finite, supported values.
+4. Apply or save the change, then inspect the visible result and Problems/Console output.
+5. Run Play or Preview when the feature has runtime behavior; use Pause/Step for deterministic inspection.
+6. Save, reload the project and confirm the authored value is unchanged.
+7. Run Project Health and the relevant test, then build the standalone player and repeat the observable check.
+
+**Expected result:** Cycle and missing-reference visualization is visible in the editor, survives reload and reaches Preview/Play and exported players where applicable.
+
+**Persistence and export:** Cycle and missing-reference visualization is stored in the owning project, scene, component, asset, workspace preference or build manifest. Editor-only state is excluded from players.
+
+**Undo and recovery:** Use Undo/Redo for document edits, Revert/rollback for imports or packages, Recovery Browser for interrupted saves, and source control or the migration backup for project-wide recovery.
+
+**Common mistakes and fixes:**
+
+- Editing Cycle and missing-reference visualization on the wrong selection or workspace.
+- Ignoring a permission, validation, missing-reference or host-template warning.
+- Checking only the editor preview and not save/reload plus the standalone player.
+
+**Keyboard and accessibility:** Use Command Palette or keyboard focus instead of pointer-only navigation. Every dialog exposes a named control, visible focus, Escape/cancel path and reduced-motion behavior.
+
+**Minimal example:** Minimal: create one valid target, configure Cycle and missing-reference visualization, save and verify one visible result in Play.
+
+**Production example:** Production: add validation, localization/accessibility, deterministic tests, budgets, recovery evidence and both development and release builds for Cycle and missing-reference visualization.
+
+**Rhai API:** N/A
+
+**Visual Graph API:** N/A
+
+<a id="assets-deterministic-non-image-thumbnails"></a>
+
+### Deterministic non-image thumbnails
+
+**Classification:** Manual · Assisted · Project-wide · Reversible
+
+**Purpose and when to use it:** Use Deterministic non-image thumbnails in Assets to complete its supported authoring or runtime job without leaving the Design workflow. Use it when the project needs deterministic non-image thumbnails; keep unrelated settings in their owning workspace.
+
+**Preconditions:**
+
+- An open project
+- Source files for import operations
+
+**Exact workflow:**
+
+1. Open Design, then open Assets.
+2. Choose Deterministic non-image thumbnails; read its visible validation and permission state before editing.
+3. Select the target project, asset or object and enter only finite, supported values.
+4. Apply or save the change, then inspect the visible result and Problems/Console output.
+5. Run Play or Preview when the feature has runtime behavior; use Pause/Step for deterministic inspection.
+6. Save, reload the project and confirm the authored value is unchanged.
+7. Run Project Health and the relevant test, then build the standalone player and repeat the observable check.
+
+**Expected result:** Deterministic non-image thumbnails is visible in the editor, survives reload and reaches Preview/Play and exported players where applicable.
+
+**Persistence and export:** Deterministic non-image thumbnails is stored in the owning project, scene, component, asset, workspace preference or build manifest. Editor-only state is excluded from players.
+
+**Undo and recovery:** Use Undo/Redo for document edits, Revert/rollback for imports or packages, Recovery Browser for interrupted saves, and source control or the migration backup for project-wide recovery.
+
+**Common mistakes and fixes:**
+
+- Editing Deterministic non-image thumbnails on the wrong selection or workspace.
+- Ignoring a permission, validation, missing-reference or host-template warning.
+- Checking only the editor preview and not save/reload plus the standalone player.
+
+**Keyboard and accessibility:** Use Command Palette or keyboard focus instead of pointer-only navigation. Every dialog exposes a named control, visible focus, Escape/cancel path and reduced-motion behavior.
+
+**Minimal example:** Minimal: create one valid target, configure Deterministic non-image thumbnails, save and verify one visible result in Play.
+
+**Production example:** Production: add validation, localization/accessibility, deterministic tests, budgets, recovery evidence and both development and release builds for Deterministic non-image thumbnails.
+
+**Rhai API:** N/A
+
+**Visual Graph API:** N/A
+
+<a id="assets-offline-trusted-content-discovery"></a>
+
+### Offline trusted content discovery
+
+**Classification:** Manual · Assisted · Project-wide · Reversible
+
+**Purpose and when to use it:** Use Offline trusted content discovery in Assets to complete its supported authoring or runtime job without leaving the Design workflow. Use it when the project needs offline trusted content discovery; keep unrelated settings in their owning workspace.
+
+**Preconditions:**
+
+- An open project
+- Source files for import operations
+
+**Exact workflow:**
+
+1. Open Design, then open Assets.
+2. Choose Offline trusted content discovery; read its visible validation and permission state before editing.
+3. Select the target project, asset or object and enter only finite, supported values.
+4. Apply or save the change, then inspect the visible result and Problems/Console output.
+5. Run Play or Preview when the feature has runtime behavior; use Pause/Step for deterministic inspection.
+6. Save, reload the project and confirm the authored value is unchanged.
+7. Run Project Health and the relevant test, then build the standalone player and repeat the observable check.
+
+**Expected result:** Offline trusted content discovery is visible in the editor, survives reload and reaches Preview/Play and exported players where applicable.
+
+**Persistence and export:** Offline trusted content discovery is stored in the owning project, scene, component, asset, workspace preference or build manifest. Editor-only state is excluded from players.
+
+**Undo and recovery:** Use Undo/Redo for document edits, Revert/rollback for imports or packages, Recovery Browser for interrupted saves, and source control or the migration backup for project-wide recovery.
+
+**Common mistakes and fixes:**
+
+- Editing Offline trusted content discovery on the wrong selection or workspace.
+- Ignoring a permission, validation, missing-reference or host-template warning.
+- Checking only the editor preview and not save/reload plus the standalone player.
+
+**Keyboard and accessibility:** Use Command Palette or keyboard focus instead of pointer-only navigation. Every dialog exposes a named control, visible focus, Escape/cancel path and reduced-motion behavior.
+
+**Minimal example:** Minimal: create one valid target, configure Offline trusted content discovery, save and verify one visible result in Play.
+
+**Production example:** Production: add validation, localization/accessibility, deterministic tests, budgets, recovery evidence and both development and release builds for Offline trusted content discovery.
 
 **Rhai API:** N/A
 
@@ -7323,6 +7863,729 @@ Learn by completing real work. Every public feature below states ownership, pers
 **Visual Graph API:** `Events/Awake`, `Events/Start`, `Events/Fixed Update`, `Signals/Emit`
 
 
+## Event Sheet and Object Blueprint
+
+<a id="event-sheet-per-object-event-sheet"></a>
+
+### Per-object Event Sheet
+
+**Classification:** Manual · Assisted · Runtime · Per-object · Reversible
+
+**Purpose and when to use it:** Use Per-object Event Sheet in Event Sheet and Object Blueprint to complete its supported authoring or runtime job without leaving the Script workflow. Use it when the project needs per-object event sheet; keep unrelated settings in their owning workspace.
+
+**Preconditions:**
+
+- A selected scene object
+- A Rhai or Visual Graph action asset for runtime callbacks
+
+**Exact workflow:**
+
+1. Open Script, then open Event Sheet and Object Blueprint.
+2. Choose Per-object Event Sheet; read its visible validation and permission state before editing.
+3. Select the target project, asset or object and enter only finite, supported values.
+4. Apply or save the change, then inspect the visible result and Problems/Console output.
+5. Run Play or Preview when the feature has runtime behavior; use Pause/Step for deterministic inspection.
+6. Save, reload the project and confirm the authored value is unchanged.
+7. Run Project Health and the relevant test, then build the standalone player and repeat the observable check.
+
+**Expected result:** Per-object Event Sheet is visible in the editor, survives reload and reaches Preview/Play and exported players where applicable.
+
+**Persistence and export:** Per-object Event Sheet is stored in the owning project, scene, component, asset, workspace preference or build manifest. Editor-only state is excluded from players.
+
+**Undo and recovery:** Use Undo/Redo for document edits, Revert/rollback for imports or packages, Recovery Browser for interrupted saves, and source control or the migration backup for project-wide recovery.
+
+**Common mistakes and fixes:**
+
+- Editing Per-object Event Sheet on the wrong selection or workspace.
+- Ignoring a permission, validation, missing-reference or host-template warning.
+- Checking only the editor preview and not save/reload plus the standalone player.
+
+**Keyboard and accessibility:** Use Command Palette or keyboard focus instead of pointer-only navigation. Every dialog exposes a named control, visible focus, Escape/cancel path and reduced-motion behavior.
+
+**Minimal example:** Minimal: create one valid target, configure Per-object Event Sheet, save and verify one visible result in Play.
+
+**Production example:** Production: add validation, localization/accessibility, deterministic tests, budgets, recovery evidence and both development and release builds for Per-object Event Sheet.
+
+**Rhai API:** `awake`, `start`, `update`, `fixed_update`, `on_timer`, `on_signal`, `on_collision_enter`, `on_trigger_enter`, `input_pressed`, `timer_start`, `random`
+
+**Visual Graph API:** `Events`, `Input`, `Timing`, `Signals`, `Physics`, `UI`, `Animation`, `Network`
+
+<a id="event-sheet-awake-start-update-and-fixed-update-events"></a>
+
+### Awake, Start, Update and Fixed Update events
+
+**Classification:** Manual · Assisted · Runtime · Per-object · Reversible
+
+**Purpose and when to use it:** Use Awake, Start, Update and Fixed Update events in Event Sheet and Object Blueprint to complete its supported authoring or runtime job without leaving the Script workflow. Use it when the project needs awake, start, update and fixed update events; keep unrelated settings in their owning workspace.
+
+**Preconditions:**
+
+- A selected scene object
+- A Rhai or Visual Graph action asset for runtime callbacks
+
+**Exact workflow:**
+
+1. Open Script, then open Event Sheet and Object Blueprint.
+2. Choose Awake, Start, Update and Fixed Update events; read its visible validation and permission state before editing.
+3. Select the target project, asset or object and enter only finite, supported values.
+4. Apply or save the change, then inspect the visible result and Problems/Console output.
+5. Run Play or Preview when the feature has runtime behavior; use Pause/Step for deterministic inspection.
+6. Save, reload the project and confirm the authored value is unchanged.
+7. Run Project Health and the relevant test, then build the standalone player and repeat the observable check.
+
+**Expected result:** Awake, Start, Update and Fixed Update events is visible in the editor, survives reload and reaches Preview/Play and exported players where applicable.
+
+**Persistence and export:** Awake, Start, Update and Fixed Update events is stored in the owning project, scene, component, asset, workspace preference or build manifest. Editor-only state is excluded from players.
+
+**Undo and recovery:** Use Undo/Redo for document edits, Revert/rollback for imports or packages, Recovery Browser for interrupted saves, and source control or the migration backup for project-wide recovery.
+
+**Common mistakes and fixes:**
+
+- Editing Awake, Start, Update and Fixed Update events on the wrong selection or workspace.
+- Ignoring a permission, validation, missing-reference or host-template warning.
+- Checking only the editor preview and not save/reload plus the standalone player.
+
+**Keyboard and accessibility:** Use Command Palette or keyboard focus instead of pointer-only navigation. Every dialog exposes a named control, visible focus, Escape/cancel path and reduced-motion behavior.
+
+**Minimal example:** Minimal: create one valid target, configure Awake, Start, Update and Fixed Update events, save and verify one visible result in Play.
+
+**Production example:** Production: add validation, localization/accessibility, deterministic tests, budgets, recovery evidence and both development and release builds for Awake, Start, Update and Fixed Update events.
+
+**Rhai API:** `awake`, `start`, `update`, `fixed_update`, `on_timer`, `on_signal`, `on_collision_enter`, `on_trigger_enter`, `input_pressed`, `timer_start`, `random`
+
+**Visual Graph API:** `Events`, `Input`, `Timing`, `Signals`, `Physics`, `UI`, `Animation`, `Network`
+
+<a id="event-sheet-input-and-timer-events"></a>
+
+### Input and timer events
+
+**Classification:** Manual · Assisted · Runtime · Per-object · Reversible
+
+**Purpose and when to use it:** Use Input and timer events in Event Sheet and Object Blueprint to complete its supported authoring or runtime job without leaving the Script workflow. Use it when the project needs input and timer events; keep unrelated settings in their owning workspace.
+
+**Preconditions:**
+
+- A selected scene object
+- A Rhai or Visual Graph action asset for runtime callbacks
+
+**Exact workflow:**
+
+1. Open Script, then open Event Sheet and Object Blueprint.
+2. Choose Input and timer events; read its visible validation and permission state before editing.
+3. Select the target project, asset or object and enter only finite, supported values.
+4. Apply or save the change, then inspect the visible result and Problems/Console output.
+5. Run Play or Preview when the feature has runtime behavior; use Pause/Step for deterministic inspection.
+6. Save, reload the project and confirm the authored value is unchanged.
+7. Run Project Health and the relevant test, then build the standalone player and repeat the observable check.
+
+**Expected result:** Input and timer events is visible in the editor, survives reload and reaches Preview/Play and exported players where applicable.
+
+**Persistence and export:** Input and timer events is stored in the owning project, scene, component, asset, workspace preference or build manifest. Editor-only state is excluded from players.
+
+**Undo and recovery:** Use Undo/Redo for document edits, Revert/rollback for imports or packages, Recovery Browser for interrupted saves, and source control or the migration backup for project-wide recovery.
+
+**Common mistakes and fixes:**
+
+- Editing Input and timer events on the wrong selection or workspace.
+- Ignoring a permission, validation, missing-reference or host-template warning.
+- Checking only the editor preview and not save/reload plus the standalone player.
+
+**Keyboard and accessibility:** Use Command Palette or keyboard focus instead of pointer-only navigation. Every dialog exposes a named control, visible focus, Escape/cancel path and reduced-motion behavior.
+
+**Minimal example:** Minimal: create one valid target, configure Input and timer events, save and verify one visible result in Play.
+
+**Production example:** Production: add validation, localization/accessibility, deterministic tests, budgets, recovery evidence and both development and release builds for Input and timer events.
+
+**Rhai API:** `awake`, `start`, `update`, `fixed_update`, `on_timer`, `on_signal`, `on_collision_enter`, `on_trigger_enter`, `input_pressed`, `timer_start`, `random`
+
+**Visual Graph API:** `Events`, `Input`, `Timing`, `Signals`, `Physics`, `UI`, `Animation`, `Network`
+
+<a id="event-sheet-signal-collision-and-trigger-events"></a>
+
+### Signal, collision and trigger events
+
+**Classification:** Manual · Assisted · Runtime · Per-object · Reversible
+
+**Purpose and when to use it:** Use Signal, collision and trigger events in Event Sheet and Object Blueprint to complete its supported authoring or runtime job without leaving the Script workflow. Use it when the project needs signal, collision and trigger events; keep unrelated settings in their owning workspace.
+
+**Preconditions:**
+
+- A selected scene object
+- A Rhai or Visual Graph action asset for runtime callbacks
+
+**Exact workflow:**
+
+1. Open Script, then open Event Sheet and Object Blueprint.
+2. Choose Signal, collision and trigger events; read its visible validation and permission state before editing.
+3. Select the target project, asset or object and enter only finite, supported values.
+4. Apply or save the change, then inspect the visible result and Problems/Console output.
+5. Run Play or Preview when the feature has runtime behavior; use Pause/Step for deterministic inspection.
+6. Save, reload the project and confirm the authored value is unchanged.
+7. Run Project Health and the relevant test, then build the standalone player and repeat the observable check.
+
+**Expected result:** Signal, collision and trigger events is visible in the editor, survives reload and reaches Preview/Play and exported players where applicable.
+
+**Persistence and export:** Signal, collision and trigger events is stored in the owning project, scene, component, asset, workspace preference or build manifest. Editor-only state is excluded from players.
+
+**Undo and recovery:** Use Undo/Redo for document edits, Revert/rollback for imports or packages, Recovery Browser for interrupted saves, and source control or the migration backup for project-wide recovery.
+
+**Common mistakes and fixes:**
+
+- Editing Signal, collision and trigger events on the wrong selection or workspace.
+- Ignoring a permission, validation, missing-reference or host-template warning.
+- Checking only the editor preview and not save/reload plus the standalone player.
+
+**Keyboard and accessibility:** Use Command Palette or keyboard focus instead of pointer-only navigation. Every dialog exposes a named control, visible focus, Escape/cancel path and reduced-motion behavior.
+
+**Minimal example:** Minimal: create one valid target, configure Signal, collision and trigger events, save and verify one visible result in Play.
+
+**Production example:** Production: add validation, localization/accessibility, deterministic tests, budgets, recovery evidence and both development and release builds for Signal, collision and trigger events.
+
+**Rhai API:** `awake`, `start`, `update`, `fixed_update`, `on_timer`, `on_signal`, `on_collision_enter`, `on_trigger_enter`, `input_pressed`, `timer_start`, `random`
+
+**Visual Graph API:** `Events`, `Input`, `Timing`, `Signals`, `Physics`, `UI`, `Animation`, `Network`
+
+<a id="event-sheet-ui-animation-and-network-events"></a>
+
+### UI, animation and network events
+
+**Classification:** Manual · Assisted · Runtime · Per-object · Reversible
+
+**Purpose and when to use it:** Use UI, animation and network events in Event Sheet and Object Blueprint to complete its supported authoring or runtime job without leaving the Script workflow. Use it when the project needs ui, animation and network events; keep unrelated settings in their owning workspace.
+
+**Preconditions:**
+
+- A selected scene object
+- A Rhai or Visual Graph action asset for runtime callbacks
+
+**Exact workflow:**
+
+1. Open Script, then open Event Sheet and Object Blueprint.
+2. Choose UI, animation and network events; read its visible validation and permission state before editing.
+3. Select the target project, asset or object and enter only finite, supported values.
+4. Apply or save the change, then inspect the visible result and Problems/Console output.
+5. Run Play or Preview when the feature has runtime behavior; use Pause/Step for deterministic inspection.
+6. Save, reload the project and confirm the authored value is unchanged.
+7. Run Project Health and the relevant test, then build the standalone player and repeat the observable check.
+
+**Expected result:** UI, animation and network events is visible in the editor, survives reload and reaches Preview/Play and exported players where applicable.
+
+**Persistence and export:** UI, animation and network events is stored in the owning project, scene, component, asset, workspace preference or build manifest. Editor-only state is excluded from players.
+
+**Undo and recovery:** Use Undo/Redo for document edits, Revert/rollback for imports or packages, Recovery Browser for interrupted saves, and source control or the migration backup for project-wide recovery.
+
+**Common mistakes and fixes:**
+
+- Editing UI, animation and network events on the wrong selection or workspace.
+- Ignoring a permission, validation, missing-reference or host-template warning.
+- Checking only the editor preview and not save/reload plus the standalone player.
+
+**Keyboard and accessibility:** Use Command Palette or keyboard focus instead of pointer-only navigation. Every dialog exposes a named control, visible focus, Escape/cancel path and reduced-motion behavior.
+
+**Minimal example:** Minimal: create one valid target, configure UI, animation and network events, save and verify one visible result in Play.
+
+**Production example:** Production: add validation, localization/accessibility, deterministic tests, budgets, recovery evidence and both development and release builds for UI, animation and network events.
+
+**Rhai API:** `awake`, `start`, `update`, `fixed_update`, `on_timer`, `on_signal`, `on_collision_enter`, `on_trigger_enter`, `input_pressed`, `timer_start`, `random`
+
+**Visual Graph API:** `Events`, `Input`, `Timing`, `Signals`, `Physics`, `UI`, `Animation`, `Network`
+
+<a id="event-sheet-visible-rhai-or-visual-graph-action-asset"></a>
+
+### Visible Rhai or Visual Graph action asset
+
+**Classification:** Manual · Assisted · Runtime · Per-object · Reversible
+
+**Purpose and when to use it:** Use Visible Rhai or Visual Graph action asset in Event Sheet and Object Blueprint to complete its supported authoring or runtime job without leaving the Script workflow. Use it when the project needs visible rhai or visual graph action asset; keep unrelated settings in their owning workspace.
+
+**Preconditions:**
+
+- A selected scene object
+- A Rhai or Visual Graph action asset for runtime callbacks
+
+**Exact workflow:**
+
+1. Open Script, then open Event Sheet and Object Blueprint.
+2. Choose Visible Rhai or Visual Graph action asset; read its visible validation and permission state before editing.
+3. Select the target project, asset or object and enter only finite, supported values.
+4. Apply or save the change, then inspect the visible result and Problems/Console output.
+5. Run Play or Preview when the feature has runtime behavior; use Pause/Step for deterministic inspection.
+6. Save, reload the project and confirm the authored value is unchanged.
+7. Run Project Health and the relevant test, then build the standalone player and repeat the observable check.
+
+**Expected result:** Visible Rhai or Visual Graph action asset is visible in the editor, survives reload and reaches Preview/Play and exported players where applicable.
+
+**Persistence and export:** Visible Rhai or Visual Graph action asset is stored in the owning project, scene, component, asset, workspace preference or build manifest. Editor-only state is excluded from players.
+
+**Undo and recovery:** Use Undo/Redo for document edits, Revert/rollback for imports or packages, Recovery Browser for interrupted saves, and source control or the migration backup for project-wide recovery.
+
+**Common mistakes and fixes:**
+
+- Editing Visible Rhai or Visual Graph action asset on the wrong selection or workspace.
+- Ignoring a permission, validation, missing-reference or host-template warning.
+- Checking only the editor preview and not save/reload plus the standalone player.
+
+**Keyboard and accessibility:** Use Command Palette or keyboard focus instead of pointer-only navigation. Every dialog exposes a named control, visible focus, Escape/cancel path and reduced-motion behavior.
+
+**Minimal example:** Minimal: create one valid target, configure Visible Rhai or Visual Graph action asset, save and verify one visible result in Play.
+
+**Production example:** Production: add validation, localization/accessibility, deterministic tests, budgets, recovery evidence and both development and release builds for Visible Rhai or Visual Graph action asset.
+
+**Rhai API:** `awake`, `start`, `update`, `fixed_update`, `on_timer`, `on_signal`, `on_collision_enter`, `on_trigger_enter`, `input_pressed`, `timer_start`, `random`
+
+**Visual Graph API:** `Events`, `Input`, `Timing`, `Signals`, `Physics`, `UI`, `Animation`, `Network`
+
+<a id="event-sheet-event-search-and-callback-completion"></a>
+
+### Event search and callback completion
+
+**Classification:** Manual · Assisted · Runtime · Per-object · Reversible
+
+**Purpose and when to use it:** Use Event search and callback completion in Event Sheet and Object Blueprint to complete its supported authoring or runtime job without leaving the Script workflow. Use it when the project needs event search and callback completion; keep unrelated settings in their owning workspace.
+
+**Preconditions:**
+
+- A selected scene object
+- A Rhai or Visual Graph action asset for runtime callbacks
+
+**Exact workflow:**
+
+1. Open Script, then open Event Sheet and Object Blueprint.
+2. Choose Event search and callback completion; read its visible validation and permission state before editing.
+3. Select the target project, asset or object and enter only finite, supported values.
+4. Apply or save the change, then inspect the visible result and Problems/Console output.
+5. Run Play or Preview when the feature has runtime behavior; use Pause/Step for deterministic inspection.
+6. Save, reload the project and confirm the authored value is unchanged.
+7. Run Project Health and the relevant test, then build the standalone player and repeat the observable check.
+
+**Expected result:** Event search and callback completion is visible in the editor, survives reload and reaches Preview/Play and exported players where applicable.
+
+**Persistence and export:** Event search and callback completion is stored in the owning project, scene, component, asset, workspace preference or build manifest. Editor-only state is excluded from players.
+
+**Undo and recovery:** Use Undo/Redo for document edits, Revert/rollback for imports or packages, Recovery Browser for interrupted saves, and source control or the migration backup for project-wide recovery.
+
+**Common mistakes and fixes:**
+
+- Editing Event search and callback completion on the wrong selection or workspace.
+- Ignoring a permission, validation, missing-reference or host-template warning.
+- Checking only the editor preview and not save/reload plus the standalone player.
+
+**Keyboard and accessibility:** Use Command Palette or keyboard focus instead of pointer-only navigation. Every dialog exposes a named control, visible focus, Escape/cancel path and reduced-motion behavior.
+
+**Minimal example:** Minimal: create one valid target, configure Event search and callback completion, save and verify one visible result in Play.
+
+**Production example:** Production: add validation, localization/accessibility, deterministic tests, budgets, recovery evidence and both development and release builds for Event search and callback completion.
+
+**Rhai API:** `awake`, `start`, `update`, `fixed_update`, `on_timer`, `on_signal`, `on_collision_enter`, `on_trigger_enter`, `input_pressed`, `timer_start`, `random`
+
+**Visual Graph API:** `Events`, `Input`, `Timing`, `Signals`, `Physics`, `UI`, `Animation`, `Network`
+
+<a id="event-sheet-event-sheet-inheritance-and-overrides"></a>
+
+### Event Sheet inheritance and overrides
+
+**Classification:** Manual · Assisted · Runtime · Per-object · Reversible
+
+**Purpose and when to use it:** Use Event Sheet inheritance and overrides in Event Sheet and Object Blueprint to complete its supported authoring or runtime job without leaving the Script workflow. Use it when the project needs event sheet inheritance and overrides; keep unrelated settings in their owning workspace.
+
+**Preconditions:**
+
+- A selected scene object
+- A Rhai or Visual Graph action asset for runtime callbacks
+
+**Exact workflow:**
+
+1. Open Script, then open Event Sheet and Object Blueprint.
+2. Choose Event Sheet inheritance and overrides; read its visible validation and permission state before editing.
+3. Select the target project, asset or object and enter only finite, supported values.
+4. Apply or save the change, then inspect the visible result and Problems/Console output.
+5. Run Play or Preview when the feature has runtime behavior; use Pause/Step for deterministic inspection.
+6. Save, reload the project and confirm the authored value is unchanged.
+7. Run Project Health and the relevant test, then build the standalone player and repeat the observable check.
+
+**Expected result:** Event Sheet inheritance and overrides is visible in the editor, survives reload and reaches Preview/Play and exported players where applicable.
+
+**Persistence and export:** Event Sheet inheritance and overrides is stored in the owning project, scene, component, asset, workspace preference or build manifest. Editor-only state is excluded from players.
+
+**Undo and recovery:** Use Undo/Redo for document edits, Revert/rollback for imports or packages, Recovery Browser for interrupted saves, and source control or the migration backup for project-wide recovery.
+
+**Common mistakes and fixes:**
+
+- Editing Event Sheet inheritance and overrides on the wrong selection or workspace.
+- Ignoring a permission, validation, missing-reference or host-template warning.
+- Checking only the editor preview and not save/reload plus the standalone player.
+
+**Keyboard and accessibility:** Use Command Palette or keyboard focus instead of pointer-only navigation. Every dialog exposes a named control, visible focus, Escape/cancel path and reduced-motion behavior.
+
+**Minimal example:** Minimal: create one valid target, configure Event Sheet inheritance and overrides, save and verify one visible result in Play.
+
+**Production example:** Production: add validation, localization/accessibility, deterministic tests, budgets, recovery evidence and both development and release builds for Event Sheet inheritance and overrides.
+
+**Rhai API:** `awake`, `start`, `update`, `fixed_update`, `on_timer`, `on_signal`, `on_collision_enter`, `on_trigger_enter`, `input_pressed`, `timer_start`, `random`
+
+**Visual Graph API:** `Events`, `Input`, `Timing`, `Signals`, `Physics`, `UI`, `Animation`, `Network`
+
+<a id="event-sheet-deterministic-event-priority-and-seed"></a>
+
+### Deterministic event priority and seed
+
+**Classification:** Manual · Assisted · Runtime · Per-object · Reversible
+
+**Purpose and when to use it:** Use Deterministic event priority and seed in Event Sheet and Object Blueprint to complete its supported authoring or runtime job without leaving the Script workflow. Use it when the project needs deterministic event priority and seed; keep unrelated settings in their owning workspace.
+
+**Preconditions:**
+
+- A selected scene object
+- A Rhai or Visual Graph action asset for runtime callbacks
+
+**Exact workflow:**
+
+1. Open Script, then open Event Sheet and Object Blueprint.
+2. Choose Deterministic event priority and seed; read its visible validation and permission state before editing.
+3. Select the target project, asset or object and enter only finite, supported values.
+4. Apply or save the change, then inspect the visible result and Problems/Console output.
+5. Run Play or Preview when the feature has runtime behavior; use Pause/Step for deterministic inspection.
+6. Save, reload the project and confirm the authored value is unchanged.
+7. Run Project Health and the relevant test, then build the standalone player and repeat the observable check.
+
+**Expected result:** Deterministic event priority and seed is visible in the editor, survives reload and reaches Preview/Play and exported players where applicable.
+
+**Persistence and export:** Deterministic event priority and seed is stored in the owning project, scene, component, asset, workspace preference or build manifest. Editor-only state is excluded from players.
+
+**Undo and recovery:** Use Undo/Redo for document edits, Revert/rollback for imports or packages, Recovery Browser for interrupted saves, and source control or the migration backup for project-wide recovery.
+
+**Common mistakes and fixes:**
+
+- Editing Deterministic event priority and seed on the wrong selection or workspace.
+- Ignoring a permission, validation, missing-reference or host-template warning.
+- Checking only the editor preview and not save/reload plus the standalone player.
+
+**Keyboard and accessibility:** Use Command Palette or keyboard focus instead of pointer-only navigation. Every dialog exposes a named control, visible focus, Escape/cancel path and reduced-motion behavior.
+
+**Minimal example:** Minimal: create one valid target, configure Deterministic event priority and seed, save and verify one visible result in Play.
+
+**Production example:** Production: add validation, localization/accessibility, deterministic tests, budgets, recovery evidence and both development and release builds for Deterministic event priority and seed.
+
+**Rhai API:** `awake`, `start`, `update`, `fixed_update`, `on_timer`, `on_signal`, `on_collision_enter`, `on_trigger_enter`, `input_pressed`, `timer_start`, `random`
+
+**Visual Graph API:** `Events`, `Input`, `Timing`, `Signals`, `Physics`, `UI`, `Animation`, `Network`
+
+<a id="event-sheet-disabled-object-event-exclusion"></a>
+
+### Disabled-object event exclusion
+
+**Classification:** Manual · Assisted · Runtime · Per-object · Reversible
+
+**Purpose and when to use it:** Use Disabled-object event exclusion in Event Sheet and Object Blueprint to complete its supported authoring or runtime job without leaving the Script workflow. Use it when the project needs disabled-object event exclusion; keep unrelated settings in their owning workspace.
+
+**Preconditions:**
+
+- A selected scene object
+- A Rhai or Visual Graph action asset for runtime callbacks
+
+**Exact workflow:**
+
+1. Open Script, then open Event Sheet and Object Blueprint.
+2. Choose Disabled-object event exclusion; read its visible validation and permission state before editing.
+3. Select the target project, asset or object and enter only finite, supported values.
+4. Apply or save the change, then inspect the visible result and Problems/Console output.
+5. Run Play or Preview when the feature has runtime behavior; use Pause/Step for deterministic inspection.
+6. Save, reload the project and confirm the authored value is unchanged.
+7. Run Project Health and the relevant test, then build the standalone player and repeat the observable check.
+
+**Expected result:** Disabled-object event exclusion is visible in the editor, survives reload and reaches Preview/Play and exported players where applicable.
+
+**Persistence and export:** Disabled-object event exclusion is stored in the owning project, scene, component, asset, workspace preference or build manifest. Editor-only state is excluded from players.
+
+**Undo and recovery:** Use Undo/Redo for document edits, Revert/rollback for imports or packages, Recovery Browser for interrupted saves, and source control or the migration backup for project-wide recovery.
+
+**Common mistakes and fixes:**
+
+- Editing Disabled-object event exclusion on the wrong selection or workspace.
+- Ignoring a permission, validation, missing-reference or host-template warning.
+- Checking only the editor preview and not save/reload plus the standalone player.
+
+**Keyboard and accessibility:** Use Command Palette or keyboard focus instead of pointer-only navigation. Every dialog exposes a named control, visible focus, Escape/cancel path and reduced-motion behavior.
+
+**Minimal example:** Minimal: create one valid target, configure Disabled-object event exclusion, save and verify one visible result in Play.
+
+**Production example:** Production: add validation, localization/accessibility, deterministic tests, budgets, recovery evidence and both development and release builds for Disabled-object event exclusion.
+
+**Rhai API:** `awake`, `start`, `update`, `fixed_update`, `on_timer`, `on_signal`, `on_collision_enter`, `on_trigger_enter`, `input_pressed`, `timer_start`, `random`
+
+**Visual Graph API:** `Events`, `Input`, `Timing`, `Signals`, `Physics`, `UI`, `Animation`, `Network`
+
+<a id="event-sheet-duplicate-callback-validation"></a>
+
+### Duplicate callback validation
+
+**Classification:** Manual · Assisted · Runtime · Per-object · Reversible
+
+**Purpose and when to use it:** Use Duplicate callback validation in Event Sheet and Object Blueprint to complete its supported authoring or runtime job without leaving the Script workflow. Use it when the project needs duplicate callback validation; keep unrelated settings in their owning workspace.
+
+**Preconditions:**
+
+- A selected scene object
+- A Rhai or Visual Graph action asset for runtime callbacks
+
+**Exact workflow:**
+
+1. Open Script, then open Event Sheet and Object Blueprint.
+2. Choose Duplicate callback validation; read its visible validation and permission state before editing.
+3. Select the target project, asset or object and enter only finite, supported values.
+4. Apply or save the change, then inspect the visible result and Problems/Console output.
+5. Run Play or Preview when the feature has runtime behavior; use Pause/Step for deterministic inspection.
+6. Save, reload the project and confirm the authored value is unchanged.
+7. Run Project Health and the relevant test, then build the standalone player and repeat the observable check.
+
+**Expected result:** Duplicate callback validation is visible in the editor, survives reload and reaches Preview/Play and exported players where applicable.
+
+**Persistence and export:** Duplicate callback validation is stored in the owning project, scene, component, asset, workspace preference or build manifest. Editor-only state is excluded from players.
+
+**Undo and recovery:** Use Undo/Redo for document edits, Revert/rollback for imports or packages, Recovery Browser for interrupted saves, and source control or the migration backup for project-wide recovery.
+
+**Common mistakes and fixes:**
+
+- Editing Duplicate callback validation on the wrong selection or workspace.
+- Ignoring a permission, validation, missing-reference or host-template warning.
+- Checking only the editor preview and not save/reload plus the standalone player.
+
+**Keyboard and accessibility:** Use Command Palette or keyboard focus instead of pointer-only navigation. Every dialog exposes a named control, visible focus, Escape/cancel path and reduced-motion behavior.
+
+**Minimal example:** Minimal: create one valid target, configure Duplicate callback validation, save and verify one visible result in Play.
+
+**Production example:** Production: add validation, localization/accessibility, deterministic tests, budgets, recovery evidence and both development and release builds for Duplicate callback validation.
+
+**Rhai API:** `awake`, `start`, `update`, `fixed_update`, `on_timer`, `on_signal`, `on_collision_enter`, `on_trigger_enter`, `input_pressed`, `timer_start`, `random`
+
+**Visual Graph API:** `Events`, `Input`, `Timing`, `Signals`, `Physics`, `UI`, `Animation`, `Network`
+
+<a id="event-sheet-10-000-event-bounded-scheduler"></a>
+
+### 10,000-event bounded scheduler
+
+**Classification:** Manual · Assisted · Runtime · Per-object · Reversible
+
+**Purpose and when to use it:** Use 10,000-event bounded scheduler in Event Sheet and Object Blueprint to complete its supported authoring or runtime job without leaving the Script workflow. Use it when the project needs 10,000-event bounded scheduler; keep unrelated settings in their owning workspace.
+
+**Preconditions:**
+
+- A selected scene object
+- A Rhai or Visual Graph action asset for runtime callbacks
+
+**Exact workflow:**
+
+1. Open Script, then open Event Sheet and Object Blueprint.
+2. Choose 10,000-event bounded scheduler; read its visible validation and permission state before editing.
+3. Select the target project, asset or object and enter only finite, supported values.
+4. Apply or save the change, then inspect the visible result and Problems/Console output.
+5. Run Play or Preview when the feature has runtime behavior; use Pause/Step for deterministic inspection.
+6. Save, reload the project and confirm the authored value is unchanged.
+7. Run Project Health and the relevant test, then build the standalone player and repeat the observable check.
+
+**Expected result:** 10,000-event bounded scheduler is visible in the editor, survives reload and reaches Preview/Play and exported players where applicable.
+
+**Persistence and export:** 10,000-event bounded scheduler is stored in the owning project, scene, component, asset, workspace preference or build manifest. Editor-only state is excluded from players.
+
+**Undo and recovery:** Use Undo/Redo for document edits, Revert/rollback for imports or packages, Recovery Browser for interrupted saves, and source control or the migration backup for project-wide recovery.
+
+**Common mistakes and fixes:**
+
+- Editing 10,000-event bounded scheduler on the wrong selection or workspace.
+- Ignoring a permission, validation, missing-reference or host-template warning.
+- Checking only the editor preview and not save/reload plus the standalone player.
+
+**Keyboard and accessibility:** Use Command Palette or keyboard focus instead of pointer-only navigation. Every dialog exposes a named control, visible focus, Escape/cancel path and reduced-motion behavior.
+
+**Minimal example:** Minimal: create one valid target, configure 10,000-event bounded scheduler, save and verify one visible result in Play.
+
+**Production example:** Production: add validation, localization/accessibility, deterministic tests, budgets, recovery evidence and both development and release builds for 10,000-event bounded scheduler.
+
+**Rhai API:** `awake`, `start`, `update`, `fixed_update`, `on_timer`, `on_signal`, `on_collision_enter`, `on_trigger_enter`, `input_pressed`, `timer_start`, `random`
+
+**Visual Graph API:** `Events`, `Input`, `Timing`, `Signals`, `Physics`, `UI`, `Animation`, `Network`
+
+<a id="event-sheet-reusable-object-blueprint"></a>
+
+### Reusable Object Blueprint
+
+**Classification:** Manual · Assisted · Runtime · Per-object · Reversible
+
+**Purpose and when to use it:** Use Reusable Object Blueprint in Event Sheet and Object Blueprint to complete its supported authoring or runtime job without leaving the Script workflow. Use it when the project needs reusable object blueprint; keep unrelated settings in their owning workspace.
+
+**Preconditions:**
+
+- A selected scene object
+- A Rhai or Visual Graph action asset for runtime callbacks
+
+**Exact workflow:**
+
+1. Open Script, then open Event Sheet and Object Blueprint.
+2. Choose Reusable Object Blueprint; read its visible validation and permission state before editing.
+3. Select the target project, asset or object and enter only finite, supported values.
+4. Apply or save the change, then inspect the visible result and Problems/Console output.
+5. Run Play or Preview when the feature has runtime behavior; use Pause/Step for deterministic inspection.
+6. Save, reload the project and confirm the authored value is unchanged.
+7. Run Project Health and the relevant test, then build the standalone player and repeat the observable check.
+
+**Expected result:** Reusable Object Blueprint is visible in the editor, survives reload and reaches Preview/Play and exported players where applicable.
+
+**Persistence and export:** Reusable Object Blueprint is stored in the owning project, scene, component, asset, workspace preference or build manifest. Editor-only state is excluded from players.
+
+**Undo and recovery:** Use Undo/Redo for document edits, Revert/rollback for imports or packages, Recovery Browser for interrupted saves, and source control or the migration backup for project-wide recovery.
+
+**Common mistakes and fixes:**
+
+- Editing Reusable Object Blueprint on the wrong selection or workspace.
+- Ignoring a permission, validation, missing-reference or host-template warning.
+- Checking only the editor preview and not save/reload plus the standalone player.
+
+**Keyboard and accessibility:** Use Command Palette or keyboard focus instead of pointer-only navigation. Every dialog exposes a named control, visible focus, Escape/cancel path and reduced-motion behavior.
+
+**Minimal example:** Minimal: create one valid target, configure Reusable Object Blueprint, save and verify one visible result in Play.
+
+**Production example:** Production: add validation, localization/accessibility, deterministic tests, budgets, recovery evidence and both development and release builds for Reusable Object Blueprint.
+
+**Rhai API:** `awake`, `start`, `update`, `fixed_update`, `on_timer`, `on_signal`, `on_collision_enter`, `on_trigger_enter`, `input_pressed`, `timer_start`, `random`
+
+**Visual Graph API:** `Events`, `Input`, `Timing`, `Signals`, `Physics`, `UI`, `Animation`, `Network`
+
+<a id="event-sheet-object-blueprint-inheritance"></a>
+
+### Object Blueprint inheritance
+
+**Classification:** Manual · Assisted · Runtime · Per-object · Reversible
+
+**Purpose and when to use it:** Use Object Blueprint inheritance in Event Sheet and Object Blueprint to complete its supported authoring or runtime job without leaving the Script workflow. Use it when the project needs object blueprint inheritance; keep unrelated settings in their owning workspace.
+
+**Preconditions:**
+
+- A selected scene object
+- A Rhai or Visual Graph action asset for runtime callbacks
+
+**Exact workflow:**
+
+1. Open Script, then open Event Sheet and Object Blueprint.
+2. Choose Object Blueprint inheritance; read its visible validation and permission state before editing.
+3. Select the target project, asset or object and enter only finite, supported values.
+4. Apply or save the change, then inspect the visible result and Problems/Console output.
+5. Run Play or Preview when the feature has runtime behavior; use Pause/Step for deterministic inspection.
+6. Save, reload the project and confirm the authored value is unchanged.
+7. Run Project Health and the relevant test, then build the standalone player and repeat the observable check.
+
+**Expected result:** Object Blueprint inheritance is visible in the editor, survives reload and reaches Preview/Play and exported players where applicable.
+
+**Persistence and export:** Object Blueprint inheritance is stored in the owning project, scene, component, asset, workspace preference or build manifest. Editor-only state is excluded from players.
+
+**Undo and recovery:** Use Undo/Redo for document edits, Revert/rollback for imports or packages, Recovery Browser for interrupted saves, and source control or the migration backup for project-wide recovery.
+
+**Common mistakes and fixes:**
+
+- Editing Object Blueprint inheritance on the wrong selection or workspace.
+- Ignoring a permission, validation, missing-reference or host-template warning.
+- Checking only the editor preview and not save/reload plus the standalone player.
+
+**Keyboard and accessibility:** Use Command Palette or keyboard focus instead of pointer-only navigation. Every dialog exposes a named control, visible focus, Escape/cancel path and reduced-motion behavior.
+
+**Minimal example:** Minimal: create one valid target, configure Object Blueprint inheritance, save and verify one visible result in Play.
+
+**Production example:** Production: add validation, localization/accessibility, deterministic tests, budgets, recovery evidence and both development and release builds for Object Blueprint inheritance.
+
+**Rhai API:** `awake`, `start`, `update`, `fixed_update`, `on_timer`, `on_signal`, `on_collision_enter`, `on_trigger_enter`, `input_pressed`, `timer_start`, `random`
+
+**Visual Graph API:** `Events`, `Input`, `Timing`, `Signals`, `Physics`, `UI`, `Animation`, `Network`
+
+<a id="event-sheet-composition-conflict-validation"></a>
+
+### Composition conflict validation
+
+**Classification:** Manual · Assisted · Runtime · Per-object · Reversible
+
+**Purpose and when to use it:** Use Composition conflict validation in Event Sheet and Object Blueprint to complete its supported authoring or runtime job without leaving the Script workflow. Use it when the project needs composition conflict validation; keep unrelated settings in their owning workspace.
+
+**Preconditions:**
+
+- A selected scene object
+- A Rhai or Visual Graph action asset for runtime callbacks
+
+**Exact workflow:**
+
+1. Open Script, then open Event Sheet and Object Blueprint.
+2. Choose Composition conflict validation; read its visible validation and permission state before editing.
+3. Select the target project, asset or object and enter only finite, supported values.
+4. Apply or save the change, then inspect the visible result and Problems/Console output.
+5. Run Play or Preview when the feature has runtime behavior; use Pause/Step for deterministic inspection.
+6. Save, reload the project and confirm the authored value is unchanged.
+7. Run Project Health and the relevant test, then build the standalone player and repeat the observable check.
+
+**Expected result:** Composition conflict validation is visible in the editor, survives reload and reaches Preview/Play and exported players where applicable.
+
+**Persistence and export:** Composition conflict validation is stored in the owning project, scene, component, asset, workspace preference or build manifest. Editor-only state is excluded from players.
+
+**Undo and recovery:** Use Undo/Redo for document edits, Revert/rollback for imports or packages, Recovery Browser for interrupted saves, and source control or the migration backup for project-wide recovery.
+
+**Common mistakes and fixes:**
+
+- Editing Composition conflict validation on the wrong selection or workspace.
+- Ignoring a permission, validation, missing-reference or host-template warning.
+- Checking only the editor preview and not save/reload plus the standalone player.
+
+**Keyboard and accessibility:** Use Command Palette or keyboard focus instead of pointer-only navigation. Every dialog exposes a named control, visible focus, Escape/cancel path and reduced-motion behavior.
+
+**Minimal example:** Minimal: create one valid target, configure Composition conflict validation, save and verify one visible result in Play.
+
+**Production example:** Production: add validation, localization/accessibility, deterministic tests, budgets, recovery evidence and both development and release builds for Composition conflict validation.
+
+**Rhai API:** `awake`, `start`, `update`, `fixed_update`, `on_timer`, `on_signal`, `on_collision_enter`, `on_trigger_enter`, `input_pressed`, `timer_start`, `random`
+
+**Visual Graph API:** `Events`, `Input`, `Timing`, `Signals`, `Physics`, `UI`, `Animation`, `Network`
+
+<a id="event-sheet-shape-or-sprite-to-object-to-event-to-scene-workflow"></a>
+
+### Shape or Sprite to Object to Event to Scene workflow
+
+**Classification:** Manual · Assisted · Runtime · Per-object · Reversible
+
+**Purpose and when to use it:** Use Shape or Sprite to Object to Event to Scene workflow in Event Sheet and Object Blueprint to complete its supported authoring or runtime job without leaving the Script workflow. Use it when the project needs shape or sprite to object to event to scene workflow; keep unrelated settings in their owning workspace.
+
+**Preconditions:**
+
+- A selected scene object
+- A Rhai or Visual Graph action asset for runtime callbacks
+
+**Exact workflow:**
+
+1. Open Script, then open Event Sheet and Object Blueprint.
+2. Choose Shape or Sprite to Object to Event to Scene workflow; read its visible validation and permission state before editing.
+3. Select the target project, asset or object and enter only finite, supported values.
+4. Apply or save the change, then inspect the visible result and Problems/Console output.
+5. Run Play or Preview when the feature has runtime behavior; use Pause/Step for deterministic inspection.
+6. Save, reload the project and confirm the authored value is unchanged.
+7. Run Project Health and the relevant test, then build the standalone player and repeat the observable check.
+
+**Expected result:** Shape or Sprite to Object to Event to Scene workflow is visible in the editor, survives reload and reaches Preview/Play and exported players where applicable.
+
+**Persistence and export:** Shape or Sprite to Object to Event to Scene workflow is stored in the owning project, scene, component, asset, workspace preference or build manifest. Editor-only state is excluded from players.
+
+**Undo and recovery:** Use Undo/Redo for document edits, Revert/rollback for imports or packages, Recovery Browser for interrupted saves, and source control or the migration backup for project-wide recovery.
+
+**Common mistakes and fixes:**
+
+- Editing Shape or Sprite to Object to Event to Scene workflow on the wrong selection or workspace.
+- Ignoring a permission, validation, missing-reference or host-template warning.
+- Checking only the editor preview and not save/reload plus the standalone player.
+
+**Keyboard and accessibility:** Use Command Palette or keyboard focus instead of pointer-only navigation. Every dialog exposes a named control, visible focus, Escape/cancel path and reduced-motion behavior.
+
+**Minimal example:** Minimal: create one valid target, configure Shape or Sprite to Object to Event to Scene workflow, save and verify one visible result in Play.
+
+**Production example:** Production: add validation, localization/accessibility, deterministic tests, budgets, recovery evidence and both development and release builds for Shape or Sprite to Object to Event to Scene workflow.
+
+**Rhai API:** `awake`, `start`, `update`, `fixed_update`, `on_timer`, `on_signal`, `on_collision_enter`, `on_trigger_enter`, `input_pressed`, `timer_start`, `random`
+
+**Visual Graph API:** `Events`, `Input`, `Timing`, `Signals`, `Physics`, `UI`, `Animation`, `Network`
+
+
 ## Visual Graph Editor
 
 <a id="visual-graph-scratch-style-block-mode"></a>
@@ -7628,6 +8891,314 @@ Learn by completing real work. Every public feature below states ownership, pers
 **Minimal example:** Minimal: create one valid target, configure Typed pins and wires, save and verify one visible result in Play.
 
 **Production example:** Production: add validation, localization/accessibility, deterministic tests, budgets, recovery evidence and both development and release builds for Typed pins and wires.
+
+**Rhai API:** `Generated and parsed Rhai API v2 command stream`
+
+**Visual Graph API:** `All Rhai API v2 generated nodes`
+
+<a id="visual-graph-drag-or-click-pin-connection"></a>
+
+### Drag or click pin connection
+
+**Classification:** Manual · Assisted · Automatic · Runtime · Reversible
+
+**Purpose and when to use it:** Use Drag or click pin connection in Visual Graph Editor to complete its supported authoring or runtime job without leaving the Script workflow. Use it when the project needs drag or click pin connection; keep unrelated settings in their owning workspace.
+
+**Preconditions:**
+
+- A .nova-graph or .rhai asset
+
+**Exact workflow:**
+
+1. Open Script, then open Visual Graph Editor.
+2. Choose Drag or click pin connection; read its visible validation and permission state before editing.
+3. Select the target project, asset or object and enter only finite, supported values.
+4. Apply or save the change, then inspect the visible result and Problems/Console output.
+5. Run Play or Preview when the feature has runtime behavior; use Pause/Step for deterministic inspection.
+6. Save, reload the project and confirm the authored value is unchanged.
+7. Run Project Health and the relevant test, then build the standalone player and repeat the observable check.
+
+**Expected result:** Drag or click pin connection is visible in the editor, survives reload and reaches Preview/Play and exported players where applicable.
+
+**Persistence and export:** Drag or click pin connection is stored in the owning project, scene, component, asset, workspace preference or build manifest. Editor-only state is excluded from players.
+
+**Undo and recovery:** Use Undo/Redo for document edits, Revert/rollback for imports or packages, Recovery Browser for interrupted saves, and source control or the migration backup for project-wide recovery.
+
+**Common mistakes and fixes:**
+
+- Editing Drag or click pin connection on the wrong selection or workspace.
+- Ignoring a permission, validation, missing-reference or host-template warning.
+- Checking only the editor preview and not save/reload plus the standalone player.
+
+**Keyboard and accessibility:** Use Command Palette or keyboard focus instead of pointer-only navigation. Every dialog exposes a named control, visible focus, Escape/cancel path and reduced-motion behavior.
+
+**Minimal example:** Minimal: create one valid target, configure Drag or click pin connection, save and verify one visible result in Play.
+
+**Production example:** Production: add validation, localization/accessibility, deterministic tests, budgets, recovery evidence and both development and release builds for Drag or click pin connection.
+
+**Rhai API:** `Generated and parsed Rhai API v2 command stream`
+
+**Visual Graph API:** `All Rhai API v2 generated nodes`
+
+<a id="visual-graph-focal-wheel-zoom-and-zoom-slider"></a>
+
+### Focal wheel zoom and zoom slider
+
+**Classification:** Manual · Assisted · Automatic · Runtime · Reversible
+
+**Purpose and when to use it:** Use Focal wheel zoom and zoom slider in Visual Graph Editor to complete its supported authoring or runtime job without leaving the Script workflow. Use it when the project needs focal wheel zoom and zoom slider; keep unrelated settings in their owning workspace.
+
+**Preconditions:**
+
+- A .nova-graph or .rhai asset
+
+**Exact workflow:**
+
+1. Open Script, then open Visual Graph Editor.
+2. Choose Focal wheel zoom and zoom slider; read its visible validation and permission state before editing.
+3. Select the target project, asset or object and enter only finite, supported values.
+4. Apply or save the change, then inspect the visible result and Problems/Console output.
+5. Run Play or Preview when the feature has runtime behavior; use Pause/Step for deterministic inspection.
+6. Save, reload the project and confirm the authored value is unchanged.
+7. Run Project Health and the relevant test, then build the standalone player and repeat the observable check.
+
+**Expected result:** Focal wheel zoom and zoom slider is visible in the editor, survives reload and reaches Preview/Play and exported players where applicable.
+
+**Persistence and export:** Focal wheel zoom and zoom slider is stored in the owning project, scene, component, asset, workspace preference or build manifest. Editor-only state is excluded from players.
+
+**Undo and recovery:** Use Undo/Redo for document edits, Revert/rollback for imports or packages, Recovery Browser for interrupted saves, and source control or the migration backup for project-wide recovery.
+
+**Common mistakes and fixes:**
+
+- Editing Focal wheel zoom and zoom slider on the wrong selection or workspace.
+- Ignoring a permission, validation, missing-reference or host-template warning.
+- Checking only the editor preview and not save/reload plus the standalone player.
+
+**Keyboard and accessibility:** Use Command Palette or keyboard focus instead of pointer-only navigation. Every dialog exposes a named control, visible focus, Escape/cancel path and reduced-motion behavior.
+
+**Minimal example:** Minimal: create one valid target, configure Focal wheel zoom and zoom slider, save and verify one visible result in Play.
+
+**Production example:** Production: add validation, localization/accessibility, deterministic tests, budgets, recovery evidence and both development and release builds for Focal wheel zoom and zoom slider.
+
+**Rhai API:** `Generated and parsed Rhai API v2 command stream`
+
+**Visual Graph API:** `All Rhai API v2 generated nodes`
+
+<a id="visual-graph-frame-all-and-reset-zoom"></a>
+
+### Frame all and reset zoom
+
+**Classification:** Manual · Assisted · Automatic · Runtime · Reversible
+
+**Purpose and when to use it:** Use Frame all and reset zoom in Visual Graph Editor to complete its supported authoring or runtime job without leaving the Script workflow. Use it when the project needs frame all and reset zoom; keep unrelated settings in their owning workspace.
+
+**Preconditions:**
+
+- A .nova-graph or .rhai asset
+
+**Exact workflow:**
+
+1. Open Script, then open Visual Graph Editor.
+2. Choose Frame all and reset zoom; read its visible validation and permission state before editing.
+3. Select the target project, asset or object and enter only finite, supported values.
+4. Apply or save the change, then inspect the visible result and Problems/Console output.
+5. Run Play or Preview when the feature has runtime behavior; use Pause/Step for deterministic inspection.
+6. Save, reload the project and confirm the authored value is unchanged.
+7. Run Project Health and the relevant test, then build the standalone player and repeat the observable check.
+
+**Expected result:** Frame all and reset zoom is visible in the editor, survives reload and reaches Preview/Play and exported players where applicable.
+
+**Persistence and export:** Frame all and reset zoom is stored in the owning project, scene, component, asset, workspace preference or build manifest. Editor-only state is excluded from players.
+
+**Undo and recovery:** Use Undo/Redo for document edits, Revert/rollback for imports or packages, Recovery Browser for interrupted saves, and source control or the migration backup for project-wide recovery.
+
+**Common mistakes and fixes:**
+
+- Editing Frame all and reset zoom on the wrong selection or workspace.
+- Ignoring a permission, validation, missing-reference or host-template warning.
+- Checking only the editor preview and not save/reload plus the standalone player.
+
+**Keyboard and accessibility:** Use Command Palette or keyboard focus instead of pointer-only navigation. Every dialog exposes a named control, visible focus, Escape/cancel path and reduced-motion behavior.
+
+**Minimal example:** Minimal: create one valid target, configure Frame all and reset zoom, save and verify one visible result in Play.
+
+**Production example:** Production: add validation, localization/accessibility, deterministic tests, budgets, recovery evidence and both development and release builds for Frame all and reset zoom.
+
+**Rhai API:** `Generated and parsed Rhai API v2 command stream`
+
+**Visual Graph API:** `All Rhai API v2 generated nodes`
+
+<a id="visual-graph-double-click-node-insertion"></a>
+
+### Double-click node insertion
+
+**Classification:** Manual · Assisted · Automatic · Runtime · Reversible
+
+**Purpose and when to use it:** Use Double-click node insertion in Visual Graph Editor to complete its supported authoring or runtime job without leaving the Script workflow. Use it when the project needs double-click node insertion; keep unrelated settings in their owning workspace.
+
+**Preconditions:**
+
+- A .nova-graph or .rhai asset
+
+**Exact workflow:**
+
+1. Open Script, then open Visual Graph Editor.
+2. Choose Double-click node insertion; read its visible validation and permission state before editing.
+3. Select the target project, asset or object and enter only finite, supported values.
+4. Apply or save the change, then inspect the visible result and Problems/Console output.
+5. Run Play or Preview when the feature has runtime behavior; use Pause/Step for deterministic inspection.
+6. Save, reload the project and confirm the authored value is unchanged.
+7. Run Project Health and the relevant test, then build the standalone player and repeat the observable check.
+
+**Expected result:** Double-click node insertion is visible in the editor, survives reload and reaches Preview/Play and exported players where applicable.
+
+**Persistence and export:** Double-click node insertion is stored in the owning project, scene, component, asset, workspace preference or build manifest. Editor-only state is excluded from players.
+
+**Undo and recovery:** Use Undo/Redo for document edits, Revert/rollback for imports or packages, Recovery Browser for interrupted saves, and source control or the migration backup for project-wide recovery.
+
+**Common mistakes and fixes:**
+
+- Editing Double-click node insertion on the wrong selection or workspace.
+- Ignoring a permission, validation, missing-reference or host-template warning.
+- Checking only the editor preview and not save/reload plus the standalone player.
+
+**Keyboard and accessibility:** Use Command Palette or keyboard focus instead of pointer-only navigation. Every dialog exposes a named control, visible focus, Escape/cancel path and reduced-motion behavior.
+
+**Minimal example:** Minimal: create one valid target, configure Double-click node insertion, save and verify one visible result in Play.
+
+**Production example:** Production: add validation, localization/accessibility, deterministic tests, budgets, recovery evidence and both development and release builds for Double-click node insertion.
+
+**Rhai API:** `Generated and parsed Rhai API v2 command stream`
+
+**Visual Graph API:** `All Rhai API v2 generated nodes`
+
+<a id="visual-graph-indexed-automatic-block-layout"></a>
+
+### Indexed automatic block layout
+
+**Classification:** Manual · Assisted · Automatic · Runtime · Reversible
+
+**Purpose and when to use it:** Use Indexed automatic block layout in Visual Graph Editor to complete its supported authoring or runtime job without leaving the Script workflow. Use it when the project needs indexed automatic block layout; keep unrelated settings in their owning workspace.
+
+**Preconditions:**
+
+- A .nova-graph or .rhai asset
+
+**Exact workflow:**
+
+1. Open Script, then open Visual Graph Editor.
+2. Choose Indexed automatic block layout; read its visible validation and permission state before editing.
+3. Select the target project, asset or object and enter only finite, supported values.
+4. Apply or save the change, then inspect the visible result and Problems/Console output.
+5. Run Play or Preview when the feature has runtime behavior; use Pause/Step for deterministic inspection.
+6. Save, reload the project and confirm the authored value is unchanged.
+7. Run Project Health and the relevant test, then build the standalone player and repeat the observable check.
+
+**Expected result:** Indexed automatic block layout is visible in the editor, survives reload and reaches Preview/Play and exported players where applicable.
+
+**Persistence and export:** Indexed automatic block layout is stored in the owning project, scene, component, asset, workspace preference or build manifest. Editor-only state is excluded from players.
+
+**Undo and recovery:** Use Undo/Redo for document edits, Revert/rollback for imports or packages, Recovery Browser for interrupted saves, and source control or the migration backup for project-wide recovery.
+
+**Common mistakes and fixes:**
+
+- Editing Indexed automatic block layout on the wrong selection or workspace.
+- Ignoring a permission, validation, missing-reference or host-template warning.
+- Checking only the editor preview and not save/reload plus the standalone player.
+
+**Keyboard and accessibility:** Use Command Palette or keyboard focus instead of pointer-only navigation. Every dialog exposes a named control, visible focus, Escape/cancel path and reduced-motion behavior.
+
+**Minimal example:** Minimal: create one valid target, configure Indexed automatic block layout, save and verify one visible result in Play.
+
+**Production example:** Production: add validation, localization/accessibility, deterministic tests, budgets, recovery evidence and both development and release builds for Indexed automatic block layout.
+
+**Rhai API:** `Generated and parsed Rhai API v2 command stream`
+
+**Visual Graph API:** `All Rhai API v2 generated nodes`
+
+<a id="visual-graph-animation-frame-batched-graph-gestures"></a>
+
+### Animation-frame batched graph gestures
+
+**Classification:** Manual · Assisted · Automatic · Runtime · Reversible
+
+**Purpose and when to use it:** Use Animation-frame batched graph gestures in Visual Graph Editor to complete its supported authoring or runtime job without leaving the Script workflow. Use it when the project needs animation-frame batched graph gestures; keep unrelated settings in their owning workspace.
+
+**Preconditions:**
+
+- A .nova-graph or .rhai asset
+
+**Exact workflow:**
+
+1. Open Script, then open Visual Graph Editor.
+2. Choose Animation-frame batched graph gestures; read its visible validation and permission state before editing.
+3. Select the target project, asset or object and enter only finite, supported values.
+4. Apply or save the change, then inspect the visible result and Problems/Console output.
+5. Run Play or Preview when the feature has runtime behavior; use Pause/Step for deterministic inspection.
+6. Save, reload the project and confirm the authored value is unchanged.
+7. Run Project Health and the relevant test, then build the standalone player and repeat the observable check.
+
+**Expected result:** Animation-frame batched graph gestures is visible in the editor, survives reload and reaches Preview/Play and exported players where applicable.
+
+**Persistence and export:** Animation-frame batched graph gestures is stored in the owning project, scene, component, asset, workspace preference or build manifest. Editor-only state is excluded from players.
+
+**Undo and recovery:** Use Undo/Redo for document edits, Revert/rollback for imports or packages, Recovery Browser for interrupted saves, and source control or the migration backup for project-wide recovery.
+
+**Common mistakes and fixes:**
+
+- Editing Animation-frame batched graph gestures on the wrong selection or workspace.
+- Ignoring a permission, validation, missing-reference or host-template warning.
+- Checking only the editor preview and not save/reload plus the standalone player.
+
+**Keyboard and accessibility:** Use Command Palette or keyboard focus instead of pointer-only navigation. Every dialog exposes a named control, visible focus, Escape/cancel path and reduced-motion behavior.
+
+**Minimal example:** Minimal: create one valid target, configure Animation-frame batched graph gestures, save and verify one visible result in Play.
+
+**Production example:** Production: add validation, localization/accessibility, deterministic tests, budgets, recovery evidence and both development and release builds for Animation-frame batched graph gestures.
+
+**Rhai API:** `Generated and parsed Rhai API v2 command stream`
+
+**Visual Graph API:** `All Rhai API v2 generated nodes`
+
+<a id="visual-graph-large-graph-culling-and-low-detail-rendering"></a>
+
+### Large-graph culling and low-detail rendering
+
+**Classification:** Manual · Assisted · Automatic · Runtime · Reversible
+
+**Purpose and when to use it:** Use Large-graph culling and low-detail rendering in Visual Graph Editor to complete its supported authoring or runtime job without leaving the Script workflow. Use it when the project needs large-graph culling and low-detail rendering; keep unrelated settings in their owning workspace.
+
+**Preconditions:**
+
+- A .nova-graph or .rhai asset
+
+**Exact workflow:**
+
+1. Open Script, then open Visual Graph Editor.
+2. Choose Large-graph culling and low-detail rendering; read its visible validation and permission state before editing.
+3. Select the target project, asset or object and enter only finite, supported values.
+4. Apply or save the change, then inspect the visible result and Problems/Console output.
+5. Run Play or Preview when the feature has runtime behavior; use Pause/Step for deterministic inspection.
+6. Save, reload the project and confirm the authored value is unchanged.
+7. Run Project Health and the relevant test, then build the standalone player and repeat the observable check.
+
+**Expected result:** Large-graph culling and low-detail rendering is visible in the editor, survives reload and reaches Preview/Play and exported players where applicable.
+
+**Persistence and export:** Large-graph culling and low-detail rendering is stored in the owning project, scene, component, asset, workspace preference or build manifest. Editor-only state is excluded from players.
+
+**Undo and recovery:** Use Undo/Redo for document edits, Revert/rollback for imports or packages, Recovery Browser for interrupted saves, and source control or the migration backup for project-wide recovery.
+
+**Common mistakes and fixes:**
+
+- Editing Large-graph culling and low-detail rendering on the wrong selection or workspace.
+- Ignoring a permission, validation, missing-reference or host-template warning.
+- Checking only the editor preview and not save/reload plus the standalone player.
+
+**Keyboard and accessibility:** Use Command Palette or keyboard focus instead of pointer-only navigation. Every dialog exposes a named control, visible focus, Escape/cancel path and reduced-motion behavior.
+
+**Minimal example:** Minimal: create one valid target, configure Large-graph culling and low-detail rendering, save and verify one visible result in Play.
+
+**Production example:** Production: add validation, localization/accessibility, deterministic tests, budgets, recovery evidence and both development and release builds for Large-graph culling and low-detail rendering.
 
 **Rhai API:** `Generated and parsed Rhai API v2 command stream`
 
@@ -8161,13 +9732,13 @@ Learn by completing real work. Every public feature below states ownership, pers
 
 **Visual Graph API:** `All Rhai API v2 generated nodes`
 
-<a id="visual-graph-1-000-node-authoring-profile"></a>
+<a id="visual-graph-10-000-node-bounded-document"></a>
 
-### 1,000-node authoring profile
+### 10,000-node bounded document
 
 **Classification:** Manual · Assisted · Automatic · Runtime · Reversible
 
-**Purpose and when to use it:** Use 1,000-node authoring profile in Visual Graph Editor to complete its supported authoring or runtime job without leaving the Script workflow. Use it when the project needs 1,000-node authoring profile; keep unrelated settings in their owning workspace.
+**Purpose and when to use it:** Use 10,000-node bounded document in Visual Graph Editor to complete its supported authoring or runtime job without leaving the Script workflow. Use it when the project needs 10,000-node bounded document; keep unrelated settings in their owning workspace.
 
 **Preconditions:**
 
@@ -8176,30 +9747,30 @@ Learn by completing real work. Every public feature below states ownership, pers
 **Exact workflow:**
 
 1. Open Script, then open Visual Graph Editor.
-2. Choose 1,000-node authoring profile; read its visible validation and permission state before editing.
+2. Choose 10,000-node bounded document; read its visible validation and permission state before editing.
 3. Select the target project, asset or object and enter only finite, supported values.
 4. Apply or save the change, then inspect the visible result and Problems/Console output.
 5. Run Play or Preview when the feature has runtime behavior; use Pause/Step for deterministic inspection.
 6. Save, reload the project and confirm the authored value is unchanged.
 7. Run Project Health and the relevant test, then build the standalone player and repeat the observable check.
 
-**Expected result:** 1,000-node authoring profile is visible in the editor, survives reload and reaches Preview/Play and exported players where applicable.
+**Expected result:** 10,000-node bounded document is visible in the editor, survives reload and reaches Preview/Play and exported players where applicable.
 
-**Persistence and export:** 1,000-node authoring profile is stored in the owning project, scene, component, asset, workspace preference or build manifest. Editor-only state is excluded from players.
+**Persistence and export:** 10,000-node bounded document is stored in the owning project, scene, component, asset, workspace preference or build manifest. Editor-only state is excluded from players.
 
 **Undo and recovery:** Use Undo/Redo for document edits, Revert/rollback for imports or packages, Recovery Browser for interrupted saves, and source control or the migration backup for project-wide recovery.
 
 **Common mistakes and fixes:**
 
-- Editing 1,000-node authoring profile on the wrong selection or workspace.
+- Editing 10,000-node bounded document on the wrong selection or workspace.
 - Ignoring a permission, validation, missing-reference or host-template warning.
 - Checking only the editor preview and not save/reload plus the standalone player.
 
 **Keyboard and accessibility:** Use Command Palette or keyboard focus instead of pointer-only navigation. Every dialog exposes a named control, visible focus, Escape/cancel path and reduced-motion behavior.
 
-**Minimal example:** Minimal: create one valid target, configure 1,000-node authoring profile, save and verify one visible result in Play.
+**Minimal example:** Minimal: create one valid target, configure 10,000-node bounded document, save and verify one visible result in Play.
 
-**Production example:** Production: add validation, localization/accessibility, deterministic tests, budgets, recovery evidence and both development and release builds for 1,000-node authoring profile.
+**Production example:** Production: add validation, localization/accessibility, deterministic tests, budgets, recovery evidence and both development and release builds for 10,000-node bounded document.
 
 **Rhai API:** `Generated and parsed Rhai API v2 command stream`
 
@@ -17051,21 +18622,5 @@ Learn by completing real work. Every public feature below states ownership, pers
 **Rhai API:** N/A
 
 **Visual Graph API:** N/A
-
-
-<a id="v70-stable-platform"></a>
-
-## Nova_A 7 stable creator-platform workflow
-
-Use this release workflow to learn, migrate, verify and ship a complete project while keeping every stable contract and every external limitation visible.
-
-1. Open Manage → Learning Center → Platform readiness. Search for the feature you intend to use and inspect Binding, Validation, Undo, Persistence, Runtime/export, Documentation and Tests before authoring. A circle means the dimension does not apply; a dash means external evidence is still required.
-2. Start with a guided project or the creator-v700-stable-platform reference. Follow each lesson in order: prerequisites, exact workflow, expected result, save/reload, undo/recovery, Play/Step, standalone build and accessibility checks.
-3. When opening a 6.x project, review the migration preview before applying. Confirm the source/target engines, semantic diff, backup path and deterministic checksum. The 7.0 seal changes only the supported-engine ceiling to <8.0.0; it does not rewrite schema 29 gameplay data.
-4. For code or Visual Graph behavior, edit either representation, save, inspect the synchronized counterpart and run parity/tests. Unsupported Rhai remains in a lossless Code block. Review the API browser or docs/API_REFERENCE_7_0.md before relying on a runtime call.
-5. Run Project Health, template/reference checks and Build validation. Build Windows on Windows and Web locally. Treat Linux/macOS as matching-host, Android as toolchain-gated experimental and iOS/console as deferred; do not turn an unavailable target into a false pass.
-6. Exercise keyboard and pointer paths in English, German and Chinese at 100–200% UI scale, high contrast and reduced motion. Save, close, reopen, recover from one intentional invalid value, then inspect release evidence and the exact eleven artifacts.
-
-**Undo and recovery:** Cancel a migration or restore its backup if the preview is unexpected. Undo document edits, use Recovery Browser after interrupted saves, disable a failing package/plugin, and keep the last valid build. Read docs/TROUBLESHOOTING_7_0.md for symptom-based recovery. Signing, clean-machine lifecycle, matching-host builds, independent observation and the real soak remain external until captured.
 
 <!-- NOVA_V6_TEACHING_END -->

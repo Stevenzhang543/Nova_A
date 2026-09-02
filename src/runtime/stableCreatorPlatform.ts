@@ -22,7 +22,7 @@ export interface CreatorFeatureReadiness {
 const testFamilies: ReadonlyArray<[string, string]> = [
   ['project-manager', 'migration-projects'], ['workspaces', 'editor-shell'], ['hierarchy', 'editor-shell'], ['viewport', 'interactions'],
   ['inspector', 'components-runtime'], ['assets', 'content-import'], ['physics', 'physics-determinism'], ['script', 'script-graph-parity'],
-  ['visual-graph', 'script-graph-parity'], ['animation', 'animation-determinism'], ['interface', 'ui-accessibility'], ['audio', 'audio-runtime'],
+  ['visual-graph', 'script-graph-parity'], ['event-sheet', 'object-event-authoring'], ['animation', 'animation-determinism'], ['interface', 'ui-accessibility'], ['audio', 'audio-runtime'],
   ['world', 'world-navigation'], ['rendering', 'renderer-determinism'], ['debug', 'runtime-evidence'], ['manage', 'project-health'],
   ['ecosystem', 'plugin-package-security'], ['automation', 'automation-sandbox'], ['network', 'network-determinism'], ['build', 'export-release'],
   ['recovery-team', 'recovery-semantic-merge'], ['task-', 'guided-project-lifecycle']
@@ -48,7 +48,7 @@ function readinessFor(guide: LearningGuide): CreatorFeatureReadiness {
       persistence: editorOnly ? notApplicable('Editor-only state is intentionally excluded from project/player data and uses workspace preferences where relevant.') : covered('canonical project/scene/asset/settings serialization', 'Authored state has a named owner and is included in save/reload qualification.'),
       runtimeExport: editorOnly ? notApplicable('This editor-only operation must not enter exported players.') : runtime || guide.taskProject ? covered('Play → save/reload → standalone player', 'Runtime behavior is exercised through the shared player/export lifecycle.') : covered('build input or explicit editor-only exclusion', 'Project authoring reaches deterministic build input, or its exclusion is explicit.'),
       documentation: covered(`manual/#${guide.id}`, 'EN/DE/ZH task-oriented lessons include classification, prerequisites, steps, expected result, persistence, recovery, mistakes, accessibility and API equivalents.'),
-      tests: platformExternal ? external(`v7-${familyFor(guide)} + matching-host evidence`, 'Local validation is retained; hardware, matching-host or independent lifecycle evidence remains external.') : covered(`v7-${familyFor(guide)}`, 'Mapped to the 7.0 automated family and normal-user interaction matrix.')
+      tests: platformExternal ? external(`v26.04-${familyFor(guide)} + matching-host evidence`, 'Local validation is retained; hardware, matching-host or independent lifecycle evidence remains external.') : covered(`v26.04-${familyFor(guide)}`, 'Mapped to the 26.04 automated family and normal-user interaction matrix.')
     }
   }
 }
@@ -66,11 +66,11 @@ export const CREATOR_PLATFORM_SUMMARY = Object.freeze({
 })
 
 export const CREATOR_CONTRACT_REVIEW = Object.freeze({
-  release: '7.0.0', reviewedContracts: NOVA_STABLE_CONTRACTS.length, currentContractsFrozen: NOVA_STABLE_CONTRACTS.every(contract => contract.frozen),
+  release: '26.04', machineVersion: '26.4.0', reviewedContracts: NOVA_STABLE_CONTRACTS.length, currentContractsFrozen: NOVA_STABLE_CONTRACTS.every(contract => contract.frozen),
   schemaChangeApproved: false, breakingChangesApproved: 0, nextContractDecision: 'deferred' as const,
   decision: 'Retain Project Format 2/schema 29, Rhai API 2, Visual Graph 1, Plugin API 2, Package Manifest 1, Build CLI 1 and Workspace document 3. No demonstrated requirement justifies a breaking contract.',
   earliestNextReview: NOVA_FEATURE_FREEZE.earliestApproval,
-  reasons: Object.freeze(['The current contracts express every 7.0 feature additively.', 'The observation window and independent external certification are not complete.', 'A major-version label never authorizes a destructive project migration.', 'Any future contract needs preview, complete backup, deterministic migration, semantic diff, validation, rollback and golden fixtures before approval.'])
+  reasons: Object.freeze(['The current contracts express every 26.04 feature additively.', 'The observation window and independent external certification are not complete.', 'A calendar-version label never authorizes a destructive project migration.', 'Any future contract needs preview, complete backup, deterministic migration, semantic diff, validation, rollback and golden fixtures before approval.'])
 })
 
 export const CREATOR_SUPPORT_MATRIX = Object.freeze([
@@ -80,5 +80,5 @@ export const CREATOR_SUPPORT_MATRIX = Object.freeze([
   Object.freeze({ target: 'macOS player', status: 'matching-host-external', evidence: 'Xcode, signing, notarization and hardware evidence are required.' }),
   Object.freeze({ target: 'Android player', status: 'optional-gated', evidence: 'JDK/SDK/NDK/template/signing/device/store gates remain explicit.' }),
   Object.freeze({ target: 'iOS / consoles', status: 'deferred-or-excluded', evidence: 'iOS is matching-host/deferred; proprietary console SDKs are not bundled.' }),
-  Object.freeze({ target: '3D / XR / ray tracing', status: 'out-of-scope', evidence: 'Nova_A 7.0 remains a focused local-first 2D engine.' })
+  Object.freeze({ target: '3D / XR / ray tracing', status: 'out-of-scope', evidence: 'Nova_A 26.04 remains a focused local-first 2D engine.' })
 ])

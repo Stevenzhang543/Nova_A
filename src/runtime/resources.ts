@@ -10,8 +10,11 @@ export interface NovaResourceDocument {
   kind: ResourceKind
   parent: string | null
   data: Record<string, unknown>
+  /** Additive named overrides; older editors safely ignore these fields. */
+  variants?: Record<string, Record<string, unknown>>
+  activeVariant?: string
 }
-export interface ResolvedResource extends NovaResourceDocument { chain: string[]; overrides: string[] }
+export interface ResolvedResource extends NovaResourceDocument { chain: string[]; overrides: string[]; activeVariant: string; variants: Record<string, Record<string, unknown>> }
 export interface ResourceIssue { severity: 'error' | 'warning'; code: string; assetUuid: string; message: string }
 
 const kinds: ResourceKind[] = ['Material', 'AnimationLibrary', 'InputMap', 'PhysicsMaterial', 'Theme', 'DataTable']
@@ -44,14 +47,22 @@ function normalizeOverrideData(kind: ResourceKind, source: unknown): Record<stri
   const data = object(source), complete = normalizeData(kind, data)
   return Object.fromEntries(Object.keys(data).filter(key => key in complete).sort().map(key => [key, complete[key]]))
 }
+function normalizeVariants(kind: ResourceKind, source: unknown): Record<string, Record<string, unknown>> {
+  return Object.fromEntries(Object.entries(object(source)).sort(([a], [b]) => a.localeCompare(b)).slice(0, 128).flatMap(([name, value]) => {
+    const safeName = id(name, '').slice(0, 80)
+    return safeName && safeName !== 'Default' ? [[safeName, normalizeOverrideData(kind, value)]] : []
+  }))
+}
 export function defaultResource(kind: ResourceKind, name: string = kind): NovaResourceDocument {
-  return normalizeResource({ format: 'nova-resource', version: 1, id: id(name, kind), name, kind, parent: null, data: {} })
+  return normalizeResource({ format: 'nova-resource', version: 1, id: id(name, kind), name, kind, parent: null, data: {}, variants: {}, activeVariant: 'Default' })
 }
 export function normalizeResource(value: unknown): NovaResourceDocument {
   const source = object(value), kind = kinds.includes(source.kind as ResourceKind) ? source.kind as ResourceKind : 'Material'
   const name = typeof source.name === 'string' && source.name.trim() ? source.name.trim().slice(0, 120) : kind
   const parent = reference(source.parent)
-  return { format: 'nova-resource', version: 1, id: id(source.id, name), name, kind, parent, data: parent ? normalizeOverrideData(kind, source.data) : normalizeData(kind, source.data) }
+  const variants = normalizeVariants(kind, source.variants), requestedVariant = id(source.activeVariant, 'Default')
+  const activeVariant = requestedVariant === 'Default' || requestedVariant in variants ? requestedVariant : 'Default'
+  return { format: 'nova-resource', version: 1, id: id(source.id, name), name, kind, parent, data: parent ? normalizeOverrideData(kind, source.data) : normalizeData(kind, source.data), variants, activeVariant }
 }
 export function serializeResource(value: unknown): string { return `${JSON.stringify(normalizeResource(value), null, 2)}\n` }
 export function createResourceAsset(kind: ResourceKind, name: string = kind): AssetRecord { return createTextAsset(name, 'resource', serializeResource(defaultResource(kind, name)), `Assets/Resources/${kind === 'AnimationLibrary' ? 'Animation Libraries' : kind === 'InputMap' ? 'Input Maps' : kind === 'PhysicsMaterial' ? 'Physics Materials' : ''}`.replace(/\/$/, '')) }
@@ -73,7 +84,7 @@ function deepMerge(base: Record<string, unknown>, override: Record<string, unkno
   for (const [key, value] of Object.entries(override)) output[key] = value && typeof value === 'object' && !Array.isArray(value) && output[key] && typeof output[key] === 'object' && !Array.isArray(output[key]) ? deepMerge(output[key] as Record<string, unknown>, value as Record<string, unknown>) : structuredClone(value)
   return output
 }
-export function resolveResource(referenceValue: string | null | undefined): ResolvedResource | null {
+export function resolveResource(referenceValue: string | null | undefined, variantName?: string): ResolvedResource | null {
   let currentReference = referenceValue ?? null, resolved: NovaResourceDocument | null = null
   const visited = new Set<string>(), chain: string[] = [], layers: NovaResourceDocument[] = []
   while (currentReference && layers.length < 64) {
@@ -84,9 +95,20 @@ export function resolveResource(referenceValue: string | null | undefined): Reso
     layers.push(document); currentReference = document.parent
   }
   if (currentReference) return null
-  const localOverrides = Object.keys(layers[0]?.data ?? {}).sort()
-  for (const layer of [...layers].reverse()) resolved = resolved ? { ...layer, data: deepMerge(resolved.data, layer.data) } : structuredClone(layer)
-  return resolved ? { ...resolved, chain: [...chain].reverse(), overrides: localOverrides } : null
+  const selectedVariant = id(variantName ?? layers[0]?.activeVariant, 'Default'), localOverrides = Object.keys(layers[0]?.data ?? {}).sort()
+  for (const layer of [...layers].reverse()) {
+    const base: Record<string, unknown> = resolved ? deepMerge(resolved.data, layer.data) : structuredClone(layer.data)
+    const variant: Record<string, unknown> = selectedVariant === 'Default' ? {} : layer.variants?.[selectedVariant] ?? {}
+    resolved = { ...layer, data: deepMerge(base, variant), variants: structuredClone(layer.variants ?? {}), activeVariant: selectedVariant }
+  }
+  return resolved ? { ...resolved, chain: [...chain].reverse(), overrides: localOverrides, variants: structuredClone(layers[0]?.variants ?? {}), activeVariant: selectedVariant } : null
+}
+export function resourceVariantNames(value: NovaResourceDocument | null | undefined): string[] { return ['Default', ...Object.keys(value?.variants ?? {}).sort()] }
+export function setResourceVariantData(value: NovaResourceDocument, name: string, data: unknown): NovaResourceDocument {
+  const safeName = id(name, '')
+  if (!safeName || safeName === 'Default') throw new Error('RESOURCE_VARIANT_NAME: Choose a unique named variant.')
+  const normalized = normalizeResource(value), variants = { ...(normalized.variants ?? {}), [safeName]: normalizeOverrideData(normalized.kind, data) }
+  return normalizeResource({ ...normalized, variants, activeVariant: safeName })
 }
 export function validateResourceProject(assets: AssetRecord[] = assetState.records): ResourceIssue[] {
   const issues: ResourceIssue[] = []

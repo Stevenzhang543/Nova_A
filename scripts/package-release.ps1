@@ -1,8 +1,10 @@
 [CmdletBinding()]
 param(
   [Parameter(Mandatory = $true)]
-  [ValidatePattern('^\d+\.\d+\.\d+$')]
-  [string]$Version
+  [ValidatePattern('^\d+\.\d+(?:\.\d+)?$')]
+  [string]$Version,
+  [ValidatePattern('^\d+\.\d+(?:\.\d+)?$')]
+  [string]$ReleaseLabel = ''
 )
 
 $ErrorActionPreference = 'Stop'
@@ -47,6 +49,10 @@ function Invoke-WithTransientFileRetry {
   }
 }
 
+$MachineVersion = $Version
+if ($MachineVersion -notmatch '^\d+\.\d+\.\d+$') { throw "Machine version must be three-part SemVer: $MachineVersion" }
+if ([string]::IsNullOrWhiteSpace($ReleaseLabel)) { $ReleaseLabel = $MachineVersion }
+$Version = $ReleaseLabel
 $projectRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $releaseDirectory = Join-Path $projectRoot "releases\v$Version"
 $notesPath = Join-Path $projectRoot "release-audits\v$Version-release-notes.md"
@@ -57,8 +63,8 @@ $referenceReadme = Join-Path $projectRoot 'reference-projects\README.md'
 
 $artifacts = [ordered]@{
   (Join-Path $projectRoot 'src-tauri\target\release\nova_a.exe') = "Nova_A-v$Version-windows-x64-portable.exe"
-  (Join-Path $projectRoot "src-tauri\target\release\bundle\msi\Nova_A_${Version}_x64_en-US.msi") = "Nova_A-v$Version-windows-x64.msi"
-  (Join-Path $projectRoot "src-tauri\target\release\bundle\nsis\Nova_A_${Version}_x64-setup.exe") = "Nova_A-v$Version-windows-x64-setup.exe"
+  (Join-Path $projectRoot "src-tauri\target\release\bundle\msi\Nova_A_${MachineVersion}_x64_en-US.msi") = "Nova_A-v$Version-windows-x64.msi"
+  (Join-Path $projectRoot "src-tauri\target\release\bundle\nsis\Nova_A_${MachineVersion}_x64-setup.exe") = "Nova_A-v$Version-windows-x64-setup.exe"
 }
 
 foreach ($source in @($artifacts.Keys) + @($notesPath, $ledgerPath, $benchmarkPath, $stabilityPath, $referenceReadme, (Join-Path $projectRoot 'dist\index.html'))) {
@@ -100,7 +106,7 @@ Verify every packaged file against `SHA256SUMS.txt`. Release metadata is in `rel
   [IO.File]::WriteAllText((Join-Path $webStage 'README.md'), $webReadme, [Text.UTF8Encoding]::new($false))
   $sourceCommit = (& git -C $projectRoot rev-parse HEAD).Trim()
   if ($LASTEXITCODE -ne 0) { throw 'Unable to record the source commit for web metadata.' }
-  $webMetadata = [ordered]@{ product = 'Nova_A'; version = $Version; format = 'nova-web-release'; projectFormat = 2; schema = 29; sourceCommit = $sourceCommit; generatedAt = [DateTime]::UtcNow.ToString('o'); entrypoints = @('index.html','player.html'); contentManifest = 'SHA256SUMS.txt'; runtimeCapabilities = @('2D editor','standalone player','WebAssembly physics','workers','bundled manual','local variable fonts'); hosting = [ordered]@{ protocol = 'http-or-https'; wasmMime = 'application/wasm'; hashedAssetCaching = 'immutable'; htmlCaching = 'revalidate'; crossOriginIsolationRequired = $false; spaFallbackRequired = $false } } | ConvertTo-Json -Depth 6
+  $webMetadata = [ordered]@{ product = 'Nova_A'; version = $Version; machineVersion = $MachineVersion; format = 'nova-web-release'; projectFormat = 2; schema = 29; sourceCommit = $sourceCommit; generatedAt = [DateTime]::UtcNow.ToString('o'); entrypoints = @('index.html','player.html'); contentManifest = 'SHA256SUMS.txt'; runtimeCapabilities = @('2D editor','standalone player','WebAssembly physics','workers','bundled manual','local variable fonts'); hosting = [ordered]@{ protocol = 'http-or-https'; wasmMime = 'application/wasm'; hashedAssetCaching = 'immutable'; htmlCaching = 'revalidate'; crossOriginIsolationRequired = $false; spaFallbackRequired = $false } } | ConvertTo-Json -Depth 6
   [IO.File]::WriteAllText((Join-Path $webStage 'release-metadata.json'), "$webMetadata`n", [Text.UTF8Encoding]::new($false))
   $webChecksums = Get-ChildItem -LiteralPath $webStage -File -Recurse | Where-Object Name -ne 'SHA256SUMS.txt' | Sort-Object FullName | ForEach-Object { $relative = $_.FullName.Substring($webStage.Length).TrimStart('\').Replace('\','/'); "{0}  {1}" -f (Get-Sha256Lower -LiteralPath $_.FullName), $relative }
   [IO.File]::WriteAllLines((Join-Path $webStage 'SHA256SUMS.txt'), $webChecksums, [Text.UTF8Encoding]::new($false))

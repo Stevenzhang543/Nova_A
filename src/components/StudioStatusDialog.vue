@@ -2,7 +2,7 @@
   <Teleport to="body">
     <section v-if="state.visible" class="studio-overlay" role="dialog" aria-modal="true" :aria-label="t('studioStatus')" @keydown.esc="closeStudioStatus">
       <article>
-      <header><div><strong>Nova_A Studio 6.8.0</strong><small>{{ t('stableContractHint') }}</small></div><button :title="t('close')" @click="closeStudioStatus">×</button></header>
+      <header><div><strong>Nova_A Studio {{ NOVA_RELEASE_NAME }}</strong><small>{{ t('stableContractHint') }}</small></div><button :title="t('close')" @click="closeStudioStatus">×</button></header>
         <div class="contracts"><section v-for="contract in NOVA_STABLE_CONTRACTS" :key="contract.id"><span>{{ t(`contract_${contract.id}`) }}</span><strong>v{{ contract.version }}</strong><small>{{ contract.compatibility }}</small></section></div>
         <aside><strong>{{ t('compatibilityPromise') }}</strong><p>{{ t('compatibilityPromiseHint') }}</p></aside>
         <section class="support-grid"><div><strong>{{ t('migrationCenter') }}</strong><p>{{ t('schemaFreezeSummary') }}</p></div><div><strong>{{ t('knownIssues') }}</strong><small>{{ KNOWN_ISSUES_FEED.updatedAt }} · {{ KNOWN_ISSUES_FEED.source }}</small><p v-for="issue in KNOWN_ISSUES" :key="`${issue.area}:${issue.issue}`"><b>{{ issue.severity }} · {{ issue.area }}</b> — {{ issue.issue }} {{ issue.workaround }}</p></div></section>
@@ -15,6 +15,7 @@
 </template>
 
 <script setup lang="ts">
+import { NOVA_RELEASE_NAME } from '../projects/projectFormat'
 import { ref } from 'vue'
 import { t } from '../i18n'
 import { reportRecoverableError } from '../runtime/faultCenter'

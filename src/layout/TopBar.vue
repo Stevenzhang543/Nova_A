@@ -81,7 +81,7 @@
     <div class="top-spacer"></div>
     <span v-if="recoveryState.safeMode" class="safe-pill">{{ t('safeMode') }}</span>
     <span v-if="historyState.dirty" class="dirty-pill" :title="projectTransactionState.unsavedScopes.join(', ')">● {{ t('unsavedChanges') }}</span>
-    <span class="release-pill">6.8.0 · {{ t('releaseCandidate') }}</span>
+    <span class="release-pill">{{ NOVA_RELEASE_NAME }}</span>
     <input ref="fileInput" type="file" hidden accept="application/json,.nova,.json" @change="handleFileSelected">
   </header>
 </template>
@@ -103,6 +103,7 @@ import { recoveryState } from '../runtime/recovery'
 import { completeTask, failTask, startTask } from '../runtime/editorFeedback'
 import { toggleEditorFullscreen } from '../runtime/editorWindow'
 import { projectTransactionState } from '../runtime/projectTransactions'
+import { NOVA_RELEASE_NAME } from '../projects/projectFormat'
 
 const activeMenu = ref<string | null>(null)
 const fileInput = ref<HTMLInputElement | null>(null)

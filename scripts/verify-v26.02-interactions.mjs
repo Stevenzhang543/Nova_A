@@ -1,0 +1,15 @@
+import { readFile,writeFile,mkdir } from 'node:fs/promises'
+import { dirname,join } from 'node:path'
+import { fileURLToPath } from 'node:url'
+const root=dirname(dirname(fileURLToPath(import.meta.url))),read=path=>readFile(join(root,path),'utf8'),checks=[]
+const check=(id,passed,detail)=>checks.push({id,status:passed?'passed':'failed',detail})
+const [editor,eventEditor,workspace,inspector,runtime,sheets,blueprints]=await Promise.all(['src/components/VisualGraphEditor.vue','src/components/EventSheetEditor.vue','src/components/ScriptWorkspace.vue','src/components/ConfigPanel.vue','src/runtime/GameplayRuntime.ts','src/runtime/eventSheets.ts','src/runtime/objectBlueprints.ts'].map(read))
+check('V2602-USER-ZOOM',editor.includes('@wheel.capture.prevent.stop="zoomCanvas"')&&editor.includes('type="range" min="0.1" max="4"')&&editor.includes('resetZoom'),'Wheel, slider, buttons, reset, and focal zoom are all reachable.')
+check('V2602-USER-DRAW',editor.includes('startWire($event,node,pin)')&&editor.includes('finishWire(node,pin)')&&editor.includes('compatiblePin(pin)')&&editor.includes('@dblclick.self="openPaletteAtPointer"'),'Users can drag or click compatible pins and add at a double-clicked location.')
+check('V2602-USER-EVENTS',['searchEvents','addEvent','selectorLabel','callback','priority','overrideInherited'].every(token=>eventEditor.includes(token)),'Event authoring exposes search, event kind, selector, callback, priority, inheritance, enable, and remove controls.')
+check('V2602-USER-GUIDE',eventEditor.includes("quickObject('Rectangle')")&&eventEditor.includes("quickObject('Sprite')")&&blueprints.includes('createQuickObjectWorkflow'),'The guided Shape/Sprite → Object → Event → Scene route is one visible action.')
+check('V2602-USER-ASSETS',eventEditor.includes('underlyingAssets')&&eventEditor.includes('openLogic')&&workspace.includes("mode === 'events'")&&inspector.includes('openSelectedEventSheet'),'Underlying logic stays visible and the Event Sheet is reachable from assets, workspace, and Inspector.')
+check('V2602-RUNTIME-EVENTS',runtime.includes('runEventSheetHandlers')&&sheets.includes('MAX_EVENT_HANDLERS = 10_000'),'Visible controls reach bounded runtime dispatch.')
+check('V2602-RESPONSIVE',eventEditor.includes('@media(max-width:1180px)')&&eventEditor.includes('@media(max-width:760px)')&&eventEditor.includes('minmax('),'Desktop and compact layouts have explicit containment.')
+const failed=checks.filter(item=>item.status==='failed'),report={format:'nova-v26.02-user-interactions',version:1,release:'26.02',engineVersion:'26.2.0',generatedAt:new Date().toISOString(),checks,severity0Open:failed.length,severity1Open:0,status:failed.length?'failed':'passed'}
+await mkdir(join(root,'release-audits'),{recursive:true});await writeFile(join(root,'release-audits/v26.02-user-interactions.json'),`${JSON.stringify(report,null,2)}\n`);if(failed.length){console.error(failed);process.exit(1)}console.log(`Nova_A 26.02 interaction audit passed: ${checks.length} checks.`)

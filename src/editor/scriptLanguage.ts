@@ -1,4 +1,5 @@
 import { SCRIPT_API, apiEntry } from './scriptApi'
+import { analyzeModuleGraph, analyzeScript26, type ScriptGenericHelper, type ScriptStatement, type ScriptStructure, type ScriptTypeInfo } from './scriptLanguage26'
 
 export type ScriptSeverity = 'error' | 'warning' | 'info'
 export type ScriptDiagnosticPhase = 'parser' | 'semantic' | 'compatibility' | 'runtime' | 'test'
@@ -40,6 +41,10 @@ export interface ScriptAnalysis {
   tests: ScriptTestMetadata[]
   semanticTokens: ScriptSemanticToken[]
   apiUsage: string[]
+  types: ScriptTypeInfo[]
+  structures: ScriptStructure[]
+  genericHelpers: ScriptGenericHelper[]
+  statements: ScriptStatement[]
 }
 export interface ScriptCompletion { label: string; detail: string; documentation: string; insertText: string; deprecated: boolean }
 export interface ScriptCodeAction { title: string; code: string; line: number; replacement: string }
@@ -160,9 +165,11 @@ export function analyzeScript(source: string, apiVersion: 1 | 2 = 2, revision = 
   for (const call of calls) if (!known.has(call.name)) diagnostics.push(diagnostic(call.line, call.column, call.name.length, 'error', 'semantic', 'NOVA-SEM-003', `Unknown function “${call.name}”.`))
   const lifecycle = new Set(['awake', 'start', 'fixed_update', 'update', 'late_update', 'on_destroy', 'on_timer', 'on_task', 'on_signal', 'on_collision_enter', 'on_collision_stay', 'on_collision_exit', 'on_trigger_enter', 'on_trigger_stay', 'on_trigger_exit', 'before_all', 'before_each', 'after_each', 'after_all'])
   for (const symbol of symbols) if (symbol.kind === 'function' && !lifecycle.has(symbol.name) && !symbol.name.startsWith('test_') && !calls.some(call => call.name === symbol.name)) diagnostics.push(diagnostic(symbol.line, symbol.column, symbol.name.length, 'warning', 'semantic', 'NOVA-LINT-UNUSED', `Function “${symbol.name}” is never called in this workspace document.`))
+  const rich = analyzeScript26(source)
+  for (const item of rich.annotationDiagnostics) diagnostics.push(diagnostic(item.line, item.column, 1, item.code === 'NOVA-TYPE-001' ? 'warning' : item.code === 'NOVA-TYPE-004' ? 'error' : 'warning', 'semantic', item.code, item.message))
   const uniqueDiagnostics = [...new Map(diagnostics.map(item => [`${item.code}:${item.line}:${item.column}:${item.message}`, item])).values()]
   const elapsedMs = (typeof performance === 'undefined' ? Date.now() : performance.now()) - started
-  return { apiVersion, revision, elapsedMs, diagnostics: uniqueDiagnostics, symbols, dependencies: [...new Set(dependencies)], functions, references, tests, semanticTokens, apiUsage: [...new Set(calls.map(call => call.name).filter(name => API_NAMES.has(name)))] }
+  return { apiVersion, revision, elapsedMs, diagnostics: uniqueDiagnostics, symbols, dependencies: [...new Set(dependencies)], functions, references, tests, semanticTokens, apiUsage: [...new Set(calls.map(call => call.name).filter(name => API_NAMES.has(name)))], types: rich.types, structures: rich.structures, genericHelpers: rich.genericHelpers, statements: rich.statements }
 }
 
 export function applyScriptLintPolicy(analysis: ScriptAnalysis, policy: { deprecatedApi: 'off' | 'warning' | 'error'; shadowing: 'off' | 'warning'; unusedSymbols: 'off' | 'warning' }): ScriptAnalysis {
@@ -186,7 +193,8 @@ export function parameterHint(name: string, activeParameter = 0): { signature: s
 }
 export function hoverInfo(name: string, analysis?: ScriptAnalysis): { signature: string; documentation: string; link: string } | null {
   const entry = apiEntry(name); if (entry) return { signature: entry.signature, documentation: `${entry.detail}\n\nExample: ${entry.example}`, link: entry.documentation }
-  const symbol = analysis?.symbols.find(item => item.name === name); return symbol ? { signature: symbol.signature, documentation: symbol.documentation || 'Project symbol', link: '' } : null
+  const symbol = analysis?.symbols.find(item => item.name === name), inferred = analysis?.types.find(item => item.name === name)
+  return symbol ? { signature: inferred ? `${symbol.signature}: ${inferred.type}` : symbol.signature, documentation: symbol.documentation || (inferred ? `${inferred.confidence} type from ${inferred.source}` : 'Project symbol'), link: '' } : null
 }
 export function findScriptReferences(source: string, name: string): ScriptReference[] { return analyzeScript(source).references.filter(reference => reference.name === name) }
 export function renameScriptSymbol(source: string, name: string, replacement: string): string {
@@ -246,6 +254,7 @@ export class ScriptWorkspaceIndex {
     const uris = [...this.documents.keys()]
     return document.analysis.dependencies.map(module => ({ module, status: uris.some(candidate => candidate.endsWith(module) || candidate.endsWith(`${module}.rhai`)) ? 'resolved' : 'missing', candidates: uris.filter(candidate => candidate.toLowerCase().includes(module.split('/').pop()?.toLowerCase() ?? '')).slice(0, 8) }))
   }
+  moduleDiagnostics() { return analyzeModuleGraph([...this.documents.values()].map(document => ({ uri: document.uri, dependencies: document.analysis.dependencies }))) }
   snapshot(): string {
     return JSON.stringify({ format: 'nova-script-index', version: 2, documents: [...this.documents.values()].map(document => ({ uri: document.uri, source: document.source, apiVersion: document.analysis.apiVersion, revision: document.analysis.revision })) })
   }
@@ -271,6 +280,8 @@ export type ScriptProtocolRequest =
   | { id: string | number; method: 'textDocument/definition'; params: { symbol: string } }
   | { id: string | number; method: 'textDocument/references'; params: { symbol: string } }
   | { id: string | number; method: 'workspace/symbol'; params: { query: string } }
+  | { id: string | number; method: 'workspace/moduleDiagnostics'; params: Record<string, never> }
+  | { id: string | number; method: 'textDocument/typeAnalysis'; params: { uri: string } }
   | { id: string | number; method: 'textDocument/formatting'; params: { uri: string } }
 
 export function handleScriptProtocol(index: ScriptWorkspaceIndex, request: ScriptProtocolRequest): { id: string | number; result?: unknown; error?: { code: string; message: string } } {
@@ -285,6 +296,8 @@ export function handleScriptProtocol(index: ScriptWorkspaceIndex, request: Scrip
     if (request.method === 'textDocument/definition') return { id: request.id, result: index.definition(request.params.symbol) }
     if (request.method === 'textDocument/references') return { id: request.id, result: index.references(request.params.symbol) }
     if (request.method === 'workspace/symbol') return { id: request.id, result: index.workspaceSymbols(request.params.query) }
+    if (request.method === 'workspace/moduleDiagnostics') return { id: request.id, result: index.moduleDiagnostics() }
+    if (request.method === 'textDocument/typeAnalysis') { const analysis = index.document(request.params.uri)?.analysis; return { id: request.id, result: analysis ? { types: analysis.types, structures: analysis.structures, genericHelpers: analysis.genericHelpers, statements: analysis.statements } : null } }
     const document = index.document(request.params.uri)
     return { id: request.id, result: document ? [{ range: { start: { line: 1, column: 1 }, end: { line: document.source.split(/\r?\n/).length, column: 1 } }, newText: formatScript(document.source) }] : [] }
   } catch (error) { return { id: request.id, error: { code: 'NOVA-PROTOCOL-001', message: error instanceof Error ? error.message : String(error) } } }

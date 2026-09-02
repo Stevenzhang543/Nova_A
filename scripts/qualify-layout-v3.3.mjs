@@ -20,6 +20,9 @@ const requiredViewports = String(process.env.NOVA_LAYOUT_REQUIRED_VIEWPORTS ?? '
 const requiredScales = String(process.env.NOVA_LAYOUT_REQUIRED_SCALES ?? '1').split(',').map(Number).filter(value => Number.isFinite(value) && value >= 1 && value <= 2)
 const requiredTextPattern = process.env.NOVA_LAYOUT_REQUIRED_TEXT ? new RegExp(process.env.NOVA_LAYOUT_REQUIRED_TEXT, 'i') : null
 const requiredManageIndex = Math.max(0, Number.parseInt(process.env.NOVA_LAYOUT_REQUIRED_MANAGE_INDEX ?? '2', 10) || 0)
+const requiredWorkspaceIndex = process.env.NOVA_LAYOUT_REQUIRED_WORKSPACE_INDEX === undefined ? null : Math.max(0, Number.parseInt(process.env.NOVA_LAYOUT_REQUIRED_WORKSPACE_INDEX, 10) || 0)
+const requiredClickSelector = process.env.NOVA_LAYOUT_REQUIRED_CLICK || ''
+const requiredRootSelector = process.env.NOVA_LAYOUT_REQUIRED_ROOT || '.manage-workspace'
 const edgeCandidates = ['C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', 'C:/Program Files/Microsoft/Edge/Application/msedge.exe']
 let edgePath = ''
 for (const candidate of edgeCandidates) { try { await readFile(candidate); edgePath = candidate; break } catch { /* next installed path */ } }
@@ -105,9 +108,18 @@ try {
     }
 
     if (requiredTextPattern) {
-      await clickIndex(client, '.workspace-list button', 5)
-      await clickIndex(client, '.manage-body>nav button', requiredManageIndex)
-      const visibleText = await evaluate(client, "(document.querySelector('.manage-workspace')?.innerText||'').replace(/\\s+/g,' ')")
+      if (requiredWorkspaceIndex === null) {
+        await clickIndex(client, '.workspace-list button', 5)
+        await clickIndex(client, '.manage-body>nav button', requiredManageIndex)
+      } else {
+        await clickIndex(client, '.workspace-list button', requiredWorkspaceIndex)
+        if (requiredClickSelector) {
+          await waitForExpression(client, `Boolean(document.querySelector(${JSON.stringify(requiredClickSelector)}))`, 10_000)
+          await evaluate(client, `document.querySelector(${JSON.stringify(requiredClickSelector)})?.click(); true`)
+          await waitForExpression(client, `Boolean(document.querySelector(${JSON.stringify(requiredRootSelector)}))`, 5_000)
+        }
+      }
+      const visibleText = await evaluate(client, `(document.querySelector(${JSON.stringify(requiredRootSelector)})?.innerText||'').replace(/\\s+/g,' ')`)
       requiredTextResults.push({ locale, pattern: requiredTextPattern.source, status: requiredTextPattern.test(visibleText) ? 'passed' : 'failed' })
     }
 

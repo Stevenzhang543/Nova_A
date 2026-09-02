@@ -196,6 +196,10 @@ export interface ScriptPropertyMetadata {
 export class Script2D extends ComponentBase {
   readonly kind = 'Script2D' as const
   scriptAsset: string | null = null
+  /** Optional designer-facing event index. Runtime still executes scriptAsset. */
+  eventSheetAsset: string | null = null
+  /** Reusable authored-object source, retained through scene and prefab round trips. */
+  objectBlueprintAsset: string | null = null
   properties: Record<string, ScriptPropertyValue> = {}
   propertyMetadata: Record<string, ScriptPropertyMetadata> = {}
   lastError: string | null = null

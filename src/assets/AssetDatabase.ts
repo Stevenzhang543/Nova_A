@@ -107,6 +107,8 @@ export function inferAssetType(file: Pick<File, 'name' | 'type'>): AssetType {
   if (extension === 'nova-prefab' || extension === 'prefab') return 'prefab'
   if (extension === 'rhai' || mime === 'text/x-rhai') return 'script'
   if (extension === 'nova-graph') return 'visualScript'
+  if (extension === 'nova-events') return 'eventSheet'
+  if (extension === 'nova-object') return 'objectBlueprint'
   if (extension === 'nova-schema') return 'dataSchema'
   if (extension === 'nova-data' || extension === 'csv') return 'dataTable'
   if (extension === 'nova-replay') return 'replay'
@@ -141,6 +143,8 @@ function defaultFolder(type: AssetType): string {
   if (type === 'prefab') return 'Assets/Prefabs'
   if (type === 'script') return 'Assets/Scripts'
   if (type === 'visualScript') return 'Assets/Visual Scripts'
+  if (type === 'eventSheet') return 'Assets/Event Sheets'
+  if (type === 'objectBlueprint') return 'Assets/Object Blueprints'
   if (type === 'material') return 'Assets/Materials'
   if (type === 'animation') return 'Assets/Animations'
   if (type === 'controller') return 'Assets/Controllers'
@@ -332,7 +336,7 @@ export function createTextAsset(
   requestedFolder?: string
 ): AssetRecord {
   const uuid = normalizeUuid(undefined)
-  const extension = assetType === 'script' ? '.rhai' : assetType === 'visualScript' ? '.nova-graph' : assetType === 'prefab' ? '.nova-prefab' : assetType === 'scene' ? '.nova-scene' : assetType === 'material' ? '.nova-material' : assetType === 'animation' ? '.nova-anim' : assetType === 'controller' ? '.nova-controller' : assetType === 'animationMask' ? '.nova-mask' : assetType === 'rig' ? '.nova-rig' : assetType === 'skin' ? '.nova-skin' : assetType === 'timeline' ? '.nova-timeline' : assetType === 'tileset' ? '.nova-tileset' : assetType === 'atlas' ? '.nova-atlas' : assetType === 'shader' ? '.nova-shader' : assetType === 'uiTheme' ? '.nova-theme' : assetType === 'behaviorTree' ? '.nova-behavior' : assetType === 'stateMachine' ? '.nova-state' : assetType === 'tilePalette' ? '.nova-palette' : assetType === 'brushPreset' ? '.nova-brush' : assetType === 'terrainRules' ? '.nova-terrain' : assetType === 'dataSchema' ? '.nova-schema' : assetType === 'dataTable' ? '.nova-data' : assetType === 'replay' ? '.nova-replay' : assetType === 'path' ? '.nova-path' : assetType === 'particleSystem' ? '.nova-particle' : assetType === 'resource' ? '.nova-resource' : '.nova-locale'
+  const extension = assetType === 'script' ? '.rhai' : assetType === 'visualScript' ? '.nova-graph' : assetType === 'eventSheet' ? '.nova-events' : assetType === 'objectBlueprint' ? '.nova-object' : assetType === 'prefab' ? '.nova-prefab' : assetType === 'scene' ? '.nova-scene' : assetType === 'material' ? '.nova-material' : assetType === 'animation' ? '.nova-anim' : assetType === 'controller' ? '.nova-controller' : assetType === 'animationMask' ? '.nova-mask' : assetType === 'rig' ? '.nova-rig' : assetType === 'skin' ? '.nova-skin' : assetType === 'timeline' ? '.nova-timeline' : assetType === 'tileset' ? '.nova-tileset' : assetType === 'atlas' ? '.nova-atlas' : assetType === 'shader' ? '.nova-shader' : assetType === 'uiTheme' ? '.nova-theme' : assetType === 'behaviorTree' ? '.nova-behavior' : assetType === 'stateMachine' ? '.nova-state' : assetType === 'tilePalette' ? '.nova-palette' : assetType === 'brushPreset' ? '.nova-brush' : assetType === 'terrainRules' ? '.nova-terrain' : assetType === 'dataSchema' ? '.nova-schema' : assetType === 'dataTable' ? '.nova-data' : assetType === 'replay' ? '.nova-replay' : assetType === 'path' ? '.nova-path' : assetType === 'particleSystem' ? '.nova-particle' : assetType === 'resource' ? '.nova-resource' : '.nova-locale'
   const safeName = sanitizedName(name).endsWith(extension) ? sanitizedName(name) : `${sanitizedName(name)}${extension}`
   const mimeType = assetType === 'script' ? 'text/x-rhai' : assetType === 'visualScript' ? 'application/x-nova-graph+json' : `application/x-nova-${assetType}`
   const record: AssetRecord = {
@@ -366,7 +370,7 @@ export function createTextAsset(
 
 export function readTextAsset(reference: string | null | undefined): string | null {
   const record = resolveAsset(reference)
-  if (!record || !['script', 'visualScript', 'prefab', 'scene', 'material', 'animation', 'controller', 'animationMask', 'rig', 'skin', 'timeline', 'tileset', 'atlas', 'shader', 'localization', 'uiTheme', 'behaviorTree', 'stateMachine', 'tilePalette', 'brushPreset', 'terrainRules', 'dataSchema', 'dataTable', 'replay', 'path', 'particleSystem', 'resource'].includes(record.assetType)) return null
+  if (!record || !['script', 'visualScript', 'eventSheet', 'objectBlueprint', 'prefab', 'scene', 'material', 'animation', 'controller', 'animationMask', 'rig', 'skin', 'timeline', 'tileset', 'atlas', 'shader', 'localization', 'uiTheme', 'behaviorTree', 'stateMachine', 'tilePalette', 'brushPreset', 'terrainRules', 'dataSchema', 'dataTable', 'replay', 'path', 'particleSystem', 'resource'].includes(record.assetType)) return null
   const comma = record.source.indexOf(',')
   if (!record.source.startsWith('data:') || comma < 0) return record.source || null
   try {
@@ -382,7 +386,7 @@ export function readTextAsset(reference: string | null | undefined): string | nu
 
 export function updateTextAsset(uuid: string, source: string): boolean {
   const record = assetState.records.find(asset => asset.uuid === uuid)
-  if (!record || record.path.startsWith('.nova/') || !['script', 'visualScript', 'prefab', 'scene', 'material', 'animation', 'controller', 'animationMask', 'rig', 'skin', 'timeline', 'tileset', 'atlas', 'shader', 'localization', 'uiTheme', 'behaviorTree', 'stateMachine', 'tilePalette', 'brushPreset', 'terrainRules', 'dataSchema', 'dataTable', 'replay', 'path', 'particleSystem', 'resource'].includes(record.assetType)) return false
+  if (!record || record.path.startsWith('.nova/') || !['script', 'visualScript', 'eventSheet', 'objectBlueprint', 'prefab', 'scene', 'material', 'animation', 'controller', 'animationMask', 'rig', 'skin', 'timeline', 'tileset', 'atlas', 'shader', 'localization', 'uiTheme', 'behaviorTree', 'stateMachine', 'tilePalette', 'brushPreset', 'terrainRules', 'dataSchema', 'dataTable', 'replay', 'path', 'particleSystem', 'resource'].includes(record.assetType)) return false
   record.source = textDataUrl(source, record.mimeType || 'text/plain')
   record.byteLength = new TextEncoder().encode(source).byteLength
   record.sourceModified = Date.now()
@@ -489,7 +493,7 @@ export function loadAssets(source: unknown, folderSource?: unknown, databaseSour
     const knownFields = new Set(['uuid', 'name', 'path', 'assetType', 'mimeType', 'byteLength', 'source', 'sourceModified', 'importedAt', 'width', 'height', 'duration', 'fontFamily', 'settings', 'script', 'animationImport', 'interchange', 'pipeline', 'tags', 'collectionIds', 'contentGroup', 'editorOnly', 'sourceControlStatus', 'thumbnailKey', 'unknownFields'])
     const inheritedUnknown = item.unknownFields && typeof item.unknownFields === 'object' ? item.unknownFields : {}
     const unknownFields = { ...inheritedUnknown, ...Object.fromEntries(Object.entries(value).filter(([key]) => !knownFields.has(key))) }
-    const assetType = ['image', 'audio', 'font', 'scene', 'prefab', 'script', 'material', 'animation', 'controller', 'animationMask', 'rig', 'skin', 'timeline', 'tileset', 'atlas', 'shader', 'localization', 'uiTheme', 'behaviorTree', 'stateMachine', 'tilePalette', 'brushPreset', 'terrainRules', 'dataSchema', 'dataTable', 'replay', 'path', 'particleSystem', 'visualScript', 'other', 'resource'].includes(String(item.assetType)) ? item.assetType as AssetType : 'other'
+    const assetType = ['image', 'audio', 'font', 'scene', 'prefab', 'script', 'material', 'animation', 'controller', 'animationMask', 'rig', 'skin', 'timeline', 'tileset', 'atlas', 'shader', 'localization', 'uiTheme', 'behaviorTree', 'stateMachine', 'tilePalette', 'brushPreset', 'terrainRules', 'dataSchema', 'dataTable', 'replay', 'path', 'particleSystem', 'visualScript', 'eventSheet', 'objectBlueprint', 'other', 'resource'].includes(String(item.assetType)) ? item.assetType as AssetType : 'other'
     const uuid = normalizeUuid(item.uuid)
     const defaults = defaultImportSettings()
     const settings: AssetImportSettings = {

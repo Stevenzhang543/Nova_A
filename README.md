@@ -4,15 +4,31 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE.md)
 [![Tier 1](https://img.shields.io/badge/Tier%201-Windows%20%7C%20Web-63c6ff)](./docs/PLATFORM_BUILD_MATRIX_5_0.md)
-[![Release](https://img.shields.io/badge/release-7.0.0%20candidate-63c6ff)]()
+[![Release](https://img.shields.io/badge/release-26.04-63c6ff)]()
 
 Nova_A is an open-source 2D game engine and desktop editor built with Rust, WebAssembly, Vue 3, and Tauri.
 
-Version **7.0.0** completes Nova_A's stable creator-platform milestone. The Learning Center now derives a seven-dimension readiness record for every public feature: binding, validation, undo, persistence, runtime/export, documentation and tests. The reviewed 6.x contracts remain frozen at Project Format 2/schema 29; existing projects receive a previewed, backed-up and rollback-capable compatibility-ceiling seal instead of a risky schema rewrite. Complete English, German and Chinese teaching manuals, API/migration/troubleshooting references, stable-platform and recovery projects, history fixtures and exact release evidence ship together. No feature, animation, visual component or authored project value was removed.
+Release **26.04** completes the asset, 2D content, and reusable-library ecosystem while preserving Project Format 2/schema 29 and every frozen contract. A two-way dependency view, cycle and missing-reference diagnostics, deterministic thumbnails, unified importer profiles, named Resource variants, localization import validation, offline trusted discovery, and the retained worker/cache pipeline work alongside every existing authoring and animation feature.
 
 **Manual:** [interactive English/German/Chinese webpage](./manual/index.html) · [English Markdown](./manual/MANUAL.en.md) · [Deutsch](./manual/MANUAL.de.md) · [中文](./manual/MANUAL.zh-CN.md)
 
-## What is new in v7.0.0
+## What is new in 26.04
+
+- **Complete plan:** [26.01–26.10 implementation manual](docs/ROADMAP_26_01_TO_26_10.md) and [competitive review](docs/COMPETITIVE_REVIEW_26_01.md).
+- **Feature truth:** [generated full operation/binding inventory](docs/FEATURE_INVENTORY_26_04.md) covers every public operation over binding, validation, undo, persistence, runtime/export, documentation, and tests.
+- **Asset and library ecosystem:** [26.04 implementation contract](docs/ASSET_CONTENT_LIBRARY_26_04.md) documents dependency visualization, deterministic import/reimport, thumbnails, content profiles, variants, trusted offline discovery, repair and export closure.
+- **26.04 layout audit:** [localized Assets workspace audit](docs/UI_LAYOUT_AUDIT_26_04.md) covers dependency lanes, production profiles, variants, thumbnails, themes, scale, keyboard focus, scrolling and narrow layouts.
+- **Language and debugger depth:** [26.03 implementation contract](docs/LANGUAGE_DEBUGGING_26_03.md) documents optional types/data, modules, statement maps, task cancellation, watches, breakpoints, LSP 3.17, code↔graph coverage, escape blocks, diff, and merge.
+- **26.03 layout audit:** [localized Script Studio and Visual Graph audit](docs/UI_LAYOUT_AUDIT_26_03.md) covers type/statement panes, debugger tasks, live values, coverage cards, Execute Rhai source, themes, scale, and compact layouts.
+- **Object-event workflow:** [Event Sheet and Object Blueprint guide](docs/OBJECT_EVENT_AUTHORING_26_02.md) documents runtime binding, inheritance, validation, reusable composition, and guided creation.
+- **Responsive graph authoring:** [Visual Graph performance and interaction contract](docs/VISUAL_GRAPH_PERFORMANCE_26_02.md) documents focal zoom, direct wiring, indexed layout, batching, culling, and preserved visual feedback.
+- **26.02 layout audit:** [panel and localization audit](docs/UI_LAYOUT_AUDIT_26_02.md) covers the new three-column Event Sheet studio and retained cross-panel containment.
+- **20 verified starters:** Scene, Test, and Gameplay categories now have search, difficulty, setup-time, capability, and tag discovery. See the [template catalog](docs/TEMPLATE_LIBRARY_26_01.md).
+- **Actual two-way visual scripting:** selecting an existing `.rhai` and switching modes opens its exact linked graph; variables, My Blocks functions, `if/else`, bounded loops, operators, entity/API values and commands convert structurally. See the [visual scripting contract](docs/VISUAL_SCRIPTING_26_01.md).
+- **Every-panel containment:** flex/grid children shrink correctly, fields stay inside cards, translated text wraps, tab rows have reachable scrolling, and dense studios collapse at narrow effective widths. See the [panel audit](docs/UI_LAYOUT_AUDIT_26_01.md).
+- **Version compatibility:** the public/calendar and machine/SemVer mapping is documented in [versioning policy](docs/VERSIONING_2026.md); legacy projects receive a metadata-only `<27.0.0` ceiling seal with no schema rewrite.
+
+## Stable platform inherited from 7.0.0
 
 - **Platform readiness:** Manage → Learning Center → Platform readiness audits all 358 public features across seven explicit dimensions and never disguises external work as a local pass.
 - **Stable contracts:** Project Format 2/schema 29, Rhai API 2, Graph Format 1, Plugin API 2, Package Manifest 1, Build CLI 1 and workspace document 3 remain compatible. The next breaking-contract decision is deferred pending evidence.
@@ -114,7 +130,7 @@ See the [v6.4 content and animation guide](./docs/CONTENT_ANIMATION_6_4.md).
 
 ## Retained v6.0.3 corrections
 
-- All 12 startup templates resolve a real Windows x64 player template when their build settings have not been edited.
+- All 20 startup templates resolve a real Windows x64 player template when their build settings have not been edited.
 - Old `windows-x86_64-v1`/equivalent synthesized IDs migrate to the compatible registered template without rewriting custom IDs.
 - `RectTransform` is passive by default; buttons, sliders, checkboxes, and text inputs opt into focus with inferred roles and names.
 - Reading order `0` is automatic scene order. Duplicate warnings are reserved for conflicting explicit positive orders.

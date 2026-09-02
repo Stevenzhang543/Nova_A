@@ -2,7 +2,7 @@
   <div class="settings-page">
     <header class="page-header">
       <div>
-      <span class="eyebrow">Nova_A 6.8.0</span>
+      <span class="eyebrow">Nova_A {{ NOVA_RELEASE_NAME }}</span>
         <h1>{{ t('settings') }}</h1>
       </div>
       <div class="theme-switch" :aria-label="t('theme')">
@@ -170,6 +170,7 @@
 </template>
 
 <script setup lang="ts">
+import { NOVA_RELEASE_NAME } from '../projects/projectFormat'
 import { computed, defineComponent, h, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { t } from '../i18n'
 import { editorState } from '../store/editor'

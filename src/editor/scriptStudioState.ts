@@ -4,6 +4,10 @@ import { openCodeWorkspace } from '../visual/graphStudioState'
 export const scriptStudioState = reactive({
   activeUuid: null as string | null,
   openTabs: [] as string[],
+  activeDirty: false,
+  /** Registered by ScriptStudio while mounted so a mode switch can validate,
+   * save, and synchronize the exact active Rhai draft before opening blocks. */
+  saveActiveDraft: null as null | (() => Promise<boolean>),
   layout: { detailDock: 'right' as 'right' | 'bottom', explorerVisible: true, detailVisible: true }
 })
 

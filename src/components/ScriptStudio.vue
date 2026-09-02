@@ -73,7 +73,7 @@
           <span v-if="linkedGraphUuid" class="linked-graph-status">↔ {{ t('linkedVisualGraph') }}</span>
           <span :class="scriptIndexState.status === 'error' ? 'status-error' : 'status-ok'">Index {{ scriptIndexState.documentCount }} / {{ scriptIndexState.symbolCount }}</span>
           <span>{{ t('lineColumn', { line: cursor.line, column: cursor.column }) }}</span>
-      <span>Rhai API v{{ activeAsset?.script?.apiVersion ?? 2 }} · UTF-8 · {{ analysis.elapsedMs.toFixed(1) }} ms</span><span>{{ t('engineVersion') }} 6.8.0</span>
+      <span>Rhai API v{{ activeAsset?.script?.apiVersion ?? 2 }} · UTF-8 · {{ analysis.elapsedMs.toFixed(1) }} ms</span><span>{{ t('engineVersion') }} {{ NOVA_RELEASE_NAME }}</span>
         </footer>
       </main>
 
@@ -95,9 +95,24 @@
           <h3 v-if="referenceResults.length">{{ t('references') }}</h3><button v-for="reference in referenceResults" :key="`${reference.uuid}:${reference.line}:${reference.column}`" class="symbol" @click="openAt(reference.uuid, reference.line)"><i>↗</i><span>{{ reference.name }}</span><small>{{ reference.line }}:{{ reference.column }}</small></button>
         </div>
 
+        <div v-else-if="inspectorTab === 'types'" class="inspector-pane type-pane">
+          <div class="pane-heading"><strong>{{ t('typesAndStatements') }}</strong><span>{{ analysis.types.length }} · {{ analysis.statements.length }}</span></div>
+          <p class="pane-help">{{ t('optionalTypeHint') }}</p>
+          <h3>{{ t('inferredTypes') }}</h3>
+          <button v-for="item in analysis.types" :key="`${item.name}:${item.line}`" class="symbol type-symbol" @click="focusLine(item.line)"><i>{{ item.declared ? 'T' : '≈' }}</i><span><b>{{ item.name }}</b><small>{{ item.confidence }} · {{ item.source }}</small></span><code>{{ item.type }}</code></button>
+          <p v-if="!analysis.types.length" class="empty-pane">{{ t('noTypeInformation') }}</p>
+          <h3>{{ t('dataStructures') }}</h3>
+          <article v-for="structure in analysis.structures" :key="`${structure.name}:${structure.line}`" class="type-structure"><strong>{{ structure.name }}</strong><small>{{ structure.fields.map(field => `${field.name}${field.optional ? '?' : ''}: ${field.type}`).join(' · ') }}</small></article>
+          <h3>{{ t('genericHelpers') }}</h3>
+          <article v-for="helper in analysis.genericHelpers" :key="`${helper.functionName}:${helper.line}`" class="type-structure"><strong>{{ helper.functionName }}&lt;{{ helper.parameters.join(', ') }}&gt;</strong><small>{{ Object.entries(helper.constraints).map(([name, values]) => `${name}: ${values.join(' | ')}`).join(' · ') }}</small></article>
+          <h3>{{ t('statementMap') }}</h3>
+          <button v-for="statement in analysis.statements.slice(0, 500)" :key="statement.id" class="symbol statement" @click="focusLine(statement.line,statement.column)"><i>{{ statement.kind.slice(0,1).toUpperCase() }}</i><span><b>{{ statement.functionName || t('moduleScope') }}</b><small>{{ statement.normalized }}</small></span><code>{{ statement.line }}</code></button>
+        </div>
+
         <div v-else-if="inspectorTab === 'modules'" class="inspector-pane">
           <div class="pane-heading"><strong>{{ t('scriptModules') }}</strong><span>{{ analysis.dependencies.length }}</span></div>
           <p class="pane-help">{{ t('moduleHelp') }}</p>
+          <button v-for="item in projectModuleDiagnostics" :key="item.cycle.join('|')" class="problem" @click="openModuleDiagnostic(item.uri)"><i class="error"></i><span><strong>{{ item.message }}</strong><small>{{ item.code }}</small></span></button>
           <label><span>{{ t('scriptApiVersion') }}</span><select :value="activeAsset?.script?.apiVersion ?? 2" @change="setApiVersion(Number(($event.target as HTMLSelectElement).value))"><option :value="2">API v2</option><option v-if="activeAsset?.script?.apiVersion === 1" :value="1" disabled>API v1 · {{ t('compatibilityMode') }}</option></select></label>
           <label><span>{{ t('scriptPackage') }}</span><input :value="activeAsset?.script?.packageName" maxlength="128" @change="setPackageName(($event.target as HTMLInputElement).value)"></label>
           <label><span>{{ t('hotReloadPolicy') }}</span><select :value="activeAsset?.script?.reloadPolicy" @change="setReloadPolicy(($event.target as HTMLSelectElement).value)"><option value="preserve">{{ t('preserveState') }}</option><option value="recreate">{{ t('recreateState') }}</option><option value="disabled">{{ t('disabled') }}</option></select></label>
@@ -134,7 +149,7 @@
           <h3>{{ t('breakpoints') }}</h3><article v-for="point in breakpointDetails" :key="point.id" class="breakpoint-detail"><label><input v-model="point.enabled" type="checkbox"><span>{{ point.line }}</span></label><input v-model="point.group" :placeholder="t('breakpointGroup')"><input v-model="point.functionName" :placeholder="t('functionBreakpoint')"><input v-model="point.condition" :placeholder="t('condition')"><input v-model.number="point.hitCondition" type="number" min="0" max="1000000" :placeholder="t('hitCount')"><input v-model="point.logMessage" :placeholder="t('logpointMessage')"><button @click="removeDetailedBreakpoint(point.id)">×</button></article>
           <button @click="addFunctionBreakpoint">＋ {{ t('functionBreakpoint') }}</button>
           <h3>{{ t('exceptionPolicy') }}</h3><select v-model="scriptProjectSettings.exceptionPolicy"><option value="never">{{ t('never') }}</option><option value="uncaught">{{ t('uncaught') }}</option><option value="all">{{ t('allExceptions') }}</option></select>
-          <h3>{{ t('tasks') }}</h3><label v-for="task in debug.tasks" :key="task.id"><span><b>{{ task.name }}</b><small>{{ task.state }} · {{ task.detail }}</small></span></label><p v-if="!debug.tasks.length" class="empty-pane">{{ t('noDebugTasks') }}</p>
+          <h3>{{ t('tasks') }}</h3><label v-for="task in debug.tasks" :key="task.id"><span><b>{{ task.name }}</b><small>{{ task.state }} · {{ task.detail }}</small></span><button v-if="['queued','running','waiting'].includes(task.state)" :title="t('cancelTask')" @click="runtime.cancelDebugTask(task.id)">×</button></label><p v-if="!debug.tasks.length" class="empty-pane">{{ t('noDebugTasks') }}</p>
           <h3>{{ t('remoteDebugging') }}</h3><p>{{ scriptProjectSettings.remoteDebug.enabled ? `${scriptProjectSettings.remoteDebug.host}:${scriptProjectSettings.remoteDebug.port} · ${debug.remotePeer?.authenticated ? t('authenticated') : t('waitingForAuthenticatedPlayer')}` : t('remoteDebugDisabled') }}</p>
           <h3>{{ t('locals') }}</h3><pre>{{ formattedLocals }}</pre>
           <h3>{{ t('watches') }}</h3><div class="dependency-editor"><input v-model="watchDraft" :placeholder="t('watchExpression')" @keydown.enter="addWatch"><button @click="addWatch">＋</button></div>
@@ -176,6 +191,7 @@
 </template>
 
 <script setup lang="ts">
+import { NOVA_RELEASE_NAME } from '../projects/projectFormat'
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { createTextAsset, readTextAsset, updateTextAsset, assetState } from '../assets/AssetDatabase'
 import { defaultScriptMetadata, type ScriptBreakpointMetadata } from '../assets/types'
@@ -197,23 +213,24 @@ import { scriptCoverageReport, scriptCoverageState } from '../runtime/scriptCove
 import { markScriptIndexApiChanged, rebuildAndPersistScriptIndex, restoreScriptIndex, scriptIndexState } from '../editor/scriptIndexPersistence'
 import { ensureLinkedGraphForScript, linkedScriptGraphUuid } from '../visual/graphCodeSync'
 import { parseScriptContract, scriptContractHeader } from '../runtime/scriptContracts'
+import { analyzeModuleGraph, remapStatementLines } from '../editor/scriptLanguage26'
 
 const service = new ScriptLanguageService()
 const editor = ref<HTMLTextAreaElement | null>(null), findInput = ref<HTMLInputElement | null>(null), renameInput = ref<HTMLInputElement | null>(null)
 const drafts = reactive<Record<string, string>>({}), dirtyUuids = reactive(new Set<string>())
 const draft = computed({ get: () => activeAsset.value ? drafts[activeAsset.value.uuid] ?? '' : '', set: value => { if (activeAsset.value) drafts[activeAsset.value.uuid] = value } })
-const emptyAnalysis = (): ScriptAnalysis => ({ apiVersion: 2, revision: 0, elapsedMs: 0, diagnostics: [], symbols: [], dependencies: [], functions: {}, references: [], tests: [], semanticTokens: [], apiUsage: [] })
+const emptyAnalysis = (): ScriptAnalysis => ({ apiVersion: 2, revision: 0, elapsedMs: 0, diagnostics: [], symbols: [], dependencies: [], functions: {}, references: [], tests: [], semanticTokens: [], apiUsage: [], types: [], structures: [], genericHelpers: [], statements: [] })
 const analysis = ref<ScriptAnalysis>(emptyAnalysis()), validationError = ref('')
 const projectQuery = ref(''), findOpen = ref(false), findText = ref(''), replaceText = ref(''), completionOpen = ref(false)
 const templateId = ref<ScriptTemplateId>('component')
-const cursor = reactive({ line: 1, column: 1 }), inspectorTab = ref<'problems' | 'symbols' | 'modules' | 'contract' | 'debug' | 'tests' | 'signals' | 'api'>('problems')
+const cursor = reactive({ line: 1, column: 1 }), inspectorTab = ref<'problems' | 'symbols' | 'types' | 'modules' | 'contract' | 'debug' | 'tests' | 'signals' | 'api'>('problems')
 const packageDraft = ref(''), watchDraft = ref(''), signalDraft = ref(''), connectionSignalDraft = ref(''), connectionCallbackDraft = ref(''), apiQuery = ref('')
 const testScope = ref<'file' | 'project' | 'tags' | 'failed' | 'headless'>('file'), testTags = ref('')
 const renameOpen = ref(false), renameSource = ref(''), renameDraft = ref('')
 const referenceResults = ref<Array<{ uuid: string; name: string; line: number; column: number }>>([])
 let analysisRevision = 0
 const inspectorTabs = [
-  { id: 'problems' as const, label: 'problems' }, { id: 'symbols' as const, label: 'symbols' }, { id: 'modules' as const, label: 'modules' }, { id: 'contract' as const, label: 'behaviorContract' },
+  { id: 'problems' as const, label: 'problems' }, { id: 'symbols' as const, label: 'symbols' }, { id: 'types' as const, label: 'types' }, { id: 'modules' as const, label: 'modules' }, { id: 'contract' as const, label: 'behaviorContract' },
   { id: 'debug' as const, label: 'debug' }, { id: 'tests' as const, label: 'tests' }, { id: 'signals' as const, label: 'signals' }, { id: 'api' as const, label: 'api' }
 ]
 const scripts = computed(() => { void assetState.generation; return assetState.records.filter(asset => asset.assetType === 'script').sort((a, b) => a.path.localeCompare(b.path)) })
@@ -246,12 +263,14 @@ const deprecatedCount = computed(() => analysis.value.diagnostics.filter(item =>
 const reloadHistory = computed(() => hotReloadHistory(activeAsset.value?.uuid))
 const canRollbackReload = computed(() => Boolean(activeAsset.value && scriptHotReloadState.rollbackSources[activeAsset.value.uuid]))
 const coverage = computed(() => { void scriptCoverageState.revision; return scriptCoverageReport() })
+const projectModuleDiagnostics = computed(() => analyzeModuleGraph(scripts.value.map(asset => ({ uri: asset.path, dependencies: analyzeScript(drafts[asset.uuid] ?? readTextAsset(asset.uuid) ?? '').dependencies }))))
 
-watch(activeAsset, asset => { if (!asset) { analysis.value = emptyAnalysis(); return }; if (!(asset.uuid in drafts)) { const saved = readTextAsset(asset.uuid) ?? '', recovery = asset.script?.recoverySource ?? ''; drafts[asset.uuid] = recovery && recovery !== saved ? recovery : saved; if (recovery && recovery !== saved) dirtyUuids.add(asset.uuid) } void analyzeCurrent() }, { immediate: true })
+watch(activeAsset, asset => { if (!asset) { analysis.value = emptyAnalysis(); scriptStudioState.activeDirty = false; return }; if (!(asset.uuid in drafts)) { const saved = readTextAsset(asset.uuid) ?? '', recovery = asset.script?.recoverySource ?? ''; drafts[asset.uuid] = recovery && recovery !== saved ? recovery : saved; if (recovery && recovery !== saved) dirtyUuids.add(asset.uuid) } scriptStudioState.activeDirty = dirtyUuids.has(asset.uuid); void analyzeCurrent() }, { immediate: true })
+watch(activeDirty, value => { scriptStudioState.activeDirty = value })
 watch(()=>assetState.generation,()=>{const asset=activeAsset.value;if(!asset||dirtyUuids.has(asset.uuid)||!linkedScriptGraphUuid(asset.uuid))return;const saved=readTextAsset(asset.uuid);if(saved!==null&&drafts[asset.uuid]!==saved){drafts[asset.uuid]=saved;void analyzeCurrent()}})
 watch(findOpen, open => { if (open) void nextTick(() => findInput.value?.focus()) })
-onMounted(() => { restoreScriptIndex(); rebuildProjectIndex(); const selected = assetState.records.find(asset => asset.uuid === assetState.selectedGuid && asset.assetType === 'script'); if (selected) open(selected.uuid); else if (!activeAsset.value && scripts.value[0]) open(scripts.value[0].uuid) })
-onBeforeUnmount(() => service.dispose())
+onMounted(() => { scriptStudioState.saveActiveDraft = saveActive; restoreScriptIndex(); rebuildProjectIndex(); const selected = assetState.records.find(asset => asset.uuid === assetState.selectedGuid && asset.assetType === 'script'); if (selected) open(selected.uuid); else if (!activeAsset.value && scripts.value[0]) open(scripts.value[0].uuid) })
+onBeforeUnmount(() => { if (scriptStudioState.saveActiveDraft === saveActive) scriptStudioState.saveActiveDraft = null; service.dispose() })
 
 function open(uuid: string) { openScriptAsset(uuid) }
 function close(uuid: string) { if (dirtyUuids.has(uuid)) { scriptStudioState.activeUuid = uuid; return }; closeScriptAsset(uuid) }
@@ -269,19 +288,20 @@ function requestCompletions() { completionOpen.value = true; editor.value?.focus
 function insertCompletion(name: string) { const prefix = wordBeforeCursor.value; const el = editor.value; if (!el) return; el.selectionStart -= prefix.length; replaceSelection(name); completionOpen.value = false }
 function focusLine(line: number, column = 1) { const el = editor.value; if (!el) return; const lines = draft.value.split(/\r?\n/); const pos = lines.slice(0, Math.max(0, line - 1)).reduce((sum, value) => sum + value.length + 1, 0) + Math.max(0, column - 1); el.focus(); el.setSelectionRange(pos, pos); el.scrollTop = Math.max(0, (line - 4) * 22); cursorChanged() }
 function toggleBreakpoint(line: number) { const asset = activeAsset.value; if (!asset) return; asset.script ??= defaultScriptMetadata(); const index = asset.script.breakpoints.indexOf(line); if (index >= 0) { asset.script.breakpoints.splice(index, 1); asset.script.breakpointDetails = asset.script.breakpointDetails.filter(point => point.line !== line || point.functionName) } else { asset.script.breakpoints.push(line); asset.script.breakpointDetails.push({ id: `line-${line}-${Date.now()}`, line, functionName: '', condition: '', hitCondition: 0, logMessage: '', enabled: true, hitCount: 0 }) } asset.script.breakpoints.sort((a, b) => a - b); pushHistory('Toggle script breakpoint', `script-breakpoint:${asset.uuid}`); assetState.generation++ }
-async function saveActive() {
-  const asset=activeAsset.value;if(!asset)return
+async function saveActive(): Promise<boolean> {
+  const asset=activeAsset.value;if(!asset)return false
   const result=runtime.validateModuleSource(asset.uuid,draft.value);validationError.value=result.error??''
-  if(result.error){addEditorLog(result.error,'Script','error',asset.uuid);inspectorTab.value='problems';return}
+  if(result.error){addEditorLog(result.error,'Script','error',asset.uuid);inspectorTab.value='problems';return false}
   const previousScript=readTextAsset(asset.uuid)??'',previousGraphs=new Map(assetState.records.filter(item=>item.assetType==='visualScript').map(item=>[item.uuid,readTextAsset(item.uuid)??'']))
-  asset.script??=defaultScriptMetadata();asset.script.tests=analysis.value.tests.map(test=>test.name);asset.script.recoverySource='';asset.script.lastSavedHash=sourceHash(draft.value)
-  if(!updateTextAsset(asset.uuid,draft.value))return
+  asset.script??=defaultScriptMetadata();const remapped=remapStatementLines(analyzeScript(previousScript).statements,analysis.value.statements,asset.script.breakpoints);const lineMap=new Map(remapped.map(item=>[item.from,item.to]));asset.script.breakpoints=remapped.map(item=>item.to).sort((a,b)=>a-b);asset.script.breakpointDetails=asset.script.breakpointDetails.map(point=>({...point,line:lineMap.get(point.line)??point.line}));asset.script.tests=analysis.value.tests.map(test=>test.name);asset.script.recoverySource='';asset.script.lastSavedHash=sourceHash(draft.value)
+  if(!updateTextAsset(asset.uuid,draft.value))return false
   try{
     const synchronized=ensureLinkedGraphForScript(asset.uuid,draft.value)
     if(synchronized){const graphSource=readTextAsset(synchronized.graphAssetUuid)??'';runtime.queueGraphHotReload(synchronized.graphAssetUuid,graphSource,previousGraphs.get(synchronized.graphAssetUuid)??'');window.dispatchEvent(new CustomEvent('nova-linked-graph-synchronized',{detail:{graphAssetUuid:synchronized.graphAssetUuid,scriptUuid:asset.uuid}}));addEditorLog(t(synchronized.created?'linkedGraphCreatedFromCode':'linkedGraphUpdatedFromCode'),'Script','info',synchronized.graphAssetUuid)}
-  }catch(error){updateTextAsset(asset.uuid,previousScript);validationError.value=error instanceof Error?error.message:String(error);addEditorLog(validationError.value,'Script','error',asset.uuid);inspectorTab.value='problems';return}
-  runtime.queueHotReload(asset.uuid,draft.value);dirtyUuids.delete(asset.uuid);rebuildProjectIndex();pushHistory('Edit script asset',`script:${asset.uuid}`);addEditorLog(t('scriptSaved',{name:asset.name}),'Script','info',asset.uuid)
+  }catch(error){updateTextAsset(asset.uuid,previousScript);validationError.value=error instanceof Error?error.message:String(error);addEditorLog(validationError.value,'Script','error',asset.uuid);inspectorTab.value='problems';return false}
+  runtime.queueHotReload(asset.uuid,draft.value);dirtyUuids.delete(asset.uuid);scriptStudioState.activeDirty=false;rebuildProjectIndex();pushHistory('Edit script asset',`script:${asset.uuid}`);addEditorLog(t('scriptSaved',{name:asset.name}),'Script','info',asset.uuid);return true
 }
+function openModuleDiagnostic(uri:string){const asset=scripts.value.find(item=>item.path===uri);if(asset)openAt(asset.uuid,1)}
 function findNext() { const el = editor.value; if (!el || !findText.value) return; const lower = draft.value.toLowerCase(), needle = findText.value.toLowerCase(); let index = lower.indexOf(needle, el.selectionEnd); if (index < 0) index = lower.indexOf(needle); if (index >= 0) { el.focus(); el.setSelectionRange(index, index + needle.length); cursorChanged() } }
 function replaceOne() { const el = editor.value; if (!el) return; if (draft.value.slice(el.selectionStart, el.selectionEnd).toLowerCase() !== findText.value.toLowerCase()) { findNext(); return }; replaceSelection(replaceText.value) }
 function replaceAll() { if (!findText.value) return; draft.value = draft.value.replace(new RegExp(escapeRegex(findText.value), 'gi'), replaceText.value); sourceChanged() }
@@ -342,4 +362,5 @@ function sourceHash(value: string) { let hash = 2166136261; for (const character
 .rename-overlay{position:absolute;inset:0;z-index:20;display:grid;place-items:center;background:var(--scrim);backdrop-filter:blur(6px)}.rename-card{width:min(390px,calc(100% - 30px));padding:18px;display:grid;gap:10px;border:1px solid var(--border-strong);border-radius:14px;background:var(--surface-2);box-shadow:var(--shadow-lg)}.rename-card p{margin:0;color:var(--text-muted)}.rename-card>div{display:flex;justify-content:flex-end;gap:7px}.rename-card button{min-height:32px;padding:0 12px;border:1px solid var(--border-subtle);border-radius:8px;color:var(--text-secondary);background:var(--surface-3)}.rename-card button.primary{color:var(--accent-contrast);background:var(--accent);border-color:var(--accent)}
 .toolbar-actions select{min-height:32px;max-width:150px;padding:0 9px;border:1px solid var(--border-subtle);border-radius:8px;color:var(--text-secondary);background:var(--surface-2)}
 @media(max-width:1000px){.studio-mark{flex:0 0 auto}}
+.type-symbol{align-items:center}.type-symbol>span{display:grid;gap:2px}.type-symbol>span small{max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.type-symbol code,.statement code{flex:0 0 auto;padding:3px 6px;border-radius:999px;color:var(--accent);background:var(--accent-soft);font:11px/1.35 var(--font-mono)}.type-structure{padding:8px;display:grid;gap:4px;border:1px solid var(--border-subtle);border-radius:8px;background:var(--surface-2)}.type-structure small{overflow-wrap:anywhere;color:var(--text-muted);line-height:1.45}.statement>span{display:grid;gap:2px;overflow:hidden}.statement>span small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.type-pane{contain:content}
 </style>

@@ -24,8 +24,9 @@ try {
   const [templates, projectData, language, builds, accessibility, components, boxEntities] = await Promise.all(['templates', 'projectData', 'language', 'buildSettings', 'accessibility', 'components', 'boxEntity'].map(load))
   const ids = templates.PROJECT_TEMPLATES.map(template => template.id)
   const categoryCounts = Object.fromEntries(templates.PROJECT_TEMPLATE_CATEGORIES.map(category => [category, templates.PROJECT_TEMPLATES.filter(template => template.category === category).length]))
-  check('CATALOG-CATEGORIES', templates.PROJECT_TEMPLATE_CATEGORIES.join(',') === 'scene,test,game' && Object.values(categoryCounts).every(count => count === 4), 'The launcher exposes three explicit categories with four templates each.', { categoryCounts })
-  check('CATALOG-IDENTITY', new Set(ids).size === ids.length && ids.length === 12, 'Every launcher template has one stable, unique ID.', { ids })
+  check('CATALOG-CATEGORIES', templates.PROJECT_TEMPLATE_CATEGORIES.join(',') === 'scene,test,game' && categoryCounts.scene === 7 && categoryCounts.test === 7 && categoryCounts.game === 6, 'The launcher exposes 20 templates across clear Scene, Test and Gameplay categories.', { categoryCounts })
+  check('CATALOG-IDENTITY', new Set(ids).size === ids.length && ids.length === 20, 'Every launcher template has one stable, unique ID.', { ids })
+  check('CATALOG-DISCOVERY-METADATA', templates.PROJECT_TEMPLATES.every(template => ['beginner','intermediate','advanced'].includes(template.difficulty) && Number.isFinite(template.setupMinutes) && template.setupMinutes > 0 && Array.isArray(template.tags) && template.tags.length >= 2), 'Every template has searchable tags, a difficulty, and an honest setup-time estimate.')
 
   const projects = new Map(), templateFailures = [], schemaFailures = [], scriptFailures = [], buildFailures = [], accessibilityFailures = []
   for (const descriptor of templates.PROJECT_TEMPLATES) {
@@ -61,7 +62,7 @@ try {
       templateFailures.push({ template: descriptor.id, failures: [error instanceof Error ? error.message : String(error)] })
     }
   }
-  check('CATALOG-FACTORIES', projects.size === 12 && templateFailures.length === 0, 'Every template factory completes and passes its template-specific structural audit.', { templateFailures })
+  check('CATALOG-FACTORIES', projects.size === 20 && templateFailures.length === 0, 'Every template factory completes and passes its template-specific structural audit, including verified variants.', { templateFailures })
   check('CATALOG-SCHEMA', schemaFailures.length === 0, 'Every generated template passes the same full project validator used by Create Project.', { schemaFailures })
   check('CATALOG-SCRIPTS-STATIC', scriptFailures.length === 0, 'Every authored template script passes the API-v2 static analyzer.', { scriptFailures })
   check('CATALOG-BUILD-DEFAULTS', buildFailures.length === 0, 'Every untouched template resolves to a registered Windows x64 export template with no blocking errors or warnings.', { buildFailures })
@@ -151,7 +152,7 @@ try {
 }
 
 const failed = checks.filter(check => check.status === 'failed')
-const report = { format: 'nova-template-catalog-verification', version: 1, engineVersion: '7.0.0', generatedAt: new Date().toISOString(), checks, severity0Open: 0, severity1Open: failed.length, status: failed.length ? 'failed' : 'passed' }
+const report = { format: 'nova-template-catalog-verification', version: 2, engineVersion: '26.4.0', release: '26.04', generatedAt: new Date().toISOString(), checks, severity0Open: 0, severity1Open: failed.length, status: failed.length ? 'failed' : 'passed' }
 await mkdir(join(root, 'release-audits'), { recursive: true })
 await writeFile(join(root, 'release-audits/template-catalog-verification.json'), `${JSON.stringify(report, null, 2)}\n`)
 if (failed.length) { console.error(failed); process.exit(1) }

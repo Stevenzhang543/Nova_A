@@ -1,7 +1,7 @@
 import { reactive } from 'vue'
 import { NOVA_PACKAGE_MANIFEST_VERSION } from './stableContracts'
 
-const PACKAGE_ENGINE_VERSION = '7.0.0'
+const PACKAGE_ENGINE_VERSION = '26.4.0'
 
 export { NOVA_PACKAGE_MANIFEST_VERSION }
 export type PackageSourceKind = 'local' | 'git' | 'registry'
@@ -133,33 +133,33 @@ function officialSecurity(type: PackageEntryPointType, sha256: string, dependenc
 const OFFICIAL_PACKAGES: Record<string, PackageManifest> = {
   [OFFICIAL_NAVIGATION_PACKAGE_ID]: {
     manifestVersion: NOVA_PACKAGE_MANIFEST_VERSION, id: OFFICIAL_NAVIGATION_PACKAGE_ID, name: 'Nova Navigation 2D', version: '2.6.0',
-    description: 'Grid/polygon navigation, agents, flow fields, avoidance, and dynamic rebaking.', engine: '>=2.6.0 <8.0.0', dependencies: {},
+    description: 'Grid/polygon navigation, agents, flow fields, avoidance, and dynamic rebaking.', engine: '>=2.6.0 <27.0.0', dependencies: {},
     pluginApi: null, native: false, ...officialSecurity('runtime', '26434adf10b122a8708afc496f682242d7f634a344bbd00f4699ff71b2e3a9ae'), ...OFFICIAL_METADATA
   },
   [OFFICIAL_AI_PACKAGE_ID]: {
     manifestVersion: NOVA_PACKAGE_MANIFEST_VERSION, id: OFFICIAL_AI_PACKAGE_ID, name: 'Nova AI Tools', version: '3.8.0',
-    description: 'Optional serialized behavior trees and hierarchical state machines with deterministic debug traces.', engine: '>=3.8.0 <8.0.0', dependencies: {},
+    description: 'Optional serialized behavior trees and hierarchical state machines with deterministic debug traces.', engine: '>=3.8.0 <27.0.0', dependencies: {},
     pluginApi: null, native: false, ...officialSecurity('runtime', '11c75ccdc9f2037548e9eef31bd3ee34134a365e9eaeef741ee8e7917a69ac4e'), ...OFFICIAL_METADATA
   },
   [OFFICIAL_OBJECT_POOL_PACKAGE_ID]: {
     manifestVersion: NOVA_PACKAGE_MANIFEST_VERSION, id: OFFICIAL_OBJECT_POOL_PACKAGE_ID, name: 'Nova Object Pool', version: '3.8.0',
-    description: 'Optional runtime object pools with reset contracts, bounded capacity, lifetime policies, reuse counters, and leak diagnostics.', engine: '>=3.8.0 <8.0.0', dependencies: {},
+    description: 'Optional runtime object pools with reset contracts, bounded capacity, lifetime policies, reuse counters, and leak diagnostics.', engine: '>=3.8.0 <27.0.0', dependencies: {},
     pluginApi: null, native: false, ...officialSecurity('runtime', '1bb0707fffc9aa16790924146797791413754147129750608f29360bd2ee4e86'), ...OFFICIAL_METADATA
   },
   [OFFICIAL_STREAMING_TOOLS_PACKAGE_ID]: {
     manifestVersion: NOVA_PACKAGE_MANIFEST_VERSION, id: OFFICIAL_STREAMING_TOOLS_PACKAGE_ID, name: 'Nova Streaming Tools', version: '3.8.0',
-    description: 'Optional authoring helpers and diagnostics for the core asynchronous world-cell runtime.', engine: '>=3.8.0 <8.0.0', dependencies: {},
+    description: 'Optional authoring helpers and diagnostics for the core asynchronous world-cell runtime.', engine: '>=3.8.0 <27.0.0', dependencies: {},
     pluginApi: null, native: false, ...officialSecurity('editor', 'fbd228b8e1b6f780487885dea93276958c978d2f13f117a7c654c78d630cb047'), ...OFFICIAL_METADATA
   },
   [OFFICIAL_NETWORKING_PACKAGE_ID]: {
     manifestVersion: NOVA_PACKAGE_MANIFEST_VERSION, id: OFFICIAL_NETWORKING_PACKAGE_ID, name: 'Nova Optional Networking', version: '2.9.0',
-    description: 'Bounded WebSocket/native UDP transports, RPCs, snapshots, prediction, interpolation, rollback helpers, and multiplayer diagnostics.', engine: '>=2.9.0 <8.0.0', dependencies: {},
+    description: 'Bounded WebSocket/native UDP transports, RPCs, snapshots, prediction, interpolation, rollback helpers, and multiplayer diagnostics.', engine: '>=2.9.0 <27.0.0', dependencies: {},
     pluginApi: null, native: false, ...officialSecurity('runtime', 'fd048525377499fbd054cb74b69d5369c57d11431951695d413ec1e14cfe3424'),
     ...OFFICIAL_METADATA, permissions: ['network.client', 'network.listen']
   },
   [OFFICIAL_ANDROID_PACKAGE_ID]: {
     manifestVersion: NOVA_PACKAGE_MANIFEST_VERSION, id: OFFICIAL_ANDROID_PACKAGE_ID, name: 'Nova Android Export', version: '6.7.0',
-    description: 'Optional Android export templates and validation. Requires a local Android SDK/JDK toolchain.', engine: '>=2.9.0 <8.0.0', dependencies: {},
+    description: 'Optional Android export templates and validation. Requires a local Android SDK/JDK toolchain.', engine: '>=2.9.0 <27.0.0', dependencies: {},
     pluginApi: null, native: false, ...officialSecurity('build', 'cb2f4c6efb9bf972451cf545a4854878f8515ca327417424975ad2756349a5ca'),
     ...OFFICIAL_METADATA, permissions: ['build.android-sdk']
   }

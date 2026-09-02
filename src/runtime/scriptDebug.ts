@@ -23,6 +23,7 @@ export type DebugProtocolRequest =
   | { id: string; method: 'stackTrace' }
   | { id: string; method: 'scopes'; frame: number }
   | { id: string; method: 'evaluate'; expression: string; frame: number }
+  | { id: string; method: 'cancelTask'; taskId: string }
   | { id: string; method: 'continue' | 'next' | 'stepIn' | 'stepOut' }
 export interface ScriptTestResult {
   script: string
@@ -183,6 +184,13 @@ export function updateDebugTask(task: DebugTask): void {
   if (scriptDebugState.tasks.length > 512) scriptDebugState.tasks.splice(512)
 }
 
+export function markDebugTaskCancelled(taskId: string, detail = 'Cancellation requested by debugger'): DebugTask | null {
+  const task = scriptDebugState.tasks.find(item => item.id === taskId)
+  if (!task || !['queued', 'running', 'waiting'].includes(task.state)) return null
+  updateDebugTask({ ...task, state: 'cancelled', detail: detail.slice(0, 1_024) })
+  return task
+}
+
 function secureTokenMatch(received: string, expected: string): boolean {
   const first = received.toLowerCase().replace(/[^a-f0-9]/g, '').slice(0, 128), second = expected.toLowerCase().replace(/[^a-f0-9]/g, '').slice(0, 128)
   let mismatch = first.length ^ second.length
@@ -199,7 +207,7 @@ export function handleDebugProtocol(request: DebugProtocolRequest, policy: { ena
     if (scriptDebugState.remoteAudit.length > 200) scriptDebugState.remoteAudit.splice(200)
     if (!accepted) return { id: request.id, error: { code: 'NOVA-DEBUG-AUTH', message: 'Remote debugging requires explicit local-player enablement and a valid authentication token.' } }
     scriptDebugState.remotePeer = { id: `peer-${Date.now()}`, address: request.address, authenticated: true, connectedAt: new Date().toISOString(), playerVersion: request.playerVersion.slice(0, 40) }
-    return { id: request.id, result: { protocol: 'nova-rhai-debug', version: 2, capabilities: ['breakpoints', 'conditionalBreakpoints', 'hitCounts', 'logpoints', 'stackTrace', 'scopes', 'evaluate', 'tasks', 'hotReload'] } }
+    return { id: request.id, result: { protocol: 'nova-rhai-debug', version: 3, capabilities: ['statementMaps', 'statementStepping', 'breakpoints', 'conditionalBreakpoints', 'hitCounts', 'logpoints', 'stackTrace', 'scopes', 'evaluate', 'tasks', 'taskCancellation', 'hotReload'] } }
   }
   if (!scriptDebugState.remotePeer?.authenticated) return { id: request.id, error: { code: 'NOVA-DEBUG-NOT-AUTHENTICATED', message: 'Initialize an authenticated local session first.' } }
   if (request.method === 'threads') return { id: request.id, result: [{ id: 1, name: 'Main callbacks' }, ...scriptDebugState.tasks.map((task, index) => ({ id: index + 2, name: `${task.name} · ${task.state}` }))] }
@@ -207,6 +215,10 @@ export function handleDebugProtocol(request: DebugProtocolRequest, policy: { ena
   if (request.method === 'scopes') return { id: request.id, result: [{ name: 'Locals', variables: scriptDebugState.locals }, { name: 'Watches', variables: scriptDebugState.watches }] }
   if (request.method === 'evaluate') {
     try { return { id: request.id, result: evaluateDebugExpression(request.expression) } } catch (error) { return { id: request.id, error: { code: 'NOVA-DEBUG-EVALUATE', message: error instanceof Error ? error.message : String(error) } } }
+  }
+  if (request.method === 'cancelTask') {
+    const task = markDebugTaskCancelled(request.taskId, 'Cancellation accepted by remote debugger')
+    return task ? { id: request.id, result: { accepted: true, taskId: task.id } } : { id: request.id, error: { code: 'NOVA-DEBUG-TASK', message: 'Task is not cancellable.' } }
   }
   const mode: DebugStepMode = request.method === 'continue' ? 'continue' : request.method === 'stepIn' ? 'into' : request.method === 'stepOut' ? 'out' : 'over'
   requestDebugStep(mode)

@@ -95,7 +95,7 @@ export function recordScriptFunction(scriptUuid: string, scriptName: string, fun
   profilerState.scriptFunctions.splice(0, profilerState.scriptFunctions.length, ...values)
 }
 
-export function captureScriptProfile(engineVersion = '6.8.0'): ScriptProfileCapture {
+export function captureScriptProfile(engineVersion = '26.4.0'): ScriptProfileCapture {
   const capture: ScriptProfileCapture = { format: 'nova-script-profile', version: 1, engineVersion, createdAt: new Date().toISOString(), entries: profilerState.scriptFunctions.map(item => ({ ...item })) }
   profilerState.scriptCaptures.push(capture)
   if (profilerState.scriptCaptures.length > 16) profilerState.scriptCaptures.splice(0, profilerState.scriptCaptures.length - 16)

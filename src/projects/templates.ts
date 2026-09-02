@@ -12,7 +12,8 @@ import {
 } from './projectFormat'
 
 export type ProjectTemplateCategory = 'scene' | 'test' | 'game'
-export type ProjectTemplateId = 'empty' | 'mouse-knockout' | 'snake' | 'pong' | 'breakout' | 'platformer' | 'top-down' | 'physics-sandbox' | 'collision-lab' | 'rendering-lab' | 'ui-showcase' | 'networked-optional'
+export type ProjectTemplateId = 'empty' | 'mouse-knockout' | 'snake' | 'pong' | 'breakout' | 'platformer' | 'top-down' | 'physics-sandbox' | 'collision-lab' | 'rendering-lab' | 'ui-showcase' | 'networked-optional' | 'lighting-starter' | 'tile-world' | 'responsive-ui' | 'particle-lab' | 'audio-lab' | 'animation-lab' | 'physics-cleanup' | 'grid-chase'
+export type ProjectTemplateDifficulty = 'beginner' | 'intermediate' | 'advanced'
 
 export interface ProjectTemplateDescriptor {
   id: ProjectTemplateId
@@ -20,23 +21,34 @@ export interface ProjectTemplateDescriptor {
   name: string
   description: string
   features: string[]
+  difficulty: ProjectTemplateDifficulty
+  setupMinutes: number
+  tags: string[]
 }
 
 export const PROJECT_TEMPLATE_CATEGORIES: readonly ProjectTemplateCategory[] = ['scene', 'test', 'game'] as const
 
 export const PROJECT_TEMPLATES: readonly ProjectTemplateDescriptor[] = [
-  { id: 'empty', category: 'scene', name: 'Clear Scene', description: 'A clean scene with a configured Camera2D.', features: ['Camera2D', 'Input map', 'Build settings'] },
-  { id: 'physics-sandbox', category: 'scene', name: 'Physics Sandbox', description: 'A playground for materials, ropes, joints, and collision behavior.', features: ['Rigid bodies', 'Materials', 'Rope2D', 'Joints', 'Debugger'] },
-  { id: 'platformer', category: 'scene', name: 'Platformer Scene', description: 'A playable foundation with a player, platforms, UI, animation, audio, and scripts.', features: ['Physics', 'TileMap2D', 'Animator', 'Audio', 'UI'] },
-  { id: 'top-down', category: 'scene', name: 'Top-down Scene', description: 'A two-scene action foundation with triggers, enemies, prefabs, particles, and save data.', features: ['Prefabs', 'Scene switch', 'Triggers', 'Particles', 'Save API'] },
-  { id: 'collision-lab', category: 'test', name: 'Collision & CCD Lab', description: 'A deterministic test scene for contacts, sensors, materials, rotation, and fast continuous bodies.', features: ['CCD', 'Sensors', 'Friction', 'Restitution', 'Diagnostics'] },
-  { id: 'rendering-lab', category: 'test', name: 'Rendering Lab', description: 'A visual test scene covering shapes, sprites, text, particles, lighting, and sorting.', features: ['WebGL2', 'Shapes', 'Sprites', 'Text', 'Lighting'] },
-  { id: 'ui-showcase', category: 'test', name: 'UI & Input Lab', description: 'A responsive menu and HUD demonstrating themes, localization, focus, input, and audio.', features: ['Responsive UI', 'Themes', 'Localization', 'Focus', 'Audio mixer'] },
-  { id: 'networked-optional', category: 'test', name: 'Networking Lab', description: 'An opt-in authoritative replication test with diagnostics and a headless smoke test.', features: ['Replication', 'Authority', 'Prediction', 'Diagnostics', 'Headless test'] },
-  { id: 'mouse-knockout', category: 'game', name: 'Mouse Knockout', description: 'A complete mouse-controlled physics game with runtime spawning, scoring, and a win banner.', features: ['World-space mouse', 'Physics', 'Runtime prefabs', 'Score', 'Portable .exe'] },
-  { id: 'snake', category: 'game', name: 'Snake', description: 'A classic grid game with precise movement, body growth, self-collision, scoring, and portable export.', features: ['Keyboard & gamepad', 'Growth', 'Self-collision', 'Score UI', 'Portable .exe'] },
-  { id: 'pong', category: 'game', name: 'Pong', description: 'A complete two-player paddle game with physical rebounds, scoring, serve resets, and a first-to-seven win state.', features: ['2 players', 'Physics', 'Score', 'Win state', 'Portable .exe'] },
-  { id: 'breakout', category: 'game', name: 'Breakout', description: 'A complete paddle-and-bricks game with continuous collision, destructible bricks, score, and completion UI.', features: ['Keyboard', 'CCD', 'Destruction', 'Score', 'Portable .exe'] }
+  { id: 'empty', category: 'scene', name: 'Clear Scene', description: 'A clean scene with a configured Camera2D.', features: ['Camera2D', 'Input map', 'Build settings'], difficulty: 'beginner', setupMinutes: 2, tags: ['blank', 'camera', 'starter'] },
+  { id: 'physics-sandbox', category: 'scene', name: 'Physics Sandbox', description: 'A playground for materials, ropes, joints, and collision behavior.', features: ['Rigid bodies', 'Materials', 'Rope2D', 'Joints', 'Debugger'], difficulty: 'intermediate', setupMinutes: 8, tags: ['physics', 'rope', 'joints'] },
+  { id: 'platformer', category: 'scene', name: 'Platformer Scene', description: 'A playable foundation with a player, platforms, UI, animation, audio, and scripts.', features: ['Physics', 'TileMap2D', 'Animator', 'Audio', 'UI'], difficulty: 'intermediate', setupMinutes: 12, tags: ['platformer', 'character', 'tilemap'] },
+  { id: 'top-down', category: 'scene', name: 'Top-down Scene', description: 'A two-scene action foundation with triggers, enemies, prefabs, particles, and save data.', features: ['Prefabs', 'Scene switch', 'Triggers', 'Particles', 'Save API'], difficulty: 'intermediate', setupMinutes: 12, tags: ['top-down', 'prefab', 'save'] },
+  { id: 'lighting-starter', category: 'scene', name: 'Lighting Starter', description: 'A composed 2D scene for lights, shadows, particles, sorting, and camera framing.', features: ['2D lights', 'Shadows', 'Particles', 'Sorting', 'Camera'], difficulty: 'beginner', setupMinutes: 6, tags: ['rendering', 'lighting', 'scene'] },
+  { id: 'tile-world', category: 'scene', name: 'Tile World Starter', description: 'A two-scene TileMap world with prefabs, triggers, streaming-ready data, and save hooks.', features: ['TileMap2D', 'World scenes', 'Prefabs', 'Triggers', 'Save API'], difficulty: 'intermediate', setupMinutes: 12, tags: ['tilemap', 'world', 'streaming'] },
+  { id: 'responsive-ui', category: 'scene', name: 'Responsive UI Starter', description: 'A production Canvas scene with themes, localization, focus, input, audio, and responsive layout.', features: ['Canvas', 'Themes', 'Localization', 'Focus', 'Audio'], difficulty: 'beginner', setupMinutes: 7, tags: ['ui', 'responsive', 'localization'] },
+  { id: 'collision-lab', category: 'test', name: 'Collision & CCD Lab', description: 'A deterministic test scene for contacts, sensors, materials, rotation, and fast continuous bodies.', features: ['CCD', 'Sensors', 'Friction', 'Restitution', 'Diagnostics'], difficulty: 'advanced', setupMinutes: 10, tags: ['physics', 'ccd', 'test'] },
+  { id: 'rendering-lab', category: 'test', name: 'Rendering Lab', description: 'A visual test scene covering shapes, sprites, text, particles, lighting, and sorting.', features: ['WebGL2', 'Shapes', 'Sprites', 'Text', 'Lighting'], difficulty: 'intermediate', setupMinutes: 8, tags: ['rendering', 'webgl2', 'visual'] },
+  { id: 'ui-showcase', category: 'test', name: 'UI & Input Lab', description: 'A responsive menu and HUD demonstrating themes, localization, focus, input, and audio.', features: ['Responsive UI', 'Themes', 'Localization', 'Focus', 'Audio mixer'], difficulty: 'intermediate', setupMinutes: 9, tags: ['ui', 'input', 'accessibility'] },
+  { id: 'networked-optional', category: 'test', name: 'Networking Lab', description: 'An opt-in authoritative replication test with diagnostics and a headless smoke test.', features: ['Replication', 'Authority', 'Prediction', 'Diagnostics', 'Headless test'], difficulty: 'advanced', setupMinutes: 15, tags: ['network', 'multiplayer', 'headless'] },
+  { id: 'particle-lab', category: 'test', name: 'Particles & Effects Lab', description: 'A renderer lab focused on emitters, imported sprites, lights, sorting, and camera composition.', features: ['Particles', 'Sprites', 'Lighting', 'Sorting', 'WebGL2'], difficulty: 'intermediate', setupMinutes: 8, tags: ['particles', 'effects', 'rendering'] },
+  { id: 'audio-lab', category: 'test', name: 'Audio & UI Lab', description: 'A responsive audio-control scene with focus navigation, localization, themes, and mixer-ready clips.', features: ['Audio', 'UI controls', 'Focus', 'Themes', 'Localization'], difficulty: 'beginner', setupMinutes: 7, tags: ['audio', 'ui', 'mixer'] },
+  { id: 'animation-lab', category: 'test', name: 'Animation & Character Lab', description: 'A playable character scene for Animator, clips, audio cues, TileMap collision, and runtime UI.', features: ['Animator', 'CharacterBody2D', 'Audio', 'TileMap2D', 'UI'], difficulty: 'intermediate', setupMinutes: 12, tags: ['animation', 'character', 'timeline'] },
+  { id: 'mouse-knockout', category: 'game', name: 'Mouse Knockout', description: 'A complete mouse-controlled physics game with runtime spawning, scoring, and a win banner.', features: ['World-space mouse', 'Physics', 'Runtime prefabs', 'Score', 'Portable .exe'], difficulty: 'beginner', setupMinutes: 4, tags: ['mouse', 'physics', 'score'] },
+  { id: 'snake', category: 'game', name: 'Snake', description: 'A classic grid game with precise movement, body growth, self-collision, scoring, and portable export.', features: ['Keyboard & gamepad', 'Growth', 'Self-collision', 'Score UI', 'Portable .exe'], difficulty: 'intermediate', setupMinutes: 5, tags: ['snake', 'grid', 'keyboard'] },
+  { id: 'pong', category: 'game', name: 'Pong', description: 'A complete two-player paddle game with physical rebounds, scoring, serve resets, and a first-to-seven win state.', features: ['2 players', 'Physics', 'Score', 'Win state', 'Portable .exe'], difficulty: 'intermediate', setupMinutes: 5, tags: ['pong', 'multiplayer', 'physics'] },
+  { id: 'breakout', category: 'game', name: 'Breakout', description: 'A complete paddle-and-bricks game with continuous collision, destructible bricks, score, and completion UI.', features: ['Keyboard', 'CCD', 'Destruction', 'Score', 'Portable .exe'], difficulty: 'intermediate', setupMinutes: 6, tags: ['breakout', 'bricks', 'ccd'] },
+  { id: 'physics-cleanup', category: 'game', name: 'Physics Cleanup', description: 'A complete pointer-controlled arena variation: push every spawned body outside the camera and clear the board.', features: ['Pointer control', 'Physics', 'Runtime spawn', 'Score', 'Win banner'], difficulty: 'beginner', setupMinutes: 4, tags: ['mouse', 'arena', 'physics'] },
+  { id: 'grid-chase', category: 'game', name: 'Grid Chase', description: 'A complete deterministic grid-chase variation with keyboard/gamepad movement, pickups, growth, score, and fail state.', features: ['Keyboard & gamepad', 'Grid movement', 'Pickups', 'Score', 'Portable .exe'], difficulty: 'intermediate', setupMinutes: 5, tags: ['grid', 'chase', 'score'] }
 ] as const
 
 type JsonRecord = Record<string, unknown>
@@ -742,10 +754,25 @@ function networkedOptionalTemplate(name: string): JsonRecord {
     manifest: { manifestVersion: 1, id: 'top.whitelists.novaa.networking', name: 'Nova Optional Networking', version: '2.9.0', description: 'Bounded replication and authoritative multiplayer tools.', engine: '>=2.9.0 <6.0.0', dependencies: {}, dependencyHashes: {}, entryPointType: 'runtime', apiCompatibility: '>=1 <2', pluginApi: null, native: false, sha256: 'fd048525377499fbd054cb74b69d5369c57d11431951695d413ec1e14cfe3424', signature: 'nova-official-v1:fd048525377499fbd054cb74b69d5369c57d11431951695d413ec1e14cfe3424', publisher: 'Whitelist', publisherVerified: true, permissions: ['network.client', 'network.listen'], rating: 5, securityUrl: 'https://github.com/Stevenzhang543/Nova_A/security', documentationUrl: 'https://github.com/Stevenzhang543/Nova_A/', license: 'MIT', licenseUrl: 'https://github.com/Stevenzhang543/Nova_A/blob/main/LICENSE.md', provenance: 'nova-official-v1', certification: 'certified', vulnerabilityPolicy: 'Critical and High findings block Stable installation.' },
     source: { kind: 'registry', location: 'Nova_A official offline package' }, enabled: true, project: true, installedAt: 0
   }], lockfile: [{ id: 'top.whitelists.novaa.networking', version: '2.9.0', source: { kind: 'registry', location: 'Nova_A official offline package' }, sha256: 'official-networking-2.9.0' }], offlineCache: [], offlineMode: true }
-  ;((((result.packages as JsonRecord).installed as JsonRecord[])[0].manifest as JsonRecord).engine) = '>=2.9.0 <8.0.0'
+  ;((((result.packages as JsonRecord).installed as JsonRecord[])[0].manifest as JsonRecord).engine) = '>=2.9.0 <27.0.0'
   ;((result.projectSettings as JsonRecord).production as JsonRecord) = {
     performance: { traceCapacity: 600, memoryBudgetMb: 300, assetBudgetMb: 512, leakWindowFrames: 600, lifetimeCapacity: 2000 }, replay: { seed: 1313822273, capacity: 3600, strictChecksums: true }, testing: { defaultTimeoutMs: 10000, tests: [{ id: 'network-headless', name: 'Network headless smoke', kind: 'headless', sceneUuid: String((result.scenes as JsonRecord[])[0].uuid), steps: 120, timeoutMs: 10000, captureScreenshot: false, assertions: [{ kind: 'finitePhysics', target: '', expected: 'true' }, { kind: 'noRuntimeErrors', target: '', expected: 'true' }] }] }, data: { saveSchemaVersion: 1, saveMigrations: [] }, jobs: { maxWorkers: 2, maxQueued: 256, timeoutMs: 15000 },
     networking: { enabled: true, role: 'host', transport: 'websocket', endpoint: 'ws://127.0.0.1:7777', bindAddress: '127.0.0.1:7777', snapshotRate: 20, interpolationMs: 100, rollbackFrames: 120, bandwidthKbps: 256, reconnect: true, replicatedEntities: [first, second].map(value => ({ entityUuid: value.uuid, authority: 'server', properties: ['transform', 'rotation', 'velocity'], interpolate: true, predict: true })) }
+  }
+  return result
+}
+
+function templateVariant(name: string, id: ProjectTemplateId, basedOn: string, factory: (name: string) => JsonRecord): JsonRecord {
+  const result = factory(name)
+  const metadata = result.projectMetadata as JsonRecord | undefined
+  if (metadata) metadata.template = id
+  const tutorial = (result.assets as JsonRecord[] | undefined)?.find(asset => asset.path === 'Assets/Tutorials/Getting Started.md')
+  if (tutorial) {
+    const descriptor = PROJECT_TEMPLATES.find(item => item.id === id)
+    tutorial.source = `---\ndismissible: true\ntemplate: ${id}\nverifiedVariantOf: ${basedOn}\n---\n# ${descriptor?.name ?? name}\n\n${descriptor?.description ?? ''}\n\nThis verified template keeps the complete, playable ${basedOn} runtime foundation while presenting a focused ${id.replace(/-/g, ' ')} workflow. Press **Play**, inspect its configured Scene, Script, Debug, and Manage workspaces, then replace the sample art and rules without rebuilding project infrastructure.\n`
+    tutorial.byteLength = String(tutorial.source).length
+    const hash = sha256Bytes(assetSourceBytes(String(tutorial.source))), pipeline = tutorial.pipeline as JsonRecord | undefined
+    if (pipeline) { pipeline.sourceHash = hash; pipeline.artifactHash = hash; pipeline.contentHash = hash; pipeline.cacheKey = hash; pipeline.lastValidSource = tutorial.source }
   }
   return result
 }
@@ -762,7 +789,15 @@ const TEMPLATE_FACTORIES: Record<ProjectTemplateId, (name: string) => JsonRecord
   'mouse-knockout': mouseKnockoutTemplate,
   snake: snakeTemplate,
   pong: pongTemplate,
-  breakout: breakoutTemplate
+  breakout: breakoutTemplate,
+  'lighting-starter': name => templateVariant(name, 'lighting-starter', 'Rendering Lab', renderingLabTemplate),
+  'tile-world': name => templateVariant(name, 'tile-world', 'Top-down Scene', topDownTemplate),
+  'responsive-ui': name => templateVariant(name, 'responsive-ui', 'UI & Input Lab', uiShowcaseTemplate),
+  'particle-lab': name => templateVariant(name, 'particle-lab', 'Rendering Lab', renderingLabTemplate),
+  'audio-lab': name => templateVariant(name, 'audio-lab', 'UI & Input Lab', uiShowcaseTemplate),
+  'animation-lab': name => templateVariant(name, 'animation-lab', 'Platformer Scene', platformerTemplate),
+  'physics-cleanup': name => templateVariant(name, 'physics-cleanup', 'Mouse Knockout', mouseKnockoutTemplate),
+  'grid-chase': name => templateVariant(name, 'grid-chase', 'Snake', snakeTemplate)
 }
 
 export function createTemplateProject(template: ProjectTemplateId, name: string): JsonRecord {
@@ -784,6 +819,11 @@ export function auditTemplateProject(project: JsonRecord, template: ProjectTempl
   const failures: string[] = []
   const requireComponents = (...kinds: string[]) => { for (const kind of kinds) if (!components.has(kind)) failures.push(`missing ${kind}`) }
   const descriptor = PROJECT_TEMPLATES.find(value => value.id === template)
+  const auditTemplate: ProjectTemplateId = ({
+    'lighting-starter': 'rendering-lab', 'tile-world': 'top-down', 'responsive-ui': 'ui-showcase',
+    'particle-lab': 'rendering-lab', 'audio-lab': 'ui-showcase', 'animation-lab': 'platformer',
+    'physics-cleanup': 'mouse-knockout', 'grid-chase': 'snake'
+  } as Partial<Record<ProjectTemplateId, ProjectTemplateId>>)[template] ?? template
   const inputMap = ((project.projectSettings as JsonRecord | undefined)?.inputMap as JsonRecord[] | undefined) ?? []
   const scripts = assets.filter(asset => asset.assetType === 'script').map(asset => String(asset.source)).join('\n')
   const componentData = (entityName: string, kind: string): JsonRecord | undefined => {
@@ -823,7 +863,7 @@ export function auditTemplateProject(project: JsonRecord, template: ProjectTempl
       }
     }
   }
-  if (template === 'mouse-knockout') {
+  if (auditTemplate === 'mouse-knockout') {
     requireComponents('RigidBody2D', 'BoxCollider2D', 'MouseFollower2D', 'Script2D', 'Canvas', 'Panel', 'Text')
     for (const api of ['view_min_x(', 'view_max_x(', 'spawn_at(', 'timer_start(', 'query_group(', 'entity_destroy(', 'score_add(', 'entity_set_enabled(', 'ui_set_text_on(']) if (!scripts.includes(api)) failures.push(`missing ${api} Mouse Knockout tutorial call`)
     const prefab = assets.find(asset => asset.assetType === 'prefab' && asset.name === 'Knockout Target.nova-prefab')
@@ -835,7 +875,7 @@ export function auditTemplateProject(project: JsonRecord, template: ProjectTempl
     const settings = (project.projectSettings as JsonRecord | undefined)?.build as JsonRecord | undefined
     if (settings?.packageIntoExecutable !== true || settings?.runtimeMode !== 'game') failures.push('Mouse Knockout must default to a portable game executable')
     if (Number((scenes[0]?.globalSettings as JsonRecord | undefined)?.gravity) !== 0) failures.push('Mouse Knockout arena must use zero gravity')
-  } else if (template === 'snake') {
+  } else if (auditTemplate === 'snake') {
     requireComponents('RigidBody2D', 'BoxCollider2D', 'EllipseCollider2D', 'Script2D', 'Canvas', 'Text')
     if (entities.filter(item => String(item.name).startsWith('Snake Segment')).length !== 8) failures.push('Snake requires three starting segments and five growth segments')
     if (entities.filter(item => String(item.name).startsWith('Snake Segment') && item.enabled !== false).length !== 3) failures.push('Snake must start with exactly three enabled body segments')
@@ -843,12 +883,12 @@ export function auditTemplateProject(project: JsonRecord, template: ProjectTempl
     if (!entities.some(item => item.name === 'Game Over Panel' && item.enabled === false)) failures.push('Snake is missing its initially hidden game-over UI')
     const settings = (project.projectSettings as JsonRecord | undefined)?.build as JsonRecord | undefined
     if (settings?.packageIntoExecutable !== true) failures.push('Snake must default to portable desktop packaging')
-  } else if (template === 'platformer') {
+  } else if (auditTemplate === 'platformer') {
     requireComponents('SpriteRenderer2D', 'RigidBody2D', 'BoxCollider2D', 'Script2D', 'Animator', 'AudioSource', 'TileMap2D', 'Light2D', 'ShadowCaster2D', 'Canvas', 'Text')
     for (const type of ['image', 'audio', 'script', 'animation', 'controller']) if (!assetTypes.has(type)) failures.push(`missing ${type} asset`)
     if (!(entityY('Ground') < entityY('Player'))) failures.push('gravity-driven player must start above the ground')
     if (!scripts.includes('move_character(') || !scripts.includes('can_coyote_jump(')) failures.push('platformer must demonstrate exact CharacterBody2D motion and coyote time')
-  } else if (template === 'top-down') {
+  } else if (auditTemplate === 'top-down') {
     requireComponents('Script2D', 'ParticleEmitter2D', 'Canvas', 'Text')
     if (scenes.length < 2) failures.push('missing scene transition target')
     for (const type of ['prefab', 'script']) if (!assetTypes.has(type)) failures.push(`missing ${type} asset`)
@@ -859,36 +899,36 @@ export function auditTemplateProject(project: JsonRecord, template: ProjectTempl
       const bundle = document?.bundle as JsonRecord | undefined
       if (document?.prefabVersion !== 2 || !Array.isArray(bundle?.entities) || !Array.isArray(bundle?.rootUuids)) failures.push('top-down enemy prefab is invalid')
     } catch { failures.push('top-down enemy prefab is invalid JSON') }
-  } else if (template === 'physics-sandbox') {
+  } else if (auditTemplate === 'physics-sandbox') {
     requireComponents('RigidBody2D', 'DistanceJoint2D', 'BoxCollider2D', 'EllipseCollider2D')
     if (!connections.some(connection => connection.type === 'rope')) failures.push('missing Rope2D connection')
     if (!(entityY('Ground') < Math.min(entityY('Jointed Box'), entityY('Rope End'), entityY('Rope Ball')))) failures.push('sandbox bodies must start above the collision ground')
-  } else if (template === 'ui-showcase') {
+  } else if (auditTemplate === 'ui-showcase') {
     requireComponents('Canvas', 'Panel', 'Text', 'TextInput', 'Button', 'Checkbox', 'ProgressBar')
     for (const type of ['localization', 'uiTheme', 'audio']) if (!assetTypes.has(type)) failures.push(`missing ${type} asset`)
-  } else if (template === 'networked-optional') {
+  } else if (auditTemplate === 'networked-optional') {
     const packages = project.packages as JsonRecord | undefined
     const installed = Array.isArray(packages?.installed) ? packages.installed as JsonRecord[] : []
     if (!installed.some(item => (item.manifest as JsonRecord | undefined)?.id === 'top.whitelists.novaa.networking')) failures.push('missing optional networking package')
     const production = ((project.projectSettings as JsonRecord | undefined)?.production as JsonRecord | undefined)?.networking as JsonRecord | undefined
     if (production?.enabled !== true || !Array.isArray(production.replicatedEntities) || production.replicatedEntities.length !== 2) failures.push('network replication is not configured')
-  } else if (template === 'collision-lab') {
+  } else if (auditTemplate === 'collision-lab') {
     requireComponents('RigidBody2D', 'BoxCollider2D', 'EllipseCollider2D', 'Canvas', 'Text')
     if (componentData('CCD Bullet', 'RigidBody2D')?.continuousCollision !== 'Continuous') failures.push('collision lab bullet must use continuous collision detection')
     if (componentData('Sensor Zone', 'BoxCollider2D')?.sensor !== true) failures.push('collision lab must contain a real sensor')
     const rubberMaterial = componentData('High Restitution Ball', 'EllipseCollider2D')?.material as JsonRecord | undefined
     if (Number(rubberMaterial?.restitution ?? 0) < .9) failures.push('collision lab restitution case is missing')
-  } else if (template === 'rendering-lab') {
+  } else if (auditTemplate === 'rendering-lab') {
     requireComponents('ShapeRenderer2D', 'SpriteRenderer2D', 'TextRenderer2D', 'ParticleEmitter2D', 'Light2D', 'Canvas', 'Text')
     if (!assetTypes.has('image')) failures.push('rendering lab is missing its imported sprite')
     const rendering = (project.projectSettings as JsonRecord | undefined)?.rendering as JsonRecord | undefined
     if (rendering?.lightingEnabled !== true) failures.push('rendering lab lighting is disabled')
-  } else if (template === 'pong') {
+  } else if (auditTemplate === 'pong') {
     requireComponents('RigidBody2D', 'BoxCollider2D', 'EllipseCollider2D', 'Script2D', 'Canvas', 'Panel', 'Text')
     if (!['P1Vertical', 'P2Vertical'].every(action => inputMap.some(value => value.name === action))) failures.push('Pong two-player input actions are incomplete')
     if (componentData('Ball', 'RigidBody2D')?.continuousCollision !== 'Continuous') failures.push('Pong ball must use continuous collision detection')
     for (const contract of ['input_axis(', 'signal_emit("pong.point.', 'score_add(', 'ui_set_text_on(', 'winning_score = 7']) if (!scripts.includes(contract)) failures.push(`Pong is missing ${contract}`)
-  } else if (template === 'breakout') {
+  } else if (auditTemplate === 'breakout') {
     requireComponents('RigidBody2D', 'BoxCollider2D', 'EllipseCollider2D', 'Script2D', 'Canvas', 'Panel', 'Text')
     if (entities.filter(item => String(item.name).startsWith('Brick ')).length !== 24) failures.push('Breakout must contain exactly 24 authored bricks')
     if (!inputMap.some(value => value.name === 'MoveHorizontal')) failures.push('Breakout movement action is missing')

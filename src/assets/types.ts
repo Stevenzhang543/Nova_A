@@ -7,9 +7,9 @@ export type AssetType =
   | 'tileset' | 'atlas' | 'shader' | 'localization' | 'uiTheme' | 'other'
   | 'behaviorTree' | 'stateMachine' | 'tilePalette' | 'brushPreset' | 'terrainRules'
   | 'dataSchema' | 'dataTable' | 'replay' | 'path'
-  | 'particleSystem' | 'visualScript'
+  | 'particleSystem' | 'visualScript' | 'eventSheet' | 'objectBlueprint'
   | 'resource'
-export type TextAssetType = Extract<AssetType, 'script' | 'visualScript' | 'prefab' | 'scene' | 'material' | 'animation' | 'controller' | 'animationMask' | 'rig' | 'skin' | 'timeline' | 'tileset' | 'atlas' | 'shader' | 'localization' | 'uiTheme' | 'behaviorTree' | 'stateMachine' | 'tilePalette' | 'brushPreset' | 'terrainRules' | 'dataSchema' | 'dataTable' | 'replay' | 'path' | 'particleSystem' | 'resource' | 'other'>
+export type TextAssetType = Extract<AssetType, 'script' | 'visualScript' | 'eventSheet' | 'objectBlueprint' | 'prefab' | 'scene' | 'material' | 'animation' | 'controller' | 'animationMask' | 'rig' | 'skin' | 'timeline' | 'tileset' | 'atlas' | 'shader' | 'localization' | 'uiTheme' | 'behaviorTree' | 'stateMachine' | 'tilePalette' | 'brushPreset' | 'terrainRules' | 'dataSchema' | 'dataTable' | 'replay' | 'path' | 'particleSystem' | 'resource' | 'other'>
 export type AssetCompression = 'None' | 'Lossless' | 'Optimized'
 export type TextureImportProfile = 'General' | 'PixelArt' | 'UI' | 'NormalMap'
 export type AudioImportProfile = 'SoundEffect' | 'Music' | 'Voice' | 'Streaming'
@@ -220,7 +220,7 @@ export const DEFAULT_ASSET_FOLDERS = [
   'Assets/Atlases', 'Assets/Shaders', 'Assets/Localization', 'Assets/UI Themes', 'Assets/Packages', 'ProjectSettings',
   'Assets/AI', 'Assets/TilePalettes', 'Assets/BrushPresets', 'Assets/TerrainRules',
   'Assets/Data', 'Assets/Data/Schemas', 'Assets/Data/Tables', 'Assets/Replays', 'Assets/Paths',
-  'Assets/Particles', 'Assets/Visual Scripts',
+  'Assets/Particles', 'Assets/Visual Scripts', 'Assets/Event Sheets', 'Assets/Object Blueprints',
   'Assets/Resources', 'Assets/Resources/Animation Libraries', 'Assets/Resources/Input Maps', 'Assets/Resources/Physics Materials',
   '.nova/cache', '.nova/imported', '.nova/user'
 ] as const

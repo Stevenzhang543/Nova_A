@@ -74,26 +74,22 @@ export function analyzeProjectUpgrade(source: string): UpgradePreview {
   const sourceEngine = String(project.engineVersion ?? 'legacy')
   const projectFormat = String(project.projectFormat ?? 'Legacy Nova_A project')
   const minimumEngine = String(engineRange.minimum ?? project.engineVersion ?? 'legacy')
-  const maximumEngine = String(engineRange.maximumExclusive ?? '8.0.0')
+  const maximumEngine = String(engineRange.maximumExclusive ?? '27.0.0')
   const hasDeclaredEngineRange = engineRange.minimum !== undefined || engineRange.maximumExclusive !== undefined
   const validEngineRange = !hasDeclaredEngineRange || Boolean(parseVersion(minimumEngine) && parseVersion(maximumEngine) && compareVersions(minimumEngine, maximumEngine) < 0)
   const currentEngineInRange = validEngineRange && (!hasDeclaredEngineRange || (compareVersions(NOVA_ENGINE_VERSION, minimumEngine) >= 0 && compareVersions(NOVA_ENGINE_VERSION, maximumEngine) < 0))
-  const v39BoundarySeal = validEngineRange && parseVersion(sourceEngine) !== null && compareVersions(sourceEngine, '4.0.0') < 0 && maximumEngine === '4.0.0' && compareVersions(NOVA_ENGINE_VERSION, minimumEngine) >= 0
-  const v49BoundarySeal = validEngineRange && parseVersion(sourceEngine) !== null && compareVersions(sourceEngine, '5.0.0') < 0 && maximumEngine === '5.0.0' && compareVersions(NOVA_ENGINE_VERSION, minimumEngine) >= 0
-  const v59BoundarySeal = validEngineRange && parseVersion(sourceEngine) !== null && compareVersions(sourceEngine, '6.0.0') < 0 && maximumEngine === '6.0.0' && compareVersions(NOVA_ENGINE_VERSION, minimumEngine) >= 0
-  const v69BoundarySeal = validEngineRange && parseVersion(sourceEngine) !== null && compareVersions(sourceEngine, '7.0.0') < 0 && maximumEngine === '7.0.0' && compareVersions(NOVA_ENGINE_VERSION, minimumEngine) >= 0
-  const engineRangeSupported = currentEngineInRange || v39BoundarySeal || v49BoundarySeal || v59BoundarySeal || v69BoundarySeal
-  if (v39BoundarySeal) warnings.push('This 3.x project has an archived engine ceiling; v7 seals it to the reviewed <8.0.0 range without changing schema 29 or authored data.')
-  if (v49BoundarySeal) warnings.push('This 4.x project has an archived engine ceiling; v7 seals it to the reviewed <8.0.0 range without changing schema 29 or authored data.')
-  if (v59BoundarySeal) warnings.push('This 5.x project has an archived engine ceiling; v7 seals it to the reviewed <8.0.0 range without changing schema 29 or authored data.')
-  if (v69BoundarySeal) warnings.push('This 6.x project has the archived <7.0.0 ceiling; v7 seals it to the reviewed <8.0.0 range without changing schema 29 or authored data.')
+  const archivedCeilings = new Set(['4.0.0', '5.0.0', '6.0.0', '7.0.0', '8.0.0'])
+  const sourceVersion = parseVersion(sourceEngine)
+  const calendarBoundarySeal = validEngineRange && sourceVersion !== null && sourceVersion[0] < 26 && archivedCeilings.has(maximumEngine) && compareVersions(NOVA_ENGINE_VERSION, minimumEngine) >= 0
+  const engineRangeSupported = currentEngineInRange || calendarBoundarySeal
+  if (calendarBoundarySeal) warnings.push(`This project has the archived <${maximumEngine} ceiling; 26.01 seals only compatibility metadata to the reviewed <27.0.0 range without changing schema 29 or authored data.`)
   if (!engineRangeSupported) warnings.push(validEngineRange ? `This project does not declare compatibility with Nova_A ${NOVA_ENGINE_VERSION}.` : 'The project engine compatibility range is malformed.')
-  const engineUpgradeRequired = sourceEngine !== NOVA_ENGINE_VERSION || v39BoundarySeal || v49BoundarySeal || v59BoundarySeal || v69BoundarySeal
+  const engineUpgradeRequired = sourceEngine !== NOVA_ENGINE_VERSION || calendarBoundarySeal
   const migrationSteps = Array.from({ length: Math.max(0, NOVA_PROJECT_SCHEMA_VERSION - Math.max(sourceSchema, 1)) }, (_, index) => {
     const fromSchema = Math.max(sourceSchema, 1) + index
     return { fromSchema, toSchema: fromSchema + 1, name: fromSchema === 22 ? 'Authoritative project data, assets, scenes, and prefabs' : `Legacy schema ${fromSchema} projection` }
   })
-  if (engineUpgradeRequired && sourceSchema === NOVA_PROJECT_SCHEMA_VERSION) migrationSteps.push({ fromSchema: sourceSchema, toSchema: sourceSchema, name: '7.0 compatibility metadata seal (schema remains frozen)' })
+  if (engineUpgradeRequired && sourceSchema === NOVA_PROJECT_SCHEMA_VERSION) migrationSteps.push({ fromSchema: sourceSchema, toSchema: sourceSchema, name: '26.01 calendar-version compatibility seal (schema remains frozen)' })
   const schemaSupported = Number.isFinite(sourceSchema) && sourceSchema >= 1 && sourceSchema <= NOVA_PROJECT_SCHEMA_VERSION
   const formatSupported = !project.projectFormat || projectFormat === 'Nova_A Project Format 2'
   const supported = schemaSupported && formatSupported && engineRangeSupported
@@ -101,7 +97,7 @@ export function analyzeProjectUpgrade(source: string): UpgradePreview {
     { id: 'document', status: 'passed', label: 'Project document', detail: 'JSON parsed without executing project content.' },
     { id: 'format', status: formatSupported ? 'passed' : 'blocked', label: 'Project format', detail: formatSupported ? `${projectFormat}; schema ${sourceSchema}` : `${projectFormat} is not supported by the 4.0 migration chain.` },
     { id: 'schema', status: schemaSupported ? 'passed' : 'blocked', label: 'Migration chain', detail: schemaSupported ? `Schemas ${sourceSchema}–${NOVA_PROJECT_SCHEMA_VERSION} have a registered forward path.` : `Schema ${sourceSchema} cannot be migrated safely.` },
-    { id: 'engine', status: engineRangeSupported ? (v39BoundarySeal || v49BoundarySeal || v59BoundarySeal || v69BoundarySeal ? 'warning' : 'passed') : 'blocked', label: 'Engine compatibility', detail: engineRangeSupported ? (v39BoundarySeal || v49BoundarySeal || v59BoundarySeal || v69BoundarySeal ? `${minimumEngine} – <${maximumEngine}; the registered 7.0 boundary seal widens only compatibility metadata to <8.0.0.` : `${minimumEngine} – <${maximumEngine} accepts Nova_A ${NOVA_ENGINE_VERSION}.`) : (validEngineRange ? `${minimumEngine} – <${maximumEngine} excludes Nova_A ${NOVA_ENGINE_VERSION}.` : `${minimumEngine} – <${maximumEngine} is not a valid semantic-version range.`) },
+    { id: 'engine', status: engineRangeSupported ? (calendarBoundarySeal ? 'warning' : 'passed') : 'blocked', label: 'Engine compatibility', detail: engineRangeSupported ? (calendarBoundarySeal ? `${minimumEngine} – <${maximumEngine}; the registered 26.01 boundary seal widens only compatibility metadata to <27.0.0.` : `${minimumEngine} – <${maximumEngine} accepts Nova_A ${NOVA_ENGINE_VERSION}.`) : (validEngineRange ? `${minimumEngine} – <${maximumEngine} excludes Nova_A ${NOVA_ENGINE_VERSION}.` : `${minimumEngine} – <${maximumEngine} is not a valid semantic-version range.`) },
     { id: 'packages', status: packageProblems.length ? 'warning' : 'passed', label: 'Package compatibility', detail: packageProblems.length ? `${packageProblems.length} package issue(s) will remain disabled for review.` : `${previewPackages.length} package manifest(s) are compatible.` },
     { id: 'backup', status: 'passed', label: 'Recovery', detail: 'A complete source download and bounded local rollback copy are created before migration.' },
     { id: 'validation', status: supported ? 'pending' : 'blocked', label: 'Post-migration validation', detail: supported ? 'The complete migrated document will be validated and canonicalized before the editor session changes.' : 'Validation cannot run until the blocking preflight issue is resolved.' }

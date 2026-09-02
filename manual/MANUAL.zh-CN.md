@@ -1,4 +1,4 @@
-# Nova_A 7.0.0 完整使用手册
+# Nova_A 26.4.0 完整使用手册
 
 ## 6.2.0 行为契约
 
@@ -832,11 +832,11 @@ AI 工作流：启用官方包，添加 BehaviorTree2D 并创建 v2 资源。模
 在**交付**刷新确定性 CI 缓存键，并让差异构建配合补丁清单。创建本地、HTTPS 或外部命令连接器；远程／外部连接器必须获得项目权限。“准备计划”只验证目标和校验和，返回不可执行计划，不会访问网络。最终部署仍需外部明确执行。详见 `docs/EXTENSIONS_PLATFORM_DELIVERY_5_9.md`。
 
 <!-- NOVA_V6_TEACHING_START -->
-# Nova_A 7.0.0 任务式教学手册
+# Nova_A 26.4.0 任务式教学手册
 
 通过完成真实任务学习。以下每个公开功能均说明归属、持久化、恢复、无障碍和发布行为。
 
-- Engine: **7.0.0**
+- Engine: **26.4.0**
 - Stable contracts: Project Format 2/schema 29; Rhai API 2; Graph Format 1; Plugin API 2; Package Manifest 1; Build CLI 1; workspace document 3.
 - External signing, independent clean-machine evidence, two-machine reproduction, matching-host builds and a real 72-hour soak remain pending until independently captured.
 
@@ -1172,13 +1172,13 @@ AI 工作流：启用官方包，添加 BehaviorTree2D 并创建 v2 资源。模
 
 **可视化图 API:** N/A
 
-<a id="project-manager-project-templates"></a>
+<a id="project-manager-20-template-library"></a>
 
-### Project templates
+### 20-template library
 
 **分类:** Assisted · Project-wide · Reversible
 
-**用途和使用时机:** 在“Project Manager”中使用“Project templates”，可在“Launcher”工作流内完成对应的创作或运行任务。 项目需要“Project templates”时使用；无关设置应保留在其所属工作区。
+**用途和使用时机:** 在“Project Manager”中使用“20-template library”，可在“Launcher”工作流内完成对应的创作或运行任务。 项目需要“20-template library”时使用；无关设置应保留在其所属工作区。
 
 **前提条件:**
 
@@ -1188,30 +1188,210 @@ AI 工作流：启用官方包，添加 BehaviorTree2D 并创建 v2 资源。模
 **准确操作流程:**
 
 1. 打开“Launcher”，再打开“Project Manager”。
-2. 选择“Project templates”；编辑前先阅读可见的验证与权限状态。
+2. 选择“20-template library”；编辑前先阅读可见的验证与权限状态。
 3. 选择目标项目、资源或对象，只输入有限且受支持的数值。
 4. 应用或保存更改，检查可见结果以及“问题/控制台”输出。
 5. 若该功能具有运行行为，启动“播放”或“预览”；使用“暂停/单步”进行确定性检查。
 6. 保存并重新载入项目，确认创作值保持不变。
 7. 运行“项目健康”和对应测试，构建独立播放器后重复可观察检查。
 
-**预期结果:** “Project templates”会在编辑器中可见，重新载入后保持，并在适用时进入预览、播放和导出的播放器。
+**预期结果:** “20-template library”会在编辑器中可见，重新载入后保持，并在适用时进入预览、播放和导出的播放器。
 
-**持久化和导出:** “Project templates”保存在所属的项目、场景、组件、资源、工作区偏好或构建清单中；仅编辑器状态不会进入播放器。
+**持久化和导出:** “20-template library”保存在所属的项目、场景、组件、资源、工作区偏好或构建清单中；仅编辑器状态不会进入播放器。
 
 **撤销和恢复:** 文档编辑使用撤销/重做；导入或软件包使用还原/回滚；中断保存使用恢复浏览器；项目级恢复使用源代码管理或迁移备份。
 
 **常见错误和修复:**
 
-- 在错误的选择或工作区上编辑“Project templates”。
+- 在错误的选择或工作区上编辑“20-template library”。
 - 忽略权限、验证、缺失引用或宿主模板警告。
 - 只检查编辑器预览，而未验证保存/重载与独立播放器。
 
 **键盘和无障碍:** 可使用命令面板或键盘焦点替代纯指针操作。所有对话框均有可访问名称、可见焦点、Escape/取消路径和减少动态效果。
 
-**最小示例:** 最小示例：创建一个有效目标，配置“Project templates”，保存，并在播放模式确认一个可见结果。
+**最小示例:** 最小示例：创建一个有效目标，配置“20-template library”，保存，并在播放模式确认一个可见结果。
 
-**生产示例:** 生产示例：为“Project templates”加入验证、本地化/无障碍、确定性测试、预算、恢复证据以及开发与发布构建。
+**生产示例:** 生产示例：为“20-template library”加入验证、本地化/无障碍、确定性测试、预算、恢复证据以及开发与发布构建。
+
+**Rhai API:** N/A
+
+**可视化图 API:** N/A
+
+<a id="project-manager-template-search"></a>
+
+### Template search
+
+**分类:** Assisted · Project-wide · Reversible
+
+**用途和使用时机:** 在“Project Manager”中使用“Template search”，可在“Launcher”工作流内完成对应的创作或运行任务。 项目需要“Template search”时使用；无关设置应保留在其所属工作区。
+
+**前提条件:**
+
+- A writable project folder
+- A supported .nova/.json document for import or migration
+
+**准确操作流程:**
+
+1. 打开“Launcher”，再打开“Project Manager”。
+2. 选择“Template search”；编辑前先阅读可见的验证与权限状态。
+3. 选择目标项目、资源或对象，只输入有限且受支持的数值。
+4. 应用或保存更改，检查可见结果以及“问题/控制台”输出。
+5. 若该功能具有运行行为，启动“播放”或“预览”；使用“暂停/单步”进行确定性检查。
+6. 保存并重新载入项目，确认创作值保持不变。
+7. 运行“项目健康”和对应测试，构建独立播放器后重复可观察检查。
+
+**预期结果:** “Template search”会在编辑器中可见，重新载入后保持，并在适用时进入预览、播放和导出的播放器。
+
+**持久化和导出:** “Template search”保存在所属的项目、场景、组件、资源、工作区偏好或构建清单中；仅编辑器状态不会进入播放器。
+
+**撤销和恢复:** 文档编辑使用撤销/重做；导入或软件包使用还原/回滚；中断保存使用恢复浏览器；项目级恢复使用源代码管理或迁移备份。
+
+**常见错误和修复:**
+
+- 在错误的选择或工作区上编辑“Template search”。
+- 忽略权限、验证、缺失引用或宿主模板警告。
+- 只检查编辑器预览，而未验证保存/重载与独立播放器。
+
+**键盘和无障碍:** 可使用命令面板或键盘焦点替代纯指针操作。所有对话框均有可访问名称、可见焦点、Escape/取消路径和减少动态效果。
+
+**最小示例:** 最小示例：创建一个有效目标，配置“Template search”，保存，并在播放模式确认一个可见结果。
+
+**生产示例:** 生产示例：为“Template search”加入验证、本地化/无障碍、确定性测试、预算、恢复证据以及开发与发布构建。
+
+**Rhai API:** N/A
+
+**可视化图 API:** N/A
+
+<a id="project-manager-template-difficulty-filter"></a>
+
+### Template difficulty filter
+
+**分类:** Assisted · Project-wide · Reversible
+
+**用途和使用时机:** 在“Project Manager”中使用“Template difficulty filter”，可在“Launcher”工作流内完成对应的创作或运行任务。 项目需要“Template difficulty filter”时使用；无关设置应保留在其所属工作区。
+
+**前提条件:**
+
+- A writable project folder
+- A supported .nova/.json document for import or migration
+
+**准确操作流程:**
+
+1. 打开“Launcher”，再打开“Project Manager”。
+2. 选择“Template difficulty filter”；编辑前先阅读可见的验证与权限状态。
+3. 选择目标项目、资源或对象，只输入有限且受支持的数值。
+4. 应用或保存更改，检查可见结果以及“问题/控制台”输出。
+5. 若该功能具有运行行为，启动“播放”或“预览”；使用“暂停/单步”进行确定性检查。
+6. 保存并重新载入项目，确认创作值保持不变。
+7. 运行“项目健康”和对应测试，构建独立播放器后重复可观察检查。
+
+**预期结果:** “Template difficulty filter”会在编辑器中可见，重新载入后保持，并在适用时进入预览、播放和导出的播放器。
+
+**持久化和导出:** “Template difficulty filter”保存在所属的项目、场景、组件、资源、工作区偏好或构建清单中；仅编辑器状态不会进入播放器。
+
+**撤销和恢复:** 文档编辑使用撤销/重做；导入或软件包使用还原/回滚；中断保存使用恢复浏览器；项目级恢复使用源代码管理或迁移备份。
+
+**常见错误和修复:**
+
+- 在错误的选择或工作区上编辑“Template difficulty filter”。
+- 忽略权限、验证、缺失引用或宿主模板警告。
+- 只检查编辑器预览，而未验证保存/重载与独立播放器。
+
+**键盘和无障碍:** 可使用命令面板或键盘焦点替代纯指针操作。所有对话框均有可访问名称、可见焦点、Escape/取消路径和减少动态效果。
+
+**最小示例:** 最小示例：创建一个有效目标，配置“Template difficulty filter”，保存，并在播放模式确认一个可见结果。
+
+**生产示例:** 生产示例：为“Template difficulty filter”加入验证、本地化/无障碍、确定性测试、预算、恢复证据以及开发与发布构建。
+
+**Rhai API:** N/A
+
+**可视化图 API:** N/A
+
+<a id="project-manager-template-category-browser"></a>
+
+### Template category browser
+
+**分类:** Assisted · Project-wide · Reversible
+
+**用途和使用时机:** 在“Project Manager”中使用“Template category browser”，可在“Launcher”工作流内完成对应的创作或运行任务。 项目需要“Template category browser”时使用；无关设置应保留在其所属工作区。
+
+**前提条件:**
+
+- A writable project folder
+- A supported .nova/.json document for import or migration
+
+**准确操作流程:**
+
+1. 打开“Launcher”，再打开“Project Manager”。
+2. 选择“Template category browser”；编辑前先阅读可见的验证与权限状态。
+3. 选择目标项目、资源或对象，只输入有限且受支持的数值。
+4. 应用或保存更改，检查可见结果以及“问题/控制台”输出。
+5. 若该功能具有运行行为，启动“播放”或“预览”；使用“暂停/单步”进行确定性检查。
+6. 保存并重新载入项目，确认创作值保持不变。
+7. 运行“项目健康”和对应测试，构建独立播放器后重复可观察检查。
+
+**预期结果:** “Template category browser”会在编辑器中可见，重新载入后保持，并在适用时进入预览、播放和导出的播放器。
+
+**持久化和导出:** “Template category browser”保存在所属的项目、场景、组件、资源、工作区偏好或构建清单中；仅编辑器状态不会进入播放器。
+
+**撤销和恢复:** 文档编辑使用撤销/重做；导入或软件包使用还原/回滚；中断保存使用恢复浏览器；项目级恢复使用源代码管理或迁移备份。
+
+**常见错误和修复:**
+
+- 在错误的选择或工作区上编辑“Template category browser”。
+- 忽略权限、验证、缺失引用或宿主模板警告。
+- 只检查编辑器预览，而未验证保存/重载与独立播放器。
+
+**键盘和无障碍:** 可使用命令面板或键盘焦点替代纯指针操作。所有对话框均有可访问名称、可见焦点、Escape/取消路径和减少动态效果。
+
+**最小示例:** 最小示例：创建一个有效目标，配置“Template category browser”，保存，并在播放模式确认一个可见结果。
+
+**生产示例:** 生产示例：为“Template category browser”加入验证、本地化/无障碍、确定性测试、预算、恢复证据以及开发与发布构建。
+
+**Rhai API:** N/A
+
+**可视化图 API:** N/A
+
+<a id="project-manager-template-setup-time-and-capability-preview"></a>
+
+### Template setup-time and capability preview
+
+**分类:** Assisted · Project-wide · Reversible
+
+**用途和使用时机:** 在“Project Manager”中使用“Template setup-time and capability preview”，可在“Launcher”工作流内完成对应的创作或运行任务。 项目需要“Template setup-time and capability preview”时使用；无关设置应保留在其所属工作区。
+
+**前提条件:**
+
+- A writable project folder
+- A supported .nova/.json document for import or migration
+
+**准确操作流程:**
+
+1. 打开“Launcher”，再打开“Project Manager”。
+2. 选择“Template setup-time and capability preview”；编辑前先阅读可见的验证与权限状态。
+3. 选择目标项目、资源或对象，只输入有限且受支持的数值。
+4. 应用或保存更改，检查可见结果以及“问题/控制台”输出。
+5. 若该功能具有运行行为，启动“播放”或“预览”；使用“暂停/单步”进行确定性检查。
+6. 保存并重新载入项目，确认创作值保持不变。
+7. 运行“项目健康”和对应测试，构建独立播放器后重复可观察检查。
+
+**预期结果:** “Template setup-time and capability preview”会在编辑器中可见，重新载入后保持，并在适用时进入预览、播放和导出的播放器。
+
+**持久化和导出:** “Template setup-time and capability preview”保存在所属的项目、场景、组件、资源、工作区偏好或构建清单中；仅编辑器状态不会进入播放器。
+
+**撤销和恢复:** 文档编辑使用撤销/重做；导入或软件包使用还原/回滚；中断保存使用恢复浏览器；项目级恢复使用源代码管理或迁移备份。
+
+**常见错误和修复:**
+
+- 在错误的选择或工作区上编辑“Template setup-time and capability preview”。
+- 忽略权限、验证、缺失引用或宿主模板警告。
+- 只检查编辑器预览，而未验证保存/重载与独立播放器。
+
+**键盘和无障碍:** 可使用命令面板或键盘焦点替代纯指针操作。所有对话框均有可访问名称、可见焦点、Escape/取消路径和减少动态效果。
+
+**最小示例:** 最小示例：创建一个有效目标，配置“Template setup-time and capability preview”，保存，并在播放模式确认一个可见结果。
+
+**生产示例:** 生产示例：为“Template setup-time and capability preview”加入验证、本地化/无障碍、确定性测试、预算、恢复证据以及开发与发布构建。
 
 **Rhai API:** N/A
 
@@ -4925,6 +5105,51 @@ AI 工作流：启用官方包，添加 BehaviorTree2D 并创建 v2 资源。模
 
 **可视化图 API:** N/A
 
+<a id="assets-named-resource-variants"></a>
+
+### Named Resource variants
+
+**分类:** Manual · Assisted · Project-wide · Reversible
+
+**用途和使用时机:** 在“Assets”中使用“Named Resource variants”，可在“Design”工作流内完成对应的创作或运行任务。 项目需要“Named Resource variants”时使用；无关设置应保留在其所属工作区。
+
+**前提条件:**
+
+- An open project
+- Source files for import operations
+
+**准确操作流程:**
+
+1. 打开“Design”，再打开“Assets”。
+2. 选择“Named Resource variants”；编辑前先阅读可见的验证与权限状态。
+3. 选择目标项目、资源或对象，只输入有限且受支持的数值。
+4. 应用或保存更改，检查可见结果以及“问题/控制台”输出。
+5. 若该功能具有运行行为，启动“播放”或“预览”；使用“暂停/单步”进行确定性检查。
+6. 保存并重新载入项目，确认创作值保持不变。
+7. 运行“项目健康”和对应测试，构建独立播放器后重复可观察检查。
+
+**预期结果:** “Named Resource variants”会在编辑器中可见，重新载入后保持，并在适用时进入预览、播放和导出的播放器。
+
+**持久化和导出:** “Named Resource variants”保存在所属的项目、场景、组件、资源、工作区偏好或构建清单中；仅编辑器状态不会进入播放器。
+
+**撤销和恢复:** 文档编辑使用撤销/重做；导入或软件包使用还原/回滚；中断保存使用恢复浏览器；项目级恢复使用源代码管理或迁移备份。
+
+**常见错误和修复:**
+
+- 在错误的选择或工作区上编辑“Named Resource variants”。
+- 忽略权限、验证、缺失引用或宿主模板警告。
+- 只检查编辑器预览，而未验证保存/重载与独立播放器。
+
+**键盘和无障碍:** 可使用命令面板或键盘焦点替代纯指针操作。所有对话框均有可访问名称、可见焦点、Escape/取消路径和减少动态效果。
+
+**最小示例:** 最小示例：创建一个有效目标，配置“Named Resource variants”，保存，并在播放模式确认一个可见结果。
+
+**生产示例:** 生产示例：为“Named Resource variants”加入验证、本地化/无障碍、确定性测试、预算、恢复证据以及开发与发布构建。
+
+**Rhai API:** N/A
+
+**可视化图 API:** N/A
+
 <a id="assets-material-resources"></a>
 
 ### Material Resources
@@ -5280,6 +5505,321 @@ AI 工作流：启用官方包，添加 BehaviorTree2D 并创建 v2 资源。模
 **最小示例:** 最小示例：创建一个有效目标，配置“Font shaping settings”，保存，并在播放模式确认一个可见结果。
 
 **生产示例:** 生产示例：为“Font shaping settings”加入验证、本地化/无障碍、确定性测试、预算、恢复证据以及开发与发布构建。
+
+**Rhai API:** N/A
+
+**可视化图 API:** N/A
+
+<a id="assets-localization-import-validation"></a>
+
+### Localization import validation
+
+**分类:** Manual · Assisted · Project-wide · Reversible
+
+**用途和使用时机:** 在“Assets”中使用“Localization import validation”，可在“Design”工作流内完成对应的创作或运行任务。 项目需要“Localization import validation”时使用；无关设置应保留在其所属工作区。
+
+**前提条件:**
+
+- An open project
+- Source files for import operations
+
+**准确操作流程:**
+
+1. 打开“Design”，再打开“Assets”。
+2. 选择“Localization import validation”；编辑前先阅读可见的验证与权限状态。
+3. 选择目标项目、资源或对象，只输入有限且受支持的数值。
+4. 应用或保存更改，检查可见结果以及“问题/控制台”输出。
+5. 若该功能具有运行行为，启动“播放”或“预览”；使用“暂停/单步”进行确定性检查。
+6. 保存并重新载入项目，确认创作值保持不变。
+7. 运行“项目健康”和对应测试，构建独立播放器后重复可观察检查。
+
+**预期结果:** “Localization import validation”会在编辑器中可见，重新载入后保持，并在适用时进入预览、播放和导出的播放器。
+
+**持久化和导出:** “Localization import validation”保存在所属的项目、场景、组件、资源、工作区偏好或构建清单中；仅编辑器状态不会进入播放器。
+
+**撤销和恢复:** 文档编辑使用撤销/重做；导入或软件包使用还原/回滚；中断保存使用恢复浏览器；项目级恢复使用源代码管理或迁移备份。
+
+**常见错误和修复:**
+
+- 在错误的选择或工作区上编辑“Localization import validation”。
+- 忽略权限、验证、缺失引用或宿主模板警告。
+- 只检查编辑器预览，而未验证保存/重载与独立播放器。
+
+**键盘和无障碍:** 可使用命令面板或键盘焦点替代纯指针操作。所有对话框均有可访问名称、可见焦点、Escape/取消路径和减少动态效果。
+
+**最小示例:** 最小示例：创建一个有效目标，配置“Localization import validation”，保存，并在播放模式确认一个可见结果。
+
+**生产示例:** 生产示例：为“Localization import validation”加入验证、本地化/无障碍、确定性测试、预算、恢复证据以及开发与发布构建。
+
+**Rhai API:** N/A
+
+**可视化图 API:** N/A
+
+<a id="assets-nine-patch-production-profile"></a>
+
+### Nine-patch production profile
+
+**分类:** Manual · Assisted · Project-wide · Reversible
+
+**用途和使用时机:** 在“Assets”中使用“Nine-patch production profile”，可在“Design”工作流内完成对应的创作或运行任务。 项目需要“Nine-patch production profile”时使用；无关设置应保留在其所属工作区。
+
+**前提条件:**
+
+- An open project
+- Source files for import operations
+
+**准确操作流程:**
+
+1. 打开“Design”，再打开“Assets”。
+2. 选择“Nine-patch production profile”；编辑前先阅读可见的验证与权限状态。
+3. 选择目标项目、资源或对象，只输入有限且受支持的数值。
+4. 应用或保存更改，检查可见结果以及“问题/控制台”输出。
+5. 若该功能具有运行行为，启动“播放”或“预览”；使用“暂停/单步”进行确定性检查。
+6. 保存并重新载入项目，确认创作值保持不变。
+7. 运行“项目健康”和对应测试，构建独立播放器后重复可观察检查。
+
+**预期结果:** “Nine-patch production profile”会在编辑器中可见，重新载入后保持，并在适用时进入预览、播放和导出的播放器。
+
+**持久化和导出:** “Nine-patch production profile”保存在所属的项目、场景、组件、资源、工作区偏好或构建清单中；仅编辑器状态不会进入播放器。
+
+**撤销和恢复:** 文档编辑使用撤销/重做；导入或软件包使用还原/回滚；中断保存使用恢复浏览器；项目级恢复使用源代码管理或迁移备份。
+
+**常见错误和修复:**
+
+- 在错误的选择或工作区上编辑“Nine-patch production profile”。
+- 忽略权限、验证、缺失引用或宿主模板警告。
+- 只检查编辑器预览，而未验证保存/重载与独立播放器。
+
+**键盘和无障碍:** 可使用命令面板或键盘焦点替代纯指针操作。所有对话框均有可访问名称、可见焦点、Escape/取消路径和减少动态效果。
+
+**最小示例:** 最小示例：创建一个有效目标，配置“Nine-patch production profile”，保存，并在播放模式确认一个可见结果。
+
+**生产示例:** 生产示例：为“Nine-patch production profile”加入验证、本地化/无障碍、确定性测试、预算、恢复证据以及开发与发布构建。
+
+**Rhai API:** N/A
+
+**可视化图 API:** N/A
+
+<a id="assets-vector-and-sdf-production-profile"></a>
+
+### Vector and SDF production profile
+
+**分类:** Manual · Assisted · Project-wide · Reversible
+
+**用途和使用时机:** 在“Assets”中使用“Vector and SDF production profile”，可在“Design”工作流内完成对应的创作或运行任务。 项目需要“Vector and SDF production profile”时使用；无关设置应保留在其所属工作区。
+
+**前提条件:**
+
+- An open project
+- Source files for import operations
+
+**准确操作流程:**
+
+1. 打开“Design”，再打开“Assets”。
+2. 选择“Vector and SDF production profile”；编辑前先阅读可见的验证与权限状态。
+3. 选择目标项目、资源或对象，只输入有限且受支持的数值。
+4. 应用或保存更改，检查可见结果以及“问题/控制台”输出。
+5. 若该功能具有运行行为，启动“播放”或“预览”；使用“暂停/单步”进行确定性检查。
+6. 保存并重新载入项目，确认创作值保持不变。
+7. 运行“项目健康”和对应测试，构建独立播放器后重复可观察检查。
+
+**预期结果:** “Vector and SDF production profile”会在编辑器中可见，重新载入后保持，并在适用时进入预览、播放和导出的播放器。
+
+**持久化和导出:** “Vector and SDF production profile”保存在所属的项目、场景、组件、资源、工作区偏好或构建清单中；仅编辑器状态不会进入播放器。
+
+**撤销和恢复:** 文档编辑使用撤销/重做；导入或软件包使用还原/回滚；中断保存使用恢复浏览器；项目级恢复使用源代码管理或迁移备份。
+
+**常见错误和修复:**
+
+- 在错误的选择或工作区上编辑“Vector and SDF production profile”。
+- 忽略权限、验证、缺失引用或宿主模板警告。
+- 只检查编辑器预览，而未验证保存/重载与独立播放器。
+
+**键盘和无障碍:** 可使用命令面板或键盘焦点替代纯指针操作。所有对话框均有可访问名称、可见焦点、Escape/取消路径和减少动态效果。
+
+**最小示例:** 最小示例：创建一个有效目标，配置“Vector and SDF production profile”，保存，并在播放模式确认一个可见结果。
+
+**生产示例:** 生产示例：为“Vector and SDF production profile”加入验证、本地化/无障碍、确定性测试、预算、恢复证据以及开发与发布构建。
+
+**Rhai API:** N/A
+
+**可视化图 API:** N/A
+
+<a id="assets-two-way-dependency-graph"></a>
+
+### Two-way dependency graph
+
+**分类:** Manual · Assisted · Project-wide · Reversible
+
+**用途和使用时机:** 在“Assets”中使用“Two-way dependency graph”，可在“Design”工作流内完成对应的创作或运行任务。 项目需要“Two-way dependency graph”时使用；无关设置应保留在其所属工作区。
+
+**前提条件:**
+
+- An open project
+- Source files for import operations
+
+**准确操作流程:**
+
+1. 打开“Design”，再打开“Assets”。
+2. 选择“Two-way dependency graph”；编辑前先阅读可见的验证与权限状态。
+3. 选择目标项目、资源或对象，只输入有限且受支持的数值。
+4. 应用或保存更改，检查可见结果以及“问题/控制台”输出。
+5. 若该功能具有运行行为，启动“播放”或“预览”；使用“暂停/单步”进行确定性检查。
+6. 保存并重新载入项目，确认创作值保持不变。
+7. 运行“项目健康”和对应测试，构建独立播放器后重复可观察检查。
+
+**预期结果:** “Two-way dependency graph”会在编辑器中可见，重新载入后保持，并在适用时进入预览、播放和导出的播放器。
+
+**持久化和导出:** “Two-way dependency graph”保存在所属的项目、场景、组件、资源、工作区偏好或构建清单中；仅编辑器状态不会进入播放器。
+
+**撤销和恢复:** 文档编辑使用撤销/重做；导入或软件包使用还原/回滚；中断保存使用恢复浏览器；项目级恢复使用源代码管理或迁移备份。
+
+**常见错误和修复:**
+
+- 在错误的选择或工作区上编辑“Two-way dependency graph”。
+- 忽略权限、验证、缺失引用或宿主模板警告。
+- 只检查编辑器预览，而未验证保存/重载与独立播放器。
+
+**键盘和无障碍:** 可使用命令面板或键盘焦点替代纯指针操作。所有对话框均有可访问名称、可见焦点、Escape/取消路径和减少动态效果。
+
+**最小示例:** 最小示例：创建一个有效目标，配置“Two-way dependency graph”，保存，并在播放模式确认一个可见结果。
+
+**生产示例:** 生产示例：为“Two-way dependency graph”加入验证、本地化/无障碍、确定性测试、预算、恢复证据以及开发与发布构建。
+
+**Rhai API:** N/A
+
+**可视化图 API:** N/A
+
+<a id="assets-cycle-and-missing-reference-visualization"></a>
+
+### Cycle and missing-reference visualization
+
+**分类:** Manual · Assisted · Project-wide · Reversible
+
+**用途和使用时机:** 在“Assets”中使用“Cycle and missing-reference visualization”，可在“Design”工作流内完成对应的创作或运行任务。 项目需要“Cycle and missing-reference visualization”时使用；无关设置应保留在其所属工作区。
+
+**前提条件:**
+
+- An open project
+- Source files for import operations
+
+**准确操作流程:**
+
+1. 打开“Design”，再打开“Assets”。
+2. 选择“Cycle and missing-reference visualization”；编辑前先阅读可见的验证与权限状态。
+3. 选择目标项目、资源或对象，只输入有限且受支持的数值。
+4. 应用或保存更改，检查可见结果以及“问题/控制台”输出。
+5. 若该功能具有运行行为，启动“播放”或“预览”；使用“暂停/单步”进行确定性检查。
+6. 保存并重新载入项目，确认创作值保持不变。
+7. 运行“项目健康”和对应测试，构建独立播放器后重复可观察检查。
+
+**预期结果:** “Cycle and missing-reference visualization”会在编辑器中可见，重新载入后保持，并在适用时进入预览、播放和导出的播放器。
+
+**持久化和导出:** “Cycle and missing-reference visualization”保存在所属的项目、场景、组件、资源、工作区偏好或构建清单中；仅编辑器状态不会进入播放器。
+
+**撤销和恢复:** 文档编辑使用撤销/重做；导入或软件包使用还原/回滚；中断保存使用恢复浏览器；项目级恢复使用源代码管理或迁移备份。
+
+**常见错误和修复:**
+
+- 在错误的选择或工作区上编辑“Cycle and missing-reference visualization”。
+- 忽略权限、验证、缺失引用或宿主模板警告。
+- 只检查编辑器预览，而未验证保存/重载与独立播放器。
+
+**键盘和无障碍:** 可使用命令面板或键盘焦点替代纯指针操作。所有对话框均有可访问名称、可见焦点、Escape/取消路径和减少动态效果。
+
+**最小示例:** 最小示例：创建一个有效目标，配置“Cycle and missing-reference visualization”，保存，并在播放模式确认一个可见结果。
+
+**生产示例:** 生产示例：为“Cycle and missing-reference visualization”加入验证、本地化/无障碍、确定性测试、预算、恢复证据以及开发与发布构建。
+
+**Rhai API:** N/A
+
+**可视化图 API:** N/A
+
+<a id="assets-deterministic-non-image-thumbnails"></a>
+
+### Deterministic non-image thumbnails
+
+**分类:** Manual · Assisted · Project-wide · Reversible
+
+**用途和使用时机:** 在“Assets”中使用“Deterministic non-image thumbnails”，可在“Design”工作流内完成对应的创作或运行任务。 项目需要“Deterministic non-image thumbnails”时使用；无关设置应保留在其所属工作区。
+
+**前提条件:**
+
+- An open project
+- Source files for import operations
+
+**准确操作流程:**
+
+1. 打开“Design”，再打开“Assets”。
+2. 选择“Deterministic non-image thumbnails”；编辑前先阅读可见的验证与权限状态。
+3. 选择目标项目、资源或对象，只输入有限且受支持的数值。
+4. 应用或保存更改，检查可见结果以及“问题/控制台”输出。
+5. 若该功能具有运行行为，启动“播放”或“预览”；使用“暂停/单步”进行确定性检查。
+6. 保存并重新载入项目，确认创作值保持不变。
+7. 运行“项目健康”和对应测试，构建独立播放器后重复可观察检查。
+
+**预期结果:** “Deterministic non-image thumbnails”会在编辑器中可见，重新载入后保持，并在适用时进入预览、播放和导出的播放器。
+
+**持久化和导出:** “Deterministic non-image thumbnails”保存在所属的项目、场景、组件、资源、工作区偏好或构建清单中；仅编辑器状态不会进入播放器。
+
+**撤销和恢复:** 文档编辑使用撤销/重做；导入或软件包使用还原/回滚；中断保存使用恢复浏览器；项目级恢复使用源代码管理或迁移备份。
+
+**常见错误和修复:**
+
+- 在错误的选择或工作区上编辑“Deterministic non-image thumbnails”。
+- 忽略权限、验证、缺失引用或宿主模板警告。
+- 只检查编辑器预览，而未验证保存/重载与独立播放器。
+
+**键盘和无障碍:** 可使用命令面板或键盘焦点替代纯指针操作。所有对话框均有可访问名称、可见焦点、Escape/取消路径和减少动态效果。
+
+**最小示例:** 最小示例：创建一个有效目标，配置“Deterministic non-image thumbnails”，保存，并在播放模式确认一个可见结果。
+
+**生产示例:** 生产示例：为“Deterministic non-image thumbnails”加入验证、本地化/无障碍、确定性测试、预算、恢复证据以及开发与发布构建。
+
+**Rhai API:** N/A
+
+**可视化图 API:** N/A
+
+<a id="assets-offline-trusted-content-discovery"></a>
+
+### Offline trusted content discovery
+
+**分类:** Manual · Assisted · Project-wide · Reversible
+
+**用途和使用时机:** 在“Assets”中使用“Offline trusted content discovery”，可在“Design”工作流内完成对应的创作或运行任务。 项目需要“Offline trusted content discovery”时使用；无关设置应保留在其所属工作区。
+
+**前提条件:**
+
+- An open project
+- Source files for import operations
+
+**准确操作流程:**
+
+1. 打开“Design”，再打开“Assets”。
+2. 选择“Offline trusted content discovery”；编辑前先阅读可见的验证与权限状态。
+3. 选择目标项目、资源或对象，只输入有限且受支持的数值。
+4. 应用或保存更改，检查可见结果以及“问题/控制台”输出。
+5. 若该功能具有运行行为，启动“播放”或“预览”；使用“暂停/单步”进行确定性检查。
+6. 保存并重新载入项目，确认创作值保持不变。
+7. 运行“项目健康”和对应测试，构建独立播放器后重复可观察检查。
+
+**预期结果:** “Offline trusted content discovery”会在编辑器中可见，重新载入后保持，并在适用时进入预览、播放和导出的播放器。
+
+**持久化和导出:** “Offline trusted content discovery”保存在所属的项目、场景、组件、资源、工作区偏好或构建清单中；仅编辑器状态不会进入播放器。
+
+**撤销和恢复:** 文档编辑使用撤销/重做；导入或软件包使用还原/回滚；中断保存使用恢复浏览器；项目级恢复使用源代码管理或迁移备份。
+
+**常见错误和修复:**
+
+- 在错误的选择或工作区上编辑“Offline trusted content discovery”。
+- 忽略权限、验证、缺失引用或宿主模板警告。
+- 只检查编辑器预览，而未验证保存/重载与独立播放器。
+
+**键盘和无障碍:** 可使用命令面板或键盘焦点替代纯指针操作。所有对话框均有可访问名称、可见焦点、Escape/取消路径和减少动态效果。
+
+**最小示例:** 最小示例：创建一个有效目标，配置“Offline trusted content discovery”，保存，并在播放模式确认一个可见结果。
+
+**生产示例:** 生产示例：为“Offline trusted content discovery”加入验证、本地化/无障碍、确定性测试、预算、恢复证据以及开发与发布构建。
 
 **Rhai API:** N/A
 
@@ -7137,6 +7677,729 @@ AI 工作流：启用官方包，添加 BehaviorTree2D 并创建 v2 资源。模
 **可视化图 API:** `Events/Awake`, `Events/Start`, `Events/Fixed Update`, `Signals/Emit`
 
 
+## Event Sheet and Object Blueprint
+
+<a id="event-sheet-per-object-event-sheet"></a>
+
+### Per-object Event Sheet
+
+**分类:** Manual · Assisted · Runtime · Per-object · Reversible
+
+**用途和使用时机:** 在“Event Sheet and Object Blueprint”中使用“Per-object Event Sheet”，可在“Script”工作流内完成对应的创作或运行任务。 项目需要“Per-object Event Sheet”时使用；无关设置应保留在其所属工作区。
+
+**前提条件:**
+
+- A selected scene object
+- A Rhai or Visual Graph action asset for runtime callbacks
+
+**准确操作流程:**
+
+1. 打开“Script”，再打开“Event Sheet and Object Blueprint”。
+2. 选择“Per-object Event Sheet”；编辑前先阅读可见的验证与权限状态。
+3. 选择目标项目、资源或对象，只输入有限且受支持的数值。
+4. 应用或保存更改，检查可见结果以及“问题/控制台”输出。
+5. 若该功能具有运行行为，启动“播放”或“预览”；使用“暂停/单步”进行确定性检查。
+6. 保存并重新载入项目，确认创作值保持不变。
+7. 运行“项目健康”和对应测试，构建独立播放器后重复可观察检查。
+
+**预期结果:** “Per-object Event Sheet”会在编辑器中可见，重新载入后保持，并在适用时进入预览、播放和导出的播放器。
+
+**持久化和导出:** “Per-object Event Sheet”保存在所属的项目、场景、组件、资源、工作区偏好或构建清单中；仅编辑器状态不会进入播放器。
+
+**撤销和恢复:** 文档编辑使用撤销/重做；导入或软件包使用还原/回滚；中断保存使用恢复浏览器；项目级恢复使用源代码管理或迁移备份。
+
+**常见错误和修复:**
+
+- 在错误的选择或工作区上编辑“Per-object Event Sheet”。
+- 忽略权限、验证、缺失引用或宿主模板警告。
+- 只检查编辑器预览，而未验证保存/重载与独立播放器。
+
+**键盘和无障碍:** 可使用命令面板或键盘焦点替代纯指针操作。所有对话框均有可访问名称、可见焦点、Escape/取消路径和减少动态效果。
+
+**最小示例:** 最小示例：创建一个有效目标，配置“Per-object Event Sheet”，保存，并在播放模式确认一个可见结果。
+
+**生产示例:** 生产示例：为“Per-object Event Sheet”加入验证、本地化/无障碍、确定性测试、预算、恢复证据以及开发与发布构建。
+
+**Rhai API:** `awake`, `start`, `update`, `fixed_update`, `on_timer`, `on_signal`, `on_collision_enter`, `on_trigger_enter`, `input_pressed`, `timer_start`, `random`
+
+**可视化图 API:** `Events`, `Input`, `Timing`, `Signals`, `Physics`, `UI`, `Animation`, `Network`
+
+<a id="event-sheet-awake-start-update-and-fixed-update-events"></a>
+
+### Awake, Start, Update and Fixed Update events
+
+**分类:** Manual · Assisted · Runtime · Per-object · Reversible
+
+**用途和使用时机:** 在“Event Sheet and Object Blueprint”中使用“Awake, Start, Update and Fixed Update events”，可在“Script”工作流内完成对应的创作或运行任务。 项目需要“Awake, Start, Update and Fixed Update events”时使用；无关设置应保留在其所属工作区。
+
+**前提条件:**
+
+- A selected scene object
+- A Rhai or Visual Graph action asset for runtime callbacks
+
+**准确操作流程:**
+
+1. 打开“Script”，再打开“Event Sheet and Object Blueprint”。
+2. 选择“Awake, Start, Update and Fixed Update events”；编辑前先阅读可见的验证与权限状态。
+3. 选择目标项目、资源或对象，只输入有限且受支持的数值。
+4. 应用或保存更改，检查可见结果以及“问题/控制台”输出。
+5. 若该功能具有运行行为，启动“播放”或“预览”；使用“暂停/单步”进行确定性检查。
+6. 保存并重新载入项目，确认创作值保持不变。
+7. 运行“项目健康”和对应测试，构建独立播放器后重复可观察检查。
+
+**预期结果:** “Awake, Start, Update and Fixed Update events”会在编辑器中可见，重新载入后保持，并在适用时进入预览、播放和导出的播放器。
+
+**持久化和导出:** “Awake, Start, Update and Fixed Update events”保存在所属的项目、场景、组件、资源、工作区偏好或构建清单中；仅编辑器状态不会进入播放器。
+
+**撤销和恢复:** 文档编辑使用撤销/重做；导入或软件包使用还原/回滚；中断保存使用恢复浏览器；项目级恢复使用源代码管理或迁移备份。
+
+**常见错误和修复:**
+
+- 在错误的选择或工作区上编辑“Awake, Start, Update and Fixed Update events”。
+- 忽略权限、验证、缺失引用或宿主模板警告。
+- 只检查编辑器预览，而未验证保存/重载与独立播放器。
+
+**键盘和无障碍:** 可使用命令面板或键盘焦点替代纯指针操作。所有对话框均有可访问名称、可见焦点、Escape/取消路径和减少动态效果。
+
+**最小示例:** 最小示例：创建一个有效目标，配置“Awake, Start, Update and Fixed Update events”，保存，并在播放模式确认一个可见结果。
+
+**生产示例:** 生产示例：为“Awake, Start, Update and Fixed Update events”加入验证、本地化/无障碍、确定性测试、预算、恢复证据以及开发与发布构建。
+
+**Rhai API:** `awake`, `start`, `update`, `fixed_update`, `on_timer`, `on_signal`, `on_collision_enter`, `on_trigger_enter`, `input_pressed`, `timer_start`, `random`
+
+**可视化图 API:** `Events`, `Input`, `Timing`, `Signals`, `Physics`, `UI`, `Animation`, `Network`
+
+<a id="event-sheet-input-and-timer-events"></a>
+
+### Input and timer events
+
+**分类:** Manual · Assisted · Runtime · Per-object · Reversible
+
+**用途和使用时机:** 在“Event Sheet and Object Blueprint”中使用“Input and timer events”，可在“Script”工作流内完成对应的创作或运行任务。 项目需要“Input and timer events”时使用；无关设置应保留在其所属工作区。
+
+**前提条件:**
+
+- A selected scene object
+- A Rhai or Visual Graph action asset for runtime callbacks
+
+**准确操作流程:**
+
+1. 打开“Script”，再打开“Event Sheet and Object Blueprint”。
+2. 选择“Input and timer events”；编辑前先阅读可见的验证与权限状态。
+3. 选择目标项目、资源或对象，只输入有限且受支持的数值。
+4. 应用或保存更改，检查可见结果以及“问题/控制台”输出。
+5. 若该功能具有运行行为，启动“播放”或“预览”；使用“暂停/单步”进行确定性检查。
+6. 保存并重新载入项目，确认创作值保持不变。
+7. 运行“项目健康”和对应测试，构建独立播放器后重复可观察检查。
+
+**预期结果:** “Input and timer events”会在编辑器中可见，重新载入后保持，并在适用时进入预览、播放和导出的播放器。
+
+**持久化和导出:** “Input and timer events”保存在所属的项目、场景、组件、资源、工作区偏好或构建清单中；仅编辑器状态不会进入播放器。
+
+**撤销和恢复:** 文档编辑使用撤销/重做；导入或软件包使用还原/回滚；中断保存使用恢复浏览器；项目级恢复使用源代码管理或迁移备份。
+
+**常见错误和修复:**
+
+- 在错误的选择或工作区上编辑“Input and timer events”。
+- 忽略权限、验证、缺失引用或宿主模板警告。
+- 只检查编辑器预览，而未验证保存/重载与独立播放器。
+
+**键盘和无障碍:** 可使用命令面板或键盘焦点替代纯指针操作。所有对话框均有可访问名称、可见焦点、Escape/取消路径和减少动态效果。
+
+**最小示例:** 最小示例：创建一个有效目标，配置“Input and timer events”，保存，并在播放模式确认一个可见结果。
+
+**生产示例:** 生产示例：为“Input and timer events”加入验证、本地化/无障碍、确定性测试、预算、恢复证据以及开发与发布构建。
+
+**Rhai API:** `awake`, `start`, `update`, `fixed_update`, `on_timer`, `on_signal`, `on_collision_enter`, `on_trigger_enter`, `input_pressed`, `timer_start`, `random`
+
+**可视化图 API:** `Events`, `Input`, `Timing`, `Signals`, `Physics`, `UI`, `Animation`, `Network`
+
+<a id="event-sheet-signal-collision-and-trigger-events"></a>
+
+### Signal, collision and trigger events
+
+**分类:** Manual · Assisted · Runtime · Per-object · Reversible
+
+**用途和使用时机:** 在“Event Sheet and Object Blueprint”中使用“Signal, collision and trigger events”，可在“Script”工作流内完成对应的创作或运行任务。 项目需要“Signal, collision and trigger events”时使用；无关设置应保留在其所属工作区。
+
+**前提条件:**
+
+- A selected scene object
+- A Rhai or Visual Graph action asset for runtime callbacks
+
+**准确操作流程:**
+
+1. 打开“Script”，再打开“Event Sheet and Object Blueprint”。
+2. 选择“Signal, collision and trigger events”；编辑前先阅读可见的验证与权限状态。
+3. 选择目标项目、资源或对象，只输入有限且受支持的数值。
+4. 应用或保存更改，检查可见结果以及“问题/控制台”输出。
+5. 若该功能具有运行行为，启动“播放”或“预览”；使用“暂停/单步”进行确定性检查。
+6. 保存并重新载入项目，确认创作值保持不变。
+7. 运行“项目健康”和对应测试，构建独立播放器后重复可观察检查。
+
+**预期结果:** “Signal, collision and trigger events”会在编辑器中可见，重新载入后保持，并在适用时进入预览、播放和导出的播放器。
+
+**持久化和导出:** “Signal, collision and trigger events”保存在所属的项目、场景、组件、资源、工作区偏好或构建清单中；仅编辑器状态不会进入播放器。
+
+**撤销和恢复:** 文档编辑使用撤销/重做；导入或软件包使用还原/回滚；中断保存使用恢复浏览器；项目级恢复使用源代码管理或迁移备份。
+
+**常见错误和修复:**
+
+- 在错误的选择或工作区上编辑“Signal, collision and trigger events”。
+- 忽略权限、验证、缺失引用或宿主模板警告。
+- 只检查编辑器预览，而未验证保存/重载与独立播放器。
+
+**键盘和无障碍:** 可使用命令面板或键盘焦点替代纯指针操作。所有对话框均有可访问名称、可见焦点、Escape/取消路径和减少动态效果。
+
+**最小示例:** 最小示例：创建一个有效目标，配置“Signal, collision and trigger events”，保存，并在播放模式确认一个可见结果。
+
+**生产示例:** 生产示例：为“Signal, collision and trigger events”加入验证、本地化/无障碍、确定性测试、预算、恢复证据以及开发与发布构建。
+
+**Rhai API:** `awake`, `start`, `update`, `fixed_update`, `on_timer`, `on_signal`, `on_collision_enter`, `on_trigger_enter`, `input_pressed`, `timer_start`, `random`
+
+**可视化图 API:** `Events`, `Input`, `Timing`, `Signals`, `Physics`, `UI`, `Animation`, `Network`
+
+<a id="event-sheet-ui-animation-and-network-events"></a>
+
+### UI, animation and network events
+
+**分类:** Manual · Assisted · Runtime · Per-object · Reversible
+
+**用途和使用时机:** 在“Event Sheet and Object Blueprint”中使用“UI, animation and network events”，可在“Script”工作流内完成对应的创作或运行任务。 项目需要“UI, animation and network events”时使用；无关设置应保留在其所属工作区。
+
+**前提条件:**
+
+- A selected scene object
+- A Rhai or Visual Graph action asset for runtime callbacks
+
+**准确操作流程:**
+
+1. 打开“Script”，再打开“Event Sheet and Object Blueprint”。
+2. 选择“UI, animation and network events”；编辑前先阅读可见的验证与权限状态。
+3. 选择目标项目、资源或对象，只输入有限且受支持的数值。
+4. 应用或保存更改，检查可见结果以及“问题/控制台”输出。
+5. 若该功能具有运行行为，启动“播放”或“预览”；使用“暂停/单步”进行确定性检查。
+6. 保存并重新载入项目，确认创作值保持不变。
+7. 运行“项目健康”和对应测试，构建独立播放器后重复可观察检查。
+
+**预期结果:** “UI, animation and network events”会在编辑器中可见，重新载入后保持，并在适用时进入预览、播放和导出的播放器。
+
+**持久化和导出:** “UI, animation and network events”保存在所属的项目、场景、组件、资源、工作区偏好或构建清单中；仅编辑器状态不会进入播放器。
+
+**撤销和恢复:** 文档编辑使用撤销/重做；导入或软件包使用还原/回滚；中断保存使用恢复浏览器；项目级恢复使用源代码管理或迁移备份。
+
+**常见错误和修复:**
+
+- 在错误的选择或工作区上编辑“UI, animation and network events”。
+- 忽略权限、验证、缺失引用或宿主模板警告。
+- 只检查编辑器预览，而未验证保存/重载与独立播放器。
+
+**键盘和无障碍:** 可使用命令面板或键盘焦点替代纯指针操作。所有对话框均有可访问名称、可见焦点、Escape/取消路径和减少动态效果。
+
+**最小示例:** 最小示例：创建一个有效目标，配置“UI, animation and network events”，保存，并在播放模式确认一个可见结果。
+
+**生产示例:** 生产示例：为“UI, animation and network events”加入验证、本地化/无障碍、确定性测试、预算、恢复证据以及开发与发布构建。
+
+**Rhai API:** `awake`, `start`, `update`, `fixed_update`, `on_timer`, `on_signal`, `on_collision_enter`, `on_trigger_enter`, `input_pressed`, `timer_start`, `random`
+
+**可视化图 API:** `Events`, `Input`, `Timing`, `Signals`, `Physics`, `UI`, `Animation`, `Network`
+
+<a id="event-sheet-visible-rhai-or-visual-graph-action-asset"></a>
+
+### Visible Rhai or Visual Graph action asset
+
+**分类:** Manual · Assisted · Runtime · Per-object · Reversible
+
+**用途和使用时机:** 在“Event Sheet and Object Blueprint”中使用“Visible Rhai or Visual Graph action asset”，可在“Script”工作流内完成对应的创作或运行任务。 项目需要“Visible Rhai or Visual Graph action asset”时使用；无关设置应保留在其所属工作区。
+
+**前提条件:**
+
+- A selected scene object
+- A Rhai or Visual Graph action asset for runtime callbacks
+
+**准确操作流程:**
+
+1. 打开“Script”，再打开“Event Sheet and Object Blueprint”。
+2. 选择“Visible Rhai or Visual Graph action asset”；编辑前先阅读可见的验证与权限状态。
+3. 选择目标项目、资源或对象，只输入有限且受支持的数值。
+4. 应用或保存更改，检查可见结果以及“问题/控制台”输出。
+5. 若该功能具有运行行为，启动“播放”或“预览”；使用“暂停/单步”进行确定性检查。
+6. 保存并重新载入项目，确认创作值保持不变。
+7. 运行“项目健康”和对应测试，构建独立播放器后重复可观察检查。
+
+**预期结果:** “Visible Rhai or Visual Graph action asset”会在编辑器中可见，重新载入后保持，并在适用时进入预览、播放和导出的播放器。
+
+**持久化和导出:** “Visible Rhai or Visual Graph action asset”保存在所属的项目、场景、组件、资源、工作区偏好或构建清单中；仅编辑器状态不会进入播放器。
+
+**撤销和恢复:** 文档编辑使用撤销/重做；导入或软件包使用还原/回滚；中断保存使用恢复浏览器；项目级恢复使用源代码管理或迁移备份。
+
+**常见错误和修复:**
+
+- 在错误的选择或工作区上编辑“Visible Rhai or Visual Graph action asset”。
+- 忽略权限、验证、缺失引用或宿主模板警告。
+- 只检查编辑器预览，而未验证保存/重载与独立播放器。
+
+**键盘和无障碍:** 可使用命令面板或键盘焦点替代纯指针操作。所有对话框均有可访问名称、可见焦点、Escape/取消路径和减少动态效果。
+
+**最小示例:** 最小示例：创建一个有效目标，配置“Visible Rhai or Visual Graph action asset”，保存，并在播放模式确认一个可见结果。
+
+**生产示例:** 生产示例：为“Visible Rhai or Visual Graph action asset”加入验证、本地化/无障碍、确定性测试、预算、恢复证据以及开发与发布构建。
+
+**Rhai API:** `awake`, `start`, `update`, `fixed_update`, `on_timer`, `on_signal`, `on_collision_enter`, `on_trigger_enter`, `input_pressed`, `timer_start`, `random`
+
+**可视化图 API:** `Events`, `Input`, `Timing`, `Signals`, `Physics`, `UI`, `Animation`, `Network`
+
+<a id="event-sheet-event-search-and-callback-completion"></a>
+
+### Event search and callback completion
+
+**分类:** Manual · Assisted · Runtime · Per-object · Reversible
+
+**用途和使用时机:** 在“Event Sheet and Object Blueprint”中使用“Event search and callback completion”，可在“Script”工作流内完成对应的创作或运行任务。 项目需要“Event search and callback completion”时使用；无关设置应保留在其所属工作区。
+
+**前提条件:**
+
+- A selected scene object
+- A Rhai or Visual Graph action asset for runtime callbacks
+
+**准确操作流程:**
+
+1. 打开“Script”，再打开“Event Sheet and Object Blueprint”。
+2. 选择“Event search and callback completion”；编辑前先阅读可见的验证与权限状态。
+3. 选择目标项目、资源或对象，只输入有限且受支持的数值。
+4. 应用或保存更改，检查可见结果以及“问题/控制台”输出。
+5. 若该功能具有运行行为，启动“播放”或“预览”；使用“暂停/单步”进行确定性检查。
+6. 保存并重新载入项目，确认创作值保持不变。
+7. 运行“项目健康”和对应测试，构建独立播放器后重复可观察检查。
+
+**预期结果:** “Event search and callback completion”会在编辑器中可见，重新载入后保持，并在适用时进入预览、播放和导出的播放器。
+
+**持久化和导出:** “Event search and callback completion”保存在所属的项目、场景、组件、资源、工作区偏好或构建清单中；仅编辑器状态不会进入播放器。
+
+**撤销和恢复:** 文档编辑使用撤销/重做；导入或软件包使用还原/回滚；中断保存使用恢复浏览器；项目级恢复使用源代码管理或迁移备份。
+
+**常见错误和修复:**
+
+- 在错误的选择或工作区上编辑“Event search and callback completion”。
+- 忽略权限、验证、缺失引用或宿主模板警告。
+- 只检查编辑器预览，而未验证保存/重载与独立播放器。
+
+**键盘和无障碍:** 可使用命令面板或键盘焦点替代纯指针操作。所有对话框均有可访问名称、可见焦点、Escape/取消路径和减少动态效果。
+
+**最小示例:** 最小示例：创建一个有效目标，配置“Event search and callback completion”，保存，并在播放模式确认一个可见结果。
+
+**生产示例:** 生产示例：为“Event search and callback completion”加入验证、本地化/无障碍、确定性测试、预算、恢复证据以及开发与发布构建。
+
+**Rhai API:** `awake`, `start`, `update`, `fixed_update`, `on_timer`, `on_signal`, `on_collision_enter`, `on_trigger_enter`, `input_pressed`, `timer_start`, `random`
+
+**可视化图 API:** `Events`, `Input`, `Timing`, `Signals`, `Physics`, `UI`, `Animation`, `Network`
+
+<a id="event-sheet-event-sheet-inheritance-and-overrides"></a>
+
+### Event Sheet inheritance and overrides
+
+**分类:** Manual · Assisted · Runtime · Per-object · Reversible
+
+**用途和使用时机:** 在“Event Sheet and Object Blueprint”中使用“Event Sheet inheritance and overrides”，可在“Script”工作流内完成对应的创作或运行任务。 项目需要“Event Sheet inheritance and overrides”时使用；无关设置应保留在其所属工作区。
+
+**前提条件:**
+
+- A selected scene object
+- A Rhai or Visual Graph action asset for runtime callbacks
+
+**准确操作流程:**
+
+1. 打开“Script”，再打开“Event Sheet and Object Blueprint”。
+2. 选择“Event Sheet inheritance and overrides”；编辑前先阅读可见的验证与权限状态。
+3. 选择目标项目、资源或对象，只输入有限且受支持的数值。
+4. 应用或保存更改，检查可见结果以及“问题/控制台”输出。
+5. 若该功能具有运行行为，启动“播放”或“预览”；使用“暂停/单步”进行确定性检查。
+6. 保存并重新载入项目，确认创作值保持不变。
+7. 运行“项目健康”和对应测试，构建独立播放器后重复可观察检查。
+
+**预期结果:** “Event Sheet inheritance and overrides”会在编辑器中可见，重新载入后保持，并在适用时进入预览、播放和导出的播放器。
+
+**持久化和导出:** “Event Sheet inheritance and overrides”保存在所属的项目、场景、组件、资源、工作区偏好或构建清单中；仅编辑器状态不会进入播放器。
+
+**撤销和恢复:** 文档编辑使用撤销/重做；导入或软件包使用还原/回滚；中断保存使用恢复浏览器；项目级恢复使用源代码管理或迁移备份。
+
+**常见错误和修复:**
+
+- 在错误的选择或工作区上编辑“Event Sheet inheritance and overrides”。
+- 忽略权限、验证、缺失引用或宿主模板警告。
+- 只检查编辑器预览，而未验证保存/重载与独立播放器。
+
+**键盘和无障碍:** 可使用命令面板或键盘焦点替代纯指针操作。所有对话框均有可访问名称、可见焦点、Escape/取消路径和减少动态效果。
+
+**最小示例:** 最小示例：创建一个有效目标，配置“Event Sheet inheritance and overrides”，保存，并在播放模式确认一个可见结果。
+
+**生产示例:** 生产示例：为“Event Sheet inheritance and overrides”加入验证、本地化/无障碍、确定性测试、预算、恢复证据以及开发与发布构建。
+
+**Rhai API:** `awake`, `start`, `update`, `fixed_update`, `on_timer`, `on_signal`, `on_collision_enter`, `on_trigger_enter`, `input_pressed`, `timer_start`, `random`
+
+**可视化图 API:** `Events`, `Input`, `Timing`, `Signals`, `Physics`, `UI`, `Animation`, `Network`
+
+<a id="event-sheet-deterministic-event-priority-and-seed"></a>
+
+### Deterministic event priority and seed
+
+**分类:** Manual · Assisted · Runtime · Per-object · Reversible
+
+**用途和使用时机:** 在“Event Sheet and Object Blueprint”中使用“Deterministic event priority and seed”，可在“Script”工作流内完成对应的创作或运行任务。 项目需要“Deterministic event priority and seed”时使用；无关设置应保留在其所属工作区。
+
+**前提条件:**
+
+- A selected scene object
+- A Rhai or Visual Graph action asset for runtime callbacks
+
+**准确操作流程:**
+
+1. 打开“Script”，再打开“Event Sheet and Object Blueprint”。
+2. 选择“Deterministic event priority and seed”；编辑前先阅读可见的验证与权限状态。
+3. 选择目标项目、资源或对象，只输入有限且受支持的数值。
+4. 应用或保存更改，检查可见结果以及“问题/控制台”输出。
+5. 若该功能具有运行行为，启动“播放”或“预览”；使用“暂停/单步”进行确定性检查。
+6. 保存并重新载入项目，确认创作值保持不变。
+7. 运行“项目健康”和对应测试，构建独立播放器后重复可观察检查。
+
+**预期结果:** “Deterministic event priority and seed”会在编辑器中可见，重新载入后保持，并在适用时进入预览、播放和导出的播放器。
+
+**持久化和导出:** “Deterministic event priority and seed”保存在所属的项目、场景、组件、资源、工作区偏好或构建清单中；仅编辑器状态不会进入播放器。
+
+**撤销和恢复:** 文档编辑使用撤销/重做；导入或软件包使用还原/回滚；中断保存使用恢复浏览器；项目级恢复使用源代码管理或迁移备份。
+
+**常见错误和修复:**
+
+- 在错误的选择或工作区上编辑“Deterministic event priority and seed”。
+- 忽略权限、验证、缺失引用或宿主模板警告。
+- 只检查编辑器预览，而未验证保存/重载与独立播放器。
+
+**键盘和无障碍:** 可使用命令面板或键盘焦点替代纯指针操作。所有对话框均有可访问名称、可见焦点、Escape/取消路径和减少动态效果。
+
+**最小示例:** 最小示例：创建一个有效目标，配置“Deterministic event priority and seed”，保存，并在播放模式确认一个可见结果。
+
+**生产示例:** 生产示例：为“Deterministic event priority and seed”加入验证、本地化/无障碍、确定性测试、预算、恢复证据以及开发与发布构建。
+
+**Rhai API:** `awake`, `start`, `update`, `fixed_update`, `on_timer`, `on_signal`, `on_collision_enter`, `on_trigger_enter`, `input_pressed`, `timer_start`, `random`
+
+**可视化图 API:** `Events`, `Input`, `Timing`, `Signals`, `Physics`, `UI`, `Animation`, `Network`
+
+<a id="event-sheet-disabled-object-event-exclusion"></a>
+
+### Disabled-object event exclusion
+
+**分类:** Manual · Assisted · Runtime · Per-object · Reversible
+
+**用途和使用时机:** 在“Event Sheet and Object Blueprint”中使用“Disabled-object event exclusion”，可在“Script”工作流内完成对应的创作或运行任务。 项目需要“Disabled-object event exclusion”时使用；无关设置应保留在其所属工作区。
+
+**前提条件:**
+
+- A selected scene object
+- A Rhai or Visual Graph action asset for runtime callbacks
+
+**准确操作流程:**
+
+1. 打开“Script”，再打开“Event Sheet and Object Blueprint”。
+2. 选择“Disabled-object event exclusion”；编辑前先阅读可见的验证与权限状态。
+3. 选择目标项目、资源或对象，只输入有限且受支持的数值。
+4. 应用或保存更改，检查可见结果以及“问题/控制台”输出。
+5. 若该功能具有运行行为，启动“播放”或“预览”；使用“暂停/单步”进行确定性检查。
+6. 保存并重新载入项目，确认创作值保持不变。
+7. 运行“项目健康”和对应测试，构建独立播放器后重复可观察检查。
+
+**预期结果:** “Disabled-object event exclusion”会在编辑器中可见，重新载入后保持，并在适用时进入预览、播放和导出的播放器。
+
+**持久化和导出:** “Disabled-object event exclusion”保存在所属的项目、场景、组件、资源、工作区偏好或构建清单中；仅编辑器状态不会进入播放器。
+
+**撤销和恢复:** 文档编辑使用撤销/重做；导入或软件包使用还原/回滚；中断保存使用恢复浏览器；项目级恢复使用源代码管理或迁移备份。
+
+**常见错误和修复:**
+
+- 在错误的选择或工作区上编辑“Disabled-object event exclusion”。
+- 忽略权限、验证、缺失引用或宿主模板警告。
+- 只检查编辑器预览，而未验证保存/重载与独立播放器。
+
+**键盘和无障碍:** 可使用命令面板或键盘焦点替代纯指针操作。所有对话框均有可访问名称、可见焦点、Escape/取消路径和减少动态效果。
+
+**最小示例:** 最小示例：创建一个有效目标，配置“Disabled-object event exclusion”，保存，并在播放模式确认一个可见结果。
+
+**生产示例:** 生产示例：为“Disabled-object event exclusion”加入验证、本地化/无障碍、确定性测试、预算、恢复证据以及开发与发布构建。
+
+**Rhai API:** `awake`, `start`, `update`, `fixed_update`, `on_timer`, `on_signal`, `on_collision_enter`, `on_trigger_enter`, `input_pressed`, `timer_start`, `random`
+
+**可视化图 API:** `Events`, `Input`, `Timing`, `Signals`, `Physics`, `UI`, `Animation`, `Network`
+
+<a id="event-sheet-duplicate-callback-validation"></a>
+
+### Duplicate callback validation
+
+**分类:** Manual · Assisted · Runtime · Per-object · Reversible
+
+**用途和使用时机:** 在“Event Sheet and Object Blueprint”中使用“Duplicate callback validation”，可在“Script”工作流内完成对应的创作或运行任务。 项目需要“Duplicate callback validation”时使用；无关设置应保留在其所属工作区。
+
+**前提条件:**
+
+- A selected scene object
+- A Rhai or Visual Graph action asset for runtime callbacks
+
+**准确操作流程:**
+
+1. 打开“Script”，再打开“Event Sheet and Object Blueprint”。
+2. 选择“Duplicate callback validation”；编辑前先阅读可见的验证与权限状态。
+3. 选择目标项目、资源或对象，只输入有限且受支持的数值。
+4. 应用或保存更改，检查可见结果以及“问题/控制台”输出。
+5. 若该功能具有运行行为，启动“播放”或“预览”；使用“暂停/单步”进行确定性检查。
+6. 保存并重新载入项目，确认创作值保持不变。
+7. 运行“项目健康”和对应测试，构建独立播放器后重复可观察检查。
+
+**预期结果:** “Duplicate callback validation”会在编辑器中可见，重新载入后保持，并在适用时进入预览、播放和导出的播放器。
+
+**持久化和导出:** “Duplicate callback validation”保存在所属的项目、场景、组件、资源、工作区偏好或构建清单中；仅编辑器状态不会进入播放器。
+
+**撤销和恢复:** 文档编辑使用撤销/重做；导入或软件包使用还原/回滚；中断保存使用恢复浏览器；项目级恢复使用源代码管理或迁移备份。
+
+**常见错误和修复:**
+
+- 在错误的选择或工作区上编辑“Duplicate callback validation”。
+- 忽略权限、验证、缺失引用或宿主模板警告。
+- 只检查编辑器预览，而未验证保存/重载与独立播放器。
+
+**键盘和无障碍:** 可使用命令面板或键盘焦点替代纯指针操作。所有对话框均有可访问名称、可见焦点、Escape/取消路径和减少动态效果。
+
+**最小示例:** 最小示例：创建一个有效目标，配置“Duplicate callback validation”，保存，并在播放模式确认一个可见结果。
+
+**生产示例:** 生产示例：为“Duplicate callback validation”加入验证、本地化/无障碍、确定性测试、预算、恢复证据以及开发与发布构建。
+
+**Rhai API:** `awake`, `start`, `update`, `fixed_update`, `on_timer`, `on_signal`, `on_collision_enter`, `on_trigger_enter`, `input_pressed`, `timer_start`, `random`
+
+**可视化图 API:** `Events`, `Input`, `Timing`, `Signals`, `Physics`, `UI`, `Animation`, `Network`
+
+<a id="event-sheet-10-000-event-bounded-scheduler"></a>
+
+### 10,000-event bounded scheduler
+
+**分类:** Manual · Assisted · Runtime · Per-object · Reversible
+
+**用途和使用时机:** 在“Event Sheet and Object Blueprint”中使用“10,000-event bounded scheduler”，可在“Script”工作流内完成对应的创作或运行任务。 项目需要“10,000-event bounded scheduler”时使用；无关设置应保留在其所属工作区。
+
+**前提条件:**
+
+- A selected scene object
+- A Rhai or Visual Graph action asset for runtime callbacks
+
+**准确操作流程:**
+
+1. 打开“Script”，再打开“Event Sheet and Object Blueprint”。
+2. 选择“10,000-event bounded scheduler”；编辑前先阅读可见的验证与权限状态。
+3. 选择目标项目、资源或对象，只输入有限且受支持的数值。
+4. 应用或保存更改，检查可见结果以及“问题/控制台”输出。
+5. 若该功能具有运行行为，启动“播放”或“预览”；使用“暂停/单步”进行确定性检查。
+6. 保存并重新载入项目，确认创作值保持不变。
+7. 运行“项目健康”和对应测试，构建独立播放器后重复可观察检查。
+
+**预期结果:** “10,000-event bounded scheduler”会在编辑器中可见，重新载入后保持，并在适用时进入预览、播放和导出的播放器。
+
+**持久化和导出:** “10,000-event bounded scheduler”保存在所属的项目、场景、组件、资源、工作区偏好或构建清单中；仅编辑器状态不会进入播放器。
+
+**撤销和恢复:** 文档编辑使用撤销/重做；导入或软件包使用还原/回滚；中断保存使用恢复浏览器；项目级恢复使用源代码管理或迁移备份。
+
+**常见错误和修复:**
+
+- 在错误的选择或工作区上编辑“10,000-event bounded scheduler”。
+- 忽略权限、验证、缺失引用或宿主模板警告。
+- 只检查编辑器预览，而未验证保存/重载与独立播放器。
+
+**键盘和无障碍:** 可使用命令面板或键盘焦点替代纯指针操作。所有对话框均有可访问名称、可见焦点、Escape/取消路径和减少动态效果。
+
+**最小示例:** 最小示例：创建一个有效目标，配置“10,000-event bounded scheduler”，保存，并在播放模式确认一个可见结果。
+
+**生产示例:** 生产示例：为“10,000-event bounded scheduler”加入验证、本地化/无障碍、确定性测试、预算、恢复证据以及开发与发布构建。
+
+**Rhai API:** `awake`, `start`, `update`, `fixed_update`, `on_timer`, `on_signal`, `on_collision_enter`, `on_trigger_enter`, `input_pressed`, `timer_start`, `random`
+
+**可视化图 API:** `Events`, `Input`, `Timing`, `Signals`, `Physics`, `UI`, `Animation`, `Network`
+
+<a id="event-sheet-reusable-object-blueprint"></a>
+
+### Reusable Object Blueprint
+
+**分类:** Manual · Assisted · Runtime · Per-object · Reversible
+
+**用途和使用时机:** 在“Event Sheet and Object Blueprint”中使用“Reusable Object Blueprint”，可在“Script”工作流内完成对应的创作或运行任务。 项目需要“Reusable Object Blueprint”时使用；无关设置应保留在其所属工作区。
+
+**前提条件:**
+
+- A selected scene object
+- A Rhai or Visual Graph action asset for runtime callbacks
+
+**准确操作流程:**
+
+1. 打开“Script”，再打开“Event Sheet and Object Blueprint”。
+2. 选择“Reusable Object Blueprint”；编辑前先阅读可见的验证与权限状态。
+3. 选择目标项目、资源或对象，只输入有限且受支持的数值。
+4. 应用或保存更改，检查可见结果以及“问题/控制台”输出。
+5. 若该功能具有运行行为，启动“播放”或“预览”；使用“暂停/单步”进行确定性检查。
+6. 保存并重新载入项目，确认创作值保持不变。
+7. 运行“项目健康”和对应测试，构建独立播放器后重复可观察检查。
+
+**预期结果:** “Reusable Object Blueprint”会在编辑器中可见，重新载入后保持，并在适用时进入预览、播放和导出的播放器。
+
+**持久化和导出:** “Reusable Object Blueprint”保存在所属的项目、场景、组件、资源、工作区偏好或构建清单中；仅编辑器状态不会进入播放器。
+
+**撤销和恢复:** 文档编辑使用撤销/重做；导入或软件包使用还原/回滚；中断保存使用恢复浏览器；项目级恢复使用源代码管理或迁移备份。
+
+**常见错误和修复:**
+
+- 在错误的选择或工作区上编辑“Reusable Object Blueprint”。
+- 忽略权限、验证、缺失引用或宿主模板警告。
+- 只检查编辑器预览，而未验证保存/重载与独立播放器。
+
+**键盘和无障碍:** 可使用命令面板或键盘焦点替代纯指针操作。所有对话框均有可访问名称、可见焦点、Escape/取消路径和减少动态效果。
+
+**最小示例:** 最小示例：创建一个有效目标，配置“Reusable Object Blueprint”，保存，并在播放模式确认一个可见结果。
+
+**生产示例:** 生产示例：为“Reusable Object Blueprint”加入验证、本地化/无障碍、确定性测试、预算、恢复证据以及开发与发布构建。
+
+**Rhai API:** `awake`, `start`, `update`, `fixed_update`, `on_timer`, `on_signal`, `on_collision_enter`, `on_trigger_enter`, `input_pressed`, `timer_start`, `random`
+
+**可视化图 API:** `Events`, `Input`, `Timing`, `Signals`, `Physics`, `UI`, `Animation`, `Network`
+
+<a id="event-sheet-object-blueprint-inheritance"></a>
+
+### Object Blueprint inheritance
+
+**分类:** Manual · Assisted · Runtime · Per-object · Reversible
+
+**用途和使用时机:** 在“Event Sheet and Object Blueprint”中使用“Object Blueprint inheritance”，可在“Script”工作流内完成对应的创作或运行任务。 项目需要“Object Blueprint inheritance”时使用；无关设置应保留在其所属工作区。
+
+**前提条件:**
+
+- A selected scene object
+- A Rhai or Visual Graph action asset for runtime callbacks
+
+**准确操作流程:**
+
+1. 打开“Script”，再打开“Event Sheet and Object Blueprint”。
+2. 选择“Object Blueprint inheritance”；编辑前先阅读可见的验证与权限状态。
+3. 选择目标项目、资源或对象，只输入有限且受支持的数值。
+4. 应用或保存更改，检查可见结果以及“问题/控制台”输出。
+5. 若该功能具有运行行为，启动“播放”或“预览”；使用“暂停/单步”进行确定性检查。
+6. 保存并重新载入项目，确认创作值保持不变。
+7. 运行“项目健康”和对应测试，构建独立播放器后重复可观察检查。
+
+**预期结果:** “Object Blueprint inheritance”会在编辑器中可见，重新载入后保持，并在适用时进入预览、播放和导出的播放器。
+
+**持久化和导出:** “Object Blueprint inheritance”保存在所属的项目、场景、组件、资源、工作区偏好或构建清单中；仅编辑器状态不会进入播放器。
+
+**撤销和恢复:** 文档编辑使用撤销/重做；导入或软件包使用还原/回滚；中断保存使用恢复浏览器；项目级恢复使用源代码管理或迁移备份。
+
+**常见错误和修复:**
+
+- 在错误的选择或工作区上编辑“Object Blueprint inheritance”。
+- 忽略权限、验证、缺失引用或宿主模板警告。
+- 只检查编辑器预览，而未验证保存/重载与独立播放器。
+
+**键盘和无障碍:** 可使用命令面板或键盘焦点替代纯指针操作。所有对话框均有可访问名称、可见焦点、Escape/取消路径和减少动态效果。
+
+**最小示例:** 最小示例：创建一个有效目标，配置“Object Blueprint inheritance”，保存，并在播放模式确认一个可见结果。
+
+**生产示例:** 生产示例：为“Object Blueprint inheritance”加入验证、本地化/无障碍、确定性测试、预算、恢复证据以及开发与发布构建。
+
+**Rhai API:** `awake`, `start`, `update`, `fixed_update`, `on_timer`, `on_signal`, `on_collision_enter`, `on_trigger_enter`, `input_pressed`, `timer_start`, `random`
+
+**可视化图 API:** `Events`, `Input`, `Timing`, `Signals`, `Physics`, `UI`, `Animation`, `Network`
+
+<a id="event-sheet-composition-conflict-validation"></a>
+
+### Composition conflict validation
+
+**分类:** Manual · Assisted · Runtime · Per-object · Reversible
+
+**用途和使用时机:** 在“Event Sheet and Object Blueprint”中使用“Composition conflict validation”，可在“Script”工作流内完成对应的创作或运行任务。 项目需要“Composition conflict validation”时使用；无关设置应保留在其所属工作区。
+
+**前提条件:**
+
+- A selected scene object
+- A Rhai or Visual Graph action asset for runtime callbacks
+
+**准确操作流程:**
+
+1. 打开“Script”，再打开“Event Sheet and Object Blueprint”。
+2. 选择“Composition conflict validation”；编辑前先阅读可见的验证与权限状态。
+3. 选择目标项目、资源或对象，只输入有限且受支持的数值。
+4. 应用或保存更改，检查可见结果以及“问题/控制台”输出。
+5. 若该功能具有运行行为，启动“播放”或“预览”；使用“暂停/单步”进行确定性检查。
+6. 保存并重新载入项目，确认创作值保持不变。
+7. 运行“项目健康”和对应测试，构建独立播放器后重复可观察检查。
+
+**预期结果:** “Composition conflict validation”会在编辑器中可见，重新载入后保持，并在适用时进入预览、播放和导出的播放器。
+
+**持久化和导出:** “Composition conflict validation”保存在所属的项目、场景、组件、资源、工作区偏好或构建清单中；仅编辑器状态不会进入播放器。
+
+**撤销和恢复:** 文档编辑使用撤销/重做；导入或软件包使用还原/回滚；中断保存使用恢复浏览器；项目级恢复使用源代码管理或迁移备份。
+
+**常见错误和修复:**
+
+- 在错误的选择或工作区上编辑“Composition conflict validation”。
+- 忽略权限、验证、缺失引用或宿主模板警告。
+- 只检查编辑器预览，而未验证保存/重载与独立播放器。
+
+**键盘和无障碍:** 可使用命令面板或键盘焦点替代纯指针操作。所有对话框均有可访问名称、可见焦点、Escape/取消路径和减少动态效果。
+
+**最小示例:** 最小示例：创建一个有效目标，配置“Composition conflict validation”，保存，并在播放模式确认一个可见结果。
+
+**生产示例:** 生产示例：为“Composition conflict validation”加入验证、本地化/无障碍、确定性测试、预算、恢复证据以及开发与发布构建。
+
+**Rhai API:** `awake`, `start`, `update`, `fixed_update`, `on_timer`, `on_signal`, `on_collision_enter`, `on_trigger_enter`, `input_pressed`, `timer_start`, `random`
+
+**可视化图 API:** `Events`, `Input`, `Timing`, `Signals`, `Physics`, `UI`, `Animation`, `Network`
+
+<a id="event-sheet-shape-or-sprite-to-object-to-event-to-scene-workflow"></a>
+
+### Shape or Sprite to Object to Event to Scene workflow
+
+**分类:** Manual · Assisted · Runtime · Per-object · Reversible
+
+**用途和使用时机:** 在“Event Sheet and Object Blueprint”中使用“Shape or Sprite to Object to Event to Scene workflow”，可在“Script”工作流内完成对应的创作或运行任务。 项目需要“Shape or Sprite to Object to Event to Scene workflow”时使用；无关设置应保留在其所属工作区。
+
+**前提条件:**
+
+- A selected scene object
+- A Rhai or Visual Graph action asset for runtime callbacks
+
+**准确操作流程:**
+
+1. 打开“Script”，再打开“Event Sheet and Object Blueprint”。
+2. 选择“Shape or Sprite to Object to Event to Scene workflow”；编辑前先阅读可见的验证与权限状态。
+3. 选择目标项目、资源或对象，只输入有限且受支持的数值。
+4. 应用或保存更改，检查可见结果以及“问题/控制台”输出。
+5. 若该功能具有运行行为，启动“播放”或“预览”；使用“暂停/单步”进行确定性检查。
+6. 保存并重新载入项目，确认创作值保持不变。
+7. 运行“项目健康”和对应测试，构建独立播放器后重复可观察检查。
+
+**预期结果:** “Shape or Sprite to Object to Event to Scene workflow”会在编辑器中可见，重新载入后保持，并在适用时进入预览、播放和导出的播放器。
+
+**持久化和导出:** “Shape or Sprite to Object to Event to Scene workflow”保存在所属的项目、场景、组件、资源、工作区偏好或构建清单中；仅编辑器状态不会进入播放器。
+
+**撤销和恢复:** 文档编辑使用撤销/重做；导入或软件包使用还原/回滚；中断保存使用恢复浏览器；项目级恢复使用源代码管理或迁移备份。
+
+**常见错误和修复:**
+
+- 在错误的选择或工作区上编辑“Shape or Sprite to Object to Event to Scene workflow”。
+- 忽略权限、验证、缺失引用或宿主模板警告。
+- 只检查编辑器预览，而未验证保存/重载与独立播放器。
+
+**键盘和无障碍:** 可使用命令面板或键盘焦点替代纯指针操作。所有对话框均有可访问名称、可见焦点、Escape/取消路径和减少动态效果。
+
+**最小示例:** 最小示例：创建一个有效目标，配置“Shape or Sprite to Object to Event to Scene workflow”，保存，并在播放模式确认一个可见结果。
+
+**生产示例:** 生产示例：为“Shape or Sprite to Object to Event to Scene workflow”加入验证、本地化/无障碍、确定性测试、预算、恢复证据以及开发与发布构建。
+
+**Rhai API:** `awake`, `start`, `update`, `fixed_update`, `on_timer`, `on_signal`, `on_collision_enter`, `on_trigger_enter`, `input_pressed`, `timer_start`, `random`
+
+**可视化图 API:** `Events`, `Input`, `Timing`, `Signals`, `Physics`, `UI`, `Animation`, `Network`
+
+
 ## Visual Graph Editor
 
 <a id="visual-graph-scratch-style-block-mode"></a>
@@ -7442,6 +8705,314 @@ AI 工作流：启用官方包，添加 BehaviorTree2D 并创建 v2 资源。模
 **最小示例:** 最小示例：创建一个有效目标，配置“Typed pins and wires”，保存，并在播放模式确认一个可见结果。
 
 **生产示例:** 生产示例：为“Typed pins and wires”加入验证、本地化/无障碍、确定性测试、预算、恢复证据以及开发与发布构建。
+
+**Rhai API:** `Generated and parsed Rhai API v2 command stream`
+
+**可视化图 API:** `All Rhai API v2 generated nodes`
+
+<a id="visual-graph-drag-or-click-pin-connection"></a>
+
+### Drag or click pin connection
+
+**分类:** Manual · Assisted · Automatic · Runtime · Reversible
+
+**用途和使用时机:** 在“Visual Graph Editor”中使用“Drag or click pin connection”，可在“Script”工作流内完成对应的创作或运行任务。 项目需要“Drag or click pin connection”时使用；无关设置应保留在其所属工作区。
+
+**前提条件:**
+
+- A .nova-graph or .rhai asset
+
+**准确操作流程:**
+
+1. 打开“Script”，再打开“Visual Graph Editor”。
+2. 选择“Drag or click pin connection”；编辑前先阅读可见的验证与权限状态。
+3. 选择目标项目、资源或对象，只输入有限且受支持的数值。
+4. 应用或保存更改，检查可见结果以及“问题/控制台”输出。
+5. 若该功能具有运行行为，启动“播放”或“预览”；使用“暂停/单步”进行确定性检查。
+6. 保存并重新载入项目，确认创作值保持不变。
+7. 运行“项目健康”和对应测试，构建独立播放器后重复可观察检查。
+
+**预期结果:** “Drag or click pin connection”会在编辑器中可见，重新载入后保持，并在适用时进入预览、播放和导出的播放器。
+
+**持久化和导出:** “Drag or click pin connection”保存在所属的项目、场景、组件、资源、工作区偏好或构建清单中；仅编辑器状态不会进入播放器。
+
+**撤销和恢复:** 文档编辑使用撤销/重做；导入或软件包使用还原/回滚；中断保存使用恢复浏览器；项目级恢复使用源代码管理或迁移备份。
+
+**常见错误和修复:**
+
+- 在错误的选择或工作区上编辑“Drag or click pin connection”。
+- 忽略权限、验证、缺失引用或宿主模板警告。
+- 只检查编辑器预览，而未验证保存/重载与独立播放器。
+
+**键盘和无障碍:** 可使用命令面板或键盘焦点替代纯指针操作。所有对话框均有可访问名称、可见焦点、Escape/取消路径和减少动态效果。
+
+**最小示例:** 最小示例：创建一个有效目标，配置“Drag or click pin connection”，保存，并在播放模式确认一个可见结果。
+
+**生产示例:** 生产示例：为“Drag or click pin connection”加入验证、本地化/无障碍、确定性测试、预算、恢复证据以及开发与发布构建。
+
+**Rhai API:** `Generated and parsed Rhai API v2 command stream`
+
+**可视化图 API:** `All Rhai API v2 generated nodes`
+
+<a id="visual-graph-focal-wheel-zoom-and-zoom-slider"></a>
+
+### Focal wheel zoom and zoom slider
+
+**分类:** Manual · Assisted · Automatic · Runtime · Reversible
+
+**用途和使用时机:** 在“Visual Graph Editor”中使用“Focal wheel zoom and zoom slider”，可在“Script”工作流内完成对应的创作或运行任务。 项目需要“Focal wheel zoom and zoom slider”时使用；无关设置应保留在其所属工作区。
+
+**前提条件:**
+
+- A .nova-graph or .rhai asset
+
+**准确操作流程:**
+
+1. 打开“Script”，再打开“Visual Graph Editor”。
+2. 选择“Focal wheel zoom and zoom slider”；编辑前先阅读可见的验证与权限状态。
+3. 选择目标项目、资源或对象，只输入有限且受支持的数值。
+4. 应用或保存更改，检查可见结果以及“问题/控制台”输出。
+5. 若该功能具有运行行为，启动“播放”或“预览”；使用“暂停/单步”进行确定性检查。
+6. 保存并重新载入项目，确认创作值保持不变。
+7. 运行“项目健康”和对应测试，构建独立播放器后重复可观察检查。
+
+**预期结果:** “Focal wheel zoom and zoom slider”会在编辑器中可见，重新载入后保持，并在适用时进入预览、播放和导出的播放器。
+
+**持久化和导出:** “Focal wheel zoom and zoom slider”保存在所属的项目、场景、组件、资源、工作区偏好或构建清单中；仅编辑器状态不会进入播放器。
+
+**撤销和恢复:** 文档编辑使用撤销/重做；导入或软件包使用还原/回滚；中断保存使用恢复浏览器；项目级恢复使用源代码管理或迁移备份。
+
+**常见错误和修复:**
+
+- 在错误的选择或工作区上编辑“Focal wheel zoom and zoom slider”。
+- 忽略权限、验证、缺失引用或宿主模板警告。
+- 只检查编辑器预览，而未验证保存/重载与独立播放器。
+
+**键盘和无障碍:** 可使用命令面板或键盘焦点替代纯指针操作。所有对话框均有可访问名称、可见焦点、Escape/取消路径和减少动态效果。
+
+**最小示例:** 最小示例：创建一个有效目标，配置“Focal wheel zoom and zoom slider”，保存，并在播放模式确认一个可见结果。
+
+**生产示例:** 生产示例：为“Focal wheel zoom and zoom slider”加入验证、本地化/无障碍、确定性测试、预算、恢复证据以及开发与发布构建。
+
+**Rhai API:** `Generated and parsed Rhai API v2 command stream`
+
+**可视化图 API:** `All Rhai API v2 generated nodes`
+
+<a id="visual-graph-frame-all-and-reset-zoom"></a>
+
+### Frame all and reset zoom
+
+**分类:** Manual · Assisted · Automatic · Runtime · Reversible
+
+**用途和使用时机:** 在“Visual Graph Editor”中使用“Frame all and reset zoom”，可在“Script”工作流内完成对应的创作或运行任务。 项目需要“Frame all and reset zoom”时使用；无关设置应保留在其所属工作区。
+
+**前提条件:**
+
+- A .nova-graph or .rhai asset
+
+**准确操作流程:**
+
+1. 打开“Script”，再打开“Visual Graph Editor”。
+2. 选择“Frame all and reset zoom”；编辑前先阅读可见的验证与权限状态。
+3. 选择目标项目、资源或对象，只输入有限且受支持的数值。
+4. 应用或保存更改，检查可见结果以及“问题/控制台”输出。
+5. 若该功能具有运行行为，启动“播放”或“预览”；使用“暂停/单步”进行确定性检查。
+6. 保存并重新载入项目，确认创作值保持不变。
+7. 运行“项目健康”和对应测试，构建独立播放器后重复可观察检查。
+
+**预期结果:** “Frame all and reset zoom”会在编辑器中可见，重新载入后保持，并在适用时进入预览、播放和导出的播放器。
+
+**持久化和导出:** “Frame all and reset zoom”保存在所属的项目、场景、组件、资源、工作区偏好或构建清单中；仅编辑器状态不会进入播放器。
+
+**撤销和恢复:** 文档编辑使用撤销/重做；导入或软件包使用还原/回滚；中断保存使用恢复浏览器；项目级恢复使用源代码管理或迁移备份。
+
+**常见错误和修复:**
+
+- 在错误的选择或工作区上编辑“Frame all and reset zoom”。
+- 忽略权限、验证、缺失引用或宿主模板警告。
+- 只检查编辑器预览，而未验证保存/重载与独立播放器。
+
+**键盘和无障碍:** 可使用命令面板或键盘焦点替代纯指针操作。所有对话框均有可访问名称、可见焦点、Escape/取消路径和减少动态效果。
+
+**最小示例:** 最小示例：创建一个有效目标，配置“Frame all and reset zoom”，保存，并在播放模式确认一个可见结果。
+
+**生产示例:** 生产示例：为“Frame all and reset zoom”加入验证、本地化/无障碍、确定性测试、预算、恢复证据以及开发与发布构建。
+
+**Rhai API:** `Generated and parsed Rhai API v2 command stream`
+
+**可视化图 API:** `All Rhai API v2 generated nodes`
+
+<a id="visual-graph-double-click-node-insertion"></a>
+
+### Double-click node insertion
+
+**分类:** Manual · Assisted · Automatic · Runtime · Reversible
+
+**用途和使用时机:** 在“Visual Graph Editor”中使用“Double-click node insertion”，可在“Script”工作流内完成对应的创作或运行任务。 项目需要“Double-click node insertion”时使用；无关设置应保留在其所属工作区。
+
+**前提条件:**
+
+- A .nova-graph or .rhai asset
+
+**准确操作流程:**
+
+1. 打开“Script”，再打开“Visual Graph Editor”。
+2. 选择“Double-click node insertion”；编辑前先阅读可见的验证与权限状态。
+3. 选择目标项目、资源或对象，只输入有限且受支持的数值。
+4. 应用或保存更改，检查可见结果以及“问题/控制台”输出。
+5. 若该功能具有运行行为，启动“播放”或“预览”；使用“暂停/单步”进行确定性检查。
+6. 保存并重新载入项目，确认创作值保持不变。
+7. 运行“项目健康”和对应测试，构建独立播放器后重复可观察检查。
+
+**预期结果:** “Double-click node insertion”会在编辑器中可见，重新载入后保持，并在适用时进入预览、播放和导出的播放器。
+
+**持久化和导出:** “Double-click node insertion”保存在所属的项目、场景、组件、资源、工作区偏好或构建清单中；仅编辑器状态不会进入播放器。
+
+**撤销和恢复:** 文档编辑使用撤销/重做；导入或软件包使用还原/回滚；中断保存使用恢复浏览器；项目级恢复使用源代码管理或迁移备份。
+
+**常见错误和修复:**
+
+- 在错误的选择或工作区上编辑“Double-click node insertion”。
+- 忽略权限、验证、缺失引用或宿主模板警告。
+- 只检查编辑器预览，而未验证保存/重载与独立播放器。
+
+**键盘和无障碍:** 可使用命令面板或键盘焦点替代纯指针操作。所有对话框均有可访问名称、可见焦点、Escape/取消路径和减少动态效果。
+
+**最小示例:** 最小示例：创建一个有效目标，配置“Double-click node insertion”，保存，并在播放模式确认一个可见结果。
+
+**生产示例:** 生产示例：为“Double-click node insertion”加入验证、本地化/无障碍、确定性测试、预算、恢复证据以及开发与发布构建。
+
+**Rhai API:** `Generated and parsed Rhai API v2 command stream`
+
+**可视化图 API:** `All Rhai API v2 generated nodes`
+
+<a id="visual-graph-indexed-automatic-block-layout"></a>
+
+### Indexed automatic block layout
+
+**分类:** Manual · Assisted · Automatic · Runtime · Reversible
+
+**用途和使用时机:** 在“Visual Graph Editor”中使用“Indexed automatic block layout”，可在“Script”工作流内完成对应的创作或运行任务。 项目需要“Indexed automatic block layout”时使用；无关设置应保留在其所属工作区。
+
+**前提条件:**
+
+- A .nova-graph or .rhai asset
+
+**准确操作流程:**
+
+1. 打开“Script”，再打开“Visual Graph Editor”。
+2. 选择“Indexed automatic block layout”；编辑前先阅读可见的验证与权限状态。
+3. 选择目标项目、资源或对象，只输入有限且受支持的数值。
+4. 应用或保存更改，检查可见结果以及“问题/控制台”输出。
+5. 若该功能具有运行行为，启动“播放”或“预览”；使用“暂停/单步”进行确定性检查。
+6. 保存并重新载入项目，确认创作值保持不变。
+7. 运行“项目健康”和对应测试，构建独立播放器后重复可观察检查。
+
+**预期结果:** “Indexed automatic block layout”会在编辑器中可见，重新载入后保持，并在适用时进入预览、播放和导出的播放器。
+
+**持久化和导出:** “Indexed automatic block layout”保存在所属的项目、场景、组件、资源、工作区偏好或构建清单中；仅编辑器状态不会进入播放器。
+
+**撤销和恢复:** 文档编辑使用撤销/重做；导入或软件包使用还原/回滚；中断保存使用恢复浏览器；项目级恢复使用源代码管理或迁移备份。
+
+**常见错误和修复:**
+
+- 在错误的选择或工作区上编辑“Indexed automatic block layout”。
+- 忽略权限、验证、缺失引用或宿主模板警告。
+- 只检查编辑器预览，而未验证保存/重载与独立播放器。
+
+**键盘和无障碍:** 可使用命令面板或键盘焦点替代纯指针操作。所有对话框均有可访问名称、可见焦点、Escape/取消路径和减少动态效果。
+
+**最小示例:** 最小示例：创建一个有效目标，配置“Indexed automatic block layout”，保存，并在播放模式确认一个可见结果。
+
+**生产示例:** 生产示例：为“Indexed automatic block layout”加入验证、本地化/无障碍、确定性测试、预算、恢复证据以及开发与发布构建。
+
+**Rhai API:** `Generated and parsed Rhai API v2 command stream`
+
+**可视化图 API:** `All Rhai API v2 generated nodes`
+
+<a id="visual-graph-animation-frame-batched-graph-gestures"></a>
+
+### Animation-frame batched graph gestures
+
+**分类:** Manual · Assisted · Automatic · Runtime · Reversible
+
+**用途和使用时机:** 在“Visual Graph Editor”中使用“Animation-frame batched graph gestures”，可在“Script”工作流内完成对应的创作或运行任务。 项目需要“Animation-frame batched graph gestures”时使用；无关设置应保留在其所属工作区。
+
+**前提条件:**
+
+- A .nova-graph or .rhai asset
+
+**准确操作流程:**
+
+1. 打开“Script”，再打开“Visual Graph Editor”。
+2. 选择“Animation-frame batched graph gestures”；编辑前先阅读可见的验证与权限状态。
+3. 选择目标项目、资源或对象，只输入有限且受支持的数值。
+4. 应用或保存更改，检查可见结果以及“问题/控制台”输出。
+5. 若该功能具有运行行为，启动“播放”或“预览”；使用“暂停/单步”进行确定性检查。
+6. 保存并重新载入项目，确认创作值保持不变。
+7. 运行“项目健康”和对应测试，构建独立播放器后重复可观察检查。
+
+**预期结果:** “Animation-frame batched graph gestures”会在编辑器中可见，重新载入后保持，并在适用时进入预览、播放和导出的播放器。
+
+**持久化和导出:** “Animation-frame batched graph gestures”保存在所属的项目、场景、组件、资源、工作区偏好或构建清单中；仅编辑器状态不会进入播放器。
+
+**撤销和恢复:** 文档编辑使用撤销/重做；导入或软件包使用还原/回滚；中断保存使用恢复浏览器；项目级恢复使用源代码管理或迁移备份。
+
+**常见错误和修复:**
+
+- 在错误的选择或工作区上编辑“Animation-frame batched graph gestures”。
+- 忽略权限、验证、缺失引用或宿主模板警告。
+- 只检查编辑器预览，而未验证保存/重载与独立播放器。
+
+**键盘和无障碍:** 可使用命令面板或键盘焦点替代纯指针操作。所有对话框均有可访问名称、可见焦点、Escape/取消路径和减少动态效果。
+
+**最小示例:** 最小示例：创建一个有效目标，配置“Animation-frame batched graph gestures”，保存，并在播放模式确认一个可见结果。
+
+**生产示例:** 生产示例：为“Animation-frame batched graph gestures”加入验证、本地化/无障碍、确定性测试、预算、恢复证据以及开发与发布构建。
+
+**Rhai API:** `Generated and parsed Rhai API v2 command stream`
+
+**可视化图 API:** `All Rhai API v2 generated nodes`
+
+<a id="visual-graph-large-graph-culling-and-low-detail-rendering"></a>
+
+### Large-graph culling and low-detail rendering
+
+**分类:** Manual · Assisted · Automatic · Runtime · Reversible
+
+**用途和使用时机:** 在“Visual Graph Editor”中使用“Large-graph culling and low-detail rendering”，可在“Script”工作流内完成对应的创作或运行任务。 项目需要“Large-graph culling and low-detail rendering”时使用；无关设置应保留在其所属工作区。
+
+**前提条件:**
+
+- A .nova-graph or .rhai asset
+
+**准确操作流程:**
+
+1. 打开“Script”，再打开“Visual Graph Editor”。
+2. 选择“Large-graph culling and low-detail rendering”；编辑前先阅读可见的验证与权限状态。
+3. 选择目标项目、资源或对象，只输入有限且受支持的数值。
+4. 应用或保存更改，检查可见结果以及“问题/控制台”输出。
+5. 若该功能具有运行行为，启动“播放”或“预览”；使用“暂停/单步”进行确定性检查。
+6. 保存并重新载入项目，确认创作值保持不变。
+7. 运行“项目健康”和对应测试，构建独立播放器后重复可观察检查。
+
+**预期结果:** “Large-graph culling and low-detail rendering”会在编辑器中可见，重新载入后保持，并在适用时进入预览、播放和导出的播放器。
+
+**持久化和导出:** “Large-graph culling and low-detail rendering”保存在所属的项目、场景、组件、资源、工作区偏好或构建清单中；仅编辑器状态不会进入播放器。
+
+**撤销和恢复:** 文档编辑使用撤销/重做；导入或软件包使用还原/回滚；中断保存使用恢复浏览器；项目级恢复使用源代码管理或迁移备份。
+
+**常见错误和修复:**
+
+- 在错误的选择或工作区上编辑“Large-graph culling and low-detail rendering”。
+- 忽略权限、验证、缺失引用或宿主模板警告。
+- 只检查编辑器预览，而未验证保存/重载与独立播放器。
+
+**键盘和无障碍:** 可使用命令面板或键盘焦点替代纯指针操作。所有对话框均有可访问名称、可见焦点、Escape/取消路径和减少动态效果。
+
+**最小示例:** 最小示例：创建一个有效目标，配置“Large-graph culling and low-detail rendering”，保存，并在播放模式确认一个可见结果。
+
+**生产示例:** 生产示例：为“Large-graph culling and low-detail rendering”加入验证、本地化/无障碍、确定性测试、预算、恢复证据以及开发与发布构建。
 
 **Rhai API:** `Generated and parsed Rhai API v2 command stream`
 
@@ -7975,13 +9546,13 @@ AI 工作流：启用官方包，添加 BehaviorTree2D 并创建 v2 资源。模
 
 **可视化图 API:** `All Rhai API v2 generated nodes`
 
-<a id="visual-graph-1-000-node-authoring-profile"></a>
+<a id="visual-graph-10-000-node-bounded-document"></a>
 
-### 1,000-node authoring profile
+### 10,000-node bounded document
 
 **分类:** Manual · Assisted · Automatic · Runtime · Reversible
 
-**用途和使用时机:** 在“Visual Graph Editor”中使用“1,000-node authoring profile”，可在“Script”工作流内完成对应的创作或运行任务。 项目需要“1,000-node authoring profile”时使用；无关设置应保留在其所属工作区。
+**用途和使用时机:** 在“Visual Graph Editor”中使用“10,000-node bounded document”，可在“Script”工作流内完成对应的创作或运行任务。 项目需要“10,000-node bounded document”时使用；无关设置应保留在其所属工作区。
 
 **前提条件:**
 
@@ -7990,30 +9561,30 @@ AI 工作流：启用官方包，添加 BehaviorTree2D 并创建 v2 资源。模
 **准确操作流程:**
 
 1. 打开“Script”，再打开“Visual Graph Editor”。
-2. 选择“1,000-node authoring profile”；编辑前先阅读可见的验证与权限状态。
+2. 选择“10,000-node bounded document”；编辑前先阅读可见的验证与权限状态。
 3. 选择目标项目、资源或对象，只输入有限且受支持的数值。
 4. 应用或保存更改，检查可见结果以及“问题/控制台”输出。
 5. 若该功能具有运行行为，启动“播放”或“预览”；使用“暂停/单步”进行确定性检查。
 6. 保存并重新载入项目，确认创作值保持不变。
 7. 运行“项目健康”和对应测试，构建独立播放器后重复可观察检查。
 
-**预期结果:** “1,000-node authoring profile”会在编辑器中可见，重新载入后保持，并在适用时进入预览、播放和导出的播放器。
+**预期结果:** “10,000-node bounded document”会在编辑器中可见，重新载入后保持，并在适用时进入预览、播放和导出的播放器。
 
-**持久化和导出:** “1,000-node authoring profile”保存在所属的项目、场景、组件、资源、工作区偏好或构建清单中；仅编辑器状态不会进入播放器。
+**持久化和导出:** “10,000-node bounded document”保存在所属的项目、场景、组件、资源、工作区偏好或构建清单中；仅编辑器状态不会进入播放器。
 
 **撤销和恢复:** 文档编辑使用撤销/重做；导入或软件包使用还原/回滚；中断保存使用恢复浏览器；项目级恢复使用源代码管理或迁移备份。
 
 **常见错误和修复:**
 
-- 在错误的选择或工作区上编辑“1,000-node authoring profile”。
+- 在错误的选择或工作区上编辑“10,000-node bounded document”。
 - 忽略权限、验证、缺失引用或宿主模板警告。
 - 只检查编辑器预览，而未验证保存/重载与独立播放器。
 
 **键盘和无障碍:** 可使用命令面板或键盘焦点替代纯指针操作。所有对话框均有可访问名称、可见焦点、Escape/取消路径和减少动态效果。
 
-**最小示例:** 最小示例：创建一个有效目标，配置“1,000-node authoring profile”，保存，并在播放模式确认一个可见结果。
+**最小示例:** 最小示例：创建一个有效目标，配置“10,000-node bounded document”，保存，并在播放模式确认一个可见结果。
 
-**生产示例:** 生产示例：为“1,000-node authoring profile”加入验证、本地化/无障碍、确定性测试、预算、恢复证据以及开发与发布构建。
+**生产示例:** 生产示例：为“10,000-node bounded document”加入验证、本地化/无障碍、确定性测试、预算、恢复证据以及开发与发布构建。
 
 **Rhai API:** `Generated and parsed Rhai API v2 command stream`
 
@@ -16865,21 +18436,5 @@ AI 工作流：启用官方包，添加 BehaviorTree2D 并创建 v2 资源。模
 **Rhai API:** N/A
 
 **可视化图 API:** N/A
-
-
-<a id="v70-stable-platform"></a>
-
-## Nova_A 7 稳定创作平台流程
-
-使用本流程学习、迁移、验证并发布完整项目，同时明确保留所有稳定契约和外部限制。
-
-1. 打开“管理 → 学习中心 → 平台就绪情况”，搜索计划使用的功能，并检查绑定、验证、撤销、持久化、运行时／导出、文档和测试。圆圈代表不适用，短横线代表仍需外部证据。
-2. 从引导项目或 creator-v700-stable-platform 参考开始，依次完成前提条件、准确步骤、预期结果、保存／重载、撤销／恢复、播放／单步、独立构建和无障碍检查。
-3. 打开 6.x 项目时先查看迁移预览，核对源／目标引擎、语义差异、备份路径和确定性校验和。7.0 只把受支持引擎上限封存为 <8.0.0，不会重写 schema 29 玩法数据。
-4. 编辑 Rhai 或可视化图中的任意一侧，保存后检查同步的另一侧并运行等价性测试。不支持的 Rhai 会无损保留在代码块中。使用运行时调用前请查阅 API 浏览器或 docs/API_REFERENCE_7_0.md。
-5. 运行“项目健康”、模板／参考检查和构建验证。在 Windows 本机构建 Windows 与 Web；Linux／macOS 需要匹配主机，Android 为工具链门禁实验目标，iOS／主机平台仍延期，不能把不可用目标伪装为通过。
-6. 在英／德／中、100–200% 界面缩放、高对比度和减少动态效果下测试键盘与指针。保存、关闭、重开，恢复一次故意输入的非法值，再检查证据和精确十一份发布文件。
-
-**撤销和恢复:** 若预览不符合预期，请取消迁移或恢复备份；文档编辑使用撤销，中断保存使用恢复浏览器，故障包／插件应停用，并保留最后一次有效构建。按症状恢复请查 docs/TROUBLESHOOTING_7_0.md。签名、干净机器生命周期、匹配主机构建、独立观察和真实长测在取得证据前仍属于外部工作。
 
 <!-- NOVA_V6_TEACHING_END -->

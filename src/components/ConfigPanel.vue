@@ -208,6 +208,9 @@
         <InspectorSection v-if="selectedEntity.script2D" :title="t('script2D')" category="gameplay" open>
           <ComponentTools kind="Script2D" />
           <PropertyRow :label="t('scriptAsset')"><select v-model="selectedEntity.script2D.scriptAsset" @change="synchronizeScriptProperties"><option :value="null">{{ t('none') }}</option><option v-for="asset in scriptAssets" :key="asset.uuid" :value="assetReference(asset.uuid)">{{ asset.name }} · {{ asset.assetType === 'visualScript' ? t('visualGraph') : 'Rhai' }}</option></select></PropertyRow>
+          <PropertyRow :label="t('eventSheet')"><select v-model="selectedEntity.script2D.eventSheetAsset" @change="applySelectedEventSheet"><option :value="null">{{ t('none') }}</option><option v-for="asset in eventSheetAssets" :key="asset.uuid" :value="assetReference(asset.uuid)">{{ asset.name }}</option></select></PropertyRow>
+          <PropertyRow :label="t('objectBlueprint')"><select v-model="selectedEntity.script2D.objectBlueprintAsset"><option :value="null">{{ t('none') }}</option><option v-for="asset in objectBlueprintAssets" :key="asset.uuid" :value="assetReference(asset.uuid)">{{ asset.name }}</option></select></PropertyRow>
+          <button v-if="selectedEntity.script2D.eventSheetAsset" class="secondary-action" @click="openSelectedEventSheet">{{ t('openEventSheet') }}</button>
           <button class="secondary-action" @click="synchronizeScriptProperties">{{ t('refreshScriptProperties') }}</button>
           <div v-for="group in scriptPropertyGroups" :key="group.name" class="script-property-group">
             <h4>{{ group.name }}</h4>
@@ -384,6 +387,9 @@ import { componentAuthoringRule, evaluateNumericExpression, validateEntityAuthor
 import { OFFICIAL_AI_PACKAGE_ID, OFFICIAL_OBJECT_POOL_PACKAGE_ID, packageEnabled } from '../runtime/packages'
 import { configureUiAccessibility } from '../runtime/uiAccessibility'
 import { pluginRuntime, pluginState, type PluginContributionKind } from '../runtime/plugins'
+import { attachEventSheet } from '../runtime/eventSheets'
+import { openEventSheetAsset } from '../visual/graphStudioState'
+import { applyEditorWorkspace } from '../editor/workspaces'
 
 const InspectorSection = defineComponent({ props: { title: { type: String, required: true }, category: { type: String, default: 'general' }, open: Boolean }, setup(props, { slots }) { return () => h('details', { class: 'inspector-section', open: props.open, style: { display: inspectorSectionVisible(props.title, props.category as InspectorCategory) ? '' : 'none' } }, [h('summary', [h('span', props.title), h('i', '⌄')]), h('div', { class: 'section-body' }, slots.default?.())]) } })
 const PropertyRow = defineComponent({ props: { label: { type: String, required: true }, path: { type: String, default: '' } }, setup(props, { slots }) { return () => {
@@ -454,6 +460,8 @@ const panelWidth = ref(estate.inspectorWidth)
 const imageAssets = computed(() => assetState.records.filter(asset => asset.assetType === 'image'))
 const fontAssets = computed(() => assetState.records.filter(asset => asset.assetType === 'font'))
 const scriptAssets = computed(() => assetState.records.filter(asset => asset.assetType === 'script' || asset.assetType === 'visualScript'))
+const eventSheetAssets = computed(() => assetState.records.filter(asset => asset.assetType === 'eventSheet'))
+const objectBlueprintAssets = computed(() => assetState.records.filter(asset => asset.assetType === 'objectBlueprint'))
 const pathAssets = computed(() => assetState.records.filter(asset => asset.assetType === 'path'))
 const pathPointsText = computed(() => selectedEntity.value?.authoring.path.points.map(point => `${point.x},${point.y}`).join(' ') ?? '')
 const pathTangentsText = computed(() => selectedEntity.value?.authoring.path.tangents.map(tangent => `${tangent.incoming.x},${tangent.incoming.y}:${tangent.outgoing.x},${tangent.outgoing.y}`).join(' ') ?? '')
@@ -843,6 +851,8 @@ function synchronizeScriptProperties() {
   estate.statusText = error ?? t('scriptPropertiesUpdated')
   if (!error) pushHistory('Refresh script properties')
 }
+function applySelectedEventSheet() { const entity=selectedEntity.value,reference=entity?.script2D?.eventSheetAsset;if(!entity||!reference)return;if(attachEventSheet(entity,reference)){synchronizeScriptProperties();pushHistory('Attach Event Sheet');state.world.invalidateRuntime()} }
+function openSelectedEventSheet() { const uuid=assetGuid(selectedEntity.value?.script2D?.eventSheetAsset);if(!uuid)return;openEventSheetAsset(uuid);applyEditorWorkspace('script') }
 function setScriptProperty(name: string, value: ScriptPropertyValue) {
   if (!selectedEntity.value?.script2D) return
   selectedEntity.value.script2D.properties[name] = value

@@ -682,3 +682,81 @@ html body #app :where(p, li, td, th, .body-copy) {
     clip-path: inset(50%);
   }
 }
+
+/* 26.01 panel-containment contract. Every authoring pane owns its scrolling,
+   every flex/grid child is allowed to shrink, and translated copy wraps before
+   it can push a field or action outside the visible window. */
+#app :where(
+  .config-panel, .bottom-panel, .build-panel, .console-panel, .history-panel,
+  .physics-runtime-panel, .renderer-panel, .scene-panel, .tilemap-panel,
+  .audio-system-panel, .presentation-panel, .production-panel, .settings-page,
+  .script-studio, .automation-studio, .network-studio, .ecosystem-studio,
+  .rendering-studio, .animation-studio, .content-studio, .device-studio,
+  .visual-graph-editor, .studio-grid, .studio-card, .settings-card,
+  .inspector-pane, .asset-inspector, .registry-inspector, .package-inspector
+) {
+  min-width: 0;
+  min-height: 0;
+  max-width: 100%;
+}
+
+#app :where(
+  .config-panel, .bottom-panel, .build-panel, .console-panel, .history-panel,
+  .physics-runtime-panel, .renderer-panel, .scene-panel, .tilemap-panel,
+  .audio-system-panel, .presentation-panel, .production-panel, .settings-page,
+  .script-studio, .automation-studio, .network-studio, .ecosystem-studio,
+  .rendering-studio, .animation-studio, .content-studio, .device-studio,
+  .visual-graph-editor, .studio-grid, .studio-card, .settings-card,
+  .inspector-pane, .asset-inspector, .registry-inspector, .package-inspector
+) :where(div, section, article, aside, header, footer, nav, label, fieldset) {
+  min-width: 0;
+  max-width: 100%;
+}
+
+#app :where(input, select, textarea, output) {
+  min-width: 0;
+  max-width: 100%;
+  font: inherit;
+}
+
+#app :where(
+  .config-panel, .bottom-panel, .build-panel, .settings-page, .studio-card,
+  .inspector-pane, .asset-inspector, .registry-inspector, .package-inspector,
+  .automation-studio, .network-studio, .ecosystem-studio, .rendering-studio,
+  .animation-studio, .content-studio, .device-studio
+) :where(p, li, dt, dd, label, legend, strong, small, span:not(.icon):not(.glyph)) {
+  overflow-wrap: anywhere;
+  word-break: normal;
+}
+
+#app :where(.panel-tabs, .inspector-tabs, .studio-modes, .inspector-categories, .settings-search nav) {
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
+  overscroll-behavior-inline: contain;
+}
+
+#app :where(.panel-tabs, .inspector-tabs, .studio-modes, .inspector-categories, .settings-search nav) > button {
+  flex: 0 0 auto;
+  max-width: min(240px, 72vw);
+}
+
+#app :where(.studio-card, .settings-card, .inspector-pane, .asset-inspector, .package-inspector) {
+  overflow-x: clip;
+}
+
+#app :where(.studio-card, .settings-card, .inspector-pane, .asset-inspector, .package-inspector) :where(.row, .field-row, .setting-row, .property-row, label) > * {
+  min-width: 0;
+}
+
+@media (max-width: 1100px) {
+  #app :where(.studio-grid, .extension-grid, .package-grid, .template-grid, .delivery-grid, .shipping-grid, .audit-grid, .wide-grid, .orchestration-grid, .diagnostics-grid) {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+  #app :where(.studio-header, .page-header) {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+}

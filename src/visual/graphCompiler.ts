@@ -119,6 +119,7 @@ function compileScope(graph: NovaGraphDocument, context: ScopeContext): EmittedL
   const expression = (node: GraphNode, pin: GraphPin, stack = new Set<string>()): string => {
     const token = `${node.uuid}:${pin.uuid}`; if (stack.has(token)) return '()'; const nextStack = new Set(stack).add(token)
     if (node.type.startsWith('literal.')) return rhaiValue(node.config.value ?? pin.defaultValue)
+    if (node.type === 'code.expression') return `(${String(node.config.source ?? '()').slice(0, 64_000)})`
     if (node.type === 'variable.get') return globalNames.get(String(node.config.variableUuid ?? '')) ?? '()'
     if (node.type === 'local.get') return localNames.get(String(node.config.localUuid ?? '')) ?? '()'
     if (node.type.startsWith('event.') || node.type.startsWith('custom.event.') || node.type === 'routine.entry') return safeIdentifier(pin.key)
