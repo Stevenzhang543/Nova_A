@@ -74,6 +74,7 @@ function selectWorkspace(workspace: EditorWorkspace): void {
 .workspace-spacer { flex: 1; }
 .context-title{min-width:140px;max-width:min(290px,23vw);display:grid;align-content:center;padding:0 10px;border-left:1px solid var(--border-subtle)}.context-title small,.context-title strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.context-title small{color:var(--text-muted);font-size:var(--type-caption);font-weight:500}.context-title strong{font-size:var(--type-dense)}
 button,summary { min-height: 34px; padding: 0 10px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; flex: 0 0 auto; border: 1px solid transparent; border-radius: 9px; color: var(--text-muted); background: transparent; font-size:var(--type-caption); white-space: nowrap; }
+.workspace-list button { line-height: 1.2 !important; }
 button:hover { color: var(--text-primary); background: var(--surface-hover); }
 button.active { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 30%, transparent); background: var(--accent-soft); }
 .workspace-list button span:first-child { min-width: 15px; color: currentColor; font: 600 var(--type-caption)/1 var(--font-mono); }

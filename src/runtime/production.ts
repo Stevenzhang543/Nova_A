@@ -106,6 +106,12 @@ export interface NetworkMultiInstanceSettings {
   separateInspectors: boolean
 }
 
+export interface NetworkServiceSelection {
+  identityProviderId: string
+  lobbyProviderId: string
+  relayProviderId: string
+}
+
 export interface ProductionProjectSettings {
   performance: {
     traceCapacity: number
@@ -183,6 +189,7 @@ export interface ProductionProjectSettings {
     security: NetworkSecuritySettings
     interest: NetworkInterestSettings
     multiInstance: NetworkMultiInstanceSettings
+    services: NetworkServiceSelection
     allowAuthorityTransfer: boolean
     allowSceneHandoff: boolean
     replicatedEntities: ReplicatedEntityDefinition[]
@@ -212,6 +219,7 @@ const DEFAULTS: ProductionProjectSettings = {
     security: { requireEncryption: false, maximumPacketAgeMs: 15_000, replayWindow: 2_048 },
     interest: { enabled: false, defaultRadius: 64, maximumRadius: 4_096 },
     multiInstance: { peerCount: 2, separateLogs: true, separateInspectors: true },
+    services: { identityProviderId: '', lobbyProviderId: '', relayProviderId: '' },
     allowAuthorityTransfer: true,
     allowSceneHandoff: true,
     replicatedEntities: []
@@ -299,7 +307,7 @@ export function normalizeProductionSettings(value: unknown): ProductionProjectSe
     const authority: NetworkRpcDefinition['authority'] = item.authority === 'owner' || item.authority === 'any' ? item.authority : 'server'
     return [{ name, channelId: channelIds.has(String(item.channelId)) ? String(item.channelId) : channels[0].id, direction, authority, payloadSchema: schemas.includes(item.payloadSchema as NetworkPayloadSchema) ? item.payloadSchema as NetworkPayloadSchema : 'any', maximumPayloadBytes: bounded(item.maximumPayloadBytes, 8_192, 2, 65_507, true), callsPerSecond: bounded(item.callsPerSecond, 30, 1, 1_000, true) }]
   })
-  const simulation = object(networking.simulation), authentication = object(networking.authentication), security = object(networking.security), interest = object(networking.interest), multiInstance = object(networking.multiInstance)
+  const simulation = object(networking.simulation), authentication = object(networking.authentication), security = object(networking.security), interest = object(networking.interest), multiInstance = object(networking.multiInstance), services = object(networking.services)
   return {
     performance: {
       traceCapacity: bounded(performance.traceCapacity, DEFAULTS.performance.traceCapacity, 60, 10_000, true),
@@ -346,8 +354,9 @@ export function normalizeProductionSettings(value: unknown): ProductionProjectSe
       simulation: { enabled: simulation.enabled === true, latencyMs: bounded(simulation.latencyMs, 0, 0, 10_000, true), jitterMs: bounded(simulation.jitterMs, 0, 0, 10_000, true), lossPercent: bounded(simulation.lossPercent, 0, 0, 100), duplicatePercent: bounded(simulation.duplicatePercent, 0, 0, 100), reorderPercent: bounded(simulation.reorderPercent, 0, 0, 100), seed: bounded(simulation.seed, DEFAULTS.networking.simulation.seed, 0, 0xffff_ffff, true) >>> 0 },
       authentication: { mode: authentication.mode === 'hook' ? 'hook' : 'none', providerId: id(authentication.providerId, ''), requireVerifiedPeers: authentication.requireVerifiedPeers === true, handshakeTimeoutMs: bounded(authentication.handshakeTimeoutMs, DEFAULTS.networking.authentication.handshakeTimeoutMs, 250, 30_000, true) },
       security: { requireEncryption: security.requireEncryption === true, maximumPacketAgeMs: bounded(security.maximumPacketAgeMs, DEFAULTS.networking.security.maximumPacketAgeMs, 1_000, 120_000, true), replayWindow: bounded(security.replayWindow, DEFAULTS.networking.security.replayWindow, 64, 16_384, true) },
-      interest: { enabled: interest.enabled === true, defaultRadius: bounded(interest.defaultRadius, DEFAULTS.networking.interest.defaultRadius, 0, 1_000_000), maximumRadius: bounded(interest.maximumRadius, DEFAULTS.networking.interest.maximumRadius, 1, 1_000_000) },
+      interest: (() => { const maximumRadius = bounded(interest.maximumRadius, DEFAULTS.networking.interest.maximumRadius, 1, 1_000_000); return { enabled: interest.enabled === true, defaultRadius: bounded(interest.defaultRadius, DEFAULTS.networking.interest.defaultRadius, 0, maximumRadius), maximumRadius } })(),
       multiInstance: { peerCount: bounded(multiInstance.peerCount, DEFAULTS.networking.multiInstance.peerCount, 2, 8, true), separateLogs: multiInstance.separateLogs !== false, separateInspectors: multiInstance.separateInspectors !== false },
+      services: { identityProviderId: id(services.identityProviderId, ''), lobbyProviderId: id(services.lobbyProviderId, ''), relayProviderId: id(services.relayProviderId, '') },
       allowAuthorityTransfer: networking.allowAuthorityTransfer !== false,
       allowSceneHandoff: networking.allowSceneHandoff !== false,
       replicatedEntities

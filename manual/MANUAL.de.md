@@ -1,4 +1,4 @@
-# Nova_A 26.4.0 – Vollständiges Handbuch
+# Nova_A 26.10 – Vollständiges Handbuch
 
 ## 6.2.0 Verhaltensverträge
 
@@ -770,11 +770,11 @@ Im **Paketlabor** Reverse-Domain-ID, SemVer, Herausgeber, Archiv-SHA-256, Lizenz
 **Exportvorlagen** zeigt Ziel, Architektur, Laufzeit und Nachweisgrenzen. Windows/Web sind lokal verfügbar; saubere Fremdmaschine und Signatur bleiben extern. Linux/macOS benötigen den passenden Host; Android bleibt bis zu allen SDK-/Vorlagen-/Signatur-/Geräte-/Installations-/Eingabe-/Audioprüfungen blockiert. In **Auslieferung** sind Cache-Schlüssel deterministisch, Delta-Builds an Patch-Manifeste gebunden und Remote-/Befehlsverbinder berechtigungspflichtig. Plan vorbereiten führt nichts aus und greift nicht auf das Netzwerk zu. Siehe `docs/EXTENSIONS_PLATFORM_DELIVERY_5_9.md`.
 
 <!-- NOVA_V6_TEACHING_START -->
-# Nova_A 26.4.0 aufgabenorientiertes Lehrhandbuch
+# Nova_A 26.10 aufgabenorientiertes Lehrhandbuch
 
 Lernen durch echte Aufgaben. Jede öffentliche Funktion erklärt Zuständigkeit, Speicherung, Wiederherstellung, Barrierefreiheit und Release-Verhalten.
 
-- Engine: **26.4.0**
+- Engine: **26.10.0**
 - Stable contracts: Project Format 2/schema 29; Rhai API 2; Graph Format 1; Plugin API 2; Package Manifest 1; Build CLI 1; workspace document 3.
 - External signing, independent clean-machine evidence, two-machine reproduction, matching-host builds and a real 72-hour soak remain pending until independently captured.
 
@@ -10499,6 +10499,94 @@ Lernen durch echte Aufgaben. Jede öffentliche Funktion erklärt Zuständigkeit,
 
 **Visual-Graph-API:** `Animation/Play`, `Animation/Set Parameter`, `Timeline/Signal`
 
+<a id="animation-fixed-time-cinematic-capture-plan"></a>
+
+### Fixed-time cinematic capture plan
+
+**Klassifikation:** Manual · Assisted · Runtime · Reversible · Per-object
+
+**Zweck und Einsatz:** Fixed-time cinematic capture plan im Bereich Animation and Timeline erledigt die unterstützte Autoren- oder Laufzeitaufgabe direkt im Arbeitsbereich Animation. Verwenden, wenn das Projekt Fixed-time cinematic capture plan benötigt; nicht zugehörige Einstellungen bleiben in ihrem zuständigen Arbeitsbereich.
+
+**Voraussetzungen:**
+
+- Animation, controller, rig or timeline assets
+
+**Exakter Ablauf:**
+
+1. Animation und danach Animation and Timeline öffnen.
+2. Fixed-time cinematic capture plan wählen und vor der Bearbeitung sichtbare Validierung und Berechtigungen prüfen.
+3. Zielprojekt, Asset oder Objekt wählen und nur endliche, unterstützte Werte eingeben.
+4. Änderung anwenden oder speichern und sichtbares Ergebnis sowie Probleme/Konsole prüfen.
+5. Bei Laufzeitverhalten Play oder Vorschau starten; Pause/Einzelschritt für deterministische Prüfung verwenden.
+6. Projekt speichern, neu laden und den unveränderten Autorenwert bestätigen.
+7. Project Health und den passenden Test ausführen, Standalone-Player bauen und die sichtbare Prüfung wiederholen.
+
+**Erwartetes Ergebnis:** Fixed-time cinematic capture plan ist im Editor sichtbar, bleibt nach dem Neuladen erhalten und erreicht gegebenenfalls Vorschau, Play und exportierte Player.
+
+**Speicherung und Export:** Fixed-time cinematic capture plan wird im zuständigen Projekt, in Szene, Komponente, Asset, Arbeitsbereichseinstellung oder Build-Manifest gespeichert. Reine Editor-Daten gelangen nicht in Player.
+
+**Rückgängig und Wiederherstellung:** Für Dokumentänderungen Rückgängig/Wiederholen, für Importe oder Pakete Zurücksetzen/Rollback, bei unterbrochenen Speicherungen Recovery Browser und für projektweite Wiederherstellung Quellverwaltung oder Migrations-Backup verwenden.
+
+**Häufige Fehler und Lösungen:**
+
+- Fixed-time cinematic capture plan mit falscher Auswahl oder im falschen Arbeitsbereich bearbeiten.
+- Berechtigungs-, Validierungs-, Referenz- oder Hostvorlagenwarnung ignorieren.
+- Nur die Editorvorschau prüfen, nicht Speichern/Neuladen und Standalone-Player.
+
+**Tastatur und Barrierefreiheit:** Command Palette oder Tastaturfokus statt reiner Zeigerbedienung verwenden. Dialoge besitzen Namen, sichtbaren Fokus, Escape/Abbrechen und reduzierte Bewegung.
+
+**Minimales Beispiel:** Minimal: ein gültiges Ziel erstellen, Fixed-time cinematic capture plan konfigurieren, speichern und ein sichtbares Play-Ergebnis prüfen.
+
+**Produktionsbeispiel:** Produktion: Validierung, Lokalisierung/Barrierefreiheit, deterministische Tests, Budgets, Wiederherstellung und Entwicklungs-/Release-Builds für Fixed-time cinematic capture plan ergänzen.
+
+**Rhai-API:** `animation_play`, `animation_parameter`, `signal_emit`
+
+**Visual-Graph-API:** `Animation/Play`, `Animation/Set Parameter`, `Timeline/Signal`
+
+<a id="animation-frame-to-audio-sample-synchronization"></a>
+
+### Frame-to-audio sample synchronization
+
+**Klassifikation:** Manual · Assisted · Runtime · Reversible · Per-object
+
+**Zweck und Einsatz:** Frame-to-audio sample synchronization im Bereich Animation and Timeline erledigt die unterstützte Autoren- oder Laufzeitaufgabe direkt im Arbeitsbereich Animation. Verwenden, wenn das Projekt Frame-to-audio sample synchronization benötigt; nicht zugehörige Einstellungen bleiben in ihrem zuständigen Arbeitsbereich.
+
+**Voraussetzungen:**
+
+- Animation, controller, rig or timeline assets
+
+**Exakter Ablauf:**
+
+1. Animation und danach Animation and Timeline öffnen.
+2. Frame-to-audio sample synchronization wählen und vor der Bearbeitung sichtbare Validierung und Berechtigungen prüfen.
+3. Zielprojekt, Asset oder Objekt wählen und nur endliche, unterstützte Werte eingeben.
+4. Änderung anwenden oder speichern und sichtbares Ergebnis sowie Probleme/Konsole prüfen.
+5. Bei Laufzeitverhalten Play oder Vorschau starten; Pause/Einzelschritt für deterministische Prüfung verwenden.
+6. Projekt speichern, neu laden und den unveränderten Autorenwert bestätigen.
+7. Project Health und den passenden Test ausführen, Standalone-Player bauen und die sichtbare Prüfung wiederholen.
+
+**Erwartetes Ergebnis:** Frame-to-audio sample synchronization ist im Editor sichtbar, bleibt nach dem Neuladen erhalten und erreicht gegebenenfalls Vorschau, Play und exportierte Player.
+
+**Speicherung und Export:** Frame-to-audio sample synchronization wird im zuständigen Projekt, in Szene, Komponente, Asset, Arbeitsbereichseinstellung oder Build-Manifest gespeichert. Reine Editor-Daten gelangen nicht in Player.
+
+**Rückgängig und Wiederherstellung:** Für Dokumentänderungen Rückgängig/Wiederholen, für Importe oder Pakete Zurücksetzen/Rollback, bei unterbrochenen Speicherungen Recovery Browser und für projektweite Wiederherstellung Quellverwaltung oder Migrations-Backup verwenden.
+
+**Häufige Fehler und Lösungen:**
+
+- Frame-to-audio sample synchronization mit falscher Auswahl oder im falschen Arbeitsbereich bearbeiten.
+- Berechtigungs-, Validierungs-, Referenz- oder Hostvorlagenwarnung ignorieren.
+- Nur die Editorvorschau prüfen, nicht Speichern/Neuladen und Standalone-Player.
+
+**Tastatur und Barrierefreiheit:** Command Palette oder Tastaturfokus statt reiner Zeigerbedienung verwenden. Dialoge besitzen Namen, sichtbaren Fokus, Escape/Abbrechen und reduzierte Bewegung.
+
+**Minimales Beispiel:** Minimal: ein gültiges Ziel erstellen, Frame-to-audio sample synchronization konfigurieren, speichern und ein sichtbares Play-Ergebnis prüfen.
+
+**Produktionsbeispiel:** Produktion: Validierung, Lokalisierung/Barrierefreiheit, deterministische Tests, Budgets, Wiederherstellung und Entwicklungs-/Release-Builds für Frame-to-audio sample synchronization ergänzen.
+
+**Rhai-API:** `animation_play`, `animation_parameter`, `signal_emit`
+
+**Visual-Graph-API:** `Animation/Play`, `Animation/Set Parameter`, `Timeline/Signal`
+
 
 ## Interface Studio
 
@@ -11820,6 +11908,94 @@ Lernen durch echte Aufgaben. Jede öffentliche Funktion erklärt Zuständigkeit,
 **Minimales Beispiel:** Minimal: ein gültiges Ziel erstellen, Device recovery konfigurieren, speichern und ein sichtbares Play-Ergebnis prüfen.
 
 **Produktionsbeispiel:** Produktion: Validierung, Lokalisierung/Barrierefreiheit, deterministische Tests, Budgets, Wiederherstellung und Entwicklungs-/Release-Builds für Device recovery ergänzen.
+
+**Rhai-API:** `audio_play`, `audio_stop`, `audio_set_bus`
+
+**Visual-Graph-API:** `Audio/Play`, `Audio/Stop`
+
+<a id="audio-sample-accurate-cinematic-frame-boundaries"></a>
+
+### Sample-accurate cinematic frame boundaries
+
+**Klassifikation:** Manual · Runtime · Project-wide · Per-object · Reversible
+
+**Zweck und Einsatz:** Sample-accurate cinematic frame boundaries im Bereich Audio Studio erledigt die unterstützte Autoren- oder Laufzeitaufgabe direkt im Arbeitsbereich Animation / Debug. Verwenden, wenn das Projekt Sample-accurate cinematic frame boundaries benötigt; nicht zugehörige Einstellungen bleiben in ihrem zuständigen Arbeitsbereich.
+
+**Voraussetzungen:**
+
+- An imported audio asset
+
+**Exakter Ablauf:**
+
+1. Animation / Debug und danach Audio Studio öffnen.
+2. Sample-accurate cinematic frame boundaries wählen und vor der Bearbeitung sichtbare Validierung und Berechtigungen prüfen.
+3. Zielprojekt, Asset oder Objekt wählen und nur endliche, unterstützte Werte eingeben.
+4. Änderung anwenden oder speichern und sichtbares Ergebnis sowie Probleme/Konsole prüfen.
+5. Bei Laufzeitverhalten Play oder Vorschau starten; Pause/Einzelschritt für deterministische Prüfung verwenden.
+6. Projekt speichern, neu laden und den unveränderten Autorenwert bestätigen.
+7. Project Health und den passenden Test ausführen, Standalone-Player bauen und die sichtbare Prüfung wiederholen.
+
+**Erwartetes Ergebnis:** Sample-accurate cinematic frame boundaries ist im Editor sichtbar, bleibt nach dem Neuladen erhalten und erreicht gegebenenfalls Vorschau, Play und exportierte Player.
+
+**Speicherung und Export:** Sample-accurate cinematic frame boundaries wird im zuständigen Projekt, in Szene, Komponente, Asset, Arbeitsbereichseinstellung oder Build-Manifest gespeichert. Reine Editor-Daten gelangen nicht in Player.
+
+**Rückgängig und Wiederherstellung:** Für Dokumentänderungen Rückgängig/Wiederholen, für Importe oder Pakete Zurücksetzen/Rollback, bei unterbrochenen Speicherungen Recovery Browser und für projektweite Wiederherstellung Quellverwaltung oder Migrations-Backup verwenden.
+
+**Häufige Fehler und Lösungen:**
+
+- Sample-accurate cinematic frame boundaries mit falscher Auswahl oder im falschen Arbeitsbereich bearbeiten.
+- Berechtigungs-, Validierungs-, Referenz- oder Hostvorlagenwarnung ignorieren.
+- Nur die Editorvorschau prüfen, nicht Speichern/Neuladen und Standalone-Player.
+
+**Tastatur und Barrierefreiheit:** Command Palette oder Tastaturfokus statt reiner Zeigerbedienung verwenden. Dialoge besitzen Namen, sichtbaren Fokus, Escape/Abbrechen und reduzierte Bewegung.
+
+**Minimales Beispiel:** Minimal: ein gültiges Ziel erstellen, Sample-accurate cinematic frame boundaries konfigurieren, speichern und ein sichtbares Play-Ergebnis prüfen.
+
+**Produktionsbeispiel:** Produktion: Validierung, Lokalisierung/Barrierefreiheit, deterministische Tests, Budgets, Wiederherstellung und Entwicklungs-/Release-Builds für Sample-accurate cinematic frame boundaries ergänzen.
+
+**Rhai-API:** `audio_play`, `audio_stop`, `audio_set_bus`
+
+**Visual-Graph-API:** `Audio/Play`, `Audio/Stop`
+
+<a id="audio-production-media-build-validation"></a>
+
+### Production-media build validation
+
+**Klassifikation:** Manual · Runtime · Project-wide · Per-object · Reversible
+
+**Zweck und Einsatz:** Production-media build validation im Bereich Audio Studio erledigt die unterstützte Autoren- oder Laufzeitaufgabe direkt im Arbeitsbereich Animation / Debug. Verwenden, wenn das Projekt Production-media build validation benötigt; nicht zugehörige Einstellungen bleiben in ihrem zuständigen Arbeitsbereich.
+
+**Voraussetzungen:**
+
+- An imported audio asset
+
+**Exakter Ablauf:**
+
+1. Animation / Debug und danach Audio Studio öffnen.
+2. Production-media build validation wählen und vor der Bearbeitung sichtbare Validierung und Berechtigungen prüfen.
+3. Zielprojekt, Asset oder Objekt wählen und nur endliche, unterstützte Werte eingeben.
+4. Änderung anwenden oder speichern und sichtbares Ergebnis sowie Probleme/Konsole prüfen.
+5. Bei Laufzeitverhalten Play oder Vorschau starten; Pause/Einzelschritt für deterministische Prüfung verwenden.
+6. Projekt speichern, neu laden und den unveränderten Autorenwert bestätigen.
+7. Project Health und den passenden Test ausführen, Standalone-Player bauen und die sichtbare Prüfung wiederholen.
+
+**Erwartetes Ergebnis:** Production-media build validation ist im Editor sichtbar, bleibt nach dem Neuladen erhalten und erreicht gegebenenfalls Vorschau, Play und exportierte Player.
+
+**Speicherung und Export:** Production-media build validation wird im zuständigen Projekt, in Szene, Komponente, Asset, Arbeitsbereichseinstellung oder Build-Manifest gespeichert. Reine Editor-Daten gelangen nicht in Player.
+
+**Rückgängig und Wiederherstellung:** Für Dokumentänderungen Rückgängig/Wiederholen, für Importe oder Pakete Zurücksetzen/Rollback, bei unterbrochenen Speicherungen Recovery Browser und für projektweite Wiederherstellung Quellverwaltung oder Migrations-Backup verwenden.
+
+**Häufige Fehler und Lösungen:**
+
+- Production-media build validation mit falscher Auswahl oder im falschen Arbeitsbereich bearbeiten.
+- Berechtigungs-, Validierungs-, Referenz- oder Hostvorlagenwarnung ignorieren.
+- Nur die Editorvorschau prüfen, nicht Speichern/Neuladen und Standalone-Player.
+
+**Tastatur und Barrierefreiheit:** Command Palette oder Tastaturfokus statt reiner Zeigerbedienung verwenden. Dialoge besitzen Namen, sichtbaren Fokus, Escape/Abbrechen und reduzierte Bewegung.
+
+**Minimales Beispiel:** Minimal: ein gültiges Ziel erstellen, Production-media build validation konfigurieren, speichern und ein sichtbares Play-Ergebnis prüfen.
+
+**Produktionsbeispiel:** Produktion: Validierung, Lokalisierung/Barrierefreiheit, deterministische Tests, Budgets, Wiederherstellung und Entwicklungs-/Release-Builds für Production-media build validation ergänzen.
 
 **Rhai-API:** `audio_play`, `audio_stop`, `audio_set_bus`
 
@@ -13234,6 +13410,182 @@ Lernen durch echte Aufgaben. Jede öffentliche Funktion erklärt Zuständigkeit,
 **Minimales Beispiel:** Minimal: ein gültiges Ziel erstellen, Pixel-perfect and high-DPI rendering konfigurieren, speichern und ein sichtbares Play-Ergebnis prüfen.
 
 **Produktionsbeispiel:** Produktion: Validierung, Lokalisierung/Barrierefreiheit, deterministische Tests, Budgets, Wiederherstellung und Entwicklungs-/Release-Builds für Pixel-perfect and high-DPI rendering ergänzen.
+
+**Rhai-API:** N/A
+
+**Visual-Graph-API:** `Material and particle graph node catalogs`
+
+<a id="rendering-budgeted-texture-residency-and-idle-eviction"></a>
+
+### Budgeted texture residency and idle eviction
+
+**Klassifikation:** Manual · Assisted · Runtime · Project-wide · Reversible
+
+**Zweck und Einsatz:** Budgeted texture residency and idle eviction im Bereich Rendering Studio erledigt die unterstützte Autoren- oder Laufzeitaufgabe direkt im Arbeitsbereich Manage. Verwenden, wenn das Projekt Budgeted texture residency and idle eviction benötigt; nicht zugehörige Einstellungen bleiben in ihrem zuständigen Arbeitsbereich.
+
+**Voraussetzungen:**
+
+- Renderer-compatible scene content
+
+**Exakter Ablauf:**
+
+1. Manage und danach Rendering Studio öffnen.
+2. Budgeted texture residency and idle eviction wählen und vor der Bearbeitung sichtbare Validierung und Berechtigungen prüfen.
+3. Zielprojekt, Asset oder Objekt wählen und nur endliche, unterstützte Werte eingeben.
+4. Änderung anwenden oder speichern und sichtbares Ergebnis sowie Probleme/Konsole prüfen.
+5. Bei Laufzeitverhalten Play oder Vorschau starten; Pause/Einzelschritt für deterministische Prüfung verwenden.
+6. Projekt speichern, neu laden und den unveränderten Autorenwert bestätigen.
+7. Project Health und den passenden Test ausführen, Standalone-Player bauen und die sichtbare Prüfung wiederholen.
+
+**Erwartetes Ergebnis:** Budgeted texture residency and idle eviction ist im Editor sichtbar, bleibt nach dem Neuladen erhalten und erreicht gegebenenfalls Vorschau, Play und exportierte Player.
+
+**Speicherung und Export:** Budgeted texture residency and idle eviction wird im zuständigen Projekt, in Szene, Komponente, Asset, Arbeitsbereichseinstellung oder Build-Manifest gespeichert. Reine Editor-Daten gelangen nicht in Player.
+
+**Rückgängig und Wiederherstellung:** Für Dokumentänderungen Rückgängig/Wiederholen, für Importe oder Pakete Zurücksetzen/Rollback, bei unterbrochenen Speicherungen Recovery Browser und für projektweite Wiederherstellung Quellverwaltung oder Migrations-Backup verwenden.
+
+**Häufige Fehler und Lösungen:**
+
+- Budgeted texture residency and idle eviction mit falscher Auswahl oder im falschen Arbeitsbereich bearbeiten.
+- Berechtigungs-, Validierungs-, Referenz- oder Hostvorlagenwarnung ignorieren.
+- Nur die Editorvorschau prüfen, nicht Speichern/Neuladen und Standalone-Player.
+
+**Tastatur und Barrierefreiheit:** Command Palette oder Tastaturfokus statt reiner Zeigerbedienung verwenden. Dialoge besitzen Namen, sichtbaren Fokus, Escape/Abbrechen und reduzierte Bewegung.
+
+**Minimales Beispiel:** Minimal: ein gültiges Ziel erstellen, Budgeted texture residency and idle eviction konfigurieren, speichern und ein sichtbares Play-Ergebnis prüfen.
+
+**Produktionsbeispiel:** Produktion: Validierung, Lokalisierung/Barrierefreiheit, deterministische Tests, Budgets, Wiederherstellung und Entwicklungs-/Release-Builds für Budgeted texture residency and idle eviction ergänzen.
+
+**Rhai-API:** N/A
+
+**Visual-Graph-API:** `Material and particle graph node catalogs`
+
+<a id="rendering-unified-production-media-checklist"></a>
+
+### Unified production-media checklist
+
+**Klassifikation:** Manual · Assisted · Runtime · Project-wide · Reversible
+
+**Zweck und Einsatz:** Unified production-media checklist im Bereich Rendering Studio erledigt die unterstützte Autoren- oder Laufzeitaufgabe direkt im Arbeitsbereich Manage. Verwenden, wenn das Projekt Unified production-media checklist benötigt; nicht zugehörige Einstellungen bleiben in ihrem zuständigen Arbeitsbereich.
+
+**Voraussetzungen:**
+
+- Renderer-compatible scene content
+
+**Exakter Ablauf:**
+
+1. Manage und danach Rendering Studio öffnen.
+2. Unified production-media checklist wählen und vor der Bearbeitung sichtbare Validierung und Berechtigungen prüfen.
+3. Zielprojekt, Asset oder Objekt wählen und nur endliche, unterstützte Werte eingeben.
+4. Änderung anwenden oder speichern und sichtbares Ergebnis sowie Probleme/Konsole prüfen.
+5. Bei Laufzeitverhalten Play oder Vorschau starten; Pause/Einzelschritt für deterministische Prüfung verwenden.
+6. Projekt speichern, neu laden und den unveränderten Autorenwert bestätigen.
+7. Project Health und den passenden Test ausführen, Standalone-Player bauen und die sichtbare Prüfung wiederholen.
+
+**Erwartetes Ergebnis:** Unified production-media checklist ist im Editor sichtbar, bleibt nach dem Neuladen erhalten und erreicht gegebenenfalls Vorschau, Play und exportierte Player.
+
+**Speicherung und Export:** Unified production-media checklist wird im zuständigen Projekt, in Szene, Komponente, Asset, Arbeitsbereichseinstellung oder Build-Manifest gespeichert. Reine Editor-Daten gelangen nicht in Player.
+
+**Rückgängig und Wiederherstellung:** Für Dokumentänderungen Rückgängig/Wiederholen, für Importe oder Pakete Zurücksetzen/Rollback, bei unterbrochenen Speicherungen Recovery Browser und für projektweite Wiederherstellung Quellverwaltung oder Migrations-Backup verwenden.
+
+**Häufige Fehler und Lösungen:**
+
+- Unified production-media checklist mit falscher Auswahl oder im falschen Arbeitsbereich bearbeiten.
+- Berechtigungs-, Validierungs-, Referenz- oder Hostvorlagenwarnung ignorieren.
+- Nur die Editorvorschau prüfen, nicht Speichern/Neuladen und Standalone-Player.
+
+**Tastatur und Barrierefreiheit:** Command Palette oder Tastaturfokus statt reiner Zeigerbedienung verwenden. Dialoge besitzen Namen, sichtbaren Fokus, Escape/Abbrechen und reduzierte Bewegung.
+
+**Minimales Beispiel:** Minimal: ein gültiges Ziel erstellen, Unified production-media checklist konfigurieren, speichern und ein sichtbares Play-Ergebnis prüfen.
+
+**Produktionsbeispiel:** Produktion: Validierung, Lokalisierung/Barrierefreiheit, deterministische Tests, Budgets, Wiederherstellung und Entwicklungs-/Release-Builds für Unified production-media checklist ergänzen.
+
+**Rhai-API:** N/A
+
+**Visual-Graph-API:** `Material and particle graph node catalogs`
+
+<a id="rendering-deterministic-numbered-frame-capture"></a>
+
+### Deterministic numbered frame capture
+
+**Klassifikation:** Manual · Assisted · Runtime · Project-wide · Reversible
+
+**Zweck und Einsatz:** Deterministic numbered frame capture im Bereich Rendering Studio erledigt die unterstützte Autoren- oder Laufzeitaufgabe direkt im Arbeitsbereich Manage. Verwenden, wenn das Projekt Deterministic numbered frame capture benötigt; nicht zugehörige Einstellungen bleiben in ihrem zuständigen Arbeitsbereich.
+
+**Voraussetzungen:**
+
+- Renderer-compatible scene content
+
+**Exakter Ablauf:**
+
+1. Manage und danach Rendering Studio öffnen.
+2. Deterministic numbered frame capture wählen und vor der Bearbeitung sichtbare Validierung und Berechtigungen prüfen.
+3. Zielprojekt, Asset oder Objekt wählen und nur endliche, unterstützte Werte eingeben.
+4. Änderung anwenden oder speichern und sichtbares Ergebnis sowie Probleme/Konsole prüfen.
+5. Bei Laufzeitverhalten Play oder Vorschau starten; Pause/Einzelschritt für deterministische Prüfung verwenden.
+6. Projekt speichern, neu laden und den unveränderten Autorenwert bestätigen.
+7. Project Health und den passenden Test ausführen, Standalone-Player bauen und die sichtbare Prüfung wiederholen.
+
+**Erwartetes Ergebnis:** Deterministic numbered frame capture ist im Editor sichtbar, bleibt nach dem Neuladen erhalten und erreicht gegebenenfalls Vorschau, Play und exportierte Player.
+
+**Speicherung und Export:** Deterministic numbered frame capture wird im zuständigen Projekt, in Szene, Komponente, Asset, Arbeitsbereichseinstellung oder Build-Manifest gespeichert. Reine Editor-Daten gelangen nicht in Player.
+
+**Rückgängig und Wiederherstellung:** Für Dokumentänderungen Rückgängig/Wiederholen, für Importe oder Pakete Zurücksetzen/Rollback, bei unterbrochenen Speicherungen Recovery Browser und für projektweite Wiederherstellung Quellverwaltung oder Migrations-Backup verwenden.
+
+**Häufige Fehler und Lösungen:**
+
+- Deterministic numbered frame capture mit falscher Auswahl oder im falschen Arbeitsbereich bearbeiten.
+- Berechtigungs-, Validierungs-, Referenz- oder Hostvorlagenwarnung ignorieren.
+- Nur die Editorvorschau prüfen, nicht Speichern/Neuladen und Standalone-Player.
+
+**Tastatur und Barrierefreiheit:** Command Palette oder Tastaturfokus statt reiner Zeigerbedienung verwenden. Dialoge besitzen Namen, sichtbaren Fokus, Escape/Abbrechen und reduzierte Bewegung.
+
+**Minimales Beispiel:** Minimal: ein gültiges Ziel erstellen, Deterministic numbered frame capture konfigurieren, speichern und ein sichtbares Play-Ergebnis prüfen.
+
+**Produktionsbeispiel:** Produktion: Validierung, Lokalisierung/Barrierefreiheit, deterministische Tests, Budgets, Wiederherstellung und Entwicklungs-/Release-Builds für Deterministic numbered frame capture ergänzen.
+
+**Rhai-API:** N/A
+
+**Visual-Graph-API:** `Material and particle graph node catalogs`
+
+<a id="rendering-balanced-and-low-end-semantic-parity"></a>
+
+### Balanced and low-end semantic parity
+
+**Klassifikation:** Manual · Assisted · Runtime · Project-wide · Reversible
+
+**Zweck und Einsatz:** Balanced and low-end semantic parity im Bereich Rendering Studio erledigt die unterstützte Autoren- oder Laufzeitaufgabe direkt im Arbeitsbereich Manage. Verwenden, wenn das Projekt Balanced and low-end semantic parity benötigt; nicht zugehörige Einstellungen bleiben in ihrem zuständigen Arbeitsbereich.
+
+**Voraussetzungen:**
+
+- Renderer-compatible scene content
+
+**Exakter Ablauf:**
+
+1. Manage und danach Rendering Studio öffnen.
+2. Balanced and low-end semantic parity wählen und vor der Bearbeitung sichtbare Validierung und Berechtigungen prüfen.
+3. Zielprojekt, Asset oder Objekt wählen und nur endliche, unterstützte Werte eingeben.
+4. Änderung anwenden oder speichern und sichtbares Ergebnis sowie Probleme/Konsole prüfen.
+5. Bei Laufzeitverhalten Play oder Vorschau starten; Pause/Einzelschritt für deterministische Prüfung verwenden.
+6. Projekt speichern, neu laden und den unveränderten Autorenwert bestätigen.
+7. Project Health und den passenden Test ausführen, Standalone-Player bauen und die sichtbare Prüfung wiederholen.
+
+**Erwartetes Ergebnis:** Balanced and low-end semantic parity ist im Editor sichtbar, bleibt nach dem Neuladen erhalten und erreicht gegebenenfalls Vorschau, Play und exportierte Player.
+
+**Speicherung und Export:** Balanced and low-end semantic parity wird im zuständigen Projekt, in Szene, Komponente, Asset, Arbeitsbereichseinstellung oder Build-Manifest gespeichert. Reine Editor-Daten gelangen nicht in Player.
+
+**Rückgängig und Wiederherstellung:** Für Dokumentänderungen Rückgängig/Wiederholen, für Importe oder Pakete Zurücksetzen/Rollback, bei unterbrochenen Speicherungen Recovery Browser und für projektweite Wiederherstellung Quellverwaltung oder Migrations-Backup verwenden.
+
+**Häufige Fehler und Lösungen:**
+
+- Balanced and low-end semantic parity mit falscher Auswahl oder im falschen Arbeitsbereich bearbeiten.
+- Berechtigungs-, Validierungs-, Referenz- oder Hostvorlagenwarnung ignorieren.
+- Nur die Editorvorschau prüfen, nicht Speichern/Neuladen und Standalone-Player.
+
+**Tastatur und Barrierefreiheit:** Command Palette oder Tastaturfokus statt reiner Zeigerbedienung verwenden. Dialoge besitzen Namen, sichtbaren Fokus, Escape/Abbrechen und reduzierte Bewegung.
+
+**Minimales Beispiel:** Minimal: ein gültiges Ziel erstellen, Balanced and low-end semantic parity konfigurieren, speichern und ein sichtbares Play-Ergebnis prüfen.
+
+**Produktionsbeispiel:** Produktion: Validierung, Lokalisierung/Barrierefreiheit, deterministische Tests, Budgets, Wiederherstellung und Entwicklungs-/Release-Builds für Balanced and low-end semantic parity ergänzen.
 
 **Rhai-API:** N/A
 
@@ -18374,5 +18726,55 @@ Lernen durch echte Aufgaben. Jede öffentliche Funktion erklärt Zuständigkeit,
 **Rhai-API:** N/A
 
 **Visual-Graph-API:** N/A
+
+
+<a id="v2608-device-mobile-accessibility"></a>
+
+## Touch-, Gamepad-, Mobile- und Barrierefreiheits-Ablauf
+
+Ein codefreies Spiel bleibt über Desktop, Touch, Controller, sicheren Bereich und assistive Technik steuerbar.
+
+1. Einstellungen → Geräte & mobile Eingabe öffnen. Mobile Hoch-/Querformat wählen, drehen und sicheren Bereich sowie 44 × 44-Ziel prüfen.
+2. Virtuelle Steuerung aktivieren: Stick/Steuerkreuz einer Vektor-/Achsenaktion und Taste einer Button-Aktion zuordnen; Anker, Versatz, Größe, Deckkraft und Haptik setzen. Alle speisen dieselbe Input Map.
+3. Einen Stift an Druck, Neigung X/Y, Drehung, Spitze, Seitentaste und Radierer binden. Im Eingabe-Test jede Achse prüfen; bei Zeigerabbruch, Fokusverlust und ausgeblendeter Seite müssen alle gehaltenen Stiftzustände freigegeben werden.
+4. Im Gamepad eine Belegung erfassen und Achsenminimum, Mitte, Maximum, Totzone sowie Umkehrung kalibrieren. Aufzeichnen/Wiedergeben und Speichern/Laden prüfen. Sensoren benötigen Aktivierung und ausdrückliche Berechtigungsanfrage.
+5. Präsentation → Barrierefreiheit öffnen. Mit Tastatur/Gamepad traversieren, Rolle/Name/Zustand/Wert/Live-Daten prüfen, semantischen Snapshot exportieren und Kontrast, reduzierte Bewegung, RTL, EN/DE/ZH sowie 200–400 % Text testen.
+6. Für Android das optionale geprüfte Paket aktivieren. JDK 17, SDK/API 35, Build-Tools, NDK, adb und Vorlage erkennen; nur begründete Berechtigungen auswählen und sensible Zwecke angeben.
+7. APK nur bei bereitem Toolchain-Status bauen. Release-Passwörter/Alias bleiben in Umgebungsvariablen. Geräteaktualisierung, Installation und Logcat erfordern getrennte Klicks; iOS bleibt Matching-Host/verschoben.
+
+**Rückgängig und Wiederherstellung:** Synthetische Mausereignisse nach Touch werden entfernt und Abbruch/Fokusverlust löst Steuerungen. Ungültige Kalibrierung, Berechtigungen, IDs, Pfade, APKs, Seriennummern, Toolchains und Gradle-Ausgaben scheitern sichtbar; keine Geheimnisse oder impliziten Geräteaktionen.
+
+
+<a id="v2609-large-world-performance"></a>
+
+## Großwelt- und Low-End-Leistungsablauf
+
+Ein Projekt mit 10.000–100.000 Objekten messen und abstimmen, ohne Physik, Effekte, Bedienelemente oder Exportverhalten zu verändern.
+
+1. Debug → Profiler → Trace öffnen. Kalt-/Warmstart, Main-Thread, Worker, Queue, Cache, Allokationen, langsamsten Frame, 1%-Minimum und Eingabe-bis-Pixel vor Änderungen aufzeichnen.
+2. Adaptive Darstellungsqualität aktivieren und begrenzte Hintergrund-, Streaming-, Befehls-, Messwert- und Raumzellenbudgets setzen. Nur Pixeldichte/Partikelbudget ändern sich; Physik, Skripte, Animation und Autorendaten nicht.
+3. Das 26.09-Großweltprojekt öffnen. Hierarchie/Assets suchen, während Navigation/Streaming auswählen und ziehen, Arbeitsbereiche wechseln und Virtualisierung sowie Abbruch veralteter Ergebnisse prüfen.
+4. Unter Jobs Worker und lokalen Rückfall vergleichen. Animationssampling, Partikelschritt und Raumgitter müssen identisch sein; ersetzte Generationen werden verworfen.
+5. Im Team-Workflow einen Change-List-Basisstand erzeugen, dieselbe Szene, denselben Quelltext und dieselbe Visual-Graph-Identität auf zwei Seiten ändern und den Drei-Wege-Merge prüfen. Löschen, Umordnen, veraltete Generationen und echte Konflikte müssen sichtbar und verlustfrei bleiben.
+6. 10k-, 50k- und 100k-Fixtures ausführen. Prüfsummen, deterministische Reihenfolge, Fixed-Step-Ausgabe, 1%-Minimum und Speichertrend vergleichen; speichern/laden und Player bauen.
+7. Bei Budgetüberschreitung nur nach Messung Präsentations- und Hintergrundbudgets ändern. Keine Bedienung/Effekte entfernen oder Fixed-Step senken.
+
+**Rückgängig und Wiederherstellung:** Hintergrundarbeit abbrechen oder Standardwerte wiederherstellen. Worker-Fehler nutzen den begrenzten lokalen Pfad; veraltete Ergebnisse werden verworfen und Streaming später fortgesetzt.
+
+
+<a id="v2610-stable-platform"></a>
+
+## Nova_A 26.10: Ablauf der stabilen Creator-Plattform
+
+Mit diesem Ablauf ein vollständiges Projekt lernen, migrieren, prüfen und ausliefern, ohne stabile Verträge oder externe Grenzen zu verbergen.
+
+1. Verwalten → Lernzentrum → Plattformbereitschaft öffnen. Die gewünschte Funktion suchen und Bindung, Validierung, Rückgängig, Speicherung, Laufzeit/Export, Dokumentation und Tests prüfen. Kreis bedeutet nicht anwendbar; Strich bedeutet externe Evidenz.
+2. Mit einem geführten Projekt oder creator-v2610-mixed-game beginnen. Voraussetzungen, exakte Schritte, Ergebnis, Speichern/Laden, Rückgängig/Wiederherstellung, Play/Step, Standalone-Build und Barrierefreiheit der Reihe nach prüfen.
+3. Beim Öffnen eines 6.x-Projekts zuerst die Migrationsvorschau lesen. Quell-/Zielversion, semantischen Diff, Backup und deterministische Prüfsumme prüfen. Der 26.10-Siegel ändert nur die Obergrenze auf <27.0.0 und keine Schema-29-Spieldaten.
+4. Rhai oder Visual Graph bearbeiten, speichern, die synchronisierte Gegenseite und Paritätstests prüfen. Nicht unterstütztes Rhai bleibt verlustfrei im Code-Block. Vor Runtime-Aufrufen API-Browser oder docs/API_SDK_26_10.md verwenden.
+5. Projektzustand, Vorlagen/Referenzen und Build-Validierung ausführen. Windows unter Windows und Web lokal bauen. Linux/macOS benötigen Matching Host, Android ist experimentell/toolchain-gebunden, iOS/Konsolen sind verschoben.
+6. Tastatur und Zeiger auf Englisch, Deutsch und Chinesisch bei 100–200 %, hohem Kontrast und reduzierter Bewegung prüfen. Speichern, neu öffnen, einen absichtlich falschen Wert beheben und elf Release-Dateien kontrollieren.
+
+**Rückgängig und Wiederherstellung:** Bei unerwarteter Vorschau abbrechen oder Backup wiederherstellen. Dokumentänderungen rückgängig machen, Recovery Browser nach unterbrochenem Speichern verwenden, fehlerhafte Pakete/Plugins deaktivieren und den letzten gültigen Build behalten. docs/TROUBLESHOOTING_26_10.md erklärt die Fehlerbehebung. Externe Nachweise bleiben offen.
 
 <!-- NOVA_V6_TEACHING_END -->

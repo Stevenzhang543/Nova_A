@@ -3,8 +3,12 @@ import { createHash } from 'node:crypto'
 import { spawn } from 'node:child_process'
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { basename, dirname, extname, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
 
-const ENGINE_VERSION = '5.0.1', PROJECT_SCHEMA = 29, CLI_VERSION = 1
+const REPOSITORY_ROOT = dirname(dirname(fileURLToPath(import.meta.url)))
+const PACKAGE_AUTHORITY = JSON.parse(await readFile(resolve(REPOSITORY_ROOT, 'package.json'), 'utf8'))
+const ENGINE_VERSION = String(PACKAGE_AUTHORITY.version ?? ''), PROJECT_SCHEMA = 29, CLI_VERSION = 1
+if (!/^\d+\.\d+\.\d+$/.test(ENGINE_VERSION)) throw new Error('package.json does not contain a valid three-part Nova_A machine version')
 const commands = new Set(['validate', 'import', 'test', 'script-test', 'build', 'export', 'package', 'version'])
 
 function parse(values) {

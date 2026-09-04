@@ -1,5 +1,7 @@
 # Compatibility and migration policy
 
+Nova_A 26.10 writes engine version 26.10.0 with Project Format 2/schema 29 and accepts every publicly supported schema from 5 through 29. The 2026 calendar cycle is additive: platform input, performance, collaboration, readiness and documentation data use existing extensible routes and do not widen a frozen format or API. Reviewed legacy projects retain the `<27.0.0` calendar-cycle ceiling and the same preview, backup, semantic-diff, validation, canonical-reparse and rollback workflow. The 7.0 record below remains the historical origin of the frozen schema-29 creator-platform contract.
+
 Nova_A 7.0.0 writes Project Format 2, schema 29, engine version 7.0.0. It accepts every publicly supported schema from 5 through 29. Schema 29 remains frozen; 7.0 seals reviewed historical `<4.0.0`, `<5.0.0`, `<6.0.0`, and `<7.0.0` boundaries to the 7.x `<8.0.0` contract without adding schema fields. Migration preview, complete backup, deterministic double run, semantic diff, validation, canonical reparse, and rollback remain mandatory. Collision bits/masks, scripts/graphs, presentation, strokes, assets, packages, optional data, and compatible unknown fields are preserved.
 
 Import is transactional:

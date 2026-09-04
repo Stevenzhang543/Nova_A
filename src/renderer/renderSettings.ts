@@ -17,6 +17,8 @@ export interface PostProcessValues {
 export interface PostProcessPreset2D { id: string; name: string; values: PostProcessValues }
 export interface PostProcessVolume2D { id: string; name: string; enabled: boolean; center: { x: number; y: number }; size: { x: number; y: number }; blendDistance: number; priority: number; presetId: string }
 export interface RenderQualityVolume2D { id: string; name: string; enabled: boolean; center: { x: number; y: number }; size: { x: number; y: number }; priority: number; preset: RenderQualityPreset; maximumPixelRatio: number | null; particleBudget: number | null; shadowQuality: ShadowQuality | null }
+export interface TextureStreamingSettings { enabled: boolean; memoryBudgetMb: number; idleFrames: number; uploadBudgetPerFrame: number; preloadMargin: number }
+export interface DeterministicCaptureSettings { frameRate: number; sampleRate: number; maximumFrames: number; memoryBudgetMb: number; includeUi: boolean }
 
 export interface RenderingSettings {
   rendererPath: 'Auto' | 'Native' | 'Compatibility'
@@ -38,6 +40,8 @@ export interface RenderingSettings {
   pixelSnap: boolean
   maximumPixelRatio: number
   particleBudget: number
+  textureStreaming: TextureStreamingSettings
+  deterministicCapture: DeterministicCaptureSettings
   budgets: { drawCalls: number; textureMemoryMb: number; overdraw: number; gpuMs: number; particleMs: number }
 }
 
@@ -57,6 +61,8 @@ export const DEFAULT_RENDERING_SETTINGS: RenderingSettings = {
     { id: 'pixel', name: 'Pixel crisp', values: { exposure: 0, contrast: 1.08, saturation: 1, vignette: 0, bloom: 0, blur: 0, userMaterial: null } }
   ], volumes: [] },
   debugView: 'None', pixelSnap: false, maximumPixelRatio: 2, particleBudget: 10_000,
+  textureStreaming: { enabled: true, memoryBudgetMb: 256, idleFrames: 600, uploadBudgetPerFrame: 16, preloadMargin: 1.5 },
+  deterministicCapture: { frameRate: 60, sampleRate: 48_000, maximumFrames: 300, memoryBudgetMb: 128, includeUi: true },
   budgets: { drawCalls: 500, textureMemoryMb: 256, overdraw: 4, gpuMs: 8, particleMs: 2 }
 }
 
@@ -84,6 +90,8 @@ export function normalizeRenderingSettings(value: unknown): RenderingSettings {
   const source = value && typeof value === 'object' ? value as Record<string, unknown> : {}
   const post = source.postProcessing && typeof source.postProcessing === 'object' ? source.postProcessing as Record<string, unknown> : {}
   const budgets = source.budgets && typeof source.budgets === 'object' ? source.budgets as Record<string, unknown> : {}
+  const textureStreaming = source.textureStreaming && typeof source.textureStreaming === 'object' ? source.textureStreaming as Record<string, unknown> : {}
+  const deterministicCapture = source.deterministicCapture && typeof source.deterministicCapture === 'object' ? source.deterministicCapture as Record<string, unknown> : {}
   const shadowQuality = ['Off', 'Hard', 'Soft', 'Ultra'].includes(String(source.shadowQuality)) ? source.shadowQuality as ShadowQuality : DEFAULT_RENDERING_SETTINGS.shadowQuality
   const debugView = ['None', 'Overdraw', 'BatchBreaks', 'Lighting', 'Normals'].includes(String(source.debugView)) ? source.debugView as RenderDebugView : 'None'
   const qualityPreset = ['Performance', 'Balanced', 'High', 'Ultra', 'PixelArt'].includes(String(source.qualityPreset)) ? source.qualityPreset as RenderQualityPreset : 'Balanced'
@@ -117,6 +125,20 @@ export function normalizeRenderingSettings(value: unknown): RenderingSettings {
     pixelSnap: source.pixelSnap === true,
     maximumPixelRatio: finite(source.maximumPixelRatio, 2, 1, 4),
     particleBudget: Math.round(finite(source.particleBudget, 10_000, 100, 100_000)),
+    textureStreaming: {
+      enabled: textureStreaming.enabled !== false,
+      memoryBudgetMb: finite(textureStreaming.memoryBudgetMb, finite(budgets.textureMemoryMb, 256, 1, 65_536), 16, 65_536),
+      idleFrames: Math.round(finite(textureStreaming.idleFrames, 600, 2, 36_000)),
+      uploadBudgetPerFrame: Math.round(finite(textureStreaming.uploadBudgetPerFrame, 16, 1, 4_096)),
+      preloadMargin: finite(textureStreaming.preloadMargin, 1.5, 1, 8)
+    },
+    deterministicCapture: {
+      frameRate: Math.round(finite(deterministicCapture.frameRate, 60, 1, 240)),
+      sampleRate: Math.round(finite(deterministicCapture.sampleRate, 48_000, 8_000, 192_000)),
+      maximumFrames: Math.round(finite(deterministicCapture.maximumFrames, 300, 1, 18_000)),
+      memoryBudgetMb: finite(deterministicCapture.memoryBudgetMb, 128, 16, 2_048),
+      includeUi: deterministicCapture.includeUi !== false
+    },
     budgets: { drawCalls: Math.round(finite(budgets.drawCalls, 500, 1, 100_000)), textureMemoryMb: finite(budgets.textureMemoryMb, 256, 1, 65_536), overdraw: finite(budgets.overdraw, 4, 1, 128), gpuMs: finite(budgets.gpuMs, 8, .1, 100), particleMs: finite(budgets.particleMs, 2, .05, 100) }
   }
 }
@@ -184,9 +206,9 @@ export function advancedRenderingActive(): boolean {
 
 export function applyQualityPreset(preset: RenderQualityPreset): void {
   renderingSettings.qualityPreset = preset
-  if (preset === 'Performance') { Object.assign(renderingSettings, { shadowQuality: 'Off', maximumPixelRatio: 1, particleBudget: 2_500, pixelSnap: false }); Object.assign(renderingSettings.postProcessing, { enabled: false, bloom: 0, blur: 0 }) }
-  else if (preset === 'Balanced') Object.assign(renderingSettings, { shadowQuality: 'Soft', maximumPixelRatio: 1.5, particleBudget: 10_000, pixelSnap: false })
-  else if (preset === 'High') Object.assign(renderingSettings, { shadowQuality: 'Soft', maximumPixelRatio: 2, particleBudget: 25_000, pixelSnap: false })
-  else if (preset === 'Ultra') Object.assign(renderingSettings, { shadowQuality: 'Ultra', maximumPixelRatio: 3, particleBudget: 50_000, pixelSnap: false })
-  else if (preset === 'PixelArt') Object.assign(renderingSettings, { shadowQuality: 'Hard', maximumPixelRatio: 1, particleBudget: 10_000, pixelSnap: true, colorSpace: 'sRGB' })
+  if (preset === 'Performance') { Object.assign(renderingSettings, { shadowQuality: 'Off', maximumPixelRatio: 1, particleBudget: 2_500, pixelSnap: false }); Object.assign(renderingSettings.textureStreaming, { enabled: true, memoryBudgetMb: 96, idleFrames: 180, uploadBudgetPerFrame: 6 }); Object.assign(renderingSettings.postProcessing, { enabled: false, bloom: 0, blur: 0 }) }
+  else if (preset === 'Balanced') { Object.assign(renderingSettings, { shadowQuality: 'Soft', maximumPixelRatio: 1.5, particleBudget: 10_000, pixelSnap: false }); Object.assign(renderingSettings.textureStreaming, { enabled: true, memoryBudgetMb: 256, idleFrames: 600, uploadBudgetPerFrame: 16 }) }
+  else if (preset === 'High') { Object.assign(renderingSettings, { shadowQuality: 'Soft', maximumPixelRatio: 2, particleBudget: 25_000, pixelSnap: false }); Object.assign(renderingSettings.textureStreaming, { enabled: true, memoryBudgetMb: 512, idleFrames: 1_200, uploadBudgetPerFrame: 32 }) }
+  else if (preset === 'Ultra') { Object.assign(renderingSettings, { shadowQuality: 'Ultra', maximumPixelRatio: 3, particleBudget: 50_000, pixelSnap: false }); Object.assign(renderingSettings.textureStreaming, { enabled: true, memoryBudgetMb: 1_024, idleFrames: 2_400, uploadBudgetPerFrame: 64 }) }
+  else if (preset === 'PixelArt') { Object.assign(renderingSettings, { shadowQuality: 'Hard', maximumPixelRatio: 1, particleBudget: 10_000, pixelSnap: true, colorSpace: 'sRGB' }); Object.assign(renderingSettings.textureStreaming, { enabled: true, memoryBudgetMb: 192, idleFrames: 600, uploadBudgetPerFrame: 16 }) }
 }

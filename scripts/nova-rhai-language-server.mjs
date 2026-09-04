@@ -2,8 +2,10 @@
 import { createInterface } from 'node:readline'
 import { createServer } from 'vite'
 import { readFile, writeFile } from 'node:fs/promises'
-import { resolve } from 'node:path'
+import { dirname, join, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
 
+const repositoryRoot=dirname(dirname(fileURLToPath(import.meta.url))),machineVersion=String(JSON.parse(await readFile(join(repositoryRoot,'package.json'),'utf8')).version??''),versionParts=machineVersion.split('.'),releaseName=versionParts.length===3?`${versionParts[0]}.${versionParts[1].padStart(2,'0')}${versionParts[2]==='0'?'':`.${versionParts[2]}`}`:machineVersion
 const vite=await createServer({server:{middlewareMode:true},appType:'custom',logLevel:'silent'}),language=await vite.ssrLoadModule('/src/editor/scriptLanguage.ts'),index=new language.ScriptWorkspaceIndex(),documents=new Map(),cancelled=new Set()
 const legacy=process.argv.includes('--legacy-jsonl'),indexArgument=process.argv.indexOf('--index'),indexPath=indexArgument>=0&&process.argv[indexArgument+1]?resolve(process.argv[indexArgument+1]):null
 if(indexPath)try{index.restore(await readFile(indexPath,'utf8'))}catch{/* A missing/corrupt cache is rebuilt from client documents. */}
@@ -20,7 +22,7 @@ const saveIndex=async()=>{if(indexPath)await writeFile(indexPath,`${index.snapsh
 
 async function standardResult(request){
   const method=request.method,params=request.params??{},uri=uriOf(params),document=documents.get(uri)??index.document(uri),source=document?.source??document?.text??''
-  if(method==='initialize')return{capabilities:{positionEncoding:'utf-16',textDocumentSync:{openClose:true,change:1,save:{includeText:true}},completionProvider:{triggerCharacters:['.','_']},hoverProvider:true,signatureHelpProvider:{triggerCharacters:['(',',']},definitionProvider:true,referencesProvider:true,renameProvider:{prepareProvider:true},documentSymbolProvider:true,workspaceSymbolProvider:true,documentFormattingProvider:true,codeActionProvider:true,diagnosticProvider:{identifier:'nova-rhai',interFileDependencies:true,workspaceDiagnostics:true},experimental:{novaTypeAnalysis:true,novaModuleDiagnostics:true,novaStatementMap:true}},serverInfo:{name:'Nova Rhai Language Server',version:'26.04'}}
+  if(method==='initialize')return{capabilities:{positionEncoding:'utf-16',textDocumentSync:{openClose:true,change:1,save:{includeText:true}},completionProvider:{triggerCharacters:['.','_']},hoverProvider:true,signatureHelpProvider:{triggerCharacters:['(',',']},definitionProvider:true,referencesProvider:true,renameProvider:{prepareProvider:true},documentSymbolProvider:true,workspaceSymbolProvider:true,documentFormattingProvider:true,codeActionProvider:true,diagnosticProvider:{identifier:'nova-rhai',interFileDependencies:true,workspaceDiagnostics:true},experimental:{novaTypeAnalysis:true,novaModuleDiagnostics:true,novaStatementMap:true}},serverInfo:{name:'Nova Rhai Language Server',version:releaseName}}
   if(method==='shutdown'){await saveIndex();return null}
   if(method==='textDocument/completion')return language.completionDetails(prefixAt(source,params.position),index.document(uri)?.analysis).map(item=>({label:item.label,kind:3,detail:item.detail,documentation:{kind:'markdown',value:item.documentation},insertText:item.insertText,tags:item.deprecated?[1]:[]}))
   if(method==='textDocument/hover'){const value=language.hoverInfo(wordAt(source,params.position),index.document(uri)?.analysis);return value?{contents:{kind:'markdown',value:`\`${value.signature}\`\n\n${value.documentation}`}}:null}

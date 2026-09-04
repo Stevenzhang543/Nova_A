@@ -8,6 +8,7 @@ import { preview } from 'vite'
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)))
 const qualificationVersion = process.env.NOVA_LAYOUT_VERSION || '3.3.0'
+const qualificationEngineVersion = process.env.NOVA_LAYOUT_ENGINE_VERSION || qualificationVersion
 const qualificationTag = qualificationVersion.split('.').slice(0, 2).join('.')
 const [qualificationMajor, qualificationMinor] = qualificationVersion.split('.').map(Number)
 const isV41 = qualificationMajor > 4 || (qualificationMajor === 4 && qualificationMinor >= 1)
@@ -17,7 +18,7 @@ const requiredViewports = String(process.env.NOVA_LAYOUT_REQUIRED_VIEWPORTS ?? '
   const [width, height] = value.split('x').map(Number)
   return Number.isFinite(width) && Number.isFinite(height) ? [width, height] : null
 }).filter(Boolean)
-const requiredScales = String(process.env.NOVA_LAYOUT_REQUIRED_SCALES ?? '1').split(',').map(Number).filter(value => Number.isFinite(value) && value >= 1 && value <= 2)
+const requiredScales = String(process.env.NOVA_LAYOUT_REQUIRED_SCALES ?? '1').split(',').map(Number).filter(value => Number.isFinite(value) && value >= 0.8 && value <= 2)
 const requiredTextPattern = process.env.NOVA_LAYOUT_REQUIRED_TEXT ? new RegExp(process.env.NOVA_LAYOUT_REQUIRED_TEXT, 'i') : null
 const requiredManageIndex = Math.max(0, Number.parseInt(process.env.NOVA_LAYOUT_REQUIRED_MANAGE_INDEX ?? '2', 10) || 0)
 const requiredWorkspaceIndex = process.env.NOVA_LAYOUT_REQUIRED_WORKSPACE_INDEX === undefined ? null : Math.max(0, Number.parseInt(process.env.NOVA_LAYOUT_REQUIRED_WORKSPACE_INDEX, 10) || 0)
@@ -215,7 +216,7 @@ try {
   const controlsPassed = !isV41 || stableControls.length > 0 && controlIds.size === stableControls.length && stableControls.every(item => item.testId && item.surface && item.label && (!item.disabled || item.disabledReason))
   results.push({name:'Stable control inventory',status:controlsPassed?'passed':'failed',detail:{count:stableControls.length,unique:controlIds.size}})
   results.push({ name: 'Browser console and fatal surface', status: seriousConsoleErrors.length === 0 && !await evaluate(client, "Boolean(document.querySelector('.error-recovery,[data-fatal=true]'))") ? 'passed' : 'failed', detail: JSON.stringify(seriousConsoleErrors) })
-  const report = { format: `nova-v${qualificationVersion}-layout-qualification`, version: 1, engineVersion: qualificationVersion, generatedAt: new Date().toISOString(), browser: browser.product, languages: ['en','de','zh'], matrix:requiredMatrix.length?requiredMatrix:isV41?{viewports:['1366x768','1920x1080','2560x1440','3840x2160'],scales:[100,125,150,175,200],catalogs:['SHELL','LCH','HLT','BLD']}:undefined,requiredTextResults,stableControls,screenshots,results,consoleErrors: seriousConsoleErrors }
+  const report = { format: `nova-v${qualificationVersion}-layout-qualification`, version: 1, release: qualificationVersion, engineVersion: qualificationEngineVersion, generatedAt: new Date().toISOString(), browser: browser.product, languages: ['en','de','zh'], matrix:requiredMatrix.length?requiredMatrix:isV41?{viewports:['1366x768','1920x1080','2560x1440','3840x2160'],scales:[100,125,150,175,200],catalogs:['SHELL','LCH','HLT','BLD']}:undefined,requiredTextResults,stableControls,screenshots,results,consoleErrors: seriousConsoleErrors }
   report.status = results.every(result => result.status === 'passed') ? 'passed' : 'failed'
   if (requiredMatrix.length && !requiredMatrix.every(result => result.status === 'passed')) report.status = 'failed'
   if (requiredTextResults.some(result => result.status !== 'passed')) report.status = 'failed'

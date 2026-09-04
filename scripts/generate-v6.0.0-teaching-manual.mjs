@@ -5,8 +5,19 @@ import { createServer } from 'vite'
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)))
 const engineVersion = process.argv.find(argument => argument.startsWith('--engine-version='))?.split('=')[1] || '6.0.0'
-const server = await createServer({ root, server: { middlewareMode: true, hmr: false }, appType: 'custom' })
+const publicRelease = new Map([['26.8.0', '26.08'], ['26.9.0', '26.09'], ['26.10.0', '26.10']]).get(engineVersion) ?? engineVersion
+const server = await createServer({
+  root,
+  server: { middlewareMode: true, hmr: false },
+  appType: 'custom',
+  // This script only asks Vite to load one server-side TypeScript module. Disable
+  // the client dependency crawl so it cannot still be scanning when the short-
+  // lived server closes after the manuals have been written.
+  optimizeDeps: { noDiscovery: true },
+})
 const escapeHtml = value => String(value).replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;')
+const legacyTeachingStyle = `.v6-manual{padding:0 24px 40px}.v6-panel{margin:24px 0}.v6-guide{border:1px solid var(--line);border-radius:14px;margin:8px 0;background:var(--panel)}.v6-guide summary{display:flex;justify-content:space-between;gap:16px;padding:14px;cursor:pointer}.v6-guide summary span{font-size:12px;color:var(--muted);text-align:end}.v6-guide>div{padding:0 16px 16px}.v6-guide h3{font-size:14px;margin:16px 0 6px}@media(max-width:760px){.v6-manual{padding:0 12px 28px}.v6-guide summary{align-items:flex-start;flex-direction:column}}@media(prefers-reduced-motion:reduce){.v6-guide{scroll-behavior:auto}}`
+const teachingStyle = `/* NOVA_V6_TEACHING_STYLE_START */${legacyTeachingStyle}/* NOVA_V6_TEACHING_STYLE_END */`
 async function writeReliable(path, value) {
   let lastError
   for (let attempt = 0; attempt < 5; attempt++) {
@@ -20,7 +31,7 @@ const labels = {
   de: { heading: 'Nova_A 6.0 aufgabenorientiertes Lehrhandbuch', intro: 'Lernen durch echte Aufgaben. Jede öffentliche Funktion erklärt Zuständigkeit, Speicherung, Wiederherstellung, Barrierefreiheit und Release-Verhalten.', class: 'Klassifikation', purpose: 'Zweck und Einsatz', pre: 'Voraussetzungen', steps: 'Exakter Ablauf', result: 'Erwartetes Ergebnis', persist: 'Speicherung und Export', undo: 'Rückgängig und Wiederherstellung', mistakes: 'Häufige Fehler und Lösungen', a11y: 'Tastatur und Barrierefreiheit', minimal: 'Minimales Beispiel', production: 'Produktionsbeispiel', rhai: 'Rhai-API', graph: 'Visual-Graph-API', guided: 'Vollständige geführte Projekte' },
   'zh-CN': { heading: 'Nova_A 6.0 任务式教学手册', intro: '通过完成真实任务学习。以下每个公开功能均说明归属、持久化、恢复、无障碍和发布行为。', class: '分类', purpose: '用途和使用时机', pre: '前提条件', steps: '准确操作流程', result: '预期结果', persist: '持久化和导出', undo: '撤销和恢复', mistakes: '常见错误和修复', a11y: '键盘和无障碍', minimal: '最小示例', production: '生产示例', rhai: 'Rhai API', graph: '可视化图 API', guided: '完整引导项目' }
 }
-for (const copy of Object.values(labels)) copy.heading = copy.heading.replace('6.0', engineVersion)
+for (const copy of Object.values(labels)) copy.heading = copy.heading.replace('6.0', publicRelease)
 const v65 = {
   en: { title: 'Exact compound physics and renderer quality', intro: 'Use this release workflow when one body needs multiple collision pieces or a camera region needs a different quality budget.', steps: [
     'Select a body, open Inspector → Physics → Collider children, and add Box/Circle/Convex children. Set each child sensor, layer, mask and one-way policy; the primary collider is child 0.',
@@ -69,6 +80,33 @@ const v66 = {
     '使用所有权、复制差异、回滚时间线、数据包／通道计数和网络模拟复现延迟、丢包、乱序与重复。测试停止、撤销权限、重连、后加入、保存／重载，并确认离线运行不受影响。',
     '直接互联网传输应使用 WSS 或已审核的加密适配器，以及已审核的身份验证提供器。Nova_A 不提供凭据、NAT 穿透、云中继、证书或强制云账户。'
   ], recovery: '软件包缺失、权限拒绝、适配器／提供器未注册、强制加密不满足、数据包畸形／版本错误、节点超时、载荷越界或限速都会明确失败。修复依赖或配置；断线节点的所有权会返回主机／服务器。' }
+}
+
+const v2607 = {
+  en: { title: '26.07 bounded multiplayer and server workflow', intro: 'Build, inspect, and export the optional local-first multiplayer path while keeping its permission, rollback, process, and deployment boundaries explicit.', steps: [
+    'Install and enable Nova Optional Networking. In Network Studio → Session, enable networking, grant the project permission, choose Local for same-device discovery or Direct for an explicit endpoint, and connect only with the named action. Opening a project or panel never opens a socket.',
+    'In Protocol, define bounded channels and RPC direction/authority. Owner-only RPCs need an entity scope. A verified authentication hook supplies cryptographic peer identity for its signed context; unverified WebSocket/adapter Host/Server claims are downgraded, Direct native UDP authority must come from the configured endpoint, and local loopback is only a local-machine trust boundary. Admitted role and source stay immutable. In Replication, select only required fields and budgets.',
+    'Use deterministic impairment to reproduce latency, jitter, loss, reorder, and duplication. The 26.07 rollback restores authoritative transform, rotation, and velocity at one fixed tick and reapplies recorded state deltas. It does not rerun InputSnapshot values through physics or Rhai, so nonlinear gameplay rollback remains deferred.',
+    'In Orchestration, build once and launch 2, 4, then 8 instances. Each card shows identity, role, endpoint, bind address, PID, status, Stop, Logs, and Inspector. Logs filters editor-observed events for that instance. The editor Inspector opens only that process identity/status detail card; it does not focus or control the child or open its UI. Use the toggle inside the corresponding player to see its live network state and bounded editorState log. Native launch accepts only the exact executable named by an adjacent current format-2 build report whose Windows/x86_64 identity, byte length, SHA-256, embedded project, grants, authority, session, and transport policy all match.',
+    'For Windows server output, use Server/Host, Direct, native UDP, automatic startup, project permission, and an enabled/locked package with explicit network.client and network.listen grants. The default matching-host player is locally hash-recorded but unsigned; explicit --player is rejected until a signed template registry exists. Web export includes optional dynamic networking/navigation/AI only when the matching project package and feature are enabled, and omits Tauri-only dynamic chunks.',
+    'Run the 26.07 network, actual 2/4/8-process, interaction, history, layout, Windows, and server gates after the final build. The server check requires admitted reconnecting clients, fixed ticks, and authoritative snapshots. It uses a WebView-backed player with the world renderer disabled; no-window service operation and graceful service-control shutdown are not certified.'
+  ], recovery: 'Disconnect or Stop clears the bounded session epoch and delayed deliveries. Version-1 saves accept engines 5.8.0 through current only with the current schema and session; future or malformed versions fail closed. Repair the exact package, grant, role, transport, endpoint, provider, or build-report error before retrying. Native UDP is unencrypted and localhost qualification does not prove a secure public deployment; signing, hostile-network review, relay/NAT, clean-machine lifecycle, and a 72-hour soak remain external.' },
+  de: { title: '26.07: begrenzter Mehrspieler- und Server-Ablauf', intro: 'Den optionalen lokal-zuerst Mehrspielerpfad bauen, prüfen und exportieren, wobei Berechtigungs-, Rollback-, Prozess- und Bereitstellungsgrenzen sichtbar bleiben.', steps: [
+    'Nova Optional Networking installieren und aktivieren. In Network Studio → Sitzung Networking und die Projektberechtigung aktivieren, Lokal für Erkennung auf demselben Gerät oder Direkt für einen ausdrücklichen Endpunkt wählen und nur über die benannte Aktion verbinden. Projekt- oder Panelöffnung startet keinen Socket.',
+    'Im Protokoll begrenzte Kanäle und RPC-Richtung/Autorität definieren; Owner-RPCs benötigen einen Objektbereich. Ein verifizierter Authentifizierungs-Hook liefert kryptografische Peer-Identität für seinen signierten Kontext. Unverifizierte WebSocket-/Adapter-Host-/Server-Claims werden herabgestuft, Direct-UDP-Autorität muss vom konfigurierten Endpunkt kommen, und lokales Loopback ist nur eine lokale Rechner-Vertrauensgrenze. Zugelassene Rolle und Quelle bleiben unveränderlich.',
+    'Mit deterministischer Netzsimulation Latenz, Jitter, Verlust, Umordnung und Duplikate reproduzieren. 26.07 stellt Transformation, Rotation und Geschwindigkeit am autoritativen Fixed Tick wieder her und wendet aufgezeichnete Zustandsdeltas an. InputSnapshot wird nicht erneut durch Physik oder Rhai ausgeführt; nichtlinearer Gameplay-Rollback bleibt offen.',
+    'In Orchestrierung einmal bauen und 2, 4 sowie 8 Instanzen starten. Jede Karte zeigt Identität, Rolle, Endpunkt, Bind-Adresse, PID, Status, Stop, Logs und Inspector. Logs filtert vom Editor beobachtete Ereignisse. Der Editor-Inspector öffnet nur die Identitäts-/Statuskarte dieses Prozesses; er fokussiert oder steuert das Kind nicht und öffnet dessen UI nicht. Der Schalter im entsprechenden Player zeigt dessen Live-Netzstatus und begrenztes editorState-Log. Der native Start akzeptiert nur die genaue EXE eines benachbarten aktuellen Format-2-Bauberichts, wenn Windows/x86_64-Identität, Bytezahl, SHA-256, eingebettetes Projekt, Grants, Autorität, Sitzung und Transportregel übereinstimmen.',
+    'Für Windows-Serverausgabe Server/Host, Direkt, natives UDP, Autostart, Projektberechtigung und ein aktiviertes/gesperrtes Paket mit ausdrücklich erteiltem network.client und network.listen verwenden. Der Standard-Player des passenden Hosts wird lokal gehasht, ist aber unsigniert; --player bleibt bis zu einem signierten Vorlagenregister gesperrt. Webexport nimmt optionale dynamische Netzwerk-/Navigations-/KI-Module nur bei aktivem passendem Projektpaket auf und lässt reine Tauri-Dynamikmodule weg.',
+    'Nach dem endgültigen Build Netzwerk-, echte 2/4/8-Prozess-, Interaktions-, Verlauf-, Layout-, Windows- und Server-Gates ausführen. Der Servercheck verlangt zugelassene wiederverbundene Clients, Fixed Ticks und autoritative Snapshots. Er nutzt einen WebView-Player ohne Welt-Renderer; echter No-Window-Dienst und kontrolliertes sanftes Beenden sind nicht zertifiziert.'
+  ], recovery: 'Trennen oder Stop löscht Sitzungsepoche und verzögerte Zustellungen. Version-1-Saves akzeptieren Engine-Versionen 5.8.0 bis aktuell nur mit aktuellem Schema und aktueller Sitzung; zukünftige oder fehlerhafte Versionen werden abgelehnt. Vor Wiederholung den genauen Paket-, Berechtigungs-, Rollen-, Transport-, Endpunkt-, Anbieter- oder Build-Bericht-Fehler beheben. Natives UDP ist unverschlüsselt; Signierung, feindliche Netzprüfung, Relay/NAT, Clean-Machine-Lebenszyklus und 72-Stunden-Test bleiben extern.' },
+  'zh-CN': { title: '26.07 有边界的多人游戏与服务器流程', intro: '构建、检查并导出可选的本地优先多人游戏，同时明确展示权限、回滚、进程与部署边界。', steps: [
+    '安装并启用 Nova Optional Networking。在“网络工作室 → 会话”中启用网络、授予项目权限；同设备发现选择“本地”，明确端点选择“直连”，并只通过具名操作连接。仅打开项目或面板绝不会打开套接字。',
+    '在“协议”中定义有上限的通道和 RPC 方向／权威；仅所有者 RPC 必须带实体范围。已验证的认证 Hook 会为其签名上下文提供密码学节点身份；未验证的 WebSocket／适配器 Host／Server 声明会被降级，直连原生 UDP 的权威只能来自已配置端点，本地回环仅属于本机信任边界。准入后的角色与来源不可变。',
+    '使用确定性弱网模拟重现延迟、抖动、丢包、乱序和重复。26.07 回滚会在固定 Tick 恢复权威变换、旋转和速度，再应用已记录的状态差量；它不会把 InputSnapshot 重新送入物理或 Rhai，因此非线性玩法回滚仍属延期功能。',
+    '在“编排”中构建一次，再分别启动 2、4、8 个实例。每张卡片显示身份、角色、端点、绑定地址、PID、状态、停止、日志和检查器。“日志”只按实例筛选编辑器观察到的事件。编辑器中的“检查器”仅打开该进程的身份／状态详情卡；它不会聚焦或控制子进程，也不会打开子进程界面。请在对应播放器窗口内切换“检查器”，查看该播放器的实时网络状态和有界 editorState 日志。原生启动只接受相邻当前格式 2 构建报告明确记录的可执行文件，并会核对 Windows/x86_64 身份、字节数、SHA-256、嵌入项目、授权、权威、会话和传输策略。',
+    'Windows 服务器输出必须使用 Server／Host、直连、原生 UDP、自动启动、项目权限，以及已启用并锁定、明确授予 network.client 与 network.listen 的软件包。默认匹配宿主播放器只记录本地未签名哈希；在存在签名模板注册表前，显式 --player 会被拒绝。Web 导出只有在对应项目软件包和功能均启用时才包含可选的网络／导航／AI 动态模块，并会排除仅供 Tauri 使用的动态分块。',
+    '最终构建后运行 26.07 网络、真实 2／4／8 进程、交互、历史、布局、Windows 与服务器门禁。服务器检查必须观察到已准入客户端重连、固定 Tick 和权威快照。当前是关闭世界渲染器的 WebView 播放器；真正无窗口服务及服务控制下的优雅退出尚未认证。'
+  ], recovery: '断开连接或“停止”会清除有界会话世代与延迟投递。版本 1 存档仅在当前 schema 和当前会话一致时接受 5.8.0 至当前版本的引擎；未来或畸形版本会安全失败。重试前应修复明确的软件包、授权、角色、传输、端点、提供器或构建报告错误。原生 UDP 未加密，本地测试不证明公共部署安全；签名、恶意网络审查、中继／NAT、干净机器生命周期和 72 小时长测仍属外部工作。' }
 }
 
 const v67 = {
@@ -152,6 +190,40 @@ const v70 = {
   ], recovery: '若预览不符合预期，请取消迁移或恢复备份；文档编辑使用撤销，中断保存使用恢复浏览器，故障包／插件应停用，并保留最后一次有效构建。按症状恢复请查 docs/TROUBLESHOOTING_7_0.md。签名、干净机器生命周期、匹配主机构建、独立观察和真实长测在取得证据前仍属于外部工作。' }
 }
 
+function releaseLessonFor(version, locale) {
+  let lesson = version === '6.5.0' ? { id: 'v65-physics-renderer', ...v65[locale] }
+    : version === '6.6.0' ? { id: 'v66-multiplayer', ...v66[locale] }
+    : version === '26.7.0' ? { id: 'v2607-multiplayer', ...v2607[locale] }
+    : ['6.7.0', '26.8.0'].includes(version) ? { id: version === '26.8.0' ? 'v2608-device-mobile-accessibility' : 'v67-device-mobile-accessibility', ...v67[locale] }
+    : ['6.8.0', '26.9.0'].includes(version) ? { id: version === '26.9.0' ? 'v2609-large-world-performance' : 'v68-large-world-performance', ...v68[locale] }
+    : ['7.0.0', '26.10.0'].includes(version) ? { id: version === '26.10.0' ? 'v2610-stable-platform' : 'v70-stable-platform', ...v70[locale] }
+    : null
+  if (!lesson || !version.startsWith('26.')) return lesson
+  const replacements = version === '26.8.0'
+    ? [[/v6\.7/g, '26.08'], [/6\.7/g, '26.08'], [/creator-v670-touch-platformer/g, 'platform-v2608-touch-pen-accessibility']]
+    : version === '26.9.0'
+      ? [[/v6\.8/g, '26.09'], [/6\.8/g, '26.09'], [/creator-v680-large-world/g, 'performance-v2609-large-world']]
+      : [[/Nova_A 7/g, 'Nova_A 26.10'], [/v7\b/g, '26.10'], [/7\.0/g, '26.10'], [/<8\.0\.0/g, '<27.0.0'], [/<8\.0/g, '<27.0.0'], [/creator-v700-stable-platform/g, 'creator-v2610-mixed-game'], [/docs\/API_REFERENCE_7_0\.md/g, 'docs/API_SDK_26_10.md'], [/docs\/TROUBLESHOOTING_7_0\.md/g, 'docs/TROUBLESHOOTING_26_10.md']]
+  const update = value => replacements.reduce((result, [pattern, replacement]) => result.replace(pattern, replacement), value)
+  lesson = { ...lesson, title: update(lesson.title), intro: update(lesson.intro), recovery: update(lesson.recovery), steps: lesson.steps.map(update) }
+  if (version === '26.8.0') lesson.steps.splice(2, 0, locale === 'de'
+    ? 'Einen Stift an Druck, Neigung X/Y, Drehung, Spitze, Seitentaste und Radierer binden. Im Eingabe-Test jede Achse prüfen; bei Zeigerabbruch, Fokusverlust und ausgeblendeter Seite müssen alle gehaltenen Stiftzustände freigegeben werden.'
+    : locale === 'zh-CN'
+      ? '把触控笔的压力、X／Y 倾斜、旋转、笔尖、侧键和橡皮擦绑定到动作；在输入测试中逐项验证。指针取消、窗口失焦或页面隐藏后，所有保持中的笔状态都必须释放。'
+      : 'Bind pen pressure, tilt X/Y, twist, tip, barrel button and eraser to actions, then verify every channel in the input test. Pointer cancellation, focus loss and page hiding must release every held pen state.')
+  if (version === '26.9.0') lesson.steps.splice(4, 0, locale === 'de'
+    ? 'Im Team-Workflow einen Change-List-Basisstand erzeugen, dieselbe Szene, denselben Quelltext und dieselbe Visual-Graph-Identität auf zwei Seiten ändern und den Drei-Wege-Merge prüfen. Löschen, Umordnen, veraltete Generationen und echte Konflikte müssen sichtbar und verlustfrei bleiben.'
+    : locale === 'zh-CN'
+      ? '在团队工作流中建立变更列表基线，从两侧修改同一场景、源码和可视化图身份，再检查三方合并。删除、重排、旧世代及真实冲突必须保持可见且无损。'
+      : 'Create a change-list base in Team Workflow, edit the same scene, source, and Visual Graph identity on two sides, then inspect the three-way merge. Deletes, reorders, stale generations, and true conflicts must remain visible and lossless.')
+  return lesson
+}
+
+function releaseLessons(locale) {
+  const versions = engineVersion === '26.10.0' ? ['26.8.0', '26.9.0', '26.10.0'] : engineVersion === '26.9.0' ? ['26.8.0', '26.9.0'] : [engineVersion]
+  return versions.map(version => releaseLessonFor(version, locale)).filter(Boolean)
+}
+
 function replaceMarked(source, start, end, contents) {
   const expression = new RegExp(`${start}[\\s\\S]*?${end}`, 'm')
   const block = `${start}\n${contents}\n${end}`
@@ -169,26 +241,7 @@ function markdownFor(locale, guides, localizedLearningGuide) {
       lines.push(`<a id="${guide.id}"></a>`, '', `### ${text.title}`, '', `**${l.class}:** ${guide.classifications.join(' · ')}`, '', `**${l.purpose}:** ${text.purpose} ${text.whenToUse}`, '', `**${l.pre}:**`, '', ...text.prerequisites.map(item => `- ${item}`), '', `**${l.steps}:**`, '', ...text.steps.map((step, index) => `${index + 1}. ${step}`), '', `**${l.result}:** ${text.expectedResult}`, '', `**${l.persist}:** ${text.persistence}`, '', `**${l.undo}:** ${text.undoRecovery}`, '', `**${l.mistakes}:**`, '', ...text.mistakes.map(item => `- ${item}`), '', `**${l.a11y}:** ${text.accessibility}`, '', `**${l.minimal}:** ${text.minimalExample}`, '', `**${l.production}:** ${text.productionExample}`, '', `**${l.rhai}:** ${text.relatedRhai.length ? text.relatedRhai.map(value => `\`${value}\``).join(', ') : 'N/A'}`, '', `**${l.graph}:** ${text.relatedGraph.length ? text.relatedGraph.map(value => `\`${value}\``).join(', ') : 'N/A'}`, '')
     }
   }
-  if (engineVersion === '6.5.0') {
-    const lesson = v65[locale]
-    lines.push('', `## ${lesson.title}`, '', lesson.intro, '', ...lesson.steps.map((step, index) => `${index + 1}. ${step}`), '', `**${l.undo}:** ${lesson.recovery}`, '')
-  }
-  if (engineVersion === '6.6.0') {
-    const lesson = v66[locale]
-    lines.push('', `## ${lesson.title}`, '', lesson.intro, '', ...lesson.steps.map((step, index) => `${index + 1}. ${step}`), '', `**${l.undo}:** ${lesson.recovery}`, '')
-  }
-  if (engineVersion === '6.7.0') {
-    const lesson = v67[locale]
-    lines.push('', `## ${lesson.title}`, '', lesson.intro, '', ...lesson.steps.map((step, index) => `${index + 1}. ${step}`), '', `**${l.undo}:** ${lesson.recovery}`, '')
-  }
-  if (engineVersion === '6.8.0') {
-    const lesson = v68[locale]
-    lines.push('', `## ${lesson.title}`, '', lesson.intro, '', ...lesson.steps.map((step, index) => `${index + 1}. ${step}`), '', `**${l.undo}:** ${lesson.recovery}`, '')
-  }
-  if (engineVersion === '7.0.0') {
-    const lesson = v70[locale]
-    lines.push('', '<a id="v70-stable-platform"></a>', '', `## ${lesson.title}`, '', lesson.intro, '', ...lesson.steps.map((step, index) => `${index + 1}. ${step}`), '', `**${l.undo}:** ${lesson.recovery}`, '')
-  }
+  for (const lesson of releaseLessons(locale)) lines.push('', `<a id="${lesson.id}"></a>`, '', `## ${lesson.title}`, '', lesson.intro, '', ...lesson.steps.map((step, index) => `${index + 1}. ${step}`), '', `**${l.undo}:** ${lesson.recovery}`, '')
   return lines.join('\n')
 }
 
@@ -201,30 +254,38 @@ function htmlFor(locale, guides, localizedLearningGuide) {
     const ordered = values => `<ol>${values.map(value => `<li>${escapeHtml(value)}</li>`).join('')}</ol>`
     return `<details id="${locale}-v6-${guide.id}" class="v6-guide"${guide.taskProject ? ' open' : ''}><summary><strong>${escapeHtml(text.title)}</strong><span>${escapeHtml(guide.classifications.join(' · '))}</span></summary><div><h3>${escapeHtml(l.purpose)}</h3><p>${escapeHtml(text.purpose)} ${escapeHtml(text.whenToUse)}</p><h3>${escapeHtml(l.pre)}</h3>${list(text.prerequisites)}<h3>${escapeHtml(l.steps)}</h3>${ordered(text.steps)}<h3>${escapeHtml(l.result)}</h3><p>${escapeHtml(text.expectedResult)}</p><h3>${escapeHtml(l.persist)}</h3><p>${escapeHtml(text.persistence)}</p><h3>${escapeHtml(l.undo)}</h3><p>${escapeHtml(text.undoRecovery)}</p><h3>${escapeHtml(l.mistakes)}</h3>${list(text.mistakes)}<h3>${escapeHtml(l.a11y)}</h3><p>${escapeHtml(text.accessibility)}</p><h3>${escapeHtml(l.minimal)}</h3><p>${escapeHtml(text.minimalExample)}</p><h3>${escapeHtml(l.production)}</h3><p>${escapeHtml(text.productionExample)}</p><h3>${escapeHtml(l.rhai)} / ${escapeHtml(l.graph)}</h3><p><code>${escapeHtml(text.relatedRhai.join(', ') || 'N/A')}</code> · <code>${escapeHtml(text.relatedGraph.join(', ') || 'N/A')}</code></p></div></details>`
   }).join('')}</section>`).join('')
-  const lesson = engineVersion === '6.5.0' ? { id: 'v65-physics-renderer', ...v65[locale] } : engineVersion === '6.6.0' ? { id: 'v66-multiplayer', ...v66[locale] } : engineVersion === '6.7.0' ? { id: 'v67-device-mobile-accessibility', ...v67[locale] } : engineVersion === '6.8.0' ? { id: 'v68-large-world-performance', ...v68[locale] } : engineVersion === '7.0.0' ? { id: 'v70-stable-platform', ...v70[locale] } : null
-  const release = lesson ? `<section class="v6-panel" id="${locale}-${lesson.id}"><h2>${escapeHtml(lesson.title)}</h2><p>${escapeHtml(lesson.intro)}</p><ol>${lesson.steps.map(step => `<li>${escapeHtml(step)}</li>`).join('')}</ol><h3>${escapeHtml(l.undo)}</h3><p>${escapeHtml(lesson.recovery)}</p></section>` : ''
-  return `<article data-lang="${locale}"${locale === 'en' ? '' : ' hidden'} class="v6-teaching"><section id="${locale}-v60"><div class="hero"><span class="eyebrow">Nova_A ${engineVersion} · Project Format 2/schema 29 · external certification honestly pending</span><h1>${escapeHtml(l.heading)}</h1><p>${escapeHtml(l.intro)}</p><div class="links">${toc}</div></div>${release}${panels}</section></article>`
+  const release = releaseLessons(locale).map(lesson => `<section class="v6-panel" id="${locale}-${lesson.id}"><h2>${escapeHtml(lesson.title)}</h2><p>${escapeHtml(lesson.intro)}</p><ol>${lesson.steps.map(step => `<li>${escapeHtml(step)}</li>`).join('')}</ol><h3>${escapeHtml(l.undo)}</h3><p>${escapeHtml(lesson.recovery)}</p></section>`).join('')
+  return `<article data-lang="${locale}"${locale === 'en' ? '' : ' hidden'} class="v6-teaching"><section id="${locale}-v60"><div class="hero"><span class="eyebrow">Nova_A ${publicRelease} · Engine ${engineVersion} · Project Format 2/schema 29 · external certification honestly pending</span><h1>${escapeHtml(l.heading)}</h1><p>${escapeHtml(l.intro)}</p><div class="links">${toc}</div></div>${release}${panels}</section></article>`
 }
 
 try {
   const { CREATOR_LEARNING_GUIDES, localizedLearningGuide } = await server.ssrLoadModule('/src/runtime/creatorLearning.ts')
   for (const [locale, filename] of [['en', 'MANUAL.en.md'], ['de', 'MANUAL.de.md'], ['zh-CN', 'MANUAL.zh-CN.md']]) {
     const path = join(root, 'manual', filename), source = await readFile(path, 'utf8')
-    const titles = { en: `# Nova_A ${engineVersion} Complete Manual`, de: `# Nova_A ${engineVersion} – Vollständiges Handbuch`, 'zh-CN': `# Nova_A ${engineVersion} 完整使用手册` }
+    const titles = { en: `# Nova_A ${publicRelease} Complete Manual`, de: `# Nova_A ${publicRelease} – Vollständiges Handbuch`, 'zh-CN': `# Nova_A ${publicRelease} 完整使用手册` }
     const updated = replaceMarked(source, '<!-- NOVA_V6_TEACHING_START -->', '<!-- NOVA_V6_TEACHING_END -->', markdownFor(locale, CREATOR_LEARNING_GUIDES, localizedLearningGuide)).replace(/^# Nova_A[^\r\n]*$/m, titles[locale])
     await writeReliable(path, updated)
   }
   const htmlPath = join(root, 'manual/index.html'), original = await readFile(htmlPath, 'utf8')
   let html = original
-    .replace(/<title>Nova_A \d+\.\d+\.\d+ Manual<\/title>/, `<title>Nova_A ${engineVersion} Manual</title>`)
-    .replace(/(<strong>Nova_A<\/strong><span>) \d+\.\d+\.\d+ Offline Teaching Manual(<\/span>)/, `$1 ${engineVersion} Offline Teaching Manual$2`)
+    .replace(/<title>Nova_A [^<]+ Manual<\/title>/, `<title>Nova_A ${publicRelease} Manual</title>`)
+    .replace(/(<strong>Nova_A<\/strong><span>) [^<]+ Offline Teaching Manual(<\/span>)/, `$1 ${publicRelease} Offline Teaching Manual$2`)
     .replace(/Engine \d+\.\d+\.\d+ ·/g, `Engine ${engineVersion} ·`)
-    .replace(/<meta name="description" content="[^"]*">/, `<meta name="description" content="Complete Nova_A ${engineVersion} English, German and Chinese teaching manual for every editor, runtime, migration, recovery and release workflow.">`)
-    .replace(/<footer>Nova_A \d+\.\d+\.\d+ · Whitelist · Open-source 2D game engine<\/footer>/, `<footer>Nova_A ${engineVersion} · Whitelist · Open-source 2D game engine</footer>`)
-    .replaceAll('Nova_A 5.9 Manual', `Nova_A ${engineVersion} Manual`).replaceAll('Nova_A 6.0 Manual', `Nova_A ${engineVersion} Manual`).replaceAll('5.9.0 Offline Documentation', `${engineVersion} Offline Teaching Manual`).replaceAll('6.0.0 Offline Teaching Manual', `${engineVersion} Offline Teaching Manual`).replaceAll('Engine 5.9.0', `Engine ${engineVersion}`).replaceAll('Engine 6.0.0', `Engine ${engineVersion}`)
-  const supplement = `<!-- NOVA_V6_TEACHING_START -->\n<div class="release-supplement v6-manual" aria-label="Nova_A ${engineVersion} task-oriented teaching manual">${['en', 'de', 'zh-CN'].map(locale => htmlFor(locale, CREATOR_LEARNING_GUIDES, localizedLearningGuide)).join('')}</div>\n<!-- NOVA_V6_TEACHING_END -->`
+    .replace(/<meta name="description" content="[^"]*">/, `<meta name="description" content="Complete Nova_A ${publicRelease} (engine ${engineVersion}) English, German and Chinese teaching manual for every editor, runtime, migration, recovery and release workflow.">`)
+    .replace(/<footer>Nova_A [^<]+ · Whitelist · Open-source 2D game engine<\/footer>/, `<footer>Nova_A ${publicRelease} · Engine ${engineVersion} · Whitelist · Open-source 2D game engine</footer>`)
+    .replaceAll('Nova_A 5.9 Manual', `Nova_A ${publicRelease} Manual`).replaceAll('Nova_A 6.0 Manual', `Nova_A ${publicRelease} Manual`).replaceAll('5.9.0 Offline Documentation', `${publicRelease} Offline Teaching Manual`).replaceAll('6.0.0 Offline Teaching Manual', `${publicRelease} Offline Teaching Manual`).replaceAll('Engine 5.9.0', `Engine ${engineVersion}`).replaceAll('Engine 6.0.0', `Engine ${engineVersion}`)
+  const supplement = `<!-- NOVA_V6_TEACHING_START -->\n<div class="release-supplement v6-manual" aria-label="Nova_A ${publicRelease} task-oriented teaching manual">${['en', 'de', 'zh-CN'].map(locale => htmlFor(locale, CREATOR_LEARNING_GUIDES, localizedLearningGuide)).join('')}</div>\n<!-- NOVA_V6_TEACHING_END -->`
   html = replaceMarked(html, '<!-- NOVA_V6_TEACHING_START -->', '<!-- NOVA_V6_TEACHING_END -->', supplement.replace('<!-- NOVA_V6_TEACHING_START -->\n', '').replace('\n<!-- NOVA_V6_TEACHING_END -->', ''))
-  html = html.replace('</style>', `.v6-manual{padding:0 24px 40px}.v6-panel{margin:24px 0}.v6-guide{border:1px solid var(--line);border-radius:14px;margin:8px 0;background:var(--panel)}.v6-guide summary{display:flex;justify-content:space-between;gap:16px;padding:14px;cursor:pointer}.v6-guide summary span{font-size:12px;color:var(--muted);text-align:end}.v6-guide>div{padding:0 16px 16px}.v6-guide h3{font-size:14px;margin:16px 0 6px}@media(max-width:760px){.v6-manual{padding:0 12px 28px}.v6-guide summary{align-items:flex-start;flex-direction:column}}@media(prefers-reduced-motion:reduce){.v6-guide{scroll-behavior:auto}}\n</style>`)
+  html = html
+    .replace(/\/\* NOVA_V6_TEACHING_STYLE_START \*\/[\s\S]*?\/\* NOVA_V6_TEACHING_STYLE_END \*\//g, '')
+    .replaceAll(legacyTeachingStyle, '')
+    .replace('</style>', `${teachingStyle}\n</style>`)
   await writeReliable(htmlPath, html)
   console.log(`Generated ${CREATOR_LEARNING_GUIDES.length} complete feature lessons in English, German and Chinese.`)
-} finally { await server.close() }
+} finally {
+  // ssrLoadModule can finish before Vite's import bookkeeping becomes idle.
+  // Waiting here prevents a close/restart race and the misleading dep-scan
+  // "server is being restarted or closed" diagnostics it used to emit.
+  await server.waitForRequestsIdle()
+  await server.close()
+}

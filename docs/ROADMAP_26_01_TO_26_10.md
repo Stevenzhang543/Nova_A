@@ -56,6 +56,8 @@ Normal-user checks: import and reimport a full art/audio/font pack, repair a mov
 
 ## 26.05 — production rendering, animation, audio, and cinematic workflow
 
+Implementation status: completed in the 26.05 release candidate. The unified rendering, animation, audio and cinematic behavior is specified in `PRODUCTION_MEDIA_26_05.md`; localized responsive evidence is specified in `UI_LAYOUT_AUDIT_26_05.md`.
+
 Implementation: richer 2D materials/shaders, visual shader parity, render passes, texture streaming, lights/shadows/normal maps, particles/trails, post effects, pixel-art and high-DPI paths; animation curves/dope sheet/state/blend/rig tooling; audio buses/effects/spatialization/snapshots; cinematic preview/recording and deterministic frame capture.
 
 Programmer audit: WebGL2/Canvas fallback goldens, device loss, shader limits, batch/cull correctness, animation/audio timing at variable display rates, memory/voice budgets, exported parity, low-end fallback without semantic changes.
@@ -63,6 +65,8 @@ Programmer audit: WebGL2/Canvas fallback goldens, device loss, shader limits, ba
 Normal-user checks: author a polished animated scene with lighting, particles, audio mix, UI, and a skippable cutscene on Balanced and Low-end profiles.
 
 ## 26.06 — physics, navigation, AI, and simulation authoring
+
+Implementation status: completed as a 26.06 release candidate. The authored/runtime contract, unit convention, simulation evidence and normal-user reference are documented in `SIMULATION_AUTHORING_26_06.md`; the complete localized layout gate is documented in `UI_LAYOUT_AUDIT_26_06.md`; output/template reliability is documented in `OUTPUT_BUILD_RELIABILITY_26_06.md`. Local automated completion does not close the explicitly pending hardware, matching-host, signing, soak or independent-usability gates.
 
 Implementation: complete compound/chain/concave-static contacts, rotational CCD, stable stacks, motors/limits/break forces, rope/cloth-like constrained paths, authoritative units/evidence, terrain/navmesh workflows, steering/avoidance, behavior trees/HSM/utility AI, deterministic crowds, and visual simulation debugging.
 

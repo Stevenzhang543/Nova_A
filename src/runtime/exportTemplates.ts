@@ -25,9 +25,12 @@ for (const template of BUILTIN_TEMPLATES) template.engineRange = template.engine
 export const exportTemplateState = reactive({ templates: structuredClone(BUILTIN_TEMPLATES), androidGates: { jdk: false, sdk: false, ndk: false, template: false, signing: false, device: false, installLaunch: false, inputAudio: false }, selectedId: 'windows-x64-v1', lastError: '' })
 
 export function exportTemplateFor(id: string): ExportTemplateManifest | null { return exportTemplateState.templates.find(item => item.id === id) ?? null }
+export function compatibleExportTemplates(target: BuildTarget, architecture: BuildArchitecture, runtimeMode: BuildRuntimeMode): ExportTemplateManifest[] {
+  return exportTemplateState.templates.filter(item => item.target === target && item.architectures.includes(architecture) && item.runtimeModes.includes(runtimeMode))
+}
 /** Resolves the registered template for a target tuple instead of synthesizing an ID that may not exist. */
 export function defaultExportTemplateId(target: BuildTarget, architecture: BuildArchitecture, runtimeMode: BuildRuntimeMode): string {
-  const compatible = exportTemplateState.templates.filter(item => item.target === target && item.architectures.includes(architecture) && item.runtimeModes.includes(runtimeMode))
+  const compatible = compatibleExportTemplates(target, architecture, runtimeMode)
   return compatible.find(item => item.installed && item.trusted)?.id ?? compatible.find(item => item.trusted)?.id ?? compatible[0]?.id ?? ''
 }
 /** Migrates only Nova_A's previously synthesized, unregistered IDs; custom template IDs remain untouched. */
@@ -38,12 +41,14 @@ export function resolveExportTemplateId(id: string, target: BuildTarget, archite
   return !selected || legacyIds.has(selected) ? defaultExportTemplateId(target, architecture, runtimeMode) : selected
 }
 export function exportTemplateIssues(id: string, target: BuildTarget, architecture: BuildArchitecture, runtimeMode: BuildRuntimeMode, capabilities: ExportCapabilities): string[] {
-  const template = exportTemplateFor(id); if (!template) return ['The selected export template is not installed or registered.']
+  const compatible = compatibleExportTemplates(target, architecture, runtimeMode)
+  const available = compatible.map(item => item.id).join(' or ')
+  const template = exportTemplateFor(id); if (!template) return [`Export template "${id || '(empty)'}" is not registered for ${target}/${architecture}/${runtimeMode}. ${available ? `Choose ${available}.` : 'Install a matching template or change Target, Architecture, or Runtime.'}`]
   const issues: string[] = []
-  if (!template.trusted || !template.signature || !/^[a-f0-9]{64}$/.test(template.sha256)) issues.push('Export template trust metadata is invalid.')
-  if (!template.installed) issues.push('Export template is not installed on this host.')
-  if (template.target !== target || !template.architectures.includes(architecture) || !template.runtimeModes.includes(runtimeMode)) issues.push('Export template does not match the target, architecture, or runtime mode.')
-  if (template.host !== 'any' && capabilities.host !== template.host) issues.push(`Export template requires a ${template.host} host.`)
+  if (!template.trusted || !template.signature || !/^[a-f0-9]{64}$/.test(template.sha256)) issues.push(`${template.name} (${template.id}) has invalid trust metadata. Reinstall it from a verified offline source.`)
+  if (!template.installed) issues.push(`${template.name} (${template.id}) is registered but not installed. Install and verify it in Manage → Packages, or choose a locally installed target.`)
+  if (template.target !== target || !template.architectures.includes(architecture) || !template.runtimeModes.includes(runtimeMode)) issues.push(`${template.name} (${template.id}) does not support ${target}/${architecture}/${runtimeMode}. ${available ? `Choose ${available}.` : 'Install a compatible template or change the target tuple.'}`)
+  if (template.host !== 'any' && capabilities.host !== template.host) issues.push(`${template.name} (${template.id}) requires a ${template.host} host; this editor reports ${capabilities.host}. Use a matching host or CI runner.`)
   if (target === 'android' && !(['jdk', 'sdk', 'ndk', 'template'] as const).every(gate => exportTemplateState.androidGates[gate])) issues.push('Android build requires JDK 17, SDK 35/build-tools, NDK, and the validated local template. Device, deploy, signing, input and audio remain explicit qualification gates, not build prerequisites.')
   return issues
 }

@@ -67,7 +67,7 @@ export function transportReviewIssues(review: NetworkTransportReview): string[] 
   if (!/^\d+\.\d+\.\d+$/.test(review.version)) issues.push('Adapter version must use semantic versioning.')
   if (!review.publisher.trim() || review.reviewedBy !== 'Whitelist') issues.push('Adapter publisher review is missing.')
   if (!/^[a-f0-9]{64}$/.test(review.sha256)) issues.push('Adapter SHA-256 is invalid.')
-  if (!review.permissions.length || review.permissions.some(permission => permission !== 'network.client' && permission !== 'network.listen')) issues.push('Adapter permissions are missing or exceed networking scope.')
+  if (!review.permissions.includes('network.client') || review.permissions.some(permission => permission !== 'network.client' && permission !== 'network.listen')) issues.push('Adapter permissions are missing or exceed networking scope.')
   if (!https(review.documentationUrl) || !https(review.securityUrl)) issues.push('Adapter documentation and security policy must use HTTPS.')
   return issues
 }
@@ -85,7 +85,9 @@ export function reviewedNetworkTransports(): ReadonlyArray<NetworkTransportRevie
 }
 
 export function createReviewedNetworkTransport(id: string, settings: Readonly<ProductionProjectSettings['networking']>): NetworkTransportContract | null {
-  return transportAdapters.get(id)?.create(settings) ?? null
+  const adapter = transportAdapters.get(id)
+  if (!adapter || ((settings.role === 'host' || settings.role === 'server') && !adapter.review.permissions.includes('network.listen'))) return null
+  return adapter.create(settings)
 }
 
 export function registerNetworkAuthenticationProvider(provider: NetworkAuthenticationProvider): () => void {
@@ -154,6 +156,16 @@ export class NetworkAuthorityTable {
   }
   owner(entityUuid: string): string { return this.owners.get(entityUuid) ?? '' }
   entries(): Array<{ entityUuid: string; ownerPeerId: string }> { return [...this.owners].map(([entityUuid, ownerPeerId]) => ({ entityUuid, ownerPeerId })).sort((a, b) => a.entityUuid.localeCompare(b.entityUuid)) }
+  restore(entries: readonly { entityUuid: string; ownerPeerId: string }[], definitions: readonly ReplicatedEntityDefinition[]): boolean {
+    const allowed = new Set(definitions.map(definition => definition.entityUuid)), staged = new Map<string, string>()
+    for (const entry of entries.slice(0, 2_000)) {
+      const entityUuid = safeId(entry.entityUuid, 128), ownerPeerId = entry.ownerPeerId ? safeId(entry.ownerPeerId, 80) : ''
+      if (!entityUuid || entityUuid !== entry.entityUuid || !allowed.has(entityUuid) || (entry.ownerPeerId && ownerPeerId !== entry.ownerPeerId) || staged.has(entityUuid)) return false
+      staged.set(entityUuid, ownerPeerId)
+    }
+    if (staged.size !== allowed.size) return false
+    this.owners = staged; return true
+  }
   transfer(entityUuid: string, targetPeerId: string): boolean { if (!this.owners.has(entityUuid) || !safeId(targetPeerId)) return false; this.owners.set(entityUuid, safeId(targetPeerId)); return true }
   releasePeer(peerId: string, authorityPeerId: string): string[] { const changed: string[] = []; for (const [entityUuid, owner] of this.owners) if (owner === peerId) { this.owners.set(entityUuid, authorityPeerId); changed.push(entityUuid) }; return changed.sort() }
   clear(): void { this.owners.clear() }

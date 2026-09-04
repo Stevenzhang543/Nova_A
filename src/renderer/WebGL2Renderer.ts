@@ -36,6 +36,7 @@ interface CachedTexture {
   width: number
   height: number
   filter: TextureFilter | null
+  lastUsedFrame: number
 }
 
 interface CachedText {
@@ -212,7 +213,7 @@ function textureDimensions(source: TexImageSource): { width: number; height: num
 }
 
 export class WebGL2Renderer implements Renderer2D {
-  readonly stats: RendererStats = { backend: 'WebGL2', drawCalls: 0, batches: 0, triangles: 0, sprites: 0, shapes: 0, text: 0, textures: 0, gpuMs: null, passes: 1, renderTargets: 1, overdraw: 0, batchBreaks: 0, atlasPages: 0, textureMemoryBytes: 0, textureUploads: 0, shaderCompiles: 0, shaderFallbacks: 0, contextLosses: 0, batchBreakReasons: {} }
+  readonly stats: RendererStats = { backend: 'WebGL2', drawCalls: 0, batches: 0, triangles: 0, sprites: 0, shapes: 0, text: 0, textures: 0, gpuMs: null, passes: 1, renderTargets: 1, overdraw: 0, batchBreaks: 0, atlasPages: 0, textureMemoryBytes: 0, textureUploads: 0, textureEvictions: 0, textureBudgetBytes: 0, textureBudgetExceeded: false, streamingMisses: 0, shaderCompiles: 0, shaderFallbacks: 0, contextLosses: 0, batchBreakReasons: {} }
   private readonly gl: WebGL2RenderingContext
   private readonly program: WebGLProgram
   private readonly vao: WebGLVertexArrayObject
@@ -231,7 +232,7 @@ export class WebGL2Renderer implements Renderer2D {
   private lastGpuMs: number | null = null
   private readonly whiteCanvas: HTMLCanvasElement
   private readonly whiteRegion: TextureRegion
-  private readonly textureCache = new WeakMap<object, CachedTexture>()
+  private readonly textureCache = new Map<object, CachedTexture>()
   private textureMemoryBytes = 0
   private textureCount = 0
   private readonly textCache = new Map<string, CachedText>()
@@ -249,6 +250,7 @@ export class WebGL2Renderer implements Renderer2D {
   private effectsHeight = 0
   private contextLost = false
   private contextLossCount = 0
+  private frameSerial = 0
   private readonly onContextLost = (event: Event) => {
     event.preventDefault()
     this.contextLost = true
@@ -259,6 +261,9 @@ export class WebGL2Renderer implements Renderer2D {
   }
   private readonly onContextRestored = () => {
     this.contextLost = false
+    this.textureCache.clear()
+    this.textureMemoryBytes = 0
+    this.textureCount = 0
     reportRendererContextRestored()
     window.dispatchEvent(new CustomEvent('nova-renderer-reset-request'))
   }
@@ -314,6 +319,7 @@ export class WebGL2Renderer implements Renderer2D {
   }
 
   beginFrame(options: FrameOptions): void {
+    this.frameSerial++
     this.frame = options
     this.resize(options.width, options.height, options.pixelRatio)
     this.packets = []
@@ -323,7 +329,7 @@ export class WebGL2Renderer implements Renderer2D {
     this.effectsTargetActive = renderingSettings.postProcessing.enabled
     if (this.effectsTargetActive) this.ensureEffectsTarget()
     this.pollGpuTimers()
-    Object.assign(this.stats, { drawCalls: 0, batches: 0, triangles: 0, sprites: 0, shapes: 0, text: 0, textures: this.textureCount, gpuMs: this.lastGpuMs, passes: 1, renderTargets: this.effectsTargetActive ? 1 : 0, overdraw: 0, batchBreaks: 0, atlasPages: assetState.atlasPages.length, textureMemoryBytes: this.textureMemoryBytes, textureUploads: 0, shaderCompiles: 0, shaderFallbacks: 0, contextLosses: this.contextLossCount, batchBreakReasons: {} })
+    Object.assign(this.stats, { drawCalls: 0, batches: 0, triangles: 0, sprites: 0, shapes: 0, text: 0, textures: this.textureCount, gpuMs: this.lastGpuMs, passes: 1, renderTargets: this.effectsTargetActive ? 1 : 0, overdraw: 0, batchBreaks: 0, atlasPages: assetState.atlasPages.length, textureMemoryBytes: this.textureMemoryBytes, textureUploads: 0, textureEvictions: 0, textureBudgetBytes: Math.round(renderingSettings.textureStreaming.memoryBudgetMb * 1048576), textureBudgetExceeded: false, streamingMisses: 0, shaderCompiles: 0, shaderFallbacks: 0, contextLosses: this.contextLossCount, batchBreakReasons: {} })
     const gl = this.gl
     gl.bindFramebuffer(gl.FRAMEBUFFER, this.effectsTargetActive ? this.framebuffer : null)
     const [r, g, b, a] = normalizedColor(options.clearColor)
@@ -420,6 +426,7 @@ export class WebGL2Renderer implements Renderer2D {
       this.validatedFirstBlit = true
     }
     gl.bindFramebuffer(gl.FRAMEBUFFER, null)
+    this.trimTextureResidency()
     return { ...this.stats, batchBreakReasons: { ...this.stats.batchBreakReasons } }
   }
 
@@ -436,6 +443,8 @@ export class WebGL2Renderer implements Renderer2D {
     for (const state of this.materialPrograms.values()) if (state) gl.deleteProgram(state.program)
     if (this.postProgram) gl.deleteProgram(this.postProgram.program)
     for (const query of this.pendingTimers) gl.deleteQuery(query)
+    for (const cached of this.textureCache.values()) gl.deleteTexture(cached.texture)
+    this.textureCache.clear()
     this.materialPrograms.clear()
     this.textCache.clear()
   }
@@ -650,10 +659,12 @@ export class WebGL2Renderer implements Renderer2D {
     if (!cached) {
       const texture = this.gl.createTexture()
       if (!texture) throw new Error('Could not allocate WebGL texture')
-      cached = { texture, width: 0, height: 0, filter: null }
+      cached = { texture, width: 0, height: 0, filter: null, lastUsedFrame: this.frameSerial }
       this.textureCache.set(source, cached)
       this.textureCount++
+      this.stats.streamingMisses++
     }
+    cached.lastUsedFrame = this.frameSerial
     const gl = this.gl
     gl.bindTexture(gl.TEXTURE_2D, cached.texture)
     if (cached.width !== dimensions.width || cached.height !== dimensions.height) {
@@ -674,6 +685,32 @@ export class WebGL2Renderer implements Renderer2D {
       cached.filter = filter
     }
     return cached.texture
+  }
+
+  private trimTextureResidency(): void {
+    const budgetBytes = Math.max(16 * 1048576, Math.round(renderingSettings.textureStreaming.memoryBudgetMb * 1048576))
+    this.stats.textureBudgetBytes = budgetBytes
+    if (!renderingSettings.textureStreaming.enabled) {
+      this.stats.textureBudgetExceeded = this.textureMemoryBytes > budgetBytes
+      this.stats.textures = this.textureCount
+      this.stats.textureMemoryBytes = this.textureMemoryBytes
+      return
+    }
+    const idleBefore = this.frameSerial - Math.max(2, renderingSettings.textureStreaming.idleFrames)
+    const candidates = [...this.textureCache.entries()]
+      .filter(([source, cached]) => source !== this.whiteCanvas && cached.lastUsedFrame < this.frameSerial)
+      .sort((first, second) => first[1].lastUsedFrame - second[1].lastUsedFrame || first[1].width * first[1].height - second[1].width * second[1].height)
+    for (const [source, cached] of candidates) {
+      if (cached.lastUsedFrame > idleBefore && this.textureMemoryBytes <= budgetBytes) break
+      this.gl.deleteTexture(cached.texture)
+      this.textureCache.delete(source)
+      this.textureCount = Math.max(0, this.textureCount - 1)
+      this.textureMemoryBytes = Math.max(0, this.textureMemoryBytes - cached.width * cached.height * 4)
+      this.stats.textureEvictions++
+    }
+    this.stats.textureBudgetExceeded = this.textureMemoryBytes > budgetBytes
+    this.stats.textures = this.textureCount
+    this.stats.textureMemoryBytes = this.textureMemoryBytes
   }
 
   private textTexture(command: TextRenderCommand): CachedText {

@@ -9,16 +9,37 @@ lerna-debug.log*
 
 node_modules
 .pnpm-store/
+.VSCodeCounter/
 dist
 dist-ssr
+.vite/
+.cache/
+.turbo/
+coverage/
+playwright-report/
+test-results/
+release-audits/
+stage*/
+*.tsbuildinfo
+*.tmp
+*.temp
 *.local
 nova_core/target/
 /target/
+/src-tauri/target/
+/src-tauri/gen/
+
+# Local configuration and credentials. Keep the documented example.
+.env
+.env.*
+!.env.example
 
 # Editor directories and files
 .vscode
 .idea
 .DS_Store
+Thumbs.db
+Desktop.ini
 *.suo
 *.ntvs*
 *.njsproj

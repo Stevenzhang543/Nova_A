@@ -1,8 +1,8 @@
 import { assetState } from '../assets/AssetDatabase'
 import { assetSourceBytes } from '../assets/contentHash'
 import { addEditorLog, editorState } from '../store/editor'
-import { getSceneJSON, sceneManager } from '../store/physics'
-import { buildProgress, buildSettings, recordBuildHistory, synchronizeBuildScenes, validateBuildSettings } from './buildSettings'
+import { getSceneJSON, physicsState, sceneManager } from '../store/physics'
+import { buildProgress, buildSettings, recordBuildHistory, serializeBuildSettings, synchronizeBuildScenes, validateBuildSettings } from './buildSettings'
 import { NOVA_ENGINE_VERSION } from '../projects/projectFormat'
 import { createNovaPak, packageBase64 } from './novaPak'
 import { OFFICIAL_AI_PACKAGE_ID, OFFICIAL_NAVIGATION_PACKAGE_ID, OFFICIAL_NETWORKING_PACKAGE_ID, packageEnabled, packageState } from './packages'
@@ -11,6 +11,7 @@ import { OFFICIAL_ANDROID_PACKAGE_ID } from './packages'
 import { projectSessionState } from '../projects/projectSession'
 import { stableProjectText, teamWorkflowMetadata } from './teamWorkflow'
 import { createBuildProvenance, releaseEngineeringState, webDeploymentHeaders } from './releaseEngineering'
+import { validateProductionRuntime } from './productionValidation'
 
 interface ExportFile { path: string; dataBase64: string }
 interface NativeBuildResult { outputPath: string; files: string[]; launched: boolean; cacheHits?: number; changedFiles?: number; buildId?: string }
@@ -27,6 +28,13 @@ interface ViteManifestEntry { file: string; css?: string[]; assets?: string[]; i
 function bytesToBase64(bytes: Uint8Array): string { return packageBase64(bytes) }
 function bytesToHex(bytes: Uint8Array): string { return [...bytes].map(value => value.toString(16).padStart(2, '0')).join('') }
 async function sha256(bytes: Uint8Array): Promise<string> { return bytesToHex(new Uint8Array(await crypto.subtle.digest('SHA-256', bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer))) }
+
+export function buildSbomSerial(buildId: string, deterministic: boolean): string {
+  if (!deterministic) return `urn:uuid:${crypto.randomUUID()}`
+  const hash = buildId.toLowerCase().replace(/[^0-9a-f]/g, '').padEnd(32, '0').slice(0, 32)
+  const variant = ((Number.parseInt(hash[16], 16) & 0x3) | 0x8).toString(16)
+  return `urn:uuid:${hash.slice(0, 8)}-${hash.slice(8, 12)}-5${hash.slice(13, 16)}-${variant}${hash.slice(17, 20)}-${hash.slice(20, 32)}`
+}
 
 export function sanitizeGameName(value: string): string {
   return value.replace(/[<>:"/\\|?*\x00-\x1f]/g, '').trim().slice(0, 80) || 'MyGame'
@@ -65,7 +73,7 @@ function projectForBuild(projectJson: string): string {
   const settings = project.projectSettings && typeof project.projectSettings === 'object'
     ? project.projectSettings as Record<string, unknown>
     : {}
-  settings.build = { ...buildSettings, sceneOrder: [...buildSettings.sceneOrder], outputDirectory: '' }
+  settings.build = serializeBuildSettings(buildSettings.sceneOrder)
   settings.team = teamWorkflowMetadata()
   project.projectSettings = settings
   return stableProjectText(project)
@@ -151,7 +159,7 @@ async function webBuildMetadata(pack: Uint8Array, webFiles: ExportFile[]): Promi
     files.push({ path: file.path, sha256: await sha256(bytes), bytes: bytes.byteLength })
   }
   files.sort((a, b) => a.path.localeCompare(b.path))
-  const report = { format: 'nova-build-report', version: 2, engineVersion: NOVA_ENGINE_VERSION, buildId: packHash, createdAt: buildSettings.delivery.deterministic ? '1970-01-01T00:00:00.000Z' : new Date().toISOString(), target: buildSettings.target, architecture: buildSettings.architecture, profile: buildSettings.profile, projectId: projectSessionState.id, totalBytes: files.reduce((sum, file) => sum + file.bytes, 0), cacheMode: buildSettings.delivery.cacheMode, files }
+  const report = { format: 'nova-build-report', version: 2, engineVersion: NOVA_ENGINE_VERSION, buildId: packHash, createdAt: buildSettings.delivery.deterministic ? '1970-01-01T00:00:00.000Z' : new Date().toISOString(), target: buildSettings.target, architecture: buildSettings.architecture, profile: buildSettings.profile, runtimeMode: buildSettings.runtimeMode, projectId: projectSessionState.id, totalBytes: files.reduce((sum, file) => sum + file.bytes, 0), cacheMode: buildSettings.delivery.cacheMode, files }
   const patch = { format: 'nova-patch-manifest', version: 1, fromBuild: null, toBuild: packHash, added: files.map(file => file.path), changed: [], removed: [], files }
   const dependencies = { format: 'nova-dependency-report', version: 1, engineVersion: NOVA_ENGINE_VERSION, packages: JSON.parse(projectForBuild(getSceneJSON())).packages?.lockfile ?? [], assets: assetsForBuild().map(asset => ({ uuid: asset.uuid, path: asset.path, type: asset.assetType })) }
   const contentManifest = { format: 'nova-content-manifest', version: 1, engineVersion: NOVA_ENGINE_VERSION, buildId: packHash, include: [...buildSettings.delivery.include], exclude: [...buildSettings.delivery.exclude], stripUnusedAssets: buildSettings.delivery.stripUnusedAssets, compression: buildSettings.delivery.compression, files }
@@ -162,7 +170,7 @@ async function webBuildMetadata(pack: Uint8Array, webFiles: ExportFile[]): Promi
     settings: buildSettings, packages: packageState.lockfile, files, deterministic: buildSettings.delivery.deterministic,
     toolchain: { builder: 'Nova_A Web Export 1', packageManager: 'pnpm 10.30.0', projectFormat: '2.29' }
   })
-  const sbom = { format: 'CycloneDX', specVersion: '1.5', serialNumber: `urn:uuid:${crypto.randomUUID()}`, version: 1, metadata: { component: { type: 'application', name: buildSettings.gameName, version: buildSettings.platform.version }, properties: [{ name: 'nova.engine', value: NOVA_ENGINE_VERSION }, { name: 'nova.build', value: packHash }] }, components: packageState.lockfile.map(entry => ({ type: 'library', 'bom-ref': `${entry.id}@${entry.version}`, name: entry.id, version: entry.version, hashes: [{ alg: 'SHA-256', content: entry.sha256 }], properties: [{ name: 'nova.source', value: `${entry.source.kind}:${entry.source.location}` }] })) }
+  const sbom = { format: 'CycloneDX', specVersion: '1.5', serialNumber: buildSbomSerial(packHash, buildSettings.delivery.deterministic), version: 1, metadata: { component: { type: 'application', name: buildSettings.gameName, version: buildSettings.platform.version }, properties: [{ name: 'nova.engine', value: NOVA_ENGINE_VERSION }, { name: 'nova.build', value: packHash }] }, components: packageState.lockfile.map(entry => ({ type: 'library', 'bom-ref': `${entry.id}@${entry.version}`, name: entry.id, version: entry.version, hashes: [{ alg: 'SHA-256', content: entry.sha256 }], properties: [{ name: 'nova.source', value: `${entry.source.kind}:${entry.source.location}` }] })) }
   const deployment = { format: 'nova-deployment-manifest', version: 1, engineVersion: NOVA_ENGINE_VERSION, buildId: packHash, mode: buildSettings.delivery.deploymentMode, destination: buildSettings.delivery.deploymentDestination || 'local', releaseChannel: buildSettings.delivery.releaseChannel, implicitNetworkOperation: false, headers: buildSettings.delivery.webHeaders ? '_headers' : null }
   const encode = (path: string, value: unknown): ExportFile => ({ path, dataBase64: bytesToBase64(new TextEncoder().encode(`${JSON.stringify(value, null, 2)}\n`)) })
   return [
@@ -182,12 +190,15 @@ export async function buildGame(run = false): Promise<NativeBuildResult> {
   const startedAt = new Date().toISOString()
   const startedClock = performance.now()
   synchronizeBuildScenes(sceneManager.scenes.map(scene => scene.uuid))
-  const validationErrors = validateBuildSettings(buildSettings).filter(issue => issue.severity === 'error')
+  const validationErrors = [
+    ...validateBuildSettings(buildSettings),
+    ...validateProductionRuntime(assetState, editorState.rendererStats, physicsState.audioSettings)
+  ].filter(issue => issue.severity === 'error')
   if (validationErrors.length) throw new Error(validationErrors.map(issue => issue.message).join(' '))
   if (buildSettings.target === 'android' && !packageEnabled(OFFICIAL_ANDROID_PACKAGE_ID)) throw new Error('Install the optional Nova Android Export package before selecting Android.')
   if (buildSettings.runtimeMode === 'headless-server') {
     if (buildSettings.target === 'web') throw new Error('Headless authoritative-server exports require a native desktop target.')
-    if (!packageEnabled(OFFICIAL_NETWORKING_PACKAGE_ID) || !productionSettings.networking.enabled) throw new Error('Enable the optional Nova Networking package and networking settings before exporting a headless server.')
+    if (!packageEnabled(OFFICIAL_NETWORKING_PACKAGE_ID) || !productionSettings.networking.enabled || !productionSettings.networking.autoStart) throw new Error('Enable the optional Nova Networking package, networking settings, and automatic runtime startup before exporting a headless server.')
     if (productionSettings.networking.role === 'client') throw new Error('Headless server exports require the networking role Server or Host.')
   }
   buildProgress.phase = 'validating'; buildProgress.percent = 8; buildProgress.message = 'Validating scenes and asset references…'; buildProgress.outputPath = ''
@@ -209,7 +220,7 @@ export async function buildGame(run = false): Promise<NativeBuildResult> {
     result = await invoke<NativeBuildResult>('export_game', {
       request: {
         gameName: sanitizeGameName(buildSettings.gameName), target: buildSettings.target,
-        architecture: buildSettings.architecture, packageIntoExecutable: buildSettings.packageIntoExecutable,
+        architecture: buildSettings.architecture, runtimeMode: buildSettings.runtimeMode, packageIntoExecutable: buildSettings.packageIntoExecutable,
         developmentBuild: buildSettings.developmentBuild, outputDirectory: buildSettings.outputDirectory,
         packBase64: packageBase64(pack), webFiles, run, projectId: projectSessionState.id,
         profile: buildSettings.profile, platform: buildSettings.platform, delivery: buildSettings.delivery

@@ -1,4 +1,4 @@
-# Nova_A 26.4.0 完整使用手册
+# Nova_A 26.10 完整使用手册
 
 ## 6.2.0 行为契约
 
@@ -832,11 +832,11 @@ AI 工作流：启用官方包，添加 BehaviorTree2D 并创建 v2 资源。模
 在**交付**刷新确定性 CI 缓存键，并让差异构建配合补丁清单。创建本地、HTTPS 或外部命令连接器；远程／外部连接器必须获得项目权限。“准备计划”只验证目标和校验和，返回不可执行计划，不会访问网络。最终部署仍需外部明确执行。详见 `docs/EXTENSIONS_PLATFORM_DELIVERY_5_9.md`。
 
 <!-- NOVA_V6_TEACHING_START -->
-# Nova_A 26.4.0 任务式教学手册
+# Nova_A 26.10 任务式教学手册
 
 通过完成真实任务学习。以下每个公开功能均说明归属、持久化、恢复、无障碍和发布行为。
 
-- Engine: **26.4.0**
+- Engine: **26.10.0**
 - Stable contracts: Project Format 2/schema 29; Rhai API 2; Graph Format 1; Plugin API 2; Package Manifest 1; Build CLI 1; workspace document 3.
 - External signing, independent clean-machine evidence, two-machine reproduction, matching-host builds and a real 72-hour soak remain pending until independently captured.
 
@@ -10561,6 +10561,94 @@ AI 工作流：启用官方包，添加 BehaviorTree2D 并创建 v2 资源。模
 
 **可视化图 API:** `Animation/Play`, `Animation/Set Parameter`, `Timeline/Signal`
 
+<a id="animation-fixed-time-cinematic-capture-plan"></a>
+
+### Fixed-time cinematic capture plan
+
+**分类:** Manual · Assisted · Runtime · Reversible · Per-object
+
+**用途和使用时机:** 在“Animation and Timeline”中使用“Fixed-time cinematic capture plan”，可在“Animation”工作流内完成对应的创作或运行任务。 项目需要“Fixed-time cinematic capture plan”时使用；无关设置应保留在其所属工作区。
+
+**前提条件:**
+
+- Animation, controller, rig or timeline assets
+
+**准确操作流程:**
+
+1. 打开“Animation”，再打开“Animation and Timeline”。
+2. 选择“Fixed-time cinematic capture plan”；编辑前先阅读可见的验证与权限状态。
+3. 选择目标项目、资源或对象，只输入有限且受支持的数值。
+4. 应用或保存更改，检查可见结果以及“问题/控制台”输出。
+5. 若该功能具有运行行为，启动“播放”或“预览”；使用“暂停/单步”进行确定性检查。
+6. 保存并重新载入项目，确认创作值保持不变。
+7. 运行“项目健康”和对应测试，构建独立播放器后重复可观察检查。
+
+**预期结果:** “Fixed-time cinematic capture plan”会在编辑器中可见，重新载入后保持，并在适用时进入预览、播放和导出的播放器。
+
+**持久化和导出:** “Fixed-time cinematic capture plan”保存在所属的项目、场景、组件、资源、工作区偏好或构建清单中；仅编辑器状态不会进入播放器。
+
+**撤销和恢复:** 文档编辑使用撤销/重做；导入或软件包使用还原/回滚；中断保存使用恢复浏览器；项目级恢复使用源代码管理或迁移备份。
+
+**常见错误和修复:**
+
+- 在错误的选择或工作区上编辑“Fixed-time cinematic capture plan”。
+- 忽略权限、验证、缺失引用或宿主模板警告。
+- 只检查编辑器预览，而未验证保存/重载与独立播放器。
+
+**键盘和无障碍:** 可使用命令面板或键盘焦点替代纯指针操作。所有对话框均有可访问名称、可见焦点、Escape/取消路径和减少动态效果。
+
+**最小示例:** 最小示例：创建一个有效目标，配置“Fixed-time cinematic capture plan”，保存，并在播放模式确认一个可见结果。
+
+**生产示例:** 生产示例：为“Fixed-time cinematic capture plan”加入验证、本地化/无障碍、确定性测试、预算、恢复证据以及开发与发布构建。
+
+**Rhai API:** `animation_play`, `animation_parameter`, `signal_emit`
+
+**可视化图 API:** `Animation/Play`, `Animation/Set Parameter`, `Timeline/Signal`
+
+<a id="animation-frame-to-audio-sample-synchronization"></a>
+
+### Frame-to-audio sample synchronization
+
+**分类:** Manual · Assisted · Runtime · Reversible · Per-object
+
+**用途和使用时机:** 在“Animation and Timeline”中使用“Frame-to-audio sample synchronization”，可在“Animation”工作流内完成对应的创作或运行任务。 项目需要“Frame-to-audio sample synchronization”时使用；无关设置应保留在其所属工作区。
+
+**前提条件:**
+
+- Animation, controller, rig or timeline assets
+
+**准确操作流程:**
+
+1. 打开“Animation”，再打开“Animation and Timeline”。
+2. 选择“Frame-to-audio sample synchronization”；编辑前先阅读可见的验证与权限状态。
+3. 选择目标项目、资源或对象，只输入有限且受支持的数值。
+4. 应用或保存更改，检查可见结果以及“问题/控制台”输出。
+5. 若该功能具有运行行为，启动“播放”或“预览”；使用“暂停/单步”进行确定性检查。
+6. 保存并重新载入项目，确认创作值保持不变。
+7. 运行“项目健康”和对应测试，构建独立播放器后重复可观察检查。
+
+**预期结果:** “Frame-to-audio sample synchronization”会在编辑器中可见，重新载入后保持，并在适用时进入预览、播放和导出的播放器。
+
+**持久化和导出:** “Frame-to-audio sample synchronization”保存在所属的项目、场景、组件、资源、工作区偏好或构建清单中；仅编辑器状态不会进入播放器。
+
+**撤销和恢复:** 文档编辑使用撤销/重做；导入或软件包使用还原/回滚；中断保存使用恢复浏览器；项目级恢复使用源代码管理或迁移备份。
+
+**常见错误和修复:**
+
+- 在错误的选择或工作区上编辑“Frame-to-audio sample synchronization”。
+- 忽略权限、验证、缺失引用或宿主模板警告。
+- 只检查编辑器预览，而未验证保存/重载与独立播放器。
+
+**键盘和无障碍:** 可使用命令面板或键盘焦点替代纯指针操作。所有对话框均有可访问名称、可见焦点、Escape/取消路径和减少动态效果。
+
+**最小示例:** 最小示例：创建一个有效目标，配置“Frame-to-audio sample synchronization”，保存，并在播放模式确认一个可见结果。
+
+**生产示例:** 生产示例：为“Frame-to-audio sample synchronization”加入验证、本地化/无障碍、确定性测试、预算、恢复证据以及开发与发布构建。
+
+**Rhai API:** `animation_play`, `animation_parameter`, `signal_emit`
+
+**可视化图 API:** `Animation/Play`, `Animation/Set Parameter`, `Timeline/Signal`
+
 
 ## Interface Studio
 
@@ -11882,6 +11970,94 @@ AI 工作流：启用官方包，添加 BehaviorTree2D 并创建 v2 资源。模
 **最小示例:** 最小示例：创建一个有效目标，配置“Device recovery”，保存，并在播放模式确认一个可见结果。
 
 **生产示例:** 生产示例：为“Device recovery”加入验证、本地化/无障碍、确定性测试、预算、恢复证据以及开发与发布构建。
+
+**Rhai API:** `audio_play`, `audio_stop`, `audio_set_bus`
+
+**可视化图 API:** `Audio/Play`, `Audio/Stop`
+
+<a id="audio-sample-accurate-cinematic-frame-boundaries"></a>
+
+### Sample-accurate cinematic frame boundaries
+
+**分类:** Manual · Runtime · Project-wide · Per-object · Reversible
+
+**用途和使用时机:** 在“Audio Studio”中使用“Sample-accurate cinematic frame boundaries”，可在“Animation / Debug”工作流内完成对应的创作或运行任务。 项目需要“Sample-accurate cinematic frame boundaries”时使用；无关设置应保留在其所属工作区。
+
+**前提条件:**
+
+- An imported audio asset
+
+**准确操作流程:**
+
+1. 打开“Animation / Debug”，再打开“Audio Studio”。
+2. 选择“Sample-accurate cinematic frame boundaries”；编辑前先阅读可见的验证与权限状态。
+3. 选择目标项目、资源或对象，只输入有限且受支持的数值。
+4. 应用或保存更改，检查可见结果以及“问题/控制台”输出。
+5. 若该功能具有运行行为，启动“播放”或“预览”；使用“暂停/单步”进行确定性检查。
+6. 保存并重新载入项目，确认创作值保持不变。
+7. 运行“项目健康”和对应测试，构建独立播放器后重复可观察检查。
+
+**预期结果:** “Sample-accurate cinematic frame boundaries”会在编辑器中可见，重新载入后保持，并在适用时进入预览、播放和导出的播放器。
+
+**持久化和导出:** “Sample-accurate cinematic frame boundaries”保存在所属的项目、场景、组件、资源、工作区偏好或构建清单中；仅编辑器状态不会进入播放器。
+
+**撤销和恢复:** 文档编辑使用撤销/重做；导入或软件包使用还原/回滚；中断保存使用恢复浏览器；项目级恢复使用源代码管理或迁移备份。
+
+**常见错误和修复:**
+
+- 在错误的选择或工作区上编辑“Sample-accurate cinematic frame boundaries”。
+- 忽略权限、验证、缺失引用或宿主模板警告。
+- 只检查编辑器预览，而未验证保存/重载与独立播放器。
+
+**键盘和无障碍:** 可使用命令面板或键盘焦点替代纯指针操作。所有对话框均有可访问名称、可见焦点、Escape/取消路径和减少动态效果。
+
+**最小示例:** 最小示例：创建一个有效目标，配置“Sample-accurate cinematic frame boundaries”，保存，并在播放模式确认一个可见结果。
+
+**生产示例:** 生产示例：为“Sample-accurate cinematic frame boundaries”加入验证、本地化/无障碍、确定性测试、预算、恢复证据以及开发与发布构建。
+
+**Rhai API:** `audio_play`, `audio_stop`, `audio_set_bus`
+
+**可视化图 API:** `Audio/Play`, `Audio/Stop`
+
+<a id="audio-production-media-build-validation"></a>
+
+### Production-media build validation
+
+**分类:** Manual · Runtime · Project-wide · Per-object · Reversible
+
+**用途和使用时机:** 在“Audio Studio”中使用“Production-media build validation”，可在“Animation / Debug”工作流内完成对应的创作或运行任务。 项目需要“Production-media build validation”时使用；无关设置应保留在其所属工作区。
+
+**前提条件:**
+
+- An imported audio asset
+
+**准确操作流程:**
+
+1. 打开“Animation / Debug”，再打开“Audio Studio”。
+2. 选择“Production-media build validation”；编辑前先阅读可见的验证与权限状态。
+3. 选择目标项目、资源或对象，只输入有限且受支持的数值。
+4. 应用或保存更改，检查可见结果以及“问题/控制台”输出。
+5. 若该功能具有运行行为，启动“播放”或“预览”；使用“暂停/单步”进行确定性检查。
+6. 保存并重新载入项目，确认创作值保持不变。
+7. 运行“项目健康”和对应测试，构建独立播放器后重复可观察检查。
+
+**预期结果:** “Production-media build validation”会在编辑器中可见，重新载入后保持，并在适用时进入预览、播放和导出的播放器。
+
+**持久化和导出:** “Production-media build validation”保存在所属的项目、场景、组件、资源、工作区偏好或构建清单中；仅编辑器状态不会进入播放器。
+
+**撤销和恢复:** 文档编辑使用撤销/重做；导入或软件包使用还原/回滚；中断保存使用恢复浏览器；项目级恢复使用源代码管理或迁移备份。
+
+**常见错误和修复:**
+
+- 在错误的选择或工作区上编辑“Production-media build validation”。
+- 忽略权限、验证、缺失引用或宿主模板警告。
+- 只检查编辑器预览，而未验证保存/重载与独立播放器。
+
+**键盘和无障碍:** 可使用命令面板或键盘焦点替代纯指针操作。所有对话框均有可访问名称、可见焦点、Escape/取消路径和减少动态效果。
+
+**最小示例:** 最小示例：创建一个有效目标，配置“Production-media build validation”，保存，并在播放模式确认一个可见结果。
+
+**生产示例:** 生产示例：为“Production-media build validation”加入验证、本地化/无障碍、确定性测试、预算、恢复证据以及开发与发布构建。
 
 **Rhai API:** `audio_play`, `audio_stop`, `audio_set_bus`
 
@@ -13296,6 +13472,182 @@ AI 工作流：启用官方包，添加 BehaviorTree2D 并创建 v2 资源。模
 **最小示例:** 最小示例：创建一个有效目标，配置“Pixel-perfect and high-DPI rendering”，保存，并在播放模式确认一个可见结果。
 
 **生产示例:** 生产示例：为“Pixel-perfect and high-DPI rendering”加入验证、本地化/无障碍、确定性测试、预算、恢复证据以及开发与发布构建。
+
+**Rhai API:** N/A
+
+**可视化图 API:** `Material and particle graph node catalogs`
+
+<a id="rendering-budgeted-texture-residency-and-idle-eviction"></a>
+
+### Budgeted texture residency and idle eviction
+
+**分类:** Manual · Assisted · Runtime · Project-wide · Reversible
+
+**用途和使用时机:** 在“Rendering Studio”中使用“Budgeted texture residency and idle eviction”，可在“Manage”工作流内完成对应的创作或运行任务。 项目需要“Budgeted texture residency and idle eviction”时使用；无关设置应保留在其所属工作区。
+
+**前提条件:**
+
+- Renderer-compatible scene content
+
+**准确操作流程:**
+
+1. 打开“Manage”，再打开“Rendering Studio”。
+2. 选择“Budgeted texture residency and idle eviction”；编辑前先阅读可见的验证与权限状态。
+3. 选择目标项目、资源或对象，只输入有限且受支持的数值。
+4. 应用或保存更改，检查可见结果以及“问题/控制台”输出。
+5. 若该功能具有运行行为，启动“播放”或“预览”；使用“暂停/单步”进行确定性检查。
+6. 保存并重新载入项目，确认创作值保持不变。
+7. 运行“项目健康”和对应测试，构建独立播放器后重复可观察检查。
+
+**预期结果:** “Budgeted texture residency and idle eviction”会在编辑器中可见，重新载入后保持，并在适用时进入预览、播放和导出的播放器。
+
+**持久化和导出:** “Budgeted texture residency and idle eviction”保存在所属的项目、场景、组件、资源、工作区偏好或构建清单中；仅编辑器状态不会进入播放器。
+
+**撤销和恢复:** 文档编辑使用撤销/重做；导入或软件包使用还原/回滚；中断保存使用恢复浏览器；项目级恢复使用源代码管理或迁移备份。
+
+**常见错误和修复:**
+
+- 在错误的选择或工作区上编辑“Budgeted texture residency and idle eviction”。
+- 忽略权限、验证、缺失引用或宿主模板警告。
+- 只检查编辑器预览，而未验证保存/重载与独立播放器。
+
+**键盘和无障碍:** 可使用命令面板或键盘焦点替代纯指针操作。所有对话框均有可访问名称、可见焦点、Escape/取消路径和减少动态效果。
+
+**最小示例:** 最小示例：创建一个有效目标，配置“Budgeted texture residency and idle eviction”，保存，并在播放模式确认一个可见结果。
+
+**生产示例:** 生产示例：为“Budgeted texture residency and idle eviction”加入验证、本地化/无障碍、确定性测试、预算、恢复证据以及开发与发布构建。
+
+**Rhai API:** N/A
+
+**可视化图 API:** `Material and particle graph node catalogs`
+
+<a id="rendering-unified-production-media-checklist"></a>
+
+### Unified production-media checklist
+
+**分类:** Manual · Assisted · Runtime · Project-wide · Reversible
+
+**用途和使用时机:** 在“Rendering Studio”中使用“Unified production-media checklist”，可在“Manage”工作流内完成对应的创作或运行任务。 项目需要“Unified production-media checklist”时使用；无关设置应保留在其所属工作区。
+
+**前提条件:**
+
+- Renderer-compatible scene content
+
+**准确操作流程:**
+
+1. 打开“Manage”，再打开“Rendering Studio”。
+2. 选择“Unified production-media checklist”；编辑前先阅读可见的验证与权限状态。
+3. 选择目标项目、资源或对象，只输入有限且受支持的数值。
+4. 应用或保存更改，检查可见结果以及“问题/控制台”输出。
+5. 若该功能具有运行行为，启动“播放”或“预览”；使用“暂停/单步”进行确定性检查。
+6. 保存并重新载入项目，确认创作值保持不变。
+7. 运行“项目健康”和对应测试，构建独立播放器后重复可观察检查。
+
+**预期结果:** “Unified production-media checklist”会在编辑器中可见，重新载入后保持，并在适用时进入预览、播放和导出的播放器。
+
+**持久化和导出:** “Unified production-media checklist”保存在所属的项目、场景、组件、资源、工作区偏好或构建清单中；仅编辑器状态不会进入播放器。
+
+**撤销和恢复:** 文档编辑使用撤销/重做；导入或软件包使用还原/回滚；中断保存使用恢复浏览器；项目级恢复使用源代码管理或迁移备份。
+
+**常见错误和修复:**
+
+- 在错误的选择或工作区上编辑“Unified production-media checklist”。
+- 忽略权限、验证、缺失引用或宿主模板警告。
+- 只检查编辑器预览，而未验证保存/重载与独立播放器。
+
+**键盘和无障碍:** 可使用命令面板或键盘焦点替代纯指针操作。所有对话框均有可访问名称、可见焦点、Escape/取消路径和减少动态效果。
+
+**最小示例:** 最小示例：创建一个有效目标，配置“Unified production-media checklist”，保存，并在播放模式确认一个可见结果。
+
+**生产示例:** 生产示例：为“Unified production-media checklist”加入验证、本地化/无障碍、确定性测试、预算、恢复证据以及开发与发布构建。
+
+**Rhai API:** N/A
+
+**可视化图 API:** `Material and particle graph node catalogs`
+
+<a id="rendering-deterministic-numbered-frame-capture"></a>
+
+### Deterministic numbered frame capture
+
+**分类:** Manual · Assisted · Runtime · Project-wide · Reversible
+
+**用途和使用时机:** 在“Rendering Studio”中使用“Deterministic numbered frame capture”，可在“Manage”工作流内完成对应的创作或运行任务。 项目需要“Deterministic numbered frame capture”时使用；无关设置应保留在其所属工作区。
+
+**前提条件:**
+
+- Renderer-compatible scene content
+
+**准确操作流程:**
+
+1. 打开“Manage”，再打开“Rendering Studio”。
+2. 选择“Deterministic numbered frame capture”；编辑前先阅读可见的验证与权限状态。
+3. 选择目标项目、资源或对象，只输入有限且受支持的数值。
+4. 应用或保存更改，检查可见结果以及“问题/控制台”输出。
+5. 若该功能具有运行行为，启动“播放”或“预览”；使用“暂停/单步”进行确定性检查。
+6. 保存并重新载入项目，确认创作值保持不变。
+7. 运行“项目健康”和对应测试，构建独立播放器后重复可观察检查。
+
+**预期结果:** “Deterministic numbered frame capture”会在编辑器中可见，重新载入后保持，并在适用时进入预览、播放和导出的播放器。
+
+**持久化和导出:** “Deterministic numbered frame capture”保存在所属的项目、场景、组件、资源、工作区偏好或构建清单中；仅编辑器状态不会进入播放器。
+
+**撤销和恢复:** 文档编辑使用撤销/重做；导入或软件包使用还原/回滚；中断保存使用恢复浏览器；项目级恢复使用源代码管理或迁移备份。
+
+**常见错误和修复:**
+
+- 在错误的选择或工作区上编辑“Deterministic numbered frame capture”。
+- 忽略权限、验证、缺失引用或宿主模板警告。
+- 只检查编辑器预览，而未验证保存/重载与独立播放器。
+
+**键盘和无障碍:** 可使用命令面板或键盘焦点替代纯指针操作。所有对话框均有可访问名称、可见焦点、Escape/取消路径和减少动态效果。
+
+**最小示例:** 最小示例：创建一个有效目标，配置“Deterministic numbered frame capture”，保存，并在播放模式确认一个可见结果。
+
+**生产示例:** 生产示例：为“Deterministic numbered frame capture”加入验证、本地化/无障碍、确定性测试、预算、恢复证据以及开发与发布构建。
+
+**Rhai API:** N/A
+
+**可视化图 API:** `Material and particle graph node catalogs`
+
+<a id="rendering-balanced-and-low-end-semantic-parity"></a>
+
+### Balanced and low-end semantic parity
+
+**分类:** Manual · Assisted · Runtime · Project-wide · Reversible
+
+**用途和使用时机:** 在“Rendering Studio”中使用“Balanced and low-end semantic parity”，可在“Manage”工作流内完成对应的创作或运行任务。 项目需要“Balanced and low-end semantic parity”时使用；无关设置应保留在其所属工作区。
+
+**前提条件:**
+
+- Renderer-compatible scene content
+
+**准确操作流程:**
+
+1. 打开“Manage”，再打开“Rendering Studio”。
+2. 选择“Balanced and low-end semantic parity”；编辑前先阅读可见的验证与权限状态。
+3. 选择目标项目、资源或对象，只输入有限且受支持的数值。
+4. 应用或保存更改，检查可见结果以及“问题/控制台”输出。
+5. 若该功能具有运行行为，启动“播放”或“预览”；使用“暂停/单步”进行确定性检查。
+6. 保存并重新载入项目，确认创作值保持不变。
+7. 运行“项目健康”和对应测试，构建独立播放器后重复可观察检查。
+
+**预期结果:** “Balanced and low-end semantic parity”会在编辑器中可见，重新载入后保持，并在适用时进入预览、播放和导出的播放器。
+
+**持久化和导出:** “Balanced and low-end semantic parity”保存在所属的项目、场景、组件、资源、工作区偏好或构建清单中；仅编辑器状态不会进入播放器。
+
+**撤销和恢复:** 文档编辑使用撤销/重做；导入或软件包使用还原/回滚；中断保存使用恢复浏览器；项目级恢复使用源代码管理或迁移备份。
+
+**常见错误和修复:**
+
+- 在错误的选择或工作区上编辑“Balanced and low-end semantic parity”。
+- 忽略权限、验证、缺失引用或宿主模板警告。
+- 只检查编辑器预览，而未验证保存/重载与独立播放器。
+
+**键盘和无障碍:** 可使用命令面板或键盘焦点替代纯指针操作。所有对话框均有可访问名称、可见焦点、Escape/取消路径和减少动态效果。
+
+**最小示例:** 最小示例：创建一个有效目标，配置“Balanced and low-end semantic parity”，保存，并在播放模式确认一个可见结果。
+
+**生产示例:** 生产示例：为“Balanced and low-end semantic parity”加入验证、本地化/无障碍、确定性测试、预算、恢复证据以及开发与发布构建。
 
 **Rhai API:** N/A
 
@@ -18436,5 +18788,55 @@ AI 工作流：启用官方包，添加 BehaviorTree2D 并创建 v2 资源。模
 **Rhai API:** N/A
 
 **可视化图 API:** N/A
+
+
+<a id="v2608-device-mobile-accessibility"></a>
+
+## 触控、手柄、移动交付与无障碍流程
+
+让一个无代码游戏在桌面、触控、手柄、安全区域和辅助技术下保持可控、可理解。
+
+1. 打开“设置 → 设备与移动输入”。选择移动竖屏／横屏并旋转，先检查安全区域和 44 × 44 点击目标覆盖层。
+2. 启用虚拟控制：将摇杆／方向键绑定到向量或轴动作，将按钮绑定到按钮动作；设置锚点、偏移、大小、不透明度和触觉时长。它们与键盘／手柄共用同一 Input Map。
+3. 把触控笔的压力、X／Y 倾斜、旋转、笔尖、侧键和橡皮擦绑定到动作；在输入测试中逐项验证。指针取消、窗口失焦或页面隐藏后，所有保持中的笔状态都必须释放。
+4. 在“手柄”中捕获绑定，设置按设备或通用的最小值、中心、最大值、死区和反转。测试录制／回放、保存／重载。传感器必须先启用，再由用户点击请求权限。
+5. 打开“呈现 → 无障碍”，用键盘／手柄遍历，检查角色、名称、状态、数值和实时区域并导出语义快照；测试高对比度、减少动态效果、RTL、英／德／中和 200–400% 文字。
+6. Android 需要先启用可选的已审核包，然后检测 JDK 17、SDK/API 35、Build Tools、NDK、adb 和已验证模板；只选必要权限，敏感权限必须写明用途。
+7. 仅在工具链就绪时构建 APK。发布签名密码与别名只从环境变量读取。刷新设备、安装 APK、捕获有限 logcat 都必须分别点击；iOS 仍需匹配 macOS 主机，当前延期。
+
+**撤销和恢复:** 触控后的合成鼠标事件会去重，取消／失焦会释放控件。非法校准、权限、标识符、路径、APK、序列号、缺失工具链和 Gradle 失败都会明确报告；不会保存凭据、自动安装、自动收集日志或虚假声明 iOS 支持。
+
+
+<a id="v2609-large-world-performance"></a>
+
+## 大型世界与低端设备性能流程
+
+在不改变固定步进玩法、创作特效、编辑器控制和导出行为的前提下，测量并调优 1 万至 10 万对象项目。
+
+1. 打开“调试 → 分析器 → 帧追踪”。调整前先记录冷／热启动、主线程、工作线程、队列、缓存、分配、最慢帧、1% 低帧和输入到像素延迟。
+2. 启用自适应显示质量，并设置有界后台、流式、命令、指标发布和空间单元预算。自适应只改变像素密度与粒子显示容量，不改变物理、脚本、动画或创作值。
+3. 打开 26.09 大型世界参考项目；在导航或流式任务运行时搜索层级／资源、拖动和选择对象、反复切换工作区，确认列表虚拟化且取消后的旧结果不会生效。
+4. 在“任务”中测试工作线程。动画采样、粒子步进和空间网格必须与本地回退完全一致；取消或替换带键任务后，旧代结果必须被拒绝。
+5. 在团队工作流中建立变更列表基线，从两侧修改同一场景、源码和可视化图身份，再检查三方合并。删除、重排、旧世代及真实冲突必须保持可见且无损。
+6. 运行 1 万、5 万和 10 万对象夹具；对比校验和、确定性查询顺序、固定步进输出、1% 低帧和内存趋势；保存／重载、播放／暂停／单步并构建独立播放器。
+7. 若目标设备超出帧预算，只能依据证据调整显示和后台预算；不得隐藏控件、删除动画／特效、降低固定时间步或虚假声明未测硬件。
+
+**撤销和恢复:** 若交互延迟升高，请取消后台任务或恢复默认值。工作线程失败会自动使用有界本地实现；旧代结果会丢弃，流式任务在后续帧继续，项目文档始终是权威数据。
+
+
+<a id="v2610-stable-platform"></a>
+
+## Nova_A 26.10 稳定创作平台流程
+
+使用本流程学习、迁移、验证并发布完整项目，同时明确保留所有稳定契约和外部限制。
+
+1. 打开“管理 → 学习中心 → 平台就绪情况”，搜索计划使用的功能，并检查绑定、验证、撤销、持久化、运行时／导出、文档和测试。圆圈代表不适用，短横线代表仍需外部证据。
+2. 从引导项目或 creator-v2610-mixed-game 参考开始，依次完成前提条件、准确步骤、预期结果、保存／重载、撤销／恢复、播放／单步、独立构建和无障碍检查。
+3. 打开 6.x 项目时先查看迁移预览，核对源／目标引擎、语义差异、备份路径和确定性校验和。26.10 只把受支持引擎上限封存为 <27.0.0，不会重写 schema 29 玩法数据。
+4. 编辑 Rhai 或可视化图中的任意一侧，保存后检查同步的另一侧并运行等价性测试。不支持的 Rhai 会无损保留在代码块中。使用运行时调用前请查阅 API 浏览器或 docs/API_SDK_26_10.md。
+5. 运行“项目健康”、模板／参考检查和构建验证。在 Windows 本机构建 Windows 与 Web；Linux／macOS 需要匹配主机，Android 为工具链门禁实验目标，iOS／主机平台仍延期，不能把不可用目标伪装为通过。
+6. 在英／德／中、100–200% 界面缩放、高对比度和减少动态效果下测试键盘与指针。保存、关闭、重开，恢复一次故意输入的非法值，再检查证据和精确十一份发布文件。
+
+**撤销和恢复:** 若预览不符合预期，请取消迁移或恢复备份；文档编辑使用撤销，中断保存使用恢复浏览器，故障包／插件应停用，并保留最后一次有效构建。按症状恢复请查 docs/TROUBLESHOOTING_26_10.md。签名、干净机器生命周期、匹配主机构建、独立观察和真实长测在取得证据前仍属于外部工作。
 
 <!-- NOVA_V6_TEACHING_END -->

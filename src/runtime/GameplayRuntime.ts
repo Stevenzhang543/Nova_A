@@ -32,7 +32,7 @@ import { beforeWorldPhysicsStep, beginWorldGameplay, canUseCoyoteTime, queueChar
 import { acquirePooled, releasePooled } from './objectPool'
 import type { CharacterBody2D } from '../world/components'
 import { completeReplayFixedStep, deterministicRandom, replayFixedInput, resetDeterministicSeed } from './replay'
-import { beginProductionRuntime, callProductionRpc, onProductionRpc, onProductionSceneHandoff, productionNetworkContext, stopProductionRuntime, updateProductionRuntime } from './productionRuntime'
+import { beginProductionRuntime, callProductionRpc, onProductionRemoteInput, onProductionRpc, onProductionSceneHandoff, productionNetworkContext, stopProductionRuntime, updateProductionRuntime } from './productionRuntime'
 import { recordScriptFunction } from './profiler'
 import { synchronizePerformanceWorld } from './largeWorldPerformance'
 import type { ScriptBreakpointMetadata } from '../assets/types'
@@ -300,7 +300,10 @@ export class GameplayRuntime {
     this.networkUnsubscribe?.()
     const rpcCleanup = onProductionRpc((name, payload, context) => this.emitSignal(`network.${name}`, { payload, sender: context.sender, tick: context.tick }, '', context.sender))
     const sceneCleanup = onProductionSceneHandoff((sceneUuid, spawnTag, peerId) => { this.pendingScene = { type: 'load', identifier: sceneUuid }; this.emitSignal('network.scene_handoff', { scene: sceneUuid, spawnTag, peer: peerId }, '', peerId) })
-    this.networkUnsubscribe = () => { rpcCleanup(); sceneCleanup() }
+    const remoteInputCleanup = onProductionRemoteInput(frame => {
+      for (const entityUuid of frame.targetEntityUuids) this.emitSignal('network.input', { input: frame.input, sender: frame.peerId, tick: frame.tick, entity: entityUuid }, entityUuid, frame.peerId)
+    })
+    this.networkUnsubscribe = () => { rpcCleanup(); sceneCleanup(); remoteInputCleanup() }
     this.ensureLifecycle()
     this.flushStructuralCommands()
     addEditorLog('Gameplay runtime started', 'Runtime')
@@ -404,6 +407,7 @@ export class GameplayRuntime {
   stepOnce(viewport?: DOMRect): void {
     if (!this.active) this.beginSession()
     synchronizePerformanceWorld(physicsState.world.entities)
+    this.dispatchSignals()
     this.ensureLifecycle()
     this.inputSnapshot = replayFixedInput(this.decorateViewportInput(this.input.sample(physicsState.inputMap, viewport), viewport))
     this.dispatchInputCallbacks(this.inputSnapshot)

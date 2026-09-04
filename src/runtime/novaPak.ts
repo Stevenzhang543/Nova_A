@@ -1,4 +1,5 @@
 import type { AssetRecord } from '../assets/types'
+import { NOVA_ENGINE_VERSION } from '../projects/projectFormat'
 
 const MAGIC = new TextEncoder().encode('NOVAPAK\0')
 const HEADER_BYTES = 16
@@ -163,7 +164,7 @@ export async function createNovaPak(projectJson: string, assets: AssetRecord[], 
     : undefined
   const index: NovaPakIndex = {
     format: 'nova-pak', version: NOVA_PAK_VERSION,
-    engineVersion: String(project.engineVersion ?? '6.7.0'),
+    engineVersion: String(project.engineVersion ?? NOVA_ENGINE_VERSION),
     createdAt: options.deterministic === false ? new Date().toISOString() : '1970-01-01T00:00:00.000Z', startupSceneUuid,
     physicsProfile: physicsProfile && typeof physicsProfile === 'object' ? structuredClone(physicsProfile as Record<string, unknown>) : undefined,
     entries

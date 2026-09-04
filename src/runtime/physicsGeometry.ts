@@ -1,4 +1,4 @@
-import type { ColliderShapeDescriptor2D, PhysicsShapeKind } from './physicsProduction'
+import { MAX_AUTHORED_COLLIDER_POINTS, type ColliderShapeDescriptor2D, type PhysicsShapeKind } from './physicsProduction'
 import type { Vec2 } from '../world/types'
 
 export const COLLIDER_CHILD_STRIDE = 21
@@ -49,6 +49,36 @@ function polygonArea(points: Vec2[]): number {
   for (let index = 0; index < points.length; index++) twice += points[index].x * points[(index + 1) % points.length].y - points[index].y * points[(index + 1) % points.length].x
   return twice * .5
 }
+function orientation(a: Vec2, b: Vec2, c: Vec2): number {
+  const value = cross(a, b, c)
+  return Math.abs(value) <= 1e-10 ? 0 : Math.sign(value)
+}
+function onSegment(a: Vec2, b: Vec2, pointValue: Vec2): boolean {
+  return Math.abs(cross(a, b, pointValue)) <= 1e-10
+    && pointValue.x >= Math.min(a.x, b.x) - 1e-10 && pointValue.x <= Math.max(a.x, b.x) + 1e-10
+    && pointValue.y >= Math.min(a.y, b.y) - 1e-10 && pointValue.y <= Math.max(a.y, b.y) + 1e-10
+}
+function segmentsIntersect(a: Vec2, b: Vec2, c: Vec2, d: Vec2): boolean {
+  const first = orientation(a, b, c), second = orientation(a, b, d), third = orientation(c, d, a), fourth = orientation(c, d, b)
+  if (first !== second && third !== fourth) return true
+  return (first === 0 && onSegment(a, b, c)) || (second === 0 && onSegment(a, b, d)) || (third === 0 && onSegment(c, d, a)) || (fourth === 0 && onSegment(c, d, b))
+}
+function isSimplePolygon(points: Vec2[]): boolean {
+  for (let first = 0; first < points.length; first++) {
+    for (let second = first + 1; second < points.length; second++) {
+      if (Math.hypot(points[first].x - points[second].x, points[first].y - points[second].y) <= 1e-9) return false
+    }
+  }
+  for (let first = 0; first < points.length; first++) {
+    const firstNext = (first + 1) % points.length
+    for (let second = first + 1; second < points.length; second++) {
+      const secondNext = (second + 1) % points.length
+      if (first === second || firstNext === second || secondNext === first) continue
+      if (segmentsIntersect(points[first], points[firstNext], points[second], points[secondNext])) return false
+    }
+  }
+  return true
+}
 function insideTriangle(pointValue: Vec2, a: Vec2, b: Vec2, c: Vec2): boolean {
   const first = cross(a, b, pointValue), second = cross(b, c, pointValue), third = cross(c, a, pointValue)
   const negative = first < -1e-10 || second < -1e-10 || third < -1e-10
@@ -60,9 +90,11 @@ function insideTriangle(pointValue: Vec2, a: Vec2, b: Vec2, c: Vec2): boolean {
  * become silent convex envelopes: the caller receives no pieces and validation
  * can name the polygon that must be repaired. */
 export function decomposeSimplePolygon(input: Vec2[]): Vec2[][] {
+  if (input.length > MAX_AUTHORED_COLLIDER_POINTS) return []
+  if (input.some(entry => !Number.isFinite(entry?.x) || !Number.isFinite(entry?.y))) return []
   const points = input.map(point).filter((entry, index, values) => index === 0 || Math.hypot(entry.x - values[index - 1].x, entry.y - values[index - 1].y) > 1e-9)
   if (points.length > 2 && Math.hypot(points[0].x - points[points.length - 1].x, points[0].y - points[points.length - 1].y) <= 1e-9) points.pop()
-  if (points.length < 3 || Math.abs(polygonArea(points)) <= 1e-12) return []
+  if (points.length < 3 || Math.abs(polygonArea(points)) <= 1e-12 || !isSimplePolygon(points)) return []
   const order = [...points.keys()]
   if (polygonArea(points) < 0) order.reverse()
   const triangles: Vec2[][] = []
@@ -102,13 +134,16 @@ function baseShape(source: ColliderSource2D, id: string, kind: SolverColliderSha
 }
 
 function prepareOne(source: ColliderSource2D, id: string, kind: PhysicsShapeKind, offset: Vec2, rotation: number, size: Vec2, authored: Vec2[], properties: Partial<ColliderShapeDescriptor2D> = {}): { shapes: SolverColliderShape2D[]; decomposed: boolean; invalid: boolean } {
+  if (![offset?.x, offset?.y, rotation, size?.x, size?.y].every(value => Number.isFinite(value)) || !(size.x > 0) || !(size.y > 0) || authored.some(entry => !Number.isFinite(entry?.x) || !Number.isFinite(entry?.y))) return { shapes: [], decomposed: false, invalid: true }
   if (kind === 'Chain') {
     if (authored.length < 2) return { shapes: [], decomposed: true, invalid: true }
     const thickness = Math.max(1e-4, Math.abs(size.y || .02))
     const shapes = authored.slice(0, -1).flatMap((start, index) => {
       const end = authored[index + 1], dx = end.x - start.x, dy = end.y - start.y, length = Math.hypot(dx, dy)
       if (length <= 1e-9) return []
-      const center = { x: offset.x + (start.x + end.x) * .5, y: offset.y + (start.y + end.y) * .5 }
+      const midpoint = { x: (start.x + end.x) * .5, y: (start.y + end.y) * .5 }
+      const cosine = Math.cos(rotation), sine = Math.sin(rotation)
+      const center = { x: offset.x + midpoint.x * cosine - midpoint.y * sine, y: offset.y + midpoint.x * sine + midpoint.y * cosine }
       return [baseShape(source, id, 'Segment', center, rotation + Math.atan2(dy, dx), { x: length, y: thickness }, [], index, properties)]
     })
     return { shapes, decomposed: true, invalid: shapes.length === 0 }
@@ -132,6 +167,7 @@ export function prepareColliderSet(source: ColliderSource2D, dynamic: boolean): 
   let decomposed = false
   for (const descriptor of descriptors) {
     if (!descriptor.enabled) continue
+    if (descriptor.points.length > MAX_AUTHORED_COLLIDER_POINTS) return { shapes: [], blockedReason: `Collider '${descriptor.id}' exceeds the ${MAX_AUTHORED_COLLIDER_POINTS}-point authoring safety limit.`, decomposed: true }
     if (dynamic && descriptor.kind === 'ConcavePolygon') return { shapes: [], blockedReason: `Dynamic concave child '${descriptor.id}' is unsupported. Decompose it into convex children.`, decomposed }
     if (dynamic && descriptor.kind === 'Chain') return { shapes: [], blockedReason: `Dynamic chain child '${descriptor.id}' is unsupported. Use finite convex segment children.`, decomposed }
     const result = prepareOne(source, descriptor.id, descriptor.kind, descriptor.offset, descriptor.rotation, descriptor.size, descriptor.points, descriptor)

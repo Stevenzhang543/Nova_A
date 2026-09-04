@@ -1,6 +1,6 @@
-# Nova_A 7.0 known limitations
+# Nova_A 26.10 known limitations
 
-This 7.0 statement supersedes historical implementation notes later in this file:
+This 26.10 statement supersedes historical implementation notes later in this file:
 
 - Nova_A remains deliberately 2D-first; 3D, XR, ray tracing, AAA terrain/film systems, and proprietary console SDKs are not included.
 - Windows and Web are the locally qualified Tier-1 outputs. Linux and macOS require matching-host build/lifecycle evidence; Android is optional and toolchain/signing/device/store gated; iOS is deferred to a matching macOS host.
@@ -11,9 +11,13 @@ This 7.0 statement supersedes historical implementation notes later in this file
 - Rhai callback-boundary stepping is not arbitrary VM statement suspension; the external editor protocol is not claimed as a complete LSP.
 - Interactive native cold-start, working-set, GPU frame-time, real low-end-device results, independent beginner/expert studies, and a real wall-clock soak remain external until measured.
 - Networking is optional infrastructure, not a production hosted service. Public deployment requires independently reviewed authentication, encryption/tunnel, relay/NAT, abuse, operations, and privacy design.
-- Project Format 2/schema 29 remains frozen. A future format needs an explicit preview/backup/migration/diff/rollback path; 7.0 does not promise future downgrade support.
+- Project Format 2/schema 29 remains frozen, with the reviewed historical-project compatibility ceiling widened to `<27.0.0`. A future format needs an explicit preview/backup/migration/diff/rollback path; 26.10 does not promise future downgrade support.
 
-The exact current platform and evidence boundaries are in `STABLE_CREATOR_PLATFORM_7_0.md`. The remaining text is retained as a historical 5.0 candidate record and is not the current implementation inventory.
+The exact current platform and evidence boundaries are in `STABLE_CREATOR_PLATFORM_26_10.md`. The remaining text is retained as historical context and is not the current implementation inventory.
+
+## Historical 7.0 boundary
+
+Nova_A 7.0 used `STABLE_CREATOR_PLATFORM_7_0.md` and a reviewed `<8.0.0` compatibility ceiling. Those statements remain part of the historical record but do not override the current 26.10 support matrix, gap register or `<27.0.0` compatibility ceiling.
 
 ## Historical 5.0 candidate record
 

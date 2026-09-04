@@ -63,7 +63,7 @@ function textureDimensions(source: TexImageSource): { width: number; height: num
 }
 
 export class Canvas2DRenderer implements Renderer2D {
-  readonly stats: RendererStats = { backend: 'Canvas2D', drawCalls: 0, batches: 0, triangles: 0, sprites: 0, shapes: 0, text: 0, textures: 0, gpuMs: null, passes: 1, renderTargets: 0, overdraw: 0, batchBreaks: 0, atlasPages: 0, textureMemoryBytes: 0, textureUploads: 0, shaderCompiles: 0, shaderFallbacks: 0, contextLosses: 0, batchBreakReasons: {} }
+  readonly stats: RendererStats = { backend: 'Canvas2D', drawCalls: 0, batches: 0, triangles: 0, sprites: 0, shapes: 0, text: 0, textures: 0, gpuMs: null, passes: 1, renderTargets: 0, overdraw: 0, batchBreaks: 0, atlasPages: 0, textureMemoryBytes: 0, textureUploads: 0, textureEvictions: 0, textureBudgetBytes: 0, textureBudgetExceeded: false, streamingMisses: 0, shaderCompiles: 0, shaderFallbacks: 0, contextLosses: 0, batchBreakReasons: {} }
   private readonly context: CanvasRenderingContext2D
   private commands: QueuedCommand[] = []
   private tintedTextures = new WeakMap<object, Map<string, HTMLCanvasElement>>()
@@ -94,7 +94,7 @@ export class Canvas2DRenderer implements Renderer2D {
     this.resize(width, height, pixelRatio)
     this.commands = []
     this.cameraIndex = -1
-    Object.assign(this.stats, { drawCalls: 0, batches: 0, triangles: 0, sprites: 0, shapes: 0, text: 0, textures: 0, gpuMs: null, passes: 1, renderTargets: 0, overdraw: 0, batchBreaks: 0, atlasPages: 0, textureMemoryBytes: 0, textureUploads: 0, shaderCompiles: 0, shaderFallbacks: 0, contextLosses: 0, batchBreakReasons: {} })
+    Object.assign(this.stats, { drawCalls: 0, batches: 0, triangles: 0, sprites: 0, shapes: 0, text: 0, textures: 0, gpuMs: null, passes: 1, renderTargets: 0, overdraw: 0, batchBreaks: 0, atlasPages: 0, textureMemoryBytes: 0, textureUploads: 0, textureEvictions: 0, textureBudgetBytes: 0, textureBudgetExceeded: false, streamingMisses: 0, shaderCompiles: 0, shaderFallbacks: 0, contextLosses: 0, batchBreakReasons: {} })
     this.context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0)
     this.context.imageSmoothingEnabled = true
     this.context.imageSmoothingQuality = 'high'

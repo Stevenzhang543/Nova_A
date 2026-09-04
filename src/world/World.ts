@@ -279,10 +279,11 @@ function writeConnectionRecord(data: Float64Array, recordIndex: number, record: 
   data[index + 16] = 1
   data[index + 17] = connection.breakState === 'snapped' ? 1 : connection.breakState === 'torn' ? 2 : 0
   data[index + 18] = connection.componentType === 'FixedJoint2D' || connection.componentType === 'WeldJoint2D' ? 1
-    : connection.componentType === 'DistanceJoint2D' || connection.componentType === 'RopeJoint2D' ? 2
+    : connection.componentType === 'DistanceJoint2D' ? 2
       : connection.componentType === 'RevoluteJoint2D' || connection.componentType === 'MotorJoint2D' ? 3
         : connection.componentType === 'PrismaticJoint2D' ? 4
-          : connection.componentType === 'SpringJoint2D' ? 5 : 0
+          : connection.componentType === 'SpringJoint2D' ? 5
+            : connection.componentType === 'RopeJoint2D' ? 6 : 0
   data[index + 20] = connection.binding ? 1 : 0
   data[index + 21] = connection.bindAngle
   data[index + 22] = connection.bindOffset.x

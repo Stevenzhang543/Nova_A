@@ -11,12 +11,14 @@
   --type-body: calc(14px * var(--ui-scale));
   --type-section: calc(16px * var(--ui-scale));
   --type-page: calc(22px * var(--ui-scale));
-  --line-caption: calc(16px * var(--ui-scale));
-  --line-dense: calc(18px * var(--ui-scale));
-  --line-body: calc(20px * var(--ui-scale));
-  --line-control: calc(18px * var(--ui-scale));
-  --line-section: calc(20px * var(--ui-scale));
-  --line-page: calc(26px * var(--ui-scale));
+  --line-caption: calc(17px * var(--ui-scale));
+  --line-dense: calc(19px * var(--ui-scale));
+  --line-body: calc(21px * var(--ui-scale));
+  --line-control: calc(19px * var(--ui-scale));
+  --line-section: calc(22px * var(--ui-scale));
+  --line-page: calc(28px * var(--ui-scale));
+  --tracking-ui: 0.008em;
+  --tracking-copy: 0.006em;
   --space-1: 4px;
   --space-2: 8px;
   --space-3: 12px;
@@ -213,6 +215,7 @@ body,
   font-kerning: normal;
   font-optical-sizing: auto;
   font-feature-settings: "kern" 1, "liga" 1, "calt" 1;
+  letter-spacing: var(--tracking-copy);
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -389,13 +392,54 @@ button[aria-pressed='true'],
   font-family: var(--font-ui) !important;
   font-size: var(--type-dense) !important;
   line-height: var(--line-dense);
-  letter-spacing: 0;
+  letter-spacing: var(--tracking-ui);
 }
 
 :where(h1, h2, h3, h4, strong, b) {
   font-family: var(--font-display);
   font-variation-settings: "wght" 620;
-  letter-spacing: -0.012em;
+  letter-spacing: -0.004em;
+}
+
+/* 26.06 form contract. Single-line authored values and their prompts are
+   centered both optically and semantically. Multiline prose/source editors
+   intentionally retain start alignment for scanning and indentation. */
+html body #app :where(
+  input:not([type]),
+  input[type='text'], input[type='number'], input[type='search'],
+  input[type='email'], input[type='password'], input[type='tel'],
+  input[type='url'], input[type='date'], input[type='time'], select
+) {
+  text-align: center !important;
+  text-align-last: center !important;
+  line-height: var(--line-control) !important;
+}
+
+html body #app :where(
+  input:not([type]),
+  input[type='text'], input[type='number'], input[type='search'],
+  input[type='email'], input[type='password'], input[type='tel'],
+  input[type='url'], input[type='date'], input[type='time']
+)::placeholder {
+  text-align: center !important;
+  opacity: .72;
+}
+
+/* Preserve the scanning direction of prose and source editors. This explicit
+   counterpart keeps the single-line centering contract from leaking into
+   multiline controls through scoped component styles or inherited rules. */
+html body #app :where(textarea, [role='textbox'][aria-multiline='true'], pre) {
+  text-align: start !important;
+  text-align-last: auto !important;
+}
+
+html body #app textarea::placeholder {
+  text-align: start !important;
+}
+
+:root:lang(zh-CN) {
+  --tracking-ui: 0.018em;
+  --tracking-copy: 0.012em;
 }
 
 :where(small, figcaption, caption, .caption, .hint, .meta) {
@@ -758,5 +802,59 @@ html body #app :where(p, li, td, th, .body-copy) {
   #app :where(.studio-header, .page-header) {
     align-items: flex-start;
     flex-wrap: wrap;
+  }
+}
+
+/* 26.10 creator-layout safety net. Component styles still own their visual
+   hierarchy; these rules only establish invariants that every panel must obey
+   under translation, zoom, touch input, and narrow effective viewports. */
+#app :where(.editor-root, .editor-main, .editor-workspace, .editor-content, .manage-workspace, .panel-content, [data-control-scope]) :where(*) {
+  min-inline-size: 0;
+}
+
+#app :where(.scroll, .scrollable, .panel-scroll, .page, main, aside, [role='tabpanel']) {
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+
+#app :where(button, summary, [role='button'], [role='tab'], [role='menuitem']) {
+  max-inline-size: 100%;
+}
+
+#app :where(.settings-card, .studio-card, .inspector-pane, .asset-inspector, .package-inspector, [role='dialog']) :where(button:not(.icon-button), summary, label, legend) {
+  white-space: normal;
+  text-wrap: pretty;
+}
+
+#app :where([role='dialog'], .dialog, .popover, .menu-popover, .workspace-popover, .filter-popover) {
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+
+#app :where(button, input, select, textarea, summary, [tabindex]):focus-visible {
+  scroll-margin: 12px;
+}
+
+:root:lang(de) #app :where(.settings-card, .studio-card, .inspector-pane, .asset-inspector, .package-inspector) {
+  hyphens: auto;
+}
+
+@media (pointer: coarse) {
+  #app :where(button, summary, [role='button'], [role='tab'], input:not([type='checkbox']):not([type='radio']), select) {
+    min-block-size: 44px;
+  }
+  #app :where(input[type='checkbox'], input[type='radio']) {
+    min-inline-size: 24px;
+    min-block-size: 24px;
+  }
+}
+
+@media (max-width: 760px) {
+  #app :where(.settings-card, .studio-card, .inspector-pane, .asset-inspector, .package-inspector) :where(.row, .field-row, .setting-row, .property-row) {
+    flex-wrap: wrap;
+  }
+  #app :where(.settings-card, .studio-card, .inspector-pane, .asset-inspector, .package-inspector) :where(.row, .field-row, .setting-row, .property-row) > :where(input, select, textarea, output) {
+    flex-basis: 100%;
+    inline-size: 100%;
   }
 }

@@ -1,13 +1,19 @@
 import { CREATOR_LEARNING_GUIDES, type LearningGuide } from './creatorLearning'
+import { PLATFORM_GAP_REGISTER, PLATFORM_GAP_SUMMARY } from './platformGapRegister'
 import { NOVA_FEATURE_FREEZE, NOVA_STABLE_CONTRACTS } from './stableContracts'
+import { NOVA_ENGINE_VERSION, NOVA_RELEASE_NAME } from '../projects/projectFormat'
 
 export type ReadinessStatus = 'covered' | 'not-applicable' | 'external'
 export type ReadinessDimension = 'binding' | 'validation' | 'undo' | 'persistence' | 'runtimeExport' | 'documentation' | 'tests'
+export type EvidenceAuthority = 'implementation' | 'validation' | 'transaction' | 'serialization' | 'runtime-export' | 'documentation' | 'automated-test' | 'scope-contract' | 'external-evidence'
 
 export interface ReadinessEvidence {
   status: ReadinessStatus
   route: string
   detail: string
+  authority: EvidenceAuthority
+  source: string
+  gapId?: string
 }
 
 export interface CreatorFeatureReadiness {
@@ -16,69 +22,218 @@ export interface CreatorFeatureReadiness {
   panel: string
   workspace: string
   taskProject: boolean
+  policy: string
   dimensions: Record<ReadinessDimension, ReadinessEvidence>
 }
 
-const testFamilies: ReadonlyArray<[string, string]> = [
-  ['project-manager', 'migration-projects'], ['workspaces', 'editor-shell'], ['hierarchy', 'editor-shell'], ['viewport', 'interactions'],
-  ['inspector', 'components-runtime'], ['assets', 'content-import'], ['physics', 'physics-determinism'], ['script', 'script-graph-parity'],
-  ['visual-graph', 'script-graph-parity'], ['event-sheet', 'object-event-authoring'], ['animation', 'animation-determinism'], ['interface', 'ui-accessibility'], ['audio', 'audio-runtime'],
-  ['world', 'world-navigation'], ['rendering', 'renderer-determinism'], ['debug', 'runtime-evidence'], ['manage', 'project-health'],
-  ['ecosystem', 'plugin-package-security'], ['automation', 'automation-sandbox'], ['network', 'network-determinism'], ['build', 'export-release'],
-  ['recovery-team', 'recovery-semantic-merge'], ['task-', 'guided-project-lifecycle']
-]
+export interface CreatorReadinessPolicy {
+  catalogPrefix: string
+  owner: string
+  dimensions: Record<ReadinessDimension, ReadinessEvidence>
+}
 
-function familyFor(guide: LearningGuide): string { return testFamilies.find(([prefix]) => guide.id.startsWith(prefix))?.[1] ?? 'platform-inventory' }
-function covered(route: string, detail: string): ReadinessEvidence { return { status: 'covered', route, detail } }
-function notApplicable(detail: string): ReadinessEvidence { return { status: 'not-applicable', route: 'explicitly excluded', detail } }
-function external(route: string, detail: string): ReadinessEvidence { return { status: 'external', route, detail } }
+const RELEASE = NOVA_RELEASE_NAME
+const MACHINE_VERSION = NOVA_ENGINE_VERSION
+const SCOPE_DOCUMENT = 'docs/STABLE_CREATOR_PLATFORM_26_10.md'
+
+function evidence(status: ReadinessStatus, authority: EvidenceAuthority, source: string, route: string, detail: string, gapId?: string): ReadinessEvidence {
+  return Object.freeze({ status, authority, source, route, detail, ...(gapId ? { gapId } : {}) })
+}
+
+function local(authority: Exclude<EvidenceAuthority, 'scope-contract' | 'external-evidence'>, source: string, route: string, detail: string): ReadinessEvidence {
+  return evidence('covered', authority, source, route, detail)
+}
+
+function excluded(detail: string): ReadinessEvidence {
+  return evidence('not-applicable', 'scope-contract', SCOPE_DOCUMENT, 'scope:26.10/{id}', detail)
+}
+
+function documentation(): ReadinessEvidence {
+  return local('documentation', 'manual/MANUAL.en.md', 'manual:EN/DE/ZH#{id}', 'The operation has a stable manual anchor in each bundled locale; manual parity and link audits are separate release gates.')
+}
+
+interface AuthoredPolicyOptions {
+  prefix: string
+  owner: string
+  binding: string
+  validation: string
+  persistence: string
+  runtime: string
+  tests: string
+  family: string
+  undo?: string
+}
+
+function authoredPolicy(options: AuthoredPolicyOptions): CreatorReadinessPolicy {
+  return Object.freeze({
+    catalogPrefix: options.prefix,
+    owner: options.owner,
+    dimensions: Object.freeze({
+      binding: local('implementation', options.binding, `control:${options.prefix}/{id}`, `The ${options.owner} implementation owns the control-to-command route for this exact catalog operation.`),
+      validation: local('validation', options.validation, `validation:${options.prefix}/{id}`, 'The owning subsystem validates selection, value, permission and finite-state preconditions before mutation.'),
+      undo: local('transaction', options.undo ?? 'src/runtime/projectMutationRouter.ts', `transaction:${options.prefix}/{id}`, 'The authored mutation enters the project transaction route and retains Undo/Redo or a named subsystem rollback boundary.'),
+      persistence: local('serialization', options.persistence, `serialization:${options.prefix}/{id}`, 'The authored result has a named canonical owner and participates in save, reload and compatibility checks.'),
+      runtimeExport: local('runtime-export', options.runtime, `runtime-export:${options.prefix}/{id}`, 'The authored result reaches the shared preview/player/build path and is subject to deterministic export qualification.'),
+      documentation: documentation(),
+      tests: local('automated-test', options.tests, `qualification:${RELEASE}/${options.family}/{id}`, `The operation is assigned to the ${options.family} executable evidence family; a release report, rather than this mapping, records pass or failure.`)
+    })
+  })
+}
+
+interface EditorPolicyOptions {
+  prefix: string
+  owner: string
+  binding: string
+  validation: string
+  persistence?: string
+  tests: string
+  family: string
+  mutatesWorkspace?: boolean
+}
+
+function editorPolicy(options: EditorPolicyOptions): CreatorReadinessPolicy {
+  const mutatesWorkspace = options.mutatesWorkspace ?? true
+  return Object.freeze({
+    catalogPrefix: options.prefix,
+    owner: options.owner,
+    dimensions: Object.freeze({
+      binding: local('implementation', options.binding, `control:${options.prefix}/{id}`, `The ${options.owner} implementation owns the exact editor command route.`),
+      validation: local('validation', options.validation, `validation:${options.prefix}/{id}`, 'The editor command checks its active document, selection, mode and availability before changing state.'),
+      undo: mutatesWorkspace
+        ? local('transaction', 'src/store/editor.ts', `workspace-transaction:${options.prefix}/{id}`, 'Workspace-only changes use reversible editor state, layout history or an explicit reset path.')
+        : excluded('This operation observes or navigates editor state and does not mutate authored project data.'),
+      persistence: options.persistence
+        ? local('serialization', options.persistence, `workspace-persistence:${options.prefix}/{id}`, 'The editor-only value has an explicit workspace or preference owner and is excluded from game data.')
+        : excluded('Ephemeral editor observation is intentionally not serialized into project or player data.'),
+      runtimeExport: excluded('Editor navigation, diagnostics or recovery UI is intentionally excluded from exported players.'),
+      documentation: documentation(),
+      tests: local('automated-test', options.tests, `qualification:${RELEASE}/${options.family}/{id}`, `The operation is assigned to the ${options.family} editor evidence family; the release report records its outcome.`)
+    })
+  })
+}
+
+function projectManagerPolicy(): CreatorReadinessPolicy {
+  return Object.freeze({
+    catalogPrefix: 'project-manager', owner: 'Project Manager',
+    dimensions: Object.freeze({
+      binding: local('implementation', 'src/components/ProjectManager.vue', 'control:project-manager/{id}', 'Project Manager owns create, open, import, template and migration entry points.'),
+      validation: local('validation', 'src/runtime/projectUpgrade.ts', 'validation:project-manager/{id}', 'Input is parsed without execution and checked for supported format, schema, paths, package requirements and deterministic migration before session replacement.'),
+      undo: local('transaction', 'src/runtime/recovery.ts', 'recovery:project-manager/{id}', 'Project creation/import/migration preserves the source, preview and named rollback or cancellation boundary.'),
+      persistence: local('serialization', 'src/projects/projectManager.ts', 'project-registry:project-manager/{id}', 'Project identity, recent entries and canonical imported project data have explicit persistence owners.'),
+      runtimeExport: excluded('Launcher operations prepare projects but are not included as player behavior.'),
+      documentation: documentation(),
+      tests: local('automated-test', 'scripts/verify-v7.0.0-history.mjs', `qualification:${RELEASE}/migration-history/{id}`, 'Historical, malformed, future and current project inputs are assigned to the migration/history family.')
+    })
+  })
+}
+
+function taskPolicy(prefix: string, fixture: string): CreatorReadinessPolicy {
+  return authoredPolicy({
+    prefix, owner: 'Guided Project', binding: 'src/runtime/creatorLearning.ts', validation: 'src/runtime/productionValidation.ts',
+    persistence: `${fixture}/project.nova`, runtime: 'src/runtime/productionRuntime.ts', tests: `${fixture}/test-controls.json`, family: `guided-project/${prefix}`
+  })
+}
+
+/**
+ * Exact catalog-prefix policies. A guide that matches zero or more than one policy
+ * throws during module initialization; there is deliberately no catch-all route.
+ */
+export const CREATOR_READINESS_POLICIES: readonly CreatorReadinessPolicy[] = Object.freeze([
+  projectManagerPolicy(),
+  editorPolicy({ prefix: 'workspaces', owner: 'Workspace Manager', binding: 'src/components/WorkspaceManager.vue', validation: 'src/store/editor.ts', persistence: 'src/store/preferences.ts', tests: 'scripts/verify-v26.07-interactions.mjs', family: 'workspace-navigation' }),
+  authoredPolicy({ prefix: 'hierarchy', owner: 'Hierarchy', binding: 'src/components/SceneSideBar.vue', validation: 'src/projects/projectData.ts', persistence: 'src/projects/projectData.ts', runtime: 'src/runtime/productionRuntime.ts', tests: 'scripts/verify-v26.07-interactions.mjs', family: 'hierarchy-scene' }),
+  authoredPolicy({ prefix: 'viewport', owner: 'Scene View', binding: 'src/components/WorldCanvas.vue', validation: 'src/store/editor.ts', persistence: 'src/projects/projectData.ts', runtime: 'src/runtime/productionRuntime.ts', tests: 'scripts/verify-v26.07-interactions.mjs', family: 'viewport-tools' }),
+  authoredPolicy({ prefix: 'inspector', owner: 'Inspector', binding: 'src/components/ConfigPanel.vue', validation: 'src/runtime/productionValidation.ts', persistence: 'src/projects/projectData.ts', runtime: 'src/runtime/productionRuntime.ts', tests: 'scripts/verify-v6.5.0.mjs', family: 'component-runtime' }),
+  authoredPolicy({ prefix: 'assets', owner: 'Asset workspace', binding: 'src/components/ContentAssetInspector.vue', validation: 'src/runtime/resources.ts', persistence: 'src/projects/projectArchive.ts', runtime: 'src/runtime/gameExporter.ts', tests: 'scripts/verify-v6.4.0.mjs', family: 'content-import' }),
+  authoredPolicy({ prefix: 'physics', owner: 'Physics Settings and Monitor', binding: 'src/components/PhysicsSettingsPanel.vue', validation: 'src/runtime/physicsProduction.ts', persistence: 'src/projects/projectData.ts', runtime: 'src/runtime/physics2d.ts', tests: 'scripts/verify-v6.5.0.mjs', family: 'physics-determinism' }),
+  authoredPolicy({ prefix: 'script', owner: 'Script Studio', binding: 'src/components/ScriptStudio.vue', validation: 'src/runtime/scriptContracts.ts', persistence: 'src/projects/projectData.ts', runtime: 'src/runtime/GameplayRuntime.ts', tests: 'scripts/verify-v26.06-visual-graph.mjs', family: 'rhai-runtime' }),
+  authoredPolicy({ prefix: 'event-sheet', owner: 'Event Sheet', binding: 'src/components/EventSheetEditor.vue', validation: 'src/runtime/eventSheets.ts', persistence: 'src/runtime/eventSheets.ts', runtime: 'src/runtime/GameplayRuntime.ts', tests: 'scripts/verify-v26.02.mjs', family: 'event-scheduling' }),
+  authoredPolicy({ prefix: 'visual-graph', owner: 'Visual Graph Editor', binding: 'src/components/VisualGraphEditor.vue', validation: 'src/visual/graphProduction.ts', persistence: 'src/visual/graphTypes.ts', runtime: 'src/visual/graphCompiler.ts', tests: 'scripts/verify-v26.06-visual-graph.mjs', family: 'graph-code-parity' }),
+  authoredPolicy({ prefix: 'animation', owner: 'Animation workspace', binding: 'src/components/AnimationPanel.vue', validation: 'src/runtime/animationProduction.ts', persistence: 'src/runtime/animation.ts', runtime: 'src/runtime/animationProduction.ts', tests: 'scripts/verify-v26.05.mjs', family: 'animation-determinism' }),
+  authoredPolicy({ prefix: 'interface', owner: 'Interface workspace', binding: 'src/runtime/uiProduction.ts', validation: 'src/runtime/uiAccessibility.ts', persistence: 'src/projects/projectData.ts', runtime: 'src/runtime/gameUi.ts', tests: 'scripts/verify-v6.7.0.mjs', family: 'ui-accessibility' }),
+  authoredPolicy({ prefix: 'audio', owner: 'Audio Studio', binding: 'src/components/AudioSystemPanel.vue', validation: 'src/runtime/audio.ts', persistence: 'src/projects/projectData.ts', runtime: 'src/runtime/audio.ts', tests: 'scripts/verify-v26.05.mjs', family: 'audio-runtime' }),
+  authoredPolicy({ prefix: 'world', owner: 'World Studio', binding: 'src/components/WorldToolsPanel.vue', validation: 'src/runtime/worldGameplay.ts', persistence: 'src/runtime/worldStreaming.ts', runtime: 'src/runtime/tileSceneRuntime.ts', tests: 'scripts/verify-v5.7.0-worlds.mjs', family: 'world-navigation-streaming' }),
+  authoredPolicy({ prefix: 'rendering', owner: 'Rendering Studio', binding: 'src/components/RenderingPanel.vue', validation: 'src/runtime/productionValidation.ts', persistence: 'src/projects/projectData.ts', runtime: 'src/runtime/productionRuntime.ts', tests: 'scripts/verify-v6.5.0.mjs', family: 'renderer-determinism' }),
+  editorPolicy({ prefix: 'debug', owner: 'Debug workspace', binding: 'src/components/ProfilerPanel.vue', validation: 'src/runtime/profiler.ts', tests: 'scripts/verify-v6.8.0.mjs', family: 'debug-performance', mutatesWorkspace: false }),
+  authoredPolicy({ prefix: 'manage', owner: 'Settings and Project Health', binding: 'src/components/ManageWorkspace.vue', validation: 'src/runtime/projectIntegrity.ts', persistence: 'src/projects/projectData.ts', runtime: 'src/runtime/gameExporter.ts', tests: 'scripts/verify-v26.07.mjs', family: 'project-health-settings' }),
+  authoredPolicy({ prefix: 'ecosystem', owner: 'Ecosystem Studio', binding: 'src/components/EcosystemStudioPanel.vue', validation: 'src/runtime/packages.ts', persistence: 'src/runtime/packages.ts', runtime: 'src/runtime/plugins.ts', tests: 'scripts/verify-v6.9.0.mjs', family: 'package-plugin-security' }),
+  editorPolicy({ prefix: 'automation', owner: 'Automation Studio', binding: 'src/components/AutomationStudio.vue', validation: 'src/runtime/editorAutomation.ts', persistence: 'src/projects/projectData.ts', tests: 'scripts/verify-v6.3.0.mjs', family: 'automation-sandbox' }),
+  authoredPolicy({ prefix: 'network', owner: 'Network Studio', binding: 'src/components/NetworkStudioPanel.vue', validation: 'src/runtime/networkProduction.ts', persistence: 'src/runtime/networking.ts', runtime: 'src/runtime/networkProtocol.ts', tests: 'scripts/verify-v26.07-networking.mjs', family: 'network-determinism' }),
+  authoredPolicy({ prefix: 'build', owner: 'Build Settings', binding: 'src/components/BuildSettingsPanel.vue', validation: 'src/runtime/buildSettings.ts', persistence: 'src/runtime/buildSettings.ts', runtime: 'src/runtime/gameExporter.ts', tests: 'scripts/verify-v26.07-windows.mjs', family: 'export-release', undo: 'src/runtime/projectTransactions.ts' }),
+  editorPolicy({ prefix: 'recovery-team', owner: 'Recovery and Team Workflow', binding: 'src/components/RecoveryCenter.vue', validation: 'src/runtime/projectIntegrity.ts', persistence: 'src/runtime/recovery.ts', tests: 'scripts/verify-v7.0.0-history.mjs', family: 'recovery-semantic-merge' }),
+  taskPolicy('task-snake', 'reference-projects/projects/creator-v60-snake'),
+  taskPolicy('task-platformer', 'reference-projects/projects/creator-v60-platformer'),
+  taskPolicy('task-top-down', 'reference-projects/projects/creator-v60-top-down'),
+  taskPolicy('task-physics-puzzle', 'reference-projects/projects/creator-v60-physics-puzzle'),
+  taskPolicy('task-menu', 'reference-projects/projects/creator-v60-localized-menu'),
+  taskPolicy('task-cutscene', 'reference-projects/projects/creator-v60-animation-cutscene'),
+  taskPolicy('task-tilemap', 'reference-projects/projects/creator-v60-tilemap-world'),
+  taskPolicy('task-save', 'reference-projects/projects/creator-v60-save-checkpoint'),
+  taskPolicy('task-network', 'reference-projects/projects/creator-v60-network-sample'),
+  taskPolicy('task-web', 'reference-projects/projects/creator-v60-web-deployment'),
+  taskPolicy('task-windows', 'reference-projects/projects/creator-v60-windows-portable'),
+  taskPolicy('task-package', 'reference-projects/projects/creator-v60-package-plugin')
+])
+
+function materialize(template: ReadinessEvidence, guide: LearningGuide): ReadinessEvidence {
+  return Object.freeze({ ...template, route: template.route.split('{id}').join(guide.id) })
+}
+
+export const CREATOR_READINESS_DIMENSIONS: readonly ReadinessDimension[] = Object.freeze(['binding', 'validation', 'undo', 'persistence', 'runtimeExport', 'documentation', 'tests'])
 
 function readinessFor(guide: LearningGuide): CreatorFeatureReadiness {
-  const editorOnly = guide.classifications.includes('Editor-only')
-  const runtime = guide.classifications.includes('Runtime')
-  const destructive = guide.classifications.includes('Destructive')
-  const reversible = guide.classifications.includes('Reversible')
-  const platformExternal = /Android|iOS|Linux|macOS|clean-machine|screen-reader/i.test(`${guide.feature} ${guide.prerequisites.join(' ')}`)
-  return {
-    id: guide.id, feature: guide.feature, panel: guide.panel, workspace: guide.workspace, taskProject: Boolean(guide.taskProject),
-    dimensions: {
-      binding: covered(`creator-learning:${guide.id}`, 'The public operation has a stable catalog identity, owning panel and reachable workspace.'),
-      validation: covered(`preconditions:${guide.prerequisites.length}`, guide.prerequisites.length ? 'The guide declares its finite prerequisites and the owning subsystem reports invalid or unavailable state.' : 'The operation is valid without project prerequisites.'),
-      undo: destructive ? covered('confirmation + transaction/recovery', 'Destructive state requires named confirmation and a documented recovery boundary.') : reversible ? covered('Undo/Redo or subsystem rollback', 'The operation declares a reversible editor or project transaction.') : notApplicable('The operation is automatic, observational, runtime-only, or does not mutate authored state.'),
-      persistence: editorOnly ? notApplicable('Editor-only state is intentionally excluded from project/player data and uses workspace preferences where relevant.') : covered('canonical project/scene/asset/settings serialization', 'Authored state has a named owner and is included in save/reload qualification.'),
-      runtimeExport: editorOnly ? notApplicable('This editor-only operation must not enter exported players.') : runtime || guide.taskProject ? covered('Play → save/reload → standalone player', 'Runtime behavior is exercised through the shared player/export lifecycle.') : covered('build input or explicit editor-only exclusion', 'Project authoring reaches deterministic build input, or its exclusion is explicit.'),
-      documentation: covered(`manual/#${guide.id}`, 'EN/DE/ZH task-oriented lessons include classification, prerequisites, steps, expected result, persistence, recovery, mistakes, accessibility and API equivalents.'),
-      tests: platformExternal ? external(`v26.04-${familyFor(guide)} + matching-host evidence`, 'Local validation is retained; hardware, matching-host or independent lifecycle evidence remains external.') : covered(`v26.04-${familyFor(guide)}`, 'Mapped to the 26.04 automated family and normal-user interaction matrix.')
-    }
-  }
+  const matches = CREATOR_READINESS_POLICIES.filter(policy => guide.id === policy.catalogPrefix || guide.id.startsWith(`${policy.catalogPrefix}-`))
+  if (matches.length !== 1) throw new Error(`Readiness policy invariant failed for ${guide.id}: expected one exact prefix policy, found ${matches.length}.`)
+  const policy = matches[0]
+  const dimensions = Object.fromEntries(CREATOR_READINESS_DIMENSIONS.map(dimension => [dimension, materialize(policy.dimensions[dimension], guide)])) as Record<ReadinessDimension, ReadinessEvidence>
+  return Object.freeze({ id: guide.id, feature: guide.feature, panel: guide.panel, workspace: guide.workspace, taskProject: Boolean(guide.taskProject), policy: policy.catalogPrefix, dimensions: Object.freeze(dimensions) })
 }
 
 export const CREATOR_PLATFORM_READINESS: readonly CreatorFeatureReadiness[] = Object.freeze(CREATOR_LEARNING_GUIDES.map(readinessFor))
-export const CREATOR_READINESS_DIMENSIONS: readonly ReadinessDimension[] = Object.freeze(['binding', 'validation', 'undo', 'persistence', 'runtimeExport', 'documentation', 'tests'])
 
 export const CREATOR_PLATFORM_SUMMARY = Object.freeze({
+  release: RELEASE,
+  machineVersion: MACHINE_VERSION,
   features: CREATOR_PLATFORM_READINESS.length,
+  policies: CREATOR_READINESS_POLICIES.length,
   dimensions: CREATOR_READINESS_DIMENSIONS.length,
   covered: CREATOR_PLATFORM_READINESS.reduce((count, item) => count + CREATOR_READINESS_DIMENSIONS.filter(dimension => item.dimensions[dimension].status === 'covered').length, 0),
   notApplicable: CREATOR_PLATFORM_READINESS.reduce((count, item) => count + CREATOR_READINESS_DIMENSIONS.filter(dimension => item.dimensions[dimension].status === 'not-applicable').length, 0),
   external: CREATOR_PLATFORM_READINESS.reduce((count, item) => count + CREATOR_READINESS_DIMENSIONS.filter(dimension => item.dimensions[dimension].status === 'external').length, 0),
-  uncovered: CREATOR_PLATFORM_READINESS.reduce((count, item) => count + CREATOR_READINESS_DIMENSIONS.filter(dimension => !item.dimensions[dimension]).length, 0)
+  uncovered: CREATOR_PLATFORM_READINESS.reduce((count, item) => count + CREATOR_READINESS_DIMENSIONS.filter(dimension => !item.dimensions[dimension]).length, 0),
+  openBlockingGaps: PLATFORM_GAP_SUMMARY.openBlocking,
+  deferredExternalGaps: PLATFORM_GAP_SUMMARY.deferredExternal
 })
 
 export const CREATOR_CONTRACT_REVIEW = Object.freeze({
-  release: '26.04', machineVersion: '26.4.0', reviewedContracts: NOVA_STABLE_CONTRACTS.length, currentContractsFrozen: NOVA_STABLE_CONTRACTS.every(contract => contract.frozen),
-  schemaChangeApproved: false, breakingChangesApproved: 0, nextContractDecision: 'deferred' as const,
-  decision: 'Retain Project Format 2/schema 29, Rhai API 2, Visual Graph 1, Plugin API 2, Package Manifest 1, Build CLI 1 and Workspace document 3. No demonstrated requirement justifies a breaking contract.',
+  release: RELEASE,
+  machineVersion: MACHINE_VERSION,
+  reviewedContracts: NOVA_STABLE_CONTRACTS.length,
+  currentContractsFrozen: NOVA_STABLE_CONTRACTS.every(contract => contract.frozen),
+  schemaChangeApproved: false,
+  breakingChangesApproved: 0,
+  nextContractDecision: 'deferred' as const,
+  decision: 'Retain Project Format 2/schema 29, Rhai API 2, Visual Graph 1, Plugin API 2, Package Manifest 1, Build CLI 1 and Workspace document 3. No demonstrated migration or ecosystem evidence justifies a breaking contract in 26.10.',
   earliestNextReview: NOVA_FEATURE_FREEZE.earliestApproval,
-  reasons: Object.freeze(['The current contracts express every 26.04 feature additively.', 'The observation window and independent external certification are not complete.', 'A calendar-version label never authorizes a destructive project migration.', 'Any future contract needs preview, complete backup, deterministic migration, semantic diff, validation, rollback and golden fixtures before approval.'])
+  gapRegister: 'docs/PLATFORM_GAP_REGISTER_26_10.md',
+  openBlockingGaps: PLATFORM_GAP_SUMMARY.openBlocking,
+  reasons: Object.freeze([
+    'The reviewed 26.10 capability set fits the seven existing contracts additively.',
+    'Historical migration and compatibility paths remain required and no authored data may be removed for a calendar version.',
+    'Independent ecosystem, matching-host and clean-machine evidence remains explicitly deferred-external.',
+    'Any future contract requires a demonstrated need, preview, complete backup, deterministic migration, semantic diff, validation, rollback and golden fixtures.'
+  ])
 })
 
 export const CREATOR_SUPPORT_MATRIX = Object.freeze([
-  Object.freeze({ target: 'Windows editor/player', status: 'tier-1-local', evidence: 'Native editor, portable game, MSI and setup build plus launch smoke.' }),
-  Object.freeze({ target: 'Web editor/player', status: 'tier-1-local', evidence: 'Production Web/WASM build and hosted-player archive; HTTP(S) required.' }),
-  Object.freeze({ target: 'Linux player/server', status: 'matching-host-external', evidence: 'Source/pipeline is available; matching-host build and lifecycle evidence are required.' }),
-  Object.freeze({ target: 'macOS player', status: 'matching-host-external', evidence: 'Xcode, signing, notarization and hardware evidence are required.' }),
-  Object.freeze({ target: 'Android player', status: 'optional-gated', evidence: 'JDK/SDK/NDK/template/signing/device/store gates remain explicit.' }),
-  Object.freeze({ target: 'iOS / consoles', status: 'deferred-or-excluded', evidence: 'iOS is matching-host/deferred; proprietary console SDKs are not bundled.' }),
-  Object.freeze({ target: '3D / XR / ray tracing', status: 'out-of-scope', evidence: 'Nova_A 26.04 remains a focused local-first 2D engine.' })
+  Object.freeze({ target: 'Windows editor/player', status: 'tier-1-local', evidence: 'Local native editor, portable game, MSI/setup build routes and launch smoke; signing and independent clean-machine lifecycle remain deferred-external.' }),
+  Object.freeze({ target: 'Web player', status: 'tier-1-local', evidence: 'Production Web/WASM build and hosted-player archive; HTTP(S) is required. Firefox/WebKit independent evidence remains deferred-external.' }),
+  Object.freeze({ target: 'Linux editor/player/server', status: 'matching-host-external', evidence: 'Source and pipeline definitions exist; matching-host graphics/audio/input/package/lifecycle evidence is required.' }),
+  Object.freeze({ target: 'macOS editor/player', status: 'matching-host-external', evidence: 'Xcode, hardware, signing, notarization and lifecycle evidence is required.' }),
+  Object.freeze({ target: 'Android player', status: 'optional-gated', evidence: 'Optional experimental path; JDK/SDK/NDK/template, signing, clean-device, hardware and store gates remain explicit.' }),
+  Object.freeze({ target: 'iOS / consoles', status: 'deferred-or-excluded', evidence: 'iOS needs a matching-host program; proprietary console SDKs and agreements are not bundled.' }),
+  Object.freeze({ target: '3D / XR / ray tracing', status: 'out-of-scope', evidence: 'Nova_A 26.10 remains a focused local-first 2D engine.' })
 ])
+
+export const CREATOR_PLATFORM_GAPS = PLATFORM_GAP_REGISTER
+export const CREATOR_PLATFORM_GAP_SUMMARY = PLATFORM_GAP_SUMMARY

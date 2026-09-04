@@ -1,5 +1,6 @@
 import { reactive } from 'vue'
 import type { Entity } from '../world/Entity'
+import type { Component2D, ComponentKind } from '../world/components'
 import type { Vec2 } from '../world/types'
 
 export interface PerformanceRuntimeSettings {
@@ -125,6 +126,7 @@ export function recordWorkerPerformance(workerMs: number, queueWaitMs: number, f
   if (fallback) performanceRuntimeState.workerFallbacks++
   if (stale) performanceRuntimeState.staleWorkerResults++
 }
+export function recordStaleWorkerResult(): void { performanceRuntimeState.staleWorkerResults++ }
 export function recordCachePerformance(hits: number, misses: number, allocations = 0): void {
   publishedCacheHits += Math.max(0, Math.round(hits)); publishedCacheMisses += Math.max(0, Math.round(misses)); pendingAllocations += Math.max(0, Math.round(allocations))
 }
@@ -167,8 +169,27 @@ export class StableComponentScheduler {
   private scales = new Float64Array(0)
   private enabled = new Uint8Array(0)
   private buckets = new Map<string, Uint32Array>()
-  private componentSignature = 0
+  private readonly emptyIndices = new Uint32Array(0)
+  private componentCount = 0
+  private componentCache = new WeakMap<Entity, { map: Entity['componentMap']; size: number; records: Array<{ kind: ComponentKind; component: Component2D; removed: boolean }> }>()
   count = 0
+
+  private refreshComponentCache(entity: Entity): boolean {
+    const map = entity.componentMap, previous = this.componentCache.get(entity)
+    let changed = !previous || previous.map !== map || previous.size !== map.size
+    if (!changed && previous) {
+      // A size check catches normal add/delete operations. Identity and the
+      // active flag catch same-size replacements and remove/restore without
+      // repeatedly allocating or iterating componentMap.values().
+      for (const record of previous.records) {
+        if (map.get(record.kind) !== record.component || record.removed !== record.component.removed) { changed = true; break }
+      }
+    }
+    if (!changed && previous) return false
+    const records = [...map.values()].map(component => ({ kind: component.kind, component, removed: component.removed }))
+    this.componentCache.set(entity, { map, size: map.size, records })
+    return true
+  }
 
   synchronize(entities: readonly Entity[]): { dirty: number; allocations: number; componentCount: number } {
     let allocations = 0
@@ -177,32 +198,35 @@ export class StableComponentScheduler {
       this.positions = new Float64Array(this.capacity * 2); this.rotations = new Float64Array(this.capacity); this.scales = new Float64Array(this.capacity * 2); this.enabled = new Uint8Array(this.capacity)
       allocations += 4
     }
-    let nextComponentSignature = 0x811c9dc5
-    for (const entity of entities) for (const component of entity.componentMap.values()) {
-      for (let index = 0; index < component.kind.length; index++) nextComponentSignature = Math.imul(nextComponentSignature ^ component.kind.charCodeAt(index), 0x01000193) >>> 0
-      nextComponentSignature = Math.imul(nextComponentSignature ^ Number(component.removed), 0x01000193) >>> 0
+    let componentStructureDirty = false
+    let entityOrderDirty = this.count !== entities.length
+    for (let index = 0; index < entities.length; index++) {
+      const changed = this.refreshComponentCache(entities[index])
+      if (changed) { componentStructureDirty = true; allocations++ }
+      entityOrderDirty ||= this.uuids[index] !== entities[index].uuid
     }
-    const structuralDirty = this.count !== entities.length || nextComponentSignature !== this.componentSignature || entities.some((entity, index) => this.uuids[index] !== entity.uuid)
+    const structuralDirty = entityOrderDirty || componentStructureDirty
     let dirty = 0
     const componentBuckets = structuralDirty ? new Map<string, number[]>() : null
     for (let index = 0; index < entities.length; index++) {
       const entity = entities[index], x = entity.transform.position.x, y = entity.transform.position.y, rotation = entity.transform.rotation, scaleX = entity.transform.scale.x, scaleY = entity.transform.scale.y
       if (structuralDirty || this.positions[index * 2] !== x || this.positions[index * 2 + 1] !== y || this.rotations[index] !== rotation || this.scales[index * 2] !== scaleX || this.scales[index * 2 + 1] !== scaleY || this.enabled[index] !== Number(entity.enabled)) dirty++
       this.uuids[index] = entity.uuid; this.positions[index * 2] = x; this.positions[index * 2 + 1] = y; this.rotations[index] = rotation; this.scales[index * 2] = scaleX; this.scales[index * 2 + 1] = scaleY; this.enabled[index] = Number(entity.enabled)
-      if (componentBuckets) for (const component of entity.componentMap.values()) { if (component.removed) continue; const values = componentBuckets.get(component.kind) ?? []; values.push(index); componentBuckets.set(component.kind, values) }
+      if (componentBuckets) for (const record of this.componentCache.get(entity)?.records ?? []) { if (record.component.removed) continue; const values = componentBuckets.get(record.kind) ?? []; values.push(index); componentBuckets.set(record.kind, values) }
     }
-    this.uuids.length = entities.length; this.count = entities.length; this.componentSignature = nextComponentSignature
-    let componentCount = [...this.buckets.values()].reduce((sum, indexes) => sum + indexes.length, 0)
+    this.uuids.length = entities.length; this.count = entities.length
+    let componentCount = this.componentCount
     if (componentBuckets) {
       componentCount = 0
       for (const [kind, indexes] of componentBuckets) { componentCount += indexes.length; this.buckets.set(kind, Uint32Array.from(indexes)); allocations++ }
       for (const kind of [...this.buckets.keys()]) if (!componentBuckets.has(kind)) this.buckets.delete(kind)
+      this.componentCount = componentCount
     }
     performanceRuntimeState.entityCount = entities.length; performanceRuntimeState.componentCount = componentCount
     return { dirty, allocations, componentCount }
   }
 
-  indices(kind: string): Uint32Array { return this.buckets.get(kind) ?? new Uint32Array(0) }
+  indices(kind: string): Uint32Array { return this.buckets.get(kind) ?? this.emptyIndices }
   position(index: number): Vec2 { return { x: this.positions[index * 2] ?? 0, y: this.positions[index * 2 + 1] ?? 0 } }
 }
 

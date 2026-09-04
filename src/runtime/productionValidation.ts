@@ -12,6 +12,9 @@ import { physicsState } from '../store/physics'
 import { validateScriptContract } from './scriptContracts'
 import { validateResourceProject } from './resources'
 import { networkAuthenticationProviders, networkEncryptionGuidance, reviewedNetworkTransports } from './networkProduction'
+import { networkServiceSelectionIssues } from './networkServices'
+import { buildMediaProductionReport } from './mediaProduction26'
+import { buildSimulationProductionReport } from './simulationAuthoring26'
 
 export interface ProductionValidationIssue { code: string; severity: 'warning' | 'error'; message: string; fix: string }
 
@@ -34,6 +37,13 @@ export function validateProductionRuntime(assets: Pick<AssetDatabaseState, 'reco
   if (audioRuntime.diagnostics.contextState === 'suspended' && audioRuntime.diagnostics.activeVoices) issues.push({ code: 'AUD-SUSPENDED', severity: 'error', message: 'Audio output is suspended while voices are active.', fix: 'Open Presentation → Audio and press Recover audio.' })
   if (audioRuntime.diagnostics.underruns > 0) issues.push({ code: 'AUD-UNDERRUN', severity: 'warning', message: `${audioRuntime.diagnostics.underruns} audio underruns were detected.`, fix: 'Prefer streaming for long music, preload short effects, and reduce simultaneous voices.' })
   if (audioRuntime.diagnostics.failures.length) issues.push({ code: 'AUD-FAILURE', severity: 'error', message: audioRuntime.diagnostics.failures[0].message, fix: audioRuntime.diagnostics.failures[0].recovery })
+  for (const media of buildMediaProductionReport(assets.records, physicsState.world.entities, renderer, audio).issues) {
+    if (issues.some(item => item.code === media.code && item.message === media.message)) continue
+    issues.push({ code: media.code, severity: media.status === 'blocked' ? 'error' : 'warning', message: `${media.subsystem}: ${media.message}`, fix: media.fix })
+  }
+  for (const simulation of buildSimulationProductionReport(physicsState.world.entities, physicsState.world.connections, physicsState.globalSettings).issues) {
+    issues.push({ code: simulation.code, severity: simulation.status === 'blocked' ? 'error' : 'warning', message: simulation.message, fix: simulation.fix })
+  }
   const network = productionSettings.networking
   if (network.enabled && !packageEnabled(OFFICIAL_NETWORKING_PACKAGE_ID)) issues.push({ code: 'NET-PACKAGE-MISSING', severity: 'error', message: 'Networking is enabled but the optional Nova Networking package is not installed.', fix: 'Open Network Studio and install the reviewed optional package.' })
   if (network.enabled && !network.permissionGranted) issues.push({ code: 'NET-PERMISSION-DENIED', severity: 'error', message: 'Networking is enabled without an explicit project network permission.', fix: 'Review the transport and endpoint in Network Studio, then grant permission.' })
@@ -43,6 +53,7 @@ export function validateProductionRuntime(assets: Pick<AssetDatabaseState, 'reco
   if (network.enabled && network.authentication.mode === 'hook' && !networkAuthenticationProviders().some(provider => provider.id === network.authentication.providerId)) issues.push({ code: 'NET-AUTH-HOOK-MISSING', severity: 'error', message: `Authentication provider ${network.authentication.providerId || '(empty)'} is not registered.`, fix: 'Register the reviewed provider before play/build or choose no authentication hook for an offline/local prototype.' })
   if (network.enabled && network.authentication.requireVerifiedPeers && network.authentication.mode !== 'hook') issues.push({ code: 'NET-AUTH-VERIFICATION-MISSING', severity: 'error', message: 'Verified peers are required without an authentication hook.', fix: 'Choose and register a reviewed authentication provider, or disable verified-peer enforcement for trusted local development.' })
   if (network.enabled) {
+    for (const serviceIssue of networkServiceSelectionIssues(network)) issues.push({ code: 'NET-SERVICE-MISSING', severity: 'error', message: serviceIssue, fix: 'Install a reviewed provider or clear the optional identity/lobby/relay selection in Network Studio.' })
     const selectedAdapter = reviewedNetworkTransports().find(adapter => adapter.id === network.transportAdapterId)
     const encryption = networkEncryptionGuidance(network, selectedAdapter?.encrypted === true)
     if (encryption.severity !== 'info') issues.push({ code: 'NET-ENCRYPTION', severity: encryption.severity, message: encryption.message, fix: 'Use a secure WebSocket/reviewed encrypted adapter, or disable the strict encryption requirement only for trusted local development.' })

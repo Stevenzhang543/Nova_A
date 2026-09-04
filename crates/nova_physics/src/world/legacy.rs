@@ -59,34 +59,57 @@ fn active_bound_pairs(
     constraints: &[ConnectionConstraint],
     body_count: usize,
 ) -> HashSet<(usize, usize)> {
-    let mut adjacency = vec![Vec::new(); body_count];
-    for constraint in constraints
-        .iter()
-        .filter(|constraint| {
-            constraint.active
-                && !constraint.collide_connected
-                && (constraint.binding || constraint.joint_kind > 0)
-        })
-    {
-        adjacency[constraint.body_a].push(constraint.body_b);
-        adjacency[constraint.body_b].push(constraint.body_a);
+    fn root(parents: &mut [usize], index: usize) -> usize {
+        let mut current = index;
+        while parents[current] != current {
+            parents[current] = parents[parents[current]];
+            current = parents[current];
+        }
+        current
+    }
+    fn union(parents: &mut [usize], ranks: &mut [u8], first: usize, second: usize) {
+        let first_root = root(parents, first);
+        let second_root = root(parents, second);
+        if first_root == second_root { return; }
+        if ranks[first_root] < ranks[second_root] { parents[first_root] = second_root; }
+        else {
+            parents[second_root] = first_root;
+            if ranks[first_root] == ranks[second_root] { ranks[first_root] = ranks[first_root].saturating_add(1); }
+        }
+    }
+
+    let mut parents: Vec<usize> = (0..body_count).collect();
+    let mut ranks = vec![0_u8; body_count];
+    for constraint in constraints.iter().filter(|constraint| constraint.active && !constraint.collide_connected && constraint.binding) {
+        union(&mut parents, &mut ranks, constraint.body_a, constraint.body_b);
+    }
+
+    let mut components: HashMap<usize, Vec<usize>> = HashMap::new();
+    for body in 0..body_count {
+        let component = root(&mut parents, body);
+        components.entry(component).or_default().push(body);
     }
     let mut pairs = HashSet::new();
-    for start in 0..body_count {
-        let mut pending = vec![start];
-        let mut visited = vec![false; body_count];
-        visited[start] = true;
-        while let Some(current) = pending.pop() {
-            for &next in &adjacency[current] {
-                if !visited[next] {
-                    visited[next] = true;
-                    pending.push(next);
-                }
+    // Every binding component behaves as one compound body.
+    for members in components.values() {
+        for (offset, &first) in members.iter().enumerate() {
+            for &second in members.iter().skip(offset + 1) {
+                pairs.insert((first.min(second), first.max(second)));
             }
         }
-        for (other, connected) in visited.into_iter().enumerate().skip(start + 1) {
-            if connected {
-                pairs.insert((start, other));
+    }
+    // An ordinary non-colliding joint does not propagate through other joint
+    // chains, but each endpoint represents its complete binding component.
+    // Suppress the Cartesian product so A bound to B and B jointed to C also
+    // correctly suppresses A-C, without turning A-B-C joint chains compound.
+    for constraint in constraints.iter().filter(|constraint| constraint.active && !constraint.collide_connected && !constraint.binding && constraint.joint_kind > 0) {
+        let first_root = root(&mut parents, constraint.body_a);
+        let second_root = root(&mut parents, constraint.body_b);
+        let first_members = components.get(&first_root).map(Vec::as_slice).unwrap_or(&[]);
+        let second_members = components.get(&second_root).map(Vec::as_slice).unwrap_or(&[]);
+        for &first in first_members {
+            for &second in second_members {
+                if first != second { pairs.insert((first.min(second), first.max(second))); }
             }
         }
     }
@@ -539,6 +562,12 @@ impl SolverWorld {
         }
         let global_gravity = finite_or(global_gravity, 0.0);
         let air_friction = non_negative(air_friction, 0.0);
+        for constraint in &mut self.constraints {
+            constraint.tension = 0.0;
+            constraint.strain = 0.0;
+            constraint.motor_torque = 0.0;
+            constraint.link_tensions.fill(0.0);
+        }
         let bound_pairs = active_bound_pairs(&self.constraints, self.bodies.len());
         let sub_steps = determine_sub_steps(&self.bodies, dt, global_gravity, self.quality.minimum_substeps);
         let sub_dt = dt / sub_steps as f64;

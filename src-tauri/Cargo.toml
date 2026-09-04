@@ -1,6 +1,6 @@
 [package]
 name = "nova_a"
-version = "26.4.0"
+version = "26.10.0"
 description = "Nova_A open-source 2D physics and rendering engine."
 authors = ["Whitelist"]
 repository = "https://github.com/Stevenzhang543/Nova_A"
@@ -26,3 +26,4 @@ base64 = "0.22"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 sha2 = "0.10"
+flate2 = "1"

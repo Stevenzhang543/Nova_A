@@ -4,18 +4,33 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE.md)
 [![Tier 1](https://img.shields.io/badge/Tier%201-Windows%20%7C%20Web-63c6ff)](./docs/PLATFORM_BUILD_MATRIX_5_0.md)
-[![Release](https://img.shields.io/badge/release-26.04-63c6ff)]()
+[![Release](https://img.shields.io/badge/release-26.10-63c6ff)]()
 
 Nova_A 是一款开源 2D 游戏引擎与桌面编辑器，使用 Rust、WebAssembly、Vue 3 与 Tauri 构建。
 
-版本 **26.04** 完成资产、2D 内容与可复用资源库生态，同时保持 Project Format 2/schema 29 与全部冻结契约。双向依赖视图、循环及缺失引用诊断、确定性缩略图、统一导入生产配置、命名资源变体、本地化导入验证和可信离线内容发现，与已有工作线程／缓存管线及全部创作动画功能共同工作。
+版本 **26.10** 完成当前年度路线，形成稳定、轻量的 2D 创作平台，同时保持 Project Format 2/schema 29 与全部冻结契约。该版本整合压感笔与无障碍输入、可取消且照顾低配置设备的加载流程、租约安全 Worker、大世界缓存查询、安全失败的语义协作、逐操作平台就绪证据、三个完整创作参考项目，以及中／英／德三语任务手册。确实需要其他主机、真实硬件、签名凭据、公共基础设施或独立人员的工作仍明确标记为外部验证。
 
 **手册：** [中英德三语交互网页](./manual/index.html) · [中文 Markdown](./manual/MANUAL.zh-CN.md) · [English](./manual/MANUAL.en.md) · [Deutsch](./manual/MANUAL.de.md)
 
-## 26.04 更新内容
+## 26.10 更新内容
 
+- **稳定创作平台：** [26.10 平台契约](docs/STABLE_CREATOR_PLATFORM_26_10.md)、[类型化差距登记](docs/PLATFORM_GAP_REGISTER_26_10.md)与[支持矩阵](docs/SUPPORT_MATRIX_26_10.md)明确区分本地已验证、设计范围及外部认证，不使用笼统兜底结论。
+- **401 条精确操作路径：**每项公开操作都有明确的绑定、验证、撤销、持久化、运行时／导出、文档与测试处置，并在中／英／德手册中共享稳定锚点。
+- **终极性能核心：**带世代／租约保护的 Worker、确定性让步回退、未变化场景的组件缓存、有界资源虚拟化、按需工作区分块，以及可被首次交互取消的空闲预热，在低配置设备上仍保留完整语义和动画。
+- **平台输入与无障碍：**压感、倾斜、旋转、橡皮擦与笔按键，和逻辑／物理键盘、鼠标、触控、手势、手柄、虚拟控件及权限门禁传感器共同经过同一 Action 路径；详见 [26.08 平台契约](docs/PLATFORM_INPUT_ACCESSIBILITY_26_08.md)。
+- **协作正确性：**完整源码指纹、带世代的变更列表、保持身份与顺序的三方合并、真实删除／重排、有界冲突报告及合并后规范验证，会在不确定时安全失败而不会静默改写内容。
+- **可运行端到端参考：**代码创作、积木创作、混合创作、平台输入、大世界、语义合并及关闭渲染器的权威端项目均位于[参考项目库](reference-projects/README.md)。
+- **发布与恢复指南：**当前的 [API/SDK](docs/API_SDK_26_10.md)、[迁移](docs/MIGRATION_26_10.md)、[故障排除](docs/TROUBLESHOOTING_26_10.md)、[可复现性](docs/REPRODUCIBILITY_26_10.md)、[干净机器验证](docs/CLEAN_MACHINE_QUALIFICATION_26_10.md)及[独立可用性](docs/INDEPENDENT_USABILITY_26_10.md)协议已完整记录。
 - **完整路线：** [26.01–26.10 实施手册](docs/ROADMAP_26_01_TO_26_10.md)与[竞品审查](docs/COMPETITIVE_REVIEW_26_01.md)。
-- **功能事实清单：** [完整功能与绑定清单](docs/FEATURE_INVENTORY_26_04.md)逐项记录绑定、验证、撤销、持久化、运行时／导出、文档与测试。
+- **功能事实清单：** [完整功能与绑定清单](docs/FEATURE_INVENTORY_26_06.md)逐项记录绑定、验证、撤销、持久化、运行时／导出、文档与测试。
+- **多人游戏制作：** [26.07 网络与服务器契约](docs/MULTIPLAYER_PRODUCTION_26_07.md)说明显式软件包／权限／会话门禁、权威、复制、有界回滚、回放／存档范围、已审核服务接口、多实例测试、导出安全及真实外部限制。
+- **网络工作室布局：** [26.07 全面板审计](docs/UI_LAYOUT_AUDIT_26_07.md)覆盖会话、协议、复制、编排、回放、诊断的响应式流程，以及英／德／中三语下每实例“日志”和“检查器”操作的准确范围。
+- **可运行参考项目：** [26.07 合作与服务器项目](reference-projects/README.md#nova_a-2607-multiplayer-and-server-references)用于验证状态差量回滚和关闭渲染器的权威端，且不把公共网络或真正无窗口运行伪装为已认证。
+- **模拟制作：** [26.06 实现契约](docs/SIMULATION_AUTHORING_26_06.md)说明精确单位、复合体、约束、绳索／布料、导航、避障、AI 及确定性证据。
+- **输出可靠性：** [模板／输出契约](docs/OUTPUT_BUILD_RELIABILITY_26_06.md)统一交互式与无头构建模板标识，并用确定性包和支持的输出验证全部二十个启动模板。
+- **26.06 布局审计：** [三语全界面审计](docs/UI_LAYOUT_AUDIT_26_06.md)覆盖字距／行距、单行控件居中、图表检查器约束、全部面板、语言、缩放与视口。
+- **生产媒体工作流：** [26.05 实现契约](docs/PRODUCTION_MEDIA_26_05.md)说明材质／回退、有序渲染 Pass、有界纹理驻留、动画与音频就绪检查，以及固定帧／整数采样捕获。
+- **26.05 布局审计：** [本地化生产工作流审计](docs/UI_LAYOUT_AUDIT_26_05.md)覆盖新增卡片、表单、状态、操作、主题、缩放和响应式断点。
 - **资产与资源库生态：** [26.04 实现契约](docs/ASSET_CONTENT_LIBRARY_26_04.md)记录依赖可视化、确定性导入／重新导入、缩略图、生产配置、资源变体、可信离线发现、修复与导出闭包。
 - **26.04 布局审计：** [本地化资产工作区审计](docs/UI_LAYOUT_AUDIT_26_04.md)覆盖依赖栏、生产配置、变体、缩略图、主题、缩放、键盘焦点、滚动及窄布局。
 - **语言与调试深度：** [26.03 实现契约](docs/LANGUAGE_DEBUGGING_26_03.md)说明可选类型／数据、模块、语句映射、任务取消、监视、断点、LSP 3.17、代码↔图表覆盖率、逃生积木、差异与合并。
@@ -30,14 +45,14 @@ Nova_A 是一款开源 2D 游戏引擎与桌面编辑器，使用 Rust、WebAsse
 
 ## 从 7.0.0 继承的稳定平台
 
-- **平台就绪情况：**“管理 → 学习中心 → 平台就绪情况”对全部 358 项公开功能执行七维审计，并明确区分不适用与仍需外部证据的项目。
+- **平台就绪情况：**“管理 → 学习中心 → 平台就绪情况”对全部 401 项公开操作执行七维审计，并明确区分不适用与仍需外部证据的项目。
 - **稳定契约：**Project Format 2/schema 29、Rhai API 2、Graph Format 1、Plugin API 2、Package Manifest 1、Build CLI 1 与 workspace document 3 保持兼容；下次破坏性契约决策等待证据后再进行。
 - **安全 6.x 迁移封存：**干运行预览、语义差异、备份、确定性规范应用和回滚只把旧引擎上限更新为 `<8.0.0`；未来 schema 仍安全阻断。
 - **完整教学：**每项公开功能均有中／英／德分类、前提、准确流程、预期结果、持久化／导出、撤销／恢复、常见错误、无障碍、示例与 Rhai／可视化图等价说明。
 - **诚实的平台支持：**Windows 与 Web 为本地验证 Tier 1；Linux／macOS 需要匹配主机，Android 仍为工具链门禁实验目标，iOS／主机平台延期，3D 不在范围内。
 - **发布资格：**稳定平台／迁移参考、历史黄金夹具、正常用户交互／本地化布局审计、保留的运行时／安全／性能检查、干净源码构建与精确十一文件组成本地证据。独立观察、签名、匹配主机构建和真实长测仍为外部工作。
 
-请阅读[稳定创作平台契约](./docs/STABLE_CREATOR_PLATFORM_7_0.md)、[API 参考](./docs/API_REFERENCE_7_0.md)、[迁移指南](./docs/MIGRATION_7_0.md)和[故障排除](./docs/TROUBLESHOOTING_7_0.md)。
+请阅读当前的[稳定创作平台契约](./docs/STABLE_CREATOR_PLATFORM_26_10.md)、[API／SDK 指南](./docs/API_SDK_26_10.md)、[迁移指南](./docs/MIGRATION_26_10.md)和[故障排除](./docs/TROUBLESHOOTING_26_10.md)。
 
 ## 保留的 v6.9.0 生态与发布基线
 
@@ -431,7 +446,7 @@ Vue 编辑器
 - 桌面端：Tauri 2 及其系统 WebView 支持的 Windows、macOS 与 Linux。
 - 建议在目标操作系统上构建对应安装包：Windows 生成 NSIS/MSI，macOS 生成 app/DMG，Linux 生成当前 Tauri 工具链支持的包格式。
 
-Nova_A 当前是桌面/网页编辑器；仓库尚未配置 Android 与 iOS 应用目标。
+Nova_A 仍以桌面／Web 编辑器为主。Android 是可选、受工具链门禁的 Experimental 目标；iOS 应用输出仍延期到匹配的 macOS 主机。
 
 ## 通用环境要求
 
@@ -489,7 +504,7 @@ pnpm dev
 pnpm tauri dev
 ```
 
-### 完整验证
+### 开发阶段验证
 
 ```sh
 pnpm test:core
@@ -499,7 +514,9 @@ pnpm audit:manual
 pnpm build
 ```
 
-这些命令依次运行全部 workspace 测试（包括完整物理测试套件）、将警告视为错误的代码检查、Vue/TypeScript 类型检查、Release WASM 和优化后的 Vite 前端构建。
+这些命令用于开发阶段反馈：依次运行全部 workspace 测试（包括完整物理测试套件）、将警告视为错误的代码检查、Vue/TypeScript 类型检查、手册审计、Release WASM 和优化后的 Vite 前端构建。它们不会生成打包所需的原生、浏览器布局、交互、性能、安全或发布证据报告。
+
+`pnpm audit` 是当前公开版本 26.10 的通用审计入口。它检查当前静态／手册门禁，并读取下方发布准备流程生成的完整 26.10 报告；它不能代替这些报告的生成过程。
 
 ### 浏览器生产预览
 
@@ -516,13 +533,20 @@ pnpm tauri build
 
 Tauri 打包前会自动执行 `pnpm build`。不同系统的结果通常位于 `src-tauri/target/release/bundle/` 下。
 
-原生构建成功后，使用以下命令整理完整的版本发布文件：
+### 从干净检出完成 26.10 发布
+
+请在装有 Microsoft Edge 且满足上述依赖的合格 Windows 主机上运行最终发布流程。从干净检出开始，安装锁定依赖，生成全部本地报告与结构化证据，再打包并独立验证结果：
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\package-release.ps1 -Version 4.2.0
+pnpm install --frozen-lockfile
+pnpm prepare:v26.10
+pnpm release:v26.10
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/verify-release-package.ps1 -Version 26.10 -MachineVersion 26.10.0
 ```
 
-该命令会在 `releases/v4.2.0/` 生成规定的十一项顶层产物：便携版 EXE、MSI、NSIS 安装程序、Web ZIP、源码 ZIP、参考项目 ZIP、发布证据 ZIP、发布说明、完整编辑清单、许可证和 `SHA256SUMS.txt`。发布证据 ZIP 保留环境、工具、源码、测试、覆盖率、视觉基线／差异、日志、截图、已知问题及签字门槛的机器可读层级。
+`prepare:v26.10` 会在需要时选择 26.10 权威，重新生成手册与参考项目，运行 Rust 测试与 clippy、TypeScript／静态审计、模板／就绪情况／历史检查、优化后的 Web 与 Tauri 构建、完整浏览器交互和布局验证、Windows 编辑器／游戏／无界面服务冒烟、基准、稳定性、依赖安全及仓库卫生检查，最后运行 26.10 产品审计并生成 `release-audits/evidence-v26.10/evidence-manifest.json`。任一命令失败都会立即停止。生成的 `release-audits/` 目录按设计由 Git 忽略，干净检出必须重新生成；不得从另一份源码树复制。
+
+审阅该清单及其中明确保持待处理的外部门禁后，`release:v26.10` 会把公开版本 **26.10**（机器版本 **26.10.0**）整理到 `releases/v26.10/`，生成规定的十一项顶层产物：便携版 EXE、MSI、NSIS 安装程序、Web ZIP、源码 ZIP、参考项目 ZIP、发布证据 ZIP、发布说明、完整编辑清单、许可证和 `SHA256SUMS.txt`。打包器先在同级私有暂存目录完成验证，成功后再替换正式目录，因此失败尝试不会删除上一份完整版本；最后一条命令会独立解压并验证该发布包。发布者签名、Linux/macOS 匹配主机构建、真实设备工作、独立干净机器／可用性评审、第二台机器复现和真实时长浸泡测试，在取得各自证据前仍属外部工作。
 
 ### 无界面导出
 
@@ -530,7 +554,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\package-release.
 pnpm export -- --project ./project.nova --target web --profile release --output ./Builds/MyGame
 ```
 
-CLI 接受 `windows`、`linux`、`macos` 或 `web`；桌面目标需要对应宿主 Player。它生成构建报告、缓存清单以及可选补丁清单；其他参数请运行 `pnpm export -- --help` 查看。
+CLI 接受 `windows`、`linux`、`macos` 或 `web`；桌面目标需要对应宿主 Player。它生成构建报告、内容清单、来源证明、SBOM、依赖／体积／部署报告以及可选补丁清单；其他参数请运行 `pnpm export -- --help` 查看。
 
 ### 使用 Nova Player 导出游戏
 

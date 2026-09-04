@@ -69,6 +69,17 @@ export function createSemanticEvidence(nodes: readonly UiAccessibilityNode[], op
 
 export async function detectNativeAccessibilityCapabilities(): Promise<NativeAccessibilityCapabilities> {
   nativeAccessibilityState.loading = true; nativeAccessibilityState.error = ''
+  if (typeof window === 'undefined' || !('__TAURI_INTERNALS__' in window)) {
+    nativeAccessibilityState.capabilities = {
+      platform: typeof navigator === 'undefined' ? 'web' : navigator.platform || 'web',
+      webviewDomBridge: true,
+      nativeCustomAdapters: false,
+      automationProvider: 'Web ARIA',
+      notes: ['Semantic HTML and ARIA are exposed by the active browser accessibility tree.']
+    }
+    nativeAccessibilityState.loading = false
+    return nativeAccessibilityState.capabilities
+  }
   try {
     const { invoke } = await import('@tauri-apps/api/core')
     const response = await invoke<NativeAccessibilityCapabilities>('native_accessibility_capabilities')

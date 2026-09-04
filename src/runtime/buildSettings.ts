@@ -1,8 +1,9 @@
 import { reactive } from 'vue'
-import { OFFICIAL_ANDROID_PACKAGE_ID, OFFICIAL_NETWORKING_PACKAGE_ID, packageEnabled } from './packages'
+import { OFFICIAL_ANDROID_PACKAGE_ID, OFFICIAL_NETWORKING_PACKAGE_ID, packageEnabled, packageState } from './packages'
 import { platformSupport } from './platformSupport'
 import { productionSettings } from './production'
 import { networkAuthenticationProviders, networkEncryptionGuidance, reviewedNetworkTransports } from './networkProduction'
+import { networkServiceSelectionIssues } from './networkServices'
 import { defaultExportTemplateId, exportTemplateIssues, resolveExportTemplateId } from './exportTemplates'
 import { refreshAndroidToolchain, validateAndroidPermissions } from './mobileDelivery'
 
@@ -108,16 +109,16 @@ export interface BuildProgress {
   changedFiles: number
 }
 
-export interface BuildPreset { id: string; name: string; target: BuildTarget; profile: BuildProfile; runtimeMode: BuildRuntimeMode; cacheMode: BuildCacheMode; compression: BuildCompression; stripUnusedAssets: boolean; releaseChannel?: BuildReleaseChannel; exportTemplate?: string }
+export interface BuildPreset { id: string; name: string; target: BuildTarget; architecture: BuildArchitecture; profile: BuildProfile; runtimeMode: BuildRuntimeMode; cacheMode: BuildCacheMode; compression: BuildCompression; stripUnusedAssets: boolean; releaseChannel?: BuildReleaseChannel; exportTemplate?: string }
 export interface BuildHistoryEntry { id: string; startedAt: string; finishedAt: string; target: BuildTarget; profile: BuildProfile; status: 'complete' | 'failed'; outputPath: string; buildId: string; sizeBytes: number; message: string; durationMs?: number; inputsHash?: string; outputsHash?: string; cacheKey?: string; manifestPath?: string; log?: string[]; evidenceStatus?: 'passed' | 'warning' | 'blocked' }
 
 export const BUILTIN_BUILD_PRESETS: readonly BuildPreset[] = Object.freeze([
-  Object.freeze({ id: 'windows-release', name: 'Windows Tier-1 release', target: 'windows', profile: 'release', runtimeMode: 'game', cacheMode: 'validate', compression: 'maximum', stripUnusedAssets: true, releaseChannel: 'stable', exportTemplate: 'windows-x64-v1' }),
-  Object.freeze({ id: 'web-release', name: 'Web Tier-1 release', target: 'web', profile: 'release', runtimeMode: 'game', cacheMode: 'validate', compression: 'maximum', stripUnusedAssets: true, releaseChannel: 'stable', exportTemplate: 'web-es2022-v1' }),
-  Object.freeze({ id: 'desktop-debug', name: 'Windows development', target: 'windows', profile: 'debug', runtimeMode: 'game', cacheMode: 'incremental', compression: 'store', stripUnusedAssets: false, releaseChannel: 'development', exportTemplate: 'windows-x64-v1' }),
-  Object.freeze({ id: 'headless-server', name: 'Windows headless server', target: 'windows', profile: 'release', runtimeMode: 'headless-server', cacheMode: 'clean', compression: 'maximum', stripUnusedAssets: true, releaseChannel: 'beta', exportTemplate: 'windows-headless-x64-v1' }),
-  Object.freeze({ id: 'linux-ci', name: 'Linux matching-host CI', target: 'linux', profile: 'release', runtimeMode: 'game', cacheMode: 'clean', compression: 'maximum', stripUnusedAssets: true, releaseChannel: 'beta', exportTemplate: 'linux-x64-experimental-v1' }),
-  Object.freeze({ id: 'macos-ci', name: 'macOS matching-host CI', target: 'macos', profile: 'release', runtimeMode: 'game', cacheMode: 'clean', compression: 'maximum', stripUnusedAssets: true, releaseChannel: 'beta', exportTemplate: 'macos-universal-experimental-v1' })
+  Object.freeze({ id: 'windows-release', name: 'Windows Tier-1 release', target: 'windows', architecture: 'x86_64', profile: 'release', runtimeMode: 'game', cacheMode: 'validate', compression: 'maximum', stripUnusedAssets: true, releaseChannel: 'stable', exportTemplate: 'windows-x64-v1' }),
+  Object.freeze({ id: 'web-release', name: 'Web Tier-1 release', target: 'web', architecture: 'x86_64', profile: 'release', runtimeMode: 'game', cacheMode: 'validate', compression: 'maximum', stripUnusedAssets: true, releaseChannel: 'stable', exportTemplate: 'web-es2022-v1' }),
+  Object.freeze({ id: 'desktop-debug', name: 'Windows development', target: 'windows', architecture: 'x86_64', profile: 'debug', runtimeMode: 'game', cacheMode: 'incremental', compression: 'store', stripUnusedAssets: false, releaseChannel: 'development', exportTemplate: 'windows-x64-v1' }),
+  Object.freeze({ id: 'headless-server', name: 'Windows headless server', target: 'windows', architecture: 'x86_64', profile: 'release', runtimeMode: 'headless-server', cacheMode: 'clean', compression: 'maximum', stripUnusedAssets: true, releaseChannel: 'beta', exportTemplate: 'windows-headless-x64-v1' }),
+  Object.freeze({ id: 'linux-ci', name: 'Linux matching-host CI', target: 'linux', architecture: 'x86_64', profile: 'release', runtimeMode: 'game', cacheMode: 'clean', compression: 'maximum', stripUnusedAssets: true, releaseChannel: 'beta', exportTemplate: 'linux-x64-experimental-v1' }),
+  Object.freeze({ id: 'macos-ci', name: 'macOS matching-host CI', target: 'macos', architecture: 'x86_64', profile: 'release', runtimeMode: 'game', cacheMode: 'clean', compression: 'maximum', stripUnusedAssets: true, releaseChannel: 'beta', exportTemplate: 'macos-universal-experimental-v1' })
 ])
 
 function loadBuildHistory(): BuildHistoryEntry[] {
@@ -165,7 +166,7 @@ export const buildSettings = reactive<BuildSettings>({
     structuredLogs: true, crashReports: false, telemetryEnabled: false, telemetryEndpoint: '', privacyPolicyUrl: '',
     cacheMode: 'incremental', include: ['Assets/**'], exclude: ['**/*.psd', '**/*.kra', '.nova/**'], stripUnusedAssets: false,
     sizeReport: true, dependencyReport: true, debugSymbols: true, crashSymbols: true,
-    releaseChannel: 'development', exportTemplate: 'windows-x64-v1', provenance: true, sbom: true, webHeaders: true,
+    releaseChannel: 'development', exportTemplate: defaultExportTemplateId(DEFAULT_CAPABILITIES.host === 'unknown' ? 'web' : DEFAULT_CAPABILITIES.host, 'x86_64', 'game'), provenance: true, sbom: true, webHeaders: true,
     deploymentMode: 'local', deploymentDestination: '', signingHook: '', notarizationHook: '', cleanMachineJob: false,
     contentCache: true, deltaBuilds: true, ciMatrixVersion: 1, deploymentConnectorId: 'local', deploymentPermissionGranted: false
   }
@@ -267,7 +268,7 @@ export function setBuildProfile(profile: BuildProfile): void {
 export function applyBuildPreset(id: string): boolean {
   const preset = BUILTIN_BUILD_PRESETS.find(item => item.id === id)
   if (!preset) return false
-  buildSettings.presetName = preset.id; buildSettings.target = preset.target; buildSettings.runtimeMode = preset.runtimeMode
+  buildSettings.presetName = preset.id; buildSettings.target = preset.target; buildSettings.architecture = preset.architecture; buildSettings.runtimeMode = preset.runtimeMode
   buildSettings.delivery.cacheMode = preset.cacheMode; buildSettings.delivery.incremental = preset.cacheMode !== 'clean'
   buildSettings.delivery.compression = preset.compression; buildSettings.delivery.stripUnusedAssets = preset.stripUnusedAssets
   buildSettings.delivery.releaseChannel = preset.releaseChannel ?? (preset.profile === 'release' ? 'beta' : 'development')
@@ -306,11 +307,43 @@ export function validateBuildSettings(settings: BuildSettings, capabilities = ex
   if (settings.runtimeMode === 'headless-server' && (settings.target === 'web' || settings.target === 'android')) issues.push({ code: 'headless', severity: 'error', message: 'Headless authoritative servers require a desktop target.' })
   if (productionSettings.networking.enabled && !packageEnabled(OFFICIAL_NETWORKING_PACKAGE_ID)) issues.push({ code: 'network-package', severity: 'error', message: 'Networked builds require the reviewed optional Nova Networking package.' })
   if (productionSettings.networking.enabled && !productionSettings.networking.permissionGranted) issues.push({ code: 'network-permission', severity: 'error', message: 'Networked builds require an explicit project network permission.' })
+  if (productionSettings.networking.enabled && productionSettings.networking.sessionMode === 'direct' && !productionSettings.networking.transportAdapterId) {
+    if (productionSettings.networking.transport === 'websocket') {
+      try {
+        const endpoint = new URL(productionSettings.networking.endpoint)
+        if (!['ws:', 'wss:'].includes(endpoint.protocol) || !endpoint.hostname || endpoint.username || endpoint.password || endpoint.hash) throw new Error('invalid')
+        if (endpoint.port && (!Number.isInteger(Number(endpoint.port)) || Number(endpoint.port) < 1 || Number(endpoint.port) > 65_535)) throw new Error('invalid')
+      } catch { issues.push({ code: 'network-endpoint', severity: 'error', message: 'Direct WebSocket networking requires a valid ws:// or wss:// endpoint without embedded credentials or a fragment.' }) }
+    } else if (productionSettings.networking.transport === 'native-udp') {
+      try {
+        const endpoint = new URL(productionSettings.networking.endpoint)
+        if (endpoint.protocol !== 'udp:' || !endpoint.hostname || !endpoint.port || endpoint.username || endpoint.password || endpoint.search || endpoint.hash || (endpoint.pathname && endpoint.pathname !== '/') || Number(endpoint.port) < 1 || Number(endpoint.port) > 65_535) throw new Error('invalid')
+      } catch { issues.push({ code: 'network-endpoint', severity: 'error', message: 'Direct native UDP networking requires an endpoint such as udp://127.0.0.1:7777 with a port from 1 to 65535.' }) }
+      try {
+        const bind = new URL(`udp://${productionSettings.networking.bindAddress}`)
+        if (!bind.hostname || !bind.port || bind.username || bind.password || bind.search || bind.hash || (bind.pathname && bind.pathname !== '/') || Number(bind.port) < 0 || Number(bind.port) > 65_535) throw new Error('invalid')
+      } catch { issues.push({ code: 'network-bind-address', severity: 'error', message: 'Native UDP requires a bind address such as 127.0.0.1:0 or 0.0.0.0:7777.' }) }
+    }
+  }
+  if (productionSettings.networking.enabled) {
+    for (const channel of productionSettings.networking.channels) if (channel.maximumPayloadBytes > productionSettings.networking.maximumPacketBytes) issues.push({ code: 'network-channel-packet-bound', severity: 'error', message: `Channel ${channel.id} allows ${channel.maximumPayloadBytes} payload bytes, above the ${productionSettings.networking.maximumPacketBytes}-byte packet bound.` })
+    for (const rpc of productionSettings.networking.rpcContracts) {
+      const channel = productionSettings.networking.channels.find(item => item.id === rpc.channelId)
+      if (!channel) issues.push({ code: 'network-rpc-channel', severity: 'error', message: `RPC ${rpc.name} references missing channel ${rpc.channelId}.` })
+      else if (rpc.maximumPayloadBytes > channel.maximumPayloadBytes) issues.push({ code: 'network-rpc-payload-bound', severity: 'error', message: `RPC ${rpc.name} allows ${rpc.maximumPayloadBytes} bytes, above channel ${channel.id}'s ${channel.maximumPayloadBytes}-byte bound.` })
+    }
+    if (!productionSettings.networking.transportAdapterId && productionSettings.networking.transport === 'native-udp' && (productionSettings.networking.role === 'host' || productionSettings.networking.role === 'server')) {
+      const networkPackage = packageState.installed.find(item => item.manifest.id === OFFICIAL_NETWORKING_PACKAGE_ID && item.project && item.enabled)
+      if (networkPackage && !networkPackage.grantedPermissions.includes('network.listen')) issues.push({ code: 'network-listen-permission', severity: 'error', message: 'Native Host/Server builds require the Nova Networking package network.listen grant.' })
+    }
+  }
   if (productionSettings.networking.enabled && productionSettings.networking.transportAdapterId && !reviewedNetworkTransports().some(adapter => adapter.id === productionSettings.networking.transportAdapterId)) issues.push({ code: 'network-adapter', severity: 'error', message: `Reviewed transport adapter ${productionSettings.networking.transportAdapterId} is not registered.` })
   if (productionSettings.networking.enabled && productionSettings.networking.authentication.mode === 'hook' && !networkAuthenticationProviders().some(provider => provider.id === productionSettings.networking.authentication.providerId)) issues.push({ code: 'network-authentication', severity: 'error', message: `Authentication provider ${productionSettings.networking.authentication.providerId || '(empty)'} is not registered.` })
   if (productionSettings.networking.enabled && productionSettings.networking.authentication.requireVerifiedPeers && productionSettings.networking.authentication.mode !== 'hook') issues.push({ code: 'network-verification', severity: 'error', message: 'Verified peers require a reviewed authentication hook.' })
+  if (productionSettings.networking.enabled) for (const issue of networkServiceSelectionIssues(productionSettings.networking)) issues.push({ code: 'network-service', severity: 'error', message: issue })
   if (productionSettings.networking.enabled) { const selectedAdapter = reviewedNetworkTransports().find(adapter => adapter.id === productionSettings.networking.transportAdapterId), guidance = networkEncryptionGuidance(productionSettings.networking, selectedAdapter?.encrypted === true); if (guidance.severity === 'error') issues.push({ code: 'network-encryption', severity: 'error', message: guidance.message }); else if (guidance.severity === 'warning') issues.push({ code: 'network-encryption', severity: 'warning', message: guidance.message }) }
   if (settings.runtimeMode === 'headless-server' && !productionSettings.networking.enabled) issues.push({ code: 'headless-network', severity: 'error', message: 'The headless server preset requires networking to be enabled explicitly.' })
+  if (settings.runtimeMode === 'headless-server' && !productionSettings.networking.autoStart) issues.push({ code: 'headless-network-autostart', severity: 'error', message: 'The headless server preset requires networking to start automatically with the runtime.' })
   if (settings.runtimeMode === 'headless-server' && !['server', 'host'].includes(productionSettings.networking.role)) issues.push({ code: 'headless-authority', severity: 'error', message: 'Headless servers require the Server or Host authority role.' })
   if (settings.runtimeMode === 'headless-server' && productionSettings.networking.transport !== 'native-udp' && !productionSettings.networking.transportAdapterId) issues.push({ code: 'headless-transport', severity: 'error', message: 'Authoritative headless servers require native UDP or a reviewed transport adapter.' })
   if (settings.packageIntoExecutable && (settings.target === 'web' || settings.target === 'macos' || settings.target === 'android')) issues.push({ code: 'single-file', severity: 'error', message: 'Single-file packaging is unavailable for this target.' })

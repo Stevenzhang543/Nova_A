@@ -87,7 +87,7 @@
             <button :title="t('close')" @click="repairMode = false">×</button>
           </section>
 
-          <div class="asset-grid" :class="`asset-${assets.viewMode}`" :style="{ '--asset-size': `${assets.thumbnailSize}px` }" @scroll.passive="extendAssetWindow">
+          <div ref="assetGrid" class="asset-grid" :class="`asset-${assets.viewMode}`" :style="assetGridStyle" @scroll.passive="updateAssetWindow">
             <article
               v-for="asset in displayedAssets"
               :key="asset.uuid"
@@ -296,7 +296,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
+import { computed, defineAsyncComponent, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { t } from '../i18n'
 import { addEditorLog, editorState as estate } from '../store/editor'
 import { clearAssetReferences, countAssetReferences, getSceneJSON, physicsState as state, pushHistory, replaceAssetReferences } from '../store/physics'
@@ -321,15 +321,7 @@ import { applyEditorWorkspace, reorderBottomTab, workspaceState } from '../edito
 import { instantiatePrefab, replaceEntitiesWithPrefab } from '../runtime/prefabs'
 import { createSceneAssetFromEntities, instantiateSceneAsset } from '../runtime/sceneInstances'
 import { reimportAnimationClip } from '../runtime/animation'
-import AnimationPanel from './AnimationPanel.vue'
 import ContentAssetInspector from './ContentAssetInspector.vue'
-import AudioSystemPanel from './AudioSystemPanel.vue'
-import ConsolePanel from './ConsolePanel.vue'
-import ProfilerPanel from './ProfilerPanel.vue'
-import NetworkStudioPanel from './NetworkStudioPanel.vue'
-import EcosystemStudioPanel from './EcosystemStudioPanel.vue'
-import TilemapPanel from './TilemapPanel.vue'
-import WorldToolsPanel from './WorldToolsPanel.vue'
 import { buildAssetDependencyGraph, explainAssetBuildInclusion, findAssetReferences, repairMissingAssetReference, unusedAssetReport } from '../assets/assetGraph'
 import { cancelAssetImport, importPipelineState } from '../assets/importPipeline'
 import { sourceStatusFor } from '../runtime/teamWorkflow'
@@ -337,6 +329,18 @@ import { moveAssetToProjectTrash } from '../runtime/projectTrash'
 import { projectScopeDirty } from '../runtime/projectTransactions'
 import { pluginRuntime, pluginState } from '../runtime/plugins'
 import { createResourceAsset, type ResourceKind } from '../runtime/resources'
+
+// Bottom tools are substantial, mutually exclusive workspaces. Loading the
+// inactive tools only when selected reduces cold-start parsing without changing
+// a control, animation, or persisted panel state.
+const AnimationPanel = defineAsyncComponent(() => import('./AnimationPanel.vue'))
+const AudioSystemPanel = defineAsyncComponent(() => import('./AudioSystemPanel.vue'))
+const ConsolePanel = defineAsyncComponent(() => import('./ConsolePanel.vue'))
+const ProfilerPanel = defineAsyncComponent(() => import('./ProfilerPanel.vue'))
+const NetworkStudioPanel = defineAsyncComponent(() => import('./NetworkStudioPanel.vue'))
+const EcosystemStudioPanel = defineAsyncComponent(() => import('./EcosystemStudioPanel.vue'))
+const TilemapPanel = defineAsyncComponent(() => import('./TilemapPanel.vue'))
+const WorldToolsPanel = defineAsyncComponent(() => import('./WorldToolsPanel.vue'))
 
 const permanentTabs = [
   { id: 'assets' as const, label: 'assets' as const }, { id: 'console' as const, label: 'console' as const },
@@ -367,10 +371,26 @@ const pivotPresets = [
   { id: 'bottom-left', label: 'pivotBottomLeft', value: { x: 0, y: 1 } }, { id: 'bottom', label: 'pivotBottom', value: { x: .5, y: 1 } }, { id: 'bottom-right', label: 'pivotBottomRight', value: { x: 1, y: 1 } }
 ] as const
 const panelStyle = computed(() => ({ height: estate.bottomPanelOpen ? `min(${estate.bottomPanelHeight}px, 42vh)` : '34px' }))
-const assetWindowLimit = ref(320)
+const assetGrid = ref<HTMLElement | null>(null)
+const assetScrollTop = ref(0)
+const assetViewportHeight = ref(320)
+const assetViewportWidth = ref(800)
+const assetOverscanRows = 4
 const filteredAssetRecords = computed(() => { void assets.generation; return filteredAssets() })
 const filteredAssetCount = computed(() => filteredAssetRecords.value.length)
-const displayedAssets = computed(() => filteredAssetRecords.value.slice(0, assetWindowLimit.value))
+const assetColumnCount = computed(() => assets.viewMode === 'list' ? 1 : Math.max(1, Math.floor((Math.max(118, assetViewportWidth.value - 18) + 7) / (Math.max(118, assets.thumbnailSize) + 7))))
+const assetRowStride = computed(() => assets.viewMode === 'list' ? 56 : 65)
+const assetStartRow = computed(() => Math.max(0, Math.floor(assetScrollTop.value / assetRowStride.value) - assetOverscanRows))
+const assetVisibleRows = computed(() => Math.max(1, Math.ceil(assetViewportHeight.value / assetRowStride.value) + assetOverscanRows * 2))
+const assetWindowStart = computed(() => Math.min(filteredAssetCount.value, assetStartRow.value * assetColumnCount.value))
+const assetWindowEnd = computed(() => Math.min(filteredAssetCount.value, assetWindowStart.value + assetVisibleRows.value * assetColumnCount.value))
+const displayedAssets = computed(() => filteredAssetRecords.value.slice(assetWindowStart.value, assetWindowEnd.value))
+const assetTotalRows = computed(() => Math.ceil(filteredAssetCount.value / assetColumnCount.value))
+const assetGridStyle = computed(() => ({
+  '--asset-size': `${assets.thumbnailSize}px`,
+  paddingTop: `${9 + assetStartRow.value * assetRowStride.value}px`,
+  paddingBottom: `${9 + Math.max(0, assetTotalRows.value - Math.ceil(assetWindowEnd.value / assetColumnCount.value)) * assetRowStride.value}px`
+}))
 const visibleFolders = computed(() => assets.folders.filter(folder => !folder.startsWith('.nova/')))
 const selectedAsset = computed(() => assets.records.find(asset => asset.uuid === assets.selectedGuid) ?? null)
 const projectSnapshot = computed(() => { void assets.generation; try { return JSON.parse(getSceneJSON()) as unknown } catch { return null } })
@@ -408,7 +428,21 @@ const selectedAtlasReport = computed(() => {
   const group = asset.settings.atlasSettings.group || 'default'
   return packAtlasDeterministic(assets.records.filter(candidate => candidate.assetType === 'image' && candidate.settings.atlas && (candidate.settings.atlasSettings.group || 'default') === group).map(candidate => ({ uuid: candidate.uuid, width: candidate.width, height: candidate.height, group })), { maxSize: asset.settings.atlasSettings.maxSize, padding: asset.settings.atlasSettings.padding, rotationPolicy: asset.settings.atlasSettings.rotationPolicy })
 })
-watch(() => [assets.search, assets.currentFolder, assets.typeFilter, assets.tagFilter, assets.selectedCollectionId, assets.favoritesOnly], () => { assetWindowLimit.value = 320 })
+watch(() => [assets.search, assets.currentFolder, assets.typeFilter, assets.tagFilter, assets.selectedCollectionId, assets.favoritesOnly, assets.viewMode, assets.thumbnailSize], () => {
+  assetScrollTop.value = 0
+  if (assetGrid.value) assetGrid.value.scrollTop = 0
+})
+let assetResizeObserver: ResizeObserver | null = null
+onMounted(() => {
+  const update = () => {
+    if (!assetGrid.value) return
+    assetViewportHeight.value = Math.max(1, assetGrid.value.clientHeight)
+    assetViewportWidth.value = Math.max(1, assetGrid.value.clientWidth)
+  }
+  update()
+  if (typeof ResizeObserver !== 'undefined') { assetResizeObserver = new ResizeObserver(update); if (assetGrid.value) assetResizeObserver.observe(assetGrid.value) }
+})
+onBeforeUnmount(() => assetResizeObserver?.disconnect())
 function clonePipelineMetadata(value: AssetPipelineMetadata | undefined): AssetPipelineMetadata | null {
   // Asset records are exposed through Vue's reactive database. The import
   // metadata itself is JSON-owned project data, so clone it across that
@@ -484,7 +518,12 @@ function openAssetEditor(uuid: string) {
   if (asset.assetType === 'audio') { estate.bottomPanelTab = 'audio'; return }
   inspectorTab.value = asset.assetType === 'image' || asset.assetType === 'font' || asset.assetType === 'atlas' || asset.assetType === 'tileset' ? 'import' : 'source'
 }
-function extendAssetWindow(event: Event) { const element = event.currentTarget as HTMLElement; if (element.scrollTop + element.clientHeight >= element.scrollHeight - 240 && assetWindowLimit.value < filteredAssetCount.value) assetWindowLimit.value = Math.min(filteredAssetCount.value, assetWindowLimit.value + 320) }
+function updateAssetWindow(event: Event) {
+  const element = event.currentTarget as HTMLElement
+  assetScrollTop.value = Math.max(0, element.scrollTop)
+  assetViewportHeight.value = Math.max(1, element.clientHeight)
+  assetViewportWidth.value = Math.max(1, element.clientWidth)
+}
 function createCollection() { const collection = createAssetCollection(collectionName.value); if (!collection) return; collectionName.value = ''; if (selectedAsset.value) toggleAssetInCollection(selectedAsset.value.uuid, collection.id); assets.generation++ }
 function toggleSelectedCollection(collectionId: string) { if (!selectedAsset.value) return; toggleAssetInCollection(selectedAsset.value.uuid, collectionId); assets.generation++ }
 function dismissTutorial() { const asset = selectedAsset.value; if (!asset || !asset.path.startsWith('Assets/Tutorials/')) return; deleteAsset(asset.uuid); assets.selectedGuid = null; addEditorLog(t('tutorialDismissed'), 'Project') }

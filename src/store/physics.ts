@@ -59,7 +59,7 @@ import { loadRuntimeAccessibilitySettings, loadUiAudioSettings, serializeRuntime
 import { configureUiAccessibility } from '../runtime/uiAccessibility'
 import { loadProductionSettings, serializeProductionSettings } from '../runtime/production'
 import { markSourceBaseline, refreshSourceStatus, stableProjectText } from '../runtime/teamWorkflow'
-import { defaultPhysicsLayers, defaultPhysicsProfile, normalizePhysicsLayers, normalizePhysicsProfile } from '../runtime/physicsProduction'
+import { defaultPhysicsLayers, defaultPhysicsProfile, MAX_AUTHORED_COLLIDER_POINTS, normalizePhysicsLayers, normalizePhysicsProfile } from '../runtime/physicsProduction'
 import { commitProjectTransaction, createNativeProjectTransactionSink, markProjectDirty, markTransactionBaseline, projectChecksum, projectTransactionState, type ProjectMutationScope } from '../runtime/projectTransactions'
 import { loadProjectTrash, serializeProjectTrash } from '../runtime/projectTrash'
 
@@ -563,9 +563,12 @@ const SCALAR_ENTITY_PROPERTIES = [
 
 const BOOLEAN_ENTITY_PROPERTIES = ['autoInertia', 'isSensor', 'isStatic', 'isKinematic'] as const
 
-function normalizedVertices(vertices: SceneEntityData['vertices']): Array<{ x: number; y: number }> | null {
-  if (!Array.isArray(vertices) || vertices.length < 3) return null
-  return vertices.map(vertex => ({ x: finiteNumber(vertex.x, 0), y: finiteNumber(vertex.y, 0) }))
+function normalizedVertices(vertices: SceneEntityData['vertices'], minimum = 3): Array<{ x: number; y: number }> | null {
+  if (!Array.isArray(vertices) || vertices.length < minimum) return null
+  // Preserve a bounded one-point-over-limit sentinel. Physics preparation can
+  // then produce an explicit diagnostic instead of silently truncating while
+  // hostile multi-million-point payloads never reach quadratic validation.
+  return vertices.slice(0, MAX_AUTHORED_COLLIDER_POINTS + 1).map(vertex => ({ x: finiteNumber(vertex.x, 0), y: finiteNumber(vertex.y, 0) }))
 }
 
 function storedComponent(item: SceneEntityData, kind: ComponentKind): SceneComponentData | undefined {
@@ -844,15 +847,18 @@ function normalizeExtendedComponent(component: Component2D): void {
     }))
   } else if (component instanceof NavigationRegion2D) {
     component.polygon = (Array.isArray(component.polygon) ? component.polygon : []).slice(0, 4096).map(point => safeVector(point, { x: 0, y: 0 }))
-    component.cellSize = clamp(component.cellSize, .5, .01, 1e6); component.clusterSize = Math.round(clamp(component.clusterSize, 16, 4, 64)); component.rebakeInterval = clamp(component.rebakeInterval, .5, .02, 60); component.navigationLayer = Math.round(clamp(component.navigationLayer, 1, 1, 32)); component.traversalCost = clamp(component.traversalCost, 1, .001, 1e6)
+    component.cellSize = clamp(component.cellSize, .5, .01, 1e6); component.clusterSize = Math.round(clamp(component.clusterSize, 16, 4, 64)); component.rebakeInterval = clamp(component.rebakeInterval, .5, .02, 60); component.navigationLayer = Math.round(clamp(component.navigationLayer, 1, 1, 32)); component.navigationMask = Math.round(clamp(component.navigationMask, 1, 0, 0xffff_ffff)) >>> 0; component.traversalCost = clamp(component.traversalCost, 1, .001, 1e6); component.agentRadius = clamp(component.agentRadius, .4, 0, 1e6)
+    if (!['Grid', 'Polygon'].includes(component.navigationMode)) component.navigationMode = 'Grid'
+    if (!['SceneGeometry', 'TileMap', 'Manual'].includes(component.source)) component.source = 'Manual'
+    component.sourceEntityUuid = typeof component.sourceEntityUuid === 'string' ? component.sourceEntityUuid.slice(0, 128) : null
     component.links = (Array.isArray(component.links) ? component.links : []).slice(0, 2048).map((link, index) => ({ id: typeof link.id === 'string' ? link.id.slice(0, 80) : `link-${index}`, start: safeVector(link.start, { x: 0, y: 0 }), end: safeVector(link.end, { x: 1, y: 0 }), bidirectional: link.bidirectional !== false, cost: clamp(link.cost, 1, .001, 1e6), enabled: link.enabled !== false }))
-    component.costAreas = (Array.isArray(component.costAreas) ? component.costAreas : []).slice(0, 2048).map((area, index) => ({ id: typeof area.id === 'string' ? area.id.slice(0, 80) : `cost-${index}`, name: typeof area.name === 'string' ? area.name.slice(0, 80) : `Cost ${index + 1}`, shape: area.shape === 'Circle' ? 'Circle' as const : 'Box' as const, center: safeVector(area.center, { x: 0, y: 0 }), size: safeVector(area.size, { x: 1, y: 1 }), radius: clamp(area.radius, 1, .001, 1e6), multiplier: clamp(area.multiplier, 1, .001, 1_000), navigationLayer: Math.round(clamp(area.navigationLayer, component.navigationLayer, 1, 32)), enabled: area.enabled !== false }))
+    component.costAreas = (Array.isArray(component.costAreas) ? component.costAreas : []).slice(0, 2048).map((area, index) => { const size = safeVector(area.size, { x: 1, y: 1 }); return { id: typeof area.id === 'string' ? area.id.slice(0, 80) : `cost-${index}`, name: typeof area.name === 'string' ? area.name.slice(0, 80) : `Cost ${index + 1}`, shape: area.shape === 'Circle' ? 'Circle' as const : 'Box' as const, center: safeVector(area.center, { x: 0, y: 0 }), size: { x: clamp(size.x, 1, .001, 1e6), y: clamp(size.y, 1, .001, 1e6) }, radius: clamp(area.radius, 1, .001, 1e6), multiplier: clamp(area.multiplier, 1, .001, 1_000), navigationLayer: Math.round(clamp(area.navigationLayer, component.navigationLayer, 1, 32)), enabled: area.enabled !== false } })
     if (!['AStar', 'HierarchicalAStar', 'FlowField'].includes(component.algorithm)) component.algorithm = 'AStar'
   } else if (component instanceof NavigationObstacle2D) {
-    component.size = safeVector(component.size, { x: 1, y: 1 }); component.radius = clamp(component.radius, .5, .001, 1e6); component.navigationLayer = Math.round(clamp(component.navigationLayer, 1, 1, 32)); if (!['Box', 'Circle'].includes(component.shape)) component.shape = 'Circle'
+    component.size = safeVector(component.size, { x: 1, y: 1 }); component.size.x = clamp(component.size.x, 1, .001, 1e6); component.size.y = clamp(component.size.y, 1, .001, 1e6); component.radius = clamp(component.radius, .5, .001, 1e6); component.navigationLayer = Math.round(clamp(component.navigationLayer, 1, 1, 32)); component.avoidanceVelocity = safeVector(component.avoidanceVelocity, { x: 0, y: 0 }); component.dynamic = component.dynamic !== false; if (!['Box', 'Circle'].includes(component.shape)) component.shape = 'Circle'
   } else if (component instanceof NavigationAgent2D) {
-    component.targetPosition = safeVector(component.targetPosition, { x: 0, y: 0 }); component.targetEntityUuid = typeof component.targetEntityUuid === 'string' ? component.targetEntityUuid : null
-    component.speed = clamp(component.speed, 4, 0, 1e6); component.acceleration = clamp(component.acceleration, 20, 0, 1e9); component.radius = clamp(component.radius, .4, .001, 1e6); component.stoppingDistance = clamp(component.stoppingDistance, .1, 0, 1e6); component.avoidanceRadius = clamp(component.avoidanceRadius, 1.2, 0, 1e6); component.maximumAvoidanceNeighbors = Math.round(clamp(component.maximumAvoidanceNeighbors, 16, 1, 32)); component.repathInterval = clamp(component.repathInterval, .25, .02, 60); component.navigationLayer = Math.round(clamp(component.navigationLayer, 1, 1, 32))
+    component.targetPosition = safeVector(component.targetPosition, { x: 0, y: 0 }); component.targetEntityUuid = typeof component.targetEntityUuid === 'string' ? component.targetEntityUuid.slice(0, 128) : null
+    component.speed = clamp(component.speed, 4, 0, 1e6); component.acceleration = clamp(component.acceleration, 20, 0, 1e9); component.radius = clamp(component.radius, .4, .001, 1e6); component.stoppingDistance = clamp(component.stoppingDistance, .1, 0, 1e6); component.avoidanceRadius = clamp(component.avoidanceRadius, 1.2, 0, 1e6); component.maximumAvoidanceNeighbors = Math.round(clamp(component.maximumAvoidanceNeighbors, 16, 1, 32)); component.repathInterval = clamp(component.repathInterval, .25, .02, 60); component.navigationLayer = Math.round(clamp(component.navigationLayer, 1, 1, 32)); component.navigationMask = Math.round(clamp(component.navigationMask, 1, 0, 0xffff_ffff)) >>> 0; component.avoidancePriority = clamp(component.avoidancePriority, .5, 0, 1); component.velocity = safeVector(component.velocity, { x: 0, y: 0 }); component.path = (Array.isArray(component.path) ? component.path : []).slice(0, 65_536).map(point => safeVector(point, { x: 0, y: 0 })); component.pathIndex = Math.round(clamp(component.pathIndex, 0, 0, component.path.length)); if (!['Idle', 'Pending', 'Ready', 'Unreachable'].includes(component.pathStatus)) component.pathStatus = 'Idle'
   } else if (component instanceof BehaviorTree2D) {
     component.treeAsset = typeof component.treeAsset === 'string' ? component.treeAsset : null; component.tickRate = clamp(component.tickRate, 10, 1, 1000); component.blackboardOverrides = Object.fromEntries(Object.entries(component.blackboardOverrides && typeof component.blackboardOverrides === 'object' ? component.blackboardOverrides : {}).slice(0, 256).flatMap(([key, value]) => typeof value === 'boolean' || typeof value === 'number' && Number.isFinite(value) || typeof value === 'string' ? [[key.slice(0, 80), typeof value === 'string' ? value.slice(0, 256) : value]] : []))
   } else if (component instanceof StateMachine2D) component.machineAsset = typeof component.machineAsset === 'string' ? component.machineAsset : null
@@ -1106,10 +1112,10 @@ function applyStoredComponents(entity: Entity, item: SceneEntityData): void {
     collider.rotation = finiteNumber(data.rotation, collider.rotation)
     collider.radiusX = Math.max(1e-9, finiteNumber(data.radiusX, collider.radiusX))
     collider.radiusY = Math.max(1e-9, finiteNumber(data.radiusY, collider.radiusY))
-    const vertices = normalizedVertices(data.vertices as SceneEntityData['vertices'])
-    if (vertices) collider.vertices = vertices
     const shapeModels = ['Box', 'Circle', 'Capsule', 'Segment', 'Chain', 'ConvexPolygon', 'ConcavePolygon'] as const
     if (shapeModels.includes(data.shapeModel as typeof shapeModels[number])) collider.shapeModel = data.shapeModel as typeof collider.shapeModel
+    const vertices = normalizedVertices(data.vertices as SceneEntityData['vertices'], collider.shapeModel === 'Chain' ? 2 : 3)
+    if (vertices) collider.vertices = vertices
     collider.shapes = Array.isArray(data.shapes) ? data.shapes.slice(0, 128).flatMap((value, index) => {
       if (!value || typeof value !== 'object') return []
       const raw = value as Record<string, unknown>
@@ -1118,7 +1124,7 @@ function applyStoredComponents(entity: Entity, item: SceneEntityData): void {
       copyVector(offset, raw.offset); copyVector(size, raw.size)
       size.x = Math.max(1e-9, Math.abs(size.x)); size.y = Math.max(1e-9, Math.abs(size.y))
       const physicsLayer=Math.min(31,Math.max(0,Math.round(finiteNumber(raw.physicsLayer,data.physicsLayer as number)))); const oneWayNormal={x:0,y:1};copyVector(oneWayNormal,raw.oneWayNormal)
-      return [{ id: typeof raw.id === 'string' && raw.id ? raw.id : `shape-${index + 1}`, kind, offset, rotation: finiteNumber(raw.rotation), size, radius: Math.max(1e-9, finiteNumber(raw.radius, .5)), points: normalizedVertices(raw.points as SceneEntityData['vertices']) ?? [], enabled: raw.enabled !== false, sensor: typeof raw.sensor==='boolean'?raw.sensor:data.sensor===true, physicsLayer, collisionMask: Math.min(0xffff_ffff,Math.max(0,Math.round(finiteNumber(raw.collisionMask,data.collisionMask as number))))>>>0, oneWay: raw.oneWay===true, oneWayNormal }]
+      return [{ id: typeof raw.id === 'string' && raw.id ? raw.id : `shape-${index + 1}`, kind, offset, rotation: finiteNumber(raw.rotation), size, radius: Math.max(1e-9, finiteNumber(raw.radius, .5)), points: normalizedVertices(raw.points as SceneEntityData['vertices'], kind === 'Chain' ? 2 : 3) ?? [], enabled: raw.enabled !== false, sensor: typeof raw.sensor==='boolean'?raw.sensor:data.sensor===true, physicsLayer, collisionMask: Math.min(0xffff_ffff,Math.max(0,Math.round(finiteNumber(raw.collisionMask,data.collisionMask as number))))>>>0, oneWay: raw.oneWay===true, oneWayNormal }]
     }) : []
     collider.sensor = data.sensor === true
     collider.physicsLayer = Math.min(31, Math.max(0, Math.round(finiteNumber(data.physicsLayer))))

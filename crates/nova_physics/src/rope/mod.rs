@@ -120,7 +120,7 @@ impl ConnectionConstraint {
             broken_code,
             tension: 0.0,
             strain: 0.0,
-            joint_kind: non_negative(data[data_index + 18], 0.0).round().clamp(0.0, 5.0) as u8,
+            joint_kind: non_negative(data[data_index + 18], 0.0).round().clamp(0.0, 6.0) as u8,
             joint_axis: Vec2::new(
                 finite_or(data[data_index + 29], 1.0),
                 finite_or(data[data_index + 30], 0.0),
@@ -938,6 +938,7 @@ fn solve_binding_velocity(bodies: &mut [Body], constraint: &mut ConnectionConstr
     if inverse_inertia > 0.0 {
         let angular_impulse =
             -(relative_angular_velocity + 0.2 * angle_error / dt) / inverse_inertia;
+        constraint.motor_torque = constraint.motor_torque.max(angular_impulse.abs() / dt);
         let (a, b) = two_bodies_mut(bodies, constraint.body_a, constraint.body_b);
         a.angular_velocity -= angular_impulse * a.inv_inertia;
         b.angular_velocity += angular_impulse * b.inv_inertia;
@@ -1057,7 +1058,6 @@ fn synchronize_binding_motion(bodies: &mut [Body], constraint: &ConnectionConstr
 
 fn solve_joint_motor(bodies: &mut [Body], constraint: &mut ConnectionConstraint, dt: f64) {
     if !constraint.motor_enabled || constraint.max_motor_force <= 0.0 || dt <= 0.0 {
-        constraint.motor_torque = 0.0;
         return;
     }
     if constraint.joint_kind == 4 {
@@ -1069,19 +1069,18 @@ fn solve_joint_motor(bodies: &mut [Body], constraint: &mut ConnectionConstraint,
         let denominator = a.inv_mass + b.inv_mass
             + radius_a.cross(axis).powi(2) * a.inv_inertia
             + radius_b.cross(axis).powi(2) * b.inv_inertia;
-        if denominator <= 0.0 { constraint.motor_torque = 0.0; return; }
+        if denominator <= 0.0 { return; }
         let relative_speed = b.point_velocity(radius_b).sub(a.point_velocity(radius_a)).dot(axis);
         let impulse = ((constraint.motor_speed - relative_speed) / denominator)
             .clamp(-constraint.max_motor_force * dt, constraint.max_motor_force * dt);
         apply_pair_impulse(bodies, constraint.body_a, constraint.body_b, axis.mul(impulse), radius_a, radius_b);
-        constraint.motor_torque = impulse.abs() / dt;
+        constraint.motor_torque = constraint.motor_torque.max(impulse.abs() / dt);
         return;
     }
     let a = &bodies[constraint.body_a];
     let b = &bodies[constraint.body_b];
     let inverse = a.inv_inertia + b.inv_inertia;
     if inverse <= 0.0 {
-        constraint.motor_torque = 0.0;
         return;
     }
     let requested = (constraint.motor_speed - (b.angular_velocity - a.angular_velocity)) / inverse;
@@ -1090,7 +1089,7 @@ fn solve_joint_motor(bodies: &mut [Body], constraint: &mut ConnectionConstraint,
     let (a, b) = two_bodies_mut(bodies, constraint.body_a, constraint.body_b);
     a.angular_velocity -= impulse * a.inv_inertia;
     b.angular_velocity += impulse * b.inv_inertia;
-    constraint.motor_torque = impulse.abs() / dt;
+    constraint.motor_torque = constraint.motor_torque.max(impulse.abs() / dt);
 }
 
 fn solve_revolute_limit_velocity(bodies: &mut [Body], constraint: &mut ConnectionConstraint, dt: f64) {
@@ -1164,13 +1163,14 @@ fn correct_anchor_point_position(bodies: &mut [Body], constraint: &ConnectionCon
     }
 }
 
-fn solve_relative_angle_velocity(bodies: &mut [Body], constraint: &ConnectionConstraint, dt: f64) {
+fn solve_relative_angle_velocity(bodies: &mut [Body], constraint: &mut ConnectionConstraint, dt: f64) {
     let a = &bodies[constraint.body_a];
     let b = &bodies[constraint.body_b];
     let inverse = a.inv_inertia + b.inv_inertia;
     if inverse <= 0.0 { return; }
     let error = normalize_angle((b.angle - a.angle) - constraint.bind_angle);
     let impulse = -((b.angular_velocity - a.angular_velocity) + error * 0.2 / dt) / inverse;
+    constraint.motor_torque = constraint.motor_torque.max(impulse.abs() / dt);
     let (a, b) = two_bodies_mut(bodies, constraint.body_a, constraint.body_b);
     a.angular_velocity -= impulse * a.inv_inertia;
     b.angular_velocity += impulse * b.inv_inertia;
@@ -1281,6 +1281,10 @@ fn solve_connection_velocity(bodies: &mut [Body], constraint: &mut ConnectionCon
     }
     let (radius_a, radius_b, normal, length, _) = constraint.geometry(bodies);
     let error = length - constraint.rest_length;
+    if constraint.joint_kind == 6 && error <= 0.0 {
+        constraint.tension = 0.0;
+        return;
+    }
     if constraint.joint_kind != 2 && constraint.bendable && error <= 0.0 {
         constraint.tension = 0.0;
         return;
@@ -1362,6 +1366,7 @@ fn correct_connection_position(bodies: &mut [Body], constraint: &mut ConnectionC
     let (radius_a, radius_b, normal, length, _) = constraint.geometry(bodies);
     let error = length - constraint.rest_length;
     if constraint.stretchable
+        || (constraint.joint_kind == 6 && error <= POSITION_SLOP)
         || (constraint.joint_kind != 2 && constraint.bendable && error <= POSITION_SLOP)
     {
         return;
@@ -1377,7 +1382,11 @@ fn correct_connection_position(bodies: &mut [Body], constraint: &mut ConnectionC
     if denominator <= 0.0 {
         return;
     }
-    let projection = if constraint.joint_kind == 2 { 1.0 } else { 0.75 };
+    let projection = if constraint.joint_kind == 2 || constraint.joint_kind == 6 {
+        1.0
+    } else {
+        0.75
+    };
     let correction = normal.mul(error * projection / denominator);
     let (a, b) = two_bodies_mut(bodies, constraint.body_a, constraint.body_b);
     a.position = a

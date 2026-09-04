@@ -1,4 +1,4 @@
-# Nova_A 26.4.0 Complete Manual
+# Nova_A 26.10 Complete Manual
 
 ## 6.2.0 behavior contracts
 
@@ -1018,11 +1018,11 @@ In **Export templates**, inspect installed target/architecture/runtime templates
 In **Delivery**, refresh deterministic CI cache keys, keep delta builds with patch manifests, and create local, HTTPS or external-command connectors. Remote/external connectors require project permission. Prepare Plan validates destination and checksum but returns a non-executable plan and performs no network operation. Final deployment remains an external, explicit action. See `docs/EXTENSIONS_PLATFORM_DELIVERY_5_9.md`.
 
 <!-- NOVA_V6_TEACHING_START -->
-# Nova_A 26.4.0 task-oriented teaching manual
+# Nova_A 26.10 task-oriented teaching manual
 
 Learn by completing real work. Every public feature below states ownership, persistence, recovery, accessibility and release behavior.
 
-- Engine: **26.4.0**
+- Engine: **26.10.0**
 - Stable contracts: Project Format 2/schema 29; Rhai API 2; Graph Format 1; Plugin API 2; Package Manifest 1; Build CLI 1; workspace document 3.
 - External signing, independent clean-machine evidence, two-machine reproduction, matching-host builds and a real 72-hour soak remain pending until independently captured.
 
@@ -10747,6 +10747,94 @@ Learn by completing real work. Every public feature below states ownership, pers
 
 **Visual Graph API:** `Animation/Play`, `Animation/Set Parameter`, `Timeline/Signal`
 
+<a id="animation-fixed-time-cinematic-capture-plan"></a>
+
+### Fixed-time cinematic capture plan
+
+**Classification:** Manual · Assisted · Runtime · Reversible · Per-object
+
+**Purpose and when to use it:** Use Fixed-time cinematic capture plan in Animation and Timeline to complete its supported authoring or runtime job without leaving the Animation workflow. Use it when the project needs fixed-time cinematic capture plan; keep unrelated settings in their owning workspace.
+
+**Preconditions:**
+
+- Animation, controller, rig or timeline assets
+
+**Exact workflow:**
+
+1. Open Animation, then open Animation and Timeline.
+2. Choose Fixed-time cinematic capture plan; read its visible validation and permission state before editing.
+3. Select the target project, asset or object and enter only finite, supported values.
+4. Apply or save the change, then inspect the visible result and Problems/Console output.
+5. Run Play or Preview when the feature has runtime behavior; use Pause/Step for deterministic inspection.
+6. Save, reload the project and confirm the authored value is unchanged.
+7. Run Project Health and the relevant test, then build the standalone player and repeat the observable check.
+
+**Expected result:** Fixed-time cinematic capture plan is visible in the editor, survives reload and reaches Preview/Play and exported players where applicable.
+
+**Persistence and export:** Fixed-time cinematic capture plan is stored in the owning project, scene, component, asset, workspace preference or build manifest. Editor-only state is excluded from players.
+
+**Undo and recovery:** Use Undo/Redo for document edits, Revert/rollback for imports or packages, Recovery Browser for interrupted saves, and source control or the migration backup for project-wide recovery.
+
+**Common mistakes and fixes:**
+
+- Editing Fixed-time cinematic capture plan on the wrong selection or workspace.
+- Ignoring a permission, validation, missing-reference or host-template warning.
+- Checking only the editor preview and not save/reload plus the standalone player.
+
+**Keyboard and accessibility:** Use Command Palette or keyboard focus instead of pointer-only navigation. Every dialog exposes a named control, visible focus, Escape/cancel path and reduced-motion behavior.
+
+**Minimal example:** Minimal: create one valid target, configure Fixed-time cinematic capture plan, save and verify one visible result in Play.
+
+**Production example:** Production: add validation, localization/accessibility, deterministic tests, budgets, recovery evidence and both development and release builds for Fixed-time cinematic capture plan.
+
+**Rhai API:** `animation_play`, `animation_parameter`, `signal_emit`
+
+**Visual Graph API:** `Animation/Play`, `Animation/Set Parameter`, `Timeline/Signal`
+
+<a id="animation-frame-to-audio-sample-synchronization"></a>
+
+### Frame-to-audio sample synchronization
+
+**Classification:** Manual · Assisted · Runtime · Reversible · Per-object
+
+**Purpose and when to use it:** Use Frame-to-audio sample synchronization in Animation and Timeline to complete its supported authoring or runtime job without leaving the Animation workflow. Use it when the project needs frame-to-audio sample synchronization; keep unrelated settings in their owning workspace.
+
+**Preconditions:**
+
+- Animation, controller, rig or timeline assets
+
+**Exact workflow:**
+
+1. Open Animation, then open Animation and Timeline.
+2. Choose Frame-to-audio sample synchronization; read its visible validation and permission state before editing.
+3. Select the target project, asset or object and enter only finite, supported values.
+4. Apply or save the change, then inspect the visible result and Problems/Console output.
+5. Run Play or Preview when the feature has runtime behavior; use Pause/Step for deterministic inspection.
+6. Save, reload the project and confirm the authored value is unchanged.
+7. Run Project Health and the relevant test, then build the standalone player and repeat the observable check.
+
+**Expected result:** Frame-to-audio sample synchronization is visible in the editor, survives reload and reaches Preview/Play and exported players where applicable.
+
+**Persistence and export:** Frame-to-audio sample synchronization is stored in the owning project, scene, component, asset, workspace preference or build manifest. Editor-only state is excluded from players.
+
+**Undo and recovery:** Use Undo/Redo for document edits, Revert/rollback for imports or packages, Recovery Browser for interrupted saves, and source control or the migration backup for project-wide recovery.
+
+**Common mistakes and fixes:**
+
+- Editing Frame-to-audio sample synchronization on the wrong selection or workspace.
+- Ignoring a permission, validation, missing-reference or host-template warning.
+- Checking only the editor preview and not save/reload plus the standalone player.
+
+**Keyboard and accessibility:** Use Command Palette or keyboard focus instead of pointer-only navigation. Every dialog exposes a named control, visible focus, Escape/cancel path and reduced-motion behavior.
+
+**Minimal example:** Minimal: create one valid target, configure Frame-to-audio sample synchronization, save and verify one visible result in Play.
+
+**Production example:** Production: add validation, localization/accessibility, deterministic tests, budgets, recovery evidence and both development and release builds for Frame-to-audio sample synchronization.
+
+**Rhai API:** `animation_play`, `animation_parameter`, `signal_emit`
+
+**Visual Graph API:** `Animation/Play`, `Animation/Set Parameter`, `Timeline/Signal`
+
 
 ## Interface Studio
 
@@ -12068,6 +12156,94 @@ Learn by completing real work. Every public feature below states ownership, pers
 **Minimal example:** Minimal: create one valid target, configure Device recovery, save and verify one visible result in Play.
 
 **Production example:** Production: add validation, localization/accessibility, deterministic tests, budgets, recovery evidence and both development and release builds for Device recovery.
+
+**Rhai API:** `audio_play`, `audio_stop`, `audio_set_bus`
+
+**Visual Graph API:** `Audio/Play`, `Audio/Stop`
+
+<a id="audio-sample-accurate-cinematic-frame-boundaries"></a>
+
+### Sample-accurate cinematic frame boundaries
+
+**Classification:** Manual · Runtime · Project-wide · Per-object · Reversible
+
+**Purpose and when to use it:** Use Sample-accurate cinematic frame boundaries in Audio Studio to complete its supported authoring or runtime job without leaving the Animation / Debug workflow. Use it when the project needs sample-accurate cinematic frame boundaries; keep unrelated settings in their owning workspace.
+
+**Preconditions:**
+
+- An imported audio asset
+
+**Exact workflow:**
+
+1. Open Animation / Debug, then open Audio Studio.
+2. Choose Sample-accurate cinematic frame boundaries; read its visible validation and permission state before editing.
+3. Select the target project, asset or object and enter only finite, supported values.
+4. Apply or save the change, then inspect the visible result and Problems/Console output.
+5. Run Play or Preview when the feature has runtime behavior; use Pause/Step for deterministic inspection.
+6. Save, reload the project and confirm the authored value is unchanged.
+7. Run Project Health and the relevant test, then build the standalone player and repeat the observable check.
+
+**Expected result:** Sample-accurate cinematic frame boundaries is visible in the editor, survives reload and reaches Preview/Play and exported players where applicable.
+
+**Persistence and export:** Sample-accurate cinematic frame boundaries is stored in the owning project, scene, component, asset, workspace preference or build manifest. Editor-only state is excluded from players.
+
+**Undo and recovery:** Use Undo/Redo for document edits, Revert/rollback for imports or packages, Recovery Browser for interrupted saves, and source control or the migration backup for project-wide recovery.
+
+**Common mistakes and fixes:**
+
+- Editing Sample-accurate cinematic frame boundaries on the wrong selection or workspace.
+- Ignoring a permission, validation, missing-reference or host-template warning.
+- Checking only the editor preview and not save/reload plus the standalone player.
+
+**Keyboard and accessibility:** Use Command Palette or keyboard focus instead of pointer-only navigation. Every dialog exposes a named control, visible focus, Escape/cancel path and reduced-motion behavior.
+
+**Minimal example:** Minimal: create one valid target, configure Sample-accurate cinematic frame boundaries, save and verify one visible result in Play.
+
+**Production example:** Production: add validation, localization/accessibility, deterministic tests, budgets, recovery evidence and both development and release builds for Sample-accurate cinematic frame boundaries.
+
+**Rhai API:** `audio_play`, `audio_stop`, `audio_set_bus`
+
+**Visual Graph API:** `Audio/Play`, `Audio/Stop`
+
+<a id="audio-production-media-build-validation"></a>
+
+### Production-media build validation
+
+**Classification:** Manual · Runtime · Project-wide · Per-object · Reversible
+
+**Purpose and when to use it:** Use Production-media build validation in Audio Studio to complete its supported authoring or runtime job without leaving the Animation / Debug workflow. Use it when the project needs production-media build validation; keep unrelated settings in their owning workspace.
+
+**Preconditions:**
+
+- An imported audio asset
+
+**Exact workflow:**
+
+1. Open Animation / Debug, then open Audio Studio.
+2. Choose Production-media build validation; read its visible validation and permission state before editing.
+3. Select the target project, asset or object and enter only finite, supported values.
+4. Apply or save the change, then inspect the visible result and Problems/Console output.
+5. Run Play or Preview when the feature has runtime behavior; use Pause/Step for deterministic inspection.
+6. Save, reload the project and confirm the authored value is unchanged.
+7. Run Project Health and the relevant test, then build the standalone player and repeat the observable check.
+
+**Expected result:** Production-media build validation is visible in the editor, survives reload and reaches Preview/Play and exported players where applicable.
+
+**Persistence and export:** Production-media build validation is stored in the owning project, scene, component, asset, workspace preference or build manifest. Editor-only state is excluded from players.
+
+**Undo and recovery:** Use Undo/Redo for document edits, Revert/rollback for imports or packages, Recovery Browser for interrupted saves, and source control or the migration backup for project-wide recovery.
+
+**Common mistakes and fixes:**
+
+- Editing Production-media build validation on the wrong selection or workspace.
+- Ignoring a permission, validation, missing-reference or host-template warning.
+- Checking only the editor preview and not save/reload plus the standalone player.
+
+**Keyboard and accessibility:** Use Command Palette or keyboard focus instead of pointer-only navigation. Every dialog exposes a named control, visible focus, Escape/cancel path and reduced-motion behavior.
+
+**Minimal example:** Minimal: create one valid target, configure Production-media build validation, save and verify one visible result in Play.
+
+**Production example:** Production: add validation, localization/accessibility, deterministic tests, budgets, recovery evidence and both development and release builds for Production-media build validation.
 
 **Rhai API:** `audio_play`, `audio_stop`, `audio_set_bus`
 
@@ -13482,6 +13658,182 @@ Learn by completing real work. Every public feature below states ownership, pers
 **Minimal example:** Minimal: create one valid target, configure Pixel-perfect and high-DPI rendering, save and verify one visible result in Play.
 
 **Production example:** Production: add validation, localization/accessibility, deterministic tests, budgets, recovery evidence and both development and release builds for Pixel-perfect and high-DPI rendering.
+
+**Rhai API:** N/A
+
+**Visual Graph API:** `Material and particle graph node catalogs`
+
+<a id="rendering-budgeted-texture-residency-and-idle-eviction"></a>
+
+### Budgeted texture residency and idle eviction
+
+**Classification:** Manual · Assisted · Runtime · Project-wide · Reversible
+
+**Purpose and when to use it:** Use Budgeted texture residency and idle eviction in Rendering Studio to complete its supported authoring or runtime job without leaving the Manage workflow. Use it when the project needs budgeted texture residency and idle eviction; keep unrelated settings in their owning workspace.
+
+**Preconditions:**
+
+- Renderer-compatible scene content
+
+**Exact workflow:**
+
+1. Open Manage, then open Rendering Studio.
+2. Choose Budgeted texture residency and idle eviction; read its visible validation and permission state before editing.
+3. Select the target project, asset or object and enter only finite, supported values.
+4. Apply or save the change, then inspect the visible result and Problems/Console output.
+5. Run Play or Preview when the feature has runtime behavior; use Pause/Step for deterministic inspection.
+6. Save, reload the project and confirm the authored value is unchanged.
+7. Run Project Health and the relevant test, then build the standalone player and repeat the observable check.
+
+**Expected result:** Budgeted texture residency and idle eviction is visible in the editor, survives reload and reaches Preview/Play and exported players where applicable.
+
+**Persistence and export:** Budgeted texture residency and idle eviction is stored in the owning project, scene, component, asset, workspace preference or build manifest. Editor-only state is excluded from players.
+
+**Undo and recovery:** Use Undo/Redo for document edits, Revert/rollback for imports or packages, Recovery Browser for interrupted saves, and source control or the migration backup for project-wide recovery.
+
+**Common mistakes and fixes:**
+
+- Editing Budgeted texture residency and idle eviction on the wrong selection or workspace.
+- Ignoring a permission, validation, missing-reference or host-template warning.
+- Checking only the editor preview and not save/reload plus the standalone player.
+
+**Keyboard and accessibility:** Use Command Palette or keyboard focus instead of pointer-only navigation. Every dialog exposes a named control, visible focus, Escape/cancel path and reduced-motion behavior.
+
+**Minimal example:** Minimal: create one valid target, configure Budgeted texture residency and idle eviction, save and verify one visible result in Play.
+
+**Production example:** Production: add validation, localization/accessibility, deterministic tests, budgets, recovery evidence and both development and release builds for Budgeted texture residency and idle eviction.
+
+**Rhai API:** N/A
+
+**Visual Graph API:** `Material and particle graph node catalogs`
+
+<a id="rendering-unified-production-media-checklist"></a>
+
+### Unified production-media checklist
+
+**Classification:** Manual · Assisted · Runtime · Project-wide · Reversible
+
+**Purpose and when to use it:** Use Unified production-media checklist in Rendering Studio to complete its supported authoring or runtime job without leaving the Manage workflow. Use it when the project needs unified production-media checklist; keep unrelated settings in their owning workspace.
+
+**Preconditions:**
+
+- Renderer-compatible scene content
+
+**Exact workflow:**
+
+1. Open Manage, then open Rendering Studio.
+2. Choose Unified production-media checklist; read its visible validation and permission state before editing.
+3. Select the target project, asset or object and enter only finite, supported values.
+4. Apply or save the change, then inspect the visible result and Problems/Console output.
+5. Run Play or Preview when the feature has runtime behavior; use Pause/Step for deterministic inspection.
+6. Save, reload the project and confirm the authored value is unchanged.
+7. Run Project Health and the relevant test, then build the standalone player and repeat the observable check.
+
+**Expected result:** Unified production-media checklist is visible in the editor, survives reload and reaches Preview/Play and exported players where applicable.
+
+**Persistence and export:** Unified production-media checklist is stored in the owning project, scene, component, asset, workspace preference or build manifest. Editor-only state is excluded from players.
+
+**Undo and recovery:** Use Undo/Redo for document edits, Revert/rollback for imports or packages, Recovery Browser for interrupted saves, and source control or the migration backup for project-wide recovery.
+
+**Common mistakes and fixes:**
+
+- Editing Unified production-media checklist on the wrong selection or workspace.
+- Ignoring a permission, validation, missing-reference or host-template warning.
+- Checking only the editor preview and not save/reload plus the standalone player.
+
+**Keyboard and accessibility:** Use Command Palette or keyboard focus instead of pointer-only navigation. Every dialog exposes a named control, visible focus, Escape/cancel path and reduced-motion behavior.
+
+**Minimal example:** Minimal: create one valid target, configure Unified production-media checklist, save and verify one visible result in Play.
+
+**Production example:** Production: add validation, localization/accessibility, deterministic tests, budgets, recovery evidence and both development and release builds for Unified production-media checklist.
+
+**Rhai API:** N/A
+
+**Visual Graph API:** `Material and particle graph node catalogs`
+
+<a id="rendering-deterministic-numbered-frame-capture"></a>
+
+### Deterministic numbered frame capture
+
+**Classification:** Manual · Assisted · Runtime · Project-wide · Reversible
+
+**Purpose and when to use it:** Use Deterministic numbered frame capture in Rendering Studio to complete its supported authoring or runtime job without leaving the Manage workflow. Use it when the project needs deterministic numbered frame capture; keep unrelated settings in their owning workspace.
+
+**Preconditions:**
+
+- Renderer-compatible scene content
+
+**Exact workflow:**
+
+1. Open Manage, then open Rendering Studio.
+2. Choose Deterministic numbered frame capture; read its visible validation and permission state before editing.
+3. Select the target project, asset or object and enter only finite, supported values.
+4. Apply or save the change, then inspect the visible result and Problems/Console output.
+5. Run Play or Preview when the feature has runtime behavior; use Pause/Step for deterministic inspection.
+6. Save, reload the project and confirm the authored value is unchanged.
+7. Run Project Health and the relevant test, then build the standalone player and repeat the observable check.
+
+**Expected result:** Deterministic numbered frame capture is visible in the editor, survives reload and reaches Preview/Play and exported players where applicable.
+
+**Persistence and export:** Deterministic numbered frame capture is stored in the owning project, scene, component, asset, workspace preference or build manifest. Editor-only state is excluded from players.
+
+**Undo and recovery:** Use Undo/Redo for document edits, Revert/rollback for imports or packages, Recovery Browser for interrupted saves, and source control or the migration backup for project-wide recovery.
+
+**Common mistakes and fixes:**
+
+- Editing Deterministic numbered frame capture on the wrong selection or workspace.
+- Ignoring a permission, validation, missing-reference or host-template warning.
+- Checking only the editor preview and not save/reload plus the standalone player.
+
+**Keyboard and accessibility:** Use Command Palette or keyboard focus instead of pointer-only navigation. Every dialog exposes a named control, visible focus, Escape/cancel path and reduced-motion behavior.
+
+**Minimal example:** Minimal: create one valid target, configure Deterministic numbered frame capture, save and verify one visible result in Play.
+
+**Production example:** Production: add validation, localization/accessibility, deterministic tests, budgets, recovery evidence and both development and release builds for Deterministic numbered frame capture.
+
+**Rhai API:** N/A
+
+**Visual Graph API:** `Material and particle graph node catalogs`
+
+<a id="rendering-balanced-and-low-end-semantic-parity"></a>
+
+### Balanced and low-end semantic parity
+
+**Classification:** Manual · Assisted · Runtime · Project-wide · Reversible
+
+**Purpose and when to use it:** Use Balanced and low-end semantic parity in Rendering Studio to complete its supported authoring or runtime job without leaving the Manage workflow. Use it when the project needs balanced and low-end semantic parity; keep unrelated settings in their owning workspace.
+
+**Preconditions:**
+
+- Renderer-compatible scene content
+
+**Exact workflow:**
+
+1. Open Manage, then open Rendering Studio.
+2. Choose Balanced and low-end semantic parity; read its visible validation and permission state before editing.
+3. Select the target project, asset or object and enter only finite, supported values.
+4. Apply or save the change, then inspect the visible result and Problems/Console output.
+5. Run Play or Preview when the feature has runtime behavior; use Pause/Step for deterministic inspection.
+6. Save, reload the project and confirm the authored value is unchanged.
+7. Run Project Health and the relevant test, then build the standalone player and repeat the observable check.
+
+**Expected result:** Balanced and low-end semantic parity is visible in the editor, survives reload and reaches Preview/Play and exported players where applicable.
+
+**Persistence and export:** Balanced and low-end semantic parity is stored in the owning project, scene, component, asset, workspace preference or build manifest. Editor-only state is excluded from players.
+
+**Undo and recovery:** Use Undo/Redo for document edits, Revert/rollback for imports or packages, Recovery Browser for interrupted saves, and source control or the migration backup for project-wide recovery.
+
+**Common mistakes and fixes:**
+
+- Editing Balanced and low-end semantic parity on the wrong selection or workspace.
+- Ignoring a permission, validation, missing-reference or host-template warning.
+- Checking only the editor preview and not save/reload plus the standalone player.
+
+**Keyboard and accessibility:** Use Command Palette or keyboard focus instead of pointer-only navigation. Every dialog exposes a named control, visible focus, Escape/cancel path and reduced-motion behavior.
+
+**Minimal example:** Minimal: create one valid target, configure Balanced and low-end semantic parity, save and verify one visible result in Play.
+
+**Production example:** Production: add validation, localization/accessibility, deterministic tests, budgets, recovery evidence and both development and release builds for Balanced and low-end semantic parity.
 
 **Rhai API:** N/A
 
@@ -18622,5 +18974,55 @@ Learn by completing real work. Every public feature below states ownership, pers
 **Rhai API:** N/A
 
 **Visual Graph API:** N/A
+
+
+<a id="v2608-device-mobile-accessibility"></a>
+
+## Touch, gamepad, mobile delivery, and accessibility workflow
+
+Build one no-code game that remains controllable and understandable across desktop, touch, controller, safe-area, and assistive-technology paths.
+
+1. Open Settings → Devices & mobile input. In Preview choose Mobile portrait/landscape, rotate it, and inspect the safe-area and 44 × 44 target overlays before placing controls.
+2. Enable virtual controls, add a Stick/D-pad for a vector or axis action and a Button for a button action, choose anchors/offsets/size/opacity/haptic duration, then Play. These controls feed the same Input Map actions as keyboard and gamepad; they are not a second gameplay system.
+3. Bind pen pressure, tilt X/Y, twist, tip, barrel button and eraser to actions, then verify every channel in the input test. Pointer cancellation, focus loss and page hiding must release every held pen state.
+4. In Gamepad capture a binding, then add per-device or wildcard axis calibration with minimum, center, maximum, dead zone, and inversion. Record/replay the Input Map and save/reload to prove persistence. Sensors stay disabled until enabled and their permission button is clicked.
+5. Open Presentation → Accessibility. Use keyboard and gamepad traversal, inspect role/name/state/value/live metadata, export the semantic snapshot, and test high contrast, reduced motion, RTL, EN/DE/ZH, and text/caption scale at 200%, 300%, and 400%.
+6. For Android, enable the optional verified package and open Build → Platform → Android delivery. Discover JDK 17, SDK/API 35, build-tools, NDK, adb, and the validated template; select only justified permissions and supply purposes for runtime-sensitive permissions.
+7. Build an APK only when discovery is ready. Debug/local signing needs no serialized secret; manual release signing uses a keystore path and environment-only passwords/alias. Refresh devices, install the selected APK, and capture bounded logcat only with separate explicit clicks. iOS remains matching-host/deferred.
+
+**Undo and recovery:** Synthetic mouse events after touch are deduplicated; cancel/blur releases controls. Invalid calibration, permissions, identifiers, paths, APKs, serials, missing toolchains, and failed Gradle output fail visibly. No credential, automatic install, automatic log collection, or unsupported iOS claim is stored.
+
+
+<a id="v2609-large-world-performance"></a>
+
+## Large-world and low-end performance workflow
+
+Measure and tune a 10k–100k-object project while preserving exact fixed-step gameplay, authored effects, editor controls and exported behavior.
+
+1. Open Debug → Profiler → Trace. Record cold start, warm workspace switches, main-thread/worker/queue time, cache hit rate, allocations, worst frame, 1% low FPS and input-to-pixel latency before changing a budget.
+2. Keep adaptive presentation quality enabled for low-end testing, then set bounded background, streaming, command, metric-publication and spatial-cell budgets. Adaptive quality changes only pixel density and particle presentation capacity; it never changes physics, script, animation or authored values.
+3. Open the 26.09 large-world reference. Search Hierarchy and Assets, drag/select while navigation or streaming is pending, repeatedly change workspaces, and confirm lists stay virtualized and cancelled generations never apply.
+4. Use Jobs to test the worker path. Animation sampling, particle stepping and spatial-grid preparation must match the local fallback exactly; cancel or supersede a keyed job and confirm its stale result is rejected.
+5. Create a change-list base in Team Workflow, edit the same scene, source, and Visual Graph identity on two sides, then inspect the three-way merge. Deletes, reorders, stale generations, and true conflicts must remain visible and lossless.
+6. Run the 10k, 50k and 100k fixtures. Compare checksums, deterministic query order, fixed-step output, 1% lows and memory trends. Save/reload, Play/Pause/Step and build the standalone player.
+7. If a target misses its frame budget, tune presentation and background budgets with evidence. Never hide a control, remove an animation/effect, lower fixed timestep or claim unmeasured hardware performance.
+
+**Undo and recovery:** Cancel background work or restore defaults if interaction latency grows. Worker failure uses the bounded local implementation. Stale generations are discarded, streaming resumes in later frames, and project data stays authoritative.
+
+
+<a id="v2610-stable-platform"></a>
+
+## Nova_A 26.10 stable creator-platform workflow
+
+Use this release workflow to learn, migrate, verify and ship a complete project while keeping every stable contract and every external limitation visible.
+
+1. Open Manage → Learning Center → Platform readiness. Search for the feature you intend to use and inspect Binding, Validation, Undo, Persistence, Runtime/export, Documentation and Tests before authoring. A circle means the dimension does not apply; a dash means external evidence is still required.
+2. Start with a guided project or the creator-v2610-mixed-game reference. Follow each lesson in order: prerequisites, exact workflow, expected result, save/reload, undo/recovery, Play/Step, standalone build and accessibility checks.
+3. When opening a 6.x project, review the migration preview before applying. Confirm the source/target engines, semantic diff, backup path and deterministic checksum. The 26.10 seal changes only the supported-engine ceiling to <27.0.0; it does not rewrite schema 29 gameplay data.
+4. For code or Visual Graph behavior, edit either representation, save, inspect the synchronized counterpart and run parity/tests. Unsupported Rhai remains in a lossless Code block. Review the API browser or docs/API_SDK_26_10.md before relying on a runtime call.
+5. Run Project Health, template/reference checks and Build validation. Build Windows on Windows and Web locally. Treat Linux/macOS as matching-host, Android as toolchain-gated experimental and iOS/console as deferred; do not turn an unavailable target into a false pass.
+6. Exercise keyboard and pointer paths in English, German and Chinese at 100–200% UI scale, high contrast and reduced motion. Save, close, reopen, recover from one intentional invalid value, then inspect release evidence and the exact eleven artifacts.
+
+**Undo and recovery:** Cancel a migration or restore its backup if the preview is unexpected. Undo document edits, use Recovery Browser after interrupted saves, disable a failing package/plugin, and keep the last valid build. Read docs/TROUBLESHOOTING_26_10.md for symptom-based recovery. Signing, clean-machine lifecycle, matching-host builds, independent observation and the real soak remain external until captured.
 
 <!-- NOVA_V6_TEACHING_END -->

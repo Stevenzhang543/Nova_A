@@ -97,17 +97,33 @@ const showInspector = computed(() => state.currentPage === 'scene' && state.insp
 const inspectorLoaded = ref(showInspector.value)
 watch(showInspector, visible => { if (visible) inspectorLoaded.value = true })
 let idleWarmup = 0
+let warmupCancelled = false
+const cancelWarmupForInput = () => {
+  warmupCancelled = true
+  if (idleWarmup) window.cancelIdleCallback(idleWarmup)
+}
 onMounted(() => {
-  const warm = () => {
-    const started = performance.now()
-    void Promise.allSettled([loadConfigPanel(), loadScriptWorkspace(), loadPresentationPanel(), loadManageWorkspace(), loadPhysicsRuntimePanel()])
-      .then(() => recordWarmStartup(started))
+  const memory = Number((navigator as Navigator & { deviceMemory?: number }).deviceMemory ?? 8)
+  const cores = navigator.hardwareConcurrency || 8
+  // Low-end devices load only the requested workspace. Faster devices warm one
+  // chunk per idle period, immediately yielding to real pointer/keyboard work.
+  if (memory <= 4 || cores <= 4) return
+  const queue = [loadConfigPanel, loadScriptWorkspace, loadPresentationPanel, loadManageWorkspace, loadPhysicsRuntimePanel]
+  const started = performance.now()
+  const warmNext = (deadline: IdleDeadline) => {
+    if (warmupCancelled || !queue.length) { if (!queue.length) recordWarmStartup(started); return }
+    if (!deadline.didTimeout && deadline.timeRemaining() < 6) { idleWarmup = window.requestIdleCallback(warmNext, { timeout: 3_000 }); return }
+    const load = queue.shift()!
+    void load().finally(() => { if (!warmupCancelled) idleWarmup = window.requestIdleCallback(warmNext, { timeout: 3_000 }) })
   }
-  idleWarmup = window.requestIdleCallback(warm, { timeout: 2_000 })
+  window.addEventListener('pointerdown', cancelWarmupForInput, { once: true, passive: true })
+  window.addEventListener('keydown', cancelWarmupForInput, { once: true })
+  idleWarmup = window.requestIdleCallback(warmNext, { timeout: 3_000 })
 })
 onBeforeUnmount(() => {
-  if (!idleWarmup) return
-  window.cancelIdleCallback(idleWarmup)
+  cancelWarmupForInput()
+  window.removeEventListener('pointerdown', cancelWarmupForInput)
+  window.removeEventListener('keydown', cancelWarmupForInput)
 })
 const draggedPanel = ref<'hierarchy' | 'inspector' | ''>(''), dragTarget = ref('')
 function isFloating(panel: 'hierarchy' | 'inspector'): boolean { return workspaceState.floatingPanels.includes(panel) }

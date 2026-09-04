@@ -1,5 +1,6 @@
 import type { Entity } from '../world/Entity'
 import type { InputSnapshot } from './input'
+import { cloneNetworkInput } from './networkInput'
 import { packageEnabled, OFFICIAL_NETWORKING_PACKAGE_ID } from './packages'
 import { productionSettings } from './production'
 import { reportRecoverableError } from './faultCenter'
@@ -12,6 +13,36 @@ const rpcListeners = new Set<(name: string, payload: unknown, context: { sender:
 let rpcCleanups: Array<() => void> = []
 const sceneHandoffListeners = new Set<(sceneUuid: string, spawnTag: string, peerId: string) => void>()
 let sceneHandoffCleanup: (() => void) | null = null
+
+export interface ProductionRemoteInputFrame {
+  readonly peerId: string
+  readonly tick: number
+  readonly input: InputSnapshot
+  readonly targetEntityUuids: readonly string[]
+}
+
+const remoteInputListeners = new Set<(frame: ProductionRemoteInputFrame) => void>()
+
+function dispatchRemoteInputs(module: NetworkingModule): void {
+  for (const raw of module.drainRemoteInputs(64)) {
+    const peerId = raw.peerId.trim().slice(0, 80)
+    const tick = Number.isSafeInteger(raw.tick) ? Math.max(0, Math.min(0x7fff_ffff, raw.tick)) : 0
+    const targetEntityUuids = [...new Set(raw.targetEntityUuids
+      .filter((uuid): uuid is string => typeof uuid === 'string')
+      .map(uuid => uuid.trim().slice(0, 128))
+      .filter(Boolean))]
+      .slice(0, 2_000)
+      .sort()
+    if (!peerId || !targetEntityUuids.length) continue
+    for (const listener of remoteInputListeners) {
+      try {
+        listener(Object.freeze({ peerId, tick, input: cloneNetworkInput(raw.input), targetEntityUuids: Object.freeze([...targetEntityUuids]) }))
+      } catch (error) {
+        reportRecoverableError(error, 'Remote gameplay input listener', 'Runtime')
+      }
+    }
+  }
+}
 
 function bindRpcHandlers(module: NetworkingModule): void {
   for (const cleanup of rpcCleanups) cleanup()
@@ -68,6 +99,11 @@ export function productionNetworkContext(): { enabled: boolean; connected: boole
 export function callProductionRpc(name: string, payload: unknown): boolean { return networking?.callRpc(name, payload) ?? false }
 export function onProductionRpc(listener: (name: string, payload: unknown, context: { sender: string; tick: number }) => void): () => void { rpcListeners.add(listener); return () => rpcListeners.delete(listener) }
 export function onProductionSceneHandoff(listener: (sceneUuid: string, spawnTag: string, peerId: string) => void): () => void { sceneHandoffListeners.add(listener); return () => sceneHandoffListeners.delete(listener) }
+export function onProductionRemoteInput(listener: (frame: ProductionRemoteInputFrame) => void): () => void {
+  if (remoteInputListeners.size >= 32) throw new Error('Remote gameplay input listener limit reached.')
+  remoteInputListeners.add(listener)
+  return () => remoteInputListeners.delete(listener)
+}
 export async function stopProductionNetworking(): Promise<void> {
   lifecycleGeneration++
   const active = networking
@@ -75,7 +111,11 @@ export async function stopProductionNetworking(): Promise<void> {
   if (active) await active.stopNetworking()
 }
 
-export function updateProductionRuntime(entities: Entity[], fixedDelta: number, input?: InputSnapshot, physicsChecksum = ''): void { networking?.updateNetworking(entities, fixedDelta, input, physicsChecksum) }
+export function updateProductionRuntime(entities: Entity[], fixedDelta: number, input?: InputSnapshot, physicsChecksum = ''): void {
+  if (!networking) return
+  networking.updateNetworking(entities, fixedDelta, input, physicsChecksum)
+  dispatchRemoteInputs(networking)
+}
 export function stopProductionRuntime(): void {
   lifecycleGeneration++
   loading = null

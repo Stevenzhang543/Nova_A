@@ -1,4 +1,5 @@
 import { reactive } from 'vue'
+import { NOVA_ENGINE_VERSION, NOVA_RELEASE_NAME } from '../projects/projectFormat'
 
 export type ReleaseGateStatus = 'passed' | 'warning' | 'blocked' | 'external'
 export type ReleaseEvidenceKind = 'automated' | 'manual' | 'external'
@@ -64,21 +65,21 @@ export const NOVA_RELEASE_PIPELINE: readonly ReleasePipelineStage[] = Object.fre
   Object.freeze({ id: 'rust', label: 'Rust format, lint and tests', command: 'cargo test --workspace --all-targets', required: true, mutation: 'workspace' as const }),
   Object.freeze({ id: 'web', label: 'Deterministic web build', command: 'pnpm build', required: true, mutation: 'workspace' as const }),
   Object.freeze({ id: 'native', label: 'Windows release build', command: 'pnpm tauri build', required: true, mutation: 'workspace' as const }),
-  Object.freeze({ id: 'evidence', label: 'Evidence, SBOM and provenance', command: 'pnpm evidence:v26.04', required: true, mutation: 'workspace' as const }),
-  Object.freeze({ id: 'package', label: 'Eleven-artifact release package', command: 'pnpm release:v26.04', required: true, mutation: 'release-output' as const }),
+  Object.freeze({ id: 'evidence', label: 'Evidence, SBOM and provenance', command: `pnpm evidence:v${NOVA_RELEASE_NAME}`, required: true, mutation: 'workspace' as const }),
+  Object.freeze({ id: 'package', label: 'Eleven-artifact release package', command: `pnpm release:v${NOVA_RELEASE_NAME}`, required: true, mutation: 'release-output' as const }),
   Object.freeze({ id: 'external', label: 'Signing and clean-machine matrix', command: 'release operator workflow', required: true, mutation: 'external' as const })
 ])
 
 export const RELEASE_CANDIDATE_FREEZE = Object.freeze({
-  release: '26.04',
-  machineVersion: '26.4.0',
+  release: NOVA_RELEASE_NAME,
+  machineVersion: NOVA_ENGINE_VERSION,
   sourceRelease: '7.0.0',
   active: true,
-  openedAt: '2026-09-02T00:00:00.000Z',
+  openedAt: '2026-09-04T00:00:00.000Z',
   minimumDays: 14,
-  earliestApprovalAt: '2026-09-16T00:00:00.000Z',
+  earliestApprovalAt: '2026-09-18T00:00:00.000Z',
   policy: 'Feature development is frozen. Only release-blocking corrections, documentation and evidence fixes are accepted.',
-  frozenContracts: Object.freeze(['Project Format 2 / schema 29', 'Rhai API v2', 'Plugin API 2', 'Package manifest 1', 'Build CLI 1', 'Eleven-file release artifact format'])
+  frozenContracts: Object.freeze(['Project Format 2 / schema 29', 'Rhai API 2', 'Visual Graph 1', 'Plugin API 2', 'Package Manifest 1', 'Build CLI 1', 'Workspace document 3', 'Network Protocol 2', 'Eleven-file release artifact format'])
 })
 
 export const releaseEngineeringState = reactive({

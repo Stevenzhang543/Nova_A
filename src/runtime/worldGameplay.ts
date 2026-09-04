@@ -9,9 +9,12 @@ import { prepareObjectPools, resetObjectPools, setPoolSignalEmitter, updateObjec
 import * as navigationRuntime from './navigation2d'
 import { resetWorldStreaming, updateWorldStreaming as updateWorldStreamingRuntime, worldStreamingState } from './worldStreaming'
 import { resetTileSceneRuntime, tileSceneRuntimeState, updateTileSceneRuntime } from './tileSceneRuntime'
+import { captureSimulationEvidence, clearSimulationEvidence } from './simulationAuthoring26'
 
 export const worldGameplayState = reactive({
   navigationDebug: false,
+  aiDebug: false,
+  simulationDebug: false,
   areaDebug: false,
   chunkDebug: false,
   streamingEnabled: true,
@@ -28,7 +31,7 @@ export const worldGameplayState = reactive({
 
 export function serializeWorldGameplaySettings(): Record<string, unknown> {
   return {
-    navigationDebug: worldGameplayState.navigationDebug, areaDebug: worldGameplayState.areaDebug, chunkDebug: worldGameplayState.chunkDebug,
+    navigationDebug: worldGameplayState.navigationDebug, aiDebug: worldGameplayState.aiDebug, simulationDebug: worldGameplayState.simulationDebug, areaDebug: worldGameplayState.areaDebug, chunkDebug: worldGameplayState.chunkDebug,
     streamingEnabled: worldGameplayState.streamingEnabled,
     memoryBudgetMb: Math.min(65_536, Math.max(1, finiteNumber(worldGameplayState.memoryBudgetMb, 256))),
     originShiftThreshold: Math.min(1e12, Math.max(1, finiteNumber(worldGameplayState.originShiftThreshold, 10_000)))
@@ -38,6 +41,8 @@ export function serializeWorldGameplaySettings(): Record<string, unknown> {
 export function loadWorldGameplaySettings(value: unknown): void {
   const source = value && typeof value === 'object' ? value as Record<string, unknown> : {}
   worldGameplayState.navigationDebug = source.navigationDebug === true
+  worldGameplayState.aiDebug = source.aiDebug === true
+  worldGameplayState.simulationDebug = source.simulationDebug === true
   worldGameplayState.areaDebug = source.areaDebug === true
   worldGameplayState.chunkDebug = source.chunkDebug === true
   worldGameplayState.streamingEnabled = source.streamingEnabled !== false
@@ -200,6 +205,7 @@ export function beforeWorldPhysicsStep(fixedDelta: number, nowSeconds: number, f
   applyAreaEffects(fixedDelta, emitSignal)
   navigationRuntime.updateNavigation(physicsState.world.entities, fixedDelta, nowSeconds)
   if (aiModule) aiModule.updateAi(physicsState.world.entities, fixedDelta, frame)
+  captureSimulationEvidence(frame, physicsState.world.entities, physicsState.world.connections)
   if (packageEnabled(OFFICIAL_OBJECT_POOL_PACKAGE_ID)) updateObjectPools(nowSeconds)
   updateWorldStreaming()
   updateTileSceneRuntime(physicsState.world.entities, focusPosition())
@@ -208,7 +214,7 @@ export function beforeWorldPhysicsStep(fixedDelta: number, nowSeconds: number, f
 
 export function resetWorldGameplay(): void {
   areaOccupants.clear(); sceneStreamQueue.clear(); activePortals.clear(); navigationRuntime.resetNavigation(); aiModule?.resetAi(); resetObjectPools(); resetWorldStreaming(); resetTileSceneRuntime()
-  worldGameplayState.loadedChunks = 0; worldGameplayState.usedMemoryMb = 0; worldGameplayState.pendingStreams = 0; worldGameplayState.originOffset = { x: 0, y: 0 }; worldGameplayState.originShiftCount = 0; worldGameplayState.lastOriginShift = { x: 0, y: 0 }
+  worldGameplayState.loadedChunks = 0; worldGameplayState.usedMemoryMb = 0; worldGameplayState.pendingStreams = 0; worldGameplayState.originOffset = { x: 0, y: 0 }; worldGameplayState.originShiftCount = 0; worldGameplayState.lastOriginShift = { x: 0, y: 0 }; clearSimulationEvidence()
 }
 
 export function navigationPaths(): readonly import('./navigation2d').NavigationDebugPath[] { return [...navigationRuntime.navigationDebugPaths.values()] }

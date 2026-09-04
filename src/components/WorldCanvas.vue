@@ -37,11 +37,13 @@ import { activeRenderQuality, renderingSettings } from '../renderer/renderSettin
 import { prepareColliderSet } from '../runtime/physicsGeometry'
 import { recordEntityProperties } from '../editor/animationStudioState'
 import { navigationPaths, worldGameplayState } from '../runtime/worldGameplay'
+import { aiDebugState } from '../runtime/aiTools'
 import { worldStreamingState } from '../runtime/worldStreaming'
 import { authoringState, createAuthoringObject } from '../editor/authoring2d'
 import { timelinePresentationState } from '../runtime/timeline'
 import VirtualControlsOverlay from './VirtualControlsOverlay.vue'
 import { beginPerformanceFrame, completePerformanceFrame, markPerformanceInput, performanceRuntimeState } from '../runtime/largeWorldPerformance'
+import { PHYSICS_UNITS } from '../runtime/physicsProduction'
 
 const canvasRef = ref<HTMLCanvasElement | null>(null)
 const renderCanvasRef = ref<HTMLCanvasElement | null>(null)
@@ -1279,7 +1281,25 @@ function render() {
   if (isGameView && focusedUiInput.value) synchronizeNativeInput()
 }
 
+function drawWorldDebugLabel(context: CanvasRenderingContext2D, point: Vec2, text: string, color: string, yOffset = 0): void {
+  context.save(); context.translate(point.x, point.y); context.scale(1 / camera.scale, -1 / camera.scale)
+  context.font = '500 11px ui-rounded, "SF Pro Rounded", system-ui, sans-serif'; context.textBaseline = 'middle'
+  const width = Math.min(320, context.measureText(text).width + 10), y = -14 - yOffset
+  context.fillStyle = 'rgba(10, 15, 23, .82)'; context.fillRect(-2, y - 9, width, 18)
+  context.fillStyle = color; context.fillText(text, 3, y)
+  context.restore()
+}
+
+function drawWorldDebugVector(context: CanvasRenderingContext2D, start: Vec2, vector: Vec2, color: string): void {
+  const length = Math.hypot(vector.x, vector.y); if (length <= 1e-9) return
+  const maximum = 64 / camera.scale, scale = Math.min(maximum / length, 1), end = { x: start.x + vector.x * scale, y: start.y + vector.y * scale }
+  const angle = Math.atan2(end.y - start.y, end.x - start.x), head = 6 / camera.scale
+  context.beginPath(); context.moveTo(start.x, start.y); context.lineTo(end.x, end.y); context.lineTo(end.x - Math.cos(angle - .55) * head, end.y - Math.sin(angle - .55) * head); context.moveTo(end.x, end.y); context.lineTo(end.x - Math.cos(angle + .55) * head, end.y - Math.sin(angle + .55) * head)
+  context.strokeStyle = color; context.stroke()
+}
+
 function drawWorldGameplayDebug(context: CanvasRenderingContext2D): void {
+  if (!worldGameplayState.navigationDebug && !worldGameplayState.aiDebug && !worldGameplayState.simulationDebug && !worldGameplayState.areaDebug && !worldGameplayState.chunkDebug) return
   context.save(); context.lineWidth = 2 / camera.scale
   if (worldGameplayState.navigationDebug) {
     context.strokeStyle = '#5ea6ff'; context.fillStyle = '#5ea6ff'
@@ -1289,8 +1309,32 @@ function drawWorldGameplayDebug(context: CanvasRenderingContext2D): void {
       for (const point of path.points) { context.beginPath(); context.arc(point.x, point.y, 2.5 / camera.scale, 0, Math.PI * 2); context.fill() }
     }
   }
+  const aiByEntity = worldGameplayState.aiDebug ? new Map(aiDebugState.agents.map(item => [item.entityUuid, item])) : null
+  const machineByEntity = worldGameplayState.aiDebug ? new Map(aiDebugState.machines.map(item => [item.entityUuid, item])) : null
+  let aiLabels = 0, simulationLabels = 0
   for (const entity of world.entities) {
+    if (!entity.enabled || (editorState.currentPage === 'scene' && entity.layer !== editorState.activeLayer)) continue
     const transform = worldTransform(entity, world.entities)
+    if (worldGameplayState.aiDebug && aiLabels < 512) {
+      const behavior = entity.getComponent<import('../world/components').BehaviorTree2D>('BehaviorTree2D'), machine = entity.getComponent<import('../world/components').StateMachine2D>('StateMachine2D'), agent = entity.getComponent<import('../world/components').NavigationAgent2D>('NavigationAgent2D')
+      const behaviorDebug = aiByEntity?.get(entity.uuid), machineDebug = machineByEntity?.get(entity.uuid)
+      if (behavior?.enabled || machine?.enabled || agent?.enabled) {
+        if (agent?.enabled) {
+          const target = agent.targetEntityUuid ? world.entities.find(candidate => candidate.uuid === agent.targetEntityUuid) : null
+          const targetPoint = target ? worldTransform(target, world.entities).position : agent.targetPosition
+          context.save(); context.setLineDash([5 / camera.scale, 4 / camera.scale]); context.strokeStyle = '#77c8ff'; context.beginPath(); context.moveTo(transform.position.x, transform.position.y); context.lineTo(targetPoint.x, targetPoint.y); context.stroke(); context.setLineDash([]); drawWorldDebugVector(context, transform.position, agent.velocity, '#52e0bb'); context.restore()
+        }
+        const active = machineDebug?.activeState || machine?.currentState || behaviorDebug?.activeNode || behavior?.currentNode || 'idle'
+        const perceived = behaviorDebug ? ` · seen ${behaviorDebug.perceived}` : ''
+        drawWorldDebugLabel(context, transform.position, `${entity.name} · ${active}${perceived}`, '#8bd5ff', 18)
+        aiLabels++
+      }
+    }
+    if (worldGameplayState.simulationDebug && simulationLabels < 512 && entity.hasComponent('RigidBody2D')) {
+      const speed = Math.hypot(entity.velocity.x, entity.velocity.y), angular = entity.angularVelocity
+      drawWorldDebugLabel(context, transform.position, `${entity.name} · ${speed.toFixed(2)} ${PHYSICS_UNITS.speed} · ω ${angular.toFixed(2)} rad/s · ${entity.rigidBody.mass.toFixed(2)} ${PHYSICS_UNITS.mass}`, entity.rigidBody.sleeping ? '#87a8d6' : '#a8f0c6')
+      simulationLabels++
+    }
     const area = entity.getComponent<import('../world/components').Area2D>('Area2D')
     if (worldGameplayState.areaDebug && area?.enabled) {
       context.setLineDash([6 / camera.scale, 4 / camera.scale]); context.strokeStyle = '#65d6b4'
@@ -1305,7 +1349,16 @@ function drawWorldGameplayDebug(context: CanvasRenderingContext2D): void {
       const active = status === 'Active', pending = ['Loading', 'Activating', 'Deactivating', 'Unloading'].includes(status)
       context.strokeStyle = active ? '#63d6a3' : pending ? '#ffd166' : '#c28cff'; context.fillStyle = active ? 'rgba(99,214,163,.08)' : pending ? 'rgba(255,209,102,.08)' : 'rgba(194,140,255,.06)'
       context.setLineDash(pending ? [5 / camera.scale, 4 / camera.scale] : []); context.fillRect(transform.position.x - chunk.size.x / 2, transform.position.y - chunk.size.y / 2, chunk.size.x, chunk.size.y); context.strokeRect(transform.position.x - chunk.size.x / 2, transform.position.y - chunk.size.y / 2, chunk.size.x, chunk.size.y); context.setLineDash([])
-      context.font = `${11 / camera.scale}px ui-rounded, system-ui`; context.fillStyle = context.strokeStyle; context.fillText(`${chunk.ownership || entity.name} · ${status}`, transform.position.x - chunk.size.x / 2 + 5 / camera.scale, transform.position.y - chunk.size.y / 2 + 14 / camera.scale)
+      drawWorldDebugLabel(context, { x: transform.position.x - chunk.size.x / 2, y: transform.position.y + chunk.size.y / 2 }, `${chunk.ownership || entity.name} · ${status}`, context.strokeStyle as string)
+    }
+  }
+  if (worldGameplayState.simulationDebug) {
+    for (const connection of world.connections.slice(0, 256)) {
+      if (!connection.enabled) continue
+      const paths = routePoints(connection, world.entities), points = paths[0]
+      if (!points?.length) continue
+      const midpoint = points[Math.floor(points.length / 2)]
+      drawWorldDebugLabel(context, midpoint, `${connection.name} · ${connection.tension.toFixed(2)} ${PHYSICS_UNITS.force} · ${(connection.strain * 100).toFixed(1)}% · ${connection.breakState}`, connection.breakState === 'intact' ? '#ffd37d' : '#ff7b86', 36)
     }
   }
   context.restore()

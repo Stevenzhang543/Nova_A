@@ -62,6 +62,7 @@ async function setMode(mode: 'code' | 'graph' | 'events'): Promise<void> {
     } catch (error) { addEditorLog(error instanceof Error ? error.message : String(error), 'Script', 'error', script.uuid) }
     return
   }
+  if (studio.mode === 'graph' && studio.activeGraphDirty && studio.saveActiveGraph && !await studio.saveActiveGraph()) return
   const graphUuid = studio.activeGraphUuid
   const graphSource = readTextAsset(graphUuid)
   let graphDocumentUuid = ''

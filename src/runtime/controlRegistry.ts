@@ -5,6 +5,8 @@ export interface StableControlRecord {
   kind: StableControlKind
   label: string
   surface: string
+  identitySource: 'authored' | 'structural'
+  structuralPath: string
   disabled: boolean
   disabledReason: string
   shortcut: string
@@ -43,6 +45,31 @@ function kindOf(element: HTMLElement): StableControlKind {
   return ['button', 'input', 'select', 'textarea'].includes(tag) ? tag as StableControlKind : 'control'
 }
 
+/**
+ * Build a locale-independent path for controls that have not been assigned an
+ * authored key yet.  Text and translated labels are deliberately excluded, so
+ * the identifier remains the same in English, German, Chinese and pseudo/RTL
+ * qualification.  `nth-of-type` is evaluated in the rendered component scope,
+ * which is deterministic for a given reachable UI state.
+ */
+function structuralPath(element: HTMLElement, scope: HTMLElement): string {
+  const parts: string[] = []
+  let current: HTMLElement | null = element
+  while (current && current !== scope && parts.length < 12) {
+    const authored = current.dataset.testKey || current.id || current.getAttribute('name') || current.dataset.command || current.dataset.doc || current.dataset.shortcut
+    if (authored) {
+      parts.unshift(`${current.tagName.toLocaleLowerCase()}-${slug(authored)}`)
+      break
+    }
+    const tag = current.tagName.toLocaleLowerCase()
+    const siblings = current.parentElement ? [...current.parentElement.children].filter(item => item.tagName === current!.tagName) : []
+    const index = Math.max(0, siblings.indexOf(current)) + 1
+    parts.unshift(`${tag}-${index}`)
+    current = current.parentElement
+  }
+  return parts.join('--') || `${kindOf(element)}-1`
+}
+
 function assignStableIdentity(element: HTMLElement): void {
   if (element.matches(INTERNAL_SELECTOR) || element.closest(INTERNAL_SELECTOR)) return
   const label = visibleText(element)
@@ -50,14 +77,14 @@ function assignStableIdentity(element: HTMLElement): void {
   element.dataset.surface ||= surface
   if (!element.dataset.testid) {
     const scope = element.closest<HTMLElement>('[data-control-scope],[data-surface]') || document.documentElement
-    const controls = [...scope.querySelectorAll<HTMLElement>(SELECTOR)].filter(control => !control.matches(INTERNAL_SELECTOR) && !control.closest(INTERNAL_SELECTOR))
-    const ordinal = Math.max(0, controls.indexOf(element)) + 1
     const explicitKey = element.dataset.testKey || element.id || element.getAttribute('name') || element.dataset.command || element.dataset.doc || element.dataset.shortcut
-    const stableKey = explicitKey ? slug(explicitKey) : `${kindOf(element)}-${ordinal}`
+    const stableKey = explicitKey ? slug(explicitKey) : structuralPath(element, scope)
     const base = `nova-${slug(surface)}-${stableKey}`
     let id = base, suffix = 2
     while (document.querySelector(`[data-testid="${CSS.escape(id)}"]`)) id = `${base}-${suffix++}`
     element.dataset.testid = id
+    element.dataset.testIdentity = explicitKey ? 'authored' : 'structural'
+    element.dataset.testPath = structuralPath(element, scope)
   }
   if (!element.getAttribute('aria-labelledby')) {
     const generatedLabel = derivedVisibleText(element) || kindOf(element)
@@ -109,6 +136,7 @@ export function stableControlInventory(root: ParentNode = document): StableContr
   scan(root)
   return [...root.querySelectorAll<HTMLElement>('[data-testid]')].filter(element => element.matches(SELECTOR)).map(element => ({
     testId: element.dataset.testid!, kind: kindOf(element), label: visibleText(element), surface: surfaceName(element),
+    identitySource: element.dataset.testIdentity === 'authored' ? 'authored' : 'structural', structuralPath: element.dataset.testPath || '',
     disabled: 'disabled' in element && Boolean((element as HTMLButtonElement).disabled), disabledReason: element.dataset.disabledReason || element.getAttribute('title') || '',
     shortcut: element.dataset.shortcut || ''
   }))

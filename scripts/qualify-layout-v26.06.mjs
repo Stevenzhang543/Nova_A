@@ -1,0 +1,11 @@
+process.env.NOVA_LAYOUT_VERSION = '26.06'
+process.env.NOVA_LAYOUT_ENGINE_VERSION = '26.6.0'
+process.env.NOVA_LAYOUT_OUTPUT = 'v26.06-layout-browser.json'
+process.env.NOVA_LAYOUT_SCREENSHOTS = 'v26.06'
+process.env.NOVA_LAYOUT_REQUIRED_VIEWPORTS = '1024x640,1024x768,1366x768,1920x1080,2560x1440'
+process.env.NOVA_LAYOUT_REQUIRED_SCALES = '0.8,1,1.25,1.5'
+process.env.NOVA_LAYOUT_REQUIRED_TEXT = 'Design|Design|设计'
+process.env.NOVA_LAYOUT_REQUIRED_WORKSPACE_INDEX = '0'
+process.env.NOVA_LAYOUT_REQUIRED_CLICK = '.workspace-list button:first-child'
+process.env.NOVA_LAYOUT_REQUIRED_ROOT = '.workspace-bar'
+await import('./qualify-layout-v3.3.mjs')

@@ -11,7 +11,7 @@ pub const PROJECT_FORMAT_NAME: &str = "Nova_A Project Format 2";
 pub const PROJECT_FORMAT_MAJOR: u32 = 2;
 pub const CURRENT_FORMAT_VERSION: u32 = 29;
 pub const MINIMUM_SUPPORTED_FORMAT_VERSION: u32 = 5;
-pub const CURRENT_ENGINE_VERSION: &str = "26.4.0";
+pub const CURRENT_ENGINE_VERSION: &str = "26.10.0";
 
 fn default_named_physics_layers() -> Value {
     let colors = [
@@ -624,9 +624,226 @@ pub fn migrate_project_value(value: Value) -> Result<ProjectFile, FormatError> {
                 "testing": {"defaultTimeoutMs":10000,"tests":[]},
                 "data": {"saveSchemaVersion":1,"saveMigrations":[]},
                 "jobs": {"maxWorkers":2,"maxQueued":256,"timeoutMs":15000},
-                "networking": {"enabled":false,"permissionGranted":false,"autoStart":false,"role":"client","sessionMode":"local","sessionName":"Nova session","playerName":"Player","maxPeers":8,"transport":"websocket","endpoint":"ws://127.0.0.1:7777","bindAddress":"127.0.0.1:0","snapshotRate":20,"interpolationMs":100,"rollbackFrames":120,"bandwidthKbps":256,"reconnect":true,"reconnectMaxAttempts":5,"protocolVersion":2,"schemaVersion":1,"maximumPacketBytes":32768,"maximumMessagesPerSecond":240,"maximumPendingReliable":256,"reliableRetryMs":150,"reliableMaximumAttempts":8,"reconciliationThreshold":0.25,"lateJoin":true,"channels":[{"id":"state","delivery":"unreliable-sequenced","maximumPayloadBytes":16384,"messagesPerSecond":120,"priority":10},{"id":"input","delivery":"unreliable-sequenced","maximumPayloadBytes":4096,"messagesPerSecond":120,"priority":20},{"id":"events","delivery":"reliable-ordered","maximumPayloadBytes":8192,"messagesPerSecond":60,"priority":30}],"rpcContracts":[],"simulation":{"enabled":false,"latencyMs":0,"jitterMs":0,"lossPercent":0.0,"duplicatePercent":0.0,"reorderPercent":0.0,"seed":1313166418_u64},"replicatedEntities":[]}
+                "networking": {"enabled":false,"permissionGranted":false,"autoStart":false,"role":"client","sessionMode":"local","sessionName":"Local game","playerName":"Player","maxPeers":8,"transport":"websocket","transportAdapterId":"","endpoint":"ws://127.0.0.1:7777","bindAddress":"127.0.0.1:0","snapshotRate":20,"interpolationMs":100,"rollbackFrames":120,"bandwidthKbps":256,"reconnect":true,"reconnectMaxAttempts":8,"protocolVersion":2,"schemaVersion":1,"maximumPacketBytes":65507,"maximumMessagesPerSecond":240,"maximumPendingReliable":512,"reliableRetryMs":120,"reliableMaximumAttempts":8,"reconciliationThreshold":0.05,"lateJoin":true,"channels":[{"id":"state","delivery":"unreliable-sequenced","maximumPayloadBytes":48000,"messagesPerSecond":120,"priority":2},{"id":"input","delivery":"unreliable-sequenced","maximumPayloadBytes":16000,"messagesPerSecond":240,"priority":3},{"id":"events","delivery":"reliable-ordered","maximumPayloadBytes":32000,"messagesPerSecond":120,"priority":4}],"rpcContracts":[],"simulation":{"enabled":false,"latencyMs":0,"jitterMs":0,"lossPercent":0.0,"duplicatePercent":0.0,"reorderPercent":0.0,"seed":1313166423_u64},"authentication":{"mode":"none","providerId":"","requireVerifiedPeers":false,"handshakeTimeoutMs":5000},"security":{"requireEncryption":false,"maximumPacketAgeMs":15000,"replayWindow":2048},"interest":{"enabled":false,"defaultRadius":64.0,"maximumRadius":4096.0},"multiInstance":{"peerCount":2,"separateLogs":true,"separateInspectors":true},"services":{"identityProviderId":"","lobbyProviderId":"","relayProviderId":""},"allowAuthorityTransfer":true,"allowSceneHandoff":true,"replicatedEntities":[]}
             })
         });
+        if let Some(production) = settings
+            .get_mut("production")
+            .and_then(Value::as_object_mut)
+        {
+            production.entry("networking").or_insert_with(|| json!({}));
+            if let Some(networking) = production
+                .get_mut("networking")
+                .and_then(Value::as_object_mut)
+            {
+                networking.entry("enabled").or_insert_with(|| json!(false));
+                networking
+                    .entry("permissionGranted")
+                    .or_insert_with(|| json!(false));
+                networking
+                    .entry("autoStart")
+                    .or_insert_with(|| json!(false));
+                networking.entry("role").or_insert_with(|| json!("client"));
+                networking
+                    .entry("sessionMode")
+                    .or_insert_with(|| json!("local"));
+                networking
+                    .entry("sessionName")
+                    .or_insert_with(|| json!("Local game"));
+                networking
+                    .entry("playerName")
+                    .or_insert_with(|| json!("Player"));
+                networking.entry("maxPeers").or_insert_with(|| json!(8));
+                networking
+                    .entry("transport")
+                    .or_insert_with(|| json!("websocket"));
+                networking
+                    .entry("transportAdapterId")
+                    .or_insert_with(|| json!(""));
+                networking
+                    .entry("endpoint")
+                    .or_insert_with(|| json!("ws://127.0.0.1:7777"));
+                networking
+                    .entry("bindAddress")
+                    .or_insert_with(|| json!("127.0.0.1:0"));
+                networking
+                    .entry("snapshotRate")
+                    .or_insert_with(|| json!(20));
+                networking
+                    .entry("interpolationMs")
+                    .or_insert_with(|| json!(100));
+                networking
+                    .entry("rollbackFrames")
+                    .or_insert_with(|| json!(120));
+                networking
+                    .entry("bandwidthKbps")
+                    .or_insert_with(|| json!(256));
+                networking.entry("reconnect").or_insert_with(|| json!(true));
+                networking
+                    .entry("reconnectMaxAttempts")
+                    .or_insert_with(|| json!(8));
+                networking
+                    .entry("protocolVersion")
+                    .or_insert_with(|| json!(2));
+                networking
+                    .entry("schemaVersion")
+                    .or_insert_with(|| json!(1));
+                networking
+                    .entry("maximumPacketBytes")
+                    .or_insert_with(|| json!(65_507));
+                networking
+                    .entry("maximumMessagesPerSecond")
+                    .or_insert_with(|| json!(240));
+                networking
+                    .entry("maximumPendingReliable")
+                    .or_insert_with(|| json!(512));
+                networking
+                    .entry("reliableRetryMs")
+                    .or_insert_with(|| json!(120));
+                networking
+                    .entry("reliableMaximumAttempts")
+                    .or_insert_with(|| json!(8));
+                networking
+                    .entry("reconciliationThreshold")
+                    .or_insert_with(|| json!(0.05));
+                networking.entry("lateJoin").or_insert_with(|| json!(true));
+                networking.entry("channels").or_insert_with(|| json!([
+                    {"id":"state","delivery":"unreliable-sequenced","maximumPayloadBytes":48000,"messagesPerSecond":120,"priority":2},
+                    {"id":"input","delivery":"unreliable-sequenced","maximumPayloadBytes":16000,"messagesPerSecond":240,"priority":3},
+                    {"id":"events","delivery":"reliable-ordered","maximumPayloadBytes":32000,"messagesPerSecond":120,"priority":4}
+                ]));
+                networking
+                    .entry("rpcContracts")
+                    .or_insert_with(|| json!([]));
+                networking.entry("simulation").or_insert_with(|| {
+                    json!({
+                        "enabled":false,"latencyMs":0,"jitterMs":0,"lossPercent":0.0,
+                        "duplicatePercent":0.0,"reorderPercent":0.0,"seed":1313166423_u64
+                    })
+                });
+                networking.entry("authentication").or_insert_with(|| json!({
+                    "mode":"none","providerId":"","requireVerifiedPeers":false,"handshakeTimeoutMs":5000
+                }));
+                networking.entry("security").or_insert_with(|| {
+                    json!({
+                        "requireEncryption":false,"maximumPacketAgeMs":15000,"replayWindow":2048
+                    })
+                });
+                networking.entry("interest").or_insert_with(|| {
+                    json!({
+                        "enabled":false,"defaultRadius":64.0,"maximumRadius":4096.0
+                    })
+                });
+                networking.entry("multiInstance").or_insert_with(|| {
+                    json!({
+                        "peerCount":2,"separateLogs":true,"separateInspectors":true
+                    })
+                });
+                networking.entry("services").or_insert_with(|| {
+                    json!({
+                        "identityProviderId":"","lobbyProviderId":"","relayProviderId":""
+                    })
+                });
+                networking
+                    .entry("allowAuthorityTransfer")
+                    .or_insert_with(|| json!(true));
+                networking
+                    .entry("allowSceneHandoff")
+                    .or_insert_with(|| json!(true));
+                networking
+                    .entry("replicatedEntities")
+                    .or_insert_with(|| json!([]));
+
+                if let Some(authentication) = networking
+                    .get_mut("authentication")
+                    .and_then(Value::as_object_mut)
+                {
+                    authentication
+                        .entry("mode")
+                        .or_insert_with(|| json!("none"));
+                    authentication
+                        .entry("providerId")
+                        .or_insert_with(|| json!(""));
+                    authentication
+                        .entry("requireVerifiedPeers")
+                        .or_insert_with(|| json!(false));
+                    authentication
+                        .entry("handshakeTimeoutMs")
+                        .or_insert_with(|| json!(5000));
+                }
+                if let Some(security) = networking
+                    .get_mut("security")
+                    .and_then(Value::as_object_mut)
+                {
+                    security
+                        .entry("requireEncryption")
+                        .or_insert_with(|| json!(false));
+                    security
+                        .entry("maximumPacketAgeMs")
+                        .or_insert_with(|| json!(15000));
+                    security
+                        .entry("replayWindow")
+                        .or_insert_with(|| json!(2048));
+                }
+                if let Some(interest) = networking
+                    .get_mut("interest")
+                    .and_then(Value::as_object_mut)
+                {
+                    interest.entry("enabled").or_insert_with(|| json!(false));
+                    interest
+                        .entry("defaultRadius")
+                        .or_insert_with(|| json!(64.0));
+                    interest
+                        .entry("maximumRadius")
+                        .or_insert_with(|| json!(4096.0));
+                }
+                if let Some(multi_instance) = networking
+                    .get_mut("multiInstance")
+                    .and_then(Value::as_object_mut)
+                {
+                    multi_instance
+                        .entry("peerCount")
+                        .or_insert_with(|| json!(2));
+                    multi_instance
+                        .entry("separateLogs")
+                        .or_insert_with(|| json!(true));
+                    multi_instance
+                        .entry("separateInspectors")
+                        .or_insert_with(|| json!(true));
+                }
+                if let Some(services) = networking
+                    .get_mut("services")
+                    .and_then(Value::as_object_mut)
+                {
+                    services
+                        .entry("identityProviderId")
+                        .or_insert_with(|| json!(""));
+                    services
+                        .entry("lobbyProviderId")
+                        .or_insert_with(|| json!(""));
+                    services
+                        .entry("relayProviderId")
+                        .or_insert_with(|| json!(""));
+                }
+                if let Some(definitions) = networking
+                    .get_mut("replicatedEntities")
+                    .and_then(Value::as_array_mut)
+                {
+                    for definition in definitions {
+                        if let Some(definition) = definition.as_object_mut() {
+                            definition.entry("ownerPeerId").or_insert_with(|| json!(""));
+                            definition
+                                .entry("alwaysRelevant")
+                                .or_insert_with(|| json!(false));
+                            definition
+                                .entry("interestRadius")
+                                .or_insert_with(|| json!(64.0));
+                            definition.entry("sceneUuid").or_insert_with(|| json!(""));
+                        }
+                    }
+                }
+            }
+        }
     }
 
     let requested_active_scene = root
@@ -2117,31 +2334,51 @@ fn validate_project_settings(value: Option<&Value>) -> Result<(), FormatError> {
                 "production networking lifecycle settings are invalid".into(),
             ));
         }
-        for key in ["permissionGranted", "autoStart", "lateJoin"] {
-            if networking.get(key).is_some_and(|value| !value.is_boolean()) {
+        for key in [
+            "permissionGranted",
+            "autoStart",
+            "lateJoin",
+            "allowAuthorityTransfer",
+            "allowSceneHandoff",
+        ] {
+            if !networking.get(key).is_some_and(Value::is_boolean) {
                 return Err(FormatError(format!(
                     "production networking {key} must be a boolean"
                 )));
             }
         }
-        if networking
-            .get("sessionMode")
-            .is_some_and(|value| !matches!(value.as_str(), Some("local" | "direct")))
-        {
+        if !matches!(
+            networking.get("sessionMode").and_then(Value::as_str),
+            Some("local" | "direct")
+        ) {
             return Err(FormatError(
                 "production networking sessionMode is invalid".into(),
             ));
         }
         for key in ["sessionName", "playerName"] {
-            if networking.get(key).is_some_and(|value| {
-                !value
-                    .as_str()
-                    .is_some_and(|text| !text.trim().is_empty() && text.len() <= 80)
-            }) {
+            if !networking
+                .get(key)
+                .and_then(Value::as_str)
+                .is_some_and(|text| !text.trim().is_empty() && text.len() <= 80)
+            {
                 return Err(FormatError(format!(
                     "production networking {key} is invalid"
                 )));
             }
+        }
+        let is_provider_id = |value: Option<&Value>, allow_empty: bool| {
+            value.and_then(Value::as_str).is_some_and(|text| {
+                text.len() <= 80
+                    && (allow_empty || !text.is_empty())
+                    && text
+                        .bytes()
+                        .all(|byte| byte.is_ascii_alphanumeric() || b"_.-".contains(&byte))
+            })
+        };
+        if !is_provider_id(networking.get("transportAdapterId"), true) {
+            return Err(FormatError(
+                "production networking transportAdapterId is invalid".into(),
+            ));
         }
         for (key, minimum, maximum) in [
             ("maxPeers", 1, 64),
@@ -2171,6 +2408,135 @@ fn validate_project_settings(value: Option<&Value>) -> Result<(), FormatError> {
                 1_000.0,
             )?;
         }
+        let authentication = networking
+            .get("authentication")
+            .and_then(Value::as_object)
+            .ok_or_else(|| FormatError("networking.authentication must be an object".into()))?;
+        let authentication_mode = authentication.get("mode").and_then(Value::as_str);
+        if !matches!(authentication_mode, Some("none" | "hook"))
+            || !authentication
+                .get("requireVerifiedPeers")
+                .is_some_and(Value::is_boolean)
+            || !is_provider_id(authentication.get("providerId"), true)
+        {
+            return Err(FormatError(
+                "networking authentication configuration is invalid".into(),
+            ));
+        }
+        if authentication_mode == Some("hook")
+            && !is_provider_id(authentication.get("providerId"), false)
+        {
+            return Err(FormatError(
+                "networking hook authentication requires a providerId".into(),
+            ));
+        }
+        if authentication
+            .get("requireVerifiedPeers")
+            .and_then(Value::as_bool)
+            == Some(true)
+            && authentication_mode != Some("hook")
+        {
+            return Err(FormatError(
+                "verified networking peers require hook authentication".into(),
+            ));
+        }
+        bounded_u64(
+            "networking.authentication.handshakeTimeoutMs",
+            authentication.get("handshakeTimeoutMs"),
+            250,
+            30_000,
+        )?;
+
+        let security = networking
+            .get("security")
+            .and_then(Value::as_object)
+            .ok_or_else(|| FormatError("networking.security must be an object".into()))?;
+        if !security
+            .get("requireEncryption")
+            .is_some_and(Value::is_boolean)
+        {
+            return Err(FormatError(
+                "networking.security.requireEncryption must be a boolean".into(),
+            ));
+        }
+        bounded_u64(
+            "networking.security.maximumPacketAgeMs",
+            security.get("maximumPacketAgeMs"),
+            1_000,
+            120_000,
+        )?;
+        bounded_u64(
+            "networking.security.replayWindow",
+            security.get("replayWindow"),
+            64,
+            16_384,
+        )?;
+
+        let interest = networking
+            .get("interest")
+            .and_then(Value::as_object)
+            .ok_or_else(|| FormatError("networking.interest must be an object".into()))?;
+        if !interest.get("enabled").is_some_and(Value::is_boolean) {
+            return Err(FormatError(
+                "networking.interest.enabled must be a boolean".into(),
+            ));
+        }
+        bounded_f64(
+            "networking.interest.defaultRadius",
+            interest.get("defaultRadius"),
+            0.0,
+            1_000_000.0,
+        )?;
+        bounded_f64(
+            "networking.interest.maximumRadius",
+            interest.get("maximumRadius"),
+            1.0,
+            1_000_000.0,
+        )?;
+        if interest
+            .get("defaultRadius")
+            .and_then(Value::as_f64)
+            .zip(interest.get("maximumRadius").and_then(Value::as_f64))
+            .is_some_and(|(default_radius, maximum_radius)| default_radius > maximum_radius)
+        {
+            return Err(FormatError(
+                "networking.interest.defaultRadius exceeds maximumRadius".into(),
+            ));
+        }
+
+        let multi_instance = networking
+            .get("multiInstance")
+            .and_then(Value::as_object)
+            .ok_or_else(|| FormatError("networking.multiInstance must be an object".into()))?;
+        bounded_u64(
+            "networking.multiInstance.peerCount",
+            multi_instance.get("peerCount"),
+            2,
+            8,
+        )?;
+        for key in ["separateLogs", "separateInspectors"] {
+            if !multi_instance.get(key).is_some_and(Value::is_boolean) {
+                return Err(FormatError(format!(
+                    "networking.multiInstance.{key} must be a boolean"
+                )));
+            }
+        }
+
+        let services = networking
+            .get("services")
+            .and_then(Value::as_object)
+            .ok_or_else(|| FormatError("networking.services must be an object".into()))?;
+        for key in ["identityProviderId", "lobbyProviderId", "relayProviderId"] {
+            if !is_provider_id(services.get(key), true) {
+                return Err(FormatError(format!("networking.services.{key} is invalid")));
+            }
+        }
+
+        let maximum_packet_bytes = networking
+            .get("maximumPacketBytes")
+            .and_then(Value::as_u64)
+            .unwrap_or(65_507);
+        let mut channel_ids = std::collections::HashSet::new();
         if let Some(channels) = networking.get("channels") {
             let channels = channels
                 .as_array()
@@ -2180,7 +2546,6 @@ fn validate_project_settings(value: Option<&Value>) -> Result<(), FormatError> {
                     "networking.channels must contain 1–32 channels".into(),
                 ));
             }
-            let mut ids = std::collections::HashSet::new();
             for channel in channels {
                 let channel = channel
                     .as_object()
@@ -2188,7 +2553,7 @@ fn validate_project_settings(value: Option<&Value>) -> Result<(), FormatError> {
                 let id = channel.get("id").and_then(Value::as_str).unwrap_or("");
                 if id.is_empty()
                     || id.len() > 80
-                    || !ids.insert(id)
+                    || !channel_ids.insert(id)
                     || !matches!(
                         channel.get("delivery").and_then(Value::as_str),
                         Some("reliable-ordered" | "unreliable-sequenced")
@@ -2202,7 +2567,7 @@ fn validate_project_settings(value: Option<&Value>) -> Result<(), FormatError> {
                     "networking.channels.maximumPayloadBytes",
                     channel.get("maximumPayloadBytes"),
                     2,
-                    65_507,
+                    maximum_packet_bytes,
                 )?;
                 bounded_u64(
                     "networking.channels.messagesPerSecond",
@@ -2239,7 +2604,7 @@ fn validate_project_settings(value: Option<&Value>) -> Result<(), FormatError> {
                     || !rpc
                         .get("channelId")
                         .and_then(Value::as_str)
-                        .is_some_and(|value| !value.is_empty() && value.len() <= 80)
+                        .is_some_and(|value| channel_ids.contains(value))
                     || !matches!(
                         rpc.get("direction").and_then(Value::as_str),
                         Some("client-to-server" | "server-to-client" | "bidirectional")
@@ -2361,6 +2726,10 @@ fn validate_project_settings(value: Option<&Value>) -> Result<(), FormatError> {
             ));
         }
         let mut replicated_ids = std::collections::HashSet::new();
+        let maximum_interest_radius = interest
+            .get("maximumRadius")
+            .and_then(Value::as_f64)
+            .unwrap_or(1_000_000.0);
         for definition in replicated_entities {
             let definition = definition.as_object().ok_or_else(|| {
                 FormatError("every replicated-entity definition must be an object".into())
@@ -2373,6 +2742,15 @@ fn validate_project_settings(value: Option<&Value>) -> Result<(), FormatError> {
                 .get("properties")
                 .and_then(Value::as_array)
                 .ok_or_else(|| FormatError("replicated properties must be an array".into()))?;
+            let owner_peer_id = definition
+                .get("ownerPeerId")
+                .and_then(Value::as_str)
+                .unwrap_or("");
+            let scene_uuid = definition
+                .get("sceneUuid")
+                .and_then(Value::as_str)
+                .unwrap_or("");
+            let mut unique_properties = std::collections::HashSet::new();
             if entity_uuid.is_empty()
                 || entity_uuid.len() > 128
                 || !replicated_ids.insert(entity_uuid)
@@ -2382,12 +2760,27 @@ fn validate_project_settings(value: Option<&Value>) -> Result<(), FormatError> {
                 )
                 || !definition.get("interpolate").is_some_and(Value::is_boolean)
                 || !definition.get("predict").is_some_and(Value::is_boolean)
+                || !definition
+                    .get("alwaysRelevant")
+                    .is_some_and(Value::is_boolean)
+                || owner_peer_id.len() > 80
+                || !owner_peer_id
+                    .bytes()
+                    .all(|byte| byte.is_ascii_alphanumeric() || b"_.-".contains(&byte))
+                || (!scene_uuid.is_empty() && !is_uuid(scene_uuid))
+                || !definition
+                    .get("interestRadius")
+                    .and_then(Value::as_f64)
+                    .is_some_and(|radius| {
+                        radius.is_finite() && (0.0..=maximum_interest_radius).contains(&radius)
+                    })
                 || properties.len() > 3
                 || properties.iter().any(|property| {
-                    !matches!(
-                        property.as_str(),
-                        Some("transform" | "rotation" | "velocity")
-                    )
+                    let Some(property) = property.as_str() else {
+                        return true;
+                    };
+                    !matches!(property, "transform" | "rotation" | "velocity")
+                        || !unique_properties.insert(property)
                 })
             {
                 return Err(FormatError(
@@ -4014,6 +4407,79 @@ mod tests {
             migrated.extra["projectSettings"]["production"]["networking"]["enabled"],
             false
         );
+    }
+
+    #[test]
+    fn migrates_additive_26_07_networking_contract_without_schema_change() {
+        let source = json!({
+            "formatVersion": 20,
+            "engineVersion": "2.7.0",
+            "projectSettings": {"inputMap": [], "production": {
+                "performance": {"traceCapacity":600,"memoryBudgetMb":300.0,"assetBudgetMb":512.0,"leakWindowFrames":600,"lifetimeCapacity":2000},
+                "replay": {"seed":1313822273_u64,"capacity":3600,"strictChecksums":true},
+                "testing": {"defaultTimeoutMs":10000,"tests":[]},
+                "data": {"saveSchemaVersion":1,"saveMigrations":[]},
+                "jobs": {"maxWorkers":2,"maxQueued":256,"timeoutMs":15000},
+                "networking": {
+                    "enabled":false,"permissionGranted":false,"autoStart":false,"role":"client",
+                    "sessionMode":"local","sessionName":"Legacy session","playerName":"Player","maxPeers":8,
+                    "transport":"websocket","endpoint":"ws://127.0.0.1:7777","bindAddress":"127.0.0.1:0",
+                    "snapshotRate":20,"interpolationMs":100,"rollbackFrames":120,"bandwidthKbps":256,
+                    "reconnect":true,"reconnectMaxAttempts":5,"protocolVersion":2,"schemaVersion":1,
+                    "maximumPacketBytes":32768,"maximumMessagesPerSecond":240,"maximumPendingReliable":256,
+                    "reliableRetryMs":150,"reliableMaximumAttempts":8,"reconciliationThreshold":0.25,
+                    "lateJoin":true,
+                    "channels":[{"id":"events","delivery":"reliable-ordered","maximumPayloadBytes":8192,"messagesPerSecond":60,"priority":30}],
+                    "rpcContracts":[],
+                    "simulation":{"enabled":false,"latencyMs":0,"jitterMs":0,"lossPercent":0.0,"duplicatePercent":0.0,"reorderPercent":0.0,"seed":1313166418_u64},
+                    "replicatedEntities":[]
+                }
+            }},
+            "entities": []
+        });
+        let migrated = migrate_project_value(source).unwrap();
+        validate_project(&migrated).unwrap();
+        let networking = &migrated.extra["projectSettings"]["production"]["networking"];
+        assert_eq!(migrated.format_version, 29);
+        assert_eq!(networking["protocolVersion"], 2);
+        assert_eq!(networking["transportAdapterId"], "");
+        assert_eq!(networking["authentication"]["mode"], "none");
+        assert_eq!(networking["security"]["replayWindow"], 2048);
+        assert_eq!(networking["interest"]["maximumRadius"], 4096.0);
+        assert_eq!(networking["multiInstance"]["peerCount"], 2);
+        assert_eq!(networking["services"]["relayProviderId"], "");
+        assert_eq!(networking["allowAuthorityTransfer"], true);
+        assert_eq!(networking["allowSceneHandoff"], true);
+    }
+
+    #[test]
+    fn rejects_invalid_26_07_network_security_and_service_bounds() {
+        let mut migrated = migrate_project_value(json!({
+            "formatVersion": 20,
+            "engineVersion": "2.7.0",
+            "projectSettings": {"inputMap": []},
+            "entities": []
+        }))
+        .unwrap();
+
+        migrated.extra.get_mut("projectSettings").unwrap()["production"]["networking"]
+            ["authentication"]["mode"] = json!("hook");
+        let error = validate_project(&migrated).unwrap_err();
+        assert!(error.0.contains("requires a providerId"));
+
+        migrated.extra.get_mut("projectSettings").unwrap()["production"]["networking"]
+            ["authentication"]["providerId"] = json!("reviewed-auth");
+        migrated.extra.get_mut("projectSettings").unwrap()["production"]["networking"]
+            ["services"]["relayProviderId"] = json!("../unsafe");
+        let error = validate_project(&migrated).unwrap_err();
+        assert!(error.0.contains("relayProviderId"));
+
+        migrated.extra.get_mut("projectSettings").unwrap()["production"]["networking"]
+            ["services"]["relayProviderId"] = json!("");
+        migrated.extra.get_mut("projectSettings").unwrap()["production"]["networking"]
+            ["security"]["replayWindow"] = json!(16);
+        let error = validate_project(&migrated).unwrap_err();
+        assert!(error.0.contains("replayWindow"));
     }
 
     #[test]

@@ -52,6 +52,7 @@ export interface DeviceSensorSnapshot {
 }
 export interface DeviceRuntimeCapabilities {
   touch: boolean
+  pen: boolean
   maximumTouches: number
   pointerEvents: boolean
   gamepads: boolean
@@ -82,7 +83,7 @@ const defaults = (): DeviceInputSettings => ({
 
 export const deviceInputSettings = reactive<DeviceInputSettings>(defaults())
 export const deviceSensorState = reactive<DeviceSensorSnapshot>({ orientation: [0, 0, 0], acceleration: [0, 0, 0], rotationRate: [0, 0, 0], permission: 'not-requested', updatedAt: 0 })
-export const deviceRuntimeState = reactive({ capabilities: { touch: false, maximumTouches: 0, pointerEvents: false, gamepads: false, vibration: false, orientationLock: false, motionSensors: false, devicePixelRatio: 1, viewport: [0, 0], orientation: 'landscape', safeArea: { left: 0, top: 0, right: 0, bottom: 0 } } as DeviceRuntimeCapabilities, lastHapticAt: 0, lastError: '' })
+export const deviceRuntimeState = reactive({ capabilities: { touch: false, pen: false, maximumTouches: 0, pointerEvents: false, gamepads: false, vibration: false, orientationLock: false, motionSensors: false, devicePixelRatio: 1, viewport: [0, 0], orientation: 'landscape', safeArea: { left: 0, top: 0, right: 0, bottom: 0 } } as DeviceRuntimeCapabilities, lastHapticAt: 0, lastError: '' })
 
 export function normalizeDeviceInputSettings(source: unknown): DeviceInputSettings {
   const item = source && typeof source === 'object' ? source as Partial<DeviceInputSettings> : {}, base = defaults()
@@ -120,7 +121,8 @@ export function applyGamepadAxisCalibration(raw: number, deviceId: string, axis:
 
 export class TouchPointerDeduplicator {
   private recent: Array<{ at: number; x: number; y: number }> = []
-  recordTouch(at: number, x: number, y: number): void { this.recent.push({ at, x, y }); this.prune(at) }
+  recordPointer(at: number, x: number, y: number): void { this.recent.push({ at, x, y }); this.prune(at) }
+  recordTouch(at: number, x: number, y: number): void { this.recordPointer(at, x, y) }
   acceptMouse(at: number, x: number, y: number, firesTouchEvents = false): boolean {
     this.prune(at)
     if (firesTouchEvents) return false
@@ -133,7 +135,8 @@ export class TouchPointerDeduplicator {
 export function refreshDeviceCapabilities(): DeviceRuntimeCapabilities {
   if (typeof window === 'undefined' || typeof navigator === 'undefined') return deviceRuntimeState.capabilities
   const safeArea = deviceInputSettings.safeAreaMode === 'custom' ? { ...deviceInputSettings.customSafeArea } : deviceInputSettings.safeAreaMode === 'off' ? { left: 0, top: 0, right: 0, bottom: 0 } : readCssSafeArea()
-  const capabilities: DeviceRuntimeCapabilities = { touch: navigator.maxTouchPoints > 0 || 'ontouchstart' in window, maximumTouches: Math.max(0, navigator.maxTouchPoints || 0), pointerEvents: typeof PointerEvent !== 'undefined', gamepads: typeof navigator.getGamepads === 'function', vibration: typeof navigator.vibrate === 'function', orientationLock: Boolean(globalThis.screen?.orientation && 'lock' in globalThis.screen.orientation), motionSensors: 'DeviceMotionEvent' in window || 'DeviceOrientationEvent' in window, devicePixelRatio: bounded(window.devicePixelRatio, 1, .25, 8), viewport: [Math.max(0, window.innerWidth), Math.max(0, window.innerHeight)], orientation: window.innerHeight > window.innerWidth ? 'portrait' : 'landscape', safeArea }
+  const pointerEvents = typeof PointerEvent !== 'undefined'
+  const capabilities: DeviceRuntimeCapabilities = { touch: navigator.maxTouchPoints > 0 || 'ontouchstart' in window, pen: pointerEvents, maximumTouches: Math.max(0, navigator.maxTouchPoints || 0), pointerEvents, gamepads: typeof navigator.getGamepads === 'function', vibration: typeof navigator.vibrate === 'function', orientationLock: Boolean(globalThis.screen?.orientation && 'lock' in globalThis.screen.orientation), motionSensors: 'DeviceMotionEvent' in window || 'DeviceOrientationEvent' in window, devicePixelRatio: bounded(window.devicePixelRatio, 1, .25, 8), viewport: [Math.max(0, window.innerWidth), Math.max(0, window.innerHeight)], orientation: window.innerHeight > window.innerWidth ? 'portrait' : 'landscape', safeArea }
   deviceRuntimeState.capabilities = capabilities
   return capabilities
 }
@@ -151,9 +154,43 @@ export function performHaptic(milliseconds = 12): boolean {
   const accepted = navigator.vibrate(duration); if (accepted) deviceRuntimeState.lastHapticAt = Date.now(); return accepted
 }
 
-let sensorAttached = false
-const onOrientation = (event: DeviceOrientationEvent): void => { deviceSensorState.orientation = [bounded(event.beta, 0, -180, 180), bounded(event.gamma, 0, -90, 90), bounded(event.alpha, 0, 0, 360)]; deviceSensorState.updatedAt = Date.now() }
-const onMotion = (event: DeviceMotionEvent): void => { const acceleration = event.accelerationIncludingGravity, rotation = event.rotationRate; deviceSensorState.acceleration = [bounded(acceleration?.x, 0, -100, 100), bounded(acceleration?.y, 0, -100, 100), bounded(acceleration?.z, 0, -100, 100)]; deviceSensorState.rotationRate = [bounded(rotation?.alpha, 0, -2_000, 2_000), bounded(rotation?.beta, 0, -2_000, 2_000), bounded(rotation?.gamma, 0, -2_000, 2_000)]; deviceSensorState.updatedAt = Date.now() }
+export function sensorSampleIntervalMs(frequency = deviceInputSettings.sensorFrequency): number {
+  return 1_000 / Math.round(bounded(frequency, 30, 1, 120))
+}
+
+export function sensorSampleDue(lastSampleAt: number, now: number, frequency = deviceInputSettings.sensorFrequency): boolean {
+  if (!Number.isFinite(now)) return false
+  return !Number.isFinite(lastSampleAt) || now < lastSampleAt || now - lastSampleAt + 1e-6 >= sensorSampleIntervalMs(frequency)
+}
+
+let sensorAttached = false, sensorLifecycleAttached = false
+let lastOrientationSampleAt = -Infinity, lastMotionSampleAt = -Infinity
+const monotonicNow = (): number => typeof performance === 'undefined' ? Date.now() : performance.now()
+const onOrientation = (event: DeviceOrientationEvent): void => {
+  if (!deviceInputSettings.motionSensorsEnabled || deviceSensorState.permission !== 'granted') return
+  const now = monotonicNow(); if (!sensorSampleDue(lastOrientationSampleAt, now)) return; lastOrientationSampleAt = now
+  deviceSensorState.orientation = [bounded(event.beta, 0, -180, 180), bounded(event.gamma, 0, -90, 90), bounded(event.alpha, 0, 0, 360)]; deviceSensorState.updatedAt = Date.now()
+}
+const onMotion = (event: DeviceMotionEvent): void => {
+  if (!deviceInputSettings.motionSensorsEnabled || deviceSensorState.permission !== 'granted') return
+  const now = monotonicNow(); if (!sensorSampleDue(lastMotionSampleAt, now)) return; lastMotionSampleAt = now
+  const acceleration = event.accelerationIncludingGravity, rotation = event.rotationRate
+  deviceSensorState.acceleration = [bounded(acceleration?.x, 0, -100, 100), bounded(acceleration?.y, 0, -100, 100), bounded(acceleration?.z, 0, -100, 100)]; deviceSensorState.rotationRate = [bounded(rotation?.alpha, 0, -2_000, 2_000), bounded(rotation?.beta, 0, -2_000, 2_000), bounded(rotation?.gamma, 0, -2_000, 2_000)]; deviceSensorState.updatedAt = Date.now()
+}
+const pauseDeviceSensors = (): void => {
+  if (!sensorAttached || typeof window === 'undefined') return
+  sensorAttached = false
+  window.removeEventListener('deviceorientation', onOrientation)
+  window.removeEventListener('devicemotion', onMotion)
+  lastOrientationSampleAt = -Infinity
+  lastMotionSampleAt = -Infinity
+}
+const onSensorVisibility = (): void => {
+  if (typeof document !== 'undefined' && document.hidden) pauseDeviceSensors()
+  else if (deviceSensorState.permission === 'granted' && deviceInputSettings.motionSensorsEnabled) attachDeviceSensors()
+}
+const onSensorPageHide = (): void => pauseDeviceSensors()
+const onSensorPageShow = (): void => { if (deviceSensorState.permission === 'granted' && deviceInputSettings.motionSensorsEnabled) attachDeviceSensors() }
 
 export async function requestDeviceSensorPermission(): Promise<boolean> {
   if (!deviceInputSettings.motionSensorsEnabled || typeof window === 'undefined' || !('DeviceMotionEvent' in window || 'DeviceOrientationEvent' in window)) { deviceSensorState.permission = 'unsupported'; return false }
@@ -164,8 +201,27 @@ export async function requestDeviceSensorPermission(): Promise<boolean> {
     attachDeviceSensors(); deviceSensorState.permission = 'granted'; return true
   } catch (error) { deviceSensorState.permission = 'denied'; deviceRuntimeState.lastError = error instanceof Error ? error.message : String(error); return false }
 }
-export function attachDeviceSensors(): void { if (sensorAttached || typeof window === 'undefined' || deviceSensorState.permission !== 'granted') return; sensorAttached = true; window.addEventListener('deviceorientation', onOrientation); window.addEventListener('devicemotion', onMotion) }
-export function detachDeviceSensors(): void { if (!sensorAttached || typeof window === 'undefined') return; sensorAttached = false; window.removeEventListener('deviceorientation', onOrientation); window.removeEventListener('devicemotion', onMotion) }
+export function attachDeviceSensors(): void {
+  if (typeof window === 'undefined' || deviceSensorState.permission !== 'granted' || !deviceInputSettings.motionSensorsEnabled) return
+  if (!sensorLifecycleAttached) {
+    sensorLifecycleAttached = true
+    window.addEventListener('pagehide', onSensorPageHide)
+    window.addEventListener('pageshow', onSensorPageShow)
+    document.addEventListener('visibilitychange', onSensorVisibility)
+  }
+  if (sensorAttached || document.hidden) return
+  sensorAttached = true
+  window.addEventListener('deviceorientation', onOrientation)
+  window.addEventListener('devicemotion', onMotion)
+}
+export function detachDeviceSensors(): void {
+  pauseDeviceSensors()
+  if (!sensorLifecycleAttached || typeof window === 'undefined') return
+  sensorLifecycleAttached = false
+  window.removeEventListener('pagehide', onSensorPageHide)
+  window.removeEventListener('pageshow', onSensorPageShow)
+  document.removeEventListener('visibilitychange', onSensorVisibility)
+}
 
 export function sensorValue(code: string): number {
   const values: Record<string, number> = { 'tilt-x': deviceSensorState.orientation[1] / 90, 'tilt-y': deviceSensorState.orientation[0] / 180, heading: deviceSensorState.orientation[2] / 360, 'acceleration-x': deviceSensorState.acceleration[0] / 10, 'acceleration-y': deviceSensorState.acceleration[1] / 10, 'acceleration-z': deviceSensorState.acceleration[2] / 10, 'rotation-x': deviceSensorState.rotationRate[1] / 360, 'rotation-y': deviceSensorState.rotationRate[2] / 360, 'rotation-z': deviceSensorState.rotationRate[0] / 360 }

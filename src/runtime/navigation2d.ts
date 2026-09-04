@@ -23,6 +23,7 @@ interface NavigationGrid {
   blocked: Uint8Array
   costs: Float64Array
   traversalCost: number
+  minimumCost: number
   builtAt: number
 }
 
@@ -60,7 +61,7 @@ function pointInPolygon(point: Vec2, polygon: Vec2[]): boolean {
   let inside = false
   for (let index = 0, previous = polygon.length - 1; index < polygon.length; previous = index++) {
     const a = polygon[index], b = polygon[previous]
-    if ((a.y > point.y) !== (b.y > point.y) && point.x < (b.x - a.x) * (point.y - a.y) / Math.max(EPSILON, b.y - a.y) + a.x) inside = !inside
+    if ((a.y > point.y) !== (b.y > point.y) && point.x < (b.x - a.x) * (point.y - a.y) / (b.y - a.y) + a.x) inside = !inside
   }
   return inside
 }
@@ -123,12 +124,19 @@ function tileNavigationSample(region: NavigationRegion2D, point: Vec2, entities:
   return { blocked: !found, cost: found ? Math.max(.001, cost) : 0 }
 }
 
-export function bakeNavigationGrid(regionEntity: Entity, entities: Entity[], now = performance.now()): NavigationGrid | null {
-  const started = performance.now()
-  const region = regionEntity.getComponent<NavigationRegion2D>('NavigationRegion2D')
+interface NavigationBakeContext {
+  regionEntity: Entity; region: NavigationRegion2D; entities: Entity[]; obstacles: Entity[]; polygon: Vec2[]
+  min: Vec2; width: number; height: number; cellSize: number; blocked: Uint8Array; costs: Float64Array; now: number; started: number
+}
+
+function prepareNavigationBake(regionEntity: Entity, entities: Entity[], now: number): NavigationBakeContext | null {
+  const started = performance.now(), region = regionEntity.getComponent<NavigationRegion2D>('NavigationRegion2D')
   if (!region?.enabled || region.polygon.length < 3) return null
   if (region.source === 'TileMap' && region.sourceEntityUuid) { const tileMap = entities.find(entity => entity.uuid === region.sourceEntityUuid)?.getComponent<import('../world/components').TileMap2D>('TileMap2D'); if (tileMap) normalizeTileMap(tileMap) }
-  const obstacles = entities.filter(entity => entity.enabled && entity.getComponent<NavigationObstacle2D>('NavigationObstacle2D')?.navigationLayer === region.navigationLayer)
+  const obstacles = entities.filter(entity => {
+    const obstacle = entity.getComponent<NavigationObstacle2D>('NavigationObstacle2D')
+    return entity.enabled && obstacle?.enabled && obstacle.navigationLayer === region.navigationLayer
+  }).sort((first, second) => first.uuid.localeCompare(second.uuid))
   const polygon = region.polygon.map(point => localPointToWorld(regionEntity, point, entities))
   const min = { x: Math.min(...polygon.map(point => point.x)), y: Math.min(...polygon.map(point => point.y)) }
   const max = { x: Math.max(...polygon.map(point => point.x)), y: Math.max(...polygon.map(point => point.y)) }
@@ -138,20 +146,51 @@ export function bakeNavigationGrid(regionEntity: Entity, entities: Entity[], now
     cellSize *= Math.sqrt(width * height / MAX_GRID_CELLS)
     width = Math.max(1, Math.ceil((max.x - min.x) / cellSize)); height = Math.max(1, Math.ceil((max.y - min.y) / cellSize))
   }
-  const blocked = new Uint8Array(width * height), costs = new Float64Array(width * height)
-  for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) {
+  return { regionEntity, region, entities, obstacles, polygon, min, width, height, cellSize, blocked: new Uint8Array(width * height), costs: new Float64Array(width * height), now, started }
+}
+
+function sampleNavigationRow(context: NavigationBakeContext, y: number): void {
+  const { regionEntity, region, entities, obstacles, polygon, min, width, cellSize, blocked, costs } = context
+  for (let x = 0; x < width; x++) {
     const point = { x: min.x + (x + .5) * cellSize, y: min.y + (y + .5) * cellSize }
     const tile = tileNavigationSample(region, point, entities), index = y * width + x
     blocked[index] = pointInPolygon(point, polygon) && !obstacles.some(entity => obstacleContains(entity, entity.getComponent<NavigationObstacle2D>('NavigationObstacle2D')!, point, entities, Math.max(0, region.agentRadius))) && !tile?.blocked ? 0 : 1
     costs[index] = (tile?.cost ?? 1) * navigationCostMultiplier(regionEntity, region, point, entities)
   }
-  const grid = { regionUuid: regionEntity.uuid, revision: gridSignature(regionEntity, region, obstacles, entities), width, height, cellSize, min, blocked, costs, traversalCost: Math.max(.001, finiteNumber(region.traversalCost, 1)), builtAt: now }
-  grids.set(regionEntity.uuid, grid)
-  region.bakedRevision++
-  navigationProfile.bakeCount++
-  navigationProfile.bakedCells = width * height
-  navigationProfile.lastBakeMilliseconds = performance.now() - started
+}
+
+function finishNavigationBake(context: NavigationBakeContext): NavigationGrid {
+  const { regionEntity, region, entities, obstacles, min, width, height, cellSize, blocked, costs, now, started } = context
+  let minimumCost = Number.POSITIVE_INFINITY
+  for (let index = 0; index < costs.length; index++) if (!blocked[index] && costs[index] < minimumCost) minimumCost = costs[index]
+  const grid = { regionUuid: regionEntity.uuid, revision: gridSignature(regionEntity, region, obstacles, entities), width, height, cellSize, min, blocked, costs, traversalCost: Math.max(.001, finiteNumber(region.traversalCost, 1)), minimumCost: Number.isFinite(minimumCost) ? Math.max(.001, minimumCost) : 1, builtAt: now }
+  grids.set(regionEntity.uuid, grid); region.bakedRevision++; navigationProfile.bakeCount++; navigationProfile.bakedCells = width * height; navigationProfile.lastBakeMilliseconds = performance.now() - started
   return grid
+}
+
+export function bakeNavigationGrid(regionEntity: Entity, entities: Entity[], now = performance.now()): NavigationGrid | null {
+  const context = prepareNavigationBake(regionEntity, entities, now)
+  if (!context) return null
+  for (let y = 0; y < context.height; y++) sampleNavigationRow(context, y)
+  return finishNavigationBake(context)
+}
+
+async function bakeNavigationGridCancellable(regionEntity: Entity, entities: Entity[], signal: AbortSignal, onProgress: (progress: number) => void): Promise<NavigationGrid | null> {
+  const context = prepareNavigationBake(regionEntity, entities, performance.now())
+  if (!context) return null
+  let sliceStarted = performance.now()
+  for (let y = 0; y < context.height; y++) {
+    if (signal.aborted) return null
+    sampleNavigationRow(context, y)
+    if (performance.now() - sliceStarted >= Math.max(.25, performanceRuntimeSettings.frameWorkBudgetMs)) {
+      onProgress((y + 1) / context.height)
+      await new Promise<void>(resolve => setTimeout(resolve, 0))
+      sliceStarted = performance.now()
+    }
+  }
+  if (signal.aborted) return null
+  onProgress(1)
+  return finishNavigationBake(context)
 }
 
 function cell(grid: NavigationGrid, point: Vec2): number {
@@ -214,10 +253,10 @@ function aStar(grid: NavigationGrid, startPoint: Vec2, goalPoint: Vec2, diagonal
     for (const next of neighbors(grid, current, diagonal)) {
       if (allowed && next !== goal && next !== start && !allowed.has(next)) continue
       const nx = next % grid.width, ny = Math.floor(next / grid.width)
-      const tentative = scores[current] + Math.hypot(nx - cx, ny - cy) * grid.traversalCost * grid.costs[next]
+      const tentative = scores[current] + Math.hypot(nx - cx, ny - cy) * grid.cellSize * grid.traversalCost * grid.costs[next]
       if (tentative >= scores[next]) continue
       scores[next] = tentative; cameFrom[next] = current
-      open.push({ index: next, score: tentative + Math.hypot(goalX - nx, goalY - ny) })
+      open.push({ index: next, score: tentative + Math.hypot(goalX - nx, goalY - ny) * grid.cellSize * grid.traversalCost * grid.minimumCost })
     }
   }
   return []
@@ -293,7 +332,8 @@ function flowFieldPath(grid: NavigationGrid, startPoint: Vec2, goalPoint: Vec2, 
   while (open.length) {
     const current = open.pop()!.index
     for (const next of neighbors(grid, current, diagonal)) {
-      const tentative = costs[current] + grid.costs[next]
+      const dx = next % grid.width - current % grid.width, dy = Math.floor(next / grid.width) - Math.floor(current / grid.width)
+      const tentative = costs[current] + Math.hypot(dx, dy) * grid.cellSize * grid.traversalCost * grid.costs[current]
       if (tentative >= costs[next]) continue
       costs[next] = tentative; open.push({ index: next, score: tentative })
     }
@@ -379,21 +419,24 @@ function polygonPath(regionEntity: Entity, region: NavigationRegion2D, start: Ve
       if (next === current) continue
       const linkCost = linkEdges.get(`${current}:${next}`)
       if (linkCost === undefined && !walkableSegment(nodes[current], nodes[next])) continue
-      const distance = linkCost ?? Math.hypot(nodes[next].x - nodes[current].x, nodes[next].y - nodes[current].y) * Math.max(.001, region.traversalCost)
+      const midpoint = { x: (nodes[next].x + nodes[current].x) * .5, y: (nodes[next].y + nodes[current].y) * .5 }
+      const distance = linkCost ?? Math.hypot(nodes[next].x - nodes[current].x, nodes[next].y - nodes[current].y) * Math.max(.001, region.traversalCost) * navigationCostMultiplier(regionEntity, region, midpoint, entities)
       const tentative = scores[current] + distance
       if (tentative >= scores[next]) continue
       scores[next] = tentative; cameFrom[next] = current
-      open.push({ index: next, score: tentative + Math.hypot(goal.x - nodes[next].x, goal.y - nodes[next].y) })
+      open.push({ index: next, score: tentative + Math.hypot(goal.x - nodes[next].x, goal.y - nodes[next].y) * Math.max(.001, region.traversalCost) * .001 })
     }
   }
   return []
 }
 
-export function findNavigationPath(regionEntity: Entity, start: Vec2, goal: Vec2, entities: Entity[], agentRadius?: number): Vec2[] {
+export function findNavigationPath(regionEntity: Entity, start: Vec2, goal: Vec2, entities: Entity[], agentRadius?: number, nowMilliseconds = performance.now()): Vec2[] {
   const region = regionEntity.getComponent<NavigationRegion2D>('NavigationRegion2D')
   if (!region) return []
   const started = performance.now()
   navigationProfile.pathQueries++
+  const regionPolygon = region.polygon.map(point => localPointToWorld(regionEntity, point, entities))
+  if (!pointInOrOnPolygon(start, regionPolygon) || !pointInOrOnPolygon(goal, regionPolygon)) { navigationProfile.failedQueries++; return [] }
   if (region.navigationMode === 'Polygon') {
     const path = polygonPath(regionEntity, region, start, goal, entities, Math.max(0, finiteNumber(agentRadius, region.agentRadius)))
     navigationProfile.lastQueryMilliseconds = performance.now() - started
@@ -401,11 +444,13 @@ export function findNavigationPath(regionEntity: Entity, start: Vec2, goal: Vec2
     if (!path.length) navigationProfile.failedQueries++
     return path
   }
-  const obstacles = entities.filter(entity => entity.enabled && entity.getComponent<NavigationObstacle2D>('NavigationObstacle2D')?.navigationLayer === region.navigationLayer)
+  const obstacles = entities.filter(entity => {
+    const obstacle = entity.getComponent<NavigationObstacle2D>('NavigationObstacle2D')
+    return entity.enabled && obstacle?.enabled && obstacle.navigationLayer === region.navigationLayer
+  }).sort((first, second) => first.uuid.localeCompare(second.uuid))
   const signature = gridSignature(regionEntity, region, obstacles, entities)
   const cached = grids.get(regionEntity.uuid)
-  const now = performance.now()
-  const grid = !cached || cached.revision !== signature && (!region.dynamic || now - cached.builtAt >= region.rebakeInterval * 1_000) ? bakeNavigationGrid(regionEntity, entities, now) : cached
+  const grid = !cached || cached.revision !== signature && (!region.dynamic || nowMilliseconds - cached.builtAt >= region.rebakeInterval * 1_000) ? bakeNavigationGrid(regionEntity, entities, nowMilliseconds) : cached
   if (!grid) { navigationProfile.failedQueries++; return [] }
   const path = gridPathWithLinks(grid, regionEntity, region, start, goal, entities)
   navigationProfile.lastQueryMilliseconds = performance.now() - started
@@ -414,39 +459,69 @@ export function findNavigationPath(regionEntity: Entity, start: Vec2, goal: Vec2
   return path
 }
 
+function avoidanceExtent(entity: Entity): number {
+  const otherAgent = entity.getComponent<NavigationAgent2D>('NavigationAgent2D'), obstacle = entity.getComponent<NavigationObstacle2D>('NavigationObstacle2D')
+  if (otherAgent?.enabled) return Math.max(otherAgent.radius, otherAgent.avoidanceRadius)
+  if (!obstacle?.enabled) return 0
+  return obstacle.shape === 'Circle' ? obstacle.radius : Math.hypot(obstacle.size.x, obstacle.size.y) * .5
+}
+
+export function avoidanceSpatialCellSize(maximumExtent: number): number { return Math.max(.25, Math.min(1_000_000, finiteNumber(maximumExtent, 1)) / 32) }
+
 function avoid(entity: Entity, desired: Vec2, agent: NavigationAgent2D, candidates: Entity[], entities: Entity[]): Vec2 {
   if (!agent.avoidance) return desired
   const position = worldTransform(entity, entities).position
   let x = desired.x, y = desired.y
   let visited = 0
+  const priority = Math.min(1, Math.max(0, finiteNumber(agent.avoidancePriority, .5)))
   const maximumNeighbors = Math.max(1, Math.min(MAX_NAVIGATION_AVOIDANCE_NEIGHBORS, Math.round(finiteNumber(agent.maximumAvoidanceNeighbors, 16))))
-  for (const other of candidates) {
-    if (other === entity || !other.enabled) continue
-    const otherAgent = other.getComponent<NavigationAgent2D>('NavigationAgent2D')
-    const obstacle = other.getComponent<NavigationObstacle2D>('NavigationObstacle2D')
-    if (!otherAgent && !obstacle) continue
-    if (otherAgent && otherAgent.navigationLayer !== agent.navigationLayer) continue
-    if (obstacle && obstacle.navigationLayer !== agent.navigationLayer) continue
-    if (visited++ >= maximumNeighbors) break
+  const neighbors = candidates.flatMap(other => {
+    if (other === entity || !other.enabled) return []
+    const otherAgent = other.getComponent<NavigationAgent2D>('NavigationAgent2D'), obstacle = other.getComponent<NavigationObstacle2D>('NavigationObstacle2D')
+    if (!otherAgent && !obstacle || otherAgent && (!otherAgent.enabled || otherAgent.navigationLayer !== agent.navigationLayer) || obstacle && (!obstacle.enabled || obstacle.navigationLayer !== agent.navigationLayer)) return []
+    const point = worldTransform(other, entities).position
+    return [{ other, otherAgent, obstacle, point, distanceSquared: (point.x - position.x) ** 2 + (point.y - position.y) ** 2 }]
+  }).sort((first, second) => first.distanceSquared - second.distanceSquared || first.other.uuid.localeCompare(second.other.uuid)).slice(0, maximumNeighbors)
+  for (const { other, otherAgent, obstacle, point } of neighbors) {
+    visited++
     navigationProfile.avoidancePairs++
-    const point = worldTransform(other, entities).position, dx = position.x - point.x, dy = position.y - point.y
-    const radius = agent.avoidanceRadius + (otherAgent?.radius ?? obstacle?.radius ?? .5), distance = Math.hypot(dx, dy)
-    if (distance > EPSILON && distance < radius) { const strength = (radius - distance) / radius * agent.speed; x += dx / distance * strength; y += dy / distance * strength }
+    const otherVelocity = otherAgent?.velocity ?? obstacle?.avoidanceVelocity ?? { x: 0, y: 0 }, otherRadius = otherAgent?.radius ?? avoidanceExtent(other)
+    const relativeSpeed = Math.max(.001, Math.hypot(desired.x - otherVelocity.x, desired.y - otherVelocity.y))
+    const horizon = Math.min(1.5, Math.max(.05, (agent.avoidanceRadius + otherRadius) / relativeSpeed))
+    const predicted = { x: point.x + otherVelocity.x * horizon, y: point.y + otherVelocity.y * horizon }
+    const dx = position.x - predicted.x, dy = position.y - predicted.y
+    const radius = agent.avoidanceRadius + otherRadius, distance = Math.hypot(dx, dy)
+    if (distance < radius) {
+      const otherPriority = Math.min(1, Math.max(0, finiteNumber(otherAgent?.avoidancePriority, 1)))
+      const responsibility = obstacle ? 1 : Math.min(1, Math.max(.1, .5 + (otherPriority - priority) * .5))
+      const strength = (radius - distance) / radius * Math.max(0, finiteNumber(agent.speed)) * responsibility
+      if (distance > EPSILON) { x += dx / distance * strength; y += dy / distance * strength }
+      else {
+        const direction = other.uuid.localeCompare(entity.uuid) < 0 ? -1 : 1
+        x += direction * strength
+      }
+    }
   }
   navigationProfile.maximumNeighbors = Math.max(navigationProfile.maximumNeighbors, visited)
   const length = Math.hypot(x, y); return length > agent.speed ? { x: x / length * agent.speed, y: y / length * agent.speed } : { x, y }
 }
 
 export function updateNavigation(entities: Entity[], fixedDelta: number, nowSeconds: number): void {
-  const regions = entities.filter(entity => entity.enabled && entity.getComponent<NavigationRegion2D>('NavigationRegion2D')?.enabled)
+  const regions = entities.filter(entity => entity.enabled && entity.getComponent<NavigationRegion2D>('NavigationRegion2D')?.enabled).sort((first, second) => first.uuid.localeCompare(second.uuid))
   const allAgents = entities.filter(entity => entity.enabled && entity.getComponent<NavigationAgent2D>('NavigationAgent2D')?.enabled).sort((first, second) => first.uuid.localeCompare(second.uuid))
   const activeAgents = allAgents.slice(0, MAX_NAVIGATION_AGENTS)
-  const avoidanceEntities = entities.filter(entity => entity.enabled && (entity.hasComponent('NavigationAgent2D') || entity.hasComponent('NavigationObstacle2D')))
-  const spatialCellSize = Math.max(.25, Math.min(64, activeAgents.reduce((maximum, entity) => Math.max(maximum, entity.getComponent<NavigationAgent2D>('NavigationAgent2D')?.avoidanceRadius ?? 1), 1) * 2))
+  const avoidanceEntities = entities.filter(entity => entity.enabled && (entity.getComponent<NavigationAgent2D>('NavigationAgent2D')?.enabled || entity.getComponent<NavigationObstacle2D>('NavigationObstacle2D')?.enabled))
+  // Keep both the largest query and largest inserted bounds below the spatial
+  // hash's bounded key budget. This preserves exact large-radius avoidance
+  // instead of clipping valid neighbors after 16,384 enumerated cells.
+  const maximumAvoidanceExtent = Math.max(1,
+    activeAgents.reduce((maximum, entity) => Math.max(maximum, entity.getComponent<NavigationAgent2D>('NavigationAgent2D')?.avoidanceRadius ?? 0), 0),
+    avoidanceEntities.reduce((maximum, entity) => Math.max(maximum, avoidanceExtent(entity)), 0))
+  const spatialCellSize = avoidanceSpatialCellSize(maximumAvoidanceExtent)
   const spatial = new SpatialHash2D(spatialCellSize), avoidanceByUuid = new Map<string, Entity>()
   for (const entity of avoidanceEntities) {
-    const position = worldTransform(entity, entities).position
-    spatial.upsert({ id: entity.uuid, bounds: { minX: position.x, minY: position.y, maxX: position.x, maxY: position.y } }); avoidanceByUuid.set(entity.uuid, entity)
+    const position = worldTransform(entity, entities).position, extent = avoidanceExtent(entity)
+    spatial.upsert({ id: entity.uuid, bounds: { minX: position.x - extent, minY: position.y - extent, maxX: position.x + extent, maxY: position.y + extent } }); avoidanceByUuid.set(entity.uuid, entity)
   }
   performanceRuntimeState.spatialEntries = spatial.size
   navigationProfile.activeAgents = activeAgents.length
@@ -467,15 +542,16 @@ export function updateNavigation(entities: Entity[], fixedDelta: number, nowSeco
     if (!agent) continue
     const position = worldTransform(entity, entities).position
     const target = agent.targetEntityUuid ? worldTransform(entities.find(candidate => candidate.uuid === agent.targetEntityUuid) ?? entity, entities).position : agent.targetPosition
-    const regionEntity = regions.find(candidate => {
+    const compatibleRegions = regions.filter(candidate => {
       const region = candidate.getComponent<NavigationRegion2D>('NavigationRegion2D')!
       const bit = 1 << ((region.navigationLayer - 1) & 31)
       return region.navigationLayer === agent.navigationLayer && (agent.navigationMask & bit) !== 0 && (region.navigationMask & bit) !== 0
     })
+    const regionEntity = compatibleRegions.find(candidate => pointInOrOnPolygon(position, candidate.getComponent<NavigationRegion2D>('NavigationRegion2D')!.polygon.map(point => localPointToWorld(candidate, point, entities)))) ?? compatibleRegions[0]
     if (!regionEntity) { agent.pathStatus = 'Unreachable'; agent.path = []; navigationDebugPaths.set(entity.uuid, { entityUuid: entity.uuid, points: [], status: 'Unreachable' }); continue }
     const needsRepath = (nextRepath.get(entity.uuid) ?? 0) <= nowSeconds || !agent.path.length
     if (needsRepath && repathEligible.has(entity.uuid)) {
-      const raw = findNavigationPath(regionEntity, position, target, entities, agent.radius)
+      const raw = findNavigationPath(regionEntity, position, target, entities, agent.radius, nowSeconds * 1_000)
       const grid = grids.get(regionEntity.uuid)
       agent.path = agent.pathSmoothing && grid ? smoothPath(grid, raw) : raw
       agent.pathIndex = Math.min(1, Math.max(0, agent.path.length - 1))
@@ -486,11 +562,15 @@ export function updateNavigation(entities: Entity[], fixedDelta: number, nowSeco
       navigationProfile.deferredRepaths++
       if (!agent.path.length) agent.pathStatus = 'Pending'
     }
-    const waypoint = agent.path[agent.pathIndex]
+    let waypoint = agent.path[agent.pathIndex]
+    while (waypoint) {
+      const waypointDistance = Math.hypot(waypoint.x - position.x, waypoint.y - position.y)
+      if (waypointDistance > Math.max(agent.stoppingDistance, agent.radius * .25)) break
+      agent.pathIndex++; waypoint = agent.path[agent.pathIndex]
+    }
     if (!waypoint) { agent.velocity = { x: 0, y: 0 }; continue }
     const dx = waypoint.x - position.x, dy = waypoint.y - position.y, distance = Math.hypot(dx, dy)
-    if (distance <= Math.max(agent.stoppingDistance, agent.radius * .25)) { agent.pathIndex++; continue }
-    const nearby = spatial.query({ minX: position.x - spatialCellSize, minY: position.y - spatialCellSize, maxX: position.x + spatialCellSize, maxY: position.y + spatialCellSize }).flatMap(uuid => { const candidate = avoidanceByUuid.get(uuid); return candidate ? [candidate] : [] })
+    const nearby = spatial.query({ minX: position.x - agent.avoidanceRadius, minY: position.y - agent.avoidanceRadius, maxX: position.x + agent.avoidanceRadius, maxY: position.y + agent.avoidanceRadius }).flatMap(uuid => { const candidate = avoidanceByUuid.get(uuid); return candidate ? [candidate] : [] })
     const desired = avoid(entity, { x: dx / distance * agent.speed, y: dy / distance * agent.speed }, agent, nearby, entities)
     const maximumDelta = Math.max(0, agent.acceleration) * fixedDelta
     const changeX = desired.x - agent.velocity.x, changeY = desired.y - agent.velocity.y, changeLength = Math.hypot(changeX, changeY)
@@ -502,7 +582,8 @@ export function updateNavigation(entities: Entity[], fixedDelta: number, nowSeco
 
 export function clearNavigationData(regionUuid?: string): void {
   if (regionUuid) grids.delete(regionUuid); else grids.clear()
-  for (const [entityUuid, path] of navigationDebugPaths) if (!regionUuid || path.entityUuid === regionUuid) navigationDebugPaths.delete(entityUuid)
+  navigationDebugPaths.clear()
+  nextRepath.clear()
 }
 
 export function rebakeNavigation(entities: Entity[]): { baked: number; cells: number; milliseconds: number } {
@@ -542,7 +623,7 @@ export async function requestNavigationBake(entities: Entity[]): Promise<{ baked
         sliceStarted = performance.now()
       }
       if (controller.signal.aborted) break
-      const grid = bakeNavigationGrid(regions[index], entities)
+      const grid = await bakeNavigationGridCancellable(regions[index], entities, controller.signal, progress => { navigationBakeState.progress = (index + progress) / Math.max(1, regions.length) })
       if (controller.signal.aborted) break
       if (grid) { navigationBakeState.regions++; navigationBakeState.cells += grid.width * grid.height }
       navigationBakeState.progress = (index + 1) / Math.max(1, regions.length)

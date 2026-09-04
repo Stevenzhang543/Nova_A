@@ -2113,9 +2113,10 @@ checksum = "650eef8c711430f1a879fdd01d4745a7deea475becfb90269c06775983bbf086"
 
 [[package]]
 name = "nova_a"
-version = "26.4.0"
+version = "26.10.0"
 dependencies = [
  "base64 0.22.1",
+ "flate2",
  "serde",
  "serde_json",
  "sha2",

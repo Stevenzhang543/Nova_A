@@ -3,8 +3,12 @@ import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { build as viteBuild } from 'vite'
+import { REGISTERED_EXPORT_TEMPLATES } from './export-template-registry.mjs'
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)))
+const machineVersion = String(JSON.parse(await readFile(join(root, 'package.json'), 'utf8')).version ?? '')
+const versionParts = machineVersion.split('.')
+const release = versionParts.length === 3 ? `${versionParts[0]}.${versionParts[1].padStart(2, '0')}${versionParts[2] === '0' ? '' : `.${versionParts[2]}`}` : machineVersion
 const compiled = await mkdtemp(join(tmpdir(), 'nova-template-catalog-'))
 const checks = []
 const check = (id, passed, detail, metrics = {}) => checks.push({ id, status: passed ? 'passed' : 'failed', detail, metrics })
@@ -15,20 +19,23 @@ try {
     build: {
       ssr: true, outDir: compiled, emptyOutDir: false,
       rollupOptions: {
-        input: { templates: join(root, 'src/projects/templates.ts'), projectData: join(root, 'src/projects/projectData.ts'), language: join(root, 'src/editor/scriptLanguage.ts'), buildSettings: join(root, 'src/runtime/buildSettings.ts'), accessibility: join(root, 'src/runtime/uiAccessibility.ts'), components: join(root, 'src/world/components.ts'), boxEntity: join(root, 'src/world/BoxEntity.ts') },
+        input: { templates: join(root, 'src/projects/templates.ts'), projectData: join(root, 'src/projects/projectData.ts'), language: join(root, 'src/editor/scriptLanguage.ts'), buildSettings: join(root, 'src/runtime/buildSettings.ts'), exportTemplates: join(root, 'src/runtime/exportTemplates.ts'), novaPak: join(root, 'src/runtime/novaPak.ts'), accessibility: join(root, 'src/runtime/uiAccessibility.ts'), components: join(root, 'src/world/components.ts'), boxEntity: join(root, 'src/world/BoxEntity.ts') },
         output: { entryFileNames: '[name].mjs', chunkFileNames: 'chunks/[name]-[hash].mjs' }
       }
     }
   })
   const load = name => import(`${pathToFileURL(join(compiled, `${name}.mjs`)).href}?v=${Date.now()}`)
-  const [templates, projectData, language, builds, accessibility, components, boxEntities] = await Promise.all(['templates', 'projectData', 'language', 'buildSettings', 'accessibility', 'components', 'boxEntity'].map(load))
+  const [templates, projectData, language, builds, browserTemplates, novaPak, accessibility, components, boxEntities] = await Promise.all(['templates', 'projectData', 'language', 'buildSettings', 'exportTemplates', 'novaPak', 'accessibility', 'components', 'boxEntity'].map(load))
   const ids = templates.PROJECT_TEMPLATES.map(template => template.id)
   const categoryCounts = Object.fromEntries(templates.PROJECT_TEMPLATE_CATEGORIES.map(category => [category, templates.PROJECT_TEMPLATES.filter(template => template.category === category).length]))
   check('CATALOG-CATEGORIES', templates.PROJECT_TEMPLATE_CATEGORIES.join(',') === 'scene,test,game' && categoryCounts.scene === 7 && categoryCounts.test === 7 && categoryCounts.game === 6, 'The launcher exposes 20 templates across clear Scene, Test and Gameplay categories.', { categoryCounts })
   check('CATALOG-IDENTITY', new Set(ids).size === ids.length && ids.length === 20, 'Every launcher template has one stable, unique ID.', { ids })
   check('CATALOG-DISCOVERY-METADATA', templates.PROJECT_TEMPLATES.every(template => ['beginner','intermediate','advanced'].includes(template.difficulty) && Number.isFinite(template.setupMinutes) && template.setupMinutes > 0 && Array.isArray(template.tags) && template.tags.length >= 2), 'Every template has searchable tags, a difficulty, and an honest setup-time estimate.')
+  const browserRegistry = browserTemplates.exportTemplateState.templates.map(template => ({ id: template.id, target: template.target, architectures: [...template.architectures].sort(), runtimeModes: [...template.runtimeModes].sort() })).sort((a, b) => a.id.localeCompare(b.id))
+  const cliRegistry = REGISTERED_EXPORT_TEMPLATES.map(template => ({ id: template.id, target: template.target, architectures: [...template.architectures].sort(), runtimeModes: [...template.runtimeModes].sort() })).sort((a, b) => a.id.localeCompare(b.id))
+  check('CATALOG-EXPORT-TEMPLATE-REGISTRY', JSON.stringify(browserRegistry) === JSON.stringify(cliRegistry), 'Interactive and headless builders register the same stable export-template IDs and target tuples.', { browserRegistry, cliRegistry })
 
-  const projects = new Map(), templateFailures = [], schemaFailures = [], scriptFailures = [], buildFailures = [], accessibilityFailures = []
+  const projects = new Map(), templateFailures = [], schemaFailures = [], scriptFailures = [], buildFailures = [], packageFailures = [], accessibilityFailures = []
   for (const descriptor of templates.PROJECT_TEMPLATES) {
     try {
       const project = templates.createTemplateProject(descriptor.id, `Verify ${descriptor.name}`)
@@ -58,6 +65,20 @@ try {
         const errors = language.analyzeScript(asset.source, asset.script?.apiVersion ?? 2).diagnostics.filter(diagnostic => diagnostic.severity === 'error')
         if (errors.length) scriptFailures.push({ template: descriptor.id, script: asset.name, errors })
       }
+      try {
+        const startupSceneUuid = settings.startupSceneUuid || project.activeSceneUuid || project.scenes[0]?.uuid || ''
+        const projectJson = JSON.stringify(project)
+        const firstPackage = await novaPak.createNovaPak(projectJson, project.assets, startupSceneUuid, { deterministic: true, compression: 'balanced' })
+        const secondPackage = await novaPak.createNovaPak(projectJson, project.assets, startupSceneUuid, { deterministic: true, compression: 'balanced' })
+        const parsed = await novaPak.parseNovaPak(firstPackage)
+        const deterministic = firstPackage.byteLength === secondPackage.byteLength
+          && firstPackage.every((value, index) => secondPackage[index] === value)
+        if (!deterministic || parsed.index.startupSceneUuid !== startupSceneUuid || !parsed.files.has('project.nova')) {
+          throw new Error(`NovaPak round-trip mismatch (deterministic=${deterministic}, startup=${parsed.index.startupSceneUuid}, projectEntry=${parsed.files.has('project.nova')})`)
+        }
+      } catch (error) {
+        packageFailures.push({ template: descriptor.id, error: error instanceof Error ? error.message : String(error) })
+      }
     } catch (error) {
       templateFailures.push({ template: descriptor.id, failures: [error instanceof Error ? error.message : String(error)] })
     }
@@ -66,6 +87,7 @@ try {
   check('CATALOG-SCHEMA', schemaFailures.length === 0, 'Every generated template passes the same full project validator used by Create Project.', { schemaFailures })
   check('CATALOG-SCRIPTS-STATIC', scriptFailures.length === 0, 'Every authored template script passes the API-v2 static analyzer.', { scriptFailures })
   check('CATALOG-BUILD-DEFAULTS', buildFailures.length === 0, 'Every untouched template resolves to a registered Windows x64 export template with no blocking errors or warnings.', { buildFailures })
+  check('CATALOG-PACKAGE-OUTPUT', packageFailures.length === 0, 'Every untouched template creates, parses, and deterministically reproduces a valid NovaPak with its selected startup scene.', { packageFailures })
   check('CATALOG-UI-SEMANTICS', accessibilityFailures.length === 0, 'Every template UI distinguishes passive visuals from reachable controls and has unique explicit reading order.', { accessibilityFailures })
 
   const passive = new boxEntities.BoxEntity(1, { x: 0, y: 0 }, { x: 1, y: 1 }); passive.name = 'Legacy HUD'; const passiveRect = passive.addComponent(new components.RectTransform()); passiveRect.focusable = true; passiveRect.skipNavigation = false
@@ -152,7 +174,7 @@ try {
 }
 
 const failed = checks.filter(check => check.status === 'failed')
-const report = { format: 'nova-template-catalog-verification', version: 2, engineVersion: '26.4.0', release: '26.04', generatedAt: new Date().toISOString(), checks, severity0Open: 0, severity1Open: failed.length, status: failed.length ? 'failed' : 'passed' }
+const report = { format: 'nova-template-catalog-verification', version: 3, engineVersion: machineVersion, release, generatedAt: new Date().toISOString(), checks, severity0Open: 0, severity1Open: failed.length, status: failed.length ? 'failed' : 'passed' }
 await mkdir(join(root, 'release-audits'), { recursive: true })
 await writeFile(join(root, 'release-audits/template-catalog-verification.json'), `${JSON.stringify(report, null, 2)}\n`)
 if (failed.length) { console.error(failed); process.exit(1) }

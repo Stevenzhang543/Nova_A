@@ -970,6 +970,69 @@ mod tests {
     }
 
     #[test]
+    fn ordinary_joint_collision_suppression_is_not_transitive() {
+        let bodies = vec![
+            Body::from_data(&box_record(1.0, 0.0, 0.0, 1.0, 1.0), 0),
+            Body::from_data(&box_record(2.0, 0.0, 0.0, 1.0, 1.0), 0),
+            Body::from_data(&box_record(3.0, 0.0, 0.0, 1.0, 1.0), 0),
+        ];
+        let mut records = connection_record(0, 1, 1.0);
+        records[18] = 2.0;
+        let mut second = connection_record(1, 2, 1.0);
+        second[18] = 2.0;
+        records.extend(second);
+        let constraints = read_constraints(&records, bodies.len(), &bodies);
+        let pairs = active_bound_pairs(&constraints, bodies.len());
+        assert!(pairs.contains(&(0, 1)) && pairs.contains(&(1, 2)));
+        assert!(!pairs.contains(&(0, 2)), "an ordinary joint chain is not one compound body");
+
+        records[20] = 1.0;
+        records[CONNECTION_STRIDE + 20] = 1.0;
+        let bindings = read_constraints(&records, bodies.len(), &bodies);
+        assert!(active_bound_pairs(&bindings, bodies.len()).contains(&(0, 2)));
+    }
+
+    #[test]
+    fn ordinary_joint_suppresses_both_endpoint_binding_components() {
+        let bodies = vec![
+            Body::from_data(&box_record(1.0, 0.0, 0.0, 1.0, 1.0), 0),
+            Body::from_data(&box_record(2.0, 0.0, 0.0, 1.0, 1.0), 0),
+            Body::from_data(&box_record(3.0, 0.0, 0.0, 1.0, 1.0), 0),
+            Body::from_data(&box_record(4.0, 0.0, 0.0, 1.0, 1.0), 0),
+        ];
+        let mut records = connection_record(0, 1, 1.0);
+        records[20] = 1.0;
+        let mut joint = connection_record(1, 2, 1.0);
+        joint[18] = 2.0;
+        records.extend(joint);
+        let mut second_binding = connection_record(2, 3, 1.0);
+        second_binding[20] = 1.0;
+        records.extend(second_binding);
+
+        let constraints = read_constraints(&records, bodies.len(), &bodies);
+        let pairs = active_bound_pairs(&constraints, bodies.len());
+        for expected in [(0, 1), (2, 3), (0, 2), (0, 3), (1, 2), (1, 3)] {
+            assert!(pairs.contains(&expected), "missing compound/joint suppression {expected:?}");
+        }
+    }
+
+    #[test]
+    fn fixed_joint_break_torque_observes_constraint_reaction() {
+        let mut bodies = box_record(1.0, 0.0, 0.0, 1.0, 1.0);
+        bodies[9] = 1.0;
+        let mut second = box_record(2.0, 0.0, 0.0, 1.0, 1.0);
+        second[15] = 10.0;
+        bodies.extend(second);
+        let mut joint = connection_record(0, 1, 0.1);
+        joint[18] = 1.0;
+        joint[39] = 0.01;
+        let output = step_physics_with_connections(&bodies, &joint, 1.0 / 120.0, 0.0, 0.0);
+        let offset = bodies.len();
+        assert_eq!(output[offset + 16], 0.0);
+        assert_eq!(output[offset + 17], 1.0);
+    }
+
+    #[test]
     fn distance_joint_holds_its_configured_length() {
         let mut bodies = ellipse_record(1.0, -1.0, 0.0, 0.1, 0.1);
         bodies[4] = -8.0;
@@ -981,6 +1044,22 @@ mod tests {
         let output = step_physics_with_connections(&bodies, &joint, 0.1, 0.0, 0.0);
         let distance = Vec2::new(output[STRIDE + 2] - output[2], output[STRIDE + 3] - output[3]).length();
         assert!((distance - 2.0).abs() < 1.0e-5, "distance={distance}, a=({},{}), b=({},{}), va=({},{}), vb=({},{})", output[2], output[3], output[STRIDE + 2], output[STRIDE + 3], output[4], output[5], output[STRIDE + 4], output[STRIDE + 5]);
+    }
+
+    #[test]
+    fn rope_joint_is_slack_below_its_maximum_length_and_limits_extension() {
+        let mut slack_bodies = ellipse_record(1.0, -0.5, 0.0, 0.1, 0.1);
+        slack_bodies.extend(ellipse_record(2.0, 0.5, 0.0, 0.1, 0.1));
+        let mut rope = connection_record(0, 1, 2.0);
+        rope[18] = 6.0;
+        let slack = step_physics_with_connections(&slack_bodies, &rope, 1.0 / 60.0, 0.0, 0.0);
+        assert!((slack[STRIDE + 2] - slack[2] - 1.0).abs() < 1.0e-10);
+
+        let mut stretched_bodies = ellipse_record(1.0, -1.5, 0.0, 0.1, 0.1);
+        stretched_bodies.extend(ellipse_record(2.0, 1.5, 0.0, 0.1, 0.1));
+        let stretched = step_physics_with_connections(&stretched_bodies, &rope, 1.0 / 60.0, 0.0, 0.0);
+        let distance = stretched[STRIDE + 2] - stretched[2];
+        assert!(distance <= 2.0 + 1.0e-6, "distance={distance}");
     }
 
     #[test]

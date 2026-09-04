@@ -9,6 +9,8 @@ import { preview } from 'vite'
 const root = dirname(dirname(fileURLToPath(import.meta.url)))
 const evidenceRoot = join(root, 'release-audits')
 const releaseVersion = process.env.NOVA_INTERACTION_VERSION || '6.0.2'
+const engineVersion = process.env.NOVA_INTERACTION_ENGINE_VERSION || releaseVersion
+const outputName = process.env.NOVA_INTERACTION_OUTPUT || `v${releaseVersion}-user-interactions.json`
 const releaseSlug = releaseVersion.replaceAll('.', '')
 const controls = new Map(), clicked = new Set(), settings = [], drags = [], navigation = [], errors = [], launcherLayout = []
 const wait = milliseconds => new Promise(resolve => setTimeout(resolve, milliseconds))
@@ -87,7 +89,7 @@ try {
   })
   const unclassified = catalog.filter(item => !item.disposition)
   const report = {
-    format: `nova-v${releaseVersion}-user-interaction-audit`, version: 1, engineVersion: releaseVersion, generatedAt: new Date().toISOString(),
+    format: `nova-v${releaseVersion}-user-interaction-audit`, version: 1, release: releaseVersion, engineVersion, generatedAt: new Date().toISOString(),
     scope: { locales: ['en', 'de', 'zh'], project: 'Mouse Knockout', policy: 'Safe reversible actions execute; destructive, filesystem, build, external-navigation and permission actions receive an explicit disposition.' },
     summary: { registeredControls: catalog.length, clickedControls: catalog.filter(item => item.disposition === 'clicked').length, settingsMutatedAndRestored: settings.filter(item => item.status === 'passed').length, dragSurfacesPassed: drags.filter(item => item.status === 'passed').length, explicitlyBlockedOrReviewed: catalog.filter(item => !['clicked', 'mutated-and-restored'].includes(item.disposition)).length },
     navigation, settings, drags, launcherLayout, controls: catalog, consoleErrors: seriousErrors,
@@ -96,7 +98,7 @@ try {
     severity1Open: settings.some(item => item.status === 'failed') || drags.some(item => item.status === 'failed') || launcherLayout.some(item => item.status === 'failed') ? 1 : 0
   }
   report.status = report.severity0Open || report.severity1Open || report.fatalSurface ? 'failed' : 'passed'
-  await writeFile(join(evidenceRoot, `v${releaseVersion}-user-interactions.json`), `${JSON.stringify(report, null, 2)}\n`)
+  await writeFile(join(evidenceRoot, outputName), `${JSON.stringify(report, null, 2)}\n`)
   if (report.status !== 'passed') throw new Error(`Interaction audit failed: console=${seriousErrors.length}, settings=${settings.filter(item => item.status === 'failed').length}, drags=${drags.filter(item => item.status === 'failed').length}`)
   console.log(`Nova_A v${releaseVersion} interaction audit passed: ${catalog.length} registered controls, ${navigation.length} navigation actions, ${settings.length} settings, ${drags.length} drag surfaces.`)
 } finally {

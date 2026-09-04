@@ -43,6 +43,7 @@ import { completeTask, failTask, startTask } from '../runtime/editorFeedback'
 import { gameplayRuntime } from '../runtime/GameplayRuntime'
 import { applyCurrentProjectRepair, previewCurrentProjectRepair, validateCurrentProject } from '../runtime/projectIntegrity'
 import { focusStableControl, stableControlInventory } from '../runtime/controlRegistry'
+import { simulationPreflight } from '../runtime/simulationAuthoring26'
 
 type TranslationKey = Parameters<typeof t>[0]
 interface EditorCommand { id: string; label: TranslationKey; group: TranslationKey; icon: string; shortcut?: string; keywords: string; run: () => void }
@@ -70,6 +71,13 @@ async function deleteFromPalette(): Promise<void> {
 async function playFromPalette(): Promise<void> {
   await physicsState.world.wasmReady
   if (physicsState.world.wasmError) return
+  const { blocked, reviews } = simulationPreflight(physicsState.world.entities, physicsState.world.connections, physicsState.globalSettings)
+  if (blocked.length) {
+    const summary = `${t('simulationReadiness')}: ${t('blocked')} (${blocked.length}) · ${blocked.map(issue => issue.code).join(', ')}`
+    state.statusText = summary; addEditorLog(summary, 'Physics')
+    return
+  }
+  if (reviews.length) addEditorLog(`${t('simulationReadiness')}: ${t('mediaStatus_review')} (${reviews.length}) · ${reviews.map(issue => issue.code).join(', ')}`, 'Physics')
   toggleSimulation(true); gameplayRuntime.beginSession(); addEditorLog(t('physicsRunning'), 'Physics')
 }
 function stopFromPalette(): void { gameplayRuntime.stopSession(); stopPlayMode(); addEditorLog(t('simulationRestored'), 'Physics') }

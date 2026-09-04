@@ -1,5 +1,5 @@
 import { reactive } from 'vue'
-import { canonicalProjectText } from '../projects/projectData'
+import { canonicalProjectText, validateProjectDocument } from '../projects/projectData'
 
 export type SourceChangeKind = 'added' | 'modified' | 'deleted' | 'conflict'
 export type SourceEntryKind = 'scene' | 'asset' | 'prefab' | 'resource' | 'settings' | 'packages' | 'project'
@@ -16,7 +16,7 @@ export interface TeamTaskLink { id: string; url: string; summary: string }
 export interface TeamChangeNote { id: string; owner: string; note: string; createdAt: string }
 export interface TeamBuildPreset { id: string; name: string; target: string; profile: string; settings: string }
 export interface BinaryAssetLock { path: string; owner: string; token: string; expiresAt: number }
-export interface TeamChangeList { id: string; name: string; owner: string; createdAt: string; status: 'open' | 'ready' | 'merged'; changes: SourceChange[]; noteIds: string[]; fingerprint: string }
+export interface TeamChangeList { id: string; name: string; owner: string; createdAt: string; status: 'open' | 'ready' | 'merged'; changes: SourceChange[]; noteIds: string[]; fingerprint: string; baseFingerprint: string; currentFingerprint: string; generation: number; stale: boolean }
 export interface SemanticMergeConflict { id: string; path: string; kind: 'scene' | 'graph' | 'asset' | 'settings' | 'project'; base: unknown; ours: unknown; theirs: unknown; resolution: 'unresolved' | 'ours' | 'theirs' }
 export interface SemanticMergePlan { format: 'nova-semantic-merge'; version: 1; merged: Record<string, unknown>; conflicts: SemanticMergeConflict[]; autoMerged: string[]; fingerprint: string }
 
@@ -25,6 +25,9 @@ interface SnapshotEntry { path: string; kind: SourceEntryKind; fingerprint: stri
 const SETTINGS_KEY = 'nova_a.team_workflow.v1'
 const LOCK_KEY_PREFIX = 'nova_a.project_lock.'
 const MAX_CHANGES = 5_000
+const MAX_MERGE_DEPTH = 64
+const MAX_MERGE_NODES = 250_000
+let sourceGeneration = 0
 
 function storedSettings(): { enabled: boolean; networkOperations: boolean; diffTool: string; mergeTool: string; diffArguments: string; mergeArguments: string } {
   if (typeof localStorage === 'undefined') return { enabled: false, networkOperations: false, diffTool: '', mergeTool: '', diffArguments: '{left} {right}', mergeArguments: '{base} {ours} {theirs} {output}' }
@@ -98,13 +101,16 @@ function snapshot(source: string): Map<string, SnapshotEntry> {
     const asset = raw as Record<string, unknown>, id = String(asset.uuid ?? '')
     if (!id) continue
     const kind: SourceEntryKind = asset.assetType === 'prefab' ? 'prefab' : ['dataSchema', 'dataTable', 'material', 'localization', 'uiTheme', 'resource'].includes(String(asset.assetType)) ? 'resource' : 'asset'
-    output.set(id, { path: String(asset.path ?? id), kind, fingerprint: fingerprint({ ...asset, source: undefined }) })
+    // Script, graph, localization, and text source is authoritative authored
+    // content. Excluding it made real edits invisible to change lists.
+    output.set(id, { path: String(asset.path ?? id), kind, fingerprint: fingerprint(asset) })
   }
   return output
 }
 
 export function markSourceBaseline(source: string): void {
   teamWorkflowState.baseline = stableProjectText(source)
+  sourceGeneration++
   teamWorkflowState.changes.splice(0)
   teamWorkflowState.conflicts.splice(0)
   teamWorkflowState.status = 'clean'
@@ -123,6 +129,8 @@ export function refreshSourceStatus(currentSource: string): SourceChange[] {
   teamWorkflowState.changes.splice(0, teamWorkflowState.changes.length, ...changes.slice(0, MAX_CHANGES))
   teamWorkflowState.operationSummary.splice(0, teamWorkflowState.operationSummary.length, ...changes.slice(0, 100).map(change => `${change.change.toUpperCase()} ${change.path}`))
   teamWorkflowState.status = changes.length ? 'changes' : 'clean'
+  const currentFingerprint = fingerprint(JSON.parse(stableProjectText(currentSource)))
+  for (const list of teamWorkflowState.changeLists) list.stale = list.currentFingerprint !== currentFingerprint
   return changes
 }
 
@@ -224,7 +232,9 @@ export function createTeamChangeList(name: string, owner: string, changeIds: str
   const changeList: TeamChangeList = {
     id: crypto.randomUUID(), name: cleanName, owner: cleanOwner, createdAt: new Date().toISOString(), status: denied.length ? 'open' : 'ready',
     changes: selected.map(change => ({ ...change })), noteIds: teamWorkflowState.changeNotes.filter(note => note.owner === cleanOwner).map(note => note.id),
-    fingerprint: fingerprint({ owner: cleanOwner, changes: selected.map(change => ({ id: change.id, change: change.change, path: change.path })) })
+    fingerprint: fingerprint({ owner: cleanOwner, changes: selected.map(change => ({ id: change.id, change: change.change, path: change.path })) }),
+    baseFingerprint: fingerprint(JSON.parse(teamWorkflowState.baseline || stableProjectText(currentSource))),
+    currentFingerprint: fingerprint(JSON.parse(stableProjectText(currentSource))), generation: sourceGeneration, stale: false
   }
   teamWorkflowState.changeLists.unshift(changeList); if (teamWorkflowState.changeLists.length > 256) teamWorkflowState.changeLists.splice(256)
   teamWorkflowState.activeChangeListId = changeList.id
@@ -232,26 +242,51 @@ export function createTeamChangeList(name: string, owner: string, changeIds: str
 }
 
 function same(left: unknown, right: unknown): boolean { return JSON.stringify(normalized(left)) === JSON.stringify(normalized(right)) }
-function mergeKind(path: string): SemanticMergeConflict['kind'] { return path.startsWith('/scenes/') ? 'scene' : /(?:graph|visualGraph)/i.test(path) ? 'graph' : path.startsWith('/assets/') ? 'asset' : path.startsWith('/projectSettings') ? 'settings' : 'project' }
+function mergeKind(path: string, ...values: unknown[]): SemanticMergeConflict['kind'] {
+  if (path.startsWith('/scenes/')) return 'scene'
+  if (/(?:graph|visualGraph)/i.test(path) || values.some(value => plain(value) && /graph/i.test(String(value.assetType ?? value.type ?? '')))) return 'graph'
+  return path.startsWith('/assets/') ? 'asset' : path.startsWith('/projectSettings') ? 'settings' : 'project'
+}
 function plain(value: unknown): value is Record<string, unknown> { return Boolean(value && typeof value === 'object' && !Array.isArray(value)) }
-function semanticMergeValue(base: unknown, ours: unknown, theirs: unknown, path: string, conflicts: SemanticMergeConflict[], autoMerged: string[]): unknown {
+function arrayIdentity(value: unknown): string | null {
+  if (!plain(value)) return null
+  for (const key of ['uuid', 'id', 'key', 'name']) if (typeof value[key] === 'string' && String(value[key]).trim()) return `${key}:${String(value[key])}`
+  return null
+}
+function semanticMergeValue(base: unknown, ours: unknown, theirs: unknown, path: string, conflicts: SemanticMergeConflict[], autoMerged: string[], state: { nodes: number }, depth = 0): unknown {
+  state.nodes++
+  if (depth > MAX_MERGE_DEPTH || state.nodes > MAX_MERGE_NODES) throw new Error('Semantic merge exceeds the safe depth or node limit.')
   if (same(ours, theirs)) return ours
   if (same(ours, base)) { autoMerged.push(path); return theirs }
   if (same(theirs, base)) { autoMerged.push(path); return ours }
   if (plain(ours) && plain(theirs) && (plain(base) || base === undefined)) {
     const source = plain(base) ? base : {}, output: Record<string, unknown> = {}
-    for (const key of [...new Set([...Object.keys(source), ...Object.keys(ours), ...Object.keys(theirs)])].sort()) output[key] = semanticMergeValue(source[key], ours[key], theirs[key], `${path}/${key}`, conflicts, autoMerged)
+    for (const key of [...new Set([...Object.keys(source), ...Object.keys(ours), ...Object.keys(theirs)])].sort()) {
+      const merged = semanticMergeValue(source[key], ours[key], theirs[key], `${path}/${key}`, conflicts, autoMerged, state, depth + 1)
+      if (merged !== undefined) output[key] = merged
+    }
     return output
   }
-  if (Array.isArray(ours) && Array.isArray(theirs) && (path === '/scenes' || path === '/assets')) {
-    const baseArray = Array.isArray(base) ? base : [], identity = (value: unknown, index: number) => plain(value) && typeof value.uuid === 'string' ? value.uuid : `#${index}`
-    const baseMap = new Map(baseArray.map((value, index) => [identity(value, index), value])), oursMap = new Map(ours.map((value, index) => [identity(value, index), value])), theirsMap = new Map(theirs.map((value, index) => [identity(value, index), value]))
-    return [...new Set([...baseMap.keys(), ...oursMap.keys(), ...theirsMap.keys()])].sort().flatMap(id => {
-      const merged = semanticMergeValue(baseMap.get(id), oursMap.get(id), theirsMap.get(id), `${path}/${id}`, conflicts, autoMerged)
+  if (Array.isArray(ours) && Array.isArray(theirs)) {
+    const baseArray = Array.isArray(base) ? base : []
+    const allIdentifiable = [...baseArray, ...ours, ...theirs].every(value => arrayIdentity(value) !== null)
+    if (!allIdentifiable) {
+      if (conflicts.length >= MAX_CHANGES) throw new Error('Semantic merge conflict limit exceeded; no partial plan was created.')
+      const conflict: SemanticMergeConflict = { id: fingerprint({ path, base, ours, theirs }), path, kind: mergeKind(path, base, ours, theirs), base, ours, theirs, resolution: 'unresolved' }
+      conflicts.push(conflict); return ours
+    }
+    const keyed = (items: unknown[]) => new Map(items.map(value => [arrayIdentity(value)!, value]))
+    const baseMap = keyed(baseArray), oursMap = keyed(ours), theirsMap = keyed(theirs)
+    // Retain authored base order, then append each side's additions in their
+    // authored order. Sorting UUIDs used to reorder scenes and runtime tracks.
+    const ids = [...new Set([...baseMap.keys(), ...oursMap.keys(), ...theirsMap.keys()])]
+    return ids.flatMap(id => {
+      const merged = semanticMergeValue(baseMap.get(id), oursMap.get(id), theirsMap.get(id), `${path}/${id.split('/').join('~1')}`, conflicts, autoMerged, state, depth + 1)
       return merged === undefined ? [] : [merged]
     })
   }
-  const conflict: SemanticMergeConflict = { id: fingerprint({ path, base, ours, theirs }), path, kind: mergeKind(path), base, ours, theirs, resolution: 'unresolved' }
+  if (conflicts.length >= MAX_CHANGES) throw new Error('Semantic merge conflict limit exceeded; no partial plan was created.')
+  const conflict: SemanticMergeConflict = { id: fingerprint({ path, base, ours, theirs }), path, kind: mergeKind(path, base, ours, theirs), base, ours, theirs, resolution: 'unresolved' }
   conflicts.push(conflict)
   return ours
 }
@@ -259,8 +294,8 @@ function semanticMergeValue(base: unknown, ours: unknown, theirs: unknown, path:
 export function createSemanticMergePlan(baseSource: string, oursSource: string, theirsSource: string): SemanticMergePlan {
   const base = JSON.parse(stableProjectText(baseSource)) as Record<string, unknown>, ours = JSON.parse(stableProjectText(oursSource)) as Record<string, unknown>, theirs = JSON.parse(stableProjectText(theirsSource)) as Record<string, unknown>
   const conflicts: SemanticMergeConflict[] = [], autoMerged: string[] = []
-  const merged = semanticMergeValue(base, ours, theirs, '', conflicts, autoMerged) as Record<string, unknown>
-  const plan: SemanticMergePlan = { format: 'nova-semantic-merge', version: 1, merged, conflicts: conflicts.slice(0, MAX_CHANGES), autoMerged: [...new Set(autoMerged)].slice(0, MAX_CHANGES), fingerprint: fingerprint({ base, ours, theirs }) }
+  const merged = semanticMergeValue(base, ours, theirs, '', conflicts, autoMerged, { nodes: 0 }) as Record<string, unknown>
+  const plan: SemanticMergePlan = { format: 'nova-semantic-merge', version: 1, merged, conflicts, autoMerged: [...new Set(autoMerged)].slice(0, MAX_CHANGES), fingerprint: fingerprint({ base, ours, theirs }) }
   teamWorkflowState.semanticMerge = plan
   return plan
 }
@@ -268,14 +303,19 @@ export function createSemanticMergePlan(baseSource: string, oursSource: string, 
 function assignSemanticPath(root: Record<string, unknown>, path: string, value: unknown): void {
   const parts = path.split('/').filter(Boolean); let cursor: unknown = root
   for (let index = 0; index < parts.length - 1; index++) {
-    const part = parts[index]
-    if (Array.isArray(cursor)) cursor = cursor.find(item => plain(item) && item.uuid === part)
+    const part = parts[index].split('~1').join('/')
+    if (Array.isArray(cursor)) cursor = cursor.find(item => arrayIdentity(item) === part)
     else if (plain(cursor)) cursor = cursor[part]
     if (cursor === undefined) throw new Error(`Semantic merge path no longer exists: ${path}`)
   }
   const last = parts[parts.length - 1]; if (!last) throw new Error('Cannot replace the merge root.')
-  if (Array.isArray(cursor)) { const index = cursor.findIndex(item => plain(item) && item.uuid === last); if (index < 0) throw new Error(`Semantic merge identity is missing: ${last}`); cursor[index] = value }
-  else if (plain(cursor)) cursor[last] = value
+  const decodedLast = last.split('~1').join('/')
+  if (Array.isArray(cursor)) {
+    const index = cursor.findIndex(item => arrayIdentity(item) === decodedLast)
+    if (index < 0) throw new Error(`Semantic merge identity is missing: ${decodedLast}`)
+    if (value === undefined) cursor.splice(index, 1); else cursor[index] = value
+  }
+  else if (plain(cursor)) { if (value === undefined) delete cursor[decodedLast]; else cursor[decodedLast] = value }
   else throw new Error(`Semantic merge path is not assignable: ${path}`)
 }
 
@@ -292,7 +332,10 @@ export function finalizeSemanticMerge(): string {
   if (!plan) throw new Error('No semantic merge is active.')
   const unresolved = plan.conflicts.filter(conflict => conflict.resolution === 'unresolved')
   if (unresolved.length) throw new Error(`${unresolved.length} semantic conflicts still require a choice.`)
-  return stableProjectText(plan.merged)
+  const source = stableProjectText(plan.merged)
+  const validation = validateProjectDocument(source)
+  if (!validation.valid) throw new Error(`Merged project failed validation: ${validation.issues[0]?.message ?? 'unknown schema error'}`)
+  return source
 }
 
 export function shareTeamBuildPreset(name: string, target: string, profile: string, settings: unknown): TeamBuildPreset | null {

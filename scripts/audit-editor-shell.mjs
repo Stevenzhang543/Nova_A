@@ -44,7 +44,7 @@ const versions = await Promise.all([
   read('crates/nova_format/src/lib.rs'), read('src/projects/projectFormat.ts')
 ])
 const currentVersion = JSON.parse(versions[0]).version
-assert(currentVersion === '26.4.0', `Expected the 26.04 machine release authority 26.4.0, found ${currentVersion}`)
+assert(/^26\.(?:[1-9]|10)\.0$/.test(currentVersion), `Expected a supported 2026 calendar-cycle machine version, found ${currentVersion}`)
 for (const source of versions) assert(source.includes(currentVersion), `A primary release metadata file does not identify ${currentVersion}`)
 assert(!bottomPanel.includes("id: 'world'") && bottomPanel.includes("id: 'tilemap'"), 'The monolithic World Tools dock was not removed or contextual Tilemap is missing')
 

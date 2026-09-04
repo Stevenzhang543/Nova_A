@@ -22,17 +22,21 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, defineAsyncComponent } from 'vue'
 import { t } from '../i18n'
 import { editorState as state, type ManageSection } from '../store/editor'
-import SettingsPanel from '../panels/SettingsPanel.vue'
-import PackageManagerPanel from './PackageManagerPanel.vue'
-import ProjectHealthPanel from './ProjectHealthPanel.vue'
-import RenderingPanel from './RenderingPanel.vue'
-import BuildSettingsPanel from './BuildSettingsPanel.vue'
-import CreatorLearningCenter from './CreatorLearningCenter.vue'
-import AutomationStudio from './AutomationStudio.vue'
 import { projectScopeDirty } from '../runtime/projectTransactions'
+
+// Each management tool is an independent route. Deferring inactive tools keeps
+// launcher/editor startup responsive while Vue retains the same component state
+// and transition behavior once a route is selected.
+const SettingsPanel = defineAsyncComponent(() => import('../panels/SettingsPanel.vue'))
+const PackageManagerPanel = defineAsyncComponent(() => import('./PackageManagerPanel.vue'))
+const ProjectHealthPanel = defineAsyncComponent(() => import('./ProjectHealthPanel.vue'))
+const RenderingPanel = defineAsyncComponent(() => import('./RenderingPanel.vue'))
+const BuildSettingsPanel = defineAsyncComponent(() => import('./BuildSettingsPanel.vue'))
+const CreatorLearningCenter = defineAsyncComponent(() => import('./CreatorLearningCenter.vue'))
+const AutomationStudio = defineAsyncComponent(() => import('./AutomationStudio.vue'))
 
 type TranslationKey = Parameters<typeof t>[0]
 const sections: ReadonlyArray<{ id: ManageSection; label: TranslationKey; description: TranslationKey; short: TranslationKey; icon: string }> = [

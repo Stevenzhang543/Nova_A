@@ -21,6 +21,7 @@ import { t } from '../i18n'
 import { addEditorLog, editorState } from '../store/editor'
 import { physicsState as state, stopPlayMode, toggleSimulation } from '../store/physics'
 import { gameplayRuntime } from '../runtime/GameplayRuntime'
+import { simulationPreflight as inspectSimulationPreflight } from '../runtime/simulationAuthoring26'
 
 async function ensurePhysics(): Promise<boolean> {
   editorState.statusText = t('physicsLoading')
@@ -30,8 +31,21 @@ async function ensurePhysics(): Promise<boolean> {
   return false
 }
 
+function simulationPreflight(): boolean {
+  const { blocked, reviews } = inspectSimulationPreflight(state.world.entities, state.world.connections, state.globalSettings)
+  if (blocked.length) {
+    const summary = `${t('simulationReadiness')}: ${t('blocked')} (${blocked.length}) · ${blocked.map(issue => issue.code).join(', ')}`
+    editorState.statusText = summary
+    addEditorLog(summary, 'Physics')
+    return false
+  }
+  if (reviews.length) addEditorLog(`${t('simulationReadiness')}: ${t('mediaStatus_review')} (${reviews.length}) · ${reviews.map(issue => issue.code).join(', ')}`, 'Physics')
+  return true
+}
+
 async function playSimulation() {
   if (!await ensurePhysics()) return
+  if (!simulationPreflight()) return
   toggleSimulation(true)
   gameplayRuntime.beginSession()
   editorState.statusText = t('physicsRunning')
@@ -46,6 +60,7 @@ function pauseSimulation() {
 
 async function stepSimulation() {
   if (!await ensurePhysics()) return
+  if (!simulationPreflight()) return
   if (state.playMode === 'editing') { toggleSimulation(true); toggleSimulation(false) }
   gameplayRuntime.stepOnce()
   editorState.statusText = t('physicsStepped')

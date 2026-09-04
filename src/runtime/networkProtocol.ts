@@ -119,7 +119,8 @@ export function parseNetworkPacket(
   const value = record(parsed)
   if (!value || value.format !== NOVA_NETWORK_PACKET_FORMAT || value.protocol !== NOVA_NETWORK_PROTOCOL) return { packet: null, error: 'Packet protocol or format is unsupported.' }
   const sessionId = typeof value.sessionId === 'string' ? value.sessionId : '', sender = typeof value.sender === 'string' ? value.sender : '', channelId = typeof value.channel === 'string' ? value.channel : ''
-  if (!sessionId || utf8Bytes(sessionId) > 80 || !sender || utf8Bytes(sender) > 80) return { packet: null, error: 'Packet session or sender identity is invalid.' }
+  const safeIdentity = /^[A-Za-z0-9_.-]{1,80}$/
+  if (!safeIdentity.test(sessionId) || !safeIdentity.test(sender)) return { packet: null, error: 'Packet session or sender identity is invalid.' }
   if (expectedSessionId && sessionId !== expectedSessionId) return { packet: null, error: 'Packet belongs to another session.' }
   const channel = channels.find(candidate => candidate.id === channelId)
   if (!channel || value.delivery !== channel.delivery) return { packet: null, error: 'Packet channel or delivery contract is invalid.' }
@@ -140,12 +141,20 @@ export function parseNetworkPacket(
 
 export class NetworkRateLimiter {
   private windows = new Map<string, { startedAt: number; count: number }>()
+  constructor(private readonly maximumKeys = 4_096) {}
   accept(key: string, limit: number, now: number): boolean {
     const boundedLimit = Math.max(1, Math.min(10_000, Math.round(limit))), current = this.windows.get(key)
-    if (!current || now - current.startedAt >= 1_000) { this.windows.set(key, { startedAt: now, count: 1 }); return true }
+    if (!current || now - current.startedAt >= 1_000) {
+      if (!current && this.windows.size >= Math.max(16, this.maximumKeys)) {
+        for (const [candidate, window] of this.windows) if (now - window.startedAt >= 1_000) this.windows.delete(candidate)
+        while (this.windows.size >= Math.max(16, this.maximumKeys)) this.windows.delete(this.windows.keys().next().value ?? '')
+      }
+      this.windows.set(key, { startedAt: now, count: 1 }); return true
+    }
     if (current.count >= boundedLimit) return false
     current.count++; return true
   }
+  clearPrefix(prefix: string): void { for (const key of this.windows.keys()) if (key.startsWith(prefix)) this.windows.delete(key) }
   clear(): void { this.windows.clear() }
 }
 
@@ -158,7 +167,13 @@ export class ReliablePacketWindow {
     if (this.pending.size >= Math.max(1, this.maximum)) return false
     this.pending.set(`${peer}:${packet.channel}:${packet.sequence}`, { peer, packet, source, sentAt: now, attempts: 1 }); return true
   }
-  acknowledge(peer: string, channel: string, sequence: number): boolean { return this.pending.delete(`${peer}:${channel}:${sequence}`) || this.pending.delete(`*:${channel}:${sequence}`) }
+  canTrack(count = 1): boolean { return Number.isSafeInteger(count) && count >= 0 && this.pending.size + count <= Math.max(1, this.maximum) }
+  acknowledge(peer: string, channel: string, sequence: number): boolean { return this.pending.delete(`${peer}:${channel}:${sequence}`) }
+  acknowledgeBootstrap(channel: string, sequence: number): boolean {
+    const key = `*:${channel}:${sequence}`, pending = this.pending.get(key)
+    if (!pending || (pending.packet.kind !== 'hello' && pending.packet.kind !== 'join')) return false
+    return this.pending.delete(key)
+  }
   due(now: number, retryMs: number, maximumAttempts: number): ReliablePendingPacket[] {
     const due: ReliablePendingPacket[] = []
     for (const [key, item] of this.pending) {

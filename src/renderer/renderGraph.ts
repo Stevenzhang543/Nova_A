@@ -4,6 +4,8 @@ import { advancedRenderingActive, renderingSettings } from './renderSettings'
 
 export type RenderPassName = 'World' | 'Lighting' | 'UI' | 'EditorOverlay' | 'PostProcess'
 export interface RenderPassSample { name: RenderPassName; enabled: boolean; durationMs: number; drawCalls: number }
+export interface DeterministicCaptureFrame { index: number; timeSeconds: number; audioSampleStart: number; audioSampleEnd: number; dataUrl: string; width: number; height: number; encodedBytes: number }
+export interface DeterministicCaptureOptions { name?: string; frameRate?: number; sampleRate?: number; maximumFrames?: number; memoryBudgetMb?: number; includeUi?: boolean }
 
 export const renderGraphState = reactive({
   frame: 0,
@@ -11,6 +13,11 @@ export const renderGraphState = reactive({
   captures: [] as Array<{ id: number; createdAt: string; dataUrl: string; width: number; height: number }>,
   captureRequested: false,
   comparisons: [] as Array<{ first: number; second: number; difference: number; comparedAt: string }>
+  , sequence: {
+    active: false, name: 'Cinematic capture', frameRate: 60, sampleRate: 48_000, maximumFrames: 300,
+    memoryBudgetBytes: 128 * 1048576, includeUi: true, capturedBytes: 0, frames: [] as DeterministicCaptureFrame[],
+    stoppedReason: '', startedAtRenderFrame: 0
+  }
 })
 
 let framePasses: RenderPassSample[] = []
@@ -30,17 +37,50 @@ export function completeRenderGraph(worldStarted: number, stats: RendererStats, 
   renderGraphState.passes.splice(0, renderGraphState.passes.length, ...framePasses)
 }
 export function requestRenderCapture(): void { renderGraphState.captureRequested = true }
+export function startDeterministicCapture(options: DeterministicCaptureOptions = {}): void {
+  const defaults = renderingSettings.deterministicCapture
+  const frameRate = Math.min(240, Math.max(1, Math.round(Number(options.frameRate ?? defaults.frameRate) || defaults.frameRate)))
+  const sampleRate = Math.min(192_000, Math.max(8_000, Math.round(Number(options.sampleRate ?? defaults.sampleRate) || defaults.sampleRate)))
+  const maximumFrames = Math.min(18_000, Math.max(1, Math.round(Number(options.maximumFrames ?? defaults.maximumFrames) || defaults.maximumFrames)))
+  const memoryBudgetMb = Math.min(2_048, Math.max(16, Number(options.memoryBudgetMb ?? defaults.memoryBudgetMb) || defaults.memoryBudgetMb))
+  Object.assign(renderGraphState.sequence, {
+    active: true,
+    name: String(options.name ?? 'Cinematic capture').trim().slice(0, 80) || 'Cinematic capture',
+    frameRate,
+    sampleRate,
+    maximumFrames,
+    memoryBudgetBytes: Math.round(memoryBudgetMb * 1048576),
+    includeUi: options.includeUi ?? defaults.includeUi,
+    capturedBytes: 0,
+    stoppedReason: '',
+    startedAtRenderFrame: renderGraphState.frame
+  })
+  renderGraphState.sequence.frames.splice(0)
+}
+export function stopDeterministicCapture(reason = 'Stopped by user'): void { renderGraphState.sequence.active = false; renderGraphState.sequence.stoppedReason = reason.slice(0, 160) }
+export function clearDeterministicCapture(): void { stopDeterministicCapture(''); renderGraphState.sequence.frames.splice(0); renderGraphState.sequence.capturedBytes = 0 }
 export function captureRenderSurface(canvas: HTMLCanvasElement, overlay?: HTMLCanvasElement | null, filter = 'none'): void {
-  if (!renderGraphState.captureRequested) return
+  const sequence = renderGraphState.sequence
+  const sequenceCapture = sequence.active
+  if (!renderGraphState.captureRequested && !sequenceCapture) return
   renderGraphState.captureRequested = false
   try {
     let source = canvas
-    if (overlay) {
+    if (overlay && (!sequenceCapture || sequence.includeUi)) {
       const composite = document.createElement('canvas'); composite.width = canvas.width; composite.height = canvas.height
       const context = composite.getContext('2d')
       if (context) { context.filter = filter; context.drawImage(canvas, 0, 0); context.filter = 'none'; context.drawImage(overlay, 0, 0, overlay.width, overlay.height, 0, 0, composite.width, composite.height); source = composite }
     }
-    renderGraphState.captures.unshift({ id: Date.now(), createdAt: new Date().toISOString(), dataUrl: source.toDataURL('image/png'), width: source.width, height: source.height })
+    const dataUrl = source.toDataURL('image/png')
+    if (sequenceCapture) {
+      const index = sequence.frames.length, encodedBytes = Math.max(0, Math.ceil((dataUrl.length - dataUrl.indexOf(',') - 1) * .75))
+      if (sequence.capturedBytes + encodedBytes > sequence.memoryBudgetBytes) { stopDeterministicCapture('Capture memory budget reached'); return }
+      const audioSampleStart = Math.round(index * sequence.sampleRate / sequence.frameRate), audioSampleEnd = Math.round((index + 1) * sequence.sampleRate / sequence.frameRate)
+      sequence.frames.push({ index, timeSeconds: index / sequence.frameRate, audioSampleStart, audioSampleEnd, dataUrl, width: source.width, height: source.height, encodedBytes })
+      sequence.capturedBytes += encodedBytes
+      if (sequence.frames.length >= sequence.maximumFrames) stopDeterministicCapture('Maximum frame count reached')
+    }
+    renderGraphState.captures.unshift({ id: Date.now(), createdAt: sequenceCapture ? `Frame ${sequence.frames.length - 1} · ${((sequence.frames.length - 1) / sequence.frameRate).toFixed(6)} s` : new Date().toISOString(), dataUrl, width: source.width, height: source.height })
     if (renderGraphState.captures.length > 12) renderGraphState.captures.length = 12
   } catch { /* A tainted imported image must not break the render loop. */ }
 }

@@ -8,6 +8,12 @@ export type PhysicsDroppedTimePolicy = 'Drop' | 'PreserveBacklog' | 'SlowMotion'
 export type PhysicsProfileId = 'Accurate' | 'Balanced' | 'Fast' | 'Custom'
 export type PhysicsStabilityLabel = 'stable' | 'nondeterministic' | 'experimental'
 
+/** Maximum vertices accepted by one authored polygon/chain. A 129-point chain
+ * expands to the solver's 128-child bridge limit; larger sources are retained
+ * only as a one-point-over-limit sentinel so production validation can reject
+ * them without mapping or triangulating an unbounded project payload. */
+export const MAX_AUTHORED_COLLIDER_POINTS = 129
+
 export interface PhysicsSimulationProfile2D {
   id: PhysicsProfileId
   name: string

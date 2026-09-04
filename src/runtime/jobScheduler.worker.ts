@@ -1,4 +1,4 @@
-type WorkerJob = { id: number; kind: 'parseJson' | 'parseCsv' | 'hash' | 'compare' | 'sampleAnimation' | 'advanceParticles' | 'buildSpatialGrid'; payload: unknown }
+type WorkerJob = { id: number; lease: number; kind: 'parseJson' | 'parseCsv' | 'hash' | 'compare' | 'sampleAnimation' | 'advanceParticles' | 'buildSpatialGrid'; payload: unknown }
 
 function parseCsv(source: string): string[][] {
   const rows: string[][] = []; let row: string[] = [], field = '', quoted = false
@@ -49,7 +49,7 @@ function buildSpatialGrid(payload: unknown) {
 }
 
 self.onmessage = (event: MessageEvent<WorkerJob>) => {
-  const { id, kind, payload } = event.data
+  const { id, lease, kind, payload } = event.data
   try {
     const result = kind === 'parseJson' ? JSON.parse(String(payload))
       : kind === 'parseCsv' ? parseCsv(String(payload))
@@ -58,6 +58,6 @@ self.onmessage = (event: MessageEvent<WorkerJob>) => {
             : kind === 'sampleAnimation' ? sampleAnimation(payload)
               : kind === 'advanceParticles' ? advanceParticles(payload)
                 : buildSpatialGrid(payload)
-    self.postMessage({ id, result })
-  } catch (error) { self.postMessage({ id, error: error instanceof Error ? error.message : String(error) }) }
+    self.postMessage({ id, lease, result })
+  } catch (error) { self.postMessage({ id, lease, error: error instanceof Error ? error.message : String(error) }) }
 }

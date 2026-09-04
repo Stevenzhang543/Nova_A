@@ -1,7 +1,11 @@
 import { reactive } from 'vue'
+import { NOVA_ENGINE_VERSION } from '../projects/projectFormat'
 import { NOVA_PACKAGE_MANIFEST_VERSION } from './stableContracts'
 
-const PACKAGE_ENGINE_VERSION = '26.4.0'
+// Package compatibility must follow the single project-format authority. Keeping
+// a release number here caused current-engine packages to be evaluated as if an
+// older Nova_A build were running.
+const PACKAGE_ENGINE_VERSION = NOVA_ENGINE_VERSION
 
 export { NOVA_PACKAGE_MANIFEST_VERSION }
 export type PackageSourceKind = 'local' | 'git' | 'registry'

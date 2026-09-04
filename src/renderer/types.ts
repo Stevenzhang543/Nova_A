@@ -105,6 +105,10 @@ export interface RendererStats {
   atlasPages: number
   textureMemoryBytes: number
   textureUploads: number
+  textureEvictions: number
+  textureBudgetBytes: number
+  textureBudgetExceeded: boolean
+  streamingMisses: number
   shaderCompiles: number
   shaderFallbacks: number
   contextLosses: number

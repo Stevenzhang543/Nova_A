@@ -1,16 +1,18 @@
-use std::collections::{BTreeMap, HashMap};
+use std::collections::{BTreeMap, HashMap, HashSet};
 use std::fs::{self, File, OpenOptions};
 use std::io::{Read, Seek, SeekFrom, Write};
 use std::net::{SocketAddr, UdpSocket};
 use std::path::{Path, PathBuf};
-use std::process::Command;
+use std::process::{Child, Command};
 use std::sync::atomic::{AtomicU32, Ordering};
-use std::sync::Mutex;
+use std::sync::{Mutex, OnceLock};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use base64::Engine;
+use flate2::read::GzDecoder;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
+use tauri::Manager;
 
 const EMBEDDED_LEGACY_MAGIC: &[u8; 8] = b"NOVAPAK!";
 const EMBEDDED_MAGIC: &[u8; 8] = b"NOVAPK2!";
@@ -21,6 +23,12 @@ const MAX_WEB_EXPORT_FILES: usize = 20_000;
 const MAX_WEB_EXPORT_FILE_BYTES: u64 = 256 * 1024 * 1024;
 const MAX_WEB_EXPORT_TOTAL_BYTES: u64 = 2 * 1024 * 1024 * 1024;
 const ENGINE_VERSION: &str = env!("CARGO_PKG_VERSION");
+const MAX_RUNTIME_PROJECT_BYTES: usize = 64 * 1024 * 1024;
+const MAX_RUNTIME_UDP_SOCKETS: usize = 8;
+const MAX_EDITOR_UDP_SOCKETS: usize = 32;
+static EXPORTED_PLAYER_MODE: OnceLock<bool> = OnceLock::new();
+static RUNTIME_NETWORK_POLICY: OnceLock<Result<Option<RuntimeNetworkPolicy>, String>> =
+    OnceLock::new();
 
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -34,6 +42,7 @@ struct ExportRequest {
     game_name: String,
     target: String,
     architecture: String,
+    runtime_mode: String,
     package_into_executable: bool,
     development_build: bool,
     output_directory: String,
@@ -219,12 +228,18 @@ struct BuildReport {
     target: String,
     architecture: String,
     profile: String,
+    #[serde(default = "default_runtime_mode")]
+    runtime_mode: String,
     project_id: String,
     #[serde(default)]
     cache_mode: String,
     #[serde(default)]
     total_bytes: u64,
     files: Vec<BuildFileRecord>,
+}
+
+fn default_runtime_mode() -> String {
+    "game".into()
 }
 
 #[derive(Deserialize)]
@@ -254,9 +269,10 @@ struct NetworkInstanceLaunchRequest {
     session_name: String,
     count: u8,
     separate_logs: bool,
+    separate_inspectors: bool,
 }
 
-#[derive(Serialize)]
+#[derive(Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 struct NetworkInstanceLaunch {
     id: String,
@@ -264,6 +280,9 @@ struct NetworkInstanceLaunch {
     player_name: String,
     session_name: String,
     log_scope: String,
+    inspector_id: String,
+    endpoint: String,
+    bind_address: String,
     process_id: u32,
 }
 
@@ -275,6 +294,50 @@ struct RuntimeOverrides {
     session_name: Option<String>,
     instance_id: Option<String>,
     log_scope: Option<String>,
+    inspector_id: Option<String>,
+    session_mode: Option<String>,
+    transport: Option<String>,
+    endpoint: Option<String>,
+    bind_address: Option<String>,
+}
+
+struct ManagedNetworkInstance {
+    child: Child,
+    launch: NetworkInstanceLaunch,
+}
+
+fn terminate_network_child(child: &mut Child) -> Result<(), String> {
+    if child
+        .try_wait()
+        .map_err(|error| error.to_string())?
+        .is_some()
+    {
+        return Ok(());
+    }
+    child.kill().map_err(|error| error.to_string())?;
+    child.wait().map_err(|error| error.to_string())?;
+    Ok(())
+}
+
+#[derive(Default)]
+struct NetworkInstances {
+    children: Mutex<HashMap<String, ManagedNetworkInstance>>,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct NetworkInstanceStatus {
+    id: String,
+    role: String,
+    player_name: String,
+    session_name: String,
+    log_scope: String,
+    inspector_id: String,
+    endpoint: String,
+    bind_address: String,
+    process_id: u32,
+    running: bool,
+    exit_code: Option<i32>,
 }
 
 #[derive(Deserialize)]
@@ -315,7 +378,13 @@ struct ProjectTransactionResult {
 #[derive(Default)]
 struct UdpSockets {
     next_id: AtomicU32,
-    sockets: Mutex<HashMap<u32, UdpSocket>>,
+    sockets: Mutex<HashMap<u32, ManagedUdpSocket>>,
+}
+
+struct ManagedUdpSocket {
+    socket: UdpSocket,
+    authorization: Option<RuntimeUdpAuthorization>,
+    admitted_peers: HashSet<SocketAddr>,
 }
 
 #[derive(Serialize)]
@@ -324,25 +393,282 @@ struct UdpPacket {
     payload: String,
 }
 
-#[tauri::command]
-fn udp_open(state: tauri::State<'_, UdpSockets>, bind_address: String) -> Result<u32, String> {
-    let address: SocketAddr = bind_address
-        .parse()
-        .map_err(|_| "UDP bind address must be an IP address and port".to_string())?;
+#[derive(Clone)]
+struct RuntimeNetworkPolicy {
+    configured_role: String,
+    session_mode: String,
+    transport: String,
+    endpoint: String,
+    bind_address: String,
+    maximum_peers: usize,
+    protocol_version: u64,
+    requires_encryption: bool,
+    client_allowed: bool,
+    listen_allowed: bool,
+    enabled: bool,
+    permission_granted: bool,
+    auto_start: bool,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+struct RuntimeUdpAuthorization {
+    role: String,
+    bind_address: SocketAddr,
+    endpoint: SocketAddr,
+    maximum_peers: usize,
+}
+
+fn require_editor_mode() -> Result<(), String> {
+    let player = *EXPORTED_PLAYER_MODE.get_or_init(|| {
+        runtime_package_bytes()
+            .map(|package| package.is_some())
+            .unwrap_or(true)
+    });
+    if player {
+        Err(
+            "This editor-only native command is unavailable in exported Nova Player applications."
+                .into(),
+        )
+    } else {
+        Ok(())
+    }
+}
+
+fn parse_udp_address(value: &str, label: &str) -> Result<SocketAddr, String> {
+    value
+        .trim()
+        .trim_start_matches("udp://")
+        .parse::<SocketAddr>()
+        .map_err(|_| format!("{label} must be an IP address and port"))
+}
+
+fn udp_address_stays_in_scope(configured: SocketAddr, requested: SocketAddr) -> bool {
+    requested.ip() == configured.ip()
+        || (requested.ip().is_loopback()
+            && (configured.ip().is_loopback() || configured.ip().is_unspecified()))
+}
+
+fn require_runtime_udp_permission() -> Result<Option<RuntimeUdpAuthorization>, String> {
+    let policy = RUNTIME_NETWORK_POLICY
+        .get_or_init(load_runtime_network_policy)
+        .clone()?;
+    let Some(policy) = policy else {
+        return Ok(None);
+    };
+    if !policy.enabled || !policy.permission_granted || !policy.auto_start {
+        return Err(
+            "The embedded project has not enabled and authorized automatic networking.".into(),
+        );
+    }
+    if policy.protocol_version != 2 {
+        return Err("The embedded project did not authorize Nova Network Protocol 2.".into());
+    }
+    if policy.requires_encryption {
+        return Err("The embedded project requires encryption, but the built-in native UDP transport is plaintext.".into());
+    }
+    if !policy.client_allowed {
+        return Err("The embedded networking package has not granted network.client.".into());
+    }
+    let requested_role = bounded_environment_value("NOVA_NETWORK_ROLE", 16)
+        .unwrap_or_else(|| policy.configured_role.clone());
+    if !matches!(requested_role.as_str(), "client" | "host" | "server") {
+        return Err("The runtime network role override is invalid.".into());
+    }
+    if matches!(requested_role.as_str(), "host" | "server") {
+        if !matches!(policy.configured_role.as_str(), "host" | "server") {
+            return Err(
+                "A runtime override cannot elevate a Client project to Host or Server.".into(),
+            );
+        }
+        if !policy.listen_allowed {
+            return Err(
+                "Host and Server networking require the reviewed network.listen permission.".into(),
+            );
+        }
+    }
+    if policy.session_mode != "direct" || policy.transport != "native-udp" {
+        return Err("The embedded project did not authorize the native UDP transport.".into());
+    }
+    if bounded_environment_value("NOVA_NETWORK_SESSION_MODE", 16)
+        .is_some_and(|value| value != policy.session_mode)
+        || bounded_environment_value("NOVA_NETWORK_TRANSPORT", 24)
+            .is_some_and(|value| value != policy.transport)
+    {
+        return Err(
+            "Runtime overrides cannot enable or replace the embedded network session capability."
+                .into(),
+        );
+    }
+    let configured_endpoint =
+        parse_udp_address(&policy.endpoint, "The embedded UDP endpoint policy")?;
+    let configured_bind = parse_udp_address(&policy.bind_address, "The embedded UDP bind policy")?;
+    let endpoint = bounded_environment_value("NOVA_NETWORK_ENDPOINT", 256)
+        .map(|value| parse_udp_address(&value, "The runtime UDP endpoint override"))
+        .transpose()?
+        .unwrap_or(configured_endpoint);
+    let bind_address = bounded_environment_value("NOVA_NETWORK_BIND_ADDRESS", 256)
+        .map(|value| parse_udp_address(&value, "The runtime UDP bind override"))
+        .transpose()?
+        .unwrap_or(configured_bind);
+    if !udp_address_stays_in_scope(configured_endpoint, endpoint)
+        || !udp_address_stays_in_scope(configured_bind, bind_address)
+    {
+        return Err("Runtime overrides may change a UDP port, but cannot broaden the authorized network interface or host.".into());
+    }
+    Ok(Some(RuntimeUdpAuthorization {
+        role: requested_role,
+        bind_address,
+        endpoint,
+        maximum_peers: policy.maximum_peers.clamp(1, 64),
+    }))
+}
+
+fn open_udp_socket(
+    state: &UdpSockets,
+    address: SocketAddr,
+    authorization: Option<RuntimeUdpAuthorization>,
+) -> Result<u32, String> {
+    let mut sockets = state
+        .sockets
+        .lock()
+        .map_err(|_| "UDP socket state is unavailable".to_string())?;
+    let maximum = if authorization.is_some() {
+        MAX_RUNTIME_UDP_SOCKETS
+    } else {
+        MAX_EDITOR_UDP_SOCKETS
+    };
+    if sockets.len() >= maximum {
+        return Err(format!("UDP socket limit reached ({maximum})"));
+    }
     let socket = UdpSocket::bind(address).map_err(|error| error.to_string())?;
     socket
         .set_nonblocking(true)
         .map_err(|error| error.to_string())?;
-    let id = state
-        .next_id
-        .fetch_add(1, Ordering::Relaxed)
-        .wrapping_add(1);
-    state
+    let socket_id = (0..=maximum)
+        .find_map(|_| {
+            let candidate = state
+                .next_id
+                .fetch_add(1, Ordering::Relaxed)
+                .wrapping_add(1);
+            (candidate != 0 && !sockets.contains_key(&candidate)).then_some(candidate)
+        })
+        .ok_or("Could not allocate a unique UDP socket identity")?;
+    sockets.insert(
+        socket_id,
+        ManagedUdpSocket {
+            socket,
+            authorization,
+            admitted_peers: HashSet::new(),
+        },
+    );
+    Ok(socket_id)
+}
+
+fn udp_target_is_authorized(
+    authorization: Option<&RuntimeUdpAuthorization>,
+    admitted_peers: &HashSet<SocketAddr>,
+    target: SocketAddr,
+) -> bool {
+    authorization.is_none()
+        || authorization.is_some_and(|policy| {
+            target == policy.endpoint
+                || (matches!(policy.role.as_str(), "host" | "server")
+                    && admitted_peers.contains(&target))
+        })
+}
+
+fn udp_bind_is_authorized(
+    authorization: Option<&RuntimeUdpAuthorization>,
+    address: SocketAddr,
+) -> bool {
+    authorization.is_none() || authorization.is_some_and(|policy| address == policy.bind_address)
+}
+
+fn udp_source_is_authorized(
+    authorization: Option<&RuntimeUdpAuthorization>,
+    source: SocketAddr,
+) -> bool {
+    authorization.is_none()
+        || authorization.is_some_and(|policy| policy.role != "client" || source == policy.endpoint)
+}
+
+fn admit_udp_peer(
+    authorization: Option<&RuntimeUdpAuthorization>,
+    admitted_peers: &mut HashSet<SocketAddr>,
+    address: SocketAddr,
+) -> Result<(), String> {
+    let Some(policy) = authorization else {
+        return Ok(());
+    };
+    if policy.role == "client" {
+        return (address == policy.endpoint).then_some(()).ok_or_else(|| {
+            "A Client runtime can admit only its configured server endpoint.".into()
+        });
+    }
+    if !admitted_peers.contains(&address) && admitted_peers.len() >= policy.maximum_peers {
+        return Err("The native UDP admitted-peer limit has been reached.".into());
+    }
+    admitted_peers.insert(address);
+    Ok(())
+}
+
+#[tauri::command]
+fn udp_open(state: tauri::State<'_, UdpSockets>, bind_address: String) -> Result<u32, String> {
+    let authorization = require_runtime_udp_permission()?;
+    let address = parse_udp_address(&bind_address, "UDP bind address")?;
+    if !udp_bind_is_authorized(authorization.as_ref(), address) {
+        return Err(
+            "UDP bind address is outside the embedded project's effective network policy.".into(),
+        );
+    }
+    open_udp_socket(state.inner(), address, authorization)
+}
+
+#[tauri::command]
+fn udp_admit_peer(
+    state: tauri::State<'_, UdpSockets>,
+    socket_id: u32,
+    target: String,
+) -> Result<(), String> {
+    let authorization = require_runtime_udp_permission()?;
+    let address = parse_udp_address(&target, "UDP peer")?;
+    let mut sockets = state
         .sockets
         .lock()
-        .map_err(|_| "UDP socket state is unavailable".to_string())?
-        .insert(id, socket);
-    Ok(id)
+        .map_err(|_| "UDP socket state is unavailable".to_string())?;
+    let socket = sockets
+        .get_mut(&socket_id)
+        .ok_or("UDP socket is not open")?;
+    if socket.authorization != authorization {
+        return Err("UDP socket does not belong to the active runtime network policy.".into());
+    }
+    admit_udp_peer(
+        socket.authorization.as_ref(),
+        &mut socket.admitted_peers,
+        address,
+    )
+}
+
+#[tauri::command]
+fn udp_forget_peer(
+    state: tauri::State<'_, UdpSockets>,
+    socket_id: u32,
+    target: String,
+) -> Result<(), String> {
+    let authorization = require_runtime_udp_permission()?;
+    let address = parse_udp_address(&target, "UDP peer")?;
+    let mut sockets = state
+        .sockets
+        .lock()
+        .map_err(|_| "UDP socket state is unavailable".to_string())?;
+    let socket = sockets
+        .get_mut(&socket_id)
+        .ok_or("UDP socket is not open")?;
+    if socket.authorization != authorization {
+        return Err("UDP socket does not belong to the active runtime network policy.".into());
+    }
+    socket.admitted_peers.remove(&address);
+    Ok(())
 }
 
 #[tauri::command]
@@ -352,18 +678,28 @@ fn udp_send(
     target: String,
     payload: String,
 ) -> Result<(), String> {
+    let authorization = require_runtime_udp_permission()?;
     if payload.len() > 65_507 {
         return Err("UDP payload exceeds 65,507 bytes".into());
     }
-    let address: SocketAddr = target
-        .parse()
-        .map_err(|_| "UDP target must be an IP address and port".to_string())?;
+    let address = parse_udp_address(&target, "UDP target")?;
     let sockets = state
         .sockets
         .lock()
         .map_err(|_| "UDP socket state is unavailable".to_string())?;
     let socket = sockets.get(&socket_id).ok_or("UDP socket is not open")?;
+    if socket.authorization != authorization {
+        return Err("UDP socket does not belong to the active runtime network policy.".into());
+    }
+    if !udp_target_is_authorized(
+        socket.authorization.as_ref(),
+        &socket.admitted_peers,
+        address,
+    ) {
+        return Err("UDP target is outside the embedded project's effective endpoint and admitted peer scope.".into());
+    }
     socket
+        .socket
         .send_to(payload.as_bytes(), address)
         .map_err(|error| error.to_string())?;
     Ok(())
@@ -375,19 +711,30 @@ fn udp_receive(
     socket_id: u32,
     maximum: usize,
 ) -> Result<Vec<UdpPacket>, String> {
-    let sockets = state
+    let authorization = require_runtime_udp_permission()?;
+    let mut sockets = state
         .sockets
         .lock()
         .map_err(|_| "UDP socket state is unavailable".to_string())?;
-    let socket = sockets.get(&socket_id).ok_or("UDP socket is not open")?;
+    let socket = sockets
+        .get_mut(&socket_id)
+        .ok_or("UDP socket is not open")?;
+    if socket.authorization != authorization {
+        return Err("UDP socket does not belong to the active runtime network policy.".into());
+    }
     let mut packets = Vec::new();
     let mut buffer = vec![0_u8; 65_507];
     for _ in 0..maximum.clamp(1, 64) {
-        match socket.recv_from(&mut buffer) {
-            Ok((length, source)) => packets.push(UdpPacket {
-                source: source.to_string(),
-                payload: String::from_utf8_lossy(&buffer[..length]).into_owned(),
-            }),
+        match socket.socket.recv_from(&mut buffer) {
+            Ok((length, source)) => {
+                if !udp_source_is_authorized(socket.authorization.as_ref(), source) {
+                    continue;
+                }
+                packets.push(UdpPacket {
+                    source: source.to_string(),
+                    payload: String::from_utf8_lossy(&buffer[..length]).into_owned(),
+                });
+            }
             Err(error) if error.kind() == std::io::ErrorKind::WouldBlock => break,
             Err(error) => return Err(error.to_string()),
         }
@@ -641,6 +988,7 @@ fn bounded_command_text(output: &std::process::Output) -> String {
 
 #[tauri::command]
 fn android_devices() -> Result<Vec<AndroidDevice>, String> {
+    require_editor_mode()?;
     let status = android_toolchain_status();
     let adb = status
         .adb_path
@@ -676,6 +1024,7 @@ fn android_devices() -> Result<Vec<AndroidDevice>, String> {
 
 #[tauri::command]
 fn android_deploy_apk(request: AndroidDeployRequest) -> Result<AndroidCommandResult, String> {
+    require_editor_mode()?;
     if !valid_android_serial(&request.device_serial) {
         return Err("Invalid Android device serial.".into());
     }
@@ -708,6 +1057,7 @@ fn android_deploy_apk(request: AndroidDeployRequest) -> Result<AndroidCommandRes
 
 #[tauri::command]
 fn android_logcat_snapshot(device_serial: String) -> Result<AndroidCommandResult, String> {
+    require_editor_mode()?;
     if !valid_android_serial(&device_serial) {
         return Err("Invalid Android device serial.".into());
     }
@@ -786,6 +1136,7 @@ fn safe_relative_path(path: &str) -> Result<PathBuf, String> {
 fn commit_project_transaction(
     request: ProjectTransactionRequest,
 ) -> Result<ProjectTransactionResult, String> {
+    require_editor_mode()?;
     if request.files.is_empty() || request.files.len() > 20_000 {
         return Err("project transaction must contain between 1 and 20,000 files".into());
     }
@@ -1037,6 +1388,318 @@ fn runtime_package_bytes() -> Result<Option<Vec<u8>>, String> {
         .map_err(|error| error.to_string())
 }
 
+fn runtime_project_document(pack: &[u8]) -> Result<serde_json::Value, String> {
+    if pack.len() < 16 || &pack[..8] != b"NOVAPAK\0" {
+        return Err("The embedded runtime package header is invalid.".into());
+    }
+    let version = u32::from_le_bytes(
+        pack[8..12]
+            .try_into()
+            .map_err(|_| "The runtime package version is truncated.")?,
+    );
+    if version != 1 {
+        return Err(format!("Unsupported runtime package version {version}."));
+    }
+    let index_length = u32::from_le_bytes(
+        pack[12..16]
+            .try_into()
+            .map_err(|_| "The runtime package index length is truncated.")?,
+    ) as usize;
+    if index_length == 0 || index_length > 16 * 1024 * 1024 || 16 + index_length > pack.len() {
+        return Err("The runtime package index is invalid or truncated.".into());
+    }
+    let index: serde_json::Value = serde_json::from_slice(&pack[16..16 + index_length])
+        .map_err(|error| format!("The runtime package index is invalid: {error}"))?;
+    if index.get("format").and_then(serde_json::Value::as_str) != Some("nova-pak")
+        || index.get("version").and_then(serde_json::Value::as_u64) != Some(1)
+    {
+        return Err("The runtime package index contract is unsupported.".into());
+    }
+    let entries = index
+        .get("entries")
+        .and_then(serde_json::Value::as_array)
+        .ok_or("The runtime package has no entry table.")?;
+    if entries.len() > MAX_WEB_EXPORT_FILES {
+        return Err("The runtime package entry table exceeds the safety limit.".into());
+    }
+    let entry = entries
+        .iter()
+        .find(|entry| entry.get("path").and_then(serde_json::Value::as_str) == Some("project.nova"))
+        .ok_or("The runtime package has no project.nova authority.")?;
+    let offset = entry
+        .get("offset")
+        .and_then(serde_json::Value::as_u64)
+        .and_then(|value| usize::try_from(value).ok())
+        .ok_or("The project.nova package offset is invalid.")?;
+    let length = entry
+        .get("length")
+        .and_then(serde_json::Value::as_u64)
+        .and_then(|value| usize::try_from(value).ok())
+        .ok_or("The project.nova package length is invalid.")?;
+    let original_length = entry
+        .get("originalLength")
+        .and_then(serde_json::Value::as_u64)
+        .and_then(|value| usize::try_from(value).ok())
+        .ok_or("The project.nova original length is invalid.")?;
+    if original_length == 0 || original_length > MAX_RUNTIME_PROJECT_BYTES {
+        return Err("The project.nova authority exceeds the 64 MiB runtime limit.".into());
+    }
+    let data_start = 16_usize
+        .checked_add(index_length)
+        .ok_or("The runtime package data offset overflowed.")?;
+    let start = data_start
+        .checked_add(offset)
+        .ok_or("The project.nova package offset overflowed.")?;
+    let end = start
+        .checked_add(length)
+        .ok_or("The project.nova package length overflowed.")?;
+    let stored = pack
+        .get(start..end)
+        .ok_or("The project.nova package entry is truncated.")?;
+    let decoded = match entry.get("codec").and_then(serde_json::Value::as_str) {
+        Some("store") => stored.to_vec(),
+        Some("gzip") => {
+            let mut decoder = GzDecoder::new(stored);
+            let mut output = Vec::with_capacity(original_length.min(1024 * 1024));
+            decoder
+                .by_ref()
+                .take((MAX_RUNTIME_PROJECT_BYTES + 1) as u64)
+                .read_to_end(&mut output)
+                .map_err(|error| {
+                    format!("The project.nova entry could not be decompressed: {error}")
+                })?;
+            output
+        }
+        _ => return Err("The project.nova compression codec is unsupported.".into()),
+    };
+    if decoded.len() != original_length {
+        return Err("The project.nova package entry has the wrong decoded size.".into());
+    }
+    let expected_hash = entry
+        .get("sha256")
+        .and_then(serde_json::Value::as_str)
+        .ok_or("The project.nova package entry has no SHA-256 digest.")?;
+    if expected_hash.len() != 64
+        || !expected_hash.bytes().all(|byte| byte.is_ascii_hexdigit())
+        || !sha256_hex(&decoded).eq_ignore_ascii_case(expected_hash)
+    {
+        return Err("The project.nova package entry failed its SHA-256 check.".into());
+    }
+    serde_json::from_slice(&decoded)
+        .map_err(|error| format!("The embedded project.nova is invalid JSON: {error}"))
+}
+
+fn network_policy_from_project(
+    project: &serde_json::Value,
+) -> Result<RuntimeNetworkPolicy, String> {
+    let networking = project
+        .pointer("/projectSettings/production/networking")
+        .and_then(serde_json::Value::as_object)
+        .ok_or("The embedded project has no networking policy.")?;
+    let installed = project
+        .pointer("/packages/installed")
+        .and_then(serde_json::Value::as_array)
+        .and_then(|entries| {
+            entries.iter().find(|entry| {
+                entry
+                    .pointer("/manifest/id")
+                    .and_then(serde_json::Value::as_str)
+                    == Some("top.whitelists.novaa.networking")
+                    && entry.get("enabled").and_then(serde_json::Value::as_bool) == Some(true)
+                    && entry.get("project").and_then(serde_json::Value::as_bool) == Some(true)
+            })
+        })
+        .ok_or("The embedded project does not contain the enabled Nova networking package.")?;
+    let locked = project
+        .pointer("/packages/lockfile")
+        .and_then(serde_json::Value::as_array)
+        .and_then(|entries| {
+            entries.iter().find(|entry| {
+                entry.get("id").and_then(serde_json::Value::as_str)
+                    == Some("top.whitelists.novaa.networking")
+            })
+        })
+        .ok_or("The embedded networking package has no lockfile record.")?;
+    let manifest_version = installed
+        .pointer("/manifest/version")
+        .and_then(serde_json::Value::as_str)
+        .unwrap_or_default();
+    let manifest_hash = installed
+        .pointer("/manifest/sha256")
+        .and_then(serde_json::Value::as_str)
+        .unwrap_or_default();
+    let lock_version = locked
+        .get("version")
+        .and_then(serde_json::Value::as_str)
+        .unwrap_or_default();
+    let lock_hash = locked
+        .get("sha256")
+        .and_then(serde_json::Value::as_str)
+        .unwrap_or_default();
+    if manifest_version.is_empty()
+        || manifest_version != lock_version
+        || manifest_hash.len() != 64
+        || !manifest_hash.eq_ignore_ascii_case(lock_hash)
+        || !manifest_hash.bytes().all(|byte| byte.is_ascii_hexdigit())
+    {
+        return Err(
+            "The embedded networking package does not match its verified lockfile record.".into(),
+        );
+    }
+    let declared = installed
+        .pointer("/manifest/permissions")
+        .and_then(serde_json::Value::as_array)
+        .into_iter()
+        .flatten()
+        .filter_map(serde_json::Value::as_str)
+        .collect::<Vec<_>>();
+    let granted = installed
+        .get("grantedPermissions")
+        .and_then(serde_json::Value::as_array)
+        .into_iter()
+        .flatten()
+        .filter_map(serde_json::Value::as_str)
+        .collect::<Vec<_>>();
+    let configured_role = networking
+        .get("role")
+        .and_then(serde_json::Value::as_str)
+        .filter(|role| matches!(*role, "client" | "host" | "server"))
+        .unwrap_or("client")
+        .to_owned();
+    let custom_services_selected = networking
+        .get("services")
+        .and_then(serde_json::Value::as_object)
+        .is_some_and(|services| {
+            services
+                .values()
+                .any(|value| value.as_str().is_some_and(|id| !id.is_empty()))
+        });
+    let custom_transport_selected = networking
+        .get("transportAdapterId")
+        .and_then(serde_json::Value::as_str)
+        .is_some_and(|id| !id.is_empty());
+    Ok(RuntimeNetworkPolicy {
+        configured_role,
+        session_mode: networking
+            .get("sessionMode")
+            .and_then(serde_json::Value::as_str)
+            .unwrap_or_default()
+            .to_owned(),
+        transport: if custom_services_selected || custom_transport_selected {
+            "reviewed-provider".into()
+        } else {
+            networking
+                .get("transport")
+                .and_then(serde_json::Value::as_str)
+                .unwrap_or_default()
+                .to_owned()
+        },
+        endpoint: networking
+            .get("endpoint")
+            .and_then(serde_json::Value::as_str)
+            .unwrap_or_default()
+            .to_owned(),
+        bind_address: networking
+            .get("bindAddress")
+            .and_then(serde_json::Value::as_str)
+            .unwrap_or_default()
+            .to_owned(),
+        maximum_peers: networking
+            .get("maxPeers")
+            .and_then(serde_json::Value::as_u64)
+            .and_then(|value| usize::try_from(value).ok())
+            .unwrap_or(8)
+            .clamp(1, 64),
+        protocol_version: networking
+            .get("protocolVersion")
+            .and_then(serde_json::Value::as_u64)
+            .unwrap_or_default(),
+        requires_encryption: networking
+            .get("security")
+            .and_then(serde_json::Value::as_object)
+            .and_then(|security| security.get("requireEncryption"))
+            .and_then(serde_json::Value::as_bool)
+            == Some(true),
+        client_allowed: declared.contains(&"network.client") && granted.contains(&"network.client"),
+        listen_allowed: declared.contains(&"network.listen") && granted.contains(&"network.listen"),
+        enabled: networking
+            .get("enabled")
+            .and_then(serde_json::Value::as_bool)
+            == Some(true),
+        permission_granted: networking
+            .get("permissionGranted")
+            .and_then(serde_json::Value::as_bool)
+            == Some(true),
+        auto_start: networking
+            .get("autoStart")
+            .and_then(serde_json::Value::as_bool)
+            == Some(true),
+    })
+}
+
+fn embedded_build_runtime_mode(project: &serde_json::Value) -> Result<&str, String> {
+    match project
+        .pointer("/projectSettings/build/runtimeMode")
+        .and_then(serde_json::Value::as_str)
+    {
+        Some(mode @ ("game" | "headless-server")) => Ok(mode),
+        _ => Err("The embedded project has no supported build runtime mode.".into()),
+    }
+}
+
+fn validate_export_runtime_contract(
+    requested_runtime_mode: &str,
+    target: &str,
+    project: &serde_json::Value,
+) -> Result<(), String> {
+    if !matches!(requested_runtime_mode, "game" | "headless-server") {
+        return Err("unsupported export runtime mode".into());
+    }
+    let embedded_runtime_mode = embedded_build_runtime_mode(project)?;
+    if embedded_runtime_mode != requested_runtime_mode {
+        return Err(
+            "The native export runtime mode does not match the embedded project build contract."
+                .into(),
+        );
+    }
+    if requested_runtime_mode != "headless-server" {
+        return Ok(());
+    }
+    if matches!(target, "web" | "android") {
+        return Err(
+            "Headless authoritative-server exports require a native desktop target.".into(),
+        );
+    }
+    let policy = network_policy_from_project(project)?;
+    if !policy.enabled
+        || !policy.permission_granted
+        || !policy.auto_start
+        || !policy.client_allowed
+        || !policy.listen_allowed
+        || !matches!(policy.configured_role.as_str(), "host" | "server")
+        || policy.session_mode != "direct"
+        || policy.transport != "native-udp"
+        || policy.protocol_version != 2
+        || policy.requires_encryption
+    {
+        return Err("Headless export requires an enabled, authorized, auto-starting Direct native-UDP Host/Server with explicit network.client and network.listen grants.".into());
+    }
+    parse_udp_address(&policy.endpoint, "The embedded headless UDP endpoint")?;
+    parse_udp_address(
+        &policy.bind_address,
+        "The embedded headless UDP bind address",
+    )?;
+    Ok(())
+}
+
+fn load_runtime_network_policy() -> Result<Option<RuntimeNetworkPolicy>, String> {
+    let Some(pack) = runtime_package_bytes()? else {
+        return Ok(None);
+    };
+    let project = runtime_project_document(&pack)?;
+    network_policy_from_project(&project).map(Some)
+}
+
 #[tauri::command]
 fn runtime_mode() -> Result<bool, String> {
     Ok(runtime_package_bytes()?.is_some())
@@ -1068,13 +1731,104 @@ fn runtime_overrides() -> RuntimeOverrides {
         session_name: bounded_environment_value("NOVA_NETWORK_SESSION", 80),
         instance_id: bounded_environment_value("NOVA_NETWORK_INSTANCE", 32),
         log_scope: bounded_environment_value("NOVA_LOG_SCOPE", 48),
+        inspector_id: bounded_environment_value("NOVA_NETWORK_INSPECTOR", 64),
+        session_mode: bounded_environment_value("NOVA_NETWORK_SESSION_MODE", 16)
+            .filter(|value| value == "local" || value == "direct"),
+        transport: bounded_environment_value("NOVA_NETWORK_TRANSPORT", 24)
+            .filter(|value| value == "websocket" || value == "native-udp"),
+        endpoint: bounded_environment_value("NOVA_NETWORK_ENDPOINT", 256),
+        bind_address: bounded_environment_value("NOVA_NETWORK_BIND_ADDRESS", 128),
     }
+}
+
+fn validate_network_player_build(
+    executable: &Path,
+    working_directory: &Path,
+) -> Result<(), String> {
+    let report_path = working_directory.join("nova-build-report.json");
+    let report_metadata = report_path
+        .metadata()
+        .map_err(|_| "Network play requires the adjacent Nova_A build report.".to_string())?;
+    if !report_metadata.is_file() || report_metadata.len() > 8 * 1024 * 1024 {
+        return Err("The adjacent Nova_A build report is invalid or exceeds 8 MiB.".into());
+    }
+    let report: BuildReport = serde_json::from_slice(
+        &fs::read(&report_path)
+            .map_err(|error| format!("Could not read the Nova_A build report: {error}"))?,
+    )
+    .map_err(|error| format!("The adjacent Nova_A build report is invalid: {error}"))?;
+    let host_target = if cfg!(target_os = "windows") {
+        "windows"
+    } else if cfg!(target_os = "macos") {
+        "macos"
+    } else if cfg!(target_os = "linux") {
+        "linux"
+    } else {
+        "unknown"
+    };
+    if report.format != "nova-build-report"
+        || report.version != 2
+        || report.engine_version != ENGINE_VERSION
+        || report.target != host_target
+        || report.architecture != std::env::consts::ARCH
+        || report.runtime_mode != "game"
+    {
+        return Err("The network player build report does not match this Nova_A host, engine, or report contract.".into());
+    }
+    let relative = executable
+        .strip_prefix(working_directory)
+        .map_err(|_| "The network player is outside its reported build directory.".to_string())?
+        .to_string_lossy()
+        .replace('\\', "/");
+    safe_relative_path(&relative)?;
+    let mut matching_records = report.files.iter().filter(|record| record.path == relative);
+    let record = matching_records
+        .next()
+        .ok_or("The executable is not present in the Nova_A build report.")?;
+    if matching_records.next().is_some() {
+        return Err("The Nova_A build report contains a duplicate executable record.".into());
+    }
+    let executable_metadata = executable
+        .metadata()
+        .map_err(|error| format!("Could not inspect the network player: {error}"))?;
+    if record.bytes != executable_metadata.len()
+        || record.sha256.len() != 64
+        || !record.sha256.bytes().all(|byte| byte.is_ascii_hexdigit())
+        || !file_hash(executable)?.eq_ignore_ascii_case(&record.sha256)
+    {
+        return Err(
+            "The network player does not match its build-report hash and byte count.".into(),
+        );
+    }
+    let pack = embedded_package(executable)?
+        .ok_or("Multi-instance play requires a single-file Nova_A player with an embedded project package.")?;
+    let project = runtime_project_document(&pack)?;
+    if embedded_build_runtime_mode(&project)? != "game" {
+        return Err("Multi-instance play requires a game-runtime player build.".into());
+    }
+    let policy = network_policy_from_project(&project)?;
+    if !policy.enabled
+        || !policy.permission_granted
+        || !policy.auto_start
+        || !policy.client_allowed
+        || !policy.listen_allowed
+        || !matches!(policy.configured_role.as_str(), "host" | "server")
+        || policy.session_mode != "direct"
+        || policy.transport != "native-udp"
+        || policy.protocol_version != 2
+        || policy.requires_encryption
+    {
+        return Err("The built player does not authorize direct native-UDP Host/Server multi-instance play with network.client and network.listen grants.".into());
+    }
+    Ok(())
 }
 
 #[tauri::command]
 fn launch_network_instances(
+    state: tauri::State<'_, NetworkInstances>,
     request: NetworkInstanceLaunchRequest,
 ) -> Result<Vec<NetworkInstanceLaunch>, String> {
+    require_editor_mode()?;
     if !(2..=8).contains(&request.count) {
         return Err("Network play requires 2–8 bounded instances".into());
     }
@@ -1093,6 +1847,7 @@ fn launch_network_instances(
     {
         return Err("Windows network play requires a built .exe player".into());
     }
+    validate_network_player_build(&executable, &working_directory)?;
     let session_name: String = request
         .session_name
         .chars()
@@ -1102,7 +1857,24 @@ fn launch_network_instances(
     if session_name.trim().is_empty() {
         return Err("Network play session name cannot be empty".into());
     }
-    let mut launched = Vec::with_capacity(request.count as usize);
+    let reservation = UdpSocket::bind("127.0.0.1:0")
+        .map_err(|error| format!("Could not reserve a local network-play port: {error}"))?;
+    let host_endpoint = reservation
+        .local_addr()
+        .map_err(|error| format!("Could not read the local network-play port: {error}"))?
+        .to_string();
+    drop(reservation);
+    let mut managed = state
+        .children
+        .lock()
+        .map_err(|_| "Network instance state is unavailable".to_string())?;
+    managed.retain(|_, instance| instance.child.try_wait().ok().flatten().is_none());
+    if !managed.is_empty() {
+        return Err(
+            "Stop the current network-play instances before launching another group".into(),
+        );
+    }
+    let mut pending: Vec<ManagedNetworkInstance> = Vec::with_capacity(request.count as usize);
     for index in 0..request.count {
         let role = if index == 0 { "host" } else { "client" };
         let player_name = if index == 0 {
@@ -1115,29 +1887,135 @@ fn launch_network_instances(
             .separate_logs
             .then(|| format!("network-{}", index + 1))
             .unwrap_or_default();
+        let inspector_id = request
+            .separate_inspectors
+            .then(|| format!("network-peer-{}", index + 1))
+            .unwrap_or_default();
+        let bind_address = if index == 0 {
+            host_endpoint.clone()
+        } else {
+            "127.0.0.1:0".to_owned()
+        };
         let mut command = Command::new(&executable);
         command
             .current_dir(&working_directory)
             .env("NOVA_NETWORK_ROLE", role)
             .env("NOVA_NETWORK_PLAYER_NAME", &player_name)
             .env("NOVA_NETWORK_SESSION", &session_name)
-            .env("NOVA_NETWORK_INSTANCE", &instance_id);
+            .env("NOVA_NETWORK_INSTANCE", &instance_id)
+            .env("NOVA_NETWORK_SESSION_MODE", "direct")
+            .env("NOVA_NETWORK_TRANSPORT", "native-udp")
+            .env("NOVA_NETWORK_ENDPOINT", &host_endpoint)
+            .env("NOVA_NETWORK_BIND_ADDRESS", &bind_address);
         if !log_scope.is_empty() {
             command.env("NOVA_LOG_SCOPE", &log_scope);
         }
-        let child = command
-            .spawn()
-            .map_err(|error| format!("Could not launch {instance_id}: {error}"))?;
-        launched.push(NetworkInstanceLaunch {
+        if !inspector_id.is_empty() {
+            command.env("NOVA_NETWORK_INSPECTOR", &inspector_id);
+        }
+        let child = match command.spawn() {
+            Ok(child) => child,
+            Err(error) => {
+                for instance in &mut pending {
+                    let _ = terminate_network_child(&mut instance.child);
+                }
+                return Err(format!("Could not launch {instance_id}: {error}"));
+            }
+        };
+        let launch = NetworkInstanceLaunch {
             id: instance_id,
             role: role.to_owned(),
             player_name,
             session_name: session_name.clone(),
             log_scope,
+            inspector_id,
+            endpoint: host_endpoint.clone(),
+            bind_address,
             process_id: child.id(),
-        });
+        };
+        pending.push(ManagedNetworkInstance { child, launch });
+    }
+    let launched: Vec<NetworkInstanceLaunch> = pending
+        .iter()
+        .map(|instance| instance.launch.clone())
+        .collect();
+    for instance in pending {
+        managed.insert(instance.launch.id.clone(), instance);
     }
     Ok(launched)
+}
+
+#[tauri::command]
+fn network_instance_status(
+    state: tauri::State<'_, NetworkInstances>,
+) -> Result<Vec<NetworkInstanceStatus>, String> {
+    require_editor_mode()?;
+    let mut children = state
+        .children
+        .lock()
+        .map_err(|_| "Network instance state is unavailable".to_string())?;
+    let mut statuses = Vec::with_capacity(children.len());
+    for instance in children.values_mut() {
+        let exit = instance
+            .child
+            .try_wait()
+            .map_err(|error| error.to_string())?;
+        statuses.push(NetworkInstanceStatus {
+            id: instance.launch.id.clone(),
+            role: instance.launch.role.clone(),
+            player_name: instance.launch.player_name.clone(),
+            session_name: instance.launch.session_name.clone(),
+            log_scope: instance.launch.log_scope.clone(),
+            inspector_id: instance.launch.inspector_id.clone(),
+            endpoint: instance.launch.endpoint.clone(),
+            bind_address: instance.launch.bind_address.clone(),
+            process_id: instance.launch.process_id,
+            running: exit.is_none(),
+            exit_code: exit.and_then(|status| status.code()),
+        });
+    }
+    statuses.sort_by(|left, right| left.id.cmp(&right.id));
+    Ok(statuses)
+}
+
+#[tauri::command]
+fn stop_network_instances(state: tauri::State<'_, NetworkInstances>) -> Result<usize, String> {
+    require_editor_mode()?;
+    let mut children = state
+        .children
+        .lock()
+        .map_err(|_| "Network instance state is unavailable".to_string())?;
+    let count = children.len();
+    for instance in children.values_mut() {
+        terminate_network_child(&mut instance.child)?;
+    }
+    children.clear();
+    Ok(count)
+}
+
+#[tauri::command]
+fn stop_network_instance(
+    state: tauri::State<'_, NetworkInstances>,
+    instance_id: String,
+) -> Result<bool, String> {
+    require_editor_mode()?;
+    let clean_id: String = instance_id
+        .chars()
+        .filter(|character| character.is_ascii_alphanumeric() || matches!(character, '-' | '_'))
+        .take(32)
+        .collect();
+    if clean_id != instance_id || clean_id.is_empty() {
+        return Err("Invalid network instance identity".into());
+    }
+    let mut children = state
+        .children
+        .lock()
+        .map_err(|_| "Network instance state is unavailable".to_string())?;
+    let Some(mut instance) = children.remove(&clean_id) else {
+        return Ok(false);
+    };
+    terminate_network_child(&mut instance.child)?;
+    Ok(true)
 }
 
 fn copy_directory(source: &Path, destination: &Path) -> Result<(), String> {
@@ -1419,6 +2297,7 @@ fn build_file_records(root: &Path, files: &[String]) -> Result<Vec<BuildFileReco
 
 #[tauri::command]
 fn export_game(request: ExportRequest) -> Result<ExportResult, String> {
+    require_editor_mode()?;
     if !matches!(
         request.target.as_str(),
         "windows" | "linux" | "macos" | "web" | "android"
@@ -1427,6 +2306,9 @@ fn export_game(request: ExportRequest) -> Result<ExportResult, String> {
     }
     if !matches!(request.architecture.as_str(), "x86_64" | "aarch64") {
         return Err("unsupported export architecture".into());
+    }
+    if !matches!(request.runtime_mode.as_str(), "game" | "headless-server") {
+        return Err("unsupported export runtime mode".into());
     }
     if request.target != "web"
         && request.target != "android"
@@ -1463,6 +2345,8 @@ fn export_game(request: ExportRequest) -> Result<ExportResult, String> {
     if pack.is_empty() {
         return Err("game package cannot be empty".into());
     }
+    let embedded_project = runtime_project_document(&pack)?;
+    validate_export_runtime_contract(&request.runtime_mode, &request.target, &embedded_project)?;
     let mut decoded_web_bytes = 0_u64;
     for file in &request.web_files {
         let estimated = (file.data_base64.len() as u64)
@@ -1495,6 +2379,7 @@ fn export_game(request: ExportRequest) -> Result<ExportResult, String> {
     build_digest.update(request.target.as_bytes());
     build_digest.update(request.architecture.as_bytes());
     build_digest.update(request.profile.as_bytes());
+    build_digest.update(request.runtime_mode.as_bytes());
     build_digest.update(serde_json::to_vec(&request.platform).map_err(|error| error.to_string())?);
     let build_id = format!("{:x}", build_digest.finalize());
     let mut previous_report = fs::read(root.join("nova-build-report.json"))
@@ -1763,7 +2648,7 @@ fn export_game(request: ExportRequest) -> Result<ExportResult, String> {
 
     let platform_config = serde_json::to_vec_pretty(&serde_json::json!({
         "format": "nova-platform-config", "version": 1, "engineVersion": ENGINE_VERSION,
-        "target": request.target, "architecture": request.architecture, "profile": request.profile,
+        "target": request.target, "architecture": request.architecture, "profile": request.profile, "runtimeMode": request.runtime_mode,
         "application": request.platform, "structuredLogs": request.delivery.structured_logs,
         "crashCapture": request.delivery.crash_reports,
         "telemetry": { "enabled": request.delivery.telemetry_enabled, "endpoint": request.delivery.telemetry_endpoint, "privacyPolicy": request.delivery.privacy_policy_url }
@@ -1872,7 +2757,7 @@ fn export_game(request: ExportRequest) -> Result<ExportResult, String> {
         let provenance = serde_json::to_vec_pretty(&serde_json::json!({
             "format": "nova-build-provenance", "version": 1, "engineVersion": ENGINE_VERSION, "buildId": build_id,
             "projectId": request.project_id, "target": request.target, "architecture": request.architecture,
-            "profile": request.profile, "releaseChannel": request.delivery.release_channel,
+            "profile": request.profile, "runtimeMode": request.runtime_mode, "releaseChannel": request.delivery.release_channel,
             "exportTemplate": request.delivery.export_template, "inputsHash": build_id, "outputsHash": output_digest,
             "deterministic": request.delivery.deterministic, "sourceCommit": "working-tree",
             "toolchain": { "builder": "Nova_A Desktop Export 1", "host": std::env::consts::OS, "architecture": std::env::consts::ARCH },
@@ -2013,6 +2898,7 @@ fn export_game(request: ExportRequest) -> Result<ExportResult, String> {
         target: request.target.clone(),
         architecture: request.architecture.clone(),
         profile: request.profile.clone(),
+        runtime_mode: request.runtime_mode.clone(),
         project_id: request.project_id.clone(),
         cache_mode: request.delivery.cache_mode.clone(),
         total_bytes: records.iter().map(|record| record.bytes).sum(),
@@ -2095,6 +2981,7 @@ fn logs_directory() -> PathBuf {
 
 #[tauri::command]
 fn open_external_diff(request: ExternalDiffRequest) -> Result<(), String> {
+    require_editor_mode()?;
     if request.executable.trim().is_empty() || request.executable.len() > 1_024 {
         return Err("Choose a bounded external diff executable path".into());
     }
@@ -2153,6 +3040,7 @@ fn external_tool_directory(label: &str) -> Result<PathBuf, String> {
 
 #[tauri::command]
 fn open_external_merge(request: ExternalMergeRequest) -> Result<(), String> {
+    require_editor_mode()?;
     if request.executable.trim().is_empty() || request.executable.len() > 1_024 {
         return Err("Choose a bounded external merge executable path".into());
     }
@@ -2216,6 +3104,7 @@ fn initialize_git_repository(
     pre_commit_contents: String,
     ci_contents: String,
 ) -> Result<String, String> {
+    require_editor_mode()?;
     let root = PathBuf::from(project_directory)
         .canonicalize()
         .map_err(|error| format!("Project directory is unavailable: {error}"))?;
@@ -2283,12 +3172,16 @@ pub fn run() {
     install_panic_logger();
     tauri::Builder::default()
         .manage(UdpSockets::default())
+        .manage(NetworkInstances::default())
         .plugin(tauri_plugin_opener::init())
         .invoke_handler(tauri::generate_handler![
             runtime_mode,
             runtime_package,
             runtime_overrides,
             launch_network_instances,
+            network_instance_status,
+            stop_network_instance,
+            stop_network_instances,
             android_toolchain_status,
             android_devices,
             android_deploy_apk,
@@ -2302,10 +3195,24 @@ pub fn run() {
             commit_project_transaction,
             write_crash_log,
             udp_open,
+            udp_admit_peer,
+            udp_forget_peer,
             udp_send,
             udp_receive,
             udp_close
         ])
+        .on_window_event(|window, event| {
+            if window.label() != "main" || !matches!(event, tauri::WindowEvent::Destroyed) {
+                return;
+            }
+            let state = window.app_handle().state::<NetworkInstances>();
+            if let Ok(mut children) = state.children.lock() {
+                for instance in children.values_mut() {
+                    let _ = terminate_network_child(&mut instance.child);
+                }
+                children.clear();
+            };
+        })
         .run(tauri::generate_context!())
         .expect("error while running Nova_A");
 }
@@ -2313,6 +3220,166 @@ pub fn run() {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn network_project(runtime_mode: &str, granted_permissions: &[&str]) -> serde_json::Value {
+        let package_hash = "a".repeat(64);
+        serde_json::json!({
+            "projectSettings": {
+                "build": { "runtimeMode": runtime_mode },
+                "production": { "networking": {
+                    "enabled": true, "permissionGranted": true, "autoStart": true,
+                    "role": "host", "sessionMode": "direct", "transport": "native-udp",
+                    "endpoint": "udp://127.0.0.1:7777", "bindAddress": "127.0.0.1:0",
+                    "maxPeers": 8, "protocolVersion": 2, "security": { "requireEncryption": false },
+                    "transportAdapterId": "", "services": {}
+                }}
+            },
+            "packages": {
+                "installed": [{
+                    "manifest": { "id": "top.whitelists.novaa.networking", "version": "1.0.0", "sha256": package_hash, "permissions": ["network.client", "network.listen"] },
+                    "enabled": true, "project": true,
+                    "grantedPermissions": granted_permissions
+                }],
+                "lockfile": [{ "id": "top.whitelists.novaa.networking", "version": "1.0.0", "sha256": package_hash }]
+            }
+        })
+    }
+
+    #[test]
+    fn native_export_attests_headless_runtime_and_network_policy() {
+        let valid = network_project("headless-server", &["network.client", "network.listen"]);
+        assert!(validate_export_runtime_contract("headless-server", "windows", &valid).is_ok());
+        assert!(validate_export_runtime_contract("game", "windows", &valid)
+            .unwrap_err()
+            .contains("does not match"));
+
+        let missing_listen = network_project("headless-server", &["network.client"]);
+        assert!(
+            validate_export_runtime_contract("headless-server", "windows", &missing_listen)
+                .unwrap_err()
+                .contains("network.listen")
+        );
+
+        let mut wrong_transport = valid;
+        wrong_transport["projectSettings"]["production"]["networking"]["transport"] =
+            serde_json::json!("websocket");
+        assert!(
+            validate_export_runtime_contract("headless-server", "windows", &wrong_transport)
+                .unwrap_err()
+                .contains("native-UDP")
+        );
+
+        let mut wrong_protocol =
+            network_project("headless-server", &["network.client", "network.listen"]);
+        wrong_protocol["projectSettings"]["production"]["networking"]["protocolVersion"] =
+            serde_json::json!(1);
+        assert!(
+            validate_export_runtime_contract("headless-server", "windows", &wrong_protocol)
+                .is_err()
+        );
+
+        let mut plaintext_mismatch =
+            network_project("headless-server", &["network.client", "network.listen"]);
+        plaintext_mismatch["projectSettings"]["production"]["networking"]["security"]
+            ["requireEncryption"] = serde_json::json!(true);
+        assert!(validate_export_runtime_contract(
+            "headless-server",
+            "windows",
+            &plaintext_mismatch
+        )
+        .is_err());
+
+        let mut undeclared_listen =
+            network_project("headless-server", &["network.client", "network.listen"]);
+        undeclared_listen["packages"]["installed"][0]["manifest"]["permissions"] =
+            serde_json::json!(["network.client"]);
+        assert!(
+            validate_export_runtime_contract("headless-server", "windows", &undeclared_listen)
+                .is_err()
+        );
+    }
+
+    #[test]
+    fn runtime_udp_scope_bounds_bind_targets_and_socket_count() {
+        let authorization = RuntimeUdpAuthorization {
+            role: "host".into(),
+            bind_address: "127.0.0.1:0".parse().unwrap(),
+            endpoint: "127.0.0.1:7777".parse().unwrap(),
+            maximum_peers: 8,
+        };
+        assert!(udp_bind_is_authorized(
+            Some(&authorization),
+            "127.0.0.1:0".parse().unwrap()
+        ));
+        assert!(!udp_bind_is_authorized(
+            Some(&authorization),
+            "0.0.0.0:0".parse().unwrap()
+        ));
+
+        let mut observed = HashSet::new();
+        assert!(udp_target_is_authorized(
+            Some(&authorization),
+            &observed,
+            "127.0.0.1:7777".parse().unwrap()
+        ));
+        assert!(!udp_target_is_authorized(
+            Some(&authorization),
+            &observed,
+            "127.0.0.1:8888".parse().unwrap()
+        ));
+        observed.insert("127.0.0.1:8888".parse().unwrap());
+        assert!(udp_target_is_authorized(
+            Some(&authorization),
+            &observed,
+            "127.0.0.1:8888".parse().unwrap()
+        ));
+        let client_authorization = RuntimeUdpAuthorization {
+            role: "client".into(),
+            ..authorization.clone()
+        };
+        assert!(!udp_target_is_authorized(
+            Some(&client_authorization),
+            &observed,
+            "127.0.0.1:8888".parse().unwrap()
+        ));
+        assert!(udp_source_is_authorized(
+            Some(&client_authorization),
+            client_authorization.endpoint
+        ));
+        assert!(!udp_source_is_authorized(
+            Some(&client_authorization),
+            "127.0.0.1:8888".parse().unwrap()
+        ));
+
+        let bounded_authorization = RuntimeUdpAuthorization {
+            maximum_peers: 1,
+            ..authorization.clone()
+        };
+        let mut admitted = HashSet::new();
+        let first_peer = "127.0.0.1:8888".parse().unwrap();
+        let reconnect_peer = "127.0.0.1:9999".parse().unwrap();
+        admit_udp_peer(Some(&bounded_authorization), &mut admitted, first_peer).unwrap();
+        assert!(
+            admit_udp_peer(Some(&bounded_authorization), &mut admitted, reconnect_peer).is_err()
+        );
+        admitted.remove(&first_peer);
+        admit_udp_peer(Some(&bounded_authorization), &mut admitted, reconnect_peer).unwrap();
+
+        let state = UdpSockets::default();
+        for _ in 0..MAX_RUNTIME_UDP_SOCKETS {
+            open_udp_socket(
+                &state,
+                authorization.bind_address,
+                Some(authorization.clone()),
+            )
+            .unwrap();
+        }
+        assert!(
+            open_udp_socket(&state, authorization.bind_address, Some(authorization))
+                .unwrap_err()
+                .contains("socket limit")
+        );
+    }
 
     #[test]
     fn embedded_package_round_trips_without_changing_payload() {
@@ -2354,6 +3421,87 @@ mod tests {
             .unwrap_err()
             .contains("SHA-256 integrity"));
         fs::remove_file(path).unwrap();
+    }
+
+    #[test]
+    fn network_instance_launcher_requires_a_reported_embedded_player() {
+        let unique = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
+        let directory = std::env::temp_dir().join(format!(
+            "nova-a-network-player-test-{}-{unique}",
+            std::process::id()
+        ));
+        fs::create_dir_all(&directory).unwrap();
+        let executable = directory.join("NetworkGame.exe");
+        fs::write(&executable, b"player-prefix").unwrap();
+        let package_hash = "a".repeat(64);
+        let project = serde_json::json!({
+            "projectSettings": { "build": { "runtimeMode": "game" }, "production": { "networking": {
+                "enabled": true, "permissionGranted": true, "autoStart": true,
+                "role": "host", "sessionMode": "direct", "transport": "native-udp",
+                "endpoint": "udp://127.0.0.1:7777", "bindAddress": "127.0.0.1:0",
+                "maxPeers": 8, "protocolVersion": 2, "security": { "requireEncryption": false },
+                "transportAdapterId": "", "services": {}
+            }}},
+            "packages": {
+                "installed": [{
+                    "manifest": {
+                        "id": "top.whitelists.novaa.networking", "version": "1.0.0", "sha256": package_hash,
+                        "permissions": ["network.client", "network.listen"]
+                    },
+                    "enabled": true, "project": true,
+                    "grantedPermissions": ["network.client", "network.listen"]
+                }],
+                "lockfile": [{ "id": "top.whitelists.novaa.networking", "version": "1.0.0", "sha256": package_hash }]
+            }
+        });
+        let project_bytes = serde_json::to_vec(&project).unwrap();
+        let index = serde_json::json!({
+            "format": "nova-pak", "version": 1,
+            "entries": [{
+                "path": "project.nova", "offset": 0, "length": project_bytes.len(),
+                "originalLength": project_bytes.len(), "codec": "store",
+                "sha256": sha256_hex(&project_bytes)
+            }]
+        });
+        let index_bytes = serde_json::to_vec(&index).unwrap();
+        let mut pack = b"NOVAPAK\0".to_vec();
+        pack.extend_from_slice(&1_u32.to_le_bytes());
+        pack.extend_from_slice(&(index_bytes.len() as u32).to_le_bytes());
+        pack.extend_from_slice(&index_bytes);
+        pack.extend_from_slice(&project_bytes);
+        append_embedded_package(&executable, &pack).unwrap();
+        let target = if cfg!(target_os = "windows") {
+            "windows"
+        } else if cfg!(target_os = "macos") {
+            "macos"
+        } else if cfg!(target_os = "linux") {
+            "linux"
+        } else {
+            "unknown"
+        };
+        let report = serde_json::json!({
+            "format": "nova-build-report", "version": 2, "engineVersion": ENGINE_VERSION,
+            "buildId": "fixture", "createdAt": 0, "target": target,
+            "architecture": std::env::consts::ARCH, "profile": "release", "runtimeMode": "game", "projectId": "fixture",
+            "cacheMode": "clean", "totalBytes": executable.metadata().unwrap().len(),
+            "files": [{ "path": "NetworkGame.exe", "sha256": file_hash(&executable).unwrap(), "bytes": executable.metadata().unwrap().len() }]
+        });
+        fs::write(
+            directory.join("nova-build-report.json"),
+            serde_json::to_vec(&report).unwrap(),
+        )
+        .unwrap();
+        validate_network_player_build(&executable, &directory).unwrap();
+        let mut tampered = fs::read(&executable).unwrap();
+        tampered[0] ^= 0xff;
+        fs::write(&executable, tampered).unwrap();
+        assert!(validate_network_player_build(&executable, &directory)
+            .unwrap_err()
+            .contains("hash and byte count"));
+        fs::remove_dir_all(directory).unwrap();
     }
 
     #[test]

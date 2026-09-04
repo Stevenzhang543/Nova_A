@@ -1,7 +1,7 @@
 import { reactive } from 'vue'
 import type { InputAction } from './input'
 
-export type InputModality = 'keyboard' | 'mouse' | 'gamepad' | 'touch'
+export type InputModality = 'keyboard' | 'mouse' | 'gamepad' | 'touch' | 'pen'
 export type InputPromptStyle = 'symbol' | 'compact' | 'label'
 
 export interface InputPromptState {
@@ -32,6 +32,7 @@ const KEYBOARD_SYMBOLS: Record<string, string> = {
 }
 const MOUSE_SYMBOLS: Record<string, string> = { '0': 'LMB', '1': 'MMB', '2': 'RMB' }
 const GAMEPAD_SYMBOLS: Record<string, string> = { '0': 'A', '1': 'B', '2': 'X', '3': 'Y', '4': 'LB', '5': 'RB', '6': 'LT', '7': 'RT', '8': 'View', '9': 'Menu', '12': 'D-pad ↑', '13': 'D-pad ↓', '14': 'D-pad ←', '15': 'D-pad →' }
+const PEN_SYMBOLS: Record<string, string> = { tip: 'Pen', barrel: 'Barrel', eraser: 'Eraser', pressure: 'Pressure', x: 'Tilt X', y: 'Tilt Y', twist: 'Twist' }
 
 function cleanAction(value: string): string { return value.trim().slice(0, 120) }
 
@@ -58,12 +59,14 @@ export function inputPromptForAction(actionName: string, actions: InputAction[],
   const preferred = action?.bindings.find(binding => modality === 'keyboard' ? binding.device === 'keyboard' || binding.device === 'physical-key'
     : modality === 'mouse' ? binding.device.startsWith('mouse')
       : modality === 'gamepad' ? binding.device.startsWith('gamepad')
-        : binding.device === 'touch' || binding.device === 'gesture') ?? action?.bindings[0]
+        : modality === 'pen' ? binding.device.startsWith('pen')
+          : binding.device === 'touch' || binding.device === 'gesture') ?? action?.bindings[0]
   const code = preferred?.code ?? ''
-  const symbol = modality === 'keyboard' ? KEYBOARD_SYMBOLS[code] ?? code.replace(/^Key/, '').replace(/^Digit/, '')
+  const symbol = modality === 'keyboard' ? KEYBOARD_SYMBOLS[code] ?? (code === ' ' ? 'Space' : code.replace(/^Key/, '').replace(/^Digit/, ''))
     : modality === 'mouse' ? MOUSE_SYMBOLS[code] ?? `Mouse ${code}`
       : modality === 'gamepad' ? gamepadSymbol(code)
-        : code || 'Touch'
+        : modality === 'pen' ? PEN_SYMBOLS[code] ?? code.replace(/^button-/, 'Pen ')
+          : code || 'Touch'
   const label = cleanAction(actionName) || 'Action'
   return { action: label, modality, bindingCode: code, symbol: symbol || '—', label, accessibleLabel: `${label}: ${symbol || 'unbound'} on ${modality}` }
 }

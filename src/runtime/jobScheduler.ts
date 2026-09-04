@@ -1,20 +1,23 @@
 import { reactive } from 'vue'
 import { productionSettings } from './production'
-import { recordWorkerPerformance } from './largeWorldPerformance'
+import { recordStaleWorkerResult, recordWorkerPerformance } from './largeWorldPerformance'
 
 export type JobKind = 'parseJson' | 'parseCsv' | 'hash' | 'compare' | 'sampleAnimation' | 'advanceParticles' | 'buildSpatialGrid'
 export interface JobScheduleOptions { key?: string; generation?: number; timeoutMs?: number }
-interface QueueJob { id: number; kind: JobKind; payload: unknown; resolve: (value: unknown) => void; reject: (reason: Error) => void; timer: number | null; cancelled: boolean; queuedAt: number; key: string; generation: number; timeoutMs: number }
-interface WorkerSlot { worker: Worker; busy: boolean; jobId: number | null }
+interface QueueJob { id: number; kind: JobKind; payload: unknown; resolve: (value: unknown) => void; reject: (reason: Error) => void; timer: ReturnType<typeof setTimeout> | null; cancelled: boolean; settled: boolean; queuedAt: number; key: string; generation: number; timeoutMs: number }
+interface WorkerSlot { worker: Worker; busy: boolean; jobId: number | null; lease: number }
+interface ActiveJob { job: QueueJob; started: number; slot: WorkerSlot | null; lease: number }
 
 export const jobSchedulerState = reactive({
   workerAvailable: typeof Worker !== 'undefined', usingFallback: false, queued: 0, active: 0, completed: 0, failed: 0, cancelled: 0, stale: 0, averageMs: 0, workerMs: 0, queueWaitMs: 0, fallbackCount: 0, lastError: ''
 })
 
-const queue: QueueJob[] = [], workers: WorkerSlot[] = [], pending = new Map<number, { job: QueueJob; started: number; slot: WorkerSlot | null }>()
+const queue: QueueJob[] = [], workers: WorkerSlot[] = [], pending = new Map<number, ActiveJob>()
 const latestGenerations = new Map<string, number>()
 let nextId = 1
+let nextLease = 1
 let fallbackBusy = false
+let fallbackLease = 0
 
 function parseCsv(source: string): string[][] {
   const rows: string[][] = []; let row: string[] = [], field = '', quoted = false
@@ -59,34 +62,89 @@ export function runJobLocally(kind: JobKind, payload: unknown): unknown {
   return `${first.toString(16).padStart(8, '0')}${second.toString(16).padStart(8, '0')}`
 }
 
-function complete(id: number, result: unknown, error?: string): void {
-  const active = pending.get(id); if (!active) return
-  pending.delete(id); if (active.job.timer !== null) clearTimeout(active.job.timer)
-  if (active.slot) { active.slot.busy = false; active.slot.jobId = null }
-  else fallbackBusy = false
+function settle(active: ActiveJob, result: unknown, error?: string): void {
+  const { job } = active
+  if (job.settled) return
+  job.settled = true
+  if (job.timer !== null) { clearTimeout(job.timer); job.timer = null }
   const elapsed = performance.now() - active.started
-  const queueWaitMs = Math.max(0, active.started - active.job.queuedAt), stale = Boolean(active.job.key && latestGenerations.get(active.job.key) !== active.job.generation)
+  const queueWaitMs = Math.max(0, active.started - job.queuedAt), stale = Boolean(job.key && latestGenerations.get(job.key) !== job.generation)
   jobSchedulerState.averageMs = jobSchedulerState.completed ? jobSchedulerState.averageMs * .9 + elapsed * .1 : elapsed
   jobSchedulerState.workerMs = elapsed; jobSchedulerState.queueWaitMs = queueWaitMs
   jobSchedulerState.active = pending.size
-  if (active.job.cancelled) {
+  if (job.cancelled) {
     jobSchedulerState.cancelled++
-    active.job.reject(new Error(error || 'Job cancelled'))
+    job.reject(new Error(error || 'Job cancelled'))
   }
-  else if (stale) { jobSchedulerState.stale++; recordWorkerPerformance(elapsed, queueWaitMs, !active.slot, true); active.job.reject(new Error(`Stale ${active.job.kind} result discarded for ${active.job.key}`)) }
-  else if (error) { jobSchedulerState.failed++; jobSchedulerState.lastError = error; active.job.reject(new Error(error)) }
-  else { jobSchedulerState.completed++; active.job.resolve(result) }
+  else if (stale) { jobSchedulerState.stale++; recordWorkerPerformance(elapsed, queueWaitMs, !active.slot, true); job.reject(new Error(`Stale ${job.kind} result discarded for ${job.key}`)) }
+  else if (error) { jobSchedulerState.failed++; jobSchedulerState.lastError = error; job.reject(new Error(error)) }
+  else { jobSchedulerState.completed++; job.resolve(result) }
   if (!stale) recordWorkerPerformance(elapsed, queueWaitMs, !active.slot, false)
+}
+
+function releaseSlot(active: ActiveJob): void {
+  if (active.slot && active.slot.jobId === active.job.id && active.slot.lease === active.lease) {
+    active.slot.busy = false; active.slot.jobId = null; active.slot.lease = 0
+  } else if (!active.slot && fallbackLease === active.lease) {
+    fallbackBusy = false; fallbackLease = 0
+  }
+}
+
+function complete(id: number, lease: number, result: unknown, error?: string): void {
+  const active = pending.get(id)
+  if (!active || active.lease !== lease) {
+    // A retired worker is allowed to finish, but its reply must never settle a
+    // newer job occupying the same slot.
+    jobSchedulerState.stale++
+    recordStaleWorkerResult()
+    return
+  }
+  pending.delete(id)
+  releaseSlot(active)
+  settle(active, result, error)
   dispatch()
+}
+
+function retireWorker(slot: WorkerSlot): void {
+  slot.worker.onmessage = null
+  slot.worker.onerror = null
+  slot.worker.terminate()
+  const index = workers.indexOf(slot)
+  if (index >= 0) workers.splice(index, 1)
+  slot.busy = false; slot.jobId = null; slot.lease = 0
+}
+
+function cancelActive(active: ActiveJob, reason: string): void {
+  if (active.job.settled) return
+  active.job.cancelled = true
+  pending.delete(active.job.id)
+  // Worker work cannot be safely reused after cancellation or timeout. Retire
+  // the slot so a late message cannot free or complete a newer lease.
+  if (active.slot) retireWorker(active.slot)
+  settle(active, undefined, reason)
+  dispatch()
+}
+
+function rejectQueued(job: QueueJob, reason: string, stale = false): void {
+  if (job.settled) return
+  job.settled = true
+  if (stale) { jobSchedulerState.stale++; recordWorkerPerformance(0, 0, false, true) }
+  else jobSchedulerState.cancelled++
+  job.reject(new Error(reason))
 }
 
 function createWorker(): WorkerSlot | null {
   if (!jobSchedulerState.workerAvailable) return null
   try {
     const worker = new Worker(new URL('./jobScheduler.worker.ts', import.meta.url), { type: 'module', name: 'nova-job-worker' })
-    const slot: WorkerSlot = { worker, busy: false, jobId: null }
-    worker.onmessage = event => complete(Number(event.data?.id), event.data?.result, typeof event.data?.error === 'string' ? event.data.error : undefined)
-    worker.onerror = event => { const id = slot.jobId; jobSchedulerState.workerAvailable = false; jobSchedulerState.usingFallback = true; worker.terminate(); const index = workers.indexOf(slot); if (index >= 0) workers.splice(index, 1); if (id !== null) complete(id, undefined, event.message || 'Worker failed') }
+    const slot: WorkerSlot = { worker, busy: false, jobId: null, lease: 0 }
+    worker.onmessage = event => complete(Number(event.data?.id), Number(event.data?.lease), event.data?.result, typeof event.data?.error === 'string' ? event.data.error : undefined)
+    worker.onerror = event => {
+      const lease = slot.lease, active = slot.jobId === null ? null : pending.get(slot.jobId)
+      jobSchedulerState.workerAvailable = false; jobSchedulerState.usingFallback = true
+      retireWorker(slot)
+      if (active && active.lease === lease) complete(active.job.id, lease, undefined, event.message || 'Worker failed')
+    }
     workers.push(slot); return slot
   } catch { jobSchedulerState.workerAvailable = false; jobSchedulerState.usingFallback = true; return null }
 }
@@ -99,14 +157,32 @@ function dispatch(): void {
     if (!slot && jobSchedulerState.workerAvailable && workers.length >= productionSettings.jobs.maxWorkers) break
     if (!slot && fallbackBusy) break
     const job = queue.shift()!; jobSchedulerState.queued = queue.length
-    if (job.cancelled) { jobSchedulerState.cancelled++; job.reject(new Error('Job cancelled')); continue }
-    const started = performance.now(); pending.set(job.id, { job, started, slot }); jobSchedulerState.active = pending.size
-    job.timer = window.setTimeout(() => { job.cancelled = true; complete(job.id, undefined, `Job timed out after ${job.timeoutMs} ms`) }, job.timeoutMs)
-    if (slot) { slot.busy = true; slot.jobId = job.id; slot.worker.postMessage({ id: job.id, kind: job.kind, payload: job.payload }); continue }
+    if (job.cancelled) { rejectQueued(job, 'Job cancelled'); continue }
+    if (job.key && latestGenerations.get(job.key) !== job.generation) { rejectQueued(job, `Stale ${job.kind} result discarded for ${job.key}`, true); continue }
+    const started = performance.now(), lease = nextLease++
+    const active: ActiveJob = { job, started, slot, lease }
+    pending.set(job.id, active); jobSchedulerState.active = pending.size
+    job.timer = globalThis.setTimeout(() => { const current = pending.get(job.id); if (current?.lease === lease) cancelActive(current, `Job timed out after ${job.timeoutMs} ms`) }, job.timeoutMs)
+    if (slot) {
+      slot.busy = true; slot.jobId = job.id; slot.lease = lease
+      try { slot.worker.postMessage({ id: job.id, lease, kind: job.kind, payload: job.payload }) }
+      catch (error) { retireWorker(slot); complete(job.id, lease, undefined, error instanceof Error ? error.message : String(error)) }
+      continue
+    }
     jobSchedulerState.usingFallback = true
     jobSchedulerState.fallbackCount++
-    fallbackBusy = true
-    queueMicrotask(() => { try { complete(job.id, runJobLocally(job.kind, job.payload)) } catch (error) { complete(job.id, undefined, error instanceof Error ? error.message : String(error)) } })
+    fallbackBusy = true; fallbackLease = lease
+    // A task boundary lets input, paint and cancellation run before an
+    // unavoidable single-thread fallback begins.
+    globalThis.setTimeout(() => {
+      const current = pending.get(job.id)
+      if (!current || current.lease !== lease || job.settled) {
+        if (fallbackLease === lease) { fallbackBusy = false; fallbackLease = 0; dispatch() }
+        return
+      }
+      try { complete(job.id, lease, runJobLocally(job.kind, job.payload)) }
+      catch (error) { complete(job.id, lease, undefined, error instanceof Error ? error.message : String(error)) }
+    }, 0)
   }
 }
 
@@ -116,8 +192,23 @@ export function scheduleJob<T = unknown>(kind: JobKind, payload: unknown, option
   const key = options.key?.trim().slice(0, 160) ?? '', generation = options.generation ?? (key ? (latestGenerations.get(key) ?? 0) + 1 : 0)
   if (key) latestGenerations.set(key, generation)
   let queued!: QueueJob
-  const promise = new Promise<T>((resolve, reject) => { queued = { id, kind, payload, resolve: value => resolve(value as T), reject, timer: null, cancelled: false, queuedAt: performance.now(), key, generation, timeoutMs: Math.min(120_000, Math.max(100, options.timeoutMs ?? productionSettings.jobs.timeoutMs)) }; queue.push(queued); dispatch() })
-  return { id, generation, promise, cancel: () => { queued.cancelled = true; if (key && latestGenerations.get(key) === generation) latestGenerations.set(key, generation + 1); const active = pending.get(id); if (active) complete(id, undefined, 'Job cancelled') } }
+  const promise = new Promise<T>((resolve, reject) => { queued = { id, kind, payload, resolve: value => resolve(value as T), reject, timer: null, cancelled: false, settled: false, queuedAt: performance.now(), key, generation, timeoutMs: Math.min(120_000, Math.max(100, options.timeoutMs ?? productionSettings.jobs.timeoutMs)) }; queue.push(queued); dispatch() })
+  return { id, generation, promise, cancel: () => {
+    if (queued.settled) return
+    queued.cancelled = true
+    if (key && latestGenerations.get(key) === generation) latestGenerations.set(key, generation + 1)
+    const active = pending.get(id)
+    if (active) { cancelActive(active, 'Job cancelled'); return }
+    const index = queue.findIndex(job => job.id === id)
+    if (index >= 0) { queue.splice(index, 1); jobSchedulerState.queued = queue.length; rejectQueued(queued, 'Job cancelled'); dispatch() }
+  } }
 }
 
-export function shutdownJobScheduler(): void { for (const slot of workers) slot.worker.terminate(); workers.splice(0); for (const { job } of pending.values()) job.reject(new Error('Job scheduler stopped')); pending.clear(); for (const job of queue) job.reject(new Error('Job scheduler stopped')); queue.splice(0); latestGenerations.clear(); fallbackBusy = false; jobSchedulerState.active = 0; jobSchedulerState.queued = 0 }
+export function shutdownJobScheduler(): void {
+  for (const slot of [...workers]) retireWorker(slot)
+  for (const active of pending.values()) { if (active.job.timer !== null) clearTimeout(active.job.timer); active.job.timer = null; active.job.settled = true; active.job.reject(new Error('Job scheduler stopped')) }
+  pending.clear()
+  for (const job of queue) { job.settled = true; job.reject(new Error('Job scheduler stopped')) }
+  queue.splice(0); latestGenerations.clear(); fallbackBusy = false; fallbackLease = 0
+  jobSchedulerState.active = 0; jobSchedulerState.queued = 0
+}

@@ -4,18 +4,33 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE.md)
 [![Tier 1](https://img.shields.io/badge/Tier%201-Windows%20%7C%20Web-63c6ff)](./docs/PLATFORM_BUILD_MATRIX_5_0.md)
-[![Release](https://img.shields.io/badge/release-26.04-63c6ff)]()
+[![Release](https://img.shields.io/badge/release-26.10-63c6ff)]()
 
 Nova_A is an open-source 2D game engine and desktop editor built with Rust, WebAssembly, Vue 3, and Tauri.
 
-Release **26.04** completes the asset, 2D content, and reusable-library ecosystem while preserving Project Format 2/schema 29 and every frozen contract. A two-way dependency view, cycle and missing-reference diagnostics, deterministic thumbnails, unified importer profiles, named Resource variants, localization import validation, offline trusted discovery, and the retained worker/cache pipeline work alongside every existing authoring and animation feature.
+Release **26.10** completes the current calendar roadmap as a stable, lightweight 2D creator platform while preserving Project Format 2/schema 29 and every frozen contract. It combines first-class pen and accessible input, cancellable low-end-aware loading, lease-safe workers, cached large-world queries, fail-closed semantic collaboration, operation-specific readiness evidence, three complete creator references, and a trilingual task manual. Work that genuinely requires another host, physical hardware, signing credentials, public infrastructure, or independent people remains explicitly external.
 
 **Manual:** [interactive English/German/Chinese webpage](./manual/index.html) · [English Markdown](./manual/MANUAL.en.md) · [Deutsch](./manual/MANUAL.de.md) · [中文](./manual/MANUAL.zh-CN.md)
 
-## What is new in 26.04
+## What is new in 26.10
 
+- **Stable creator platform:** [26.10 contract](docs/STABLE_CREATOR_PLATFORM_26_10.md), [typed gap register](docs/PLATFORM_GAP_REGISTER_26_10.md), and [support matrix](docs/SUPPORT_MATRIX_26_10.md) distinguish locally verified behavior, intentional scope, and external certification without catch-all passes.
+- **401 exact operation routes:** each public operation has an explicit Binding, Validation, Undo, Persistence, Runtime/export, Documentation, and Tests disposition, with a stable manual anchor in English, German, and Chinese.
+- **Ultimate-performance core:** generation/lease-safe workers, deterministic yielding fallback, unchanged-scene component caches, bounded asset virtualization, lazy workspace chunks, and interaction-cancelled idle warming keep semantics and animation intact on constrained devices.
+- **Platform input and accessibility:** pressure, tilt, twist, eraser and pen buttons join logical/physical keyboard, mouse, touch, gestures, gamepads, virtual controls, and permission-gated sensors on the same action path. See the [26.08 platform contract](docs/PLATFORM_INPUT_ACCESSIBILITY_26_08.md).
+- **Collaboration correctness:** source-complete fingerprints, generation-aware change lists, exact identity-preserving three-way merge, real delete/reorder handling, bounded conflict reporting, and canonical post-merge validation fail closed instead of silently rewriting content.
+- **Runnable end-to-end references:** code-authored, block-authored, mixed-authoring, platform-input, large-world, semantic-merge, and renderer-disabled authority projects live in the [reference library](reference-projects/README.md).
+- **Release and recovery guidance:** [API/SDK](docs/API_SDK_26_10.md), [migration](docs/MIGRATION_26_10.md), [troubleshooting](docs/TROUBLESHOOTING_26_10.md), [reproducibility](docs/REPRODUCIBILITY_26_10.md), [clean-machine](docs/CLEAN_MACHINE_QUALIFICATION_26_10.md), and [independent-usability](docs/INDEPENDENT_USABILITY_26_10.md) protocols are current.
 - **Complete plan:** [26.01–26.10 implementation manual](docs/ROADMAP_26_01_TO_26_10.md) and [competitive review](docs/COMPETITIVE_REVIEW_26_01.md).
-- **Feature truth:** [generated full operation/binding inventory](docs/FEATURE_INVENTORY_26_04.md) covers every public operation over binding, validation, undo, persistence, runtime/export, documentation, and tests.
+- **Feature truth:** [generated full operation/binding inventory](docs/FEATURE_INVENTORY_26_06.md) covers every public operation over binding, validation, undo, persistence, runtime/export, documentation, and tests.
+- **Multiplayer production:** [26.07 networking and server contract](docs/MULTIPLAYER_PRODUCTION_26_07.md) documents explicit package/permission/session gates, authority, replication, bounded rollback, replay/save scope, reviewed service interfaces, multi-instance testing, export security, and honest external limits.
+- **Network Studio layout:** [26.07 all-panel audit](docs/UI_LAYOUT_AUDIT_26_07.md) covers the responsive session/protocol/replication/orchestration/replay/diagnostics workflow and the exact scope of per-instance Logs and Inspector actions in English, German, and Chinese.
+- **Runnable references:** [26.07 co-op and server projects](reference-projects/README.md#nova_a-2607-multiplayer-and-server-references) exercise the state-delta rollback and renderer-disabled authority paths without claiming public-network or no-window certification.
+- **Simulation production:** [26.06 implementation contract](docs/SIMULATION_AUTHORING_26_06.md) documents exact units, compounds, constraints, rope/cloth, navigation, avoidance, AI and deterministic evidence.
+- **Output reliability:** [template/output contract](docs/OUTPUT_BUILD_RELIABILITY_26_06.md) aligns interactive and headless template IDs and verifies all twenty launcher templates through deterministic packages and supported outputs.
+- **26.06 layout audit:** [localized all-panel audit](docs/UI_LAYOUT_AUDIT_26_06.md) covers line/letter spacing, centered single-line controls, graph-inspector containment, panels, locales, scales and viewports.
+- **Production media:** [26.05 implementation contract](docs/PRODUCTION_MEDIA_26_05.md) documents materials/fallback, ordered render passes, bounded texture residency, animation and audio readiness, and fixed-frame/integer-sample capture.
+- **26.05 layout audit:** [localized production workflow audit](docs/UI_LAYOUT_AUDIT_26_05.md) covers every added card, form, status, action, theme, scale and responsive breakpoint.
 - **Asset and library ecosystem:** [26.04 implementation contract](docs/ASSET_CONTENT_LIBRARY_26_04.md) documents dependency visualization, deterministic import/reimport, thumbnails, content profiles, variants, trusted offline discovery, repair and export closure.
 - **26.04 layout audit:** [localized Assets workspace audit](docs/UI_LAYOUT_AUDIT_26_04.md) covers dependency lanes, production profiles, variants, thumbnails, themes, scale, keyboard focus, scrolling and narrow layouts.
 - **Language and debugger depth:** [26.03 implementation contract](docs/LANGUAGE_DEBUGGING_26_03.md) documents optional types/data, modules, statement maps, task cancellation, watches, breakpoints, LSP 3.17, code↔graph coverage, escape blocks, diff, and merge.
@@ -30,14 +45,14 @@ Release **26.04** completes the asset, 2D content, and reusable-library ecosyste
 
 ## Stable platform inherited from 7.0.0
 
-- **Platform readiness:** Manage → Learning Center → Platform readiness audits all 358 public features across seven explicit dimensions and never disguises external work as a local pass.
+- **Platform readiness:** Manage → Learning Center → Platform readiness audits all 401 public operations across seven explicit dimensions and never disguises external work as a local pass.
 - **Stable contracts:** Project Format 2/schema 29, Rhai API 2, Graph Format 1, Plugin API 2, Package Manifest 1, Build CLI 1 and workspace document 3 remain compatible. The next breaking-contract decision is deferred pending evidence.
 - **Safe 6.x migration seal:** a dry-run preview, semantic diff, backup, deterministic canonical apply and rollback update only the historical engine ceiling to `<8.0.0`; future schemas still fail closed.
 - **Complete teaching:** every public feature has EN/DE/ZH classification, prerequisites, exact workflow, expected result, persistence/export, undo/recovery, mistakes, accessibility, examples and Rhai/Visual Graph equivalents.
 - **Honest platform support:** Windows and Web are locally qualified Tier 1. Linux/macOS remain matching-host, Android remains experimental/toolchain-gated, iOS/console remain deferred and 3D is out of scope.
 - **Release qualification:** stable-platform and migration references, history/golden fixtures, normal-user interaction and localized layout audits, retained runtime/security/performance checks, clean-source build and exact eleven artifacts form the local evidence set. Independent observation, signing, matching-host builds and real-duration soak remain external.
 
-See the [stable creator-platform contract](./docs/STABLE_CREATOR_PLATFORM_7_0.md), [API reference](./docs/API_REFERENCE_7_0.md), [migration guide](./docs/MIGRATION_7_0.md), and [troubleshooting guide](./docs/TROUBLESHOOTING_7_0.md).
+See the current [stable creator-platform contract](./docs/STABLE_CREATOR_PLATFORM_26_10.md), [API/SDK guide](./docs/API_SDK_26_10.md), [migration guide](./docs/MIGRATION_26_10.md), and [troubleshooting guide](./docs/TROUBLESHOOTING_26_10.md).
 
 ## Retained v6.9.0 ecosystem and shipping baseline
 
@@ -436,7 +451,7 @@ Physics, math, runtime, script, and format crates contain no Vue, DOM, JavaScrip
 - Desktop: Windows, macOS, and Linux systems supported by Tauri 2 and their native webview.
 - Build native release bundles on the target operating system whenever possible. Windows produces NSIS/MSI, macOS produces app/DMG bundles, and Linux produces the formats supported by the installed Tauri toolchain.
 
-Nova_A is currently a desktop/web editor. Android and iOS application targets are not configured in this repository.
+Nova_A remains a desktop/Web-first editor. Android is an optional Experimental, toolchain-gated target; iOS application output remains deferred to a matching macOS host.
 
 ## Common prerequisites
 
@@ -494,7 +509,7 @@ This rebuilds development WASM before Vite starts, preventing a stale Rust modul
 pnpm tauri dev
 ```
 
-### Validation
+### Development validation
 
 ```sh
 pnpm test:core
@@ -504,7 +519,9 @@ pnpm audit:manual
 pnpm build
 ```
 
-These commands run all workspace tests (including the complete physics suite), warnings-as-errors linting, Vue/TypeScript checking, a release Rust-to-WASM build, and the optimized Vite build.
+These commands provide development feedback by running all workspace tests (including the complete physics suite), warnings-as-errors linting, Vue/TypeScript checking, the manual audit, a release Rust-to-WASM build, and the optimized Vite build. They do not create the native, browser-layout, interaction, performance, security, or release-evidence reports required for packaging.
+
+`pnpm audit` is the generic audit for the current public release, 26.10. It validates the current static/manual gates and consumes the complete 26.10 reports generated by the release-preparation workflow below; it is not a substitute for generating those reports.
 
 ### Browser production preview
 
@@ -521,13 +538,20 @@ pnpm tauri build
 
 The Tauri build invokes `pnpm build` automatically before packaging. Result locations vary by operating system under `src-tauri/target/release/bundle/`.
 
-After the native build succeeds, assemble the complete versioned release set:
+### Complete 26.10 release from a clean checkout
+
+Run the final release workflow on a qualified Windows host with Microsoft Edge and the prerequisites above. From a clean checkout, install the pinned dependencies, generate every required local report and the structured evidence tree, then package and independently verify the result:
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\package-release.ps1 -Version 4.2.0
+pnpm install --frozen-lockfile
+pnpm prepare:v26.10
+pnpm release:v26.10
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/verify-release-package.ps1 -Version 26.10 -MachineVersion 26.10.0
 ```
 
-This creates `releases/v4.2.0/` with the eleven mandatory top-level artifacts: portable executable, MSI, NSIS setup executable, web ZIP, source ZIP, reference-project ZIP, release-evidence ZIP, release notes, exhaustive edit ledger, license, and `SHA256SUMS.txt`. The evidence ZIP keeps the required machine-readable hierarchy, environment/tool/source identity, test and coverage reports, visual baselines/diffs, logs, screenshots, known issues, and sign-off gates.
+`prepare:v26.10` selects the 26.10 authority when needed, regenerates the manuals and references, runs Rust tests and clippy, TypeScript and static audits, template/readiness/history checks, the optimized Web and Tauri builds, exhaustive browser interaction and layout qualification, Windows editor/game/headless smoke, benchmarks, stability, dependency security and repository hygiene, then runs the 26.10 product audit and creates `release-audits/evidence-v26.10/evidence-manifest.json`. It stops at the first failed command. The generated `release-audits/` tree is intentionally ignored by Git and must be recreated for a clean checkout; never copy it from another source tree.
+
+After reviewing that manifest and its explicitly pending external gates, `release:v26.10` packages public release **26.10** (machine version **26.10.0**) into `releases/v26.10/` with the eleven mandatory top-level artifacts: portable executable, MSI, NSIS setup executable, web ZIP, source ZIP, reference-project ZIP, release-evidence ZIP, release notes, exhaustive edit ledger, license, and `SHA256SUMS.txt`. Packaging first verifies a private staging sibling, then swaps it into place so a failed attempt does not delete the previous complete release. The final command independently extracts and validates that package. Publisher signing, matching-host Linux/macOS builds, real-device work, independent clean-machine/usability review, second-machine reproduction and a real-duration soak remain external until their own evidence exists.
 
 ### Headless export
 
@@ -535,7 +559,7 @@ This creates `releases/v4.2.0/` with the eleven mandatory top-level artifacts: p
 pnpm export -- --project ./project.nova --target web --profile release --output ./Builds/MyGame
 ```
 
-The CLI accepts `windows`, `linux`, `macos`, or `web`; desktop output requires the matching host player. It writes `nova-build-report.json`, `.nova-build-cache/manifest.json`, and—when enabled—`nova-patch-manifest.json`. Use `--compression store|balanced|maximum`, `--architecture x86_64|aarch64`, `--runtime game|headless-server`, `--no-incremental`, or `--no-patch`. Run `pnpm export -- --help` for the bounded argument contract.
+The CLI accepts `windows`, `linux`, `macos`, or `web`; desktop output requires the matching host player. It writes `nova-build-report.json`, `nova-content-manifest.json`, provenance, SBOM, dependency/size/deployment reports, and—when enabled—`nova-patch-manifest.json`. Use `--compression store|balanced|maximum`, `--architecture x86_64|aarch64`, `--runtime game|headless-server`, `--no-incremental`, or `--no-patch`. Run `pnpm export -- --help` for the bounded argument contract.
 
 ### Export a game with Nova Player
 

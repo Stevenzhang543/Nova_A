@@ -121,7 +121,7 @@ const tabs = [{ id: 'ui' as const, label: 'responsiveUi' }, { id: 'localization'
 const activeTab = ref<Tab>(props.initialTab), selectedThemeReference = ref(''), themeCompareReference = ref(''), themeDraft = ref<UiThemeDocument | null>(null), selectedLocaleReference = ref(''), localeDraft = ref<LocalizationTable | null>(null), selectedAudioGuid = ref(''), peaks = ref<number[]>([]), waveformCursor = ref(0), waveformSelection = ref<{start:number;end:number}|null>(null), waveformPlaying = ref(false), newLocale = ref(''), csvImport = ref<HTMLInputElement | null>(null), poImport = ref<HTMLInputElement | null>(null)
 const previewPresets = UI_DEVICE_PRESETS
 const previewPresetIndex = ref(0), previewDpi = ref(1), previewSafeArea = ref(true), previewRtl = ref(false)
-const inputModalities: InputModality[] = ['keyboard', 'mouse', 'gamepad', 'touch'], previewModality = ref<InputModality>('keyboard'), promptAction = ref(physicsState.inputMap[0]?.name ?? '')
+const inputModalities: InputModality[] = ['keyboard', 'mouse', 'gamepad', 'touch', 'pen'], previewModality = ref<InputModality>('keyboard'), promptAction = ref(physicsState.inputMap[0]?.name ?? '')
 const themeTokenGroups = ['colors', 'typography', 'spacing', 'radii', 'states', 'icons', 'sounds', 'animation'] as const
 const defaultBuses = ['Master', 'Music', 'SFX', 'UI']
 const audioSettings = physicsState.audioSettings, audioDiagnostics = reactive(audioRuntime.diagnostics)

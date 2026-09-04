@@ -1,8 +1,14 @@
-# Nova_A 7.0 frozen creator-platform contracts
+# Nova_A 26.10 frozen creator-platform contracts
 
-Nova_A 7.0 certifies the existing seven additive contracts without changing Project Format 2/schema 29. The next contract decision is deferred until a demonstrated need, the observation window, migration/ecosystem review, and independent external evidence exist. See `STABLE_CREATOR_PLATFORM_7_0.md` for the current decision, Visual Graph and Workspace contracts, feature-readiness model, support matrix, and completion rules.
+Nova_A 26.10 (machine version 26.10.0) retains the same authoritative contract set: Project Format 2/schema 29, Rhai API 2, Visual Graph Format 1, Plugin API 2, Package Manifest 1, Build CLI 1 and Workspace Document 3. Platform input, large-world performance, semantic collaboration, readiness and documentation work is additive and introduces no contract-version change. See `STABLE_CREATOR_PLATFORM_26_10.md` for the current decision, readiness model, support matrix and completion rules.
 
-The compatibility ceiling for reviewed 6.x projects is sealed from `<7.0.0` to `<8.0.0` through migration preview, complete backup, deterministic in-memory conversion, semantic diff, validation, canonical reparse, and rollback. No authored field is removed because the product version changed.
+The reviewed historical-project compatibility ceiling is `<27.0.0`. Widening that ceiling is a metadata-only migration performed through preview, complete backup, deterministic in-memory conversion, semantic diff, validation, canonical reparse and rollback. No authored field is removed because the product version changed.
+
+The next contract decision remains deferred until a demonstrated need, the observation window, migration/ecosystem review and independent external evidence exist.
+
+## Historical 7.0 freeze record
+
+Nova_A 7.0 certified the seven additive contracts without changing Project Format 2/schema 29. At that release, reviewed 6.x projects advanced from the `<7.0.0` ceiling to `<8.0.0`; `STABLE_CREATOR_PLATFORM_7_0.md` records that historical decision. It is not the current 26.10 authority.
 
 ## Historical 5.0 freeze record
 
