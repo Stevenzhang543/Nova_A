@@ -29,24 +29,7 @@ function Get-Sha256Lower {
   }
 }
 
-function Get-CalendarReleaseInfo {
-  param([Parameter(Mandatory = $true)][string]$Label)
-  $match = [regex]::Match($Label, '^(\d{2})\.(\d{2})$')
-  if (-not $match.Success) { return $null }
-  $year = [int]$match.Groups[1].Value
-  $sequence = [int]$match.Groups[2].Value
-  if ($sequence -lt 1 -or $sequence -gt 12) { throw "Calendar release sequence must be between 01 and 12: $Label" }
-  return [pscustomobject]@{ Year = $year; Sequence = $sequence; MachineVersion = "$year.$sequence.0" }
-}
-
-function Get-CanonicalCalendarLabel {
-  param([string]$MachineVersion)
-  $match = [regex]::Match($MachineVersion, '^(\d{2})\.(\d{1,2})\.0$')
-  if (-not $match.Success -or [int]$match.Groups[1].Value -lt 26) { return $null }
-  $sequence = [int]$match.Groups[2].Value
-  if ($sequence -lt 1 -or $sequence -gt 12) { return $null }
-  return '{0}.{1:00}' -f [int]$match.Groups[1].Value, $sequence
-}
+. (Join-Path $PSScriptRoot 'release-policy.ps1')
 
 function Test-VersionAtMost {
   param([string]$Candidate, [string]$Maximum)
@@ -379,7 +362,16 @@ try {
   elseif ($requiresStructuredEvidence) { throw "The $Version evidence archive is missing build/local-builds.json." }
 
   $portableVersion = (Get-Item -LiteralPath (Join-Path $releaseRoot "Nova_A-v$Version-windows-x64-portable.exe")).VersionInfo.ProductVersion
-  if ($portableVersion -notlike "$MachineVersion*") { throw "Portable executable reports unexpected product version $portableVersion" }
+  Assert-WindowsReleaseArtifactVersions -Portable (Join-Path $releaseRoot "Nova_A-v$Version-windows-x64-portable.exe") -Setup (Join-Path $releaseRoot "Nova_A-v$Version-windows-x64-setup.exe") -Msi (Join-Path $releaseRoot "Nova_A-v$Version-windows-x64.msi") -MachineVersion $MachineVersion
+  if ($null -ne $calendarRelease -and ($calendarRelease.Year -gt 26 -or $calendarRelease.Sequence -ge 12)) {
+    $snapshotPath = Join-Path $evidence 'build/source-snapshot.json'
+    & node (Join-Path $PSScriptRoot 'release-source-snapshot.mjs') "--verify=$snapshotPath" "--root=$source" | Out-Null
+    if ($LASTEXITCODE -ne 0) { throw 'Packaged source fails frozen snapshot verification.' }
+    $snapshot = Get-Content -LiteralPath $snapshotPath -Raw | ConvertFrom-Json
+    if ($snapshot.release -ne $Version -or $snapshot.sourceInputDigest -ne $manifest.sourceInputDigest) { throw 'Packaged source lineage disagrees with the qualified release.' }
+    & node (Join-Path $PSScriptRoot 'release-qualification.mjs') "--packaged-evidence=$evidence" "--source=$source" "--web=$web" | Out-Null
+    if ($LASTEXITCODE -ne 0) { throw 'Packaged execution logs/reports or web assets disagree with the qualified build.' }
+  }
   [pscustomobject]@{ RootFiles = $actual.Count; PayloadChecksums = $checksumCount; WebFiles = @(Get-ChildItem -LiteralPath $web -File -Recurse).Count; ReferenceProjects = $referenceReadmes.Count; EvidenceFiles = $evidenceFiles.Count; EvidenceHashes = $manifest.entries.Count; PortableProductVersion = $portableVersion; Status = 'passed' }
 }
 finally {

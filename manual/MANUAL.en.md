@@ -1,4 +1,647 @@
-# Nova_A 26.10 Complete Manual
+# Nova_A 26.16 Complete Manual
+
+<!-- NOVA_V2616_START -->
+## 26.16 — animation, audio and interface production
+
+Engine: **26.16.0** · Project Format 2/schema 29.
+
+### Produce an animated menu and a synchronized cutscene
+
+This task joins animation, audio and interface authoring in one saved project. Start with UI Showcase or the current animated-menu reference. Use a disposable copy, keep the original imported media, and save the project before changing the sequence. The reference's expected-output and test-controls files describe its exact authored actions; qualification reports identify the actions actually observed.
+
+### Build and inspect the menu
+
+In Interface, select the menu Canvas and its RectTransform children. Choose the intended reference size and scaling, then inspect anchors, minimum/maximum sizes, safe area, clipping, scrolling and text overflow in the actual preview. A Fixed layout deliberately ignores responsive breakpoints. Negative padding/margins are clamped with a diagnostic; use signed position/anchor offsets for intentional overlap. A parent hidden or clipped by a modal must not leave an active child in the keyboard order. Set useful accessibility names, focusability and reading order. Component-source metadata does not instantiate another UI subtree; use a prefab for linked reusable content.
+
+Open the theme document, set a parent only when inheritance is intended, and override individual tokens or styles. A child should retain only its explicit changes: changing a parent later must still affect inherited values. Spacing tokens affect styles that reference them; they do not silently replace every Panel gap. Save a valid draft, switch away and return, then verify an intentionally invalid draft survives without modifying saved runtime values. Resolve a changed-source conflict explicitly. Duplicate locale ownership and invalid style values are refused.
+
+Use localization keys for visible text and supported label/placeholder bindings. Add EN/DE/ZH values and a fallback locale, then exercise long translations and font fallback. Imported font coverage depends on the font file. CSV retains string and variant cells; PO supports ordinary multiline strings and Nova variant metadata. Indexed gettext plurals require the lossless CSV route. Recheck build inclusion diagnostics: selected tables, their fallback chain and fonts must survive the package. Enter mixed Chinese/Latin text with IME, select and replace part of it, then Tab through controls. Composition Enter must commit text without activating a game action. Editor controls must not feed gameplay shortcuts.
+
+### Author motion with explicit draft ownership
+
+Select a target scene object and open Animation. Choose or create a clip. Add numeric property tracks, target objects, key times and values. Select a key to edit tangent mode, interpolation and easing; use Dope/Curve views for timing and shape. Resize Asset structure and Properties so track names, lanes and fields remain readable; Reset pane sizes restores defaults. Sprite frames use their own durations. Command tracks and markers are discrete side effects: inspect their target and payload separately from continuous value tracks.
+
+Record edits into draft adds keys to the unsaved clip. It does not save on every property change. Save explicitly; malformed or non-finite values must remain in the draft with an exact field diagnostic. A recording is bounded to100 tracks and10,000 keys per track. A capacity refusal must not half-write a new track. Switching assets/workspaces and Save/Discard/Cancel project departure retain the six supported document kinds: clip, controller, mask, rig, skin and timeline.
+
+Save first, then select Preview saved asset. This starts an owned Play session using the actual runtime evaluator. Pause or change Evaluated runtime time to inspect a pose. Seeking suppresses commands crossed by the jump. Stop preview and restore scene returns authored values; a later external Play session cannot be adopted or stopped by an old preview owner. Runtime recording captures evaluated poses into an unsaved draft after restoration, so Stop cannot erase a newly recorded asset. Save that draft and reopen it.
+
+### Controllers, rigs and root motion
+
+Create controller parameters, states and transitions. Check source/destination, conditions, exit time, blend duration, destination offset, interruption and marker/normalized synchronization. Test a transition at its exact boundary and while another transition is active. Layer masks, additive weights,1D/2D blend children and synchronized timing use the same evaluator as Play. A zero-weight layer still advances its clock; it does not contribute a pose. Trigger lifetime must not cause a later unrelated transition.
+
+For rigs, verify bone parent/rest transforms and skin weights before animation. Exercise IK, constraints, retargeted rest-relative motion and mirrored binds on the intended objects. Invalid indices/cycles and excessive work must produce a diagnosis. Root-motion Apply retains absolute authored root position/rotation sampling. Ignore suppresses root position/rotation while retaining scale. Accumulated movement is an explicit animationRootMotionDelta/applyAnimationRootMotion API choice; existing scenes do not silently become delta-driven. Test a complete loop and a backward seek, especially when gameplay also moves the object. Curve splitting may bake to bounded linear keys at1e-6 sampled tolerance; it can refuse excessive work instead of claiming exact symbolic equality.
+
+### Put sound and captions on the timeline
+
+Create timeline tracks and bind the intended scene objects/assets. Set clip start, duration, source offset, playback rate and gain envelope; verify every visibility, animation, audio, nested timeline, command and subtitle track used by the sequence. Place captions over their intended intervals and wire Skip through the reference's visible action to the actual timeline target. Seeking must reconstruct the current subtitle/pose without firing every skipped command. Overlapping audio clips need independent voices; nested rates must reach audio as well as animation.
+
+In Audio, select the clip and Mixer audition bus. Inspect Output bus, sends and supported low/high-pass, compressor, delay and reverb fields. Audition uses a separate instance of the game mixer; stopping it must not stop unrelated game audio. Loop/trim and waveform edits remain explicit undoable operations. Meter labels are RMS/sample-peak estimates, not BS.1770 loudness or oversampled true peak. Watch Transport clock, sample position and real voice status while pausing/seeking the timeline.
+
+The shared media clock follows evaluated fixed simulation steps. Pause freezes transport; paused single-step evaluates the pose/sample position while sound remains paused. Buffered signed rates are bounded; streaming uses browser media transport and unsupported rates pause with a diagnostic. Use Stream for media exceeding the decoded cache budget. Decode limits are64MiB resident PCM,32MiB per clip and16 pending decodes; device latency and streaming recovery require matching hardware tests.
+
+### Finish and audit the exact project
+
+Play the complete menu and cutscene, start music, observe caption boundaries, pause/resume, seek backward and forward, loop, reach the end and Skip. Stop and repeat: listeners, voices, previews and native text bridges must be disposed. Check narrow panes, both themes, all three languages and100/150/200% UI scale. Test touch press/cancel, keyboard navigation and IME separately.
+
+Save, reload the application and use Open to select the downloaded project. Repeat the exact sequence. Build its Web output, serve the extracted complete ZIP over HTTP, and repeat in the exported player. Use the actual qualified Windows build for native export checks. Confirm locale/font/audio dependencies, captions, focus and Skip survive. Retain failing cases and downloaded artifacts with hashes. Fixed-frame/sample and package tests are programmer evidence; physical sound quality, screen readers, low-end hardware and long-duration soak need their own observations.
+
+
+### Bind the reference actions and preserve the saved result
+
+Select a menu Button, open Timeline action in its Inspector, and choose Play, Pause, Skip or Resume. These explicit @timeline:play/pause/skip/resume values use the nearest enabled TimelinePlayer on the button or a parent. Put the shared player on the menu Canvas; no Script2D or embedded target UUID is needed. Choosing Custom callback restores the prior script callback. The reference uses a30-second sequence, an Arrival marker at20seconds and an Introduction marker at0seconds. Pause retains the current position; Skip honors unskippable clips; Resume starts at the configured marker.
+
+Caption values such as {caption.intro} resolve the clip locale first, then its owner Canvas preview locale, then the project preview locale. Include each table and its fallback fonts. Export discovery includes explicit clip locales and refuses more than64MiB of timeline source text instead of silently omitting dependencies.
+
+The real menu audit edits the title-opacity key from25 to35, music gain from0.65 to0.5 and the Chinese introduction caption, then saves, reopens and runs the downloaded Web ZIP. The generated reference remains a reproducible starting point; the evidence download is the separately observed edited project. Browser recovery copies are optional: a full recovery cache must not prevent an external save. Inspect the Task log if a recovery copy was unavailable, and retain the downloaded project file.
+
+<!-- NOVA_V2616_END -->
+
+<!-- NOVA_V2615_START -->
+## 26.15 — production assets, rendering and all forty starters
+
+Engine: **26.15.0** · Project Format 2/schema 29.
+
+### Production assets and rendering
+
+### Begin with an observable result
+Create an Empty project to learn importing, or Rendering Lab to study lighting. The launcher shows a real runtime preview, requirements, controls and expected result before Create. Search, category and difficulty filters apply together; Reset restores the full forty-entry catalog. Feature manual opens the relevant subsystem chapter. Related task opens the exact starter instructions below. Several entries intentionally reuse a complete foundation; that relationship and any unbound demonstration controls are disclosed.
+
+### Import, inspect and recover
+Open Design → Assets. Import an image plus its atlas JSON, or an orthogonal Tiled map and its referenced atlas images/tilesets. The batch row reports completed, failed and cancelled items. Cancel stops uncommitted work; completed assets remain. Open the job disclosure to inspect an individual failure or retry. On a narrow dock choose an asset to enter full-width details, then use Browse to return. On larger docks browse, preview and details remain side by side.
+
+The source image preview resolves the real asset, including linked atlas frames. Overview shows source ownership, errors and typed dependency selectors. If an image is missing, import it, select it in that source slot and follow the dependency button. Rename or move the original through the asset browser: linked UUIDs must remain unchanged. A failed reimport retains the previous usable asset and shows its error. A project replacement cancels late work so an old import cannot write into the new project.
+
+### Slice and animate without duplicating source pixels
+Select an imported atlas, open Slices and choose Extract or update frames. Each child links its original source and stable frame identity; Open original source returns to the owner. Reordering source frames or renaming a source does not make a new identity. Removed or malformed source frames receive explicit validation/repair behavior; arbitrary unsupported metadata is not silently reconstructed.
+
+For a regular image enable sprite-sheet slicing, enter columns/rows/margins/spacing and create slices. Trim now analyzes actual decoded alpha. Automatic slicing records connected opaque regions and a first region/collision outline; it does not itself create independent child assets. Create animation from frames makes a normal AnimationClip using source order and per-frame durations, or1/12 second where no duration exists. Attach/edit that clip through the normal Animation workflow. Extracting frames alone does not attach an animation to an entity.
+
+### Bring a Tiled map into the scene
+Bind every image/external tileset before Create tilemap in scene. The importer preserves firstgid, all horizontal/vertical/diagonal flips, downward source rows converted to world-up, and variable tile-frame durations. Supported input is finite orthogonal JSON with atlas tilesets, or the documented simple CSV TMX/TSX subset. Infinite maps, isometric layouts, compressed/group/object/image layers and complex collision geometry are rejected with diagnostics. Keep the original in Tiled when using those features.
+
+The imported map owns its source and layers. To edit tile definitions locally choose Make editable copy in Tilemap. This creates an independent ordinary TileSet sharing image UUIDs; definition editing, Undo/Redo and export then use that copy. Source reimport updates the original map, not your independent definitions. Layer painting remains available without overwriting an imported document with a different format.
+
+### Shared resources and named variants
+Create a Theme, Material, InputMap, PhysicsMaterial, AnimationLibrary or DataTable resource from Assets. Resource edits are drafts until Save Resource. Malformed JSON, an unfinished variant and switching assets/workspaces retain the exact draft. Saved runtime values deliberately show the saved resolver result. Create a named variant, edit its partial overrides, save, then Create Override for a child resource. The child inherits parent fields and named variants; only local fields replace inherited values. Duplicate names, non-object JSON, missing parents, kind mismatches and cycles are refused. Save/reopen and inspect both parent and child before relying on export.
+
+### Observe the renderer, then export
+In Rendering Lab select Point Light in Design and edit its intensity. In Manage → Rendering, scene-wide lighting and output settings are separate from selected-object properties. Verify actual pixels change, then inspect diagnostics. Directional shadow controls are disabled with an explanation because that path is unsupported; switching light type preserves authored values. Normal-map direction follows source rotation/flips. Shader initialization/compile failures have an explicit fallback, and context restoration rebuilds resources.
+
+Texture entry/byte limits, a512MiB maximum GPU budget and per-frame FIFO upload budget bound resource growth. Preload margin requests nearby assets when culling is enabled. Inspect queued uploads/bytes/deferrals before raising budgets; higher budgets cost memory and do not guarantee better frame time. Mutable canvas/video textures refresh per frame. Canvas mesh antialiasing can differ from WebGL at triangle seams.
+
+Use Project → Build, choose Web and export. A browser without a directory picker downloads a complete ZIP containing the player, WASM, game package and file manifest. Extract it and serve the directory over HTTP; a lone game.nova-pak is not the complete browser application. On Windows use the matching current native player. Compare the edited lighting and asset dependencies in the exported game with the editor, then save/reopen the original project. Qualification records actual hashes and measured output; it does not certify every GPU, physical device or installation lifecycle.
+
+
+### Clear Scene (empty)
+
+Controls and setup: Create objects in Design, then press Play. The empty scene intentionally has no game controls.
+
+Expected result: An empty scene is ready for your first object; an empty Game preview is expected.
+
+Requirements: Ready offline
+
+After following these controls, stop and confirm authored state is restored. Save and reopen the project, repeat the result, then compare its exported player. A successful start alone does not certify all game behavior.
+
+### Physics Sandbox (physics-sandbox)
+
+Controls and setup: Press Play. No gameplay input is required; Stop restores the authored scene.
+
+Expected result: A jointed box, elastic-rope bodies and ground demonstrate gravity and constraints.
+
+Requirements: Ready offline
+
+After following these controls, stop and confirm authored state is restored. Save and reopen the project, repeat the result, then compare its exported player. A successful start alone does not certify all game behavior.
+
+### Platformer Scene (platformer)
+
+Controls and setup: Play: A/D to move, Space to jump. Click the Game viewport before using keys.
+
+Expected result: The player moves and jumps on the ground/platform; an included sprite, idle clip, tile map and jump sound are attached.
+
+Requirements: Ready offline · Keyboard · Audio included
+
+After following these controls, stop and confirm authored state is restored. Save and reopen the project, repeat the result, then compare its exported player. A successful start alone does not certify all game behavior.
+
+### Top-down Scene (top-down)
+
+Controls and setup: Play: WASD to move; E spawns an enemy. Enter the exit zone on the right to save a checkpoint and open Main Menu.
+
+Expected result: The player moves through a tiled world, spawns enemies and reaches the exit scene.
+
+Requirements: Ready offline · Keyboard
+
+After following these controls, stop and confirm authored state is restored. Save and reopen the project, repeat the result, then compare its exported player. A successful start alone does not certify all game behavior.
+
+### Lighting Starter (lighting-starter)
+
+Controls and setup: Press Play. No gameplay input is required; Stop restores the authored scene.
+
+Expected result: Shapes, sprite, text and particles are shown under the configured point light.
+
+Requirements: Ready offline
+
+Shared foundation: rendering-lab.
+
+After following these controls, stop and confirm authored state is restored. Save and reopen the project, repeat the result, then compare its exported player. A successful start alone does not certify all game behavior.
+
+### Tile World Starter (tile-world)
+
+Controls and setup: Play: WASD to move; E spawns an enemy. Enter the exit zone on the right to save a checkpoint and open Main Menu.
+
+Expected result: The Top-down foundation includes a tile palette, layered map, navigation region and streamed chunks.
+
+Requirements: Ready offline · Keyboard
+
+Shared foundation: top-down.
+
+After following these controls, stop and confirm authored state is restored. Save and reopen the project, repeat the result, then compare its exported player. A successful start alone does not certify all game behavior.
+
+### Responsive UI Starter (responsive-ui)
+
+Controls and setup: Play: click the name field, type, and use Tab/Shift+Tab to move focus. Click or press Space on the sound checkbox. The Play button emits an action; no second game scene is supplied.
+
+Expected result: A responsive menu exposes text entry, focus, checkbox and progress display.
+
+Requirements: Ready offline · Keyboard · Pointer
+
+Shared foundation: ui-showcase.
+
+After following these controls, stop and confirm authored state is restored. Save and reopen the project, repeat the result, then compare its exported player. A successful start alone does not certify all game behavior.
+
+### Collision & CCD Lab (collision-lab)
+
+Controls and setup: Press Play. No gameplay input is required; Stop restores the authored scene.
+
+Expected result: A fast CCD bullet meets a thin wall; falling bodies compare friction, restitution and a sensor. Inspect Debug → Physics.
+
+Requirements: Ready offline
+
+After following these controls, stop and confirm authored state is restored. Save and reopen the project, repeat the result, then compare its exported player. A successful start alone does not certify all game behavior.
+
+### Rendering Lab (rendering-lab)
+
+Controls and setup: Press Play. No gameplay input is required; Stop restores the authored scene.
+
+Expected result: Rectangle, ellipse, triangle, sprite, world text, particles and point lighting appear together.
+
+Requirements: Ready offline
+
+After following these controls, stop and confirm authored state is restored. Save and reopen the project, repeat the result, then compare its exported player. A successful start alone does not certify all game behavior.
+
+### UI & Input Lab (ui-showcase)
+
+Controls and setup: Play: click the name field, type, and use Tab/Shift+Tab to move focus. Click or press Space on the sound checkbox. The Play button emits an action; no second game scene is supplied.
+
+Expected result: The localized menu accepts a player name and toggles its checkbox. Theme and a sample audio asset are included; the audio asset is not attached to a click action.
+
+Requirements: Ready offline · Keyboard · Pointer
+
+After following these controls, stop and confirm authored state is restored. Save and reopen the project, repeat the result, then compare its exported player. A successful start alone does not certify all game behavior.
+
+### Networking Lab (networked-optional)
+
+Controls and setup: Play previews the arena offline. For multiplayer, start a compatible WebSocket server, then enable Networking in Manage and set its endpoint (default ws://127.0.0.1:7777). The sample does not start a server or add player movement.
+
+Expected result: Two configured replication objects appear without a network connection. Optional multiplayer requires the explicit server setup above.
+
+Requirements: Ready offline · Server optional
+
+After following these controls, stop and confirm authored state is restored. Save and reopen the project, repeat the result, then compare its exported player. A successful start alone does not certify all game behavior.
+
+### Particles & Effects Lab (particle-lab)
+
+Controls and setup: Press Play. No gameplay input is required; Stop restores the authored scene.
+
+Expected result: The Rendering Lab emitter produces a colored particle plume beside shapes, sprite and text.
+
+Requirements: Ready offline
+
+Shared foundation: rendering-lab.
+
+After following these controls, stop and confirm authored state is restored. Save and reopen the project, repeat the result, then compare its exported player. A successful start alone does not certify all game behavior.
+
+### Audio & UI Lab (audio-lab)
+
+Controls and setup: Play: click the name field, type, and use Tab/Shift+Tab to move focus. Click or press Space on the sound checkbox. The Play button emits an action; no second game scene is supplied.
+
+Expected result: A UI menu and embedded UIClick audio asset are ready to inspect in Audio. This focused foundation does not play the asset automatically.
+
+Requirements: Ready offline · Keyboard · Pointer · Audio included
+
+Shared foundation: ui-showcase.
+
+After following these controls, stop and confirm authored state is restored. Save and reopen the project, repeat the result, then compare its exported player. A successful start alone does not certify all game behavior.
+
+### Animation & Character Lab (animation-lab)
+
+Controls and setup: Play: A/D to move, Space to jump. Click the Game viewport before using keys.
+
+Expected result: The Platformer player runs an attached looping idle-opacity clip through its Animator controller.
+
+Requirements: Ready offline · Keyboard · Audio included
+
+Shared foundation: platformer.
+
+After following these controls, stop and confirm authored state is restored. Save and reopen the project, repeat the result, then compare its exported player. A successful start alone does not certify all game behavior.
+
+### Mouse Knockout (mouse-knockout)
+
+Controls and setup: Play: move the pointer inside the Game view to steer the blue block and push targets off screen.
+
+Expected result: Eight orange targets spawn; clearing all eight produces the congratulations panel.
+
+Requirements: Ready offline · Pointer
+
+After following these controls, stop and confirm authored state is restored. Save and reopen the project, repeat the result, then compare its exported player. A successful start alone does not certify all game behavior.
+
+### Snake (snake)
+
+Controls and setup: Play: WASD, arrow keys or gamepad D-pad to turn. Stop, then Play to restart.
+
+Expected result: A moving snake wraps at the edges, grows on pickups and ends on self-collision.
+
+Requirements: Ready offline · Keyboard
+
+After following these controls, stop and confirm authored state is restored. Save and reopen the project, repeat the result, then compare its exported player. A successful start alone does not certify all game behavior.
+
+### Pong (pong)
+
+Controls and setup: Two local players: W/S moves the left paddle; Up/Down moves the right paddle. Stop and Play restart.
+
+Expected result: The ball rebounds between two paddles; scoring reaches a winner at seven points.
+
+Requirements: Ready offline · Keyboard · Two local players
+
+After following these controls, stop and confirm authored state is restored. Save and reopen the project, repeat the result, then compare its exported player. A successful start alone does not certify all game behavior.
+
+### Breakout (breakout)
+
+Controls and setup: Play: A/D or Left/Right moves the paddle. Stop and Play restart the board.
+
+Expected result: The ball breaks 24 collider-backed bricks and the HUD tracks completion.
+
+Requirements: Ready offline · Keyboard
+
+After following these controls, stop and confirm authored state is restored. Save and reopen the project, repeat the result, then compare its exported player. A successful start alone does not certify all game behavior.
+
+### Physics Cleanup (physics-cleanup)
+
+Controls and setup: Play: move the pointer inside the Game view to steer the blue block and push targets off screen.
+
+Expected result: The complete Mouse Knockout foundation provides eight targets and a runtime win panel.
+
+Requirements: Ready offline · Pointer
+
+Shared foundation: mouse-knockout.
+
+After following these controls, stop and confirm authored state is restored. Save and reopen the project, repeat the result, then compare its exported player. A successful start alone does not certify all game behavior.
+
+### Grid Chase (grid-chase)
+
+Controls and setup: Play: WASD, arrow keys or gamepad D-pad to turn. Stop, then Play to restart.
+
+Expected result: The complete Snake foundation provides grid movement, food, growth and self-collision.
+
+Requirements: Ready offline · Keyboard
+
+Shared foundation: snake.
+
+After following these controls, stop and confirm authored state is restored. Save and reopen the project, repeat the result, then compare its exported player. A successful start alone does not certify all game behavior.
+
+### Coin Trail (coin-trail)
+
+Controls and setup: Play: WASD or arrow keys to move; R restarts. Collect the highlighted checkpoints in order and avoid red hazards.
+
+Expected result: The HUD counts 6 checkpoints and shows a finish state. No time limit.
+
+Requirements: Ready offline · Keyboard
+
+After following these controls, stop and confirm authored state is restored. Save and reopen the project, repeat the result, then compare its exported player. A successful start alone does not certify all game behavior.
+
+### Checkpoint Sprint (checkpoint-sprint)
+
+Controls and setup: Play: WASD or arrow keys to move; R restarts. Collect the highlighted checkpoints in order and avoid red hazards.
+
+Expected result: The HUD counts 8 checkpoints and shows a finish state. Finish within 25 seconds.
+
+Requirements: Ready offline · Keyboard
+
+After following these controls, stop and confirm authored state is restored. Save and reopen the project, repeat the result, then compare its exported player. A successful start alone does not certify all game behavior.
+
+### Slalom Run (slalom-run)
+
+Controls and setup: Play: WASD or arrow keys to move; R restarts. Collect the highlighted checkpoints in order and avoid red hazards.
+
+Expected result: The HUD counts 6 checkpoints and shows a finish state. Dodge the slalom hazards.
+
+Requirements: Ready offline · Keyboard
+
+After following these controls, stop and confirm authored state is restored. Save and reopen the project, repeat the result, then compare its exported player. A successful start alone does not certify all game behavior.
+
+### Orbit Dodge (orbit-dodge)
+
+Controls and setup: Play: WASD or arrow keys to move; R restarts. Collect the highlighted checkpoints in order and avoid red hazards.
+
+Expected result: The HUD counts 6 checkpoints and shows a finish state. Avoid two moving orbital hazards.
+
+Requirements: Ready offline · Keyboard
+
+After following these controls, stop and confirm authored state is restored. Save and reopen the project, repeat the result, then compare its exported player. A successful start alone does not certify all game behavior.
+
+### Target Circuit (target-circuit)
+
+Controls and setup: Play: WASD or arrow keys to move; R restarts. Collect the highlighted checkpoints in order and avoid red hazards.
+
+Expected result: The HUD counts 8 checkpoints and shows a finish state. Complete the figure-eight route within 20 seconds.
+
+Requirements: Ready offline · Keyboard
+
+After following these controls, stop and confirm authored state is restored. Save and reopen the project, repeat the result, then compare its exported player. A successful start alone does not certify all game behavior.
+
+### Hazard Crossing (hazard-crossing)
+
+Controls and setup: Play: WASD or arrow keys to move; R restarts. Collect the highlighted checkpoints in order and avoid red hazards.
+
+Expected result: The HUD counts 4 checkpoints and shows a finish state. Cross three moving hazard lanes.
+
+Requirements: Ready offline · Keyboard
+
+After following these controls, stop and confirm authored state is restored. Save and reopen the project, repeat the result, then compare its exported player. A successful start alone does not certify all game behavior.
+
+### Domino Cascade (domino-cascade)
+
+Controls and setup: Press Play. No gameplay input is required; Stop restores the authored scene.
+
+Expected result: Twenty dominoes fall after the striker reaches the row.
+
+Requirements: Ready offline
+
+After following these controls, stop and confirm authored state is restored. Save and reopen the project, repeat the result, then compare its exported player. A successful start alone does not certify all game behavior.
+
+### Pyramid Stack (pyramid-stack)
+
+Controls and setup: Press Play. No gameplay input is required; Stop restores the authored scene.
+
+Expected result: Twenty-eight boxes settle into a stacked pyramid above the ground.
+
+Requirements: Ready offline
+
+After following these controls, stop and confirm authored state is restored. Save and reopen the project, repeat the result, then compare its exported player. A successful start alone does not certify all game behavior.
+
+### Restitution Gallery (restitution-gallery)
+
+Controls and setup: Press Play. No gameplay input is required; Stop restores the authored scene.
+
+Expected result: Six falling balls compare restitution from zero to one.
+
+Requirements: Ready offline
+
+After following these controls, stop and confirm authored state is restored. Save and reopen the project, repeat the result, then compare its exported player. A successful start alone does not certify all game behavior.
+
+### Friction Ramps (friction-ramp)
+
+Controls and setup: Press Play. No gameplay input is required; Stop restores the authored scene.
+
+Expected result: Four ramp cases compare friction coefficients 0, 0.2, 0.6 and 1.2.
+
+Requirements: Ready offline
+
+After following these controls, stop and confirm authored state is restored. Save and reopen the project, repeat the result, then compare its exported player. A successful start alone does not certify all game behavior.
+
+### Pendulum Row (pendulum-row)
+
+Controls and setup: Press Play. No gameplay input is required; Stop restores the authored scene.
+
+Expected result: Five distance-joint pendulums swing from separate anchors.
+
+Requirements: Ready offline
+
+After following these controls, stop and confirm authored state is restored. Save and reopen the project, repeat the result, then compare its exported player. A successful start alone does not certify all game behavior.
+
+### Billiards Break (billiards-break)
+
+Controls and setup: Press Play. No gameplay input is required; Stop restores the authored scene.
+
+Expected result: A cue ball breaks a rack of ten balls in zero gravity.
+
+Requirements: Ready offline
+
+After following these controls, stop and confirm authored state is restored. Save and reopen the project, repeat the result, then compare its exported player. A successful start alone does not certify all game behavior.
+
+### Gravity Fountain (gravity-fountain)
+
+Controls and setup: Press Play. No gameplay input is required; Stop restores the authored scene.
+
+Expected result: Twenty-four balls follow ballistic arcs and bounce on the ground.
+
+Requirements: Ready offline
+
+After following these controls, stop and confirm authored state is restored. Save and reopen the project, repeat the result, then compare its exported player. A successful start alone does not certify all game behavior.
+
+### Shape Poster (shape-poster)
+
+Controls and setup: Press Play. No gameplay input is required; Stop restores the authored scene.
+
+Expected result: A static composition displays colored geometry and world-space text.
+
+Requirements: Ready offline
+
+After following these controls, stop and confirm authored state is restored. Save and reopen the project, repeat the result, then compare its exported player. A successful start alone does not certify all game behavior.
+
+### Neon Garden (neon-garden)
+
+Controls and setup: Press Play. No gameplay input is required; Stop restores the authored scene.
+
+Expected result: Three point lights illuminate eighteen arranged shapes.
+
+Requirements: Ready offline
+
+After following these controls, stop and confirm authored state is restored. Save and reopen the project, repeat the result, then compare its exported player. A successful start alone does not certify all game behavior.
+
+### Particle Fireworks (particle-fireworks)
+
+Controls and setup: Press Play. No gameplay input is required; Stop restores the authored scene.
+
+Expected result: Five particle fountains emit continuously after Play.
+
+Requirements: Ready offline
+
+After following these controls, stop and confirm authored state is restored. Save and reopen the project, repeat the result, then compare its exported player. A successful start alone does not certify all game behavior.
+
+### Rain Room (rain-room)
+
+Controls and setup: Press Play. No gameplay input is required; Stop restores the authored scene.
+
+Expected result: Seven emitters create falling rain around a room silhouette.
+
+Requirements: Ready offline
+
+After following these controls, stop and confirm authored state is restored. Save and reopen the project, repeat the result, then compare its exported player. A successful start alone does not certify all game behavior.
+
+### Starfield Drift (starfield)
+
+Controls and setup: Press Play. No gameplay input is required; Stop restores the authored scene.
+
+Expected result: Three particle layers create a drifting star field.
+
+Requirements: Ready offline
+
+After following these controls, stop and confirm authored state is restored. Save and reopen the project, repeat the result, then compare its exported player. A successful start alone does not certify all game behavior.
+
+### Orbit Gallery (orbit-gallery)
+
+Controls and setup: Press Play. No gameplay input is required; Stop restores the authored scene.
+
+Expected result: Six script-driven shapes orbit their configured centers.
+
+Requirements: Ready offline
+
+After following these controls, stop and confirm authored state is restored. Save and reopen the project, repeat the result, then compare its exported player. A successful start alone does not certify all game behavior.
+
+### Sprite Wall (sprite-wall)
+
+Controls and setup: Press Play. No gameplay input is required; Stop restores the authored scene.
+
+Expected result: Twenty-four tinted sprite instances reuse one included image.
+
+Requirements: Ready offline
+
+After following these controls, stop and confirm authored state is restored. Save and reopen the project, repeat the result, then compare its exported player. A successful start alone does not certify all game behavior.
+
+<!-- NOVA_V2615_END -->
+
+<!-- NOVA_V2614_START -->
+## 26.14 — Reusable enemy family
+
+Engine: **26.14.0** · Project Format 2/schema 29.
+
+
+Build one reusable enemy and a derived variant, then prove which asset owns each property and callback.
+
+Use a blueprint for shared composition and an Event Sheet for declared behavior. Change only the instance values that should differ.
+
+- Stop Play before authoring.
+- Open Script → Event Sheet and create a Rectangle object, or select an existing scripted object.
+
+1. Use the object workflow to create a prefab, saved Event Sheet and Object Blueprint. Edit the blueprint, name it Enemy Family and save. Save is refused if a required component is also excluded or an inherited source is missing.
+
+2. Choose Derive child blueprint, name it Scout Enemy and leave Prefab and Event Sheet inherited. Save, then instantiate the saved blueprint. The child keeps the actual base asset reference.
+
+3. In Design, refresh Script2D properties and change only the new instance’s move_speed from 6 to 9. Expand Object ownership, search move_speed and compare Authored with Inherited/default value.
+
+4. Open Event authors and follow Open callback author. The editor selects the unique callback declaration in the actual author asset; overloaded or malformed declarations report that the location is ambiguous.
+
+5. Use the enemy-family reference to inspect collision and task callbacks, the UI restart signal and ObjectPool2D. spawn_at uses a matching pool; despawn() in that instance returns it to the pool. There is no separate pool_spawn command.
+
+6. Play and pause. Expand Runtime state to compare the captured authored values with current behavior properties, subscriptions and task/timer queues. These observations cannot edit the running VM.
+
+7. While paused, make a valid logic edit and save. Reload validates all affected scripts before replacing them. Attempt an invalid edit too: the failed candidate must leave the old runtime and dirty source intact.
+
+8. Stop, Undo and Redo an instance change, save the project, reopen it and repeat Play. Inspect the inherited source references and the one deliberate override after reopening.
+
+The child resolves the parent composition; the instance override is visible separately from its baseline; callbacks navigate to their real authors; failed edits preserve the previous runnable state.
+
+Blueprints, Event Sheets, prefab references and instance values are project assets/data. Runtime observations are snapshots and are not saved as authored values.
+
+Create, derive and instantiate use document history. Invalid blueprint drafts survive Cancel and workspace departure. Save or explicit Discard resolves a draft; a changed saved base produces a visible conflict.
+
+All blueprint fields have visible labels. Tab through the modal; Escape opens the same Save/Discard/Cancel decision. At high UI scale, scroll the form while the footer remains reachable.
+
+```rhai
+@export(type="float") let move_speed = 6.0;
+fn update(dt) { if input_pressed("Jump") { set_position(move_speed, 0.0); } }
+```
+
+Open reference-projects/projects/creator-v2614-enemy-family/project.nova. Follow test-controls.json for collision, UI restart, pooled reuse, paused reload and save/reopen; its audit reports record which checks actually ran.
+
+<!-- NOVA_V2614_END -->
+
+
+
+
+<!-- NOVA_V2613_START -->
+## 26.13 — organize a graph and keep a readable workspace
+
+Engine: **26.13.0** · Project Format2/schema29 · Graph Format1.
+
+Arrange the same nested-loop program in Code and Visual, then tailor the editor to the task. Graph layout changes positions and wire geometry; they must preserve generated program behavior. Panel sizing changes editor presentation and does not change game properties.
+
+1. Create a blank project and a script with the example below. Save, attach it through Script2D to an enabled scene object, and Play. The Console should print 18. Stop, switch to Visual and select the function and nested loops.
+
+2. Apply layout to the whole graph. Inspect the measured cards, pins and control regions. Select a subset and apply selected layout: unselected nodes must keep their positions. Pan and zoom, apply layout again, then Undo and Redo. Verify selection and viewport are retained and no node identity disappears.
+
+3. Search for total or multiply to navigate to a declaration or function. Use the graph keyboard controls and pin actions to make and cancel a connection. Select a wire, add a reroute point, move it and remove it. Save and reopen the graph; retained waypoints must keep their order. Code still prints18.
+
+4. Expand a long source-backed node when its text needs inspection, then compact it. Source-backed status remains visible; compacting does not turn text into typed syntax. For large graphs, cancel an arrangement in progress and verify the draft remains usable. A blocked wire route is a diagnostic to repair, not a silently missing connection.
+
+5. Drag a visible panel separator. Arrow keys resize it; Shift uses a larger step, Home/End use its bounds, double-click resets and Escape cancels a drag. Try a short window with a large bottom-dock preference: the first movement must start from its visible size. Collapse hierarchy and use its visible expansion rail.
+
+6. Maximize hierarchy, Inspector or bottom tools, then restore. Their mounted fields, saved sizes and docking choices remain available. Tab through the focused panel and ensure covered panels receive no focus. Repeat after floating a panel through Layout → Manage workspaces.
+
+7. Resize Design, switch to Script, then return: each preset remembers its own dimensions. In Manage workspaces, save a named custom layout. Change a size, select the saved row, and choose Apply workspace. Export/import layouts to test portability. User and project storage scopes stay separate; the custom-layout capacity is24.
+
+8. Repeat the task in English, German and Chinese, light/dark themes and100/150/200% scale. Fields must remain readable and reachable; use panel focus or scrolling where necessary. In Animation, typing or deleting in a text field must edit that field. In Event Sheets, cancel a document switch and verify the unsaved draft remains.
+
+```rhai
+// Layout changes must preserve this comment and the result.
+fn multiply(value) { value * 2 }
+fn start() {
+  let total = 0;
+  for row in 0..3 {
+    for column in 0..2 { total += multiply(row + column); }
+  }
+  print(total);
+}
+
+```
+
+Expected result:18 before and after arrangement, selected arrangement, rerouting, Undo/Redo, save/reopen and export. Manual node positions outside a selected arrangement stay unchanged. Panel restore returns the previous dimensions; applying a named layout restores that layout. Record actual failures rather than assuming that a parseable graph or a contained page is usable.
+
+Large graph measurements depend on hardware and graph shape. The release evidence records actual100/1,000/10,000-node timings and worker/fallback/cancellation results. A graph with arbitrary fixed obstacles or authored waypoints may have no valid route; the editor must report that case. Local browser accessibility-tree and focus checks do not certify physical assistive technology. The same Project Format2/schema29 and Graph Format1 remain in use; optional bounded reroute points are additive.
+<!-- NOVA_V2613_END -->
+
+<!-- NOVA_V2612_START -->
+## 26.12 — edit one program in Code and Visual
+
+Engine: **26.12.0** · Project Format 2/schema 29 · Graph Format 1.
+
+New Rhai companions use typed syntax nodes. Existing execution graphs keep their compiler and explicit source-backed blocks. The conversion preview reports the representation of the current graph and points to exact source regions; it does not certify the behavior of an untested game.
+
+1. Create a Clear Scene project. Open the Script workspace, create a Rhai script, and replace its source with the example below. Save. Attach that asset to a Script2D component on an enabled scene object. Play and inspect the Console: it prints 12.
+
+2. Stop and choose Visual for the same asset. Review the conversion panel. Functions, parameters, local declarations, array elements, map entries, the for loop, member assignment and calls each have connected typed nodes. Select a source region to focus its code or corresponding node.
+
+3. Select the Literal node containing 2 in doubled. In Literal (Rhai spelling), enter 3 and save. Return to Code: the function now multiplies by 3. Play again: the Console prints18. Undo the field change, save, and verify12 again.
+
+4. Select the Array node. Add an elements child, create a Literal containing4, and connect its output to that input. Reorder children with the up/down controls. Disconnecting a required scalar child is an error; removing an ordered child removes its wire and leaves the former child available as a disconnected node.
+
+5. Select a Block to add, remove or reorder statements. Use the optional-child controls for an initializer, else branch, return value, loop counter, catch parameter or typed-method receiver. A blank visual module can be built from Function Declaration, Block, Expression Statement, Call and Literal nodes. Declaration/function nodes own language variables and arguments; the old execution-graph tables do not apply to this representation.
+
+6. Rename a parsed declaration in its node field. References with the same lexical binding follow the rename; a separate shadowed declaration keeps its own name. Return to Code after edits and inspect the actual generated source. Correct invalid identifiers or scope conflicts before saving.
+
+7. Create Assets/Scripts/Shared.rhai containing fn bonus(value) { value + 1 }. In the main module add a standalone use "Assets/Scripts/Shared.rhai"; line. Call bonus from start, save both assets and replay. Shared dependencies initialize once in dependency order. Strings and comments that resemble use lines are inert. Missing paths and dependency cycles are actionable errors.
+
+8. Add a missing closing bracket in Code and attempt to switch. The draft and diagnostic stay visible. Cancel the transition, repair the source and switch again. For a changed asset or failed save, keep the editor open and resolve the conflict; accepting a conversion preview is tied to that exact source revision.
+
+9. Open creator-v2612-code-game, creator-v2612-blocks-game and creator-v2612-mixed-game from reference-projects/projects. In each, collect six checkpoints with WASD/arrows and press R to restart. The blocks variant attaches the graph directly; the others attach Rhai. Save/reopen and export the same scene to repeat the route.
+
+```rhai
+// Keep this comment while switching modes.
+fn doubled(value) { value * 2 }
+fn start() {
+  let values = [1, 2, 3];
+  let state = #{score: 0};
+  for value in values { state.score += doubled(value); }
+  print(state.score);
+}
+```
+
+Expected checks:12 before the multiplier edit,18 after it,12 after undo; no comment or variable loss over three switches; six Coin Trail points, completion, and a working restart. Syntax errors block saving/conversion without clearing the draft. Compare actual commands, logs, state and runtime errors when extending the example.
+
+The shared source projection is limited to64,000 UTF16 characters,10,000 nodes and128 pins per node; ordered lists are grouped when necessary. Limits reject rather than truncate. Rhai integers and floats are distinct overloads: write0.0 where a float is required. The API overload palette identifies actual registered signatures. Native import aliases/namespaces, eval, await and blocking sleep are unavailable; project-local use is dependency concatenation, and timers/tasks provide supported delays. Local closures and function pointers execute, but closure identities cannot be serialized into saved properties. Syntax coverage does not replace runtime, export or user testing.
+
+Project Format2/schema29 and Graph Format1 remain unchanged. The additive language metadata identifies the new representation. Preserve a backup before opening a typed graph in an older editor. Existing legacy graphs remain usable and report any source-backed regions. For the exact syntax, API signatures and audit scope see VERSION_26_12_LANGUAGE.md, SCRIPT_SUPPORT_MATRIX_26_12.md and the separate release evidence.
+<!-- NOVA_V2612_END -->
 
 ## 6.2.0 behavior contracts
 

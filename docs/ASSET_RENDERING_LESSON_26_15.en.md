@@ -1,0 +1,29 @@
+# Production assets and rendering
+
+## Begin with an observable result
+Create an Empty project to learn importing, or Rendering Lab to study lighting. The launcher shows a real runtime preview, requirements, controls and expected result before Create. Search, category and difficulty filters apply together; Reset restores the full forty-entry catalog. Feature manual opens the relevant subsystem chapter. Related task opens the exact starter instructions below. Several entries intentionally reuse a complete foundation; that relationship and any unbound demonstration controls are disclosed.
+
+## Import, inspect and recover
+Open Design → Assets. Import an image plus its atlas JSON, or an orthogonal Tiled map and its referenced atlas images/tilesets. The batch row reports completed, failed and cancelled items. Cancel stops uncommitted work; completed assets remain. Open the job disclosure to inspect an individual failure or retry. On a narrow dock choose an asset to enter full-width details, then use Browse to return. On larger docks browse, preview and details remain side by side.
+
+The source image preview resolves the real asset, including linked atlas frames. Overview shows source ownership, errors and typed dependency selectors. If an image is missing, import it, select it in that source slot and follow the dependency button. Rename or move the original through the asset browser: linked UUIDs must remain unchanged. A failed reimport retains the previous usable asset and shows its error. A project replacement cancels late work so an old import cannot write into the new project.
+
+## Slice and animate without duplicating source pixels
+Select an imported atlas, open Slices and choose Extract or update frames. Each child links its original source and stable frame identity; Open original source returns to the owner. Reordering source frames or renaming a source does not make a new identity. Removed or malformed source frames receive explicit validation/repair behavior; arbitrary unsupported metadata is not silently reconstructed.
+
+For a regular image enable sprite-sheet slicing, enter columns/rows/margins/spacing and create slices. Trim now analyzes actual decoded alpha. Automatic slicing records connected opaque regions and a first region/collision outline; it does not itself create independent child assets. Create animation from frames makes a normal AnimationClip using source order and per-frame durations, or1/12 second where no duration exists. Attach/edit that clip through the normal Animation workflow. Extracting frames alone does not attach an animation to an entity.
+
+## Bring a Tiled map into the scene
+Bind every image/external tileset before Create tilemap in scene. The importer preserves firstgid, all horizontal/vertical/diagonal flips, downward source rows converted to world-up, and variable tile-frame durations. Supported input is finite orthogonal JSON with atlas tilesets, or the documented simple CSV TMX/TSX subset. Infinite maps, isometric layouts, compressed/group/object/image layers and complex collision geometry are rejected with diagnostics. Keep the original in Tiled when using those features.
+
+The imported map owns its source and layers. To edit tile definitions locally choose Make editable copy in Tilemap. This creates an independent ordinary TileSet sharing image UUIDs; definition editing, Undo/Redo and export then use that copy. Source reimport updates the original map, not your independent definitions. Layer painting remains available without overwriting an imported document with a different format.
+
+## Shared resources and named variants
+Create a Theme, Material, InputMap, PhysicsMaterial, AnimationLibrary or DataTable resource from Assets. Resource edits are drafts until Save Resource. Malformed JSON, an unfinished variant and switching assets/workspaces retain the exact draft. Saved runtime values deliberately show the saved resolver result. Create a named variant, edit its partial overrides, save, then Create Override for a child resource. The child inherits parent fields and named variants; only local fields replace inherited values. Duplicate names, non-object JSON, missing parents, kind mismatches and cycles are refused. Save/reopen and inspect both parent and child before relying on export.
+
+## Observe the renderer, then export
+In Rendering Lab select Point Light in Design and edit its intensity. In Manage → Rendering, scene-wide lighting and output settings are separate from selected-object properties. Verify actual pixels change, then inspect diagnostics. Directional shadow controls are disabled with an explanation because that path is unsupported; switching light type preserves authored values. Normal-map direction follows source rotation/flips. Shader initialization/compile failures have an explicit fallback, and context restoration rebuilds resources.
+
+Texture entry/byte limits, a512MiB maximum GPU budget and per-frame FIFO upload budget bound resource growth. Preload margin requests nearby assets when culling is enabled. Inspect queued uploads/bytes/deferrals before raising budgets; higher budgets cost memory and do not guarantee better frame time. Mutable canvas/video textures refresh per frame. Canvas mesh antialiasing can differ from WebGL at triangle seams.
+
+Use Project → Build, choose Web and export. A browser without a directory picker downloads a complete ZIP containing the player, WASM, game package and file manifest. Extract it and serve the directory over HTTP; a lone game.nova-pak is not the complete browser application. On Windows use the matching current native player. Compare the edited lighting and asset dependencies in the exported game with the editor, then save/reopen the original project. Qualification records actual hashes and measured output; it does not certify every GPU, physical device or installation lifecycle.

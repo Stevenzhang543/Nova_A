@@ -12,7 +12,7 @@ jobs:
       - uses: pnpm/action-setup@v4
         with: { version: 10.30.0 }
       - uses: actions/setup-node@v4
-        with: { node-version: 20, cache: pnpm }
+        with: { node-version-file: .node-version, cache: pnpm }
       - run: pnpm install --frozen-lockfile
       - run: pnpm references
       - run: node scripts/stability-v3.mjs --duration-hours=24 --output=release-audits/v3.0.0-stability-24h.json

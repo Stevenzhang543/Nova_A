@@ -1,7 +1,7 @@
 {
   "name": "nova_a",
   "private": true,
-  "version": "26.10.0",
+  "version": "26.16.0",
   "homepage": "https://github.com/Stevenzhang543/Nova_A/",
   "repository": {
     "type": "git",
@@ -17,7 +17,15 @@
     "build:wasm": "wasm-pack build crates/nova_wasm --target web --out-dir ../../nova_core/pkg --out-name nova_core --release",
     "build:wasm:dev": "wasm-pack build crates/nova_wasm --target web --out-dir ../../nova_core/pkg --out-name nova_core --dev",
     "test:core": "cargo test --workspace --all-targets",
-    "check": "vue-tsc --noEmit",
+    "check": "vue-tsc --noEmit && tsc --project tsconfig.node.json --noEmit",
+    "check:config": "tsc --project tsconfig.node.json --noEmit",
+    "inventory:v26.11": "node scripts/inventory-v26.11.mjs",
+    "verify:v26.11:graphs": "node scripts/verify-v26.11-visual-roundtrip.mjs",
+    "verify:v26.11:input": "node scripts/verify-v26.11-input-prompts.mjs",
+    "verify:v26.11:locks": "node scripts/verify-v26.11-project-locks.mjs",
+    "verify:v26.11:templates": "node scripts/verify-v26.11-templates.mjs",
+    "verify:v26.11:interactions": "node scripts/verify-v26.11-interactions.mjs",
+    "qualify:v26.11:layout": "node scripts/qualify-layout-v26.11.mjs",
     "audit:manual": "node scripts/audit-manual.mjs",
     "audit:editor": "node scripts/audit-editor-shell.mjs",
     "audit:scripts": "node scripts/audit-script-studio.mjs",
@@ -537,6 +545,7 @@
   },
   "devDependencies": {
     "@tauri-apps/cli": "2.11.4",
+    "@types/node": "22.20.1",
     "@vitejs/plugin-vue": "^5.2.1",
     "typescript": "~5.6.2",
     "vite": "^6.4.3",

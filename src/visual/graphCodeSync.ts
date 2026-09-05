@@ -3,7 +3,11 @@ import { SCRIPT_API_V2_MANIFEST } from '../editor/scriptApi'
 import { compileGraph } from './graphCompiler'
 import { createGraphNode, defaultVisualGraph, graphNodeDefinition } from './graphCatalog'
 import { addRoutineParameter, createGraphRoutine, synchronizeGraphSignatures } from './graphProduction'
-import { parseGraphDocument, serializeGraphDocument, type GraphCanvasScope, type GraphNode, type GraphPin, type GraphValue, type NovaGraphDocument } from './graphTypes'
+import { arrangeExecutionBlocks } from './graphInteraction'
+import { parseGraphDocument, sanitizeGraphValue, serializeGraphDocument, type GraphCanvasScope, type GraphNode, type GraphPin, type GraphValue, type NovaGraphDocument } from './graphTypes'
+import { projectRhaiSyntax } from './graphSyntax'
+export { assessRhaiConversion } from './graphSyntax'
+export type { SourceConversionAssessment, SourceConversionRegion, SourceConversionDiagnostic } from './graphSyntax'
 
 export const GRAPH_LINK_PREFIX = '// @nova-graph-link '
 const NODE_MARKER = /\s*\/\/ @nova-node ([0-9a-f-]{36})\s*$/i
@@ -67,9 +71,15 @@ function variableLine(graph: NovaGraphDocument, line: string): string | null {
 export function createLinkedRhaiSource(graphInput: NovaGraphDocument): string {
   const result = compileGraph(graphInput)
   if (!result.valid) return ''
+  if (result.graph.language) return GRAPH_LINK_PREFIX + result.graph.uuid + '\n// Rhai structure IR 1: code and typed nodes share the same program.\n' + result.source
   const mapping = new Map(result.mappings.filter(item => item.nodeUuid).map(item => [item.generatedLine, item.nodeUuid]))
   const lines = result.source.replace(/\s+$/, '').split('\n')
+  const safeMarkerLines = new Set<number>(); syntaxMask(result.source, true, safeMarkerLines)
   const marked = lines.map((line, index) => {
+    if (!safeMarkerLines.has(index)) return line
+    // The runtime's export preprocessor consumes the declaration before Rhai
+    // parsing and currently requires its literal to end at the semicolon.
+    if (/^\s*@export\b/.test(line)) return line
     const nodeUuid = mapping.get(index + 1)
     if (nodeUuid) return `${line} // @nova-node ${nodeUuid}`
     const variableUuid = variableLine(result.graph, line)
@@ -137,24 +147,44 @@ function parseValue(source: string): GraphValue | undefined {
     try { return JSON.parse(value) as string } catch { return undefined }
   }
   if (value.startsWith('[') && value.endsWith(']')) {
-    const members = splitArguments(value.slice(1, -1)).map(parseValue)
-    return members.every(member => member !== undefined) ? members as GraphValue[] : undefined
+    // Typed literal spelling uses JSON equivalence. Rhai-only array literals
+    // (for example [+7] or [()]) stay explicit source instead of changing type.
+    try { const parsed: unknown = JSON.parse(value); return Array.isArray(parsed) ? parsed as GraphValue[] : undefined } catch { return undefined }
   }
   return undefined
 }
 
 interface RhaiFunctionRegion { name: string; parameters: string[]; start: number; end: number; body: string }
 
-function matchingBrace(source: string, opening: number): number {
-  let quote = '', escaped = false, lineComment = false, blockComment = false, depth = 0
-  for (let index = opening; index < source.length; index++) {
+/** Keeps offsets while hiding comments and quoted text from structural scans. */
+function syntaxMask(source: string, hideStrings = true, safeMarkerLines?: Set<number>): string {
+  const masked = source.split('')
+  let quote = '', escaped = false, lineComment = false, commentDepth = 0, line = 0
+  for (let index = 0; index < source.length; index++) {
     const character = source[index], next = source[index + 1]
-    if (lineComment) { if (character === '\n') lineComment = false; continue }
-    if (blockComment) { if (character === '*' && next === '/') { blockComment = false; index++ }; continue }
-    if (quote) { if (escaped) escaped = false; else if (character === '\\') escaped = true; else if (character === quote) quote = ''; continue }
-    if (character === '/' && next === '/') { lineComment = true; index++; continue }
-    if (character === '/' && next === '*') { blockComment = true; index++; continue }
-    if (character === '"' || character === "'") { quote = character; continue }
+    if (character === '\n') { if (!quote && !commentDepth) safeMarkerLines?.add(line); line++ }
+    const hide = () => { if (character !== '\n' && character !== '\r') masked[index] = ' ' }
+    if (lineComment) { hide(); if (character === '\n') lineComment = false; continue }
+    if (commentDepth) {
+      hide()
+      if (character === '/' && next === '*') { masked[++index] = ' '; commentDepth++ }
+      else if (character === '*' && next === '/') { masked[++index] = ' '; commentDepth-- }
+      continue
+    }
+    if (quote) { if (hideStrings) hide(); if (escaped) escaped = false; else if (character === '\\') escaped = true; else if (character === quote) quote = ''; continue }
+    if (character === '/' && next === '/') { hide(); masked[++index] = ' '; lineComment = true }
+    else if (character === '/' && next === '*') { hide(); masked[++index] = ' '; commentDepth = 1 }
+    else if (character === '"' || character === "'" || character === '`') { quote = character; if (hideStrings) hide() }
+  }
+  if (!quote && !commentDepth) safeMarkerLines?.add(line)
+  return masked.join('')
+}
+
+function matchingBrace(source: string, opening: number): number {
+  const masked = syntaxMask(source)
+  let depth = 0
+  for (let index = opening; index < source.length; index++) {
+    const character = masked[index]
     if (character === '{') depth++
     else if (character === '}' && --depth === 0) return index
   }
@@ -162,34 +192,30 @@ function matchingBrace(source: string, opening: number): number {
 }
 
 function rhaiFunctionRegions(source: string): RhaiFunctionRegion[] {
-  const result: RhaiFunctionRegion[] = [], matcher = /\bfn\s+([A-Za-z_][A-Za-z0-9_]*)\s*\(([^)]*)\)\s*\{/g
-  for (let match = matcher.exec(source); match; match = matcher.exec(source)) {
-    const opening = source.indexOf('{', match.index), closing = matchingBrace(source, opening)
+  const result: RhaiFunctionRegion[] = [], matcher = /\bfn\s+([A-Za-z_][A-Za-z0-9_]*)\s*\(([^)]*)\)\s*\{/g, masked = syntaxMask(source)
+  for (let match = matcher.exec(masked); match; match = matcher.exec(masked)) {
+    const opening = masked.indexOf('{', match.index), closing = matchingBrace(source, opening)
     if (closing < 0) break
-    result.push({ name: match[1], parameters: splitArguments(match[2]).map(value => value.split('=')[0].trim()).filter(value => /^[A-Za-z_][A-Za-z0-9_]*$/.test(value)).slice(0, 64), start: match.index, end: closing + 1, body: source.slice(opening + 1, closing) })
+    const parameters = splitArguments(match[2])
+    if (parameters.length > 64 || parameters.some(value => !/^[A-Za-z_][A-Za-z0-9_]*$/.test(value))) continue
+    result.push({ name: match[1], parameters, start: match.index, end: closing + 1, body: source.slice(opening + 1, closing) })
     matcher.lastIndex = closing + 1
   }
   return result
 }
 
 function rhaiStatements(source: string): string[] {
-  const result: string[] = []
-  let quote = '', escaped = false, lineComment = false, blockComment = false, depth = 0, start = 0
+  const result: string[] = [], masked = syntaxMask(source)
+  let depth = 0, start = 0
   const push = (end: number) => { const value = source.slice(start, end).trim(); if (value) result.push(value); start = end }
   for (let index = 0; index < source.length; index++) {
-    const character = source[index], next = source[index + 1]
-    if (lineComment) { if (character === '\n') lineComment = false; continue }
-    if (blockComment) { if (character === '*' && next === '/') { blockComment = false; index++ }; continue }
-    if (quote) { if (escaped) escaped = false; else if (character === '\\') escaped = true; else if (character === quote) quote = ''; continue }
-    if (character === '/' && next === '/') { lineComment = true; index++; continue }
-    if (character === '/' && next === '*') { blockComment = true; index++; continue }
-    if (character === '"' || character === "'") { quote = character; continue }
+    const character = masked[index]
     if ('([{'.includes(character)) depth++
     else if (')]}'.includes(character)) depth = Math.max(0, depth - 1)
     if (character === ';' && depth === 0) push(index + 1)
     else if (character === '}' && depth === 0) {
-      const remainder = source.slice(index + 1)
-      if (!/^\s*else\b/.test(remainder)) push(index + 1)
+      const remainder = masked.slice(index + 1)
+      if (!/^\s*(?:(?:else|catch)\b|;)/.test(remainder)) push(index + 1)
     }
   }
   push(source.length)
@@ -220,20 +246,33 @@ function withoutOuterParentheses(source: string): string {
 }
 
 function topLevelOperator(source: string, operators: readonly string[]): { left: string; operator: string; right: string } | null {
-  let quote = '', escaped = false, depth = 0
+  const masked = syntaxMask(source)
+  let depth = 0
   for (let index = source.length - 1; index >= 0; index--) {
-    const character = source[index]
-    if (quote) { if (escaped) escaped = false; else if (character === '\\') escaped = true; else if (character === quote) quote = ''; continue }
-    if (character === '"' || character === "'") { quote = character; continue }
+    const character = masked[index]
     if (')]}'.includes(character)) { depth++; continue }
     if ('([{'.includes(character)) { depth--; continue }
     if (depth !== 0) continue
     for (const operator of operators) {
       const start = index - operator.length + 1
-      if (start <= 0 || source.slice(start, index + 1) !== operator || !source.slice(index + 1).trim()) continue
+      if (start <= 0 || masked.slice(start, index + 1) !== operator || !source.slice(index + 1).trim()) continue
+      if (operator.length === 1 && /[<>=!&|*/]/.test(operator) && (/[<>=!&|*/]/.test(masked[start - 1] ?? '') || /[<>=!&|*/]/.test(masked[index + 1] ?? ''))) continue
+      if ((operator === '+' || operator === '-') && /(?:\d|\.)[eE]$/.test(masked.slice(0, start))) continue
       if ((operator === '+' || operator === '-') && /[+\-*/%<>=!&|,(]\s*$/.test(source.slice(0, start))) continue
       return { left: source.slice(0, start).trim(), operator, right: source.slice(index + 1).trim() }
     }
+  }
+  return null
+}
+
+function exactCall(sourceInput: string): { name: string; args: string[] } | null {
+  const source = sourceInput.trim().replace(/;$/, '').trim(), masked = syntaxMask(source), match = masked.match(/^([A-Za-z_][A-Za-z0-9_]*)\s*\(/)
+  if (!match) return null
+  const opening = masked.indexOf('(')
+  let depth = 0
+  for (let index = opening; index < masked.length; index++) {
+    if (masked[index] === '(') depth++
+    else if (masked[index] === ')' && --depth === 0) return index === masked.length - 1 ? { name: match[1], args: splitArguments(source.slice(opening + 1, index)) } : null
   }
   return null
 }
@@ -245,10 +284,10 @@ function expressionNode(sourceInput: string, x: number, y: number, graph: NovaGr
     const node = createGraphNode('variable.get', x, y, graph), output = node.pins.find(pin => pin.key === 'value')
     node.config.variableUuid = variable.uuid; if (output) output.valueType = variable.valueType; scope.nodes.push(node); return node
   }
-  const callable = source.match(/^([A-Za-z_][A-Za-z0-9_]*)\s*\(([\s\S]*)\)$/)
-  const definition = callable ? graphNodeDefinition(`api.${callable[1]}`, graph, null) : null
-  if (callable && definition?.pins.some(pin => pin.direction === 'output' && pin.kind === 'data')) {
-    const node = createGraphNode(definition.type, x, y, graph), args = splitArguments(callable[2]), inputs = node.pins.filter(pin => pin.direction === 'input' && pin.kind === 'data')
+  const callable = exactCall(source)
+  const definition = callable ? graphNodeDefinition(`api.${callable.name}`, graph, null) : null
+  if (callable && definition?.pins.some(pin => pin.direction === 'output' && pin.kind === 'data') && callable.args.length === definition.pins.filter(pin => pin.direction === 'input' && pin.kind === 'data').length) {
+    const node = createGraphNode(definition.type, x, y, graph), args = callable.args, inputs = node.pins.filter(pin => pin.direction === 'input' && pin.kind === 'data')
     scope.nodes.push(node)
     if (args.length === inputs.length) for (let index = 0; index < inputs.length; index++) assignExpression(scope, node, inputs[index].key, args[index], x - 220, y + index * 62, graph)
     return node
@@ -260,7 +299,7 @@ function expressionNode(sourceInput: string, x: number, y: number, graph: NovaGr
     const binary = topLevelOperator(source, group)
     if (!binary) continue
     const type = ({ '||': 'logic.or', '&&': 'logic.and', '==': 'compare.equal', '!=': 'compare.not_equal', '<': 'compare.less', '<=': 'compare.less_equal', '>': 'compare.greater', '>=': 'compare.greater_equal', '+': 'math.add', '-': 'math.subtract', '*': 'math.multiply', '/': 'math.divide', '%': 'math.modulo' } as Record<string, string>)[binary.operator]
-    const node = createGraphNode(type, x, y, graph); scope.nodes.push(node)
+    const node = createGraphNode(type, x, y, graph); node.config.rhaiArithmetic = true; scope.nodes.push(node)
     assignExpression(scope, node, 'a', binary.left, x - 230, y - 42, graph); assignExpression(scope, node, 'b', binary.right, x - 230, y + 42, graph)
     return node
   }
@@ -273,7 +312,13 @@ function assignExpression(scope: GraphCanvasScope, node: GraphNode, pinKey: stri
   const pin = node.pins.find(candidate => candidate.direction === 'input' && candidate.kind === 'data' && candidate.key === pinKey)
   if (!pin) return
   const value = parseValue(source)
-  if (value !== undefined) { pin.defaultValue = value; return }
+  const matchesType = pin.valueType === 'Data' || pin.valueType === 'Number' && typeof value === 'number' || pin.valueType === 'Boolean' && typeof value === 'boolean' || ['String', 'Entity', 'Resource'].includes(pin.valueType ?? '') && typeof value === 'string' || pin.valueType === 'Vec2' && Array.isArray(value) && value.length === 2 && value.every(item => typeof item === 'number')
+  if (value !== undefined && matchesType && !(pin.required && value === null) && JSON.stringify(sanitizeGraphValue(value, pin.valueType ?? 'Data')) === JSON.stringify(value)) {
+    pin.defaultValue = value
+    const originals = node.config.rhaiInputSources && typeof node.config.rhaiInputSources === 'object' && !Array.isArray(node.config.rhaiInputSources) ? node.config.rhaiInputSources : {}
+    originals[pinKey] = source.trim(); node.config.rhaiInputSources = originals
+    return
+  }
   const expression = expressionNode(source, x, y, graph, scope), output = expression.pins.find(candidate => candidate.direction === 'output' && candidate.kind === 'data')
   if (output) scope.edges.push({ uuid: crypto.randomUUID().toLowerCase(), from: { nodeUuid: expression.uuid, pinUuid: output.uuid }, to: { nodeUuid: node.uuid, pinUuid: pin.uuid } })
 }
@@ -288,11 +333,11 @@ function statementNode(statement: string, x: number, y: number, graph: NovaGraph
     if (valuePin) { valuePin.valueType = variable.valueType; assignExpression(scope, node, 'value', assignment[2], x - 230, y + 70, graph) }
     return node
   }
-  const callableMatch = statement.match(/^(?:let\s+[A-Za-z_][A-Za-z0-9_]*\s*=\s*)?([A-Za-z_][A-Za-z0-9_]*)\s*\(([\s\S]*)\)\s*;?$/)
-  const callable = callableMatch?.[1] ?? '', definition = callable ? graphNodeDefinition(`api.${callable}`, graph, null) : null
+  const callableMatch = exactCall(statement)
+  const callable = callableMatch?.name ?? '', definition = callable ? graphNodeDefinition(`api.${callable}`, graph, null) : null
   if (definition?.pins.some(pin => pin.kind === 'execution' && pin.direction === 'input')) {
     const node = createGraphNode(definition.type, x, y, graph)
-    const inputs = node.pins.filter(pin => pin.direction === 'input' && pin.kind === 'data'), argumentsList = splitArguments(callableMatch?.[2] ?? '')
+    const inputs = node.pins.filter(pin => pin.direction === 'input' && pin.kind === 'data'), argumentsList = callableMatch?.args ?? []
     if (argumentsList.length === inputs.length) {
       for (let index = 0; index < inputs.length; index++) assignExpression(scope, node, inputs[index].key, argumentsList[index], x - 230, y + index * 70, graph)
       return node
@@ -303,7 +348,8 @@ function statementNode(statement: string, x: number, y: number, graph: NovaGraph
   const routine = callable ? graph.routines.find(item => safeIdentifier(item.name) === callable) : null
   if (routine) {
     const node = createGraphNode(`routine.call.${routine.uuid}`, x, y, graph)
-    const inputs = node.pins.filter(pin => pin.direction === 'input' && pin.kind === 'data'), argumentsList = splitArguments(callableMatch?.[2] ?? '')
+    const inputs = node.pins.filter(pin => pin.direction === 'input' && pin.kind === 'data'), argumentsList = callableMatch?.args ?? []
+    if (inputs.length !== argumentsList.length) { node.config.rhaiSourceOverride = statement; return node }
     for (let index = 0; index < Math.min(inputs.length, argumentsList.length); index++) assignExpression(scope, node, inputs[index].key, argumentsList[index], x - 230, y + index * 70, graph)
     return node
   }
@@ -314,27 +360,31 @@ function statementNode(statement: string, x: number, y: number, graph: NovaGraph
   return node
 }
 
-interface StructuredBlock { kind: 'if' | 'repeat'; condition: string; first: string; second: string }
+interface StructuredBlock { kind: 'if' | 'repeat'; condition: string; first: string; second: string; indexName?: string }
 
 function structuredBlock(statement: string): StructuredBlock | null {
   const source = statement.trim().replace(/;$/, '')
-  if (source.startsWith('if ')) {
-    const opening = source.indexOf('{'), closing = opening >= 0 ? matchingBrace(source, opening) : -1
+  if (/^if\b/.test(source)) {
+    const opening = syntaxMask(source).indexOf('{'), closing = opening >= 0 ? matchingBrace(source, opening) : -1
     if (opening > 3 && closing > opening) {
-      const remainder = source.slice(closing + 1).trim(), elseOpening = remainder.startsWith('else') ? remainder.indexOf('{') : -1
+      const remainder = source.slice(closing + 1).trim()
+      if (/^else\s+if\b/.test(remainder)) return { kind: 'if', condition: source.slice(2, opening).trim(), first: source.slice(opening + 1, closing), second: remainder.replace(/^else\s+/, '') }
+      const elseOpening = /^else\s*\{/.test(remainder) ? remainder.indexOf('{') : -1
       const elseClosing = elseOpening >= 0 ? matchingBrace(remainder, elseOpening) : -1
-      if (!remainder || (elseOpening >= 0 && elseClosing > elseOpening)) return { kind: 'if', condition: source.slice(3, opening).trim(), first: source.slice(opening + 1, closing), second: elseOpening >= 0 ? remainder.slice(elseOpening + 1, elseClosing) : '' }
+      if (!remainder || (elseOpening >= 0 && elseClosing > elseOpening && !remainder.slice(elseClosing + 1).trim())) return { kind: 'if', condition: source.slice(2, opening).trim(), first: source.slice(opening + 1, closing), second: elseOpening >= 0 ? remainder.slice(elseOpening + 1, elseClosing) : '' }
     }
   }
-  const repeat = source.match(/^for\s+[A-Za-z_][A-Za-z0-9_]*\s+in\s+0\.\.([^\{]+)\{/)
+  // Only a statically bounded integer range has the same contract as Repeat.
+  const repeat = source.match(/^for\s+([A-Za-z_][A-Za-z0-9_]*)\s+in\s+0\.\.(\d+)\s*\{/)
   if (repeat) {
     const opening = source.indexOf('{'), closing = matchingBrace(source, opening)
-    if (closing > opening) return { kind: 'repeat', condition: repeat[1].trim(), first: source.slice(opening + 1, closing), second: '' }
+    if (closing > opening && Number(repeat[2]) <= 1024 && !source.slice(closing + 1).trim()) return { kind: 'repeat', condition: repeat[2], first: source.slice(opening + 1, closing), second: '', indexName: repeat[1] }
   }
   return null
 }
 
 function populateExecution(scope: GraphCanvasScope, statements: string[], start: GraphNode, startKey: string, graph: NovaGraphDocument, y: number): { node: GraphNode; key: string } {
+  if (statements.length > 2_048) throw new Error('A visual execution scope exceeds 2,048 statements; split the script before converting.')
   let previous = start, previousKey = startKey, index = 0
   for (const statement of statements.slice(0, 2_048)) {
     const structured = structuredBlock(statement), x = 360 + index * 270
@@ -345,7 +395,7 @@ function populateExecution(scope: GraphCanvasScope, statements: string[], start:
       if (falseStatements.length) populateExecution(scope, falseStatements, branch, 'false', graph, y + 112)
       previous = branch; previousKey = 'next'
     } else if (structured?.kind === 'repeat') {
-      const repeat = createGraphNode('flow.repeat', x, y, graph); scope.nodes.push(repeat); connectPin(scope, previous, previousKey, repeat); assignExpression(scope, repeat, 'count', structured.condition, x - 210, y + 78, graph)
+      const repeat = createGraphNode('flow.repeat', x, y, graph); repeat.config.rhaiIndexName = structured.indexName ?? ''; scope.nodes.push(repeat); connectPin(scope, previous, previousKey, repeat); assignExpression(scope, repeat, 'count', structured.condition, x - 210, y + 78, graph)
       const body = rhaiStatements(structured.first); if (body.length) populateExecution(scope, body, repeat, 'body', graph, y + 112)
       previous = repeat; previousKey = 'next'
     } else {
@@ -362,28 +412,64 @@ function eraseRanges(source: string, ranges: Array<{ start: number; end: number 
   return characters.join('')
 }
 
+function preserveImplicitReturn(statements: string[]): string[] {
+  const last = statements[statements.length - 1]
+  if (!last || !syntaxMask(last).trim() || syntaxMask(last).trim().endsWith(';') || /^\s*(?:return|throw|for|while|loop|try)\b/.test(last)) return statements
+  const branch = structuredBlock(last)
+  if (branch?.kind === 'if') statements[statements.length - 1] = `if ${branch.condition} {\n${preserveImplicitReturn(rhaiStatements(branch.first)).join('\n')}\n} else {\n${preserveImplicitReturn(rhaiStatements(branch.second)).join('\n')}\n}`
+  // A tail declaration or assignment is legal Rhai and evaluates to unit.
+  // A block expression retains that behavior without guessing its syntax.
+  else statements[statements.length - 1] = `return { ${last}\n};`
+  return statements
+}
+
 /** Converts ordinary Rhai into an editable graph without discarding source.
  * Recognized lifecycle/API statements become typed blocks; unsupported syntax
  * remains a bounded Rhai block and therefore round-trips with the same behavior. */
-export function createGraphFromRhaiSource(sourceInput: string, name = 'Visual Script', requestedUuid = ''): NovaGraphDocument {
+export function createLegacyGraphFromRhaiSource(sourceInput: string, name = 'Visual Script', requestedUuid = ''): NovaGraphDocument {
+  if (sourceInput.length > 64_000) throw new Error('Rhai conversion supports up to 64,000 source characters; split the script before converting. The original source has not been changed.')
   const source = sourceInput.replace(/\r\n?/g, '\n').replace(/^\/\/ @nova-graph-link [0-9a-f-]{36}\s*\n/im, '')
   const graph = defaultVisualGraph(name)
   graph.uuid = requestedUuid || graph.uuid; graph.nodes = []; graph.edges = []; graph.comments = []; graph.variables = []
+  // Interpolated strings and private declarations require a full Rhai AST to
+  // transform safely; preserve their exact lexical source in a module block.
+  if (source.includes('`') || /\bprivate\s+fn\b/.test(syntaxMask(source))) {
+    const module = createGraphNode('code.module', 70, 70, graph); module.config.source = source; graph.nodes.push(module)
+    return parseGraphDocument(serializeGraphDocument(graph))
+  }
   const functions = rhaiFunctionRegions(source)
   // Register top-level variables before function bodies so assignments and
   // expressions inside routines can resolve to typed variable blocks.
   let remainder = eraseRanges(source, functions)
-  const variables: Array<{ start: number; end: number }> = [], variableMatcher = /(?:^|\n)([ \t]*(?:@export\([^\n]*\)\s*)?let\s+([A-Za-z_][A-Za-z0-9_]*)\s*=\s*([^;\n]+);)/g
-  for (let match = variableMatcher.exec(remainder); match; match = variableMatcher.exec(remainder)) {
-    const value = parseValue(match[3]); if (value === undefined) continue
-    const declarationStart = match.index + (match[0].startsWith('\n') ? 1 : 0), exposed = /@export\(/.test(match[1])
+  const variables: Array<{ start: number; end: number }> = [], variableMatcher = /(?:^|\n)([ \t]*(?:@export(?:\([^\n]*\))?\s*)?let\s+([A-Za-z_][A-Za-z0-9_]*)\s*=\s*([^;\n]+);)/g, variableSource = syntaxMask(remainder, false)
+  for (let match = variableMatcher.exec(variableSource); match; match = variableMatcher.exec(variableSource)) {
+    const value = parseValue(match[3]); if (value === undefined || JSON.stringify(sanitizeGraphValue(value)) !== JSON.stringify(value)) continue
+    const declarationStart = match.index + (match[0].startsWith('\n') ? 1 : 0), exposed = /@export\b/.test(match[1])
     graph.variables.push({ uuid: crypto.randomUUID().toLowerCase(), name: match[2], valueType: typeof value === 'boolean' ? 'Boolean' : typeof value === 'number' ? 'Number' : typeof value === 'string' ? 'String' : Array.isArray(value) && value.length === 2 && value.every(item => typeof item === 'number') ? 'Vec2' : 'Data', defaultValue: value, exposed, serialized: true, group: 'Graph', tooltip: '', minimum: null, maximum: null, step: typeof value === 'number' ? .01 : null, resourceType: null })
+    const variable = graph.variables[graph.variables.length - 1]
+    variable.sourceLiteral = match[3].trim()
+    const metadata = match[1].match(/@export\(([^\n]*)\)/)?.[1]
+    for (const field of metadata ? splitArguments(metadata) : []) {
+      const pair = field.match(/^([A-Za-z_]+)\s*=\s*([\s\S]+)$/)
+      if (!pair) continue
+      const value = parseValue(pair[2])
+      if (pair[1] === 'min' && typeof value === 'number') variable.minimum = value
+      else if (pair[1] === 'max' && typeof value === 'number') variable.maximum = value
+      else if (pair[1] === 'step' && typeof value === 'number') variable.step = value
+      else if (pair[1] === 'group' && typeof value === 'string') variable.group = value
+      else if (pair[1] === 'tooltip' && typeof value === 'string') variable.tooltip = value
+      else if (pair[1] === 'serialize' && typeof value === 'boolean') variable.serialized = value
+    }
     variables.push({ start: declarationStart, end: declarationStart + match[1].length })
   }
   remainder = eraseRanges(remainder, variables)
+  // Hoisting a literal across arbitrary module initialization can change which
+  // bindings exist at each statement. Keep that initialization in source order.
+  if (syntaxMask(remainder).trim()) { graph.variables = []; remainder = eraseRanges(source, functions) }
   const customFunctions = functions.filter(region => !graphNodeDefinition(`event.${region.name}`, graph, null))
   for (const region of customFunctions) {
     const routine = createGraphRoutine('function', region.name)
+    routine.nodes.find(node => node.type === 'routine.entry')!.config.rhaiOriginalSignature = true
     for (const parameter of region.parameters) addRoutineParameter(routine, 'input', parameter, 'Data')
     graph.routines.push(routine)
   }
@@ -397,19 +483,38 @@ export function createGraphFromRhaiSource(sourceInput: string, name = 'Visual Sc
       const entry = routine.nodes.find(node => node.type === 'routine.entry'), exit = routine.nodes.find(node => node.type === 'routine.return')
       if (!entry || !exit) continue
       routine.edges = []
-      const statements = rhaiStatements(region.body)
+      // Rhai's final expression is its return value; retain branch structure
+      // while making expression returns explicit before the graph Return.
+      const statements = preserveImplicitReturn(rhaiStatements(region.body))
       if (statements.length) { const terminal = populateExecution(routine, statements, entry, 'next', graph, 120); connectPin(routine, terminal.node, terminal.key, exit) }
       else connectPin(routine, entry, 'next', exit)
       continue
     }
     const y = 90 + chainIndex * 220, event = createGraphNode(eventType, 70, y, graph)
+    event.config.rhaiParameters = region.parameters
     graph.nodes.push(event)
     populateExecution(graph, rhaiStatements(region.body), event, 'next', graph, y)
     chainIndex++
   }
   remainder = remainder.replace(/^\/\/ (?:Generated by Nova_A Visual Scripting|Bidirectional projection:|Linked \.rhai).*$/gm, '').trim()
   if (remainder) { const module = createGraphNode('code.module', 70, Math.max(360, 90 + chainIndex * 220), graph); module.config.source = remainder.slice(0, 64_000); graph.nodes.push(module) }
+  for (const scope of graphScopes(graph)) arrangeExecutionBlocks(scope)
+  if (!compileGraph(graph).valid) {
+    // A typed projection is optional; the authored Rhai is authoritative when
+    // its dynamic types, overloads or recursive calls exceed graph contracts.
+    graph.nodes = []; graph.edges = []; graph.variables = []; graph.routines = []
+    const module = createGraphNode('code.module', 70, 70, graph); module.config.source = source; graph.nodes.push(module)
+  }
   return parseGraphDocument(serializeGraphDocument(graph))
+}
+
+function syntaxProjectionSource(source: string): string {
+  return source.replace(/^\/\/ @nova-graph-link [0-9a-f-]{36}\r?\n(?:\/\/ (?:Rhai structure IR 1:|Bidirectional projection:)[^\r\n]*(?:\r?\n|$))?/i, '')
+}
+
+/** New code projections use the shared span-preserving Rhai IR. */
+export function createGraphFromRhaiSource(sourceInput: string, name = 'Visual Script', requestedUuid = ''): NovaGraphDocument {
+  return parseGraphDocument(serializeGraphDocument(projectRhaiSyntax(syntaxProjectionSource(sourceInput), name, requestedUuid)))
 }
 
 function incomingLiteral(scope: GraphCanvasScope, node: GraphNode, pin: GraphPin): GraphNode | null {
@@ -484,9 +589,73 @@ function synchronizeRawModule(graph: NovaGraphDocument, source: string): boolean
   return true
 }
 
+function projectionSource(source: string): string {
+  const normalized = source.replace(/\r\n?/g, '\n'), safeLines = new Set<number>(), masked = syntaxMask(normalized, true, safeLines).split('\n')
+  return normalized.split('\n').flatMap((raw, index) => {
+    const line = safeLines.has(index) ? withoutMarker(raw) : raw
+    if (/^\s*__nova_graph_trace\(/.test(masked[index]) || safeLines.has(index) && (line.startsWith(GRAPH_LINK_PREFIX) || /^\/\/ (?:Generated by Nova_A Visual Scripting|Bidirectional projection:|Linked \.rhai)/.test(line))) return []
+    return [line]
+  }).join('\n').trim()
+}
+
+function rebuildLinkedGraph(previous: NovaGraphDocument, source: string): NovaGraphDocument {
+  const graph = createLegacyGraphFromRhaiSource(projectionSource(source), previous.name, previous.uuid)
+  // Variable identities are referenced by serialized component overrides.
+  for (const variable of graph.variables) {
+    const old = previous.variables.find(item => item.name === variable.name)
+    if (!old) continue
+    const importedUuid = variable.uuid; variable.uuid = old.uuid
+    for (const scope of graphScopes(graph)) for (const node of scope.nodes) if (node.config.variableUuid === importedUuid) node.config.variableUuid = old.uuid
+  }
+  for (const routine of graph.routines) {
+    const old = previous.routines.find(item => item.name === routine.name)
+    if (!old) continue
+    const importedUuid = routine.uuid; routine.uuid = old.uuid
+    routine.description = old.description
+    for (const direction of ['inputs', 'outputs'] as const) for (const parameter of routine[direction]) {
+      const oldParameter = old[direction].find(item => item.name === parameter.name)
+      if (oldParameter) parameter.uuid = oldParameter.uuid
+    }
+    for (const scope of graphScopes(graph)) for (const node of scope.nodes) if (node.type === `routine.call.${importedUuid}`) node.type = `routine.call.${old.uuid}`
+  }
+  // Keep unchanged block identities so their breakpoints survive structural
+  // edits. Changed/new blocks keep fresh IDs and the newly arranged positions.
+  const semanticNode = (node: GraphNode) => JSON.stringify({ type: node.type, config: node.config, pins: node.pins.map(pin => [pin.key, pin.direction, pin.kind, pin.valueType, pin.defaultValue]) })
+  for (const scope of graphScopes(graph)) {
+    const oldScope = scope === graph ? previous : previous.routines.find(item => item.uuid === (scope as { uuid?: string }).uuid)
+    if (!oldScope) continue
+    const available = new Map<string, GraphNode[]>(), nodeIds = new Map<string, string>(), pinIds = new Map<string, string>()
+    for (const node of oldScope.nodes) { const key = semanticNode(node), nodes = available.get(key) ?? []; nodes.push(node); available.set(key, nodes) }
+    for (const node of scope.nodes) {
+      const old = available.get(semanticNode(node))?.shift()
+      if (!old) continue
+      nodeIds.set(node.uuid, old.uuid)
+      for (const pin of node.pins) pinIds.set(pin.uuid, old.pins.find(item => item.key === pin.key && item.direction === pin.direction)?.uuid ?? pin.uuid)
+      node.uuid = old.uuid
+      for (const pin of node.pins) pin.uuid = pinIds.get(pin.uuid) ?? pin.uuid
+    }
+    for (const edge of scope.edges) {
+      edge.from.nodeUuid = nodeIds.get(edge.from.nodeUuid) ?? edge.from.nodeUuid
+      edge.to.nodeUuid = nodeIds.get(edge.to.nodeUuid) ?? edge.to.nodeUuid
+      edge.from.pinUuid = pinIds.get(edge.from.pinUuid) ?? edge.from.pinUuid
+      edge.to.pinUuid = pinIds.get(edge.to.pinUuid) ?? edge.to.pinUuid
+    }
+  }
+  const retainedNodes = new Set(graphScopes(graph).flatMap(scope => scope.nodes.map(node => node.uuid)))
+  graph.debug = { ...previous.debug, breakpoints: previous.debug.breakpoints.filter(item => retainedNodes.has(item.nodeUuid)) }
+  return graph
+}
+
 export function applyLinkedRhaiSource(graphInput: NovaGraphDocument, source: string): Omit<GraphCodeSyncResult, 'graphAssetUuid'> {
   const graph = parseGraphDocument(serializeGraphDocument(graphInput))
-  const baseline = sourceRegions(createLinkedRhaiSource(graph))
+  const baselineSource = createLinkedRhaiSource(graph)
+  if (graph.language) {
+    if (source === baselineSource || source === syntaxProjectionSource(baselineSource)) return { graph, changedNodes: [], changedVariables: [], rawModuleChanged: false }
+    const rebuilt = projectRhaiSyntax(syntaxProjectionSource(source), graph.name, graph.uuid, graph)
+    return { graph: parseGraphDocument(serializeGraphDocument(rebuilt)), changedNodes: rebuilt.nodes.map(node => node.uuid), changedVariables: [], rawModuleChanged: false }
+  }
+  if (source.replace(/\r\n?/g, '\n').trim() === baselineSource.trim()) return { graph, changedNodes: [], changedVariables: [], rawModuleChanged: false }
+  const baseline = sourceRegions(baselineSource)
   const edited = sourceRegions(source)
   const changedNodes: string[] = [], changedVariables: string[] = []
   for (const variable of graph.variables) {
@@ -499,7 +668,14 @@ export function applyLinkedRhaiSource(graphInput: NovaGraphDocument, source: str
     const after = meaningful(edited.nodes.get(node.uuid) ?? []).join('\n').trim()
     if (after && after !== before && applyStructuredNodeEdit(graph, node.uuid, edited.nodes.get(node.uuid) ?? [])) changedNodes.push(node.uuid)
   }
-  const rawModuleChanged = synchronizeRawModule(graph, edited.unowned.join('\n'))
+  const rawModuleChanged = edited.unowned.join('\n') !== baseline.unowned.join('\n') && synchronizeRawModule(graph, edited.unowned.join('\n'))
+  // Marker edits are accepted only when their regenerated projection accounts
+  // for the complete edited source. Deletion, insertion and control-flow edits
+  // must not resurrect old nodes or silently discard unowned statements.
+  if (projectionSource(createLinkedRhaiSource(graph)) !== projectionSource(source)) {
+    const rebuilt = rebuildLinkedGraph(graphInput, source)
+    return { graph: rebuilt, changedNodes: graphScopes(rebuilt).flatMap(scope => scope.nodes.map(node => node.uuid)), changedVariables: rebuilt.variables.map(variable => variable.uuid), rawModuleChanged: true }
+  }
   return { graph, changedNodes, changedVariables, rawModuleChanged }
 }
 
@@ -534,7 +710,7 @@ export function synchronizeLinkedGraphForScript(scriptUuid: string, source: stri
   const graphSource = readTextAsset(graphAsset.uuid)
   if (!graphSource) throw new Error('The linked visual graph source is unavailable.')
   const currentGraph = parseGraphDocument(graphSource)
-  const synchronized = NODE_MARKER.test(source) || VARIABLE_MARKER.test(source)
+  const synchronized = currentGraph.language || source.split(/\r?\n/).some(line => NODE_MARKER.test(line) || VARIABLE_MARKER.test(line))
     ? applyLinkedRhaiSource(currentGraph, source)
     : { graph: createGraphFromRhaiSource(source, currentGraph.name, currentGraph.uuid), changedNodes: currentGraph.nodes.map(node => node.uuid), changedVariables: currentGraph.variables.map(variable => variable.uuid), rawModuleChanged: true }
   if (!updateTextAsset(graphAsset.uuid, serializeGraphDocument(synchronized.graph))) throw new Error('The linked visual graph could not be saved.')

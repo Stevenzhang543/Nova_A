@@ -2,9 +2,11 @@ import { SCRIPT_API_V2_MANIFEST, type ScriptApiV2Binding } from '../editor/scrip
 import { packageState, versionSatisfies } from '../runtime/packages'
 import { pluginState } from '../runtime/plugins'
 import { defaultGraphValue, graphUuid, type GraphNode, type GraphParameter, type GraphPin, type GraphRoutine, type GraphValue, type GraphValueType, type NovaGraphDocument } from './graphTypes'
+import { initializeSyntaxNode, SYNTAX_NODE_DEFINITIONS, syntaxNodeDefinition } from './graphSyntaxSchema'
+import { initializeSyntaxApiNode, SYNTAX_API_NODE_DEFINITIONS, syntaxApiNodeDefinition, syntaxExtensionDefinitions } from './graphSyntaxApi'
 
 export interface GraphPinTemplate { key: string; name: string; direction: 'input' | 'output'; kind: 'execution' | 'data'; valueType?: GraphValueType; required?: boolean; defaultValue?: GraphValue }
-export interface GraphNodeDefinition { type: string; title: string; category: string; description: string; keywords: string; color: string; pins: GraphPinTemplate[]; api?: ScriptApiV2Binding; packageId?: string; deprecatedBy?: string }
+export interface GraphNodeDefinition { type: string; title: string; category: string; description: string; keywords: string; color: string; pins: GraphPinTemplate[]; api?: ScriptApiV2Binding; packageId?: string; deprecatedBy?: string; syntaxApiType?: string; syntaxApiDefaults?: readonly (string | null)[] }
 
 const COLORS: Record<string, string> = {
   Events: '#e45b73', Flow: '#a777e3', Values: '#5e9fe6', Variables: '#d9a441', Functions: '#7f79df', Libraries: '#5fa7b8', Math: '#44b894', Comparison: '#db8756', Conversion: '#8a9aae',
@@ -168,13 +170,21 @@ export function productionGraphNodeCatalog(graph?: NovaGraphDocument, scope?: Gr
   return [...routineNodes, ...packageNodes, ...pluginNodes]
 }
 
-export function graphNodeDefinition(type: string, graph?: NovaGraphDocument, scope?: GraphRoutine | null): GraphNodeDefinition | null { return CATALOG.get(type) ?? productionGraphNodeCatalog(graph, scope).find(item => item.type === type) ?? null }
-export function searchGraphNodeCatalog(query: string, graph?: NovaGraphDocument, scope?: GraphRoutine | null): readonly GraphNodeDefinition[] { const needle = query.trim().toLowerCase(); return [...GRAPH_NODE_CATALOG, ...productionGraphNodeCatalog(graph, scope)].filter(item => !needle || `${item.title} ${item.category} ${item.description} ${item.keywords}`.toLowerCase().includes(needle)) }
+export function graphNodeDefinition(type: string, graph?: NovaGraphDocument, scope?: GraphRoutine | null): GraphNodeDefinition | null {
+  const definition = syntaxNodeDefinition(type) ?? syntaxApiNodeDefinition(type) ?? CATALOG.get(type)
+  if (definition) return definition
+  const contributed = productionGraphNodeCatalog(graph, scope)
+  return (graph?.language ? syntaxExtensionDefinitions(contributed) : contributed).find(item => item.type === type) ?? null
+}
+export function searchGraphNodeCatalog(query: string, graph?: NovaGraphDocument, scope?: GraphRoutine | null): readonly GraphNodeDefinition[] { const needle = query.trim().toLowerCase(), contributed = productionGraphNodeCatalog(graph, scope); return (graph?.language ? [...SYNTAX_NODE_DEFINITIONS, ...SYNTAX_API_NODE_DEFINITIONS, ...syntaxExtensionDefinitions(contributed)] : [...GRAPH_NODE_CATALOG, ...contributed]).filter(item => !needle || `${item.title} ${item.category} ${item.description} ${item.keywords}`.toLowerCase().includes(needle)) }
 
 export function createGraphNode(type: string, x = 0, y = 0, graph?: NovaGraphDocument, scope?: GraphRoutine | null): GraphNode {
   const definition = graphNodeDefinition(type, graph, scope)
   if (!definition) throw new Error(`Unknown visual graph node type: ${type}`)
   const node: GraphNode = { uuid: graphUuid(), type, title: definition.title, category: definition.category, position: { x, y }, size: { width: 224, height: Math.max(82, 46 + definition.pins.length * 26) }, collapsed: false, pins: definition.pins.map(pin), config: {} }
+  if (type.startsWith('rhai.')) initializeSyntaxNode(node)
+  if (type.startsWith('rhai-api.')) initializeSyntaxApiNode(node, type)
+  else if (definition.syntaxApiType) { initializeSyntaxApiNode(node, definition.syntaxApiType, definition.syntaxApiDefaults); node.config.palettePackageId = definition.packageId ?? '' }
   if (type === 'literal.boolean') node.config.value = false
   else if (type === 'literal.number') node.config.value = 0
   else if (type === 'literal.vec2') node.config.value = [0, 0]

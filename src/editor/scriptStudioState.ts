@@ -8,7 +8,11 @@ export const scriptStudioState = reactive({
   /** Registered by ScriptStudio while mounted so a mode switch can validate,
    * save, and synchronize the exact active Rhai draft before opening blocks. */
   saveActiveDraft: null as null | (() => Promise<boolean>),
-  layout: { detailDock: 'right' as 'right' | 'bottom', explorerVisible: true, detailVisible: true }
+  layout: {
+    detailDock: 'right' as 'right' | 'bottom', explorerVisible: true, detailVisible: true,
+    explorerWidth: 224, detailWidth: 328, detailHeight: 220,
+    compactToolbar: true, codeFocused: false, activePanel: 'detail' as 'explorer' | 'detail',
+  }
 })
 
 export function toggleScriptDetailDock(): void { scriptStudioState.layout.detailDock = scriptStudioState.layout.detailDock === 'right' ? 'bottom' : 'right' }

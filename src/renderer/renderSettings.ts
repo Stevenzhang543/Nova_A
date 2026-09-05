@@ -71,6 +71,19 @@ function finite(value: unknown, fallback: number, min: number, max: number): num
   return Math.min(max, Math.max(min, number))
 }
 
+export const GPU_TEXTURE_MEMORY_LIMIT_MB = 512
+
+export function normalizeTextureStreamingSettings(value: unknown, fallbackBudget: unknown = 256): TextureStreamingSettings {
+  const source = value && typeof value === 'object' ? value as Record<string, unknown> : {}
+  return {
+    enabled: source.enabled !== false,
+    memoryBudgetMb: finite(source.memoryBudgetMb, finite(fallbackBudget, 256, 16, GPU_TEXTURE_MEMORY_LIMIT_MB), 16, GPU_TEXTURE_MEMORY_LIMIT_MB),
+    idleFrames: Math.round(finite(source.idleFrames, 600, 2, 36_000)),
+    uploadBudgetPerFrame: Math.round(finite(source.uploadBudgetPerFrame, 16, 1, 4_096)),
+    preloadMargin: finite(source.preloadMargin, 1.5, 1, 8)
+  }
+}
+
 function color(value: unknown, fallback: { r: number; g: number; b: number }) {
   const source = value && typeof value === 'object' ? value as Record<string, unknown> : {}
   return {
@@ -125,13 +138,7 @@ export function normalizeRenderingSettings(value: unknown): RenderingSettings {
     pixelSnap: source.pixelSnap === true,
     maximumPixelRatio: finite(source.maximumPixelRatio, 2, 1, 4),
     particleBudget: Math.round(finite(source.particleBudget, 10_000, 100, 100_000)),
-    textureStreaming: {
-      enabled: textureStreaming.enabled !== false,
-      memoryBudgetMb: finite(textureStreaming.memoryBudgetMb, finite(budgets.textureMemoryMb, 256, 1, 65_536), 16, 65_536),
-      idleFrames: Math.round(finite(textureStreaming.idleFrames, 600, 2, 36_000)),
-      uploadBudgetPerFrame: Math.round(finite(textureStreaming.uploadBudgetPerFrame, 16, 1, 4_096)),
-      preloadMargin: finite(textureStreaming.preloadMargin, 1.5, 1, 8)
-    },
+    textureStreaming: normalizeTextureStreamingSettings(textureStreaming, budgets.textureMemoryMb),
     deterministicCapture: {
       frameRate: Math.round(finite(deterministicCapture.frameRate, 60, 1, 240)),
       sampleRate: Math.round(finite(deterministicCapture.sampleRate, 48_000, 8_000, 192_000)),
@@ -209,6 +216,6 @@ export function applyQualityPreset(preset: RenderQualityPreset): void {
   if (preset === 'Performance') { Object.assign(renderingSettings, { shadowQuality: 'Off', maximumPixelRatio: 1, particleBudget: 2_500, pixelSnap: false }); Object.assign(renderingSettings.textureStreaming, { enabled: true, memoryBudgetMb: 96, idleFrames: 180, uploadBudgetPerFrame: 6 }); Object.assign(renderingSettings.postProcessing, { enabled: false, bloom: 0, blur: 0 }) }
   else if (preset === 'Balanced') { Object.assign(renderingSettings, { shadowQuality: 'Soft', maximumPixelRatio: 1.5, particleBudget: 10_000, pixelSnap: false }); Object.assign(renderingSettings.textureStreaming, { enabled: true, memoryBudgetMb: 256, idleFrames: 600, uploadBudgetPerFrame: 16 }) }
   else if (preset === 'High') { Object.assign(renderingSettings, { shadowQuality: 'Soft', maximumPixelRatio: 2, particleBudget: 25_000, pixelSnap: false }); Object.assign(renderingSettings.textureStreaming, { enabled: true, memoryBudgetMb: 512, idleFrames: 1_200, uploadBudgetPerFrame: 32 }) }
-  else if (preset === 'Ultra') { Object.assign(renderingSettings, { shadowQuality: 'Ultra', maximumPixelRatio: 3, particleBudget: 50_000, pixelSnap: false }); Object.assign(renderingSettings.textureStreaming, { enabled: true, memoryBudgetMb: 1_024, idleFrames: 2_400, uploadBudgetPerFrame: 64 }) }
+  else if (preset === 'Ultra') { Object.assign(renderingSettings, { shadowQuality: 'Ultra', maximumPixelRatio: 3, particleBudget: 50_000, pixelSnap: false }); Object.assign(renderingSettings.textureStreaming, { enabled: true, memoryBudgetMb: GPU_TEXTURE_MEMORY_LIMIT_MB, idleFrames: 2_400, uploadBudgetPerFrame: 64 }) }
   else if (preset === 'PixelArt') { Object.assign(renderingSettings, { shadowQuality: 'Hard', maximumPixelRatio: 1, particleBudget: 10_000, pixelSnap: true, colorSpace: 'sRGB' }); Object.assign(renderingSettings.textureStreaming, { enabled: true, memoryBudgetMb: 192, idleFrames: 600, uploadBudgetPerFrame: 16 }) }
 }

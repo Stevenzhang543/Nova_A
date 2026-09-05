@@ -307,13 +307,14 @@ export class InputManager {
   private replay: { recording: InputRecording; startedAt: number; index: number; loop: boolean } | null = null
 
   readonly onKeyDown = (event: KeyboardEvent) => {
-    if (!this.isTypingTarget(event.target)) { this.keyboard.add(event.code); this.logicalKeys.add(logicalKey(event.key)); this.updateModifiers(event); if (!event.repeat) setInputModality('keyboard') }
+    if (!event.defaultPrevented && !event.isComposing && event.keyCode !== 229 && !this.isTypingTarget(event.target)) { this.keyboard.add(event.code); this.logicalKeys.add(logicalKey(event.key)); this.updateModifiers(event); if (!event.repeat) setInputModality('keyboard') }
   }
   readonly onKeyUp = (event: KeyboardEvent) => { this.keyboard.delete(event.code); this.logicalKeys.delete(logicalKey(event.key)); this.updateModifiers(event) }
   readonly onMouseDown = (event: MouseEvent) => { if (this.acceptMouse(event)) { this.mouseButtons.add(event.button); setInputModality('mouse') } }
   readonly onMouseUp = (event: MouseEvent) => { if (this.acceptMouse(event)) this.mouseButtons.delete(event.button) }
   readonly onMouseMove = (event: MouseEvent) => { if (!this.acceptMouse(event)) return; this.clientX = event.clientX; this.clientY = event.clientY; this.movementX += event.movementX; this.movementY += event.movementY; if (Math.abs(event.movementX) + Math.abs(event.movementY) >= 1) setInputModality('mouse') }
   readonly onWheel = (event: WheelEvent) => { this.wheelX += event.deltaX; this.wheelY += event.deltaY; if (Math.abs(event.deltaX) + Math.abs(event.deltaY) >= .5) setInputModality('mouse') }
+  readonly onFocusIn = (event: FocusEvent) => { if (this.isTypingTarget(event.target)) { this.keyboard.clear(); this.logicalKeys.clear(); this.modifiers.clear() } }
   readonly onBlur = () => this.releaseTransientInput()
   readonly onPageHide = () => this.releaseTransientInput()
   readonly onVisibilityChange = () => { if (typeof document !== 'undefined' && document.hidden) this.releaseTransientInput() }
@@ -370,6 +371,7 @@ export class InputManager {
     if (this.attached) return
     this.attached = true
     window.addEventListener('keydown', this.onKeyDown)
+    window.addEventListener('focusin', this.onFocusIn)
     window.addEventListener('keyup', this.onKeyUp)
     window.addEventListener('mousedown', this.onMouseDown)
     window.addEventListener('mouseup', this.onMouseUp)
@@ -397,6 +399,7 @@ export class InputManager {
     if (!this.attached) return
     this.attached = false
     window.removeEventListener('keydown', this.onKeyDown)
+    window.removeEventListener('focusin', this.onFocusIn)
     window.removeEventListener('keyup', this.onKeyUp)
     window.removeEventListener('mousedown', this.onMouseDown)
     window.removeEventListener('mouseup', this.onMouseUp)
@@ -693,7 +696,7 @@ export class InputManager {
   }
 
   private isTypingTarget(target: EventTarget | null): boolean {
-    return target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target instanceof HTMLSelectElement || (target instanceof HTMLElement && target.isContentEditable)
+    return typeof HTMLElement !== 'undefined' && target instanceof HTMLElement && (target.isContentEditable || Boolean(target.closest('input, textarea, select, button, a[href], [contenteditable]:not([contenteditable="false"]), [role="button"], [role="tab"], [role="menuitem"], [role="textbox"], [role="slider"], [role="checkbox"]')))
   }
 }
 

@@ -1,6 +1,7 @@
 <template>
-  <div class="config-wrapper" data-doc="manual/inspector" :class="dock" :style="{ width: `${panelWidth}px` }">
-    <div class="resize-handle" @mousedown="startResize"></div>
+  <div class="config-wrapper" data-doc="manual/inspector" :class="[dock,{'panel-maximized':workspaceState.maximizedPanel==='inspector'}]" :style="{ width: `${panelWidth}px` }">
+    <PanelResizeHandle v-model="panelWidth" orientation="vertical" :minimum="252" :maximum="480" :reset-value="292" :reverse="dock==='right'" :label="t('inspector')" :disabled="workspaceState.maximizedPanel==='inspector'" @commit="estate.inspectorWidth=$event" />
+    <PanelMaximizeButton panel="inspector" class="inspector-maximize" />
     <aside class="config-panel" :class="{ runtime: !canEdit }">
       <div v-if="selectedEntities.length" class="inspector-sticky">
         <header class="inspector-header">
@@ -99,7 +100,7 @@
 
         <InspectorSection v-if="selectedEntity.hasComponent('RigidBody2D')" :title="t('rigidBody2D')" category="physics" open>
           <ComponentTools kind="RigidBody2D" />
-          <select v-model="bodyType"><option value="Dynamic">{{ t('dynamic') }}</option><option value="Kinematic">{{ t('kinematic') }}</option><option value="Static">{{ t('static') }}</option></select>
+          <select v-model="bodyType" :aria-label="t('bodyType')"><option value="Dynamic">{{ t('dynamic') }}</option><option value="Kinematic">{{ t('kinematic') }}</option><option value="Static">{{ t('static') }}</option></select>
           <PropertyRow :label="t('massMode')"><select v-model="selectedEntity.rigidBody.massMode"><option value="Automatic">{{ t('automatic') }}</option><option value="Manual">{{ t('manualMass') }}</option></select></PropertyRow>
           <PropertyRow :label="t('continuousCollision')"><select v-model="selectedEntity.rigidBody.continuousCollision"><option value="Discrete">{{ t('discreteMode') }}</option><option value="Continuous">{{ t('continuousMode') }}</option></select></PropertyRow>
           <PropertyRow :label="t('transformOwnership')"><select v-model="selectedEntity.rigidBody.transformOwnership"><option value="Physics">{{ t('physicsOwned') }}</option><option value="Animation">{{ t('animationOwned') }}</option></select></PropertyRow>
@@ -209,7 +210,7 @@
           <ComponentTools kind="Script2D" />
           <PropertyRow :label="t('scriptAsset')"><select v-model="selectedEntity.script2D.scriptAsset" @change="synchronizeScriptProperties"><option :value="null">{{ t('none') }}</option><option v-for="asset in scriptAssets" :key="asset.uuid" :value="assetReference(asset.uuid)">{{ asset.name }} · {{ asset.assetType === 'visualScript' ? t('visualGraph') : 'Rhai' }}</option></select></PropertyRow>
           <PropertyRow :label="t('eventSheet')"><select v-model="selectedEntity.script2D.eventSheetAsset" @change="applySelectedEventSheet"><option :value="null">{{ t('none') }}</option><option v-for="asset in eventSheetAssets" :key="asset.uuid" :value="assetReference(asset.uuid)">{{ asset.name }}</option></select></PropertyRow>
-          <PropertyRow :label="t('objectBlueprint')"><select v-model="selectedEntity.script2D.objectBlueprintAsset"><option :value="null">{{ t('none') }}</option><option v-for="asset in objectBlueprintAssets" :key="asset.uuid" :value="assetReference(asset.uuid)">{{ asset.name }}</option></select></PropertyRow>
+          <PropertyRow :label="t('objectBlueprint')"><select v-model="selectedEntity.script2D.objectBlueprintAsset" @change="selectedEntity.objectBlueprintAsset=selectedEntity.script2D.objectBlueprintAsset"><option :value="null">{{ t('none') }}</option><option v-for="asset in objectBlueprintAssets" :key="asset.uuid" :value="assetReference(asset.uuid)">{{ asset.name }}</option></select></PropertyRow>
           <button v-if="selectedEntity.script2D.eventSheetAsset" class="secondary-action" @click="openSelectedEventSheet">{{ t('openEventSheet') }}</button>
           <button class="secondary-action" @click="synchronizeScriptProperties">{{ t('refreshScriptProperties') }}</button>
           <div v-for="group in scriptPropertyGroups" :key="group.name" class="script-property-group">
@@ -322,6 +323,7 @@
           <DiagnosticRow v-if="selectedEntity.contactCount > 0" :label="t('penetration')" :value="`${selectedEntity.penetrationDepth.toPrecision(5)} m`" />
         </InspectorSection>
 
+        <ObjectOwnershipPanel :entity="selectedEntity" @edit-blueprint="blueprintEditorUuid=$event" @create-blueprint="createOwnedBlueprint" @open-callback="requestObjectAuthorNavigation" />
         <RuntimeComponentsInspector :entity="selectedEntity" :search-query="estate.inspectorSearch" :category="estate.inspectorCategory" />
         <WorldComponentsInspector :entity="selectedEntity" />
         <GameplayComponentsInspector :entity="selectedEntity" />
@@ -336,9 +338,10 @@
     </aside>
 
     <div v-if="showColorPicker" class="modal-scrim" @mousedown.self="showColorPicker = false"><div class="color-modal"><h4>{{ t('selectColor') }}</h4><input v-model="tempColor" type="color"><div><button @click="showColorPicker = false">{{ t('cancel') }}</button><button class="primary" @click="applyColor">{{ t('apply') }}</button></div></div></div>
+    <ObjectBlueprintEditor v-if="blueprintEditorUuid" :key="blueprintEditorUuid" :asset-uuid="blueprintEditorUuid" @close="blueprintEditorUuid=null" @derive="deriveOwnedBlueprint" />
     <Teleport to="body">
       <div v-if="estate.componentPickerOpen && selectedEntity" class="modal-scrim component-picker-scrim" @mousedown.self="closeComponentPicker">
-        <section class="component-picker" role="dialog" aria-modal="true" :aria-label="t('addComponent')" @keydown.escape="closeComponentPicker">
+        <section class="component-picker" role="dialog" aria-modal="true" v-modal-focus :aria-label="t('addComponent')" @keydown.escape="closeComponentPicker">
           <header><div><span class="eyebrow">{{ t('addComponent') }}</span><h4>{{ selectedEntity.name }}</h4></div><button :aria-label="t('cancel')" @click="closeComponentPicker">×</button></header>
           <input ref="componentSearchInput" v-model="componentSearch" type="search" :placeholder="t('searchComponents')">
           <div class="component-picker-list">
@@ -354,9 +357,17 @@
 </template>
 
 <script setup lang="ts">
-import { computed, defineComponent, h, nextTick, onBeforeUnmount, reactive, ref, watch } from 'vue'
+import ObjectOwnershipPanel from './ObjectOwnershipPanel.vue'
+import ObjectBlueprintEditor from './ObjectBlueprintEditor.vue'
+import {authorBlueprintFromEntity,authorDerivedBlueprint} from '../editor/objectBlueprintAuthoring'
+import {requestObjectAuthorNavigation} from '../editor/objectAuthorNavigation'
+import {objectOwnershipCopy} from '../editor/objectOwnershipCopy'
+import { vModalFocus } from '../editor/modalFocus'
+import { cloneVNode, computed, defineComponent, h, isVNode, nextTick, reactive, ref, watch, type VNode } from 'vue'
+import PanelMaximizeButton from './PanelMaximizeButton.vue'
+import PanelResizeHandle from './PanelResizeHandle.vue'
 import { t } from '../i18n'
-import { editorState as estate, type InspectorCategory } from '../store/editor'
+import { editorState as estate, addEditorLog, type InspectorCategory } from '../store/editor'
 import { deleteConnection, physicsState as state, pushHistory, repairConnection, sceneManager } from '../store/physics'
 import { preferencesState as prefs } from '../store/preferences'
 import { requestConfirmation } from '../store/dialog'
@@ -389,18 +400,30 @@ import { configureUiAccessibility } from '../runtime/uiAccessibility'
 import { pluginRuntime, pluginState, type PluginContributionKind } from '../runtime/plugins'
 import { attachEventSheet } from '../runtime/eventSheets'
 import { openEventSheetAsset } from '../visual/graphStudioState'
-import { applyEditorWorkspace } from '../editor/workspaces'
+import { applyEditorWorkspace, workspaceState } from '../editor/workspaces'
 
 const InspectorSection = defineComponent({ props: { title: { type: String, required: true }, category: { type: String, default: 'general' }, open: Boolean }, setup(props, { slots }) { return () => h('details', { class: 'inspector-section', open: props.open, style: { display: inspectorSectionVisible(props.title, props.category as InspectorCategory) ? '' : 'none' } }, [h('summary', [h('span', props.title), h('i', '⌄')]), h('div', { class: 'section-body' }, slots.default?.())]) } })
+function namePropertyControls(nodes: VNode[], label: string): VNode[] {
+  return nodes.map(node => {
+    if (!isVNode(node)) return node
+    const interactive = typeof node.type === 'object' || ['input', 'select', 'textarea', 'button'].includes(String(node.type))
+    const copy = cloneVNode(node, interactive && !node.props?.['aria-label'] && !node.props?.['aria-labelledby'] ? { 'aria-label': label } : {})
+    if (Array.isArray(node.children)) {
+      const pair = String(node.props?.class ?? '').split(' ').includes('pair')
+      copy.children = node.children.map((child, index) => isVNode(child) ? namePropertyControls([child], pair ? `${label} ${index === 0 ? 'X' : 'Y'}` : label)[0] : child)
+    }
+    return copy
+  })
+}
 const PropertyRow = defineComponent({ props: { label: { type: String, required: true }, path: { type: String, default: '' } }, setup(props, { slots }) { return () => {
   if (estate.inspectorPinnedOnly && (!props.path || !estate.pinnedInspectorProperties.includes(props.path))) return null
   if (estate.inspectorModifiedOnly && (!props.path || !modifiedPropertyPaths.value.has(props.path))) return null
   const metadata = props.path ? propertyMetadata(props.path) : undefined
-  return h('label', { class: ['property-row', { modified: props.path && modifiedPropertyPaths.value.has(props.path), pinned: props.path && estate.pinnedInspectorProperties.includes(props.path) }], 'data-property-path': props.path || undefined, title: metadata?.help, onContextmenu: props.path ? (event: MouseEvent) => openPropertyMenu(event, props.path) : undefined }, [h('span', [props.path && estate.pinnedInspectorProperties.includes(props.path) ? h('i', '★') : null, props.label, metadata?.unit ? h('small', metadata.unit) : null]), h('div', { class: 'property-control' }, slots.default?.())])
+  return h('div', { role: 'group', 'aria-label': props.label, class: ['property-row', { modified: props.path && modifiedPropertyPaths.value.has(props.path), pinned: props.path && estate.pinnedInspectorProperties.includes(props.path) }], 'data-property-path': props.path || undefined, title: metadata?.help, onContextmenu: props.path ? (event: MouseEvent) => openPropertyMenu(event, props.path) : undefined }, [h('span', [props.path && estate.pinnedInspectorProperties.includes(props.path) ? h('i', '★') : null, props.label, metadata?.unit ? h('small', metadata.unit) : null]), h('div', { class: 'property-control' }, namePropertyControls(slots.default?.() ?? [], props.label))])
 } } })
 const DiagnosticRow = defineComponent({ props: { label: { type: String, required: true }, value: { type: String, required: true }, active: Boolean }, setup(props) { return () => h('div', { class: ['diagnostic-row', { active: props.active }] }, [h('span', props.label), h('code', props.value)]) } })
 const ToggleSwitch = defineComponent({ props: { modelValue: { type: Boolean, required: true } }, emits: ['update:modelValue'], setup(props, { emit }) { return () => h('button', { class: ['toggle', { active: props.modelValue }], role: 'switch', 'aria-checked': props.modelValue, onClick: () => { emit('update:modelValue', !props.modelValue); onConfigChange() } }, h('i')) } })
-const NumberRange = defineComponent({ props: { modelValue: { type: Number, required: true }, min: { type: Number, required: true }, max: { type: Number, required: true }, step: { type: Number, required: true } }, emits: ['update:modelValue'], setup(props, { emit }) { const update = (event: Event) => emit('update:modelValue', Number((event.target as HTMLInputElement).value)); return () => h('div', { class: 'number-range' }, [h('input', { type: 'range', value: props.modelValue, min: props.min, max: props.max, step: props.step, onInput: update }), h('input', { type: 'number', value: props.modelValue, step: props.step, onChange: update })]) } })
+const NumberRange = defineComponent({ inheritAttrs: false, props: { modelValue: { type: Number, required: true }, min: { type: Number, required: true }, max: { type: Number, required: true }, step: { type: Number, required: true } }, emits: ['update:modelValue'], setup(props, { emit, attrs }) { const update = (event: Event) => emit('update:modelValue', Number((event.target as HTMLInputElement).value)); return () => h('div', { class: 'number-range' }, [h('input', { type: 'range', 'aria-label': attrs['aria-label'], 'aria-labelledby': attrs['aria-labelledby'], value: props.modelValue, min: props.min, max: props.max, step: props.step, onInput: update }), h('input', { type: 'number', 'aria-label': attrs['aria-label'], 'aria-labelledby': attrs['aria-labelledby'], value: props.modelValue, step: props.step, onChange: update })]) } })
 const NumericExpressionInput = defineComponent({ props: { modelValue: { type: Number, required: true }, minimum: { type: Number, default: Number.NEGATIVE_INFINITY }, maximum: { type: Number, default: Number.POSITIVE_INFINITY } }, emits: ['update:modelValue'], setup(props, { emit }) { const draft = ref(String(props.modelValue)); watch(() => props.modelValue, value => { if (document.activeElement?.getAttribute('data-numeric-expression') !== draft.value) draft.value = String(value) }); const commit = () => { const value = evaluateNumericExpression(draft.value, props.modelValue); if (value === null) { draft.value = String(props.modelValue); return } const bounded = Math.min(props.maximum, Math.max(props.minimum, value)); draft.value = String(bounded); emit('update:modelValue', bounded) }; return () => h('input', { value: draft.value, type: 'text', inputmode: 'decimal', 'data-numeric-expression': draft.value, title: t('numericExpressionHelp'), onInput: (event: Event) => { draft.value = (event.target as HTMLInputElement).value }, onChange: commit, onBlur: commit, onKeydown: (event: KeyboardEvent) => { if (event.key === 'Enter') commit() } }) } })
 const ComponentTools = defineComponent({
   props: { kind: { type: String, required: true } },
@@ -444,6 +467,9 @@ function formatColliderPoints(points: Array<{x:number;y:number}>) { return point
 function setColliderPoints(shape: {points:Array<{x:number;y:number}>}, event: Event) { const rows=(event.target as HTMLTextAreaElement).value.split(/[\n;]+/).flatMap(row=>{const [x,y]=row.trim().split(/[\s,]+/).map(Number);return Number.isFinite(x)&&Number.isFinite(y)?[{x,y}]:[]}).slice(0,128); if(rows.length>=2){shape.points=rows;pushHistory('Edit collider points')} }
 const collisionMaskNames = computed(() => { const mask = selectedEntity.value?.collider.collisionMask ?? 0; return state.globalSettings.layers.filter(layer => (mask & ((2 ** layer.id) >>> 0)) !== 0).map(layer => layer.name).join(', ') })
 const canEdit = computed(() => state.playMode === 'editing')
+const blueprintEditorUuid=ref<string|null>(null)
+function createOwnedBlueprint(){const entity=selectedEntity.value;if(!entity)return;try{blueprintEditorUuid.value=authorBlueprintFromEntity(entity)}catch(error){addEditorLog(error instanceof Error?error.message:String(error),'Assets','error')}}
+function deriveOwnedBlueprint(uuid:string){try{blueprintEditorUuid.value=authorDerivedBlueprint(uuid,objectOwnershipCopy[prefs.locale].deriveName)}catch(error){addEditorLog(error instanceof Error?error.message:String(error),'Assets','error')}}
 const selectedConnections = computed(() => selectedEntity.value ? state.world.connections.filter(connection => connection.anchors.some(anchor => anchor.entityId === selectedEntity.value!.id)) : [])
 const entityColor = computed(() => selectedEntity.value ? `rgb(${selectedEntity.value.color.r}, ${selectedEntity.value.color.g}, ${selectedEntity.value.color.b})` : 'transparent')
 const selectedEntityArea = computed(() => selectedEntity.value ? entityArea(selectedEntity.value) : 0)
@@ -457,6 +483,7 @@ const isCurrentPropertyPinned = computed(() => estate.pinnedInspectorProperties.
 const props = withDefaults(defineProps<{ dock?: 'left' | 'right' }>(), { dock: 'right' })
 const dock = computed(() => props.dock)
 const panelWidth = ref(estate.inspectorWidth)
+watch(() => estate.inspectorWidth, value => { panelWidth.value=value })
 const imageAssets = computed(() => assetState.records.filter(asset => asset.assetType === 'image'))
 const fontAssets = computed(() => assetState.records.filter(asset => asset.assetType === 'font'))
 const scriptAssets = computed(() => assetState.records.filter(asset => asset.assetType === 'script' || asset.assetType === 'visualScript'))
@@ -971,23 +998,17 @@ const commonComponentKinds = computed(() => {
 function setMultiTags(value: string) { if (!canEdit.value) return; const tags = cleanList(value); for (const entity of selectedEntities.value) entity.tags = [...tags]; pushHistory('Set shared tags', 'multi:tags') }
 function setMultiGroups(value: string) { if (!canEdit.value) return; const groups = cleanList(value); for (const entity of selectedEntities.value) entity.groups = [...groups]; pushHistory('Set shared groups', 'multi:groups') }
 
-let resizeStartX = 0
-let resizeStartWidth = 0
-function startResize(event: MouseEvent) { resizeStartX = event.clientX; resizeStartWidth = panelWidth.value; document.addEventListener('mousemove', resizePanel); document.addEventListener('mouseup', stopResize); document.body.style.cursor = 'ew-resize' }
-function resizePanel(event: MouseEvent) { const delta = event.clientX - resizeStartX; panelWidth.value = Math.min(480, Math.max(252, resizeStartWidth + (props.dock === 'right' ? -delta : delta))) }
-function stopResize() { document.removeEventListener('mousemove', resizePanel); document.removeEventListener('mouseup', stopResize); document.body.style.cursor = 'default'; estate.inspectorWidth = panelWidth.value }
-onBeforeUnmount(stopResize)
 </script>
 
 <style scoped>
 .config-wrapper { position: relative; min-width: 252px; max-width: 38vw; flex: 0 0 auto; z-index: 180; background: var(--surface-1); }.config-wrapper.right{border-left:1px solid var(--border-subtle)}.config-wrapper.left{border-right:1px solid var(--border-subtle)}
-.resize-handle { position: absolute; inset: 0 auto 0 -4px; width: 8px; cursor: ew-resize; z-index: 6; }
-.config-wrapper.left .resize-handle { inset: 0 -4px 0 auto; }
-.config-panel { position: absolute; inset: 0; overflow: auto; contain: layout paint; color: var(--text-secondary); background: var(--surface-1); font-family: inherit; font-size: var(--type-dense); }
+.resize-handle { position: absolute; inset: 0 auto 0 0; width: 8px; cursor: ew-resize; z-index: 6; }
+.config-wrapper.left .resize-handle { inset: 0 0 0 auto; }
+.config-panel { position: absolute; inset: 0; overflow: auto; scroll-padding-block: min(230px, 40%) 12px; contain: layout paint; color: var(--text-secondary); background: var(--surface-1); font-family: inherit; font-size: var(--type-dense); }
 .config-panel :deep(button), .config-panel :deep(input), .config-panel :deep(select), .config-panel :deep(textarea) { font-family: inherit; font-size:11px; }
 .config-panel.runtime { pointer-events: none; opacity: .72; }
 .settings-content { min-height: 100%; padding: 8px 11px 26px; display: flex; flex-direction: column; gap: 8px; }
-.inspector-sticky { position: sticky; top: 0; z-index: 12; padding: 10px 11px 7px; border-bottom: 1px solid var(--border-subtle); background: color-mix(in srgb, var(--surface-1) 96%, transparent); backdrop-filter: var(--glass-blur); }
+.inspector-sticky { position: sticky; top: 0; z-index: 12; box-sizing: border-box; max-height: min(230px, 40%); overflow: auto; overscroll-behavior: contain; padding: 10px 11px 7px; border-bottom: 1px solid var(--border-subtle); background: color-mix(in srgb, var(--surface-1) 96%, transparent); backdrop-filter: var(--glass-blur); }
 .inspector-search-row { display: flex; gap: 6px; }.inspector-search-row input { min-width: 0; height: 30px; min-height: 30px; flex: 1; }.add-component-trigger { min-width: 96px; min-height: 30px; padding: 0 8px; border: 1px solid var(--accent); border-radius: 7px; color: var(--accent-contrast); background: var(--accent); font-size:11px !important; white-space: nowrap; }
 .inspector-categories { margin-top: 7px; display: flex; gap: 3px; overflow-x: auto; scrollbar-width: none; }.inspector-categories::-webkit-scrollbar { display: none; }.inspector-categories button { height: 24px; padding: 0 8px; flex: 0 0 auto; border: 1px solid transparent; border-radius: 999px; color: var(--text-muted); background: transparent; font-size:11px !important; white-space: nowrap; }.inspector-categories button:hover, .inspector-categories button.active { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 35%, transparent); background: var(--accent-soft); }
 .inspector-view-controls{margin-top:5px;display:flex;gap:4px}.inspector-view-controls button{min-height:25px;padding:0 7px;border:1px solid var(--border-subtle);border-radius:6px;color:var(--text-muted);background:transparent;font-size:11px!important}.inspector-view-controls button.active{color:var(--accent);border-color:var(--accent);background:var(--accent-soft)}
@@ -1031,4 +1052,21 @@ onBeforeUnmount(stopResize)
 .property-menu{position:fixed;z-index:1600;width:220px;padding:7px;display:flex;flex-direction:column;gap:3px;border:1px solid var(--border-strong);border-radius:10px;background:var(--surface-1);box-shadow:0 16px 36px rgba(0,0,0,.34)}.property-menu>strong{padding:5px 7px;color:var(--accent);font:600 11px/1.3 var(--font-mono);overflow-wrap:anywhere}.property-menu>button{min-height:28px;padding:0 7px;text-align:left;border:0;border-radius:6px;color:var(--text-secondary);background:transparent;font-size:11px}.property-menu>button:hover{background:var(--surface-hover)}.property-menu>button:disabled{opacity:.4}.property-menu>p{margin:4px;padding:7px;border-top:1px solid var(--border-subtle);color:var(--text-muted);font-size:11px;line-height:1.4}
 @media (max-width: 760px) { .config-wrapper { max-width: 46vw; } }
 @media (max-width: 560px) { .component-picker-list>section { grid-template-columns: 1fr; } }
+/* Dock width, not window width, determines when labels need their own line. */
+.config-wrapper { container: nova-inspector / inline-size; }
+.inspector-categories { scrollbar-width: thin; }
+.inspector-categories::-webkit-scrollbar { display: initial; height: 5px; }
+@container nova-inspector (max-width: 360px) {
+  :deep(.property-row) { align-items: stretch; flex-direction: column; gap: 5px; padding-block: 7px; }
+  :deep(.property-row > span) { width: 100%; line-height: 1.45; overflow-wrap: anywhere; }
+  :deep(.property-control) { width: 100%; justify-content: flex-start; }
+  :deep(.property-control > input), :deep(.property-control > select) { min-height: 32px; }
+  .inspector-search-row { flex-wrap: wrap; }
+  .inspector-search-row input { flex-basis: 100%; }
+  .inspector-view-controls { flex-wrap: wrap; }
+  .prefab-actions, .empty-ui-actions { grid-template-columns: 1fr; }
+  .prefab-actions button, .empty-ui-actions button { white-space: normal; overflow: visible; min-height: 32px; padding: 6px; }
+  :deep(.component-tools) { flex-wrap: wrap; }
+  .compound-shapes article > label { grid-template-columns: 1fr; }
+}
 </style>

@@ -1,7 +1,7 @@
 <template>
   <Teleport to="body">
     <div class="modal-scrim" @mousedown.self="emit('close')">
-      <section class="builder" role="dialog" aria-modal="true" :aria-label="t('connectionBuilder')">
+      <section class="builder" role="dialog" aria-modal="true" v-modal-focus :aria-label="t('connectionBuilder')">
       <header>
         <div>
           <span class="eyebrow">{{ t('connections') }}</span>
@@ -103,6 +103,7 @@
 </template>
 
 <script setup lang="ts">
+import { vModalFocus } from '../editor/modalFocus'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { t } from '../i18n'
 import { editorState } from '../store/editor'

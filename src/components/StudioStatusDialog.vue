@@ -1,6 +1,6 @@
 <template>
   <Teleport to="body">
-    <section v-if="state.visible" class="studio-overlay" role="dialog" aria-modal="true" :aria-label="t('studioStatus')" @keydown.esc="closeStudioStatus">
+    <section v-if="state.visible" class="studio-overlay" role="dialog" aria-modal="true" v-modal-focus :aria-label="t('studioStatus')" @keydown.esc="closeStudioStatus">
       <article>
       <header><div><strong>Nova_A Studio {{ NOVA_RELEASE_NAME }}</strong><small>{{ t('stableContractHint') }}</small></div><button :title="t('close')" @click="closeStudioStatus">×</button></header>
         <div class="contracts"><section v-for="contract in NOVA_STABLE_CONTRACTS" :key="contract.id"><span>{{ t(`contract_${contract.id}`) }}</span><strong>v{{ contract.version }}</strong><small>{{ contract.compatibility }}</small></section></div>
@@ -15,6 +15,7 @@
 </template>
 
 <script setup lang="ts">
+import { vModalFocus } from '../editor/modalFocus'
 import { NOVA_RELEASE_NAME } from '../projects/projectFormat'
 import { ref } from 'vue'
 import { t } from '../i18n'

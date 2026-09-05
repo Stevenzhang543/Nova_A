@@ -42,6 +42,9 @@
         </div>
       </aside>
       <section class="tile-properties">
+        <div v-if="importedMap" class="imported-map-ownership"><p>{{ ac('sourceOwnedTiles') }}</p><button @click="makeEditableCopy">{{ ac('editableTileSet') }}</button></div>
+        <p v-if="tileSetError" role="alert">{{ tileSetError }}</p>
+        <fieldset class="tile-definition-fields" :disabled="importedMap">
         <strong>{{ selectedDefinition?.name ?? t('tileProperties') }}</strong>
         <label><span>{{ t('tileName') }}</span><input v-if="selectedDefinition" v-model="selectedDefinition.name" @change="saveSet"></label>
         <label><span>{{ t('tileCollision') }}</span><select v-if="selectedDefinition" v-model="selectedDefinition.collision" @change="collisionChanged"><option>None</option><option>Box</option><option>Polygon</option><option>OneWay</option></select></label>
@@ -60,6 +63,7 @@
         <label class="stacked"><span>{{ t('navigationPolygon') }}</span><textarea :value="navigationPolygonText" rows="3" placeholder="0,0 1,0 1,1 0,1" @change="updateTypedPolygon('navigationPolygon', $event)"></textarea></label>
         <label class="stacked"><span>{{ t('occlusionPolygon') }}</span><textarea :value="occlusionPolygonText" rows="3" placeholder="0,0 1,0 1,1 0,1" @change="updateTypedPolygon('occlusionPolygon', $event)"></textarea></label>
         <p class="terrain-preview"><b>{{ t('terrainPreview') }}</b><span>{{ terrainPreview }}</span></p>
+        </fieldset>
         <p>{{ t('tilePaintHint') }}</p>
         <p v-if="tilemapEditorState.selection">{{ t('tileSelection') }}: {{ tilemapEditorState.selection.start.x }},{{ tilemapEditorState.selection.start.y }} → {{ tilemapEditorState.selection.end.x }},{{ tilemapEditorState.selection.end.y }}<template v-if="selectionWorld"> · {{ t('worldCoordinates') }} {{ selectionWorld.x.toFixed(2) }}, {{ selectionWorld.y.toFixed(2) }}</template></p>
         <section class="layers"><strong>{{ t('tileLayers') }}</strong><button v-for="(layer, index) in tileMap.layers" :key="layer.id" :class="{ active: index === tileMap.activeLayer }" @click="activateLayer(index)"><input v-model="layer.visible" type="checkbox" @click.stop><input v-model="layer.name" @change="changedLayer"><span>{{ layer.locked ? '🔒' : '' }}</span></button><div><button @click="addLayer">+</button><button @click="duplicateLayer">⧉</button><button :disabled="tileMap.layers.length <= 1" @click="removeLayer">−</button></div><template v-if="activeLayer"><label><span>{{ t('locked') }}</span><input v-model="activeLayer.locked" type="checkbox"></label><label><span>{{ t('blendMode') }}</span><select v-model="activeLayer.blendMode" @change="changedLayer"><option>Alpha</option><option>Additive</option><option>Multiply</option><option>Screen</option></select></label><label><span>{{ t('parallax') }}</span><div><input v-model.number="activeLayer.parallax.x" type="number" step="0.05" @change="changedLayer"><input v-model.number="activeLayer.parallax.y" type="number" step="0.05" @change="changedLayer"></div></label><label><span>{{ t('zOrder') }}</span><input v-model.number="activeLayer.zOrder" type="number" @change="changedLayer"></label><label><span>{{ t('tileCollision') }}</span><input v-model="activeLayer.collisionEnabled" type="checkbox"></label><label><span>{{ t('navigation') }}</span><input v-model="activeLayer.navigationEnabled" type="checkbox"></label><label><span>{{ t('occluders') }}</span><input v-model="activeLayer.occlusionEnabled" type="checkbox"></label></template></section>
@@ -75,6 +79,8 @@
 import { computed, onBeforeUnmount, reactive, ref, watch } from 'vue'
 import { assetReference, assetState } from '../assets/AssetDatabase'
 import { t } from '../i18n'
+import { assetWorkflowCopy as ac } from '../assets/assetWorkflowCopy'
+import { isTiledMapAsset } from '../assets/tiledMapAssets'
 import { createTileMapEntity, physicsState, pushHistory } from '../store/physics'
 import type { TileMap2D } from '../world/components'
 import {
@@ -85,6 +91,7 @@ import {
   createTerrainRules,
   createTilePalette,
   createTileSet,
+  copyEditableTileSet,
   deterministicTileMapStorage,
   duplicateTileLayer,
   diagnoseTileMap,
@@ -121,8 +128,11 @@ const prefabAssets = computed(() => assetState.records.filter(asset => asset.ass
 const sourceImage = computed(() => images.value.find(asset => asset.uuid === sourceImageUuid.value) ?? null)
 const tileSetAsset = computed(() => tileSets.value.find(asset => assetReference(asset.uuid) === tileMap.value?.tileSetAsset) ?? null)
 const tileSet = computed(() => readTileSet(tileMap.value?.tileSetAsset))
+const importedMap = computed(() => !!tileSetAsset.value && isTiledMapAsset(tileSetAsset.value))
+const tileSetError = ref('')
 const selectedDefinition = computed(() => tileSet.value?.tiles[tilemapEditorState.tileIndex] ?? null)
 const activeSourceId = ref('primary')
+watch(tileSet, value => { if (value && !value.sources.some(source => source.id === activeSourceId.value)) activeSourceId.value = value.sources[0]?.id ?? '' }, { immediate: true })
 const activeSource = computed(() => tileSet.value?.sources.find(source => source.id === activeSourceId.value) ?? tileSet.value?.sources[0] ?? null)
 const activeLayer = computed(() => tileMap.value?.layers[tileMap.value.activeLayer] ?? null)
 const polygonText = computed(() => selectedDefinition.value?.polygon.map(point => `${point.x},${point.y}`).join(' ') ?? '')
@@ -184,8 +194,23 @@ function toggleBrushMirror(bit: 4 | 8) { tilemapEditorState.transform = (tilemap
 function copySelection() { if (tileMap.value && copyTileSelection(tileMap.value)) pushHistory('Copy tile selection') }
 function transformSelection(operation: 'rotate' | 'mirrorX' | 'mirrorY') { if (tileMap.value && transformTileSelection(tileMap.value, operation)) { tileMap.value.revision++; invalidateTileMap(tileMap.value); pushHistory(`Transform tile selection: ${operation}`) } }
 function runDiagnostics() { diagnostics.value = tileMap.value ? diagnoseTileMap(tileMap.value) : [] }
-function saveSet() { if (tileSetAsset.value && tileSet.value) saveTileSet(tileSetAsset.value.uuid, tileSet.value) }
-function addAtlasSource() { if (!tileSet.value || !sourceImage.value) return; const id = `atlas-${crypto.randomUUID().slice(0, 8)}`; tileSet.value.sources.push({ id, name: sourceImage.value.name, textureAsset: assetReference(sourceImage.value.uuid), margin: 0, spacing: 0 }); activeSourceId.value = id; saveSet(); pushHistory('Add atlas source') }
+function makeEditableCopy() {
+  if (!tileMap.value || !tileSetAsset.value) return
+  try {
+    const asset = copyEditableTileSet(tileSetAsset.value.uuid)
+    tileMap.value.tileSetAsset = assetReference(asset.uuid)
+    tileMap.value.revision++; invalidateTileMap(tileMap.value)
+    tileSetError.value = ''; pushHistory('Make editable TileSet copy')
+  } catch (error) { tileSetError.value = error instanceof Error ? error.message : String(error) }
+}
+function saveSet() {
+  if (importedMap.value || !tileSetAsset.value || !tileSet.value) return
+  if (saveTileSet(tileSetAsset.value.uuid, tileSet.value)) {
+    tileSetError.value = ''; if (tileMap.value) { tileMap.value.revision++; invalidateTileMap(tileMap.value) }
+    pushHistory('Edit TileSet')
+  } else tileSetError.value = ac('operationFailed')
+}
+function addAtlasSource() { if (!tileSet.value || !sourceImage.value) return; const id = `atlas-${crypto.randomUUID().slice(0, 8)}`; tileSet.value.sources.push({ id, name: sourceImage.value.name, textureAsset: assetReference(sourceImage.value.uuid), margin: 0, spacing: 0 }); activeSourceId.value = id; saveSet() }
 function updateRegion(field: 'x' | 'y' | 'width' | 'height', event: Event) { if (!selectedDefinition.value || !tileSet.value) return; const current = selectedDefinition.value.region ?? { x: autoRegion.value.x, y: autoRegion.value.y, width: tileSet.value.tileWidth, height: tileSet.value.tileHeight }; current[field] = Math.max(field === 'width' || field === 'height' ? 1 : 0, Math.round(Number((event.target as HTMLInputElement).value) || 0)); selectedDefinition.value.region = current; saveSet() }
 function collisionChanged() {
   if (selectedDefinition.value?.collision === 'Polygon' && selectedDefinition.value.polygon.length < 3) selectedDefinition.value.polygon = [{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 1, y: 1 }, { x: 0, y: 1 }]
@@ -207,23 +232,20 @@ function updateMetadata(event: Event) { if (!selectedDefinition.value) return; t
 function updateAnimationFrames(event: Event) { if (!selectedDefinition.value || !tileSet.value) return; const frames = (event.target as HTMLInputElement).value.split(',').map(Number).filter(value => Number.isInteger(value) && value >= 0 && value < tileSet.value!.tiles.length).slice(0,256); selectedDefinition.value.animation = frames.length ? { frames, framesPerSecond: selectedDefinition.value.animation?.framesPerSecond ?? 8, mode: selectedDefinition.value.animation?.mode ?? 'Loop' } : null; saveSet() }
 function updateVariants(event: Event) { if (!selectedDefinition.value || !tileSet.value) return; selectedDefinition.value.variants = (event.target as HTMLTextAreaElement).value.split(',').flatMap(pair => { const [tile,weight] = pair.trim().split(':').map(Number); return Number.isInteger(tile) && tile >= 0 && tile < tileSet.value!.tiles.length && Number.isFinite(weight) && weight > 0 ? [{ tile, weight }] : [] }).slice(0,64); saveSet() }
 function tileStyle(index: number) {
-  const set = tileSet.value, image = sourceImageForSet.value
-  if (!set || !image) return {}
-  const column = index % set.columns, row = Math.floor(index / set.columns)
-  return {
-    backgroundImage: `url(${image.source})`,
-    backgroundSize: `${set.columns * 100}% ${set.rows * 100}%`,
-    backgroundPosition: `${set.columns <= 1 ? 0 : column / (set.columns - 1) * 100}% ${set.rows <= 1 ? 0 : row / (set.rows - 1) * 100}%`
-  }
+  const set = tileSet.value, tile = set?.tiles[index]
+  if (!set || !tile) return {}
+  const source = set.sources.find(value => value.id === tile.sourceId), reference = source?.textureAsset ?? set.textureAsset
+  const image = images.value.find(asset => reference === assetReference(asset.uuid) || reference === asset.uuid)
+  if (!image) return {}
+  const region = tile.region ?? { x: (source?.margin ?? 0) + index % set.columns * (set.tileWidth + (source?.spacing ?? 0)), y: (source?.margin ?? 0) + Math.floor(index / set.columns) * (set.tileHeight + (source?.spacing ?? 0)), width: set.tileWidth, height: set.tileHeight }
+  return { backgroundImage: 'url(' + image.source + ')', backgroundSize: (image.width / region.width * 100) + '% ' + (image.height / region.height * 100) + '%', backgroundPosition: (image.width === region.width ? 0 : region.x / (image.width - region.width) * 100) + '% ' + (image.height === region.height ? 0 : region.y / (image.height - region.height) * 100) + '%' }
 }
-const sourceImageForSet = computed(() => {
-  const reference = tileSet.value?.sources.find(source => source.id === selectedDefinition.value?.sourceId)?.textureAsset ?? tileSet.value?.textureAsset
-  return images.value.find(asset => reference === assetReference(asset.uuid) || reference === asset.uuid) ?? null
-})
 onBeforeUnmount(() => { tilemapEditorState.active = false })
 </script>
 
 <style scoped>
+.tile-definition-fields{border:0;min-width:0;margin:0;padding:0}.tile-definition-fields:disabled{opacity:.7}.imported-map-ownership{display:grid;gap:6px;padding:8px;background:var(--surface-2);border:1px solid var(--border-subtle);border-radius:8px}.imported-map-ownership button{min-height:32px;white-space:normal;overflow-wrap:anywhere}
+
 .asset-selects { margin: 7px 0; display: grid; gap: 4px; }.asset-selects select,.asset-selects input { min-width: 0; width:100%; }.layers, .baking,.animation-settings,.diagnostics,.tile-history { margin-top: 12px; padding-top: 8px; display: grid; gap: 4px; border-top: 1px solid var(--border-subtle); }.layers > button { min-height: 28px; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; border: 1px solid transparent; border-radius: 6px; background: transparent; }.layers > button.active { border-color: var(--accent); background: var(--accent-soft); }.layers > button input:not([type=checkbox]) { width: 100%; min-width: 0; border: 0; background: transparent; }.layers > div { display: flex; gap: 4px; }.baking > button,.diagnostics>button { min-height: 30px; }.diagnostics article{padding:5px;display:grid;gap:2px;border-left:3px solid var(--text-muted);background:var(--surface-2)}.diagnostics article.error{border-color:var(--danger)}.diagnostics article.warning{border-color:var(--warning)}.diagnostics article.info{border-color:var(--success)}.diagnostics article span{overflow-wrap:anywhere;color:var(--text-muted)}.tile-history ol{margin:0;padding-left:18px}.tile-history li{display:grid;grid-template-columns:minmax(70px,1fr) auto;gap:6px;color:var(--text-muted);font-size:var(--type-caption)}
 .baking progress{width:100%;height:6px;accent-color:var(--accent)}.bake-actions{display:grid;grid-template-columns:1fr auto;gap:4px}.baking code{overflow:hidden;text-overflow:ellipsis;color:var(--text-muted)}
 .tilemap-panel { height: 100%; min-width: 0; display: flex; flex-direction: column; }.tilemap-toolbar { min-height: 42px; padding: 5px 7px; display: flex; align-items: center; flex-wrap: wrap; gap: 5px; border-bottom: 1px solid var(--border-subtle); }.tilemap-toolbar > span { flex: 1; }.tilemap-toolbar button, .tilemap-toolbar select, .tilemap-toolbar input { min-height: 30px; border: 1px solid var(--border-subtle); border-radius: 7px; background: var(--surface-2); color: var(--text-secondary); font-size: 11px; }.tilemap-toolbar button { padding: 0 8px; }.tilemap-toolbar button.primary { color: var(--accent-contrast); border-color: var(--accent); background: var(--accent); }.tilemap-toolbar button.active { color: var(--accent); border-color: var(--accent); background: var(--accent-soft); }.tilemap-toolbar label { display: flex; align-items: center; gap: 4px; color: var(--text-muted); font-size:11px; }.tilemap-toolbar label input { width: 54px; padding: 0 4px; }.tilemap-workspace { min-height: 0; flex: 1; display: grid; grid-template-columns: minmax(180px, 1fr) 260px; }.tilemap-workspace aside { min-width: 0; padding: 8px; overflow: auto; }.tilemap-workspace strong { color: var(--text-primary); font-size: 12px; }.palette-grid { margin-top: 7px; display: grid; gap: 3px; }.palette-grid button { width: 32px; height: 32px; padding: 2px; border: 1px solid var(--border-subtle); border-radius: 5px; background: var(--surface-3); }.palette-grid button.selected { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }.palette-grid span { width: 100%; height: 100%; display: block; background-repeat: no-repeat; image-rendering: pixelated; }.tile-properties { padding: 8px 10px; overflow: auto; border-left: 1px solid var(--border-subtle); }.tile-properties label { min-height: 34px; display: flex; align-items: center; justify-content: space-between; gap: 8px; border-bottom: 1px solid var(--border-subtle); color: var(--text-muted); font-size: 11px; }.tile-properties label.stacked { padding: 6px 0; align-items: stretch; flex-direction: column; }.tile-properties input, .tile-properties select, .tile-properties textarea { width: 140px; min-width: 0; }.tile-properties textarea { width: 100%; resize: vertical; }.tile-properties p, .empty { color: var(--text-muted); font-size: 11px; line-height: 1.5; }.empty { margin: auto; padding: 18px; text-align: center; }.empty p { margin: 5px 0 0; }

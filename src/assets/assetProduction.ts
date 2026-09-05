@@ -1,6 +1,6 @@
 import type { AssetContentGroup, AssetImportSettings, AssetPipelineMetadata, AssetRecord, SpriteRegion } from './types'
 import { assetSourceBytes, sha256Bytes } from './contentHash'
-import { buildAssetDependencyGraph } from './assetGraph'
+import { buildAssetDependencyGraph, projectAssetReferences, repairAssetPathReferences } from './assetGraph'
 
 export const ASSET_SOURCE_CATALOG = Object.freeze([
   { id: 'png', extensions: ['png'], importer: 'nova.image', magic: '89 50 4e 47' },
@@ -27,11 +27,12 @@ export interface ProductionAssetGraph {
   duplicateSources: Array<{ sourceHash: string; assets: string[] }>
 }
 
-function sortedUnique(values: Iterable<string>): string[] { return [...new Set(values)].sort((a, b) => a.localeCompare(b)) }
+const ordinal = (first:string,second:string) => first < second ? -1 : first > second ? 1 : 0
+function sortedUnique(values: Iterable<string>): string[] { return [...new Set(values)].sort((a, b) => ordinal(a,b)) }
 
 export function stableAssetSettings(value: unknown): string {
   if (Array.isArray(value)) return `[${value.map(stableAssetSettings).join(',')}]`
-  if (value && typeof value === 'object') return `{${Object.entries(value as Record<string, unknown>).sort(([a], [b]) => a.localeCompare(b)).map(([key, item]) => `${JSON.stringify(key)}:${stableAssetSettings(item)}`).join(',')}}`
+  if (value && typeof value === 'object') return `{${Object.entries(value as Record<string, unknown>).sort(([a], [b]) => ordinal(a,b)).map(([key, item]) => `${JSON.stringify(key)}:${stableAssetSettings(item)}`).join(',')}}`
   return JSON.stringify(value)
 }
 
@@ -40,37 +41,58 @@ export function assetSettingsHash(settings: unknown): string {
 }
 
 export function buildProductionAssetGraph(assets: AssetRecord[], project?: unknown): ProductionAssetGraph {
-  const base = buildAssetDependencyGraph(assets, project), cycles: string[][] = [], state = new Map<string, 0 | 1 | 2>(), stack: string[] = []
-  const visit = (uuid: string) => {
-    const status = state.get(uuid) ?? 0
-    if (status === 2) return
-    if (status === 1) { const start = stack.indexOf(uuid); if (start >= 0) cycles.push([...stack.slice(start), uuid]); return }
-    state.set(uuid, 1); stack.push(uuid)
-    for (const dependency of [...(base.dependencies.get(uuid) ?? [])].sort()) if (base.dependencies.has(dependency)) visit(dependency)
-    stack.pop(); state.set(uuid, 2)
+  const base = buildAssetDependencyGraph(assets, project), cycles: string[][] = [], state = new Map<string, 0 | 1 | 2>()
+  for(const root of [...base.dependencies.keys()].sort()){
+    if(state.get(root)===2)continue
+    const path:string[]=[],positions=new Map<string,number>(),stack:Array<{uuid:string;children:string[];index:number}>=[]
+    const enter=(uuid:string)=>{state.set(uuid,1);positions.set(uuid,path.length);path.push(uuid);stack.push({uuid,children:[...(base.dependencies.get(uuid)??[])].filter(id=>base.dependencies.has(id)).sort(),index:0})}
+    enter(root)
+    while(stack.length){const frame=stack[stack.length-1]
+      if(frame.index>=frame.children.length){state.set(frame.uuid,2);positions.delete(frame.uuid);path.pop();stack.pop();continue}
+      const child=frame.children[frame.index++],status=state.get(child)??0
+      if(status===0)enter(child)
+      else if(status===1&&cycles.length<256)cycles.push([...path.slice(positions.get(child)!),child])
+    }
   }
-  for (const uuid of [...base.dependencies.keys()].sort()) visit(uuid)
   const hashes = new Map<string, string[]>()
-  for (const asset of assets) { const hash = asset.pipeline?.sourceHash; if (hash) hashes.set(hash, [...(hashes.get(hash) ?? []), asset.uuid]) }
-  const duplicateSources = [...hashes].filter(([, uuids]) => uuids.length > 1).map(([sourceHash, uuids]) => ({ sourceHash, assets: sortedUnique(uuids) })).sort((a, b) => a.sourceHash.localeCompare(b.sourceHash))
-  return { ...base, cycles: cycles.sort((a, b) => a.join('/').localeCompare(b.join('/'))), duplicateSources }
+  for (const asset of assets) { const hash = asset.pipeline?.sourceHash; if (hash) { const values=hashes.get(hash)??[]; values.push(asset.uuid); hashes.set(hash,values) } }
+  const duplicateSources = [...hashes].filter(([, uuids]) => uuids.length > 1).map(([sourceHash, uuids]) => ({ sourceHash, assets: sortedUnique(uuids) })).sort((a, b) => ordinal(a.sourceHash,b.sourceHash))
+  return { ...base, cycles: cycles.sort((a, b) => ordinal(a.join('/'),b.join('/'))), duplicateSources }
 }
 
-export interface ContentClosureEntry { uuid: string; path: string; groupId: string; mode: AssetContentGroup['mode']; owner: string; reason: string }
+export interface ContentClosureEntry { uuid: string; path: string; groupId: string; mode: AssetContentGroup['mode']; owner: string; reason: string; issue?: 'missing' | 'editor-only' | 'unknown-group' | 'invalid-source'; sourceError?:string }
 export function buildContentClosure(assets: AssetRecord[], groups: AssetContentGroup[], roots: Iterable<string>, project?: unknown): ContentClosureEntry[] {
-  const graph = buildProductionAssetGraph(assets, project), byId = new Map(assets.map(asset => [asset.uuid, asset])), groupMap = new Map(groups.map(group => [group.id, group])), queue = sortedUnique(roots), seen = new Set<string>(), output: ContentClosureEntry[] = []
-  while (queue.length) {
-    const uuid = queue.shift()!; if (seen.has(uuid)) continue; seen.add(uuid)
-    const asset = byId.get(uuid); if (!asset || asset.editorOnly) continue
-    const groupId = asset.contentGroup || 'main', group = groupMap.get(groupId) ?? { id: 'main', name: 'Main', mode: 'embedded' as const, optional: false }
-    output.push({ uuid, path: asset.path, groupId, mode: group.mode, owner: uuid, reason: group.mode === 'excluded' ? 'Explicitly excluded' : 'Root or transitive dependency' })
-    for (const dependency of sortedUnique(graph.dependencies.get(uuid) ?? [])) queue.push(dependency)
+  const graph = buildAssetDependencyGraph(assets, project), byId = new Map(assets.map(asset => [asset.uuid.toLowerCase(), asset])), groupMap = new Map(groups.map(group => [group.id, group]))
+  const sourceErrors=new Map(graph.diagnostics.map(issue=>[issue.owner,issue.message]))
+  const queue = sortedUnique(roots).map(reference => {const uuid=reference.replace(/^asset:\/\//i,'');return {uuid:/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(uuid)?uuid.toLowerCase():uuid,owner:'project'}}), seen = new Set<string>(), output: ContentClosureEntry[] = []
+  for (let index=0;index<queue.length;index++) {
+    const {uuid,owner}=queue[index]; if(seen.has(uuid))continue;seen.add(uuid)
+    const asset=byId.get(uuid)
+    if(!asset){output.push({uuid,path:uuid,groupId:'',mode:'excluded',owner,reason:'Required asset is missing',issue:'missing'});continue}
+    const sourceError=sourceErrors.get(asset.uuid)
+    const groupId=asset.contentGroup||'main',group=groupMap.get(groupId),issue=sourceError?'invalid-source':asset.editorOnly?'editor-only':!group&&groupId!=='main'?'unknown-group':undefined
+    output.push({uuid:asset.uuid,path:asset.path,groupId,mode:asset.editorOnly?'excluded':group?.mode??'embedded',owner,reason:owner==='project'?'Build root':`Required by ${byId.get(owner)?.path??owner}`,issue,sourceError})
+    for(const dependency of sortedUnique(graph.dependencies.get(uuid)??[]))queue.push({uuid:dependency,owner:uuid})
   }
-  return output.sort((a, b) => a.path.localeCompare(b.path) || a.uuid.localeCompare(b.uuid))
+  return output.sort((a,b)=>ordinal(a.path,b.path)||ordinal(a.uuid,b.uuid))
 }
-
-export function validateContentClosure(entries: ContentClosureEntry[]): Array<{ severity: 'warning' | 'error'; message: string; uuid: string }> {
-  return entries.filter(entry => entry.mode === 'excluded').map(entry => ({ severity: 'error', uuid: entry.uuid, message: `${entry.path} is required by the dependency closure but belongs to an excluded content group.` }))
+export function validateContentClosure(entries: ContentClosureEntry[]): Array<{severity:'warning'|'error';message:string;uuid:string}> {
+  return entries.filter(entry=>entry.issue||entry.mode==='excluded').map(entry=>({severity:'error',uuid:entry.uuid,message:entry.issue==='invalid-source'?`${entry.path} dependency source is invalid: ${entry.sourceError}`:entry.issue==='missing'?`${entry.path} is missing (${entry.reason}; owner ${entry.owner}).`:entry.issue==='editor-only'?`${entry.path} is required but marked editor-only.`:entry.issue==='unknown-group'?`${entry.path} belongs to unknown content group ${entry.groupId}.`:`${entry.path} is required by the dependency closure but belongs to an excluded content group.`}))
+}
+export interface AssetBuildPolicy {include:readonly string[];exclude:readonly string[];stripUnusedAssets:boolean}
+export interface AssetBuildSelection {assets:AssetRecord[];closure:ContentClosureEntry[];diagnostics:Array<{severity:'warning'|'error';message:string;uuid:string}>}
+function buildGlob(path:string,pattern:string):boolean {
+  const escaped=pattern.split('**').map(part=>part.split('*').map(part=>part.split('?').map(part=>part.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')).join('[^/]')).join('[^/]*')).join('.*')
+  return new RegExp('^'+escaped+'$','i').test(path.replace(/\\/g,'/'))
+}
+export function selectBuildAssets(assets:AssetRecord[],groups:AssetContentGroup[],project:unknown,policy:AssetBuildPolicy):AssetBuildSelection {
+  const allowed=(asset:AssetRecord)=>!policy.exclude.some(pattern=>buildGlob(asset.path,pattern))&&(!policy.include.length||policy.include.some(pattern=>buildGlob(asset.path,pattern)))
+  const roots=projectAssetReferences(project,assets)
+  if(!policy.stripUnusedAssets)for(const asset of assets)if(!asset.editorOnly&&allowed(asset)&&groups.find(group=>group.id===(asset.contentGroup||'main'))?.mode!=='excluded')roots.add(asset.uuid.toLowerCase())
+  const closure=buildContentClosure(assets,groups,roots,project),diagnostics=validateContentClosure(closure),byId=new Map(assets.map(asset=>[asset.uuid.toLowerCase(),asset]))
+  for(const entry of closure){const asset=byId.get(entry.uuid.toLowerCase());if(asset&&!allowed(asset))diagnostics.push({severity:'error',uuid:asset.uuid,message:`${asset.path} is required but excluded by build include/exclude rules (${entry.reason}).`})}
+  const selected=closure.flatMap(entry=>{const asset=byId.get(entry.uuid.toLowerCase());return asset&&!entry.issue&&entry.mode!=='excluded'&&allowed(asset)?[asset]:[]})
+  return {assets:selected,closure,diagnostics}
 }
 
 export interface ImportComparison { field: string; before: string; after: string; changed: boolean }
@@ -107,37 +129,41 @@ export function applyBulkAssetSettings(assets: AssetRecord[], patch: Partial<Pic
 
 export function moveAssetFolderTransactional(assets: AssetRecord[], fromFolder: string, toFolder: string, faultAt?: 'after-paths' | 'after-references'): number {
   const from = fromFolder.replace(/\\/g, '/').replace(/\/+$/, ''), to = toFolder.replace(/\\/g, '/').replace(/\/+$/, '')
-  if (!from.startsWith('Assets') || !to.startsWith('Assets') || to === from || to.startsWith(`${from}/`)) throw new Error('Folder move must remain inside Assets and cannot target its own descendant.')
-  const snapshot = assets.map(asset => ({ asset, path: asset.path, source: asset.source })), moving = assets.filter(asset => asset.path === from || asset.path.startsWith(`${from}/`))
+  if (!(from === 'Assets' || from.startsWith('Assets/')) || !(to === 'Assets' || to.startsWith('Assets/')) || [...from.split('/'), ...to.split('/')].some(part => part === '..' || part === '.') || to === from || to.startsWith(`${from}/`)) throw new Error('Folder move must remain inside Assets and cannot target its own descendant.')
+  const snapshot = assets.map(asset => ({ asset, state: JSON.parse(JSON.stringify(asset)) as AssetRecord })), moving = assets.filter(asset => asset.path === from || asset.path.startsWith(`${from}/`))
   try {
     for (const asset of moving) asset.path = `${to}${asset.path.slice(from.length)}`
     if (faultAt === 'after-paths') throw new Error('Injected folder-move interruption after paths')
-    for (const asset of assets) asset.source = asset.source.split(from).join(to).split(encodeURIComponent(from)).join(encodeURIComponent(to))
+    repairAssetPathReferences(assets, from, to)
     if (faultAt === 'after-references') throw new Error('Injected folder-move interruption after references')
     const paths = new Set<string>(); for (const asset of assets) { const key = asset.path.toLowerCase(); if (paths.has(key)) throw new Error(`Folder move produced duplicate path ${asset.path}`); paths.add(key) }
     return moving.length
-  } catch (error) { for (const item of snapshot) { item.asset.path = item.path; item.asset.source = item.source } throw error }
+  } catch (error) { for (const item of snapshot) { for (const key of Object.keys(item.asset)) if (!(key in item.state)) delete (item.asset as unknown as Record<string,unknown>)[key]; Object.assign(item.asset, item.state) } throw error }
 }
 
 export interface AtlasInput { uuid: string; width: number; height: number; group: string }
 export interface AtlasPlacement { uuid: string; page: number; x: number; y: number; width: number; height: number; rotated: boolean }
 export interface AtlasPackingReport { pages: number; placements: AtlasPlacement[]; utilization: number; deterministicKey: string; diagnostics: string[] }
 export function packAtlasDeterministic(inputs: AtlasInput[], options: { maxSize: number; padding: number; rotationPolicy: 'Never' | 'Allow' }): AtlasPackingReport {
-  const size = Math.min(8192, Math.max(64, Math.trunc(options.maxSize))), padding = Math.min(64, Math.max(0, Math.trunc(options.padding))), diagnostics: string[] = []
-  const sorted = [...inputs].filter(input => input.width > 0 && input.height > 0).sort((a, b) => a.group.localeCompare(b.group) || Math.max(b.width, b.height) - Math.max(a.width, a.height) || b.height - a.height || b.width - a.width || a.uuid.localeCompare(b.uuid))
+  const size = Math.min(8192, Math.max(64, Math.trunc(Number.isFinite(options.maxSize) ? options.maxSize : 2048))), padding = Math.min(64, Math.max(0, Math.trunc(Number.isFinite(options.padding) ? options.padding : 0))), diagnostics: string[] = []
+  const seen = new Set<string>()
+  const sorted = [...inputs].filter(input => { if (!Number.isSafeInteger(input.width) || !Number.isSafeInteger(input.height) || input.width <= 0 || input.height <= 0) { diagnostics.push(`${input.uuid} has invalid dimensions.`); return false } if (seen.has(input.uuid)) throw new Error(`ATLAS_DUPLICATE_ID: ${input.uuid}`); seen.add(input.uuid); return true }).sort((a, b) => ordinal(a.group,b.group) || Math.max(b.width, b.height) - Math.max(a.width, a.height) || b.height - a.height || b.width - a.width || ordinal(a.uuid,b.uuid))
   const pages: Array<{ x: number; y: number; rowHeight: number }> = [{ x: 0, y: 0, rowHeight: 0 }], placements: AtlasPlacement[] = []
+  let activeGroup: string | null = null
   for (const input of sorted) {
     let width = input.width, height = input.height, rotated = false
     if (options.rotationPolicy === 'Allow' && height > width && height <= size && width <= size) { [width, height] = [height, width]; rotated = true }
     if (width + padding * 2 > size || height + padding * 2 > size) { diagnostics.push(`${input.uuid} exceeds ${size}px atlas limit.`); continue }
+    if (activeGroup !== null && activeGroup !== input.group) pages.push({ x:0, y:0, rowHeight:0 })
+    activeGroup = input.group
     let page = pages.length - 1, cursor = pages[page]
     if (cursor.x + width + padding * 2 > size) { cursor.x = 0; cursor.y += cursor.rowHeight; cursor.rowHeight = 0 }
     if (cursor.y + height + padding * 2 > size) { pages.push({ x: 0, y: 0, rowHeight: 0 }); page++; cursor = pages[page] }
     placements.push({ uuid: input.uuid, page, x: cursor.x + padding, y: cursor.y + padding, width, height, rotated })
     cursor.x += width + padding * 2; cursor.rowHeight = Math.max(cursor.rowHeight, height + padding * 2)
   }
-  const used = placements.reduce((sum, item) => sum + item.width * item.height, 0), pageCount = Math.max(1, pages.length), deterministicKey = sha256Bytes(new TextEncoder().encode(stableAssetSettings({ size, padding, placements })))
-  return { pages: pageCount, placements, utilization: used / (pageCount * size * size), deterministicKey, diagnostics }
+  const used = placements.reduce((sum, item) => sum + item.width * item.height, 0), pageCount = placements.length ? pages.length : 0, deterministicKey = sha256Bytes(new TextEncoder().encode(stableAssetSettings({ size, padding, groups:sorted.map(input=>[input.uuid,input.group]), placements })))
+  return { pages: pageCount, placements, utilization: pageCount ? used / (pageCount * size * size) : 0, deterministicKey, diagnostics }
 }
 
 export function gridSliceRegions(width: number, height: number, columns: number, rows: number, margin = 0, spacing = 0): SpriteRegion[] {
@@ -195,7 +221,7 @@ export class ThumbnailCache {
   private readonly values = new Map<string, { url: string; used: number }>()
   constructor(readonly capacity = 512) {}
   get(key: string): string | null { const item = this.values.get(key); if (!item) return null; item.used = performance.now(); return item.url }
-  set(key: string, url: string): void { this.values.set(key, { url, used: performance.now() }); if (this.values.size <= this.capacity) return; const victim = [...this.values].sort((a, b) => a[1].used - b[1].used || a[0].localeCompare(b[0]))[0]; if (victim) this.values.delete(victim[0]) }
+  set(key: string, url: string): void { this.values.set(key, { url, used: performance.now() }); if (this.values.size <= this.capacity) return; const victim = [...this.values].sort((a, b) => a[1].used - b[1].used || ordinal(a[0],b[0]))[0]; if (victim) this.values.delete(victim[0]) }
   clear(): void { this.values.clear() }
 }
 

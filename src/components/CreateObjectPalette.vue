@@ -1,7 +1,7 @@
 <template>
   <Teleport to="body">
     <div v-if="estate.createObjectPaletteOpen" class="authoring-scrim" @mousedown.self="close">
-      <section class="authoring-palette" role="dialog" aria-modal="true" :aria-label="t('createObject')" @keydown.escape="close">
+      <section class="authoring-palette" role="dialog" aria-modal="true" v-modal-focus :aria-label="t('createObject')" @keydown.escape="close">
         <header>
           <div><span>{{ t('authoringPalette') }}</span><h2>{{ t('createObject') }}</h2></div>
           <button :aria-label="t('cancel')" @click="close">×</button>
@@ -37,6 +37,7 @@
 </template>
 
 <script setup lang="ts">
+import { vModalFocus } from '../editor/modalFocus'
 import { computed, nextTick, ref, watch } from 'vue'
 import { t } from '../i18n'
 import { editorState as estate } from '../store/editor'

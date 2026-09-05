@@ -1,5 +1,6 @@
 import { graphNodeDefinition } from './graphCatalog'
 import { MAX_GRAPH_EDGES, MAX_GRAPH_NODES, canonicalGraphDocument, parseGraphDocument, type GraphCanvasScope, type GraphEdge, type GraphNode, type GraphPin, type GraphRoutine, type GraphValue, type GraphValueType, type NovaGraphDocument } from './graphTypes'
+import { assessRhaiConversion, emitSyntaxGraph, syntaxSourceLocation } from './graphSyntax'
 
 export type GraphDiagnosticSeverity = 'error' | 'warning' | 'info'
 export interface GraphDiagnostic { severity: GraphDiagnosticSeverity; code: string; message: string; scopeUuid?: string; nodeUuid?: string; pinUuid?: string; edgeUuid?: string }
@@ -35,6 +36,10 @@ export function validateGraph(graphInput: NovaGraphDocument): GraphValidationRes
   if (nodeCount > MAX_GRAPH_NODES) diagnostics.push({ severity: 'error', code: 'GRAPH-LIMIT-NODES', message: `Graph exceeds ${MAX_GRAPH_NODES.toLocaleString('en-US')} total nodes.` })
   if (edgeCount > MAX_GRAPH_EDGES) diagnostics.push({ severity: 'error', code: 'GRAPH-LIMIT-EDGES', message: `Graph exceeds ${MAX_GRAPH_EDGES.toLocaleString('en-US')} total edges.` })
   const ids = new Set<string>(), register = (uuid: string, kind: string, location: Partial<GraphDiagnostic> = {}) => { if (!UUID_PATTERN.test(uuid)) diagnostics.push({ severity: 'error', code: 'GRAPH-ID-INVALID', message: `${kind} requires a locale-independent RFC 4122 UUID: ${uuid || '(empty)'}.`, ...location }); if (ids.has(uuid)) diagnostics.push({ severity: 'error', code: 'GRAPH-ID-DUPLICATE', message: `${kind} has a duplicate stable UUID: ${uuid || '(empty)'}.`, ...location }); ids.add(uuid) }
+  if (graph.language) {
+    if (!graph.nodes.some(node => node.uuid === graph.language!.rootNodeUuid && node.type === 'rhai.Program')) diagnostics.push({ severity: 'error', code: 'GRAPH-LANGUAGE-ROOT', message: 'A Rhai structure requires its original Program root.' })
+    if (graph.variables.length || graph.routines.length || graph.customEvents.length) diagnostics.push({ severity: 'error', code: 'GRAPH-LANGUAGE-OWNERSHIP', message: 'Use Language declaration/function nodes in a Rhai structure. Legacy variable/routine/event tables belong to the original graph workflow.' })
+  }
   const named = (items: ReadonlyArray<{ uuid: string; name: string }>, kind: string, scopeUuid = graph.uuid) => { const names = new Set<string>(); for (const item of items) { register(item.uuid, kind, { scopeUuid }); if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(item.name)) diagnostics.push({ severity: 'error', code: 'GRAPH-SYMBOL-NAME', message: `${kind} “${item.name}” is not a stable script identifier.`, scopeUuid }); if (names.has(item.name)) diagnostics.push({ severity: 'error', code: 'GRAPH-SYMBOL-DUPLICATE', message: `${kind} name “${item.name}” is duplicated.`, scopeUuid }); names.add(item.name) } }
   register(graph.uuid, 'Graph')
   named(graph.variables, 'Variable')
@@ -98,6 +103,14 @@ export function validateGraph(graphInput: NovaGraphDocument): GraphValidationRes
   for (const routine of graph.routines) for (const node of routine.nodes) { const match = /^routine\.call\.([0-9a-f-]+)$/.exec(node.type); if (match) calls.set(routine.uuid, [...(calls.get(routine.uuid) ?? []), match[1]]) }
   const visitingRoutines = new Set<string>(), visitedRoutines = new Set<string>(), visitRoutine = (uuid: string) => { if (visitingRoutines.has(uuid)) { diagnostics.push({ severity: 'error', code: 'GRAPH-ROUTINE-CYCLE', message: 'Recursive routine cycle is unbounded; use Bounded Repeat instead.', scopeUuid: uuid }); return }; if (visitedRoutines.has(uuid)) return; visitingRoutines.add(uuid); for (const next of calls.get(uuid) ?? []) visitRoutine(next); visitingRoutines.delete(uuid); visitedRoutines.add(uuid) }
   for (const routine of graph.routines) visitRoutine(routine.uuid)
+  if (graph.language && !diagnostics.some(item => item.severity === 'error')) {
+    try {
+      const emitted = emitSyntaxGraph(graph), assessment = assessRhaiConversion(emitted.text, graph.name, graph)
+      diagnostics.push(...assessment.diagnostics.map(item => ({ severity: item.severity, code: item.code, message: item.message + ' (' + item.span.line + ':' + item.span.column + ')', nodeUuid: item.nodeUuid, scopeUuid: item.scopeUuid })))
+      const owned = new Set(emitted.ranges.map(range => range.nodeUuid))
+      for (const node of graph.nodes) if (!owned.has(node.uuid)) diagnostics.push({ severity: 'warning', code: 'GRAPH-LANGUAGE-DISCONNECTED', message: node.title + ' is not connected to the module and will not execute.', nodeUuid: node.uuid, scopeUuid: graph.uuid })
+    } catch (error) { diagnostics.push({ severity: 'error', code: 'GRAPH-LANGUAGE-EMISSION', message: error instanceof Error ? error.message : String(error), scopeUuid: graph.uuid }) }
+  }
   const unique = new Map<string, GraphDiagnostic>()
   for (const diagnostic of diagnostics) unique.set(`${diagnostic.code}:${diagnostic.scopeUuid ?? ''}:${diagnostic.nodeUuid ?? ''}:${diagnostic.pinUuid ?? ''}:${diagnostic.edgeUuid ?? ''}:${diagnostic.message}`, diagnostic)
   const result = [...unique.values()].sort((a, b) => ordinal(a.severity, b.severity) || ordinal(a.code, b.code) || ordinal(a.scopeUuid ?? '', b.scopeUuid ?? '') || ordinal(a.nodeUuid ?? '', b.nodeUuid ?? ''))
@@ -106,7 +119,18 @@ export function validateGraph(graphInput: NovaGraphDocument): GraphValidationRes
 
 function rhaiString(value: string): string { return JSON.stringify(value) }
 function rhaiValue(value: GraphValue): string { if (value === null) return '()'; if (typeof value === 'boolean') return value ? 'true' : 'false'; if (typeof value === 'number') return Number.isFinite(value) ? (Number.isInteger(value) ? `${value}.0` : String(value)) : '0.0'; if (typeof value === 'string') return rhaiString(value); if (Array.isArray(value)) return `[${value.map(rhaiValue).join(', ')}]`; return `#{ ${Object.entries(value).sort(([a], [b]) => ordinal(a, b)).map(([key, item]) => `${rhaiString(key)}: ${rhaiValue(item)}`).join(', ')} }` }
+function rhaiLiteral(value: GraphValue, source: unknown): string {
+  if (typeof source === 'string') {
+    try { if (JSON.stringify(JSON.parse(source)) === JSON.stringify(value)) return source } catch { /* Nonliteral source cannot override a typed value. */ }
+    if (typeof value === 'number' && /^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?$/i.test(source.trim()) && Number(source) === value) return source
+    if (source.trim() === '()' && value === null) return '()'
+  }
+  return rhaiValue(value)
+}
 function metadata(variable: NovaGraphDocument['variables'][number]): string { const fields = [`type=${rhaiString(variable.valueType.toLowerCase())}`, `group=${rhaiString(variable.group)}`, `tooltip=${rhaiString(variable.tooltip)}`, `serialize=${variable.serialized ? 'true' : 'false'}`]; if (variable.minimum !== null) fields.push(`min=${variable.minimum}`); if (variable.maximum !== null) fields.push(`max=${variable.maximum}`); if (variable.step !== null) fields.push(`step=${variable.step}`); if (variable.resourceType) fields.push(`resource=${rhaiString(variable.resourceType)}`); return fields.join(', ') }
+
+function originalRoutineSignature(routine: GraphRoutine | null | undefined): boolean { return routine?.nodes.some(node => node.type === 'routine.entry' && node.config.rhaiOriginalSignature === true) ?? false }
+function repeatIndex(node: GraphNode): string { return typeof node.config.rhaiIndexName === 'string' && /^[A-Za-z_][A-Za-z0-9_]*$/.test(node.config.rhaiIndexName) ? node.config.rhaiIndexName : `__index_${safeIdentifier(node.uuid.replace(/-/g, '').slice(0, 8))}` }
 
 function compileScope(graph: NovaGraphDocument, context: ScopeContext): EmittedLine[] {
   const { scope, routine } = context, topology = graphTopology(scope), globalNames = new Map(graph.variables.map(variable => [variable.uuid, safeIdentifier(variable.name)])), localNames = new Map((routine?.locals ?? []).map(variable => [variable.uuid, safeIdentifier(variable.name)])), pinOwner = new Map<string, { node: GraphNode; pin: GraphPin }>()
@@ -115,16 +139,20 @@ function compileScope(graph: NovaGraphDocument, context: ScopeContext): EmittedL
   const outputEdge = (node: GraphNode, key: string): GraphEdge | null => { const pin = node.pins.find(candidate => candidate.key === key && candidate.direction === 'output' && candidate.kind === 'execution'); return pin ? topology.outgoing.get(pin.uuid)?.[0] ?? null : null }
   const outputTarget = (node: GraphNode, key: string): GraphNode | null => { const edge = outputEdge(node, key); return edge ? topology.nodes.get(edge.to.nodeUuid) ?? null : null }
   const resultName = (node: GraphNode) => `__result_${safeIdentifier(node.uuid.replace(/-/g, '').slice(0, 12))}`
-  const inputExpression = (node: GraphNode, key: string, stack = new Set<string>()): string => { const pin = node.pins.find(candidate => candidate.key === key && candidate.direction === 'input' && candidate.kind === 'data'); if (!pin) return '()'; const edge = incomingEdge(pin); if (!edge) return rhaiValue(pin.defaultValue); const owner = pinOwner.get(edge.from.pinUuid); return owner ? expression(owner.node, owner.pin, stack) : rhaiValue(pin.defaultValue) }
+  const inputExpression = (node: GraphNode, key: string, stack = new Set<string>()): string => { const pin = node.pins.find(candidate => candidate.key === key && candidate.direction === 'input' && candidate.kind === 'data'); if (!pin) return '()'; const edge = incomingEdge(pin); if (!edge) { const originals = node.config.rhaiInputSources; return rhaiLiteral(pin.defaultValue, originals && typeof originals === 'object' && !Array.isArray(originals) ? originals[key] : undefined) }; const owner = pinOwner.get(edge.from.pinUuid); return owner ? expression(owner.node, owner.pin, stack) : rhaiValue(pin.defaultValue) }
   const expression = (node: GraphNode, pin: GraphPin, stack = new Set<string>()): string => {
     const token = `${node.uuid}:${pin.uuid}`; if (stack.has(token)) return '()'; const nextStack = new Set(stack).add(token)
     if (node.type.startsWith('literal.')) return rhaiValue(node.config.value ?? pin.defaultValue)
     if (node.type === 'code.expression') return `(${String(node.config.source ?? '()').slice(0, 64_000)})`
     if (node.type === 'variable.get') return globalNames.get(String(node.config.variableUuid ?? '')) ?? '()'
     if (node.type === 'local.get') return localNames.get(String(node.config.localUuid ?? '')) ?? '()'
+    if (node.type.startsWith('event.') && Array.isArray(node.config.rhaiParameters)) {
+      const index = node.pins.filter(item => item.kind === 'data' && item.direction === 'output').findIndex(item => item.uuid === pin.uuid)
+      return safeIdentifier(String(node.config.rhaiParameters[index] ?? pin.key))
+    }
     if (node.type.startsWith('event.') || node.type.startsWith('custom.event.') || node.type === 'routine.entry') return safeIdentifier(pin.key)
-    if (node.type === 'flow.repeat' && pin.key === 'index') return `__index_${safeIdentifier(node.uuid.replace(/-/g, '').slice(0, 8))}`
-    if (node.type.startsWith('math.')) { const operation: Record<string, string> = { add: '+', subtract: '-', multiply: '*', divide: '/', modulo: '%' }, name = node.type.slice(5), a = inputExpression(node, 'a', nextStack), b = inputExpression(node, 'b', nextStack); if (name === 'minimum') return `if ${a} < ${b} { ${a} } else { ${b} }`; if (name === 'maximum') return `if ${a} > ${b} { ${a} } else { ${b} }`; if (name === 'divide' || name === 'modulo') return `if ${b} == 0.0 { 0.0 } else { ${a} ${operation[name]} ${b} }`; return `(${a} ${operation[name] ?? '+'} ${b})` }
+    if (node.type === 'flow.repeat' && pin.key === 'index') return repeatIndex(node)
+    if (node.type.startsWith('math.')) { const operation: Record<string, string> = { add: '+', subtract: '-', multiply: '*', divide: '/', modulo: '%' }, name = node.type.slice(5), a = inputExpression(node, 'a', nextStack), b = inputExpression(node, 'b', nextStack); if (name === 'minimum') return `if ${a} < ${b} { ${a} } else { ${b} }`; if (name === 'maximum') return `if ${a} > ${b} { ${a} } else { ${b} }`; if (node.config.rhaiArithmetic !== true && (name === 'divide' || name === 'modulo')) return `if ${b} == 0.0 { 0.0 } else { ${a} ${operation[name]} ${b} }`; return `(${a} ${operation[name] ?? '+'} ${b})` }
     if (node.type.startsWith('compare.')) { const operation: Record<string, string> = { equal: '==', not_equal: '!=', less: '<', less_equal: '<=', greater: '>', greater_equal: '>=' }; return `(${inputExpression(node, 'a', nextStack)} ${operation[node.type.slice(8)] ?? '=='} ${inputExpression(node, 'b', nextStack)})` }
     if (node.type === 'logic.and' || node.type === 'logic.or') return `(${inputExpression(node, 'a', nextStack)} ${node.type.endsWith('and') ? '&&' : '||'} ${inputExpression(node, 'b', nextStack)})`
     if (node.type === 'logic.not') return `!(${inputExpression(node, 'value', nextStack)})`
@@ -135,23 +163,23 @@ function compileScope(graph: NovaGraphDocument, context: ScopeContext): EmittedL
     if (node.type === 'convert.boolean_to_number') return `if ${inputExpression(node, 'value', nextStack)} { 1.0 } else { 0.0 }`
     if (node.type === 'convert.string_to_number') return `(${inputExpression(node, 'value', nextStack)}).to_float()`
     const routineMatch = /^routine\.call\.([0-9a-f-]+)$/.exec(node.type)
-    if (routineMatch) { const target = graph.routines.find(item => item.uuid === routineMatch[1]), parameters = [routine ? '__nova_call_depth + 1' : '1', ...(target?.inputs ?? []).map(item => inputExpression(node, item.name, nextStack))], call = `${safeIdentifier(target?.name ?? 'missing')}(${parameters.join(', ')})`; if (target?.pure) return target.outputs.length > 1 ? `${call}[${rhaiString(pin.key)}]` : call; return target && target.outputs.length > 1 ? `${resultName(node)}[${rhaiString(pin.key)}]` : resultName(node) }
+    if (routineMatch) { const target = graph.routines.find(item => item.uuid === routineMatch[1]), parameters = [...(originalRoutineSignature(target) ? [] : [routine && !originalRoutineSignature(routine) ? '__nova_call_depth + 1' : '1']), ...(target?.inputs ?? []).map(item => inputExpression(node, item.name, nextStack))], call = `${safeIdentifier(target?.name ?? 'missing')}(${parameters.join(', ')})`; if (target?.pure) return target.outputs.length > 1 ? `${call}[${rhaiString(pin.key)}]` : call; return target && target.outputs.length > 1 ? `${resultName(node)}[${rhaiString(pin.key)}]` : resultName(node) }
     const definition = graphNodeDefinition(node.type, graph, routine), api = definition?.api
     if (api) return `${api.callable}(${node.pins.filter(candidate => candidate.direction === 'input' && candidate.kind === 'data').map(candidate => inputExpression(node, candidate.key, nextStack)).join(', ')})`
     return '()'
   }
   const watchValues = () => { const names = [...globalNames.values(), ...localNames.values(), ...(routine?.inputs.map(item => safeIdentifier(item.name)) ?? [])].slice(0, 128); return `#{ ${names.map(name => `${rhaiString(name)}: ${name}`).join(', ')} }` }
-  const traceDepth = (depth: number) => routine ? `__nova_call_depth + ${depth}` : String(depth)
+  const traceDepth = (depth: number) => routine && !originalRoutineSignature(routine) ? `__nova_call_depth + ${depth}` : String(depth)
   const traceNode = (node: GraphNode, depth: number): EmittedLine => ({ text: `${'  '.repeat(Math.min(32, depth))}__nova_graph_trace(${rhaiString(graph.uuid)}, ${rhaiString(context.uuid)}, ${rhaiString(node.uuid)}, "", ${traceDepth(depth)}, ${watchValues()});`, scopeUuid: context.uuid, nodeUuid: node.uuid })
   const traceEdge = (edge: GraphEdge | null, depth: number): EmittedLine[] => edge ? [{ text: `${'  '.repeat(Math.min(32, depth))}__nova_graph_trace(${rhaiString(graph.uuid)}, ${rhaiString(context.uuid)}, "", ${rhaiString(edge.uuid)}, ${traceDepth(depth)}, ${watchValues()});`, scopeUuid: context.uuid, edgeUuid: edge.uuid }] : []
   const emit = (node: GraphNode | null, depth: number, path: Set<string>): EmittedLine[] => {
     if (!node || depth > scope.nodes.length + 1 || path.has(node.uuid)) return []
     const nextPath = new Set(path).add(node.uuid), indent = '  '.repeat(Math.min(32, depth)), lines: EmittedLine[] = [traceNode(node, depth)]
     const definition = graphNodeDefinition(node.type, graph, routine), api = definition?.api
-    const sourceOverride = typeof node.config.rhaiSourceOverride === 'string' ? node.config.rhaiSourceOverride.trim() : ''
-    const embeddedSource = node.type === 'code.statement' && typeof node.config.source === 'string' ? node.config.source.trim() : sourceOverride
-    if (embeddedSource) {
-      for (const line of embeddedSource.split(/\r?\n/).slice(0, 512)) lines.push({ text: `${indent}${line.trimEnd()}`, scopeUuid: context.uuid, nodeUuid: node.uuid })
+    const sourceOverride = typeof node.config.rhaiSourceOverride === 'string' ? node.config.rhaiSourceOverride : ''
+    const embeddedSource = node.type === 'code.statement' && typeof node.config.source === 'string' ? node.config.source : sourceOverride
+    if (embeddedSource.trim()) {
+      for (const line of embeddedSource.split(/\r?\n/)) lines.push({ text: line, scopeUuid: context.uuid, nodeUuid: node.uuid })
       const edge = outputEdge(node, 'next')
       lines.push(...traceEdge(edge, depth), ...emit(edge ? topology.nodes.get(edge.to.nodeUuid) ?? null : null, depth, nextPath))
       return lines
@@ -160,9 +188,9 @@ function compileScope(graph: NovaGraphDocument, context: ScopeContext): EmittedL
     if (node.type === 'variable.set' || node.type === 'local.set') { const name = node.type === 'local.set' ? localNames.get(String(node.config.localUuid ?? '')) : globalNames.get(String(node.config.variableUuid ?? '')); if (name) lines.push({ text: `${indent}${name} = ${inputExpression(node, 'value')};`, scopeUuid: context.uuid, nodeUuid: node.uuid }); const edge = outputEdge(node, 'next'); lines.push(...traceEdge(edge, depth), ...emit(edge ? topology.nodes.get(edge.to.nodeUuid) ?? null : null, depth, nextPath)); return lines }
     if (node.type === 'flow.branch') { const trueEdge = outputEdge(node, 'true'), falseEdge = outputEdge(node, 'false'), nextEdge = outputEdge(node, 'next'); lines.push({ text: `${indent}if ${inputExpression(node, 'condition')} {`, scopeUuid: context.uuid, nodeUuid: node.uuid }, ...traceEdge(trueEdge, depth + 1), ...emit(trueEdge ? topology.nodes.get(trueEdge.to.nodeUuid) ?? null : null, depth + 1, nextPath), { text: `${indent}} else {`, scopeUuid: context.uuid, nodeUuid: node.uuid }, ...traceEdge(falseEdge, depth + 1), ...emit(falseEdge ? topology.nodes.get(falseEdge.to.nodeUuid) ?? null : null, depth + 1, nextPath), { text: `${indent}}`, scopeUuid: context.uuid, nodeUuid: node.uuid }, ...traceEdge(nextEdge, depth), ...emit(nextEdge ? topology.nodes.get(nextEdge.to.nodeUuid) ?? null : null, depth, nextPath)); return lines }
     if (node.type === 'flow.sequence') { for (const key of ['first', 'second', 'next']) { const edge = outputEdge(node, key); lines.push(...traceEdge(edge, depth), ...emit(edge ? topology.nodes.get(edge.to.nodeUuid) ?? null : null, depth, nextPath)) }; return lines }
-    if (node.type === 'flow.repeat') { const suffix = safeIdentifier(node.uuid.replace(/-/g, '').slice(0, 8)), count = `__count_${suffix}`, index = `__index_${suffix}`, bodyEdge = outputEdge(node, 'body'), nextEdge = outputEdge(node, 'next'); lines.push({ text: `${indent}let ${count} = (${inputExpression(node, 'count')}).to_int();`, scopeUuid: context.uuid, nodeUuid: node.uuid }, { text: `${indent}if ${count} < 0 { ${count} = 0; }`, scopeUuid: context.uuid, nodeUuid: node.uuid }, { text: `${indent}if ${count} > 1024 { ${count} = 1024; }`, scopeUuid: context.uuid, nodeUuid: node.uuid }, { text: `${indent}for ${index} in 0..${count} {`, scopeUuid: context.uuid, nodeUuid: node.uuid }, ...traceEdge(bodyEdge, depth + 1), ...emit(bodyEdge ? topology.nodes.get(bodyEdge.to.nodeUuid) ?? null : null, depth + 1, nextPath), { text: `${indent}}`, scopeUuid: context.uuid, nodeUuid: node.uuid }, ...traceEdge(nextEdge, depth), ...emit(nextEdge ? topology.nodes.get(nextEdge.to.nodeUuid) ?? null : null, depth, nextPath)); return lines }
+    if (node.type === 'flow.repeat') { const suffix = safeIdentifier(node.uuid.replace(/-/g, '').slice(0, 8)), count = `__count_${suffix}`, index = repeatIndex(node), bodyEdge = outputEdge(node, 'body'), nextEdge = outputEdge(node, 'next'); lines.push({ text: `${indent}let ${count} = (${inputExpression(node, 'count')}).to_int();`, scopeUuid: context.uuid, nodeUuid: node.uuid }, { text: `${indent}if ${count} < 0 { ${count} = 0; }`, scopeUuid: context.uuid, nodeUuid: node.uuid }, { text: `${indent}if ${count} > 1024 { ${count} = 1024; }`, scopeUuid: context.uuid, nodeUuid: node.uuid }, { text: `${indent}for ${index} in 0..${count} {`, scopeUuid: context.uuid, nodeUuid: node.uuid }, ...traceEdge(bodyEdge, depth + 1), ...emit(bodyEdge ? topology.nodes.get(bodyEdge.to.nodeUuid) ?? null : null, depth + 1, nextPath), { text: `${indent}}`, scopeUuid: context.uuid, nodeUuid: node.uuid }, ...traceEdge(nextEdge, depth), ...emit(nextEdge ? topology.nodes.get(nextEdge.to.nodeUuid) ?? null : null, depth, nextPath)); return lines }
     const routineMatch = /^routine\.call\.([0-9a-f-]+)$/.exec(node.type)
-    if (routineMatch) { const target = graph.routines.find(item => item.uuid === routineMatch[1]); if (target && !target.pure) { const parameters = [routine ? '__nova_call_depth + 1' : '1', ...target.inputs.map(item => inputExpression(node, item.name))], call = `${safeIdentifier(target.name)}(${parameters.join(', ')})`, statement = target.outputs.length ? `let ${resultName(node)} = ${call};` : `${call};`; lines.push({ text: `${indent}${statement}`, scopeUuid: context.uuid, nodeUuid: node.uuid }) }; const edge = outputEdge(node, 'next'); lines.push(...traceEdge(edge, depth), ...emit(edge ? topology.nodes.get(edge.to.nodeUuid) ?? null : null, depth, nextPath)); return lines }
+    if (routineMatch) { const target = graph.routines.find(item => item.uuid === routineMatch[1]); if (target && !target.pure) { const parameters = [...(originalRoutineSignature(target) ? [] : [routine && !originalRoutineSignature(routine) ? '__nova_call_depth + 1' : '1']), ...target.inputs.map(item => inputExpression(node, item.name))], call = `${safeIdentifier(target.name)}(${parameters.join(', ')})`, statement = target.outputs.length ? `let ${resultName(node)} = ${call};` : `${call};`; lines.push({ text: `${indent}${statement}`, scopeUuid: context.uuid, nodeUuid: node.uuid }) }; const edge = outputEdge(node, 'next'); lines.push(...traceEdge(edge, depth), ...emit(edge ? topology.nodes.get(edge.to.nodeUuid) ?? null : null, depth, nextPath)); return lines }
     const eventMatch = /^custom\.emit\.([0-9a-f-]+)$/.exec(node.type)
     if (eventMatch) { const event = graph.customEvents.find(item => item.uuid === eventMatch[1]); if (event) lines.push({ text: `${indent}${safeIdentifier(event.name)}(${event.parameters.map(item => inputExpression(node, item.name)).join(', ')});`, scopeUuid: context.uuid, nodeUuid: node.uuid }); const edge = outputEdge(node, 'next'); lines.push(...traceEdge(edge, depth), ...emit(edge ? topology.nodes.get(edge.to.nodeUuid) ?? null : null, depth, nextPath)); return lines }
     if (node.type === 'routine.return') { const values = routine?.outputs.map(item => inputExpression(node, item.name)) ?? [], result = values.length === 0 ? '()' : values.length === 1 ? values[0] : `#{ ${(routine?.outputs ?? []).map((item, index) => `${rhaiString(item.name)}: ${values[index]}`).join(', ')} }`; lines.push({ text: `${indent}return ${result};`, scopeUuid: context.uuid, nodeUuid: node.uuid }); return lines }
@@ -170,7 +198,7 @@ function compileScope(graph: NovaGraphDocument, context: ScopeContext): EmittedL
     return lines
   }
   if (routine) {
-    const entry = scope.nodes.find(node => node.type === 'routine.entry'), parameters = ['__nova_call_depth', ...routine.inputs.map(item => safeIdentifier(item.name))], header = `fn ${safeIdentifier(routine.name)}(${parameters.join(', ')}) {${routine.kind !== 'function' ? ` // ${routine.kind}${routine.inline ? ' · inline-safe' : ''}` : ''}`
+    const entry = scope.nodes.find(node => node.type === 'routine.entry'), parameters = [...(originalRoutineSignature(routine) ? [] : ['__nova_call_depth']), ...routine.inputs.map(item => safeIdentifier(item.name))], header = `fn ${safeIdentifier(routine.name)}(${parameters.join(', ')}) {${routine.kind !== 'function' ? ` // ${routine.kind}${routine.inline ? ' · inline-safe' : ''}` : ''}`
     const lines: EmittedLine[] = [{ text: header, scopeUuid: context.uuid, nodeUuid: entry?.uuid }]
     for (const local of routine.locals) lines.push({ text: `  let ${safeIdentifier(local.name)} = ${rhaiValue(local.defaultValue)};`, scopeUuid: context.uuid })
     const start = entry ? outputTarget(entry, 'next') : null
@@ -179,7 +207,7 @@ function compileScope(graph: NovaGraphDocument, context: ScopeContext): EmittedL
   }
   const events = scope.nodes.filter(node => node.type.startsWith('event.') || node.type.startsWith('custom.event.')).sort((a, b) => ordinal(a.type, b.type) || ordinal(a.uuid, b.uuid)), lines: EmittedLine[] = []
   for (const eventNode of events) {
-    const customMatch = /^custom\.event\.([0-9a-f-]+)$/.exec(eventNode.type), custom = customMatch ? graph.customEvents.find(item => item.uuid === customMatch[1]) : null, name = custom?.name ?? eventNode.type.slice(6), parameters = eventNode.pins.filter(pin => pin.kind === 'data' && pin.direction === 'output').map(pin => safeIdentifier(pin.key))
+    const customMatch = /^custom\.event\.([0-9a-f-]+)$/.exec(eventNode.type), custom = customMatch ? graph.customEvents.find(item => item.uuid === customMatch[1]) : null, name = custom?.name ?? eventNode.type.slice(6), parameters = Array.isArray(eventNode.config.rhaiParameters) ? eventNode.config.rhaiParameters.map(value => safeIdentifier(String(value))) : eventNode.pins.filter(pin => pin.kind === 'data' && pin.direction === 'output').map(pin => safeIdentifier(pin.key))
     lines.push({ text: `fn ${safeIdentifier(name)}(${parameters.join(', ')}) {`, scopeUuid: context.uuid, nodeUuid: eventNode.uuid }, traceNode(eventNode, 1), ...traceEdge(outputEdge(eventNode, 'next'), 1), ...emit(outputTarget(eventNode, 'next'), 1, new Set([eventNode.uuid])), { text: '}', scopeUuid: context.uuid, nodeUuid: eventNode.uuid }, { text: '' })
   }
   return lines
@@ -188,19 +216,27 @@ function compileScope(graph: NovaGraphDocument, context: ScopeContext): EmittedL
 export function compileGraph(graphInput: NovaGraphDocument): GraphCompileResult {
   const started = performance.now(), graph = canonicalGraphDocument(graphInput), validation = validateGraph(graph)
   if (!validation.valid) return { ...validation, elapsedMs: performance.now() - started, source: '', graph, mappings: [] }
+  if (graph.language) {
+    const emitted = emitSyntaxGraph(graph), mappings: GraphSourceMapping[] = []
+    for (const range of [...emitted.ranges].sort((a, b) => (b.end - b.start) - (a.end - a.start))) {
+      const first = syntaxSourceLocation(emitted.text, range.start).line, last = syntaxSourceLocation(emitted.text, range.end).line
+      for (let line = first; line <= last; line++) mappings.push({ generatedLine: line, graphUuid: graph.uuid, scopeUuid: graph.uuid, nodeUuid: range.nodeUuid, edgeUuid: '' })
+    }
+    return { ...validation, elapsedMs: performance.now() - started, source: emitted.text, graph, mappings }
+  }
   const lines: EmittedLine[] = [
     { text: `// Generated by Nova_A Visual Scripting · graph ${graph.uuid} · format ${graph.version} · API ${graph.apiVersion}` },
     { text: '// Linked .rhai and .nova-graph assets synchronize in both directions when either asset is saved.' },
-    ...graph.variables.map(variable => ({ text: `${variable.exposed ? `@export(${metadata(variable)}) ` : ''}let ${safeIdentifier(variable.name)} = ${rhaiValue(variable.defaultValue)};` })), { text: '' },
+    ...graph.variables.map(variable => ({ text: `${variable.exposed ? `@export(${metadata(variable)}) ` : ''}let ${safeIdentifier(variable.name)} = ${rhaiLiteral(variable.defaultValue, variable.sourceLiteral)};` })), { text: '' },
     ...graph.nodes.filter(node => node.type === 'code.module' && typeof node.config.source === 'string' && node.config.source.trim()).flatMap(node => [
-      ...String(node.config.source).split(/\r?\n/).slice(0, 2_048).map(text => ({ text, scopeUuid: graph.uuid, nodeUuid: node.uuid })),
+      ...String(node.config.source).split(/\r?\n/).map(text => ({ text, scopeUuid: graph.uuid, nodeUuid: node.uuid })),
       { text: '' }
     ])
   ]
   for (const routine of graph.routines) lines.push(...compileScope(graph, { uuid: routine.uuid, name: routine.name, scope: routine, routine }), { text: '' })
   lines.push(...compileScope(graph, { uuid: graph.uuid, name: graph.name, scope: graph, routine: null }))
   while (lines.length && lines[lines.length - 1]?.text === '') lines.pop()
-  const source = `${lines.map(line => line.text).join('\n').replace(/\n{3,}/g, '\n\n')}\n`, mappings = lines.flatMap((line, index): GraphSourceMapping[] => line.scopeUuid || line.nodeUuid || line.edgeUuid ? [{ generatedLine: index + 1, graphUuid: graph.uuid, scopeUuid: line.scopeUuid ?? graph.uuid, nodeUuid: line.nodeUuid ?? '', edgeUuid: line.edgeUuid ?? '' }] : [])
+  const source = `${lines.map(line => line.text).join('\n')}\n`, mappings = lines.flatMap((line, index): GraphSourceMapping[] => line.scopeUuid || line.nodeUuid || line.edgeUuid ? [{ generatedLine: index + 1, graphUuid: graph.uuid, scopeUuid: line.scopeUuid ?? graph.uuid, nodeUuid: line.nodeUuid ?? '', edgeUuid: line.edgeUuid ?? '' }] : [])
   return { ...validation, elapsedMs: performance.now() - started, source, graph, mappings }
 }
 

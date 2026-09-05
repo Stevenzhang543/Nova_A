@@ -16,7 +16,7 @@
     </nav>
     <div v-if="registryOpen && !pluginToolsOpen" class="registry-layout">
       <section class="registry-list">
-        <header><select v-model="packages.selectedRegistry"><option v-for="registry in packages.registries" :key="registry.id" :value="registry.id">{{ registry.name }}</option></select><input v-model="packages.registryQuery" type="search" :placeholder="t('searchRegistry')"></header>
+        <header><select v-model="packages.selectedRegistry" :aria-label="t('registry')"><option v-for="registry in packages.registries" :key="registry.id" :value="registry.id">{{ registry.name }}</option></select><input v-model="packages.registryQuery" type="search" :placeholder="t('searchRegistry')"></header>
         <article v-for="manifest in catalog" :key="`${manifest.id}:${manifest.version}`" :class="{ selected: selectedRegistryId === manifest.id }" @click="selectedRegistryId = manifest.id">
           <div class="package-mark">{{ manifest.pluginApi === 2 ? 'P' : 'N' }}</div><div><strong>{{ manifest.name }}</strong><small>{{ manifest.id }} · {{ manifest.version }}</small><p>{{ manifest.description }}</p></div><span v-if="manifest.publisherVerified" class="verified">✓ {{ t('verifiedPublisher') }}</span>
         </article>

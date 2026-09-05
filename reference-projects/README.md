@@ -1,5 +1,51 @@
 # Nova_A 7.0 reference projects
 
+<!-- NOVA_V2616_REFERENCES -->
+## Nova_A26.16 animation/audio/interface references
+
+Engine26.16.0 · Project Format2/schema29. The animated menu joins title animation, generated PCM music, three caption languages and four explicit Timeline Button actions. The current evidence contains the separately edited/saved menu and downloaded Web ZIP; generation is not presented as an actual authoring action. All40 library tasks remain in the offline manual.
+
+- [Animated menu and cutscene](projects/creator-v2616-animated-menu/README.md)
+- [Coin Trail — code](projects/creator-v2616-code-game/README.md)
+- [Coin Trail — blocks](projects/creator-v2616-blocks-game/README.md)
+- [Coin Trail — mixed](projects/creator-v2616-mixed-game/README.md)
+- [Renderer-disabled authority](projects/server-v2616-headless-authority/README.md)
+- [Complete26.16 lesson](../docs/ANIMATION_AUDIO_INTERFACE_LESSON_26_16.en.md)
+<!-- NOVA_V2616_REFERENCES_END -->
+
+## Nova_A 26.15 asset/rendering and cumulative references
+
+Engine26.15.0, Project Format 2/schema 29. The offline manual contains the complete production-asset/rendering lesson and a matching task for every one of the40 starters. The evidence bundle retains the actual user-authored sprite/Tiled/resource project and lit rendering project, their Web downloads and matching native comparison. Generated references below retain cumulative code/blocks/workspace/object tasks; their README, controls and expected-output files distinguish generation from executed qualification.
+
+- [Coin Trail — code](projects/creator-v2615-code-game/README.md)
+- [Coin Trail — blocks](projects/creator-v2615-blocks-game/README.md)
+- [Coin Trail — mixed](projects/creator-v2615-mixed-game/README.md)
+- [Renderer-disabled authority](projects/server-v2615-headless-authority/README.md)
+
+
+## Nova_A 26.14 object-family references
+
+Engine26.14.0, Project Format 2/schema 29. Open each project.nova through the launcher; each directory records inputs and expected outcomes. The enemy-family lesson exercises inherited callbacks, instance overrides, collision/UI signals, bounded reuse, paused reload and actual save/reopen. Export qualification and development observations are separately identified in the release evidence.
+
+- [Enemy Family](projects/creator-v2614-enemy-family/README.md)
+- [Coin Trail — code](projects/creator-v2614-code-game/README.md)
+- [Coin Trail — blocks](projects/creator-v2614-blocks-game/README.md)
+- [Coin Trail — mixed](projects/creator-v2614-mixed-game/README.md)
+- [Renderer-disabled authority](projects/server-v2614-headless-authority/README.md)
+
+
+## Nova_A 26.13 graph and workspace references
+
+Engine26.13.0, Project Format 2/schema 29. Open the project.nova file through the launcher. Code, blocks and mixed Coin Trail variants retain the same six-checkpoint route and controls; their README, expected-output and test-controls documents describe layout/edit/save/reopen/export checks. Generation is separate from executed qualification.
+
+- [Coin Trail — code](projects/creator-v2613-code-game/README.md)
+- [Coin Trail — blocks](projects/creator-v2613-blocks-game/README.md)
+- [Coin Trail — mixed](projects/creator-v2613-mixed-game/README.md)
+- [Renderer-disabled authority](projects/server-v2613-headless-authority/README.md)
+
+
+The retained historical references below are joined by four 26.12 references. Open `projects/creator-v2612-code-game/project.nova`, `projects/creator-v2612-blocks-game/project.nova` or `projects/creator-v2612-mixed-game/project.nova` to play the same six-checkpoint Coin Trail game from code, typed blocks or linked authoring. Each directory has concrete controls and expected outcomes. `projects/server-v2612-headless-authority/project.nova` retains the permission-gated renderer-disabled WebView authority; it is not a windowless native server. Their executed checks and exact build hashes are recorded separately in the 26.12 release evidence.
+
 These are generated, schema-valid source projects. Open any `.nova` file through **File → Import Project**, inspect it, press **Play**, run its project tests, and export it from **Build Settings**.
 
 | Project | Demonstrates |

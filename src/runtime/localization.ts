@@ -1,6 +1,8 @@
 import { reactive } from 'vue'
 import { assetReference, assetState, createTextAsset, readTextAsset, resolveAsset, updateTextAsset } from '../assets/AssetDatabase'
 import { finiteNumber } from '../world/geometry'
+import { parseRhai, walkRhai } from '../visual/rhaiSyntax'
+import { decodeRhaiString } from '../visual/rhaiSyntaxLexer'
 
 export type TextDirection = 'ltr' | 'rtl'
 export type PseudolocalizationMode = 'accented' | 'expanded' | 'bidi'
@@ -45,10 +47,12 @@ export const localizationSettings = reactive<LocalizationProjectSettings>({
 const RTL_PREFIXES = new Set(['ar', 'fa', 'he', 'ur'])
 const MAX_TABLE_ENTRIES = 20_000
 const MAX_FALLBACKS = 16
+const extractionDiagnostics = new WeakMap<LocalizationExtraction[], LocalizationDiagnostic[]>()
 
 function cleanLocale(value: unknown, fallback = 'en'): string {
   const locale = String(value ?? '').trim().replace(/_/g, '-').slice(0, 35)
-  return /^[A-Za-z]{2,3}(?:-[A-Za-z0-9]{2,8})*$/.test(locale) ? locale : fallback
+  if (!/^[A-Za-z]{2,3}(?:-[A-Za-z0-9]{2,8})*$/.test(locale)) return fallback
+  try { return Intl.getCanonicalLocales(locale)[0] ?? fallback } catch { return fallback }
 }
 
 function cleanReference(value: unknown): string | null {
@@ -58,7 +62,7 @@ function cleanReference(value: unknown): string | null {
 function cleanValue(value: unknown): LocalizationValue | null {
   if (typeof value === 'string') return value.slice(0, 100_000)
   if (!value || typeof value !== 'object' || Array.isArray(value)) return null
-  const variants: Record<string, string> = {}
+  const variants: Record<string, string> = Object.create(null)
   for (const [key, text] of Object.entries(value).slice(0, 32)) if (typeof text === 'string') variants[key.slice(0, 40)] = text.slice(0, 100_000)
   return Object.keys(variants).length ? variants : null
 }
@@ -80,8 +84,8 @@ export function defaultLocalizationTable(locale = 'en'): LocalizationTable {
 export function normalizeLocalizationTable(source: unknown, localeHint = 'en'): LocalizationTable {
   const item = source && typeof source === 'object' ? source as Partial<LocalizationTable> : {}
   const locale = cleanLocale(item.locale, cleanLocale(localeHint))
-  const entries: Record<string, LocalizationValue> = {}
-  const contexts: Record<string, string> = {}
+  const entries: Record<string, LocalizationValue> = Object.create(null)
+  const contexts: Record<string, string> = Object.create(null)
   if (item.entries && typeof item.entries === 'object' && !Array.isArray(item.entries)) {
     for (const [key, raw] of Object.entries(item.entries).slice(0, MAX_TABLE_ENTRIES)) {
       const clean = cleanValue(raw)
@@ -121,16 +125,34 @@ export function readLocalizationTable(reference: string | null | undefined): Loc
   }
 }
 
+export function validateLocalizationDocument(table: LocalizationTable): string[] {
+  const errors: string[] = []
+  if (!table || typeof table !== 'object' || !table.entries || typeof table.entries !== 'object' || Array.isArray(table.entries)) return ['Localization document requires an entries object.']
+  if (Object.keys(table.entries).length > MAX_TABLE_ENTRIES || JSON.stringify(table).length > 8 * 1024 * 1024) errors.push('Localization document exceeds 20,000 entries or 16 MiB of UTF-16 content.')
+  if (cleanLocale(table.locale, '') !== table.locale || table.fallbackLocale && cleanLocale(table.fallbackLocale, '') !== table.fallbackLocale) errors.push('Locale must be a canonical BCP-47 locale such as en, de or zh-CN.')
+  for (const [key, value] of Object.entries(table.entries)) {
+    if (!key.trim() || key.trim() !== key || key.length > 240) errors.push(`Localization key would be altered: ${key.slice(0, 80)}`)
+    if (typeof value === 'string') { if (value.length > 100_000) errors.push(`Translation exceeds 100,000 UTF-16 units: ${key}`) }
+    else if (!value || Array.isArray(value) || typeof value !== 'object' || Object.keys(value).length > 32 || !Object.prototype.hasOwnProperty.call(value, 'other') || Object.entries(value).some(([name, text]) => name.length > 40 || typeof text !== 'string' || text.length > 100_000)) errors.push(`Plural/select entry requires up to 32 string variants including other: ${key}`)
+    if (errors.length >= 64) break
+  }
+  return errors
+}
 export function writeLocalizationTable(reference: string, table: LocalizationTable): boolean {
   const asset = resolveAsset(reference)
   if (!asset || asset.assetType !== 'localization') return false
+  const errors = validateLocalizationDocument(table); if (errors.length) throw new Error(errors.join('\n'))
+  if (assetState.records.some(candidate => candidate.uuid !== asset.uuid && candidate.assetType === 'localization' && readLocalizationTable(candidate.uuid)?.locale.toLowerCase() === table.locale.toLowerCase())) throw new Error(`A localization table already owns ${table.locale}; merge translations into that table instead.`)
   const normalized = normalizeLocalizationTable(table, asset.settings.localizationSettings.locale)
+  if (!updateTextAsset(asset.uuid, JSON.stringify(normalized, null, 2))) return false
   asset.settings.localizationSettings.locale = normalized.locale
   asset.settings.localizationSettings.fallbackLocale = normalized.fallbackLocale
-  return updateTextAsset(asset.uuid, JSON.stringify(normalized, null, 2))
+  return true
 }
 
 export function createLocalizationTable(locale: string): string {
+  const canonical = cleanLocale(locale, ''); if (!canonical) throw new Error('Enter a valid BCP-47 locale such as en, de or zh-CN.')
+  if (assetState.records.some(candidate => candidate.assetType === 'localization' && readLocalizationTable(candidate.uuid)?.locale.toLowerCase() === canonical.toLowerCase())) throw new Error(`A localization table already owns ${canonical}; edit that table instead.`)
   const table = defaultLocalizationTable(locale)
   const asset = createTextAsset(`${table.locale}.nova-locale`, 'localization', JSON.stringify(table, null, 2), 'Assets/Localization')
   asset.settings.localizationSettings.locale = table.locale
@@ -164,13 +186,29 @@ export function serializeLocalizationSettings(): LocalizationProjectSettings {
   return normalizeLocalizationSettings(localizationSettings)
 }
 
+let localeGeneration = -1
+let cachedLocaleTables: LocalizationTable[] = []
 function localeTables(): LocalizationTable[] {
-  void assetState.generation
-  return assetState.records.flatMap(asset => {
-    if (asset.assetType !== 'localization') return []
-    const table = readLocalizationTable(asset.uuid)
-    return table ? [table] : []
-  })
+  if (localeGeneration !== assetState.generation) {
+    const records = assetState.records.filter(asset => asset.assetType === 'localization')
+    let bytes = 0
+    cachedLocaleTables = records.slice(0, 256).flatMap(asset => { const source = readTextAsset(asset.uuid); if (source === null || (bytes += source.length * 2) > 16 * 1024 * 1024) return []; const table = readLocalizationTable(asset.uuid); return table ? [table] : [] })
+    localeGeneration = assetState.generation
+  }
+  return cachedLocaleTables
+}
+export function localizationFallbackLocales(requested = localizationSettings.previewLocale): string[] {
+  const tables = localeTables(), result: string[] = [], seen = new Set<string>()
+  const visit = (locale: string) => {
+    if (!locale || seen.has(locale.toLowerCase()) || result.length >= 64) return
+    seen.add(locale.toLowerCase()); result.push(locale)
+    const table = tables.find(item => item.locale.toLowerCase() === locale.toLowerCase())
+    if (table?.fallbackLocale) visit(table.fallbackLocale)
+    const language = locale.split('-')[0]; if (language !== locale) visit(language)
+  }
+  visit(requested)
+  for (const locale of [...localizationSettings.fallbackChain, localizationSettings.sourceLocale]) visit(locale)
+  return result
 }
 
 function variant(value: LocalizationValue, variables: Record<string, LocalizationVariable>, locale: string): string {
@@ -179,7 +217,8 @@ function variant(value: LocalizationValue, variables: Record<string, Localizatio
   if (selection && value[selection] !== undefined) return value[selection]
   const count = finiteNumber(variables.count, Number.NaN)
   if (Number.isFinite(count)) {
-    const category = new Intl.PluralRules(locale).select(count)
+    let category: Intl.LDMLPluralRule = 'other'
+    try { category = new Intl.PluralRules(locale).select(count) } catch { /* Invalid author locale uses the explicit other variant. */ }
     if (value[`=${count}`] !== undefined) return value[`=${count}`]
     if (value[category] !== undefined) return value[category]
   }
@@ -220,28 +259,36 @@ export function pseudolocalize(text: string, mode: PseudolocalizationMode = loca
   return `［${accented}${padding}］`
 }
 
-export function localize(key: string, variables: Record<string, LocalizationVariable> = {}, fallback = ''): string {
-  if (!key) return fallback
+export function localize(key: string, variables: Record<string, LocalizationVariable> = {}, fallback = '', requested = localizationSettings.previewLocale): string {
   const tables = localeTables()
-  const requested = localizationSettings.previewLocale
-  const requestedTable = tables.find(table => table.locale.toLowerCase() === requested.toLowerCase())
-  const chain = [requestedTable?.locale, requestedTable?.fallbackLocale, ...localizationSettings.fallbackChain, localizationSettings.sourceLocale]
-    .filter((locale): locale is string => Boolean(locale))
-  let value: LocalizationValue | undefined
-  let locale = requested
-  for (const candidate of chain) {
+  let value: LocalizationValue | undefined, locale = requested
+  for (const candidate of localizationFallbackLocales(requested)) {
     const table = tables.find(item => item.locale.toLowerCase() === candidate.toLowerCase())
-    if (table?.entries[key] !== undefined) { value = table.entries[key]; locale = table.locale; break }
+    if (key && table?.entries[key] !== undefined) { value = table.entries[key]; locale = table.locale; break }
   }
   const formatted = formatVariables(value === undefined ? fallback || key : variant(value, variables, locale), variables, locale)
   return localizationSettings.pseudolocalization ? pseudolocalize(formatted) : formatted
 }
 
+/** Legacy starter UI uses whole-label {key} shorthand; literal prose and variables remain untouched. */
+export function localizeUiLabel(value: string, locale = localizationSettings.previewLocale): string { const key = /^\{([A-Za-z0-9_.-]+)\}$/.exec(value)?.[1]; return key ? localize(key, {}, value, locale) : value }
+
 function csvCell(value: string): string { return /[",\r\n]/.test(value) ? `"${value.replace(/"/g, '""')}"` : value }
 function parseCsv(source: string): string[][] {
-  const rows: string[][] = []; let row: string[] = [], cell = '', quoted = false
-  for (let index = 0; index < source.length; index++) { const character = source[index]; if (quoted) { if (character === '"' && source[index + 1] === '"') { cell += '"'; index++ } else if (character === '"') quoted = false; else cell += character } else if (character === '"') quoted = true; else if (character === ',') { row.push(cell); cell = '' } else if (character === '\n') { row.push(cell.replace(/\r$/, '')); rows.push(row); row = []; cell = '' } else cell += character }
-  if (cell || row.length) { row.push(cell.replace(/\r$/, '')); rows.push(row) }
+  if (source.length > 8 * 1024 * 1024) throw new Error('Localization CSV exceeds 16 MiB of UTF-16 content.')
+  const rows: string[][] = []; let row: string[] = [], cell = '', quoted = false, closed = false
+  const field = () => { row.push(cell); cell = ''; closed = false }
+  for (let index = 0; index < source.length; index++) {
+    const character = source[index]
+    if (quoted) { if (character === '"' && source[index + 1] === '"') { cell += '"'; index++ } else if (character === '"') { quoted = false; closed = true } else cell += character; continue }
+    if (character === ',') field()
+    else if (character === '\n' || character === '\r') { if (character === '\r' && source[index + 1] === '\n') index++; field(); rows.push(row); row = []; if (rows.length > MAX_TABLE_ENTRIES + 1) throw new Error('Localization CSV exceeds 20,000 entries.') }
+    else if (character === '"' && !cell && !closed) quoted = true
+    else if (character === '"' || closed) throw new Error(`Malformed localization CSV near UTF-16 offset ${index}.`)
+    else cell += character
+  }
+  if (quoted) throw new Error('Localization CSV contains an unterminated quoted field.')
+  if (cell || row.length || closed) { field(); rows.push(row) }
   return rows
 }
 
@@ -255,37 +302,52 @@ export function importLocalizationCsv(source: string, locale = 'en', base?: Loca
   const header = rows.shift()?.map(value => value.trim().toLowerCase()) ?? [], keyIndex = header.indexOf('key'), valueIndex = header.indexOf('value'), contextIndex = header.indexOf('context')
   if (keyIndex < 0 || valueIndex < 0) throw new Error('Localization CSV requires key and value columns.')
   for (const row of rows.slice(0, MAX_TABLE_ENTRIES)) { const key = String(row[keyIndex] ?? '').trim().slice(0, 240), raw = String(row[valueIndex] ?? ''); if (!key) continue; try { const parsed = JSON.parse(raw) as unknown; table.entries[key] = parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed as Record<string, string> : raw } catch { table.entries[key] = raw }; const context = String(row[contextIndex] ?? '').trim(); if (context) table.contexts[key] = context.slice(0, 2_000) }
+  const errors = validateLocalizationDocument(table); if (errors.length) throw new Error(errors.join('\n'))
   return normalizeLocalizationTable(table, locale)
 }
 
-function poQuote(value: string): string { return `"${value.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\r/g, '\\r').replace(/\n/g, '\\n')}"` }
-function poUnquote(value: string): string { try { return JSON.parse(value.trim()) as string } catch { return '' } }
+function poQuote(value: string): string { return JSON.stringify(value) }
+function poUnquote(value: string): string { try { const parsed = JSON.parse(value.trim()) as unknown; if (typeof parsed === 'string') return parsed } catch { /* Report malformed import, never replace existing translations with empty strings. */ }; throw new Error('Malformed quoted localization PO string.') }
 
 export function exportLocalizationPo(table: LocalizationTable): string {
   const normalized = normalizeLocalizationTable(table)
   const header = `msgid ""\nmsgstr ""\n"Language: ${normalized.locale}\\n"\n"Content-Type: text/plain; charset=UTF-8\\n"\n`
   const rows = Object.keys(normalized.entries).sort().map(key => {
     const raw = normalized.entries[key], context = normalized.contexts[key], value = typeof raw === 'string' ? raw : raw.other ?? Object.values(raw)[0] ?? ''
-    return `${context ? `#. ${context.replace(/[\r\n]+/g, ' ').slice(0, 2_000)}\n` : ''}msgctxt ${poQuote(key)}\nmsgid ${poQuote(key)}\nmsgstr ${poQuote(value)}\n`
+    return `${typeof raw !== 'string' ? `#. nova-variants ${JSON.stringify(raw)}\n` : ''}${context ? `#. ${context.replace(/[\r\n]+/g, ' ').slice(0, 2_000)}\n` : ''}msgctxt ${poQuote(key)}\nmsgid ${poQuote(key)}\nmsgstr ${poQuote(value)}\n`
   })
   return `${header}\n${rows.join('\n')}`
 }
 
 export function importLocalizationPo(source: string, locale = 'en', base?: LocalizationTable): LocalizationTable {
-  if (source.length > 20_000_000) throw new Error('Localization PO file is too large.')
-  const table = normalizeLocalizationTable(base ?? defaultLocalizationTable(locale), locale), blocks = source.split(/\r?\n\s*\r?\n/).slice(0, MAX_TABLE_ENTRIES + 1)
-  for (const block of blocks) {
-    const context = block.match(/^msgctxt\s+(".*")$/m), id = block.match(/^msgid\s+(".*")$/m), value = block.match(/^msgstr\s+(".*")$/m)
-    const key = poUnquote(context?.[1] ?? id?.[1] ?? '').trim().slice(0, 240)
-    if (!key || !value) continue
-    table.entries[key] = poUnquote(value[1]).slice(0, 100_000)
-    const comment = block.match(/^#\.\s*(.*)$/m)?.[1]?.trim(); if (comment) table.contexts[key] = comment.slice(0, 2_000)
+  if (source.length > 8 * 1024 * 1024) throw new Error('Localization PO exceeds 16 MiB of UTF-16 content.')
+  const table = normalizeLocalizationTable(base ?? defaultLocalizationTable(locale), locale)
+  let fields: Record<string, string> = Object.create(null), current = '', comments: string[] = [], variants: Record<string, string> | null = null, entries = 0
+  const finish = () => {
+    if (!Object.keys(fields).length) { comments = []; variants = null; return }
+    if (!Object.prototype.hasOwnProperty.call(fields, 'msgid') || !Object.prototype.hasOwnProperty.call(fields, 'msgstr')) throw new Error('PO entry requires msgid and msgstr; indexed gettext plurals need CSV or Nova variant metadata.')
+    const key = fields.msgctxt || fields.msgid
+    if (key) { if (++entries > MAX_TABLE_ENTRIES) throw new Error('Localization PO exceeds 20,000 entries.'); table.entries[key] = variants ? { ...variants, other: fields.msgstr } : fields.msgstr; if (comments.length) table.contexts[key] = comments.join('\n') }
+    fields = Object.create(null); current = ''; comments = []; variants = null
   }
+  for (const [index, line] of source.replace(/\r\n?/g, '\n').split('\n').entries()) {
+    const value = line.trim()
+    if (!value) { finish(); continue }
+    if (value.startsWith('#. nova-variants ')) { const parsed = JSON.parse(value.slice(17)) as unknown; if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) throw new Error('Invalid Nova PO variant metadata.'); variants = parsed as Record<string, string>; continue }
+    if (value.startsWith('#.')) { comments.push(value.slice(2).trim()); continue }
+    if (value.startsWith('#')) continue
+    const field = value.match(/^(msgctxt|msgid|msgstr)\s+(".*")$/)
+    if (field) { if (Object.prototype.hasOwnProperty.call(fields, field[1])) { if (field[1] === 'msgid' && Object.prototype.hasOwnProperty.call(fields, 'msgstr')) finish(); else throw new Error(`Duplicate PO field on line ${index + 1}.`) }; current = field[1]; fields[current] = poUnquote(field[2]); continue }
+    if (value.startsWith('"') && current) { fields[current] += poUnquote(value); continue }
+    throw new Error(`Unsupported or malformed PO field on line ${index + 1}; existing draft retained. Indexed gettext plurals require a lossless CSV import.`)
+  }
+  finish()
+  const errors = validateLocalizationDocument(table); if (errors.length) throw new Error(errors.join('\n'))
   return normalizeLocalizationTable(table, locale)
 }
 
 export function localizationDiagnostics(extracted: LocalizationExtraction[], tables: LocalizationTable[]): LocalizationDiagnostic[] {
-  const diagnostics: LocalizationDiagnostic[] = missingLocalizationReport(extracted, tables).map(item => ({ code: 'NOVA-LOC-MISSING', severity: 'error', key: item.key, locale: item.locale, message: `Missing ${item.key} in ${item.locale}.` }))
+  const diagnostics: LocalizationDiagnostic[] = [...(extractionDiagnostics.get(extracted) ?? []), ...missingLocalizationReport(extracted, tables).map((item): LocalizationDiagnostic => ({ code: 'NOVA-LOC-MISSING', severity: 'error', key: item.key, locale: item.locale, message: `Missing ${item.key} in ${item.locale}.` }))]
   for (const table of tables) {
     for (const [key, value] of Object.entries(table.entries)) {
       if (!/^[A-Za-z0-9][A-Za-z0-9_.-]{0,239}$/.test(key)) diagnostics.push({ code: 'NOVA-LOC-KEY', severity: 'warning', key, locale: table.locale, message: 'Localization key is not stable identifier syntax.' })
@@ -302,33 +364,48 @@ export function localizationDiagnostics(extracted: LocalizationExtraction[], tab
 
 /** Extracts structured localization keys from serialized UI components and Rhai calls. */
 export function extractLocalizationKeys(project: unknown, scripts: Array<{ path: string; source: string }> = []): LocalizationExtraction[] {
-  const found = new Map<string, LocalizationExtraction>()
-  const visit = (value: unknown, path: string): void => { if (Array.isArray(value)) value.forEach((item, index) => visit(item, `${path}[${index}]`)); else if (value && typeof value === 'object') for (const [key, child] of Object.entries(value)) { if (key === 'localizationKey' && typeof child === 'string' && child.trim()) found.set(child.trim(), { key: child.trim(), context: 'UI component', source: path }); visit(child, `${path}.${key}`) } }
-  visit(project, 'project')
-  const pattern = /(?:localize|tr)\(\s*["']([^"']+)["']/g
-  for (const script of scripts) for (const match of script.source.matchAll(pattern)) if (match[1]) found.set(match[1], { key: match[1], context: 'Script call', source: `${script.path}:${script.source.slice(0, match.index).split('\n').length}` })
-  return [...found.values()].sort((a, b) => a.key.localeCompare(b.key))
+  const found = new Map<string, LocalizationExtraction>(), seen = new WeakSet<object>(), stack: Array<{ value: unknown; path: string; depth: number }> = [{ value: project, path: 'project', depth: 0 }]
+  let remaining = 100_000, limited = scripts.length > 512
+  while (stack.length && remaining-- > 0) {
+    const { value, path, depth } = stack.pop()!
+    if (depth > 64) { limited = true; continue }
+    if (!value || typeof value !== 'object' || seen.has(value)) continue
+    seen.add(value)
+    const entries: Array<[string, unknown]> = value instanceof Map ? [...value.entries()].map(([key, child]) => [String(key), child]) : Object.entries(value)
+    if (entries.length > 20_000) limited = true
+    for (const [key, child] of entries.slice(0, 20_000)) { if (key === 'localizationKey' && typeof child === 'string' && child.trim()) found.set(child.trim(), { key: child.trim(), context: 'UI component', source: path }); if (child && typeof child === 'object') stack.push({ value: child, path: `${path}.${key}`, depth: depth + 1 }) }
+  }
+  if (stack.length) limited = true
+  let sourceBudget = 4 * 1024 * 1024
+  for (const script of scripts.slice(0, 512)) {
+    if ((sourceBudget -= script.source.length) < 0) { limited = true; break }
+    const program = parseRhai(script.source, { moduleMode: 'host' })
+    for (const node of walkRhai(program)) if (node.kind === 'Call' && node.callee.kind === 'Identifier' && ['localize', 'tr'].includes(node.callee.name)) {
+      const literal = node.arguments[0]
+      if (literal?.kind !== 'Literal' || literal.literalKind !== 'string') continue
+      try { const key = decodeRhaiString(literal.raw); if (key) found.set(key, { key, context: 'Script call', source: `${script.path}:${literal.span.line}` }) } catch { /* Invalid source remains diagnosed by the shared language model. */ }
+    }
+  }
+  const result = [...found.values()].sort((a, b) => a.key.localeCompare(b.key))
+  if (limited) extractionDiagnostics.set(result, [{ code: 'NOVA-LOC-EXTRACTION-LIMIT', severity: 'warning', key: '', locale: '', message: 'Key extraction is incomplete: maximum64 ancestry,100,000 objects,20,000 fields/object,512 scripts or4 Mi UTF-16 script units reached. Split the input and audit each part.' }])
+  return result
 }
 
 export function missingLocalizationReport(extracted: LocalizationExtraction[], tables: LocalizationTable[]): MissingLocalizationEntry[] {
   return extracted.flatMap(item => tables.flatMap(table => table.entries[item.key] === undefined ? [{ key: item.key, locale: table.locale, source: item.source, context: item.context }] : [])).sort((a, b) => a.key.localeCompare(b.key) || a.locale.localeCompare(b.locale))
 }
 
-export function activeTextDirection(): TextDirection {
-  const table = localeTables().find(item => item.locale.toLowerCase() === localizationSettings.previewLocale.toLowerCase())
-  return table?.direction ?? (RTL_PREFIXES.has(localizationSettings.previewLocale.split('-')[0].toLowerCase()) ? 'rtl' : 'ltr')
+export function activeTextDirection(locale = localizationSettings.previewLocale): TextDirection {
+  const table = localeTables().find(item => item.locale.toLowerCase() === locale.toLowerCase())
+  return table?.direction ?? (RTL_PREFIXES.has(locale.split('-')[0].toLowerCase()) ? 'rtl' : 'ltr')
 }
 
-export function activeFontFallbackFamilies(): string[] {
-  const table = localeTables().find(item => item.locale.toLowerCase() === localizationSettings.previewLocale.toLowerCase())
-  return (table?.fontFallbacks ?? []).flatMap(reference => {
-    const asset = resolveAsset(reference)
-    return asset?.assetType === 'font' && asset.fontFamily ? [asset.fontFamily] : []
-  }).slice(0, MAX_FALLBACKS)
+export function activeFontFallbackFamilies(locale = localizationSettings.previewLocale): string[] {
+  const tables = localeTables()
+  return [...new Set(localizationFallbackLocales(locale).flatMap(candidate => tables.find(table => table.locale.toLowerCase() === candidate.toLowerCase())?.fontFallbacks ?? []).flatMap(reference => { const asset = resolveAsset(reference); return asset?.assetType === 'font' && asset.fontFamily ? [asset.fontFamily] : [] }))].slice(0, MAX_FALLBACKS)
 }
 
 export function selectedLocalizationAssetUuids(): Set<string> {
-  const selected = new Set(localizationSettings.buildLocales.map(locale => locale.toLowerCase()))
-  selected.add(localizationSettings.sourceLocale.toLowerCase())
+  const selected = new Set([...localizationSettings.buildLocales, localizationSettings.sourceLocale].flatMap(locale => localizationFallbackLocales(locale)).map(locale => locale.toLowerCase()))
   return new Set(assetState.records.flatMap(asset => asset.assetType === 'localization' && selected.has(asset.settings.localizationSettings.locale.toLowerCase()) ? [asset.uuid] : []))
 }

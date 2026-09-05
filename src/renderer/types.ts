@@ -16,6 +16,8 @@ export interface TextureRegion {
   uv: { x: number; y: number; width: number; height: number }
   filter: TextureFilter
   colorSpace?: 'sRGB' | 'Linear'
+  /** Changes whenever published pixels change, even at the same source identity and size. */
+  revision?: string | number
 }
 
 export interface FrameOptions {
@@ -108,6 +110,9 @@ export interface RendererStats {
   textureEvictions: number
   textureBudgetBytes: number
   textureBudgetExceeded: boolean
+  textureUploadQueue?: number
+  textureUploadQueueBytes?: number
+  textureUploadDeferrals?: number
   streamingMisses: number
   shaderCompiles: number
   shaderFallbacks: number
@@ -120,6 +125,8 @@ export interface Renderer2D {
   resize(width: number, height: number, pixelRatio: number): void
   beginFrame(options: FrameOptions): void
   beginCamera(camera: CameraRenderView): void
+  /** Optional GPU preparation; CPU decoding is requested by the scene renderer. */
+  preloadTexture?(texture: TextureRegion): void
   submitSprite(command: SpriteRenderCommand): void
   submitShape(command: ShapeRenderCommand): void
   submitText(command: TextRenderCommand): void

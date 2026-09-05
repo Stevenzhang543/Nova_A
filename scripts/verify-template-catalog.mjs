@@ -28,8 +28,8 @@ try {
   const [templates, projectData, language, builds, browserTemplates, novaPak, accessibility, components, boxEntities] = await Promise.all(['templates', 'projectData', 'language', 'buildSettings', 'exportTemplates', 'novaPak', 'accessibility', 'components', 'boxEntity'].map(load))
   const ids = templates.PROJECT_TEMPLATES.map(template => template.id)
   const categoryCounts = Object.fromEntries(templates.PROJECT_TEMPLATE_CATEGORIES.map(category => [category, templates.PROJECT_TEMPLATES.filter(template => template.category === category).length]))
-  check('CATALOG-CATEGORIES', templates.PROJECT_TEMPLATE_CATEGORIES.join(',') === 'scene,test,game' && categoryCounts.scene === 7 && categoryCounts.test === 7 && categoryCounts.game === 6, 'The launcher exposes 20 templates across clear Scene, Test and Gameplay categories.', { categoryCounts })
-  check('CATALOG-IDENTITY', new Set(ids).size === ids.length && ids.length === 20, 'Every launcher template has one stable, unique ID.', { ids })
+  check('CATALOG-CATEGORIES', templates.PROJECT_TEMPLATE_CATEGORIES.join(',') === 'scene,test,game' && categoryCounts.scene >= 7 && categoryCounts.test >= 7 && categoryCounts.game >= 6, 'The launcher preserves at least the original 20 templates across Scene, Test and Gameplay categories.', { categoryCounts })
+  check('CATALOG-IDENTITY', new Set(ids).size === ids.length && ids.length >= 20, 'Every launcher template has one stable, unique ID; additive releases may extend the catalog.', { ids })
   check('CATALOG-DISCOVERY-METADATA', templates.PROJECT_TEMPLATES.every(template => ['beginner','intermediate','advanced'].includes(template.difficulty) && Number.isFinite(template.setupMinutes) && template.setupMinutes > 0 && Array.isArray(template.tags) && template.tags.length >= 2), 'Every template has searchable tags, a difficulty, and an honest setup-time estimate.')
   const browserRegistry = browserTemplates.exportTemplateState.templates.map(template => ({ id: template.id, target: template.target, architectures: [...template.architectures].sort(), runtimeModes: [...template.runtimeModes].sort() })).sort((a, b) => a.id.localeCompare(b.id))
   const cliRegistry = REGISTERED_EXPORT_TEMPLATES.map(template => ({ id: template.id, target: template.target, architectures: [...template.architectures].sort(), runtimeModes: [...template.runtimeModes].sort() })).sort((a, b) => a.id.localeCompare(b.id))
@@ -83,7 +83,7 @@ try {
       templateFailures.push({ template: descriptor.id, failures: [error instanceof Error ? error.message : String(error)] })
     }
   }
-  check('CATALOG-FACTORIES', projects.size === 20 && templateFailures.length === 0, 'Every template factory completes and passes its template-specific structural audit, including verified variants.', { templateFailures })
+  check('CATALOG-FACTORIES', projects.size === ids.length && templateFailures.length === 0, 'Every registered template factory completes and passes its template-specific structural audit, including verified variants.', { templateFailures })
   check('CATALOG-SCHEMA', schemaFailures.length === 0, 'Every generated template passes the same full project validator used by Create Project.', { schemaFailures })
   check('CATALOG-SCRIPTS-STATIC', scriptFailures.length === 0, 'Every authored template script passes the API-v2 static analyzer.', { scriptFailures })
   check('CATALOG-BUILD-DEFAULTS', buildFailures.length === 0, 'Every untouched template resolves to a registered Windows x64 export template with no blocking errors or warnings.', { buildFailures })

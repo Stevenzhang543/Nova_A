@@ -5,12 +5,14 @@ import type { ComponentKind, ProgressBar, Slider, Checkbox, Text as UIText, Text
 import { STABLE_COMPONENT_KINDS } from '../world/componentRegistry'
 import { finiteNumber, normalizeEntity } from '../world/geometry'
 import { setWorldTransform, worldTransform } from '../world/hierarchy'
-import { acquirePooled } from './objectPool'
+import { acquirePooled, hasObjectPool } from './objectPool'
 import { instantiatePrefab } from './prefabs'
 import { initializeGameplayEntities } from './gameplayComponents'
+import { entityLifetimeActive, entityLifetimeGeneration } from './entityLifetimes'
 
 export interface RuntimeEntityHandle { id: string; generation: number }
-export interface RuntimeEntitySnapshot { uuid: string; name: string; enabled: boolean; tags: string[]; groups: string[]; components: string[]; position: [number, number] }
+export interface RuntimeEntitySnapshot { uuid: string; generation: number; name: string; enabled: boolean; tags: string[]; groups: string[]; components: string[]; position: [number, number] }
+export interface PendingEntityResolution { uuid: string; generation: number }
 export interface SpawnTransform { position: { x: number; y: number }; rotation: number; scale: { x: number; y: number } }
 
 export type TargetMutation =
@@ -31,9 +33,9 @@ export function runtimeHandleGeneration(id: string): number {
 }
 
 export function runtimeSceneEntitySnapshots(entities: readonly Entity[]): RuntimeEntitySnapshot[] {
-  return entities.slice(0, 100_000).map(entity => {
+  return entities.filter(entityLifetimeActive).slice(0, 100_000).map(entity => {
     const position = worldTransform(entity, entities).position
-    return { uuid: entity.uuid, name: entity.name, enabled: entity.enabled, tags: [...entity.tags], groups: [...entity.groups], components: entity.components.map(component => component.kind), position: [position.x, position.y] }
+    return { uuid: entity.uuid, generation: entityLifetimeGeneration(entity), name: entity.name, enabled: entity.enabled, tags: [...entity.tags], groups: [...entity.groups], components: entity.components.map(component => component.kind), position: [position.x, position.y] }
   })
 }
 
@@ -42,6 +44,7 @@ export function spawnRuntimePrefab(reference: string, transform: SpawnTransform,
   if (!clean) return null
   const position = { x: finiteNumber(transform.position.x), y: finiteNumber(transform.position.y) }
   const pooled = acquirePooled(clean, position)
+  if (!pooled && hasObjectPool(clean)) { addEditorLog(`Object pool capacity unavailable for ${clean}; spawn was refused.`, 'Runtime', 'warning'); return null }
   const values = pooled ?? instantiatePrefab(clean, position, false, invalidateRuntime)
   if (!values.length) return null
   const roots = values.filter(entity => !entity.parentUuid || !values.some(candidate => candidate.uuid === entity.parentUuid))
@@ -64,15 +67,15 @@ export function spawnRuntimePrefab(reference: string, transform: SpawnTransform,
   return root
 }
 
-export function resolveRuntimeHandle(handle: RuntimeEntityHandle, pending: ReadonlyMap<string, string>): Entity | null {
-  const resolved = pending.get(handle.id) ?? handle.id
-  if (!resolved || runtimeHandleGeneration(handle.id) !== (Math.round(handle.generation) >>> 0)) {
+export function resolveRuntimeHandle(handle: RuntimeEntityHandle, pending: ReadonlyMap<string, PendingEntityResolution>): Entity | null {
+  const resolution = pending.get(handle.id), resolved = resolution?.uuid ?? handle.id
+  const entity = physicsState.world.entities.find(candidate => candidate.uuid === resolved)
+  const generation = resolution ? runtimeHandleGeneration(handle.id) : entity ? entityLifetimeGeneration(entity) : 0
+  if (!entity || !entityLifetimeActive(entity) || generation !== (Math.round(handle.generation) >>> 0) || resolution && resolution.generation !== entityLifetimeGeneration(entity)) {
     addEditorLog(`Stale entity handle rejected: ${handle.id || '<empty>'}`, 'Runtime', 'error')
     return null
   }
-  const entity = physicsState.world.entities.find(candidate => candidate.uuid === resolved)
-  if (!entity) addEditorLog(`Stale entity handle rejected: ${handle.id}`, 'Runtime', 'error')
-  return entity ?? null
+  return entity
 }
 
 function cleanMember(value: string): string { return value.trim().slice(0, 80) }

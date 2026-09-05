@@ -1,4 +1,7 @@
 import { reactive } from 'vue'
+import { assetState, textureContentRevision } from '../assets/AssetDatabase'
+import { isTiledMapAsset, resolveTiledMapAsset } from '../assets/tiledMapAssets'
+import { BoundedImportCache, registerImportSessionCleanup } from '../assets/importRetention'
 import {
   assetReference,
   createTextAsset,
@@ -30,7 +33,7 @@ export interface TileDefinition {
   prefabAsset: string | null
   sourceId: string
   region: { x: number; y: number; width: number; height: number } | null
-  animation: { frames: number[]; framesPerSecond: number; mode: 'Loop' | 'PingPong' | 'Once' } | null
+  animation: { frames: number[]; durations?: number[]; framesPerSecond: number; mode: 'Loop' | 'PingPong' | 'Once' } | null
   variants: Array<{ tile: number; weight: number }>
 }
 
@@ -157,19 +160,29 @@ export function normalizeTileSet(source: unknown): TileSetDocument {
         prefabAsset: typeof raw?.prefabAsset === 'string' ? raw.prefabAsset : null,
         sourceId: typeof raw?.sourceId === 'string' && sources.some(source => source.id === raw.sourceId) ? raw.sourceId : sources[0].id,
         region: rawRegion ? { x: integer(rawRegion.x, 0, 0, 1_000_000), y: integer(rawRegion.y, 0, 0, 1_000_000), width: integer(rawRegion.width, tileWidth, 1, 1_000_000), height: integer(rawRegion.height, tileHeight, 1, 1_000_000) } : null,
-        animation: animationFrames.length ? { frames: animationFrames, framesPerSecond: Math.min(240, Math.max(0.01, finiteNumber(rawAnimation?.framesPerSecond, 8))), mode: rawAnimation?.mode === 'PingPong' || rawAnimation?.mode === 'Once' ? rawAnimation.mode : 'Loop' } : null,
+        animation: animationFrames.length ? { frames: animationFrames, ...(Array.isArray(rawAnimation?.durations) && rawAnimation.durations.length === animationFrames.length && rawAnimation.durations.every(value => typeof value === 'number' && Number.isFinite(value) && value > 0 && value <= 3600) ? {durations: [...rawAnimation.durations] as number[]} : {}), framesPerSecond: Math.min(240, Math.max(0.01, finiteNumber(rawAnimation?.framesPerSecond, 8))), mode: rawAnimation?.mode === 'PingPong' || rawAnimation?.mode === 'Once' ? rawAnimation.mode : 'Loop' } : null,
         variants
       }
     })
   }
 }
 
-export function readTileSet(reference: string | null | undefined): TileSetDocument | null {
+const parsedTileSets = new BoundedImportCache<string, {asset: AssetRecord; source: string; generation: number; value: TileSetDocument | null}>(128, 64 * 1024 * 1024)
+registerImportSessionCleanup(() => parsedTileSets.clear())
+export function tileSetCacheStats() { return {entries: parsedTileSets.size, bytes: parsedTileSets.bytes, maxEntries: 128, maxBytes: 64 * 1024 * 1024} }
+function readRuntimeTileSet(reference: string | null | undefined): TileSetDocument | null {
   const asset = resolveAsset(reference)
-  const source = readTextAsset(reference)
-  if (!asset || asset.assetType !== 'tileset' || !source) return null
-  try { return normalizeTileSet(JSON.parse(source)) } catch { return null }
+  if (!asset || asset.assetType !== 'tileset') return null
+  const cached = parsedTileSets.get(asset.uuid)
+  if (cached && cached.asset === asset && cached.source === asset.source && cached.generation === assetState.generation) return cached.value
+  const source = readTextAsset(reference); if (!source) return null
+  let value: TileSetDocument | null = null
+  try { const parsed = JSON.parse(source); value = normalizeTileSet(parsed.format === 'nova-tiled-map-resource' ? resolveTiledMapAsset(asset, assetState.records).tileSet : parsed) } catch { /* Import details expose the precise dependency diagnostic. */ }
+  parsedTileSets.set(asset.uuid, {asset, source: asset.source, generation: assetState.generation, value}, source.length * 2 + (value?.tiles.length ?? 0) * 512)
+  return value
 }
+/** Editors receive detached data; unsaved Inspector edits cannot alter the renderer's cached document. */
+export function readTileSet(reference: string | null | undefined): TileSetDocument | null { const value=readRuntimeTileSet(reference);return value?JSON.parse(JSON.stringify(value)):null }
 
 export function createTileSet(texture: AssetRecord, tileWidth = 32, tileHeight = 32): AssetRecord {
   if (texture.assetType !== 'image') throw new Error('A TileSet requires an image asset')
@@ -181,7 +194,15 @@ export function createTileSet(texture: AssetRecord, tileWidth = 32, tileHeight =
   return createTextAsset(`${texture.name.replace(/\.[^.]+$/, '')} TileSet`, 'tileset', JSON.stringify(document, null, 2), 'Assets/TileSets')
 }
 
+/** Imported map documents remain source-owned. Editing starts from an explicit, independent copy. */
+export function copyEditableTileSet(reference: string): AssetRecord {
+  const owner = resolveAsset(reference), document = readTileSet(reference)
+  if (!owner || !document) throw new Error('TILESET_COPY: Resolve all source dependencies before making a copy.')
+  return createTextAsset(owner.name.replace(/\.[^.]+$/, '') + ' Editable TileSet', 'tileset', JSON.stringify(document, null, 2), 'Assets/TileSets')
+}
 export function saveTileSet(assetUuid: string, document: TileSetDocument): boolean {
+  const asset = resolveAsset(assetUuid)
+  if (!asset || asset.assetType !== 'tileset' || isTiledMapAsset(asset)) return false
   return updateTextAssetTransactional(assetUuid, `${JSON.stringify(normalizeTileSet(document), null, 2)}\n`)
 }
 
@@ -283,7 +304,7 @@ export function readTilePalette(reference: string | null): TilePaletteDocument |
 export function readTerrainRules(reference: string | null): TerrainRulesDocument | null { const value = readAssetJson(reference, 'terrainRules'); if (!value) return null; const rules: Record<string, number> = {}; if (value.rules && typeof value.rules === 'object') for (const [mask, tile] of Object.entries(value.rules as Record<string, unknown>)) rules[String(integer(mask, 0, 0, 15))] = integer(tile, -1, -1, MAX_TILESET_TILES - 1); return { version: 1, terrain: typeof value.terrain === 'string' ? value.terrain.slice(0, 80) : '', rules } }
 
 export function bakeTileMap(component: TileMap2D): { collision: number; navigation: number; occluders: number; chunks: number } {
-  normalizeTileMap(component); const set = readTileSet(component.tileSetAsset)
+  normalizeTileMap(component); const set = readRuntimeTileSet(component.tileSetAsset)
   const navigationTiles = component.layers.filter(layer => layer.navigationEnabled).flatMap(layer => layer.tiles).filter(tile => tile >= 0)
   const occlusionTiles = component.layers.filter(layer => layer.occlusionEnabled).flatMap(layer => layer.tiles).filter(tile => tile >= 0)
   return { collision: component.bakeCollision ? buildTileColliderDescriptors(component).length : 0, navigation: component.bakeNavigation && set ? navigationTiles.filter(tile => (set.tiles[tile]?.navigationCost ?? 0) > 0).length : 0, occluders: component.bakeOccluders && set ? occlusionTiles.filter(tile => set.tiles[tile]?.occluder).length : 0, chunks: Math.ceil(component.width / component.chunkSize) * Math.ceil(component.height / component.chunkSize) * component.layers.length }
@@ -339,8 +360,8 @@ export function validateTerrainRules(document: TerrainRulesDocument | null): Til
 }
 
 export function diagnoseTileMap(component: TileMap2D): TilemapDiagnostic[] {
-  normalizeTileMap(component)
-  const tileSet = readTileSet(component.tileSetAsset)
+  component = tileMapView(component)
+  const tileSet = readRuntimeTileSet(component.tileSetAsset)
   if (!tileSet) return [{ severity: 'error', code: 'missing-tile', message: 'The tilemap has no readable TileSet 2.0 asset.' }]
   const issues: TilemapDiagnostic[] = [...validateTerrainRules(readTerrainRules(tilemapEditorState.terrainRulesAsset))]
   let overdraw = 0, navigationTiles = 0, collisionTiles = 0
@@ -368,13 +389,17 @@ export function diagnoseTileMap(component: TileMap2D): TilemapDiagnostic[] {
 
 export interface RuntimeTileChunk { layerId: string; chunkX: number; chunkY: number; width: number; height: number; tiles: number[]; transforms: TileCellTransform2D[] }
 
-function ensureRuntimeTileMap(component: TileMap2D): void {
-  const cells = component.width * component.height
-  if (!Number.isInteger(component.width) || !Number.isInteger(component.height) || component.width < 1 || component.height < 1 || !component.layers.length || component.layers.some(layer => layer.tiles.length !== cells || layer.transforms.length !== cells) || component.activeLayer < 0 || component.activeLayer >= component.layers.length || component.tiles !== component.layers[component.activeLayer].tiles) normalizeTileMap(component)
+/** Read-only projection: Inspector/render queries never normalize live reactive arrays. */
+function tileMapView(component: TileMap2D): TileMap2D {
+  const cells=component.width*component.height
+  const valid=Number.isInteger(component.width)&&Number.isInteger(component.height)&&component.width>=1&&component.width<=2048&&component.height>=1&&component.height<=2048&&Array.isArray(component.layers)&&component.layers.length>0&&component.layers.length<=128&&cells*component.layers.length<=MAX_TILEMAP_CELLS&&component.layers.every(layer=>Array.isArray(layer.tiles)&&Array.isArray(layer.transforms)&&layer.tiles.length===cells&&layer.transforms.length===cells)&&Number.isInteger(component.activeLayer)&&component.activeLayer>=0&&component.activeLayer<component.layers.length&&component.tiles===component.layers[component.activeLayer].tiles&&Number.isInteger(component.chunkSize)&&component.chunkSize>=4&&component.chunkSize<=128&&Number.isFinite(component.tileSize?.x)&&component.tileSize.x>0&&Number.isFinite(component.tileSize?.y)&&component.tileSize.y>0
+  if(valid)return component
+  const view={...component} as TileMap2D;normalizeTileMap(view);return view
 }
+function ensureRuntimeTileMap(component: TileMap2D): void { if(tileMapView(component)!==component)normalizeTileMap(component) }
 
 export function readRuntimeTileChunk(component: TileMap2D, layerId: string, chunkX: number, chunkY: number): RuntimeTileChunk | null {
-  ensureRuntimeTileMap(component)
+  component = tileMapView(component)
   const layer = component.layers.find(candidate => candidate.id === layerId)
   if (!layer) return null
   const startX = Math.max(0, Math.round(chunkX) * component.chunkSize), startY = Math.max(0, Math.round(chunkY) * component.chunkSize)
@@ -404,7 +429,7 @@ export function writeRuntimeTileChunk(component: TileMap2D, chunk: RuntimeTileCh
 export function tileMetadataAt(component: TileMap2D, x: number, y: number): Record<string, boolean | number | string> {
   ensureRuntimeTileMap(component)
   if (x < 0 || y < 0 || x >= component.width || y >= component.height) return {}
-  const set = readTileSet(component.tileSetAsset), index = y * component.width + x
+  const set = readRuntimeTileSet(component.tileSetAsset), index = y * component.width + x
   return Object.assign({}, ...component.layers.filter(layer => layer.visible).map(layer => set?.tiles[layer.tiles[index]]?.metadata ?? {}))
 }
 
@@ -418,7 +443,7 @@ export function worldToTile(entity: Entity, component: TileMap2D, point: Vec2, e
 function tileIndex(component: TileMap2D, cell: { x: number; y: number }): number { return cell.y * component.width + cell.x }
 function chooseVariant(component: TileMap2D, cell: { x: number; y: number }, value: number): number {
   if (!tilemapEditorState.randomizeVariants || value < 0) return value
-  const definition = readTileSet(component.tileSetAsset)?.tiles[value]
+  const definition = readRuntimeTileSet(component.tileSetAsset)?.tiles[value]
   const choices = [{ tile: value, weight: 1 }, ...(definition?.variants ?? [])]
   const total = choices.reduce((sum, choice) => sum + choice.weight, 0)
   let sample = deterministicUnit(cell) * total
@@ -447,7 +472,7 @@ function deterministicUnit(cell: { x: number; y: number }): number {
 
 function terrainTile(component: TileMap2D, cell: { x: number; y: number }, fallback: number): number {
   const terrain = readTerrainRules(tilemapEditorState.terrainRulesAsset)
-  const tileSet = readTileSet(component.tileSetAsset)
+  const tileSet = readRuntimeTileSet(component.tileSetAsset)
   if (!terrain || !tileSet || !terrain.terrain) return fallback
   const matches = (x: number, y: number) => {
     if (x < 0 || y < 0 || x >= component.width || y >= component.height) return false
@@ -544,12 +569,12 @@ export function endTileStroke(component: TileMap2D, stroke: TileStroke, cell: { 
 }
 
 export function tileWorldCoordinate(entity: Entity, component: TileMap2D, cell: { x: number; y: number }, entities: Entity[]): Vec2 {
-  normalizeTileMap(component)
+  component = tileMapView(component)
   return localPointToWorld(entity, { x: (cell.x + .5 - component.width / 2) * component.tileSize.x, y: (component.height / 2 - cell.y - .5) * component.tileSize.y }, entities)
 }
 
 export function deterministicTileMapStorage(component: TileMap2D): string {
-  normalizeTileMap(component)
+  component = tileMapView(component)
   const runLength = (values: number[]) => { const output: Array<[number, number]> = []; for (const value of values) { const previous = output[output.length - 1]; if (previous?.[0] === value) previous[1]++; else output.push([value, 1]) } return output }
   const value = {
     format: 'nova-tilemap-source', version: 1, width: component.width, height: component.height, tileSize: { ...component.tileSize }, chunkSize: component.chunkSize,
@@ -559,7 +584,7 @@ export function deterministicTileMapStorage(component: TileMap2D): string {
 }
 
 export function tileStreamingBoundaries(component: TileMap2D): Array<{ chunkX: number; chunkY: number; left: number; top: number; right: number; bottom: number }> {
-  normalizeTileMap(component); const size = Math.max(1, component.chunkSize), output = []
+  component = tileMapView(component); const size = Math.max(1, component.chunkSize), output = []
   for (let y = 0; y < component.height; y += size) for (let x = 0; x < component.width; x += size) output.push({ chunkX: Math.floor(x / size), chunkY: Math.floor(y / size), left: x, top: y, right: Math.min(component.width, x + size), bottom: Math.min(component.height, y + size) })
   return output
 }
@@ -654,9 +679,19 @@ function markTileDirty(component: TileMap2D, x: number, y: number): void {
 }
 export function invalidateTileMap(component: TileMap2D): void { chunkCaches.delete(component) }
 
-function animationTile(definition: TileDefinition | undefined, nowSeconds: number): number | null {
+let explicitTileTime: number | null = null
+export function setTileAnimationTime(seconds: number | null): void { if(seconds!==null&&(!Number.isFinite(seconds)||seconds<0))throw new Error('TILE_TIME: Expected a finite non-negative time.');explicitTileTime=seconds }
+function tileAnimationTime(): number { return explicitTileTime ?? performance.now()/1000 }
+export function animationTile(definition: TileDefinition | undefined, nowSeconds: number): number | null {
   const animation = definition?.animation
   if (!animation?.frames.length) return definition?.index ?? null
+  if(animation.durations?.length===animation.frames.length){
+    const order=animation.mode==='PingPong'&&animation.frames.length>1?[...animation.frames.keys(),...Array.from({length:animation.frames.length-2},(_,i)=>animation.frames.length-2-i)]:[...animation.frames.keys()]
+    const total=order.reduce((sum,index)=>sum+animation.durations![index],0),time=Math.max(0,nowSeconds)
+    let cursor=animation.mode==='Once'?Math.min(total,time):time%total
+    for(const index of order){const duration=animation.durations[index];if(cursor<duration)return animation.frames[index];cursor-=duration}
+    return animation.frames[order.at(-1)!]
+  }
   const raw = Math.max(0, Math.floor(nowSeconds * animation.framesPerSecond))
   if (animation.mode === 'Once') return animation.frames[Math.min(animation.frames.length - 1, raw)]
   if (animation.mode === 'PingPong' && animation.frames.length > 1) {
@@ -677,7 +712,7 @@ function chunkCommand(entity: Entity, component: TileMap2D, layer: TileMap2D['la
     const value = layer.tiles[cellIndex]
     if (value < 0 || value >= tileSet.columns * tileSet.rows) continue
     const definition = tileSet.tiles[value]
-    const frame = animationTile(definition, performance.now() / 1_000) ?? value
+    const frame = animationTile(definition, tileAnimationTime()) ?? value
     const frameDefinition = tileSet.tiles[frame] ?? definition
     const source = tileSet.sources.find(candidate => candidate.id === frameDefinition?.sourceId) ?? tileSet.sources[0]
     const region = frameDefinition?.region ?? {
@@ -743,14 +778,14 @@ export function tileChunkCommands(
   cameraPosition?: Vec2
 ): TileChunkRenderCommand[] {
   if (!component.enabled || component.removed || !component.tileSetAsset) return []
-  normalizeTileMap(component)
-  const tileSet = readTileSet(component.tileSetAsset)
+  component = tileMapView(component)
+  const tileSet = readRuntimeTileSet(component.tileSetAsset)
   const asset = resolveAsset(component.tileSetAsset)
   if (!tileSet || !asset) return []
   const transform = worldTransform(entity, entities)
   const hasAnimation = tileSet.tiles.some(tile => tile.animation?.frames.length)
-  const animationTick = hasAnimation ? Math.floor(performance.now() / 1000 * Math.max(1, ...tileSet.tiles.map(tile => tile.animation?.framesPerSecond ?? 1))) : 0
-  const signature = [component.width, component.height, component.chunkSize, component.tileSize.x, component.tileSize.y, component.tileSetAsset, asset.sourceModified, transform.position.x, transform.position.y, transform.rotation, transform.scale.x, transform.scale.y, cameraPosition?.x ?? 0, cameraPosition?.y ?? 0, component.tint.r, component.tint.g, component.tint.b, component.opacity, component.filterMode, component.sortingLayer, component.orderInLayer, component.material, component.revision, animationTick, ...component.layers.map(layer => `${layer.id}:${layer.visible}:${layer.opacity}:${layer.blendMode}:${layer.parallax.x}:${layer.parallax.y}:${layer.zOrder}`)].join(':')
+  const animationTick = hasAnimation ? tileSet.tiles.filter(tile=>tile.animation?.frames.length).map(tile=>animationTile(tile,tileAnimationTime())).join(',') : 0
+  const signature = [assetState.generation, textureContentRevision(), component.width, component.height, component.chunkSize, component.tileSize.x, component.tileSize.y, component.tileSetAsset, asset.sourceModified, transform.position.x, transform.position.y, transform.rotation, transform.scale.x, transform.scale.y, cameraPosition?.x ?? 0, cameraPosition?.y ?? 0, component.tint.r, component.tint.g, component.tint.b, component.opacity, component.filterMode, component.sortingLayer, component.orderInLayer, component.material, component.revision, animationTick, ...component.layers.map(layer => `${layer.id}:${layer.visible}:${layer.opacity}:${layer.blendMode}:${layer.parallax.x}:${layer.parallax.y}:${layer.zOrder}`)].join(':')
   let cache = chunkCaches.get(component)
   if (!cache || cache.signature !== signature) {
     cache = { signature, chunks: new Map(), dirty: new Set() }
@@ -814,7 +849,7 @@ export function tilePlacementDescriptors(
   chunkY: number
 ): TilePlacementDescriptor[] {
   ensureRuntimeTileMap(component)
-  const tileSet = readTileSet(component.tileSetAsset)
+  const tileSet = readRuntimeTileSet(component.tileSetAsset)
   if (!tileSet) return []
   const startX = Math.max(0, Math.round(chunkX) * component.chunkSize), startY = Math.max(0, Math.round(chunkY) * component.chunkSize)
   if (startX >= component.width || startY >= component.height) return []
@@ -845,7 +880,7 @@ export function tilePlacementDescriptors(
 /** Greedily merges adjacent box tiles and horizontal one-way runs. */
 export function buildTileColliderDescriptors(component: TileMap2D): TileColliderDescriptor[] {
   if (!component.bakeCollision) return []
-  const tileSet = readTileSet(component.tileSetAsset)
+  const tileSet = readRuntimeTileSet(component.tileSetAsset)
   if (!tileSet) return []
   normalizeTileMap(component)
   const collisionLayers = component.layers.filter(layer => layer.visible && layer.collisionEnabled)

@@ -8,6 +8,7 @@ import {
   pushHistory,
   selectEntities,
   serializeEntity,
+  readEntityAuthoringData,
   type EntityBundle,
   type SceneEntityData
 } from '../store/physics'
@@ -185,15 +186,24 @@ function sourceRecord(document: PrefabDocument, sourceUuid: string | null): Scen
   return sourceUuid ? document.bundle.entities.find(record => record.uuid === sourceUuid) ?? null : null
 }
 
-export function capturePrefabOverrides(entity: Entity): Record<string, unknown> {
+function calculatePrefabOverrides(entity: Entity, snapshot: (entity: Entity) => Record<string, unknown>): Record<string, unknown> | null {
   const prefab = prefabRecord(entity.prefabAsset)
   const source = prefab ? sourceRecord(prefab.document, entity.prefabSourceUuid) : null
-  if (!source) return {}
-  const current = canonicalRecord(serializeEntity(entity) as SceneEntityData, prefabInstanceEntities(entity))
+  if (!source) return null
+  const current = canonicalRecord(snapshot(entity) as SceneEntityData, prefabInstanceEntities(entity))
   const baseline = canonicalRecord(source, [])
   const overrides: Record<string, unknown> = {}
   diffValues(baseline, current, '', overrides)
   delete overrides['']
+  return overrides
+}
+
+/** Inspector queries are pure: they neither normalize components nor write reactive overrides. */
+export function readPrefabOverrides(entity: Entity): Record<string, unknown> { return calculatePrefabOverrides(entity, readEntityAuthoringData) ?? {} }
+
+export function capturePrefabOverrides(entity: Entity): Record<string, unknown> {
+  const overrides = calculatePrefabOverrides(entity, serializeEntity)
+  if (!overrides) return {}
   entity.prefabOverrides = overrides
   return overrides
 }
@@ -347,7 +357,7 @@ export function unpackPrefabInstance(entity: Entity): boolean {
 }
 
 export function comparePrefabInstance(entity: Entity): Array<{ path: string; value: unknown }> {
-  return Object.entries(capturePrefabOverrides(entity)).sort(([left], [right]) => left.localeCompare(right)).map(([path, value]) => ({ path, value: clone(value) }))
+  return Object.entries(readPrefabOverrides(entity)).sort(([left], [right]) => left.localeCompare(right)).map(([path, value]) => ({ path, value: clone(value) }))
 }
 
 export function resetPrefabOverride(entity: Entity, path: string): boolean {
@@ -421,7 +431,7 @@ export function prefabConflictReport(entity: Entity): PrefabConflict[] {
   if (!source) output.push({ code: 'orphan-source', severity: 'error', message: 'Prefab source entity no longer exists.' })
   if (prefabBundleCreatesCycle(prefab.reference, prefab.document.bundle)) output.push({ code: 'circular-dependency', severity: 'error', message: 'Prefab dependency graph is circular.' })
   if (prefab.document.sourceChecksum !== checksum(prefab.document.bundle)) output.push({ code: 'stale-source', severity: 'warning', message: 'Prefab checksum does not match its authored bundle.' })
-  for (const [path] of Object.entries(capturePrefabOverrides(entity))) output.push({ code: 'override', severity: 'info', message: `Instance overrides ${path}.`, path })
+  for (const [path] of Object.entries(readPrefabOverrides(entity))) output.push({ code: 'override', severity: 'info', message: `Instance overrides ${path}.`, path })
   return output.sort((left, right) => left.severity.localeCompare(right.severity) || (left.path ?? '').localeCompare(right.path ?? ''))
 }
 

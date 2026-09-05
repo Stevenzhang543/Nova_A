@@ -11,6 +11,7 @@
     <UndoHistoryPanel v-if="editorState.undoHistoryOpen" />
     <ExternalChangeDialog v-if="externalChangeState.visible" />
     <EditorFeedback />
+    <ConfirmDialog />
   </template>
   <PlayerApp v-else-if="mode === 'player'" />
   <div v-else class="app-loading">Nova_A</div>
@@ -20,6 +21,7 @@
 import { defineAsyncComponent, onBeforeUnmount, onMounted, ref } from 'vue'
 import ProjectManager from './components/ProjectManager.vue'
 import EditorFeedback from './components/EditorFeedback.vue'
+import ConfirmDialog from './components/ConfirmDialog.vue'
 import { projectManagerState as projectManager } from './projects/projectManager'
 import { editorState } from './store/editor'
 import { applySafeModeRestrictions, initializeRecoverySession } from './runtime/recovery'

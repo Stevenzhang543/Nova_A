@@ -28,6 +28,7 @@ const MAX_CHANGES = 5_000
 const MAX_MERGE_DEPTH = 64
 const MAX_MERGE_NODES = 250_000
 let sourceGeneration = 0
+let lockedProjectId = ''
 
 function storedSettings(): { enabled: boolean; networkOperations: boolean; diffTool: string; mergeTool: string; diffArguments: string; mergeArguments: string } {
   if (typeof localStorage === 'undefined') return { enabled: false, networkOperations: false, diffTool: '', mergeTool: '', diffArguments: '{left} {right}', mergeArguments: '{base} {ours} {theirs} {output}' }
@@ -474,18 +475,30 @@ export function acquireProjectLock(projectId: string, owner: string, durationMin
     }
   } catch { /* A malformed expired lock is replaced safely. */ }
   const token = crypto.randomUUID(), lock: ProjectLock = { token, owner: owner.slice(0, 120), createdAt: now, expiresAt: now + Math.min(1_440, Math.max(5, durationMinutes)) * 60_000 }
-  localStorage.setItem(key, JSON.stringify(lock)); teamWorkflowState.lockToken = token; teamWorkflowState.lockExpiresAt = lock.expiresAt; teamWorkflowState.status = 'locked-by-me'
+  localStorage.setItem(key, JSON.stringify(lock))
+  if (lockedProjectId && lockStorageKey(lockedProjectId) !== key) releaseProjectLock(lockedProjectId)
+  lockedProjectId = projectId
+  teamWorkflowState.lockToken = token; teamWorkflowState.lockExpiresAt = lock.expiresAt; teamWorkflowState.status = 'locked-by-me'
   return true
 }
 
 export function releaseProjectLock(projectId: string): void {
-  if (typeof localStorage === 'undefined' || !teamWorkflowState.lockToken) return
+  if (typeof localStorage === 'undefined' || !teamWorkflowState.lockToken || !lockedProjectId) return
   const key = lockStorageKey(projectId)
+  if (key !== lockStorageKey(lockedProjectId)) return
   try {
     const lock = JSON.parse(localStorage.getItem(key) ?? 'null') as ProjectLock | null
     if (lock?.token === teamWorkflowState.lockToken) localStorage.removeItem(key)
-  } finally { teamWorkflowState.lockToken = ''; teamWorkflowState.lockExpiresAt = 0; teamWorkflowState.status = '' }
+  } catch { /* Unreadable storage cannot establish ownership; never remove it. */ }
+  finally { lockedProjectId = ''; teamWorkflowState.lockToken = ''; teamWorkflowState.lockExpiresAt = 0; teamWorkflowState.status = '' }
 }
+
+// A normal reload/close destroys this document's in-memory token. Release only
+// its exact lease first; cached pages retain their token and must keep the lease.
+// Do not persist ownership credentials in sessionStorage, which tabs can clone.
+if (typeof window !== 'undefined') window.addEventListener('pagehide', (event: PageTransitionEvent) => {
+  if (!event.persisted && lockedProjectId) releaseProjectLock(lockedProjectId)
+})
 
 export function downloadProjectLock(projectId: string, owner: string): void {
   const lock = { format: 'nova-project-lock', version: 1, projectId, owner: owner.slice(0, 120), token: teamWorkflowState.lockToken, expiresAt: new Date(teamWorkflowState.lockExpiresAt).toISOString() }

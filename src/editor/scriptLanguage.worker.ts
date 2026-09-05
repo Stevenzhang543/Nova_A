@@ -1,5 +1,5 @@
 import { analyzeScript } from './scriptLanguage'
 
-self.onmessage = (event: MessageEvent<{ id: number; source: string; apiVersion?: 1 | 2; revision?: number }>) => {
-  self.postMessage({ id: event.data.id, analysis: analyzeScript(event.data.source, event.data.apiVersion ?? 2, event.data.revision ?? 0) })
+self.onmessage = (event: MessageEvent<{ id: number; source: string; apiVersion?: 1 | 2; revision?: number; externalFunctions?: string[] }>) => {
+  self.postMessage({ id: event.data.id, analysis: analyzeScript(event.data.source, event.data.apiVersion ?? 2, event.data.revision ?? 0,event.data.externalFunctions) })
 }

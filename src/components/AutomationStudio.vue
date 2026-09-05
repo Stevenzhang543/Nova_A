@@ -3,7 +3,7 @@
     <header class="studio-header"><div><span>{{ t('automationStudio') }}</span><h2>{{ t('automationStudioTitle') }}</h2><p>{{ t('automationStudioHint') }}</p></div><span class="sandbox">{{ t('automationSandbox') }}</span></header>
     <div class="studio-grid">
       <section class="authoring card">
-        <header><strong>{{ t('automationSource') }}</strong><select v-model="template" @change="applyTemplate"><option v-for="item in templates" :key="item.id" :value="item.id">{{ t(item.label) }}</option></select></header>
+        <header><strong>{{ t('automationSource') }}</strong><select v-model="template" :aria-label="t('automationSource')" @change="applyTemplate"><option v-for="item in templates" :key="item.id" :value="item.id">{{ t(item.label) }}</option></select></header>
         <input v-model="state.origin" maxlength="120" :placeholder="t('automationName')">
         <textarea v-model="state.source" spellcheck="false" autocomplete="off" @input="invalidate"></textarea>
         <div class="permissions"><strong>{{ t('permissionReview') }}</strong><label v-for="permission in permissions" :key="permission"><input v-model="state.granted" type="checkbox" :value="permission" @change="invalidate"><span>{{ permission }}</span></label></div>

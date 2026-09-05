@@ -184,11 +184,12 @@ async function preflight(files: readonly ProjectTransactionFile[], sink: Project
     const estimate = typeof navigator !== 'undefined' ? await navigator.storage?.estimate?.() : undefined
     if (typeof estimate?.quota === 'number' && typeof estimate.usage === 'number') availableBytes = Math.max(0, estimate.quota - estimate.usage)
   } catch { messages.push('Storage quota could not be measured; the transactional write still verifies every file.') }
-  const diskSpace = availableBytes !== null && availableBytes < estimatedBytes * 2 + 1_048_576 ? 'blocked' : availableBytes === null ? 'warning' : 'passed'
+  // navigator.storage measures the browser origin, not the selected file/native/download destination.
+  const diskSpace = availableBytes !== null && availableBytes >= estimatedBytes * 2 + 1_048_576 ? 'passed' : 'warning'
   const permission = sink.writable ? 'passed' : 'blocked'
   const path = sink.destination && sink.destination.length > 240 && !sink.destination.startsWith('\\\\?\\') ? 'blocked' : 'passed'
   const result: ProjectTransactionPreflight = { estimatedBytes, availableBytes, diskSpace, permission, path, validation: 'passed', cancellation: signal?.aborted ? 'cancelled' : 'ready', messages }
-  if (diskSpace === 'blocked') messages.push(`The transaction needs ${estimatedBytes.toLocaleString()} bytes plus rollback space.`)
+  if (availableBytes !== null && diskSpace === 'warning') messages.push('Browser recovery storage may be full. The selected destination still reports its own write errors.')
   if (permission === 'blocked') messages.push('The destination is read-only or did not grant write permission.')
   if (path === 'blocked') messages.push('The selected path exceeds the portable project-path limit.')
   if (signal?.aborted) messages.push('The operation was cancelled before mutation.')
@@ -224,20 +225,24 @@ export async function commitProjectTransaction(source: string, options: CommitPr
     const checked = await preflight(files, options.sink, options.signal); projectTransactionState.preflight = checked
     if (checked.validation === 'blocked' || checked.diskSpace === 'blocked' || checked.permission === 'blocked' || checked.path === 'blocked' || checked.cancellation === 'cancelled') throw new Error(checked.messages[0] || 'Project transaction preflight failed.')
     move('prepared'); assertBoundary(options.signal, options.faultAt, 'prepared')
-    if (typeof localStorage !== 'undefined' && canonical.length <= MAX_LOCAL_COPY_BYTES) {
-      const previous = projectTransactionState.manualBaseline || options.previousSource || ''
-      localStorage.setItem(`${JOURNAL_KEY}.temporary`, canonical)
-      if (previous) localStorage.setItem(`${LAST_GOOD_KEY}.backup`, previous)
-    }
+    // Recovery storage is supplementary; a quota failure must not block or undo an external save.
+    const cacheWarning = (error: unknown): void => { appendTaskLog(task, 'Browser recovery copy unavailable: ' + (error instanceof Error ? error.message : String(error))) }
+    try {
+      if (typeof localStorage !== 'undefined' && canonical.length * 2 <= MAX_LOCAL_COPY_BYTES) {
+        const previous = projectTransactionState.manualBaseline || options.previousSource || ''
+        localStorage.setItem(`${JOURNAL_KEY}.temporary`, canonical)
+        if (previous && previous.length * 2 <= MAX_LOCAL_COPY_BYTES) localStorage.setItem(`${LAST_GOOD_KEY}.backup`, previous)
+      }
+    } catch (error) { cacheWarning(error) }
     move('writing'); assertBoundary(options.signal, options.faultAt, 'writing')
     await options.sink.write(files, journal, options.signal)
     move('verifying'); assertBoundary(options.signal, options.faultAt, 'verifying')
     if (files.find(item => item.path === 'project.nova')?.checksum !== projectChecksum(canonical)) throw new Error('The staged project checksum changed before commit.')
     move('committing'); assertBoundary(options.signal, options.faultAt, 'committing')
-    if (typeof localStorage !== 'undefined') {
-      if (canonical.length <= MAX_LOCAL_COPY_BYTES) localStorage.setItem(LAST_GOOD_KEY, canonical)
-      localStorage.removeItem(`${JOURNAL_KEY}.temporary`)
-    }
+    try {
+      if (typeof localStorage !== 'undefined' && canonical.length * 2 <= MAX_LOCAL_COPY_BYTES) localStorage.setItem(LAST_GOOD_KEY, canonical)
+    } catch (error) { cacheWarning(error) }
+    try { if (typeof localStorage !== 'undefined') localStorage.removeItem(`${JOURNAL_KEY}.temporary`) } catch (error) { cacheWarning(error) }
     journal.recoveryState = 'verified'; move('committed')
     projectTransactionState.lastCommittedId = id; projectTransactionState.lastCommittedAt = journal.updatedAt; projectTransactionState.lastManualChecksum = journal.sourceChecksum
     projectTransactionState.recent.unshift(structuredClone(journal)); projectTransactionState.recent.splice(20)

@@ -1,6 +1,6 @@
 <template>
   <Teleport to="body">
-    <section v-if="fault" class="fault-overlay" data-doc="manual/recovery" role="alertdialog" aria-modal="true" :aria-label="t('fatalErrorTitle')" @keydown.esc="dismissActiveFault">
+    <section v-if="fault" class="fault-overlay" data-doc="manual/recovery" role="alertdialog" aria-modal="true" v-modal-focus :aria-label="t('fatalErrorTitle')" @keydown.esc="dismissActiveFault">
       <article>
         <header><span>!</span><div><strong>{{ t('fatalErrorTitle') }}</strong><small>{{ t('fatalErrorContained') }}</small></div></header>
         <p>{{ fault.message }}</p><code>{{ fault.context }} · {{ timestamp }}</code>
@@ -12,6 +12,7 @@
 </template>
 
 <script setup lang="ts">
+import { vModalFocus } from '../editor/modalFocus'
 import { computed, ref } from 'vue'
 import { t } from '../i18n'
 import { dismissActiveFault, faultCenterState, faultDiagnostics, reportRecoverableError } from '../runtime/faultCenter'

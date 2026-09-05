@@ -4,8 +4,8 @@ import {
   deleteEntity,
   physicsState,
   sceneManager,
-  runtimeLoadScene,
-  runtimeReloadScene,
+  prepareRuntimeSceneTransition,
+  readEntityAuthoringData,
   stopPlayMode
 } from '../store/physics'
 import { finiteNumber, normalizeEntity } from '../world/geometry'
@@ -15,12 +15,17 @@ import { worldTransform, setWorldTransform } from '../world/hierarchy'
 import type { RuntimePhysicsEvent } from '../world/World'
 import { instantiatePrefab } from './prefabs'
 import { InputManager, type InputSnapshot } from './input'
-import { RuntimeTime } from './time'
+import { RuntimeTime, type TimerExpiration } from './time'
+import { executeScriptTestSuite } from './scriptTestExecution'
 import { WasmScriptRuntime } from '../../nova_core/pkg/nova_core.js'
 import { subtreeEntities } from '../editor/selection'
 import { animationRuntime, setAnimatorParameter } from './animation'
 import { timelineRuntime } from './timeline'
+import { dispatchTimelineUiAction } from './timelineUiActions'
 import { audioRuntime } from './audio'
+import { MediaClock } from './mediaClock'
+import { setTileAnimationTime } from './tilemap'
+import { setRuntimeCaptionTime } from './presentation'
 import { particleRuntime } from './particles'
 import { clearSaveValues, commitSaveSlot, deleteSaveValue, loadSaveSlot, saveSnapshot, setSaveValue, useSaveProject, type SaveValue } from './saveGame'
 import { pluginRuntime } from './plugins'
@@ -29,14 +34,15 @@ import { analyzeScript26, statementAtLine } from '../editor/scriptLanguage26'
 import { beginDebugSession, clearScriptDebugger, evaluateDebugExpression, pauseScriptDebugger, requestDebugStep, scriptDebugState, updateDebugTask, type DebugStepMode, type ScriptTestResult } from './scriptDebug'
 import { scriptProjectSettings } from './scriptSettings'
 import { beforeWorldPhysicsStep, beginWorldGameplay, canUseCoyoteTime, queueCharacterMotion, resetWorldGameplay } from './worldGameplay'
-import { acquirePooled, releasePooled } from './objectPool'
+import { acquirePooled, hasObjectPool, releasePooled, setPoolRuntimeHooks } from './objectPool'
+import { beginEntityLifetime, entityLifetimeActive, entityLifetimeGeneration, inspectEntityLifetimeGeneration, retireEntityLifetime } from './entityLifetimes'
 import type { CharacterBody2D } from '../world/components'
 import { completeReplayFixedStep, deterministicRandom, replayFixedInput, resetDeterministicSeed } from './replay'
 import { beginProductionRuntime, callProductionRpc, onProductionRemoteInput, onProductionRpc, onProductionSceneHandoff, productionNetworkContext, stopProductionRuntime, updateProductionRuntime } from './productionRuntime'
 import { recordScriptFunction } from './profiler'
 import { synchronizePerformanceWorld } from './largeWorldPerformance'
 import type { ScriptBreakpointMetadata } from '../assets/types'
-import { commitHotReload, prepareHotReload, rejectHotReload, rollbackHotReload as restoreHotReloadSource } from './scriptHotReload'
+import { commitHotReload, completeHotReloadRollback, peekHotReloadRollback, prepareHotReload, rejectHotReload } from './scriptHotReload'
 import { recordScriptCoverage, resetScriptCoverage } from './scriptCoverage'
 import { executableGraphSource } from '../visual/graphCompiler'
 import {
@@ -51,13 +57,14 @@ import {
 } from '../visual/graphDebugger'
 import { graphStateValues } from '../visual/graphDebugger'
 import { planGraphHotReload } from '../visual/graphProduction'
-import { applyTargetMutation, resolveRuntimeHandle, runtimeSceneEntitySnapshots, spawnRuntimePrefab, type RuntimeEntityHandle, type TargetMutation } from './dynamicObjects'
+import { applyTargetMutation, resolveRuntimeHandle, runtimeSceneEntitySnapshots, spawnRuntimePrefab, type PendingEntityResolution, type RuntimeEntityHandle, type TargetMutation } from './dynamicObjects'
 import { addRuntimeScore, gameFlowSnapshot, resetGameFlow, restoreRuntimeCheckpoint, setGamePaused, setRuntimeCheckpoint, setRuntimeScore, setSessionValue } from './gameFlow'
 import { beginGameplayComponents, processGameplayContacts, updateGameplayComponents } from './gameplayComponents'
 import { activeGameCamera, gameScreenToWorld, visibleWorldBounds } from '../renderer/sceneRenderer'
 import { packageState } from './packages'
 import { parseScriptContract, validateScriptContract, type ScriptContractReport } from './scriptContracts'
-import { resolveEventHandlers, type ObjectEventKind } from './eventSheets'
+import { eventCallbackFamily, resolveEventHandlers, type ObjectEventKind } from './eventSheets'
+import { resolveProjectScriptBundle } from './scriptModules'
 
 type LifecycleFunction = 'awake' | 'start' | 'fixed_update' | 'update' | 'late_update' | 'on_destroy' | 'on_timer' | 'on_task' | 'on_signal'
 
@@ -165,8 +172,8 @@ interface ScriptContact {
 }
 
 interface ScriptEvent { name: string; source: string; payload: unknown }
-interface RuntimeSignal extends ScriptEvent { target: string }
-interface PendingDebugInvocation { entityUuid: string; functionName: string; contact?: ScriptContact; event?: ScriptEvent }
+interface RuntimeSignal extends ScriptEvent { target: string; deliveredCallbacks?: string[] }
+interface PendingDebugInvocation { entityUuid: string; scriptUuid: string; functionName: string; contact?: ScriptContact; event?: ScriptEvent; logicAsset?: string | null; callbackKind?: string }
 interface PendingGraphExecution {
   entityUuid: string
   scriptUuid: string
@@ -222,6 +229,7 @@ fn on_collision_enter(other, point_x, point_y, normal_x, normal_y, relative_x, r
 export class GameplayRuntime {
   readonly input = new InputManager()
   readonly time = new RuntimeTime()
+  private readonly mediaClock=new MediaClock()
   readonly diagnostics: RuntimeDiagnostics = { scripts: 0, scriptErrors: 0, lifecycleCalls: 0, activeTimers: 0, sceneSwitches: 0, timings: { inputMs: 0, physicsMs: 0, scriptsMs: 0, animationMs: 0, audioMs: 0, assetsMs: 0 } }
   private scriptRuntime: WasmScriptRuntime | null = null
   private active = false
@@ -231,13 +239,24 @@ export class GameplayRuntime {
   private inputSnapshot: InputSnapshot = EMPTY_INPUT
   private fixedPressed: Record<string, boolean> = {}
   private fixedReleased: Record<string, boolean> = {}
-  private pendingDestroy = new Set<number>()
-  private pendingPrefabs: Array<{ reference: string; position: { x: number; y: number } }> = []
-  private pendingDynamicCommands: Array<{ sourceUuid: string; command: Exclude<ScriptCommand, GraphTraceCommand> }> = []
-  private pendingHandleResolutions = new Map<string, string>()
+  private pendingDestroy = new Map<number, number>()
+  private pendingPrefabs: Array<{ sourceUuid: string; sourceGeneration: number; allowRetiredSource: boolean; reference: string; position: { x: number; y: number } }> = []
+  private pendingDynamicCommands: Array<{ sourceUuid: string; sourceGeneration: number; allowRetiredSource: boolean; command: Exclude<ScriptCommand, GraphTraceCommand> }> = []
+  private callbackWorld: Entity[] | null = null
+  private authoredEntities = new Map<string, { origin: 'scene' | 'runtime-spawned'; data: Record<string, unknown> }>()
+  private compiledExports = new Map<string, ExportedProperty[]>()
+  private pendingHandleResolutions = new Map<string, PendingEntityResolution>()
+  private invocationSerial = 0
+  private sessionGeneration = 0
+  private playSessionIdentity = 0
+  private pendingDespawn = new Map<number, number>()
   private pendingScene: { type: 'load'; identifier: string } | { type: 'reload' } | null = null
   private quitRequested = false
   private compiledSources = new Map<string, string>()
+  private compiledDocuments = new Map<string, string>()
+  private compiledModuleDocuments = new Map<string, Map<string, string>>()
+  private pendingRollbackHistory = new Map<string, string | null>()
+  private behaviorProperties = new Map<string, Record<string, ScriptPropertyValue>>()
   private declaredFunctions = new Map<string, { source: string; names: Set<string>; contract: ScriptContractReport }>()
   private contractValidations = new Map<string, { signature: string; error: string | null }>()
   private pendingReloads = new Map<string, string>()
@@ -247,17 +266,37 @@ export class GameplayRuntime {
   private networkUnsubscribe: (() => void) | null = null
 
   get isActive(): boolean { return this.active }
+  /** Stable through scene changes; increments only when a new Play session begins. */
+  get sessionIdentity(): number { return this.playSessionIdentity }
 
   beginSession(): void {
     if (this.active) return
+    this.playSessionIdentity++
+    this.authoredEntities.clear(); this.compiledExports.clear()
+    for (const entity of physicsState.world.entities) this.captureAuthoredEntity(entity, 'scene')
     this.active = true
+    const sessionGeneration = ++this.sessionGeneration
     this.input.start()
     this.time.reset()
+    this.mediaClock.seek(0)
+    setTileAnimationTime(0); setRuntimeCaptionTime(null); setRuntimeCaptionTime(0)
+    audioRuntime.stopAll();audioRuntime.begin(physicsState.audioSettings)
+    audioRuntime.setTransportTime({seconds:0,playing:true,scale:physicsState.globalSettings.timeScale})
+    for (const entity of physicsState.world.entities) beginEntityLifetime(entity)
+    setPoolRuntimeHooks({ clock: () => this.time.value.elapsed, beforeRelease: entities => {
+      for (const entity of entities) this.destroying.add(entity.uuid)
+      for (const entity of entities) { this.runDestructionCallbacks(entity); this.clearEntityRuntimeState(entity) }
+      for (const entity of entities) this.destroying.delete(entity.uuid)
+    } })
     resetDeterministicSeed()
     resetGameFlow()
     beginGameplayComponents(physicsState.world.entities)
     this.awakened.clear()
     this.started.clear()
+    this.compiledSources.clear()
+    this.compiledDocuments.clear(); this.compiledModuleDocuments.clear(); this.pendingRollbackHistory.clear()
+    this.declaredFunctions.clear()
+    this.behaviorProperties.clear()
     beginDebugSession()
     beginGraphDebugSession()
     scriptDebugState.exceptionPolicy = scriptProjectSettings.exceptionPolicy
@@ -295,7 +334,7 @@ export class GameplayRuntime {
     this.emitSignal('scene.started', { scene: sceneManager.activeSceneUuid }, '', 'runtime')
     useSaveProject()
     void pluginRuntime.start()
-    void beginWorldGameplay((name, payload, target, source) => this.emitSignal(name, payload, target, source))
+    void beginWorldGameplay((name, payload, target, source) => this.emitSignal(name, payload, target, source), () => this.active && this.sessionGeneration === sessionGeneration)
     beginProductionRuntime()
     this.networkUnsubscribe?.()
     const rpcCleanup = onProductionRpc((name, payload, context) => this.emitSignal(`network.${name}`, { payload, sender: context.sender, tick: context.tick }, '', context.sender))
@@ -311,12 +350,13 @@ export class GameplayRuntime {
 
   frame(frameDelta: number, viewport?: DOMRect): void {
     synchronizePerformanceWorld(physicsState.world.entities)
+    if (this.active) this.flushHotReloads()
     if (physicsState.playMode !== 'playing') {
       const physicsStarted = performance.now()
       Object.assign(physicsState.engineDiagnostics, physicsState.world.update(frameDelta, false, physicsState.globalSettings))
       const physicsMs = performance.now() - physicsStarted
       const audioStarted = performance.now()
-      audioRuntime.update(physicsState.world.entities, physicsState.audioSettings, false)
+      audioRuntime.update(physicsState.world.entities, physicsState.audioSettings, false,{seconds:this.mediaClock.seconds,playing:false,scale:this.time.value.scale})
       const audioMs = performance.now() - audioStarted
       particleRuntime.update(physicsState.world.entities, frameDelta, false)
       pluginRuntime.update(frameDelta)
@@ -336,11 +376,7 @@ export class GameplayRuntime {
     const expired = this.time.beginFrame(frameDelta, physicsState.globalSettings.tickRate, physicsState.globalSettings.timeScale)
     let scriptsMs = 0
     const timerScriptsStarted = performance.now()
-    for (const timer of expired) {
-      const entity = physicsState.world.entities.find(candidate => candidate.uuid === timer.entityUuid)
-      if (entity && timer.kind === 'timer') { this.runEntityFunction(entity, 'on_timer', undefined, { name: timer.name, source: entity.uuid, payload: null }); this.runEventSheetHandlers(entity, 'timer', timer.name, 'on_timer', undefined, { name: timer.name, source: entity.uuid, payload: null }) }
-      else if (entity) { updateDebugTask({ id: `${entity.uuid}:${timer.name}`, name: timer.name, state: 'completed', entityUuid: entity.uuid, detail: `Completed at frame ${this.time.value.frame}` }); this.runEntityFunction(entity, 'on_task', undefined, { name: timer.name, source: entity.uuid, payload: null }) }
-    }
+    this.dispatchTimerExpirations(expired)
     scriptsMs += performance.now() - timerScriptsStarted
 
     let firstFixedStep = true
@@ -367,8 +403,11 @@ export class GameplayRuntime {
         updateGameplayComponents(physicsState.world.entities, this.inputSnapshot, fixedDelta, (name, payload, target, source) => this.emitSignal(name, payload, target, source), (prefab, owner) => {
           const transform = worldTransform(owner, physicsState.world.entities)
           return spawnRuntimePrefab(prefab, { position: transform.position, rotation: transform.rotation, scale: { x: 1, y: 1 } })
-        }, (target, despawn) => { if (!despawn || !releasePooled(target)) this.pendingDestroy.add(target.id) })
+        }, (target, despawn) => this.queueEntityRemoval(target, despawn))
         beforeWorldPhysicsStep(fixedDelta, this.time.value.elapsed, this.time.value.frame, (name, payload, target, source) => this.emitSignal(name, payload, target, source), scene => { this.pendingScene = { type: 'load', identifier: scene } })
+        this.mediaClock.advance(fixedDelta)
+        setTileAnimationTime(this.mediaClock.seconds); setRuntimeCaptionTime(this.mediaClock.seconds)
+        audioRuntime.setTransportTime({seconds:this.mediaClock.seconds,playing:true,scale:this.time.value.scale})
         animationRuntime.update(physicsState.world.entities, fixedDelta)
         timelineRuntime.update(physicsState.world.entities, fixedDelta)
         fixedScriptsMs += performance.now() - fixedScriptsStarted
@@ -389,7 +428,7 @@ export class GameplayRuntime {
     pluginRuntime.update(this.time.value.delta)
     const animationMs = performance.now() - animationStarted
     const audioStarted = performance.now()
-    audioRuntime.update(physicsState.world.entities, physicsState.audioSettings, true)
+    audioRuntime.update(physicsState.world.entities, physicsState.audioSettings, true,{seconds:this.mediaClock.seconds,playing:true,scale:this.time.value.scale})
     const audioMs = performance.now() - audioStarted
     this.flushStructuralCommands()
     Object.assign(this.diagnostics.timings, {
@@ -406,6 +445,7 @@ export class GameplayRuntime {
 
   stepOnce(viewport?: DOMRect): void {
     if (!this.active) this.beginSession()
+    this.flushHotReloads()
     synchronizePerformanceWorld(physicsState.world.entities)
     this.dispatchSignals()
     this.ensureLifecycle()
@@ -419,13 +459,13 @@ export class GameplayRuntime {
     }
     this.fixedPressed = {}
     this.fixedReleased = {}
-    this.time.beginFrame(this.time.value.fixedDelta, physicsState.globalSettings.tickRate, physicsState.globalSettings.timeScale)
+    this.dispatchTimerExpirations(this.time.beginFrame(this.time.value.fixedDelta, physicsState.globalSettings.tickRate, physicsState.globalSettings.timeScale))
     this.runPhase('fixed_update')
     this.flushEntityCommands()
     updateGameplayComponents(physicsState.world.entities, this.inputSnapshot, this.time.value.fixedDelta, (name, payload, target, source) => this.emitSignal(name, payload, target, source), (prefab, owner) => {
       const transform = worldTransform(owner, physicsState.world.entities)
       return spawnRuntimePrefab(prefab, { position: transform.position, rotation: transform.rotation, scale: { x: 1, y: 1 } })
-    }, (target, despawn) => { if (!despawn || !releasePooled(target)) this.pendingDestroy.add(target.id) })
+    }, (target, despawn) => this.queueEntityRemoval(target, despawn))
     beforeWorldPhysicsStep(this.time.value.fixedDelta, this.time.value.elapsed, this.time.value.frame, (name, payload, target, source) => this.emitSignal(name, payload, target, source), scene => { this.pendingScene = { type: 'load', identifier: scene } })
     Object.assign(physicsState.engineDiagnostics, physicsState.world.singleStep(physicsState.globalSettings))
     const checksum = physicsState.world.stateChecksum()
@@ -434,20 +474,26 @@ export class GameplayRuntime {
     this.dispatchPhysicsEvents(physicsState.world.events)
     this.runPhase('update')
     this.runPhase('late_update')
+    this.mediaClock.advance(this.time.value.fixedDelta)
+    setTileAnimationTime(this.mediaClock.seconds); setRuntimeCaptionTime(this.mediaClock.seconds)
+    audioRuntime.setTransportTime({seconds:this.mediaClock.seconds,playing:false,scale:this.time.value.scale})
     animationRuntime.update(physicsState.world.entities, this.time.value.fixedDelta)
     timelineRuntime.update(physicsState.world.entities, this.time.value.fixedDelta)
     particleRuntime.update(physicsState.world.entities, this.time.value.fixedDelta, true)
     pluginRuntime.update(this.time.value.fixedDelta)
-    audioRuntime.update(physicsState.world.entities, physicsState.audioSettings, true)
+    audioRuntime.update(physicsState.world.entities, physicsState.audioSettings, false,{seconds:this.mediaClock.seconds,playing:false,scale:this.time.value.scale})
     this.flushStructuralCommands()
   }
 
   stopSession(log = true): void {
     if (!this.active) return
+    this.sessionGeneration++
     const ending = [...physicsState.world.entities]
     for (const entity of ending) this.destroying.add(entity.uuid)
-    for (const entity of ending) this.runEntityFunction(entity, 'on_destroy')
+    for (const entity of ending) this.runDestructionCallbacks(entity)
+    for (const entity of ending) retireEntityLifetime(entity)
     this.pendingDestroy.clear()
+    this.pendingDespawn.clear()
     this.pendingPrefabs = []
     animationRuntime.reset()
     animationRuntime.onEvent = null
@@ -460,11 +506,13 @@ export class GameplayRuntime {
     stopProductionRuntime()
     this.networkUnsubscribe?.(); this.networkUnsubscribe = null
     pluginRuntime.stop()
-    audioRuntime.stopAll()
+    void audioRuntime.dispose()
     this.pendingScene = null
     this.active = false
     this.input.stop()
     this.time.reset()
+    this.mediaClock.seek(0)
+    setTileAnimationTime(null); setRuntimeCaptionTime(null)
     this.awakened.clear()
     this.started.clear()
     this.destroying.clear()
@@ -477,9 +525,16 @@ export class GameplayRuntime {
     this.pendingHandleResolutions.clear()
     this.pendingSignals = []
     this.pendingReloads.clear()
+    setPoolRuntimeHooks()
     this.contractValidations.clear()
+    this.behaviorProperties.clear()
+    this.compiledSources.clear()
+    this.authoredEntities.clear(); this.compiledExports.clear()
+    this.compiledDocuments.clear(); this.compiledModuleDocuments.clear(); this.pendingRollbackHistory.clear()
+    this.declaredFunctions.clear()
     this.pendingDebugInvocation = null
     this.pendingGraphExecution = null
+    this.scriptRuntime?.free(); this.scriptRuntime = null
     clearScriptDebugger()
     clearGraphPause()
     if (log) addEditorLog('Gameplay runtime stopped', 'Runtime')
@@ -503,7 +558,7 @@ export class GameplayRuntime {
     const storedSource = readTextAsset(component?.scriptAsset)
     if (!component || !asset || !storedSource || (asset.assetType !== 'script' && asset.assetType !== 'visualScript')) return 'Select a valid Rhai or visual graph asset'
     let source: string
-    try { source = asset.assetType === 'visualScript' ? executableGraphSource(storedSource) : storedSource } catch (error) { component.lastError = this.errorMessage(error); return component.lastError }
+    try { const bundled = this.resolveScriptBundle(asset.uuid); if (bundled === null) throw new Error('Script module could not be resolved'); source = bundled } catch (error) { component.lastError = this.errorMessage(error); return component.lastError }
     this.ensureScriptRuntime()
     if (!this.scriptRuntime) return 'Script runtime is still loading'
     try {
@@ -530,6 +585,16 @@ export class GameplayRuntime {
     }
   }
 
+  /** Read the exact draft/module bundle for editor analysis without invoking the VM. */
+  resolveModuleSource(scriptUuid: string, source: string, overrides = new Map<string, string>()): { source: string | null; error: string | null } {
+    try {
+      const next = new Map(overrides)
+      next.set(scriptUuid, source)
+      const bundled = this.resolveScriptBundle(scriptUuid, next)
+      return { source: bundled, error: bundled === null ? 'Script module could not be resolved' : null }
+    } catch (error) { return { source: null, error: this.errorMessage(error) } }
+  }
+
   validateModuleSource(scriptUuid: string, source: string, overrides = new Map<string, string>()): { error: string | null; exports: ExportedProperty[] } {
     try {
       const next = new Map(overrides)
@@ -552,6 +617,7 @@ export class GameplayRuntime {
       scriptDebugState.hotReload = { status: 'rejected', scriptUuid, message: `Candidate rejected before apply: ${validation.error}`, frame: this.time.value.frame }
       return
     }
+    this.pendingRollbackHistory.delete(scriptUuid)
     this.pendingReloads.set(scriptUuid, source)
     scriptDebugState.hotReload = { status: 'pending', scriptUuid, message: 'Analyzed candidate queued for a transactional frame-boundary swap', frame: this.time.value.frame }
   }
@@ -571,6 +637,7 @@ export class GameplayRuntime {
       }
       const validation = this.validateModuleSource(scriptUuid, candidateSource)
       if (validation.error) throw new Error(validation.error)
+      this.pendingRollbackHistory.delete(scriptUuid)
       this.pendingReloads.set(scriptUuid, candidateSource)
       scriptDebugState.hotReload = { status: 'pending', scriptUuid, message: `Visual graph queued with ${Object.keys(graphPlan.preserved).length} compatible state values preserved`, frame: this.time.value.frame }
     } catch (error) {
@@ -579,17 +646,24 @@ export class GameplayRuntime {
   }
 
   rollbackHotReload(scriptUuid: string): boolean {
-    const source = restoreHotReloadSource(scriptUuid)
-    if (!source || !updateTextAsset(scriptUuid, source)) return false
-    this.pendingReloads.set(scriptUuid, source)
+    const rollback = peekHotReloadRollback(scriptUuid)
+    if (!rollback || !scriptProjectSettings.hotReloadEnabled || resolveAsset(scriptUuid)?.script?.reloadPolicy === 'disabled') return false
+    if (rollback.source === this.compiledDocuments.get(scriptUuid)) {
+      scriptDebugState.hotReload = { status: 'rejected', scriptUuid, message: 'This root document did not change in that generation. Roll back the changed imported module to restore its dependent scripts together.', frame: this.time.value.frame }
+      return false
+    }
+    const validation = this.validateModuleSource(scriptUuid, rollback.source)
+    if (validation.error || !updateTextAsset(scriptUuid, rollback.source)) return false
+    this.pendingRollbackHistory.set(scriptUuid, rollback.historyId)
+    this.pendingReloads.set(scriptUuid, rollback.source)
     scriptDebugState.hotReload = { status: 'pending', scriptUuid, message: 'Rollback source queued for transactional apply', frame: this.time.value.frame }
     return true
   }
 
-  emitSignal(name: string, payload: unknown = null, target = '', source = 'editor'): void {
+  emitSignal(name: string, payload: unknown = null, target = '', source = 'editor', deliveredCallbacks: string[] = []): void {
     const clean = name.trim().slice(0, 128)
     if (!clean) return
-    this.pendingSignals.push({ name: clean, payload: this.serializable(payload), target: target.trim().slice(0, 128), source: source.trim().slice(0, 128) })
+    this.pendingSignals.push({ name: clean, payload: this.serializable(payload), target: target.trim().slice(0, 128), source: source.trim().slice(0, 128), deliveredCallbacks: [...deliveredCallbacks] })
     if (this.pendingSignals.length > 1024) {
       this.pendingSignals.splice(0, this.pendingSignals.length - 1024)
       addEditorLog('Signal queue limit reached; oldest events were dropped.', 'Script', 'warning')
@@ -614,7 +688,7 @@ export class GameplayRuntime {
     requestDebugStep('continue')
     if (pending) {
       const entity = physicsState.world.entities.find(candidate => candidate.uuid === pending.entityUuid)
-      if (entity) this.runEntityFunction(entity, pending.functionName, pending.contact, pending.event, true)
+      if (entity) this.runEntityFunction(entity, pending.functionName, pending.contact, pending.event, true, pending.logicAsset, false, pending.callbackKind)
     }
     if (physicsState.playMode === 'paused') physicsState.playMode = 'playing'
   }
@@ -643,7 +717,7 @@ export class GameplayRuntime {
     requestDebugStep(mode)
     if (pending) {
       const entity = physicsState.world.entities.find(candidate => candidate.uuid === pending.entityUuid)
-      if (entity) this.runEntityFunction(entity, pending.functionName, pending.contact, pending.event, true)
+      if (entity) this.runEntityFunction(entity, pending.functionName, pending.contact, pending.event, true, pending.logicAsset, false, pending.callbackKind)
     }
     physicsState.playMode = 'paused'
     scriptDebugState.paused = true
@@ -669,64 +743,48 @@ export class GameplayRuntime {
 
   runScriptTests(scriptUuid?: string, options: { tags?: string[]; includeSkipped?: boolean; testNames?: string[] } = {}): ScriptTestResult[] {
     if (scriptProjectSettings.testing.coverageEnabled) resetScriptCoverage()
-    const assets = scriptUuid ? [resolveAsset(scriptUuid)].filter(Boolean) : physicsState.world.entities.map(entity => resolveAsset(entity.script2D?.scriptAsset ?? '')).filter(Boolean)
-    const unique = [...new Map(assets.map(asset => [asset!.uuid, asset!])).values()].filter(asset => asset.assetType === 'script')
+    const references = scriptUuid ? [scriptUuid] : physicsState.world.entities.flatMap(entity => [entity.script2D?.scriptAsset, ...resolveEventHandlers(entity.script2D?.eventSheetAsset).map(handler => handler.logicAsset)])
+    const assets = [...new Map(references.flatMap(reference => { const asset = resolveAsset(reference); return asset && (asset.assetType === 'script' || asset.assetType === 'visualScript') ? [[asset.uuid, asset] as const] : [] })).values()]
     const results: ScriptTestResult[] = []
-    for (const asset of unique) {
+    for (const asset of assets) {
       let source: string | null = null
       try { source = this.resolveScriptBundle(asset.uuid) } catch (error) { results.push({ script: asset.name, test: 'module resolution', passed: false, skipped: false, durationMs: 0, seed: 1, caseName: '', tags: [], message: this.errorMessage(error) }); continue }
       if (!source) continue
-      const scriptAnalysis = analyzeScript(source)
-      const selectedNames = new Set(options.testNames ?? [])
-      const tests = scriptAnalysis.tests.filter(test =>
-        (!options.tags?.length || options.tags.every(tag => test.tags.includes(tag))) &&
-        (!options.testNames || selectedNames.has(test.name))
-      )
-      for (const test of tests) {
-        const cases = test.cases.length ? test.cases : ['']
-        for (const caseName of cases) {
-          const started = performance.now()
-          if (test.skipped && !options.includeSkipped) {
-            results.push({ script: asset.name, test: test.name, passed: true, skipped: true, durationMs: 0, seed: test.seed, caseName, tags: test.tags, message: 'Skipped by @test metadata' })
-            continue
-          }
-        try {
-          const isolated = new WasmScriptRuntime()
-          const context = {
-            apiVersion: asset.script?.apiVersion ?? scriptProjectSettings.apiVersion,
-            entity: 'test-entity', entityName: 'Script test', components: [], entities: {},
-            time: { delta: 0, fixedDelta: 1 / 60, elapsed: 0, scale: 1, frame: 0 }, randomSeed: test.seed || scriptProjectSettings.deterministicTestSeed, input: EMPTY_INPUT,
-            event: { name: 'test.run', source: 'Script Studio', payload: { test: test.name, case: caseName, seed: test.seed } },
-            properties: {} as Record<string, ScriptPropertyValue>, save: {},
-            transform: { position: [0, 0], rotation: 0, scale: [1, 1] }, rigidBody: null
-          }
-          const logs: ScriptExecution['logs'] = []
-          const callbacks = ['before_all', 'before_each', test.name, 'after_each', 'after_all'].filter(name => scriptAnalysis.functions[name])
-          for (const functionName of callbacks) {
-            const execution = parseScriptExecution(isolated.execute_json(source, functionName, JSON.stringify(context)))
-            if (scriptProjectSettings.testing.coverageEnabled) recordScriptCoverage(asset.uuid, source, functionName)
-            context.properties = execution.properties
-            logs.push(...execution.logs)
-            if (performance.now() - started > test.timeoutMs) throw new Error(`Timed out after ${test.timeoutMs} ms`)
-          }
-          const failure = logs.find(log => log.level === 'error')
-          results.push({ script: asset.name, test: test.name, passed: !failure, skipped: false, durationMs: performance.now() - started, seed: test.seed, caseName, tags: test.tags, message: failure?.message ?? `Passed with deterministic seed ${test.seed}` })
-        } catch (error) {
-          results.push({ script: asset.name, test: test.name, passed: false, skipped: false, durationMs: performance.now() - started, seed: test.seed, caseName, tags: test.tags, message: this.errorMessage(error) })
+      const analysis = analyzeScript(source), selectedNames = new Set(options.testNames ?? [])
+      const tests = analysis.tests.filter(test => (!options.tags?.length || options.tags.every(tag => test.tags.includes(tag))) && (!options.testNames || selectedNames.has(test.name)))
+      results.push(...executeScriptTestSuite({
+        scriptUuid: asset.uuid, scriptName: asset.name, source, functions: new Set(Object.keys(analysis.functions)), tests, includeSkipped: options.includeSkipped,
+        createVm: () => new WasmScriptRuntime(), parseExecution: parseScriptExecution,
+        onExecution: functionName => { if (scriptProjectSettings.testing.coverageEnabled) recordScriptCoverage(asset.uuid, source!, functionName) },
+        context: {
+          apiVersion: asset.script?.apiVersion ?? scriptProjectSettings.apiVersion, entity: 'test-entity', entityName: 'Script test', components: [], entities: {},
+          time: { delta: 0, fixedDelta: 1 / 60, elapsed: 0, scale: 1, frame: 0 }, randomSeed: scriptProjectSettings.deterministicTestSeed, input: EMPTY_INPUT,
+          properties: {}, save: {}, transform: { position: [0, 0], rotation: 0, scale: [1, 1] }, rigidBody: null
         }
-        }
-      }
+      }))
     }
+    if (!results.length && scriptProjectSettings.testing.failOnEmpty) results.push({ script: 'Selected scripts', test: 'discovery', passed: false, skipped: false, durationMs: 0, seed: 1, caseName: '', tags: [], message: 'No tests matched the selected scripts, tags and names.' })
     scriptDebugState.testResults.splice(0, scriptDebugState.testResults.length, ...results)
     addEditorLog(`Script tests: ${results.filter(result => result.passed && !result.skipped).length}/${results.filter(result => !result.skipped).length} passed, ${results.filter(result => result.skipped).length} skipped`, 'Script', results.every(result => result.passed) ? 'info' : 'error')
     return results
   }
 
   invokeUiCallback(entity: Entity, functionName: string): void {
-    if (!this.active || !functionName.trim()) return
-    this.emitSignal(`ui.${functionName.trim()}`, { entity: entity.uuid }, entity.uuid, entity.uuid)
-    this.runEntityFunction(entity, functionName.trim().slice(0, 80))
-    this.runEventSheetHandlers(entity, 'ui', functionName.trim().slice(0, 80), functionName.trim().slice(0, 80))
+    const requested = functionName.trim()
+    if (!this.active || !entity.enabled || !entityLifetimeActive(entity) || this.isRemovalPending(entity)) return
+    const timelineAction = dispatchTimelineUiAction(entity, requested, physicsState.world.entities)
+    if (timelineAction.handled) { if (timelineAction.issue) addEditorLog(timelineAction.issue, 'Script', 'warning', entity.uuid); return }
+    const callback = requested.slice(0, 80)
+    if (!callback || !this.canRun(entity)) return
+    const primary = resolveAsset(entity.script2D?.scriptAsset)?.uuid
+    const sheetOwnsCallback = resolveEventHandlers(entity.script2D?.eventSheetAsset).some(handler => handler.kind === 'ui' && (!handler.selector || handler.selector === callback) && handler.callback === callback && resolveAsset(handler.logicAsset)?.uuid === primary)
+    const direct = callback !== 'on_signal' && !sheetOwnsCallback
+    const delivered = direct && primary ? [JSON.stringify([primary, callback])] : []
+    this.emitSignal(`ui.${callback}`, { entity: entity.uuid }, entity.uuid, entity.uuid, delivered)
+    // Event Sheets receive the complete event once at the signal boundary.
+    // Keep legacy named button callbacks immediate and record their provenance
+    // so a matching signal connection cannot invoke them a second time.
+    if (direct) this.runEntityFunction(entity, callback)
     this.flushEntityCommands()
     this.flushStructuralCommands()
   }
@@ -738,6 +796,7 @@ export class GameplayRuntime {
   }
 
   private ensureLifecycle(): void {
+    for (const entity of physicsState.world.entities) this.captureAuthoredEntity(entity, 'runtime-spawned')
     const scripted = physicsState.world.entities.filter(entity => this.canRun(entity))
     this.diagnostics.scripts = scripted.length
     for (const entity of scripted) {
@@ -779,23 +838,75 @@ export class GameplayRuntime {
     }
   }
 
-  private runEventSheetHandlers(entity: Entity, kind: ObjectEventKind, selector = '', canonicalCallback = '', contact?: ScriptContact, event?: ScriptEvent): void {
+  private runEventSheetHandlers(entity: Entity, kind: ObjectEventKind, selector = '', canonicalCallback = '', contact?: ScriptContact, event?: ScriptEvent, alreadyDispatched: readonly string[] = []): Set<string> {
     const reference = entity.script2D?.eventSheetAsset
-    if (!reference || !this.canRun(entity)) return
+    const primary = resolveAsset(entity.script2D?.scriptAsset)?.uuid
+    const dispatched = new Set<string>([...alreadyDispatched, ...(canonicalCallback && primary ? [JSON.stringify([primary, canonicalCallback])] : [])])
+    if (!reference || !this.canRun(entity)) return dispatched
     for (const handler of resolveEventHandlers(reference)) {
-      if (handler.kind !== kind || (handler.selector && handler.selector !== selector) || handler.callback === canonicalCallback) continue
-      this.runEntityFunction(entity, handler.callback, contact, event)
+      if (handler.kind !== kind || (handler.selector && handler.selector !== selector)) continue
+      const key = JSON.stringify([resolveAsset(handler.logicAsset)?.uuid ?? handler.sourceSheetAsset, handler.callback])
+      if (dispatched.has(key)) continue
+      dispatched.add(key)
+      this.runEntityFunction(entity, handler.callback, contact, event, kind === 'destroy', handler.logicAsset, kind === 'destroy', eventCallbackFamily(kind))
+    }
+    return dispatched
+  }
+
+  private runDestructionCallbacks(entity: Entity, world?: Entity[]): void {
+    const previous = this.callbackWorld
+    if (world) this.callbackWorld = world
+    try { this.runEntityFunction(entity, 'on_destroy', undefined, undefined, true, undefined, true); this.runEventSheetHandlers(entity, 'destroy', '', 'on_destroy') }
+    finally { this.callbackWorld = previous }
+  }
+
+  private captureAuthoredEntity(entity: Entity, origin: 'scene' | 'runtime-spawned'): void {
+    if (!this.authoredEntities.has(entity.uuid)) this.authoredEntities.set(entity.uuid, { origin, data: readEntityAuthoringData(entity) })
+  }
+
+  inspectObjectRuntime(entityUuid: string) {
+    const entity = physicsState.world.entities.find(candidate => candidate.uuid === entityUuid), authored = this.authoredEntities.get(entityUuid)
+    const primary = resolveAsset(entity?.script2D?.scriptAsset)?.uuid
+    const behaviorIds = new Set([primary, ...(entity ? resolveEventHandlers(entity.script2D?.eventSheetAsset).map(handler => resolveAsset(handler.logicAsset)?.uuid) : [])].filter((uuid): uuid is string => !!uuid))
+    const storedScript = (authored?.data.components as Array<{ kind: string; data: { properties?: Record<string, ScriptPropertyValue> } }> | undefined)?.find(component => component.kind === 'Script2D')
+    const behaviors = [...behaviorIds].map(scriptUuid => ({ scriptUuid, sourcePath: resolveAsset(scriptUuid)?.path ?? '', primary: scriptUuid === primary,
+      authoredProperties: { ...Object.fromEntries((this.compiledExports.get(scriptUuid) ?? []).map(item => [item.name, item.defaultValue ?? item.value])), ...(scriptUuid === primary ? storedScript?.data.properties ?? {} : {}) },
+      properties: scriptUuid === primary ? entity?.script2D?.properties ?? {} : this.behaviorProperties.get(`${entityUuid}:${scriptUuid}`) ?? {}
+    }))
+    const subscriptions: Array<{ sourceSheetAsset: string | null; scriptUuid: string; signal: string; callback: string; source: string; target: string }> = []
+    if (this.active && entity && this.canRun(entity)) {
+      const seen = new Set<string>()
+      for (const handler of resolveEventHandlers(entity.script2D?.eventSheetAsset)) {
+        if (!['signal', 'ui', 'animation', 'network'].includes(handler.kind)) continue
+        const scriptUuid = resolveAsset(handler.logicAsset)?.uuid
+        if (!scriptUuid || !this.declaredFunctions.get(scriptUuid)?.names.has(handler.callback)) continue
+        const signal = handler.kind === 'signal' ? handler.selector : `${handler.kind}.${handler.selector}`
+        const key = JSON.stringify([scriptUuid, signal, handler.callback, '', entityUuid]); if (seen.has(key)) continue; seen.add(key)
+        subscriptions.push({ sourceSheetAsset: handler.sourceSheetAsset, scriptUuid, signal, callback: handler.callback, source: '', target: entityUuid })
+      }
+      for (const connection of resolveAsset(entity.script2D?.scriptAsset)?.script?.signalConnections ?? []) {
+        if (!connection.enabled || !primary || !this.declaredFunctions.get(primary)?.names.has(connection.callback) || (connection.target && connection.target !== entityUuid)) continue
+        const key = JSON.stringify([primary, connection.signal, connection.callback, connection.source || '', entityUuid]); if (seen.has(key)) continue; seen.add(key)
+        subscriptions.push({ sourceSheetAsset: null, scriptUuid: primary, signal: connection.signal, callback: connection.callback, source: connection.source || '', target: entityUuid })
+      }
+    }
+    return JSON.parse(JSON.stringify({ active: this.active, entityUuid, generation: entity && this.active ? inspectEntityLifetimeGeneration(entity) : null, authoredOrigin: authored?.origin ?? null, authoredEntity: authored?.data ?? null, behaviors, subscriptions, timers: this.time.inspect(entityUuid) })) as {
+      active: boolean; entityUuid: string; generation: number | null; authoredOrigin: 'scene' | 'runtime-spawned' | null; authoredEntity: Record<string, unknown> | null;
+      behaviors: Array<{ scriptUuid: string; sourcePath: string; primary: boolean; authoredProperties: Record<string, ScriptPropertyValue>; properties: Record<string, ScriptPropertyValue> }>;
+      subscriptions: typeof subscriptions; timers: ReturnType<RuntimeTime['inspect']>
     }
   }
 
-  private runEntityFunction(entity: Entity, functionName: LifecycleFunction | string, contact?: ScriptContact, event?: ScriptEvent, bypassBreakpoint = false): void {
+  private runEntityFunction(entity: Entity, functionName: LifecycleFunction | string, contact?: ScriptContact, event?: ScriptEvent, bypassBreakpoint = false, logicAsset?: string | null, duringDestruction = false, callbackKind?: string): void {
     const component = entity.script2D
     if (!this.canRun(entity) || !component) return
-    const asset = resolveAsset(component.scriptAsset)
+    if (!duringDestruction && functionName !== 'on_destroy' && (this.isRemovalPending(entity) || this.destroying.has(entity.uuid))) return
+    const reference = logicAsset === undefined ? component.scriptAsset : logicAsset
+    const asset = resolveAsset(reference)
     let source: string | null = null
-    try { source = this.resolveScriptBundle(asset?.uuid ?? '') } catch (error) { this.reportScriptError(entity, this.errorMessage(error)); return }
+    try { source = (this.active && asset ? this.compiledSources.get(asset.uuid) : null) ?? this.resolveScriptBundle(asset?.uuid ?? '') } catch (error) { this.reportScriptError(entity, this.errorMessage(error)); return }
     if (!asset || (asset.assetType !== 'script' && asset.assetType !== 'visualScript') || !source) {
-      this.reportScriptError(entity, `Missing script or visual graph asset: ${component.scriptAsset ?? 'none'}`)
+      this.reportScriptError(entity, `Missing script or visual graph asset: ${reference ?? 'none'}`)
       return
     }
     let declared = this.declaredFunctions.get(asset.uuid)
@@ -820,20 +931,26 @@ export class GameplayRuntime {
     if (contractValidation.error) { this.reportScriptError(entity, contractValidation.error); return }
     this.ensureScriptRuntime()
     if (!this.scriptRuntime) return
-    const runtimeTransform = worldTransform(entity, physicsState.world.entities)
+    const executionWorld = this.callbackWorld ?? physicsState.world.entities
+    const runtimeTransform = worldTransform(entity, executionWorld)
+    const primaryBehavior = resolveAsset(component.scriptAsset)?.uuid === asset.uuid
+    const behaviorKey = `${entity.uuid}:${asset.uuid}`
     const context = {
       apiVersion: asset.script?.apiVersion ?? scriptProjectSettings.apiVersion,
       entity: entity.uuid,
+      invocationId: ++this.invocationSerial,
+      callbackKind: callbackKind ?? functionName,
+      entityGenerations: Object.fromEntries(executionWorld.filter(entityLifetimeActive).map(value => [value.uuid, entityLifetimeGeneration(value)])),
       entityName: entity.name,
       components: entity.components.map(value => value.kind),
-      entities: Object.fromEntries(physicsState.world.entities.map(value => [value.name, value.uuid])),
-      sceneEntities: runtimeSceneEntitySnapshots(physicsState.world.entities),
+      entities: Object.fromEntries(executionWorld.filter(entityLifetimeActive).map(value => [value.name, value.uuid])),
+      sceneEntities: runtimeSceneEntitySnapshots(executionWorld),
       time: { ...this.time.value },
       randomSeed: Math.floor(deterministicRandom() * 0x1_0000_0000),
       input: this.inputSnapshot,
       contact,
       event,
-      properties: component.properties,
+      properties: primaryBehavior ? component.properties : (this.behaviorProperties.get(behaviorKey) ?? {}),
       save: saveSnapshot(),
       transform: {
         position: [runtimeTransform.position.x, runtimeTransform.position.y],
@@ -874,7 +991,7 @@ export class GameplayRuntime {
           condition = false
         }
         if (condition) {
-        this.pendingDebugInvocation = { entityUuid: entity.uuid, functionName, contact, event }
+        this.pendingDebugInvocation = { entityUuid: entity.uuid, scriptUuid: asset.uuid, functionName, contact, event, logicAsset, callbackKind }
         physicsState.playMode = 'paused'
         pauseScriptDebugger({ entityUuid: entity.uuid, entityName: entity.name, scriptUuid: asset.uuid, sourcePath: asset.path, functionName, line: breakpoint.line, depth: 0 }, context, `Breakpoint at ${asset.path}:${breakpoint.line} · hit ${breakpoint.hitCount}`)
         addEditorLog(`Paused at ${asset.path}:${breakpoint.line}`, 'Script', 'debug', asset.uuid)
@@ -888,16 +1005,17 @@ export class GameplayRuntime {
       const runtime = this.scriptRuntime as unknown as { execute_cached_json(id: string, fn: string, context: string): string }
       const execution = parseScriptExecution(runtime.execute_cached_json(asset.uuid, functionName, JSON.stringify(context)), declared.contract.contract.budgets)
       if (scriptProjectSettings.testing.coverageEnabled) recordScriptCoverage(asset.uuid, source, functionName)
-      component.properties = execution.properties
+      if (primaryBehavior) component.properties = execution.properties
+      else this.behaviorProperties.set(behaviorKey, execution.properties)
       component.lastError = null
       this.diagnostics.lifecycleCalls++
       for (const log of execution.logs) addEditorLog(`${entity.name}: ${log.message}`, 'Script', log.level === 'error' ? 'error' : log.level === 'warning' ? 'warning' : 'info')
-      this.processScriptCommands(entity, asset.uuid, asset.path, functionName, execution.commands)
+      this.processScriptCommands(entity, asset.uuid, asset.path, functionName, execution.commands, 0, !duringDestruction)
     } catch (error) {
       const message = this.errorMessage(error)
       this.reportScriptError(entity, message)
       if (asset.assetType === 'visualScript') recordGraphError(graphDebugState.activeGraphUuid || asset.uuid, graphDebugState.activeNodeUuid, message)
-      if (scriptProjectSettings.debuggerEnabled && scriptProjectSettings.breakOnRuntimeError && scriptProjectSettings.exceptionPolicy !== 'never') {
+      if (!duringDestruction && scriptProjectSettings.debuggerEnabled && scriptProjectSettings.breakOnRuntimeError && scriptProjectSettings.exceptionPolicy !== 'never') {
         physicsState.playMode = 'paused'
         pauseScriptDebugger({ entityUuid: entity.uuid, entityName: entity.name, scriptUuid: asset.uuid, sourcePath: asset.path, functionName, line: analyzeScript(source).functions[functionName]?.line ?? 1, depth: 0 }, context, `Runtime error: ${this.errorMessage(error)}`)
       }
@@ -906,7 +1024,7 @@ export class GameplayRuntime {
     }
   }
 
-  private processScriptCommands(entity: Entity, scriptUuid: string, sourcePath: string, functionName: string, commands: ScriptCommand[], startIndex = 0): boolean {
+  private processScriptCommands(entity: Entity, scriptUuid: string, sourcePath: string, functionName: string, commands: ScriptCommand[], startIndex = 0, allowPause = true): boolean {
     for (let index = Math.max(0, startIndex); index < commands.length; index++) {
       const command = commands[index]
       if (command.type !== 'graphTrace') {
@@ -915,7 +1033,7 @@ export class GameplayRuntime {
       }
       const decision = recordGraphTrace(command)
       if (decision.logMessage) addEditorLog(`${entity.name}: ${decision.logMessage}`, 'Script', 'debug', scriptUuid)
-      if (decision.pause && (!scriptProjectSettings.debuggerEnabled || !scriptDebugState.enabled)) { clearGraphPause(); continue }
+      if (decision.pause && (!allowPause || !scriptProjectSettings.debuggerEnabled || !scriptDebugState.enabled)) { clearGraphPause(); continue }
       if (!decision.pause) continue
       this.pendingGraphExecution = { entityUuid: entity.uuid, scriptUuid, sourcePath, functionName, commands, nextIndex: index + 1 }
       physicsState.playMode = 'paused'
@@ -962,12 +1080,12 @@ export class GameplayRuntime {
     } else if (command.type === 'audioPlay') audioRuntime.play(entity, physicsState.world.entities)
     else if (command.type === 'audioPause') audioRuntime.pause(entity)
     else if (command.type === 'audioStop') audioRuntime.stop(entity)
-    else if (command.type === 'destroy') this.pendingDestroy.add(entity.id)
-    else if (command.type === 'despawn') { if (!releasePooled(entity)) this.pendingDestroy.add(entity.id) }
+    else if (command.type === 'destroy') this.queueEntityRemoval(entity, false)
+    else if (command.type === 'despawn') this.queueEntityRemoval(entity, true)
     else if (command.type === 'instantiate') {
       const transform = worldTransform(entity, physicsState.world.entities)
-      this.pendingPrefabs.push({ reference: command.prefab, position: { ...transform.position } })
-    } else if (command.type === 'spawnAt' || command.type === 'targetSetPosition' || command.type === 'targetSetRotation' || command.type === 'targetSetScale' || command.type === 'targetSetEnabled' || command.type === 'targetSetComponentEnabled' || command.type === 'targetSetUiText' || command.type === 'targetSetUiValue' || command.type === 'targetAddTag' || command.type === 'targetRemoveTag' || command.type === 'targetAddGroup' || command.type === 'targetRemoveGroup' || command.type === 'targetDestroy') this.pendingDynamicCommands.push({ sourceUuid: entity.uuid, command })
+      this.pendingPrefabs.push({ ...this.commandSource(entity), reference: command.prefab, position: { ...transform.position } })
+    } else if (command.type === 'spawnAt' || command.type === 'targetSetPosition' || command.type === 'targetSetRotation' || command.type === 'targetSetScale' || command.type === 'targetSetEnabled' || command.type === 'targetSetComponentEnabled' || command.type === 'targetSetUiText' || command.type === 'targetSetUiValue' || command.type === 'targetAddTag' || command.type === 'targetRemoveTag' || command.type === 'targetAddGroup' || command.type === 'targetRemoveGroup' || command.type === 'targetDestroy') this.pendingDynamicCommands.push({ ...this.commandSource(entity), command })
     else if (command.type === 'loadScene') this.pendingScene = { type: 'load', identifier: command.scene }
     else if (command.type === 'reloadScene') this.pendingScene = { type: 'reload' }
     else if (command.type === 'quit') this.quitRequested = true
@@ -982,11 +1100,11 @@ export class GameplayRuntime {
     else if (command.type === 'inputMapEnable') { if (!this.input.enableMap(command.name)) addEditorLog(`Input map rejected: ${command.name}`, 'Input', 'error') }
     else if (command.type === 'inputMapDisable') { if (!this.input.disableMap(command.name)) addEditorLog(`Input map cannot be disabled: ${command.name}`, 'Input', 'warning') }
     else if (command.type === 'inputSchemeSet') { if (!this.input.setScheme(command.name)) addEditorLog('Input scheme requires a name', 'Input', 'error') }
-    else if (command.type === 'startTimer') this.time.start(entity.uuid, command.name, command.seconds, command.repeat)
+    else if (command.type === 'startTimer') { if (!this.time.start(entity.uuid, command.name, command.seconds, command.repeat)) addEditorLog(`${entity.name}: timer rejected by name, duration or queue limit`, 'Script', 'error') }
     else if (command.type === 'pauseTimer') this.time.pause(entity.uuid, command.name)
     else if (command.type === 'resumeTimer') this.time.resume(entity.uuid, command.name)
     else if (command.type === 'cancelTimer') this.time.cancel(entity.uuid, command.name)
-    else if (command.type === 'startTask') { this.time.startTask(entity.uuid, command.name, command.seconds); updateDebugTask({ id: `${entity.uuid}:${command.name}`, name: command.name, state: 'waiting', entityUuid: entity.uuid, detail: `Waiting ${command.seconds.toFixed(3)} s` }) }
+    else if (command.type === 'startTask') { const accepted = this.time.startTask(entity.uuid, command.name, command.seconds); updateDebugTask({ id: `${entity.uuid}:${command.name}`, name: command.name, state: accepted ? 'waiting' : 'failed', entityUuid: entity.uuid, detail: accepted ? `Waiting ${command.seconds.toFixed(3)} s` : 'Task rejected by name, duration or queue limit' }) }
     else if (command.type === 'cancelTask') { this.time.cancelTask(entity.uuid, command.name); updateDebugTask({ id: `${entity.uuid}:${command.name}`, name: command.name, state: 'cancelled', entityUuid: entity.uuid, detail: 'Cancelled by script' }) }
     else if (command.type === 'emitSignal') this.emitSignal(command.name, command.payload, command.target, entity.uuid)
     else if (command.type === 'saveSet') setSaveValue(command.key, command.value)
@@ -1014,19 +1132,23 @@ export class GameplayRuntime {
 
   private flushDynamicCommands(): void {
     let spawned = false
-    for (const { sourceUuid, command } of this.pendingDynamicCommands) {
+    const batch = this.pendingDynamicCommands.splice(0, MAX_SCRIPT_BRIDGE_COMMANDS)
+    for (const entry of batch) {
+      if (!this.commandSourceActive(entry)) continue
+      const { sourceUuid, command } = entry
       if (command.type === 'spawnAt') {
         const root = spawnRuntimePrefab(command.prefab, { position: { x: command.x, y: command.y }, rotation: command.rotation, scale: { x: command.scaleX, y: command.scaleY } }, false)
         if (!root) { addEditorLog(`Spawn failed for ${command.prefab} (requested by ${sourceUuid})`, 'Runtime', 'error'); continue }
         spawned = true
         if (this.pendingHandleResolutions.size >= 10_000) { const oldest = this.pendingHandleResolutions.keys().next().value; if (oldest) this.pendingHandleResolutions.delete(oldest) }
-        this.pendingHandleResolutions.set(command.pendingId, root.uuid)
+        this.pendingHandleResolutions.set(command.pendingId, { uuid: root.uuid, generation: entityLifetimeGeneration(root) })
         this.emitSignal('entity.spawned', { entity: root.uuid, pending: command.pendingId }, root.uuid, sourceUuid)
         continue
       }
       if (!('target' in command) || !('generation' in command)) continue
       const handle: RuntimeEntityHandle = { id: command.target, generation: command.generation }
       const target = resolveRuntimeHandle(handle, this.pendingHandleResolutions); if (!target) continue
+      if (this.isRemovalPending(target)) continue
       let mutation: TargetMutation | null = null
       if (command.type === 'targetSetPosition') mutation = { type: 'position', x: command.x, y: command.y }
       else if (command.type === 'targetSetRotation') mutation = { type: 'rotation', radians: command.radians }
@@ -1037,34 +1159,49 @@ export class GameplayRuntime {
       else if (command.type === 'targetSetUiValue') mutation = { type: 'uiValue', value: command.value }
       else if (command.type === 'targetAddTag' || command.type === 'targetRemoveTag') mutation = { type: command.type === 'targetAddTag' ? 'addTag' : 'removeTag', value: command.tag }
       else if (command.type === 'targetAddGroup' || command.type === 'targetRemoveGroup') mutation = { type: command.type === 'targetAddGroup' ? 'addGroup' : 'removeGroup', value: command.group }
-      else if (command.type === 'targetDestroy') { this.pendingDestroy.add(target.id); continue }
+      else if (command.type === 'targetDestroy') { this.queueEntityRemoval(target, false); continue }
       if (mutation) applyTargetMutation(target, mutation)
     }
     if (spawned) physicsState.world.invalidateRuntime()
-    this.pendingDynamicCommands = []
     const living = new Set(physicsState.world.entities.map(entity => entity.uuid))
-    for (const [pending, resolved] of this.pendingHandleResolutions) if (!living.has(resolved)) this.pendingHandleResolutions.delete(pending)
+    for (const [pending, resolved] of this.pendingHandleResolutions) if (!living.has(resolved.uuid)) this.pendingHandleResolutions.delete(pending)
   }
+
+  private commandSource(entity: Entity) { return { sourceUuid: entity.uuid, sourceGeneration: entityLifetimeGeneration(entity), allowRetiredSource: this.destroying.has(entity.uuid) } }
+  private commandSourceActive(source: { sourceUuid: string; sourceGeneration: number; allowRetiredSource: boolean }): boolean {
+    return source.allowRetiredSource || physicsState.world.entities.some(entity => entity.uuid === source.sourceUuid && inspectEntityLifetimeGeneration(entity) === source.sourceGeneration)
+  }
+  private queueEntityRemoval(entity: Entity, despawn: boolean): void { (despawn ? this.pendingDespawn : this.pendingDestroy).set(entity.id, entityLifetimeGeneration(entity)) }
+  private isRemovalPending(entity: Entity): boolean { const generation = inspectEntityLifetimeGeneration(entity); return generation !== null && (this.pendingDestroy.get(entity.id) === generation || this.pendingDespawn.get(entity.id) === generation) }
 
   private flushEntityCommands(): void {
     this.flushDynamicCommands()
-    for (const id of this.pendingDestroy) {
+    for (const [id, generation] of [...this.pendingDespawn].slice(0, MAX_SCRIPT_BRIDGE_COMMANDS)) {
+      this.pendingDespawn.delete(id)
       const entity = physicsState.world.entities.find(candidate => candidate.id === id)
-      if (!entity || this.destroying.has(entity.uuid)) continue
+      if (entity && inspectEntityLifetimeGeneration(entity) === generation && !releasePooled(entity)) this.queueEntityRemoval(entity, false)
+    }
+    const pending = [...this.pendingDestroy].slice(0, MAX_SCRIPT_BRIDGE_COMMANDS)
+    for (const [id, generation] of pending) {
+      this.pendingDestroy.delete(id)
+      const entity = physicsState.world.entities.find(candidate => candidate.id === id)
+      if (!entity || inspectEntityLifetimeGeneration(entity) !== generation || this.destroying.has(entity.uuid)) continue
       const doomed = subtreeEntities([id], physicsState.world.entities)
       for (const candidate of doomed) this.destroying.add(candidate.uuid)
       for (const candidate of doomed) {
-        this.runEntityFunction(candidate, 'on_destroy')
-        this.time.removeEntity(candidate.uuid)
-        this.awakened.delete(candidate.uuid)
-        this.started.delete(candidate.uuid)
+        this.runDestructionCallbacks(candidate)
+        this.clearEntityRuntimeState(candidate)
+        retireEntityLifetime(candidate)
       }
       deleteEntity(id)
       for (const candidate of doomed) this.destroying.delete(candidate.uuid)
     }
-    this.pendingDestroy.clear()
-    for (const request of this.pendingPrefabs) acquirePooled(request.reference, request.position) ?? instantiatePrefab(request.reference, request.position, false)
-    this.pendingPrefabs = []
+    for (const request of this.pendingPrefabs.splice(0, MAX_SCRIPT_BRIDGE_COMMANDS)) if (this.commandSourceActive(request)) {
+      if (!acquirePooled(request.reference, request.position)) {
+        if (hasObjectPool(request.reference)) addEditorLog(`Object pool capacity unavailable for ${request.reference}; spawn was refused.`, 'Runtime', 'warning')
+        else instantiatePrefab(request.reference, request.position, false)
+      }
+    }
     this.ensureLifecycle()
   }
 
@@ -1073,30 +1210,31 @@ export class GameplayRuntime {
     const scene = this.pendingScene
     this.pendingScene = null
     if (!scene) return
-    this.emitSignal('scene.unloading', { type: scene.type }, '', 'runtime')
-    this.dispatchSignals()
     const before = [...physicsState.world.entities]
-    const unloading = before.filter(candidate => !candidate.persistentAcrossScenes)
-    for (const entity of unloading) this.destroying.add(entity.uuid)
-    for (const entity of unloading) {
-      this.runEntityFunction(entity, 'on_destroy')
-      this.time.removeEntity(entity.uuid)
-    }
+    let transaction: ReturnType<typeof prepareRuntimeSceneTransition>
+    try { transaction = prepareRuntimeSceneTransition(scene.type === 'load' ? scene.identifier : undefined) }
+    catch (error) { addEditorLog(`Runtime scene preparation failed: ${this.errorMessage(error)}`, 'Runtime', 'error'); return }
+    if (!transaction.commit()) { addEditorLog(`Runtime scene transition failed: ${transaction.error ?? 'Commit rejected'}`, 'Runtime', 'error'); return }
+    const retained = new Set(transaction.preservedEntityUuids), unloading = before.filter(entity => !retained.has(entity.uuid))
     this.pendingDestroy.clear()
+    this.pendingDespawn.clear()
     this.pendingPrefabs = []
     this.pendingDynamicCommands = []
-    const switched = scene.type === 'reload' ? runtimeReloadScene() : runtimeLoadScene(scene.identifier)
-    if (!switched) {
-      for (const entity of unloading) this.destroying.delete(entity.uuid)
-      addEditorLog(scene.type === 'reload' ? 'Runtime scene reload failed' : `Scene not found: ${scene.identifier}`, 'Runtime', 'error')
-      return
-    }
+    // Accepted transitions run outgoing callbacks against their original context;
+    // a failed installation never destroys instances or consumes their timers.
+    this.callbackWorld = before
+    try { this.emitSignal('scene.unloading', { type: scene.type }, '', 'runtime'); this.dispatchSignals() }
+    finally { this.callbackWorld = null }
+    for (const entity of unloading) this.destroying.add(entity.uuid)
+    for (const entity of unloading) { this.runDestructionCallbacks(entity, before); this.clearEntityRuntimeState(entity); retireEntityLifetime(entity) }
     for (const entity of unloading) this.destroying.delete(entity.uuid)
     const living = new Set(physicsState.world.entities.map(entity => entity.uuid))
-    for (const [pending, resolved] of this.pendingHandleResolutions) if (!living.has(resolved)) this.pendingHandleResolutions.delete(pending)
+    for (const [pending, resolved] of this.pendingHandleResolutions) if (!living.has(resolved.uuid)) this.pendingHandleResolutions.delete(pending)
     for (const uuid of [...this.awakened]) if (!living.has(uuid)) this.awakened.delete(uuid)
     for (const uuid of [...this.started]) if (!living.has(uuid)) this.started.delete(uuid)
     beginGameplayComponents(physicsState.world.entities)
+    const sessionGeneration = ++this.sessionGeneration
+    void beginWorldGameplay((name, payload, target, source) => this.emitSignal(name, payload, target, source), () => this.active && this.sessionGeneration === sessionGeneration)
     this.diagnostics.sceneSwitches++
     this.ensureLifecycle()
     this.emitSignal('scene.loaded', { type: scene.type }, '', 'runtime')
@@ -1104,7 +1242,7 @@ export class GameplayRuntime {
   }
 
   private dispatchPhysicsEvents(events: RuntimePhysicsEvent[]): void {
-    processGameplayContacts(events, physicsState.world.entities, (name, payload, target, source) => this.emitSignal(name, payload, target, source), (target, despawn) => { if (!despawn || !releasePooled(target)) this.pendingDestroy.add(target.id) })
+    processGameplayContacts(events, physicsState.world.entities, (name, payload, target, source) => this.emitSignal(name, payload, target, source), (target, despawn) => this.queueEntityRemoval(target, despawn))
     for (const event of events) {
       if (!event.firstEntityUuid || !event.secondEntityUuid) continue
       const first = physicsState.world.entities.find(entity => entity.uuid === event.firstEntityUuid)
@@ -1142,7 +1280,16 @@ export class GameplayRuntime {
 
   private canRun(entity: Entity): boolean {
     const script = entity.script2D
-    return entity.enabled && !!script && script.enabled && !script.removed
+    return entity.enabled && entityLifetimeActive(entity) && !!script && script.enabled && !script.removed
+  }
+
+  private clearEntityRuntimeState(entity: Entity): void {
+    this.time.removeEntity(entity.uuid); this.awakened.delete(entity.uuid); this.started.delete(entity.uuid)
+    for (const key of this.behaviorProperties.keys()) if (key.startsWith(`${entity.uuid}:`)) this.behaviorProperties.delete(key)
+    for (const key of this.contractValidations.keys()) if (key.startsWith(`${entity.uuid}:`)) this.contractValidations.delete(key)
+    this.pendingSignals = this.pendingSignals.filter(signal => signal.target !== entity.uuid)
+    if (this.pendingDebugInvocation?.entityUuid === entity.uuid) this.pendingDebugInvocation = null
+    if (this.pendingGraphExecution?.entityUuid === entity.uuid) this.pendingGraphExecution = null
   }
 
   private latchFixedInput(snapshot: InputSnapshot): void {
@@ -1165,7 +1312,9 @@ export class GameplayRuntime {
 
   private compileAttachedScripts(): void {
     for (const entity of physicsState.world.entities) {
-      const uuid = resolveAsset(entity.script2D?.scriptAsset ?? '')?.uuid
+      const references = new Set([entity.script2D?.scriptAsset, ...resolveEventHandlers(entity.script2D?.eventSheetAsset).map(handler => handler.logicAsset)])
+      for (const reference of references) {
+      const uuid = resolveAsset(reference)?.uuid
       if (!uuid) continue
       try {
         const source = this.resolveScriptBundle(uuid)
@@ -1173,124 +1322,160 @@ export class GameplayRuntime {
       } catch (error) {
         this.reportScriptError(entity, this.errorMessage(error))
       }
+      }
     }
   }
 
-  private ensureCompiled(scriptUuid: string, source: string): ExportedProperty[] {
-    if (this.compiledSources.get(scriptUuid) === source) return []
+  private ensureCompiled(scriptUuid: string, source: string, candidateDocument?: string): ExportedProperty[] {
+    const registerCompiledGraph = (): void => { const asset = resolveAsset(scriptUuid); if (asset?.assetType === 'visualScript') { const document = this.compiledDocuments.get(scriptUuid); if (document !== undefined) registerGraphDebugDocument(document) } }
+    if (this.compiledSources.get(scriptUuid) === source) { registerCompiledGraph(); return [] }
     if (!this.scriptRuntime) throw new Error('Script runtime is unavailable')
-    const runtime = this.scriptRuntime as unknown as { compile_cached(id: string, source: string): string }
-    const exports = JSON.parse(runtime.compile_cached(scriptUuid, source)) as ExportedProperty[]
-    this.compiledSources.set(scriptUuid, source)
+    const documents = new Map<string, string>()
+    if (this.resolveScriptBundle(scriptUuid, candidateDocument === undefined ? new Map() : new Map([[scriptUuid, candidateDocument]]), documents) !== source) throw Error('Script module source changed before compilation; retry the candidate.')
     const contract = parseScriptContract(source)
     if (!contract.valid) throw new Error(contract.diagnostics.filter(item => item.severity === 'error').map(item => `${item.code} line ${item.line}: ${item.message}`).join(' '))
+    const runtime = this.scriptRuntime as unknown as { compile_cached(id: string, source: string): string }
+    const exports = JSON.parse(runtime.compile_cached(scriptUuid, source)) as ExportedProperty[]
+    this.compiledExports.set(scriptUuid, exports)
+    this.compiledSources.set(scriptUuid, source)
+    this.compiledModuleDocuments.set(scriptUuid, documents)
+    const document = candidateDocument ?? readTextAsset(scriptUuid)
+    if (document !== null && document !== undefined) this.compiledDocuments.set(scriptUuid, document)
     this.declaredFunctions.set(scriptUuid, { source, names: new Set(Object.keys(analyzeScript(source).functions)), contract })
     for (const key of this.contractValidations.keys()) if (key.endsWith(`:${scriptUuid}`)) this.contractValidations.delete(key)
+    registerCompiledGraph()
     return exports
   }
 
   private flushHotReloads(): void {
-    for (const [uuid] of this.pendingReloads) {
-      const asset = resolveAsset(uuid)
-      if (asset?.script?.reloadPolicy === 'disabled') {
-        scriptDebugState.hotReload = { status: 'disabled', scriptUuid: uuid, message: 'This script opted out of hot reload', frame: this.time.value.frame }
-        addEditorLog(`Hot reload disabled for ${asset.name}`, 'Script', 'debug', uuid)
-        continue
-      }
-      let plan: ReturnType<typeof prepareHotReload> | null = null
-      try {
-        const source = this.resolveScriptBundle(uuid)
-        if (!source) continue
-        const previousSource = this.compiledSources.get(uuid) ?? source
-        const previousValidation = this.validateSource(previousSource)
-        const candidateValidation = this.validateSource(source)
-        if (candidateValidation.error) throw new Error(candidateValidation.error)
-        plan = prepareHotReload(uuid, previousSource, source, previousValidation.exports, candidateValidation.exports, asset?.script?.reloadPolicy ?? 'preserve')
-        if (plan.classification === 'rejected' || plan.classification === 'restart-required') {
-          const message = plan.classification === 'restart-required' ? `Restart required: ${plan.reasons.join(' ')}` : plan.reasons.join(' ')
-          rejectHotReload(plan, message)
-          scriptDebugState.hotReload = { status: 'rejected', scriptUuid: uuid, message, frame: this.time.value.frame }
-          addEditorLog(message, 'Script', plan.classification === 'restart-required' ? 'warning' : 'error', uuid)
-          continue
-        }
-        const exports = this.ensureCompiled(uuid, source)
-        for (const entity of physicsState.world.entities.filter(candidate => resolveAsset(candidate.script2D?.scriptAsset ?? '')?.uuid === uuid)) {
-          const component = entity.script2D
-          if (!component) continue
-          component.propertyMetadata = Object.fromEntries(exports.map(exported => [exported.name, { ...exported, defaultValue: exported.defaultValue ?? exported.value }]))
-          const recreate = asset?.script?.reloadPolicy === 'recreate'
-          component.properties = Object.fromEntries(exports.map(exported => [exported.name, this.exportValue(exported, recreate ? undefined : component.properties[exported.name])]))
-          if (recreate) { this.awakened.delete(entity.uuid); this.started.delete(entity.uuid) }
-        }
-        commitHotReload(plan)
-        scriptDebugState.hotReload = { status: 'applied', scriptUuid: uuid, message: asset?.script?.reloadPolicy === 'recreate' ? 'Applied and recreated instances' : 'Applied with compatible serialized state preserved', frame: this.time.value.frame }
-        addEditorLog(`Hot reloaded ${resolveAsset(uuid)?.name ?? uuid} at frame ${this.time.value.frame}`, 'Script', 'debug', uuid)
-      } catch (error) {
-        const message = `Hot reload rejected; previous valid program retained: ${this.errorMessage(error)}`
-        if (plan) rejectHotReload(plan, message)
-        scriptDebugState.hotReload = { status: 'rejected', scriptUuid: uuid, message, frame: this.time.value.frame }
-        addEditorLog(message, 'Script', 'error', uuid)
-      }
+    const queued = new Map(this.pendingReloads); this.pendingReloads.clear()
+    const rollbackHistory = new Map(this.pendingRollbackHistory); this.pendingRollbackHistory.clear()
+    if (!queued.size) return
+    const requestedUuid = queued.keys().next().value!
+    if (!scriptProjectSettings.hotReloadEnabled) {
+      scriptDebugState.hotReload = { status: 'disabled', scriptUuid: requestedUuid, message: 'Project hot reload was disabled before the queued frame-boundary apply.', frame: this.time.value.frame }
+      return
     }
-    this.pendingReloads.clear()
+    const plans: ReturnType<typeof prepareHotReload>[] = []
+    let candidateRuntime: WasmScriptRuntime | null = null
+    let replacedRuntime: WasmScriptRuntime | null = null
+    let committed = false
+    try {
+      const affected = new Set(queued.keys())
+      for (const [root, documents] of this.compiledModuleDocuments) if ([...queued.keys()].some(uuid => documents.has(uuid))) affected.add(root)
+      const priorDocuments = new Map<string, string>()
+      for (const documents of this.compiledModuleDocuments.values()) for (const [uuid, raw] of documents) if (!priorDocuments.has(uuid)) priorDocuments.set(uuid, raw)
+      const candidates = new Map<string, { source: string; previousSource: string; previousDocument: string; documents: Map<string, string>; contract: ScriptContractReport; names: Set<string>; recreate: boolean; exports: ExportedProperty[] }>()
+      for (const uuid of affected) {
+        const asset = resolveAsset(uuid)
+        if (!asset) throw Error(`Reload asset is missing: ${uuid}`)
+        if (asset.script?.reloadPolicy === 'disabled') throw Error(`${asset.name} opted out of hot reload; the entire dependent transaction was retained.`)
+        const overrides = new Map(this.compiledModuleDocuments.get(uuid) ?? priorDocuments)
+        for (const [changed, raw] of queued) overrides.set(changed, raw)
+        const documents = new Map<string, string>(), source = this.resolveScriptBundle(uuid, overrides, documents)
+        if (!source) throw Error(`Reload module cannot be resolved: ${asset.name}`)
+        const contract = parseScriptContract(source)
+        if (!contract.valid) throw Error(contract.diagnostics.filter(item => item.severity === 'error').map(item => item.message).join(' '))
+        const previousSource = this.compiledSources.get(uuid) ?? this.resolveScriptBundle(uuid, priorDocuments) ?? source
+        candidates.set(uuid, { source, previousSource, previousDocument: this.compiledDocuments.get(uuid) ?? priorDocuments.get(uuid) ?? readTextAsset(uuid) ?? previousSource, documents, contract, names: new Set(Object.keys(analyzeScript(source).functions)), recreate: asset.script?.reloadPolicy === 'recreate', exports: [] })
+      }
+      // A separate complete cache is prepared; one failed compile cannot replace any live AST.
+      const nextSources = new Map(this.compiledSources)
+      for (const [uuid, candidate] of candidates) nextSources.set(uuid, candidate.source)
+      candidateRuntime = new WasmScriptRuntime()
+      for (const [uuid, source] of nextSources) {
+        const exports = JSON.parse(candidateRuntime.compile_cached(uuid, source)) as ExportedProperty[]
+        const candidate = candidates.get(uuid)
+        if (candidate) candidate.exports = exports
+      }
+      for (const [uuid, candidate] of candidates) {
+        const previous = this.validateSource(candidate.previousSource)
+        if (previous.error) throw Error(previous.error)
+        const plan = prepareHotReload(uuid, candidate.previousSource, candidate.source, previous.exports, candidate.exports, resolveAsset(uuid)?.script?.reloadPolicy ?? 'preserve')
+        plans.push(plan)
+        if (plan.classification === 'rejected' || plan.classification === 'restart-required') throw Error(`${plan.classification === 'restart-required' ? 'Restart required: ' : ''}${plan.reasons.join(' ')}`)
+      }
+      // Prepare all primary and inherited state transfers before publishing the candidate VM.
+      const transfers = [...candidates].flatMap(([uuid, candidate]) => physicsState.world.entities.flatMap(entity => {
+          const component = entity.script2D
+          if (!component) return []
+          const primary = resolveAsset(component.scriptAsset)?.uuid === uuid, key = `${entity.uuid}:${uuid}`
+          if (!primary && !this.behaviorProperties.has(key)) return []
+          const previous = primary ? component.properties : this.behaviorProperties.get(key)!
+          const properties = Object.fromEntries(candidate.exports.map(exported => [exported.name, this.exportValue(exported, candidate.recreate ? undefined : previous[exported.name])]))
+          const metadata = Object.fromEntries(candidate.exports.map(exported => [exported.name, { ...exported, defaultValue: exported.defaultValue ?? exported.value }]))
+          return [{ entity, component, primary, key, properties, metadata, recreate: candidate.recreate }]
+      }))
+      replacedRuntime = this.scriptRuntime
+      this.scriptRuntime = candidateRuntime; candidateRuntime = null; this.compiledSources = nextSources; committed = true
+      for (const [uuid, candidate] of candidates) {
+        this.compiledExports.set(uuid, candidate.exports)
+        this.compiledModuleDocuments.set(uuid, candidate.documents)
+        this.compiledDocuments.set(uuid, candidate.documents.get(uuid)!)
+        this.declaredFunctions.set(uuid, { source: candidate.source, names: candidate.names, contract: candidate.contract })
+        for (const key of this.contractValidations.keys()) if (key.endsWith(`:${uuid}`)) this.contractValidations.delete(key)
+        if (this.pendingDebugInvocation?.scriptUuid === uuid) this.pendingDebugInvocation = null
+        if (this.pendingGraphExecution?.scriptUuid === uuid) this.pendingGraphExecution = null
+      }
+      for (const transfer of transfers) {
+        if (transfer.primary) { transfer.component.propertyMetadata = transfer.metadata; transfer.component.properties = transfer.properties }
+        else this.behaviorProperties.set(transfer.key, transfer.properties)
+        if (transfer.recreate) { this.awakened.delete(transfer.entity.uuid); this.started.delete(transfer.entity.uuid) }
+      }
+      for (const plan of plans) commitHotReload(plan, candidates.get(plan.scriptUuid)!.previousDocument)
+      for (const historyId of rollbackHistory.values()) completeHotReloadRollback(historyId)
+      for (const [uuid, candidate] of candidates) if (resolveAsset(uuid)?.assetType === 'visualScript') registerGraphDebugDocument(candidate.documents.get(uuid)!)
+      const message = `Applied one VM transaction for ${candidates.size} affected scripts with compatible state retained.`
+      scriptDebugState.hotReload = { status: 'applied', scriptUuid: requestedUuid, message, frame: this.time.value.frame }
+      addEditorLog(message, 'Script', 'debug', requestedUuid)
+    } catch (error) {
+      const message = committed ? `Hot reload committed, but post-commit bookkeeping failed: ${this.errorMessage(error)}` : `Hot reload rejected; previous valid programs retained: ${this.errorMessage(error)}`
+      if (!committed) for (const plan of plans) rejectHotReload(plan, message)
+      scriptDebugState.hotReload = { status: committed ? 'applied' : 'rejected', scriptUuid: requestedUuid, message, frame: this.time.value.frame }
+      addEditorLog(message, 'Script', 'error', requestedUuid)
+    } finally {
+      try { candidateRuntime?.free() } catch (error) { addEditorLog(`Rejected script VM cleanup failed: ${this.errorMessage(error)}`, 'Script', 'error') }
+      try { replacedRuntime?.free() } catch (error) { addEditorLog(`Replaced script VM cleanup failed: ${this.errorMessage(error)}`, 'Script', 'error') }
+    }
   }
 
   private dispatchSignals(): void {
     const batch = this.pendingSignals.splice(0)
     for (const signal of batch) {
       scriptDebugState.lastSignal = { name: signal.name, source: signal.source, target: signal.target }
-      const recipients = signal.target
-        ? physicsState.world.entities.filter(entity => entity.uuid === signal.target)
-        : physicsState.world.entities
+      const signalWorld = this.callbackWorld ?? physicsState.world.entities
+      const recipients = signal.target ? signalWorld.filter(entity => entity.uuid === signal.target) : signalWorld
       for (const entity of recipients) {
         this.runEntityFunction(entity, 'on_signal', undefined, signal)
         const eventKind: ObjectEventKind = signal.name.startsWith('ui.') ? 'ui' : signal.name.startsWith('animation.') ? 'animation' : signal.name.startsWith('network.') ? 'network' : 'signal'
-        this.runEventSheetHandlers(entity, eventKind, signal.name.replace(/^(?:ui|animation|network)\./, ''), 'on_signal', undefined, signal)
+        const dispatched = this.runEventSheetHandlers(entity, eventKind, signal.name.replace(/^(?:ui|animation|network)\./, ''), 'on_signal', undefined, signal, signal.deliveredCallbacks)
         const asset = resolveAsset(entity.script2D?.scriptAsset ?? '')
         for (const connection of asset?.script?.signalConnections ?? []) {
           if (!connection.enabled || connection.signal !== signal.name) continue
           if (connection.source && connection.source !== signal.source) continue
           if (connection.target && connection.target !== entity.uuid) continue
-          if (connection.callback !== 'on_signal') this.runEntityFunction(entity, connection.callback, undefined, signal)
+          const key = JSON.stringify([asset!.uuid, connection.callback])
+          if (!dispatched.has(key)) { dispatched.add(key); this.runEntityFunction(entity, connection.callback, undefined, signal) }
         }
       }
     }
   }
 
-  private resolveScriptBundle(scriptUuid: string, overrides = new Map<string, string>()): string | null {
-    const root = resolveAsset(scriptUuid)
-    if (!root || (root.assetType !== 'script' && root.assetType !== 'visualScript')) return null
-    if (root.assetType === 'visualScript') {
-      const graphSource = overrides.get(root.uuid) ?? readTextAsset(root.uuid)
-      if (graphSource === null) return null
-      registerGraphDebugDocument(graphSource)
-      return executableGraphSource(graphSource)
+  private dispatchTimerExpirations(expired: readonly TimerExpiration[]): void {
+    for (const timer of expired) {
+      if (!this.time.consumeExpiration(timer)) continue
+      const entity = physicsState.world.entities.find(candidate => candidate.uuid === timer.entityUuid)
+      if (entity && timer.kind === 'timer') { this.runEntityFunction(entity, 'on_timer', undefined, { name: timer.name, source: entity.uuid, payload: null }); this.runEventSheetHandlers(entity, 'timer', timer.name, 'on_timer', undefined, { name: timer.name, source: entity.uuid, payload: null }) }
+      else if (entity) { updateDebugTask({ id: `${entity.uuid}:${timer.name}`, name: timer.name, state: 'completed', entityUuid: entity.uuid, detail: `Completed at frame ${this.time.value.frame}` }); this.runEntityFunction(entity, 'on_task', undefined, { name: timer.name, source: entity.uuid, payload: null }); this.runEventSheetHandlers(entity, 'task', timer.name, 'on_task', undefined, { name: timer.name, source: entity.uuid, payload: null }) }
     }
-    const visiting = new Set<string>()
-    const resolved = new Set<string>()
-    const chunks: string[] = []
-    const visit = (uuid: string): void => {
-      if (visiting.has(uuid)) throw new Error(`Circular script module dependency at ${resolveAsset(uuid)?.path ?? uuid}`)
-      if (resolved.has(uuid)) return
-      const asset = resolveAsset(uuid)
-      const source = overrides.get(uuid) ?? readTextAsset(uuid)
-      if (!asset || asset.assetType !== 'script' || source === null) throw new Error(`Missing script module: ${uuid}`)
-      visiting.add(uuid)
-      const dependencies = [...source.matchAll(/^\s*use\s+["'`]([^"'`]+)["'`]\s*;?\s*$/gm)].map(match => match[1])
-      for (const reference of dependencies) {
-        const normalized = reference.replace(/\\/g, '/').replace(/^\.\//, '')
-        const path = normalized.startsWith('Assets/') ? normalized : `Assets/Scripts/${normalized}`
-        const module = [path, path.endsWith('.rhai') ? path : `${path}.rhai`]
-          .map(candidate => resolveAsset(candidate)).find(candidate => candidate?.assetType === 'script')
-        if (!module) throw new Error(`Script module not found: ${reference}`)
-        visit(module.uuid)
-      }
-      visiting.delete(uuid)
-      resolved.add(uuid)
-      chunks.push(`// module: ${asset.path}\n${source.replace(/^\s*use\s+["'`][^"'`]+["'`]\s*;?\s*$/gm, '')}`)
-    }
-    visit(root.uuid)
-    return chunks.join('\n\n')
+  }
+
+  private resolveScriptBundle(scriptUuid: string, overrides = new Map<string, string>(), documents?: Map<string, string>): string | null {
+    return resolveProjectScriptBundle(scriptUuid, {
+      resolveAsset: reference => { const asset = resolveAsset(reference) ?? assetState.records.find(candidate => candidate.path === reference); return asset && (asset.assetType === 'script' || asset.assetType === 'visualScript') ? { uuid: asset.uuid, path: asset.path, assetType: asset.assetType } : null },
+      readSource: uuid => { const raw = overrides.get(uuid) ?? readTextAsset(uuid); if (raw !== null) documents?.set(uuid, raw); return raw },
+      compileVisual: executableGraphSource
+    })
   }
 
   private serializable(value: unknown): unknown {

@@ -10,12 +10,16 @@ interface Shelf {
   height: number
   x: number
 }
+export const TEXTURE_ATLAS_LIMITS = Object.freeze({ sources: 16384, decodeConcurrency: 4, decodedPixels: 128 * 1024 * 1024, pagePixels: 128 * 1024 * 1024, decodeTimeoutMs: 15000 })
+const ordinal = (first:string,second:string) => first < second ? -1 : first > second ? 1 : 0
 
 function loadImage(source: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const image = new Image()
-    image.onload = () => resolve(image)
-    image.onerror = () => reject(new Error('Image asset could not be decoded'))
+    const finish=(error?:Error)=>{clearTimeout(timeout);image.onload=null;image.onerror=null;if(error)reject(error);else resolve(image)}
+    const timeout=setTimeout(()=>finish(new Error('Image decode exceeded 15 seconds')),TEXTURE_ATLAS_LIMITS.decodeTimeoutMs)
+    image.onload = () => finish()
+    image.onerror = () => finish(new Error('Image asset could not be decoded'))
     image.src = source
   })
 }
@@ -35,36 +39,56 @@ function place(width: number, height: number, shelves: Shelf[], pageSize: number
 }
 
 export async function buildTextureAtlases(records: AssetRecord[], pageSize = 2048): Promise<TextureAtlasPage[]> {
-  const sources = records.filter(record => record.assetType === 'image' && record.settings.atlas && record.source)
-  const loaded = (await Promise.all(sources.map(async record => {
-    try { return { record, image: await loadImage(record.source) } as LoadedImage }
-    catch { return null }
-  }))).filter((value): value is LoadedImage => value !== null)
-  loaded.sort((first, second) => first.record.settings.atlasSettings.group.localeCompare(second.record.settings.atlasSettings.group) || second.image.naturalHeight - first.image.naturalHeight || second.image.naturalWidth - first.image.naturalWidth || first.record.uuid.localeCompare(second.record.uuid))
+  pageSize = Math.min(8192, Math.max(64, Math.trunc(Number.isFinite(pageSize) ? pageSize : 2048)))
+  const sources = records.filter(record => record.assetType === 'image' && !record.derivedSprite && record.settings.atlas && record.source).map(record=>({...record,settings:JSON.parse(JSON.stringify(record.settings)) as AssetRecord['settings']}))
+  if(sources.length>TEXTURE_ATLAS_LIMITS.sources)throw new Error('ATLAS_SOURCE_LIMIT: Too many atlas sources; previous atlas retained.')
+  const loaded:LoadedImage[]=[];let decodedPixels=0,cursor=0,failure:Error|null=null
+  const workers=Array.from({length:Math.min(TEXTURE_ATLAS_LIMITS.decodeConcurrency,sources.length)},async()=>{
+    while(cursor<sources.length&&!failure){const record=sources[cursor++]
+      try{const image=await loadImage(record.source),pixels=image.naturalWidth*image.naturalHeight
+        if(!Number.isSafeInteger(pixels)||pixels<1||decodedPixels+pixels>TEXTURE_ATLAS_LIMITS.decodedPixels)throw new Error('ATLAS_PIXEL_LIMIT: Decoded atlas images exceed the pixel budget.')
+        decodedPixels+=pixels;loaded.push({record,image})
+      }catch(error){failure=error instanceof Error&&error.message.startsWith('ATLAS_PIXEL_LIMIT')?error:new Error(`ATLAS_IMAGE_DECODE: ${record.path} could not be decoded; previous atlas retained.`)}
+    }
+  })
+  await Promise.all(workers)
+  if(failure)throw failure
+  loaded.sort((first, second) => ordinal(first.record.settings.atlasSettings.group,second.record.settings.atlasSettings.group) || second.image.naturalHeight - first.image.naturalHeight || second.image.naturalWidth - first.image.naturalWidth || ordinal(first.record.uuid,second.record.uuid))
 
+  const groupSizes = new Map<string, number>()
+  for (const item of loaded) { const requested = Number(item.record.settings.atlasSettings.maxSize), limit = Number.isFinite(requested) ? Math.min(pageSize, Math.max(64, Math.trunc(requested))) : pageSize; groupSizes.set(item.record.settings.atlasSettings.group, Math.min(groupSizes.get(item.record.settings.atlasSettings.group) ?? pageSize, limit)) }
   const pages: TextureAtlasPage[] = []
+  let activeSize = pageSize
   let page: TextureAtlasPage | null = null
   let context: CanvasRenderingContext2D | null = null
   let shelves: Shelf[] = []
+  let activeGroup: string | null = null
+  let pagePixels=0
   const createPage = () => {
+    if(pagePixels+activeSize*activeSize>TEXTURE_ATLAS_LIMITS.pagePixels)throw new Error('ATLAS_PAGE_LIMIT: Generated atlas pages exceed the pixel budget; previous atlas retained.')
+    pagePixels+=activeSize*activeSize
     const canvas = document.createElement('canvas')
-    canvas.width = pageSize
-    canvas.height = pageSize
+    canvas.width = activeSize
+    canvas.height = activeSize
     page = { key: `atlas:${pages.length}`, canvas, regions: new Map() }
     pages.push(page)
     context = canvas.getContext('2d', { alpha: true })
-    context?.clearRect(0, 0, pageSize, pageSize)
+    if (!context) throw new Error('ATLAS_CANVAS: Could not allocate a 2D canvas; previous atlas retained.')
+    context.clearRect(0, 0, activeSize, activeSize)
     shelves = []
   }
 
   for (const item of loaded) {
-    const padding = Math.min(32, Math.max(0, Math.trunc(item.record.settings.atlasSettings.padding)))
-    const scale = Math.min(1, (pageSize - padding * 2) / Math.max(item.image.naturalWidth, item.image.naturalHeight))
+    activeSize = groupSizes.get(item.record.settings.atlasSettings.group) ?? pageSize
+    const rawPadding = Number(item.record.settings.atlasSettings.padding), padding = Math.min(32, Math.max(0, Math.trunc(Number.isFinite(rawPadding) ? rawPadding : 0)))
+    if (padding * 2 >= activeSize || item.image.naturalWidth < 1 || item.image.naturalHeight < 1) throw new Error(`ATLAS_DIMENSIONS: Invalid image dimensions or padding for ${item.record.path}.`)
+    const scale = Math.min(1, (activeSize - padding * 2) / Math.max(item.image.naturalWidth, item.image.naturalHeight))
     const width = Math.max(1, Math.round(item.image.naturalWidth * scale))
     const height = Math.max(1, Math.round(item.image.naturalHeight * scale))
-    if (!page) createPage()
-    let position = place(width + padding * 2, height + padding * 2, shelves, pageSize)
-    if (!position) { createPage(); position = place(width + padding * 2, height + padding * 2, shelves, pageSize) }
+    if (!page || activeGroup !== item.record.settings.atlasSettings.group) createPage()
+    activeGroup = item.record.settings.atlasSettings.group
+    let position = place(width + padding * 2, height + padding * 2, shelves, activeSize)
+    if (!position) { createPage(); position = place(width + padding * 2, height + padding * 2, shelves, activeSize) }
     if (!page || !context || !position) continue
     const activePage = page as TextureAtlasPage
     const activeContext = context as CanvasRenderingContext2D
@@ -73,7 +97,7 @@ export async function buildTextureAtlases(records: AssetRecord[], pageSize = 204
     activePage.regions.set(item.record.uuid, {
       key: activePage.key,
       source: activePage.canvas,
-      uv: { x: x / pageSize, y: y / pageSize, width: width / pageSize, height: height / pageSize },
+      uv: { x: x / activeSize, y: y / activeSize, width: width / activeSize, height: height / activeSize },
       filter: item.record.settings.filterMode
     })
   }

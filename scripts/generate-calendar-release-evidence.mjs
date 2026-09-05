@@ -8,6 +8,18 @@ import { fileURLToPath } from 'node:url'
 const root = dirname(dirname(fileURLToPath(import.meta.url)))
 const release = process.argv.find(value => value.startsWith('--release='))?.slice(10)
 const machineVersion = process.argv.find(value => value.startsWith('--engine='))?.slice(9)
+if (/^\d{2}\.\d{2}$/.test(release ?? '') && Number(release.replace('.', '')) >= 2612) {
+  const run = process.argv.find(value => value.startsWith('--run='))?.slice(6)
+  if (!run) throw new Error('New releases require --run=<actual release-qualification output directory>; historical reports cannot qualify a later release.')
+  const { releaseVersion } = await import('./release-source-snapshot.mjs')
+  const identity = JSON.parse(await readFile(join(run, 'plan.json'), 'utf8'))
+  if (identity.release !== release || identity.machineVersion !== releaseVersion(release) || machineVersion !== identity.machineVersion) throw new Error('Requested release/engine disagrees with the executed qualification plan.')
+  const { generateSequentialReleaseEvidence } = await import('./generate-sequential-release-evidence.mjs')
+  const { resolve } = await import('node:path')
+  const result = await generateSequentialReleaseEvidence(root, resolve(run))
+  console.log(JSON.stringify(result, null, 2))
+  process.exit(0)
+}
 const supported = new Map([['26.08', '26.8.0'], ['26.09', '26.9.0'], ['26.10', '26.10.0']])
 if (supported.get(release) !== machineVersion) throw new Error('Evidence requires a matching calendar release and machine version.')
 const releaseChangeManifest = {

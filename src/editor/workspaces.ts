@@ -64,6 +64,7 @@ export const WORKSPACE_PROFILE_PRESETS = Object.freeze([
 ])
 
 export const workspaceState = reactive({
+  maximizedPanel: '' as '' | 'hierarchy' | 'inspector' | 'bottom',
   custom: [] as CustomWorkspace[],
   selectedCustomId: '',
   safeLayout: false,
@@ -82,9 +83,11 @@ type PanelName = 'hierarchy' | 'inspector' | 'bottom'
 const USER_STORAGE_KEY = 'nova-a-editor-workspaces-v3'
 const V4_STORAGE_KEY = 'nova-a-editor-workspaces-v2'
 const LEGACY_STORAGE_KEY = 'nova-a-editor-layout-v1'
+const MAX_CUSTOM_WORKSPACES = 24
 const PAGES = new Set<EditorPage>(['scene', 'game', 'script', 'settings', 'manage'])
 const BOTTOM_TABS = new Set<BottomPanelTab>(['assets', 'packages', 'console', 'animation', 'audio', 'worldProduction', 'networkStudio', 'ecosystem', 'tilemap', 'presentation', 'profiler', 'rendering', 'project', 'build'])
 let initialized = false
+const rememberedLayouts = new Map<EditorWorkspace, WorkspaceLayout>()
 
 function scopedStorageKey(base: string): string { return preferencesState.workspaceLayoutScope === 'project' ? `${base}:project:${projectSessionState.id}` : base }
 function storageKey(): string { return scopedStorageKey(USER_STORAGE_KEY) }
@@ -148,6 +151,7 @@ function notifyLayoutChanged(): void {
 }
 
 function applyLayout(layout: WorkspaceLayout): void {
+  workspaceState.maximizedPanel = ''
   const value = normalizeLayout(layout)
   Object.assign(editorState, {
     currentPage: value.page, hierarchyVisible: value.hierarchyVisible, inspectorVisible: value.inspectorVisible,
@@ -169,40 +173,59 @@ function applyLayout(layout: WorkspaceLayout): void {
 
 function normalizeCustomList(value: unknown): CustomWorkspace[] {
   if (!Array.isArray(value)) return []
-  return value.slice(0, 24).flatMap((item, index) => {
+  const ids = new Set<string>()
+  return value.slice(0, MAX_CUSTOM_WORKSPACES).flatMap((item, index) => {
     if (!item || typeof item !== 'object') return []
     const source = item as Partial<CustomWorkspace>
     const name = typeof source.name === 'string' ? source.name.trim().slice(0, 48) : ''
-    return name ? [{ id: typeof source.id === 'string' ? source.id.slice(0, 80) : `custom-${index}`, name, ...normalizeLayout(source) }] : []
+    let id = typeof source.id === 'string' && source.id.trim() ? source.id.slice(0, 80) : `custom-${index}`
+    if (ids.has(id)) id = `custom-${index}-${crypto.randomUUID?.() ?? Date.now()}`
+    ids.add(id)
+    return name ? [{ id, name, ...normalizeLayout(source) }] : []
   })
 }
 
 function readStored(): void {
   if (typeof localStorage === 'undefined') return
+  rememberedLayouts.clear()
+  workspaceState.custom.splice(0)
+  workspaceState.selectedCustomId = ''
   workspaceState.safeLayout = flags().get('safe-layout') === '1' || flags().get('safe-mode') === '1'
   if (workspaceState.safeLayout) { editorState.activeWorkspace = 'design'; applyLayout(safeDesignLayout); return }
   try {
     const parsed = JSON.parse(localStorage.getItem(storageKey()) ?? localStorage.getItem(scopedStorageKey(V4_STORAGE_KEY)) ?? 'null') as Record<string, unknown> | null
     if (parsed?.layout) {
+      rememberedLayouts.clear()
+      if (parsed.layouts && typeof parsed.layouts === 'object' && !Array.isArray(parsed.layouts)) {
+        for (const preset of WORKSPACE_PRESETS) {
+          const saved = (parsed.layouts as Record<string,unknown>)[preset.id]
+          if (saved && preset.id !== 'custom') rememberedLayouts.set(preset.id, normalizeLayout(saved))
+        }
+      }
       const rawWorkspace = parsed.activeWorkspace === 'interface' ? 'ui' : parsed.activeWorkspace
-      if (WORKSPACE_PRESETS.some(item => item.id === rawWorkspace)) editorState.activeWorkspace = rawWorkspace as EditorWorkspace
+      editorState.activeWorkspace = WORKSPACE_PRESETS.some(item => item.id === rawWorkspace) ? rawWorkspace as EditorWorkspace : 'design'
       workspaceState.selectedCustomId = typeof parsed.selectedCustomId === 'string' ? parsed.selectedCustomId : ''
       workspaceState.custom.splice(0, workspaceState.custom.length, ...normalizeCustomList(parsed.custom))
       applyLayout(normalizeLayout(parsed.layout))
       return
     }
-    const legacy = JSON.parse(localStorage.getItem(LEGACY_STORAGE_KEY) ?? 'null') as Record<string, unknown> | null
+    const legacy = preferencesState.workspaceLayoutScope === 'user' ? JSON.parse(localStorage.getItem(LEGACY_STORAGE_KEY) ?? 'null') as Record<string, unknown> | null : null
     if (legacy) {
       editorState.activeWorkspace = legacy.activeWorkspace === 'interface' ? 'ui' : 'design'
       applyLayout(normalizeLayout({ ...legacy, bottomPanelTab: legacy.bottomPanelTab === 'presentation' ? 'assets' : legacy.bottomPanelTab }))
+      return
     }
-  } catch { applyLayout(safeDesignLayout) }
+    editorState.activeWorkspace = 'design'
+    applyLayout(safeDesignLayout)
+  } catch { editorState.activeWorkspace = 'design'; applyLayout(safeDesignLayout) }
 }
 
 function persist(): void {
   if (typeof localStorage === 'undefined' || workspaceState.safeLayout) return
   try {
-    localStorage.setItem(storageKey(), JSON.stringify({ version: 3, migratedFrom: localStorage.getItem(scopedStorageKey(V4_STORAGE_KEY)) ? 2 : null, activeWorkspace: editorState.activeWorkspace, selectedCustomId: workspaceState.selectedCustomId, layout: captureWorkspaceLayout(), custom: workspaceState.custom }))
+    const layout = captureWorkspaceLayout()
+    if (editorState.activeWorkspace !== 'custom') rememberedLayouts.set(editorState.activeWorkspace, layout)
+    localStorage.setItem(storageKey(), JSON.stringify({ version: 3, migratedFrom: localStorage.getItem(scopedStorageKey(V4_STORAGE_KEY)) ? 2 : null, activeWorkspace: editorState.activeWorkspace, selectedCustomId: workspaceState.selectedCustomId, layout, layouts: Object.fromEntries(rememberedLayouts), custom: workspaceState.custom }))
   } catch { /* Layout persistence is optional; editor operation is not. */ }
 }
 
@@ -212,6 +235,7 @@ export function initializeEditorWorkspaces(): void {
   readStored()
   let last = { page: editorState.currentPage, workspace: editorState.activeWorkspace }
   watch(() => ({ page: editorState.currentPage, workspace: editorState.activeWorkspace }), current => {
+    workspaceState.maximizedPanel = ''
     if (!workspaceState.restoringNavigation && (current.page !== last.page || current.workspace !== last.workspace)) {
       workspaceState.navigationBack.push(last)
       if (workspaceState.navigationBack.length > 50) workspaceState.navigationBack.shift()
@@ -219,10 +243,12 @@ export function initializeEditorWorkspaces(): void {
     }
     last = current
   })
+  watch(storageKey, readStored)
   watch(() => ({ ...captureWorkspaceLayout(), workspace: editorState.activeWorkspace, custom: workspaceState.custom.map(item => ({ ...item })), selected: workspaceState.selectedCustomId, scope: preferencesState.workspaceLayoutScope }), persist, { deep: true })
 }
 
 export function applyEditorWorkspace(workspace: EditorWorkspace): void {
+  if (!workspaceState.safeLayout && editorState.activeWorkspace !== 'custom') rememberedLayouts.set(editorState.activeWorkspace, captureWorkspaceLayout())
   let preset = WORKSPACE_PRESETS.find(candidate => candidate.id === workspace)
   if (workspace === 'custom') {
     const custom = workspaceState.custom.find(item => item.id === workspaceState.selectedCustomId) ?? workspaceState.custom[0]
@@ -231,7 +257,7 @@ export function applyEditorWorkspace(workspace: EditorWorkspace): void {
   }
   if (!preset) return
   editorState.activeWorkspace = preset.id
-  applyLayout(preset)
+  applyLayout(rememberedLayouts.get(preset.id) ?? preset)
 }
 
 export function applyWorkspaceProfile(id: string): boolean {
@@ -242,9 +268,23 @@ export function applyWorkspaceProfile(id: string): boolean {
   return true
 }
 
+export function applyNamedWorkspace(id: string): boolean {
+  const custom = workspaceState.custom.find(item => item.id === id)
+  if (custom) {
+    workspaceState.selectedCustomId = custom.id
+    applyEditorWorkspace('custom')
+    return true
+  }
+  const preset = WORKSPACE_PRESETS.find(item => item.id === id && item.id !== 'custom')
+  if (!preset) return false
+  applyEditorWorkspace(preset.id)
+  return true
+}
+
 export function saveCurrentWorkspace(name?: string): CustomWorkspace {
   const existing = workspaceState.custom.find(item => item.id === workspaceState.selectedCustomId)
   if (existing && !name) { Object.assign(existing, captureWorkspaceLayout()); editorState.activeWorkspace = 'custom'; return existing }
+  requireCustomCapacity(1)
   const workspace: CustomWorkspace = { id: crypto.randomUUID?.() ?? `custom-${Date.now()}`, name: (name?.trim() || `Custom ${workspaceState.custom.length + 1}`).slice(0, 48), ...captureWorkspaceLayout() }
   workspaceState.custom.push(workspace); workspaceState.selectedCustomId = workspace.id; editorState.activeWorkspace = 'custom'; return workspace
 }
@@ -252,15 +292,34 @@ export function saveCurrentWorkspace(name?: string): CustomWorkspace {
 export function duplicateWorkspace(id: string, name?: string): CustomWorkspace | null {
   const source = workspaceState.custom.find(item => item.id === id) ?? WORKSPACE_PRESETS.find(item => item.id === id)
   if (!source) return null
+  requireCustomCapacity(1)
   const sourceName = 'name' in source ? source.name : source.label
   const duplicate: CustomWorkspace = { id: crypto.randomUUID?.() ?? `custom-${Date.now()}`, name: (name?.trim() || `${sourceName} Copy`).slice(0, 48), ...normalizeLayout(source) }
   workspaceState.custom.push(duplicate); workspaceState.selectedCustomId = duplicate.id; editorState.activeWorkspace = 'custom'; applyLayout(duplicate); return duplicate
 }
 
 export function renameWorkspace(id: string, name: string): boolean { const item = workspaceState.custom.find(candidate => candidate.id === id); const safe = name.trim().slice(0, 48); if (!item || !safe) return false; item.name = safe; return true }
-export function removeWorkspace(id: string): boolean { const index = workspaceState.custom.findIndex(item => item.id === id); if (index < 0) return false; workspaceState.custom.splice(index, 1); workspaceState.selectedCustomId = workspaceState.custom[0]?.id ?? ''; if (!workspaceState.selectedCustomId) applyEditorWorkspace('design'); return true }
+export function removeWorkspace(id: string): boolean {
+  const index = workspaceState.custom.findIndex(item => item.id === id)
+  if (index < 0) return false
+  workspaceState.custom.splice(index, 1)
+  if (workspaceState.selectedCustomId === id) {
+    workspaceState.selectedCustomId = workspaceState.custom[0]?.id ?? ''
+    if (editorState.activeWorkspace === 'custom') applyEditorWorkspace(workspaceState.selectedCustomId ? 'custom' : 'design')
+  }
+  return true
+}
 export function exportWorkspaces(): string { return JSON.stringify({ format: 'nova-workspaces', version: 3, engineLine: '6.x', workspaces: workspaceState.custom }, null, 2) }
-export function importWorkspaces(source: string): number { const parsed = JSON.parse(source) as Record<string, unknown>; if (parsed.format !== 'nova-workspaces' || (parsed.version !== 2 && parsed.version !== 3)) throw new Error('Unsupported Nova_A workspace document.'); const imported = normalizeCustomList(parsed.workspaces); const ids = new Set(workspaceState.custom.map(item => item.id)); for (const item of imported) { if (ids.has(item.id)) item.id = crypto.randomUUID?.() ?? `custom-${Date.now()}-${ids.size}`; ids.add(item.id); workspaceState.custom.push(item) } return imported.length }
+function requireCustomCapacity(additional: number): void { if (workspaceState.custom.length + additional > MAX_CUSTOM_WORKSPACES) throw new Error(`A maximum of ${MAX_CUSTOM_WORKSPACES} custom workspaces can be stored. Delete an unused workspace before adding more.`) }
+export function importWorkspaces(source: string): number {
+  const parsed = JSON.parse(source) as Record<string, unknown>
+  if (!parsed || parsed.format !== 'nova-workspaces' || (parsed.version !== 2 && parsed.version !== 3)) throw new Error('Unsupported Nova_A workspace document.')
+  if (Array.isArray(parsed.workspaces) && parsed.workspaces.length > MAX_CUSTOM_WORKSPACES) throw new Error(`A maximum of ${MAX_CUSTOM_WORKSPACES} custom workspaces can be imported at once.`)
+  const imported = normalizeCustomList(parsed.workspaces); requireCustomCapacity(imported.length)
+  const ids = new Set(workspaceState.custom.map(item => item.id))
+  for (const item of imported) { if (ids.has(item.id)) item.id = crypto.randomUUID?.() ?? `custom-${Date.now()}-${ids.size}`; ids.add(item.id); workspaceState.custom.push(item) }
+  return imported.length
+}
 
 export function navigateHistory(direction: 'back' | 'forward'): boolean {
   const source = direction === 'back' ? workspaceState.navigationBack : workspaceState.navigationForward
@@ -268,12 +327,14 @@ export function navigateHistory(direction: 'back' | 'forward'): boolean {
   const target = source.pop(); if (!target) return false
   destination.push({ page: editorState.currentPage, workspace: editorState.activeWorkspace })
   workspaceState.restoringNavigation = true
-  editorState.activeWorkspace = target.workspace; editorState.currentPage = target.page
+  applyEditorWorkspace(target.workspace); editorState.currentPage = target.page
   queueMicrotask(() => { workspaceState.restoringNavigation = false })
   notifyLayoutChanged(); return true
 }
 
-export function toggleEditorPanel(panel: PanelName): void { if (panel === 'hierarchy') editorState.hierarchyVisible = !editorState.hierarchyVisible; else if (panel === 'inspector') editorState.inspectorVisible = !editorState.inspectorVisible; else editorState.bottomPanelVisible = !editorState.bottomPanelVisible; notifyLayoutChanged() }
+export function toggleEditorPanel(panel: PanelName): void { workspaceState.maximizedPanel = ''; if (panel === 'hierarchy') editorState.hierarchyVisible = !editorState.hierarchyVisible; else if (panel === 'inspector') editorState.inspectorVisible = !editorState.inspectorVisible; else editorState.bottomPanelVisible = !editorState.bottomPanelVisible; notifyLayoutChanged() }
+export function togglePanelMaximize(panel: PanelName): void { workspaceState.maximizedPanel = workspaceState.maximizedPanel === panel ? '' : panel; notifyLayoutChanged() }
+export function restorePanelLayout(): void { if (workspaceState.maximizedPanel) { workspaceState.maximizedPanel = ''; notifyLayoutChanged() } }
 export function dockEditorPanel(panel: 'hierarchy' | 'inspector', destination: 'left' | 'right' | 'floating'): void {
   const floating = workspaceState.floatingPanels
   const index = floating.indexOf(panel)
@@ -291,7 +352,7 @@ export function setPanelPinned(panel: 'hierarchy' | 'inspector' | 'bottom', pinn
   else editorState.bottomPanelPinned = pinned
   notifyLayoutChanged()
 }
-export function toggleFocusMode(): void { editorState.distractionFree = !editorState.distractionFree; notifyLayoutChanged() }
+export function toggleFocusMode(): void { workspaceState.maximizedPanel = ''; editorState.distractionFree = !editorState.distractionFree; notifyLayoutChanged() }
 const MANAGE_TABS: Partial<Record<BottomPanelTab, ManageSection>> = { packages: 'packages', project: 'project', rendering: 'rendering', build: 'build' }
 export function openManageSection(section: ManageSection): void { editorState.activeWorkspace = 'manage'; editorState.currentPage = 'manage'; editorState.manageSection = section; editorState.bottomPanelOpen = false; notifyLayoutChanged() }
 export function openEditorTool(tab: BottomPanelTab): void {
@@ -301,5 +362,8 @@ export function openEditorTool(tab: BottomPanelTab): void {
   editorState.bottomPanelVisible = true; editorState.bottomPanelOpen = true; editorState.bottomPanelTab = tab === 'presentation' ? 'assets' : tab; notifyLayoutChanged()
 }
 export function reorderBottomTab(source: BottomPanelTab, target: BottomPanelTab): void { const order = workspaceState.bottomTabOrder; const from = order.indexOf(source), to = order.indexOf(target); if (from < 0 || to < 0 || from === to) return; order.splice(to, 0, order.splice(from, 1)[0]); notifyLayoutChanged() }
-export function resetEditorLayout(): void { if (typeof localStorage !== 'undefined') { localStorage.removeItem(storageKey()); localStorage.removeItem(scopedStorageKey(V4_STORAGE_KEY)); localStorage.removeItem(LEGACY_STORAGE_KEY) }; workspaceState.safeLayout = false; applyEditorWorkspace('design') }
+export function resetEditorLayout(): void {
+  try { if (typeof localStorage !== 'undefined') { localStorage.removeItem(storageKey()); localStorage.removeItem(scopedStorageKey(V4_STORAGE_KEY)); if (preferencesState.workspaceLayoutScope === 'user') localStorage.removeItem(LEGACY_STORAGE_KEY) } } catch { /* Reset must remain usable when browser storage is unavailable. */ }
+  rememberedLayouts.clear(); workspaceState.safeLayout = false; editorState.activeWorkspace = 'design'; applyLayout(safeDesignLayout)
+}
 export function enableSafeLayout(): void { workspaceState.safeLayout = true; editorState.activeWorkspace = 'design'; applyLayout(safeDesignLayout) }

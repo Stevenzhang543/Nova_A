@@ -1,0 +1,47 @@
+# 26.16 animation and audio authoring UI
+
+Integration notice26.16: this journal retains historical development paths, agent handoffs, intermediate failures and pending-at-the-time statements. Its reviewed source is integrated after26.15 was independently packaged and verified. The combined final development source passed TypeScript,12 actual menu/downloaded-player groups and the required current module/field checks;54 additional layout surfaces are recorded separately. Current behavior is in RELEASE_NOTES_26_16.md and the three task lessons. Only fresh source-bound integrated gate results establish production qualification; physical devices and long soak remain external.
+
+## Consequences assessed before editing
+
+The old preview advances a ruler without evaluating the scene. Preview must use the actual runtime evaluator and an owned Play snapshot, with authored state restored on Stop, asset switch and departure. Saved assets are required for runtime preview; no temporary asset writes may masquerade as saving a draft.
+
+The existing asset switch and unmount discard local animation/controller/rig/skin/timeline drafts. Add their exact asset kinds to the final15 shared draft cache, retain raw editing documents and original saved bases, register active project-departure ownership, and refuse stale/conflicting saves. Invalid fields must not be silently normalized away.
+
+Record mode currently persists the visible draft on every recorded edit. Recording must update the draft and require explicit Save; capacity failures remain visible. Runtime recording remains a separate named action and preserves failed saves.
+
+Fixed side widths and independently sized track headers/lanes obscure key ownership. Add measured responsive pane dimensions, actual resizers and aligned readable row geometry. Pointer drag cancellation and key selection must remain stable when UI scale changes.
+
+Use the final16 media clock, timeline seek and existing animation evaluator. Audio fields that currently estimate RMS/sample peak must not claim qualified LUFS or true-peak measurements. PresentationPanel remains owned by the Interface agent until its baseline stabilizes; audio changes will be coordinated narrowly.
+
+## Initial edit ledger
+
+- src/components/AnimationPanel.vue: copied final active13 baseline; implementation changes pending.
+- src/editor/animationStudioState.ts: copied final active13 baseline; draft-only recording changes pending.
+- src/editor/studioDraftRetention.ts: copied final15 resource+14blueprint baseline and added exact animation/controller/animationMask/rig/skin/timeline identity kinds. Existing cache/project/rollback/resource behavior remains intact.
+- docs/VERSION_26_16_ANIMATION_UI.md: consequence, ownership and evidence ledger.
+
+No16 user/geometry/qualification pass is claimed by staging these files. The existing media-core checks are recorded separately in VERSION_26_16_MEDIA.md.
+## Implemented staged changes (development; browser verification pending)
+
+- `src/components/AnimationPanel.vue`: replaces the ruler-only RAF preview with the owned runtime session; adds actual evaluated seek/pause/restore controls outside an inert authored field surface; retains six media document kinds with original saved bases; validates raw fields before Save; reports conflicts and failed persistence without clearing recovery. Save preserves the selected Curve/Dope view. Recorded runtime poses transfer to a retained clip draft after scene restoration. New timeline frame-rate/zoom/rate/Boolean visibility/compatible-asset/removal controls write their actual serialized fields. All existing controller, mask, rig, skin, command, marker and sprite editors remain. Measured numeric row heights align key lanes; structure and property resizers retain visible controls at narrow widths. Key pointer selection no longer toggles twice, and scale-aware drag/box selection have capture, cancellation and unmount cleanup.
+- `src/editor/animationStudioState.ts`: removes immediate `updateTextAsset` writes from record mode; binds a live record/project/base to a retained draft and preserves recording across workspace navigation. It preflights finite values, the actual 100-track and 10,000-key limits before adding keys, permits replacement at the snapped existing frame, and exposes a refusal code. Explicit discard stops the recording owner.
+- `src/editor/animationAuthoring.ts`: dispatches the real six document normalizers on detached data; reports exact fields/counts normalization would change rather than silently accepting them. Tagged recovery preserves NaN and signed infinities as invalid drafts. Validation has a 16 MiB serialized ceiling and a bounded traversal; it does not mutate input.
+- `src/editor/animationAuthoringCopy.ts`: matching English, German and Chinese draft, validation, preview, capture, recording-limit and resize copy.
+- `src/editor/animationPreviewSession.ts`: owns only the Play session it started from Edit mode, runs the same physics readiness/preflight and GameplayRuntime as global Play, resolves the target again after startup callbacks, and restores pending authoring drafts after the normal whole-project Stop restore. It compares the stable runtime session identity, so rapid external Stop→Play cannot be adopted or stopped by the old editor owner. It preserves a final recording reset snapshot and does not overwrite a newer retained draft while restoring older recovery.
+- `src/runtime/GameplayRuntime.ts`: adds a readonly stable Play session identity with a serial increment only on a new `beginSession`; existing scene-transition/callback generation logic remains separate.
+- `src/runtime/animation.ts`: authorized direct clip inspect/seek/stop methods sample through the existing evaluator, preserving Play/Pause ownership and suppressing crossed seek callbacks. Adds a detached recording snapshot reader shared by the existing persistence method, plus scoped reset observers so a global Stop can transfer final samples before runtime disposal. Existing recording persistence and cancellation remain available.
+- `src/components/PresentationPanel.vue` audio sections: replaces an isolated HTML audio preview with a separately owned actual mixer runtime; adds bus selection, output routing and all supported filter/compressor/delay/reverb fields; commits effect/send toggles and gains plus loop edits through existing history. Shows real transport and voice sample clocks. Labels RMS and sample-peak estimates accurately, with a streaming-rate capability hint. Mixer audition stops/releases its own media on selection/unmount. Waveform analysis no longer changes asset metadata merely on selection; explicit normalization changes commit only if the same live asset/source/target remains current after decoding. Waveform drag supports capture, Escape and unmount cleanup. Bus creation uses collision-free IDs. Adds a property-pane resize handle and contained layouts. Coordinated exception: `createLocale` now creates successfully before discarding the old translation draft and catches refusal into the existing error surface; Interface/theme changes are owned and documented by the Interface agent.
+- `src/editor/audioAudition.ts`: detached source entity plus a separate instance of the actual AudioRuntime for mixer-routed playback, absolute-time seek, pause, diagnostics and disposal; no scene/entity/asset mutation.
+- `src/editor/audioAuthoringCopy.ts`: matching EN/DE/ZH meter, transport, effect, routing and failure copy.
+- `src/runtime/audio.ts`: export-only change for `AudioRuntime`; the audition and game use the same implementation with independently owned contexts/voices.
+- `scripts/verify-v26.16-animation-authoring.mjs`: 15 actual bundled-module groups for six document types, exact invalid drafts, no record-time asset writes, workspace retention, stale saved bases, atomic limits, actual mixer routing/seek/isolation, and detached final capture. Browser Audio elements are explicit transport fixtures; this is not PCM evidence.
+- `scripts/verify-v26.16-animation-ui.mjs`: 14 actual SFC/compiler and extracted production handler groups for Save ordering/failure, target rebinding, cancelled startup, rapid Stop→Play, capture identity and keyboard/pointer selection. Explicit dependency fixtures; no mounted geometry or complete user-workflow claim.
+- `scripts/verify-v26.16-animation-audio.mjs`: preserves the media agent's 46 checks and adds three real direct-evaluator seek/stop groups (49 passed). Actual browser PCM evidence is the separate media agent suite.
+- `src/editor/studioDraftRetention.ts`: six exact media-kind mappings were coordinated with the Interface agent, who also owns theme/localization additions on the final15 resource baseline.
+
+## Observed verification so far
+
+The module suite passed 15 groups and UI/session handler suite passed 14. The existing media evaluator suite passed49 after the recording snapshot reader. An initial merged strict TypeScript pass passed; a later refresh currently reports one Interface-owned localization diagnostic inference error, sent to its owner. No 26.16 complete browser, screenshot, exported-player, or release qualification is claimed here yet.
+
+The isolated combined browser directory is `.cache/development-v26.16-check`: actual 26.14 package/WASM metadata plus staged15/16 source, explicitly development-only. Its generated reports must retain `development: true` and `qualifiedRelease: null` until root promotes and qualifies the actual release.

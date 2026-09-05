@@ -6,13 +6,29 @@ import { analyzeProjectUpgrade, downloadProjectBackup, dryRunProjectMigration, r
 import { acquireProjectLock, inspectProjectLock, markSourceBaseline, releaseProjectLock } from '../runtime/teamWorkflow'
 import { canonicalProjectText, MAX_PROJECT_DOCUMENT_CHARACTERS, validateProjectDocument, type ProjectValidationReport } from './projectData'
 import { recoveryState } from '../runtime/recovery'
-import { appendTaskLog, completeTask, failTask, startTask } from '../runtime/editorFeedback'
+import { appendTaskLog, cancelTask, completeTask, failTask, startTask } from '../runtime/editorFeedback'
 import { markProjectDirty, setProjectTransactionDirectory } from '../runtime/projectTransactions'
+import { assetState, readTextAsset } from '../assets/AssetDatabase'
+import { listPendingAuthoringDrafts, restoreAuthoringDrafts, snapshotAuthoringDrafts } from '../editor/studioDraftRetention'
+import { createProjectDepartureGuard } from '../editor/projectDepartureGuard'
+import { projectDepartureCopy } from '../editor/projectDepartureCopy'
+import { requestConfirmation } from '../store/dialog'
 
 const RECENT_KEY = 'nova_a.recent_projects.v2'
 const MAX_RECENT_PROJECTS = 8
 const MAX_SNAPSHOT_BYTES = 1_750_000
 const physicsModule = () => import('../store/physics')
+let replacementDeclined = false
+const mayReplaceProject = createProjectDepartureGuard({
+  context: () => projectSessionState.id,
+  pending: () => listPendingAuthoringDrafts(projectSessionState.id, assetState.records),
+  chooseDiscard: drafts => { const copy = projectDepartureCopy(); return requestConfirmation({ title: copy.title, message: `${copy.message}\n\n${drafts.map(draft => draft.name).join('\n')}`, confirmLabel: copy.discard, cancelLabel: copy.cancel, destructive: true }) },
+  stale: () => { projectManagerState.error = projectDepartureCopy().stale }
+})
+function restoreDraftsAfterFailedOpen(projectId: string, snapshots: ReturnType<typeof snapshotAuthoringDrafts>) {
+  const rejected = restoreAuthoringDrafts(projectId, assetState.records, snapshots, record => readTextAsset(record.uuid))
+  if (rejected.length) throw new Error(`${projectDepartureCopy().restoreFailed} ${rejected.join(', ')}`)
+}
 
 export interface RecentProject {
   id: string
@@ -49,7 +65,7 @@ export const projectManagerState = reactive({
   recents: readRecents() as RecentProject[],
   currentSnapshot: null as string | null,
   currentLocation: '',
-  pendingUpgrade: null as null | { source: string; fileName: string; importAsCopy: boolean; preview: UpgradePreview },
+  pendingUpgrade: null as null | { source: string; fileName: string; importAsCopy: boolean; projectDirectory: string; preview: UpgradePreview },
   readOnlyDocument: null as null | { source: string; fileName: string; preview: UpgradePreview },
   backupBeforeUpgrade: true,
   lastUpgradeValidation: null as ProjectValidationReport | null
@@ -58,14 +74,21 @@ export const projectManagerState = reactive({
 })
 
 export async function createNewProject(name: string, template: ProjectTemplateId, location = ''): Promise<boolean> {
+  if (projectManagerState.busy) return false
   projectManagerState.busy = true
   projectManagerState.error = ''
   try {
     const { clearEditorHistory, getSceneJSON, loadProject, physicsState } = await physicsModule()
     await physicsState.world.wasmReady
     const source = createTemplateProjectJson(template, safeProjectName(name))
+    if (!await mayReplaceProject()) return false
     const previousId = projectSessionState.id
-    if (!loadProject(source)) throw new Error(editorState.statusText || 'The selected template did not pass project validation.')
+    const previousSource = getSceneJSON(), previousDrafts = snapshotAuthoringDrafts(previousId, assetState.records, record => readTextAsset(record.uuid))
+    if (!loadProject(source)) {
+      const message = editorState.statusText || 'The selected template did not pass project validation.'
+      if (loadProject(previousSource)) restoreDraftsAfterFailedOpen(previousId, previousDrafts)
+      throw new Error(message)
+    }
     releaseProjectLock(previousId); recoveryState.readOnly = !acquireProjectLock(projectSessionState.id, 'Nova_A Editor')
     projectManagerState.currentSnapshot = getSceneJSON()
     projectManagerState.currentLocation = location.trim().slice(0, 500)
@@ -84,8 +107,6 @@ export async function createNewProject(name: string, template: ProjectTemplateId
 export async function openProjectDocument(source: string, fileName = 'project.nova', importAsCopy = false, projectDirectory = ''): Promise<boolean> {
   try {
     if (source.length > MAX_PROJECT_DOCUMENT_CHARACTERS) throw new Error('This project exceeds Nova_A\'s 192 MB safe document limit. Store large media as external project assets before opening it.')
-    projectManagerState.currentLocation = projectDirectory.trim().slice(0, 500)
-    setProjectTransactionDirectory(projectManagerState.currentLocation)
     const preview = analyzeProjectUpgrade(source)
     if (!preview.supported && preview.sourceSchema > preview.targetSchema) {
       projectManagerState.readOnlyDocument = { source, fileName, preview }
@@ -98,7 +119,7 @@ export async function openProjectDocument(source: string, fileName = 'project.no
     try { const parsed=JSON.parse(source) as Record<string,unknown>, metadata=parsed.projectMetadata as Record<string,unknown>|undefined; sourceProjectId=String(metadata?.id??'') } catch { /* analyzeProjectUpgrade already parsed safely. */ }
     const lock=sourceProjectId&&!importAsCopy?inspectProjectLock(sourceProjectId):{locked:false,owner:'',expiresAt:0}
     projectManagerState.lockConflict=lock.locked?{projectId:sourceProjectId,owner:lock.owner,expiresAt:lock.expiresAt}:null
-    projectManagerState.pendingUpgrade = { source, fileName, importAsCopy, preview }
+    projectManagerState.pendingUpgrade = { source, fileName, importAsCopy, projectDirectory: projectDirectory.trim().slice(0, 500), preview }
     projectManagerState.visible = true
     projectManagerState.error = ''
     return false
@@ -106,15 +127,16 @@ export async function openProjectDocument(source: string, fileName = 'project.no
     projectManagerState.error = error instanceof Error ? error.message : String(error)
     return false
   }
-  return openProjectDocumentNow(source, fileName, importAsCopy)
 }
 
-async function openProjectDocumentNow(source: string, fileName = 'project.nova', importAsCopy = false, forceReadOnly = false): Promise<boolean> {
+async function openProjectDocumentNow(source: string, fileName = 'project.nova', importAsCopy = false, forceReadOnly = false, projectDirectory = projectManagerState.currentLocation): Promise<boolean> {
+  replacementDeclined = false
   projectManagerState.busy = true
   projectManagerState.error = ''
   try {
     const { clearEditorHistory, getSceneJSON, loadProject, physicsState } = await physicsModule()
     await physicsState.world.wasmReady
+    if (!await mayReplaceProject()) { replacementDeclined = true; return false }
     let previousProject: string | null = null
     try { previousProject = getSceneJSON() } catch { previousProject = null }
     let existingMetadata = false
@@ -123,8 +145,9 @@ async function openProjectDocumentNow(source: string, fileName = 'project.nova',
       existingMetadata = !!parsed?.projectMetadata
     } catch { /* The canonical loader reports the useful parse error. */ }
     const previousId = projectSessionState.id
+    const previousDrafts = snapshotAuthoringDrafts(previousId, assetState.records, record => readTextAsset(record.uuid))
     if (!loadProject(source)) {
-      if (previousProject) loadProject(previousProject)
+      if (previousProject && loadProject(previousProject)) restoreDraftsAfterFailedOpen(previousId, previousDrafts)
       throw new Error('The project is invalid, unsupported, or newer than this Nova_A version. The previous project was restored.')
     }
     if (importAsCopy || !existingMetadata) {
@@ -133,6 +156,8 @@ async function openProjectDocumentNow(source: string, fileName = 'project.nova',
     }
     if (projectSessionState.id !== previousId) releaseProjectLock(previousId)
     recoveryState.readOnly = forceReadOnly || !acquireProjectLock(projectSessionState.id, 'Nova_A Editor')
+    projectManagerState.currentLocation = projectDirectory
+    setProjectTransactionDirectory(projectDirectory)
     projectManagerState.currentSnapshot = getSceneJSON()
     markSourceBaseline(projectManagerState.currentSnapshot)
     clearEditorHistory('project-open', projectManagerState.currentSnapshot)
@@ -156,6 +181,7 @@ export function downloadReadOnlyDocument(): void {
 }
 
 export async function applyPendingProjectUpgrade(forceReadOnly = false): Promise<boolean> {
+  if (projectManagerState.busy) return false
   const pending = projectManagerState.pendingUpgrade
   if (!pending) return false
   projectManagerState.busy = true
@@ -178,10 +204,11 @@ export async function applyPendingProjectUpgrade(forceReadOnly = false): Promise
     const blocking = validation.issues.filter(issue => issue.severity === 'error')
     if (blocking.length) throw new Error(`Migration validation failed: ${blocking[0].path || '<project>'}: ${blocking[0].message}`)
     const canonical = canonicalProjectText(migrated)
-    projectManagerState.pendingUpgrade = null
     if (projectManagerState.lockConflict && !forceReadOnly) throw new Error(`Project is locked by ${projectManagerState.lockConflict.owner}. Open it read-only or close the other editor.`)
-    const opened = await openProjectDocumentNow(canonical, pending.fileName, pending.importAsCopy, forceReadOnly)
+    const opened = await openProjectDocumentNow(canonical, pending.fileName, pending.importAsCopy, forceReadOnly, pending.projectDirectory)
+    if (!opened && replacementDeclined) { cancelTask(task); return false }
     if (!opened) throw new Error(projectManagerState.error || 'Migrated project could not be opened.')
+    projectManagerState.pendingUpgrade = null
     recordMigrationApplied(dryRun); projectManagerState.lockConflict=null; completeTask(task, `Migration ${dryRun.id} committed; rollback retained.`)
     return true
   } catch (error) {
@@ -202,6 +229,7 @@ export function downloadLastUpgradeRollback(): boolean {
 }
 
 export async function restoreLastUpgradeRollback(): Promise<boolean> {
+  if (projectManagerState.busy) return false
   const rollback = readUpgradeRollback()
   if (!rollback) return false
   const validation = validateProjectDocument(rollback.source)

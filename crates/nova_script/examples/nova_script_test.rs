@@ -36,6 +36,80 @@ struct TestResult {
     message: String,
 }
 
+struct TestSuite {
+    runtime: ScriptRuntime,
+    context: ScriptContext,
+    functions: BTreeSet<String>,
+    callback_counts: BTreeMap<String, usize>,
+    initialized: bool,
+    attempted: bool,
+    error: Option<String>,
+}
+
+impl TestSuite {
+    fn new(functions: BTreeSet<String>) -> Self {
+        Self {
+            runtime: ScriptRuntime::new(),
+            context: ScriptContext {
+                entity: "test-entity".into(),
+                entity_name: "Headless test".into(),
+                random_seed: 1,
+                time: TimeSnapshot {
+                    fixed_delta: 1.0 / 60.0,
+                    scale: 1.0,
+                    ..TimeSnapshot::default()
+                },
+                ..ScriptContext::default()
+            },
+            functions,
+            callback_counts: BTreeMap::new(),
+            initialized: false,
+            attempted: false,
+            error: None,
+        }
+    }
+
+    fn invoke(&mut self, callback: &str, context: &mut ScriptContext) -> Result<(), String> {
+        if !self.functions.contains(callback) {
+            return Ok(());
+        }
+        *self.callback_counts.entry(callback.into()).or_default() += 1;
+        let execution = self
+            .runtime
+            .execute_cached("suite", callback, context.clone())?;
+        context.properties = execution.properties;
+        if let Some(log) = execution.logs.iter().find(|log| log.level == "error") {
+            return Err(log.message.clone());
+        }
+        Ok(())
+    }
+
+    fn initialize(&mut self, source: &str) {
+        if self.attempted {
+            return;
+        }
+        self.attempted = true;
+        if let Err(error) = self.runtime.upsert("suite", source) {
+            self.error = Some(error);
+            return;
+        }
+        self.initialized = true;
+        let mut context = self.context.clone();
+        if let Err(error) = self.invoke("before_all", &mut context) {
+            self.error = Some(format!("before_all: {error}"));
+        }
+        self.context = context;
+    }
+
+    fn finish(&mut self) -> Result<(), String> {
+        if !self.initialized {
+            return Ok(());
+        }
+        let mut context = self.context.clone();
+        self.invoke("after_all", &mut context)
+    }
+}
+
 fn main() -> ExitCode {
     match run() {
         Ok(failed) => ExitCode::from(if failed { 1 } else { 0 }),
@@ -116,6 +190,7 @@ fn run() -> Result<bool, String> {
     let started = Instant::now();
     let mut results = Vec::new();
     let mut coverage_files = Vec::new();
+    let mut suite_reports = Vec::new();
     for path in files {
         let normalized_path = path.display().to_string().replace('\\', "/");
         if !changed.is_empty()
@@ -127,9 +202,27 @@ fn run() -> Result<bool, String> {
         }
         let source =
             fs::read_to_string(&path).map_err(|error| format!("{}: {error}", path.display()))?;
-        let tests = discover_tests(&source);
-        let executable_functions = discover_functions(&source);
-        let mut covered_functions = BTreeSet::new();
+        let executable_functions = match ScriptRuntime::new().function_names(&source) {
+            Ok(names) => names.into_iter().collect::<BTreeSet<_>>(),
+            Err(error) => {
+                results.push(TestResult {
+                    file: path.display().to_string(),
+                    name: "compile".into(),
+                    case_name: String::new(),
+                    status: "failed",
+                    duration_ms: 0.0,
+                    seed: 1,
+                    tags: vec![],
+                    fixture: String::new(),
+                    attempt: 1,
+                    message: error.clone(),
+                });
+                suite_reports.push(json!({"file":normalized_path,"initialized":false,"callbackCounts":{},"error":error}));
+                continue;
+            }
+        };
+        let tests = discover_tests(&source, &executable_functions);
+        let mut suite = TestSuite::new(executable_functions.clone());
         for (name, metadata) in tests {
             if stable_hash(&format!("{}::{name}", path.display())) % shard_count != shard_index {
                 continue;
@@ -161,26 +254,35 @@ fn run() -> Result<bool, String> {
                     });
                     continue;
                 }
-                let mut result = run_test(&path, &source, &name, &case_name, &metadata, 1);
+                suite.initialize(&source);
+                let mut result = run_test(&path, &mut suite, &name, &case_name, &metadata, 1);
                 if metadata.flaky_infrastructure {
                     for attempt in 2..=metadata.retries.saturating_add(1) {
                         if !matches!(result.status, "failed" | "timeout") {
                             break;
                         }
-                        result = run_test(&path, &source, &name, &case_name, &metadata, attempt);
-                    }
-                }
-                if result.status != "skipped" {
-                    covered_functions.insert(name.clone());
-                    for hook in ["before_all", "before_each", "after_each", "after_all"] {
-                        if executable_functions.contains(hook) {
-                            covered_functions.insert(hook.to_owned());
-                        }
+                        result = run_test(&path, &mut suite, &name, &case_name, &metadata, attempt);
                     }
                 }
                 results.push(result);
             }
         }
+        if let Err(error) = suite.finish() {
+            results.push(TestResult {
+                file: path.display().to_string(),
+                name: "after_all".into(),
+                case_name: String::new(),
+                status: "failed",
+                duration_ms: 0.0,
+                seed: 1,
+                tags: vec![],
+                fixture: String::new(),
+                attempt: 1,
+                message: format!("after_all: {error}"),
+            });
+        }
+        let covered_functions: BTreeSet<_> = suite.callback_counts.keys().cloned().collect();
+        suite_reports.push(json!({"file":normalized_path,"initialized":suite.initialized,"callbackCounts":suite.callback_counts}));
         coverage_files.push(json!({"file":normalized_path,"executableFunctions":executable_functions,"coveredFunctions":covered_functions}));
     }
     let passed = results
@@ -201,7 +303,7 @@ fn run() -> Result<bool, String> {
         serde_json::to_string_pretty(&json!({
         "format": "nova-script-test-report", "version": 2, "engineVersion": env!("CARGO_PKG_VERSION"),
         "durationMs": started.elapsed().as_secs_f64() * 1_000.0, "shard":{"index":shard_index,"count":shard_count}, "changed":changed,
-        "passed": passed, "failed": failed, "skipped": skipped, "results": results
+        "passed": passed, "failed": failed, "skipped": skipped, "results": results, "suites": suite_reports
     })).map_err(|error| error.to_string())?
     };
     if let Some(path) = output {
@@ -243,19 +345,6 @@ fn stable_hash(value: &str) -> u64 {
     })
 }
 
-fn discover_functions(source: &str) -> BTreeSet<String> {
-    source
-        .lines()
-        .filter_map(|line| {
-            line.trim()
-                .strip_prefix("fn ")
-                .and_then(|rest| rest.split('(').next())
-                .filter(|name| !name.is_empty())
-                .map(str::to_owned)
-        })
-        .collect()
-}
-
 fn collect_scripts(path: &Path, output: &mut Vec<PathBuf>) -> Result<(), String> {
     if path.is_file() {
         if path.extension().and_then(|value| value.to_str()) == Some("rhai") {
@@ -272,31 +361,104 @@ fn collect_scripts(path: &Path, output: &mut Vec<PathBuf>) -> Result<(), String>
     Ok(())
 }
 
-fn discover_tests(source: &str) -> Vec<(String, TestMetadata)> {
+fn discover_tests(source: &str, functions: &BTreeSet<String>) -> Vec<(String, TestMetadata)> {
     let mut pending = None;
-    let mut tests = Vec::new();
-    for line in source.lines() {
+    let mut metadata = BTreeMap::new();
+    let masked = mask_test_literals(source);
+    for line in masked.lines() {
         let clean = line.trim();
         if let Some(fields) = clean.strip_prefix("// @test") {
             pending = Some(parse_metadata(fields));
             continue;
         }
-        let Some(rest) = clean.strip_prefix("fn test_") else {
+        let Some(rest) = clean.strip_prefix("fn ") else {
             continue;
         };
         let Some(name) = rest.split('(').next() else {
             continue;
         };
-        tests.push((
-            format!("test_{name}"),
-            pending.take().unwrap_or_else(|| TestMetadata {
-                timeout_ms: 10_000,
-                seed: 1,
-                ..TestMetadata::default()
-            }),
-        ));
+        let name = name.trim();
+        if functions.contains(name) {
+            if let Some(value) = pending.take() {
+                metadata.insert(name.to_owned(), value);
+            }
+        }
     }
-    tests
+    functions
+        .iter()
+        .filter(|name| name.starts_with("test_"))
+        .map(|name| {
+            (
+                name.clone(),
+                metadata.remove(name).unwrap_or_else(|| TestMetadata {
+                    timeout_ms: 10_000,
+                    seed: 1,
+                    ..TestMetadata::default()
+                }),
+            )
+        })
+        .collect()
+}
+
+// Preserve genuine line metadata while hiding function-looking text inside
+// strings and nested block comments. Rhai itself remains the syntax authority.
+fn mask_test_literals(source: &str) -> String {
+    let bytes = source.as_bytes();
+    let mut output = bytes.to_vec();
+    let mut at = 0;
+    let mut depth = 0_u32;
+    let mut quote = None;
+    while at < bytes.len() {
+        let pair = bytes.get(at..at + 2);
+        if depth > 0 {
+            if pair == Some(b"/*") {
+                depth += 1;
+                output[at] = b' ';
+                output[at + 1] = b' ';
+                at += 2;
+                continue;
+            }
+            if pair == Some(b"*/") {
+                depth -= 1;
+                output[at] = b' ';
+                output[at + 1] = b' ';
+                at += 2;
+                continue;
+            }
+            if bytes[at] != b'\n' && bytes[at] != b'\r' {
+                output[at] = b' ';
+            }
+        } else if let Some(delimiter) = quote {
+            if bytes[at] != b'\n' && bytes[at] != b'\r' {
+                output[at] = b' ';
+            }
+            if bytes[at] == b'\\' && at + 1 < bytes.len() {
+                at += 1;
+                if bytes[at] != b'\n' && bytes[at] != b'\r' {
+                    output[at] = b' ';
+                }
+            } else if bytes[at] == delimiter {
+                quote = None;
+            }
+        } else if pair == Some(b"//") {
+            while at < bytes.len() && bytes[at] != b'\n' {
+                at += 1;
+            }
+            continue;
+        } else if pair == Some(b"/*") {
+            depth = 1;
+            output[at] = b' ';
+            output[at + 1] = b' ';
+            at += 2;
+            continue;
+        } else if matches!(bytes[at], b'"' | b'\'' | b'`') {
+            quote = Some(bytes[at]);
+            output[at] = b' ';
+        }
+        at += 1;
+    }
+    String::from_utf8(output)
+        .expect("Masked UTF-8 source retains only untouched UTF-8 or ASCII spaces")
 }
 
 fn parse_metadata(fields: &str) -> TestMetadata {
@@ -356,49 +518,37 @@ fn parse_metadata(fields: &str) -> TestMetadata {
 
 fn run_test(
     path: &Path,
-    source: &str,
+    suite: &mut TestSuite,
     name: &str,
     case_name: &str,
     metadata: &TestMetadata,
     attempt: u8,
 ) -> TestResult {
     let started = Instant::now();
-    let mut context = ScriptContext {
-        entity: "test-entity".into(),
-        entity_name: "Headless test".into(),
-        random_seed: metadata.seed,
-        time: TimeSnapshot {
-            fixed_delta: 1.0 / 60.0,
-            scale: 1.0,
-            ..TimeSnapshot::default()
-        },
-        event: Some(EventSnapshot {
-            name: "test.run".into(),
-            source: "nova-script-test".into(),
-            payload: json!({"test":name,"case":case_name,"seed":metadata.seed}),
-        }),
-        ..ScriptContext::default()
-    };
-    let runtime = ScriptRuntime::new();
-    let callbacks = ["before_all", "before_each", name, "after_each", "after_all"];
-    let mut failure = None;
-    for callback in callbacks {
-        match runtime.execute(source, callback, context.clone()) {
-            Ok(execution) => {
-                context.properties = execution.properties;
-                if let Some(log) = execution.logs.iter().find(|log| log.level == "error") {
-                    failure = Some(log.message.clone());
-                    break;
-                }
+    let mut context = suite.context.clone();
+    context.random_seed = metadata.seed;
+    context.event = Some(EventSnapshot {
+        name: "test.run".into(),
+        source: "nova-script-test".into(),
+        payload: json!({"test":name,"case":case_name,"seed":metadata.seed}),
+    });
+    let mut failures = Vec::new();
+    if let Some(error) = &suite.error {
+        failures.push(error.clone());
+    } else {
+        for callback in ["before_each", name] {
+            if let Err(error) = suite.invoke(callback, &mut context) {
+                failures.push(error);
+                break;
             }
-            Err(error) => {
-                failure = Some(error);
+            if started.elapsed().as_millis() > metadata.timeout_ms {
+                failures.push(format!("Timed out after {} ms", metadata.timeout_ms));
                 break;
             }
         }
-        if started.elapsed().as_millis() > metadata.timeout_ms {
-            failure = Some(format!("Timed out after {} ms", metadata.timeout_ms));
-            break;
+        // Test failures and timeout checks cannot bypass per-case cleanup.
+        if let Err(error) = suite.invoke("after_each", &mut context) {
+            failures.push(format!("after_each: {error}"));
         }
     }
     let duration_ms = started.elapsed().as_secs_f64() * 1_000.0;
@@ -409,7 +559,7 @@ fn run_test(
         case_name: case_name.into(),
         status: if timeout {
             "timeout"
-        } else if failure.is_some() {
+        } else if !failures.is_empty() {
             "failed"
         } else {
             "passed"
@@ -419,8 +569,11 @@ fn run_test(
         tags: metadata.tags.clone(),
         fixture: metadata.fixture.clone(),
         attempt,
-        message: failure
-            .unwrap_or_else(|| format!("Passed with deterministic seed {}", metadata.seed)),
+        message: if failures.is_empty() {
+            format!("Passed with deterministic seed {}", metadata.seed)
+        } else {
+            failures.join(" | ")
+        },
     }
 }
 

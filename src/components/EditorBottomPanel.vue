@@ -1,17 +1,18 @@
 <template>
-  <section class="bottom-panel" data-control-scope="transient-bottom-dock" :class="{ collapsed: !estate.bottomPanelOpen, unpinned: !estate.bottomPanelPinned }" :style="panelStyle" @mouseleave="autoHide">
-    <div v-if="estate.bottomPanelOpen" class="resize-handle" @mousedown="startResize"></div>
+  <section class="bottom-panel" data-control-scope="transient-bottom-dock" :class="{ collapsed: !estate.bottomPanelOpen, unpinned: !estate.bottomPanelPinned, 'panel-maximized': workspaceState.maximizedPanel==='bottom' }" :style="panelStyle" @mouseleave="autoHide">
+    <PanelResizeHandle v-if="estate.bottomPanelOpen" v-model="estate.bottomPanelHeight" orientation="horizontal" :minimum="120" :maximum="520" :reset-value="240" reverse :label="t('bottomPanel')" :disabled="workspaceState.maximizedPanel==='bottom'" />
     <header class="panel-tabs">
       <select v-model="estate.bottomPanelTab" class="compact-tab-select" :aria-label="t('tools')" @change="estate.bottomPanelOpen = true"><option v-for="tab in tabs" :key="tab.id" :value="tab.id">{{ t(tab.label) }}</option></select>
       <button v-for="tab in tabs" :key="tab.id" class="panel-tab" :class="{ active: estate.bottomPanelTab === tab.id }" draggable="true" :aria-pressed="estate.bottomPanelTab === tab.id" @dragstart="draggedTab = tab.id" @dragover.prevent @drop="dropTab(tab.id)" @click="openTab(tab.id)">{{ t(tab.label) }}<i v-if="tabDirty(tab.id)">●</i></button>
       <span></span>
+      <PanelMaximizeButton v-if="estate.bottomPanelOpen" panel="bottom" />
       <button :class="{ active: estate.bottomPanelPinned }" :aria-pressed="estate.bottomPanelPinned" :title="t(estate.bottomPanelPinned ? 'unpinPanel' : 'pinPanel')" @click="estate.bottomPanelPinned = !estate.bottomPanelPinned">⌖</button>
       <button v-if="estate.bottomPanelTab === 'console' && estate.bottomPanelOpen" :title="t('clearConsole')" @click="estate.logs.splice(0)">⌫</button>
       <button :title="t(estate.bottomPanelOpen ? 'collapsePanel' : 'expandPanel')" @click="estate.bottomPanelOpen = !estate.bottomPanelOpen">{{ estate.bottomPanelOpen ? '⌄' : '⌃' }}</button>
     </header>
 
     <div v-if="estate.bottomPanelOpen" class="panel-content">
-      <div v-if="estate.bottomPanelTab === 'assets'" class="asset-browser" :class="{ inspecting: selectedAsset }">
+      <div v-if="estate.bottomPanelTab === 'assets'" class="asset-browser" :class="{ inspecting: selectedAsset, 'details-visible': assetDetailMode && selectedAsset }">
         <aside class="folder-tree">
           <strong>{{ t('projectFiles') }}</strong>
           <button
@@ -28,12 +29,13 @@
         <section class="asset-workspace">
           <header class="asset-toolbar">
             <div class="asset-actions-row">
-              <button class="primary" :disabled="assets.importing" @click="assetInput?.click()">＋ {{ t('importAssets') }}</button>
+              <button class="primary" :disabled="assets.importing || assetBatch.active" @click="assetInput?.click()">＋ {{ t('importAssets') }}</button>
+              <button v-if="selectedAsset" class="asset-detail-toggle" type="button" @click="assetDetailMode = true">{{ assetCopy('previewDetails') }}</button>
               <button @click="createScriptAsset">+ {{ t('newScript') }}</button>
               <button @click="createVisualGraphAsset">+ {{ t('visualGraph') }}</button>
               <button :disabled="!state.selectedEntityIds.length" @click="createSceneAssetFromSelection">+ {{ t('createSceneAsset') }}</button>
               <button @click="creatingFolder = !creatingFolder">{{ t('newFolder') }}</button>
-              <details ref="assetOverflow" class="asset-overflow"><summary :title="t('moreActions')">•••</summary><section class="asset-overflow-menu"><strong>{{ t('newSharedResource') }}</strong><button v-for="kind in resourceKinds" :key="kind" type="button" :aria-label="`+ ${t(`resource_${kind}`)}`" @click="createSharedResource(kind); closeAssetOverflow()">+ {{ t(`resource_${kind}`) }}</button><button type="button" @click="exportFolder(); closeAssetOverflow()">{{ t('exportProjectFolder') }}</button><button type="button" @click="batchReimportVisible(); closeAssetOverflow()">{{ t('batchReimport') }}</button><button type="button" :disabled="!selectedAsset" @click="bulkApplyVisible(); closeAssetOverflow()">{{ t('bulkApplyVisible') }}</button><button v-for="item in pluginAssetContributions" :key="`${item.pluginId}:${item.kind}:${item.id}`" type="button" :title="`${item.pluginName} · ${item.description ?? ''}`" @click="pluginRuntime.invokeContribution(item.kind,item.id,item.pluginId); closeAssetOverflow()">{{ item.label }}</button></section></details>
+              <details ref="assetOverflow" class="asset-overflow"><summary :title="t('moreActions')">•••</summary><section class="asset-overflow-menu"><strong>{{ t('newSharedResource') }}</strong><button v-for="kind in resourceKinds" :key="kind" type="button" :aria-label="`+ ${t(`resource_${kind}`)}`" @click="createSharedResource(kind); closeAssetOverflow()">+ {{ t(`resource_${kind}`) }}</button><button type="button" @click="exportFolder(); closeAssetOverflow()">{{ t('exportProjectFolder') }}</button><button type="button" :disabled="assetBatch.active" @click="batchReimportVisible(); closeAssetOverflow()">{{ t('batchReimport') }}</button><button type="button" :disabled="!selectedAsset" @click="bulkApplyVisible(); closeAssetOverflow()">{{ t('bulkApplyVisible') }}</button><button v-for="item in pluginAssetContributions" :key="`${item.pluginId}:${item.kind}:${item.id}`" type="button" :title="`${item.pluginName} · ${item.description ?? ''}`" @click="pluginRuntime.invokeContribution(item.kind,item.id,item.pluginId); closeAssetOverflow()">{{ item.label }}</button></section></details>
               <input v-if="creatingFolder" v-model="newFolderName" class="folder-input" :placeholder="t('folderName')" @keydown.enter="createFolder" @keydown.escape="creatingFolder = false">
               <span class="path" :title="assets.currentFolder">{{ assets.currentFolder }}</span>
               <input v-model="assets.search" type="search" :placeholder="t('searchAssets')">
@@ -63,7 +65,8 @@
             <article v-for="change in externalChanges" :key="change.id"><span><strong>{{ t('externalAssetChanged') }}</strong><small>{{ change.name }}</small></span><button @click="resolveExternal(change.id, 'reimport')">{{ t('reimportAsset') }}</button><button @click="resolveExternal(change.id, 'keep')">{{ t('keepCurrent') }}</button><button @click="resolveExternal(change.id, 'duplicate')">{{ t('importAsCopy') }}</button></article>
           </section>
 
-          <div v-if="importJobs.length" class="import-queue" aria-live="polite">
+          <details v-if="importJobs.length" class="import-queue" :open="importJobs.some(job=>!['complete','cancelled','failed'].includes(job.status))" aria-live="polite">
+            <summary>{{ t('importLog') }} · {{ importJobs.length }}</summary>
             <article v-for="job in importJobs" :key="job.id">
               <span><strong>{{ job.name }}</strong><small>{{ t(`importStatus_${job.status}`) }}</small></span>
               <progress :value="job.progress" max="1"></progress>
@@ -71,7 +74,7 @@
               <button v-else-if="job.retryable" @click="retryImport(job.id)">{{ t('retry') }}</button>
               <details v-if="job.logs.length"><summary>{{ t('importLog') }}</summary><code v-for="(line,index) in job.logs" :key="index">{{ line }}</code></details>
             </article>
-          </div>
+          </details>
 
           <section v-if="repairMode && missingReferenceIds.length" class="missing-repair" aria-live="polite">
             <strong>{{ t('repairMissingReference') }}</strong>
@@ -87,6 +90,12 @@
             <button :title="t('close')" @click="repairMode = false">×</button>
           </section>
 
+          <section v-if="assetBatch.total" class="asset-batch" :aria-label="assetCopy('progress')">
+            <header><strong>{{ assetCopy('progress') }} {{ assetBatch.done }}/{{ assetBatch.total }}</strong><button v-if="assetBatch.active" type="button" @click="cancelAssetBatch">{{ assetCopy('cancel') }}</button></header>
+            <progress :value="assetBatch.done" :max="assetBatch.total" :aria-label="assetCopy('progress')"></progress>
+            <p role="status">{{ assetBatch.name }} · {{ assetCopy('completed') }} {{ assetBatch.completed }} · {{ assetCopy('failed') }} {{ assetBatch.failed }} · {{ assetCopy('cancelled') }} {{ assetBatch.cancelled }}</p>
+            <details v-if="assetBatch.failed"><summary>{{ assetCopy('failed') }}</summary><p v-for="(item,index) in assetBatch.results.filter(v=>v.status==='failed')" :key="index">{{ item.name }}: {{ item.message }}</p></details>
+          </section>
           <div ref="assetGrid" class="asset-grid" :class="`asset-${assets.viewMode}`" :style="assetGridStyle" @scroll.passive="updateAssetWindow">
             <article
               v-for="asset in displayedAssets"
@@ -97,7 +106,7 @@
               @click="assets.selectedGuid = asset.uuid"
               @dblclick="openAssetEditor(asset.uuid)"
             >
-              <span class="asset-preview" :class="{ 'asset-icon': asset.assetType!=='image' }" :style="{ backgroundImage: `url(${contentThumbnailDataUrl(asset)})`, imageRendering: asset.settings.filterMode === 'Nearest' ? 'pixelated' : 'auto', backgroundSize: asset.assetType==='image' ? 'contain' : 'cover' }"><i v-if="asset.assetType!=='image'">{{ assetIcon(asset.assetType) }}</i></span>
+              <AssetImagePreview v-if="asset.assetType === 'image'" class="asset-preview" :asset="asset" /><span v-else class="asset-preview asset-icon"  :style="{ backgroundImage: `url(${contentThumbnailDataUrl(asset)})`, backgroundSize: 'cover' }"><i>{{ assetIcon(asset.assetType) }}</i></span>
               <span v-if="assetSourceStatus(asset.uuid)" :class="['source-badge', assetSourceStatus(asset.uuid)]">{{ assetSourceStatus(asset.uuid)?.slice(0, 1).toUpperCase() }}</span>
               <button class="favorite-button" :class="{ active: assets.favorites.includes(asset.uuid) }" :title="t('favorite')" @click.stop="toggleAssetFavorite(asset.uuid)">★</button>
               <input v-if="renamingGuid === asset.uuid" v-model="renameValue" @click.stop @keydown.enter="commitRename" @keydown.escape="renamingGuid = null" @blur="commitRename">
@@ -110,12 +119,13 @@
         </section>
 
         <aside v-if="selectedAsset" class="asset-inspector" @change="assetSettingsChanged">
-          <header><span>{{ t('assetInspector') }}</span><strong>{{ selectedAsset.name }}</strong></header>
+          <header><button class="asset-detail-back" type="button" @click="assetDetailMode = false">← {{ assetCopy('browse') }}</button><span>{{ t('assetInspector') }}</span><strong>{{ selectedAsset.name }}</strong></header>
           <nav class="importer-tabs" :aria-label="t('assetImporter')"><button v-for="tab in importerTabs" :key="tab" :class="{ active: inspectorTab === tab }" @click="inspectorTab = tab">{{ t(`importerTab_${tab}`) }}</button></nav>
-          <div v-if="selectedAsset.assetType === 'image'" class="large-preview" :style="{ backgroundImage: `url(${selectedAsset.source})`, imageRendering: selectedAsset.settings.filterMode === 'Nearest' ? 'pixelated' : 'auto' }"></div>
+          <AssetImagePreview v-if="selectedAsset.assetType === 'image'" class="large-preview" :asset="selectedAsset" show-error />
           <audio v-else-if="selectedAsset.assetType === 'audio'" class="asset-media-preview" :src="selectedAsset.source" controls preload="metadata"></audio>
           <div v-else-if="selectedAsset.assetType === 'font'" class="font-preview" :style="{ fontFamily: selectedAsset.fontFamily }">Nova_A Aa 123</div>
           <ContentAssetInspector :asset="selectedAsset" @open-animation="openAnimationAsset" @select-asset="assets.selectedGuid=$event" />
+          <details v-if="assetOperationError" class="pipeline-error" open><summary>{{ assetCopy('operationFailed') }}</summary><p role="alert">{{ assetOperationError }}</p></details>
           <section v-show="inspectorTab === 'source'" class="inspector-pane">
             <label><span>GUID</span><code>{{ selectedAsset.uuid.slice(0, 13) }}…</code></label>
             <label><span>{{ t('assetPath') }}</span><code>{{ selectedAsset.path }}</code></label>
@@ -158,13 +168,14 @@
             <label><span>{{ t('useSpriteRegion') }}</span><input :checked="selectedAsset.settings.spriteRegion !== null" type="checkbox" @change="toggleSpriteRegion"></label>
             <label v-if="selectedAsset.settings.spriteRegion" class="region-field"><span>{{ t('spriteRegion') }} X/Y/W/H</span><div><input v-model.number="selectedAsset.settings.spriteRegion.x" type="number" min="0" step="1"><input v-model.number="selectedAsset.settings.spriteRegion.y" type="number" min="0" step="1"><input v-model.number="selectedAsset.settings.spriteRegion.width" type="number" min="1" step="1"><input v-model.number="selectedAsset.settings.spriteRegion.height" type="number" min="1" step="1"></div></label>
             <label><span>{{ t('trimTransparent') }}</span><button type="button" @click="trimSelectedImage">{{ t('trimNow') }}</button></label>
-            <label><span>{{ t('spriteSheetSlicing') }}</span><input v-model="selectedAsset.settings.spriteSheet.enabled" type="checkbox"></label>
-            <template v-if="selectedAsset.settings.spriteSheet.enabled"><label><span>{{ t('sheetColumnsRows') }}</span><div><input v-model.number="selectedAsset.settings.spriteSheet.columns" type="number" min="1" max="256"><input v-model.number="selectedAsset.settings.spriteSheet.rows" type="number" min="1" max="256"></div></label><label><span>{{ t('marginSpacing') }}</span><div><input v-model.number="selectedAsset.settings.spriteSheet.margin" type="number" min="0"><input v-model.number="selectedAsset.settings.spriteSheet.spacing" type="number" min="0"></div></label><button class="save-script" type="button" @click="sliceSelectedSheet">{{ t('createSpriteSlices') }}</button></template>
+            <label v-if="!selectedAsset.derivedSprite"><span>{{ t('spriteSheetSlicing') }}</span><input v-model="selectedAsset.settings.spriteSheet.enabled" type="checkbox"></label>
+            <template v-if="!selectedAsset.derivedSprite && selectedAsset.settings.spriteSheet.enabled"><label><span>{{ t('sheetColumnsRows') }}</span><div><input v-model.number="selectedAsset.settings.spriteSheet.columns" type="number" min="1" max="256"><input v-model.number="selectedAsset.settings.spriteSheet.rows" type="number" min="1" max="256"></div></label><label><span>{{ t('marginSpacing') }}</span><div><input v-model.number="selectedAsset.settings.spriteSheet.margin" type="number" min="0"><input v-model.number="selectedAsset.settings.spriteSheet.spacing" type="number" min="0"></div></label><button class="save-script" type="button" @click="sliceSelectedSheet">{{ t('createSpriteSlices') }}</button></template>
+            <button v-if="!selectedAsset.derivedSprite" class="save-script" type="button" @click="animateSelectedFrames">{{ assetCopy('animation') }}</button>
             <button class="save-script" type="button" @click="autoSliceSelectedImage">{{ t('automaticSpriteSlicing') }}</button>
             <label><span>{{ t('collisionGeneration') }}</span><select v-model="selectedAsset.settings.collisionGeneration.mode"><option>None</option><option>Box</option><option>Polygon</option></select></label>
             <label v-if="selectedAsset.settings.collisionGeneration.mode === 'Polygon'"><span>{{ t('polygonTolerance') }}</span><input v-model.number="selectedAsset.settings.collisionGeneration.tolerance" type="number" min="0" max="64" step="0.25"></label>
             <label class="region-field"><span>{{ t('sliceBorders') }} L/T/R/B</span><div><input v-model.number="selectedAsset.settings.borders.left" type="number" min="0"><input v-model.number="selectedAsset.settings.borders.top" type="number" min="0"><input v-model.number="selectedAsset.settings.borders.right" type="number" min="0"><input v-model.number="selectedAsset.settings.borders.bottom" type="number" min="0"></div></label>
-            <label><span>{{ t('useTextureAtlas') }}</span><input v-model="selectedAsset.settings.atlas" type="checkbox"></label>
+            <label v-if="!selectedAsset.derivedSprite"><span>{{ t('useTextureAtlas') }}</span><input v-model="selectedAsset.settings.atlas" type="checkbox"></label>
             <label><span>{{ t('atlasGroup') }}</span><input v-model="selectedAsset.settings.atlasSettings.group"></label>
             <label><span>{{ t('atlasRotation') }}</span><select v-model="selectedAsset.settings.atlasSettings.rotationPolicy"><option>Never</option><option>Allow</option></select></label>
             <label><span>{{ t('atlasTrimPolicy') }}</span><select v-model="selectedAsset.settings.atlasSettings.trimPolicy"><option>None</option><option>Transparent</option></select></label>
@@ -297,12 +308,19 @@
 
 <script setup lang="ts">
 import { computed, defineAsyncComponent, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import PanelMaximizeButton from './PanelMaximizeButton.vue'
+import PanelResizeHandle from './PanelResizeHandle.vue'
+import AssetImagePreview from './AssetImagePreview.vue'
+import { emptyAssetBatch, importAssetBatch, reimportAssetBatch, reimportCandidates } from '../assets/assetBatch'
+import { readAssetPixels } from '../assets/assetPixels'
+import { createSpriteFrameAnimation } from '../assets/assetFrameAnimation'
+import { assetWorkflowCopy as assetCopy } from '../assets/assetWorkflowCopy'
 import { t } from '../i18n'
 import { addEditorLog, editorState as estate } from '../store/editor'
 import { clearAssetReferences, countAssetReferences, getSceneJSON, physicsState as state, pushHistory, replaceAssetReferences } from '../store/physics'
 import { requestConfirmation } from '../store/dialog'
 import {
-  applyAssetFilter, applyImportPreset, assetReference, assetState as assets, createAssetCollection, createAssetFolder, createTextAsset, deleteAsset, filteredAssets, importAssetFiles,
+  applyAssetFilter, applyImportPreset, assetReference, assetSessionVersion, assetState as assets, createAssetCollection, createAssetFolder, createTextAsset, deleteAsset, filteredAssets,
   linkAssetSource, moveAsset, queueTextureAtlasRebuild, readTextAsset, reimportAsset, renameAsset, resolveExternalAssetChange, retryFailedAssetImport,
   saveCurrentAssetFilter, saveImportPreset, sliceSpriteSheet, toggleAssetFavorite, toggleAssetInCollection, trimTransparentImage
 } from '../assets/AssetDatabase'
@@ -329,6 +347,13 @@ import { moveAssetToProjectTrash } from '../runtime/projectTrash'
 import { projectScopeDirty } from '../runtime/projectTransactions'
 import { pluginRuntime, pluginState } from '../runtime/plugins'
 import { createResourceAsset, type ResourceKind } from '../runtime/resources'
+
+const assetOperationError = ref('')
+const assetBatch = ref(emptyAssetBatch()), assetDetailMode = ref(false)
+let assetBatchController: AbortController | null = null
+function cancelAssetBatch(){assetBatchController?.abort()}
+onBeforeUnmount(cancelAssetBatch)
+watch(() => assets.selectedGuid, value => { if(value) assetDetailMode.value = true })
 
 // Bottom tools are substantial, mutually exclusive workspaces. Loading the
 // inactive tools only when selected reduces cold-start parsing without changing
@@ -393,6 +418,7 @@ const assetGridStyle = computed(() => ({
 }))
 const visibleFolders = computed(() => assets.folders.filter(folder => !folder.startsWith('.nova/')))
 const selectedAsset = computed(() => assets.records.find(asset => asset.uuid === assets.selectedGuid) ?? null)
+watch(() => selectedAsset.value?.uuid, () => { assetOperationError.value = '' })
 const projectSnapshot = computed(() => { void assets.generation; try { return JSON.parse(getSceneJSON()) as unknown } catch { return null } })
 const assetGraph = computed(() => buildAssetDependencyGraph(assets.records, projectSnapshot.value))
 const productionGraph = computed(() => buildProductionAssetGraph(assets.records, projectSnapshot.value))
@@ -457,21 +483,18 @@ function dropTab(target: (typeof permanentTabs)[number]['id'] | 'tilemap') {
   draggedTab.value = null
 }
 function autoHide() {
-  if (!estate.bottomPanelPinned && !document.activeElement?.closest('.bottom-panel')) estate.bottomPanelOpen = false
+  if (!estate.bottomPanelPinned && workspaceState.maximizedPanel!=='bottom' && !document.activeElement?.closest('.bottom-panel')) estate.bottomPanelOpen = false
 }
+watch(() => estate.bottomPanelOpen, open => { if (!open && workspaceState.maximizedPanel==='bottom') workspaceState.maximizedPanel='' })
 async function importFiles(event: Event) {
-  const input = event.target as HTMLInputElement
-  if (!input.files?.length) return
-  const imported = await importAssetFiles(input.files, assets.currentFolder === 'Assets' ? undefined : assets.currentFolder)
-  if (imported.length) {
-    const latest = imported[imported.length - 1]
-    assets.selectedGuid = latest.uuid
-    assets.currentFolder = latest.path.slice(0, latest.path.lastIndexOf('/'))
-    pushHistory('Import assets')
-    addEditorLog(t('assetsImported', { count: imported.length }), 'Assets')
-  }
-  input.value = ''
+  const input=event.target as HTMLInputElement,files=[...(input.files??[])];input.value=''
+  if(!files.length||assetBatch.value.active)return
+  const session=assetSessionVersion(),controller=new AbortController();assetBatchController=controller;assetOperationError.value=''
+  try{const result=await importAssetBatch(files,assets.currentFolder==='Assets'?undefined:assets.currentFolder,{signal:controller.signal,progress:value=>assetBatch.value=value})
+    if(session===assetSessionVersion() && result.assets.length){const latest=result.assets.at(-1)!;assets.selectedGuid=latest.uuid;assets.currentFolder=latest.path.slice(0,latest.path.lastIndexOf('/'));pushHistory('Import assets');addEditorLog(t('assetsImported',{count:result.assets.length}),'Assets')}
+  }catch(error){assetOperationError.value=error instanceof Error?error.message:String(error)}finally{if(assetBatchController===controller)assetBatchController=null}
 }
+
 function dragAsset(event: DragEvent, guid: string) { event.dataTransfer?.setData('application/x-nova-asset-guid', guid); if (event.dataTransfer) event.dataTransfer.effectAllowed = 'copyMove' }
 async function dropOnFolder(event: DragEvent, folder: string) {
   const guid = event.dataTransfer?.getData('application/x-nova-asset-guid'), asset = assets.records.find(record => record.uuid === guid)
@@ -594,17 +617,15 @@ function togglePlatformOverride(platform: typeof compressionPlatforms[number], e
 async function autoSliceSelectedImage() {
   const asset = selectedAsset.value; if (!asset || asset.assetType !== 'image') return
   try {
-    const blob = await (await fetch(asset.source)).blob(), bitmap = await createImageBitmap(blob), canvas = document.createElement('canvas')
-    canvas.width = bitmap.width; canvas.height = bitmap.height
-    const context = canvas.getContext('2d', { willReadFrequently: true }); if (!context) throw new Error('2D canvas is unavailable')
-    context.drawImage(bitmap, 0, 0); bitmap.close()
-    const rgba = context.getImageData(0, 0, canvas.width, canvas.height).data, alpha = new Uint8Array(canvas.width * canvas.height)
+    assetOperationError.value = ''
+    const pixels = await readAssetPixels(asset, assets.records), {width, height, data: rgba} = pixels, alpha = new Uint8Array(width * height)
     for (let index = 0; index < alpha.length; index++) alpha[index] = rgba[index * 4 + 3]
-    const regions = detectOpaqueRegions(canvas.width, canvas.height, alpha).slice(0, 4096)
+    const regions = detectOpaqueRegions(width, height, alpha).slice(0, 4096)
+    pixels.assertCurrent()
     asset.settings.extractedAnimationFrames = regions
     if (regions[0]) { asset.settings.spriteRegion = regions[0]; asset.settings.polygonOutline = polygonOutlineForRegion(regions[0]) }
     assets.generation++; pushHistory('Automatically slice sprite', `asset:${asset.uuid}`); addEditorLog(t('automaticSlicesCreated', { count: regions.length }), 'Assets', regions.length ? 'info' : 'warning')
-  } catch (error) { addEditorLog(error instanceof Error ? error.message : String(error), 'Assets', 'error') }
+  } catch (error) { assetOperationError.value = error instanceof Error ? error.message : String(error); addEditorLog(assetOperationError.value, 'Assets', 'error') }
 }
 function toggleSpriteRegion(event: Event) {
   const asset = selectedAsset.value
@@ -623,8 +644,9 @@ function reimportAnimation() {
   addEditorLog(t('animationReimported', { name: asset.name }), 'Assets')
 }
 function applyPivotPreset(id: string) { const asset = selectedAsset.value, preset = pivotPresets.find(candidate => candidate.id === id); if (!asset || !preset) return; asset.settings.pivot = { ...preset.value }; pushHistory('Set sprite pivot preset', `asset:${asset.uuid}`) }
-async function trimSelectedImage() { const asset = selectedAsset.value; if (!asset) return; if (await trimTransparentImage(asset)) { pushHistory('Trim transparent sprite', `asset:${asset.uuid}`); addEditorLog(t('transparentTrimApplied'), 'Assets') } }
-function sliceSelectedSheet() { const asset = selectedAsset.value; if (!asset) return; const generated = sliceSpriteSheet(asset); if (generated.length) { assets.selectedGuid = generated[0].uuid; pushHistory('Slice sprite sheet'); addEditorLog(t('spriteSlicesCreated', { count: generated.length }), 'Assets') } }
+async function trimSelectedImage() { const asset = selectedAsset.value; if (!asset) return; assetOperationError.value = ''; try { if (await trimTransparentImage(asset)) { pushHistory('Trim transparent sprite', `asset:${asset.uuid}`); addEditorLog(t('transparentTrimApplied'), 'Assets') } } catch(error) { assetOperationError.value = error instanceof Error ? error.message : String(error) } }
+function animateSelectedFrames() { const asset = selectedAsset.value; if (!asset) return; assetOperationError.value = ''; try { const animation = createSpriteFrameAnimation(asset); pushHistory('Create sprite animation', `asset:${animation.uuid}`); openAnimationAsset(animation.uuid) } catch(error) { assetOperationError.value = error instanceof Error ? error.message : String(error) } }
+function sliceSelectedSheet() { const asset = selectedAsset.value; if (!asset) return; assetOperationError.value = ''; try { const generated = sliceSpriteSheet(asset); if (generated.length) { assets.selectedGuid = generated[0].uuid; pushHistory('Slice sprite sheet'); addEditorLog(t('spriteSlicesCreated', { count: generated.length }), 'Assets') } } catch (error) { assetOperationError.value = error instanceof Error ? error.message : String(error); addEditorLog(assetOperationError.value, 'Assets', 'error') } }
 async function reimportSelectedAsset(event: Event) {
   const input = event.target as HTMLInputElement, file = input.files?.[0]; input.value = ''
   const asset = selectedAsset.value
@@ -637,10 +659,12 @@ async function reimportSelectedAsset(event: Event) {
 function compareSelectedImport() { const current = selectedAsset.value?.pipeline; importComparisonText.value = compareImportMetadata(previousPipeline.value, current).map(row => `${row.changed ? '●' : '○'} ${row.field}: ${row.before || '—'} → ${row.after || '—'}`).join('\n') }
 function revertSelectedImport() { const asset = selectedAsset.value; if (!asset || !revertToVerifiedArtifact(asset)) { addEditorLog(t('noVerifiedArtifact'), 'Assets', 'warning'); return } assets.generation++; importComparisonText.value = ''; addEditorLog(t('importReverted'), 'Assets') }
 async function batchReimportVisible() {
-  const candidates = filteredAssetRecords.value.filter(asset => asset.pipeline && /^(data:|blob:)/.test(asset.source)).slice(0, 2000); let complete = 0, failed = 0
-  for (const asset of candidates) { try { const response = await fetch(asset.source), blob = await response.blob(), file = new File([blob], asset.name, { type: asset.mimeType, lastModified: asset.sourceModified }); if (await reimportAsset(asset.uuid, file)) complete++; else failed++ } catch { failed++ } }
-  addEditorLog(t('batchReimportComplete', { complete, failed }), 'Assets', failed ? 'warning' : 'info')
+  if(assetBatch.value.active)return
+  const session=assetSessionVersion(),candidates=reimportCandidates(filteredAssetRecords.value),controller=new AbortController();assetBatchController=controller;assetOperationError.value=''
+  try{const result=await reimportAssetBatch(candidates,{signal:controller.signal,progress:value=>assetBatch.value=value});if(session===assetSessionVersion() && result.completed)pushHistory('Batch reimport assets');addEditorLog(t('batchReimportComplete',{complete:result.completed,failed:result.failed}),'Assets',result.failed?'warning':'info')}
+  catch(error){assetOperationError.value=error instanceof Error?error.message:String(error)}finally{if(assetBatchController===controller)assetBatchController=null}
 }
+
 async function bulkApplyVisible() {
   const source = selectedAsset.value
   if (!source || !filteredAssetRecords.value.length) return
@@ -695,17 +719,14 @@ function assetIcon(type: AssetType): string { return type === 'audio' ? '♫' : 
 function formatBytes(value: number): string { return value < 1024 ? `${value} B` : value < 1024 ** 2 ? `${(value / 1024).toFixed(1)} KB` : `${(value / 1024 ** 2).toFixed(1)} MB` }
 function assetSourceStatus(uuid: string) { return sourceStatusFor(uuid) }
 
-let startY = 0, startHeight = 0
-function startResize(event: MouseEvent) { startY = event.clientY; startHeight = estate.bottomPanelHeight; document.addEventListener('mousemove', resizePanel); document.addEventListener('mouseup', stopResize); document.body.style.cursor = 'ns-resize' }
-function resizePanel(event: MouseEvent) { estate.bottomPanelHeight = Math.min(520, Math.max(120, startHeight + startY - event.clientY)) }
-function stopResize() { document.removeEventListener('mousemove', resizePanel); document.removeEventListener('mouseup', stopResize); document.body.style.cursor = 'default' }
-onBeforeUnmount(stopResize)
 </script>
 
 <style scoped>
+.asset-workspace>.import-queue{position:static;z-index:auto;flex:0 0 auto;width:calc(100% - 12px);margin:6px;max-height:220px;overflow:auto;display:block;box-shadow:none}.asset-workspace>.import-queue>summary{cursor:pointer;min-height:30px;overflow-wrap:anywhere}.asset-workspace>.import-queue>article{padding:6px 0}.asset-workspace>.import-queue:not([open])>article{display:none}
+
 .asset-inspector label.region-field { padding: 6px 0; flex-direction: column; align-items: stretch; }.asset-inspector label.region-field > div { max-width: none; }.asset-inspector label.region-field input { width: 25%; min-width: 0; }
 .bottom-panel { position: relative; flex: 0 0 auto; min-height: 34px; display: flex; flex-direction: column; border-top: 1px solid var(--border-subtle); background: var(--surface-1); container-type: inline-size; }
-.resize-handle { position: absolute; inset: -4px 0 auto; height: 8px; cursor: ns-resize; z-index: 5; }
+.resize-handle { position: absolute; inset: 0 0 auto; height: 8px; cursor: ns-resize; z-index: 5; }
 .panel-tabs { min-height: 34px; flex: 0 0 auto; padding: 3px 5px; display: flex; align-items: center; flex-wrap: wrap; gap: 2px; overflow: hidden; border-bottom: 1px solid var(--border-subtle); }
 .panel-tabs span { min-width: 4px; flex: 1; }.panel-tabs button { height: 29px; padding: 0 clamp(7px, .9vw, 12px); flex: 0 1 auto; border: 0; border-radius: 7px; color: var(--text-muted); background: transparent; font-size: clamp(10px, .82vw, 12px); white-space: nowrap; word-break: keep-all; writing-mode: horizontal-tb; }.panel-tabs button:hover, .panel-tabs button.active { color: var(--text-primary); background: var(--surface-hover); }.panel-tabs button.active { color: var(--accent); }
 .compact-tab-select{display:none;width:min(240px,calc(100% - 76px));min-height:28px;height:28px;padding-block:2px}
@@ -747,4 +768,22 @@ onBeforeUnmount(stopResize)
 .atlas-report,.content-closure{margin:7px 0;padding:7px;display:grid;gap:4px;border:1px solid var(--border-subtle);border-radius:9px;background:var(--surface-3);font-size:var(--type-caption)}.atlas-report p{margin:0;color:var(--text-muted)}.atlas-report code{overflow:hidden;color:var(--accent);text-overflow:ellipsis;white-space:nowrap}.atlas-report small{color:var(--warning);overflow-wrap:anywhere}.content-closure summary{cursor:pointer;color:var(--text-secondary)}.content-closure article{padding:4px 0;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px;border-top:1px solid var(--border-subtle)}.content-closure article.invalid{color:var(--danger)}.content-closure article button{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.content-closure article small{color:var(--text-muted)}
 .atlas-report,.content-closure{margin:7px 0;padding:7px;display:grid;gap:4px;border:1px solid var(--border-subtle);border-radius:9px;background:var(--surface-3);font-size:var(--type-caption)}.atlas-report p{margin:0;color:var(--text-muted)}.atlas-report code{overflow:hidden;color:var(--accent);text-overflow:ellipsis;white-space:nowrap}.atlas-report small{color:var(--warning);overflow-wrap:anywhere}.content-closure summary{cursor:pointer;color:var(--text-secondary)}.content-closure article{padding:4px 0;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px;border-top:1px solid var(--border-subtle)}.content-closure article.invalid{color:var(--danger)}.content-closure article button{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.content-closure article small{color:var(--text-muted)}
 .atlas-report,.content-closure{margin:7px 0;padding:7px;display:grid;gap:4px;border:1px solid var(--border-subtle);border-radius:9px;background:var(--surface-3);font-size:var(--type-caption)}.atlas-report p{margin:0;color:var(--text-muted)}.atlas-report code{overflow:hidden;color:var(--accent);text-overflow:ellipsis;white-space:nowrap}.atlas-report small{color:var(--warning);overflow-wrap:anywhere}.content-closure summary{cursor:pointer;color:var(--text-secondary)}.content-closure article{padding:4px 0;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px;border-top:1px solid var(--border-subtle)}.content-closure article.invalid{color:var(--danger)}.content-closure article button{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.content-closure article small{color:var(--text-muted)}
+/* The asset inspector can be narrow in a wide workspace; use its own width. */
+.asset-inspector { container: nova-asset-inspector / inline-size; }
+.asset-actions { flex-wrap: wrap; }
+.asset-actions button { white-space: normal; overflow-wrap: anywhere; padding: 6px; }
+@container nova-asset-inspector (max-width: 330px) {
+  .asset-inspector label:has(> :is(input:not([type='checkbox']), select, div)) { align-items: stretch; flex-direction: column; gap: 5px; padding-block: 7px; }
+  .asset-inspector label > span:first-child { max-width: 100%; white-space: normal; overflow: visible; line-height: 1.4; }
+  .asset-inspector label > *:last-child { max-width: 100%; }
+  .asset-inspector label input:not([type='checkbox']), .asset-inspector label select { width: 100%; min-height: 30px; }
+  .asset-inspector label div input { width: 50%; }
+}
+.asset-inspector>nav{flex:0 0 auto}
+.asset-inspector>nav button,.asset-inspector .asset-actions button{height:auto;white-space:normal;overflow-wrap:anywhere;padding-block:6px;word-break:normal}
+.asset-inspector>.importer-tabs{grid-template-columns:repeat(auto-fit,minmax(min(100px,100%),1fr))}
+.asset-inspector .asset-actions button{flex:1 1 100px}
+
+.panel-content{container:nova-assets-dock/inline-size}.asset-detail-toggle,.asset-detail-back{display:none}.asset-batch{flex:0 0 auto;max-height:160px;overflow:auto;display:grid;gap:5px;padding:8px;border-bottom:1px solid var(--border-subtle)}.asset-batch header{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}.asset-batch progress{width:100%;height:8px}.asset-batch p{margin:0;overflow-wrap:anywhere}.asset-batch button{min-height:30px;white-space:normal}.asset-browser.inspecting{grid-template-columns:minmax(110px,16%) minmax(180px,1fr) minmax(280px,34%)}
+@container nova-assets-dock (max-width:800px){.asset-browser,.asset-browser.inspecting{position:relative;grid-template-columns:minmax(90px,22%) minmax(0,1fr)}.asset-detail-toggle,.asset-detail-back{display:block;min-height:32px;white-space:normal}.asset-inspector{display:none;position:static;inset:auto;width:auto;box-shadow:none}.asset-browser.details-visible{grid-template-columns:minmax(0,1fr)}.asset-browser.details-visible>.folder-tree,.asset-browser.details-visible>.asset-workspace{display:none}.asset-browser.details-visible>.asset-inspector{display:block;width:auto}.asset-inspector header strong{white-space:normal;overflow-wrap:anywhere}.asset-inspector>header{position:sticky;top:-6px;z-index:1;background:var(--surface-2)}}
 </style>

@@ -47,8 +47,8 @@ try {
     await waitForExpression(client, "Boolean(document.querySelector('.project-manager'))", 20_000)
   }
   await collect('launcher')
-  await clickIndex('.template-categories button', 2, 'launcher category: prebuilt games')
-  await clickIndex('.template-grid button', 0, 'launcher template: Mouse Knockout')
+  await clickIndex('[data-template-category="game"]', 0, 'launcher category: prebuilt games')
+  await clickIndex('[data-template-id="mouse-knockout"]', 0, 'launcher template: Mouse Knockout')
   await clickIndex('.create-button', 0, 'launcher: create project')
   await waitForExpression(client, "Boolean(document.querySelector('.editor-root'))", 30_000)
 
@@ -56,8 +56,8 @@ try {
     await evaluate(client, `(() => { let value={}; try{value=JSON.parse(localStorage.getItem('nova_a.preferences.v1')||'{}')}catch{} value.locale='${locale}'; value.uiScale=1; value.reduceMotion=true; localStorage.setItem('nova_a.preferences.v1',JSON.stringify(value)); location.reload(); return true })()`)
     await waitForExpression(client, "Boolean(document.querySelector('.project-manager,.editor-root'))", 25_000)
     if (await evaluate(client, "Boolean(document.querySelector('.project-manager'))")) {
-      await clickIndex('.template-categories button', 2, `${locale}: launcher category prebuilt games`)
-      await clickIndex('.template-grid button', 0, `${locale}: launcher template Mouse Knockout`)
+      await clickIndex('[data-template-category="game"]', 0, `${locale}: launcher category prebuilt games`)
+      await clickIndex('[data-template-id="mouse-knockout"]', 0, `${locale}: launcher template Mouse Knockout`)
       await clickIndex('.create-button', 0, `${locale}: recreate isolated audit project`)
       await waitForExpression(client, "Boolean(document.querySelector('.editor-root'))", 25_000)
     }

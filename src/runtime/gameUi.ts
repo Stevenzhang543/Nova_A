@@ -1,29 +1,27 @@
-import { resolveAsset, resolveTexture } from '../assets/AssetDatabase'
+import { resolveTexture } from '../assets/AssetDatabase'
 import type { Entity } from '../world/Entity'
 import type { Button, Canvas, Checkbox, Image, Panel, ProgressBar, RectTransform, Slider, Text, TextInput } from '../world/components'
-import { activeFontFallbackFamilies, activeTextDirection, localize } from './localization'
+import { activeFontFallbackFamilies, activeTextDirection, localizationSettings, localize, localizeUiLabel } from './localization'
 import { runtimeAccessibilitySettings, uiAudioSettings } from './presentation'
 import { audioRuntime } from './audio'
 import { readUiTheme, themeStyle, themeVariant as applyThemeVariant, type UiThemeDocument } from './uiTheme'
 import type { InputAction } from './input'
 import { formatInputPrompt, inputPromptForAction, setInputModality } from './inputModality'
 
-export interface UiRect { x: number; y: number; width: number; height: number }
-interface ResolvedUi { entity: Entity; rect: UiRect; order: number; clips: Array<{ rect: UiRect; rounded: number }>; scale: number; theme: UiThemeDocument | null }
+import { resolveUiLayout, uiClipContains, uiItemVisibleArea, type UiLayoutItem, type UiLayoutIssue, type UiLayoutOptions, type UiRect } from './uiLayout'
+import { drawUiText, measureUiText } from './uiTextPresentation'
+import { truncateUtf16, uiTextGraphemes } from './uiTextLayout'
+import { UiImageTintCache } from './uiImageTint'
+export type { UiRect } from './uiLayout'
+interface ResolvedUi extends UiLayoutItem { theme: UiThemeDocument | null }
 type UiCallback = (entity: Entity, functionName: string) => void
 type RemapCallback = (action: string, bindingIndex: number, binding: { device: 'keyboard' | 'gamepad-button' | 'gamepad-axis'; code: string }) => void
 
-export interface GameUiRenderOptions { editor?: boolean; selectedEntityIds?: Iterable<number> }
+export interface GameUiRenderOptions { editor?: boolean; preview?: boolean; selectedEntityIds?: Iterable<number>; layout?: UiLayoutOptions; themeOverride?: { reference: string; theme: UiThemeDocument } }
 export interface UiAccessibilityNode { uuid: string; role: string; label: string; description: string; state: string; value: string; valueMin?: number; valueMax?: number; valueNow?: number; checked?: boolean; live: 'off' | 'polite' | 'assertive'; rect: UiRect; tabIndex: number; focused: boolean; disabled: boolean }
 
 function color(value: { r: number; g: number; b: number }, opacity = 100): string {
   return `rgba(${Math.round(value.r)},${Math.round(value.g)},${Math.round(value.b)},${Math.min(1, Math.max(0, opacity / 100))})`
-}
-
-function anchorPoint(preset: RectTransform['anchorPreset'], parent: UiRect): { x: number; y: number } {
-  const left = preset.includes('left') || preset === 'left', right = preset.includes('right') || preset === 'right'
-  const top = preset.includes('top') || preset === 'top', bottom = preset.includes('bottom') || preset === 'bottom'
-  return { x: left ? parent.x : right ? parent.x + parent.width : parent.x + parent.width / 2, y: top ? parent.y : bottom ? parent.y + parent.height : parent.y + parent.height / 2 }
 }
 
 function roundRect(context: CanvasRenderingContext2D, rect: UiRect, radius: number): void {
@@ -44,11 +42,13 @@ function drawNineSliceImage(context: CanvasRenderingContext2D, source: CanvasIma
   }
 }
 
-function clampSize(value: number, minimum: number, maximum: number): number { return Math.min(Math.max(0, maximum), Math.max(Math.max(0, minimum), Math.max(0, value))) }
-function interactive(entity: Entity): boolean { return entity.hasComponent('Button') || entity.hasComponent('Slider') || entity.hasComponent('Checkbox') || entity.hasComponent('TextInput') }
-function isDisabled(entity: Entity): boolean { return entity.getComponent<Button>('Button')?.interactable === false || entity.getComponent<Slider>('Slider')?.interactable === false || entity.getComponent<Checkbox>('Checkbox')?.interactable === false || entity.getComponent<TextInput>('TextInput')?.interactable === false }
+function controlFontFamily(theme: UiThemeDocument | null, locale: string): string { const family = String(theme?.variables.fontFamily ?? 'Nunito Sans').replace(/["\\]/g, ''); return [family, ...activeFontFallbackFamilies(locale), 'Segoe UI', 'sans-serif'].map(value => value === 'sans-serif' ? value : `"${value.replace(/["\\]/g, '')}"`).join(', ') }
+function interactive(entity: Entity): boolean { return ['Button', 'Slider', 'Checkbox', 'TextInput'].some(kind => entity.getComponent<Button>(kind as 'Button')?.enabled) }
+function isDisabled(entity: Entity): boolean { return ['Button', 'Slider', 'Checkbox', 'TextInput'].some(kind => { const control = entity.getComponent<Button>(kind as 'Button'); return control?.enabled && !control.interactable }) }
 
-class GameUiRuntime {
+export class GameUiRuntime {
+  layoutIssues: UiLayoutIssue[] = []
+  private imageTints = new UiImageTintCache()
   private resolved: ResolvedUi[] = []
   private hovered: Entity | null = null
   private pressed: Entity | null = null
@@ -68,21 +68,21 @@ class GameUiRuntime {
   setInputActions(actions: InputAction[]): void { this.inputActions = actions }
 
   render(context: CanvasRenderingContext2D, width: number, height: number, entities: Entity[], options: GameUiRenderOptions = {}): void {
-    const resolved = this.resolve(width, height, entities)
+    const resolved = this.resolve(width, height, entities, context, options)
     this.resolved = options.editor ? resolved.filter(item => item.entity.editorVisible) : resolved
     if (this.focused && !this.resolved.some(item => item.entity === this.focused)) this.focused = null
     const selected = new Set(options.selectedEntityIds ?? [])
-    if (!options.editor && runtimeAccessibilitySettings.gamepadNavigation) this.pollGamepads()
+    if (!options.editor && !options.preview && runtimeAccessibilitySettings.gamepadNavigation) this.pollGamepads()
     context.save(); context.beginPath(); context.rect(0, 0, Math.max(0, width), Math.max(0, height)); context.clip()
     for (const item of this.resolved) {
       context.save()
       for (const clip of item.clips) { roundRect(context, clip.rect, clip.rounded); context.clip() }
       this.draw(context, item, options.editor === true)
-      if (options.editor) this.drawEditorOverlay(context, item.entity, item.rect, selected.has(item.entity.id))
+      if (options.editor && !options.preview) this.drawEditorOverlay(context, item.entity, item.rect, selected.has(item.entity.id))
       else if (item.entity === this.focused) this.drawFocusRing(context, item.rect)
       context.restore()
     }
-    this.drawTooltip(context)
+    if (!options.preview) this.drawTooltip(context)
     context.restore()
   }
 
@@ -91,7 +91,7 @@ class GameUiRuntime {
     for (let index = this.resolved.length - 1; index >= 0; index--) {
       const item = this.resolved[index]
       if (modal && !this.isDescendantOf(item.entity, modal)) continue
-      const insideClips = item.clips.every(clip => point.x >= clip.rect.x && point.x <= clip.rect.x + clip.rect.width && point.y >= clip.rect.y && point.y <= clip.rect.y + clip.rect.height)
+      const insideClips = item.clips.every(clip => uiClipContains(clip, point))
       if (insideClips && (!interactiveOnly || interactive(item.entity)) && point.x >= item.rect.x && point.x <= item.rect.x + item.rect.width && point.y >= item.rect.y && point.y <= item.rect.y + item.rect.height) return item.entity
     }
     return null
@@ -99,15 +99,15 @@ class GameUiRuntime {
 
   accessibilityNodes(): UiAccessibilityNode[] {
     if (!runtimeAccessibilitySettings.screenReaderMetadata) return []
-    return this.focusableItems(true).flatMap(item => {
+    return this.resolved.filter(item => this.inFocusScope(item)).sort((a, b) => (a.entity.getComponent<RectTransform>('RectTransform')?.readingOrder ?? 0) - (b.entity.getComponent<RectTransform>('RectTransform')?.readingOrder ?? 0)).flatMap(item => {
       const rect = item.entity.getComponent<RectTransform>('RectTransform')!
       if (rect.accessibilityHidden) return []
       const text = item.entity.getComponent<Text>('Text'), checkbox = item.entity.getComponent<Checkbox>('Checkbox')
-      const label = rect.accessibilityLabel || (text ? localize(text.localizationKey, text.localizationVariables, text.text) : checkbox ? localize(checkbox.localizationKey, {}, checkbox.label) : item.entity.name)
-      const role = rect.accessibilityRole || (item.entity.hasComponent('Button') ? 'button' : item.entity.hasComponent('Slider') ? 'slider' : item.entity.hasComponent('Checkbox') ? 'checkbox' : item.entity.hasComponent('TextInput') ? 'textbox' : 'group')
-      const slider = item.entity.getComponent<Slider>('Slider'), checkboxValue = item.entity.getComponent<Checkbox>('Checkbox')?.checked, inputValue = item.entity.getComponent<TextInput>('TextInput')?.value
+      const label = localizeUiLabel(rect.accessibilityLabel, item.locale) || (text ? localize(text.localizationKey, text.localizationVariables, text.text, item.locale) : checkbox ? localize(checkbox.localizationKey, {}, localizeUiLabel(checkbox.label, item.locale), item.locale) : item.entity.name)
+      const role = rect.accessibilityRole || (item.entity.hasComponent('Button') ? 'button' : item.entity.hasComponent('Slider') ? 'slider' : item.entity.hasComponent('Checkbox') ? 'checkbox' : item.entity.hasComponent('TextInput') ? 'textbox' : item.entity.hasComponent('ProgressBar') ? 'progressbar' : 'group')
+      const slider = item.entity.getComponent<Slider>('Slider') ?? item.entity.getComponent<ProgressBar>('ProgressBar'), checkboxValue = item.entity.getComponent<Checkbox>('Checkbox')?.checked, input = item.entity.getComponent<TextInput>('TextInput'), inputValue = input?.password ? '•'.repeat(uiTextGraphemes(input.value).length) : input?.value
       const inferredValue = slider ? String(slider.value) : checkboxValue !== undefined ? String(checkboxValue) : inputValue ?? ''
-      return [{ uuid: item.entity.uuid, role, label, description: rect.accessibilityDescription, state: rect.accessibilityState || (isDisabled(item.entity) ? 'disabled' : ''), value: rect.accessibilityValue || inferredValue, valueMin: slider?.min, valueMax: slider?.max, valueNow: slider?.value, checked: checkboxValue, live: rect.accessibilityLive.toLowerCase() as 'off' | 'polite' | 'assertive', rect: { ...item.rect }, tabIndex: rect.readingOrder, focused: item.entity === this.focused, disabled: isDisabled(item.entity) }]
+      return [{ uuid: item.entity.uuid, role, label, description: [rect.accessibilityDescription, rect.accessibilityState].filter(Boolean).join('; '), state: rect.accessibilityState || (isDisabled(item.entity) ? 'disabled' : ''), value: input?.password ? inferredValue : rect.accessibilityValue || inferredValue, valueMin: slider?.min, valueMax: slider?.max, valueNow: slider?.value, checked: checkboxValue, live: rect.accessibilityLive.toLowerCase() as 'off' | 'polite' | 'assertive', rect: { ...item.rect }, tabIndex: rect.focusable && !rect.skipNavigation && !isDisabled(item.entity) ? Math.max(-1, rect.tabIndex) : -1, focused: item.entity === this.focused, disabled: isDisabled(item.entity) }]
     })
   }
 
@@ -117,10 +117,27 @@ class GameUiRuntime {
   focusedTextInput(): { entity: Entity; rect: UiRect; input: TextInput } | null {
     if (!this.focusedInput) return null
     const item = this.resolved.find(candidate => candidate.entity === this.focusedInput), input = this.focusedInput.getComponent<TextInput>('TextInput')
-    return item && input ? { entity: this.focusedInput, rect: { ...item.rect }, input } : null
+    return item && input?.enabled && input.interactable && this.inFocusScope(item) ? { entity: this.focusedInput, rect: { ...item.rect }, input } : null
   }
 
+  focusedTextInputPlaceholder(): string { const active = this.focusedTextInput(); return active ? localizeUiLabel(active.input.placeholder, this.focusedTextInputLocale()) : '' }
+  focusedTextInputLocale(): string { return this.resolved.find(item => item.entity === this.focusedInput)?.locale || localizationSettings.previewLocale }
+  focusedTextInputStyle(): Record<string, string> {
+    const item = this.resolved.find(candidate => candidate.entity === this.focusedInput), input = item?.entity.getComponent<TextInput>('TextInput')
+    if (!item || !input) return {}
+    const style = themeStyle(item.theme, input.styleClass, 'focused', input.styleOverrides)
+    return { fontFamily: controlFontFamily(item.theme, item.locale), fontSize: `${Number(style.fontSize ?? 16) * item.scale * runtimeAccessibilitySettings.textScale}px`, fontWeight: String(style.fontWeight ?? 500), color: runtimeAccessibilitySettings.highContrast ? '#fff' : String(style.foreground ?? '#f5f7fb'), background: runtimeAccessibilitySettings.highContrast ? '#000' : String(style.background ?? '#151b24'), borderColor: String(style.border ?? '#4f96ff'), borderRadius: `${Number(style.cornerRadius ?? 8) * item.scale}px`, textAlign: item.direction === 'rtl' ? 'right' : 'left' }
+  }
   blurTextInput(): void { this.focusedInput = null }
+  commitTextInput(uuid: string, value: string): boolean {
+    const active = this.focusedTextInput(); if (!active || active.entity.uuid !== uuid) return false
+    const next = truncateUtf16(value, Math.min(100_000, active.input.maxLength))
+    if (next !== active.input.value) { active.input.value = next; this.callback?.(active.entity, 'on_value_changed') }
+    return true
+  }
+  activateByUuid(uuid: string): boolean { const entity = this.focusableItems(true).find(item => item.entity.uuid === uuid)?.entity; if (!entity) return false; this.setFocus(entity); this.activate(entity); return true }
+  pointerCancel(): void { const button = this.pressed?.getComponent<Button>('Button'); if (button) button.state = button.interactable ? 'Normal' : 'Disabled'; this.pressed = null; this.dragged = null }
+
 
   wheel(point: { x: number; y: number }, deltaX: number, deltaY: number): boolean {
     setInputModality('mouse')
@@ -149,10 +166,10 @@ class GameUiRuntime {
     if (!entity) { this.focusedInput = null; return false }
     this.setFocus(entity)
     const button = entity.getComponent<Button>('Button'), slider = entity.getComponent<Slider>('Slider'), checkbox = entity.getComponent<Checkbox>('Checkbox'), input = entity.getComponent<TextInput>('TextInput')
-    if (button?.interactable) { button.state = 'Pressed'; this.pressed = entity }
-    else if (slider?.interactable) { this.pressed = entity; this.updateSlider(entity, point) }
-    else if (checkbox?.interactable) { checkbox.checked = !checkbox.checked; this.callback?.(entity, 'on_pressed') }
-    if (input?.interactable) this.focusedInput = entity
+    if (button?.enabled && button.interactable) { button.state = 'Pressed'; this.pressed = entity }
+    else if (slider?.enabled && slider.interactable) { this.pressed = entity; this.updateSlider(entity, point) }
+    else if (checkbox?.enabled && checkbox.interactable) this.pressed = entity
+    if (input?.enabled && input.interactable) this.focusedInput = entity
     return Boolean(button || slider || checkbox || input)
   }
 
@@ -177,152 +194,83 @@ class GameUiRuntime {
     const pressed = this.pressed; this.pressed = null
     if (!pressed) return false
     const button = pressed.getComponent<Button>('Button')
-    if (button) {
+    if (button || pressed.getComponent<Checkbox>('Checkbox')) {
       const inside = this.entityAt(point, true) === pressed
-      button.state = button.interactable ? (inside ? 'Hovered' : 'Normal') : 'Disabled'
-      if (inside && button.interactable) this.activate(pressed)
+      if (button) button.state = button.interactable ? (inside ? 'Hovered' : 'Normal') : 'Disabled'
+      if (inside && !isDisabled(pressed)) this.activate(pressed)
     }
     return true
   }
 
   keyDown(event: KeyboardEvent): boolean {
+    if (event.isComposing || event.keyCode === 229 || event.ctrlKey || event.metaKey || event.altKey) return false
     setInputModality('keyboard')
     if (this.awaitingRemap && event.key !== 'Escape') { this.applyRemap({ device: 'keyboard', code: event.code || event.key }); return true }
     if (event.key === 'Escape' && this.awaitingRemap) { this.awaitingRemap = null; audioRuntime.playUiClip(uiAudioSettings.cancel, uiAudioSettings.bus); return true }
-    const input = this.focusedInput?.getComponent<TextInput>('TextInput')
-    if (input?.interactable) {
-      if (event.key === 'Backspace') input.value = input.value.slice(0, -1)
-      else if (event.key === 'Escape' || event.key === 'Enter') this.focusedInput = null
-      else if (event.key.length === 1 && input.value.length < Math.max(0, input.maxLength)) input.value += event.key
-      else return false
-      return true
+    if (this.focusedInput) {
+      if (event.key === 'Tab') { this.blurTextInput(); this.focusNext(event.shiftKey ? -1 : 1); return true }
+      if (event.key === 'Escape' || event.key === 'Enter') { this.blurTextInput(); return true }
+      // Native input owns text editing, selection, surrogate pairs and composition.
+      return false
     }
     if (!runtimeAccessibilitySettings.keyboardNavigation) return false
-    if (event.key === 'Tab') { this.focusNext(event.shiftKey ? -1 : 1); return true }
+    if (event.key === 'Tab') { if (!this.focusableItems().length) return false; this.focusNext(event.shiftKey ? -1 : 1); return true }
     if (event.key === 'ArrowUp' || event.key === 'ArrowDown' || event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
       const slider = this.focused?.getComponent<Slider>('Slider')
-      if (slider?.interactable && (event.key === 'ArrowLeft' || event.key === 'ArrowRight')) { this.adjustSlider(slider, event.key === 'ArrowRight' ? 1 : -1); return true }
+      if (slider?.interactable && (event.key === 'ArrowLeft' || event.key === 'ArrowRight')) { this.adjustSlider(this.focused!, slider, event.key === 'ArrowRight' ? 1 : -1); return true }
       this.focusDirection(event.key.replace('Arrow', '').toLowerCase() as 'up' | 'down' | 'left' | 'right'); return true
     }
-    if ((event.key === 'Enter' || event.key === ' ') && this.focused) { this.activate(this.focused); return true }
+    if ((event.key === 'Enter' || event.key === ' ') && this.focused) { if (!event.repeat) this.activate(this.focused); return true }
     return false
   }
 
   reset(): void {
     if (this.hovered) { const button = this.hovered.getComponent<Button>('Button'); if (button) button.state = button.interactable ? 'Normal' : 'Disabled' }
-    this.resolved = []; this.hovered = null; this.pressed = null; this.focused = null; this.focusedInput = null; this.awaitingRemap = null; this.dragged = null; this.tooltip = null; this.previousGamepadButtons.clear(); this.previousGamepadDirection = ''
+    this.imageTints.clear(); this.resolved = []; this.hovered = null; this.pressed = null; this.focused = null; this.focusedInput = null; this.awaitingRemap = null; this.dragged = null; this.tooltip = null; this.previousGamepadButtons.clear(); this.previousGamepadDirection = ''
   }
 
-  private resolve(width: number, height: number, entities: Entity[]): ResolvedUi[] {
-    const byUuid = new Map(entities.map(entity => [entity.uuid, entity])), cache = new Map<string, UiRect>(), scaleCache = new Map<string, number>(), orderCache = new Map<string, number>(), themeCache = new Map<string, UiThemeDocument | null>()
-    const viewport = { x: 0, y: 0, width, height }, resolving = new Set<string>(), direction = activeTextDirection()
-    const children = new Map<string, Entity[]>()
-    for (const entity of entities) if (entity.parentUuid) { const list = children.get(entity.parentUuid) ?? []; list.push(entity); children.set(entity.parentUuid, list) }
-    const rectFor = (entity: Entity): UiRect | null => {
-      const cached = cache.get(entity.uuid); if (cached) return cached
-      const rect = entity.getComponent<RectTransform>('RectTransform'); if (!rect?.enabled || resolving.has(entity.uuid)) return null
-      resolving.add(entity.uuid)
-      const parent = entity.parentUuid ? byUuid.get(entity.parentUuid) : null, parentRect = parent ? rectFor(parent) ?? viewport : viewport
-      const parentScale = parent ? scaleCache.get(parent.uuid) ?? 1 : 1, parentOrder = parent ? orderCache.get(parent.uuid) ?? 0 : 0
-      const canvas = entity.getComponent<Canvas>('Canvas')
-      const ownScale = canvas?.scaleWithScreen ? Math.min(width / Math.max(1, canvas.referenceSize.x), height / Math.max(1, canvas.referenceSize.y)) * canvas.dpiScale : parentScale
-      const scale = canvas ? ownScale : parentScale
-      const breakpoint = rect.breakpoints.find(item => width >= Number(item.minWidth) && width <= Number(item.maxWidth))
-      if (breakpoint?.visible === false) { resolving.delete(entity.uuid); return null }
-      const position = breakpoint ? breakpoint.position : rect.position, requestedSize = breakpoint ? breakpoint.size : rect.size
-      let desiredWidth = clampSize(requestedSize.x * scale, rect.minSize.x * scale, rect.maxSize.x * scale)
-      let desiredHeight = clampSize(requestedSize.y * scale, rect.minSize.y * scale, rect.maxSize.y * scale)
-      if (rect.horizontalPolicy === 'Fill') desiredWidth = Math.max(0, parentRect.width - (rect.margins.left + rect.margins.right) * scale)
-      if (rect.verticalPolicy === 'Fill') desiredHeight = Math.max(0, parentRect.height - (rect.margins.top + rect.margins.bottom) * scale)
-      const text = entity.getComponent<Text>('Text')
-      if (rect.horizontalPolicy === 'Content' && text) desiredWidth = clampSize((text.text.length * text.fontSize * .62 + 20) * scale, rect.minSize.x * scale, rect.maxSize.x * scale)
-      if (rect.verticalPolicy === 'Content' && text) desiredHeight = clampSize((text.fontSize * 1.35 + 14) * scale, rect.minSize.y * scale, rect.maxSize.y * scale)
-      if (rect.aspectRatio > 0 && Number.isFinite(rect.aspectRatio)) {
-        if (rect.aspectConstraint === 'WidthControlsHeight') desiredHeight = desiredWidth / rect.aspectRatio
-        else if (rect.aspectConstraint === 'HeightControlsWidth') desiredWidth = desiredHeight * rect.aspectRatio
-        else if (rect.aspectConstraint === 'Fit') { const ratio = desiredWidth / Math.max(1e-9, desiredHeight); if (ratio > rect.aspectRatio) desiredWidth = desiredHeight * rect.aspectRatio; else desiredHeight = desiredWidth / rect.aspectRatio }
-      }
-      let result: UiRect
-      if (canvas) {
-        const inset = canvas.safeArea ? canvas.safeAreaInsets : { left: 0, top: 0, right: 0, bottom: 0 }
-        result = { x: inset.left * scale, y: inset.top * scale, width: Math.max(0, width - (inset.left + inset.right) * scale), height: Math.max(0, height - (inset.top + inset.bottom) * scale) }
-      } else if (rect.anchorPreset === 'stretch' || rect.anchorMin.x !== rect.anchorMax.x || rect.anchorMin.y !== rect.anchorMax.y) {
-        result = { x: parentRect.x + rect.margins.left * scale, y: parentRect.y + rect.margins.top * scale, width: Math.max(0, parentRect.width - (rect.margins.left + rect.margins.right) * scale), height: Math.max(0, parentRect.height - (rect.margins.top + rect.margins.bottom) * scale) }
-      } else {
-        const anchor = anchorPoint(rect.anchorPreset, parentRect)
-        result = { x: anchor.x + position.x * scale - desiredWidth * rect.pivot.x, y: anchor.y + position.y * scale - desiredHeight * rect.pivot.y, width: desiredWidth, height: desiredHeight }
-      }
-      result.x += (rect.offsets.left - rect.offsets.right) * scale; result.y += (rect.offsets.top - rect.offsets.bottom) * scale
-      const parentPanel = parent?.getComponent<Panel>('Panel')
-      if (parentPanel && parentPanel.layout !== 'None') {
-        const siblings = (children.get(parent!.uuid) ?? []).filter(sibling => sibling.enabled && sibling.getComponent<RectTransform>('RectTransform')?.enabled)
-        const layout = parentPanel.layout === 'Horizontal' ? 'Row' : parentPanel.layout === 'Vertical' ? 'Column' : parentPanel.layout
-        const sourceIndex = Math.max(0, siblings.indexOf(entity)), index = direction === 'rtl' && (layout === 'Row' || layout === 'Grid' || layout === 'Flow' || layout === 'Split') ? siblings.length - 1 - sourceIndex : sourceIndex
-        const padding = parentPanel.padding, inner = { x: parentRect.x + padding.left * scale, y: parentRect.y + padding.top * scale, width: Math.max(0, parentRect.width - (padding.left + padding.right) * scale), height: Math.max(0, parentRect.height - (padding.top + padding.bottom) * scale) }
-        const gap = parentPanel.gap * scale
-        if (layout === 'Column') {
-          const cellHeight = Math.max(0, (inner.height - Math.max(0, siblings.length - 1) * gap) / Math.max(1, siblings.length)); result = { x: inner.x, y: inner.y + index * (cellHeight + gap), width: inner.width, height: cellHeight }
-        } else if (layout === 'Row' && !parentPanel.wrap || layout === 'Split') {
-          const cellWidth = Math.max(0, (inner.width - Math.max(0, siblings.length - 1) * gap) / Math.max(1, siblings.length)); result = { x: inner.x + index * (cellWidth + gap), y: inner.y, width: cellWidth, height: inner.height }
-        } else if (layout === 'Overlay' || layout === 'Margin') result = { ...inner }
-        else if (layout === 'Center') result = { x: inner.x + (inner.width - desiredWidth) / 2, y: inner.y + (inner.height - desiredHeight) / 2, width: desiredWidth, height: desiredHeight }
-        else if (layout === 'Aspect') { const ratio = rect.aspectRatio > 0 ? rect.aspectRatio : Math.max(1e-9, desiredWidth / Math.max(1e-9, desiredHeight)); let aspectWidth = inner.width, aspectHeight = aspectWidth / ratio; if (aspectHeight > inner.height) { aspectHeight = inner.height; aspectWidth = aspectHeight * ratio }; result = { x: inner.x + (inner.width - aspectWidth) / 2, y: inner.y + (inner.height - aspectHeight) / 2, width: aspectWidth, height: aspectHeight } }
-        else {
-          const flowColumns = Math.max(1, Math.floor((inner.width + gap) / Math.max(1, rect.preferredSize.x * scale + gap)))
-          const columns = layout === 'Flow' ? Math.min(Math.max(1, siblings.length), flowColumns) : Math.max(1, Math.min(Math.max(1, siblings.length), Math.round(parentPanel.columns))), rows = Math.max(1, Math.ceil(siblings.length / columns)), column = index % columns, row = Math.floor(index / columns)
-          const cellWidth = Math.max(0, (inner.width - (columns - 1) * gap) / columns), cellHeight = Math.max(0, (inner.height - (rows - 1) * gap) / rows)
-          result = { x: inner.x + column * (cellWidth + gap), y: inner.y + row * (cellHeight + gap), width: cellWidth, height: cellHeight }
-        }
-      }
-      if (parentPanel && (parentPanel.scrollHorizontal || parentPanel.scrollVertical)) { result.x -= (parentPanel.scrollHorizontal ? parentPanel.scrollOffset.x : 0) * scale; result.y -= (parentPanel.scrollVertical ? parentPanel.scrollOffset.y : 0) * scale }
-      if (direction === 'rtl' && rect.mirrorInRtl && (!parentPanel || parentPanel.layout === 'None')) result.x = parentRect.x + parentRect.width - (result.x - parentRect.x) - result.width
-      resolving.delete(entity.uuid); cache.set(entity.uuid, result); scaleCache.set(entity.uuid, scale); orderCache.set(entity.uuid, canvas?.sortingOrder ?? parentOrder)
-      const inheritedTheme = parent ? themeCache.get(parent.uuid) ?? null : null; themeCache.set(entity.uuid, canvas?.themeAsset ? applyThemeVariant(readUiTheme(canvas.themeAsset), canvas.themeVariant) : inheritedTheme)
-      return result
-    }
-    for (const entity of entities) if (entity.enabled && entity.hasComponent('RectTransform')) rectFor(entity)
-    return entities.flatMap((entity, index) => {
-      if (!entity.enabled || !entity.hasComponent('RectTransform') || entity.getComponent<Panel>('Panel')?.visible === false) return []
-      const rect = cache.get(entity.uuid); if (!rect) return []
-      const clips: ResolvedUi['clips'] = []
-      let parent = entity.parentUuid ? byUuid.get(entity.parentUuid) : null
-      while (parent) {
-        const panel = parent.getComponent<Panel>('Panel'), parentBounds = cache.get(parent.uuid)
-        if (panel && parentBounds && (panel.clipChildren || panel.maskChildren || panel.scrollHorizontal || panel.scrollVertical)) clips.unshift({ rect: parentBounds, rounded: panel.maskChildren ? panel.cornerRadius * (scaleCache.get(parent.uuid) ?? 1) : 0 })
-        parent = parent.parentUuid ? byUuid.get(parent.parentUuid) : null
-      }
-      const zOrder = entity.getComponent<RectTransform>('RectTransform')?.zOrder ?? 0
-      return [{ entity, rect, clips, scale: scaleCache.get(entity.uuid) ?? 1, theme: themeCache.get(entity.uuid) ?? null, order: (orderCache.get(entity.uuid) ?? 0) * 1_000_000 + entity.layer * 1000 + zOrder * 10 + index }]
-    }).sort((first, second) => first.order - second.order)
+  private resolve(width: number, height: number, entities: Entity[], context: CanvasRenderingContext2D, options: GameUiRenderOptions): ResolvedUi[] {
+    const result = resolveUiLayout(width, height, entities, { locale: localizationSettings.previewLocale, direction: activeTextDirection(), localeDirection: activeTextDirection, measureText: (_entity, text, scale, locale, available) => measureUiText(text, scale, locale, available, context), ...options.layout })
+    this.layoutIssues = result.issues
+    const themes = new Map<string, UiThemeDocument | null>()
+    return result.items.filter(item => item.visible).map(item => {
+      const reference = item.canvas?.themeAsset, variant = item.canvas?.themeVariant ?? 'default', key = `${reference}:${variant}`
+      if (!themes.has(key)) themes.set(key, applyThemeVariant(reference && options.themeOverride?.reference === reference ? options.themeOverride.theme : readUiTheme(reference), variant))
+      return { ...item, theme: themes.get(key) ?? null }
+    })
   }
 
   private draw(context: CanvasRenderingContext2D, item: ResolvedUi, editor: boolean): void {
     const { entity, rect, theme } = item, panel = entity.getComponent<Panel>('Panel'), button = entity.getComponent<Button>('Button')
-      if (panel || button) {
-      if (button && !button.interactable) button.state = 'Disabled'
-      const state = button ? button.state.toLowerCase() : 'normal', style = themeStyle(theme, button?.styleClass ?? panel?.styleClass ?? 'panel', state, button?.styleOverrides ?? panel?.styleOverrides)
-      const stateColor = button?.state === 'Hovered' ? button.hoveredColor : button?.state === 'Pressed' ? button.pressedColor : button?.state === 'Disabled' ? button.disabledColor : button?.normalColor
+      if (panel?.enabled || button?.enabled) {
+      const visualState = button?.interactable === false ? 'Disabled' : button?.state
+      const state = button ? (visualState ?? 'Normal').toLowerCase() : 'normal', style = themeStyle(theme, button?.styleClass ?? panel?.styleClass ?? 'panel', state, button?.styleOverrides ?? panel?.styleOverrides)
+      const stateColor = visualState === 'Hovered' ? button?.hoveredColor : visualState === 'Pressed' ? button?.pressedColor : visualState === 'Disabled' ? button?.disabledColor : button?.normalColor
       const fill = runtimeAccessibilitySettings.highContrast ? '#05070a' : typeof style.background === 'string' ? style.background : panel ? color(panel.color, panel.opacity) : color(stateColor ?? { r: 45, g: 106, b: 214 })
       roundRect(context, rect, Number(style.cornerRadius ?? panel?.cornerRadius ?? 10) * item.scale); context.globalAlpha = Number(style.opacity ?? 1); context.fillStyle = fill; context.fill(); context.globalAlpha = 1
       if (style.border) { context.strokeStyle = String(style.border); context.lineWidth = Number(style.borderWidth ?? 1); context.stroke() }
       if (panel?.showScrollbars && (panel.scrollHorizontal || panel.scrollVertical)) this.drawScrollbars(context, item, panel)
     }
     const image = entity.getComponent<Image>('Image')
-    if (image?.spriteAsset) {
+    if (image?.enabled && image.spriteAsset) {
       const texture = resolveTexture(image.spriteAsset)
       if (texture) {
         const source = texture.source as CanvasImageSource & { width: number; height: number }, sx = texture.uv.x * source.width, sy = texture.uv.y * source.height, sw = texture.uv.width * source.width, sh = texture.uv.height * source.height
         const destination = { ...rect }
         if (image.preserveAspect && sw > 0 && sh > 0 && rect.width > 0 && rect.height > 0) { const scale = Math.min(rect.width / sw, rect.height / sh); destination.width = sw * scale; destination.height = sh * scale; destination.x += (rect.width - destination.width) / 2; destination.y += (rect.height - destination.height) / 2 }
+        let drawable: CanvasImageSource = source, sourceRect = { x: sx, y: sy, width: sw, height: sh }
+        if (image.tint.r !== 255 || image.tint.g !== 255 || image.tint.b !== 255) {
+          try { const tinted = this.imageTints.resolve(`${texture.key}:${texture.revision}`, source, sourceRect, image.tint); drawable = tinted.source; sourceRect = tinted.rect }
+          catch (error) { this.layoutIssues.push({ entityUuid: entity.uuid, code: 'NOVA-UI-TINT-LIMIT', message: String(error) }); this.drawMissingImage(context, rect, true); return }
+        }
         context.save(); context.globalAlpha = image.opacity / 100
-        if (image.nineSlice.enabled && !image.preserveAspect) drawNineSliceImage(context, source, { x: sx, y: sy, width: sw, height: sh }, destination, image.nineSlice)
-        else context.drawImage(source, sx, sy, sw, sh, destination.x, destination.y, destination.width, destination.height)
-        if (image.tint.r !== 255 || image.tint.g !== 255 || image.tint.b !== 255) { context.globalCompositeOperation = 'multiply'; context.fillStyle = color(image.tint); context.fillRect(destination.x, destination.y, destination.width, destination.height); context.globalCompositeOperation = 'destination-in'; context.drawImage(source, sx, sy, sw, sh, destination.x, destination.y, destination.width, destination.height) }
+        if (image.nineSlice.enabled && !image.preserveAspect) drawNineSliceImage(context, drawable, sourceRect, destination, image.nineSlice)
+        else context.drawImage(drawable, sourceRect.x, sourceRect.y, sourceRect.width, sourceRect.height, destination.x, destination.y, destination.width, destination.height)
         context.restore()
       } else this.drawMissingImage(context, rect, true)
-    } else if (image && editor) this.drawMissingImage(context, rect, false)
+    } else if (image?.enabled && editor) this.drawMissingImage(context, rect, false)
     const progress = entity.getComponent<ProgressBar>('ProgressBar'), slider = entity.getComponent<Slider>('Slider')
-    if (progress || slider) {
+    if (progress?.enabled || slider?.enabled) {
       const component = progress ?? slider!, style = themeStyle(theme, component.styleClass, 'normal', component.styleOverrides)
       const ratio = component.max > component.min ? Math.min(1, Math.max(0, (component.value - component.min) / (component.max - component.min))) : 0, barHeight = Math.min(12 * item.scale, rect.height), bar = { x: rect.x, y: rect.y + (rect.height - barHeight) / 2, width: rect.width, height: barHeight }
       roundRect(context, bar, barHeight / 2); context.fillStyle = typeof style.background === 'string' ? style.background : color(progress?.backgroundColor ?? { r: 31, g: 37, b: 47 }); context.fill()
@@ -330,36 +278,35 @@ class GameUiRuntime {
       if (slider) { context.beginPath(); context.arc(bar.x + bar.width * ratio, bar.y + bar.height / 2, 9 * item.scale, 0, Math.PI * 2); context.fillStyle = '#f7f9fc'; context.fill() }
     }
     const checkbox = entity.getComponent<Checkbox>('Checkbox')
-    if (checkbox) {
+    if (checkbox?.enabled) {
       const style = themeStyle(theme, checkbox.styleClass, 'normal', checkbox.styleOverrides), box = Math.min(24 * item.scale, rect.height)
       context.strokeStyle = String(style.border ?? '#8d98aa'); context.lineWidth = Number(style.borderWidth ?? 2); context.strokeRect(rect.x, rect.y + (rect.height - box) / 2, box, box)
       if (checkbox.checked) { context.fillStyle = String(style.background ?? '#4f96ff'); context.fillRect(rect.x + 4, rect.y + (rect.height - box) / 2 + 4, box - 8, box - 8) }
-      context.fillStyle = runtimeAccessibilitySettings.highContrast ? '#ffffff' : String(style.foreground ?? '#f5f7fb'); context.font = `${Number(style.fontWeight ?? 600)} ${Number(style.fontSize ?? 16) * item.scale * runtimeAccessibilitySettings.textScale}px Nunito Sans, Segoe UI, sans-serif`; context.textAlign = activeTextDirection() === 'rtl' ? 'right' : 'left'; context.textBaseline = 'middle'
-      const label = localize(checkbox.localizationKey, {}, checkbox.label), x = activeTextDirection() === 'rtl' ? rect.x + rect.width - box - 9 : rect.x + box + 9; context.fillText(label, x, rect.y + rect.height / 2)
+      context.fillStyle = runtimeAccessibilitySettings.highContrast ? '#ffffff' : String(style.foreground ?? '#f5f7fb'); context.font = `${Number(style.fontWeight ?? 600)} ${Number(style.fontSize ?? 16) * item.scale * runtimeAccessibilitySettings.textScale}px ${controlFontFamily(theme, item.locale)}`; context.textAlign = item.direction === 'rtl' ? 'right' : 'left'; context.textBaseline = 'middle'
+      const label = localize(checkbox.localizationKey, {}, localizeUiLabel(checkbox.label, item.locale), item.locale), x = item.direction === 'rtl' ? rect.x + rect.width - box - 9 : rect.x + box + 9; context.fillText(label, x, rect.y + rect.height / 2)
     }
     const input = entity.getComponent<TextInput>('TextInput')
-    if (input) {
+    if (input?.enabled) {
       const style = themeStyle(theme, input.styleClass, this.focusedInput === entity ? 'focused' : 'normal', input.styleOverrides)
       roundRect(context, rect, Number(style.cornerRadius ?? 8) * item.scale); context.strokeStyle = String(style.border ?? (this.focusedInput === entity ? '#4f96ff' : '#657085')); context.lineWidth = Number(style.borderWidth ?? (this.focusedInput === entity ? 2 : 1)); context.stroke()
-      const shown = input.value ? (input.password ? '•'.repeat(input.value.length) : input.value) : input.placeholder
-      context.fillStyle = runtimeAccessibilitySettings.highContrast ? '#ffffff' : String(style.foreground ?? (input.value ? '#f5f7fb' : '#7e899c')); context.font = `${Number(style.fontWeight ?? 500)} ${Number(style.fontSize ?? 16) * item.scale * runtimeAccessibilitySettings.textScale}px Nunito Sans, Segoe UI, sans-serif`; context.textAlign = activeTextDirection() === 'rtl' ? 'right' : 'left'; context.textBaseline = 'middle'; context.fillText(shown, activeTextDirection() === 'rtl' ? rect.x + rect.width - 12 : rect.x + 12, rect.y + rect.height / 2, Math.max(0, rect.width - 24))
+      const shown = input.value ? (input.password ? '•'.repeat(uiTextGraphemes(input.value).length) : input.value) : localizeUiLabel(input.placeholder, item.locale)
+      context.fillStyle = runtimeAccessibilitySettings.highContrast ? '#ffffff' : String(style.foreground ?? (input.value ? '#f5f7fb' : '#7e899c')); context.font = `${Number(style.fontWeight ?? 500)} ${Number(style.fontSize ?? 16) * item.scale * runtimeAccessibilitySettings.textScale}px ${controlFontFamily(theme, item.locale)}`; context.textAlign = item.direction === 'rtl' ? 'right' : 'left'; context.textBaseline = 'middle'; context.save(); context.beginPath(); context.rect(rect.x + 12, rect.y, Math.max(0, rect.width - 24), rect.height); context.clip(); context.fillText(shown, item.direction === 'rtl' ? rect.x + rect.width - 12 : rect.x + 12, rect.y + rect.height / 2); context.restore()
     }
     const text = entity.getComponent<Text>('Text')
-    if (text) {
-      const fontAsset = resolveAsset(text.fontAsset), importedFallbacks = fontAsset?.assetType === 'font' ? fontAsset.settings.fontSettings.fallbackFamilies : [], fallbacks = [...new Set([...importedFallbacks, ...activeFontFallbackFamilies()])], localizedText = localize(text.localizationKey, text.localizationVariables, text.text), displayText = text.inputPromptAction ? formatInputPrompt(inputPromptForAction(text.inputPromptAction, this.inputActions)) : localizedText, rtl = activeTextDirection() === 'rtl'
-      context.fillStyle = runtimeAccessibilitySettings.highContrast ? '#ffffff' : color(text.color, text.opacity); context.font = `${text.fontWeight} ${Math.max(1, text.fontSize * item.scale * runtimeAccessibilitySettings.textScale)}px ${fontAsset?.assetType === 'font' && fontAsset.fontFamily ? `"${fontAsset.fontFamily}"` : text.fontFamily}${fallbacks.length ? `, ${fallbacks.map(family => `"${family.replace(/["\\]/g, '')}"`).join(', ')}` : ''}`
-      const align = rtl && text.align === 'left' ? 'right' : rtl && text.align === 'right' ? 'left' : text.align; context.textAlign = align; context.direction = rtl ? 'rtl' : 'ltr'; context.textBaseline = 'middle'
-      const x = align === 'left' || align === 'start' ? rect.x : align === 'right' || align === 'end' ? rect.x + rect.width : rect.x + rect.width / 2
-      const outline = fontAsset?.assetType === 'font' ? fontAsset.settings.fontSettings.outlineWidth * item.scale : 0
-      if (outline > 0) { context.strokeStyle = '#000000'; context.lineWidth = outline * 2; context.lineJoin = 'round'; context.strokeText(displayText, x, rect.y + rect.height / 2, rect.width) }
-      context.fillText(displayText, x, rect.y + rect.height / 2, rect.width)
+    if (text?.enabled && (text.captionCategory === 'None' || (text.captionCategory === 'Dialogue' ? runtimeAccessibilitySettings.subtitles : runtimeAccessibilitySettings.captions))) {
+      const control = button ?? panel, style = control ? themeStyle(theme, control.styleClass, button?.state.toLowerCase() ?? 'normal', control.styleOverrides) : {}
+      const display = text.inputPromptAction ? formatInputPrompt(inputPromptForAction(text.inputPromptAction, this.inputActions)) : undefined
+      context.fillStyle = runtimeAccessibilitySettings.highContrast ? '#ffffff' : typeof style.foreground === 'string' ? style.foreground : color(text.color, text.opacity)
+      drawUiText(context, text, rect, item.scale, item.locale, display)
     }
   }
 
   private drawFocusRing(context: CanvasRenderingContext2D, rect: UiRect): void { context.save(); context.strokeStyle = runtimeAccessibilitySettings.focusRingColor; context.lineWidth = runtimeAccessibilitySettings.focusRingWidth; context.setLineDash([]); context.strokeRect(rect.x - 3, rect.y - 3, rect.width + 6, rect.height + 6); context.restore() }
   private drawTooltip(context: CanvasRenderingContext2D): void { const current = this.tooltip; if (!current) return; const panel = current.entity.getComponent<Panel>('Panel'), item = this.resolved.find(candidate => candidate.entity === current.entity); if (!panel || !item || performance.now() - current.since < Math.max(0, panel.tooltipDelay) * 1000) return; const text = panel.tooltipText.slice(0, 500); context.save(); context.font = `${14 * runtimeAccessibilitySettings.textScale}px Nunito Sans, Segoe UI, sans-serif`; const width = Math.min(360, Math.max(90, context.measureText(text).width + 20)), x = Math.min(context.canvas.width - width - 8, Math.max(8, item.rect.x)), y = Math.min(context.canvas.height - 38, item.rect.y + item.rect.height + 6); roundRect(context, { x, y, width, height: 32 }, 7); context.fillStyle = runtimeAccessibilitySettings.highContrast ? '#000' : 'rgba(22,29,40,.96)'; context.fill(); context.strokeStyle = '#79b2ff'; context.stroke(); context.fillStyle = '#fff'; context.textAlign = 'left'; context.textBaseline = 'middle'; context.fillText(text, x + 10, y + 16, width - 20); context.restore() }
-  private rawEntityAt(point: { x: number; y: number }): Entity | null { for (let index = this.resolved.length - 1; index >= 0; index--) { const item = this.resolved[index]; if (item.clips.every(clip => point.x >= clip.rect.x && point.x <= clip.rect.x + clip.rect.width && point.y >= clip.rect.y && point.y <= clip.rect.y + clip.rect.height) && point.x >= item.rect.x && point.x <= item.rect.x + item.rect.width && point.y >= item.rect.y && point.y <= item.rect.y + item.rect.height) return item.entity }; return null }
-  private isDescendantOf(entity: Entity, ancestor: Entity): boolean { if (entity === ancestor) return true; const byUuid = new Map(this.resolved.map(item => [item.entity.uuid, item.entity])); let parent = entity.parentUuid ? byUuid.get(entity.parentUuid) : null; while (parent) { if (parent === ancestor) return true; parent = parent.parentUuid ? byUuid.get(parent.parentUuid) : null }; return false }
+  private rawEntityAt(point: { x: number; y: number }): Entity | null { for (let index = this.resolved.length - 1; index >= 0; index--) { const item = this.resolved[index]; if (item.clips.every(clip => uiClipContains(clip, point)) && point.x >= item.rect.x && point.x <= item.rect.x + item.rect.width && point.y >= item.rect.y && point.y <= item.rect.y + item.rect.height) return item.entity }; return null }
+  private isDescendantOf(entity: Entity, ancestor: Entity): boolean { if (entity === ancestor) return true; const byUuid = new Map(this.resolved.map(item => [item.entity.uuid, item.entity])), seen = new Set<string>(); let parent = entity.parentUuid ? byUuid.get(entity.parentUuid) : null; while (parent && !seen.has(parent.uuid)) { if (parent === ancestor) return true; seen.add(parent.uuid); parent = parent.parentUuid ? byUuid.get(parent.parentUuid) : null }; return false }
+  private inFocusScope(item: ResolvedUi): boolean { const area = uiItemVisibleArea(item), modal = [...this.resolved].reverse().find(candidate => candidate.entity.getComponent<Panel>('Panel')?.behavior === 'Modal'); return area.width > 0 && area.height > 0 && (!modal || this.isDescendantOf(item.entity, modal.entity)) }
+
   private drawScrollbars(context: CanvasRenderingContext2D, item: ResolvedUi, panel: Panel): void {
     const children = this.resolved.filter(candidate => candidate.entity.parentUuid === item.entity.uuid), rect = item.rect
     const contentWidth = Math.max(rect.width, panel.contentSize.x * item.scale, ...children.map(child => child.rect.x + child.rect.width - rect.x + panel.scrollOffset.x * item.scale))
@@ -378,8 +325,18 @@ class GameUiRuntime {
     context.restore()
   }
 
-  private focusableItems(includeNonInteractive = false): ResolvedUi[] { return this.resolved.filter(item => { const rect = item.entity.getComponent<RectTransform>('RectTransform'); return rect?.focusable && !rect.skipNavigation && !rect.accessibilityHidden && (includeNonInteractive || interactive(item.entity)) && !isDisabled(item.entity) }).sort((first, second) => (first.entity.getComponent<RectTransform>('RectTransform')?.readingOrder ?? 0) - (second.entity.getComponent<RectTransform>('RectTransform')?.readingOrder ?? 0) || first.order - second.order) }
-  private setFocus(entity: Entity): boolean { const item = this.resolved.find(candidate => candidate.entity === entity), rect = entity.getComponent<RectTransform>('RectTransform'); if (!item || !rect?.focusable || rect.skipNavigation || rect.accessibilityHidden || isDisabled(entity)) return false; this.focused = entity; if (runtimeAccessibilitySettings.announceFocusChanges) this.callback?.(entity, 'on_focus_enter'); audioRuntime.playUiClip(entity.getComponent<Button>('Button')?.focusAudio ?? this.themeSound(entity, 'focus') ?? uiAudioSettings.focus, uiAudioSettings.bus); return true }
+  private focusableItems(includeNegative = false): ResolvedUi[] {
+    const priority = (item: ResolvedUi) => { const value = item.entity.getComponent<RectTransform>('RectTransform')?.tabIndex ?? 0; return value > 0 ? value : Number.POSITIVE_INFINITY }
+    return this.resolved.filter(item => { const rect = item.entity.getComponent<RectTransform>('RectTransform'); return rect?.focusable && (includeNegative || rect.tabIndex >= 0) && !rect.skipNavigation && !rect.accessibilityHidden && (interactive(item.entity) || Boolean(rect.accessibilityRole)) && !isDisabled(item.entity) && this.inFocusScope(item) }).sort((a, b) => priority(a) - priority(b) || (a.entity.getComponent<RectTransform>('RectTransform')?.readingOrder ?? 0) - (b.entity.getComponent<RectTransform>('RectTransform')?.readingOrder ?? 0))
+  }
+  private setFocus(entity: Entity): boolean {
+    if (!this.focusableItems(true).some(item => item.entity === entity)) return false
+    if (this.focused === entity) { if (entity.hasComponent('TextInput')) this.focusedInput = entity; return true }
+    const previous = this.focused; this.focused = entity; this.focusedInput = entity.hasComponent('TextInput') ? entity : null
+    if (runtimeAccessibilitySettings.announceFocusChanges) { if (previous) this.callback?.(previous, 'on_focus_exit'); this.callback?.(entity, 'on_focus_enter') }
+    audioRuntime.playUiClip(entity.getComponent<Button>('Button')?.focusAudio ?? this.themeSound(entity, 'focus') ?? uiAudioSettings.focus, uiAudioSettings.bus); return true
+  }
+
   private focusNext(direction: -1 | 1): void { const items = this.focusableItems(); if (!items.length) return; const current = items.findIndex(item => item.entity === this.focused), next = current < 0 ? (direction > 0 ? 0 : items.length - 1) : (current + direction + items.length) % items.length; this.setFocus(items[next].entity) }
   private focusDirection(direction: 'up' | 'down' | 'left' | 'right'): void {
     const currentItem = this.resolved.find(item => item.entity === this.focused); if (!currentItem) { this.focusNext(1); return }
@@ -392,14 +349,14 @@ class GameUiRuntime {
 
   private activate(entity: Entity): void {
     const button = entity.getComponent<Button>('Button'), checkbox = entity.getComponent<Checkbox>('Checkbox'), input = entity.getComponent<TextInput>('TextInput'), rect = entity.getComponent<RectTransform>('RectTransform')
-    if (button?.interactable) { audioRuntime.playUiClip(button.pressAudio ?? this.themeSound(entity, 'press') ?? uiAudioSettings.press, uiAudioSettings.bus); if (rect?.remapAction) this.awaitingRemap = { entity, action: rect.remapAction, bindingIndex: Math.max(0, Math.round(rect.remapBindingIndex)) }; else this.callback?.(entity, button.onPressed || 'on_pressed') }
-    else if (checkbox?.interactable) { checkbox.checked = !checkbox.checked; this.callback?.(entity, 'on_pressed') }
-    else if (input?.interactable) this.focusedInput = entity
+    if (button?.enabled && button.interactable) { audioRuntime.playUiClip(button.pressAudio ?? this.themeSound(entity, 'press') ?? uiAudioSettings.press, uiAudioSettings.bus); if (rect?.remapAction) this.awaitingRemap = { entity, action: rect.remapAction, bindingIndex: Math.max(0, Math.round(rect.remapBindingIndex)) }; else this.callback?.(entity, button.onPressed || 'on_pressed') }
+    else if (checkbox?.enabled && checkbox.interactable) { checkbox.checked = !checkbox.checked; this.callback?.(entity, 'on_pressed') }
+    else if (input?.enabled && input.interactable) this.focusedInput = entity
   }
 
-  private adjustSlider(slider: Slider, direction: number): void { const step = slider.wholeNumbers ? 1 : Math.max((slider.max - slider.min) / 100, 1e-9); slider.value = Math.min(slider.max, Math.max(slider.min, slider.value + direction * step)); if (slider.wholeNumbers) slider.value = Math.round(slider.value) }
+  private adjustSlider(entity: Entity, slider: Slider, direction: number): void { const before = slider.value, step = slider.wholeNumbers ? 1 : Math.max((slider.max - slider.min) / 100, 1e-9); slider.value = Math.min(slider.max, Math.max(slider.min, slider.value + direction * step)); if (slider.wholeNumbers) slider.value = Math.round(slider.value); if (slider.value !== before) this.callback?.(entity, 'on_value_changed') }
   private themeSound(entity: Entity, slot: 'hover' | 'press' | 'focus' | 'cancel'): string | null { const value = this.resolved.find(item => item.entity === entity)?.theme?.tokens.sounds[slot]; return typeof value === 'string' && value ? value : null }
-  private updateSlider(entity: Entity, point: { x: number; y: number }): void { const slider = entity.getComponent<Slider>('Slider'), item = this.resolved.find(candidate => candidate.entity === entity); if (!slider || !item) return; const ratio = Math.min(1, Math.max(0, (point.x - item.rect.x) / Math.max(1, item.rect.width))), value = slider.min + (slider.max - slider.min) * ratio; slider.value = slider.wholeNumbers ? Math.round(value) : value }
+  private updateSlider(entity: Entity, point: { x: number; y: number }): void { const slider = entity.getComponent<Slider>('Slider'), item = this.resolved.find(candidate => candidate.entity === entity); if (!slider?.enabled || !slider.interactable || !item) return; const before = slider.value, physical = Math.min(1, Math.max(0, (point.x - item.rect.x) / Math.max(1, item.rect.width))), ratio = item.direction === 'rtl' ? 1 - physical : physical, value = slider.min + (slider.max - slider.min) * ratio; slider.value = slider.wholeNumbers ? Math.round(value) : value; if (slider.value !== before) this.callback?.(entity, 'on_value_changed') }
   private applyRemap(binding: { device: 'keyboard' | 'gamepad-button' | 'gamepad-axis'; code: string }): void { const pending = this.awaitingRemap; if (!pending) return; this.remapCallback?.(pending.action, pending.bindingIndex, binding); this.callback?.(pending.entity, 'on_input_remapped'); this.awaitingRemap = null }
 
   private pollGamepads(): void {

@@ -1,6 +1,9 @@
 import type { Entity } from '../world/Entity'
-import type { Canvas, Panel, RectTransform, Text } from '../world/components'
-import type { TextDirection } from './localization'
+import type { Canvas, Panel, RectTransform, Text, TextInput } from '../world/components'
+import { activeTextDirection, localizationSettings, type TextDirection } from './localization'
+import { resolveUiLayout, type UiLayoutOptions } from './uiLayout'
+import { layoutUiText } from './uiTextLayout'
+import { measureUiText, uiTextPresentation } from './uiTextPresentation'
 import { auditUiAccessibility, type AccessibilityIssueSeverity } from './uiAccessibility'
 import { readUiTheme, themeInheritanceChain, themeUnusedTokens } from './uiTheme'
 
@@ -43,38 +46,17 @@ export const UI_DEVICE_PRESETS: readonly UiDevicePreset[] = Object.freeze([
 function issue(entity: Entity, code: UiValidationCode | string, severity: AccessibilityIssueSeverity, property: string, message: string, preset: string): UiValidationIssue {
   return { code, severity, entityUuid: entity.uuid, entityName: entity.name, source: `scene/entity/${entity.uuid}/${property}`, message, preset }
 }
-function finite(value: number, fallback = 0): number { return Number.isFinite(value) ? value : fallback }
 
-function layoutForPreset(entities: Entity[], preset: UiDevicePreset, direction: TextDirection): UiResolvedRect[] {
-  const byUuid = new Map(entities.map(entity => [entity.uuid, entity])), cache = new Map<string, UiResolvedRect>(), active = new Set<string>()
-  const resolve = (entity: Entity): UiResolvedRect | null => {
-    const cached = cache.get(entity.uuid); if (cached) return cached
-    const rect = entity.getComponent<RectTransform>('RectTransform'); if (!rect?.enabled || active.has(entity.uuid)) return null
-    active.add(entity.uuid)
-    const parent = entity.parentUuid ? byUuid.get(entity.parentUuid) : null, parentRect = parent ? resolve(parent) : null
-    const canvas = entity.getComponent<Canvas>('Canvas'), scale = canvas?.scaleWithScreen ? Math.min(preset.width / Math.max(1, canvas.referenceSize.x), preset.height / Math.max(1, canvas.referenceSize.y)) : 1
-    const parentBox = parentRect ?? { entityUuid: '', x: 0, y: 0, width: preset.width / scale, height: preset.height / scale, visible: true }
-    const breakpoint = rect.breakpoints.find(item => preset.width >= finite(item.minWidth) && preset.width <= finite(item.maxWidth))
-    const visible = breakpoint?.visible !== false && parentBox.visible
-    const size = breakpoint?.size ?? rect.size, position = breakpoint?.position ?? rect.position
-    const stretchX = Math.abs(rect.anchorMax.x - rect.anchorMin.x) > 1e-9, stretchY = Math.abs(rect.anchorMax.y - rect.anchorMin.y) > 1e-9
-    const width = stretchX ? parentBox.width * (rect.anchorMax.x - rect.anchorMin.x) - rect.offsets.left - rect.offsets.right : size.x
-    const height = stretchY ? parentBox.height * (rect.anchorMax.y - rect.anchorMin.y) - rect.offsets.top - rect.offsets.bottom : size.y
-    const anchorX = direction === 'rtl' && rect.mirrorInRtl ? 1 - rect.anchorMin.x : rect.anchorMin.x
-    const x = parentBox.x + parentBox.width * anchorX + (direction === 'rtl' && rect.mirrorInRtl ? -position.x : position.x) - width * rect.pivot.x
-    const y = parentBox.y + parentBox.height * rect.anchorMin.y + position.y - height * rect.pivot.y
-    const resolved = { entityUuid: entity.uuid, x, y, width: Math.max(0, width), height: Math.max(0, height), visible }
-    cache.set(entity.uuid, resolved); active.delete(entity.uuid); return resolved
-  }
-  return entities.flatMap(entity => entity.hasComponent('RectTransform') ? [resolve(entity)].filter((value): value is UiResolvedRect => value !== null) : [])
-}
+let textContext: CanvasRenderingContext2D | null | undefined
+function validationTextContext(): CanvasRenderingContext2D | null { if (textContext === undefined) textContext = typeof document === 'undefined' ? null : document.createElement('canvas').getContext('2d'); return textContext }
 
-export function validateUiForPreset(entities: Entity[], preset: UiDevicePreset, direction: TextDirection = 'ltr', minimumTargetSize = 44): UiMatrixResult {
-  const rects = layoutForPreset(entities, preset, direction), resolved = new Map(rects.map(rect => [rect.entityUuid, rect])), byUuid = new Map(entities.map(entity => [entity.uuid, entity])), issues: UiValidationIssue[] = []
+export function validateUiForPreset(entities: Entity[], preset: UiDevicePreset, direction: TextDirection = 'ltr', minimumTargetSize = 44, layoutOptions: UiLayoutOptions = {}): UiMatrixResult {
+  const context = validationTextContext(), layout = resolveUiLayout(preset.width, preset.height, entities, { locale: localizationSettings.previewLocale, direction, safeArea: preset.safeArea, localeDirection: activeTextDirection, measureText: (_entity, text, scale, locale, width) => measureUiText(text, scale, locale, width, context), ...layoutOptions }), actualItems = new Map(layout.items.map(item => [item.entity.uuid, item]))
+  const rects = layout.items.map(item => ({ entityUuid: item.entity.uuid, ...item.rect, visible: item.visible })), resolved = new Map(rects.map(rect => [rect.entityUuid, rect])), byUuid = new Map(entities.map(entity => [entity.uuid, entity])), issues: UiValidationIssue[] = layout.issues.map(finding => { const entity = byUuid.get(finding.entityUuid); return { ...finding, entityName: entity?.name ?? '', source: `scene/entity/${finding.entityUuid}/RectTransform`, severity: 'error', preset: preset.id } })
   for (const entity of entities) {
     const rect = entity.getComponent<RectTransform>('RectTransform'); if (!rect) continue
     const actual = resolved.get(entity.uuid); if (!actual?.visible) continue
-    if (rect.layoutMode !== 'Fixed' && rect.horizontalPolicy === 'Fixed' && rect.verticalPolicy === 'Fixed' && rect.anchorMin.x === rect.anchorMax.x && rect.anchorMin.y === rect.anchorMax.y) issues.push(issue(entity, 'NOVA-UI-FIXED-LAYOUT', 'warning', 'RectTransform.layoutMode', 'Fixed coordinates require explicit Fixed layout mode.', preset.id))
+    if (rect.layoutMode === 'Fixed' && rect.breakpoints.length) issues.push(issue(entity, 'NOVA-UI-FIXED-LAYOUT', 'warning', 'RectTransform.breakpoints', 'Fixed layout ignores responsive breakpoints; use Responsive to apply them.', preset.id))
     if (rect.minSize.x > rect.maxSize.x || rect.minSize.y > rect.maxSize.y) issues.push(issue(entity, 'NOVA-UI-MINMAX', 'error', 'RectTransform.minSize', 'Minimum size exceeds maximum size.', preset.id))
     const ranges = [...rect.breakpoints].sort((a, b) => a.minWidth - b.minWidth)
     ranges.forEach((range, index) => {
@@ -84,20 +66,30 @@ export function validateUiForPreset(entities: Entity[], preset: UiDevicePreset, 
     const parent = entity.parentUuid ? byUuid.get(entity.parentUuid) : null, parentRect = parent ? resolved.get(parent.uuid) : null, parentPanel = parent?.getComponent<Panel>('Panel')
     if (parentRect && (actual.x < parentRect.x - .5 || actual.y < parentRect.y - .5 || actual.x + actual.width > parentRect.x + parentRect.width + .5 || actual.y + actual.height > parentRect.y + parentRect.height + .5)) issues.push(issue(entity, 'NOVA-UI-OVERFLOW', parentPanel?.clipChildren ? 'error' : 'warning', 'RectTransform.position', parentPanel?.clipChildren ? 'Control overflows a clipping container.' : 'Control extends outside its parent.', preset.id))
     const text = entity.getComponent<Text>('Text')
-    if (text && text.overflow === 'Clip') {
-      const estimated = [...text.text].length * text.fontSize * .56
-      if (estimated > actual.width || text.fontSize * 1.3 > actual.height) issues.push(issue(entity, 'NOVA-UI-CLIPPED-TEXT', 'warning', 'Text.overflow', 'Text may clip at this resolution or language length.', preset.id))
+    if (text?.enabled) {
+      const item = actualItems.get(entity.uuid)!, style = uiTextPresentation(text, item.scale, item.locale)
+      context?.save(); if (context) context.font = style.font
+      const measured = layoutUiText(style.value, { width: actual.width, height: actual.height, lineHeight: style.lineHeight, wrap: text.wrap, overflow: text.overflow, measure: value => context?.measureText(value).width ?? [...value].length * style.size * .62 })
+      context?.restore()
+      if (measured.clipped && text.overflow !== 'Visible') issues.push(issue(entity, 'NOVA-UI-CLIPPED-TEXT', 'warning', 'Text.overflow', `Text ${text.overflow === 'Ellipsis' ? 'uses ellipsis' : 'clips'} at this viewport and locale${context ? '' : ' (estimated font metrics)'}.`, preset.id))
+      if (measured.limited) issues.push(issue(entity, 'NOVA-UI-TEXT-LIMIT', 'error', 'Text.text', 'Text exceeds the 32,768 UTF-16 unit rendering limit.', preset.id))
     }
+    const textInput = entity.getComponent<TextInput>('TextInput')
+    if (textInput && textInput.value.length > 32_768) issues.push(issue(entity, 'NOVA-UI-TEXT-LIMIT', 'warning', 'TextInput.value', 'The native input retains up to 100,000 UTF-16 units; canvas paragraph and password-glyph processing is bounded to 32,768 units.', preset.id))
+    if (Object.values(rect.margins).some(value => value < 0) || entity.getComponent<Panel>('Panel') && Object.values(entity.getComponent<Panel>('Panel')!.padding).some(value => value < 0)) issues.push(issue(entity, 'NOVA-UI-NEGATIVE-INSET', 'warning', 'RectTransform.margins', 'Container padding and margin insets are clamped to zero when negative; use signed position or anchor offsets for overlap.', preset.id))
+    if (rect.componentSource) issues.push(issue(entity, 'NOVA-UI-COMPONENT-BINDING', 'warning', 'RectTransform.componentSource', 'Reusable component metadata does not instantiate content at runtime; the serialized scene children are rendered. Use a prefab instance for linked content.', preset.id))
+    if (['Button', 'Slider', 'Checkbox', 'TextInput'].some(kind => entity.hasComponent(kind as 'Button')) && (actual.width < minimumTargetSize || actual.height < minimumTargetSize)) issues.push(issue(entity, 'NOVA-A11Y-TARGET', 'warning', 'RectTransform.size', `Rendered interactive target is smaller than ${minimumTargetSize} × ${minimumTargetSize} logical pixels.`, preset.id))
     if (rect.componentSource && !byUuid.has(rect.componentSource) && !rect.componentSource.startsWith('asset://')) issues.push(issue(entity, 'NOVA-UI-MISSING-COMPONENT', 'error', 'RectTransform.componentSource', 'Reusable UI component source cannot be resolved.', preset.id))
     const canvas = entity.getComponent<Canvas>('Canvas')
     if (canvas?.safeArea && preset.safeArea.top + preset.safeArea.bottom > 0 && actual.y < preset.safeArea.top) issues.push(issue(entity, 'NOVA-UI-SAFE-AREA', 'warning', 'Canvas.safeArea', 'Canvas content reaches outside the device safe area.', preset.id))
   }
-  for (const accessibility of auditUiAccessibility(entities, minimumTargetSize)) issues.push({ ...accessibility, preset: preset.id })
+  for (const accessibility of auditUiAccessibility(entities, minimumTargetSize).filter(finding => finding.code !== 'NOVA-A11Y-TARGET' && resolved.get(finding.entityUuid)?.visible)) issues.push({ ...accessibility, preset: preset.id })
   for (const canvasEntity of entities.filter(entity => entity.hasComponent('Canvas'))) {
     const themeRef = canvasEntity.getComponent<Canvas>('Canvas')?.themeAsset
     if (!themeRef) continue
     const chain = themeInheritanceChain(themeRef)
     if (chain.cycle) issues.push(issue(canvasEntity, 'NOVA-UI-THEME-CYCLE', 'error', 'Canvas.themeAsset', `Theme inheritance cycle: ${chain.references.join(' → ')}`, preset.id))
+    if (chain.missing.length) issues.push(issue(canvasEntity, 'NOVA-UI-THEME-MISSING', 'error', 'Canvas.themeAsset', `Theme cannot resolve: ${chain.missing.join(', ')}`, preset.id))
     const theme = readUiTheme(themeRef)
     if (theme) for (const token of themeUnusedTokens(theme).slice(0, 32)) issues.push(issue(canvasEntity, 'NOVA-UI-UNUSED-TOKEN', 'info', 'Canvas.themeAsset', `Theme token ${token} is unused.`, preset.id))
   }

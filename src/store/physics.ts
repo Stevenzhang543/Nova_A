@@ -1,3 +1,4 @@
+import { truncateUtf16 } from '../runtime/uiTextLayout'
 import { reactive, markRaw } from 'vue'
 import { World, defaultCollisionMatrix, PHYSICS_LAYER_COUNT, type EngineDiagnostics, type GlobalPhysicsSettings } from '../world/World'
 import { Camera } from '../world/Camera'
@@ -31,7 +32,7 @@ import {
 } from '../world/components'
 import { Transform } from '../world/Transform'
 import { SceneManager } from '../world/SceneManager'
-import { translateEntityTree, worldTransform } from '../world/hierarchy'
+import { translateEntityTree } from '../world/hierarchy'
 import { CommandHistory, DocumentMutationCommand } from '../editor/commands'
 import { subtreeEntities, updateSelection, type SelectionMode } from '../editor/selection'
 import { assetReference, assetState, loadAssets, readTextAsset, registerEmbeddedImage, serializeAssetDatabaseSettings, serializeAssetFolders, serializeAssets, synchronizeAssetDependencyMetadata, updateTextAsset } from '../assets/AssetDatabase'
@@ -62,6 +63,7 @@ import { markSourceBaseline, refreshSourceStatus, stableProjectText } from '../r
 import { defaultPhysicsLayers, defaultPhysicsProfile, MAX_AUTHORED_COLLIDER_POINTS, normalizePhysicsLayers, normalizePhysicsProfile } from '../runtime/physicsProduction'
 import { commitProjectTransaction, createNativeProjectTransactionSink, markProjectDirty, markTransactionBaseline, projectChecksum, projectTransactionState, type ProjectMutationScope } from '../runtime/projectTransactions'
 import { loadProjectTrash, serializeProjectTrash } from '../runtime/projectTrash'
+import { prepareRuntimeSceneTransition as prepareSceneTransition, type PreparedRuntimeSceneTransition } from '../runtime/runtimeSceneTransition'
 
 interface PhysicsState {
   world: World
@@ -105,6 +107,7 @@ export interface SceneEntityData {
   editorOnly?: boolean
   runtimePersistence?: 'Scene' | 'Session' | 'SaveGame' | 'Transient'
   persistentAcrossScenes?: boolean
+  objectBlueprintAsset?: string | null
   prefabAsset?: string | null
   prefabInstanceUuid?: string | null
   prefabSourceUuid?: string | null
@@ -318,6 +321,15 @@ function serializeComponent(component: Component2D): Record<string, unknown> {
 
 export function serializeEntity(entity: Entity): Record<string, unknown> {
   normalizeEntity(entity)
+  return entityAuthoringData(entity)
+}
+
+/** Detached authoring values for inspectors; does not normalize or mutate the entity. */
+export function readEntityAuthoringData(entity: Entity): Record<string, unknown> {
+  return JSON.parse(JSON.stringify(entityAuthoringData(entity))) as Record<string, unknown>
+}
+
+function entityAuthoringData(entity: Entity): Record<string, unknown> {
   return {
     uuid: entity.uuid,
     name: entity.name,
@@ -332,6 +344,7 @@ export function serializeEntity(entity: Entity): Record<string, unknown> {
     editorOnly: entity.editorOnly,
     runtimePersistence: entity.runtimePersistence,
     persistentAcrossScenes: entity.persistentAcrossScenes,
+    objectBlueprintAsset: entity.objectBlueprintAsset ?? entity.script2D?.objectBlueprintAsset ?? null,
     prefabAsset: entity.prefabAsset,
     prefabInstanceUuid: entity.prefabInstanceUuid,
     prefabSourceUuid: entity.prefabSourceUuid,
@@ -442,6 +455,10 @@ function visitStoredAssetReferences(scene: Record<string, unknown>, uuid: string
   for (const entity of scene.entities) {
     if (!entity || typeof entity !== 'object' || !Array.isArray((entity as SceneEntityData).components)) continue
     const storedEntity = entity as SceneEntityData
+    if (matchesAssetReference(storedEntity.objectBlueprintAsset, uuid)) {
+      count++
+      if (clear) storedEntity.objectBlueprintAsset = replacement
+    }
     if (matchesAssetReference(storedEntity.prefabAsset, uuid)) {
       count++
       if (clear) {
@@ -469,6 +486,10 @@ function visitLiveAssetReferences(uuid: string, clear: boolean, replacementUuid?
   let count = 0
   const replacement = replacementUuid ? `asset://${replacementUuid}` : null
   for (const entity of physicsState.world.entities) {
+    if (matchesAssetReference(entity.objectBlueprintAsset, uuid)) {
+      count++
+      if (clear) entity.objectBlueprintAsset = replacement
+    }
     if (matchesAssetReference(entity.prefabAsset, uuid)) {
       count++
       if (clear) {
@@ -823,9 +844,9 @@ function normalizeExtendedComponent(component: Component2D): void {
     component.localizationKey = typeof component.localizationKey === 'string' ? component.localizationKey.slice(0, 240) : ''
     component.styleClass = typeof component.styleClass === 'string' ? component.styleClass.slice(0, 80) : 'checkbox'; component.styleOverrides = safeStyleOverrides(component.styleOverrides)
   } else if (component instanceof TextInput) {
-    component.value = typeof component.value === 'string' ? component.value.slice(0, 100_000) : ''
+    component.value = typeof component.value === 'string' ? truncateUtf16(component.value, 100_000) : ''
     component.placeholder = typeof component.placeholder === 'string' ? component.placeholder.slice(0, 1000) : ''
-    component.maxLength = Math.round(clamp(component.maxLength, 256, 0, 100_000)); component.value = component.value.slice(0, component.maxLength)
+    component.maxLength = Math.round(clamp(component.maxLength, 256, 0, 100_000)); component.value = truncateUtf16(component.value, component.maxLength)
     component.styleClass = typeof component.styleClass === 'string' ? component.styleClass.slice(0, 80) : 'input'; component.styleOverrides = safeStyleOverrides(component.styleOverrides)
   } else if (component instanceof TileMap2D) {
     normalizeTileMap(component)
@@ -1072,8 +1093,9 @@ function applyStoredComponents(entity: Entity, item: SceneEntityData): void {
     const source = storedComponent(item, kind)
     if (!source) continue
     const component = createExtendedComponent(kind, source.uuid)
-    applyComponentMetadata(component, source)
     pasteComponentValues(component, recordData(source))
+    // Envelope metadata is authoritative; a stale data.enabled must not re-enable a removed component.
+    applyComponentMetadata(component, source)
     normalizeExtendedComponent(component)
     entity.componentMap.set(kind, component)
   }
@@ -1212,6 +1234,8 @@ export function createEntityFromData(item: SceneEntityData, forcedId?: number): 
   entity.editorOnly = item.editorOnly === true
   entity.runtimePersistence = item.runtimePersistence === 'Session' || item.runtimePersistence === 'SaveGame' || item.runtimePersistence === 'Transient' ? item.runtimePersistence : 'Scene'
   entity.persistentAcrossScenes = item.persistentAcrossScenes === true
+  entity.objectBlueprintAsset = typeof item.objectBlueprintAsset === 'string' ? item.objectBlueprintAsset : item.objectBlueprintAsset === null ? null : entity.script2D?.objectBlueprintAsset ?? null
+  if (entity.script2D) entity.script2D.objectBlueprintAsset = entity.objectBlueprintAsset
   entity.prefabAsset = typeof item.prefabAsset === 'string' ? item.prefabAsset : null
   entity.prefabInstanceUuid = typeof item.prefabInstanceUuid === 'string' ? item.prefabInstanceUuid : null
   entity.prefabSourceUuid = typeof item.prefabSourceUuid === 'string' ? item.prefabSourceUuid : null
@@ -1822,72 +1846,30 @@ export function setSceneLoaded(uuid: string, loaded: boolean): boolean {
   return reloadSceneManagerProject()
 }
 
-function persistentEntityRecords(): EntityBundle | null {
-  const persistentIds = physicsState.world.entities
-    .filter(entity => entity.persistentAcrossScenes)
-    .map(entity => entity.id)
-  const snapshot = captureEntityBundle(persistentIds)
-  if (!snapshot) return null
-  for (const rootUuid of snapshot.rootUuids) {
-    const source = physicsState.world.entities.find(entity => entity.uuid === rootUuid)
-    const record = snapshot.entities.find(entity => entity.uuid === rootUuid)
-    const transform = record?.components?.find(component => component.kind === 'Transform2D')?.data
-    if (!source || !transform || typeof transform !== 'object') continue
-    const absolute = worldTransform(source, physicsState.world.entities)
-    transform.parentUuid = null
-    transform.position = { ...absolute.position }
-    transform.rotation = absolute.rotation
-    transform.scale = { ...absolute.scale }
-  }
-  return snapshot
-}
-
-function restorePersistentEntities(snapshot: EntityBundle | null): void {
-  if (!snapshot) return
-  const existing = new Set(physicsState.world.entities.map(entity => entity.uuid))
-  const runtimeIdByUuid = new Map(physicsState.world.entities.map(entity => [entity.uuid, entity.id]))
-  for (const record of snapshot.entities) {
-    if (!record.uuid || existing.has(record.uuid)) continue
-    const entity = createEntityFromData(record, physicsState.world.allocateId())
-    physicsState.world.entities.push(entity)
-    existing.add(entity.uuid)
-    runtimeIdByUuid.set(entity.uuid, entity.id)
-    if (!editorState.layers.includes(entity.layer)) editorState.layers.push(entity.layer)
-  }
-  const existingConnections = new Set(physicsState.world.connections.map(connection => connection.uuid))
-  for (const stored of snapshot.connections) {
-    if (existingConnections.has(stored.connection.uuid)) continue
-    const connection = JSON.parse(JSON.stringify(stored.connection)) as Connection
-    connection.id = physicsState.world.allocateConnectionId()
-    connection.anchors.forEach((anchor, index) => {
-      const runtimeId = runtimeIdByUuid.get(stored.anchorUuids[index])
-      if (runtimeId !== undefined) anchor.entityId = runtimeId
-    })
-    if (connection.anchors.every((_, index) => runtimeIdByUuid.has(stored.anchorUuids[index]))
-      && normalizeConnection(connection, physicsState.world.entities)) {
-      physicsState.world.connections.push(connection)
-      existingConnections.add(connection.uuid)
-    }
-  }
-  editorState.layers.sort((first, second) => first - second)
-  physicsState.world.invalidateRuntime()
-}
-
 /** Runtime-only scene switch. Persistent entities retain their UUID and state. */
-export function runtimeLoadScene(identifier: string): boolean {
-  const target = sceneManager.scenes.find(scene => scene.uuid === identifier || scene.name === identifier)
-  if (!target) return false
-  const persistent = persistentEntityRecords()
-  if (!sceneManager.setActive(target.uuid) || !reloadSceneManagerProject(true)) return false
-  restorePersistentEntities(persistent)
-  return true
+export function prepareRuntimeSceneTransition(identifier?: string): PreparedRuntimeSceneTransition {
+  return prepareSceneTransition({
+    scenes: sceneManager, world: physicsState.world,
+    createEntity: (record, id) => createEntityFromData(record, id),
+    captureView: () => ({ settings: JSON.parse(JSON.stringify(physicsState.globalSettings)) as GlobalPhysicsSettings, layers: [...editorState.layers], activeLayer: editorState.activeLayer, renderLayer: editorState.renderLayer, selection: [...physicsState.selectedEntityIds], selected: physicsState.selectedEntityId }),
+    restoreView: view => { Object.assign(physicsState.globalSettings, view.settings); editorState.layers.splice(0, editorState.layers.length, ...view.layers); editorState.activeLayer = view.activeLayer; editorState.renderLayer = view.renderLayer; physicsState.selectedEntityIds.splice(0, physicsState.selectedEntityIds.length, ...view.selection); physicsState.selectedEntityId = view.selected },
+    applyView: (scene, entities) => {
+      const layers = [...new Set([1, ...(Array.isArray(scene.layers) ? scene.layers.map(layer => normalizeIdentifier(layer)) : []), ...entities.map(entity => entity.layer)])].sort((a, b) => a - b)
+      editorState.layers.splice(0, editorState.layers.length, ...layers)
+      loadGlobalSettings(scene)
+      const activeLayer = normalizeIdentifier(scene.activeLayer, layers[0]), renderLayer = normalizeIdentifier(scene.renderLayer, layers[0])
+      editorState.activeLayer = layers.includes(activeLayer) ? activeLayer : layers[0]
+      editorState.renderLayer = scene.renderLayer === 'all' || !layers.includes(renderLayer) ? 'all' : renderLayer
+      selectEntities(physicsState.selectedEntityIds.filter(id => entities.some(entity => entity.id === id)), 'replace', physicsState.selectedEntityId)
+    }
+  }, identifier)
 }
 
+export function runtimeLoadScene(identifier: string): boolean {
+  try { return prepareRuntimeSceneTransition(identifier).commit() } catch (error) { editorState.statusText = `Runtime scene preparation failed: ${error instanceof Error ? error.message : String(error)}`; return false }
+}
 export function runtimeReloadScene(): boolean {
-  const persistent = persistentEntityRecords()
-  if (!reloadSceneManagerProject(true)) return false
-  restorePersistentEntities(persistent)
-  return true
+  try { return prepareRuntimeSceneTransition().commit() } catch (error) { editorState.statusText = `Runtime scene preparation failed: ${error instanceof Error ? error.message : String(error)}`; return false }
 }
 
 export function toggleSimulation(state: boolean): void {

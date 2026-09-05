@@ -2,7 +2,7 @@
   <Teleport to="body">
     <Transition name="confirm">
       <div v-if="state.visible" class="confirm-scrim" @mousedown.self="finish(false)">
-        <section class="confirm-card" role="alertdialog" aria-modal="true" :aria-labelledby="titleId" :aria-describedby="messageId">
+        <section class="confirm-card" role="alertdialog" aria-modal="true" v-modal-focus :aria-labelledby="titleId" :aria-describedby="messageId">
           <span class="confirm-icon" :class="{ destructive: state.destructive }" aria-hidden="true">!</span>
           <div class="confirm-copy">
             <h2 :id="titleId">{{ state.title }}</h2>
@@ -19,6 +19,7 @@
 </template>
 
 <script setup lang="ts">
+import { vModalFocus } from '../editor/modalFocus'
 import { nextTick, onBeforeUnmount, ref, watch } from 'vue'
 import { confirmDialogState as state, resolveConfirmation } from '../store/dialog'
 

@@ -4,7 +4,8 @@ param(
   [ValidatePattern('^\d+\.\d+(?:\.\d+)?$')]
   [string]$Version,
   [ValidatePattern('^\d+\.\d+(?:\.\d+)?$')]
-  [string]$ReleaseLabel = ''
+  [string]$ReleaseLabel = '',
+  [string]$SourceSnapshot = ''
 )
 
 $ErrorActionPreference = 'Stop'
@@ -26,24 +27,7 @@ function Get-Sha256Lower {
   }
 }
 
-function Get-CalendarReleaseInfo {
-  param([Parameter(Mandatory = $true)][string]$Label)
-  $match = [regex]::Match($Label, '^(\d{2})\.(\d{2})$')
-  if (-not $match.Success) { return $null }
-  $year = [int]$match.Groups[1].Value
-  $sequence = [int]$match.Groups[2].Value
-  if ($sequence -lt 1 -or $sequence -gt 12) { throw "Calendar release sequence must be between 01 and 12: $Label" }
-  return [pscustomobject]@{ Year = $year; Sequence = $sequence; MachineVersion = "$year.$sequence.0" }
-}
-
-function Get-CanonicalCalendarLabel {
-  param([Parameter(Mandatory = $true)][string]$MachineVersion)
-  $match = [regex]::Match($MachineVersion, '^(\d{2})\.(\d{1,2})\.0$')
-  if (-not $match.Success -or [int]$match.Groups[1].Value -lt 26) { return $null }
-  $sequence = [int]$match.Groups[2].Value
-  if ($sequence -lt 1 -or $sequence -gt 12) { return $null }
-  return '{0}.{1:00}' -f [int]$match.Groups[1].Value, $sequence
-}
+. (Join-Path $PSScriptRoot 'release-policy.ps1')
 
 function Test-VersionAtMost {
   param([string]$Candidate, [string]$Maximum)
@@ -255,6 +239,7 @@ function Test-ExcludedSourcePath {
 
 function Get-FilesystemSourceFiles {
   param([Parameter(Mandatory = $true)][string]$Root)
+  if ($script:requiresFrozenSnapshot) { return @($script:frozenSourceManifest.sourceInputs | ForEach-Object path) }
   $stack = [Collections.Generic.Stack[IO.DirectoryInfo]]::new()
   $stack.Push([IO.DirectoryInfo]::new($Root))
   $files = [Collections.Generic.List[string]]::new()
@@ -304,11 +289,20 @@ $calendarRelease = Get-CalendarReleaseInfo -Label $Version
 if ($Version.Split('.').Count -eq 2 -and $null -eq $calendarRelease) { throw "Two-part public versions must use the calendar label YY.MM: $Version" }
 if ($null -ne $calendarRelease -and $calendarRelease.MachineVersion -ne $MachineVersion) { throw "Public calendar label $Version requires machine version $($calendarRelease.MachineVersion), not $MachineVersion." }
 $requiresStructuredEvidence = Test-RequiresStructuredEvidence -Label $Version
+$requiresFrozenSnapshot = $null -ne $calendarRelease -and ($calendarRelease.Year -gt 26 -or $calendarRelease.Sequence -ge 12)
 $projectRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
+$snapshotPath = if ([string]::IsNullOrWhiteSpace($SourceSnapshot)) { Join-Path $projectRoot ".cache\release-snapshots\v$Version\snapshot.json" } else { [IO.Path]::GetFullPath($SourceSnapshot) }
+if ($requiresFrozenSnapshot) {
+  & node (Join-Path $PSScriptRoot 'release-source-snapshot.mjs') "--verify=$snapshotPath" "--root=$projectRoot" | Out-Null
+  if ($LASTEXITCODE -ne 0) { throw 'Current source no longer matches its immutable release snapshot.' }
+  $frozenSourceManifest = Get-Content -LiteralPath $snapshotPath -Raw | ConvertFrom-Json
+  if ($frozenSourceManifest.release -ne $Version -or $frozenSourceManifest.machineVersion -ne $MachineVersion) { throw 'Frozen source identifies a different release.' }
+}
 $gitSafeDirectory = $projectRoot.Replace('\', '/')
 $sourceIdentity = Get-SourceIdentity -Root $projectRoot
 Assert-VersionAuthorities -Root $projectRoot -MachineVersion $MachineVersion
 $finalReleaseDirectory = Join-Path $projectRoot "releases\v$Version"
+if (Test-Path -LiteralPath $finalReleaseDirectory) { throw "Immutable release already exists: $finalReleaseDirectory" }
 $notesPath = Join-Path $projectRoot "release-audits\v$Version-release-notes.md"
 $ledgerPath = Join-Path $projectRoot "release-audits\v$Version-edit-ledger.md"
 $benchmarkPath = Join-Path $projectRoot "release-audits\v$Version-benchmarks.json"
@@ -356,6 +350,7 @@ foreach ($source in $requiredInputs) {
     throw "Required release input is missing: $source"
   }
 }
+Assert-WindowsReleaseArtifactVersions -Portable (Join-Path $projectRoot 'src-tauri\target\release\nova_a.exe') -Setup (Join-Path $projectRoot "src-tauri\target\release\bundle\nsis\Nova_A_${MachineVersion}_x64-setup.exe") -Msi (Join-Path $projectRoot "src-tauri\target\release\bundle\msi\Nova_A_${MachineVersion}_x64_en-US.msi") -MachineVersion $MachineVersion
 if ($requiresStructuredEvidence) {
   $candidateEvidence = Get-Content -LiteralPath $structuredEvidenceManifest -Raw | ConvertFrom-Json
   if ($candidateEvidence.format -ne 'nova-release-evidence-manifest' -or $candidateEvidence.version -ne 1 -or $candidateEvidence.release -ne $Version -or $candidateEvidence.machineVersion -ne $MachineVersion -or $candidateEvidence.engineVersion -ne $MachineVersion -or $candidateEvidence.localQualificationComplete -ne $true -or $candidateEvidence.localReportAuthorities.status -ne 'passed') {
@@ -363,6 +358,13 @@ if ($requiresStructuredEvidence) {
   }
   Assert-StructuredEvidence -EvidenceRoot $structuredEvidence -Manifest $candidateEvidence -ProjectRoot $projectRoot
   Assert-EvidenceSourceInputs -ProjectRoot $projectRoot -Manifest $candidateEvidence
+  if ($requiresFrozenSnapshot -and $candidateEvidence.sourceInputDigest -ne $frozenSourceManifest.sourceInputDigest) { throw 'Evidence and frozen source lineage disagree.' }
+  if ($requiresFrozenSnapshot) {
+    $qualificationPath = [IO.Path]::GetFullPath((Join-Path $projectRoot $candidateEvidence.qualification.runPath))
+    if (-not $qualificationPath.StartsWith(($projectRoot.TrimEnd('\') + '\release-audits\'), [StringComparison]::OrdinalIgnoreCase)) { throw 'Qualification evidence must be an owned release-audits run.' }
+    & node (Join-Path $PSScriptRoot 'release-qualification.mjs') "--verify=$qualificationPath" "--root=$projectRoot" | Out-Null
+    if ($LASTEXITCODE -ne 0) { throw 'Qualified commands, logs, reports or build assets changed before packaging.' }
+  }
   Assert-CurrentReleaseReferences -ProjectRoot $projectRoot -PublicLabel $Version -MachineVersion $MachineVersion
 }
 $releaseGeneratedAt = if ($requiresStructuredEvidence) { [string]$candidateEvidence.generatedAt } else { (Get-Item -LiteralPath $notesPath).LastWriteTimeUtc.ToString('o') }
@@ -549,26 +551,15 @@ foreach ($line in Get-Content -LiteralPath $checksumPath) {
 $resolvedFinalRelease = [IO.Path]::GetFullPath($finalReleaseDirectory)
 $finalReleaseParent = [IO.Path]::GetDirectoryName($resolvedFinalRelease)
 if (-not $finalReleaseParent.Equals($releaseRoot, [StringComparison]::OrdinalIgnoreCase) -or [IO.Path]::GetFileName($resolvedFinalRelease) -ne "v$Version") { throw "Unsafe final release target: $resolvedFinalRelease" }
-$backupDirectory = Join-Path $releaseRoot (".v$Version-backup-" + [guid]::NewGuid().ToString('N'))
-$backedUpPreviousRelease = $false
-try {
-  if (Test-Path -LiteralPath $resolvedFinalRelease) {
-    $existingRelease = Get-Item -LiteralPath $resolvedFinalRelease -Force
-    if (-not $existingRelease.PSIsContainer -or ($existingRelease.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) { throw "Refusing to replace a non-directory or reparse-point release target: $resolvedFinalRelease" }
-    Move-Item -LiteralPath $resolvedFinalRelease -Destination $backupDirectory
-    $backedUpPreviousRelease = $true
-  }
-  Move-Item -LiteralPath $releaseDirectory -Destination $resolvedFinalRelease
+if ($requiresFrozenSnapshot) {
+  & node (Join-Path $PSScriptRoot 'release-source-snapshot.mjs') "--verify=$snapshotPath" "--root=$projectRoot" | Out-Null
+  if ($LASTEXITCODE -ne 0) { throw 'Source changed during packaging; discard this candidate and rebuild from its frozen source.' }
+  & node (Join-Path $PSScriptRoot 'release-qualification.mjs') "--verify=$qualificationPath" "--root=$projectRoot" | Out-Null
+  if ($LASTEXITCODE -ne 0) { throw 'Qualified build outputs changed during packaging.' }
 }
-catch {
-  if (-not (Test-Path -LiteralPath $resolvedFinalRelease) -and $backedUpPreviousRelease -and (Test-Path -LiteralPath $backupDirectory)) {
-    Move-Item -LiteralPath $backupDirectory -Destination $resolvedFinalRelease
-  }
-  throw
-}
-if ($backedUpPreviousRelease -and (Test-Path -LiteralPath $backupDirectory)) {
-  Remove-Item -LiteralPath $backupDirectory -Recurse -Force
-}
+if (Test-Path -LiteralPath $resolvedFinalRelease) { throw "Immutable release already exists: $resolvedFinalRelease" }
+# Directory.Move fails if the destination appeared concurrently; Move-Item could nest it.
+[IO.Directory]::Move($releaseDirectory, $resolvedFinalRelease)
 
 Get-ChildItem -LiteralPath $resolvedFinalRelease -File | Sort-Object Name | Select-Object Name, Length, LastWriteTime
 }

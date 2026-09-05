@@ -695,7 +695,7 @@ html body #app :where(p, li, td, th, .body-copy) {
 :root[data-ui-scale='xlarge'] body #app .settings-page .settings-search nav {
   width: 100%;
 }
-:root[data-ui-scale='xlarge'] body #app .settings-page :where(.input-action-heading, .input-binding) {
+:root[data-ui-scale='xlarge'] body #app .settings-page .input-action-heading {
   grid-template-columns: repeat(2, minmax(0, 1fr)) 38px;
 }
 :root[data-ui-scale='xlarge'] body #app .settings-page :where(.input-action-heading > input, .input-action-heading > select) {
@@ -796,7 +796,7 @@ html body #app :where(p, li, td, th, .body-copy) {
 }
 
 @media (max-width: 1100px) {
-  #app :where(.studio-grid, .extension-grid, .package-grid, .template-grid, .delivery-grid, .shipping-grid, .audit-grid, .wide-grid, .orchestration-grid, .diagnostics-grid) {
+  #app :where(.studio-grid:not([data-measured-studio-layout]), .extension-grid, .package-grid, .template-grid, .delivery-grid, .shipping-grid, .audit-grid, .wide-grid, .orchestration-grid, .diagnostics-grid) {
     grid-template-columns: minmax(0, 1fr) !important;
   }
   #app :where(.studio-header, .page-header) {
@@ -856,5 +856,79 @@ html body #app :where(p, li, td, th, .body-copy) {
   #app :where(.settings-card, .studio-card, .inspector-pane, .asset-inspector, .package-inspector) :where(.row, .field-row, .setting-row, .property-row) > :where(input, select, textarea, output) {
     flex-basis: 100%;
     inline-size: 100%;
+  }
+}
+
+/* 26.11: component forms must fit a narrow inspector even on a wide monitor.
+   Checkbox/color rows remain compact; text, numeric pairs and selectors stack. */
+@container nova-inspector (max-width: 360px) {
+  #app .config-panel :where(.runtime-component, .world-component, .gameplay-card) label:has(> :is(select, textarea, div, input:not([type='checkbox']):not([type='radio']):not([type='color']))) {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 6px;
+    padding-block: 8px;
+  }
+  #app .config-panel :where(.runtime-component, .world-component, .gameplay-card) label > :is(select, textarea, div, input:not([type='checkbox']):not([type='radio']):not([type='color'])) {
+    width: 100%;
+    max-width: 100%;
+  }
+  #app .config-panel :where(.runtime-component, .world-component, .gameplay-card) :is(header, .actions) {
+    flex-wrap: wrap;
+  }
+  #app .config-panel .world-component details article {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* 26.13: maximizing changes presentation only; the dock remains mounted and its
+   authored width, height and docking preference remain available on restore. */
+#app .editor-main .panel-maximized,
+#app .editor-main .floating-maximized {
+  position: absolute !important;
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  min-width: 0 !important;
+  max-width: none !important;
+  max-height: none !important;
+  z-index: 700 !important;
+  margin: 0 !important;
+  border-radius: 0 !important;
+  background: var(--bg-base);
+  animation: none !important;
+  transition: none !important;
+  transform: none !important;
+}
+#app .editor-main[data-maximized-panel]:not([data-maximized-panel='']) > .dock-group { overflow: visible; }
+#app .panel-maximized > .panel-resize-handle { display: none; }
+#app .inspector-maximize { position: absolute; top: 8px; right: 12px; z-index: 25; }
+#app .config-wrapper .inspector-header { padding-right: 38px; }
+#app .config-wrapper .inspector-header h3 { white-space: normal; overflow-wrap: anywhere; }
+#app .panel-resize-handle { flex: 0 0 auto; }
+
+/* Each form responds to its own available width, including narrow docks on a
+   large display. Checkboxes and compact icon controls keep their own layout. */
+:where(.settings-card,.studio-card,.runtime-component,.world-component,.gameplay-card,.inspector-pane,.package-inspector) {
+  container: nova-form / inline-size;
+}
+@container nova-form (max-width: 380px) {
+  #app :where(.settings-card,.studio-card,.runtime-component,.world-component,.gameplay-card,.inspector-pane,.package-inspector) label:has(> :is(select,textarea,input:not([type='checkbox']):not([type='radio']):not([type='color']))) {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    height: auto !important;
+    gap: 6px;
+    padding-block: 6px;
+  }
+  #app :where(.settings-card,.studio-card,.runtime-component,.world-component,.gameplay-card,.inspector-pane,.package-inspector) label > :is(span,strong,small) {
+    max-width: 100% !important;
+    white-space: normal !important;
+    overflow: visible !important;
+    overflow-wrap: anywhere;
+  }
+  #app :where(.settings-card,.studio-card,.runtime-component,.world-component,.gameplay-card,.inspector-pane,.package-inspector) label > :is(select,textarea,input:not([type='checkbox']):not([type='radio']):not([type='color'])) {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-height: 30px;
   }
 }

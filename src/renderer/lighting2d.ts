@@ -7,8 +7,10 @@ import type { Vec2 } from '../world/types'
 import { activeGameCamera, activeGameCameras } from './sceneRenderer'
 import { activePostProcessing, activeRenderQuality, renderingSettings } from './renderSettings'
 import type { CameraRenderView } from './types'
+import { CanvasPixelCache, textureContentVersion } from './textureContent'
 
-const normalResponseCache = new Map<string, HTMLCanvasElement>()
+const normalResponseCache = new CanvasPixelCache(192, 48 * 1048576)
+let lightingFrame = 0
 
 interface LightingOptions {
   width: number
@@ -38,7 +40,7 @@ function layerBit(layer: number): number { return (1 << (layer & 31)) >>> 0 }
 
 function compatibleTargets(entities: Entity[], lightEntity: Entity, light: Light2D, activeLayer: number, gameView: boolean): Entity[] {
   return entities.filter(entity => {
-    if (!entity.enabled || (!gameView && (!entity.editorVisible || entity.layer !== activeLayer))) return false
+    if (!entity.enabled || !entity.authoring.visible || (!gameView && (!entity.editorVisible || entity.layer !== activeLayer))) return false
     if ((light.layerMask & layerBit(entity.layer)) === 0) return false
     const spriteMask = entity.spriteRenderer?.lightMask ?? 0xffff_ffff
     return (spriteMask & layerBit(lightEntity.layer)) !== 0 && !entity.hasComponent('Light2D') && !entity.hasComponent('Camera2D') && !entity.hasComponent('RectTransform')
@@ -102,11 +104,12 @@ function drawShadows(context: CanvasRenderingContext2D, lightEntity: Entity, lig
   const shadowLength = Math.max(options.width, options.height) * 1.5
   for (const casterEntity of entities) {
     const caster = casterEntity.getComponent<ShadowCaster2D>('ShadowCaster2D')
-    if (!caster?.enabled || caster.removed || (caster.layerMask & light.layerMask) === 0 || (casterEntity === lightEntity && !caster.selfShadows)) continue
+    if (!casterEntity.enabled || !casterEntity.authoring.visible || (!options.gameView && (!casterEntity.editorVisible || casterEntity.layer !== options.activeLayer)) || !caster?.enabled || caster.removed || (caster.layerMask & light.layerMask) === 0 || (casterEntity === lightEntity && !caster.selfShadows)) continue
     const boundary = entityBoundaryPoints(casterEntity, activeRenderQuality.shadowQuality === 'Ultra' ? 64 : activeRenderQuality.shadowQuality === 'Soft' ? 32 : 12, entities)
       .map(point => worldToScreen(point, camera, options.width, options.height))
     if (boundary.length < 2) continue
     context.save(); context.globalCompositeOperation = 'source-over'; context.fillStyle = `rgba(0,0,0,${caster.opacity})`
+    if (!caster.selfShadows) { context.beginPath(); context.rect(0, 0, options.width, options.height); context.moveTo(boundary[0].x, boundary[0].y); for (const point of boundary.slice(1)) context.lineTo(point.x, point.y); context.closePath(); context.clip('evenodd') }
     if (activeRenderQuality.shadowQuality === 'Soft' || activeRenderQuality.shadowQuality === 'Ultra') context.filter = `blur(${activeRenderQuality.shadowQuality === 'Ultra' ? 8 : 4}px)`
     for (let index = 0; index < boundary.length; index++) {
       const first = boundary[index], second = boundary[(index + 1) % boundary.length]
@@ -122,7 +125,7 @@ function normalResponse(reference: string, direction: Vec2): HTMLCanvasElement |
   const texture = resolveTexture(reference)
   if (!texture) return null
   const angleBin = Math.round((Math.atan2(direction.y, direction.x) + Math.PI) / (Math.PI * 2) * 24) % 24
-  const key = `${texture.key}:${texture.uv.x}:${texture.uv.y}:${texture.uv.width}:${texture.uv.height}:${angleBin}`
+  const key = `${texture.key}:${textureContentVersion(texture, lightingFrame)}:${texture.uv.x}:${texture.uv.y}:${texture.uv.width}:${texture.uv.height}:${angleBin}`
   const existing = normalResponseCache.get(key)
   if (existing) return existing
   const source = texture.source as CanvasImageSource & { width?: number; height?: number; naturalWidth?: number; naturalHeight?: number }
@@ -141,7 +144,6 @@ function normalResponse(reference: string, direction: Vec2): HTMLCanvasElement |
       data.data[index] = 255; data.data[index + 1] = 255; data.data[index + 2] = 255; data.data[index + 3] = Math.round(data.data[index + 3] * (.12 + .88 * lambert))
     }
     response.putImageData(data, 0, 0); normalResponseCache.set(key, canvas)
-    if (normalResponseCache.size > 192) normalResponseCache.delete(normalResponseCache.keys().next().value as string)
     return canvas
   } catch { return null }
 }
@@ -154,7 +156,11 @@ function drawNormalMappedLight(context: CanvasRenderingContext2D, targets: Entit
     const transform = worldTransform(entity, entities), dx = lightWorld.x - transform.position.x, dy = lightWorld.y - transform.position.y
     const distance = Math.hypot(dx, dy)
     if (light.lightType !== 'Directional' && distance > light.range) continue
-    const response = normalResponse(sprite.normalMapAsset, light.lightType === 'Directional' ? { x: -Math.cos(transform.rotation), y: -Math.sin(transform.rotation) } : { x: dx, y: dy })
+    const lightRotation = worldTransform(lightEntity, entities).rotation
+    const direction = light.lightType === 'Directional' ? { x: -Math.cos(lightRotation), y: -Math.sin(lightRotation) } : { x: dx, y: dy }
+    const cosine = Math.cos(transform.rotation), sine = Math.sin(transform.rotation)
+    const localDirection = { x: (direction.x * cosine + direction.y * sine) * (transform.scale.x < 0 ? -1 : 1) * (sprite.flipX ? -1 : 1), y: (-direction.x * sine + direction.y * cosine) * (transform.scale.y < 0 ? -1 : 1) * (sprite.flipY ? -1 : 1) }
+    const response = normalResponse(sprite.normalMapAsset, localDirection)
     if (!response) continue
     const position = worldToScreen(transform.position, camera, options.width, options.height), attenuation = light.lightType === 'Directional' ? 1 : Math.max(0, 1 - distance / Math.max(.0001, light.range))
     context.save(); context.globalCompositeOperation = 'screen'; context.globalAlpha = Math.min(.7, light.intensity * attenuation * .22)
@@ -167,8 +173,9 @@ function drawNormalMappedLight(context: CanvasRenderingContext2D, targets: Entit
 
 export function renderLighting2D(context: CanvasRenderingContext2D, entities: Entity[], options: LightingOptions): number {
   if (!renderingSettings.lightingEnabled) return 0
+  lightingFrame++
   const started = performance.now()
-  const lights = entities.flatMap(entity => { const light = entity.getComponent<Light2D>('Light2D'); return entity.enabled && light?.enabled && !light.removed ? [{ entity, light }] : [] })
+  const lights = entities.flatMap(entity => { const light = entity.getComponent<Light2D>('Light2D'); return entity.enabled && entity.authoring.visible && (options.gameView || (entity.editorVisible && entity.layer === options.activeLayer)) && light?.enabled && !light.removed ? [{ entity, light }] : [] })
   const cameras = options.gameView
     ? activeGameCameras(entities, options.width, options.height).map(camera => camera.view)
     : [options.editorCamera]
@@ -184,7 +191,7 @@ export function renderLighting2D(context: CanvasRenderingContext2D, entities: En
       context.save()
       if (!clipTargets(context, targets, entities, camera, options.width, options.height)) { context.restore(); continue }
       const transform = worldTransform(entity, entities), position = worldToScreen(transform.position, camera, options.width, options.height)
-      punchLight(context, light, position, transform.rotation, camera.scale, options)
+      punchLight(context, light, position, transform.rotation - (camera.rotation ?? 0), camera.scale, options)
       drawNormalMappedLight(context, targets, entity, light, entities, camera, options)
       context.restore()
       drawShadows(context, entity, light, entities, camera, options)

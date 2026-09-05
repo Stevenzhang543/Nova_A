@@ -2,8 +2,8 @@
   <section class="console-panel">
     <header>
       <input v-model="search" type="search" :placeholder="t('consoleSearch')">
-      <select v-model="level"><option value="all">{{ t('allLevels') }}</option><option v-for="item in levels" :key="item" :value="item">{{ levelLabel(item) }}</option></select>
-      <select v-model="category"><option value="all">{{ t('allCategories') }}</option><option v-for="item in categories" :key="item">{{ item }}</option></select>
+      <select v-model="level" :aria-label="t('allLevels')"><option value="all">{{ t('allLevels') }}</option><option v-for="item in levels" :key="item" :value="item">{{ levelLabel(item) }}</option></select>
+      <select v-model="category" :aria-label="t('allCategories')"><option value="all">{{ t('allCategories') }}</option><option v-for="item in categories" :key="item">{{ item }}</option></select>
       <span>{{ t('visibleMessages', { count: visible.length }) }}</span>
       <button @click="editorState.logs.splice(0)">{{ t('clearConsole') }}</button>
     </header>

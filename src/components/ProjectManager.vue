@@ -2,7 +2,7 @@
   <main class="project-manager">
     <header class="manager-header">
       <a class="identity" href="https://whitelists.top" target="_blank" rel="noreferrer"><span>N</span><strong>Nova_A</strong></a>
-      <nav aria-label="Project manager utilities">
+      <nav :aria-label="libraryText.utilities">
         <select v-model="prefs.locale" :aria-label="t('language')"><option value="en">English</option><option value="de">Deutsch</option><option value="zh">中文</option></select>
         <button class="manual-link" type="button" @click="openBundledManual">{{ t('learnNova') }}</button>
         <span class="version">{{ NOVA_RELEASE_NAME }}</span>
@@ -29,27 +29,37 @@
         <header><div><span>{{ t('newProject') }}</span><strong>{{ projectName || t('untitledProject') }}</strong></div><label>{{ t('projectName') }}<input v-model="projectName" maxlength="80" @keydown.enter="create"></label></header>
         <label class="project-location"><span>{{ t('projectLocation') }}</span><input v-model.trim="projectLocation" maxlength="500" :aria-invalid="Boolean(pathError)"><small :class="{ 'path-error': pathError }">{{ pathError || t('projectFolderHint') }}</small></label>
         <nav class="template-categories" role="tablist" :aria-label="t('templateCategories')">
-          <button v-for="category in categories" :key="category" type="button" role="tab" :aria-selected="selectedCategory === category" :class="{ active: selectedCategory === category }" @click="selectCategory(category)">
+          <button v-for="category in categories" :key="category" :data-template-category="category" type="button" role="tab" :aria-selected="selectedCategory === category" :class="{ active: selectedCategory === category }" @click="selectCategory(category)">
             <span>{{ categoryIcon[category] }}</span><strong>{{ categoryName(category) }}</strong><small>{{ templateCount(category) }}</small>
           </button>
         </nav>
-        <p class="category-description">{{ categoryDescription(selectedCategory) }}</p>
+        <p class="category-description">{{ selectedCategory === 'all' ? libraryText.browse : categoryDescription(selectedCategory) }}</p>
         <div class="template-library-tools">
           <label><span>{{ t('searchTemplates') }}</span><input v-model.trim="templateQuery" type="search" :placeholder="t('searchTemplatesPlaceholder')"></label>
           <label><span>{{ t('difficulty') }}</span><select v-model="templateDifficulty"><option value="all">{{ t('allDifficulties') }}</option><option value="beginner">{{ t('beginner') }}</option><option value="intermediate">{{ t('intermediate') }}</option><option value="advanced">{{ t('advanced') }}</option></select></label>
+          <label><span>{{ libraryText.sort }}</span><select v-model="templateSort"><option value="catalog">{{ libraryText.catalog }}</option><option value="newest">{{ libraryText.newest }}</option><option value="name">{{ t('name') }}</option><option value="time">{{ libraryText.quickest }}</option></select></label>
         </div>
+        <div class="template-results"><span role="status" aria-live="polite">{{ libraryText.results.replace('{count}', String(visibleTemplates.length)).replace('{total}', String(templates.length)) }}</span><button type="button" @click="resetTemplateFilters">{{ libraryText.reset }}</button></div>
         <div class="template-grid">
-          <button v-for="template in visibleTemplates" :key="template.id" :class="{ selected: selectedTemplate === template.id }" :aria-pressed="selectedTemplate === template.id" @click="selectedTemplate = template.id">
-            <span class="template-icon">{{ icons[template.id] }}</span>
+          <button v-for="template in visibleTemplates" :key="template.id" :data-template-id="template.id" :class="{ selected: selectedTemplate === template.id }" :aria-pressed="selectedTemplate === template.id" @click="selectedTemplate = template.id">
+            <span class="template-preview"><img :src="templatePreview(template.id)" :alt="`${libraryText.previewOf} ${templateName(template.id, template.name)}`" loading="lazy" width="640" height="360"><small>{{ libraryText.preview }}</small></span>
             <strong>{{ templateName(template.id, template.name) }}</strong>
             <small>{{ templateDescription(template.id, template.description) }}</small>
+            <span class="template-requirements" :aria-label="libraryText.requirements"><span v-for="requirement in templateGuide(template.id, prefs.locale).requirements" :key="requirement">{{ requirement }}</span></span>
             <span class="feature-list">{{ templateFeatures(template.id, template.features).join(' · ') }}</span>
             <span class="template-meta"><b>{{ t(template.difficulty) }}</b><span>{{ t('setupMinutes', { count: template.setupMinutes }) }}</span></span>
           </button>
           <p v-if="!visibleTemplates.length" class="template-empty">{{ t('noMatchingTemplates') }}</p>
         </div>
-        <details class="template-details"><summary>{{ t('templateDetails') }}</summary><strong>{{ selectedTemplateRecord ? templateName(selectedTemplateRecord.id, selectedTemplateRecord.name) : '' }}</strong><p>{{ selectedTemplateRecord ? templateDescription(selectedTemplateRecord.id, selectedTemplateRecord.description) : '' }}</p><span>{{ selectedTemplateRecord ? templateFeatures(selectedTemplateRecord.id, selectedTemplateRecord.features).join(' · ') : '' }}</span><small v-if="selectedTemplateRecord">{{ t(selectedTemplateRecord.difficulty) }} · {{ t('setupMinutes', { count: selectedTemplateRecord.setupMinutes }) }} · {{ selectedTemplateRecord.tags.join(' · ') }}</small></details>
-        <button class="create-button" :disabled="state.busy || Boolean(pathError) || !projectName.trim()" :title="pathError" @click="create">{{ state.busy ? t('preparingProject') : t('createProject') }}</button>
+        <section v-if="selectedTemplateRecord && selectedGuide" class="template-details" :aria-label="t('templateDetails')">
+          <header><strong>{{ templateName(selectedTemplateRecord.id, selectedTemplateRecord.name) }}</strong><small>{{ t(selectedTemplateRecord.difficulty) }} · {{ t('setupMinutes', { count: selectedTemplateRecord.setupMinutes }) }}</small></header>
+          <p v-if="selectedGuide.foundation" class="template-foundation">{{ libraryText.foundation }}: {{ templateName(selectedGuide.foundation, selectedGuide.foundation) }}</p>
+          <div class="template-instructions"><section><h3>{{ libraryText.controls }}</h3><p>{{ selectedGuide.controls }}</p></section><section><h3>{{ libraryText.expected }}</h3><p>{{ selectedGuide.expected }}</p></section></div>
+          <nav class="template-help" :aria-label="t('documentation')"><button type="button" :aria-label="`${libraryText.guide}: ${templateName(selectedTemplateRecord.id, selectedTemplateRecord.name)}`" @click="openTemplateManual(selectedGuide.manualSection)">{{ libraryText.guide }}</button><button type="button" :aria-label="`${libraryText.task}: ${templateName(selectedTemplateRecord.id, selectedTemplateRecord.name)}`" @click="openTemplateManual(selectedGuide.taskSection)">{{ libraryText.task }}</button></nav>
+          <small>{{ libraryText.captureHint }}</small>
+        </section>
+        <p class="template-selection" aria-live="polite">{{ selectedTemplateRecord ? `${libraryText.selected}: ${templateName(selectedTemplateRecord.id, selectedTemplateRecord.name)}` : t('noMatchingTemplates') }}</p>
+        <button class="create-button" :disabled="state.busy || Boolean(pathError) || !projectName.trim() || !selectedTemplateRecord" :title="pathError" @click="create">{{ state.busy ? t('preparingProject') : t('createProject') }}</button>
       </section>
 
       <section class="recents-card">
@@ -69,7 +79,7 @@
     </section>
 
     <footer><span>{{ t('managerFooter') }}</span><a href="https://github.com/Stevenzhang543/Nova_A/" target="_blank" rel="noreferrer">GitHub</a></footer>
-    <div v-if="state.pendingUpgrade" class="upgrade-scrim" role="dialog" aria-modal="true" :aria-label="t('projectUpgrade')">
+    <div v-if="state.pendingUpgrade" class="upgrade-scrim" role="dialog" aria-modal="true" v-modal-focus :aria-label="t('projectUpgrade')">
       <section class="upgrade-dialog">
         <header><div><span class="eyebrow">{{ t('projectUpgrade') }}</span><h2>{{ t('upgradePreview') }}</h2></div><button :aria-label="t('cancel')" @click="cancelPendingProjectUpgrade">×</button></header>
         <div class="upgrade-flow"><strong>{{ state.pendingUpgrade.preview.sourceEngine }} · Schema {{ state.pendingUpgrade.preview.sourceSchema }}</strong><span>→</span><strong>{{ state.pendingUpgrade.preview.targetEngine }} · Schema {{ state.pendingUpgrade.preview.targetSchema }}</strong></div>
@@ -85,7 +95,7 @@
         <footer><button @click="cancelPendingProjectUpgrade">{{ t('cancel') }}</button><button v-if="state.lockConflict" @click="migrateAndOpen(true)">{{ t('openReadOnly') }}</button><button class="primary" :disabled="state.pendingUpgrade.preview.preflight.some(check => check.status === 'blocked') || Boolean(state.lockConflict)" @click="migrateAndOpen(false)">{{ state.pendingUpgrade.preview.requiresMigration ? t('migrateAndOpen') : t('openProject') }}</button></footer>
       </section>
     </div>
-    <div v-if="state.readOnlyDocument" class="upgrade-scrim" role="dialog" aria-modal="true" :aria-label="t('readOnlyCompatibility')">
+    <div v-if="state.readOnlyDocument" class="upgrade-scrim" role="dialog" aria-modal="true" v-modal-focus :aria-label="t('readOnlyCompatibility')">
       <section class="upgrade-dialog read-only-dialog">
         <header><div><span class="eyebrow">{{ t('readOnlyCompatibility') }}</span><h2>{{ state.readOnlyDocument.preview.projectName }}</h2></div><button :aria-label="t('cancel')" @click="closeReadOnlyDocument">×</button></header>
         <p>{{ t('readOnlyCompatibilityHint', { schema: state.readOnlyDocument.preview.sourceSchema, supported: state.readOnlyDocument.preview.targetSchema }) }}</p>
@@ -101,11 +111,14 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { vModalFocus } from '../editor/modalFocus'
+import { computed, ref, watch } from 'vue'
 import { t } from '../i18n'
 import { preferencesState as prefs } from '../store/preferences'
 import { applyPendingProjectUpgrade, cancelPendingProjectUpgrade, closeReadOnlyDocument, continueCurrentProject, createNewProject, downloadLastUpgradeRollback, downloadReadOnlyDocument, openProjectDocument, openRecentProject, projectManagerState as state, removeRecentProject } from '../projects/projectManager'
-import { PROJECT_TEMPLATE_CATEGORIES as categories, PROJECT_TEMPLATES as templates, type ProjectTemplateCategory, type ProjectTemplateId } from '../projects/templates'
+import { PROJECT_TEMPLATE_CATEGORIES, PROJECT_TEMPLATES as templates, type ProjectTemplateCategory, type ProjectTemplateId } from '../projects/templates'
+import { discoverTemplates } from '../projects/templateDiscovery'
+import { templateGuide } from '../projects/templateGuides'
 import { openBundledManual } from '../runtime/openManual'
 import { completeTask, failTask, startTask } from '../runtime/editorFeedback'
 import { watchProjectFile } from '../runtime/projectExternalChanges'
@@ -114,29 +127,41 @@ import { NOVA_RELEASE_NAME } from '../projects/projectFormat'
 
 const projectName = ref('My Game')
 const projectLocation = ref('Projects/My Game')
-const selectedTemplate = ref<ProjectTemplateId>('empty')
-const selectedCategory = ref<ProjectTemplateCategory>('scene')
+const selectedTemplate = ref<ProjectTemplateId | null>('empty')
+const selectedCategory = ref<ProjectTemplateCategory | 'all'>('all')
+const categories = ['all', ...PROJECT_TEMPLATE_CATEGORIES] as const
 const templateQuery = ref('')
 const templateDifficulty = ref<'all' | 'beginner' | 'intermediate' | 'advanced'>('all')
+const templateSort = ref<'catalog' | 'name' | 'time' | 'newest'>('catalog')
+const libraryText = computed(() => ({
+  en: { browse: 'Browse all starters, or narrow the library by category, difficulty, and search.', sort: 'Sort by', catalog: 'Catalog order', newest: 'Newest first', quickest: 'Quickest setup', results: '{count} of {total} templates', reset: 'Reset filters', selected: 'Create from', utilities: 'Project manager utilities', preview: 'Runtime preview', previewOf: 'Runtime preview of', controls: 'Controls and setup', expected: 'Expected result', requirements: 'Requirements', guide: 'Feature manual', task: 'Related task', foundation: 'Uses the complete foundation', captureHint: 'Captured from the running Game view. Colors and motion may vary by renderer and frame.' },
+  de: { browse: 'Alle Vorlagen durchsuchen oder nach Kategorie, Schwierigkeit und Suchbegriff filtern.', sort: 'Sortieren', catalog: 'Katalogreihenfolge', newest: 'Neueste zuerst', quickest: 'Schnellster Einstieg', results: '{count} von {total} Vorlagen', reset: 'Filter zurücksetzen', selected: 'Erstellen aus', utilities: 'Projektmanager-Werkzeuge', preview: 'Laufzeitvorschau', previewOf: 'Laufzeitvorschau von', controls: 'Steuerung und Einrichtung', expected: 'Erwartetes Ergebnis', requirements: 'Voraussetzungen', guide: 'Funktionshandbuch', task: 'Verwandte Aufgabe', foundation: 'Nutzt die vollständige Grundlage', captureHint: 'Aus der laufenden Spielansicht aufgenommen. Farben und Bewegung können je nach Renderer und Frame variieren.' },
+  zh: { browse: '浏览所有模板，或按分类、难度和关键词筛选。', sort: '排序方式', catalog: '目录顺序', newest: '最新优先', quickest: '最快上手', results: '{count} / {total} 个模板', reset: '重置筛选', selected: '使用模板', utilities: '项目管理工具', preview: '运行时预览', previewOf: '运行时预览：', controls: '操作与准备', expected: '预期结果', requirements: '使用要求', guide: '功能手册', task: '相关任务', foundation: '使用完整基础项目', captureHint: '截图来自正在运行的游戏视口；颜色与运动效果可能因渲染器和帧而异。' }
+}[prefs.locale]))
 const openInput = ref<HTMLInputElement | null>(null)
 const importInput = ref<HTMLInputElement | null>(null)
 const migrationInput = ref<HTMLInputElement | null>(null)
 const archiveInput = ref<HTMLInputElement | null>(null)
-const icons: Record<ProjectTemplateId, string> = { empty: '◇', 'mouse-knockout': '✣', snake: '⌇', pong: '↔', breakout: '▦', platformer: '▰', 'top-down': '◉', 'physics-sandbox': '⌁', 'collision-lab': '◎', 'rendering-lab': '◈', 'ui-showcase': '▣', 'networked-optional': '⇄', 'lighting-starter': '◐', 'tile-world': '▦', 'responsive-ui': '▤', 'particle-lab': '✦', 'audio-lab': '♪', 'animation-lab': '▷', 'physics-cleanup': '✣', 'grid-chase': '⌗' }
-const categoryIcon: Record<ProjectTemplateCategory, string> = { scene: '◇', test: '⌁', game: '▶' }
 
-function templateName(id: ProjectTemplateId, fallback: string): string { const key = `template_${id}_name`, localized = t(key); return localized && localized !== key ? localized : fallback }
-function templateDescription(id: ProjectTemplateId, fallback: string): string { const key = `template_${id}_description`, localized = t(key); return localized && localized !== key ? localized : fallback }
+const categoryIcon: Record<ProjectTemplateCategory | 'all', string> = { all: '▦', scene: '◇', test: '⌁', game: '▶' }
+
+function templateName(id: ProjectTemplateId, fallback: string): string { const translated = templates.find(value => value.id === id)?.localized?.[prefs.locale as 'de' | 'zh']; if (translated) return translated.name; const key = `template_${id}_name`, localized = t(key); return localized && localized !== key ? localized : fallback }
+function templateDescription(id: ProjectTemplateId, fallback: string): string { const translated = templates.find(value => value.id === id)?.localized?.[prefs.locale as 'de' | 'zh']; if (translated) return translated.description; const key = `template_${id}_description`, localized = t(key); return localized && localized !== key ? localized : fallback }
 function templateFeatures(id: ProjectTemplateId, fallback: string[]): string[] { const key = `template_${id}_features`, localized = t(key); return localized && localized !== key ? localized.split('|') : fallback }
-function categoryName(category: ProjectTemplateCategory): string { return t(`templateCategory_${category}`) }
+function categoryName(category: ProjectTemplateCategory | 'all'): string { return category === 'all' ? t('all') : t(`templateCategory_${category}`) }
 function categoryDescription(category: ProjectTemplateCategory): string { return t(`templateCategory_${category}_description`) }
-function templateCount(category: ProjectTemplateCategory): number { return templates.filter(template => template.category === category).length }
-function selectCategory(category: ProjectTemplateCategory): void {
+function templateCount(category: ProjectTemplateCategory | 'all'): number { return category === 'all' ? templates.length : templates.filter(template => template.category === category).length }
+function selectCategory(category: ProjectTemplateCategory | 'all'): void {
   selectedCategory.value = category
-  if (!templates.some(template => template.id === selectedTemplate.value && template.category === category)) selectedTemplate.value = templates.find(template => template.category === category)?.id ?? 'empty'
 }
-const visibleTemplates = computed(() => { const query = templateQuery.value.toLocaleLowerCase(); return templates.filter(template => template.category === selectedCategory.value && (templateDifficulty.value === 'all' || template.difficulty === templateDifficulty.value) && (!query || `${template.name} ${template.description} ${template.features.join(' ')} ${template.tags.join(' ')}`.toLocaleLowerCase().includes(query))) })
-const selectedTemplateRecord = computed(() => templates.find(template => template.id === selectedTemplate.value))
+const visibleTemplates = computed(() => discoverTemplates(templates, { category: selectedCategory.value, difficulty: templateDifficulty.value, query: templateQuery.value, sort: templateSort.value, locale: prefs.locale }, template => `${templateName(template.id, template.name)} ${templateDescription(template.id, template.description)} ${templateFeatures(template.id, template.features).join(' ')} ${templateGuide(template.id, prefs.locale).controls} ${templateGuide(template.id, prefs.locale).expected} ${templateGuide(template.id, prefs.locale).requirements.join(' ')}`))
+watch(visibleTemplates, visible => { if (!visible.some(template => template.id === selectedTemplate.value)) selectedTemplate.value = visible[0]?.id ?? null }, { flush: 'sync' })
+const selectedTemplateRecord = computed(() => visibleTemplates.value.find(template => template.id === selectedTemplate.value))
+const selectedGuide = computed(() => selectedTemplateRecord.value ? templateGuide(selectedTemplateRecord.value.id, prefs.locale) : null)
+const previews = import.meta.glob('../assets/template-previews/*.png', { eager: true, query: '?url', import: 'default' }) as Record<string, string>
+function templatePreview(id: ProjectTemplateId): string { return previews[`../assets/template-previews/${id}.png`] ?? '' }
+function openTemplateManual(section: string): void { openBundledManual(`${prefs.locale === 'zh' ? 'zh-CN' : prefs.locale}-${section}`) }
+function resetTemplateFilters(): void { selectedCategory.value = 'all'; templateDifficulty.value = 'all'; templateQuery.value = ''; templateSort.value = 'catalog' }
 const pathError = computed(() => {
   const value = projectLocation.value.trim()
   if (!value) return t('projectLocationRequired')
@@ -144,7 +169,7 @@ const pathError = computed(() => {
   if (/(^|[\\/])(con|prn|aux|nul|com[1-9]|lpt[1-9])([.\\/]|$)/i.test(value)) return t('projectLocationReserved')
   return ''
 })
-function create(): void { if (!pathError.value && projectName.value.trim()) void createNewProject(projectName.value, selectedTemplate.value, projectLocation.value) }
+function create(): void { if (!state.busy && !pathError.value && projectName.value.trim() && selectedTemplateRecord.value) void createNewProject(projectName.value, selectedTemplateRecord.value.id, projectLocation.value) }
 async function chooseProject(mode:'open'|'add'|'migrate'|'archive'):Promise<void>{
   if(mode==='archive'){archiveInput.value?.click();return}
   const picker=(window as unknown as {showOpenFilePicker?: (options:unknown)=>Promise<Array<{getFile():Promise<File>}>>}).showOpenFilePicker
@@ -213,4 +238,45 @@ async function readArchive(event:Event):Promise<void>{const input=event.target a
 .compatibility-summary{padding:9px;display:grid;gap:3px;border:1px solid var(--border-subtle);border-radius:9px;background:var(--surface-2)}.compatibility-summary small{color:var(--text-muted)}.migration-steps{margin-top:12px;padding:9px;border:1px solid var(--border-subtle);border-radius:9px}.migration-steps summary{cursor:pointer}.migration-steps li{margin:4px 0;color:var(--text-muted);font-size:11px}.read-only-dialog{width:min(820px,100%)}.read-only-dialog textarea{width:100%;min-height:340px;margin-top:10px;resize:vertical;font:11px/1.45 var(--font-mono)}
 .preflight{margin-top:10px;padding:10px;border:1px solid var(--border-subtle);border-radius:10px;background:var(--surface-2)}.preflight>strong{display:block;margin-bottom:6px}.preflight>div{min-height:36px;display:grid;grid-template-columns:22px minmax(0,1fr);gap:7px;align-items:center;border-top:1px solid var(--border-subtle)}.preflight>div>span{width:19px;height:19px;display:grid;place-items:center;border-radius:50%;color:var(--surface-1);background:var(--success);font-weight:800}.preflight>div.warning>span,.preflight>div.pending>span{background:var(--warning)}.preflight>div.blocked>span{background:var(--danger)}.preflight p{margin:0!important;display:grid}.preflight small{color:var(--text-muted);line-height:1.35}
 .lock-warning{padding:9px;border:1px solid var(--warning);border-radius:9px;color:var(--warning)!important;background:color-mix(in srgb,var(--warning) 8%,transparent)}
+/* More templates remain discoverable without squeezing the creation fields. */
+.creation-card { container: nova-template-library / inline-size; }
+.template-categories { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.template-categories button { grid-template-columns: minmax(0, 1fr) auto; }
+.template-categories button > span { display: none; }
+.template-categories button strong { white-space: normal; overflow: visible; line-height: 1.4; }
+.template-library-tools { grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr) minmax(0, 1fr); }
+.template-results { margin-top: 9px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; color: var(--text-muted); }
+.template-results button { min-height: 30px; padding: 4px 10px; border: 1px solid var(--border-subtle); border-radius: 7px; background: var(--surface-2); color: var(--text-primary); }
+.template-grid { grid-template-columns: repeat(auto-fit, minmax(min(100%, 230px), 1fr)); max-height: min(510px, 48vh); }
+.template-grid button { min-height: 190px; }
+.template-grid button > :is(strong, small) { overflow-wrap: anywhere; line-height: 1.5; }
+.template-meta { flex-wrap: wrap; }
+.template-selection { margin: 10px 0 0; line-height: 1.5; overflow-wrap: anywhere; color: var(--text-secondary); }
+@container nova-template-library (max-width: 540px) {
+  .template-library-tools { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .template-library-tools > label:first-child { grid-column: 1 / -1; }
+  .template-categories { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@container nova-template-library (max-width: 320px) {
+  .template-library-tools { grid-template-columns: minmax(0, 1fr); }
+}
+/* 26.15: real previews and instructions stay readable in the launcher card's own width. */
+.template-grid button { gap: 9px; padding: 12px; }
+.template-library-tools > label { width: 100%; }
+.template-preview { width: 100%; display: grid; gap: 4px; }
+.template-preview img { width: 100%; height: auto; aspect-ratio: 16 / 9; object-fit: contain; background: #141922; border-radius: 7px; }
+.template-preview small { color: var(--text-muted); font-size: var(--type-caption); }
+.template-requirements { display: flex; flex-wrap: wrap; gap: 4px; }
+.template-requirements > span { padding: 3px 6px; border: 1px solid var(--border-subtle); border-radius: 999px; font-size: var(--type-caption); color: var(--text-secondary); background: var(--surface-1); }
+.template-details { padding: 13px; gap: 10px; }
+.template-details > header { display: grid; gap: 4px; }
+.template-details > header strong { overflow-wrap: anywhere; font-size: var(--type-section); }
+.template-instructions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.template-instructions section { min-width: 0; }
+.template-instructions h3 { margin: 0 0 5px; color: var(--text-primary); font-size: var(--type-body); }
+.template-instructions p, .template-foundation { margin: 0; line-height: 1.6; overflow-wrap: anywhere; font-size: var(--type-body); }
+.template-help { display: flex; flex-wrap: wrap; gap: 8px; }
+.template-help button { min-height: 34px; padding: 6px 10px; border: 1px solid var(--border-subtle); border-radius: 7px; background: var(--surface-1); color: var(--accent); overflow-wrap: anywhere; }
+.template-details > small { line-height: 1.5; overflow-wrap: anywhere; }
+@container nova-template-library (max-width: 540px) { .template-instructions { grid-template-columns: minmax(0, 1fr); } }
 </style>

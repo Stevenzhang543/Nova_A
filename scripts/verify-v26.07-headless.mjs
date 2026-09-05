@@ -5,6 +5,7 @@ import { mkdir, readFile, rm, stat, symlink, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { gunzipSync } from 'node:zlib'
+import { observeHeadlessPeer, waitForHeadlessPeer } from './lib/headlessPeerDiagnostics.mjs'
 
 const release = process.env.NOVA_HEADLESS_RELEASE || '26.07'
 const engineVersion = process.env.NOVA_HEADLESS_ENGINE_VERSION || '26.7.0'
@@ -21,7 +22,7 @@ const executable = join(output, `${gameName}.exe`)
 for (const path of [editor, referenceProjectPath]) await stat(path)
 await rm(output, { recursive: true, force: true }); await rm(negativeRoot, { recursive: true, force: true }); await rm(runtimeInputRoot, { recursive: true, force: true })
 await mkdir(output, { recursive: true }); await mkdir(negativeRoot, { recursive: true }); await mkdir(runtimeInputRoot, { recursive: true })
-const [serverPort, clientPort, reconnectPort] = await distinctUdpPorts(3)
+const [serverPort, clientPort, reconnectPort, wrongSessionPort] = await distinctUdpPorts(4)
 const baseProject = JSON.parse(await readFile(referenceProjectPath, 'utf8'))
 baseProject.projectSettings.production.networking.bindAddress = `127.0.0.1:${serverPort}`
 baseProject.projectSettings.production.networking.endpoint = `udp://127.0.0.1:${clientPort}`
@@ -39,6 +40,10 @@ if (!Number.isSafeInteger(packageLength) || packageStart <= 0) throw new Error('
 const embedded = bytes.subarray(packageStart, footerStart), expectedPackageHash = bytes.subarray(footerStart + 16).toString('hex'), packageSha256 = createHash('sha256').update(embedded).digest('hex')
 if (packageSha256 !== expectedPackageHash) throw new Error('Exported headless authority embedded-package SHA-256 does not match.')
 const { project: packagedProject } = decodeRuntimeProject(embedded)
+const sessionName = packagedProject.projectSettings?.production?.networking?.sessionName
+if (typeof sessionName !== 'string' || !sessionName.trim() || sessionName.length > 80) throw new Error('Packaged server session identity must be a nonempty name of at most 80 characters.')
+const networkSettings = packagedProject.projectSettings.production.networking, peerSettingsPath = join(output, 'headless-peer-settings.json')
+await writeFile(peerSettingsPath, JSON.stringify({ format: 'nova-headless-peer-settings', version: 1, schemaVersion: networkSettings.schemaVersion, protocolVersion: networkSettings.protocolVersion, replicatedEntities: networkSettings.replicatedEntities ?? [], channels: networkSettings.channels, rpcContracts: networkSettings.rpcContracts }) + '\n')
 const packagedDelivery = packagedProject.projectSettings?.build?.delivery ?? {}
 if (packagedProject.projectSettings?.build?.platform?.signingIdentity || packagedProject.projectSettings?.build?.platform?.notarizationProfile || packagedDelivery.signingHook || packagedDelivery.notarizationHook || packagedDelivery.deploymentDestination) throw new Error('Packaged server retained editor-only signing, notarization, or deployment configuration.')
 for (const entry of [...(packagedProject.packages?.installed ?? []), ...(packagedProject.packages?.lockfile ?? [])]) if (/[\\/:@]/.test(String(entry?.source?.location ?? ''))) throw new Error('Packaged server retained a path- or credential-shaped package source location.')
@@ -81,13 +86,13 @@ await writeFile(escapeProjectPath, `${JSON.stringify(escapeProject)}\n`)
 const escapedAsset = spawnSync(process.execPath, exportCommand(escapeProjectPath, join(escapeCaseRoot, 'output')), { cwd: root, encoding: 'utf8', windowsHide: true })
 policyRejections.push({ id: 'asset-junction-outside-project', rejected: escapedAsset.status !== 0 && /outside the project directory/i.test(`${escapedAsset.stderr || escapedAsset.stdout}`), status: escapedAsset.status, diagnostic: `${escapedAsset.stderr || escapedAsset.stdout}`.trim().slice(0, 1_000) })
 
-const traffic = await serverTrafficSmoke(executable, serverPort, clientPort, reconnectPort)
+const traffic = await serverTrafficSmoke(executable, serverPort, clientPort, reconnectPort, wrongSessionPort, sessionName)
 const policyPassed = policyRejections.every(item => item.rejected)
 const artifact = { path: executable, bytes: bytes.length, sha256: createHash('sha256').update(bytes).digest('hex') }
 const status = traffic.status === 'passed' && policyPassed ? 'passed' : 'failed'
 const report = {
   format: `nova-v${release}-headless-authority-verification`, version: 1, release, engineVersion, generatedAt: new Date().toISOString(),
-  export: { command: command.slice(1), sourceReference: referenceProjectPath, output: executable, runtimeMode: 'headless-server', singleFile: !await exists(join(output, 'game.nova-pak')), packageLength, packageSha256, playerTemplate: buildReport.playerTemplate, localBuildMetadataRedacted: true, ephemeralPorts: { server: serverPort, firstClient: clientPort, reconnectClient: reconnectPort } },
+  export: { command: command.slice(1), sourceReference: referenceProjectPath, output: executable, runtimeMode: 'headless-server', singleFile: !await exists(join(output, 'game.nova-pak')), packageLength, packageSha256, playerTemplate: buildReport.playerTemplate, localBuildMetadataRedacted: true, sessionName, ephemeralPorts: { server: serverPort, firstClient: clientPort, reconnectClient: reconnectPort, wrongSessionClient: wrongSessionPort } },
   artifact, policyRejections, traffic,
   qualification: { worldRendererDisabled: 'verified-by-runtime-contract', nativeNoWindowService: 'pending-external-separate-template-required', signedPlayerTemplateRegistry: 'pending-external', publicEncryptedDeployment: 'pending-external', hostileNetworkReview: 'pending-external', soak72Hours: 'pending-external' },
   status
@@ -96,17 +101,18 @@ await writeFile(join(root, `release-audits/v${release}-headless-smoke.json`), `$
 if (status !== 'passed') throw new Error(`${release} local server smoke failed: policy=${policyPassed}, traffic=${traffic.status}`)
 console.log(`Nova_A ${release} WebView-backed server export policy, embedded package, authoritative snapshots and localhost reconnect traffic passed; no-window service qualification remains pending.`)
 
-async function serverTrafficSmoke(path, serverPort, clientPort, reconnectPort) {
+async function serverTrafficSmoke(path, serverPort, clientPort, reconnectPort, wrongSessionPort, sessionName) {
   const server = spawn(path, [], { cwd: dirname(path), windowsHide: true, stdio: 'ignore' })
   let serverExit = null, serverError = ''
   server.once('exit', (code, signal) => { serverExit = { code, signal } })
   server.once('error', error => { serverError = error instanceof Error ? error.message : String(error) })
   try {
-    const first = await exercisePeer(clientPort, serverPort, 'first-connect')
+    const first = await exercisePeer(clientPort, serverPort, 'first-connect', sessionName)
+    const wrongSession = await exercisePeer(wrongSessionPort, serverPort, 'wrong-session', `rejected-${createHash('sha256').update(sessionName).digest('hex').slice(0, 32)}`, false)
     await new Promise(resolve => setTimeout(resolve, 250))
-    const reconnect = await exercisePeer(reconnectPort, serverPort, 'late-reconnect')
-    const passed = serverExit === null && !serverError && first.status === 'passed' && reconnect.status === 'passed'
-    return { status: passed ? 'passed' : 'failed', serverStayedAlive: serverExit === null && !serverError, serverExit, serverError, first, reconnect, shutdown: 'terminated-by-local-verification-harness' }
+    const reconnect = await exercisePeer(reconnectPort, serverPort, 'late-reconnect', sessionName)
+    const passed = serverExit === null && !serverError && first.status === 'passed' && wrongSession.status === 'passed' && reconnect.status === 'passed'
+    return { status: passed ? 'passed' : 'failed', serverStayedAlive: serverExit === null && !serverError, serverExit, serverError, first, wrongSession, reconnect, shutdown: 'terminated-by-local-verification-harness' }
   } catch (error) {
     return { status: 'failed', serverStayedAlive: serverExit === null && !serverError, serverExit, serverError, error: error instanceof Error ? error.message : String(error), shutdown: 'terminated-by-local-verification-harness' }
   } finally {
@@ -115,17 +121,26 @@ async function serverTrafficSmoke(path, serverPort, clientPort, reconnectPort) {
   }
 }
 
-async function exercisePeer(localPort, serverPort, phase) {
-  const peer = fork(join(root, 'scripts/network-peer-v6.6.0.mjs'), ['client', String(localPort), String(serverPort), gameName], { cwd: root, stdio: ['ignore','pipe','pipe','ipc'] })
-  const messages = []; let stderr = ''
-  peer.on('message', value => messages.push(value)); peer.stderr.on('data', value => { stderr += value.toString().slice(0, 8_000) })
+async function exercisePeer(localPort, serverPort, phase, sessionName, expectAdmission = true) {
+  const peer = fork(join(root, 'scripts/network-peer-v6.6.0.mjs'), ['client', String(localPort), String(serverPort), sessionName, peerSettingsPath], { cwd: root, stdio: ['ignore','pipe','pipe','ipc'] })
+  const messages = [], diagnostic = observeHeadlessPeer(peer); let step = 'ready'
+  peer.on('message', value => messages.push(value))
   try {
-    const ready = await waitFor(() => messages.find(item => item?.type === 'ready'), 15_000)
+    const ready = await waitForHeadlessPeer(() => messages.find(item => item?.type === 'ready'), diagnostic, `${phase}:ready`, 15_000)
     await new Promise(resolve => setTimeout(resolve, 1_500)); peer.send({ type: 'exercise' })
-    const result = await waitFor(() => [...messages].reverse().find(item => item?.type === 'report'), 20_000)
+    step = 'report'
+    const result = await waitForHeadlessPeer(() => [...messages].reverse().find(item => item?.type === 'report'), diagnostic, `${phase}:report`, 20_000)
     const authorityPeer = result.state?.peerDetails?.find(item => item.role === 'server' || item.role === 'host')
-    const passed = Boolean(ready) && result.state?.status === 'connected' && result.state?.peers >= 1 && result.state?.receivedPackets > 0 && result.state?.snapshots > 0 && result.state?.invalidPackets === 0 && result.runtime?.tick >= 180 && Boolean(authorityPeer)
-    return { phase, status: passed ? 'passed' : 'failed', localPort, id: result.state?.localPeerId, authorityPeer: authorityPeer ? { id: authorityPeer.id, role: authorityPeer.role } : null, peers: result.state?.peers, snapshots: result.state?.snapshots, receivedPackets: result.state?.receivedPackets, sentPackets: result.state?.sentPackets, invalidPackets: result.state?.invalidPackets, schemaRejected: result.state?.schemaRejected, fixedTicks: result.runtime?.tick, stderr }
+    const exercised = Boolean(ready) && result.state?.status === 'connected' && result.state?.sentPackets > 0 && result.exercisedTicks === 180
+    const expectedReplicaCount = networkSettings.replicatedEntities?.length ?? 0
+    const restoredBaseline = (result.state?.events ?? []).map(item => /^Late-join baseline restored (\d+) entities and current authority state\.$/.exec(item.message ?? '')).filter(Boolean).map(match => Number(match[1]))
+    const replicaStateApplied = result.replicaState?.length === expectedReplicaCount && result.replicaState.every(entity => entity.position?.length === 2 && entity.position.every(Number.isFinite) && !entity.position.every(value => value === 999_999))
+    const admitted = result.state?.peers >= 1 && result.state?.receivedPackets > 0 && result.state?.snapshots > 0 && result.state?.invalidPackets === 0 && result.state?.schemaRejected === 0 && result.state?.lateJoins > 0 && restoredBaseline.some(count => count >= expectedReplicaCount) && replicaStateApplied && Boolean(authorityPeer)
+    const rejected = result.state?.peers === 0 && result.state?.snapshots === 0 && !authorityPeer
+    const passed = exercised && (expectAdmission ? admitted : rejected)
+    return { phase, status: passed ? 'passed' : 'failed', expectedAdmission: expectAdmission, sessionName, localPort, id: result.state?.localPeerId, authorityPeer: authorityPeer ? { id: authorityPeer.id, role: authorityPeer.role } : null, peers: result.state?.peers, snapshots: result.state?.snapshots, receivedPackets: result.state?.receivedPackets, sentPackets: result.state?.sentPackets, invalidPackets: result.state?.invalidPackets, schemaRejected: result.state?.schemaRejected, lateJoins: result.state?.lateJoins, expectedReplicaCount, restoredBaseline, replicaState: result.replicaState, lastError: result.state?.lastError, fixedTicks: result.runtime?.tick, exercisedTicks: result.exercisedTicks, startup: diagnostic.startup, stderr: diagnostic.stderr, stdout: diagnostic.stdout }
+  } catch (error) {
+    return { phase, step, status: 'failed', expectedAdmission: expectAdmission, sessionName, localPort, peerExit: diagnostic.exit, peerError: diagnostic.error, startup: diagnostic.startup, stdout: diagnostic.stdout, stderr: diagnostic.stderr, error: error instanceof Error ? error.message : String(error) }
   } finally {
     if (peer.connected) peer.send({ type: 'stop' })
     await Promise.race([new Promise(resolve => peer.once('exit', resolve)), new Promise(resolve => setTimeout(resolve, 2_000))])
@@ -159,7 +174,6 @@ function decodeRuntimeProject(pack) {
   try { return { index, project: JSON.parse(decoded.toString('utf8')) } } catch (error) { throw new Error(`Embedded project.nova is invalid JSON: ${error instanceof Error ? error.message : String(error)}`) }
 }
 
-async function waitFor(read, timeout) { const started = Date.now(); while (Date.now() - started < timeout) { const value = read(); if (value) return value; await new Promise(resolve => setTimeout(resolve, 25)) } throw new Error(`Timed out after ${timeout} ms`) }
 async function distinctUdpPorts(count) {
   const ports = new Set()
   while (ports.size < count) {

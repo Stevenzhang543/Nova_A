@@ -12,7 +12,7 @@
     </header>
 
     <section class="settings-search" aria-label="Settings search">
-      <label><span>⌕</span><input v-model="editorState.settingsSearch" type="search" :placeholder="t('searchSettings')"></label>
+      <label><span>⌕</span><input v-model="editorState.settingsSearch" type="search" :aria-label="t('searchSettings')" :placeholder="t('searchSettings')"></label>
       <nav :aria-label="t('settingScope')"><button v-for="scope in settingScopes" :key="scope.id" :class="{ active: editorState.settingsScope === scope.id }" @click="editorState.settingsScope = scope.id">{{ t(scope.label) }}</button></nav>
     </section>
 
@@ -73,7 +73,7 @@
       <section v-show="showCard('inputMap inputDevice bindingCode gamepad keyboard', 'project')" class="settings-card input-map-card">
         <div class="card-heading"><span class="card-icon">⌨</span><h2>{{ t('inputMap') }}</h2></div>
         <p>{{ t('inputMapDescription') }}</p>
-        <div class="input-map-toolbar"><input v-model="inputSearch" type="search" :placeholder="t('searchActions')"><select v-model="inputDeviceFilter"><option value="all">{{ t('allDevices') }}</option><option v-for="device in inputDevices" :key="device">{{ device }}</option></select><label><input v-model="compactInputMap" type="checkbox"> {{ t('compactMode') }}</label><button :class="{ active: inputRecording }" @click="toggleInputRecording">{{ inputRecording ? t('stop') : t('record') }}</button><button :disabled="!lastInputRecording" @click="replayInputRecording">▶ {{ t('replay') }}</button></div>
+        <div class="input-map-toolbar"><input v-model="inputSearch" type="search" :placeholder="t('searchActions')"><select v-model="inputDeviceFilter" :aria-label="t('inputDevice')"><option value="all">{{ t('allDevices') }}</option><option v-for="device in inputDevices" :key="device">{{ device }}</option></select><label><input v-model="compactInputMap" type="checkbox"> {{ t('compactMode') }}</label><button :class="{ active: inputRecording }" @click="toggleInputRecording">{{ inputRecording ? t('stop') : t('record') }}</button><button :disabled="!lastInputRecording" @click="replayInputRecording">▶ {{ t('replay') }}</button></div>
         <div class="connected-devices"><span v-for="device in connectedInputDevices" :key="`${device.kind}:${device.index}`">{{ device.kind }} {{ device.index }} · {{ device.mapping }}</span></div>
         <div v-if="inputConflicts.length" class="input-conflicts" role="alert"><strong>{{ t('bindingConflicts') }} · {{ inputConflicts.length }}</strong><span v-for="conflict in inputConflicts" :key="`${conflict.signature}:${conflict.action}`">{{ conflict.conflictsWithAction }} ↔ {{ conflict.action }} · {{ conflict.signature }}</span></div>
         <div class="input-actions">
@@ -105,17 +105,17 @@
               </div>
             </details>
             <div v-for="(binding, bindingIndex) in action.bindings" :key="bindingIndex" class="input-binding">
-              <select v-model="binding.device" :aria-label="t('inputDevice')" @change="setBindingDevice(binding); commitInputMap()">
+              <label class="binding-field"><span>{{ t('inputDevice') }}</span><select v-model="binding.device" :aria-label="t('inputDevice')" @change="setBindingDevice(binding); commitInputMap()">
                 <option v-for="device in inputDevices" :key="device" :value="device">{{ device }}</option>
-              </select>
-              <input v-model.trim="binding.code" :aria-label="t('bindingCode')" maxlength="80" @change="commitInputMap">
+              </select></label>
+              <label class="binding-field"><span>{{ t('bindingCode') }}</span><input v-model.trim="binding.code" :aria-label="t('bindingCode')" maxlength="80" @change="commitInputMap"></label>
               <template v-if="action.kind === 'vector2'">
-                <input v-model.number="binding.x" :aria-label="t('inputX')" type="number" min="-100" max="100" step="0.1" @change="commitInputMap">
-                <input v-model.number="binding.y" :aria-label="t('inputY')" type="number" min="-100" max="100" step="0.1" @change="commitInputMap">
+                <label class="binding-field"><span>{{ t('inputX') }}</span><input v-model.number="binding.x" :aria-label="t('inputX')" type="number" min="-100" max="100" step="0.1" @change="commitInputMap"></label>
+                <label class="binding-field"><span>{{ t('inputY') }}</span><input v-model.number="binding.y" :aria-label="t('inputY')" type="number" min="-100" max="100" step="0.1" @change="commitInputMap"></label>
               </template>
-              <input v-else v-model.number="binding.scale" :aria-label="t('inputScale')" type="number" min="-100" max="100" step="0.1" @change="commitInputMap">
-              <input v-if="binding.device.startsWith('gamepad')" v-model.number="binding.gamepad" :aria-label="t('gamepadIndex')" type="number" min="0" max="15" step="1" @change="commitInputMap">
-              <input v-if="binding.device === 'gamepad-axis'" v-model.number="binding.deadzone" :aria-label="t('deadzone')" type="number" min="0" max="0.99" step="0.01" @change="commitInputMap">
+              <label v-else class="binding-field"><span>{{ t('inputScale') }}</span><input v-model.number="binding.scale" :aria-label="t('inputScale')" type="number" min="-100" max="100" step="0.1" @change="commitInputMap"></label>
+              <label v-if="binding.device.startsWith('gamepad')" class="binding-field"><span>{{ t('gamepadIndex') }}</span><input v-model.number="binding.gamepad" :aria-label="t('gamepadIndex')" type="number" min="0" max="15" step="1" @change="commitInputMap"></label>
+              <label v-if="binding.device === 'gamepad-axis'" class="binding-field"><span>{{ t('deadzone') }}</span><input v-model.number="binding.deadzone" :aria-label="t('deadzone')" type="number" min="0" max="0.99" step="0.01" @change="commitInputMap"></label>
               <button class="icon-action danger" :title="t('removeBinding')" @click="removeInputBinding(actionIndex, bindingIndex)">×</button>
               <details v-if="!compactInputMap" class="binding-advanced"><summary>{{ t('advanced') }}</summary><label>{{ t('threshold') }}<input v-model.number="binding.threshold" type="number" min="0" max="1" step="0.01" @change="commitInputMap"></label><label>{{ t('invert') }}<input v-model="binding.invert" type="checkbox" @change="commitInputMap"></label><label>{{ t('responseCurve') }}<select v-model="binding.responseCurve" @change="commitInputMap"><option>linear</option><option>square</option><option>cubic</option><option>exponential</option></select></label><label>{{ t('deviceIdentity') }}<input v-model="binding.deviceId" @change="commitInputMap"></label><label>{{ t('modifiers') }}<input :value="binding.modifiers.join(', ')" @change="setBindingList(binding,'modifiers',$event)"></label><label>{{ t('chord') }}<input :value="binding.chord.join(', ')" @change="setBindingList(binding,'chord',$event)"></label></details>
             </div>
@@ -171,7 +171,7 @@
 
 <script setup lang="ts">
 import { NOVA_RELEASE_NAME } from '../projects/projectFormat'
-import { computed, defineComponent, h, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, defineComponent, h, inject, onBeforeUnmount, onMounted, provide, ref, watch } from 'vue'
 import { t } from '../i18n'
 import { editorState } from '../store/editor'
 import { autosaveState, physicsState as physics, pushHistory, restoreAutosave } from '../store/physics'
@@ -192,9 +192,11 @@ function setTheme(theme: ThemeMode) {
   if (theme === 'light') prefs.highContrast = false
 }
 
+const settingRowLabel = Symbol('settings-row-label')
 const SettingRow = defineComponent({
   props: { label: { type: String, required: true } },
   setup(props, { slots }) {
+    provide(settingRowLabel, () => props.label)
     return () => h('label', { class: 'setting-row' }, [h('span', props.label), h('div', { class: 'setting-control' }, slots.default?.())])
   }
 })
@@ -202,10 +204,12 @@ const SettingRow = defineComponent({
 const ToggleSwitch = defineComponent({
   props: { modelValue: { type: Boolean, required: true } },
   emits: ['update:modelValue'],
-  setup(props, { emit }) {
+  setup(props, { emit, attrs }) {
+    const rowLabel = inject<() => string>(settingRowLabel, () => '')
     return () => h('button', {
       class: ['toggle', { active: props.modelValue }],
       role: 'switch',
+      'aria-label': attrs['aria-label'] ?? (attrs['aria-labelledby'] ? undefined : rowLabel()),
       'aria-checked': props.modelValue,
       onClick: () => emit('update:modelValue', !props.modelValue)
     }, h('span'))
@@ -366,4 +370,15 @@ p { margin: 0 0 8px 40px; color: var(--text-muted); font-size: 12px; line-height
 .action-advanced{margin-bottom:7px;padding:7px;border:1px solid var(--border-subtle);border-radius:8px;background:color-mix(in srgb,var(--surface-3) 55%,transparent)}.action-advanced>summary{min-height:24px;display:flex;align-items:center;cursor:pointer;color:var(--accent);font-size:12px;font-weight:620}.action-advanced-grid{display:grid;grid-template-columns:repeat(3,minmax(150px,1fr));gap:7px;padding-top:7px}.action-advanced-grid label{min-width:0;display:grid;grid-template-columns:minmax(88px,.8fr) minmax(0,1fr);gap:7px;align-items:center;color:var(--text-muted);font-size:11.5px}.action-advanced-grid input:not([type='checkbox']),.action-advanced-grid select{width:100%;min-width:0}.action-advanced-grid input[type='checkbox']{justify-self:end}
 @media (max-width: 1400px) { .settings-grid { grid-template-columns: 1fr; } }
 @media (max-width: 800px) { .page-header,.settings-search { align-items: flex-start; flex-direction: column; }.settings-search>label{width:100%}.settings-search nav{width:100%} .input-action-heading, .input-binding { grid-template-columns: repeat(2, minmax(0, 1fr)) 28px; } .input-action-heading > input, .input-action-heading > select { grid-column: auto; }.binding-advanced{grid-column:1/-1}.input-map-toolbar>*{flex:1 1 130px}.action-advanced-grid{grid-template-columns:1fr} }
+/* Binding labels remain attached to their fields when the card reflows. */
+.input-binding{grid-template-columns:repeat(auto-fit,minmax(min(160px,100%),1fr));align-items:end}
+.input-binding>.binding-field{display:grid;grid-template-columns:minmax(0,1fr);gap:4px;min-width:0;align-self:stretch}
+.binding-field>span{font-size:var(--type-caption);color:var(--text-muted);overflow-wrap:anywhere}
+.binding-field>input,.binding-field>select{width:100%;max-width:100%}
+.input-binding>.icon-action{justify-self:end;align-self:start;width:30px}
+.input-map-toolbar>input{flex:1 1 200px}
+.input-map-toolbar>select{flex:1 1 160px}
+.input-map-toolbar>label{flex:1 1 160px}
+.settings-search{flex-wrap:wrap}.settings-search>label{flex:1 1 250px}.settings-search nav{flex:1 1 300px}
+@container nova-form (max-width:600px){.input-action-heading{grid-template-columns:minmax(0,1fr) 30px 30px}.input-action-heading>input,.input-action-heading>select{grid-column:1/-1}.action-advanced-grid{grid-template-columns:minmax(0,1fr)}.binding-advanced>label{grid-template-columns:minmax(0,1fr)}.settings-card>.input-map-toolbar>input{flex-basis:100%;width:100%}}
 </style>

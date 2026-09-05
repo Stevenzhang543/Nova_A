@@ -1,6 +1,6 @@
 <template>
   <Teleport to="body">
-    <section v-if="recovery.visible" class="recovery-screen" role="dialog" aria-modal="true" :aria-label="t('crashRecovery')">
+    <section v-if="recovery.visible" class="recovery-screen" role="dialog" aria-modal="true" v-modal-focus :aria-label="t('crashRecovery')">
       <article>
         <header><span>↻</span><div><strong>{{ t('crashRecovery') }}</strong><small>{{ t('crashRecoveryHint') }}</small></div></header>
         <p v-if="recovery.invalidSnapshots" class="warning">{{ t('invalidSnapshotsSkipped', { count: recovery.invalidSnapshots }) }}</p>
@@ -21,6 +21,7 @@
   </Teleport>
 </template>
 <script setup lang="ts">
+import { vModalFocus } from '../editor/modalFocus'
 import { computed, ref, watch } from 'vue'
 import { t } from '../i18n'
 import { clearEditorHistory, getSceneJSON, loadProject } from '../store/physics'

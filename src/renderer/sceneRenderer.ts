@@ -1,7 +1,7 @@
 import { resolveAsset, resolveTexture } from '../assets/AssetDatabase'
 import { compoundGeometries } from '../world/compoundGeometry'
 import type { Connection } from '../world/Connection'
-import { Camera2D, ShapeRenderer2D, SpriteRenderer2D, TextRenderer2D, TileMap2D } from '../world/components'
+import { Camera2D, ParticleEmitter2D, ShapeRenderer2D, SpriteRenderer2D, TextRenderer2D, TileMap2D } from '../world/components'
 import type { Entity } from '../world/Entity'
 import { worldTransform } from '../world/hierarchy'
 import type { CameraRenderView, RenderColor, Renderer2D, RendererStats } from './types'
@@ -27,6 +27,8 @@ export interface SceneRenderOptions {
   connections: Connection[]
   editorGrid?: { enabled: boolean; step: number; color: string }
   performanceMode?: boolean
+  /** One explicit clock advance; camera queries and lighting never advance it. */
+  deltaSeconds?: number
 }
 
 export interface ActiveCamera {
@@ -58,12 +60,13 @@ function parseCssColor(value: string): RenderColor {
   return { r: 17, g: 21, b: 27, a: 1 }
 }
 
-const smoothedCameraPositions = new WeakMap<Camera2D, { x: number; y: number }>()
+let smoothedCameraPositions = new WeakMap<Camera2D, { x: number; y: number }>()
+export function resetCameraSmoothing(): void { smoothedCameraPositions = new WeakMap() }
 interface TimelineCameraBlendOverride { fromEntityUuid: string | null; toEntityUuid: string; weight: number }
 let timelineCameraBlend: TimelineCameraBlendOverride | null = null
 export function setTimelineCameraBlend(value: TimelineCameraBlendOverride | null): void { timelineCameraBlend = value ? { ...value, weight: Math.min(1, Math.max(0, finite(value.weight, 0))) } : null }
 
-export function activeGameCameras(entities: Entity[], width: number, height: number): ActiveCamera[] {
+export function activeGameCameras(entities: Entity[], width: number, height: number, deltaSeconds?: number): ActiveCamera[] {
   const safeWidth = Math.max(1, finite(width, 1)), safeHeight = Math.max(1, finite(height, 1))
   return entities
     .flatMap(entity => {
@@ -92,9 +95,9 @@ export function activeGameCameras(entities: Entity[], width: number, height: num
         desired = { x: desired.x < minX ? previous.x + desired.x - minX : desired.x > maxX ? previous.x + desired.x - maxX : previous.x, y: desired.y < minY ? previous.y + desired.y - minY : desired.y > maxY ? previous.y + desired.y - maxY : previous.y }
       }
       if (component.limits.enabled) desired = { x: Math.min(finite(component.limits.right, desired.x), Math.max(finite(component.limits.left, desired.x), desired.x)), y: Math.min(finite(component.limits.top, desired.y), Math.max(finite(component.limits.bottom, desired.y), desired.y)) }
-      const blend = component.smoothing.enabled ? 1 - Math.exp(-Math.max(0, finite(component.smoothing.speed, 0)) / 60) : 1
-      const smoothed = { x: previous.x + (desired.x - previous.x) * blend, y: previous.y + (desired.y - previous.y) * blend }
-      smoothedCameraPositions.set(component, smoothed)
+      const blend = component.smoothing.enabled ? 1 - Math.exp(-Math.max(0, finite(component.smoothing.speed, 0)) * Math.max(0, finite(deltaSeconds ?? 0, 0))) : 1
+      const smoothed = deltaSeconds === undefined ? previous : { x: previous.x + (desired.x - previous.x) * blend, y: previous.y + (desired.y - previous.y) * blend }
+      if (deltaSeconds !== undefined) smoothedCameraPositions.set(component, smoothed)
       const position = pixelPerfect
         ? { x: Math.round(smoothed.x * scale) / scale, y: Math.round(smoothed.y * scale) / scale }
         : smoothed
@@ -203,8 +206,15 @@ function submitText(renderer: Renderer2D, entity: Entity, text: TextRenderer2D, 
   })
 }
 
+/** Expand the existing camera culling rectangle for texture preparation only. */
+export function texturePreloadBounds(bounds: ReturnType<typeof visibleWorldBounds>, margin: number) {
+  const factor = Math.min(8, Math.max(1, finite(margin, 1.5))), centerX = (bounds.minX + bounds.maxX) / 2, centerY = (bounds.minY + bounds.maxY) / 2
+  const halfWidth = ((bounds.maxX - bounds.minX) / 2 + 4) * factor, halfHeight = ((bounds.maxY - bounds.minY) / 2 + 4) * factor
+  return { minX: centerX - halfWidth, maxX: centerX + halfWidth, minY: centerY - halfHeight, maxY: centerY + halfHeight }
+}
+
 export function renderWorld(renderer: Renderer2D, entities: Entity[], options: SceneRenderOptions): RendererStats {
-  const cameras = options.gameView ? activeGameCameras(entities, options.width, options.height) : []
+  const cameras = options.gameView ? activeGameCameras(entities, options.width, options.height, options.deltaSeconds ?? 0) : []
   const primaryCamera = cameras[0] ?? null
   const qualityPosition = primaryCamera?.view.position ?? options.editorCamera.position ?? { x: 0, y: 0 }
   updateActivePostProcess(qualityPosition)
@@ -218,6 +228,13 @@ export function renderWorld(renderer: Renderer2D, entities: Entity[], options: S
   const compounds = compoundGeometries(entities, options.connections)
   const compoundMembers = new Set(compounds.filter(compound => compound.members.length > 1).flatMap(compound => [...compound.memberIds]))
   const passes = options.gameView && cameras.length ? cameras : [{ entity: null, component: null, view: options.editorCamera, background: parseCssColor(options.canvasColor) }]
+  const preloadJobs: Array<() => void> = [], requestedTextures = new Set<string>()
+  let preparedTileTextures = 0
+  const requestTexture = (reference: string | null | undefined, filter?: TextureFilter) => {
+    if (!reference || requestedTextures.has(reference) || requestedTextures.size >= 256) return
+    requestedTextures.add(reference)
+    const texture = resolveTexture(reference, filter); if (texture) renderer.preloadTexture?.(texture)
+  }
   for (const camera of passes) {
     renderer.beginCamera(camera.view)
     const visibleBounds = visibleWorldBounds(camera.view, options.width, options.height)
@@ -225,13 +242,13 @@ export function renderWorld(renderer: Renderer2D, entities: Entity[], options: S
     const near = camera.component?.nearSortingLayer ?? -Infinity
     const far = camera.component?.farSortingLayer ?? Infinity
     const cullingMask = camera.component?.cullingMask ?? 0xffff_ffff
-    const visible = entities
+    const candidates = entities
       .filter(entity => entity.enabled && entity.authoring.visible && (options.gameView || entity.editorVisible))
       .filter(entity => options.gameView || entity.layer === options.activeLayer)
       .filter(entity => options.renderLayer === 'all' || entity.layer === options.renderLayer)
       .filter(entity => (cullingMask & (1 << (entity.layer & 31))) !== 0)
       .filter(entity => sortingLayer(entity) >= near && sortingLayer(entity) <= far)
-      .filter(entity => {
+    const visible = candidates.filter(entity => {
         if (!options.performanceMode) return true
         const position = worldTransform(entity, entities).position
         const margin = 4
@@ -269,8 +286,32 @@ export function renderWorld(renderer: Renderer2D, entities: Entity[], options: S
       })
     }
     renderer.endCamera()
+    if (renderingSettings.textureStreaming.enabled && options.performanceMode) {
+      const bounds = texturePreloadBounds(visibleBounds, renderingSettings.textureStreaming.preloadMargin), drawn = new Set(visible)
+      for (const entity of candidates) {
+        if (preloadJobs.length >= 256) break
+        if (drawn.has(entity)) continue
+        const position = worldTransform(entity, entities).position
+        if (position.x < bounds.minX || position.x > bounds.maxX || position.y < bounds.minY || position.y > bounds.maxY) continue
+        preloadJobs.push(() => {
+          const sprite = entity.spriteRenderer, shape = entity.getComponent<ShapeRenderer2D>('ShapeRenderer2D'), particles = entity.getComponent<ParticleEmitter2D>('ParticleEmitter2D')
+          if (sprite?.enabled) { requestTexture(sprite.spriteAsset, sprite.filterMode); requestTexture(sprite.normalMapAsset, sprite.filterMode) }
+          if (shape?.enabled) requestTexture(shape.textureAsset, shape.filterMode)
+          if (particles?.enabled) requestTexture(particles.textureAsset)
+          for (const reference of [sprite?.material, shape?.material, particles?.material]) if (reference && reference !== 'Default') for (const texture of Object.values(resolveMaterial(reference).textures)) requestTexture(texture)
+        })
+        if (preloadJobs.length >= 256) break
+      }
+      for (const entity of visible) {
+        const tileMap = entity.getComponent<TileMap2D>('TileMap2D')
+        if (!tileMap?.enabled || preloadJobs.length >= 256) continue
+        preloadJobs.push(() => { if (preparedTileTextures >= 256) return; for (const chunk of tileChunkCommands(entity, tileMap, entities, bounds, camera.view.position)) for (const sprite of chunk.sprites) { renderer.preloadTexture?.(sprite.texture); if (++preparedTileTextures >= 256) return } })
+      }
+    }
   }
-  return renderer.endFrame()
+  const stats = renderer.endFrame()
+  for (const preload of preloadJobs) preload()
+  return { ...stats, textureUploadQueue: renderer.stats.textureUploadQueue, textureUploadQueueBytes: renderer.stats.textureUploadQueueBytes, textureUploadDeferrals: renderer.stats.textureUploadDeferrals }
 }
 
 function submitEditorGrid(renderer: Renderer2D, options: SceneRenderOptions): void {

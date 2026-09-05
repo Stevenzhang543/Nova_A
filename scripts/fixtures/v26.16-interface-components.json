@@ -1,0 +1,323 @@
+{
+  "Canvas": {
+    "referenceSize": {
+      "x": 1280,
+      "y": 720
+    },
+    "scaleWithScreen": false,
+    "sortingOrder": 7,
+    "safeArea": true,
+    "safeAreaInsets": {
+      "left": 11,
+      "top": 22,
+      "right": 33,
+      "bottom": 44
+    },
+    "dpiScale": 1.5,
+    "localePreview": "ar",
+    "themeAsset": "asset://00000384-0000-4000-8000-000000000000",
+    "themeVariant": "night"
+  },
+  "RectTransform": {
+    "layoutMode": "Fixed",
+    "anchorPreset": "bottom-right",
+    "pivot": {
+      "x": 0.2,
+      "y": 0.3
+    },
+    "position": {
+      "x": 31,
+      "y": 47
+    },
+    "size": {
+      "x": 222,
+      "y": 111
+    },
+    "preferredSize": {
+      "x": 210,
+      "y": 109
+    },
+    "anchorMin": {
+      "x": 0.2,
+      "y": 0.3
+    },
+    "anchorMax": {
+      "x": 0.8,
+      "y": 0.9
+    },
+    "offsets": {
+      "left": 1,
+      "top": 2,
+      "right": 3,
+      "bottom": 4
+    },
+    "margins": {
+      "left": 5,
+      "top": 6,
+      "right": 7,
+      "bottom": 8
+    },
+    "horizontalPolicy": "Fill",
+    "verticalPolicy": "Content",
+    "minSize": {
+      "x": 10,
+      "y": 20
+    },
+    "maxSize": {
+      "x": 400,
+      "y": 500
+    },
+    "aspectRatio": 1.5,
+    "aspectConstraint": "Fit",
+    "breakpoints": [
+      {
+        "minWidth": 200,
+        "maxWidth": 400,
+        "visible": false,
+        "position": {
+          "x": 2,
+          "y": 3
+        },
+        "size": {
+          "x": 100,
+          "y": 80
+        }
+      }
+    ],
+    "mirrorInRtl": false,
+    "zOrder": 8,
+    "componentSource": "00000385-0000-4000-8000-000000000000",
+    "componentVariant": "compact",
+    "focusable": true,
+    "tabIndex": 3,
+    "focusUp": "00000386-0000-4000-8000-000000000000",
+    "focusDown": "00000387-0000-4000-8000-000000000000",
+    "focusLeft": "00000388-0000-4000-8000-000000000000",
+    "focusRight": "00000389-0000-4000-8000-000000000000",
+    "accessibilityRole": "region",
+    "accessibilityLabel": "Label 中文",
+    "accessibilityDescription": "Description 🙂",
+    "accessibilityState": "expanded",
+    "accessibilityValue": "Value",
+    "accessibilityLive": "Polite",
+    "accessibilityHidden": true,
+    "readingOrder": 8,
+    "skipNavigation": false,
+    "remapAction": "jump",
+    "remapBindingIndex": 2
+  },
+  "Panel": {
+    "color": {
+      "r": 11,
+      "g": 22,
+      "b": 33
+    },
+    "opacity": 76,
+    "cornerRadius": 13,
+    "layout": "Flow",
+    "gap": 12,
+    "padding": {
+      "left": 3,
+      "top": 4,
+      "right": 5,
+      "bottom": 6
+    },
+    "columns": 3,
+    "wrap": true,
+    "align": "Center",
+    "justify": "SpaceBetween",
+    "clipChildren": true,
+    "maskChildren": true,
+    "scrollHorizontal": true,
+    "scrollVertical": true,
+    "scrollOffset": {
+      "x": 22,
+      "y": 33
+    },
+    "contentSize": {
+      "x": 600,
+      "y": 900
+    },
+    "showScrollbars": false,
+    "scrollSpeed": 61,
+    "behavior": "Popup",
+    "visible": false,
+    "closeOnOutside": false,
+    "draggable": true,
+    "dropGroup": "cards",
+    "tooltipText": "Helpful 中文",
+    "tooltipDelay": 0.8,
+    "styleClass": "custom-panel",
+    "styleOverrides": {
+      "background": "#223344",
+      "foreground": "#fedcba",
+      "border": "#778899",
+      "borderWidth": 3,
+      "cornerRadius": 9,
+      "fontSize": 21,
+      "fontWeight": 700,
+      "opacity": 0.75
+    }
+  },
+  "Image": {
+    "spriteAsset": "asset://0000038a-0000-4000-8000-000000000000",
+    "tint": {
+      "r": 201,
+      "g": 155,
+      "b": 91
+    },
+    "opacity": 77,
+    "preserveAspect": false,
+    "nineSlice": {
+      "enabled": true,
+      "left": 3,
+      "top": 4,
+      "right": 5,
+      "bottom": 6
+    }
+  },
+  "Text": {
+    "text": "Saved\n中文 🙂",
+    "fontAsset": "asset://0000038b-0000-4000-8000-000000000000",
+    "fontFamily": "Example Font, sans-serif",
+    "fontSize": 31,
+    "fontWeight": 700,
+    "align": "start",
+    "color": {
+      "r": 101,
+      "g": 102,
+      "b": 103
+    },
+    "opacity": 88,
+    "localizationKey": "ui.greeting",
+    "localizationVariables": {
+      "count": 2,
+      "name": "Ada",
+      "ready": true
+    },
+    "wrap": "Character",
+    "overflow": "Ellipsis",
+    "inputPromptAction": "jump",
+    "captionCategory": "Effects"
+  },
+  "Button": {
+    "interactable": false,
+    "state": "Pressed",
+    "normalColor": {
+      "r": 10,
+      "g": 11,
+      "b": 12
+    },
+    "hoveredColor": {
+      "r": 20,
+      "g": 21,
+      "b": 22
+    },
+    "pressedColor": {
+      "r": 30,
+      "g": 31,
+      "b": 32
+    },
+    "disabledColor": {
+      "r": 40,
+      "g": 41,
+      "b": 42
+    },
+    "onPressed": "play_menu",
+    "onHoverEnter": "hover_menu",
+    "onHoverExit": "leave_menu",
+    "pressAudio": "asset://0000038c-0000-4000-8000-000000000000",
+    "hoverAudio": "asset://0000038d-0000-4000-8000-000000000000",
+    "focusAudio": "asset://0000038e-0000-4000-8000-000000000000",
+    "styleClass": "custom-button",
+    "styleOverrides": {
+      "background": "#223344",
+      "foreground": "#fedcba",
+      "border": "#778899",
+      "borderWidth": 3,
+      "cornerRadius": 9,
+      "fontSize": 21,
+      "fontWeight": 700,
+      "opacity": 0.75
+    }
+  },
+  "Slider": {
+    "min": -10,
+    "max": 20,
+    "value": 8,
+    "wholeNumbers": true,
+    "interactable": false,
+    "styleClass": "custom-slider",
+    "styleOverrides": {
+      "background": "#223344",
+      "foreground": "#fedcba",
+      "border": "#778899",
+      "borderWidth": 3,
+      "cornerRadius": 9,
+      "fontSize": 21,
+      "fontWeight": 700,
+      "opacity": 0.75
+    }
+  },
+  "ProgressBar": {
+    "min": -20,
+    "max": 80,
+    "value": 17,
+    "fillColor": {
+      "r": 71,
+      "g": 72,
+      "b": 73
+    },
+    "backgroundColor": {
+      "r": 81,
+      "g": 82,
+      "b": 83
+    },
+    "styleClass": "custom-progress",
+    "styleOverrides": {
+      "background": "#223344",
+      "foreground": "#fedcba",
+      "border": "#778899",
+      "borderWidth": 3,
+      "cornerRadius": 9,
+      "fontSize": 21,
+      "fontWeight": 700,
+      "opacity": 0.75
+    }
+  },
+  "Checkbox": {
+    "checked": true,
+    "interactable": false,
+    "label": "Sound 中文",
+    "localizationKey": "ui.sound",
+    "styleClass": "custom-check",
+    "styleOverrides": {
+      "background": "#223344",
+      "foreground": "#fedcba",
+      "border": "#778899",
+      "borderWidth": 3,
+      "cornerRadius": 9,
+      "fontSize": 21,
+      "fontWeight": 700,
+      "opacity": 0.75
+    }
+  },
+  "TextInput": {
+    "value": "Player 中文🙂",
+    "placeholder": "Enter 中文",
+    "maxLength": 37,
+    "interactable": false,
+    "password": true,
+    "styleClass": "custom-input",
+    "styleOverrides": {
+      "background": "#223344",
+      "foreground": "#fedcba",
+      "border": "#778899",
+      "borderWidth": 3,
+      "cornerRadius": 9,
+      "fontSize": 21,
+      "fontWeight": 700,
+      "opacity": 0.75
+    }
+  }
+}

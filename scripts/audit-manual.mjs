@@ -3,12 +3,14 @@ import { resolve } from 'node:path'
 
 const root = process.cwd(), manuals = ['MANUAL.en.md', 'MANUAL.de.md', 'MANUAL.zh-CN.md']
 const engineVersion = JSON.parse(await readFile(resolve(root, 'package.json'), 'utf8')).version
-const publicRelease = new Map([['26.8.0', '26.08'], ['26.9.0', '26.09'], ['26.10.0', '26.10']]).get(engineVersion) ?? engineVersion
-const requiredReleaseLessons = engineVersion === '26.10.0'
+const calendar = /^(\d{2})\.(\d{1,2})\.0$/.exec(engineVersion)
+const publicRelease = calendar && Number(calendar[1]) >= 26 && Number(calendar[2]) >= 1 ? `${calendar[1]}.${calendar[2].padStart(2, '0')}` : engineVersion
+const milestone = calendar && Number(calendar[1]) >= 26 ? Number(calendar[1]) * 100 + Number(calendar[2]) : 0
+const requiredReleaseLessons = milestone >= 2610
   ? ['v2608-device-mobile-accessibility', 'v2609-large-world-performance', 'v2610-stable-platform']
-  : engineVersion === '26.9.0'
+  : milestone >= 2609
     ? ['v2608-device-mobile-accessibility', 'v2609-large-world-performance']
-    : engineVersion === '26.8.0'
+    : milestone >= 2608
       ? ['v2608-device-mobile-accessibility']
       : []
 const components = ['Transform2D', 'Camera2D', 'SpriteRenderer2D', 'ShapeRenderer2D', 'TextRenderer2D', 'RigidBody2D', 'BoxCollider2D', 'EllipseCollider2D', 'PolygonCollider2D', 'FixedJoint2D', 'DistanceJoint2D', 'RevoluteJoint2D', 'PrismaticJoint2D', 'SpringJoint2D', 'Rope2D', 'Script2D', 'Animator', 'AudioSource', 'AudioListener', 'ParticleEmitter2D', 'Canvas', 'RectTransform', 'Image', 'Text', 'Button', 'Slider', 'ProgressBar', 'Checkbox', 'TextInput', 'TileMap2D', 'Skeleton2D', 'TimelinePlayer']

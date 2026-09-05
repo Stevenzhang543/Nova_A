@@ -1,6 +1,6 @@
 <template>
   <Teleport to="body">
-    <section v-if="state.workspaceManagerOpen" class="scrim" role="dialog" aria-modal="true" :aria-label="t('manageWorkspaces')" @mousedown.self="close" @keydown.esc="close">
+    <section v-if="state.workspaceManagerOpen" class="scrim" role="dialog" aria-modal="true" v-modal-focus :aria-label="t('manageWorkspaces')" @mousedown.self="close" @keydown.esc="close">
       <article>
         <header><div><strong>{{ t('manageWorkspaces') }}</strong><small>{{ t('workspaceManagerHint') }}</small></div><button :title="t('close')" @click="close">×</button></header>
         <div class="scope"><span>{{ t('layoutScope') }}</span><button :class="{ active: prefs.workspaceLayoutScope === 'user' }" @click="prefs.workspaceLayoutScope = 'user'">{{ t('editorScope') }}</button><button :class="{ active: prefs.workspaceLayoutScope === 'project' }" @click="prefs.workspaceLayoutScope = 'project'">{{ t('projectScope') }}</button></div>
@@ -13,7 +13,7 @@
           </nav>
           <main>
             <label><span>{{ t('workspaceName') }}</span><input v-model.trim="name" maxlength="48" :placeholder="t('workspaceName')"></label>
-            <div class="actions"><button class="primary" @click="saveNew">{{ t('saveCurrentWorkspace') }}</button><button :disabled="!selected" @click="duplicate">{{ t('duplicateWorkspace') }}</button><button :disabled="!selectedCustom || !name" @click="rename">{{ t('renameWorkspace') }}</button><button :disabled="!selectedCustom" @click="saveChanges">{{ t('updateWorkspace') }}</button></div>
+            <div class="actions"><button class="primary" :disabled="!selected" @click="applySelected">{{ applyLabel }}</button><button @click="saveNew">{{ t('saveCurrentWorkspace') }}</button><button :disabled="!selected" @click="duplicate">{{ t('duplicateWorkspace') }}</button><button :disabled="!selectedCustom || !name" @click="rename">{{ t('renameWorkspace') }}</button><button :disabled="!selectedCustom" @click="saveChanges">{{ t('updateWorkspace') }}</button></div>
             <div class="dock-grid">
               <fieldset><legend>{{ t('hierarchyDock') }}</legend><button :class="{ active: state.hierarchyDock === 'left' && !workspaceState.floatingPanels.includes('hierarchy') }" @click="dockEditorPanel('hierarchy','left')">{{ t('left') }}</button><button :class="{ active: state.hierarchyDock === 'right' && !workspaceState.floatingPanels.includes('hierarchy') }" @click="dockEditorPanel('hierarchy','right')">{{ t('right') }}</button><button :class="{ active: workspaceState.floatingPanels.includes('hierarchy') }" @click="dockEditorPanel('hierarchy','floating')">{{ t('floating') }}</button><label><input :checked="workspaceState.hierarchyPinned" type="checkbox" @change="setPanelPinned('hierarchy', ($event.target as HTMLInputElement).checked)">{{ t('pinPanel') }}</label></fieldset>
               <fieldset><legend>{{ t('inspectorDock') }}</legend><button :class="{ active: state.inspectorDock === 'left' && !workspaceState.floatingPanels.includes('inspector') }" @click="dockEditorPanel('inspector','left')">{{ t('left') }}</button><button :class="{ active: state.inspectorDock === 'right' && !workspaceState.floatingPanels.includes('inspector') }" @click="dockEditorPanel('inspector','right')">{{ t('right') }}</button><button :class="{ active: workspaceState.floatingPanels.includes('inspector') }" @click="dockEditorPanel('inspector','floating')">{{ t('floating') }}</button><label><input :checked="workspaceState.inspectorPinned" type="checkbox" @change="setPanelPinned('inspector', ($event.target as HTMLInputElement).checked)">{{ t('pinPanel') }}</label></fieldset>
@@ -28,19 +28,27 @@
   </Teleport>
 </template>
 <script setup lang="ts">
+import { vModalFocus } from '../editor/modalFocus'
 import { computed, ref, watch } from 'vue'
 import { t } from '../i18n'
 import { editorState as state } from '../store/editor'
 import { preferencesState as prefs } from '../store/preferences'
-import { WORKSPACE_PRESETS, WORKSPACE_PROFILE_PRESETS, applyWorkspaceProfile, dockEditorPanel, duplicateWorkspace, exportWorkspaces, importWorkspaces, removeWorkspace, renameWorkspace, resetEditorLayout, saveCurrentWorkspace, setPanelPinned, workspaceState } from '../editor/workspaces'
+import { WORKSPACE_PRESETS, WORKSPACE_PROFILE_PRESETS, applyNamedWorkspace, applyWorkspaceProfile, dockEditorPanel, duplicateWorkspace, exportWorkspaces, importWorkspaces, removeWorkspace, renameWorkspace, resetEditorLayout, saveCurrentWorkspace, setPanelPinned, workspaceState } from '../editor/workspaces'
 import { reportRecoverableError } from '../runtime/faultCenter'
 const selected = ref('design'), name = ref(''), status = ref(''), fileInput = ref<HTMLInputElement | null>(null)
 const selectedCustom = computed(() => workspaceState.custom.find(item => item.id === selected.value) ?? null)
+const applyLabel = computed(() => ({ en: 'Apply workspace', de: 'Arbeitsbereich anwenden', zh: '应用工作区' })[prefs.locale])
 watch(selectedCustom, item => { name.value = item?.name ?? '' }, { immediate: true })
 function close() { state.workspaceManagerOpen = false }
+function applySelected() {
+  if (!applyNamedWorkspace(selected.value)) return
+  const label = selectedCustom.value?.name ?? t(WORKSPACE_PRESETS.find(item => item.id === selected.value)!.label)
+  state.statusText = t('workspaceActivated', { workspace: label })
+  close()
+}
 function useProfile(id: string) { if (applyWorkspaceProfile(id)) { status.value = t('workspaceProfileApplied'); close() } }
-function saveNew() { const item = saveCurrentWorkspace(name.value || undefined); selected.value = item.id; name.value = item.name; status.value = t('workspaceSaved') }
-function duplicate() { const item = duplicateWorkspace(selected.value, name.value ? `${name.value} Copy` : undefined); if (item) { selected.value = item.id; name.value = item.name; status.value = t('workspaceDuplicated') } }
+function saveNew() { try { const item = saveCurrentWorkspace(name.value || undefined); selected.value = item.id; name.value = item.name; status.value = t('workspaceSaved') } catch(error) { status.value = error instanceof Error ? error.message : String(error) } }
+function duplicate() { try { const item = duplicateWorkspace(selected.value, name.value ? `${name.value} Copy` : undefined); if (item) { selected.value = item.id; name.value = item.name; status.value = t('workspaceDuplicated') } } catch(error) { status.value = error instanceof Error ? error.message : String(error) } }
 function rename() { if (selectedCustom.value && renameWorkspace(selectedCustom.value.id, name.value)) status.value = t('workspaceRenamed') }
 function saveChanges() { if (selectedCustom.value) { workspaceState.selectedCustomId = selectedCustom.value.id; saveCurrentWorkspace(); status.value = t('workspaceUpdated') } }
 function remove() { if (selectedCustom.value && removeWorkspace(selectedCustom.value.id)) { selected.value = 'design'; name.value = ''; status.value = t('workspaceDeleted') } }

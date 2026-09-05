@@ -223,7 +223,7 @@ try {
   report.severity0Open = 0
   report.severity1Open = report.status === 'passed' ? 0 : 1
   await writeFile(join(evidenceRoot, `v${qualificationVersion}-layout-browser.json`), `${JSON.stringify(report, null, 2)}\n`, 'utf8')
-  if (report.status !== 'passed') throw new Error(`Layout qualification failed: ${results.filter(result => result.status !== 'passed').map(result => result.name).join(', ')}`)
+  if (report.status !== 'passed') throw new Error(`Layout qualification failed: ${[...results, ...requiredMatrix, ...requiredTextResults].filter(result => result.status !== 'passed').map(result => result.name ?? `${result.locale}: ${result.pattern}`).join(', ')}`)
   console.log(`Nova_A v${qualificationVersion} layout qualification passed: ${results.length - 1} panel/viewport states in three languages; ${screenshots.length} captures.`)
 } finally {
   try { await client?.send('Browser.close') } catch { /* process cleanup below */ }

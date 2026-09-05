@@ -11,7 +11,7 @@ use std::rc::Rc;
 // Rhai selects `web_time::Instant` for wasm32 and `std::time::Instant` on
 // native targets. Using its portable clock keeps graph tracing from trapping
 // before any lifecycle function can run in the editor/player WebAssembly host.
-use rhai::{Array, Dynamic, Engine, Instant, Map, Scope, AST, FLOAT, INT};
+use rhai::{Array, CallFnOptions, Dynamic, Engine, Instant, Map, Scope, AST, FLOAT, INT};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
@@ -81,6 +81,8 @@ pub struct InputSnapshot {
 #[serde(rename_all = "camelCase")]
 pub struct SceneEntitySnapshot {
     pub uuid: String,
+    #[serde(default)]
+    pub generation: u32,
     pub name: String,
     pub enabled: bool,
     #[serde(default)]
@@ -194,6 +196,12 @@ pub struct ScriptContext {
     #[serde(default = "current_script_api_version")]
     pub api_version: u8,
     pub entity: String,
+    #[serde(default)]
+    pub invocation_id: u64,
+    #[serde(default)]
+    pub callback_kind: String,
+    #[serde(default)]
+    pub entity_generations: BTreeMap<String, u32>,
     #[serde(default)]
     pub entity_name: String,
     #[serde(default)]
@@ -550,6 +558,20 @@ pub struct ScriptRuntime {
 }
 
 impl ScriptRuntime {
+    /// Discover actual script functions without executing module statements.
+    /// Receiver methods are not callable as test/lifecycle callbacks.
+    pub fn function_names(&self, source: &str) -> Result<Vec<String>, String> {
+        let prepared = prepare_script(source)?;
+        let ast = base_engine()
+            .compile(&prepared.source)
+            .map_err(|error| error.to_string())?;
+        Ok(ast
+            .iter_functions()
+            .filter(|function| function.this_type.is_none())
+            .map(|function| function.name.to_owned())
+            .collect())
+    }
+
     pub fn new() -> Self {
         Self::default()
     }
@@ -685,6 +707,22 @@ fn base_engine() -> Engine {
     engine.set_max_map_size(MAX_SCRIPT_MAP_SIZE);
     engine.disable_symbol("eval");
     engine.disable_symbol("import");
+    engine.disable_symbol("sleep");
+    // A VM operation budget cannot interrupt an OS thread sleep, and sleeping
+    // traps on wasm32-unknown-unknown. Guard function-pointer dispatch as well
+    // as direct syntax; scripts should schedule timers/tasks through the host.
+    engine.register_fn(
+        "sleep",
+        |_seconds: INT| -> Result<(), Box<rhai::EvalAltResult>> {
+            Err("Blocking sleep is disabled; use Nova_A timer/task scheduling".into())
+        },
+    );
+    engine.register_fn(
+        "sleep",
+        |_seconds: FLOAT| -> Result<(), Box<rhai::EvalAltResult>> {
+            Err("Blocking sleep is disabled; use Nova_A timer/task scheduling".into())
+        },
+    );
     engine
 }
 
@@ -730,8 +768,9 @@ fn engine_with_host(context: &ScriptContext, output: Rc<RefCell<HostOutput>>) ->
         symbol.split('_').next().unwrap_or(symbol).to_owned()
     });
     let entity = context.entity.clone();
+    let generation = context.entity_generations.get(&entity).copied();
     engine.register_fn("entity_handle", move || {
-        handle_map(true, "Entity", &entity, "")
+        entity_handle_map(&entity, generation)
     });
     let entity_name = context.entity_name.clone();
     engine.register_fn("entity_name", move || entity_name.clone());
@@ -740,10 +779,11 @@ fn engine_with_host(context: &ScriptContext, output: Rc<RefCell<HostOutput>>) ->
         entities.get(name).cloned().unwrap_or_default()
     });
     let entities = context.entities.clone();
+    let generations = context.entity_generations.clone();
     engine.register_fn("find_entity_handle", move |name: &str| {
         entities
             .get(name)
-            .map(|id| handle_map(true, "Entity", id, ""))
+            .map(|id| entity_handle_map(id, generations.get(id).copied()))
             .unwrap_or_else(|| handle_map(false, "Entity", "", "Entity not found"))
     });
     let components = context.components.clone();
@@ -845,6 +885,17 @@ fn handle_generation(id: &str) -> u32 {
     id.bytes().fold(2_166_136_261_u32, |hash, byte| {
         hash.wrapping_mul(16_777_619) ^ u32::from(byte)
     })
+}
+
+fn entity_handle_map(id: &str, generation: Option<u32>) -> Map {
+    let mut handle = handle_map(true, "Entity", id, "");
+    if let Some(generation) = generation {
+        handle.insert(
+            "generation".into(),
+            Dynamic::from_int(INT::from(generation)),
+        );
+    }
+    handle
 }
 
 fn target_from_handle(handle: Map) -> Option<(String, u32)> {
@@ -1004,7 +1055,12 @@ fn bounded_query_handles<'a>(
     let maximum = usize::try_from(limit.clamp(0, 256)).unwrap_or(0);
     values
         .take(maximum)
-        .map(|entity| Dynamic::from_map(handle_map(true, "Entity", &entity.uuid, "")))
+        .map(|entity| {
+            Dynamic::from_map(entity_handle_map(
+                &entity.uuid,
+                (entity.generation != 0).then_some(entity.generation),
+            ))
+        })
         .collect()
 }
 
@@ -1013,10 +1069,15 @@ fn scene_entity_from_handle(
     entities: &[SceneEntitySnapshot],
 ) -> Option<&SceneEntitySnapshot> {
     let (id, generation) = target_from_handle(handle)?;
-    if handle_generation(&id) != generation {
-        return None;
-    }
-    entities.iter().find(|entity| entity.uuid == id)
+    entities.iter().find(|entity| {
+        entity.uuid == id
+            && generation
+                == if entity.generation == 0 {
+                    handle_generation(&id)
+                } else {
+                    entity.generation
+                }
+    })
 }
 
 fn register_time_api(engine: &mut Engine, context: &ScriptContext) {
@@ -1746,6 +1807,7 @@ fn register_command_api(
     let commands = Rc::clone(&output);
     let pending_serial = Rc::new(RefCell::new(0_u64));
     let source_entity = context.entity.clone();
+    let invocation_id = context.invocation_id;
     engine.register_fn(
         "spawn_at",
         move |prefab: &str, x: FLOAT, y: FLOAT, rotation: FLOAT, scale_x: FLOAT, scale_y: FLOAT| {
@@ -1769,7 +1831,7 @@ fn register_command_api(
                 *value = value.saturating_add(1);
                 *value
             };
-            let pending_id = format!("pending:{source_entity}:{serial}");
+            let pending_id = format!("pending:{source_entity}:{invocation_id}:{serial}");
             commands.borrow_mut().commands.push(ScriptCommand::SpawnAt {
                 pending_id: pending_id.clone(),
                 prefab,
@@ -2210,13 +2272,41 @@ fn call_lifecycle(
     if !exists {
         return Ok(());
     }
-    let result = match function {
-        "update" | "late_update" => {
-            engine.call_fn::<Dynamic>(scope, ast, function, (context.time.delta,))
-        }
-        "fixed_update" => {
-            engine.call_fn::<Dynamic>(scope, ast, function, (context.time.fixed_delta,))
-        }
+    // execute_prepared already initialized this scope. Re-evaluating the AST
+    // would duplicate top-level commands and shadow the exported properties
+    // whose callback changes must be returned to the host.
+    let options = CallFnOptions::new().eval_ast(false);
+    let family = match context.callback_kind.as_str() {
+        "update" | "late_update" | "fixed_update" | "on_timer" | "on_task" | "on_signal"
+        | "on_collision_enter" | "on_collision_stay" | "on_collision_exit" | "on_trigger_enter"
+        | "on_trigger_stay" | "on_trigger_exit" => context.callback_kind.as_str(),
+        _ => function,
+    };
+    // Existing custom handlers without parameters remain callable. Typed custom
+    // handlers receive their event family's arguments just like canonical names.
+    let family = if family != function
+        && ast.iter_functions().any(|entry| {
+            entry.name == function && entry.this_type.is_none() && entry.params.is_empty()
+        }) {
+        ""
+    } else {
+        family
+    };
+    let result = match family {
+        "update" | "late_update" => engine.call_fn_with_options::<Dynamic>(
+            options,
+            scope,
+            ast,
+            function,
+            (context.time.delta,),
+        ),
+        "fixed_update" => engine.call_fn_with_options::<Dynamic>(
+            options,
+            scope,
+            ast,
+            function,
+            (context.time.fixed_delta,),
+        ),
         "on_timer" => {
             let name = context
                 .event
@@ -2229,7 +2319,7 @@ fn call_lifecycle(
                         .map(|contact| contact.other_entity.clone())
                 })
                 .unwrap_or_default();
-            engine.call_fn::<Dynamic>(scope, ast, function, (name,))
+            engine.call_fn_with_options::<Dynamic>(options, scope, ast, function, (name,))
         }
         "on_task" => {
             let name = context
@@ -2237,17 +2327,24 @@ fn call_lifecycle(
                 .as_ref()
                 .map(|event| event.name.clone())
                 .unwrap_or_default();
-            engine.call_fn::<Dynamic>(scope, ast, function, (name,))
+            engine.call_fn_with_options::<Dynamic>(options, scope, ast, function, (name,))
         }
         "on_signal" => {
             let event = context.event.clone().unwrap_or_default();
             let payload = json_to_dynamic(&event.payload).unwrap_or(Dynamic::UNIT);
-            engine.call_fn::<Dynamic>(scope, ast, function, (event.name, payload, event.source))
+            engine.call_fn_with_options::<Dynamic>(
+                options,
+                scope,
+                ast,
+                function,
+                (event.name, payload, event.source),
+            )
         }
         "on_collision_enter" | "on_collision_stay" | "on_collision_exit" | "on_trigger_enter"
         | "on_trigger_stay" | "on_trigger_exit" => {
             let contact = context.contact.clone().unwrap_or_default();
-            engine.call_fn::<Dynamic>(
+            engine.call_fn_with_options::<Dynamic>(
+                options,
                 scope,
                 ast,
                 function,
@@ -2262,7 +2359,7 @@ fn call_lifecycle(
                 ),
             )
         }
-        _ => engine.call_fn::<Dynamic>(scope, ast, function, ()),
+        _ => engine.call_fn_with_options::<Dynamic>(options, scope, ast, function, ()),
     };
     result.map(|_| ()).map_err(|error| error.to_string())
 }
@@ -2647,6 +2744,33 @@ mod tests {
     }
 
     #[test]
+    fn lifecycle_runs_global_initialization_once_and_retains_export_changes() {
+        let source = r#"
+            @export let counter = 0;
+            score_add(1.0);
+            fn update(dt) { counter += 1; }
+        "#;
+        let execution = ScriptRuntime::new()
+            .execute(source, "update", context())
+            .unwrap();
+        assert_eq!(
+            execution.commands,
+            vec![ScriptCommand::ScoreAdd { value: 1.0 }]
+        );
+        assert_eq!(execution.properties["counter"], 1);
+
+        let mut next_context = context();
+        next_context.properties = execution.properties;
+        let mut cached = ScriptRuntime::new();
+        cached.upsert("counter", source).unwrap();
+        let next = cached
+            .execute_cached("counter", "update", next_context)
+            .unwrap();
+        assert_eq!(next.commands, vec![ScriptCommand::ScoreAdd { value: 1.0 }]);
+        assert_eq!(next.properties["counter"], 2);
+    }
+
+    #[test]
     fn exported_graph_values_cross_the_sandbox_boundary() {
         let source = r#"
             @export(type="vec2") let direction = [2.0, -1.0];
@@ -2983,6 +3107,7 @@ mod tests {
         let mut script_context = context();
         script_context.scene_entities = vec![SceneEntitySnapshot {
             uuid: "enemy-1".into(),
+            generation: 0,
             name: "Enemy".into(),
             enabled: true,
             tags: vec!["enemy".into()],
@@ -3026,10 +3151,10 @@ mod tests {
             .expect("v5.4 gameplay API executes");
         assert!(execution.logs.is_empty());
         assert!(
-            matches!(&execution.commands[0], ScriptCommand::SpawnAt { pending_id, prefab, .. } if pending_id == "pending:entity-1:1" && prefab == "asset://bullet")
+            matches!(&execution.commands[0], ScriptCommand::SpawnAt { pending_id, prefab, .. } if pending_id == "pending:entity-1:0:1" && prefab == "asset://bullet")
         );
         assert!(
-            matches!(&execution.commands[1], ScriptCommand::TargetSetPosition { target, .. } if target == "pending:entity-1:1")
+            matches!(&execution.commands[1], ScriptCommand::TargetSetPosition { target, .. } if target == "pending:entity-1:0:1")
         );
         assert!(
             matches!(&execution.commands[2], ScriptCommand::TargetAddTag { target, tag, .. } if target == "enemy-1" && tag == "targeted")
@@ -3042,6 +3167,81 @@ mod tests {
         let serialized = serde_json::to_value(&execution.commands[1]).expect("command bridge");
         assert_eq!(serialized["type"], "targetSetPosition");
         assert!(serialized.get("generation").is_some());
+    }
+
+    #[test]
+    fn entity_lifetime_generations_cross_reads_queries_and_commands() {
+        let mut script_context = context();
+        script_context.entity_generations =
+            BTreeMap::from([("entity-1".into(), 41), ("enemy-1".into(), 73)]);
+        script_context
+            .entities
+            .insert("Enemy".into(), "enemy-1".into());
+        script_context.scene_entities = vec![SceneEntitySnapshot {
+            uuid: "enemy-1".into(),
+            generation: 73,
+            name: "Enemy".into(),
+            enabled: true,
+            tags: vec!["enemy".into()],
+            groups: vec![],
+            components: vec![],
+            position: [4.0, 2.0],
+        }];
+        let execution = ScriptRuntime::new().execute(r#"
+            fn update(dt) {
+                expect(entity_handle().generation == 41, "self lifetime");
+                let found = find_entity_handle("Enemy");
+                let queried = query_tag("enemy", 1)[0];
+                expect(found.generation == 73 && queried.generation == 73, "target lifetime");
+                expect(entity_name_on(found) == "Enemy" && entity_position_x_on(queried) == 4.0, "fresh query");
+                let stale = found; stale.generation = 72;
+                expect(entity_name_on(stale) == "" && !entity_enabled_on(stale), "stale query rejected");
+                entity_set_position(found, 3.0, 5.0);
+            }
+        "#, "update", script_context).unwrap();
+        assert!(execution.logs.is_empty());
+        assert!(
+            matches!(&execution.commands[0], ScriptCommand::TargetSetPosition { generation: 73, target, .. } if target == "enemy-1")
+        );
+    }
+
+    #[test]
+    fn pending_spawn_handles_are_unique_across_callback_invocations() {
+        let source = r#"fn update(dt) { let item = spawn_at("asset://bullet", 0.0, 0.0, 0.0, 1.0, 1.0); entity_set_position(item, 2.0, 0.0); }"#;
+        let mut first = context();
+        first.invocation_id = 81;
+        let mut second = context();
+        second.invocation_id = 82;
+        let runtime = ScriptRuntime::new();
+        let a = runtime.execute(source, "update", first).unwrap();
+        let b = runtime.execute(source, "update", second).unwrap();
+        for (execution, expected) in [(&a, "pending:entity-1:81:1"), (&b, "pending:entity-1:82:1")]
+        {
+            assert!(
+                matches!(&execution.commands[0], ScriptCommand::SpawnAt { pending_id, .. } if pending_id == expected)
+            );
+            assert!(
+                matches!(&execution.commands[1], ScriptCommand::TargetSetPosition { target, generation, .. } if target == expected && *generation == handle_generation(expected))
+            );
+        }
+    }
+
+    #[test]
+    fn legacy_context_omitting_lifetime_metadata_still_deserializes() {
+        let old: ScriptContext =
+            serde_json::from_value(serde_json::json!({ "entity": "legacy" })).unwrap();
+        assert_eq!(old.invocation_id, 0);
+        assert!(old.entity_generations.is_empty());
+        let execution = ScriptRuntime::new()
+            .execute(
+                "fn start(){ let h = entity_handle(); entity_set_position(h, 1.0, 2.0); }",
+                "start",
+                old,
+            )
+            .unwrap();
+        assert!(
+            matches!(execution.commands[0], ScriptCommand::TargetSetPosition { generation, .. } if generation == handle_generation("legacy"))
+        );
     }
 
     #[test]
@@ -3203,5 +3403,58 @@ mod tests {
             )
             .expect_err("oversized script array must be rejected");
         assert!(error.to_lowercase().contains("array"), "{error}");
+    }
+
+    #[test]
+    fn custom_event_callbacks_receive_family_arguments_and_keep_zero_arg_compatibility() {
+        let runtime = ScriptRuntime::new();
+        for (family, source, expected) in [
+            ("on_task", "fn custom(name) { log_info(name); }", "task"),
+            ("on_timer", "fn custom(name) { log_info(name); }", "task"),
+            (
+                "on_signal",
+                "fn custom(name, payload, source) { log_info(name + payload.n + source); }",
+                "task7sender",
+            ),
+            ("on_task", "fn custom() { log_info(\"legacy\"); }", "legacy"),
+        ] {
+            let mut input = context();
+            input.callback_kind = family.into();
+            input.event = Some(EventSnapshot {
+                name: "task".into(),
+                source: "sender".into(),
+                payload: serde_json::json!({"n":7}),
+            });
+            let result = runtime.execute(source, "custom", input).unwrap();
+            assert_eq!(result.logs[0].message, expected);
+        }
+        let mut input = context();
+        input.callback_kind = "update".into();
+        input.time.delta = 0.25;
+        assert!(runtime
+            .execute(
+                "fn custom(dt) { expect(dt == 0.25, \"delta\"); }",
+                "custom",
+                input
+            )
+            .unwrap()
+            .logs
+            .is_empty());
+    }
+
+    #[test]
+    fn sandbox_rejects_blocking_sleep_including_function_pointers() {
+        let runtime = ScriptRuntime::new();
+        for source in [
+            "fn update(dt) { sleep(0); }",
+            "fn update(dt) { sleep(0.0); }",
+            "fn update(dt) { Fn(\"sleep\").call(0); }",
+            "fn update(dt) { Fn(\"sleep\").call(0.0); }",
+        ] {
+            let error = runtime
+                .execute(source, "update", context())
+                .expect_err("direct and indirect sleep must never block a VM callback");
+            assert!(error.to_lowercase().contains("sleep"), "{error}");
+        }
     }
 }

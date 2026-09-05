@@ -11,7 +11,7 @@ pub const PROJECT_FORMAT_NAME: &str = "Nova_A Project Format 2";
 pub const PROJECT_FORMAT_MAJOR: u32 = 2;
 pub const CURRENT_FORMAT_VERSION: u32 = 29;
 pub const MINIMUM_SUPPORTED_FORMAT_VERSION: u32 = 5;
-pub const CURRENT_ENGINE_VERSION: &str = "26.10.0";
+pub const CURRENT_ENGINE_VERSION: &str = "26.16.0";
 
 fn default_named_physics_layers() -> Value {
     let colors = [
@@ -240,19 +240,22 @@ pub fn migrate_project_value(value: Value) -> Result<ProjectFile, FormatError> {
     } else {
         root.remove("projectSettings")
     };
-    let source_version = root
-        .get("formatVersion")
-        .and_then(Value::as_u64)
-        .unwrap_or(1) as u32;
+    let read_version = |field: &str| -> Result<u32, FormatError> {
+        match root.get(field) {
+            None => Ok(1),
+            Some(value) => value
+                .as_u64()
+                .and_then(|value| u32::try_from(value).ok())
+                .ok_or_else(|| FormatError(format!("{field} must be an unsigned 32-bit integer"))),
+        }
+    };
+    let source_version = read_version("formatVersion")?;
     let source_engine_version = root
         .get("engineVersion")
         .and_then(Value::as_str)
         .unwrap_or("legacy")
         .to_owned();
-    let source_major = root
-        .get("projectFormatMajor")
-        .and_then(Value::as_u64)
-        .unwrap_or(1) as u32;
+    let source_major = read_version("projectFormatMajor")?;
     if source_major > PROJECT_FORMAT_MAJOR {
         return Err(FormatError(format!(
             "project format major {source_major} is newer than supported major {PROJECT_FORMAT_MAJOR}"
@@ -1435,6 +1438,18 @@ fn is_standard_component_kind(kind: &str) -> bool {
             | "TextInput"
             | "TileMap2D"
             | "CharacterBody2D"
+            | "GridMover2D"
+            | "PlatformController2D"
+            | "TopDownController2D"
+            | "Health2D"
+            | "DamageHitbox2D"
+            | "Collectible2D"
+            | "Projectile2D"
+            | "Spawner2D"
+            | "Cooldown2D"
+            | "Lifetime2D"
+            | "MouseFollower2D"
+            | "CameraFollow2D"
             | "Area2D"
             | "AreaEffector2D"
             | "NavigationRegion2D"
@@ -3655,6 +3670,24 @@ mod tests {
     }
 
     #[test]
+    fn schema_versions_cannot_wrap_or_silently_fall_back_to_legacy() {
+        for field in ["formatVersion", "projectFormatMajor"] {
+            for version in [
+                json!(4_294_967_297_u64),
+                json!(-1),
+                json!(1.5),
+                json!("29"),
+                Value::Null,
+            ] {
+                let mut source = json!({"entities": []});
+                source[field] = version;
+                assert!(migrate_project_value(source).unwrap_err().0.contains(field));
+            }
+        }
+        assert!(migrate_project_value(json!({"entities": []})).is_ok());
+    }
+
+    #[test]
     fn schema_19_adds_valid_world_settings_and_preserves_unknown_world_fields() {
         let scene = deterministic_uuid("schema-19-scene");
         let source = json!({
@@ -4080,6 +4113,51 @@ mod tests {
             restored.scenes[0].entities[1].components[1].data["properties"]["speed"],
             7.5
         );
+    }
+
+    #[test]
+    fn gameplay_template_components_survive_project_round_trip() {
+        let kinds = [
+            "GridMover2D",
+            "PlatformController2D",
+            "TopDownController2D",
+            "Health2D",
+            "DamageHitbox2D",
+            "Collectible2D",
+            "Projectile2D",
+            "Spawner2D",
+            "Cooldown2D",
+            "Lifetime2D",
+            "MouseFollower2D",
+            "CameraFollow2D",
+        ];
+        let scene = deterministic_uuid("gameplay-component-scene");
+        let entities: Vec<Value> = kinds.iter().map(|kind| json!({
+            "uuid": deterministic_uuid(&format!("entity-{kind}")), "name": kind,
+            "components": [
+                {"uuid":deterministic_uuid(&format!("transform-{kind}")), "kind":"Transform2D", "data":{}},
+                {"uuid":deterministic_uuid(&format!("component-{kind}")), "kind":kind, "data":{"testValue":7.5}}
+            ]
+        })).collect();
+        let source = json!({"formatVersion":CURRENT_FORMAT_VERSION,"activeSceneUuid":scene,"assets":[],
+            "scenes":[{"uuid":scene,"name":"Gameplay","entities":entities,"connections":[]}]});
+        let project = migrate_project_value(source).unwrap();
+        let encoded = serde_json::to_string(&project).unwrap();
+        let restored: ProjectFile = serde_json::from_str(&encoded).unwrap();
+        validate_project(&restored).unwrap();
+        for (index, kind) in kinds.iter().enumerate() {
+            assert_eq!(restored.scenes[0].entities[index].components[1].kind, *kind);
+            assert_eq!(
+                restored.scenes[0].entities[index].components[1].data["testValue"],
+                7.5
+            );
+        }
+        let mut invalid = restored;
+        invalid.scenes[0].entities[0].components[1].kind = "UnknownFutureComponent2D".into();
+        assert!(validate_project(&invalid)
+            .unwrap_err()
+            .0
+            .contains("unsupported component kind"));
     }
 
     #[test]

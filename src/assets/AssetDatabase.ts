@@ -18,10 +18,16 @@ import {
   type TextureAtlasPage
 } from './types'
 import type { TextureRegion } from '../renderer'
-import { dismissExternalAssetChange, importPipelineState, processAssetImport, retryAssetImport, stopWatchingAsset, watchAssetSource, type ImportedArtifact } from './importPipeline'
+import { clearAssetImportSession, dismissExternalAssetChange, importPipelineState, processAssetImport, retryAssetImport, stopWatchingAsset, watchAssetSource, type ImportedArtifact } from './importPipeline'
 import { buildAssetDependencyGraph, repairAssetPathReferences } from './assetGraph'
 import { assetSourceBytes, sha256Bytes } from './contentHash'
+import { assetSettingsHash } from './assetProduction'
+import { bindInterchangeTexture } from './interchangeBindings'
 import { importContentInterchangeAsync, validateInterchangeMetadata } from './contentInteroperability'
+import { applyDerivedSprite, prepareDerivedSpriteRefresh, spriteDefinitions, validateDerivedSprite } from './derivedSprites'
+import { clearDerivedSpriteTextures, resolveDerivedSpriteTexture } from './derivedSpriteTexture'
+import { BoundedImportCache } from './importRetention'
+import { readAssetPixels } from './assetPixels'
 
 export interface AssetDatabaseState {
   records: AssetRecord[]
@@ -78,8 +84,22 @@ watch(() => assetState.selectedGuid, guid => {
   assetState.recentGuids.splice(0, assetState.recentGuids.length, guid, ...assetState.recentGuids.filter(value => value !== guid).slice(0, 19))
 })
 
-const imageCache = new Map<string, HTMLImageElement>()
+const pendingImageLoads = new Map<string, HTMLImageElement>()
+const rejectedImageSources = new WeakMap<AssetRecord, { source: string; error: string }>()
+const IMAGE_CACHE_LIMITS = Object.freeze({ entries: 256, bytes: 128 * 1024 * 1024 })
+const imageCache = new BoundedImportCache<string, HTMLImageElement>(IMAGE_CACHE_LIMITS.entries, IMAGE_CACHE_LIMITS.bytes, key => {
+  const pending = pendingImageLoads.get(key)
+  if (pending) { pending.onload = null; pending.onerror = null; pending.src = ''; pendingImageLoads.delete(key) }
+})
+export function imageDecodedCacheStats() { return { entries: imageCache.size, bytes: imageCache.bytes, pending: pendingImageLoads.size, limits: IMAGE_CACHE_LIMITS } }
+const installedFonts = new Map<string, FontFace>()
 let atlasRevision = 0
+let atlasContentRevision = 0
+let assetSessionRevision = 0
+export function assetSessionVersion(): number { return assetSessionRevision }
+let decodedTextureRevision = 0
+export function textureContentRevision(): number { return decodedTextureRevision + atlasContentRevision }
+const reimportRevisions = new WeakMap<AssetRecord, number>()
 let indexRevision = -1
 let indexedRecords: AssetRecord[] = []
 let recordsByUuid = new Map<string, AssetRecord>()
@@ -194,34 +214,45 @@ export function normalizeFolder(value: string): string {
   return clean.startsWith('.') ? clean : clean.startsWith('Assets') || clean === 'ProjectSettings' ? clean : `Assets/${clean}`
 }
 
-function imageMetadata(source: string): Promise<{ width: number; height: number }> {
-  return new Promise(resolve => {
-    const image = new Image()
-    image.onload = () => resolve({ width: image.naturalWidth, height: image.naturalHeight })
-    image.onerror = () => resolve({ width: 0, height: 0 })
-    image.src = source
+function imageMetadata(source:string):Promise<{width:number;height:number}>{
+  return new Promise((resolve,reject)=>{
+    const image=new Image();let finished=false
+    const timeout=window.setTimeout(()=>finish(new Error('IMAGE_METADATA_TIMEOUT: Image decoding exceeded 15 seconds.')),15000)
+    const finish=(error?:Error)=>{if(finished)return;finished=true;window.clearTimeout(timeout);image.onload=null;image.onerror=null;if(error)reject(error);else resolve({width:image.naturalWidth,height:image.naturalHeight})}
+    image.onload=()=>finish();image.onerror=()=>finish(new Error('IMAGE_METADATA: The image could not be decoded.'));image.src=source
   })
 }
-
-function audioMetadata(source: string): Promise<number> {
-  return new Promise(resolve => {
-    const audio = new Audio()
-    const finish = (duration = 0) => { audio.removeAttribute('src'); audio.load(); resolve(Number.isFinite(duration) ? duration : 0) }
-    audio.onloadedmetadata = () => finish(audio.duration)
-    audio.onerror = () => finish()
-    audio.src = source
+function audioMetadata(source:string):Promise<number>{
+  return new Promise((resolve,reject)=>{
+    const audio=new Audio();let finished=false
+    const timeout=window.setTimeout(()=>finish(new Error('AUDIO_METADATA_TIMEOUT: Audio decoding exceeded 15 seconds.')),15000)
+    const finish=(error?:Error)=>{if(finished)return;finished=true;window.clearTimeout(timeout);const duration=audio.duration;audio.onloadedmetadata=null;audio.onerror=null;audio.removeAttribute('src');audio.load();if(error)reject(error);else if(!Number.isFinite(duration)||duration<0)reject(new Error('AUDIO_METADATA: Audio has no finite duration.'));else resolve(duration)}
+    audio.onloadedmetadata=()=>finish();audio.onerror=()=>finish(new Error('AUDIO_METADATA: The audio could not be decoded.'));audio.src=source
   })
 }
 
 function fontFamilyFor(uuid: string): string { return `NovaAsset_${uuid.replace(/-/g, '')}` }
 
+async function prepareFont(record: AssetRecord): Promise<FontFace | null> {
+  if (record.assetType !== 'font' || !record.source || !('FontFace' in window)) return null
+  const face = new FontFace(record.fontFamily || fontFamilyFor(record.uuid), `url(${JSON.stringify(record.source)})`)
+  let timeout: ReturnType<typeof setTimeout> | undefined
+  try { return await Promise.race([face.load(), new Promise<never>((_,reject)=>{timeout=setTimeout(()=>reject(new Error('FONT_METADATA_TIMEOUT: Font decoding exceeded 15 seconds.')),15000)})]) }
+  finally { if(timeout!==undefined)clearTimeout(timeout) }
+}
+function registerFont(uuid:string,face:FontFace|null):void {
+  if(!face)return
+  document.fonts.add(face)
+  const previous=installedFonts.get(uuid)
+  if(previous&&previous!==face)document.fonts.delete(previous)
+  installedFonts.set(uuid,face)
+}
 function installFont(record: AssetRecord): void {
-  if (record.assetType !== 'font' || !record.source || !('FontFace' in window)) return
-  const face = new FontFace(record.fontFamily || fontFamilyFor(record.uuid), `url(${record.source})`)
-  void face.load().then(loaded => document.fonts.add(loaded)).catch(() => undefined)
+  const source=record.source
+  void prepareFont(record).then(face=>{if(assetState.records.includes(record)&&record.source===source)registerFont(record.uuid,face)}).catch(()=>undefined)
 }
 
-async function recordImportedArtifact(file: File, settings: AssetImportSettings, artifact: ImportedArtifact, requestedFolder?: string): Promise<AssetRecord> {
+async function recordImportedArtifact(file: File, settings: AssetImportSettings, artifact: ImportedArtifact, requestedFolder?: string, signal?: AbortSignal, session = assetSessionRevision): Promise<AssetRecord> {
   let assetType = inferAssetType(file), source = artifact.source
   const external = ['atlas', 'tileset', 'other'].includes(assetType) ? await importContentInterchangeAsync(file.name, new TextDecoder().decode(artifact.bytes)) : null
   if (external) {
@@ -233,10 +264,11 @@ async function recordImportedArtifact(file: File, settings: AssetImportSettings,
     artifact.metadata.diagnostics.push(...external.metadata.diagnostics)
   }
   const metadata = assetType === 'image' ? await imageMetadata(source) : { width: 0, height: 0 }
+  if (assetType === 'image' && (!metadata.width || !metadata.height)) throw new Error('IMAGE_METADATA: The imported image could not be decoded.')
   const uuid = normalizeUuid(undefined)
   const record: AssetRecord = {
     uuid, name: sanitizedName(file.name), path: uniquePath(requestedFolder || defaultFolder(assetType), file.name), assetType,
-    mimeType: file.type || 'application/octet-stream', byteLength: file.size, source, sourceModified: file.lastModified, importedAt: Date.now(),
+    mimeType: external?.mimeType || file.type || 'application/octet-stream', byteLength: file.size, source, sourceModified: file.lastModified, importedAt: Date.now(),
     width: metadata.width, height: metadata.height, duration: assetType === 'audio' ? await audioMetadata(source) : 0,
     fontFamily: assetType === 'font' ? fontFamilyFor(uuid) : '', settings,
     script: assetType === 'script' ? defaultScriptMetadata() : undefined,
@@ -244,66 +276,75 @@ async function recordImportedArtifact(file: File, settings: AssetImportSettings,
     pipeline: artifact.metadata,
     interchange: external?.metadata
   }
-  assetState.records.push(record); installFont(record)
+  const font=await prepareFont(record)
+  if(signal?.aborted || session !== assetSessionRevision) throw new DOMException('Import cancelled or project replaced', 'AbortError')
+  registerFont(record.uuid,font)
+  assetState.records.push(record)
   const folder = record.path.slice(0, record.path.lastIndexOf('/'))
   if (folder && !assetState.folders.includes(folder)) assetState.folders.push(folder)
   return record
 }
 
-export async function importAssetFiles(files: Iterable<File>, requestedFolder?: string): Promise<AssetRecord[]> {
+export async function importAssetFiles(files: Iterable<File>, requestedFolder?: string, signal?: AbortSignal): Promise<AssetRecord[]> {
+  const session = assetSessionRevision
   assetState.importing = true
   const imported: AssetRecord[] = []
   try {
     for (const file of files) {
+      if(signal?.aborted || session !== assetSessionRevision) throw new DOMException('Import cancelled or project replaced', 'AbortError')
       const assetType = inferAssetType(file)
       const settings = defaultImportSettings()
       if (assetType === 'image' && /(?:^|[-_.])pixel(?:[-_.]|$)/i.test(file.name)) settings.filterMode = 'Nearest'
-      const artifact = await processAssetImport(file, settings)
-      const record = await recordImportedArtifact(file, settings, artifact, requestedFolder)
+      const artifact = await processAssetImport(file, settings, {signal})
+      const record = await recordImportedArtifact(file, settings, artifact, requestedFolder, signal, session)
       imported.push(record)
     }
-    assetState.records.sort((first, second) => first.path.localeCompare(second.path))
-    assetState.generation++
-    queueTextureAtlasRebuild()
     return imported
   } finally {
+    if (session === assetSessionRevision && imported.length) { for (const asset of assetState.records) if (asset.interchange) bindInterchangeTexture(asset, assetState.records); assetState.records.sort((first, second) => first.path.localeCompare(second.path)); assetState.generation++; queueTextureAtlasRebuild() }
     assetState.importing = false
   }
 }
 
 /** Creates independently addressable sprite-region assets without duplicating source pixels. */
 export function sliceSpriteSheet(record: AssetRecord): AssetRecord[] {
-  if (record.assetType !== 'image') return []
-  const sheet = record.settings.spriteSheet
-  const columns = Math.min(256, Math.max(1, Math.trunc(sheet.columns))), rows = Math.min(256, Math.max(1, Math.trunc(sheet.rows)))
-  const margin = Math.max(0, Math.trunc(sheet.margin)), spacing = Math.max(0, Math.trunc(sheet.spacing))
-  const width = Math.floor((record.width - margin * 2 - spacing * (columns - 1)) / columns)
-  const height = Math.floor((record.height - margin * 2 - spacing * (rows - 1)) / rows)
-  if (width < 1 || height < 1 || columns * rows > 4096) return []
-  const stem = record.name.replace(/\.[^.]+$/, ''), extension = record.name.match(/\.[^.]+$/)?.[0] ?? '.png'
-  const generated: AssetRecord[] = []
-  for (let row = 0; row < rows; row++) for (let column = 0; column < columns; column++) {
-    const name = `${stem}_${String(row * columns + column).padStart(3, '0')}${extension}`
-    generated.push({
-      ...record, uuid: normalizeUuid(undefined), name, path: uniquePath(record.path.slice(0, record.path.lastIndexOf('/')), name), importedAt: Date.now(),
-      settings: { ...record.settings, spriteRegion: { x: margin + column * (width + spacing), y: margin + row * (height + spacing), width, height }, spriteSheet: { ...sheet, enabled: false }, pivot: { ...record.settings.pivot }, borders: { ...record.settings.borders }, platformVariants: { ...record.settings.platformVariants } },
-      pipeline: record.pipeline ? { ...record.pipeline, dependencies: [...record.pipeline.dependencies], reverseDependencies: [] } : undefined,
-      unknownFields: record.unknownFields ? { ...record.unknownFields } : undefined
-    })
+  if (!assetState.records.includes(record)) throw new Error('SPRITE_DERIVATION: The source asset is no longer in this project.')
+  const definitions = spriteDefinitions(record, assetState.records), updates = prepareDerivedSpriteRefresh(record, assetState.records)
+  const existing = new Map<string, AssetRecord>()
+  for (const child of assetState.records.filter(value => value.derivedSprite?.ownerAsset === 'asset://' + record.uuid)) {
+    if (existing.has(child.derivedSprite!.sourceKey)) throw new Error('SPRITE_DERIVATION: Duplicate derived frame identity.')
+    existing.set(child.derivedSprite!.sourceKey, child)
   }
-  assetState.records.push(...generated); assetState.records.sort((first, second) => first.path.localeCompare(second.path)); assetState.generation++; queueTextureAtlasRebuild()
-  return generated
+  const folder = record.path.slice(0, record.path.lastIndexOf('/')), paths = new Set(assetState.records.map(value => value.path.toLowerCase()))
+  const added: AssetRecord[] = [], output: AssetRecord[] = []
+  for (const definition of definitions) {
+    const retained = existing.get(definition.sprite.sourceKey)
+    if (retained) { output.push(retained); continue }
+    const name = sanitizedName(definition.name), stem = name.replace(/\.[^.]+$/, '')
+    let path = folder + '/' + name, suffix = 2
+    while (paths.has(path.toLowerCase())) path = folder + '/' + stem + ' (' + suffix++ + ').png'
+    paths.add(path.toLowerCase())
+    const settings = JSON.parse(JSON.stringify(record.settings)) as AssetImportSettings
+    settings.spriteRegion = null; settings.atlas = false; settings.spriteSheet.enabled = false
+    const child: AssetRecord = { uuid: normalizeUuid(undefined), name: path.slice(path.lastIndexOf('/') + 1), path, assetType: 'image', mimeType: 'image/png',
+      source: '', byteLength: 0, sourceModified: 0, importedAt: Date.now(), width: 0, height: 0, duration: definition.durationMs / 1000, fontFamily: '',
+      settings, contentGroup: record.contentGroup, editorOnly: record.editorOnly, tags: [...(record.tags ?? [])], pipeline: inlinePipeline(JSON.stringify(definition.sprite)) }
+    applyDerivedSprite(child, definition.sprite); child.pipeline!.dependencies = [...new Set([record.uuid, definition.sprite.textureAsset.slice(8)])]
+    added.push(child); output.push(child)
+  }
+  // All geometry, dependencies, identities and prospective names pass before committing anything.
+  for (const update of updates) applyDerivedSprite(update.record, update.sprite)
+  assetState.records.push(...added); assetState.records.sort((first, second) => first.path.localeCompare(second.path))
+  clearDerivedSpriteTextures(); assetState.generation++
+  return output.map(record => resolveAsset(record.uuid)!)
 }
 
 /** Finds the non-transparent pixel bounds and stores them as the active sprite region. */
 export async function trimTransparentImage(record: AssetRecord): Promise<boolean> {
-  if (record.assetType !== 'image' || !record.source || record.width < 1 || record.height < 1) return false
-  const image = await new Promise<HTMLImageElement>((resolve, reject) => { const value = new Image(); value.onload = () => resolve(value); value.onerror = () => reject(new Error('Image preview failed')); value.src = record.source })
-  const canvas = document.createElement('canvas'); canvas.width = record.width; canvas.height = record.height
-  const context = canvas.getContext('2d', { willReadFrequently: true }); if (!context) return false
-  context.drawImage(image, 0, 0); const pixels = context.getImageData(0, 0, record.width, record.height).data
-  let left = record.width, top = record.height, right = -1, bottom = -1
-  for (let y = 0; y < record.height; y++) for (let x = 0; x < record.width; x++) if (pixels[(y * record.width + x) * 4 + 3] > 0) { left = Math.min(left, x); right = Math.max(right, x); top = Math.min(top, y); bottom = Math.max(bottom, y) }
+  const snapshot = await readAssetPixels(record, assetState.records), {width, height, data: pixels} = snapshot
+  let left = width, top = height, right = -1, bottom = -1
+  for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) if (pixels[(y * width + x) * 4 + 3] > 0) { left = Math.min(left, x); right = Math.max(right, x); top = Math.min(top, y); bottom = Math.max(bottom, y) }
+  snapshot.assertCurrent()
   if (right < left || bottom < top) return false
   record.settings.spriteRegion = { x: left, y: top, width: right - left + 1, height: bottom - top + 1 }; record.settings.transparentTrim = true; assetState.generation++; queueTextureAtlasRebuild(); return true
 }
@@ -484,13 +525,19 @@ function sourceFolder(path: unknown, type: AssetType): string {
 }
 
 export function loadAssets(source: unknown, folderSource?: unknown, databaseSource?: unknown): void {
+  for (const raw of Array.isArray(source) ? source : []) if (raw && typeof raw === 'object' && raw.derivedSprite !== undefined) { if (raw.assetType !== 'image') throw new Error('SPRITE_DERIVATION: Only image assets may carry derived sprite metadata.'); validateDerivedSprite(raw.derivedSprite) }
+  assetSessionRevision++
+  for(const face of installedFonts.values())document.fonts.delete(face)
+  installedFonts.clear()
+  clearAssetImportSession()
   assetState.records.splice(0)
   imageCache.clear()
+  clearDerivedSpriteTextures()
   const records = Array.isArray(source) ? source : []
   for (const value of records) {
     if (!value || typeof value !== 'object') continue
     const item = value as Partial<AssetRecord>
-    const knownFields = new Set(['uuid', 'name', 'path', 'assetType', 'mimeType', 'byteLength', 'source', 'sourceModified', 'importedAt', 'width', 'height', 'duration', 'fontFamily', 'settings', 'script', 'animationImport', 'interchange', 'pipeline', 'tags', 'collectionIds', 'contentGroup', 'editorOnly', 'sourceControlStatus', 'thumbnailKey', 'unknownFields'])
+    const knownFields = new Set(['uuid', 'name', 'path', 'assetType', 'mimeType', 'byteLength', 'source', 'sourceModified', 'importedAt', 'width', 'height', 'duration', 'fontFamily', 'settings', 'script', 'animationImport', 'interchange', 'derivedSprite', 'pipeline', 'tags', 'collectionIds', 'contentGroup', 'editorOnly', 'sourceControlStatus', 'thumbnailKey', 'unknownFields'])
     const inheritedUnknown = item.unknownFields && typeof item.unknownFields === 'object' ? item.unknownFields : {}
     const unknownFields = { ...inheritedUnknown, ...Object.fromEntries(Object.entries(value).filter(([key]) => !knownFields.has(key))) }
     const assetType = ['image', 'audio', 'font', 'scene', 'prefab', 'script', 'material', 'animation', 'controller', 'animationMask', 'rig', 'skin', 'timeline', 'tileset', 'atlas', 'shader', 'localization', 'uiTheme', 'behaviorTree', 'stateMachine', 'tilePalette', 'brushPreset', 'terrainRules', 'dataSchema', 'dataTable', 'replay', 'path', 'particleSystem', 'visualScript', 'eventSheet', 'objectBlueprint', 'other', 'resource'].includes(String(item.assetType)) ? item.assetType as AssetType : 'other'
@@ -624,6 +671,7 @@ export function loadAssets(source: unknown, folderSource?: unknown, databaseSour
         lastImportedAt: Math.max(0, Number(item.animationImport?.lastImportedAt) || 0)
       } : undefined,
       interchange: validateInterchangeMetadata(item.interchange) ?? undefined,
+      derivedSprite: validateDerivedSprite(item.derivedSprite),
       pipeline: item.pipeline && typeof item.pipeline === 'object' ? {
         importerId: String(item.pipeline.importerId || 'nova.legacy').slice(0, 80),
         importerVersion: String(item.pipeline.importerVersion || '1.0.0').slice(0, 40),
@@ -654,6 +702,7 @@ export function loadAssets(source: unknown, folderSource?: unknown, databaseSour
     }
   }
   assetState.records.forEach(record => {
+    if (record.derivedSprite) { record.width = record.derivedSprite.sourceSize.width; record.height = record.derivedSprite.sourceSize.height }
     const folder = record.path.slice(0, record.path.lastIndexOf('/'))
     if (folder) folders.add(folder)
     installFont(record)
@@ -669,9 +718,9 @@ export function renameAsset(uuid: string, name: string): boolean {
   if (!record) return false
   const folder = record.path.slice(0, record.path.lastIndexOf('/'))
   const oldPath = record.path
-  record.name = sanitizedName(name)
-  record.path = uniquePath(folder, record.name, uuid)
-  repairAssetPathReferences(assetState.records, oldPath, record.path)
+  const newName = sanitizedName(name), newPath = uniquePath(folder, newName, uuid)
+  repairAssetPathReferences(assetState.records, oldPath, newPath)
+  record.name = newName; record.path = newPath
   assetState.generation++
   return true
 }
@@ -681,55 +730,66 @@ export function moveAsset(uuid: string, folder: string): boolean {
   if (!record) return false
   const destination = normalizeFolder(folder)
   const oldPath = record.path
+  const newPath = uniquePath(destination, record.name, uuid)
+  repairAssetPathReferences(assetState.records, oldPath, newPath)
   if (!assetState.folders.includes(destination)) assetState.folders.push(destination)
-  record.path = uniquePath(destination, record.name, uuid)
-  repairAssetPathReferences(assetState.records, oldPath, record.path)
+  record.path = newPath
   assetState.generation++
   return true
 }
 
-/** Reimports without changing the stable GUID and keeps the previous artifact on failure. */
-export async function reimportAsset(uuid: string, file: File): Promise<boolean> {
+/** Validate asynchronously before committing; stale operations never replace newer authoring. */
+export async function reimportAsset(uuid: string, file: File, prepared?: ImportedArtifact, signal?: AbortSignal): Promise<boolean> {
   const record = assetState.records.find(asset => asset.uuid === uuid)
   if (!record) return false
-  const previous = record.source
+  const revision = (reimportRevisions.get(record) ?? 0) + 1; reimportRevisions.set(record, revision)
+  const before = JSON.parse(JSON.stringify(record)) as AssetRecord
+  const settings = JSON.stringify(record.settings)
+  const current = () => !signal?.aborted && assetState.records.includes(record) && reimportRevisions.get(record) === revision && record.source === before.source && JSON.stringify(record.settings) === settings
   try {
-    const artifact = await processAssetImport(file, record.settings)
+    if (record.derivedSprite) throw new Error('SPRITE_DERIVATION: Reimport the linked source image or atlas instead of an extracted frame.')
+    const inferred = inferAssetType(file)
+    if (inferred !== 'other' && inferred !== record.assetType) throw new Error(`CONTENT_TYPE_MISMATCH: ${inferred} source cannot replace ${record.assetType}.`)
+    if (prepared && prepared.metadata.settingsHash !== assetSettingsHash(before.settings)) throw new Error('IMPORT_SETTINGS_CHANGED: Retry settings differ from the current asset. Reimport with the current settings.')
+    const artifact = prepared ?? await processAssetImport(file, before.settings, { targetUuid: uuid, signal })
     const decoded = ['atlas', 'tileset'].includes(record.assetType) ? new TextDecoder().decode(artifact.bytes) : ''
-    const external = decoded ? await importContentInterchangeAsync(file.name, decoded, record.interchange) : null
-    if (record.interchange && !external) throw new Error('CONTENT_FORMAT_MISMATCH: Reimport requires the same supported atlas or Tiled metadata family.')
-    if (external && external.assetType !== record.assetType) throw new Error(`CONTENT_TYPE_MISMATCH: ${external.assetType} source cannot replace ${record.assetType}.`)
-    record.source = external ? `data:${external.mimeType};charset=utf-8,${encodeURIComponent(external.source)}` : artifact.source
-    record.mimeType = file.type || record.mimeType
-    record.byteLength = file.size
-    record.sourceModified = file.lastModified
-    record.importedAt = Date.now()
-    record.pipeline = artifact.metadata
+    const external = decoded ? await importContentInterchangeAsync(file.name, decoded, before.interchange) : null
+    if (before.interchange && !external) throw new Error('CONTENT_FORMAT_MISMATCH: Reimport requires the same supported atlas or Tiled metadata family.')
+    if (external && external.assetType !== before.assetType) throw new Error(`CONTENT_TYPE_MISMATCH: ${external.assetType} source cannot replace ${before.assetType}.`)
+    const candidate = { ...before, source: external ? `data:${external.mimeType};charset=utf-8,${encodeURIComponent(external.source)}` : artifact.source,
+      mimeType: external?.mimeType || file.type || before.mimeType, byteLength: file.size, sourceModified: file.lastModified, importedAt: Date.now(), pipeline: structuredClone(artifact.metadata) }
     if (external) {
-      record.interchange = external.metadata
-      record.mimeType = external.mimeType
-      record.pipeline.importerId = `nova.${external.metadata.format}`
-      record.pipeline.lastValidSource = record.source
-      record.pipeline.artifactHash = sha256Bytes(assetSourceBytes(record.source))
-      record.pipeline.contentHash = record.pipeline.artifactHash
-      record.pipeline.diagnostics.push(...external.metadata.diagnostics)
+      candidate.interchange = external.metadata; candidate.pipeline.importerId = `nova.${external.metadata.format}`
+      candidate.pipeline.artifactHash = sha256Bytes(assetSourceBytes(candidate.source)); candidate.pipeline.contentHash = candidate.pipeline.artifactHash
+      candidate.pipeline.diagnostics.push(...external.metadata.diagnostics)
     }
-    if (record.assetType === 'image') Object.assign(record, await imageMetadata(record.source))
-    if (record.assetType === 'audio') record.duration = await audioMetadata(record.source)
-    installFont(record)
-    assetState.generation++
-    queueTextureAtlasRebuild()
-    return true
+    candidate.pipeline.lastValidSource = candidate.source
+    if (candidate.assetType === 'image') {
+      Object.assign(candidate, await imageMetadata(candidate.source))
+      if (!candidate.width || !candidate.height) throw new Error('IMAGE_METADATA: The replacement image could not be decoded.')
+    }
+    if (candidate.assetType === 'audio') candidate.duration = await audioMetadata(candidate.source)
+    const font=await prepareFont(candidate)
+    const binding = bindInterchangeTexture(candidate, assetState.records, before)
+    if (binding.diagnostics.length) throw new Error(binding.diagnostics.map(issue=>`${issue.code}: ${issue.message}`).join('\n'))
+    const derivedUpdates = prepareDerivedSpriteRefresh(candidate, assetState.records)
+    if (!current()) return false
+    registerFont(uuid,font)
+    // Keep editor identity/path and any independent metadata edits made while bytes were read.
+    for (const key of ['source','mimeType','byteLength','sourceModified','importedAt','pipeline','interchange','width','height','duration'] as const) {
+      if (key === 'interchange' && candidate.interchange === undefined) continue
+      Object.assign(record, { [key]: candidate[key] })
+    }
+    for (const update of derivedUpdates) applyDerivedSprite(update.record, update.sprite)
+    for (const page of assetState.atlasPages) page.regions.delete(uuid)
+    clearDerivedSpriteTextures(); rejectedImageSources.delete(record); imageCache.delete(uuid); assetState.generation++; queueTextureAtlasRebuild(); return true
   } catch (error) {
-    record.source = record.pipeline?.lastValidSource || previous
-    record.pipeline = { ...inlinePipeline(record.source), ...record.pipeline,
-      importerVersion: record.pipeline?.importerVersion || '3.0.0', platform: record.pipeline?.platform || 'web',
-      sourceHash: record.pipeline?.sourceHash || record.pipeline?.contentHash || '', artifactHash: record.pipeline?.artifactHash || record.pipeline?.cacheKey || '',
-      contentHash: record.pipeline?.contentHash || '', cacheKey: record.pipeline?.cacheKey || '', status: 'failed',
-      lastValidSource: record.source, error: error instanceof Error ? error.message : String(error), dependencies: record.pipeline?.dependencies ?? [], reverseDependencies: record.pipeline?.reverseDependencies ?? [], cacheHit: record.pipeline?.cacheHit === true,
-      invalidationReason: 'Source reimport failed; previous verified artifact retained', diagnostics: [{ severity: 'error', code: 'IMPORT_FAILED', message: error instanceof Error ? error.message : String(error) }], reproducible: false
-    }
-    return false
+    if (!current()) return false
+    const message = error instanceof Error ? error.message : String(error)
+    record.pipeline = { ...inlinePipeline(before.source), ...before.pipeline, status: 'failed', lastValidSource: before.source, error: message,
+      invalidationReason: 'Source reimport failed; previous artifact and identity retained',
+      diagnostics: [...(before.pipeline?.diagnostics ?? []).filter(item => item.code !== 'IMPORT_FAILED'), { severity: 'error', code: 'IMPORT_FAILED', message }] }
+    assetState.generation++; return false
   }
 }
 
@@ -747,8 +807,12 @@ export function deleteAsset(uuid: string): boolean {
   const index = assetState.records.findIndex(record => record.uuid === uuid)
   if (index < 0) return false
   stopWatchingAsset(uuid)
+  const font=installedFonts.get(uuid)
+  if(font)document.fonts.delete(font)
+  installedFonts.delete(uuid)
   assetState.records.splice(index, 1)
   imageCache.delete(uuid)
+  clearDerivedSpriteTextures()
   if (assetState.selectedGuid === uuid) assetState.selectedGuid = null
   assetState.generation++
   queueTextureAtlasRebuild()
@@ -760,6 +824,7 @@ export function restoreAssetRecord(value: AssetRecord): boolean {
   if (!value || assetState.records.some(record => record.uuid === value.uuid)) return false
   const restored = JSON.parse(JSON.stringify(value)) as AssetRecord
   assetState.records.push(restored)
+  installFont(restored)
   assetState.records.sort((a, b) => a.path.localeCompare(b.path) || a.uuid.localeCompare(b.uuid))
   const folder = restored.path.slice(0, restored.path.lastIndexOf('/')) || 'Assets'
   if (!assetState.folders.includes(folder)) assetState.folders.push(folder)
@@ -838,6 +903,7 @@ export function synchronizeAssetDependencyMetadata(project?: unknown): void {
 export async function retryFailedAssetImport(jobId: number, requestedFolder?: string): Promise<AssetRecord | null> {
   const result = await retryAssetImport(jobId)
   if (!result) return null
+  if (result.targetUuid) return await reimportAsset(result.targetUuid, result.file, result.artifact) ? resolveAsset(result.targetUuid) : null
   const record = await recordImportedArtifact(result.file, result.settings, result.artifact, requestedFolder)
   assetState.records.sort((a, b) => a.path.localeCompare(b.path)); assetState.generation++; queueTextureAtlasRebuild()
   return record
@@ -853,7 +919,7 @@ export async function linkAssetSource(uuid: string): Promise<'linked' | 'cancell
   const handle = handles[0]
   if (!handle || !assetState.records.some(record => record.uuid === uuid)) return 'cancelled'
   const initial = await handle.getFile()
-  watchAssetSource(uuid, handle, async file => reimportAsset(uuid, file))
+  watchAssetSource(uuid, handle, async file => reimportAsset(uuid, file), initial.lastModified)
   const record = assetState.records.find(asset => asset.uuid === uuid)
   if (record) record.sourceModified = initial.lastModified
   return 'linked'
@@ -865,7 +931,7 @@ export async function resolveExternalAssetChange(changeId: string, choice: 'reim
   let success = true
   if (choice === 'reimport') success = await reimportAsset(change.uuid, change.file)
   else if (choice === 'duplicate') success = (await importAssetFiles([change.file])).length > 0
-  dismissExternalAssetChange(change.id)
+  if (success) dismissExternalAssetChange(change.id)
   return success
 }
 
@@ -880,21 +946,66 @@ export function resolveAsset(reference: string | null | undefined): AssetRecord 
   return guid ? recordsByUuid.get(guid) ?? null : null
 }
 
+export function assetTextureDiagnostic(reference: string | null | undefined): string {
+  const record = resolveAsset(reference)
+  if (!record) return 'TEXTURE_MISSING: Select or repair the missing image reference.'
+  if (record.derivedSprite) {
+    const texture = resolveAsset(record.derivedSprite.textureAsset)
+    if (!texture || texture.assetType !== 'image' || texture.derivedSprite) return 'TEXTURE_SOURCE_MISSING: Repair the original image linked by this frame.'
+    if (!resolveAsset(record.derivedSprite.ownerAsset)) return 'TEXTURE_OWNER_MISSING: Repair the atlas or sheet that owns this frame.'
+    const frame = record.derivedSprite.frame
+    if (frame.x + frame.width > texture.width || frame.y + frame.height > texture.height) return 'TEXTURE_FRAME_BOUNDS: This frame no longer fits its source image. Restore or reimport the matching source.'
+    const failure = rejectedImageSources.get(texture)
+    return failure?.source === texture.source ? failure.error : ''
+  }
+  const failure = rejectedImageSources.get(record)
+  return failure?.source === record.source ? failure.error : ''
+}
+
 export function resolveTexture(reference: string | null | undefined, filterOverride?: 'Nearest' | 'Linear'): TextureRegion | null {
   const record = resolveAsset(reference)
-  if (!record || record.assetType !== 'image' || !record.source) return null
+  if (!record || record.assetType !== 'image') return null
+  const texture = resolveUncroppedTexture(record, filterOverride)
+  return texture ? importedSpriteRegion(record, texture) : null
+}
+
+function resolveUncroppedTexture(record: AssetRecord, filterOverride?: 'Nearest' | 'Linear'): TextureRegion | null {
+  if (record.derivedSprite) {
+    const image = resolveAsset(record.derivedSprite.textureAsset)
+    if (!image || image.assetType !== 'image' || image.derivedSprite) return null
+    const texture = resolveUncroppedTexture(image, filterOverride)
+    return texture ? resolveDerivedSpriteTexture(record.derivedSprite, texture, image, filterOverride ?? record.settings.filterMode) : null
+  }
+  if (!record.source) return null
   for (const page of assetState.atlasPages) {
     const region = page.regions.get(record.uuid)
-    if (region) return importedSpriteRegion(record, { ...region, filter: filterOverride ?? region.filter, colorSpace: record.settings.colorSpace })
+    if (region) return { ...region, key: region.key + ':revision:' + atlasContentRevision, revision: atlasContentRevision, filter: filterOverride ?? region.filter, colorSpace: record.settings.colorSpace }
   }
+  if (rejectedImageSources.get(record)?.source === record.source) return null
   let image = imageCache.get(record.uuid)
   if (!image) {
-    image = new Image()
-    image.src = record.source
-    imageCache.set(record.uuid, image)
+    const expectedBytes = Math.max(4, record.width * record.height * 4)
+    if (!Number.isFinite(expectedBytes) || expectedBytes > IMAGE_CACHE_LIMITS.bytes) { rejectedImageSources.set(record, { source: record.source, error: 'TEXTURE_MEMORY_BUDGET: This source exceeds the128MiB decoded-image budget. Enable atlas packing or import a smaller source.' }); return null }
+    const loaded = new Image(), source = record.source
+    if (!imageCache.set(record.uuid, loaded, expectedBytes)) return null
+    pendingImageLoads.set(record.uuid, loaded)
+    loaded.onload = () => {
+      if (pendingImageLoads.get(record.uuid) !== loaded) return
+      pendingImageLoads.delete(record.uuid); loaded.onload = null; loaded.onerror = null
+      if (record.source !== source || imageCache.get(record.uuid) !== loaded) return
+      decodedTextureRevision++
+      const weight = loaded.naturalWidth * loaded.naturalHeight * 4
+      if (!Number.isFinite(weight) || weight <= 0 || !imageCache.set(record.uuid, loaded, weight)) { imageCache.delete(record.uuid); rejectedImageSources.set(record, { source, error: 'TEXTURE_DECODE_FAILED: Image pixels could not be retained. Reimport the source to retry; reduce oversized image dimensions.' }) }
+    }
+    loaded.onerror = () => {
+      if (pendingImageLoads.get(record.uuid) !== loaded) return
+      pendingImageLoads.delete(record.uuid); loaded.onload = null; loaded.onerror = null
+      imageCache.delete(record.uuid); if (record.source === source) rejectedImageSources.set(record, { source, error: 'TEXTURE_DECODE_FAILED: Image decoding failed. Reimport the source to retry.' })
+    }
+    loaded.src = source; image = loaded
   }
   if (!image.complete || image.naturalWidth <= 0) return null
-  return importedSpriteRegion(record, { key: `asset:${record.uuid}`, source: image, uv: { x: 0, y: 0, width: 1, height: 1 }, filter: filterOverride ?? record.settings.filterMode, colorSpace: record.settings.colorSpace })
+  return { key: `asset:${record.uuid}:${record.pipeline?.artifactHash || record.importedAt}`, source: image, revision: record.pipeline?.artifactHash || record.importedAt, uv: { x: 0, y: 0, width: 1, height: 1 }, filter: filterOverride ?? record.settings.filterMode, colorSpace: record.settings.colorSpace }
 }
 
 /** Resolves a pixel-space sub-region without allocating another texture. */
@@ -904,7 +1015,7 @@ export function resolveTextureRegion(
   filterOverride?: 'Nearest' | 'Linear'
 ): TextureRegion | null {
   const record = resolveAsset(reference)
-  const texture = resolveTexture(reference, filterOverride)
+  const texture = record?.assetType === 'image' ? resolveUncroppedTexture(record, filterOverride) : null
   if (!record || !texture || record.width <= 0 || record.height <= 0) return null
   const x = Math.min(record.width - 1, Math.max(0, Number(region.x) || 0))
   const y = Math.min(record.height - 1, Math.max(0, Number(region.y) || 0))
@@ -946,6 +1057,7 @@ export async function rebuildTextureAtlases(): Promise<void> {
   const pages = await buildTextureAtlases(assetState.records)
   if (revision !== atlasRevision) return
   assetState.atlasPages.splice(0, assetState.atlasPages.length, ...pages.map(page => markRaw(page)))
+  atlasContentRevision++; clearDerivedSpriteTextures()
   assetState.atlasError = ''
   assetState.generation++
 }

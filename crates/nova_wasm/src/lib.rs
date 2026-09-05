@@ -447,3 +447,49 @@ pub fn step_physics_with_connections(
         air_friction,
     )
 }
+
+#[cfg(test)]
+mod tests {
+    use nova_runtime::EngineEvent;
+
+    #[test]
+    fn runtime_event_json_matches_frontend_contact_and_joint_fields() {
+        let event = EngineEvent::CollisionStarted {
+            first: 1,
+            second: 2,
+            first_collider: 3,
+            second_collider: 4,
+            point: [0.0, 1.0],
+            normal: [1.0, 0.0],
+            relative_velocity: [2.0, 3.0],
+            initial_relative_velocity: [4.0, 5.0],
+            normal_impulse: 6.0,
+            tangent_impulse: 7.0,
+            normal_force: 8.0,
+            tangent_force: 9.0,
+            penetration: 0.25,
+        };
+        let json = serde_json::to_value(event).unwrap();
+        assert_eq!(json["type"], "collisionStarted");
+        assert_eq!(json["firstCollider"], 3);
+        assert_eq!(json["secondCollider"], 4);
+        assert_eq!(json["relativeVelocity"], serde_json::json!([2.0, 3.0]));
+        assert_eq!(
+            json["initialRelativeVelocity"],
+            serde_json::json!([4.0, 5.0])
+        );
+        assert_eq!(json["normalImpulse"], 6.0);
+        assert_eq!(json["tangentImpulse"], 7.0);
+        assert_eq!(json["normalForce"], 8.0);
+        assert_eq!(json["tangentForce"], 9.0);
+        let joint = serde_json::to_value(EngineEvent::JointBroken {
+            handle: 1,
+            joint_kind: 2,
+            link: 3,
+            tension: 4.0,
+            strain: 5.0,
+        })
+        .unwrap();
+        assert_eq!(joint["jointKind"], 2);
+    }
+}

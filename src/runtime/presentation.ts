@@ -32,6 +32,9 @@ export const runtimeAccessibilitySettings = reactive<RuntimeAccessibilitySetting
 
 export const uiAudioSettings = reactive<UiAudioSettings>({ hover: null, press: null, focus: null, cancel: null, bus: 'UI' })
 export const runtimeCaptions = reactive<RuntimeCaption[]>([])
+let captionClockSeconds: number | null = null, captionSequence = 0
+export function setRuntimeCaptionTime(seconds: number | null): void { if (seconds !== null && (!Number.isFinite(seconds) || seconds < 0)) throw new Error('Caption time must be finite and non-negative.'); if (seconds === null) runtimeCaptions.splice(0); captionClockSeconds = seconds }
+function captionNow(): number { return captionClockSeconds === null ? (typeof performance === 'undefined' ? Date.now() : performance.now()) : captionClockSeconds * 1000 }
 
 export function normalizeRuntimeAccessibilitySettings(source: unknown): RuntimeAccessibilitySettings {
   const item = source && typeof source === 'object' ? source as Partial<RuntimeAccessibilitySettings> : {}
@@ -66,13 +69,13 @@ export function loadUiAudioSettings(source: unknown): void { Object.assign(uiAud
 export function serializeUiAudioSettings(): UiAudioSettings { return normalizeUiAudioSettings(uiAudioSettings) }
 
 export function publishRuntimeCaption(caption: Omit<RuntimeCaption, 'id' | 'startedAt'> & { id?: string }): string {
-  const id = caption.id?.trim().slice(0, 80) || `caption-${Date.now().toString(36)}`
-  runtimeCaptions.push({ id, text: caption.text.slice(0, 4_000), category: caption.category, speaker: caption.speaker.slice(0, 120), startedAt: typeof performance === 'undefined' ? Date.now() : performance.now(), durationMs: Math.min(120_000, Math.max(250, Number(caption.durationMs) || 3_000)) })
+  const id = caption.id?.trim().slice(0, 80) || `caption-${(++captionSequence).toString(36)}`
+  runtimeCaptions.push({ id, text: caption.text.slice(0, 4_000), category: caption.category, speaker: caption.speaker.slice(0, 120), startedAt: captionNow(), durationMs: Math.min(120_000, Math.max(250, Number(caption.durationMs) || 3_000)) })
   if (runtimeCaptions.length > 32) runtimeCaptions.splice(0, runtimeCaptions.length - 32)
   return id
 }
 export function dismissRuntimeCaption(id: string): void { const index = runtimeCaptions.findIndex(caption => caption.id === id); if (index >= 0) runtimeCaptions.splice(index, 1) }
-export function activeRuntimeCaptions(now = typeof performance === 'undefined' ? Date.now() : performance.now()): RuntimeCaption[] {
+export function activeRuntimeCaptions(now = captionNow()): RuntimeCaption[] {
   for (let index = runtimeCaptions.length - 1; index >= 0; index--) if (now - runtimeCaptions[index].startedAt >= runtimeCaptions[index].durationMs) runtimeCaptions.splice(index, 1)
-  return runtimeCaptions.filter(caption => caption.category === 'Dialogue' ? runtimeAccessibilitySettings.subtitles : runtimeAccessibilitySettings.captions)
+  return runtimeCaptions.filter(caption => now >= caption.startedAt).filter(caption => caption.category === 'Dialogue' ? runtimeAccessibilitySettings.subtitles : runtimeAccessibilitySettings.captions)
 }

@@ -1,11 +1,12 @@
 <template>
-  <aside class="sidebar-container" :style="{ width: isCollapsed ? '0px' : `${panelWidth}px` }" :class="[dock, { 'jelly-slide': !isDragging, 'no-transition': isDragging }]">
+  <aside class="sidebar-container" :style="{ width: isCollapsed ? '22px' : `${panelWidth}px` }" :class="[dock, { 'jelly-slide': !isDragging, 'no-transition': isDragging, 'panel-maximized': workspaceState.maximizedPanel==='hierarchy' }]">
     <button v-if="isCollapsed" class="expand" :title="t('expandPanel')" @click="expandPanel">›</button>
     <div v-show="!isCollapsed" class="scene-sidebar">
       <section class="scene-manager">
         <div class="list-header">
           <span>{{ t('scenes') }}</span>
           <div class="header-actions">
+            <PanelMaximizeButton panel="hierarchy" />
             <button :title="t('reloadScene')" :disabled="!canEdit" @click="reloadScene">↻</button>
             <button :title="t('addScene')" :disabled="!canEdit" @click="addScene">+</button>
           </div>
@@ -69,7 +70,7 @@
         <button v-if="draggingIds.length" class="root-drop" @dragover.prevent @drop.prevent.stop="dropOnRoot($event)">{{ t('reparentToRoot') }}</button>
       </div>
     </div>
-    <div v-show="!isCollapsed" class="resize-handle" @mousedown="startDrag"></div>
+    <PanelResizeHandle v-show="!isCollapsed" v-model="panelWidth" orientation="vertical" :minimum="0" :maximum="500" :reset-value="236" :reverse="dock==='right'" :label="t('hierarchy')" :disabled="workspaceState.maximizedPanel==='hierarchy'" @dragging="isDragging=$event" @commit="commitPanelWidth" />
   </aside>
 </template>
 
@@ -82,10 +83,15 @@ import type { Entity } from '../world/Entity'
 import { setParent } from '../world/hierarchy'
 import { selectionRoots } from '../editor/selection'
 import { authoringState, saveHierarchyFilter, toggleHierarchyPin } from '../editor/authoring2d'
+import { workspaceState } from '../editor/workspaces'
+import PanelMaximizeButton from './PanelMaximizeButton.vue'
+import PanelResizeHandle from './PanelResizeHandle.vue'
 
 const props = withDefaults(defineProps<{ dock?: 'left' | 'right' }>(), { dock: 'left' })
 const dock = computed(() => props.dock)
 const panelWidth = ref(editorState.hierarchyWidth)
+watch(() => editorState.hierarchyWidth, value => { if (!isDragging.value) { panelWidth.value=value;isCollapsed.value=false } })
+watch(() => workspaceState.maximizedPanel, value => { if(value==='hierarchy')isCollapsed.value=false })
 const isCollapsed = ref(false)
 const isDragging = ref(false)
 const editingId = ref<number | null>(null)
@@ -289,14 +295,10 @@ watch(() => `${sceneManager.activeSceneUuid}:${state.selectedEntityIds.join(',')
 }, { immediate: true })
 
 const collapseThreshold = 118
-let startX = 0
-let startWidth = 0
-function startDrag(event: MouseEvent) { isDragging.value = true; startX = event.clientX; startWidth = panelWidth.value; document.addEventListener('mousemove', onDrag); document.addEventListener('mouseup', stopDrag); document.body.style.cursor = 'ew-resize' }
-function onDrag(event: MouseEvent) { if (!isDragging.value) return; const delta = event.clientX - startX; const width = startWidth + (props.dock === 'left' ? delta : -delta); panelWidth.value = width < collapseThreshold ? 0 : Math.min(Math.max(width, collapseThreshold), 500) }
-function stopDrag() { isDragging.value = false; document.removeEventListener('mousemove', onDrag); document.removeEventListener('mouseup', stopDrag); document.body.style.cursor = 'default'; if (panelWidth.value < collapseThreshold) isCollapsed.value = true; else editorState.hierarchyWidth = panelWidth.value }
+function commitPanelWidth(value:number) { isDragging.value=false;if(value<collapseThreshold){isCollapsed.value=true;panelWidth.value=0}else{panelWidth.value=Math.max(160,value);editorState.hierarchyWidth=panelWidth.value} }
 function expandPanel() { isCollapsed.value = false; panelWidth.value = editorState.hierarchyWidth || 236 }
 onMounted(() => { if (entityList.value) { hierarchyViewportHeight.value = entityList.value.clientHeight; hierarchyResizeObserver = new ResizeObserver(entries => { hierarchyViewportHeight.value = entries[0]?.contentRect.height ?? hierarchyViewportHeight.value }); hierarchyResizeObserver.observe(entityList.value) } })
-onUnmounted(() => { document.removeEventListener('mousemove', onDrag); document.removeEventListener('mouseup', stopDrag); hierarchyResizeObserver?.disconnect() })
+onUnmounted(() => { hierarchyResizeObserver?.disconnect() })
 </script>
 
 <style scoped>
@@ -314,5 +316,5 @@ onUnmounted(() => { document.removeEventListener('mousemove', onDrag); document.
 .disclosure, .state-button { width: 19px; height: 22px; padding: 0; flex: 0 0 19px; display: grid; place-items: center; border: 0; border-radius: 5px; color: var(--text-muted); background: transparent; font-size:11px; }.disclosure:hover, .state-button:hover { color: var(--accent); background: var(--surface-3); }.disclosure.placeholder { pointer-events: none; }.shape-icon { width: 15px; flex: 0 0 15px; color: var(--accent); text-align: center; }.name { min-width: 0; flex: 1; display: flex; align-items: center; gap: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }.name mark{padding:0;color:inherit;background:color-mix(in srgb,var(--warning) 28%,transparent)}.name small { color: var(--text-muted); font-size:11px; }.edit-input { min-width: 0; height: 23px; min-height: 23px; flex: 1; padding: 2px 5px; }.state-button { opacity: .25; }.state-button.pin.active,.entity-item.pinned .pin{color:var(--accent);opacity:1}.entity-item:hover .state-button, .entity-item.selected .state-button, .entity-item.hidden .state-button, .entity-item.locked .state-button, .entity-item.disabled .power { opacity: .9; }.power { color: var(--success); }
 .status-mark{width:16px;height:16px;display:grid;place-items:center;border-radius:4px;color:var(--accent);background:var(--accent-soft);font-size:11px;font-weight:800}.status-mark.scene{color:var(--success)}.status-mark.override{color:var(--warning);background:transparent}
 .empty-state { padding: 18px 8px; color: var(--text-muted); font-size:11px; text-align: center; }.root-drop { width: calc(100% - 8px); min-height: 31px; margin: 6px 4px; border: 1px dashed var(--accent); border-radius: 8px; color: var(--accent); background: var(--accent-soft); font-size:11px; }
-.resize-handle { position: absolute; inset: 0 -4px 0 auto; width: 8px; cursor: ew-resize; z-index: 4; }.right .resize-handle{inset:0 auto 0 -4px}.expand { position: absolute; left: 0; top: 48%; z-index: 5; width: 20px; height: 54px; border: 1px solid var(--border-subtle); border-left: 0; border-radius: 0 9px 9px 0; color: var(--accent); background: var(--surface-1); }.right .expand{left:auto;right:0;transform:scaleX(-1)}
+.resize-handle { position: absolute; inset: 0 0 0 auto; width: 8px; cursor: ew-resize; z-index: 4; }.right .resize-handle{inset:0 auto 0 0}.expand { position: absolute; left: 0; top: 48%; z-index: 5; width: 20px; height: 54px; border: 1px solid var(--border-subtle); border-left: 0; border-radius: 0 9px 9px 0; color: var(--accent); background: var(--surface-1); }.right .expand{left:auto;right:0;transform:scaleX(-1)}
 </style>

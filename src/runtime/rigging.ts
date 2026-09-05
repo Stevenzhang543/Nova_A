@@ -110,8 +110,11 @@ export function normalizeRig(source: unknown): RigDocument {
     }
   })
   if (!bones.length) bones.push(defaultRig().bones[0])
-  const order = new Map(bones.map((bone, index) => [bone.id, index]))
-  for (const bone of bones) if (!bone.parentId || !order.has(bone.parentId) || order.get(bone.parentId)! >= order.get(bone.id)!) bone.parentId = null
+  const byId=new Map(bones.map(bone=>[bone.id,bone])),ordered:RigBone2D[]=[],visited=new Set<string>(),visiting=new Set<string>()
+  for(const bone of bones)if(bone.parentId&&!byId.has(bone.parentId))bone.parentId=null
+  const visit=(bone:RigBone2D)=>{if(visited.has(bone.id))return;if(visiting.has(bone.id))throw new Error('RIG_HIERARCHY_CYCLE: Bone parents must form an acyclic hierarchy.');visiting.add(bone.id);if(bone.parentId)visit(byId.get(bone.parentId)!);visiting.delete(bone.id);visited.add(bone.id);ordered.push(bone)}
+  for(const bone of bones)visit(bone)
+  bones.splice(0,bones.length,...ordered)
   const ikChains = (Array.isArray(item.ikChains) ? item.ikChains : []).slice(0, 128).flatMap((chain, index) => {
     if (!chain || !used.has(String(chain.endBoneId))) return []
     return [{
@@ -131,6 +134,8 @@ export function normalizeRig(source: unknown): RigDocument {
       weight: Math.min(1, Math.max(0, finiteNumber(constraint.weight, 1)))
     }]
   })
+  const work=ikChains.filter(chain=>chain.weight>0).reduce((sum,chain)=>{let depth=0,next:string|null=chain.endBoneId;while(next&&depth<chain.chainLength){depth++;next=byId.get(next)?.parentId??null}return sum+depth*chain.iterations*(bones.length+constraints.length)},bones.length*constraints.length)
+  if(work>2000000)throw new Error('RIG_EVALUATION_LIMIT: This rig exceeds 2,000,000 estimated pose operations; reduce IK iterations or split the rig.')
   const attachments = (Array.isArray(item.attachments) ? item.attachments : []).slice(0, 256).flatMap((attachment, index) => attachment && used.has(String(attachment.boneId)) ? [{ id: safeId(attachment.id, `attachment_${index + 1}`), name: typeof attachment.name === 'string' ? attachment.name.slice(0, 80) : `Attachment ${index + 1}`, boneId: String(attachment.boneId), position: vector(attachment.position, { x: 0, y: 0 }), rotation: finiteNumber(attachment.rotation), allowedAssetTypes: [...new Set((Array.isArray(attachment.allowedAssetTypes) ? attachment.allowedAssetTypes : ['image', 'prefab']).flatMap(value => typeof value === 'string' ? [value.slice(0, 40)] : []))].slice(0, 16) }] : [])
   const retargetAliases: Record<string, string> = {}
   if (item.retargetAliases && typeof item.retargetAliases === 'object' && !Array.isArray(item.retargetAliases)) for (const [alias, boneId] of Object.entries(item.retargetAliases).slice(0, 512)) if (typeof boneId === 'string' && used.has(boneId)) retargetAliases[safeId(alias, '')] = boneId
@@ -153,12 +158,12 @@ export function normalizeSkin(source: unknown): SkinDocument {
   })
   const fallback = defaultSkin()
   const safeVertices = vertices.length >= 3 ? vertices : fallback.vertices
-  const triangles = (Array.isArray(item.triangles) ? item.triangles : []).slice(0, 195_000)
-    .map(value => Math.round(finiteNumber(value, -1))).filter(value => value >= 0 && value < safeVertices.length)
+  const rawTriangles=(Array.isArray(item.triangles)?item.triangles:[]).slice(0,195_000),triangles:number[]=[]
+  for(let index=0;index+2<rawTriangles.length;index+=3){const triangle=rawTriangles.slice(index,index+3).map(value=>Math.round(finiteNumber(value,-1)));if(triangle.every(value=>value>=0&&value<safeVertices.length))triangles.push(...triangle)}
   return {
     version: 1, name: typeof item.name === 'string' ? item.name.slice(0, 120) : 'Skin',
     rigAsset: typeof item.rigAsset === 'string' ? item.rigAsset : null,
-    vertices: safeVertices, triangles: triangles.length >= 3 && triangles.length % 3 === 0 ? triangles : fallback.triangles
+    vertices: safeVertices, triangles: triangles.length ? triangles : safeVertices.length>=4 ? fallback.triangles : [0,1,2]
   }
 }
 
@@ -170,15 +175,19 @@ function parseAsset<T>(reference: string | null, type: 'rig' | 'skin', normalize
 
 const rigCache = new Map<string, { generation: number; value: RigDocument | null }>()
 const skinCache = new Map<string, { generation: number; value: SkinDocument | null }>()
+let rigCacheGeneration=-1
+function refreshRigCaches():void{if(rigCacheGeneration!==assetState.generation){rigCache.clear();skinCache.clear();rigCacheGeneration=assetState.generation}for(const cache of [rigCache,skinCache])while(cache.size>=128)cache.delete(cache.keys().next().value!)}
 
 export function readRig(reference: string | null): RigDocument | null {
   if (!reference) return null
+  refreshRigCaches()
   const cached = rigCache.get(reference); if (cached?.generation === assetState.generation) return cached.value
   const value = parseAsset(reference, 'rig', normalizeRig); rigCache.set(reference, { generation: assetState.generation, value }); return value
 }
 
 export function readSkin(reference: string | null): SkinDocument | null {
   if (!reference) return null
+  refreshRigCaches()
   const cached = skinCache.get(reference); if (cached?.generation === assetState.generation) return cached.value
   const value = parseAsset(reference, 'skin', normalizeSkin); skinCache.set(reference, { generation: assetState.generation, value }); return value
 }
@@ -187,7 +196,7 @@ export function createRigAsset(name = 'New Rig'): AssetRecord { return createTex
 export function createSkinAsset(name = 'New Skin'): AssetRecord { return createTextAsset(name, 'skin', JSON.stringify(defaultSkin(name), null, 2), 'Assets/Skins') }
 export function rigAssetReference(asset: AssetRecord): string { return assetReference(asset.uuid) }
 
-interface BoneWorld { position: Vec2; rotation: number; scale: Vec2 }
+export interface BoneWorld { position: Vec2; rotation: number; scale: Vec2 }
 
 function buildWorld(rig: RigDocument, locals: Map<string, BoneWorld>): Map<string, BoneWorld> {
   const result = new Map<string, BoneWorld>()
@@ -216,26 +225,26 @@ function poseWorld(rig: RigDocument, skeleton: Skeleton2D): Map<string, BoneWorl
       scale: override ? vector(override.scale, bone.scale) : { ...bone.scale }
     }] as [string, BoneWorld]
   }))
-  let result = buildWorld(rig, locals)
-  for (const constraint of rig.constraints) {
-    const local = locals.get(constraint.boneId); if (!local) continue
-    if (constraint.type === 'RotationLimit') local.rotation = Math.min(constraint.maximum.x, Math.max(constraint.minimum.x, local.rotation))
-    else if (constraint.type === 'PositionLimit') {
-      local.position.x = Math.min(constraint.maximum.x, Math.max(constraint.minimum.x, local.position.x))
-      local.position.y = Math.min(constraint.maximum.y, Math.max(constraint.minimum.y, local.position.y))
-    } else if (constraint.targetBoneId) {
-      const bone = result.get(constraint.boneId), target = result.get(constraint.targetBoneId)
-      if (bone && target) local.rotation += (target.rotation - bone.rotation) * constraint.weight
+  const applyLimits=(boneId?:string,hardOnly=false)=>{
+    for(const constraint of rig.constraints){
+      if(boneId&&constraint.boneId!==boneId||hardOnly&&constraint.weight<1||constraint.weight<=0)continue
+      const local=locals.get(constraint.boneId);if(!local)continue
+      const bound=(value:number,first:number,second:number)=>value+(Math.min(Math.max(first,second),Math.max(Math.min(first,second),value))-value)*constraint.weight
+      if(constraint.type==='RotationLimit')local.rotation=bound(local.rotation,constraint.minimum.x,constraint.maximum.x)
+      else if(constraint.type==='PositionLimit'){local.position.x=bound(local.position.x,constraint.minimum.x,constraint.maximum.x);local.position.y=bound(local.position.y,constraint.minimum.y,constraint.maximum.y)}
     }
   }
-  result = buildWorld(rig, locals)
+  applyLimits(undefined,true)
+  let result=buildWorld(rig,locals)
+  const definitions=new Map(rig.bones.map(bone=>[bone.id,bone]))
   for (const chain of rig.ikChains) {
-    const endDefinition = rig.bones.find(bone => bone.id === chain.endBoneId); if (!endDefinition) continue
+    if(chain.weight<=0)continue
+    const endDefinition = definitions.get(chain.endBoneId); if (!endDefinition) continue
     for (let iteration = 0; iteration < chain.iterations; iteration++) {
       let remaining = chain.chainLength
       let boneId: string | null = chain.endBoneId
       while (boneId && remaining-- > 0) {
-        const bone = result.get(boneId), local = locals.get(boneId), definition = rig.bones.find(candidate => candidate.id === boneId)
+        const bone = result.get(boneId), local = locals.get(boneId), definition = definitions.get(boneId)
         const end = result.get(chain.endBoneId)
         if (!bone || !local || !definition || !end) break
         const endLength = endDefinition.length * end.scale.x
@@ -245,19 +254,24 @@ function poseWorld(rig: RigDocument, skeleton: Skeleton2D): Map<string, BoneWorl
         let delta = targetAngle - currentAngle
         delta = Math.atan2(Math.sin(delta), Math.cos(delta))
         local.rotation += delta * chain.weight
+        applyLimits(boneId,true)
         result = buildWorld(rig, locals)
         boneId = definition.parentId
       }
     }
   }
-  return result
+  // Copy constraints resolve sequentially; final limits retain priority over IK/copy results.
+  for(const constraint of rig.constraints)if(constraint.type==='CopyRotation'&&constraint.targetBoneId&&constraint.weight>0){const local=locals.get(constraint.boneId),bone=result.get(constraint.boneId),target=result.get(constraint.targetBoneId);if(local&&bone&&target){local.rotation+=Math.atan2(Math.sin(target.rotation-bone.rotation),Math.cos(target.rotation-bone.rotation))*constraint.weight;result=buildWorld(rig,locals)}}
+  applyLimits();return buildWorld(rig,locals)
 }
+
+export function evaluateRigPose(rig:RigDocument,skeleton:Skeleton2D):Map<string,BoneWorld>{return poseWorld(normalizeRig(rig),skeleton)}
 
 export function deformSkin(entity: Entity, sprite: SpriteRenderer2D): SkinnedMesh2D | null {
   const skeleton = entity.getComponent<Skeleton2D>('Skeleton2D')
   if (!skeleton?.enabled || !skeleton.previewEnabled) return null
   const rig = readRig(skeleton.rigAsset); const skin = readSkin(skeleton.skinAsset)
-  if (!rig || !skin || skin.rigAsset && skin.rigAsset !== skeleton.rigAsset) return null
+  if (!rig || !skin || skin.rigAsset && resolveAsset(skin.rigAsset)?.uuid !== resolveAsset(skeleton.rigAsset)?.uuid) return null
   const bones = poseWorld(rig, skeleton)
   const bindLocals = new Map<string, BoneWorld>(rig.bones.map(bone => [bone.id, { position: { ...bone.position }, rotation: bone.rotation, scale: { ...bone.scale } }] as [string, BoneWorld]))
   const bindBones = buildWorld(rig, bindLocals)
@@ -268,8 +282,8 @@ export function deformSkin(entity: Entity, sprite: SpriteRenderer2D): SkinnedMes
       const bone = bones.get(weight.boneId), bind = bindBones.get(weight.boneId); if (!bone || !bind) continue
       const bindCosine = Math.cos(-bind.rotation), bindSine = Math.sin(-bind.rotation)
       const dx = source.x - bind.position.x, dy = source.y - bind.position.y
-      const localX = (dx * bindCosine - dy * bindSine) / Math.max(1e-9, Math.abs(bind.scale.x)) * bone.scale.x
-      const localY = (dx * bindSine + dy * bindCosine) / Math.max(1e-9, Math.abs(bind.scale.y)) * bone.scale.y
+      const localX = (dx * bindCosine - dy * bindSine) / (Math.abs(bind.scale.x)<1e-9?(bind.scale.x<0?-1e-9:1e-9):bind.scale.x) * bone.scale.x
+      const localY = (dx * bindSine + dy * bindCosine) / (Math.abs(bind.scale.y)<1e-9?(bind.scale.y<0?-1e-9:1e-9):bind.scale.y) * bone.scale.y
       const cosine = Math.cos(bone.rotation), sine = Math.sin(bone.rotation)
       x += (bone.position.x + localX * cosine - localY * sine) * weight.weight
       y += (bone.position.y + localX * sine + localY * cosine) * weight.weight
@@ -288,7 +302,10 @@ export function retargetPose(sourceRig: RigDocument, targetRig: RigDocument, sou
     const mapped = explicitMapping[sourceBone.id] ?? targetByAlias.get(sourceAliases.get(sourceBone.id) ?? sourceBone.name.toLowerCase())
     const targetBone = target.bones.find(bone => bone.id === mapped); if (!targetBone) return []
     const pose = sourcePoseById.get(sourceBone.id), sourceLength = Math.max(1e-9, sourceBone.length), lengthScale = targetBone.length / sourceLength
-    return [{ boneId: targetBone.id, position: pose ? { x: pose.position.x * lengthScale, y: pose.position.y * lengthScale } : { ...targetBone.position }, rotation: pose?.rotation ?? targetBone.rotation, scale: pose ? { ...pose.scale } : { ...targetBone.scale } }]
+    if(!pose)return [{boneId:targetBone.id,position:{...targetBone.position},rotation:targetBone.rotation,scale:{...targetBone.scale}}]
+    const position=vector(pose.position,sourceBone.position),scale=vector(pose.scale,sourceBone.scale),rotation=finiteNumber(pose.rotation,sourceBone.rotation)
+    const scaleDelta=(value:number,rest:number,target:number)=>Math.abs(rest)>1e-9?target*value/rest:target+value-rest
+    return [{boneId:targetBone.id,position:{x:targetBone.position.x+(position.x-sourceBone.position.x)*lengthScale,y:targetBone.position.y+(position.y-sourceBone.position.y)*lengthScale},rotation:targetBone.rotation+Math.atan2(Math.sin(rotation-sourceBone.rotation),Math.cos(rotation-sourceBone.rotation)),scale:{x:scaleDelta(scale.x,sourceBone.scale.x,targetBone.scale.x),y:scaleDelta(scale.y,sourceBone.scale.y,targetBone.scale.y)}}]
   })
 }
 
@@ -302,6 +319,7 @@ function pointSegmentDistanceSquared(point: Vec2, start: Vec2, end: Vec2): numbe
 /** Deterministic bounded inverse-distance weighting; it refuses work that would stall the editor. */
 export function autoWeightSkin(rigValue: RigDocument, skinValue: SkinDocument, maximumInfluences = 4, falloff = 2): AutoWeightResult {
   const rig = normalizeRig(rigValue), skin = normalizeSkin(skinValue), influenceLimit = Math.min(8, Math.max(1, Math.round(maximumInfluences)))
+  if(skinValue.vertices.length>65_000)throw new Error('AUTO_WEIGHT_LIMIT: A skin supports at most 65,000 vertices; no weights were changed.')
   const operations = rig.bones.length * skin.vertices.length
   if (operations > 2_000_000) throw new Error(`AUTO_WEIGHT_LIMIT: ${operations.toLocaleString()} bone/vertex comparisons exceed the 2,000,000-operation editor limit. Split the skin or rig before auto-weighting.`)
   const bind = buildWorld(rig, new Map(rig.bones.map(bone => [bone.id, { position: { ...bone.position }, rotation: bone.rotation, scale: { ...bone.scale } }] as [string, BoneWorld])))

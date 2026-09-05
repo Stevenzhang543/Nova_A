@@ -1,11 +1,12 @@
 import { mkdir, readFile, readdir, writeFile } from 'node:fs/promises'
 import { dirname, extname, join, relative } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { releaseVersion } from './release-source-snapshot.mjs'
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)))
 const release = process.argv.find(value => value.startsWith('--release='))?.slice(10)
 const machine = process.argv.find(value => value.startsWith('--engine='))?.slice(9)
-if (!/^26\.(?:08|09|10)$/.test(release ?? '') || !/^26\.(?:8|9|10)\.0$/.test(machine ?? '')) throw new Error('Calendar history requires --release=26.08|26.09|26.10 and its --engine value.')
+if (releaseVersion(release) !== machine) throw new Error('History verification requires a matching --release=YY.SS and --engine=YY.S.0 sequence.')
 const checks = []
 const check = (id, passed, detail, metrics = {}) => checks.push({ id, status: passed ? 'passed' : 'failed', detail, metrics })
 async function filesBelow(directory) { const output = []; for (const entry of await readdir(directory, { withFileTypes: true })) { const path = join(directory, entry.name); entry.isDirectory() ? output.push(...await filesBelow(path)) : output.push(path) } return output }

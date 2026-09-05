@@ -167,6 +167,8 @@ export interface AnimationImportMetadata {
 }
 
 export interface AssetRecord {
+  /** Stable source frame; derived images share the owner's source pixels. */
+  derivedSprite?: import('./derivedSprites').DerivedSprite
   uuid: string
   name: string
   path: string

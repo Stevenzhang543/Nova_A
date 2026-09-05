@@ -12,6 +12,10 @@ export interface StableControlRecord {
   shortcut: string
 }
 
+type StableControlElement = HTMLElement | SVGElement
+function isControlElement(node: Node): node is StableControlElement { return node instanceof HTMLElement || node instanceof SVGElement }
+function renderedText(element: StableControlElement): string { return ('innerText' in element ? element.innerText : element.textContent ?? '').trim() }
+
 const SELECTOR = 'button,input,select,textarea,a[href],[role="button"],[role="tab"],[role="menuitem"],[data-stable-control]'
 const INTERNAL_SELECTOR = '[data-feature-state="internal"]'
 let observer: MutationObserver | null = null
@@ -21,23 +25,23 @@ function slug(value: string): string {
   return normalized.slice(0, 56) || 'control'
 }
 
-function derivedVisibleText(element: HTMLElement): string {
-  if (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement) return element.labels?.[0]?.innerText.trim() || element.placeholder || element.name || element.type
-  if (element instanceof HTMLSelectElement) return element.labels?.[0]?.innerText.trim() || element.name || 'Select'
-  return element.getAttribute('title') || element.innerText.trim().replace(/\s+/g, ' ') || element.textContent?.trim().replace(/\s+/g, ' ') || ''
+function derivedVisibleText(element: StableControlElement): string {
+  if (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement) return element.labels?.[0]?.textContent?.trim() || element.placeholder || element.name || element.type
+  if (element instanceof HTMLSelectElement) return element.labels?.[0]?.textContent?.trim() || element.name || 'Select'
+  return element.getAttribute('title') || renderedText(element).replace(/\s+/g, ' ') || element.textContent?.trim().replace(/\s+/g, ' ') || ''
 }
 
-function visibleText(element: HTMLElement): string {
+function visibleText(element: StableControlElement): string {
   const authoredAriaLabel = element.dataset.generatedAriaLabel === 'true' ? '' : element.getAttribute('aria-label')
   return authoredAriaLabel || derivedVisibleText(element)
 }
 
-function surfaceName(element: HTMLElement): string {
-  const scope = element.closest<HTMLElement>('[data-control-scope],[data-surface]')
+function surfaceName(element: StableControlElement): string {
+  const scope = element.closest<StableControlElement>('[data-control-scope],[data-surface]')
   return scope?.dataset.controlScope || scope?.dataset.surface || 'application'
 }
 
-function kindOf(element: HTMLElement): StableControlKind {
+function kindOf(element: StableControlElement): StableControlKind {
   const role = element.getAttribute('role')
   if (role === 'tab' || role === 'menuitem') return role
   if (element instanceof HTMLAnchorElement) return 'link'
@@ -52,9 +56,9 @@ function kindOf(element: HTMLElement): StableControlKind {
  * qualification.  `nth-of-type` is evaluated in the rendered component scope,
  * which is deterministic for a given reachable UI state.
  */
-function structuralPath(element: HTMLElement, scope: HTMLElement): string {
+function structuralPath(element: StableControlElement, scope: StableControlElement): string {
   const parts: string[] = []
-  let current: HTMLElement | null = element
+  let current: StableControlElement | null = element
   while (current && current !== scope && parts.length < 12) {
     const authored = current.dataset.testKey || current.id || current.getAttribute('name') || current.dataset.command || current.dataset.doc || current.dataset.shortcut
     if (authored) {
@@ -70,13 +74,13 @@ function structuralPath(element: HTMLElement, scope: HTMLElement): string {
   return parts.join('--') || `${kindOf(element)}-1`
 }
 
-function assignStableIdentity(element: HTMLElement): void {
+function assignStableIdentity(element: StableControlElement): void {
   if (element.matches(INTERNAL_SELECTOR) || element.closest(INTERNAL_SELECTOR)) return
   const label = visibleText(element)
   const surface = surfaceName(element)
   element.dataset.surface ||= surface
   if (!element.dataset.testid) {
-    const scope = element.closest<HTMLElement>('[data-control-scope],[data-surface]') || document.documentElement
+    const scope = element.closest<StableControlElement>('[data-control-scope],[data-surface]') || document.documentElement
     const explicitKey = element.dataset.testKey || element.id || element.getAttribute('name') || element.dataset.command || element.dataset.doc || element.dataset.shortcut
     const stableKey = explicitKey ? slug(explicitKey) : structuralPath(element, scope)
     const base = `nova-${slug(surface)}-${stableKey}`
@@ -90,7 +94,7 @@ function assignStableIdentity(element: HTMLElement): void {
     const generatedLabel = derivedVisibleText(element) || kindOf(element)
     if (element.dataset.generatedAriaLabel === 'true') {
       if (element.getAttribute('aria-label') !== generatedLabel) element.setAttribute('aria-label', generatedLabel)
-    } else if (!element.getAttribute('aria-label') && (!label || !element.innerText.trim())) {
+    } else if (!element.getAttribute('aria-label') && (!label || !renderedText(element))) {
       element.dataset.generatedAriaLabel = 'true'
       element.setAttribute('aria-label', generatedLabel)
     }
@@ -102,21 +106,35 @@ function assignStableIdentity(element: HTMLElement): void {
       element.dataset.disabledReason = generatedReason
     }
     const reason = element.dataset.disabledReason
-    if (!element.getAttribute('title')) element.setAttribute('title', reason)
+    if (!element.getAttribute('title')) {
+      element.dataset.generatedDisabledTitle = reason
+      element.setAttribute('title', reason)
+    }
+  } else {
+    // A generated disabled hint must not survive when a control becomes usable.
+    // Preserve authored titles (including a title changed while disabled).
+    if (element.dataset.generatedDisabledTitle !== undefined) {
+      if (element.getAttribute('title') === element.dataset.generatedDisabledTitle) element.removeAttribute('title')
+      delete element.dataset.generatedDisabledTitle
+    }
+    if (element.dataset.generatedDisabledReason === 'true') {
+      delete element.dataset.disabledReason
+      delete element.dataset.generatedDisabledReason
+    }
   }
 }
 
 function refreshTextOwner(node: Node): void {
-  const parent = node instanceof HTMLElement ? node : node.parentElement
+  const parent = isControlElement(node) ? node : node.parentElement
   if (!parent) return
   if (parent.matches(SELECTOR)) assignStableIdentity(parent)
   const label = parent.closest('label')
-  label?.querySelectorAll<HTMLElement>(SELECTOR).forEach(assignStableIdentity)
+  label?.querySelectorAll<StableControlElement>(SELECTOR).forEach(assignStableIdentity)
 }
 
 function scan(root: ParentNode = document): void {
-  if (root instanceof HTMLElement && root.matches(SELECTOR)) assignStableIdentity(root)
-  root.querySelectorAll<HTMLElement>(SELECTOR).forEach(assignStableIdentity)
+  if (root instanceof Node && isControlElement(root) && root.matches(SELECTOR)) assignStableIdentity(root)
+  root.querySelectorAll<StableControlElement>(SELECTOR).forEach(assignStableIdentity)
 }
 
 export function installStableControlRegistry(): void {
@@ -124,9 +142,9 @@ export function installStableControlRegistry(): void {
   scan()
   observer = new MutationObserver(records => {
     for (const record of records) {
-      if (record.type === 'attributes' && record.target instanceof HTMLElement) assignStableIdentity(record.target)
+      if (record.type === 'attributes' && isControlElement(record.target)) assignStableIdentity(record.target)
       if (record.type === 'characterData' || record.type === 'childList') refreshTextOwner(record.target)
-      record.addedNodes.forEach(node => { if (node instanceof HTMLElement) scan(node) })
+      record.addedNodes.forEach(node => { if (isControlElement(node)) scan(node) })
     }
   })
   observer.observe(document.documentElement, { subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: ['disabled', 'aria-label', 'title'] })
@@ -134,7 +152,7 @@ export function installStableControlRegistry(): void {
 
 export function stableControlInventory(root: ParentNode = document): StableControlRecord[] {
   scan(root)
-  return [...root.querySelectorAll<HTMLElement>('[data-testid]')].filter(element => element.matches(SELECTOR)).map(element => ({
+  return [...root.querySelectorAll<StableControlElement>('[data-testid]')].filter(element => element.matches(SELECTOR)).map(element => ({
     testId: element.dataset.testid!, kind: kindOf(element), label: visibleText(element), surface: surfaceName(element),
     identitySource: element.dataset.testIdentity === 'authored' ? 'authored' : 'structural', structuralPath: element.dataset.testPath || '',
     disabled: 'disabled' in element && Boolean((element as HTMLButtonElement).disabled), disabledReason: element.dataset.disabledReason || element.getAttribute('title') || '',
@@ -143,7 +161,7 @@ export function stableControlInventory(root: ParentNode = document): StableContr
 }
 
 export function focusStableControl(testId: string): boolean {
-  const control = document.querySelector<HTMLElement>(`[data-testid="${CSS.escape(testId)}"]`)
+  const control = document.querySelector<StableControlElement>(`[data-testid="${CSS.escape(testId)}"]`)
   if (!control) return false
   control.scrollIntoView({ block: 'nearest', inline: 'nearest' }); control.focus(); return true
 }

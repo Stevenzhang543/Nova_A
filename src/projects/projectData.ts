@@ -254,14 +254,14 @@ export function validateProjectDocument(source: string | unknown): ProjectValida
       if (entity.editorOnly === true && entity.runtimePersistence === 'SaveGame') add('warning', 'editor-only-persistence', `${entityPath}.runtimePersistence`, 'Editor-only objects cannot be written to player saves.', true)
       if (typeof entity.ownerUuid === 'string' && !sceneEntityIds.has(entity.ownerUuid.toLowerCase())) add('error', 'missing-owner', `${entityPath}.ownerUuid`, 'Owner entity does not exist in this scene.', true)
       const components = Array.isArray(entity.components) ? entity.components.filter(item => item && typeof item === 'object') as Array<Record<string, unknown>> : []
-      const kinds = new Set(components.map(component => String(component.kind ?? '')))
+      const kinds = new Set(components.filter(component => component.removed !== true).map(component => String(component.kind ?? '')))
       if (!kinds.has('Transform2D')) add('error', 'component-dependency', `${entityPath}.components`, 'Every entity requires Transform2D.', true)
       for (const [componentIndex, component] of components.entries()) {
         const componentPath = `${entityPath}.components[${componentIndex}]`, componentUuid = String(component.uuid ?? '').toLowerCase(), kind = String(component.kind ?? '')
         if (!UUID.test(componentUuid) || identities.has(componentUuid)) add('error', 'component-uuid', `${componentPath}.uuid`, 'Component UUID is invalid or duplicated.', true)
         else identities.add(componentUuid)
         if (!stableComponentKinds.has(kind)) add('warning', 'unknown-component', `${componentPath}.kind`, `Component ${kind || '<empty>'} is unavailable in this editor.`, false)
-        if (stableComponentKinds.has(kind)) {
+        if (stableComponentKinds.has(kind) && component.removed !== true) {
           const rule = componentAuthoringRule(kind as ComponentKind)
           for (const dependency of rule.required) if (!kinds.has(dependency)) add('error', 'component-dependency', `${componentPath}.kind`, `${kind} requires ${dependency}.`, true)
           for (const conflict of rule.conflicts) if (kinds.has(conflict)) add('error', 'component-conflict', `${componentPath}.kind`, `${kind} conflicts with ${conflict}.`, true)
@@ -299,7 +299,7 @@ export function validateProjectDocument(source: string | unknown): ProjectValida
   for (const [assetIndex, asset] of assets.entries()) {
     if (asset.assetType !== 'prefab') continue
     try {
-      const document = JSON.parse(String(asset.source ?? '')) as Record<string, unknown>
+      const document = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(assetSourceBytes(String(asset.source ?? '')))) as Record<string, unknown>
       if (![1, 2].includes(Number(document.prefabVersion))) add('error', 'prefab-version', `assets[${assetIndex}].source`, 'Prefab source version is unsupported.', false)
       const bundle = document.bundle as Record<string, unknown> | undefined
       if (!bundle || !Array.isArray(bundle.entities) || !Array.isArray(bundle.rootUuids)) add('error', 'prefab-bundle', `assets[${assetIndex}].source`, 'Prefab source bundle is malformed.', false)

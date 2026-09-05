@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onBeforeUnmount, watch, nextTick } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick } from 'vue'
 import { physicsState, pushHistory, selectEntities } from '../store/physics'
 import { BoxEntity } from '../world/BoxEntity'
 import { CircleEntity } from '../world/CircleEntity'
@@ -15,7 +15,7 @@ import { defaultColorForLayer } from '../world/layers'
 import { compoundGeometries } from '../world/compoundGeometry'
 import { localPointToWorld, prepareHierarchyIndex, worldPointToLocal, worldTransform } from '../world/hierarchy'
 import { applyRotation, applyScale, applyTranslation, axisVector, captureTransforms, gizmoPivot, gizmoRotation, projectedDelta, type GizmoAxis, type TransformSnapshot } from '../editor/gizmo'
-import { createRenderer2D, type Renderer2D } from '../renderer'
+import { createRenderer2D, RendererCanvasReplacementRequired, type Renderer2D } from '../renderer'
 import { reportRendererReset } from '../renderer/capabilities'
 import { renderWorld } from '../renderer/sceneRenderer'
 import { assetReference, resolveAsset } from '../assets/AssetDatabase'
@@ -32,7 +32,7 @@ import { physicsDebugState } from '../runtime/physicsDebug'
 import { renderDebugView2D, renderLighting2D, renderPostProcessOverlay, worldPostProcessFilter } from '../renderer/lighting2d'
 import { beginRenderGraph, captureRenderSurface, completeRenderGraph, recordRenderPass, renderGraphState } from '../renderer/renderGraph'
 import { captureRenderTexture } from '../renderer/renderTextures'
-import { activeGameCameras } from '../renderer/sceneRenderer'
+import { activeGameCameras, resetCameraSmoothing } from '../renderer/sceneRenderer'
 import { activeRenderQuality, renderingSettings } from '../renderer/renderSettings'
 import { prepareColliderSet } from '../runtime/physicsGeometry'
 import { recordEntityProperties } from '../editor/animationStudioState'
@@ -44,13 +44,23 @@ import { timelinePresentationState } from '../runtime/timeline'
 import VirtualControlsOverlay from './VirtualControlsOverlay.vue'
 import { beginPerformanceFrame, completePerformanceFrame, markPerformanceInput, performanceRuntimeState } from '../runtime/largeWorldPerformance'
 import { PHYSICS_UNITS } from '../runtime/physicsProduction'
+import { UiNativeInputBridge, isExternalUiControl } from '../runtime/uiNativeInput'
+import { runtimeAccessibilitySettings, runtimeCaptions, activeRuntimeCaptions } from '../runtime/presentation'
+import { setInputModality } from '../runtime/inputModality'
+import { activeTextDirection } from '../runtime/localization'
 
 const canvasRef = ref<HTMLCanvasElement | null>(null)
 const renderCanvasRef = ref<HTMLCanvasElement | null>(null)
+const renderCanvasKey = ref(0)
+let rendererInitialization = 0, canvasDisposed = false
+const gameSurfaceRef = ref<HTMLDivElement | null>(null)
 const nativeInputRef = ref<HTMLInputElement | null>(null)
 const focusedUiInput = ref<{ entity: Entity; rect: { x: number; y: number; width: number; height: number }; input: TextInput } | null>(null)
 const accessibilityNodes = ref<UiAccessibilityNode[]>([])
 let accessibilitySignature = ''
+let touchPointer: number | null = null
+const captionTick = ref(0), visibleCaptions = computed(() => { void captionTick.value; return activeRuntimeCaptions() })
+const inputBridge = new UiNativeInputBridge((uuid, value) => gameUiRuntime.commitTextInput(uuid, value))
 let ctx: CanvasRenderingContext2D | null = null
 let renderer: Renderer2D | null = null
 let canvasPixelRatio = 1
@@ -154,32 +164,63 @@ function readPalette() {
 watch(() => [prefs.theme, prefs.highContrast, prefs.maxPixelRatio], () => { readPalette(); scheduleResize() })
 watch(() => editorState.currentPage, page => {
   if (page !== 'game') {
-    gameUiRuntime.blurTextInput()
-    focusedUiInput.value = null
+    closeNativeInput(); gameUiRuntime.pointerCancel(); touchPointer = null
   }
 })
 
 function synchronizeNativeInput(focus = false) {
-  const active = gameUiRuntime.focusedTextInput()
+  const active = gameUiRuntime.focusedTextInput(), changed = active?.entity.uuid !== focusedUiInput.value?.entity.uuid
   focusedUiInput.value = active
-  if (focus && active) void nextTick(() => { nativeInputRef.value?.focus(); nativeInputRef.value?.select() })
+  if (!active) { inputBridge.reset(); return }
+  void nextTick(() => {
+    const input = nativeInputRef.value
+    if (!input || gameUiRuntime.focusedTextInput()?.entity.uuid !== active.entity.uuid) return
+    inputBridge.bind(input, active.entity.uuid, active.input.value)
+    if (focus || changed) input.focus({ preventScroll: true })
+  })
 }
-
 function nativeInputStyle() {
-  const rect = focusedUiInput.value?.rect
-  return rect ? { left: `${rect.x}px`, top: `${rect.y}px`, width: `${rect.width}px`, height: `${rect.height}px` } : {}
-}
-
-function onNativeInput(event: Event) {
   const active = focusedUiInput.value
-  if (!active) return
-  active.input.value = (event.target as HTMLInputElement).value.slice(0, Math.max(0, active.input.maxLength))
+  if (!active) return {}
+  const style = gameUiRuntime.focusedTextInputStyle()
+  return { left: `${active.rect.x}px`, top: `${active.rect.y}px`, width: `${active.rect.width}px`, height: `${active.rect.height}px`, ...style }
 }
-
+function onNativeInput(event: Event) { const active = focusedUiInput.value; if (active) inputBridge.input(event.target as HTMLInputElement, active.input.maxLength, (event as InputEvent).isComposing) }
+function onCompositionEnd(event: CompositionEvent) { const active = focusedUiInput.value; if (active) inputBridge.compositionEnd(event.target as HTMLInputElement, active.input.maxLength) }
+function onNativeKey(event: KeyboardEvent) {
+  event.stopPropagation()
+  if (inputBridge.ownsCompositionKey(event)) return
+  if (event.key === 'Tab') { event.preventDefault(); const active = focusedUiInput.value; if (active && nativeInputRef.value) inputBridge.flush(nativeInputRef.value, active.input.maxLength); gameUiRuntime.keyDown(event); synchronizeNativeInput(true); synchronizeAccessibleFocus(); return }
+  if (event.key === 'Enter' || event.key === 'Escape') { event.preventDefault(); closeNativeInput(); canvasRef.value?.focus({ preventScroll: true }) }
+}
 function closeNativeInput() {
-  gameUiRuntime.blurTextInput()
-  focusedUiInput.value = null
+  const active = focusedUiInput.value
+  if (active && nativeInputRef.value) {
+    if (inputBridge.isComposing) inputBridge.compositionEnd(nativeInputRef.value, active.input.maxLength)
+    else inputBridge.flush(nativeInputRef.value, active.input.maxLength)
+  }
+  gameUiRuntime.blurTextInput(); focusedUiInput.value = null; inputBridge.reset()
 }
+function synchronizeAccessibleFocus() {
+  if (gameUiRuntime.focusedTextInput()) return
+  const focused = gameUiRuntime.accessibilityNodes().find(node => node.focused)
+  if (focused) void nextTick(() => gameSurfaceRef.value?.querySelector<HTMLElement>(`[data-ui-uuid="${focused.uuid}"]`)?.focus({ preventScroll: true }))
+}
+function onAccessibleFocus(uuid: string) { gameUiRuntime.focusByUuid(uuid); synchronizeNativeInput(true) }
+function onAccessibleActivate(uuid: string, event: MouseEvent) { event.stopPropagation(); event.preventDefault(); gameUiRuntime.activateByUuid(uuid); synchronizeNativeInput(true) }
+function onUiPointerDown(event: PointerEvent) {
+  if (event.pointerType === 'mouse' || editorState.currentPage !== 'game' || touchPointer !== null) return
+  if (!gameUiRuntime.pointerDown(screenPos(event))) return
+  touchPointer = event.pointerId; event.preventDefault(); event.stopPropagation(); canvasRef.value?.setPointerCapture(event.pointerId)
+  setInputModality(event.pointerType === 'pen' ? 'pen' : 'touch'); synchronizeNativeInput(true)
+}
+function onUiPointerMove(event: PointerEvent) { if (event.pointerId === touchPointer) { event.preventDefault(); event.stopPropagation(); gameUiRuntime.pointerMove(screenPos(event)) } }
+function onUiPointerUp(event: PointerEvent) {
+  if (event.pointerId !== touchPointer) return
+  event.preventDefault(); event.stopPropagation(); gameUiRuntime.pointerUp(screenPos(event)); touchPointer = null
+  if (canvasRef.value?.hasPointerCapture(event.pointerId)) canvasRef.value.releasePointerCapture(event.pointerId)
+}
+function onUiPointerCancel(event: PointerEvent) { if (event.pointerId === touchPointer) { gameUiRuntime.pointerCancel(); touchPointer = null } }
 
 function resize() {
   const canvas = canvasRef.value; if (!canvas) return
@@ -249,7 +290,7 @@ function runFrame(time?: number) {
     }
   }
   const renderingStarted = performance.now()
-  render()
+  render(dt)
   const renderingMs = performance.now() - renderingStarted
   const timings = gameplayRuntime.diagnostics.timings
   const frameMs = Math.max(0, dt * 1000)
@@ -292,7 +333,7 @@ onMounted(() => {
   gameUiRuntime.setRemapCallback((action, bindingIndex, binding) => {
     if (rebindInputAction(physicsState.inputMap, action, bindingIndex, binding)) pushHistory('Remap runtime input')
   })
-  if (renderCanvasRef.value) renderer = createRenderer2D(renderCanvasRef.value)
+  void resetRenderer()
   window.addEventListener('nova-renderer-reset-request', resetRenderer)
   world.connections.filter(connection => connection.breakState !== 'intact').forEach(connection => knownBrokenConnections.add(connection.id))
   resize()
@@ -300,19 +341,28 @@ onMounted(() => {
     const r = canvasRef.value.getBoundingClientRect(); camera.offset.x = r.width / 2; camera.offset.y = r.height / 2
     resizeObserver = new ResizeObserver(scheduleResize); resizeObserver.observe(canvasRef.value.parentElement!)
   }
-  lastTime = performance.now(); loop(); window.addEventListener('resize', scheduleResize); window.addEventListener('mouseup', onMouseUp); window.addEventListener('keydown', onKeyDown)
+  lastTime = performance.now(); loop(); window.addEventListener('resize', scheduleResize); window.addEventListener('mouseup', onMouseUp); window.addEventListener('keydown', onKeyDown, true)
   void world.wasmReady.then(() => {
     if (world.wasmError) editorState.statusText = t('physicsUnavailable', { message: world.wasmError.message })
   }).catch(error => { editorState.statusText = t('physicsUnavailable', { message: error instanceof Error ? error.message : String(error) }); reportRecoverableError(error, 'Physics WebAssembly initialization', 'Physics') })
 })
-onBeforeUnmount(() => { pendingMouseMove = null; if (raf) cancelAnimationFrame(raf); if (resizeRaf) cancelAnimationFrame(resizeRaf); window.removeEventListener('resize', scheduleResize); window.removeEventListener('mouseup', onMouseUp); window.removeEventListener('keydown', onKeyDown); window.removeEventListener('nova-renderer-reset-request', resetRenderer); if (resizeObserver) resizeObserver.disconnect(); gameUiRuntime.reset(); renderer?.destroy(); renderer = null })
+onBeforeUnmount(() => { canvasDisposed = true; rendererInitialization++; pendingMouseMove = null; if (raf) cancelAnimationFrame(raf); if (resizeRaf) cancelAnimationFrame(resizeRaf); window.removeEventListener('resize', scheduleResize); window.removeEventListener('mouseup', onMouseUp); window.removeEventListener('keydown', onKeyDown, true); window.removeEventListener('nova-renderer-reset-request', resetRenderer); if (resizeObserver) resizeObserver.disconnect(); gameUiRuntime.reset(); renderer?.destroy(); renderer = null })
 
-function resetRenderer() {
-  if (!renderCanvasRef.value) return
-  renderer?.destroy()
-  renderer = createRenderer2D(renderCanvasRef.value)
-  renderer.resize(renderCanvasRef.value.clientWidth, renderCanvasRef.value.clientHeight, canvasPixelRatio)
-  reportRendererReset()
+async function resetRenderer() {
+  if (!renderCanvasRef.value || canvasDisposed) return
+  const generation = ++rendererInitialization
+  renderer?.destroy(); renderer = null
+  try {
+    try { renderer = createRenderer2D(renderCanvasRef.value) }
+    catch (error) {
+      if (!(error instanceof RendererCanvasReplacementRequired)) throw error
+      renderCanvasKey.value++; await nextTick()
+      if (generation !== rendererInitialization || canvasDisposed || !renderCanvasRef.value) return
+      renderer = createRenderer2D(renderCanvasRef.value, true)
+    }
+    if (renderCanvasRef.value) renderer.resize(renderCanvasRef.value.clientWidth, renderCanvasRef.value.clientHeight, canvasPixelRatio)
+    reportRendererReset()
+  } catch (error) { reportRecoverableError(error, 'Renderer initialization', 'Renderer') }
 }
 
 function screenPos(e: MouseEvent): Vec2 { const r = canvasRef.value!.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top } }
@@ -400,8 +450,8 @@ function editorBoundaryPoints(entity: Entity, samples = 48): Vec2[] {
 
 function onKeyDown(event: KeyboardEvent) {
   markPerformanceInput()
-  if (focusedUiInput.value && (document.activeElement === nativeInputRef.value || event.isComposing)) return
-  if (editorState.currentPage === 'game' && gameUiRuntime.keyDown(event)) { event.preventDefault(); return }
+  if (event.isComposing || event.keyCode === 229 || event.target === nativeInputRef.value || isExternalUiControl(event.target, gameSurfaceRef.value) || isExternalUiControl(document.activeElement, gameSurfaceRef.value)) return
+  if (editorState.currentPage === 'game' && gameUiRuntime.keyDown(event)) { event.preventDefault(); event.stopPropagation(); synchronizeNativeInput(true); synchronizeAccessibleFocus(); return }
   if ((event.key === 'Delete' || event.key === 'Backspace') && hoveredVertex && (hoveredVertex.target === 'renderer')) {
     const entity = world.entities.find(candidate => candidate.id === hoveredVertex!.entityId), minimum = entity?.renderer.shape === 'Line' ? 2 : 3
     if (entity && entity.renderer.vertices.length > minimum) { entity.renderer.vertices.splice(hoveredVertex.index, 1); entity.authoring.path.points = entity.renderer.vertices.map(point => ({ ...point })); pushHistory('Delete shape point', `vertices:${entity.uuid}`); hoveredVertex = null; event.preventDefault() }
@@ -536,7 +586,7 @@ function onMouseDown(e: MouseEvent) {
   markPerformanceInput()
   const sPos = screenPos(e); const wPos = camera.screenToWorld(sPos); dragButton = e.button; hasMovedEntity = false
   if (editorState.currentPage === 'game') {
-    if (e.button === 0) { gameUiRuntime.pointerDown(sPos); synchronizeNativeInput(true) }
+    if (e.button === 0) { canvasRef.value?.focus({ preventScroll: true }); if (gameUiRuntime.pointerDown(sPos)) { e.preventDefault(); e.stopPropagation() }; synchronizeNativeInput(true) }
     return
   }
   const tileEntity = tilemapEditorState.active ? world.entities.find(entity => entity.uuid === tilemapEditorState.selectedEntityUuid) ?? null : null
@@ -716,7 +766,7 @@ function onMouseUp(event?: MouseEvent) {
   markPerformanceInput()
   flushPendingMouseMove()
   if (editorState.currentPage === 'game') {
-    if (event && canvasRef.value) gameUiRuntime.pointerUp(screenPos(event))
+    if (event && canvasRef.value && gameUiRuntime.pointerUp(screenPos(event))) { event.preventDefault(); event.stopPropagation() }
     return
   }
   if (authoringState.measurement.active) { authoringState.measurement.active = false; return }
@@ -1072,16 +1122,18 @@ function drawPhysicsDebug(context: CanvasRenderingContext2D) {
   context.restore()
 }
 
-function render() {
+function render(deltaSeconds = 0) {
   if (!ctx || !canvasRef.value) return
   const desiredPixelRatio = Math.max(.5, Math.min(window.devicePixelRatio || 1, prefs.maxPixelRatio, activeRenderQuality.maximumPixelRatio) * performanceRuntimeState.adaptivePixelRatioScale)
   if (Math.abs(desiredPixelRatio - canvasPixelRatio) > .001) resize()
   const cvs = canvasRef.value; const width = cvs.width / canvasPixelRatio; const height = cvs.height / canvasPixelRatio
+  if (state.playMode === 'editing') resetCameraSmoothing()
   const graphStarted = beginRenderGraph()
   let passStarted = graphStarted
   if (renderer) {
     Object.assign(editorState.rendererStats, renderWorld(renderer, world.entities, {
       width, height, pixelRatio: canvasPixelRatio,
+      deltaSeconds: state.playMode === 'playing' ? deltaSeconds * state.globalSettings.timeScale : 0,
       editorCamera: { scale: camera.scale, offset: { ...camera.offset } },
       gameView: editorState.currentPage === 'game', activeLayer: editorState.activeLayer,
       renderLayer: editorState.currentPage === 'game' ? editorState.renderLayer : editorState.activeLayer,
@@ -1265,7 +1317,7 @@ function render() {
   gameUiRuntime.render(ctx, width, height, uiEntities, { editor: !isGameView, selectedEntityIds: selectedIds })
   renderScreenRulers(ctx, width, height)
   const nodes = isGameView ? gameUiRuntime.accessibilityNodes() : []
-  const nextAccessibilitySignature = nodes.map(node => `${node.uuid}:${node.rect.x.toFixed(1)}:${node.rect.y.toFixed(1)}:${node.rect.width.toFixed(1)}:${node.rect.height.toFixed(1)}:${node.label}:${node.focused}:${node.disabled}`).join('|')
+  const nextAccessibilitySignature = JSON.stringify(nodes)
   if (nextAccessibilitySignature !== accessibilitySignature) { accessibilitySignature = nextAccessibilitySignature; accessibilityNodes.value = nodes }
   recordRenderPass('UI', passStarted, true, uiEntities.length ? 1 : 0)
   completeRenderGraph(graphStarted, editorState.rendererStats, passStarted, passStarted)
@@ -1278,7 +1330,7 @@ function render() {
       if (activeCamera.component.renderTexture) captureRenderTexture(activeCamera.component.renderTexture, renderCanvasRef.value, activeCamera.component.viewport, renderGraphState.frame)
     }
   }
-  if (isGameView && focusedUiInput.value) synchronizeNativeInput()
+  if (isGameView) { synchronizeNativeInput(); if (runtimeCaptions.length) captionTick.value++ }
 }
 
 function drawWorldDebugLabel(context: CanvasRenderingContext2D, point: Vec2, text: string, color: string, yOffset = 0): void {
@@ -1421,15 +1473,15 @@ function drawTilemapOverlay(context: CanvasRenderingContext2D, view: { minX: num
 </script>
 
 <template>
-  <div class="canvas-container" @dragover="onAssetDragOver" @drop="onAssetDrop">
-    <canvas ref="renderCanvasRef" class="render-canvas" :style="{ filter: worldPostProcessFilter() }" aria-hidden="true" />
-    <canvas ref="canvasRef" class="overlay-canvas" @mousedown="onMouseDown" @mousemove="onMouseMove" @mouseup="onMouseUp" @dblclick="onDoubleClick" @wheel="onWheel" @contextmenu.prevent />
+  <div ref="gameSurfaceRef" class="canvas-container" @dragover="onAssetDragOver" @drop="onAssetDrop">
+    <canvas :key="renderCanvasKey" ref="renderCanvasRef" class="render-canvas" :style="{ filter: worldPostProcessFilter() }" aria-hidden="true" />
+    <canvas ref="canvasRef" class="overlay-canvas" tabindex="0" :aria-label="editorState.currentPage === 'game' ? t('game') : t('scene')" @touchstart="touchPointer !== null && $event.stopPropagation()" @touchmove="touchPointer !== null && $event.stopPropagation()" @pointerdown="onUiPointerDown" @pointermove="onUiPointerMove" @pointerup="onUiPointerUp" @pointercancel="onUiPointerCancel" @lostpointercapture="onUiPointerCancel" @mousedown="onMouseDown" @mousemove="onMouseMove" @mouseup="onMouseUp" @dblclick="onDoubleClick" @wheel="onWheel" @contextmenu.prevent />
     <VirtualControlsOverlay v-if="editorState.currentPage === 'game'" />
     <div v-if="editorState.currentPage === 'game' && accessibilityNodes.length" class="game-ui-a11y" aria-label="Game UI">
       <div
         v-for="node in accessibilityNodes"
         :key="node.uuid"
-        class="game-ui-a11y-node"
+        class="game-ui-a11y-node" data-game-ui-control :data-ui-uuid="node.uuid"
         :style="{ left: `${node.rect.x}px`, top: `${node.rect.y}px`, width: `${node.rect.width}px`, height: `${node.rect.height}px` }"
         :role="node.role"
         :aria-label="node.label"
@@ -1444,25 +1496,26 @@ function drawTilemapOverlay(context: CanvasRenderingContext2D, view: { minX: num
         :aria-disabled="node.disabled"
         :aria-current="node.focused ? 'true' : undefined"
         :tabindex="node.disabled ? -1 : node.tabIndex"
-        @focus="gameUiRuntime.focusByUuid(node.uuid)"
+        @focus="onAccessibleFocus(node.uuid)" @click="onAccessibleActivate(node.uuid, $event)"
       ></div>
     </div>
-    <div v-if="editorState.currentPage === 'game' && timelinePresentationState.subtitles.length" class="timeline-subtitles" aria-live="polite">
-      <p v-for="subtitle in timelinePresentationState.subtitles" :key="`${subtitle.ownerUuid}:${subtitle.clipId}`" :class="`safe-${subtitle.safeArea}`" :lang="subtitle.locale || undefined">{{ subtitle.text }}</p>
+    <div v-if="editorState.currentPage === 'game' && (runtimeAccessibilitySettings.subtitles && timelinePresentationState.subtitles.length || visibleCaptions.length)" class="timeline-subtitles" :class="{ 'caption-transparent': !runtimeAccessibilitySettings.captionBackground }" :style="{ '--caption-scale': runtimeAccessibilitySettings.captionScale }" aria-live="polite" aria-atomic="false">
+      <p v-for="subtitle in (runtimeAccessibilitySettings.subtitles ? timelinePresentationState.subtitles : [])" :key="`${subtitle.ownerUuid}:${subtitle.clipId}`" :class="`safe-${subtitle.safeArea}`" :lang="subtitle.locale || undefined">{{ subtitle.text }}</p>
+      <p v-for="caption in visibleCaptions" :key="caption.id" class="safe-TitleSafe">{{ caption.speaker ? `${caption.speaker}: ` : '' }}{{ caption.text }}</p>
     </div>
     <input
       v-if="focusedUiInput && editorState.currentPage === 'game'"
       ref="nativeInputRef"
-      class="native-ui-input"
+      class="native-ui-input" data-game-ui-control :lang="gameUiRuntime.focusedTextInputLocale() || undefined" :dir="activeTextDirection(gameUiRuntime.focusedTextInputLocale())"
       :aria-label="focusedUiInput.entity.getComponent<RectTransform>('RectTransform')?.accessibilityLabel || focusedUiInput.entity.name"
       :style="nativeInputStyle()"
       :type="focusedUiInput.input.password ? 'password' : 'text'"
-      :value="focusedUiInput.input.value"
-      :placeholder="focusedUiInput.input.placeholder"
+      :placeholder="gameUiRuntime.focusedTextInputPlaceholder()"
       :maxlength="Math.max(0, focusedUiInput.input.maxLength)"
       @input="onNativeInput"
-      @keydown.enter.prevent="closeNativeInput"
-      @keydown.esc.prevent="closeNativeInput"
+      @compositionstart="inputBridge.compositionStart()"
+      @compositionend="onCompositionEnd"
+      @keydown="onNativeKey"
       @blur="closeNativeInput"
     >
   </div>
@@ -1477,8 +1530,10 @@ canvas { position: absolute; inset: 0; display: block; width: 100%; height: 100%
 .game-ui-a11y { position: absolute; inset: 0; z-index: 7; pointer-events: none; }
 .game-ui-a11y-node { position: absolute; overflow: hidden; opacity: .001; pointer-events: none; }
 .timeline-subtitles { position: absolute; inset: 0; z-index: 9; pointer-events: none; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; }
-.timeline-subtitles p { max-width: min(80%, 860px); margin: 0 10% 7%; padding: 8px 14px; border: 1px solid rgba(255,255,255,.22); border-radius: 10px; color: #fff; background: rgba(5,8,13,.78); box-shadow: 0 5px 20px rgba(0,0,0,.28); font: 650 clamp(16px,2.15vw,28px)/1.35 var(--font-ui); text-align: center; text-wrap: balance; }
+.timeline-subtitles p { max-width: min(80%, 860px); margin: 0 10% 7%; padding: 8px 14px; border: 1px solid rgba(255,255,255,.22); border-radius: 10px; color: #fff; background: rgba(5,8,13,.78); box-shadow: 0 5px 20px rgba(0,0,0,.28); font: 650 calc(clamp(16px,2.15vw,28px) * var(--caption-scale, 1))/1.35 var(--font-ui); text-align: center; text-wrap: balance; }
 .timeline-subtitles p.safe-TitleSafe { max-width: min(80%, 860px); margin-right: 10%; margin-left: 10%; margin-bottom: 7%; }
 .timeline-subtitles p.safe-ActionSafe { max-width: 90%; margin-right: 5%; margin-left: 5%; margin-bottom: 4%; }
 .timeline-subtitles p.safe-FullFrame { max-width: 96%; margin-right: 2%; margin-left: 2%; margin-bottom: 2%; }
+.timeline-subtitles.caption-transparent p { background: transparent; border-color: transparent; box-shadow: none; text-shadow: 0 1px 3px #000, 0 -1px 3px #000; }
+.overlay-canvas:focus-visible { outline: 2px solid var(--accent, #79b2ff); outline-offset: -2px; }
 </style>

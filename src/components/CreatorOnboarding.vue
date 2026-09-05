@@ -1,8 +1,8 @@
 <template>
   <Transition name="onboarding">
-    <div v-if="learning.onboardingVisible" ref="dialog" class="onboarding-scrim" role="dialog" aria-modal="true" tabindex="-1" :aria-labelledby="`onboarding-title-${learning.onboardingStep}`" @keydown="onKeyDown">
+    <div v-if="learning.onboardingVisible" ref="dialog" class="onboarding-scrim" role="dialog" aria-modal="true" v-modal-focus tabindex="-1" :aria-labelledby="`onboarding-title-${learning.onboardingStep}`" @keydown="onKeyDown">
       <section class="onboarding-card">
-        <header><span>Nova_A 6.0 · {{ t('firstRunOnboarding') }}</span><button :aria-label="t('close')" @click="finishCreatorOnboarding">×</button></header>
+        <header><span>Nova_A {{ NOVA_RELEASE_NAME }} · {{ t('firstRunOnboarding') }}</span><button :aria-label="t('close')" @click="finishCreatorOnboarding">×</button></header>
         <div class="step-visual" aria-hidden="true"><span>{{ current.icon }}</span><i v-for="(_, index) in steps" :key="index" :class="{ active: index <= learning.onboardingStep }"></i></div>
         <main>
           <small>{{ t('stepOf', { current: learning.onboardingStep + 1, total: steps.length }) }}</small>
@@ -17,10 +17,12 @@
 </template>
 
 <script setup lang="ts">
+import { vModalFocus } from '../editor/modalFocus'
 import { computed, nextTick, ref, watch } from 'vue'
 import { t } from '../i18n'
 import { creatorLearningState as learning, finishCreatorOnboarding } from '../runtime/creatorLearning'
 import { editorState } from '../store/editor'
+import { NOVA_RELEASE_NAME } from '../projects/projectFormat'
 type TranslationKey = Parameters<typeof t>[0]
 const steps: ReadonlyArray<{ icon: string; title: TranslationKey; description: TranslationKey; points: TranslationKey[] }> = [
   { icon: '◇', title: 'onboardingChooseGoal', description: 'onboardingChooseGoalHint', points: ['onboardingTemplatePoint', 'onboardingGuidePoint', 'onboardingLocalPoint'] },
@@ -33,7 +35,15 @@ const current = computed(() => steps[Math.min(steps.length - 1, Math.max(0, lear
 const dialog = ref<HTMLElement | null>(null)
 watch(() => learning.onboardingVisible, visible => { if (visible) void nextTick(() => dialog.value?.focus()) }, { immediate: true })
 function next(): void { if (learning.onboardingStep < steps.length - 1) learning.onboardingStep++; else { finishCreatorOnboarding(); editorState.activeWorkspace = 'manage'; editorState.currentPage = 'manage'; editorState.manageSection = 'learn' } }
-function onKeyDown(event: KeyboardEvent): void { if (event.key === 'Escape') finishCreatorOnboarding(); else if (event.key === 'ArrowLeft' && learning.onboardingStep > 0) learning.onboardingStep--; else if (event.key === 'ArrowRight' || event.key === 'Enter') next(); else return; event.preventDefault() }
+function onKeyDown(event: KeyboardEvent): void {
+  if (event.defaultPrevented) return
+  if (event.key !== 'Escape' && event.target !== event.currentTarget) return
+  if (event.key === 'Escape') finishCreatorOnboarding()
+  else if (event.key === 'ArrowLeft' && learning.onboardingStep > 0) learning.onboardingStep--
+  else if (event.key === 'ArrowRight' || event.key === 'Enter') next()
+  else return
+  event.preventDefault(); event.stopPropagation()
+}
 </script>
 
 <style scoped>

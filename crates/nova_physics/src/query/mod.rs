@@ -196,7 +196,16 @@ fn ray_aabb_interval(origin: Vec2, direction: Vec2, distance: f64, bounds: Aabb)
 
 impl PhysicsWorld {
     fn query_records(&self) -> Vec<(u32, Body)> {
-        self.bodies.iter().map(|record| (record.handle, Body::from_data(&record.values, 0))).collect()
+        let mut colliders = Vec::new();
+        for record in &self.bodies {
+            let mut body = Body::from_data(&record.values, 0);
+            body.apply_collider_children(&record.collider_shapes);
+            colliders.push((record.handle, body.collider_proxy(None)));
+            for index in 0..body.collider_children.len() {
+                colliders.push((record.handle, body.collider_proxy(Some(index))));
+            }
+        }
+        colliders
     }
 
     pub fn raycast_all(&self, origin: [f64; 2], direction: [f64; 2], distance: f64, mask: u32) -> Vec<PhysicsQueryHit> {
@@ -208,6 +217,10 @@ impl PhysicsWorld {
             ray_body(&body, origin, direction, distance).map(|mut hit| { hit.handle = handle; hit })
         }).collect();
         hits.sort_by(|first, second| first.distance.total_cmp(&second.distance).then(first.handle.cmp(&second.handle)));
+        // The public query contract returns bodies, so retain the closest
+        // child hit for each owner without reporting duplicates.
+        let mut owners = HashSet::new();
+        hits.retain(|hit| owners.insert(hit.handle));
         hits
     }
 
@@ -217,7 +230,8 @@ impl PhysicsWorld {
 
     pub fn overlap_point(&self, point: [f64; 2], mask: u32) -> Vec<u32> {
         let point = Vec2::new(finite_or(point[0], 0.0), finite_or(point[1], 0.0));
-        self.query_records().into_iter().filter_map(|(handle, body)| (query_enabled(mask, &body) && point_in_body(&body, point)).then_some(handle)).collect()
+        let mut owners = HashSet::new();
+        self.query_records().into_iter().filter_map(|(handle, body)| (query_enabled(mask, &body) && point_in_body(&body, point) && owners.insert(handle)).then_some(handle)).collect()
     }
 
     pub fn overlap_circle(&self, center: [f64; 2], radius: f64, mask: u32) -> Vec<u32> {
@@ -231,7 +245,8 @@ impl PhysicsWorld {
     }
 
     fn overlap_shape(&self, query: &Body, mask: u32) -> Vec<u32> {
-        self.query_records().into_iter().filter_map(|(handle, body)| (query_enabled(mask, &body) && !collide(query, &body).is_empty()).then_some(handle)).collect()
+        let mut owners = HashSet::new();
+        self.query_records().into_iter().filter_map(|(handle, body)| (query_enabled(mask, &body) && !collide(query, &body).is_empty() && owners.insert(handle)).then_some(handle)).collect()
     }
 
     pub fn shape_cast(&self, center: [f64; 2], size: [f64; 2], angle: f64, direction: [f64; 2], distance: f64, mask: u32) -> Option<PhysicsQueryHit> {
@@ -260,6 +275,7 @@ impl PhysicsWorld {
         let mut best: Option<PhysicsQueryHit> = None;
         for (handle, body) in self.query_records() {
             if Some(handle) == excluded_handle || !query_enabled(mask, &body) { continue; }
+            if excluded_handle.is_some() && body.is_sensor { continue; }
             if body.one_way {
                 let allowed = rotate(body.one_way_normal, body.collider_angle())
                     .normalized_or(Vec2::new(0.0, 1.0));
@@ -454,6 +470,55 @@ mod query_tests {
         let cast = world.shape_cast([0.0, 0.0], [0.5, 0.5], 0.0, [1.0, 0.0], 10.0, 1).unwrap();
         assert_eq!(cast.handle, 10);
         assert!((cast.distance - 0.75).abs() < 1.0e-6);
+    }
+
+    #[test]
+    fn compound_children_are_queried_at_their_exact_offsets_and_layers() {
+        let mut world = PhysicsWorld::new();
+        world.create_body(10, 0, &box_record(0.0, 10.0, 0)).unwrap();
+        let mut child = vec![0.0; COLLIDER_CHILD_STRIDE];
+        child[0] = 42.0; child[1] = 3.0; child[2] = 4.0; child[3] = -10.0;
+        child[5] = 2.0; child[6] = 2.0; child[8] = 1.0; child[9] = u32::MAX as f64;
+        world.upsert_collider_shapes(10, &child).unwrap();
+        assert_eq!(world.overlap_point([4.0, 0.0], 2), vec![10]);
+        assert!(world.overlap_point([4.0, 0.0], 1).is_empty());
+        assert!(world.overlap_point([2.0, 5.0], u32::MAX).is_empty());
+        assert_eq!(world.overlap_circle([4.0, 0.0], 0.5, 2), vec![10]);
+        assert_eq!(world.overlap_box([4.0, 0.0], [0.5, 0.5], 0.0, 2), vec![10]);
+        let ray = world.raycast([0.0, 0.0], [1.0, 0.0], 10.0, 2).unwrap();
+        assert_eq!(ray.handle, 10);
+        assert!((ray.distance - 3.0).abs() < 1.0e-9);
+        let sweep = world.shape_cast([0.0, 0.0], [1.0, 1.0], 0.0, [1.0, 0.0], 10.0, 2).unwrap();
+        assert!((sweep.distance - 2.5).abs() < 1.0e-6);
+
+        let mut second_child = child.clone();
+        second_child[0] = 43.0; second_child[2] = 4.5;
+        child.extend(second_child);
+        world.upsert_collider_shapes(10, &child).unwrap();
+        assert_eq!(world.overlap_point([4.0, 0.0], 2), vec![10]);
+        assert_eq!(world.overlap_circle([4.0, 0.0], 0.5, 2), vec![10]);
+        assert_eq!(world.raycast_all([0.0, 0.0], [1.0, 0.0], 10.0, 2).len(), 1);
+    }
+
+    #[test]
+    fn characters_collide_with_compound_children_but_not_sensors() {
+        let mut world = PhysicsWorld::new();
+        world.create_body(1, 0, &box_record(0.0, 0.0, 0)).unwrap();
+        world.create_body(2, 1, &box_record(0.0, 10.0, 0)).unwrap();
+        let mut child = vec![0.0; COLLIDER_CHILD_STRIDE];
+        child[0] = 42.0; child[1] = 3.0; child[2] = 4.0; child[3] = -10.0;
+        child[5] = 2.0; child[6] = 2.0; child[9] = u32::MAX as f64;
+        world.upsert_collider_shapes(2, &child).unwrap();
+        let moved = world.move_character_box(1, [2.0, 2.0], [10.0, 0.0], 0.5, 0.0, 0.0, 4, 1.0e-5, 1).unwrap();
+        assert!(moved.on_wall);
+        assert!((moved.position[0] - 2.0).abs() < 1.0e-4);
+        world.set_transform(1, 0.0, 0.0, 0.0).unwrap();
+        child[7] = 1.0;
+        world.upsert_collider_shapes(2, &child).unwrap();
+        let through_sensor = world.move_character_box(1, [2.0, 2.0], [10.0, 0.0], 0.5, 0.0, 0.0, 4, 1.0e-5, 1).unwrap();
+        assert!(!through_sensor.on_wall);
+        assert!((through_sensor.position[0] - 10.0).abs() < 1.0e-9);
+        assert_eq!(world.overlap_point([4.0, 0.0], 1), vec![2]);
     }
 
     #[test]

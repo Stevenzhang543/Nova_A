@@ -1,3 +1,4 @@
+import { OBJECT_FAMILY_LESSON_ID, objectFamilyGuide, objectFamilyLesson } from './objectFamilyLesson'
 import { computed, reactive } from 'vue'
 import { preferencesState, type PerformanceProfile } from '../store/preferences'
 import type { Locale } from '../store/preferences'
@@ -87,10 +88,12 @@ const taskSpecs: readonly PanelSpec[] = [
 
 function slug(value: string): string { return value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 100) }
 function expand(spec: PanelSpec, taskProject = false): LearningGuide[] {
-  return spec.features.map(feature => ({ id: `${spec.id}-${slug(feature)}`, panel: spec.panel, workspace: spec.workspace, feature, classifications: [...spec.classifications], prerequisites: [...spec.prerequisites], relatedRhai: [...(spec.rhai ?? [])], relatedGraph: [...(spec.graph ?? [])], taskProject }))
+  // Keep published manual anchors and saved learning progress stable while the
+  // library grows; its visible title must not advertise an obsolete count.
+  return spec.features.map(feature => ({ id: `${spec.id}-${slug(feature)}`, panel: spec.panel, workspace: spec.workspace, feature: feature === '20-template library' ? 'Template library' : feature, classifications: [...spec.classifications], prerequisites: [...spec.prerequisites], relatedRhai: [...(spec.rhai ?? [])], relatedGraph: [...(spec.graph ?? [])], taskProject }))
 }
 
-export const CREATOR_LEARNING_GUIDES: readonly LearningGuide[] = Object.freeze([...panelSpecs.flatMap(spec => expand(spec)), ...taskSpecs.flatMap(spec => expand(spec, true))])
+export const CREATOR_LEARNING_GUIDES: readonly LearningGuide[] = Object.freeze([...panelSpecs.flatMap(spec => expand(spec)), ...taskSpecs.flatMap(spec => expand(spec, true)), objectFamilyGuide])
 export const CREATOR_TASK_GUIDES: readonly LearningGuide[] = Object.freeze(CREATOR_LEARNING_GUIDES.filter(guide => guide.taskProject))
 
 const localeText = {
@@ -133,6 +136,7 @@ const localeText = {
 } as const
 
 export function localizedLearningGuide(guide: LearningGuide, locale: Locale): LocalizedLearningGuide {
+  if (guide.id === OBJECT_FAMILY_LESSON_ID) return objectFamilyLesson(locale)
   const copy = localeText[locale]
   return { title: localizedUiLabel(guide.feature, locale), purpose: copy.purpose(guide), whenToUse: copy.when(guide), prerequisites: [...guide.prerequisites], steps: copy.steps(guide), expectedResult: copy.expected(guide), persistence: copy.persistence(guide), undoRecovery: copy.recovery, mistakes: copy.mistakes(guide), accessibility: copy.accessibility, minimalExample: copy.minimal(guide), productionExample: copy.production(guide), relatedRhai: [...guide.relatedRhai], relatedGraph: [...guide.relatedGraph] }
 }

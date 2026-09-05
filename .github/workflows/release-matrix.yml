@@ -20,7 +20,7 @@ jobs:
       - uses: pnpm/action-setup@v4
         with: { version: 10.30.0 }
       - uses: actions/setup-node@v4
-        with: { node-version: 20, cache: pnpm }
+        with: { node-version-file: .node-version, cache: pnpm }
       - uses: taiki-e/install-action@v2
         with: { tool: wasm-pack }
       - run: pnpm install --frozen-lockfile
@@ -46,7 +46,7 @@ jobs:
       - uses: pnpm/action-setup@v4
         with: { version: 10.30.0 }
       - uses: actions/setup-node@v4
-        with: { node-version: 20, cache: pnpm }
+        with: { node-version-file: .node-version, cache: pnpm }
       - uses: taiki-e/install-action@v2
         with: { tool: wasm-pack }
       - run: pnpm install --frozen-lockfile
@@ -63,7 +63,7 @@ jobs:
       - uses: pnpm/action-setup@v4
         with: { version: 10.30.0 }
       - uses: actions/setup-node@v4
-        with: { node-version: 20, cache: pnpm }
+        with: { node-version-file: .node-version, cache: pnpm }
       - run: pnpm install --frozen-lockfile
       - run: node scripts/audit-v3.mjs --android-contract
       # Producing a signed APK/AAB remains an optional-package qualification,

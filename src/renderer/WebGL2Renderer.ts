@@ -2,7 +2,9 @@ import { nineSliceGeometry, shapeGeometry, spriteGeometry, strokeGeometry, type 
 import { assetState, resolveTexture as resolveTextureAsset } from '../assets/AssetDatabase'
 import { analyzeMaterialShader, defaultMaterial, reflectShaderUniforms, reportMaterialFallback, resolvedMaterialFragment, resolveMaterial, type Material2DResource } from './materials'
 import { reportRendererContextLost, reportRendererContextRestored } from './capabilities'
-import { activePostProcessing, renderingSettings } from './renderSettings'
+import { activePostProcessing, GPU_TEXTURE_MEMORY_LIMIT_MB, renderingSettings } from './renderSettings'
+import { textureContentVersion } from './textureContent'
+import { boundedFrame } from './surfaceLimits'
 import {
   normalizedColor,
   type CameraRenderView,
@@ -37,11 +39,14 @@ interface CachedTexture {
   height: number
   filter: TextureFilter | null
   lastUsedFrame: number
+  contentVersion: string
 }
 
 interface CachedText {
   region: TextureRegion
   aspect: number
+  bytes: number
+  lastUsedFrame: number
 }
 
 const MAX_PACKET_VERTICES = 65_000
@@ -105,22 +110,23 @@ function compileShader(gl: WebGL2RenderingContext, type: number, source: string)
   return shader
 }
 
-function createProgram(gl: WebGL2RenderingContext, fragmentSource = FRAGMENT_SOURCE): WebGLProgram {
-  const vertex = compileShader(gl, gl.VERTEX_SHADER, VERTEX_SOURCE)
-  const fragment = compileShader(gl, gl.FRAGMENT_SHADER, fragmentSource)
-  const program = gl.createProgram()
-  if (!program) throw new Error('Could not allocate WebGL program')
-  gl.attachShader(program, vertex)
-  gl.attachShader(program, fragment)
-  gl.linkProgram(program)
-  gl.deleteShader(vertex)
-  gl.deleteShader(fragment)
-  if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
-    const message = gl.getProgramInfoLog(program) || 'Unknown shader link error'
-    gl.deleteProgram(program)
-    throw new Error(message)
+function createProgram(gl: WebGL2RenderingContext, fragmentSource = FRAGMENT_SOURCE, vertexSource = VERTEX_SOURCE): WebGLProgram {
+  const vertex = compileShader(gl, gl.VERTEX_SHADER, vertexSource)
+  let fragment: WebGLShader | null = null, program: WebGLProgram | null = null
+  try {
+    fragment = compileShader(gl, gl.FRAGMENT_SHADER, fragmentSource)
+    program = gl.createProgram()
+    if (!program) throw new Error('Could not allocate WebGL program')
+    gl.attachShader(program, vertex); gl.attachShader(program, fragment); gl.linkProgram(program)
+    if (!gl.getProgramParameter(program, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(program) || 'Unknown shader link error')
+    return program
+  } catch (error) {
+    if (program) gl.deleteProgram(program)
+    throw error
+  } finally {
+    gl.deleteShader(vertex)
+    if (fragment) gl.deleteShader(fragment)
   }
-  return program
 }
 
 interface ProgramState {
@@ -195,21 +201,14 @@ void main(){
 }
 
 function createPostProgram(gl: WebGL2RenderingContext, material: Material2DResource): WebGLProgram {
-  const vertex = compileShader(gl, gl.VERTEX_SHADER, POST_VERTEX_SOURCE)
-  const fragment = compileShader(gl, gl.FRAGMENT_SHADER, postMaterialFragment(material))
-  const program = gl.createProgram()
-  if (!program) throw new Error('Could not allocate post-process program')
-  gl.attachShader(program, vertex); gl.attachShader(program, fragment); gl.linkProgram(program)
-  gl.deleteShader(vertex); gl.deleteShader(fragment)
-  if (!gl.getProgramParameter(program, gl.LINK_STATUS)) { const message = gl.getProgramInfoLog(program) || 'Post-process shader link failed'; gl.deleteProgram(program); throw new Error(message) }
-  return program
+  return createProgram(gl, postMaterialFragment(material), POST_VERTEX_SOURCE)
 }
 
 function textureDimensions(source: TexImageSource): { width: number; height: number } {
   if (source instanceof HTMLImageElement) return { width: source.naturalWidth, height: source.naturalHeight }
   if (source instanceof HTMLVideoElement) return { width: source.videoWidth, height: source.videoHeight }
   const value = source as { width?: number; height?: number }
-  return { width: Math.max(1, value.width ?? 1), height: Math.max(1, value.height ?? 1) }
+  return { width: value.width ?? 1, height: value.height ?? 1 }
 }
 
 export class WebGL2Renderer implements Renderer2D {
@@ -235,7 +234,11 @@ export class WebGL2Renderer implements Renderer2D {
   private readonly textureCache = new Map<object, CachedTexture>()
   private textureMemoryBytes = 0
   private textureCount = 0
+  private readonly pendingTextureUploads = new Map<object, { region: TextureRegion; requestedFrame: number; bytes: number }>()
+  private drainingTextureUploads = false
+  private pendingTextureBytes = 0
   private readonly textCache = new Map<string, CachedText>()
+  private textCacheBytes = 0
   private packets: GeometryPacket[] = []
   private frame: FrameOptions = { width: 1, height: 1, pixelRatio: 1, clearColor: { r: 0, g: 0, b: 0, a: 1 } }
   private camera: CameraRenderView = { scale: 1, offset: { x: 0, y: 0 } }
@@ -260,7 +263,8 @@ export class WebGL2Renderer implements Renderer2D {
     reportRendererContextLost()
   }
   private readonly onContextRestored = () => {
-    this.contextLost = false
+    // Objects from the lost context are invalid; remain suspended until the owner rebuilds.
+    this.contextLost = true
     this.textureCache.clear()
     this.textureMemoryBytes = 0
     this.textureCount = 0
@@ -274,6 +278,7 @@ export class WebGL2Renderer implements Renderer2D {
     this.gl = gl
     canvas.addEventListener('webglcontextlost', this.onContextLost)
     canvas.addEventListener('webglcontextrestored', this.onContextRestored)
+    try {
     this.program = createProgram(gl)
     const vao = gl.createVertexArray(), vertexBuffer = gl.createBuffer(), indexBuffer = gl.createBuffer()
     if (!vao || !vertexBuffer || !indexBuffer) throw new Error('Could not allocate WebGL buffers')
@@ -304,12 +309,20 @@ export class WebGL2Renderer implements Renderer2D {
     const whiteContext = this.whiteCanvas.getContext('2d')!
     whiteContext.fillStyle = '#ffffff'
     whiteContext.fillRect(0, 0, 1, 1)
-    this.whiteRegion = { key: '__white', source: this.whiteCanvas, uv: { x: 0, y: 0, width: 1, height: 1 }, filter: 'Nearest' }
+    this.whiteRegion = { key: '__white', source: this.whiteCanvas, uv: { x: 0, y: 0, width: 1, height: 1 }, filter: 'Nearest', revision: 0 }
+    this.resolveTexture(this.whiteRegion, 'Nearest')
+    } catch (error) {
+      canvas.removeEventListener('webglcontextlost', this.onContextLost)
+      canvas.removeEventListener('webglcontextrestored', this.onContextRestored)
+      gl.getExtension('WEBGL_lose_context')?.loseContext()
+      throw error
+    }
   }
 
   resize(width: number, height: number, pixelRatio: number): void {
-    const pixelWidth = Math.max(1, Math.round(width * pixelRatio))
-    const pixelHeight = Math.max(1, Math.round(height * pixelRatio))
+    const safe = boundedFrame({ width, height, pixelRatio, clearColor: this.frame.clearColor }, this.gl.getParameter(this.gl.MAX_RENDERBUFFER_SIZE) as number)
+    const pixelWidth = Math.max(1, Math.floor(safe.width * safe.pixelRatio))
+    const pixelHeight = Math.max(1, Math.floor(safe.height * safe.pixelRatio))
     if (this.targetWidth === pixelWidth && this.targetHeight === pixelHeight) return
     this.targetWidth = pixelWidth
     this.targetHeight = pixelHeight
@@ -320,8 +333,8 @@ export class WebGL2Renderer implements Renderer2D {
 
   beginFrame(options: FrameOptions): void {
     this.frameSerial++
-    this.frame = options
-    this.resize(options.width, options.height, options.pixelRatio)
+    this.frame = boundedFrame(options, this.gl.getParameter(this.gl.MAX_RENDERBUFFER_SIZE) as number)
+    this.resize(this.frame.width, this.frame.height, this.frame.pixelRatio)
     this.packets = []
     this.sequence = 0
     this.cameraIndex = -1
@@ -329,7 +342,9 @@ export class WebGL2Renderer implements Renderer2D {
     this.effectsTargetActive = renderingSettings.postProcessing.enabled
     if (this.effectsTargetActive) this.ensureEffectsTarget()
     this.pollGpuTimers()
-    Object.assign(this.stats, { drawCalls: 0, batches: 0, triangles: 0, sprites: 0, shapes: 0, text: 0, textures: this.textureCount, gpuMs: this.lastGpuMs, passes: 1, renderTargets: this.effectsTargetActive ? 1 : 0, overdraw: 0, batchBreaks: 0, atlasPages: assetState.atlasPages.length, textureMemoryBytes: this.textureMemoryBytes, textureUploads: 0, textureEvictions: 0, textureBudgetBytes: Math.round(renderingSettings.textureStreaming.memoryBudgetMb * 1048576), textureBudgetExceeded: false, streamingMisses: 0, shaderCompiles: 0, shaderFallbacks: 0, contextLosses: this.contextLossCount, batchBreakReasons: {} })
+    Object.assign(this.stats, { drawCalls: 0, batches: 0, triangles: 0, sprites: 0, shapes: 0, text: 0, textures: this.textureCount, gpuMs: this.lastGpuMs, passes: 1, renderTargets: this.effectsTargetActive ? 1 : 0, overdraw: 0, batchBreaks: 0, atlasPages: assetState.atlasPages.length, textureMemoryBytes: this.textureMemoryBytes, textureUploads: 0, textureEvictions: 0, textureBudgetBytes: this.textureBudget(), textureBudgetExceeded: false, streamingMisses: 0, shaderCompiles: 0, shaderFallbacks: 0, contextLosses: this.contextLossCount, batchBreakReasons: {} })
+    this.stats.textureUploadDeferrals = 0
+    this.drainTextureUploads()
     const gl = this.gl
     gl.bindFramebuffer(gl.FRAMEBUFFER, this.effectsTargetActive ? this.framebuffer : null)
     const [r, g, b, a] = normalizedColor(options.clearColor)
@@ -347,11 +362,13 @@ export class WebGL2Renderer implements Renderer2D {
   beginCamera(camera: CameraRenderView): void { this.camera = camera; this.cameraIndex++ }
 
   submitSprite(command: SpriteRenderCommand): void {
+    if (command.mesh && (command.mesh.positions.length > MAX_PACKET_VERTICES || command.mesh.uvs.length > MAX_PACKET_VERTICES || command.mesh.indices.length > MAX_PACKET_VERTICES * 3)) return
     this.stats.sprites++
     this.queue(command, command.texture, command.tint, command.mesh ? spriteGeometry(command) : command.nineSlice ? nineSliceGeometry(command) : spriteGeometry(command))
   }
 
   submitShape(command: ShapeRenderCommand): void {
+    if (command.vertices.length > MAX_PACKET_VERTICES) return
     this.stats.shapes++
     if (command.fill.a > 0 && command.shape !== 'Line') this.queue(command, command.texture ?? this.whiteRegion, command.fill, shapeGeometry(command))
     const stroke = strokeGeometry(command)
@@ -359,9 +376,11 @@ export class WebGL2Renderer implements Renderer2D {
   }
 
   submitText(command: TextRenderCommand): void {
-    if (!command.text.trim() || command.color.a <= 0) return
+    if (command.text.length > 65_536 || !command.text.trim() || command.color.a <= 0) return
+    if (![command.fontSize, command.fontWeight, command.lineHeight, command.outlineWidth, command.maxWidth].every(Number.isFinite) || command.fontSize <= 0 || command.lineHeight <= 0) return
     this.stats.text++
     const cached = this.textTexture(command)
+    if (!cached) return
     const width = command.maxWidth > 0 ? Math.min(command.maxWidth, command.fontSize * cached.aspect) : command.fontSize * cached.aspect
     const pivotX = command.align === 'center' ? .5 : command.align === 'right' || command.align === 'end' ? 1 : 0
     const sprite: SpriteRenderCommand = {
@@ -382,7 +401,7 @@ export class WebGL2Renderer implements Renderer2D {
 
   endFrame(): RendererStats {
     if (this.contextLost || this.gl.isContextLost()) return { ...this.stats }
-    this.packets.sort((first, second) => first.cameraIndex - second.cameraIndex || first.layer - second.layer || first.order - second.order || first.material.localeCompare(second.material) || first.sequence - second.sequence)
+    this.packets.sort((first, second) => first.cameraIndex - second.cameraIndex || first.layer - second.layer || first.order - second.order || first.sequence - second.sequence)
     let batch: GeometryPacket[] = []
     const flush = () => {
       if (!batch.length) return
@@ -434,6 +453,9 @@ export class WebGL2Renderer implements Renderer2D {
     this.canvas.removeEventListener('webglcontextlost', this.onContextLost)
     this.canvas.removeEventListener('webglcontextrestored', this.onContextRestored)
     const gl = this.gl
+    for (const value of this.textCache.values()) { const surface = value.region.source as HTMLCanvasElement; surface.width = 0; surface.height = 0 }
+    this.textCache.clear(); this.textCacheBytes = 0; this.packets = []; this.pendingTextureUploads.clear(); this.pendingTextureBytes = 0
+    if (this.contextLost || gl.isContextLost()) { this.textureCache.clear(); this.materialPrograms.clear(); this.textureMemoryBytes = 0; this.textureCount = 0; return }
     gl.deleteBuffer(this.vertexBuffer)
     gl.deleteBuffer(this.indexBuffer)
     gl.deleteVertexArray(this.vao)
@@ -444,9 +466,8 @@ export class WebGL2Renderer implements Renderer2D {
     if (this.postProgram) gl.deleteProgram(this.postProgram.program)
     for (const query of this.pendingTimers) gl.deleteQuery(query)
     for (const cached of this.textureCache.values()) gl.deleteTexture(cached.texture)
-    this.textureCache.clear()
+    this.textureCache.clear(); this.textureMemoryBytes = 0; this.textureCount = 0
     this.materialPrograms.clear()
-    this.textCache.clear()
   }
 
   private queue(
@@ -456,7 +477,7 @@ export class WebGL2Renderer implements Renderer2D {
     geometry: GeometryData,
     orderOverride = order.orderInLayer
   ): void {
-    if (!geometry.positions.length || !geometry.indices.length) return
+    if (this.packets.length >= 100_000 || !geometry.positions.length || !geometry.indices.length) return
     if (geometry.positions.length > MAX_PACKET_VERTICES) return
     if (geometry.positions.some(position => !Number.isFinite(position.x) || !Number.isFinite(position.y))) return
     if (geometry.uvs.some(uv => !Number.isFinite(uv.x) || !Number.isFinite(uv.y))) return
@@ -545,6 +566,7 @@ export class WebGL2Renderer implements Renderer2D {
     }
     if (!reference || reference === 'Default' || reference === 'Particles' || reference.startsWith('__')) return this.baseProgramState
     if (this.materialPrograms.has(reference)) return this.materialPrograms.get(reference) ?? this.baseProgramState
+    if (this.materialPrograms.size >= 128) { const key = this.materialPrograms.keys().next().value!; const stale = this.materialPrograms.get(key); if (stale) this.gl.deleteProgram(stale.program); this.materialPrograms.delete(key) }
     const material = resolveMaterial(reference)
     const resolved = resolvedMaterialFragment(material)
     if ([...resolved.diagnostics, ...analyzeMaterialShader(resolved.source, material.includes)].some(item => item.severity === 'error')) { reportMaterialFallback(reference, 'shader validation failed'); this.stats.shaderFallbacks++; this.materialPrograms.set(reference, null); return this.baseProgramState }
@@ -552,7 +574,7 @@ export class WebGL2Renderer implements Renderer2D {
       const program = createProgram(this.gl, materialFragment(material))
       this.stats.shaderCompiles++
       const camera = this.gl.getUniformLocation(program, 'u_camera'), texture = this.gl.getUniformLocation(program, 'u_texture'), rotation = this.gl.getUniformLocation(program, 'u_rotation')
-      if (!camera || !texture || !rotation) throw new Error('Material shader does not expose the renderer uniforms')
+      if (!camera || !texture || !rotation) { this.gl.deleteProgram(program); throw new Error('Material shader does not expose the renderer uniforms') }
       const state = { program, camera, texture, rotation, linearTexture: this.gl.getUniformLocation(program, 'u_linearTexture'), material }
       this.materialPrograms.set(reference, state)
       return state
@@ -655,11 +677,23 @@ export class WebGL2Renderer implements Renderer2D {
   private resolveTexture(region: TextureRegion, filter: TextureFilter): WebGLTexture {
     const source = region.source as object
     const dimensions = textureDimensions(region.source)
+    const maximum = Math.min(8192, this.gl.getParameter(this.gl.MAX_TEXTURE_SIZE) as number), weight = dimensions.width * dimensions.height * 4
     let cached = this.textureCache.get(source)
+    const contentVersion = textureContentVersion(region, this.frameSerial)
+    const changed = !cached || cached.width !== dimensions.width || cached.height !== dimensions.height || cached.contentVersion !== contentVersion
+    if (changed && source !== this.whiteCanvas && renderingSettings.textureStreaming.enabled && !this.drainingTextureUploads && (this.stats.textureUploads >= this.uploadBudget() || this.pendingTextureUploads.size > 0)) {
+      this.queueTextureUpload(region)
+      if (cached) { cached.lastUsedFrame = this.frameSerial; return cached.texture }
+      return this.resolveTexture(this.whiteRegion, 'Nearest')
+    }
+    if (!Number.isFinite(weight) || dimensions.width <= 0 || dimensions.height <= 0 || dimensions.width > maximum || dimensions.height > maximum || !this.reserveTexture(source, weight)) {
+      this.stats.textureBudgetExceeded = true; this.stats.streamingMisses++
+      return this.resolveTexture(this.whiteRegion, 'Nearest')
+    }
     if (!cached) {
       const texture = this.gl.createTexture()
       if (!texture) throw new Error('Could not allocate WebGL texture')
-      cached = { texture, width: 0, height: 0, filter: null, lastUsedFrame: this.frameSerial }
+      cached = { texture, width: 0, height: 0, filter: null, lastUsedFrame: this.frameSerial, contentVersion: '' }
       this.textureCache.set(source, cached)
       this.textureCount++
       this.stats.streamingMisses++
@@ -667,13 +701,14 @@ export class WebGL2Renderer implements Renderer2D {
     cached.lastUsedFrame = this.frameSerial
     const gl = this.gl
     gl.bindTexture(gl.TEXTURE_2D, cached.texture)
-    if (cached.width !== dimensions.width || cached.height !== dimensions.height) {
+    if (cached.width !== dimensions.width || cached.height !== dimensions.height || cached.contentVersion !== contentVersion) {
       this.textureMemoryBytes -= cached.width * cached.height * 4
       gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false)
       gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, region.source)
       this.stats.textureUploads++
       cached.width = dimensions.width
       cached.height = dimensions.height
+      cached.contentVersion = contentVersion
       this.textureMemoryBytes += cached.width * cached.height * 4
     }
     if (cached.filter !== filter) {
@@ -687,11 +722,60 @@ export class WebGL2Renderer implements Renderer2D {
     return cached.texture
   }
 
+  preloadTexture(region: TextureRegion): void {
+    const cached = this.textureCache.get(region.source as object)
+    if (!cached || cached.contentVersion !== textureContentVersion(region, this.frameSerial)) this.queueTextureUpload(region)
+  }
+
+  private uploadBudget(): number { return Math.round(Math.min(4096, Math.max(1, finite(renderingSettings.textureStreaming.uploadBudgetPerFrame, 16)))) }
+
+  private queueTextureUpload(region: TextureRegion): void {
+    const source = region.source as object, dimensions = textureDimensions(region.source)
+    if (!Number.isFinite(dimensions.width * dimensions.height) || dimensions.width <= 0 || dimensions.height <= 0 || dimensions.width > 8192 || dimensions.height > 8192) return
+    this.stats.textureUploadDeferrals = (this.stats.textureUploadDeferrals ?? 0) + 1
+    const bytes = dimensions.width * dimensions.height * 4, previous = this.pendingTextureUploads.get(source)?.bytes ?? 0
+    if ((this.pendingTextureUploads.has(source) || this.pendingTextureUploads.size < 2048) && this.pendingTextureBytes - previous + bytes <= this.textureBudget() - 4) {
+      this.pendingTextureUploads.set(source, { region: { ...region, uv: { ...region.uv } }, requestedFrame: this.frameSerial, bytes }); this.pendingTextureBytes += bytes - previous
+    } else this.stats.textureBudgetExceeded = true
+    this.stats.textureUploadQueue = this.pendingTextureUploads.size; this.stats.textureUploadQueueBytes = this.pendingTextureBytes
+  }
+
+  private drainTextureUploads(): void {
+    this.drainingTextureUploads = true
+    try {
+      const maximum = renderingSettings.textureStreaming.enabled ? this.uploadBudget() : 4096
+      for (const [source, request] of this.pendingTextureUploads) {
+        if (this.stats.textureUploads >= maximum) break
+        this.pendingTextureUploads.delete(source); this.pendingTextureBytes -= request.bytes
+        if (request.requestedFrame < this.frameSerial - 120) continue
+        this.resolveTexture(request.region, request.region.filter)
+      }
+    } finally { this.drainingTextureUploads = false; this.stats.textureUploadQueue = this.pendingTextureUploads.size; this.stats.textureUploadQueueBytes = this.pendingTextureBytes }
+  }
+
+  private textureBudget(): number { return Math.min(GPU_TEXTURE_MEMORY_LIMIT_MB, Math.max(16, finite(renderingSettings.textureStreaming.memoryBudgetMb, 256))) * 1048576 }
+
+  private evictTexture(source: object): void {
+    const cached = this.textureCache.get(source); if (!cached) return
+    this.gl.deleteTexture(cached.texture); this.textureCache.delete(source)
+    this.textureCount--; this.textureMemoryBytes -= cached.width * cached.height * 4; this.stats.textureEvictions++
+  }
+
+  private reserveTexture(source: object, bytes: number): boolean {
+    const cached = this.textureCache.get(source), previousBytes = cached ? cached.width * cached.height * 4 : 0
+    const reserveFallback = source !== this.whiteCanvas && !this.textureCache.has(this.whiteCanvas)
+    const budget = this.textureBudget() - (reserveFallback ? 4 : 0), entries = 2048 - (reserveFallback ? 1 : 0)
+    if (bytes > budget) return false
+    const over = () => this.textureMemoryBytes - previousBytes + bytes > budget || this.textureCache.size + (cached ? 0 : 1) > entries
+    if (over()) for (const [candidate] of [...this.textureCache].filter(([candidate, value]) => candidate !== source && candidate !== this.whiteCanvas && value.lastUsedFrame < this.frameSerial).sort((a, b) => a[1].lastUsedFrame - b[1].lastUsedFrame)) { this.evictTexture(candidate); if (!over()) break }
+    return !over()
+  }
+
   private trimTextureResidency(): void {
-    const budgetBytes = Math.max(16 * 1048576, Math.round(renderingSettings.textureStreaming.memoryBudgetMb * 1048576))
+    const budgetBytes = this.textureBudget()
     this.stats.textureBudgetBytes = budgetBytes
     if (!renderingSettings.textureStreaming.enabled) {
-      this.stats.textureBudgetExceeded = this.textureMemoryBytes > budgetBytes
+      this.stats.textureBudgetExceeded ||= this.textureMemoryBytes > budgetBytes
       this.stats.textures = this.textureCount
       this.stats.textureMemoryBytes = this.textureMemoryBytes
       return
@@ -708,15 +792,15 @@ export class WebGL2Renderer implements Renderer2D {
       this.textureMemoryBytes = Math.max(0, this.textureMemoryBytes - cached.width * cached.height * 4)
       this.stats.textureEvictions++
     }
-    this.stats.textureBudgetExceeded = this.textureMemoryBytes > budgetBytes
+    this.stats.textureBudgetExceeded ||= this.textureMemoryBytes > budgetBytes
     this.stats.textures = this.textureCount
     this.stats.textureMemoryBytes = this.textureMemoryBytes
   }
 
-  private textTexture(command: TextRenderCommand): CachedText {
-    const key = [command.text, command.fontFamily, command.fontWeight, command.lineHeight, command.outlineWidth, command.outlineColor.r, command.outlineColor.g, command.outlineColor.b, command.outlineColor.a].join('|')
+  private textTexture(command: TextRenderCommand): CachedText | null {
+    const key = [command.text, command.fontFamily, command.fontWeight, command.fontSize, command.lineHeight, command.outlineWidth, command.outlineColor.r, command.outlineColor.g, command.outlineColor.b, command.outlineColor.a].join('|')
     const existing = this.textCache.get(key)
-    if (existing) return existing
+    if (existing) { existing.lastUsedFrame = this.frameSerial; return existing }
     const fontPixels = 64
     const rasterOutline = Math.max(0, command.outlineWidth / Math.max(1, command.fontSize) * fontPixels)
     const padding = Math.ceil(8 + rasterOutline * 2)
@@ -726,6 +810,9 @@ export class WebGL2Renderer implements Renderer2D {
     measure.font = `${command.fontWeight} ${fontPixels}px ${command.fontFamily}`
     const width = Math.max(1, Math.ceil(Math.max(...lines.map(line => measure.measureText(line || ' ').width)) + padding * 2))
     const height = Math.max(1, Math.ceil(lines.length * fontPixels * command.lineHeight + padding * 2))
+    const bytes = Math.min(4096, width) * Math.min(4096, height) * 4
+    for (const [key, value] of this.textCache) { if (this.textCache.size < 256 && this.textCacheBytes + bytes <= 64 * 1048576) break; if (value.lastUsedFrame === this.frameSerial) continue; this.textCache.delete(key); this.textCacheBytes -= value.bytes; this.evictTexture(value.region.source as object); const surface = value.region.source as HTMLCanvasElement; surface.width = 0; surface.height = 0 }
+    if (this.textCache.size >= 256 || this.textCacheBytes + bytes > 64 * 1048576) { this.stats.textureBudgetExceeded = true; this.stats.streamingMisses++; return null }
     const canvas = document.createElement('canvas')
     canvas.width = Math.min(4096, width)
     canvas.height = Math.min(4096, height)
@@ -746,10 +833,9 @@ export class WebGL2Renderer implements Renderer2D {
     })
     const cached: CachedText = {
       region: { key: `text:${key}`, source: canvas, uv: { x: 0, y: 0, width: 1, height: 1 }, filter: 'Linear' },
-      aspect: canvas.width / Math.max(1, canvas.height)
+      aspect: canvas.width / Math.max(1, canvas.height), bytes, lastUsedFrame: this.frameSerial
     }
-    this.textCache.set(key, cached)
-    if (this.textCache.size > 256) this.textCache.delete(this.textCache.keys().next().value as string)
+    this.textCache.set(key, cached); this.textCacheBytes += bytes
     return cached
   }
 }

@@ -62,14 +62,16 @@ export function queryRendererCapabilities(preferred?: RendererBackendName, reque
   const matrix: RendererFeatureSupport[] = backend === 'WebGL2' ? [
     supported('sprites', 'Sprites, atlases, cameras and render targets', 'Batched WebGL2 path with stable layer/order sorting.'),
     supported('materials', 'Typed materials and shaders', 'GLSL ES 3.00 safe subset with reflection, includes and hot reload.'),
-    supported('lighting', '2D lights, occluders, shadows and normals', 'Renderer lighting pass is enabled when requested.'),
+    limited('lighting', '2D lights, shadows and normals', 'A Canvas overlay supplies bounded normal-map response and point/spot/area shadows; directional shadows are not implemented.', 'Use point/spot/area lights for shadows and verify the target scene output.'),
     supported('particles', 'GPU-rendered 2D particle output', 'CPU simulation feeds batched renderer geometry.'),
     gl?.getExtension('EXT_disjoint_timer_query_webgl2') ? supported('gpu-timing', 'GPU timings', 'Disjoint timer queries are available.') : limited('gpu-timing', 'GPU timings', 'This driver does not expose disjoint timer queries.', 'Use CPU frame timings or update the GPU driver.'),
     unsupported('compute', 'Compute and storage shaders', 'WebGL2 does not expose compute/storage shader stages.', 'Use the documented CPU/job-system equivalent.')
   ] : [
     supported('base-2d', 'Sprites, shapes, text and cameras', 'Canvas2D compatibility output remains deterministic.'),
     limited('materials', 'Custom materials', 'Canvas2D renders the safe base material only.', 'Restore WebGL2 or switch the renderer path to Auto.'),
-    unsupported('post', 'Render targets and post processing', 'Canvas2D has no Nova_A post-process graph.', 'Restore WebGL2 support or disable the post-process effect.'),
+    supported('render-textures', 'Camera render textures', 'Bounded Canvas captures are available in both renderer backends.'),
+    limited('lighting', '2D lights, shadows and normals', 'The shared Canvas overlay supports normal response and point/spot/area shadows; directional shadows are not implemented.', 'Verify the target lighting scene output.'),
+    unsupported('post', 'Custom post-process shaders', 'Canvas2D has no Nova_A GLSL post-process graph.', 'Restore WebGL2 support or disable the custom shader effect.'),
     unsupported('gpu-timing', 'GPU timings', 'No GPU query API exists on Canvas2D.', 'Use CPU frame timings.')
   ]
   const report: RendererCapabilityReport = {
@@ -90,9 +92,10 @@ export function queryRendererCapabilities(preferred?: RendererBackendName, reque
       : ['stable draw order', 'multiple cameras/viewports', 'sprites/shapes/text', 'base material fallback'],
     unsupported: backend === 'WebGL2'
       ? ['compute shaders', '3D/cube samplers', 'storage images', 'unbounded shader loops']
-      : ['custom shaders', 'post-process render targets', 'GPU timings', 'normal-map lighting'],
+      : ['custom shaders', 'custom post-process shaders', 'GPU timings', 'directional-light shadows'],
     fallbackRules
   }
+  gl?.getExtension('WEBGL_lose_context')?.loseContext()
   rendererCapabilityState.report = report
   return report
 }

@@ -1116,20 +1116,38 @@ fn default_output_root(game_name: &str) -> PathBuf {
 }
 
 fn safe_relative_path(path: &str) -> Result<PathBuf, String> {
-    let candidate = Path::new(path);
-    if candidate.is_absolute()
-        || candidate.components().any(|part| {
-            matches!(
-                part,
-                std::path::Component::ParentDir
-                    | std::path::Component::RootDir
-                    | std::path::Component::Prefix(_)
-            )
+    // Build and project paths are portable, even when a package was authored
+    // on a different host. Windows separators, drive prefixes and alternate
+    // data streams must not become ordinary filenames on Unix.
+    let normalized = path.replace('\\', "/");
+    if normalized.is_empty()
+        || normalized.split('/').any(|part| {
+            let stem = part
+                .split('.')
+                .next()
+                .unwrap_or_default()
+                .to_ascii_uppercase();
+            part.is_empty()
+                || matches!(part, "." | "..")
+                || part.ends_with(['.', ' '])
+                || part.chars().any(|character| {
+                    character.is_control()
+                        || matches!(character, ':' | '<' | '>' | '"' | '|' | '?' | '*')
+                })
+                || matches!(stem.as_str(), "CON" | "PRN" | "AUX" | "NUL")
+                || ["COM", "LPT"].iter().any(|prefix| {
+                    stem.strip_prefix(prefix).is_some_and(|suffix| {
+                        matches!(
+                            suffix,
+                            "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" | "¹" | "²" | "³"
+                        )
+                    })
+                })
         })
     {
         return Err(format!("unsafe export path: {path}"));
     }
-    Ok(candidate.to_path_buf())
+    Ok(PathBuf::from(normalized))
 }
 
 #[tauri::command]
@@ -1883,14 +1901,16 @@ fn launch_network_instances(
             format!("Client {index}")
         };
         let instance_id = format!("peer-{}", index + 1);
-        let log_scope = request
-            .separate_logs
-            .then(|| format!("network-{}", index + 1))
-            .unwrap_or_default();
-        let inspector_id = request
-            .separate_inspectors
-            .then(|| format!("network-peer-{}", index + 1))
-            .unwrap_or_default();
+        let log_scope = if request.separate_logs {
+            format!("network-{}", index + 1)
+        } else {
+            String::new()
+        };
+        let inspector_id = if request.separate_inspectors {
+            format!("network-peer-{}", index + 1)
+        } else {
+            String::new()
+        };
         let bind_address = if index == 0 {
             host_endpoint.clone()
         } else {
@@ -3509,6 +3529,26 @@ mod tests {
         assert!(safe_relative_path("assets/player.js").is_ok());
         assert!(safe_relative_path("../private.txt").is_err());
         assert!(safe_relative_path("C:\\private.txt").is_err());
+        for path in [
+            "",
+            ".",
+            "assets/..",
+            "..\\private.txt",
+            "/private.txt",
+            "\\\\server\\share",
+            "assets/file.txt:secret",
+            "assets/file.",
+            "assets/CON.txt",
+            "assets/LPT1",
+            "assets/COM¹.txt",
+        ] {
+            assert!(safe_relative_path(path).is_err(), "accepted {path:?}");
+        }
+        assert_eq!(
+            safe_relative_path("assets\\player.js").unwrap(),
+            PathBuf::from("assets/player.js")
+        );
+        assert!(safe_relative_path("Assets/角色/player.png").is_ok());
     }
 
     #[test]

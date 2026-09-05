@@ -1,3 +1,4 @@
+import { localizationBuildDependencies } from '../assets/localizationDependencies'
 import type { AssetRecord } from '../assets/types'
 import { NOVA_ENGINE_VERSION } from '../projects/projectFormat'
 
@@ -79,9 +80,13 @@ async function assetBytes(asset: AssetRecord): Promise<Uint8Array> {
   return new Uint8Array(await response.arrayBuffer())
 }
 
-export interface NovaPakBuildOptions { deterministic?: boolean; compression?: 'store' | 'balanced' | 'maximum' }
+export interface NovaPakBuildOptions { deterministic?: boolean; compression?: 'store' | 'balanced' | 'maximum'; authoritativeAssets?: boolean }
 
 export async function createNovaPak(projectJson: string, assets: AssetRecord[], startupSceneUuid: string, options: NovaPakBuildOptions = {}): Promise<Uint8Array> {
+  // All package identity/source fields are scalar: capture them before the first asynchronous read.
+  assets=assets.map(asset=>({...asset}))
+  const identities=new Set<string>(),paths=new Set(['project.nova'])
+  for(const asset of assets){const path=safePackagePath(asset.path).toLowerCase(),id=asset.uuid.toLowerCase();if(identities.has(id)||paths.has(path))throw new Error(`Duplicate package asset identity/path: ${asset.path}`);identities.add(id);paths.add(path)}
   const project = JSON.parse(projectJson) as Record<string, unknown>
   const developmentBuild = (project.projectSettings as { build?: { developmentBuild?: boolean } } | undefined)?.build?.developmentBuild !== false
   const packageEntries = project.packages && typeof project.packages === 'object' && Array.isArray((project.packages as Record<string, unknown>).installed)
@@ -102,18 +107,15 @@ export async function createNovaPak(projectJson: string, assets: AssetRecord[], 
   }).filter((kind): kind is string => typeof kind === 'string'))
   const usesRigging = componentKinds.has('Skeleton2D')
   const usesTimeline = componentKinds.has('TimelinePlayer')
-  const presentation = (project.projectSettings as { presentation?: { localization?: { sourceLocale?: string; buildLocales?: string[] } } } | undefined)?.presentation
-  const selectedLocales = new Set((presentation?.localization?.buildLocales ?? [presentation?.localization?.sourceLocale ?? 'en']).map(locale => String(locale).toLowerCase()))
-  if (presentation?.localization?.sourceLocale) selectedLocales.add(presentation.localization.sourceLocale.toLowerCase())
+  const selectedLocaleAssets = localizationBuildDependencies(assets, project).assetUuids
   const excludedOptionalUuids = new Set(projectAssets.flatMap(asset => {
     const type = String(asset.assetType)
-    const locale = type === 'localization' && asset.settings && typeof asset.settings === 'object'
-      ? String(((asset.settings as Record<string, unknown>).localizationSettings as Record<string, unknown> | undefined)?.locale ?? '').toLowerCase()
-      : ''
-    const unused = (type === 'rig' || type === 'skin') ? !usesRigging : type === 'timeline' ? !usesTimeline : type === 'localization' ? !selectedLocales.has(locale) : false
+    const unused = (type === 'rig' || type === 'skin') ? !usesRigging : type === 'timeline' ? !usesTimeline : type === 'localization' ? !selectedLocaleAssets.has(String(asset.uuid).toLowerCase()) : false
     return unused && typeof asset.uuid === 'string' ? [asset.uuid] : []
   }))
-  projectAssets = projectAssets.filter(asset => !excludedOptionalUuids.has(String(asset.uuid)))
+  if(options.authoritativeAssets)excludedOptionalUuids.clear()
+  const selectedUuids=new Set(assets.map(asset=>asset.uuid))
+  projectAssets = projectAssets.filter(asset => selectedUuids.has(String(asset.uuid)) && !excludedOptionalUuids.has(String(asset.uuid)))
   project.assets = projectAssets
   for (const asset of projectAssets) {
     delete asset.source
@@ -134,7 +136,7 @@ export async function createNovaPak(projectJson: string, assets: AssetRecord[], 
     if (excludedOptionalUuids.has(asset.uuid)) continue
     sources.push({ path: safePackagePath(asset.path), bytes: await assetBytes(asset), mimeType: asset.mimeType || 'application/octet-stream', asset })
   }
-  sources.sort((first, second) => first.path.localeCompare(second.path))
+  sources.sort((first, second) => first.path < second.path ? -1 : first.path > second.path ? 1 : 0)
 
   const entries: NovaPakEntry[] = []
   const blocks: Uint8Array[] = []

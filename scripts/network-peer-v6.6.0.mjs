@@ -1,6 +1,10 @@
 import { createSocket } from 'node:dgram'
+import { join } from 'node:path'
+import { readFile } from 'node:fs/promises'
 import { createServer } from 'vite'
 
+const startup = name => process.send?.({ type: 'startup', name, at: Date.now() })
+startup('module-loaded')
 const role = process.argv[2] === 'host' ? 'host' : 'client', localPort = Number(process.argv[3]), serverPort = Number(process.argv[4]), sessionName = process.argv[5] || 'v66-peer-soak'
 const impairedLink = sessionName.includes('-2-')
 Object.defineProperty(globalThis, 'navigator', { configurable: true, value: { platform: 'Win32', hardwareConcurrency: 4, userAgent: `Nova_A v6.6 ${role} peer` } })
@@ -8,8 +12,17 @@ globalThis.window ??= { setTimeout, clearTimeout, setInterval, clearInterval, ad
 globalThis.localStorage ??= { getItem() { return null }, setItem() {}, removeItem() {} }
 globalThis.performance ??= { now: () => Date.now() }
 
-const vite = await createServer({ root: process.cwd(), appType: 'custom', logLevel: 'silent', server: { middlewareMode: true } }); await vite.watcher.close()
-const production = await vite.ssrLoadModule('/src/runtime/production.ts'), network = await vite.ssrLoadModule('/src/runtime/networking.ts')
+startup('vite-create')
+const vite = await createServer({ cacheDir: join(process.cwd(), '.cache', 'network-peer-v66'), root: process.cwd(), appType: 'custom', logLevel: 'silent', server: { middlewareMode: true } }); await vite.watcher.close()
+startup('production-load')
+const production = await vite.ssrLoadModule('/src/runtime/production.ts')
+startup('network-load')
+const network = await vite.ssrLoadModule('/src/runtime/networking.ts')
+startup('network-loaded')
+// Optional decoded-package settings keep headless clients on the authority's actual replication schema.
+// Older soak invocations omit this argument and retain their existing empty-world defaults.
+const packagedSettings = process.argv[6] ? JSON.parse(await readFile(process.argv[6], 'utf8')) : null
+if (packagedSettings && (packagedSettings.format !== 'nova-headless-peer-settings' || packagedSettings.version !== 1 || !Array.isArray(packagedSettings.replicatedEntities))) throw new Error('Invalid packaged headless peer settings.')
 production.resetProductionSettings(); production.loadProductionSettings({ networking: {
   enabled: true, permissionGranted: true, autoStart: false, role, sessionMode: 'direct', sessionName, playerName: role === 'host' ? 'Host' : `Client ${localPort}`, maxPeers: 8,
   transport: 'native-udp', endpoint: `udp://127.0.0.1:${serverPort}`, bindAddress: `127.0.0.1:${localPort}`, snapshotRate: 30, interpolationMs: 80, rollbackFrames: 120, bandwidthKbps: 1_024,
@@ -18,10 +31,17 @@ production.resetProductionSettings(); production.loadProductionSettings({ networ
   authentication: { mode: 'none', providerId: '', requireVerifiedPeers: false, handshakeTimeoutMs: 10_000 }, security: { requireEncryption: false, maximumPacketAgeMs: 15_000, replayWindow: 2_048 },
   channels: [{ id: 'state', delivery: 'unreliable-sequenced', maximumPayloadBytes: 16_000, messagesPerSecond: 240, priority: 8 }, { id: 'input', delivery: 'unreliable-sequenced', maximumPayloadBytes: 8_192, messagesPerSecond: 480, priority: 12 }, { id: 'events', delivery: 'reliable-ordered', maximumPayloadBytes: 8_192, messagesPerSecond: 240, priority: 16 }],
   rpcContracts: [{ name: 'soak.ready', channelId: 'events', direction: 'bidirectional', authority: 'any', payloadSchema: 'integer', maximumPayloadBytes: 32, callsPerSecond: 64 }],
-  simulation: { enabled: true, latencyMs: impairedLink ? 8 : 2, jitterMs: impairedLink ? 3 : 1, lossPercent: impairedLink ? 1 : 0, duplicatePercent: impairedLink ? 1 : 0, reorderPercent: impairedLink ? 1 : 0, seed: localPort }, replicatedEntities: []
+  simulation: { enabled: true, latencyMs: impairedLink ? 8 : 2, jitterMs: impairedLink ? 3 : 1, lossPercent: impairedLink ? 1 : 0, duplicatePercent: impairedLink ? 1 : 0, reorderPercent: impairedLink ? 1 : 0, seed: localPort }, replicatedEntities: [],
+  ...(packagedSettings ? { schemaVersion: packagedSettings.schemaVersion, protocolVersion: packagedSettings.protocolVersion, replicatedEntities: packagedSettings.replicatedEntities, channels: packagedSettings.channels, rpcContracts: packagedSettings.rpcContracts } : {})
 } })
+const replicaEntities = []
+if (packagedSettings) {
+  startup('entity-load')
+  const { BoxEntity } = await vite.ssrLoadModule('/src/world/BoxEntity.ts')
+  for (const [index, definition] of production.productionSettings.networking.replicatedEntities.entries()) replicaEntities.push(new BoxEntity(index + 1, { x: 999_999, y: 999_999 }, { x: 1, y: 1 }, definition.entityUuid))
+}
 
-let rpcReceived = 0
+let rpcReceived = 0, exercisedTicks = 0
 network.registerRpc('soak.ready', value => { if (Number.isSafeInteger(value)) rpcReceived++ })
 const udp = createSocket('udp4'), peerEndpoints = new Map()
 const testTransport = {
@@ -34,16 +54,19 @@ const testTransport = {
   async send(source, target = '') { const resolved = peerEndpoints.get(target) ?? target, match = /^127\.0\.0\.1:(\d+)$/.exec(resolved), port = match ? Number(match[1]) : serverPort; await new Promise((resolve, reject) => udp.send(Buffer.from(source), port, '127.0.0.1', error => error ? reject(error) : resolve())) },
   async close() { if (udp) await new Promise(resolve => udp.close(resolve)) }
 }
+startup('transport-connect')
 await network.startNetworkingWithTransport(testTransport)
+startup('transport-ready')
 process.send?.({ type: 'ready', role, peerId: network.networkingState.localPeerId })
 
 const input = { down: {}, pressed: {}, released: {}, performed: {}, cancelled: {}, phases: {}, durations: {}, tapCounts: {}, consumed: {}, axes: {}, vectors: {}, mousePosition: [0, 0], wheel: [0, 0], pointerDelta: [0, 0], touches: 0, devices: [], contexts: ['Gameplay'], maps: ['Default'], scheme: 'KeyboardMouse' }
-async function report() { process.send?.({ type: 'report', role, rpcReceived, state: JSON.parse(JSON.stringify(network.networkingState)), runtime: network.networkRuntimeSnapshot() }) }
+async function report() { process.send?.({ type: 'report', role, rpcReceived, exercisedTicks, replicaState: replicaEntities.map(entity => ({ uuid: entity.uuid, position: [entity.transform.position.x, entity.transform.position.y] })), state: JSON.parse(JSON.stringify(network.networkingState)), runtime: network.networkRuntimeSnapshot() }) }
+if (packagedSettings) network.updateNetworking(replicaEntities, 0)
 process.on('message', async message => {
   if (!message || typeof message !== 'object') return
   if (message.type === 'exercise') {
     await network.sendNetworkPacket('hello', { role, playerName: role, lateJoin: true }, 'events')
-    for (let tick = 0; tick < 180; tick++) { if (tick % 12 === 0) network.callRpc('soak.ready', localPort); network.updateNetworking([], 1 / 60, input, `soak-${tick}`); await new Promise(resolve => setTimeout(resolve, 1)) }
+    for (let tick = 0; tick < 180; tick++) { if (tick % 12 === 0 && !packagedSettings) network.callRpc('soak.ready', localPort); network.updateNetworking(replicaEntities, 1 / 60, input, `soak-${tick}`); exercisedTicks++; await new Promise(resolve => setTimeout(resolve, 1)) }
     await new Promise(resolve => setTimeout(resolve, 700)); await report()
   }
   if (message.type === 'report') await report()

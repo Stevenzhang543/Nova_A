@@ -9,6 +9,8 @@ import type {
   TileChunkRenderCommand,
   TextureRegion
 } from './types'
+import { CanvasPixelCache, textureContentVersion } from './textureContent'
+import { boundedFrame } from './surfaceLimits'
 
 type QueuedCommand =
   | { type: 'shape'; value: ShapeRenderCommand; camera: CameraRenderView; cameraIndex: number }
@@ -18,7 +20,6 @@ type QueuedCommand =
 const MAX_FRAME_COMMANDS = 100_000
 const MAX_SHAPE_VERTICES = 65_000
 const MAX_TEXT_LENGTH = 65_536
-const MAX_CANVAS_DIMENSION = 16_384
 
 function finite(value: number): boolean {
   return Number.isFinite(value)
@@ -66,7 +67,10 @@ export class Canvas2DRenderer implements Renderer2D {
   readonly stats: RendererStats = { backend: 'Canvas2D', drawCalls: 0, batches: 0, triangles: 0, sprites: 0, shapes: 0, text: 0, textures: 0, gpuMs: null, passes: 1, renderTargets: 0, overdraw: 0, batchBreaks: 0, atlasPages: 0, textureMemoryBytes: 0, textureUploads: 0, textureEvictions: 0, textureBudgetBytes: 0, textureBudgetExceeded: false, streamingMisses: 0, shaderCompiles: 0, shaderFallbacks: 0, contextLosses: 0, batchBreakReasons: {} }
   private readonly context: CanvasRenderingContext2D
   private commands: QueuedCommand[] = []
-  private tintedTextures = new WeakMap<object, Map<string, HTMLCanvasElement>>()
+  private readonly tintedTextures = new CanvasPixelCache()
+  private readonly textureIdentities = new WeakMap<object, number>()
+  private nextTextureIdentity = 0
+  private frameSerial = 0
   private frame: FrameOptions = { width: 1, height: 1, pixelRatio: 1, clearColor: { r: 0, g: 0, b: 0, a: 1 } }
   private camera: CameraRenderView = { scale: 1, offset: { x: 0, y: 0 } }
   private cameraIndex = -1
@@ -78,19 +82,16 @@ export class Canvas2DRenderer implements Renderer2D {
   }
 
   resize(width: number, height: number, pixelRatio: number): void {
-    const safeWidth = finite(width) ? Math.min(MAX_CANVAS_DIMENSION, Math.max(1, width)) : 1
-    const safeHeight = finite(height) ? Math.min(MAX_CANVAS_DIMENSION, Math.max(1, height)) : 1
-    const safeRatio = finite(pixelRatio) ? Math.min(8, Math.max(0.25, pixelRatio)) : 1
-    const pixelWidth = Math.min(MAX_CANVAS_DIMENSION, Math.max(1, Math.round(safeWidth * safeRatio)))
-    const pixelHeight = Math.min(MAX_CANVAS_DIMENSION, Math.max(1, Math.round(safeHeight * safeRatio)))
+    const safe = boundedFrame({ width, height, pixelRatio, clearColor: this.frame.clearColor })
+    const pixelWidth = Math.max(1, Math.floor(safe.width * safe.pixelRatio))
+    const pixelHeight = Math.max(1, Math.floor(safe.height * safe.pixelRatio))
     if (this.canvas.width !== pixelWidth) this.canvas.width = pixelWidth
     if (this.canvas.height !== pixelHeight) this.canvas.height = pixelHeight
   }
   beginFrame(options: FrameOptions): void {
-    const width = finite(options.width) ? Math.min(MAX_CANVAS_DIMENSION, Math.max(1, options.width)) : 1
-    const height = finite(options.height) ? Math.min(MAX_CANVAS_DIMENSION, Math.max(1, options.height)) : 1
-    const pixelRatio = finite(options.pixelRatio) ? Math.min(8, Math.max(0.25, options.pixelRatio)) : 1
-    this.frame = { ...options, width, height, pixelRatio }
+    this.frameSerial++
+    this.frame = boundedFrame(options)
+    const { width, height, pixelRatio } = this.frame
     this.resize(width, height, pixelRatio)
     this.commands = []
     this.cameraIndex = -1
@@ -166,7 +167,7 @@ export class Canvas2DRenderer implements Renderer2D {
     this.stats.batchBreaks = Math.max(0, this.stats.batches - 1)
     return { ...this.stats }
   }
-  destroy(): void { this.commands = []; this.tintedTextures = new WeakMap() }
+  destroy(): void { this.commands = []; this.tintedTextures.clear() }
 
   private applyCamera(context: CanvasRenderingContext2D, camera: CameraRenderView): void {
     const center = camera.position && finitePoint(camera.position) ? camera.position : undefined
@@ -201,8 +202,7 @@ export class Canvas2DRenderer implements Renderer2D {
       if (command.shape !== 'Line') context.closePath()
     }
     if (command.shape !== 'Line' && command.fill.a > 0) {
-      context.fillStyle = cssColor(command.fill)
-      context.fill()
+      if (!command.texture) { context.fillStyle = cssColor(command.fill); context.fill() }
       if (command.texture) {
         const xs = command.vertices.map(point => point.x), ys = command.vertices.map(point => point.y)
         const left = command.shape === 'Ellipse' ? -command.radiusX : Math.min(...xs)
@@ -210,7 +210,8 @@ export class Canvas2DRenderer implements Renderer2D {
         const bottom = command.shape === 'Ellipse' ? -command.radiusY : Math.min(...ys)
         const top = command.shape === 'Ellipse' ? command.radiusY : Math.max(...ys)
         context.save(); context.clip(); context.scale(1, -1)
-        this.drawTexture(context, command.texture, left, -top, right - left, top - bottom)
+        context.globalAlpha *= command.fill.a
+        this.drawTexture(context, command.texture, left, -top, right - left, top - bottom, command.fill)
         context.restore()
       }
     }
@@ -236,8 +237,10 @@ export class Canvas2DRenderer implements Renderer2D {
   }
   private drawSkinnedMesh(context: CanvasRenderingContext2D, command: SpriteRenderCommand): void {
     const mesh = command.mesh!
-    const dimensions = textureDimensions(command.texture.source)
-    const region = command.texture.uv
+    const white = command.tint.r >= 254.5 && command.tint.g >= 254.5 && command.tint.b >= 254.5
+    const texture: TextureRegion = white ? command.texture : { ...command.texture, source: this.tintedTexture(command.texture, command.tint), uv: { x: 0, y: 0, width: 1, height: 1 } }
+    const dimensions = textureDimensions(texture.source)
+    const region = texture.uv
     context.globalAlpha = command.tint.a
     context.imageSmoothingEnabled = command.texture.filter !== 'Nearest'
     for (let index = 0; index + 2 < mesh.indices.length; index += 3) {
@@ -257,7 +260,7 @@ export class Canvas2DRenderer implements Renderer2D {
       const f = (p[0].y * (uv[1].x * uv[2].y - uv[2].x * uv[1].y) + p[1].y * (uv[2].x * uv[0].y - uv[0].x * uv[2].y) + p[2].y * (uv[0].x * uv[1].y - uv[1].x * uv[0].y)) / denominator
       context.save(); context.beginPath(); context.moveTo(p[0].x, -p[0].y); context.lineTo(p[1].x, -p[1].y); context.lineTo(p[2].x, -p[2].y); context.closePath(); context.clip()
       context.transform(a, -b, c, -d, e, -f)
-      context.drawImage(command.texture.source as CanvasImageSource, 0, 0)
+      context.drawImage(texture.source as CanvasImageSource, 0, 0)
       context.restore()
     }
     context.globalAlpha = 1
@@ -297,15 +300,22 @@ export class Canvas2DRenderer implements Renderer2D {
       context.drawImage(region.source as CanvasImageSource, sourceX, sourceY, sourceWidth, sourceHeight, x, y, width, height)
       return
     }
+    context.drawImage(this.tintedTexture(region, tint!), x, y, width, height)
+  }
+
+  private tintedTexture(region: TextureRegion, tint: { r: number; g: number; b: number }): HTMLCanvasElement {
+    const dimensions = textureDimensions(region.source), sourceX = region.uv.x * dimensions.width, sourceY = region.uv.y * dimensions.height
+    const sourceWidth = Math.max(1, region.uv.width * dimensions.width), sourceHeight = Math.max(1, region.uv.height * dimensions.height)
     const source = region.source as unknown as object
-    let variants = this.tintedTextures.get(source)
-    if (!variants) { variants = new Map(); this.tintedTextures.set(source, variants) }
-    const key = `${sourceX}:${sourceY}:${sourceWidth}:${sourceHeight}:${tint.r}:${tint.g}:${tint.b}`
-    let tinted = variants.get(key)
+    let identity = this.textureIdentities.get(source)
+    if (identity === undefined) { identity = ++this.nextTextureIdentity; this.textureIdentities.set(source, identity) }
+    const key = `${identity}:${textureContentVersion(region, this.frameSerial)}:${sourceX}:${sourceY}:${sourceWidth}:${sourceHeight}:${tint.r}:${tint.g}:${tint.b}`
+    let tinted = this.tintedTextures.get(key)
     if (!tinted) {
       tinted = document.createElement('canvas')
-      tinted.width = Math.max(1, Math.round(sourceWidth))
-      tinted.height = Math.max(1, Math.round(sourceHeight))
+      const reduction = Math.min(1, 4096 / Math.max(sourceWidth, sourceHeight), Math.sqrt(4_194_304 / (sourceWidth * sourceHeight)))
+      tinted.width = Math.max(1, Math.round(sourceWidth * reduction))
+      tinted.height = Math.max(1, Math.round(sourceHeight * reduction))
       const tintContext = tinted.getContext('2d', { alpha: true })!
       tintContext.drawImage(region.source as CanvasImageSource, sourceX, sourceY, sourceWidth, sourceHeight, 0, 0, tinted.width, tinted.height)
       tintContext.globalCompositeOperation = 'multiply'
@@ -313,9 +323,12 @@ export class Canvas2DRenderer implements Renderer2D {
       tintContext.fillRect(0, 0, tinted.width, tinted.height)
       tintContext.globalCompositeOperation = 'destination-in'
       tintContext.drawImage(region.source as CanvasImageSource, sourceX, sourceY, sourceWidth, sourceHeight, 0, 0, tinted.width, tinted.height)
-      variants.set(key, tinted)
+      this.tintedTextures.set(key, tinted)
     }
-    context.drawImage(tinted, x, y, width, height)
+    this.stats.textures = this.tintedTextures.size
+    this.stats.textureMemoryBytes = this.tintedTextures.bytes
+    this.stats.textureBudgetBytes = this.tintedTextures.maximumBytes
+    return tinted
   }
 
   private drawNineSlice(context: CanvasRenderingContext2D, command: SpriteRenderCommand, x: number, y: number): void {
@@ -330,7 +343,7 @@ export class Canvas2DRenderer implements Renderer2D {
     context.imageSmoothingEnabled = command.texture.filter !== 'Nearest'
     for (let row = 0; row < 3; row++) for (let column = 0; column < 3; column++) {
       const sw = sx[column + 1] - sx[column], sh = sy[row + 1] - sy[row], dw = dx[column + 1] - dx[column], dh = dy[row + 1] - dy[row]
-      if (sw > 0 && sh > 0 && dw > 0 && dh > 0) context.drawImage(command.texture.source as CanvasImageSource, sourceX + sx[column], sourceY + sy[row], sw, sh, x + dx[column], y + dy[row], dw, dh)
+      if (sw > 0 && sh > 0 && dw > 0 && dh > 0) this.drawTexture(context, { ...command.texture, uv: { x: (sourceX + sx[column]) / dimensions.width, y: (sourceY + sy[row]) / dimensions.height, width: sw / dimensions.width, height: sh / dimensions.height } }, x + dx[column], y + dy[row], dw, dh, command.tint)
     }
   }
 }

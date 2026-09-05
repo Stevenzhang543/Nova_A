@@ -72,6 +72,7 @@ export abstract class Entity {
   editorOnly = false
   runtimePersistence: RuntimePersistencePolicy = 'Scene'
   persistentAcrossScenes = false
+  objectBlueprintAsset: string | null = null
   prefabAsset: string | null = null
   prefabInstanceUuid: string | null = null
   prefabSourceUuid: string | null = null

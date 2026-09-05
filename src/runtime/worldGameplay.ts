@@ -193,11 +193,14 @@ function updateWorldStreaming(): void {
   }
 }
 
-export async function beginWorldGameplay(emitSignal: (name: string, payload: unknown, target: string, source: string) => void): Promise<void> {
-  await ensureOptionalPackages()
-  if (aiModule) aiModule.setAiSignalEmitter((name, entity) => { if (name) emitSignal(name, null, entity.uuid, 'ai') })
+export async function beginWorldGameplay(emitSignal: (name: string, payload: unknown, target: string, source: string) => void, isCurrent: () => boolean = () => true): Promise<void> {
+  if (!isCurrent()) return
+  // Reviewed local pools are synchronous: awake/start may spawn immediately.
   setPoolSignalEmitter((name, entity) => emitSignal(name, null, entity.uuid, 'pool'))
   if (packageEnabled(OFFICIAL_OBJECT_POOL_PACKAGE_ID)) prepareObjectPools()
+  await ensureOptionalPackages()
+  if (!isCurrent()) return
+  if (aiModule) aiModule.setAiSignalEmitter((name, entity) => { if (name) emitSignal(name, null, entity.uuid, 'ai') })
 }
 
 export function beforeWorldPhysicsStep(fixedDelta: number, nowSeconds: number, frame: number, emitSignal: (name: string, payload: unknown, target: string, source: string) => void, requestSceneLoad: (scene: string) => void = () => {}): void {

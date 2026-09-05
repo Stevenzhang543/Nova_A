@@ -62,4 +62,6 @@ function sectionDirty(id:ManageSection){return id==='learn'||id==='automation'?f
 .manage-body>main{position:relative;min-width:0;min-height:0;overflow:hidden;background:var(--bg-base)}.manage-body>main>:deep(*){max-width:100%}
 @media(max-width:760px){.manage-header{min-height:64px}.lifecycle{display:none}.manage-body{grid-template-columns:54px minmax(0,1fr)}.manage-body>nav button{grid-template-columns:1fr;padding:4px}.manage-body>nav button>span:last-child{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}.manage-body>nav button>span:first-child{margin:auto}}
 .manage-body>nav strong i{display:inline-block;width:6px;height:6px;margin-left:5px;border-radius:50%;background:var(--warning);font-size:0;font-style:normal;vertical-align:middle}
+.manage-body > nav strong, .manage-body > nav small { white-space: normal; overflow-wrap: anywhere; line-height: 1.4; }
+.manage-body > nav button { flex: 0 0 auto; height: auto; padding-block: 9px; }
 </style>

@@ -109,7 +109,7 @@ onBeforeUnmount(() => {
     <header><div><strong>{{ l('title') }}</strong><p>{{ l('subtitle') }}</p></div><span>{{ deviceRuntimeState.capabilities.orientation }} · {{ deviceRuntimeState.capabilities.devicePixelRatio.toFixed(2) }}×</span></header>
     <nav :aria-label="l('title')"><button v-for="tab in tabs" :key="tab.id" :class="{active:activeTab===tab.id}" @click="activeTab=tab.id">{{ tab.label }}</button></nav>
     <div v-if="activeTab==='preview'" class="page preview-page">
-      <div class="toolbar"><select v-model.number="presetIndex"><option v-for="(item,index) in UI_DEVICE_PRESETS" :key="item.id" :value="index">{{ item.label }} · {{ item.width }}×{{ item.height }}</option></select><button @click="rotated=!rotated">↻ {{ l('rotate') }}</button></div>
+      <div class="toolbar"><select v-model.number="presetIndex" :aria-label="l('preview')"><option v-for="(item,index) in UI_DEVICE_PRESETS" :key="item.id" :value="index">{{ item.label }} · {{ item.width }}×{{ item.height }}</option></select><button @click="rotated=!rotated">↻ {{ l('rotate') }}</button></div>
       <div class="device-frame" :class="{portrait:previewHeight>previewWidth}" :style="previewStyle">
         <div class="device-camera" aria-hidden="true"></div><div class="safe-frame" :style="{left:`${previewSafe.left/previewWidth*100}%`,right:`${previewSafe.right/previewWidth*100}%`,top:`${previewSafe.top/previewHeight*100}%`,bottom:`${previewSafe.bottom/previewHeight*100}%`}"><span>{{ l('safe') }}</span><i></i></div>
         <div class="target-sample">44 × 44</div>

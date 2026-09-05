@@ -1,4 +1,6 @@
 import { assetState } from '../assets/AssetDatabase'
+import { selectBuildAssets } from '../assets/assetProduction'
+import type { AssetRecord } from '../assets/types'
 import { assetSourceBytes } from '../assets/contentHash'
 import { addEditorLog, editorState } from '../store/editor'
 import { getSceneJSON, physicsState, sceneManager } from '../store/physics'
@@ -12,6 +14,7 @@ import { projectSessionState } from '../projects/projectSession'
 import { stableProjectText, teamWorkflowMetadata } from './teamWorkflow'
 import { createBuildProvenance, releaseEngineeringState, webDeploymentHeaders } from './releaseEngineering'
 import { validateProductionRuntime } from './productionValidation'
+import { createWebArchive } from './webArchive'
 
 interface ExportFile { path: string; dataBase64: string }
 interface NativeBuildResult { outputPath: string; files: string[]; launched: boolean; cacheHits?: number; changedFiles?: number; buildId?: string }
@@ -40,18 +43,13 @@ export function sanitizeGameName(value: string): string {
   return value.replace(/[<>:"/\\|?*\x00-\x1f]/g, '').trim().slice(0, 80) || 'MyGame'
 }
 
-function globMatches(path: string, pattern: string): boolean {
-  const expression = pattern.replace(/[.+^${}()|[\]\\]/g, '\\$&').replace(/\*\*/g, '\u0000').replace(/\*/g, '[^/]*').replace(/\?/g, '[^/]').replace(/\u0000/g, '.*')
-  return new RegExp(`^${expression}$`, 'i').test(path.replace(/\\/g, '/'))
-}
-
-function assetsForBuild() {
-  const included = buildSettings.delivery.include, excluded = buildSettings.delivery.exclude
-  return assetState.records.filter(asset => {
-    const path = asset.path.replace(/\\/g, '/')
-    if (excluded.some(pattern => globMatches(path, pattern))) return false
-    return !included.length || included.some(pattern => globMatches(path, pattern))
-  })
+function assetsForBuild(project:unknown) {
+  const source=project&&typeof project==='object'?(project as {assets?:unknown}).assets:undefined
+  const snapshot=Array.isArray(source)?source as AssetRecord[]:JSON.parse(JSON.stringify(assetState.records)) as AssetRecord[]
+  const result=selectBuildAssets(snapshot,assetState.contentGroups,project,buildSettings.delivery)
+  const failures=result.diagnostics.filter(issue=>issue.severity==='error')
+  if(failures.length)throw new Error(failures.map(issue=>issue.message).join('\n'))
+  return result.assets
 }
 
 function androidImageFile(reference: string | null, path: string): ExportFile | null {
@@ -91,7 +89,7 @@ async function collectWebPlayerFiles(): Promise<ExportFile[]> {
   const manifest = await manifestResponse.json() as Record<string, ViteManifestEntry>
   const playerKey = Object.keys(manifest).find(key => key === 'player.html' || key.endsWith('/player.ts') || key.endsWith('player.ts'))
   if (!playerKey) throw new Error('The production bundle does not contain Nova Player')
-  const paths = new Set<string>()
+  const paths = new Set<string>(), visited = new Set<string>()
   const includeDynamicEntry = (key: string): boolean => {
     if (key.endsWith('/networking.ts') || key === 'src/runtime/networking.ts') return productionSettings.networking.enabled && packageEnabled(OFFICIAL_NETWORKING_PACKAGE_ID)
     if (key.endsWith('/navigation2d.ts') || key === 'src/runtime/navigation2d.ts') return packageEnabled(OFFICIAL_NAVIGATION_PACKAGE_ID)
@@ -99,8 +97,10 @@ async function collectWebPlayerFiles(): Promise<ExportFile[]> {
     return true
   }
   const visit = (key: string) => {
+    if (visited.has(key)) return
+    visited.add(key)
     const entry = manifest[key]
-    if (!entry) return
+    if (!entry) throw new Error(`Web Player manifest dependency is missing: ${key}`)
     paths.add(entry.file)
     entry.css?.forEach(path => paths.add(path))
     entry.assets?.forEach(path => paths.add(path))
@@ -141,9 +141,14 @@ function decodeBase64(value: string): Uint8Array {
 async function exportWebInBrowser(pack: Uint8Array, webFiles: ExportFile[]): Promise<NativeBuildResult> {
   const picker = (window as unknown as { showDirectoryPicker?: (options?: { mode: 'readwrite' }) => Promise<DirectoryHandle> }).showDirectoryPicker
   if (!picker) {
-    const url = URL.createObjectURL(new Blob([pack.buffer.slice(pack.byteOffset, pack.byteOffset + pack.byteLength)], { type: 'application/x-nova-pak' }))
-    const anchor = document.createElement('a'); anchor.href = url; anchor.download = 'game.nova-pak'; anchor.click(); URL.revokeObjectURL(url)
-    return { outputPath: anchor.download, files: [anchor.download], launched: false, cacheHits: 0, changedFiles: 1, buildId: await sha256(pack) }
+    const files = [...webFiles.map(file => ({ path: file.path, bytes: decodeBase64(file.dataBase64) })), { path: 'game.nova-pak', bytes: pack }]
+    const archive = await createWebArchive(files)
+    const outputPath = sanitizeGameName(buildSettings.gameName) + '-web.zip'
+    const url = URL.createObjectURL(archive)
+    try {
+      const anchor = document.createElement('a'); anchor.href = url; anchor.download = outputPath; anchor.click()
+    } finally { window.setTimeout(() => URL.revokeObjectURL(url), 1000) }
+    return { outputPath, files: files.map(file => file.path), launched: false, cacheHits: 0, changedFiles: files.length, buildId: await sha256(pack) }
   }
   const root = await picker({ mode: 'readwrite' })
   for (const file of webFiles) await writeBrowserFile(root, file.path, decodeBase64(file.dataBase64))
@@ -151,7 +156,7 @@ async function exportWebInBrowser(pack: Uint8Array, webFiles: ExportFile[]): Pro
   return { outputPath: sanitizeGameName(buildSettings.gameName), files: ['index.html', 'game.nova-pak', ...webFiles.slice(1).map(file => file.path)], launched: false, cacheHits: 0, changedFiles: webFiles.length + 1, buildId: await sha256(pack) }
 }
 
-async function webBuildMetadata(pack: Uint8Array, webFiles: ExportFile[]): Promise<ExportFile[]> {
+async function webBuildMetadata(pack: Uint8Array, webFiles: ExportFile[], projectJson: string, selectedAssets: AssetRecord[]): Promise<ExportFile[]> {
   const packHash = await sha256(pack)
   const files: Array<{ path: string; sha256: string; bytes: number }> = [{ path: 'game.nova-pak', sha256: packHash, bytes: pack.byteLength }]
   for (const file of webFiles) {
@@ -161,7 +166,7 @@ async function webBuildMetadata(pack: Uint8Array, webFiles: ExportFile[]): Promi
   files.sort((a, b) => a.path.localeCompare(b.path))
   const report = { format: 'nova-build-report', version: 2, engineVersion: NOVA_ENGINE_VERSION, buildId: packHash, createdAt: buildSettings.delivery.deterministic ? '1970-01-01T00:00:00.000Z' : new Date().toISOString(), target: buildSettings.target, architecture: buildSettings.architecture, profile: buildSettings.profile, runtimeMode: buildSettings.runtimeMode, projectId: projectSessionState.id, totalBytes: files.reduce((sum, file) => sum + file.bytes, 0), cacheMode: buildSettings.delivery.cacheMode, files }
   const patch = { format: 'nova-patch-manifest', version: 1, fromBuild: null, toBuild: packHash, added: files.map(file => file.path), changed: [], removed: [], files }
-  const dependencies = { format: 'nova-dependency-report', version: 1, engineVersion: NOVA_ENGINE_VERSION, packages: JSON.parse(projectForBuild(getSceneJSON())).packages?.lockfile ?? [], assets: assetsForBuild().map(asset => ({ uuid: asset.uuid, path: asset.path, type: asset.assetType })) }
+  const dependencies = { format: 'nova-dependency-report', version: 1, engineVersion: NOVA_ENGINE_VERSION, packages: JSON.parse(projectJson).packages?.lockfile ?? [], assets: selectedAssets.map(asset => ({ uuid: asset.uuid, path: asset.path, type: asset.assetType })) }
   const contentManifest = { format: 'nova-content-manifest', version: 1, engineVersion: NOVA_ENGINE_VERSION, buildId: packHash, include: [...buildSettings.delivery.include], exclude: [...buildSettings.delivery.exclude], stripUnusedAssets: buildSettings.delivery.stripUnusedAssets, compression: buildSettings.delivery.compression, files }
   const size = { format: 'nova-build-size-report', version: 1, engineVersion: NOVA_ENGINE_VERSION, totalBytes: files.reduce((sum, file) => sum + file.bytes, 0), files: [...files].sort((a, b) => b.bytes - a.bytes) }
   const provenance = createBuildProvenance({
@@ -204,11 +209,11 @@ export async function buildGame(run = false): Promise<NativeBuildResult> {
   buildProgress.phase = 'validating'; buildProgress.percent = 8; buildProgress.message = 'Validating scenes and asset references…'; buildProgress.outputPath = ''
   const projectJson = projectForBuild(getSceneJSON())
   buildProgress.phase = 'packing'; buildProgress.percent = 32; buildProgress.message = 'Creating indexed game.nova-pak…'
-  const selectedAssets = assetsForBuild()
-  const pack = await createNovaPak(projectJson, selectedAssets, buildSettings.startupSceneUuid, { deterministic: buildSettings.delivery.deterministic, compression: buildSettings.delivery.compression })
+  const selectedAssets = assetsForBuild(JSON.parse(projectJson))
+  const pack = await createNovaPak(projectJson, selectedAssets, buildSettings.startupSceneUuid, { deterministic: buildSettings.delivery.deterministic, compression: buildSettings.delivery.compression, authoritativeAssets: true })
   buildProgress.phase = 'exporting'; buildProgress.percent = 66; buildProgress.message = 'Writing Nova Player export…'
   const webFiles = buildSettings.target === 'web' || buildSettings.target === 'android' ? await collectWebPlayerFiles() : []
-  if (buildSettings.target === 'web') webFiles.push(...await webBuildMetadata(pack, webFiles))
+  if (buildSettings.target === 'web') webFiles.push(...await webBuildMetadata(pack, webFiles, projectJson, selectedAssets))
   if (buildSettings.target === 'android') {
     const icon = androidImageFile(buildSettings.platform.iconAsset, 'nova-android/mipmap-hdpi/ic_launcher.png')
     const splash = androidImageFile(buildSettings.platform.splashAsset, 'nova-android/drawable/nova_splash.png')

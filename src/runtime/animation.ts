@@ -4,6 +4,7 @@ import { finiteNumber } from '../world/geometry'
 import type { Entity } from '../world/Entity'
 import type { Animator, AnimatorParameterValue } from '../world/components'
 import { performanceComponentScheduler } from './largeWorldPerformance'
+import { MediaClock } from './mediaClock'
 
 export type AnimatableProperty = 'Transform.position.x' | 'Transform.position.y' | 'Transform.rotation' | 'Transform.scale.x' | 'Transform.scale.y' | 'SpriteRenderer.opacity' | 'UI.opacity'
 export type AnimatorParameterType = 'Bool' | 'Float' | 'Integer' | 'Trigger'
@@ -242,9 +243,12 @@ function parseAsset<T>(reference: string | null, type: 'animation' | 'controller
 const clipCache = new Map<string, { generation: number; value: AnimationClipDocument | null }>()
 const controllerCache = new Map<string, { generation: number; value: AnimatorControllerDocument | null }>()
 const maskCache = new Map<string, { generation: number; value: AnimationMaskDocument | null }>()
+let animationCacheGeneration=-1
+function refreshAnimationCaches():void{if(animationCacheGeneration!==assetState.generation){clipCache.clear();controllerCache.clear();maskCache.clear();animationCacheGeneration=assetState.generation}for(const cache of [clipCache,controllerCache,maskCache])while(cache.size>=512)cache.delete(cache.keys().next().value!)}
 
 export function readAnimationClip(reference: string | null): AnimationClipDocument | null {
   if (!reference) return null
+  refreshAnimationCaches()
   const cached = clipCache.get(reference)
   if (cached?.generation === assetState.generation) return cached.value
   const value = parseAsset(reference, 'animation', normalizeAnimationClip)
@@ -254,6 +258,7 @@ export function readAnimationClip(reference: string | null): AnimationClipDocume
 
 export function readAnimatorController(reference: string | null): AnimatorControllerDocument | null {
   if (!reference) return null
+  refreshAnimationCaches()
   const cached = controllerCache.get(reference)
   if (cached?.generation === assetState.generation) return cached.value
   const value = parseAsset(reference, 'controller', normalizeAnimatorController)
@@ -263,6 +268,7 @@ export function readAnimatorController(reference: string | null): AnimatorContro
 
 export function readAnimationMask(reference: string | null): AnimationMaskDocument | null {
   if (!reference) return null
+  refreshAnimationCaches()
   const cached = maskCache.get(reference); if (cached?.generation === assetState.generation) return cached.value
   const value = parseAsset(reference, 'animationMask', normalizeAnimationMask)
   maskCache.set(reference, { generation: assetState.generation, value }); return value
@@ -290,6 +296,7 @@ export function reimportAnimationClip(asset: AssetRecord): AnimationClipDocument
     ? [[item.source as AnimatableProperty, item.target as AnimatableProperty] as const]
     : []))
   const length = animationClipLength(source)
+  if(Math.ceil(length*sampleRate)+1>10000||(Math.ceil(length*sampleRate)+1)*source.tracks.length>250000)throw new Error('ANIMATION_IMPORT_LIMIT: Resampling exceeds 10,000 keys per track or 250,000 total keys; slice the source or reduce sample rate.')
   const tracks = source.tracks.map(track => {
     const property = mapping.get(track.property) ?? track.property
     const keyframes: AnimationKeyframe[] = []
@@ -327,36 +334,48 @@ function easeRatio(ratio: number, easing: KeyEasing | undefined): number {
 }
 
 export function sampleAnimationTrack(keyframes: AnimationKeyframe[], time: number): number | null {
-  if (!keyframes.length) return null
-  if (time <= keyframes[0].time) return keyframes[0].value
-  const last = keyframes[keyframes.length - 1]
-  if (time >= last.time) return last.value
-  for (let index = 1; index < keyframes.length; index++) {
-    const next = keyframes[index]
-    if (time > next.time) continue
-    const previous = keyframes[index - 1]
-    const range = Math.max(1e-9, next.time - previous.time)
-    const ratio = easeRatio((time - previous.time) / range, previous.easing)
-    const interpolation = previous.interpolation ?? (previous.tangentMode === 'Constant' ? 'Step' : previous.tangentMode === 'Linear' ? 'Linear' : 'Cubic')
-    if (interpolation === 'Step') return previous.value
-    if (interpolation === 'Linear') return previous.value + (next.value - previous.value) * ratio
-    const slope = (next.value - previous.value) / range
-    const m0 = (previous.tangentMode === 'Free' ? previous.outTangent : slope) * range
-    const m1 = (next.tangentMode === 'Free' ? next.inTangent : slope) * range
-    const ratio2 = ratio * ratio, ratio3 = ratio2 * ratio
-    return (2 * ratio3 - 3 * ratio2 + 1) * previous.value + (ratio3 - 2 * ratio2 + ratio) * m0 + (-2 * ratio3 + 3 * ratio2) * next.value + (ratio3 - ratio2) * m1
+  if(!keyframes.length||!Number.isFinite(time))return null
+  if(time<=keyframes[0].time)return keyframes[0].value
+  const last=keyframes[keyframes.length-1];if(time>=last.time)return last.value
+  let low=1,high=keyframes.length-1
+  while(low<high){const middle=(low+high)>>>1;if(keyframes[middle].time<=time)low=middle+1;else high=middle}
+  const index=low,next=keyframes[index],previous=keyframes[index-1],range=Math.max(1e-9,next.time-previous.time),ratio=easeRatio((time-previous.time)/range,previous.easing)
+  const interpolation=previous.interpolation??(previous.tangentMode==='Constant'?'Step':previous.tangentMode==='Linear'?'Linear':'Cubic')
+  if(interpolation==='Step')return previous.value
+  if(interpolation==='Linear')return previous.value+(next.value-previous.value)*ratio
+  const slope=(next.value-previous.value)/range,left=keyframes[index-2]??previous,right=keyframes[index+1]??next
+  const outgoing=previous.tangentMode==='Free'?previous.outTangent:previous.tangentMode==='Constant'?0:previous.tangentMode==='Auto'?(next.value-left.value)/Math.max(1e-9,next.time-left.time):slope
+  const incoming=next.tangentMode==='Free'?next.inTangent:next.tangentMode==='Constant'?0:next.tangentMode==='Auto'?(right.value-previous.value)/Math.max(1e-9,right.time-previous.time):slope
+  const m0=outgoing*range,m1=incoming*range,ratio2=ratio*ratio,ratio3=ratio2*ratio
+  return (2*ratio3-3*ratio2+1)*previous.value+(ratio3-2*ratio2+ratio)*m0+(-2*ratio3+3*ratio2)*next.value+(ratio3-ratio2)*m1
+}
+
+export interface AnimationRootMotionDelta {x:number;y:number;rotation:number}
+/** Extract local root displacement, including whole loop traversals; does not redefine Apply. */
+export function animationRootMotionDelta(clip:AnimationClipDocument,previous:number,next:number):AnimationRootMotionDelta{
+  if(!Number.isFinite(previous)||!Number.isFinite(next))throw new Error('ANIMATION_TIME: Root motion requires finite sample times.')
+  const length=animationClipLength(clip),value=(property:AnimatableProperty,time:number)=>{const track=clip.tracks.find(track=>!track.targetEntityUuid&&track.property===property);if(!track)return 0
+    if(!clip.loop)return sampleAnimationTrack(track.keyframes,Math.max(0,Math.min(length,time)))??0
+    const cycle=Math.floor(time/length),local=((time%length)+length)%length,start=sampleAnimationTrack(track.keyframes,0)??0,end=sampleAnimationTrack(track.keyframes,length)??0
+    return (sampleAnimationTrack(track.keyframes,local)??0)+cycle*(end-start)
   }
-  return last.value
+  return {x:value('Transform.position.x',next)-value('Transform.position.x',previous),y:value('Transform.position.y',next)-value('Transform.position.y',previous),rotation:value('Transform.rotation',next)-value('Transform.rotation',previous)}
+}
+export function applyAnimationRootMotion(entity:Entity,delta:AnimationRootMotionDelta,weight=1):void{
+  if(![delta.x,delta.y,delta.rotation,weight].every(Number.isFinite))throw new Error('ANIMATION_ROOT_MOTION: Root displacement and weight must be finite.')
+  const amount=Math.max(0,Math.min(1,weight));entity.transform.position.x+=delta.x*amount;entity.transform.position.y+=delta.y*amount;entity.transform.rotation+=delta.rotation*amount
 }
 
 /** Samples the exact runtime interpolation used by animation playback and reports cumulative root travel. */
 export function previewRootMotion(clipValue: AnimationClipDocument, sampleRate = 60): RootMotionPreview {
   const clip = normalizeAnimationClip(clipValue), duration = animationClipLength(clip), rate = Math.min(240, Math.max(1, Math.round(finiteNumber(sampleRate, clip.frameRate))))
   const tracks = new Map(clip.tracks.filter(track => !track.targetEntityUuid && ['Transform.position.x', 'Transform.position.y', 'Transform.rotation'].includes(track.property)).map(track => [track.property, track]))
-  const samples = Math.max(2, Math.ceil(duration * rate) + 1), points: Array<{ x: number; y: number; rotation: number }> = []
-  for (let index = 0; index < samples; index++) { const time = duration * index / (samples - 1); points.push({ x: sampleAnimationTrack(tracks.get('Transform.position.x')?.keyframes ?? [], time) ?? 0, y: sampleAnimationTrack(tracks.get('Transform.position.y')?.keyframes ?? [], time) ?? 0, rotation: sampleAnimationTrack(tracks.get('Transform.rotation')?.keyframes ?? [], time) ?? 0 }) }
-  const first = points[0], last = points[points.length-1]!, distance = points.slice(1).reduce((total, point, index) => total + Math.hypot(point.x - points[index].x, point.y - points[index].y), 0)
-  return { duration, delta: { x: last.x - first.x, y: last.y - first.y, rotation: last.rotation - first.rotation }, distance, samples }
+  const samples=Math.max(2,Math.ceil(duration*rate)+1)
+  if(samples>100000)throw new Error('ANIMATION_PREVIEW_LIMIT: Root-motion preview exceeds 100,000 samples; reduce sample rate or slice the clip.')
+  const point=(time:number)=>({x:sampleAnimationTrack(tracks.get('Transform.position.x')?.keyframes??[],time)??0,y:sampleAnimationTrack(tracks.get('Transform.position.y')?.keyframes??[],time)??0,rotation:sampleAnimationTrack(tracks.get('Transform.rotation')?.keyframes??[],time)??0})
+  const first=point(0);let previous=first,distance=0
+  for(let index=1;index<samples;index++){const next=point(duration*index/(samples-1));distance+=Math.hypot(next.x-previous.x,next.y-previous.y);previous=next}
+  return {duration,delta:{x:previous.x-first.x,y:previous.y-first.y,rotation:previous.rotation-first.rotation},distance,samples}
 }
 
 export function reduceAnimationKeys(keyframes: AnimationKeyframe[], tolerance = .0001): AnimationKeyframe[] {
@@ -365,26 +384,41 @@ export function reduceAnimationKeys(keyframes: AnimationKeyframe[], tolerance = 
   const result: AnimationKeyframe[] = [{ ...keyframes[0] }]
   for (let index = 1; index < keyframes.length - 1; index++) {
     const previous = result[result.length - 1], current = keyframes[index], next = keyframes[index + 1]
-    if ((current.interpolation ?? 'Cubic') === 'Step' || current.tangentMode === 'Free') { result.push({ ...current }); continue }
+    if ((previous.interpolation ?? (previous.tangentMode==='Linear'?'Linear':'Cubic')) !== 'Linear' || (current.interpolation ?? (current.tangentMode==='Linear'?'Linear':'Cubic')) !== 'Linear' || previous.easing && previous.easing !== 'Linear' || current.easing && current.easing !== 'Linear' || previous.tangentMode === 'Free' || current.tangentMode === 'Free') { result.push({ ...current }); continue }
     const ratio = (current.time - previous.time) / Math.max(1e-9, next.time - previous.time), expected = previous.value + (next.value - previous.value) * ratio
     if (Math.abs(current.value - expected) > safeTolerance) result.push({ ...current })
   }
   result.push({ ...keyframes[keyframes.length - 1] }); return result
 }
 
+/** Preserves Step/Linear segments exactly; curved cut segments use bounded adaptive linear baking (1e-6 absolute value error at probes). */
+function bakeAnimationRange(keys:AnimationKeyframe[],from:number,to:number,cuts:number[]=[]):AnimationKeyframe[]{
+  if(!keys.length)return []
+  const points=[...new Set([from,to,...keys.map(key=>key.time).filter(time=>time>from&&time<to),...cuts.filter(time=>time>from&&time<to)])].sort((a,b)=>a-b),output:AnimationKeyframe[]=[]
+  const key=(time:number,value:number,interpolation:AnimationInterpolation='Linear'):AnimationKeyframe=>({time,value,tangentMode:interpolation==='Step'?'Constant':'Linear',inTangent:0,outTangent:0,easing:'Linear',interpolation})
+  const push=(value:AnimationKeyframe)=>{if(output.length>=10000)throw new Error('ANIMATION_EDIT_LIMIT: Curve-preserving edit exceeds 10,000 keys per track.');if(output.at(-1)?.time!==value.time)output.push(value);else output[output.length-1]=value}
+  const subdivide=(start:number,end:number,a:number,b:number,depth:number)=>{const probes=[.25,.5,.75],error=Math.max(...probes.map(ratio=>Math.abs((sampleAnimationTrack(keys,start+(end-start)*ratio)??0)-(a+(b-a)*ratio))));if(error<=1e-6){push(key(start,a));return}if(depth>=24)throw new Error('ANIMATION_EDIT_PRECISION: Curve cannot be preserved within the edit sampling budget.');const middle=(start+end)/2,value=sampleAnimationTrack(keys,middle)??0;subdivide(start,middle,a,value,depth+1);subdivide(middle,end,value,b,depth+1)}
+  for(let index=0;index+1<points.length;index++){const start=points[index],end=points[index+1];let lo=0,hi=keys.length;while(lo<hi){const mid=(lo+hi)>>>1;if(keys[mid].time<=start)lo=mid+1;else hi=mid}const left=keys[lo-1],step=left&&(left.interpolation==='Step'||!left.interpolation&&left.tangentMode==='Constant');if(step)push(key(start,sampleAnimationTrack(keys,start)??0,'Step'));else subdivide(start,end,sampleAnimationTrack(keys,start)??0,sampleAnimationTrack(keys,end)??0,0)}
+  push(key(to,sampleAnimationTrack(keys,to)??0));return output
+}
+
 export function retimeAnimationClip(clip: AnimationClipDocument, start: number, end: number, timeScale: number, ripple = true): AnimationClipDocument {
+  if(![start,end,timeScale].every(Number.isFinite))throw new Error('ANIMATION_RETIME: Range and scale must be finite.')
   const value = normalizeAnimationClip(clip), from = Math.max(0, Math.min(start, end)), to = Math.max(from, Math.max(start, end)), scale = Math.min(1_000, Math.max(.001, finiteNumber(timeScale, 1))), oldRange = to - from, delta = oldRange * (scale - 1)
+  if(scale===1)return value
   const retime = (time: number) => time < from ? time : time <= to ? from + (time - from) * scale : ripple ? time + delta : time
-  value.tracks.forEach(track => track.keyframes.forEach(key => { key.time = retime(key.time) }))
+  value.tracks.forEach(track=>{if(!track.keyframes.length)return;const last=track.keyframes.at(-1)!.time;track.keyframes=bakeAnimationRange(track.keyframes,Math.min(0,track.keyframes[0].time),last,[from,to]).map(key=>({...key,time:retime(key.time)}))})
+  let spriteTime=0;value.spriteFrames=value.spriteFrames.map(frame=>{const start=spriteTime;spriteTime+=frame.duration;return {...frame,duration:Math.max(.001,retime(spriteTime)-retime(start))}})
   value.events.forEach(event => { event.time = retime(event.time) }); value.markers.forEach(marker => { marker.time = retime(marker.time) })
   value.commandTracks.forEach(track => track.commands.forEach(command => { command.time = retime(command.time) }))
   return normalizeAnimationClip(value)
 }
 
 export function sliceAnimationClip(clip: AnimationClipDocument, start: number, end: number, name = `${clip.name} Slice`): AnimationClipDocument {
+  if(![start,end].every(Number.isFinite))throw new Error('ANIMATION_SLICE: Range must be finite.')
   const from = Math.max(0, Math.min(start, end)), to = Math.max(from + 1e-6, Math.max(start, end)), value = normalizeAnimationClip(clip)
   value.name = name.slice(0, 120)
-  value.tracks.forEach(track => { track.keyframes = track.keyframes.filter(key => key.time >= from && key.time <= to).map(key => ({ ...key, time: key.time - from })) })
+  value.tracks.forEach(track => { track.keyframes = bakeAnimationRange(track.keyframes,from,to).map(key=>({...key,time:key.time-from})) })
   value.events = value.events.filter(event => event.time >= from && event.time <= to).map(event => ({ ...event, time: event.time - from }))
   value.markers = value.markers.filter(marker => marker.time >= from && marker.time <= to).map(marker => ({ ...marker, time: marker.time - from }))
   value.commandTracks.forEach(track => { track.commands = track.commands.filter(command => command.time >= from && command.time <= to).map(command => ({ ...command, time: command.time - from })) })
@@ -435,42 +469,82 @@ function conditionMatches(value: AnimatorParameterValue, condition: TransitionCo
   return left <= right
 }
 
-interface LayerRuntimeState { stateId: string; time: number; previousStateId: string | null; previousTime: number; blendTime: number; blendDuration: number }
+interface LayerRuntimeState { stateId: string; time: number; clock:MediaClock; previousClock:MediaClock|null; previousStateId: string | null; previousTime: number; blendTime: number; blendDuration: number; interruption: AnimatorTransition['interruption'] }
 interface AnimatorRuntimeState { controllerAsset: string | null; layers: Map<string, LayerRuntimeState> }
 interface SampledClip { values: Map<string, { property: AnimatableProperty; targetEntityUuid: string | null; value: number }>; spriteAsset: string | null }
 export interface AnimatorRuntimeInspection { entityUuid: string; controllerAsset: string | null; layers: Array<{ layerId: string; stateId: string; time: number; previousStateId: string | null; blendProgress: number }> }
-export interface RuntimeAnimationRecordingStatus { active: boolean; entityUuid: string; elapsed: number; frameRate: number; samples: number; targetAssetUuid: string | null }
-interface RuntimeAnimationRecordingSession { entityUuid: string; elapsed: number; accumulator: number; frameRate: number; targetAssetUuid: string | null; tracks: Map<AnimatableProperty, AnimationKeyframe[]> }
-interface DirectClipPlayback { reference: string; time: number }
+export interface RuntimeAnimationRecordingStatus { active: boolean; entityUuid: string; elapsed: number; frameRate: number; samples: number; targetAssetUuid: string | null; limited:boolean }
+interface RuntimeAnimationRecordingSession { entityUuid:string;elapsed:number;clock:MediaClock;nextFrame:number;frameRate:number;targetAssetUuid:string|null;tracks:Map<AnimatableProperty,AnimationKeyframe[]>;previous:Map<AnimatableProperty,number>;limited:boolean }
+interface DirectClipPlayback { reference: string; time: number; clock: MediaClock }
+interface AppliedAnimationProperty {entity:Entity;property:AnimatableProperty;base:number;output:number;touched:boolean}
+export interface TimelineAnimationSample {key:string;owner:Entity;clipAsset:string;time:number;weight:number;additive?:boolean;loop?:boolean}
 
 class AnimationRuntime {
   private runtime = new Map<string, AnimatorRuntimeState>()
   private recording: RuntimeAnimationRecordingSession | null = null
   private directPlayback = new Map<string, DirectClipPlayback>()
+  private appliedPose=new Map<string,AppliedAnimationProperty>()
+  private timelinePose=new Map<string,{entity:Entity;property:AnimatableProperty;base:number;output:number}>()
+  private frameSerial=0
+  private timelineFrame=-1
+  private evaluationOwner:Entity|null=null
+  private evaluationEntities:Entity[]=[]
+  private spritePose=new Map<Entity,{base:string|null;output:string|null;touched:boolean}>()
+  private timelineSprites=new Map<Entity,{base:string|null;output:string|null}>()
   onEvent: ((entity: Entity, event: AnimationEvent) => void) | null = null
   onCommand: ((entity: Entity, track: AnimationCommandTrack, command: AnimationCommand) => void) | null = null
 
-  reset(): void { this.runtime.clear(); this.recording = null; this.directPlayback.clear() }
-  playClipOnce(entityUuid: string, reference: string): boolean { if (!entityUuid || !readAnimationClip(reference)) return false; this.directPlayback.set(entityUuid, { reference, time: 0 }); return true }
+  private recordingResetObservers=new Set<(document:AnimationClipDocument)=>void>()
+  /** Editor preview owners can transfer the exact recording before a global Stop clears runtime state. */
+  observeRecordingReset(observer:(document:AnimationClipDocument)=>void):()=>void {this.recordingResetObservers.add(observer);return()=>this.recordingResetObservers.delete(observer)}
+  reset(): void { const captured=this.recordingResetObservers.size?this.readRuntimeRecordingDraft():null;if(captured)for(const observer of this.recordingResetObservers)observer(structuredClone(captured));this.runtime.clear(); this.recording = null; this.directPlayback.clear();this.appliedPose.clear();this.timelinePose.clear();this.frameSerial=0;this.timelineFrame=-1;this.spritePose.clear();this.timelineSprites.clear();this.evaluationOwner=null;this.evaluationEntities=[] }
+  playClipOnce(entityUuid: string, reference: string): boolean { if (!entityUuid || !readAnimationClip(reference)) return false; this.directPlayback.set(entityUuid, { reference, time: 0, clock: new MediaClock() }); return true }
+  /** Detached transport state for the editor; does not advance or initialize playback. */
+  inspectClipPlayback(entityUuid: string): { reference: string; time: number; duration: number } | null {
+    const playback = this.directPlayback.get(entityUuid)
+    if (!playback) return null
+    const clip = readAnimationClip(playback.reference)
+    return clip ? { reference: playback.reference, time: playback.time, duration: animationClipLength(clip) } : null
+  }
+  /** Sample through the runtime evaluator without dispatching events crossed by a seek.
+   * The caller retains Play/Pause ownership; this method never changes simulation state. */
+  seekClipPlayback(entityUuid: string, reference: string, seconds: number, entities: Entity[]): boolean {
+    if (!Number.isFinite(seconds)) throw new RangeError('ANIMATION_SEEK_TIME: A finite time is required.')
+    const entity = entities.find(candidate => candidate.uuid === entityUuid), clip = readAnimationClip(reference)
+    if (!entity || !clip) return false
+    const clock = new MediaClock(Math.min(animationClipLength(clip), Math.max(0, seconds))), time = Math.min(animationClipLength(clip), clock.seconds)
+    this.directPlayback.set(entityUuid, { reference, time, clock })
+    this.evaluationOwner = entity; this.evaluationEntities = entities
+    const state: AnimatorState = { id: 'direct', name: 'Direct', clipAsset: reference, speed: 1, speedParameter: null, cycleOffset: 0, mirrorX: false, mirrorY: false, rootMotion: 'Apply', x: 0, y: 0, subgraph: 'Direct', blendTree: null }
+    this.applySample(entity, entities, this.sampleClip(clip, time, false), 1, false, null, state)
+    return true
+  }
+  /** Stop this transport only. The owning runtime session restores the authored scene. */
+  stopClipPlayback(entityUuid: string): boolean { return this.directPlayback.delete(entityUuid) }
   recordingStatus(): RuntimeAnimationRecordingStatus {
     const value = this.recording
-    return value ? { active: true, entityUuid: value.entityUuid, elapsed: value.elapsed, frameRate: value.frameRate, samples: value.tracks.values().next().value?.length ?? 0, targetAssetUuid: value.targetAssetUuid } : { active: false, entityUuid: '', elapsed: 0, frameRate: 60, samples: 0, targetAssetUuid: null }
+    return value ? { active: true, entityUuid: value.entityUuid, elapsed: value.elapsed, frameRate: value.frameRate, samples: value.tracks.values().next().value?.length ?? 0, targetAssetUuid: value.targetAssetUuid,limited:value.limited } : { active: false, entityUuid: '', elapsed: 0, frameRate: 60, samples: 0, targetAssetUuid: null,limited:false }
   }
   beginRuntimeRecording(entityUuid: string, frameRate = 60, targetAssetUuid: string | null = null): boolean {
     if (!entityUuid || this.recording) return false
-    this.recording = { entityUuid, elapsed: 0, accumulator: 0, frameRate: Math.min(240, Math.max(1, Math.round(finiteNumber(frameRate, 60)))), targetAssetUuid, tracks: new Map() }
+    this.recording = { entityUuid, elapsed: 0,clock:new MediaClock(),nextFrame:1,previous:new Map(),limited:false, frameRate: Math.min(240, Math.max(1, Math.round(finiteNumber(frameRate, 60)))), targetAssetUuid, tracks: new Map() }
     return true
   }
-  finishRuntimeRecording(name = 'Runtime Recording'): AssetRecord | null {
-    const recording = this.recording; this.recording = null
+  /** Detached evaluated clip for editor draft capture; does not persist or clear recording. */
+  readRuntimeRecordingDraft(name = 'Runtime Recording'): AnimationClipDocument | null {
+    const recording = this.recording
     if (!recording || !recording.tracks.size) return null
-    const clip = normalizeAnimationClip({
+    return normalizeAnimationClip({
       ...defaultAnimationClip(name), frameRate: recording.frameRate, loop: false,
       tracks: [...recording.tracks.entries()].map(([property, keyframes]) => ({ property, targetEntityUuid: null, keyframes: reduceAnimationKeys(keyframes, 1e-6) }))
     })
+  }
+  finishRuntimeRecording(name = 'Runtime Recording'): AssetRecord | null {
+    const recording = this.recording, clip = this.readRuntimeRecordingDraft(name)
+    if (!recording || !clip) return null
     const target = recording.targetAssetUuid ? assetState.records.find(asset => asset.uuid === recording.targetAssetUuid && asset.assetType === 'animation') : null
-    if (target && updateTextAsset(target.uuid, JSON.stringify(clip, null, 2))) return target
-    return createTextAsset(name, 'animation', JSON.stringify(clip, null, 2), 'Assets/Animations/Recordings')
+    if(target){if(!updateTextAsset(target.uuid,JSON.stringify(clip,null,2)))return null;this.recording=null;return target}
+    const created=createTextAsset(name,'animation',JSON.stringify(clip,null,2),'Assets/Animations/Recordings');this.recording=null;return created
   }
   cancelRuntimeRecording(): void { this.recording = null }
   inspect(entityUuid?: string): AnimatorRuntimeInspection[] {
@@ -478,11 +552,17 @@ class AnimationRuntime {
   }
 
   update(entities: Entity[], delta: number): void {
+    this.initializeRecordingPose(entities)
+    this.frameSerial++;this.evaluationEntities=entities
+    for(const [entity,pose] of this.spritePose){if(!entities.includes(entity)||!entity.spriteRenderer){this.spritePose.delete(entity);continue}if(entity.spriteRenderer.spriteAsset!==pose.output)pose.base=entity.spriteRenderer.spriteAsset;entity.spriteRenderer.spriteAsset=pose.base;pose.output=pose.base;pose.touched=false}
+    const identities=new Set(entities)
+    for(const [key,entry] of this.appliedPose){const current=this.propertyValue(entry.entity,entry.property);if(!identities.has(entry.entity)||current===null){this.appliedPose.delete(key);continue}entry.base+=current-entry.output;this.setPropertyValue(entry.entity,entry.property,entry.base);entry.output=this.propertyValue(entry.entity,entry.property)??entry.base;entry.touched=false}
     const alive = new Set(entities.map(entity => entity.uuid))
     for (const uuid of this.runtime.keys()) if (!alive.has(uuid)) this.runtime.delete(uuid)
     const animatorIndices = performanceComponentScheduler.count === entities.length ? performanceComponentScheduler.indices('Animator') : null
     for (let sourceIndex = 0; sourceIndex < (animatorIndices?.length ?? entities.length); sourceIndex++) {
       const entity = entities[animatorIndices ? animatorIndices[sourceIndex] : sourceIndex]
+      this.evaluationOwner=entity
       const animator = entity.getComponent<Animator>('Animator')
       if (!entity.enabled || !animator?.enabled) continue
       const controller = readAnimatorController(animator.controllerAsset)
@@ -496,104 +576,115 @@ class AnimationRuntime {
       for (const parameter of controller.parameters) {
         if (!(parameter.name in animator.parameters)) animator.parameters[parameter.name] = parameter.defaultValue
       }
+      const consumedTriggers=new Set<string>()
       controller.layers.forEach((layer, layerIndex) => {
         const weight = Math.min(1, Math.max(0, animator.layerWeights[layer.id] ?? layer.weight))
-        if (weight <= 0) return
         let layerState = state!.layers.get(layer.id)
         const requested = layerIndex === 0 && animator.currentState && controller.states.some(candidate => candidate.id === animator.currentState) ? animator.currentState : ''
         if (!layerState || !controller.states.some(candidate => candidate.id === layerState!.stateId)) {
-          layerState = { stateId: requested || layer.defaultState, time: 0, previousStateId: null, previousTime: 0, blendTime: 0, blendDuration: 0 }
+          layerState = { stateId: requested || layer.defaultState, time: 0,clock:new MediaClock(),previousClock:null, previousStateId: null, previousTime: 0, blendTime: 0, blendDuration: 0, interruption: 'None' }
           state!.layers.set(layer.id, layerState)
         } else if (requested && requested !== layerState.stateId) {
-          layerState.previousStateId = layerState.stateId; layerState.previousTime = layerState.time
-          layerState.stateId = requested; layerState.time = 0; layerState.blendTime = 0; layerState.blendDuration = 0
+          layerState.previousStateId = null;layerState.previousClock=null; layerState.previousTime = layerState.time
+          layerState.stateId = requested; layerState.time = 0;layerState.clock.seek(0); layerState.blendTime = 0; layerState.blendDuration = 0
         }
         const synchronized = layer.synchronizedTiming && layer.synchronizedLayer ? state!.layers.get(layer.synchronizedLayer) : null
-        if (synchronized && !layerState.previousStateId) layerState.time = synchronized.time
         let activeState = controller.states.find(candidate => candidate.id === layerState!.stateId) ?? controller.states[0]
         const activeClip = this.stateClip(activeState, animator)
         const activeLength = activeClip ? animationClipLength(activeClip) : 0
-        const normalizedTime = activeLength > 0 ? layerState.time / activeLength : 1
-        const mayInterrupt = !layerState.previousStateId || controller.transitions.some(candidate => candidate.to === layerState!.stateId && candidate.interruption !== 'None')
-        const transition = mayInterrupt ? controller.transitions.find(candidate => candidate.from === activeState.id
-          && (!candidate.hasExitTime || normalizedTime >= candidate.exitTime)
-          && candidate.conditions.every(condition => conditionMatches(animator.parameters[condition.parameter] ?? false, condition))) : undefined
+        if(synchronized&&!layerState.previousStateId){const sourceState=controller.states.find(candidate=>candidate.id===synchronized.stateId),sourceClip=sourceState?this.stateClip(sourceState,animator):null,sourceLength=sourceClip?animationClipLength(sourceClip):activeLength;layerState.clock.seek(sourceLength>0?synchronized.clock.seconds/sourceLength*activeLength:synchronized.clock.seconds);layerState.time=activeLength>0?((layerState.clock.seconds%activeLength)+activeLength)%activeLength:0}
+        const normalizedTime = activeLength > 0 ? layerState.clock.seconds / activeLength : 1
+        const transitionSources=!layerState.previousStateId?[activeState.id]:layerState.interruption==='Source'?[layerState.previousStateId]:layerState.interruption==='Destination'?[activeState.id]:layerState.interruption==='SourceThenDestination'?[layerState.previousStateId,activeState.id]:[]
+        let transition:AnimatorTransition|undefined
+        for(const sourceId of transitionSources){
+          const sourceState=controller.states.find(candidate=>candidate.id===sourceId),sourceClip=sourceState?this.stateClip(sourceState,animator):null,sourceLength=sourceClip?animationClipLength(sourceClip):0
+          const phase=sourceId===activeState.id?normalizedTime:sourceLength>0?(layerState.previousClock?.seconds??layerState.previousTime)/sourceLength:1
+          transition=controller.transitions.find(candidate=>candidate.from===sourceId&&candidate.to!==activeState.id&&(!candidate.hasExitTime||phase>=candidate.exitTime)&&candidate.conditions.every(condition=>conditionMatches(animator.parameters[condition.parameter]??false,condition)))
+          if(transition)break
+        }
         if (transition) {
           for (const condition of transition.conditions) {
             const parameter = controller.parameters.find(candidate => candidate.name === condition.parameter)
-            if (parameter?.type === 'Trigger') animator.parameters[parameter.name] = false
+            if (parameter?.type === 'Trigger') consumedTriggers.add(parameter.name)
           }
           const destination = controller.states.find(candidate => candidate.id === transition.to) ?? activeState
           const destinationClip = this.stateClip(destination, animator)
-          layerState.previousStateId = layerState.stateId; layerState.previousTime = layerState.time
+          layerState.previousStateId = layerState.stateId; layerState.previousTime = layerState.time;layerState.previousClock=new MediaClock(layerState.clock.seconds)
           layerState.stateId = transition.to
           layerState.time = this.synchronizedTransitionTime(transition, activeClip, destinationClip, layerState.previousTime)
-          layerState.blendTime = 0; layerState.blendDuration = transition.duration
+          layerState.clock.seek(layerState.time);layerState.blendTime = 0; layerState.blendDuration = transition.duration;layerState.interruption=transition.interruption
+          if(transition.duration<=0){layerState.previousStateId=null;layerState.previousClock=null}
           activeState = destination
         }
         const clip = this.stateClip(activeState, animator)
         const length = clip ? animationClipLength(clip) : 0
-        const previousTime = layerState.time
+        const previousTime = layerState.clock.seconds
         const parameterSpeed = activeState.speedParameter ? finiteNumber(animator.parameters[activeState.speedParameter], 1) : 1
-        const scaledDelta = Math.max(0, delta) * animator.speed * activeState.speed * parameterSpeed * (clip?.playbackSpeed ?? 1)
-        const rawTime = layerState.time + scaledDelta
+        const speed=animator.speed*activeState.speed*parameterSpeed*(clip?.playbackSpeed??1)
+        const rawTime = layerState.clock.advance(synchronized&&!layerState.previousStateId?0:Math.max(0,finiteNumber(delta)),speed)
         layerState.time = rawTime
         if (clip && length > 0) {
           if (clip.loop) layerState.time = ((layerState.time % length) + length) % length
-          else layerState.time = Math.min(length, Math.max(0, layerState.time))
+          else {layerState.time = Math.min(length, Math.max(0, layerState.time));layerState.clock.seek(layerState.time)}
           this.emitDispatches(entity, clip, previousTime, clip.loop ? rawTime : layerState.time)
           let sampled = this.sampleState(activeState, animator, layerState.time)
           if (layerState.previousStateId && layerState.blendDuration > 0) {
             const previousState = controller.states.find(candidate => candidate.id === layerState!.previousStateId)
-            layerState.blendTime += Math.abs(scaledDelta)
+            layerState.blendTime += Math.max(0,finiteNumber(delta))*Math.abs(animator.speed)
             if (previousState) {
               const previousClip = this.stateClip(previousState, animator)
               const previousLength = previousClip ? animationClipLength(previousClip) : 0
-              layerState.previousTime += Math.max(0, delta) * animator.speed * previousState.speed
+              const previousSpeedParameter=previousState.speedParameter?finiteNumber(animator.parameters[previousState.speedParameter],1):1
+              layerState.previousClock??=new MediaClock(layerState.previousTime)
+              layerState.previousTime=layerState.previousClock.advance(Math.max(0,finiteNumber(delta)),animator.speed*previousState.speed*previousSpeedParameter*(previousClip?.playbackSpeed??1))
               if (previousClip?.loop && previousLength > 0) layerState.previousTime = ((layerState.previousTime % previousLength) + previousLength) % previousLength
               else if (previousLength > 0) layerState.previousTime = Math.min(previousLength, Math.max(0, layerState.previousTime))
             }
             const ratio = Math.min(1, layerState.blendTime / layerState.blendDuration)
             if (previousState) sampled = this.blendSamples(this.sampleState(previousState, animator, layerState.previousTime, ratio < 1), sampled, ratio)
-            if (ratio >= 1) layerState.previousStateId = null
+            if (ratio >= 1) {layerState.previousStateId = null;layerState.previousClock=null}
           }
           const mask = readAnimationMask(layer.maskAsset)
           this.applySample(entity, entities, sampled, weight, layer.additive, mask ? new Set(mask.properties) : null, activeState)
         }
         if (layerIndex === 0) animator.currentState = activeState.id
       })
+      for(const name of consumedTriggers)animator.parameters[name]=false
     }
     for (const [entityUuid, playback] of this.directPlayback) {
       const entity = entities.find(candidate => candidate.uuid === entityUuid), clip = readAnimationClip(playback.reference)
       if (!entity || !clip) { this.directPlayback.delete(entityUuid); continue }
-      const previous = playback.time, length = animationClipLength(clip); playback.time = Math.min(length, playback.time + Math.max(0, delta) * clip.playbackSpeed)
+      const previous = playback.time, length = animationClipLength(clip); playback.time = Math.min(length, playback.clock.advance(Math.max(0, finiteNumber(delta)), clip.playbackSpeed))
       this.emitDispatches(entity, clip, previous, playback.time)
       const state: AnimatorState = { id: 'direct', name: 'Direct', clipAsset: playback.reference, speed: 1, speedParameter: null, cycleOffset: 0, mirrorX: false, mirrorY: false, rootMotion: 'Apply', x: 0, y: 0, subgraph: 'Direct', blendTree: null }
-      this.applySample(entity, entities, this.sampleClip(clip, playback.time), 1, false, null, state)
+      this.applySample(entity, entities, this.sampleClip(clip, playback.time, false), 1, false, null, state)
       if (playback.time >= length) this.directPlayback.delete(entityUuid)
     }
+    for(const [key,entry] of this.appliedPose)if(!entry.touched)this.appliedPose.delete(key)
+    for(const [entity,entry] of this.spritePose)if(!entry.touched)this.spritePose.delete(entity)
     this.captureRuntimeRecording(entities, Math.max(0, delta))
   }
 
-  private captureRuntimeRecording(entities: Entity[], delta: number): void {
-    const recording = this.recording
-    if (!recording) return
-    const entity = entities.find(candidate => candidate.uuid === recording.entityUuid)
-    if (!entity) { this.recording = null; return }
-    recording.elapsed = Math.min(14_400, recording.elapsed + delta)
-    recording.accumulator += delta
-    const interval = 1 / recording.frameRate
-    if (recording.accumulator + 1e-9 < interval && recording.tracks.size) return
-    recording.accumulator %= interval
-    const properties: AnimatableProperty[] = ['Transform.position.x', 'Transform.position.y', 'Transform.rotation', 'Transform.scale.x', 'Transform.scale.y', 'SpriteRenderer.opacity', 'UI.opacity']
-    for (const property of properties) {
-      const value = this.propertyValue(entity, property)
-      if (value === null) continue
-      const keys = recording.tracks.get(property) ?? []
-      if (keys.length >= 240_000) continue
-      keys.push({ time: recording.elapsed, value, tangentMode: 'Linear', inTangent: 0, outTangent: 0, easing: 'Linear', interpolation: 'Linear' })
-      recording.tracks.set(property, keys)
+  private recordingValues(entity:Entity):Map<AnimatableProperty,number>{
+    const values=new Map<AnimatableProperty,number>();for(const property of TRACKS){const value=this.propertyValue(entity,property);if(value!==null)values.set(property,value)}return values
+  }
+  private initializeRecordingPose(entities:Entity[]):void{
+    const recording=this.recording;if(!recording||recording.previous.size)return
+    const entity=entities.find(value=>value.uuid===recording.entityUuid);if(!entity)return
+    recording.previous=this.recordingValues(entity)
+    for(const [property,value] of recording.previous)recording.tracks.set(property,[{time:0,value,tangentMode:'Linear',inTangent:0,outTangent:0,easing:'Linear',interpolation:'Linear'}])
+  }
+  private captureRuntimeRecording(entities:Entity[],delta:number):void{
+    const recording=this.recording;if(!recording||recording.limited)return
+    const entity=entities.find(value=>value.uuid===recording.entityUuid);if(!entity)return
+    const previousTime=recording.elapsed,values=this.recordingValues(entity),maximum=Math.min(14400,9999/recording.frameRate)
+    recording.elapsed=Math.min(maximum,recording.clock.advance(Math.max(0,finiteNumber(delta))))
+    const lastFrame=Math.min(9999,Math.floor(recording.elapsed*recording.frameRate+1e-9))
+    for(;recording.nextFrame<=lastFrame;recording.nextFrame++){
+      const time=recording.nextFrame/recording.frameRate,ratio=recording.elapsed>previousTime?Math.max(0,Math.min(1,(time-previousTime)/Math.max(1e-9,recording.clock.seconds-previousTime))):1
+      for(const [property,value] of values){const previous=recording.previous.get(property)??value,keys=recording.tracks.get(property)??[];keys.push({time,value:previous+(value-previous)*ratio,tangentMode:'Linear',inTangent:0,outTangent:0,easing:'Linear',interpolation:'Linear'});recording.tracks.set(property,keys)}
     }
+    recording.previous=values;recording.limited=recording.elapsed>=maximum
   }
 
   private stateClip(state: AnimatorState, animator: Animator): AnimationClipDocument | null {
@@ -654,17 +745,20 @@ class AnimationRuntime {
     return destination?.loop ? ((time % destinationLength) + destinationLength) % destinationLength : Math.min(destinationLength, Math.max(0, time))
   }
 
-  private sampleClip(clip: AnimationClipDocument | null, time: number): SampledClip {
+  private sampleClip(clip: AnimationClipDocument | null, time: number, loop=clip?.loop??false): SampledClip {
     const values = new Map<string, { property: AnimatableProperty; targetEntityUuid: string | null; value: number }>()
     let spriteAsset: string | null = null
     if (!clip) return { values, spriteAsset }
+    const length=animationClipLength(clip)
+    time=loop?((time%length)+length)%length:Math.max(0,Math.min(length,time))
     if (clip.spriteFrames.length) {
       let cursor = 0
       for (const frame of clip.spriteFrames) {
         cursor += frame.duration
-        if (time <= cursor) { spriteAsset = frame.spriteAsset; break }
+        if (time < cursor) { spriteAsset = frame.spriteAsset; break }
       }
     }
+    if(clip.spriteFrames.length&&!spriteAsset)spriteAsset=clip.spriteFrames.at(-1)!.spriteAsset
     for (const track of clip.tracks) {
       const value = sampleAnimationTrack(track.keyframes, time)
       if (value === null) continue
@@ -673,13 +767,14 @@ class AnimationRuntime {
     return { values, spriteAsset }
   }
 
-  private blendSamples(first: SampledClip, second: SampledClip, ratio: number): SampledClip {
-    const values = new Map(first.values)
-    for (const [key, next] of second.values) {
-      const previous = values.get(key)
-      values.set(key, { ...next, value: previous ? previous.value + (next.value - previous.value) * ratio : next.value })
-    }
-    return { values, spriteAsset: ratio >= .5 ? second.spriteAsset : first.spriteAsset }
+  private baseSampleValue(sample:{targetEntityUuid:string|null;property:AnimatableProperty}):number{
+    const owner=sample.targetEntityUuid?this.evaluationEntities.find(entity=>entity.uuid===sample.targetEntityUuid):this.evaluationOwner
+    return owner?this.propertyValue(owner,sample.property)??0:sample.property.includes('scale')||sample.property.includes('opacity')?1:0
+  }
+  private blendSamples(first:SampledClip,second:SampledClip,ratio:number):SampledClip{
+    const values=new Map<string,{property:AnimatableProperty;targetEntityUuid:string|null;value:number}>()
+    for(const key of new Set([...first.values.keys(),...second.values.keys()])){const a=first.values.get(key),b=second.values.get(key),definition=(b??a)!,base=this.baseSampleValue(definition);values.set(key,{...definition,value:(a?.value??base)+((b?.value??base)-(a?.value??base))*ratio})}
+    return {values,spriteAsset:ratio>=.5?second.spriteAsset:first.spriteAsset}
   }
 
   private blendWeighted(samples: Array<{ sample: SampledClip; weight: number }>): SampledClip {
@@ -694,25 +789,50 @@ class AnimationRuntime {
       }
     }
     const values = new Map<string, { property: AnimatableProperty; targetEntityUuid: string | null; value: number }>()
-    for (const [key, value] of totals) values.set(key, { property: value.property, targetEntityUuid: value.targetEntityUuid, value: value.weight > 0 ? value.value / value.weight : value.value })
+    const totalWeight=samples.reduce((sum,sample)=>sum+sample.weight,0)
+    for (const [key, value] of totals) values.set(key, { property: value.property, targetEntityUuid: value.targetEntityUuid, value: totalWeight>0?(value.value+Math.max(0,totalWeight-value.weight)*this.baseSampleValue(value))/totalWeight:this.baseSampleValue(value) })
     return { values, spriteAsset }
   }
 
   private applySample(owner: Entity, entities: Entity[], sample: SampledClip, weight: number, additive: boolean, mask: Set<AnimatableProperty> | null, state: AnimatorState): void {
-    if (sample.spriteAsset && owner.spriteRenderer && weight >= .5) owner.spriteRenderer.spriteAsset = sample.spriteAsset
+    if(weight<=0)return
+    if (sample.spriteAsset && owner.spriteRenderer && weight >= .5){let pose=this.spritePose.get(owner);if(!pose){pose={base:owner.spriteRenderer.spriteAsset,output:owner.spriteRenderer.spriteAsset,touched:true};this.spritePose.set(owner,pose)}owner.spriteRenderer.spriteAsset=sample.spriteAsset;pose.output=sample.spriteAsset;pose.touched=true}
     for (const sampled of sample.values.values()) {
       if (mask && !mask.has(sampled.property)) continue
       const entity = sampled.targetEntityUuid ? entities.find(candidate => candidate.uuid === sampled.targetEntityUuid) : owner
       if (!entity) continue
-      if (entity === owner && state.rootMotion === 'Ignore' && sampled.property.startsWith('Transform.')) continue
+      if (entity === owner && state.rootMotion === 'Ignore' && ['Transform.position.x','Transform.position.y','Transform.rotation'].includes(sampled.property)) continue
       const current = this.propertyValue(entity, sampled.property)
       if (current === null) continue
+      const key=`${entity.uuid}:${sampled.property}`
+      let applied=this.appliedPose.get(key)
+      if(!applied||applied.entity!==entity){applied={entity,property:sampled.property,base:current,output:current,touched:true};this.appliedPose.set(key,applied)}
+      applied.touched=true
       let sampledValue = sampled.value
       if (state.mirrorX && (sampled.property === 'Transform.position.x' || sampled.property === 'Transform.rotation')) sampledValue = -sampledValue
       if (state.mirrorY && (sampled.property === 'Transform.position.y' || sampled.property === 'Transform.rotation')) sampledValue = -sampledValue
-      const value = additive ? current + sampledValue * weight : current + (sampledValue - current) * weight
+      const value = additive ? current + (sampledValue-(sampled.property.includes('scale')||sampled.property.includes('opacity')?1:0)) * weight : current + (sampledValue - current) * weight
       this.setPropertyValue(entity, sampled.property, value)
+      applied.output=this.propertyValue(entity,sampled.property)??value
     }
+  }
+
+  /** One transaction per timeline evaluation; repeated paused seeks restore the pre-timeline pose. */
+  applyTimelineSamples(requests:readonly TimelineAnimationSample[],entities:Entity[]):Array<{key:string;message:string}>{
+    if(this.timelineFrame===this.frameSerial)for(const previous of this.timelinePose.values()){const current=this.propertyValue(previous.entity,previous.property);if(entities.includes(previous.entity)&&current!==null){const value=previous.base+current-previous.output;this.setPropertyValue(previous.entity,previous.property,value);const entry=this.appliedPose.get(`${previous.entity.uuid}:${previous.property}`);if(entry)entry.output=this.propertyValue(previous.entity,previous.property)??value}}
+    if(this.timelineFrame===this.frameSerial)for(const [entity,pose] of this.timelineSprites){if(entities.includes(entity)&&entity.spriteRenderer){if(entity.spriteRenderer.spriteAsset===pose.output)entity.spriteRenderer.spriteAsset=pose.base;const applied=this.spritePose.get(entity);if(applied)applied.output=entity.spriteRenderer.spriteAsset}}
+    this.timelinePose.clear();this.timelineSprites.clear();this.timelineFrame=this.frameSerial
+    const diagnostics:Array<{key:string;message:string}>=[],totals=new Map<string,{entity:Entity;property:AnimatableProperty;value:number;weight:number;additive:number}>(),sprites=new Map<Entity,{asset:string;weight:number}>()
+    for(const request of requests){const clip=readAnimationClip(request.clipAsset);if(!clip){diagnostics.push({key:request.key,message:'Timeline animation asset is missing or invalid.'});continue}const sample=this.sampleClip(clip,request.time,request.loop??clip.loop),weight=Math.min(1,Math.max(0,finiteNumber(request.weight,1)))
+      for(const value of sample.values.values()){const target=value.targetEntityUuid?entities.find(entity=>entity.uuid===value.targetEntityUuid):request.owner;if(!target)continue;const key=`${target.uuid}:${value.property}`,current=this.propertyValue(target,value.property);if(current===null)continue;if(!this.timelinePose.has(key))this.timelinePose.set(key,{entity:target,property:value.property,base:current,output:current});const total=totals.get(key)??{entity:target,property:value.property,value:0,weight:0,additive:0};if(request.additive)total.additive+=(value.value-(value.property.includes('scale')||value.property.includes('opacity')?1:0))*weight;else{total.value+=value.value*weight;total.weight+=weight}totals.set(key,total)}
+      if(sample.spriteAsset&&weight>=(sprites.get(request.owner)?.weight??.5))sprites.set(request.owner,{asset:sample.spriteAsset,weight})
+    }
+    const state:AnimatorState={id:'timeline',name:'Timeline',clipAsset:null,speed:1,speedParameter:null,cycleOffset:0,mirrorX:false,mirrorY:false,rootMotion:'Apply',x:0,y:0,subgraph:'Timeline',blendTree:null}
+    for(const [key,total] of totals){const base=this.timelinePose.get(key)!.base,value=(total.weight>1?total.value/total.weight:base*(1-total.weight)+total.value)+total.additive;this.applySample(total.entity,entities,{values:new Map([[key,{property:total.property,targetEntityUuid:null,value}]]),spriteAsset:null},1,false,null,state)}
+    for(const [entity,sprite] of sprites)if(entity.spriteRenderer){this.timelineSprites.set(entity,{base:entity.spriteRenderer.spriteAsset,output:sprite.asset});this.applySample(entity,entities,{values:new Map(),spriteAsset:sprite.asset},1,false,null,state)}
+
+    for(const entry of this.timelinePose.values())entry.output=this.propertyValue(entry.entity,entry.property)??entry.output
+    return diagnostics
   }
 
   private propertyValue(entity: Entity, property: AnimatableProperty): number | null {

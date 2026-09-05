@@ -1,25 +1,34 @@
 [CmdletBinding()]
 param(
-  [ValidateSet('26.08', '26.09', '26.10')]
-  [string]$Release = '26.10'
+  [ValidatePattern('^\d{2}\.\d{2}$')]
+  [string]$Release = '26.10',
+  [string]$FocusScript = '',
+  [string]$QualificationPlan = ''
 )
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
-$machineVersions = @{
-  '26.08' = '26.8.0'
-  '26.09' = '26.9.0'
-  '26.10' = '26.10.0'
-}
+. (Join-Path $PSScriptRoot 'release-policy.ps1')
+$releaseInfo = Get-CalendarReleaseInfo -Label $Release
+if ($releaseInfo.Year -lt 26) { throw 'Release preparation requires year 26 or later.' }
 $focusScripts = @{
   '26.08' = 'verify:v26.08:input'
   '26.09' = 'verify:v26.09:runtime'
   '26.10' = 'verify:v26.10:readiness'
 }
 
-$machineVersion = $machineVersions[$Release]
+$machineVersion = $releaseInfo.MachineVersion
+if ([string]::IsNullOrWhiteSpace($FocusScript)) { $FocusScript = if ($focusScripts.ContainsKey($Release)) { $focusScripts[$Release] } else { "verify:v${Release}:focus" } }
 $projectRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..')).Path
+if ($releaseInfo.Year -gt 26 -or $releaseInfo.Sequence -ge 12) {
+  if ([string]::IsNullOrWhiteSpace($QualificationPlan)) { throw 'Release 26.12 and later require -QualificationPlan with explicit actual commands/report schemas. Finalize the version, authored manual/references/docs and freeze source first. No authority was changed.' }
+  $plan = Get-Content -LiteralPath $QualificationPlan -Raw | ConvertFrom-Json
+  if ($plan.release -ne $Release -or $plan.machineVersion -ne $machineVersion) { throw 'Qualification plan identifies another release.' }
+  & node (Join-Path $PSScriptRoot 'release-qualification.mjs') "--root=$projectRoot" "--plan=$QualificationPlan"
+  if ($LASTEXITCODE -ne 0) { throw 'Qualification failed or was context-blocked; inspect the recorded run directory. No evidence pass was claimed.' }
+  return
+}
 $pnpmCommand = Get-Command pnpm.cmd -ErrorAction SilentlyContinue
 if ($null -eq $pnpmCommand) { $pnpmCommand = Get-Command pnpm -ErrorAction Stop }
 $cargoCommand = Get-Command cargo -ErrorAction Stop
@@ -39,6 +48,11 @@ function Invoke-PnpmScript {
 
 Push-Location $projectRoot
 try {
+  # Validate every required command before a version setter or generator runs.
+  $package = Get-Content -LiteralPath 'package.json' -Raw | ConvertFrom-Json
+  $requiredScripts = @('tauri','test:core','check','audit:manual','audit:scripts','audit:rendering','audit:animation','audit:typography','verify:templates','audit:repository',$FocusScript,"version:v$Release","manual:v$Release","references:v$Release","verify:v$Release","verify:v${Release}:history","verify:v${Release}:layout-contract","verify:v${Release}:interactions","qualify:v${Release}:layout","verify:v${Release}:windows","verify:v${Release}:headless","benchmark:v$Release","stability:v$Release","security:v$Release","audit:v$Release","evidence:v$Release")
+  $missingScripts = @($requiredScripts | Where-Object { $_ -notin $package.scripts.psobject.Properties.Name })
+  if ($missingScripts.Count -gt 0) { throw "Release $Release has no complete qualification command plan: $($missingScripts -join ', '). No version authority or generated source was changed." }
   $currentVersion = [string](Get-Content -LiteralPath 'package.json' -Raw | ConvertFrom-Json).version
   if ($currentVersion -ne $machineVersion) {
     Invoke-PnpmScript -Name "version:v$Release"
@@ -64,7 +78,7 @@ try {
     Invoke-PnpmScript -Name $name
   }
 
-  Invoke-PnpmScript -Name $focusScripts[$Release]
+  Invoke-PnpmScript -Name $FocusScript
   Invoke-PnpmScript -Name "verify:v$Release"
   Invoke-PnpmScript -Name "verify:v${Release}:history"
   Invoke-PnpmScript -Name "verify:v${Release}:layout-contract"

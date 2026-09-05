@@ -1,3 +1,4 @@
+import { templateGuide } from './templateGuides'
 import { defaultAudioSettings } from '../runtime/audio'
 import { defaultInputMap } from '../runtime/input'
 import { defaultCollisionMatrix } from '../world/World'
@@ -6,13 +7,14 @@ import { newProjectMetadata } from './projectSession'
 import { normalizeProjectManifest } from './projectManifest'
 import { assetSourceBytes, sha256Bytes } from '../assets/contentHash'
 import { defaultSceneAuthoringSettings } from '../editor/sceneAuthoring'
+import { TEMPLATE_ADDITIONS_26_11, type AddedTemplateId } from './templateCatalog26_11'
 import {
   NOVA_ENGINE_VERSION, NOVA_PROJECT_FORMAT, NOVA_PROJECT_FORMAT_MAJOR,
   NOVA_PROJECT_SCHEMA_VERSION, projectCompatibility
 } from './projectFormat'
 
 export type ProjectTemplateCategory = 'scene' | 'test' | 'game'
-export type ProjectTemplateId = 'empty' | 'mouse-knockout' | 'snake' | 'pong' | 'breakout' | 'platformer' | 'top-down' | 'physics-sandbox' | 'collision-lab' | 'rendering-lab' | 'ui-showcase' | 'networked-optional' | 'lighting-starter' | 'tile-world' | 'responsive-ui' | 'particle-lab' | 'audio-lab' | 'animation-lab' | 'physics-cleanup' | 'grid-chase'
+export type ProjectTemplateId = AddedTemplateId | 'empty' | 'mouse-knockout' | 'snake' | 'pong' | 'breakout' | 'platformer' | 'top-down' | 'physics-sandbox' | 'collision-lab' | 'rendering-lab' | 'ui-showcase' | 'networked-optional' | 'lighting-starter' | 'tile-world' | 'responsive-ui' | 'particle-lab' | 'audio-lab' | 'animation-lab' | 'physics-cleanup' | 'grid-chase'
 export type ProjectTemplateDifficulty = 'beginner' | 'intermediate' | 'advanced'
 
 export interface ProjectTemplateDescriptor {
@@ -24,6 +26,8 @@ export interface ProjectTemplateDescriptor {
   difficulty: ProjectTemplateDifficulty
   setupMinutes: number
   tags: string[]
+  introduced?: string
+  localized?: Partial<Record<'de' | 'zh', { name: string; description: string }>>
 }
 
 export const PROJECT_TEMPLATE_CATEGORIES: readonly ProjectTemplateCategory[] = ['scene', 'test', 'game'] as const
@@ -48,7 +52,8 @@ export const PROJECT_TEMPLATES: readonly ProjectTemplateDescriptor[] = [
   { id: 'pong', category: 'game', name: 'Pong', description: 'A complete two-player paddle game with physical rebounds, scoring, serve resets, and a first-to-seven win state.', features: ['2 players', 'Physics', 'Score', 'Win state', 'Portable .exe'], difficulty: 'intermediate', setupMinutes: 5, tags: ['pong', 'multiplayer', 'physics'] },
   { id: 'breakout', category: 'game', name: 'Breakout', description: 'A complete paddle-and-bricks game with continuous collision, destructible bricks, score, and completion UI.', features: ['Keyboard', 'CCD', 'Destruction', 'Score', 'Portable .exe'], difficulty: 'intermediate', setupMinutes: 6, tags: ['breakout', 'bricks', 'ccd'] },
   { id: 'physics-cleanup', category: 'game', name: 'Physics Cleanup', description: 'A complete pointer-controlled arena variation: push every spawned body outside the camera and clear the board.', features: ['Pointer control', 'Physics', 'Runtime spawn', 'Score', 'Win banner'], difficulty: 'beginner', setupMinutes: 4, tags: ['mouse', 'arena', 'physics'] },
-  { id: 'grid-chase', category: 'game', name: 'Grid Chase', description: 'A complete deterministic grid-chase variation with keyboard/gamepad movement, pickups, growth, score, and fail state.', features: ['Keyboard & gamepad', 'Grid movement', 'Pickups', 'Score', 'Portable .exe'], difficulty: 'intermediate', setupMinutes: 5, tags: ['grid', 'chase', 'score'] }
+  { id: 'grid-chase', category: 'game', name: 'Grid Chase', description: 'A complete deterministic grid-chase variation with keyboard/gamepad movement, pickups, growth, score, and fail state.', features: ['Keyboard & gamepad', 'Grid movement', 'Pickups', 'Score', 'Portable .exe'], difficulty: 'intermediate', setupMinutes: 5, tags: ['grid', 'chase', 'score'] },
+  ...TEMPLATE_ADDITIONS_26_11.map(({ de, zh, ...descriptor }) => ({ ...descriptor, features: [...descriptor.features], tags: [...descriptor.tags], introduced: '26.11', localized: { de: { name: de[0], description: de[1] }, zh: { name: zh[0], description: zh[1] } } }))
 ] as const
 
 type JsonRecord = Record<string, unknown>
@@ -615,7 +620,7 @@ function topDownTemplate(name: string): JsonRecord {
   const tileSetId = stableUuid('asset:top-down-world-tileset')
   const source = `@export(type="float", min=0, max=30, step=0.1, group="Movement", tooltip="Top-down movement speed") let speed = 7.0;\nfn update(dt) {\n  let move = input_vector("Move");\n  set_velocity(move.x * speed, move.y * speed);\n  if input_pressed("Spawn") { instantiate("asset://${enemyPrefabId}"); }\n}\nfn on_trigger_enter(other, px, py, nx, ny, rvx, rvy) {\n  save_set("last_trigger", other);\n  save_set("checkpoint", [px, py]);\n  save_commit("slot1");\n  scene_load("Main Menu");\n}`
   const enemySource = `@export(type="float", min=0, max=20, step=0.1, group="AI", tooltip="Patrol movement speed") let patrol_speed = 2.0;\nfn fixed_update(dt) {\n  let pose = transform();\n  let body = rigid_body();\n  if pose.position_x > 7.0 { set_velocity(-patrol_speed, body.velocity_y); }\n  else if pose.position_x < 2.0 { set_velocity(patrol_speed, body.velocity_y); }\n  else if body.velocity_x == 0.0 { set_velocity(patrol_speed, body.velocity_y); }\n}`
-  const player = shape('top-player', 'Player', [0, 0], [1.2, 1.2], { type: 'Circle', color: [94, 203, 181], scriptAsset: scriptId, extra: [component('top-player', 'ParticleEmitter2D', { emissionRate: 12, burst: 0, lifetime: 1, maxParticles: 128, velocityMin: { x: -.5, y: -.5 }, velocityMax: { x: .5, y: .5 }, colorStart: { r: 94, g: 203, b: 181 }, colorEnd: { r: 94, g: 203, b: 181 }, opacityStart: .7, opacityEnd: 0 })] })
+  const player = shape('top-player', 'Player', [0, 0], [1.2, 1.2], { type: 'Circle', color: [94, 203, 181], scriptAsset: scriptId, extra: [component('top-player', 'ParticleEmitter2D', { emissionRate: 12, burst: 0, lifetime: 1, maxParticles: 128, initialVelocityMin: { x: -.5, y: -.5 }, initialVelocityMax: { x: .5, y: .5 }, startColor: { r: 94, g: 203, b: 181 }, endColor: { r: 94, g: 203, b: 181 }, startOpacity: 70, endOpacity: 0 })] })
   const enemy = shape('top-enemy', 'Enemy', [5, 0], [1.4, 1.4], { color: [242, 118, 118], body: 'Kinematic', scriptAsset: enemyScriptId })
   const trigger = shape('top-trigger', 'Exit Trigger', [8, 0], [2, 4], { color: [239, 190, 92], body: 'Static', sensor: true })
   const topTiles = Array(40 * 24).fill(0).map((value, index) => index % 40 === 0 || index % 40 === 39 || Math.floor(index / 40) === 0 || Math.floor(index / 40) === 23 ? 1 : value)
@@ -631,7 +636,7 @@ function topDownTemplate(name: string): JsonRecord {
     ...worldTileAssets('top-down-world')
   ])
   ;((result.projectSettings as JsonRecord).inputMap as JsonRecord[]) = [{ name: 'Move', kind: 'vector2', bindings: [
-    { device: 'keyboard', code: 'KeyW', scale: 1, x: 0, y: -1, gamepad: 0, deadzone: .15 }, { device: 'keyboard', code: 'KeyS', scale: 1, x: 0, y: 1, gamepad: 0, deadzone: .15 },
+    { device: 'keyboard', code: 'KeyW', scale: 1, x: 0, y: 1, gamepad: 0, deadzone: .15 }, { device: 'keyboard', code: 'KeyS', scale: 1, x: 0, y: -1, gamepad: 0, deadzone: .15 },
     { device: 'keyboard', code: 'KeyA', scale: 1, x: -1, y: 0, gamepad: 0, deadzone: .15 }, { device: 'keyboard', code: 'KeyD', scale: 1, x: 1, y: 0, gamepad: 0, deadzone: .15 }
   ] }, { name: 'Spawn', kind: 'button', bindings: [{ device: 'keyboard', code: 'KeyE', scale: 1, x: 0, y: 0, gamepad: 0, deadzone: .15 }] }]
   return result
@@ -689,8 +694,8 @@ function renderingLabTemplate(name: string): JsonRecord {
     color: { r: 232, g: 240, b: 252 }, opacity: 100, sortingLayer: 1, orderInLayer: 6, material: 'Default'
   })])
   const emitter = entity('rendering-lab-particles', 'Particle Sample', [0, -.8], [component('rendering-lab-particles', 'ParticleEmitter2D', {
-    emissionRate: 26, burst: 12, lifetime: 1.5, maxParticles: 256, velocityMin: { x: -1.8, y: 1.2 }, velocityMax: { x: 1.8, y: 3.5 }, acceleration: { x: 0, y: -1.2 },
-    colorStart: { r: 111, g: 183, b: 255 }, colorEnd: { r: 197, g: 131, b: 244 }, opacityStart: .9, opacityEnd: 0, sizeStart: .16, sizeEnd: .03, sortingLayer: 1, orderInLayer: 5
+    emissionRate: 26, burst: 12, lifetime: 1.5, maxParticles: 256, initialVelocityMin: { x: -1.8, y: 1.2 }, initialVelocityMax: { x: 1.8, y: 3.5 }, gravity: { x: 0, y: -1.2 },
+    startColor: { r: 111, g: 183, b: 255 }, endColor: { r: 197, g: 131, b: 244 }, startOpacity: 90, endOpacity: 0, startScale: .16, endScale: .03, sortingLayer: 1, orderInLayer: 5
   })])
   const light = entity('rendering-lab-light', 'Point Light', [0, 1.2], [component('rendering-lab-light', 'Light2D', { lightType: 'Point', color: { r: 137, g: 191, b: 255 }, intensity: 1.1, range: 8, innerAngle: 30, outerAngle: 60, areaSize: { x: 4, y: 3 }, layerMask: 0xffffffff, castsShadows: true, shadowSoftness: .7 })])
   const shapes = [
@@ -711,11 +716,14 @@ function uiElement(seed: string, name: string, parentUuid: string, position: [nu
   const inferredLabel = String(data.accessibilityLabel ?? (kind === 'Checkbox' ? data.label : kind === 'TextInput' ? data.placeholder : kind === 'Button' ? data.text : '') ?? '').trim()
   const role = kind === 'Button' ? 'button' : kind === 'Slider' ? 'slider' : kind === 'Checkbox' ? 'checkbox' : kind === 'TextInput' ? 'textbox' : ''
   const componentData = { ...data }
+  const caption = kind === 'Button' && typeof componentData.text === 'string' ? componentData.text : ''
+  if (kind === 'Button') delete componentData.text
   for (const key of ['focusable', 'tabIndex', 'readingOrder', 'accessibilityRole', 'accessibilityLabel'] as const) delete componentData[key]
   const result = entity(seed, name, [0, 0], [
     component(seed, 'RectTransform', { parentUuid, anchorPreset: 'center', position: { x: position[0], y: position[1] }, size: { x: size[0], y: size[1] }, minSize: { x: Math.min(80, size[0]), y: Math.min(32, size[1]) }, maxSize: { x: 4096, y: 4096 }, flexGrow: 0, flexShrink: 1, focusable: interactive && data.focusable !== false, skipNavigation: !interactive || data.focusable === false, tabIndex: Number.isFinite(order) && order >= 0 ? Math.round(order) : 0, readingOrder: Number.isFinite(order) && order >= 0 ? Math.round(order) : 0, accessibilityRole: String(data.accessibilityRole ?? role), accessibilityLabel: inferredLabel }),
     component(seed, kind, componentData)
   ])
+  if (caption) (result.components as JsonRecord[]).push(component(seed, 'Text', { text: caption, localizationKey: /^\{[^{}]+\}$/.test(caption) ? caption.slice(1, -1) : '', fontSize: 24, fontWeight: 600, align: 'center', color: { r: 255, g: 255, b: 255 }, opacity: 100 }))
   const transform = (result.components as JsonRecord[])[0].data as JsonRecord
   transform.parentUuid = parentUuid
   return result
@@ -727,13 +735,13 @@ function uiShowcaseTemplate(name: string): JsonRecord {
     component('ui-showcase-canvas', 'RectTransform', { parentUuid: null, anchorPreset: 'stretch', position: { x: 0, y: 0 }, size: { x: 1920, y: 1080 }, minSize: { x: 320, y: 180 }, maxSize: { x: 7680, y: 4320 }, flexGrow: 1, flexShrink: 1 }),
     component('ui-showcase-canvas', 'Canvas', { referenceSize: { x: 1920, y: 1080 }, scaleWithScreen: true, sortingOrder: 100, safeArea: true })
   ])
-  const panel = uiElement('ui-showcase-panel', 'Menu Panel', canvasUuid, [0, 0], [720, 620], 'Panel', { color: { r: 28, g: 34, b: 46 }, opacity: 96, cornerRadius: 24, layout: 'vertical', gap: 18, padding: 36, clipping: true, styleClass: 'menu-card' })
+  const panel = uiElement('ui-showcase-panel', 'Menu Panel', canvasUuid, [0, 0], [720, 620], 'Panel', { color: { r: 28, g: 34, b: 46 }, opacity: 96, cornerRadius: 24, layout: 'None', gap: 18, padding: 36, clipping: true, styleClass: 'menu-card' })
   const panelUuid = String(panel.uuid)
   const title = uiElement('ui-showcase-title', 'Localized Title', panelUuid, [0, -220], [600, 70], 'Text', { text: '{menu.title}', fontSize: 38, fontWeight: 700, align: 'center', color: { r: 244, g: 248, b: 255 }, opacity: 100, localizationKey: 'menu.title' })
-  const nameInput = uiElement('ui-showcase-input', 'Player Name', panelUuid, [0, -110], [560, 58], 'TextInput', { value: '', placeholder: '{menu.playerName}', fontSize: 20, maxLength: 32, focusable: true, tabIndex: 1, styleClass: 'input' })
+  const nameInput = uiElement('ui-showcase-input', 'Player Name', panelUuid, [0, -110], [560, 58], 'TextInput', { value: '', placeholder: 'Player name', fontSize: 20, maxLength: 32, focusable: true, tabIndex: 1, styleClass: 'input' })
   const playButton = uiElement('ui-showcase-play', 'Play Button', panelUuid, [0, -20], [560, 62], 'Button', { text: '{menu.play}', action: 'StartGame', focusable: true, tabIndex: 2, styleClass: 'primary', accessibilityLabel: 'Start game' })
-  const options = uiElement('ui-showcase-options', 'Options Toggle', panelUuid, [0, 70], [560, 54], 'Checkbox', { checked: true, label: '{menu.sound}', action: 'ToggleSound', focusable: true, tabIndex: 3, styleClass: 'checkbox' })
-  const loading = uiElement('ui-showcase-progress', 'Loading Progress', panelUuid, [0, 160], [560, 28], 'ProgressBar', { value: 68, minimum: 0, maximum: 100, styleClass: 'progress' })
+  const options = uiElement('ui-showcase-options', 'Options Toggle', panelUuid, [0, 70], [560, 54], 'Checkbox', { checked: true, label: 'Sound enabled', localizationKey: 'menu.sound', action: 'ToggleSound', focusable: true, tabIndex: 3, styleClass: 'checkbox' })
+  const loading = uiElement('ui-showcase-progress', 'Loading Progress', panelUuid, [0, 160], [560, 28], 'ProgressBar', { value: 68, min: 0, max: 100, styleClass: 'progress' })
   const scroll = uiElement('ui-showcase-scroll', 'News Scroll View', panelUuid, [0, 245], [560, 90], 'Panel', { color: { r: 22, g: 27, b: 37 }, opacity: 100, cornerRadius: 12, clipping: true, scrollHorizontal: false, scrollVertical: true, contentSize: { x: 560, y: 360 }, scrollSpeed: 42, showScrollbars: true, styleClass: 'scroll' })
   const localization = JSON.stringify({ locale: 'en', entries: { 'menu.title': 'Nova_A UI Showcase', 'menu.playerName': 'Player name', 'menu.play': 'Play', 'menu.sound': 'Sound enabled' } })
   const theme = JSON.stringify({ version: 1, name: 'Showcase', variables: { accent: '#6ea8fe', radius: 12, spacing: 8 }, classes: { 'menu-card': { background: '#1d222c', radius: 24 }, primary: { background: '#4c8df6', foreground: '#ffffff' }, input: { background: '#11151b' } } })
@@ -757,7 +765,7 @@ function networkedOptionalTemplate(name: string): JsonRecord {
   ;((((result.packages as JsonRecord).installed as JsonRecord[])[0].manifest as JsonRecord).engine) = '>=2.9.0 <27.0.0'
   ;((result.projectSettings as JsonRecord).production as JsonRecord) = {
     performance: { traceCapacity: 600, memoryBudgetMb: 300, assetBudgetMb: 512, leakWindowFrames: 600, lifetimeCapacity: 2000 }, replay: { seed: 1313822273, capacity: 3600, strictChecksums: true }, testing: { defaultTimeoutMs: 10000, tests: [{ id: 'network-headless', name: 'Network headless smoke', kind: 'headless', sceneUuid: String((result.scenes as JsonRecord[])[0].uuid), steps: 120, timeoutMs: 10000, captureScreenshot: false, assertions: [{ kind: 'finitePhysics', target: '', expected: 'true' }, { kind: 'noRuntimeErrors', target: '', expected: 'true' }] }] }, data: { saveSchemaVersion: 1, saveMigrations: [] }, jobs: { maxWorkers: 2, maxQueued: 256, timeoutMs: 15000 },
-    networking: { enabled: true, role: 'host', transport: 'websocket', endpoint: 'ws://127.0.0.1:7777', bindAddress: '127.0.0.1:7777', snapshotRate: 20, interpolationMs: 100, rollbackFrames: 120, bandwidthKbps: 256, reconnect: true, replicatedEntities: [first, second].map(value => ({ entityUuid: value.uuid, authority: 'server', properties: ['transform', 'rotation', 'velocity'], interpolate: true, predict: true })) }
+    networking: { enabled: false, role: 'host', transport: 'websocket', endpoint: 'ws://127.0.0.1:7777', bindAddress: '127.0.0.1:7777', snapshotRate: 20, interpolationMs: 100, rollbackFrames: 120, bandwidthKbps: 256, reconnect: true, replicatedEntities: [first, second].map(value => ({ entityUuid: value.uuid, authority: 'server', properties: ['transform', 'rotation', 'velocity'], interpolate: true, predict: true })) }
   }
   return result
 }
@@ -777,7 +785,165 @@ function templateVariant(name: string, id: ProjectTemplateId, basedOn: string, f
   return result
 }
 
-const TEMPLATE_FACTORIES: Record<ProjectTemplateId, (name: string) => JsonRecord> = {
+function decorativeShape(seed: string, name: string, position: [number, number], size: [number, number], color: [number, number, number], type: 'Box' | 'Circle' | 'Triangle' = 'Circle'): JsonRecord {
+  const result = shape(seed, name, position, size, { type, color, body: 'Static' })
+  result.components = (result.components as JsonRecord[]).filter(value => value.kind === 'Transform2D' || value.kind === 'ShapeRenderer2D')
+  return result
+}
+
+function authoredAddition(name: string, id: AddedTemplateId): JsonRecord {
+  const descriptor = PROJECT_TEMPLATES.find(value => value.id === id)!
+  const bodies: JsonRecord[] = [], assets: JsonRecord[] = []
+  const colors: [number, number, number][] = [[102, 178, 255], [120, 221, 187], [255, 182, 108], [200, 152, 255], [247, 133, 161], [238, 218, 129]]
+  const addBody = (suffix: string, position: [number, number], size: [number, number], options: Parameters<typeof shape>[4] = {}) => {
+    const value = shape(`${id}-${suffix}`, suffix, position, size, options); bodies.push(value); return value
+  }
+  const addArt = (suffix: string, position: [number, number], size: [number, number], color: [number, number, number], type: 'Box' | 'Circle' | 'Triangle' = 'Circle') => {
+    const value = decorativeShape(`${id}-${suffix}`, suffix, position, size, color, type); bodies.push(value); return value
+  }
+  let gravity = descriptor.category === 'test' ? 9.80665 : 0
+  let instructions = 'Press Play. Inspect the named objects and their components. Stop returns to the authored scene.'
+  if (descriptor.category === 'game') {
+    const courses: Record<string, [number, number][]> = {
+      'coin-trail': [[-6, -2], [-3, 1], [0, 3], [3, 1], [6, -2], [0, -3]],
+      'checkpoint-sprint': [[-6, -3], [-6, 3], [-2, 3], [-2, -3], [2, -3], [2, 3], [6, 3], [6, -3]],
+      'slalom-run': [[-6, -3], [-4, 2], [-1, -2], [1, 2], [4, -2], [6, 3]],
+      'orbit-dodge': [[-6, 0], [-3, 3], [3, 3], [6, 0], [3, -3], [-3, -3]],
+      'target-circuit': [[-5, 0], [-3, 3], [0, 0], [3, -3], [5, 0], [3, 3], [0, 0], [-3, -3]],
+      'hazard-crossing': [[0, -3], [0, -1], [0, 1], [0, 3]]
+    }
+    const points = courses[id]!, timeLimit = id === 'checkpoint-sprint' ? 25 : id === 'target-circuit' ? 20 : 0
+    const hazards: [number, number][] = id === 'slalom-run' ? [[-3, -.5], [0, .5], [3, -.5]] : id === 'orbit-dodge' ? [[3, 0], [-3, 0]] : id === 'hazard-crossing' ? [[-4, -2], [2, 0], [-1, 2]] : []
+    points.forEach((point, index) => {
+      const goal = addArt(`Checkpoint ${index + 1}`, point, [.8, .8], colors[1])
+      goal.enabled = index === 0
+    })
+    hazards.forEach((point, index) => addArt(`Hazard ${index + 1}`, point, [1.2, 1.2], colors[4]))
+    instructions = 'WASD / arrow keys move. Collect the green checkpoint; the next appears after collection. Avoid pink circles. R restarts, including after a win or loss.'
+    // Rhai functions have their own scope. Lifecycle callbacks own the exported
+    // state, so reset that state directly in each callback instead of a helper.
+    const resetSource = `
+  checkpoint = 0; elapsed = 0.0; finished = false; score_set(0.0); set_position(-7.5, -4.0);
+  for index in 0..${points.length} { entity_set_enabled(find_entity_handle("Checkpoint " + (index + 1)), index == 0); }
+  ui_set_text_on(find_entity_handle("Scene Title"), "${descriptor.name} | Checkpoint 1/${points.length} | WASD / arrows | R restart");`
+    const source = `@export(type="int", min=0, max=8, group="Runtime") let checkpoint = 0;
+@export(type="float", min=0, max=10000, group="Runtime") let elapsed = 0.0;
+@export(type="bool", group="Runtime") let finished = false;
+fn start() { ${resetSource} }
+fn update(dt) {
+  if input_pressed("Restart") { ${resetSource} return; }
+  if finished { return; }
+  elapsed += dt;
+  let pose = transform();
+  let mx = input_axis("MoveHorizontal"); let my = input_axis("MoveVertical");
+  if mx != 0.0 && my != 0.0 { mx *= 0.7071067811865476; my *= 0.7071067811865476; }
+  let x = pose.position_x + mx * 6.0 * dt;
+  let y = pose.position_y + my * 6.0 * dt;
+  if x < -8.0 { x = -8.0; } else if x > 8.0 { x = 8.0; }
+  if y < -4.5 { y = -4.5; } else if y > 4.5 { y = 4.5; }
+  set_position(x, y);
+  ${hazards.map(([hx, hy], index) => {
+    const moving = id === 'orbit-dodge' || id === 'hazard-crossing'
+    const x = id === 'orbit-dodge' ? `cos(elapsed * ${index ? '1.3' : '1.0'} + ${index ? '3.141592653589793' : '0.0'}) * ${index ? '5.0' : '3.0'}` : id === 'hazard-crossing' ? `sin(elapsed * ${1 + index * .3} + ${index.toFixed(1)}) * 6.0` : hx.toFixed(1)
+    const y = id === 'orbit-dodge' ? `sin(elapsed * ${index ? '1.3' : '1.0'} + ${index ? '3.141592653589793' : '0.0'}) * 2.5` : hy.toFixed(1)
+    return `let hx${index} = ${x}; let hy${index} = ${y};\n  ${moving ? `entity_set_position(find_entity_handle("Hazard ${index + 1}"), hx${index}, hy${index});` : ''}\n  if (x - hx${index}) * (x - hx${index}) + (y - hy${index}) * (y - hy${index}) < 0.81 { finished = true; ui_set_text_on(find_entity_handle("Scene Title"), "Hazard hit | R to restart"); return; }`
+  }).join('\n  ')}
+  ${timeLimit ? `if elapsed >= ${timeLimit}.0 { finished = true; ui_set_text_on(find_entity_handle("Scene Title"), "Time expired | R to restart"); return; }` : ''}
+  let xs = [${points.map(point => point[0].toFixed(1)).join(', ')}]; let ys = [${points.map(point => point[1].toFixed(1)).join(', ')}];
+  let dx = x - xs[checkpoint]; let dy = y - ys[checkpoint];
+  if dx * dx + dy * dy < 0.64 {
+    entity_set_enabled(find_entity_handle("Checkpoint " + (checkpoint + 1)), false);
+    checkpoint += 1; score_add(1.0);
+    if checkpoint == ${points.length} { finished = true; ui_set_text_on(find_entity_handle("Scene Title"), "Course complete! | R to restart"); }
+    else { entity_set_enabled(find_entity_handle("Checkpoint " + (checkpoint + 1)), true); }
+  }
+  if !finished { ui_set_text_on(find_entity_handle("Scene Title"), "${descriptor.name} | Checkpoint " + (checkpoint + 1) + "/${points.length}${timeLimit ? ` | Limit ${timeLimit}s | elapsed ` : ' | elapsed ' }" + elapsed.to_int() + "s | R restart"); }
+}`
+    const player = addArt('Player', [-7.5, -4], [.6, .6], colors[0])
+    ;(player.components as JsonRecord[]).push(component(`${id}-player-script`, 'Script2D', { scriptAsset: `asset://${stableUuid(`asset:${id}-game`)}`, properties: {} }))
+    assets.push(scriptAsset(`${id}-game`, 'CheckpointGame', source))
+  } else if (descriptor.category === 'test') {
+    addBody('Ground', [0, -5], [20, .6], { body: 'Static', color: [70, 84, 105], restitution: id === 'restitution-gallery' ? 1 : .1, friction: .6 })
+    if (id === 'domino-cascade') {
+      for (let i = 0; i < 20; i++) addBody(`Domino ${i + 1}`, [-6.8 + i * .7, -3.65], [.25, 2.1], { color: colors[i % colors.length], friction: .7 })
+      setInitialVelocity(addBody('Striker', [-8.5, -3.4], [.75, .75], { type: 'Circle', continuous: true }), 8, 0)
+    } else if (id === 'pyramid-stack') {
+      for (let row = 0; row < 7; row++) for (let column = 0; column < 7 - row; column++) addBody(`Block ${row}-${column}`, [(column - (6 - row) / 2) * 1.1, -4.15 + row * 1.04], [1, 1], { color: colors[row % colors.length], friction: .8 })
+    } else if (id === 'restitution-gallery') {
+      for (let i = 0; i < 6; i++) addBody(`Restitution ${(i / 5).toFixed(1)}`, [-6.25 + i * 2.5, 3.4], [1, 1], { type: 'Circle', restitution: i / 5, friction: 0, color: colors[i] })
+    } else if (id === 'friction-ramp') {
+      for (let i = 0; i < 4; i++) {
+        const friction = [0, .2, .6, 1.2][i], x = -6.75 + i * 4.5
+        const ramp = addBody(`Ramp ${i + 1}`, [x, -1], [4, .35], { body: 'Static', friction, color: colors[i] })
+        ;((ramp.components as JsonRecord[])[0].data as JsonRecord).rotation = -.35
+        addBody(`Friction ${friction}`, [x - 1, .05], [.65, .65], { friction, color: colors[i] })
+      }
+    } else if (id === 'pendulum-row') {
+      for (let i = 0; i < 5; i++) {
+        const x = -7 + i * 3.25, length = 2 + i * .25
+        const anchor = addBody(`Anchor ${i + 1}`, [x, 3.5], [.3, .3], { body: 'Static' })
+        addBody(`Pendulum ${i + 1}`, [x + length * .5, 3.5 - length * Math.sqrt(.75)], [.7, .7], { type: 'Circle', color: colors[i], extra: [component(`${id}-joint-${i}`, 'DistanceJoint2D', { targetEntityUuid: anchor.uuid, distance: length, stiffness: 240, damping: 2, collideConnected: false })] })
+      }
+    } else if (id === 'billiards-break') {
+      gravity = 0
+      addBody('Top Cushion', [0, 5], [20, .6], { body: 'Static', restitution: .9, friction: 0 })
+      for (const x of [-9.6, 9.6]) addBody(`Side Cushion ${x}`, [x, 0], [.6, 10], { body: 'Static', restitution: .9, friction: 0 })
+      for (let row = 0; row < 4; row++) for (let col = 0; col <= row; col++) addBody(`Ball ${row}-${col}`, [2 + row * .77, (col - row / 2) * .88], [.85, .85], { type: 'Circle', restitution: .92, friction: .02, color: colors[(row + col) % colors.length] })
+      setInitialVelocity(addBody('Cue Ball', [-6, 0], [.85, .85], { type: 'Circle', restitution: .92, friction: .02, continuous: true, color: [240, 245, 255] }), 12, 0)
+    } else {
+      for (let i = 0; i < 24; i++) setInitialVelocity(addBody(`Ballistic ${i + 1}`, [-1.65 + (i % 8) * .47, -3.5 + Math.floor(i / 8) * .5], [.35, .35], { type: 'Circle', restitution: .55, continuous: true, color: colors[i % colors.length] }), ((i % 8) - 3.5) * .65, 6 + Math.floor(i / 8) * 1.5)
+      for (const x of [-9.6, 9.6]) addBody(`Basin Wall ${x}`, [x, -2], [.6, 6], { body: 'Static' })
+    }
+  } else if (id === 'sprite-wall') {
+    assets.push(imageAsset(`${id}-sprite`, 'SharedSprite', '#ffffff'))
+    for (let i = 0; i < 24; i++) bodies.push(entity(`${id}-${i}`, `Sprite ${i + 1}`, [-6.25 + (i % 6) * 2.5, 3.6 - Math.floor(i / 6) * 2.35], [component(`${id}-${i}`, 'SpriteRenderer2D', { spriteAsset: `asset://${stableUuid(`asset:${id}-sprite`)}`, size: { x: 1.7, y: 1.7 }, opacity: 100, tint: { r: colors[i % 6][0], g: colors[i % 6][1], b: colors[i % 6][2] }, sortingLayer: 1, orderInLayer: i })]))
+  } else if (id === 'shape-poster' || id === 'neon-garden' || id === 'orbit-gallery') {
+    addArt('Central Star', [0, 0], [2.3, 2.3], colors[2], 'Circle')
+    for (let i = 0; i < (id === 'neon-garden' ? 18 : 6); i++) {
+      const angle = i * Math.PI / 3, radius = id === 'orbit-gallery' ? 1.8 + i * .62 : 2.5 + Math.floor(i / 6) * 1.1
+      const object = addArt(`Shape ${i + 1}`, [Math.cos(angle) * radius, Math.sin(angle) * radius], [1, 1], colors[i % 6], i % 2 ? 'Triangle' : 'Box')
+      if (id === 'orbit-gallery') {
+        const source = `@export(type="float", min=0, max=100000, group="Runtime") let angle = ${angle.toFixed(8)};\nfn update(dt) { angle += dt * ${(1.2 - i * .13).toFixed(2)}; set_position(cos(angle) * ${radius.toFixed(2)}, sin(angle) * ${radius.toFixed(2)}); }`
+        assets.push(scriptAsset(`${id}-${i}`, `Orbit${i + 1}`, source))
+        ;(object.components as JsonRecord[]).push(component(`${id}-script-${i}`, 'Script2D', { scriptAsset: `asset://${stableUuid(`asset:${id}-${i}`)}`, properties: {} }))
+      }
+    }
+    if (id === 'shape-poster') bodies.push(entity(`${id}-caption`, 'Poster Caption', [-6.7, -3.8], [component(`${id}-caption`, 'TextRenderer2D', { text: 'NOVA / FORM & MOTION', fontSize: .8, fontWeight: 700, maxWidth: 13.5, color: { r: 239, g: 244, b: 255 }, opacity: 100, sortingLayer: 1, orderInLayer: 20 })]))
+    if (id === 'neon-garden') for (let i = 0; i < 3; i++) bodies.push(entity(`${id}-light-${i}`, `Light ${i + 1}`, [-4 + i * 4, 1], [component(`${id}-light-${i}`, 'Light2D', { lightType: 'Point', color: { r: colors[i][0], g: colors[i][1], b: colors[i][2] }, intensity: 1.4, range: 7, castsShadows: true, layerMask: 0xffffffff })]))
+  } else {
+    const rain = id === 'rain-room', stars = id === 'starfield', count = rain ? 7 : stars ? 3 : 5
+    for (let i = 0; i < count; i++) {
+      const color = colors[i % 6]
+      bodies.push(entity(`${id}-emitter-${i}`, `Emitter ${i + 1}`, rain ? [-7.5 + i * 2.5, 5] : stars ? [8.5, 0] : [-6 + i * 3, -2.5], [component(`${id}-emitter-${i}`, 'ParticleEmitter2D', {
+        emissionRate: rain ? 16 : stars ? 20 : 18, burst: 10, lifetime: stars ? 6 : 2, maxParticles: stars ? 160 : 80,
+        initialVelocityMin: rain ? { x: -.4, y: -7 } : stars ? { x: -2 - i, y: -1.5 } : { x: -1.5, y: 2.5 },
+        initialVelocityMax: rain ? { x: .4, y: -5 } : stars ? { x: -1.8 - i, y: 1.5 } : { x: 1.5, y: 5 },
+        gravity: { x: 0, y: rain ? -2 : stars ? 0 : -1.8 }, startColor: { r: color[0], g: color[1], b: color[2] }, endColor: { r: color[0], g: color[1], b: color[2] },
+        startOpacity: 95, endOpacity: 0, startScale: stars ? .03 + i * .025 : rain ? .04 : .12, endScale: .02, sortingLayer: 1, orderInLayer: i
+      })]))
+    }
+    if (rain) {
+      const foreground = [addArt('Silhouette Base', [0, -4.3], [20, 1.2], [49, 58, 76], 'Box'), addArt('Shelter', [0, -1.5], [3.5, 4.6], [66, 79, 100], 'Box')]
+      for (const object of foreground) ((object.components as JsonRecord[]).find(part => part.kind === 'ShapeRenderer2D')!.data as JsonRecord).orderInLayer = 20
+    }
+  }
+  const title = descriptor.category === 'game' ? `${descriptor.name} | WASD / arrows | R restart` : descriptor.name
+  const main = scene(id, descriptor.name, [cameraAtSize(`${id}-camera`, 6), ...bodies, ...canvasWithLabel(`${id}-ui`, title)])
+  ;(main.globalSettings as JsonRecord).gravity = gravity
+  const result = project(name, id, [main], assets, `---\ndismissible: true\ntemplate: ${id}\n---\n# ${descriptor.name}\n\n${descriptor.description}\n\n${instructions}\n\n## Edit and verify\n\nSelect named objects in Scene and change one component at a time. Play checks runtime behavior; Stop restores authored values. Save, reopen, and use Manage → Build to verify persistence and export. ${descriptor.category === 'game' ? 'These are small complete checkpoint games; edit CheckpointGame.rhai to change course rules. All movement and hit tests use world units.' : 'Physics tests are teaching fixtures, not numerical certification. Particle renderings need Play to emit.'}\n`)
+  if (descriptor.category === 'game') {
+    const bind = (code: string, scale: number) => ({ device: 'keyboard', code, scale, x: 0, y: 0, gamepad: 0, deadzone: .15 })
+    ;(result.projectSettings as JsonRecord).inputMap = [
+      { name: 'MoveHorizontal', kind: 'axis', bindings: [bind('KeyA', -1), bind('ArrowLeft', -1), bind('KeyD', 1), bind('ArrowRight', 1)] },
+      { name: 'MoveVertical', kind: 'axis', bindings: [bind('KeyW', 1), bind('ArrowUp', 1), bind('KeyS', -1), bind('ArrowDown', -1)] },
+      { name: 'Restart', kind: 'button', bindings: [bind('KeyR', 1)] }
+    ]
+  }
+  if (id === 'neon-garden') { const rendering = (result.projectSettings as JsonRecord).rendering as JsonRecord; rendering.lightingEnabled = true; rendering.ambientIntensity = .12 }
+  return result
+}
+
+const TEMPLATE_FACTORIES: Record<Exclude<ProjectTemplateId, AddedTemplateId>, (name: string) => JsonRecord> = {
   empty: emptyTemplate,
   'physics-sandbox': physicsTemplate,
   platformer: platformerTemplate,
@@ -801,9 +967,24 @@ const TEMPLATE_FACTORIES: Record<ProjectTemplateId, (name: string) => JsonRecord
 }
 
 export function createTemplateProject(template: ProjectTemplateId, name: string): JsonRecord {
-  const factory = TEMPLATE_FACTORIES[template]
+  const factory = TEMPLATE_ADDITIONS_26_11.some(value => value.id === template)
+    ? (name: string) => authoredAddition(name, template as AddedTemplateId)
+    : TEMPLATE_FACTORIES[template as keyof typeof TEMPLATE_FACTORIES]
   if (!factory) throw new Error(`Unknown project template: ${String(template).slice(0, 80)}`)
   const result = factory(name)
+  const tutorial = (result.assets as JsonRecord[] | undefined)?.find(asset => asset.path === 'Assets/Tutorials/Getting Started.md')
+  if (tutorial) {
+    const instructions = (['en', 'de', 'zh'] as const).map(locale => {
+      const guide = templateGuide(template, locale)
+      const labels = locale === 'de' ? ['Steuerung und Einrichtung', 'Erwartetes Ergebnis', 'Voraussetzungen'] : locale === 'zh' ? ['操作与准备', '预期结果', '使用要求'] : ['Controls and setup', 'Expected result', 'Requirements']
+      return `## ${labels[0]} (${locale})\n\n${guide.controls}\n\n### ${labels[1]}\n\n${guide.expected}\n\n${labels[2]}: ${guide.requirements.join(' · ')}\n`
+    }).join('\n')
+    tutorial.source = `${String(tutorial.source ?? '')}\n\n${instructions}`
+    const bytes = assetSourceBytes(String(tutorial.source)), hash = sha256Bytes(bytes)
+    tutorial.byteLength = bytes.length
+    const pipeline = tutorial.pipeline as JsonRecord | undefined
+    if (pipeline) { pipeline.sourceHash = hash; pipeline.artifactHash = hash; pipeline.contentHash = hash; pipeline.cacheKey = hash; pipeline.lastValidSource = tutorial.source }
+  }
   const failures = auditTemplateProject(result, template)
   if (failures.length) throw new Error(`Template ${template} failed its release audit: ${failures.join('; ')}`)
   return result
@@ -911,7 +1092,7 @@ export function auditTemplateProject(project: JsonRecord, template: ProjectTempl
     const installed = Array.isArray(packages?.installed) ? packages.installed as JsonRecord[] : []
     if (!installed.some(item => (item.manifest as JsonRecord | undefined)?.id === 'top.whitelists.novaa.networking')) failures.push('missing optional networking package')
     const production = ((project.projectSettings as JsonRecord | undefined)?.production as JsonRecord | undefined)?.networking as JsonRecord | undefined
-    if (production?.enabled !== true || !Array.isArray(production.replicatedEntities) || production.replicatedEntities.length !== 2) failures.push('network replication is not configured')
+    if (production?.enabled !== false || !Array.isArray(production.replicatedEntities) || production.replicatedEntities.length !== 2) failures.push('optional networking must start offline with two replication descriptors')
   } else if (auditTemplate === 'collision-lab') {
     requireComponents('RigidBody2D', 'BoxCollider2D', 'EllipseCollider2D', 'Canvas', 'Text')
     if (componentData('CCD Bullet', 'RigidBody2D')?.continuousCollision !== 'Continuous') failures.push('collision lab bullet must use continuous collision detection')

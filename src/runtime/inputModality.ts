@@ -62,13 +62,26 @@ export function inputPromptForAction(actionName: string, actions: InputAction[],
         : modality === 'pen' ? binding.device.startsWith('pen')
           : binding.device === 'touch' || binding.device === 'gesture') ?? action?.bindings[0]
   const code = preferred?.code ?? ''
-  const symbol = modality === 'keyboard' ? KEYBOARD_SYMBOLS[code] ?? (code === ' ' ? 'Space' : code.replace(/^Key/, '').replace(/^Digit/, ''))
-    : modality === 'mouse' ? MOUSE_SYMBOLS[code] ?? `Mouse ${code}`
-      : modality === 'gamepad' ? gamepadSymbol(code)
-        : modality === 'pen' ? PEN_SYMBOLS[code] ?? code.replace(/^button-/, 'Pen ')
-          : code || 'Touch'
+  // A fallback binding must keep its real device. A keyboard-only Jump action
+  // does not acquire a mouse binding merely because the pointer moved.
+  const bindingModality: InputModality = !preferred ? modality
+    : preferred.device === 'keyboard' || preferred.device === 'physical-key' ? 'keyboard'
+      : preferred.device.startsWith('mouse') ? 'mouse'
+        : preferred.device.startsWith('gamepad') ? 'gamepad'
+          : preferred.device.startsWith('pen') ? 'pen'
+            : preferred.device === 'sensor' ? modality : 'touch'
+  const symbol = !preferred ? '—'
+    : preferred.device === 'sensor' ? `Sensor ${code}`
+      : bindingModality === 'keyboard' ? KEYBOARD_SYMBOLS[code] ?? (code === ' ' ? 'Space' : code.replace(/^Key/, '').replace(/^Digit/, ''))
+        : preferred.device === 'mouse-button' ? MOUSE_SYMBOLS[code] ?? `Mouse ${code}`
+          : bindingModality === 'mouse' ? `Mouse ${code}`
+            : preferred.device === 'gamepad-axis' ? `Axis ${code}`
+              : bindingModality === 'gamepad' ? gamepadSymbol(code)
+                : bindingModality === 'pen' ? PEN_SYMBOLS[code] ?? code.replace(/^button-/, 'Pen ')
+                  : code || 'Touch'
   const label = cleanAction(actionName) || 'Action'
-  return { action: label, modality, bindingCode: code, symbol: symbol || '—', label, accessibleLabel: `${label}: ${symbol || 'unbound'} on ${modality}` }
+  const deviceLabel = preferred?.device === 'sensor' ? 'sensor' : bindingModality
+  return { action: label, modality: bindingModality, bindingCode: code, symbol: symbol || '—', label, accessibleLabel: preferred ? `${label}: ${symbol || 'unbound'} on ${deviceLabel}` : `${label}: unbound` }
 }
 
 export function formatInputPrompt(descriptor: InputPromptDescriptor, style = inputPromptState.promptStyle): string {

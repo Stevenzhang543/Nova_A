@@ -1,4 +1,647 @@
-# Nova_A 26.10 – Vollständiges Handbuch
+# Nova_A 26.16 – Vollständiges Handbuch
+
+<!-- NOVA_V2616_START -->
+## 26.16 — Animation, Audio und Interface-Produktion
+
+Engine: **26.16.0** · Project Format 2/schema 29.
+
+### Animiertes Menü und synchronisierte Zwischensequenz produzieren
+
+Diese Aufgabe verbindet Animation, Audio und Interface in einem gespeicherten Projekt. Beginnen Sie mit UI Showcase oder der aktuellen Menüreferenz. Arbeiten Sie in einer Kopie, behalten Sie importierte Originaldateien und speichern Sie vor größeren Änderungen. expected-output und test-controls der Referenz beschreiben die konkreten Aktionen; Ausführungsberichte belegen nur tatsächlich beobachtete Prüfungen.
+
+### Menü und Übersetzungen
+
+Wählen Sie in Interface den Canvas und seine RectTransform-Kinder. Prüfen Sie Referenzgröße, Skalierung, Anker, Mindest-/Maximalgröße, sicheren Bereich, Beschneidung, Scrollen und Textüberlauf in der wirklichen Vorschau. Fixed ignoriert responsive Breakpoints bewusst. Negative Innen-/Außenabstände werden mit Diagnose begrenzt; für Überlagerungen dienen vorzeichenbehaftete Positions-/Ankerwerte. Verdeckte Kinder und modale Hintergrundelemente dürfen nicht fokussierbar bleiben. Vergeben Sie verständliche Namen, Fokus- und Lesereihenfolge. Component-source-Metadaten erzeugen keinen UI-Unterbaum; verknüpfte Inhalte benötigen ein Prefab.
+
+Öffnen Sie das Theme, setzen Sie bei Bedarf einen Elternwert und ändern Sie nur beabsichtigte Tokens/Stile. Ein Kind muss spätere Änderungen des Eltern-Themes weiter erben. Spacing ersetzt nicht automatisch jeden Panel-Abstand. Speichern Sie gültige Entwürfe; prüfen Sie anschließend, dass ungültiger Text beim Wechsel erhalten bleibt und gespeicherte Laufzeitwerte unverändert sind. Konflikte verlangen eine ausdrückliche Entscheidung. Ungültige Stile und doppelte Sprachzuordnung werden abgelehnt.
+
+Verwenden Sie Lokalisierungsschlüssel und unterstützte Label-/Platzhalterbindungen. Ergänzen Sie EN/DE/ZH, Fallback-Sprache und passende Schriftdateien. Prüfen Sie lange Übersetzungen, Glyphen und Paketabhängigkeiten einschließlich rekursiver Fallbacks. CSV bewahrt Strings und Varianten; PO unterstützt gewöhnliche mehrzeilige Strings sowie Nova-Variantenmetadaten. Indizierte gettext-Plurale erfordern CSV. Geben Sie gemischten chinesischen/lateinischen Text per IME ein, ersetzen Sie eine Auswahl und navigieren Sie mit Tab. Enter während der Komposition darf keine Spielaktion auslösen. Editor-Schaltflächen dürfen keine Gameplay-Tasten weiterreichen.
+
+### Clips, Kurven und Entwürfe
+
+Wählen Sie ein Szenenobjekt und öffnen Sie Animation. Erstellen/wählen Sie einen Clip, ergänzen Sie Eigenschaftsspuren, Zielobjekte, Zeiten und Werte. Bearbeiten Sie Tangentenmodus, Interpolation und Easing am gewählten Schlüssel. Dope-/Kurvenansicht trennen Timing und Verlauf. Vergrößern Sie Asset-Struktur und Eigenschaften; Bereichsgrößen zurücksetzen stellt die Vorgaben wieder her. Sprite-Frames besitzen eigene Dauern. Befehle und Marker sind diskrete Seiteneffekte mit getrennten Ziel-/Payload-Feldern.
+
+Änderungen im Entwurf aufzeichnen ergänzt Schlüssel ohne automatische Speicherung. Speichern Sie ausdrücklich. Nichtendliche oder ungültige Werte bleiben mit genauer Feldmeldung erhalten. Grenzen:100 Spuren und10.000 Schlüssel pro Spur; eine Ablehnung darf keinen halben neuen Datensatz hinterlassen. Clip, Controller, Maske, Rig, Skin und Timeline behalten ihre Entwürfe bei Asset-/Workspace-Wechsel und Save/Discard/Cancel beim Projektwechsel.
+
+Speichern Sie vor Gespeichertes Asset abspielen. Die Vorschau besitzt eine eigene echte Spielsitzung. Pause und ausgewertete Laufzeit zeigen tatsächlich berechnete Posen. Springen löst keine übersprungenen Befehle aus. Vorschau stoppen und Szene wiederherstellen setzt Autorenwerte zurück; eine alte Vorschau darf eine später extern gestartete Sitzung nicht übernehmen. Laufzeitaufzeichnung überträgt die letzten Posen nach der Wiederherstellung in einen ungespeicherten Entwurf. Speichern und öffnen Sie ihn erneut.
+
+### Controller und Rig
+
+Prüfen Sie Parameter, Zustände, Bedingungen, Exit-Zeit, Überblenddauer, Zieloffset, Unterbrechung und Marker-/Normalzeit-Synchronisation. Testen Sie Grenzzeitpunkte und unterbrochene Übergänge. Masken, additive Ebenen,1D/2D-Blends und Synchronisation verwenden den Spiel-Evaluator. Gewicht null hält die Uhr nicht an, trägt aber keine Pose bei. Trigger dürfen keine unbeteiligte spätere Transition auslösen.
+
+Prüfen Sie Knochenhierarchie, Ruhepose und Gewichte, danach IK, Constraints, Retargeting relativ zur Ruhepose und gespiegelte Bindungen. Ungültige Indizes/Zyklen und zu großer Aufwand benötigen Diagnosen. Root Motion Apply behält die absolute Abtastung der verfassten Root-Position und -Drehung bei. Ignore unterdrückt Position/Drehung der Wurzel, nicht ihre Skalierung. Akkumulierte Bewegung wird ausdrücklich über animationRootMotionDelta/applyAnimationRootMotion angewendet; vorhandene Szenen wechseln nicht stillschweigend zur Delta-Bewegung. Testen Sie Schleifen und Rückwärtssprünge. Kurvenschnitte können begrenzt linear gebacken werden: Stichprobentoleranz1e-6, keine symbolische Identitätsgarantie; zu aufwendige Daten werden abgelehnt.
+
+### Gemeinsame Timeline für Ton und Untertitel
+
+Binden Sie Spuren an die richtigen Objekte/Assets. Setzen Sie Anfang, Dauer, Quelloffset, Rate und Lautstärkehüllkurve. Prüfen Sie verwendete Sichtbarkeits-, Animations-, Audio-, verschachtelte Timeline-, Befehls- und Untertitelspuren. Verknüpfen Sie Skip über die sichtbare Referenzaktion mit dem richtigen Timeline-Ziel. Springen rekonstruiert Pose/Untertitel und überspringt Seiteneffekte. Überlappende Audioclips benötigen eigene Stimmen; verschachtelte Raten müssen auch Audio erreichen.
+
+Wählen Sie im Audio-Bereich Clip und Vorhör-Bus. Prüfen Sie Ausgangsbus, Sends, Tief-/Hochpass, Kompressor, Delay und Reverb. Vorhören besitzt einen eigenen Spiel-Mixer; sein Stop darf fremde Stimmen nicht stoppen. Loop-/Trim-/Wellenformänderungen bleiben ausdrückliche Undo-Aktionen. Anzeigen sind RMS-/Sample-Spitzen-Schätzungen, keine BS.1770- oder True-Peak-Messung. Beobachten Sie Transportuhr, Sampleposition und Stimmen beim Pause/Sprung.
+
+Die gemeinsame Medienuhr folgt ausgewerteten festen Simulationsschritten. Pause friert sie ein; Einzelschritt berechnet Pose/Sampleposition bei pausiertem Ton. Gepufferte Raten sind begrenzt. Streaming verwendet den Browsertransport und pausiert bei nicht unterstützten Raten mit Diagnose. Große Dateien benötigen Stream. Grenzen:64MiB residente PCM-Daten,32MiB pro Clip,16 parallele Decodes. Gerätelatenz und Streaming-Erholung benötigen echte Hardware.
+
+### Exaktes Projekt prüfen und exportieren
+
+Spielen Sie Menü und Sequenz vollständig: Musik, Untertitelgrenzen, Pause/Fortsetzen, Vor-/Rückwärtssprung, Schleife, Ende und Skip. Nach Stop und erneutem Start müssen Stimmen, Listener, Vorschau und native Texteingabe sauber freigegeben sein. Prüfen Sie schmale Bereiche, beide Themes, drei Sprachen und100/150/200% Skalierung; Touch-Abbruch, Tastatur und IME getrennt.
+
+Speichern Sie, laden Sie die Anwendung neu und öffnen Sie die heruntergeladene Datei über Open. Wiederholen Sie dieselbe Folge. Exportieren Sie das vollständige Web-ZIP, stellen Sie es per HTTP bereit und prüfen Sie den Player. Native Prüfungen benötigen den tatsächlich qualifizierten Windows-Build. Sprache/Fonts/Audio, Untertitel, Fokus und Skip müssen erhalten bleiben. Behalten Sie Fehler und Artefakthashes. Determinismus-/Paketprüfungen ersetzen keine Beobachtung von Lautsprechern, Screenreadern, schwacher Hardware oder Langzeitbetrieb.
+
+
+### Referenzaktionen binden und Speicherung prüfen
+
+Wählen Sie einen Menü-Button und im Inspector Timeline-Aktion: Play, Pause, Skip oder Resume. Die ausdrücklichen Werte @timeline:play/pause/skip/resume verwenden den nächsten aktivierten TimelinePlayer am Button oder einem Elternobjekt. Ein gemeinsamer Player auf dem Canvas benötigt weder Script2D noch eine eingebettete Ziel-UUID. Custom callback stellt den vorherigen Skript-Callback wieder her. Die Referenz dauert30Sekunden, Arrival liegt bei20 und Introduction bei0. Pause hält die Position; Skip respektiert nicht überspringbare Clips; Resume startet am konfigurierten Marker.
+
+Untertitel wie {caption.intro} verwenden zuerst die Clip-Sprache, dann die Canvas-Vorschausprache und danach die Projekt-Vorschausprache. Export enthält auch ausdrückliche Clip-Sprachen samt Fallbacks/Fonts. Mehr als64MiB Timeline-Quelltext werden mit Diagnose abgelehnt.
+
+Der reale Menütest ändert den Deckkraftschlüssel von25 auf35, die Musiklautstärke von0,65 auf0,5 und den chinesischen Einführungstext, speichert, öffnet erneut und startet das heruntergeladene Web-ZIP. Die generierte Referenz bleibt der reproduzierbare Ausgangspunkt; der Evidenzdownload enthält die beobachteten Änderungen. Ein voller optionaler Browser-Wiederherstellungscache darf das externe Speichern nicht verhindern. Prüfen Sie bei Bedarf das Aufgabenprotokoll und behalten Sie die gespeicherte Projektdatei.
+
+<!-- NOVA_V2616_END -->
+
+<!-- NOVA_V2615_START -->
+## 26.15 — Produktionsressourcen, Rendering und alle vierzig Starter
+
+Engine: **26.15.0** · Project Format 2/schema 29.
+
+### Produktionsressourcen und Rendering
+
+### Mit einem sichtbaren Ergebnis beginnen
+Empty eignet sich zum Importieren, Rendering Lab zur Beleuchtung. Der Projektstarter zeigt eine echte Laufzeitvorschau, Voraussetzungen, Steuerung und erwartetes Ergebnis. Suche, Kategorie und Schwierigkeit wirken gemeinsam; Zurücksetzen zeigt alle vierzig Einträge. Das Funktionshandbuch öffnet das betreffende Fachkapitel, die zugehörige Aufgabe die Anleitung des ausgewählten Starters. Wiederverwendete Grundlagen und noch ungebundene Beispielaktionen sind ausdrücklich angegeben.
+
+### Importieren, prüfen und Fehler beheben
+Design → Assets öffnen. Ein Bild zusammen mit seiner Atlas-JSON-Datei importieren oder eine orthogonale Tiled-Karte mit den benötigten Bildern und Tilesets. Der Stapel zeigt abgeschlossene, fehlgeschlagene und abgebrochene Dateien. Abbrechen beendet noch nicht übernommene Arbeit; bereits erfolgreiche Importe bleiben bestehen. Einzelne Aufträge lassen sich im aufklappbaren Protokoll prüfen und wiederholen. In schmalen Bereichen öffnet eine Auswahl die Details über die volle Breite; Durchsuchen führt zurück.
+
+Die Vorschau nutzt die tatsächlichen Bilddaten, auch bei verknüpften Atlas-Ausschnitten. Übersicht zeigt Quelle, Fehler und typisierte Abhängigkeitsfelder. Ein fehlendes Bild importieren, im passenden Quellfeld auswählen und dem Navigationsknopf folgen. Verschieben und Umbenennen der Originaldatei müssen deren UUID-Verknüpfungen erhalten. Ein fehlgeschlagener Reimport behält den letzten gültigen Stand. Beim Projektwechsel werden verspätete Importergebnisse verworfen.
+
+### Ausschnitte und Animation
+Beim Atlas Ausschnitte öffnen und Frames extrahieren oder aktualisieren. Jeder erzeugte Frame behält seine stabile Quellidentität und verweist auf das Original. Eine andere Quellreihenfolge oder ein neuer Dateiname erzeugt keine neue Identität. Fehlerhafte oder nicht unterstützte Daten werden diagnostiziert.
+
+Bei regulären Bildern Raster-Slicing einschalten und Spalten, Zeilen, Rand und Abstand festlegen. Zuschneiden analysiert die echte Transparenz. Automatisches Slicing speichert zusammenhängende sichtbare Regionen und die erste Region samt Kontur; es erzeugt allein noch keine getrennten Frame-Assets. Animation aus Frames erstellt einen normalen AnimationClip in Quellreihenfolge mit individuellen Zeitwerten, ersatzweise1/12 Sekunde. Den Clip anschließend über den normalen Animationsablauf an ein Objekt binden. Bloßes Extrahieren bindet keine Animation.
+
+### Tiled-Karten bearbeiten
+Vor dem Erzeugen einer Tilemap alle Bild- und Tileset-Quellen zuordnen. firstgid, horizontale/vertikale/diagonale Spiegelungen, die Umrechnung abwärts laufender Quellzeilen und individuelle Animationszeiten bleiben erhalten. Unterstützt sind endliche orthogonale JSON-Karten mit Atlas-Tilesets sowie die dokumentierte einfache CSV-TMX/TSX-Untermenge. Unendliche/isometrische Karten, komprimierte Gruppen-/Objekt-/Bildebenen und komplexe Kollisionsgeometrie werden abgewiesen. Solche Funktionen weiter im Originalwerkzeug bearbeiten.
+
+Die importierte Karte besitzt ihre Quelle und Ebenen. Für lokale Tile-Definitionen im Tilemap-Werkzeug eine bearbeitbare Kopie anlegen. Das unabhängige TileSet teilt die Bild-UUIDs; Bearbeiten, Rückgängig/Wiederholen und Export verwenden die Kopie. Reimport verändert das Original, nicht die lokalen Definitionen. Ebenenmalen bleibt möglich, ohne die Quellkarte mit einem anderen Dokumentformat zu überschreiben.
+
+### Gemeinsame Ressourcen und Varianten
+In Assets Theme, Material, InputMap, PhysicsMaterial, AnimationLibrary oder DataTable anlegen. Änderungen bleiben bis Ressource speichern ein Entwurf. Ungültiges JSON und unfertige Varianten gehen beim Asset-/Arbeitsbereichwechsel nicht verloren. Gespeicherte Laufzeitwerte zeigen ausdrücklich den gespeicherten Resolverzustand. Eine benannte Variante mit partiellen Werten speichern und anschließend eine abgeleitete Überschreibung anlegen. Das Kind erbt Elternwerte und Varianten; lokale Felder überschreiben gezielt. Doppelte Namen, JSON ohne Objektstruktur, fehlende Eltern, Typkonflikte und Zyklen werden abgewiesen. Eltern und Kind nach Speichern/Öffnen erneut prüfen.
+
+### Rendering beobachten und exportieren
+In Rendering Lab Point Light auswählen und die Intensität ändern. Unter Verwalten → Rendering sind globale Szenenbeleuchtung und Ausgabeeinstellungen von den Objektfeldern getrennt. Tatsächliche Bildänderungen und Diagnosen prüfen. Nicht unterstützte Richtungsschatten sind mit Erklärung deaktiviert; Typwechsel erhalten gespeicherte Werte. Normalen folgen Bildrotation und Spiegelungen. Initialisierungs-/Shaderfehler verwenden einen erklärten Rückfallpfad; Kontextwiederherstellung baut Ressourcen neu auf.
+
+Begrenzte Texturanzahl/-bytes, höchstens512MiB GPU-Budget und ein faires Upload-Budget pro Frame begrenzen Wachstum. Der Vorladerand fordert bei aktivem Culling nahe Bilder an. Warteschlange, Bytes und Aufschübe prüfen, bevor Budgets erhöht werden. Canvas-/Videotexturen werden pro Frame erneuert. Canvas-Kanten von Mesh-Dreiecken können von WebGL abweichen.
+
+Projekt → Build öffnen und Web wählen. Ohne Verzeichnisdialog wird ein vollständiges ZIP mit Player, WASM, Spielpaket und Dateimanifest heruntergeladen. Entpacken und per HTTP bereitstellen; game.nova-pak allein ist keine vollständige Browseranwendung. Für Windows den passenden aktuellen nativen Player verwenden. Beleuchtung und Ressourcen im Export mit dem Editor vergleichen und das gespeicherte Projekt erneut öffnen. Messungen gelten für die geprüften Programme und diesen Rechner, nicht pauschal für jede GPU oder Installation.
+
+
+### Clear Scene (empty)
+
+Steuerung und Einrichtung: Objekte in Design erstellen, dann Play starten. Die leere Szene hat absichtlich keine Spielsteuerung.
+
+Erwartetes Ergebnis: Eine leere Szene ist für das erste Objekt bereit; eine leere Spielansicht ist korrekt.
+
+Voraussetzungen: Offline bereit
+
+Danach Stop ausführen und die wiederhergestellte Ausgangsszene prüfen. Projekt speichern, erneut öffnen und das Ergebnis wiederholen; anschließend den exportierten Player vergleichen. Ein erfolgreicher Start allein bestätigt nicht jedes Spielverhalten.
+
+### Physics Sandbox (physics-sandbox)
+
+Steuerung und Einrichtung: Play starten. Keine Spieleingabe nötig; Stop stellt die Ausgangsszene wieder her.
+
+Erwartetes Ergebnis: Eine verbundene Box, elastisch verbundene Körper und Boden zeigen Schwerkraft und Zwangsbedingungen.
+
+Voraussetzungen: Offline bereit
+
+Danach Stop ausführen und die wiederhergestellte Ausgangsszene prüfen. Projekt speichern, erneut öffnen und das Ergebnis wiederholen; anschließend den exportierten Player vergleichen. Ein erfolgreicher Start allein bestätigt nicht jedes Spielverhalten.
+
+### Platformer Scene (platformer)
+
+Steuerung und Einrichtung: Play: A/D zum Bewegen, Leertaste zum Springen. Vor Tastatureingaben in die Spielansicht klicken.
+
+Erwartetes Ergebnis: Die Figur läuft und springt auf Boden/Plattform; Sprite, Idle-Clip, Tilemap und Sprungton sind enthalten.
+
+Voraussetzungen: Offline bereit · Tastatur · Audio enthalten
+
+Danach Stop ausführen und die wiederhergestellte Ausgangsszene prüfen. Projekt speichern, erneut öffnen und das Ergebnis wiederholen; anschließend den exportierten Player vergleichen. Ein erfolgreicher Start allein bestätigt nicht jedes Spielverhalten.
+
+### Top-down Scene (top-down)
+
+Steuerung und Einrichtung: Play: WASD bewegt; E erzeugt einen Gegner. Die rechte Ausgangszone speichert einen Checkpoint und öffnet Main Menu.
+
+Erwartetes Ergebnis: Die Figur bewegt sich durch die Kachelwelt, erzeugt Gegner und erreicht die Ausgangsszene.
+
+Voraussetzungen: Offline bereit · Tastatur
+
+Danach Stop ausführen und die wiederhergestellte Ausgangsszene prüfen. Projekt speichern, erneut öffnen und das Ergebnis wiederholen; anschließend den exportierten Player vergleichen. Ein erfolgreicher Start allein bestätigt nicht jedes Spielverhalten.
+
+### Lighting Starter (lighting-starter)
+
+Steuerung und Einrichtung: Play starten. Keine Spieleingabe nötig; Stop stellt die Ausgangsszene wieder her.
+
+Erwartetes Ergebnis: Formen, Sprite, Text und Partikel erscheinen im eingerichteten Punktlicht.
+
+Voraussetzungen: Offline bereit
+
+Gemeinsame Grundlage: rendering-lab.
+
+Danach Stop ausführen und die wiederhergestellte Ausgangsszene prüfen. Projekt speichern, erneut öffnen und das Ergebnis wiederholen; anschließend den exportierten Player vergleichen. Ein erfolgreicher Start allein bestätigt nicht jedes Spielverhalten.
+
+### Tile World Starter (tile-world)
+
+Steuerung und Einrichtung: Play: WASD bewegt; E erzeugt einen Gegner. Die rechte Ausgangszone speichert einen Checkpoint und öffnet Main Menu.
+
+Erwartetes Ergebnis: Die Top-down-Grundlage enthält Kachelpalette, Ebenenkarte, Navigationsregion und gestreamte Chunks.
+
+Voraussetzungen: Offline bereit · Tastatur
+
+Gemeinsame Grundlage: top-down.
+
+Danach Stop ausführen und die wiederhergestellte Ausgangsszene prüfen. Projekt speichern, erneut öffnen und das Ergebnis wiederholen; anschließend den exportierten Player vergleichen. Ein erfolgreicher Start allein bestätigt nicht jedes Spielverhalten.
+
+### Responsive UI Starter (responsive-ui)
+
+Steuerung und Einrichtung: Play: Namensfeld anklicken, tippen und mit Tab/Umschalt+Tab fokussieren. Die Sound-Checkbox per Klick oder Leertaste ändern. Die Play-Schaltfläche sendet eine Aktion; es gibt keine zweite Spielszene.
+
+Erwartetes Ergebnis: Ein anpassbares Menü zeigt Texteingabe, Fokus, Checkbox und Fortschritt.
+
+Voraussetzungen: Offline bereit · Tastatur · Zeiger
+
+Gemeinsame Grundlage: ui-showcase.
+
+Danach Stop ausführen und die wiederhergestellte Ausgangsszene prüfen. Projekt speichern, erneut öffnen und das Ergebnis wiederholen; anschließend den exportierten Player vergleichen. Ein erfolgreicher Start allein bestätigt nicht jedes Spielverhalten.
+
+### Collision & CCD Lab (collision-lab)
+
+Steuerung und Einrichtung: Play starten. Keine Spieleingabe nötig; Stop stellt die Ausgangsszene wieder her.
+
+Erwartetes Ergebnis: Ein schnelles CCD-Projektil trifft eine dünne Wand; fallende Körper vergleichen Reibung, Rückprall und Sensor. Debug → Physics prüfen.
+
+Voraussetzungen: Offline bereit
+
+Danach Stop ausführen und die wiederhergestellte Ausgangsszene prüfen. Projekt speichern, erneut öffnen und das Ergebnis wiederholen; anschließend den exportierten Player vergleichen. Ein erfolgreicher Start allein bestätigt nicht jedes Spielverhalten.
+
+### Rendering Lab (rendering-lab)
+
+Steuerung und Einrichtung: Play starten. Keine Spieleingabe nötig; Stop stellt die Ausgangsszene wieder her.
+
+Erwartetes Ergebnis: Rechteck, Ellipse, Dreieck, Sprite, Welttext, Partikel und Punktlicht erscheinen zusammen.
+
+Voraussetzungen: Offline bereit
+
+Danach Stop ausführen und die wiederhergestellte Ausgangsszene prüfen. Projekt speichern, erneut öffnen und das Ergebnis wiederholen; anschließend den exportierten Player vergleichen. Ein erfolgreicher Start allein bestätigt nicht jedes Spielverhalten.
+
+### UI & Input Lab (ui-showcase)
+
+Steuerung und Einrichtung: Play: Namensfeld anklicken, tippen und mit Tab/Umschalt+Tab fokussieren. Die Sound-Checkbox per Klick oder Leertaste ändern. Die Play-Schaltfläche sendet eine Aktion; es gibt keine zweite Spielszene.
+
+Erwartetes Ergebnis: Das lokalisierte Menü nimmt einen Namen an und schaltet die Checkbox. Theme und Audiobeispiel sind enthalten; der Ton ist nicht an Klicks gebunden.
+
+Voraussetzungen: Offline bereit · Tastatur · Zeiger
+
+Danach Stop ausführen und die wiederhergestellte Ausgangsszene prüfen. Projekt speichern, erneut öffnen und das Ergebnis wiederholen; anschließend den exportierten Player vergleichen. Ein erfolgreicher Start allein bestätigt nicht jedes Spielverhalten.
+
+### Networking Lab (networked-optional)
+
+Steuerung und Einrichtung: Play zeigt die Arena offline. Für Mehrspieler einen kompatiblen WebSocket-Server starten, dann Networking in Manage aktivieren und den Endpunkt setzen (Standard ws://127.0.0.1:7777). Die Vorlage startet keinen Server und enthält keine Spielerbewegung.
+
+Erwartetes Ergebnis: Zwei konfigurierte Replikationsobjekte erscheinen ohne Netzwerkverbindung. Mehrspieler erfordert die oben beschriebene Servereinrichtung.
+
+Voraussetzungen: Offline bereit · Server optional
+
+Danach Stop ausführen und die wiederhergestellte Ausgangsszene prüfen. Projekt speichern, erneut öffnen und das Ergebnis wiederholen; anschließend den exportierten Player vergleichen. Ein erfolgreicher Start allein bestätigt nicht jedes Spielverhalten.
+
+### Particles & Effects Lab (particle-lab)
+
+Steuerung und Einrichtung: Play starten. Keine Spieleingabe nötig; Stop stellt die Ausgangsszene wieder her.
+
+Erwartetes Ergebnis: Der Emitter aus Rendering Lab erzeugt eine farbige Partikelwolke neben Formen, Sprite und Text.
+
+Voraussetzungen: Offline bereit
+
+Gemeinsame Grundlage: rendering-lab.
+
+Danach Stop ausführen und die wiederhergestellte Ausgangsszene prüfen. Projekt speichern, erneut öffnen und das Ergebnis wiederholen; anschließend den exportierten Player vergleichen. Ein erfolgreicher Start allein bestätigt nicht jedes Spielverhalten.
+
+### Audio & UI Lab (audio-lab)
+
+Steuerung und Einrichtung: Play: Namensfeld anklicken, tippen und mit Tab/Umschalt+Tab fokussieren. Die Sound-Checkbox per Klick oder Leertaste ändern. Die Play-Schaltfläche sendet eine Aktion; es gibt keine zweite Spielszene.
+
+Erwartetes Ergebnis: Ein UI-Menü und der enthaltene UIClick-Ton lassen sich in Audio prüfen. Diese Grundlage spielt den Ton nicht automatisch ab.
+
+Voraussetzungen: Offline bereit · Tastatur · Zeiger · Audio enthalten
+
+Gemeinsame Grundlage: ui-showcase.
+
+Danach Stop ausführen und die wiederhergestellte Ausgangsszene prüfen. Projekt speichern, erneut öffnen und das Ergebnis wiederholen; anschließend den exportierten Player vergleichen. Ein erfolgreicher Start allein bestätigt nicht jedes Spielverhalten.
+
+### Animation & Character Lab (animation-lab)
+
+Steuerung und Einrichtung: Play: A/D zum Bewegen, Leertaste zum Springen. Vor Tastatureingaben in die Spielansicht klicken.
+
+Erwartetes Ergebnis: Die Platformer-Figur spielt einen angehängten Idle-Deckkraftclip über ihren Animator-Controller.
+
+Voraussetzungen: Offline bereit · Tastatur · Audio enthalten
+
+Gemeinsame Grundlage: platformer.
+
+Danach Stop ausführen und die wiederhergestellte Ausgangsszene prüfen. Projekt speichern, erneut öffnen und das Ergebnis wiederholen; anschließend den exportierten Player vergleichen. Ein erfolgreicher Start allein bestätigt nicht jedes Spielverhalten.
+
+### Mouse Knockout (mouse-knockout)
+
+Steuerung und Einrichtung: Play: Den Zeiger in der Spielansicht bewegen, um den blauen Block zu steuern und Ziele hinauszustoßen.
+
+Erwartetes Ergebnis: Acht orange Ziele erscheinen; nach allen acht erscheint die Glückwunschtafel.
+
+Voraussetzungen: Offline bereit · Zeiger
+
+Danach Stop ausführen und die wiederhergestellte Ausgangsszene prüfen. Projekt speichern, erneut öffnen und das Ergebnis wiederholen; anschließend den exportierten Player vergleichen. Ein erfolgreicher Start allein bestätigt nicht jedes Spielverhalten.
+
+### Snake (snake)
+
+Steuerung und Einrichtung: Play: WASD, Pfeiltasten oder Steuerkreuz zum Abbiegen. Stop und Play starten neu.
+
+Erwartetes Ergebnis: Die Schlange umläuft Bildschirmränder, wächst bei Pickups und endet bei Selbstkollision.
+
+Voraussetzungen: Offline bereit · Tastatur
+
+Danach Stop ausführen und die wiederhergestellte Ausgangsszene prüfen. Projekt speichern, erneut öffnen und das Ergebnis wiederholen; anschließend den exportierten Player vergleichen. Ein erfolgreicher Start allein bestätigt nicht jedes Spielverhalten.
+
+### Pong (pong)
+
+Steuerung und Einrichtung: Zwei lokale Spieler: W/S bewegt das linke Paddel, Hoch/Runter das rechte. Stop und Play starten neu.
+
+Erwartetes Ergebnis: Der Ball springt zwischen zwei Paddeln; sieben Punkte ergeben den Sieg.
+
+Voraussetzungen: Offline bereit · Tastatur · Zwei lokale Spieler
+
+Danach Stop ausführen und die wiederhergestellte Ausgangsszene prüfen. Projekt speichern, erneut öffnen und das Ergebnis wiederholen; anschließend den exportierten Player vergleichen. Ein erfolgreicher Start allein bestätigt nicht jedes Spielverhalten.
+
+### Breakout (breakout)
+
+Steuerung und Einrichtung: Play: A/D oder Links/Rechts bewegt das Paddel. Stop und Play starten das Feld neu.
+
+Erwartetes Ergebnis: Der Ball zerstört 24 Kollisionssteine; das HUD zeigt den Fortschritt.
+
+Voraussetzungen: Offline bereit · Tastatur
+
+Danach Stop ausführen und die wiederhergestellte Ausgangsszene prüfen. Projekt speichern, erneut öffnen und das Ergebnis wiederholen; anschließend den exportierten Player vergleichen. Ein erfolgreicher Start allein bestätigt nicht jedes Spielverhalten.
+
+### Physics Cleanup (physics-cleanup)
+
+Steuerung und Einrichtung: Play: Den Zeiger in der Spielansicht bewegen, um den blauen Block zu steuern und Ziele hinauszustoßen.
+
+Erwartetes Ergebnis: Die vollständige Mouse-Knockout-Grundlage enthält acht Ziele und eine Sieganzeige.
+
+Voraussetzungen: Offline bereit · Zeiger
+
+Gemeinsame Grundlage: mouse-knockout.
+
+Danach Stop ausführen und die wiederhergestellte Ausgangsszene prüfen. Projekt speichern, erneut öffnen und das Ergebnis wiederholen; anschließend den exportierten Player vergleichen. Ein erfolgreicher Start allein bestätigt nicht jedes Spielverhalten.
+
+### Grid Chase (grid-chase)
+
+Steuerung und Einrichtung: Play: WASD, Pfeiltasten oder Steuerkreuz zum Abbiegen. Stop und Play starten neu.
+
+Erwartetes Ergebnis: Die vollständige Snake-Grundlage bietet Rasterbewegung, Nahrung, Wachstum und Selbstkollision.
+
+Voraussetzungen: Offline bereit · Tastatur
+
+Gemeinsame Grundlage: snake.
+
+Danach Stop ausführen und die wiederhergestellte Ausgangsszene prüfen. Projekt speichern, erneut öffnen und das Ergebnis wiederholen; anschließend den exportierten Player vergleichen. Ein erfolgreicher Start allein bestätigt nicht jedes Spielverhalten.
+
+### Coin Trail (coin-trail)
+
+Steuerung und Einrichtung: Play: WASD oder Pfeiltasten bewegen, R startet neu. Markierte Checkpoints der Reihe nach sammeln und roten Gefahren ausweichen.
+
+Erwartetes Ergebnis: Das HUD zählt 6 Checkpoints und zeigt den Abschluss. Ohne Zeitlimit.
+
+Voraussetzungen: Offline bereit · Tastatur
+
+Danach Stop ausführen und die wiederhergestellte Ausgangsszene prüfen. Projekt speichern, erneut öffnen und das Ergebnis wiederholen; anschließend den exportierten Player vergleichen. Ein erfolgreicher Start allein bestätigt nicht jedes Spielverhalten.
+
+### Checkpoint Sprint (checkpoint-sprint)
+
+Steuerung und Einrichtung: Play: WASD oder Pfeiltasten bewegen, R startet neu. Markierte Checkpoints der Reihe nach sammeln und roten Gefahren ausweichen.
+
+Erwartetes Ergebnis: Das HUD zählt 8 Checkpoints und zeigt den Abschluss. In 25 Sekunden abschließen.
+
+Voraussetzungen: Offline bereit · Tastatur
+
+Danach Stop ausführen und die wiederhergestellte Ausgangsszene prüfen. Projekt speichern, erneut öffnen und das Ergebnis wiederholen; anschließend den exportierten Player vergleichen. Ein erfolgreicher Start allein bestätigt nicht jedes Spielverhalten.
+
+### Slalom Run (slalom-run)
+
+Steuerung und Einrichtung: Play: WASD oder Pfeiltasten bewegen, R startet neu. Markierte Checkpoints der Reihe nach sammeln und roten Gefahren ausweichen.
+
+Erwartetes Ergebnis: Das HUD zählt 6 Checkpoints und zeigt den Abschluss. Slalom-Gefahren ausweichen.
+
+Voraussetzungen: Offline bereit · Tastatur
+
+Danach Stop ausführen und die wiederhergestellte Ausgangsszene prüfen. Projekt speichern, erneut öffnen und das Ergebnis wiederholen; anschließend den exportierten Player vergleichen. Ein erfolgreicher Start allein bestätigt nicht jedes Spielverhalten.
+
+### Orbit Dodge (orbit-dodge)
+
+Steuerung und Einrichtung: Play: WASD oder Pfeiltasten bewegen, R startet neu. Markierte Checkpoints der Reihe nach sammeln und roten Gefahren ausweichen.
+
+Erwartetes Ergebnis: Das HUD zählt 6 Checkpoints und zeigt den Abschluss. Zwei umlaufenden Gefahren ausweichen.
+
+Voraussetzungen: Offline bereit · Tastatur
+
+Danach Stop ausführen und die wiederhergestellte Ausgangsszene prüfen. Projekt speichern, erneut öffnen und das Ergebnis wiederholen; anschließend den exportierten Player vergleichen. Ein erfolgreicher Start allein bestätigt nicht jedes Spielverhalten.
+
+### Target Circuit (target-circuit)
+
+Steuerung und Einrichtung: Play: WASD oder Pfeiltasten bewegen, R startet neu. Markierte Checkpoints der Reihe nach sammeln und roten Gefahren ausweichen.
+
+Erwartetes Ergebnis: Das HUD zählt 8 Checkpoints und zeigt den Abschluss. Die Achterroute in 20 Sekunden abschließen.
+
+Voraussetzungen: Offline bereit · Tastatur
+
+Danach Stop ausführen und die wiederhergestellte Ausgangsszene prüfen. Projekt speichern, erneut öffnen und das Ergebnis wiederholen; anschließend den exportierten Player vergleichen. Ein erfolgreicher Start allein bestätigt nicht jedes Spielverhalten.
+
+### Hazard Crossing (hazard-crossing)
+
+Steuerung und Einrichtung: Play: WASD oder Pfeiltasten bewegen, R startet neu. Markierte Checkpoints der Reihe nach sammeln und roten Gefahren ausweichen.
+
+Erwartetes Ergebnis: Das HUD zählt 4 Checkpoints und zeigt den Abschluss. Drei bewegte Gefahrenbahnen überqueren.
+
+Voraussetzungen: Offline bereit · Tastatur
+
+Danach Stop ausführen und die wiederhergestellte Ausgangsszene prüfen. Projekt speichern, erneut öffnen und das Ergebnis wiederholen; anschließend den exportierten Player vergleichen. Ein erfolgreicher Start allein bestätigt nicht jedes Spielverhalten.
+
+### Domino Cascade (domino-cascade)
+
+Steuerung und Einrichtung: Play starten. Keine Spieleingabe nötig; Stop stellt die Ausgangsszene wieder her.
+
+Erwartetes Ergebnis: Zwanzig Dominosteine fallen nach dem Anstoß.
+
+Voraussetzungen: Offline bereit
+
+Danach Stop ausführen und die wiederhergestellte Ausgangsszene prüfen. Projekt speichern, erneut öffnen und das Ergebnis wiederholen; anschließend den exportierten Player vergleichen. Ein erfolgreicher Start allein bestätigt nicht jedes Spielverhalten.
+
+### Pyramid Stack (pyramid-stack)
+
+Steuerung und Einrichtung: Play starten. Keine Spieleingabe nötig; Stop stellt die Ausgangsszene wieder her.
+
+Erwartetes Ergebnis: Achtundzwanzig Boxen setzen sich als Pyramide auf dem Boden.
+
+Voraussetzungen: Offline bereit
+
+Danach Stop ausführen und die wiederhergestellte Ausgangsszene prüfen. Projekt speichern, erneut öffnen und das Ergebnis wiederholen; anschließend den exportierten Player vergleichen. Ein erfolgreicher Start allein bestätigt nicht jedes Spielverhalten.
+
+### Restitution Gallery (restitution-gallery)
+
+Steuerung und Einrichtung: Play starten. Keine Spieleingabe nötig; Stop stellt die Ausgangsszene wieder her.
+
+Erwartetes Ergebnis: Sechs fallende Bälle vergleichen Rückprall von null bis eins.
+
+Voraussetzungen: Offline bereit
+
+Danach Stop ausführen und die wiederhergestellte Ausgangsszene prüfen. Projekt speichern, erneut öffnen und das Ergebnis wiederholen; anschließend den exportierten Player vergleichen. Ein erfolgreicher Start allein bestätigt nicht jedes Spielverhalten.
+
+### Friction Ramps (friction-ramp)
+
+Steuerung und Einrichtung: Play starten. Keine Spieleingabe nötig; Stop stellt die Ausgangsszene wieder her.
+
+Erwartetes Ergebnis: Vier Rampen vergleichen Reibungswerte 0, 0,2, 0,6 und 1,2.
+
+Voraussetzungen: Offline bereit
+
+Danach Stop ausführen und die wiederhergestellte Ausgangsszene prüfen. Projekt speichern, erneut öffnen und das Ergebnis wiederholen; anschließend den exportierten Player vergleichen. Ein erfolgreicher Start allein bestätigt nicht jedes Spielverhalten.
+
+### Pendulum Row (pendulum-row)
+
+Steuerung und Einrichtung: Play starten. Keine Spieleingabe nötig; Stop stellt die Ausgangsszene wieder her.
+
+Erwartetes Ergebnis: Fünf Pendel mit Distanzgelenken schwingen an getrennten Ankern.
+
+Voraussetzungen: Offline bereit
+
+Danach Stop ausführen und die wiederhergestellte Ausgangsszene prüfen. Projekt speichern, erneut öffnen und das Ergebnis wiederholen; anschließend den exportierten Player vergleichen. Ein erfolgreicher Start allein bestätigt nicht jedes Spielverhalten.
+
+### Billiards Break (billiards-break)
+
+Steuerung und Einrichtung: Play starten. Keine Spieleingabe nötig; Stop stellt die Ausgangsszene wieder her.
+
+Erwartetes Ergebnis: Eine Spielkugel stößt zehn Kugeln ohne Schwerkraft an.
+
+Voraussetzungen: Offline bereit
+
+Danach Stop ausführen und die wiederhergestellte Ausgangsszene prüfen. Projekt speichern, erneut öffnen und das Ergebnis wiederholen; anschließend den exportierten Player vergleichen. Ein erfolgreicher Start allein bestätigt nicht jedes Spielverhalten.
+
+### Gravity Fountain (gravity-fountain)
+
+Steuerung und Einrichtung: Play starten. Keine Spieleingabe nötig; Stop stellt die Ausgangsszene wieder her.
+
+Erwartetes Ergebnis: Vierundzwanzig Bälle folgen Flugbahnen und prallen am Boden ab.
+
+Voraussetzungen: Offline bereit
+
+Danach Stop ausführen und die wiederhergestellte Ausgangsszene prüfen. Projekt speichern, erneut öffnen und das Ergebnis wiederholen; anschließend den exportierten Player vergleichen. Ein erfolgreicher Start allein bestätigt nicht jedes Spielverhalten.
+
+### Shape Poster (shape-poster)
+
+Steuerung und Einrichtung: Play starten. Keine Spieleingabe nötig; Stop stellt die Ausgangsszene wieder her.
+
+Erwartetes Ergebnis: Eine statische Komposition zeigt farbige Geometrie und Welttext.
+
+Voraussetzungen: Offline bereit
+
+Danach Stop ausführen und die wiederhergestellte Ausgangsszene prüfen. Projekt speichern, erneut öffnen und das Ergebnis wiederholen; anschließend den exportierten Player vergleichen. Ein erfolgreicher Start allein bestätigt nicht jedes Spielverhalten.
+
+### Neon Garden (neon-garden)
+
+Steuerung und Einrichtung: Play starten. Keine Spieleingabe nötig; Stop stellt die Ausgangsszene wieder her.
+
+Erwartetes Ergebnis: Drei Punktlichter beleuchten achtzehn angeordnete Formen.
+
+Voraussetzungen: Offline bereit
+
+Danach Stop ausführen und die wiederhergestellte Ausgangsszene prüfen. Projekt speichern, erneut öffnen und das Ergebnis wiederholen; anschließend den exportierten Player vergleichen. Ein erfolgreicher Start allein bestätigt nicht jedes Spielverhalten.
+
+### Particle Fireworks (particle-fireworks)
+
+Steuerung und Einrichtung: Play starten. Keine Spieleingabe nötig; Stop stellt die Ausgangsszene wieder her.
+
+Erwartetes Ergebnis: Fünf Partikelfontänen emittieren nach Play fortlaufend.
+
+Voraussetzungen: Offline bereit
+
+Danach Stop ausführen und die wiederhergestellte Ausgangsszene prüfen. Projekt speichern, erneut öffnen und das Ergebnis wiederholen; anschließend den exportierten Player vergleichen. Ein erfolgreicher Start allein bestätigt nicht jedes Spielverhalten.
+
+### Rain Room (rain-room)
+
+Steuerung und Einrichtung: Play starten. Keine Spieleingabe nötig; Stop stellt die Ausgangsszene wieder her.
+
+Erwartetes Ergebnis: Sieben Emitter erzeugen Regen um eine Raumsilhouette.
+
+Voraussetzungen: Offline bereit
+
+Danach Stop ausführen und die wiederhergestellte Ausgangsszene prüfen. Projekt speichern, erneut öffnen und das Ergebnis wiederholen; anschließend den exportierten Player vergleichen. Ein erfolgreicher Start allein bestätigt nicht jedes Spielverhalten.
+
+### Starfield Drift (starfield)
+
+Steuerung und Einrichtung: Play starten. Keine Spieleingabe nötig; Stop stellt die Ausgangsszene wieder her.
+
+Erwartetes Ergebnis: Drei Partikelebenen erzeugen ein wanderndes Sternenfeld.
+
+Voraussetzungen: Offline bereit
+
+Danach Stop ausführen und die wiederhergestellte Ausgangsszene prüfen. Projekt speichern, erneut öffnen und das Ergebnis wiederholen; anschließend den exportierten Player vergleichen. Ein erfolgreicher Start allein bestätigt nicht jedes Spielverhalten.
+
+### Orbit Gallery (orbit-gallery)
+
+Steuerung und Einrichtung: Play starten. Keine Spieleingabe nötig; Stop stellt die Ausgangsszene wieder her.
+
+Erwartetes Ergebnis: Sechs skriptgesteuerte Formen umkreisen ihre Mittelpunkte.
+
+Voraussetzungen: Offline bereit
+
+Danach Stop ausführen und die wiederhergestellte Ausgangsszene prüfen. Projekt speichern, erneut öffnen und das Ergebnis wiederholen; anschließend den exportierten Player vergleichen. Ein erfolgreicher Start allein bestätigt nicht jedes Spielverhalten.
+
+### Sprite Wall (sprite-wall)
+
+Steuerung und Einrichtung: Play starten. Keine Spieleingabe nötig; Stop stellt die Ausgangsszene wieder her.
+
+Erwartetes Ergebnis: Vierundzwanzig eingefärbte Sprites nutzen ein enthaltenes Bild.
+
+Voraussetzungen: Offline bereit
+
+Danach Stop ausführen und die wiederhergestellte Ausgangsszene prüfen. Projekt speichern, erneut öffnen und das Ergebnis wiederholen; anschließend den exportierten Player vergleichen. Ein erfolgreicher Start allein bestätigt nicht jedes Spielverhalten.
+
+<!-- NOVA_V2615_END -->
+
+<!-- NOVA_V2614_START -->
+## 26.14 — Wiederverwendbare Gegnerfamilie
+
+Engine: **26.14.0** · Project Format 2/schema 29.
+
+
+Einen gemeinsamen Gegner und eine abgeleitete Variante erstellen und die tatsächlichen Autoren von Eigenschaften und Rückrufen prüfen.
+
+Blueprints bestimmen gemeinsame Komponenten; Event Sheets bestimmen deklarierte Ereignisse. Nur abweichende Instanzwerte ändern.
+
+- Play vor der Bearbeitung stoppen.
+- Script → Event Sheet öffnen und ein Rechteck erstellen oder ein vorhandenes Skriptobjekt wählen.
+
+1. Im Objektablauf Prefab, gespeichertes Event Sheet und Object Blueprint erstellen. Den Blueprint Enemy Family nennen und speichern. Widersprüchliche Komponenten oder fehlende Vererbungsquellen verhindern das Speichern.
+
+2. Einen untergeordneten Blueprint ableiten und Scout Enemy nennen. Prefab und Event Sheet geerbt lassen, speichern und die gespeicherte Vorlage instanziieren.
+
+3. In Design die Script2D-Eigenschaften aktualisieren. Nur bei der neuen Instanz move_speed von 6 auf 9 ändern. Objekteigentum öffnen und Autorenwert mit geerbtem Standard vergleichen.
+
+4. Unter Ereignisautoren den Rückrufautor öffnen. Die eindeutige Deklaration im tatsächlichen Quellasset wird ausgewählt. Mehrdeutige oder fehlerhafte Deklarationen werden gemeldet.
+
+5. Im Referenzprojekt Kollisions- und Task-Rückrufe, das UI-Neustartsignal und ObjectPool2D prüfen. spawn_at verwendet den passenden Pool; despawn() gibt die ausführende Instanz in den Pool zurück. pool_spawn existiert nicht als eigener Befehl.
+
+6. Play starten und pausieren. Im Laufzeitzustand ursprüngliche Autorenwerte mit aktuellen Eigenschaften, Abonnements und Timer-/Task-Warteschlangen vergleichen. Diese Ansicht verändert die VM nicht.
+
+7. Pausiert eine gültige Logikänderung speichern. Alle betroffenen Skripte werden vor dem Austausch geprüft. Auch einen ungültigen Versuch prüfen: bisherige Laufzeit und ungespeicherter Quelltext bleiben erhalten.
+
+8. Stoppen, eine Instanzänderung rückgängig machen und wiederholen, Projekt speichern und öffnen. Play und die geerbten Verweise sowie die absichtliche Überschreibung erneut prüfen.
+
+Die Variante erbt ihre Komponenten; einzelne Überschreibungen und Laufzeitwerte bleiben unterscheidbar; Navigation führt zum tatsächlichen Autor; ungültige Änderungen ersetzen keinen funktionierenden Zustand.
+
+Blueprints, Event Sheets, Prefab-Verweise und Instanzwerte werden gespeichert. Laufzeitbeobachtungen bleiben Momentaufnahmen.
+
+Erstellen, Ableiten und Instanziieren verwenden den Verlauf. Ungültige Entwürfe bleiben bei Abbrechen und Arbeitsbereichswechsel erhalten. Eine extern geänderte Basis erzeugt einen sichtbaren Konflikt.
+
+Felder besitzen sichtbare Beschriftungen. Tab navigiert im Dialog; Escape führt zu Speichern/Verwerfen/Abbrechen. Bei großer UI-Skalierung bleibt die Fußzeile erreichbar.
+
+```rhai
+@export(type="float") let move_speed = 6.0;
+fn update(dt) { if input_pressed("Jump") { set_position(move_speed, 0.0); } }
+```
+
+reference-projects/projects/creator-v2614-enemy-family/project.nova öffnen. test-controls.json beschreibt Kollision, UI-Neustart, Pool-Wiederverwendung, pausiertes Neuladen und Speichern/Öffnen. Nur die Prüfberichte belegen ausgeführte Tests.
+
+<!-- NOVA_V2614_END -->
+
+
+
+
+<!-- NOVA_V2613_START -->
+## 26.13 — Graphen ordnen und einen lesbaren Arbeitsbereich behalten
+
+Engine: **26.13.0** · Project Format2/schema29 · Graph Format1.
+
+Ordne dasselbe Programm mit verschachtelten Schleifen in Code und Visual und passe den Editor an die Aufgabe an. Graphlayout verändert Positionen und Leitungen, aber nicht das Programmverhalten. Bereichsgrößen betreffen die Darstellung des Editors, nicht die Spieleigenschaften.
+
+1. Erstelle ein leeres Projekt und ein Skript mit dem folgenden Beispiel. Speichere es, verknüpfe es über Script2D mit einem aktiven Objekt und starte Play. Die Konsole soll18 anzeigen. Stoppe und wechsle zu Visual; wähle Funktion und verschachtelte Schleifen.
+
+2. Ordne den gesamten Graphen an und prüfe gemessene Karten, Pins und Kontrollbereiche. Ordne danach nur ausgewählte Knoten an: alle anderen Positionen bleiben erhalten. Verschiebe und zoome die Ansicht, ordne erneut an und prüfe Rückgängig/Wiederholen. Auswahl, Ansicht und Knotenidentitäten bleiben erhalten.
+
+3. Suche total oder multiply und navigiere zur Deklaration/Funktion. Erstelle und annulliere eine Verbindung mit Tastatur und Pin-Aktionen. Füge einer gewählten Leitung einen Umlenkpunkt hinzu, verschiebe und entferne ihn. Speichere und öffne den Graphen erneut; verbliebene Punkte behalten ihre Reihenfolge. Das Programm zeigt weiterhin18.
+
+4. Erweitere einen langen Quelltextknoten zum Lesen und klappe ihn wieder kompakt. Die Kennzeichnung als Quelltext bleibt sichtbar; Kompaktansicht erzeugt keine typisierte Struktur. Brich eine laufende Anordnung eines großen Graphen ab und prüfe den Entwurf. Eine blockierte Leitungsroute muss eine reparierbare Diagnose bleiben.
+
+5. Ziehe einen sichtbaren Trenner. Pfeiltasten ändern die Größe; Umschalt vergrößert den Schritt, Pos1/Ende wählen die Grenzen, Doppelklick setzt zurück und Escape bricht Ziehen ab. Prüfe ein kurzes Fenster mit großer gespeicherter Werkzeughöhe: die Bewegung beginnt bei der sichtbaren Größe. Klappe die Hierarchie ein und nutze ihre sichtbare Öffnungsleiste.
+
+6. Maximiere Hierarchie, Inspector oder untere Werkzeuge und stelle sie wieder her. Felder, gespeicherte Größen und Dockposition bleiben erhalten. Tab darf keine verdeckten Bereiche fokussieren. Wiederhole dies nach dem schwebenden Andocken im Arbeitsbereichsmanager.
+
+7. Ändere Design, wechsle zu Skript und zurück: jede Vorlage merkt sich eigene Maße. Speichere einen benannten Arbeitsbereich, ändere die Größe und wähle danach die gespeicherte Zeile sowie Arbeitsbereich anwenden. Prüfe Export/Import. Benutzer- und Projektbereiche bleiben getrennt; höchstens24 eigene Layouts werden gespeichert.
+
+8. Wiederhole die Aufgabe auf Englisch, Deutsch und Chinesisch, hell/dunkel und bei100/150/200% Skalierung. Felder müssen lesbar und erreichbar sein. Tippen/Löschen in Animations-Textfeldern bearbeitet deren Inhalt. Brich einen Event-Sheet-Wechsel ab und prüfe, dass der ungespeicherte Entwurf erhalten bleibt.
+
+```rhai
+// Layout changes must preserve this comment and the result.
+fn multiply(value) { value * 2 }
+fn start() {
+  let total = 0;
+  for row in 0..3 {
+    for column in 0..2 { total += multiply(row + column); }
+  }
+  print(total);
+}
+
+```
+
+Erwartet:18 vor und nach Anordnung, ausgewählter Anordnung, Umlenkpunkten, Rückgängig/Wiederholen, erneutem Öffnen und Export. Nicht ausgewählte Positionen bleiben erhalten. Wiederherstellen bringt die vorherigen Maße zurück; ein angewendetes benanntes Layout seine gespeicherten Maße. Erfasse echte Fehler statt aus gültiger Syntax auf gute Bedienbarkeit zu schließen.
+
+Große Graphen hängen von Hardware und Struktur ab. Release-Nachweise enthalten gemessene100/1.000/10.000-Knoten-Werte sowie Worker-, Rückfall- und Abbruchtests. Feste Hindernisse oder vorgegebene Punkte können eine gültige Route verhindern; dies muss sichtbar gemeldet werden. Browser-Fokus und Accessibility-Baum bestätigen keine physischen Hilfstechnologien. Project Format2/Schema29 und Graph Format1 bleiben bestehen; begrenzte Umlenkpunkte sind eine optionale Ergänzung.
+<!-- NOVA_V2613_END -->
+
+<!-- NOVA_V2612_START -->
+## 26.12 — ein Programm in Code und Visual bearbeiten
+
+Engine: **26.12.0** · Project Format 2/schema 29 · Graph Format 1.
+
+Neue Rhai-Begleitgraphen bestehen aus typisierten Syntaxknoten. Bestehende Ablaufgraphen behalten ihren Compiler und ausdrücklich gekennzeichnete Quelltextblöcke. Die Konvertierungsvorschau beschreibt den aktuellen Graphen und verweist auf genaue Quelltextbereiche; sie bestätigt nicht automatisch das Verhalten eines ungetesteten Spiels.
+
+1. Erstelle ein Projekt mit Clear Scene. Öffne den Skriptarbeitsbereich, erstelle ein Rhai-Skript und ersetze den Inhalt durch das folgende Beispiel. Speichere es und verknüpfe das Asset über Script2D mit einem aktiven Szenenobjekt. Starte Play: Die Konsole zeigt12.
+
+2. Stoppe und wechsle für dasselbe Asset zu Visual. Prüfe die Konvertierungsvorschau. Funktionen, Parameter, Deklarationen, Array-Elemente, Map-Einträge, for-Schleife, Zuweisung und Aufrufe besitzen verbundene Syntaxknoten. Ein ausgewählter Quellbereich führt zum Code oder zu seinem Knoten.
+
+3. Wähle den Literal-Knoten mit2 in doubled. Trage unter Literal (Rhai spelling) die3 ein und speichere. Im Code multipliziert die Funktion nun mit3. Play zeigt18. Mache die Feldänderung rückgängig, speichere und prüfe erneut12.
+
+4. Wähle das Array, füge ein elements-Kind hinzu und verbinde einen neuen Literal-Knoten mit4. Ändere die Reihenfolge mit den Pfeiltasten der Liste. Ein fehlendes erforderliches Einzelkind ist ein Fehler. Das Entfernen eines Listenkinds löst dessen Verbindung; der bisherige Knoten bleibt unverbunden erhalten.
+
+5. Füge im Block Anweisungen hinzu, entferne oder sortiere sie. Optionale Kinder steuern Initialisierung, else, Rückgabewert, Schleifenzähler, catch-Parameter und Methodenempfänger. Aus Function Declaration, Block, Expression Statement, Call und Literal entsteht ein leeres visuelles Programm. Sprachdeklarationen besitzen ihre Variablen und Argumente; die alten Tabellen für Ablaufgraphen gelten hier nicht.
+
+6. Benenne eine eingelesene Deklaration im Knoten um. Referenzen derselben lexikalischen Bindung folgen ihr; eine verdeckende Deklaration behält ihren eigenen Namen. Kontrolliere danach den erzeugten Code und behebe ungültige Bezeichner oder Namenskonflikte vor dem Speichern.
+
+7. Erstelle Assets/Scripts/Shared.rhai mit fn bonus(value) { value + 1 }. Ergänze im Hauptmodul eine eigene Zeile use "Assets/Scripts/Shared.rhai";. Rufe bonus in start auf, speichere beide Assets und starte erneut. Abhängigkeiten initialisieren einmal in ihrer Reihenfolge. Ähnliche Zeichenketten und Kommentare sind wirkungslos; fehlende Pfade und Zyklen ergeben konkrete Fehler.
+
+8. Entferne im Code eine schließende Klammer und versuche zu wechseln. Entwurf und Diagnose bleiben sichtbar. Brich den Wechsel ab, repariere die Syntax und versuche es erneut. Löse Asset-Konflikte oder Speicherfehler im offenen Editor; eine bestätigte Vorschau gilt nur für genau diese Quelltextrevision.
+
+9. Öffne die Referenzen creator-v2612-code-game, creator-v2612-blocks-game und creator-v2612-mixed-game unter reference-projects/projects. Sammle jeweils sechs Kontrollpunkte mit WASD/Pfeilen und starte mit R neu. Die Blockvariante bindet den Graphen direkt, die anderen Rhai. Speichere, öffne erneut und exportiere dieselbe Szene.
+
+```rhai
+// Keep this comment while switching modes.
+fn doubled(value) { value * 2 }
+fn start() {
+  let values = [1, 2, 3];
+  let state = #{score: 0};
+  for value in values { state.score += doubled(value); }
+  print(state.score);
+}
+```
+
+Prüfe12 vor der Änderung,18 danach und12 nach Rückgängig; drei Wechsel ohne verlorene Kommentare oder Variablen; sechs Punkte, Abschluss und Neustart in Coin Trail. Syntaxfehler blockieren Speichern/Konvertierung und erhalten den Entwurf. Vergleiche bei Erweiterungen wirkliche Befehle, Logs, Zustand und Laufzeitfehler.
+
+Die Projektion begrenzt Module auf64.000 UTF16-Zeichen,10.000 Knoten und128 Pins je Knoten. Lange Listen werden gruppiert; Überschreitungen werden abgelehnt und nicht abgeschnitten. Rhai unterscheidet Integer und Float: Für Float-Parameter ist beispielsweise0.0 nötig. Die API-Palette nennt tatsächlich registrierte Überladungen. Native import-Aliase/Namensräume, eval, await und blockierendes sleep stehen nicht bereit. Lokales use verbindet Abhängigkeiten; Timer und Tasks liefern unterstützte Verzögerungen. Lokale Closures/Funktionszeiger laufen, ihre Identitäten sind aber nicht als Projekteigenschaften speicherbar. Syntaxabdeckung ersetzt keinen Laufzeit-, Export- oder Benutzertest.
+
+Project Format2/Schema29 und Graph Format1 bleiben erhalten. Zusätzliche Sprachmetadaten kennzeichnen die neue Darstellung. Sichere Projekte vor dem Öffnen typisierter Graphen in alten Editoren. Bestehende Ablaufgraphen bleiben nutzbar und zeigen Quelltextbereiche an. Syntax, Signaturen und Testgrenzen stehen in VERSION_26_12_LANGUAGE.md, SCRIPT_SUPPORT_MATRIX_26_12.md und den getrennten Release-Nachweisen.
+<!-- NOVA_V2612_END -->
 
 ## 6.2.0 Verhaltensverträge
 

@@ -2,7 +2,7 @@
   <Teleport to="body">
     <Transition name="palette">
       <div v-if="state.commandPaletteOpen" class="palette-scrim" role="presentation" @mousedown.self="close">
-        <section ref="dialog" class="command-palette" role="dialog" aria-modal="true" :aria-label="t('commandPalette')">
+        <section ref="dialog" class="command-palette" role="dialog" aria-modal="true" v-modal-focus :aria-label="t('commandPalette')">
           <header>
             <span>⌕</span>
             <input ref="searchInput" v-model="query" type="search" :placeholder="palettePlaceholder" @keydown="onKeyDown">
@@ -28,6 +28,7 @@
 </template>
 
 <script setup lang="ts">
+import { vModalFocus } from '../editor/modalFocus'
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { t } from '../i18n'
 import { addEditorLog, editorState as state, type BottomPanelTab, type EditorWorkspace } from '../store/editor'

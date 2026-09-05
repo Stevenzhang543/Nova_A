@@ -1,3 +1,4 @@
+import { resolveInterchangeTexture } from '../assets/interchangeBindings'
 import { readTextAsset, resolveAsset, type AssetDatabaseState } from '../assets/AssetDatabase'
 import { queryRendererCapabilities, rendererCapabilityState } from '../renderer/capabilities'
 import { materialRuntimeDiagnostics, normalizeMaterial, validateMaterialForPlatform } from '../renderer/materials'
@@ -85,10 +86,7 @@ export function validateProductionRuntime(assets: Pick<AssetDatabaseState, 'reco
       if (ids.has(slice.id) || sourceKeys.has(slice.sourceKey)) { issues.push({ code: 'CONTENT-SLICE-IDENTITY', severity: 'error', message: `${asset.path} contains duplicate frame identity ${slice.sourceKey}.`, fix: 'Make frame names unique in the source tool, then reimport.' }); break }
       ids.add(slice.id); sourceKeys.add(slice.sourceKey)
     }
-    if (asset.assetType === 'atlas' && metadata.texturePath) {
-      const expected = metadata.texturePath.replace(/\\/g, '/').split('/').pop()?.toLowerCase()
-      if (expected && !assets.records.some(candidate => candidate.assetType === 'image' && (candidate.name.toLowerCase() === expected || candidate.path.toLowerCase().endsWith(`/${expected}`)))) issues.push({ code: 'CONTENT-TEXTURE-MISSING', severity: 'error', message: `${asset.path} references missing texture ${metadata.texturePath}.`, fix: 'Import the texture beside the metadata or repair the texture reference in Content Studio.' })
-    }
+    if (asset.assetType === 'atlas' && metadata.texturePath) for (const issue of resolveInterchangeTexture(asset, assets.records).diagnostics) issues.push({code:issue.code,severity:issue.severity,message:issue.message,fix:'Assign the intended image by stable asset reference in Content Studio.'})
   }
   return issues.slice(0, 256)
 }

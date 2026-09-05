@@ -1,9 +1,9 @@
 <template>
-  <header class="top-bar">
+  <header ref="topBar" class="top-bar" :style="{ '--menu-left': `${menuLeft}px` }">
     <a class="brand" href="https://whitelists.top" target="_blank" rel="noreferrer" aria-label="Nova_A by Whitelist">
       <span class="brand-mark">N</span><span>Nova_A</span>
     </a>
-    <nav class="menu-container" @mouseleave="onMenuLeave" @mouseenter="onMenuEnter">
+    <nav class="menu-container" @mouseleave="onMenuLeave" @mouseenter="onMenuEnter" @scroll="closeMenu">
       <div class="menu-item">
         <button @click="toggleMenu('file')" :class="{ active: activeMenu === 'file' }">{{ t('file') }}</button>
         <Transition name="menu"><div v-if="activeMenu === 'file'" class="dropdown">
@@ -88,14 +88,14 @@
 
 <script setup lang="ts">
 import { openUrl } from '@tauri-apps/plugin-opener'
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue'
 import { t } from '../i18n'
 import { addEditorLog, editorState } from '../store/editor'
 import { clearScene, copySelectedEntities, deleteSelected, duplicateSelectedEntities, historyState, pasteEntities, physicsState, pushHistory, redo, resetCamera, saveProject, selectEntities, undo } from '../store/physics'
 import { preferencesState } from '../store/preferences'
 import { confirmDialogState, requestConfirmation } from '../store/dialog'
 import { openProjectDocument, rememberCurrentProject, showProjectManager } from '../projects/projectManager'
-import { resetEditorLayout, toggleEditorPanel, toggleFocusMode } from '../editor/workspaces'
+import { openEditorTool, resetEditorLayout, toggleEditorPanel, toggleFocusMode } from '../editor/workspaces'
 import { openBundledManual } from '../runtime/openManual'
 import { reportRecoverableError } from '../runtime/faultCenter'
 import { openStudioStatus } from '../runtime/stableContracts'
@@ -106,6 +106,8 @@ import { projectTransactionState } from '../runtime/projectTransactions'
 import { NOVA_RELEASE_NAME } from '../projects/projectFormat'
 
 const activeMenu = ref<string | null>(null)
+const topBar = ref<HTMLElement | null>(null)
+const menuLeft = ref(0)
 const fileInput = ref<HTMLInputElement | null>(null)
 let menuTimeout: number | null = null
 const projectUrl = 'https://github.com/Stevenzhang543/Nova_A/'
@@ -140,9 +142,7 @@ function handlePaste() { if (!isEditing.value) return; const pasted = pasteEntit
 function handleDuplicate() { if (!isEditing.value) return; const duplicated = duplicateSelectedEntities(); if (duplicated.length) addEditorLog(`Duplicated ${duplicated.length} ${duplicated.length === 1 ? 'entity' : 'entities'}`); activeMenu.value = null }
 function handleRename() { if (physicsState.selectedEntityId !== null) editorState.renameRequestId = physicsState.selectedEntityId; activeMenu.value = null }
 function openBottomPanel(tab: 'console' | 'profiler' | 'project' | 'build') {
-  if (editorState.currentPage === 'settings') editorState.currentPage = 'scene'
-  editorState.bottomPanelTab = tab
-  editorState.bottomPanelOpen = true
+  openEditorTool(tab)
   activeMenu.value = null
 }
 function handleToggleGrid() { editorState.showGrid = !editorState.showGrid; activeMenu.value = null }
@@ -179,7 +179,17 @@ function handleStudioStatus() { activeMenu.value = null; openStudioStatus() }
 function handleProjectManager() { showProjectManager() }
 function handleUndo() { if (isEditing.value) undo(); activeMenu.value = null }
 function handleRedo() { if (isEditing.value) redo(); activeMenu.value = null }
-function toggleMenu(menu: string) { activeMenu.value = activeMenu.value === menu ? null : menu }
+async function toggleMenu(menu: string) {
+  activeMenu.value = activeMenu.value === menu ? null : menu
+  if (!activeMenu.value) return
+  await nextTick()
+  const bar = topBar.value, button = bar?.querySelector<HTMLElement>('.menu-item > button.active'), dropdown = bar?.querySelector<HTMLElement>('.dropdown')
+  if (!bar || !button || !dropdown) return
+  const barRect = bar.getBoundingClientRect(), buttonRect = button.getBoundingClientRect()
+  const preferred = dropdown.classList.contains('dropdown-right') ? buttonRect.right - dropdown.offsetWidth : buttonRect.left
+  menuLeft.value = Math.max(8, Math.min(preferred - barRect.left, barRect.width - dropdown.offsetWidth - 8))
+}
+function closeMenu() { activeMenu.value = null }
 function onMenuEnter() { if (menuTimeout !== null) window.clearTimeout(menuTimeout) }
 function onMenuLeave() {
   if (menuTimeout !== null) window.clearTimeout(menuTimeout)
@@ -222,12 +232,13 @@ function handleKeyDown(event: KeyboardEvent) {
   else if (event.key === 'Escape') { selectEntities([], 'replace'); activeMenu.value = null }
 }
 
-onMounted(() => { window.addEventListener('keydown', handleKeyDown); pushHistory() })
-onUnmounted(() => { window.removeEventListener('keydown', handleKeyDown); if (menuTimeout !== null) window.clearTimeout(menuTimeout) })
+onMounted(() => { window.addEventListener('keydown', handleKeyDown); window.addEventListener('resize', closeMenu); pushHistory() })
+onUnmounted(() => { window.removeEventListener('keydown', handleKeyDown); window.removeEventListener('resize', closeMenu); if (menuTimeout !== null) window.clearTimeout(menuTimeout) })
 </script>
 
 <style scoped>
-.top-bar { height: 44px; flex: 0 0 44px; display: flex; align-items: center; gap: 12px; padding: 0 12px; color: var(--text-secondary); background: color-mix(in srgb,var(--surface-1) 96%,var(--bg-base)); border-bottom: 1px solid var(--border-subtle); box-shadow:inset 0 -1px color-mix(in srgb,var(--accent) 4%,transparent); backdrop-filter: var(--glass-blur); position: relative; z-index: 500; }
+/* Above the workspace toolbar (600), below dialogs and palettes (1200+). */
+.top-bar { height: 44px; flex: 0 0 44px; display: flex; align-items: center; gap: 12px; padding: 0 12px; color: var(--text-secondary); background: color-mix(in srgb,var(--surface-1) 96%,var(--bg-base)); border-bottom: 1px solid var(--border-subtle); box-shadow:inset 0 -1px color-mix(in srgb,var(--accent) 4%,transparent); backdrop-filter: var(--glass-blur); position: relative; z-index: 650; }
 .brand { display: flex; align-items: center; gap: 8px; color: var(--text-primary); text-decoration: none; font-size: var(--type-dense); font-weight: 700; letter-spacing: -.01em; }
 .brand-mark { display: grid; place-items: center; width: 25px; height: 25px; border-radius: 8px; color: var(--accent-contrast); background: linear-gradient(145deg, var(--accent), var(--accent-secondary)); font-size: var(--type-caption); box-shadow: 0 5px 16px var(--accent-soft); }
 .menu-container { height: 100%; display: flex; align-items: center; gap: 2px; }
@@ -251,4 +262,13 @@ kbd { color: var(--text-muted); font-family: inherit; font-size:var(--type-capti
 @media(max-width:720px){.brand>span:last-child{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}.brand{gap:0}.top-bar{padding-inline:7px}.menu-container{min-width:0;overflow-x:auto;scrollbar-width:none}.menu-container::-webkit-scrollbar{display:none}}
 .menu-enter-active, .menu-leave-active { transition: opacity 130ms ease, transform 130ms ease; transform-origin: top left; }
 .menu-enter-from, .menu-leave-to { opacity: 0; transform: translateY(-4px) scale(.98); }
+/* Keep translated menu labels intrinsic-sized. The positioned top bar, outside
+   the scroller, owns dropdown geometry so scrolling never clips open commands. */
+.menu-container { min-width: 0; flex: 0 1 auto; overflow-x: auto; overflow-y: hidden; scrollbar-width: thin; overscroll-behavior-inline: contain; }
+.menu-container::-webkit-scrollbar { display: initial; height: 4px; }
+.brand, .safe-pill, .dirty-pill, .release-pill { flex-shrink: 0; }
+.menu-item { position: static; flex: 0 0 auto; }
+.menu-item > button { flex: 0 0 auto; width: max-content; white-space: nowrap; }
+.dropdown, .dropdown-right { top: 100%; left: var(--menu-left, 8px); right: auto; min-width: min(250px, calc(100vw - 16px)); max-width: calc(100vw - 16px); max-height: calc(100vh - 74px); overflow: auto; }
+.dropdown > button { flex: 0 0 auto; white-space: normal; }
 </style>

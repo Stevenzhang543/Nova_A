@@ -1,6 +1,6 @@
 <template>
   <Teleport to="body">
-    <section v-if="state.shortcutEditorOpen" class="scrim" role="dialog" aria-modal="true" :aria-label="t('shortcutEditor')" @mousedown.self="close" @keydown.esc="close">
+    <section v-if="state.shortcutEditorOpen" class="scrim" role="dialog" aria-modal="true" v-modal-focus :aria-label="t('shortcutEditor')" @mousedown.self="close" @keydown.esc="close">
       <article>
         <header><div><strong>{{ t('shortcutEditor') }}</strong><small>{{ t('shortcutEditorHint') }}</small></div><button :title="t('close')" @click="close">×</button></header>
         <label class="search"><span>⌕</span><input v-model="query" type="search" :placeholder="t('searchShortcuts')"></label>
@@ -20,6 +20,7 @@
   </Teleport>
 </template>
 <script setup lang="ts">
+import { vModalFocus } from '../editor/modalFocus'
 import { computed, ref } from 'vue'
 import { t } from '../i18n'
 import { editorState as state } from '../store/editor'

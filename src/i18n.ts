@@ -1362,8 +1362,8 @@ Object.assign(zh, {
 })
 
 Object.assign(en, {
-  releaseLabel: 'Nova_A v26.10',
-  version: 'Nova_A v26.10',
+  releaseLabel: 'Nova_A v26.16',
+  version: 'Nova_A v26.16',
   quickPeerCounts: 'Quick instance-count presets',
   refreshInstances: 'Refresh status',
   stopAllInstances: 'Stop all',
@@ -1423,8 +1423,8 @@ Object.assign(en, {
 })
 
 Object.assign(de, {
-  releaseLabel: 'Nova_A v26.10',
-  version: 'Nova_A v26.10',
+  releaseLabel: 'Nova_A v26.16',
+  version: 'Nova_A v26.16',
   quickPeerCounts: 'Voreinstellungen für die Instanzanzahl',
   refreshInstances: 'Status aktualisieren',
   stopAllInstances: 'Alle stoppen',
@@ -1484,8 +1484,8 @@ Object.assign(de, {
 })
 
 Object.assign(zh, {
-  releaseLabel: 'Nova_A v26.10',
-  version: 'Nova_A v26.10',
+  releaseLabel: 'Nova_A v26.16',
+  version: 'Nova_A v26.16',
   quickPeerCounts: '快速选择实例数量',
   refreshInstances: '刷新状态',
   stopAllInstances: '全部停止',
@@ -1543,6 +1543,10 @@ Object.assign(zh, {
   noInstanceLogsAvailable: '目前没有可显示的匹配事件。',
   instanceInspectorHint: '此处显示身份和进程状态。请在该播放器内打开网络检查器，以查看实时节点、所有权、回滚、同步和带宽。'
 })
+
+Object.assign(en, { growingTemplateLibrary: 'Template library' })
+Object.assign(de, { growingTemplateLibrary: 'Vorlagenbibliothek' })
+Object.assign(zh, { growingTemplateLibrary: '模板库' })
 
 const dictionaries: Record<'en' | 'de' | 'zh', Dictionary> = { en, de, zh }
 
