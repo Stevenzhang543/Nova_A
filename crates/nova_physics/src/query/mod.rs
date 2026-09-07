@@ -70,11 +70,13 @@ fn ray_body(body: &Body, origin: Vec2, direction: Vec2, distance: f64) -> Option
     }
     match &body.shape {
         Shape::Ellipse { radius_x, radius_y } => {
-            let local_origin = inverse_rotate(origin.sub(body.collider_position()), body.collider_angle());
+            let local_origin =
+                inverse_rotate(origin.sub(body.collider_position()), body.collider_angle());
             let local_direction = inverse_rotate(direction, body.collider_angle());
             let a = (local_direction.x / radius_x).powi(2) + (local_direction.y / radius_y).powi(2);
-            let b = 2.0 * (local_origin.x * local_direction.x / radius_x.powi(2)
-                + local_origin.y * local_direction.y / radius_y.powi(2));
+            let b = 2.0
+                * (local_origin.x * local_direction.x / radius_x.powi(2)
+                    + local_origin.y * local_direction.y / radius_y.powi(2));
             let c = (local_origin.x / radius_x).powi(2) + (local_origin.y / radius_y).powi(2) - 1.0;
             let discriminant = b * b - 4.0 * a * c;
             if a <= EPSILON || discriminant < 0.0 {
@@ -86,38 +88,67 @@ fn ray_body(body: &Body, origin: Vec2, direction: Vec2, distance: f64) -> Option
                 .filter(|value| *value >= 0.0 && *value <= distance)
                 .min_by(f64::total_cmp)?;
             let local_point = local_origin.add(local_direction.mul(t));
-            let local_normal = Vec2::new(local_point.x / radius_x.powi(2), local_point.y / radius_y.powi(2))
-                .normalized_or(local_direction.neg());
+            let local_normal = Vec2::new(
+                local_point.x / radius_x.powi(2),
+                local_point.y / radius_y.powi(2),
+            )
+            .normalized_or(local_direction.neg());
             let normal = rotate(local_normal, body.collider_angle());
             let point = origin.add(direction.mul(t));
-            Some(PhysicsQueryHit { handle: 0, point: [point.x, point.y], normal: [normal.x, normal.y], distance: t })
+            Some(PhysicsQueryHit {
+                handle: 0,
+                point: [point.x, point.y],
+                normal: [normal.x, normal.y],
+                distance: t,
+            })
         }
         Shape::Polygon { vertices } => {
-            let world_vertices: Vec<Vec2> = vertices.iter().map(|vertex| body.collider_position().add(rotate(*vertex, body.collider_angle()))).collect();
-            let signed_area: f64 = (0..world_vertices.len()).map(|index| world_vertices[index].cross(world_vertices[(index + 1) % world_vertices.len()])).sum();
+            let world_vertices: Vec<Vec2> = vertices
+                .iter()
+                .map(|vertex| {
+                    body.collider_position()
+                        .add(rotate(*vertex, body.collider_angle()))
+                })
+                .collect();
+            let signed_area: f64 = (0..world_vertices.len())
+                .map(|index| {
+                    world_vertices[index].cross(world_vertices[(index + 1) % world_vertices.len()])
+                })
+                .sum();
             let mut closest: Option<(f64, Vec2)> = None;
             for index in 0..world_vertices.len() {
                 let a = world_vertices[index];
                 let b = world_vertices[(index + 1) % world_vertices.len()];
                 let edge = b.sub(a);
                 let denominator = direction.cross(edge);
-                if denominator.abs() <= EPSILON { continue; }
+                if denominator.abs() <= EPSILON {
+                    continue;
+                }
                 let delta = a.sub(origin);
                 let ray_t = delta.cross(edge) / denominator;
                 let edge_t = delta.cross(direction) / denominator;
-                if ray_t < 0.0
-                    || ray_t > distance
-                    || !(-EPSILON..=1.0 + EPSILON).contains(&edge_t)
+                if ray_t < 0.0 || ray_t > distance || !(-EPSILON..=1.0 + EPSILON).contains(&edge_t)
                 {
                     continue;
                 }
-                let raw = if signed_area >= 0.0 { Vec2::new(edge.y, -edge.x) } else { Vec2::new(-edge.y, edge.x) };
+                let raw = if signed_area >= 0.0 {
+                    Vec2::new(edge.y, -edge.x)
+                } else {
+                    Vec2::new(-edge.y, edge.x)
+                };
                 let normal = raw.normalized_or(direction.neg());
-                if closest.map_or(true, |value| ray_t < value.0) { closest = Some((ray_t, normal)); }
+                if closest.map_or(true, |value| ray_t < value.0) {
+                    closest = Some((ray_t, normal));
+                }
             }
             closest.map(|(t, normal)| {
                 let point = origin.add(direction.mul(t));
-                PhysicsQueryHit { handle: 0, point: [point.x, point.y], normal: [normal.x, normal.y], distance: t }
+                PhysicsQueryHit {
+                    handle: 0,
+                    point: [point.x, point.y],
+                    normal: [normal.x, normal.y],
+                    distance: t,
+                }
             })
         }
     }
@@ -145,7 +176,7 @@ fn query_shape(shape: Shape, position: Vec2, angle: f64) -> Body {
         restitution: 0.0,
         restitution_threshold: 0.0,
         static_friction: 0.0,
-       dynamic_friction: 0.0,
+        dynamic_friction: 0.0,
         friction_combine: 0,
         restitution_combine: 3,
         is_static: true,
@@ -168,13 +199,22 @@ fn query_shape(shape: Shape, position: Vec2, angle: f64) -> Body {
 }
 
 fn box_shape(half_width: f64, half_height: f64) -> Shape {
-    Shape::Polygon { vertices: vec![
-        Vec2::new(-half_width, -half_height), Vec2::new(half_width, -half_height),
-        Vec2::new(half_width, half_height), Vec2::new(-half_width, half_height),
-    ] }
+    Shape::Polygon {
+        vertices: vec![
+            Vec2::new(-half_width, -half_height),
+            Vec2::new(half_width, -half_height),
+            Vec2::new(half_width, half_height),
+            Vec2::new(-half_width, half_height),
+        ],
+    }
 }
 
-fn ray_aabb_interval(origin: Vec2, direction: Vec2, distance: f64, bounds: Aabb) -> Option<(f64, f64)> {
+fn ray_aabb_interval(
+    origin: Vec2,
+    direction: Vec2,
+    distance: f64,
+    bounds: Aabb,
+) -> Option<(f64, f64)> {
     let mut entry: f64 = 0.0;
     let mut exit = distance;
     for (origin_axis, direction_axis, minimum, maximum) in [
@@ -182,41 +222,59 @@ fn ray_aabb_interval(origin: Vec2, direction: Vec2, distance: f64, bounds: Aabb)
         (origin.y, direction.y, bounds.min_y, bounds.max_y),
     ] {
         if direction_axis.abs() <= EPSILON {
-            if origin_axis < minimum || origin_axis > maximum { return None; }
+            if origin_axis < minimum || origin_axis > maximum {
+                return None;
+            }
             continue;
         }
         let first = (minimum - origin_axis) / direction_axis;
         let second = (maximum - origin_axis) / direction_axis;
         entry = entry.max(first.min(second));
         exit = exit.min(first.max(second));
-        if entry > exit { return None; }
+        if entry > exit {
+            return None;
+        }
     }
     (exit >= 0.0 && entry <= distance).then_some((entry.max(0.0), exit.min(distance)))
 }
 
 impl PhysicsWorld {
     fn query_records(&self) -> Vec<(u32, Body)> {
-        let mut colliders = Vec::new();
-        for record in &self.bodies {
-            let mut body = Body::from_data(&record.values, 0);
-            body.apply_collider_children(&record.collider_shapes);
-            colliders.push((record.handle, body.collider_proxy(None)));
-            for index in 0..body.collider_children.len() {
-                colliders.push((record.handle, body.collider_proxy(Some(index))));
-            }
-        }
-        colliders
+        self.query_records_with_identity()
+            .into_iter()
+            .map(|(handle, _, body)| (handle, body))
+            .collect()
     }
 
-    pub fn raycast_all(&self, origin: [f64; 2], direction: [f64; 2], distance: f64, mask: u32) -> Vec<PhysicsQueryHit> {
+    pub fn raycast_all(
+        &self,
+        origin: [f64; 2],
+        direction: [f64; 2],
+        distance: f64,
+        mask: u32,
+    ) -> Vec<PhysicsQueryHit> {
         let origin = Vec2::new(finite_or(origin[0], 0.0), finite_or(origin[1], 0.0));
         let direction = Vec2::new(finite_or(direction[0], 1.0), finite_or(direction[1], 0.0));
         let distance = non_negative(distance, 0.0);
-        let mut hits: Vec<_> = self.query_records().into_iter().filter_map(|(handle, body)| {
-            if !query_enabled(mask, &body) { return None; }
-            ray_body(&body, origin, direction, distance).map(|mut hit| { hit.handle = handle; hit })
-        }).collect();
-        hits.sort_by(|first, second| first.distance.total_cmp(&second.distance).then(first.handle.cmp(&second.handle)));
+        let mut hits: Vec<_> = self
+            .query_records()
+            .into_iter()
+            .filter_map(|(handle, body)| {
+                if !query_enabled(mask, &body) {
+                    return None;
+                }
+                ray_body(&body, origin, direction, distance).map(|mut hit| {
+                    hit.handle = handle;
+                    hit
+                })
+            })
+            .collect();
+        hits.sort_by(|first, second| {
+            first
+                .distance
+                .total_cmp(&second.distance)
+                .then(first.handle.cmp(&second.handle))
+        });
         // The public query contract returns bodies, so retain the closest
         // child hit for each owner without reporting duplicates.
         let mut owners = HashSet::new();
@@ -224,32 +282,76 @@ impl PhysicsWorld {
         hits
     }
 
-    pub fn raycast(&self, origin: [f64; 2], direction: [f64; 2], distance: f64, mask: u32) -> Option<PhysicsQueryHit> {
-        self.raycast_all(origin, direction, distance, mask).into_iter().next()
+    pub fn raycast(
+        &self,
+        origin: [f64; 2],
+        direction: [f64; 2],
+        distance: f64,
+        mask: u32,
+    ) -> Option<PhysicsQueryHit> {
+        self.raycast_all(origin, direction, distance, mask)
+            .into_iter()
+            .next()
     }
 
     pub fn overlap_point(&self, point: [f64; 2], mask: u32) -> Vec<u32> {
         let point = Vec2::new(finite_or(point[0], 0.0), finite_or(point[1], 0.0));
         let mut owners = HashSet::new();
-        self.query_records().into_iter().filter_map(|(handle, body)| (query_enabled(mask, &body) && point_in_body(&body, point) && owners.insert(handle)).then_some(handle)).collect()
+        self.query_records()
+            .into_iter()
+            .filter_map(|(handle, body)| {
+                (query_enabled(mask, &body) && point_in_body(&body, point) && owners.insert(handle))
+                    .then_some(handle)
+            })
+            .collect()
     }
 
     pub fn overlap_circle(&self, center: [f64; 2], radius: f64, mask: u32) -> Vec<u32> {
-        let query = query_shape(Shape::Ellipse { radius_x: positive(radius, MIN_DIMENSION), radius_y: positive(radius, MIN_DIMENSION) }, Vec2::new(finite_or(center[0], 0.0), finite_or(center[1], 0.0)), 0.0);
+        let query = query_shape(
+            Shape::Ellipse {
+                radius_x: positive(radius, MIN_DIMENSION),
+                radius_y: positive(radius, MIN_DIMENSION),
+            },
+            Vec2::new(finite_or(center[0], 0.0), finite_or(center[1], 0.0)),
+            0.0,
+        );
         self.overlap_shape(&query, mask)
     }
 
     pub fn overlap_box(&self, center: [f64; 2], size: [f64; 2], angle: f64, mask: u32) -> Vec<u32> {
-        let query = query_shape(box_shape(positive(size[0].abs(), MIN_DIMENSION) * 0.5, positive(size[1].abs(), MIN_DIMENSION) * 0.5), Vec2::new(finite_or(center[0], 0.0), finite_or(center[1], 0.0)), normalize_angle(angle));
+        let query = query_shape(
+            box_shape(
+                positive(size[0].abs(), MIN_DIMENSION) * 0.5,
+                positive(size[1].abs(), MIN_DIMENSION) * 0.5,
+            ),
+            Vec2::new(finite_or(center[0], 0.0), finite_or(center[1], 0.0)),
+            normalize_angle(angle),
+        );
         self.overlap_shape(&query, mask)
     }
 
     fn overlap_shape(&self, query: &Body, mask: u32) -> Vec<u32> {
         let mut owners = HashSet::new();
-        self.query_records().into_iter().filter_map(|(handle, body)| (query_enabled(mask, &body) && !collide(query, &body).is_empty() && owners.insert(handle)).then_some(handle)).collect()
+        self.query_records()
+            .into_iter()
+            .filter_map(|(handle, body)| {
+                (query_enabled(mask, &body)
+                    && !collide(query, &body).is_empty()
+                    && owners.insert(handle))
+                .then_some(handle)
+            })
+            .collect()
     }
 
-    pub fn shape_cast(&self, center: [f64; 2], size: [f64; 2], angle: f64, direction: [f64; 2], distance: f64, mask: u32) -> Option<PhysicsQueryHit> {
+    pub fn shape_cast(
+        &self,
+        center: [f64; 2],
+        size: [f64; 2],
+        angle: f64,
+        direction: [f64; 2],
+        distance: f64,
+        mask: u32,
+    ) -> Option<PhysicsQueryHit> {
         self.shape_cast_excluding(center, size, angle, direction, distance, mask, None)
     }
 
@@ -265,61 +367,34 @@ impl PhysicsWorld {
         excluded_handle: Option<u32>,
     ) -> Option<PhysicsQueryHit> {
         let start = Vec2::new(finite_or(center[0], 0.0), finite_or(center[1], 0.0));
-        let direction = Vec2::new(finite_or(direction[0], 1.0), finite_or(direction[1], 0.0)).normalized_or(Vec2::new(1.0, 0.0));
-        let distance = non_negative(distance, 0.0);
-        let shape = box_shape(positive(size[0].abs(), MIN_DIMENSION) * 0.5, positive(size[1].abs(), MIN_DIMENSION) * 0.5);
-        let query_extent = shape.characteristic_extent();
-        let query_bounds = shape.aabb(Vec2::ZERO, normalize_angle(angle));
-        let query_half_width = query_bounds.max_x.abs().max(query_bounds.min_x.abs());
-        let query_half_height = query_bounds.max_y.abs().max(query_bounds.min_y.abs());
-        let mut best: Option<PhysicsQueryHit> = None;
-        for (handle, body) in self.query_records() {
-            if Some(handle) == excluded_handle || !query_enabled(mask, &body) { continue; }
-            if excluded_handle.is_some() && body.is_sensor { continue; }
-            if body.one_way {
-                let allowed = rotate(body.one_way_normal, body.collider_angle())
-                    .normalized_or(Vec2::new(0.0, 1.0));
-                let starts_on_blocking_side = start.sub(body.collider_position()).dot(allowed) >= -POSITION_SLOP;
-                if direction.dot(allowed) >= -EPSILON || !starts_on_blocking_side { continue; }
-            }
-            let target_bounds = body.shape.aabb(body.collider_position(), body.collider_angle());
-            let expanded = Aabb {
-                min_x: target_bounds.min_x - query_half_width,
-                max_x: target_bounds.max_x + query_half_width,
-                min_y: target_bounds.min_y - query_half_height,
-                max_y: target_bounds.max_y + query_half_height,
-            };
-            let Some((entry, exit)) = ray_aabb_interval(start, direction, distance, expanded) else { continue; };
-            let collides_at = |travel: f64| {
-                let query = query_shape(shape.clone(), start.add(direction.mul(travel)), normalize_angle(angle));
-                collide(&query, &body).into_iter().next()
-            };
-            if let Some(manifold) = collides_at(0.0) {
-                let surface_normal = manifold.normal.neg();
-                let hit = PhysicsQueryHit { handle, point: [manifold.point.x, manifold.point.y], normal: [surface_normal.x, surface_normal.y], distance: 0.0 };
-                if best.map_or(true, |current| hit.distance < current.distance) { best = Some(hit); }
-                continue;
-            }
-            let span = (exit - entry).max(0.0);
-            let sample_scale = query_extent.min(body.shape.characteristic_extent()).max(MIN_DIMENSION);
-            let steps = ((span / sample_scale * 8.0).ceil() as usize).clamp(8, 4096);
-            let mut previous = entry;
-            for step in 1..=steps {
-                let travel = entry + span * step as f64 / steps as f64;
-                let Some(mut manifold) = collides_at(travel) else { previous = travel; continue; };
-                let mut low = previous;
-                let mut high = travel;
-                for _ in 0..48 {
-                    let middle = (low + high) * 0.5;
-                    if let Some(value) = collides_at(middle) { high = middle; manifold = value; } else { low = middle; }
+        let direction = Vec2::new(finite_or(direction[0], 1.0), finite_or(direction[1], 0.0));
+        self.query_records()
+            .into_iter()
+            .filter_map(|(handle, body)| {
+                if Some(handle) == excluded_handle
+                    || !query_enabled(mask, &body)
+                    || (excluded_handle.is_some() && body.is_sensor)
+                {
+                    return None;
                 }
-                let surface_normal = manifold.normal.neg();
-                let hit = PhysicsQueryHit { handle, point: [manifold.point.x, manifold.point.y], normal: [surface_normal.x, surface_normal.y], distance: high };
-                if best.map_or(true, |current| hit.distance < current.distance) { best = Some(hit); }
-                break;
-            }
-        }
-        best
+                cast_box_against_body(
+                    start,
+                    size,
+                    angle,
+                    direction,
+                    non_negative(distance, 0.0),
+                    &body,
+                )
+                .map(|mut hit| {
+                    hit.handle = handle;
+                    hit
+                })
+            })
+            .min_by(|a, b| {
+                a.distance
+                    .total_cmp(&b.distance)
+                    .then(a.handle.cmp(&b.handle))
+            })
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -342,12 +417,44 @@ impl PhysicsWorld {
             finite_or(self.bodies[body_index].values[2], 0.0),
             finite_or(self.bodies[body_index].values[3], 0.0),
         );
-        let angle = normalize_angle(self.bodies[body_index].values[14]);
-        let size = [
-            positive(size[0].abs(), MIN_DIMENSION),
-            positive(size[1].abs(), MIN_DIMENSION),
-        ];
-        let requested = Vec2::new(finite_or(displacement[0], 0.0), finite_or(displacement[1], 0.0));
+        let body_angle = normalize_angle(self.bodies[body_index].values[14]);
+        let mut geometry = Body::from_data(&self.bodies[body_index].values, 0);
+        geometry.apply_collider_children(&self.bodies[body_index].collider_shapes);
+        // CharacterBody2D has a box envelope contract. Include the real collider
+        // offset/rotation and every nonsensor compound child in its local bounds.
+        geometry.position = Vec2::ZERO;
+        geometry.angle = 0.0;
+        geometry.shape = box_shape(
+            positive(size[0].abs(), MIN_DIMENSION) * 0.5,
+            positive(size[1].abs(), MIN_DIMENSION) * 0.5,
+        );
+        let mut bounds = geometry
+            .shape
+            .aabb(geometry.collider_offset, geometry.collider_angle_offset);
+        for child in &geometry.collider_children {
+            if child.is_sensor {
+                continue;
+            }
+            let other = child.shape.aabb(child.offset, child.angle_offset);
+            bounds.min_x = bounds.min_x.min(other.min_x);
+            bounds.max_x = bounds.max_x.max(other.max_x);
+            bounds.min_y = bounds.min_y.min(other.min_y);
+            bounds.max_y = bounds.max_y.max(other.max_y);
+        }
+        let offset = rotate(
+            Vec2::new(
+                (bounds.min_x + bounds.max_x) * 0.5,
+                (bounds.min_y + bounds.max_y) * 0.5,
+            ),
+            body_angle,
+        );
+        let start = start.add(offset);
+        let angle = body_angle;
+        let size = [bounds.max_x - bounds.min_x, bounds.max_y - bounds.min_y];
+        let requested = Vec2::new(
+            finite_or(displacement[0], 0.0),
+            finite_or(displacement[1], 0.0),
+        );
         let slope_cosine = finite_or(max_slope_angle, std::f64::consts::FRAC_PI_4)
             .clamp(0.0, std::f64::consts::FRAC_PI_2)
             .cos();
@@ -365,11 +472,18 @@ impl PhysicsWorld {
 
         for _ in 0..maximum_slides {
             let distance = remaining.length();
-            if distance <= EPSILON { break; }
+            if distance <= EPSILON {
+                break;
+            }
             let direction = remaining.mul(1.0 / distance);
             let hit = self.shape_cast_excluding(
-                [position.x, position.y], size, angle,
-                [direction.x, direction.y], distance + margin, mask, Some(handle),
+                [position.x, position.y],
+                size,
+                angle,
+                [direction.x, direction.y],
+                distance + margin,
+                mask,
+                Some(handle),
             );
             let Some(hit) = hit else {
                 position = position.add(remaining);
@@ -382,7 +496,11 @@ impl PhysicsWorld {
             if normal.y >= slope_cosine {
                 result.on_floor = true;
                 result.floor_normal = [normal.x, normal.y];
-                if let Some(platform) = self.bodies.iter().find(|record| record.handle == hit.handle) {
+                if let Some(platform) = self
+                    .bodies
+                    .iter()
+                    .find(|record| record.handle == hit.handle)
+                {
                     result.platform_velocity = [
                         finite_or(platform.values[4], 0.0),
                         finite_or(platform.values[5], 0.0),
@@ -401,10 +519,24 @@ impl PhysicsWorld {
             if result.on_wall && step_height > EPSILON && direction.y.abs() < 0.5 {
                 let raised = position.add(Vec2::new(0.0, step_height));
                 let step_hit = self.shape_cast_excluding(
-                    [raised.x, raised.y], size, angle,
-                    [direction.x, direction.y], untravelled.length(), mask, Some(handle),
+                    [raised.x, raised.y],
+                    size,
+                    angle,
+                    [direction.x, direction.y],
+                    untravelled.length(),
+                    mask,
+                    Some(handle),
                 );
-                if step_hit.is_none() {
+                let ceiling_hit = self.shape_cast_excluding(
+                    [position.x, position.y],
+                    size,
+                    angle,
+                    [0.0, 1.0],
+                    step_height + margin,
+                    mask,
+                    Some(handle),
+                );
+                if step_hit.is_none() && ceiling_hit.is_none() {
                     position = raised.add(untravelled);
                     remaining = Vec2::ZERO;
                     break;
@@ -416,27 +548,45 @@ impl PhysicsWorld {
             } else {
                 untravelled
             };
-            if remaining.length() <= margin { remaining = Vec2::ZERO; break; }
+            if remaining.length() <= margin {
+                remaining = Vec2::ZERO;
+                break;
+            }
         }
 
         if floor_snap > EPSILON && !result.on_floor && requested.y <= EPSILON {
             if let Some(hit) = self.shape_cast_excluding(
-                [position.x, position.y], size, angle, [0.0, -1.0], floor_snap + margin, mask, Some(handle),
+                [position.x, position.y],
+                size,
+                angle,
+                [0.0, -1.0],
+                floor_snap + margin,
+                mask,
+                Some(handle),
             ) {
-                let normal = Vec2::new(hit.normal[0], hit.normal[1]).normalized_or(Vec2::new(0.0, 1.0));
+                let normal =
+                    Vec2::new(hit.normal[0], hit.normal[1]).normalized_or(Vec2::new(0.0, 1.0));
                 if normal.y >= slope_cosine {
                     position.y -= (hit.distance - margin).clamp(0.0, floor_snap);
                     result.on_floor = true;
                     result.floor_normal = [normal.x, normal.y];
-                    if let Some(platform) = self.bodies.iter().find(|record| record.handle == hit.handle) {
-                        result.platform_velocity = [finite_or(platform.values[4], 0.0), finite_or(platform.values[5], 0.0)];
+                    if let Some(platform) = self
+                        .bodies
+                        .iter()
+                        .find(|record| record.handle == hit.handle)
+                    {
+                        result.platform_velocity = [
+                            finite_or(platform.values[4], 0.0),
+                            finite_or(platform.values[5], 0.0),
+                        ];
                     }
                 }
             }
         }
 
-        self.set_transform(handle, position.x, position.y, angle)?;
-        result.position = [position.x, position.y];
+        let body_position = position.sub(offset);
+        self.set_transform(handle, body_position.x, body_position.y, body_angle)?;
+        result.position = [body_position.x, body_position.y];
         result.applied_motion = [position.x - start.x, position.y - start.y];
         result.remaining_motion = [remaining.x, remaining.y];
         Ok(result)
@@ -449,9 +599,16 @@ mod query_tests {
 
     fn box_record(x: f64, y: f64, layer: u32) -> Vec<f64> {
         let mut record = vec![0.0; STRIDE];
-        record[2] = x; record[3] = y; record[8] = 1.0; record[9] = 1.0;
-        record[12] = 2.0; record[13] = 2.0; record[25] = 1.0; record[26] = 1.0;
-        record[33] = layer as f64; record[42] = u32::MAX as f64;
+        record[2] = x;
+        record[3] = y;
+        record[8] = 1.0;
+        record[9] = 1.0;
+        record[12] = 2.0;
+        record[13] = 2.0;
+        record[25] = 1.0;
+        record[26] = 1.0;
+        record[33] = layer as f64;
+        record[42] = u32::MAX as f64;
         record
     }
 
@@ -461,13 +618,24 @@ mod query_tests {
         world.create_body(20, 1, &box_record(5.0, 0.0, 1)).unwrap();
         world.create_body(10, 0, &box_record(2.0, 0.0, 0)).unwrap();
         let hits = world.raycast_all([0.0, 0.0], [1.0, 0.0], 10.0, u32::MAX);
-        assert_eq!(hits.iter().map(|hit| hit.handle).collect::<Vec<_>>(), vec![10, 20]);
+        assert_eq!(
+            hits.iter().map(|hit| hit.handle).collect::<Vec<_>>(),
+            vec![10, 20]
+        );
         assert!((hits[0].distance - 1.0).abs() < 1.0e-10);
-        assert_eq!(world.raycast([0.0, 0.0], [1.0, 0.0], 10.0, 1 << 1).unwrap().handle, 20);
+        assert_eq!(
+            world
+                .raycast([0.0, 0.0], [1.0, 0.0], 10.0, 1 << 1)
+                .unwrap()
+                .handle,
+            20
+        );
         assert_eq!(world.overlap_point([2.0, 0.0], 1), vec![10]);
         assert_eq!(world.overlap_circle([5.0, 0.0], 0.5, 1 << 1), vec![20]);
         assert_eq!(world.overlap_box([2.0, 0.0], [0.5, 0.5], 0.0, 1), vec![10]);
-        let cast = world.shape_cast([0.0, 0.0], [0.5, 0.5], 0.0, [1.0, 0.0], 10.0, 1).unwrap();
+        let cast = world
+            .shape_cast([0.0, 0.0], [0.5, 0.5], 0.0, [1.0, 0.0], 10.0, 1)
+            .unwrap();
         assert_eq!(cast.handle, 10);
         assert!((cast.distance - 0.75).abs() < 1.0e-6);
     }
@@ -477,8 +645,14 @@ mod query_tests {
         let mut world = PhysicsWorld::new();
         world.create_body(10, 0, &box_record(0.0, 10.0, 0)).unwrap();
         let mut child = vec![0.0; COLLIDER_CHILD_STRIDE];
-        child[0] = 42.0; child[1] = 3.0; child[2] = 4.0; child[3] = -10.0;
-        child[5] = 2.0; child[6] = 2.0; child[8] = 1.0; child[9] = u32::MAX as f64;
+        child[0] = 42.0;
+        child[1] = 3.0;
+        child[2] = 4.0;
+        child[3] = -10.0;
+        child[5] = 2.0;
+        child[6] = 2.0;
+        child[8] = 1.0;
+        child[9] = u32::MAX as f64;
         world.upsert_collider_shapes(10, &child).unwrap();
         assert_eq!(world.overlap_point([4.0, 0.0], 2), vec![10]);
         assert!(world.overlap_point([4.0, 0.0], 1).is_empty());
@@ -488,11 +662,14 @@ mod query_tests {
         let ray = world.raycast([0.0, 0.0], [1.0, 0.0], 10.0, 2).unwrap();
         assert_eq!(ray.handle, 10);
         assert!((ray.distance - 3.0).abs() < 1.0e-9);
-        let sweep = world.shape_cast([0.0, 0.0], [1.0, 1.0], 0.0, [1.0, 0.0], 10.0, 2).unwrap();
+        let sweep = world
+            .shape_cast([0.0, 0.0], [1.0, 1.0], 0.0, [1.0, 0.0], 10.0, 2)
+            .unwrap();
         assert!((sweep.distance - 2.5).abs() < 1.0e-6);
 
         let mut second_child = child.clone();
-        second_child[0] = 43.0; second_child[2] = 4.5;
+        second_child[0] = 43.0;
+        second_child[2] = 4.5;
         child.extend(second_child);
         world.upsert_collider_shapes(10, &child).unwrap();
         assert_eq!(world.overlap_point([4.0, 0.0], 2), vec![10]);
@@ -506,16 +683,25 @@ mod query_tests {
         world.create_body(1, 0, &box_record(0.0, 0.0, 0)).unwrap();
         world.create_body(2, 1, &box_record(0.0, 10.0, 0)).unwrap();
         let mut child = vec![0.0; COLLIDER_CHILD_STRIDE];
-        child[0] = 42.0; child[1] = 3.0; child[2] = 4.0; child[3] = -10.0;
-        child[5] = 2.0; child[6] = 2.0; child[9] = u32::MAX as f64;
+        child[0] = 42.0;
+        child[1] = 3.0;
+        child[2] = 4.0;
+        child[3] = -10.0;
+        child[5] = 2.0;
+        child[6] = 2.0;
+        child[9] = u32::MAX as f64;
         world.upsert_collider_shapes(2, &child).unwrap();
-        let moved = world.move_character_box(1, [2.0, 2.0], [10.0, 0.0], 0.5, 0.0, 0.0, 4, 1.0e-5, 1).unwrap();
+        let moved = world
+            .move_character_box(1, [2.0, 2.0], [10.0, 0.0], 0.5, 0.0, 0.0, 4, 1.0e-5, 1)
+            .unwrap();
         assert!(moved.on_wall);
         assert!((moved.position[0] - 2.0).abs() < 1.0e-4);
         world.set_transform(1, 0.0, 0.0, 0.0).unwrap();
         child[7] = 1.0;
         world.upsert_collider_shapes(2, &child).unwrap();
-        let through_sensor = world.move_character_box(1, [2.0, 2.0], [10.0, 0.0], 0.5, 0.0, 0.0, 4, 1.0e-5, 1).unwrap();
+        let through_sensor = world
+            .move_character_box(1, [2.0, 2.0], [10.0, 0.0], 0.5, 0.0, 0.0, 4, 1.0e-5, 1)
+            .unwrap();
         assert!(!through_sensor.on_wall);
         assert!((through_sensor.position[0] - 10.0).abs() < 1.0e-9);
         assert_eq!(world.overlap_point([4.0, 0.0], 1), vec![2]);
@@ -526,7 +712,19 @@ mod query_tests {
         let mut world = PhysicsWorld::new();
         world.create_body(1, 0, &box_record(0.0, 0.0, 0)).unwrap();
         world.create_body(2, 1, &box_record(4.0, 0.0, 0)).unwrap();
-        let moved = world.move_character_box(1, [2.0, 2.0], [10.0, 0.0], std::f64::consts::FRAC_PI_4, 0.0, 0.0, 4, 1.0e-5, 1).unwrap();
+        let moved = world
+            .move_character_box(
+                1,
+                [2.0, 2.0],
+                [10.0, 0.0],
+                std::f64::consts::FRAC_PI_4,
+                0.0,
+                0.0,
+                4,
+                1.0e-5,
+                1,
+            )
+            .unwrap();
         assert!(moved.on_wall);
         assert!((moved.position[0] - 2.0).abs() < 1.0e-4);
         assert!((moved.applied_motion[0] - 2.0).abs() < 1.0e-4);
@@ -540,27 +738,122 @@ mod query_tests {
         floor[4] = 2.5;
         world.create_body(2, 1, &floor).unwrap();
         world.create_body(3, 2, &box_record(0.0, 3.0, 0)).unwrap();
-        let down = world.move_character_box(1, [2.0, 2.0], [0.0, -10.0], std::f64::consts::FRAC_PI_4, 0.0, 0.0, 4, 1.0e-5, 1).unwrap();
+        let down = world
+            .move_character_box(
+                1,
+                [2.0, 2.0],
+                [0.0, -10.0],
+                std::f64::consts::FRAC_PI_4,
+                0.0,
+                0.0,
+                4,
+                1.0e-5,
+                1,
+            )
+            .unwrap();
         assert!(down.on_floor && down.floor_normal[1] > 0.99);
         assert!((down.platform_velocity[0] - 2.5).abs() < 1.0e-10);
         world.set_transform(1, 0.0, 0.0, 0.0).unwrap();
-        let up = world.move_character_box(1, [2.0, 2.0], [0.0, 10.0], std::f64::consts::FRAC_PI_4, 0.0, 0.0, 4, 1.0e-5, 1).unwrap();
+        let up = world
+            .move_character_box(
+                1,
+                [2.0, 2.0],
+                [0.0, 10.0],
+                std::f64::consts::FRAC_PI_4,
+                0.0,
+                0.0,
+                4,
+                1.0e-5,
+                1,
+            )
+            .unwrap();
         assert!(up.on_ceiling && up.ceiling_normal[1] < -0.99);
+    }
+
+    #[test]
+    fn continuous_polygon_sweeps_hit_thin_rotated_targets_over_long_travel() {
+        let mut world = PhysicsWorld::new();
+        let mut wall = box_record(10000.0, 0.0, 0);
+        wall[12] = 0.00001;
+        wall[13] = 100.0;
+        wall[14] = 0.6;
+        world.create_body(9, 0, &wall).unwrap();
+        let hit = world
+            .shape_cast([0.0, 0.0], [0.00001, 0.00001], 0.2, [1.0, 0.0], 20000.0, 1)
+            .unwrap();
+        assert!(hit.distance > 9999.9 && hit.distance < 10000.0);
+        assert_eq!(hit.handle, 9);
+    }
+
+    #[test]
+    fn step_up_cannot_teleport_through_a_low_ceiling_and_idle_snap_refreshes_floor() {
+        let mut world = PhysicsWorld::new();
+        world.create_body(1, 0, &box_record(0.0, 0.0, 0)).unwrap();
+        world.create_body(2, 1, &box_record(4.0, 0.0, 0)).unwrap();
+        world.create_body(3, 2, &box_record(2.0, 2.5, 0)).unwrap();
+        let moved = world
+            .move_character_box(1, [2.0, 2.0], [8.0, 0.0], 0.5, 3.0, 0.0, 4, 1e-5, 1)
+            .unwrap();
+        assert!(moved.position[0] < 2.01);
+        assert!(moved.position[1] < 0.01);
+        world.set_transform(1, 0.0, 0.2, 0.0).unwrap();
+        world.create_body(4, 3, &box_record(0.0, -2.0, 0)).unwrap();
+        let idle = world
+            .move_character_box(1, [2.0, 2.0], [0.0, 0.0], 0.5, 0.0, 0.5, 4, 1e-5, 1)
+            .unwrap();
+        assert!(idle.on_floor);
+        world.destroy_body(4);
+        let removed = world
+            .move_character_box(1, [2.0, 2.0], [0.0, 0.0], 0.5, 0.0, 0.5, 4, 1e-5, 1)
+            .unwrap();
+        assert!(!removed.on_floor);
     }
 
     #[test]
     fn character_floor_snap_and_step_height_are_applied_in_world_units() {
         let mut snap_world = PhysicsWorld::new();
-        snap_world.create_body(1, 0, &box_record(0.0, 0.2, 0)).unwrap();
-        snap_world.create_body(2, 1, &box_record(0.0, -2.0, 0)).unwrap();
-        let snapped = snap_world.move_character_box(1, [2.0, 2.0], [0.25, 0.0], std::f64::consts::FRAC_PI_4, 0.0, 0.5, 4, 1.0e-5, 1).unwrap();
+        snap_world
+            .create_body(1, 0, &box_record(0.0, 0.2, 0))
+            .unwrap();
+        snap_world
+            .create_body(2, 1, &box_record(0.0, -2.0, 0))
+            .unwrap();
+        let snapped = snap_world
+            .move_character_box(
+                1,
+                [2.0, 2.0],
+                [0.25, 0.0],
+                std::f64::consts::FRAC_PI_4,
+                0.0,
+                0.5,
+                4,
+                1.0e-5,
+                1,
+            )
+            .unwrap();
         assert!(snapped.on_floor);
         assert!((snapped.position[1]).abs() < 1.0e-4);
 
         let mut step_world = PhysicsWorld::new();
-        step_world.create_body(1, 0, &box_record(0.0, 0.0, 0)).unwrap();
-        step_world.create_body(2, 1, &box_record(4.0, 0.0, 0)).unwrap();
-        let stepped = step_world.move_character_box(1, [2.0, 2.0], [8.0, 0.0], std::f64::consts::FRAC_PI_4, 3.0, 0.0, 4, 1.0e-5, 1).unwrap();
+        step_world
+            .create_body(1, 0, &box_record(0.0, 0.0, 0))
+            .unwrap();
+        step_world
+            .create_body(2, 1, &box_record(4.0, 0.0, 0))
+            .unwrap();
+        let stepped = step_world
+            .move_character_box(
+                1,
+                [2.0, 2.0],
+                [8.0, 0.0],
+                std::f64::consts::FRAC_PI_4,
+                3.0,
+                0.0,
+                4,
+                1.0e-5,
+                1,
+            )
+            .unwrap();
         assert!(stepped.position[0] > 7.9);
         assert!((stepped.position[1] - 3.0).abs() < 1.0e-4);
     }
@@ -573,13 +866,279 @@ mod query_tests {
         slope[12] = 10.0;
         slope[13] = 1.0;
         slope[14] = 0.25;
-        for (index, (x, y)) in [(-5.0, -0.5), (5.0, -0.5), (5.0, 0.5), (-5.0, 0.5)].iter().enumerate() {
+        for (index, (x, y)) in [(-5.0, -0.5), (5.0, -0.5), (5.0, 0.5), (-5.0, 0.5)]
+            .iter()
+            .enumerate()
+        {
             slope[34 + index * 2] = *x;
             slope[35 + index * 2] = *y;
         }
         world.create_body(2, 1, &slope).unwrap();
-        let result = world.move_character_box(1, [1.0, 2.0], [0.0, -8.0], 0.5, 0.0, 0.0, 4, 1.0e-5, 1).unwrap();
+        let result = world
+            .move_character_box(1, [1.0, 2.0], [0.0, -8.0], 0.5, 0.0, 0.0, 4, 1.0e-5, 1)
+            .unwrap();
         assert!(result.on_floor);
         assert!(result.floor_normal[1] >= 0.5_f64.cos());
+    }
+}
+
+fn cast_box_against_body(
+    start: Vec2,
+    size: [f64; 2],
+    angle: f64,
+    direction: Vec2,
+    distance: f64,
+    body: &Body,
+) -> Option<PhysicsQueryHit> {
+    let direction = direction.normalized_or(Vec2::new(1.0, 0.0));
+    let shape = box_shape(
+        positive(size[0].abs(), MIN_DIMENSION) * 0.5,
+        positive(size[1].abs(), MIN_DIMENSION) * 0.5,
+    );
+    let query_bounds = shape.aabb(Vec2::ZERO, normalize_angle(angle));
+    let query_half_width = query_bounds.max_x.abs().max(query_bounds.min_x.abs());
+    let query_half_height = query_bounds.max_y.abs().max(query_bounds.min_y.abs());
+    if body.one_way {
+        let allowed =
+            rotate(body.one_way_normal, body.collider_angle()).normalized_or(Vec2::new(0.0, 1.0));
+        if direction.dot(allowed) >= -EPSILON
+            || start.sub(body.collider_position()).dot(allowed) < -POSITION_SLOP
+        {
+            return None;
+        }
+    }
+    let target_bounds = body
+        .shape
+        .aabb(body.collider_position(), body.collider_angle());
+    let expanded = Aabb {
+        min_x: target_bounds.min_x - query_half_width,
+        max_x: target_bounds.max_x + query_half_width,
+        min_y: target_bounds.min_y - query_half_height,
+        max_y: target_bounds.max_y + query_half_height,
+    };
+    let (entry, exit) = ray_aabb_interval(start, direction, distance, expanded)?;
+    let collides_at = |travel: f64| {
+        let query = query_shape(
+            shape.clone(),
+            start.add(direction.mul(travel)),
+            normalize_angle(angle),
+        );
+        collide(&query, body).into_iter().next()
+    };
+    if let Some(manifold) = collides_at(0.0) {
+        let surface_normal = manifold.normal.neg();
+        let hit = PhysicsQueryHit {
+            handle: 0,
+            point: [manifold.point.x, manifold.point.y],
+            normal: [surface_normal.x, surface_normal.y],
+            distance: 0.0,
+        };
+        return Some(hit);
+    }
+    if let Shape::Polygon { vertices } = &body.shape {
+        // Continuous SAT: intersect the exact time interval on every separating axis.
+        // Thin/rotated targets cannot fall between a finite number of sample positions.
+        let mut axes = vec![
+            rotate(Vec2::new(1.0, 0.0), angle),
+            rotate(Vec2::new(0.0, 1.0), angle),
+        ];
+        for index in 0..vertices.len() {
+            let edge = rotate(
+                vertices[(index + 1) % vertices.len()].sub(vertices[index]),
+                body.collider_angle(),
+            );
+            if edge.length_squared() > EPSILON * EPSILON {
+                axes.push(Vec2::new(-edge.y, edge.x).normalized_or(Vec2::new(1.0, 0.0)));
+            }
+        }
+        let mut first: f64 = 0.0;
+        let mut last = distance;
+        let mut normal = direction.neg();
+        for axis in axes {
+            let query_min = shape.support(start, angle, axis.neg()).dot(axis);
+            let query_max = shape.support(start, angle, axis).dot(axis);
+            let target_min = body
+                .shape
+                .support(body.collider_position(), body.collider_angle(), axis.neg())
+                .dot(axis);
+            let target_max = body
+                .shape
+                .support(body.collider_position(), body.collider_angle(), axis)
+                .dot(axis);
+            let speed = direction.dot(axis);
+            if speed.abs() <= EPSILON {
+                if query_max < target_min || query_min > target_max {
+                    return None;
+                }
+                continue;
+            }
+            let a = (target_min - query_max) / speed;
+            let b = (target_max - query_min) / speed;
+            let entry = a.min(b);
+            let exit = a.max(b);
+            if entry > first {
+                first = entry;
+                normal = if speed > 0.0 { axis.neg() } else { axis };
+            }
+            last = last.min(exit);
+            if first > last {
+                return None;
+            }
+        }
+        if last < 0.0 || first > distance {
+            return None;
+        }
+        let point = shape.support(start.add(direction.mul(first)), angle, normal.neg());
+        return Some(PhysicsQueryHit {
+            handle: 0,
+            point: [point.x, point.y],
+            normal: [normal.x, normal.y],
+            distance: first,
+        });
+    }
+    // In ellipse unit space a translated box is a parallelogram. Its first
+    // contact with the unit circle is either a vertex crossing or an edge tangent.
+    // Solve those finite candidates analytically instead of sampling the travel.
+    if let Shape::Ellipse { radius_x, radius_y } = &body.shape {
+        let center = body.collider_position();
+        let target_angle = body.collider_angle();
+        let unit = |point: Vec2| {
+            let local = inverse_rotate(point.sub(center), target_angle);
+            Vec2::new(local.x / radius_x, local.y / radius_y)
+        };
+        let local_direction = inverse_rotate(direction, target_angle);
+        let velocity = Vec2::new(local_direction.x / radius_x, local_direction.y / radius_y);
+        let half_x = size[0].abs() * 0.5;
+        let half_y = size[1].abs() * 0.5;
+        let vertices = [
+            Vec2::new(-half_x, -half_y),
+            Vec2::new(half_x, -half_y),
+            Vec2::new(half_x, half_y),
+            Vec2::new(-half_x, half_y),
+        ]
+        .map(|point| unit(start.add(rotate(point, angle))));
+        let mut candidates: Vec<(f64, Vec2)> = Vec::with_capacity(16);
+        let a = velocity.length_squared();
+        for vertex in vertices {
+            let b = vertex.dot(velocity);
+            let c = vertex.length_squared() - 1.0;
+            let discriminant = b * b - a * c;
+            if discriminant >= 0.0 && a > 0.0 {
+                for travel in [
+                    (-b - discriminant.sqrt()) / a,
+                    (-b + discriminant.sqrt()) / a,
+                ] {
+                    if travel >= entry - 1e-9 && travel <= exit + 1e-9 {
+                        candidates.push((travel.max(0.0), vertex.add(velocity.mul(travel))));
+                    }
+                }
+            }
+        }
+        for index in 0..4 {
+            let first = vertices[index];
+            let edge = vertices[(index + 1) % 4].sub(first);
+            let normal = Vec2::new(-edge.y, edge.x).normalized_or(Vec2::new(1.0, 0.0));
+            let speed = velocity.dot(normal);
+            if speed.abs() <= f64::EPSILON {
+                continue;
+            }
+            for sign in [-1.0, 1.0] {
+                let travel = (sign - first.dot(normal)) / speed;
+                if travel < entry - 1e-9 || travel > exit + 1e-9 {
+                    continue;
+                }
+                let point = normal.mul(sign);
+                let fraction =
+                    point.sub(first.add(velocity.mul(travel))).dot(edge) / edge.length_squared();
+                if (-1e-9..=1.0 + 1e-9).contains(&fraction) {
+                    candidates.push((travel.max(0.0), point));
+                }
+            }
+        }
+        if let Some((travel, point)) = candidates
+            .into_iter()
+            .filter(|(travel, _)| *travel <= distance)
+            .min_by(|a, b| a.0.total_cmp(&b.0))
+        {
+            let world_point = center.add(rotate(
+                Vec2::new(point.x * radius_x, point.y * radius_y),
+                target_angle,
+            ));
+            let normal = rotate(
+                Vec2::new(point.x / radius_x, point.y / radius_y),
+                target_angle,
+            )
+            .normalized_or(direction.neg());
+            return Some(PhysicsQueryHit {
+                handle: 0,
+                point: [world_point.x, world_point.y],
+                normal: [normal.x, normal.y],
+                distance: travel,
+            });
+        }
+    }
+    None
+}
+
+#[cfg(test)]
+mod sweep_binding_tests {
+    use super::*;
+    #[test]
+    fn ellipse_sweep_finds_a_thin_rotated_long_target_without_sampling() {
+        let mut values = vec![0.0; STRIDE];
+        values[1] = 1.0;
+        values[2] = 5000.0;
+        values[8] = 1.0;
+        values[9] = 1.0;
+        values[12] = 0.01;
+        values[13] = 1000.0;
+        values[14] = 0.6;
+        values[42] = u32::MAX as f64;
+        let mut world = PhysicsWorld::new();
+        world.create_body(1, 0, &values).unwrap();
+        let hit = world
+            .shape_cast(
+                [0.0, 0.0],
+                [0.001, 0.001],
+                0.2,
+                [1.0, 0.0],
+                10000.0,
+                u32::MAX,
+            )
+            .unwrap();
+        assert!(hit.distance > 4999.0 && hit.distance < 5000.0);
+        assert!(hit.normal[0] < -0.5);
+        let miss = world.shape_cast(
+            [0.0, 2000.0],
+            [0.001, 0.001],
+            0.2,
+            [1.0, 0.0],
+            10000.0,
+            u32::MAX,
+        );
+        assert!(miss.is_none());
+    }
+    #[test]
+    fn character_offset_and_compound_envelope_keep_the_body_origin_separate() {
+        let mut values = vec![0.0; STRIDE];
+        values[8] = 1.0;
+        values[24] = 1.0;
+        values[12] = 2.0;
+        values[13] = 2.0;
+        values[42] = u32::MAX as f64;
+        values[43] = 3.0;
+        let mut world = PhysicsWorld::new();
+        world.create_body(1, 0, &values).unwrap();
+        values[24] = 0.0;
+        values[9] = 1.0;
+        values[43] = 0.0;
+        values[2] = 8.0;
+        world.create_body(2, 1, &values).unwrap();
+        let moved = world
+            .move_character_box(1, [2.0, 2.0], [10.0, 0.0], 0.5, 0.0, 0.0, 4, 1e-5, u32::MAX)
+            .unwrap();
+        assert!((moved.position[0] - 3.0).abs() < 0.001);
+        assert!(moved.on_wall);
+        assert!((moved.applied_motion[0] - moved.position[0]).abs() < 1e-9);
     }
 }

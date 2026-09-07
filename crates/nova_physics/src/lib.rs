@@ -35,7 +35,9 @@ mod engine {
     include!("rope/mod.rs");
     include!("world/legacy.rs");
     include!("world/persistent.rs");
+    include!("world/origin.rs");
     include!("query/mod.rs");
+    include!("query/filtered.rs");
 
     #[cfg(test)]
     include!("tests.rs");
@@ -43,8 +45,9 @@ mod engine {
 
 pub use engine::{
     step_physics, step_physics_with_connections, CharacterMoveResult, PhysicsContact, PhysicsEvent,
-    PhysicsQueryHit, PhysicsWorld, COLLIDER_CHILD_STRIDE, CONNECTION_STRIDE, LEGACY_STRIDE,
-    ROPE_NODE_CAPACITY, ROPE_NODE_DATA_OFFSET, STRIDE, V1_2_STRIDE, V3_3_STRIDE,
+    PhysicsFilteredHit2D, PhysicsQueryHit, PhysicsQueryKind2D, PhysicsQueryRequest2D, PhysicsWorld,
+    COLLIDER_CHILD_STRIDE, CONNECTION_STRIDE, LEGACY_STRIDE, ROPE_NODE_CAPACITY,
+    ROPE_NODE_DATA_OFFSET, STRIDE, V1_2_STRIDE, V3_3_STRIDE,
 };
 
 pub mod body {

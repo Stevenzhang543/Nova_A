@@ -54,7 +54,7 @@ import { loadRenderingSettings, serializeRenderingSettings } from '../renderer/r
 import { clearRenderTextures } from '../renderer/renderTextures'
 import { beginPhysicsMonitorSession } from '../runtime/physicsMonitor'
 import { loadPackageState, serializePackageState } from '../runtime/packages'
-import { loadWorldGameplaySettings, serializeWorldGameplaySettings } from '../runtime/worldGameplay'
+import { loadWorldGameplaySettings, serializeWorldGameplaySettings, worldGameplayState } from '../runtime/worldGameplay'
 import { loadLocalizationSettings, serializeLocalizationSettings } from '../runtime/localization'
 import { loadRuntimeAccessibilitySettings, loadUiAudioSettings, serializeRuntimeAccessibilitySettings, serializeUiAudioSettings } from '../runtime/presentation'
 import { configureUiAccessibility } from '../runtime/uiAccessibility'
@@ -1134,7 +1134,7 @@ function applyStoredComponents(entity: Entity, item: SceneEntityData): void {
     collider.rotation = finiteNumber(data.rotation, collider.rotation)
     collider.radiusX = Math.max(1e-9, finiteNumber(data.radiusX, collider.radiusX))
     collider.radiusY = Math.max(1e-9, finiteNumber(data.radiusY, collider.radiusY))
-    const shapeModels = ['Box', 'Circle', 'Capsule', 'Segment', 'Chain', 'ConvexPolygon', 'ConcavePolygon'] as const
+    const shapeModels = ['Box', 'Circle', 'Capsule', 'Segment', 'Chain', 'WorldBoundary', 'ConvexPolygon', 'ConcavePolygon'] as const
     if (shapeModels.includes(data.shapeModel as typeof shapeModels[number])) collider.shapeModel = data.shapeModel as typeof collider.shapeModel
     const vertices = normalizedVertices(data.vertices as SceneEntityData['vertices'], collider.shapeModel === 'Chain' ? 2 : 3)
     if (vertices) collider.vertices = vertices
@@ -1299,7 +1299,8 @@ export function createEntityFromData(item: SceneEntityData, forcedId?: number): 
   const rect = entity.getComponent<RectTransform>('RectTransform')
   if (rect && (entity.hasComponent('Button') || entity.hasComponent('Slider') || entity.hasComponent('Checkbox') || entity.hasComponent('TextInput')) && storedRectData?.skipNavigation !== true) rect.skipNavigation = false
   configureUiAccessibility(entity)
-  syncDensityFromMass(entity)
+  const authoredBody = storedComponent(item, 'RigidBody2D')
+  if (!authoredBody || typeof recordData(authoredBody).density !== 'number') syncDensityFromMass(entity)
   return entity
 }
 
@@ -1849,7 +1850,7 @@ export function setSceneLoaded(uuid: string, loaded: boolean): boolean {
 /** Runtime-only scene switch. Persistent entities retain their UUID and state. */
 export function prepareRuntimeSceneTransition(identifier?: string): PreparedRuntimeSceneTransition {
   return prepareSceneTransition({
-    scenes: sceneManager, world: physicsState.world,
+    scenes: sceneManager, world: physicsState.world, origin: () => ({ ...worldGameplayState.originOffset }),
     createEntity: (record, id) => createEntityFromData(record, id),
     captureView: () => ({ settings: JSON.parse(JSON.stringify(physicsState.globalSettings)) as GlobalPhysicsSettings, layers: [...editorState.layers], activeLayer: editorState.activeLayer, renderLayer: editorState.renderLayer, selection: [...physicsState.selectedEntityIds], selected: physicsState.selectedEntityId }),
     restoreView: view => { Object.assign(physicsState.globalSettings, view.settings); editorState.layers.splice(0, editorState.layers.length, ...view.layers); editorState.activeLayer = view.activeLayer; editorState.renderLayer = view.renderLayer; physicsState.selectedEntityIds.splice(0, physicsState.selectedEntityIds.length, ...view.selection); physicsState.selectedEntityId = view.selected },

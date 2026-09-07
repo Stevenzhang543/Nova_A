@@ -1,3 +1,4 @@
+import { setStreamRuntimeHooks } from './streamLifecycle'
 import { assetState, readTextAsset, resolveAsset, updateTextAsset } from '../assets/AssetDatabase'
 import { addEditorLog, editorState } from '../store/editor'
 import {
@@ -33,7 +34,7 @@ import { analyzeScript } from '../editor/scriptLanguage'
 import { analyzeScript26, statementAtLine } from '../editor/scriptLanguage26'
 import { beginDebugSession, clearScriptDebugger, evaluateDebugExpression, pauseScriptDebugger, requestDebugStep, scriptDebugState, updateDebugTask, type DebugStepMode, type ScriptTestResult } from './scriptDebug'
 import { scriptProjectSettings } from './scriptSettings'
-import { beforeWorldPhysicsStep, beginWorldGameplay, canUseCoyoteTime, queueCharacterMotion, resetWorldGameplay } from './worldGameplay'
+import { beforeWorldPhysicsStep, beginWorldGameplay, finishWorldSceneTransition, canUseCoyoteTime, queueCharacterMotion, retireWorldGameplayEntity, resetWorldGameplay } from './worldGameplay'
 import { acquirePooled, hasObjectPool, releasePooled, setPoolRuntimeHooks } from './objectPool'
 import { beginEntityLifetime, entityLifetimeActive, entityLifetimeGeneration, inspectEntityLifetimeGeneration, retireEntityLifetime } from './entityLifetimes'
 import type { CharacterBody2D } from '../world/components'
@@ -59,7 +60,7 @@ import { graphStateValues } from '../visual/graphDebugger'
 import { planGraphHotReload } from '../visual/graphProduction'
 import { applyTargetMutation, resolveRuntimeHandle, runtimeSceneEntitySnapshots, spawnRuntimePrefab, type PendingEntityResolution, type RuntimeEntityHandle, type TargetMutation } from './dynamicObjects'
 import { addRuntimeScore, gameFlowSnapshot, resetGameFlow, restoreRuntimeCheckpoint, setGamePaused, setRuntimeCheckpoint, setRuntimeScore, setSessionValue } from './gameFlow'
-import { beginGameplayComponents, processGameplayContacts, updateGameplayComponents } from './gameplayComponents'
+import { beginGameplayComponents, initializeGameplayEntities, processGameplayContacts, updateGameplayComponents } from './gameplayComponents'
 import { activeGameCamera, gameScreenToWorld, visibleWorldBounds } from '../renderer/sceneRenderer'
 import { packageState } from './packages'
 import { parseScriptContract, validateScriptContract, type ScriptContractReport } from './scriptContracts'
@@ -288,6 +289,11 @@ export class GameplayRuntime {
       for (const entity of entities) { this.runDestructionCallbacks(entity); this.clearEntityRuntimeState(entity) }
       for (const entity of entities) this.destroying.delete(entity.uuid)
     } })
+    setStreamRuntimeHooks({ beforeDeactivate: (entities, world) => {
+      for (const entity of entities) this.destroying.add(entity.uuid)
+      for (const entity of entities) { this.runDestructionCallbacks(entity, world); this.clearEntityRuntimeState(entity) }
+      for (const entity of entities) this.destroying.delete(entity.uuid)
+    }, afterActivate: (_entities, fresh) => { initializeGameplayEntities(fresh); this.ensureLifecycle() } }, physicsState.world.entities)
     resetDeterministicSeed()
     resetGameFlow()
     beginGameplayComponents(physicsState.world.entities)
@@ -487,6 +493,7 @@ export class GameplayRuntime {
 
   stopSession(log = true): void {
     if (!this.active) return
+    setStreamRuntimeHooks(null)
     this.sessionGeneration++
     const ending = [...physicsState.world.entities]
     for (const entity of ending) this.destroying.add(entity.uuid)
@@ -1215,6 +1222,7 @@ export class GameplayRuntime {
     try { transaction = prepareRuntimeSceneTransition(scene.type === 'load' ? scene.identifier : undefined) }
     catch (error) { addEditorLog(`Runtime scene preparation failed: ${this.errorMessage(error)}`, 'Runtime', 'error'); return }
     if (!transaction.commit()) { addEditorLog(`Runtime scene transition failed: ${transaction.error ?? 'Commit rejected'}`, 'Runtime', 'error'); return }
+    finishWorldSceneTransition()
     const retained = new Set(transaction.preservedEntityUuids), unloading = before.filter(entity => !retained.has(entity.uuid))
     this.pendingDestroy.clear()
     this.pendingDespawn.clear()
@@ -1284,6 +1292,7 @@ export class GameplayRuntime {
   }
 
   private clearEntityRuntimeState(entity: Entity): void {
+    retireWorldGameplayEntity(entity.uuid)
     this.time.removeEntity(entity.uuid); this.awakened.delete(entity.uuid); this.started.delete(entity.uuid)
     for (const key of this.behaviorProperties.keys()) if (key.startsWith(`${entity.uuid}:`)) this.behaviorProperties.delete(key)
     for (const key of this.contractValidations.keys()) if (key.startsWith(`${entity.uuid}:`)) this.contractValidations.delete(key)

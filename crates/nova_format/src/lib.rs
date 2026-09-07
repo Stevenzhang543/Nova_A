@@ -11,7 +11,7 @@ pub const PROJECT_FORMAT_NAME: &str = "Nova_A Project Format 2";
 pub const PROJECT_FORMAT_MAJOR: u32 = 2;
 pub const CURRENT_FORMAT_VERSION: u32 = 29;
 pub const MINIMUM_SUPPORTED_FORMAT_VERSION: u32 = 5;
-pub const CURRENT_ENGINE_VERSION: &str = "26.16.0";
+pub const CURRENT_ENGINE_VERSION: &str = "26.17.0";
 
 fn default_named_physics_layers() -> Value {
     let colors = [
@@ -4775,5 +4775,26 @@ mod tests {
             "27.0.0"
         );
         validate_project(&migrated_v6).expect("6.x to 7.x compatibility seal validates");
+    }
+}
+
+#[cfg(test)]
+mod physics_float_roundtrip_26_17 {
+    #[test]
+    fn project_numbers_preserve_exact_binary_values() {
+        let values: [f64; 7] = [
+            11.180339887498949,
+            3.7500000000000004,
+            1.8750000000000002,
+            0.10000000000000002,
+            -0.0,
+            1.0e-20,
+            1.0e50,
+        ];
+        for expected in values {
+            let source = serde_json::to_string(&expected).unwrap();
+            let actual: f64 = serde_json::from_str(&source).unwrap();
+            assert_eq!(actual.to_bits(), expected.to_bits(), "{source}");
+        }
     }
 }

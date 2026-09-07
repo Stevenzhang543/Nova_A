@@ -1,13 +1,27 @@
 #[derive(Clone, Debug, PartialEq)]
 pub enum PhysicsEvent {
-    BodyCreated { handle: u32 },
-    BodyDestroyed { handle: u32 },
+    BodyCreated {
+        handle: u32,
+    },
+    BodyDestroyed {
+        handle: u32,
+    },
     ContactStarted(PhysicsContact),
     ContactStayed(PhysicsContact),
     ContactEnded(PhysicsContact),
-    BodySleeping { handle: u32 },
-    BodyWoke { handle: u32 },
-    ConstraintBroken { handle: u32, joint_kind: u8, link: i32, tension: f64, strain: f64 },
+    BodySleeping {
+        handle: u32,
+    },
+    BodyWoke {
+        handle: u32,
+    },
+    ConstraintBroken {
+        handle: u32,
+        joint_kind: u8,
+        link: i32,
+        tension: f64,
+        strain: f64,
+    },
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -69,7 +83,12 @@ pub struct PhysicsWorld {
 }
 
 impl PhysicsWorld {
-    pub fn new() -> Self { Self { quality: SolverQuality::default(), ..Self::default() } }
+    pub fn new() -> Self {
+        Self {
+            quality: SolverQuality::default(),
+            ..Self::default()
+        }
+    }
 
     pub fn set_quality(
         &mut self,
@@ -82,28 +101,76 @@ impl PhysicsWorld {
         let quality = SolverQuality {
             minimum_substeps,
             solver_iterations,
+            position_iterations: 1,
             sleep_linear_threshold,
             sleep_angular_threshold,
             time_to_sleep,
-        }.normalized();
+        }
+        .normalized();
         if quality != self.quality {
             self.quality = quality;
             self.configuration_dirty = true;
         }
     }
 
-    pub fn body_count(&self) -> usize { self.bodies.len() }
-    pub fn connection_count(&self) -> usize { self.connections.len() }
-    pub fn configuration_rebuilds(&self) -> u64 { self.configuration_rebuilds }
-    pub fn physics_steps(&self) -> u64 { self.physics_steps }
+    pub fn set_quality_iterations(
+        &mut self,
+        minimum_substeps: usize,
+        velocity_iterations: usize,
+        position_iterations: usize,
+        sleep_linear_threshold: f64,
+        sleep_angular_threshold: f64,
+        time_to_sleep: f64,
+    ) {
+        let quality = SolverQuality {
+            minimum_substeps,
+            solver_iterations: velocity_iterations,
+            position_iterations,
+            sleep_linear_threshold,
+            sleep_angular_threshold,
+            time_to_sleep,
+        }
+        .normalized();
+        if quality != self.quality {
+            self.quality = quality;
+            self.configuration_dirty = true;
+        }
+    }
 
-    pub fn create_body(&mut self, handle: u32, order: u32, values: &[f64]) -> Result<(), &'static str> {
-        if self.body_index.contains_key(&handle) { return Err("body handle already exists"); }
+    pub fn body_count(&self) -> usize {
+        self.bodies.len()
+    }
+    pub fn connection_count(&self) -> usize {
+        self.connections.len()
+    }
+    pub fn configuration_rebuilds(&self) -> u64 {
+        self.configuration_rebuilds
+    }
+    pub fn physics_steps(&self) -> u64 {
+        self.physics_steps
+    }
+
+    pub fn create_body(
+        &mut self,
+        handle: u32,
+        order: u32,
+        values: &[f64],
+    ) -> Result<(), &'static str> {
+        if self.body_index.contains_key(&handle) {
+            return Err("body handle already exists");
+        }
         self.upsert_body(handle, order, values).map(|_| ())
     }
 
-    pub fn upsert_body(&mut self, handle: u32, order: u32, values: &[f64]) -> Result<bool, &'static str> {
-        if values.len() != STRIDE { return Err("body record has the wrong length"); }
+    pub fn upsert_body(
+        &mut self,
+        handle: u32,
+        order: u32,
+        values: &[f64],
+    ) -> Result<bool, &'static str> {
+        if values.len() != STRIDE {
+            return Err("body record has the wrong length");
+        }
         if let Some(&index) = self.body_index.get(&handle) {
             let record = &mut self.bodies[index];
             let changed = record.order != order || record.values != values;
@@ -122,7 +189,12 @@ impl PhysicsWorld {
             }
             return Ok(changed);
         }
-        self.bodies.push(BodyRecord { handle, order, values: values.to_vec(), collider_shapes: Vec::new() });
+        self.bodies.push(BodyRecord {
+            handle,
+            order,
+            values: values.to_vec(),
+            collider_shapes: Vec::new(),
+        });
         self.rebuild_indexes();
         self.configuration_dirty = true;
         self.events.push(PhysicsEvent::BodyCreated { handle });
@@ -130,7 +202,9 @@ impl PhysicsWorld {
     }
 
     pub fn destroy_body(&mut self, handle: u32) -> bool {
-        let Some(index) = self.body_index.get(&handle).copied() else { return false; };
+        let Some(index) = self.body_index.get(&handle).copied() else {
+            return false;
+        };
         let ended = self
             .contacts
             .iter()
@@ -151,26 +225,68 @@ impl PhysicsWorld {
 
     /// Additive collider-child channel. The stable body record remains 56
     /// scalars; compound/chain/concave pieces are retained beside it.
-    pub fn upsert_collider_shapes(&mut self, handle: u32, values: &[f64]) -> Result<bool, &'static str> {
-        if values.len() % COLLIDER_CHILD_STRIDE != 0 { return Err("collider child records have the wrong length"); }
-        if values.len() / COLLIDER_CHILD_STRIDE > 128 { return Err("a body cannot have more than 128 solver collider children"); }
-        let Some(index) = self.body_index.get(&handle).copied() else { return Err("body handle does not exist"); };
-        if self.bodies[index].collider_shapes == values { return Ok(false); }
+    pub fn upsert_collider_shapes(
+        &mut self,
+        handle: u32,
+        values: &[f64],
+    ) -> Result<bool, &'static str> {
+        if values.len() % COLLIDER_CHILD_STRIDE != 0 {
+            return Err("collider child records have the wrong length");
+        }
+        if values.len() / COLLIDER_CHILD_STRIDE > 128 {
+            return Err("a body cannot have more than 128 solver collider children");
+        }
+        let Some(index) = self.body_index.get(&handle).copied() else {
+            return Err("body handle does not exist");
+        };
+        if self.bodies[index].collider_shapes == values {
+            return Ok(false);
+        }
         self.bodies[index].collider_shapes.clear();
         self.bodies[index].collider_shapes.extend_from_slice(values);
         self.configuration_dirty = true;
         Ok(true)
     }
 
-    pub fn set_transform(&mut self, handle: u32, x: f64, y: f64, angle: f64) -> Result<(), &'static str> {
-        self.update_body(handle, |values| { values[2] = finite_or(x, values[2]); values[3] = finite_or(y, values[3]); values[14] = normalize_angle(angle); values[49] = 0.0; values[50] = 0.0; })
+    pub fn set_transform(
+        &mut self,
+        handle: u32,
+        x: f64,
+        y: f64,
+        angle: f64,
+    ) -> Result<(), &'static str> {
+        self.update_body(handle, |values| {
+            values[2] = finite_or(x, values[2]);
+            values[3] = finite_or(y, values[3]);
+            values[14] = normalize_angle(angle);
+            values[49] = 0.0;
+            values[50] = 0.0;
+        })
     }
 
-    pub fn set_velocity(&mut self, handle: u32, x: f64, y: f64, angular: f64) -> Result<(), &'static str> {
-        self.update_body(handle, |values| { values[4] = finite_or(x, values[4]); values[5] = finite_or(y, values[5]); values[15] = finite_or(angular, values[15]); values[49] = 0.0; values[50] = 0.0; })
+    pub fn set_velocity(
+        &mut self,
+        handle: u32,
+        x: f64,
+        y: f64,
+        angular: f64,
+    ) -> Result<(), &'static str> {
+        self.update_body(handle, |values| {
+            values[4] = finite_or(x, values[4]);
+            values[5] = finite_or(y, values[5]);
+            values[15] = finite_or(angular, values[15]);
+            values[49] = 0.0;
+            values[50] = 0.0;
+        })
     }
 
-    pub fn set_material(&mut self, handle: u32, restitution: f64, static_friction: f64, dynamic_friction: f64) -> Result<(), &'static str> {
+    pub fn set_material(
+        &mut self,
+        handle: u32,
+        restitution: f64,
+        static_friction: f64,
+        dynamic_friction: f64,
+    ) -> Result<(), &'static str> {
         self.update_body(handle, |values| {
             values[10] = unit_interval(restitution);
             values[20] = non_negative(static_friction, values[20]);
@@ -178,36 +294,78 @@ impl PhysicsWorld {
         })
     }
 
-    pub fn apply_force(&mut self, handle: u32, x: f64, y: f64, torque: f64) -> Result<(), &'static str> {
-        self.update_body(handle, |values| { values[21] = finite_or(x, values[21]); values[22] = finite_or(y, values[22]); values[16] = finite_or(torque, values[16]); values[49] = 0.0; values[50] = 0.0; })
+    pub fn apply_force(
+        &mut self,
+        handle: u32,
+        x: f64,
+        y: f64,
+        torque: f64,
+    ) -> Result<(), &'static str> {
+        self.update_body(handle, |values| {
+            values[21] = finite_or(x, values[21]);
+            values[22] = finite_or(y, values[22]);
+            values[16] = finite_or(torque, values[16]);
+            values[49] = 0.0;
+            values[50] = 0.0;
+        })
     }
 
     /// Adds a force for the next fixed step only. Multiple effectors accumulate
     /// without changing the retained body descriptor or rebuilding the solver.
-    pub fn apply_transient_force(&mut self, handle: u32, x: f64, y: f64, torque: f64) -> Result<(), &'static str> {
-        if !self.body_index.contains_key(&handle) { return Err("body handle does not exist"); }
-        let entry = self.transient_forces.entry(handle).or_insert((0.0, 0.0, 0.0));
+    pub fn apply_transient_force(
+        &mut self,
+        handle: u32,
+        x: f64,
+        y: f64,
+        torque: f64,
+    ) -> Result<(), &'static str> {
+        if !self.body_index.contains_key(&handle) {
+            return Err("body handle does not exist");
+        }
+        let entry = self
+            .transient_forces
+            .entry(handle)
+            .or_insert((0.0, 0.0, 0.0));
         entry.0 = finite_or(entry.0 + finite_or(x, 0.0), entry.0);
         entry.1 = finite_or(entry.1 + finite_or(y, 0.0), entry.1);
         entry.2 = finite_or(entry.2 + finite_or(torque, 0.0), entry.2);
         Ok(())
     }
 
-    pub fn apply_impulse(&mut self, handle: u32, x: f64, y: f64, offset_x: f64, offset_y: f64) -> Result<(), &'static str> {
+    pub fn apply_impulse(
+        &mut self,
+        handle: u32,
+        x: f64,
+        y: f64,
+        offset_x: f64,
+        offset_y: f64,
+    ) -> Result<(), &'static str> {
         self.update_body(handle, |values| {
-            if values[9] > 0.5 || values[24] > 0.5 { return; }
+            if values[9] > 0.5 || values[24] > 0.5 {
+                return;
+            }
             let mass = positive(values[8], 1.0);
             values[4] = finite_or(values[4] + finite_or(x, 0.0) / mass, values[4]);
             values[5] = finite_or(values[5] + finite_or(y, 0.0) / mass, values[5]);
             let inertia = positive_with_minimum(values[26], 1.0, MIN_INERTIA);
-            values[15] = finite_or(values[15] + (offset_x * y - offset_y * x) / inertia, values[15]);
+            values[15] = finite_or(
+                values[15] + (offset_x * y - offset_y * x) / inertia,
+                values[15],
+            );
             values[49] = 0.0;
             values[50] = 0.0;
         })
     }
 
-    pub fn upsert_connection(&mut self, handle: u32, order: u32, values: &[f64]) -> Result<bool, &'static str> {
-        if values.len() != CONNECTION_STRIDE { return Err("connection record has the wrong length"); }
+    pub fn upsert_connection(
+        &mut self,
+        handle: u32,
+        order: u32,
+        values: &[f64],
+    ) -> Result<bool, &'static str> {
+        if values.len() != CONNECTION_STRIDE {
+            return Err("connection record has the wrong length");
+        }
         if let Some(&index) = self.connection_index.get(&handle) {
             let record = &mut self.connections[index];
             let changed = record.order != order || record.values != values;
@@ -218,14 +376,20 @@ impl PhysicsWorld {
             }
             return Ok(changed);
         }
-        self.connections.push(ConnectionRecord { handle, order, values: values.to_vec() });
+        self.connections.push(ConnectionRecord {
+            handle,
+            order,
+            values: values.to_vec(),
+        });
         self.rebuild_indexes();
         self.configuration_dirty = true;
         Ok(true)
     }
 
     pub fn destroy_connection(&mut self, handle: u32) -> bool {
-        let Some(index) = self.connection_index.get(&handle).copied() else { return false; };
+        let Some(index) = self.connection_index.get(&handle).copied() else {
+            return false;
+        };
         self.connections.remove(index);
         self.rebuild_indexes();
         self.configuration_dirty = true;
@@ -233,7 +397,11 @@ impl PhysicsWorld {
     }
 
     pub fn clear(&mut self) {
-        for record in &self.bodies { self.events.push(PhysicsEvent::BodyDestroyed { handle: record.handle }); }
+        for record in &self.bodies {
+            self.events.push(PhysicsEvent::BodyDestroyed {
+                handle: record.handle,
+            });
+        }
         self.bodies.clear();
         self.connections.clear();
         self.body_index.clear();
@@ -252,22 +420,34 @@ impl PhysicsWorld {
 
     pub fn step(&mut self, dt: f64, global_gravity: f64, air_friction: f64) {
         self.rebuild_dense_if_needed();
-        if self.dense_bodies.is_empty() { return; }
+        if self.dense_bodies.is_empty() {
+            return;
+        }
         self.previous_bodies.clear();
         self.previous_bodies.extend_from_slice(&self.dense_bodies);
-        let Some(solver) = self.solver.as_mut() else { return; };
+        let Some(solver) = self.solver.as_mut() else {
+            return;
+        };
         let transient_forces = std::mem::take(&mut self.transient_forces);
         for (handle, (x, y, torque)) in &transient_forces {
-            let Some(index) = self.body_index.get(handle).copied() else { continue; };
-            let Some(body) = solver.bodies.get_mut(index) else { continue; };
+            let Some(index) = self.body_index.get(handle).copied() else {
+                continue;
+            };
+            let Some(body) = solver.bodies.get_mut(index) else {
+                continue;
+            };
             body.force.x = finite_or(body.force.x + x, body.force.x);
             body.force.y = finite_or(body.force.y + y, body.force.y);
             body.torque = finite_or(body.torque + torque, body.torque);
         }
         solver.step(dt, global_gravity, air_friction);
         for (handle, (x, y, torque)) in transient_forces {
-            let Some(index) = self.body_index.get(&handle).copied() else { continue; };
-            let Some(body) = solver.bodies.get_mut(index) else { continue; };
+            let Some(index) = self.body_index.get(&handle).copied() else {
+                continue;
+            };
+            let Some(body) = solver.bodies.get_mut(index) else {
+                continue;
+            };
             body.force.x = finite_or(body.force.x - x, body.force.x);
             body.force.y = finite_or(body.force.y - y, body.force.y);
             body.torque = finite_or(body.torque - torque, body.torque);
@@ -283,7 +463,9 @@ impl PhysicsWorld {
         self.state_buffer.extend_from_slice(&self.dense_connections);
     }
 
-    pub fn state(&self) -> &[f64] { &self.state_buffer }
+    pub fn state(&self) -> &[f64] {
+        &self.state_buffer
+    }
     /// Stable checksum of the authoritative, ordered physics state. Float bits
     /// are hashed exactly so replay diagnostics detect even sub-pixel drift.
     pub fn state_checksum(&self) -> u64 {
@@ -297,28 +479,53 @@ impl PhysicsWorld {
         hash ^= self.physics_steps;
         hash.wrapping_mul(0x0000_0100_0000_01b3)
     }
-    pub fn previous_body_state(&self) -> &[f64] { &self.previous_bodies }
-    pub fn body_state_len(&self) -> usize { self.dense_bodies.len() }
-    pub fn drain_events(&mut self) -> Vec<PhysicsEvent> { std::mem::take(&mut self.events) }
+    pub fn previous_body_state(&self) -> &[f64] {
+        &self.previous_bodies
+    }
+    pub fn body_state_len(&self) -> usize {
+        self.dense_bodies.len()
+    }
+    pub fn drain_events(&mut self) -> Vec<PhysicsEvent> {
+        std::mem::take(&mut self.events)
+    }
 
     fn rebuild_indexes(&mut self) {
         self.body_index.clear();
-        for (index, record) in self.bodies.iter().enumerate() { self.body_index.insert(record.handle, index); }
+        for (index, record) in self.bodies.iter().enumerate() {
+            self.body_index.insert(record.handle, index);
+        }
         self.connection_index.clear();
-        for (index, record) in self.connections.iter().enumerate() { self.connection_index.insert(record.handle, index); }
+        for (index, record) in self.connections.iter().enumerate() {
+            self.connection_index.insert(record.handle, index);
+        }
     }
 
     fn rebuild_dense_if_needed(&mut self) {
-        if !self.configuration_dirty { return; }
+        if !self.configuration_dirty {
+            return;
+        }
         self.bodies.sort_by_key(|record| record.order);
         self.connections.sort_by_key(|record| record.order);
         self.rebuild_indexes();
         self.dense_bodies.clear();
-        for record in &self.bodies { self.dense_bodies.extend_from_slice(&record.values); }
+        for record in &self.bodies {
+            self.dense_bodies.extend_from_slice(&record.values);
+        }
         self.dense_connections.clear();
-        for record in &self.connections { self.dense_connections.extend_from_slice(&record.values); }
-        let child_shapes = self.bodies.iter().map(|record| record.collider_shapes.as_slice()).collect::<Vec<_>>();
-        self.solver = Some(SolverWorld::new_with_children(&self.dense_bodies, &self.dense_connections, self.quality, &child_shapes));
+        for record in &self.connections {
+            self.dense_connections.extend_from_slice(&record.values);
+        }
+        let child_shapes = self
+            .bodies
+            .iter()
+            .map(|record| record.collider_shapes.as_slice())
+            .collect::<Vec<_>>();
+        self.solver = Some(SolverWorld::new_with_children(
+            &self.dense_bodies,
+            &self.dense_connections,
+            self.quality,
+            &child_shapes,
+        ));
         self.configuration_rebuilds = self.configuration_rebuilds.saturating_add(1);
         self.state_buffer.clear();
         self.state_buffer.extend_from_slice(&self.dense_bodies);
@@ -328,32 +535,72 @@ impl PhysicsWorld {
 
     fn copy_dense_to_records(&mut self) {
         for (index, record) in self.bodies.iter_mut().enumerate() {
-            record.values.copy_from_slice(&self.dense_bodies[index * STRIDE..(index + 1) * STRIDE]);
+            record
+                .values
+                .copy_from_slice(&self.dense_bodies[index * STRIDE..(index + 1) * STRIDE]);
         }
         for (index, record) in self.connections.iter_mut().enumerate() {
-            record.values.copy_from_slice(&self.dense_connections[index * CONNECTION_STRIDE..(index + 1) * CONNECTION_STRIDE]);
+            record.values.copy_from_slice(
+                &self.dense_connections[index * CONNECTION_STRIDE..(index + 1) * CONNECTION_STRIDE],
+            );
         }
     }
 
     fn collect_state_events(&mut self) {
         for (index, record) in self.bodies.iter().enumerate() {
             let before = record.values[49] > 0.5;
-            let after = self.dense_bodies.get(index * STRIDE + 49).copied().unwrap_or(0.0) > 0.5;
+            let after = self
+                .dense_bodies
+                .get(index * STRIDE + 49)
+                .copied()
+                .unwrap_or(0.0)
+                > 0.5;
             if before != after {
-                self.events.push(if after { PhysicsEvent::BodySleeping { handle: record.handle } } else { PhysicsEvent::BodyWoke { handle: record.handle } });
+                self.events.push(if after {
+                    PhysicsEvent::BodySleeping {
+                        handle: record.handle,
+                    }
+                } else {
+                    PhysicsEvent::BodyWoke {
+                        handle: record.handle,
+                    }
+                });
             }
         }
         for (index, record) in self.connections.iter().enumerate() {
             let base = index * CONNECTION_STRIDE;
             let before = record.values[17];
-            let after = self.dense_connections.get(base + 17).copied().unwrap_or(before);
+            let after = self
+                .dense_connections
+                .get(base + 17)
+                .copied()
+                .unwrap_or(before);
             if before <= 0.5 && after > 0.5 {
                 self.events.push(PhysicsEvent::ConstraintBroken {
                     handle: record.handle,
                     joint_kind: finite_or(record.values[18], 0.0).round().clamp(0.0, 255.0) as u8,
-                    link: finite_or(self.dense_connections.get(base + 28).copied().unwrap_or(-1.0), -1.0).round() as i32,
-                    tension: non_negative(self.dense_connections.get(base + 18).copied().unwrap_or(0.0), 0.0),
-                    strain: non_negative(self.dense_connections.get(base + 19).copied().unwrap_or(0.0), 0.0),
+                    link: finite_or(
+                        self.dense_connections
+                            .get(base + 28)
+                            .copied()
+                            .unwrap_or(-1.0),
+                        -1.0,
+                    )
+                    .round() as i32,
+                    tension: non_negative(
+                        self.dense_connections
+                            .get(base + 18)
+                            .copied()
+                            .unwrap_or(0.0),
+                        0.0,
+                    ),
+                    strain: non_negative(
+                        self.dense_connections
+                            .get(base + 19)
+                            .copied()
+                            .unwrap_or(0.0),
+                        0.0,
+                    ),
                 });
             }
         }
@@ -370,9 +617,19 @@ impl PhysicsWorld {
                     continue;
                 };
                 let pair = if first.handle <= second.handle {
-                    (first.handle, second.handle, contact.child_a, contact.child_b)
+                    (
+                        first.handle,
+                        second.handle,
+                        contact.child_a,
+                        contact.child_b,
+                    )
                 } else {
-                    (second.handle, first.handle, contact.child_b, contact.child_a)
+                    (
+                        second.handle,
+                        first.handle,
+                        contact.child_b,
+                        contact.child_a,
+                    )
                 };
                 let snapshot = PhysicsContact {
                     first: first.handle,
@@ -383,7 +640,10 @@ impl PhysicsWorld {
                     point: [contact.point.x, contact.point.y],
                     normal: [contact.normal.x, contact.normal.y],
                     relative_velocity: [contact.relative_velocity.x, contact.relative_velocity.y],
-                    initial_relative_velocity: [contact.initial_relative_velocity.x, contact.initial_relative_velocity.y],
+                    initial_relative_velocity: [
+                        contact.initial_relative_velocity.x,
+                        contact.initial_relative_velocity.y,
+                    ],
                     normal_impulse: contact.normal_impulse,
                     tangent_impulse: contact.tangent_impulse,
                     normal_force: contact.normal_force,
@@ -391,7 +651,9 @@ impl PhysicsWorld {
                     penetration: contact.penetration.max(0.0),
                 };
                 match current.get_mut(&pair) {
-                    Some(existing) if existing.penetration < snapshot.penetration => *existing = snapshot,
+                    Some(existing) if existing.penetration < snapshot.penetration => {
+                        *existing = snapshot
+                    }
                     None => {
                         current.insert(pair, snapshot);
                     }
@@ -418,8 +680,14 @@ impl PhysicsWorld {
         self.contacts = current;
     }
 
-    fn update_body(&mut self, handle: u32, update: impl FnOnce(&mut [f64])) -> Result<(), &'static str> {
-        let Some(index) = self.body_index.get(&handle).copied() else { return Err("body handle does not exist"); };
+    fn update_body(
+        &mut self,
+        handle: u32,
+        update: impl FnOnce(&mut [f64]),
+    ) -> Result<(), &'static str> {
+        let Some(index) = self.body_index.get(&handle).copied() else {
+            return Err("body handle does not exist");
+        };
         update(&mut self.bodies[index].values);
         self.configuration_dirty = true;
         Ok(())
@@ -432,7 +700,12 @@ mod persistent_world_tests {
 
     fn body_record() -> Vec<f64> {
         let mut body = vec![0.0; STRIDE];
-        body[8] = 1.0; body[12] = 1.0; body[13] = 1.0; body[17] = 1.0; body[25] = 1.0; body[26] = 1.0;
+        body[8] = 1.0;
+        body[12] = 1.0;
+        body[13] = 1.0;
+        body[17] = 1.0;
+        body[25] = 1.0;
+        body[26] = 1.0;
         body
     }
 
@@ -533,10 +806,17 @@ mod persistent_world_tests {
         }
         world.drain_events();
         world.step(1.0 / 60.0, 0.0, 0.0);
-        let pairs = world.drain_events().into_iter().filter_map(|event| match event {
-            PhysicsEvent::ContactStarted(contact) => Some((contact.first.min(contact.second), contact.first.max(contact.second))),
-            _ => None,
-        }).collect::<Vec<_>>();
+        let pairs = world
+            .drain_events()
+            .into_iter()
+            .filter_map(|event| match event {
+                PhysicsEvent::ContactStarted(contact) => Some((
+                    contact.first.min(contact.second),
+                    contact.first.max(contact.second),
+                )),
+                _ => None,
+            })
+            .collect::<Vec<_>>();
         let mut sorted = pairs.clone();
         sorted.sort_unstable();
         assert_eq!(pairs, sorted);

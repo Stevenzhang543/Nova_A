@@ -279,3 +279,14 @@ export class ParticleRuntime {
 }
 
 export const particleRuntime = new ParticleRuntime()
+
+/** A frame translation preserves live world-space particles and trail history. */
+export function shiftParticleOrigin(offset: Vec2, entities: Entity[]): void {
+  for (const entity of entities) {
+    const component = entity.getComponent<ParticleEmitter2D>('ParticleEmitter2D', true)
+    if (!component?.worldSpace) continue
+    const state = states.get(component.uuid)
+    if (!state) continue
+    for (const particle of state.particles) { particle.position.x -= offset.x; particle.position.y -= offset.y; for (const point of particle.trail) { point.x -= offset.x; point.y -= offset.y } }
+  }
+}

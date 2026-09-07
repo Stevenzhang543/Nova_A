@@ -37,8 +37,8 @@ export function worldTransform(entity: Entity, entities: readonly Entity[], visi
     position: { x: finiteNumber(entity.transform.position.x), y: finiteNumber(entity.transform.position.y) },
     rotation: normalizeAngle(entity.transform.rotation),
     scale: {
-      x: positiveNumber(entity.transform.scale.x, 1),
-      y: positiveNumber(entity.transform.scale.y, 1)
+      x: (entity.transform.scale.x < 0 ? -1 : 1) * positiveNumber(entity.transform.scale.x, 1),
+      y: (entity.transform.scale.y < 0 ? -1 : 1) * positiveNumber(entity.transform.scale.y, 1)
     }
   }
   const parentUuid = entity.parentUuid
@@ -57,7 +57,7 @@ export function worldTransform(entity: Entity, entities: readonly Entity[], visi
       x: parentWorld.position.x + offset.x,
       y: parentWorld.position.y + offset.y
     },
-    rotation: normalizeAngle(parentWorld.rotation + local.rotation),
+    rotation: normalizeAngle(parentWorld.rotation + local.rotation * Math.sign(parentWorld.scale.x * parentWorld.scale.y)),
     scale: {
       x: parentWorld.scale.x * local.scale.x,
       y: parentWorld.scale.y * local.scale.y
@@ -75,8 +75,8 @@ export function worldPointToLocal(entity: Entity, point: Vec2, entities: readonl
   const transform = worldTransform(entity, entities)
   const rotated = rotate({ x: point.x - transform.position.x, y: point.y - transform.position.y }, -transform.rotation)
   return {
-    x: rotated.x / Math.max(transform.scale.x, 1e-12),
-    y: rotated.y / Math.max(transform.scale.y, 1e-12)
+    x: rotated.x / transform.scale.x,
+    y: rotated.y / transform.scale.y
   }
 }
 
@@ -94,13 +94,13 @@ export function setWorldTransform(entity: Entity, value: WorldTransform2D, entit
     y: value.position.y - parentWorld.position.y
   }, -parentWorld.rotation)
   entity.transform.position = {
-    x: position.x / Math.max(parentWorld.scale.x, 1e-12),
-    y: position.y / Math.max(parentWorld.scale.y, 1e-12)
+    x: position.x / parentWorld.scale.x,
+    y: position.y / parentWorld.scale.y
   }
-  entity.transform.rotation = normalizeAngle(value.rotation - parentWorld.rotation)
+  entity.transform.rotation = normalizeAngle((value.rotation - parentWorld.rotation) * Math.sign(parentWorld.scale.x * parentWorld.scale.y))
   entity.transform.scale = {
-    x: value.scale.x / Math.max(parentWorld.scale.x, 1e-12),
-    y: value.scale.y / Math.max(parentWorld.scale.y, 1e-12)
+    x: value.scale.x / parentWorld.scale.x,
+    y: value.scale.y / parentWorld.scale.y
   }
 }
 

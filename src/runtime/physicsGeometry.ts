@@ -152,8 +152,10 @@ function prepareOne(source: ColliderSource2D, id: string, kind: PhysicsShapeKind
     const pieces = decomposeSimplePolygon(authored)
     return { shapes: pieces.map((points, index) => baseShape(source, id, 'ConvexPolygon', offset, rotation, size, points, index, properties)), decomposed: true, invalid: pieces.length === 0 }
   }
+  if (kind === 'ConvexPolygon' && (authored.length < 3 || !isSimplePolygon(authored) || Math.abs(polygonArea(authored)) <= 1e-12)) return { shapes: [], decomposed: false, invalid: true }
+  if (kind === 'ConvexPolygon' && authored.length === 4) { const turns = authored.map((a, i) => Math.sign(cross(a, authored[(i+1)%4], authored[(i+2)%4]))).filter(Boolean); if (new Set(turns).size !== 1) return { shapes: [], decomposed: false, invalid: true } }
   const normalizedKind: SolverColliderShape2D['kind'] = kind === 'Circle' ? 'Circle' : kind === 'Capsule' ? 'Capsule' : kind === 'Segment' || kind === 'WorldBoundary' ? 'Segment' : kind === 'ConvexPolygon' ? 'ConvexPolygon' : 'Box'
-  return { shapes: [baseShape(source, id, normalizedKind, offset, rotation, size, authored.slice(0, 4), 0, properties)], decomposed: false, invalid: false }
+  return { shapes: [baseShape(source, id, normalizedKind, offset, rotation, size, normalizedKind === 'ConvexPolygon' ? authored.slice(0, 4) : [], 0, properties)], decomposed: false, invalid: false }
 }
 
 /** Converts one authoring collider into exact convex children. Static chain and
@@ -168,6 +170,7 @@ export function prepareColliderSet(source: ColliderSource2D, dynamic: boolean): 
   for (const descriptor of descriptors) {
     if (!descriptor.enabled) continue
     if (descriptor.points.length > MAX_AUTHORED_COLLIDER_POINTS) return { shapes: [], blockedReason: `Collider '${descriptor.id}' exceeds the ${MAX_AUTHORED_COLLIDER_POINTS}-point authoring safety limit.`, decomposed: true }
+    if (dynamic && descriptor.id !== 'primary' && descriptor.kind === 'WorldBoundary') return { shapes: [], blockedReason: `WorldBoundary child '${descriptor.id}' requires a static or kinematic owner.`, decomposed }
     if (dynamic && descriptor.kind === 'ConcavePolygon') return { shapes: [], blockedReason: `Dynamic concave child '${descriptor.id}' is unsupported. Decompose it into convex children.`, decomposed }
     if (dynamic && descriptor.kind === 'Chain') return { shapes: [], blockedReason: `Dynamic chain child '${descriptor.id}' is unsupported. Use finite convex segment children.`, decomposed }
     const result = prepareOne(source, descriptor.id, descriptor.kind, descriptor.offset, descriptor.rotation, descriptor.size, descriptor.points, descriptor)
@@ -186,13 +189,13 @@ export function encodeColliderChildren(shapes: SolverColliderShape2D[], scale: V
   children.forEach((shape, childIndex) => {
     const index = childIndex * COLLIDER_CHILD_STRIDE
     output[index] = shape.id; output[index + 1] = kindCode(shape.kind)
-    output[index + 2] = shape.offset.x * scale.x; output[index + 3] = shape.offset.y * scale.y; output[index + 4] = shape.rotation
+    output[index + 2] = shape.offset.x * scale.x; output[index + 3] = shape.offset.y * scale.y; output[index + 4] = shape.rotation * Math.sign(scale.x * scale.y)
     output[index + 5] = shape.size.x * Math.abs(scale.x); output[index + 6] = shape.size.y * Math.abs(scale.y)
     const matrixMask = collisionMatrix[shape.physicsLayer] ?? (2 ** shape.physicsLayer) >>> 0
     output[index + 7] = shape.sensor ? 1 : 0; output[index + 8] = shape.physicsLayer; output[index + 9] = (shape.collisionMask & matrixMask) >>> 0
     shape.points.slice(0, 4).forEach((vertex, vertexIndex) => { output[index + 10 + vertexIndex * 2] = vertex.x * scale.x; output[index + 11 + vertexIndex * 2] = vertex.y * scale.y })
     if (shape.points.length === 3) { output[index + 16] = shape.points[2].x * scale.x; output[index + 17] = shape.points[2].y * scale.y }
-    output[index + 18] = shape.oneWay ? 1 : 0; output[index + 19] = shape.oneWayNormal.x; output[index + 20] = shape.oneWayNormal.y
+    output[index + 18] = shape.oneWay ? 1 : 0; output[index + 19] = shape.oneWayNormal.x / scale.x; output[index + 20] = shape.oneWayNormal.y / scale.y
   })
   return output
 }

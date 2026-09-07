@@ -27,7 +27,7 @@ import { buildTileColliderDescriptors } from '../runtime/tilemap'
 import { assetState, readTextAsset } from '../assets/AssetDatabase'
 import { recordPhysicsTelemetry } from '../runtime/physicsMonitor'
 import { defaultPhysicsLayers, defaultPhysicsProfile, normalizePhysicsMaterial, normalizePhysicsProfile, stablePhysicsEventOrder, type PhysicsInterpolationMode, type PhysicsLayerDefinition, type PhysicsSimulationProfile2D } from '../runtime/physicsProduction'
-import { encodeColliderChildren, prepareColliderSet, type SolverColliderShape2D } from '../runtime/physicsGeometry'
+import { encodeColliderChildren, solverShapeArea, prepareColliderSet, type SolverColliderShape2D } from '../runtime/physicsGeometry'
 
 export const PHYSICS_STRIDE = 56
 export const PHYSICS_LAYER_COUNT = 32
@@ -105,9 +105,16 @@ export interface PhysicsQueryHit2D {
   point: Vec2
   normal: Vec2
   distance: number
+  collider?: number
+  sensor?: boolean
+  physicsLayer?: number
+  bodyType?: string
 }
 
-interface WasmQueryHit { handle: number; point: [number, number]; normal: [number, number]; distance: number }
+export type PhysicsQueryKind2D = 'Ray' | 'Point' | 'Circle' | 'Box' | 'Sweep' | 'Nearest'
+export interface PhysicsQueryRequest2D { kind: PhysicsQueryKind2D; origin: Vec2; direction?: Vec2; size?: Vec2; angle?: number; radius?: number; distance?: number; layerMask?: number; includeSensors?: boolean; excludeEntityUuids?: readonly string[]; maximumResults?: number }
+
+interface WasmQueryHit { handle: number; point: [number, number]; normal: [number, number]; distance: number; collider?: number; sensor?: boolean; physicsLayer?: number; bodyType?: string }
 
 interface ConnectionRecord {
   connection: Connection
@@ -117,37 +124,33 @@ interface ConnectionRecord {
 }
 
 /** Writes one entity into the stable Float64 ABI shared with nova_core. */
-function writeEntityRecord(data: Float64Array, entityIndex: number, entity: Entity, entities: Entity[], settings: GlobalPhysicsSettings, runtimeHandle = entity.id, solverShape?: SolverColliderShape2D): void {
-  const materialSource = readTextAsset(entity.collider.materialAsset)
-  if (materialSource) {
-    try {
-      const value = JSON.parse(materialSource) as Record<string, unknown>
-      if (value.format === 'nova-physics-material') {
-        const material = normalizePhysicsMaterial(value)
-        Object.assign(entity.collider.material, material)
-        if (entity.rigidBody.massMode === 'Automatic') entity.rigidBody.density = material.density
-      }
-    } catch { /* A malformed optional asset is ignored; project validation reports it. */ }
-  }
+function writeEntityRecord(data: Float64Array, entityIndex: number, entity: Entity, entities: Entity[], settings: GlobalPhysicsSettings, runtimeHandle = entity.id, solverShapes?: SolverColliderShape2D[]): void {
   normalizeEntity(entity)
-  if (entity.rigidBody.massMode === 'Automatic') syncMassFromDensity(entity)
+  let material = entity.collider.material
+  if (entity.collider.materialAsset) {
+    const source = readTextAsset(entity.collider.materialAsset)
+    if (!source) throw Error('PHYSICS_MATERIAL_MISSING: ' + entity.collider.materialAsset)
+    try { const value = JSON.parse(source); if (value?.format !== 'nova-physics-material') throw Error('Incorrect material format'); material = normalizePhysicsMaterial(value) }
+    catch { throw Error('PHYSICS_MATERIAL_INPUT: repair the linked physics material JSON before simulation.') }
+  }
   const transform = worldTransform(entity, entities)
   const collider = entity.collider
-  const shape = solverShape ?? prepareColliderSet(collider, !entity.isStatic && !entity.isKinematic).shapes[0]
+  const shapes = solverShapes ?? prepareColliderSet(collider, !entity.isStatic && !entity.isKinematic).shapes
+  const shape = shapes[0]
   if (!shape) throw new Error(`Collider '${entity.name}' has no solver-safe shape. Repair the Collider2D component before simulation.`)
   const index = entityIndex * PHYSICS_STRIDE
   data[index] = runtimeHandle
   data[index + 1] = shape.kind === 'Circle' ? 1 : shape.kind === 'Capsule' ? 2 : shape.kind === 'Segment' ? 3 : 0
   data[index + 2] = transform.position.x
   data[index + 3] = transform.position.y
-  data[index + 4] = entity.velocity.x
-  data[index + 5] = entity.velocity.y
+  data[index + 4] = entity.rigidBody.transformOwnership === 'Animation' ? 0 : entity.velocity.x
+  data[index + 5] = entity.rigidBody.transformOwnership === 'Animation' ? 0 : entity.velocity.y
   data[index + 6] = entity.acceleration.x
   data[index + 7] = entity.acceleration.y
-  data[index + 8] = entity.mass
+  data[index + 8] = entity.rigidBody.massMode === 'Automatic' ? Math.max(1e-6, Math.min(1e50, (entity.collider.materialAsset ? material.density : entity.density) * shapes.reduce((sum, child) => sum + solverShapeArea(child, transform.scale), 0))) : entity.mass
   data[index + 9] = entity.isStatic || collider.shapeModel === 'WorldBoundary' ? 1 : 0
-  data[index + 10] = entity.restitution
-  data[index + 11] = entity.dynamicFriction
+  data[index + 10] = material.restitution
+  data[index + 11] = material.dynamicFriction
 
   if (shape.kind === 'Circle') {
     data[index + 12] = shape.size.x * Math.abs(transform.scale.x) * .5
@@ -159,37 +162,37 @@ function writeEntityRecord(data: Float64Array, entityIndex: number, entity: Enti
   }
 
   data[index + 14] = transform.rotation
-  data[index + 15] = entity.angularVelocity
+  data[index + 15] = entity.rigidBody.transformOwnership === 'Animation' ? 0 : entity.angularVelocity
   data[index + 16] = entity.torque
   data[index + 17] = entity.gravityScale
   data[index + 18] = entity.linearDamping
   data[index + 19] = entity.angularDamping
-  data[index + 20] = entity.staticFriction
+  data[index + 20] = material.staticFriction
   data[index + 21] = entity.force.x
   data[index + 22] = entity.force.y
   data[index + 23] = entity.gravity
-  data[index + 24] = entity.isKinematic ? 1 : 0
+  data[index + 24] = entity.isKinematic || entity.rigidBody.transformOwnership === 'Animation' ? 1 : 0
   data[index + 25] = entity.autoInertia ? 1 : 0
   data[index + 26] = entity.inertia
-  data[index + 27] = entity.restitutionThreshold
+  data[index + 27] = material.restitutionThreshold
   data[index + 28] = shape.sensor ? 1 : 0
   data[index + 33] = shape.physicsLayer
   const matrixMask = settings.collisionMatrix[shape.physicsLayer] ?? (1 << shape.physicsLayer)
   data[index + 42] = (shape.collisionMask & matrixMask) >>> 0
   data[index + 43] = shape.offset.x * transform.scale.x
   data[index + 44] = shape.offset.y * transform.scale.y
-  data[index + 45] = shape.rotation
+  data[index + 45] = shape.rotation * Math.sign(transform.scale.x * transform.scale.y)
   data[index + 46] = entity.rigidBody.freezeRotation ? 1 : 0
   data[index + 47] = entity.rigidBody.continuousCollision === 'Continuous' ? 1 : 0
   data[index + 48] = entity.rigidBody.sleepingAllowed ? 1 : 0
   data[index + 49] = entity.rigidBody.sleeping ? 1 : 0
   data[index + 50] = entity.rigidBody.sleepTimer
   data[index + 51] = shape.oneWay ? 1 : 0
-  data[index + 52] = shape.oneWayNormal.x
-  data[index + 53] = shape.oneWayNormal.y
+  data[index + 52] = shape.oneWayNormal.x / transform.scale.x
+  data[index + 53] = shape.oneWayNormal.y / transform.scale.y
   const combineCode = (mode: 'Average' | 'Minimum' | 'Maximum' | 'Multiply') => mode === 'Minimum' ? 1 : mode === 'Multiply' ? 2 : mode === 'Maximum' ? 3 : 0
-  data[index + 54] = combineCode(collider.material.frictionCombine)
-  data[index + 55] = combineCode(collider.material.restitutionCombine)
+  data[index + 54] = combineCode(material.frictionCombine)
+  data[index + 55] = combineCode(material.restitutionCombine)
 
   const recordVertices = shape.kind === 'ConvexPolygon' ? shape.points : []
   if (recordVertices.length) {
@@ -216,10 +219,8 @@ function readEntityRecord(output: Float64Array, entityIndex: number, entity: Ent
     },
     rotation: finiteNumber(output[index + 14], transform.rotation)
   }, entities)
-  entity.velocity.x = finiteNumber(output[index + 4], entity.velocity.x)
-  entity.velocity.y = finiteNumber(output[index + 5], entity.velocity.y)
+  if (entity.rigidBody.transformOwnership !== 'Animation') { entity.velocity.x = finiteNumber(output[index + 4], entity.velocity.x); entity.velocity.y = finiteNumber(output[index + 5], entity.velocity.y); entity.angularVelocity = finiteNumber(output[index + 15], entity.angularVelocity) }
   entity.mass = finiteNumber(output[index + 8], entity.mass)
-  entity.angularVelocity = finiteNumber(output[index + 15], entity.angularVelocity)
   entity.inertia = finiteNumber(output[index + 26], entity.inertia)
   entity.contactCount = Math.max(0, Math.round(finiteNumber(output[index + 29], 0)))
   entity.contactNormal.x = finiteNumber(output[index + 30], 0)
@@ -291,7 +292,7 @@ function writeConnectionRecord(data: Float64Array, recordIndex: number, record: 
   data[index + 24] = connection.collisionEnabled && segment === 0 ? 1 : 0
   data[index + 25] = connection.collisionRadius
   data[index + 26] = connection.linearDensity
-  const nodeCount = segment === 0 ? Math.min(ROPE_NODE_CAPACITY, connection.ropeNodes.length) : 0
+  const nodeCount = connection.componentType === 'Rope2D' && segment === 0 ? Math.min(ROPE_NODE_CAPACITY, connection.ropeNodes.length) : 0
   data[index + 27] = nodeCount
   data[index + 28] = connection.breakLink
   if (connection.componentType !== 'Rope2D') {
@@ -361,6 +362,7 @@ export class World {
   private tileCollisionOwners = new Map<number, Entity>()
   private tileCollisionSignature = ''
   private activeConnectionRecords: ConnectionRecord[] = []
+  private runtimeJointConnections = new Map<string, Connection>()
   private timingSignature = ''
   private lastSettings: GlobalPhysicsSettings = { gravity: 9.8, airFriction: .01, timeScale: 1, tickRate: 60, maxCatchUpSteps: 8, collisionMatrix: defaultCollisionMatrix(), interpolation: 'Interpolate', layers: defaultPhysicsLayers(), profile: defaultPhysicsProfile() }
   wasmError: Error | null = null
@@ -558,16 +560,30 @@ export class World {
     return this.mapQueryHit(JSON.parse(this.runtime.shape_cast_json(center.x, center.y, size.x, size.y, angle, direction.x, direction.y, distance, mask >>> 0)) as WasmQueryHit | null)
   }
 
-  nearest(center: Vec2, maximumDistance: number, mask = 0xffff_ffff, samples = 64): PhysicsQueryHit2D | null {
-    const distance = Math.max(0, finiteNumber(maximumDistance, 0))
-    const count = Math.min(256, Math.max(8, Math.round(finiteNumber(samples, 64))))
-    let best: PhysicsQueryHit2D | null = null
-    for (let index = 0; index < count; index++) {
-      const angle = index * Math.PI * 2 / count
-      const hit = this.raycast(center, { x: Math.cos(angle), y: Math.sin(angle) }, distance, mask)
-      if (hit && (!best || hit.distance < best.distance || (hit.distance === best.distance && hit.entityUuid < best.entityUuid))) best = hit
-    }
-    return best
+  queryPhysics(request: PhysicsQueryRequest2D): PhysicsQueryHit2D[] {
+    const excluded = new Set(request.excludeEntityUuids ?? [])
+    if (excluded.size > 1024) throw new Error('PHYSICS_QUERY_LIMIT: at most 1024 excluded entities are supported.')
+    this.prepareQuery()
+    if (!this.runtime) return []
+    const excludedHandles = this.activeBodies.flatMap(entity => excluded.has((this.tileCollisionOwners.get(entity.id) ?? entity).uuid) ? [this.bodyHandles.get(entity.id)!] : [])
+    if (excludedHandles.length > 1024) throw new Error('PHYSICS_QUERY_LIMIT: excluded entities expand to more than 1024 solver bodies.')
+    const payload = { kind: request.kind, origin: [request.origin.x, request.origin.y], direction: [request.direction?.x ?? 1, request.direction?.y ?? 0], size: [request.size?.x ?? 1, request.size?.y ?? 1], angle: request.angle ?? 0, radius: request.radius ?? 1, distance: request.distance ?? 0, layerMask: (request.layerMask ?? 0xffff_ffff) >>> 0, includeSensors: request.includeSensors !== false, excludedHandles, maximumResults: request.maximumResults ?? 4096 }
+    if ([...payload.origin, ...payload.direction, ...payload.size, payload.angle, payload.radius, payload.distance].some(value => !Number.isFinite(value))) throw new Error('PHYSICS_QUERY_INPUT: query values must be finite.')
+    const native = this.runtime as WasmRuntimeWorld & { query_filtered_json(source: string): string }
+    const hits = JSON.parse(native.query_filtered_json(JSON.stringify(payload))) as WasmQueryHit[]
+    if (hits.length === 4096) throw new Error('PHYSICS_QUERY_LIMIT: query saturated 4096 solver-body results; narrow the region or layer mask before owner grouping and sorting.')
+    const owners = new Map(this.activeBodies.map(entity => [this.bodyHandles.get(entity.id), this.tileCollisionOwners.get(entity.id) ?? entity]))
+    const seen = new Set<string>()
+    return hits.flatMap(hit => {
+      const entity = owners.get(hit.handle)
+      if (!entity || seen.has(entity.uuid)) return []
+      seen.add(entity.uuid)
+      return [{ entityUuid: entity.uuid, point: { x: hit.point[0], y: hit.point[1] }, normal: { x: hit.normal[0], y: hit.normal[1] }, distance: hit.distance, collider: hit.collider, sensor: hit.sensor, physicsLayer: hit.physicsLayer, bodyType: hit.bodyType }]
+    })
+  }
+
+  nearest(center: Vec2, maximumDistance: number, mask = 0xffff_ffff, _samples = 64): PhysicsQueryHit2D | null {
+    return this.queryPhysics({ kind: 'Nearest', origin: center, distance: Math.max(0, finiteNumber(maximumDistance, 0)), layerMask: mask, maximumResults: 1 })[0] ?? null
   }
 
   contactQuery(entityUuid: string): RuntimePhysicsEvent[] {
@@ -629,6 +645,31 @@ export class World {
     return true
   }
 
+  /** Shift the coordinate frame while retaining native handles, sleep and contact state. */
+  shiftOrigin(offset: Vec2): void {
+    if (![offset.x, offset.y].every(value => Number.isFinite(value) && Math.abs(value) <= 1e12)) throw new Error('ORIGIN_SHIFT_INPUT: offset must be finite and within world bounds.')
+    const ids = new Set(this.entities.map(entity => entity.uuid)), roots = this.entities.filter(entity => !entity.parentUuid || !ids.has(entity.parentUuid))
+    if (roots.some(entity => !Number.isFinite(entity.transform.position.x - offset.x) || !Number.isFinite(entity.transform.position.y - offset.y))) throw new Error('ORIGIN_SHIFT_INPUT: translated positions must be finite.')
+    const runtime = this.runtime as (WasmRuntimeWorld & { shift_origin(x: number, y: number): void }) | null
+    runtime?.shift_origin(offset.x, offset.y)
+    const move = (point: Vec2) => { point.x -= offset.x; point.y -= offset.y }
+    for (const entity of roots) move(entity.transform.position)
+    for (const entity of this.tileCollisionBodies) move(entity.transform.position)
+    const shiftedConnections = new Set<Connection>()
+    for (const connection of [...this.connections, ...this.activeConnectionRecords.map(record => record.connection)]) {
+      if (shiftedConnections.has(connection)) continue
+      shiftedConnections.add(connection); for (const node of connection.ropeNodes) move(node.position)
+    }
+    const bodies = (values: Float64Array) => { for (let at = 0; at + PHYSICS_STRIDE <= values.length; at += PHYSICS_STRIDE) { values[at + 2] -= offset.x; values[at + 3] -= offset.y } }
+    const ropes = (values: Float64Array) => { for (let at = 0; at + CONNECTION_STRIDE <= values.length; at += CONNECTION_STRIDE) for (let node = 0; node < Math.min(ROPE_NODE_CAPACITY, values[at + 27]); node++) { const index = at + ROPE_NODE_DATA_OFFSET + node * 4; values[index] -= offset.x; values[index + 1] -= offset.y } }
+    for (const record of this.bodyRecords.values()) bodies(record)
+    for (const record of this.connectionRecords.values()) ropes(record)
+    bodies(this.previousBodyBuffer)
+    const bodyLength = Math.min(this.activeBodies.length * PHYSICS_STRIDE, this.stateBuffer.length)
+    bodies(this.stateBuffer.subarray(0, bodyLength)); ropes(this.stateBuffer.subarray(bodyLength))
+    for (const event of this.events) if (event.point) { event.point[0] -= offset.x; event.point[1] -= offset.y }
+  }
+
   invalidateRuntime(): void {
     this.runtime?.clear()
     this.bodyHandles.clear()
@@ -639,6 +680,7 @@ export class World {
     this.bodyOrders.clear()
     this.connectionOrders.clear()
     this.activeConnectionRecords = []
+    this.runtimeJointConnections.clear()
     this.activeBodies = []
     this.tileCollisionBodies = []
     this.tileCollisionOwners.clear()
@@ -695,9 +737,8 @@ export class World {
       }
       liveBodies.add(entity.id)
       const prepared = colliderSets.get(entity.id) ?? prepareColliderSet(entity.collider, !entity.isStatic && !entity.isKinematic)
-      const primaryShape = prepared.shapes[0]
       this.bodyScratch.fill(0)
-      writeEntityRecord(this.bodyScratch, 0, entity, this.entities, settings, handle, primaryShape)
+      writeEntityRecord(this.bodyScratch, 0, entity, this.entities, settings, handle, prepared.shapes)
       const cached = this.bodyRecords.get(handle)
       if (!cached || this.bodyOrders.get(handle) !== order || !recordsEqual(cached, this.bodyScratch)) {
         runtime.upsert_body(handle, order, this.bodyScratch)
@@ -720,7 +761,14 @@ export class World {
       this.bodyOrders.delete(handle)
     }
 
-    const runtimeConnections = [...this.connections, ...connectionsFromJointComponents(this.entities)]
+    const joints = connectionsFromJointComponents(this.entities), liveJoints = new Set(joints.map(connection => connection.uuid))
+    for (const uuid of this.runtimeJointConnections.keys()) if (!liveJoints.has(uuid)) this.runtimeJointConnections.delete(uuid)
+    for (const connection of joints) {
+      const previous = this.runtimeJointConnections.get(connection.uuid)
+      if (previous) { connection.breakState = previous.breakState; connection.breakLink = previous.breakLink }
+      this.runtimeJointConnections.set(connection.uuid, connection)
+    }
+    const runtimeConnections = [...this.connections, ...joints]
     this.activeConnectionRecords = collectConnectionRecords(this.activeBodies, runtimeConnections, this.entities)
     const liveConnections = new Set<string>()
     this.activeConnectionRecords.forEach((record, order) => {
@@ -756,15 +804,14 @@ export class World {
     const catchUp = Math.min(240, Math.max(1, Math.round(finiteNumber(settings.maxCatchUpSteps, profile.maxCatchUpSteps))))
     const timeScale = Math.min(100, Math.max(0, finiteNumber(settings.timeScale, 1)))
     const dropCode = profile.droppedTimePolicy === 'PreserveBacklog' ? 1 : profile.droppedTimePolicy === 'SlowMotion' ? 2 : 0
-    const solverIterations = Math.max(profile.velocityIterations, profile.positionIterations)
-    const signature = `${tickRate}:${catchUp}:${timeScale}:${paused}:${dropCode}:${profile.minimumSubsteps}:${solverIterations}:${profile.sleepLinearThreshold}:${profile.sleepAngularThreshold}:${profile.timeToSleep}`
+    const signature = `${tickRate}:${catchUp}:${timeScale}:${paused}:${dropCode}:${profile.minimumSubsteps}:${profile.velocityIterations}:${profile.positionIterations}:${profile.sleepLinearThreshold}:${profile.sleepAngularThreshold}:${profile.timeToSleep}`
     if (signature === this.timingSignature) return
     const runtime = this.runtime as unknown as {
       set_timing: (tickRate: number, catchUp: number, scale: number, paused: boolean, droppedPolicy: number) => void
-      set_physics_quality: (substeps: number, iterations: number, sleepLinear: number, sleepAngular: number, timeToSleep: number) => void
+      set_physics_quality_iterations: (substeps: number, velocityIterations: number, positionIterations: number, sleepLinear: number, sleepAngular: number, timeToSleep: number) => void
     }
     runtime.set_timing(tickRate, catchUp, timeScale, paused, dropCode)
-    runtime.set_physics_quality(profile.minimumSubsteps, solverIterations, profile.sleepLinearThreshold, profile.sleepAngularThreshold, profile.timeToSleep)
+    runtime.set_physics_quality_iterations(profile.minimumSubsteps, profile.velocityIterations, profile.positionIterations, profile.sleepLinearThreshold, profile.sleepAngularThreshold, profile.timeToSleep)
     this.timingSignature = signature
   }
 
@@ -882,7 +929,7 @@ export class World {
 
   private storeRecord(records: Map<number, Float64Array>, handle: number, source: Float64Array): void {
     const cached = records.get(handle)
-    if (cached) cached.set(source)
+    if (cached?.length === source.length) cached.set(source)
     else records.set(handle, source.slice())
   }
 }

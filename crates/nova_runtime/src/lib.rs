@@ -380,6 +380,25 @@ impl RuntimeWorld {
     pub fn physics_mut(&mut self) -> &mut PhysicsWorld {
         &mut self.physics
     }
+    pub fn set_physics_quality_iterations(
+        &mut self,
+        minimum_substeps: usize,
+        velocity_iterations: usize,
+        position_iterations: usize,
+        sleep_linear_threshold: f64,
+        sleep_angular_threshold: f64,
+        time_to_sleep: f64,
+    ) {
+        self.physics.set_quality_iterations(
+            minimum_substeps,
+            velocity_iterations,
+            position_iterations,
+            sleep_linear_threshold,
+            sleep_angular_threshold,
+            time_to_sleep,
+        );
+    }
+
     pub fn set_physics_quality(
         &mut self,
         minimum_substeps: usize,
@@ -490,6 +509,13 @@ impl RuntimeWorld {
 
     pub fn destroy_connection(&mut self, handle: u32) -> bool {
         self.physics.destroy_connection(handle)
+    }
+
+    pub fn query_filtered(
+        &self,
+        request: &nova_physics::PhysicsQueryRequest2D,
+    ) -> Result<Vec<nova_physics::PhysicsFilteredHit2D>, &'static str> {
+        self.physics.query_filtered(request)
     }
 
     pub fn raycast(

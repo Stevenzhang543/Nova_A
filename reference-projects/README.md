@@ -1,5 +1,21 @@
 # Nova_A 7.0 reference projects
 
+<!-- NOVA_V2617_REFERENCES -->
+## Nova_A26.17 physics and world references
+
+Engine26.17.0 · Project Format2/schema29. These generated projects describe expected behavior; release evidence separately contains actual edited/saved projects and exact downloaded-player observations. The retained authority is a renderer-disabled WebView, not a windowless native server. All40 library starters and120 localized starter lessons remain.
+
+- [Platformer: character and materials](projects/physics-v2617-platformer/README.md)
+- [Navigation, AI and streamed worlds](projects/physics-v2617-navigation/README.md)
+- [Compound constraints, rope and cloth lattice](projects/physics-v2617-puzzle/README.md)
+- [Coin Trail — code](projects/creator-v2617-code-game/README.md)
+- [Coin Trail — blocks](projects/creator-v2617-blocks-game/README.md)
+- [Coin Trail — mixed](projects/creator-v2617-mixed-game/README.md)
+- [Renderer-disabled authority](projects/server-v2617-headless-authority/README.md)
+- [Complete physics/world lesson](../docs/PHYSICS_WORLD_LESSON_26_17.en.md)
+- [All declared physics/world fields](../docs/PHYSICS_WORLD_FIELD_MATRIX_26_17.md)
+<!-- NOVA_V2617_REFERENCES_END -->
+
 <!-- NOVA_V2616_REFERENCES -->
 ## Nova_A26.16 animation/audio/interface references
 

@@ -4,9 +4,13 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE.md)
 [![Tier 1](https://img.shields.io/badge/Tier%201-Windows%20%7C%20Web-63c6ff)](./docs/PLATFORM_BUILD_MATRIX_5_0.md)
-[![Release](https://img.shields.io/badge/release-26.10-63c6ff)]()
+[![Release](https://img.shields.io/badge/release-26.17-63c6ff)]()
 
 Nova_A 是一款开源 2D 游戏引擎与桌面编辑器，使用 Rust、WebAssembly、Vue 3 与 Tauri 构建。
+
+<!-- NOVA_V2617_OVERVIEW -->
+当前版本 **26.17** 加强物理属性与 Rust 持久世界的绑定、几何查询、角色移动、导航和 AI、真实场景流送及原点平移。新增可读的物理/世界表单、运行状态、三个物理工作流示例与中英德完整教程，保留 40 个库模板及项目格式 2 / schema 29。详见[版本说明](docs/RELEASE_NOTES_26_17.md)、[逐文件编辑记录](docs/EDIT_LEDGER_26_17.md)和[中文教程](docs/PHYSICS_WORLD_LESSON_26_17.zh.md)。最终资格由冻结源码的检查和发布证据确定。
+<!-- NOVA_V2617_OVERVIEW_END -->
 
 版本 **26.10** 完成当前年度路线，形成稳定、轻量的 2D 创作平台，同时保持 Project Format 2/schema 29 与全部冻结契约。该版本整合压感笔与无障碍输入、可取消且照顾低配置设备的加载流程、租约安全 Worker、大世界缓存查询、安全失败的语义协作、逐操作平台就绪证据、三个完整创作参考项目，以及中／英／德三语任务手册。确实需要其他主机、真实硬件、签名凭据、公共基础设施或独立人员的工作仍明确标记为外部验证。
 

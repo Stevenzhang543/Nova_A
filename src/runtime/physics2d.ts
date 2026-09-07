@@ -1,5 +1,5 @@
 import { physicsState } from '../store/physics'
-import type { PhysicsQueryHit2D } from '../world/World'
+import type { PhysicsQueryHit2D, PhysicsQueryRequest2D } from '../world/World'
 import type { Entity } from '../world/Entity'
 import type { CharacterBody2D } from '../world/components'
 import type { Vec2 } from '../world/types'
@@ -16,6 +16,7 @@ export interface PhysicsQueryResult2D extends PhysicsQueryHit2D {
 const DEFAULT_QUERY_OPTIONS: PhysicsQueryOptions2D = { layerMask: 0xffff_ffff, includeSensors: true, excludeEntityUuids: [], maximumResults: 256, sort: 'distance' }
 
 function options(value: Partial<PhysicsQueryOptions2D> = {}): PhysicsQueryOptions2D {
+  if (Array.isArray(value.excludeEntityUuids) && new Set(value.excludeEntityUuids).size > 1024) throw new Error('PHYSICS_QUERY_LIMIT: at most 1024 excluded entities are supported.')
   return {
     layerMask: Number.isFinite(value.layerMask) ? Number(value.layerMask) >>> 0 : DEFAULT_QUERY_OPTIONS.layerMask,
     includeSensors: value.includeSensors !== false,
@@ -25,18 +26,24 @@ function options(value: Partial<PhysicsQueryOptions2D> = {}): PhysicsQueryOption
   }
 }
 
-function enrich(hit: PhysicsQueryHit2D): PhysicsQueryResult2D | null {
-  const entity = physicsState.world.entities.find(candidate => candidate.uuid === hit.entityUuid)
-  const collider = entity?.getCollider()
-  if (!entity || !collider) return null
-  return { ...hit, bodyType: entity.rigidBody.bodyType, colliderType: collider.shapeModel, sensor: collider.sensor, physicsLayer: collider.physicsLayer }
+function enrich(hit: PhysicsQueryHit2D, entities: ReadonlyMap<string, Entity>): PhysicsQueryResult2D | null {
+  const entity = entities.get(hit.entityUuid)
+  const collider = entity?.getCollider(), tileMap = entity?.getComponent<import('../world/components').TileMap2D>('TileMap2D')
+  if (!entity || (!collider && !tileMap)) return null
+  return { ...hit, bodyType: hit.bodyType ?? (tileMap && !collider ? 'Static' : entity.rigidBody.bodyType), colliderType: collider?.shapeModel ?? 'TileMap2D', sensor: hit.sensor ?? collider?.sensor ?? false, physicsLayer: hit.physicsLayer ?? collider?.physicsLayer ?? tileMap!.physicsLayer }
 }
 
 function filterHits(hits: PhysicsQueryHit2D[], value: Partial<PhysicsQueryOptions2D> = {}): PhysicsQueryResult2D[] {
   const settings = options(value), excluded = new Set(settings.excludeEntityUuids)
-  const result = hits.flatMap(hit => { const enriched = enrich(hit); return enriched && !excluded.has(enriched.entityUuid) && (settings.includeSensors || !enriched.sensor) ? [enriched] : [] })
+  const entities = new Map(physicsState.world.entities.map(entity => [entity.uuid, entity]))
+  const result = hits.flatMap(hit => { const enriched = enrich(hit, entities); return enriched && !excluded.has(enriched.entityUuid) && (settings.includeSensors || !enriched.sensor) ? [enriched] : [] })
   result.sort(settings.sort === 'entity' ? (a, b) => a.entityUuid.localeCompare(b.entityUuid) || a.distance - b.distance : (a, b) => a.distance - b.distance || a.entityUuid.localeCompare(b.entityUuid))
   return result.slice(0, settings.maximumResults)
+}
+
+function query(request: PhysicsQueryRequest2D, value: Partial<PhysicsQueryOptions2D>): PhysicsQueryResult2D[] {
+  const settings = options(value)
+  return filterHits(physicsState.world.queryPhysics({ ...request, layerMask: settings.layerMask, includeSensors: settings.includeSensors, excludeEntityUuids: settings.excludeEntityUuids, maximumResults: 4096 }), settings)
 }
 
 /** Public runtime query facade. Masks address physics layers, never rendering layers. */
@@ -55,27 +62,19 @@ export const Physics2D = {
   },
   contacts(entityUuid: string) { return physicsState.world.contactQuery(entityUuid) },
   rayQuery(origin: Vec2, direction: Vec2, distance: number, queryOptions: Partial<PhysicsQueryOptions2D> = {}): PhysicsQueryResult2D[] {
-    const settings = options(queryOptions)
-    return filterHits(physicsState.world.raycastAll(origin, direction, distance, settings.layerMask), settings)
+    return query({ kind: 'Ray', origin, direction, distance }, queryOptions)
   },
   pointQuery(point: Vec2, queryOptions: Partial<PhysicsQueryOptions2D> = {}): PhysicsQueryResult2D[] {
-    const settings = options(queryOptions)
-    return filterHits(physicsState.world.overlapPoint(point, settings.layerMask).map(entityUuid => ({ entityUuid, point: { ...point }, normal: { x: 0, y: 0 }, distance: 0 })), settings)
+    return query({ kind: 'Point', origin: point }, queryOptions)
   },
   overlapQuery(center: Vec2, shape: { kind: 'circle'; radius: number } | { kind: 'box'; size: Vec2; angle?: number }, queryOptions: Partial<PhysicsQueryOptions2D> = {}): PhysicsQueryResult2D[] {
-    const settings = options(queryOptions)
-    const uuids = shape.kind === 'circle'
-      ? physicsState.world.overlapCircle(center, shape.radius, settings.layerMask)
-      : physicsState.world.overlapBox(center, shape.size, shape.angle ?? 0, settings.layerMask)
-    return filterHits(uuids.map(entityUuid => ({ entityUuid, point: { ...center }, normal: { x: 0, y: 0 }, distance: 0 })), settings)
+    return query(shape.kind === 'circle' ? { kind: 'Circle', origin: center, radius: shape.radius } : { kind: 'Box', origin: center, size: shape.size, angle: shape.angle }, queryOptions)
   },
   sweep(center: Vec2, size: Vec2, angle: number, direction: Vec2, distance: number, queryOptions: Partial<PhysicsQueryOptions2D> = {}): PhysicsQueryResult2D | null {
-    const settings = options(queryOptions), hit = physicsState.world.shapeCast(center, size, angle, direction, distance, settings.layerMask)
-    return hit ? filterHits([hit], settings)[0] ?? null : null
+    return query({ kind: 'Sweep', origin: center, size, angle, direction, distance }, queryOptions)[0] ?? null
   },
   nearest(center: Vec2, maximumDistance: number, queryOptions: Partial<PhysicsQueryOptions2D> = {}): PhysicsQueryResult2D | null {
-    const settings = options(queryOptions), hit = physicsState.world.nearest(center, maximumDistance, settings.layerMask)
-    return hit ? filterHits([hit], settings)[0] ?? null : null
+    return query({ kind: 'Nearest', origin: center, distance: maximumDistance }, queryOptions)[0] ?? null
   },
   contactQuery(entityUuid: string) { return physicsState.world.contactQuery(entityUuid).map(event => ({ ...event })) },
   teleport(entity: Entity, position: Vec2, angle?: number) { return physicsState.world.teleport(entity, position, angle) },

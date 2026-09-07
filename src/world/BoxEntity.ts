@@ -9,7 +9,13 @@ export class BoxEntity extends Entity {
   set vertices(value: Vec2[]) {
     this.renderer.vertices = value
     const collider = this.getCollider(true)
-    if (collider && !collider.removed) collider.vertices = value.map(vertex => ({ ...vertex }))
+    if (collider && !collider.removed) {
+      collider.vertices = value.map(vertex => ({ ...vertex }))
+      if (value.length && collider.shapeModel === 'Box') collider.size = {
+        x: positiveNumber(Math.max(...value.map(point => point.x)) - Math.min(...value.map(point => point.x))),
+        y: positiveNumber(Math.max(...value.map(point => point.y)) - Math.min(...value.map(point => point.y)))
+      }
+    }
   }
 
   constructor(id: number, pos: Vec2, size: Vec2, uuid?: string) {

@@ -1,0 +1,5 @@
+import{createServer}from'node:http'
+import{readFile}from'node:fs/promises'
+import{resolve,relative,isAbsolute,extname}from'node:path'
+// Serve only the downloaded archive tree in a separate process, independent of CDP and export work.
+const root=resolve(process.argv[2]);const server=createServer(async(request,response)=>{try{const url=new URL(request.url,'http://localhost'),file=resolve(root,'.'+decodeURIComponent(url.pathname==='/'?'/index.html':url.pathname)),local=relative(root,file);if(local.startsWith('..')||isAbsolute(local))throw Error('outside export');response.setHeader('Content-Type',({'.html':'text/html','.js':'text/javascript','.css':'text/css','.wasm':'application/wasm','.json':'application/json','.png':'image/png','.svg':'image/svg+xml','.woff2':'font/woff2'})[extname(file)]??'application/octet-stream');response.end(await readFile(file))}catch{response.statusCode=404;response.end('Not found')}});server.listen(0,'127.0.0.1',()=>process.send?.({port:server.address().port}));process.on('disconnect',()=>{server.closeAllConnections();server.close(()=>process.exit())});

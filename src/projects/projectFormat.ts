@@ -1,7 +1,7 @@
 /** Machine-safe semantic version used by Cargo, npm, Tauri and compatibility checks. */
-export const NOVA_ENGINE_VERSION = '26.16.0'
+export const NOVA_ENGINE_VERSION = '26.17.0'
 /** Calendar release name shown to creators and used for release artifact names. */
-export const NOVA_RELEASE_NAME = '26.16'
+export const NOVA_RELEASE_NAME = '26.17'
 export const NOVA_PROJECT_FORMAT = 'Nova_A Project Format 2'
 export const NOVA_PROJECT_FORMAT_MAJOR = 2
 export const NOVA_PROJECT_SCHEMA_VERSION = 29

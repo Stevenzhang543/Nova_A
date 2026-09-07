@@ -100,6 +100,7 @@
 
         <InspectorSection v-if="selectedEntity.hasComponent('RigidBody2D')" :title="t('rigidBody2D')" category="physics" open>
           <ComponentTools kind="RigidBody2D" />
+          <SimulationStatusPanel17 />
           <select v-model="bodyType" :aria-label="t('bodyType')"><option value="Dynamic">{{ t('dynamic') }}</option><option value="Kinematic">{{ t('kinematic') }}</option><option value="Static">{{ t('static') }}</option></select>
           <PropertyRow :label="t('massMode')"><select v-model="selectedEntity.rigidBody.massMode"><option value="Automatic">{{ t('automatic') }}</option><option value="Manual">{{ t('manualMass') }}</option></select></PropertyRow>
           <PropertyRow :label="t('continuousCollision')"><select v-model="selectedEntity.rigidBody.continuousCollision"><option value="Discrete">{{ t('discreteMode') }}</option><option value="Continuous">{{ t('continuousMode') }}</option></select></PropertyRow>
@@ -285,9 +286,9 @@
           <PropertyRow :label="t('colliderShape')"><select v-model="colliderShapeModel"><option v-for="kind in colliderShapeKinds" :key="kind" :value="kind">{{ kind }}</option></select></PropertyRow>
           <p class="physics-support-note">{{ colliderShapeSupport }}</p>
           <details class="compound-shapes">
-            <summary><span>{{ t('additionalShapes') }} ({{ selectedEntity.collider.shapes.length }})</span><button type="button" :disabled="selectedEntity.collider.shapes.length >= 32" @click.prevent="addColliderShape">＋</button></summary>
+            <summary :title="text17('radiusHint')"><span>{{ t('additionalShapes') }} ({{ selectedEntity.collider.shapes.length }})</span><button type="button" :disabled="selectedEntity.collider.shapes.length >= 32" @click.prevent="addColliderShape">＋</button></summary>
             <article v-for="(shape, index) in selectedEntity.collider.shapes" :key="shape.id">
-              <header><select v-model="shape.kind"><option v-for="kind in colliderShapeKinds" :key="kind">{{ kind }}</option></select><label><input v-model="shape.enabled" type="checkbox">{{ t('componentEnabled') }}</label><button type="button" @click="removeColliderShape(index)">×</button></header>
+              <header><select v-model="shape.kind" :aria-label="t('colliderShape')"><option v-for="kind in colliderShapeKinds" :key="kind">{{ kind }}</option></select><label><input v-model="shape.enabled" type="checkbox">{{ t('componentEnabled') }}</label><button type="button" @click="removeColliderShape(index)">×</button></header>
               <label><span>{{ t('colliderOffset') }}</span><div class="pair"><input v-model.number="shape.offset.x" type="number" step="0.01"><input v-model.number="shape.offset.y" type="number" step="0.01"></div></label>
               <label><span>{{ t('colliderSize') }}</span><div class="pair"><input v-model.number="shape.size.x" type="number" min="0.000001" step="0.1"><input v-model.number="shape.size.y" type="number" min="0.000001" step="0.1"></div></label>
               <label><span>{{ t('colliderRotation') }}</span><input v-model.number="shape.rotation" type="number" step="0.01"></label>
@@ -376,6 +377,8 @@ import { CircleEntity } from '../world/CircleEntity'
 import { TriangleEntity } from '../world/TriangleEntity'
 import { effectiveInertia, entityArea, finiteNumber, MIN_AREA, MIN_SIZE, normalizeEntity, syncDensityFromMass, syncMassFromDensity } from '../world/geometry'
 import ConnectionBuilder from './ConnectionBuilder.vue'
+import SimulationStatusPanel17 from './SimulationStatusPanel17.vue'
+import { simulationLabel17 as text17 } from '../editor/simulationLabels17'
 import RuntimeComponentsInspector from './RuntimeComponentsInspector.vue'
 import WorldComponentsInspector from './WorldComponentsInspector.vue'
 import GameplayComponentsInspector from './GameplayComponentsInspector.vue'
@@ -1032,7 +1035,7 @@ function setMultiGroups(value: string) { if (!canEdit.value) return; const group
 .pair { width: 100%; display: flex; gap: 6px; }.pair input { width: 50%; min-width: 0; }
 .physics-support-note { margin: -2px 0 2px; padding: 7px 8px; overflow-wrap: anywhere; border: 1px solid var(--border-subtle); border-radius: 7px; color: var(--text-muted); background: var(--surface-1); font-size: 11px; line-height: 1.4; }
 .compound-shapes { border: 1px solid var(--border-subtle); border-radius: 8px; background: var(--surface-1); }.compound-shapes>summary{min-height:31px;padding:3px 5px 3px 8px;display:flex;align-items:center;justify-content:space-between;list-style:none;color:var(--text-secondary);cursor:pointer}.compound-shapes>summary::-webkit-details-marker{display:none}.compound-shapes>summary button,.compound-shapes article header button{width:25px;min-width:25px;height:25px;border:1px solid var(--border-subtle);border-radius:6px;color:var(--accent);background:var(--surface-3)}.compound-shapes article{margin:6px;padding:7px;display:grid;gap:6px;border:1px solid var(--border-subtle);border-radius:7px}.compound-shapes article header{display:grid;grid-template-columns:minmax(0,1fr) auto 25px;align-items:center;gap:5px}.compound-shapes article header label{display:flex;align-items:center;gap:4px;white-space:nowrap}.compound-shapes article>label{display:grid;grid-template-columns:minmax(70px,.8fr) minmax(0,1.2fr);align-items:center;gap:6px}.compound-shapes article input{min-width:0;width:100%}.compound-shapes>p{margin:6px 8px 8px;color:var(--text-muted);font-size:11px;line-height:1.4}
-:deep(.number-range) { width: 100%; display: flex; align-items: center; gap: 7px; }:deep(.number-range input[type='range']) { min-width: 0; flex: 1; accent-color: var(--accent); }:deep(.number-range input[type='number']) { width: 72px; min-width: 60px; }
+:deep(.number-range) { width: 100%; display: flex; align-items: center; gap: 7px; }:deep(.number-range input[type='range']) { min-width: 0; flex: 1; accent-color: var(--accent); }:deep(.number-range input[type='number']) { width: 92px; min-width: 86px; flex: 0 0 92px; }
 :deep(.toggle) { width: 38px; height: 22px; padding: 3px; border: 0; border-radius: 99px; background: var(--surface-3); }:deep(.toggle i) { display: block; width: 16px; height: 16px; border-radius: 50%; background: var(--text-muted); transition: transform 180ms ease; }:deep(.toggle.active) { background: var(--accent); }:deep(.toggle.active i) { transform: translateX(16px); background: var(--accent-contrast); }
 :deep(.diagnostic-row) { min-height: 30px; display: flex; align-items: center; justify-content: space-between; gap: 8px; color: var(--text-muted); font-family: inherit; font-size:11px; }:deep(.diagnostic-row code) { color: var(--accent); font-family: var(--font-mono); font-size:11px; }:deep(.diagnostic-row.active code) { color: var(--warning); }
 .stacked-field { display: flex; flex-direction: column; gap: 6px; color: var(--text-secondary); font-family: inherit; font-size: 11px; }.stacked-field input, .stacked-field textarea { width: 100%; color: var(--text-secondary); font: inherit; }.stacked-field textarea { min-height: 58px; padding: 7px; resize: vertical; border: 1px solid var(--border-subtle); border-radius: 7px; background: var(--input-bg); }
@@ -1069,4 +1072,6 @@ function setMultiGroups(value: string) { if (!canEdit.value) return; const group
   :deep(.component-tools) { flex-wrap: wrap; }
   .compound-shapes article > label { grid-template-columns: 1fr; }
 }
+.compound-shapes{container-type:inline-size}.compound-shapes article{min-width:0}.compound-shapes label{flex-wrap:wrap;gap:6px}.compound-shapes label>span{white-space:normal;overflow-wrap:anywhere}.compound-shapes input,.compound-shapes select{min-height:34px;min-width:0;max-width:100%}
+.compound-shapes article header{grid-template-columns:minmax(0,1fr) 30px}.compound-shapes article header>select{grid-column:1/-1;width:100%}.compound-shapes article>label .pair{flex-wrap:wrap}.compound-shapes article>label .pair input{flex:1 1 86px}
 </style>

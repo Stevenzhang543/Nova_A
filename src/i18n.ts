@@ -1362,8 +1362,8 @@ Object.assign(zh, {
 })
 
 Object.assign(en, {
-  releaseLabel: 'Nova_A v26.16',
-  version: 'Nova_A v26.16',
+  releaseLabel: 'Nova_A v26.17',
+  version: 'Nova_A v26.17',
   quickPeerCounts: 'Quick instance-count presets',
   refreshInstances: 'Refresh status',
   stopAllInstances: 'Stop all',
@@ -1423,8 +1423,8 @@ Object.assign(en, {
 })
 
 Object.assign(de, {
-  releaseLabel: 'Nova_A v26.16',
-  version: 'Nova_A v26.16',
+  releaseLabel: 'Nova_A v26.17',
+  version: 'Nova_A v26.17',
   quickPeerCounts: 'Voreinstellungen für die Instanzanzahl',
   refreshInstances: 'Status aktualisieren',
   stopAllInstances: 'Alle stoppen',
@@ -1484,8 +1484,8 @@ Object.assign(de, {
 })
 
 Object.assign(zh, {
-  releaseLabel: 'Nova_A v26.16',
-  version: 'Nova_A v26.16',
+  releaseLabel: 'Nova_A v26.17',
+  version: 'Nova_A v26.17',
   quickPeerCounts: '快速选择实例数量',
   refreshInstances: '刷新状态',
   stopAllInstances: '全部停止',

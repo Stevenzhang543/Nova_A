@@ -82,6 +82,7 @@ export interface ColliderShapeDescriptor2D {
   offset: Vec2
   rotation: number
   size: Vec2
+  /** Legacy project metadata; full width/height in size are authoritative for child circles and ellipses. */
   radius: number
   points: Vec2[]
   enabled: boolean

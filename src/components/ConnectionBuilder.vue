@@ -1,7 +1,7 @@
 <template>
   <Teleport to="body">
     <div class="modal-scrim" @mousedown.self="emit('close')">
-      <section class="builder" role="dialog" aria-modal="true" v-modal-focus :aria-label="t('connectionBuilder')">
+      <section class="builder" @focusin="form17.focus" @change="form17.change" role="dialog" aria-modal="true" v-modal-focus :aria-label="t('connectionBuilder')">
       <header>
         <div>
           <span class="eyebrow">{{ t('connections') }}</span>
@@ -18,6 +18,7 @@
       </header>
 
       <div class="builder-body">
+        <p v-if="form17.error.value" class="form-error17" role="alert">{{ form17.error.value }}</p>
         <Transition name="step" mode="out-in">
           <section v-if="stage === 'objects'" key="objects" class="wizard-step">
             <div class="step-copy">
@@ -72,19 +73,20 @@
             </div>
             <details v-if="drawingComplete" class="advanced-physics">
               <summary>{{ t('connectionPhysics') }}</summary>
+              <p class="rope-units17">{{ simulationLabel17('ropeUnits') }}</p>
               <div class="physics-grid">
                 <label class="collision-toggle"><span><strong>{{ t('stringCollisions') }}</strong><small>{{ t('stringCollisionsDescription') }}</small></span><input v-model="collisionEnabled" type="checkbox"></label>
-                <label v-if="collisionEnabled"><span>{{ t('stringRadius') }}</span><input v-model.number="collisionRadius" type="number" min="0.000001" max="1000000" step="0.01"></label>
-                <label v-if="collisionEnabled"><span>{{ t('stringDensity') }}</span><input v-model.number="linearDensity" type="number" min="0.000001" max="1e50" step="0.01"></label>
-                <label><span>{{ t('ropeSegments') }}</span><input v-model.number="segmentCount" type="number" min="3" max="32" step="1"></label>
+                <label v-if="collisionEnabled"><span>{{ t('stringRadius') }}</span><input v-model.lazy.number="collisionRadius" type="number" min="0.000001" max="1000000" step="0.01"></label>
+                <label v-if="collisionEnabled"><span>{{ t('stringDensity') }}</span><input v-model.lazy.number="linearDensity" type="number" min="0.000001" max="1e50" step="0.01"></label>
+                <label><span>{{ t('ropeSegments') }}</span><input v-model.lazy.number="segmentCount" type="number" min="3" max="32" step="1"></label>
                 <label><span>{{ t('collideConnected') }}</span><input v-model="collideConnected" type="checkbox"></label>
                 <label><span>{{ t('stretchable') }}</span><input v-model="stretchable" type="checkbox"></label>
                 <label><span>{{ t('bendable') }}</span><input v-model="bendable" type="checkbox"></label>
-                <label><span>{{ t('stiffness') }}</span><input v-model.number="stiffness" type="number" min="0" max="1000000000000" step="1"></label>
-                <label><span>{{ t('connectionDamping') }}</span><input v-model.number="connectionDamping" type="number" min="0" max="1000000000" step="0.1"></label>
-                <label><span>{{ t('maxStretch') }}</span><input v-model.number="maxStretchPercent" type="number" min="0" max="99900" step="1"></label>
-                <label><span>{{ t('bendTolerance') }}</span><input v-model.number="bendingToleranceMass" type="number" min="0" max="1e50" step="0.1"></label>
-                <label><span>{{ t('stretchTolerance') }}</span><input v-model.number="stretchingToleranceMass" type="number" min="0" max="1e50" step="0.1"></label>
+                <label><span>{{ t('stiffness') }}</span><input v-model.lazy.number="stiffness" type="number" min="0" max="1000000000000" step="1"></label>
+                <label><span>{{ t('connectionDamping') }}</span><input v-model.lazy.number="connectionDamping" type="number" min="0" max="1000000000" step="0.1"></label>
+                <label><span>{{ t('maxStretch') }}</span><input v-model.lazy.number="maxStretchPercent" type="number" min="0" max="99900" step="1"></label>
+                <label><span>{{ t('bendTolerance') }}</span><input v-model.lazy.number="bendingToleranceMass" type="number" min="0" max="1e50" step="0.1"></label>
+                <label><span>{{ t('stretchTolerance') }}</span><input v-model.lazy.number="stretchingToleranceMass" type="number" min="0" max="1e50" step="0.1"></label>
               </div>
               <p v-if="segmentCount >= 28 || (collisionEnabled && segmentCount >= 20)" class="rope-warning">{{ t('ropePerformanceWarning') }}</p>
             </details>
@@ -103,6 +105,8 @@
 </template>
 
 <script setup lang="ts">
+import { useSimulationFormGuard17 } from '../editor/simulationForm17'
+import { simulationLabel17 } from '../editor/simulationLabels17'
 import { vModalFocus } from '../editor/modalFocus'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { t } from '../i18n'
@@ -132,6 +136,7 @@ import { worldTransform } from '../world/hierarchy'
 type Stage = 'objects' | 'path' | 'simulation'
 type VisiblePath = 'straight' | 'manual'
 
+const form17 = useSimulationFormGuard17(() => {})
 const props = defineProps<{ selectedId: number; connectionId: number | null }>()
 const emit = defineEmits<{ close: [] }>()
 const world = physicsState.world
@@ -207,7 +212,7 @@ function goBack() {
 }
 
 function copyHiddenPhysics(target: Connection): void {
-  if (existing) { target.name = existing.name; target.curvature = existing.curvature }
+  if (existing) Object.assign(target, JSON.parse(JSON.stringify(existing)) as Connection)
   target.stretchable = stretchable.value
   target.bendable = bendable.value
   target.stiffness = stiffness.value
@@ -506,6 +511,7 @@ onMounted(() => {
       const selectedFirst = existing.anchors[0].entityId === props.selectedId
       drawnAnchors.value = [{ ...selectedAnchor, localPoint: { ...selectedAnchor.localPoint } }, { ...partnerAnchor, localPoint: { ...partnerAnchor.localPoint } }]
       drawnPoints.value = selectedFirst ? existingRoute.map(point => ({ ...point })) : existingRoute.map(point => ({ ...point })).reverse()
+      stage.value = 'simulation'
     }
   }
 })
@@ -539,4 +545,5 @@ h2 { margin: 2px 0 0; font-size: 18px; letter-spacing: -.02em; }
 footer button { min-height: 35px; padding: 0 14px; border: 1px solid var(--border-subtle); border-radius: 9px; background: var(--surface-3); color: var(--text-secondary); font-size: 11px; }footer button.primary { min-width: 140px; color: var(--accent-contrast); border-color: var(--accent); background: var(--accent); }
 .step-enter-active, .step-leave-active { transition: opacity 180ms ease, transform 220ms cubic-bezier(.2,.8,.2,1); }.step-enter-from { opacity: 0; transform: translateX(24px); }.step-leave-to { opacity: 0; transform: translateX(-18px); }
 @media (max-width: 680px) { .path-picker, .object-picker { grid-template-columns: 1fr; }.path-picker button { min-height: 108px; }.step-indicator { display: none; }.center-toggle { align-self: flex-start; }.compact-copy { flex-wrap: wrap; }.preview-shell, .preview-shell canvas { min-height: 280px; } }
+.builder{container-type:inline-size}.physics-grid{grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr))}.physics-grid label{flex-wrap:wrap;align-items:stretch;flex-direction:column}.physics-grid input[type=number]{width:100%;min-width:86px;min-height:34px}.physics-grid input[type=checkbox]{align-self:flex-start}.builder h2,.builder h3,.builder strong,.builder p,.builder summary{overflow-wrap:anywhere;white-space:normal}.rope-units17,.form-error17{padding:8px 12px;line-height:1.5}.form-error17{color:var(--danger)}footer{flex-wrap:wrap}footer button{white-space:normal;overflow-wrap:anywhere}.preview-instruction,.preview-success{max-width:95%;white-space:normal}
 </style>

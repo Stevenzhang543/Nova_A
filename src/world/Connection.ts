@@ -607,6 +607,7 @@ export function normalizeConnection(connection: Connection, entities: Entity[]):
 export function connectionsFromJointComponents(entities: Entity[]): Connection[] {
   const result: Connection[] = []
   for (const entity of entities) {
+    if (!entity.enabled) continue
     for (const component of entity.componentMap.values()) {
       if (!(component instanceof Joint2D) || !component.enabled || component.removed || !component.targetEntityUuid) continue
       const target = entities.find(candidate => candidate.uuid === component.targetEntityUuid)
@@ -616,9 +617,6 @@ export function connectionsFromJointComponents(entities: Entity[]): Connection[]
       if (!component.initialized) {
         component.referenceOffset = rotate({ x: transformB.position.x - transformA.position.x, y: transformB.position.y - transformA.position.y }, -transformA.rotation)
         component.referenceAngle = normalizeAngle(transformB.rotation - transformA.rotation)
-        const anchorA = localPointToWorld(entity, component.anchor, entities)
-        const anchorB = localPointToWorld(target, component.connectedAnchor, entities)
-        if (component.kind === 'DistanceJoint2D' || component.kind === 'RopeJoint2D' || component.kind === 'SpringJoint2D') component.distance = Math.max(1e-6, Math.hypot(anchorB.x - anchorA.x, anchorB.y - anchorA.y))
         component.initialized = true
       }
       const connection = createConnection(-Math.max(1, entity.id), entities, [entity.id, target.id], ['center', 'center'])

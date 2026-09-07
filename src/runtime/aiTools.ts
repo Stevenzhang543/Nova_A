@@ -25,21 +25,25 @@ export interface StateMachineDocument {
 export const MAX_AI_AGENTS = 10_000
 export const MAX_AI_TICKS_PER_FRAME = 2_048
 export const MAX_PERCEPTION_RESULTS = 32
-const elapsed = new Map<string, number>(), signals = new Set<string>(), blackboards = new Map<string, Record<string, BlackboardValue>>()
+const elapsed = new Map<string, Map<string, number>>(), signals = new Map<string, number>(), blackboards = new Map<string, Record<string, BlackboardValue>>()
+const behaviorInputs = new Map<string, { tree: BehaviorTreeDocument; overrides: string }>()
+const MAX_NODE_EVALUATIONS_PER_TICK = 4096, MAX_NODE_EVALUATIONS_PER_FRAME = 65_536
 const tickElapsed = new Map<string, number>(), enteredMachines = new Map<string, string>()
 const behaviorDocuments = new Map<string, { source: string; name: string; tree: BehaviorTreeDocument; nodes: Map<string, BehaviorNode> }>()
 const stateDocuments = new Map<string, { source: string; name: string; machine: StateMachineDocument; states: Map<string, StateMachineDocument['states'][number]> }>()
-let tickCursor = 0
+let tickCursor = 0, signalSequence = 0
+const signalCursors = new Map<string, number>()
+const hasAiSignal = (uuid: string, name: string): boolean => (signals.get(name) ?? 0) > (signalCursors.get(uuid) ?? 0)
 export const aiDebugState = reactive({
   activeAgents: 0, tickedAgents: 0, deferredAgents: 0, droppedAgents: 0, nodeEvaluations: 0, perceptionQueries: 0, maximumPerceptionResults: 0,
-  perceptionCandidates: 0,
+  perceptionCandidates: 0, recordedTraces: 0, skippedTraces: 0,
   agents: [] as Array<{ entityUuid: string; entityName: string; tree: string; activeNode: string; result: boolean; blackboard: Record<string, BlackboardValue>; perceived: number; utility: Record<string, number> }>,
   machines: [] as Array<{ entityUuid: string; entityName: string; machine: string; activeState: string; lineage: string[]; transition: string }>
 })
 
 export let emitAiSignal: (name: string, entity: Entity) => void = () => undefined
 export function setAiSignalEmitter(emitter: typeof emitAiSignal): void { emitAiSignal = emitter }
-export function notifyAiSignal(name: string): void { const normalized = name.trim().slice(0, 128); if (normalized) signals.add(normalized) }
+export function notifyAiSignal(name: string): void { const normalized = name.trim().slice(0, 128); if (normalized) { if (!signals.has(normalized) && signals.size >= 1024) throw new Error('AI_SIGNAL_LIMIT: at most 1024 distinct pending broadcasts are supported.'); signals.set(normalized, ++signalSequence) } }
 export function perceptionSpatialCellSize(maximumRadius: number): number { return Math.max(1, Math.min(1_000_000, Number.isFinite(maximumRadius) ? maximumRadius : 0) / 32) }
 
 function scalar(value: unknown, fallback: BlackboardValue = false): BlackboardValue {
@@ -197,32 +201,39 @@ function runPerception(entity: Entity, tree: BehaviorTreeDocument, board: Record
   return total
 }
 
-interface TickDebug { activeNode: string; utility: Record<string, number> }
+function recordAiTrace(command: Parameters<typeof recordGraphTrace>[0]): void {
+  if (aiDebugState.recordedTraces < 256) { aiDebugState.recordedTraces++; recordGraphTrace(command) } else aiDebugState.skippedTraces++
+}
+interface TickDebug { remaining: number; exhausted: boolean; activeNode: string; utility: Record<string, number> }
 function tickNode(entity: Entity, graphUuid: string, nodes: ReadonlyMap<string, BehaviorNode>, id: string, board: Record<string, BlackboardValue>, dt: number, debug: TickDebug, depth = 0, visiting = new Set<string>()): boolean {
   if (depth > 32 || visiting.has(id)) { recordGraphError(graphUuid, id || 'root', 'Behavior tree contains a cycle or exceeds 32 levels'); return false }
+  if (debug.remaining-- <= 0 || aiDebugState.nodeEvaluations >= MAX_NODE_EVALUATIONS_PER_FRAME) { if (!debug.exhausted) recordGraphError(graphUuid, id, 'AI_NODE_BUDGET: tree evaluation exceeded its bounded tick/frame budget.'); debug.exhausted = true; return false }
   const node = nodes.get(id); if (!node) { recordGraphError(graphUuid, id || 'root', 'Behavior tree node is missing'); return false }
   const started = performance.now(); debug.activeNode = node.id; aiDebugState.nodeEvaluations++; visiting.add(id)
   let result = false, edgeUuid = ''
   if (node.type === 'Sequence') { result = true; for (const child of node.children) { edgeUuid = `${node.id}->${child}`; if (!tickNode(entity, graphUuid, nodes, child, board, dt, debug, depth + 1, new Set(visiting))) { result = false; break } } }
-  else if (node.type === 'Selector') { for (const child of node.children) { edgeUuid = `${node.id}->${child}`; if (tickNode(entity, graphUuid, nodes, child, board, dt, debug, depth + 1, new Set(visiting))) { result = true; break } } }
+  else if (node.type === 'Selector') { for (const child of node.children) { edgeUuid = `${node.id}->${child}`; if (tickNode(entity, graphUuid, nodes, child, board, dt, debug, depth + 1, new Set(visiting))) { result = true; break } if (debug.exhausted) break } }
   else if (node.type === 'UtilitySelector') {
     const candidates = node.children.flatMap((child, index) => { const target = nodes.get(child); if (!target) return []; const raw = target.scoreKey ? Number(board[target.scoreKey]) : 0; const score = (Number.isFinite(raw) ? raw : 0) * (target.weight ?? 1) + (target.bias ?? 0); debug.utility[child] = score; return [{ child, score, index }] }).sort((a, b) => b.score - a.score || a.index - b.index)
     if (candidates[0]) { edgeUuid = `${node.id}->${candidates[0].child}`; result = tickNode(entity, graphUuid, nodes, candidates[0].child, board, dt, debug, depth + 1, new Set(visiting)) }
-  } else if (node.type === 'Condition') result = node.condition === 'has_navigation_target' ? Boolean(entity.getComponent<NavigationAgent2D>('NavigationAgent2D')) : signals.has(node.condition)
+  } else if (node.type === 'Condition') result = node.condition === 'has_navigation_target' ? Boolean(entity.getComponent<NavigationAgent2D>('NavigationAgent2D')) : hasAiSignal(entity.uuid, node.condition)
   else if (node.type === 'BlackboardCondition') result = compareBlackboard(board[node.key ?? ''], node.operator, node.value ?? false)
   else if (node.type === 'SetBlackboard') { if (node.key) board[node.key] = scalar(node.value); result = Boolean(node.key) }
   else if (node.type === 'Perception') result = Number(board[`${node.key ?? node.condition}.count`] ?? 0) > 0
   else if (node.type === 'Action') { if (node.action || node.name) emitAiSignal(node.action || node.name, entity); result = true }
-  else { const key = `${entity.uuid}:${node.id}`, value = (elapsed.get(key) ?? 0) + dt; if (value >= node.seconds) { elapsed.delete(key); result = true } else elapsed.set(key, value) }
-  recordGraphTrace({ type: 'graphTrace', graphUuid, scopeUuid: entity.uuid, nodeUuid: node.id, edgeUuid, depth, durationMicros: (performance.now() - started) * 1_000, values: { entity: entity.uuid, node: node.name, result, state: 'behaviorTree' } })
+  else { const timers = elapsed.get(entity.uuid) ?? new Map<string, number>(); elapsed.set(entity.uuid, timers); const value = (timers.get(node.id) ?? 0) + dt; if (value >= node.seconds) { timers.delete(node.id); result = true } else timers.set(node.id, value) }
+  recordAiTrace({ type: 'graphTrace', graphUuid, scopeUuid: entity.uuid, nodeUuid: node.id, edgeUuid, depth, durationMicros: (performance.now() - started) * 1_000, values: { entity: entity.uuid, node: node.name, result, state: 'behaviorTree' } })
   return result
 }
 
 function tickBehavior(entity: Entity, behavior: BehaviorTree2D, entities: Entity[], dt: number, index: PerceptionIndex | null): void {
   const source = behaviorDocument(behavior.treeAsset); if (!source) return
   const started = performance.now(), tree = source.tree
-  const board = blackboards.get(entity.uuid) ?? { ...(tree.blackboard ?? {}) }; Object.assign(board, behavior.blackboardOverrides); blackboards.set(entity.uuid, board)
-  const perceived = index && tree.perception?.length ? runPerception(entity, tree, board, entities, index) : 0, debug: TickDebug = { activeNode: tree.root, utility: {} }, result = tickNode(entity, source.uuid, source.nodes, tree.root, board, Math.min(.25, Math.max(0, dt)), debug)
+  const overrides = JSON.stringify(behavior.blackboardOverrides), previous = behaviorInputs.get(entity.uuid)
+  if (previous && (previous.tree !== tree || previous.overrides !== overrides)) retireAiEntity(entity.uuid)
+  if (!behaviorInputs.has(entity.uuid)) { const initial = { ...(tree.blackboard ?? {}), ...(blackboards.get(entity.uuid) ?? {}), ...behavior.blackboardOverrides }; blackboards.set(entity.uuid, initial); behaviorInputs.set(entity.uuid, { tree, overrides }) }
+  const board = blackboards.get(entity.uuid)!
+  const perceived = index && tree.perception?.length ? runPerception(entity, tree, board, entities, index) : 0, debug: TickDebug = { remaining: MAX_NODE_EVALUATIONS_PER_TICK, exhausted: false, activeNode: tree.root, utility: {} }, result = tickNode(entity, source.uuid, source.nodes, tree.root, board, Math.min(.25, Math.max(0, dt)), debug)
   behavior.currentNode = debug.activeNode
   if (aiDebugState.agents.length < 512) aiDebugState.agents.push({ entityUuid: entity.uuid, entityName: entity.name, tree: source.name, activeNode: debug.activeNode, result, blackboard: { ...board }, perceived, utility: debug.utility })
   recordScriptFunction(source.uuid, source.name, 'BehaviorTree.tick', performance.now() - started, 0)
@@ -246,7 +257,7 @@ function tickMachine(entity: Entity, machine: StateMachine2D): void {
       enteredMachines.set(entity.uuid, entryKey)
     }
     for (const stateId of [...lineage].reverse()) { const state = states.get(stateId); if (state?.onUpdate) emitAiSignal(state.onUpdate, entity) }
-    const transition = value.transitions.map((candidate, index) => ({ candidate, index, depth: candidate.from === '*' ? Number.MAX_SAFE_INTEGER : lineage.indexOf(candidate.from) })).filter(item => item.depth >= 0 && signals.has(item.candidate.signal)).sort((a, b) => (b.candidate.priority ?? 0) - (a.candidate.priority ?? 0) || a.depth - b.depth || a.index - b.index)[0]?.candidate
+    const transition = value.transitions.map((candidate, index) => ({ candidate, index, depth: candidate.from === '*' ? Number.MAX_SAFE_INTEGER : lineage.indexOf(candidate.from) })).filter(item => item.depth >= 0 && hasAiSignal(entity.uuid, item.candidate.signal)).sort((a, b) => (b.candidate.priority ?? 0) - (a.candidate.priority ?? 0) || a.depth - b.depth || a.index - b.index)[0]?.candidate
     if (transition) {
       const next = states.get(transition.to)
       if (!next) recordGraphError(source.uuid, transition.to, 'Transition target state is missing')
@@ -261,16 +272,18 @@ function tickMachine(entity: Entity, machine: StateMachine2D): void {
     }
     const activeLineage = transition ? lineage : stateLineage(states, machine.currentState)
     if (aiDebugState.machines.length < 512) aiDebugState.machines.push({ entityUuid: entity.uuid, entityName: entity.name, machine: source.name, activeState: machine.currentState, lineage: activeLineage, transition: transition?.signal ?? '' })
-    recordGraphTrace({ type: 'graphTrace', graphUuid: source.uuid, scopeUuid: entity.uuid, nodeUuid: machine.currentState, edgeUuid: transition ? `${transition.from}->${transition.to}` : '', depth: 0, durationMicros: (performance.now() - started) * 1_000, values: { entity: entity.uuid, state: machine.currentState, transition: transition?.signal ?? '' } })
+    recordAiTrace({ type: 'graphTrace', graphUuid: source.uuid, scopeUuid: entity.uuid, nodeUuid: machine.currentState, edgeUuid: transition ? `${transition.from}->${transition.to}` : '', depth: 0, durationMicros: (performance.now() - started) * 1_000, values: { entity: entity.uuid, state: machine.currentState, transition: transition?.signal ?? '' } })
   }
   recordScriptFunction(source.uuid, source.name, 'StateMachine.tick', performance.now() - started, 0)
 }
 
 export function updateAi(entities: Entity[], dt: number, _frame: number): void {
-  Object.assign(aiDebugState, { activeAgents: 0, tickedAgents: 0, deferredAgents: 0, droppedAgents: 0, nodeEvaluations: 0, perceptionQueries: 0, maximumPerceptionResults: 0, perceptionCandidates: 0, agents: [], machines: [] })
+  Object.assign(aiDebugState, { activeAgents: 0, tickedAgents: 0, deferredAgents: 0, droppedAgents: 0, nodeEvaluations: 0, perceptionQueries: 0, maximumPerceptionResults: 0, perceptionCandidates: 0, recordedTraces: 0, skippedTraces: 0, agents: [], machines: [] })
   const candidates = entities.filter(entity => entity.enabled && (entity.getComponent<BehaviorTree2D>('BehaviorTree2D')?.enabled || entity.getComponent<StateMachine2D>('StateMachine2D')?.enabled)).sort((a, b) => a.uuid.localeCompare(b.uuid)), bounded = candidates.slice(0, MAX_AI_AGENTS)
   aiDebugState.activeAgents = bounded.length; aiDebugState.droppedAgents = Math.max(0, candidates.length - bounded.length)
   const boundedIds = new Set(bounded.map(entity => entity.uuid))
+  for (const uuid of signalCursors.keys()) if (!boundedIds.has(uuid)) signalCursors.delete(uuid)
+  for (const uuid of behaviorInputs.keys()) if (!boundedIds.has(uuid)) retireAiEntity(uuid)
   for (const key of tickElapsed.keys()) if (!boundedIds.has(key)) tickElapsed.delete(key)
   for (const key of blackboards.keys()) if (!boundedIds.has(key)) blackboards.delete(key)
   for (const key of enteredMachines.keys()) if (!boundedIds.has(key)) enteredMachines.delete(key)
@@ -304,6 +317,7 @@ export function updateAi(entities: Entity[], dt: number, _frame: number): void {
   for (const entity of bounded) {
     if (!selected.has(entity.uuid)) continue
     aiDebugState.tickedAgents++
+    const consumedThrough = signalSequence
     const behavior = entity.getComponent<BehaviorTree2D>('BehaviorTree2D')
     if (behavior?.enabled) {
       const interval = 1 / Math.max(1, behavior.tickRate), accumulated = tickElapsed.get(entity.uuid) ?? dt
@@ -311,10 +325,14 @@ export function updateAi(entities: Entity[], dt: number, _frame: number): void {
       tickElapsed.set(entity.uuid, accumulated % interval)
     }
     const machine = entity.getComponent<StateMachine2D>('StateMachine2D'); if (machine?.enabled) tickMachine(entity, machine)
+    signalCursors.set(entity.uuid, consumedThrough)
   }
-  signals.clear()
+  let consumed = signalSequence
+  for (const entity of bounded) consumed = Math.min(consumed, signalCursors.get(entity.uuid) ?? 0)
+  for (const [name, sequence] of signals) if (sequence <= consumed) signals.delete(name)
 }
 
 export function blackboardSnapshot(entityUuid: string): Record<string, BlackboardValue> { return { ...(blackboards.get(entityUuid) ?? {}) } }
 export function setBlackboardValue(entityUuid: string, key: string, value: BlackboardValue): void { const normalized = key.trim().slice(0, 80); if (!normalized) return; const board = blackboards.get(entityUuid) ?? {}; board[normalized] = scalar(value); blackboards.set(entityUuid, board) }
-export function resetAi(): void { elapsed.clear(); signals.clear(); blackboards.clear(); tickElapsed.clear(); enteredMachines.clear(); behaviorDocuments.clear(); stateDocuments.clear(); tickCursor = 0; Object.assign(aiDebugState, { activeAgents: 0, tickedAgents: 0, deferredAgents: 0, droppedAgents: 0, nodeEvaluations: 0, perceptionQueries: 0, maximumPerceptionResults: 0, perceptionCandidates: 0, agents: [], machines: [] }) }
+export function retireAiEntity(uuid: string): void { signalCursors.delete(uuid); elapsed.delete(uuid); blackboards.delete(uuid); behaviorInputs.delete(uuid); tickElapsed.delete(uuid); enteredMachines.delete(uuid) }
+export function resetAi(): void { signalCursors.clear(); signalSequence = 0; behaviorInputs.clear(); elapsed.clear(); signals.clear(); blackboards.clear(); tickElapsed.clear(); enteredMachines.clear(); behaviorDocuments.clear(); stateDocuments.clear(); tickCursor = 0; Object.assign(aiDebugState, { activeAgents: 0, tickedAgents: 0, deferredAgents: 0, droppedAgents: 0, nodeEvaluations: 0, perceptionQueries: 0, maximumPerceptionResults: 0, perceptionCandidates: 0, recordedTraces: 0, skippedTraces: 0, agents: [], machines: [] }) }

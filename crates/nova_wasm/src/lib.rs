@@ -67,6 +67,21 @@ impl WasmRuntimeWorld {
         self.inner.destroy_connection(handle)
     }
 
+    pub fn query_filtered_json(&self, source: &str) -> Result<String, JsValue> {
+        if source.len() > 32768 {
+            return Err(JsValue::from_str(
+                "PHYSICS_QUERY_LIMIT: request exceeds32KiB",
+            ));
+        }
+        let request: nova_physics::PhysicsQueryRequest2D = serde_json::from_str(source)
+            .map_err(|error| JsValue::from_str(&format!("PHYSICS_QUERY_INPUT: {error}")))?;
+        let hits = self
+            .inner
+            .query_filtered(&request)
+            .map_err(JsValue::from_str)?;
+        serde_json::to_string(&hits).map_err(|error| JsValue::from_str(&error.to_string()))
+    }
+
     pub fn raycast_json(
         &self,
         origin_x: f64,
@@ -201,6 +216,13 @@ impl WasmRuntimeWorld {
             .map_err(JsValue::from_str)
     }
 
+    pub fn shift_origin(&mut self, x: f64, y: f64) -> Result<(), JsValue> {
+        self.inner
+            .physics_mut()
+            .shift_origin(x, y)
+            .map_err(JsValue::from_str)
+    }
+
     pub fn teleport_body(
         &mut self,
         handle: u32,
@@ -250,6 +272,25 @@ impl WasmRuntimeWorld {
                 _ => DroppedTimePolicy::Drop,
             },
         });
+    }
+
+    pub fn set_physics_quality_iterations(
+        &mut self,
+        minimum_substeps: usize,
+        velocity_iterations: usize,
+        position_iterations: usize,
+        sleep_linear_threshold: f64,
+        sleep_angular_threshold: f64,
+        time_to_sleep: f64,
+    ) {
+        self.inner.set_physics_quality_iterations(
+            minimum_substeps,
+            velocity_iterations,
+            position_iterations,
+            sleep_linear_threshold,
+            sleep_angular_threshold,
+            time_to_sleep,
+        );
     }
 
     pub fn set_physics_quality(

@@ -1,3 +1,4 @@
+import { activateStreamEntities, deactivateStreamEntities } from './streamLifecycle'
 import { reactive } from 'vue'
 import { physicsState } from '../store/physics'
 import type { Entity } from '../world/Entity'
@@ -8,7 +9,7 @@ import { instantiateSceneAsset } from './sceneInstances'
 import { tilePlacementDescriptors, worldToTile } from './tilemap'
 
 const MAX_ACTIVE_TILE_PLACEMENTS = 50_000
-const instances = new Map<string, { entities: Entity[]; active: boolean }>()
+const instances = new Map<string, { entities: Entity[]; enabled: Map<string, boolean>; active: boolean }>()
 export const tileSceneRuntimeState = reactive({ activePlacements: 0, cachedPlacements: 0, spawned: 0, deferred: 0, invalidAssets: 0 })
 
 function key(host: Entity, descriptor: ReturnType<typeof tilePlacementDescriptors>[number]): string {
@@ -25,7 +26,6 @@ function chunksNearFocus(entity: Entity, component: TileMap2D, focus: Vec2, enti
 
 export function updateTileSceneRuntime(entities: Entity[], focus: Vec2): void {
   const desired = new Map<string, { host: Entity; descriptor: ReturnType<typeof tilePlacementDescriptors>[number] }>()
-  let dirty = false
   tileSceneRuntimeState.deferred = 0; tileSceneRuntimeState.invalidAssets = 0
   for (const host of entities) {
     const component = host.getComponent<TileMap2D>('TileMap2D')
@@ -37,12 +37,17 @@ export function updateTileSceneRuntime(entities: Entity[], focus: Vec2): void {
   }
   for (const [instanceKey, instance] of instances) {
     const active = desired.has(instanceKey)
-    if (instance.active !== active) { for (const entity of instance.entities) entity.enabled = active; dirty = true }
+    if (instance.active !== active) {
+      if (!active) { instance.enabled = new Map(instance.entities.map(entity => [entity.uuid, entity.enabled])); deactivateStreamEntities(instance.entities.filter(entity => entity.enabled), entities) }
+      for (const entity of instance.entities) entity.enabled = active && instance.enabled.get(entity.uuid) !== false
+      if (active) activateStreamEntities(instance.entities.filter(entity => entity.enabled))
+    }
     instance.active = active
   }
   for (const [instanceKey, value] of desired) {
     const cached = instances.get(instanceKey)
-    if (cached) { cached.active = true; for (const entity of cached.entities) entity.enabled = true; continue }
+    if (cached) continue
+    if (instances.size >= MAX_ACTIVE_TILE_PLACEMENTS) { tileSceneRuntimeState.deferred++; continue }
     const created = value.descriptor.kind === 'scene'
       ? instantiateSceneAsset(value.descriptor.asset, value.descriptor.position, false)
       : instantiatePrefab(value.descriptor.asset, value.descriptor.position, false)
@@ -55,18 +60,18 @@ export function updateTileSceneRuntime(entities: Entity[], focus: Vec2): void {
       root.ownerUuid = value.host.uuid
       root.runtimePersistence = 'Scene'
     }
-    instances.set(instanceKey, { entities: created, active: true }); tileSceneRuntimeState.spawned += created.length; dirty = true
+    instances.set(instanceKey, { entities: created, enabled: new Map(created.map(entity => [entity.uuid, entity.enabled])), active: true }); tileSceneRuntimeState.spawned += created.length; activateStreamEntities(created)
   }
   tileSceneRuntimeState.activePlacements = [...instances.values()].filter(instance => instance.active).length
   tileSceneRuntimeState.cachedPlacements = instances.size
-  if (dirty) physicsState.world.invalidateRuntime()
 }
 
-export function resetTileSceneRuntime(): void {
+export function resetTileSceneRuntime(detachOnly = false): void {
   const entityIds = new Set([...instances.values()].flatMap(instance => instance.entities.map(entity => entity.id)))
+  if (!detachOnly) {
   for (let index = physicsState.world.connections.length - 1; index >= 0; index--) if (physicsState.world.connections[index].anchors.some(anchor => entityIds.has(anchor.entityId))) physicsState.world.connections.splice(index, 1)
   for (let index = physicsState.world.entities.length - 1; index >= 0; index--) if (entityIds.has(physicsState.world.entities[index].id)) physicsState.world.entities.splice(index, 1)
+  }
   instances.clear()
   Object.assign(tileSceneRuntimeState, { activePlacements: 0, cachedPlacements: 0, spawned: 0, deferred: 0, invalidAssets: 0 })
-  if (entityIds.size) physicsState.world.invalidateRuntime()
 }

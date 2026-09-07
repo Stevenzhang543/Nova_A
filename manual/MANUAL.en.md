@@ -1,5 +1,61 @@
-# Nova_A 26.16 Complete Manual
+# Nova_A 26.17 Complete Manual
 
+<!-- NOVA_V2617_START -->
+## 26.17 — physics, navigation and streamed worlds
+
+Engine: **26.17.0** · Project Format 2/schema 29.
+
+### Build and verify physics, navigation and streamed worlds
+
+The X/Y readout keeps its timer in the exported readout_elapsed property. Ordinary Rhai locals are initialized on each callback; use exported properties for persistent callback state.
+
+Use the separate26.17 platformer, navigation and physics-puzzle references as starting projects. Keep an original copy. The generated reference describes intended behavior; the release evidence contains the separately edited project, actual downloads and observed player behavior. Project Format2/schema29 and the existing Rhai/visual format remain unchanged. The complete declared-field map is PHYSICS_WORLD_FIELD_MATRIX_26_17.md, including nested shapes/materials/effects, all connection fields and global profiles.
+
+### Author a body with deliberate units and ownership
+
+Open Design, select an entity, expand its physics sections and resize the Inspector. World Studio provides larger Character, Areas, Navigation, AI, Streaming and Simulation forms. Open Physics and world status for read-only body counts, configuration rebuilds, navigation time, streaming estimates and origin offset. Fields use meters, seconds, kilograms, newtons and radians internally. Main Inspector rotation is shown in degrees; child collider rotation is radians. Linear velocity is m/s, angular velocity rad/s, density kg/m² and inertia kg·m². Positive global gravity pulls toward negative world Y.
+
+Choose Dynamic for force integration, Kinematic for commanded movement or Static for scenery. Animation ownership treats animation-authored transforms kinematically and retains authored velocity for later Physics ownership. Automatic mass sums enabled collider geometry with signed parent/world scale and effective material density; Manual uses the authored mass. Automatic inertia and explicit inertia are separate choices. A linked material changes effective coefficients without replacing inline values. Deliberately applying an asset in the Inspector remains an authoring edit. Test both asset and inline material behavior after saving.
+
+Edit size, offsets, rotation, density, friction, restitution, threshold, damping, gravity, force and torque after the body has already run. Pause to compare authored settings with observed contact/sleep state. Resume and confirm that the next native synchronization applies the edit while unrelated bodies retain their handles and velocities. Use Undo/Redo, Stop and reopen to distinguish a runtime change from a saved authoring change. Invalid finite/range drafts in the world/settings forms restore their previous value with an error.
+
+### Build the platformer and inspect contacts
+
+In the platformer, Player uses CharacterBody2D. Set floor snap, safe margin, step height, maximum slides, slope angle, coyote time and platform carry deliberately. A/D and Space move/jump; Play, Pause and Step should apply one movement integration per fixed tick. Try the low step, one-way Platform and Moving Platform. The demonstration moving platform travels continuously: test within20seconds or author a reversing controller for longer play.
+
+Change platform friction and collision masks; test landing from above and passage from below. Physics layers are0–31, while navigation layers use1–32; rendering layers do not filter physics queries. Compound children have independent masks, sensor and one-way settings. Width/height are authoritative for child circles/ellipses; the old child radius is compatibility metadata. Concave/chain dynamic restrictions and static WorldBoundary requirements must be resolved before running.
+
+The character uses a conservative envelope including solid child offsets and rotations. Gaps in a compound character are enclosed; this is not an exact concave character cast. Step-up checks overhead clearance. Idle floor refresh and moving-platform support refresh prevent removed floors from imparting stale velocity. Continuous collision mode costs more than discrete mode; compare tunneling and stacking using the actual chosen tick/substep/solver profile.
+
+### Build a constraint puzzle and keep connection identity
+
+Open the puzzle, select Jointed Box and edit its distance and local anchors. Joint type controls whether axis, angular/linear limits, motor speed and force cap apply. Positive break force/torque thresholds enable breakage; legacy zero means unlimited. A broken component joint stays broken until disabling/re-enabling, removing it or resetting the session. Explicit distance is retained on first Play. Reference offset/angle initialize once.
+
+Open an existing rope from Connections. Its saved route now opens directly in the physics stage. Set collision radius in meters, linear density in kg/m, stiffness, damping, stretch/bend settings and point count. The legacy Segments label selects3–32 simulated points. Save explicitly rebuilds/rearms the rope; it preserves its UUID, enabled state and hidden joint settings. Cancel discards the draft. Test an out-of-range point count, restore the prior value, Cancel, edit again, Save, Undo/Redo and reopen. The small cloth example is a lattice of bodies and connections; it does not provide a fabric or self-collision solver.
+
+### Bake navigation and connect AI
+
+Select World Navigation and choose Manual, SceneGeometry or TileMap source. Manual defines a boundary; SceneGeometry captures eligible colliders; TileMap captures tile content, transforms, masks and source assets and always uses a grid. Choose a positive cell size and agent clearance. Larger clearance can close a narrow passage. Grid AStar, HierarchicalAStar/fallback and FlowField share weighted links and cost areas; polygon mode uses its own visibility search with continuous clearance. Directed links may chain between disconnected islands. Four FlowField goals are cached per grid.
+
+Bake publishes only a complete, current result. While a large bake is active, Cancel remains available; the progress bar can move controls, so follow the visible button. Cancelled work does not automatically restart. Correct the source and Bake again. Moving a collider/obstacle, changing scale, clearance, costs, links, tile content or asset bytes invalidates affected routes. A stale agent stops until it receives a current path. Do not mistake bakedRevision in a saved document for a portable baked artifact.
+
+In the navigation reference, WASD moves Player and Navigator pursues it around the barrier. Set speed, acceleration, radius, stopping distance, repath interval, avoidance range/priority/neighbors and target UUID. Acceleration zero preserves current velocity. Static obstacles do not contribute predicted motion. Enable the Navigation and AI packages. The behavior asset includes perception and Wait; inspect tags, radius, field of view, result limit and blackboard key. Blackboard overrides initialize on source/override changes; subsequent runtime writes survive ticks. Deferred agents consume broadcast generations once. Missing assets/packages and work limits are diagnoses to repair, not silent fallback features.
+
+### Stream real membership and shift the origin
+
+Inspect Stream Cell, its referenced scene, dependencies, load/unload/prefetch distances, priority, cache policy, ownership, save key and memory estimate. Prefetch prepares detached data; Active installs actual entities and queryable bodies. The hierarchy should show Streamed Landmark. Shared owners retain membership until the last active lease releases. Disabled authored children stay disabled. Persistent objects and descendants retain stable UUIDs and internal connections after cell release.
+
+Cancel pending streaming and confirm it stays stopped. Repair a missing dependency, cycle, changed source or insufficient estimate budget before Retry. Estimates are MiB admission inputs, not measured heap usage. A failed portal preload can be retried by repairing its source and toggling preload off/on. Portal destination UUID/name resolves after scene commit, resets arrival velocity and prevents an immediate bounce. Missing arrival targets report an explicit error.
+
+While paused in Play, select Player and Shift origin to selected entity. Relative geometry, native handles, velocity, sleeping/contact state, rope points, navigation targets and cached/streamed coordinates must agree. Absolute position equals current world position plus origin offset. Stop restores the authored scene. Repeated shifts and reloaded handoffs must not duplicate persistent UUIDs or move their rope twice.
+
+### Save, export and qualify the same behavior
+
+Save the edited project, reopen it through Open Project and repeat the key interactions. Export Web through Build, retain the complete ZIP, extract it and serve it over HTTP. Compare the visible X/Y readout and controls with the paused Inspector. The audit independently compares all authored scene/entity/component/connection values and every package/file hash, then runs only the downloaded files in a fresh browser process. Combined export-and-player browser navigation timed out during local diagnostics; those attempts remain failures, while separate-process player checks are reported individually.
+
+Use the profiler on the intended device. More position iterations now perform additional positional correction independently of velocity iterations, so prior performance assumptions must be remeasured. Queries, grid caches, AI evaluation/traces, streaming membership and handoffs have explicit resource bounds; saturation produces a diagnosis rather than a partial result. Native/WASM analytic, fuzz, replay and cleanup checks are programmer evidence. Real mouse/keyboard, layout, save and exported-play checks are separate. Software rendering, a finite local soak and measured workloads do not establish universal maximum performance, physical assistive-technology support, publisher signing or every device's behavior.
+
+<!-- NOVA_V2617_END -->
 <!-- NOVA_V2616_START -->
 ## 26.16 — animation, audio and interface production
 

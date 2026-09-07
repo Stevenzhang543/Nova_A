@@ -4,15 +4,15 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE.md)
 [![Tier 1](https://img.shields.io/badge/Tier%201-Windows%20%7C%20Web-63c6ff)](./docs/PLATFORM_BUILD_MATRIX_5_0.md)
-[![Release](https://img.shields.io/badge/release-26.16-63c6ff)]()
+[![Release](https://img.shields.io/badge/release-26.17-63c6ff)]()
 
 Nova_A is an open-source 2D game engine and desktop editor built with Rust, WebAssembly, Vue 3, and Tauri.
 
-Release **26.16** connects animation, audio and interface production through shared integer timing, real saved-asset preview, bounded PCM playback, readable authoring, responsive/localized UI and native text input. An animated menu joins music, captions and explicit timeline buttons through save/reopen and a complete Web export. It retains all40 library starters, typed Rhai/code↔visual authoring and Project Format2/schema29. Exact source/build evidence and external qualification boundaries remain explicit.
+Release **26.17** strengthens retained physics bindings, geometric queries, character movement, navigation/AI, actual scene streaming and origin shifting. Readable world forms and runtime diagnostics support three new physics workflows, complete English/German/Chinese lessons and a declared-field manual. It retains all 40 library starters, typed Rhai/code↔visual authoring and Project Format 2/schema 29. Exact source-bound checks and external qualification boundaries remain explicit.
 
 **Manual:** [interactive English/German/Chinese webpage](./manual/index.html) · [English Markdown](./manual/MANUAL.en.md) · [Deutsch](./manual/MANUAL.de.md) · [中文](./manual/MANUAL.zh-CN.md)
 
-**Current work:** [26.16 release notes](docs/RELEASE_NOTES_26_16.md) · [language contract](docs/VERSION_26_12_LANGUAGE.md) · [API support matrix](docs/SCRIPT_SUPPORT_MATRIX_26_12.md) · [every 26.16 edit](docs/EDIT_LEDGER_26_16.md) · [26.12–26.16 tracker](docs/IMPLEMENTATION_TRACKER_26_12_TO_26_16.md) · [26.11–26.20 coding manual](docs/ROADMAP_26_11_TO_26_20.md). The [26.11 audit](docs/AUDIT_26_11.md), [source map](docs/SOURCE_MAP_26_11.md), [feature inventory](docs/FEATURE_INVENTORY_26_11.md) and [edit ledger](docs/EDIT_LEDGER_26_11.md) remain the inherited baseline. Each milestone has its own source snapshot and release directory.
+**Current work:** [26.17 release notes](docs/RELEASE_NOTES_26_17.md) · [language contract](docs/VERSION_26_12_LANGUAGE.md) · [API support matrix](docs/SCRIPT_SUPPORT_MATRIX_26_12.md) · [every 26.17 edit](docs/EDIT_LEDGER_26_17.md) · [26.17 tracker](docs/IMPLEMENTATION_TRACKER_26_17.md) · [26.12–26.16 history](docs/IMPLEMENTATION_TRACKER_26_12_TO_26_16.md) · [26.11–26.20 coding manual](docs/ROADMAP_26_11_TO_26_20.md). The [26.11 audit](docs/AUDIT_26_11.md), [source map](docs/SOURCE_MAP_26_11.md), [feature inventory](docs/FEATURE_INVENTORY_26_11.md) and [edit ledger](docs/EDIT_LEDGER_26_11.md) remain the inherited baseline. Each milestone has its own source snapshot and release directory.
 
 ## What is new in 26.10
 

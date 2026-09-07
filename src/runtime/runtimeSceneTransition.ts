@@ -1,4 +1,6 @@
 import type { Entity } from '../world/Entity'
+import type { Vec2 } from '../world/types'
+import type { NavigationAgent2D } from '../world/components'
 import type { SceneManager } from '../world/SceneManager'
 import { normalizeConnection, type Connection } from '../world/Connection'
 import { worldTransform } from '../world/hierarchy'
@@ -7,6 +9,7 @@ export interface RuntimeSceneHost<View> {
   scenes: Pick<SceneManager, 'scenes' | 'activeScene' | 'activeSceneUuid' | 'navigationHistory' | 'navigationIndex' | 'setActive'>
   world: { entities: Entity[]; connections: Connection[]; allocateId(): number; allocateConnectionId(): number; invalidateRuntime(): void }
   createEntity(data: Record<string, unknown>, id: number): Entity
+  origin?(): Vec2
   captureView(): View
   restoreView(view: View): void
   applyView(scene: Record<string, unknown>, entities: Entity[]): void
@@ -57,6 +60,14 @@ export function prepareRuntimeSceneTransition<View>(host: RuntimeSceneHost<View>
     if (!normalizeConnection(connection, entities)) throw Error(`Runtime scene connection is invalid: ${connection.uuid ?? connection.id}`)
     connections.push(connection); connectionUuids.add(connection.uuid)
   }
+  const origin = host.origin?.() ?? { x: 0, y: 0 }
+  if (![origin.x, origin.y].every(Number.isFinite)) throw Error('Runtime scene origin must be finite.')
+  for (const entity of entities) if (!persistent.has(entity.uuid)) {
+    if (!entity.parentUuid) { entity.transform.position.x -= origin.x; entity.transform.position.y -= origin.y }
+    const agent = entity.getComponent<NavigationAgent2D>('NavigationAgent2D', true)
+    if (agent) { agent.targetPosition.x -= origin.x; agent.targetPosition.y -= origin.y; for (const point of agent.path) { point.x -= origin.x; point.y -= origin.y } }
+  }
+  for (const connection of connections) if (!retainedConnections.includes(connection)) for (const node of connection.ropeNodes) { node.position.x -= origin.x; node.position.y -= origin.y }
   let attempted = false, error: string | null = null
   return {
     preservedEntityUuids: [...persistent], get error() { return error },

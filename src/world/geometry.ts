@@ -229,8 +229,8 @@ function normalizeTransform(entity: GeometryEntity): void {
   entity.transform.position.x = finiteNumber(entity.transform.position.x)
   entity.transform.position.y = finiteNumber(entity.transform.position.y)
   entity.transform.rotation = normalizeAngle(entity.transform.rotation)
-  entity.transform.scale.x = positiveNumber(entity.transform.scale.x, 1)
-  entity.transform.scale.y = positiveNumber(entity.transform.scale.y, 1)
+  entity.transform.scale.x = (finiteNumber(entity.transform.scale.x, 1) < 0 ? -1 : 1) * positiveNumber(entity.transform.scale.x, 1)
+  entity.transform.scale.y = (finiteNumber(entity.transform.scale.y, 1) < 0 ? -1 : 1) * positiveNumber(entity.transform.scale.y, 1)
 }
 
 function normalizeMotion(entity: GeometryEntity): void {
@@ -314,7 +314,7 @@ export function normalizeEntity(entity: GeometryEntity): void {
     collider.rotation = normalizeAngle(collider.rotation)
     collider.radiusX = positiveNumber(collider.radiusX, 1)
     collider.radiusY = positiveNumber(collider.radiusY, collider.radiusX)
-    if (collider.kind !== 'EllipseCollider2D') {
+    if (collider.shapeModel === 'Box') {
       const hull = convexHull(collider.vertices)
       if (hull.length >= 3 && polygonArea(hull) > MIN_AREA) collider.vertices = hull
     }
