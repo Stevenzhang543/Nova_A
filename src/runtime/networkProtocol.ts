@@ -67,14 +67,15 @@ export function networkChecksum(value: unknown): string {
   return `${(first >>> 0).toString(16).padStart(8, '0')}${(second >>> 0).toString(16).padStart(8, '0')}${utf8Bytes(source).toString(16).padStart(8, '0')}`
 }
 
-export function validateNetworkValue(value: unknown, depth = 0): string | null {
+export function validateNetworkValue(value: unknown, depth = 0, budget = { remaining: 65_536 }): string | null {
+  if (--budget.remaining < 0) return 'Payload exceeds the 65,536-value work bound.'
   if (depth > MAX_NETWORK_DEPTH) return `Payload exceeds maximum depth ${MAX_NETWORK_DEPTH}.`
   if (value === null || typeof value === 'boolean') return null
   if (typeof value === 'number') return Number.isFinite(value) ? null : 'Payload numbers must be finite.'
   if (typeof value === 'string') return utf8Bytes(value) <= 65_536 ? null : 'Payload string exceeds 65,536 UTF-8 bytes.'
   if (Array.isArray(value)) {
     if (value.length > MAX_NETWORK_COLLECTION_ITEMS) return `Payload array exceeds ${MAX_NETWORK_COLLECTION_ITEMS} items.`
-    for (const item of value) { const error = validateNetworkValue(item, depth + 1); if (error) return error }
+    for (const item of value) { const error = validateNetworkValue(item, depth + 1, budget); if (error) return error }
     return null
   }
   const source = record(value)
@@ -84,7 +85,7 @@ export function validateNetworkValue(value: unknown, depth = 0): string | null {
   for (const [key, item] of entries) {
     if (!key || utf8Bytes(key) > 128) return 'Payload keys must contain 1–128 UTF-8 bytes.'
     if (SENSITIVE_KEYS.test(key)) return `Payload key ${key} is reserved for secrets and cannot enter networking, replay, save, or diagnostics.`
-    const error = validateNetworkValue(item, depth + 1); if (error) return error
+    const error = validateNetworkValue(item, depth + 1, budget); if (error) return error
   }
   return null
 }
@@ -162,6 +163,7 @@ export interface ReliablePendingPacket { peer: string; packet: NetworkPacket; so
 
 export class ReliablePacketWindow {
   private pending = new Map<string, ReliablePendingPacket>()
+  private expired: ReliablePendingPacket[] = []
   constructor(private readonly maximum: number) {}
   track(peer: string, packet: NetworkPacket, source: string, now: number): boolean {
     if (this.pending.size >= Math.max(1, this.maximum)) return false
@@ -178,11 +180,12 @@ export class ReliablePacketWindow {
     const due: ReliablePendingPacket[] = []
     for (const [key, item] of this.pending) {
       if (now - item.sentAt < retryMs) continue
-      if (item.attempts >= maximumAttempts) { this.pending.delete(key); continue }
+      if (item.attempts >= maximumAttempts) { this.pending.delete(key); this.expired.push(item); if (this.expired.length > Math.max(1, this.maximum)) this.expired.shift(); continue }
       item.attempts++; item.sentAt = now; due.push(item)
     }
     return due
   }
+  takeExpired(): ReliablePendingPacket[] { return this.expired.splice(0) }
   get size(): number { return this.pending.size }
   clearPeer(peer: string): number {
     let removed = 0
@@ -193,7 +196,7 @@ export class ReliablePacketWindow {
     }
     return removed
   }
-  clear(): void { this.pending.clear() }
+  clear(): void { this.pending.clear(); this.expired.splice(0) }
 }
 
 export interface SimulatedDelivery { dropped: boolean; copies: number; delayMs: number; reordered: boolean }

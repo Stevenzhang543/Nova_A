@@ -149,6 +149,54 @@
   --connection-broken: #c93944;
 }
 
+/* 26.20: user-authored palette roles, shared by every themed editor surface. */
+:root[data-theme='light'][data-palette='cloud-blue'] {
+  --color-background: #F7F9FC; --color-surface: #FFFFFF;
+  --color-primary: #4F6F8F; --color-secondary: #8EA9B8; --color-accent: #7FA6A0; --color-text-primary: #263746;
+}
+:root[data-theme='light'][data-palette='meadow-cream'] {
+  --color-background: #FBF7EA; --color-surface: #F1F3E7;
+  --color-primary: #607A64; --color-secondary: #A5B58A; --color-accent: #C9AF78; --color-text-primary: #38463B;
+}
+:root[data-theme='light'][data-palette='blush-berry'] {
+  --color-background: #FFF5F7; --color-surface: #F8E7EC;
+  --color-primary: #9F5F75; --color-secondary: #D7A6B5; --color-accent: #A799BA; --color-text-primary: #4A3941;
+}
+:root[data-theme='dark'][data-palette='midnight-blue'] {
+  --color-background: #0F141A; --color-surface: #171E27;
+  --color-primary: #527397; --color-secondary: #3F586F; --color-accent: #6D8D8A; --color-text-primary: #D8E0E8;
+}
+:root[data-theme='dark'][data-palette='night-garden'] {
+  --color-background: #171518; --color-surface: #211E23;
+  --color-primary: #806F8D; --color-secondary: #5F6D78; --color-accent: #738778; --color-text-primary: #DDD8DF;
+}
+:root[data-palette] {
+  --bg-base: var(--color-background); --bg-canvas: var(--color-background);
+  --surface-1: var(--color-surface); --surface-2: var(--color-surface);
+  --surface-3: color-mix(in srgb, var(--color-secondary) 12%, var(--color-surface));
+  --surface-hover: color-mix(in srgb, var(--color-secondary) 22%, var(--color-surface));
+  --surface-raised: var(--surface-3); --surface-popover: var(--color-surface);
+  --surface-inset: var(--color-background);
+  --surface-glass: color-mix(in srgb, var(--color-surface) 90%, transparent);
+  --input-bg: var(--color-surface); --field-bg: var(--input-bg);
+  --text-primary: var(--color-text-primary);
+  --text-secondary: color-mix(in srgb, var(--color-text-primary) 90%, var(--color-surface));
+  --text-muted: color-mix(in srgb, var(--color-text-primary) 78%, var(--color-surface));
+  --border-subtle: color-mix(in srgb, var(--color-text-primary) 24%, var(--color-surface));
+  --border-strong: color-mix(in srgb, var(--color-text-primary) 45%, var(--color-surface));
+  --accent: var(--color-primary); --accent-strong: var(--color-primary);
+  --accent-secondary: var(--color-secondary);
+  --accent-soft: color-mix(in srgb, var(--color-primary) 16%, transparent);
+  --creation: var(--color-accent); --creation-soft: color-mix(in srgb, var(--color-accent) 16%, transparent);
+  --selection-bg: var(--accent-soft); --selection-text: var(--text-primary);
+  --focus-ring: var(--color-text-primary); --drag-target: var(--color-accent);
+  --accent-contrast: #ffffff;
+  --canvas-grid: color-mix(in srgb, var(--color-secondary) 25%, var(--color-background));
+  --canvas-grid-label: var(--text-muted);
+}
+/* Dark primary colors are backgrounds; text links need a lighter derived ink. */
+:root[data-theme='dark'][data-palette] { --accent: color-mix(in srgb, var(--color-primary) 55%, var(--color-text-primary)); --accent-contrast: var(--color-background); }
+
 :root[data-theme='dark'][data-high-contrast='true'] {
   --bg-base: #050608;
   --bg-canvas: #080a0d;
@@ -932,3 +980,39 @@ html body #app :where(p, li, td, th, .body-copy) {
     min-height: 30px;
   }
 }
+
+/* 26.20 all-panel audit: grow controls with text instead of fixed glyph boxes. */
+#app :where(.hierarchy-actions button,.hierarchy-filters button,.state-button,.authoring-palette .favorite) {
+  min-width: calc(26px * var(--ui-scale)); width: calc(26px * var(--ui-scale));
+  min-height: calc(var(--line-control) + 8px); height: auto;
+  flex: 0 0 calc(26px * var(--ui-scale)); padding: 2px;
+}
+#app .hierarchy-header > .hierarchy-filters { grid-template-columns: minmax(0,1fr) calc(30px * var(--ui-scale)) calc(30px * var(--ui-scale)); }
+#app :where(.scene-menu > summary,.asset-overflow > summary) { min-width: calc(30px * var(--ui-scale)); width: auto; min-height: calc(var(--line-control) + 10px); height: auto; padding: 4px; }
+#app .authoring-palette .type-card { padding-right: calc(30px * var(--ui-scale)); }
+#app .learning-tabs { flex: 0 0 auto; flex-wrap: wrap; }
+#app .guide-list button { flex-shrink: 0; height: auto; min-height: calc(2 * var(--line-body) + 12px); grid-template-columns: calc(20px * var(--ui-scale)) minmax(0,1fr); }
+#app :where(.learning-tabs,.studio-header nav,.production-header nav,.build-header nav) button { height: auto; min-height: calc(var(--line-control) + 12px); white-space: normal; overflow-wrap: anywhere; padding-block: 6px; flex-shrink: 0; }
+#app :where(.studio-header nav,.production-header nav,.build-header nav) { flex-wrap: wrap; }
+#app .automation-studio .card > header { flex-wrap: wrap; }
+#app .automation-studio .card > header select { flex: 1 1 100%; width: 100%; max-width: 100%; }
+#app .automation-studio .permissions label { height: auto; min-height: calc(var(--line-control) + 10px); flex-wrap: wrap; overflow-wrap: anywhere; }
+#app .automation-studio .actions button { height: auto; white-space: normal; padding-block: 6px; min-height: calc(var(--line-control) + 12px); }
+#app .production-panel .data-layout label { display: flex; flex-direction: column; align-items: stretch; height: auto; gap: 5px; }
+#app .production-panel .data-layout label select { width: 100%; max-width: 100%; }
+#app .production-panel .data-layout button { height: auto; white-space: normal; padding-block: 6px; }
+:root[data-ui-scale='large'] #app .build-panel .field-grid,
+:root[data-ui-scale='xlarge'] #app .build-panel .field-grid { grid-template-columns: minmax(0,1fr); }
+#app .presentation-panel .table-editor > header { flex-wrap: wrap; }
+#app .presentation-panel .table-editor > header select { flex: 1 1 100%; width: 100%; max-width: 100%; }
+
+/* Keep the named Automation areas consistent with the shared narrow grid. */
+@media (max-width:1100px) {
+  #app .automation-studio .studio-grid { grid-template-areas: 'author' 'preview' 'trace'; }
+}
+#app .hierarchy-filters select { grid-column: 1 / -1; }
+#app .production-panel .data-assets > button { flex-shrink: 0; min-height: calc(var(--line-control) + 14px); overflow-wrap: anywhere; }
+#app .project-health .issues button { min-width: calc(28px * var(--ui-scale)); flex-shrink: 0; }
+/* This dialog is teleported to body, outside #app. */
+.authoring-palette .favorite { width: calc(28px * var(--ui-scale)); min-width: calc(28px * var(--ui-scale)); height: auto; min-height: calc(var(--line-control) + 8px); padding: 2px; }
+.authoring-palette .type-card { padding-right: calc(34px * var(--ui-scale)); }

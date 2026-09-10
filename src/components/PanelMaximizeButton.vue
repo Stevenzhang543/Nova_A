@@ -11,6 +11,6 @@ const copy={en:{maximize:'Maximize panel',restore:'Restore panel layout'},de:{ma
 const label=computed(()=>copy[preferencesState.locale][active.value?'restore':'maximize'])
 </script>
 <style scoped>
-.panel-maximize{flex:0 0 auto;min-width:30px!important;min-height:30px!important;padding:3px 6px!important;border:1px solid var(--border-subtle)!important;border-radius:6px!important;background:var(--surface-2)!important;color:var(--text-primary)!important;font:15px/1 var(--font-sans)!important}
+.panel-maximize{flex:0 0 auto;min-width:calc(30px * var(--ui-scale))!important;min-height:calc(30px * var(--ui-scale))!important;height:auto!important;padding:3px 6px!important;border:1px solid var(--border-subtle)!important;border-radius:6px!important;background:var(--surface-2)!important;color:var(--text-primary)!important;font:calc(15px * var(--ui-scale))/1 var(--font-ui)!important}
 .panel-maximize[aria-pressed=true]{border-color:var(--accent)!important;background:var(--accent-soft)!important}
 </style>

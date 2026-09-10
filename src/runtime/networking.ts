@@ -16,6 +16,7 @@ import {
   stableNetworkJson,
   utf8Bytes,
   validatePayloadSchema,
+  validateNetworkValue,
   type NetworkPacket
 } from './networkProtocol'
 import {
@@ -91,6 +92,7 @@ export const networkingState = reactive({
   sentBytes: 0, receivedBytes: 0, sentPackets: 0, receivedPackets: 0, droppedPackets: 0, invalidPackets: 0, schemaRejected: 0, rateLimited: 0,
   reliableSent: 0, reliableAcknowledged: 0, reliableResent: 0, reliableExpired: 0, reliablePending: 0, duplicatePackets: 0, outOfOrderPackets: 0,
   rpcCalls: 0, rpcRejected: 0, snapshots: 0, inputFrames: 0, lateJoins: 0, rollbacks: 0, replayedInputs: 0, predictionCorrections: 0, divergences: 0,
+  snapshotPageEntities: 0, snapshotDeferredEntities: 0,
   reconnectAttempts: 0, pingMs: null as number | null, currentTick: 0, bandwidthOutKbps: 0, bandwidthInKbps: 0,
   replayRejected: 0, authenticationRejected: 0, authorityTransfers: 0, interestCulled: 0, sceneHandoffs: 0, disconnectCleanups: 0,
   ownership: [] as Array<{ entityUuid: string; ownerPeerId: string }>,
@@ -193,26 +195,33 @@ const sequenceByChannel = new Map<string, number>(), inboundSequences = new Map<
 let reliableWindow = new ReliablePacketWindow(productionSettings.networking.maximumPendingReliable)
 const outboundRate = new NetworkRateLimiter(), inboundRate = new NetworkRateLimiter(), rpcRate = new NetworkRateLimiter()
 const rpcHandlers = new Map<string, (payload: unknown, context: { sender: string; tick: number }) => void>()
+const snapshotCursors = new Map<string, number>()
 const remoteSnapshots: NetworkPacket[] = [], remoteInputs = new Map<string, Map<number, InputSnapshot>>()
 const localHistory: Array<{ tick: number; input: InputSnapshot; checksum: string; snapshot: SnapshotPayload }> = []
 const replayProtection = new NetworkReplayProtectionWindow(), authorityTable = new NetworkAuthorityTable(), peerInterests = new Map<string, NetworkInterestView>()
 const verifiedPeers = new Set<string>()
 const handshakenPeers = new Set<string>()
 const peerSources = new Map<string, string>()
+const peerEpochs = new Map<string, string>()
+const retiredPeerEpochs = new Map<string, number>()
+function pruneRetiredEpochs(): void { for (const [key, until] of retiredPeerEpochs) if (until < Date.now()) retiredPeerEpochs.delete(key) }
 const sourcePeers = new Map<string, string>()
 const scheduledDeliveries = new Set<ReturnType<typeof setTimeout>>()
 const baselinePending = new Map<string, Set<string>>()
+const baselineSending = new Set<string>()
 const baselineTransfers = new Map<string, { transferId: string; count: number; checksum: string; chunks: Map<number, string>; bytes: number; startedAt: number }>()
 const deferredInbound = new Map<string, Map<string, DeferredInboundPacket>>()
 let deferredInboundCount = 0
 const preAdmissionRpcs: PreAdmissionRpc[] = []
 const rollbackTimeline = new NetworkTimeline<NetworkRollbackEntry>(600), replicationDiffs = new NetworkTimeline<NetworkReplicationDiff>(2_000)
-const interpolationTargets = new Map<string, { position?: [number, number]; rotation?: number; velocity?: [number, number]; remaining: number }>()
+const interpolationTargets = new Map<string, { sender: string; position?: [number, number]; rotation?: number; velocity?: [number, number]; remaining: number }>()
 let localInterest: NetworkInterestView | null = null
 let sceneHandoffHandler: ((sceneUuid: string, spawnTag: string, peerId: string) => void | Promise<void>) | null = null
 let serviceAbort: AbortController | null = null
 const serviceHandles: NetworkServiceHandle[] = []
 let reconnectAllowed = false
+let startupPromise: Promise<void> | null = null
+function requireConnectionGeneration(generation: number): void { if (generation !== connectionGeneration) throw new DOMException('Network session opening was cancelled.', 'AbortError') }
 
 function networkSessionId(): string { let hash = 0x811c9dc5; const source = `${productionSettings.networking.sessionName}:${productionSettings.networking.schemaVersion}`; for (const char of source) hash = Math.imul(hash ^ char.charCodeAt(0), 0x01000193); return `session-${(hash >>> 0).toString(16).padStart(8, '0')}` }
 function peerIdentity(): string { const uuid = typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`; return `${productionSettings.networking.playerName.replace(/[^a-zA-Z0-9_.-]/g, '_').slice(0, 32)}-${uuid.slice(0, 12)}` }
@@ -228,7 +237,7 @@ function authorityClaimTrusted(sender: string, source: string): boolean {
   if (transport?.kind === 'native-udp') return source === productionSettings.networking.endpoint.replace(/^udp:\/\//i, '')
   return false
 }
-function nextSequence(channelId: string, peer = '*'): number { const destination = peer || '*', key = `${destination}:${channelId}`, baseline = sequenceByChannel.get(key) ?? (destination === '*' ? 0 : sequenceByChannel.get(`*:${channelId}`) ?? 0), next = (baseline + 1) & 0x7fff_ffff; sequenceByChannel.set(key, next || 1); return next || 1 }
+function nextSequence(channelId: string, peer = '*', commit = true): number { const destination = peer || '*', key = `${destination}:${channelId}`, baseline = sequenceByChannel.get(key) ?? (destination === '*' ? 0 : sequenceByChannel.get(`*:${channelId}`) ?? 0), next = (baseline + 1) & 0x7fff_ffff; if (commit) sequenceByChannel.set(key, next || 1); return next || 1 }
 const MAX_SEQUENCE = 0x7fff_ffff
 function sequenceDistance(previous: number, current: number): number { if (current === previous) return 0; return current > previous ? current - previous : MAX_SEQUENCE - previous + current }
 function nextExpectedSequence(previous: number): number { return previous >= MAX_SEQUENCE ? 1 : previous + 1 }
@@ -247,10 +256,14 @@ function refreshProductionDiagnostics(): void {
   networkingState.replicationDiffs.splice(0, networkingState.replicationDiffs.length, ...replicationDiffs.snapshot())
 }
 function removePeer(peerId: string, reason: string): void {
+  const epoch = peerEpochs.get(peerId); pruneRetiredEpochs()
+  if (epoch && retiredPeerEpochs.size < 4096) retiredPeerEpochs.set(`${peerId}:${epoch}`, Date.now() + productionSettings.networking.security.maximumPacketAgeMs)
+  baselineSending.delete(peerId); snapshotCursors.delete(peerId)
+  for (const [uuid, target] of interpolationTargets) if (target.sender === peerId) interpolationTargets.delete(uuid)
   const index = networkingState.peerDetails.findIndex(item => item.id === peerId)
   if (index >= 0) networkingState.peerDetails.splice(index, 1)
   networkingState.peers = networkingState.peerDetails.length
-  verifiedPeers.delete(peerId); handshakenPeers.delete(peerId); remoteInputs.delete(peerId); peerInterests.delete(peerId); const source = peerSources.get(peerId); peerSources.delete(peerId); if (source && sourcePeers.get(source) === peerId) sourcePeers.delete(source); baselinePending.delete(peerId); baselineTransfers.delete(peerId); clearDeferredInbound(peerId); replayProtection.clearPeer(peerId); inboundRate.clearPrefix(`${peerId}:`); rpcRate.clearPrefix(`${peerId}:`)
+  verifiedPeers.delete(peerId); handshakenPeers.delete(peerId); peerEpochs.delete(peerId); remoteInputs.delete(peerId); peerInterests.delete(peerId); const source = peerSources.get(peerId); peerSources.delete(peerId); if (source && sourcePeers.get(source) === peerId) sourcePeers.delete(source); baselinePending.delete(peerId); baselineTransfers.delete(peerId); clearDeferredInbound(peerId); replayProtection.clearPeer(peerId); inboundRate.clearPrefix(`${peerId}:`); rpcRate.clearPrefix(`${peerId}:`)
   if (transport?.kind === 'native-udp') transport.unbindPeer?.(peerId)
   let releasedNetworkState = reliableWindow.clearPeer(peerId)
   for (const key of [...sequenceByChannel.keys()]) if (key.startsWith(`${peerId}:`)) { sequenceByChannel.delete(key); releasedNetworkState++ }
@@ -272,21 +285,24 @@ function pruneDisconnectedPeers(now = Date.now()): void {
 
 function cancelScheduledDeliveries(): void { for (const timer of scheduledDeliveries) globalThis.clearTimeout(timer); scheduledDeliveries.clear() }
 async function closeNetworkServices(): Promise<void> { serviceAbort?.abort(); serviceAbort = null; const handles = serviceHandles.splice(0); await Promise.all(handles.map(handle => handle.close().catch(() => undefined))) }
-async function openNetworkServices(): Promise<void> {
-  await closeNetworkServices(); serviceAbort = new AbortController()
+async function openNetworkServices(generation: number): Promise<void> {
+  await closeNetworkServices(); requireConnectionGeneration(generation)
+  const abort = new AbortController(); serviceAbort = abort
   const selected = selectedNetworkServiceIds(productionSettings.networking)
   for (const kind of ['identity', 'lobby', 'relay'] as NetworkServiceKind[]) {
     if (!selected[kind]) continue
-    const handle = await openReviewedNetworkService(kind, productionSettings.networking, { sessionId: networkingState.sessionId, localPeerId: networkingState.localPeerId, role: productionSettings.networking.role, signal: serviceAbort.signal })
+    const handle = await openReviewedNetworkService(kind, productionSettings.networking, { sessionId: networkingState.sessionId, localPeerId: networkingState.localPeerId, role: productionSettings.networking.role, signal: abort.signal })
+    if (generation !== connectionGeneration || abort.signal.aborted) { await handle.close().catch(() => undefined); requireConnectionGeneration(generation); throw new DOMException('Network service opening was cancelled.', 'AbortError') }
     serviceHandles.push(handle)
     const operation = kind === 'identity' ? 'identify' : kind === 'lobby' ? (productionSettings.networking.role === 'client' ? 'discover' : 'publish') : 'connect'
     await handle.request(operation, Object.freeze({ sessionName: productionSettings.networking.sessionName, role: productionSettings.networking.role, peerId: networkingState.localPeerId }))
+    requireConnectionGeneration(generation)
     addEvent(`Reviewed ${kind} service ${selected[kind]} opened for ${operation}.`)
   }
 }
 function resetConnectionPeerState(): void {
   for (const peer of [...networkingState.peerDetails]) removePeer(peer.id, 'session reset')
-  networkingState.peerDetails.splice(0); networkingState.peers = 0; remoteSnapshots.splice(0); remoteInputs.clear(); inboundSequences.clear(); reliableBuffers.clear(); peerSources.clear(); sourcePeers.clear(); baselinePending.clear(); baselineTransfers.clear(); clearDeferredInbound(); preAdmissionRpcs.splice(0); verifiedPeers.clear(); handshakenPeers.clear(); peerInterests.clear(); interpolationTargets.clear(); replayProtection.clear(); reliableWindow.clear(); outboundRate.clear(); inboundRate.clear(); rpcRate.clear()
+  networkingState.peerDetails.splice(0); networkingState.peers = 0; remoteSnapshots.splice(0); remoteInputs.clear(); inboundSequences.clear(); reliableBuffers.clear(); peerSources.clear(); peerEpochs.clear(); retiredPeerEpochs.clear(); baselineSending.clear(); snapshotCursors.clear(); sourcePeers.clear(); baselinePending.clear(); baselineTransfers.clear(); clearDeferredInbound(); preAdmissionRpcs.splice(0); verifiedPeers.clear(); handshakenPeers.clear(); peerInterests.clear(); interpolationTargets.clear(); replayProtection.clear(); reliableWindow.clear(); outboundRate.clear(); inboundRate.clear(); rpcRate.clear()
 }
 
 async function transportSend(source: string, packet: NetworkPacket, target: string, resend = false): Promise<boolean> {
@@ -316,9 +332,10 @@ export async function sendNetworkPacket(kind: NetworkPacket['kind'], payload: un
   const targets = contract.delivery === 'reliable-ordered' && kind !== 'ack' && !target && networkingState.peerDetails.length ? networkingState.peerDetails.map(peer => peer.id) : [target]
   let deliveries: Array<{ destination: string; packet: NetworkPacket; source: string; bytes: number }>
   try {
+    const payloadError = validateNetworkValue(payload); if (payloadError) throw new Error(payloadError)
     if (utf8Bytes(stableNetworkJson(payload)) > contract.maximumPayloadBytes) throw new Error(`Packet payload exceeds channel ${channelId}.`)
     deliveries = targets.map(destination => {
-      const packet = securePacket(createNetworkPacket({ sessionId: networkingState.sessionId, sender: networkingState.localPeerId, channel: channelId, delivery: contract.delivery, sequence: nextSequence(channelId, destination || '*'), ack: null, tick, schema: productionSettings.networking.schemaVersion, kind, payload })), source = serializeNetworkPacket(packet), bytes = utf8Bytes(source)
+      const packet = securePacket(createNetworkPacket({ sessionId: networkingState.sessionId, sender: networkingState.localPeerId, channel: channelId, delivery: contract.delivery, sequence: nextSequence(channelId, destination || '*', false), ack: null, tick, schema: productionSettings.networking.schemaVersion, kind, payload })), source = serializeNetworkPacket(packet), bytes = utf8Bytes(source)
       if (bytes > productionSettings.networking.maximumPacketBytes) throw new Error('Packet exceeds the configured byte bound.')
       return { destination, packet, source, bytes }
     })
@@ -327,12 +344,13 @@ export async function sendNetworkPacket(kind: NetworkPacket['kind'], payload: un
   const limit = productionSettings.networking.bandwidthKbps * 1024 / 8
   const totalBytes = deliveries.reduce((sum, item) => sum + item.bytes, 0)
   if (budgetBytes + totalBytes > limit) { networkingState.droppedPackets += deliveries.length; channelStat(channelId).dropped += deliveries.length; return false }
-  budgetBytes += totalBytes
   if (contract.delivery === 'reliable-ordered' && kind !== 'ack') {
     if (!reliableWindow.canTrack(deliveries.length)) { networkingState.droppedPackets += deliveries.length; networkingState.reliableExpired += deliveries.length; return false }
     for (const item of deliveries) { if (!reliableWindow.track(item.destination || '*', item.packet, item.source, now)) { networkingState.droppedPackets++; networkingState.reliableExpired++; return false }; networkingState.reliableSent++ }
     networkingState.reliablePending = reliableWindow.size
   }
+  budgetBytes += totalBytes
+  for (const item of deliveries) sequenceByChannel.set(`${item.destination || '*'}:${item.packet.channel}`, item.packet.sequence)
   if (kind === 'resync') for (const item of deliveries) if (item.destination) { const pending = baselinePending.get(item.destination) ?? new Set<string>(); pending.add(`${item.packet.channel}:${item.packet.sequence}`); baselinePending.set(item.destination, pending) }
   const delivered = await Promise.all(deliveries.map(item => transportSend(item.source, item.packet, item.destination)))
   return delivered.every(Boolean)
@@ -340,20 +358,28 @@ export async function sendNetworkPacket(kind: NetworkPacket['kind'], payload: un
 
 async function sendAck(packet: NetworkPacket, _peer: string): Promise<void> { const ack = securePacket(createNetworkPacket({ sessionId: networkingState.sessionId, sender: networkingState.localPeerId, channel: packet.channel, delivery: packet.delivery, sequence: 0, ack: packet.sequence, tick, schema: productionSettings.networking.schemaVersion, kind: 'ack', payload: null })); await transportSend(serializeNetworkPacket(ack), ack, packet.sender) }
 async function sendAuthoritativeBaseline(peerId: string, reliable: NetworkChannelDefinition): Promise<void> {
+  baselineSending.add(peerId); baselinePending.set(peerId, new Set())
   const document: BaselineDocument = { format: 'nova-network-baseline', version: 1, save: exportMultiplayerSave(lastEntities, tick), authority: authorityTable.entries(), scenes: networkingState.peerDetails.map(peer => ({ peerId: peer.id, sceneUuid: peer.sceneUuid })).filter(item => item.sceneUuid).slice(0, 64) }
   const source = stableNetworkJson(document), configuredByteBudget = Math.max(1_024, productionSettings.networking.bandwidthKbps * 1024 / 8), maximumChunkBytes = Math.max(128, Math.min(48_000, reliable.maximumPayloadBytes - 2_048, productionSettings.networking.maximumPacketBytes - 4_096, configuredByteBudget - 768))
   const chunks: string[] = []
-  for (let offset = 0; offset < source.length;) { let end = Math.min(source.length, offset + maximumChunkBytes); while (end > offset && utf8Bytes(source.slice(offset, end)) > maximumChunkBytes) end--; if (end <= offset) throw new Error('The authoritative baseline cannot fit the configured packet limits.'); chunks.push(source.slice(offset, end)); offset = end }
+  for (let offset = 0; offset < source.length;) {
+    let low = offset, high = Math.min(source.length, offset + maximumChunkBytes)
+    while (low < high) { const end = Math.ceil((low + high) / 2); if (utf8Bytes(JSON.stringify(source.slice(offset, end))) - 2 <= maximumChunkBytes) low = end; else high = end - 1 }
+    if (low <= offset) throw new Error('The authoritative baseline cannot fit the configured packet limits.')
+    chunks.push(source.slice(offset, low)); offset = low
+  }
   if (!chunks.length || chunks.length > 256 || utf8Bytes(source) > 8 * 1024 * 1024) throw new Error('The authoritative baseline exceeds the bounded 8 MiB / 256 chunk limit.')
   const transferId = `base-${tick.toString(36)}-${networkChecksum(source).slice(0, 12)}`, checksum = networkChecksum(source)
-  const generation = connectionGeneration, byteBudget = configuredByteBudget, messageBudget = Math.max(1, Math.min(productionSettings.networking.maximumMessagesPerSecond, reliable.messagesPerSecond)); let windowStarted = performance.now(), windowBytes = 0, windowMessages = 0
+  const generation = connectionGeneration, targetEpoch = peerEpochs.get(peerId), byteBudget = configuredByteBudget, messageBudget = Math.max(1, Math.min(productionSettings.networking.maximumMessagesPerSecond, reliable.messagesPerSecond)); let windowStarted = performance.now(), windowBytes = 0, windowMessages = 0
   for (let index = 0; index < chunks.length; index++) {
     const estimate = Math.min(byteBudget, utf8Bytes(chunks[index]) + 768), elapsed = performance.now() - windowStarted
     if (windowMessages >= messageBudget || windowBytes + estimate > byteBudget) { await new Promise(resolve => globalThis.setTimeout(resolve, Math.max(1, 1_000 - elapsed))); windowStarted = performance.now(); windowBytes = 0; windowMessages = 0 }
-    if (generation !== connectionGeneration || !transport || networkingState.status !== 'connected') throw new Error('Authoritative baseline transfer was cancelled with the session.')
+    if (generation !== connectionGeneration || !transport || networkingState.status !== 'connected' || !handshakenPeers.has(peerId) || peerEpochs.get(peerId) !== targetEpoch) throw new Error('Authoritative baseline transfer was cancelled with the session or peer.')
     if (!await sendNetworkPacket('resync', { transferId, index, count: chunks.length, checksum, chunk: chunks[index] } satisfies BaselineChunkPayload, reliable.id, peerId)) throw new Error(`Authoritative baseline chunk ${index + 1}/${chunks.length} could not be queued.`)
     windowBytes += estimate; windowMessages++
   }
+  baselineSending.delete(peerId)
+  if (!baselinePending.get(peerId)?.size) { baselinePending.delete(peerId); drainDeferredInbound(peerId) }
 }
 function queuePreAdmissionRpc(payload: RpcPayload, channelId: string): boolean {
   if (channel(channelId)?.delivery !== 'reliable-ordered' || preAdmissionRpcs.length >= Math.max(1, productionSettings.networking.maximumPendingReliable)) return false
@@ -398,7 +424,7 @@ function drainDeferredInbound(peerId: string): void {
 }
 
 function processPacket(packet: NetworkPacket, peer: string): void {
-  if (packet.kind === 'ack') { if (packet.ack !== null && (reliableWindow.acknowledge(packet.sender, packet.channel, packet.ack) || reliableWindow.acknowledgeBootstrap(packet.channel, packet.ack))) networkingState.reliableAcknowledged++; const baseline = baselinePending.get(packet.sender); if (packet.ack !== null && baseline) { baseline.delete(`${packet.channel}:${packet.ack}`); if (!baseline.size) { baselinePending.delete(packet.sender); addEvent(`Authoritative baseline acknowledged by ${packet.sender}.`); drainDeferredInbound(packet.sender) } }; networkingState.reliablePending = reliableWindow.size; return }
+  if (packet.kind === 'ack') { if (packet.ack !== null && (reliableWindow.acknowledge(packet.sender, packet.channel, packet.ack) || reliableWindow.acknowledgeBootstrap(packet.channel, packet.ack))) networkingState.reliableAcknowledged++; const baseline = baselinePending.get(packet.sender); if (packet.ack !== null && baseline) { baseline.delete(`${packet.channel}:${packet.ack}`); if (!baseline.size && !baselineSending.has(packet.sender)) { baselinePending.delete(packet.sender); addEvent(`Authoritative baseline acknowledged by ${packet.sender}.`); drainDeferredInbound(packet.sender) } }; networkingState.reliablePending = reliableWindow.size; return }
   if (packet.kind === 'hello' || packet.kind === 'join') {
     const payload = packet.payload && typeof packet.payload === 'object' ? packet.payload as Partial<HelloPayload> : {}, claimedRole = payload.role === 'server' || payload.role === 'host' ? payload.role : 'client', localRole = productionSettings.networking.role
     const trustedAuthorityRoute = authorityClaimTrusted(packet.sender, peer)
@@ -406,11 +432,12 @@ function processPacket(packet: NetworkPacket, peer: string): void {
     const hello: HelloPayload = { role: admittedRole, playerName: typeof payload.playerName === 'string' ? payload.playerName.slice(0, 80) : packet.sender, lateJoin: payload.lateJoin === true }, wasKnown = handshakenPeers.has(packet.sender)
     if (!updatePeer(packet.sender, hello)) { networkingState.droppedPackets++; networkingState.schemaRejected++; addEvent(`Peer ${packet.sender} was rejected because the session is full.`, 'warning'); return }
     peerSources.set(packet.sender, peer); sourcePeers.set(peer, packet.sender)
+    peerEpochs.set(packet.sender, packet.security?.epoch ?? '')
     if (transport?.kind === 'native-udp') transport.bindPeer?.(packet.sender, peer)
     handshakenPeers.add(packet.sender); const reliable = channelByDelivery('reliable-ordered', 'events')
     if (!wasKnown && claimedRole !== admittedRole) addEvent(`Peer ${packet.sender} requested ${claimedRole} authority and was admitted as client.`, 'warning')
     if (!wasKnown && packet.kind === 'hello' && reliable) void sendNetworkPacket('join', { role: localRole, playerName: productionSettings.networking.playerName, lateJoin: productionSettings.networking.lateJoin } satisfies HelloPayload, reliable.id, packet.sender)
-    if (!wasKnown && tick > 0 && productionSettings.networking.lateJoin && (localRole === 'server' || localRole === 'host')) { networkingState.lateJoins++; if (reliable) void sendAuthoritativeBaseline(packet.sender, reliable).catch(error => { baselinePending.delete(packet.sender); drainDeferredInbound(packet.sender); networkingState.lastError = error instanceof Error ? error.message : String(error); addEvent(networkingState.lastError, 'error') }) }
+    if (!wasKnown && tick > 0 && productionSettings.networking.lateJoin && (localRole === 'server' || localRole === 'host')) { networkingState.lateJoins++; if (reliable) void sendAuthoritativeBaseline(packet.sender, reliable).catch(error => { removePeer(packet.sender, 'failed authoritative baseline'); networkingState.lastError = error instanceof Error ? error.message : String(error); addEvent(networkingState.lastError, 'error') }) }
     if (!wasKnown) flushPreAdmissionRpcs(packet.sender)
     addEvent(`${hello.playerName} joined as ${hello.role}.`); return
   }
@@ -420,7 +447,7 @@ function processPacket(packet: NetworkPacket, peer: string): void {
     const value = packet.payload && typeof packet.payload === 'object' ? packet.payload as Partial<AuthorityPayload> : {}, entityUuid = typeof value.entityUuid === 'string' ? value.entityUuid.slice(0, 128) : '', targetPeerId = typeof value.targetPeerId === 'string' ? value.targetPeerId.slice(0, 80) : '', remoteRole = networkingState.peerDetails.find(item => item.id === packet.sender)?.role ?? 'client'
     const authorized = productionSettings.networking.allowAuthorityTransfer && ((remoteRole === 'server' || remoteRole === 'host') || authorityTable.owner(entityUuid) === packet.sender) && (targetPeerId === networkingState.localPeerId || networkingState.peerDetails.some(item => item.id === targetPeerId))
     if (!authorized || !authorityTable.transfer(entityUuid, targetPeerId)) { networkingState.schemaRejected++; addEvent(`Authority transfer from ${packet.sender} was rejected.`, 'warning'); return }
-    networkingState.authorityTransfers++; refreshProductionDiagnostics(); addEvent(`Authority for ${entityUuid} transferred to ${targetPeerId}.`); return
+    interpolationTargets.delete(entityUuid); networkingState.authorityTransfers++; refreshProductionDiagnostics(); addEvent(`Authority for ${entityUuid} transferred to ${targetPeerId}.`); return
   }
   if (packet.kind === 'interest') {
     const value = packet.payload && typeof packet.payload === 'object' ? packet.payload as Partial<InterestPayload> : {}, center = value.center
@@ -433,51 +460,81 @@ function processPacket(packet: NetworkPacket, peer: string): void {
     const detail = networkingState.peerDetails.find(item => item.id === packet.sender); if (detail) detail.sceneUuid = sceneUuid
     networkingState.sceneHandoffs++; addEvent(`Scene handoff to ${sceneUuid} received from ${packet.sender}.`); void sceneHandoffHandler?.(sceneUuid, spawnTag, packet.sender); return
   }
-  if (packet.kind === 'rpc') { networkingState.rpcCalls++; const payload = packet.payload && typeof packet.payload === 'object' ? packet.payload as Partial<RpcPayload> : {}, contract = productionSettings.networking.rpcContracts.find(item => item.name === payload.name), remoteRole = networkingState.peerDetails.find(item => item.id === packet.sender)?.role ?? 'client'; if (!contract || !acceptsRpc(contract, remoteRole, packet.sender, payload.value) || !validatePayloadSchema(payload.value, contract.payloadSchema) || utf8Bytes(stableNetworkJson(payload.value)) > contract.maximumPayloadBytes || !rpcRate.accept(`${packet.sender}:${contract.name}`, contract.callsPerSecond, performance.now())) { networkingState.rpcRejected++; networkingState.schemaRejected++; return }; try { rpcHandlers.get(contract.name)?.(payload.value, { sender: packet.sender, tick: packet.tick }) } catch (error) { networkingState.lastError = error instanceof Error ? error.message : String(error); addEvent(`RPC ${contract.name} failed: ${networkingState.lastError}`, 'error') }; return }
+  if (packet.kind === 'rpc') { networkingState.rpcCalls++; const payload = packet.payload && typeof packet.payload === 'object' ? packet.payload as Partial<RpcPayload> : {}, contract = productionSettings.networking.rpcContracts.find(item => item.name === payload.name), remoteRole = networkingState.peerDetails.find(item => item.id === packet.sender)?.role ?? 'client'; if (!contract || contract.channelId !== packet.channel || !acceptsRpc(contract, remoteRole, packet.sender, payload.value) || !validatePayloadSchema(payload.value, contract.payloadSchema) || utf8Bytes(stableNetworkJson(payload.value)) > contract.maximumPayloadBytes || !rpcRate.accept(`${packet.sender}:${contract.name}`, contract.callsPerSecond, performance.now())) { networkingState.rpcRejected++; networkingState.schemaRejected++; return }; try { rpcHandlers.get(contract.name)?.(payload.value, { sender: packet.sender, tick: packet.tick }) } catch (error) { networkingState.lastError = error instanceof Error ? error.message : String(error); addEvent(`RPC ${contract.name} failed: ${networkingState.lastError}`, 'error') }; return }
   if (packet.kind === 'input') { const normalized = normalizeNetworkInput(packet.payload, true); if (!normalized) { networkingState.schemaRejected++; networkingState.droppedPackets++; addEvent(`Malformed input frame from ${packet.sender} was rejected.`, 'warning'); return }; const frames = remoteInputs.get(packet.sender) ?? new Map<number, InputSnapshot>(); frames.set(packet.tick, normalized); while (frames.size > Math.max(1, productionSettings.networking.rollbackFrames)) frames.delete(frames.keys().next().value ?? 0); remoteInputs.set(packet.sender, frames); networkingState.inputFrames++; return }
   if (packet.kind === 'resync') {
+    const reject = (message: string): void => {
+      removePeer(packet.sender, 'invalid authoritative baseline')
+      networkingState.schemaRejected++; networkingState.droppedPackets++; networkingState.lastError = message; addEvent(message, 'error')
+      if (productionSettings.networking.role === 'client') { networkingState.status = 'error'; scheduleReconnect() }
+    }
     const payload = packet.payload && typeof packet.payload === 'object' ? packet.payload as Partial<BaselineChunkPayload> : {}, remoteRole = networkingState.peerDetails.find(item => item.id === packet.sender)?.role ?? 'client'
     const valid = productionSettings.networking.role === 'client' && productionSettings.networking.lateJoin && (remoteRole === 'server' || remoteRole === 'host') && typeof payload.transferId === 'string' && /^[A-Za-z0-9_.-]{1,80}$/.test(payload.transferId) && Number.isSafeInteger(payload.index) && Number.isSafeInteger(payload.count) && Number(payload.count) >= 1 && Number(payload.count) <= 256 && Number(payload.index) >= 0 && Number(payload.index) < Number(payload.count) && typeof payload.checksum === 'string' && /^[a-f0-9]{24}$/i.test(payload.checksum) && typeof payload.chunk === 'string'
-    if (!valid) { networkingState.schemaRejected++; networkingState.droppedPackets++; addEvent(`Unauthorized or malformed resync from ${packet.sender} was rejected.`, 'warning'); return }
-    const chunkPayload: BaselineChunkPayload = { transferId: String(payload.transferId), index: Number(payload.index), count: Number(payload.count), checksum: String(payload.checksum), chunk: String(payload.chunk) }
+    if (!valid) { reject('Unauthorized or malformed authoritative baseline. Reconnect after correcting the sender.'); return }
+    const chunkPayload = payload as BaselineChunkPayload
     let transfer = baselineTransfers.get(packet.sender)
-    if (!transfer || transfer.transferId !== chunkPayload.transferId) { if (chunkPayload.index !== 0) { networkingState.schemaRejected++; return }; transfer = { transferId: chunkPayload.transferId, count: chunkPayload.count, checksum: chunkPayload.checksum, chunks: new Map(), bytes: 0, startedAt: Date.now() }; baselineTransfers.set(packet.sender, transfer) }
-    if (transfer.count !== chunkPayload.count || transfer.checksum !== chunkPayload.checksum || Date.now() - transfer.startedAt > 15_000) { baselineTransfers.delete(packet.sender); networkingState.schemaRejected++; return }
-    if (!transfer.chunks.has(chunkPayload.index)) { transfer.bytes += utf8Bytes(chunkPayload.chunk); if (transfer.bytes > 8 * 1024 * 1024) { baselineTransfers.delete(packet.sender); networkingState.schemaRejected++; return }; transfer.chunks.set(chunkPayload.index, chunkPayload.chunk) }
-    void sendAck(packet, peer)
-    if (transfer.chunks.size === transfer.count) {
-      try {
-        const source = Array.from({ length: transfer.count }, (_, index) => transfer!.chunks.get(index) ?? '').join(''); if (networkChecksum(source) !== transfer.checksum) throw new Error('Authoritative baseline checksum mismatch.')
-        const document = JSON.parse(source) as Partial<BaselineDocument>; if (document.format !== 'nova-network-baseline' || document.version !== 1 || !document.save || !Array.isArray(document.authority) || !Array.isArray(document.scenes)) throw new Error('Authoritative baseline format is invalid.')
-        const restored = importMultiplayerSave(document.save, lastEntities); if (!authorityTable.restore(document.authority, productionSettings.networking.replicatedEntities)) throw new Error('Authoritative baseline ownership is invalid.')
-        for (const scene of document.scenes.slice(0, 64)) { if (!scene || typeof scene.peerId !== 'string' || typeof scene.sceneUuid !== 'string') continue; const detail = networkingState.peerDetails.find(item => item.id === scene.peerId); if (detail) detail.sceneUuid = scene.sceneUuid.slice(0, 128) }
-        tick = Math.max(tick, restored.tick); networkingState.lateJoins++; networkingState.snapshots++; baselineTransfers.delete(packet.sender); refreshProductionDiagnostics(); addEvent(`Late-join baseline restored ${restored.restored} entities and current authority state.`)
-      } catch (error) { baselineTransfers.delete(packet.sender); networkingState.lastError = error instanceof Error ? error.message : String(error); networkingState.schemaRejected++; addEvent(networkingState.lastError, 'error') }
+    if (!transfer || transfer.transferId !== chunkPayload.transferId) {
+      if (chunkPayload.index !== 0) { reject('Authoritative baseline must start with chunk zero.'); return }
+      transfer = { transferId: chunkPayload.transferId, count: chunkPayload.count, checksum: chunkPayload.checksum, chunks: new Map(), bytes: 0, startedAt: Date.now() }; baselineTransfers.set(packet.sender, transfer)
     }
+    if (transfer.count !== chunkPayload.count || transfer.checksum !== chunkPayload.checksum || Date.now() - transfer.startedAt > 15_000) { reject('Authoritative baseline metadata changed or the transfer expired.'); return }
+    if (!transfer.chunks.has(chunkPayload.index)) {
+      transfer.bytes += utf8Bytes(chunkPayload.chunk)
+      if (transfer.bytes > 8 * 1024 * 1024) { reject('Authoritative baseline exceeds 8 MiB.'); return }
+      transfer.chunks.set(chunkPayload.index, chunkPayload.chunk)
+    }
+    if (transfer.chunks.size !== transfer.count) { void sendAck(packet, peer); return }
+    try {
+      const source = Array.from({ length: transfer.count }, (_, index) => transfer!.chunks.get(index) ?? '').join('')
+      if (networkChecksum(source) !== transfer.checksum) throw new Error('Authoritative baseline checksum mismatch.')
+      const document = JSON.parse(source) as Partial<BaselineDocument>
+      if (!document || document.format !== 'nova-network-baseline' || document.version !== 1 || !document.save || !Array.isArray(document.authority) || !Array.isArray(document.scenes) || document.scenes.length > 64) throw new Error('Authoritative baseline format is invalid.')
+      const scenePeers = new Set<string>()
+      for (const scene of document.scenes) {
+        if (!scene || typeof scene.peerId !== 'string' || !/^[A-Za-z0-9_.-]{1,80}$/.test(scene.peerId) || typeof scene.sceneUuid !== 'string' || !/^[A-Za-z0-9_.-]{1,128}$/.test(scene.sceneUuid) || scenePeers.has(scene.peerId)) throw new Error('Authoritative baseline scene identity is invalid.')
+        scenePeers.add(scene.peerId)
+      }
+      const definitions = productionSettings.networking.replicatedEntities, allowed = new Set(definitions.map(definition => definition.entityUuid)), stagedAuthority = new NetworkAuthorityTable()
+      if (!stagedAuthority.restore(document.authority, definitions)) throw new Error('Authoritative baseline ownership is invalid.')
+      if (!Array.isArray(document.save.entities) || document.save.entities.some(entity => !entity || !allowed.has(entity.uuid))) throw new Error('Authoritative baseline contains an entity outside the replication contract.')
+      const restored = importMultiplayerSave(document.save, lastEntities, new Map(definitions.map(definition => [definition.entityUuid, definition.properties])))
+      authorityTable.restore(stagedAuthority.entries(), definitions)
+      for (const scene of document.scenes) { const detail = networkingState.peerDetails.find(item => item.id === scene.peerId); if (detail) detail.sceneUuid = scene.sceneUuid }
+      tick = Math.max(tick, restored.tick); networkingState.currentTick = tick
+      networkingState.lateJoins++; networkingState.snapshots++; baselineTransfers.delete(packet.sender); refreshProductionDiagnostics()
+      addEvent('Late-join baseline restored ' + restored.restored + ' entities and current authority state.')
+      void sendAck(packet, peer)
+    } catch (error) { reject(error instanceof Error ? error.message : String(error)) }
     return
   }
+
   if (packet.kind === 'snapshot') { const payload = packet.payload && typeof packet.payload === 'object' ? packet.payload as Partial<SnapshotPayload> : {}, entities = normalizeEntitySnapshot(payload.entities); remoteSnapshots.push({ ...packet, payload: { entities, checksum: typeof payload.checksum === 'string' ? payload.checksum.slice(0, 64) : '', full: payload.full === true } }); if (remoteSnapshots.length > 128) remoteSnapshots.splice(0, remoteSnapshots.length - 128); networkingState.snapshots++; return }
   if (packet.kind === 'ping') { const reliable = channelByDelivery('reliable-ordered', packet.channel); if (reliable) void sendNetworkPacket('pong', { sentAt: (packet.payload as { sentAt?: unknown })?.sentAt ?? 0 }, reliable.id, packet.sender); return }
   if (packet.kind === 'pong') { const sentAt = Number((packet.payload as { sentAt?: unknown })?.sentAt); if (Number.isFinite(sentAt)) networkingState.pingMs = Math.max(0, performance.now() - sentAt) }
 }
+
+function commitPacketReplay(packet: NetworkPacket): void { replayProtection.accept(packet.sender, packet.security, Date.now(), productionSettings.networking.security.maximumPacketAgeMs, productionSettings.networking.security.replayWindow, productionSettings.networking.authentication.mode === 'hook' || productionSettings.networking.authentication.requireVerifiedPeers) }
 
 function processAcceptedPacket(packet: NetworkPacket, peer: string): void {
   const sequenceKey = `${packet.sender}:${packet.channel}`
   if (packet.delivery === 'reliable-ordered' && !inboundSequences.has(sequenceKey) && packet.sequence > 0 && ((packet.kind === 'hello' || packet.kind === 'join' || packet.kind === 'resync') || !handshakenPeers.has(packet.sender))) inboundSequences.set(sequenceKey, packet.sequence - 1)
   const previous = inboundSequences.get(sequenceKey) ?? 0
   const distance = sequenceDistance(previous, packet.sequence)
-  if (packet.delivery === 'unreliable-sequenced') { if (distance === 0 || distance > MAX_SEQUENCE / 2) { networkingState.duplicatePackets++; return }; inboundSequences.set(sequenceKey, packet.sequence); processPacket(packet, peer); return }
-  if (packet.kind === 'ack') { processPacket(packet, peer); return }
+  if (packet.delivery === 'unreliable-sequenced') { if (distance === 0 || distance > MAX_SEQUENCE / 2) { networkingState.duplicatePackets++; return }; commitPacketReplay(packet); inboundSequences.set(sequenceKey, packet.sequence); processPacket(packet, peer); return }
+  if (packet.kind === 'ack') { commitPacketReplay(packet); processPacket(packet, peer); return }
   if (distance === 0 || distance > MAX_SEQUENCE / 2) { networkingState.duplicatePackets++; return }
   if (distance > productionSettings.networking.maximumPendingReliable) { networkingState.droppedPackets++; networkingState.outOfOrderPackets++; networkingState.lastError = `Reliable sequence gap from ${packet.sender} exceeds the receive window.`; return }
   const buffer = reliableBuffers.get(sequenceKey) ?? new Map<number, NetworkPacket>()
   if (!buffer.has(packet.sequence) && buffer.size >= productionSettings.networking.maximumPendingReliable) { networkingState.droppedPackets++; networkingState.reliableExpired++; return }
+  commitPacketReplay(packet)
   buffer.set(packet.sequence, packet); reliableBuffers.set(sequenceKey, buffer); if (distance > 1) networkingState.outOfOrderPackets++
   let expected = nextExpectedSequence(previous)
-  while (buffer.has(expected)) { const ordered = buffer.get(expected)!; buffer.delete(expected); inboundSequences.set(sequenceKey, expected); processPacket(ordered, peer); if (ordered.kind !== 'resync') void sendAck(ordered, peer); expected = nextExpectedSequence(expected) }
+  while (buffer.has(expected)) { const ordered = buffer.get(expected)!; buffer.delete(expected); inboundSequences.set(sequenceKey, expected); processPacket(ordered, peer); if (!handshakenPeers.has(packet.sender)) break; if (ordered.kind !== 'resync') void sendAck(ordered, peer); expected = nextExpectedSequence(expected) }
 }
 
 function receive(source: string, peer: string): void {
+  if (!productionSettings.networking.enabled || !productionSettings.networking.permissionGranted) { void stopNetworking(); return }
+  if (!transport || networkingState.status !== 'connected') return
   const bytes = utf8Bytes(source), now = performance.now()
   if (now - receiveBudgetStarted >= 1_000) { networkingState.bandwidthInKbps = Math.round(receiveBudgetBytes * 8 / 1024); receiveBudgetStarted = now; receiveBudgetBytes = 0 }
   const limit = productionSettings.networking.bandwidthKbps * 1024 / 8
@@ -495,18 +552,23 @@ function receive(source: string, peer: string): void {
     authenticated = Boolean(security && verifyAuthenticationProof(productionSettings.networking.authentication.providerId, { sessionId: packet.sessionId, sender: packet.sender, epoch: security.epoch, nonce: security.nonce, issuedAt: security.issuedAt, packetChecksum: authenticationChecksum(packet) }, security.proof))
     if (!authenticated) { networkingState.droppedPackets++; networkingState.authenticationRejected++; networkingState.lastError = 'Packet authentication proof was rejected.'; return }
   }
-  const knownPeer = networkingState.peerDetails.find(item => item.id === packet.sender), lifecyclePacket = packet.kind === 'hello' || packet.kind === 'join'
+  let knownPeer = networkingState.peerDetails.find(item => item.id === packet.sender)
+  const lifecyclePacket = packet.kind === 'hello' || packet.kind === 'join', admittedEpoch = peerEpochs.get(packet.sender), incomingEpoch = packet.security?.epoch ?? '', replacingEpoch = admittedEpoch !== undefined && admittedEpoch !== incomingEpoch
+  pruneRetiredEpochs()
+  if ((incomingEpoch && retiredPeerEpochs.has(`${packet.sender}:${incomingEpoch}`)) || (replacingEpoch && (!lifecyclePacket || !incomingEpoch)) || ((!knownPeer || replacingEpoch) && retiredPeerEpochs.size >= 4096)) { networkingState.droppedPackets++; networkingState.replayRejected++; networkingState.lastError = 'Packet epoch is retired, changed without a lifecycle handshake, or reconnect history is full.'; return }
   if (!knownPeer && !lifecyclePacket) { networkingState.droppedPackets++; networkingState.lastError = `Peer ${packet.sender} sent ${packet.kind} before admission.`; packetSummary('in', peer, packet, bytes, false); return }
   if (!knownPeer && lifecyclePacket && networkingState.peerDetails.length >= productionSettings.networking.maxPeers) { networkingState.droppedPackets++; networkingState.schemaRejected++; networkingState.lastError = 'Session peer limit reached.'; return }
   const sequenceKey = `${packet.sender}:${packet.channel}`, previousSequence = inboundSequences.get(sequenceKey) ?? 0, bufferedSequence = reliableBuffers.get(sequenceKey)?.has(packet.sequence) === true
-  const replayDecision = replayProtection.accept(packet.sender, packet.security, Date.now(), productionSettings.networking.security.maximumPacketAgeMs, productionSettings.networking.security.replayWindow, productionSettings.networking.authentication.mode === 'hook' || productionSettings.networking.authentication.requireVerifiedPeers)
-  if (!replayDecision.accepted) { networkingState.droppedPackets++; networkingState.replayRejected++; networkingState.lastError = `Packet rejected by replay protection: ${replayDecision.reason}.`; const alreadyProcessed = sequenceDistance(previousSequence, packet.sequence) === 0 || sequenceDistance(previousSequence, packet.sequence) > MAX_SEQUENCE / 2; if (replayDecision.reason === 'duplicate' && knownPeer && !bufferedSequence && alreadyProcessed && packet.delivery === 'reliable-ordered' && packet.kind !== 'ack') void sendAck(packet, peer); return }
-  if (knownPeer) { knownPeer.lastSeenAt = Date.now(); knownPeer.verified ||= authenticated }
-  if (authenticated) verifiedPeers.add(packet.sender)
   const contract = channel(packet.channel)
   if (!contract || !inboundRate.accept(`${packet.sender}:${packet.channel}`, contract.messagesPerSecond, now)) { networkingState.rateLimited++; channelStat(packet.channel).dropped++; packetSummary('in', peer, packet, bytes, false); return }
+  const replayDecision = replayProtection.accept(packet.sender, packet.security, Date.now(), productionSettings.networking.security.maximumPacketAgeMs, productionSettings.networking.security.replayWindow, productionSettings.networking.authentication.mode === 'hook' || productionSettings.networking.authentication.requireVerifiedPeers, false)
+  if (!replayDecision.accepted) { networkingState.droppedPackets++; networkingState.replayRejected++; networkingState.lastError = `Packet rejected by replay protection: ${replayDecision.reason}.`; const alreadyProcessed = sequenceDistance(previousSequence, packet.sequence) === 0 || sequenceDistance(previousSequence, packet.sequence) > MAX_SEQUENCE / 2; if (replayDecision.reason === 'duplicate' && knownPeer && !bufferedSequence && alreadyProcessed && packet.delivery === 'reliable-ordered' && packet.kind !== 'ack') void sendAck(packet, peer); return }
+  if (replacingEpoch) { removePeer(packet.sender, 'new connection epoch'); knownPeer = undefined }
+  if (knownPeer) { knownPeer.lastSeenAt = Date.now(); knownPeer.verified ||= authenticated }
+  if (authenticated) verifiedPeers.add(packet.sender)
   if (knownPeer && baselinePending.has(packet.sender) && !['ack', 'leave', 'hello', 'join'].includes(packet.kind)) {
     if (deferInboundPacket(packet, peer)) {
+      commitPacketReplay(packet)
       networkingState.receivedBytes += bytes; networkingState.receivedPackets++; channelStat(packet.channel).received++; packetSummary('in', peer, packet, bytes, true)
       return
     }
@@ -518,7 +580,14 @@ function receive(source: string, peer: string): void {
 
 function scheduleReconnect(): void { if (!reconnectAllowed || !productionSettings.networking.enabled || !productionSettings.networking.permissionGranted || !productionSettings.networking.reconnect || networkingState.status === 'disabled' || reconnectTimer !== null) return; if (networkingState.reconnectAttempts >= productionSettings.networking.reconnectMaxAttempts) { networkingState.status = 'error'; networkingState.lastError = 'Reconnect attempt limit reached.'; return }; networkingState.status = 'reconnecting'; const delay = Math.min(10_000, 500 * 2 ** Math.min(5, networkingState.reconnectAttempts++)); reconnectTimer = globalThis.setTimeout(() => { reconnectTimer = null; const active = transport; transport = null; void (async () => { if (active) try { await active.close() } catch {}; if (reconnectAllowed) await startNetworking() })().catch(error => { networkingState.status = 'error'; networkingState.lastError = error instanceof Error ? error.message : String(error) }) }, delay) }
 
-export async function startNetworking(): Promise<void> {
+export function startNetworking(): Promise<void> {
+  if (startupPromise) return startupPromise
+  const pending = startNetworkingSession(); startupPromise = pending
+  void pending.finally(() => { if (startupPromise === pending) startupPromise = null }).catch(() => undefined)
+  return pending
+}
+
+async function startNetworkingSession(): Promise<void> {
   if (!productionSettings.networking.enabled) throw new Error('Networking is disabled for this project.')
   if (!productionSettings.networking.permissionGranted) { networkingState.status = 'permission-required'; throw new Error('Network permission must be granted explicitly before a session starts.') }
   if (transport) return
@@ -529,21 +598,36 @@ export async function startNetworking(): Promise<void> {
   const adapterEncrypted = reviewedNetworkTransports().find(item => item.id === productionSettings.networking.transportAdapterId)?.encrypted === true, encryption = networkEncryptionGuidance(productionSettings.networking, adapterEncrypted); networkingState.encryptedTransport = encryption.protected; networkingState.encryptionMessage = encryption.message
   if (encryption.severity === 'error') { networkingState.status = 'error'; networkingState.lastError = encryption.message; throw new Error(encryption.message) }
   reconnectAllowed = true; connectionGeneration++; cancelScheduledDeliveries(); resetConnectionPeerState(); networkingState.status = 'connecting'; networkingState.lastError = ''; networkingState.sessionMode = productionSettings.networking.sessionMode; networkingState.sessionId = networkSessionId(); networkingState.localPeerId ||= peerIdentity(); simulator = new DeterministicNetworkSimulator(productionSettings.networking.simulation.seed); reliableWindow = new ReliablePacketWindow(productionSettings.networking.maximumPendingReliable); sessionEpoch = createNetworkEpoch(); tick = 0; snapshotAccumulator = 0; budgetStarted = performance.now(); budgetBytes = 0; receiveBudgetStarted = budgetStarted; receiveBudgetBytes = 0; rollbackTimeline.clear(); replicationDiffs.clear(); authorityTable.initialize(productionSettings.networking.replicatedEntities, networkingState.localPeerId, productionSettings.networking.role); refreshProductionDiagnostics()
+  const generation = connectionGeneration
+  let ownedTransport: NetworkTransport | null = null
   try {
-    await openNetworkServices()
-    transport = productionSettings.networking.sessionMode === 'local' ? new LocalLobbyTransport() : reviewed ?? (productionSettings.networking.transport === 'native-udp' ? new NativeUdpTransport() : new WebSocketTransport()); networkingState.transport = transport.kind; networkingState.transportAdapterId = productionSettings.networking.transportAdapterId
+    await openNetworkServices(generation); requireConnectionGeneration(generation)
+    transport = productionSettings.networking.sessionMode === 'local' ? new LocalLobbyTransport() : reviewed ?? (productionSettings.networking.transport === 'native-udp' ? new NativeUdpTransport() : new WebSocketTransport()); ownedTransport = transport; networkingState.transport = transport.kind; networkingState.transportAdapterId = productionSettings.networking.transportAdapterId
     if (encryption.severity === 'warning') addEvent(encryption.message, 'warning')
-    await transport.connect(receive, state => { if (state === 'connected') networkingState.status = 'connected'; else if (networkingState.status !== 'disabled') { networkingState.lastError = state; scheduleReconnect() } }); networkingState.status = 'connected'; networkingState.reconnectAttempts = 0; addEvent(`${transport.kind} session started${serviceHandles.length ? ` with ${serviceHandles.length} explicitly selected reviewed service(s)` : '; no Nova_A cloud service is involved'}.`); const reliable = channelByDelivery('reliable-ordered', 'events'); if (!reliable) throw new Error('At least one reliable channel is required for session control.'); await sendNetworkPacket('hello', { role: productionSettings.networking.role, playerName: productionSettings.networking.playerName, lateJoin: productionSettings.networking.lateJoin } satisfies HelloPayload, reliable.id)
-  } catch (error) { networkingState.status = 'error'; networkingState.lastError = error instanceof Error ? error.message : String(error); addEvent(networkingState.lastError, 'error'); const active = transport; transport = null; if (active) try { await active.close() } catch {}; await closeNetworkServices(); scheduleReconnect(); throw error }
+    await ownedTransport.connect((source, peer) => { if (generation === connectionGeneration && transport === ownedTransport) receive(source, peer) }, state => { if (generation !== connectionGeneration || transport !== ownedTransport) return; if (state === 'connected') networkingState.status = 'connected'; else if (networkingState.status !== 'disabled') { networkingState.lastError = state; scheduleReconnect() } }); requireConnectionGeneration(generation); networkingState.status = 'connected'; networkingState.reconnectAttempts = 0; addEvent(`${ownedTransport.kind} session started${serviceHandles.length ? ` with ${serviceHandles.length} explicitly selected reviewed service(s)` : '; no Nova_A cloud service is involved'}.`); const reliable = channelByDelivery('reliable-ordered', 'events'); if (!reliable) throw new Error('At least one reliable channel is required for session control.'); await sendNetworkPacket('hello', { role: productionSettings.networking.role, playerName: productionSettings.networking.playerName, lateJoin: productionSettings.networking.lateJoin } satisfies HelloPayload, reliable.id)
+  } catch (error) { if (generation !== connectionGeneration) { if (ownedTransport) try { await ownedTransport.close() } catch {}; throw new DOMException('Network session opening was cancelled.', 'AbortError') }; networkingState.status = 'error'; networkingState.lastError = error instanceof Error ? error.message : String(error); addEvent(networkingState.lastError, 'error'); const active = transport; transport = null; const closingServices = closeNetworkServices(); await Promise.allSettled([closingServices, active?.close()]); if (generation === connectionGeneration) scheduleReconnect(); throw error }
 }
 
-export async function stopNetworking(disableState = true): Promise<void> { reconnectAllowed = false; if (reconnectTimer !== null) clearTimeout(reconnectTimer); reconnectTimer = null; if (transport && networkingState.status === 'connected') { const reliable = channelByDelivery('reliable-ordered', 'events'); if (reliable) await sendNetworkPacket('leave', null, reliable.id) }; connectionGeneration++; cancelScheduledDeliveries(); const active = transport; transport = null; if (active) try { await active.close() } catch {}; await closeNetworkServices(); resetConnectionPeerState(); localHistory.splice(0); authorityTable.clear(); rollbackTimeline.clear(); replicationDiffs.clear(); localInterest = null; networkingState.ownership.splice(0); networkingState.peerInterests.splice(0); networkingState.rollbackTimeline.splice(0); networkingState.replicationDiffs.splice(0); networkingState.reliablePending = 0; if (disableState) { networkingState.status = 'disabled'; networkingState.reconnectAttempts = 0 } }
+export async function stopNetworking(disableState = true): Promise<void> {
+  reconnectAllowed = false
+  if (reconnectTimer !== null) clearTimeout(reconnectTimer)
+  reconnectTimer = null
+  const reliable = channelByDelivery('reliable-ordered', 'events')
+  const leaving = transport && networkingState.status === 'connected' && reliable ? sendNetworkPacket('leave', null, reliable.id) : Promise.resolve(false)
+  connectionGeneration++; startupPromise = null; cancelScheduledDeliveries()
+  const active = transport; transport = null
+  const closingServices = closeNetworkServices()
+  resetConnectionPeerState(); localHistory.splice(0); authorityTable.clear(); rollbackTimeline.clear(); replicationDiffs.clear(); localInterest = null
+  networkingState.ownership.splice(0); networkingState.peerInterests.splice(0); networkingState.rollbackTimeline.splice(0); networkingState.replicationDiffs.splice(0); networkingState.reliablePending = 0
+  if (disableState) { networkingState.status = 'disabled'; networkingState.reconnectAttempts = 0 }
+  await Promise.allSettled([leaving, closingServices, active?.close()])
+}
 
 function localSnapshot(entities: Entity[], full = false, targetPeer = ''): SnapshotPayload {
   const definitions = new Map(productionSettings.networking.replicatedEntities.map(definition => [definition.entityUuid, definition])), view = targetPeer ? peerInterests.get(targetPeer) : undefined
   const snapshots = entities.flatMap(entity => {
     const definition = definitions.get(entity.uuid); if (!definition) return []
-    const owner = authorityTable.owner(entity.uuid), sendsAuthority = definition.authority === 'server' ? productionSettings.networking.role === 'server' || productionSettings.networking.role === 'host' : owner ? owner === networkingState.localPeerId : productionSettings.networking.role === 'client'
+    const owner = authorityTable.owner(entity.uuid), sendsAuthority = definition.authority === 'server' ? productionSettings.networking.role === 'server' || productionSettings.networking.role === 'host' : owner === networkingState.localPeerId || productionSettings.networking.role === 'host' || productionSettings.networking.role === 'server'
     if (!sendsAuthority) return []
     const transform = worldTransform(entity, entities), position: [number, number] = [finiteNumber(transform.position.x), finiteNumber(transform.position.y)]
     if (!full && !entityRelevantToPeer(definition, position, view, productionSettings.networking.interest.enabled)) { networkingState.interestCulled++; return [] }
@@ -554,6 +638,25 @@ function localSnapshot(entities: Entity[], full = false, targetPeer = ''): Snaps
     return snapshot.position || snapshot.rotation !== undefined || snapshot.velocity ? [snapshot] : []
   }).slice(0, 2_000).sort((left, right) => left.uuid.localeCompare(right.uuid))
   return { checksum: networkChecksum(snapshots), full, entities: snapshots }
+}
+
+function snapshotPage(snapshot: SnapshotPayload, target: string, contract: NetworkChannelDefinition): SnapshotPayload | null {
+  if (!snapshot.entities.length) return null
+  const empty = { entities: [], checksum: '0'.repeat(24), full: false }, emptyBytes = utf8Bytes(stableNetworkJson(empty))
+  const envelope = createNetworkPacket({ sessionId: networkingState.sessionId, sender: networkingState.localPeerId, channel: contract.id, delivery: contract.delivery, sequence: MAX_SEQUENCE, ack: null, tick: MAX_SEQUENCE, schema: productionSettings.networking.schemaVersion, kind: 'snapshot', payload: empty, security: { epoch: sessionEpoch, nonce: '0'.repeat(24), issuedAt: Number.MAX_SAFE_INTEGER, proof: productionSettings.networking.authentication.mode === 'hook' ? '0'.repeat(512) : '' } })
+  const overhead = utf8Bytes(stableNetworkJson(envelope)) - emptyBytes, limit = Math.min(contract.maximumPayloadBytes, productionSettings.networking.maximumPacketBytes - overhead)
+  const start = (snapshotCursors.get(target) ?? 0) % snapshot.entities.length, page: EntitySnapshot[] = []
+  let bytes = emptyBytes
+  for (let offset = 0; offset < Math.min(1024, snapshot.entities.length); offset++) {
+    const entity = snapshot.entities[(start + offset) % snapshot.entities.length], nextBytes = utf8Bytes(stableNetworkJson(entity)) + (page.length ? 1 : 0)
+    if (bytes + nextBytes > limit) break
+    bytes += nextBytes; page.push(entity)
+  }
+  networkingState.snapshotPageEntities = page.length; networkingState.snapshotDeferredEntities = snapshot.entities.length - page.length
+  if (!page.length) { networkingState.lastError = 'A replicated entity cannot fit the state channel or packet byte limit. Increase the limit or reduce replicated properties.'; return null }
+  snapshotCursors.set(target, (start + page.length) % snapshot.entities.length)
+  page.sort((a, b) => a.uuid.localeCompare(b.uuid))
+  return { entities: page, checksum: networkChecksum(page), full: false }
 }
 
 function predictionSnapshot(entities: Entity[]): SnapshotPayload {
@@ -568,15 +671,36 @@ function predictionSnapshot(entities: Entity[]): SnapshotPayload {
   }).slice(0, 2_000) }
 }
 
+function parentFirstNetworkStates<T extends { uuid: string }>(states: readonly T[], entities: readonly Entity[]): T[] {
+  const byUuid = new Map(entities.map(entity => [entity.uuid, entity])), depths = new Map<string, number>()
+  for (const state of states) {
+    let entity = byUuid.get(state.uuid)
+    const chain: string[] = [], seen = new Set<string>()
+    while (entity && !depths.has(entity.uuid)) {
+      if (seen.has(entity.uuid) || chain.length >= 512) { networkingState.schemaRejected++; networkingState.lastError = 'Network correction requires an acyclic hierarchy of at most 512 levels.'; return [] }
+      seen.add(entity.uuid); chain.push(entity.uuid); entity = entity.parentUuid ? byUuid.get(entity.parentUuid) : undefined
+    }
+    let depth = entity ? depths.get(entity.uuid)! : -1
+    for (const uuid of chain.reverse()) depths.set(uuid, ++depth)
+  }
+  return [...states].sort((a, b) => (depths.get(a.uuid) ?? 0) - (depths.get(b.uuid) ?? 0) || a.uuid.localeCompare(b.uuid))
+}
+
 function reconcile(snapshotPacket: NetworkPacket, entities: Entity[]): void {
   const payload = snapshotPacket.payload as SnapshotPayload, history = localHistory.find(item => item.tick === snapshotPacket.tick)
   const comparedHistory = history?.snapshot.entities.filter(entity => payload.entities.some(remote => remote.uuid === entity.uuid)).sort((left, right) => left.uuid.localeCompare(right.uuid)) ?? [], comparedChecksum = comparedHistory.length ? networkChecksum(comparedHistory) : ''
   if (payload.checksum && comparedChecksum && payload.checksum !== comparedChecksum) { networkingState.divergences++; rollbackTimeline.push({ tick: snapshotPacket.tick, peerId: snapshotPacket.sender, checksumBefore: comparedChecksum, checksumAfter: payload.checksum, replayedInputs: 0, correction: 0, reason: 'authoritative-checksum-divergence' }) }
   const definitions = new Map(productionSettings.networking.replicatedEntities.map(definition => [definition.entityUuid, definition]))
-  for (const remote of payload.entities) {
-    const definition = definitions.get(remote.uuid), entity = entities.find(candidate => candidate.uuid === remote.uuid), peerRole = networkingState.peerDetails.find(item => item.id === snapshotPacket.sender)?.role ?? 'server', owner = authorityTable.owner(remote.uuid), receivesAuthority = definition?.authority === 'server' ? productionSettings.networking.role === 'client' && (peerRole === 'server' || peerRole === 'host') : owner ? owner === snapshotPacket.sender : peerRole === 'client'
+  const ordered = parentFirstNetworkStates(payload.entities, entities), byUuid = new Map(entities.map(entity => [entity.uuid, entity]))
+  const previousWorld = new Map(ordered.flatMap(state => { const entity = byUuid.get(state.uuid); return entity ? [[state.uuid, worldTransform(entity, entities)] as const] : [] }))
+  for (const candidate of ordered) {
+    const definition = definitions.get(candidate.uuid), entity = entities.find(entity => entity.uuid === candidate.uuid), peerRole = networkingState.peerDetails.find(item => item.id === snapshotPacket.sender)?.role ?? 'client', owner = authorityTable.owner(candidate.uuid)
+    const authoritativeServer = productionSettings.networking.role === 'client' && (peerRole === 'server' || peerRole === 'host')
+    const receivesAuthority = definition?.authority === 'server' ? authoritativeServer : owner ? owner === snapshotPacket.sender || (owner !== networkingState.localPeerId && authoritativeServer) : authoritativeServer
     if (!definition || !entity || !receivesAuthority) continue
-    const current = worldTransform(entity, entities), remoteVelocity = remote.velocity ?? [entity.velocity.x, entity.velocity.y], predictionSeconds = definition.predict ? Math.min(.25, Math.max(0, productionSettings.networking.interpolationMs / 1_000)) : 0, projectedX = remote.position ? remote.position[0] + remoteVelocity[0] * predictionSeconds : current.position.x, projectedY = remote.position ? remote.position[1] + remoteVelocity[1] * predictionSeconds : current.position.y, error = Math.hypot(projectedX - current.position.x, projectedY - current.position.y), fields: string[] = []
+    const remote: EntitySnapshot = { uuid: candidate.uuid, ...(definition.properties.includes('transform') && candidate.position ? { position: candidate.position } : {}), ...(definition.properties.includes('rotation') && candidate.rotation !== undefined ? { rotation: candidate.rotation } : {}), ...(definition.properties.includes('velocity') && candidate.velocity ? { velocity: candidate.velocity } : {}) }
+    if (!remote.position && remote.rotation === undefined && !remote.velocity) continue
+    const current = previousWorld.get(remote.uuid)!, remoteVelocity = remote.velocity ?? [entity.velocity.x, entity.velocity.y], predictionSeconds = definition.predict ? Math.min(.25, Math.max(0, productionSettings.networking.interpolationMs / 1_000)) : 0, projectedX = remote.position ? remote.position[0] + remoteVelocity[0] * predictionSeconds : current.position.x, projectedY = remote.position ? remote.position[1] + remoteVelocity[1] * predictionSeconds : current.position.y, error = Math.hypot(projectedX - current.position.x, projectedY - current.position.y), fields: string[] = []
     if (remote.position && (remote.position[0] !== current.position.x || remote.position[1] !== current.position.y)) fields.push('transform')
     if (remote.rotation !== undefined && remote.rotation !== current.rotation) fields.push('rotation')
     if (remote.velocity && (remote.velocity[0] !== entity.velocity.x || remote.velocity[1] !== entity.velocity.y)) fields.push('velocity')
@@ -585,15 +709,17 @@ function reconcile(snapshotPacket: NetworkPacket, entities: Entity[]): void {
     const blend = rollback || !definition.interpolate ? 1 : 0
     if (rollback) { networkingState.predictionCorrections++; networkingState.rollbacks++; networkingState.replayedInputs += rollback.replayedFrames; rollbackTimeline.push({ tick: snapshotPacket.tick, peerId: snapshotPacket.sender, checksumBefore: history?.checksum ?? '', checksumAfter: payload.checksum, replayedInputs: rollback.replayedFrames, correction: error, reason: 'authoritative-rollback-replay' }) }
     if (fields.length) replicationDiffs.push({ tick: snapshotPacket.tick, peerId: snapshotPacket.sender, entityUuid: remote.uuid, fields, error, authority: definition.authority })
-    if (definition.interpolate && !rollback) interpolationTargets.set(remote.uuid, { ...(remote.position ? { position: [targetX, targetY] as [number, number] } : {}), ...(targetRotation !== undefined ? { rotation: targetRotation } : {}), ...(targetVelocity ? { velocity: targetVelocity } : {}), remaining: Math.max(.001, productionSettings.networking.interpolationMs / 1_000) })
+    if (definition.interpolate && !rollback) interpolationTargets.set(remote.uuid, { sender: snapshotPacket.sender, ...(remote.position ? { position: [targetX, targetY] as [number, number] } : {}), ...(targetRotation !== undefined ? { rotation: targetRotation } : {}), ...(targetVelocity ? { velocity: targetVelocity } : {}), remaining: Math.max(.001, productionSettings.networking.interpolationMs / 1_000) })
     setWorldTransform(entity, { ...current, position: { x: current.position.x + (targetX - current.position.x) * blend, y: current.position.y + (targetY - current.position.y) * blend }, rotation: targetRotation === undefined ? current.rotation : current.rotation + (targetRotation - current.rotation) * blend }, entities)
-    if (targetVelocity) entity.velocity = { x: targetVelocity[0], y: targetVelocity[1] }
+    if (targetVelocity && blend) entity.velocity = { x: targetVelocity[0], y: targetVelocity[1] }
   }
   refreshProductionDiagnostics()
 }
 
 export function updateNetworking(entities: Entity[], fixedDelta: number, input?: InputSnapshot, physicsChecksum = ''): void {
+  if (!productionSettings.networking.enabled || !productionSettings.networking.permissionGranted) { void stopNetworking(); return }
   if (!transport || networkingState.status !== 'connected') return
+  if (authorityTable.synchronize(productionSettings.networking.replicatedEntities, networkingState.localPeerId, productionSettings.networking.role)) { interpolationTargets.clear(); refreshProductionDiagnostics() }
   tick++; networkingState.currentTick = tick; lastEntities = entities; lastInput = input ? cloneNetworkInput(input) : lastInput; lastChecksum = physicsChecksum.slice(0, 64)
   const snapshot = predictionSnapshot(entities)
   if (lastInput) localHistory.push({ tick, input: cloneNetworkInput(lastInput), checksum: lastChecksum, snapshot })
@@ -605,21 +731,36 @@ export function updateNetworking(entities: Entity[], fixedDelta: number, input?:
     snapshotAccumulator = Math.max(0, snapshotAccumulator - interval); if (snapshotAccumulator < 1e-9) snapshotAccumulator = 0; const stateChannel = channelByDelivery('unreliable-sequenced', 'state')
     if (stateChannel) {
       const targets = networkingState.peerDetails.filter(peer => !baselinePending.has(peer.id)).map(peer => peer.id)
-      for (const target of targets) { const targeted = localSnapshot(entities, false, target); if (targeted.entities.length) void sendNetworkPacket('snapshot', targeted, stateChannel.id, target) }
+      for (const target of targets) { const targeted = localSnapshot(entities, false, target), page = snapshotPage(targeted, target, stateChannel); if (page) void sendNetworkPacket('snapshot', page, stateChannel.id, target) }
     }
   }
   while (remoteSnapshots.length) reconcile(remoteSnapshots.shift()!, entities)
   const interpolationDelta = Math.max(0, Math.min(.25, fixedDelta))
-  for (const [entityUuid, target] of interpolationTargets) {
+  const interpolationOrder = parentFirstNetworkStates([...interpolationTargets.keys()].map(uuid => ({ uuid })), entities)
+  const beforeInterpolation = new Map(interpolationOrder.flatMap(state => { const entity = entities.find(entity => entity.uuid === state.uuid); return entity ? [[state.uuid, worldTransform(entity, entities)] as const] : [] }))
+  for (const { uuid: entityUuid } of interpolationOrder) {
+    const target = interpolationTargets.get(entityUuid)!, definition = productionSettings.networking.replicatedEntities.find(item => item.entityUuid === entityUuid)
+    if (!definition || !definition.interpolate) { interpolationTargets.delete(entityUuid); continue }
+    if (!definition.properties.includes('transform')) delete target.position
+    if (!definition.properties.includes('rotation')) delete target.rotation
+    if (!definition.properties.includes('velocity')) delete target.velocity
     const entity = entities.find(candidate => candidate.uuid === entityUuid); if (!entity) { interpolationTargets.delete(entityUuid); continue }
-    const current = worldTransform(entity, entities), alpha = Math.min(1, interpolationDelta / Math.max(interpolationDelta, target.remaining))
+    const current = beforeInterpolation.get(entityUuid)!, alpha = Math.min(1, interpolationDelta / Math.max(interpolationDelta, target.remaining))
     setWorldTransform(entity, { ...current, position: target.position ? { x: current.position.x + (target.position[0] - current.position.x) * alpha, y: current.position.y + (target.position[1] - current.position.y) * alpha } : current.position, rotation: target.rotation === undefined ? current.rotation : current.rotation + (target.rotation - current.rotation) * alpha }, entities)
     if (target.velocity) entity.velocity = { x: entity.velocity.x + (target.velocity[0] - entity.velocity.x) * alpha, y: entity.velocity.y + (target.velocity[1] - entity.velocity.y) * alpha }
     target.remaining -= interpolationDelta; if (target.remaining <= 1e-6 || alpha >= 1) interpolationTargets.delete(entityUuid)
   }
   const reliableBefore = reliableWindow.size, dueReliable = reliableWindow.due(performance.now(), productionSettings.networking.reliableRetryMs, productionSettings.networking.reliableMaximumAttempts)
   networkingState.reliableExpired += Math.max(0, reliableBefore - reliableWindow.size)
-  for (const pending of dueReliable) void transportSend(pending.source, pending.packet, pending.peer === '*' ? '' : pending.peer, true)
+  const expired = reliableWindow.takeExpired()
+  for (const peerId of new Set(expired.map(item => item.peer))) {
+    if (peerId === '*' && productionSettings.networking.role !== 'client') continue
+    if (peerId !== '*') removePeer(peerId, 'reliable acknowledgement timeout')
+    else reliableWindow.clearPeer('*')
+    networkingState.lastError = `Reliable delivery to ${peerId} exhausted its acknowledgement retries. Reconnect the peer.`; addEvent(networkingState.lastError, 'error')
+    if (productionSettings.networking.role === 'client') { networkingState.status = 'error'; scheduleReconnect() }
+  }
+  for (const pending of dueReliable) if (networkingState.status === 'connected' && (pending.peer === '*' || networkingState.peerDetails.some(peer => peer.id === pending.peer))) void transportSend(pending.source, pending.packet, pending.peer === '*' ? '' : pending.peer, true)
   networkingState.reliablePending = reliableWindow.size
   const inputs = [...remoteInputs].flatMap(([peerId, frames]) => { const value = frames.get(tick); return value ? [{ peerId, input: value }] : [] }); if (lastInput) inputs.push({ peerId: networkingState.localPeerId, input: lastInput })
   recordMultiplayerReplayFrame(tick, inputs, lastChecksum, networkingState.packetSummaries.slice(-32))
@@ -628,6 +769,7 @@ export function updateNetworking(entities: Entity[], fixedDelta: number, input?:
 
 export function registerRpc(name: string, handler: (payload: unknown, context: { sender: string; tick: number }) => void): () => void { const key = name.trim().replace(/[^a-zA-Z0-9_.-]/g, '_').slice(0, 80); rpcHandlers.set(key, handler); return () => rpcHandlers.delete(key) }
 export function callRpc(name: string, payload: unknown): boolean {
+  if (!productionSettings.networking.enabled || !productionSettings.networking.permissionGranted || !transport || networkingState.status !== 'connected') return false
   const contract = productionSettings.networking.rpcContracts.find(item => item.name === name), localRole = productionSettings.networking.role
   if (!contract) { networkingState.rpcRejected++; return false }
   const direction = contract.direction === 'bidirectional' || (contract.direction === 'client-to-server' && localRole === 'client') || (contract.direction === 'server-to-client' && (localRole === 'server' || localRole === 'host')), entityUuid = rpcEntityUuid(payload), authority = contract.authority === 'any' || (contract.authority === 'owner' && Boolean(entityUuid) && authorityTable.owner(entityUuid) === networkingState.localPeerId) || (contract.authority === 'server' && (localRole === 'server' || localRole === 'host'))
@@ -642,7 +784,7 @@ export function callRpc(name: string, payload: unknown): boolean {
   networkingState.rpcCalls++; void sendNetworkPacket('rpc', rpc, contract.channelId); return true
 }
 export function setNetworkInterest(center: [number, number], radius = productionSettings.networking.interest.defaultRadius, sceneUuid = ''): boolean { if (!center.every(Number.isFinite) || !Number.isFinite(radius)) return false; localInterest = { peerId: networkingState.localPeerId, center: [finiteNumber(center[0]), finiteNumber(center[1])], radius: Math.max(0, Math.min(productionSettings.networking.interest.maximumRadius, radius)), sceneUuid: sceneUuid.slice(0, 128), updatedAt: Date.now() }; const reliable = channelByDelivery('reliable-ordered', 'events'); if (reliable && networkingState.status === 'connected') void sendNetworkPacket('interest', { center: localInterest.center, radius: localInterest.radius, sceneUuid: localInterest.sceneUuid } satisfies InterestPayload, reliable.id); return true }
-export function transferNetworkAuthority(entityUuid: string, targetPeerId: string): boolean { const source = entityUuid.slice(0, 128), target = targetPeerId.slice(0, 80), localRole = productionSettings.networking.role, authorized = productionSettings.networking.allowAuthorityTransfer && ((localRole === 'server' || localRole === 'host') || authorityTable.owner(source) === networkingState.localPeerId) && (target === networkingState.localPeerId || networkingState.peerDetails.some(peer => peer.id === target)); if (!authorized || !authorityTable.transfer(source, target)) return false; networkingState.authorityTransfers++; refreshProductionDiagnostics(); const reliable = channelByDelivery('reliable-ordered', 'events'); if (reliable && networkingState.status === 'connected') void sendNetworkPacket('authority', { entityUuid: source, targetPeerId: target } satisfies AuthorityPayload, reliable.id); return true }
+export function transferNetworkAuthority(entityUuid: string, targetPeerId: string): boolean { const source = entityUuid.slice(0, 128), target = targetPeerId.slice(0, 80), localRole = productionSettings.networking.role, authorized = productionSettings.networking.allowAuthorityTransfer && ((localRole === 'server' || localRole === 'host') || authorityTable.owner(source) === networkingState.localPeerId) && (target === networkingState.localPeerId || networkingState.peerDetails.some(peer => peer.id === target)); if (!authorized || !authorityTable.transfer(source, target)) return false; interpolationTargets.delete(source); networkingState.authorityTransfers++; refreshProductionDiagnostics(); const reliable = channelByDelivery('reliable-ordered', 'events'); if (reliable && networkingState.status === 'connected') void sendNetworkPacket('authority', { entityUuid: source, targetPeerId: target } satisfies AuthorityPayload, reliable.id); return true }
 export function handoffNetworkScene(targetPeerId: string, sceneUuid: string, spawnTag = ''): boolean { const localRole = productionSettings.networking.role, target = targetPeerId.slice(0, 80), scene = sceneUuid.slice(0, 128); if (!productionSettings.networking.allowSceneHandoff || (localRole !== 'server' && localRole !== 'host') || !scene || !networkingState.peerDetails.some(peer => peer.id === target)) return false; const reliable = channelByDelivery('reliable-ordered', 'events'); if (!reliable || networkingState.status !== 'connected') return false; networkingState.sceneHandoffs++; void sendNetworkPacket('scene', { sceneUuid: scene, spawnTag: spawnTag.slice(0, 80) } satisfies ScenePayload, reliable.id, target); return true }
 export function registerNetworkSceneHandoff(handler: (sceneUuid: string, spawnTag: string, peerId: string) => void | Promise<void>): () => void { sceneHandoffHandler = handler; return () => { if (sceneHandoffHandler === handler) sceneHandoffHandler = null } }
 export function consumeRemoteInput(peerId: string, targetTick = tick): InputSnapshot | null { const frames = remoteInputs.get(peerId), input = frames?.get(targetTick) ?? null; if (input) frames?.delete(targetTick); return input ? cloneNetworkInput(input) : null }
@@ -650,9 +792,33 @@ export function drainRemoteInputs(maxFrames = 64): RemoteNetworkInputFrame[] {
   const limit = Math.max(1, Math.min(256, Math.round(Number(maxFrames) || 64))), ownership = authorityTable.entries(), pending = [...remoteInputs].flatMap(([peerId, frames]) => [...frames].map(([frameTick, input]) => ({ peerId, tick: frameTick, input }))).sort((left, right) => left.tick - right.tick || left.peerId.localeCompare(right.peerId)).slice(0, limit)
   return pending.map(frame => { remoteInputs.get(frame.peerId)?.delete(frame.tick); return { peerId: frame.peerId, tick: frame.tick, input: cloneNetworkInput(frame.input), targetEntityUuids: ownership.filter(item => item.ownerPeerId === frame.peerId).map(item => item.entityUuid).sort() } })
 }
-export function rollbackSnapshot(targetTick: number): boolean { const frame = [...localHistory].reverse().find(item => item.tick <= targetTick); if (!frame) return false; for (const state of frame.snapshot.entities) { const entity = lastEntities.find(candidate => candidate.uuid === state.uuid); if (!entity) continue; const current = worldTransform(entity, lastEntities); setWorldTransform(entity, { ...current, position: state.position ? { x: state.position[0], y: state.position[1] } : current.position, rotation: state.rotation ?? current.rotation }, lastEntities); if (state.velocity) entity.velocity = { x: state.velocity[0], y: state.velocity[1] } }; tick = frame.tick; networkingState.currentTick = tick; localHistory.splice(localHistory.findIndex(item => item.tick > tick) < 0 ? localHistory.length : localHistory.findIndex(item => item.tick > tick)); remoteSnapshots.splice(0); for (const frames of remoteInputs.values()) for (const frameTick of [...frames.keys()]) if (frameTick > tick) frames.delete(frameTick); reliableBuffers.clear(); reliableWindow.clear(); baselinePending.clear(); baselineTransfers.clear(); clearDeferredInbound(); interpolationTargets.clear(); snapshotAccumulator = 0; networkingState.reliablePending = 0; networkingState.rollbacks++; rollbackTimeline.push({ tick, peerId: networkingState.localPeerId, checksumBefore: lastChecksum, checksumAfter: frame.checksum, replayedInputs: 0, correction: 0, reason: 'manual-snapshot-restore' }); refreshProductionDiagnostics(); return true }
+export function rollbackSnapshot(targetTick: number): boolean {
+  if (!Number.isSafeInteger(targetTick) || targetTick < 0) return false
+  const frame = [...localHistory].reverse().find(item => item.tick <= targetTick)
+  if (!frame) return false
+  for (const state of parentFirstNetworkStates(frame.snapshot.entities, lastEntities)) {
+    const entity = lastEntities.find(candidate => candidate.uuid === state.uuid); if (!entity) continue
+    const current = worldTransform(entity, lastEntities)
+    setWorldTransform(entity, { ...current, position: state.position ? { x: state.position[0], y: state.position[1] } : current.position, rotation: state.rotation ?? current.rotation }, lastEntities)
+    if (state.velocity) entity.velocity = { x: state.velocity[0], y: state.velocity[1] }
+  }
+  if (!transport) tick = frame.tick
+  networkingState.currentTick = tick
+  localHistory.splice(0); remoteSnapshots.splice(0); interpolationTargets.clear(); snapshotAccumulator = 0
+  networkingState.rollbacks++
+  rollbackTimeline.push({ tick, peerId: networkingState.localPeerId, checksumBefore: lastChecksum, checksumAfter: frame.checksum, replayedInputs: 0, correction: 0, reason: 'manual-snapshot-restore' })
+  refreshProductionDiagnostics(); return true
+}
+
 export function multiplayerSave(): MultiplayerSaveDocument { return exportMultiplayerSave(lastEntities, tick) }
-export function restoreMultiplayerSave(value: unknown): { tick: number; restored: number } { const restored = importMultiplayerSave(value, lastEntities); tick = restored.tick; networkingState.currentTick = tick; localHistory.splice(0); remoteSnapshots.splice(0); remoteInputs.clear(); reliableBuffers.clear(); reliableWindow.clear(); baselinePending.clear(); baselineTransfers.clear(); clearDeferredInbound(); interpolationTargets.clear(); snapshotAccumulator = 0; networkingState.reliablePending = 0; return restored }
+export function restoreMultiplayerSave(value: unknown): { tick: number; restored: number } {
+  const restored = importMultiplayerSave(value, lastEntities)
+  if (!transport) tick = restored.tick
+  networkingState.currentTick = tick
+  localHistory.splice(0); remoteSnapshots.splice(0); interpolationTargets.clear(); snapshotAccumulator = 0
+  return restored
+}
+
 export function captureNetworkDiagnostics(): string { return networkDiagnosticCapture(networkingState as unknown as Record<string, unknown>, networkingState.events, networkingState.packetSummaries) }
 export function networkRuntimeSnapshot(): Readonly<{ tick: number; localHistory: number; remoteInputs: number; reliablePending: number; owners: number; interestViews: number; rollbackEntries: number; replicationDiffs: number }> { return Object.freeze({ tick, localHistory: localHistory.length, remoteInputs: [...remoteInputs.values()].reduce((sum, frames) => sum + frames.size, 0), reliablePending: reliableWindow.size, owners: authorityTable.entries().length, interestViews: peerInterests.size, rollbackEntries: networkingState.rollbackTimeline.length, replicationDiffs: networkingState.replicationDiffs.length }) }
 

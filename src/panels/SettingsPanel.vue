@@ -17,7 +17,7 @@
     </section>
 
     <div class="settings-grid">
-      <section v-show="showCard('appearanceSettings language interfaceScale compactMode reduceMotion highContrast launchMaximized workspaceLayoutScope shortcutEditor', 'editor')" class="settings-card">
+      <section v-show="showCard('appearanceSettings theme color palette language interfaceScale compactMode reduceMotion highContrast launchMaximized workspaceLayoutScope shortcutEditor', 'editor')" class="settings-card">
         <div class="card-heading"><span class="card-icon">◐</span><h2>{{ t('appearanceSettings') }}</h2></div>
         <SettingRow :label="t('language')">
           <select v-model="prefs.locale">
@@ -26,6 +26,12 @@
             <option value="zh">{{ t('chinese') }}</option>
           </select>
         </SettingRow>
+        <SettingRow :label="PALETTE_COPY[prefs.locale].label">
+          <select data-audit="color-palette" :aria-label="PALETTE_COPY[prefs.locale].label" :value="prefs.theme === 'light' ? prefs.lightPalette : prefs.darkPalette" @change="selectColorPalette(($event.target as HTMLSelectElement).value)">
+            <option v-for="(palette, index) in COLOR_PALETTES" :key="palette.id" :value="palette.id">{{ PALETTE_COPY[prefs.locale].names[index] }} · {{ t(palette.mode) }}</option>
+          </select>
+        </SettingRow>
+        <p>{{ PALETTE_COPY[prefs.locale].hint }}</p><button class="secondary-action" data-audit="qualification-help" @click="openBundledManual((prefs.locale === 'zh' ? 'zh-CN' : prefs.locale) + '-v2620-production')">{{ t('documentation') }}</button>
         <SettingRow :label="t('interfaceScale')">
           <div class="value-control"><input v-model.number="prefs.uiScale" type="range" min="1" max="2" step="0.05"><output>{{ Math.round(prefs.uiScale * 100) }}%</output></div>
         </SettingRow>
@@ -170,12 +176,14 @@
 </template>
 
 <script setup lang="ts">
+import { openBundledManual } from '../runtime/openManual'
 import { NOVA_RELEASE_NAME } from '../projects/projectFormat'
 import { computed, defineComponent, h, inject, onBeforeUnmount, onMounted, provide, ref, watch } from 'vue'
 import { t } from '../i18n'
 import { editorState } from '../store/editor'
 import { autosaveState, physicsState as physics, pushHistory, restoreAutosave } from '../store/physics'
-import { preferencesState as prefs, resetPreferences } from '../store/preferences'
+import { preferencesState as prefs, resetPreferences, selectColorPalette } from '../store/preferences'
+import { COLOR_PALETTES, PALETTE_COPY } from '../store/colorPalettes'
 import type { ThemeMode } from '../store/preferences'
 import type { PerformanceProfile } from '../store/preferences'
 import { INPUT_DEVICES, createInputAction, createInputBinding, detectInputConflicts, normalizeInputMap, type InputBinding, type InputDevice, type InputDeviceIdentity, type InputModifier, type InputRecording } from '../runtime/input'

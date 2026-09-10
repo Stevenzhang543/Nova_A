@@ -53,7 +53,7 @@ export async function withBrowserAudit({ release, name, width = 1440, height = 9
     assert.ok(target >= 0, `Missing option ${value}`); await click(selector, index); await press('Escape'); await press('Home'); for (let n = 0; n < target; n++) await press('ArrowDown'); await press('Enter'); await press('Tab'); await wait(100)
     assert.equal(await evaluate(`document.querySelectorAll(${JSON.stringify(selector)})[${index}].value`), value)
   }
-  const capture = async label => { assert.match(label, /^[a-z0-9-]+$/); const file = `v${release}-${name}-${label}.png`; const result = await client.send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false }); await writeFile(join(evidence, file), Buffer.from(result.data, 'base64')); captures.push(file); return file }
+  const capture = async (label, pageClient = client) => { assert.match(label, /^[a-z0-9-]+$/); const file = `v${release}-${name}-${label}.png`; const result = await pageClient.send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false }); await writeFile(join(evidence, file), Buffer.from(result.data, 'base64')); captures.push(file); return file }
   const check = async (label, action) => { await action(); checks.push({ name: label, status: 'passed' }); console.log(`PASS ${label}`) }
   const viewport = async (w, h) => { await client.send('Emulation.setDeviceMetricsOverride', { width: w, height: h, deviceScaleFactor: 1, mobile: false }); await client.send('Emulation.setVisibleSize', { width: w, height: h }); await wait(480); assert.deepEqual(await evaluate('({width:innerWidth,height:innerHeight})'), { width: w, height: h }) }
   try {

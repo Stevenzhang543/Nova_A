@@ -8,6 +8,12 @@ import { fileURLToPath, pathToFileURL } from 'node:url'
 export function resolveMilestoneAuditContext(moduleUrl, { release, reportName, argv = process.argv.slice(2), env = process.env } = {}) {
   assert.match(release, /^26\.(?:1[3-9]|20)$/); assert.match(reportName, /^[a-z0-9-]+$/)
   const scriptRoot = dirname(dirname(fileURLToPath(moduleUrl))), option = name => argv.find(value => value.startsWith(`--${name}=`))?.slice(name.length + 3)
+  const regressionOrigin = release, target = option('qualification-release')
+  if (target) {
+    assert.equal(target, '26.20', 'Only the integrated 26.20 regression target is supported')
+    assert.ok(Number(release.split('.')[1]) <= 20, 'Cannot qualify a future suite')
+    release = target
+  }
   let repository = scriptRoot
   while (!existsSync(join(repository, 'package.json'))) { const parent = dirname(repository); assert.notEqual(parent, repository, 'Audit must live below a repository package.json'); repository = parent }
   const development = argv.includes('--development') || env.NOVA_AUDIT_DEVELOPMENT === '1'
@@ -33,7 +39,7 @@ export function resolveMilestoneAuditContext(moduleUrl, { release, reportName, a
   const expectedRelease = development ? buildEngineVersion.split('.').slice(0, 2).join('.') : release
   if (env.NOVA_AUDIT_EXPECTED_RELEASE) assert.equal(env.NOVA_AUDIT_EXPECTED_RELEASE, expectedRelease, 'Expected browser release must match the selected build metadata')
   const reportPath = resolve(repository, option('report') ?? (development ? join(sourceRoot, 'reports', `v${release}-${reportName}.json`) : join(repository, 'release-audits', `v${release}-${reportName}.json`)))
-  const metadata = () => ({ format: `nova-v${release}-${reportName}-audit`, version: 1, release, engineVersion, buildEngineVersion, generatedAt: new Date().toISOString(), development, expectedRelease, qualificationTarget: release, qualifiedRelease: null, baselineVersion: development ? engineVersion : null, overlayVersion: development ? `${release}.0` : null, sourceRoots: bases.map(directory => relative(repository, directory).replaceAll('\\', '/') || '.'), buildRoot: relative(repository, buildRoot).replaceAll('\\', '/') || '.' })
+  const metadata = () => ({ format: `nova-v${release}-${reportName}-audit`, version: 1, release, regressionOrigin, engineVersion, buildEngineVersion, generatedAt: new Date().toISOString(), development, expectedRelease, qualificationTarget: release, qualifiedRelease: null, baselineVersion: development ? engineVersion : null, overlayVersion: development ? `${release}.0` : null, sourceRoots: bases.map(directory => relative(repository, directory).replaceAll('\\', '/') || '.'), buildRoot: relative(repository, buildRoot).replaceAll('\\', '/') || '.' })
   return { repository, scriptRoot, sourceRoot, bases, development, engineVersion, buildEngineVersion, buildRoot, expectedRelease, reportPath, metadata }
 }
 

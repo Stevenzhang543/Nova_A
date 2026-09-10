@@ -104,8 +104,21 @@ export const packageState = reactive({
   ,lastSolverDiagnostic: null as PackageSolverDiagnostic | null
 })
 
+export type PackageLifecycleAction = 'enable' | 'disable' | 'uninstall' | 'update' | 'rollback'
+const packageLifecycleListeners = new Set<(id: string, action: PackageLifecycleAction) => void>()
+export function onPackageLifecycle(listener: (id: string, action: PackageLifecycleAction) => void): () => void { packageLifecycleListeners.add(listener); return () => { packageLifecycleListeners.delete(listener) } }
+function notifyPackageLifecycle(id: string, action: PackageLifecycleAction): void { for (const listener of packageLifecycleListeners) listener(id, action) }
+export function setPackageEnabled(id: string, enabled: boolean): boolean {
+  const item = packageState.installed.find(candidate => candidate.manifest.id === id)
+  if (!item || enabled && (item.manifest.native || item.securityStatus !== 'verified' || packageCompatibility(item).length > 0)) return false
+  item.enabled = enabled
+  notifyPackageLifecycle(id, enabled ? 'enable' : 'disable')
+  return true
+}
 const verifiedPublisherPackages = new Set<string>()
-function publisherPackageKey(manifest: PackageManifest): string { return `${manifest.id}@${manifest.version}:${manifest.sha256}:${manifest.signature}:${manifest.publisher}` }
+function publisherPackageKey(manifest: PackageManifest): string { return JSON.stringify(normalizePackageManifest(manifest)) }
+// Official archive identity and operational metadata are stable across legacy copy edits.
+function officialRegistryPackageKey(manifest: PackageManifest): string { return JSON.stringify({ ...normalizePackageManifest(manifest), description: '', vulnerabilityPolicy: '' }) }
 export function markPublisherPackageVerified(manifest: PackageManifest, fingerprint: string): void {
   if (!/^[a-f0-9]{16,64}$/.test(fingerprint) || !manifest.signature.startsWith('ed25519-v1:')) throw new Error('Publisher verification metadata is invalid.')
   manifest.publisherVerified = true
@@ -183,7 +196,17 @@ export function enableOfficialPackage(id: typeof OFFICIAL_NAVIGATION_PACKAGE_ID 
   const manifest = OFFICIAL_PACKAGES[id]
   if (!manifest) return false
   const existing = packageState.installed.find(item => item.manifest.id === id)
-  if (existing) { existing.enabled = true; existing.project = true; resolvePackageLockfile(); return true }
+  if (existing) {
+    const candidate = { ...existing, enabled: true, project: true }
+    const candidates = packageState.installed.map(item => item === existing ? candidate : item)
+    if (existing.securityStatus !== 'verified' || packageCompatibility(candidate, PACKAGE_ENGINE_VERSION, candidates).length) return false
+    const diagnostic = diagnosePackageResolution(candidates)
+    if (diagnostic.status === 'blocked') return false
+    existing.enabled = true; existing.project = true
+    packageState.lockfile.splice(0, packageState.lockfile.length, ...diagnostic.lockfile)
+    notifyPackageLifecycle(id, 'enable')
+    return true
+  }
   installPackageManifest(manifest, { kind: 'registry', location: 'Nova_A official offline package' })
   return true
 }
@@ -314,6 +337,7 @@ export function reviewPackageSecurity(manifest: PackageManifest, candidates: rea
     && candidate.signature === manifest.signature
     && candidate.publisher === manifest.publisher
     && candidate.publisherVerified
+    && officialRegistryPackageKey(candidate) === officialRegistryPackageKey(manifest)
   )
   const officialSignature = manifest.signature === `nova-official-v1:${manifest.sha256}` && manifest.publisherVerified && Boolean(trustedRegistryEntry)
   const reviewedPublisherSignature = manifest.publisherVerified && manifest.signature.startsWith('ed25519-v1:') && verifiedPublisherPackages.has(publisherPackageKey(manifest))
@@ -342,8 +366,8 @@ export function verifyPackageArchive(manifest: PackageManifest, archiveSha256: s
 
 export function quarantinePackage(manifest: PackageManifest, reason: string): void {
   if (!packageState.quarantine.some(item => item.id === manifest.id && item.version === manifest.version)) packageState.quarantine.push({ id: manifest.id, version: manifest.version, reason: reason.slice(0, 500), quarantinedAt: Date.now() })
-  const installed = packageState.installed.find(item => item.manifest.id === manifest.id)
-  if (installed) { installed.enabled = false; installed.securityStatus = 'quarantined' }
+  const installed = packageState.installed.find(item => item.manifest.id === manifest.id && item.manifest.version === manifest.version)
+  if (installed) { installed.enabled = false; installed.securityStatus = 'quarantined'; notifyPackageLifecycle(manifest.id, 'disable') }
 }
 
 export function applyVerifiedPackageSecurityBulletin(value: unknown): { revoked: number; vulnerable: number; disabled: number } {
@@ -510,11 +534,15 @@ export function installPackageManifest(value: unknown, sourceValue?: unknown): I
   }
   const existing = packageState.installed.findIndex(candidate => candidate.manifest.id === manifest.id)
   const cached = packageState.offlineCache.findIndex(candidate => candidate.id === manifest.id && candidate.version === manifest.version)
-  if (cached >= 0) packageState.offlineCache.splice(cached, 1, manifest); else packageState.offlineCache.push(manifest)
   if (existing >= 0 && compareVersions(manifest.version, packageState.installed[existing].manifest.version) <= 0) return packageState.installed[existing]
   const item: InstalledPackage = { manifest, source, enabled: !manifest.native && security.status === 'verified', project: true, installedAt: Date.now(), securityStatus: security.status, grantedPermissions: [...manifest.permissions], deprecations }
+  const candidates = existing >= 0 ? packageState.installed.map((current, index) => index === existing ? item : current) : [...packageState.installed, item]
+  const diagnostic = diagnosePackageResolution(candidates)
+  if (diagnostic.status === 'blocked') throw new Error(diagnostic.errors.join(' '))
+  if (cached >= 0) packageState.offlineCache.splice(cached, 1, manifest); else packageState.offlineCache.push(manifest)
   if (existing >= 0) packageState.installed.splice(existing, 1, item); else packageState.installed.push(item)
-  try { resolvePackageLockfile() } catch (error) { packageState.errors.push(error instanceof Error ? error.message : String(error)) }
+  packageState.lockfile.splice(0, packageState.lockfile.length, ...diagnostic.lockfile)
+  if (existing >= 0) notifyPackageLifecycle(manifest.id, 'update')
   return item
 }
 
@@ -537,16 +565,14 @@ export function applyPackageUpdate(id: string): boolean {
   }
   const addedPermissions = update.permissions.filter(permission => !current.grantedPermissions.includes(permission))
   if (addedPermissions.length) { packageState.errors.push(`Update blocked until permission review: ${addedPermissions.join(', ')}`); return false }
+  const candidate = { ...current, manifest: update, securityStatus: security.status, installedAt: Date.now(), grantedPermissions: current.grantedPermissions.filter(permission => update.permissions.includes(permission)) }
+  const diagnostic = diagnosePackageResolution(packageState.installed.map((item, position) => position === index ? candidate : item))
+  if (diagnostic.status === 'blocked') { packageState.errors.push(...diagnostic.errors); return false }
   const history = packageState.rollback[id] ?? (packageState.rollback[id] = [])
   history.unshift(current.manifest); if (history.length > 5) history.splice(5)
-  packageState.installed.splice(index, 1, { ...current, manifest: update, securityStatus: security.status, installedAt: Date.now() })
-  try { resolvePackageLockfile() } catch (error) {
-    packageState.installed.splice(index, 1, current)
-    history.shift()
-    resolvePackageLockfile()
-    packageState.errors.push(error instanceof Error ? error.message : String(error))
-    return false
-  }
+  packageState.installed.splice(index, 1, candidate)
+  packageState.lockfile.splice(0, packageState.lockfile.length, ...diagnostic.lockfile)
+  notifyPackageLifecycle(id, 'update')
   return true
 }
 
@@ -555,14 +581,27 @@ export function approvePackageUpdatePermissions(id: string, permissions: string[
   if (!item || !update) return false
   const required = update.permissions.filter(permission => !item.grantedPermissions.includes(permission))
   if (required.some(permission => !permissions.includes(permission))) return false
-  item.grantedPermissions = [...new Set([...item.grantedPermissions, ...required])]
-  return applyPackageUpdate(id)
+  const previous = [...item.grantedPermissions]
+  item.grantedPermissions = [...new Set([...previous, ...required])]
+  try { const applied = applyPackageUpdate(id); if (!applied) item.grantedPermissions = previous; return applied }
+  catch (error) { item.grantedPermissions = previous; throw error }
 }
 
 export function rollbackPackage(id: string): boolean {
-  const item = packageState.installed.find(candidate => candidate.manifest.id === id), previous = packageState.rollback[id]?.shift()
-  if (!item || !previous || reviewPackageSecurity(previous).status !== 'verified') return false
-  item.manifest = previous; item.securityStatus = 'verified'; item.enabled = !previous.native; resolvePackageLockfile(); return true
+  const index = packageState.installed.findIndex(candidate => candidate.manifest.id === id)
+  const item = packageState.installed[index], history = packageState.rollback[id], previous = history?.[0]
+  if (!item || !previous) return false
+  const candidate = { ...item, manifest: previous, grantedPermissions: item.grantedPermissions.filter(permission => previous.permissions.includes(permission)) }
+  const candidates = packageState.installed.map((installed, position) => position === index ? candidate : installed)
+  const security = reviewPackageSecurity(previous, candidates)
+  if (security.status !== 'verified') return false
+  const diagnostic = diagnosePackageResolution(candidates)
+  if (diagnostic.status === 'blocked') { packageState.errors.push(...diagnostic.errors); return false }
+  packageState.installed.splice(index, 1, { ...candidate, securityStatus: 'verified', enabled: item.enabled && !previous.native })
+  packageState.lockfile.splice(0, packageState.lockfile.length, ...diagnostic.lockfile)
+  history.shift()
+  notifyPackageLifecycle(id, 'rollback')
+  return true
 }
 
 export function verifyPackageCache(): string[] {
@@ -583,8 +622,11 @@ export function uninstallPackage(id: string): boolean {
   if (packageUninstallImpact(id).length) return false
   const index = packageState.installed.findIndex(item => item.manifest.id === id)
   if (index < 0) return false
+  const diagnostic = diagnosePackageResolution(packageState.installed.filter((_, position) => position !== index))
+  if (diagnostic.status === 'blocked') { packageState.errors.push(...diagnostic.errors); return false }
   packageState.installed.splice(index, 1)
-  resolvePackageLockfile()
+  packageState.lockfile.splice(0, packageState.lockfile.length, ...diagnostic.lockfile)
+  notifyPackageLifecycle(id, 'uninstall')
   return true
 }
 

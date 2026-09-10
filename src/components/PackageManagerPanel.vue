@@ -56,7 +56,7 @@
           <div><dt>{{ t('license') }}</dt><dd>{{ selected.manifest.license }}</dd></div>
           <div><dt>{{ t('provenance') }}</dt><dd>{{ selected.manifest.provenance }}</dd></div>
           <div><dt>{{ t('security') }}</dt><dd :class="selected.securityStatus === 'verified' ? 'success' : 'problem'">{{ selected.securityStatus }}</dd></div>
-          <div><dt>SHA-256</dt><dd>{{ selected.manifest.sha256 ? `${selected.manifest.sha256.slice(0, 14)}…` : t('unsigned') }}</dd></div>
+          <div><dt>SHA-256</dt><dd>{{ selected.manifest.sha256 || t('unsigned') }}</dd></div>
         </dl>
         <section>
           <strong>{{ t('compatibilityReport') }}</strong>
@@ -94,8 +94,8 @@ import { computed, ref } from 'vue'
 import { t } from '../i18n'
 import { requestConfirmation } from '../store/dialog'
 import { pushHistory } from '../store/physics'
-import { approvePackageUpdatePermissions, installPackageManifest, installRegistryPackage, normalizePackageManifest, packageCompatibility, packageInstallReview, packageState as packages, packageUninstallImpact, packageUpdate, registryPackages, reviewPackageSecurity, rollbackPackage, uninstallPackage, verifyPackageCache, type InstalledPackage } from '../runtime/packages'
-import { normalizePluginManifest, pluginState as plugins, setPluginSafeMode } from '../runtime/plugins'
+import { setPackageEnabled, approvePackageUpdatePermissions, installPackageManifest, installRegistryPackage, normalizePackageManifest, packageCompatibility, packageInstallReview, packageState as packages, packageUninstallImpact, packageUpdate, registryPackages, reviewPackageSecurity, rollbackPackage, uninstallPackage, verifyPackageCache, type InstalledPackage } from '../runtime/packages'
+import { preparePackagePluginManifest, pluginRuntime, pluginState as plugins, setPluginSafeMode } from '../runtime/plugins'
 import { completeTask, failTask, startTask } from '../runtime/editorFeedback'
 import { openBundledManual } from '../runtime/openManual'
 import PluginSettings from './PluginSettings.vue'
@@ -133,11 +133,13 @@ async function importManifest(event: Event): Promise<void> {
     const raw = JSON.parse(await file.text()) as Record<string, unknown>
     const preview = normalizePackageManifest(raw.package ?? raw), review = reviewPackageSecurity(preview)
     if (review.status !== 'verified') throw new Error(review.blocking.join(' '))
+    const plugin = raw.plugin ? preparePackagePluginManifest(raw.plugin, preview) : null
     const approved = await requestConfirmation({ title: t('permissionReview'), message: `${preview.name} · ${preview.entryPointType}\n${preview.permissions.length ? preview.permissions.join(', ') : t('none')}\nSHA-256 ${preview.sha256}`, confirmLabel: t('installPackage'), cancelLabel: t('cancel'), destructive: false })
     if (!approved) { completeTask(task, t('cancel')); return }
     const item = installPackageManifest(raw.package ?? raw, raw.source)
-    if (item.manifest.pluginApi === 2 && raw.plugin) {
-      const plugin = normalizePluginManifest(raw.plugin), index = plugins.manifests.findIndex(candidate => candidate.id === plugin.id)
+    if (plugin && item.manifest.version === plugin.version) {
+      pluginRuntime.unload(plugin.id)
+      const index = plugins.manifests.findIndex(candidate => candidate.id === plugin.id)
       if (index >= 0) plugins.manifests.splice(index, 1, plugin); else plugins.manifests.push(plugin)
     }
     selectedId.value = item.manifest.id; pushHistory('Install package'); completeTask(task, item.manifest.name)
@@ -145,42 +147,46 @@ async function importManifest(event: Event): Promise<void> {
 }
 async function requestUninstall(): Promise<void> {
   if (!selected.value) return
-  const impact = packageUninstallImpact(selected.value.manifest.id)
+  const reviewed = selected.value
+  const impact = packageUninstallImpact(reviewed.manifest.id)
   const approved = await requestConfirmation({ title: t('uninstallPackage'), message: impact.length ? `${t('uninstallImpact')}: ${impact.join('; ')}` : t('uninstallNoImpact'), confirmLabel: t('uninstallPackage'), cancelLabel: t('cancel'), destructive: true })
   if (!approved) return
-  const packageName = selected.value.manifest.name
+  if (selected.value !== reviewed || !packages.installed.includes(reviewed)) return
+  const packageName = reviewed.manifest.name
   const task = startTask(t('uninstallPackage'), { detail: packageName })
   try {
-    if (!uninstallPackage(selected.value.manifest.id)) throw new Error(t('operationFailed'))
+    if (!uninstallPackage(reviewed.manifest.id)) throw new Error(t('operationFailed'))
     selectedId.value = ''; pushHistory('Uninstall package'); completeTask(task, packageName)
   } catch (error) { failTask(task, error) }
 }
 function setEnabled(item: InstalledPackage, enabled: boolean): void {
-  item.enabled = enabled
+  if (!setPackageEnabled(item.manifest.id, enabled)) return
   const plugin = plugins.manifests.find(candidate => candidate.id === item.manifest.id)
   if (plugin) plugin.projectEnabled = enabled
   pushHistory(enabled ? 'Enable package' : 'Disable package', `package:${item.manifest.id}`)
 }
 async function applyUpdate(): Promise<void> {
   if (!selected.value) return
-  const task = startTask(t('applyPackageUpdate'), { detail: selected.value.manifest.name })
+  const reviewed = selected.value, candidate = update.value, permissions = [...updatePermissions.value]
+  const task = startTask(t('applyPackageUpdate'), { detail: reviewed.manifest.name })
   if (updatePermissions.value.length) {
     const approved = await requestConfirmation({ title: t('permissionChanges'), message: updatePermissions.value.join(', '), confirmLabel: t('approve'), cancelLabel: t('cancel'), destructive: false })
     if (!approved) { completeTask(task, t('cancel')); return }
   }
-  if (!approvePackageUpdatePermissions(selected.value.manifest.id, updatePermissions.value)) { failTask(task, new Error(t('operationFailed'))); return }
-  const plugin = plugins.manifests.find(candidate => candidate.id === selected.value?.manifest.id)
-  if (plugin) plugin.version = selected.value.manifest.version
+  if (selected.value !== reviewed || update.value !== candidate || !packages.installed.includes(reviewed)) { failTask(task, new Error(t('operationFailed'))); return }
+  if (!approvePackageUpdatePermissions(reviewed.manifest.id, permissions)) { failTask(task, new Error(t('operationFailed'))); return }
   pushHistory('Update package', `package:${selected.value.manifest.id}`); completeTask(task, selected.value.manifest.version)
 }
 async function installSelectedRegistry(): Promise<void> {
   if (!selectedRegistry.value) return
-  const task = startTask(t('installPackage'), { detail: selectedRegistry.value.name })
+  const reviewed = selectedRegistry.value, registry = packages.selectedRegistry
+  const task = startTask(t('installPackage'), { detail: reviewed.name })
   const review = packageInstallReview(selectedRegistry.value)
   if (!review.executionAllowed) { failTask(task, new Error(review.blocking.join(' '))); return }
   const approved = await requestConfirmation({ title: t('permissionReview'), message: `${selectedRegistry.value.name} · ${selectedRegistry.value.entryPointType}\n${t('publisher')}: ${review.publisher}\n${t('license')}: ${review.license}\n${t('provenance')}: ${review.provenance}\n${t('permissions')}: ${review.permissions.length ? review.permissions.join(', ') : t('none')}\nSHA-256 ${review.archiveSha256}`, confirmLabel: t('installPackage'), cancelLabel: t('cancel'), destructive: false })
   if (!approved) { completeTask(task, t('cancel')); return }
-  try { const item = installRegistryPackage(selectedRegistry.value.id); selectedId.value = item.manifest.id; pushHistory('Install registry package'); completeTask(task, item.manifest.name) }
+  if (selectedRegistry.value !== reviewed || packages.selectedRegistry !== registry) { failTask(task, new Error(t('operationFailed'))); return }
+  try { const item = installRegistryPackage(reviewed.id); selectedId.value = item.manifest.id; pushHistory('Install registry package'); completeTask(task, item.manifest.name) }
   catch (error) { failTask(task, error) }
 }
 function performRollback(): void { if (!selected.value || !rollbackPackage(selected.value.manifest.id)) return; pushHistory('Rollback package', `package:${selected.value.manifest.id}`) }
@@ -199,4 +205,16 @@ async function openPackageUrl(url: string): Promise<void> {
 .registry-layout{min-height:0;flex:1;display:grid;grid-template-columns:minmax(300px,1fr) minmax(260px,34%);overflow:hidden}.registry-list,.registry-inspector{min-height:0;overflow:auto;scrollbar-gutter:stable}.registry-list{padding:8px}.registry-list>header{padding-bottom:7px;display:grid;grid-template-columns:minmax(130px,220px) minmax(140px,1fr);gap:6px}.registry-list>header>*{min-width:0}.registry-list>article{min-width:0;padding:9px;display:grid;grid-template-columns:38px minmax(0,1fr) auto;align-items:start;gap:8px;border:1px solid transparent;border-radius:10px}.registry-list>article:hover,.registry-list>article.selected{border-color:var(--accent);background:var(--accent-soft)}.registry-list>article>div:nth-child(2){min-width:0;display:grid}.registry-list strong,.registry-list small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.registry-list small,.registry-list p,.registry-inspector p{color:var(--text-muted);font-size:11px}.registry-list p{margin:3px 0 0;line-height:1.4}.verified{color:var(--success);font-size:11px;white-space:nowrap}.registry-inspector{padding:12px;border-left:1px solid var(--border-subtle);background:var(--surface-2)}.registry-inspector>header{display:flex;justify-content:space-between;gap:8px}.registry-inspector>header>div{min-width:0;display:grid}.registry-inspector>header small{overflow:hidden;color:var(--text-muted);font-size:11px;text-overflow:ellipsis}.registry-inspector>header>span{color:var(--warning)}.registry-inspector dl div{padding:5px 0;display:grid;grid-template-columns:90px minmax(0,1fr);gap:6px;border-bottom:1px solid var(--border-subtle)}.registry-inspector dt{color:var(--text-muted)}.registry-inspector dd{margin:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.registry-inspector dd b{color:var(--success)}.registry-inspector section{margin-top:11px;padding-top:9px;border-top:1px solid var(--border-subtle)}.registry-links{display:grid;grid-template-columns:1fr 1fr;gap:5px}.registry-links strong{grid-column:1/-1}.registry-links button,.registry-inspector>.install{min-height:30px;border:1px solid var(--border-subtle);border-radius:7px;background:var(--surface-3)}.registry-inspector>.install{width:100%;margin-top:10px;color:var(--accent-contrast);border-color:var(--accent);background:var(--accent)}
 @media(max-width:800px){.package-header{flex-wrap:wrap}.package-header>div{flex-basis:100%}.package-tabs{flex-wrap:wrap;overflow:visible}.package-list article{grid-template-columns:38px minmax(0,1fr) auto}.package-list .source{display:none}}
 @media(max-width:800px){.registry-layout{grid-template-columns:1fr}.registry-inspector{position:absolute;right:0;bottom:0;width:min(330px,78vw);height:calc(100% - 48px);box-shadow:var(--shadow-lg)}}
+</style>
+
+<style scoped>
+.package-manager{container-type:inline-size}.package-header{flex-wrap:wrap}.package-header button,.package-tabs button{height:auto;white-space:normal}
+.registry-inspector dd,.package-inspector dd,.registry-inspector p,.package-inspector p{white-space:normal;overflow-wrap:anywhere;overflow:visible;text-overflow:clip}
+@container(max-width:850px){.package-layout,.registry-layout{grid-template-columns:minmax(0,1fr);overflow:auto;align-content:start}.package-inspector,.registry-inspector{position:static;width:auto;height:auto;min-width:0;max-width:100%;box-shadow:none;overflow:visible}.package-list,.registry-list{overflow:visible}.registry-list>header{grid-template-columns:minmax(0,1fr)}}
+</style>
+
+<style scoped>
+.registry-inspector dt,.package-inspector dt{overflow-wrap:anywhere;white-space:normal}
+.registry-links{grid-template-columns:repeat(2,minmax(0,1fr))}.registry-links button{min-width:0;white-space:normal;overflow-wrap:anywhere;height:auto}
+.registry-inspector>header,.package-title{flex-wrap:wrap;overflow-wrap:anywhere}
 </style>

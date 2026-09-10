@@ -5,6 +5,7 @@ import { reportRendererContextLost, reportRendererContextRestored } from './capa
 import { activePostProcessing, GPU_TEXTURE_MEMORY_LIMIT_MB, renderingSettings } from './renderSettings'
 import { textureContentVersion } from './textureContent'
 import { boundedFrame } from './surfaceLimits'
+import { multisampleCount } from './outputQuality20'
 import {
   normalizedColor,
   type CameraRenderView,
@@ -50,6 +51,7 @@ interface CachedText {
 }
 
 const MAX_PACKET_VERTICES = 65_000
+const MAX_BATCH_INDICES = MAX_PACKET_VERTICES * 3
 function finite(value: number, fallback: number): number { return Number.isFinite(value) ? value : fallback }
 function safeViewport(viewport: CameraRenderView['viewport']): { x: number; y: number; width: number; height: number } {
   const x = Math.min(1 - 1e-6, Math.max(0, finite(viewport?.x ?? 0, 0)))
@@ -218,12 +220,26 @@ export class WebGL2Renderer implements Renderer2D {
   private readonly vao: WebGLVertexArrayObject
   private readonly vertexBuffer: WebGLBuffer
   private readonly indexBuffer: WebGLBuffer
+  private vertexUpload = new Float32Array(0)
+  private indexUpload = new Uint32Array(0)
+  private vertexCapacityBytes = 0
+  private indexCapacityBytes = 0
+  private readonly maximumSurfaceDimension: number
+  private readonly maximumTextureDimension: number
   private framebuffer: WebGLFramebuffer | null = null
   private colorTarget: WebGLTexture | null = null
+  private sampleFramebuffer: WebGLFramebuffer | null = null
+  private sampleColor: WebGLRenderbuffer | null = null
+  private sampleSignature = ''
+  private sampleCount = 0
+  private requestedSamples = 0
+  private readonly supportedSamples: number[]
+  private readonly defaultSamples: number
   private readonly baseProgramState: ProgramState
   private readonly materialPrograms = new Map<string, ProgramState | null>()
   private materialGeneration = -1
   private postProgram: (PostProgramState & { reference: string; generation: number }) | null = null
+  private copyProgram: WebGLProgram | null = null
   private failedPostSignature = ''
   private readonly timerExtension: TimerQueryExtension | null
   private activeTimer: WebGLQuery | null = null
@@ -273,9 +289,13 @@ export class WebGL2Renderer implements Renderer2D {
   }
 
   constructor(private readonly canvas: HTMLCanvasElement) {
-    const gl = canvas.getContext('webgl2', { alpha: false, antialias: true, depth: false, premultipliedAlpha: true, powerPreference: 'high-performance' })
+    const gl = canvas.getContext('webgl2', { alpha: false, antialias: renderingSettings.antiAliasing !== 'Off', depth: false, premultipliedAlpha: true, powerPreference: 'high-performance' })
     if (!gl) throw new Error('WebGL2 is unavailable')
     this.gl = gl
+    this.supportedSamples = Array.from(gl.getInternalformatParameter(gl.RENDERBUFFER, gl.RGBA8, gl.SAMPLES) as Int32Array)
+    this.defaultSamples = gl.getParameter(gl.SAMPLES) as number
+    this.maximumSurfaceDimension = gl.getParameter(gl.MAX_RENDERBUFFER_SIZE) as number
+    this.maximumTextureDimension = Math.min(8192, gl.getParameter(gl.MAX_TEXTURE_SIZE) as number)
     canvas.addEventListener('webglcontextlost', this.onContextLost)
     canvas.addEventListener('webglcontextrestored', this.onContextRestored)
     try {
@@ -320,7 +340,7 @@ export class WebGL2Renderer implements Renderer2D {
   }
 
   resize(width: number, height: number, pixelRatio: number): void {
-    const safe = boundedFrame({ width, height, pixelRatio, clearColor: this.frame.clearColor }, this.gl.getParameter(this.gl.MAX_RENDERBUFFER_SIZE) as number)
+    const safe = boundedFrame({ width, height, pixelRatio, clearColor: this.frame.clearColor }, this.maximumSurfaceDimension)
     const pixelWidth = Math.max(1, Math.floor(safe.width * safe.pixelRatio))
     const pixelHeight = Math.max(1, Math.floor(safe.height * safe.pixelRatio))
     if (this.targetWidth === pixelWidth && this.targetHeight === pixelHeight) return
@@ -333,20 +353,26 @@ export class WebGL2Renderer implements Renderer2D {
 
   beginFrame(options: FrameOptions): void {
     this.frameSerial++
-    this.frame = boundedFrame(options, this.gl.getParameter(this.gl.MAX_RENDERBUFFER_SIZE) as number)
+    this.frame = boundedFrame(options, this.maximumSurfaceDimension)
     this.resize(this.frame.width, this.frame.height, this.frame.pixelRatio)
-    this.packets = []
+    this.packets.length = 0
     this.sequence = 0
     this.cameraIndex = -1
     if (this.contextLost || this.gl.isContextLost()) return
-    this.effectsTargetActive = renderingSettings.postProcessing.enabled
-    if (this.effectsTargetActive) this.ensureEffectsTarget()
+    const aa = renderingSettings.antiAliasing
+    this.requestedSamples = aa === 'Off' ? 0 : aa === 'MSAA8' ? 8 : aa === 'MSAA2' ? 2 : aa === 'MSAA4' ? 4 : renderingSettings.pixelSnap ? 0 : 4
+    this.effectsTargetActive = renderingSettings.postProcessing.enabled || aa?.startsWith('MSAA') === true
+    if (this.effectsTargetActive) { this.ensureEffectsTarget(); this.ensureMultisampleTarget() }
+    else this.releaseMultisampleTarget()
     this.pollGpuTimers()
     Object.assign(this.stats, { drawCalls: 0, batches: 0, triangles: 0, sprites: 0, shapes: 0, text: 0, textures: this.textureCount, gpuMs: this.lastGpuMs, passes: 1, renderTargets: this.effectsTargetActive ? 1 : 0, overdraw: 0, batchBreaks: 0, atlasPages: assetState.atlasPages.length, textureMemoryBytes: this.textureMemoryBytes, textureUploads: 0, textureEvictions: 0, textureBudgetBytes: this.textureBudget(), textureBudgetExceeded: false, streamingMisses: 0, shaderCompiles: 0, shaderFallbacks: 0, contextLosses: this.contextLossCount, batchBreakReasons: {} })
+    this.stats.backingWidth = this.canvas.width; this.stats.backingHeight = this.canvas.height
+    this.stats.antiAliasingSamples = this.effectsTargetActive ? this.sampleCount : this.defaultSamples
+    this.stats.antiAliasingLimited = this.effectsTargetActive && this.sampleCount < this.requestedSamples
     this.stats.textureUploadDeferrals = 0
     this.drainTextureUploads()
     const gl = this.gl
-    gl.bindFramebuffer(gl.FRAMEBUFFER, this.effectsTargetActive ? this.framebuffer : null)
+    gl.bindFramebuffer(gl.FRAMEBUFFER, this.effectsTargetActive ? this.sampleFramebuffer ?? this.framebuffer : null)
     const [r, g, b, a] = normalizedColor(options.clearColor)
     gl.viewport(0, 0, this.canvas.width, this.canvas.height)
     gl.disable(gl.DEPTH_TEST)
@@ -403,10 +429,12 @@ export class WebGL2Renderer implements Renderer2D {
     if (this.contextLost || this.gl.isContextLost()) return { ...this.stats }
     this.packets.sort((first, second) => first.cameraIndex - second.cameraIndex || first.layer - second.layer || first.order - second.order || first.sequence - second.sequence)
     let batch: GeometryPacket[] = []
+    let batchVertexCount = 0, batchIndexCount = 0
     const flush = () => {
       if (!batch.length) return
       this.drawBatch(batch)
       batch = []
+      batchVertexCount = 0; batchIndexCount = 0
     }
     for (const packet of this.packets) {
       const previous = batch[0]
@@ -416,23 +444,27 @@ export class WebGL2Renderer implements Renderer2D {
         && previous.filter === packet.filter
         && previous.material === packet.material
         && previous.blend === packet.blend
-      const vertexCount = batch.reduce((total, item) => total + item.geometry.positions.length, 0)
-      if ((!sameBatch || vertexCount + packet.geometry.positions.length > 65_000) && batch.length) {
-        const reason = !previous ? 'initial' : previous.cameraIndex !== packet.cameraIndex ? 'camera' : previous.texture?.source !== packet.texture?.source ? 'texture' : previous.filter !== packet.filter ? 'filter' : previous.material !== packet.material ? 'material' : previous.blend !== packet.blend ? 'blend' : 'vertex-limit'
+      if ((!sameBatch || batchVertexCount + packet.geometry.positions.length > MAX_PACKET_VERTICES || batchIndexCount + packet.geometry.indices.length > MAX_BATCH_INDICES) && batch.length) {
+        const reason = !previous ? 'initial' : previous.cameraIndex !== packet.cameraIndex ? 'camera' : previous.texture?.source !== packet.texture?.source ? 'texture' : previous.filter !== packet.filter ? 'filter' : previous.material !== packet.material ? 'material' : previous.blend !== packet.blend ? 'blend' : batchIndexCount + packet.geometry.indices.length > MAX_BATCH_INDICES ? 'index-limit' : 'vertex-limit'
         this.stats.batchBreakReasons[reason] = (this.stats.batchBreakReasons[reason] ?? 0) + 1
         flush()
       }
       batch.push(packet)
+      batchVertexCount += packet.geometry.positions.length
+      batchIndexCount += packet.geometry.indices.length
     }
     flush()
     this.stats.batchBreaks = Math.max(0, this.stats.batches - 1)
     const gl = this.gl
+    if (this.effectsTargetActive && this.sampleFramebuffer) {
+      gl.bindFramebuffer(gl.READ_FRAMEBUFFER, this.sampleFramebuffer)
+      gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, this.framebuffer)
+      gl.blitFramebuffer(0, 0, this.canvas.width, this.canvas.height, 0, 0, this.canvas.width, this.canvas.height, gl.COLOR_BUFFER_BIT, gl.NEAREST)
+    }
     const postReference = activePostProcessing.userMaterial
     const postMaterial = postReference ? null : builtInPostMaterial()
-    if (this.effectsTargetActive && !this.drawPostMaterial(postReference ?? '__nova_builtin_post__', postMaterial)) {
-      gl.bindFramebuffer(gl.READ_FRAMEBUFFER, this.framebuffer)
-      gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, null)
-      gl.blitFramebuffer(0, 0, this.canvas.width, this.canvas.height, 0, 0, this.canvas.width, this.canvas.height, gl.COLOR_BUFFER_BIT, gl.NEAREST)
+    if (this.effectsTargetActive && (!renderingSettings.postProcessing.enabled || !this.drawPostMaterial(postReference ?? '__nova_builtin_post__', postMaterial))) {
+      this.drawResolvedColor()
     }
     if (this.activeTimer && this.timerExtension) {
       gl.endQuery(this.timerExtension.TIME_ELAPSED_EXT)
@@ -454,14 +486,17 @@ export class WebGL2Renderer implements Renderer2D {
     this.canvas.removeEventListener('webglcontextrestored', this.onContextRestored)
     const gl = this.gl
     for (const value of this.textCache.values()) { const surface = value.region.source as HTMLCanvasElement; surface.width = 0; surface.height = 0 }
+    this.vertexUpload = new Float32Array(0); this.indexUpload = new Uint32Array(0)
     this.textCache.clear(); this.textCacheBytes = 0; this.packets = []; this.pendingTextureUploads.clear(); this.pendingTextureBytes = 0
     if (this.contextLost || gl.isContextLost()) { this.textureCache.clear(); this.materialPrograms.clear(); this.textureMemoryBytes = 0; this.textureCount = 0; return }
     gl.deleteBuffer(this.vertexBuffer)
     gl.deleteBuffer(this.indexBuffer)
     gl.deleteVertexArray(this.vao)
+    this.releaseMultisampleTarget()
     if (this.framebuffer) gl.deleteFramebuffer(this.framebuffer)
     if (this.colorTarget) gl.deleteTexture(this.colorTarget)
     gl.deleteProgram(this.program)
+    if (this.copyProgram) gl.deleteProgram(this.copyProgram)
     for (const state of this.materialPrograms.values()) if (state) gl.deleteProgram(state.program)
     if (this.postProgram) gl.deleteProgram(this.postProgram.program)
     for (const query of this.pendingTimers) gl.deleteQuery(query)
@@ -491,16 +526,22 @@ export class WebGL2Renderer implements Renderer2D {
 
   private drawBatch(batch: GeometryPacket[]): void {
     const gl = this.gl
-    const vertices: number[] = []
-    const indices: number[] = []
-    let vertexOffset = 0
+    let floats = 0, indexCount = 0
+    for (const packet of batch) { floats += packet.geometry.positions.length * 8; indexCount += packet.geometry.indices.length }
+    // Retain capacity between frames; upload only the used range. Geometry and order are unchanged.
+    if (this.vertexUpload.length < floats) this.vertexUpload = new Float32Array(Math.max(floats, Math.min(MAX_PACKET_VERTICES * 8, Math.max(1024, this.vertexUpload.length * 2))))
+    if (this.indexUpload.length < indexCount) this.indexUpload = new Uint32Array(Math.max(indexCount, Math.min(MAX_BATCH_INDICES, Math.max(1024, this.indexUpload.length * 2))))
+    let vertexOffset = 0, floatOffset = 0, indexOffset = 0
     for (const packet of batch) {
       const [r, g, b, a] = packet.color
-      packet.geometry.positions.forEach((position, index) => {
-        const uv = packet.geometry.uvs[index] ?? { x: 0, y: 0 }
-        vertices.push(position.x, position.y, uv.x, uv.y, r, g, b, a)
-      })
-      packet.geometry.indices.forEach(index => indices.push(index + vertexOffset))
+      for (let index = 0; index < packet.geometry.positions.length; index++) {
+        const position = packet.geometry.positions[index], uv = packet.geometry.uvs[index]
+        this.vertexUpload[floatOffset++] = position.x; this.vertexUpload[floatOffset++] = position.y
+        this.vertexUpload[floatOffset++] = uv?.x ?? 0; this.vertexUpload[floatOffset++] = uv?.y ?? 0
+        this.vertexUpload[floatOffset++] = r; this.vertexUpload[floatOffset++] = g
+        this.vertexUpload[floatOffset++] = b; this.vertexUpload[floatOffset++] = a
+      }
+      for (const index of packet.geometry.indices) this.indexUpload[indexOffset++] = index + vertexOffset
       vertexOffset += packet.geometry.positions.length
     }
 
@@ -525,9 +566,17 @@ export class WebGL2Renderer implements Renderer2D {
       gl.useProgram(program.program)
       gl.bindVertexArray(this.vao)
       gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer)
-      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.DYNAMIC_DRAW)
+      if (this.vertexCapacityBytes < this.vertexUpload.byteLength) {
+        gl.bufferData(gl.ARRAY_BUFFER, this.vertexUpload.byteLength, gl.DYNAMIC_DRAW)
+        this.vertexCapacityBytes = this.vertexUpload.byteLength
+      }
+      gl.bufferSubData(gl.ARRAY_BUFFER, 0, this.vertexUpload, 0, floats)
       gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer)
-      gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint32Array(indices), gl.DYNAMIC_DRAW)
+      if (this.indexCapacityBytes < this.indexUpload.byteLength) {
+        gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, this.indexUpload.byteLength, gl.DYNAMIC_DRAW)
+        this.indexCapacityBytes = this.indexUpload.byteLength
+      }
+      gl.bufferSubData(gl.ELEMENT_ARRAY_BUFFER, 0, this.indexUpload, 0, indexCount)
       gl.uniform4f(program.camera, 2 * scale / Math.max(1, width), 2 * scale / Math.max(1, height), finite(center.x, 0), finite(center.y, 0))
       const rotation = finite(camera.rotation ?? 0, 0)
       gl.uniform2f(program.rotation, Math.cos(rotation), Math.sin(rotation))
@@ -541,7 +590,7 @@ export class WebGL2Renderer implements Renderer2D {
       else if (batch[0].blend === 'Multiply') gl.blendFunc(gl.DST_COLOR, gl.ONE_MINUS_SRC_ALPHA)
       else if (batch[0].blend === 'Screen') gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_COLOR)
       else gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
-      gl.drawElements(gl.TRIANGLES, indices.length, gl.UNSIGNED_INT, 0)
+      gl.drawElements(gl.TRIANGLES, indexCount, gl.UNSIGNED_INT, 0)
       if (!this.validatedFirstDraw) {
         const error = gl.getError()
         if (error !== gl.NO_ERROR) throw new Error(`WebGL2 renderer failed its first draw (error 0x${error.toString(16)})`)
@@ -553,8 +602,8 @@ export class WebGL2Renderer implements Renderer2D {
     }
     this.stats.drawCalls++
     this.stats.batches++
-    this.stats.triangles += indices.length / 3
-    this.stats.overdraw += indices.length / 3
+    this.stats.triangles += indexCount / 3
+    this.stats.overdraw += indexCount / 3
     this.stats.textures = this.textureCount
     this.stats.textureMemoryBytes = this.textureMemoryBytes
   }
@@ -641,6 +690,50 @@ export class WebGL2Renderer implements Renderer2D {
     return gl.getError() === gl.NO_ERROR
   }
 
+  /** A texture draw is legal for both single- and multisampled default surfaces.
+   * Blitting a resolved texture into a multisampled default framebuffer is not. */
+  private drawResolvedColor(): void {
+    const gl = this.gl
+    if (!this.copyProgram) {
+      this.copyProgram = createProgram(gl, `#version 300 es
+precision highp float;
+in vec2 v_uv;
+uniform sampler2D u_texture;
+out vec4 outputColor;
+void main(){ outputColor=texelFetch(u_texture,ivec2(gl_FragCoord.xy),0); }`, POST_VERTEX_SOURCE)
+      this.stats.shaderCompiles++
+    }
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null); gl.viewport(0, 0, this.canvas.width, this.canvas.height); gl.disable(gl.BLEND)
+    gl.useProgram(this.copyProgram); gl.bindVertexArray(this.vao)
+    gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, this.colorTarget)
+    gl.uniform1i(gl.getUniformLocation(this.copyProgram, 'u_texture'), 0)
+    gl.drawArrays(gl.TRIANGLES, 0, 3); gl.bindVertexArray(null); gl.enable(gl.BLEND)
+  }
+
+  private releaseMultisampleTarget(): void {
+    if (this.sampleFramebuffer) this.gl.deleteFramebuffer(this.sampleFramebuffer)
+    if (this.sampleColor) this.gl.deleteRenderbuffer(this.sampleColor)
+    this.sampleFramebuffer = null; this.sampleColor = null; this.sampleCount = 0; this.sampleSignature = ''
+  }
+
+  private ensureMultisampleTarget(): void {
+    const count = multisampleCount(this.requestedSamples, this.supportedSamples, this.canvas.width, this.canvas.height)
+    const signature = this.canvas.width + ':' + this.canvas.height + ':' + count
+    if (signature === this.sampleSignature) return
+    this.releaseMultisampleTarget(); this.sampleSignature = signature
+    if (!count) return
+    const gl = this.gl, framebuffer = gl.createFramebuffer(), color = gl.createRenderbuffer()
+    if (!framebuffer || !color) { gl.deleteFramebuffer(framebuffer); gl.deleteRenderbuffer(color); return }
+    gl.bindRenderbuffer(gl.RENDERBUFFER, color)
+    gl.renderbufferStorageMultisample(gl.RENDERBUFFER, count, gl.RGBA8, this.canvas.width, this.canvas.height)
+    gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer)
+    gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.RENDERBUFFER, color)
+    const complete = gl.checkFramebufferStatus(gl.FRAMEBUFFER) === gl.FRAMEBUFFER_COMPLETE && gl.getError() === gl.NO_ERROR
+    gl.bindRenderbuffer(gl.RENDERBUFFER, null); gl.bindFramebuffer(gl.FRAMEBUFFER, null)
+    if (!complete) { gl.deleteFramebuffer(framebuffer); gl.deleteRenderbuffer(color); return }
+    this.sampleFramebuffer = framebuffer; this.sampleColor = color; this.sampleCount = count
+  }
+
   private ensureEffectsTarget(): void {
     const gl = this.gl
     if (!this.framebuffer) this.framebuffer = gl.createFramebuffer()
@@ -677,7 +770,7 @@ export class WebGL2Renderer implements Renderer2D {
   private resolveTexture(region: TextureRegion, filter: TextureFilter): WebGLTexture {
     const source = region.source as object
     const dimensions = textureDimensions(region.source)
-    const maximum = Math.min(8192, this.gl.getParameter(this.gl.MAX_TEXTURE_SIZE) as number), weight = dimensions.width * dimensions.height * 4
+    const maximum = this.maximumTextureDimension, weight = dimensions.width * dimensions.height * 4
     let cached = this.textureCache.get(source)
     const contentVersion = textureContentVersion(region, this.frameSerial)
     const changed = !cached || cached.width !== dimensions.width || cached.height !== dimensions.height || cached.contentVersion !== contentVersion

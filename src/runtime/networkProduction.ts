@@ -119,7 +119,7 @@ export function verifyAuthenticationProof(providerId: string, context: NetworkAu
 export class NetworkReplayProtectionWindow {
   private readonly seen = new Map<string, Map<string, number>>()
 
-  accept(sender: string, envelope: NetworkSecurityEnvelope | undefined, now: number, maximumAgeMs: number, maximumEntries: number, required: boolean): NetworkReplayDecision {
+  accept(sender: string, envelope: NetworkSecurityEnvelope | undefined, now: number, maximumAgeMs: number, maximumEntries: number, required: boolean, commit = true): NetworkReplayDecision {
     if (!envelope) return required ? { accepted: false, reason: 'missing-envelope' } : { accepted: true, reason: '' }
     if (!envelope.epoch || envelope.epoch.length > 80 || !envelope.nonce || envelope.nonce.length > 120 || !Number.isSafeInteger(envelope.issuedAt)) return { accepted: false, reason: 'expired' }
     const age = now - envelope.issuedAt
@@ -129,7 +129,7 @@ export class NetworkReplayProtectionWindow {
     for (const [nonce, issuedAt] of entries) if (now - issuedAt > maximumAgeMs) entries.delete(nonce)
     if (entries.has(envelope.nonce)) return { accepted: false, reason: 'duplicate' }
     if (entries.size >= maximumEntries) return { accepted: false, reason: 'window-full' }
-    entries.set(envelope.nonce, envelope.issuedAt); this.seen.set(key, entries)
+    if (commit) { entries.set(envelope.nonce, envelope.issuedAt); this.seen.set(key, entries) }
     while (this.seen.size > 128) this.seen.delete(this.seen.keys().next().value ?? '')
     return { accepted: true, reason: '' }
   }
@@ -150,15 +150,31 @@ export function createNetworkNonce(sequence: number): string {
 
 export class NetworkAuthorityTable {
   private owners = new Map<string, string>()
+  private authored = new Map<string, string>()
   initialize(definitions: readonly ReplicatedEntityDefinition[], localPeerId: string, role: string): void {
-    this.owners.clear()
-    for (const definition of definitions) this.owners.set(definition.entityUuid, definition.authority === 'owner' && definition.ownerPeerId ? definition.ownerPeerId : role === 'server' || role === 'host' ? localPeerId : '')
+    this.clear(); this.synchronize(definitions, localPeerId, role)
+  }
+  synchronize(definitions: readonly ReplicatedEntityDefinition[], localPeerId: string, role: string): boolean {
+    let changed = false
+    const allowed = new Set<string>()
+    for (const definition of definitions) {
+      allowed.add(definition.entityUuid)
+      const identity = JSON.stringify([definition.authority, definition.ownerPeerId, role, localPeerId])
+      if (this.authored.get(definition.entityUuid) === identity) continue
+      this.authored.set(definition.entityUuid, identity)
+      this.owners.set(definition.entityUuid, definition.authority === 'owner' && definition.ownerPeerId ? definition.ownerPeerId : role === 'server' || role === 'host' ? localPeerId : '')
+      changed = true
+    }
+    for (const uuid of this.authored.keys()) if (!allowed.has(uuid)) { this.authored.delete(uuid); this.owners.delete(uuid); changed = true }
+    return changed
   }
   owner(entityUuid: string): string { return this.owners.get(entityUuid) ?? '' }
   entries(): Array<{ entityUuid: string; ownerPeerId: string }> { return [...this.owners].map(([entityUuid, ownerPeerId]) => ({ entityUuid, ownerPeerId })).sort((a, b) => a.entityUuid.localeCompare(b.entityUuid)) }
   restore(entries: readonly { entityUuid: string; ownerPeerId: string }[], definitions: readonly ReplicatedEntityDefinition[]): boolean {
+    if (!Array.isArray(entries) || entries.length > 2_000) return false
     const allowed = new Set(definitions.map(definition => definition.entityUuid)), staged = new Map<string, string>()
-    for (const entry of entries.slice(0, 2_000)) {
+    for (const entry of entries) {
+      if (!entry || typeof entry !== 'object' || Array.isArray(entry) || typeof entry.entityUuid !== 'string' || typeof entry.ownerPeerId !== 'string') return false
       const entityUuid = safeId(entry.entityUuid, 128), ownerPeerId = entry.ownerPeerId ? safeId(entry.ownerPeerId, 80) : ''
       if (!entityUuid || entityUuid !== entry.entityUuid || !allowed.has(entityUuid) || (entry.ownerPeerId && ownerPeerId !== entry.ownerPeerId) || staged.has(entityUuid)) return false
       staged.set(entityUuid, ownerPeerId)
@@ -168,7 +184,7 @@ export class NetworkAuthorityTable {
   }
   transfer(entityUuid: string, targetPeerId: string): boolean { if (!this.owners.has(entityUuid) || !safeId(targetPeerId)) return false; this.owners.set(entityUuid, safeId(targetPeerId)); return true }
   releasePeer(peerId: string, authorityPeerId: string): string[] { const changed: string[] = []; for (const [entityUuid, owner] of this.owners) if (owner === peerId) { this.owners.set(entityUuid, authorityPeerId); changed.push(entityUuid) }; return changed.sort() }
-  clear(): void { this.owners.clear() }
+  clear(): void { this.owners.clear(); this.authored.clear() }
 }
 
 export function entityRelevantToPeer(definition: ReplicatedEntityDefinition, position: [number, number], view: NetworkInterestView | undefined, enabled: boolean): boolean {

@@ -20,12 +20,13 @@ startup('network-load')
 const network = await vite.ssrLoadModule('/src/runtime/networking.ts')
 startup('network-loaded')
 // Optional decoded-package settings keep headless clients on the authority's actual replication schema.
+// Pace the connectivity workload at60Hz with bandwidth for8peers. Budget refusal is tested separately; oversubscribed retry expiry must not masquerade as connectivity.
 // Older soak invocations omit this argument and retain their existing empty-world defaults.
 const packagedSettings = process.argv[6] ? JSON.parse(await readFile(process.argv[6], 'utf8')) : null
 if (packagedSettings && (packagedSettings.format !== 'nova-headless-peer-settings' || packagedSettings.version !== 1 || !Array.isArray(packagedSettings.replicatedEntities))) throw new Error('Invalid packaged headless peer settings.')
 production.resetProductionSettings(); production.loadProductionSettings({ networking: {
   enabled: true, permissionGranted: true, autoStart: false, role, sessionMode: 'direct', sessionName, playerName: role === 'host' ? 'Host' : `Client ${localPort}`, maxPeers: 8,
-  transport: 'native-udp', endpoint: `udp://127.0.0.1:${serverPort}`, bindAddress: `127.0.0.1:${localPort}`, snapshotRate: 30, interpolationMs: 80, rollbackFrames: 120, bandwidthKbps: 1_024,
+  transport: 'native-udp', endpoint: `udp://127.0.0.1:${serverPort}`, bindAddress: `127.0.0.1:${localPort}`, snapshotRate: 30, interpolationMs: 80, rollbackFrames: 120, bandwidthKbps: 8_192,
   reconnect: true, reconnectMaxAttempts: 4, schemaVersion: 1, maximumPacketBytes: 32_768, maximumMessagesPerSecond: 2_000, maximumPendingReliable: 512,
   reliableRetryMs: 40, reliableMaximumAttempts: 16, reconciliationThreshold: .01, lateJoin: true,
   authentication: { mode: 'none', providerId: '', requireVerifiedPeers: false, handshakeTimeoutMs: 10_000 }, security: { requireEncryption: false, maximumPacketAgeMs: 15_000, replayWindow: 2_048 },
@@ -66,7 +67,7 @@ process.on('message', async message => {
   if (!message || typeof message !== 'object') return
   if (message.type === 'exercise') {
     await network.sendNetworkPacket('hello', { role, playerName: role, lateJoin: true }, 'events')
-    for (let tick = 0; tick < 180; tick++) { if (tick % 12 === 0 && !packagedSettings) network.callRpc('soak.ready', localPort); network.updateNetworking(replicaEntities, 1 / 60, input, `soak-${tick}`); exercisedTicks++; await new Promise(resolve => setTimeout(resolve, 1)) }
+    for (let tick = 0; tick < 180; tick++) { if (tick % 12 === 0 && !packagedSettings) network.callRpc('soak.ready', localPort); network.updateNetworking(replicaEntities, 1 / 60, input, `soak-${tick}`); exercisedTicks++; await new Promise(resolve => setTimeout(resolve, 16)) }
     await new Promise(resolve => setTimeout(resolve, 700)); await report()
   }
   if (message.type === 'report') await report()

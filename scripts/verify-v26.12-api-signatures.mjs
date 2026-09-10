@@ -128,8 +128,8 @@ try {
     await isolated.default({ module_or_path: compiledModule })
     check('isolated actual WASM: ' + name, () => { const output = run(code, 'start', isolated); assert.equal(output.error, undefined); assert.deepEqual(output.result.logs.map(item => item.message), expected) })
   }
-  console.log(JSON.stringify({ status: fail.length ? 'failed' : 'passed', checks: checks.length, hostOverloadsExecuted: host.length, lifecycleCallbacksExecuted: 15, isolatedPlatformProbes: platformProbes.length, signatureCount: inventory.signatures.length, failed: checks.filter(item => item.status === 'failed') }, null, 2))
+  console.log(JSON.stringify({ generatedAt: new Date().toISOString(), status: fail.length ? 'failed' : 'passed', checks: checks.length, hostOverloadsExecuted: host.length, lifecycleCallbacksExecuted: 15, isolatedPlatformProbes: platformProbes.length, signatureCount: inventory.signatures.length, failed: checks.filter(item => item.status === 'failed') }, null, 2))
   const report = process.argv.find(value => value.startsWith('--report='))?.slice(9)
-  if (report) await writeFile(report, JSON.stringify({ status: fail.length ? 'failed' : 'passed', checks, hostOverloadsExecuted: host.length, isolatedPlatformProbes: platformProbes.length, signatureCount: inventory.signatures.length }, null, 2))
+  if (report) await writeFile(report, JSON.stringify({ generatedAt: new Date().toISOString(), status: fail.length ? 'failed' : 'passed', checks, hostOverloadsExecuted: host.length, isolatedPlatformProbes: platformProbes.length, signatureCount: inventory.signatures.length }, null, 2))
   if (fail.length) process.exitCode = 1
 } finally { await rm(temporary, { recursive: true, force: true }) }

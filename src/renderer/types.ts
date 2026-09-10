@@ -100,6 +100,10 @@ export interface RendererStats {
   text: number
   textures: number
   gpuMs: number | null
+  backingWidth?: number
+  backingHeight?: number
+  antiAliasingSamples?: number
+  antiAliasingLimited?: boolean
   passes: number
   renderTargets: number
   overdraw: number

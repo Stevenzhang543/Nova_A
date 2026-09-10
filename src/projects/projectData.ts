@@ -76,14 +76,16 @@ function canonicalValue(value: unknown, path: string, key = ''): unknown {
   }
   if (typeof value === 'string') return canonicalString(value, key)
   if (!value || typeof value !== 'object') return value
-  const source = value as Record<string, unknown>, output: Record<string, unknown> = {}
+  const source = value as Record<string, unknown>, output: Record<string, unknown> = Object.create(null)
   for (const childKey of Object.keys(source).sort((a, b) => a.localeCompare(b))) output[childKey] = canonicalValue(source[childKey], path ? `${path}.${childKey}` : childKey, childKey)
   return output
 }
 
 /** Canonical project JSON is UTF-8 text, LF terminated, two-space indented, and lexicographically keyed. */
 export function canonicalProjectText(source: string | unknown): string {
+  if (typeof source === 'string' && source.length > MAX_PROJECT_DOCUMENT_CHARACTERS) throw new Error('Project text exceeds the safe size limit.')
   const value = typeof source === 'string' ? JSON.parse(source) : source
+  if (value && typeof value === 'object') { const issue = projectResourceBudgetIssue(value as Record<string, unknown>); if (issue) throw new Error(issue) }
   return `${JSON.stringify(canonicalValue(value, ''), null, 2)}\n`
 }
 

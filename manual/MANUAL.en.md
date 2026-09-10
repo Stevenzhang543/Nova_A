@@ -1,5 +1,161 @@
-# Nova_A 26.17 Complete Manual
+# Nova_A 26.20 Complete Manual
 
+<!-- NOVA_V2620_START -->
+## 26.20 — create, tune, compare and ship
+
+Engine: **26.20.0** · Project Format 2/schema 29.
+
+### Nova_A 26.20 — create, tune, compare and ship
+
+This lesson extends the complete English manual and the 40 starter walkthroughs. Engine26.20.0 retains Project Format2/schema29, Rhai API2, Graph1, Plugin API2 and Network Protocol2. A successful local release does not certify every platform or every possible program.
+
+### Choose an editor palette
+
+Open Manage → Project & safety → Settings → Appearance. Color palette offers Cloud Blue, Meadow Cream, Blush Berry, Midnight Blue and Night Garden. The first three are light; the last two are dark. Choosing one applies it immediately. Dark/Light switches restore the last selected palette in that mode. Native keyboard arrow selection applies each visited option; use the mode buttons to return to your previous mode choice. Close and reopen the app to check persistence.
+
+The six supplied roles remain exact semantic tokens: background, surface, primary, secondary, accent and main text. Supporting borders, muted text, hover and selection colors are derived from them. Dark text links use a lighter derived primary for readability. High contrast remains an explicit override. Editor palettes never recolor game materials or runtime UI themes. Reduce motion, animation durations and existing effects remain available.
+
+### Build the same game in Code, Blocks and Mixed
+
+Open the matching creator-v2620-code-game, creator-v2620-blocks-game or creator-v2620-mixed-game reference. In Play, use WASD/arrow keys to collect six checkpoints in order; R restarts. Stop before editing. Open CheckpointGame.rhai in Script and find the movement-speed value. In Code change that value; in Blocks open its linked graph and edit the corresponding literal; in Mixed make one change in each representation. Save the script, switch representation and confirm the value remains. Typed graph support and source-backed ranges remain explicitly different; do not erase unsupported source to force a visual conversion.
+
+Select Checkpoint1 in Design and move X. The script queries the checkpoint entity's current world position, so the pickup target moves with it. Undo and Redo the move. Save the project, reopen it, repeat Play, export Web through Manage → Build Settings and repeat movement, pickup and restart. A changed Inspector value alone is not proof of exported behavior.
+
+### Tune resolution and anti-aliasing without cutting features
+
+Open Manage → Rendering → Quality. Keep your scene's animation, lighting, particles, audio, timeline, UI and post-processing settings enabled. Resolution scale1 uses the existing device-density limits;1.5 or2 increases backing pixels for supersampling, subject to device and allocation bounds. Scale0.5 is an explicit user option. It is never silently selected by this release. The separate existing adaptive-quality/profile controls retain their existing opt-in behavior.
+
+Auto uses the normal framebuffer anti-aliasing and adds bounded multisampling when post-processing needs an offscreen surface. Auto does not add offscreen smoothing when pixel snapping is enabled. MSAA2/4/8 requests explicit samples; actual support may be lower. Off disables requested WebGL anti-aliasing. Actual backing / MSAA samples shows the rendered dimensions and sample count; a request is not a guarantee. Canvas2D uses browser smoothing and does not report GPU sample counts. Existing nearest texture filtering and pixel-perfect controls remain available for pixel art.
+
+Higher resolution and MSAA cost GPU memory and time. The optional multisample color target plus its resolve texture is bounded to256MiB; sample count falls back to supported values within that budget, while the logical viewport is preserved. General surfaces remain bounded to8192 pixels per dimension and16,777,216 backing pixels. Device capability checks can impose a lower limit. Changing resolution must not pan the editor camera. Apply one change, Undo/Redo, save/reopen and inspect the same setting and output in the exported game.
+
+### Preserve animation and compare evidence
+
+Open creator-v2620-animated-menu. Play the menu and use its input/checkbox controls while watching the title fade and timeline behavior. Repeat at two resolution scales and in the Web export. Existing asset, animation, controller, rig, timeline, audio and UI chapters explain their full workflows. This reference preserves those authored assets; the release does not remove them to improve a benchmark.
+
+For performance comparisons use the same project, camera, number of entities, resolution, effects, build, device and warm-up. Record CPU frame time, available GPU time, draw calls and actual pixels alongside FPS. The optimized batch algorithm preserves packet ordering and vertex/index uploads; steady-size batches reuse CPU/GPU storage. Index-heavy batches may split into extra draws to bound memory. Isolated batching timings are not total engine FPS. Read the fresh performance reports and their hardware/scope before comparing results.
+
+### Diagnose, recover and export
+
+If WebGL is unavailable, read the visible fallback reason and validate Canvas2D output. If MSAA is lower than requested, check actual sample counts and output size before reducing anything. If labels appear clipped, raise the panel size, scroll its own content, or maximize it; report palette, language, scale and panel name. If a shader fails, inspect the named material diagnostic and retained fallback. If a script cannot convert structurally, retain the source-backed range and fix the reported syntax/coverage boundary.
+
+Use Project Health before export. Browser-native export being Blocked is correct: native export requires the desktop host. Build logs and repair actions identify prerequisites. Save before external editing; review file conflicts through Team, choose local/incoming/base, apply once and verify Undo/Redo. A stale preview must be refreshed. Package permissions require review; disabling/uninstalling a package unloads its plugin. Signed-update staging records review/operator actions and does not install binaries.
+
+For a clean/moved checkout install pinned Node22.22.2, pnpm10.30.0, Rust1.92.0 with rustfmt/clippy/wasm32, and Windows native prerequisites. Offline work requires populated caches. After moving the source, explicitly repair pnpm links offline; compile native metadata into a fresh target directory because paths can be absolute. Do not remove authored assets to repair a cache.
+
+### Release acceptance
+
+Run all declared local gates against frozen source, verify the exact11 release files and payload checksums, then use the packaged manuals/references/evidence. Historical releases remain immutable. Complete beginner/expert observation, assistive technology, low-end/mobile input, Linux/macOS/Android, production signing/disposable installer lifecycle, independent security and real-duration soak on their actual environments before claiming those outcomes. Only this Windows computer is locally available.
+
+<!-- NOVA_V2620_END -->
+<!-- NOVA_V2619_START -->
+## 26.19 — build, review and recover
+
+Engine: **26.19.0** · Project Format 2/schema 29.
+
+### Nova_A 26.19: build, review and recover
+
+Use disposable copies of the six projects under `reference-projects/projects` whose IDs contain `v2619`. Open `project.nova` from the launcher. The source package and reference archive include the files; no service account is needed. Project Format 2/schema 29, Rhai API 2, Graph Format 1, Plugin API 2 and Package Manifest 1 remain unchanged.
+
+### Finish a small game in three authoring modes
+
+Open `creator-v2619-code-game`, `creator-v2619-blocks-game`, or `creator-v2619-mixed-game`. Play, focus the viewport, and use WASD/arrows to collect six checkpoints. The title advances from Checkpoint 1/6 to completion. R resets score, position and checkpoints. Stop before editing.
+
+In Code, open CheckpointGame.rhai and change the two movement multipliers from 6.0 to 4.0. In Blocks, open its linked CheckpointGame.nova-graph, find the numeric literals in the X/Y movement expressions, and change both to 4.0. Mixed keeps a linked code document and typed graph; switch views, confirm the same values, then save. Undo/Redo must change the intended edit only. Syntax errors must remain visible and must not silently replace code with an incomplete graph.
+
+The pickup calculation queries the active Checkpoint entity's world position using `find_entity_handle`, `entity_position_x_on` and `entity_position_y_on`. Move Checkpoint 1 in Design and play again: its pickup location moves too. This is a deliberate improvement over the older fixed-coordinate lesson. Save/reopen and confirm the transform and script/graph values before exporting. The code and graph versions execute the same supported Rhai operations; generated graph arrangement does not change evaluation order.
+
+### Review and resolve a real conflict
+
+Open `delivery-v2619-semantic-merge/project.nova`. Select Checkpoint 1 and change Transform position X from -6 to -4. Open Manage → Build Settings → Team, enable Optional team workflow, and choose the neighboring `incoming.nova`. It changes the same entity's X to -2.
+
+Read the local and incoming values; open Base version to see -6. Choose the incoming value for that conflict, then Apply semantic merge. The same entity now has X=-2. Undo returns to -4; Redo returns to -2. Save/reopen and export the result. Keep identity and entity count unchanged. The explicit ordering conflict chooses order while preserving merged property values. A delete/edit conflict can restore the edited identity; changing the choice again remains safe.
+
+If you edit the project during review, applying the old preview is rejected. Reimport the incoming file and review the new preview. Unresolved conflicts block application. Duplicate identities and oversized/deep merge input are rejected before a partial plan is committed. These are local three-way project merges, not a cloud collaboration service. Enable network operations only for an explicitly requested external action; the merge itself needs none.
+
+### Review a package and its lifetime
+
+Open `delivery-v2619-package-build`, then Manage → Packages → Browse. Select Nova Navigation 2D. Read publisher, version, compatibility, dependencies, permissions, SHA-256 and license; choose Install and review the confirmation. The bundled offline catalog requires no download. Return to installed packages, disable, enable and remove the package. Undo removal, save/reopen and inspect the result.
+
+A package that is still required by another package cannot be removed. Failed update permission approval restores previous grants. Rejected updates preserve the installed version and lockfile; quarantining a rejected newer candidate does not disable a valid older version. Rollback checks security and the complete dependency graph before consuming history. Disabling or removing a package unloads its running plugin. A version change unloads and disables the old binary until you import the corresponding reviewed manifest and binary; a version label is not evidence that code was replaced. Native plugins remain outside the in-process WASM sandbox. Remote plugin URLs are not fetched implicitly: import the asset locally first.
+
+### Build and inspect the result
+
+Open Manage → Build Settings. Overview selects target, architecture, profile, scene order and startup scene. Platform holds application identity and optional signing settings. Delivery exposes deterministic output, cache, inclusion rules, logs and reports. Diagnostics & history preserves build failures and output information. Team contains local collaboration controls.
+
+Choose Web in a browser. Native export requires a successful desktop-host capability check, not merely a Windows browser. A failed check shows a restart/retry message. Android requires its actual local toolchain and a device for device qualification. Linux/macOS remain matching-host targets; Windows results do not qualify them.
+
+Save before building and wait until the save task finishes. Export Web, extract the ZIP into a separate folder, serve it over local HTTP, and open its index page. Compare checkpoint positions, movement speed, score, restart and assets with the saved editor project. The archive's build report lists file sizes/hashes; validate them when transferring an artifact. The retained `server-v2619-headless-authority` is a renderer-disabled WebView server, not a windowless native server.
+
+### Reproduce a source build offline
+
+Install prerequisites intentionally first: Node 22.22.2 (`.node-version`), pnpm 10.30.0 (`packageManager`), Rust 1.92.0 (`rust-toolchain.toml`), clippy, rustfmt, wasm32-unknown-unknown, wasm-pack and its cached bindgen tooling. Windows native builds also require the matching MSVC/Windows SDK and Tauri bundling prerequisites. Use the checked-in lockfiles. No direct application dependency range was changed merely to pin a calendar release.
+
+With populated dependency caches, run `pnpm install --offline --frozen-lockfile --ignore-scripts`, then `wasm-pack build crates/nova_wasm --target web --out-dir ../../nova_core/pkg --out-name nova_core --release --mode no-install -- --locked --offline`, then `pnpm build`. Missing cached dependencies should fail explicitly; offline does not mean prerequisites are magically available.
+
+Windows pnpm junctions can retain an old absolute directory after moving a checkout. From the new path, explicitly repair them with `pnpm install --offline --frozen-lockfile --ignore-scripts --force`, then rebuild. Do not copy generated dependencies into the published source archive. The dedicated reproducibility audit compares clean and moved Web output byte for byte and keeps command logs; it does not claim that an arbitrary machine without prerequisites can build offline.
+
+### External editing and recovery
+
+For a standard LSP client, launch `node scripts/nova-rhai-language-server.mjs --stdio` from the source checkout with installed dependencies. It uses Content-Length JSON-RPC, UTF-16 positions and full document synchronization. The server supports diagnostics, completion, hover, symbols, definitions, references, rename and formatting for its declared Rhai model. Send increasing document versions; stale changes are ignored. Closing a document removes its index, and shutdown waits for queued work. An optional index is a cache, not the authoritative script file.
+
+When a project file changes externally, compare it before choosing disk or editor state. A stopped/replaced watcher cannot publish a stale read into another project. Partially written invalid files retain a diagnostic and are retried. Keep the editor version if the disk file is incomplete; repair the external file and compare again. Test save/recovery on a disposable copy before relying on a workflow.
+
+Signed update staging requires explicit opt-in, the matching channel, a valid signature/fingerprint, a supported base version and a fresh sequence. Cancellation or a changed base/channel during verification prevents staging. Staging does not download or install anything. Commit/rollback records describe operator-confirmed installer actions, not an atomic binary updater. Production signing and install/open/update/uninstall on disposable machines remain separately qualified; this user's available Windows computer is not treated as disposable. An iPhone does not qualify Android.
+
+### Acceptance and evidence
+
+Programmer evidence includes malformed/archive input, lifecycle cancellation, permission revocation, semantic identity/order, real LSP process messages, clean/moved offline builds, source hashes and full release gates. User evidence includes actual input, conflict choices, Undo/Redo, save/reopen, package review and exported player behavior. Changed panels are checked across EN/DE/ZH, light/dark, 100/150/200% and narrow/normal/wide layouts. Native UI automation initialization failed locally; browser observations are not relabeled as native clicks. Refer to the exact release evidence for completed checks and explicit external gaps; this lesson alone certifies none.
+
+Attached plugin manifests imported with a package must match its ID, version and API. Imported consent is cleared and the plugin remains disabled. Review its capabilities in Plugin Tools before enabling; replacing the declaration unloads the previous instance.
+
+Tauri’s generated native permission metadata also contains absolute cache paths. After moving a checkout, use a fresh native target directory: `cargo check --manifest-path src-tauri/Cargo.toml --target-dir src-tauri/target/relocated --locked --offline`. For a packaged build, set `CARGO_TARGET_DIR` to a new directory before `pnpm tauri build`; its output is written there. Preserve authored files and the old cache until the new build succeeds. The reproducibility audit uses four compiler jobs and records the explicit cache repair.
+
+<!-- NOVA_V2619_END -->
+<!-- NOVA_V2618_START -->
+## 26.18 — multiplayer, ownership and honest server boundaries
+
+Engine: **26.18.0** · Project Format 2/schema 29.
+
+### 26.18 multiplayer workshop
+
+Use the separate `multiplayer-v2618-coop-host` and `multiplayer-v2618-coop-client` projects. Keep a disposable copy of each. They share scene, entity and script identities, and use two player slots. Extra clients do not create extra avatars. The networking package is optional; these projects start with permission and automatic startup withheld. Ordinary offline projects do not need a networking provider.
+
+### Connect and observe
+
+Open Host and Client in separate editor windows on the same browser origin, or corresponding local player windows. Keep both windows rendering: browsers may suspend animation updates in background tabs. Open Network Studio → Session. Grant network permission in each project, keep Local lobby and the same session name, then Connect Host before Client. Each peer list must show the other player's distinct identity. Local lobby uses the same device, origin and browser storage partition; two unrelated browser profiles or origins do not form an Internet session.
+
+Play both projects. Focus the Host canvas and use WASD or arrow keys: Host Player moves. Focus Client: its bounded `coop.move` RPC requests movement of Client Player on Host, and the resulting state replicates to both. Stop restores authored editor state. If input does nothing, first inspect Play, canvas focus, permission, connected status, peer admission, RPC contract and the actual script errors. A transport being connected does not prove that the game is running.
+
+### Ownership and property selection
+
+Server authority means the host/server computes the object's replicated state. Owner authority means the named peer owns it; an empty owner does not let any client claim it. For an ownership experiment, select an object, add it in Replication, choose Owner and enter an admitted peer ID. Or use Orchestration → Authority transfer to transfer an existing assignment explicitly. Observe both peers' ownership diagnostics before moving it. Locally owned state must not be overwritten by the host's relay snapshot. The shipped co-op keeps server authority because its movement scripts ask the host to simulate the remote body.
+
+Choose Transform, Rotation and Velocity separately. Regular snapshots and late-join restoration obey these choices. Transform here is position; scale, enabled state and angular velocity are not additional live replication fields. Full manual multiplayer saves record more state and restore that recorded state intentionally. Interpolate smooths remote enabled fields; Predict replays recorded transform deltas, not physics and scripts. Parent changes apply before child world transforms.
+
+### Edit contracts and recover
+
+Protocol cards expose named channels, reliable ordering or sequenced delivery, payload bytes, message rate and priority. RPC cards expose direction, authority, payload schema, bytes and call rate. A generic object schema does not validate each game-specific field: validate your RPC payload before using it in gameplay. RPCs must use their authored channel. Live additions/removals reach gameplay listeners on production ticks.
+
+Numeric drafts commit on leaving the field. Try an out-of-range value, then repair it: the first edit must preserve the saved value and show an error; the repaired value must apply. Use Undo/Redo and Save Project, reopen and verify the same settings. Changing session identity, transport, authentication or channel identity ends the existing connection; use Reconnect after editing. Property and ownership changes remain live. Reconnect restores admission and baseline state, not arbitrary application history.
+
+Disconnect Client, move Host, reconnect Client and inspect the current state and late-join count. A late join is an atomic validated baseline. Invalid ownership, metadata, byte bounds or checksums must reject it without partially changing the world. Reliable exhaustion reports an actionable failure and removes the peer's pending queues. Old epochs cannot resume gameplay within the tracked connection lifecycle. Optional verified authentication is required for security-sensitive adapters; a checksum is not authentication.
+
+### Diagnostics, impairment and export
+
+Simulation exposes latency, jitter, loss, duplicate and reorder percentages plus a repeatable seed. First establish a clean connection, then introduce modest impairment and compare peer identities, ACK/retry counts, rejected packets and bounded history. Duplicate rejection under a duplicate simulation is expected; distinguish it from a stalled reliable stream. Snapshot-page counters describe the most recently targeted peer: deferred entities are sent on later snapshot intervals, so a large world is not sent atomically every tick.
+
+Instance Logs show this editor's observed events for that process; Inspector shows process identity/status. Inspect gameplay state and network events in the running player. These views are not a remote native debugger or captured child stdout. Export diagnostics for troubleshooting and check redaction before sharing.
+
+Before exporting co-op players, explicitly enable permission and Start with game runtime, choose the intended role and session, and test the actual outputs together. Local lobby players must share the supported local origin/storage context; Windows direct UDP uses a host bind port and clients pointing at that host, with distinct client bind ports. The separate server reference is a Windows renderer-disabled WebView export. It still requires the desktop host/WebView; it is not a windowless Rust server. Read NATIVE_SERVER_ARCHITECTURE_26_18.md for the real native design and acceptance gates.
+
+### Honest rollback and completion checks
+
+Transform-delta replay does not rewind solver contacts, Rhai scopes, entity lifetimes, audio, UI, file writes, plugins or external services. Do not rerun arbitrary frames to imitate full rollback. Public matchmaking, relay and authentication services require explicit reviewed providers and independent infrastructure tests.
+
+For your project, retain evidence of two distinct players moving, ownership edits, disconnect/rejoin, late join, invalid/valid edits, Undo/Redo, save/reopen, exported client/server behavior and logs. Compare the code, blocks and mixed reference variants: generated graphs must compile to the same source and execute the same gameplay. Generated reference files and passing unit tests alone are not user-workflow evidence.
+
+<!-- NOVA_V2618_END -->
 <!-- NOVA_V2617_START -->
 ## 26.17 — physics, navigation and streamed worlds
 

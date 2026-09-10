@@ -1,7 +1,7 @@
 {
   "name": "nova_a",
   "private": true,
-  "version": "26.17.0",
+  "version": "26.20.0",
   "homepage": "https://github.com/Stevenzhang543/Nova_A/",
   "repository": {
     "type": "git",
@@ -10,8 +10,8 @@
   "type": "module",
   "packageManager": "pnpm@10.30.0",
   "engines": {
-    "node": ">=18",
-    "pnpm": ">=9"
+    "node": "22.22.2",
+    "pnpm": "10.30.0"
   },
   "scripts": {
     "build:wasm": "wasm-pack build crates/nova_wasm --target web --out-dir ../../nova_core/pkg --out-name nova_core --release",

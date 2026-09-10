@@ -4,11 +4,17 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE.md)
 [![Tier 1](https://img.shields.io/badge/Tier%201-Windows%20%7C%20Web-63c6ff)](./docs/PLATFORM_BUILD_MATRIX_5_0.md)
-[![Release](https://img.shields.io/badge/release-26.17-63c6ff)]()
+[![Release](https://img.shields.io/badge/release-26.20-63c6ff)]()
+
+<!-- NOVA_V2620_OVERVIEW -->
+Release **26.20** adds five supplied color palettes, saved output resolution and anti-aliasing controls, and optimized WebGL batching and upload buffers while retaining features and animations. See [release notes](docs/RELEASE_NOTES_26_20.md), [every edit](docs/EDIT_LEDGER_26_20.md), [performance budgets](docs/PERFORMANCE_BUDGETS_26_20.md) and the [qualification lesson](docs/QUALIFICATION_LESSON_26_20.en.md). Executed evidence defines platform support and remaining external checks.
+
+<!-- NOVA_V2619_OVERVIEW -->
+Previous release **26.19** hardens package/plugin lifetimes, signed-update review, external editing and semantic collaboration. Conflict values and package reviews wrap at large text sizes. Six separate references and English/German/Chinese delivery lessons accompany pinned Windows/Web toolchains. See [release notes](docs/RELEASE_NOTES_26_19.md), [every edit](docs/EDIT_LEDGER_26_19.md), and the [delivery lesson](docs/DELIVERY_LESSON_26_19.en.md). Other platforms and disposable installer qualification remain pending.
 
 Nova_A is an open-source 2D game engine and desktop editor built with Rust, WebAssembly, Vue 3, and Tauri.
 
-Release **26.17** strengthens retained physics bindings, geometric queries, character movement, navigation/AI, actual scene streaming and origin shifting. Readable world forms and runtime diagnostics support three new physics workflows, complete English/German/Chinese lessons and a declared-field manual. It retains all 40 library starters, typed Rhai/code↔visual authoring and Project Format 2/schema 29. Exact source-bound checks and external qualification boundaries remain explicit.
+Previous release **26.18** hardened multiplayer ownership, reliable delivery, reconnect and late join, replication masks and interpolation. Network Studio gains labeled responsive controls, explicit recovery and honest server/rollback limits. Six separate references and English/German/Chinese lessons retain all 40 starters and Project Format 2/schema 29. See [release notes](docs/RELEASE_NOTES_26_18.md), [every edit](docs/EDIT_LEDGER_26_18.md), and the [multiplayer lesson](docs/MULTIPLAYER_LESSON_26_18.en.md).
 
 **Manual:** [interactive English/German/Chinese webpage](./manual/index.html) · [English Markdown](./manual/MANUAL.en.md) · [Deutsch](./manual/MANUAL.de.md) · [中文](./manual/MANUAL.zh-CN.md)
 

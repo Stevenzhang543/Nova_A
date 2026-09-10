@@ -17,8 +17,8 @@ export interface TeamChangeNote { id: string; owner: string; note: string; creat
 export interface TeamBuildPreset { id: string; name: string; target: string; profile: string; settings: string }
 export interface BinaryAssetLock { path: string; owner: string; token: string; expiresAt: number }
 export interface TeamChangeList { id: string; name: string; owner: string; createdAt: string; status: 'open' | 'ready' | 'merged'; changes: SourceChange[]; noteIds: string[]; fingerprint: string; baseFingerprint: string; currentFingerprint: string; generation: number; stale: boolean }
-export interface SemanticMergeConflict { id: string; path: string; kind: 'scene' | 'graph' | 'asset' | 'settings' | 'project'; base: unknown; ours: unknown; theirs: unknown; resolution: 'unresolved' | 'ours' | 'theirs' }
-export interface SemanticMergePlan { format: 'nova-semantic-merge'; version: 1; merged: Record<string, unknown>; conflicts: SemanticMergeConflict[]; autoMerged: string[]; fingerprint: string }
+export interface SemanticMergeConflict { id: string; path: string; kind: 'scene' | 'graph' | 'asset' | 'settings' | 'project'; base: unknown; ours: unknown; theirs: unknown; resolution: 'unresolved' | 'ours' | 'theirs'; orderOnly?: boolean; siblingOrder?: string[] }
+export interface SemanticMergePlan { format: 'nova-semantic-merge'; version: 1; merged: Record<string, unknown>; conflicts: SemanticMergeConflict[]; autoMerged: string[]; fingerprint: string; sourceFingerprint?: string }
 
 interface SnapshotEntry { path: string; kind: SourceEntryKind; fingerprint: string }
 
@@ -65,7 +65,7 @@ export const teamWorkflowState = reactive({
 function normalized(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(normalized)
   if (!value || typeof value !== 'object') return value
-  const output: Record<string, unknown> = {}
+  const output: Record<string, unknown> = Object.create(null)
   for (const key of Object.keys(value as Record<string, unknown>).sort()) output[key] = normalized((value as Record<string, unknown>)[key])
   return output
 }
@@ -254,6 +254,16 @@ function arrayIdentity(value: unknown): string | null {
   for (const key of ['uuid', 'id', 'key', 'name']) if (typeof value[key] === 'string' && String(value[key]).trim()) return `${key}:${String(value[key])}`
   return null
 }
+function escapeSemanticPart(value: string): string { return value.replace(/~/g, '~0').replace(/\//g, '~1') }
+function decodeSemanticPart(value: string): string { return value.replace(/~1/g, '/').replace(/~0/g, '~') }
+function weaveSemanticOrder(preferred: string[], additional: string[]): string[] {
+  const seen = new Set(preferred), before = new Map<string, string[]>(); let pending: string[] = []
+  for (const id of additional) {
+    if (seen.has(id)) { if (pending.length) { before.set(id, [...(before.get(id) ?? []), ...pending]); pending = [] } }
+    else { seen.add(id); pending.push(id) }
+  }
+  return preferred.flatMap(id => [...(before.get(id) ?? []), id]).concat(pending)
+}
 function semanticMergeValue(base: unknown, ours: unknown, theirs: unknown, path: string, conflicts: SemanticMergeConflict[], autoMerged: string[], state: { nodes: number }, depth = 0): unknown {
   state.nodes++
   if (depth > MAX_MERGE_DEPTH || state.nodes > MAX_MERGE_NODES) throw new Error('Semantic merge exceeds the safe depth or node limit.')
@@ -261,9 +271,9 @@ function semanticMergeValue(base: unknown, ours: unknown, theirs: unknown, path:
   if (same(ours, base)) { autoMerged.push(path); return theirs }
   if (same(theirs, base)) { autoMerged.push(path); return ours }
   if (plain(ours) && plain(theirs) && (plain(base) || base === undefined)) {
-    const source = plain(base) ? base : {}, output: Record<string, unknown> = {}
+    const source = plain(base) ? base : {}, output: Record<string, unknown> = Object.create(null)
     for (const key of [...new Set([...Object.keys(source), ...Object.keys(ours), ...Object.keys(theirs)])].sort()) {
-      const merged = semanticMergeValue(source[key], ours[key], theirs[key], `${path}/${key}`, conflicts, autoMerged, state, depth + 1)
+      const merged = semanticMergeValue(Object.prototype.hasOwnProperty.call(source, key) ? source[key] : undefined, Object.prototype.hasOwnProperty.call(ours, key) ? ours[key] : undefined, Object.prototype.hasOwnProperty.call(theirs, key) ? theirs[key] : undefined, `${path}/${escapeSemanticPart(key)}`, conflicts, autoMerged, state, depth + 1)
       if (merged !== undefined) output[key] = merged
     }
     return output
@@ -276,15 +286,35 @@ function semanticMergeValue(base: unknown, ours: unknown, theirs: unknown, path:
       const conflict: SemanticMergeConflict = { id: fingerprint({ path, base, ours, theirs }), path, kind: mergeKind(path, base, ours, theirs), base, ours, theirs, resolution: 'unresolved' }
       conflicts.push(conflict); return ours
     }
-    const keyed = (items: unknown[]) => new Map(items.map(value => [arrayIdentity(value)!, value]))
+    const keyed = (items: unknown[]) => {
+      const result = new Map<string, unknown>()
+      for (const value of items) { const id = arrayIdentity(value)!; if (result.has(id)) throw new Error('Duplicate semantic merge identity: ' + id); result.set(id, value) }
+      return result
+    }
     const baseMap = keyed(baseArray), oursMap = keyed(ours), theirsMap = keyed(theirs)
-    // Retain authored base order, then append each side's additions in their
-    // authored order. Sorting UUIDs used to reorder scenes and runtime tracks.
-    const ids = [...new Set([...baseMap.keys(), ...oursMap.keys(), ...theirsMap.keys()])]
-    return ids.flatMap(id => {
-      const merged = semanticMergeValue(baseMap.get(id), oursMap.get(id), theirsMap.get(id), `${path}/${id.split('/').join('~1')}`, conflicts, autoMerged, state, depth + 1)
+    const baseIds = [...baseMap.keys()], oursIds = [...oursMap.keys()], theirsIds = [...theirsMap.keys()]
+    const common = baseIds.filter(id => oursMap.has(id) && theirsMap.has(id))
+    const commonSet = new Set(common)
+    const retained = (ids: string[]) => ids.filter(id => commonSet.has(id))
+    const oursReordered = !same(retained(oursIds), common), theirsReordered = !same(retained(theirsIds), common)
+    const sharedNew = oursIds.filter(id => !baseMap.has(id) && theirsMap.has(id)), shared = new Set([...common, ...sharedNew])
+    const orderConflict = oursReordered && theirsReordered && !same(retained(oursIds), retained(theirsIds)) || sharedNew.length > 0 && !same(oursIds.filter(id => shared.has(id)), theirsIds.filter(id => shared.has(id)))
+    // A one-sided reorder remains authoritative even when the other side edits values.
+    const preferred = theirsReordered && !oursReordered ? theirsIds : oursReordered ? oursIds : baseIds
+    const ids = weaveSemanticOrder(weaveSemanticOrder(weaveSemanticOrder(preferred, oursIds), theirsIds), baseIds)
+    const result = ids.flatMap(id => {
+      const childPath = path + '/' + escapeSemanticPart(id)
+      const conflictStart = conflicts.length
+      const merged = semanticMergeValue(baseMap.get(id), oursMap.get(id), theirsMap.get(id), childPath, conflicts, autoMerged, state, depth + 1)
+      const conflict = conflicts[conflictStart]
+      if (conflict?.path === childPath) conflict.siblingOrder = ids
       return merged === undefined ? [] : [merged]
     })
+    if (orderConflict) {
+      if (conflicts.length >= MAX_CHANGES) throw new Error('Semantic merge conflict limit exceeded.')
+      conflicts.push({ id: fingerprint({ path, order: true, baseIds, oursIds, theirsIds }), path, kind: mergeKind(path), base: baseIds, ours: weaveSemanticOrder(oursIds, ids), theirs: weaveSemanticOrder(theirsIds, ids), resolution: 'unresolved', orderOnly: true })
+    }
+    return result
   }
   if (conflicts.length >= MAX_CHANGES) throw new Error('Semantic merge conflict limit exceeded; no partial plan was created.')
   const conflict: SemanticMergeConflict = { id: fingerprint({ path, base, ours, theirs }), path, kind: mergeKind(path, base, ours, theirs), base, ours, theirs, resolution: 'unresolved' }
@@ -294,43 +324,69 @@ function semanticMergeValue(base: unknown, ours: unknown, theirs: unknown, path:
 
 export function createSemanticMergePlan(baseSource: string, oursSource: string, theirsSource: string): SemanticMergePlan {
   const base = JSON.parse(stableProjectText(baseSource)) as Record<string, unknown>, ours = JSON.parse(stableProjectText(oursSource)) as Record<string, unknown>, theirs = JSON.parse(stableProjectText(theirsSource)) as Record<string, unknown>
+  for (const root of [base, ours, theirs]) {
+    const pending: Array<{ value: unknown; depth: number }> = [{ value: root, depth: 0 }]; let nodes = 0
+    while (pending.length) {
+      const { value, depth } = pending.pop()!
+      if (++nodes > MAX_MERGE_NODES || depth > MAX_MERGE_DEPTH) throw new Error('Semantic merge exceeds the safe depth or node limit.')
+      if (Array.isArray(value)) {
+        const identities = value.map(arrayIdentity)
+        if (identities.every(id => id !== null) && new Set(identities).size !== identities.length) throw new Error('Duplicate semantic merge identity.')
+        for (const child of value) pending.push({ value: child, depth: depth + 1 })
+      } else if (plain(value)) for (const child of Object.values(value)) pending.push({ value: child, depth: depth + 1 })
+    }
+  }
   const conflicts: SemanticMergeConflict[] = [], autoMerged: string[] = []
   const merged = semanticMergeValue(base, ours, theirs, '', conflicts, autoMerged, { nodes: 0 }) as Record<string, unknown>
-  const plan: SemanticMergePlan = { format: 'nova-semantic-merge', version: 1, merged, conflicts, autoMerged: [...new Set(autoMerged)].slice(0, MAX_CHANGES), fingerprint: fingerprint({ base, ours, theirs }) }
+  const plan: SemanticMergePlan = { format: 'nova-semantic-merge', version: 1, merged, conflicts, autoMerged: [...new Set(autoMerged)].slice(0, MAX_CHANGES), fingerprint: fingerprint({ base, ours, theirs }), sourceFingerprint: fingerprint(ours) }
   teamWorkflowState.semanticMerge = plan
   return plan
 }
 
-function assignSemanticPath(root: Record<string, unknown>, path: string, value: unknown): void {
+function assignSemanticPath(root: Record<string, unknown>, path: string, value: unknown, conflict: SemanticMergeConflict): void {
   const parts = path.split('/').filter(Boolean); let cursor: unknown = root
   for (let index = 0; index < parts.length - 1; index++) {
-    const part = parts[index].split('~1').join('/')
+    const part = decodeSemanticPart(parts[index])
     if (Array.isArray(cursor)) cursor = cursor.find(item => arrayIdentity(item) === part)
     else if (plain(cursor)) cursor = cursor[part]
     if (cursor === undefined) throw new Error(`Semantic merge path no longer exists: ${path}`)
   }
   const last = parts[parts.length - 1]; if (!last) throw new Error('Cannot replace the merge root.')
-  const decodedLast = last.split('~1').join('/')
+  const decodedLast = decodeSemanticPart(last)
   if (Array.isArray(cursor)) {
     const index = cursor.findIndex(item => arrayIdentity(item) === decodedLast)
-    if (index < 0) throw new Error(`Semantic merge identity is missing: ${decodedLast}`)
-    if (value === undefined) cursor.splice(index, 1); else cursor[index] = value
+    if (index < 0) {
+      if (value !== undefined) {
+        const order = new Map((conflict.siblingOrder ?? []).map((id, index) => [id, index])), rank = order.get(decodedLast) ?? order.size
+        const before = cursor.findIndex(item => (order.get(arrayIdentity(item) ?? '') ?? order.size) > rank)
+        cursor.splice(before < 0 ? cursor.length : before, 0, value)
+      }
+    } else if (value === undefined) cursor.splice(index, 1); else cursor[index] = value
   }
-  else if (plain(cursor)) { if (value === undefined) delete cursor[decodedLast]; else cursor[decodedLast] = value }
+  else if (plain(cursor)) {
+    if (conflict.orderOnly) {
+      const array = cursor[decodedLast]
+      if (!Array.isArray(array) || !Array.isArray(value)) throw new Error('Semantic order target is invalid.')
+      const order = new Map(value.map((id, index) => [id, index]))
+      array.sort((left, right) => (order.get(arrayIdentity(left)) ?? value.length) - (order.get(arrayIdentity(right)) ?? value.length))
+    } else if (value === undefined) delete cursor[decodedLast]; else Object.defineProperty(cursor, decodedLast, { value, writable: true, enumerable: true, configurable: true })
+  }
   else throw new Error(`Semantic merge path is not assignable: ${path}`)
 }
 
 export function resolveSemanticMergeConflict(conflictId: string, resolution: 'ours' | 'theirs'): boolean {
   const plan = teamWorkflowState.semanticMerge, conflict = plan?.conflicts.find(item => item.id === conflictId)
   if (!plan || !conflict) return false
-  assignSemanticPath(plan.merged, conflict.path, resolution === 'ours' ? conflict.ours : conflict.theirs)
+  assignSemanticPath(plan.merged, conflict.path, JSON.parse(JSON.stringify({ value: resolution === 'ours' ? conflict.ours : conflict.theirs })).value, conflict)
+  if (conflict.orderOnly) for (const sibling of plan.conflicts) if (sibling.siblingOrder && sibling.path.slice(0, sibling.path.lastIndexOf('/')) === conflict.path) sibling.siblingOrder = [...(resolution === 'ours' ? conflict.ours : conflict.theirs) as string[]]
   conflict.resolution = resolution
   return true
 }
 
-export function finalizeSemanticMerge(): string {
+export function finalizeSemanticMerge(currentSource?: string): string {
   const plan = teamWorkflowState.semanticMerge
   if (!plan) throw new Error('No semantic merge is active.')
+  if (currentSource !== undefined && plan.sourceFingerprint !== fingerprint(JSON.parse(stableProjectText(currentSource)))) throw new Error('The project changed during merge review. Import the incoming project again to refresh the preview.')
   const unresolved = plan.conflicts.filter(conflict => conflict.resolution === 'unresolved')
   if (unresolved.length) throw new Error(`${unresolved.length} semantic conflicts still require a choice.`)
   const source = stableProjectText(plan.merged)

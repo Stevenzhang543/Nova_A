@@ -12,7 +12,7 @@ exclude = ["src-tauri"]
 resolver = "2"
 
 [workspace.package]
-version = "26.17.0"
+version = "26.20.0"
 edition = "2021"
 rust-version = "1.77"
 license = "MIT"
@@ -24,3 +24,11 @@ serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1", features = ["float_roundtrip"] }
 wasm-bindgen = "0.2"
 rhai = { version = "1.25.0", default-features = false, features = ["std"] }
+
+# 26.20: optimize across crate boundaries without changing panic/recovery semantics.
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 1
+incremental = false
+strip = "debuginfo"

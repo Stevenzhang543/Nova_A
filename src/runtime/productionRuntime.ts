@@ -11,6 +11,7 @@ let loading: Promise<void> | null = null
 let lifecycleGeneration = 0
 const rpcListeners = new Set<(name: string, payload: unknown, context: { sender: string; tick: number }) => void>()
 let rpcCleanups: Array<() => void> = []
+let rpcBindingSignature = ''
 const sceneHandoffListeners = new Set<(sceneUuid: string, spawnTag: string, peerId: string) => void>()
 let sceneHandoffCleanup: (() => void) | null = null
 
@@ -45,6 +46,7 @@ function dispatchRemoteInputs(module: NetworkingModule): void {
 }
 
 function bindRpcHandlers(module: NetworkingModule): void {
+  rpcBindingSignature = JSON.stringify(productionSettings.networking.rpcContracts.map(contract => contract.name))
   for (const cleanup of rpcCleanups) cleanup()
   rpcCleanups = productionSettings.networking.rpcContracts.map(contract => module.registerRpc(contract.name, (payload, context) => {
     for (const listener of rpcListeners) listener(contract.name, payload, context)
@@ -113,6 +115,7 @@ export async function stopProductionNetworking(): Promise<void> {
 
 export function updateProductionRuntime(entities: Entity[], fixedDelta: number, input?: InputSnapshot, physicsChecksum = ''): void {
   if (!networking) return
+  if (rpcBindingSignature !== JSON.stringify(productionSettings.networking.rpcContracts.map(contract => contract.name))) bindRpcHandlers(networking)
   networking.updateNetworking(entities, fixedDelta, input, physicsChecksum)
   dispatchRemoteInputs(networking)
 }

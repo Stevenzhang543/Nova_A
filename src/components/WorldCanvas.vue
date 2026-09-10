@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { boundedFrame } from '../renderer/surfaceLimits'
 import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick } from 'vue'
 import { physicsState, pushHistory, selectEntities } from '../store/physics'
 import { BoxEntity } from '../world/BoxEntity'
@@ -222,11 +223,18 @@ function onUiPointerUp(event: PointerEvent) {
 }
 function onUiPointerCancel(event: PointerEvent) { if (event.pointerId === touchPointer) { gameUiRuntime.pointerCancel(); touchPointer = null } }
 
+let canvasLogicalWidth = 0, canvasLogicalHeight = 0
+function desiredCanvasPixelRatio(width: number, height: number) {
+  return boundedFrame({width, height, pixelRatio: Math.max(.5, Math.min(window.devicePixelRatio || 1, prefs.maxPixelRatio, activeRenderQuality.maximumPixelRatio) * performanceRuntimeState.adaptivePixelRatioScale * (Number.isFinite(renderingSettings.resolutionScale) ? Math.min(2, Math.max(.5, renderingSettings.resolutionScale)) : 1)), clearColor: {r:0,g:0,b:0,a:1}}).pixelRatio
+}
 function resize() {
   const canvas = canvasRef.value; if (!canvas) return
-  canvasPixelRatio = Math.max(.5, Math.min(window.devicePixelRatio || 1, prefs.maxPixelRatio, activeRenderQuality.maximumPixelRatio) * performanceRuntimeState.adaptivePixelRatioScale)
-  const dpr = canvasPixelRatio; const r = canvas.getBoundingClientRect()
-  const oldWidth = canvas.width / dpr; const oldHeight = canvas.height / dpr
+  const r = canvas.getBoundingClientRect()
+  if (r.width <= 0 || r.height <= 0) return
+  const oldWidth = canvasLogicalWidth; const oldHeight = canvasLogicalHeight
+  canvasLogicalWidth = r.width; canvasLogicalHeight = r.height
+  canvasPixelRatio = desiredCanvasPixelRatio(r.width, r.height)
+  const dpr = canvasPixelRatio
   const nextWidth = Math.max(1, Math.round(r.width * dpr)); const nextHeight = Math.max(1, Math.round(r.height * dpr))
   const backingStoreChanged = canvas.width !== nextWidth || canvas.height !== nextHeight
   if (backingStoreChanged) {
@@ -348,11 +356,19 @@ onMounted(() => {
 })
 onBeforeUnmount(() => { canvasDisposed = true; rendererInitialization++; pendingMouseMove = null; if (raf) cancelAnimationFrame(raf); if (resizeRaf) cancelAnimationFrame(resizeRaf); window.removeEventListener('resize', scheduleResize); window.removeEventListener('mouseup', onMouseUp); window.removeEventListener('keydown', onKeyDown, true); window.removeEventListener('nova-renderer-reset-request', resetRenderer); if (resizeObserver) resizeObserver.disconnect(); gameUiRuntime.reset(); renderer?.destroy(); renderer = null })
 
+let rendererContextAntialias: boolean | null = null
+watch(() => renderingSettings.antiAliasing === 'Off', () => { void resetRenderer() })
 async function resetRenderer() {
   if (!renderCanvasRef.value || canvasDisposed) return
   const generation = ++rendererInitialization
+  const contextAntialias = renderingSettings.antiAliasing !== 'Off'
+  const replaceContext = rendererContextAntialias !== null && rendererContextAntialias !== contextAntialias
   renderer?.destroy(); renderer = null
   try {
+    if (replaceContext) {
+      renderCanvasKey.value++; await nextTick()
+      if (generation !== rendererInitialization || canvasDisposed || !renderCanvasRef.value) return
+    }
     try { renderer = createRenderer2D(renderCanvasRef.value) }
     catch (error) {
       if (!(error instanceof RendererCanvasReplacementRequired)) throw error
@@ -361,6 +377,7 @@ async function resetRenderer() {
       renderer = createRenderer2D(renderCanvasRef.value, true)
     }
     if (renderCanvasRef.value) renderer.resize(renderCanvasRef.value.clientWidth, renderCanvasRef.value.clientHeight, canvasPixelRatio)
+    rendererContextAntialias = contextAntialias
     reportRendererReset()
   } catch (error) { reportRecoverableError(error, 'Renderer initialization', 'Renderer') }
 }
@@ -1124,9 +1141,9 @@ function drawPhysicsDebug(context: CanvasRenderingContext2D) {
 
 function render(deltaSeconds = 0) {
   if (!ctx || !canvasRef.value) return
-  const desiredPixelRatio = Math.max(.5, Math.min(window.devicePixelRatio || 1, prefs.maxPixelRatio, activeRenderQuality.maximumPixelRatio) * performanceRuntimeState.adaptivePixelRatioScale)
+  const desiredPixelRatio = desiredCanvasPixelRatio(canvasLogicalWidth, canvasLogicalHeight)
   if (Math.abs(desiredPixelRatio - canvasPixelRatio) > .001) resize()
-  const cvs = canvasRef.value; const width = cvs.width / canvasPixelRatio; const height = cvs.height / canvasPixelRatio
+  const cvs = canvasRef.value; const width = canvasLogicalWidth; const height = canvasLogicalHeight
   if (state.playMode === 'editing') resetCameraSmoothing()
   const graphStarted = beginRenderGraph()
   let passStarted = graphStarted

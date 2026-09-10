@@ -7,7 +7,7 @@ import { markProjectDirty, markTransactionBaseline, projectChecksum, projectTran
 interface WatchFile { name: string; size: number; lastModified: number; text(): Promise<string> }
 interface WatchHandle { getFile(): Promise<WatchFile> }
 const POLL_MS = 2_000
-let timer: number | null = null, handle: WatchHandle | null = null, knownStamp = ''
+let timer: number | null = null, handle: WatchHandle | null = null, knownStamp = '', watchGeneration = 0
 
 export const externalChangeState = reactive({
   visible: false, fileName: '', incomingSource: '', incomingChecksum: '', detectedAt: '', kind: 'external' as 'external' | 'branch-switch' | 'large-update',
@@ -29,23 +29,41 @@ export function signalExternalProjectChange(source: string, fileName = 'project.
   externalChangeState.visible = true; externalChangeState.keepEditorAcknowledged = false; setIncomingProject(current, incoming, fileName); return true
 }
 
-async function poll(): Promise<void> {
-  if (!handle) return
+async function poll(generation: number, sourceHandle: WatchHandle): Promise<void> {
+  const current = () => generation === watchGeneration && handle === sourceHandle
+  if (!current()) return
   try {
-    const file = await handle.getFile(), stamp = `${file.lastModified}:${file.size}`
-    if (knownStamp && stamp !== knownStamp) signalExternalProjectChange(await file.text(), file.name)
-    knownStamp = stamp; externalChangeState.error = ''
-  } catch (error) { externalChangeState.error = error instanceof Error ? error.message : String(error) }
-  if (handle) timer = window.setTimeout(() => { void poll() }, POLL_MS)
+    const file = await sourceHandle.getFile()
+    if (!current()) return
+    const stamp = file.lastModified + ':' + file.size
+    if (knownStamp && stamp !== knownStamp) {
+      const source = await file.text()
+      if (!current()) return
+      externalChangeState.error = ''
+      signalExternalProjectChange(source, file.name)
+      // Retry invalid or partially written files; keep the diagnostic visible.
+      if (!externalChangeState.error) knownStamp = stamp
+    } else { knownStamp = stamp; externalChangeState.error = '' }
+  } catch (error) { if (current()) externalChangeState.error = error instanceof Error ? error.message : String(error) }
+  if (current()) timer = window.setTimeout(() => { void poll(generation, sourceHandle) }, POLL_MS)
 }
 
 export async function watchProjectFile(sourceHandle: WatchHandle): Promise<void> {
   stopProjectFileWatcher(); handle = sourceHandle
-  const file = await handle.getFile(); knownStamp = `${file.lastModified}:${file.size}`; externalChangeState.watching = true
-  timer = window.setTimeout(() => { void poll() }, POLL_MS)
+  const generation = watchGeneration
+  try {
+    const file = await sourceHandle.getFile()
+    if (generation !== watchGeneration || handle !== sourceHandle) return
+    knownStamp = file.lastModified + ':' + file.size; externalChangeState.watching = true; externalChangeState.error = ''
+    timer = window.setTimeout(() => { void poll(generation, sourceHandle) }, POLL_MS)
+  } catch (error) {
+    if (generation !== watchGeneration || handle !== sourceHandle) return
+    stopProjectFileWatcher(); externalChangeState.error = error instanceof Error ? error.message : String(error)
+    throw error
+  }
 }
 
-export function stopProjectFileWatcher(): void { if (timer !== null) window.clearTimeout(timer); timer = null; handle = null; knownStamp = ''; externalChangeState.watching = false }
+export function stopProjectFileWatcher(): void { watchGeneration++; if (timer !== null) window.clearTimeout(timer); timer = null; handle = null; knownStamp = ''; externalChangeState.watching = false }
 
 export function compareExternalProject(): SemanticProjectChange[] { return [...externalChangeState.conflicts] }
 

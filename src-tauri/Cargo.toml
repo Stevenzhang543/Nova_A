@@ -1,6 +1,6 @@
 [package]
 name = "nova_a"
-version = "26.17.0"
+version = "26.20.0"
 description = "Nova_A open-source 2D physics and rendering engine."
 authors = ["Whitelist"]
 repository = "https://github.com/Stevenzhang543/Nova_A"
@@ -27,3 +27,15 @@ serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1", features = ["float_roundtrip"] }
 sha2 = "0.10"
 flate2 = "1"
+
+# Keep desktop builds independent when the checkout is nested in another workspace.
+[workspace]
+resolver = "2"
+
+# Independent desktop workspace uses the same optimized release policy.
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 1
+incremental = false
+strip = "debuginfo"

@@ -93,7 +93,9 @@ export class Canvas2DRenderer implements Renderer2D {
     this.frame = boundedFrame(options)
     const { width, height, pixelRatio } = this.frame
     this.resize(width, height, pixelRatio)
-    this.commands = []
+    this.commands.length = 0
+    this.stats.backingWidth = this.canvas.width; this.stats.backingHeight = this.canvas.height
+    this.stats.antiAliasingSamples = undefined; this.stats.antiAliasingLimited = false
     this.cameraIndex = -1
     Object.assign(this.stats, { drawCalls: 0, batches: 0, triangles: 0, sprites: 0, shapes: 0, text: 0, textures: 0, gpuMs: null, passes: 1, renderTargets: 0, overdraw: 0, batchBreaks: 0, atlasPages: 0, textureMemoryBytes: 0, textureUploads: 0, textureEvictions: 0, textureBudgetBytes: 0, textureBudgetExceeded: false, streamingMisses: 0, shaderCompiles: 0, shaderFallbacks: 0, contextLosses: 0, batchBreakReasons: {} })
     this.context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0)

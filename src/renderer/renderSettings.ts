@@ -1,4 +1,5 @@
 import { reactive } from 'vue'
+import { normalizeAntiAliasing, type AntiAliasing2D } from './outputQuality20'
 
 export type ShadowQuality = 'Off' | 'Hard' | 'Soft' | 'Ultra'
 export type ColorSpace2D = 'sRGB' | 'Linear'
@@ -21,6 +22,8 @@ export interface TextureStreamingSettings { enabled: boolean; memoryBudgetMb: nu
 export interface DeterministicCaptureSettings { frameRate: number; sampleRate: number; maximumFrames: number; memoryBudgetMb: number; includeUi: boolean }
 
 export interface RenderingSettings {
+  antiAliasing: AntiAliasing2D
+  resolutionScale: number
   rendererPath: 'Auto' | 'Native' | 'Compatibility'
   unsupportedPolicy: 'Block' | 'WarnAndFallback'
   qualityPreset: RenderQualityPreset
@@ -60,6 +63,7 @@ export const DEFAULT_RENDERING_SETTINGS: RenderingSettings = {
     { id: 'dream', name: 'Dream', values: { exposure: .12, contrast: .92, saturation: 1.08, vignette: .08, bloom: .4, blur: .5, userMaterial: null } },
     { id: 'pixel', name: 'Pixel crisp', values: { exposure: 0, contrast: 1.08, saturation: 1, vignette: 0, bloom: 0, blur: 0, userMaterial: null } }
   ], volumes: [] },
+  antiAliasing: 'Auto', resolutionScale: 1,
   debugView: 'None', pixelSnap: false, maximumPixelRatio: 2, particleBudget: 10_000,
   textureStreaming: { enabled: true, memoryBudgetMb: 256, idleFrames: 600, uploadBudgetPerFrame: 16, preloadMargin: 1.5 },
   deterministicCapture: { frameRate: 60, sampleRate: 48_000, maximumFrames: 300, memoryBudgetMb: 128, includeUi: true },
@@ -121,6 +125,8 @@ export function normalizeRenderingSettings(value: unknown): RenderingSettings {
   const volumes = Array.isArray(post.volumes) ? post.volumes.slice(0, 64).flatMap((item, index) => { if (!item || typeof item !== 'object') return []; const volume = item as Record<string, unknown>, center = volume.center && typeof volume.center === 'object' ? volume.center as Record<string, unknown> : {}, size = volume.size && typeof volume.size === 'object' ? volume.size as Record<string, unknown> : {}; return [{ id: id(volume.id, `volume-${index + 1}`), name: typeof volume.name === 'string' ? volume.name.slice(0, 80) : `Volume ${index + 1}`, enabled: volume.enabled !== false, center: { x: finite(center.x, 0, -1e9, 1e9), y: finite(center.y, 0, -1e9, 1e9) }, size: { x: finite(size.x, 10, .001, 1e9), y: finite(size.y, 10, .001, 1e9) }, blendDistance: finite(volume.blendDistance, 1, 0, 1e6), priority: Math.round(finite(volume.priority, 0, -1000, 1000)), presetId: id(volume.presetId, uniquePresets[0]?.id ?? 'neutral') }] }) : []
   const activePreset = id(post.activePreset, hasStoredPresets ? uniquePresets[0]?.id ?? 'neutral' : 'project')
   return {
+    antiAliasing: normalizeAntiAliasing(source.antiAliasing),
+    resolutionScale: finite(source.resolutionScale, 1, .5, 2),
     rendererPath: ['Auto', 'Native', 'Compatibility'].includes(String(source.rendererPath)) ? source.rendererPath as RenderingSettings['rendererPath'] : 'Auto',
     unsupportedPolicy: source.unsupportedPolicy === 'Block' ? 'Block' : 'WarnAndFallback',
     qualityPreset,

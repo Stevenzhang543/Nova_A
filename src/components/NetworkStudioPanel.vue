@@ -1,16 +1,17 @@
 <template>
-  <section class="network-studio">
+  <section class="network-studio" @change.capture="guardNetworkNumber18">
     <header class="studio-header">
       <div><strong>{{ t('networkStudio') }}</strong><span>{{ t('networkStudioHint') }}</span></div>
       <nav role="tablist" :aria-label="t('networkStudio')" @keydown="handleTabKeydown"><button v-for="tab in tabs" :id="`network-studio-tab-${tab.id}`" :key="tab.id" role="tab" :aria-selected="activeTab === tab.id" :aria-controls="`network-studio-panel-${tab.id}`" :tabindex="activeTab === tab.id ? 0 : -1" :class="{ active: activeTab === tab.id }" @click="activeTab = tab.id">{{ t(tab.label) }}</button></nav>
       <output :class="networkState?.status ?? 'disabled'" role="status" aria-live="polite" aria-atomic="true">{{ networkStatusLabel }}</output>
     </header>
+    <p v-if="networkFormError18" class="network-draft-error" role="alert">{{ networkFormError18 }}</p>
 
     <main v-if="!networkPackageEnabled" :id="`network-studio-panel-${activeTab}`" class="empty-state" role="tabpanel" tabindex="0" :aria-labelledby="`network-studio-tab-${activeTab}`">
       <strong>{{ t('optionalNetworking') }}</strong><p>{{ t('networkingOptionalHint') }}</p><button class="primary" @click="installNetworking">{{ t('enableNetworkingPackage') }}</button>
     </main>
 
-    <main v-else-if="activeTab === 'session'" id="network-studio-panel-session" class="studio-grid" role="tabpanel" tabindex="0" aria-labelledby="network-studio-tab-session">
+    <main v-else-if="activeTab === 'session'" id="network-studio-panel-session" data-measured-studio-layout class="studio-grid" role="tabpanel" tabindex="0" aria-labelledby="network-studio-tab-session">
       <section class="card">
         <header><strong>{{ t('session') }}</strong><span>{{ t('noMandatoryCloud') }}</span></header>
         <label><span>{{ t('networkingEnabled') }}</span><input v-model="settings.networking.enabled" type="checkbox" @change="commit"></label>
@@ -19,9 +20,10 @@
         <label><span>{{ t('autoStart') }}</span><input v-model="settings.networking.autoStart" type="checkbox" :disabled="!settings.networking.permissionGranted" @change="commit"></label>
         <label><span>{{ t('sessionMode') }}</span><select v-model="settings.networking.sessionMode" @change="commit"><option value="local">{{ t('localLobby') }}</option><option value="direct">{{ t('directConnect') }}</option></select></label>
         <label><span>{{ t('networkRole') }}</span><select v-model="settings.networking.role" @change="commit"><option value="client">{{ t('client') }}</option><option value="server">{{ t('server') }}</option><option value="host">{{ t('host') }}</option></select></label>
+        <p data-network-role-hint>{{ nl18(settings.networking.role === 'host' ? 'roleHost' : settings.networking.role === 'server' ? 'roleServer' : 'roleClient') }}</p>
         <label><span>{{ t('sessionName') }}</span><input v-model="settings.networking.sessionName" maxlength="80" @change="commit"></label>
         <label><span>{{ t('playerName') }}</span><input v-model="settings.networking.playerName" maxlength="80" @change="commit"></label>
-        <label><span>{{ t('maximumPeers') }}</span><input v-model.number="settings.networking.maxPeers" type="number" min="1" max="64" @change="commit"></label>
+        <label><span>{{ t('maximumPeers') }}</span><input v-model.lazy.number="settings.networking.maxPeers" :data-network-committed="settings.networking.maxPeers" type="number" min="1" max="64" @change="commit"></label>
       </section>
       <section class="card">
         <header><strong>{{ settings.networking.sessionMode === 'local' ? t('localLobby') : t('directConnect') }}</strong><span>{{ t('protocol') }} 2 · {{ t('networkSchema') }} {{ settings.networking.schemaVersion }}</span></header>
@@ -33,12 +35,14 @@
           <label><span>{{ t('bindAddress') }}</span><input v-model="settings.networking.bindAddress" maxlength="256" spellcheck="false" @change="commit"></label>
         </template>
         <label><span>{{ t('autoReconnect') }}</span><input v-model="settings.networking.reconnect" type="checkbox" @change="commit"></label>
-        <label><span>{{ t('reconnectLimit') }}</span><input v-model.number="settings.networking.reconnectMaxAttempts" type="number" min="0" max="32" @change="commit"></label>
+        <label><span>{{ t('reconnectLimit') }}</span><input v-model.lazy.number="settings.networking.reconnectMaxAttempts" :data-network-committed="settings.networking.reconnectMaxAttempts" type="number" min="0" max="32" @change="commit"></label>
         <label><span>{{ t('lateJoin') }}</span><input v-model="settings.networking.lateJoin" type="checkbox" @change="commit"></label>
-        <div class="button-row"><button class="primary" :disabled="networkBusy || !canConnect" @click="connect">{{ t('connect') }}</button><button :disabled="networkBusy || networkState?.status === 'disabled'" @click="disconnect">{{ t('disconnect') }}</button></div>
+        <p>{{ nl18('identityHint') }}</p>
+        <p v-if="connectionEdited18" role="status">{{ nl18('reconnectEdited') }}</p>
+        <div class="button-row"><button class="primary" :disabled="networkBusy || !canConnect" @click="connect">{{ t('connect') }}</button><button :disabled="networkBusy || !canConnect" @click="reconnect18">{{ nl18('reconnect') }}</button><button :disabled="networkBusy || networkState?.status === 'disabled'" @click="disconnect">{{ t('disconnect') }}</button></div>
         <div v-if="settings.networking.sessionMode === 'local'" class="button-row"><button :disabled="networkBusy || !canConnect" @click="hostLocalLobby">{{ t('hostLocalLobby') }}</button><button :disabled="!settings.networking.permissionGranted" @click="discoverLocalLobbies">{{ t('discoverLocalLobbies') }}</button></div>
         <p :class="securityGuidance.severity">{{ securityGuidance.message }}</p>
-        <p v-if="networkState?.lastError" class="danger breakable" role="alert">{{ networkState.lastError }}</p>
+        <div v-if="networkState?.lastError" class="danger breakable" role="alert"><p>{{ networkFailure18(networkState.lastError) }}</p><details><summary>{{ nl18('technicalDetails') }}</summary><pre>{{ networkState.lastError }}</pre></details></div>
       </section>
       <section class="card peers-card">
         <header><strong>{{ t('peers') }}</strong><span>{{ networkState?.peers ?? 0 }}/{{ settings.networking.maxPeers }}</span></header>
@@ -61,58 +65,85 @@
       </section>
     </main>
 
-    <main v-else-if="activeTab === 'protocol'" id="network-studio-panel-protocol" class="studio-grid wide-grid" role="tabpanel" tabindex="0" aria-labelledby="network-studio-tab-protocol">
+    <main v-else-if="activeTab === 'protocol'" id="network-studio-panel-protocol" data-measured-studio-layout class="studio-grid network-wide-grid" role="tabpanel" tabindex="0" aria-labelledby="network-studio-tab-protocol">
       <section class="card span-two">
         <header><strong>{{ t('networkChannels') }}</strong><button :disabled="settings.networking.channels.length >= 32" @click="addChannel">＋ {{ t('channel') }}</button></header>
-        <div class="table-scroll"><article v-for="channel in settings.networking.channels" :key="channel.id" class="channel-row"><input v-model="channel.id" maxlength="80" :disabled="builtInChannels.includes(channel.id)" @change="commit"><select v-model="channel.delivery" @change="commit"><option value="reliable-ordered">{{ t('reliableOrdered') }}</option><option value="unreliable-sequenced">{{ t('unreliableSequenced') }}</option></select><label><span>{{ t('payloadBytes') }}</span><input v-model.number="channel.maximumPayloadBytes" type="number" min="32" max="65507" @change="commit"></label><label><span>{{ t('ratePerSecond') }}</span><input v-model.number="channel.messagesPerSecond" type="number" min="1" max="2000" @change="commit"></label><label><span>{{ t('priority') }}</span><input v-model.number="channel.priority" type="number" min="0" max="100" @change="commit"></label><button :disabled="builtInChannels.includes(channel.id)" @click="removeChannel(channel.id)">×</button></article></div>
+        <div class="table-scroll"><article v-for="channel in settings.networking.channels" :key="channel.id" class="channel-row">
+          <label><span>{{ nl18('name') }}</span><input v-model="channel.id" maxlength="80" :disabled="builtInChannels.includes(channel.id)" @change="commit"></label>
+          <label><span>{{ nl18('delivery') }}</span><select v-model="channel.delivery" @change="commit"><option value="reliable-ordered">{{ t('reliableOrdered') }}</option><option value="unreliable-sequenced">{{ t('unreliableSequenced') }}</option></select></label>
+          <label><span>{{ t('payloadBytes') }}</span><input v-model.lazy.number="channel.maximumPayloadBytes" :data-network-committed="channel.maximumPayloadBytes" type="number" min="32" max="65507" @change="commit"></label>
+          <label><span>{{ t('ratePerSecond') }}</span><input v-model.lazy.number="channel.messagesPerSecond" :data-network-committed="channel.messagesPerSecond" type="number" min="1" max="2000" @change="commit"></label>
+          <label><span>{{ t('priority') }}</span><input v-model.lazy.number="channel.priority" :data-network-committed="channel.priority" type="number" min="0" max="100" @change="commit"></label>
+          <button :disabled="builtInChannels.includes(channel.id)" :aria-label="nl18('remove') + ' ' + channel.id" @click="removeChannel(channel.id)">{{ nl18('remove') }}</button>
+        </article></div>
       </section>
       <section class="card limits-card">
         <header><strong>{{ t('protocolBounds') }}</strong><span>{{ t('failClosed') }}</span></header>
-        <label><span>{{ t('packetBytes') }}</span><input v-model.number="settings.networking.maximumPacketBytes" type="number" min="512" max="65507" @change="commit"></label>
-        <label><span>{{ t('messageRate') }}</span><input v-model.number="settings.networking.maximumMessagesPerSecond" type="number" min="1" max="10000" @change="commit"></label>
-        <label><span>{{ t('pendingReliable') }}</span><input v-model.number="settings.networking.maximumPendingReliable" type="number" min="1" max="4096" @change="commit"></label>
-        <label><span>{{ t('retryMs') }}</span><input v-model.number="settings.networking.reliableRetryMs" type="number" min="10" max="5000" @change="commit"></label>
-        <label><span>{{ t('retryLimit') }}</span><input v-model.number="settings.networking.reliableMaximumAttempts" type="number" min="1" max="32" @change="commit"></label>
-        <label><span>{{ t('bandwidthLimit') }}</span><input v-model.number="settings.networking.bandwidthKbps" type="number" min="8" max="1000000" @change="commit"></label>
+        <label><span>{{ t('packetBytes') }}</span><input v-model.lazy.number="settings.networking.maximumPacketBytes" :data-network-committed="settings.networking.maximumPacketBytes" type="number" min="512" max="65507" @change="commit"></label>
+        <label><span>{{ t('messageRate') }}</span><input v-model.lazy.number="settings.networking.maximumMessagesPerSecond" :data-network-committed="settings.networking.maximumMessagesPerSecond" type="number" min="1" max="10000" @change="commit"></label>
+        <label><span>{{ t('pendingReliable') }}</span><input v-model.lazy.number="settings.networking.maximumPendingReliable" :data-network-committed="settings.networking.maximumPendingReliable" type="number" min="1" max="4096" @change="commit"></label>
+        <label><span>{{ t('retryMs') }}</span><input v-model.lazy.number="settings.networking.reliableRetryMs" :data-network-committed="settings.networking.reliableRetryMs" type="number" min="10" max="5000" @change="commit"></label>
+        <label><span>{{ t('retryLimit') }}</span><input v-model.lazy.number="settings.networking.reliableMaximumAttempts" :data-network-committed="settings.networking.reliableMaximumAttempts" type="number" min="1" max="32" @change="commit"></label>
+        <label><span>{{ t('bandwidthLimit') }}</span><input v-model.lazy.number="settings.networking.bandwidthKbps" :data-network-committed="settings.networking.bandwidthKbps" type="number" min="8" max="1000000" @change="commit"></label>
       </section>
       <section class="card span-three">
         <header><strong>RPC</strong><button :disabled="settings.networking.rpcContracts.length >= 256" @click="addRpc">＋ RPC</button></header>
-        <div class="table-scroll"><article v-for="rpc in settings.networking.rpcContracts" :key="rpc.name" class="rpc-row"><input v-model="rpc.name" maxlength="80" @change="commit"><select v-model="rpc.channelId" @change="commit"><option v-for="channel in settings.networking.channels" :key="channel.id" :value="channel.id">{{ channel.id }}</option></select><select v-model="rpc.direction" @change="commit"><option value="client-to-server">{{ t('client') }} → {{ t('server') }}</option><option value="server-to-client">{{ t('server') }} → {{ t('client') }}</option><option value="bidirectional">{{ t('bidirectional') }}</option></select><select v-model="rpc.authority" @change="commit"><option value="server">{{ t('server') }}</option><option value="owner">{{ t('owner') }}</option><option value="any">{{ t('any') }}</option></select><select v-model="rpc.payloadSchema" @change="commit"><option v-for="schema in payloadSchemas" :key="schema">{{ schema }}</option></select><input v-model.number="rpc.maximumPayloadBytes" type="number" min="2" max="65507" :title="t('payloadBytes')" @change="commit"><input v-model.number="rpc.callsPerSecond" type="number" min="1" max="1000" :title="t('ratePerSecond')" @change="commit"><button @click="removeRpc(rpc.name)">×</button></article></div>
+        <div class="table-scroll"><article v-for="rpc in settings.networking.rpcContracts" :key="rpc.name" class="rpc-row">
+          <label><span>{{ nl18('name') }}</span><input v-model="rpc.name" maxlength="80" @change="commit"></label>
+          <label><span>{{ t('channel') }}</span><select v-model="rpc.channelId" @change="commit"><option v-for="channel in settings.networking.channels" :key="channel.id" :value="channel.id">{{ channel.id }}</option></select></label>
+          <label><span>{{ nl18('direction') }}</span><select v-model="rpc.direction" @change="commit"><option value="client-to-server">{{ t('client') }} → {{ t('server') }}</option><option value="server-to-client">{{ t('server') }} → {{ t('client') }}</option><option value="bidirectional">{{ t('bidirectional') }}</option></select></label>
+          <label><span>{{ t('authority') }}</span><select v-model="rpc.authority" @change="commit"><option value="server">{{ t('server') }}</option><option value="owner">{{ t('owner') }}</option><option value="any">{{ t('any') }}</option></select></label>
+          <label><span>{{ nl18('schema') }}</span><select v-model="rpc.payloadSchema" @change="commit"><option v-for="schema in payloadSchemas" :key="schema">{{ schema }}</option></select></label>
+          <label><span>{{ t('payloadBytes') }}</span><input v-model.lazy.number="rpc.maximumPayloadBytes" :data-network-committed="rpc.maximumPayloadBytes" type="number" min="2" max="65507" @change="commit"></label>
+          <label><span>{{ t('ratePerSecond') }}</span><input v-model.lazy.number="rpc.callsPerSecond" :data-network-committed="rpc.callsPerSecond" type="number" min="1" max="1000" @change="commit"></label>
+          <button :aria-label="nl18('remove') + ' ' + rpc.name" @click="removeRpc(rpc.name)">{{ nl18('remove') }}</button>
+        </article></div>
       </section>
     </main>
 
-    <main v-else-if="activeTab === 'replication'" id="network-studio-panel-replication" class="studio-grid" role="tabpanel" tabindex="0" aria-labelledby="network-studio-tab-replication">
+    <main v-else-if="activeTab === 'replication'" id="network-studio-panel-replication" data-measured-studio-layout class="studio-grid" role="tabpanel" tabindex="0" aria-labelledby="network-studio-tab-replication">
+      <section class="card span-three"><header><strong>{{ nl18('rollbackTitle') }}</strong></header><p>{{ nl18('rollbackHint') }}</p></section>
       <section class="card">
         <header><strong>{{ t('replication') }}</strong><span>{{ settings.networking.replicatedEntities.length }}/2000</span></header>
         <p>{{ t('replicationHint') }}</p><button class="primary" :disabled="!selectedEntity || replicatedSelected" @click="replicateSelected">＋ {{ t('replicateSelected') }}</button>
-        <label><span>{{ t('snapshotRate') }}</span><input v-model.number="settings.networking.snapshotRate" type="number" min="1" max="120" @change="commit"></label>
-        <label><span>{{ t('interpolationMs') }}</span><input v-model.number="settings.networking.interpolationMs" type="number" min="0" max="2000" @change="commit"></label>
-        <label><span>{{ t('rollbackFrames') }}</span><input v-model.number="settings.networking.rollbackFrames" type="number" min="0" max="600" @change="commit"></label>
-        <label><span>{{ t('reconciliationThreshold') }}</span><input v-model.number="settings.networking.reconciliationThreshold" type="number" min="0" max="1000" step=".01" @change="commit"></label>
+        <label><span>{{ t('snapshotRate') }}</span><input v-model.lazy.number="settings.networking.snapshotRate" :data-network-committed="settings.networking.snapshotRate" type="number" min="1" max="120" @change="commit"></label>
+        <label><span>{{ t('interpolationMs') }}</span><input v-model.lazy.number="settings.networking.interpolationMs" :data-network-committed="settings.networking.interpolationMs" type="number" min="0" max="2000" @change="commit"></label>
+        <label><span>{{ t('rollbackFrames') }}</span><input v-model.lazy.number="settings.networking.rollbackFrames" :data-network-committed="settings.networking.rollbackFrames" type="number" min="0" max="600" @change="commit"></label>
+        <label><span>{{ t('reconciliationThreshold') }}</span><input v-model.lazy.number="settings.networking.reconciliationThreshold" :data-network-committed="settings.networking.reconciliationThreshold" type="number" min="0" max="1000" step=".01" @change="commit"></label>
       </section>
       <section class="card span-two">
         <header><strong>{{ t('replicatedProperties') }}</strong><span>{{ t('authority') }}</span></header>
-        <div class="table-scroll"><article v-for="definition in settings.networking.replicatedEntities" :key="definition.entityUuid" class="replication-row"><strong :title="definition.entityUuid">{{ entityName(definition.entityUuid) }}</strong><select v-model="definition.authority" @change="commit"><option value="server">{{ t('server') }}</option><option value="owner">{{ t('owner') }}</option></select><div><label><input v-model="definition.properties" type="checkbox" value="transform" @change="commit">{{ t('transform') }}</label><label><input v-model="definition.properties" type="checkbox" value="rotation" @change="commit">{{ t('rotation') }}</label><label><input v-model="definition.properties" type="checkbox" value="velocity" @change="commit">{{ t('velocity') }}</label></div><label><input v-model="definition.interpolate" type="checkbox" @change="commit">{{ t('interpolate') }}</label><label><input v-model="definition.predict" type="checkbox" @change="commit">{{ t('predict') }}</label><label><input v-model="definition.alwaysRelevant" type="checkbox" @change="commit">{{ t('alwaysRelevant') }}</label><input v-model.number="definition.interestRadius" type="number" min="0" :max="settings.networking.interest.maximumRadius" :title="t('interestRadius')" @change="commit"><button @click="removeReplication(definition.entityUuid)">×</button></article></div>
+        <div class="table-scroll"><article v-for="definition in settings.networking.replicatedEntities" :key="definition.entityUuid" class="replication-row">
+          <strong :title="definition.entityUuid">{{ entityName(definition.entityUuid) }}</strong>
+          <label><span>{{ t('authority') }}</span><select v-model="definition.authority" @change="commit"><option value="server">{{ t('server') }}</option><option value="owner">{{ t('owner') }}</option></select></label>
+          <label v-if="definition.authority === 'owner'"><span>{{ nl18('ownerId') }}</span><input v-model.lazy="definition.ownerPeerId" maxlength="80" spellcheck="false" @change="commit"></label>
+          <fieldset><legend>{{ t('replicatedProperties') }}</legend><label><input v-model="definition.properties" type="checkbox" value="transform" @change="commit">{{ t('transform') }}</label><label><input v-model="definition.properties" type="checkbox" value="rotation" @change="commit">{{ t('rotation') }}</label><label><input v-model="definition.properties" type="checkbox" value="velocity" @change="commit">{{ t('velocity') }}</label></fieldset>
+          <label class="toggle-field"><input v-model="definition.interpolate" type="checkbox" @change="commit">{{ t('interpolate') }}</label>
+          <label class="toggle-field"><input v-model="definition.predict" type="checkbox" @change="commit">{{ t('predict') }}</label>
+          <label class="toggle-field"><input v-model="definition.alwaysRelevant" type="checkbox" @change="commit">{{ t('alwaysRelevant') }}</label>
+          <label><span>{{ t('interestRadius') }} (m)</span><input v-model.lazy.number="definition.interestRadius" :data-network-committed="definition.interestRadius" type="number" min="0" :max="settings.networking.interest.maximumRadius" step="0.1" @change="commit"></label>
+          <button :aria-label="nl18('remove') + ' ' + entityName(definition.entityUuid)" @click="removeReplication(definition.entityUuid)">{{ nl18('remove') }}</button>
+        </article></div>
       </section>
     </main>
 
-    <main v-else-if="activeTab === 'orchestration'" id="network-studio-panel-orchestration" class="studio-grid orchestration-grid" role="tabpanel" tabindex="0" aria-labelledby="network-studio-tab-orchestration">
+    <main v-else-if="activeTab === 'orchestration'" id="network-studio-panel-orchestration" data-measured-studio-layout class="studio-grid network-orchestration-grid" role="tabpanel" tabindex="0" aria-labelledby="network-studio-tab-orchestration">
       <section class="card">
         <header><strong>{{ t('networkSecurity') }}</strong><span>{{ settings.networking.authentication.mode }}</span></header>
         <label><span>{{ t('authentication') }}</span><select v-model="settings.networking.authentication.mode" @change="commit"><option value="none">{{ t('none') }}</option><option value="hook">{{ t('authenticationHook') }}</option></select></label>
         <label v-if="settings.networking.authentication.mode === 'hook'"><span>{{ t('providerId') }}</span><input v-model="settings.networking.authentication.providerId" list="network-auth-providers" maxlength="80" @change="commit"><datalist id="network-auth-providers"><option v-for="provider in authenticationProviders" :key="provider.id" :value="provider.id">{{ provider.label }}</option></datalist></label>
         <label><span>{{ t('requireVerifiedPeers') }}</span><input v-model="settings.networking.authentication.requireVerifiedPeers" type="checkbox" @change="commit"></label>
         <label><span>{{ t('requireEncryption') }}</span><input v-model="settings.networking.security.requireEncryption" type="checkbox" @change="commit"></label>
-        <label><span>{{ t('maximumPacketAge') }}</span><input v-model.number="settings.networking.security.maximumPacketAgeMs" type="number" min="1000" max="120000" @change="commit"></label>
-        <label><span>{{ t('replayWindow') }}</span><input v-model.number="settings.networking.security.replayWindow" type="number" min="64" max="16384" @change="commit"></label>
+        <label><span>{{ t('maximumPacketAge') }}</span><input v-model.lazy.number="settings.networking.security.maximumPacketAgeMs" :data-network-committed="settings.networking.security.maximumPacketAgeMs" type="number" min="1000" max="120000" @change="commit"></label>
+        <label><span>{{ t('replayWindow') }}</span><input v-model.lazy.number="settings.networking.security.replayWindow" :data-network-committed="settings.networking.security.replayWindow" type="number" min="64" max="16384" @change="commit"></label>
         <p :class="securityGuidance.severity">{{ securityGuidance.message }}</p>
       </section>
       <section class="card">
         <header><strong>{{ t('interestManagement') }}</strong><span>{{ networkState?.peerInterests.length ?? 0 }}</span></header>
         <label><span>{{ t('enabled') }}</span><input v-model="settings.networking.interest.enabled" type="checkbox" @change="commit"></label>
-        <label><span>{{ t('defaultRadius') }}</span><input v-model.number="settings.networking.interest.defaultRadius" type="number" min="0" max="1000000" @change="commit"></label>
-        <label><span>{{ t('maximumRadius') }}</span><input v-model.number="settings.networking.interest.maximumRadius" type="number" min="1" max="1000000" @change="commit"></label>
-        <div class="coordinate-row"><input v-model.number="interestX" type="number" aria-label="Interest X"><input v-model.number="interestY" type="number" aria-label="Interest Y"><button @click="publishInterest">{{ t('publishInterest') }}</button></div>
+        <label><span>{{ t('defaultRadius') }}</span><input v-model.lazy.number="settings.networking.interest.defaultRadius" :data-network-committed="settings.networking.interest.defaultRadius" type="number" min="0" max="1000000" @change="commit"></label>
+        <label><span>{{ t('maximumRadius') }}</span><input v-model.lazy.number="settings.networking.interest.maximumRadius" :data-network-committed="settings.networking.interest.maximumRadius" type="number" min="1" max="1000000" @change="commit"></label>
+        <div class="coordinate-row"><input v-model.lazy.number="interestX" :data-network-committed="interestX" type="number" step="any" :aria-label="nl18('interestX')"><input v-model.lazy.number="interestY" :data-network-committed="interestY" type="number" step="any" :aria-label="nl18('interestY')"><button @click="publishInterest">{{ t('publishInterest') }}</button></div>
         <p>{{ t('interestHint') }}</p>
       </section>
       <section class="card">
@@ -134,7 +165,7 @@
       <section class="card span-two multi-instance-card">
         <header><strong>{{ t('multiInstancePlay') }}</strong><span>2–8</span></header>
         <p>{{ t('multiInstanceHint') }}</p>
-        <label><span>{{ t('peerCount') }}</span><input v-model.number="settings.networking.multiInstance.peerCount" type="number" min="2" max="8" @change="commit"></label>
+        <label><span>{{ t('peerCount') }}</span><input v-model.lazy.number="settings.networking.multiInstance.peerCount" :data-network-committed="settings.networking.multiInstance.peerCount" type="number" min="2" max="8" @change="commit"></label>
         <div class="peer-count-picker" role="group" :aria-label="t('quickPeerCounts')"><button v-for="count in peerCountPresets" :key="count" type="button" :class="{ active: settings.networking.multiInstance.peerCount === count }" :aria-pressed="settings.networking.multiInstance.peerCount === count" @click="setPeerCount(count)">{{ count }}</button></div>
         <label><span>{{ t('separateLogs') }}</span><input v-model="settings.networking.multiInstance.separateLogs" type="checkbox" @change="commit"></label>
         <label><span>{{ t('separateInspectors') }}</span><input v-model="settings.networking.multiInstance.separateInspectors" type="checkbox" @change="commit"></label>
@@ -156,6 +187,7 @@
             </div>
           </article>
         </div>
+        <p>{{ nl18('instanceScope') }}</p>
         <section v-if="selectedInstance" class="instance-detail" :aria-label="t('instanceDetails', { name: selectedInstance.playerName })">
           <header><span><strong>{{ selectedInstance.playerName }}</strong><small>{{ instanceDetailMode === 'logs' ? t('instanceLogs') : t('instanceInspector') }}</small></span><button type="button" @click="selectedInstanceId = ''">{{ t('closeInstanceDetails') }}</button></header>
           <template v-if="instanceDetailMode === 'logs'">
@@ -174,16 +206,16 @@
       </section>
     </main>
 
-    <main v-else-if="activeTab === 'simulation'" id="network-studio-panel-simulation" class="studio-grid" role="tabpanel" tabindex="0" aria-labelledby="network-studio-tab-simulation">
+    <main v-else-if="activeTab === 'simulation'" id="network-studio-panel-simulation" data-measured-studio-layout class="studio-grid" role="tabpanel" tabindex="0" aria-labelledby="network-studio-tab-simulation">
       <section class="card">
         <header><strong>{{ t('lagSimulation') }}</strong><span>{{ settings.networking.simulation.enabled ? t('enabled') : t('disabled') }}</span></header>
         <label><span>{{ t('enabled') }}</span><input v-model="settings.networking.simulation.enabled" type="checkbox" @change="commit"></label>
-        <label><span>{{ t('latencyMs') }}</span><input v-model.number="settings.networking.simulation.latencyMs" type="number" min="0" max="10000" @change="commit"></label>
-        <label><span>{{ t('jitterMs') }}</span><input v-model.number="settings.networking.simulation.jitterMs" type="number" min="0" max="10000" @change="commit"></label>
-        <label><span>{{ t('packetLoss') }} %</span><input v-model.number="settings.networking.simulation.lossPercent" type="number" min="0" max="100" step=".1" @change="commit"></label>
-        <label><span>{{ t('duplicatePackets') }} %</span><input v-model.number="settings.networking.simulation.duplicatePercent" type="number" min="0" max="100" step=".1" @change="commit"></label>
-        <label><span>{{ t('reorderPackets') }} %</span><input v-model.number="settings.networking.simulation.reorderPercent" type="number" min="0" max="100" step=".1" @change="commit"></label>
-        <label><span>{{ t('randomSeed') }}</span><input v-model.number="settings.networking.simulation.seed" type="number" min="0" max="4294967295" @change="commit"></label>
+        <label><span>{{ t('latencyMs') }}</span><input v-model.lazy.number="settings.networking.simulation.latencyMs" :data-network-committed="settings.networking.simulation.latencyMs" type="number" min="0" max="10000" @change="commit"></label>
+        <label><span>{{ t('jitterMs') }}</span><input v-model.lazy.number="settings.networking.simulation.jitterMs" :data-network-committed="settings.networking.simulation.jitterMs" type="number" min="0" max="10000" @change="commit"></label>
+        <label><span>{{ t('packetLoss') }} %</span><input v-model.lazy.number="settings.networking.simulation.lossPercent" :data-network-committed="settings.networking.simulation.lossPercent" type="number" min="0" max="100" step=".1" @change="commit"></label>
+        <label><span>{{ t('duplicatePackets') }} %</span><input v-model.lazy.number="settings.networking.simulation.duplicatePercent" :data-network-committed="settings.networking.simulation.duplicatePercent" type="number" min="0" max="100" step=".1" @change="commit"></label>
+        <label><span>{{ t('reorderPackets') }} %</span><input v-model.lazy.number="settings.networking.simulation.reorderPercent" :data-network-committed="settings.networking.simulation.reorderPercent" type="number" min="0" max="100" step=".1" @change="commit"></label>
+        <label><span>{{ t('randomSeed') }}</span><input v-model.lazy.number="settings.networking.simulation.seed" :data-network-committed="settings.networking.simulation.seed" type="number" min="0" max="4294967295" @change="commit"></label>
       </section>
       <section class="card">
         <header><strong>{{ t('multiplayerReplay') }}</strong><span>{{ multiplayerReplayState.frames.length }}</span></header>
@@ -198,11 +230,12 @@
         <button class="primary" :disabled="networkState?.status !== 'connected'" @click="captureSessionSave">{{ t('captureSessionState') }}</button>
         <label><span>{{ t('saveAsset') }}</span><select v-model="saveAsset"><option value="">{{ t('none') }}</option><option v-for="asset in multiplayerSaveAssets" :key="asset.uuid" :value="asset.uuid">{{ asset.name }}</option></select></label>
         <button :disabled="!saveAsset || networkState?.status !== 'connected'" @click="restoreSessionSave">{{ t('restoreSessionState') }}</button>
-        <p>{{ t('multiplayerSaveHint') }}</p>
+        <p>{{ t('multiplayerSaveHint') }}</p><p>{{ nl18('restoreHint') }}</p>
       </section>
     </main>
 
-    <main v-else id="network-studio-panel-diagnostics" class="studio-grid diagnostics-grid" role="tabpanel" tabindex="0" aria-labelledby="network-studio-tab-diagnostics">
+    <main v-else id="network-studio-panel-diagnostics" data-measured-studio-layout class="studio-grid network-diagnostics-grid" role="tabpanel" tabindex="0" aria-labelledby="network-studio-tab-diagnostics">
+      <section class="card metrics-card"><header><strong>{{ t('replication') }}</strong></header><p>{{ nl18('pagesHint') }}</p><dl><div><dt>{{ nl18('pageEntities') }}</dt><dd>{{ networkState?.snapshotPageEntities ?? 0 }}</dd></div><div><dt>{{ nl18('deferredEntities') }}</dt><dd>{{ networkState?.snapshotDeferredEntities ?? 0 }}</dd></div></dl></section>
       <section class="card metrics-card">
         <header><strong>{{ t('multiplayerDiagnostics') }}</strong><button @click="downloadDiagnostics">{{ t('exportDiagnostics') }}</button></header>
         <dl v-if="networkState"><div><dt>{{ t('sentReceived') }}</dt><dd>{{ networkState.sentBytes }} / {{ networkState.receivedBytes }} B</dd></div><div><dt>{{ t('bandwidth') }}</dt><dd>{{ networkState.bandwidthOutKbps }} / {{ networkState.bandwidthInKbps }} kbps</dd></div><div><dt>{{ t('packets') }}</dt><dd>{{ networkState.sentPackets }} / {{ networkState.receivedPackets }}</dd></div><div><dt>{{ t('droppedPackets') }}</dt><dd>{{ networkState.droppedPackets }}</dd></div><div><dt>{{ t('invalidPackets') }}</dt><dd>{{ networkState.invalidPackets }}</dd></div><div><dt>{{ t('rateLimited') }}</dt><dd>{{ networkState.rateLimited }}</dd></div><div><dt>{{ t('replayRejected') }}</dt><dd>{{ networkState.replayRejected }}</dd></div><div><dt>{{ t('authenticationRejected') }}</dt><dd>{{ networkState.authenticationRejected }}</dd></div><div><dt>{{ t('reliablePending') }}</dt><dd>{{ networkState.reliablePending }}</dd></div><div><dt>{{ t('resends') }}</dt><dd>{{ networkState.reliableResent }}</dd></div><div><dt>{{ t('lateJoins') }}</dt><dd>{{ networkState.lateJoins }}</dd></div><div><dt>{{ t('divergences') }}</dt><dd>{{ networkState.divergences }}</dd></div><div><dt>{{ t('rollbacks') }}</dt><dd>{{ networkState.rollbacks }}</dd></div><div><dt>{{ t('replayedInputs') }}</dt><dd>{{ networkState.replayedInputs }}</dd></div><div><dt>{{ t('interestCulled') }}</dt><dd>{{ networkState.interestCulled }}</dd></div><div><dt>{{ t('disconnectCleanups') }}</dt><dd>{{ networkState.disconnectCleanups }}</dd></div></dl>
@@ -220,9 +253,11 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue'
+import { nextTick, computed, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue'
 import { assetState, createTextAsset, readTextAsset } from '../assets/AssetDatabase'
 import { t } from '../i18n'
+import { networkLabel18 as nl18, networkFailure18 } from '../editor/networkLabels18'
+import { useNetworkForm18 } from '../editor/networkForm18'
 import { enableOfficialPackage, OFFICIAL_NETWORKING_PACKAGE_ID, packageEnabled, packageState } from '../runtime/packages'
 import { beginMultiplayerReplayRecording, compareMultiplayerReplays, multiplayerReplayState, normalizeMultiplayerReplay, stopMultiplayerReplayRecording } from '../runtime/networkReplay'
 import { reviewedNetworkServices } from '../runtime/networkServices'
@@ -234,6 +269,9 @@ import { reportRecoverableError } from '../runtime/faultCenter'
 import { loadProductionSettings, productionSettings as settings, serializeProductionSettings, type NetworkPayloadSchema } from '../runtime/production'
 import { requestConfirmation } from '../store/dialog'
 import { physicsState, pushHistory, sceneManager } from '../store/physics'
+
+const { error: networkFormError18, change: guardNetworkNumber18 } = useNetworkForm18()
+const connectionEdited18 = ref(false)
 
 type TabId = 'session' | 'protocol' | 'replication' | 'orchestration' | 'simulation' | 'diagnostics'
 type NetworkModule = typeof import('../runtime/networking')
@@ -285,14 +323,15 @@ function handleTabKeydown(event: KeyboardEvent) {
   activeTab.value = tabs[next].id
   requestAnimationFrame(() => document.getElementById(`network-studio-tab-${tabs[next].id}`)?.focus())
 }
-function commit() { loadProductionSettings(serializeProductionSettings()); pushHistory('Edit networking settings', 'project:networking') }
+function commit() { void nextTick(() => { loadProductionSettings(serializeProductionSettings()); pushHistory('Edit networking settings', 'project:networking') }) }
 function setPeerCount(count: typeof peerCountPresets[number]) { settings.networking.multiInstance.peerCount = count; commit() }
 function instanceStatus(instance: LaunchedNetworkInstance): 'running' | 'exited' | 'stopped' | 'unknown' { return instance.status === 'stopped' ? 'stopped' : instance.status === 'exited' || instance.running === false ? 'exited' : instance.status === 'running' || instance.running === true || !instance.status ? 'running' : 'unknown' }
 function instanceStatusLabel(instance: LaunchedNetworkInstance) { return t(({ running: 'instanceRunning', exited: 'instanceExited', stopped: 'instanceStopped', unknown: 'instanceUnknown' } as const)[instanceStatus(instance)]) }
 function installNetworking() { if (enableOfficialPackage(OFFICIAL_NETWORKING_PACKAGE_ID)) { pushHistory('Install Nova Networking package', 'project:packages'); void safelyLoadModule() } }
 async function grantPermission() { if (!await requestConfirmation({ title: t('grantNetworkPermission'), message: t('networkPermissionPrompt'), confirmLabel: t('grant'), cancelLabel: t('cancel'), destructive: false })) return; settings.networking.permissionGranted = true; settings.networking.enabled = true; commit() }
 async function revokePermission() { if (!await requestConfirmation({ title: t('revokeNetworkPermission'), message: t('revokeNetworkPermissionPrompt'), confirmLabel: t('revoke'), cancelLabel: t('cancel'), destructive: true })) return; await disconnect(); settings.networking.permissionGranted = false; settings.networking.autoStart = false; commit() }
-async function connect() { networkBusy.value = true; try { moduleRef.value = await startProductionNetworking(); networkState.value = moduleRef.value.networkingState } catch (error) { if (networkState.value) networkState.value.lastError = error instanceof Error ? error.message : String(error) } finally { networkBusy.value = false } }
+async function connect() { connectionEdited18.value = false; networkBusy.value = true; try { moduleRef.value = await startProductionNetworking(); networkState.value = moduleRef.value.networkingState } catch (error) { if (networkState.value) networkState.value.lastError = error instanceof Error ? error.message : String(error) } finally { networkBusy.value = false } }
+async function reconnect18() { await disconnect(); await connect() }
 async function disconnect() { networkBusy.value = true; try { await stopProductionNetworking(); stopLocalLobbyAdvertisement() } finally { networkBusy.value = false; if (moduleRef.value) networkState.value = moduleRef.value.networkingState } }
 function addChannel() { settings.networking.channels.push({ id: `channel-${settings.networking.channels.length + 1}`, delivery: 'reliable-ordered', maximumPayloadBytes: 8192, messagesPerSecond: 60, priority: 0 }); commit() }
 function removeChannel(id: string) { if (builtInChannels.includes(id)) return; settings.networking.channels = settings.networking.channels.filter(item => item.id !== id); for (const rpc of settings.networking.rpcContracts) if (rpc.channelId === id) rpc.channelId = 'events'; commit() }
@@ -362,6 +401,12 @@ async function buildAndLaunchInstances() {
   } catch (error) { multiInstanceError.value = error instanceof Error ? error.message : String(error); reportRecoverableError(error, 'Build and launch network peers', 'Runtime') } finally { networkBusy.value = false }
 }
 
+const connectionIdentity18 = () => JSON.stringify([settings.networking.role, settings.networking.sessionMode, settings.networking.sessionName, settings.networking.schemaVersion, settings.networking.transport, settings.networking.transportAdapterId, settings.networking.endpoint, settings.networking.bindAddress, settings.networking.authentication, settings.networking.services, settings.networking.channels.map(channel => [channel.id, channel.delivery])])
+watch(connectionIdentity18, async (next, previous) => {
+  if (next === previous || !networkState.value || networkState.value.status === 'disabled' || networkState.value.status === 'permission-required') return
+  connectionEdited18.value = true
+  await disconnect()
+})
 watch(networkPackageEnabled, enabled => { if (enabled) void safelyLoadModule() })
 onMounted(() => { if (networkPackageEnabled.value) void safelyLoadModule() })
 onBeforeUnmount(() => stopLocalLobbyDirectory())
@@ -450,7 +495,7 @@ onBeforeUnmount(() => stopLocalLobbyDirectory())
   scrollbar-gutter: stable;
 }
 .studio-grid:focus-visible { outline: 2px solid var(--accent); outline-offset: -3px; }
-.wide-grid { grid-template-columns: repeat(3, minmax(240px, 1fr)); }
+.network-wide-grid { grid-template-columns: repeat(3, minmax(240px, 1fr)); }
 .card {
   min-width: 0;
   max-width: 100%;
@@ -511,7 +556,7 @@ onBeforeUnmount(() => stopLocalLobbyDirectory())
 .channel-row label,
 .replication-row label { min-height: 28px; display: flex; align-items: center; gap: 5px; color: var(--text-muted); }
 .channel-row label { justify-content: space-between; }
-.channel-row label input { width: 82px; }
+.channel-row label input { width: 100%; }
 .replication-row > div { display: flex; gap: 8px; flex-wrap: wrap; }
 .peers-card article,
 .lobby-list article { padding: 7px; display: flex; justify-content: space-between; gap: 8px; border-bottom: 1px solid var(--border-subtle); }
@@ -531,7 +576,8 @@ onBeforeUnmount(() => stopLocalLobbyDirectory())
 .event-list article.warning { color: var(--warning); }
 .event-list article.error,
 .packet-list .rejected { color: var(--danger); }
-.coordinate-row { margin: 8px 0; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto; gap: 6px; }
+.coordinate-row button { grid-column: 1 / -1; }
+.coordinate-row { margin: 8px 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
 .ownership-list { margin-top: 8px; display: grid; gap: 4px; max-height: 130px; overflow: auto; }
 .ownership-list code { padding: 5px 7px; border-radius: 6px; background: var(--surface-3); white-space: normal; }
 .peer-count-picker { margin: 7px 0; display: grid; grid-template-columns: repeat(3, minmax(48px, 1fr)); gap: 6px; }
@@ -571,8 +617,8 @@ onBeforeUnmount(() => stopLocalLobbyDirectory())
 @container (max-width: 1000px) {
   .studio-header { grid-template-columns: minmax(0, 1fr) auto; }
   .studio-header nav { grid-column: 1 / -1; grid-row: 2; display: flex; padding-bottom: 2px; }
-  .studio-header nav button { flex: 1 0 104px; }
-  .studio-grid { grid-template-columns: 1fr 1fr; }
+  .studio-header nav button { flex: 1 0 max-content; }
+  .studio-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .span-three { grid-column: 1 / -1; }
   .span-two { grid-column: span 2; }
 }
@@ -643,4 +689,21 @@ onBeforeUnmount(() => stopLocalLobbyDirectory())
   .studio-header button,
   .card button { transition: none; }
 }
+/* 26.18: labeled forms use their available container rather than fixed table widths. */
+.network-draft-error { flex: 0 0 auto; max-height: 25%; overflow: auto; margin: 0; padding: 8px 12px; color: var(--danger); overflow-wrap: anywhere; }
+.studio-header nav { grid-template-columns: repeat(6, minmax(max-content, 1fr)); }
+.studio-header nav button { white-space: nowrap; word-break: normal; overflow-wrap: normal; }
+.card > header { flex-wrap: wrap; }
+.card > label { gap: 12px; padding-block: 7px; }
+.card > label input:not([type="checkbox"]), .card > label select { min-width: min(100%, 96px); }
+.table-scroll { max-height: none; overflow: visible; }
+.channel-row, .rpc-row, .replication-row { min-width: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr)); align-items: start; gap: 12px; padding: 12px 0; }
+.channel-row > label, .rpc-row > label, .replication-row > label { min-width: 0; display: flex; flex-direction: column; align-items: stretch; gap: 6px; }
+.channel-row > label > span, .rpc-row > label > span, .replication-row > label > span { overflow-wrap: anywhere; }
+.channel-row input, .channel-row select, .rpc-row input, .rpc-row select, .replication-row input:not([type="checkbox"]), .replication-row select { width: 100%; min-width: 0; }
+.replication-row > strong, .replication-row > fieldset { grid-column: 1 / -1; min-width: 0; overflow-wrap: anywhere; }
+.replication-row fieldset { display: flex; flex-wrap: wrap; gap: 10px; border: 1px solid var(--border-subtle); padding: 10px; }
+.replication-row > .toggle-field { flex-direction: row; align-items: center; }
+.card pre { white-space: pre-wrap; overflow-wrap: anywhere; word-break: break-word; }
+.card details { max-width: 100%; }
 </style>

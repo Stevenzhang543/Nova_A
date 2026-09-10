@@ -1,4 +1,5 @@
 import { reactive, watch } from 'vue'
+import { colorPalette, paletteForMode, type ColorPaletteId } from './colorPalettes'
 
 export type ThemeMode = 'dark' | 'light'
 export type Locale = 'en' | 'de' | 'zh'
@@ -7,6 +8,8 @@ export type PerformanceProfile = 'balanced' | 'low-end' | 'quality'
 
 export interface Preferences {
   theme: ThemeMode
+  lightPalette: ColorPaletteId
+  darkPalette: ColorPaletteId
   locale: Locale
   uiScale: number
   compactMode: boolean
@@ -38,6 +41,8 @@ const LIGHT_CONTRAST_MIGRATION_KEY = 'nova_a.light-contrast-default.v1.1'
 
 const defaults: Preferences = {
   theme: 'dark',
+  lightPalette: 'cloud-blue',
+  darkPalette: 'midnight-blue',
   locale: 'en',
   uiScale: 1,
   compactMode: false,
@@ -85,6 +90,8 @@ function normalizedPreferences(parsed: Partial<Preferences>, resetLegacyLightCon
   return {
     ...defaults,
     theme: normalizedTheme(parsed.theme),
+    lightPalette: paletteForMode(parsed.lightPalette, 'light'),
+    darkPalette: paletteForMode(parsed.darkPalette, 'dark'),
     locale: normalizedLocale(parsed.locale),
     uiScale: finiteRange(parsed.uiScale, defaults.uiScale, 1, 2),
     compactMode: storedBoolean(parsed.compactMode, defaults.compactMode),
@@ -130,6 +137,7 @@ export function applyPreferences(): void {
   if (typeof document === 'undefined') return
   const root = document.documentElement
   root.dataset.theme = preferencesState.theme
+  root.dataset.palette = paletteForMode(preferencesState.theme === 'light' ? preferencesState.lightPalette : preferencesState.darkPalette, preferencesState.theme)
   root.dataset.compact = String(preferencesState.compactMode)
   root.dataset.reduceMotion = String(preferencesState.reduceMotion)
   root.dataset.highContrast = String(preferencesState.highContrast)
@@ -137,6 +145,14 @@ export function applyPreferences(): void {
   root.style.setProperty('--ui-scale', String(preferencesState.uiScale))
   root.dataset.uiScale = preferencesState.uiScale > 1.75 ? 'xlarge' : preferencesState.uiScale > 1.25 ? 'large' : 'standard'
   root.lang = preferencesState.locale === 'zh' ? 'zh-CN' : preferencesState.locale
+}
+
+export function selectColorPalette(value: unknown): void {
+  const palette = colorPalette(value)
+  if (!palette) return
+  preferencesState.theme = palette.mode
+  if (palette.mode === 'light') preferencesState.lightPalette = palette.id
+  else preferencesState.darkPalette = palette.id
 }
 
 export function resetPreferences(): void {

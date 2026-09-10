@@ -1,5 +1,159 @@
-# Nova_A 26.17 – Vollständiges Handbuch
+# Nova_A 26.20 – Vollständiges Handbuch
 
+<!-- NOVA_V2620_START -->
+## 26.20 — Erstellen, abstimmen, vergleichen und ausliefern
+
+Engine: **26.20.0** · Project Format 2/schema 29.
+
+### Nova_A26.20 — erstellen, abstimmen, vergleichen und ausliefern
+
+Diese Lektion ergänzt das vollständige deutsche Handbuch und die40 Vorlagen-Anleitungen. Engine26.20.0 behält Projektformat2/Schema29, Rhai API2, Graph1, Plugin API2 und Netzwerkprotokoll2. Eine lokale Freigabe zertifiziert nicht jede Plattform und jedes mögliche Programm.
+
+### Editorpalette auswählen
+
+Manage → Project & safety → Settings → Darstellung öffnen. Die Farbpalette bietet Wolkenblau, Wiesencreme, Beerenrosa, Mitternachtsblau und Nachtgarten. Die ersten drei sind hell, die letzten zwei dunkel. Eine Auswahl gilt sofort. Hell/Dunkel stellt die zuletzt gewählte Palette des jeweiligen Modus wieder her. Die Pfeiltasten eines nativen Auswahlfelds übernehmen jede durchlaufene Option; mit den Modusschaltern kehren Sie zur vorherigen Auswahl zurück. Anwendung schließen und neu öffnen, um die Speicherung zu prüfen.
+
+Hintergrund, Oberfläche, Primärfarbe, Sekundärfarbe, Akzent und Haupttext entsprechen exakt den sechs vorgegebenen Rollen. Rahmen, dezenter Text, Hover und Auswahl sind daraus abgeleitet. Dunkle Textlinks verwenden eine aufgehellte Primärfarbe. Hoher Kontrast bleibt eine ausdrückliche Übersteuerung. Editorfarben verändern weder Spielmaterialien noch UI-Themes im Spiel. Bewegungsreduktion, Animationsdauer und Effekte bleiben erhalten.
+
+### Dasselbe Spiel mit Code, Blöcken und gemischt erstellen
+
+Die passende Referenz creator-v2620-code-game, creator-v2620-blocks-game oder creator-v2620-mixed-game öffnen. In Play mit WASD/Pfeiltasten sechs Checkpoints der Reihe nach einsammeln; R startet neu. Vor dem Bearbeiten stoppen. CheckpointGame.rhai im Script-Arbeitsbereich öffnen und den Geschwindigkeitswert suchen. Im Code den Wert ändern; im Blockmodus den entsprechenden Zahlenblock des verknüpften Graphen bearbeiten; im gemischten Modus beide Wege verwenden. Speichern, Darstellung wechseln und den erhaltenen Wert prüfen. Typisierte Graphstruktur und quelltextgestützte Bereiche sind unterschiedliche Unterstützungsstufen. Nicht unterstützten Quelltext nicht löschen, um eine Konvertierung zu erzwingen.
+
+Checkpoint1 in Design auswählen und X verschieben. Das Skript fragt die aktuelle Weltposition ab; der Einsammelpunkt folgt dem Objekt. Rückgängig/Wiederholen prüfen. Projekt speichern, neu öffnen, Play wiederholen, über Manage → Build Settings nach Web exportieren und Bewegung, Einsammeln und Neustart erneut prüfen. Ein Inspector-Wert allein beweist kein korrektes Exportverhalten.
+
+### Auflösung und Kantenglättung ohne Funktionsverlust
+
+Manage → Rendering → Quality öffnen. Animation, Beleuchtung, Partikel, Audio, Timeline, UI und Nachbearbeitung eingeschaltet lassen. Auflösungsskalierung1 nutzt die vorhandenen Grenzen der Gerätedichte.1,5 oder2 erhöht die Pixelzahl für Supersampling innerhalb der Geräte- und Speichergrenzen.0,5 ist eine ausdrückliche Benutzeroption; diese Version wählt sie nicht heimlich. Vorhandene adaptive Qualitäts- und Profiloptionen behalten ihre bisherige Bedeutung.
+
+Automatisch verwendet die normale Framebuffer-Glättung und ergänzt begrenztes Multisampling für die separate Nachbearbeitungsfläche. Bei aktiviertem Pixel-Snapping wird dort keine zusätzliche Glättung angewendet. MSAA2/4/8 fordert Samples an; die tatsächliche Unterstützung kann geringer sein. Aus deaktiviert angefordertes WebGL-Anti-Aliasing. Tatsächliche Pixel / MSAA-Samples zeigt reale Größe und Samplezahl. Canvas2D nutzt Browserglättung und meldet keine GPU-Samples. Nächster-Nachbar-Filter und pixelgenaue Kamera bleiben für Pixelgrafik verfügbar.
+
+Mehr Pixel und Samples benötigen GPU-Zeit und Speicher. Multisample-Farbfläche samt aufgelöster Textur sind zusammen auf256MiB begrenzt. Die Samplezahl wird bei Bedarf reduziert; der logische Sichtbereich bleibt erhalten. Allgemeine Oberflächen sind auf8192 Pixel pro Achse und16.777.216 Pixel insgesamt begrenzt; Geräte können niedrigere Grenzen haben. Eine Auflösungsänderung darf die Editorkamera nicht verschieben. Eine Einstellung ändern, Rückgängig/Wiederholen ausführen, speichern, neu öffnen und im exportierten Spiel vergleichen.
+
+### Animation erhalten und Leistung messen
+
+creator-v2620-animated-menu öffnen. Menü abspielen, Eingabe und Checkbox bedienen und dabei Titelfade und Timeline beobachten. Bei zwei Auflösungsskalierungen und im Webexport wiederholen. Die vorhandenen Kapitel zu Assets, Animation, Controllern, Rig, Timeline, Audio und UI bleiben vollständig erhalten. Diese Referenz bewahrt ihre Inhalte; kein System wird für einen günstigeren Messwert entfernt.
+
+Für Vergleiche dasselbe Projekt, Kamera, Objektzahl, Auflösung, Effekte, Build, Gerät und Aufwärmphase verwenden. CPU-Zeit, verfügbare GPU-Zeit, Draw Calls und tatsächliche Pixel zusätzlich zu FPS dokumentieren. Die optimierte Gruppierung erhält Reihenfolge und Vertex-/Indexdaten. Gleich große Batches verwenden Speicher erneut. Indexreiche Gruppen können in zusätzliche Draw Calls geteilt werden, damit der Speicher begrenzt bleibt. Isolierte Gruppierungszeiten sind keine Gesamt-FPS. Umfang und Gerät des aktuellen Berichts lesen.
+
+### Probleme beheben und ausliefern
+
+Bei fehlendem WebGL den sichtbaren Fallback-Grund lesen und Canvas2D-Ausgabe prüfen. Bei niedrigerem MSAA zuerst tatsächliche Samples und Auflösung ansehen. Bei abgeschnittenen Beschriftungen Panel vergrößern oder maximieren und Palette, Sprache, Skalierung und Panel angeben. Bei Shaderfehlern den genannten Materialfehler und Fallback prüfen. Bei unvollständiger Graphkonvertierung den quelltextgestützten Bereich erhalten und die gemeldete Syntax-/Unterstützungsgrenze bearbeiten.
+
+Vor Export Project Health ausführen. Blockierter nativer Export im Browser ist korrekt; dafür wird der Desktop-Host benötigt. Build-Protokolle und Reparaturaktionen nennen Voraussetzungen. Vor externer Bearbeitung speichern; Konflikte in Team vergleichen, lokal/eingehend/Basis wählen, einmal anwenden und Rückgängig/Wiederholen prüfen. Veraltete Vorschauen erneuern. Paketberechtigungen überprüfen; Deaktivierung/Entfernung entlädt das Plugin. Signierte Update-Vormerkungen dokumentieren Prüf-/Operatoraktionen und installieren keine Binärdateien.
+
+Für saubere/verschobene Quellverzeichnisse Node22.22.2, pnpm10.30.0, Rust1.92.0 mit rustfmt/clippy/wasm32 sowie Windows-Voraussetzungen installieren. Offline sind gefüllte Caches erforderlich. Nach einem Umzug pnpm-Verknüpfungen ausdrücklich offline reparieren und native Metadaten in einem neuen Target-Verzeichnis bauen. Cache-Reparatur darf keine Autoren-Assets löschen.
+
+Alle lokalen Gates gegen eingefrorenen Quellstand ausführen und exakt11 Release-Dateien mit Prüfsummen verifizieren. Historische Releases bleiben unverändert. Unabhängige Anfänger-/Expertenbeobachtung, Hilfstechnologien, schwache/mobile Hardware, Linux/macOS/Android, Signierung/disposable Installation, unabhängige Sicherheit und echte Langzeittests benötigen ihre tatsächlichen Umgebungen. Lokal steht nur dieser Windows-Rechner bereit.
+
+<!-- NOVA_V2620_END -->
+<!-- NOVA_V2619_START -->
+## 26.19 — Bauen, prüfen und wiederherstellen
+
+Engine: **26.19.0** · Project Format 2/schema 29.
+
+### Nova_A 26.19: Bauen, prüfen und wiederherstellen
+
+Arbeiten Sie mit Wegwerfkopien der sechs Projekte mit `v2619` unter `reference-projects/projects`. Öffnen Sie `project.nova` im Startfenster. Quell- und Referenzarchiv enthalten die Dateien; ein Dienstkonto ist nicht erforderlich. Project Format 2/Schema 29, Rhai API 2, Graph Format 1, Plugin API 2 und Package Manifest 1 bleiben kompatibel.
+
+### Ein vollständiges Spiel in drei Arbeitsweisen
+
+Öffnen Sie `creator-v2619-code-game`, `creator-v2619-blocks-game` oder `creator-v2619-mixed-game`. Starten Sie das Spiel, fokussieren Sie die Spielfläche und sammeln Sie mit WASD/Pfeiltasten sechs Kontrollpunkte. Der Titel wechselt von Checkpoint 1/6 zur Abschlussmeldung. R setzt Punktestand, Position und Kontrollpunkte zurück. Vor der Bearbeitung stoppen.
+
+In Code öffnen Sie CheckpointGame.rhai und ändern beide Bewegungsmultiplikatoren von 6.0 auf 4.0. In Blocks öffnen Sie CheckpointGame.nova-graph und ändern die Zahlenknoten in den X/Y-Bewegungsausdrücken auf 4.0. Mixed verknüpft Code und typisierten Graphen: wechseln Sie die Ansicht, kontrollieren Sie beide Werte und speichern Sie. Rückgängig/Wiederholen muss die beabsichtigte Änderung wiedergeben. Syntaxfehler bleiben sichtbar; ein unvollständiger Graph darf den Quelltext nicht still ersetzen.
+
+Die Aufnahmeprüfung liest die Weltposition des aktiven Checkpoint-Objekts mit `find_entity_handle`, `entity_position_x_on` und `entity_position_y_on`. Verschieben Sie Checkpoint 1 in Design: auch sein Aufnahmeort verschiebt sich. Die neue Lektion verwendet damit keine fest eingebauten Koordinaten mehr. Speichern, neu öffnen und Transformations- sowie Code/Graph-Werte vor dem Export prüfen. Die drei Arbeitsweisen führen dieselben unterstützten Rhai-Operationen aus; Graphanordnung ändert keine Auswertungsreihenfolge.
+
+### Einen echten Konflikt lösen
+
+Öffnen Sie `delivery-v2619-semantic-merge/project.nova`. Wählen Sie Checkpoint 1 und ändern Sie Transform position X von -6 auf -4. Unter Manage → Build Settings → Team aktivieren Sie den optionalen Team-Arbeitsablauf und importieren die benachbarte Datei `incoming.nova`. Diese ändert X desselben Objekts auf -2.
+
+Vergleichen Sie lokale und eingehende Werte; Basisversion zeigt -6. Übernehmen Sie den eingehenden Wert und wenden Sie die Zusammenführung an. Das gleiche Objekt hat nun X=-2. Rückgängig stellt -4 wieder her, Wiederholen -2. Speichern, neu öffnen und exportieren. Identität und Objektanzahl bleiben erhalten. Ein Reihenfolgekonflikt entscheidet die Reihenfolge und bewahrt bereits zusammengeführte Eigenschaftsänderungen. Bei Löschen gegen Bearbeiten lässt sich die bearbeitete Identität wiederherstellen; die Wahl kann erneut geändert werden.
+
+Ändern Sie das Projekt während der Prüfung, wird die alte Vorschau abgelehnt. Importieren Sie erneut und prüfen Sie die aktuellen Werte. Ungelöste Konflikte verhindern die Anwendung. Doppelte Identitäten und zu große/tiefe Eingaben werden vor einer Teiländerung abgelehnt. Dies ist eine lokale Dreiwege-Zusammenführung, kein Cloud-Dienst. Die Zusammenführung benötigt keine Netzwerkoperation.
+
+### Paketprüfung und Lebensdauer
+
+Öffnen Sie `delivery-v2619-package-build`, dann Manage → Packages → Browse. Wählen Sie Nova Navigation 2D. Lesen Sie Herausgeber, Version, Kompatibilität, Abhängigkeiten, Berechtigungen, SHA-256 und Lizenz. Installieren Sie nach Prüfung des Bestätigungsdialogs. Der gebündelte Offline-Katalog benötigt keinen Download. Deaktivieren, aktivieren und entfernen Sie das Paket anschließend in der installierten Liste. Machen Sie das Entfernen rückgängig, speichern Sie und öffnen Sie erneut.
+
+Abhängige Pakete verhindern das Entfernen. Eine fehlgeschlagene Update-Freigabe stellt frühere Berechtigungen wieder her. Abgelehnte Updates bewahren installierte Version und Sperrdatei; die Quarantäne einer ungültigen neueren Version deaktiviert keine gültige ältere Version. Rollback prüft Sicherheit und den vollständigen Abhängigkeitsgraphen, bevor Verlauf verbraucht wird. Deaktivieren oder Entfernen entlädt das laufende Plugin. Ein Versionswechsel entlädt und deaktiviert die alte Binärdatei, bis passendes geprüftes Manifest und Binärdatei importiert werden. Ein neues Versionsetikett ersetzt keinen Code. Native Erweiterungen bleiben außerhalb der WASM-Sandbox. Entfernte Plugin-URLs werden nicht automatisch geladen; importieren Sie die Ressource lokal.
+
+### Bauen und Ergebnis prüfen
+
+Manage → Build Settings enthält Ziel, Architektur, Profil, Szenenreihenfolge und Startszene unter Overview. Platform enthält Anwendungskennung und optionale Signaturangaben. Delivery enthält deterministische Ausgabe, Cache, Einschlussregeln und Berichte. Diagnostics & history zeigt Ausgaben und Fehler. Team enthält die lokale Zusammenarbeit.
+
+Im Browser wählen Sie Web. Native Ausgabe erfordert eine erfolgreiche Prüfung des Desktop-Hosts; das Betriebssystem des Browsers reicht nicht aus. Bei fehlgeschlagener Erkennung erscheint eine Neustart-/Wiederholungsanweisung. Android benötigt seine lokale Werkzeugkette und für Geräteprüfung ein echtes Gerät. Linux/macOS bleiben Ziele für passende Hosts; Windows-Ergebnisse qualifizieren sie nicht.
+
+Vor dem Bauen speichern und das Ende des Speichervorgangs abwarten. Web exportieren, ZIP in einen eigenen Ordner entpacken, über lokales HTTP bereitstellen und index öffnen. Positionen, Bewegungsgeschwindigkeit, Punkte, Neustart und Ressourcen mit dem gespeicherten Editorprojekt vergleichen. Der Buildbericht enthält Dateigrößen und Hashes. `server-v2619-headless-authority` bleibt ein Server in einer WebView mit deaktivierter Darstellung, kein fensterloser nativer Server.
+
+### Offline und nach einem Ordnerwechsel bauen
+
+Voraussetzungen zuvor bewusst installieren: Node 22.22.2, pnpm 10.30.0, Rust 1.92.0, clippy, rustfmt, wasm32-unknown-unknown sowie wasm-pack und dessen zwischengespeicherte Bindgen-Werkzeuge. `.node-version`, `packageManager` und `rust-toolchain.toml` halten die Versionen fest. Native Windows-Builds benötigen passende MSVC-/Windows-SDK- und Tauri-Paketierungswerkzeuge. Verwenden Sie die eingecheckten Sperrdateien. Direkte Anwendungsabhängigkeiten wurden nicht allein wegen der Kalendernummer geändert.
+
+Mit gefüllten Caches: `pnpm install --offline --frozen-lockfile --ignore-scripts`, anschließend `wasm-pack build crates/nova_wasm --target web --out-dir ../../nova_core/pkg --out-name nova_core --release --mode no-install -- --locked --offline` und `pnpm build`. Fehlende Cache-Inhalte müssen eine klare Fehlermeldung ergeben. Offline ersetzt keine Voraussetzungen.
+
+Windows-pnpm-Verknüpfungen können nach einem Ordnerwechsel auf den alten Pfad zeigen. Führen Sie im neuen Ordner ausdrücklich `pnpm install --offline --frozen-lockfile --ignore-scripts --force` aus und bauen Sie erneut. Generierte Abhängigkeiten gehören nicht in das Quellarchiv. Der Reproduzierbarkeitstest vergleicht die Web-Dateien vor und nach dem Umzug Byte für Byte und bewahrt Protokolle. Er behauptet keinen Offline-Build auf einem völlig unvorbereiteten Rechner.
+
+### Externer Editor und Wiederherstellung
+
+Ein Standard-LSP-Client startet `node scripts/nova-rhai-language-server.mjs --stdio` aus dem Checkout mit installierten Abhängigkeiten. Das Protokoll nutzt Content-Length-JSON-RPC, UTF-16-Positionen und vollständige Dokumentübertragung. Unterstützt werden Diagnosen, Vervollständigung, Hover, Symbole, Definitionen, Referenzen, Umbenennung und Formatierung im beschriebenen Rhai-Modell. Dokumentversionen müssen steigen; alte Änderungen werden ignoriert. Schließen entfernt den Dokumentindex, Herunterfahren wartet auf vorgemerkte Arbeit. Der optionale Index ist ein Cache, keine maßgebliche Skriptdatei.
+
+Bei extern geänderten Projektdateien zuerst vergleichen, dann Editor oder Datenträger wählen. Ein beendeter/ersetzter Beobachter darf keine alte Antwort in ein anderes Projekt übernehmen. Unvollständig geschriebene ungültige Dateien behalten eine Diagnose und werden erneut geprüft. Bei unvollständigem Datenträgerstand Editorversion behalten, externe Datei reparieren und erneut vergleichen. Wiederherstellung zuerst mit Wegwerfkopien erproben.
+
+Signierte Update-Vorbereitung benötigt ausdrückliche Aktivierung, passenden Kanal, gültige Signatur/Fingerabdruck, passende Basisversion und neue Sequenz. Abbruch oder veränderte Basis/Kanal während der Prüfung verhindert das Bereitstellen. Dabei wird nichts geladen oder installiert. Commit-/Rollback-Einträge protokollieren vom Bediener bestätigte Installeraktionen; sie bilden keinen atomaren Binär-Updater. Produktionssignierung und Installation/Start/Update/Deinstallation auf Wegwerfrechnern bleiben getrennte Nachweise. Der vorhandene Windows-Rechner wird nicht als Wegwerfsystem verwendet. Ein iPhone qualifiziert Android nicht.
+
+### Nachweise und Grenzen
+
+Programmiererprüfungen umfassen ungültige Archivdaten, Abbruch, Rechteentzug, Identität/Reihenfolge, echte LSP-Prozessnachrichten, Offline-Builds nach Umzug und alle Freigabegates. Benutzerprüfungen erfassen echte Eingaben, Konfliktentscheidungen, Rückgängig/Wiederholen, Speichern/Öffnen, Paketprüfung und exportiertes Spiel. Geänderte Paneele werden in EN/DE/ZH, hell/dunkel, 100/150/200 Prozent und drei Breiten geprüft. Die lokale native UI-Automatisierung konnte nicht initialisiert werden; Browserbeobachtungen sind keine nativen Klicknachweise. Maßgeblich sind die an den exakten Quellstand gebundenen Freigabenachweise mit ihren offenen externen Prüfungen.
+
+Ein mit einem Paket importiertes Plugin muss dieselbe ID, Version und API besitzen. Importierte Freigaben werden gelöscht; das Plugin bleibt deaktiviert. Prüfe seine Rechte in den Plugin-Werkzeugen vor dem Aktivieren. Der Austausch der Deklaration beendet die vorherige Instanz.
+
+Auch die generierten nativen Tauri-Berechtigungen enthalten absolute Cachepfade. Nach einem Umzug ein neues Zielverzeichnis verwenden: `cargo check --manifest-path src-tauri/Cargo.toml --target-dir src-tauri/target/relocated --locked --offline`. Für einen paketierten Build vor `pnpm tauri build` die Variable `CARGO_TARGET_DIR` auf ein neues Verzeichnis setzen; dort liegt die Ausgabe. Quelldateien und alten Cache bis zum Erfolg bewahren. Der Reproduzierbarkeitstest protokolliert diese Reparatur und verwendet vier Compilerjobs.
+
+<!-- NOVA_V2619_END -->
+<!-- NOVA_V2618_START -->
+## 26.18 — Multiplayer, Eigentum und Servergrenzen
+
+Engine: **26.18.0** · Project Format 2/schema 29.
+
+### 26.18 Multiplayer-Workshop
+
+Verwende getrennte Kopien von `multiplayer-v2618-coop-host` und `multiplayer-v2618-coop-client`. Beide Projekte teilen Szenen-, Objekt- und Skriptidentitäten und bieten zwei Spielerplätze. Weitere Clients erzeugen keine weiteren Figuren. Das optionale Netzwerkpaket ist enthalten; Berechtigung und automatischer Start sind zunächst ausgeschaltet. Offline-Projekte benötigen keinen Netzwerkdienst.
+
+### Verbinden und spielen
+
+Öffne Host und Client in getrennten Editor-Fenstern desselben Browser-Ursprungs. Beide Fenster müssen weiter rendern; Browser können Aktualisierungen in Hintergrund-Tabs aussetzen. Wähle Network Studio → Session, erteile in beiden Projekten ausdrücklich die Berechtigung und behalte Local lobby sowie denselben Sitzungsnamen. Verbinde zuerst Host, dann Client. Jede Peer-Liste muss die andere Spieleridentität zeigen. Der lokale Kanal benötigt dasselbe Gerät, denselben Ursprung und dieselbe Browser-Speicherpartition; verschiedene Browserprofile bilden keine Internet-Sitzung.
+
+Starte Play in beiden Projekten. Fokussiere die Host-Spielfläche und verwende WASD oder Pfeiltasten: Host Player bewegt sich. Auf Client fordert der begrenzte RPC `coop.move` die Bewegung von Client Player beim Host an; dessen Zustand wird an beide Spieler übertragen. Stop stellt den bearbeiteten Ausgangszustand wieder her. Bei fehlender Bewegung prüfe Play, Tastaturfokus, Berechtigung, Verbindung, Peer-Aufnahme, RPC-Vertrag und Skriptfehler. Eine Verbindung allein startet kein Spiel.
+
+### Autorität und Felder
+
+Server-Autorität lässt Host/Server den replizierten Zustand berechnen. Owner-Autorität weist ihn einer benannten Peer-ID zu; ein leeres Feld erlaubt keine beliebige Übernahme. Wähle ein Objekt, füge es unter Replication hinzu und trage bei Owner eine aufgenommene Peer-ID ein. Orchestration → Authority transfer überträgt die vorhandene Zuordnung ausdrücklich. Kontrolliere beide Peer-Diagnosen. Eine vom Host weitergeleitete Momentaufnahme darf den lokalen Eigentümer nicht überschreiben. Das mitgelieferte Koop-Spiel bleibt serverautoritativ, da seine Skripte den Host um Simulation bitten.
+
+Transform, Rotation und Velocity sind getrennte Auswahlfelder. Laufende Momentaufnahmen und spätes Beitreten beachten dieselbe Auswahl. Transform bezeichnet hier die Position; Skalierung, Aktivierung und Winkelgeschwindigkeit sind keine zusätzlichen laufenden Replikationsfelder. Manuelle Multiplayer-Spielstände speichern absichtlich mehr Zustand. Interpolate glättet erlaubte entfernte Felder. Predict verwendet aufgezeichnete Transformationsdifferenzen und führt weder Physik noch Skripte erneut aus. Übergeordnete Welttransformationen werden vor ihren Kindern angewandt.
+
+### Bearbeiten und wiederherstellen
+
+Protocol zeigt Kanalnamen, geordnete zuverlässige oder sequenzierte Übertragung, Nutzlastbytes, Rate und Priorität. RPC-Karten zeigen Richtung, Autorität, Schema, Größe und Aufrufrate. Ein Object-Schema prüft nicht automatisch jedes Spielfeld: validiere eigene Nutzlasten im Spielcode. RPCs müssen ihren festgelegten Kanal benutzen. Im laufenden Spiel hinzugefügte oder entfernte Verträge aktualisieren die Spielanbindung beim Produktionstakt.
+
+Zahlen werden beim Verlassen des Feldes übernommen. Gib einen ungültigen Wert ein und korrigiere ihn: zuerst bleibt der gespeicherte Wert mit Fehlermeldung erhalten, danach muss der gültige Wert gelten. Prüfe Undo/Redo und Speichern/erneutes Öffnen. Änderungen an Sitzungsidentität, Transport, Authentifizierung oder Kanalidentität beenden die alte Verbindung; anschließend Reconnect verwenden. Eigentümer- und Feldauswahl bleiben live. Wiederverbinden stellt Aufnahme und Ausgangszustand her, keine beliebige Anwendungshistorie.
+
+Trenne Client, bewege Host und verbinde Client erneut. Prüfe aktuellen Zustand und Late-join-Zähler. Fehlerhafte Eigentümer, Metadaten, Prüfsummen oder Grenzen dürfen keine teilweise Weltänderung erzeugen. Ausgeschöpfte zuverlässige Zustellung entfernt Peer-Warteschlangen und meldet den Fehler. Alte Epochen dürfen innerhalb des verfolgten Verbindungslebenszyklus nicht zurückkehren. Prüfsummen ersetzen keine geprüfte Authentifizierung.
+
+### Diagnose und Export
+
+Simulation bietet Latenz, Jitter, Verlust, Duplikate, Umordnung und Seed. Prüfe zuerst eine saubere Verbindung, danach mäßige Störungen sowie ACKs, Wiederholungen, Ablehnungen und begrenzte Historie. Bei Duplikatsimulation ist eine Duplikatablehnung zu erwarten. Seitenzähler beziehen sich auf den zuletzt adressierten Peer; zurückgestellte Objekte folgen in späteren Snapshot-Intervallen.
+
+Instanz-Logs zeigen vom Editor beobachtete Ereignisse; Inspector zeigt Prozessidentität und Status. Spielzustand und Netzwerkereignisse werden im laufenden Spieler geprüft. Das ist kein nativer Ferndebugger und keine vollständige Standardausgabe des Kindprozesses. Diagnoseexporte vor dem Teilen auf sensible Inhalte prüfen.
+
+Aktiviere vor dem Export ausdrücklich Berechtigung und automatischen Spielstart und teste die tatsächlichen Spieler zusammen. Lokale Browser-Sitzungen benötigen den gleichen unterstützten Ursprung/Speicherkontext. Bei direktem Windows-UDP verbindet sich jeder Client mit dem Host-Port und verwendet einen eigenen Bind-Port. Die separate Serverreferenz exportiert einen Windows-Spieler mit deaktiviertem Renderer und WebView. Sie ist kein fensterloser Rust-Server. Architektur und erforderliche Paritätsprüfungen stehen in NATIVE_SERVER_ARCHITECTURE_26_18.md.
+
+### Grenzen und eigene Abnahme
+
+Transformationswiederholung setzt Solverkontakte, Rhai-Speicher, Objektlebenszeiten, Audio, UI, Dateien, Plugins und externe Dienste nicht zurück. Beliebige Spielframes erneut auszuführen würde Effekte duplizieren. Öffentliche Vermittlungs-, Relay- und Authentifizierungsdienste benötigen ausdrücklich konfigurierte geprüfte Anbieter und eigene Infrastrukturtests.
+
+Dokumentiere zwei bewegte Spieler, Eigentümeränderung, Trennen/Wiederverbinden, spätes Beitreten, ungültige/gültige Bearbeitung, Undo/Redo, Speichern/Öffnen und die tatsächlichen Client-/Serverexporte samt Logs. Vergleiche Code-, Block- und Mischreferenz: dieselbe Quelle muss dieselbe Spielhandlung ausführen. Generierte Dateien und isolierte Tests allein belegen keinen Benutzerablauf.
+
+<!-- NOVA_V2618_END -->
 <!-- NOVA_V2617_START -->
 ## 26.17 — Physik, Navigation und gestreamte Welten
 

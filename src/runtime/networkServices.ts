@@ -100,6 +100,7 @@ export async function openReviewedNetworkService(kind: NetworkServiceKind, setti
   if ((context.role === 'host' || context.role === 'server') && kind === 'lobby' && !provider.review.permissions.includes('lobby.write')) throw new Error(`Reviewed lobby service ${id} has no lobby.write permission for publication.`)
   if (context.signal.aborted) throw new DOMException('Network service opening was cancelled.', 'AbortError')
   const handle = await provider.open(Object.freeze({ ...context }))
+  if (context.signal.aborted) { await handle.close().catch(() => undefined); throw new DOMException('Network service opening was cancelled.', 'AbortError') }
   if (handle.kind !== kind) { await handle.close().catch(() => undefined); throw new Error(`Network service ${id} returned the wrong service kind.`) }
   return handle
 }

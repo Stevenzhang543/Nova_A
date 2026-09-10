@@ -1,0 +1,21 @@
+import assert from 'node:assert/strict'
+import {mkdir,readFile,writeFile} from 'node:fs/promises'
+import {join,resolve,relative,isAbsolute,extname} from 'node:path'
+import {spawnSync,fork} from 'node:child_process'
+import {fileURLToPath} from 'node:url'
+import {createHash} from 'node:crypto'
+import {gunzipSync} from 'node:zlib'
+import {wait} from './browserUserAudit.mjs'
+const hash=v=>createHash('sha256').update(v).digest('hex')
+/** Export with real UI input; independently inspect downloaded bytes and run only those files. */
+export async function exportDeliveryUser19(a,u,slug,saved){
+ const name='DeliveryAudit19'+slug,folder=join(a.profile,'export-'+slug);await mkdir(folder,{recursive:true});await a.client.send('Browser.setDownloadBehavior',{behavior:'allow',downloadPath:folder,eventsEnabled:true});await a.press('Escape');await u.activate('.menu-item>button',2);await a.until("[...document.querySelectorAll('.menu-item .dropdown button')].some(e=>e.textContent.includes('Build'))");const buildIndex=await a.evaluate("[...document.querySelectorAll('.menu-item .dropdown button')].findIndex(e=>e.textContent.includes('Build'))");await u.activate('.menu-item .dropdown button',buildIndex);await a.until("!!document.querySelector('.build-panel')");await a.select('.field-grid select','web',1);await u.field('.field-grid input[maxlength="80"]',name);await a.until("!!document.querySelector('.build-actions>button.primary:not([disabled])')");await u.activate('.build-actions>button.primary');let bytes;for(let n=0;!bytes&&n<500;n++){try{bytes=await readFile(join(folder,name+'-web.zip'))}catch{await wait(100)}}assert.ok(bytes,'Actual Web export download; visible build state: '+await a.evaluate("document.querySelector('.build-actions')?.innerText"));const artifact=join(a.evidence,'v26.19-'+slug+'-authored-web.zip');await writeFile(artifact,bytes);await a.capture(slug+'-web-download');
+ const output=join(a.profile,'exports',slug),script=join(a.profile,'extract-'+slug+'.ps1');await writeFile(script,'param([string]$Archive,[string]$Output)\nAdd-Type -AssemblyName System.IO.Compression.FileSystem\n$zip=[IO.Compression.ZipFile]::OpenRead($Archive)\ntry{foreach($entry in $zip.Entries){if($entry.FullName -match "(^/|(^|/)\\.\\.(/|$)|:|\\\\)"){throw "Unsafe archive path"}}}finally{$zip.Dispose()}\n[IO.Compression.ZipFile]::ExtractToDirectory($Archive,$Output)\n');const result=spawnSync('powershell',['-NoProfile','-File',script,'-Archive',artifact,'-Output',output],{encoding:'utf8',windowsHide:true,timeout:30000});assert.equal(result.status,0,result.stderr);
+ const manifest=JSON.parse(await readFile(join(output,'nova-build-report.json'),'utf8'));assert.equal(manifest.engineVersion,a.expectedRelease+'.0');for(const file of manifest.files){const content=await readFile(join(output,file.path));assert.equal(content.length,file.bytes);assert.equal(hash(content),file.sha256)}
+ const pak=await readFile(join(output,'game.nova-pak'));assert.equal(pak.subarray(0,8).toString(),'NOVAPAK\0');assert.equal(pak.readUInt32LE(8),1);const start=16+pak.readUInt32LE(12),index=JSON.parse(pak.subarray(16,start));let project;for(const entry of index.entries){assert.ok(entry.offset>=0&&entry.length>=0&&start+entry.offset+entry.length<=pak.length);const stored=pak.subarray(start+entry.offset,start+entry.offset+entry.length),content=entry.codec==='gzip'?gunzipSync(stored):stored;assert.equal(content.length,entry.originalLength);assert.equal(hash(content),entry.sha256);if(entry.path==='project.nova')project=JSON.parse(content)}assert.ok(project);
+ const canonical=scenes=>scenes.map(s=>({uuid:s.uuid,entities:s.entities.map(e=>({...e,components:[...e.components].sort((a,b)=>a.uuid.localeCompare(b.uuid))})),connections:s.connections}));assert.deepEqual(canonical(project.scenes),canonical(saved.document.scenes),'Export retains every authored entity/component/connection value');
+ assert.deepEqual(project.packages,saved.document.packages,'Export retains package state and permissions');
+ console.log('EXPORT '+slug+' bytes and authored scene comparison passed');
+ a.observations.push({name:'exact-export-download',slug,artifact,bytes:bytes.length,sha256:hash(bytes),files:manifest.files.length,projectComparison:'All scene entities/components/connections equal the actual saved authoring project.'});
+ return {output,project,artifact,manifest};
+}

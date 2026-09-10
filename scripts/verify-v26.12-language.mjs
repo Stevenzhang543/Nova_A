@@ -133,8 +133,8 @@ try {
       assert.deepEqual(execute(program.body.map(emitRhaiNode).join('\n')).result?.logs, execute(source).result?.logs, source)
     }
   })
-  console.log(JSON.stringify({ status: failures.length ? 'failed' : 'passed', checks: checks.length, failed: checks.filter(item => item.status === 'failed'), typedKinds: [...allKinds].sort(), vmFixtures: fixtures.length, randomizedVmPairs: 60 }, null, 2))
+  console.log(JSON.stringify({ generatedAt: new Date().toISOString(), status: failures.length ? 'failed' : 'passed', checks: checks.length, failed: checks.filter(item => item.status === 'failed'), typedKinds: [...allKinds].sort(), vmFixtures: fixtures.length, randomizedVmPairs: 60 }, null, 2))
   const report = process.argv.find(value => value.startsWith('--report='))?.slice(9)
-  if (report) await writeFile(report, JSON.stringify({ status: failures.length ? 'failed' : 'passed', checks, typedKinds: [...allKinds].sort(), vmFixtures: fixtures.length, randomizedVmPairs: 60 }, null, 2))
+  if (report) await writeFile(report, JSON.stringify({ generatedAt: new Date().toISOString(), status: failures.length ? 'failed' : 'passed', checks, typedKinds: [...allKinds].sort(), vmFixtures: fixtures.length, randomizedVmPairs: 60 }, null, 2))
   if (failures.length) process.exitCode = 1
 } finally { await rm(temporary, { recursive: true, force: true }) }

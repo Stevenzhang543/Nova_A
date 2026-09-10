@@ -80,6 +80,7 @@ export const ecosystemShippingState = reactive({
 function safeRelativePath(value: string): string {
   const path = value.trim().replace(/\\/g, '/').replace(/^\.\//, '')
   if (!path || path.length > 240 || path.startsWith('/') || path.split('/').includes('..') || /^(?:[a-z]+:|\\\\)/i.test(path) || path.includes('\0')) throw new Error(`Unsafe package path: ${value.slice(0, 120)}`)
+  if (/[<>:\x00-\x1f\x7f|?*]/.test(path) || path.split('/').some(part => !part || part === '.' || /[. ]$/.test(part) || /^(?:con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\.|$)/i.test(part))) throw new Error('Package path is not portable across supported filesystems: ' + value.slice(0, 120))
   return path
 }
 function validSha256(value: string): boolean { return /^[a-f0-9]{64}$/.test(value) }
@@ -169,13 +170,18 @@ export function normalizeUpdaterManifest(value: unknown): SignedUpdaterManifest 
   return { ...source, artifact: { ...source.artifact } }
 }
 
+let updaterGeneration = 0
+
 export async function stageSignedUpdate(value: unknown, publicKeyBase64: string): Promise<UpdatePlan> {
   if (!ecosystemShippingState.updaterOptIn) throw new Error('Updates are disabled. Opt in before checking a signed channel.')
+  const generation = updaterGeneration, from = ecosystemShippingState.appliedRelease
   const manifest = normalizeUpdaterManifest(value)
+  if (!/^\d+\.\d+\.\d+$/.test(manifest.minimumVersion) || compareVersions(from, manifest.minimumVersion) < 0) throw new Error('This update requires a newer installed base version.')
   if (manifest.channel !== ecosystemShippingState.updaterChannel) throw new Error(`Update belongs to the ${manifest.channel} channel.`)
   if (compareVersions(manifest.release, ecosystemShippingState.appliedRelease) <= 0 || manifest.sequence <= ecosystemShippingState.highestUpdaterSequence || manifest.sequence <= (ecosystemShippingState.stagedUpdate?.sequence ?? 0)) throw new Error('Update is stale, a downgrade, or a replay.')
   if (manifest.signingFingerprint !== await publicKeyFingerprint(publicKeyBase64)) throw new Error('Update key does not match its pinned signing fingerprint.')
   if (!await verifyEd25519(canonicalUnsigned(manifest), publicKeyBase64, manifest.signature)) throw new Error('Update signature is invalid.')
+  if (generation !== updaterGeneration || !ecosystemShippingState.updaterOptIn || manifest.channel !== ecosystemShippingState.updaterChannel || from !== ecosystemShippingState.appliedRelease || manifest.sequence <= ecosystemShippingState.highestUpdaterSequence || manifest.sequence <= (ecosystemShippingState.stagedUpdate?.sequence ?? 0)) throw new Error('Update verification was superseded or cancelled.')
   const plan: UpdatePlan = { release: manifest.release, from: ecosystemShippingState.appliedRelease, sequence: manifest.sequence, artifact: { ...manifest.artifact }, explicitNetworkRequired: true, implicitNetworkOperation: false, verified: true, rollbackVersion: ecosystemShippingState.appliedRelease }
   ecosystemShippingState.stagedUpdate = plan; ecosystemShippingState.updaterStatus = 'staged'
   return plan
@@ -184,7 +190,7 @@ export async function stageSignedUpdate(value: unknown, publicKeyBase64: string)
 /** Records an operator-confirmed verified application. Native installers perform the actual atomic replacement. */
 export function commitStagedUpdate(artifactSha256: string): boolean {
   const plan = ecosystemShippingState.stagedUpdate
-  if (!plan || artifactSha256 !== plan.artifact.sha256) { ecosystemShippingState.updaterStatus = 'blocked'; return false }
+  if (!plan || !ecosystemShippingState.updaterOptIn || plan.from !== ecosystemShippingState.appliedRelease || plan.sequence <= ecosystemShippingState.highestUpdaterSequence || artifactSha256 !== plan.artifact.sha256) { ecosystemShippingState.updaterStatus = 'blocked'; return false }
   ecosystemShippingState.previousRelease = ecosystemShippingState.appliedRelease
   ecosystemShippingState.appliedRelease = plan.release
   ecosystemShippingState.highestUpdaterSequence = plan.sequence
@@ -196,6 +202,7 @@ export function rollbackCommittedUpdate(): boolean {
   ecosystemShippingState.previousRelease = ''; ecosystemShippingState.updaterStatus = 'rolled-back'; return true
 }
 export function setUpdaterOptIn(enabled: boolean): void {
+  updaterGeneration++
   ecosystemShippingState.updaterOptIn = enabled
   ecosystemShippingState.updaterStatus = enabled ? 'idle' : 'disabled'
   if (!enabled) ecosystemShippingState.stagedUpdate = null

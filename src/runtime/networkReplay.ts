@@ -200,7 +200,7 @@ export function exportMultiplayerSave(entities: Entity[], tick: number): Multipl
   return { ...base, checksum: networkChecksum(multiplayerSavePayload(base)) }
 }
 
-export function importMultiplayerSave(value: unknown, entities: Entity[]): { tick: number; restored: number } {
+export function importMultiplayerSave(value: unknown, entities: Entity[], propertyMasks?: ReadonlyMap<string, readonly string[]>): { tick: number; restored: number } {
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('Multiplayer save must be an object.')
   const source = value as Partial<MultiplayerSaveDocument>
   if (source.format !== 'nova-multiplayer-save' || source.version !== 1 || source.protocolVersion !== 2 || typeof source.checksum !== 'string' || !/^[a-f0-9]{24}$/i.test(source.checksum) || !Array.isArray(source.entities)) throw new Error('Unsupported multiplayer save format or protocol.')
@@ -222,6 +222,14 @@ export function importMultiplayerSave(value: unknown, entities: Entity[]): { tic
   const ordered = parentFirstSaveStages(staged)
   const backupByUuid = new Map(staged.map(item => { const transform = worldTransform(item.entity, entities); return [item.entity.uuid, { entity: item.entity, enabled: item.entity.enabled, position: [transform.position.x, transform.position.y] as [number, number], rotation: transform.rotation, scale: [transform.scale.x, transform.scale.y] as [number, number], velocity: [item.entity.velocity.x, item.entity.velocity.y] as [number, number], angularVelocity: item.entity.angularVelocity }] as const }))
   const backup = ordered.map(item => backupByUuid.get(item.entity.uuid)!)
+  // Network baselines obey the same authored fields as live snapshots. Manual saves remain complete.
+  if (propertyMasks) for (const item of ordered) {
+    const previous = backupByUuid.get(item.entity.uuid)!, properties = propertyMasks.get(item.entity.uuid) ?? []
+    if (!properties.includes('transform')) item.position = previous.position
+    if (!properties.includes('rotation')) item.rotation = previous.rotation
+    if (!properties.includes('velocity')) item.velocity = previous.velocity
+    item.enabled = previous.enabled; item.scale = previous.scale; item.angularVelocity = previous.angularVelocity
+  }
   try { for (const item of ordered) { setWorldTransform(item.entity, { position: { x: item.position[0], y: item.position[1] }, rotation: item.rotation, scale: { x: item.scale[0], y: item.scale[1] } }, entities); item.entity.enabled = item.enabled; item.entity.velocity = { x: item.velocity[0], y: item.velocity[1] }; item.entity.angularVelocity = item.angularVelocity } }
   catch (error) { for (const item of backup) { setWorldTransform(item.entity, { position: { x: item.position[0], y: item.position[1] }, rotation: item.rotation, scale: { x: item.scale[0], y: item.scale[1] } }, entities); item.entity.enabled = item.enabled; item.entity.velocity = { x: item.velocity[0], y: item.velocity[1] }; item.entity.angularVelocity = item.angularVelocity }; throw error }
   return { tick: integer(source.tick, 0, 0, 0x7fff_ffff), restored: staged.length }

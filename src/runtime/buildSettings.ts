@@ -1,4 +1,5 @@
 import { reactive } from 'vue'
+import { deliveryLabel19 } from '../editor/deliveryLabels19'
 import { OFFICIAL_ANDROID_PACKAGE_ID, OFFICIAL_NETWORKING_PACKAGE_ID, packageEnabled, packageState } from './packages'
 import { platformSupport } from './platformSupport'
 import { productionSettings } from './production'
@@ -94,6 +95,8 @@ export function buildIssueHelpTarget(code: string): string {
 }
 
 export interface ExportCapabilities {
+  nativeAvailable?: boolean
+  nativeReason?: string
   host: 'windows' | 'linux' | 'macos' | 'unknown'
   architecture: BuildArchitecture | 'unknown'
   androidAvailable: boolean
@@ -129,6 +132,7 @@ function loadBuildHistory(): BuildHistoryEntry[] {
 export const buildHistory = reactive(loadBuildHistory()) as BuildHistoryEntry[]
 
 const DEFAULT_CAPABILITIES: ExportCapabilities = {
+  nativeAvailable: false, nativeReason: '',
   host: typeof navigator !== 'undefined' && navigator.platform.toLowerCase().includes('win') ? 'windows'
     : typeof navigator !== 'undefined' && navigator.platform.toLowerCase().includes('mac') ? 'macos'
       : typeof navigator !== 'undefined' && navigator.platform ? 'linux' : 'unknown',
@@ -291,6 +295,7 @@ export function validateBuildSettings(settings: BuildSettings, capabilities = ex
   if (support.availability === 'unavailable') issues.push({ code: 'platform-unavailable', severity: 'error', message: `${support.label} export is explicitly unavailable: ${support.reason}` })
   if (support.availability === 'ci-only' && settings.delivery.releaseChannel === 'stable') issues.push({ code: 'platform-not-tier1', severity: 'error', message: `${support.label} is matching-host CI-only and cannot use the Stable release channel until ${support.evidence} passes.` })
   if (!support.architectures.includes(settings.architecture)) issues.push({ code: 'platform-architecture', severity: 'error', message: `${support.label} does not declare ${settings.architecture} support.` })
+  if (settings.target !== 'web' && settings.target !== 'android' && capabilities.nativeAvailable === false) issues.push({ code: 'native-host', severity: 'error', message: capabilities.nativeReason ? deliveryLabel19('nativeFailed') + ' ' + capabilities.nativeReason : deliveryLabel19('desktopRequired') })
   if (!settings.sceneOrder.length || !settings.startupSceneUuid) issues.push({ code: 'scene', severity: 'error', message: 'Add at least one scene and choose a startup scene.' })
   if (!/^[a-z0-9]+(?:[.-][a-z0-9]+)+$/.test(settings.platform.identifier)) issues.push({ code: 'identifier', severity: 'error', message: 'Application identifier must use reverse-domain format.' })
   if (!/^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/.test(settings.platform.version)) issues.push({ code: 'version', severity: 'error', message: 'Application version must use semantic versioning.' })
@@ -373,7 +378,7 @@ export async function detectExportCapabilities(): Promise<void> {
   if (!('__TAURI_INTERNALS__' in window)) return
   try {
     const { invoke } = await import('@tauri-apps/api/core')
-    Object.assign(exportCapabilities, await invoke<ExportCapabilities>('export_capabilities'))
-  } catch { /* Browser/default capabilities remain safe and conservative. */ }
+    Object.assign(exportCapabilities, await invoke<ExportCapabilities>('export_capabilities'), { nativeAvailable: true, nativeReason: '' })
+  } catch (error) { exportCapabilities.nativeAvailable = false; exportCapabilities.nativeReason = (error instanceof Error ? error.message : String(error)).slice(0, 500) }
     await refreshAndroidToolchain()
 }

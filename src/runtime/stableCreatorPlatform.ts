@@ -172,7 +172,8 @@ export const CREATOR_READINESS_POLICIES: readonly CreatorReadinessPolicy[] = Obj
   taskPolicy('task-network', 'reference-projects/projects/creator-v60-network-sample'),
   taskPolicy('task-web', 'reference-projects/projects/creator-v60-web-deployment'),
   taskPolicy('task-windows', 'reference-projects/projects/creator-v60-windows-portable'),
-  taskPolicy('task-package', 'reference-projects/projects/creator-v60-package-plugin')
+  taskPolicy('task-package', 'reference-projects/projects/creator-v60-package-plugin'),
+  taskPolicy('task-object-family', 'reference-projects/projects/creator-v2614-enemy-family')
 ])
 
 function materialize(template: ReadinessEvidence, guide: LearningGuide): ReadinessEvidence {
