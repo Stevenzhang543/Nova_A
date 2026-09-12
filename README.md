@@ -4,10 +4,13 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE.md)
 [![Tier 1](https://img.shields.io/badge/Tier%201-Windows%20%7C%20Web-63c6ff)](./docs/PLATFORM_BUILD_MATRIX_5_0.md)
-[![Release](https://img.shields.io/badge/release-26.20-63c6ff)]()
+[![Release](https://img.shields.io/badge/source-26.21-63c6ff)]()
+
+<!-- NOVA_V2621_DEVELOPMENT -->
+**Next series (development):** [26.21–26.30 coding manual](docs/ROADMAP_26_21_TO_26_30.md), [current feature inventory](docs/FEATURE_INVENTORY_26_21.md), [source map](docs/SOURCE_MAP_26_21.md), [engine comparison](docs/COMPETITIVE_REVIEW_26_21.md), [panel audit](docs/PANEL_AUDIT_26_21.md), [open gaps](docs/GAP_REGISTER_26_21.md), and [every development edit](docs/EDIT_LEDGER_26_21.md). 26.21 source and localized teaching are implemented; release qualification is tracked in [the 26.21 acceptance tracker](docs/IMPLEMENTATION_TRACKER_26_21.md). A packaged release is accepted only with its source-bound evidence and verified checksums.
 
 <!-- NOVA_V2620_OVERVIEW -->
-Release **26.20** adds five supplied color palettes, saved output resolution and anti-aliasing controls, and optimized WebGL batching and upload buffers while retaining features and animations. See [release notes](docs/RELEASE_NOTES_26_20.md), [every edit](docs/EDIT_LEDGER_26_20.md), [performance budgets](docs/PERFORMANCE_BUDGETS_26_20.md) and the [qualification lesson](docs/QUALIFICATION_LESSON_26_20.en.md). Executed evidence defines platform support and remaining external checks.
+Previous release **26.20** added five supplied color palettes, saved output resolution and anti-aliasing controls, and optimized WebGL batching and upload buffers while retaining features and animations. See [release notes](docs/RELEASE_NOTES_26_20.md), [every edit](docs/EDIT_LEDGER_26_20.md), [performance budgets](docs/PERFORMANCE_BUDGETS_26_20.md) and the [qualification lesson](docs/QUALIFICATION_LESSON_26_20.en.md). Executed evidence defines platform support and remaining external checks.
 
 <!-- NOVA_V2619_OVERVIEW -->
 Previous release **26.19** hardens package/plugin lifetimes, signed-update review, external editing and semantic collaboration. Conflict values and package reviews wrap at large text sizes. Six separate references and English/German/Chinese delivery lessons accompany pinned Windows/Web toolchains. See [release notes](docs/RELEASE_NOTES_26_19.md), [every edit](docs/EDIT_LEDGER_26_19.md), and the [delivery lesson](docs/DELIVERY_LESSON_26_19.en.md). Other platforms and disposable installer qualification remain pending.

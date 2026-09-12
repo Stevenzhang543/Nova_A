@@ -114,10 +114,15 @@ export function unionBoundary(polygons: Vec2[][]): BoundarySegment[] {
 export function compoundGeometries(entities: Entity[], connections: Connection[]): CompoundGeometry[] {
   const groups: CompoundGeometry[] = []
   const visited = new Set<number>()
+  // With no intact binding, each shape is its own group. Avoid two full-scene
+  // scans per shape while retaining the same polygon and boundary generation.
+  const hasBindings = connections.some(connection => connection.binding && connection.breakState === 'intact')
   for (const entity of entities) {
     if (visited.has(entity.id) || !entity.enabled || !entity.hasComponent('ShapeRenderer2D')) continue
-    const memberIds = boundCompoundEntityIds(entity.id, connections, entities)
-    const members = entities.filter(candidate => memberIds.has(candidate.id) && candidate.enabled && candidate.hasComponent('ShapeRenderer2D'))
+    const memberIds = hasBindings ? boundCompoundEntityIds(entity.id, connections, entities) : new Set([entity.id])
+    const members = hasBindings
+      ? entities.filter(candidate => memberIds.has(candidate.id) && candidate.enabled && candidate.hasComponent('ShapeRenderer2D'))
+      : [entity]
     members.forEach(member => visited.add(member.id))
     const polygons = members.map(member => entityBoundaryPoints(member, member.shapeType === 'Circle' ? 64 : 48, entities))
       .filter(polygon => polygon.length >= 3)

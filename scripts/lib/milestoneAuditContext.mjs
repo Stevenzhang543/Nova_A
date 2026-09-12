@@ -6,12 +6,12 @@ import { fileURLToPath, pathToFileURL } from 'node:url'
 
 /** Qualification uses the integrated version only; staged overlays require explicit development authorization. */
 export function resolveMilestoneAuditContext(moduleUrl, { release, reportName, argv = process.argv.slice(2), env = process.env } = {}) {
-  assert.match(release, /^26\.(?:1[3-9]|20)$/); assert.match(reportName, /^[a-z0-9-]+$/)
+  assert.match(release, /^26\.(?:1[3-9]|2[0-9]|30)$/); assert.match(reportName, /^[a-z0-9-]+$/)
   const scriptRoot = dirname(dirname(fileURLToPath(moduleUrl))), option = name => argv.find(value => value.startsWith(`--${name}=`))?.slice(name.length + 3)
   const regressionOrigin = release, target = option('qualification-release')
   if (target) {
-    assert.equal(target, '26.20', 'Only the integrated 26.20 regression target is supported')
-    assert.ok(Number(release.split('.')[1]) <= 20, 'Cannot qualify a future suite')
+    assert.match(target, /^26\.(?:2[0-9]|30)$/, 'Integrated regression targets are 26.20 through 26.30')
+    assert.ok(Number(release.split('.')[1]) <= Number(target.split('.')[1]), 'Cannot qualify a future suite')
     release = target
   }
   let repository = scriptRoot

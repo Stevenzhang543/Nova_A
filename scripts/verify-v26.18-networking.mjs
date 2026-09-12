@@ -16,9 +16,12 @@ const vite = await createServer({root: context.sourceRoot, appType: 'custom', lo
 await vite.watcher.close()
 let networking
 try {
-  const [net, production, protocol, replay, input, authority, boxes, services, hierarchy, productionRuntime, packages] = await Promise.all([
+  // Overlapping SSR roots share cyclic runtime dependencies; initialize one root at a time.
+  const loaded = []
+  for (const path of [
     'runtime/networking', 'runtime/production', 'runtime/networkProtocol', 'runtime/networkReplay', 'runtime/networkInput', 'runtime/networkProduction', 'world/BoxEntity', 'runtime/networkServices', 'world/hierarchy', 'runtime/productionRuntime', 'runtime/packages'
-  ].map(path => vite.ssrLoadModule('/src/' + path + '.ts')))
+  ]) loaded.push(await vite.ssrLoadModule('/src/' + path + '.ts'))
+  const [net, production, protocol, replay, input, authority, boxes, services, hierarchy, productionRuntime, packages] = loaded
   networking = net
   let settings = production.productionSettings.networking
   const definition = {entityUuid: '00000001-0000-4000-8000-000000000000', authority: 'server', properties: ['transform'], interpolate: false, predict: false, ownerPeerId: '', alwaysRelevant: true, interestRadius: 100, sceneUuid: ''}

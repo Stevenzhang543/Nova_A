@@ -1,6 +1,6 @@
 <template>
   <Teleport to="body">
-    <section v-if="state.workspaceManagerOpen" class="scrim" role="dialog" aria-modal="true" v-modal-focus :aria-label="t('manageWorkspaces')" @mousedown.self="close" @keydown.esc="close">
+    <section v-if="state.workspaceManagerOpen" class="scrim" role="dialog" aria-modal="true" v-modal-focus :aria-label="t('manageWorkspaces')" @mousedown.self="close" @keydown.esc.stop="close">
       <article>
         <header><div><strong>{{ t('manageWorkspaces') }}</strong><small>{{ t('workspaceManagerHint') }}</small></div><button :title="t('close')" @click="close">×</button></header>
         <div class="scope"><span>{{ t('layoutScope') }}</span><button :class="{ active: prefs.workspaceLayoutScope === 'user' }" @click="prefs.workspaceLayoutScope = 'user'">{{ t('editorScope') }}</button><button :class="{ active: prefs.workspaceLayoutScope === 'project' }" @click="prefs.workspaceLayoutScope = 'project'">{{ t('projectScope') }}</button></div>

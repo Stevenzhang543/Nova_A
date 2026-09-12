@@ -19,6 +19,12 @@ function renderedText(element: StableControlElement): string { return ('innerTex
 const SELECTOR = 'button,input,select,textarea,a[href],[role="button"],[role="tab"],[role="menuitem"],[data-stable-control]'
 const INTERNAL_SELECTOR = '[data-feature-state="internal"]'
 let observer: MutationObserver | null = null
+let identityBatch: { used: Set<string>; next: Map<string, number> } | null = null
+function withIdentityBatch(action: () => void): void {
+  if (identityBatch) { action(); return }
+  identityBatch = { used: new Set([...document.querySelectorAll<StableControlElement>('[data-testid]')].map(element => element.dataset.testid!)), next: new Map() }
+  try { action() } finally { identityBatch = null }
+}
 
 function slug(value: string): string {
   const normalized = value.normalize('NFKD').toLocaleLowerCase().replace(/[^a-z0-9\u3400-\u9fff]+/g, '-').replace(/^-|-$/g, '')
@@ -85,7 +91,14 @@ function assignStableIdentity(element: StableControlElement): void {
     const stableKey = explicitKey ? slug(explicitKey) : structuralPath(element, scope)
     const base = `nova-${slug(surface)}-${stableKey}`
     let id = base, suffix = 2
+    if (identityBatch) {
+      suffix = identityBatch.next.get(base) ?? 2
+      while (identityBatch.used.has(id)) id = `${base}-${suffix++}`
+      identityBatch.used.add(id)
+      identityBatch.next.set(base, suffix)
+    } else {
     while (document.querySelector(`[data-testid="${CSS.escape(id)}"]`)) id = `${base}-${suffix++}`
+    }
     element.dataset.testid = id
     element.dataset.testIdentity = explicitKey ? 'authored' : 'structural'
     element.dataset.testPath = structuralPath(element, scope)
@@ -139,19 +152,27 @@ function scan(root: ParentNode = document): void {
 
 export function installStableControlRegistry(): void {
   if (typeof document === 'undefined' || observer) return
-  scan()
-  observer = new MutationObserver(records => {
+  withIdentityBatch(() => scan())
+  observer = new MutationObserver(records => withIdentityBatch(() => {
+    // Vue may append thousands of options to one select in a single turn.
+    // Re-reading that select's complete label per record is quadratic work.
+    const attributeTargets = new Set<StableControlElement>()
+    const textOwners = new Set<Node>()
+    const addedRoots = new Set<StableControlElement>()
     for (const record of records) {
-      if (record.type === 'attributes' && isControlElement(record.target)) assignStableIdentity(record.target)
-      if (record.type === 'characterData' || record.type === 'childList') refreshTextOwner(record.target)
-      record.addedNodes.forEach(node => { if (isControlElement(node)) scan(node) })
+      if (record.type === 'attributes' && isControlElement(record.target)) attributeTargets.add(record.target)
+      if (record.type === 'characterData' || record.type === 'childList') textOwners.add(record.target)
+      record.addedNodes.forEach(node => { if (isControlElement(node)) addedRoots.add(node) })
     }
-  })
+    for (const target of attributeTargets) if (target.isConnected) assignStableIdentity(target)
+    for (const owner of textOwners) if (owner.isConnected) refreshTextOwner(owner)
+    for (const node of addedRoots) if (node.isConnected) scan(node)
+  }))
   observer.observe(document.documentElement, { subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: ['disabled', 'aria-label', 'title'] })
 }
 
 export function stableControlInventory(root: ParentNode = document): StableControlRecord[] {
-  scan(root)
+  withIdentityBatch(() => scan(root))
   return [...root.querySelectorAll<StableControlElement>('[data-testid]')].filter(element => element.matches(SELECTOR)).map(element => ({
     testId: element.dataset.testid!, kind: kindOf(element), label: visibleText(element), surface: surfaceName(element),
     identitySource: element.dataset.testIdentity === 'authored' ? 'authored' : 'structural', structuralPath: element.dataset.testPath || '',

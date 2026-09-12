@@ -30,7 +30,8 @@
 
       <nav v-if="breadcrumbs.length" class="breadcrumbs" :aria-label="t('hierarchyBreadcrumb')"><button v-for="(entity, index) in breadcrumbs" :key="entity.uuid" @click="selectBreadcrumb(entity)">{{ index ? '› ' : '' }}{{ entity.name }}</button></nav>
 
-      <div ref="entityList" class="entity-list" :style="{ paddingTop: `${virtualPaddingTop}px`, paddingBottom: `${virtualPaddingBottom}px` }" @scroll="onHierarchyScroll" @dragover.prevent @drop="dropOnRoot($event)">
+      <div ref="entityList" class="entity-list" @scroll="onHierarchyScroll" @dragover.prevent @drop="dropOnRoot($event)">
+        <div class="hierarchy-rows" :style="{ paddingTop: `${virtualPaddingTop}px`, paddingBottom: `${virtualPaddingBottom}px` }">
         <div
           v-for="row in virtualHierarchyRows"
           :key="row.entity.uuid"
@@ -45,7 +46,7 @@
             'search-match': matchesHierarchySearch(row.entity),
             'drop-target': dropTargetUuid === row.entity.uuid
           }"
-          :style="{ paddingLeft: `${6 + row.depth * 15}px` }"
+          :style="{ height: `${hierarchyRowHeight}px`, paddingLeft: `${6 + row.depth * 15}px` }"
           :draggable="canEdit && !row.entity.editorLocked"
           @click="selectEntity($event, row.entity)"
           @contextmenu.prevent="openContextMenu($event, 'sidebar-entity', row.entity.id)"
@@ -58,13 +59,14 @@
         >
           <button class="disclosure" :class="{ placeholder: !row.hasChildren }" :aria-label="row.expanded ? t('collapsePanel') : t('expandPanel')" @click.stop="toggleExpanded(row.entity.uuid)">{{ row.hasChildren ? (row.expanded ? '⌄' : '›') : '' }}</button>
           <span class="shape-icon">{{ getIcon(row.entity.shapeType) }}</span>
-          <span v-if="editingId !== row.entity.id" class="name" :title="t('renameHint')" @dblclick.stop="startEdit(row.entity)"><mark v-if="searchQuery && row.entity.name.toLocaleLowerCase().includes(searchQuery.toLocaleLowerCase())">{{ row.entity.name }}</mark><template v-else>{{ row.entity.name }}</template><small>{{ row.entity.id }}</small></span>
+          <span v-if="editingId !== row.entity.id" class="name" :title="`${row.entity.name} — ${t('renameHint')}`" @dblclick.stop="startEdit(row.entity)"><mark v-if="searchQuery && row.entity.name.toLocaleLowerCase().includes(searchQuery.toLocaleLowerCase())">{{ row.entity.name }}</mark><template v-else>{{ row.entity.name }}</template><small>{{ row.entity.id }}</small></span>
           <input v-else v-model="editName" v-focus class="edit-input" @click.stop @blur="finishEdit(row.entity)" @keyup.enter="finishEdit(row.entity)" @keyup.escape="editingId = null">
           <span v-if="row.entity.prefabAsset" class="status-mark" :title="t('prefabInstance')">P</span><span v-if="row.entity.sceneLayers.length" class="status-mark scene" :title="t('sceneInstance')">S</span><span v-if="Object.keys(row.entity.prefabOverrides).length" class="status-mark override" :title="t('prefabOverrides')">●</span>
           <button class="state-button pin" :class="{ active: authoringState.pinnedEntityUuids.includes(row.entity.uuid) }" :title="t('pinEntity')" @click.stop="toggleHierarchyPin(row.entity.uuid)">◆</button>
           <button class="state-button" :title="row.entity.editorVisible ? t('hideEntity') : t('showEntity')" @click.stop="toggleVisibility(row.entity)">{{ row.entity.editorVisible ? '◉' : '○' }}</button>
           <button class="state-button" :title="row.entity.editorLocked ? t('unlockEntity') : t('lockEntity')" @click.stop="toggleLock(row.entity)">{{ row.entity.editorLocked ? '▣' : '▢' }}</button>
           <button class="state-button power" :title="row.entity.enabled ? t('disableEntity') : t('enableEntity')" @click.stop="toggleEnabled(row.entity)">●</button>
+        </div>
         </div>
         <p v-if="!hierarchyRows.length" class="empty-state">{{ t('noEntitiesFound') }}</p>
         <button v-if="draggingIds.length" class="root-drop" @dragover.prevent @drop.prevent.stop="dropOnRoot($event)">{{ t('reparentToRoot') }}</button>
@@ -77,6 +79,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { t } from '../i18n'
+import { preferencesState } from '../store/preferences'
 import { addEditorLog, editorState, openContextMenu, setActiveLayer } from '../store/editor'
 import { createScene, physicsState as state, pushHistory, reloadActiveScene, sceneManager, selectEntities, setActiveScene, setSceneLoaded, synchronizeHistoryBaseline } from '../store/physics'
 import type { Entity } from '../world/Entity'
@@ -108,7 +111,7 @@ const selectionHistoryIndex = ref(-1)
 const entityList = ref<HTMLElement | null>(null)
 const hierarchyScrollTop = ref(0)
 const hierarchyViewportHeight = ref(400)
-const hierarchyRowHeight = 29, hierarchyOverscan = 12
+const hierarchyRowHeight = computed(() => Math.ceil(29 * preferencesState.uiScale)), hierarchyOverscan = 12
 let hierarchyResizeObserver: ResizeObserver | null = null
 let lastSelectedId: number | null = null
 let applyingSelectionHistory = false
@@ -174,11 +177,11 @@ const hierarchyRows = computed(() => {
   for (const entity of state.world.entities) visit(entity, 0, visited)
   return rows
 })
-const virtualStart = computed(() => Math.max(0, Math.floor(hierarchyScrollTop.value / hierarchyRowHeight) - hierarchyOverscan))
-const virtualEnd = computed(() => Math.min(hierarchyRows.value.length, Math.ceil((hierarchyScrollTop.value + hierarchyViewportHeight.value) / hierarchyRowHeight) + hierarchyOverscan))
+const virtualStart = computed(() => Math.max(0, Math.floor(hierarchyScrollTop.value / hierarchyRowHeight.value) - hierarchyOverscan))
+const virtualEnd = computed(() => Math.min(hierarchyRows.value.length, Math.ceil((hierarchyScrollTop.value + hierarchyViewportHeight.value) / hierarchyRowHeight.value) + hierarchyOverscan))
 const virtualHierarchyRows = computed(() => hierarchyRows.value.slice(virtualStart.value, virtualEnd.value))
-const virtualPaddingTop = computed(() => virtualStart.value * hierarchyRowHeight + 5)
-const virtualPaddingBottom = computed(() => Math.max(5, (hierarchyRows.value.length - virtualEnd.value) * hierarchyRowHeight + 5))
+const virtualPaddingTop = computed(() => virtualStart.value * hierarchyRowHeight.value + 5)
+const virtualPaddingBottom = computed(() => Math.max(5, (hierarchyRows.value.length - virtualEnd.value) * hierarchyRowHeight.value + 5))
 function onHierarchyScroll(event: Event) { hierarchyScrollTop.value = (event.currentTarget as HTMLElement).scrollTop }
 function matchesHierarchySearch(entity: Entity) { const query = searchQuery.value.trim().toLocaleLowerCase(); if (!query) return false; return `${entity.name} ${entity.id} ${entity.tags.join(' ')} ${entity.components.map(component => component.kind).join(' ')}`.toLocaleLowerCase().includes(query) }
 function applySavedFilter() { const filter = authoringState.savedFilters.find(candidate => candidate.id === selectedSavedFilter.value); if (!filter) return; searchQuery.value = filter.query; authoringState.tagFilter = filter.tagFilter; authoringState.selectionFilter = filter.selectionFilter }
@@ -312,7 +315,7 @@ onUnmounted(() => { hierarchyResizeObserver?.disconnect() })
 .scene-main { min-width: 0; height: 28px; padding: 0 7px; flex: 1; display: flex; align-items: center; gap: 7px; color: var(--text-secondary); font-size: 11px; }.scene-main i { width: 7px; height: 7px; flex: 0 0 7px; border: 1px solid var(--accent); border-radius: 50%; }.scene-item.active .scene-main i { background: var(--accent); box-shadow: 0 0 6px var(--accent); }.scene-main span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }.scene-main input { width: 100%; min-height: 24px; }
 .hierarchy-header { flex: 0 0 auto; padding-bottom: 7px; border-bottom: 1px solid var(--border-subtle); }.search { height: 29px; margin: 0 7px; padding: 0 7px; display: flex; align-items: center; gap: 5px; border: 1px solid var(--border-subtle); border-radius: 8px; background: var(--input-bg); }.search span { color: var(--text-muted); }.search input { min-width: 0; width: 100%; min-height: 25px; padding: 0; border: 0; background: transparent; font-size:11px; }.search input:focus-visible { outline: 0; }
 .hierarchy-header>.hierarchy-filters{height:auto;margin:5px 7px 0;padding:0;display:grid;grid-template-columns:minmax(0,1fr) 29px 29px;gap:4px;align-items:stretch;justify-content:normal;font-weight:400;letter-spacing:normal;text-transform:none}.hierarchy-filters select{min-width:0;min-height:27px}.hierarchy-filters .hierarchy-filter-wide{grid-column:1/-1}.hierarchy-filters button{width:29px;border:1px solid var(--border-subtle);border-radius:7px;color:var(--text-muted);background:var(--surface-2)}.hierarchy-filters button.active{color:var(--accent);border-color:var(--accent);background:var(--accent-soft)}.breadcrumbs{min-height:30px;padding:4px 7px;display:flex;overflow:auto;border-bottom:1px solid var(--border-subtle)}.breadcrumbs button{padding:0 3px;white-space:nowrap;border:0;color:var(--text-muted);background:transparent;font-size:11px}.breadcrumbs button:last-child{color:var(--text-primary)}
-.entity-list { min-height: 0; flex: 1; padding: 5px; overflow: auto; }.entity-item { position: relative; height: 29px; display: flex; align-items: center; gap: 4px; border: 1px solid transparent; border-radius: 7px; color: var(--text-secondary); font-size:11px; }.entity-item:hover { background: var(--surface-hover); }.entity-item.search-match:not(.selected){background:color-mix(in srgb,var(--warning) 10%,transparent)}.entity-item.selected { background: var(--accent-soft); }.entity-item.primary { border-color: color-mix(in srgb, var(--accent) 42%, transparent); }.entity-item.disabled { opacity: .5; }.entity-item.hidden .name { text-decoration: line-through; opacity: .6; }.entity-item.locked .shape-icon { color: var(--warning); }.entity-item.drop-target { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+.entity-list { min-height: 0; flex: 1; padding: 0 5px; overflow: auto; }.entity-item { position: relative; height: 29px; display: flex; align-items: center; gap: 4px; border: 1px solid transparent; border-radius: 7px; color: var(--text-secondary); font-size:11px; }.entity-item:hover { background: var(--surface-hover); }.entity-item.search-match:not(.selected){background:color-mix(in srgb,var(--warning) 10%,transparent)}.entity-item.selected { background: var(--accent-soft); }.entity-item.primary { border-color: color-mix(in srgb, var(--accent) 42%, transparent); }.entity-item.disabled { opacity: .5; }.entity-item.hidden .name { text-decoration: line-through; opacity: .6; }.entity-item.locked .shape-icon { color: var(--warning); }.entity-item.drop-target { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
 .disclosure, .state-button { width: 19px; height: 22px; padding: 0; flex: 0 0 19px; display: grid; place-items: center; border: 0; border-radius: 5px; color: var(--text-muted); background: transparent; font-size:11px; }.disclosure:hover, .state-button:hover { color: var(--accent); background: var(--surface-3); }.disclosure.placeholder { pointer-events: none; }.shape-icon { width: 15px; flex: 0 0 15px; color: var(--accent); text-align: center; }.name { min-width: 0; flex: 1; display: flex; align-items: center; gap: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }.name mark{padding:0;color:inherit;background:color-mix(in srgb,var(--warning) 28%,transparent)}.name small { color: var(--text-muted); font-size:11px; }.edit-input { min-width: 0; height: 23px; min-height: 23px; flex: 1; padding: 2px 5px; }.state-button { opacity: .25; }.state-button.pin.active,.entity-item.pinned .pin{color:var(--accent);opacity:1}.entity-item:hover .state-button, .entity-item.selected .state-button, .entity-item.hidden .state-button, .entity-item.locked .state-button, .entity-item.disabled .power { opacity: .9; }.power { color: var(--success); }
 .status-mark{width:16px;height:16px;display:grid;place-items:center;border-radius:4px;color:var(--accent);background:var(--accent-soft);font-size:11px;font-weight:800}.status-mark.scene{color:var(--success)}.status-mark.override{color:var(--warning);background:transparent}
 .empty-state { padding: 18px 8px; color: var(--text-muted); font-size:11px; text-align: center; }.root-drop { width: calc(100% - 8px); min-height: 31px; margin: 6px 4px; border: 1px dashed var(--accent); border-radius: 8px; color: var(--accent); background: var(--accent-soft); font-size:11px; }

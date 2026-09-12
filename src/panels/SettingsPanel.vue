@@ -17,7 +17,7 @@
     </section>
 
     <div class="settings-grid">
-      <section v-show="showCard('appearanceSettings theme color palette language interfaceScale compactMode reduceMotion highContrast launchMaximized workspaceLayoutScope shortcutEditor', 'editor')" class="settings-card">
+      <section v-show="showCard('appearanceSettings formLabelLayout theme color palette language interfaceScale compactMode reduceMotion highContrast launchMaximized workspaceLayoutScope shortcutEditor', 'editor')" class="settings-card">
         <div class="card-heading"><span class="card-icon">◐</span><h2>{{ t('appearanceSettings') }}</h2></div>
         <SettingRow :label="t('language')">
           <select v-model="prefs.locale">
@@ -31,7 +31,14 @@
             <option v-for="(palette, index) in COLOR_PALETTES" :key="palette.id" :value="palette.id">{{ PALETTE_COPY[prefs.locale].names[index] }} · {{ t(palette.mode) }}</option>
           </select>
         </SettingRow>
-        <p>{{ PALETTE_COPY[prefs.locale].hint }}</p><button class="secondary-action" data-audit="qualification-help" @click="openBundledManual((prefs.locale === 'zh' ? 'zh-CN' : prefs.locale) + '-v2620-production')">{{ t('documentation') }}</button>
+        <p>{{ PALETTE_COPY[prefs.locale].hint }}</p><button class="secondary-action" data-audit="qualification-help" @click="openBundledManual((prefs.locale === 'zh' ? 'zh-CN' : prefs.locale) + '-v2621-production')">{{ t('documentation') }}</button>
+        <SettingRow :label="FORM_LAYOUT_COPY[prefs.locale].label" data-non-project-control>
+          <select v-model="prefs.formLabelLayout" data-audit="form-label-layout" :aria-label="FORM_LAYOUT_COPY[prefs.locale].label">
+            <option value="auto">{{ FORM_LAYOUT_COPY[prefs.locale].auto }}</option>
+            <option value="stacked">{{ FORM_LAYOUT_COPY[prefs.locale].stacked }}</option>
+          </select>
+        </SettingRow>
+        <p>{{ FORM_LAYOUT_COPY[prefs.locale].hint }}</p>
         <SettingRow :label="t('interfaceScale')">
           <div class="value-control"><input v-model.number="prefs.uiScale" type="range" min="1" max="2" step="0.05"><output>{{ Math.round(prefs.uiScale * 100) }}%</output></div>
         </SettingRow>
@@ -183,6 +190,7 @@ import { t } from '../i18n'
 import { editorState } from '../store/editor'
 import { autosaveState, physicsState as physics, pushHistory, restoreAutosave } from '../store/physics'
 import { preferencesState as prefs, resetPreferences, selectColorPalette } from '../store/preferences'
+import { FORM_LAYOUT_COPY } from '../editor/formLayoutCopy'
 import { COLOR_PALETTES, PALETTE_COPY } from '../store/colorPalettes'
 import type { ThemeMode } from '../store/preferences'
 import type { PerformanceProfile } from '../store/preferences'
@@ -242,6 +250,7 @@ function showCard(keys: string, scope: 'all' | 'editor' | 'project' | 'runtime')
   if (editorState.settingsScope !== 'all' && scope !== 'all' && editorState.settingsScope !== scope) return false
   const needle = editorState.settingsSearch.trim().toLocaleLowerCase()
   if (!needle) return true
+  if (keys.includes('formLabelLayout') && Object.values(FORM_LAYOUT_COPY[prefs.locale]).some(value => value.toLocaleLowerCase().includes(needle))) return true
   return keys.split(' ').some(key => t(key).toLocaleLowerCase().includes(needle) || key.toLocaleLowerCase().includes(needle))
 }
 function openTool(tab: 'packages' | 'profiler' | 'project') { openEditorTool(tab) }

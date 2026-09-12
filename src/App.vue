@@ -28,8 +28,9 @@ import { applySafeModeRestrictions, initializeRecoverySession } from './runtime/
 import { disposeEditorWindow, initializeEditorWindow, toggleEditorFullscreen } from './runtime/editorWindow'
 import { navigateHistory } from './editor/workspaces'
 import { shortcutMatches } from './editor/shortcuts'
+import { installSelectValueDetails, disposeSelectValueDetails } from './editor/selectValueDetails'
 import { installStableControlRegistry } from './runtime/controlRegistry'
-import { installProjectMutationRouter } from './runtime/projectMutationRouter'
+import { installProjectMutationRouter, disposeProjectMutationRouter } from './runtime/projectMutationRouter'
 import { manualViewerState } from './runtime/openManual'
 import { studioStatusState } from './runtime/stableContracts'
 import { faultCenterState } from './runtime/faultCenter'
@@ -74,6 +75,7 @@ onMounted(async () => {
 })
 async function prepareEditor() {
   installStableControlRegistry()
+  installSelectValueDetails()
   installProjectMutationRouter()
   // Native window placement is intentionally first: recovery scanning and
   // workspace initialization must not leave the launcher visibly unmaximized.
@@ -92,7 +94,7 @@ async function prepareEditor() {
   } catch { /* Recovery Center can still restore persisted snapshots. */ }
   await applySafeModeRestrictions()
 }
-onBeforeUnmount(() => { if (editorShortcutsInstalled) window.removeEventListener('keydown', handleGlobalShortcut); disposeEditorWindow() })
+onBeforeUnmount(() => { disposeSelectValueDetails(); disposeProjectMutationRouter(); if (editorShortcutsInstalled) window.removeEventListener('keydown', handleGlobalShortcut); disposeEditorWindow() })
 </script>
 
 <style>.app-loading { height: 100vh; display: grid; place-items: center; color: var(--text-muted); background: var(--bg-base); font-weight: 700; }</style>

@@ -11,7 +11,7 @@ pub const PROJECT_FORMAT_NAME: &str = "Nova_A Project Format 2";
 pub const PROJECT_FORMAT_MAJOR: u32 = 2;
 pub const CURRENT_FORMAT_VERSION: u32 = 29;
 pub const MINIMUM_SUPPORTED_FORMAT_VERSION: u32 = 5;
-pub const CURRENT_ENGINE_VERSION: &str = "26.20.0";
+pub const CURRENT_ENGINE_VERSION: &str = "26.21.0";
 
 fn default_named_physics_layers() -> Value {
     let colors = [
@@ -502,6 +502,9 @@ pub fn migrate_project_value(value: Value) -> Result<ProjectFile, FormatError> {
             })
         });
         if let Some(build) = settings.get_mut("build").and_then(Value::as_object_mut) {
+            for (key, value) in json!({"gameName":"MyGame","target":"windows","architecture":"x86_64","sceneOrder":[],"startupSceneUuid":"","packageIntoExecutable":false,"developmentBuild":true,"outputDirectory":""}).as_object().unwrap() {
+                build.entry(key.clone()).or_insert_with(|| value.clone());
+            }
             build.entry("runtimeMode").or_insert_with(|| json!("game"));
             let development = build
                 .get("developmentBuild")
@@ -512,12 +515,28 @@ pub fn migrate_project_value(value: Value) -> Result<ProjectFile, FormatError> {
                 .or_insert_with(|| json!(if development { "debug" } else { "release" }));
             build.entry("platform").or_insert_with(|| json!({"identifier":"top.whitelists.mygame","version":"1.0.0","iconAsset":null,"splashAsset":null,"orientation":"auto","permissions":[],"signingMode":"none","signingIdentity":"","notarizationProfile":""}));
             build.entry("delivery").or_insert_with(|| json!({"deterministic":true,"incremental":true,"compression":"balanced","patchManifest":true,"structuredLogs":true,"crashReports":true,"telemetryEnabled":false,"telemetryEndpoint":"","privacyPolicyUrl":""}));
+            for (section, defaults) in [
+                (
+                    "platform",
+                    json!({"identifier":"top.whitelists.mygame","version":"1.0.0","iconAsset":null,"splashAsset":null,"orientation":"auto","permissions":[],"signingMode":"none","signingIdentity":"","notarizationProfile":""}),
+                ),
+                (
+                    "delivery",
+                    json!({"deterministic":true,"incremental":true,"compression":"balanced","patchManifest":true,"structuredLogs":true,"crashReports":true,"telemetryEnabled":false,"telemetryEndpoint":"","privacyPolicyUrl":""}),
+                ),
+            ] {
+                if let Some(values) = build.get_mut(section).and_then(Value::as_object_mut) {
+                    for (key, value) in defaults.as_object().unwrap() {
+                        values.entry(key.clone()).or_insert_with(|| value.clone());
+                    }
+                }
+            }
         }
         settings.entry("scripting").or_insert_with(
             || json!({ "apiVersion": 1, "customSignals": [], "maxConsoleEntries": 2000, "debuggerEnabled": true, "hotReloadEnabled": true, "breakOnRuntimeError": true, "deterministicTestSeed": 1, "externalEditorProtocol": true }),
         );
         if let Some(scripting) = settings.get_mut("scripting").and_then(Value::as_object_mut) {
-            scripting.insert("apiVersion".into(), json!(1));
+            scripting.entry("apiVersion").or_insert_with(|| json!(1));
             scripting
                 .entry("customSignals")
                 .or_insert_with(|| json!([]));
@@ -634,6 +653,35 @@ pub fn migrate_project_value(value: Value) -> Result<ProjectFile, FormatError> {
             .get_mut("production")
             .and_then(Value::as_object_mut)
         {
+            // Historical schema-29 files can contain only the settings available
+            // when authored. Fill missing leaves without repairing explicit bad data.
+            for (section, defaults) in [
+                (
+                    "performance",
+                    json!({"traceCapacity":600,"memoryBudgetMb":300.0,"assetBudgetMb":512.0,"leakWindowFrames":600,"lifetimeCapacity":2000}),
+                ),
+                (
+                    "replay",
+                    json!({"seed":1313822273_u64,"capacity":3600,"strictChecksums":true}),
+                ),
+                ("testing", json!({"defaultTimeoutMs":10000,"tests":[]})),
+                ("data", json!({"saveSchemaVersion":1,"saveMigrations":[]})),
+                (
+                    "jobs",
+                    json!({"maxWorkers":2,"maxQueued":256,"timeoutMs":15000}),
+                ),
+            ] {
+                let value = production
+                    .entry(section)
+                    .or_insert_with(|| defaults.clone());
+                if let (Some(values), Some(defaults)) =
+                    (value.as_object_mut(), defaults.as_object())
+                {
+                    for (key, default) in defaults {
+                        values.entry(key.clone()).or_insert_with(|| default.clone());
+                    }
+                }
+            }
             production.entry("networking").or_insert_with(|| json!({}));
             if let Some(networking) = production
                 .get_mut("networking")
@@ -970,8 +1018,39 @@ pub fn migrate_project_value(value: Value) -> Result<ProjectFile, FormatError> {
                 })
         });
     }
-    let project: ProjectFile = serde_json::from_value(Value::Object(root))
+    let mut project: ProjectFile = serde_json::from_value(Value::Object(root))
         .map_err(|error| FormatError(format!("project schema is invalid: {error}")))?;
+    // Pre-calendar script references used bare asset UUIDs. Canonicalize only
+    // known script assets; unknown references and modern malformed files stay errors.
+    if source_engine_version
+        .split('.')
+        .next()
+        .and_then(|part| part.parse::<u32>().ok())
+        .is_some_and(|major| major < 26)
+    {
+        let scripts: std::collections::HashSet<String> = project
+            .assets
+            .iter()
+            .filter(|asset| matches!(asset.asset_type.as_str(), "script" | "visualScript"))
+            .map(|asset| asset.uuid.clone())
+            .collect();
+        for scene in &mut project.scenes {
+            for entity in &mut scene.entities {
+                for component in &mut entity.components {
+                    if component.kind == "Script2D" {
+                        if let Some(reference) =
+                            component.data.get("scriptAsset").and_then(Value::as_str)
+                        {
+                            if scripts.contains(reference) {
+                                component.data["scriptAsset"] =
+                                    json!(format!("asset://{reference}"));
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
     validate_project(&project)?;
     Ok(project)
 }
@@ -1649,6 +1728,16 @@ fn validate_project_settings(value: Option<&Value>) -> Result<(), FormatError> {
     let settings = value
         .and_then(Value::as_object)
         .ok_or_else(|| FormatError("projectSettings must be an object".into()))?;
+    if let Some(scripting) = settings.get("scripting") {
+        if !matches!(
+            scripting.get("apiVersion").and_then(Value::as_u64),
+            Some(1 | 2)
+        ) {
+            return Err(FormatError(
+                "projectSettings.scripting.apiVersion must be 1 or 2".into(),
+            ));
+        }
+    }
     let actions = settings
         .get("inputMap")
         .and_then(Value::as_array)
@@ -2857,6 +2946,11 @@ fn validate_project_settings(value: Option<&Value>) -> Result<(), FormatError> {
                         | "gamepad-axis"
                         | "touch"
                         | "gesture"
+                        | "sensor"
+                        | "pen-button"
+                        | "pen-pressure"
+                        | "pen-tilt"
+                        | "pen-twist"
                 )
             ) {
                 return Err(FormatError(format!(
@@ -4796,5 +4890,152 @@ mod physics_float_roundtrip_26_17 {
             let actual: f64 = serde_json::from_str(&source).unwrap();
             assert_eq!(actual.to_bits(), expected.to_bits(), "{source}");
         }
+    }
+}
+
+#[cfg(test)]
+mod partial_production_migration_26_21 {
+    use super::*;
+
+    #[test]
+    fn historical_partial_production_settings_keep_authored_values() {
+        let source =
+            include_str!("../../../reference-projects/projects/authoring-5000-stress/project.nova");
+        let migrated = migrate_project_str(source).expect("historical partial settings migrate");
+        let value: Value = serde_json::from_str(&migrated).unwrap();
+        assert_eq!(
+            value["scenes"][0]["entities"].as_array().unwrap().len(),
+            5001
+        );
+        assert_eq!(
+            value["projectSettings"]["production"]["performance"]["animationBudgetMs"],
+            2
+        );
+        assert_eq!(
+            value["projectSettings"]["production"]["performance"]["uiBudgetMs"],
+            2
+        );
+        assert_eq!(
+            value["projectSettings"]["production"]["performance"]["traceCapacity"],
+            600
+        );
+        assert_eq!(migrate_project_str(&migrated).unwrap(), migrated);
+    }
+
+    #[test]
+    fn explicit_invalid_production_values_are_not_silently_repaired() {
+        let mut source: Value = serde_json::from_str(include_str!(
+            "../../../reference-projects/projects/authoring-5000-stress/project.nova"
+        ))
+        .unwrap();
+        source["projectSettings"]["production"]["performance"]["traceCapacity"] = json!(10001);
+        assert!(migrate_project_value(source.clone()).is_err());
+        source["projectSettings"]["production"]["performance"] = Value::Null;
+        assert!(migrate_project_value(source).is_err());
+    }
+}
+
+#[cfg(test)]
+mod authored_binding_migration_26_21 {
+    use super::*;
+    #[test]
+    fn sensor_pen_devices_and_script_api_two_survive_migration() {
+        let base: Value = serde_json::from_str(include_str!("../../../reference-projects/projects/platform-v2608-touch-pen-accessibility/project.nova")).unwrap();
+        for device in [
+            "sensor",
+            "pen-button",
+            "pen-pressure",
+            "pen-tilt",
+            "pen-twist",
+        ] {
+            let mut source = base.clone();
+            source["projectSettings"]["inputMap"][0]["bindings"][0]["device"] = json!(device);
+            source["projectSettings"]["scripting"]["apiVersion"] = json!(2);
+            let migrated = serde_json::to_value(migrate_project_value(source).unwrap()).unwrap();
+            assert_eq!(
+                migrated["projectSettings"]["inputMap"][0]["bindings"][0]["device"],
+                device
+            );
+            assert_eq!(migrated["projectSettings"]["scripting"]["apiVersion"], 2);
+        }
+        let mut invalid_api = base.clone();
+        invalid_api["projectSettings"]["scripting"]["apiVersion"] = json!(99);
+        assert!(migrate_project_value(invalid_api).is_err());
+        let mut invalid = base;
+        invalid["projectSettings"]["inputMap"][0]["bindings"][0]["device"] =
+            json!("unsupported-device");
+        assert!(migrate_project_value(invalid).is_err());
+    }
+    #[test]
+    fn partial_build_settings_preserve_delivery_rules() {
+        let source: Value = serde_json::from_str(include_str!(
+            "../../../reference-projects/projects/data-foundation-validation/project.nova"
+        ))
+        .unwrap();
+        let delivery = source["projectSettings"]["build"]["delivery"].clone();
+        let migrated = serde_json::to_value(migrate_project_value(source).unwrap()).unwrap();
+        for key in ["include", "exclude", "stripUnusedAssets"] {
+            assert_eq!(
+                migrated["projectSettings"]["build"]["delivery"][key],
+                delivery[key]
+            );
+        }
+        assert_eq!(migrated["projectSettings"]["build"]["gameName"], "MyGame");
+    }
+}
+
+#[cfg(test)]
+mod legacy_script_reference_26_21 {
+    use super::*;
+    #[test]
+    fn known_legacy_script_ids_become_canonical_without_changing_target() {
+        let source = include_str!(
+            "../../../reference-projects/projects/script-v46-api-contract/project.nova"
+        );
+        let original: Value = serde_json::from_str(source).unwrap();
+        let migrated = migrate_project_str(source).unwrap();
+        let output: Value = serde_json::from_str(&migrated).unwrap();
+        for (before_scene, after_scene) in original["scenes"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .zip(output["scenes"].as_array().unwrap())
+        {
+            for (before, after) in before_scene["entities"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .zip(after_scene["entities"].as_array().unwrap())
+            {
+                for component in before["components"]
+                    .as_array()
+                    .unwrap()
+                    .iter()
+                    .filter(|c| c["kind"] == "Script2D")
+                {
+                    let actual = after["components"]
+                        .as_array()
+                        .unwrap()
+                        .iter()
+                        .find(|c| c["uuid"] == component["uuid"])
+                        .unwrap();
+                    assert_eq!(
+                        actual["data"]["scriptAsset"],
+                        format!(
+                            "asset://{}",
+                            component["data"]["scriptAsset"].as_str().unwrap()
+                        )
+                    );
+                }
+            }
+        }
+        assert_eq!(migrate_project_str(&migrated).unwrap(), migrated);
+        let mut modern = original;
+        modern["engineVersion"] = json!(CURRENT_ENGINE_VERSION);
+        modern["manifest"]["engineCompatibility"]["maximumExclusive"] = json!("27.0.0");
+        assert!(migrate_project_value(modern)
+            .unwrap_err()
+            .0
+            .contains("invalid asset reference"));
     }
 }

@@ -11,7 +11,7 @@ async function freePort() {
   const server = createServer(); await new Promise(done => server.listen(0, '127.0.0.1', done))
   const port = server.address().port; await new Promise(done => server.close(done)); return port
 }
-async function connect(url) {
+async function connect(url, commandTimeoutMs = 30000) {
   const socket = new WebSocket(url), pending = new Map(), listeners = new Map(); let sequence = 0
   await new Promise((done, reject) => { socket.addEventListener('open', done, { once: true }); socket.addEventListener('error', reject, { once: true }) })
   socket.addEventListener('message', event => {
@@ -21,15 +21,16 @@ async function connect(url) {
   })
   socket.addEventListener('close', () => { for (const item of pending.values()) { clearTimeout(item.timer); item.reject(Error('Browser connection closed')) } pending.clear() })
   return {
-    send(method, params = {}) { return new Promise((done, reject) => { const id = ++sequence; const timer = setTimeout(() => { pending.delete(id); reject(Error(`DevTools timed out: ${method}`)) }, 30000); pending.set(id, { done, reject, timer }); socket.send(JSON.stringify({ id, method, params })) }) },
+    send(method, params = {}) { return new Promise((done, reject) => { const id = ++sequence; const timer = setTimeout(() => { pending.delete(id); reject(Error(`DevTools timed out: ${method}`)) }, method === 'Runtime.evaluate' ? commandTimeoutMs : method === 'Browser.close' ? 3000 : 30000); pending.set(id, { done, reject, timer }); socket.send(JSON.stringify({ id, method, params })) }) },
     on(method, callback) { const handlers = listeners.get(method) ?? []; handlers.push(callback); listeners.set(method, handlers); return () => { const at = handlers.indexOf(callback); if (at >= 0) handlers.splice(at, 1) } },
     close() { socket.close() }
   }
 }
 
 /** Genuine browser input and DOM observations. No application-module imports or state mutation. */
-export async function withBrowserAudit({ release, name, width = 1440, height = 900, root = process.env.NOVA_AUDIT_ROOT || process.cwd(), development = process.argv.includes('--development'), expectedRelease = development ? (process.env.NOVA_AUDIT_EXPECTED_RELEASE || '26.12') : release }, task) {
-  assert.match(release, /^26\.(?:1[3-9]|20)$/); assert.match(name, /^[a-z0-9-]+$/)
+export async function withBrowserAudit({ release, name, width = 1440, height = 900, commandTimeoutMs = 30000, root = process.env.NOVA_AUDIT_ROOT || process.cwd(), development = process.argv.includes('--development'), expectedRelease = development ? (process.env.NOVA_AUDIT_EXPECTED_RELEASE || '26.12') : release }, task) {
+  assert.match(release, /^26\.(?:1[3-9]|2[0-9]|30)$/); assert.match(name, /^[a-z0-9-]+$/)
+  assert.ok(Number.isFinite(commandTimeoutMs) && commandTimeoutMs >= 30000 && commandTimeoutMs <= 180000, 'Bounded diagnostic command deadline');
   assert.match(expectedRelease, /^26\.\d{2}$/)
   if (!development) assert.equal(expectedRelease, release, 'Qualification must exercise its actual public version')
   root = resolve(root)
@@ -63,7 +64,7 @@ export async function withBrowserAudit({ release, name, width = 1440, height = 9
     assert.ok(executable, 'Microsoft Edge must be installed')
     edge = spawn(executable, ['--headless=new', '--no-first-run', '--disable-extensions', '--disable-blink-features=FileSystemAccessLocal', '--use-angle=swiftshader', `--remote-debugging-port=${debug}`, `--user-data-dir=${profile}`, `http://127.0.0.1:${port}/`], { stdio: 'ignore', windowsHide: true })
     let target; const deadline = Date.now() + 20000; while (!target && Date.now() < deadline) { try { target = (await fetch(`http://127.0.0.1:${debug}/json/list`).then(r => r.json())).find(item => item.type === 'page') } catch {} if (!target) await wait(100) }
-    assert.ok(target, 'Edge must expose its DevTools page'); client = await connect(target.webSocketDebuggerUrl)
+    assert.ok(target, 'Edge must expose its DevTools page'); client = await connect(target.webSocketDebuggerUrl, commandTimeoutMs)
     client.on('Runtime.exceptionThrown', event => errors.push(event.exceptionDetails?.exception?.description ?? event.exceptionDetails?.text))
     await client.send('Runtime.enable'); await client.send('Page.enable'); browser = await client.send('Browser.getVersion'); await viewport(width, height)
     await until("!!document.querySelector('.project-manager,.editor-root')")
@@ -72,7 +73,7 @@ export async function withBrowserAudit({ release, name, width = 1440, height = 9
   } catch (error) { failure = error; process.exitCode = 1; console.error(error); if (client) try { await capture('failure') } catch {} }
   finally {
     await mkdir(evidence, { recursive: true })
-    await writeFile(join(evidence, `v${release}-${name}.json`), JSON.stringify({ format: `nova-v${release}-${name}-user-audit`, version: 1, release, expectedRelease, development, qualifiedRelease: development ? null : release, generatedAt: new Date().toISOString(), status: failure ? 'failed' : 'passed', checks, observations, captures, consoleErrors: errors, browser, error: failure?.stack, scope: (development ? 'Development source overlay only, not release qualification. ' : '') + 'Recorded real Edge input and DOM observations against production dist. Headless software rendering and download/file-input fallback; physical assistive technology and native OS picker behavior are not measured.' }, null, 2) + '\n')
+    await writeFile(join(evidence, `v${release}-${name}.json`), JSON.stringify({ format: `nova-v${release}-${name}-user-audit`, version: 1, release, expectedRelease, development, qualifiedRelease: development ? null : release, generatedAt: new Date().toISOString(), status: failure ? 'failed' : 'passed', checks, observations, captures, consoleErrors: errors, browser, commandTimeoutMs, error: failure?.stack, scope: (development ? 'Development source overlay only, not release qualification. ' : '') + 'Recorded real Edge input and DOM observations against production dist. Headless software rendering and download/file-input fallback; physical assistive technology and native OS picker behavior are not measured.' }, null, 2) + '\n')
     try { await client?.send('Browser.close') } catch {} client?.close(); if (edge && !edge.killed) edge.kill()
     if (server) await new Promise(done => server.httpServer.close(done))
     if (profile) { const suffix = relative(resolve(tmpdir()), resolve(profile)); assert.ok(suffix && !suffix.startsWith('..') && !isAbsolute(suffix) && suffix.startsWith(`nova-v${release.replace('.', '')}-${name}-`)); await wait(200); await rm(resolve(profile), { recursive: true, force: true, maxRetries: 10, retryDelay: 100 }) }

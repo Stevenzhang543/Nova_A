@@ -44,7 +44,12 @@ export function safeProjectName(value: unknown): string {
   return (name || 'Untitled Project').replace(/\s+/g, ' ').slice(0, 80)
 }
 
+let sessionGeneration = 0
+/** Changes even when the same project is loaded again; not project data. */
+export function getProjectSessionGeneration(): number { return sessionGeneration }
+
 export function hydrateProjectMetadata(value: unknown): void {
+  sessionGeneration += 1
   const source = value && typeof value === 'object' ? value as Partial<ProjectMetadata> : {}
   const timestamp = now()
   Object.assign(projectSessionState, {
@@ -58,6 +63,7 @@ export function hydrateProjectMetadata(value: unknown): void {
 }
 
 export function beginProjectSession(metadata: ProjectMetadata): void {
+  sessionGeneration += 1
   Object.assign(projectSessionState, metadata, { format: NOVA_PROJECT_FORMAT })
 }
 

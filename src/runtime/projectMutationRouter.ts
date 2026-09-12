@@ -1,40 +1,62 @@
+import { getProjectSessionGeneration } from '../projects/projectSession'
+
 const INPUT_DELAY_MS = 420
 let installed = false
-const timers = new WeakMap<EventTarget, number>()
+let installationGeneration = 0
+let nextControlId = 0
+const timers = new Map<HTMLElement, number>()
+const controlIds = new WeakMap<HTMLElement, number>()
 
-function labelFor(target: HTMLElement): string {
-  if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target instanceof HTMLSelectElement) {
-    return target.labels?.[0]?.innerText.trim().replace(/\s+/g, ' ').slice(0, 120) || target.getAttribute('aria-label') || target.name || target.type
-  }
-  return target.getAttribute('aria-label') || target.getAttribute('title') || target.innerText.trim().replace(/\s+/g, ' ').slice(0, 120) || 'Project property'
+function labelFor(target: HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement): string {
+  return target.labels?.[0]?.innerText.trim().replace(/\s+/g, ' ').slice(0, 120)
+    || target.getAttribute('aria-label') || target.name || target.type
 }
 
-async function commitControlMutation(target: HTMLElement): Promise<void> {
-  if (target.closest('[data-non-project-control],[role="dialog"]')?.hasAttribute('data-non-project-control')) return
-  const { physicsState, pushHistory } = await import('../store/physics')
-  if (physicsState.playMode !== 'editing') return
-  const testId = target.dataset.testid || target.id || target.getAttribute('name') || 'stable-control'
-  const surface = target.closest<HTMLElement>('[data-control-scope],[data-surface]')?.dataset.controlScope || target.dataset.surface || 'project'
-  pushHistory(`Edit ${labelFor(target)}`, `control:${surface}:${testId}`, `${surface}/${testId}`)
+function eligible(target: HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement): boolean {
+  return target.isConnected && !target.disabled && !('readOnly' in target && target.readOnly)
+    && !target.closest('[data-non-project-control]')
 }
 
 function route(event: Event): void {
   const target = event.target
-  if (!(target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target instanceof HTMLSelectElement)) return
-  if (target.disabled || ('readOnly' in target && target.readOnly) || target.closest('[data-non-project-control]')) return
+  if (!(target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target instanceof HTMLSelectElement) || !eligible(target)) return
   const previous = timers.get(target)
   if (previous !== undefined) window.clearTimeout(previous)
-  const delay = event.type === 'change' ? 0 : INPUT_DELAY_MS
-  timers.set(target, window.setTimeout(() => { timers.delete(target); void commitControlMutation(target) }, delay))
+  if (!controlIds.has(target)) controlIds.set(target, ++nextControlId)
+  const session = getProjectSessionGeneration()
+  const installation = installationGeneration
+  const scope = target.closest<HTMLElement>('[data-control-scope],[data-surface]')
+  const surface = scope?.dataset.controlScope || scope?.dataset.surface || 'project'
+  const testId = target.dataset.testid || target.id || target.name || 'control'
+  const label = labelFor(target)
+  const mergeKey = `control:${surface}:${testId}:${controlIds.get(target)}`
+  const current = () => installed && installation === installationGeneration
+    && session === getProjectSessionGeneration() && eligible(target)
+  timers.set(target, window.setTimeout(() => {
+    timers.delete(target)
+    if (!current()) return
+    // Keep the launcher/player split lazy. Recheck after module loading too.
+    void import('../store/physics').then(({ physicsState, pushHistory }) => {
+      if (current() && physicsState.playMode === 'editing') pushHistory(`Edit ${label}`, mergeKey, `${surface}/${testId}`)
+    }).catch(error => console.warn('Nova_A could not record the control edit.', error))
+  }, event.type === 'change' ? 0 : INPUT_DELAY_MS))
 }
 
-/**
- * Safety net for stable project controls. Explicit domain commands still win;
- * this router records only when the serialized project actually changed.
- */
+/** Safety net only: explicit domain commands and snapshot no-op checks still apply. */
 export function installProjectMutationRouter(): void {
   if (installed || typeof document === 'undefined') return
   installed = true
+  installationGeneration += 1
   document.addEventListener('input', route, true)
   document.addEventListener('change', route, true)
+}
+
+export function disposeProjectMutationRouter(): void {
+  if (!installed) return
+  installed = false
+  installationGeneration += 1
+  document.removeEventListener('input', route, true)
+  document.removeEventListener('change', route, true)
+  for (const timer of timers.values()) window.clearTimeout(timer)
+  timers.clear()
 }

@@ -864,7 +864,23 @@ async function removeConnection(id: number) { if (!await confirmConnectionAction
 async function separate(id: number) { if (!await confirmConnectionAction(t('separateBindingTitle'), t('confirmSeparateBinding'))) return; deleteConnection(id); pushHistory(); estate.statusText = t('bindingSeparated') }
 function repair(id: number) { repairConnection(id); pushHistory() }
 
-function onConfigChange(event?: Event) { if (!canEdit.value || !selectedEntity.value) return; const path = (event?.target as HTMLElement | null)?.closest<HTMLElement>('[data-property-path]')?.dataset.propertyPath; if (path) { modifiedPropertyPaths.value.add(path); modifiedPropertyPaths.value = new Set(modifiedPropertyPaths.value) } if (selectedEntity.value.isStatic) selectedEntity.value.isKinematic = false; normalizeEntity(selectedEntity.value); if (selectedEntity.value.prefabAsset) capturePrefabOverrides(selectedEntity.value); recordEntityProperties([selectedEntity.value]); pushHistory('Set property', `property:${selectedEntity.value.uuid}`) }
+const inspectorControlIds = new WeakMap<HTMLElement, number>()
+let nextInspectorControlId = 0
+function onConfigChange(event?: Event) {
+  if (!canEdit.value || !selectedEntity.value) return
+  const target = event?.target instanceof HTMLElement ? event.target : null
+  const path = target?.closest<HTMLElement>('[data-property-path]')?.dataset.propertyPath
+  if (path) { modifiedPropertyPaths.value.add(path); modifiedPropertyPaths.value = new Set(modifiedPropertyPaths.value) }
+  if (selectedEntity.value.isStatic) selectedEntity.value.isKinematic = false
+  normalizeEntity(selectedEntity.value)
+  if (selectedEntity.value.prefabAsset) capturePrefabOverrides(selectedEntity.value)
+  recordEntityProperties([selectedEntity.value])
+  // Field identity includes the entity because Vue reuses controls on selection changes.
+  // Calls without an originating control remain separate explicit commands.
+  if (target && !inspectorControlIds.has(target)) inspectorControlIds.set(target, ++nextInspectorControlId)
+  const mergeKey = target ? `property:${selectedEntity.value.uuid}:${path ?? 'field'}:${inspectorControlIds.get(target)}` : null
+  pushHistory('Set property', mergeKey)
+}
 function physicsMaterialDocument(uuid: string) { const source = readTextAsset(uuid); if (!source) return null; try { const value = JSON.parse(source) as Record<string, unknown>; return value.format === 'nova-physics-material' ? normalizePhysicsMaterial(value) : null } catch { return null } }
 function physicsMaterialName(uuid: string) { return physicsMaterialDocument(uuid)?.name ?? t('physicsMaterial') }
 function applySelectedPhysicsMaterial() { const entity = selectedEntity.value; if (!entity?.collider.materialAsset) return; const material = physicsMaterialDocument(entity.collider.materialAsset.replace(/^asset:\/\//, '')); if (!material) return; Object.assign(entity.collider.material, material); if (entity.rigidBody.massMode === 'Automatic') entity.rigidBody.density = material.density; onConfigChange() }

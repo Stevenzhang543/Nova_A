@@ -216,11 +216,17 @@ function handleFileSelected(event: Event) {
 function handleKeyDown(event: KeyboardEvent) {
   if (event.defaultPrevented) return
   if (confirmDialogState.visible) return
+  const commandKey = event.ctrlKey || event.metaKey
+  if (commandKey && event.key.toLowerCase() === 's' && !event.isComposing) {
+    event.preventDefault()
+    // Commit blur-based fields before serializing; keep native text editing shortcuts.
+    if (document.activeElement instanceof HTMLElement) document.activeElement.blur()
+    void nextTick().then(handleSave)
+    return
+  }
   const tag = document.activeElement?.tagName
   if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return
-  const commandKey = event.ctrlKey || event.metaKey
-  if (commandKey && event.key.toLowerCase() === 's') { event.preventDefault(); void handleSave() }
-  else if (commandKey && event.shiftKey && event.key.toLowerCase() === 'z') { event.preventDefault(); handleRedo() }
+  if (commandKey && event.shiftKey && event.key.toLowerCase() === 'z') { event.preventDefault(); handleRedo() }
   else if (commandKey && event.key.toLowerCase() === 'z') { event.preventDefault(); handleUndo() }
   else if (commandKey && event.key.toLowerCase() === 'y') { event.preventDefault(); handleRedo() }
   else if (commandKey && event.altKey && event.key.toLowerCase() === 'h') { event.preventDefault(); handleUndoHistory() }

@@ -11,6 +11,7 @@ export interface Preferences {
   lightPalette: ColorPaletteId
   darkPalette: ColorPaletteId
   locale: Locale
+  formLabelLayout: 'auto' | 'stacked'
   uiScale: number
   compactMode: boolean
   reduceMotion: boolean
@@ -44,6 +45,7 @@ const defaults: Preferences = {
   lightPalette: 'cloud-blue',
   darkPalette: 'midnight-blue',
   locale: 'en',
+  formLabelLayout: 'auto',
   uiScale: 1,
   compactMode: false,
   reduceMotion: typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches === true,
@@ -93,6 +95,7 @@ function normalizedPreferences(parsed: Partial<Preferences>, resetLegacyLightCon
     lightPalette: paletteForMode(parsed.lightPalette, 'light'),
     darkPalette: paletteForMode(parsed.darkPalette, 'dark'),
     locale: normalizedLocale(parsed.locale),
+    formLabelLayout: parsed.formLabelLayout === 'stacked' ? 'stacked' : 'auto',
     uiScale: finiteRange(parsed.uiScale, defaults.uiScale, 1, 2),
     compactMode: storedBoolean(parsed.compactMode, defaults.compactMode),
     reduceMotion: storedBoolean(parsed.reduceMotion, defaults.reduceMotion),
@@ -138,6 +141,7 @@ export function applyPreferences(): void {
   const root = document.documentElement
   root.dataset.theme = preferencesState.theme
   root.dataset.palette = paletteForMode(preferencesState.theme === 'light' ? preferencesState.lightPalette : preferencesState.darkPalette, preferencesState.theme)
+  root.dataset.formLabelLayout = preferencesState.formLabelLayout
   root.dataset.compact = String(preferencesState.compactMode)
   root.dataset.reduceMotion = String(preferencesState.reduceMotion)
   root.dataset.highContrast = String(preferencesState.highContrast)

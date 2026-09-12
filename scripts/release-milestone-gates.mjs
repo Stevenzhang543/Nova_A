@@ -109,7 +109,7 @@ export async function executeMilestoneGate(release, gate, settings = {}) {
     case 'history': return runReport('scripts/verify-calendar-history.mjs', `release-audits/v${release}-history-verification.json`, [`--release=${release}`, `--engine=${machineVersion}`])
     case 'templates': return runReport('scripts/verify-template-catalog.mjs', 'release-audits/template-catalog-verification.json')
     case 'layout-contract': return runReport('scripts/verify-calendar-layout-contract.mjs', `release-audits/v${release}-layout-contract.json`, [`--release=${release}`, `--engine=${machineVersion}`])
-    case 'browser-layout': return runReport(release === '26.20' ? 'scripts/qualify-layout-v26.20.mjs' : 'scripts/qualify-layout-v3.3.mjs', `release-audits/v${release}-layout-browser.json`, [], { NOVA_LAYOUT_VERSION: release, NOVA_LAYOUT_ENGINE_VERSION: machineVersion, NOVA_LAYOUT_REQUIRED_VIEWPORTS: '1024x640,1366x768,1920x1080', NOVA_LAYOUT_REQUIRED_SCALES: '1,1.5,2' })
+    case 'browser-layout': return runReport(['26.20','26.21'].includes(release) ? `scripts/qualify-layout-v${release}.mjs` : 'scripts/qualify-layout-v3.3.mjs', `release-audits/v${release}-layout-browser.json`, [], { NOVA_LAYOUT_VERSION: release, NOVA_LAYOUT_ENGINE_VERSION: machineVersion, NOVA_LAYOUT_REQUIRED_VIEWPORTS: '1024x640,1366x768,1920x1080', NOVA_LAYOUT_REQUIRED_SCALES: '1,1.5,2' })
     case 'user-interactions': {
       const report = await runReport('scripts/verify-v6.0.2-interactions.mjs', `release-audits/v${release}-user-interactions.json`, [], { NOVA_INTERACTION_VERSION: release, NOVA_INTERACTION_ENGINE_VERSION: machineVersion, NOVA_INTERACTION_OUTPUT: `v${release}-user-interactions.json` })
       const authoring = settings.authoring ?? (release === '26.12' ? 'scripts/verify-v26.12-authoring.mjs' : '')
@@ -156,7 +156,7 @@ export async function executeMilestoneGate(release, gate, settings = {}) {
       const vueFiles = (await filesBelow(join(root, 'src'))).filter(path => path.endsWith('.vue'))
       if (vueFiles.length < 65) throw new Error('Active Vue panel inventory is unexpectedly incomplete.')
       for (const reference of [currentReference, settings.headlessReference ?? `server-v${release.replace('.', '')}-headless-authority`]) for (const file of ['project.nova', 'README.md', 'expected-output.json', 'test-controls.json']) { const record = await fileRecord(root, `reference-projects/projects/${reference}/${file}`); if (!record.bytes) throw new Error(`Empty current reference file: ${record.path}`) }
-      const pkg = JSON.parse(await readFile(join(root, 'package.json'), 'utf8')), roadmap = await readFile(join(root, 'docs/ROADMAP_26_11_TO_26_20.md'), 'utf8')
+      const pkg = JSON.parse(await readFile(join(root, 'package.json'), 'utf8')), roadmap = await readFile(join(root, Number(release.split('.')[1]) >= 21 ? 'docs/ROADMAP_26_21_TO_26_30.md' : 'docs/ROADMAP_26_11_TO_26_20.md'), 'utf8')
       if (!roadmap.includes(`## ${release}`) || !pkg.scripts['verify:templates']) throw new Error('Current milestone roadmap or template gate is missing.')
       return write('product-audit', 'nova-release-product-audit', { scope: 'Current authority, retained authored panels/references and actual prerequisite reports. Source inventory and command success do not replace independent user observation.', vuePanels: vueFiles, ...summarizeProductEvidence(childReports), externalCertificationComplete: false })
     }

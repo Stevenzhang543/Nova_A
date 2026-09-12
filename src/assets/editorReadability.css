@@ -1,0 +1,62 @@
+/* 26.21: editor forms retain every control and all existing motion. */
+#app .editor-root :is(.config-wrapper, .settings-card) { font-size: calc(13px * var(--ui-scale, 1)); }
+#app .editor-root .settings-card { container: nova-form / inline-size; }
+#app .editor-root .property-control .pair { flex-wrap: wrap; }
+#app .editor-root .property-control .pair > input { flex: 1 1 10ch; min-width: min(100%, 10ch); width: auto; }
+#app .editor-root .number-range { flex-wrap: wrap; }
+#app .editor-root .number-range input[type='number'] { flex: 1 0 10ch; width: 10ch; min-width: min(100%, 10ch); max-width: 100%; }
+#app .editor-root .number-range input[type='range'] { flex: 2 1 12ch; }
+@container nova-inspector (max-width: 32em) {
+  #app .editor-root .property-row { grid-template-columns: minmax(0, 1fr); flex-direction: column; align-items: stretch; }
+  #app .editor-root .property-row > span:first-child { width: auto; max-width: none; white-space: normal; overflow-wrap: anywhere; }
+  #app .editor-root .property-control { width: 100%; min-width: 0; }
+}
+@container nova-form (max-width: 32em) {
+  #app .editor-root .setting-row { flex-direction: column; align-items: stretch; gap: 6px; padding-block: 9px; }
+  #app .editor-root .setting-control { width: 100%; max-width: none; }
+}
+html[data-form-label-layout='stacked'] #app .editor-root :is(.property-row, .setting-row) { grid-template-columns: minmax(0, 1fr); flex-direction: column; align-items: stretch; gap: 6px; padding-block: 9px; }
+html[data-form-label-layout='stacked'] #app .editor-root :is(.property-row > span:first-child, .property-control, .setting-control) { width: 100%; max-width: none; min-width: 0; white-space: normal; }
+
+#app .editor-root .settings-card > p { font-size: calc(12px * var(--ui-scale, 1)); line-height: 1.5; overflow-wrap: anywhere; }
+/* Keep labels, units and inspector discovery controls readable at enlarged text. */
+#app .editor-root .property-row > span:first-child { font-size: calc(12px * var(--ui-scale, 1)); line-height: 1.4; }
+#app .editor-root .property-row > span small { font-size: calc(11px * var(--ui-scale, 1)); }
+#app .editor-root .inspector-search-row input { height: auto; min-height: calc(30px * var(--ui-scale, 1)); }
+#app .editor-root .hierarchy-header > div:first-child { height: auto; min-height: 35px; flex-wrap: wrap; gap: 6px; padding-block: 6px; }
+#app .editor-root .hierarchy-actions { flex-wrap: wrap; margin-inline-start: auto; }
+#app .editor-root .hierarchy-header > .search { height: auto; min-height: calc(29px * var(--ui-scale, 1)); }
+/* Keep entity selection reachable when enlarged filters need more vertical space. */
+#app .editor-root .hierarchy-header { flex-shrink: 1; min-height: 80px; max-height: 50%; overflow: auto; overscroll-behavior: contain; }
+/* Capacity findings from the 26.21 panel audit: keep at least 6 numeric or 12 text characters. */
+#app .editor-root :is(.responsive-tools, .master-controls) label > input[type='number'] { width: calc(8ch + 34px); min-width: min(100%, calc(8ch + 34px)); flex: 0 1 calc(8ch + 34px); }
+#app .editor-root .create-locale { flex-wrap: wrap; min-width: 0; }
+#app .editor-root .create-locale input { width: calc(14ch + 20px); min-width: min(100%, calc(14ch + 20px)); max-width: 100%; }
+#app .editor-root .dependency-editor input { flex: 1 1 calc(14ch + 24px); min-width: min(100%, calc(14ch + 24px)); }
+#app .editor-root .asset-actions-row > input[type='search'] { flex: 1 1 calc(14ch + 20px); min-width: min(100%, calc(14ch + 20px)); }
+#app .editor-root .production-panel .settings-card > label:has(input[maxlength='500']) { display: flex; flex-direction: column; align-items: stretch; }
+#app .editor-root .production-panel .settings-card > label > div:has(input[maxlength='500']) { display: flex; flex-wrap: wrap; }
+#app .editor-root .production-panel .settings-card input[maxlength='500'] { flex: 1 1 calc(14ch + 20px); min-width: min(100%, calc(14ch + 20px)); }
+#app .editor-root .entity-list .entity-item { min-width: calc(10ch + 165px * var(--ui-scale, 1)); font-size: calc(12px * var(--ui-scale, 1)); }
+#app .editor-root .entity-list .name { min-width: 10ch; }
+#app .editor-root .entity-list .name small { font-size: .8em; }
+
+[data-nova-select-detail]:not([hidden]) {
+  position: fixed; z-index: 100000; pointer-events: none;
+  max-width: min(42rem, calc(100vw - 16px)); max-height: calc(100vh - 16px);
+  padding: 8px 12px; border: 1px solid var(--border-subtle); border-radius: 8px;
+  background: var(--surface-popover); color: var(--text-primary);
+  box-shadow: 0 4px 18px #0005; font-size: calc(12px * var(--ui-scale, 1));
+  line-height: 1.5; white-space: normal; overflow-wrap: anywhere;
+}
+
+#app .editor-root { --context-rail-width: calc(8 * var(--type-caption) + 28px); }
+@media (max-width: 720px) { #app .editor-root { --context-rail-width: 56px; } }
+/* Floating docks are bounded by the editor area below its toolbars. */
+#app .editor-root .floating-dock:not(.floating-maximized) { max-height: calc(100% - 60px); }
+
+
+/* Paired profiler budgets need full rows at enlarged text. */
+#app .editor-root .production-panel .settings-card > label:has(> div > input[type="number"] + input[type="number"]) { flex-direction: column; align-items: stretch; }
+#app .editor-root .production-panel .settings-card > label > div:has(> input[type="number"] + input[type="number"]) { display: flex; flex-wrap: wrap; gap: 8px; width: 100%; }
+#app .editor-root .production-panel .settings-card > label > div > input[type="number"] { flex: 1 1 calc(8ch + 34px); width: auto; min-width: min(100%, calc(8ch + 34px)); }
