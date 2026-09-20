@@ -2,7 +2,9 @@
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
   "description": "Capability for the main window",
-  "windows": ["main"],
+  "windows": [
+    "main"
+  ],
   "permissions": [
     "core:default",
     "core:window:allow-set-fullscreen",
@@ -21,6 +23,9 @@
         },
         {
           "url": "https://github.com/Stevenzhang543/Nova_A/security"
+        },
+        {
+          "url": "https://whitelists.top/"
         }
       ]
     }

@@ -1,4 +1,4 @@
-import { reactive } from 'vue'
+import { reactive, toRaw } from 'vue'
 import { productionSettings } from './production'
 import { NOVA_ENGINE_VERSION } from '../projects/projectFormat'
 
@@ -77,13 +77,15 @@ export const profilerState = reactive({
 
 const functionProfiles = new Map<string, ScriptFunctionProfile>()
 let markerSerial = 1
+let captureGeneration = 0
 
 export function beginProfilerMarker(name: string, category = 'custom', detail = ''): () => void {
   if (!profilerState.enabled || profilerState.frozen || profilerState.overheadMode === 'Off') return () => undefined
-  const start = performance.now(), frame = profilerState.current.frame
-  return () => { const marker: ProfilerMarker = { id: markerSerial++, frame, name: name.slice(0, 120), category: category.slice(0, 80), startMs: start, durationMs: Math.max(0, performance.now() - start), detail: detail.slice(0, 500) }; profilerState.markers.push(marker); if (profilerState.markers.length > 10_000) profilerState.markers.splice(0, profilerState.markers.length - 10_000) }
+  const start = performance.now(), frame = profilerState.current.frame, generation = captureGeneration
+  let completed = false
+  return () => { if (completed || generation !== captureGeneration || !profilerState.enabled || profilerState.frozen || profilerState.overheadMode === 'Off') return; completed = true; const marker: ProfilerMarker = { id: markerSerial++, frame, name: name.slice(0, 120), category: category.slice(0, 80), startMs: start, durationMs: Math.max(0, performance.now() - start), detail: detail.slice(0, 500) }; profilerState.markers.push(marker); if (profilerState.markers.length > 10_000) profilerState.markers = toRaw(profilerState.markers).slice(-10_000) }
 }
-export function recordProfilerCounter(name: string, value: number, unit = ''): void { if (!Number.isFinite(value) || profilerState.overheadMode === 'Off') return; profilerState.counters.push({ frame: profilerState.current.frame, name: name.slice(0, 120), value, unit: unit.slice(0, 24) }); if (profilerState.counters.length > 10_000) profilerState.counters.splice(0, profilerState.counters.length - 10_000) }
+export function recordProfilerCounter(name: string, value: number, unit = ''): void { if (!profilerState.enabled || profilerState.frozen || !Number.isFinite(value) || profilerState.overheadMode === 'Off') return; profilerState.counters.push({ frame: profilerState.current.frame, name: name.slice(0, 120), value, unit: unit.slice(0, 24) }); if (profilerState.counters.length > 10_000) profilerState.counters = toRaw(profilerState.counters).slice(-10_000) }
 export function addProfilerAnnotation(text: string): void { const value = text.trim().slice(0, 500); if (!value) return; profilerState.annotations.push({ frame: profilerState.current.frame, createdAt: new Date().toISOString(), text: value }); profilerState.annotations.splice(128) }
 
 export function recordScriptFunction(scriptUuid: string, scriptName: string, functionName: string, durationMs: number, allocationEstimateBytes: number): void {
@@ -119,16 +121,17 @@ export function recordFrameProfile(sample: Omit<FrameProfile, 'frame' | 'timesta
   if (profilerState.overheadMode === 'Full') {
     let cursor = next.timestamp - next.frameMs
     for (const [name, duration] of [['input', next.inputMs], ['physics', next.physicsMs], ['scripts', next.scriptsMs], ['animation', next.animationMs], ['audio', next.audioMs], ['rendering', next.renderingMs], ['assets', next.assetsMs], ['other', next.otherMs]] as Array<[string, number]>) { if (duration > 0) profilerState.markers.push({ id: markerSerial++, frame: next.frame, name, category: 'frame', startMs: cursor, durationMs: duration, detail: `Frame ${next.frame}` }); cursor += duration }
-    if (profilerState.markers.length > 10_000) profilerState.markers.splice(0, profilerState.markers.length - 10_000)
+    if (profilerState.markers.length > 10_000) profilerState.markers = toRaw(profilerState.markers).slice(-10_000)
   }
-  profilerState.counters.push({ frame: next.frame, name: 'fps', value: next.fps, unit: 'Hz' }, { frame: next.frame, name: 'allocations', value: next.allocations, unit: 'count' }, { frame: next.frame, name: 'gpuPasses', value: next.gpuPasses, unit: 'count' }); if (next.memoryMb !== null) profilerState.counters.push({ frame: next.frame, name: 'memory', value: next.memoryMb, unit: 'MB' }); if (profilerState.counters.length > 10_000) profilerState.counters.splice(0, profilerState.counters.length - 10_000)
+  profilerState.counters.push({ frame: next.frame, name: 'fps', value: next.fps, unit: 'Hz' }, { frame: next.frame, name: 'allocations', value: next.allocations, unit: 'count' }, { frame: next.frame, name: 'gpuPasses', value: next.gpuPasses, unit: 'count' }); if (next.memoryMb !== null) profilerState.counters.push({ frame: next.frame, name: 'memory', value: next.memoryMb, unit: 'MB' }); if (profilerState.counters.length > 10_000) profilerState.counters = toRaw(profilerState.counters).slice(-10_000)
   profilerState.estimatedOverheadPercent = profilerState.overheadMode === 'Full' ? Math.min(25, .25 + profilerState.markers.length / 50_000 + profilerState.counters.length / 100_000) : .08
   profilerState.capacity = productionSettings.performance.traceCapacity
-  if (profilerState.samples.length > profilerState.capacity) profilerState.samples.splice(0, profilerState.samples.length - profilerState.capacity)
+  if (profilerState.samples.length > profilerState.capacity) profilerState.samples = toRaw(profilerState.samples).slice(-profilerState.capacity)
   return next
 }
 
 export function clearProfiler(): void {
+  captureGeneration++
   profilerState.samples.splice(0)
   profilerState.scriptFunctions.splice(0)
   profilerState.markers.splice(0); profilerState.counters.splice(0); profilerState.annotations.splice(0)

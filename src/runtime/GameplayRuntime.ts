@@ -43,7 +43,7 @@ import { beginProductionRuntime, callProductionRpc, onProductionRemoteInput, onP
 import { recordScriptFunction } from './profiler'
 import { synchronizePerformanceWorld } from './largeWorldPerformance'
 import type { ScriptBreakpointMetadata } from '../assets/types'
-import { commitHotReload, completeHotReloadRollback, peekHotReloadRollback, prepareHotReload, rejectHotReload } from './scriptHotReload'
+import { clearHotReloadSession, commitHotReload, completeHotReloadRollback, peekHotReloadRollback, prepareHotReload, rejectHotReload } from './scriptHotReload'
 import { recordScriptCoverage, resetScriptCoverage } from './scriptCoverage'
 import { executableGraphSource } from '../visual/graphCompiler'
 import {
@@ -542,6 +542,7 @@ export class GameplayRuntime {
     this.pendingDebugInvocation = null
     this.pendingGraphExecution = null
     this.scriptRuntime?.free(); this.scriptRuntime = null
+    clearHotReloadSession()
     clearScriptDebugger()
     clearGraphPause()
     if (log) addEditorLog('Gameplay runtime stopped', 'Runtime')
@@ -615,6 +616,9 @@ export class GameplayRuntime {
   }
 
   queueHotReload(scriptUuid: string, source: string): void {
+    // A newer request supersedes even a previously valid queued draft.
+    this.pendingReloads.delete(scriptUuid)
+    this.pendingRollbackHistory.delete(scriptUuid)
     if (!scriptProjectSettings.hotReloadEnabled) {
       scriptDebugState.hotReload = { status: 'disabled', scriptUuid, message: 'Project hot reload is disabled', frame: this.time.value.frame }
       return
@@ -630,6 +634,9 @@ export class GameplayRuntime {
   }
 
   queueGraphHotReload(scriptUuid: string, candidateSource: string, previousSource: string): void {
+    // A newer request supersedes even a previously valid queued draft.
+    this.pendingReloads.delete(scriptUuid)
+    this.pendingRollbackHistory.delete(scriptUuid)
     if (!scriptProjectSettings.hotReloadEnabled) {
       scriptDebugState.hotReload = { status: 'disabled', scriptUuid, message: 'Project hot reload is disabled', frame: this.time.value.frame }
       return
@@ -1388,11 +1395,12 @@ export class GameplayRuntime {
         const previousSource = this.compiledSources.get(uuid) ?? this.resolveScriptBundle(uuid, priorDocuments) ?? source
         candidates.set(uuid, { source, previousSource, previousDocument: this.compiledDocuments.get(uuid) ?? priorDocuments.get(uuid) ?? readTextAsset(uuid) ?? previousSource, documents, contract, names: new Set(Object.keys(analyzeScript(source).functions)), recreate: asset.script?.reloadPolicy === 'recreate', exports: [] })
       }
-      // A separate complete cache is prepared; one failed compile cannot replace any live AST.
+      // Candidate cache shares immutable old programs; changed ASTs are isolated until commit.
       const nextSources = new Map(this.compiledSources)
       for (const [uuid, candidate] of candidates) nextSources.set(uuid, candidate.source)
-      candidateRuntime = new WasmScriptRuntime()
-      for (const [uuid, source] of nextSources) {
+      candidateRuntime = this.scriptRuntime?.fork() ?? new WasmScriptRuntime()
+      const compileSources = this.scriptRuntime ? new Map([...candidates].map(([uuid, candidate]) => [uuid, candidate.source])) : nextSources
+      for (const [uuid, source] of compileSources) {
         const exports = JSON.parse(candidateRuntime.compile_cached(uuid, source)) as ExportedProperty[]
         const candidate = candidates.get(uuid)
         if (candidate) candidate.exports = exports

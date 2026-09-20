@@ -66,6 +66,10 @@ export class DocumentMutationCommand implements EditorCommand {
     if (!(next instanceof DocumentMutationCommand)
       || this.mergeKey === null
       || next.mergeKey !== this.mergeKey
+      || next.affectedResource !== this.affectedResource
+      || next.scope !== this.scope
+      || next.beforeDocument !== this.afterDocument
+      || next.committedAt < this.committedAt
       || next.committedAt - this.committedAt > 900) return false
     this.afterDocument = next.afterDocument
     this.committedAt = next.committedAt
@@ -84,9 +88,23 @@ export class CompositeCommand implements EditorCommand {
     this.affectedResource = [...new Set(commands.map(item => item.affectedResource).filter(Boolean))].join(', ').slice(0, 240) || 'project.nova'
     this.scope = [...new Set(commands.map(item => item.scope).filter(Boolean))].join(',').slice(0, 40) || 'project'
   }
-  execute(): void { this.commands.forEach(item => item.execute()) }
-  undo(): void { [...this.commands].reverse().forEach(item => item.undo()) }
-  redo(): void { this.execute() }
+  private apply(direction: 'execute' | 'undo' | 'redo'): void {
+    const completed: EditorCommand[] = []
+    const ordered = direction === 'undo' ? [...this.commands].reverse() : this.commands
+    try {
+      for (const command of ordered) { command[direction](); completed.push(command) }
+    } catch (error) {
+      const failures: unknown[] = [error]
+      for (const command of completed.reverse()) {
+        try { direction === 'undo' ? command.redo() : command.undo() } catch (rollbackError) { failures.push(rollbackError) }
+      }
+      if (failures.length > 1) throw Object.assign(new Error('Grouped edit and rollback failed.'), {errors: failures})
+      throw error
+    }
+  }
+  execute(): void { this.apply('execute') }
+  undo(): void { this.apply('undo') }
+  redo(): void { this.apply('redo') }
   merge(): boolean { return false }
   get byteSize(): number { return this.commands.reduce((sum, item) => sum + (item.byteSize ?? 0), 0) }
 }
@@ -131,11 +149,7 @@ export class CommandHistory {
     if (this.groups.length) { this.groups[this.groups.length - 1].commands.push(command); return }
     this.commands = this.commands.slice(0, this.cursor + 1)
     const previous = this.commands[this.commands.length - 1]
-    if (previous?.merge(command)) {
-      this.cursor = this.commands.length - 1
-      return
-    }
-    this.commands.push(command)
+    if (!previous?.merge(command)) this.commands.push(command)
     while (this.commands.length > this.maximumLength || this.memoryBytes > this.memoryBudgetBytes && this.commands.length > 1) this.commands.shift()
     this.cursor = this.commands.length - 1
   }
@@ -146,30 +160,31 @@ export class CommandHistory {
   endGroup(): boolean {
     const group = this.groups.pop()
     if (!group || !group.commands.length) return false
-    const command = group.commands.length === 1 ? group.commands[0] : new CompositeCommand(group.label, group.commands)
+    const command = new CompositeCommand(group.label, group.commands)
     if (this.groups.length) this.groups[this.groups.length - 1].commands.push(command)
     else this.commit(command, true)
     return true
   }
 
   cancelGroup(): boolean {
-    const group = this.groups.pop()
+    const group = this.groups[this.groups.length - 1]
     if (!group) return false
-    ;[...group.commands].reverse().forEach(command => command.undo())
+    new CompositeCommand(group.label, group.commands).undo()
+    this.groups.pop()
     return true
   }
 
   undo(): boolean {
-    if (!this.canUndo) return false
+    if (this.groups.length || !this.canUndo) return false
     this.commands[this.cursor].undo()
     this.cursor--
     return true
   }
 
   redo(): boolean {
-    if (!this.canRedo) return false
+    if (this.groups.length || !this.canRedo) return false
+    this.commands[this.cursor + 1].redo()
     this.cursor++
-    this.commands[this.cursor].redo()
     return true
   }
 

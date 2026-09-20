@@ -68,7 +68,8 @@ export function normalizeProjectManifest(value: unknown, metadata: ProjectMetada
       maximumExclusive: typeof compatibility.maximumExclusive === 'string' ? (['4.0.0', '5.0.0', '6.0.0', '7.0.0', '8.0.0'].includes(compatibility.maximumExclusive) ? '27.0.0' : compatibility.maximumExclusive.slice(0, 40)) : '27.0.0'
     },
     schemaVersion: NOVA_PROJECT_SCHEMA_VERSION,
-    packageLockfile: safePath(source.packageLockfile, 'Packages.lock'),
+    // The format validator and every folder/transaction writer use this fixed path.
+    packageLockfile: 'Packages.lock',
     buildPresets: buildPresets.length ? buildPresets : ['ProjectSettings/build.presets.json'],
     directories: {
       source: safePath(directories.source, DEFAULT_PROJECT_DIRECTORIES.source),

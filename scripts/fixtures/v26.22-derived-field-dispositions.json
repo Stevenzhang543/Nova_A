@@ -1,0 +1,4074 @@
+[
+  {
+    "id": "src/world/components.ts#ScriptPropertyMetadata.name",
+    "source": "src/world/components.ts",
+    "declaration": "ScriptPropertyMetadata",
+    "field": "name",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Derived by GameplayRuntime.synchronizeExports from Rhai declarations; authored source and instance property values have separate lifecycle rows."
+  },
+  {
+    "id": "src/world/components.ts#ScriptPropertyMetadata.valueType",
+    "source": "src/world/components.ts",
+    "declaration": "ScriptPropertyMetadata",
+    "field": "valueType",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Derived by GameplayRuntime.synchronizeExports from Rhai declarations; authored source and instance property values have separate lifecycle rows."
+  },
+  {
+    "id": "src/world/components.ts#ScriptPropertyMetadata.defaultValue",
+    "source": "src/world/components.ts",
+    "declaration": "ScriptPropertyMetadata",
+    "field": "defaultValue",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Derived by GameplayRuntime.synchronizeExports from Rhai declarations; authored source and instance property values have separate lifecycle rows."
+  },
+  {
+    "id": "src/world/components.ts#ScriptPropertyMetadata.minimum",
+    "source": "src/world/components.ts",
+    "declaration": "ScriptPropertyMetadata",
+    "field": "minimum",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Derived by GameplayRuntime.synchronizeExports from Rhai declarations; authored source and instance property values have separate lifecycle rows."
+  },
+  {
+    "id": "src/world/components.ts#ScriptPropertyMetadata.maximum",
+    "source": "src/world/components.ts",
+    "declaration": "ScriptPropertyMetadata",
+    "field": "maximum",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Derived by GameplayRuntime.synchronizeExports from Rhai declarations; authored source and instance property values have separate lifecycle rows."
+  },
+  {
+    "id": "src/world/components.ts#ScriptPropertyMetadata.step",
+    "source": "src/world/components.ts",
+    "declaration": "ScriptPropertyMetadata",
+    "field": "step",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Derived by GameplayRuntime.synchronizeExports from Rhai declarations; authored source and instance property values have separate lifecycle rows."
+  },
+  {
+    "id": "src/world/components.ts#ScriptPropertyMetadata.enumValues",
+    "source": "src/world/components.ts",
+    "declaration": "ScriptPropertyMetadata",
+    "field": "enumValues",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Derived by GameplayRuntime.synchronizeExports from Rhai declarations; authored source and instance property values have separate lifecycle rows."
+  },
+  {
+    "id": "src/world/components.ts#ScriptPropertyMetadata.resourceType",
+    "source": "src/world/components.ts",
+    "declaration": "ScriptPropertyMetadata",
+    "field": "resourceType",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Derived by GameplayRuntime.synchronizeExports from Rhai declarations; authored source and instance property values have separate lifecycle rows."
+  },
+  {
+    "id": "src/world/components.ts#ScriptPropertyMetadata.group",
+    "source": "src/world/components.ts",
+    "declaration": "ScriptPropertyMetadata",
+    "field": "group",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Derived by GameplayRuntime.synchronizeExports from Rhai declarations; authored source and instance property values have separate lifecycle rows."
+  },
+  {
+    "id": "src/world/components.ts#ScriptPropertyMetadata.tooltip",
+    "source": "src/world/components.ts",
+    "declaration": "ScriptPropertyMetadata",
+    "field": "tooltip",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Derived by GameplayRuntime.synchronizeExports from Rhai declarations; authored source and instance property values have separate lifecycle rows."
+  },
+  {
+    "id": "src/world/components.ts#ScriptPropertyMetadata.serialized",
+    "source": "src/world/components.ts",
+    "declaration": "ScriptPropertyMetadata",
+    "field": "serialized",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Derived by GameplayRuntime.synchronizeExports from Rhai declarations; authored source and instance property values have separate lifecycle rows."
+  },
+  {
+    "id": "src/editor/sceneAuthoring.ts#AuthoringValidationIssue.severity",
+    "source": "src/editor/sceneAuthoring.ts",
+    "declaration": "AuthoringValidationIssue",
+    "field": "severity",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Generated scene validation diagnostic; not an editable scene field."
+  },
+  {
+    "id": "src/editor/sceneAuthoring.ts#AuthoringValidationIssue.code",
+    "source": "src/editor/sceneAuthoring.ts",
+    "declaration": "AuthoringValidationIssue",
+    "field": "code",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Generated scene validation diagnostic; not an editable scene field."
+  },
+  {
+    "id": "src/editor/sceneAuthoring.ts#AuthoringValidationIssue.entityUuid",
+    "source": "src/editor/sceneAuthoring.ts",
+    "declaration": "AuthoringValidationIssue",
+    "field": "entityUuid",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Generated scene validation diagnostic; not an editable scene field."
+  },
+  {
+    "id": "src/editor/sceneAuthoring.ts#AuthoringValidationIssue.component",
+    "source": "src/editor/sceneAuthoring.ts",
+    "declaration": "AuthoringValidationIssue",
+    "field": "component",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Generated scene validation diagnostic; not an editable scene field."
+  },
+  {
+    "id": "src/editor/sceneAuthoring.ts#AuthoringValidationIssue.message",
+    "source": "src/editor/sceneAuthoring.ts",
+    "declaration": "AuthoringValidationIssue",
+    "field": "message",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Generated scene validation diagnostic; not an editable scene field."
+  },
+  {
+    "id": "src/editor/sceneAuthoring.ts#AuthoringValidationIssue.fix",
+    "source": "src/editor/sceneAuthoring.ts",
+    "declaration": "AuthoringValidationIssue",
+    "field": "fix",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Generated scene validation diagnostic; not an editable scene field."
+  },
+  {
+    "id": "src/editor/sceneAuthoring.ts#ComponentAuthoringRule.required",
+    "source": "src/editor/sceneAuthoring.ts",
+    "declaration": "ComponentAuthoringRule",
+    "field": "required",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Static component authoring contract used to validate component combinations; not project data."
+  },
+  {
+    "id": "src/editor/sceneAuthoring.ts#ComponentAuthoringRule.conflicts",
+    "source": "src/editor/sceneAuthoring.ts",
+    "declaration": "ComponentAuthoringRule",
+    "field": "conflicts",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Static component authoring contract used to validate component combinations; not project data."
+  },
+  {
+    "id": "src/editor/sceneAuthoring.ts#ComponentAuthoringRule.documentation",
+    "source": "src/editor/sceneAuthoring.ts",
+    "declaration": "ComponentAuthoringRule",
+    "field": "documentation",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Static component authoring contract used to validate component combinations; not project data."
+  },
+  {
+    "id": "src/editor/sceneAuthoring.ts#ComponentAuthoringRule.allowMultiple",
+    "source": "src/editor/sceneAuthoring.ts",
+    "declaration": "ComponentAuthoringRule",
+    "field": "allowMultiple",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Static component authoring contract used to validate component combinations; not project data."
+  },
+  {
+    "id": "src/renderer/materials.ts#ShaderDiagnostic.line",
+    "source": "src/renderer/materials.ts",
+    "declaration": "ShaderDiagnostic",
+    "field": "line",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Generated shader compiler diagnostic; source shader text is the authored resource."
+  },
+  {
+    "id": "src/renderer/materials.ts#ShaderDiagnostic.severity",
+    "source": "src/renderer/materials.ts",
+    "declaration": "ShaderDiagnostic",
+    "field": "severity",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Generated shader compiler diagnostic; source shader text is the authored resource."
+  },
+  {
+    "id": "src/renderer/materials.ts#ShaderDiagnostic.message",
+    "source": "src/renderer/materials.ts",
+    "declaration": "ShaderDiagnostic",
+    "field": "message",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Generated shader compiler diagnostic; source shader text is the authored resource."
+  },
+  {
+    "id": "src/renderer/materials.ts#ShaderDiagnostic.source",
+    "source": "src/renderer/materials.ts",
+    "declaration": "ShaderDiagnostic",
+    "field": "source",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Generated shader compiler diagnostic; source shader text is the authored resource."
+  },
+  {
+    "id": "src/renderer/materials.ts#MaterialFallbackEvent.reference",
+    "source": "src/renderer/materials.ts",
+    "declaration": "MaterialFallbackEvent",
+    "field": "reference",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Runtime fallback observation with occurrence time; not authored material data."
+  },
+  {
+    "id": "src/renderer/materials.ts#MaterialFallbackEvent.reason",
+    "source": "src/renderer/materials.ts",
+    "declaration": "MaterialFallbackEvent",
+    "field": "reason",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Runtime fallback observation with occurrence time; not authored material data."
+  },
+  {
+    "id": "src/renderer/materials.ts#MaterialFallbackEvent.occurredAt",
+    "source": "src/renderer/materials.ts",
+    "declaration": "MaterialFallbackEvent",
+    "field": "occurredAt",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Runtime fallback observation with occurrence time; not authored material data."
+  },
+  {
+    "id": "src/renderer/materials.ts#MaterialFallbackEvent.actionableFix",
+    "source": "src/renderer/materials.ts",
+    "declaration": "MaterialFallbackEvent",
+    "field": "actionableFix",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Runtime fallback observation with occurrence time; not authored material data."
+  },
+  {
+    "id": "src/renderer/materialGraph.ts#MaterialGraphDiagnostic.severity",
+    "source": "src/renderer/materialGraph.ts",
+    "declaration": "MaterialGraphDiagnostic",
+    "field": "severity",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Generated graph validation finding; graph nodes and edges remain authored separately."
+  },
+  {
+    "id": "src/renderer/materialGraph.ts#MaterialGraphDiagnostic.nodeUuid",
+    "source": "src/renderer/materialGraph.ts",
+    "declaration": "MaterialGraphDiagnostic",
+    "field": "nodeUuid",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Generated graph validation finding; graph nodes and edges remain authored separately."
+  },
+  {
+    "id": "src/renderer/materialGraph.ts#MaterialGraphDiagnostic.message",
+    "source": "src/renderer/materialGraph.ts",
+    "declaration": "MaterialGraphDiagnostic",
+    "field": "message",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Generated graph validation finding; graph nodes and edges remain authored separately."
+  },
+  {
+    "id": "src/renderer/materialGraph.ts#MaterialCapabilityPreview.backend",
+    "source": "src/renderer/materialGraph.ts",
+    "declaration": "MaterialCapabilityPreview",
+    "field": "backend",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Computed renderer capability preview; authored graph and backend selection remain separate."
+  },
+  {
+    "id": "src/renderer/materialGraph.ts#MaterialCapabilityPreview.supportedNodes",
+    "source": "src/renderer/materialGraph.ts",
+    "declaration": "MaterialCapabilityPreview",
+    "field": "supportedNodes",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Computed renderer capability preview; authored graph and backend selection remain separate."
+  },
+  {
+    "id": "src/renderer/materialGraph.ts#MaterialCapabilityPreview.fallbackNodes",
+    "source": "src/renderer/materialGraph.ts",
+    "declaration": "MaterialCapabilityPreview",
+    "field": "fallbackNodes",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Computed renderer capability preview; authored graph and backend selection remain separate."
+  },
+  {
+    "id": "src/renderer/materialGraph.ts#MaterialCapabilityPreview.gpuCost",
+    "source": "src/renderer/materialGraph.ts",
+    "declaration": "MaterialCapabilityPreview",
+    "field": "gpuCost",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Computed renderer capability preview; authored graph and backend selection remain separate."
+  },
+  {
+    "id": "src/renderer/materialGraph.ts#MaterialCapabilityPreview.recommendation",
+    "source": "src/renderer/materialGraph.ts",
+    "declaration": "MaterialCapabilityPreview",
+    "field": "recommendation",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Computed renderer capability preview; authored graph and backend selection remain separate."
+  },
+  {
+    "id": "src/runtime/input.ts#InputSnapshot.down",
+    "source": "src/runtime/input.ts",
+    "declaration": "InputSnapshot",
+    "field": "down",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Sampled runtime input state; action maps and captured recordings have separate owners."
+  },
+  {
+    "id": "src/runtime/input.ts#InputSnapshot.pressed",
+    "source": "src/runtime/input.ts",
+    "declaration": "InputSnapshot",
+    "field": "pressed",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Sampled runtime input state; action maps and captured recordings have separate owners."
+  },
+  {
+    "id": "src/runtime/input.ts#InputSnapshot.released",
+    "source": "src/runtime/input.ts",
+    "declaration": "InputSnapshot",
+    "field": "released",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Sampled runtime input state; action maps and captured recordings have separate owners."
+  },
+  {
+    "id": "src/runtime/input.ts#InputSnapshot.performed",
+    "source": "src/runtime/input.ts",
+    "declaration": "InputSnapshot",
+    "field": "performed",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Sampled runtime input state; action maps and captured recordings have separate owners."
+  },
+  {
+    "id": "src/runtime/input.ts#InputSnapshot.cancelled",
+    "source": "src/runtime/input.ts",
+    "declaration": "InputSnapshot",
+    "field": "cancelled",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Sampled runtime input state; action maps and captured recordings have separate owners."
+  },
+  {
+    "id": "src/runtime/input.ts#InputSnapshot.phases",
+    "source": "src/runtime/input.ts",
+    "declaration": "InputSnapshot",
+    "field": "phases",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Sampled runtime input state; action maps and captured recordings have separate owners."
+  },
+  {
+    "id": "src/runtime/input.ts#InputSnapshot.durations",
+    "source": "src/runtime/input.ts",
+    "declaration": "InputSnapshot",
+    "field": "durations",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Sampled runtime input state; action maps and captured recordings have separate owners."
+  },
+  {
+    "id": "src/runtime/input.ts#InputSnapshot.tapCounts",
+    "source": "src/runtime/input.ts",
+    "declaration": "InputSnapshot",
+    "field": "tapCounts",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Sampled runtime input state; action maps and captured recordings have separate owners."
+  },
+  {
+    "id": "src/runtime/input.ts#InputSnapshot.consumed",
+    "source": "src/runtime/input.ts",
+    "declaration": "InputSnapshot",
+    "field": "consumed",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Sampled runtime input state; action maps and captured recordings have separate owners."
+  },
+  {
+    "id": "src/runtime/input.ts#InputSnapshot.axes",
+    "source": "src/runtime/input.ts",
+    "declaration": "InputSnapshot",
+    "field": "axes",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Sampled runtime input state; action maps and captured recordings have separate owners."
+  },
+  {
+    "id": "src/runtime/input.ts#InputSnapshot.vectors",
+    "source": "src/runtime/input.ts",
+    "declaration": "InputSnapshot",
+    "field": "vectors",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Sampled runtime input state; action maps and captured recordings have separate owners."
+  },
+  {
+    "id": "src/runtime/input.ts#InputSnapshot.mousePosition",
+    "source": "src/runtime/input.ts",
+    "declaration": "InputSnapshot",
+    "field": "mousePosition",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Sampled runtime input state; action maps and captured recordings have separate owners."
+  },
+  {
+    "id": "src/runtime/input.ts#InputSnapshot.mouseWorldPosition",
+    "source": "src/runtime/input.ts",
+    "declaration": "InputSnapshot",
+    "field": "mouseWorldPosition",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Sampled runtime input state; action maps and captured recordings have separate owners."
+  },
+  {
+    "id": "src/runtime/input.ts#InputSnapshot.viewBounds",
+    "source": "src/runtime/input.ts",
+    "declaration": "InputSnapshot",
+    "field": "viewBounds",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Sampled runtime input state; action maps and captured recordings have separate owners."
+  },
+  {
+    "id": "src/runtime/input.ts#InputSnapshot.viewportSize",
+    "source": "src/runtime/input.ts",
+    "declaration": "InputSnapshot",
+    "field": "viewportSize",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Sampled runtime input state; action maps and captured recordings have separate owners."
+  },
+  {
+    "id": "src/runtime/input.ts#InputSnapshot.wheel",
+    "source": "src/runtime/input.ts",
+    "declaration": "InputSnapshot",
+    "field": "wheel",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Sampled runtime input state; action maps and captured recordings have separate owners."
+  },
+  {
+    "id": "src/runtime/input.ts#InputSnapshot.pointerDelta",
+    "source": "src/runtime/input.ts",
+    "declaration": "InputSnapshot",
+    "field": "pointerDelta",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Sampled runtime input state; action maps and captured recordings have separate owners."
+  },
+  {
+    "id": "src/runtime/input.ts#InputSnapshot.touches",
+    "source": "src/runtime/input.ts",
+    "declaration": "InputSnapshot",
+    "field": "touches",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Sampled runtime input state; action maps and captured recordings have separate owners."
+  },
+  {
+    "id": "src/runtime/input.ts#InputSnapshot.devices",
+    "source": "src/runtime/input.ts",
+    "declaration": "InputSnapshot",
+    "field": "devices",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Sampled runtime input state; action maps and captured recordings have separate owners."
+  },
+  {
+    "id": "src/runtime/input.ts#InputSnapshot.contexts",
+    "source": "src/runtime/input.ts",
+    "declaration": "InputSnapshot",
+    "field": "contexts",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Sampled runtime input state; action maps and captured recordings have separate owners."
+  },
+  {
+    "id": "src/runtime/input.ts#InputSnapshot.maps",
+    "source": "src/runtime/input.ts",
+    "declaration": "InputSnapshot",
+    "field": "maps",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Sampled runtime input state; action maps and captured recordings have separate owners."
+  },
+  {
+    "id": "src/runtime/input.ts#InputSnapshot.scheme",
+    "source": "src/runtime/input.ts",
+    "declaration": "InputSnapshot",
+    "field": "scheme",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Sampled runtime input state; action maps and captured recordings have separate owners."
+  },
+  {
+    "id": "src/runtime/input.ts#InputDeviceIdentity.id",
+    "source": "src/runtime/input.ts",
+    "declaration": "InputDeviceIdentity",
+    "field": "id",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Discovered device identity and connection state; not a project-authored device definition."
+  },
+  {
+    "id": "src/runtime/input.ts#InputDeviceIdentity.kind",
+    "source": "src/runtime/input.ts",
+    "declaration": "InputDeviceIdentity",
+    "field": "kind",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Discovered device identity and connection state; not a project-authored device definition."
+  },
+  {
+    "id": "src/runtime/input.ts#InputDeviceIdentity.index",
+    "source": "src/runtime/input.ts",
+    "declaration": "InputDeviceIdentity",
+    "field": "index",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Discovered device identity and connection state; not a project-authored device definition."
+  },
+  {
+    "id": "src/runtime/input.ts#InputDeviceIdentity.connected",
+    "source": "src/runtime/input.ts",
+    "declaration": "InputDeviceIdentity",
+    "field": "connected",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Discovered device identity and connection state; not a project-authored device definition."
+  },
+  {
+    "id": "src/runtime/input.ts#InputDeviceIdentity.mapping",
+    "source": "src/runtime/input.ts",
+    "declaration": "InputDeviceIdentity",
+    "field": "mapping",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Discovered device identity and connection state; not a project-authored device definition."
+  },
+  {
+    "id": "src/runtime/input.ts#InputConflict.signature",
+    "source": "src/runtime/input.ts",
+    "declaration": "InputConflict",
+    "field": "signature",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Computed action binding conflict diagnostic; bindings remain authored separately."
+  },
+  {
+    "id": "src/runtime/input.ts#InputConflict.action",
+    "source": "src/runtime/input.ts",
+    "declaration": "InputConflict",
+    "field": "action",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Computed action binding conflict diagnostic; bindings remain authored separately."
+  },
+  {
+    "id": "src/runtime/input.ts#InputConflict.bindingIndex",
+    "source": "src/runtime/input.ts",
+    "declaration": "InputConflict",
+    "field": "bindingIndex",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Computed action binding conflict diagnostic; bindings remain authored separately."
+  },
+  {
+    "id": "src/runtime/input.ts#InputConflict.conflictsWithAction",
+    "source": "src/runtime/input.ts",
+    "declaration": "InputConflict",
+    "field": "conflictsWithAction",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Computed action binding conflict diagnostic; bindings remain authored separately."
+  },
+  {
+    "id": "src/runtime/input.ts#InputConflict.conflictsWithBindingIndex",
+    "source": "src/runtime/input.ts",
+    "declaration": "InputConflict",
+    "field": "conflictsWithBindingIndex",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Computed action binding conflict diagnostic; bindings remain authored separately."
+  },
+  {
+    "id": "src/runtime/input.ts#InputRecordingFrame.time",
+    "source": "src/runtime/input.ts",
+    "declaration": "InputRecordingFrame",
+    "field": "time",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Generated sampled recording frame, not an independently authored input-map field."
+  },
+  {
+    "id": "src/runtime/input.ts#InputRecordingFrame.snapshot",
+    "source": "src/runtime/input.ts",
+    "declaration": "InputRecordingFrame",
+    "field": "snapshot",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Generated sampled recording frame, not an independently authored input-map field."
+  },
+  {
+    "id": "src/runtime/input.ts#InputRecording.version",
+    "source": "src/runtime/input.ts",
+    "declaration": "InputRecording",
+    "field": "version",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Generated recording transport document; capture/replay operations own its lifecycle."
+  },
+  {
+    "id": "src/runtime/input.ts#InputRecording.duration",
+    "source": "src/runtime/input.ts",
+    "declaration": "InputRecording",
+    "field": "duration",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Generated recording transport document; capture/replay operations own its lifecycle."
+  },
+  {
+    "id": "src/runtime/input.ts#InputRecording.frames",
+    "source": "src/runtime/input.ts",
+    "declaration": "InputRecording",
+    "field": "frames",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Generated recording transport document; capture/replay operations own its lifecycle."
+  },
+  {
+    "id": "src/runtime/input.ts#PenInputState.pointerId",
+    "source": "src/runtime/input.ts",
+    "declaration": "PenInputState",
+    "field": "pointerId",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Live pointer sample; not persisted project input settings."
+  },
+  {
+    "id": "src/runtime/input.ts#PenInputState.x",
+    "source": "src/runtime/input.ts",
+    "declaration": "PenInputState",
+    "field": "x",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Live pointer sample; not persisted project input settings."
+  },
+  {
+    "id": "src/runtime/input.ts#PenInputState.y",
+    "source": "src/runtime/input.ts",
+    "declaration": "PenInputState",
+    "field": "y",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Live pointer sample; not persisted project input settings."
+  },
+  {
+    "id": "src/runtime/input.ts#PenInputState.pressure",
+    "source": "src/runtime/input.ts",
+    "declaration": "PenInputState",
+    "field": "pressure",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Live pointer sample; not persisted project input settings."
+  },
+  {
+    "id": "src/runtime/input.ts#PenInputState.tiltX",
+    "source": "src/runtime/input.ts",
+    "declaration": "PenInputState",
+    "field": "tiltX",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Live pointer sample; not persisted project input settings."
+  },
+  {
+    "id": "src/runtime/input.ts#PenInputState.tiltY",
+    "source": "src/runtime/input.ts",
+    "declaration": "PenInputState",
+    "field": "tiltY",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Live pointer sample; not persisted project input settings."
+  },
+  {
+    "id": "src/runtime/input.ts#PenInputState.twist",
+    "source": "src/runtime/input.ts",
+    "declaration": "PenInputState",
+    "field": "twist",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Live pointer sample; not persisted project input settings."
+  },
+  {
+    "id": "src/runtime/input.ts#PenInputState.buttons",
+    "source": "src/runtime/input.ts",
+    "declaration": "PenInputState",
+    "field": "buttons",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Live pointer sample; not persisted project input settings."
+  },
+  {
+    "id": "src/runtime/input.ts#PenInputState.eraser",
+    "source": "src/runtime/input.ts",
+    "declaration": "PenInputState",
+    "field": "eraser",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Live pointer sample; not persisted project input settings."
+  },
+  {
+    "id": "src/runtime/input.ts#InputManager.keyboard",
+    "source": "src/runtime/input.ts",
+    "declaration": "InputManager",
+    "field": "keyboard",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Live collector, event handlers, recording/replay session and device caches; authored action/binding settings are external to this runtime instance."
+  },
+  {
+    "id": "src/runtime/input.ts#InputManager.logicalKeys",
+    "source": "src/runtime/input.ts",
+    "declaration": "InputManager",
+    "field": "logicalKeys",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Live collector, event handlers, recording/replay session and device caches; authored action/binding settings are external to this runtime instance."
+  },
+  {
+    "id": "src/runtime/input.ts#InputManager.modifiers",
+    "source": "src/runtime/input.ts",
+    "declaration": "InputManager",
+    "field": "modifiers",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Live collector, event handlers, recording/replay session and device caches; authored action/binding settings are external to this runtime instance."
+  },
+  {
+    "id": "src/runtime/input.ts#InputManager.mouseButtons",
+    "source": "src/runtime/input.ts",
+    "declaration": "InputManager",
+    "field": "mouseButtons",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Live collector, event handlers, recording/replay session and device caches; authored action/binding settings are external to this runtime instance."
+  },
+  {
+    "id": "src/runtime/input.ts#InputManager.touches",
+    "source": "src/runtime/input.ts",
+    "declaration": "InputManager",
+    "field": "touches",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Live collector, event handlers, recording/replay session and device caches; authored action/binding settings are external to this runtime instance."
+  },
+  {
+    "id": "src/runtime/input.ts#InputManager.pens",
+    "source": "src/runtime/input.ts",
+    "declaration": "InputManager",
+    "field": "pens",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Live collector, event handlers, recording/replay session and device caches; authored action/binding settings are external to this runtime instance."
+  },
+  {
+    "id": "src/runtime/input.ts#InputManager.lastPenPointerId",
+    "source": "src/runtime/input.ts",
+    "declaration": "InputManager",
+    "field": "lastPenPointerId",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Live collector, event handlers, recording/replay session and device caches; authored action/binding settings are external to this runtime instance."
+  },
+  {
+    "id": "src/runtime/input.ts#InputManager.gestures",
+    "source": "src/runtime/input.ts",
+    "declaration": "InputManager",
+    "field": "gestures",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Live collector, event handlers, recording/replay session and device caches; authored action/binding settings are external to this runtime instance."
+  },
+  {
+    "id": "src/runtime/input.ts#InputManager.pairGesture",
+    "source": "src/runtime/input.ts",
+    "declaration": "InputManager",
+    "field": "pairGesture",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Live collector, event handlers, recording/replay session and device caches; authored action/binding settings are external to this runtime instance."
+  },
+  {
+    "id": "src/runtime/input.ts#InputManager.lastTouchTapAt",
+    "source": "src/runtime/input.ts",
+    "declaration": "InputManager",
+    "field": "lastTouchTapAt",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Live collector, event handlers, recording/replay session and device caches; authored action/binding settings are external to this runtime instance."
+  },
+  {
+    "id": "src/runtime/input.ts#InputManager.pointerDeduplicator",
+    "source": "src/runtime/input.ts",
+    "declaration": "InputManager",
+    "field": "pointerDeduplicator",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Live collector, event handlers, recording/replay session and device caches; authored action/binding settings are external to this runtime instance."
+  },
+  {
+    "id": "src/runtime/input.ts#InputManager.virtualActions",
+    "source": "src/runtime/input.ts",
+    "declaration": "InputManager",
+    "field": "virtualActions",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Live collector, event handlers, recording/replay session and device caches; authored action/binding settings are external to this runtime instance."
+  },
+  {
+    "id": "src/runtime/input.ts#InputManager.previousDown",
+    "source": "src/runtime/input.ts",
+    "declaration": "InputManager",
+    "field": "previousDown",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Live collector, event handlers, recording/replay session and device caches; authored action/binding settings are external to this runtime instance."
+  },
+  {
+    "id": "src/runtime/input.ts#InputManager.interactionState",
+    "source": "src/runtime/input.ts",
+    "declaration": "InputManager",
+    "field": "interactionState",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Live collector, event handlers, recording/replay session and device caches; authored action/binding settings are external to this runtime instance."
+  },
+  {
+    "id": "src/runtime/input.ts#InputManager.contexts",
+    "source": "src/runtime/input.ts",
+    "declaration": "InputManager",
+    "field": "contexts",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Live collector, event handlers, recording/replay session and device caches; authored action/binding settings are external to this runtime instance."
+  },
+  {
+    "id": "src/runtime/input.ts#InputManager.maps",
+    "source": "src/runtime/input.ts",
+    "declaration": "InputManager",
+    "field": "maps",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Live collector, event handlers, recording/replay session and device caches; authored action/binding settings are external to this runtime instance."
+  },
+  {
+    "id": "src/runtime/input.ts#InputManager.scheme",
+    "source": "src/runtime/input.ts",
+    "declaration": "InputManager",
+    "field": "scheme",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Live collector, event handlers, recording/replay session and device caches; authored action/binding settings are external to this runtime instance."
+  },
+  {
+    "id": "src/runtime/input.ts#InputManager.wheelX",
+    "source": "src/runtime/input.ts",
+    "declaration": "InputManager",
+    "field": "wheelX",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Live collector, event handlers, recording/replay session and device caches; authored action/binding settings are external to this runtime instance."
+  },
+  {
+    "id": "src/runtime/input.ts#InputManager.wheelY",
+    "source": "src/runtime/input.ts",
+    "declaration": "InputManager",
+    "field": "wheelY",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Live collector, event handlers, recording/replay session and device caches; authored action/binding settings are external to this runtime instance."
+  },
+  {
+    "id": "src/runtime/input.ts#InputManager.clientX",
+    "source": "src/runtime/input.ts",
+    "declaration": "InputManager",
+    "field": "clientX",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Live collector, event handlers, recording/replay session and device caches; authored action/binding settings are external to this runtime instance."
+  },
+  {
+    "id": "src/runtime/input.ts#InputManager.clientY",
+    "source": "src/runtime/input.ts",
+    "declaration": "InputManager",
+    "field": "clientY",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Live collector, event handlers, recording/replay session and device caches; authored action/binding settings are external to this runtime instance."
+  },
+  {
+    "id": "src/runtime/input.ts#InputManager.movementX",
+    "source": "src/runtime/input.ts",
+    "declaration": "InputManager",
+    "field": "movementX",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Live collector, event handlers, recording/replay session and device caches; authored action/binding settings are external to this runtime instance."
+  },
+  {
+    "id": "src/runtime/input.ts#InputManager.movementY",
+    "source": "src/runtime/input.ts",
+    "declaration": "InputManager",
+    "field": "movementY",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Live collector, event handlers, recording/replay session and device caches; authored action/binding settings are external to this runtime instance."
+  },
+  {
+    "id": "src/runtime/input.ts#InputManager.attached",
+    "source": "src/runtime/input.ts",
+    "declaration": "InputManager",
+    "field": "attached",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Live collector, event handlers, recording/replay session and device caches; authored action/binding settings are external to this runtime instance."
+  },
+  {
+    "id": "src/runtime/input.ts#InputManager.current",
+    "source": "src/runtime/input.ts",
+    "declaration": "InputManager",
+    "field": "current",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Live collector, event handlers, recording/replay session and device caches; authored action/binding settings are external to this runtime instance."
+  },
+  {
+    "id": "src/runtime/input.ts#InputManager.devices",
+    "source": "src/runtime/input.ts",
+    "declaration": "InputManager",
+    "field": "devices",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Live collector, event handlers, recording/replay session and device caches; authored action/binding settings are external to this runtime instance."
+  },
+  {
+    "id": "src/runtime/input.ts#InputManager.sampledGamepads",
+    "source": "src/runtime/input.ts",
+    "declaration": "InputManager",
+    "field": "sampledGamepads",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Live collector, event handlers, recording/replay session and device caches; authored action/binding settings are external to this runtime instance."
+  },
+  {
+    "id": "src/runtime/input.ts#InputManager.lastGamepadInventoryAt",
+    "source": "src/runtime/input.ts",
+    "declaration": "InputManager",
+    "field": "lastGamepadInventoryAt",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Live collector, event handlers, recording/replay session and device caches; authored action/binding settings are external to this runtime instance."
+  },
+  {
+    "id": "src/runtime/input.ts#InputManager.gamepadInventorySignature",
+    "source": "src/runtime/input.ts",
+    "declaration": "InputManager",
+    "field": "gamepadInventorySignature",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Live collector, event handlers, recording/replay session and device caches; authored action/binding settings are external to this runtime instance."
+  },
+  {
+    "id": "src/runtime/input.ts#InputManager.deviceListeners",
+    "source": "src/runtime/input.ts",
+    "declaration": "InputManager",
+    "field": "deviceListeners",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Live collector, event handlers, recording/replay session and device caches; authored action/binding settings are external to this runtime instance."
+  },
+  {
+    "id": "src/runtime/input.ts#InputManager.recording",
+    "source": "src/runtime/input.ts",
+    "declaration": "InputManager",
+    "field": "recording",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Live collector, event handlers, recording/replay session and device caches; authored action/binding settings are external to this runtime instance."
+  },
+  {
+    "id": "src/runtime/input.ts#InputManager.replay",
+    "source": "src/runtime/input.ts",
+    "declaration": "InputManager",
+    "field": "replay",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Live collector, event handlers, recording/replay session and device caches; authored action/binding settings are external to this runtime instance."
+  },
+  {
+    "id": "src/runtime/input.ts#InputManager.onKeyDown",
+    "source": "src/runtime/input.ts",
+    "declaration": "InputManager",
+    "field": "onKeyDown",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Live collector, event handlers, recording/replay session and device caches; authored action/binding settings are external to this runtime instance."
+  },
+  {
+    "id": "src/runtime/input.ts#InputManager.onKeyUp",
+    "source": "src/runtime/input.ts",
+    "declaration": "InputManager",
+    "field": "onKeyUp",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Live collector, event handlers, recording/replay session and device caches; authored action/binding settings are external to this runtime instance."
+  },
+  {
+    "id": "src/runtime/input.ts#InputManager.onMouseDown",
+    "source": "src/runtime/input.ts",
+    "declaration": "InputManager",
+    "field": "onMouseDown",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Live collector, event handlers, recording/replay session and device caches; authored action/binding settings are external to this runtime instance."
+  },
+  {
+    "id": "src/runtime/input.ts#InputManager.onMouseUp",
+    "source": "src/runtime/input.ts",
+    "declaration": "InputManager",
+    "field": "onMouseUp",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Live collector, event handlers, recording/replay session and device caches; authored action/binding settings are external to this runtime instance."
+  },
+  {
+    "id": "src/runtime/input.ts#InputManager.onMouseMove",
+    "source": "src/runtime/input.ts",
+    "declaration": "InputManager",
+    "field": "onMouseMove",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Live collector, event handlers, recording/replay session and device caches; authored action/binding settings are external to this runtime instance."
+  },
+  {
+    "id": "src/runtime/input.ts#InputManager.onWheel",
+    "source": "src/runtime/input.ts",
+    "declaration": "InputManager",
+    "field": "onWheel",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Live collector, event handlers, recording/replay session and device caches; authored action/binding settings are external to this runtime instance."
+  },
+  {
+    "id": "src/runtime/input.ts#InputManager.onFocusIn",
+    "source": "src/runtime/input.ts",
+    "declaration": "InputManager",
+    "field": "onFocusIn",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Live collector, event handlers, recording/replay session and device caches; authored action/binding settings are external to this runtime instance."
+  },
+  {
+    "id": "src/runtime/input.ts#InputManager.onBlur",
+    "source": "src/runtime/input.ts",
+    "declaration": "InputManager",
+    "field": "onBlur",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Live collector, event handlers, recording/replay session and device caches; authored action/binding settings are external to this runtime instance."
+  },
+  {
+    "id": "src/runtime/input.ts#InputManager.onPageHide",
+    "source": "src/runtime/input.ts",
+    "declaration": "InputManager",
+    "field": "onPageHide",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Live collector, event handlers, recording/replay session and device caches; authored action/binding settings are external to this runtime instance."
+  },
+  {
+    "id": "src/runtime/input.ts#InputManager.onVisibilityChange",
+    "source": "src/runtime/input.ts",
+    "declaration": "InputManager",
+    "field": "onVisibilityChange",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Live collector, event handlers, recording/replay session and device caches; authored action/binding settings are external to this runtime instance."
+  },
+  {
+    "id": "src/runtime/input.ts#InputManager.onTouchStart",
+    "source": "src/runtime/input.ts",
+    "declaration": "InputManager",
+    "field": "onTouchStart",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Live collector, event handlers, recording/replay session and device caches; authored action/binding settings are external to this runtime instance."
+  },
+  {
+    "id": "src/runtime/input.ts#InputManager.onTouchMove",
+    "source": "src/runtime/input.ts",
+    "declaration": "InputManager",
+    "field": "onTouchMove",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Live collector, event handlers, recording/replay session and device caches; authored action/binding settings are external to this runtime instance."
+  },
+  {
+    "id": "src/runtime/input.ts#InputManager.onTouchEnd",
+    "source": "src/runtime/input.ts",
+    "declaration": "InputManager",
+    "field": "onTouchEnd",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Live collector, event handlers, recording/replay session and device caches; authored action/binding settings are external to this runtime instance."
+  },
+  {
+    "id": "src/runtime/input.ts#InputManager.onTouchCancel",
+    "source": "src/runtime/input.ts",
+    "declaration": "InputManager",
+    "field": "onTouchCancel",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Live collector, event handlers, recording/replay session and device caches; authored action/binding settings are external to this runtime instance."
+  },
+  {
+    "id": "src/runtime/input.ts#InputManager.onPointerDown",
+    "source": "src/runtime/input.ts",
+    "declaration": "InputManager",
+    "field": "onPointerDown",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Live collector, event handlers, recording/replay session and device caches; authored action/binding settings are external to this runtime instance."
+  },
+  {
+    "id": "src/runtime/input.ts#InputManager.onPointerMove",
+    "source": "src/runtime/input.ts",
+    "declaration": "InputManager",
+    "field": "onPointerMove",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Live collector, event handlers, recording/replay session and device caches; authored action/binding settings are external to this runtime instance."
+  },
+  {
+    "id": "src/runtime/input.ts#InputManager.onPointerUp",
+    "source": "src/runtime/input.ts",
+    "declaration": "InputManager",
+    "field": "onPointerUp",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Live collector, event handlers, recording/replay session and device caches; authored action/binding settings are external to this runtime instance."
+  },
+  {
+    "id": "src/runtime/input.ts#InputManager.onPointerCancel",
+    "source": "src/runtime/input.ts",
+    "declaration": "InputManager",
+    "field": "onPointerCancel",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Live collector, event handlers, recording/replay session and device caches; authored action/binding settings are external to this runtime instance."
+  },
+  {
+    "id": "src/runtime/input.ts#InputManager.onGamepadConnected",
+    "source": "src/runtime/input.ts",
+    "declaration": "InputManager",
+    "field": "onGamepadConnected",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Live collector, event handlers, recording/replay session and device caches; authored action/binding settings are external to this runtime instance."
+  },
+  {
+    "id": "src/runtime/input.ts#InputManager.onGamepadDisconnected",
+    "source": "src/runtime/input.ts",
+    "declaration": "InputManager",
+    "field": "onGamepadDisconnected",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Live collector, event handlers, recording/replay session and device caches; authored action/binding settings are external to this runtime instance."
+  },
+  {
+    "id": "src/runtime/deviceInput.ts#DeviceSensorSnapshot.orientation",
+    "source": "src/runtime/deviceInput.ts",
+    "declaration": "DeviceSensorSnapshot",
+    "field": "orientation",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Live sensor values and permission observation; authored sensor policy is DeviceInputSettings."
+  },
+  {
+    "id": "src/runtime/deviceInput.ts#DeviceSensorSnapshot.acceleration",
+    "source": "src/runtime/deviceInput.ts",
+    "declaration": "DeviceSensorSnapshot",
+    "field": "acceleration",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Live sensor values and permission observation; authored sensor policy is DeviceInputSettings."
+  },
+  {
+    "id": "src/runtime/deviceInput.ts#DeviceSensorSnapshot.rotationRate",
+    "source": "src/runtime/deviceInput.ts",
+    "declaration": "DeviceSensorSnapshot",
+    "field": "rotationRate",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Live sensor values and permission observation; authored sensor policy is DeviceInputSettings."
+  },
+  {
+    "id": "src/runtime/deviceInput.ts#DeviceSensorSnapshot.permission",
+    "source": "src/runtime/deviceInput.ts",
+    "declaration": "DeviceSensorSnapshot",
+    "field": "permission",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Live sensor values and permission observation; authored sensor policy is DeviceInputSettings."
+  },
+  {
+    "id": "src/runtime/deviceInput.ts#DeviceSensorSnapshot.updatedAt",
+    "source": "src/runtime/deviceInput.ts",
+    "declaration": "DeviceSensorSnapshot",
+    "field": "updatedAt",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Live sensor values and permission observation; authored sensor policy is DeviceInputSettings."
+  },
+  {
+    "id": "src/runtime/deviceInput.ts#DeviceRuntimeCapabilities.touch",
+    "source": "src/runtime/deviceInput.ts",
+    "declaration": "DeviceRuntimeCapabilities",
+    "field": "touch",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Detected browser/device capabilities and viewport observations; not a saved project capability promise."
+  },
+  {
+    "id": "src/runtime/deviceInput.ts#DeviceRuntimeCapabilities.pen",
+    "source": "src/runtime/deviceInput.ts",
+    "declaration": "DeviceRuntimeCapabilities",
+    "field": "pen",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Detected browser/device capabilities and viewport observations; not a saved project capability promise."
+  },
+  {
+    "id": "src/runtime/deviceInput.ts#DeviceRuntimeCapabilities.maximumTouches",
+    "source": "src/runtime/deviceInput.ts",
+    "declaration": "DeviceRuntimeCapabilities",
+    "field": "maximumTouches",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Detected browser/device capabilities and viewport observations; not a saved project capability promise."
+  },
+  {
+    "id": "src/runtime/deviceInput.ts#DeviceRuntimeCapabilities.pointerEvents",
+    "source": "src/runtime/deviceInput.ts",
+    "declaration": "DeviceRuntimeCapabilities",
+    "field": "pointerEvents",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Detected browser/device capabilities and viewport observations; not a saved project capability promise."
+  },
+  {
+    "id": "src/runtime/deviceInput.ts#DeviceRuntimeCapabilities.gamepads",
+    "source": "src/runtime/deviceInput.ts",
+    "declaration": "DeviceRuntimeCapabilities",
+    "field": "gamepads",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Detected browser/device capabilities and viewport observations; not a saved project capability promise."
+  },
+  {
+    "id": "src/runtime/deviceInput.ts#DeviceRuntimeCapabilities.vibration",
+    "source": "src/runtime/deviceInput.ts",
+    "declaration": "DeviceRuntimeCapabilities",
+    "field": "vibration",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Detected browser/device capabilities and viewport observations; not a saved project capability promise."
+  },
+  {
+    "id": "src/runtime/deviceInput.ts#DeviceRuntimeCapabilities.orientationLock",
+    "source": "src/runtime/deviceInput.ts",
+    "declaration": "DeviceRuntimeCapabilities",
+    "field": "orientationLock",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Detected browser/device capabilities and viewport observations; not a saved project capability promise."
+  },
+  {
+    "id": "src/runtime/deviceInput.ts#DeviceRuntimeCapabilities.motionSensors",
+    "source": "src/runtime/deviceInput.ts",
+    "declaration": "DeviceRuntimeCapabilities",
+    "field": "motionSensors",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Detected browser/device capabilities and viewport observations; not a saved project capability promise."
+  },
+  {
+    "id": "src/runtime/deviceInput.ts#DeviceRuntimeCapabilities.devicePixelRatio",
+    "source": "src/runtime/deviceInput.ts",
+    "declaration": "DeviceRuntimeCapabilities",
+    "field": "devicePixelRatio",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Detected browser/device capabilities and viewport observations; not a saved project capability promise."
+  },
+  {
+    "id": "src/runtime/deviceInput.ts#DeviceRuntimeCapabilities.viewport",
+    "source": "src/runtime/deviceInput.ts",
+    "declaration": "DeviceRuntimeCapabilities",
+    "field": "viewport",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Detected browser/device capabilities and viewport observations; not a saved project capability promise."
+  },
+  {
+    "id": "src/runtime/deviceInput.ts#DeviceRuntimeCapabilities.orientation",
+    "source": "src/runtime/deviceInput.ts",
+    "declaration": "DeviceRuntimeCapabilities",
+    "field": "orientation",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Detected browser/device capabilities and viewport observations; not a saved project capability promise."
+  },
+  {
+    "id": "src/runtime/deviceInput.ts#DeviceRuntimeCapabilities.safeArea",
+    "source": "src/runtime/deviceInput.ts",
+    "declaration": "DeviceRuntimeCapabilities",
+    "field": "safeArea",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Detected browser/device capabilities and viewport observations; not a saved project capability promise."
+  },
+  {
+    "id": "src/runtime/deviceInput.ts#TouchPointerDeduplicator.recent",
+    "source": "src/runtime/deviceInput.ts",
+    "declaration": "TouchPointerDeduplicator",
+    "field": "recent",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Transient pointer deduplication history, rebuilt on runtime initialization."
+  },
+  {
+    "id": "src/runtime/animation.ts#RootMotionPreview.duration",
+    "source": "src/runtime/animation.ts",
+    "declaration": "RootMotionPreview",
+    "field": "duration",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Computed preview samples and extracted displacement; authored animation tracks remain separate."
+  },
+  {
+    "id": "src/runtime/animation.ts#RootMotionPreview.delta",
+    "source": "src/runtime/animation.ts",
+    "declaration": "RootMotionPreview",
+    "field": "delta",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Computed preview samples and extracted displacement; authored animation tracks remain separate."
+  },
+  {
+    "id": "src/runtime/animation.ts#RootMotionPreview.distance",
+    "source": "src/runtime/animation.ts",
+    "declaration": "RootMotionPreview",
+    "field": "distance",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Computed preview samples and extracted displacement; authored animation tracks remain separate."
+  },
+  {
+    "id": "src/runtime/animation.ts#RootMotionPreview.samples",
+    "source": "src/runtime/animation.ts",
+    "declaration": "RootMotionPreview",
+    "field": "samples",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Computed preview samples and extracted displacement; authored animation tracks remain separate."
+  },
+  {
+    "id": "src/runtime/animation.ts#AnimationRootMotionDelta.x",
+    "source": "src/runtime/animation.ts",
+    "declaration": "AnimationRootMotionDelta",
+    "field": "x",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Per-evaluation extracted motion output; not authored clip data."
+  },
+  {
+    "id": "src/runtime/animation.ts#AnimationRootMotionDelta.y",
+    "source": "src/runtime/animation.ts",
+    "declaration": "AnimationRootMotionDelta",
+    "field": "y",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Per-evaluation extracted motion output; not authored clip data."
+  },
+  {
+    "id": "src/runtime/animation.ts#AnimationRootMotionDelta.rotation",
+    "source": "src/runtime/animation.ts",
+    "declaration": "AnimationRootMotionDelta",
+    "field": "rotation",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Per-evaluation extracted motion output; not authored clip data."
+  },
+  {
+    "id": "src/runtime/animation.ts#TimedOccurrence.item",
+    "source": "src/runtime/animation.ts",
+    "declaration": "TimedOccurrence",
+    "field": "item",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Generated crossing/order record for event dispatch; authored event times remain separate."
+  },
+  {
+    "id": "src/runtime/animation.ts#TimedOccurrence.crossed",
+    "source": "src/runtime/animation.ts",
+    "declaration": "TimedOccurrence",
+    "field": "crossed",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Generated crossing/order record for event dispatch; authored event times remain separate."
+  },
+  {
+    "id": "src/runtime/animation.ts#TimedOccurrence.itemIndex",
+    "source": "src/runtime/animation.ts",
+    "declaration": "TimedOccurrence",
+    "field": "itemIndex",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Generated crossing/order record for event dispatch; authored event times remain separate."
+  },
+  {
+    "id": "src/runtime/animation.ts#LayerRuntimeState.stateId",
+    "source": "src/runtime/animation.ts",
+    "declaration": "LayerRuntimeState",
+    "field": "stateId",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Current animator layer clocks, state and blending progress; authored controller states/transitions remain separate."
+  },
+  {
+    "id": "src/runtime/animation.ts#LayerRuntimeState.time",
+    "source": "src/runtime/animation.ts",
+    "declaration": "LayerRuntimeState",
+    "field": "time",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Current animator layer clocks, state and blending progress; authored controller states/transitions remain separate."
+  },
+  {
+    "id": "src/runtime/animation.ts#LayerRuntimeState.clock",
+    "source": "src/runtime/animation.ts",
+    "declaration": "LayerRuntimeState",
+    "field": "clock",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Current animator layer clocks, state and blending progress; authored controller states/transitions remain separate."
+  },
+  {
+    "id": "src/runtime/animation.ts#LayerRuntimeState.previousClock",
+    "source": "src/runtime/animation.ts",
+    "declaration": "LayerRuntimeState",
+    "field": "previousClock",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Current animator layer clocks, state and blending progress; authored controller states/transitions remain separate."
+  },
+  {
+    "id": "src/runtime/animation.ts#LayerRuntimeState.previousStateId",
+    "source": "src/runtime/animation.ts",
+    "declaration": "LayerRuntimeState",
+    "field": "previousStateId",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Current animator layer clocks, state and blending progress; authored controller states/transitions remain separate."
+  },
+  {
+    "id": "src/runtime/animation.ts#LayerRuntimeState.previousTime",
+    "source": "src/runtime/animation.ts",
+    "declaration": "LayerRuntimeState",
+    "field": "previousTime",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Current animator layer clocks, state and blending progress; authored controller states/transitions remain separate."
+  },
+  {
+    "id": "src/runtime/animation.ts#LayerRuntimeState.blendTime",
+    "source": "src/runtime/animation.ts",
+    "declaration": "LayerRuntimeState",
+    "field": "blendTime",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Current animator layer clocks, state and blending progress; authored controller states/transitions remain separate."
+  },
+  {
+    "id": "src/runtime/animation.ts#LayerRuntimeState.blendDuration",
+    "source": "src/runtime/animation.ts",
+    "declaration": "LayerRuntimeState",
+    "field": "blendDuration",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Current animator layer clocks, state and blending progress; authored controller states/transitions remain separate."
+  },
+  {
+    "id": "src/runtime/animation.ts#LayerRuntimeState.interruption",
+    "source": "src/runtime/animation.ts",
+    "declaration": "LayerRuntimeState",
+    "field": "interruption",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Current animator layer clocks, state and blending progress; authored controller states/transitions remain separate."
+  },
+  {
+    "id": "src/runtime/animation.ts#AnimatorRuntimeState.controllerAsset",
+    "source": "src/runtime/animation.ts",
+    "declaration": "AnimatorRuntimeState",
+    "field": "controllerAsset",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Live controller/layer evaluation state; not the authored controller document."
+  },
+  {
+    "id": "src/runtime/animation.ts#AnimatorRuntimeState.layers",
+    "source": "src/runtime/animation.ts",
+    "declaration": "AnimatorRuntimeState",
+    "field": "layers",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Live controller/layer evaluation state; not the authored controller document."
+  },
+  {
+    "id": "src/runtime/animation.ts#SampledClip.values",
+    "source": "src/runtime/animation.ts",
+    "declaration": "SampledClip",
+    "field": "values",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Evaluated pose and sprite sample; authored tracks/frames remain separate."
+  },
+  {
+    "id": "src/runtime/animation.ts#SampledClip.spriteAsset",
+    "source": "src/runtime/animation.ts",
+    "declaration": "SampledClip",
+    "field": "spriteAsset",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Evaluated pose and sprite sample; authored tracks/frames remain separate."
+  },
+  {
+    "id": "src/runtime/animation.ts#AnimatorRuntimeInspection.entityUuid",
+    "source": "src/runtime/animation.ts",
+    "declaration": "AnimatorRuntimeInspection",
+    "field": "entityUuid",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Read-only runtime inspection result; not editable controller settings."
+  },
+  {
+    "id": "src/runtime/animation.ts#AnimatorRuntimeInspection.controllerAsset",
+    "source": "src/runtime/animation.ts",
+    "declaration": "AnimatorRuntimeInspection",
+    "field": "controllerAsset",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Read-only runtime inspection result; not editable controller settings."
+  },
+  {
+    "id": "src/runtime/animation.ts#AnimatorRuntimeInspection.layers",
+    "source": "src/runtime/animation.ts",
+    "declaration": "AnimatorRuntimeInspection",
+    "field": "layers",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Read-only runtime inspection result; not editable controller settings."
+  },
+  {
+    "id": "src/runtime/animation.ts#RuntimeAnimationRecordingStatus.active",
+    "source": "src/runtime/animation.ts",
+    "declaration": "RuntimeAnimationRecordingStatus",
+    "field": "active",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Generated recording progress diagnostic; recorded clip is a separate resource."
+  },
+  {
+    "id": "src/runtime/animation.ts#RuntimeAnimationRecordingStatus.entityUuid",
+    "source": "src/runtime/animation.ts",
+    "declaration": "RuntimeAnimationRecordingStatus",
+    "field": "entityUuid",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Generated recording progress diagnostic; recorded clip is a separate resource."
+  },
+  {
+    "id": "src/runtime/animation.ts#RuntimeAnimationRecordingStatus.elapsed",
+    "source": "src/runtime/animation.ts",
+    "declaration": "RuntimeAnimationRecordingStatus",
+    "field": "elapsed",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Generated recording progress diagnostic; recorded clip is a separate resource."
+  },
+  {
+    "id": "src/runtime/animation.ts#RuntimeAnimationRecordingStatus.frameRate",
+    "source": "src/runtime/animation.ts",
+    "declaration": "RuntimeAnimationRecordingStatus",
+    "field": "frameRate",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Generated recording progress diagnostic; recorded clip is a separate resource."
+  },
+  {
+    "id": "src/runtime/animation.ts#RuntimeAnimationRecordingStatus.samples",
+    "source": "src/runtime/animation.ts",
+    "declaration": "RuntimeAnimationRecordingStatus",
+    "field": "samples",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Generated recording progress diagnostic; recorded clip is a separate resource."
+  },
+  {
+    "id": "src/runtime/animation.ts#RuntimeAnimationRecordingStatus.targetAssetUuid",
+    "source": "src/runtime/animation.ts",
+    "declaration": "RuntimeAnimationRecordingStatus",
+    "field": "targetAssetUuid",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Generated recording progress diagnostic; recorded clip is a separate resource."
+  },
+  {
+    "id": "src/runtime/animation.ts#RuntimeAnimationRecordingStatus.limited",
+    "source": "src/runtime/animation.ts",
+    "declaration": "RuntimeAnimationRecordingStatus",
+    "field": "limited",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Generated recording progress diagnostic; recorded clip is a separate resource."
+  },
+  {
+    "id": "src/runtime/animation.ts#RuntimeAnimationRecordingSession.entityUuid",
+    "source": "src/runtime/animation.ts",
+    "declaration": "RuntimeAnimationRecordingSession",
+    "field": "entityUuid",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Live capture session and sampling clock; completed asset data has a separate owner."
+  },
+  {
+    "id": "src/runtime/animation.ts#RuntimeAnimationRecordingSession.elapsed",
+    "source": "src/runtime/animation.ts",
+    "declaration": "RuntimeAnimationRecordingSession",
+    "field": "elapsed",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Live capture session and sampling clock; completed asset data has a separate owner."
+  },
+  {
+    "id": "src/runtime/animation.ts#RuntimeAnimationRecordingSession.clock",
+    "source": "src/runtime/animation.ts",
+    "declaration": "RuntimeAnimationRecordingSession",
+    "field": "clock",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Live capture session and sampling clock; completed asset data has a separate owner."
+  },
+  {
+    "id": "src/runtime/animation.ts#RuntimeAnimationRecordingSession.nextFrame",
+    "source": "src/runtime/animation.ts",
+    "declaration": "RuntimeAnimationRecordingSession",
+    "field": "nextFrame",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Live capture session and sampling clock; completed asset data has a separate owner."
+  },
+  {
+    "id": "src/runtime/animation.ts#RuntimeAnimationRecordingSession.frameRate",
+    "source": "src/runtime/animation.ts",
+    "declaration": "RuntimeAnimationRecordingSession",
+    "field": "frameRate",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Live capture session and sampling clock; completed asset data has a separate owner."
+  },
+  {
+    "id": "src/runtime/animation.ts#RuntimeAnimationRecordingSession.targetAssetUuid",
+    "source": "src/runtime/animation.ts",
+    "declaration": "RuntimeAnimationRecordingSession",
+    "field": "targetAssetUuid",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Live capture session and sampling clock; completed asset data has a separate owner."
+  },
+  {
+    "id": "src/runtime/animation.ts#RuntimeAnimationRecordingSession.tracks",
+    "source": "src/runtime/animation.ts",
+    "declaration": "RuntimeAnimationRecordingSession",
+    "field": "tracks",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Live capture session and sampling clock; completed asset data has a separate owner."
+  },
+  {
+    "id": "src/runtime/animation.ts#RuntimeAnimationRecordingSession.previous",
+    "source": "src/runtime/animation.ts",
+    "declaration": "RuntimeAnimationRecordingSession",
+    "field": "previous",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Live capture session and sampling clock; completed asset data has a separate owner."
+  },
+  {
+    "id": "src/runtime/animation.ts#RuntimeAnimationRecordingSession.limited",
+    "source": "src/runtime/animation.ts",
+    "declaration": "RuntimeAnimationRecordingSession",
+    "field": "limited",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Live capture session and sampling clock; completed asset data has a separate owner."
+  },
+  {
+    "id": "src/runtime/animation.ts#AppliedAnimationProperty.entity",
+    "source": "src/runtime/animation.ts",
+    "declaration": "AppliedAnimationProperty",
+    "field": "entity",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Frame ownership and previous/output pose bookkeeping; not an authored property definition."
+  },
+  {
+    "id": "src/runtime/animation.ts#AppliedAnimationProperty.property",
+    "source": "src/runtime/animation.ts",
+    "declaration": "AppliedAnimationProperty",
+    "field": "property",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Frame ownership and previous/output pose bookkeeping; not an authored property definition."
+  },
+  {
+    "id": "src/runtime/animation.ts#AppliedAnimationProperty.base",
+    "source": "src/runtime/animation.ts",
+    "declaration": "AppliedAnimationProperty",
+    "field": "base",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Frame ownership and previous/output pose bookkeeping; not an authored property definition."
+  },
+  {
+    "id": "src/runtime/animation.ts#AppliedAnimationProperty.output",
+    "source": "src/runtime/animation.ts",
+    "declaration": "AppliedAnimationProperty",
+    "field": "output",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Frame ownership and previous/output pose bookkeeping; not an authored property definition."
+  },
+  {
+    "id": "src/runtime/animation.ts#AppliedAnimationProperty.touched",
+    "source": "src/runtime/animation.ts",
+    "declaration": "AppliedAnimationProperty",
+    "field": "touched",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Frame ownership and previous/output pose bookkeeping; not an authored property definition."
+  },
+  {
+    "id": "src/runtime/animation.ts#TimelineAnimationSample.key",
+    "source": "src/runtime/animation.ts",
+    "declaration": "TimelineAnimationSample",
+    "field": "key",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Transient blended timeline-to-animation sample request; authored timeline clips remain separate."
+  },
+  {
+    "id": "src/runtime/animation.ts#TimelineAnimationSample.owner",
+    "source": "src/runtime/animation.ts",
+    "declaration": "TimelineAnimationSample",
+    "field": "owner",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Transient blended timeline-to-animation sample request; authored timeline clips remain separate."
+  },
+  {
+    "id": "src/runtime/animation.ts#TimelineAnimationSample.clipAsset",
+    "source": "src/runtime/animation.ts",
+    "declaration": "TimelineAnimationSample",
+    "field": "clipAsset",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Transient blended timeline-to-animation sample request; authored timeline clips remain separate."
+  },
+  {
+    "id": "src/runtime/animation.ts#TimelineAnimationSample.time",
+    "source": "src/runtime/animation.ts",
+    "declaration": "TimelineAnimationSample",
+    "field": "time",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Transient blended timeline-to-animation sample request; authored timeline clips remain separate."
+  },
+  {
+    "id": "src/runtime/animation.ts#TimelineAnimationSample.weight",
+    "source": "src/runtime/animation.ts",
+    "declaration": "TimelineAnimationSample",
+    "field": "weight",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Transient blended timeline-to-animation sample request; authored timeline clips remain separate."
+  },
+  {
+    "id": "src/runtime/animation.ts#TimelineAnimationSample.additive",
+    "source": "src/runtime/animation.ts",
+    "declaration": "TimelineAnimationSample",
+    "field": "additive",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Transient blended timeline-to-animation sample request; authored timeline clips remain separate."
+  },
+  {
+    "id": "src/runtime/animation.ts#TimelineAnimationSample.loop",
+    "source": "src/runtime/animation.ts",
+    "declaration": "TimelineAnimationSample",
+    "field": "loop",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Transient blended timeline-to-animation sample request; authored timeline clips remain separate."
+  },
+  {
+    "id": "src/runtime/animation.ts#AnimationRuntime.runtime",
+    "source": "src/runtime/animation.ts",
+    "declaration": "AnimationRuntime",
+    "field": "runtime",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Live playback, recording, pose caches and callback subscriptions; clip/controller/instance settings remain separately authored."
+  },
+  {
+    "id": "src/runtime/animation.ts#AnimationRuntime.recording",
+    "source": "src/runtime/animation.ts",
+    "declaration": "AnimationRuntime",
+    "field": "recording",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Live playback, recording, pose caches and callback subscriptions; clip/controller/instance settings remain separately authored."
+  },
+  {
+    "id": "src/runtime/animation.ts#AnimationRuntime.directPlayback",
+    "source": "src/runtime/animation.ts",
+    "declaration": "AnimationRuntime",
+    "field": "directPlayback",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Live playback, recording, pose caches and callback subscriptions; clip/controller/instance settings remain separately authored."
+  },
+  {
+    "id": "src/runtime/animation.ts#AnimationRuntime.appliedPose",
+    "source": "src/runtime/animation.ts",
+    "declaration": "AnimationRuntime",
+    "field": "appliedPose",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Live playback, recording, pose caches and callback subscriptions; clip/controller/instance settings remain separately authored."
+  },
+  {
+    "id": "src/runtime/animation.ts#AnimationRuntime.timelinePose",
+    "source": "src/runtime/animation.ts",
+    "declaration": "AnimationRuntime",
+    "field": "timelinePose",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Live playback, recording, pose caches and callback subscriptions; clip/controller/instance settings remain separately authored."
+  },
+  {
+    "id": "src/runtime/animation.ts#AnimationRuntime.frameSerial",
+    "source": "src/runtime/animation.ts",
+    "declaration": "AnimationRuntime",
+    "field": "frameSerial",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Live playback, recording, pose caches and callback subscriptions; clip/controller/instance settings remain separately authored."
+  },
+  {
+    "id": "src/runtime/animation.ts#AnimationRuntime.timelineFrame",
+    "source": "src/runtime/animation.ts",
+    "declaration": "AnimationRuntime",
+    "field": "timelineFrame",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Live playback, recording, pose caches and callback subscriptions; clip/controller/instance settings remain separately authored."
+  },
+  {
+    "id": "src/runtime/animation.ts#AnimationRuntime.evaluationOwner",
+    "source": "src/runtime/animation.ts",
+    "declaration": "AnimationRuntime",
+    "field": "evaluationOwner",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Live playback, recording, pose caches and callback subscriptions; clip/controller/instance settings remain separately authored."
+  },
+  {
+    "id": "src/runtime/animation.ts#AnimationRuntime.evaluationEntities",
+    "source": "src/runtime/animation.ts",
+    "declaration": "AnimationRuntime",
+    "field": "evaluationEntities",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Live playback, recording, pose caches and callback subscriptions; clip/controller/instance settings remain separately authored."
+  },
+  {
+    "id": "src/runtime/animation.ts#AnimationRuntime.spritePose",
+    "source": "src/runtime/animation.ts",
+    "declaration": "AnimationRuntime",
+    "field": "spritePose",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Live playback, recording, pose caches and callback subscriptions; clip/controller/instance settings remain separately authored."
+  },
+  {
+    "id": "src/runtime/animation.ts#AnimationRuntime.timelineSprites",
+    "source": "src/runtime/animation.ts",
+    "declaration": "AnimationRuntime",
+    "field": "timelineSprites",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Live playback, recording, pose caches and callback subscriptions; clip/controller/instance settings remain separately authored."
+  },
+  {
+    "id": "src/runtime/animation.ts#AnimationRuntime.onEvent",
+    "source": "src/runtime/animation.ts",
+    "declaration": "AnimationRuntime",
+    "field": "onEvent",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Live playback, recording, pose caches and callback subscriptions; clip/controller/instance settings remain separately authored."
+  },
+  {
+    "id": "src/runtime/animation.ts#AnimationRuntime.onCommand",
+    "source": "src/runtime/animation.ts",
+    "declaration": "AnimationRuntime",
+    "field": "onCommand",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Live playback, recording, pose caches and callback subscriptions; clip/controller/instance settings remain separately authored."
+  },
+  {
+    "id": "src/runtime/animation.ts#AnimationRuntime.recordingResetObservers",
+    "source": "src/runtime/animation.ts",
+    "declaration": "AnimationRuntime",
+    "field": "recordingResetObservers",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Live playback, recording, pose caches and callback subscriptions; clip/controller/instance settings remain separately authored."
+  },
+  {
+    "id": "src/runtime/animationProduction.ts#AnimationValidationIssue.code",
+    "source": "src/runtime/animationProduction.ts",
+    "declaration": "AnimationValidationIssue",
+    "field": "code",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Generated animation validation diagnostic; authored asset remains separate."
+  },
+  {
+    "id": "src/runtime/animationProduction.ts#AnimationValidationIssue.severity",
+    "source": "src/runtime/animationProduction.ts",
+    "declaration": "AnimationValidationIssue",
+    "field": "severity",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Generated animation validation diagnostic; authored asset remains separate."
+  },
+  {
+    "id": "src/runtime/animationProduction.ts#AnimationValidationIssue.assetUuid",
+    "source": "src/runtime/animationProduction.ts",
+    "declaration": "AnimationValidationIssue",
+    "field": "assetUuid",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Generated animation validation diagnostic; authored asset remains separate."
+  },
+  {
+    "id": "src/runtime/animationProduction.ts#AnimationValidationIssue.source",
+    "source": "src/runtime/animationProduction.ts",
+    "declaration": "AnimationValidationIssue",
+    "field": "source",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Generated animation validation diagnostic; authored asset remains separate."
+  },
+  {
+    "id": "src/runtime/animationProduction.ts#AnimationValidationIssue.message",
+    "source": "src/runtime/animationProduction.ts",
+    "declaration": "AnimationValidationIssue",
+    "field": "message",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Generated animation validation diagnostic; authored asset remains separate."
+  },
+  {
+    "id": "src/runtime/animationProduction.ts#AnimationValidationIssue.targetEntityUuid",
+    "source": "src/runtime/animationProduction.ts",
+    "declaration": "AnimationValidationIssue",
+    "field": "targetEntityUuid",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Generated animation validation diagnostic; authored asset remains separate."
+  },
+  {
+    "id": "src/runtime/animationProduction.ts#AnimationSamplingResult.assetUuid",
+    "source": "src/runtime/animationProduction.ts",
+    "declaration": "AnimationSamplingResult",
+    "field": "assetUuid",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Generated sampling-audit result; not authored playback settings."
+  },
+  {
+    "id": "src/runtime/animationProduction.ts#AnimationSamplingResult.sampleRate",
+    "source": "src/runtime/animationProduction.ts",
+    "declaration": "AnimationSamplingResult",
+    "field": "sampleRate",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Generated sampling-audit result; not authored playback settings."
+  },
+  {
+    "id": "src/runtime/animationProduction.ts#AnimationSamplingResult.samples",
+    "source": "src/runtime/animationProduction.ts",
+    "declaration": "AnimationSamplingResult",
+    "field": "samples",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Generated sampling-audit result; not authored playback settings."
+  },
+  {
+    "id": "src/runtime/animationProduction.ts#AnimationSamplingResult.nonFinite",
+    "source": "src/runtime/animationProduction.ts",
+    "declaration": "AnimationSamplingResult",
+    "field": "nonFinite",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Generated sampling-audit result; not authored playback settings."
+  },
+  {
+    "id": "src/runtime/animationProduction.ts#AnimationSamplingResult.maximumError",
+    "source": "src/runtime/animationProduction.ts",
+    "declaration": "AnimationSamplingResult",
+    "field": "maximumError",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Generated sampling-audit result; not authored playback settings."
+  },
+  {
+    "id": "src/runtime/animationProduction.ts#AnimationSamplingResult.events",
+    "source": "src/runtime/animationProduction.ts",
+    "declaration": "AnimationSamplingResult",
+    "field": "events",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Generated sampling-audit result; not authored playback settings."
+  },
+  {
+    "id": "src/runtime/animationProduction.ts#AnimationSamplingResult.status",
+    "source": "src/runtime/animationProduction.ts",
+    "declaration": "AnimationSamplingResult",
+    "field": "status",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Generated sampling-audit result; not authored playback settings."
+  },
+  {
+    "id": "src/runtime/timeline.ts#ActiveTimelineSubtitle.ownerUuid",
+    "source": "src/runtime/timeline.ts",
+    "declaration": "ActiveTimelineSubtitle",
+    "field": "ownerUuid",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Currently evaluated subtitle overlay and progress; authored subtitle clip fields remain separate."
+  },
+  {
+    "id": "src/runtime/timeline.ts#ActiveTimelineSubtitle.clipId",
+    "source": "src/runtime/timeline.ts",
+    "declaration": "ActiveTimelineSubtitle",
+    "field": "clipId",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Currently evaluated subtitle overlay and progress; authored subtitle clip fields remain separate."
+  },
+  {
+    "id": "src/runtime/timeline.ts#ActiveTimelineSubtitle.text",
+    "source": "src/runtime/timeline.ts",
+    "declaration": "ActiveTimelineSubtitle",
+    "field": "text",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Currently evaluated subtitle overlay and progress; authored subtitle clip fields remain separate."
+  },
+  {
+    "id": "src/runtime/timeline.ts#ActiveTimelineSubtitle.locale",
+    "source": "src/runtime/timeline.ts",
+    "declaration": "ActiveTimelineSubtitle",
+    "field": "locale",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Currently evaluated subtitle overlay and progress; authored subtitle clip fields remain separate."
+  },
+  {
+    "id": "src/runtime/timeline.ts#ActiveTimelineSubtitle.safeArea",
+    "source": "src/runtime/timeline.ts",
+    "declaration": "ActiveTimelineSubtitle",
+    "field": "safeArea",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Currently evaluated subtitle overlay and progress; authored subtitle clip fields remain separate."
+  },
+  {
+    "id": "src/runtime/timeline.ts#ActiveTimelineSubtitle.progress",
+    "source": "src/runtime/timeline.ts",
+    "declaration": "ActiveTimelineSubtitle",
+    "field": "progress",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Currently evaluated subtitle overlay and progress; authored subtitle clip fields remain separate."
+  },
+  {
+    "id": "src/runtime/timeline.ts#ActiveTimelineCameraBlend.ownerUuid",
+    "source": "src/runtime/timeline.ts",
+    "declaration": "ActiveTimelineCameraBlend",
+    "field": "ownerUuid",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Currently evaluated camera blend output; authored timeline camera clips remain separate."
+  },
+  {
+    "id": "src/runtime/timeline.ts#ActiveTimelineCameraBlend.clipId",
+    "source": "src/runtime/timeline.ts",
+    "declaration": "ActiveTimelineCameraBlend",
+    "field": "clipId",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Currently evaluated camera blend output; authored timeline camera clips remain separate."
+  },
+  {
+    "id": "src/runtime/timeline.ts#ActiveTimelineCameraBlend.fromEntityUuid",
+    "source": "src/runtime/timeline.ts",
+    "declaration": "ActiveTimelineCameraBlend",
+    "field": "fromEntityUuid",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Currently evaluated camera blend output; authored timeline camera clips remain separate."
+  },
+  {
+    "id": "src/runtime/timeline.ts#ActiveTimelineCameraBlend.toEntityUuid",
+    "source": "src/runtime/timeline.ts",
+    "declaration": "ActiveTimelineCameraBlend",
+    "field": "toEntityUuid",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Currently evaluated camera blend output; authored timeline camera clips remain separate."
+  },
+  {
+    "id": "src/runtime/timeline.ts#ActiveTimelineCameraBlend.weight",
+    "source": "src/runtime/timeline.ts",
+    "declaration": "ActiveTimelineCameraBlend",
+    "field": "weight",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Currently evaluated camera blend output; authored timeline camera clips remain separate."
+  },
+  {
+    "id": "src/runtime/timeline.ts#TimelineState.asset",
+    "source": "src/runtime/timeline.ts",
+    "declaration": "TimelineState",
+    "field": "asset",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Live clock, dispatch and traversal state for a timeline player; authored document remains separate."
+  },
+  {
+    "id": "src/runtime/timeline.ts#TimelineState.time",
+    "source": "src/runtime/timeline.ts",
+    "declaration": "TimelineState",
+    "field": "time",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Live clock, dispatch and traversal state for a timeline player; authored document remains separate."
+  },
+  {
+    "id": "src/runtime/timeline.ts#TimelineState.clock",
+    "source": "src/runtime/timeline.ts",
+    "declaration": "TimelineState",
+    "field": "clock",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Live clock, dispatch and traversal state for a timeline player; authored document remains separate."
+  },
+  {
+    "id": "src/runtime/timeline.ts#TimelineState.publishedTime",
+    "source": "src/runtime/timeline.ts",
+    "declaration": "TimelineState",
+    "field": "publishedTime",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Live clock, dispatch and traversal state for a timeline player; authored document remains separate."
+  },
+  {
+    "id": "src/runtime/timeline.ts#TimelineState.initialized",
+    "source": "src/runtime/timeline.ts",
+    "declaration": "TimelineState",
+    "field": "initialized",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Live clock, dispatch and traversal state for a timeline player; authored document remains separate."
+  },
+  {
+    "id": "src/runtime/timeline.ts#TimelineState.suppressDispatch",
+    "source": "src/runtime/timeline.ts",
+    "declaration": "TimelineState",
+    "field": "suppressDispatch",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Live clock, dispatch and traversal state for a timeline player; authored document remains separate."
+  },
+  {
+    "id": "src/runtime/timeline.ts#TimelineState.fired",
+    "source": "src/runtime/timeline.ts",
+    "declaration": "TimelineState",
+    "field": "fired",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Live clock, dispatch and traversal state for a timeline player; authored document remains separate."
+  },
+  {
+    "id": "src/runtime/timeline.ts#TimelineState.lastUnskippedTime",
+    "source": "src/runtime/timeline.ts",
+    "declaration": "TimelineState",
+    "field": "lastUnskippedTime",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Live clock, dispatch and traversal state for a timeline player; authored document remains separate."
+  },
+  {
+    "id": "src/runtime/timeline.ts#TimelineState.activeCameraUuid",
+    "source": "src/runtime/timeline.ts",
+    "declaration": "TimelineState",
+    "field": "activeCameraUuid",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Live clock, dispatch and traversal state for a timeline player; authored document remains separate."
+  },
+  {
+    "id": "src/runtime/timeline.ts#PendingTimelineEvent.order",
+    "source": "src/runtime/timeline.ts",
+    "declaration": "PendingTimelineEvent",
+    "field": "order",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Generated traversal event queue entry; authored clip remains separate."
+  },
+  {
+    "id": "src/runtime/timeline.ts#PendingTimelineEvent.crossed",
+    "source": "src/runtime/timeline.ts",
+    "declaration": "PendingTimelineEvent",
+    "field": "crossed",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Generated traversal event queue entry; authored clip remains separate."
+  },
+  {
+    "id": "src/runtime/timeline.ts#PendingTimelineEvent.target",
+    "source": "src/runtime/timeline.ts",
+    "declaration": "PendingTimelineEvent",
+    "field": "target",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Generated traversal event queue entry; authored clip remains separate."
+  },
+  {
+    "id": "src/runtime/timeline.ts#PendingTimelineEvent.clip",
+    "source": "src/runtime/timeline.ts",
+    "declaration": "PendingTimelineEvent",
+    "field": "clip",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Generated traversal event queue entry; authored clip remains separate."
+  },
+  {
+    "id": "src/runtime/timeline.ts#PendingTimelineEvent.type",
+    "source": "src/runtime/timeline.ts",
+    "declaration": "PendingTimelineEvent",
+    "field": "type",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Generated traversal event queue entry; authored clip remains separate."
+  },
+  {
+    "id": "src/runtime/timeline.ts#PendingTimelineEvent.branchDestination",
+    "source": "src/runtime/timeline.ts",
+    "declaration": "PendingTimelineEvent",
+    "field": "branchDestination",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Generated traversal event queue entry; authored clip remains separate."
+  },
+  {
+    "id": "src/runtime/timeline.ts#TimelineRuntime.states",
+    "source": "src/runtime/timeline.ts",
+    "declaration": "TimelineRuntime",
+    "field": "states",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Live player state, sample/voice queues and evaluation ownership; timeline assets remain authored separately."
+  },
+  {
+    "id": "src/runtime/timeline.ts#TimelineRuntime.animationSamples",
+    "source": "src/runtime/timeline.ts",
+    "declaration": "TimelineRuntime",
+    "field": "animationSamples",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Live player state, sample/voice queues and evaluation ownership; timeline assets remain authored separately."
+  },
+  {
+    "id": "src/runtime/timeline.ts#TimelineRuntime.audioVoices",
+    "source": "src/runtime/timeline.ts",
+    "declaration": "TimelineRuntime",
+    "field": "audioVoices",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Live player state, sample/voice queues and evaluation ownership; timeline assets remain authored separately."
+  },
+  {
+    "id": "src/runtime/timeline.ts#TimelineRuntime.traversalVisits",
+    "source": "src/runtime/timeline.ts",
+    "declaration": "TimelineRuntime",
+    "field": "traversalVisits",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Live player state, sample/voice queues and evaluation ownership; timeline assets remain authored separately."
+  },
+  {
+    "id": "src/runtime/timeline.ts#TimelineRuntime.visibilityPose",
+    "source": "src/runtime/timeline.ts",
+    "declaration": "TimelineRuntime",
+    "field": "visibilityPose",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Live player state, sample/voice queues and evaluation ownership; timeline assets remain authored separately."
+  },
+  {
+    "id": "src/runtime/timeline.ts#TimelineRuntime.cameraPose",
+    "source": "src/runtime/timeline.ts",
+    "declaration": "TimelineRuntime",
+    "field": "cameraPose",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Live player state, sample/voice queues and evaluation ownership; timeline assets remain authored separately."
+  },
+  {
+    "id": "src/runtime/timeline.ts#TimelineRuntime.onEvent",
+    "source": "src/runtime/timeline.ts",
+    "declaration": "TimelineRuntime",
+    "field": "onEvent",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Live player state, sample/voice queues and evaluation ownership; timeline assets remain authored separately."
+  },
+  {
+    "id": "src/runtime/uiAccessibility.ts#AccessibilityIssue.code",
+    "source": "src/runtime/uiAccessibility.ts",
+    "declaration": "AccessibilityIssue",
+    "field": "code",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Generated accessibility audit finding; authored UI accessibility properties remain separate."
+  },
+  {
+    "id": "src/runtime/uiAccessibility.ts#AccessibilityIssue.severity",
+    "source": "src/runtime/uiAccessibility.ts",
+    "declaration": "AccessibilityIssue",
+    "field": "severity",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Generated accessibility audit finding; authored UI accessibility properties remain separate."
+  },
+  {
+    "id": "src/runtime/uiAccessibility.ts#AccessibilityIssue.entityUuid",
+    "source": "src/runtime/uiAccessibility.ts",
+    "declaration": "AccessibilityIssue",
+    "field": "entityUuid",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Generated accessibility audit finding; authored UI accessibility properties remain separate."
+  },
+  {
+    "id": "src/runtime/uiAccessibility.ts#AccessibilityIssue.entityName",
+    "source": "src/runtime/uiAccessibility.ts",
+    "declaration": "AccessibilityIssue",
+    "field": "entityName",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Generated accessibility audit finding; authored UI accessibility properties remain separate."
+  },
+  {
+    "id": "src/runtime/uiAccessibility.ts#AccessibilityIssue.source",
+    "source": "src/runtime/uiAccessibility.ts",
+    "declaration": "AccessibilityIssue",
+    "field": "source",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Generated accessibility audit finding; authored UI accessibility properties remain separate."
+  },
+  {
+    "id": "src/runtime/uiAccessibility.ts#AccessibilityIssue.message",
+    "source": "src/runtime/uiAccessibility.ts",
+    "declaration": "AccessibilityIssue",
+    "field": "message",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Generated accessibility audit finding; authored UI accessibility properties remain separate."
+  },
+  {
+    "id": "src/runtime/uiTextLayout.ts#UiTextLayoutOptions.width",
+    "source": "src/runtime/uiTextLayout.ts",
+    "declaration": "UiTextLayoutOptions",
+    "field": "width",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Resolved text-layout call arguments and measurement callback; not a serialized UI document schema."
+  },
+  {
+    "id": "src/runtime/uiTextLayout.ts#UiTextLayoutOptions.height",
+    "source": "src/runtime/uiTextLayout.ts",
+    "declaration": "UiTextLayoutOptions",
+    "field": "height",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Resolved text-layout call arguments and measurement callback; not a serialized UI document schema."
+  },
+  {
+    "id": "src/runtime/uiTextLayout.ts#UiTextLayoutOptions.lineHeight",
+    "source": "src/runtime/uiTextLayout.ts",
+    "declaration": "UiTextLayoutOptions",
+    "field": "lineHeight",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Resolved text-layout call arguments and measurement callback; not a serialized UI document schema."
+  },
+  {
+    "id": "src/runtime/uiTextLayout.ts#UiTextLayoutOptions.wrap",
+    "source": "src/runtime/uiTextLayout.ts",
+    "declaration": "UiTextLayoutOptions",
+    "field": "wrap",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Resolved text-layout call arguments and measurement callback; not a serialized UI document schema."
+  },
+  {
+    "id": "src/runtime/uiTextLayout.ts#UiTextLayoutOptions.overflow",
+    "source": "src/runtime/uiTextLayout.ts",
+    "declaration": "UiTextLayoutOptions",
+    "field": "overflow",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Resolved text-layout call arguments and measurement callback; not a serialized UI document schema."
+  },
+  {
+    "id": "src/runtime/uiTextLayout.ts#UiTextLayoutOptions.measure",
+    "source": "src/runtime/uiTextLayout.ts",
+    "declaration": "UiTextLayoutOptions",
+    "field": "measure",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Resolved text-layout call arguments and measurement callback; not a serialized UI document schema."
+  },
+  {
+    "id": "src/runtime/uiTextLayout.ts#UiTextLayout.lines",
+    "source": "src/runtime/uiTextLayout.ts",
+    "declaration": "UiTextLayout",
+    "field": "lines",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Computed line geometry/clipping result; authored text and layout constraints remain separate."
+  },
+  {
+    "id": "src/runtime/uiTextLayout.ts#UiTextLayout.width",
+    "source": "src/runtime/uiTextLayout.ts",
+    "declaration": "UiTextLayout",
+    "field": "width",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Computed line geometry/clipping result; authored text and layout constraints remain separate."
+  },
+  {
+    "id": "src/runtime/uiTextLayout.ts#UiTextLayout.height",
+    "source": "src/runtime/uiTextLayout.ts",
+    "declaration": "UiTextLayout",
+    "field": "height",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Computed line geometry/clipping result; authored text and layout constraints remain separate."
+  },
+  {
+    "id": "src/runtime/uiTextLayout.ts#UiTextLayout.clipped",
+    "source": "src/runtime/uiTextLayout.ts",
+    "declaration": "UiTextLayout",
+    "field": "clipped",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Computed line geometry/clipping result; authored text and layout constraints remain separate."
+  },
+  {
+    "id": "src/runtime/uiTextLayout.ts#UiTextLayout.limited",
+    "source": "src/runtime/uiTextLayout.ts",
+    "declaration": "UiTextLayout",
+    "field": "limited",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Computed line geometry/clipping result; authored text and layout constraints remain separate."
+  },
+  {
+    "id": "src/runtime/uiTextLayout.ts#UiTextLayout.lineHeight",
+    "source": "src/runtime/uiTextLayout.ts",
+    "declaration": "UiTextLayout",
+    "field": "lineHeight",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Computed line geometry/clipping result; authored text and layout constraints remain separate."
+  },
+  {
+    "id": "src/runtime/eventSheets.ts#ResolvedObjectEventHandler.sourceSheetAsset",
+    "source": "src/runtime/eventSheets.ts",
+    "declaration": "ResolvedObjectEventHandler",
+    "field": "sourceSheetAsset",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Resolved event inheritance provenance; authored handlers are ObjectEventHandler records."
+  },
+  {
+    "id": "src/runtime/eventSheets.ts#ResolvedObjectEventHandler.sourceSheetUuid",
+    "source": "src/runtime/eventSheets.ts",
+    "declaration": "ResolvedObjectEventHandler",
+    "field": "sourceSheetUuid",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Resolved event inheritance provenance; authored handlers are ObjectEventHandler records."
+  },
+  {
+    "id": "src/runtime/eventSheets.ts#ResolvedObjectEventHandler.logicAsset",
+    "source": "src/runtime/eventSheets.ts",
+    "declaration": "ResolvedObjectEventHandler",
+    "field": "logicAsset",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Resolved event inheritance provenance; authored handlers are ObjectEventHandler records."
+  },
+  {
+    "id": "src/runtime/eventSheets.ts#ResolvedObjectEventHandler.inherited",
+    "source": "src/runtime/eventSheets.ts",
+    "declaration": "ResolvedObjectEventHandler",
+    "field": "inherited",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Resolved event inheritance provenance; authored handlers are ObjectEventHandler records."
+  },
+  {
+    "id": "src/runtime/eventSheets.ts#EventSheetDiagnostic.severity",
+    "source": "src/runtime/eventSheets.ts",
+    "declaration": "EventSheetDiagnostic",
+    "field": "severity",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Generated event-sheet validation diagnostic; authored handlers remain separate."
+  },
+  {
+    "id": "src/runtime/eventSheets.ts#EventSheetDiagnostic.code",
+    "source": "src/runtime/eventSheets.ts",
+    "declaration": "EventSheetDiagnostic",
+    "field": "code",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Generated event-sheet validation diagnostic; authored handlers remain separate."
+  },
+  {
+    "id": "src/runtime/eventSheets.ts#EventSheetDiagnostic.message",
+    "source": "src/runtime/eventSheets.ts",
+    "declaration": "EventSheetDiagnostic",
+    "field": "message",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Generated event-sheet validation diagnostic; authored handlers remain separate."
+  },
+  {
+    "id": "src/runtime/eventSheets.ts#EventSheetDiagnostic.handlerUuid",
+    "source": "src/runtime/eventSheets.ts",
+    "declaration": "EventSheetDiagnostic",
+    "field": "handlerUuid",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Generated event-sheet validation diagnostic; authored handlers remain separate."
+  },
+  {
+    "id": "src/runtime/eventSheets.ts#ScheduledObjectEvent.sheetUuid",
+    "source": "src/runtime/eventSheets.ts",
+    "declaration": "ScheduledObjectEvent",
+    "field": "sheetUuid",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Runtime dispatch queue record; authored handlers and selectors remain separate."
+  },
+  {
+    "id": "src/runtime/eventSheets.ts#ScheduledObjectEvent.sourceSheetAsset",
+    "source": "src/runtime/eventSheets.ts",
+    "declaration": "ScheduledObjectEvent",
+    "field": "sourceSheetAsset",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Runtime dispatch queue record; authored handlers and selectors remain separate."
+  },
+  {
+    "id": "src/runtime/eventSheets.ts#ScheduledObjectEvent.logicAsset",
+    "source": "src/runtime/eventSheets.ts",
+    "declaration": "ScheduledObjectEvent",
+    "field": "logicAsset",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Runtime dispatch queue record; authored handlers and selectors remain separate."
+  },
+  {
+    "id": "src/runtime/eventSheets.ts#ScheduledObjectEvent.handlerUuid",
+    "source": "src/runtime/eventSheets.ts",
+    "declaration": "ScheduledObjectEvent",
+    "field": "handlerUuid",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Runtime dispatch queue record; authored handlers and selectors remain separate."
+  },
+  {
+    "id": "src/runtime/eventSheets.ts#ScheduledObjectEvent.entityUuid",
+    "source": "src/runtime/eventSheets.ts",
+    "declaration": "ScheduledObjectEvent",
+    "field": "entityUuid",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Runtime dispatch queue record; authored handlers and selectors remain separate."
+  },
+  {
+    "id": "src/runtime/eventSheets.ts#ScheduledObjectEvent.callback",
+    "source": "src/runtime/eventSheets.ts",
+    "declaration": "ScheduledObjectEvent",
+    "field": "callback",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Runtime dispatch queue record; authored handlers and selectors remain separate."
+  },
+  {
+    "id": "src/runtime/eventSheets.ts#ScheduledObjectEvent.priority",
+    "source": "src/runtime/eventSheets.ts",
+    "declaration": "ScheduledObjectEvent",
+    "field": "priority",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Runtime dispatch queue record; authored handlers and selectors remain separate."
+  },
+  {
+    "id": "src/runtime/eventSheets.ts#ScheduledObjectEvent.order",
+    "source": "src/runtime/eventSheets.ts",
+    "declaration": "ScheduledObjectEvent",
+    "field": "order",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Runtime dispatch queue record; authored handlers and selectors remain separate."
+  },
+  {
+    "id": "src/runtime/objectBlueprints.ts#ObjectBlueprintDiagnostic.severity",
+    "source": "src/runtime/objectBlueprints.ts",
+    "declaration": "ObjectBlueprintDiagnostic",
+    "field": "severity",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Generated blueprint validation diagnostic; authored blueprint remains separate."
+  },
+  {
+    "id": "src/runtime/objectBlueprints.ts#ObjectBlueprintDiagnostic.code",
+    "source": "src/runtime/objectBlueprints.ts",
+    "declaration": "ObjectBlueprintDiagnostic",
+    "field": "code",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Generated blueprint validation diagnostic; authored blueprint remains separate."
+  },
+  {
+    "id": "src/runtime/objectBlueprints.ts#ObjectBlueprintDiagnostic.message",
+    "source": "src/runtime/objectBlueprints.ts",
+    "declaration": "ObjectBlueprintDiagnostic",
+    "field": "message",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Generated blueprint validation diagnostic; authored blueprint remains separate."
+  },
+  {
+    "id": "src/runtime/objectBlueprints.ts#QuickObjectWorkflowResult.entity",
+    "source": "src/runtime/objectBlueprints.ts",
+    "declaration": "QuickObjectWorkflowResult",
+    "field": "entity",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Command result containing created entities and asset references; each created resource has its own authored lifecycle."
+  },
+  {
+    "id": "src/runtime/objectBlueprints.ts#QuickObjectWorkflowResult.eventSheetAsset",
+    "source": "src/runtime/objectBlueprints.ts",
+    "declaration": "QuickObjectWorkflowResult",
+    "field": "eventSheetAsset",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Command result containing created entities and asset references; each created resource has its own authored lifecycle."
+  },
+  {
+    "id": "src/runtime/objectBlueprints.ts#QuickObjectWorkflowResult.logicAsset",
+    "source": "src/runtime/objectBlueprints.ts",
+    "declaration": "QuickObjectWorkflowResult",
+    "field": "logicAsset",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Command result containing created entities and asset references; each created resource has its own authored lifecycle."
+  },
+  {
+    "id": "src/runtime/objectBlueprints.ts#QuickObjectWorkflowResult.prefabAsset",
+    "source": "src/runtime/objectBlueprints.ts",
+    "declaration": "QuickObjectWorkflowResult",
+    "field": "prefabAsset",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Command result containing created entities and asset references; each created resource has its own authored lifecycle."
+  },
+  {
+    "id": "src/runtime/objectBlueprints.ts#QuickObjectWorkflowResult.blueprintAsset",
+    "source": "src/runtime/objectBlueprints.ts",
+    "declaration": "QuickObjectWorkflowResult",
+    "field": "blueprintAsset",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Command result containing created entities and asset references; each created resource has its own authored lifecycle."
+  },
+  {
+    "id": "src/runtime/packages.ts#PackageSolverStep.packageId",
+    "source": "src/runtime/packages.ts",
+    "declaration": "PackageSolverStep",
+    "field": "packageId",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Generated dependency resolution trace entry; package manifests and lock entries remain separate."
+  },
+  {
+    "id": "src/runtime/packages.ts#PackageSolverStep.version",
+    "source": "src/runtime/packages.ts",
+    "declaration": "PackageSolverStep",
+    "field": "version",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Generated dependency resolution trace entry; package manifests and lock entries remain separate."
+  },
+  {
+    "id": "src/runtime/packages.ts#PackageSolverStep.requestedBy",
+    "source": "src/runtime/packages.ts",
+    "declaration": "PackageSolverStep",
+    "field": "requestedBy",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Generated dependency resolution trace entry; package manifests and lock entries remain separate."
+  },
+  {
+    "id": "src/runtime/packages.ts#PackageSolverStep.requirement",
+    "source": "src/runtime/packages.ts",
+    "declaration": "PackageSolverStep",
+    "field": "requirement",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Generated dependency resolution trace entry; package manifests and lock entries remain separate."
+  },
+  {
+    "id": "src/runtime/packages.ts#PackageSolverStep.status",
+    "source": "src/runtime/packages.ts",
+    "declaration": "PackageSolverStep",
+    "field": "status",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Generated dependency resolution trace entry; package manifests and lock entries remain separate."
+  },
+  {
+    "id": "src/runtime/packages.ts#PackageSolverStep.detail",
+    "source": "src/runtime/packages.ts",
+    "declaration": "PackageSolverStep",
+    "field": "detail",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Generated dependency resolution trace entry; package manifests and lock entries remain separate."
+  },
+  {
+    "id": "src/runtime/packages.ts#PackageSolverDiagnostic.status",
+    "source": "src/runtime/packages.ts",
+    "declaration": "PackageSolverDiagnostic",
+    "field": "status",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Generated solver diagnostic/result; installation applies a separate reviewed lockfile."
+  },
+  {
+    "id": "src/runtime/packages.ts#PackageSolverDiagnostic.roots",
+    "source": "src/runtime/packages.ts",
+    "declaration": "PackageSolverDiagnostic",
+    "field": "roots",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Generated solver diagnostic/result; installation applies a separate reviewed lockfile."
+  },
+  {
+    "id": "src/runtime/packages.ts#PackageSolverDiagnostic.steps",
+    "source": "src/runtime/packages.ts",
+    "declaration": "PackageSolverDiagnostic",
+    "field": "steps",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Generated solver diagnostic/result; installation applies a separate reviewed lockfile."
+  },
+  {
+    "id": "src/runtime/packages.ts#PackageSolverDiagnostic.errors",
+    "source": "src/runtime/packages.ts",
+    "declaration": "PackageSolverDiagnostic",
+    "field": "errors",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Generated solver diagnostic/result; installation applies a separate reviewed lockfile."
+  },
+  {
+    "id": "src/runtime/packages.ts#PackageSolverDiagnostic.lockfile",
+    "source": "src/runtime/packages.ts",
+    "declaration": "PackageSolverDiagnostic",
+    "field": "lockfile",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Generated solver diagnostic/result; installation applies a separate reviewed lockfile."
+  },
+  {
+    "id": "src/runtime/packages.ts#PackageSecurityReview.status",
+    "source": "src/runtime/packages.ts",
+    "declaration": "PackageSecurityReview",
+    "field": "status",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Computed security review result; not editable package manifest fields."
+  },
+  {
+    "id": "src/runtime/packages.ts#PackageSecurityReview.blocking",
+    "source": "src/runtime/packages.ts",
+    "declaration": "PackageSecurityReview",
+    "field": "blocking",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Computed security review result; not editable package manifest fields."
+  },
+  {
+    "id": "src/runtime/packages.ts#PackageSecurityReview.warnings",
+    "source": "src/runtime/packages.ts",
+    "declaration": "PackageSecurityReview",
+    "field": "warnings",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Computed security review result; not editable package manifest fields."
+  },
+  {
+    "id": "src/runtime/packages.ts#PackageInstallReview.id",
+    "source": "src/runtime/packages.ts",
+    "declaration": "PackageInstallReview",
+    "field": "id",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Computed installation review/permission decision input; installed package grants and manifest fields remain separate."
+  },
+  {
+    "id": "src/runtime/packages.ts#PackageInstallReview.version",
+    "source": "src/runtime/packages.ts",
+    "declaration": "PackageInstallReview",
+    "field": "version",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Computed installation review/permission decision input; installed package grants and manifest fields remain separate."
+  },
+  {
+    "id": "src/runtime/packages.ts#PackageInstallReview.publisher",
+    "source": "src/runtime/packages.ts",
+    "declaration": "PackageInstallReview",
+    "field": "publisher",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Computed installation review/permission decision input; installed package grants and manifest fields remain separate."
+  },
+  {
+    "id": "src/runtime/packages.ts#PackageInstallReview.publisherVerified",
+    "source": "src/runtime/packages.ts",
+    "declaration": "PackageInstallReview",
+    "field": "publisherVerified",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Computed installation review/permission decision input; installed package grants and manifest fields remain separate."
+  },
+  {
+    "id": "src/runtime/packages.ts#PackageInstallReview.sourcePolicy",
+    "source": "src/runtime/packages.ts",
+    "declaration": "PackageInstallReview",
+    "field": "sourcePolicy",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Computed installation review/permission decision input; installed package grants and manifest fields remain separate."
+  },
+  {
+    "id": "src/runtime/packages.ts#PackageInstallReview.archiveSha256",
+    "source": "src/runtime/packages.ts",
+    "declaration": "PackageInstallReview",
+    "field": "archiveSha256",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Computed installation review/permission decision input; installed package grants and manifest fields remain separate."
+  },
+  {
+    "id": "src/runtime/packages.ts#PackageInstallReview.signature",
+    "source": "src/runtime/packages.ts",
+    "declaration": "PackageInstallReview",
+    "field": "signature",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Computed installation review/permission decision input; installed package grants and manifest fields remain separate."
+  },
+  {
+    "id": "src/runtime/packages.ts#PackageInstallReview.license",
+    "source": "src/runtime/packages.ts",
+    "declaration": "PackageInstallReview",
+    "field": "license",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Computed installation review/permission decision input; installed package grants and manifest fields remain separate."
+  },
+  {
+    "id": "src/runtime/packages.ts#PackageInstallReview.provenance",
+    "source": "src/runtime/packages.ts",
+    "declaration": "PackageInstallReview",
+    "field": "provenance",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Computed installation review/permission decision input; installed package grants and manifest fields remain separate."
+  },
+  {
+    "id": "src/runtime/packages.ts#PackageInstallReview.pluginApiCompatibility",
+    "source": "src/runtime/packages.ts",
+    "declaration": "PackageInstallReview",
+    "field": "pluginApiCompatibility",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Computed installation review/permission decision input; installed package grants and manifest fields remain separate."
+  },
+  {
+    "id": "src/runtime/packages.ts#PackageInstallReview.certification",
+    "source": "src/runtime/packages.ts",
+    "declaration": "PackageInstallReview",
+    "field": "certification",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Computed installation review/permission decision input; installed package grants and manifest fields remain separate."
+  },
+  {
+    "id": "src/runtime/packages.ts#PackageInstallReview.permissions",
+    "source": "src/runtime/packages.ts",
+    "declaration": "PackageInstallReview",
+    "field": "permissions",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Computed installation review/permission decision input; installed package grants and manifest fields remain separate."
+  },
+  {
+    "id": "src/runtime/packages.ts#PackageInstallReview.dependencies",
+    "source": "src/runtime/packages.ts",
+    "declaration": "PackageInstallReview",
+    "field": "dependencies",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Computed installation review/permission decision input; installed package grants and manifest fields remain separate."
+  },
+  {
+    "id": "src/runtime/packages.ts#PackageInstallReview.blocking",
+    "source": "src/runtime/packages.ts",
+    "declaration": "PackageInstallReview",
+    "field": "blocking",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Computed installation review/permission decision input; installed package grants and manifest fields remain separate."
+  },
+  {
+    "id": "src/runtime/packages.ts#PackageInstallReview.warnings",
+    "source": "src/runtime/packages.ts",
+    "declaration": "PackageInstallReview",
+    "field": "warnings",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Computed installation review/permission decision input; installed package grants and manifest fields remain separate."
+  },
+  {
+    "id": "src/runtime/packages.ts#PackageInstallReview.executionAllowed",
+    "source": "src/runtime/packages.ts",
+    "declaration": "PackageInstallReview",
+    "field": "executionAllowed",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Computed installation review/permission decision input; installed package grants and manifest fields remain separate."
+  },
+  {
+    "id": "src/runtime/plugins.ts#ActivePlugin.manifest",
+    "source": "src/runtime/plugins.ts",
+    "declaration": "ActivePlugin",
+    "field": "manifest",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Live plugin instance and loaded manifest reference; project plugin configuration remains separate."
+  },
+  {
+    "id": "src/runtime/plugins.ts#ActivePlugin.instance",
+    "source": "src/runtime/plugins.ts",
+    "declaration": "ActivePlugin",
+    "field": "instance",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Live plugin instance and loaded manifest reference; project plugin configuration remains separate."
+  },
+  {
+    "id": "src/runtime/plugins.ts#PluginRuntime.active",
+    "source": "src/runtime/plugins.ts",
+    "declaration": "PluginRuntime",
+    "field": "active",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Live activation map and cancellation generation; project plugin policy remains separate."
+  },
+  {
+    "id": "src/runtime/plugins.ts#PluginRuntime.generation",
+    "source": "src/runtime/plugins.ts",
+    "declaration": "PluginRuntime",
+    "field": "generation",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Live activation map and cancellation generation; project plugin policy remains separate."
+  },
+  {
+    "id": "src/runtime/buildSettings.ts#BuildIssue.code",
+    "source": "src/runtime/buildSettings.ts",
+    "declaration": "BuildIssue",
+    "field": "code",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Generated build readiness diagnostic; authored build configuration remains separate."
+  },
+  {
+    "id": "src/runtime/buildSettings.ts#BuildIssue.severity",
+    "source": "src/runtime/buildSettings.ts",
+    "declaration": "BuildIssue",
+    "field": "severity",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Generated build readiness diagnostic; authored build configuration remains separate."
+  },
+  {
+    "id": "src/runtime/buildSettings.ts#BuildIssue.message",
+    "source": "src/runtime/buildSettings.ts",
+    "declaration": "BuildIssue",
+    "field": "message",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Generated build readiness diagnostic; authored build configuration remains separate."
+  },
+  {
+    "id": "src/runtime/buildSettings.ts#BuildIssue.helpTarget",
+    "source": "src/runtime/buildSettings.ts",
+    "declaration": "BuildIssue",
+    "field": "helpTarget",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Generated build readiness diagnostic; authored build configuration remains separate."
+  },
+  {
+    "id": "src/runtime/buildSettings.ts#ExportCapabilities.nativeAvailable",
+    "source": "src/runtime/buildSettings.ts",
+    "declaration": "ExportCapabilities",
+    "field": "nativeAvailable",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Detected host/toolchain capabilities; not authored export platform settings."
+  },
+  {
+    "id": "src/runtime/buildSettings.ts#ExportCapabilities.nativeReason",
+    "source": "src/runtime/buildSettings.ts",
+    "declaration": "ExportCapabilities",
+    "field": "nativeReason",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Detected host/toolchain capabilities; not authored export platform settings."
+  },
+  {
+    "id": "src/runtime/buildSettings.ts#ExportCapabilities.host",
+    "source": "src/runtime/buildSettings.ts",
+    "declaration": "ExportCapabilities",
+    "field": "host",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Detected host/toolchain capabilities; not authored export platform settings."
+  },
+  {
+    "id": "src/runtime/buildSettings.ts#ExportCapabilities.architecture",
+    "source": "src/runtime/buildSettings.ts",
+    "declaration": "ExportCapabilities",
+    "field": "architecture",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Detected host/toolchain capabilities; not authored export platform settings."
+  },
+  {
+    "id": "src/runtime/buildSettings.ts#ExportCapabilities.androidAvailable",
+    "source": "src/runtime/buildSettings.ts",
+    "declaration": "ExportCapabilities",
+    "field": "androidAvailable",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Detected host/toolchain capabilities; not authored export platform settings."
+  },
+  {
+    "id": "src/runtime/buildSettings.ts#ExportCapabilities.androidReason",
+    "source": "src/runtime/buildSettings.ts",
+    "declaration": "ExportCapabilities",
+    "field": "androidReason",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Detected host/toolchain capabilities; not authored export platform settings."
+  },
+  {
+    "id": "src/runtime/buildSettings.ts#BuildProgress.phase",
+    "source": "src/runtime/buildSettings.ts",
+    "declaration": "BuildProgress",
+    "field": "phase",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Generated current build progress/counters/output observation; not authored build settings."
+  },
+  {
+    "id": "src/runtime/buildSettings.ts#BuildProgress.message",
+    "source": "src/runtime/buildSettings.ts",
+    "declaration": "BuildProgress",
+    "field": "message",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Generated current build progress/counters/output observation; not authored build settings."
+  },
+  {
+    "id": "src/runtime/buildSettings.ts#BuildProgress.percent",
+    "source": "src/runtime/buildSettings.ts",
+    "declaration": "BuildProgress",
+    "field": "percent",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Generated current build progress/counters/output observation; not authored build settings."
+  },
+  {
+    "id": "src/runtime/buildSettings.ts#BuildProgress.outputPath",
+    "source": "src/runtime/buildSettings.ts",
+    "declaration": "BuildProgress",
+    "field": "outputPath",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Generated current build progress/counters/output observation; not authored build settings."
+  },
+  {
+    "id": "src/runtime/buildSettings.ts#BuildProgress.cacheHits",
+    "source": "src/runtime/buildSettings.ts",
+    "declaration": "BuildProgress",
+    "field": "cacheHits",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Generated current build progress/counters/output observation; not authored build settings."
+  },
+  {
+    "id": "src/runtime/buildSettings.ts#BuildProgress.changedFiles",
+    "source": "src/runtime/buildSettings.ts",
+    "declaration": "BuildProgress",
+    "field": "changedFiles",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Generated current build progress/counters/output observation; not authored build settings."
+  },
+  {
+    "id": "src/runtime/buildSettings.ts#BuildHistoryEntry.id",
+    "source": "src/runtime/buildSettings.ts",
+    "declaration": "BuildHistoryEntry",
+    "field": "id",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Generated build execution receipt/history; not an independently edited build preset."
+  },
+  {
+    "id": "src/runtime/buildSettings.ts#BuildHistoryEntry.startedAt",
+    "source": "src/runtime/buildSettings.ts",
+    "declaration": "BuildHistoryEntry",
+    "field": "startedAt",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Generated build execution receipt/history; not an independently edited build preset."
+  },
+  {
+    "id": "src/runtime/buildSettings.ts#BuildHistoryEntry.finishedAt",
+    "source": "src/runtime/buildSettings.ts",
+    "declaration": "BuildHistoryEntry",
+    "field": "finishedAt",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Generated build execution receipt/history; not an independently edited build preset."
+  },
+  {
+    "id": "src/runtime/buildSettings.ts#BuildHistoryEntry.target",
+    "source": "src/runtime/buildSettings.ts",
+    "declaration": "BuildHistoryEntry",
+    "field": "target",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Generated build execution receipt/history; not an independently edited build preset."
+  },
+  {
+    "id": "src/runtime/buildSettings.ts#BuildHistoryEntry.profile",
+    "source": "src/runtime/buildSettings.ts",
+    "declaration": "BuildHistoryEntry",
+    "field": "profile",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Generated build execution receipt/history; not an independently edited build preset."
+  },
+  {
+    "id": "src/runtime/buildSettings.ts#BuildHistoryEntry.status",
+    "source": "src/runtime/buildSettings.ts",
+    "declaration": "BuildHistoryEntry",
+    "field": "status",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Generated build execution receipt/history; not an independently edited build preset."
+  },
+  {
+    "id": "src/runtime/buildSettings.ts#BuildHistoryEntry.outputPath",
+    "source": "src/runtime/buildSettings.ts",
+    "declaration": "BuildHistoryEntry",
+    "field": "outputPath",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Generated build execution receipt/history; not an independently edited build preset."
+  },
+  {
+    "id": "src/runtime/buildSettings.ts#BuildHistoryEntry.buildId",
+    "source": "src/runtime/buildSettings.ts",
+    "declaration": "BuildHistoryEntry",
+    "field": "buildId",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Generated build execution receipt/history; not an independently edited build preset."
+  },
+  {
+    "id": "src/runtime/buildSettings.ts#BuildHistoryEntry.sizeBytes",
+    "source": "src/runtime/buildSettings.ts",
+    "declaration": "BuildHistoryEntry",
+    "field": "sizeBytes",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Generated build execution receipt/history; not an independently edited build preset."
+  },
+  {
+    "id": "src/runtime/buildSettings.ts#BuildHistoryEntry.message",
+    "source": "src/runtime/buildSettings.ts",
+    "declaration": "BuildHistoryEntry",
+    "field": "message",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Generated build execution receipt/history; not an independently edited build preset."
+  },
+  {
+    "id": "src/runtime/buildSettings.ts#BuildHistoryEntry.durationMs",
+    "source": "src/runtime/buildSettings.ts",
+    "declaration": "BuildHistoryEntry",
+    "field": "durationMs",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Generated build execution receipt/history; not an independently edited build preset."
+  },
+  {
+    "id": "src/runtime/buildSettings.ts#BuildHistoryEntry.inputsHash",
+    "source": "src/runtime/buildSettings.ts",
+    "declaration": "BuildHistoryEntry",
+    "field": "inputsHash",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Generated build execution receipt/history; not an independently edited build preset."
+  },
+  {
+    "id": "src/runtime/buildSettings.ts#BuildHistoryEntry.outputsHash",
+    "source": "src/runtime/buildSettings.ts",
+    "declaration": "BuildHistoryEntry",
+    "field": "outputsHash",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Generated build execution receipt/history; not an independently edited build preset."
+  },
+  {
+    "id": "src/runtime/buildSettings.ts#BuildHistoryEntry.cacheKey",
+    "source": "src/runtime/buildSettings.ts",
+    "declaration": "BuildHistoryEntry",
+    "field": "cacheKey",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Generated build execution receipt/history; not an independently edited build preset."
+  },
+  {
+    "id": "src/runtime/buildSettings.ts#BuildHistoryEntry.manifestPath",
+    "source": "src/runtime/buildSettings.ts",
+    "declaration": "BuildHistoryEntry",
+    "field": "manifestPath",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Generated build execution receipt/history; not an independently edited build preset."
+  },
+  {
+    "id": "src/runtime/buildSettings.ts#BuildHistoryEntry.log",
+    "source": "src/runtime/buildSettings.ts",
+    "declaration": "BuildHistoryEntry",
+    "field": "log",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Generated build execution receipt/history; not an independently edited build preset."
+  },
+  {
+    "id": "src/runtime/buildSettings.ts#BuildHistoryEntry.evidenceStatus",
+    "source": "src/runtime/buildSettings.ts",
+    "declaration": "BuildHistoryEntry",
+    "field": "evidenceStatus",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Generated build execution receipt/history; not an independently edited build preset."
+  },
+  {
+    "id": "src/projects/projectData.ts#ProjectIssue.severity",
+    "source": "src/projects/projectData.ts",
+    "declaration": "ProjectIssue",
+    "field": "severity",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Generated project validation diagnostic; source project fields remain separate."
+  },
+  {
+    "id": "src/projects/projectData.ts#ProjectIssue.code",
+    "source": "src/projects/projectData.ts",
+    "declaration": "ProjectIssue",
+    "field": "code",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Generated project validation diagnostic; source project fields remain separate."
+  },
+  {
+    "id": "src/projects/projectData.ts#ProjectIssue.path",
+    "source": "src/projects/projectData.ts",
+    "declaration": "ProjectIssue",
+    "field": "path",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Generated project validation diagnostic; source project fields remain separate."
+  },
+  {
+    "id": "src/projects/projectData.ts#ProjectIssue.message",
+    "source": "src/projects/projectData.ts",
+    "declaration": "ProjectIssue",
+    "field": "message",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Generated project validation diagnostic; source project fields remain separate."
+  },
+  {
+    "id": "src/projects/projectData.ts#ProjectIssue.repairable",
+    "source": "src/projects/projectData.ts",
+    "declaration": "ProjectIssue",
+    "field": "repairable",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Generated project validation diagnostic; source project fields remain separate."
+  },
+  {
+    "id": "src/projects/projectData.ts#ProjectValidationReport.valid",
+    "source": "src/projects/projectData.ts",
+    "declaration": "ProjectValidationReport",
+    "field": "valid",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Generated aggregate validation report; not project-authored data."
+  },
+  {
+    "id": "src/projects/projectData.ts#ProjectValidationReport.generatedAt",
+    "source": "src/projects/projectData.ts",
+    "declaration": "ProjectValidationReport",
+    "field": "generatedAt",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Generated aggregate validation report; not project-authored data."
+  },
+  {
+    "id": "src/projects/projectData.ts#ProjectValidationReport.issues",
+    "source": "src/projects/projectData.ts",
+    "declaration": "ProjectValidationReport",
+    "field": "issues",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Generated aggregate validation report; not project-authored data."
+  },
+  {
+    "id": "src/projects/projectData.ts#ProjectValidationReport.sceneCount",
+    "source": "src/projects/projectData.ts",
+    "declaration": "ProjectValidationReport",
+    "field": "sceneCount",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Generated aggregate validation report; not project-authored data."
+  },
+  {
+    "id": "src/projects/projectData.ts#ProjectValidationReport.entityCount",
+    "source": "src/projects/projectData.ts",
+    "declaration": "ProjectValidationReport",
+    "field": "entityCount",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Generated aggregate validation report; not project-authored data."
+  },
+  {
+    "id": "src/projects/projectData.ts#ProjectValidationReport.assetCount",
+    "source": "src/projects/projectData.ts",
+    "declaration": "ProjectValidationReport",
+    "field": "assetCount",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Generated aggregate validation report; not project-authored data."
+  },
+  {
+    "id": "src/projects/projectData.ts#ProjectRepairReport.source",
+    "source": "src/projects/projectData.ts",
+    "declaration": "ProjectRepairReport",
+    "field": "source",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Generated repair result and source/remaining findings; repair operations own authored changes."
+  },
+  {
+    "id": "src/projects/projectData.ts#ProjectRepairReport.changes",
+    "source": "src/projects/projectData.ts",
+    "declaration": "ProjectRepairReport",
+    "field": "changes",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Generated repair result and source/remaining findings; repair operations own authored changes."
+  },
+  {
+    "id": "src/projects/projectData.ts#ProjectRepairReport.remaining",
+    "source": "src/projects/projectData.ts",
+    "declaration": "ProjectRepairReport",
+    "field": "remaining",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Generated repair result and source/remaining findings; repair operations own authored changes."
+  },
+  {
+    "id": "src/projects/projectData.ts#ProjectDataSeparation.authored",
+    "source": "src/projects/projectData.ts",
+    "declaration": "ProjectDataSeparation",
+    "field": "authored",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Computed authored/generated data partition result; not an additional serialized model."
+  },
+  {
+    "id": "src/projects/projectData.ts#ProjectDataSeparation.generated",
+    "source": "src/projects/projectData.ts",
+    "declaration": "ProjectDataSeparation",
+    "field": "generated",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Computed authored/generated data partition result; not an additional serialized model."
+  },
+  {
+    "id": "src/projects/projectData.ts#SemanticProjectChange.kind",
+    "source": "src/projects/projectData.ts",
+    "declaration": "SemanticProjectChange",
+    "field": "kind",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Generated semantic difference record; applying the merge owns the actual authored changes."
+  },
+  {
+    "id": "src/projects/projectData.ts#SemanticProjectChange.resourceType",
+    "source": "src/projects/projectData.ts",
+    "declaration": "SemanticProjectChange",
+    "field": "resourceType",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Generated semantic difference record; applying the merge owns the actual authored changes."
+  },
+  {
+    "id": "src/projects/projectData.ts#SemanticProjectChange.uuid",
+    "source": "src/projects/projectData.ts",
+    "declaration": "SemanticProjectChange",
+    "field": "uuid",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Generated semantic difference record; applying the merge owns the actual authored changes."
+  },
+  {
+    "id": "src/projects/projectData.ts#SemanticProjectChange.path",
+    "source": "src/projects/projectData.ts",
+    "declaration": "SemanticProjectChange",
+    "field": "path",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Generated semantic difference record; applying the merge owns the actual authored changes."
+  },
+  {
+    "id": "src/projects/projectData.ts#SemanticProjectChange.beforeChecksum",
+    "source": "src/projects/projectData.ts",
+    "declaration": "SemanticProjectChange",
+    "field": "beforeChecksum",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Generated semantic difference record; applying the merge owns the actual authored changes."
+  },
+  {
+    "id": "src/projects/projectData.ts#SemanticProjectChange.afterChecksum",
+    "source": "src/projects/projectData.ts",
+    "declaration": "SemanticProjectChange",
+    "field": "afterChecksum",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Generated semantic difference record; applying the merge owns the actual authored changes."
+  },
+  {
+    "id": "src/projects/projectData.ts#SceneDependencyNode.sceneUuid",
+    "source": "src/projects/projectData.ts",
+    "declaration": "SceneDependencyNode",
+    "field": "sceneUuid",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Computed scene dependency graph node; authored scene references remain separate."
+  },
+  {
+    "id": "src/projects/projectData.ts#SceneDependencyNode.name",
+    "source": "src/projects/projectData.ts",
+    "declaration": "SceneDependencyNode",
+    "field": "name",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Computed scene dependency graph node; authored scene references remain separate."
+  },
+  {
+    "id": "src/projects/projectData.ts#SceneDependencyNode.dependencies",
+    "source": "src/projects/projectData.ts",
+    "declaration": "SceneDependencyNode",
+    "field": "dependencies",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Computed scene dependency graph node; authored scene references remain separate."
+  },
+  {
+    "id": "src/projects/projectData.ts#SceneDependencyNode.reverseDependencies",
+    "source": "src/projects/projectData.ts",
+    "declaration": "SceneDependencyNode",
+    "field": "reverseDependencies",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Computed scene dependency graph node; authored scene references remain separate."
+  },
+  {
+    "id": "src/world/Entity.ts#Entity.components",
+    "source": "src/world/Entity.ts",
+    "declaration": "Entity",
+    "field": "components",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Filtered live component array derived from componentMap; individual component lifecycle rows own authored values and tombstones."
+  },
+  {
+    "id": "src/world/Entity.ts#Entity.transform",
+    "source": "src/world/Entity.ts",
+    "declaration": "Entity",
+    "field": "transform",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Lookup view of the Transform2D component, not a separately stored Entity property."
+  },
+  {
+    "id": "src/world/Entity.ts#Entity.renderer",
+    "source": "src/world/Entity.ts",
+    "declaration": "Entity",
+    "field": "renderer",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Lookup view of ShapeRenderer2D; canonical renderer fields own edits and serialization."
+  },
+  {
+    "id": "src/world/Entity.ts#Entity.rigidBody",
+    "source": "src/world/Entity.ts",
+    "declaration": "Entity",
+    "field": "rigidBody",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Lookup view of RigidBody2D; canonical body fields own edits and serialization."
+  },
+  {
+    "id": "src/world/Entity.ts#Entity.spriteRenderer",
+    "source": "src/world/Entity.ts",
+    "declaration": "Entity",
+    "field": "spriteRenderer",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Nullable lookup view of SpriteRenderer2D; canonical sprite fields own authored values."
+  },
+  {
+    "id": "src/world/Entity.ts#Entity.textRenderer",
+    "source": "src/world/Entity.ts",
+    "declaration": "Entity",
+    "field": "textRenderer",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Nullable lookup view of TextRenderer2D; canonical text fields own authored values."
+  },
+  {
+    "id": "src/world/Entity.ts#Entity.camera2D",
+    "source": "src/world/Entity.ts",
+    "declaration": "Entity",
+    "field": "camera2D",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Nullable lookup view of Camera2D; canonical camera fields own authored values."
+  },
+  {
+    "id": "src/world/Entity.ts#Entity.script2D",
+    "source": "src/world/Entity.ts",
+    "declaration": "Entity",
+    "field": "script2D",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Nullable lookup view of Script2D; canonical script component fields own authored values."
+  },
+  {
+    "id": "src/world/Entity.ts#Entity.collider",
+    "source": "src/world/Entity.ts",
+    "declaration": "Entity",
+    "field": "collider",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Lookup of the live/recoverable collider component; canonical collider fields and component replacement own authored changes."
+  },
+  {
+    "id": "src/world/Entity.ts#Entity.shapeType",
+    "source": "src/world/Entity.ts",
+    "declaration": "Entity",
+    "field": "shapeType",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Read-only projection of constructor-owned entityType; not a separate authoring field."
+  },
+  {
+    "id": "src/world/Entity.ts#Entity.textureImage",
+    "source": "src/world/Entity.ts",
+    "declaration": "Entity",
+    "field": "textureImage",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Forwarding view of the decoded ShapeRenderer2D.textureImage browser cache; texture asset references are authored separately."
+  },
+  {
+    "id": "src/world/Entity.ts#Entity.contactCount",
+    "source": "src/world/Entity.ts",
+    "declaration": "Entity",
+    "field": "contactCount",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Forwarding view of RigidBody2D solver contact observations; not a project-authored contact count."
+  },
+  {
+    "id": "src/world/Entity.ts#Entity.contactNormal",
+    "source": "src/world/Entity.ts",
+    "declaration": "Entity",
+    "field": "contactNormal",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Forwarding view of the current RigidBody2D solver contact normal; not a persistent authoring input."
+  },
+  {
+    "id": "src/world/Entity.ts#Entity.penetrationDepth",
+    "source": "src/world/Entity.ts",
+    "declaration": "Entity",
+    "field": "penetrationDepth",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Forwarding view of the current RigidBody2D solver penetration observation; not a persistent authoring input."
+  },
+  {
+    "id": "src/world/SceneManager.ts#SceneDocument.dirty",
+    "source": "src/world/SceneManager.ts",
+    "declaration": "SceneDocument",
+    "field": "dirty",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Editor dirty marker initialized on import and excluded by SceneManager.serialize; scene document data is authored separately."
+  },
+  {
+    "id": "src/world/SceneManager.ts#SceneDocument.externalState",
+    "source": "src/world/SceneManager.ts",
+    "declaration": "SceneDocument",
+    "field": "externalState",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Current external-file conflict observation, reset on import and not serialized as a scene property."
+  },
+  {
+    "id": "src/world/SceneManager.ts#SceneDocument.validationState",
+    "source": "src/world/SceneManager.ts",
+    "declaration": "SceneDocument",
+    "field": "validationState",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Current scene-validation observation, reset on import and not serialized as a scene property."
+  },
+  {
+    "id": "src/world/SceneManager.ts#SceneDocument.prefabState",
+    "source": "src/world/SceneManager.ts",
+    "declaration": "SceneDocument",
+    "field": "prefabState",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Current prefab-status observation, reset on import and not serialized as a scene property."
+  },
+  {
+    "id": "src/world/SceneManager.ts#SceneDocument.visitedAt",
+    "source": "src/world/SceneManager.ts",
+    "declaration": "SceneDocument",
+    "field": "visitedAt",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Navigation timestamp updated by setActive/navigate, excluded by SceneManager.serialize; not authored scene metadata."
+  },
+  {
+    "id": "src/world/SceneManager.ts#SceneManager.navigationHistory",
+    "source": "src/world/SceneManager.ts",
+    "declaration": "SceneManager",
+    "field": "navigationHistory",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Bounded editor navigation history rebuilt on project import; separate from document Undo and serialized scene data."
+  },
+  {
+    "id": "src/world/SceneManager.ts#SceneManager.navigationIndex",
+    "source": "src/world/SceneManager.ts",
+    "declaration": "SceneManager",
+    "field": "navigationIndex",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Cursor into the editor navigation history; activeSceneUuid is the separate persisted scene selection."
+  },
+  {
+    "id": "src/world/SceneManager.ts#SceneManager.activeScene",
+    "source": "src/world/SceneManager.ts",
+    "declaration": "SceneManager",
+    "field": "activeScene",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Computed scene lookup from scenes and activeSceneUuid; no independent stored authored field."
+  },
+  {
+    "id": "src/runtime/animation.ts#DirectClipPlayback.reference",
+    "source": "src/runtime/animation.ts",
+    "declaration": "DirectClipPlayback",
+    "field": "reference",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Private AnimationRuntime.directPlayback session entry created for transient direct clip playback; source animation assets and authored Timeline/Animator components have separate lifecycle rows. This cursor is not serialized as project data."
+  },
+  {
+    "id": "src/runtime/animation.ts#DirectClipPlayback.time",
+    "source": "src/runtime/animation.ts",
+    "declaration": "DirectClipPlayback",
+    "field": "time",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Private AnimationRuntime.directPlayback session entry created for transient direct clip playback; source animation assets and authored Timeline/Animator components have separate lifecycle rows. This cursor is not serialized as project data."
+  },
+  {
+    "id": "src/runtime/animation.ts#DirectClipPlayback.clock",
+    "source": "src/runtime/animation.ts",
+    "declaration": "DirectClipPlayback",
+    "field": "clock",
+    "disposition": "Non-authored declaration exclusion",
+    "reason": "Private AnimationRuntime.directPlayback session entry created for transient direct clip playback; source animation assets and authored Timeline/Animator components have separate lifecycle rows. This cursor is not serialized as project data."
+  },
+  {
+    "id": "src/runtime/buildSettings.ts#BuildPreset.id",
+    "source": "src/runtime/buildSettings.ts",
+    "declaration": "BuildPreset",
+    "field": "id",
+    "disposition": "Immutable built-in preset declaration exclusion",
+    "reason": "Immutable built-in selector key copied to BuildSettings.presetName by applyBuildPreset."
+  },
+  {
+    "id": "src/runtime/buildSettings.ts#BuildPreset.name",
+    "source": "src/runtime/buildSettings.ts",
+    "declaration": "BuildPreset",
+    "field": "name",
+    "disposition": "Immutable built-in preset declaration exclusion",
+    "reason": "Immutable built-in menu label; no authored document field is generated from this display name."
+  },
+  {
+    "id": "src/runtime/buildSettings.ts#BuildPreset.target",
+    "source": "src/runtime/buildSettings.ts",
+    "declaration": "BuildPreset",
+    "field": "target",
+    "disposition": "Immutable built-in preset declaration exclusion",
+    "reason": "Immutable preset target default copied to the separately audited BuildSettings.target."
+  },
+  {
+    "id": "src/runtime/buildSettings.ts#BuildPreset.architecture",
+    "source": "src/runtime/buildSettings.ts",
+    "declaration": "BuildPreset",
+    "field": "architecture",
+    "disposition": "Immutable built-in preset declaration exclusion",
+    "reason": "Immutable architecture default copied to BuildSettings.architecture."
+  },
+  {
+    "id": "src/runtime/buildSettings.ts#BuildPreset.profile",
+    "source": "src/runtime/buildSettings.ts",
+    "declaration": "BuildPreset",
+    "field": "profile",
+    "disposition": "Immutable built-in preset declaration exclusion",
+    "reason": "Immutable profile default passed through setBuildProfile; authored profile is in BuildSettings."
+  },
+  {
+    "id": "src/runtime/buildSettings.ts#BuildPreset.runtimeMode",
+    "source": "src/runtime/buildSettings.ts",
+    "declaration": "BuildPreset",
+    "field": "runtimeMode",
+    "disposition": "Immutable built-in preset declaration exclusion",
+    "reason": "Immutable mode default copied to BuildSettings.runtimeMode."
+  },
+  {
+    "id": "src/runtime/buildSettings.ts#BuildPreset.cacheMode",
+    "source": "src/runtime/buildSettings.ts",
+    "declaration": "BuildPreset",
+    "field": "cacheMode",
+    "disposition": "Immutable built-in preset declaration exclusion",
+    "reason": "Immutable cache default copied to BuildDeliveryOptions.cacheMode and incremental."
+  },
+  {
+    "id": "src/runtime/buildSettings.ts#BuildPreset.compression",
+    "source": "src/runtime/buildSettings.ts",
+    "declaration": "BuildPreset",
+    "field": "compression",
+    "disposition": "Immutable built-in preset declaration exclusion",
+    "reason": "Immutable compression default copied to BuildDeliveryOptions.compression."
+  },
+  {
+    "id": "src/runtime/buildSettings.ts#BuildPreset.stripUnusedAssets",
+    "source": "src/runtime/buildSettings.ts",
+    "declaration": "BuildPreset",
+    "field": "stripUnusedAssets",
+    "disposition": "Immutable built-in preset declaration exclusion",
+    "reason": "Immutable stripping default copied to BuildDeliveryOptions.stripUnusedAssets."
+  },
+  {
+    "id": "src/runtime/buildSettings.ts#BuildPreset.releaseChannel",
+    "source": "src/runtime/buildSettings.ts",
+    "declaration": "BuildPreset",
+    "field": "releaseChannel",
+    "disposition": "Immutable built-in preset declaration exclusion",
+    "reason": "Optional immutable channel default copied to BuildDeliveryOptions.releaseChannel with profile fallback."
+  },
+  {
+    "id": "src/runtime/buildSettings.ts#BuildPreset.exportTemplate",
+    "source": "src/runtime/buildSettings.ts",
+    "declaration": "BuildPreset",
+    "field": "exportTemplate",
+    "disposition": "Immutable built-in preset declaration exclusion",
+    "reason": "Optional immutable template default resolved then copied to BuildDeliveryOptions.exportTemplate."
+  },
+  {
+    "id": "src/world/Entity.ts#Entity.id",
+    "source": "src/world/Entity.ts",
+    "declaration": "Entity",
+    "field": "id",
+    "disposition": "Reviewed non-property declaration exclusion",
+    "reason": "Runtime numeric identity is omitted from authored serialization and resolved from stable UUIDs on load. Owner: Entity constructor / serializeEntity / createEntityFromData; ordinary property Undo is not an independent identity mutation."
+  },
+  {
+    "id": "src/world/Entity.ts#Entity.uuid",
+    "source": "src/world/Entity.ts",
+    "declaration": "Entity",
+    "field": "uuid",
+    "disposition": "Reviewed non-property declaration exclusion",
+    "reason": "Stable entity identity is assigned by the constructor and preserved by creation/import rather than edited in place. Owner: Entity constructor / serializeEntity / createEntityFromData; ordinary property Undo is not an independent identity mutation."
+  },
+  {
+    "id": "src/world/Entity.ts#Entity.entityType",
+    "source": "src/world/Entity.ts",
+    "declaration": "Entity",
+    "field": "entityType",
+    "disposition": "Reviewed non-property declaration exclusion",
+    "reason": "Concrete Box/Circle/Triangle construction identity selects the implementation; changing shape is a replacement operation. Owner: Entity constructor / serializeEntity / createEntityFromData; ordinary property Undo is not an independent identity mutation."
+  },
+  {
+    "id": "src/world/SceneManager.ts#SceneDocument.uuid",
+    "source": "src/world/SceneManager.ts",
+    "declaration": "SceneDocument",
+    "field": "uuid",
+    "disposition": "Reviewed non-property declaration exclusion",
+    "reason": "Scene creation identity is normalized during import and must remain stable across navigation. Owner: SceneManager.createDocument / importProject / serialize; scene content and inheritance have separate authored lifecycle rows."
+  },
+  {
+    "id": "src/world/SceneManager.ts#SceneDocument.dependencies",
+    "source": "src/world/SceneManager.ts",
+    "declaration": "SceneDocument",
+    "field": "dependencies",
+    "disposition": "Reviewed non-property declaration exclusion",
+    "reason": "Serializer recomputes this reference list with inspectDependencies from scene data and inheritance; a cached list is not authoritative authored input. Owner: SceneManager.createDocument / importProject / serialize; scene content and inheritance have separate authored lifecycle rows."
+  },
+  {
+    "id": "src/editor/sceneAuthoring.ts#SceneAuthoringSettings.sceneVersion",
+    "source": "src/editor/sceneAuthoring.ts",
+    "declaration": "SceneAuthoringSettings",
+    "field": "sceneVersion",
+    "disposition": "Reviewed non-property declaration exclusion",
+    "reason": "Fixed scene authoring schema marker 2; normalizer owns compatibility. Owner: defaultSceneAuthoringSettings / normalizeSceneAuthoringSettings, not an Inspector choice."
+  },
+  {
+    "id": "src/editor/sceneAuthoring.ts#NamedSceneLayer.id",
+    "source": "src/editor/sceneAuthoring.ts",
+    "declaration": "NamedSceneLayer",
+    "field": "id",
+    "disposition": "Reviewed non-property declaration exclusion",
+    "reason": "Stable numeric layer identity is allocated by layer creation and referenced by the scene; renaming or toggling a layer does not edit its ID. Owner: named-layer creation / normalizeSceneAuthoringSettings; dependent layer content is a separate transaction."
+  },
+  {
+    "id": "src/runtime/eventSheets.ts#EventSheetDocument.format",
+    "source": "src/runtime/eventSheets.ts",
+    "declaration": "EventSheetDocument",
+    "field": "format",
+    "disposition": "Reviewed non-property declaration exclusion",
+    "reason": "Fixed EVENT_SHEET_FORMAT discriminator written by the document serializer. Creation/parse own this format contract; editable document contents are audited separately."
+  },
+  {
+    "id": "src/runtime/eventSheets.ts#EventSheetDocument.version",
+    "source": "src/runtime/eventSheets.ts",
+    "declaration": "EventSheetDocument",
+    "field": "version",
+    "disposition": "Reviewed non-property declaration exclusion",
+    "reason": "Fixed EVENT_SHEET_VERSION schema marker written by the document serializer. Creation/parse own this format contract; editable document contents are audited separately."
+  },
+  {
+    "id": "src/runtime/objectBlueprints.ts#ObjectBlueprintDocument.format",
+    "source": "src/runtime/objectBlueprints.ts",
+    "declaration": "ObjectBlueprintDocument",
+    "field": "format",
+    "disposition": "Reviewed non-property declaration exclusion",
+    "reason": "Fixed OBJECT_BLUEPRINT_FORMAT discriminator written by the document serializer. Creation/parse own this format contract; editable document contents are audited separately."
+  },
+  {
+    "id": "src/runtime/objectBlueprints.ts#ObjectBlueprintDocument.version",
+    "source": "src/runtime/objectBlueprints.ts",
+    "declaration": "ObjectBlueprintDocument",
+    "field": "version",
+    "disposition": "Reviewed non-property declaration exclusion",
+    "reason": "Fixed OBJECT_BLUEPRINT_VERSION schema marker written by the document serializer. Creation/parse own this format contract; editable document contents are audited separately."
+  },
+  {
+    "id": "src/runtime/packages.ts#PackageVisualNode.id",
+    "source": "src/runtime/packages.ts",
+    "declaration": "PackageVisualNode",
+    "field": "id",
+    "disposition": "Reviewed non-property declaration exclusion",
+    "reason": "Publisher-defined visual node identifier. Owned by PackageManifest.visualNodes and normalizePackageManifest; not a mutable project property or proof that a package implementation executed."
+  },
+  {
+    "id": "src/runtime/packages.ts#PackageVisualNode.title",
+    "source": "src/runtime/packages.ts",
+    "declaration": "PackageVisualNode",
+    "field": "title",
+    "disposition": "Reviewed non-property declaration exclusion",
+    "reason": "Publisher-defined displayed node title. Owned by PackageManifest.visualNodes and normalizePackageManifest; not a mutable project property or proof that a package implementation executed."
+  },
+  {
+    "id": "src/runtime/packages.ts#PackageVisualNode.category",
+    "source": "src/runtime/packages.ts",
+    "declaration": "PackageVisualNode",
+    "field": "category",
+    "disposition": "Reviewed non-property declaration exclusion",
+    "reason": "Publisher-defined catalog category. Owned by PackageManifest.visualNodes and normalizePackageManifest; not a mutable project property or proof that a package implementation executed."
+  },
+  {
+    "id": "src/runtime/packages.ts#PackageVisualNode.description",
+    "source": "src/runtime/packages.ts",
+    "declaration": "PackageVisualNode",
+    "field": "description",
+    "disposition": "Reviewed non-property declaration exclusion",
+    "reason": "Publisher-provided help text. Owned by PackageManifest.visualNodes and normalizePackageManifest; not a mutable project property or proof that a package implementation executed."
+  },
+  {
+    "id": "src/runtime/packages.ts#PackageVisualNode.callable",
+    "source": "src/runtime/packages.ts",
+    "declaration": "PackageVisualNode",
+    "field": "callable",
+    "disposition": "Reviewed non-property declaration exclusion",
+    "reason": "Publisher-declared callable name subject to package/API validation. Owned by PackageManifest.visualNodes and normalizePackageManifest; not a mutable project property or proof that a package implementation executed."
+  },
+  {
+    "id": "src/runtime/packages.ts#PackageVisualNode.inputs",
+    "source": "src/runtime/packages.ts",
+    "declaration": "PackageVisualNode",
+    "field": "inputs",
+    "disposition": "Reviewed non-property declaration exclusion",
+    "reason": "Publisher-declared typed input descriptors and default values. Owned by PackageManifest.visualNodes and normalizePackageManifest; not a mutable project property or proof that a package implementation executed."
+  },
+  {
+    "id": "src/runtime/packages.ts#PackageVisualNode.output",
+    "source": "src/runtime/packages.ts",
+    "declaration": "PackageVisualNode",
+    "field": "output",
+    "disposition": "Reviewed non-property declaration exclusion",
+    "reason": "Publisher-declared optional typed output descriptor. Owned by PackageManifest.visualNodes and normalizePackageManifest; not a mutable project property or proof that a package implementation executed."
+  },
+  {
+    "id": "src/runtime/packages.ts#PackageVisualNode.deprecatedBy",
+    "source": "src/runtime/packages.ts",
+    "declaration": "PackageVisualNode",
+    "field": "deprecatedBy",
+    "disposition": "Reviewed non-property declaration exclusion",
+    "reason": "Publisher-declared replacement callable metadata. Owned by PackageManifest.visualNodes and normalizePackageManifest; not a mutable project property or proof that a package implementation executed."
+  },
+  {
+    "id": "src/runtime/packages.ts#PackageSource.kind",
+    "source": "src/runtime/packages.ts",
+    "declaration": "PackageSource",
+    "field": "kind",
+    "disposition": "Reviewed non-property declaration exclusion",
+    "reason": "Installed package origin type (local, git or registry). Owner: installPackageManifest / normalizeSource; chosen as part of installation provenance and persisted with the installed record, not independently edited through the Inspector."
+  },
+  {
+    "id": "src/runtime/packages.ts#PackageSource.location",
+    "source": "src/runtime/packages.ts",
+    "declaration": "PackageSource",
+    "field": "location",
+    "disposition": "Reviewed non-property declaration exclusion",
+    "reason": "Installed package origin locator. Owner: installPackageManifest / normalizeSource; chosen as part of installation provenance and persisted with the installed record, not independently edited through the Inspector."
+  },
+  {
+    "id": "src/runtime/packages.ts#PackageLockEntry.id",
+    "source": "src/runtime/packages.ts",
+    "declaration": "PackageLockEntry",
+    "field": "id",
+    "disposition": "Reviewed non-property declaration exclusion",
+    "reason": "Resolved package identity. Owner: resolvePackageLockfile / diagnosePackageResolution; generated from reviewed installed manifests and rebuilt on load, not an independent authored override."
+  },
+  {
+    "id": "src/runtime/packages.ts#PackageLockEntry.version",
+    "source": "src/runtime/packages.ts",
+    "declaration": "PackageLockEntry",
+    "field": "version",
+    "disposition": "Reviewed non-property declaration exclusion",
+    "reason": "Solver-selected package version. Owner: resolvePackageLockfile / diagnosePackageResolution; generated from reviewed installed manifests and rebuilt on load, not an independent authored override."
+  },
+  {
+    "id": "src/runtime/packages.ts#PackageLockEntry.source",
+    "source": "src/runtime/packages.ts",
+    "declaration": "PackageLockEntry",
+    "field": "source",
+    "disposition": "Reviewed non-property declaration exclusion",
+    "reason": "Resolved installation provenance. Owner: resolvePackageLockfile / diagnosePackageResolution; generated from reviewed installed manifests and rebuilt on load, not an independent authored override."
+  },
+  {
+    "id": "src/runtime/packages.ts#PackageLockEntry.sha256",
+    "source": "src/runtime/packages.ts",
+    "declaration": "PackageLockEntry",
+    "field": "sha256",
+    "disposition": "Reviewed non-property declaration exclusion",
+    "reason": "Resolved archive content digest. Owner: resolvePackageLockfile / diagnosePackageResolution; generated from reviewed installed manifests and rebuilt on load, not an independent authored override."
+  },
+  {
+    "id": "src/runtime/packages.ts#PackageLockEntry.signature",
+    "source": "src/runtime/packages.ts",
+    "declaration": "PackageLockEntry",
+    "field": "signature",
+    "disposition": "Reviewed non-property declaration exclusion",
+    "reason": "Resolved publisher signature. Owner: resolvePackageLockfile / diagnosePackageResolution; generated from reviewed installed manifests and rebuilt on load, not an independent authored override."
+  },
+  {
+    "id": "src/runtime/packages.ts#PackageLockEntry.entryPointType",
+    "source": "src/runtime/packages.ts",
+    "declaration": "PackageLockEntry",
+    "field": "entryPointType",
+    "disposition": "Reviewed non-property declaration exclusion",
+    "reason": "Resolved package capability entry category. Owner: resolvePackageLockfile / diagnosePackageResolution; generated from reviewed installed manifests and rebuilt on load, not an independent authored override."
+  },
+  {
+    "id": "src/runtime/packages.ts#PackageLockEntry.dependencies",
+    "source": "src/runtime/packages.ts",
+    "declaration": "PackageLockEntry",
+    "field": "dependencies",
+    "disposition": "Reviewed non-property declaration exclusion",
+    "reason": "Resolved dependency requirement map. Owner: resolvePackageLockfile / diagnosePackageResolution; generated from reviewed installed manifests and rebuilt on load, not an independent authored override."
+  },
+  {
+    "id": "src/runtime/packages.ts#QuarantinedPackage.id",
+    "source": "src/runtime/packages.ts",
+    "declaration": "QuarantinedPackage",
+    "field": "id",
+    "disposition": "Reviewed non-property declaration exclusion",
+    "reason": "Identity of the quarantined package. Owner: quarantinePackage / loadPackageState; a security decision record retained in project state, not an editable capability approval."
+  },
+  {
+    "id": "src/runtime/packages.ts#QuarantinedPackage.version",
+    "source": "src/runtime/packages.ts",
+    "declaration": "QuarantinedPackage",
+    "field": "version",
+    "disposition": "Reviewed non-property declaration exclusion",
+    "reason": "Version of the quarantined package. Owner: quarantinePackage / loadPackageState; a security decision record retained in project state, not an editable capability approval."
+  },
+  {
+    "id": "src/runtime/packages.ts#QuarantinedPackage.reason",
+    "source": "src/runtime/packages.ts",
+    "declaration": "QuarantinedPackage",
+    "field": "reason",
+    "disposition": "Reviewed non-property declaration exclusion",
+    "reason": "Recorded security failure diagnostic. Owner: quarantinePackage / loadPackageState; a security decision record retained in project state, not an editable capability approval."
+  },
+  {
+    "id": "src/runtime/packages.ts#QuarantinedPackage.quarantinedAt",
+    "source": "src/runtime/packages.ts",
+    "declaration": "QuarantinedPackage",
+    "field": "quarantinedAt",
+    "disposition": "Reviewed non-property declaration exclusion",
+    "reason": "Recorded time of the quarantine decision. Owner: quarantinePackage / loadPackageState; a security decision record retained in project state, not an editable capability approval."
+  },
+  {
+    "id": "src/runtime/packages.ts#PackageRevocation.id",
+    "source": "src/runtime/packages.ts",
+    "declaration": "PackageRevocation",
+    "field": "id",
+    "disposition": "Reviewed non-property declaration exclusion",
+    "reason": "Bulletin-revoked package identity. Owner: applyVerifiedPackageSecurityBulletin; security-feed runtime state omitted from serializePackageState, not scene property editing or a claim of hosted bulletin delivery."
+  },
+  {
+    "id": "src/runtime/packages.ts#PackageRevocation.version",
+    "source": "src/runtime/packages.ts",
+    "declaration": "PackageRevocation",
+    "field": "version",
+    "disposition": "Reviewed non-property declaration exclusion",
+    "reason": "Bulletin-revoked version. Owner: applyVerifiedPackageSecurityBulletin; security-feed runtime state omitted from serializePackageState, not scene property editing or a claim of hosted bulletin delivery."
+  },
+  {
+    "id": "src/runtime/packages.ts#PackageRevocation.sha256",
+    "source": "src/runtime/packages.ts",
+    "declaration": "PackageRevocation",
+    "field": "sha256",
+    "disposition": "Reviewed non-property declaration exclusion",
+    "reason": "Bulletin-revoked archive digest. Owner: applyVerifiedPackageSecurityBulletin; security-feed runtime state omitted from serializePackageState, not scene property editing or a claim of hosted bulletin delivery."
+  },
+  {
+    "id": "src/runtime/packages.ts#PackageRevocation.reason",
+    "source": "src/runtime/packages.ts",
+    "declaration": "PackageRevocation",
+    "field": "reason",
+    "disposition": "Reviewed non-property declaration exclusion",
+    "reason": "Bulletin explanation. Owner: applyVerifiedPackageSecurityBulletin; security-feed runtime state omitted from serializePackageState, not scene property editing or a claim of hosted bulletin delivery."
+  },
+  {
+    "id": "src/runtime/packages.ts#PackageRevocation.advisoryId",
+    "source": "src/runtime/packages.ts",
+    "declaration": "PackageRevocation",
+    "field": "advisoryId",
+    "disposition": "Reviewed non-property declaration exclusion",
+    "reason": "Verified bulletin identity. Owner: applyVerifiedPackageSecurityBulletin; security-feed runtime state omitted from serializePackageState, not scene property editing or a claim of hosted bulletin delivery."
+  },
+  {
+    "id": "src/runtime/packages.ts#PackageRevocation.revokedAt",
+    "source": "src/runtime/packages.ts",
+    "declaration": "PackageRevocation",
+    "field": "revokedAt",
+    "disposition": "Reviewed non-property declaration exclusion",
+    "reason": "Verified bulletin issuance timestamp. Owner: applyVerifiedPackageSecurityBulletin; security-feed runtime state omitted from serializePackageState, not scene property editing or a claim of hosted bulletin delivery."
+  },
+  {
+    "id": "src/runtime/packages.ts#PackageVulnerability.advisoryId",
+    "source": "src/runtime/packages.ts",
+    "declaration": "PackageVulnerability",
+    "field": "advisoryId",
+    "disposition": "Reviewed non-property declaration exclusion",
+    "reason": "External vulnerability advisory identity. Owner: applyVerifiedPackageSecurityBulletin; security-feed state omitted from serializePackageState, not independent project property editing."
+  },
+  {
+    "id": "src/runtime/packages.ts#PackageVulnerability.id",
+    "source": "src/runtime/packages.ts",
+    "declaration": "PackageVulnerability",
+    "field": "id",
+    "disposition": "Reviewed non-property declaration exclusion",
+    "reason": "Affected package identity. Owner: applyVerifiedPackageSecurityBulletin; security-feed state omitted from serializePackageState, not independent project property editing."
+  },
+  {
+    "id": "src/runtime/packages.ts#PackageVulnerability.affected",
+    "source": "src/runtime/packages.ts",
+    "declaration": "PackageVulnerability",
+    "field": "affected",
+    "disposition": "Reviewed non-property declaration exclusion",
+    "reason": "Affected version range. Owner: applyVerifiedPackageSecurityBulletin; security-feed state omitted from serializePackageState, not independent project property editing."
+  },
+  {
+    "id": "src/runtime/packages.ts#PackageVulnerability.severity",
+    "source": "src/runtime/packages.ts",
+    "declaration": "PackageVulnerability",
+    "field": "severity",
+    "disposition": "Reviewed non-property declaration exclusion",
+    "reason": "Validated advisory severity. Owner: applyVerifiedPackageSecurityBulletin; security-feed state omitted from serializePackageState, not independent project property editing."
+  },
+  {
+    "id": "src/runtime/packages.ts#PackageVulnerability.summary",
+    "source": "src/runtime/packages.ts",
+    "declaration": "PackageVulnerability",
+    "field": "summary",
+    "disposition": "Reviewed non-property declaration exclusion",
+    "reason": "Advisory description. Owner: applyVerifiedPackageSecurityBulletin; security-feed state omitted from serializePackageState, not independent project property editing."
+  },
+  {
+    "id": "src/runtime/packages.ts#PackageVulnerability.fixedVersion",
+    "source": "src/runtime/packages.ts",
+    "declaration": "PackageVulnerability",
+    "field": "fixedVersion",
+    "disposition": "Reviewed non-property declaration exclusion",
+    "reason": "Advisory fixed version. Owner: applyVerifiedPackageSecurityBulletin; security-feed state omitted from serializePackageState, not independent project property editing."
+  },
+  {
+    "id": "src/runtime/packages.ts#PackageVulnerability.publishedAt",
+    "source": "src/runtime/packages.ts",
+    "declaration": "PackageVulnerability",
+    "field": "publishedAt",
+    "disposition": "Reviewed non-property declaration exclusion",
+    "reason": "Verified bulletin issuance timestamp. Owner: applyVerifiedPackageSecurityBulletin; security-feed state omitted from serializePackageState, not independent project property editing."
+  },
+  {
+    "id": "src/runtime/plugins.ts#PluginContributionDescriptor.id",
+    "source": "src/runtime/plugins.ts",
+    "declaration": "PluginContributionDescriptor",
+    "field": "id",
+    "disposition": "Reviewed non-property declaration exclusion",
+    "reason": "Publisher-defined contribution identity. Owner: normalizePluginManifest / contribution registration; extension metadata is reviewed on import and is not a mutable scene property."
+  },
+  {
+    "id": "src/runtime/plugins.ts#PluginContributionDescriptor.label",
+    "source": "src/runtime/plugins.ts",
+    "declaration": "PluginContributionDescriptor",
+    "field": "label",
+    "disposition": "Reviewed non-property declaration exclusion",
+    "reason": "Publisher-defined display label. Owner: normalizePluginManifest / contribution registration; extension metadata is reviewed on import and is not a mutable scene property."
+  },
+  {
+    "id": "src/runtime/plugins.ts#PluginContributionDescriptor.description",
+    "source": "src/runtime/plugins.ts",
+    "declaration": "PluginContributionDescriptor",
+    "field": "description",
+    "disposition": "Reviewed non-property declaration exclusion",
+    "reason": "Publisher-defined help text. Owner: normalizePluginManifest / contribution registration; extension metadata is reviewed on import and is not a mutable scene property."
+  },
+  {
+    "id": "src/runtime/plugins.ts#PluginContributionDescriptor.entry",
+    "source": "src/runtime/plugins.ts",
+    "declaration": "PluginContributionDescriptor",
+    "field": "entry",
+    "disposition": "Reviewed non-property declaration exclusion",
+    "reason": "Publisher-defined entry function. Owner: normalizePluginManifest / contribution registration; extension metadata is reviewed on import and is not a mutable scene property."
+  },
+  {
+    "id": "src/runtime/plugins.ts#PluginContributionDescriptor.slot",
+    "source": "src/runtime/plugins.ts",
+    "declaration": "PluginContributionDescriptor",
+    "field": "slot",
+    "disposition": "Reviewed non-property declaration exclusion",
+    "reason": "Publisher-defined extension slot. Owner: normalizePluginManifest / contribution registration; extension metadata is reviewed on import and is not a mutable scene property."
+  },
+  {
+    "id": "src/runtime/plugins.ts#PluginContributionDescriptor.order",
+    "source": "src/runtime/plugins.ts",
+    "declaration": "PluginContributionDescriptor",
+    "field": "order",
+    "disposition": "Reviewed non-property declaration exclusion",
+    "reason": "Publisher-defined ordering hint. Owner: normalizePluginManifest / contribution registration; extension metadata is reviewed on import and is not a mutable scene property."
+  },
+  {
+    "id": "src/runtime/plugins.ts#PluginContribution.kind",
+    "source": "src/runtime/plugins.ts",
+    "declaration": "PluginContribution",
+    "field": "kind",
+    "disposition": "Reviewed non-property declaration exclusion",
+    "reason": "Contribution category supplied by the containing normalized manifest bucket. Owner: plugin contribution enumeration; runtime registration derives this discriminator rather than authoring it as a project property."
+  },
+  {
+    "id": "src/runtime/plugins.ts#PluginManifest.id",
+    "source": "src/runtime/plugins.ts",
+    "declaration": "PluginManifest",
+    "field": "id",
+    "disposition": "Reviewed non-property declaration exclusion",
+    "reason": "Publisher-assigned reverse-domain plugin identity. Owner: normalizePluginManifest / validateWasmPluginPackage / loadPluginManifests. These definition fields are imported and reviewed, not independently edited as scene properties; this classification does not claim native extension availability or executed publisher code."
+  },
+  {
+    "id": "src/runtime/plugins.ts#PluginManifest.name",
+    "source": "src/runtime/plugins.ts",
+    "declaration": "PluginManifest",
+    "field": "name",
+    "disposition": "Reviewed non-property declaration exclusion",
+    "reason": "Publisher-assigned plugin display name. Owner: normalizePluginManifest / validateWasmPluginPackage / loadPluginManifests. These definition fields are imported and reviewed, not independently edited as scene properties; this classification does not claim native extension availability or executed publisher code."
+  },
+  {
+    "id": "src/runtime/plugins.ts#PluginManifest.version",
+    "source": "src/runtime/plugins.ts",
+    "declaration": "PluginManifest",
+    "field": "version",
+    "disposition": "Reviewed non-property declaration exclusion",
+    "reason": "Publisher-declared semantic plugin version. Owner: normalizePluginManifest / validateWasmPluginPackage / loadPluginManifests. These definition fields are imported and reviewed, not independently edited as scene properties; this classification does not claim native extension availability or executed publisher code."
+  },
+  {
+    "id": "src/runtime/plugins.ts#PluginManifest.apiVersion",
+    "source": "src/runtime/plugins.ts",
+    "declaration": "PluginManifest",
+    "field": "apiVersion",
+    "disposition": "Reviewed non-property declaration exclusion",
+    "reason": "Publisher-declared plugin ABI generation accepted by the host. Owner: normalizePluginManifest / validateWasmPluginPackage / loadPluginManifests. These definition fields are imported and reviewed, not independently edited as scene properties; this classification does not claim native extension availability or executed publisher code."
+  },
+  {
+    "id": "src/runtime/plugins.ts#PluginManifest.engine",
+    "source": "src/runtime/plugins.ts",
+    "declaration": "PluginManifest",
+    "field": "engine",
+    "disposition": "Reviewed non-property declaration exclusion",
+    "reason": "Publisher-declared compatible engine range. Owner: normalizePluginManifest / validateWasmPluginPackage / loadPluginManifests. These definition fields are imported and reviewed, not independently edited as scene properties; this classification does not claim native extension availability or executed publisher code."
+  },
+  {
+    "id": "src/runtime/plugins.ts#PluginManifest.entry",
+    "source": "src/runtime/plugins.ts",
+    "declaration": "PluginManifest",
+    "field": "entry",
+    "disposition": "Reviewed non-property declaration exclusion",
+    "reason": "Publisher-declared safe relative entry path. Owner: normalizePluginManifest / validateWasmPluginPackage / loadPluginManifests. These definition fields are imported and reviewed, not independently edited as scene properties; this classification does not claim native extension availability or executed publisher code."
+  },
+  {
+    "id": "src/runtime/plugins.ts#PluginManifest.entryType",
+    "source": "src/runtime/plugins.ts",
+    "declaration": "PluginManifest",
+    "field": "entryType",
+    "disposition": "Reviewed non-property declaration exclusion",
+    "reason": "Publisher-declared wasm/native entry category, subject to host capability restrictions. Owner: normalizePluginManifest / validateWasmPluginPackage / loadPluginManifests. These definition fields are imported and reviewed, not independently edited as scene properties; this classification does not claim native extension availability or executed publisher code."
+  },
+  {
+    "id": "src/runtime/plugins.ts#PluginManifest.permissions",
+    "source": "src/runtime/plugins.ts",
+    "declaration": "PluginManifest",
+    "field": "permissions",
+    "disposition": "Reviewed non-property declaration exclusion",
+    "reason": "Requested capabilities declared by the plugin, distinct from user-approved permissions. Owner: normalizePluginManifest / validateWasmPluginPackage / loadPluginManifests. These definition fields are imported and reviewed, not independently edited as scene properties; this classification does not claim native extension availability or executed publisher code."
+  },
+  {
+    "id": "src/runtime/plugins.ts#PluginManifest.sha256",
+    "source": "src/runtime/plugins.ts",
+    "declaration": "PluginManifest",
+    "field": "sha256",
+    "disposition": "Reviewed non-property declaration exclusion",
+    "reason": "Publisher-declared content digest used by plugin package verification. Owner: normalizePluginManifest / validateWasmPluginPackage / loadPluginManifests. These definition fields are imported and reviewed, not independently edited as scene properties; this classification does not claim native extension availability or executed publisher code."
+  },
+  {
+    "id": "src/runtime/plugins.ts#PluginManifest.signature",
+    "source": "src/runtime/plugins.ts",
+    "declaration": "PluginManifest",
+    "field": "signature",
+    "disposition": "Reviewed non-property declaration exclusion",
+    "reason": "Publisher signature supplied with the plugin. Owner: normalizePluginManifest / validateWasmPluginPackage / loadPluginManifests. These definition fields are imported and reviewed, not independently edited as scene properties; this classification does not claim native extension availability or executed publisher code."
+  },
+  {
+    "id": "src/runtime/plugins.ts#PluginManifest.publicKey",
+    "source": "src/runtime/plugins.ts",
+    "declaration": "PluginManifest",
+    "field": "publicKey",
+    "disposition": "Reviewed non-property declaration exclusion",
+    "reason": "Publisher verification key supplied with the plugin. Owner: normalizePluginManifest / validateWasmPluginPackage / loadPluginManifests. These definition fields are imported and reviewed, not independently edited as scene properties; this classification does not claim native extension availability or executed publisher code."
+  },
+  {
+    "id": "src/runtime/plugins.ts#PluginManifest.contributions",
+    "source": "src/runtime/plugins.ts",
+    "declaration": "PluginManifest",
+    "field": "contributions",
+    "disposition": "Reviewed non-property declaration exclusion",
+    "reason": "Publisher-declared capability descriptors, validated against requested permissions. Owner: normalizePluginManifest / validateWasmPluginPackage / loadPluginManifests. These definition fields are imported and reviewed, not independently edited as scene properties; this classification does not claim native extension availability or executed publisher code."
+  },
+  {
+    "id": "src/runtime/packages.ts#InstalledPackage.installedAt",
+    "source": "src/runtime/packages.ts",
+    "declaration": "InstalledPackage",
+    "field": "installedAt",
+    "disposition": "Reviewed non-property declaration exclusion",
+    "reason": "Installation timestamp assigned by installPackageManifest and retained on reopen. Owner: installPackageManifest / reviewPackageSecurity / loadPackageState; persisted operation results and approval records are separate from a mutable Inspector value."
+  },
+  {
+    "id": "src/runtime/packages.ts#InstalledPackage.securityStatus",
+    "source": "src/runtime/packages.ts",
+    "declaration": "InstalledPackage",
+    "field": "securityStatus",
+    "disposition": "Reviewed non-property declaration exclusion",
+    "reason": "Security review result recomputed on load; direct edits cannot establish trust. Owner: installPackageManifest / reviewPackageSecurity / loadPackageState; persisted operation results and approval records are separate from a mutable Inspector value."
+  },
+  {
+    "id": "src/runtime/packages.ts#InstalledPackage.deprecations",
+    "source": "src/runtime/packages.ts",
+    "declaration": "InstalledPackage",
+    "field": "deprecations",
+    "disposition": "Reviewed non-property declaration exclusion",
+    "reason": "Imported manifest deprecation diagnostics combined by packageManifestDeprecations during load. Owner: installPackageManifest / reviewPackageSecurity / loadPackageState; persisted operation results and approval records are separate from a mutable Inspector value."
+  },
+  {
+    "id": "src/runtime/packages.ts#InstalledPackage.grantedPermissions",
+    "source": "src/runtime/packages.ts",
+    "declaration": "InstalledPackage",
+    "field": "grantedPermissions",
+    "disposition": "Reviewed non-property declaration exclusion",
+    "reason": "Explicit install-review approval record; actual package browser cases verify its exact saved/reopened grant list. No independent field edit is used to bypass approval. Owner: installPackageManifest / reviewPackageSecurity / loadPackageState; persisted operation results and approval records are separate from a mutable Inspector value."
+  },
+  {
+    "id": "src/runtime/packages.ts#InstalledPackage.manifest",
+    "source": "src/runtime/packages.ts",
+    "declaration": "InstalledPackage",
+    "field": "manifest",
+    "disposition": "Reviewed non-property declaration exclusion",
+    "reason": "Reviewed package definition container assigned by installPackageManifest; its individual publisher-owned fields are classified in PackageManifest, and whole-manifest retention is checked by package lifecycle tests."
+  },
+  {
+    "id": "src/runtime/packages.ts#InstalledPackage.source",
+    "source": "src/runtime/packages.ts",
+    "declaration": "InstalledPackage",
+    "field": "source",
+    "disposition": "Reviewed non-property declaration exclusion",
+    "reason": "Installation-provenance container assigned by normalizeSource during install/load; PackageSource.kind/location have explicit ownership dispositions. It is not an independent Inspector edit."
+  },
+  {
+    "id": "src/runtime/plugins.ts#PluginManifest.entryAsset",
+    "source": "src/runtime/plugins.ts",
+    "declaration": "PluginManifest",
+    "field": "entryAsset",
+    "disposition": "Reviewed non-property declaration exclusion",
+    "reason": "Entry byte-asset identity attached by attachPluginAsset after PluginSettings validates/imports the bundle. This is an import-owned reference, not an independent Inspector property or proof that referenced bytes can execute."
+  }
+]

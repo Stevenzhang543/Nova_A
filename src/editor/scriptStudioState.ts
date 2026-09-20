@@ -10,7 +10,7 @@ export const scriptStudioState = reactive({
   saveActiveDraft: null as null | (() => Promise<boolean>),
   layout: {
     detailDock: 'right' as 'right' | 'bottom', explorerVisible: true, detailVisible: true,
-    explorerWidth: 224, detailWidth: 328, detailHeight: 220,
+    explorerWidth: 224, detailWidth: 400, detailHeight: 220,
     compactToolbar: true, codeFocused: false, activePanel: 'detail' as 'explorer' | 'detail',
   }
 })

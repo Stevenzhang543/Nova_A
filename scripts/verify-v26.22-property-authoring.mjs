@@ -1,0 +1,7 @@
+import assert from 'node:assert/strict'
+import {readFile} from 'node:fs/promises'
+import {runAudit,writeAuditBundle} from './lib/milestoneAuditBundle.mjs'
+const root=process.cwd(),executions=[]
+assert.equal(JSON.parse(await readFile('package.json','utf8')).version,'26.22.0','Release qualification requires aligned 26.22 source and builds')
+for(const name of ['studio-playback-user','path-draft-user','property-user','runtime-input-user','joint-user','scene-prefab-user','import-input-user','audio-draft-user','presentation-numeric-layout','advanced-inspector-user','device-render-user','settings-input-user','connection-draft-user','material-graph-user','particle-draft-user','event-draft-user','playback-stability-user','delivery-user']){const run=await runAudit(root,'scripts/verify-v26.22-'+name+'.mjs');run.reports=['release-audits/v26.22-'+name+'.json'];executions.push(run)}
+await writeAuditBundle(root,'26.22','property-authoring',executions)

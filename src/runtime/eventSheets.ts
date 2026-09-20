@@ -1,3 +1,4 @@
+import { validateEventSheetDraft } from '../editor/eventSheetDraftValidation'
 import { assetGuid, assetState, createTextAsset, readTextAsset, resolveAsset, updateTextAssetTransactional } from '../assets/AssetDatabase'
 import type { AssetRecord } from '../assets/types'
 import { executableGraphSource } from '../visual/graphCompiler'
@@ -116,6 +117,10 @@ function synchronizeEventSheetDependencies(record: AssetRecord, document: EventS
 }
 
 export function saveEventSheetAsset(assetUuid: string, document: EventSheetDocument): boolean {
+  const destination = resolveAsset(assetUuid)
+  if (!destination || destination.assetType !== 'eventSheet' || !document || !Array.isArray(document.handlers)) return false
+  if (document.handlers.some(handler => !handler || !OBJECT_EVENT_KINDS.includes(handler.kind))) return false
+  if (validateEventSheetDraft(document).length) return false
   if (!updateTextAssetTransactional(assetUuid, serializeEventSheet(document))) return false
   const record = resolveAsset(assetUuid)
   if (record) synchronizeEventSheetDependencies(record, document)
@@ -221,7 +226,7 @@ export function scheduleObjectEvents(entities: readonly Entity[], kind: ObjectEv
     const sheet = readEventSheet(entity.script2D.eventSheetAsset)
     if (!sheet?.enabled) continue
     for (const handler of resolveEventHandlers(entity.script2D.eventSheetAsset)) {
-      if (handler.kind !== kind || (selector && handler.selector !== selector)) continue
+      if (handler.kind !== kind || (handler.selector && handler.selector !== selector)) continue
       scheduled.push({ sheetUuid: handler.sourceSheetUuid, sourceSheetAsset: handler.sourceSheetAsset, logicAsset: handler.logicAsset, handlerUuid: handler.uuid, entityUuid: entity.uuid, callback: handler.callback, priority: handler.priority, order: scheduled.length })
       if (scheduled.length >= MAX_EVENT_HANDLERS) return scheduled.sort((a, b) => b.priority - a.priority || a.entityUuid.localeCompare(b.entityUuid) || a.handlerUuid.localeCompare(b.handlerUuid))
     }

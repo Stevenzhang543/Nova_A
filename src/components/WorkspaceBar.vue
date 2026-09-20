@@ -17,7 +17,7 @@
       <button :disabled="!workspaceState.navigationBack.length" :title="`${t('navigateBack')} (Alt+←)`" data-doc="manual/navigation-history" @click="navigateHistory('back')"><span aria-hidden="true">←</span><span class="control-label">{{ t('back') }}</span></button>
       <button :disabled="!workspaceState.navigationForward.length" :title="`${t('navigateForward')} (Alt+→)`" data-doc="manual/navigation-history" @click="navigateHistory('forward')"><span aria-hidden="true">→</span><span class="control-label">{{ t('forward') }}</span></button>
     </div>
-    <details class="workspace-menu layout-menu">
+    <details v-transient-popover class="workspace-menu layout-menu">
       <summary :title="t('layoutPanels')"><span aria-hidden="true">◫</span><span>{{ t('layout') }}</span></summary>
       <div class="workspace-popover" role="group" :aria-label="t('layoutPanels')">
         <h3>{{ t('layoutPanels') }}</h3>
@@ -28,7 +28,7 @@
         <button :title="`${t('manageWorkspaces')} (Ctrl+Alt+W)`" data-doc="manual/workspaces" @click="state.workspaceManagerOpen = true"><span aria-hidden="true">⚙</span><span>{{ t('manageWorkspaces') }}</span><i></i></button>
       </div>
     </details>
-    <details class="workspace-menu command-menu">
+    <details v-transient-popover class="workspace-menu command-menu">
       <summary :title="t('commands')"><span aria-hidden="true">⌕</span><span>{{ t('commands') }}</span></summary>
       <div class="workspace-popover command-popover" role="group" :aria-label="t('commands')">
         <h3>{{ t('commandsAndSearch') }}</h3>
@@ -41,6 +41,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
+import { vTransientPopover } from '../editor/transientPopover'
 import { t } from '../i18n'
 import { editorState as state, type EditorWorkspace } from '../store/editor'
 import { applyEditorWorkspace, navigateHistory, toggleEditorPanel, toggleFocusMode, WORKSPACE_PRESETS, workspaceState } from '../editor/workspaces'

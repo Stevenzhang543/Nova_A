@@ -1,0 +1,13 @@
+import assert from 'node:assert/strict'
+import ts from 'typescript'
+import {readFile} from 'node:fs/promises'
+import {propertyAudit22} from './lib/propertyAudit22.mjs'
+const audit=await propertyAudit22('path-drafts'),source=await readFile('src/editor/pathTextDraft.ts','utf8'),js=ts.transpileModule(source,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.ES2022}}).outputText,{parsePathText:parse}=await import('data:text/javascript;base64,'+Buffer.from(js).toString('base64')),checks=[]
+function check(name,fn){fn();checks.push({name,status:'passed',covers:['src/editor/pathTextDraft.ts#parsePathText']});console.log('PASS '+name)}
+check('Complete finite points preserve decimal exponent signed and hexadecimal numeric formats',()=>{assert.deepEqual(parse('0,0\n-2.5,3e2 0x10,.5','points').value,{kind:'points',points:[{x:0,y:0},{x:-2.5,y:300},{x:16,y:.5}]})})
+check('A malformed point rejects the entire draft instead of applying its valid prefix or suffix',()=>{for(const source of ['0,0 broken 2,2','0,0 1,','0,0 ,1','0,0 1,2,3','0,0 NaN,2','0,0 Infinity,2','0,0 1e309,2','0,0 1:2'])assert.deepEqual(parse(source,'points'),{value:null,issue:'syntax'},source)})
+check('Point count bounds reject both missing geometry and oversized input without truncation',()=>{for(const source of ['', '0,0',Array(10001).fill('0,0').join(' ')])assert.deepEqual(parse(source,'points'),{value:null,issue:'count'});assert.equal(parse(Array(10000).fill('0,0').join(' '),'points').value.points.length,10000)})
+check('Tangent pairs preserve both vectors and blank restores automatic tangents',()=>{assert.deepEqual(parse('-1,2:3,-4','tangents',2).value,{kind:'tangents',tangents:[{incoming:{x:-1,y:2},outgoing:{x:3,y:-4}}]});assert.deepEqual(parse('','tangents',0).value,{kind:'tangents',tangents:[]})})
+check('Malformed or excessive tangents are rejected atomically',()=>{for(const source of ['0,0:1,1 bad','0,0','0,0:1,1:2,2',',0:1,1','0,0:Infinity,1'])assert.deepEqual(parse(source,'tangents',10),{value:null,issue:'syntax'});assert.deepEqual(parse('0,0:1,1 1,1:2,2','tangents',1),{value:null,issue:'count'})})
+check('Wrong API types and invalid limits cannot bypass the fixed geometry bound',()=>{for(const value of [null,{},42])assert.equal(parse(value,'points').value,null);assert.equal(parse('','unknown').value,null);for(const maximum of [NaN,Infinity,-1,2.5,'2'])assert.equal(parse('0,0 1,1','points',maximum).value,null)})
+await audit.write(checks,'Actual strict parser used by retained path text controls. Pure parsing tests; pending boundaries, user typing, rendering and save/reopen are separate browser assertions.')

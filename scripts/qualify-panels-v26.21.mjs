@@ -7,12 +7,13 @@ import { fileURLToPath } from 'node:url'
 import { preview } from 'vite'
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)))
-const qualificationVersion = '26.21'
+const qualificationVersion = process.env.NOVA_LAYOUT_QUALIFICATION_RELEASE || '26.21'
+if (!['26.21', '26.22', '26.23'].includes(qualificationVersion)) throw Error('Unsupported panel audit release')
 const palette = process.env.NOVA_LAYOUT_PALETTE || 'midnight-blue'
 if(!['cloud-blue','meadow-cream','blush-berry','midnight-blue','night-garden'].includes(palette))throw Error('Unknown audit palette')
 const development = process.argv.includes('--development')
 const qualificationEngineVersion = JSON.parse(await readFile(join(root, 'package.json'), 'utf8')).version
-if (!development && qualificationEngineVersion !== '26.21.0') throw Error('Qualification requires actual 26.21.0 source')
+if (!development && qualificationEngineVersion !== qualificationVersion + '.0') throw Error(`Qualification requires actual ${qualificationVersion}.0 source`)
 const qualificationTag = qualificationVersion.split('.').slice(0, 2).join('.')
 const [qualificationMajor, qualificationMinor] = qualificationVersion.split('.').map(Number)
 const isV41 = qualificationMajor > 4 || (qualificationMajor === 4 && qualificationMinor >= 1)
@@ -51,7 +52,7 @@ try {
   const target = await waitForTarget(debugPort)
   client = await connectCdp(target.webSocketDebuggerUrl)
   client.on('Runtime.exceptionThrown', event => consoleErrors.push(event.exceptionDetails?.exception?.description || event.exceptionDetails?.text || 'Runtime exception'))
-  client.on('Log.entryAdded', event => { if (event.entry?.level === 'error') consoleErrors.push(event.entry.text) })
+  client.on('Log.entryAdded', event => { if (event.entry?.level === 'error') consoleErrors.push(event.entry.text + (event.entry.url ? " | " + event.entry.url : "")) })
   await client.send('Runtime.enable'); await client.send('Log.enable'); await client.send('Page.enable')
   const browser = await client.send('Browser.getVersion')
   const graphics = await evaluate(client, "(()=>{const c=document.createElement('canvas'),g=c.getContext('webgl2');if(!g)return{webgl2:false,selection:'browser-default'};const e=g.getExtension('WEBGL_debug_renderer_info'),r={webgl2:true,selection:'browser-default',vendor:e?g.getParameter(e.UNMASKED_VENDOR_WEBGL):null,renderer:e?g.getParameter(e.UNMASKED_RENDERER_WEBGL):g.getParameter(g.RENDERER)};g.getExtension('WEBGL_lose_context')?.loseContext();return r})()")
@@ -62,7 +63,7 @@ try {
     await waitForExpression(client, "document.readyState === 'complete' && Boolean(document.querySelector('.project-manager,.editor-root'))", 20_000)
     if (await evaluate(client, "Boolean(document.querySelector('.project-manager'))")) {
       if (isV41 && locale === 'en') await captureSurface(client, screenshotRoot, screenshots, 'launcher-en-1920x1080.png', locale, 1920, 1080)
-      await evaluate(client, "document.querySelector('.create-button')?.click(); true")
+      await evaluate(client, "document.querySelector('.quick-actions .new-project')?.click(); true"); await waitForExpression(client,"Boolean(document.querySelector('.create-button'))",5000); await evaluate(client, "document.querySelector('.create-button')?.click(); true")
       await waitForExpression(client, "Boolean(document.querySelector('.editor-root'))", 25_000)
     }
 
@@ -293,7 +294,7 @@ async function recordLayoutOne(cdp, collection, name) {
     return [...document.querySelectorAll('input,textarea')].filter(e=>{const r=e.getBoundingClientRect(),s=getComputedStyle(e);return r.width&&r.height&&s.display!=='none'&&s.visibility!=='hidden'&&!['checkbox','radio','range','color','hidden','file','button','submit'].includes(e.type)}).map(e=>{
       const s=getComputedStyle(e);context.font=s.fontStyle+' '+s.fontWeight+' '+s.fontSize+' '+s.fontFamily;const unit=context.measureText('0').width;
       const usable=e.clientWidth-parseFloat(s.paddingLeft||0)-parseFloat(s.paddingRight||0)-(e.type==='number'?16:0);
-      const required=e.type==='number'?6:Math.min(12,e.maxLength>0?e.maxLength:12);
+      const required=(e.type==='number'||e.hasAttribute('data-numeric-expression'))?6:Math.min(12,e.maxLength>0?e.maxLength:12);
       return {testId:e.dataset.testid||null,label:e.getAttribute('aria-label')||e.name||e.type,characters:unit?usable/unit:0,required,width:e.clientWidth,usable};
     });
   })()`)
@@ -333,7 +334,7 @@ async function setViewport(cdp, width, height, deviceScaleFactor = 1) {
 }
 async function captureSurface(cdp, directory, collection, name, locale, width, height) { await setViewport(cdp,width,height); const capture=await cdp.send('Page.captureScreenshot',{format:'png',fromSurface:true,captureBeyondViewport:false}); await writeFile(join(directory,name),Buffer.from(capture.data,'base64')); collection.push({name,locale,width,height}) }
 async function clickIndex(cdp, selector, index) { await evaluate(cdp, `(() => { const node=document.querySelectorAll(${JSON.stringify(selector)})[${index}]; if(!node)return false; node.click(); return true })()`); await new Promise(resolve => setTimeout(resolve, 120)) }
-async function reloadEditorAtViewport(cdp, width, height) { await setViewport(cdp,width,height); await evaluate(cdp,'location.reload(); true'); await waitForExpression(cdp,"document.readyState === 'complete' && Boolean(document.querySelector('.project-manager,.editor-root'))",20_000); if(await evaluate(cdp,"Boolean(document.querySelector('.project-manager'))")){await evaluate(cdp,"document.querySelector('.create-button')?.click(); true");await waitForExpression(cdp,"Boolean(document.querySelector('.editor-root'))",25_000)} }
+async function reloadEditorAtViewport(cdp, width, height) { await setViewport(cdp,width,height); await evaluate(cdp,'location.reload(); true'); await waitForExpression(cdp,"document.readyState === 'complete' && Boolean(document.querySelector('.project-manager,.editor-root'))",20_000); if(await evaluate(cdp,"Boolean(document.querySelector('.project-manager'))")){await evaluate(cdp,"document.querySelector('.quick-actions .new-project')?.click(); true");await waitForExpression(cdp,"Boolean(document.querySelector('.create-button'))",5000);await evaluate(cdp,"document.querySelector('.create-button')?.click(); true");await waitForExpression(cdp,"Boolean(document.querySelector('.editor-root'))",25_000)} }
 async function freePort() { const server=createNetServer(); await new Promise((resolve,reject)=>{server.once('error',reject);server.listen(0,'127.0.0.1',resolve)}); const address=server.address(),port=typeof address==='object'&&address?address.port:0; await new Promise(resolve=>server.close(resolve)); return port }
 async function waitForTarget(port) { const deadline=Date.now()+15_000; while(Date.now()<deadline){try{const targets=await fetch(`http://127.0.0.1:${port}/json/list`).then(response=>response.json()),target=targets.find(item=>item.type==='page');if(target)return target}catch{}await new Promise(resolve=>setTimeout(resolve,100))}throw new Error('Timed out connecting to Edge DevTools.') }
 async function connectCdp(url) { const socket=new WebSocket(url),pending=new Map(),listeners=new Map();let nextId=1;await new Promise((resolve,reject)=>{socket.addEventListener('open',resolve,{once:true});socket.addEventListener('error',reject,{once:true})});socket.addEventListener('message',message=>{const value=JSON.parse(message.data);if(value.id){const item=pending.get(value.id);if(!item)return;pending.delete(value.id);if(value.error)item.reject(new Error(value.error.message));else item.resolve(value.result)}else for(const listener of listeners.get(value.method)||[])listener(value.params||{})});return{send(method,params={}){return new Promise((resolve,reject)=>{const id=nextId++;pending.set(id,{resolve,reject});socket.send(JSON.stringify({id,method,params}))})},on(method,listener){listeners.set(method,[...(listeners.get(method)||[]),listener])}} }

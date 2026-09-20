@@ -1,3 +1,4 @@
+import {registerNodeBundle22,captureNodeBundle22} from './lib/nodeOperationTrace22.mjs'
 import { resolveMilestoneAuditContext } from './lib/milestoneAuditContext.mjs'
 import assert from 'node:assert/strict'
 import { build } from 'vite'
@@ -16,7 +17,8 @@ const locate=path=>bases.map(base=>join(base,'src',path+'.ts')).find(existsSync)
 const overlay={name:'media-overlay',enforce:'pre',resolveId(source,importer){if(!importer||!source.startsWith('.'))return null;const raw=resolve(dirname(importer.split('?')[0]),source),prefix=bases.map(base=>join(base,'src')).find(prefix=>raw.startsWith(prefix+sep));if(!prefix)return null;for(const base of bases)for(const ext of ['','.ts','.json','.js','/index.ts']){const file=join(base,'src',raw.slice(prefix.length+1)+ext);if(existsSync(file))return file.replaceAll('\\','/')}return null}}
 try{
 const entries={input:'runtime/input',tint:'runtime/uiImageTint',physics:'store/physics',pak:'runtime/novaPak',assetProduction:'assets/assetProduction',native:'runtime/uiNativeInput',drafts:'editor/studioDraftRetention',layout:'runtime/uiLayout',text:'runtime/uiTextLayout',textView:'runtime/uiTextPresentation',ui:'runtime/gameUi',validation:'runtime/uiProduction',locale:'runtime/localization',theme:'runtime/uiTheme',presentation:'runtime/presentation',database:'assets/AssetDatabase',types:'assets/types',components:'world/components',box:'world/BoxEntity'}
-await build({configFile:false,root,plugins:[overlay],logLevel:'error',build:{ssr:true,outDir:temporary,emptyOutDir:false,rollupOptions:{input:Object.fromEntries(Object.entries(entries).map(([name,path])=>[name,locate(path)])),output:{entryFileNames:'[name].mjs'}}}})
+await build({configFile:false,root,plugins:[overlay],logLevel:'error',build:{ssr:true,sourcemap:process.env.NOVA_AUDIT_NODE_OPERATION_COVERAGE==='1'?'hidden':false,outDir:temporary,emptyOutDir:false,rollupOptions:{input:Object.fromEntries(Object.entries(entries).map(([name,path])=>[name,locate(path)])),output:{entryFileNames:'[name].mjs'}}}})
+registerNodeBundle22(temporary)
 const modules=Object.fromEntries(await Promise.all(Object.keys(entries).map(async name=>[name,await import(pathToFileURL(join(temporary,name+'.mjs')).href)])))
 const {layout,text,textView,ui,validation,locale,theme,database:db,types,components,box}=modules
 const uuid=n=>n.toString(16).padStart(8,'0')+'-0000-4000-8000-000000000000'
@@ -109,4 +111,4 @@ await check('Stripped player builds include recursive locale/font dependencies a
 })
 db.loadAssets([])
 const report={...auditContext.metadata(),scope:'Programmer behavior tests using actual staged modules and controlled canvas/media I/O; not a browser/user or physical font/audio test.',status:checks.every(check=>check.status==='passed')?'passed':'failed',checks};const output=auditContext.reportPath;await mkdir(dirname(output),{recursive:true});await writeFile(output,JSON.stringify(report,null,2)+'\n');console.log(JSON.stringify({status:report.status,checks:checks.length,failed:checks.filter(check=>check.status==='failed').map(check=>({name:check.name,error:check.error.split('\n').slice(0,6).join('\n')})),output}));if(report.status==='failed')process.exitCode=1
-}finally{await rm(temporary,{recursive:true,force:true})}
+}finally{if(process.env.NOVA_AUDIT_NODE_OPERATION_COVERAGE==='1')await captureNodeBundle22(temporary);await rm(temporary,{recursive:true,force:true})}

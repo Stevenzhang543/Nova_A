@@ -1,3 +1,4 @@
+import {registerNodeBundle22,captureNodeBundle22} from './lib/nodeOperationTrace22.mjs'
 import assert from 'node:assert/strict'
 import { spawnSync } from 'node:child_process'
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
@@ -10,7 +11,8 @@ import { rhaiCorpus } from './fixtures/v26.12-rhai-corpus.mjs'
 const root = dirname(dirname(fileURLToPath(import.meta.url))), temporary = await mkdtemp(join(tmpdir(), 'nova-v2612-editor-')), checks = [], failures = []
 const check = (name, run) => { try { run(); checks.push({ name, status: 'passed' }) } catch (error) { failures.push(error); checks.push({ name, status: 'failed', error: String(error) }) } }
 try {
-  await build({ configFile: false, root, logLevel: 'error', build: { ssr: true, outDir: temporary, emptyOutDir: false, rollupOptions: { input: join(root, 'src/editor/scriptLanguage.ts'), output: { entryFileNames: 'language.mjs' } } } })
+  await build({ configFile: false, root, logLevel: 'error', build: { sourcemap:process.env.NOVA_AUDIT_NODE_OPERATION_COVERAGE==='1'?'hidden':false, ssr:true, outDir: temporary, emptyOutDir: false, rollupOptions: { input: join(root, 'src/editor/scriptLanguage.ts'), output: { entryFileNames: 'language.mjs' } } } })
+  registerNodeBundle22(temporary)
   const { analyzeScript, completionDetails, hoverInfo, parameterHint, renameScriptSymbol, formatScript, ScriptWorkspaceIndex } = await import(pathToFileURL(join(temporary, 'language.mjs')).href)
   const wasm = await import(pathToFileURL(join(root, 'nova_core/pkg/nova_core.js')).href)
   await wasm.default({ module_or_path: await readFile(join(root, 'nova_core/pkg/nova_core_bg.wasm')) })
@@ -114,6 +116,6 @@ try {
   })
   console.log(JSON.stringify({ status: failures.length ? 'failed' : 'passed', checks: checks.length, runtimeCorpus: rhaiCorpus.length, failed: checks.filter(item => item.status === 'failed') }, null, 2))
   const report = process.argv.find(value => value.startsWith('--report='))?.slice(9)
-  if (report) await writeFile(report, JSON.stringify({ status: failures.length ? 'failed' : 'passed', checks }, null, 2))
+  if (report) await writeFile(report, JSON.stringify({ generatedAt:new Date().toISOString(), status: failures.length ? 'failed' : 'passed', checks }, null, 2))
   if (failures.length) process.exitCode = 1
-} finally { await rm(temporary, { recursive: true, force: true }) }
+} finally { await captureNodeBundle22(temporary); await rm(temporary, { recursive: true, force: true }) }

@@ -540,7 +540,7 @@ struct HostOutput {
     logs: Vec<ScriptLog>,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 struct PreparedScript {
     source: String,
     exports: Vec<ExportedProperty>,
@@ -552,9 +552,9 @@ struct CompiledScript {
     ast: AST,
 }
 
-#[derive(Default)]
+#[derive(Clone, Default)]
 pub struct ScriptRuntime {
-    scripts: BTreeMap<String, CompiledScript>,
+    scripts: BTreeMap<String, Rc<CompiledScript>>,
 }
 
 impl ScriptRuntime {
@@ -610,12 +610,19 @@ impl ScriptRuntime {
             return Err("script id cannot be empty".into());
         }
         let prepared = prepare_script(source)?;
+        if let Some(existing) = self.scripts.get(script_id) {
+            if existing.prepared == prepared {
+                return Ok(existing.prepared.exports.clone());
+            }
+        }
         let ast = base_engine()
             .compile(&prepared.source)
             .map_err(|error| error.to_string())?;
         let exports = prepared.exports.clone();
-        self.scripts
-            .insert(script_id.to_owned(), CompiledScript { prepared, ast });
+        self.scripts.insert(
+            script_id.to_owned(),
+            Rc::new(CompiledScript { prepared, ast }),
+        );
         Ok(exports)
     }
 
@@ -2382,7 +2389,9 @@ fn collect_properties(
 }
 
 fn dynamic_to_json(value: Dynamic) -> Option<Value> {
-    if value.is::<bool>() {
+    if value.is_unit() {
+        Some(Value::Null)
+    } else if value.is::<bool>() {
         Some(Value::Bool(value.cast::<bool>()))
     } else if value.is::<INT>() {
         Some(Value::from(value.cast::<INT>()))
@@ -2489,6 +2498,7 @@ fn prepare_script(source: &str) -> Result<PreparedScript, String> {
                 .get("serialize")
                 .map(|value| value != "false")
                 .unwrap_or(true);
+            let expression = export_literal(&parsed);
             exports.push(ExportedProperty {
                 name: name.to_owned(),
                 value: parsed.clone(),
@@ -2666,18 +2676,113 @@ fn is_identifier(value: &str) -> bool {
         && chars.all(|value| value == '_' || value.is_ascii_alphanumeric())
 }
 
+/// Export defaults are serialized data; nested JSON maps need Rhai map syntax.
+fn export_literal(value: &Value) -> String {
+    match value {
+        Value::Null => "()".into(),
+        Value::Array(values) => format!(
+            "[{}]",
+            values
+                .iter()
+                .map(export_literal)
+                .collect::<Vec<_>>()
+                .join(",")
+        ),
+        Value::Object(values) => format!(
+            "#{{{}}}",
+            values
+                .iter()
+                .map(|(key, value)| format!(
+                    "{}:{}",
+                    Value::String(key.clone()),
+                    export_literal(value)
+                ))
+                .collect::<Vec<_>>()
+                .join(",")
+        ),
+        _ => value.to_string(),
+    }
+}
+
+/// Normalize constant Rhai map/unit tokens into JSON without evaluating source.
+fn export_json(value: &str) -> String {
+    let chars: Vec<char> = value.chars().collect();
+    let mut output = String::with_capacity(value.len());
+    let (mut index, mut quoted, mut escaped) = (0, false, false);
+    while index < chars.len() {
+        let ch = chars[index];
+        if quoted {
+            output.push(ch);
+            if escaped {
+                escaped = false;
+            } else if ch == '\\' {
+                escaped = true;
+            } else if ch == '"' {
+                quoted = false;
+            }
+            index += 1;
+            continue;
+        }
+        if ch == '"' {
+            quoted = true;
+            output.push(ch);
+            index += 1;
+            continue;
+        }
+        if ch == '#' && chars.get(index + 1) == Some(&'{') {
+            index += 1;
+            continue;
+        }
+        if ch == '(' {
+            let mut end = index + 1;
+            while chars.get(end).is_some_and(|value| value.is_whitespace()) {
+                end += 1;
+            }
+            if chars.get(end) == Some(&')') {
+                output.push_str("null");
+                index = end + 1;
+                continue;
+            }
+        }
+        if ch.is_ascii_alphabetic() || ch == '_' {
+            let begin = index;
+            index += 1;
+            while chars
+                .get(index)
+                .is_some_and(|value| value.is_ascii_alphanumeric() || *value == '_')
+            {
+                index += 1;
+            }
+            let word: String = chars[begin..index].iter().collect();
+            let mut next = index;
+            while chars.get(next).is_some_and(|value| value.is_whitespace()) {
+                next += 1;
+            }
+            if chars.get(next) == Some(&':') {
+                output.push_str(&Value::String(word).to_string());
+            } else {
+                output.push_str(&word);
+            }
+            continue;
+        }
+        output.push(ch);
+        index += 1;
+    }
+    output
+}
+
 fn parse_export_value(value: &str) -> Option<Value> {
     match value {
         "()" | "null" => Some(Value::Null),
         "true" => Some(Value::Bool(true)),
         "false" => Some(Value::Bool(false)),
         _ if value.starts_with("#{") && value.ends_with('}') => {
-            serde_json::from_str(&value[1..]).ok()
+            serde_json::from_str(&export_json(value)).ok()
         }
         _ if (value.starts_with('[') && value.ends_with(']'))
             || (value.starts_with('{') && value.ends_with('}')) =>
         {
-            serde_json::from_str(value).ok()
+            serde_json::from_str(&export_json(value)).ok()
         }
         _ if value.starts_with('"') && value.ends_with('"') && value.len() >= 2 => {
             serde_json::from_str(value).ok()
@@ -3456,5 +3561,111 @@ mod tests {
                 .expect_err("direct and indirect sleep must never block a VM callback");
             assert!(error.to_lowercase().contains("sleep"), "{error}");
         }
+    }
+
+    #[test]
+    fn candidate_cache_shares_immutable_programs_without_mutating_live_generation() {
+        let mut live = ScriptRuntime::new();
+        live.upsert("changed", "fn start(){print(1);}").unwrap();
+        live.upsert("unchanged", "fn start(){print(10);}").unwrap();
+        let mut candidate = live.clone();
+        assert!(Rc::ptr_eq(
+            &live.scripts["changed"],
+            &candidate.scripts["changed"]
+        ));
+        assert!(Rc::ptr_eq(
+            &live.scripts["unchanged"],
+            &candidate.scripts["unchanged"]
+        ));
+        candidate
+            .upsert("changed", "fn start(){print(2);}")
+            .unwrap();
+        assert!(!Rc::ptr_eq(
+            &live.scripts["changed"],
+            &candidate.scripts["changed"]
+        ));
+        assert!(Rc::ptr_eq(
+            &live.scripts["unchanged"],
+            &candidate.scripts["unchanged"]
+        ));
+        assert_eq!(
+            live.execute_cached("changed", "start", context())
+                .unwrap()
+                .logs[0]
+                .message,
+            "1"
+        );
+        assert_eq!(
+            candidate
+                .execute_cached("changed", "start", context())
+                .unwrap()
+                .logs[0]
+                .message,
+            "2"
+        );
+        assert!(candidate.upsert("changed", "fn start( {").is_err());
+        assert_eq!(
+            candidate
+                .execute_cached("changed", "start", context())
+                .unwrap()
+                .logs[0]
+                .message,
+            "2"
+        );
+        assert!(candidate.remove("unchanged"));
+        assert!(live.execute_cached("unchanged", "start", context()).is_ok());
+        drop(live);
+        assert_eq!(
+            candidate
+                .execute_cached("changed", "start", context())
+                .unwrap()
+                .logs[0]
+                .message,
+            "2"
+        );
+    }
+
+    #[test]
+    fn nested_export_defaults_and_null_state_round_trip_without_fallback() {
+        let source = "@export let bag = [#{\"coins\": 1, \"empty\": null}];\n@export let missing = null;\nfn start(){bag[0].coins+=4;missing=();}";
+        let runtime = ScriptRuntime::new();
+        let first = runtime.execute(source, "start", context()).unwrap();
+        assert_eq!(
+            first.properties["bag"],
+            serde_json::json!([{"coins":5,"empty":null}])
+        );
+        assert_eq!(first.properties["missing"], Value::Null);
+        let mut next = context();
+        next.properties = first.properties;
+        let second = runtime.execute(source, "start", next).unwrap();
+        assert_eq!(
+            second.properties["bag"],
+            serde_json::json!([{"coins":9,"empty":null}])
+        );
+        assert!(dynamic_to_json(Dynamic::UNIT).unwrap().is_null());
+        assert!(dynamic_to_json(Dynamic::from(rhai::FnPtr::new("start").unwrap())).is_none());
+    }
+
+    #[test]
+    fn compiled_cache_reuses_equal_content_and_invalidates_export_metadata() {
+        let mut runtime = ScriptRuntime::new();
+        let source = "@export(min=0) let count = 1;\nfn start(){count+=1;}";
+        runtime.upsert("same", source).unwrap();
+        let original = Rc::clone(&runtime.scripts["same"]);
+        runtime.upsert("same", source).unwrap();
+        assert!(Rc::ptr_eq(&original, &runtime.scripts["same"]));
+        runtime
+            .upsert("same", &source.replace("min=0", "min=1"))
+            .unwrap();
+        assert!(!Rc::ptr_eq(&original, &runtime.scripts["same"]));
+        assert_eq!(
+            runtime.scripts["same"].prepared.exports[0].minimum,
+            Some(1.0)
+        );
+        assert!(parse_export_value("#{value: print(1)}").is_none());
+        assert_eq!(
+            parse_export_value("#{text: \"#{} ()\", nested: [#{value: ()}]}"),
+            Some(serde_json::json!({"text":"#{} ()","nested":[{"value":null}]}))
+        );
     }
 }

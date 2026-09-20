@@ -12,23 +12,23 @@
         <h3>{{ t('physicsQualityProfile') }}</h3>
         <label><span>{{ t('qualityProfile') }}</span><select v-model="physics.globalSettings.profile.id" @change="applyQualityProfile"><option value="Accurate">{{ t('accurateProfile') }}</option><option value="Balanced">{{ t('balancedProfile') }}</option><option value="Fast">{{ t('fastProfile') }}</option><option value="Custom">{{ t('customProfile') }}</option></select></label>
         <label><span>{{ t('droppedTimePolicy') }}</span><select v-model="physics.globalSettings.profile.droppedTimePolicy"><option value="Drop">{{ t('dropTime') }}</option><option value="PreserveBacklog">{{ t('preserveBacklog') }}</option><option value="SlowMotion">{{ t('slowMotionPolicy') }}</option></select></label>
-        <label><span>{{ t('minimumSubsteps') }}</span><input v-model.lazy.number="physics.globalSettings.profile.minimumSubsteps" type="number" min="1" max="128"></label>
-        <label><span>{{ t('velocityIterations') }}</span><input v-model.lazy.number="physics.globalSettings.profile.velocityIterations" type="number" min="1" max="128"></label>
-        <label><span>{{ t('positionIterations') }}</span><input v-model.lazy.number="physics.globalSettings.profile.positionIterations" type="number" min="1" max="128"></label>
+        <label><span>{{ t('minimumSubsteps') }}</span><NumericExpressionInput v-model="physics.globalSettings.profile.minimumSubsteps" :minimum="1" :maximum="128" resource-key="project:physics.globalSettings.profile.minimumSubsteps" /></label>
+        <label><span>{{ t('velocityIterations') }}</span><NumericExpressionInput v-model="physics.globalSettings.profile.velocityIterations" :minimum="1" :maximum="128" resource-key="project:physics.globalSettings.profile.velocityIterations" /></label>
+        <label><span>{{ t('positionIterations') }}</span><NumericExpressionInput v-model="physics.globalSettings.profile.positionIterations" :minimum="1" :maximum="128" resource-key="project:physics.globalSettings.profile.positionIterations" /></label>
         <p class="stability-label"><strong>{{ t('stable') }}</strong> {{ t('physicsDeterminismBoundary') }}</p>
       </article>
       <article class="physics-card">
         <h3>{{ t('simulationSettings') }}</h3>
-        <label><span>{{ t('globalGravity') }}</span><div><input v-model.lazy.number="physics.globalSettings.gravity" type="number" step="0.01"><em>m/s²</em></div></label>
-        <label><span>{{ t('globalAirDamping') }}</span><div><input v-model.lazy.number="physics.globalSettings.airFriction" type="number" min="0" step="0.01"><em>s⁻¹</em></div></label>
-        <label><span>{{ t('timeScale') }}</span><input v-model.lazy.number="physics.globalSettings.timeScale" type="number" min="0" step="0.1"></label>
-        <label><span>{{ t('physicsTickRate') }}</span><div><input v-model.lazy.number="physics.globalSettings.profile.tickRate" type="number" min="1" max="1000" step="1"><em>Hz</em></div></label>
-        <label><span>{{ t('maxCatchUpSteps') }}</span><input v-model.lazy.number="physics.globalSettings.profile.maxCatchUpSteps" type="number" min="1" max="240" step="1"></label>
+        <label><span>{{ t('globalGravity') }}</span><div><NumericExpressionInput v-model="physics.globalSettings.gravity" :step="0.01" resource-key="project:physics.globalSettings.gravity" /><em>m/s²</em></div></label>
+        <label><span>{{ t('globalAirDamping') }}</span><div><NumericExpressionInput v-model="physics.globalSettings.airFriction" :minimum="0" :step="0.01" resource-key="project:physics.globalSettings.airFriction" /><em>s⁻¹</em></div></label>
+        <label><span>{{ t('timeScale') }}</span><NumericExpressionInput v-model="physics.globalSettings.timeScale" :minimum="0" :step="0.1" resource-key="project:physics.globalSettings.timeScale" /></label>
+        <label><span>{{ t('physicsTickRate') }}</span><div><NumericExpressionInput v-model="physics.globalSettings.profile.tickRate" :minimum="1" :maximum="1000" :step="1" resource-key="project:physics.globalSettings.profile.tickRate" /><em>Hz</em></div></label>
+        <label><span>{{ t('maxCatchUpSteps') }}</span><NumericExpressionInput v-model="physics.globalSettings.profile.maxCatchUpSteps" :minimum="1" :maximum="240" :step="1" resource-key="project:physics.globalSettings.profile.maxCatchUpSteps" /></label>
         <label><span>{{ t('physicsInterpolation') }}</span><select v-model="physics.globalSettings.profile.interpolation"><option value="Interpolate">{{ t('interpolate') }}</option><option value="None">{{ t('noInterpolation') }}</option></select></label>
-        <label><span>{{ t('sleepLinearThreshold') }}</span><div><input v-model.lazy.number="physics.globalSettings.profile.sleepLinearThreshold" type="number" min="0" step="0.0001"><em>m/s</em></div></label>
-        <label><span>{{ t('sleepAngularThreshold') }}</span><div><input v-model.lazy.number="physics.globalSettings.profile.sleepAngularThreshold" type="number" min="0" step="0.0001"><em>rad/s</em></div></label>
-        <label><span>{{ t('timeToSleep') }}</span><div><input v-model.lazy.number="physics.globalSettings.profile.timeToSleep" type="number" min="0" step="0.05"><em>s</em></div></label>
-        <label><span>{{ t('physicsBudget') }}</span><div><input v-model.lazy.number="physics.globalSettings.profile.physicsBudgetMs" type="number" min="0.1" max="1000" step="0.1"><em>ms</em></div></label>
+        <label><span>{{ t('sleepLinearThreshold') }}</span><div><NumericExpressionInput v-model="physics.globalSettings.profile.sleepLinearThreshold" :minimum="0" :step="0.0001" resource-key="project:physics.globalSettings.profile.sleepLinearThreshold" /><em>m/s</em></div></label>
+        <label><span>{{ t('sleepAngularThreshold') }}</span><div><NumericExpressionInput v-model="physics.globalSettings.profile.sleepAngularThreshold" :minimum="0" :step="0.0001" resource-key="project:physics.globalSettings.profile.sleepAngularThreshold" /><em>rad/s</em></div></label>
+        <label><span>{{ t('timeToSleep') }}</span><div><NumericExpressionInput v-model="physics.globalSettings.profile.timeToSleep" :minimum="0" :step="0.05" resource-key="project:physics.globalSettings.profile.timeToSleep" /><em>s</em></div></label>
+        <label><span>{{ t('physicsBudget') }}</span><div><NumericExpressionInput v-model="physics.globalSettings.profile.physicsBudgetMs" :minimum="0.1" :maximum="1000" :step="0.1" resource-key="project:physics.globalSettings.profile.physicsBudgetMs" /><em>ms</em></div></label>
       </article>
       <article class="physics-card diagnostics-card">
         <h3>{{ t('fixedStepDiagnostics') }}</h3>
@@ -89,6 +89,7 @@
 </template>
 
 <script setup lang="ts">
+import NumericExpressionInput from './NumericExpressionInput.vue'
 import SimulationStatusPanel17 from './SimulationStatusPanel17.vue'
 import { useSimulationFormGuard17 } from '../editor/simulationForm17'
 
@@ -143,4 +144,5 @@ function saveMaterial() { if (!draft.value || !selectedMaterial.value) return; d
 .physics-card label>div input,.material-editor label>div input{width:0;flex:1 1 0}
 .physics-workspace{container-type:inline-size}.physics-card label>span{white-space:normal;overflow-wrap:anywhere}.physics-card label input,.physics-card label select{min-height:34px;min-width:0;max-width:100%}.form-error17{color:var(--danger,#d95065);overflow-wrap:anywhere}
 @container(max-width:640px){.physics-grid{grid-template-columns:minmax(0,1fr)!important}.physics-card label{display:grid;grid-template-columns:minmax(0,1fr);gap:6px}.physics-card label>input,.physics-card label>select,.physics-card label>div{width:100%}}
+label:has(.numeric-draft){flex-wrap:wrap;align-items:stretch}label>div:has(.numeric-draft){display:flex;flex-wrap:wrap;gap:6px}.numeric-draft{max-width:100%}
 </style>

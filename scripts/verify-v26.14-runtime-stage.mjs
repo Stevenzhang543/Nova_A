@@ -19,7 +19,7 @@ for (const statement of ast.statements.filter(ts.isImportDeclaration)) {
   const names = statement.importClause?.namedBindings && ts.isNamedImports(statement.importClause.namedBindings) ? statement.importClause.namedBindings.elements.filter(element => !element.isTypeOnly).map(element => element.propertyName?.text ?? element.name.text) : []
   if (!statement.importClause?.isTypeOnly) imports.set(statement.moduleSpecifier.text, [...new Set([...(imports.get(statement.moduleSpecifier.text) ?? []), ...names])])
 }
-const realImports = new Set(['../assets/AssetDatabase', '../world/geometry', '../world/hierarchy', '../editor/selection', './time', './entityLifetimes', './dynamicObjects', './objectPool', './scriptTestExecution', './scriptHotReload', './scriptContracts', './scriptModules', './eventSheets', '../visual/graphCompiler', '../editor/scriptLanguage', '../editor/scriptLanguage26', './scriptSettings', './scriptDebug', './mediaClock', './timelineUiActions'])
+const realImports = new Set(['../assets/AssetDatabase', '../world/geometry', '../world/hierarchy', '../editor/selection', './time', './entityLifetimes', './dynamicObjects', './objectPool', './scriptTestExecution', './scriptHotReload', './scriptContracts', './scriptModules', './eventSheets', '../visual/graphCompiler', '../visual/graphProduction', '../editor/scriptLanguage', '../editor/scriptLanguage26', './scriptSettings', './scriptDebug', './mediaClock', './timelineUiActions'])
 const stagedWasm = !integrated && process.argv.includes('--staged-wasm'), wasmDirectory = stagedWasm ? join(stage,'wasm') : join(root,'nova_core/pkg')
 const wasm = await import(pathToFileURL(join(wasmDirectory, 'nova_core.js')))
 wasm.initSync({ module: await readFile(join(wasmDirectory, 'nova_core_bg.wasm')) })
@@ -31,12 +31,15 @@ class NativeVm {
   execute_cached_json(id, fn, context) { if (!this.sources.has(id)) throw Error('Missing native source cache'); return this.request(this.sources.get(id), fn, context) }
   execute_json(source, fn, context) { return this.request(source, fn, context) }
   validate(source) { return this.request(source) }
+  fork() { const candidate = new NativeVm(); candidate.sources = new Map(this.sources); return candidate }
   free() { this.sources.clear() }
 }
 let allocations = 0, frees = 0
+const compiledRequests = []
 class TrackedVm {
-  constructor() { this.vm = useNative ? new NativeVm() : new wasm.WasmScriptRuntime(); allocations++ }
-  compile_cached(...args) { return this.vm.compile_cached(...args) }
+  constructor(vm) { this.vm = vm ?? (useNative ? new NativeVm() : new wasm.WasmScriptRuntime()); allocations++ }
+  fork() { return new TrackedVm(this.vm.fork()) }
+  compile_cached(...args) { compiledRequests.push(args[0]); return this.vm.compile_cached(...args) }
   execute_cached_json(...args) { return this.vm.execute_cached_json(...args) }
   execute_json(...args) { return this.vm.execute_json(...args) }
   validate(source) { return this.vm.validate(source) }
@@ -189,6 +192,20 @@ try {
   await check('event callback discovery ignores comments, strings and receiver-only methods',()=>{
     const source=asset('callback-discovery.rhai','// fn phantom(){}\nlet text="fn string_fake(){}"; fn real(){} fn int.receiver(){}'),document=events.defaultEventSheet('names',ref(source))
     assert.deepEqual([...events.callbackNamesInLogic(document)],['real'])
+  })
+
+  await check('superseded invalid source and graph requests preserve live code and independent queued scripts',()=>{
+    const first=asset('generation-a.rhai','@export let count=0;\nfn update(dt){count+=1;}'),second=asset('generation-b.rhai','@export let count=0;\nfn update(dt){count+=2;}');
+    const targets=[first,second].map((code,index)=>{const item=new entityModule.BoxEntity(700+index,{x:0,y:0},{x:1,y:1});item.addComponent(new components.Script2D());item.script2D.scriptAsset=ref(code);return item});
+    fixture.physicsState.world.entities=targets;const live=new runtimeModule.GameplayRuntime();live.active=true;live.scriptRuntime=new TrackedVm();live.compileAttachedScripts();
+    const before=compiledRequests.length;
+    live.queueHotReload(first.uuid,'@export let count=0;\nfn update(dt){count+=100;}');
+    live.queueHotReload(second.uuid,'@export let count=0;\nfn update(dt){count+=20;}');
+    live.queueHotReload(first.uuid,'fn update( {');assert.equal(live.pendingReloads.has(first.uuid),false);assert.equal(live.pendingReloads.has(second.uuid),true);live.frame(.1);
+    assert.deepEqual(compiledRequests.slice(before),[second.uuid]);for(const item of targets)live.runEntityFunction(item,'update');assert.deepEqual(targets.map(item=>item.script2D.properties.count),[1,20]);
+    live.queueHotReload(first.uuid,'@export let count=0;\nfn update(dt){count+=100;}');live.queueGraphHotReload(first.uuid,'invalid graph','invalid graph');assert.equal(live.pendingReloads.has(first.uuid),false);
+    live.queueHotReload(first.uuid,'@export let count=0;\nfn update(dt){count+=100;}');settings.scriptProjectSettings.hotReloadEnabled=false;live.queueHotReload(first.uuid,'@export let count=0;\nfn update(dt){count+=200;}');settings.scriptProjectSettings.hotReloadEnabled=true;assert.equal(live.pendingReloads.has(first.uuid),false);
+    live.scriptRuntime.free();live.scriptRuntime=null;fixture.physicsState.world.entities=[entity];
   })
   const sharedModule=asset('atomic-helper.rhai','fn increment(){1}'),rootA=asset('atomic-a.rhai','use "atomic-helper";\n@export let count=0;\nfn update(dt){count+=increment();}'),rootB=asset('atomic-b.rhai','use "atomic-helper";\n@export let count=100;\nfn update(dt){count+=increment();}\nfn collision(){0}')
   const atomicEntities=[rootA,rootB].map((code,index)=>{const target=new entityModule.BoxEntity(61+index,{x:0,y:0},{x:1,y:1});target.addComponent(new components.Script2D());target.script2D.scriptAsset=ref(code);return target})
@@ -366,7 +383,7 @@ try {
     running.runEntityFunction(target,'update');lifetimes.beginEntityLifetime(target);target.transform.position.x=0;running.flushDynamicCommands();assert.equal(target.transform.position.x,0);running.scriptRuntime.free()
   })
   await check('actual physics authoring snapshot is detached and never normalizes live values',()=>{
-    const target=new entityModule.BoxEntity(301,{x:0,y:0},{x:1,y:1});target.addComponent(new components.Script2D());target.script2D.properties={nested:{value:9}};target.mass=NaN
+    const target=new entityModule.BoxEntity(301,{x:0,y:0},{x:1,y:1});target.addComponent(new components.Script2D());target.script2D.properties={nested:{value:9}};assert.throws(()=>{target.mass=NaN},/mass must be finite/);target.rigidBody.mass=NaN /* inject corrupted internal state past the validated public setter */
     const snapshot=physicsReal.readEntityAuthoringData(target);assert.equal(Number.isNaN(target.mass),true);snapshot.components.find(item=>item.kind==='Script2D').data.properties.nested.value=100;assert.equal(target.script2D.properties.nested.value,9)
   })
 
@@ -386,7 +403,7 @@ try {
 
   await check('actual prefab comparison and conflict reads never mutate reactive scene or override identity',()=>{
     const entity=new entityModule.BoxEntity(1201,{x:0,y:0},{x:1,y:1}),source=physicsReal.readEntityAuthoringData(entity),record=asset('readonly-inspector.prefab',JSON.stringify({prefabVersion:2,name:'Inspector source',bundle:{entities:[source],rootUuids:[entity.uuid],connections:[]},variantOf:null,sourceChecksum:'',createdAt:'2026-01-01T00:00:00.000Z'}),'prefab')
-    entity.prefabAsset=ref(record);entity.prefabSourceUuid=entity.uuid;entity.prefabInstanceUuid=crypto.randomUUID();entity.name='Local name';entity.mass=NaN
+    entity.prefabAsset=ref(record);entity.prefabSourceUuid=entity.uuid;entity.prefabInstanceUuid=crypto.randomUUID();entity.name='Local name';assert.throws(()=>{entity.mass=NaN},/mass must be finite/);entity.rigidBody.mass=NaN /* inject corrupted internal state past the validated public setter */
     const originalOverrides={sentinel:true};let overrideWrites=0;Object.defineProperty(entity,'prefabOverrides',{configurable:true,get:()=>originalOverrides,set:()=>{overrideWrites++}})
     const world=physicsReal.physicsState.world,previous=world.entities.slice(),connectionIdentity=world.connections,assetBytes=record.source;world.entities.splice(0,world.entities.length,entity)
     const snapshot=JSON.stringify(physicsReal.readEntityAuthoringData(entity)),selection=[...physicsReal.physicsState.selectedEntityIds]

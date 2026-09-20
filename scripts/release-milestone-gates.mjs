@@ -103,13 +103,13 @@ export async function executeMilestoneGate(release, gate, settings = {}) {
         // Build the exact current source instead of accidentally exercising an old native test executable.
         await run('cargo', ['build', '-p', 'nova_script', '--example', 'nova_script_test', '--target-dir', join(root, 'target')])
       }
-      for (const [script, args, report] of focus) { if (report) await runReport(script, report, args); else await node(script, args) }
+      for (const [script, args, report] of focus) { const environment = settings.pnpmEntry ? { NOVA_PNPM_ENTRY: settings.pnpmEntry } : {}; if (report) await runReport(script, report, args, environment); else await node(script, args, environment) }
       return write('focused-verification', 'nova-release-focused-verification', { scope: 'Fresh execution of the explicitly selected milestone behavior suites; retained raw child report versions identify their own scopes.' })
     }
     case 'history': return runReport('scripts/verify-calendar-history.mjs', `release-audits/v${release}-history-verification.json`, [`--release=${release}`, `--engine=${machineVersion}`])
     case 'templates': return runReport('scripts/verify-template-catalog.mjs', 'release-audits/template-catalog-verification.json')
     case 'layout-contract': return runReport('scripts/verify-calendar-layout-contract.mjs', `release-audits/v${release}-layout-contract.json`, [`--release=${release}`, `--engine=${machineVersion}`])
-    case 'browser-layout': return runReport(['26.20','26.21'].includes(release) ? `scripts/qualify-layout-v${release}.mjs` : 'scripts/qualify-layout-v3.3.mjs', `release-audits/v${release}-layout-browser.json`, [], { NOVA_LAYOUT_VERSION: release, NOVA_LAYOUT_ENGINE_VERSION: machineVersion, NOVA_LAYOUT_REQUIRED_VIEWPORTS: '1024x640,1366x768,1920x1080', NOVA_LAYOUT_REQUIRED_SCALES: '1,1.5,2' })
+    case 'browser-layout': return runReport(['26.20','26.21','26.22','26.23'].includes(release) ? `scripts/qualify-layout-v${release}.mjs` : 'scripts/qualify-layout-v3.3.mjs', `release-audits/v${release}-layout-browser.json`, [], { NOVA_LAYOUT_VERSION: release, NOVA_LAYOUT_ENGINE_VERSION: machineVersion, NOVA_LAYOUT_REQUIRED_VIEWPORTS: '1024x640,1366x768,1920x1080', NOVA_LAYOUT_REQUIRED_SCALES: '1,1.5,2' })
     case 'user-interactions': {
       const report = await runReport('scripts/verify-v6.0.2-interactions.mjs', `release-audits/v${release}-user-interactions.json`, [], { NOVA_INTERACTION_VERSION: release, NOVA_INTERACTION_ENGINE_VERSION: machineVersion, NOVA_INTERACTION_OUTPUT: `v${release}-user-interactions.json` })
       const authoring = settings.authoring ?? (release === '26.12' ? 'scripts/verify-v26.12-authoring.mjs' : '')

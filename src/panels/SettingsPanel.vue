@@ -31,7 +31,7 @@
             <option v-for="(palette, index) in COLOR_PALETTES" :key="palette.id" :value="palette.id">{{ PALETTE_COPY[prefs.locale].names[index] }} · {{ t(palette.mode) }}</option>
           </select>
         </SettingRow>
-        <p>{{ PALETTE_COPY[prefs.locale].hint }}</p><button class="secondary-action" data-audit="qualification-help" @click="openBundledManual((prefs.locale === 'zh' ? 'zh-CN' : prefs.locale) + '-v2621-production')">{{ t('documentation') }}</button>
+        <p>{{ PALETTE_COPY[prefs.locale].hint }}</p><button class="secondary-action" data-audit="qualification-help" @click="openProductionManual(prefs.locale)">{{ t('documentation') }}</button>
         <SettingRow :label="FORM_LAYOUT_COPY[prefs.locale].label" data-non-project-control>
           <select v-model="prefs.formLabelLayout" data-audit="form-label-layout" :aria-label="FORM_LAYOUT_COPY[prefs.locale].label">
             <option value="auto">{{ FORM_LAYOUT_COPY[prefs.locale].auto }}</option>
@@ -60,14 +60,14 @@
         <SettingRow :label="t('exceptionPolicy')"><select v-model="scriptSettings.exceptionPolicy"><option value="never">{{ t('never') }}</option><option value="uncaught">{{ t('uncaught') }}</option><option value="all">{{ t('allExceptions') }}</option></select></SettingRow>
         <SettingRow :label="t('hotReloadPolicy')"><ToggleSwitch v-model="scriptSettings.hotReloadEnabled" /></SettingRow>
         <SettingRow :label="t('formatIndent')"><select v-model.number="scriptSettings.formatting.indentSize"><option :value="2">2</option><option :value="4">4</option></select></SettingRow>
-        <SettingRow :label="t('formatLineWidth')"><input v-model.number="scriptSettings.formatting.lineWidth" type="number" min="60" max="240"></SettingRow>
+        <SettingRow :label="t('formatLineWidth')"><NumericExpressionInput v-model="scriptSettings.formatting.lineWidth" :minimum="60" :maximum="240" :resource-key="'project:scriptSettings.formatting.lineWidth'" /></SettingRow>
         <SettingRow :label="t('deprecatedLint')"><select v-model="scriptSettings.lint.deprecatedApi"><option value="off">{{ t('disabled') }}</option><option value="warning">{{ t('warning') }}</option><option value="error">{{ t('error') }}</option></select></SettingRow>
         <SettingRow :label="t('persistLanguageIndex')"><ToggleSwitch v-model="scriptSettings.indexing.persist" /></SettingRow>
-        <SettingRow :label="t('languageBudget')"><input v-model.number="scriptSettings.indexing.interactiveBudgetMs" type="number" min="10" max="500"></SettingRow>
-        <SettingRow :label="t('testParallelism')"><input v-model.number="scriptSettings.testing.parallelism" type="number" min="1" max="16"></SettingRow>
+        <SettingRow :label="t('languageBudget')"><NumericExpressionInput v-model="scriptSettings.indexing.interactiveBudgetMs" :minimum="10" :maximum="500" :resource-key="'project:scriptSettings.indexing.interactiveBudgetMs'" /></SettingRow>
+        <SettingRow :label="t('testParallelism')"><NumericExpressionInput v-model="scriptSettings.testing.parallelism" :minimum="1" :maximum="16" :resource-key="'project:scriptSettings.testing.parallelism'" /></SettingRow>
         <SettingRow :label="t('coverage')"><ToggleSwitch v-model="scriptSettings.testing.coverageEnabled" /></SettingRow>
         <SettingRow :label="t('remoteDebugging')"><ToggleSwitch v-model="scriptSettings.remoteDebug.enabled" /></SettingRow>
-        <SettingRow :label="t('remoteDebugPort')"><input v-model.number="scriptSettings.remoteDebug.port" type="number" min="1024" max="65535"></SettingRow>
+        <SettingRow :label="t('remoteDebugPort')"><NumericExpressionInput v-model="scriptSettings.remoteDebug.port" :minimum="1024" :maximum="65535" :resource-key="'project:scriptSettings.remoteDebug.port'" /></SettingRow>
         <SettingRow :label="t('allowExportedPlayers')"><ToggleSwitch v-model="scriptSettings.remoteDebug.allowExportedPlayers" /></SettingRow>
         <SettingRow :label="t('authenticationTokenHash')"><input v-model="scriptSettings.remoteDebug.tokenHash" maxlength="128" autocomplete="off" spellcheck="false" placeholder="SHA-256"></SettingRow>
         <p>{{ t('remoteDebugSecurityHint') }}</p>
@@ -109,11 +109,11 @@
                 <label><span>{{ t('actionMap') }}</span><input v-model.trim="action.map" maxlength="80" @change="commitInputMap"></label>
                 <label><span>{{ t('controlSchemes') }}</span><input :value="action.schemes.join(', ')" :placeholder="t('allSchemes')" @change="setActionSchemes(actionIndex, $event)"></label>
                 <label><span>{{ t('interaction') }}</span><select v-model="action.interaction" @change="commitInputMap"><option value="press">{{ t('inputPress') }}</option><option value="hold">{{ t('inputHold') }}</option><option value="tap">{{ t('inputTap') }}</option><option value="multiTap">{{ t('inputMultiTap') }}</option></select></label>
-                <label v-if="action.interaction === 'hold'"><span>{{ t('holdSeconds') }}</span><input v-model.number="action.holdSeconds" type="number" min="0.001" max="60" step="0.05" @change="commitInputMap"></label>
-                <label v-if="action.interaction === 'tap' || action.interaction === 'multiTap'"><span>{{ t('tapSeconds') }}</span><input v-model.number="action.tapSeconds" type="number" min="0.001" max="10" step="0.05" @change="commitInputMap"></label>
-                <label v-if="action.interaction === 'multiTap'"><span>{{ t('tapCount') }}</span><input v-model.number="action.multiTapCount" type="number" min="2" max="16" step="1" @change="commitInputMap"></label>
+                <label v-if="action.interaction === 'hold'"><span>{{ t('holdSeconds') }}</span><NumericExpressionInput v-model="action.holdSeconds" :minimum="0.001" :maximum="60" :step="0.05" @change="commitInputMap" :resource-key="'project:input:' + action.name + ':' + actionIndex + ':action.holdSeconds'" /></label>
+                <label v-if="action.interaction === 'tap' || action.interaction === 'multiTap'"><span>{{ t('tapSeconds') }}</span><NumericExpressionInput v-model="action.tapSeconds" :minimum="0.001" :maximum="10" :step="0.05" @change="commitInputMap" :resource-key="'project:input:' + action.name + ':' + actionIndex + ':action.tapSeconds'" /></label>
+                <label v-if="action.interaction === 'multiTap'"><span>{{ t('tapCount') }}</span><NumericExpressionInput v-model="action.multiTapCount" :minimum="2" :maximum="16" :step="1" @change="commitInputMap" :resource-key="'project:input:' + action.name + ':' + actionIndex + ':action.multiTapCount'" /></label>
                 <label><span>{{ t('consumeInput') }}</span><input v-model="action.consume" type="checkbox" @change="commitInputMap"></label>
-                <label><span>{{ t('actionPriority') }}</span><input v-model.number="action.priority" type="number" min="-10000" max="10000" step="1" @change="commitInputMap"></label>
+                <label><span>{{ t('actionPriority') }}</span><NumericExpressionInput v-model="action.priority" :minimum="-10000" :maximum="10000" :step="1" @change="commitInputMap" :resource-key="'project:input:' + action.name + ':' + actionIndex + ':action.priority'" /></label>
                 <label><span>{{ t('callbackFunction') }}</span><input v-model.trim="action.callback" maxlength="80" placeholder="on_jump" @change="commitInputMap"></label>
               </div>
             </details>
@@ -123,14 +123,14 @@
               </select></label>
               <label class="binding-field"><span>{{ t('bindingCode') }}</span><input v-model.trim="binding.code" :aria-label="t('bindingCode')" maxlength="80" @change="commitInputMap"></label>
               <template v-if="action.kind === 'vector2'">
-                <label class="binding-field"><span>{{ t('inputX') }}</span><input v-model.number="binding.x" :aria-label="t('inputX')" type="number" min="-100" max="100" step="0.1" @change="commitInputMap"></label>
-                <label class="binding-field"><span>{{ t('inputY') }}</span><input v-model.number="binding.y" :aria-label="t('inputY')" type="number" min="-100" max="100" step="0.1" @change="commitInputMap"></label>
+                <label class="binding-field"><span>{{ t('inputX') }}</span><NumericExpressionInput v-model="binding.x" :aria-label="t('inputX')" :minimum="-100" :maximum="100" :step="0.1" @change="commitInputMap" :resource-key="'project:input:' + action.name + ':' + actionIndex + ':binding:' + bindingIndex + ':binding.x'" /></label>
+                <label class="binding-field"><span>{{ t('inputY') }}</span><NumericExpressionInput v-model="binding.y" :aria-label="t('inputY')" :minimum="-100" :maximum="100" :step="0.1" @change="commitInputMap" :resource-key="'project:input:' + action.name + ':' + actionIndex + ':binding:' + bindingIndex + ':binding.y'" /></label>
               </template>
-              <label v-else class="binding-field"><span>{{ t('inputScale') }}</span><input v-model.number="binding.scale" :aria-label="t('inputScale')" type="number" min="-100" max="100" step="0.1" @change="commitInputMap"></label>
-              <label v-if="binding.device.startsWith('gamepad')" class="binding-field"><span>{{ t('gamepadIndex') }}</span><input v-model.number="binding.gamepad" :aria-label="t('gamepadIndex')" type="number" min="0" max="15" step="1" @change="commitInputMap"></label>
-              <label v-if="binding.device === 'gamepad-axis'" class="binding-field"><span>{{ t('deadzone') }}</span><input v-model.number="binding.deadzone" :aria-label="t('deadzone')" type="number" min="0" max="0.99" step="0.01" @change="commitInputMap"></label>
+              <label v-else class="binding-field"><span>{{ t('inputScale') }}</span><NumericExpressionInput v-model="binding.scale" :aria-label="t('inputScale')" :minimum="-100" :maximum="100" :step="0.1" @change="commitInputMap" :resource-key="'project:input:' + action.name + ':' + actionIndex + ':binding:' + bindingIndex + ':binding.scale'" /></label>
+              <label v-if="binding.device.startsWith('gamepad')" class="binding-field"><span>{{ t('gamepadIndex') }}</span><NumericExpressionInput v-model="binding.gamepad" :aria-label="t('gamepadIndex')" :minimum="0" :maximum="15" :step="1" @change="commitInputMap" :resource-key="'project:input:' + action.name + ':' + actionIndex + ':binding:' + bindingIndex + ':binding.gamepad'" /></label>
+              <label v-if="binding.device === 'gamepad-axis'" class="binding-field"><span>{{ t('deadzone') }}</span><NumericExpressionInput v-model="binding.deadzone" :aria-label="t('deadzone')" :minimum="0" :maximum="0.99" :step="0.01" @change="commitInputMap" :resource-key="'project:input:' + action.name + ':' + actionIndex + ':binding:' + bindingIndex + ':binding.deadzone'" /></label>
               <button class="icon-action danger" :title="t('removeBinding')" @click="removeInputBinding(actionIndex, bindingIndex)">×</button>
-              <details v-if="!compactInputMap" class="binding-advanced"><summary>{{ t('advanced') }}</summary><label>{{ t('threshold') }}<input v-model.number="binding.threshold" type="number" min="0" max="1" step="0.01" @change="commitInputMap"></label><label>{{ t('invert') }}<input v-model="binding.invert" type="checkbox" @change="commitInputMap"></label><label>{{ t('responseCurve') }}<select v-model="binding.responseCurve" @change="commitInputMap"><option>linear</option><option>square</option><option>cubic</option><option>exponential</option></select></label><label>{{ t('deviceIdentity') }}<input v-model="binding.deviceId" @change="commitInputMap"></label><label>{{ t('modifiers') }}<input :value="binding.modifiers.join(', ')" @change="setBindingList(binding,'modifiers',$event)"></label><label>{{ t('chord') }}<input :value="binding.chord.join(', ')" @change="setBindingList(binding,'chord',$event)"></label></details>
+              <details v-if="!compactInputMap" class="binding-advanced"><summary>{{ t('advanced') }}</summary><label>{{ t('threshold') }}<NumericExpressionInput v-model="binding.threshold" :minimum="0" :maximum="1" :step="0.01" @change="commitInputMap" :resource-key="'project:input:' + action.name + ':' + actionIndex + ':binding:' + bindingIndex + ':binding.threshold'" /></label><label>{{ t('invert') }}<input v-model="binding.invert" type="checkbox" @change="commitInputMap"></label><label>{{ t('responseCurve') }}<select v-model="binding.responseCurve" @change="commitInputMap"><option>linear</option><option>square</option><option>cubic</option><option>exponential</option></select></label><label>{{ t('deviceIdentity') }}<input v-model="binding.deviceId" @change="commitInputMap"></label><label>{{ t('modifiers') }}<input :value="binding.modifiers.join(', ')" @change="setBindingList(binding,'modifiers',$event)"></label><label>{{ t('chord') }}<input :value="binding.chord.join(', ')" @change="setBindingList(binding,'chord',$event)"></label></details>
             </div>
             <button class="secondary-action compact-action" @click="addInputBinding(actionIndex)">+ {{ t('addBinding') }}</button>
           </article>
@@ -183,7 +183,8 @@
 </template>
 
 <script setup lang="ts">
-import { openBundledManual } from '../runtime/openManual'
+import NumericExpressionInput from '../components/NumericExpressionInput.vue'
+import { openProductionManual } from '../runtime/openManual'
 import { NOVA_RELEASE_NAME } from '../projects/projectFormat'
 import { computed, defineComponent, h, inject, onBeforeUnmount, onMounted, provide, ref, watch } from 'vue'
 import { t } from '../i18n'
@@ -398,4 +399,5 @@ p { margin: 0 0 8px 40px; color: var(--text-muted); font-size: 12px; line-height
 .input-map-toolbar>label{flex:1 1 160px}
 .settings-search{flex-wrap:wrap}.settings-search>label{flex:1 1 250px}.settings-search nav{flex:1 1 300px}
 @container nova-form (max-width:600px){.input-action-heading{grid-template-columns:minmax(0,1fr) 30px 30px}.input-action-heading>input,.input-action-heading>select{grid-column:1/-1}.action-advanced-grid{grid-template-columns:minmax(0,1fr)}.binding-advanced>label{grid-template-columns:minmax(0,1fr)}.settings-card>.input-map-toolbar>input{flex-basis:100%;width:100%}}
+.input-binding,.action-advanced-grid{grid-template-columns:repeat(auto-fit,minmax(min(100%,calc(14em + 64px)),1fr))}
 </style>

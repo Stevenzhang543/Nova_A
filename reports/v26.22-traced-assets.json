@@ -1,0 +1,1705 @@
+{
+  "format": "nova-v26.15-assets-verification",
+  "version": 1,
+  "release": "26.22",
+  "engineVersion": "26.22.0",
+  "expectedRelease": "26.22",
+  "development": true,
+  "qualifiedRelease": null,
+  "sourceMode": "current-source-retained-development-trace",
+  "generatedAt": "2026-09-14T18:29:21.256Z",
+  "status": "passed",
+  "checks": [
+    {
+      "name": "Weighted cache bounds, replacement accounting and deterministic LRU eviction",
+      "status": "passed"
+    },
+    {
+      "name": "Real importer produces identical verified bytes and cache identity",
+      "status": "passed"
+    },
+    {
+      "name": "Oversized sources reject before reading bytes",
+      "status": "passed"
+    },
+    {
+      "name": "Failed importer retry inputs and memory caches stay within declared budgets",
+      "status": "passed"
+    },
+    {
+      "name": "Late image metadata failure retains all authored source fields and stable identity",
+      "status": "passed"
+    },
+    {
+      "name": "Successful reimport keeps identity/path while replacing validated content",
+      "status": "passed"
+    },
+    {
+      "name": "Reimport completion cannot overwrite an edit made during metadata decoding",
+      "status": "passed"
+    },
+    {
+      "name": "Path repair preserves prefixes, JSON keys, comments, prose and binary data",
+      "status": "passed"
+    },
+    {
+      "name": "Complete UUID repair preserves Unicode base64 and never rewrites longer tokens",
+      "status": "passed"
+    },
+    {
+      "name": "Folder move preserves UUIDs and fully rolls back paths/sources/provenance on failure",
+      "status": "passed"
+    },
+    {
+      "name": "Dependency roots ignore embedded asset inventory and entity parent UUIDs",
+      "status": "passed"
+    },
+    {
+      "name": "Closure reports missing, editor-only, excluded and unknown-group dependencies",
+      "status": "passed"
+    },
+    {
+      "name": "Explicit include/exclude rules cannot silently sever required closure",
+      "status": "passed"
+    },
+    {
+      "name": "Resource inheritance and inherited variant selection use the supplied asset snapshot",
+      "status": "passed"
+    },
+    {
+      "name": "Resource kind mismatch, cycles and local variant overflow are rejected",
+      "status": "passed"
+    },
+    {
+      "name": "Atlas groups occupy different pages and reordered inputs produce identical placements",
+      "status": "passed"
+    },
+    {
+      "name": "Actual canvas atlas builder separates groups and retains failures instead of partial output",
+      "status": "passed"
+    },
+    {
+      "name": "Authoritative package contains exactly closure metadata/files and retains referenced optional resources",
+      "status": "passed"
+    },
+    {
+      "name": "Repair updates complete metadata references and bare resource parents without changing document identity",
+      "status": "passed"
+    },
+    {
+      "name": "Comment references do not create build dependencies; literal paths and raw host use forms do",
+      "status": "passed"
+    },
+    {
+      "name": "Typed visual graph module dependencies follow current graph semantics",
+      "status": "passed"
+    },
+    {
+      "name": "Aseprite golden identities survive source reorder and source fingerprint is actual SHA-256",
+      "status": "passed"
+    },
+    {
+      "name": "Tiled aggregate cell limits reject small inputs that would allocate excessive generated layers",
+      "status": "passed"
+    },
+    {
+      "name": "Interchange texture binding is stable across image rename and diagnoses ambiguous basenames",
+      "status": "passed"
+    },
+    {
+      "name": "Real importer cancellation drains active and queued reads without retry leakage",
+      "status": "passed"
+    },
+    {
+      "name": "Retrying a failed reimport updates the existing UUID rather than duplicating the asset",
+      "status": "passed"
+    },
+    {
+      "name": "Persistent-cache corruption is replaced with verified bytes; cache quota failure is recoverable",
+      "status": "passed"
+    },
+    {
+      "name": "Failed external reimport remains visible for recovery",
+      "status": "passed"
+    },
+    {
+      "name": "Actual common exporter narrows scene roots and rejects broken closure before browser/native output",
+      "status": "passed"
+    },
+    {
+      "name": "Every bundled starter has a valid dependency closure with and without unused stripping",
+      "status": "passed"
+    },
+    {
+      "name": "Malformed graph dependencies become visible diagnostics and block only relevant closure",
+      "status": "passed"
+    },
+    {
+      "name": "Atlas maximum size is applied per group, padding failures are explicit and empty reports have zero pages",
+      "status": "passed"
+    },
+    {
+      "name": "Duplicate package IDs/paths reject before reading any source bytes",
+      "status": "passed"
+    },
+    {
+      "name": "Build patterns and folders never become roots; exact missing paths preserve case",
+      "status": "passed"
+    },
+    {
+      "name": "Missing interchange textures block closure, stable texture UUIDs are included",
+      "status": "passed"
+    },
+    {
+      "name": "Font constructor/decode/registration failures retain source and tracked faces are released",
+      "status": "passed"
+    },
+    {
+      "name": "Artifact settings, atlas placement and package ordering are independent of locale collation",
+      "status": "passed"
+    },
+    {
+      "name": "Package bytes and entry identity use the pre-await snapshot",
+      "status": "passed"
+    },
+    {
+      "name": "Source watches suppress stale polls/debounces and retain failed changes",
+      "status": "passed"
+    },
+    {
+      "name": "Atlas decoding limits concurrent work and rejects excessive decoded pixels before drawing",
+      "status": "passed"
+    },
+    {
+      "name": "Rhai path repair preserves comments/raw host escapes and edits complete raw/template literals",
+      "status": "passed"
+    },
+    {
+      "name": "Aseprite tags retain source frame indices when deterministic slice sorting changes order",
+      "status": "passed"
+    },
+    {
+      "name": "Inherited active variants survive save/reload and unresolved selections cannot mutate saved source",
+      "status": "passed"
+    }
+  ],
+  "limits": {
+    "sourceBytes": 536870912,
+    "memoryBytes": 67108864,
+    "diskBytes": 268435456,
+    "cacheEntries": 128,
+    "retries": 32,
+    "retryBytes": 67108864,
+    "jobs": 128,
+    "changes": 64,
+    "watchers": 128
+  },
+  "nodeOperationCoverage": [
+    {
+      "mappingVersion": 2,
+      "id": "src/assets/importRetention.ts#BoundedImportCache.constructor",
+      "source": "src/assets/importRetention.ts",
+      "line": 7,
+      "kind": "public class operation",
+      "sourceSha256": "8a8c7175d66b68206dcda36cace1fde0d518a4feeebbee05d51039d52d19d0fe",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-15-assets/1/retention.mjs",
+      "generatedSha256": "8f7d2eab836fa033721fc2e4940ae3dc43ef3aea69e097d77e44a3343b44f575",
+      "mapSha256": "ab8b064cc833abc96960fc0212759f30a97c4cff889f20da24ec45a36a48de29",
+      "entryCount": 13
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/assets/importRetention.ts#BoundedImportCache.size",
+      "source": "src/assets/importRetention.ts",
+      "line": 8,
+      "kind": "getter",
+      "sourceSha256": "8a8c7175d66b68206dcda36cace1fde0d518a4feeebbee05d51039d52d19d0fe",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-15-assets/1/retention.mjs",
+      "generatedSha256": "8f7d2eab836fa033721fc2e4940ae3dc43ef3aea69e097d77e44a3343b44f575",
+      "mapSha256": "ab8b064cc833abc96960fc0212759f30a97c4cff889f20da24ec45a36a48de29",
+      "entryCount": 6
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/assets/importRetention.ts#BoundedImportCache.bytes",
+      "source": "src/assets/importRetention.ts",
+      "line": 9,
+      "kind": "getter",
+      "sourceSha256": "8a8c7175d66b68206dcda36cace1fde0d518a4feeebbee05d51039d52d19d0fe",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-15-assets/1/retention.mjs",
+      "generatedSha256": "8f7d2eab836fa033721fc2e4940ae3dc43ef3aea69e097d77e44a3343b44f575",
+      "mapSha256": "ab8b064cc833abc96960fc0212759f30a97c4cff889f20da24ec45a36a48de29",
+      "entryCount": 9
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/assets/importRetention.ts#BoundedImportCache.get",
+      "source": "src/assets/importRetention.ts",
+      "line": 10,
+      "kind": "public class operation",
+      "sourceSha256": "8a8c7175d66b68206dcda36cace1fde0d518a4feeebbee05d51039d52d19d0fe",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-15-assets/1/retention.mjs",
+      "generatedSha256": "8f7d2eab836fa033721fc2e4940ae3dc43ef3aea69e097d77e44a3343b44f575",
+      "mapSha256": "ab8b064cc833abc96960fc0212759f30a97c4cff889f20da24ec45a36a48de29",
+      "entryCount": 21
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/assets/importRetention.ts#BoundedImportCache.set",
+      "source": "src/assets/importRetention.ts",
+      "line": 14,
+      "kind": "public class operation",
+      "sourceSha256": "8a8c7175d66b68206dcda36cace1fde0d518a4feeebbee05d51039d52d19d0fe",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-15-assets/1/retention.mjs",
+      "generatedSha256": "8f7d2eab836fa033721fc2e4940ae3dc43ef3aea69e097d77e44a3343b44f575",
+      "mapSha256": "ab8b064cc833abc96960fc0212759f30a97c4cff889f20da24ec45a36a48de29",
+      "entryCount": 58
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/assets/importRetention.ts#BoundedImportCache.delete",
+      "source": "src/assets/importRetention.ts",
+      "line": 20,
+      "kind": "public class operation",
+      "sourceSha256": "8a8c7175d66b68206dcda36cace1fde0d518a4feeebbee05d51039d52d19d0fe",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-15-assets/1/retention.mjs",
+      "generatedSha256": "8f7d2eab836fa033721fc2e4940ae3dc43ef3aea69e097d77e44a3343b44f575",
+      "mapSha256": "ab8b064cc833abc96960fc0212759f30a97c4cff889f20da24ec45a36a48de29",
+      "entryCount": 114
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/assets/importRetention.ts#BoundedImportCache.clear",
+      "source": "src/assets/importRetention.ts",
+      "line": 24,
+      "kind": "public class operation",
+      "sourceSha256": "8a8c7175d66b68206dcda36cace1fde0d518a4feeebbee05d51039d52d19d0fe",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-15-assets/1/retention.mjs",
+      "generatedSha256": "8f7d2eab836fa033721fc2e4940ae3dc43ef3aea69e097d77e44a3343b44f575",
+      "mapSha256": "ab8b064cc833abc96960fc0212759f30a97c4cff889f20da24ec45a36a48de29",
+      "entryCount": 40
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/assets/importRetention.ts#registerImportSessionCleanup",
+      "source": "src/assets/importRetention.ts",
+      "line": 29,
+      "kind": "exported function",
+      "sourceSha256": "8a8c7175d66b68206dcda36cace1fde0d518a4feeebbee05d51039d52d19d0fe",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-15-assets/1/retention.mjs",
+      "generatedSha256": "8f7d2eab836fa033721fc2e4940ae3dc43ef3aea69e097d77e44a3343b44f575",
+      "mapSha256": "ab8b064cc833abc96960fc0212759f30a97c4cff889f20da24ec45a36a48de29",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/assets/importRetention.ts#resetImportSessionCaches",
+      "source": "src/assets/importRetention.ts",
+      "line": 30,
+      "kind": "exported function",
+      "sourceSha256": "8a8c7175d66b68206dcda36cace1fde0d518a4feeebbee05d51039d52d19d0fe",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-15-assets/1/retention.mjs",
+      "generatedSha256": "8f7d2eab836fa033721fc2e4940ae3dc43ef3aea69e097d77e44a3343b44f575",
+      "mapSha256": "ab8b064cc833abc96960fc0212759f30a97c4cff889f20da24ec45a36a48de29",
+      "entryCount": 11
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/identity.ts#createUuid",
+      "source": "src/world/identity.ts",
+      "line": 8,
+      "kind": "exported function",
+      "sourceSha256": "2fe5fd95a5e427522192d9d7832f4248515d6c47832126b228d6844437068053",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-15-assets/1/graph.mjs",
+      "generatedSha256": "619bc241545d808ccc7c16f2315f08a12c4eb5dd713eee187398d1d1ef39f69e",
+      "mapSha256": "236fedfc7f9d16de97fbf1f4b2543ab630108f61a3ba3a3e396e3cf386108195",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/identity.ts#normalizeUuid",
+      "source": "src/world/identity.ts",
+      "line": 16,
+      "kind": "exported function",
+      "sourceSha256": "2fe5fd95a5e427522192d9d7832f4248515d6c47832126b228d6844437068053",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-15-assets/1/graph.mjs",
+      "generatedSha256": "619bc241545d808ccc7c16f2315f08a12c4eb5dd713eee187398d1d1ef39f69e",
+      "mapSha256": "236fedfc7f9d16de97fbf1f4b2543ab630108f61a3ba3a3e396e3cf386108195",
+      "entryCount": 7
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/packages.ts#onPackageLifecycle",
+      "source": "src/runtime/packages.ts",
+      "line": 109,
+      "kind": "exported function",
+      "sourceSha256": "6774580dde64cd01a9a826d3a11083261aed603c77524544a4008dad9458838a",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-15-assets/1/graph.mjs",
+      "generatedSha256": "619bc241545d808ccc7c16f2315f08a12c4eb5dd713eee187398d1d1ef39f69e",
+      "mapSha256": "236fedfc7f9d16de97fbf1f4b2543ab630108f61a3ba3a3e396e3cf386108195",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/projects/projectSession.ts#newProjectMetadata",
+      "source": "src/projects/projectSession.ts",
+      "line": 30,
+      "kind": "exported function",
+      "sourceSha256": "f14ebed20c3749f69a4349922958adce7f401bcf033c1568738208ab193886d4",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-15-assets/1/graph.mjs",
+      "generatedSha256": "619bc241545d808ccc7c16f2315f08a12c4eb5dd713eee187398d1d1ef39f69e",
+      "mapSha256": "236fedfc7f9d16de97fbf1f4b2543ab630108f61a3ba3a3e396e3cf386108195",
+      "entryCount": 40
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/projects/projectSession.ts#safeProjectName",
+      "source": "src/projects/projectSession.ts",
+      "line": 42,
+      "kind": "exported function",
+      "sourceSha256": "f14ebed20c3749f69a4349922958adce7f401bcf033c1568738208ab193886d4",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-15-assets/1/graph.mjs",
+      "generatedSha256": "619bc241545d808ccc7c16f2315f08a12c4eb5dd713eee187398d1d1ef39f69e",
+      "mapSha256": "236fedfc7f9d16de97fbf1f4b2543ab630108f61a3ba3a3e396e3cf386108195",
+      "entryCount": 40
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/store/colorPalettes.ts#colorPalette",
+      "source": "src/store/colorPalettes.ts",
+      "line": 10,
+      "kind": "exported function",
+      "sourceSha256": "bec5def7babea554f5e68617f4985fa1a609ce97ab71130c3c6ef5e1ef026596",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-15-assets/1/graph.mjs",
+      "generatedSha256": "619bc241545d808ccc7c16f2315f08a12c4eb5dd713eee187398d1d1ef39f69e",
+      "mapSha256": "236fedfc7f9d16de97fbf1f4b2543ab630108f61a3ba3a3e396e3cf386108195",
+      "entryCount": 3
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/store/colorPalettes.ts#paletteForMode",
+      "source": "src/store/colorPalettes.ts",
+      "line": 11,
+      "kind": "exported function",
+      "sourceSha256": "bec5def7babea554f5e68617f4985fa1a609ce97ab71130c3c6ef5e1ef026596",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-15-assets/1/graph.mjs",
+      "generatedSha256": "619bc241545d808ccc7c16f2315f08a12c4eb5dd713eee187398d1d1ef39f69e",
+      "mapSha256": "236fedfc7f9d16de97fbf1f4b2543ab630108f61a3ba3a3e396e3cf386108195",
+      "entryCount": 3
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/store/preferences.ts#applyPreferences",
+      "source": "src/store/preferences.ts",
+      "line": 139,
+      "kind": "exported function",
+      "sourceSha256": "13795bd1ae90c3ceb3349b7ce26ee495781a99d84e30c383f6b21ea86a5e2c0c",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-15-assets/1/graph.mjs",
+      "generatedSha256": "619bc241545d808ccc7c16f2315f08a12c4eb5dd713eee187398d1d1ef39f69e",
+      "mapSha256": "236fedfc7f9d16de97fbf1f4b2543ab630108f61a3ba3a3e396e3cf386108195",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/physicsProduction.ts#defaultPhysicsLayers",
+      "source": "src/runtime/physicsProduction.ts",
+      "line": 104,
+      "kind": "exported function",
+      "sourceSha256": "8fd1571e431576cd9b2dde89dca2a5f99aff6091d33d1c44def3194551061181",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-15-assets/1/graph.mjs",
+      "generatedSha256": "619bc241545d808ccc7c16f2315f08a12c4eb5dd713eee187398d1d1ef39f69e",
+      "mapSha256": "236fedfc7f9d16de97fbf1f4b2543ab630108f61a3ba3a3e396e3cf386108195",
+      "entryCount": 44
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/physicsProduction.ts#defaultPhysicsProfile",
+      "source": "src/runtime/physicsProduction.ts",
+      "line": 192,
+      "kind": "exported function",
+      "sourceSha256": "8fd1571e431576cd9b2dde89dca2a5f99aff6091d33d1c44def3194551061181",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-15-assets/1/graph.mjs",
+      "generatedSha256": "619bc241545d808ccc7c16f2315f08a12c4eb5dd713eee187398d1d1ef39f69e",
+      "mapSha256": "236fedfc7f9d16de97fbf1f4b2543ab630108f61a3ba3a3e396e3cf386108195",
+      "entryCount": 2
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/World.ts#defaultCollisionMatrix",
+      "source": "src/world/World.ts",
+      "line": 35,
+      "kind": "exported function",
+      "sourceSha256": "c725437339ebdfeaff44918dea52767b0c3cf2817578dff72e5e97032886a73b",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-15-assets/1/graph.mjs",
+      "generatedSha256": "619bc241545d808ccc7c16f2315f08a12c4eb5dd713eee187398d1d1ef39f69e",
+      "mapSha256": "236fedfc7f9d16de97fbf1f4b2543ab630108f61a3ba3a3e396e3cf386108195",
+      "entryCount": 44
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/World.ts#World.constructor",
+      "source": "src/world/World.ts",
+      "line": 379,
+      "kind": "public class operation",
+      "sourceSha256": "c725437339ebdfeaff44918dea52767b0c3cf2817578dff72e5e97032886a73b",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-15-assets/1/graph.mjs",
+      "generatedSha256": "619bc241545d808ccc7c16f2315f08a12c4eb5dd713eee187398d1d1ef39f69e",
+      "mapSha256": "236fedfc7f9d16de97fbf1f4b2543ab630108f61a3ba3a3e396e3cf386108195",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/i18n.ts#t",
+      "source": "src/i18n.ts",
+      "line": 1559,
+      "kind": "exported function",
+      "sourceSha256": "2554102983c40ced3b712778cbb314cf95379cbac0a613b3d6e112f5ef865901",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-15-assets/1/graph.mjs",
+      "generatedSha256": "619bc241545d808ccc7c16f2315f08a12c4eb5dd713eee187398d1d1ef39f69e",
+      "mapSha256": "236fedfc7f9d16de97fbf1f4b2543ab630108f61a3ba3a3e396e3cf386108195",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/editor/sceneAuthoring.ts#defaultSceneAuthoringSettings",
+      "source": "src/editor/sceneAuthoring.ts",
+      "line": 78,
+      "kind": "exported function",
+      "sourceSha256": "cacd5234a09c4bad70d65ec4e0b4b39c2239c0eca53f8141cde27ea5fc602a31",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-15-assets/1/graph.mjs",
+      "generatedSha256": "619bc241545d808ccc7c16f2315f08a12c4eb5dd713eee187398d1d1ef39f69e",
+      "mapSha256": "236fedfc7f9d16de97fbf1f4b2543ab630108f61a3ba3a3e396e3cf386108195",
+      "entryCount": 43
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/SceneManager.ts#SceneManager.constructor",
+      "source": "src/world/SceneManager.ts",
+      "line": 41,
+      "kind": "public class operation",
+      "sourceSha256": "bb21f38e41ca614bff9ce618d0471ec3d0fca919c29aade3140c429e446e53b8",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-15-assets/1/graph.mjs",
+      "generatedSha256": "619bc241545d808ccc7c16f2315f08a12c4eb5dd713eee187398d1d1ef39f69e",
+      "mapSha256": "236fedfc7f9d16de97fbf1f4b2543ab630108f61a3ba3a3e396e3cf386108195",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/editor/commands.ts#CommandHistory.constructor",
+      "source": "src/editor/commands.ts",
+      "line": 130,
+      "kind": "public class operation",
+      "sourceSha256": "025738bd1c0147d706518f0e7c60626e41087fd72cb77d2a35cd1e470545f972",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-15-assets/1/graph.mjs",
+      "generatedSha256": "619bc241545d808ccc7c16f2315f08a12c4eb5dd713eee187398d1d1ef39f69e",
+      "mapSha256": "236fedfc7f9d16de97fbf1f4b2543ab630108f61a3ba3a3e396e3cf386108195",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/editor/commands.ts#CommandHistory.lastClearReason",
+      "source": "src/editor/commands.ts",
+      "line": 142,
+      "kind": "getter",
+      "sourceSha256": "025738bd1c0147d706518f0e7c60626e41087fd72cb77d2a35cd1e470545f972",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-15-assets/1/graph.mjs",
+      "generatedSha256": "619bc241545d808ccc7c16f2315f08a12c4eb5dd713eee187398d1d1ef39f69e",
+      "mapSha256": "236fedfc7f9d16de97fbf1f4b2543ab630108f61a3ba3a3e396e3cf386108195",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/input.ts#createInputBinding",
+      "source": "src/runtime/input.ts",
+      "line": 93,
+      "kind": "exported function",
+      "sourceSha256": "0c004d90942df08d6a5d5be3b35f7f29743d9828f97fe5fcbbe27ab07b215a69",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-15-assets/1/graph.mjs",
+      "generatedSha256": "619bc241545d808ccc7c16f2315f08a12c4eb5dd713eee187398d1d1ef39f69e",
+      "mapSha256": "236fedfc7f9d16de97fbf1f4b2543ab630108f61a3ba3a3e396e3cf386108195",
+      "entryCount": 697
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/input.ts#defaultInputMap",
+      "source": "src/runtime/input.ts",
+      "line": 97,
+      "kind": "exported function",
+      "sourceSha256": "0c004d90942df08d6a5d5be3b35f7f29743d9828f97fe5fcbbe27ab07b215a69",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-15-assets/1/graph.mjs",
+      "generatedSha256": "619bc241545d808ccc7c16f2315f08a12c4eb5dd713eee187398d1d1ef39f69e",
+      "mapSha256": "236fedfc7f9d16de97fbf1f4b2543ab630108f61a3ba3a3e396e3cf386108195",
+      "entryCount": 41
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/input.ts#createInputAction",
+      "source": "src/runtime/input.ts",
+      "line": 124,
+      "kind": "exported function",
+      "sourceSha256": "0c004d90942df08d6a5d5be3b35f7f29743d9828f97fe5fcbbe27ab07b215a69",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-15-assets/1/graph.mjs",
+      "generatedSha256": "619bc241545d808ccc7c16f2315f08a12c4eb5dd713eee187398d1d1ef39f69e",
+      "mapSha256": "236fedfc7f9d16de97fbf1f4b2543ab630108f61a3ba3a3e396e3cf386108195",
+      "entryCount": 205
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/input.ts#normalizePenBindingCode",
+      "source": "src/runtime/input.ts",
+      "line": 136,
+      "kind": "exported function",
+      "sourceSha256": "0c004d90942df08d6a5d5be3b35f7f29743d9828f97fe5fcbbe27ab07b215a69",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-15-assets/1/graph.mjs",
+      "generatedSha256": "619bc241545d808ccc7c16f2315f08a12c4eb5dd713eee187398d1d1ef39f69e",
+      "mapSha256": "236fedfc7f9d16de97fbf1f4b2543ab630108f61a3ba3a3e396e3cf386108195",
+      "entryCount": 697
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/audio.ts#defaultAudioSettings",
+      "source": "src/runtime/audio.ts",
+      "line": 120,
+      "kind": "exported function",
+      "sourceSha256": "d7942420a501d92638335fcb7d098e35807a56e3c6319e5a3de8c131a7c4ebeb",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-15-assets/1/graph.mjs",
+      "generatedSha256": "619bc241545d808ccc7c16f2315f08a12c4eb5dd713eee187398d1d1ef39f69e",
+      "mapSha256": "236fedfc7f9d16de97fbf1f4b2543ab630108f61a3ba3a3e396e3cf386108195",
+      "entryCount": 41
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/renderer/outputQuality20.ts#normalizeAntiAliasing",
+      "source": "src/renderer/outputQuality20.ts",
+      "line": 2,
+      "kind": "exported function",
+      "sourceSha256": "d03ccbc43e269bb645131f784c3440d63a8bf4f24c1ace10e812e622c25465fa",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-15-assets/1/graph.mjs",
+      "generatedSha256": "619bc241545d808ccc7c16f2315f08a12c4eb5dd713eee187398d1d1ef39f69e",
+      "mapSha256": "236fedfc7f9d16de97fbf1f4b2543ab630108f61a3ba3a3e396e3cf386108195",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/renderer/renderSettings.ts#normalizeTextureStreamingSettings",
+      "source": "src/renderer/renderSettings.ts",
+      "line": 80,
+      "kind": "exported function",
+      "sourceSha256": "90ae3c7ce879634f4a166e7155278a13e8d5b44add2437ac30253a1a237f8c6e",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-15-assets/1/graph.mjs",
+      "generatedSha256": "619bc241545d808ccc7c16f2315f08a12c4eb5dd713eee187398d1d1ef39f69e",
+      "mapSha256": "236fedfc7f9d16de97fbf1f4b2543ab630108f61a3ba3a3e396e3cf386108195",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/renderer/renderSettings.ts#normalizeRenderingSettings",
+      "source": "src/renderer/renderSettings.ts",
+      "line": 106,
+      "kind": "exported function",
+      "sourceSha256": "90ae3c7ce879634f4a166e7155278a13e8d5b44add2437ac30253a1a237f8c6e",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-15-assets/1/graph.mjs",
+      "generatedSha256": "619bc241545d808ccc7c16f2315f08a12c4eb5dd713eee187398d1d1ef39f69e",
+      "mapSha256": "236fedfc7f9d16de97fbf1f4b2543ab630108f61a3ba3a3e396e3cf386108195",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/exportTemplates.ts#compatibleExportTemplates",
+      "source": "src/runtime/exportTemplates.ts",
+      "line": 28,
+      "kind": "exported function",
+      "sourceSha256": "3cc4801a081c5afd8377289708e9358bd3b9c0033f5efaada290f6833491cead",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-15-assets/1/graph.mjs",
+      "generatedSha256": "619bc241545d808ccc7c16f2315f08a12c4eb5dd713eee187398d1d1ef39f69e",
+      "mapSha256": "236fedfc7f9d16de97fbf1f4b2543ab630108f61a3ba3a3e396e3cf386108195",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/exportTemplates.ts#defaultExportTemplateId",
+      "source": "src/runtime/exportTemplates.ts",
+      "line": 32,
+      "kind": "exported function",
+      "sourceSha256": "3cc4801a081c5afd8377289708e9358bd3b9c0033f5efaada290f6833491cead",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-15-assets/1/graph.mjs",
+      "generatedSha256": "619bc241545d808ccc7c16f2315f08a12c4eb5dd713eee187398d1d1ef39f69e",
+      "mapSha256": "236fedfc7f9d16de97fbf1f4b2543ab630108f61a3ba3a3e396e3cf386108195",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/projects/projectManifest.ts#normalizeProjectManifest",
+      "source": "src/projects/projectManifest.ts",
+      "line": 55,
+      "kind": "exported function",
+      "sourceSha256": "824e903d92b4e1a2b89ca99f2dd785d226016ca0229035ce6509e58db4536fa6",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-15-assets/1/graph.mjs",
+      "generatedSha256": "619bc241545d808ccc7c16f2315f08a12c4eb5dd713eee187398d1d1ef39f69e",
+      "mapSha256": "236fedfc7f9d16de97fbf1f4b2543ab630108f61a3ba3a3e396e3cf386108195",
+      "entryCount": 40
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/visual/graphCatalog.ts#graphNodeDefinition",
+      "source": "src/visual/graphCatalog.ts",
+      "line": 173,
+      "kind": "exported function",
+      "sourceSha256": "450b997f16dc0fb68572f827a306b81b321a0bcdd51ec8e11ed772bf709d8756",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-15-assets/1/graph.mjs",
+      "generatedSha256": "619bc241545d808ccc7c16f2315f08a12c4eb5dd713eee187398d1d1ef39f69e",
+      "mapSha256": "236fedfc7f9d16de97fbf1f4b2543ab630108f61a3ba3a3e396e3cf386108195",
+      "entryCount": 9
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/visual/graphCompiler.ts#validateGraph",
+      "source": "src/visual/graphCompiler.ts",
+      "line": 33,
+      "kind": "exported function",
+      "sourceSha256": "1ee996d3dbfca0e48d0d9b06fa5ca7f86862e4e724b944497546b84e33750ecc",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-15-assets/1/graph.mjs",
+      "generatedSha256": "619bc241545d808ccc7c16f2315f08a12c4eb5dd713eee187398d1d1ef39f69e",
+      "mapSha256": "236fedfc7f9d16de97fbf1f4b2543ab630108f61a3ba3a3e396e3cf386108195",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/visual/graphCompiler.ts#compileGraph",
+      "source": "src/visual/graphCompiler.ts",
+      "line": 216,
+      "kind": "exported function",
+      "sourceSha256": "1ee996d3dbfca0e48d0d9b06fa5ca7f86862e4e724b944497546b84e33750ecc",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-15-assets/1/graph.mjs",
+      "generatedSha256": "619bc241545d808ccc7c16f2315f08a12c4eb5dd713eee187398d1d1ef39f69e",
+      "mapSha256": "236fedfc7f9d16de97fbf1f4b2543ab630108f61a3ba3a3e396e3cf386108195",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/visual/graphCompiler.ts#compileGraphSource",
+      "source": "src/visual/graphCompiler.ts",
+      "line": 243,
+      "kind": "exported function",
+      "sourceSha256": "1ee996d3dbfca0e48d0d9b06fa5ca7f86862e4e724b944497546b84e33750ecc",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-15-assets/1/graph.mjs",
+      "generatedSha256": "619bc241545d808ccc7c16f2315f08a12c4eb5dd713eee187398d1d1ef39f69e",
+      "mapSha256": "236fedfc7f9d16de97fbf1f4b2543ab630108f61a3ba3a3e396e3cf386108195",
+      "entryCount": 4
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/visual/graphCompiler.ts#executableGraphSource",
+      "source": "src/visual/graphCompiler.ts",
+      "line": 244,
+      "kind": "exported function",
+      "sourceSha256": "1ee996d3dbfca0e48d0d9b06fa5ca7f86862e4e724b944497546b84e33750ecc",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-15-assets/1/graph.mjs",
+      "generatedSha256": "619bc241545d808ccc7c16f2315f08a12c4eb5dd713eee187398d1d1ef39f69e",
+      "mapSha256": "236fedfc7f9d16de97fbf1f4b2543ab630108f61a3ba3a3e396e3cf386108195",
+      "entryCount": 4
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/assets/assetGraph.ts#projectAssetReferences",
+      "source": "src/assets/assetGraph.ts",
+      "line": 22,
+      "kind": "exported function",
+      "sourceSha256": "f7af129ff78af50ec45bbb8b4356d50ac9282adca2118ae0775d4da007c19887",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-15-assets/1/graph.mjs",
+      "generatedSha256": "619bc241545d808ccc7c16f2315f08a12c4eb5dd713eee187398d1d1ef39f69e",
+      "mapSha256": "236fedfc7f9d16de97fbf1f4b2543ab630108f61a3ba3a3e396e3cf386108195",
+      "entryCount": 192
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/assets/assetGraph.ts#buildAssetDependencyGraph",
+      "source": "src/assets/assetGraph.ts",
+      "line": 27,
+      "kind": "exported function",
+      "sourceSha256": "f7af129ff78af50ec45bbb8b4356d50ac9282adca2118ae0775d4da007c19887",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-15-assets/1/graph.mjs",
+      "generatedSha256": "619bc241545d808ccc7c16f2315f08a12c4eb5dd713eee187398d1d1ef39f69e",
+      "mapSha256": "236fedfc7f9d16de97fbf1f4b2543ab630108f61a3ba3a3e396e3cf386108195",
+      "entryCount": 98
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/assets/assetGraph.ts#repairAssetPathReferences",
+      "source": "src/assets/assetGraph.ts",
+      "line": 72,
+      "kind": "exported function",
+      "sourceSha256": "f7af129ff78af50ec45bbb8b4356d50ac9282adca2118ae0775d4da007c19887",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-15-assets/1/graph.mjs",
+      "generatedSha256": "619bc241545d808ccc7c16f2315f08a12c4eb5dd713eee187398d1d1ef39f69e",
+      "mapSha256": "236fedfc7f9d16de97fbf1f4b2543ab630108f61a3ba3a3e396e3cf386108195",
+      "entryCount": 4
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/assets/assetGraph.ts#repairMissingAssetReference",
+      "source": "src/assets/assetGraph.ts",
+      "line": 79,
+      "kind": "exported function",
+      "sourceSha256": "f7af129ff78af50ec45bbb8b4356d50ac9282adca2118ae0775d4da007c19887",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-15-assets/1/graph.mjs",
+      "generatedSha256": "619bc241545d808ccc7c16f2315f08a12c4eb5dd713eee187398d1d1ef39f69e",
+      "mapSha256": "236fedfc7f9d16de97fbf1f4b2543ab630108f61a3ba3a3e396e3cf386108195",
+      "entryCount": 2
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/assets/assetProduction.ts#stableAssetSettings",
+      "source": "src/assets/assetProduction.ts",
+      "line": 33,
+      "kind": "exported function",
+      "sourceSha256": "3a5c8cec996b215bde79393abc1f84ebb36b694967448cd27fb274ab7c74fba5",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-15-assets/1/graph.mjs",
+      "generatedSha256": "619bc241545d808ccc7c16f2315f08a12c4eb5dd713eee187398d1d1ef39f69e",
+      "mapSha256": "236fedfc7f9d16de97fbf1f4b2543ab630108f61a3ba3a3e396e3cf386108195",
+      "entryCount": 4775
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/assets/assetProduction.ts#assetSettingsHash",
+      "source": "src/assets/assetProduction.ts",
+      "line": 39,
+      "kind": "exported function",
+      "sourceSha256": "3a5c8cec996b215bde79393abc1f84ebb36b694967448cd27fb274ab7c74fba5",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-15-assets/1/graph.mjs",
+      "generatedSha256": "619bc241545d808ccc7c16f2315f08a12c4eb5dd713eee187398d1d1ef39f69e",
+      "mapSha256": "236fedfc7f9d16de97fbf1f4b2543ab630108f61a3ba3a3e396e3cf386108195",
+      "entryCount": 25
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/assets/assetProduction.ts#buildContentClosure",
+      "source": "src/assets/assetProduction.ts",
+      "line": 64,
+      "kind": "exported function",
+      "sourceSha256": "3a5c8cec996b215bde79393abc1f84ebb36b694967448cd27fb274ab7c74fba5",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-15-assets/1/graph.mjs",
+      "generatedSha256": "619bc241545d808ccc7c16f2315f08a12c4eb5dd713eee187398d1d1ef39f69e",
+      "mapSha256": "236fedfc7f9d16de97fbf1f4b2543ab630108f61a3ba3a3e396e3cf386108195",
+      "entryCount": 92
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/assets/assetProduction.ts#validateContentClosure",
+      "source": "src/assets/assetProduction.ts",
+      "line": 79,
+      "kind": "exported function",
+      "sourceSha256": "3a5c8cec996b215bde79393abc1f84ebb36b694967448cd27fb274ab7c74fba5",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-15-assets/1/graph.mjs",
+      "generatedSha256": "619bc241545d808ccc7c16f2315f08a12c4eb5dd713eee187398d1d1ef39f69e",
+      "mapSha256": "236fedfc7f9d16de97fbf1f4b2543ab630108f61a3ba3a3e396e3cf386108195",
+      "entryCount": 91
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/assets/assetProduction.ts#selectBuildAssets",
+      "source": "src/assets/assetProduction.ts",
+      "line": 88,
+      "kind": "exported function",
+      "sourceSha256": "3a5c8cec996b215bde79393abc1f84ebb36b694967448cd27fb274ab7c74fba5",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-15-assets/1/graph.mjs",
+      "generatedSha256": "619bc241545d808ccc7c16f2315f08a12c4eb5dd713eee187398d1d1ef39f69e",
+      "mapSha256": "236fedfc7f9d16de97fbf1f4b2543ab630108f61a3ba3a3e396e3cf386108195",
+      "entryCount": 91
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/assets/assetProduction.ts#moveAssetFolderTransactional",
+      "source": "src/assets/assetProduction.ts",
+      "line": 130,
+      "kind": "exported function",
+      "sourceSha256": "3a5c8cec996b215bde79393abc1f84ebb36b694967448cd27fb274ab7c74fba5",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-15-assets/1/graph.mjs",
+      "generatedSha256": "619bc241545d808ccc7c16f2315f08a12c4eb5dd713eee187398d1d1ef39f69e",
+      "mapSha256": "236fedfc7f9d16de97fbf1f4b2543ab630108f61a3ba3a3e396e3cf386108195",
+      "entryCount": 3
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/assets/assetProduction.ts#packAtlasDeterministic",
+      "source": "src/assets/assetProduction.ts",
+      "line": 147,
+      "kind": "exported function",
+      "sourceSha256": "3a5c8cec996b215bde79393abc1f84ebb36b694967448cd27fb274ab7c74fba5",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-15-assets/1/graph.mjs",
+      "generatedSha256": "619bc241545d808ccc7c16f2315f08a12c4eb5dd713eee187398d1d1ef39f69e",
+      "mapSha256": "236fedfc7f9d16de97fbf1f4b2543ab630108f61a3ba3a3e396e3cf386108195",
+      "entryCount": 5
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/assets/assetProduction.ts#validateImportSource",
+      "source": "src/assets/assetProduction.ts",
+      "line": 198,
+      "kind": "exported function",
+      "sourceSha256": "3a5c8cec996b215bde79393abc1f84ebb36b694967448cd27fb274ab7c74fba5",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-15-assets/1/graph.mjs",
+      "generatedSha256": "619bc241545d808ccc7c16f2315f08a12c4eb5dd713eee187398d1d1ef39f69e",
+      "mapSha256": "236fedfc7f9d16de97fbf1f4b2543ab630108f61a3ba3a3e396e3cf386108195",
+      "entryCount": 54
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/assets/importPipeline.ts#processAssetImport",
+      "source": "src/assets/importPipeline.ts",
+      "line": 168,
+      "kind": "exported function",
+      "sourceSha256": "de45141f490f17a89c9914aef5429c1b8fba7e0dfe16ffd50cd585587d7d6360",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-15-assets/1/graph.mjs",
+      "generatedSha256": "619bc241545d808ccc7c16f2315f08a12c4eb5dd713eee187398d1d1ef39f69e",
+      "mapSha256": "236fedfc7f9d16de97fbf1f4b2543ab630108f61a3ba3a3e396e3cf386108195",
+      "entryCount": 65
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/assets/importPipeline.ts#cancelAssetImport",
+      "source": "src/assets/importPipeline.ts",
+      "line": 233,
+      "kind": "exported function",
+      "sourceSha256": "de45141f490f17a89c9914aef5429c1b8fba7e0dfe16ffd50cd585587d7d6360",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-15-assets/1/graph.mjs",
+      "generatedSha256": "619bc241545d808ccc7c16f2315f08a12c4eb5dd713eee187398d1d1ef39f69e",
+      "mapSha256": "236fedfc7f9d16de97fbf1f4b2543ab630108f61a3ba3a3e396e3cf386108195",
+      "entryCount": 10
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/assets/importPipeline.ts#retryAssetImport",
+      "source": "src/assets/importPipeline.ts",
+      "line": 235,
+      "kind": "exported function",
+      "sourceSha256": "de45141f490f17a89c9914aef5429c1b8fba7e0dfe16ffd50cd585587d7d6360",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-15-assets/1/graph.mjs",
+      "generatedSha256": "619bc241545d808ccc7c16f2315f08a12c4eb5dd713eee187398d1d1ef39f69e",
+      "mapSha256": "236fedfc7f9d16de97fbf1f4b2543ab630108f61a3ba3a3e396e3cf386108195",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/assets/importPipeline.ts#notifyExternalAssetChange",
+      "source": "src/assets/importPipeline.ts",
+      "line": 242,
+      "kind": "exported function",
+      "sourceSha256": "de45141f490f17a89c9914aef5429c1b8fba7e0dfe16ffd50cd585587d7d6360",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-15-assets/1/graph.mjs",
+      "generatedSha256": "619bc241545d808ccc7c16f2315f08a12c4eb5dd713eee187398d1d1ef39f69e",
+      "mapSha256": "236fedfc7f9d16de97fbf1f4b2543ab630108f61a3ba3a3e396e3cf386108195",
+      "entryCount": 2
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/assets/importPipeline.ts#dismissExternalAssetChange",
+      "source": "src/assets/importPipeline.ts",
+      "line": 250,
+      "kind": "exported function",
+      "sourceSha256": "de45141f490f17a89c9914aef5429c1b8fba7e0dfe16ffd50cd585587d7d6360",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-15-assets/1/graph.mjs",
+      "generatedSha256": "619bc241545d808ccc7c16f2315f08a12c4eb5dd713eee187398d1d1ef39f69e",
+      "mapSha256": "236fedfc7f9d16de97fbf1f4b2543ab630108f61a3ba3a3e396e3cf386108195",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/assets/importPipeline.ts#watchAssetSource",
+      "source": "src/assets/importPipeline.ts",
+      "line": 258,
+      "kind": "exported function",
+      "sourceSha256": "de45141f490f17a89c9914aef5429c1b8fba7e0dfe16ffd50cd585587d7d6360",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-15-assets/1/graph.mjs",
+      "generatedSha256": "619bc241545d808ccc7c16f2315f08a12c4eb5dd713eee187398d1d1ef39f69e",
+      "mapSha256": "236fedfc7f9d16de97fbf1f4b2543ab630108f61a3ba3a3e396e3cf386108195",
+      "entryCount": 3
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/assets/importPipeline.ts#stopWatchingAsset",
+      "source": "src/assets/importPipeline.ts",
+      "line": 282,
+      "kind": "exported function",
+      "sourceSha256": "de45141f490f17a89c9914aef5429c1b8fba7e0dfe16ffd50cd585587d7d6360",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-15-assets/1/graph.mjs",
+      "generatedSha256": "619bc241545d808ccc7c16f2315f08a12c4eb5dd713eee187398d1d1ef39f69e",
+      "mapSha256": "236fedfc7f9d16de97fbf1f4b2543ab630108f61a3ba3a3e396e3cf386108195",
+      "entryCount": 7
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/assets/importPipeline.ts#clearAssetImportSession",
+      "source": "src/assets/importPipeline.ts",
+      "line": 290,
+      "kind": "exported function",
+      "sourceSha256": "de45141f490f17a89c9914aef5429c1b8fba7e0dfe16ffd50cd585587d7d6360",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-15-assets/1/graph.mjs",
+      "generatedSha256": "619bc241545d808ccc7c16f2315f08a12c4eb5dd713eee187398d1d1ef39f69e",
+      "mapSha256": "236fedfc7f9d16de97fbf1f4b2543ab630108f61a3ba3a3e396e3cf386108195",
+      "entryCount": 11
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/assets/importPipeline.ts#assetImportRetentionStats",
+      "source": "src/assets/importPipeline.ts",
+      "line": 296,
+      "kind": "exported function",
+      "sourceSha256": "de45141f490f17a89c9914aef5429c1b8fba7e0dfe16ffd50cd585587d7d6360",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-15-assets/1/graph.mjs",
+      "generatedSha256": "619bc241545d808ccc7c16f2315f08a12c4eb5dd713eee187398d1d1ef39f69e",
+      "mapSha256": "236fedfc7f9d16de97fbf1f4b2543ab630108f61a3ba3a3e396e3cf386108195",
+      "entryCount": 3
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/assets/derivedSprites.ts#validateDerivedSprite",
+      "source": "src/assets/derivedSprites.ts",
+      "line": 25,
+      "kind": "exported function",
+      "sourceSha256": "afc032cee84142b39931cc68f4933895d28959e7e12135427cc2e6464090bb93",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-15-assets/1/graph.mjs",
+      "generatedSha256": "619bc241545d808ccc7c16f2315f08a12c4eb5dd713eee187398d1d1ef39f69e",
+      "mapSha256": "236fedfc7f9d16de97fbf1f4b2543ab630108f61a3ba3a3e396e3cf386108195",
+      "entryCount": 6
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/assets/derivedSprites.ts#prepareDerivedSpriteRefresh",
+      "source": "src/assets/derivedSprites.ts",
+      "line": 75,
+      "kind": "exported function",
+      "sourceSha256": "afc032cee84142b39931cc68f4933895d28959e7e12135427cc2e6464090bb93",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-15-assets/1/graph.mjs",
+      "generatedSha256": "619bc241545d808ccc7c16f2315f08a12c4eb5dd713eee187398d1d1ef39f69e",
+      "mapSha256": "236fedfc7f9d16de97fbf1f4b2543ab630108f61a3ba3a3e396e3cf386108195",
+      "entryCount": 5
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/assets/derivedSpriteTexture.ts#clearDerivedSpriteTextures",
+      "source": "src/assets/derivedSpriteTexture.ts",
+      "line": 9,
+      "kind": "exported function",
+      "sourceSha256": "f8ce65c9f64d5528f97f18a9fb1a1e586a46b7fe9b0af4c499a0df0768df3bef",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-15-assets/1/graph.mjs",
+      "generatedSha256": "619bc241545d808ccc7c16f2315f08a12c4eb5dd713eee187398d1d1ef39f69e",
+      "mapSha256": "236fedfc7f9d16de97fbf1f4b2543ab630108f61a3ba3a3e396e3cf386108195",
+      "entryCount": 17
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/assets/AssetDatabase.ts#inferAssetType",
+      "source": "src/assets/AssetDatabase.ts",
+      "line": 120,
+      "kind": "exported function",
+      "sourceSha256": "1fd08451c8346a9d128ed5d5f78f9bfe9e2dd30089633dd17f76ee9d79b1ce0f",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-15-assets/1/graph.mjs",
+      "generatedSha256": "619bc241545d808ccc7c16f2315f08a12c4eb5dd713eee187398d1d1ef39f69e",
+      "mapSha256": "236fedfc7f9d16de97fbf1f4b2543ab630108f61a3ba3a3e396e3cf386108195",
+      "entryCount": 10
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/assets/AssetDatabase.ts#normalizeFolder",
+      "source": "src/assets/AssetDatabase.ts",
+      "line": 212,
+      "kind": "exported function",
+      "sourceSha256": "1fd08451c8346a9d128ed5d5f78f9bfe9e2dd30089633dd17f76ee9d79b1ce0f",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-15-assets/1/graph.mjs",
+      "generatedSha256": "619bc241545d808ccc7c16f2315f08a12c4eb5dd713eee187398d1d1ef39f69e",
+      "mapSha256": "236fedfc7f9d16de97fbf1f4b2543ab630108f61a3ba3a3e396e3cf386108195",
+      "entryCount": 12
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/assets/AssetDatabase.ts#readTextAsset",
+      "source": "src/assets/AssetDatabase.ts",
+      "line": 421,
+      "kind": "exported function",
+      "sourceSha256": "1fd08451c8346a9d128ed5d5f78f9bfe9e2dd30089633dd17f76ee9d79b1ce0f",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-15-assets/1/graph.mjs",
+      "generatedSha256": "619bc241545d808ccc7c16f2315f08a12c4eb5dd713eee187398d1d1ef39f69e",
+      "mapSha256": "236fedfc7f9d16de97fbf1f4b2543ab630108f61a3ba3a3e396e3cf386108195",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/assets/AssetDatabase.ts#updateTextAsset",
+      "source": "src/assets/AssetDatabase.ts",
+      "line": 437,
+      "kind": "exported function",
+      "sourceSha256": "1fd08451c8346a9d128ed5d5f78f9bfe9e2dd30089633dd17f76ee9d79b1ce0f",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-15-assets/1/graph.mjs",
+      "generatedSha256": "619bc241545d808ccc7c16f2315f08a12c4eb5dd713eee187398d1d1ef39f69e",
+      "mapSha256": "236fedfc7f9d16de97fbf1f4b2543ab630108f61a3ba3a3e396e3cf386108195",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/assets/AssetDatabase.ts#updateTextAssetTransactional",
+      "source": "src/assets/AssetDatabase.ts",
+      "line": 459,
+      "kind": "exported function",
+      "sourceSha256": "1fd08451c8346a9d128ed5d5f78f9bfe9e2dd30089633dd17f76ee9d79b1ce0f",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-15-assets/1/graph.mjs",
+      "generatedSha256": "619bc241545d808ccc7c16f2315f08a12c4eb5dd713eee187398d1d1ef39f69e",
+      "mapSha256": "236fedfc7f9d16de97fbf1f4b2543ab630108f61a3ba3a3e396e3cf386108195",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/assets/AssetDatabase.ts#loadAssets",
+      "source": "src/assets/AssetDatabase.ts",
+      "line": 544,
+      "kind": "exported function",
+      "sourceSha256": "1fd08451c8346a9d128ed5d5f78f9bfe9e2dd30089633dd17f76ee9d79b1ce0f",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-15-assets/1/graph.mjs",
+      "generatedSha256": "619bc241545d808ccc7c16f2315f08a12c4eb5dd713eee187398d1d1ef39f69e",
+      "mapSha256": "236fedfc7f9d16de97fbf1f4b2543ab630108f61a3ba3a3e396e3cf386108195",
+      "entryCount": 6
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/assets/AssetDatabase.ts#reimportAsset",
+      "source": "src/assets/AssetDatabase.ts",
+      "line": 759,
+      "kind": "exported function",
+      "sourceSha256": "1fd08451c8346a9d128ed5d5f78f9bfe9e2dd30089633dd17f76ee9d79b1ce0f",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-15-assets/1/graph.mjs",
+      "generatedSha256": "619bc241545d808ccc7c16f2315f08a12c4eb5dd713eee187398d1d1ef39f69e",
+      "mapSha256": "236fedfc7f9d16de97fbf1f4b2543ab630108f61a3ba3a3e396e3cf386108195",
+      "entryCount": 10
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/assets/AssetDatabase.ts#deleteAsset",
+      "source": "src/assets/AssetDatabase.ts",
+      "line": 823,
+      "kind": "exported function",
+      "sourceSha256": "1fd08451c8346a9d128ed5d5f78f9bfe9e2dd30089633dd17f76ee9d79b1ce0f",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-15-assets/1/graph.mjs",
+      "generatedSha256": "619bc241545d808ccc7c16f2315f08a12c4eb5dd713eee187398d1d1ef39f69e",
+      "mapSha256": "236fedfc7f9d16de97fbf1f4b2543ab630108f61a3ba3a3e396e3cf386108195",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/assets/AssetDatabase.ts#retryFailedAssetImport",
+      "source": "src/assets/AssetDatabase.ts",
+      "line": 920,
+      "kind": "exported function",
+      "sourceSha256": "1fd08451c8346a9d128ed5d5f78f9bfe9e2dd30089633dd17f76ee9d79b1ce0f",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-15-assets/1/graph.mjs",
+      "generatedSha256": "619bc241545d808ccc7c16f2315f08a12c4eb5dd713eee187398d1d1ef39f69e",
+      "mapSha256": "236fedfc7f9d16de97fbf1f4b2543ab630108f61a3ba3a3e396e3cf386108195",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/assets/AssetDatabase.ts#resolveExternalAssetChange",
+      "source": "src/assets/AssetDatabase.ts",
+      "line": 945,
+      "kind": "exported function",
+      "sourceSha256": "1fd08451c8346a9d128ed5d5f78f9bfe9e2dd30089633dd17f76ee9d79b1ce0f",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-15-assets/1/graph.mjs",
+      "generatedSha256": "619bc241545d808ccc7c16f2315f08a12c4eb5dd713eee187398d1d1ef39f69e",
+      "mapSha256": "236fedfc7f9d16de97fbf1f4b2543ab630108f61a3ba3a3e396e3cf386108195",
+      "entryCount": 2
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/assets/AssetDatabase.ts#assetGuid",
+      "source": "src/assets/AssetDatabase.ts",
+      "line": 956,
+      "kind": "exported function",
+      "sourceSha256": "1fd08451c8346a9d128ed5d5f78f9bfe9e2dd30089633dd17f76ee9d79b1ce0f",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-15-assets/1/graph.mjs",
+      "generatedSha256": "619bc241545d808ccc7c16f2315f08a12c4eb5dd713eee187398d1d1ef39f69e",
+      "mapSha256": "236fedfc7f9d16de97fbf1f4b2543ab630108f61a3ba3a3e396e3cf386108195",
+      "entryCount": 7
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/assets/AssetDatabase.ts#resolveAsset",
+      "source": "src/assets/AssetDatabase.ts",
+      "line": 960,
+      "kind": "exported function",
+      "sourceSha256": "1fd08451c8346a9d128ed5d5f78f9bfe9e2dd30089633dd17f76ee9d79b1ce0f",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-15-assets/1/graph.mjs",
+      "generatedSha256": "619bc241545d808ccc7c16f2315f08a12c4eb5dd713eee187398d1d1ef39f69e",
+      "mapSha256": "236fedfc7f9d16de97fbf1f4b2543ab630108f61a3ba3a3e396e3cf386108195",
+      "entryCount": 7
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/assets/AssetDatabase.ts#rebuildTextureAtlases",
+      "source": "src/assets/AssetDatabase.ts",
+      "line": 1072,
+      "kind": "exported function",
+      "sourceSha256": "1fd08451c8346a9d128ed5d5f78f9bfe9e2dd30089633dd17f76ee9d79b1ce0f",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-15-assets/1/graph.mjs",
+      "generatedSha256": "619bc241545d808ccc7c16f2315f08a12c4eb5dd713eee187398d1d1ef39f69e",
+      "mapSha256": "236fedfc7f9d16de97fbf1f4b2543ab630108f61a3ba3a3e396e3cf386108195",
+      "entryCount": 10
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/assets/AssetDatabase.ts#queueTextureAtlasRebuild",
+      "source": "src/assets/AssetDatabase.ts",
+      "line": 1082,
+      "kind": "exported function",
+      "sourceSha256": "1fd08451c8346a9d128ed5d5f78f9bfe9e2dd30089633dd17f76ee9d79b1ce0f",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-15-assets/1/graph.mjs",
+      "generatedSha256": "619bc241545d808ccc7c16f2315f08a12c4eb5dd713eee187398d1d1ef39f69e",
+      "mapSha256": "236fedfc7f9d16de97fbf1f4b2543ab630108f61a3ba3a3e396e3cf386108195",
+      "entryCount": 10
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/assets/assetReferences.ts#assetSourceText",
+      "source": "src/assets/assetReferences.ts",
+      "line": 12,
+      "kind": "exported function",
+      "sourceSha256": "b0fa15da1b48bb829057f4ebe6c048c03e2bb09dc012570e5f04ce681b4b68a2",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-15-assets/1/references.mjs",
+      "generatedSha256": "acef7d206e597d25ee521a6b7f5a03f6cc4455d89d508589052563710e66b59e",
+      "mapSha256": "17c470ccbd6de502343500cb0fb060cbb5a2cb1d33e50f21d40aacb65b5b09c3",
+      "entryCount": 441
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/assets/assetReferences.ts#collectAssetReferences",
+      "source": "src/assets/assetReferences.ts",
+      "line": 19,
+      "kind": "exported function",
+      "sourceSha256": "b0fa15da1b48bb829057f4ebe6c048c03e2bb09dc012570e5f04ce681b4b68a2",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-15-assets/1/references.mjs",
+      "generatedSha256": "acef7d206e597d25ee521a6b7f5a03f6cc4455d89d508589052563710e66b59e",
+      "mapSha256": "17c470ccbd6de502343500cb0fb060cbb5a2cb1d33e50f21d40aacb65b5b09c3",
+      "entryCount": 1569
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/assets/assetReferences.ts#textAssetReferences",
+      "source": "src/assets/assetReferences.ts",
+      "line": 38,
+      "kind": "exported function",
+      "sourceSha256": "b0fa15da1b48bb829057f4ebe6c048c03e2bb09dc012570e5f04ce681b4b68a2",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-15-assets/1/references.mjs",
+      "generatedSha256": "acef7d206e597d25ee521a6b7f5a03f6cc4455d89d508589052563710e66b59e",
+      "mapSha256": "17c470ccbd6de502343500cb0fb060cbb5a2cb1d33e50f21d40aacb65b5b09c3",
+      "entryCount": 279
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/assets/assetReferences.ts#rewriteAssetSource",
+      "source": "src/assets/assetReferences.ts",
+      "line": 70,
+      "kind": "exported function",
+      "sourceSha256": "b0fa15da1b48bb829057f4ebe6c048c03e2bb09dc012570e5f04ce681b4b68a2",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-15-assets/1/references.mjs",
+      "generatedSha256": "acef7d206e597d25ee521a6b7f5a03f6cc4455d89d508589052563710e66b59e",
+      "mapSha256": "17c470ccbd6de502343500cb0fb060cbb5a2cb1d33e50f21d40aacb65b5b09c3",
+      "entryCount": 8
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/assets/assetReferences.ts#referenceMetadataRepairs",
+      "source": "src/assets/assetReferences.ts",
+      "line": 136,
+      "kind": "exported function",
+      "sourceSha256": "b0fa15da1b48bb829057f4ebe6c048c03e2bb09dc012570e5f04ce681b4b68a2",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-15-assets/1/references.mjs",
+      "generatedSha256": "acef7d206e597d25ee521a6b7f5a03f6cc4455d89d508589052563710e66b59e",
+      "mapSha256": "17c470ccbd6de502343500cb0fb060cbb5a2cb1d33e50f21d40aacb65b5b09c3",
+      "entryCount": 8
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/assets/assetReferences.ts#commitAssetReferenceRepairs",
+      "source": "src/assets/assetReferences.ts",
+      "line": 152,
+      "kind": "exported function",
+      "sourceSha256": "b0fa15da1b48bb829057f4ebe6c048c03e2bb09dc012570e5f04ce681b4b68a2",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-15-assets/1/references.mjs",
+      "generatedSha256": "acef7d206e597d25ee521a6b7f5a03f6cc4455d89d508589052563710e66b59e",
+      "mapSha256": "17c470ccbd6de502343500cb0fb060cbb5a2cb1d33e50f21d40aacb65b5b09c3",
+      "entryCount": 7
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/assets/types.ts#defaultImportSettings",
+      "source": "src/assets/types.ts",
+      "line": 230,
+      "kind": "exported function",
+      "sourceSha256": "68b003a8c85b4b7207968432c298634e9841d542b23cd02278574560212c2afa",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-15-assets/1/types.mjs",
+      "generatedSha256": "f0efccada1b8717c00808890565ec85c942509c08159d9e7a61b90f75333ea70",
+      "mapSha256": "ff19a6dac5e0244a30b1e0be98cdf341e1947a44b2641ec9e813d70f7f13351f",
+      "entryCount": 136
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/resources.ts#defaultResource",
+      "source": "src/runtime/resources.ts",
+      "line": 57,
+      "kind": "exported function",
+      "sourceSha256": "bf8cac369cb04469887298520e93c1bc42627058a129abe61370c5bca7eb41be",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-15-assets/1/resources.mjs",
+      "generatedSha256": "de22f589baa2892bae79cd21cbf1b37e7e8a2175c3fa20235d209de804f46b9e",
+      "mapSha256": "9f057ec5bab6e3c3ac378de16aea9d334f4d9e0d2c3f43959cf4625a0ed739df",
+      "entryCount": 6
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/resources.ts#normalizeResource",
+      "source": "src/runtime/resources.ts",
+      "line": 60,
+      "kind": "exported function",
+      "sourceSha256": "bf8cac369cb04469887298520e93c1bc42627058a129abe61370c5bca7eb41be",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-15-assets/1/resources.mjs",
+      "generatedSha256": "de22f589baa2892bae79cd21cbf1b37e7e8a2175c3fa20235d209de804f46b9e",
+      "mapSha256": "9f057ec5bab6e3c3ac378de16aea9d334f4d9e0d2c3f43959cf4625a0ed739df",
+      "entryCount": 38
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/resources.ts#serializeResource",
+      "source": "src/runtime/resources.ts",
+      "line": 69,
+      "kind": "exported function",
+      "sourceSha256": "bf8cac369cb04469887298520e93c1bc42627058a129abe61370c5bca7eb41be",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-15-assets/1/resources.mjs",
+      "generatedSha256": "de22f589baa2892bae79cd21cbf1b37e7e8a2175c3fa20235d209de804f46b9e",
+      "mapSha256": "9f057ec5bab6e3c3ac378de16aea9d334f4d9e0d2c3f43959cf4625a0ed739df",
+      "entryCount": 9
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/resources.ts#readResourceFromAssets",
+      "source": "src/runtime/resources.ts",
+      "line": 75,
+      "kind": "exported function",
+      "sourceSha256": "bf8cac369cb04469887298520e93c1bc42627058a129abe61370c5bca7eb41be",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-15-assets/1/resources.mjs",
+      "generatedSha256": "de22f589baa2892bae79cd21cbf1b37e7e8a2175c3fa20235d209de804f46b9e",
+      "mapSha256": "9f057ec5bab6e3c3ac378de16aea9d334f4d9e0d2c3f43959cf4625a0ed739df",
+      "entryCount": 21
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/resources.ts#readResource",
+      "source": "src/runtime/resources.ts",
+      "line": 83,
+      "kind": "exported function",
+      "sourceSha256": "bf8cac369cb04469887298520e93c1bc42627058a129abe61370c5bca7eb41be",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-15-assets/1/resources.mjs",
+      "generatedSha256": "de22f589baa2892bae79cd21cbf1b37e7e8a2175c3fa20235d209de804f46b9e",
+      "mapSha256": "9f057ec5bab6e3c3ac378de16aea9d334f4d9e0d2c3f43959cf4625a0ed739df",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/resources.ts#saveResource",
+      "source": "src/runtime/resources.ts",
+      "line": 84,
+      "kind": "exported function",
+      "sourceSha256": "bf8cac369cb04469887298520e93c1bc42627058a129abe61370c5bca7eb41be",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-15-assets/1/resources.mjs",
+      "generatedSha256": "de22f589baa2892bae79cd21cbf1b37e7e8a2175c3fa20235d209de804f46b9e",
+      "mapSha256": "9f057ec5bab6e3c3ac378de16aea9d334f4d9e0d2c3f43959cf4625a0ed739df",
+      "entryCount": 2
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/resources.ts#resolveResource",
+      "source": "src/runtime/resources.ts",
+      "line": 103,
+      "kind": "exported function",
+      "sourceSha256": "bf8cac369cb04469887298520e93c1bc42627058a129abe61370c5bca7eb41be",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-15-assets/1/resources.mjs",
+      "generatedSha256": "de22f589baa2892bae79cd21cbf1b37e7e8a2175c3fa20235d209de804f46b9e",
+      "mapSha256": "9f057ec5bab6e3c3ac378de16aea9d334f4d9e0d2c3f43959cf4625a0ed739df",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/resources.ts#resolveResourceFromAssets",
+      "source": "src/runtime/resources.ts",
+      "line": 104,
+      "kind": "exported function",
+      "sourceSha256": "bf8cac369cb04469887298520e93c1bc42627058a129abe61370c5bca7eb41be",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-15-assets/1/resources.mjs",
+      "generatedSha256": "de22f589baa2892bae79cd21cbf1b37e7e8a2175c3fa20235d209de804f46b9e",
+      "mapSha256": "9f057ec5bab6e3c3ac378de16aea9d334f4d9e0d2c3f43959cf4625a0ed739df",
+      "entryCount": 9
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/resources.ts#resourceVariantNames",
+      "source": "src/runtime/resources.ts",
+      "line": 126,
+      "kind": "exported function",
+      "sourceSha256": "bf8cac369cb04469887298520e93c1bc42627058a129abe61370c5bca7eb41be",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-15-assets/1/resources.mjs",
+      "generatedSha256": "de22f589baa2892bae79cd21cbf1b37e7e8a2175c3fa20235d209de804f46b9e",
+      "mapSha256": "9f057ec5bab6e3c3ac378de16aea9d334f4d9e0d2c3f43959cf4625a0ed739df",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/resources.ts#setResourceVariantData",
+      "source": "src/runtime/resources.ts",
+      "line": 127,
+      "kind": "exported function",
+      "sourceSha256": "bf8cac369cb04469887298520e93c1bc42627058a129abe61370c5bca7eb41be",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-15-assets/1/resources.mjs",
+      "generatedSha256": "de22f589baa2892bae79cd21cbf1b37e7e8a2175c3fa20235d209de804f46b9e",
+      "mapSha256": "9f057ec5bab6e3c3ac378de16aea9d334f4d9e0d2c3f43959cf4625a0ed739df",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/resources.ts#validateResourceProject",
+      "source": "src/runtime/resources.ts",
+      "line": 135,
+      "kind": "exported function",
+      "sourceSha256": "bf8cac369cb04469887298520e93c1bc42627058a129abe61370c5bca7eb41be",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-15-assets/1/resources.mjs",
+      "generatedSha256": "de22f589baa2892bae79cd21cbf1b37e7e8a2175c3fa20235d209de804f46b9e",
+      "mapSha256": "9f057ec5bab6e3c3ac378de16aea9d334f4d9e0d2c3f43959cf4625a0ed739df",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/assets/TextureAtlas.ts#buildTextureAtlases",
+      "source": "src/assets/TextureAtlas.ts",
+      "line": 41,
+      "kind": "exported function",
+      "sourceSha256": "f8222943fe4e572e6d9f7b449ea2c380dd8790f6615d16321029b8430b915838",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-15-assets/1/atlas.mjs",
+      "generatedSha256": "c2ca52f748a89cf1dec193badc03d7e273ebd06f875c4a2885235ea6397df1aa",
+      "mapSha256": "0829e7fbaafd039b9421fef83208cd152e1f2d8406619e51e4aa75eae3048c10",
+      "entryCount": 16
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/novaPak.ts#createNovaPak",
+      "source": "src/runtime/novaPak.ts",
+      "line": 85,
+      "kind": "exported function",
+      "sourceSha256": "c45e0234a9dc89211464cd90091d8cf7aaa5e6156c2d5e9a692b3cdc1171b260",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-15-assets/1/pak.mjs",
+      "generatedSha256": "fd10ae803c254bc612a990bf9ce5cd83df3371bf50db9b7464682cded300988a",
+      "mapSha256": "b4461b3703f59b1ba2002bc11f8e7d9f2bc1f5dcd6fce7b1db03423981b2c591",
+      "entryCount": 9
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/novaPak.ts#parseNovaPak",
+      "source": "src/runtime/novaPak.ts",
+      "line": 183,
+      "kind": "exported function",
+      "sourceSha256": "c45e0234a9dc89211464cd90091d8cf7aaa5e6156c2d5e9a692b3cdc1171b260",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-15-assets/1/pak.mjs",
+      "generatedSha256": "fd10ae803c254bc612a990bf9ce5cd83df3371bf50db9b7464682cded300988a",
+      "mapSha256": "b4461b3703f59b1ba2002bc11f8e7d9f2bc1f5dcd6fce7b1db03423981b2c591",
+      "entryCount": 3
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/assets/contentInteroperability.ts#detectInterchangeFormat",
+      "source": "src/assets/contentInteroperability.ts",
+      "line": 119,
+      "kind": "exported function",
+      "sourceSha256": "efd2779ed176710b099774f1efe9812e55270af92e30a3c34045038a35f19599",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-15-assets/1/interchange.mjs",
+      "generatedSha256": "c6427b7797bdbcf62e517213654d4b0b8542becae082ace5425d08e73d6302d4",
+      "mapSha256": "b0d901ce18651bf397f185cabd890844e9d9247bfdbbfc91e7e0c03d92151ab7",
+      "entryCount": 6
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/assets/contentInteroperability.ts#importContentInterchange",
+      "source": "src/assets/contentInteroperability.ts",
+      "line": 125,
+      "kind": "exported function",
+      "sourceSha256": "efd2779ed176710b099774f1efe9812e55270af92e30a3c34045038a35f19599",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-15-assets/1/interchange.mjs",
+      "generatedSha256": "c6427b7797bdbcf62e517213654d4b0b8542becae082ace5425d08e73d6302d4",
+      "mapSha256": "b0d901ce18651bf397f185cabd890844e9d9247bfdbbfc91e7e0c03d92151ab7",
+      "entryCount": 6
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/assets/contentInteroperability.ts#validateInterchangeMetadata",
+      "source": "src/assets/contentInteroperability.ts",
+      "line": 165,
+      "kind": "exported function",
+      "sourceSha256": "efd2779ed176710b099774f1efe9812e55270af92e30a3c34045038a35f19599",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-15-assets/1/interchange.mjs",
+      "generatedSha256": "c6427b7797bdbcf62e517213654d4b0b8542becae082ace5425d08e73d6302d4",
+      "mapSha256": "b0d901ce18651bf397f185cabd890844e9d9247bfdbbfc91e7e0c03d92151ab7",
+      "entryCount": 6
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/assets/interchangeBindings.ts#resolveInterchangeTexture",
+      "source": "src/assets/interchangeBindings.ts",
+      "line": 15,
+      "kind": "exported function",
+      "sourceSha256": "7b44ae48d0de93eedb17634cb1d2f82dfe0fca6a24a07681764f909e6539c0ab",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-15-assets/1/bindings.mjs",
+      "generatedSha256": "49dc82f00435f904c90a68d93ea9b375a68cf50dbca405030b3f8f3707eaea22",
+      "mapSha256": "d3a4d908f7d14b57d6f4143973776933e5ff336dca73477fb95fe4ed8e679bea",
+      "entryCount": 5
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/assets/interchangeBindings.ts#bindInterchangeTexture",
+      "source": "src/assets/interchangeBindings.ts",
+      "line": 28,
+      "kind": "exported function",
+      "sourceSha256": "7b44ae48d0de93eedb17634cb1d2f82dfe0fca6a24a07681764f909e6539c0ab",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-15-assets/1/bindings.mjs",
+      "generatedSha256": "49dc82f00435f904c90a68d93ea9b375a68cf50dbca405030b3f8f3707eaea22",
+      "mapSha256": "d3a4d908f7d14b57d6f4143973776933e5ff336dca73477fb95fe4ed8e679bea",
+      "entryCount": 6
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/visual/graphTypes.ts#graphUuid",
+      "source": "src/visual/graphTypes.ts",
+      "line": 112,
+      "kind": "exported function",
+      "sourceSha256": "f1301f1589f75fec7793cb026cf256eb2af3f020e75b2c670890622290e8cf25",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-15-assets/1/syntax.mjs",
+      "generatedSha256": "34d3223478967da4776d91df87255f199e48ccec79a74d2accacd023f44fd97e",
+      "mapSha256": "025c4de57cd07d452b5e36af3bc9c474f4a0b4fa25056a9ece5b3d4ecbb689b2",
+      "entryCount": 39
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/visual/graphTypes.ts#defaultGraphValue",
+      "source": "src/visual/graphTypes.ts",
+      "line": 130,
+      "kind": "exported function",
+      "sourceSha256": "f1301f1589f75fec7793cb026cf256eb2af3f020e75b2c670890622290e8cf25",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-15-assets/1/syntax.mjs",
+      "generatedSha256": "34d3223478967da4776d91df87255f199e48ccec79a74d2accacd023f44fd97e",
+      "mapSha256": "025c4de57cd07d452b5e36af3bc9c474f4a0b4fa25056a9ece5b3d4ecbb689b2",
+      "entryCount": 294
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/visual/graphTypes.ts#sanitizeGraphValue",
+      "source": "src/visual/graphTypes.ts",
+      "line": 132,
+      "kind": "exported function",
+      "sourceSha256": "f1301f1589f75fec7793cb026cf256eb2af3f020e75b2c670890622290e8cf25",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-15-assets/1/syntax.mjs",
+      "generatedSha256": "34d3223478967da4776d91df87255f199e48ccec79a74d2accacd023f44fd97e",
+      "mapSha256": "025c4de57cd07d452b5e36af3bc9c474f4a0b4fa25056a9ece5b3d4ecbb689b2",
+      "entryCount": 63
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/visual/graphTypes.ts#normalizeGraphDocument",
+      "source": "src/visual/graphTypes.ts",
+      "line": 191,
+      "kind": "exported function",
+      "sourceSha256": "f1301f1589f75fec7793cb026cf256eb2af3f020e75b2c670890622290e8cf25",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-15-assets/1/syntax.mjs",
+      "generatedSha256": "34d3223478967da4776d91df87255f199e48ccec79a74d2accacd023f44fd97e",
+      "mapSha256": "025c4de57cd07d452b5e36af3bc9c474f4a0b4fa25056a9ece5b3d4ecbb689b2",
+      "entryCount": 3
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/visual/graphTypes.ts#canonicalGraphDocument",
+      "source": "src/visual/graphTypes.ts",
+      "line": 229,
+      "kind": "exported function",
+      "sourceSha256": "f1301f1589f75fec7793cb026cf256eb2af3f020e75b2c670890622290e8cf25",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-15-assets/1/syntax.mjs",
+      "generatedSha256": "34d3223478967da4776d91df87255f199e48ccec79a74d2accacd023f44fd97e",
+      "mapSha256": "025c4de57cd07d452b5e36af3bc9c474f4a0b4fa25056a9ece5b3d4ecbb689b2",
+      "entryCount": 2
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/visual/graphTypes.ts#parseGraphDocument",
+      "source": "src/visual/graphTypes.ts",
+      "line": 235,
+      "kind": "exported function",
+      "sourceSha256": "f1301f1589f75fec7793cb026cf256eb2af3f020e75b2c670890622290e8cf25",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-15-assets/1/syntax.mjs",
+      "generatedSha256": "34d3223478967da4776d91df87255f199e48ccec79a74d2accacd023f44fd97e",
+      "mapSha256": "025c4de57cd07d452b5e36af3bc9c474f4a0b4fa25056a9ece5b3d4ecbb689b2",
+      "entryCount": 4
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/visual/rhaiSyntax.ts#parseRhai",
+      "source": "src/visual/rhaiSyntax.ts",
+      "line": 279,
+      "kind": "exported function",
+      "sourceSha256": "25f8ff10d119f9b1b58d250f531b9a0b89d2b03b9b13cf583ca6f415ff871b77",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-15-assets/1/syntax.mjs",
+      "generatedSha256": "34d3223478967da4776d91df87255f199e48ccec79a74d2accacd023f44fd97e",
+      "mapSha256": "025c4de57cd07d452b5e36af3bc9c474f4a0b4fa25056a9ece5b3d4ecbb689b2",
+      "entryCount": 2
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/visual/rhaiSyntax.ts#walkRhai",
+      "source": "src/visual/rhaiSyntax.ts",
+      "line": 282,
+      "kind": "exported function",
+      "sourceSha256": "25f8ff10d119f9b1b58d250f531b9a0b89d2b03b9b13cf583ca6f415ff871b77",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-15-assets/1/syntax.mjs",
+      "generatedSha256": "34d3223478967da4776d91df87255f199e48ccec79a74d2accacd023f44fd97e",
+      "mapSha256": "025c4de57cd07d452b5e36af3bc9c474f4a0b4fa25056a9ece5b3d4ecbb689b2",
+      "entryCount": 2
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/visual/graphSyntax.ts#projectRhaiSyntax",
+      "source": "src/visual/graphSyntax.ts",
+      "line": 40,
+      "kind": "exported function",
+      "sourceSha256": "07534eba4bdf26f250b37d5978ad8fc1d65243a218ac1c12ef2dcf7840999048",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-15-assets/1/syntax.mjs",
+      "generatedSha256": "34d3223478967da4776d91df87255f199e48ccec79a74d2accacd023f44fd97e",
+      "mapSha256": "025c4de57cd07d452b5e36af3bc9c474f4a0b4fa25056a9ece5b3d4ecbb689b2",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/visual/graphSyntax.ts#emitSyntaxGraph",
+      "source": "src/visual/graphSyntax.ts",
+      "line": 154,
+      "kind": "exported function",
+      "sourceSha256": "07534eba4bdf26f250b37d5978ad8fc1d65243a218ac1c12ef2dcf7840999048",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-15-assets/1/syntax.mjs",
+      "generatedSha256": "34d3223478967da4776d91df87255f199e48ccec79a74d2accacd023f44fd97e",
+      "mapSha256": "025c4de57cd07d452b5e36af3bc9c474f4a0b4fa25056a9ece5b3d4ecbb689b2",
+      "entryCount": 3
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/visual/graphSyntax.ts#assessRhaiConversion",
+      "source": "src/visual/graphSyntax.ts",
+      "line": 212,
+      "kind": "exported function",
+      "sourceSha256": "07534eba4bdf26f250b37d5978ad8fc1d65243a218ac1c12ef2dcf7840999048",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-15-assets/1/syntax.mjs",
+      "generatedSha256": "34d3223478967da4776d91df87255f199e48ccec79a74d2accacd023f44fd97e",
+      "mapSha256": "025c4de57cd07d452b5e36af3bc9c474f4a0b4fa25056a9ece5b3d4ecbb689b2",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/visual/graphSyntax.ts#syntaxSourceLocation",
+      "source": "src/visual/graphSyntax.ts",
+      "line": 236,
+      "kind": "exported function",
+      "sourceSha256": "07534eba4bdf26f250b37d5978ad8fc1d65243a218ac1c12ef2dcf7840999048",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-15-assets/1/syntax.mjs",
+      "generatedSha256": "34d3223478967da4776d91df87255f199e48ccec79a74d2accacd023f44fd97e",
+      "mapSha256": "025c4de57cd07d452b5e36af3bc9c474f4a0b4fa25056a9ece5b3d4ecbb689b2",
+      "entryCount": 18
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/visual/graphSyntaxSchema.ts#isSyntaxNode",
+      "source": "src/visual/graphSyntaxSchema.ts",
+      "line": 41,
+      "kind": "exported function",
+      "sourceSha256": "58872a666776ac31cca70224adcbd86e3759abf72114b029a74ba56eaefb041d",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-15-assets/1/syntax.mjs",
+      "generatedSha256": "34d3223478967da4776d91df87255f199e48ccec79a74d2accacd023f44fd97e",
+      "mapSha256": "025c4de57cd07d452b5e36af3bc9c474f4a0b4fa25056a9ece5b3d4ecbb689b2",
+      "entryCount": 27
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/visual/graphSyntaxSchema.ts#syntaxFields",
+      "source": "src/visual/graphSyntaxSchema.ts",
+      "line": 42,
+      "kind": "exported function",
+      "sourceSha256": "58872a666776ac31cca70224adcbd86e3759abf72114b029a74ba56eaefb041d",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-15-assets/1/syntax.mjs",
+      "generatedSha256": "34d3223478967da4776d91df87255f199e48ccec79a74d2accacd023f44fd97e",
+      "mapSha256": "025c4de57cd07d452b5e36af3bc9c474f4a0b4fa25056a9ece5b3d4ecbb689b2",
+      "entryCount": 27
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/visual/graphSyntaxSchema.ts#syntaxSlots",
+      "source": "src/visual/graphSyntaxSchema.ts",
+      "line": 43,
+      "kind": "exported function",
+      "sourceSha256": "58872a666776ac31cca70224adcbd86e3759abf72114b029a74ba56eaefb041d",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-15-assets/1/syntax.mjs",
+      "generatedSha256": "34d3223478967da4776d91df87255f199e48ccec79a74d2accacd023f44fd97e",
+      "mapSha256": "025c4de57cd07d452b5e36af3bc9c474f4a0b4fa25056a9ece5b3d4ecbb689b2",
+      "entryCount": 54
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/visual/graphSyntaxSchema.ts#syntaxNodeDefinition",
+      "source": "src/visual/graphSyntaxSchema.ts",
+      "line": 88,
+      "kind": "exported function",
+      "sourceSha256": "58872a666776ac31cca70224adcbd86e3759abf72114b029a74ba56eaefb041d",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-15-assets/1/syntax.mjs",
+      "generatedSha256": "34d3223478967da4776d91df87255f199e48ccec79a74d2accacd023f44fd97e",
+      "mapSha256": "025c4de57cd07d452b5e36af3bc9c474f4a0b4fa25056a9ece5b3d4ecbb689b2",
+      "entryCount": 18
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/projects/templateGuides.ts#templateGuide",
+      "source": "src/projects/templateGuides.ts",
+      "line": 668,
+      "kind": "exported function",
+      "sourceSha256": "25dec7ba5747732e36addd0ad877eb06da621c0da5f6e3f45eeafd654bc58c3f",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-15-assets/1/templates.mjs",
+      "generatedSha256": "170f451e9065dcc11839fd41bd84d5048342e2a3660820e44f56bdbe380f8691",
+      "mapSha256": "68e54100836b6bd3ed8a846e38c134d350e98636915144e4d6a156d59119fbe2",
+      "entryCount": 120
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/projects/templates.ts#createTemplateProject",
+      "source": "src/projects/templates.ts",
+      "line": 969,
+      "kind": "exported function",
+      "sourceSha256": "b0aba4edf2e115a5ce2d6dbc12cb6fee7a6d2fdbc8a08839b0297cb33a0dce78",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-15-assets/1/templates.mjs",
+      "generatedSha256": "170f451e9065dcc11839fd41bd84d5048342e2a3660820e44f56bdbe380f8691",
+      "mapSha256": "68e54100836b6bd3ed8a846e38c134d350e98636915144e4d6a156d59119fbe2",
+      "entryCount": 40
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/projects/templates.ts#auditTemplateProject",
+      "source": "src/projects/templates.ts",
+      "line": 993,
+      "kind": "exported function",
+      "sourceSha256": "b0aba4edf2e115a5ce2d6dbc12cb6fee7a6d2fdbc8a08839b0297cb33a0dce78",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-15-assets/1/templates.mjs",
+      "generatedSha256": "170f451e9065dcc11839fd41bd84d5048342e2a3660820e44f56bdbe380f8691",
+      "mapSha256": "68e54100836b6bd3ed8a846e38c134d350e98636915144e4d6a156d59119fbe2",
+      "entryCount": 40
+    }
+  ],
+  "tracingScope": "Positive V8 function entries during the complete passing programmer suite, including fixture setup. Not per-assertion isolation, exhaustive domain coverage or performance qualification.",
+  "nodeOperationCoverageCase": "retained-26-15-assets complete suite including fixture setup",
+  "nodeOperationCoverageAssertion": {
+    "name": "retained-26-15-assets complete suite including fixture setup",
+    "status": "passed"
+  }
+}

@@ -1,0 +1,856 @@
+{
+  "format": "nova-v26.12-script-module-verification",
+  "version": 1,
+  "release": "26.12",
+  "engineVersion": "26.21.0",
+  "runtimeEngineVersion": "26.21.0",
+  "generatedAt": "2026-09-14T16:54:59.105Z",
+  "status": "passed",
+  "coverage": "Production GameplayRuntime and real AssetDatabase with fixture records and unrelated subsystem stubs; real graph compiler, lexer, bounded resolver and WASM execution. Browser play/stop UI is a separate gate.",
+  "checks": [
+    {
+      "id": "executed WASM engine matches the current package authority",
+      "status": "passed"
+    },
+    {
+      "id": "actual AssetDatabase resolves IDs only while production runtime resolves module paths",
+      "status": "passed"
+    },
+    {
+      "id": "production text runtime resolves and executes project helper",
+      "status": "passed"
+    },
+    {
+      "id": "comments do not trigger missing module resolution",
+      "status": "passed"
+    },
+    {
+      "id": "multiline string contents and isolated braces remain inert",
+      "status": "passed"
+    },
+    {
+      "id": "legacy single/backtick paths and literal backslashes resolve",
+      "status": "passed"
+    },
+    {
+      "id": "dependency diamond executes initialization once in deterministic order",
+      "status": "passed"
+    },
+    {
+      "id": "missing dependency includes referring asset and line",
+      "status": "passed"
+    },
+    {
+      "id": "cyclic dependencies are rejected",
+      "status": "passed"
+    },
+    {
+      "id": "native import is explicitly rejected without enabling aliases",
+      "status": "passed"
+    },
+    {
+      "id": "use aliases and dynamic paths cannot reach the VM unresolved",
+      "status": "passed"
+    },
+    {
+      "id": "hot reload override reads new dependency bytes without mutating stored assets",
+      "status": "passed"
+    },
+    {
+      "id": "failed override preserves the prior stored playable source",
+      "status": "passed"
+    },
+    {
+      "id": "production visual runtime uses identical module resolution and VM behavior without changing debug state",
+      "status": "passed"
+    },
+    {
+      "id": "only successfully compiled visual source registers debug mappings",
+      "status": "passed"
+    },
+    {
+      "id": "failed visual dependency does not register partial debug state",
+      "status": "passed"
+    },
+    {
+      "id": "Inspector exported properties use the same text/visual dependency bundle",
+      "status": "passed"
+    },
+    {
+      "id": "declared depth and module-count bounds fail before recursive overflow",
+      "status": "passed"
+    },
+    {
+      "id": "source and combined bundle lengths are bounded",
+      "status": "passed"
+    },
+    {
+      "id": "missing root remains null and no unrelated asset is treated as a module",
+      "status": "passed"
+    }
+  ],
+  "nodeOperationCoverage": [
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/mediaClock.ts#mediaSample",
+      "source": "src/runtime/mediaClock.ts",
+      "line": 4,
+      "kind": "exported function",
+      "sourceSha256": "4e2dd8ffa9052e75e54981ac3cd6de1a11bdeebfa17395e53fd51b9f9a6fc028",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-script-modules/1/runtime.mjs",
+      "generatedSha256": "af2e17c051f9157cbaf335ae3ef4e91459f9a2ad05b4638eb3a5aaf9b322f4f4",
+      "mapSha256": "c9f32adc7afd73f0fa6446551a59c6ecad2f9820b568aa5f921e1cfbcd6dfefa",
+      "entryCount": 2
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/mediaClock.ts#MediaClock.constructor",
+      "source": "src/runtime/mediaClock.ts",
+      "line": 18,
+      "kind": "public class operation",
+      "sourceSha256": "4e2dd8ffa9052e75e54981ac3cd6de1a11bdeebfa17395e53fd51b9f9a6fc028",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-script-modules/1/runtime.mjs",
+      "generatedSha256": "af2e17c051f9157cbaf335ae3ef4e91459f9a2ad05b4638eb3a5aaf9b322f4f4",
+      "mapSha256": "c9f32adc7afd73f0fa6446551a59c6ecad2f9820b568aa5f921e1cfbcd6dfefa",
+      "entryCount": 2
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/mediaClock.ts#MediaClock.seek",
+      "source": "src/runtime/mediaClock.ts",
+      "line": 21,
+      "kind": "public class operation",
+      "sourceSha256": "4e2dd8ffa9052e75e54981ac3cd6de1a11bdeebfa17395e53fd51b9f9a6fc028",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-script-modules/1/runtime.mjs",
+      "generatedSha256": "af2e17c051f9157cbaf335ae3ef4e91459f9a2ad05b4638eb3a5aaf9b322f4f4",
+      "mapSha256": "c9f32adc7afd73f0fa6446551a59c6ecad2f9820b568aa5f921e1cfbcd6dfefa",
+      "entryCount": 2
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/GameplayRuntime.ts#GameplayRuntime.synchronizeExports",
+      "source": "src/runtime/GameplayRuntime.ts",
+      "line": 562,
+      "kind": "public class operation",
+      "sourceSha256": "b248e2ad8cdcd3280299660c0851a4b5704a0af91c96f7f78934a05b74ca1ee6",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-script-modules/1/runtime.mjs",
+      "generatedSha256": "af2e17c051f9157cbaf335ae3ef4e91459f9a2ad05b4638eb3a5aaf9b322f4f4",
+      "mapSha256": "c9f32adc7afd73f0fa6446551a59c6ecad2f9820b568aa5f921e1cfbcd6dfefa",
+      "entryCount": 2
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/scriptModules.ts#resolveProjectScriptBundle",
+      "source": "src/runtime/scriptModules.ts",
+      "line": 43,
+      "kind": "exported function",
+      "sourceSha256": "de966ba6edeadc69d2860c8259204a6a2b5394857ca445362e2370e154f1a6e4",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-script-modules/1/modules.mjs",
+      "generatedSha256": "3d98019abdb42e926d62e26be9ce30d3e75327ed49ab4185b8f313641000eb12",
+      "mapSha256": "88b5eb7f37d1e7941885b0dc7756639850502ddfc1441336723cdec336d81689",
+      "entryCount": 36
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/visual/graphCodeSync.ts#createGraphFromRhaiSource",
+      "source": "src/visual/graphCodeSync.ts",
+      "line": 516,
+      "kind": "exported function",
+      "sourceSha256": "982b046c6e5dfe65f61c0560498c359ea860930e48d6071fa9bd944aed50cba3",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-script-modules/1/sync.mjs",
+      "generatedSha256": "a8e05160e8b02a67c3bc3024646fe31a2d776c3761bd91f3719f01aae2ae447f",
+      "mapSha256": "dc1669928144254c6db50acb2ba2d8e96e3c7baf3fb8bff1e24622dfb4b1102e",
+      "entryCount": 2
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/visual/graphTypes.ts#graphUuid",
+      "source": "src/visual/graphTypes.ts",
+      "line": 112,
+      "kind": "exported function",
+      "sourceSha256": "f1301f1589f75fec7793cb026cf256eb2af3f020e75b2c670890622290e8cf25",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-script-modules/1/types.mjs",
+      "generatedSha256": "7b7a293d6f536ffaac962b6beaec3c219bc8994835d9df4a9b40f187c4cb1d98",
+      "mapSha256": "936e3400bff47020493901e463527d8f1e5abb8ddd61fd29275507f75fb4f58f",
+      "entryCount": 93
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/visual/graphTypes.ts#defaultGraphValue",
+      "source": "src/visual/graphTypes.ts",
+      "line": 130,
+      "kind": "exported function",
+      "sourceSha256": "f1301f1589f75fec7793cb026cf256eb2af3f020e75b2c670890622290e8cf25",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-script-modules/1/types.mjs",
+      "generatedSha256": "7b7a293d6f536ffaac962b6beaec3c219bc8994835d9df4a9b40f187c4cb1d98",
+      "mapSha256": "936e3400bff47020493901e463527d8f1e5abb8ddd61fd29275507f75fb4f58f",
+      "entryCount": 294
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/visual/graphTypes.ts#sanitizeGraphValue",
+      "source": "src/visual/graphTypes.ts",
+      "line": 132,
+      "kind": "exported function",
+      "sourceSha256": "f1301f1589f75fec7793cb026cf256eb2af3f020e75b2c670890622290e8cf25",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-script-modules/1/types.mjs",
+      "generatedSha256": "7b7a293d6f536ffaac962b6beaec3c219bc8994835d9df4a9b40f187c4cb1d98",
+      "mapSha256": "936e3400bff47020493901e463527d8f1e5abb8ddd61fd29275507f75fb4f58f",
+      "entryCount": 1014
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/visual/graphTypes.ts#normalizeGraphDocument",
+      "source": "src/visual/graphTypes.ts",
+      "line": 191,
+      "kind": "exported function",
+      "sourceSha256": "f1301f1589f75fec7793cb026cf256eb2af3f020e75b2c670890622290e8cf25",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-script-modules/1/types.mjs",
+      "generatedSha256": "7b7a293d6f536ffaac962b6beaec3c219bc8994835d9df4a9b40f187c4cb1d98",
+      "mapSha256": "936e3400bff47020493901e463527d8f1e5abb8ddd61fd29275507f75fb4f58f",
+      "entryCount": 33
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/visual/graphTypes.ts#canonicalGraphDocument",
+      "source": "src/visual/graphTypes.ts",
+      "line": 229,
+      "kind": "exported function",
+      "sourceSha256": "f1301f1589f75fec7793cb026cf256eb2af3f020e75b2c670890622290e8cf25",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-script-modules/1/types.mjs",
+      "generatedSha256": "7b7a293d6f536ffaac962b6beaec3c219bc8994835d9df4a9b40f187c4cb1d98",
+      "mapSha256": "936e3400bff47020493901e463527d8f1e5abb8ddd61fd29275507f75fb4f58f",
+      "entryCount": 22
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/visual/graphTypes.ts#serializeGraphDocument",
+      "source": "src/visual/graphTypes.ts",
+      "line": 234,
+      "kind": "exported function",
+      "sourceSha256": "f1301f1589f75fec7793cb026cf256eb2af3f020e75b2c670890622290e8cf25",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-script-modules/1/types.mjs",
+      "generatedSha256": "7b7a293d6f536ffaac962b6beaec3c219bc8994835d9df4a9b40f187c4cb1d98",
+      "mapSha256": "936e3400bff47020493901e463527d8f1e5abb8ddd61fd29275507f75fb4f58f",
+      "entryCount": 4
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/visual/graphTypes.ts#parseGraphDocument",
+      "source": "src/visual/graphTypes.ts",
+      "line": 235,
+      "kind": "exported function",
+      "sourceSha256": "f1301f1589f75fec7793cb026cf256eb2af3f020e75b2c670890622290e8cf25",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-script-modules/1/types.mjs",
+      "generatedSha256": "7b7a293d6f536ffaac962b6beaec3c219bc8994835d9df4a9b40f187c4cb1d98",
+      "mapSha256": "936e3400bff47020493901e463527d8f1e5abb8ddd61fd29275507f75fb4f58f",
+      "entryCount": 11
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/identity.ts#createUuid",
+      "source": "src/world/identity.ts",
+      "line": 8,
+      "kind": "exported function",
+      "sourceSha256": "2fe5fd95a5e427522192d9d7832f4248515d6c47832126b228d6844437068053",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-script-modules/1/assets.mjs",
+      "generatedSha256": "4f5ce3755f4aa76f3d4e5e148d38efbe97de292a895f0c9c7f8d36bade187247",
+      "mapSha256": "7525d61ea0c631336d47132c600a09318f8126471c4ed54a4983965cf03d39e3",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/identity.ts#normalizeUuid",
+      "source": "src/world/identity.ts",
+      "line": 16,
+      "kind": "exported function",
+      "sourceSha256": "2fe5fd95a5e427522192d9d7832f4248515d6c47832126b228d6844437068053",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-script-modules/1/assets.mjs",
+      "generatedSha256": "4f5ce3755f4aa76f3d4e5e148d38efbe97de292a895f0c9c7f8d36bade187247",
+      "mapSha256": "7525d61ea0c631336d47132c600a09318f8126471c4ed54a4983965cf03d39e3",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/assets/importRetention.ts#BoundedImportCache.constructor",
+      "source": "src/assets/importRetention.ts",
+      "line": 7,
+      "kind": "public class operation",
+      "sourceSha256": "8a8c7175d66b68206dcda36cace1fde0d518a4feeebbee05d51039d52d19d0fe",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-script-modules/1/assets.mjs",
+      "generatedSha256": "4f5ce3755f4aa76f3d4e5e148d38efbe97de292a895f0c9c7f8d36bade187247",
+      "mapSha256": "7525d61ea0c631336d47132c600a09318f8126471c4ed54a4983965cf03d39e3",
+      "entryCount": 5
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/assets/importRetention.ts#registerImportSessionCleanup",
+      "source": "src/assets/importRetention.ts",
+      "line": 29,
+      "kind": "exported function",
+      "sourceSha256": "8a8c7175d66b68206dcda36cace1fde0d518a4feeebbee05d51039d52d19d0fe",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-script-modules/1/assets.mjs",
+      "generatedSha256": "4f5ce3755f4aa76f3d4e5e148d38efbe97de292a895f0c9c7f8d36bade187247",
+      "mapSha256": "7525d61ea0c631336d47132c600a09318f8126471c4ed54a4983965cf03d39e3",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/packages.ts#onPackageLifecycle",
+      "source": "src/runtime/packages.ts",
+      "line": 109,
+      "kind": "exported function",
+      "sourceSha256": "6774580dde64cd01a9a826d3a11083261aed603c77524544a4008dad9458838a",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-script-modules/1/assets.mjs",
+      "generatedSha256": "4f5ce3755f4aa76f3d4e5e148d38efbe97de292a895f0c9c7f8d36bade187247",
+      "mapSha256": "7525d61ea0c631336d47132c600a09318f8126471c4ed54a4983965cf03d39e3",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/store/preferences.ts#applyPreferences",
+      "source": "src/store/preferences.ts",
+      "line": 139,
+      "kind": "exported function",
+      "sourceSha256": "13795bd1ae90c3ceb3349b7ce26ee495781a99d84e30c383f6b21ea86a5e2c0c",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-script-modules/1/assets.mjs",
+      "generatedSha256": "4f5ce3755f4aa76f3d4e5e148d38efbe97de292a895f0c9c7f8d36bade187247",
+      "mapSha256": "7525d61ea0c631336d47132c600a09318f8126471c4ed54a4983965cf03d39e3",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/physicsProduction.ts#defaultPhysicsLayers",
+      "source": "src/runtime/physicsProduction.ts",
+      "line": 104,
+      "kind": "exported function",
+      "sourceSha256": "8fd1571e431576cd9b2dde89dca2a5f99aff6091d33d1c44def3194551061181",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-script-modules/1/assets.mjs",
+      "generatedSha256": "4f5ce3755f4aa76f3d4e5e148d38efbe97de292a895f0c9c7f8d36bade187247",
+      "mapSha256": "7525d61ea0c631336d47132c600a09318f8126471c4ed54a4983965cf03d39e3",
+      "entryCount": 2
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/physicsProduction.ts#defaultPhysicsProfile",
+      "source": "src/runtime/physicsProduction.ts",
+      "line": 192,
+      "kind": "exported function",
+      "sourceSha256": "8fd1571e431576cd9b2dde89dca2a5f99aff6091d33d1c44def3194551061181",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-script-modules/1/assets.mjs",
+      "generatedSha256": "4f5ce3755f4aa76f3d4e5e148d38efbe97de292a895f0c9c7f8d36bade187247",
+      "mapSha256": "7525d61ea0c631336d47132c600a09318f8126471c4ed54a4983965cf03d39e3",
+      "entryCount": 2
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/World.ts#defaultCollisionMatrix",
+      "source": "src/world/World.ts",
+      "line": 35,
+      "kind": "exported function",
+      "sourceSha256": "c725437339ebdfeaff44918dea52767b0c3cf2817578dff72e5e97032886a73b",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-script-modules/1/assets.mjs",
+      "generatedSha256": "4f5ce3755f4aa76f3d4e5e148d38efbe97de292a895f0c9c7f8d36bade187247",
+      "mapSha256": "7525d61ea0c631336d47132c600a09318f8126471c4ed54a4983965cf03d39e3",
+      "entryCount": 2
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/World.ts#World.constructor",
+      "source": "src/world/World.ts",
+      "line": 379,
+      "kind": "public class operation",
+      "sourceSha256": "c725437339ebdfeaff44918dea52767b0c3cf2817578dff72e5e97032886a73b",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-script-modules/1/assets.mjs",
+      "generatedSha256": "4f5ce3755f4aa76f3d4e5e148d38efbe97de292a895f0c9c7f8d36bade187247",
+      "mapSha256": "7525d61ea0c631336d47132c600a09318f8126471c4ed54a4983965cf03d39e3",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/i18n.ts#t",
+      "source": "src/i18n.ts",
+      "line": 1559,
+      "kind": "exported function",
+      "sourceSha256": "edacb5fbc23298f38a3982cef6eba9ead346750a8ddfc6ebb97f305104e03e79",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-script-modules/1/assets.mjs",
+      "generatedSha256": "4f5ce3755f4aa76f3d4e5e148d38efbe97de292a895f0c9c7f8d36bade187247",
+      "mapSha256": "7525d61ea0c631336d47132c600a09318f8126471c4ed54a4983965cf03d39e3",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/editor/sceneAuthoring.ts#defaultSceneAuthoringSettings",
+      "source": "src/editor/sceneAuthoring.ts",
+      "line": 78,
+      "kind": "exported function",
+      "sourceSha256": "cacd5234a09c4bad70d65ec4e0b4b39c2239c0eca53f8141cde27ea5fc602a31",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-script-modules/1/assets.mjs",
+      "generatedSha256": "4f5ce3755f4aa76f3d4e5e148d38efbe97de292a895f0c9c7f8d36bade187247",
+      "mapSha256": "7525d61ea0c631336d47132c600a09318f8126471c4ed54a4983965cf03d39e3",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/SceneManager.ts#SceneManager.constructor",
+      "source": "src/world/SceneManager.ts",
+      "line": 41,
+      "kind": "public class operation",
+      "sourceSha256": "bb21f38e41ca614bff9ce618d0471ec3d0fca919c29aade3140c429e446e53b8",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-script-modules/1/assets.mjs",
+      "generatedSha256": "4f5ce3755f4aa76f3d4e5e148d38efbe97de292a895f0c9c7f8d36bade187247",
+      "mapSha256": "7525d61ea0c631336d47132c600a09318f8126471c4ed54a4983965cf03d39e3",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/editor/commands.ts#CommandHistory.constructor",
+      "source": "src/editor/commands.ts",
+      "line": 130,
+      "kind": "public class operation",
+      "sourceSha256": "025738bd1c0147d706518f0e7c60626e41087fd72cb77d2a35cd1e470545f972",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-script-modules/1/assets.mjs",
+      "generatedSha256": "4f5ce3755f4aa76f3d4e5e148d38efbe97de292a895f0c9c7f8d36bade187247",
+      "mapSha256": "7525d61ea0c631336d47132c600a09318f8126471c4ed54a4983965cf03d39e3",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/editor/commands.ts#CommandHistory.lastClearReason",
+      "source": "src/editor/commands.ts",
+      "line": 142,
+      "kind": "getter",
+      "sourceSha256": "025738bd1c0147d706518f0e7c60626e41087fd72cb77d2a35cd1e470545f972",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-script-modules/1/assets.mjs",
+      "generatedSha256": "4f5ce3755f4aa76f3d4e5e148d38efbe97de292a895f0c9c7f8d36bade187247",
+      "mapSha256": "7525d61ea0c631336d47132c600a09318f8126471c4ed54a4983965cf03d39e3",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/input.ts#createInputBinding",
+      "source": "src/runtime/input.ts",
+      "line": 93,
+      "kind": "exported function",
+      "sourceSha256": "fad85ae749fdc2b0e378beff7d5b43ff7af6150efbfd8124700945281a42d6dc",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-script-modules/1/assets.mjs",
+      "generatedSha256": "4f5ce3755f4aa76f3d4e5e148d38efbe97de292a895f0c9c7f8d36bade187247",
+      "mapSha256": "7525d61ea0c631336d47132c600a09318f8126471c4ed54a4983965cf03d39e3",
+      "entryCount": 17
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/input.ts#defaultInputMap",
+      "source": "src/runtime/input.ts",
+      "line": 97,
+      "kind": "exported function",
+      "sourceSha256": "fad85ae749fdc2b0e378beff7d5b43ff7af6150efbfd8124700945281a42d6dc",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-script-modules/1/assets.mjs",
+      "generatedSha256": "4f5ce3755f4aa76f3d4e5e148d38efbe97de292a895f0c9c7f8d36bade187247",
+      "mapSha256": "7525d61ea0c631336d47132c600a09318f8126471c4ed54a4983965cf03d39e3",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/input.ts#createInputAction",
+      "source": "src/runtime/input.ts",
+      "line": 124,
+      "kind": "exported function",
+      "sourceSha256": "fad85ae749fdc2b0e378beff7d5b43ff7af6150efbfd8124700945281a42d6dc",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-script-modules/1/assets.mjs",
+      "generatedSha256": "4f5ce3755f4aa76f3d4e5e148d38efbe97de292a895f0c9c7f8d36bade187247",
+      "mapSha256": "7525d61ea0c631336d47132c600a09318f8126471c4ed54a4983965cf03d39e3",
+      "entryCount": 5
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/input.ts#normalizePenBindingCode",
+      "source": "src/runtime/input.ts",
+      "line": 136,
+      "kind": "exported function",
+      "sourceSha256": "fad85ae749fdc2b0e378beff7d5b43ff7af6150efbfd8124700945281a42d6dc",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-script-modules/1/assets.mjs",
+      "generatedSha256": "4f5ce3755f4aa76f3d4e5e148d38efbe97de292a895f0c9c7f8d36bade187247",
+      "mapSha256": "7525d61ea0c631336d47132c600a09318f8126471c4ed54a4983965cf03d39e3",
+      "entryCount": 17
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/audio.ts#defaultAudioSettings",
+      "source": "src/runtime/audio.ts",
+      "line": 120,
+      "kind": "exported function",
+      "sourceSha256": "d7942420a501d92638335fcb7d098e35807a56e3c6319e5a3de8c131a7c4ebeb",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-script-modules/1/assets.mjs",
+      "generatedSha256": "4f5ce3755f4aa76f3d4e5e148d38efbe97de292a895f0c9c7f8d36bade187247",
+      "mapSha256": "7525d61ea0c631336d47132c600a09318f8126471c4ed54a4983965cf03d39e3",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/renderer/outputQuality20.ts#normalizeAntiAliasing",
+      "source": "src/renderer/outputQuality20.ts",
+      "line": 2,
+      "kind": "exported function",
+      "sourceSha256": "d03ccbc43e269bb645131f784c3440d63a8bf4f24c1ace10e812e622c25465fa",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-script-modules/1/assets.mjs",
+      "generatedSha256": "4f5ce3755f4aa76f3d4e5e148d38efbe97de292a895f0c9c7f8d36bade187247",
+      "mapSha256": "7525d61ea0c631336d47132c600a09318f8126471c4ed54a4983965cf03d39e3",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/renderer/renderSettings.ts#normalizeTextureStreamingSettings",
+      "source": "src/renderer/renderSettings.ts",
+      "line": 80,
+      "kind": "exported function",
+      "sourceSha256": "90ae3c7ce879634f4a166e7155278a13e8d5b44add2437ac30253a1a237f8c6e",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-script-modules/1/assets.mjs",
+      "generatedSha256": "4f5ce3755f4aa76f3d4e5e148d38efbe97de292a895f0c9c7f8d36bade187247",
+      "mapSha256": "7525d61ea0c631336d47132c600a09318f8126471c4ed54a4983965cf03d39e3",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/renderer/renderSettings.ts#normalizeRenderingSettings",
+      "source": "src/renderer/renderSettings.ts",
+      "line": 106,
+      "kind": "exported function",
+      "sourceSha256": "90ae3c7ce879634f4a166e7155278a13e8d5b44add2437ac30253a1a237f8c6e",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-script-modules/1/assets.mjs",
+      "generatedSha256": "4f5ce3755f4aa76f3d4e5e148d38efbe97de292a895f0c9c7f8d36bade187247",
+      "mapSha256": "7525d61ea0c631336d47132c600a09318f8126471c4ed54a4983965cf03d39e3",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/exportTemplates.ts#compatibleExportTemplates",
+      "source": "src/runtime/exportTemplates.ts",
+      "line": 28,
+      "kind": "exported function",
+      "sourceSha256": "3cc4801a081c5afd8377289708e9358bd3b9c0033f5efaada290f6833491cead",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-script-modules/1/assets.mjs",
+      "generatedSha256": "4f5ce3755f4aa76f3d4e5e148d38efbe97de292a895f0c9c7f8d36bade187247",
+      "mapSha256": "7525d61ea0c631336d47132c600a09318f8126471c4ed54a4983965cf03d39e3",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/exportTemplates.ts#defaultExportTemplateId",
+      "source": "src/runtime/exportTemplates.ts",
+      "line": 32,
+      "kind": "exported function",
+      "sourceSha256": "3cc4801a081c5afd8377289708e9358bd3b9c0033f5efaada290f6833491cead",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-script-modules/1/assets.mjs",
+      "generatedSha256": "4f5ce3755f4aa76f3d4e5e148d38efbe97de292a895f0c9c7f8d36bade187247",
+      "mapSha256": "7525d61ea0c631336d47132c600a09318f8126471c4ed54a4983965cf03d39e3",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/visual/rhaiSyntax.ts#parseRhai",
+      "source": "src/visual/rhaiSyntax.ts",
+      "line": 279,
+      "kind": "exported function",
+      "sourceSha256": "25f8ff10d119f9b1b58d250f531b9a0b89d2b03b9b13cf583ca6f415ff871b77",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-script-modules/1/assets.mjs",
+      "generatedSha256": "4f5ce3755f4aa76f3d4e5e148d38efbe97de292a895f0c9c7f8d36bade187247",
+      "mapSha256": "7525d61ea0c631336d47132c600a09318f8126471c4ed54a4983965cf03d39e3",
+      "entryCount": 11
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/visual/rhaiSyntax.ts#walkRhai",
+      "source": "src/visual/rhaiSyntax.ts",
+      "line": 282,
+      "kind": "exported function",
+      "sourceSha256": "25f8ff10d119f9b1b58d250f531b9a0b89d2b03b9b13cf583ca6f415ff871b77",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-script-modules/1/assets.mjs",
+      "generatedSha256": "4f5ce3755f4aa76f3d4e5e148d38efbe97de292a895f0c9c7f8d36bade187247",
+      "mapSha256": "7525d61ea0c631336d47132c600a09318f8126471c4ed54a4983965cf03d39e3",
+      "entryCount": 14
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/visual/graphSyntax.ts#projectRhaiSyntax",
+      "source": "src/visual/graphSyntax.ts",
+      "line": 40,
+      "kind": "exported function",
+      "sourceSha256": "07534eba4bdf26f250b37d5978ad8fc1d65243a218ac1c12ef2dcf7840999048",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-script-modules/1/assets.mjs",
+      "generatedSha256": "4f5ce3755f4aa76f3d4e5e148d38efbe97de292a895f0c9c7f8d36bade187247",
+      "mapSha256": "7525d61ea0c631336d47132c600a09318f8126471c4ed54a4983965cf03d39e3",
+      "entryCount": 2
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/visual/graphSyntax.ts#emitSyntaxGraph",
+      "source": "src/visual/graphSyntax.ts",
+      "line": 154,
+      "kind": "exported function",
+      "sourceSha256": "07534eba4bdf26f250b37d5978ad8fc1d65243a218ac1c12ef2dcf7840999048",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-script-modules/1/assets.mjs",
+      "generatedSha256": "4f5ce3755f4aa76f3d4e5e148d38efbe97de292a895f0c9c7f8d36bade187247",
+      "mapSha256": "7525d61ea0c631336d47132c600a09318f8126471c4ed54a4983965cf03d39e3",
+      "entryCount": 27
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/visual/graphSyntax.ts#assessRhaiConversion",
+      "source": "src/visual/graphSyntax.ts",
+      "line": 212,
+      "kind": "exported function",
+      "sourceSha256": "07534eba4bdf26f250b37d5978ad8fc1d65243a218ac1c12ef2dcf7840999048",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-script-modules/1/assets.mjs",
+      "generatedSha256": "4f5ce3755f4aa76f3d4e5e148d38efbe97de292a895f0c9c7f8d36bade187247",
+      "mapSha256": "7525d61ea0c631336d47132c600a09318f8126471c4ed54a4983965cf03d39e3",
+      "entryCount": 9
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/visual/graphSyntax.ts#syntaxSourceLocation",
+      "source": "src/visual/graphSyntax.ts",
+      "line": 236,
+      "kind": "exported function",
+      "sourceSha256": "07534eba4bdf26f250b37d5978ad8fc1d65243a218ac1c12ef2dcf7840999048",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-script-modules/1/assets.mjs",
+      "generatedSha256": "4f5ce3755f4aa76f3d4e5e148d38efbe97de292a895f0c9c7f8d36bade187247",
+      "mapSha256": "7525d61ea0c631336d47132c600a09318f8126471c4ed54a4983965cf03d39e3",
+      "entryCount": 244
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/visual/graphSyntaxSchema.ts#isSyntaxNode",
+      "source": "src/visual/graphSyntaxSchema.ts",
+      "line": 41,
+      "kind": "exported function",
+      "sourceSha256": "58872a666776ac31cca70224adcbd86e3759abf72114b029a74ba56eaefb041d",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-script-modules/1/assets.mjs",
+      "generatedSha256": "4f5ce3755f4aa76f3d4e5e148d38efbe97de292a895f0c9c7f8d36bade187247",
+      "mapSha256": "7525d61ea0c631336d47132c600a09318f8126471c4ed54a4983965cf03d39e3",
+      "entryCount": 366
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/visual/graphSyntaxSchema.ts#syntaxFields",
+      "source": "src/visual/graphSyntaxSchema.ts",
+      "line": 42,
+      "kind": "exported function",
+      "sourceSha256": "58872a666776ac31cca70224adcbd86e3759abf72114b029a74ba56eaefb041d",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-script-modules/1/assets.mjs",
+      "generatedSha256": "4f5ce3755f4aa76f3d4e5e148d38efbe97de292a895f0c9c7f8d36bade187247",
+      "mapSha256": "7525d61ea0c631336d47132c600a09318f8126471c4ed54a4983965cf03d39e3",
+      "entryCount": 366
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/visual/graphSyntaxSchema.ts#syntaxSlots",
+      "source": "src/visual/graphSyntaxSchema.ts",
+      "line": 43,
+      "kind": "exported function",
+      "sourceSha256": "58872a666776ac31cca70224adcbd86e3759abf72114b029a74ba56eaefb041d",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-script-modules/1/assets.mjs",
+      "generatedSha256": "4f5ce3755f4aa76f3d4e5e148d38efbe97de292a895f0c9c7f8d36bade187247",
+      "mapSha256": "7525d61ea0c631336d47132c600a09318f8126471c4ed54a4983965cf03d39e3",
+      "entryCount": 732
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/visual/graphSyntaxSchema.ts#syntaxNodeDefinition",
+      "source": "src/visual/graphSyntaxSchema.ts",
+      "line": 88,
+      "kind": "exported function",
+      "sourceSha256": "58872a666776ac31cca70224adcbd86e3759abf72114b029a74ba56eaefb041d",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-script-modules/1/assets.mjs",
+      "generatedSha256": "4f5ce3755f4aa76f3d4e5e148d38efbe97de292a895f0c9c7f8d36bade187247",
+      "mapSha256": "7525d61ea0c631336d47132c600a09318f8126471c4ed54a4983965cf03d39e3",
+      "entryCount": 143
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/visual/graphCatalog.ts#graphNodeDefinition",
+      "source": "src/visual/graphCatalog.ts",
+      "line": 173,
+      "kind": "exported function",
+      "sourceSha256": "450b997f16dc0fb68572f827a306b81b321a0bcdd51ec8e11ed772bf709d8756",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-script-modules/1/assets.mjs",
+      "generatedSha256": "4f5ce3755f4aa76f3d4e5e148d38efbe97de292a895f0c9c7f8d36bade187247",
+      "mapSha256": "7525d61ea0c631336d47132c600a09318f8126471c4ed54a4983965cf03d39e3",
+      "entryCount": 122
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/visual/graphCompiler.ts#validateGraph",
+      "source": "src/visual/graphCompiler.ts",
+      "line": 33,
+      "kind": "exported function",
+      "sourceSha256": "1ee996d3dbfca0e48d0d9b06fa5ca7f86862e4e724b944497546b84e33750ecc",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-script-modules/1/assets.mjs",
+      "generatedSha256": "4f5ce3755f4aa76f3d4e5e148d38efbe97de292a895f0c9c7f8d36bade187247",
+      "mapSha256": "7525d61ea0c631336d47132c600a09318f8126471c4ed54a4983965cf03d39e3",
+      "entryCount": 9
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/visual/graphCompiler.ts#compileGraph",
+      "source": "src/visual/graphCompiler.ts",
+      "line": 216,
+      "kind": "exported function",
+      "sourceSha256": "1ee996d3dbfca0e48d0d9b06fa5ca7f86862e4e724b944497546b84e33750ecc",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-script-modules/1/assets.mjs",
+      "generatedSha256": "4f5ce3755f4aa76f3d4e5e148d38efbe97de292a895f0c9c7f8d36bade187247",
+      "mapSha256": "7525d61ea0c631336d47132c600a09318f8126471c4ed54a4983965cf03d39e3",
+      "entryCount": 9
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/visual/graphCompiler.ts#compileGraphSource",
+      "source": "src/visual/graphCompiler.ts",
+      "line": 243,
+      "kind": "exported function",
+      "sourceSha256": "1ee996d3dbfca0e48d0d9b06fa5ca7f86862e4e724b944497546b84e33750ecc",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-script-modules/1/assets.mjs",
+      "generatedSha256": "4f5ce3755f4aa76f3d4e5e148d38efbe97de292a895f0c9c7f8d36bade187247",
+      "mapSha256": "7525d61ea0c631336d47132c600a09318f8126471c4ed54a4983965cf03d39e3",
+      "entryCount": 9
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/visual/graphCompiler.ts#executableGraphSource",
+      "source": "src/visual/graphCompiler.ts",
+      "line": 244,
+      "kind": "exported function",
+      "sourceSha256": "1ee996d3dbfca0e48d0d9b06fa5ca7f86862e4e724b944497546b84e33750ecc",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-script-modules/1/assets.mjs",
+      "generatedSha256": "4f5ce3755f4aa76f3d4e5e148d38efbe97de292a895f0c9c7f8d36bade187247",
+      "mapSha256": "7525d61ea0c631336d47132c600a09318f8126471c4ed54a4983965cf03d39e3",
+      "entryCount": 9
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/assets/AssetDatabase.ts#readTextAsset",
+      "source": "src/assets/AssetDatabase.ts",
+      "line": 420,
+      "kind": "exported function",
+      "sourceSha256": "e94767ad0ecf0067fbe2b54a60197974925c945de7eb87125e2c204bd49b466e",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-script-modules/1/assets.mjs",
+      "generatedSha256": "4f5ce3755f4aa76f3d4e5e148d38efbe97de292a895f0c9c7f8d36bade187247",
+      "mapSha256": "7525d61ea0c631336d47132c600a09318f8126471c4ed54a4983965cf03d39e3",
+      "entryCount": 56
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/assets/AssetDatabase.ts#assetGuid",
+      "source": "src/assets/AssetDatabase.ts",
+      "line": 955,
+      "kind": "exported function",
+      "sourceSha256": "e94767ad0ecf0067fbe2b54a60197974925c945de7eb87125e2c204bd49b466e",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-script-modules/1/assets.mjs",
+      "generatedSha256": "4f5ce3755f4aa76f3d4e5e148d38efbe97de292a895f0c9c7f8d36bade187247",
+      "mapSha256": "7525d61ea0c631336d47132c600a09318f8126471c4ed54a4983965cf03d39e3",
+      "entryCount": 157
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/assets/AssetDatabase.ts#resolveAsset",
+      "source": "src/assets/AssetDatabase.ts",
+      "line": 959,
+      "kind": "exported function",
+      "sourceSha256": "e94767ad0ecf0067fbe2b54a60197974925c945de7eb87125e2c204bd49b466e",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-script-modules/1/assets.mjs",
+      "generatedSha256": "4f5ce3755f4aa76f3d4e5e148d38efbe97de292a895f0c9c7f8d36bade187247",
+      "mapSha256": "7525d61ea0c631336d47132c600a09318f8126471c4ed54a4983965cf03d39e3",
+      "entryCount": 157
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/visual/rhaiSyntaxLexer.ts#isRhaiTrivia",
+      "source": "src/visual/rhaiSyntaxLexer.ts",
+      "line": 10,
+      "kind": "exported function",
+      "sourceSha256": "78f338e82918ea20d869f89879d059644212025c9d8f7383d143d9bee1848b34",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-script-modules/1/rhaiSyntaxLexer-C0SJzKhU.mjs",
+      "generatedSha256": "466be698399f5c2ce58eb8cbc9eb7dcc8efa7cf5086bcc8bfd2dc450cb2e04dc",
+      "mapSha256": "1bf79b3d022fdf6211b25845c1a3130935275c032bfa598c1f4a2c968f92425f",
+      "entryCount": 1615
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/visual/rhaiSyntaxLexer.ts#rhaiSourceHash",
+      "source": "src/visual/rhaiSyntaxLexer.ts",
+      "line": 11,
+      "kind": "exported function",
+      "sourceSha256": "78f338e82918ea20d869f89879d059644212025c9d8f7383d143d9bee1848b34",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-script-modules/1/rhaiSyntaxLexer-C0SJzKhU.mjs",
+      "generatedSha256": "466be698399f5c2ce58eb8cbc9eb7dcc8efa7cf5086bcc8bfd2dc450cb2e04dc",
+      "mapSha256": "1bf79b3d022fdf6211b25845c1a3130935275c032bfa598c1f4a2c968f92425f",
+      "entryCount": 105
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/visual/rhaiSyntaxLexer.ts#rhaiLineStarts",
+      "source": "src/visual/rhaiSyntaxLexer.ts",
+      "line": 12,
+      "kind": "exported function",
+      "sourceSha256": "78f338e82918ea20d869f89879d059644212025c9d8f7383d143d9bee1848b34",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-script-modules/1/rhaiSyntaxLexer-C0SJzKhU.mjs",
+      "generatedSha256": "466be698399f5c2ce58eb8cbc9eb7dcc8efa7cf5086bcc8bfd2dc450cb2e04dc",
+      "mapSha256": "1bf79b3d022fdf6211b25845c1a3130935275c032bfa598c1f4a2c968f92425f",
+      "entryCount": 93
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/visual/rhaiSyntaxLexer.ts#rhaiSpan",
+      "source": "src/visual/rhaiSyntaxLexer.ts",
+      "line": 13,
+      "kind": "exported function",
+      "sourceSha256": "78f338e82918ea20d869f89879d059644212025c9d8f7383d143d9bee1848b34",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-script-modules/1/rhaiSyntaxLexer-C0SJzKhU.mjs",
+      "generatedSha256": "466be698399f5c2ce58eb8cbc9eb7dcc8efa7cf5086bcc8bfd2dc450cb2e04dc",
+      "mapSha256": "1bf79b3d022fdf6211b25845c1a3130935275c032bfa598c1f4a2c968f92425f",
+      "entryCount": 1764
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/visual/rhaiSyntaxLexer.ts#rhaiLimits",
+      "source": "src/visual/rhaiSyntaxLexer.ts",
+      "line": 18,
+      "kind": "exported function",
+      "sourceSha256": "78f338e82918ea20d869f89879d059644212025c9d8f7383d143d9bee1848b34",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-script-modules/1/rhaiSyntaxLexer-C0SJzKhU.mjs",
+      "generatedSha256": "466be698399f5c2ce58eb8cbc9eb7dcc8efa7cf5086bcc8bfd2dc450cb2e04dc",
+      "mapSha256": "1bf79b3d022fdf6211b25845c1a3130935275c032bfa598c1f4a2c968f92425f",
+      "entryCount": 71
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/visual/rhaiSyntaxLexer.ts#decodeRhaiString",
+      "source": "src/visual/rhaiSyntaxLexer.ts",
+      "line": 27,
+      "kind": "exported function",
+      "sourceSha256": "78f338e82918ea20d869f89879d059644212025c9d8f7383d143d9bee1848b34",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-script-modules/1/rhaiSyntaxLexer-C0SJzKhU.mjs",
+      "generatedSha256": "466be698399f5c2ce58eb8cbc9eb7dcc8efa7cf5086bcc8bfd2dc450cb2e04dc",
+      "mapSha256": "1bf79b3d022fdf6211b25845c1a3130935275c032bfa598c1f4a2c968f92425f",
+      "entryCount": 6
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/visual/rhaiSyntaxLexer.ts#lexRhai",
+      "source": "src/visual/rhaiSyntaxLexer.ts",
+      "line": 58,
+      "kind": "exported function",
+      "sourceSha256": "78f338e82918ea20d869f89879d059644212025c9d8f7383d143d9bee1848b34",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-script-modules/1/rhaiSyntaxLexer-C0SJzKhU.mjs",
+      "generatedSha256": "466be698399f5c2ce58eb8cbc9eb7dcc8efa7cf5086bcc8bfd2dc450cb2e04dc",
+      "mapSha256": "1bf79b3d022fdf6211b25845c1a3130935275c032bfa598c1f4a2c968f92425f",
+      "entryCount": 71
+    }
+  ],
+  "tracingScope": "Positive V8 function entries during the complete passing programmer suite, including fixture setup. Not per-assertion isolation, exhaustive domain coverage or performance qualification.",
+  "nodeOperationCoverageCase": "retained-26-12-script-modules complete suite including fixture setup",
+  "nodeOperationCoverageAssertion": {
+    "name": "retained-26-12-script-modules complete suite including fixture setup",
+    "status": "passed"
+  }
+}

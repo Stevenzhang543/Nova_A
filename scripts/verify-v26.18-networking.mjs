@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import {cpus,totalmem} from 'node:os'
 import {mkdir, writeFile} from 'node:fs/promises'
 import {dirname} from 'node:path'
-import {createServer} from 'vite'
+import {openMediaAuditModules} from './lib/mediaAudit16.mjs'
 import {resolveMilestoneAuditContext} from './lib/milestoneAuditContext.mjs'
 
 const context = resolveMilestoneAuditContext(import.meta.url, {release: '26.18', reportName: 'networking'})
@@ -12,16 +12,13 @@ Object.defineProperty(globalThis, 'navigator', {configurable: true, value: {plat
 Object.defineProperty(globalThis, 'performance', {configurable: true, value: {now: () => clock}})
 globalThis.window = {setTimeout, clearTimeout, setInterval, clearInterval, addEventListener() {}, removeEventListener() {}}
 globalThis.localStorage = {getItem() {return null}, setItem() {}, removeItem() {}}
-const vite = await createServer({root: context.sourceRoot, appType: 'custom', logLevel: 'silent', server: {middlewareMode: true}})
-await vite.watcher.close()
-let networking
+const networkingWindow = globalThis.window
+let networking, opened
 try {
-  // Overlapping SSR roots share cyclic runtime dependencies; initialize one root at a time.
-  const loaded = []
-  for (const path of [
-    'runtime/networking', 'runtime/production', 'runtime/networkProtocol', 'runtime/networkReplay', 'runtime/networkInput', 'runtime/networkProduction', 'world/BoxEntity', 'runtime/networkServices', 'world/hierarchy', 'runtime/productionRuntime', 'runtime/packages'
-  ]) loaded.push(await vite.ssrLoadModule('/src/' + path + '.ts'))
-  const [net, production, protocol, replay, input, authority, boxes, services, hierarchy, productionRuntime, packages] = loaded
+  // Bundle actual source roots together, avoiding development-server cyclic fetch deadlocks.
+  opened = await openMediaAuditModules(context,{net:'runtime/networking',production:'runtime/production',protocol:'runtime/networkProtocol',replay:'runtime/networkReplay',input:'runtime/networkInput',authority:'runtime/networkProduction',boxes:'world/BoxEntity',services:'runtime/networkServices',hierarchy:'world/hierarchy',productionRuntime:'runtime/productionRuntime',packages:'runtime/packages'})
+  globalThis.window = networkingWindow // Preserve the original real networking timers.
+  const {net,production,protocol,replay,input,authority,boxes,services,hierarchy,productionRuntime,packages} = opened.modules
   networking = net
   let settings = production.productionSettings.networking
   const definition = {entityUuid: '00000001-0000-4000-8000-000000000000', authority: 'server', properties: ['transform'], interpolate: false, predict: false, ownerPeerId: '', alwaysRelevant: true, interestRadius: 100, sceneUuid: ''}
@@ -406,8 +403,10 @@ try {
     assert.equal(net.networkRuntimeSnapshot().localHistory,600);const heapAfter=process.memoryUsage().heapUsed;await net.stopNetworking();assert.equal(net.networkRuntimeSnapshot().localHistory,0);assert.equal(net.networkRuntimeSnapshot().reliablePending,0);times.sort((a,b)=>a-b)
     return {entities:2000,updates:720,retainedFrames:600,retainedFrameEntityUpperBound:1200000,medianMs:times[360],p95Ms:times[Math.floor(times.length*.95)],maximumMs:times.at(-1),heapBefore,heapAfter,heapDelta:heapAfter-heapBefore,scope:'Actual networking update and transform history only; excludes solver/renderer, includes JS allocation/GC and concurrent host activity. Heap delta is not an isolated leak measurement.'}
   })
-} finally {if (networking) await networking.stopNetworking(); await vite.close()}
-const report = {...context.metadata(), host:{platform:process.platform,architecture:process.arch,node:process.version,cpu:cpus()[0]?.model,logicalCpus:cpus().length,totalMemoryBytes:totalmem()}, status: checks.every(item => item.status === 'passed') ? 'passed' : 'failed', scope: 'Programmer regression: actual runtime modules with explicit in-memory transport, controlled monotonic clock; not a user or multi-process audit.', checks}
+} catch (error) {
+  checks.push({name:'Runtime module loading and suite setup',status:'failed',error:error.stack??String(error)})
+} finally {if (networking) await networking.stopNetworking(); if (opened) await opened.close()}
+const report = {...context.metadata(), sourceModuleLoader:'Production Vite SSR bundle / native ESM; original networking timers restored', host:{platform:process.platform,architecture:process.arch,node:process.version,cpu:cpus()[0]?.model,logicalCpus:cpus().length,totalMemoryBytes:totalmem()}, status: checks.every(item => item.status === 'passed') ? 'passed' : 'failed', scope: 'Programmer regression: actual runtime modules with explicit in-memory transport, controlled monotonic clock; not a user or multi-process audit.', checks}
 await mkdir(dirname(context.reportPath), {recursive: true})
 await writeFile(context.reportPath, JSON.stringify(report, null, 2) + '\n')
 console.log(JSON.stringify({status: report.status, checks, report: context.reportPath}, null, 2))

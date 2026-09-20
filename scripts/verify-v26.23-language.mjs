@@ -1,0 +1,21 @@
+import assert from 'node:assert/strict';import {readFile,writeFile} from 'node:fs/promises';import {spawnSync} from 'node:child_process';import {pathToFileURL} from 'node:url';import {resolve} from 'node:path';
+const nativeBuild=spawnSync('cargo',['build','--locked','--offline','-p','nova_script','--example','runtime_bridge','--target-dir',resolve('target')],{encoding:'utf8',windowsHide:true,timeout:180000});assert.equal(nativeBuild.status,0,nativeBuild.error?.message??nativeBuild.stderr);
+const wasm=await import(pathToFileURL(resolve('nova_core/pkg/nova_core.js')));wasm.initSync({module:await readFile('nova_core/pkg/nova_core_bg.wasm')});
+const cases=[
+['dynamic reassignment','fn start(){let value=1;value="two";print(value);}',['two']],
+['array mutation','fn start(){let values=[1,2];values.push(3);values[0]+=5;print(values[0]+values[2]);}',['9']],
+['map mutation','fn start(){let bag=#{count:1};bag.count+=2;print(bag.count);}',['3']],
+['shared closure capture','fn start(){let count=2;let step=||{count+=1;count};print(step.call());print(count);}',['3','3']],
+['lexical shadowing','fn start(){let n=1;let f=||n;{let n=9;print(n);}print(f.call());}',['9','1']],
+['overload arity','fn pick(x){x+1}fn pick(x,y){x+y}fn start(){print(pick(2));print(pick(2,3));}',['3','5']],
+['method dispatch','fn scale(){this*2}fn start(){let value=4;print(value.scale());}',['8']],
+['caught exception','fn start(){try{throw "broken";}catch(error){print(error);}}',['broken']],
+['function pointer','fn twice(x){x*2}fn start(){let f=Fn("twice");print(f.call(5));}',['10']]
+];
+cases.push(['exported dynamic map','@export let inventory = #{"coins": 1};\nfn start(){inventory.coins+=2;print(inventory.coins);}',['3']],['exported nested array','@export let bag = [#{"coins": 1}];\nfn start(){bag[0].coins+=4;print(bag[0].coins);}',['5']]);
+const results=[];
+for(const[name,source,expected]of cases){const vm=new wasm.WasmScriptRuntime();try{const execution=JSON.parse(vm.execute_json(source,'start',JSON.stringify({entity:'semantics23'})));const actual=execution.logs.map(x=>x.message);const native=spawnSync(resolve('target/debug/examples/runtime_bridge.exe'),{input:JSON.stringify({source,function:'start',context:{entity:'semantics23'}}),encoding:'utf8',windowsHide:true,timeout:15000});assert.equal(native.status,0);const output=JSON.parse(native.stdout);if(output.error)throw Error(output.error);const nativeLogs=output.value.logs.map(x=>x.message);assert.deepEqual(actual,expected);assert.deepEqual(nativeLogs,actual);assert.deepEqual(output.value.properties,execution.properties);results.push({name,status:'passed',logs:actual})}catch(error){results.push({name,status:'failed',error:String(error)})}finally{vm.free()}}
+for(const[name,source]of [['native imports denied','import "outside" as alias; fn start(){}'],['eval denied','fn start(){eval("1+1");}'],['operation budget','fn start(){while true {}}']]){const vm=new wasm.WasmScriptRuntime();try{let error;try{vm.execute_json(source,'start',JSON.stringify({entity:'semantics23'}))}catch(e){error=String(e)}assert.ok(error);const result=spawnSync(resolve('target/debug/examples/runtime_bridge.exe'),{input:JSON.stringify({source,function:'start',context:{entity:'semantics23'}}),encoding:'utf8',windowsHide:true,timeout:15000});assert.equal(result.status,0);const native=JSON.parse(result.stdout);assert.ok(native.error);results.push({name,status:'passed',wasmError:error,nativeError:native.error})}catch(error){results.push({name,status:'failed',error:String(error)})}finally{vm.free()}}
+const report={engineVersion:wasm.engine_version(),generatedAt:new Date().toISOString(),format:'nova-v26.23-language-verification',version:1,release:'26.23',expectedRelease:'26.23',qualifiedRelease:'26.23',development:wasm.engine_version()!=='26.23.0',scope:'Identical semantic examples executed in actual native/WASM VMs; logs and exported properties compared. Runtime modules and host integration are tested separately.',results,status:results.every(x=>x.status==='passed')?'passed':'failed'};await writeFile('release-audits/v26.23-language.json',JSON.stringify(report,null,2));console.log(JSON.stringify(report));
+
+if(report.status!=='passed')process.exitCode=1;

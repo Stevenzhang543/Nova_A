@@ -220,7 +220,7 @@ export function normalizeInputMap(source: unknown): InputAction[] {
 /** Replaces one project input binding without changing the action's axis/vector semantics. */
 export function rebindInputAction(actions: InputAction[], actionName: string, bindingIndex: number, value: Pick<InputBinding, 'device' | 'code'>): boolean {
   const action = actions.find(candidate => candidate.name === actionName)
-  if (!action || bindingIndex < 0 || bindingIndex > 31 || !INPUT_DEVICES.includes(value.device)) return false
+  if (!action || !Number.isInteger(bindingIndex) || bindingIndex < 0 || bindingIndex > 31 || !value || !INPUT_DEVICES.includes(value.device)) return false
   while (action.bindings.length <= bindingIndex) action.bindings.push(createInputBinding(value.device, value.code))
   const previous = action.bindings[bindingIndex]
   action.bindings[bindingIndex] = { ...previous, device: value.device, code: normalizePenBindingCode(value.device, value.code) }

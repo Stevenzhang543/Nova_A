@@ -79,11 +79,11 @@ async function playFromPalette(): Promise<void> {
     return
   }
   if (reviews.length) addEditorLog(`${t('simulationReadiness')}: ${t('mediaStatus_review')} (${reviews.length}) · ${reviews.map(issue => issue.code).join(', ')}`, 'Physics')
-  toggleSimulation(true); gameplayRuntime.beginSession(); addEditorLog(t('physicsRunning'), 'Physics')
+  if (!toggleSimulation(true)) return; gameplayRuntime.beginSession(); addEditorLog(t('physicsRunning'), 'Physics')
 }
 function stopFromPalette(): void { gameplayRuntime.stopSession(); stopPlayMode(); addEditorLog(t('simulationRestored'), 'Physics') }
 function validateFromPalette(): void { const report = validateCurrentProject(); openEditorTool('project'); addEditorLog(t(report.valid ? 'projectValidationPassed' : 'projectValidationFailed', { count: report.issues.length }), 'Project', report.valid ? 'info' : 'error') }
-async function repairFromPalette(): Promise<void> { const report = previewCurrentProjectRepair(); const approved = await requestConfirmation({ title: t('repairProject'), message: `${report.changes.join('\n')}\n\n${t('repairRemainingIssues', { count: report.remaining.length })}`, confirmLabel: t('repairProject'), cancelLabel: t('cancel'), destructive: false }); if (approved) { applyCurrentProjectRepair(report); openEditorTool('project') } }
+async function repairFromPalette(): Promise<void> { const report = previewCurrentProjectRepair(); const approved = await requestConfirmation({ title: t('repairProject'), message: `${report.changes.join('\n')}\n\n${t('repairRemainingIssues', { count: report.remaining.length })}`, confirmLabel: t('repairProject'), cancelLabel: t('cancel'), destructive: false }); if (approved) { if (!applyCurrentProjectRepair(report)) addEditorLog(t('projectRepairFailed'), 'Project', 'error'); openEditorTool('project') } }
 
 const workspaceCommand = (workspace: EditorWorkspace, label: TranslationKey, icon: string): EditorCommand => ({
   id: `workspace-${workspace}`, label, group: 'workspaces', icon, keywords: `${workspace} layout workspace`, run: () => applyEditorWorkspace(workspace)

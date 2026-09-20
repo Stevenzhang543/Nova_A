@@ -1,0 +1,5 @@
+import assert from 'node:assert/strict'
+import {propertyAudit22} from './lib/propertyAudit22.mjs'
+import {openMediaAuditModules} from './lib/mediaAudit16.mjs'
+const audit=await propertyAudit22('numeric-expressions'),opened=await openMediaAuditModules({repository:process.cwd(),bases:[process.cwd()]},{authoring:'editor/sceneAuthoring'})
+try{const evaluate=opened.modules.authoring.evaluateNumericExpression,checks=[];for(const [input,expected] of [['.4',.4],['-.4',-.4],['1.',1],['.4e2',40],['1.e-2',.01],['current + .5',2.5],['(.5 + 1.) * 2',3],['1 / 0',null],['.',null],['1..2',null],['1e',null],['Infinity',null],['1e999',null],['Math.random()',null],['.5.toString()',null]]){assert.equal(evaluate(input,2),expected,input);checks.push({name:input,status:'passed',expected})}await audit.write(checks,'Actual restricted arithmetic parser; ordinary finite decimal forms accepted without eval or arbitrary property/call syntax.');console.log('PASS '+checks.length+' numeric grammar cases')}finally{await opened.close()}

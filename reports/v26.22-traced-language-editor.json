@@ -1,0 +1,486 @@
+{
+  "generatedAt": "2026-09-14T17:50:07.222Z",
+  "status": "passed",
+  "checks": [
+    {
+      "name": "real runtime corpus has no false editor errors: arrays, maps and compound writes",
+      "status": "passed"
+    },
+    {
+      "name": "real runtime corpus has no false editor errors: captured closure",
+      "status": "passed"
+    },
+    {
+      "name": "real runtime corpus has no false editor errors: direct closure and zero parameter closure",
+      "status": "passed"
+    },
+    {
+      "name": "real runtime corpus has no false editor errors: Fn pointer and implicit return",
+      "status": "passed"
+    },
+    {
+      "name": "real runtime corpus has no false editor errors: switch value, patterns and guard",
+      "status": "passed"
+    },
+    {
+      "name": "real runtime corpus has no false editor errors: do until",
+      "status": "passed"
+    },
+    {
+      "name": "real runtime corpus has no false editor errors: do while",
+      "status": "passed"
+    },
+    {
+      "name": "real runtime corpus has no false editor errors: try catch variable",
+      "status": "passed"
+    },
+    {
+      "name": "real runtime corpus has no false editor errors: try catch without variable",
+      "status": "passed"
+    },
+    {
+      "name": "real runtime corpus has no false editor errors: interpolated expressions",
+      "status": "passed"
+    },
+    {
+      "name": "real runtime corpus has no false editor errors: interpolated statement blocks and nested interpolation",
+      "status": "passed"
+    },
+    {
+      "name": "real runtime corpus has no false editor errors: for counter tuple and continue",
+      "status": "passed"
+    },
+    {
+      "name": "real runtime corpus has no false editor errors: while and loop break values",
+      "status": "passed"
+    },
+    {
+      "name": "real runtime corpus has no false editor errors: short circuit and else if tail values",
+      "status": "passed"
+    },
+    {
+      "name": "real runtime corpus has no false editor errors: signed integer literals and Rhai precedence",
+      "status": "passed"
+    },
+    {
+      "name": "real runtime corpus has no false editor errors: number spellings and string keys",
+      "status": "passed"
+    },
+    {
+      "name": "real runtime corpus has no false editor errors: escaped, raw, verbatim and doubled quote map keys",
+      "status": "passed"
+    },
+    {
+      "name": "real runtime corpus has no false editor errors: character scalar escapes and verbatim backslashes",
+      "status": "passed"
+    },
+    {
+      "name": "real runtime corpus has no false editor errors: tail declarations and assignments stay unit",
+      "status": "passed"
+    },
+    {
+      "name": "real runtime corpus has no false editor errors: private recursive helper",
+      "status": "passed"
+    },
+    {
+      "name": "real runtime corpus has no false editor errors: parameter shadowing and independent function overloads",
+      "status": "passed"
+    },
+    {
+      "name": "real runtime corpus has no false editor errors: typed receiver overloads and implicit this",
+      "status": "passed"
+    },
+    {
+      "name": "real runtime corpus has no false editor errors: normal string continuation preserves its original indentation rules",
+      "status": "passed"
+    },
+    {
+      "name": "real runtime corpus has no false editor errors: control character map keys retain valid Rhai escapes",
+      "status": "passed"
+    },
+    {
+      "name": "real runtime corpus has no false editor errors: switch range and block cases",
+      "status": "passed"
+    },
+    {
+      "name": "real runtime corpus has no false editor errors: empty module statement and return unit",
+      "status": "passed"
+    },
+    {
+      "name": "real runtime corpus has no false editor errors: comments and multiline strings remain inert",
+      "status": "passed"
+    },
+    {
+      "name": "real runtime corpus has no false editor errors: export properties and commands",
+      "status": "passed"
+    },
+    {
+      "name": "real runtime corpus has no false editor errors: legacy comment export and metadata",
+      "status": "passed"
+    },
+    {
+      "name": "real runtime corpus has no false editor errors: native module export declarations and aliases",
+      "status": "passed"
+    },
+    {
+      "name": "real runtime corpus has no false editor errors: unsupported closure persistence is observable",
+      "status": "passed"
+    },
+    {
+      "name": "real runtime corpus has no false editor errors: optional access and coalesce",
+      "status": "passed"
+    },
+    {
+      "name": "real runtime corpus has no false editor errors: runtime failure preserves actual numeric overload",
+      "status": "passed"
+    },
+    {
+      "name": "real runtime corpus has no false editor errors: uncaught throw",
+      "status": "passed"
+    },
+    {
+      "name": "standard calls, dynamic methods and captured closures are recognized",
+      "status": "passed"
+    },
+    {
+      "name": "scoped shadowing and overloads do not create duplicate errors or phantom names",
+      "status": "passed"
+    },
+    {
+      "name": "unknown typos remain errors while external function propagation survives",
+      "status": "passed"
+    },
+    {
+      "name": "exact UTF16 token spans and test annotations survive typed analysis",
+      "status": "passed"
+    },
+    {
+      "name": "selected lexical rename preserves shadowed values, strings, comments and VM behavior",
+      "status": "passed"
+    },
+    {
+      "name": "renaming a captured reference or a cursor at identifier end selects its binding",
+      "status": "passed"
+    },
+    {
+      "name": "capture collisions, exported properties and dynamic method/pointer renames refuse before edits",
+      "status": "passed"
+    },
+    {
+      "name": "workspace rename requires a single selected document and preserves other documents",
+      "status": "passed"
+    },
+    {
+      "name": "cross-module and dynamic function-pointer references refuse an incomplete rename",
+      "status": "passed"
+    },
+    {
+      "name": "legacy diagnostic and JSONL protocol contracts remain available",
+      "status": "passed"
+    },
+    {
+      "name": "formatter indents code but preserves multiline literal and comment lexemes",
+      "status": "passed"
+    },
+    {
+      "name": "actual LSP framed rename uses original CRLF/UTF16 selection",
+      "status": "passed"
+    }
+  ],
+  "nodeOperationCoverage": [
+    {
+      "mappingVersion": 2,
+      "id": "src/editor/scriptApi.ts#apiEntry",
+      "source": "src/editor/scriptApi.ts",
+      "line": 263,
+      "kind": "exported function",
+      "sourceSha256": "495274b754dbf0a95619b7b14e7a502bdd7c3af146f7c758cf98b32a23169b3b",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-language-editor/1/language.mjs",
+      "generatedSha256": "9fb7d0864b74c0ad34f8dc7226e35e105409d353fcbbd98d0c07fe1bd892598b",
+      "mapSha256": "a078f4b7c640b901343da5c396cfcf0a03301bb5ece75f008f6013a5224426f0",
+      "entryCount": 4197
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/editor/scriptLanguage26.ts#analyzeScript26",
+      "source": "src/editor/scriptLanguage26.ts",
+      "line": 25,
+      "kind": "exported function",
+      "sourceSha256": "d98269743406ef7352826651ab6fd79e16c883482eb17123382b232cd893c6c2",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-language-editor/1/language.mjs",
+      "generatedSha256": "9fb7d0864b74c0ad34f8dc7226e35e105409d353fcbbd98d0c07fe1bd892598b",
+      "mapSha256": "a078f4b7c640b901343da5c396cfcf0a03301bb5ece75f008f6013a5224426f0",
+      "entryCount": 46
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/visual/rhaiSyntaxLexer.ts#isRhaiTrivia",
+      "source": "src/visual/rhaiSyntaxLexer.ts",
+      "line": 10,
+      "kind": "exported function",
+      "sourceSha256": "78f338e82918ea20d869f89879d059644212025c9d8f7383d143d9bee1848b34",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-language-editor/1/language.mjs",
+      "generatedSha256": "9fb7d0864b74c0ad34f8dc7226e35e105409d353fcbbd98d0c07fe1bd892598b",
+      "mapSha256": "a078f4b7c640b901343da5c396cfcf0a03301bb5ece75f008f6013a5224426f0",
+      "entryCount": 5349
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/visual/rhaiSyntaxLexer.ts#rhaiSourceHash",
+      "source": "src/visual/rhaiSyntaxLexer.ts",
+      "line": 11,
+      "kind": "exported function",
+      "sourceSha256": "78f338e82918ea20d869f89879d059644212025c9d8f7383d143d9bee1848b34",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-language-editor/1/language.mjs",
+      "generatedSha256": "9fb7d0864b74c0ad34f8dc7226e35e105409d353fcbbd98d0c07fe1bd892598b",
+      "mapSha256": "a078f4b7c640b901343da5c396cfcf0a03301bb5ece75f008f6013a5224426f0",
+      "entryCount": 2003
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/visual/rhaiSyntaxLexer.ts#rhaiLineStarts",
+      "source": "src/visual/rhaiSyntaxLexer.ts",
+      "line": 12,
+      "kind": "exported function",
+      "sourceSha256": "78f338e82918ea20d869f89879d059644212025c9d8f7383d143d9bee1848b34",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-language-editor/1/language.mjs",
+      "generatedSha256": "9fb7d0864b74c0ad34f8dc7226e35e105409d353fcbbd98d0c07fe1bd892598b",
+      "mapSha256": "a078f4b7c640b901343da5c396cfcf0a03301bb5ece75f008f6013a5224426f0",
+      "entryCount": 438
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/visual/rhaiSyntaxLexer.ts#rhaiSpan",
+      "source": "src/visual/rhaiSyntaxLexer.ts",
+      "line": 13,
+      "kind": "exported function",
+      "sourceSha256": "78f338e82918ea20d869f89879d059644212025c9d8f7383d143d9bee1848b34",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-language-editor/1/language.mjs",
+      "generatedSha256": "9fb7d0864b74c0ad34f8dc7226e35e105409d353fcbbd98d0c07fe1bd892598b",
+      "mapSha256": "a078f4b7c640b901343da5c396cfcf0a03301bb5ece75f008f6013a5224426f0",
+      "entryCount": 8333
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/visual/rhaiSyntaxLexer.ts#rhaiLimits",
+      "source": "src/visual/rhaiSyntaxLexer.ts",
+      "line": 18,
+      "kind": "exported function",
+      "sourceSha256": "78f338e82918ea20d869f89879d059644212025c9d8f7383d143d9bee1848b34",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-language-editor/1/language.mjs",
+      "generatedSha256": "9fb7d0864b74c0ad34f8dc7226e35e105409d353fcbbd98d0c07fe1bd892598b",
+      "mapSha256": "a078f4b7c640b901343da5c396cfcf0a03301bb5ece75f008f6013a5224426f0",
+      "entryCount": 148
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/visual/rhaiSyntaxLexer.ts#decodeRhaiString",
+      "source": "src/visual/rhaiSyntaxLexer.ts",
+      "line": 27,
+      "kind": "exported function",
+      "sourceSha256": "78f338e82918ea20d869f89879d059644212025c9d8f7383d143d9bee1848b34",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-language-editor/1/language.mjs",
+      "generatedSha256": "9fb7d0864b74c0ad34f8dc7226e35e105409d353fcbbd98d0c07fe1bd892598b",
+      "mapSha256": "a078f4b7c640b901343da5c396cfcf0a03301bb5ece75f008f6013a5224426f0",
+      "entryCount": 91
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/visual/rhaiSyntaxLexer.ts#lexRhai",
+      "source": "src/visual/rhaiSyntaxLexer.ts",
+      "line": 58,
+      "kind": "exported function",
+      "sourceSha256": "78f338e82918ea20d869f89879d059644212025c9d8f7383d143d9bee1848b34",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-language-editor/1/language.mjs",
+      "generatedSha256": "9fb7d0864b74c0ad34f8dc7226e35e105409d353fcbbd98d0c07fe1bd892598b",
+      "mapSha256": "a078f4b7c640b901343da5c396cfcf0a03301bb5ece75f008f6013a5224426f0",
+      "entryCount": 148
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/visual/rhaiSyntax.ts#parseRhai",
+      "source": "src/visual/rhaiSyntax.ts",
+      "line": 279,
+      "kind": "exported function",
+      "sourceSha256": "25f8ff10d119f9b1b58d250f531b9a0b89d2b03b9b13cf583ca6f415ff871b77",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-language-editor/1/language.mjs",
+      "generatedSha256": "9fb7d0864b74c0ad34f8dc7226e35e105409d353fcbbd98d0c07fe1bd892598b",
+      "mapSha256": "a078f4b7c640b901343da5c396cfcf0a03301bb5ece75f008f6013a5224426f0",
+      "entryCount": 145
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/visual/rhaiSyntax.ts#walkRhai",
+      "source": "src/visual/rhaiSyntax.ts",
+      "line": 282,
+      "kind": "exported function",
+      "sourceSha256": "25f8ff10d119f9b1b58d250f531b9a0b89d2b03b9b13cf583ca6f415ff871b77",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-language-editor/1/language.mjs",
+      "generatedSha256": "9fb7d0864b74c0ad34f8dc7226e35e105409d353fcbbd98d0c07fe1bd892598b",
+      "mapSha256": "a078f4b7c640b901343da5c396cfcf0a03301bb5ece75f008f6013a5224426f0",
+      "entryCount": 297
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/visual/rhaiSyntax.ts#emitRhai",
+      "source": "src/visual/rhaiSyntax.ts",
+      "line": 445,
+      "kind": "exported function",
+      "sourceSha256": "25f8ff10d119f9b1b58d250f531b9a0b89d2b03b9b13cf583ca6f415ff871b77",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-language-editor/1/language.mjs",
+      "generatedSha256": "9fb7d0864b74c0ad34f8dc7226e35e105409d353fcbbd98d0c07fe1bd892598b",
+      "mapSha256": "a078f4b7c640b901343da5c396cfcf0a03301bb5ece75f008f6013a5224426f0",
+      "entryCount": 41
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/visual/rhaiRename.ts#renameRhaiBinding",
+      "source": "src/visual/rhaiRename.ts",
+      "line": 12,
+      "kind": "exported function",
+      "sourceSha256": "8f34155dbfedc218d0da8ffd44ff99e4dc7bb7b7a449d7a1461030046dc58dde",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-language-editor/1/language.mjs",
+      "generatedSha256": "9fb7d0864b74c0ad34f8dc7226e35e105409d353fcbbd98d0c07fe1bd892598b",
+      "mapSha256": "a078f4b7c640b901343da5c396cfcf0a03301bb5ece75f008f6013a5224426f0",
+      "entryCount": 15
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/editor/scriptLanguageSyntax.ts#analyzeScriptSyntax",
+      "source": "src/editor/scriptLanguageSyntax.ts",
+      "line": 25,
+      "kind": "exported function",
+      "sourceSha256": "5e983f00239637a8950156ac554e5d4330369184bae60683d592f2a4ff3867d9",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-language-editor/1/language.mjs",
+      "generatedSha256": "9fb7d0864b74c0ad34f8dc7226e35e105409d353fcbbd98d0c07fe1bd892598b",
+      "mapSha256": "a078f4b7c640b901343da5c396cfcf0a03301bb5ece75f008f6013a5224426f0",
+      "entryCount": 46
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/editor/scriptLanguageSyntax.ts#formatSyntaxWhitespace",
+      "source": "src/editor/scriptLanguageSyntax.ts",
+      "line": 101,
+      "kind": "exported function",
+      "sourceSha256": "5e983f00239637a8950156ac554e5d4330369184bae60683d592f2a4ff3867d9",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-language-editor/1/language.mjs",
+      "generatedSha256": "9fb7d0864b74c0ad34f8dc7226e35e105409d353fcbbd98d0c07fe1bd892598b",
+      "mapSha256": "a078f4b7c640b901343da5c396cfcf0a03301bb5ece75f008f6013a5224426f0",
+      "entryCount": 38
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/editor/scriptLanguage.ts#analyzeScript",
+      "source": "src/editor/scriptLanguage.ts",
+      "line": 56,
+      "kind": "exported function",
+      "sourceSha256": "8c2f63584f20fa9f86303b6bc0eac274571e93c52def01856de28615dc644c54",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-language-editor/1/language.mjs",
+      "generatedSha256": "9fb7d0864b74c0ad34f8dc7226e35e105409d353fcbbd98d0c07fe1bd892598b",
+      "mapSha256": "a078f4b7c640b901343da5c396cfcf0a03301bb5ece75f008f6013a5224426f0",
+      "entryCount": 46
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/editor/scriptLanguage.ts#completionDetails",
+      "source": "src/editor/scriptLanguage.ts",
+      "line": 69,
+      "kind": "exported function",
+      "sourceSha256": "8c2f63584f20fa9f86303b6bc0eac274571e93c52def01856de28615dc644c54",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-language-editor/1/language.mjs",
+      "generatedSha256": "9fb7d0864b74c0ad34f8dc7226e35e105409d353fcbbd98d0c07fe1bd892598b",
+      "mapSha256": "a078f4b7c640b901343da5c396cfcf0a03301bb5ece75f008f6013a5224426f0",
+      "entryCount": 6
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/editor/scriptLanguage.ts#parameterHint",
+      "source": "src/editor/scriptLanguage.ts",
+      "line": 76,
+      "kind": "exported function",
+      "sourceSha256": "8c2f63584f20fa9f86303b6bc0eac274571e93c52def01856de28615dc644c54",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-language-editor/1/language.mjs",
+      "generatedSha256": "9fb7d0864b74c0ad34f8dc7226e35e105409d353fcbbd98d0c07fe1bd892598b",
+      "mapSha256": "a078f4b7c640b901343da5c396cfcf0a03301bb5ece75f008f6013a5224426f0",
+      "entryCount": 9
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/editor/scriptLanguage.ts#hoverInfo",
+      "source": "src/editor/scriptLanguage.ts",
+      "line": 80,
+      "kind": "exported function",
+      "sourceSha256": "8c2f63584f20fa9f86303b6bc0eac274571e93c52def01856de28615dc644c54",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-language-editor/1/language.mjs",
+      "generatedSha256": "9fb7d0864b74c0ad34f8dc7226e35e105409d353fcbbd98d0c07fe1bd892598b",
+      "mapSha256": "a078f4b7c640b901343da5c396cfcf0a03301bb5ece75f008f6013a5224426f0",
+      "entryCount": 4
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/editor/scriptLanguage.ts#renameScriptSymbol",
+      "source": "src/editor/scriptLanguage.ts",
+      "line": 87,
+      "kind": "exported function",
+      "sourceSha256": "8c2f63584f20fa9f86303b6bc0eac274571e93c52def01856de28615dc644c54",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-language-editor/1/language.mjs",
+      "generatedSha256": "9fb7d0864b74c0ad34f8dc7226e35e105409d353fcbbd98d0c07fe1bd892598b",
+      "mapSha256": "a078f4b7c640b901343da5c396cfcf0a03301bb5ece75f008f6013a5224426f0",
+      "entryCount": 15
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/editor/scriptLanguage.ts#formatScript",
+      "source": "src/editor/scriptLanguage.ts",
+      "line": 90,
+      "kind": "exported function",
+      "sourceSha256": "8c2f63584f20fa9f86303b6bc0eac274571e93c52def01856de28615dc644c54",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-language-editor/1/language.mjs",
+      "generatedSha256": "9fb7d0864b74c0ad34f8dc7226e35e105409d353fcbbd98d0c07fe1bd892598b",
+      "mapSha256": "a078f4b7c640b901343da5c396cfcf0a03301bb5ece75f008f6013a5224426f0",
+      "entryCount": 38
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/editor/scriptLanguage.ts#ScriptWorkspaceIndex.update",
+      "source": "src/editor/scriptLanguage.ts",
+      "line": 106,
+      "kind": "public class operation",
+      "sourceSha256": "8c2f63584f20fa9f86303b6bc0eac274571e93c52def01856de28615dc644c54",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-language-editor/1/language.mjs",
+      "generatedSha256": "9fb7d0864b74c0ad34f8dc7226e35e105409d353fcbbd98d0c07fe1bd892598b",
+      "mapSha256": "a078f4b7c640b901343da5c396cfcf0a03301bb5ece75f008f6013a5224426f0",
+      "entryCount": 4
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/editor/scriptLanguage.ts#ScriptWorkspaceIndex.document",
+      "source": "src/editor/scriptLanguage.ts",
+      "line": 112,
+      "kind": "public class operation",
+      "sourceSha256": "8c2f63584f20fa9f86303b6bc0eac274571e93c52def01856de28615dc644c54",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-language-editor/1/language.mjs",
+      "generatedSha256": "9fb7d0864b74c0ad34f8dc7226e35e105409d353fcbbd98d0c07fe1bd892598b",
+      "mapSha256": "a078f4b7c640b901343da5c396cfcf0a03301bb5ece75f008f6013a5224426f0",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/editor/scriptLanguage.ts#ScriptWorkspaceIndex.rename",
+      "source": "src/editor/scriptLanguage.ts",
+      "line": 117,
+      "kind": "public class operation",
+      "sourceSha256": "8c2f63584f20fa9f86303b6bc0eac274571e93c52def01856de28615dc644c54",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-language-editor/1/language.mjs",
+      "generatedSha256": "9fb7d0864b74c0ad34f8dc7226e35e105409d353fcbbd98d0c07fe1bd892598b",
+      "mapSha256": "a078f4b7c640b901343da5c396cfcf0a03301bb5ece75f008f6013a5224426f0",
+      "entryCount": 3
+    }
+  ],
+  "tracingScope": "Positive V8 function entries during the complete passing programmer suite, including fixture setup. Not per-assertion isolation, exhaustive domain coverage or performance qualification.",
+  "nodeOperationCoverageCase": "retained-26-12-language-editor complete suite including fixture setup",
+  "nodeOperationCoverageAssertion": {
+    "name": "retained-26-12-language-editor complete suite including fixture setup",
+    "status": "passed"
+  }
+}

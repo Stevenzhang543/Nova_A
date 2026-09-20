@@ -1,0 +1,39 @@
+{
+  "format": "nova-v26.22-lsp-audit",
+  "version": 1,
+  "release": "26.22",
+  "regressionOrigin": "26.21",
+  "engineVersion": "26.21.0",
+  "buildEngineVersion": "26.21.0",
+  "generatedAt": "2026-09-13T01:51:56.772Z",
+  "development": true,
+  "expectedRelease": "26.21",
+  "qualificationTarget": "26.22",
+  "qualifiedRelease": null,
+  "baselineVersion": "26.21.0",
+  "overlayVersion": "26.22.0",
+  "sourceRoots": [
+    "."
+  ],
+  "buildRoot": ".",
+  "status": "passed",
+  "checks": [
+    {
+      "name": "stdio-stale-change-does-not-overwrite-newer-document",
+      "status": "passed",
+      "symbols": [
+        "newest"
+      ]
+    },
+    {
+      "name": "bounded-header-error-and-subsequent-frame-recovery",
+      "status": "passed"
+    },
+    {
+      "name": "close-removes-document-and-ordered-shutdown-exits",
+      "status": "passed"
+    }
+  ],
+  "stderr": "",
+  "scope": "Actual local language-server child process over Content-Length stdio, no external editor GUI claim."
+}

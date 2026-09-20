@@ -1,7 +1,7 @@
 {
   "name": "nova_a",
   "private": true,
-  "version": "26.21.0",
+  "version": "26.23.0",
   "homepage": "https://github.com/Stevenzhang543/Nova_A/",
   "repository": {
     "type": "git",
@@ -547,6 +547,7 @@
     "@tauri-apps/cli": "2.11.4",
     "@types/node": "22.20.1",
     "@vitejs/plugin-vue": "^5.2.1",
+    "source-map-js": "1.2.1",
     "typescript": "~5.6.2",
     "vite": "^6.4.3",
     "vue-tsc": "^2.1.10"

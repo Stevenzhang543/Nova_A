@@ -10,7 +10,7 @@
         <button :aria-pressed="scriptStudioState.layout.codeFocused" :aria-label="scriptStudioState.layout.codeFocused?layoutLabels.restorePanels:layoutLabels.focusCode" :title="scriptStudioState.layout.codeFocused?layoutLabels.restorePanels:layoutLabels.focusCode" @click="scriptStudioState.layout.codeFocused=!scriptStudioState.layout.codeFocused">⛶</button>
         <button :aria-expanded="paneLayout.primaryVisible" @click="toggleExplorer">{{ paneLayout.primaryVisible?t('hideExplorer'):t('showExplorer') }}</button>
         <button :aria-expanded="detailVisible" @click="toggleDetails">{{ layoutLabels.scriptDetails }}</button>
-        <details class="studio-more"><summary>{{ layoutLabels.commands }}</summary><div class="studio-commands">
+        <details class="studio-more" v-transient-popover><summary>{{ layoutLabels.commands }}</summary><div class="studio-commands">
         <button :disabled="!selectedIdentifier" @click="goToDefinition">F12 {{ t('goToDefinition') }}</button>
         <button :disabled="!activeAsset" @click="formatActive">{{ t('formatCode') }}</button>
         <button :disabled="!selectedIdentifier" @click="showReferences">{{ t('references') }}</button>
@@ -83,7 +83,7 @@
       </main>
 
       <aside v-show="detailVisible" class="studio-inspector" :style="inspectorStyle">
-        <PanelResizeHandle v-if="!paneLayout.drawer" v-model="scriptStudioState.layout.detailWidth" v-show="!detailBottom" orientation="vertical" :minimum="224" :maximum="Math.max(224,Math.min(560,studioSize.width-440))" :reset-value="328" reverse :label="layoutLabels.resizeInspector" style="left:0;top:0;bottom:0" />
+        <PanelResizeHandle v-if="!paneLayout.drawer" v-model="scriptStudioState.layout.detailWidth" v-show="!detailBottom" orientation="vertical" :minimum="320" :maximum="Math.max(320,Math.min(560,studioSize.width-440))" :reset-value="400" reverse :label="layoutLabels.resizeInspector" style="left:0;top:0;bottom:0" />
         <PanelResizeHandle v-if="!paneLayout.drawer" v-model="scriptStudioState.layout.detailHeight" v-show="detailBottom" orientation="horizontal" :minimum="140" :maximum="Math.max(140,studioSize.height-220)" :reset-value="220" reverse :label="layoutLabels.resizeInspector" style="left:0;top:0;right:0" />
         <button class="close-inspector" :aria-label="t('close')" @click="scriptStudioState.layout.detailVisible=false">×</button>
         <nav class="inspector-tabs">
@@ -128,6 +128,7 @@
           <label><span>{{ t('scriptPackage') }}</span><input :value="activeAsset?.script?.packageName" maxlength="128" @change="setPackageName(($event.target as HTMLInputElement).value)"></label>
           <label><span>{{ t('hotReloadPolicy') }}</span><select :value="activeAsset?.script?.reloadPolicy" @change="setReloadPolicy(($event.target as HTMLSelectElement).value)"><option value="preserve">{{ t('preserveState') }}</option><option value="recreate">{{ t('recreateState') }}</option><option value="disabled">{{ t('disabled') }}</option></select></label>
           <p :class="['hot-reload-state', debug.hotReload.status]">{{ debug.hotReload.message || t('hotReloadWaiting') }}</p>
+          <section class="reload-state" :data-status="debug.hotReload.status" aria-live="polite"><strong>{{ runtimeCopy[debug.hotReload.status] }}</strong><small v-if="reloadSourcePath">{{ runtimeCopy.path }}: {{ reloadSourcePath }}</small><p v-if="debug.hotReload.message">{{ debug.hotReload.message }}</p></section>
           <button :disabled="!activeAsset || !canRollbackReload" @click="rollbackReload">↶ {{ t('rollbackHotReload') }}</button>
           <details v-if="reloadHistory.length"><summary>{{ t('reloadHistory') }} · {{ reloadHistory.length }}</summary><article v-for="entry in reloadHistory.slice(0,12)" :key="entry.id" class="reload-entry"><strong>{{ entry.status }} · {{ entry.classification }}</strong><small>{{ entry.candidateHash }} · {{ entry.message }}</small></article></details>
           <code v-for="dependency in analysis.dependencies" :key="dependency">{{ dependency }}</code>
@@ -162,9 +163,9 @@
           <h3>{{ t('exceptionPolicy') }}</h3><select v-model="scriptProjectSettings.exceptionPolicy"><option value="never">{{ t('never') }}</option><option value="uncaught">{{ t('uncaught') }}</option><option value="all">{{ t('allExceptions') }}</option></select>
           <h3>{{ t('tasks') }}</h3><label v-for="task in debug.tasks" :key="task.id"><span><b>{{ task.name }}</b><small>{{ task.state }} · {{ task.detail }}</small></span><button v-if="['queued','running','waiting'].includes(task.state)" :title="t('cancelTask')" @click="runtime.cancelDebugTask(task.id)">×</button></label><p v-if="!debug.tasks.length" class="empty-pane">{{ t('noDebugTasks') }}</p>
           <h3>{{ t('remoteDebugging') }}</h3><p>{{ scriptProjectSettings.remoteDebug.enabled ? `${scriptProjectSettings.remoteDebug.host}:${scriptProjectSettings.remoteDebug.port} · ${debug.remotePeer?.authenticated ? t('authenticated') : t('waitingForAuthenticatedPlayer')}` : t('remoteDebugDisabled') }}</p>
-          <h3>{{ t('locals') }}</h3><pre>{{ formattedLocals }}</pre>
-          <h3>{{ t('watches') }}</h3><div class="dependency-editor"><input v-model="watchDraft" :placeholder="t('watchExpression')" @keydown.enter="addWatch"><button @click="addWatch">＋</button></div>
-          <label v-for="watch in debug.watches" :key="watch.id"><span><b>{{ watch.expression }}</b><small :class="{ error: watch.error }">{{ watch.error || watch.value }}</small></span><button @click="removeDebugWatch(watch.id)">×</button></label>
+          <h3>{{ t('locals') }}</h3><p class="pane-help">{{ runtimeCopy.snapshot }}</p><pre>{{ formattedLocals }}</pre>
+          <h3>{{ t('watches') }}</h3><p class="pane-help">{{ runtimeCopy.hint }}</p><div class="dependency-editor"><input v-model="watchDraft" :placeholder="t('watchExpression')" @keydown.enter="addWatch"><button @click="addWatch">＋</button></div>
+          <label v-for="watch in debug.watches" :key="watch.id"><span><b>{{ watch.expression }}</b><small :class="{ error: watch.error }">{{ watch.error || `${watch.valueType ?? ''} · ${watch.value}` }}</small></span><button @click="removeDebugWatch(watch.id)">×</button></label>
         </div>
 
         <div v-else-if="inspectorTab === 'tests'" class="inspector-pane">
@@ -219,6 +220,8 @@ import { closeScriptAsset, openScriptAsset, scriptStudioState, toggleScriptDetai
 import { findScriptReferences, formatScript, renameScriptSymbol, scriptCodeActions, type ScriptCodeAction } from '../editor/scriptLanguage'
 import { openBundledManual } from '../runtime/openManual'
 import { SCRIPT_TEMPLATES, scriptTemplate, type ScriptTemplateId } from '../editor/scriptTemplates'
+import { vTransientPopover } from '../editor/transientPopover'
+import { snapshotPreview } from '../runtime/dynamicInspection'
 import { hotReloadHistory, scriptHotReloadState } from '../runtime/scriptHotReload'
 import { scriptCoverageReport, scriptCoverageState } from '../runtime/scriptCoverage'
 import { markScriptIndexApiChanged, rebuildAndPersistScriptIndex, restoreScriptIndex, scriptIndexState } from '../editor/scriptIndexPersistence'
@@ -245,7 +248,7 @@ const studioGrid=ref<HTMLElement|null>(null),studioSize=reactive({width:1200,hei
 let studioResizeObserver:ResizeObserver|null=null
 const layoutLabels=computed(()=>studioLayoutCopy[preferencesState.locale])
 const detailBottom=computed(()=>scriptStudioState.layout.detailDock==='bottom'&&studioSize.width>=640&&studioSize.height>=360)
-const paneLayout=computed(()=>studioPaneLayout({width:studioSize.width,primaryOpen:scriptStudioState.layout.explorerVisible,secondaryOpen:scriptStudioState.layout.detailVisible&&!detailBottom.value,primaryWidth:scriptStudioState.layout.explorerWidth,secondaryWidth:scriptStudioState.layout.detailWidth,activePanel:scriptStudioState.layout.activePanel==='explorer'?'primary':'secondary',focused:scriptStudioState.layout.codeFocused}))
+const paneLayout=computed(()=>studioPaneLayout({width:studioSize.width,primaryOpen:scriptStudioState.layout.explorerVisible,secondaryOpen:scriptStudioState.layout.detailVisible&&!detailBottom.value,primaryWidth:scriptStudioState.layout.explorerWidth,secondaryWidth:Math.max(320,scriptStudioState.layout.detailWidth),activePanel:scriptStudioState.layout.activePanel==='explorer'?'primary':'secondary',focused:scriptStudioState.layout.codeFocused}))
 const detailVisible=computed(()=>detailBottom.value?scriptStudioState.layout.detailVisible&&!scriptStudioState.layout.codeFocused:paneLayout.value.secondaryVisible)
 const detailHeight=computed(()=>Math.max(140,Math.min(scriptStudioState.layout.detailHeight,studioSize.height-220)))
 const gridStyle=computed(()=>({gridTemplateColumns:paneLayout.value.columns,gridTemplateRows:detailBottom.value&&detailVisible.value?`minmax(0,1fr) ${detailHeight.value}px`:'minmax(0,1fr)'}))
@@ -317,11 +320,17 @@ const wordBeforeCursor = computed(() => { const pos = editor.value?.selectionSta
 const selectedIdentifier = computed(() => { void cursor.line;void cursor.column;const el = editor.value; if (!el) return ''; const start=sourceOffsetFromTextarea(draft.value,el.selectionStart),end=sourceOffsetFromTextarea(draft.value,el.selectionEnd),selected = draft.value.slice(start,end); if (/^[A-Za-z_][A-Za-z0-9_]*$/.test(selected)) return selected; const before = draft.value.slice(0,start).match(/[A-Za-z_][A-Za-z0-9_]*$/)?.[0] ?? ''; const after = draft.value.slice(start).match(/^[A-Za-z0-9_]*/)?.[0] ?? ''; return `${before}${after}` })
 const contextApi = computed(() => apiEntry(selectedIdentifier.value || wordBeforeCursor.value))
 const findCount = computed(() => findText.value ? (draft.value.match(new RegExp(escapeRegex(findText.value), 'gi')) ?? []).length : 0)
-const formattedLocals = computed(() => JSON.stringify(debug.locals, null, 2).slice(0, 12000))
+const runtimeCopy = computed(() => ({
+  en: { snapshot: 'Authorized host snapshot. Values are bounded previews; unavailable VM locals are not inferred.', rejected: 'Request rejected. No running program was replaced.', pending: 'Reload queued. Running code stays unchanged until the transaction validates.', applied: 'Reload transaction applied.', disabled: 'Hot reload is disabled.', idle: 'No reload request.', path: 'Reload source', hint: 'Inspect a property, items[0], or bag["item name"]. Calls and accessors are not evaluated.' },
+  de: { snapshot: 'Freigegebener Host-Zustand. Werte werden begrenzt angezeigt; nicht verfügbare VM-Variablen werden nicht ergänzt.', rejected: 'Anfrage abgelehnt. Kein laufendes Programm wurde ersetzt.', pending: 'Neuladen vorgemerkt. Laufender Code bleibt bis zur erfolgreichen Prüfung unverändert.', applied: 'Neuladen als Transaktion angewendet.', disabled: 'Neuladen im Betrieb ist deaktiviert.', idle: 'Keine Anfrage zum Neuladen.', path: 'Quelle zum Neuladen', hint: 'Eigenschaft, items[0] oder bag["item name"] prüfen. Aufrufe und Getter werden nicht ausgeführt.' },
+  zh: { snapshot: '已授权的宿主状态快照。值使用有界预览；不会推测不可用的虚拟机局部变量。', rejected: '请求已拒绝，未替换任何正在运行的程序。', pending: '重载已排队；事务通过验证前，运行代码保持不变。', applied: '重载事务已应用。', disabled: '热重载已禁用。', idle: '暂无重载请求。', path: '重载源文件', hint: '可检查属性、items[0] 或 bag["item name"]。不会执行函数调用或访问器。' }
+}[preferencesState.locale]))
+const reloadSourcePath = computed(() => assetState.records.find(asset => asset.uuid === debug.hotReload.scriptUuid)?.path ?? debug.hotReload.scriptUuid)
+const formattedLocals = computed(() => snapshotPreview(debug.locals))
 const filteredApi = computed(() => { const q = apiQuery.value.toLowerCase(); return q ? SCRIPT_API.filter(entry => `${entry.name} ${entry.category} ${entry.detail}`.toLowerCase().includes(q)) : SCRIPT_API })
 const deprecatedCount = computed(() => analysis.value.diagnostics.filter(item => item.code === 'NOVA-COMPAT-001').length)
 const reloadHistory = computed(() => hotReloadHistory(activeAsset.value?.uuid))
-const canRollbackReload = computed(() => Boolean(activeAsset.value && scriptHotReloadState.rollbackSources[activeAsset.value.uuid]))
+const canRollbackReload = computed(() => Boolean(activeAsset.value && Object.prototype.hasOwnProperty.call(scriptHotReloadState.rollbackSources, activeAsset.value.uuid)))
 const coverage = computed(() => { void scriptCoverageState.revision; return scriptCoverageReport() })
 const projectModuleDiagnostics = computed(() => analyzeModuleGraph(scripts.value.map(asset => ({ uri: asset.path, dependencies: analyzeScript(drafts[asset.uuid] ?? readTextAsset(asset.uuid) ?? '').dependencies }))))
 
@@ -380,7 +389,7 @@ function toggleBreakpoint(line: number) { const asset = activeAsset.value; if (!
 async function saveActive(): Promise<boolean> {
   const asset=activeAsset.value;if(!asset)return false
   if(sourceDraftConflict.value){validationError.value=layoutLabels.value.resolveDraftConflict;return false}
-  const result=runtime.validateModuleSource(asset.uuid,draft.value);validationError.value=result.error??''
+  const result=runtime.validateModuleSource(asset.uuid,draft.value);validationError.value=result.error?runtimeCopy.value.rejected+' '+result.error:''
   if(result.error){addEditorLog(result.error,'Script','error',asset.uuid);inspectorTab.value='problems';return false}
   const previousScript=readTextAsset(asset.uuid)??'',previousGraphs=new Map(assetState.records.filter(item=>item.assetType==='visualScript').map(item=>[item.uuid,readTextAsset(item.uuid)??''])),previousMetadata=asset.script?JSON.parse(JSON.stringify(asset.script)) as typeof asset.script:undefined
   asset.script??=defaultScriptMetadata();const remapped=remapStatementLines(analyzeScript(previousScript).statements,analysis.value.statements,asset.script.breakpoints);const lineMap=new Map(remapped.map(item=>[item.from,item.to]));asset.script.breakpoints=remapped.map(item=>item.to).sort((a,b)=>a-b);asset.script.breakpointDetails=asset.script.breakpointDetails.map(point=>({...point,line:lineMap.get(point.line)??point.line}));asset.script.tests=analysis.value.tests.map(test=>test.name);asset.script.recoverySource='';asset.script.lastSavedHash=sourceHash(draft.value)
@@ -472,11 +481,16 @@ function sourceHash(value: string) { let hash = 2166136261; for (const character
 .studio-more:not([open]) .studio-commands{display:none}.studio-commands button{height:auto;min-height:36px;min-width:0;white-space:normal;overflow-wrap:anywhere}.studio-commands>.split-action,.studio-commands>.compact-setting{grid-column:1/-1}.studio-commands .split-action>*{min-width:0;max-width:none;flex:1}.toolbar-spacer{display:none}.compact-setting{display:flex;align-items:center;gap:7px;font-size:var(--type-dense)}
 .studio-grid{position:relative;min-width:0;min-height:0;overflow:hidden;isolation:isolate}.project-scripts,.studio-inspector{position:relative;z-index:2;box-sizing:border-box;max-width:100%}.project-scripts{display:flex;padding-right:12px}.project-scripts .pane-heading button{min-width:28px;min-height:28px;border:0;background:var(--surface-2)}
 .project-scripts>input,.project-scripts>.pane-heading{flex-shrink:0}.script-list{max-height:none;min-height:0;flex:1;align-content:start;grid-auto-rows:max-content}.search-results{max-height:45%;min-height:0;flex:1}.script-list strong,.script-list small,.search-results strong,.search-results small{white-space:normal;overflow-wrap:anywhere}
-.studio-inspector{padding-left:5px;overflow:hidden}.studio-grid.detail-bottom .studio-inspector{padding:6px 0 0}.inspector-tabs{flex:0 0 auto;padding-right:28px;grid-template-columns:repeat(auto-fit,minmax(86px,1fr))}.inspector-tabs button{height:auto;min-height:34px;white-space:normal;overflow-wrap:anywhere;line-height:1.4;padding:5px 6px}.inspector-pane{flex:1;min-height:0;overflow:auto}.inspector-pane>*{flex-shrink:0}.close-inspector{position:absolute;z-index:3;top:3px;right:3px;min-width:26px;min-height:26px;padding:2px;border:0;background:var(--surface-2)}
+.studio-inspector{padding-left:5px;overflow:hidden}.studio-grid.detail-bottom .studio-inspector{padding:6px 0 0}.inspector-tabs{flex:0 0 auto;padding-right:28px;grid-template-columns:repeat(auto-fit,minmax(136px,1fr))}.inspector-tabs button{height:auto;min-height:34px;white-space:normal;overflow-wrap:anywhere;line-height:1.4;padding:5px 6px}.inspector-pane{flex:1;min-height:0;overflow:auto}.inspector-pane>*{flex-shrink:0}.close-inspector{position:absolute;z-index:3;top:3px;right:3px;min-width:26px;min-height:26px;padding:2px;border:0;background:var(--surface-2)}
 .code-workspace{min-height:0}.file-tabs{flex:0 0 auto;min-height:34px;max-height:72px}.file-tab{display:flex;flex:0 0 auto;max-width:260px}.file-tab>button:first-child{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.file-tab .close-file{flex:0 0 28px;padding:3px;border-right:1px solid var(--border-subtle)}.file-tab.active{background:var(--bg-canvas)}
 .find-bar{flex:0 0 auto;min-width:0;flex-wrap:wrap}.find-bar input{flex:1 1 120px;width:120px}.find-bar button{flex-shrink:0;min-height:30px;white-space:normal}
 .editor-shell{flex:1;min-height:0}.editor-shell textarea{min-height:0}.editor-status{flex:0 0 auto;max-height:78px;overflow:auto;gap:4px 12px;padding:5px 8px}.editor-status span{display:inline;white-space:normal;overflow-wrap:anywhere}.editor-status .linked-graph-status{white-space:normal}
 .drawer-layout .project-scripts,.drawer-layout .studio-inspector{position:absolute;z-index:10;top:0;bottom:0;box-shadow:var(--shadow-lg)}.drawer-layout .project-scripts{left:0}.drawer-layout .studio-inspector{right:0}.drawer-layout .code-workspace{grid-column:1;grid-row:1}
 @container source-studio (max-width:1000px){.compact-toolbar .studio-title{display:none}.studio-toolbar{padding:5px}.toolbar-actions{flex-basis:100%}.toolbar-actions>button{font-size:var(--type-caption)}}
 @container source-studio (max-width:640px){.toolbar-actions>select{max-width:110px}.studio-commands{grid-template-columns:1fr}.editor-shell{grid-template-columns:42px minmax(0,1fr)}.editor-shell textarea{padding-inline:9px}.editor-status{max-height:60px;font-size:var(--type-caption)}}
+.inspector-pane pre,.reload-entry small,.inspector-pane code { max-width:100%; white-space:pre-wrap; overflow-wrap:anywhere; }
+.inspector-pane label>span { min-width:0; overflow-wrap:anywhere; }
+.reload-state { padding:10px; display:grid; gap:6px; border:1px solid var(--border-subtle); border-radius:8px; background:var(--surface-2); overflow-wrap:anywhere; }
+.reload-state[data-status="rejected"] { border-color:var(--warning); }
+.reload-state p { margin:0; white-space:pre-wrap; }
 </style>

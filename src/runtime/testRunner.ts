@@ -1,5 +1,5 @@
 import { reactive } from 'vue'
-import { getSceneJSON, loadProject, physicsState, resetSimulation, sceneManager, setActiveScene, toggleSimulation } from '../store/physics'
+import { getSceneJSON, settlePendingDocumentEdits, loadProject, physicsState, resetSimulation, sceneManager, setActiveScene, toggleSimulation } from '../store/physics'
 import { gameplayRuntime } from './GameplayRuntime'
 import { productionSettings, type ProjectTestAssertion, type ProjectTestDefinition } from './production'
 import { resetScriptCoverage, scriptCoverageReport, type ScriptCoverageReport } from './scriptCoverage'
@@ -58,7 +58,7 @@ async function runOne(test: ProjectTestDefinition, signal?: AbortSignal, attempt
     if (test.kind !== 'unit') {
       await physicsState.world.wasmReady
       if (physicsState.world.wasmError) throw physicsState.world.wasmError
-      toggleSimulation(true); gameplayRuntime.beginSession()
+      toggleSimulation(true); if (!physicsState.simulationRunning) throw new Error('Pending edits blocked test playback.'); gameplayRuntime.beginSession()
       for (let step = 0; step < test.steps; step++) {
         if (signal?.aborted) return { id: test.id, name: test.name, kind: test.kind, status: 'cancelled', durationMs: performance.now() - started, assertions, screenshot: null, error: 'Cancelled', seed: test.seed, attempts: attempt, tags: [...test.tags], fixture: test.fixture }
         if (performance.now() - started > test.timeoutMs) return { id: test.id, name: test.name, kind: test.kind, status: 'timeout', durationMs: performance.now() - started, assertions, screenshot: null, error: `Timed out after ${test.timeoutMs} ms`, seed: test.seed, attempts: attempt, tags: [...test.tags], fixture: test.fixture }
@@ -78,6 +78,7 @@ function shardHash(value: string): number { let hash = 2166136261; for (const ch
 
 export async function runProjectTests(testId?: string, options: ProjectTestRunOptions = {}): Promise<ProjectTestReport> {
   if (testRunnerState.running) throw new Error('A project test run is already active')
+  if (!settlePendingDocumentEdits()) throw new Error('Finish or cancel invalid edits before running project tests.')
   const shardCount = Math.min(256, Math.max(1, Math.round(options.shardCount ?? 1))), shardIndex = Math.min(shardCount - 1, Math.max(0, Math.round(options.shardIndex ?? 0)))
   const tags = [...new Set(options.tags?.map(tag => tag.trim()).filter(Boolean) ?? [])], changed = [...new Set(options.changed?.map(id => id.trim()).filter(Boolean) ?? [])]
   const selected = productionSettings.testing.tests.filter(test => (!testId || test.id === testId) && (!tags.length || tags.every(tag => test.tags.includes(tag))) && (!changed.length || changed.includes(test.id)) && shardHash(test.id) % shardCount === shardIndex)

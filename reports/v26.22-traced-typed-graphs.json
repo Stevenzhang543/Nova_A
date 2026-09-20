@@ -1,0 +1,1213 @@
+{
+  "format": "nova-typed-graph-audit",
+  "version": 1,
+  "release": "26.12",
+  "engineVersion": "26.22.0",
+  "generatedAt": "2026-09-14T17:50:14.099Z",
+  "runtime": "actual WasmScriptRuntime",
+  "fixtures": 34,
+  "overloads": 658,
+  "checks": [
+    {
+      "name": "arrays, maps and compound writes: exact source and serialized identity",
+      "status": "passed"
+    },
+    {
+      "name": "arrays, maps and compound writes: every node regenerated structurally and executed in actual WASM",
+      "status": "passed"
+    },
+    {
+      "name": "captured closure: exact source and serialized identity",
+      "status": "passed"
+    },
+    {
+      "name": "captured closure: every node regenerated structurally and executed in actual WASM",
+      "status": "passed"
+    },
+    {
+      "name": "direct closure and zero parameter closure: exact source and serialized identity",
+      "status": "passed"
+    },
+    {
+      "name": "direct closure and zero parameter closure: every node regenerated structurally and executed in actual WASM",
+      "status": "passed"
+    },
+    {
+      "name": "Fn pointer and implicit return: exact source and serialized identity",
+      "status": "passed"
+    },
+    {
+      "name": "Fn pointer and implicit return: every node regenerated structurally and executed in actual WASM",
+      "status": "passed"
+    },
+    {
+      "name": "switch value, patterns and guard: exact source and serialized identity",
+      "status": "passed"
+    },
+    {
+      "name": "switch value, patterns and guard: every node regenerated structurally and executed in actual WASM",
+      "status": "passed"
+    },
+    {
+      "name": "do until: exact source and serialized identity",
+      "status": "passed"
+    },
+    {
+      "name": "do until: every node regenerated structurally and executed in actual WASM",
+      "status": "passed"
+    },
+    {
+      "name": "do while: exact source and serialized identity",
+      "status": "passed"
+    },
+    {
+      "name": "do while: every node regenerated structurally and executed in actual WASM",
+      "status": "passed"
+    },
+    {
+      "name": "try catch variable: exact source and serialized identity",
+      "status": "passed"
+    },
+    {
+      "name": "try catch variable: every node regenerated structurally and executed in actual WASM",
+      "status": "passed"
+    },
+    {
+      "name": "try catch without variable: exact source and serialized identity",
+      "status": "passed"
+    },
+    {
+      "name": "try catch without variable: every node regenerated structurally and executed in actual WASM",
+      "status": "passed"
+    },
+    {
+      "name": "interpolated expressions: exact source and serialized identity",
+      "status": "passed"
+    },
+    {
+      "name": "interpolated expressions: every node regenerated structurally and executed in actual WASM",
+      "status": "passed"
+    },
+    {
+      "name": "interpolated statement blocks and nested interpolation: exact source and serialized identity",
+      "status": "passed"
+    },
+    {
+      "name": "interpolated statement blocks and nested interpolation: every node regenerated structurally and executed in actual WASM",
+      "status": "passed"
+    },
+    {
+      "name": "for counter tuple and continue: exact source and serialized identity",
+      "status": "passed"
+    },
+    {
+      "name": "for counter tuple and continue: every node regenerated structurally and executed in actual WASM",
+      "status": "passed"
+    },
+    {
+      "name": "while and loop break values: exact source and serialized identity",
+      "status": "passed"
+    },
+    {
+      "name": "while and loop break values: every node regenerated structurally and executed in actual WASM",
+      "status": "passed"
+    },
+    {
+      "name": "short circuit and else if tail values: exact source and serialized identity",
+      "status": "passed"
+    },
+    {
+      "name": "short circuit and else if tail values: every node regenerated structurally and executed in actual WASM",
+      "status": "passed"
+    },
+    {
+      "name": "signed integer literals and Rhai precedence: exact source and serialized identity",
+      "status": "passed"
+    },
+    {
+      "name": "signed integer literals and Rhai precedence: every node regenerated structurally and executed in actual WASM",
+      "status": "passed"
+    },
+    {
+      "name": "number spellings and string keys: exact source and serialized identity",
+      "status": "passed"
+    },
+    {
+      "name": "number spellings and string keys: every node regenerated structurally and executed in actual WASM",
+      "status": "passed"
+    },
+    {
+      "name": "escaped, raw, verbatim and doubled quote map keys: exact source and serialized identity",
+      "status": "passed"
+    },
+    {
+      "name": "escaped, raw, verbatim and doubled quote map keys: every node regenerated structurally and executed in actual WASM",
+      "status": "passed"
+    },
+    {
+      "name": "character scalar escapes and verbatim backslashes: exact source and serialized identity",
+      "status": "passed"
+    },
+    {
+      "name": "character scalar escapes and verbatim backslashes: every node regenerated structurally and executed in actual WASM",
+      "status": "passed"
+    },
+    {
+      "name": "tail declarations and assignments stay unit: exact source and serialized identity",
+      "status": "passed"
+    },
+    {
+      "name": "tail declarations and assignments stay unit: every node regenerated structurally and executed in actual WASM",
+      "status": "passed"
+    },
+    {
+      "name": "private recursive helper: exact source and serialized identity",
+      "status": "passed"
+    },
+    {
+      "name": "private recursive helper: every node regenerated structurally and executed in actual WASM",
+      "status": "passed"
+    },
+    {
+      "name": "parameter shadowing and independent function overloads: exact source and serialized identity",
+      "status": "passed"
+    },
+    {
+      "name": "parameter shadowing and independent function overloads: every node regenerated structurally and executed in actual WASM",
+      "status": "passed"
+    },
+    {
+      "name": "typed receiver overloads and implicit this: exact source and serialized identity",
+      "status": "passed"
+    },
+    {
+      "name": "typed receiver overloads and implicit this: every node regenerated structurally and executed in actual WASM",
+      "status": "passed"
+    },
+    {
+      "name": "normal string continuation preserves its original indentation rules: exact source and serialized identity",
+      "status": "passed"
+    },
+    {
+      "name": "normal string continuation preserves its original indentation rules: every node regenerated structurally and executed in actual WASM",
+      "status": "passed"
+    },
+    {
+      "name": "control character map keys retain valid Rhai escapes: exact source and serialized identity",
+      "status": "passed"
+    },
+    {
+      "name": "control character map keys retain valid Rhai escapes: every node regenerated structurally and executed in actual WASM",
+      "status": "passed"
+    },
+    {
+      "name": "switch range and block cases: exact source and serialized identity",
+      "status": "passed"
+    },
+    {
+      "name": "switch range and block cases: every node regenerated structurally and executed in actual WASM",
+      "status": "passed"
+    },
+    {
+      "name": "empty module statement and return unit: exact source and serialized identity",
+      "status": "passed"
+    },
+    {
+      "name": "empty module statement and return unit: every node regenerated structurally and executed in actual WASM",
+      "status": "passed"
+    },
+    {
+      "name": "comments and multiline strings remain inert: exact source and serialized identity",
+      "status": "passed"
+    },
+    {
+      "name": "comments and multiline strings remain inert: every node regenerated structurally and executed in actual WASM",
+      "status": "passed"
+    },
+    {
+      "name": "export properties and commands: exact source and serialized identity",
+      "status": "passed"
+    },
+    {
+      "name": "export properties and commands: every node regenerated structurally and executed in actual WASM",
+      "status": "passed"
+    },
+    {
+      "name": "legacy comment export and metadata: exact source and serialized identity",
+      "status": "passed"
+    },
+    {
+      "name": "legacy comment export and metadata: every node regenerated structurally and executed in actual WASM",
+      "status": "passed"
+    },
+    {
+      "name": "native module export declarations and aliases: exact source and serialized identity",
+      "status": "passed"
+    },
+    {
+      "name": "native module export declarations and aliases: every node regenerated structurally and executed in actual WASM",
+      "status": "passed"
+    },
+    {
+      "name": "unsupported closure persistence is observable: exact source and serialized identity",
+      "status": "passed"
+    },
+    {
+      "name": "unsupported closure persistence is observable: every node regenerated structurally and executed in actual WASM",
+      "status": "passed"
+    },
+    {
+      "name": "optional access and coalesce: exact source and serialized identity",
+      "status": "passed"
+    },
+    {
+      "name": "optional access and coalesce: every node regenerated structurally and executed in actual WASM",
+      "status": "passed"
+    },
+    {
+      "name": "runtime failure preserves actual numeric overload: exact source and serialized identity",
+      "status": "passed"
+    },
+    {
+      "name": "runtime failure preserves actual numeric overload: every node regenerated structurally and executed in actual WASM",
+      "status": "passed"
+    },
+    {
+      "name": "uncaught throw: exact source and serialized identity",
+      "status": "passed"
+    },
+    {
+      "name": "uncaught throw: every node regenerated structurally and executed in actual WASM",
+      "status": "passed"
+    },
+    {
+      "name": "binding rename preserves shadowed variables and closure execution",
+      "status": "passed"
+    },
+    {
+      "name": "rewiring expressions preserves precedence, integer values and comments",
+      "status": "passed"
+    },
+    {
+      "name": "shared graph function rename rejects external consumers before any mutation",
+      "status": "passed"
+    },
+    {
+      "name": "graph rename rejects nested capture and preserves exact source, titles and VM output",
+      "status": "passed"
+    },
+    {
+      "name": "graph rename rejects duplicate overloads and checks the currently edited source",
+      "status": "passed"
+    },
+    {
+      "name": "new visual nodes can build a complete executable program from an empty module",
+      "status": "passed"
+    },
+    {
+      "name": "new source edits retain existing node UUID, manual position and viewport",
+      "status": "passed"
+    },
+    {
+      "name": "diagnostics point to current generated spans after length-changing edits",
+      "status": "passed"
+    },
+    {
+      "name": "cycles, removed required children, mixed declaration owners and oversized metadata are rejected",
+      "status": "passed"
+    },
+    {
+      "name": "legacy source-backed blocks are never advertised as fully structural",
+      "status": "passed"
+    },
+    {
+      "name": "large ordered arrays chunk without dropping values",
+      "status": "passed"
+    },
+    {
+      "name": "every available overload creates the exact ordered parameter pins and retained typed syntax",
+      "status": "passed"
+    },
+    {
+      "name": "engine float overload palette executes exact float defaults, and opaque inputs stay required",
+      "status": "passed"
+    },
+    {
+      "name": "visual native exports, whitespace-only changes and escaped control-key rewrites remain lossless",
+      "status": "passed"
+    }
+  ],
+  "status": "passed",
+  "nodeOperationCoverage": [
+    {
+      "mappingVersion": 2,
+      "id": "src/visual/graphProduction.ts#synchronizeGraphSignatures",
+      "source": "src/visual/graphProduction.ts",
+      "line": 31,
+      "kind": "exported function",
+      "sourceSha256": "bd628e49bb91784f077f5e87c9af964a2fb18e4ab6279ed76d106f4925967874",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-typed-graphs/1/sync.mjs",
+      "generatedSha256": "a7cf8357048988b10caaab0facf6ac57aa546b587f9242b8c93c02d1b71316a0",
+      "mapSha256": "f3b85a6009c850fb8455f3fd20accaae6febafc2000a9602efa0de4c5a5344af",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/visual/graphInteraction.ts#graphNodeLayoutSize",
+      "source": "src/visual/graphInteraction.ts",
+      "line": 40,
+      "kind": "exported function",
+      "sourceSha256": "0a32214b532c0f92f1bd62e9d37913ed7f1059619d55544798719aa17d63037a",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-typed-graphs/1/sync.mjs",
+      "generatedSha256": "a7cf8357048988b10caaab0facf6ac57aa546b587f9242b8c93c02d1b71316a0",
+      "mapSha256": "f3b85a6009c850fb8455f3fd20accaae6febafc2000a9602efa0de4c5a5344af",
+      "entryCount": 3
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/visual/graphInteraction.ts#arrangeExecutionBlocks",
+      "source": "src/visual/graphInteraction.ts",
+      "line": 89,
+      "kind": "exported function",
+      "sourceSha256": "0a32214b532c0f92f1bd62e9d37913ed7f1059619d55544798719aa17d63037a",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-typed-graphs/1/sync.mjs",
+      "generatedSha256": "a7cf8357048988b10caaab0facf6ac57aa546b587f9242b8c93c02d1b71316a0",
+      "mapSha256": "f3b85a6009c850fb8455f3fd20accaae6febafc2000a9602efa0de4c5a5344af",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/visual/graphCodeSync.ts#createLinkedRhaiSource",
+      "source": "src/visual/graphCodeSync.ts",
+      "line": 85,
+      "kind": "exported function",
+      "sourceSha256": "dcdc166ae9f37f99089854cfd2cabf909229d11d93fb2126686c8a366e8ad0d4",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-typed-graphs/1/sync.mjs",
+      "generatedSha256": "a7cf8357048988b10caaab0facf6ac57aa546b587f9242b8c93c02d1b71316a0",
+      "mapSha256": "f3b85a6009c850fb8455f3fd20accaae6febafc2000a9602efa0de4c5a5344af",
+      "entryCount": 71
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/visual/graphCodeSync.ts#createLegacyGraphFromRhaiSource",
+      "source": "src/visual/graphCodeSync.ts",
+      "line": 443,
+      "kind": "exported function",
+      "sourceSha256": "dcdc166ae9f37f99089854cfd2cabf909229d11d93fb2126686c8a366e8ad0d4",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-typed-graphs/1/sync.mjs",
+      "generatedSha256": "a7cf8357048988b10caaab0facf6ac57aa546b587f9242b8c93c02d1b71316a0",
+      "mapSha256": "f3b85a6009c850fb8455f3fd20accaae6febafc2000a9602efa0de4c5a5344af",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/visual/graphCodeSync.ts#createGraphFromRhaiSource",
+      "source": "src/visual/graphCodeSync.ts",
+      "line": 530,
+      "kind": "exported function",
+      "sourceSha256": "dcdc166ae9f37f99089854cfd2cabf909229d11d93fb2126686c8a366e8ad0d4",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-typed-graphs/1/sync.mjs",
+      "generatedSha256": "a7cf8357048988b10caaab0facf6ac57aa546b587f9242b8c93c02d1b71316a0",
+      "mapSha256": "f3b85a6009c850fb8455f3fd20accaae6febafc2000a9602efa0de4c5a5344af",
+      "entryCount": 85
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/visual/graphCodeSync.ts#applyLinkedRhaiSource",
+      "source": "src/visual/graphCodeSync.ts",
+      "line": 663,
+      "kind": "exported function",
+      "sourceSha256": "dcdc166ae9f37f99089854cfd2cabf909229d11d93fb2126686c8a366e8ad0d4",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-typed-graphs/1/sync.mjs",
+      "generatedSha256": "a7cf8357048988b10caaab0facf6ac57aa546b587f9242b8c93c02d1b71316a0",
+      "mapSha256": "f3b85a6009c850fb8455f3fd20accaae6febafc2000a9602efa0de4c5a5344af",
+      "entryCount": 36
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/visual/graphCompiler.ts#validateGraph",
+      "source": "src/visual/graphCompiler.ts",
+      "line": 33,
+      "kind": "exported function",
+      "sourceSha256": "1ee996d3dbfca0e48d0d9b06fa5ca7f86862e4e724b944497546b84e33750ecc",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-typed-graphs/1/compiler.mjs",
+      "generatedSha256": "d04a8e497432c8f5e7b172b95f31b59ba442aff6eb272467065170dc91e80d6b",
+      "mapSha256": "1fce7bdc4b4f315a288ac4c8e1a7002d6551bd1b044328d400150bc093505d67",
+      "entryCount": 196
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/visual/graphCompiler.ts#compileGraph",
+      "source": "src/visual/graphCompiler.ts",
+      "line": 216,
+      "kind": "exported function",
+      "sourceSha256": "1ee996d3dbfca0e48d0d9b06fa5ca7f86862e4e724b944497546b84e33750ecc",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-typed-graphs/1/compiler.mjs",
+      "generatedSha256": "d04a8e497432c8f5e7b172b95f31b59ba442aff6eb272467065170dc91e80d6b",
+      "mapSha256": "1fce7bdc4b4f315a288ac4c8e1a7002d6551bd1b044328d400150bc093505d67",
+      "entryCount": 190
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/visual/rhaiSyntaxLexer.ts#isRhaiTrivia",
+      "source": "src/visual/rhaiSyntaxLexer.ts",
+      "line": 10,
+      "kind": "exported function",
+      "sourceSha256": "78f338e82918ea20d869f89879d059644212025c9d8f7383d143d9bee1848b34",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-typed-graphs/1/syntax.mjs",
+      "generatedSha256": "732d33a2abd53bc6f14125c31382dca7581866f8f3064fb5ceef483a9bedb43a",
+      "mapSha256": "9f0f9c2329b796975dfde3654a830db00c68d5964894a42b36ff3411c2ced08d",
+      "entryCount": 12715
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/visual/rhaiSyntaxLexer.ts#rhaiSourceHash",
+      "source": "src/visual/rhaiSyntaxLexer.ts",
+      "line": 11,
+      "kind": "exported function",
+      "sourceSha256": "78f338e82918ea20d869f89879d059644212025c9d8f7383d143d9bee1848b34",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-typed-graphs/1/syntax.mjs",
+      "generatedSha256": "732d33a2abd53bc6f14125c31382dca7581866f8f3064fb5ceef483a9bedb43a",
+      "mapSha256": "9f0f9c2329b796975dfde3654a830db00c68d5964894a42b36ff3411c2ced08d",
+      "entryCount": 4620
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/visual/rhaiSyntaxLexer.ts#rhaiLineStarts",
+      "source": "src/visual/rhaiSyntaxLexer.ts",
+      "line": 12,
+      "kind": "exported function",
+      "sourceSha256": "78f338e82918ea20d869f89879d059644212025c9d8f7383d143d9bee1848b34",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-typed-graphs/1/syntax.mjs",
+      "generatedSha256": "732d33a2abd53bc6f14125c31382dca7581866f8f3064fb5ceef483a9bedb43a",
+      "mapSha256": "9f0f9c2329b796975dfde3654a830db00c68d5964894a42b36ff3411c2ced08d",
+      "entryCount": 946
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/visual/rhaiSyntaxLexer.ts#rhaiSpan",
+      "source": "src/visual/rhaiSyntaxLexer.ts",
+      "line": 13,
+      "kind": "exported function",
+      "sourceSha256": "78f338e82918ea20d869f89879d059644212025c9d8f7383d143d9bee1848b34",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-typed-graphs/1/syntax.mjs",
+      "generatedSha256": "732d33a2abd53bc6f14125c31382dca7581866f8f3064fb5ceef483a9bedb43a",
+      "mapSha256": "9f0f9c2329b796975dfde3654a830db00c68d5964894a42b36ff3411c2ced08d",
+      "entryCount": 19539
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/visual/rhaiSyntaxLexer.ts#rhaiLimits",
+      "source": "src/visual/rhaiSyntaxLexer.ts",
+      "line": 18,
+      "kind": "exported function",
+      "sourceSha256": "78f338e82918ea20d869f89879d059644212025c9d8f7383d143d9bee1848b34",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-typed-graphs/1/syntax.mjs",
+      "generatedSha256": "732d33a2abd53bc6f14125c31382dca7581866f8f3064fb5ceef483a9bedb43a",
+      "mapSha256": "9f0f9c2329b796975dfde3654a830db00c68d5964894a42b36ff3411c2ced08d",
+      "entryCount": 320
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/visual/rhaiSyntaxLexer.ts#decodeRhaiString",
+      "source": "src/visual/rhaiSyntaxLexer.ts",
+      "line": 27,
+      "kind": "exported function",
+      "sourceSha256": "78f338e82918ea20d869f89879d059644212025c9d8f7383d143d9bee1848b34",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-typed-graphs/1/syntax.mjs",
+      "generatedSha256": "732d33a2abd53bc6f14125c31382dca7581866f8f3064fb5ceef483a9bedb43a",
+      "mapSha256": "9f0f9c2329b796975dfde3654a830db00c68d5964894a42b36ff3411c2ced08d",
+      "entryCount": 194
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/visual/rhaiSyntaxLexer.ts#lexRhai",
+      "source": "src/visual/rhaiSyntaxLexer.ts",
+      "line": 58,
+      "kind": "exported function",
+      "sourceSha256": "78f338e82918ea20d869f89879d059644212025c9d8f7383d143d9bee1848b34",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-typed-graphs/1/syntax.mjs",
+      "generatedSha256": "732d33a2abd53bc6f14125c31382dca7581866f8f3064fb5ceef483a9bedb43a",
+      "mapSha256": "9f0f9c2329b796975dfde3654a830db00c68d5964894a42b36ff3411c2ced08d",
+      "entryCount": 320
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/visual/rhaiSyntax.ts#parseRhai",
+      "source": "src/visual/rhaiSyntax.ts",
+      "line": 279,
+      "kind": "exported function",
+      "sourceSha256": "25f8ff10d119f9b1b58d250f531b9a0b89d2b03b9b13cf583ca6f415ff871b77",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-typed-graphs/1/syntax.mjs",
+      "generatedSha256": "732d33a2abd53bc6f14125c31382dca7581866f8f3064fb5ceef483a9bedb43a",
+      "mapSha256": "9f0f9c2329b796975dfde3654a830db00c68d5964894a42b36ff3411c2ced08d",
+      "entryCount": 313
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/visual/rhaiSyntax.ts#walkRhai",
+      "source": "src/visual/rhaiSyntax.ts",
+      "line": 282,
+      "kind": "exported function",
+      "sourceSha256": "25f8ff10d119f9b1b58d250f531b9a0b89d2b03b9b13cf583ca6f415ff871b77",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-typed-graphs/1/syntax.mjs",
+      "generatedSha256": "732d33a2abd53bc6f14125c31382dca7581866f8f3064fb5ceef483a9bedb43a",
+      "mapSha256": "9f0f9c2329b796975dfde3654a830db00c68d5964894a42b36ff3411c2ced08d",
+      "entryCount": 432
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/visual/rhaiSyntax.ts#emitRhai",
+      "source": "src/visual/rhaiSyntax.ts",
+      "line": 445,
+      "kind": "exported function",
+      "sourceSha256": "25f8ff10d119f9b1b58d250f531b9a0b89d2b03b9b13cf583ca6f415ff871b77",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-typed-graphs/1/syntax.mjs",
+      "generatedSha256": "732d33a2abd53bc6f14125c31382dca7581866f8f3064fb5ceef483a9bedb43a",
+      "mapSha256": "9f0f9c2329b796975dfde3654a830db00c68d5964894a42b36ff3411c2ced08d",
+      "entryCount": 7
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/visual/rhaiSyntax.ts#emitRhaiNode",
+      "source": "src/visual/rhaiSyntax.ts",
+      "line": 457,
+      "kind": "exported function",
+      "sourceSha256": "25f8ff10d119f9b1b58d250f531b9a0b89d2b03b9b13cf583ca6f415ff871b77",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-typed-graphs/1/syntax.mjs",
+      "generatedSha256": "732d33a2abd53bc6f14125c31382dca7581866f8f3064fb5ceef483a9bedb43a",
+      "mapSha256": "9f0f9c2329b796975dfde3654a830db00c68d5964894a42b36ff3411c2ced08d",
+      "entryCount": 140
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/visual/rhaiRename.ts#renameRhaiBinding",
+      "source": "src/visual/rhaiRename.ts",
+      "line": 12,
+      "kind": "exported function",
+      "sourceSha256": "8f34155dbfedc218d0da8ffd44ff99e4dc7bb7b7a449d7a1461030046dc58dde",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-typed-graphs/1/syntax.mjs",
+      "generatedSha256": "732d33a2abd53bc6f14125c31382dca7581866f8f3064fb5ceef483a9bedb43a",
+      "mapSha256": "9f0f9c2329b796975dfde3654a830db00c68d5964894a42b36ff3411c2ced08d",
+      "entryCount": 8
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/visual/graphSyntax.ts#projectRhaiSyntax",
+      "source": "src/visual/graphSyntax.ts",
+      "line": 40,
+      "kind": "exported function",
+      "sourceSha256": "07534eba4bdf26f250b37d5978ad8fc1d65243a218ac1c12ef2dcf7840999048",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-typed-graphs/1/syntax.mjs",
+      "generatedSha256": "732d33a2abd53bc6f14125c31382dca7581866f8f3064fb5ceef483a9bedb43a",
+      "mapSha256": "9f0f9c2329b796975dfde3654a830db00c68d5964894a42b36ff3411c2ced08d",
+      "entryCount": 87
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/visual/graphSyntax.ts#emitSyntaxGraph",
+      "source": "src/visual/graphSyntax.ts",
+      "line": 154,
+      "kind": "exported function",
+      "sourceSha256": "07534eba4bdf26f250b37d5978ad8fc1d65243a218ac1c12ef2dcf7840999048",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-typed-graphs/1/syntax.mjs",
+      "generatedSha256": "732d33a2abd53bc6f14125c31382dca7581866f8f3064fb5ceef483a9bedb43a",
+      "mapSha256": "9f0f9c2329b796975dfde3654a830db00c68d5964894a42b36ff3411c2ced08d",
+      "entryCount": 579
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/visual/graphSyntax.ts#assessRhaiConversion",
+      "source": "src/visual/graphSyntax.ts",
+      "line": 212,
+      "kind": "exported function",
+      "sourceSha256": "07534eba4bdf26f250b37d5978ad8fc1d65243a218ac1c12ef2dcf7840999048",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-typed-graphs/1/syntax.mjs",
+      "generatedSha256": "732d33a2abd53bc6f14125c31382dca7581866f8f3064fb5ceef483a9bedb43a",
+      "mapSha256": "9f0f9c2329b796975dfde3654a830db00c68d5964894a42b36ff3411c2ced08d",
+      "entryCount": 191
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/visual/graphSyntax.ts#syntaxSourceLocation",
+      "source": "src/visual/graphSyntax.ts",
+      "line": 236,
+      "kind": "exported function",
+      "sourceSha256": "07534eba4bdf26f250b37d5978ad8fc1d65243a218ac1c12ef2dcf7840999048",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-typed-graphs/1/syntax.mjs",
+      "generatedSha256": "732d33a2abd53bc6f14125c31382dca7581866f8f3064fb5ceef483a9bedb43a",
+      "mapSha256": "9f0f9c2329b796975dfde3654a830db00c68d5964894a42b36ff3411c2ced08d",
+      "entryCount": 8020
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/visual/graphSyntaxSchema.ts#isSyntaxNode",
+      "source": "src/visual/graphSyntaxSchema.ts",
+      "line": 41,
+      "kind": "exported function",
+      "sourceSha256": "58872a666776ac31cca70224adcbd86e3759abf72114b029a74ba56eaefb041d",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-typed-graphs/1/syntax.mjs",
+      "generatedSha256": "732d33a2abd53bc6f14125c31382dca7581866f8f3064fb5ceef483a9bedb43a",
+      "mapSha256": "9f0f9c2329b796975dfde3654a830db00c68d5964894a42b36ff3411c2ced08d",
+      "entryCount": 13612
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/visual/graphSyntaxSchema.ts#syntaxFields",
+      "source": "src/visual/graphSyntaxSchema.ts",
+      "line": 42,
+      "kind": "exported function",
+      "sourceSha256": "58872a666776ac31cca70224adcbd86e3759abf72114b029a74ba56eaefb041d",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-typed-graphs/1/syntax.mjs",
+      "generatedSha256": "732d33a2abd53bc6f14125c31382dca7581866f8f3064fb5ceef483a9bedb43a",
+      "mapSha256": "9f0f9c2329b796975dfde3654a830db00c68d5964894a42b36ff3411c2ced08d",
+      "entryCount": 12989
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/visual/graphSyntaxSchema.ts#syntaxSlots",
+      "source": "src/visual/graphSyntaxSchema.ts",
+      "line": 43,
+      "kind": "exported function",
+      "sourceSha256": "58872a666776ac31cca70224adcbd86e3759abf72114b029a74ba56eaefb041d",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-typed-graphs/1/syntax.mjs",
+      "generatedSha256": "732d33a2abd53bc6f14125c31382dca7581866f8f3064fb5ceef483a9bedb43a",
+      "mapSha256": "9f0f9c2329b796975dfde3654a830db00c68d5964894a42b36ff3411c2ced08d",
+      "entryCount": 22325
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/visual/graphSyntaxSchema.ts#syntaxNodeEditableFields",
+      "source": "src/visual/graphSyntaxSchema.ts",
+      "line": 44,
+      "kind": "exported function",
+      "sourceSha256": "58872a666776ac31cca70224adcbd86e3759abf72114b029a74ba56eaefb041d",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-typed-graphs/1/syntax.mjs",
+      "generatedSha256": "732d33a2abd53bc6f14125c31382dca7581866f8f3064fb5ceef483a9bedb43a",
+      "mapSha256": "9f0f9c2329b796975dfde3654a830db00c68d5964894a42b36ff3411c2ced08d",
+      "entryCount": 677
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/visual/graphSyntaxSchema.ts#setSyntaxNodeField",
+      "source": "src/visual/graphSyntaxSchema.ts",
+      "line": 53,
+      "kind": "exported function",
+      "sourceSha256": "58872a666776ac31cca70224adcbd86e3759abf72114b029a74ba56eaefb041d",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-typed-graphs/1/syntax.mjs",
+      "generatedSha256": "732d33a2abd53bc6f14125c31382dca7581866f8f3064fb5ceef483a9bedb43a",
+      "mapSha256": "9f0f9c2329b796975dfde3654a830db00c68d5964894a42b36ff3411c2ced08d",
+      "entryCount": 12
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/visual/graphSyntaxSchema.ts#syntaxNodeDefinition",
+      "source": "src/visual/graphSyntaxSchema.ts",
+      "line": 88,
+      "kind": "exported function",
+      "sourceSha256": "58872a666776ac31cca70224adcbd86e3759abf72114b029a74ba56eaefb041d",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-typed-graphs/1/syntax.mjs",
+      "generatedSha256": "732d33a2abd53bc6f14125c31382dca7581866f8f3064fb5ceef483a9bedb43a",
+      "mapSha256": "9f0f9c2329b796975dfde3654a830db00c68d5964894a42b36ff3411c2ced08d",
+      "entryCount": 6473
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/visual/graphSyntaxSchema.ts#initializeSyntaxNode",
+      "source": "src/visual/graphSyntaxSchema.ts",
+      "line": 93,
+      "kind": "exported function",
+      "sourceSha256": "58872a666776ac31cca70224adcbd86e3759abf72114b029a74ba56eaefb041d",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-typed-graphs/1/syntax.mjs",
+      "generatedSha256": "732d33a2abd53bc6f14125c31382dca7581866f8f3064fb5ceef483a9bedb43a",
+      "mapSha256": "9f0f9c2329b796975dfde3654a830db00c68d5964894a42b36ff3411c2ced08d",
+      "entryCount": 665
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/visual/graphTypes.ts#graphUuid",
+      "source": "src/visual/graphTypes.ts",
+      "line": 112,
+      "kind": "exported function",
+      "sourceSha256": "f1301f1589f75fec7793cb026cf256eb2af3f020e75b2c670890622290e8cf25",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-typed-graphs/1/types.mjs",
+      "generatedSha256": "7b7a293d6f536ffaac962b6beaec3c219bc8994835d9df4a9b40f187c4cb1d98",
+      "mapSha256": "936e3400bff47020493901e463527d8f1e5abb8ddd61fd29275507f75fb4f58f",
+      "entryCount": 11842
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/visual/graphTypes.ts#defaultGraphValue",
+      "source": "src/visual/graphTypes.ts",
+      "line": 130,
+      "kind": "exported function",
+      "sourceSha256": "f1301f1589f75fec7793cb026cf256eb2af3f020e75b2c670890622290e8cf25",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-typed-graphs/1/types.mjs",
+      "generatedSha256": "7b7a293d6f536ffaac962b6beaec3c219bc8994835d9df4a9b40f187c4cb1d98",
+      "mapSha256": "936e3400bff47020493901e463527d8f1e5abb8ddd61fd29275507f75fb4f58f",
+      "entryCount": 959
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/visual/graphTypes.ts#sanitizeGraphValue",
+      "source": "src/visual/graphTypes.ts",
+      "line": 132,
+      "kind": "exported function",
+      "sourceSha256": "f1301f1589f75fec7793cb026cf256eb2af3f020e75b2c670890622290e8cf25",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-typed-graphs/1/types.mjs",
+      "generatedSha256": "7b7a293d6f536ffaac962b6beaec3c219bc8994835d9df4a9b40f187c4cb1d98",
+      "mapSha256": "936e3400bff47020493901e463527d8f1e5abb8ddd61fd29275507f75fb4f58f",
+      "entryCount": 36841
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/visual/graphTypes.ts#normalizeGraphDocument",
+      "source": "src/visual/graphTypes.ts",
+      "line": 191,
+      "kind": "exported function",
+      "sourceSha256": "f1301f1589f75fec7793cb026cf256eb2af3f020e75b2c670890622290e8cf25",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-typed-graphs/1/types.mjs",
+      "generatedSha256": "7b7a293d6f536ffaac962b6beaec3c219bc8994835d9df4a9b40f187c4cb1d98",
+      "mapSha256": "936e3400bff47020493901e463527d8f1e5abb8ddd61fd29275507f75fb4f58f",
+      "entryCount": 779
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/visual/graphTypes.ts#canonicalGraphDocument",
+      "source": "src/visual/graphTypes.ts",
+      "line": 229,
+      "kind": "exported function",
+      "sourceSha256": "f1301f1589f75fec7793cb026cf256eb2af3f020e75b2c670890622290e8cf25",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-typed-graphs/1/types.mjs",
+      "generatedSha256": "7b7a293d6f536ffaac962b6beaec3c219bc8994835d9df4a9b40f187c4cb1d98",
+      "mapSha256": "936e3400bff47020493901e463527d8f1e5abb8ddd61fd29275507f75fb4f58f",
+      "entryCount": 620
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/visual/graphTypes.ts#serializeGraphDocument",
+      "source": "src/visual/graphTypes.ts",
+      "line": 234,
+      "kind": "exported function",
+      "sourceSha256": "f1301f1589f75fec7793cb026cf256eb2af3f020e75b2c670890622290e8cf25",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-typed-graphs/1/types.mjs",
+      "generatedSha256": "7b7a293d6f536ffaac962b6beaec3c219bc8994835d9df4a9b40f187c4cb1d98",
+      "mapSha256": "936e3400bff47020493901e463527d8f1e5abb8ddd61fd29275507f75fb4f58f",
+      "entryCount": 234
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/visual/graphTypes.ts#parseGraphDocument",
+      "source": "src/visual/graphTypes.ts",
+      "line": 235,
+      "kind": "exported function",
+      "sourceSha256": "f1301f1589f75fec7793cb026cf256eb2af3f020e75b2c670890622290e8cf25",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-typed-graphs/1/types.mjs",
+      "generatedSha256": "7b7a293d6f536ffaac962b6beaec3c219bc8994835d9df4a9b40f187c4cb1d98",
+      "mapSha256": "936e3400bff47020493901e463527d8f1e5abb8ddd61fd29275507f75fb4f58f",
+      "entryCount": 158
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/identity.ts#createUuid",
+      "source": "src/world/identity.ts",
+      "line": 8,
+      "kind": "exported function",
+      "sourceSha256": "2fe5fd95a5e427522192d9d7832f4248515d6c47832126b228d6844437068053",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-typed-graphs/1/catalog.mjs",
+      "generatedSha256": "9f06c934a99c561c511bbc40f333ae763fcf281d3426f9f737bd7dce00412a34",
+      "mapSha256": "8da82292e586b0fe54c54032a253428f08aacc117d4671d0a4c93c306ccf8955",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/identity.ts#normalizeUuid",
+      "source": "src/world/identity.ts",
+      "line": 16,
+      "kind": "exported function",
+      "sourceSha256": "2fe5fd95a5e427522192d9d7832f4248515d6c47832126b228d6844437068053",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-typed-graphs/1/catalog.mjs",
+      "generatedSha256": "9f06c934a99c561c511bbc40f333ae763fcf281d3426f9f737bd7dce00412a34",
+      "mapSha256": "8da82292e586b0fe54c54032a253428f08aacc117d4671d0a4c93c306ccf8955",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/assets/importRetention.ts#BoundedImportCache.constructor",
+      "source": "src/assets/importRetention.ts",
+      "line": 7,
+      "kind": "public class operation",
+      "sourceSha256": "8a8c7175d66b68206dcda36cace1fde0d518a4feeebbee05d51039d52d19d0fe",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-typed-graphs/1/catalog.mjs",
+      "generatedSha256": "9f06c934a99c561c511bbc40f333ae763fcf281d3426f9f737bd7dce00412a34",
+      "mapSha256": "8da82292e586b0fe54c54032a253428f08aacc117d4671d0a4c93c306ccf8955",
+      "entryCount": 4
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/assets/importRetention.ts#registerImportSessionCleanup",
+      "source": "src/assets/importRetention.ts",
+      "line": 29,
+      "kind": "exported function",
+      "sourceSha256": "8a8c7175d66b68206dcda36cace1fde0d518a4feeebbee05d51039d52d19d0fe",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-typed-graphs/1/catalog.mjs",
+      "generatedSha256": "9f06c934a99c561c511bbc40f333ae763fcf281d3426f9f737bd7dce00412a34",
+      "mapSha256": "8da82292e586b0fe54c54032a253428f08aacc117d4671d0a4c93c306ccf8955",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/packages.ts#onPackageLifecycle",
+      "source": "src/runtime/packages.ts",
+      "line": 109,
+      "kind": "exported function",
+      "sourceSha256": "6774580dde64cd01a9a826d3a11083261aed603c77524544a4008dad9458838a",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-typed-graphs/1/catalog.mjs",
+      "generatedSha256": "9f06c934a99c561c511bbc40f333ae763fcf281d3426f9f737bd7dce00412a34",
+      "mapSha256": "8da82292e586b0fe54c54032a253428f08aacc117d4671d0a4c93c306ccf8955",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/store/preferences.ts#applyPreferences",
+      "source": "src/store/preferences.ts",
+      "line": 139,
+      "kind": "exported function",
+      "sourceSha256": "13795bd1ae90c3ceb3349b7ce26ee495781a99d84e30c383f6b21ea86a5e2c0c",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-typed-graphs/1/catalog.mjs",
+      "generatedSha256": "9f06c934a99c561c511bbc40f333ae763fcf281d3426f9f737bd7dce00412a34",
+      "mapSha256": "8da82292e586b0fe54c54032a253428f08aacc117d4671d0a4c93c306ccf8955",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/physicsProduction.ts#defaultPhysicsLayers",
+      "source": "src/runtime/physicsProduction.ts",
+      "line": 104,
+      "kind": "exported function",
+      "sourceSha256": "8fd1571e431576cd9b2dde89dca2a5f99aff6091d33d1c44def3194551061181",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-typed-graphs/1/catalog.mjs",
+      "generatedSha256": "9f06c934a99c561c511bbc40f333ae763fcf281d3426f9f737bd7dce00412a34",
+      "mapSha256": "8da82292e586b0fe54c54032a253428f08aacc117d4671d0a4c93c306ccf8955",
+      "entryCount": 2
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/physicsProduction.ts#defaultPhysicsProfile",
+      "source": "src/runtime/physicsProduction.ts",
+      "line": 192,
+      "kind": "exported function",
+      "sourceSha256": "8fd1571e431576cd9b2dde89dca2a5f99aff6091d33d1c44def3194551061181",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-typed-graphs/1/catalog.mjs",
+      "generatedSha256": "9f06c934a99c561c511bbc40f333ae763fcf281d3426f9f737bd7dce00412a34",
+      "mapSha256": "8da82292e586b0fe54c54032a253428f08aacc117d4671d0a4c93c306ccf8955",
+      "entryCount": 2
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/World.ts#defaultCollisionMatrix",
+      "source": "src/world/World.ts",
+      "line": 35,
+      "kind": "exported function",
+      "sourceSha256": "c725437339ebdfeaff44918dea52767b0c3cf2817578dff72e5e97032886a73b",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-typed-graphs/1/catalog.mjs",
+      "generatedSha256": "9f06c934a99c561c511bbc40f333ae763fcf281d3426f9f737bd7dce00412a34",
+      "mapSha256": "8da82292e586b0fe54c54032a253428f08aacc117d4671d0a4c93c306ccf8955",
+      "entryCount": 2
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/World.ts#World.constructor",
+      "source": "src/world/World.ts",
+      "line": 379,
+      "kind": "public class operation",
+      "sourceSha256": "c725437339ebdfeaff44918dea52767b0c3cf2817578dff72e5e97032886a73b",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-typed-graphs/1/catalog.mjs",
+      "generatedSha256": "9f06c934a99c561c511bbc40f333ae763fcf281d3426f9f737bd7dce00412a34",
+      "mapSha256": "8da82292e586b0fe54c54032a253428f08aacc117d4671d0a4c93c306ccf8955",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/i18n.ts#t",
+      "source": "src/i18n.ts",
+      "line": 1559,
+      "kind": "exported function",
+      "sourceSha256": "2554102983c40ced3b712778cbb314cf95379cbac0a613b3d6e112f5ef865901",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-typed-graphs/1/catalog.mjs",
+      "generatedSha256": "9f06c934a99c561c511bbc40f333ae763fcf281d3426f9f737bd7dce00412a34",
+      "mapSha256": "8da82292e586b0fe54c54032a253428f08aacc117d4671d0a4c93c306ccf8955",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/editor/sceneAuthoring.ts#defaultSceneAuthoringSettings",
+      "source": "src/editor/sceneAuthoring.ts",
+      "line": 78,
+      "kind": "exported function",
+      "sourceSha256": "cacd5234a09c4bad70d65ec4e0b4b39c2239c0eca53f8141cde27ea5fc602a31",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-typed-graphs/1/catalog.mjs",
+      "generatedSha256": "9f06c934a99c561c511bbc40f333ae763fcf281d3426f9f737bd7dce00412a34",
+      "mapSha256": "8da82292e586b0fe54c54032a253428f08aacc117d4671d0a4c93c306ccf8955",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/SceneManager.ts#SceneManager.constructor",
+      "source": "src/world/SceneManager.ts",
+      "line": 41,
+      "kind": "public class operation",
+      "sourceSha256": "bb21f38e41ca614bff9ce618d0471ec3d0fca919c29aade3140c429e446e53b8",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-typed-graphs/1/catalog.mjs",
+      "generatedSha256": "9f06c934a99c561c511bbc40f333ae763fcf281d3426f9f737bd7dce00412a34",
+      "mapSha256": "8da82292e586b0fe54c54032a253428f08aacc117d4671d0a4c93c306ccf8955",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/editor/commands.ts#CommandHistory.constructor",
+      "source": "src/editor/commands.ts",
+      "line": 130,
+      "kind": "public class operation",
+      "sourceSha256": "025738bd1c0147d706518f0e7c60626e41087fd72cb77d2a35cd1e470545f972",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-typed-graphs/1/catalog.mjs",
+      "generatedSha256": "9f06c934a99c561c511bbc40f333ae763fcf281d3426f9f737bd7dce00412a34",
+      "mapSha256": "8da82292e586b0fe54c54032a253428f08aacc117d4671d0a4c93c306ccf8955",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/editor/commands.ts#CommandHistory.lastClearReason",
+      "source": "src/editor/commands.ts",
+      "line": 142,
+      "kind": "getter",
+      "sourceSha256": "025738bd1c0147d706518f0e7c60626e41087fd72cb77d2a35cd1e470545f972",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-typed-graphs/1/catalog.mjs",
+      "generatedSha256": "9f06c934a99c561c511bbc40f333ae763fcf281d3426f9f737bd7dce00412a34",
+      "mapSha256": "8da82292e586b0fe54c54032a253428f08aacc117d4671d0a4c93c306ccf8955",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/input.ts#createInputBinding",
+      "source": "src/runtime/input.ts",
+      "line": 93,
+      "kind": "exported function",
+      "sourceSha256": "fad85ae749fdc2b0e378beff7d5b43ff7af6150efbfd8124700945281a42d6dc",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-typed-graphs/1/catalog.mjs",
+      "generatedSha256": "9f06c934a99c561c511bbc40f333ae763fcf281d3426f9f737bd7dce00412a34",
+      "mapSha256": "8da82292e586b0fe54c54032a253428f08aacc117d4671d0a4c93c306ccf8955",
+      "entryCount": 17
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/input.ts#defaultInputMap",
+      "source": "src/runtime/input.ts",
+      "line": 97,
+      "kind": "exported function",
+      "sourceSha256": "fad85ae749fdc2b0e378beff7d5b43ff7af6150efbfd8124700945281a42d6dc",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-typed-graphs/1/catalog.mjs",
+      "generatedSha256": "9f06c934a99c561c511bbc40f333ae763fcf281d3426f9f737bd7dce00412a34",
+      "mapSha256": "8da82292e586b0fe54c54032a253428f08aacc117d4671d0a4c93c306ccf8955",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/input.ts#createInputAction",
+      "source": "src/runtime/input.ts",
+      "line": 124,
+      "kind": "exported function",
+      "sourceSha256": "fad85ae749fdc2b0e378beff7d5b43ff7af6150efbfd8124700945281a42d6dc",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-typed-graphs/1/catalog.mjs",
+      "generatedSha256": "9f06c934a99c561c511bbc40f333ae763fcf281d3426f9f737bd7dce00412a34",
+      "mapSha256": "8da82292e586b0fe54c54032a253428f08aacc117d4671d0a4c93c306ccf8955",
+      "entryCount": 5
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/input.ts#normalizePenBindingCode",
+      "source": "src/runtime/input.ts",
+      "line": 136,
+      "kind": "exported function",
+      "sourceSha256": "fad85ae749fdc2b0e378beff7d5b43ff7af6150efbfd8124700945281a42d6dc",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-typed-graphs/1/catalog.mjs",
+      "generatedSha256": "9f06c934a99c561c511bbc40f333ae763fcf281d3426f9f737bd7dce00412a34",
+      "mapSha256": "8da82292e586b0fe54c54032a253428f08aacc117d4671d0a4c93c306ccf8955",
+      "entryCount": 17
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/audio.ts#defaultAudioSettings",
+      "source": "src/runtime/audio.ts",
+      "line": 120,
+      "kind": "exported function",
+      "sourceSha256": "d7942420a501d92638335fcb7d098e35807a56e3c6319e5a3de8c131a7c4ebeb",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-typed-graphs/1/catalog.mjs",
+      "generatedSha256": "9f06c934a99c561c511bbc40f333ae763fcf281d3426f9f737bd7dce00412a34",
+      "mapSha256": "8da82292e586b0fe54c54032a253428f08aacc117d4671d0a4c93c306ccf8955",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/renderer/outputQuality20.ts#normalizeAntiAliasing",
+      "source": "src/renderer/outputQuality20.ts",
+      "line": 2,
+      "kind": "exported function",
+      "sourceSha256": "d03ccbc43e269bb645131f784c3440d63a8bf4f24c1ace10e812e622c25465fa",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-typed-graphs/1/catalog.mjs",
+      "generatedSha256": "9f06c934a99c561c511bbc40f333ae763fcf281d3426f9f737bd7dce00412a34",
+      "mapSha256": "8da82292e586b0fe54c54032a253428f08aacc117d4671d0a4c93c306ccf8955",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/renderer/renderSettings.ts#normalizeTextureStreamingSettings",
+      "source": "src/renderer/renderSettings.ts",
+      "line": 80,
+      "kind": "exported function",
+      "sourceSha256": "90ae3c7ce879634f4a166e7155278a13e8d5b44add2437ac30253a1a237f8c6e",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-typed-graphs/1/catalog.mjs",
+      "generatedSha256": "9f06c934a99c561c511bbc40f333ae763fcf281d3426f9f737bd7dce00412a34",
+      "mapSha256": "8da82292e586b0fe54c54032a253428f08aacc117d4671d0a4c93c306ccf8955",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/renderer/renderSettings.ts#normalizeRenderingSettings",
+      "source": "src/renderer/renderSettings.ts",
+      "line": 106,
+      "kind": "exported function",
+      "sourceSha256": "90ae3c7ce879634f4a166e7155278a13e8d5b44add2437ac30253a1a237f8c6e",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-typed-graphs/1/catalog.mjs",
+      "generatedSha256": "9f06c934a99c561c511bbc40f333ae763fcf281d3426f9f737bd7dce00412a34",
+      "mapSha256": "8da82292e586b0fe54c54032a253428f08aacc117d4671d0a4c93c306ccf8955",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/exportTemplates.ts#compatibleExportTemplates",
+      "source": "src/runtime/exportTemplates.ts",
+      "line": 28,
+      "kind": "exported function",
+      "sourceSha256": "3cc4801a081c5afd8377289708e9358bd3b9c0033f5efaada290f6833491cead",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-typed-graphs/1/catalog.mjs",
+      "generatedSha256": "9f06c934a99c561c511bbc40f333ae763fcf281d3426f9f737bd7dce00412a34",
+      "mapSha256": "8da82292e586b0fe54c54032a253428f08aacc117d4671d0a4c93c306ccf8955",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/exportTemplates.ts#defaultExportTemplateId",
+      "source": "src/runtime/exportTemplates.ts",
+      "line": 32,
+      "kind": "exported function",
+      "sourceSha256": "3cc4801a081c5afd8377289708e9358bd3b9c0033f5efaada290f6833491cead",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-typed-graphs/1/catalog.mjs",
+      "generatedSha256": "9f06c934a99c561c511bbc40f333ae763fcf281d3426f9f737bd7dce00412a34",
+      "mapSha256": "8da82292e586b0fe54c54032a253428f08aacc117d4671d0a4c93c306ccf8955",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/visual/graphCatalog.ts#productionGraphNodeCatalog",
+      "source": "src/visual/graphCatalog.ts",
+      "line": 139,
+      "kind": "exported function",
+      "sourceSha256": "450b997f16dc0fb68572f827a306b81b321a0bcdd51ec8e11ed772bf709d8756",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-typed-graphs/1/catalog.mjs",
+      "generatedSha256": "9f06c934a99c561c511bbc40f333ae763fcf281d3426f9f737bd7dce00412a34",
+      "mapSha256": "8da82292e586b0fe54c54032a253428f08aacc117d4671d0a4c93c306ccf8955",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/visual/graphCatalog.ts#graphNodeDefinition",
+      "source": "src/visual/graphCatalog.ts",
+      "line": 173,
+      "kind": "exported function",
+      "sourceSha256": "450b997f16dc0fb68572f827a306b81b321a0bcdd51ec8e11ed772bf709d8756",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-typed-graphs/1/catalog.mjs",
+      "generatedSha256": "9f06c934a99c561c511bbc40f333ae763fcf281d3426f9f737bd7dce00412a34",
+      "mapSha256": "8da82292e586b0fe54c54032a253428f08aacc117d4671d0a4c93c306ccf8955",
+      "entryCount": 4736
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/visual/graphCatalog.ts#createGraphNode",
+      "source": "src/visual/graphCatalog.ts",
+      "line": 181,
+      "kind": "exported function",
+      "sourceSha256": "450b997f16dc0fb68572f827a306b81b321a0bcdd51ec8e11ed772bf709d8756",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-typed-graphs/1/catalog.mjs",
+      "generatedSha256": "9f06c934a99c561c511bbc40f333ae763fcf281d3426f9f737bd7dce00412a34",
+      "mapSha256": "8da82292e586b0fe54c54032a253428f08aacc117d4671d0a4c93c306ccf8955",
+      "entryCount": 670
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/visual/graphCatalog.ts#defaultVisualGraph",
+      "source": "src/visual/graphCatalog.ts",
+      "line": 207,
+      "kind": "exported function",
+      "sourceSha256": "450b997f16dc0fb68572f827a306b81b321a0bcdd51ec8e11ed772bf709d8756",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-typed-graphs/1/catalog.mjs",
+      "generatedSha256": "9f06c934a99c561c511bbc40f333ae763fcf281d3426f9f737bd7dce00412a34",
+      "mapSha256": "8da82292e586b0fe54c54032a253428f08aacc117d4671d0a4c93c306ccf8955",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/visual/graphSyntaxApi.ts#syntaxApiNodeDefinition",
+      "source": "src/visual/graphSyntaxApi.ts",
+      "line": 18,
+      "kind": "exported function",
+      "sourceSha256": "3c6c9f6a1c0cc9fd03a8bac7a6a38b79961b2b9ffea7d80452869d8bd96253af",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-typed-graphs/1/api.mjs",
+      "generatedSha256": "2a0692041af19b5f7acb16db36756e0db41bc5cb85bf27596a4fad7231bf0fa0",
+      "mapSha256": "60d2c55d95292b56c405ac21eb9be03334694c640ee775b3bedf661741d705ff",
+      "entryCount": 681
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/visual/graphSyntaxApi.ts#syntaxApiSignature",
+      "source": "src/visual/graphSyntaxApi.ts",
+      "line": 19,
+      "kind": "exported function",
+      "sourceSha256": "3c6c9f6a1c0cc9fd03a8bac7a6a38b79961b2b9ffea7d80452869d8bd96253af",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-typed-graphs/1/api.mjs",
+      "generatedSha256": "2a0692041af19b5f7acb16db36756e0db41bc5cb85bf27596a4fad7231bf0fa0",
+      "mapSha256": "60d2c55d95292b56c405ac21eb9be03334694c640ee775b3bedf661741d705ff",
+      "entryCount": 2
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/visual/graphSyntaxApi.ts#initializeSyntaxApiNode",
+      "source": "src/visual/graphSyntaxApi.ts",
+      "line": 80,
+      "kind": "exported function",
+      "sourceSha256": "3c6c9f6a1c0cc9fd03a8bac7a6a38b79961b2b9ffea7d80452869d8bd96253af",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-typed-graphs/1/api.mjs",
+      "generatedSha256": "2a0692041af19b5f7acb16db36756e0db41bc5cb85bf27596a4fad7231bf0fa0",
+      "mapSha256": "60d2c55d95292b56c405ac21eb9be03334694c640ee775b3bedf661741d705ff",
+      "entryCount": 660
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/visual/rhaiApiSignatures.ts#getRhaiApiSignatures",
+      "source": "src/visual/rhaiApiSignatures.ts",
+      "line": 15,
+      "kind": "exported function",
+      "sourceSha256": "d844d2d3131b515636ae5ff9869569e1af8a154497814f47c4284ebb91b9cf5f",
+      "generatedFile": ".cache/v2622-node-execution-v2/retained-26-12-typed-graphs/1/signatures.mjs",
+      "generatedSha256": "2e5003b7a19efc0e5fea529b803f843efab17f19c53bdf0d5c27be8ac3af1ad3",
+      "mapSha256": "a641175706f525a9be6d9921ed8fc4ca912506a7e0bb2b9e8972f08a55a55f1c",
+      "entryCount": 1
+    }
+  ],
+  "tracingScope": "Positive V8 function entries during the complete passing programmer suite, including fixture setup. Not per-assertion isolation, exhaustive domain coverage or performance qualification.",
+  "nodeOperationCoverageCase": "retained-26-12-typed-graphs complete suite including fixture setup",
+  "nodeOperationCoverageAssertion": {
+    "name": "retained-26-12-typed-graphs complete suite including fixture setup",
+    "status": "passed"
+  }
+}

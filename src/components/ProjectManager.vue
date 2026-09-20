@@ -15,17 +15,25 @@
         <h1>{{ t('createSomethingPlayable') }}</h1>
         <p>{{ t('projectManagerDescription') }}</p>
         <div class="quick-actions">
+          <button class="new-project" :disabled="state.busy" @click="creationOpen = true">{{ t('newProject') }}</button>
           <button class="primary" :disabled="state.busy" @click="chooseProject('open')">{{ t('openProject') }}</button>
-          <button :disabled="state.busy" @click="chooseProject('add')">{{ t('addExistingProject') }}</button>
-          <button :disabled="state.busy" @click="chooseProject('migrate')">{{ t('migrateOlderProject') }}</button>
-          <button :disabled="state.busy" @click="chooseProject('archive')">{{ t('importArchive') }}</button>
+          
+          
+          
           <button v-if="state.currentSnapshot" :disabled="state.busy" @click="continueCurrentProject">{{ t('continueProject') }}</button>
-          <button v-if="state.rollbackAvailable" :disabled="state.busy" @click="downloadLastUpgradeRollback">{{ t('downloadRollback') }}</button>
+          
         </div>
+        <details class="more-project-actions"><summary>{{ moreActionsLabel }}</summary><div class="quick-actions"><button :disabled="state.busy" @click="chooseProject('add')">{{ t('addExistingProject') }}</button>
+<button :disabled="state.busy" @click="chooseProject('migrate')">{{ t('migrateOlderProject') }}</button>
+<button :disabled="state.busy" @click="chooseProject('archive')">{{ t('importArchive') }}</button>
+<button v-if="state.rollbackAvailable" :disabled="state.busy" @click="downloadLastUpgradeRollback">{{ t('downloadRollback') }}</button></div></details>
         <p v-if="state.error" class="error" role="alert">{{ state.error }}</p>
       </div>
 
+      <Teleport to="body"><Transition name="creation-dialog"><div v-if="creationOpen" class="creation-scrim" role="dialog" aria-modal="true" v-modal-focus :aria-label="t('newProject')" @keydown.esc.stop.prevent="closeCreation">
       <section class="creation-card">
+        <div class="creation-title"><h2>{{ t('newProject') }}</h2><button :disabled="state.busy" @click="closeCreation">{{ t('cancel') }}</button></div>
+        <p v-if="state.error" class="error" role="alert">{{ state.error }}</p>
         <header><div><span>{{ t('newProject') }}</span><strong>{{ projectName || t('untitledProject') }}</strong></div><label>{{ t('projectName') }}<input v-model="projectName" maxlength="80" @keydown.enter="create"></label></header>
         <label class="project-location"><span>{{ t('projectLocation') }}</span><input v-model.trim="projectLocation" maxlength="500" :aria-invalid="Boolean(pathError)"><small :class="{ 'path-error': pathError }">{{ pathError || t('projectFolderHint') }}</small></label>
         <nav class="template-categories" role="tablist" :aria-label="t('templateCategories')">
@@ -61,6 +69,8 @@
         <p class="template-selection" aria-live="polite">{{ selectedTemplateRecord ? `${libraryText.selected}: ${templateName(selectedTemplateRecord.id, selectedTemplateRecord.name)}` : t('noMatchingTemplates') }}</p>
         <button class="create-button" :disabled="state.busy || Boolean(pathError) || !projectName.trim() || !selectedTemplateRecord" :title="pathError" @click="create">{{ state.busy ? t('preparingProject') : t('createProject') }}</button>
       </section>
+
+      </div></Transition></Teleport>
 
       <section class="recents-card">
         <header><div><span>{{ t('recentProjects') }}</span><strong>{{ state.recents.length }}</strong></div><small>{{ t('recentProjectsHint') }}</small></header>
@@ -125,6 +135,9 @@ import { watchProjectFile } from '../runtime/projectExternalChanges'
 import { readProjectArchive } from '../projects/projectArchive'
 import { NOVA_RELEASE_NAME } from '../projects/projectFormat'
 
+const creationOpen = ref(false)
+const moreActionsLabel = computed(() => ({ en: 'More project actions', de: 'Weitere Projektaktionen', zh: '更多项目操作' }[prefs.locale]))
+function closeCreation() { if (!state.busy) creationOpen.value = false }
 const projectName = ref('My Game')
 const projectLocation = ref('Projects/My Game')
 const selectedTemplate = ref<ProjectTemplateId | null>('empty')
@@ -279,4 +292,19 @@ async function readArchive(event:Event):Promise<void>{const input=event.target a
 .template-help button { min-height: 34px; padding: 6px 10px; border: 1px solid var(--border-subtle); border-radius: 7px; background: var(--surface-1); color: var(--accent); overflow-wrap: anywhere; }
 .template-details > small { line-height: 1.5; overflow-wrap: anywhere; }
 @container nova-template-library (max-width: 540px) { .template-instructions { grid-template-columns: minmax(0, 1fr); } }
+/* One scrolling page for creation; the template grid no longer nests a small scroll pane. */
+.manager-shell { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+.quick-actions .new-project { color: var(--accent-contrast); border-color: var(--accent); background: var(--accent); }
+.more-project-actions { margin-top: 16px; color: var(--text-secondary); }
+.more-project-actions summary { cursor: pointer; width: fit-content; padding: 8px 0; }
+.more-project-actions .quick-actions { margin-top: 4px; }
+.creation-scrim { position: fixed; inset: 0; z-index: 1100; overflow: auto; padding: 24px; background: var(--scrim); overscroll-behavior: contain; }
+.creation-scrim .creation-card { width: min(1180px, 100%); margin: 0 auto; overflow: visible; background: var(--surface-1); }
+.creation-title { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 16px; }
+.creation-title h2 { margin: 0; }
+.creation-title button { padding: 8px 16px; border: 1px solid var(--border-strong); border-radius: 8px; background: var(--surface-2); color: var(--text-primary); }
+.creation-scrim .template-grid { max-height: none; overflow: visible; grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr)); }
+.creation-dialog-enter-active, .creation-dialog-leave-active { transition: opacity 130ms ease; }
+.creation-dialog-enter-from, .creation-dialog-leave-to { opacity: 0; }
+@media(max-width: 800px) { .manager-shell { grid-template-columns: minmax(0, 1fr); } .creation-scrim { padding: 8px; } }
 </style>

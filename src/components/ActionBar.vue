@@ -46,7 +46,7 @@ function simulationPreflight(): boolean {
 async function playSimulation() {
   if (!await ensurePhysics()) return
   if (!simulationPreflight()) return
-  toggleSimulation(true)
+  if (!toggleSimulation(true)) return
   gameplayRuntime.beginSession()
   editorState.statusText = t('physicsRunning')
   addEditorLog(t('physicsRunning'), 'Physics')
@@ -61,7 +61,7 @@ function pauseSimulation() {
 async function stepSimulation() {
   if (!await ensurePhysics()) return
   if (!simulationPreflight()) return
-  if (state.playMode === 'editing') { toggleSimulation(true); toggleSimulation(false) }
+  if (state.playMode === 'editing') { if (!toggleSimulation(true)) return; toggleSimulation(false) }
   gameplayRuntime.stepOnce()
   editorState.statusText = t('physicsStepped')
   addEditorLog(t('physicsStepped'), 'Physics')

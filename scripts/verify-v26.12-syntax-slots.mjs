@@ -1,3 +1,4 @@
+import {registerNodeBundle22,captureNodeBundle22} from './lib/nodeOperationTrace22.mjs'
 import assert from 'node:assert/strict'
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
@@ -9,7 +10,8 @@ const root=dirname(dirname(fileURLToPath(import.meta.url))),temporary=await mkdt
 let failure
 try{
   await writeFile(join(temporary,'package.json'),'{"type":"module"}\n')
-  await build({configFile:false,root,logLevel:'error',ssr:{noExternal:true},build:{ssr:true,outDir:temporary,emptyOutDir:false,rollupOptions:{input:{syntax:join(root,'src/visual/graphSyntax.ts'),schema:join(root,'src/visual/graphSyntaxSchema.ts'),catalog:join(root,'src/visual/graphCatalog.ts'),compiler:join(root,'src/visual/graphCompiler.ts'),types:join(root,'src/visual/graphTypes.ts')},output:{entryFileNames:'[name].mjs'}}}})
+  await build({configFile:false,root,logLevel:'error',ssr:{noExternal:true},build: { sourcemap:process.env.NOVA_AUDIT_NODE_OPERATION_COVERAGE==='1'?'hidden':false,ssr:true,outDir:temporary,emptyOutDir:false,rollupOptions:{input:{syntax:join(root,'src/visual/graphSyntax.ts'),schema:join(root,'src/visual/graphSyntaxSchema.ts'),catalog:join(root,'src/visual/graphCatalog.ts'),compiler:join(root,'src/visual/graphCompiler.ts'),types:join(root,'src/visual/graphTypes.ts')},output:{entryFileNames:'[name].mjs'}}}})
+  registerNodeBundle22(temporary)
   const load=name=>import(pathToFileURL(join(temporary,name+'.mjs')).href)
   const {projectRhaiSyntax,emitSyntaxGraph}=await load('syntax'),{syntaxSlots,syntaxFields,addSyntaxChildSlot,removeSyntaxChildSlot,moveSyntaxChildSlot,setSyntaxOptionalChild,syntaxNodeOptionalChildren,setSyntaxNodeField}=await load('schema'),{createGraphNode}=await load('catalog'),{compileGraph}=await load('compiler'),{serializeGraphDocument,parseGraphDocument}=await load('types')
   const wasm=await import(pathToFileURL(join(root,'nova_core/pkg/nova_core.js')).href)
@@ -71,7 +73,7 @@ try{
   }finally{runtime.free()}
 }catch(error){failure=error;process.exitCode=1}
 finally{
-  await mkdir(join(root,'release-audits'),{recursive:true});await writeFile(join(root,'release-audits/v26.12-syntax-slots.json'),JSON.stringify({status:failure?'failed':'passed',generatedAt:new Date().toISOString(),checks,error:failure?.stack,scope:'Real typed graph creation and slot mutation, compiler validation, serialize/restore and actual shipped WASM Rhai execution. Browser drag, click geometry and undo buttons remain separate checks.'},null,2)+'\n')
-  await rm(temporary,{recursive:true,force:true})
+  await mkdir(join(root,'release-audits'),{recursive:true});await writeFile(process.argv.find(arg=>arg.startsWith('--report='))?.slice(9)??join(root,'release-audits/v26.12-syntax-slots.json'),JSON.stringify({status:failure?'failed':'passed',generatedAt:new Date().toISOString(),checks,error:failure?.stack,scope:'Real typed graph creation and slot mutation, compiler validation, serialize/restore and actual shipped WASM Rhai execution. Browser drag, click geometry and undo buttons remain separate checks.'},null,2)+'\n')
+  await captureNodeBundle22(temporary);await rm(temporary,{recursive:true,force:true})
 }
 if(failure)console.error(failure);else console.log(`26.12 syntax slots: ${checks.length} compiler and WASM behavior checks passed`)

@@ -7,6 +7,10 @@ import { Collider2D, ShapeRenderer2D } from './components'
 export class TriangleEntity extends Entity {
   get vertices(): Vec2[] { return this.renderer.vertices }
   set vertices(value: Vec2[]) {
+    if (!Array.isArray(value)) throw new TypeError('vertices must be an array of finite coordinates')
+    for (const vertex of value) {
+      if (!vertex || !Number.isFinite(vertex.x) || !Number.isFinite(vertex.y)) throw new RangeError('vertices must contain finite coordinates')
+    }
     this.renderer.vertices = value
     const collider = this.getCollider(true)
     if (collider && !collider.removed) collider.vertices = value.map(vertex => ({ ...vertex }))

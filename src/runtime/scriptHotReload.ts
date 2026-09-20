@@ -28,6 +28,8 @@ export const scriptHotReloadState = reactive({
   rollbackSources: {} as Record<string, string>
 })
 
+let planSerial = 0
+
 function sourceHash(source: string): string {
   let hash = 2166136261
   for (const character of source) hash = Math.imul(hash ^ character.charCodeAt(0), 16777619) >>> 0
@@ -72,13 +74,14 @@ export function prepareHotReload(
   if (!reasons.length) reasons.push('Function bodies and exported property layout are compatible.')
 
   const plan: HotReloadPlan = {
-    id: `reload-${Date.now()}-${sourceHash(candidateSource)}`,
+    id: `reload-${Date.now()}-${++planSerial}-${sourceHash(candidateSource)}`,
     scriptUuid, requestedAt: new Date().toISOString(), previousHash: sourceHash(previousSource), candidateHash: sourceHash(candidateSource),
     classification, reasons, transfer, previousSource, candidateSource
   }
   scriptHotReloadState.activePlan = plan
   scriptHotReloadState.restartRequired = classification === 'restart-required'
-  append({ ...plan, status: 'prepared', completedAt: null, message: reasons.join(' ') })
+  const { previousSource: _previousSource, candidateSource: _candidateSource, ...metadata } = plan
+  append({ ...metadata, reasons: [...reasons], transfer: transfer.map(change => ({ ...change })), status: 'prepared', completedAt: null, message: reasons.join(' ') })
   return plan
 }
 
@@ -86,20 +89,24 @@ export function commitHotReload(plan: HotReloadPlan, previousDocument = plan.pre
   scriptHotReloadState.rollbackSources[plan.scriptUuid] = previousDocument
   const entry = scriptHotReloadState.history.find(item => item.id === plan.id)
   if (entry) { entry.status = 'committed'; entry.completedAt = new Date().toISOString(); entry.message = `Committed ${plan.candidateHash}; rollback ${plan.previousHash} retained.` }
-  scriptHotReloadState.activePlan = null
-  scriptHotReloadState.restartRequired = false
+  if (scriptHotReloadState.activePlan?.id === plan.id) {
+    scriptHotReloadState.activePlan = null
+    scriptHotReloadState.restartRequired = false
+  }
 }
 
 export function rejectHotReload(plan: HotReloadPlan, message: string): void {
   const entry = scriptHotReloadState.history.find(item => item.id === plan.id)
   if (entry) { entry.status = 'rejected'; entry.completedAt = new Date().toISOString(); entry.message = message }
-  scriptHotReloadState.activePlan = null
-  scriptHotReloadState.restartRequired = plan.classification === 'restart-required'
+  if (scriptHotReloadState.activePlan?.id === plan.id) {
+    scriptHotReloadState.activePlan = null
+    scriptHotReloadState.restartRequired = plan.classification === 'restart-required'
+  }
 }
 
 export function peekHotReloadRollback(scriptUuid: string): { source: string; historyId: string | null } | null {
   const source = scriptHotReloadState.rollbackSources[scriptUuid]
-  if (!source) return null
+  if (source === undefined) return null
   const latest = scriptHotReloadState.history.find(item => item.scriptUuid === scriptUuid && item.status === 'committed')
   return { source, historyId: latest?.id ?? null }
 }
@@ -119,4 +126,11 @@ export function rollbackHotReload(scriptUuid: string): string | null {
 
 export function hotReloadHistory(scriptUuid?: string): HotReloadHistoryEntry[] {
   return scriptHotReloadState.history.filter(item => !scriptUuid || item.scriptUuid === scriptUuid).map(item => ({ ...item, reasons: [...item.reasons], transfer: item.transfer.map(change => ({ ...change })) }))
+}
+
+/** Rollback source belongs to the running session; retain only metadata afterwards. */
+export function clearHotReloadSession(): void {
+  scriptHotReloadState.activePlan = null
+  scriptHotReloadState.restartRequired = false
+  scriptHotReloadState.rollbackSources = {}
 }

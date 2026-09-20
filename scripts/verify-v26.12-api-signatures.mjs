@@ -1,3 +1,4 @@
+import {registerNodeBundle22,captureNodeBundle22} from './lib/nodeOperationTrace22.mjs'
 import assert from 'node:assert/strict'
 import { createHash } from 'node:crypto'
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
@@ -16,7 +17,8 @@ const checks = [], fail = []
 const check = (name, run) => { try { run(); checks.push({ name, status: 'passed' }) } catch (error) { fail.push(error); checks.push({ name, status: 'failed', error: error.message }) } }
 try {
   await writeFile(join(temporary, 'package.json'), '{"type":"module"}\n')
-  await build({ configFile: false, root, logLevel: 'error', build: { ssr: true, outDir: temporary, emptyOutDir: false, rollupOptions: { input: { api: join(root, 'src/visual/rhaiApiSignatures.ts'), language: join(root, 'src/visual/rhaiSyntax.ts'), palette: join(root, 'src/visual/graphSyntaxApi.ts') }, output: { entryFileNames: '[name].mjs' } } } })
+  await build({ configFile: false, root, logLevel: 'error', build: { sourcemap:process.env.NOVA_AUDIT_NODE_OPERATION_COVERAGE==='1'?'hidden':false,ssr:true, outDir: temporary, emptyOutDir: false, rollupOptions: { input: { api: join(root, 'src/visual/rhaiApiSignatures.ts'), language: join(root, 'src/visual/rhaiSyntax.ts'), palette: join(root, 'src/visual/graphSyntaxApi.ts') }, output: { entryFileNames: '[name].mjs' } } } })
+  registerNodeBundle22(temporary)
   const { getRhaiApiSignatures, rhaiApiCallTemplate } = await import(pathToFileURL(join(temporary, 'api.mjs')).href)
   const { parseRhai } = await import(pathToFileURL(join(temporary, 'language.mjs')).href)
   const { syntaxExtensionDefinitions, initializeSyntaxApiNode } = await import(pathToFileURL(join(temporary, 'palette.mjs')).href)
@@ -132,4 +134,4 @@ try {
   const report = process.argv.find(value => value.startsWith('--report='))?.slice(9)
   if (report) await writeFile(report, JSON.stringify({ generatedAt: new Date().toISOString(), status: fail.length ? 'failed' : 'passed', checks, hostOverloadsExecuted: host.length, isolatedPlatformProbes: platformProbes.length, signatureCount: inventory.signatures.length }, null, 2))
   if (fail.length) process.exitCode = 1
-} finally { await rm(temporary, { recursive: true, force: true }) }
+} finally { await captureNodeBundle22(temporary);await rm(temporary, { recursive: true, force: true }) }

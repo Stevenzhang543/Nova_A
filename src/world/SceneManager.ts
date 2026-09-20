@@ -128,6 +128,7 @@ export class SceneManager {
   }
 
   setLoaded(uuid: string, loaded: boolean): boolean {
+    if (typeof loaded !== 'boolean') return false
     const scene = this.scenes.find(candidate => candidate.uuid === uuid)
     if (!scene) return false
     if (!loaded && scene.uuid === this.activeSceneUuid) {

@@ -393,6 +393,13 @@ impl WasmScriptRuntime {
         }
     }
 
+    /// Share immutable compiled programs while isolating candidate cache replacements.
+    pub fn fork(&self) -> Self {
+        Self {
+            inner: self.inner.clone(),
+        }
+    }
+
     pub fn validate(&self, source: &str) -> Result<String, JsValue> {
         let exports = self
             .inner

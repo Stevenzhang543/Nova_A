@@ -1,9 +1,10 @@
+import { assertStudioDraftsSaved } from '../editor/studioSaveBoundary'
 import { assetState } from '../assets/AssetDatabase'
 import { selectBuildAssets } from '../assets/assetProduction'
 import type { AssetRecord } from '../assets/types'
 import { assetSourceBytes } from '../assets/contentHash'
 import { addEditorLog, editorState } from '../store/editor'
-import { getSceneJSON, physicsState, sceneManager } from '../store/physics'
+import { getSceneJSON, physicsState, sceneManager, settlePendingDocumentEdits } from '../store/physics'
 import { buildProgress, buildSettings, recordBuildHistory, serializeBuildSettings, synchronizeBuildScenes, validateBuildSettings } from './buildSettings'
 import { NOVA_ENGINE_VERSION } from '../projects/projectFormat'
 import { createNovaPak, packageBase64 } from './novaPak'
@@ -84,7 +85,8 @@ async function fetchBytes(path: string): Promise<Uint8Array> {
 }
 
 async function collectWebPlayerFiles(): Promise<ExportFile[]> {
-  const manifestResponse = await fetch('./.vite/manifest.json')
+  let manifestResponse = await fetch('./player-manifest.json')
+  if (!manifestResponse.ok) manifestResponse = await fetch('./.vite/manifest.json')
   if (!manifestResponse.ok) throw new Error('Web Player files are available in a production build. Run pnpm build before exporting from a browser preview.')
   const manifest = await manifestResponse.json() as Record<string, ViteManifestEntry>
   const playerKey = Object.keys(manifest).find(key => key === 'player.html' || key.endsWith('/player.ts') || key.endsWith('player.ts'))
@@ -138,9 +140,9 @@ function decodeBase64(value: string): Uint8Array {
   return Uint8Array.from(binary, character => character.charCodeAt(0))
 }
 
-async function exportWebInBrowser(pack: Uint8Array, webFiles: ExportFile[]): Promise<NativeBuildResult> {
+async function exportWebInBrowser(pack: Uint8Array, webFiles: ExportFile[], zip = false, directory?: DirectoryHandle): Promise<NativeBuildResult> {
   const picker = (window as unknown as { showDirectoryPicker?: (options?: { mode: 'readwrite' }) => Promise<DirectoryHandle> }).showDirectoryPicker
-  if (!picker) {
+  if (zip || !picker) {
     const files = [...webFiles.map(file => ({ path: file.path, bytes: decodeBase64(file.dataBase64) })), { path: 'game.nova-pak', bytes: pack }]
     const archive = await createWebArchive(files)
     const outputPath = sanitizeGameName(buildSettings.gameName) + '-web.zip'
@@ -150,7 +152,7 @@ async function exportWebInBrowser(pack: Uint8Array, webFiles: ExportFile[]): Pro
     } finally { window.setTimeout(() => URL.revokeObjectURL(url), 1000) }
     return { outputPath, files: files.map(file => file.path), launched: false, cacheHits: 0, changedFiles: files.length, buildId: await sha256(pack) }
   }
-  const root = await picker({ mode: 'readwrite' })
+  const root = directory ?? await picker.call(window, { mode: 'readwrite' })
   for (const file of webFiles) await writeBrowserFile(root, file.path, decodeBase64(file.dataBase64))
   await writeBrowserFile(root, 'game.nova-pak', pack)
   return { outputPath: sanitizeGameName(buildSettings.gameName), files: ['index.html', 'game.nova-pak', ...webFiles.slice(1).map(file => file.path)], launched: false, cacheHits: 0, changedFiles: webFiles.length + 1, buildId: await sha256(pack) }
@@ -191,7 +193,9 @@ async function webBuildMetadata(pack: Uint8Array, webFiles: ExportFile[], projec
   ]
 }
 
-export async function buildGame(run = false): Promise<NativeBuildResult> {
+export async function buildGame(run = false, webDelivery: 'auto' | 'zip' = 'auto'): Promise<NativeBuildResult> {
+  if (!settlePendingDocumentEdits()) throw new Error('Finish or cancel invalid edits before exporting the project.')
+  assertStudioDraftsSaved()
   const startedAt = new Date().toISOString()
   const startedClock = performance.now()
   synchronizeBuildScenes(sceneManager.scenes.map(scene => scene.uuid))
@@ -206,7 +210,12 @@ export async function buildGame(run = false): Promise<NativeBuildResult> {
     if (!packageEnabled(OFFICIAL_NETWORKING_PACKAGE_ID) || !productionSettings.networking.enabled || !productionSettings.networking.autoStart) throw new Error('Enable the optional Nova Networking package, networking settings, and automatic runtime startup before exporting a headless server.')
     if (productionSettings.networking.role === 'client') throw new Error('Headless server exports require the networking role Server or Host.')
   }
+  if (webDelivery === 'zip' && buildSettings.target !== 'web') throw new Error('ZIP download requires the Web target.')
   buildProgress.phase = 'validating'; buildProgress.percent = 8; buildProgress.message = 'Validating scenes and asset references…'; buildProgress.outputPath = ''
+  // Request the folder while the activating user gesture is still available.
+  const picker = (window as unknown as { showDirectoryPicker?: (options: { mode: 'readwrite' }) => Promise<DirectoryHandle> }).showDirectoryPicker
+  const browserDirectory = webDelivery === 'auto' && buildSettings.target === 'web' && !('__TAURI_INTERNALS__' in window) && picker ? await picker.call(window, { mode: 'readwrite' }) : undefined
+
   const projectJson = projectForBuild(getSceneJSON())
   buildProgress.phase = 'packing'; buildProgress.percent = 32; buildProgress.message = 'Creating indexed game.nova-pak…'
   const selectedAssets = assetsForBuild(JSON.parse(projectJson))
@@ -220,7 +229,9 @@ export async function buildGame(run = false): Promise<NativeBuildResult> {
     if (icon) webFiles.push(icon); if (splash) webFiles.push(splash)
   }
   let result: NativeBuildResult
-  if ('__TAURI_INTERNALS__' in window) {
+  if (buildSettings.target === 'web' && webDelivery === 'zip') {
+    result = await exportWebInBrowser(pack, webFiles, true)
+  } else if ('__TAURI_INTERNALS__' in window) {
     const { invoke } = await import('@tauri-apps/api/core')
     result = await invoke<NativeBuildResult>('export_game', {
       request: {
@@ -233,7 +244,7 @@ export async function buildGame(run = false): Promise<NativeBuildResult> {
     })
   } else {
     if (buildSettings.target !== 'web') throw new Error('Desktop game exports must be created from the Nova_A desktop editor. Web export is available here.')
-    result = await exportWebInBrowser(pack, webFiles)
+    result = await exportWebInBrowser(pack, webFiles, false, browserDirectory)
   }
   buildProgress.phase = 'complete'; buildProgress.percent = 100; buildProgress.message = `Build complete: ${result.outputPath}`; buildProgress.outputPath = result.outputPath; buildProgress.cacheHits = result.cacheHits ?? 0; buildProgress.changedFiles = result.changedFiles ?? result.files.length
   editorState.statusText = buildProgress.message

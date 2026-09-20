@@ -1,0 +1,10 @@
+import assert from 'node:assert/strict'
+import {readFile} from 'node:fs/promises'
+import {propertyAudit22} from './lib/propertyAudit22.mjs'
+const audit=await propertyAudit22('audit-dispositions'),checks=[]
+const check=(name,run)=>{run();checks.push({name,status:'passed'});console.log('PASS '+name)}
+const matrix=JSON.parse(await readFile('reports/v26.22-property-lifecycle-matrix.json','utf8')),operations=JSON.parse(await readFile('reports/v26.22-public-operations.json','utf8')),runtime=JSON.parse(await readFile('reports/v26.22-runtime-family-evidence.json','utf8'))
+check('Every enumerated field has a named owner and six stage dispositions without a blanket pass',()=>{assert.equal(matrix.fieldReview.namedFields,matrix.rows.length);assert.equal(matrix.fieldReview.unclassified,0);for(const row of matrix.rows){assert.equal(row.review.field,row.id);assert.ok(row.review.owner);assert.ok(!row.disposition.startsWith('requires '));for(const stage of ['mutation','validation','history','persistence','export','runtime'])assert.ok(['scoped evidence or exclusion','explicit evidence limit'].includes(row.review.stages[stage].status));assert.ok(row.review.runtimeScope.includes('not a runtime pass'))}})
+check('Every enumerated public operation links execution or an explicit exclusion',()=>{assert.ok(operations.operations.length>0);for(const operation of operations.operations)assert.ok(operation.cases.length||operation.scopeExclusion,operation.id)})
+check('Runtime effect families retain actual named passing assertions and scoped limits',()=>{assert.equal(runtime.families.length,22);for(const family of runtime.families){assert.ok(family.id&&family.scope);assert.ok(family.evidence.checks.length);assert.match(family.evidence.sha256,/^[0-9a-f]{64}$/)}})
+await audit.write(checks,'Audits classification completeness only. Accepted-value evidence, rejection-domain limits, structural variants, runtime effects and external-platform exclusions remain separate; this report does not certify every field or input.')

@@ -1,4 +1,5 @@
 import { reactive } from 'vue'
+import { snapshotPath, snapshotPreview, snapshotValueType, snapshotComparison } from './dynamicInspection'
 
 export interface DebugFrame {
   entityUuid: string
@@ -10,7 +11,7 @@ export interface DebugFrame {
   depth?: number
 }
 
-export interface DebugWatch { id: number; expression: string; value: string; error: string | null }
+export interface DebugWatch { id: number; expression: string; value: string; error: string | null; valueType?: string }
 export type DebugStepMode = 'continue' | 'into' | 'over' | 'out'
 export type DebugExceptionPolicy = 'never' | 'uncaught' | 'all'
 export interface DebugTask { id: string; name: string; state: 'queued' | 'running' | 'waiting' | 'completed' | 'cancelled' | 'failed'; entityUuid: string; detail: string }
@@ -78,15 +79,6 @@ export function normalizeDebugSourceMap(value: unknown): DebugSourceMap {
   return { mappings, diagnostics: diagnostics.slice(0, 1_000) }
 }
 
-function readPath(root: unknown, path: string): unknown {
-  const parts = path.trim().split('.').filter(Boolean)
-  let value = root
-  for (const part of parts) {
-    if (!value || typeof value !== 'object' || !(part in value)) throw new Error(`Unknown value: ${path}`)
-    value = (value as Record<string, unknown>)[part]
-  }
-  return value
-}
 
 function scalar(value: string, root: unknown): unknown {
   const clean = value.trim()
@@ -95,21 +87,23 @@ function scalar(value: string, root: unknown): unknown {
   if (clean === 'null') return null
   if (/^-?\d+(?:\.\d+)?$/.test(clean)) return Number(clean)
   if ((clean.startsWith('"') && clean.endsWith('"')) || (clean.startsWith("'") && clean.endsWith("'"))) return clean.slice(1, -1)
-  return readPath(root, clean)
+  return snapshotPath(root, clean)
 }
 
 export function evaluateDebugExpression(expression: string, root: unknown = scriptDebugState.locals): unknown {
-  const clean = expression.trim().slice(0, 512)
-  const comparison = clean.match(/^(.+?)\s*(===|!==|==|!=|>=|<=|>|<)\s*(.+)$/)
+  if (expression.length > 512) throw new Error('Snapshot expressions are limited to 512 characters')
+  const clean = expression.trim()
+  const comparison = snapshotComparison(clean)
   if (!comparison) return scalar(clean, root)
-  const left = scalar(comparison[1], root), right = scalar(comparison[3], root)
-  if (comparison[2] === '===' || comparison[2] === '==') return left === right
-  if (comparison[2] === '!==' || comparison[2] === '!=') return left !== right
+  const left = scalar(comparison[0], root), right = scalar(comparison[2], root)
+  if (comparison[1] === '===' || comparison[1] === '==') return left === right
+  if (comparison[1] === '!==' || comparison[1] === '!=') return left !== right
+  if ([left, right].some(value => value !== null && ['object', 'function', 'symbol'].includes(typeof value))) throw new Error('Ordered comparisons require scalar values')
   const first = Number(left), second = Number(right)
   if (!Number.isFinite(first) || !Number.isFinite(second)) throw new Error('Ordered comparisons require finite numbers')
-  if (comparison[2] === '>=') return first >= second
-  if (comparison[2] === '<=') return first <= second
-  if (comparison[2] === '>') return first > second
+  if (comparison[1] === '>=') return first >= second
+  if (comparison[1] === '<=') return first <= second
+  if (comparison[1] === '>') return first > second
   return first < second
 }
 
@@ -117,7 +111,7 @@ export function inspectDebugObject(path: string): void {
   scriptDebugState.inspectedPath = path.trim().slice(0, 160)
   try {
     const value = evaluateDebugExpression(scriptDebugState.inspectedPath)
-    scriptDebugState.inspectedValue = typeof value === 'string' ? value : JSON.stringify(value, null, 2)
+    scriptDebugState.inspectedValue = `${snapshotValueType(value)} · ${snapshotPreview(value)}`
   } catch (error) { scriptDebugState.inspectedValue = error instanceof Error ? error.message : String(error) }
 }
 
@@ -137,10 +131,12 @@ export function evaluateDebugWatches(): void {
   for (const watch of scriptDebugState.watches) {
     try {
       const value = evaluateDebugExpression(watch.expression)
-      watch.value = typeof value === 'string' ? value : JSON.stringify(value)
+      watch.value = typeof value === 'string' ? value.slice(0, 2048) + (value.length > 2048 ? '…[truncated]' : '') : snapshotPreview(value, 4096)
+      watch.valueType = snapshotValueType(value)
       watch.error = null
     } catch (error) {
       watch.value = '—'
+      watch.valueType = undefined
       watch.error = error instanceof Error ? error.message : String(error)
     }
   }

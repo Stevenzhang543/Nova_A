@@ -1,6 +1,6 @@
 import { reactive } from 'vue'
 import { editorState } from '../store/editor'
-import { beginProjectSession, newProjectMetadata, projectSessionState, safeProjectName, touchProjectMetadata } from './projectSession'
+import { beginProjectSession, newProjectMetadata, projectSessionState, safeProjectName } from './projectSession'
 import { createTemplateProjectJson, type ProjectTemplateId } from './templates'
 import { analyzeProjectUpgrade, downloadProjectBackup, dryRunProjectMigration, readUpgradeRollback, recordMigrationApplied, storeUpgradeRollback, type UpgradePreview } from '../runtime/projectUpgrade'
 import { acquireProjectLock, inspectProjectLock, markSourceBaseline, releaseProjectLock } from '../runtime/teamWorkflow'
@@ -248,7 +248,7 @@ export async function openRecentProject(id: string): Promise<boolean> {
 
 export async function rememberCurrentProject(): Promise<void> {
   const { getSceneJSON } = await physicsModule()
-  touchProjectMetadata()
+  // Recent-list timestamps are bookkeeping; remembering must not dirty the saved document.
   const source = getSceneJSON()
   const snapshot = source.length <= MAX_SNAPSHOT_BYTES ? source : null
   const recent: RecentProject = {

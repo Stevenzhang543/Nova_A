@@ -1,3 +1,4 @@
+import {registerNodeBundle22,captureNodeBundle22} from './lib/nodeOperationTrace22.mjs'
 import assert from 'node:assert/strict'
 import { existsSync } from 'node:fs'
 import { mkdtemp,mkdir,rm,writeFile } from 'node:fs/promises'
@@ -22,7 +23,8 @@ try{
     return null
   }}
   const input={panels:join(sourceRoot,'src/editor/panelLayout.ts'),workspaces:join(sourceRoot,'src/editor/workspaces.ts'),editor:join(root,'src/store/editor.ts'),preferences:join(root,'src/store/preferences.ts'),session:join(root,'src/projects/projectSession.ts')}
-  await build({configFile:false,root,plugins:[overlay],logLevel:'error',build:{ssr:true,outDir:temporary,emptyOutDir:false,rollupOptions:{input,output:{entryFileNames:'[name].mjs'}}}})
+  await build({configFile:false,root,plugins:[overlay],logLevel:'error',build:{sourcemap:process.env.NOVA_AUDIT_NODE_OPERATION_COVERAGE==='1'?'hidden':false,ssr:true,outDir:temporary,emptyOutDir:false,rollupOptions:{input,output:{entryFileNames:'[name].mjs'}}}})
+ registerNodeBundle22(temporary)
   const [panels,workspaces,{editorState},{preferencesState},{projectSessionState},{nextTick}]=await Promise.all([...Object.keys(input).map(key=>import(pathToFileURL(join(temporary,key+'.mjs')).href)),import('vue')])
   await check('Pointer resizing respects direction, physical scale and finite size bounds',()=>{
     assert.equal(panels.draggedPanelSize(300,60,1.5,false,160,500),340)
@@ -105,8 +107,8 @@ try{
     assert.equal(workspaces.applyNamedWorkspace('script'),true);assert.equal(editorState.activeWorkspace,'script')
     assert.equal(workspaces.applyNamedWorkspace(second.id),true);assert.equal(editorState.activeWorkspace,'custom');assert.equal(editorState.hierarchyWidth,410)
   })
-  const output=stage?join(sourceRoot,'reports/workspace-verification.json'):join(root,'release-audits/v26.13-workspaces.json')
+  const output=process.argv.find(arg=>arg.startsWith('--report='))?.slice(9)??(stage?join(sourceRoot,'reports/workspace-verification.json'):join(root,'release-audits/v26.13-workspaces.json'))
   const failed=checks.filter(item=>item.status==='failed'),status=failed.length?'failed':'passed'
   await mkdir(dirname(output),{recursive:true});await writeFile(output,JSON.stringify({status,generatedAt:new Date().toISOString(),scope:'Actual production workspace state and finite resize helpers with in-memory browser storage. Pointer geometry and observed focus have a separate browser gate.',checks},null,2)+'\n')
   console.log(JSON.stringify({status,checks:checks.length,failed,output}));if(failed.length)process.exitCode=1
-}finally{globalThis.localStorage=savedStorage;await rm(temporary,{recursive:true,force:true})}
+}finally{globalThis.localStorage=savedStorage;await captureNodeBundle22(temporary);await rm(temporary,{recursive:true,force:true})}

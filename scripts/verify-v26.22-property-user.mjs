@@ -1,0 +1,51 @@
+import assert from 'node:assert/strict'
+import {readFile} from 'node:fs/promises'
+import {join} from 'node:path'
+import {withBrowserAudit,wait} from './lib/browserUserAudit.mjs'
+import {worldUserControls17} from './lib/worldAudit17.mjs'
+await withBrowserAudit({release:'26.22',name:'property-user',expectedRelease:JSON.parse(await readFile('package.json','utf8')).version.split('.').slice(0,2).join('.'),development:process.argv.includes('--development'),width:1366,height:768},async a=>{
+ const u=worldUserControls17(a),selector='[data-property-path="Transform.position"] input';await u.open(join(process.cwd(),'reference-projects/projects/creator-v2621-code-game/project.nova'));await u.entity('Player');
+ await a.check('Malformed numeric input remains visible after blur and Escape restores it',async()=>{const before=await u.position();await u.field(selector,'1 / 0');assert.equal(await a.evaluate(`document.querySelector(${JSON.stringify(selector)}).value`),'1 / 0');assert.equal(await a.evaluate(`document.querySelector(${JSON.stringify(selector)}).getAttribute('aria-invalid')`),'true');await a.capture('invalid-draft');await a.evaluate(`document.querySelector(${JSON.stringify(selector)}).focus()`);await a.press('Escape');assert.equal((await u.position())[0],before[0]);assert.equal(await a.evaluate(`document.querySelector(${JSON.stringify(selector)}).getAttribute('aria-invalid')`),null)})
+ await a.check('Two independently edited position controls undo and redo independently',async()=>{const before=await u.position();await u.field(selector,before[0]+2,0);await u.field(selector,before[1]+3,1);await a.evaluate('document.activeElement.blur()');await a.press('z',2);assert.deepEqual(await u.position(),[before[0]+2,before[1]]);await a.press('z',2);assert.deepEqual(await u.position(),before);await a.press('y',2);await a.press('y',2);assert.deepEqual(await u.position(),[before[0]+2,before[1]+3])})
+ await a.check('A slider drag spanning the merge window is one undo action',async()=>{
+  await u.expandInspector();const index=await a.evaluate("[...document.querySelectorAll('.number-range input[type=range]')].findIndex(e=>e.getBoundingClientRect().width>0)");assert.ok(index>=0);const range='.number-range input[type=range]';await a.evaluate("window.__novaAuditSliderEvents=[];for(const type of ['pointerdown','pointermove','pointerup','input','change'])document.addEventListener(type,event=>{if(event.target.matches?.('.number-range input[type=range]'))window.__novaAuditSliderEvents.push({type,value:event.target.value,buttons:event.buttons,prevented:event.defaultPrevented})},true)");await a.evaluate(`document.querySelectorAll('${range}')[${index}].scrollIntoView({block:'center',behavior:'instant'})`);await wait(500);
+  const state=async()=>a.evaluate(`(()=>{const e=document.querySelectorAll('${range}')[${index}],r=e.getBoundingClientRect();return{value:Number(e.value),disabled:e.disabled,readOnly:e.readOnly,focused:document.activeElement===e,min:Number(e.min),max:Number(e.max),hit:document.elementFromPoint(r.x+r.width*.7,r.y+r.height/2)===e,x:r.x,y:r.y,width:r.width,height:r.height}})()`),before=await state();
+  assert.ok(before.hit,JSON.stringify(before));a.observations.push({name:'slider-before',...before});
+  await a.client.send('Input.dispatchMouseEvent',{type:'mouseMoved',x:before.x+before.width*.3,y:before.y+before.height/2});
+  await a.client.send('Input.dispatchMouseEvent',{type:'mousePressed',x:before.x+before.width*.3,y:before.y+before.height/2,button:'left',buttons:1,modifiers:0,clickCount:1});await wait(1100);a.observations.push({name:'slider-pressed',...await state()});
+  await a.client.send('Input.dispatchMouseEvent',{type:'mouseMoved',x:before.x+before.width*.7,y:before.y+before.height/2,button:'left',buttons:1});await wait(1100);a.observations.push({name:'slider-moved',...await state()});
+  await a.client.send('Input.dispatchMouseEvent',{type:'mouseReleased',x:before.x+before.width*.7,y:before.y+before.height/2,button:'left',clickCount:1});await wait(250);const after=await state();const events=await a.evaluate('window.__novaAuditSliderEvents');a.observations.push({name:'slider-events',events});assert.ok(events.filter(e=>e.type==='input').length>=2,'Gesture must contain multiple native value changes');assert.notEqual(after.value,before.value);await a.evaluate('document.activeElement.blur()');await a.press('z',2);assert.equal((await state()).value,before.value);await a.press('y',2);assert.equal((await state()).value,after.value)
+ })
+ await a.check('Slider numeric step buttons and arrow keys preserve the configured step and readable width',async()=>{
+  const row='.number-range:has(.numeric-steppers)',field=row+' .numeric-draft input';
+  await a.evaluate(`document.querySelector('${field}').scrollIntoView({block:'center',behavior:'instant'})`);await wait(200);
+  const step=await a.evaluate(`Number(document.querySelector('${row} input[type=range]').step)`);assert.ok(step>0);
+  await u.field(field,String(step*4));await u.activate(row+' .numeric-steppers button',1);assert.ok(Math.abs(Number(await a.evaluate(`document.querySelector('${field}').value`))-step*5)<1e-8);
+  await u.activate(row+' .numeric-steppers button',0);assert.ok(Math.abs(Number(await a.evaluate(`document.querySelector('${field}').value`))-step*4)<1e-8);
+  await a.evaluate(`document.querySelector('${field}').focus()`);await a.press('ArrowUp');assert.ok(Math.abs(Number(await a.evaluate(`document.querySelector('${field}').value`))-step*5)<1e-8);await a.press('ArrowDown');assert.ok(Math.abs(Number(await a.evaluate(`document.querySelector('${field}').value`))-step*4)<1e-8);
+  const capacity=await a.evaluate(`(()=>{const e=document.querySelector('${field}'),s=getComputedStyle(e),c=document.createElement('canvas').getContext('2d');c.font=s.font;return(e.clientWidth-parseFloat(s.paddingLeft)-parseFloat(s.paddingRight))/c.measureText('0').width})()`);assert.ok(capacity>=6,'At least six digits must remain usable: '+capacity);a.observations.push({name:'numeric-stepper-digit-capacity',capacity});await a.capture('numeric-steppers')
+ })
+
+ await a.check('Save immediately after typing commits the expression through the field owner',async()=>{const before=await u.position();await a.evaluate(`const e=document.querySelector(${JSON.stringify(selector)});e.scrollIntoView({block:'center'});e.focus();e.select()`);await a.client.send('Input.insertText',{text:'current + 5'});await a.client.send('Browser.setDownloadBehavior',{behavior:'allow',downloadPath:a.profile});await a.press('s',2);let saved;for(let i=0;i<100&&!saved;i++){try{saved=JSON.parse(await readFile(join(a.profile,'project.nova'),'utf8'))}catch{await wait(100)}}assert.ok(saved,'Saved project');const player=saved.scenes.flatMap(s=>s.entities).find(e=>e.name==='Player');assert.equal(player.components.find(c=>c.kind==='Transform2D').data.position.x,before[0]+5);await a.capture('saved-expression')})
+ await a.check('Switching entities discards the previous entity invalid draft',async()=>{
+  const before=await u.position();await u.field(selector,'invalid expression');await u.entity('Checkpoint 1');assert.deepEqual(await u.position(),[-6,-2]);assert.equal(await a.evaluate("document.querySelectorAll('[aria-invalid=true]').length"),0);await u.entity('Player');assert.deepEqual(await u.position(),before)
+ })
+ await a.check('Mixed shared coordinates apply to both owners and survive save/reopen',async()=>{
+  const index=await a.evaluate("[...document.querySelectorAll('.entity-list .entity-item .name')].findIndex(e=>[...e.childNodes].filter(n=>n.nodeName!=='SMALL').map(n=>n.textContent).join('').trim()==='Checkpoint 1')");assert.ok(index>=0);const at=await a.point('.entity-list .entity-item .name',index);await a.client.send('Input.dispatchMouseEvent',{type:'mousePressed',...at,button:'left',modifiers:2,clickCount:1});await a.client.send('Input.dispatchMouseEvent',{type:'mouseReleased',...at,button:'left',modifiers:2,clickCount:1});await a.until("!!document.querySelector('.multi-inspector')");
+  const mode='.multi-inspector select:has(option[value=shared])';await a.select(mode,'shared');const mixed='.multi-inspector .numeric-draft input';assert.equal(await a.evaluate(`document.querySelector('${mixed}').placeholder`),'Mixed');await u.field(mixed,42);assert.equal(await a.evaluate(`document.querySelector('${mixed}').value`),'42');await a.capture('mixed-shared-position');
+  const saved=await u.save('shared-position-22');for(const name of ['Player','Checkpoint 1']){const entity=saved.document.scenes.flatMap(s=>s.entities).find(e=>e.name===name);assert.equal(entity.components.find(c=>c.kind==='Transform2D').data.position.x,42)}await u.open(saved.file);await u.entity('Player');assert.equal((await u.position())[0],42);await u.entity('Checkpoint 1');assert.equal((await u.position())[0],42)
+ })
+
+ await a.check('Authored inspector rejects keyboard focus during playback and resumes editing after Stop',async()=>{
+  await u.entity('Checkpoint 1');await u.expandInspector();const before=await u.position();
+  await u.activate('.actionbar>button:first-child');await a.until(`!!document.querySelector('.config-panel.runtime')`);
+  await a.evaluate(`document.querySelector('[data-property-path="Transform.position"] input').focus()`);
+  assert.equal(await a.evaluate(`document.querySelector('.config-panel').contains(document.activeElement)`),false,'Disabled authoring fields must not retain keyboard focus');
+  await u.activate('.actionbar>button:nth-child(2)');await a.until(`!!document.querySelector('.actionbar>button:nth-child(2).active')`);
+  await a.evaluate(`document.querySelector('[data-property-path="Transform.position"] input').focus()`);
+  assert.equal(await a.evaluate(`document.querySelector('.config-panel').contains(document.activeElement)`),false,'Paused runtime still isolates authored fields');
+  await u.activate('.actionbar>button:nth-child(4)');await a.until(`!!document.querySelector('.config-panel:not(.runtime)')`);await u.entity('Checkpoint 1');assert.deepEqual(await u.position(),before);
+  await a.evaluate(`document.querySelector('[data-property-path="Transform.position"] input').focus()`);assert.equal(await a.evaluate(`document.querySelector('.config-panel').contains(document.activeElement)`),true);
+  await a.capture('inspector-editing-restored');
+ })
+})

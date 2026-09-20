@@ -228,7 +228,7 @@ function Test-SensitiveSourcePath {
 function Test-ExcludedSourcePath {
   param([Parameter(Mandatory = $true)][string]$Path)
   $normalized = $Path.Replace('\','/').TrimStart('/')
-  if ($normalized -ieq 'instructions.txt') { return $true }
+  if ($normalized -ieq 'godot-master' -or $normalized -ilike 'godot-master/*' -or $normalized -ieq 'instructions.txt') { return $true }
   $first = $normalized.Split('/')[0]
   if ($first -like 'stage*' -or $first -match '^(\.git|\.pnpm-store|\.VSCodeCounter|\.vite|\.cache|\.turbo|\.vscode|\.idea|dist|dist-ssr|node_modules|release-audits|releases|target|coverage|playwright-report|test-results|logs)$') { return $true }
   if ($normalized -match '^(src-tauri|nova_core)/target(/|$)' -or $normalized -match '^src-tauri/gen(/|$)') { return $true }
@@ -390,6 +390,8 @@ New-Item -ItemType Directory -Path $webStage | Out-Null
 try {
   Copy-Item -Path (Join-Path $projectRoot 'dist\*') -Destination $webStage -Recurse -Force
   Copy-Item -LiteralPath (Join-Path $projectRoot 'LICENSE.md') -Destination (Join-Path $webStage 'LICENSE.md') -Force
+  $hostingGuide = Join-Path $projectRoot 'docs\WEB_HOSTING_26_23.md'
+  if (Test-Path -LiteralPath $hostingGuide) { Copy-Item -LiteralPath $hostingGuide -Destination (Join-Path $webStage 'HOSTING.md') }
   $fontLicenseDirectory = Join-Path $webStage 'FONT_LICENSES'
   New-Item -ItemType Directory -Path $fontLicenseDirectory -Force | Out-Null
   Copy-Item -LiteralPath (Join-Path $projectRoot 'node_modules\@fontsource-variable\nunito-sans\LICENSE') -Destination (Join-Path $fontLicenseDirectory 'Nunito-Sans-OFL-1.1.txt') -Force
@@ -398,7 +400,7 @@ try {
   $webReadme = @"
 # Nova_A $Version Web Package
 
-Serve this directory from an HTTP(S) origin. Do not open `index.html` with `file://`; WebAssembly modules, workers, ES modules, and the bundled manual require a web server. `index.html` opens the editor and `player.html` opens the standalone player. Preserve file names and MIME types, especially `application/wasm` for `.wasm` files. HTTPS is required for production networking and other secure browser APIs. Use immutable long-lived caching for hashed files under `assets/`, but revalidate HTML and `release-metadata.json`. Cross-origin isolation is not required by this release; if a host enables it, configure COOP/COEP consistently for every asset. The locally qualified browser is the pinned Edge/Chromium identity in the evidence archive; Firefox remains an explicit external gate.
+Serve this directory from an HTTP(S) origin. Do not open `index.html` with `file://`; WebAssembly modules, workers, ES modules, and the bundled manual require a web server. `index.html` opens the editor and `player.html` opens the standalone player. Preserve file names and MIME types, especially `application/wasm` for `.wasm` files. HTTPS is required for production networking and other secure browser APIs. See HOSTING.md when included for static deployment and explicit Web ZIP download. Use immutable long-lived caching for hashed files under `assets/`, but revalidate HTML and `release-metadata.json`. Cross-origin isolation is not required by this release; if a host enables it, configure COOP/COEP consistently for every asset. The locally qualified browser is the pinned Edge/Chromium identity in the evidence archive; Firefox remains an explicit external gate.
 
 Verify every packaged file against `SHA256SUMS.txt`. Release metadata is in `release-metadata.json`.
 "@

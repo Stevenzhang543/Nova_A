@@ -157,7 +157,7 @@ function canonicalRecord(record: SceneEntityData, instanceEntities: Entity[]): R
 function diffValues(base: unknown, current: unknown, path: string, output: Record<string, unknown>): void {
   if (Object.is(base, current)) return
   if (Array.isArray(base) && Array.isArray(current)) {
-    if (JSON.stringify(base) !== JSON.stringify(current)) output[path] = clone(current)
+    if (canonicalProjectText(base) !== canonicalProjectText(current)) output[path] = clone(current)
     return
   }
   if (base && current && typeof base === 'object' && typeof current === 'object') {

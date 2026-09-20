@@ -56,8 +56,22 @@ function safeIdentifier(value: string): string { return value.replace(/[^A-Za-z0
 function meaningful(lines: string[]): string[] { return lines.filter(line => line.trim() && !line.includes('__nova_graph_trace(')) }
 function withoutMarker(line: string): string { return line.replace(NODE_MARKER, '').replace(VARIABLE_MARKER, '').replace(/\s+$/, '') }
 
+function graphLinkMarkers(source: string): Array<{ uuid: string; start: number; end: number }> {
+  if (!source.includes(GRAPH_LINK_PREFIX)) return []
+  const safeLines = new Set<number>(); syntaxMask(source, true, safeLines)
+  const markers: Array<{ uuid: string; start: number; end: number }> = []
+  let offset = 0
+  for (const [index, line] of (source.match(/[^\n]*\n|[^\n]+$/g) ?? []).entries()) {
+    const match = safeLines.has(index) ? /^\/\/ @nova-graph-link ([0-9a-f-]{36})[ \t]*(?:\r?\n)?$/i.exec(line) : null
+    if (match) markers.push({ uuid: match[1].toLowerCase(), start: offset, end: offset + line.length })
+    offset += line.length
+  }
+  return markers
+}
 function linkedGraphUuid(source: string): string {
-  return source.match(/^\/\/ @nova-graph-link ([0-9a-f-]{36})\s*$/im)?.[1]?.toLowerCase() ?? ''
+  // Generated scripts start with their marker: keep this frequent lookup cheap.
+  const header = /^\/\/ @nova-graph-link ([0-9a-f-]{36})[ \t]*(?:\r?\n|$)/i.exec(source)
+  return header?.[1].toLowerCase() ?? graphLinkMarkers(source)[0]?.uuid ?? ''
 }
 
 function variableLine(graph: NovaGraphDocument, line: string): string | null {
@@ -751,7 +765,15 @@ export function linkScriptToGraph(scriptUuid: string, graph: NovaGraphDocument):
 
 export function unlinkScriptFromGraph(scriptUuid: string): void {
   const asset = assetState.records.find(item => item.uuid === scriptUuid && item.assetType === 'script')
-  if (asset?.script) asset.script.linkedGraphUuid = ''
+  if (!asset) return
+  const source = readTextAsset(scriptUuid)
+  if (source === null) throw new Error('The linked script source is unavailable; its link was retained.')
+  // Both metadata and the source marker are link authorities. Preserve all
+  // other bytes, including generated node markers and authored comments.
+  let detached = source
+  for (const marker of graphLinkMarkers(source).reverse()) detached = detached.slice(0, marker.start) + detached.slice(marker.end)
+  if (detached !== source && !updateTextAsset(scriptUuid, detached)) throw new Error('The script could not be unlinked; its link was retained.')
+  if (asset.script) asset.script.linkedGraphUuid = ''
 }
 
 export function linkedScriptGraphUuid(scriptUuid: string): string {

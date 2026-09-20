@@ -6,7 +6,7 @@ import type { Vec2 } from './types'
 import { finiteNumber, normalizeAngle } from './geometry'
 import { normalizeUuid } from './identity'
 import { localPointToWorld, setWorldTransform, worldPointToLocal, worldTransform } from './hierarchy'
-import { Joint2D, type JointKind2D } from './components'
+import { Joint2D, normalizeJointBreakThreshold, type JointKind2D } from './components'
 
 export type ConnectionStyle = 'straight' | 'curved' | 'manual'
 export type AnchorMode = 'center' | 'surface' | 'vertex' | 'side' | 'local'
@@ -588,8 +588,8 @@ export function normalizeConnection(connection: Connection, entities: Entity[]):
   connection.motorEnabled = connection.motorEnabled === true
   connection.motorSpeed = finiteNumber(connection.motorSpeed)
   connection.maxMotorForce = Math.max(0, finiteNumber(connection.maxMotorForce, 1000))
-  connection.breakForce = Math.max(0, finiteNumber(connection.breakForce, Number.MAX_VALUE))
-  connection.breakTorque = Math.max(0, finiteNumber(connection.breakTorque, Number.MAX_VALUE))
+  connection.breakForce = normalizeJointBreakThreshold(connection.breakForce)
+  connection.breakTorque = normalizeJointBreakThreshold(connection.breakTorque)
   connection.anchors = (Array.isArray(connection.anchors) ? connection.anchors : [])
     .filter(anchor => entities.some(entity => entity.id === anchor.entityId))
   if (connection.anchors.length < 2) return false

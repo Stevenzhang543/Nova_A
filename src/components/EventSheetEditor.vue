@@ -19,7 +19,7 @@
       <header class="sheet-toolbar">
         <div><strong>{{ document.name }}</strong><span>{{ activeAsset?.path ?? t('unsaved') }}</span></div>
         <button :disabled="!selectedEntity || !activeAsset" @click="attachToSelection">{{ attached ? t('attached') : t('attachToSelected') }}</button>
-        <button :disabled="!dirty || !activeAsset" class="primary" @click="save">{{ t('saveAsset') }}</button>
+        <button :disabled="!activeAsset" class="primary" @click="save">{{ t('saveAsset') }}</button>
       </header>
 
       <section class="object-context">
@@ -37,7 +37,7 @@
           <div class="event-copy"><input :aria-label="t('eventName')" v-model="handler.name" maxlength="120" :placeholder="t('eventName')" @change="markDirty"><small>{{ eventDescription(handler.kind) }}</small></div>
           <label v-if="needsSelector(handler.kind)" class="selector"><span>{{ selectorLabel(handler.kind) }}</span><input v-model="handler.selector" maxlength="256" @change="markDirty"></label>
           <label class="callback"><span>{{ t('callback') }}</span><input v-model="handler.callback" list="event-callbacks" maxlength="120" @change="markDirty"></label>
-          <label class="priority"><span>{{ t('priority') }}</span><input v-model.number="handler.priority" type="number" min="-1000000" max="1000000" @change="markDirty"></label>
+          <label class="priority"><span>{{ t('priority') }}</span><NumericExpressionInput v-model="handler.priority" :resource-key="`${activeUuid}:${handler.uuid}:priority`" :aria-label="t('priority')" :minimum="-1000000" :maximum="1000000" integer @change="markDirty" /></label>
           <label class="override"><input v-model="handler.overrideInherited" type="checkbox" @change="markDirty"><span>{{ t('overrideInherited') }}</span></label>
           <button class="danger" :title="t('remove')" @click="removeHandler(handler.uuid)">×</button>
         </article>
@@ -62,13 +62,15 @@
         <article v-for="asset in blueprintAssets" :key="asset.uuid" class="blueprint-entry"><strong>{{ asset.name }}</strong><small>{{ asset.path }}</small><div><button @click="blueprintEditorUuid=asset.uuid">{{ ownershipLabels.editBlueprint }}</button><button :disabled="physicsState.playMode!=='editing'" @click="instantiateBlueprint(asset.uuid)">{{ t('instantiateToScene') }}</button></div></article>
         <p v-if="!blueprintAssets.length" class="empty">{{ t('noObjectBlueprints') }}</p>
       </section>
-      <section class="seed"><label><span>{{ t('deterministicSeed') }}</span><input v-model.number="document.deterministicSeed" type="number" min="1" max="2147483647" @change="markDirty"></label><small>{{ t('deterministicSeedHint') }}</small></section>
+      <section class="seed"><label><span>{{ t('deterministicSeed') }}</span><NumericExpressionInput v-model="document.deterministicSeed" :resource-key="`${activeUuid}:deterministicSeed`" :aria-label="t('deterministicSeed')" :minimum="1" :maximum="2147483647" integer @change="markDirty" /></label><small>{{ t('deterministicSeedHint') }}</small></section>
     </aside>
     </div>
   </section>
 </template>
 
 <script setup lang="ts">
+import NumericExpressionInput from './NumericExpressionInput.vue'
+import { settleEditorDrafts } from '../editor/pendingDrafts'
 import ObjectBlueprintEditor from './ObjectBlueprintEditor.vue'
 import {authorBlueprintFromEntity,authorDerivedBlueprint,authorBlueprintInstance} from '../editor/objectBlueprintAuthoring'
 import {objectOwnershipCopy} from '../editor/objectOwnershipCopy'
@@ -120,13 +122,16 @@ const transitions=createEventSheetTransitionGuard({
   save:()=>save(),
   report:(reason,error)=>addEditorLog(reason==='failed'?(error instanceof Error?error.message:String(error)):panelControlLabel(reason==='invalid'?'draftInvalid':'draftStale'),'Script','error',activeUuid.value)
 })
+function runSheetTransition(operation: () => boolean | void | Promise<boolean | void>): Promise<boolean> {
+  return settleEditorDrafts() ? transitions.run(operation) : Promise.resolve(false)
+}
 function commitDocument(uuid:string,value:EventSheetDocument){const previous=activeAsset.value,previousDirty=dirty.value;const record=sheetAssets.value.find(asset=>asset.uuid===uuid),source=readTextAsset(uuid),recovery=record?readStudioDraft(record,draftProjectId,'events',source):null;const next=recovery?JSON.parse(recovery.entry.source) as EventSheetDocument:value;if(previousDirty&&previous&&previous.uuid!==uuid)clearStudioDraft(previous,draftProjectId);document.value=next;loadedBaseSource.value=recovery?recovery.entry.baseSource:source;activeUuid.value=uuid;assetState.selectedGuid=uuid;graphStudioState.activeEventSheetUuid=uuid;dirty.value=!!recovery}
 async function open(uuid:string){
   if(uuid===activeUuid.value)return true
   const source=readTextAsset(uuid);if(!source){if(graphStudioState.activeEventSheetUuid===uuid)graphStudioState.activeEventSheetUuid=activeUuid.value;return false}
   try{
     const parsed=parseEventSheet(source)
-    const accepted=await transitions.run(()=>{if(readTextAsset(uuid)!==source){addEditorLog(panelControlLabel('draftStale'),'Script','error',uuid);return false}commitDocument(uuid,parsed);return true})
+    const accepted=await runSheetTransition(()=>{if(readTextAsset(uuid)!==source){addEditorLog(panelControlLabel('draftStale'),'Script','error',uuid);return false}commitDocument(uuid,parsed);return true})
     if(!accepted&&graphStudioState.activeEventSheetUuid===uuid)graphStudioState.activeEventSheetUuid=activeUuid.value
     return accepted
   }catch(error){addEditorLog(error instanceof Error?error.message:String(error),'Script','error',uuid);if(graphStudioState.activeEventSheetUuid===uuid)graphStudioState.activeEventSheetUuid=activeUuid.value;return false}
@@ -137,14 +142,15 @@ function restoreDiscardedDraft(){
   if(!source){addEditorLog(panelControlLabel('draftInvalid'),'Script','error',activeUuid.value);return false}
   try{document.value=parseEventSheet(source);loadedBaseSource.value=source;dirty.value=false;if(activeAsset.value)clearStudioDraft(activeAsset.value,draftProjectId);return true}catch(error){addEditorLog(error instanceof Error?error.message:String(error),'Script','error',activeUuid.value);return false}
 }
-async function requestLeave(){return transitions.run(()=>restoreDiscardedDraft())}
+async function requestLeave(){return runSheetTransition(()=>restoreDiscardedDraft())}
 defineExpose({requestLeave})
 function markDirty(){dirty.value=true;document.value={...document.value};retainEventDraft()}
 function logicTemplate(name:string){return `// ${name}\nfn awake() { }\nfn start() { }\nfn update(dt) { }\nfn fixed_update(dt) { }\nfn on_timer(name) { }\nfn on_task(name) { }\nfn on_destroy() { }\nfn on_signal(name, payload, source) { }\nfn on_collision_enter(other, px, py, nx, ny, rvx, rvy) { }\nfn on_trigger_enter(other, px, py, nx, ny, rvx, rvy) { }\n`}
-async function createForSelection(){const expected=selectedEntity.value;return transitions.run(()=>{if(selectedEntity.value!==expected){addEditorLog(panelControlLabel('draftStale'),'Script','error');return false}const entity=selectedEntity.value,name=entity?`${entity.name} Events`:t('newEventSheet');let logic=entity?.script2D?.scriptAsset??null;if(!logic){const asset=createTextAsset(`${entity?.name??'Object'} Logic`,'script',logicTemplate(`${entity?.name??'Object'} Logic`),'Assets/Scripts');logic=assetReference(asset.uuid)}const asset=createEventSheetAsset(name,logic);commitDocument(asset.uuid,parseEventSheet(readTextAsset(asset.uuid)!));if(entity)attachToSelection();pushHistory('Create Event Sheet');return true})}
+async function createForSelection(){const expected=selectedEntity.value;return runSheetTransition(()=>{if(selectedEntity.value!==expected){addEditorLog(panelControlLabel('draftStale'),'Script','error');return false}const entity=selectedEntity.value,name=entity?`${entity.name} Events`:t('newEventSheet');let logic=entity?.script2D?.scriptAsset??null;if(!logic){const asset=createTextAsset(`${entity?.name??'Object'} Logic`,'script',logicTemplate(`${entity?.name??'Object'} Logic`),'Assets/Scripts');logic=assetReference(asset.uuid)}const asset=createEventSheetAsset(name,logic);commitDocument(asset.uuid,parseEventSheet(readTextAsset(asset.uuid)!));if(entity)attachToSelection();pushHistory('Create Event Sheet');return true})}
 function attachToSelection(){if(!selectedEntity.value||!activeAsset.value)return;if(attachEventSheet(selectedEntity.value,assetReference(activeAsset.value.uuid))){physicsState.world.invalidateRuntime();pushHistory('Attach Event Sheet');addEditorLog(t('eventSheetAttached',{name:selectedEntity.value.name}),'Script')}}
 function save():boolean{
-  if(!activeAsset.value||errors.value.length)return false
+  if(!settleEditorDrafts()||!activeAsset.value||errors.value.length)return false
+  if(!dirty.value)return true
   if(eventDraftConflict.value){addEditorLog(panelControlLabel('draftStale'),'Script','error',activeUuid.value);return false}
   try{
     if(!saveEventSheetAsset(activeAsset.value.uuid,document.value)){addEditorLog(panelControlLabel('draftInvalid'),'Script','error',activeUuid.value);return false}
@@ -157,16 +163,21 @@ function addHandler(){document.value.handlers.push(defaultEventHandler('start'))
 function removeHandler(uuid:string){document.value.handlers=document.value.handlers.filter(handler=>handler.uuid!==uuid);markDirty()}
 function eventKindChanged(handler:ObjectEventHandler){const replacement=defaultEventHandler(handler.kind);handler.callback=replacement.callback;handler.name=replacement.name;handler.selector='';markDirty()}
 function logicChanged(){markDirty()}
-async function openLogic(){return transitions.run(()=>{if(!restoreDiscardedDraft())return false;const record=logicRecord.value;if(!record)return false;if(record.assetType==='visualScript')openGraphAsset(record.uuid);else{openScriptAsset(record.uuid);graphStudioState.mode='code'}return true})}
+async function openLogic(){return runSheetTransition(()=>{if(!restoreDiscardedDraft())return false;const record=logicRecord.value;if(!record)return false;if(record.assetType==='visualScript')openGraphAsset(record.uuid);else{openScriptAsset(record.uuid);graphStudioState.mode='code'}return true})}
 const blueprintEditorUuid=ref<string|null>(null),ownershipLabels=computed(()=>objectOwnershipCopy[preferencesState.locale])
-async function createBlueprint(){const expected=selectedEntity.value;if(!expected)return;return transitions.run(()=>{if(selectedEntity.value!==expected)return false;try{blueprintEditorUuid.value=authorBlueprintFromEntity(expected,activeAsset.value?assetReference(activeAsset.value.uuid):null);return true}catch(error){addEditorLog(error instanceof Error?error.message:String(error),'Assets','error');return false}})}
+async function createBlueprint(){const expected=selectedEntity.value;if(!expected)return;return runSheetTransition(()=>{if(selectedEntity.value!==expected)return false;try{blueprintEditorUuid.value=authorBlueprintFromEntity(expected,activeAsset.value?assetReference(activeAsset.value.uuid):null);return true}catch(error){addEditorLog(error instanceof Error?error.message:String(error),'Assets','error');return false}})}
 function instantiateBlueprint(uuid:string){try{const values=authorBlueprintInstance(uuid);addEditorLog(t('objectBlueprintInstantiated',{count:values.length}),'Assets')}catch(error){addEditorLog(error instanceof Error?error.message:String(error),'Assets','error')}}
-function deriveBlueprint(uuid:string){try{blueprintEditorUuid.value=authorDerivedBlueprint(uuid,ownershipLabels.value.deriveName)}catch(error){addEditorLog(error instanceof Error?error.message:String(error),'Assets','error')}}async function quickObject(kind:AuthoringObjectKind){return transitions.run(()=>{const result=createQuickObjectWorkflow(kind,kind==='Sprite'?t('spriteObject'):t('shapeObject'));if(!result)return false;const record=resolveAsset(result.eventSheetAsset);if(!record)return false;commitDocument(record.uuid,parseEventSheet(readTextAsset(record.uuid)!));pushHistory('Quick Object Workflow');return true})}
+function deriveBlueprint(uuid:string){try{blueprintEditorUuid.value=authorDerivedBlueprint(uuid,ownershipLabels.value.deriveName)}catch(error){addEditorLog(error instanceof Error?error.message:String(error),'Assets','error')}}async function quickObject(kind:AuthoringObjectKind){return runSheetTransition(()=>{const result=createQuickObjectWorkflow(kind,kind==='Sprite'?t('spriteObject'):t('shapeObject'));if(!result)return false;const record=resolveAsset(result.eventSheetAsset);if(!record)return false;commitDocument(record.uuid,parseEventSheet(readTextAsset(record.uuid)!));pushHistory('Quick Object Workflow');return true})}
 function needsSelector(kind:ObjectEventKind){return ['input-pressed','input-released','timer','task','signal','ui','animation','network'].includes(kind)}
 function selectorLabel(kind:ObjectEventKind){if(kind==='task')return ownershipLabels.value.taskName;return t(kind.startsWith('input-')?'inputAction':kind==='timer'?'timerName':kind==='ui'?'uiEvent':kind==='animation'?'animationEvent':kind==='network'?'networkEvent':'signalName')}
 function eventKindLabel(kind:ObjectEventKind){return kind==='destroy'?ownershipLabels.value.eventDestroy:kind==='task'?ownershipLabels.value.eventTask:t(`event_${kind}`)} 
 function eventDescription(kind:ObjectEventKind){return kind==='destroy'?ownershipLabels.value.destroyHint:kind==='task'?ownershipLabels.value.taskHint:t(`event_${kind}_hint`)}
 
+watch(savedEventSource,source=>{
+  if(dirty.value||!source||source===loadedBaseSource.value)return
+  try{document.value=parseEventSheet(source);loadedBaseSource.value=source}
+  catch(error){addEditorLog(error instanceof Error?error.message:String(error),'Script','error',activeUuid.value)}
+})
 watch(()=>graphStudioState.activeEventSheetUuid,uuid=>{if(uuid&&uuid!==activeUuid.value)open(uuid)})
 onBeforeUnmount(()=>{retainEventDraft();unregisterDraftOwner()})
 onMounted(()=>{const selected=assetState.records.find(asset=>asset.uuid===graphStudioState.activeEventSheetUuid&&asset.assetType==='eventSheet')??assetState.records.find(asset=>asset.uuid===assetState.selectedGuid&&asset.assetType==='eventSheet')??sheetAssets.value[0];if(selected)open(selected.uuid)})
@@ -182,4 +193,7 @@ onMounted(()=>{const selected=assetState.records.find(asset=>asset.uuid===graphS
 @container nova-events (max-width:760px){.event-layout{grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(350px,1fr) auto}.sheet-browser{position:static;width:auto;max-height:180px;box-shadow:none}.sheet-main{height:auto;margin-left:0}.event-details{display:grid;grid-column:auto}.sheet-toolbar>button:not(.primary){display:block}}
 @container nova-event-main (max-width:1000px){.event-list article{grid-template-columns:22px minmax(0,1fr) minmax(0,1fr) 30px}.event-list .enabled{grid-column:1;grid-row:1}.event-list .event-kind{grid-column:2/4;grid-row:1}.event-list .danger{grid-column:4;grid-row:1}.event-copy,.event-list .selector,.event-list .callback,.event-list .priority,.event-list .override{grid-column:2/4;display:grid}.event-list .override{display:flex}.event-list>header input{flex-basis:140px}}
 .blueprint-entry{margin:6px;padding:8px;min-width:0;border:1px solid var(--border-subtle);border-radius:8px}.blueprint-entry>strong,.blueprint-entry>small{display:block;white-space:normal;overflow-wrap:anywhere}.blueprint-entry>div{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px}.blueprint-entry button{min-width:0;min-height:32px;flex:1 1 110px;height:auto;white-space:normal;overflow-wrap:anywhere}
+/* Keep scaled headers from consuming the event-list scroll viewport. */
+.sheet-main{overflow:auto}.sheet-toolbar,.object-context{flex:0 0 auto}.event-list{flex:1 0 auto;overflow:visible}
+@container nova-event-main (max-width:1000px){.event-list>header{position:static}}
 </style>

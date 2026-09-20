@@ -1,3 +1,4 @@
+import { validateComponentValues } from './componentValidation'
 import { normalizeUuid } from './identity'
 import type { Vec2 } from './types'
 import type { ColliderShapeDescriptor2D, PhysicsShapeKind } from '../runtime/physicsProduction'
@@ -932,6 +933,13 @@ export class ShadowCaster2D extends ComponentBase {
   constructor(uuid?: string) { super(uuid) }
 }
 
+/** Null is the JSON representation of an unlimited joint threshold. */
+export function normalizeJointBreakThreshold(value: unknown): number {
+  if (value == null || value === Number.POSITIVE_INFINITY) return Number.POSITIVE_INFINITY
+  const numeric = typeof value === 'number' ? value : Number(value)
+  return Number.isFinite(numeric) ? Math.max(0, numeric) : Number.POSITIVE_INFINITY
+}
+
 export class Joint2D extends ComponentBase {
   readonly kind: JointKind2D
   targetEntityUuid: string | null = null
@@ -1062,9 +1070,10 @@ export function copyComponentValues<T extends Component2D>(component: T): Record
 }
 
 export function pasteComponentValues(component: Component2D, values: Record<string, unknown>): void {
+  validateComponentValues(component.kind, values)
   const target = component as unknown as Record<string, unknown>
   for (const [key, value] of Object.entries(clonePersistedValue(values))) {
     if (key === 'uuid' || key === 'kind' || key === 'removed') continue
-    if (key in target) target[key] = value
+    if (Object.prototype.hasOwnProperty.call(target, key)) target[key] = component instanceof Joint2D && (key === 'breakForce' || key === 'breakTorque') ? normalizeJointBreakThreshold(value) : value
   }
 }

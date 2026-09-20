@@ -2,6 +2,10 @@
 
 # Nova_A 2D 游戏引擎与编辑器
 
+<!-- NOVA_V2623_OVERVIEW -->
+**当前源码26.23：** [版本说明](docs/RELEASE_NOTES_26_23.md)、[脚本契约](docs/SCRIPTING_CONTRACT_26_23.md)、[网页部署](docs/WEB_HOSTING_26_23.md)、[26.23–26.30补充计划](docs/ROADMAP_26_23_TO_26_30_ADDENDUM.md)、[验收追踪](docs/IMPLEMENTATION_TRACKER_26_23.md)、[逐项修改](docs/EDIT_LEDGER_26_23.md)。发布验收以源码绑定的实际测试证据与校验和为准。
+
+
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE.md)
 [![Tier 1](https://img.shields.io/badge/Tier%201-Windows%20%7C%20Web-63c6ff)](./docs/PLATFORM_BUILD_MATRIX_5_0.md)
 [![Release](https://img.shields.io/badge/release-26.20-63c6ff)]()

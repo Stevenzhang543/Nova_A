@@ -1,5 +1,73 @@
-# Nova_A 26.21 – Vollständiges Handbuch
+# Nova_A 26.23 – Vollständiges Handbuch
 
+<!-- NOVA_V2623_START -->
+## 26.23 — Dynamische Skripte, sicheres Neuladen und Web-Ausgabe
+
+Engine: **26.23.0** · Project Format 2/schema 29.
+
+### Nova_A 26.23: Arbeitsablauf
+
+### Start und Entwürfe
+
+Neu öffnet Name, Speicherort und alle vierzig Vorlagen. Abbrechen oder Escape stellt den Fokus wieder her und behält den Entwurf. Öffnen und Fortsetzen bleiben direkt sichtbar. Mehr enthält Import, Migration und Wiederherstellung. Ein abgebrochener Entwurf ist kein gespeichertes Projekt.
+
+### Dynamische Skripte und Neuladen
+
+Rhai unterstützt dynamische Werte, veränderbare Arrays und Maps, Closures und Funktionszeiger. Projektmodule verwenden literales use und einen gemeinsamen Namensraum. Native Import-Aliase und freie Auswertung sind gesperrt. Exportierte Konstanten unterstützen verschachtelte Arrays/Maps und null. Zuerst wird das betroffene Programmpaket geprüft, danach atomar ersetzt. Ein neuer ungültiger Auftrag verwirft den älteren wartenden Auftrag desselben Skripts. Bei Fehlern läuft das alte Programm weiter; kompatibler exportierter Zustand bleibt erhalten. Stop beendet die Rücknahmezuordnung der Sitzung. SCRIPTING_CONTRACT_26_23.md dokumentiert Grenzen und Berechtigungen.
+
+### Anzeige und Bedienung
+
+Skriptdetails sind breiter; lange Meldungen umbrechen. Watches zeigen Typen und begrenzte Momentaufnahmen, nicht sämtliche lokalen VM-Variablen. Getter, Prototypen und ausführbare Ausdrücke werden nicht ausgewertet. Tasks lösen besitzgebundene Rückrufe aus, keine beliebigen pausierten VM-Stacks. Menüs haben einen gepolsterten Mausweg mit kurzer Wartezeit. Zurückkehren verhindert Schließen; Escape stellt den Fokus wieder her. Dialogentwürfe bleiben bestehen. Abgewiesene Website-Aufrufe bleiben behebbare Meldungen.
+
+### Web-Veröffentlichung und Prüfung
+
+Das Web-ZIP vollständig auf einem statischen HTTP(S)-Server entpacken; Stammverzeichnis und Unterordner funktionieren. HOSTING.md erklärt MIME und Cache. Lokales Bearbeiten braucht keinen Anwendungsserver; Netzwerkdienste sind optional. Web erstellen → Web-ZIP herunterladen bleibt auch mit Ordnerausgabe verfügbar. Das Spiel mit sämtlichen Dateien über index.html ausliefern; file:// ist kein unterstützter Hostingweg.
+
+Neu/Abbrechen/erneut öffnen, alle Vorlagen, Sprachen, Link per Tastatur, schnelle Menüwechsel, fehlerhaftes und repariertes Neuladen, Speichern/Öffnen sowie exportiertes Spiel prüfen. Leerlauf und Fortsetzen mit realer Zeit messen. Animationen und Spielqualität bleiben erhalten. Browserautomatisierung und simulierte native Aufrufe ersetzen keine Geräteprüfung. Linux, macOS, iPhone, alte PCs, Signierung und unabhängige Sicherheits-/Barrierefreiheitsprüfung bleiben getrennt nachzuweisen.
+
+<!-- NOVA_V2623_END -->
+<!-- NOVA_V2622_START -->
+## 26.22 — Bearbeiten, korrigieren, rückgängig machen und prüfen
+
+Engine: **26.22.0** · Project Format 2/schema 29.
+
+### Nova_A 26.22 — Eigenschaften und Rückgängig
+
+Entwicklungsleitfaden zur Abnahme. Die Beispiele verwenden Engine 26.22.0 und Project Format 2/schema 29. Generierte Beispiele sind noch keine qualifizierte Veröffentlichung.
+
+### Referenz öffnen
+
+Öffnen Sie `creator-v2622-code-game`, `creator-v2622-blocks-game` oder `creator-v2622-mixed-game`. Bewegen Sie sich mit WASD/Pfeiltasten, sammeln Sie Kontrollpunkte und starten Sie mit R neu. Animationen und Render-Effekte bleiben eingeschaltet. Die Referenzen für Ausgabequalität, animierte Menüs und den autoritativen Server behalten ihre bisherigen Abläufe.
+
+### Bearbeiten und rückgängig machen
+
+Wählen Sie Player. Ändern Sie rasch X und Y. Einmal Rückgängig stellt nur Y wieder her, ein zweites Mal X. Wiederholen Sie beide Änderungen mit Wiederherstellen. Ziehen Sie einen Regler länger als zwei Sekunden; einmal Rückgängig muss den Zustand vor dem Ziehen wiederherstellen. Wiederholen Sie dies in einer anderen Szene. Speichern Sie unmittelbar nach einer gültigen Eingabe wie `120+3`, öffnen Sie das Projekt erneut und prüfen Sie den Wert.
+
+Wählen Sie zwei Objekte mit verschiedenen Positionen. Der gemischte Wert muss erkennbar sein. Setzen Sie einen gemeinsamen Wert und kontrollieren Sie beide Objekte. Wenden Sie eine Prefab-Überschreibung an, setzen Sie sie zurück und prüfen Sie jeweils Rückgängig. Eine externe Zusammenführung muss erneut geprüft werden, wenn zwischenzeitliche Änderungen ihre Grundlage veralten lassen.
+
+### Ungültige Eingaben korrigieren
+
+Geben Sie `1/0` oder einen Wert außerhalb der Feldgrenzen ein. Der Entwurf bleibt mit einer Erklärung sichtbar, der gespeicherte Wert bleibt unverändert. Speichern und Wiedergabe warten auf die Korrektur. Escape stellt den gespeicherten Wert wieder her. Beim Wechsel des Objekts oder der Ressource darf der alte Entwurf nicht auf die neue Auswahl übertragen werden. Unbegrenzte Gelenkgrenzen werden ausdrücklich gewählt; große endliche Werte bleiben endlich.
+
+### Import und Audio
+
+Importieren Sie eine kurze WAV-Datei. Wählen Sie sie im Audiomischer und legen Sie einen Schleifenbereich an. Ein Startpunkt hinter dem Endpunkt muss als ungültiger Entwurf erscheinen, ohne den Bereich zu löschen. Korrigieren Sie den Start, ändern Sie das Ende und machen Sie beide Änderungen einzeln rückgängig. Ziehen Sie den Master-Regler länger als zwei Sekunden und machen Sie die gesamte Bewegung einmal rückgängig. Prüfen Sie auch Pixel pro Einheit und den Drehpunkt eines Bildes sowie Speichern und erneutes Öffnen.
+
+Codec-, Qualitäts- und plattformspezifische Kompressionsoptionen speichern derzeit die Importabsicht; der Importer transkodiert die Quelldatei nicht in diese Formate. Gleiche gespeicherte Werte beweisen keine hörbare oder sichtbare Qualität. Wiedergabe, Filter, Schleifen und Export benötigen eigene Ausführungsprüfungen.
+
+### Lesbarkeit und Ausgabe
+
+Prüfen Sie schmale und maximierte Eigenschaften-, Asset- und Audiofenster bei 100%, 150% und 200% UI-Skalierung. Zahlenfelder müssen mindestens sechs lesbare Ziffernplätze behalten; Feldpaare umbrechen. Prüfen Sie Tastaturbedienung, Fokus, Beschriftungen, gemischte Werte, Standardwerte, Überschreibungen und Zielressourcen in allen drei Sprachen und fünf Paletten.
+
+Speichern, schließen und öffnen Sie das Projekt erneut. Exportieren Sie Web und wiederholen Sie Spiel- und Menüabläufe mit den geänderten Eigenschaften. Kontrollieren Sie Verhalten und Daten. Vor den elf neuen Dateien in `releases/v26.22` bleiben die Prüfsummen älterer Veröffentlichungen unverändert.
+
+### Nachweise und Grenzen
+
+Abgeschlossene Prüfungen stehen in `IMPLEMENTATION_TRACKER_26_22.md`, nicht ausgeführte Fähigkeiten in `GAP_REGISTER_26_22.md`. Die Lebenszyklusmatrix enthält benannte Zuordnungen und ausdrückliche Nachweisgrenzen; eine Zuordnung ist keine vollständige Feldfreigabe. Entwicklungsberichte qualifizieren keine eingefrorene Veröffentlichung. Unabhängige Benutzer, assistive Technik, andere Betriebssysteme, Signierung, Geräte-Audio und Langzeittests bleiben gesonderte externe Prüfungen.
+
+Projekt speichern, Export, Wiedergabe und Einzelschritt werden bei ungespeicherten Asset-Änderungen in einem Studio angehalten. Speichern Sie das Asset in seinem Editor oder laden Sie es ausdrücklich neu, um den Entwurf zu verwerfen. Versuchen Sie den Vorgang danach erneut. Zahlenentwürfe werden zuerst geprüft. Die eigene Animationsvorschau kann weiterhin ungespeicherte Clips abspielen. Beim Trennen eines Skripts vom Graphen wird nur die tatsächliche Verknüpfungsmarkierung entfernt; Quelltext, Zeichenketten und andere Kommentare bleiben erhalten.
+
+<!-- NOVA_V2622_END -->
 <!-- NOVA_V2621_START -->
 ## 26.21 — Erstellen, abstimmen, vergleichen und ausliefern
 

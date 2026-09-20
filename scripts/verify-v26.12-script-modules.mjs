@@ -1,3 +1,4 @@
+import {registerNodeBundle22,captureNodeBundle22} from './lib/nodeOperationTrace22.mjs'
 import assert from 'node:assert/strict'
 import { build } from 'vite'
 import ts from 'typescript'
@@ -23,7 +24,8 @@ try {
     if (name === 'parseScriptContract') return `export const parseScriptContract = source => ({ valid: !source.includes('INVALID_CONTRACT'), diagnostics: [{ severity: 'error', code: 'fixture-contract', line: 1, message: 'rejected' }], contract: {} });`
     if (name === 'analyzeScript') return `export const analyzeScript = () => ({ functions: { start: {} } });`
     return `export const ${name} = () => {};`
-  }).join('\n') } }], build: { ssr: true, outDir: join(temporary, 'compiled'), rollupOptions: { input: { runtime: runtimeFile, modules: join(root, 'src/runtime/scriptModules.ts'), sync: join(root, 'src/visual/graphCodeSync.ts'), types: join(root, 'src/visual/graphTypes.ts'), assets: join(root, 'src/assets/AssetDatabase.ts') }, output: { entryFileNames: '[name].mjs', chunkFileNames: '[name]-[hash].mjs' } } } })
+  }).join('\n') } }], build: { sourcemap:process.env.NOVA_AUDIT_NODE_OPERATION_COVERAGE==='1'?'hidden':false,ssr:true, outDir: join(temporary, 'compiled'), rollupOptions: { input: { runtime: runtimeFile, modules: join(root, 'src/runtime/scriptModules.ts'), sync: join(root, 'src/visual/graphCodeSync.ts'), types: join(root, 'src/visual/graphTypes.ts'), assets: join(root, 'src/assets/AssetDatabase.ts') }, output: { entryFileNames: '[name].mjs', chunkFileNames: '[name]-[hash].mjs' } } } })
+  registerNodeBundle22(join(temporary,'compiled'))
   const load = name => import(pathToFileURL(join(temporary, 'compiled', `${name}.mjs`)))
   const [{ GameplayRuntime }, modules, sync, types, database] = await Promise.all(['runtime', 'modules', 'sync', 'types', 'assets'].map(load))
   const runtime = new GameplayRuntime(), add = (uuid, path, source, assetType = 'script') => { assets.set(uuid, { uuid, path, source, assetType }); database.assetState.records.splice(0, database.assetState.records.length, ...assets.values()); database.assetState.generation++ }
@@ -59,6 +61,6 @@ try {
   check('source and combined bundle lengths are bounded', () => { assert.throws(() => modules.resolveProjectScriptBundle('text', host, new Map(), { maxSourceLength: 8 }), /source exceeds 8/); assert.throws(() => modules.resolveProjectScriptBundle('text', host, new Map(), { maxBundleLength: 8 }), /bundle exceeds 8/) })
   check('missing root remains null and no unrelated asset is treated as a module', () => assert.equal(runtime.resolveScriptBundle('absent-root'), null))
   const report = { format: 'nova-v26.12-script-module-verification', version: 1, release: '26.12', engineVersion, runtimeEngineVersion, generatedAt: new Date().toISOString(), status: checks.some(check => check.status === 'failed') ? 'failed' : 'passed', coverage: 'Production GameplayRuntime and real AssetDatabase with fixture records and unrelated subsystem stubs; real graph compiler, lexer, bounded resolver and WASM execution. Browser play/stop UI is a separate gate.', checks }
-  await mkdir(join(root, 'release-audits'), { recursive: true }); await writeFile(join(root, 'release-audits/v26.12-script-modules.json'), JSON.stringify(report, null, 2) + '\n'); console.log(JSON.stringify(report, null, 2))
+  await mkdir(join(root, 'release-audits'), { recursive: true }); await writeFile(process.argv.find(arg=>arg.startsWith('--report='))?.slice(9)??join(root, 'release-audits/v26.12-script-modules.json'), JSON.stringify(report, null, 2) + '\n'); console.log(JSON.stringify(report, null, 2))
   if (report.status !== 'passed') process.exitCode = 1
-} finally { delete globalThis.__novaModuleFixture; await rm(temporary, { recursive: true, force: true }) }
+} finally { delete globalThis.__novaModuleFixture; await captureNodeBundle22(join(temporary,'compiled'));await rm(temporary, { recursive: true, force: true }) }

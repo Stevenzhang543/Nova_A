@@ -328,9 +328,9 @@ function takeScriptCapture() { const capture = captureScriptProfile(); const ind
 function compareScriptCaptures() { const first = profilerState.scriptCaptures[scriptCaptureA.value], second = profilerState.scriptCaptures[scriptCaptureB.value]; scriptComparison.value = first && second ? compareScriptProfiles(first, second) : [] }
 function exportCurrentScriptProfile() { const capture = captureScriptProfile(); download(`nova-script-profile-${Date.now()}.json`, JSON.stringify(capture, null, 2)) }
 
-function recordReplay() { startReplayRecording(getSceneJSON(), physicsState.globalSettings.tickRate); toggleSimulation(true); gameplayRuntime.beginSession() }
+function recordReplay() { if (!toggleSimulation(true)) return; startReplayRecording(getSceneJSON(), physicsState.globalSettings.tickRate); gameplayRuntime.beginSession() }
 function finishReplay() { const wasRecording = replayState.mode === 'recording'; const document = wasRecording ? exportReplay(physicsState.globalSettings.tickRate) : null; stopReplay(); if (document) { const asset = createTextAsset(`Replay ${new Date().toISOString().replace(/[:.]/g, '-')}`, 'replay', JSON.stringify(document, null, 2), 'Assets/Replays'); selectedReplay.value = asset.uuid; pushHistory('Record deterministic replay') } }
-function playReplay() { const source = readTextAsset(selectedReplay.value); if (!source) return; const document = normalizeReplayDocument(JSON.parse(source)); if (!loadProject(document.initialProject)) return; toggleSimulation(true); gameplayRuntime.beginSession(); startReplayPlayback(document) }
+function playReplay() { const source = readTextAsset(selectedReplay.value); if (!source) return; const document = normalizeReplayDocument(JSON.parse(source)); if (!loadProject(document.initialProject)) return; if (!toggleSimulation(true)) return; gameplayRuntime.beginSession(); startReplayPlayback(document) }
 function download(name: string, source: string, type = 'application/json') { const url = URL.createObjectURL(new Blob([source], { type })); const anchor = document.createElement('a'); anchor.href = url; anchor.download = name; anchor.click(); window.setTimeout(() => URL.revokeObjectURL(url), 0) }
 function downloadReplay() { const source = readTextAsset(selectedReplay.value); if (source) download('recording.nova-replay', source) }
 

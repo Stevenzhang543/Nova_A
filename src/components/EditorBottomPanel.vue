@@ -162,24 +162,24 @@
             <label><span>{{ t('colorSpace') }}</span><select v-model="selectedAsset.settings.colorSpace"><option>sRGB</option><option>Linear</option></select></label>
             <label><span>{{ t('generateMipmaps') }}</span><input v-model="selectedAsset.settings.generateMipmaps" type="checkbox"></label>
             <label><span>{{ t('transparency') }}</span><select v-model="selectedAsset.settings.transparency"><option>Preserve</option><option>Premultiply</option><option>Discard</option></select></label>
-            <label><span>{{ t('pixelsPerUnit') }}</span><input v-model.number="selectedAsset.settings.pixelsPerUnit" type="number" min="0.000001" step="1"></label>
-            <label><span>{{ t('pivot') }} X/Y</span><div><input v-model.number="selectedAsset.settings.pivot.x" type="number" min="0" max="1" step="0.05"><input v-model.number="selectedAsset.settings.pivot.y" type="number" min="0" max="1" step="0.05"></div></label>
+            <label><span>{{ t('pixelsPerUnit') }}</span><NumericExpressionInput v-model="selectedAsset.settings.pixelsPerUnit" :minimum="0.000001" :step="1" :resource-key="selectedAsset.uuid + ':settings.pixelsPerUnit'" /></label>
+            <label><span>{{ t('pivot') }} X/Y</span><div><NumericExpressionInput v-model="selectedAsset.settings.pivot.x" :minimum="0" :maximum="1" :step="0.05" :resource-key="selectedAsset.uuid + ':settings.pivot.x'" /><NumericExpressionInput v-model="selectedAsset.settings.pivot.y" :minimum="0" :maximum="1" :step="0.05" :resource-key="selectedAsset.uuid + ':settings.pivot.y'" /></div></label>
             <label><span>{{ t('pivotPreset') }}</span><select :value="''" @change="applyPivotPreset(($event.target as HTMLSelectElement).value)"><option value="">{{ t('custom') }}</option><option v-for="preset in pivotPresets" :key="preset.id" :value="preset.id">{{ t(preset.label) }}</option></select></label>
             <label><span>{{ t('useSpriteRegion') }}</span><input :checked="selectedAsset.settings.spriteRegion !== null" type="checkbox" @change="toggleSpriteRegion"></label>
-            <label v-if="selectedAsset.settings.spriteRegion" class="region-field"><span>{{ t('spriteRegion') }} X/Y/W/H</span><div><input v-model.number="selectedAsset.settings.spriteRegion.x" type="number" min="0" step="1"><input v-model.number="selectedAsset.settings.spriteRegion.y" type="number" min="0" step="1"><input v-model.number="selectedAsset.settings.spriteRegion.width" type="number" min="1" step="1"><input v-model.number="selectedAsset.settings.spriteRegion.height" type="number" min="1" step="1"></div></label>
+            <label v-if="selectedAsset.settings.spriteRegion" class="region-field"><span>{{ t('spriteRegion') }} X/Y/W/H</span><div><NumericExpressionInput v-model="selectedAsset.settings.spriteRegion.x" :minimum="0" :step="1" :resource-key="selectedAsset.uuid + ':settings.spriteRegion.x'" /><NumericExpressionInput v-model="selectedAsset.settings.spriteRegion.y" :minimum="0" :step="1" :resource-key="selectedAsset.uuid + ':settings.spriteRegion.y'" /><NumericExpressionInput v-model="selectedAsset.settings.spriteRegion.width" :minimum="1" :step="1" :resource-key="selectedAsset.uuid + ':settings.spriteRegion.width'" /><NumericExpressionInput v-model="selectedAsset.settings.spriteRegion.height" :minimum="1" :step="1" :resource-key="selectedAsset.uuid + ':settings.spriteRegion.height'" /></div></label>
             <label><span>{{ t('trimTransparent') }}</span><button type="button" @click="trimSelectedImage">{{ t('trimNow') }}</button></label>
             <label v-if="!selectedAsset.derivedSprite"><span>{{ t('spriteSheetSlicing') }}</span><input v-model="selectedAsset.settings.spriteSheet.enabled" type="checkbox"></label>
-            <template v-if="!selectedAsset.derivedSprite && selectedAsset.settings.spriteSheet.enabled"><label><span>{{ t('sheetColumnsRows') }}</span><div><input v-model.number="selectedAsset.settings.spriteSheet.columns" type="number" min="1" max="256"><input v-model.number="selectedAsset.settings.spriteSheet.rows" type="number" min="1" max="256"></div></label><label><span>{{ t('marginSpacing') }}</span><div><input v-model.number="selectedAsset.settings.spriteSheet.margin" type="number" min="0"><input v-model.number="selectedAsset.settings.spriteSheet.spacing" type="number" min="0"></div></label><button class="save-script" type="button" @click="sliceSelectedSheet">{{ t('createSpriteSlices') }}</button></template>
+            <template v-if="!selectedAsset.derivedSprite && selectedAsset.settings.spriteSheet.enabled"><label><span>{{ t('sheetColumnsRows') }}</span><div><NumericExpressionInput v-model="selectedAsset.settings.spriteSheet.columns" :minimum="1" :maximum="256" :resource-key="selectedAsset.uuid + ':settings.spriteSheet.columns'" /><NumericExpressionInput v-model="selectedAsset.settings.spriteSheet.rows" :minimum="1" :maximum="256" :resource-key="selectedAsset.uuid + ':settings.spriteSheet.rows'" /></div></label><label><span>{{ t('marginSpacing') }}</span><div><NumericExpressionInput v-model="selectedAsset.settings.spriteSheet.margin" :minimum="0" :resource-key="selectedAsset.uuid + ':settings.spriteSheet.margin'" /><NumericExpressionInput v-model="selectedAsset.settings.spriteSheet.spacing" :minimum="0" :resource-key="selectedAsset.uuid + ':settings.spriteSheet.spacing'" /></div></label><button class="save-script" type="button" @click="sliceSelectedSheet">{{ t('createSpriteSlices') }}</button></template>
             <button v-if="!selectedAsset.derivedSprite" class="save-script" type="button" @click="animateSelectedFrames">{{ assetCopy('animation') }}</button>
             <button class="save-script" type="button" @click="autoSliceSelectedImage">{{ t('automaticSpriteSlicing') }}</button>
             <label><span>{{ t('collisionGeneration') }}</span><select v-model="selectedAsset.settings.collisionGeneration.mode"><option>None</option><option>Box</option><option>Polygon</option></select></label>
-            <label v-if="selectedAsset.settings.collisionGeneration.mode === 'Polygon'"><span>{{ t('polygonTolerance') }}</span><input v-model.number="selectedAsset.settings.collisionGeneration.tolerance" type="number" min="0" max="64" step="0.25"></label>
-            <label class="region-field"><span>{{ t('sliceBorders') }} L/T/R/B</span><div><input v-model.number="selectedAsset.settings.borders.left" type="number" min="0"><input v-model.number="selectedAsset.settings.borders.top" type="number" min="0"><input v-model.number="selectedAsset.settings.borders.right" type="number" min="0"><input v-model.number="selectedAsset.settings.borders.bottom" type="number" min="0"></div></label>
+            <label v-if="selectedAsset.settings.collisionGeneration.mode === 'Polygon'"><span>{{ t('polygonTolerance') }}</span><NumericExpressionInput v-model="selectedAsset.settings.collisionGeneration.tolerance" :minimum="0" :maximum="64" :step="0.25" :resource-key="selectedAsset.uuid + ':settings.collisionGeneration.tolerance'" /></label>
+            <label class="region-field"><span>{{ t('sliceBorders') }} L/T/R/B</span><div><NumericExpressionInput v-model="selectedAsset.settings.borders.left" :minimum="0" :resource-key="selectedAsset.uuid + ':settings.borders.left'" /><NumericExpressionInput v-model="selectedAsset.settings.borders.top" :minimum="0" :resource-key="selectedAsset.uuid + ':settings.borders.top'" /><NumericExpressionInput v-model="selectedAsset.settings.borders.right" :minimum="0" :resource-key="selectedAsset.uuid + ':settings.borders.right'" /><NumericExpressionInput v-model="selectedAsset.settings.borders.bottom" :minimum="0" :resource-key="selectedAsset.uuid + ':settings.borders.bottom'" /></div></label>
             <label v-if="!selectedAsset.derivedSprite"><span>{{ t('useTextureAtlas') }}</span><input v-model="selectedAsset.settings.atlas" type="checkbox"></label>
             <label><span>{{ t('atlasGroup') }}</span><input v-model="selectedAsset.settings.atlasSettings.group"></label>
             <label><span>{{ t('atlasRotation') }}</span><select v-model="selectedAsset.settings.atlasSettings.rotationPolicy"><option>Never</option><option>Allow</option></select></label>
             <label><span>{{ t('atlasTrimPolicy') }}</span><select v-model="selectedAsset.settings.atlasSettings.trimPolicy"><option>None</option><option>Transparent</option></select></label>
-            <template v-if="selectedAsset.mimeType === 'image/svg+xml'"><label><span>{{ t('svgRasterization') }}</span><select v-model="selectedAsset.settings.svgSettings.rasterization"><option>ImportTime</option><option>Runtime</option><option>Disabled</option></select></label><label><span>{{ t('svgScale') }}</span><input v-model.number="selectedAsset.settings.svgSettings.scale" type="number" min="0.01" max="64" step="0.1"></label></template>
+            <template v-if="selectedAsset.mimeType === 'image/svg+xml'"><label><span>{{ t('svgRasterization') }}</span><select v-model="selectedAsset.settings.svgSettings.rasterization"><option>ImportTime</option><option>Runtime</option><option>Disabled</option></select></label><label><span>{{ t('svgScale') }}</span><NumericExpressionInput v-model="selectedAsset.settings.svgSettings.scale" :minimum="0.01" :maximum="64" :step="0.1" :resource-key="selectedAsset.uuid + ':settings.svgSettings.scale'" /></label></template>
             <label v-for="platform in compressionPlatforms" :key="platform"><span>{{ t(platform) }} {{ t('compression') }}</span><select v-model="selectedAsset.settings.platformVariants[platform]"><option :value="undefined">{{ t('inherit') }}</option><option>None</option><option>Lossless</option><option>Optimized</option></select></label>
           </template>
           <template v-else-if="selectedAsset.assetType === 'audio'">
@@ -187,7 +187,7 @@
             <label><span>{{ t('importProfile') }}</span><select :value="selectedAsset.settings.audioSettings.profile" @change="setAudioProfile"><option>SoundEffect</option><option>Music</option><option>Voice</option><option>Streaming</option></select></label>
             <label><span>{{ t('audioCodec') }}</span><select v-model="selectedAsset.settings.audioSettings.codec"><option>Original</option><option>PCM</option><option>Vorbis</option><option>MP3</option></select></label>
             <label><span>{{ t('audioQuality') }}</span><input v-model.number="selectedAsset.settings.audioSettings.quality" type="range" min="0" max="1" step="0.01"></label>
-            <label><span>{{ t('trimRange') }}</span><div><input v-model.number="selectedAsset.settings.audioSettings.trimStart" type="number" min="0" :max="selectedAsset.duration" step="0.01"><input v-model.number="selectedAsset.settings.audioSettings.trimEnd" type="number" min="0" :max="selectedAsset.duration" step="0.01"></div></label>
+            <label><span>{{ t('trimRange') }}</span><div><NumericExpressionInput v-model="selectedAsset.settings.audioSettings.trimStart" :minimum="0" :maximum="selectedAsset.duration" :step="0.01" :resource-key="selectedAsset.uuid + ':settings.audioSettings.trimStart'" /><NumericExpressionInput v-model="selectedAsset.settings.audioSettings.trimEnd" :minimum="0" :maximum="selectedAsset.duration" :step="0.01" :resource-key="selectedAsset.uuid + ':settings.audioSettings.trimEnd'" /></div></label>
             <label><span>{{ t('normalizeAudio') }}</span><input v-model="selectedAsset.settings.audioSettings.normalize" type="checkbox"></label>
             <label><span>{{ t('streamAudio') }}</span><input v-model="selectedAsset.settings.audioSettings.streaming" type="checkbox"></label><label><span>{{ t('preloadAudio') }}</span><select v-model="selectedAsset.settings.audioSettings.preload"><option>Auto</option><option>Preload</option><option>Metadata</option><option>None</option></select></label>
             <label><span>{{ t('sampleRate') }}</span><select v-model.number="selectedAsset.settings.audioSettings.sampleRate"><option :value="22050">22050</option><option :value="44100">44100</option><option :value="48000">48000</option><option :value="96000">96000</option></select></label>
@@ -195,13 +195,13 @@
           <template v-else-if="selectedAsset.assetType === 'font'">
             <label><span>{{ t('fontFamily') }}</span><b :style="{ fontFamily: selectedAsset.fontFamily }">Nova_A</b></label>
             <label><span>{{ t('fontRenderMode') }}</span><select v-model="selectedAsset.settings.fontSettings.renderMode"><option>Scalable</option><option>Bitmap</option></select></label>
-            <label v-if="selectedAsset.settings.fontSettings.renderMode === 'Bitmap'"><span>{{ t('bitmapSize') }}</span><input v-model.number="selectedAsset.settings.fontSettings.bitmapSize" type="number" min="6" max="512"></label>
-            <label><span>{{ t('fontOutline') }}</span><input v-model.number="selectedAsset.settings.fontSettings.outlineWidth" type="number" min="0" max="32" step="0.25"></label>
+            <label v-if="selectedAsset.settings.fontSettings.renderMode === 'Bitmap'"><span>{{ t('bitmapSize') }}</span><NumericExpressionInput v-model="selectedAsset.settings.fontSettings.bitmapSize" :minimum="6" :maximum="512" :resource-key="selectedAsset.uuid + ':settings.fontSettings.bitmapSize'" /></label>
+            <label><span>{{ t('fontOutline') }}</span><NumericExpressionInput v-model="selectedAsset.settings.fontSettings.outlineWidth" :minimum="0" :maximum="32" :step="0.25" :resource-key="selectedAsset.uuid + ':settings.fontSettings.outlineWidth'" /></label>
             <label><span>{{ t('textShaping') }}</span><input v-model="selectedAsset.settings.fontSettings.shaping" type="checkbox"></label>
             <label><span>{{ t('fontHinting') }}</span><select v-model="selectedAsset.settings.fontSettings.hinting"><option>Auto</option><option>None</option><option>Light</option><option>Full</option></select></label>
-            <label><span>{{ t('fontOversampling') }}</span><input v-model.number="selectedAsset.settings.fontSettings.oversampling" type="number" min="1" max="8" step="0.25"></label>
+            <label><span>{{ t('fontOversampling') }}</span><NumericExpressionInput v-model="selectedAsset.settings.fontSettings.oversampling" :minimum="1" :maximum="8" :step="0.25" :resource-key="selectedAsset.uuid + ':settings.fontSettings.oversampling'" /></label>
             <label><span>{{ t('distanceField') }}</span><select v-model="selectedAsset.settings.fontSettings.distanceField"><option>None</option><option>SDF</option><option>MSDF</option></select></label>
-            <label v-if="selectedAsset.settings.fontSettings.distanceField !== 'None'"><span>{{ t('distanceRange') }}</span><input v-model.number="selectedAsset.settings.fontSettings.distanceRange" type="number" min="1" max="64"></label>
+            <label v-if="selectedAsset.settings.fontSettings.distanceField !== 'None'"><span>{{ t('distanceRange') }}</span><NumericExpressionInput v-model="selectedAsset.settings.fontSettings.distanceRange" :minimum="1" :maximum="64" :resource-key="selectedAsset.uuid + ':settings.fontSettings.distanceRange'" /></label>
             <label class="region-field"><span>{{ t('openTypeFeatures') }}</span><input :value="selectedAsset.settings.fontSettings.openTypeFeatures.join(', ')" @change="setOpenTypeFeatures"></label>
             <label class="region-field"><span>{{ t('declaredLanguages') }}</span><input :value="selectedAsset.settings.fontSettings.declaredLanguages.join(', ')" @change="setDeclaredLanguages"></label>
             <label><span>{{ t('editorFont') }}</span><input v-model="selectedAsset.settings.fontSettings.editorFont" type="checkbox"></label>
@@ -230,14 +230,14 @@
           </template>
           <template v-else-if="selectedAsset.assetType === 'atlas'">
             <label><span>{{ t('atlasMaxSize') }}</span><select v-model.number="selectedAsset.settings.atlasSettings.maxSize"><option :value="512">512</option><option :value="1024">1024</option><option :value="2048">2048</option><option :value="4096">4096</option></select></label>
-            <label><span>{{ t('atlasPadding') }}</span><input v-model.number="selectedAsset.settings.atlasSettings.padding" type="number" min="0" max="32"></label>
+            <label><span>{{ t('atlasPadding') }}</span><NumericExpressionInput v-model="selectedAsset.settings.atlasSettings.padding" :minimum="0" :maximum="32" :resource-key="selectedAsset.uuid + ':settings.atlasSettings.padding'" /></label>
             <label><span>{{ t('trimTransparent') }}</span><input v-model="selectedAsset.settings.atlasSettings.trim" type="checkbox"></label>
             <section v-if="selectedAtlasReport" class="atlas-report"><strong>{{ t('atlasPackingReport') }}</strong><p>{{ t('atlasPages') }}: {{ selectedAtlasReport.pages }} · {{ t('atlasUtilization') }}: {{ (selectedAtlasReport.utilization * 100).toFixed(1) }}%</p><code>{{ selectedAtlasReport.deterministicKey.slice(0, 20) }}…</code><small v-for="message in selectedAtlasReport.diagnostics" :key="message">{{ message }}</small></section>
             <textarea class="text-preview" readonly :value="selectedTextSource"></textarea>
           </template>
           <template v-else-if="selectedAsset.assetType === 'tileset'">
-            <label><span>{{ t('tileSize') }}</span><div><input v-model.number="selectedAsset.settings.tileSettings.tileWidth" type="number" min="1"><input v-model.number="selectedAsset.settings.tileSettings.tileHeight" type="number" min="1"></div></label>
-            <label><span>{{ t('marginSpacing') }}</span><div><input v-model.number="selectedAsset.settings.tileSettings.margin" type="number" min="0"><input v-model.number="selectedAsset.settings.tileSettings.spacing" type="number" min="0"></div></label>
+            <label><span>{{ t('tileSize') }}</span><div><NumericExpressionInput v-model="selectedAsset.settings.tileSettings.tileWidth" :minimum="1" :resource-key="selectedAsset.uuid + ':settings.tileSettings.tileWidth'" /><NumericExpressionInput v-model="selectedAsset.settings.tileSettings.tileHeight" :minimum="1" :resource-key="selectedAsset.uuid + ':settings.tileSettings.tileHeight'" /></div></label>
+            <label><span>{{ t('marginSpacing') }}</span><div><NumericExpressionInput v-model="selectedAsset.settings.tileSettings.margin" :minimum="0" :resource-key="selectedAsset.uuid + ':settings.tileSettings.margin'" /><NumericExpressionInput v-model="selectedAsset.settings.tileSettings.spacing" :minimum="0" :resource-key="selectedAsset.uuid + ':settings.tileSettings.spacing'" /></div></label>
             <textarea class="text-preview" readonly :value="selectedTextSource"></textarea>
           </template>
           <template v-else-if="selectedAsset.assetType === 'shader'">
@@ -260,8 +260,8 @@
           <template v-else-if="selectedAsset.assetType === 'animation' && selectedAsset.animationImport">
             <p class="drag-hint">{{ t('animationImportHint') }}</p>
             <label><span>{{ t('sourceAnimation') }}</span><select v-model="selectedAsset.animationImport.sourceAsset"><option :value="null">{{ t('none') }}</option><option v-for="asset in animationSources" :key="asset.uuid" :value="assetReference(asset.uuid)">{{ asset.name }}</option></select></label>
-            <label><span>{{ t('sourceFrameRate') }}</span><input v-model.number="selectedAsset.animationImport.sourceFrameRate" type="number" min="1" max="240"></label>
-            <label><span>{{ t('sampleRate') }}</span><input v-model.number="selectedAsset.animationImport.sampleRate" type="number" min="1" max="240"></label>
+            <label><span>{{ t('sourceFrameRate') }}</span><NumericExpressionInput v-model="selectedAsset.animationImport.sourceFrameRate" :minimum="1" :maximum="240" :resource-key="selectedAsset.uuid + ':animationImport.sourceFrameRate'" /></label>
+            <label><span>{{ t('sampleRate') }}</span><NumericExpressionInput v-model="selectedAsset.animationImport.sampleRate" :minimum="1" :maximum="240" :resource-key="selectedAsset.uuid + ':animationImport.sampleRate'" /></label>
             <details class="mapping-editor"><summary>{{ t('trackMappings') }}</summary><label v-for="(mapping,index) in selectedAsset.animationImport.trackMappings" :key="index"><input v-model="mapping.source" :placeholder="t('sourceProperty')"><input v-model="mapping.target" :placeholder="t('targetProperty')"><button @click="selectedAsset.animationImport!.trackMappings.splice(index,1)">×</button></label><button @click="selectedAsset.animationImport.trackMappings.push({source:'Transform.position.x',target:'Transform.position.x'})">+ {{ t('trackMapping') }}</button></details>
             <button class="save-script" @click="reimportAnimation">{{ t('reimportAnimation') }}</button>
           </template>
@@ -307,6 +307,7 @@
 </template>
 
 <script setup lang="ts">
+import NumericExpressionInput from './NumericExpressionInput.vue'
 import { computed, defineAsyncComponent, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import PanelMaximizeButton from './PanelMaximizeButton.vue'
 import PanelResizeHandle from './PanelResizeHandle.vue'
@@ -634,7 +635,14 @@ function toggleSpriteRegion(event: Event) {
     ? { x: 0, y: 0, width: Math.max(1, asset.width), height: Math.max(1, asset.height) }
     : null
 }
-function assetSettingsChanged() { queueTextureAtlasRebuild(); pushHistory('Change import settings', `asset:${selectedAsset.value?.uuid}`) }
+function assetSettingsChanged(event: Event) {
+  const asset = selectedAsset.value
+  if (!asset) return
+  const target = event.target instanceof HTMLElement ? event.target : null
+  const field = target?.closest<HTMLElement>('[data-resource-key]')?.dataset.resourceKey
+  queueTextureAtlasRebuild()
+  pushHistory('Change import settings', field ? 'asset-field:' + field : null, field || 'asset:' + asset.uuid)
+}
 function reimportAnimation() {
   const asset = selectedAsset.value
   if (!asset?.animationImport) return
@@ -773,7 +781,7 @@ function assetSourceStatus(uuid: string) { return sourceStatusFor(uuid) }
 .asset-actions { flex-wrap: wrap; }
 .asset-actions button { white-space: normal; overflow-wrap: anywhere; padding: 6px; }
 @container nova-asset-inspector (max-width: 330px) {
-  .asset-inspector label:has(> :is(input:not([type='checkbox']), select, div)) { align-items: stretch; flex-direction: column; gap: 5px; padding-block: 7px; }
+  .asset-inspector label:has(> :is(input:not([type='checkbox']), select, div, .numeric-draft)) { align-items: stretch; flex-direction: column; gap: 5px; padding-block: 7px; }
   .asset-inspector label > span:first-child { max-width: 100%; white-space: normal; overflow: visible; line-height: 1.4; }
   .asset-inspector label > *:last-child { max-width: 100%; }
   .asset-inspector label input:not([type='checkbox']), .asset-inspector label select { width: 100%; min-height: 30px; }
@@ -786,4 +794,5 @@ function assetSourceStatus(uuid: string) { return sourceStatusFor(uuid) }
 
 .panel-content{container:nova-assets-dock/inline-size}.asset-detail-toggle,.asset-detail-back{display:none}.asset-batch{flex:0 0 auto;max-height:160px;overflow:auto;display:grid;gap:5px;padding:8px;border-bottom:1px solid var(--border-subtle)}.asset-batch header{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}.asset-batch progress{width:100%;height:8px}.asset-batch p{margin:0;overflow-wrap:anywhere}.asset-batch button{min-height:30px;white-space:normal}.asset-browser.inspecting{grid-template-columns:minmax(110px,16%) minmax(180px,1fr) minmax(280px,34%)}
 @container nova-assets-dock (max-width:800px){.asset-browser,.asset-browser.inspecting{position:relative;grid-template-columns:minmax(90px,22%) minmax(0,1fr)}.asset-detail-toggle,.asset-detail-back{display:block;min-height:32px;white-space:normal}.asset-inspector{display:none;position:static;inset:auto;width:auto;box-shadow:none}.asset-browser.details-visible{grid-template-columns:minmax(0,1fr)}.asset-browser.details-visible>.folder-tree,.asset-browser.details-visible>.asset-workspace{display:none}.asset-browser.details-visible>.asset-inspector{display:block;width:auto}.asset-inspector header strong{white-space:normal;overflow-wrap:anywhere}.asset-inspector>header{position:sticky;top:-6px;z-index:1;background:var(--surface-2)}}
+.asset-inspector label > div:has(.numeric-draft){flex-wrap:wrap;max-width:100%}.asset-inspector label:has(.numeric-draft){align-items:stretch;flex-wrap:wrap}.asset-inspector label > .numeric-draft{max-width:100%}.asset-inspector .numeric-draft :deep(input){width:100%;min-width:0}.asset-inspector label.region-field .numeric-draft{flex-basis:calc(10ch + 64px)}
 </style>

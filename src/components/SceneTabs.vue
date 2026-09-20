@@ -1,5 +1,5 @@
 <template>
-  <section class="scene-tabs" data-control-scope="scene-tabs" :aria-label="t('sceneTabs')">
+  <section class="scene-tabs" data-control-scope="scene-tabs" :data-resource-key="`scene:${active.uuid}`" :aria-label="t('sceneTabs')">
     <div class="history-actions">
       <button :disabled="sceneManager.navigationIndex <= 0" :title="t('previousScene')" @click="navigate(-1)">←</button>
       <button :disabled="sceneManager.navigationIndex >= sceneManager.navigationHistory.length - 1" :title="t('nextScene')" @click="navigate(1)">→</button>
@@ -14,11 +14,11 @@
     <button class="settings-toggle" :class="{ active: settingsOpen }" :title="t('sceneSettings')" @click="settingsOpen = !settingsOpen">⚙</button>
     <aside v-if="settingsOpen" class="scene-settings">
       <header><div><small>{{ t('sceneSettings') }}</small><strong>{{ active.name }}</strong></div><button @click="settingsOpen = false">×</button></header>
-      <label><span>{{ t('sceneTemplate') }}</span><select v-model="active.settings.templateId" @change="changed('Set scene template')"><option :value="null">{{ t('none') }}</option><option v-for="template in templates" :key="template.id" :value="template.id">{{ t(template.label) }}</option></select></label>
-      <label><span>{{ t('sceneRuntimePolicy') }}</span><select v-model="active.settings.runtimePolicy" @change="changed('Set scene runtime policy')"><option value="Replace">{{ t('sceneReplace') }}</option><option value="Additive">{{ t('sceneAdditive') }}</option><option value="Overlay">{{ t('sceneOverlay') }}</option></select></label>
+      <label><span>{{ t('sceneTemplate') }}</span><select v-model="active.settings.templateId" @change="changed('Set scene template', 'settings.templateId')"><option :value="null">{{ t('none') }}</option><option v-for="template in templates" :key="template.id" :value="template.id">{{ t(template.label) }}</option></select></label>
+      <label><span>{{ t('sceneRuntimePolicy') }}</span><select v-model="active.settings.runtimePolicy" @change="changed('Set scene runtime policy', 'settings.runtimePolicy')"><option value="Replace">{{ t('sceneReplace') }}</option><option value="Additive">{{ t('sceneAdditive') }}</option><option value="Overlay">{{ t('sceneOverlay') }}</option></select></label>
       <label><span>{{ t('sceneInheritance') }}</span><select :value="active.settings.inheritanceSourceUuid ?? ''" @change="setInheritance(($event.target as HTMLSelectElement).value)"><option value="">{{ t('none') }}</option><option v-for="scene in sceneManager.scenes.filter(scene => scene.uuid !== active.uuid)" :key="scene.uuid" :value="scene.uuid">{{ scene.name }}</option></select></label>
       <label><span>{{ t('sceneTags') }}</span><input :value="active.settings.tags.join(', ')" @change="setTags(($event.target as HTMLInputElement).value)"></label>
-      <section class="named-layers"><header><strong>{{ t('namedLayers') }}</strong><button @click="addNamedLayer">＋</button></header><div v-for="layer in active.settings.namedLayers" :key="layer.id"><i :style="{ background: layerColorCss(layer.id) }"></i><input v-model="layer.name" @change="renameLayer(layer.id, layer.name)"><button :class="{ active: layer.visible }" :title="t('entityVisible')" @click="layer.visible = !layer.visible; changed('Toggle named layer visibility')">◉</button><button :class="{ active: layer.locked }" :title="t('entityLocked')" @click="layer.locked = !layer.locked; changed('Toggle named layer lock')">▣</button></div></section>
+      <section class="named-layers"><header><strong>{{ t('namedLayers') }}</strong><button @click="addNamedLayer">＋</button></header><div v-for="layer in active.settings.namedLayers" :key="layer.id"><i :style="{ background: layerColorCss(layer.id) }"></i><input v-model="layer.name" @change="renameLayer(layer.id, layer.name)"><button :class="{ active: layer.visible }" :title="t('entityVisible')" @click="layer.visible = !layer.visible; changed('Toggle named layer visibility', `settings.namedLayers.${layer.id}.visible`)">◉</button><button :class="{ active: layer.locked }" :title="t('entityLocked')" @click="layer.locked = !layer.locked; changed('Toggle named layer lock', `settings.namedLayers.${layer.id}.locked`)">▣</button></div></section>
       <section class="dependencies"><strong>{{ t('sceneDependencies') }} · {{ dependencies.length }}</strong><code v-for="dependency in dependencies" :key="dependency">{{ dependency }}</code><p v-if="!dependencies.length">{{ t('noSceneDependencies') }}</p></section>
       <footer><span>{{ t('sceneVisited') }}</span><time>{{ new Date(active.visitedAt).toLocaleString() }}</time></footer>
     </aside>
@@ -28,7 +28,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { t } from '../i18n'
-import { createScene, physicsState, pushHistory, reloadActiveScene, sceneManager, setActiveScene, setSceneLoaded, synchronizeHistoryBaseline } from '../store/physics'
+import { createScene, physicsState, pushHistory, navigateScene, sceneManager, setActiveScene, setSceneLoaded, synchronizeHistoryBaseline } from '../store/physics'
 import { createAuthoringObject } from '../editor/authoring2d'
 import { validateSceneAuthoring } from '../editor/sceneAuthoring'
 import { layerColorCss } from '../world/layers'
@@ -47,14 +47,14 @@ const active = computed(() => sceneManager.activeScene)
 const dependencies = computed(() => sceneManager.inspectDependencies(active.value))
 function tabDescription(scene: SceneDocument): string { return `${scene.name} · ${scene.validationState} · ${scene.externalState} · ${scene.prefabState}` }
 function activate(uuid: string) { if (setActiveScene(uuid)) synchronizeHistoryBaseline() }
-function navigate(offset: -1 | 1) { const scene = sceneManager.navigate(offset); if (scene && reloadActiveScene()) synchronizeHistoryBaseline() }
+function navigate(offset: -1 | 1) { if (navigateScene(offset)) synchronizeHistoryBaseline() }
 function close(uuid: string) { if (setSceneLoaded(uuid, false)) pushHistory('Close scene tab', `scene:${uuid}`) }
 function cleanList(value: string) { return [...new Set(value.split(',').map(item => item.trim()).filter(Boolean))].slice(0, 32) }
-function changed(label: string) { sceneManager.markDirty(); pushHistory(label, `scene-settings:${active.value.uuid}`) }
-function setTags(value: string) { active.value.settings.tags = cleanList(value); changed('Set scene tags') }
-function setInheritance(value: string) { if (sceneManager.setInheritance(active.value.uuid, value || null)) changed('Set scene inheritance') }
-function addNamedLayer() { const id = Math.max(0, ...active.value.settings.namedLayers.map(layer => layer.id)) + 1; active.value.settings.namedLayers.push({ id, name: `Layer ${id}`, visible: true, locked: false }); changed('Add named layer') }
-function renameLayer(id: number, name: string) { const layer = active.value.settings.namedLayers.find(candidate => candidate.id === id); if (!layer) return; layer.name = name.trim().slice(0, 80) || `Layer ${id}`; for (const entity of physicsState.world.entities.filter(entity => entity.layer === id)) entity.namedLayer = layer.name; changed('Rename named layer') }
+function changed(label: string, path: string) { sceneManager.markDirty(); pushHistory(label, `scene-settings:${active.value.uuid}:${path}`, `scene:${active.value.uuid}`) }
+function setTags(value: string) { active.value.settings.tags = cleanList(value); changed('Set scene tags', 'settings.tags') }
+function setInheritance(value: string) { if (sceneManager.setInheritance(active.value.uuid, value || null)) changed('Set scene inheritance', 'settings.inheritanceSourceUuid') }
+function addNamedLayer() { const id = Math.max(0, ...active.value.settings.namedLayers.map(layer => layer.id)) + 1; active.value.settings.namedLayers.push({ id, name: `Layer ${id}`, visible: true, locked: false }); changed('Add named layer', 'settings.namedLayers') }
+function renameLayer(id: number, name: string) { const layer = active.value.settings.namedLayers.find(candidate => candidate.id === id); if (!layer) return; layer.name = name.trim().slice(0, 80) || `Layer ${id}`; for (const entity of physicsState.world.entities.filter(entity => entity.layer === id)) entity.namedLayer = layer.name; changed('Rename named layer', `settings.namedLayers.${id}.name`) }
 function createFromTemplate(id: typeof templates[number]['id']) {
   if (!createScene(t(templates.find(template => template.id === id)?.label ?? 'newScene'))) return
   active.value.settings.templateId = id

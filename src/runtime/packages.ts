@@ -109,6 +109,7 @@ const packageLifecycleListeners = new Set<(id: string, action: PackageLifecycleA
 export function onPackageLifecycle(listener: (id: string, action: PackageLifecycleAction) => void): () => void { packageLifecycleListeners.add(listener); return () => { packageLifecycleListeners.delete(listener) } }
 function notifyPackageLifecycle(id: string, action: PackageLifecycleAction): void { for (const listener of packageLifecycleListeners) listener(id, action) }
 export function setPackageEnabled(id: string, enabled: boolean): boolean {
+  if (typeof enabled !== 'boolean') return false
   const item = packageState.installed.find(candidate => candidate.manifest.id === id)
   if (!item || enabled && (item.manifest.native || item.securityStatus !== 'verified' || packageCompatibility(item).length > 0)) return false
   item.enabled = enabled

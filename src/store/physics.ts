@@ -1,3 +1,9 @@
+import { notify } from '../runtime/editorFeedback'
+import { assertStudioDraftsSaved } from '../editor/studioSaveBoundary'
+import { validateComponentValues } from '../world/componentValidation'
+import { preflightProjectValues, validateEntityMetadataValues } from '../projects/projectPreflight'
+import { cancelPendingProjectMutations, flushPendingProjectMutations, setProjectMutationRecorder } from '../runtime/projectMutationRouter'
+import { cancelEditorDrafts, settleEditorDrafts } from '../editor/pendingDrafts'
 import { truncateUtf16 } from '../runtime/uiTextLayout'
 import { reactive, markRaw } from 'vue'
 import { World, defaultCollisionMatrix, PHYSICS_LAYER_COUNT, type EngineDiagnostics, type GlobalPhysicsSettings } from '../world/World'
@@ -28,7 +34,7 @@ import {
   Image as UIImage, Joint2D, Light2D, Panel, ParticleEmitter2D, ProgressBar, RectTransform, RigidBody2D, Script2D, ShadowCaster2D,
   NavigationAgent2D, NavigationObstacle2D, NavigationRegion2D, ObjectPool2D, Portal2D, ShapeRenderer2D, Skeleton2D, Slider, SpriteRenderer2D, StateMachine2D,
   Text as UIText, TextInput, TextRenderer2D, TileMap2D, TimelinePlayer, WorldChunk2D,
-  copyComponentValues, pasteComponentValues, type Component2D, type ComponentKind, type ScriptPropertyValue
+  copyComponentValues, normalizeJointBreakThreshold, pasteComponentValues, type Component2D, type ComponentKind, type ScriptPropertyValue
 } from '../world/components'
 import { Transform } from '../world/Transform'
 import { SceneManager } from '../world/SceneManager'
@@ -197,7 +203,7 @@ export function enterEditMode(id: number | null): void {
 
 export function selectEntities(ids: number[], mode: SelectionMode = 'replace', primaryId?: number | null): void {
   const valid = new Set(physicsState.world.entities.map(entity => entity.id))
-  const requested = ids.filter((id, index) => valid.has(id) && ids.indexOf(id) === index)
+  const requested = [...new Set(ids)].filter(id => valid.has(id))
   const next = updateSelection(physicsState.selectedEntityIds, requested, mode)
   physicsState.selectedEntityIds.splice(0, physicsState.selectedEntityIds.length, ...next)
   const preferred = primaryId !== undefined && primaryId !== null && next.includes(primaryId)
@@ -376,6 +382,8 @@ function serializeActiveScene(): Record<string, unknown> {
       void _runtimeId
       return {
       ...stored,
+      breakForce: Number.isFinite(connection.breakForce) ? connection.breakForce : null,
+      breakTorque: Number.isFinite(connection.breakTorque) ? connection.breakTorque : null,
       anchors: connection.anchors.map(anchor => {
         const { entityId, ...storedAnchor } = anchor
         return { ...storedAnchor, entityUuid: entitiesById.get(entityId)?.uuid, localPoint: { ...anchor.localPoint } }
@@ -926,7 +934,9 @@ function normalizeExtendedComponent(component: Component2D): void {
     component.lowerLimit = finiteNumber(component.lowerLimit, -1); component.upperLimit = Math.max(component.lowerLimit, finiteNumber(component.upperLimit, 1))
     component.referenceOffset = safeVector(component.referenceOffset, { x: 0, y: 0 }); component.referenceAngle = finiteNumber(component.referenceAngle)
     component.motorSpeed = finiteNumber(component.motorSpeed); component.maxMotorForce = clamp(component.maxMotorForce, 1000, 0, 1e12)
-    component.breakForce = clamp(component.breakForce, Number.MAX_VALUE, 0, Number.MAX_VALUE); component.breakTorque = clamp(component.breakTorque, Number.MAX_VALUE, 0, Number.MAX_VALUE)
+    // JSON uses null for an authored unlimited threshold; keep that sentinel unlimited.
+    component.breakForce = normalizeJointBreakThreshold(component.breakForce)
+    component.breakTorque = normalizeJointBreakThreshold(component.breakTorque)
   }
 }
 
@@ -1123,11 +1133,12 @@ function applyStoredComponents(entity: Entity, item: SceneEntityData): void {
     entity.removeComponent('RigidBody2D')
   }
 
-  const colliderSource = item.components.find(component => component.kind?.endsWith('Collider2D'))
-  if (colliderSource?.kind === 'BoxCollider2D' || colliderSource?.kind === 'EllipseCollider2D' || colliderSource?.kind === 'PolygonCollider2D') {
+  const colliderSources = item.components.filter(component => component.kind === 'BoxCollider2D' || component.kind === 'EllipseCollider2D' || component.kind === 'PolygonCollider2D')
+  if (colliderSources.length) {
     for (const kind of ['BoxCollider2D', 'EllipseCollider2D', 'PolygonCollider2D'] as const) entity.componentMap.delete(kind)
+    for (const colliderSource of colliderSources) {
     const data = recordData(colliderSource)
-    const collider = new Collider2D(colliderSource.kind, colliderSource.uuid)
+    const collider = new Collider2D(colliderSource.kind as 'BoxCollider2D' | 'EllipseCollider2D' | 'PolygonCollider2D', colliderSource.uuid)
     applyComponentMetadata(collider, colliderSource)
     copyVector(collider.offset, data.offset)
     copyVector(collider.size, data.size)
@@ -1168,10 +1179,22 @@ function applyStoredComponents(entity: Entity, item: SceneEntityData): void {
       collider.material.dynamicFriction = finiteNumber(material.dynamicFriction, collider.material.dynamicFriction)
     }
     entity.componentMap.set(collider.kind, collider)
+    }
   } else {
     const collider = entity.getCollider(true)
     if (collider) entity.removeComponent(collider.kind)
   }
+  // Hydration replaces collider instances, but must not change authored list order.
+  const remainingComponents = new Map(entity.componentMap)
+  entity.componentMap.clear()
+  for (const source of item.components) {
+    const component = remainingComponents.get(source.kind as ComponentKind)
+    if (!component) continue
+    entity.componentMap.set(component.kind, component)
+    remainingComponents.delete(component.kind)
+  }
+  // Keep required constructor defaults absent from legacy component documents.
+  for (const component of remainingComponents.values()) entity.componentMap.set(component.kind, component)
 }
 
 function applyStoredProperties(entity: Entity, source: Record<string, unknown>): void {
@@ -1209,6 +1232,14 @@ function applyStoredTransform(entity: Entity, item: SceneEntityData, source: Rec
 
 export function createEntityFromData(item: SceneEntityData, forcedId?: number): Entity {
   if (!item || typeof item !== 'object') throw new Error(t('invalidEntityRecord'))
+  validateEntityMetadataValues(item)
+  if (Array.isArray(item.components)) for (const component of item.components) {
+    if (!component || typeof component !== 'object') throw new Error(t('invalidEntityRecord'))
+    if (component.data != null) {
+      if (typeof component.data !== 'object' || Array.isArray(component.data)) throw new Error(`${component.kind}.data: expected an object.`)
+      validateComponentValues(String(component.kind), component.data)
+    }
+  }
   const id = normalizeIdentifier(forcedId ?? item.id)
   const position = {
     x: finiteNumber(item.transform?.position?.x, 0),
@@ -1299,6 +1330,9 @@ export function createEntityFromData(item: SceneEntityData, forcedId?: number): 
   const rect = entity.getComponent<RectTransform>('RectTransform')
   if (rect && (entity.hasComponent('Button') || entity.hasComponent('Slider') || entity.hasComponent('Checkbox') || entity.hasComponent('TextInput')) && storedRectData?.skipNavigation !== true) rect.skipNavigation = false
   configureUiAccessibility(entity)
+  // Defaults repair omitted legacy metadata; explicit author choices must survive reopening.
+  if (rect && typeof storedRectData?.focusable === 'boolean') rect.focusable = storedRectData.focusable
+  if (rect && typeof storedRectData?.skipNavigation === 'boolean') rect.skipNavigation = storedRectData.skipNavigation
   const authoredBody = storedComponent(item, 'RigidBody2D')
   if (!authoredBody || typeof recordData(authoredBody).density !== 'number') syncDensityFromMass(entity)
   return entity
@@ -1684,7 +1718,42 @@ function loadPhysicsProjectSettings(value: unknown): void {
   normalizeGlobalSettings()
 }
 
+/** Recover the authored document if a later hydration/normalization owner rejects it. */
 export function loadProject(jsonString: string, preserveRuntimeSession = false): boolean {
+  const rollback = {
+    source: null as string | null,
+    mode: physicsState.playMode, running: physicsState.simulationRunning, simulation: simulationSnapshot,
+    selected: new Set(selectedEntities().map(entity => entity.uuid)),
+    primary: physicsState.world.entities.find(entity => entity.id === physicsState.selectedEntityId)?.uuid,
+    scenes: new Map(sceneManager.scenes.map(scene => [scene.uuid, {externalState:scene.externalState,validationState:scene.validationState,dirty:scene.dirty}])),
+    navigation: [...sceneManager.navigationHistory], navigationIndex: sceneManager.navigationIndex,
+    transactions: [...activeHistoryTransactions], baseline: historyBaseline
+  }
+  const loaded = hydrateProjectDocument(jsonString, preserveRuntimeSession, () => { rollback.source = getSceneJSON() })
+  if (loaded || rollback.source === null) return loaded
+  const failure = editorState.statusText
+  if (!hydrateProjectDocument(rollback.source, true)) {
+    editorState.statusText = failure + ' Previous document recovery also failed: ' + editorState.statusText
+    return false
+  }
+  physicsState.playMode = rollback.mode; physicsState.simulationRunning = rollback.running; simulationSnapshot = rollback.simulation
+  const ids = physicsState.world.entities.filter(entity => rollback.selected.has(entity.uuid)).map(entity => entity.id)
+  selectEntities(ids, 'replace', physicsState.world.entities.find(entity => entity.uuid === rollback.primary)?.id ?? ids.at(-1) ?? null)
+  for (const scene of sceneManager.scenes) {
+    const previous = rollback.scenes.get(scene.uuid)
+    if (previous) Object.assign(scene, previous)
+  }
+  sceneManager.navigationHistory = rollback.navigation
+  sceneManager.navigationIndex = rollback.navigationIndex
+  activeHistoryTransactions = rollback.transactions
+  historyBaseline = rollback.baseline
+  editorState.statusText = failure
+  return false
+}
+
+function hydrateProjectDocument(jsonString: string, preserveRuntimeSession = false, beforeHydrate?: () => void): boolean {
+  const selectedUuids = new Set(selectedEntities().map(entity => entity.uuid))
+  const primaryUuid = physicsState.world.entities.find(entity => entity.id === physicsState.selectedEntityId)?.uuid
   try {
     const preliminary: unknown = JSON.parse(jsonString)
     const preliminaryRecord = !Array.isArray(preliminary) && preliminary && typeof preliminary === 'object' ? preliminary as Record<string, unknown> : null
@@ -1695,6 +1764,13 @@ export function loadProject(jsonString: string, preserveRuntimeSession = false):
     const root = Array.isArray(parsed) ? { entities: parsed } : parsed
     if (!root || typeof root !== 'object') throw new Error(t('invalidProjectRoot'))
     const project = root as Record<string, unknown>
+    preflightProjectValues(project)
+    const preflightScenes = Array.isArray(project.scenes) ? project.scenes : [project]
+    for (const scene of preflightScenes) for (const entity of (scene as {entities: SceneEntityData[]}).entities) {
+      const shape = storedShapeType(entity)
+      if (shape !== 'Circle' && shape !== 'Box' && shape !== 'Triangle') throw new Error(t('unsupportedShape', {shape: String(shape)}))
+    }
+    beforeHydrate?.()
     hydrateProjectMetadata(project.projectMetadata)
     hydrateProjectManifest(project.manifest)
     useSaveProject()
@@ -1775,10 +1851,10 @@ export function loadProject(jsonString: string, preserveRuntimeSession = false):
       editorState.renderLayer = layers.includes(requestedRenderLayer) ? requestedRenderLayer : 'all'
     }
 
-    const validSelection = physicsState.selectedEntityIds.filter(id => entities.some(entity => entity.id === id))
-    selectEntities(validSelection, 'replace', validSelection.includes(physicsState.selectedEntityId ?? -1)
-      ? physicsState.selectedEntityId
-      : validSelection[validSelection.length - 1] ?? null)
+    cancelEditorDrafts()
+    cancelPendingProjectMutations()
+    const validSelection = entities.filter(entity => selectedUuids.has(entity.uuid)).map(entity => entity.id)
+    selectEntities(validSelection, 'replace', entities.find(entity => entity.uuid === primaryUuid)?.id ?? validSelection.at(-1) ?? null)
     return true
   } catch (error) {
     console.error('Failed to load project', error)
@@ -1818,6 +1894,7 @@ function reloadSceneManagerProject(preserveRuntimeSession = false): boolean {
 }
 
 export function createScene(name?: string): boolean {
+  if (!settlePendingDocumentEdits()) return false
   selectEntities([], 'replace')
   clearRenderTextures()
   sceneManager.captureActive(serializeActiveScene())
@@ -1828,6 +1905,7 @@ export function createScene(name?: string): boolean {
 
 export function setActiveScene(uuid: string): boolean {
   if (uuid === sceneManager.activeSceneUuid) return true
+  if (!sceneManager.scenes.some(scene => scene.uuid === uuid) || !settlePendingDocumentEdits()) return false
   selectEntities([], 'replace')
   clearRenderTextures()
   sceneManager.captureActive(serializeActiveScene())
@@ -1835,13 +1913,28 @@ export function setActiveScene(uuid: string): boolean {
   return reloadSceneManagerProject()
 }
 
+/** Navigate only after the outgoing world's drafts have reached their original scene. */
+export function navigateScene(offset: -1 | 1): boolean {
+  const index = sceneManager.navigationIndex + offset
+  const uuid = sceneManager.navigationHistory[index]
+  if (!uuid || !sceneManager.scenes.some(scene => scene.uuid === uuid) || !settlePendingDocumentEdits()) return false
+  sceneManager.captureActive(serializeActiveScene())
+  if (!sceneManager.navigate(offset)) return false
+  selectEntities([], 'replace')
+  clearRenderTextures()
+  return reloadSceneManagerProject()
+}
+
 export function reloadActiveScene(): boolean {
+  if (!settlePendingDocumentEdits()) return false
   selectEntities([], 'replace')
   clearRenderTextures()
   return reloadSceneManagerProject()
 }
 
 export function setSceneLoaded(uuid: string, loaded: boolean): boolean {
+  if (typeof loaded !== 'boolean') return false
+  if (!sceneManager.scenes.some(scene => scene.uuid === uuid) || !settlePendingDocumentEdits()) return false
   sceneManager.captureActive(serializeActiveScene())
   if (!sceneManager.setLoaded(uuid, loaded)) return false
   return reloadSceneManagerProject()
@@ -1873,13 +1966,28 @@ export function runtimeReloadScene(): boolean {
   try { return prepareRuntimeSceneTransition().commit() } catch (error) { editorState.statusText = `Runtime scene preparation failed: ${error instanceof Error ? error.message : String(error)}`; return false }
 }
 
-export function toggleSimulation(state: boolean): void {
+function settlePlaybackEdits(allowStudioDrafts = false): boolean {
+  if (!settlePendingDocumentEdits()) return false
+  if (!allowStudioDrafts) {
+    try { assertStudioDraftsSaved() } catch (error) {
+      editorState.statusText = error instanceof Error ? error.message : String(error)
+      notify(editorState.statusText, 'error')
+      return false
+    }
+  }
+  return true
+}
+
+/** Asset preview owners may retain drafts while previewing an explicitly selected asset. */
+export function toggleSimulation(state: boolean, options: { assetPreview?: boolean } = {}): boolean {
+  if (state && physicsState.playMode === 'editing' && !settlePlaybackEdits(options.assetPreview === true)) return false
   if (state && !physicsState.simulationRunning && simulationSnapshot === null) {
     simulationSnapshot = getSceneJSON()
     beginPhysicsMonitorSession()
   }
   physicsState.simulationRunning = state
   physicsState.playMode = state ? 'playing' : simulationSnapshot === null ? 'editing' : 'paused'
+  return true
 }
 
 export function resetSimulation(): void {
@@ -1890,11 +1998,13 @@ export function resetSimulation(): void {
   if (snapshot) loadProject(snapshot)
 }
 
-export function singleStepSimulation(): void {
+export function singleStepSimulation(): boolean {
+  if (physicsState.playMode === 'editing' && !settlePlaybackEdits()) return false
   physicsState.simulationRunning = false
   if (simulationSnapshot === null) simulationSnapshot = getSceneJSON()
   physicsState.playMode = 'paused'
   Object.assign(physicsState.engineDiagnostics, physicsState.world.singleStep(physicsState.globalSettings))
+  return true
 }
 
 export function stopPlayMode(): void {
@@ -1906,6 +2016,8 @@ export function hasRuntimeSession(): boolean {
 }
 
 export async function saveProject(): Promise<boolean> {
+  if (!settlePendingDocumentEdits()) return false
+  assertStudioDraftsSaved()
   const jsonString = stableProjectText(getSceneJSON())
   if (recoveryState.readOnly) throw new Error('This project is open read-only. Use Open as copy or choose a new writable project folder.')
   const nativeSink = await createNativeProjectTransactionSink()
@@ -2017,7 +2129,7 @@ export function duplicateEntity(id: number): Entity | null {
 const commandHistory = new CommandHistory(500, 64 * 1024 * 1024)
 let historyBaseline: string | null = null
 let applyingHistory = false
-let activeHistoryTransactions: Array<{ label: string; mergeKey: string | null; before: string }> = []
+let activeHistoryTransactions: Array<{ label: string; mergeKey: string | null; affectedResource: string; before: string }> = []
 export const historyState = reactive({
   length: 0,
   index: -1,
@@ -2094,9 +2206,21 @@ export function synchronizeHistoryBaseline(): void {
 }
 
 function applyHistoryDocument(document: string): void {
+  const externalStates = new Map(sceneManager.scenes.map(scene => [scene.uuid, {externalState: scene.externalState, validationState: scene.validationState}]))
+  const navigation = [...sceneManager.navigationHistory], navigationIndex = sceneManager.navigationIndex
+  cancelEditorDrafts()
+  cancelPendingProjectMutations()
   applyingHistory = true
   try {
-    if (loadProject(document)) historyBaseline = document
+    if (!loadProject(document)) throw new Error('History document could not be restored.')
+    for (const scene of sceneManager.scenes) {
+      const external = externalStates.get(scene.uuid)
+      if (external) Object.assign(scene, external)
+    }
+    sceneManager.navigationHistory = navigation.filter(uuid => sceneManager.scenes.some(scene => scene.uuid === uuid))
+    if (!sceneManager.navigationHistory.length) sceneManager.navigationHistory = [sceneManager.activeSceneUuid]
+    sceneManager.navigationIndex = Math.min(navigationIndex, sceneManager.navigationHistory.length - 1)
+    historyBaseline = getSceneJSON()
   } finally {
     applyingHistory = false
   }
@@ -2143,29 +2267,44 @@ export function pushHistory(label = 'Edit scene', mergeKey: string | null = null
   window.setTimeout(() => refreshSourceStatus(getSceneJSON()), 0)
 }
 
+/** Settle valid drafts and implicit edits before a document/history boundary. */
+export function settlePendingDocumentEdits(): boolean {
+  if (applyingHistory || physicsState.playMode !== 'editing') return true
+  if (!settleEditorDrafts()) return false
+  flushPendingProjectMutations()
+  cancelPendingProjectMutations()
+  pushHistory('Commit pending property edits')
+  while (activeHistoryTransactions.length) commitHistoryTransaction()
+  return true
+}
+
 /** Groups any number of document mutations into one named, reversible command. */
-export function beginHistoryTransaction(label: string, mergeKey: string | null = null): boolean {
+export function beginHistoryTransaction(label: string, mergeKey: string | null = null, affectedResource = mergeKey ?? 'project.nova'): boolean {
   if (physicsState.playMode !== 'editing' || applyingHistory) return false
+  if (!activeHistoryTransactions.length && !settlePendingDocumentEdits()) return false
   const before = getSceneJSON(); if (historyBaseline === null) historyBaseline = before
-  activeHistoryTransactions.push({ label: label.trim().slice(0, 160) || 'Edit scene', mergeKey, before })
+  activeHistoryTransactions.push({ label: label.trim().slice(0, 160) || 'Edit scene', mergeKey, affectedResource, before })
   return true
 }
 
 export function commitHistoryTransaction(): boolean {
-  const transaction = activeHistoryTransactions.pop(); if (!transaction) return false
-  if (activeHistoryTransactions.length) { historyBaseline = getSceneJSON(); scheduleAutosave(); return true }
-  const after = getSceneJSON(); historyBaseline = after
+  const transaction = activeHistoryTransactions[activeHistoryTransactions.length - 1]; if (!transaction) return false
+  // Serialization can reject a malformed draft; retain the transaction for correction/cancel.
+  const after = getSceneJSON()
+  activeHistoryTransactions.pop()
+  historyBaseline = after
+  if (activeHistoryTransactions.length) { scheduleAutosave(); return true }
   if (after === transaction.before) { syncHistoryState(); return false }
   const scope = commandScope(transaction.label)
-  commandHistory.commit(new DocumentMutationCommand({ label: transaction.label, before: transaction.before, after, apply: applyHistoryDocument, mergeKey: transaction.mergeKey, scope, affectedResource: transaction.mergeKey ?? 'project.nova' }), true)
+  commandHistory.commit(new DocumentMutationCommand({ label: transaction.label, before: transaction.before, after, apply: applyHistoryDocument, mergeKey: transaction.mergeKey, scope, affectedResource: transaction.affectedResource }), true)
   markProjectDirty(scope)
   if (scope === 'scene' || scope === 'asset') sceneManager.markDirty()
   syncHistoryState(); scheduleAutosave(); window.setTimeout(() => refreshSourceStatus(getSceneJSON()), 0); return true
 }
 
 export function cancelHistoryTransaction(): boolean {
-  const transaction = activeHistoryTransactions.pop(); if (!transaction) return false
-  applyHistoryDocument(transaction.before); historyBaseline = transaction.before; activeHistoryTransactions = []; syncHistoryState(); return true
+  const transaction = activeHistoryTransactions[activeHistoryTransactions.length - 1]; if (!transaction) return false
+  applyHistoryDocument(transaction.before); activeHistoryTransactions.pop(); syncHistoryState(); return true
 }
 
 export function clearEditorHistory(reason = 'project-open', source = getSceneJSON(), establishManualBaseline = true): void {
@@ -2173,6 +2312,7 @@ export function clearEditorHistory(reason = 'project-open', source = getSceneJSO
 }
 
 export function undo(): void {
+  if (!settlePendingDocumentEdits()) return
   if (!commandHistory.undo()) return
   syncHistoryState()
   editorState.statusText = t('undoSuccess')
@@ -2180,8 +2320,13 @@ export function undo(): void {
 }
 
 export function redo(): void {
+  if (!settlePendingDocumentEdits()) return
   if (!commandHistory.redo()) return
   syncHistoryState()
   editorState.statusText = t('redoSuccess')
   window.setTimeout(() => refreshSourceStatus(getSceneJSON()), 0)
 }
+
+setProjectMutationRecorder((label, mergeKey, resource) => {
+  if (physicsState.playMode === 'editing') pushHistory(label, mergeKey, resource)
+})

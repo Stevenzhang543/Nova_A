@@ -16,6 +16,7 @@ export default defineConfig(() => ({
     async writeBundle(options) {
       const output = resolve(projectRoot, options.dir ?? 'dist', 'manual')
       await mkdir(output, { recursive: true })
+      await copyFile(resolve(output, '../.vite/manifest.json'), resolve(output, '../player-manifest.json'))
       await Promise.all(['MANUAL.en.md', 'MANUAL.de.md', 'MANUAL.zh-CN.md'].map(file => copyFile(resolve(projectRoot, 'manual', file), resolve(output, file))))
     }
   }],

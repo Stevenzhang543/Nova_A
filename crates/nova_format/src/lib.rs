@@ -11,7 +11,7 @@ pub const PROJECT_FORMAT_NAME: &str = "Nova_A Project Format 2";
 pub const PROJECT_FORMAT_MAJOR: u32 = 2;
 pub const CURRENT_FORMAT_VERSION: u32 = 29;
 pub const MINIMUM_SUPPORTED_FORMAT_VERSION: u32 = 5;
-pub const CURRENT_ENGINE_VERSION: &str = "26.21.0";
+pub const CURRENT_ENGINE_VERSION: &str = "26.23.0";
 
 fn default_named_physics_layers() -> Value {
     let colors = [
@@ -2330,7 +2330,16 @@ fn validate_project_settings(value: Option<&Value>) -> Result<(), FormatError> {
             }
             if !matches!(
                 test.get("kind").and_then(Value::as_str),
-                Some("unit" | "scene" | "integration" | "headless")
+                Some(
+                    "unit"
+                        | "scene"
+                        | "integration"
+                        | "headless"
+                        | "ui"
+                        | "physics"
+                        | "animation"
+                        | "regression"
+                )
             ) {
                 return Err(FormatError(format!(
                     "project test {id} has an unsupported kind"
@@ -5037,5 +5046,48 @@ mod legacy_script_reference_26_21 {
             .unwrap_err()
             .0
             .contains("invalid asset reference"));
+    }
+}
+
+#[cfg(test)]
+mod authored_test_kinds_26_22 {
+    use super::*;
+
+    #[test]
+    fn every_editor_test_kind_migrates_and_unknown_kinds_fail() {
+        let base: Value = serde_json::from_str(include_str!(
+            "../../../reference-projects/projects/authoring-5000-stress/project.nova"
+        ))
+        .unwrap();
+        for kind in [
+            "unit",
+            "scene",
+            "integration",
+            "headless",
+            "ui",
+            "physics",
+            "animation",
+            "regression",
+            "unsupported",
+        ] {
+            let mut source = base.clone();
+            source["projectSettings"]["production"]["testing"] = json!({
+                "defaultTimeoutMs": 10000,
+                "tests": [{"id":"kind-audit", "name":"Kind audit", "kind":kind,
+                    "steps":1, "timeoutMs":1000, "captureScreenshot":false, "assertions":[]}]
+            });
+            let result = migrate_project_value(source);
+            if kind == "unsupported" {
+                assert!(result.is_err(), "unknown test kind accepted");
+            } else {
+                let migrated =
+                    serde_json::to_value(result.unwrap_or_else(|error| panic!("{kind}: {error}")))
+                        .unwrap();
+                assert_eq!(
+                    migrated["projectSettings"]["production"]["testing"]["tests"][0]["kind"],
+                    kind
+                );
+            }
+        }
     }
 }

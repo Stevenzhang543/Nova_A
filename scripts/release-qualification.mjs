@@ -187,6 +187,13 @@ export async function verifyPackagedQualification(evidenceRoot, sourceRoot, webR
     if ((expected.artifacts ?? []).some(artifact => artifact.name === 'web-editor')) {
       if (!Array.isArray(gate.webFiles) || !gate.webFiles.length) throw new Error('Packaged qualification has no web asset inventory.')
       const allowed = new Set(['README.md', 'LICENSE.md', 'release-metadata.json', 'SHA256SUMS.txt', 'FONT_LICENSES/Nunito-Sans-OFL-1.1.txt', 'FONT_LICENSES/Noto-Sans-SC-OFL-1.1.txt', 'FONT_LICENSES/JetBrains-Mono-OFL-1.1.txt'])
+      let hostingSource = null
+      try { hostingSource = await readFile(join(sourceRoot, 'docs/WEB_HOSTING_26_23.md')) } catch (error) { if (error.code !== 'ENOENT') throw error }
+      if (hostingSource !== null) {
+        const hostedGuide = await readFile(join(webRoot, 'HOSTING.md'))
+        if (!hostingSource.equals(hostedGuide)) throw new Error('Packaged hosting guide differs from the frozen source documentation.')
+        allowed.add('HOSTING.md')
+      }
       for (const record of gate.webFiles) {
         if (!record.path.startsWith('dist/')) throw new Error('Packaged web inventory path is invalid.')
         const path = record.path.slice(5), actual = await fileRecord(webRoot, path); allowed.add(path)

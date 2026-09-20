@@ -76,17 +76,17 @@
               <p class="rope-units17">{{ simulationLabel17('ropeUnits') }}</p>
               <div class="physics-grid">
                 <label class="collision-toggle"><span><strong>{{ t('stringCollisions') }}</strong><small>{{ t('stringCollisionsDescription') }}</small></span><input v-model="collisionEnabled" type="checkbox"></label>
-                <label v-if="collisionEnabled"><span>{{ t('stringRadius') }}</span><input v-model.lazy.number="collisionRadius" type="number" min="0.000001" max="1000000" step="0.01"></label>
-                <label v-if="collisionEnabled"><span>{{ t('stringDensity') }}</span><input v-model.lazy.number="linearDensity" type="number" min="0.000001" max="1e50" step="0.01"></label>
-                <label><span>{{ t('ropeSegments') }}</span><input v-model.lazy.number="segmentCount" type="number" min="3" max="32" step="1"></label>
+                <label v-if="collisionEnabled"><span>{{ t('stringRadius') }}</span><NumericExpressionInput v-model="collisionRadius" :resource-key="'connection-draft:' + (props.connectionId ?? 'new') + ':collisionRadius'" :minimum="0.000001" :maximum="1000000" :step="0.01" /></label>
+                <label v-if="collisionEnabled"><span>{{ t('stringDensity') }}</span><NumericExpressionInput v-model="linearDensity" :resource-key="'connection-draft:' + (props.connectionId ?? 'new') + ':linearDensity'" :minimum="0.000001" :maximum="1e50" :step="0.01" /></label>
+                <label><span>{{ t('ropeSegments') }}</span><NumericExpressionInput v-model="segmentCount" :resource-key="'connection-draft:' + (props.connectionId ?? 'new') + ':segmentCount'" :minimum="3" :maximum="32" :step="1" /></label>
                 <label><span>{{ t('collideConnected') }}</span><input v-model="collideConnected" type="checkbox"></label>
                 <label><span>{{ t('stretchable') }}</span><input v-model="stretchable" type="checkbox"></label>
                 <label><span>{{ t('bendable') }}</span><input v-model="bendable" type="checkbox"></label>
-                <label><span>{{ t('stiffness') }}</span><input v-model.lazy.number="stiffness" type="number" min="0" max="1000000000000" step="1"></label>
-                <label><span>{{ t('connectionDamping') }}</span><input v-model.lazy.number="connectionDamping" type="number" min="0" max="1000000000" step="0.1"></label>
-                <label><span>{{ t('maxStretch') }}</span><input v-model.lazy.number="maxStretchPercent" type="number" min="0" max="99900" step="1"></label>
-                <label><span>{{ t('bendTolerance') }}</span><input v-model.lazy.number="bendingToleranceMass" type="number" min="0" max="1e50" step="0.1"></label>
-                <label><span>{{ t('stretchTolerance') }}</span><input v-model.lazy.number="stretchingToleranceMass" type="number" min="0" max="1e50" step="0.1"></label>
+                <label><span>{{ t('stiffness') }}</span><NumericExpressionInput v-model="stiffness" :resource-key="'connection-draft:' + (props.connectionId ?? 'new') + ':stiffness'" :minimum="0" :maximum="1000000000000" :step="1" /></label>
+                <label><span>{{ t('connectionDamping') }}</span><NumericExpressionInput v-model="connectionDamping" :resource-key="'connection-draft:' + (props.connectionId ?? 'new') + ':connectionDamping'" :minimum="0" :maximum="1000000000" :step="0.1" /></label>
+                <label><span>{{ t('maxStretch') }}</span><NumericExpressionInput v-model="maxStretchPercent" :resource-key="'connection-draft:' + (props.connectionId ?? 'new') + ':maxStretchPercent'" :minimum="0" :maximum="99900" :step="1" /></label>
+                <label><span>{{ t('bendTolerance') }}</span><NumericExpressionInput v-model="bendingToleranceMass" :resource-key="'connection-draft:' + (props.connectionId ?? 'new') + ':bendingToleranceMass'" :minimum="0" :maximum="1e50" :step="0.1" /></label>
+                <label><span>{{ t('stretchTolerance') }}</span><NumericExpressionInput v-model="stretchingToleranceMass" :resource-key="'connection-draft:' + (props.connectionId ?? 'new') + ':stretchingToleranceMass'" :minimum="0" :maximum="1e50" :step="0.1" /></label>
               </div>
               <p v-if="segmentCount >= 28 || (collisionEnabled && segmentCount >= 20)" class="rope-warning">{{ t('ropePerformanceWarning') }}</p>
             </details>
@@ -105,6 +105,8 @@
 </template>
 
 <script setup lang="ts">
+import NumericExpressionInput from './NumericExpressionInput.vue'
+import { settleEditorDrafts } from '../editor/pendingDrafts'
 import { useSimulationFormGuard17 } from '../editor/simulationForm17'
 import { simulationLabel17 } from '../editor/simulationLabels17'
 import { vModalFocus } from '../editor/modalFocus'
@@ -245,6 +247,7 @@ function commitConnection(connection: Connection, statusKey: 'connectionCreated'
 }
 
 function saveBinding() {
+  if (!settleEditorDrafts()) return
   const connection = createDraftConnection()
   if (!connection || !configureBinding(connection, world.entities)) return
   if (!existing) connection.name = `${t('bind')} ${entityName(props.selectedId)} + ${entityName(partnerId.value!)}`
@@ -252,6 +255,7 @@ function saveBinding() {
 }
 
 function saveConnection() {
+  if (!settleEditorDrafts()) return
   if (!drawnAnchors.value || drawnPoints.value.length < 2) return
   const connection = createDraftConnection()
   if (!connection) return

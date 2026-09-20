@@ -3,20 +3,41 @@
     <a class="brand" href="https://whitelists.top" target="_blank" rel="noreferrer" aria-label="Nova_A by Whitelist">
       <span class="brand-mark">N</span><span>Nova_A</span>
     </a>
-    <nav class="menu-container" @mouseleave="onMenuLeave" @mouseenter="onMenuEnter" @scroll="closeMenu">
+    <nav class="menu-container" @scroll="closeMenu">
       <div class="menu-item">
         <button @click="toggleMenu('file')" :class="{ active: activeMenu === 'file' }">{{ t('file') }}</button>
-        <Transition name="menu"><div v-if="activeMenu === 'file'" class="dropdown">
+
+      </div>
+      <div class="menu-item">
+        <button @click="toggleMenu('edit')" :class="{ active: activeMenu === 'edit' }">{{ t('edit') }}</button>
+
+      </div>
+      <div class="menu-item">
+        <button @click="toggleMenu('project')" :class="{ active: activeMenu === 'project' }">{{ t('project') }}</button>
+
+      </div>
+      <div class="menu-item">
+        <button @click="toggleMenu('debug')" :class="{ active: activeMenu === 'debug' }">{{ t('debug') }}</button>
+
+      </div>
+      <div class="menu-item">
+        <button @click="toggleMenu('view')" :class="{ active: activeMenu === 'view' }">{{ t('view') }}</button>
+
+      </div>
+      <div class="menu-item">
+        <button @click="toggleMenu('help')" :class="{ active: activeMenu === 'help' }">{{ t('help') }}</button>
+
+      </div>
+      <div class="menu-item menu-popover-host">
+        <Transition name="menu" mode="out-in" @enter="positionMenu" @before-leave="deactivateMenu">
+          <div v-if="activeMenu === 'file'" :key="'file'" class="dropdown">
           <button :disabled="!isEditing" @click="handleProjectManager"><span>{{ t('projectManager') }}</span></button>
           <hr>
           <button :disabled="!isEditing" @click="handleSave"><span>{{ t('saveProject') }}</span><kbd>Ctrl S</kbd></button>
           <button :disabled="!isEditing" @click="triggerLoad"><span>{{ t('loadProject') }}</span></button>
           <hr><button class="danger" :disabled="!isEditing" @click="handleClearScene"><span>{{ t('clearScene') }}</span></button>
-        </div></Transition>
-      </div>
-      <div class="menu-item">
-        <button @click="toggleMenu('edit')" :class="{ active: activeMenu === 'edit' }">{{ t('edit') }}</button>
-        <Transition name="menu"><div v-if="activeMenu === 'edit'" class="dropdown">
+        </div>
+          <div v-else-if="activeMenu === 'edit'" :key="'edit'" class="dropdown">
           <button :disabled="!isEditing || !historyState.canUndo" @click="handleUndo"><span>{{ historyState.undoLabel ? `${t('undo')} · ${historyState.undoLabel}` : t('undo') }}</span><kbd>Ctrl Z</kbd></button>
           <button :disabled="!isEditing || !historyState.canRedo" @click="handleRedo"><span>{{ historyState.redoLabel ? `${t('redo')} · ${historyState.redoLabel}` : t('redo') }}</span><kbd>Ctrl Y</kbd></button>
           <button @click="handleUndoHistory"><span>{{ t('undoHistory') }}</span><kbd>Ctrl Alt H</kbd></button>
@@ -27,26 +48,17 @@
           <hr><button :disabled="!isEditing || !physicsState.selectedEntityIds.length" @click="handleDelete"><span>{{ t('deleteSelected') }}</span><kbd>Del</kbd></button>
           <button class="danger" :disabled="!isEditing" @click="handleDeleteAll"><span>{{ t('deleteAll') }}</span></button>
           <hr><button @click="handleDeselect"><span>{{ t('deselectAll') }}</span><kbd>Esc</kbd></button>
-        </div></Transition>
-      </div>
-      <div class="menu-item">
-        <button @click="toggleMenu('project')" :class="{ active: activeMenu === 'project' }">{{ t('project') }}</button>
-        <Transition name="menu"><div v-if="activeMenu === 'project'" class="dropdown">
+        </div>
+          <div v-else-if="activeMenu === 'project'" :key="'project'" class="dropdown">
           <button @click="openBottomPanel('project')"><span>{{ t('projectHealth') }}</span></button>
           <button @click="openBottomPanel('build')"><span>{{ t('buildPanel') }}</span></button>
-        </div></Transition>
-      </div>
-      <div class="menu-item">
-        <button @click="toggleMenu('debug')" :class="{ active: activeMenu === 'debug' }">{{ t('debug') }}</button>
-        <Transition name="menu"><div v-if="activeMenu === 'debug'" class="dropdown">
+        </div>
+          <div v-else-if="activeMenu === 'debug'" :key="'debug'" class="dropdown">
           <button @click="openBottomPanel('console')"><span>{{ t('console') }}</span></button>
           <button @click="openBottomPanel('profiler')"><span>{{ t('profiler') }}</span></button>
           <button @click="handleStatusCenter"><span>{{ t('statusCenter') }}</span></button>
-        </div></Transition>
-      </div>
-      <div class="menu-item">
-        <button @click="toggleMenu('view')" :class="{ active: activeMenu === 'view' }">{{ t('view') }}</button>
-        <Transition name="menu"><div v-if="activeMenu === 'view'" class="dropdown">
+        </div>
+          <div v-else-if="activeMenu === 'view'" :key="'view'" class="dropdown">
           <button @click="handleToggleGrid"><span>{{ t(editorState.showGrid ? 'hideGrid' : 'showGrid') }}</span><span class="check">{{ editorState.showGrid ? '✓' : '' }}</span></button>
           <hr>
           <button @click="toggleAxis('x')"><span>{{ t(editorState.showXAxis ? 'hideXAxis' : 'showXAxis') }}</span><span class="check">{{ editorState.showXAxis ? '✓' : '' }}</span></button>
@@ -64,18 +76,16 @@
           <button @click="handleFullscreen"><span>{{ t('toggleFullscreen') }}</span><kbd>F11</kbd></button>
           <button @click="handleCommandPalette"><span>{{ t('commandPalette') }}</span><kbd>Ctrl K</kbd></button>
           <button @click="handleShortcutEditor"><span>{{ t('shortcutEditor') }}</span><kbd>Ctrl Alt K</kbd></button>
-        </div></Transition>
-      </div>
-      <div class="menu-item">
-        <button @click="toggleMenu('help')" :class="{ active: activeMenu === 'help' }">{{ t('help') }}</button>
-        <Transition name="menu"><div v-if="activeMenu === 'help'" class="dropdown dropdown-right">
+        </div>
+          <div v-else-if="activeMenu === 'help'" :key="'help'" class="dropdown dropdown-right">
           <button @click="handleManual"><span>{{ t('manual') }}</span><kbd>5.0 · {{ t('offline') }}</kbd></button>
           <button @click="handleManualSection('first-game')"><span>{{ t('firstGameTutorial') }}</span></button>
           <button @click="handleManualSection('package-sdk')"><span>{{ t('packageSdk') }}</span></button>
           <button @click="handleManualSection('release-engineering')"><span>{{ t('releaseEngineeringGuide') }}</span></button>
           <button @click="handleStudioStatus"><span>{{ t('studioStatus') }}</span></button>
           <button @click="handleAbout"><span>{{ t('about') }}</span></button>
-        </div></Transition>
+        </div>
+        </Transition>
       </div>
     </nav>
     <div class="top-spacer"></div>
@@ -87,7 +97,8 @@
 </template>
 
 <script setup lang="ts">
-import { openUrl } from '@tauri-apps/plugin-opener'
+import { installTransientPopover } from '../editor/transientPopover'
+import { openExternalUrl } from '../runtime/externalLinks'
 import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue'
 import { t } from '../i18n'
 import { addEditorLog, editorState } from '../store/editor'
@@ -97,7 +108,6 @@ import { confirmDialogState, requestConfirmation } from '../store/dialog'
 import { openProjectDocument, rememberCurrentProject, showProjectManager } from '../projects/projectManager'
 import { openEditorTool, resetEditorLayout, toggleEditorPanel, toggleFocusMode } from '../editor/workspaces'
 import { openBundledManual } from '../runtime/openManual'
-import { reportRecoverableError } from '../runtime/faultCenter'
 import { openStudioStatus } from '../runtime/stableContracts'
 import { recoveryState } from '../runtime/recovery'
 import { completeTask, failTask, startTask } from '../runtime/editorFeedback'
@@ -109,7 +119,7 @@ const activeMenu = ref<string | null>(null)
 const topBar = ref<HTMLElement | null>(null)
 const menuLeft = ref(0)
 const fileInput = ref<HTMLInputElement | null>(null)
-let menuTimeout: number | null = null
+let disposeMenu: (() => void) | undefined
 const projectUrl = 'https://github.com/Stevenzhang543/Nova_A/'
 const isEditing = computed(() => physicsState.playMode === 'editing' && !recoveryState.readOnly)
 
@@ -166,10 +176,7 @@ function handleCommandPalette() { editorState.commandPaletteOpen = true; activeM
 function handleFullscreen() { activeMenu.value = null; void toggleEditorFullscreen() }
 async function handleAbout() {
   activeMenu.value = null
-  try {
-    if ('__TAURI_INTERNALS__' in window) await openUrl(projectUrl)
-    else if (!window.open(projectUrl, '_blank', 'noopener,noreferrer')) throw new Error(t('popupBlocked'))
-  } catch (error) { reportRecoverableError(error, t('openProjectWebsite'), 'Editor'); editorState.statusText = t('openWebsiteFailed') }
+  await openExternalUrl(projectUrl)
 }
 function handleManual() { activeMenu.value = null; void openBundledManual() }
 function handleManualSection(section: string) { activeMenu.value = null; void openBundledManual(section) }
@@ -179,22 +186,19 @@ function handleStudioStatus() { activeMenu.value = null; openStudioStatus() }
 function handleProjectManager() { showProjectManager() }
 function handleUndo() { if (isEditing.value) undo(); activeMenu.value = null }
 function handleRedo() { if (isEditing.value) redo(); activeMenu.value = null }
-async function toggleMenu(menu: string) {
+function toggleMenu(menu: string) {
   activeMenu.value = activeMenu.value === menu ? null : menu
-  if (!activeMenu.value) return
-  await nextTick()
-  const bar = topBar.value, button = bar?.querySelector<HTMLElement>('.menu-item > button.active'), dropdown = bar?.querySelector<HTMLElement>('.dropdown')
-  if (!bar || !button || !dropdown) return
+}
+function positionMenu(element: Element) {
+  const dropdown = element as HTMLElement
+  const bar = topBar.value, button = bar?.querySelector<HTMLElement>('.menu-item > button.active')
+  if (!bar || !button) return
   const barRect = bar.getBoundingClientRect(), buttonRect = button.getBoundingClientRect()
   const preferred = dropdown.classList.contains('dropdown-right') ? buttonRect.right - dropdown.offsetWidth : buttonRect.left
   menuLeft.value = Math.max(8, Math.min(preferred - barRect.left, barRect.width - dropdown.offsetWidth - 8))
 }
+function deactivateMenu(element: Element) { (element as HTMLElement).inert = true }
 function closeMenu() { activeMenu.value = null }
-function onMenuEnter() { if (menuTimeout !== null) window.clearTimeout(menuTimeout) }
-function onMenuLeave() {
-  if (menuTimeout !== null) window.clearTimeout(menuTimeout)
-  menuTimeout = window.setTimeout(() => { activeMenu.value = null }, 300)
-}
 
 function handleFileSelected(event: Event) {
   const target = event.target as HTMLInputElement
@@ -238,8 +242,8 @@ function handleKeyDown(event: KeyboardEvent) {
   else if (event.key === 'Escape') { selectEntities([], 'replace'); activeMenu.value = null }
 }
 
-onMounted(() => { window.addEventListener('keydown', handleKeyDown); window.addEventListener('resize', closeMenu); pushHistory() })
-onUnmounted(() => { window.removeEventListener('keydown', handleKeyDown); window.removeEventListener('resize', closeMenu); if (menuTimeout !== null) window.clearTimeout(menuTimeout) })
+onMounted(() => { disposeMenu = installTransientPopover({ isOpen: () => activeMenu.value !== null, regions: () => Array.from(topBar.value?.querySelectorAll<HTMLElement>('.menu-container, .dropdown:not([inert])') ?? []), close: restoreFocus => { const button = topBar.value?.querySelector<HTMLElement>('.menu-item > button.active'); closeMenu(); if (restoreFocus) button?.focus() } }); window.addEventListener('keydown', handleKeyDown); window.addEventListener('resize', closeMenu); pushHistory() })
+onUnmounted(() => { window.removeEventListener('keydown', handleKeyDown); window.removeEventListener('resize', closeMenu); disposeMenu?.() })
 </script>
 
 <style scoped>
@@ -266,6 +270,8 @@ kbd { color: var(--text-muted); font-family: inherit; font-size:var(--type-capti
 .dirty-pill{padding:3px 8px;border:1px solid color-mix(in srgb,var(--warning) 60%,var(--border-subtle));border-radius:999px;color:var(--warning);font-size:var(--type-caption);white-space:nowrap}
 @media(max-width:980px){.release-pill{display:none}.top-bar{gap:7px}.menu-item>button{padding-inline:7px}}
 @media(max-width:720px){.brand>span:last-child{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}.brand{gap:0}.top-bar{padding-inline:7px}.menu-container{min-width:0;overflow-x:auto;scrollbar-width:none}.menu-container::-webkit-scrollbar{display:none}}
+.menu-popover-host { flex: 0 0 0; width: 0; }
+.dropdown[inert] { pointer-events: none; }
 .menu-enter-active, .menu-leave-active { transition: opacity 130ms ease, transform 130ms ease; transform-origin: top left; }
 .menu-enter-from, .menu-leave-to { opacity: 0; transform: translateY(-4px) scale(.98); }
 /* Keep translated menu labels intrinsic-sized. The positioned top bar, outside

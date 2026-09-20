@@ -1,0 +1,16 @@
+import assert from 'node:assert/strict'
+import {readFile} from 'node:fs/promises'
+import vm from 'node:vm'
+import ts from 'typescript'
+import {webcrypto} from 'node:crypto'
+import {propertyAudit22} from './lib/propertyAudit22.mjs'
+const audit=await propertyAudit22('identity'),checks=[],source=await readFile('src/world/identity.ts','utf8'),code=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2020}}).outputText;
+const pattern=/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
+function load(crypto,random){const context={exports:{},...(crypto===undefined?{}:{crypto}),...(random?{Math:Object.assign(Object.create(Math),{random})}:{})};vm.runInNewContext(code,context,{filename:'src/world/identity.ts',timeout:1000});return context.exports}
+function test(name,covers,fn){fn();checks.push({name,status:'passed',covers:covers.map(name=>'src/world/identity.ts#'+name)});console.log('PASS '+name)}
+test('Native crypto UUID creation emits valid distinct identifiers in a bounded sample',['createUuid'],()=>{const api=load(webcrypto),ids=Array.from({length:1000},()=>api.createUuid());for(const id of ids)assert.match(id,pattern);assert.equal(new Set(ids).size,ids.length)});
+test('UUID normalization preserves all currently supported version and variant combinations',['normalizeUuid'],()=>{let created=0;const api=load({randomUUID(){created++;throw Error('Accepted identity must not be regenerated')}});for(const version of [1,2,3,4,5])for(const variant of ['8','9','a','b']){const id='abcdef01-2345-'+version+'678-'+variant+'abc-def012345678';assert.equal(api.normalizeUuid(id),id);assert.equal(api.normalizeUuid(id.toUpperCase()),id)}assert.equal(created,0)});
+test('Malformed or unsupported identities use a fresh generator without coercing objects',['normalizeUuid','createUuid'],()=>{let created=0;const fallback='00000001-0000-4000-8000-000000000000',api=load({randomUUID(){created++;return fallback}});const hostile={toString(){throw Error('Object must not be coerced')}};const invalid=[undefined,null,0,true,{},[],hostile,'','not-a-guid','00000000-0000-0000-0000-000000000000','00000001-0000-6000-8000-000000000000','00000001-0000-4000-c000-000000000000',' '+fallback,fallback+' ','{'+fallback+'}'];for(const value of invalid)assert.equal(api.normalizeUuid(value),fallback);assert.equal(created,invalid.length)});
+test('Missing randomUUID uses random bytes with explicit UUID version and variant bits',['createUuid'],()=>{for(const [fill,variant] of [[0,'8'],[0x55,'9'],[0xaa,'a'],[0xff,'b']]){let calls=0;const api=load({getRandomValues(bytes){calls++;bytes.fill(fill);return bytes}}),id=api.createUuid();assert.match(id,pattern);assert.ok(calls>0);assert.equal(id[14],'4');assert.equal(id[19],variant)}});
+test('Legacy hosts without crypto still produce correctly shaped UUIDs',['createUuid'],()=>{let calls=0;const api=load(undefined,()=>{calls++;return .5});assert.match(api.createUuid(),pattern);assert.ok(calls>0)});
+await audit.write(checks,'Executed actual identity source in isolated host contexts. Normalization intentionally follows the current project contract (UUID versions1–5). Bounded distinctness is not a collision or cryptographic-security guarantee; the legacy Math.random fallback is tested only for shape and dispatch.');

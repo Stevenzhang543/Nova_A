@@ -148,7 +148,7 @@ export function validateSceneAuthoring(entities: Entity[]): AuthoringValidationI
 
 /** Safe arithmetic evaluator for Inspector fields; no eval, properties, calls, or allocation-heavy syntax. */
 export function evaluateNumericExpression(source: string, currentValue = 0): number | null {
-  const tokens = source.trim().toLocaleLowerCase().match(/(?:\d+(?:\.\d+)?(?:e[+-]?\d+)?)|pi|tau|current|[()+\-*/]/g)
+  const tokens = source.trim().toLocaleLowerCase().match(/(?:(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?)|pi|tau|current|[()+\-*/]/g)
   if (!tokens || tokens.join('') !== source.trim().toLocaleLowerCase().replace(/\s+/g, '') || tokens.length > 128) return null
   let index = 0
   const primary = (): number | null => {

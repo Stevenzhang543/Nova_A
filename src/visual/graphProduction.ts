@@ -84,7 +84,7 @@ export function replaceGraphNodeType(graph: NovaGraphDocument, nodeUuid: string,
   }
   const validPins = new Set(replacement.pins.map(pin => pin.uuid))
   found.scope.nodes.splice(found.scope.nodes.indexOf(old), 1, replacement)
-  found.scope.edges = found.scope.edges.filter(edge => edge.from.nodeUuid !== old.uuid && edge.to.nodeUuid !== old.uuid || validPins.has(edge.from.pinUuid) && validPins.has(edge.to.pinUuid))
+  found.scope.edges = found.scope.edges.filter(edge => (edge.from.nodeUuid !== old.uuid || validPins.has(edge.from.pinUuid)) && (edge.to.nodeUuid !== old.uuid || validPins.has(edge.to.pinUuid)))
   graph.migrations.push({ uuid: graphUuid(), kind: 'replace', from: old.type, to: replacementType, appliedAt: new Date().toISOString() })
 }
 

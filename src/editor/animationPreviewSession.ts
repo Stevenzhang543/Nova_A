@@ -39,7 +39,7 @@ export function createAnimationPreviewSession() {
       const drafts=snapshotAuthoringDrafts(projectId,assetState.records,record=>readTextAsset(record.uuid))
       session={runtimeSessionId:gameplayRuntime.sessionIdentity+1,projectId,kind,target,reference,drafts}
       try {
-        toggleSimulation(true);gameplayRuntime.beginSession()
+        if (!toggleSimulation(true,{assetPreview:true})) throw new Error('ANIMATION_PREVIEW_PENDING_EDITS');gameplayRuntime.beginSession()
         const currentEntity=physicsState.world.entities.find(entity=>entity.uuid===target)
         if(!gameplayRuntime.isActive||session.runtimeSessionId!==gameplayRuntime.sessionIdentity||!currentEntity)throw new Error('ANIMATION_PREVIEW_TARGET')
         if(kind==='controller'&&currentEntity.getComponent<Animator>('Animator')?.controllerAsset!==reference)throw new Error('ANIMATION_PREVIEW_TARGET')

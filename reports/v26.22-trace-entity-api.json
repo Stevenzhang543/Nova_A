@@ -1,0 +1,846 @@
+{
+  "aliases": [
+    {
+      "field": "color",
+      "path": "renderer.color",
+      "canonicalDeclaration": "ShapeRenderer2D",
+      "canonicalField": "color",
+      "checks": [
+        "Entity authored aliases update the canonical component and survive serialization/hydration",
+        "Nonfinite entity alias writes reject before changing their canonical owner"
+      ]
+    },
+    {
+      "field": "transparency",
+      "path": "renderer.opacity",
+      "canonicalDeclaration": "ShapeRenderer2D",
+      "canonicalField": "opacity",
+      "checks": [
+        "Entity authored aliases update the canonical component and survive serialization/hydration",
+        "Nonfinite entity alias writes reject before changing their canonical owner"
+      ]
+    },
+    {
+      "field": "texture",
+      "path": "renderer.texture",
+      "canonicalDeclaration": "ShapeRenderer2D",
+      "canonicalField": "texture",
+      "checks": [
+        "Entity authored aliases update the canonical component and survive serialization/hydration"
+      ]
+    },
+    {
+      "field": "velocity",
+      "path": "rigidBody.velocity",
+      "canonicalDeclaration": "RigidBody2D",
+      "canonicalField": "velocity",
+      "checks": [
+        "Entity authored aliases update the canonical component and survive serialization/hydration",
+        "Nonfinite entity alias writes reject before changing their canonical owner"
+      ]
+    },
+    {
+      "field": "angularVelocity",
+      "path": "rigidBody.angularVelocity",
+      "canonicalDeclaration": "RigidBody2D",
+      "canonicalField": "angularVelocity",
+      "checks": [
+        "Entity authored aliases update the canonical component and survive serialization/hydration",
+        "Nonfinite entity alias writes reject before changing their canonical owner"
+      ]
+    },
+    {
+      "field": "linearDamping",
+      "path": "rigidBody.linearDamping",
+      "canonicalDeclaration": "RigidBody2D",
+      "canonicalField": "linearDamping",
+      "checks": [
+        "Entity authored aliases update the canonical component and survive serialization/hydration",
+        "Nonfinite entity alias writes reject before changing their canonical owner"
+      ]
+    },
+    {
+      "field": "angularDamping",
+      "path": "rigidBody.angularDamping",
+      "canonicalDeclaration": "RigidBody2D",
+      "canonicalField": "angularDamping",
+      "checks": [
+        "Entity authored aliases update the canonical component and survive serialization/hydration",
+        "Nonfinite entity alias writes reject before changing their canonical owner"
+      ]
+    },
+    {
+      "field": "density",
+      "path": "rigidBody.density",
+      "canonicalDeclaration": "RigidBody2D",
+      "canonicalField": "density",
+      "checks": [
+        "Entity authored aliases update the canonical component and survive serialization/hydration",
+        "Nonfinite entity alias writes reject before changing their canonical owner"
+      ]
+    },
+    {
+      "field": "mass",
+      "path": "rigidBody.mass",
+      "canonicalDeclaration": "RigidBody2D",
+      "canonicalField": "mass",
+      "checks": [
+        "Entity authored aliases update the canonical component and survive serialization/hydration",
+        "Nonfinite entity alias writes reject before changing their canonical owner"
+      ]
+    },
+    {
+      "field": "autoInertia",
+      "path": "rigidBody.autoInertia",
+      "canonicalDeclaration": "RigidBody2D",
+      "canonicalField": "autoInertia",
+      "checks": [
+        "Entity authored aliases update the canonical component and survive serialization/hydration",
+        "Boolean Entity aliases reject nonboolean values before modifying any component"
+      ]
+    },
+    {
+      "field": "inertia",
+      "path": "rigidBody.inertia",
+      "canonicalDeclaration": "RigidBody2D",
+      "canonicalField": "inertia",
+      "checks": [
+        "Entity authored aliases update the canonical component and survive serialization/hydration",
+        "Nonfinite entity alias writes reject before changing their canonical owner"
+      ]
+    },
+    {
+      "field": "gravityScale",
+      "path": "rigidBody.gravityScale",
+      "canonicalDeclaration": "RigidBody2D",
+      "canonicalField": "gravityScale",
+      "checks": [
+        "Entity authored aliases update the canonical component and survive serialization/hydration",
+        "Nonfinite entity alias writes reject before changing their canonical owner"
+      ]
+    },
+    {
+      "field": "force",
+      "path": "rigidBody.force",
+      "canonicalDeclaration": "RigidBody2D",
+      "canonicalField": "force",
+      "checks": [
+        "Entity authored aliases update the canonical component and survive serialization/hydration",
+        "Nonfinite entity alias writes reject before changing their canonical owner"
+      ]
+    },
+    {
+      "field": "torque",
+      "path": "rigidBody.torque",
+      "canonicalDeclaration": "RigidBody2D",
+      "canonicalField": "torque",
+      "checks": [
+        "Entity authored aliases update the canonical component and survive serialization/hydration",
+        "Nonfinite entity alias writes reject before changing their canonical owner"
+      ]
+    },
+    {
+      "field": "gravity",
+      "path": "rigidBody.localGravity",
+      "canonicalDeclaration": "RigidBody2D",
+      "canonicalField": "localGravity",
+      "checks": [
+        "Entity authored aliases update the canonical component and survive serialization/hydration",
+        "Nonfinite entity alias writes reject before changing their canonical owner"
+      ]
+    },
+    {
+      "field": "acceleration",
+      "path": "rigidBody.acceleration",
+      "canonicalDeclaration": "RigidBody2D",
+      "canonicalField": "acceleration",
+      "checks": [
+        "Entity authored aliases update the canonical component and survive serialization/hydration",
+        "Nonfinite entity alias writes reject before changing their canonical owner"
+      ]
+    },
+    {
+      "field": "restitution",
+      "path": "collider.material.restitution",
+      "canonicalDeclaration": "Collider2D",
+      "canonicalField": "material.restitution",
+      "checks": [
+        "Entity authored aliases update the canonical component and survive serialization/hydration",
+        "Nonfinite entity alias writes reject before changing their canonical owner"
+      ]
+    },
+    {
+      "field": "restitutionThreshold",
+      "path": "collider.material.restitutionThreshold",
+      "canonicalDeclaration": "Collider2D",
+      "canonicalField": "material.restitutionThreshold",
+      "checks": [
+        "Entity authored aliases update the canonical component and survive serialization/hydration",
+        "Nonfinite entity alias writes reject before changing their canonical owner"
+      ]
+    },
+    {
+      "field": "staticFriction",
+      "path": "collider.material.staticFriction",
+      "canonicalDeclaration": "Collider2D",
+      "canonicalField": "material.staticFriction",
+      "checks": [
+        "Entity authored aliases update the canonical component and survive serialization/hydration",
+        "Nonfinite entity alias writes reject before changing their canonical owner"
+      ]
+    },
+    {
+      "field": "dynamicFriction",
+      "path": "collider.material.dynamicFriction",
+      "canonicalDeclaration": "Collider2D",
+      "canonicalField": "material.dynamicFriction",
+      "checks": [
+        "Entity authored aliases update the canonical component and survive serialization/hydration",
+        "Nonfinite entity alias writes reject before changing their canonical owner"
+      ]
+    },
+    {
+      "field": "isSensor",
+      "path": "collider.sensor",
+      "canonicalDeclaration": "Collider2D",
+      "canonicalField": "sensor",
+      "checks": [
+        "Entity authored aliases update the canonical component and survive serialization/hydration",
+        "Boolean Entity aliases reject nonboolean values before modifying any component"
+      ]
+    }
+  ],
+  "nodeOperationCoverage": [
+    {
+      "mappingVersion": 2,
+      "id": "src/world/TriangleEntity.ts#TriangleEntity.vertices",
+      "source": "src/world/TriangleEntity.ts",
+      "line": 8,
+      "kind": "getter",
+      "sourceSha256": "e737922412cb05e17978b5c330812c1e34c451c9b75748d3e60084f876a4a1e7",
+      "generatedFile": ".cache/v2622-node-execution-v2/entity-api/1/triangle.mjs",
+      "generatedSha256": "a6a0179411a7269362dfdc1a45cda77bad5c197310f06938e01240fbc17f1523",
+      "mapSha256": "c0ba25f27e74d8e0cc2e6ef5656b1dc67420e00d670d7f1a23702b8bfbca64cd",
+      "entryCount": 28
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/TriangleEntity.ts#TriangleEntity.vertices",
+      "source": "src/world/TriangleEntity.ts",
+      "line": 9,
+      "kind": "setter",
+      "sourceSha256": "e737922412cb05e17978b5c330812c1e34c451c9b75748d3e60084f876a4a1e7",
+      "generatedFile": ".cache/v2622-node-execution-v2/entity-api/1/triangle.mjs",
+      "generatedSha256": "a6a0179411a7269362dfdc1a45cda77bad5c197310f06938e01240fbc17f1523",
+      "mapSha256": "c0ba25f27e74d8e0cc2e6ef5656b1dc67420e00d670d7f1a23702b8bfbca64cd",
+      "entryCount": 8
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/BoxEntity.ts#BoxEntity.vertices",
+      "source": "src/world/BoxEntity.ts",
+      "line": 8,
+      "kind": "getter",
+      "sourceSha256": "21f323b10d5017ee3cb886f7f866d453ad45de027582d6a8d80ad5735e89b6eb",
+      "generatedFile": ".cache/v2622-node-execution-v2/entity-api/1/box.mjs",
+      "generatedSha256": "345c791a86aa8fbc2080f18bd3338c36e13a1876c17a270f7a5e89e5c3479c3d",
+      "mapSha256": "b2a308dc430e77e91156ece6a6cd6fc2b6da1eca325dbb5f5cba988038e3342e",
+      "entryCount": 196
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/BoxEntity.ts#BoxEntity.vertices",
+      "source": "src/world/BoxEntity.ts",
+      "line": 9,
+      "kind": "setter",
+      "sourceSha256": "21f323b10d5017ee3cb886f7f866d453ad45de027582d6a8d80ad5735e89b6eb",
+      "generatedFile": ".cache/v2622-node-execution-v2/entity-api/1/box.mjs",
+      "generatedSha256": "345c791a86aa8fbc2080f18bd3338c36e13a1876c17a270f7a5e89e5c3479c3d",
+      "mapSha256": "b2a308dc430e77e91156ece6a6cd6fc2b6da1eca325dbb5f5cba988038e3342e",
+      "entryCount": 22
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/BoxEntity.ts#BoxEntity.constructor",
+      "source": "src/world/BoxEntity.ts",
+      "line": 21,
+      "kind": "public class operation",
+      "sourceSha256": "21f323b10d5017ee3cb886f7f866d453ad45de027582d6a8d80ad5735e89b6eb",
+      "generatedFile": ".cache/v2622-node-execution-v2/entity-api/1/box.mjs",
+      "generatedSha256": "345c791a86aa8fbc2080f18bd3338c36e13a1876c17a270f7a5e89e5c3479c3d",
+      "mapSha256": "b2a308dc430e77e91156ece6a6cd6fc2b6da1eca325dbb5f5cba988038e3342e",
+      "entryCount": 22
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/identity.ts#createUuid",
+      "source": "src/world/identity.ts",
+      "line": 8,
+      "kind": "exported function",
+      "sourceSha256": "2fe5fd95a5e427522192d9d7832f4248515d6c47832126b228d6844437068053",
+      "generatedFile": ".cache/v2622-node-execution-v2/entity-api/1/components.mjs",
+      "generatedSha256": "4852054f899a7fee9128cb8220dc570ec6ec793f6c71bbd7c3802f3f2c178547",
+      "mapSha256": "9a55ec983f60998bf0208f3e69a9dc78ade24793ba33c311deb3b747e0307b39",
+      "entryCount": 101
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/identity.ts#normalizeUuid",
+      "source": "src/world/identity.ts",
+      "line": 16,
+      "kind": "exported function",
+      "sourceSha256": "2fe5fd95a5e427522192d9d7832f4248515d6c47832126b228d6844437068053",
+      "generatedFile": ".cache/v2622-node-execution-v2/entity-api/1/components.mjs",
+      "generatedSha256": "4852054f899a7fee9128cb8220dc570ec6ec793f6c71bbd7c3802f3f2c178547",
+      "mapSha256": "9a55ec983f60998bf0208f3e69a9dc78ade24793ba33c311deb3b747e0307b39",
+      "entryCount": 206
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/componentValidation.ts#validateComponentValues",
+      "source": "src/world/componentValidation.ts",
+      "line": 5,
+      "kind": "exported function",
+      "sourceSha256": "dc219a7901a4c9f0d85b4a18d7dad94b3338529bd23cb330be90050295f52a5f",
+      "generatedFile": ".cache/v2622-node-execution-v2/entity-api/1/components.mjs",
+      "generatedSha256": "4852054f899a7fee9128cb8220dc570ec6ec793f6c71bbd7c3802f3f2c178547",
+      "mapSha256": "9a55ec983f60998bf0208f3e69a9dc78ade24793ba33c311deb3b747e0307b39",
+      "entryCount": 84
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/components.ts#ShapeRenderer2D.constructor",
+      "source": "src/world/components.ts",
+      "line": 112,
+      "kind": "public class operation",
+      "sourceSha256": "cce65cee9ae71d07999c388387ad7c36f199dd26fd1aaf77ef69a8b3a3e24d9a",
+      "generatedFile": ".cache/v2622-node-execution-v2/entity-api/1/components.mjs",
+      "generatedSha256": "4852054f899a7fee9128cb8220dc570ec6ec793f6c71bbd7c3802f3f2c178547",
+      "mapSha256": "9a55ec983f60998bf0208f3e69a9dc78ade24793ba33c311deb3b747e0307b39",
+      "entryCount": 44
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/components.ts#SpriteRenderer2D.constructor",
+      "source": "src/world/components.ts",
+      "line": 135,
+      "kind": "public class operation",
+      "sourceSha256": "cce65cee9ae71d07999c388387ad7c36f199dd26fd1aaf77ef69a8b3a3e24d9a",
+      "generatedFile": ".cache/v2622-node-execution-v2/entity-api/1/components.mjs",
+      "generatedSha256": "4852054f899a7fee9128cb8220dc570ec6ec793f6c71bbd7c3802f3f2c178547",
+      "mapSha256": "9a55ec983f60998bf0208f3e69a9dc78ade24793ba33c311deb3b747e0307b39",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/components.ts#TextRenderer2D.constructor",
+      "source": "src/world/components.ts",
+      "line": 154,
+      "kind": "public class operation",
+      "sourceSha256": "cce65cee9ae71d07999c388387ad7c36f199dd26fd1aaf77ef69a8b3a3e24d9a",
+      "generatedFile": ".cache/v2622-node-execution-v2/entity-api/1/components.mjs",
+      "generatedSha256": "4852054f899a7fee9128cb8220dc570ec6ec793f6c71bbd7c3802f3f2c178547",
+      "mapSha256": "9a55ec983f60998bf0208f3e69a9dc78ade24793ba33c311deb3b747e0307b39",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/components.ts#Camera2D.constructor",
+      "source": "src/world/components.ts",
+      "line": 178,
+      "kind": "public class operation",
+      "sourceSha256": "cce65cee9ae71d07999c388387ad7c36f199dd26fd1aaf77ef69a8b3a3e24d9a",
+      "generatedFile": ".cache/v2622-node-execution-v2/entity-api/1/components.mjs",
+      "generatedSha256": "4852054f899a7fee9128cb8220dc570ec6ec793f6c71bbd7c3802f3f2c178547",
+      "mapSha256": "9a55ec983f60998bf0208f3e69a9dc78ade24793ba33c311deb3b747e0307b39",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/components.ts#Script2D.constructor",
+      "source": "src/world/components.ts",
+      "line": 208,
+      "kind": "public class operation",
+      "sourceSha256": "cce65cee9ae71d07999c388387ad7c36f199dd26fd1aaf77ef69a8b3a3e24d9a",
+      "generatedFile": ".cache/v2622-node-execution-v2/entity-api/1/components.mjs",
+      "generatedSha256": "4852054f899a7fee9128cb8220dc570ec6ec793f6c71bbd7c3802f3f2c178547",
+      "mapSha256": "9a55ec983f60998bf0208f3e69a9dc78ade24793ba33c311deb3b747e0307b39",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/components.ts#RigidBody2D.constructor",
+      "source": "src/world/components.ts",
+      "line": 998,
+      "kind": "public class operation",
+      "sourceSha256": "cce65cee9ae71d07999c388387ad7c36f199dd26fd1aaf77ef69a8b3a3e24d9a",
+      "generatedFile": ".cache/v2622-node-execution-v2/entity-api/1/components.mjs",
+      "generatedSha256": "4852054f899a7fee9128cb8220dc570ec6ec793f6c71bbd7c3802f3f2c178547",
+      "mapSha256": "9a55ec983f60998bf0208f3e69a9dc78ade24793ba33c311deb3b747e0307b39",
+      "entryCount": 44
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/components.ts#Collider2D.constructor",
+      "source": "src/world/components.ts",
+      "line": 1041,
+      "kind": "public class operation",
+      "sourceSha256": "cce65cee9ae71d07999c388387ad7c36f199dd26fd1aaf77ef69a8b3a3e24d9a",
+      "generatedFile": ".cache/v2622-node-execution-v2/entity-api/1/components.mjs",
+      "generatedSha256": "4852054f899a7fee9128cb8220dc570ec6ec793f6c71bbd7c3802f3f2c178547",
+      "mapSha256": "9a55ec983f60998bf0208f3e69a9dc78ade24793ba33c311deb3b747e0307b39",
+      "entryCount": 46
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/assets/importRetention.ts#BoundedImportCache.constructor",
+      "source": "src/assets/importRetention.ts",
+      "line": 7,
+      "kind": "public class operation",
+      "sourceSha256": "8a8c7175d66b68206dcda36cace1fde0d518a4feeebbee05d51039d52d19d0fe",
+      "generatedFile": ".cache/v2622-node-execution-v2/entity-api/1/physics.mjs",
+      "generatedSha256": "90ed93ce85207bea370555849a4aadda60ed9388189575f791471a2110de2383",
+      "mapSha256": "a87f43670ac041415cd57334f1fabd5aa1cbb319d98e0a247a794f9af84c3e4e",
+      "entryCount": 4
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/assets/importRetention.ts#registerImportSessionCleanup",
+      "source": "src/assets/importRetention.ts",
+      "line": 29,
+      "kind": "exported function",
+      "sourceSha256": "8a8c7175d66b68206dcda36cace1fde0d518a4feeebbee05d51039d52d19d0fe",
+      "generatedFile": ".cache/v2622-node-execution-v2/entity-api/1/physics.mjs",
+      "generatedSha256": "90ed93ce85207bea370555849a4aadda60ed9388189575f791471a2110de2383",
+      "mapSha256": "a87f43670ac041415cd57334f1fabd5aa1cbb319d98e0a247a794f9af84c3e4e",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/visual/graphTypes.ts#defaultGraphValue",
+      "source": "src/visual/graphTypes.ts",
+      "line": 130,
+      "kind": "exported function",
+      "sourceSha256": "f1301f1589f75fec7793cb026cf256eb2af3f020e75b2c670890622290e8cf25",
+      "generatedFile": ".cache/v2622-node-execution-v2/entity-api/1/physics.mjs",
+      "generatedSha256": "90ed93ce85207bea370555849a4aadda60ed9388189575f791471a2110de2383",
+      "mapSha256": "a87f43670ac041415cd57334f1fabd5aa1cbb319d98e0a247a794f9af84c3e4e",
+      "entryCount": 294
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/packages.ts#onPackageLifecycle",
+      "source": "src/runtime/packages.ts",
+      "line": 109,
+      "kind": "exported function",
+      "sourceSha256": "6774580dde64cd01a9a826d3a11083261aed603c77524544a4008dad9458838a",
+      "generatedFile": ".cache/v2622-node-execution-v2/entity-api/1/physics.mjs",
+      "generatedSha256": "90ed93ce85207bea370555849a4aadda60ed9388189575f791471a2110de2383",
+      "mapSha256": "a87f43670ac041415cd57334f1fabd5aa1cbb319d98e0a247a794f9af84c3e4e",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/store/colorPalettes.ts#colorPalette",
+      "source": "src/store/colorPalettes.ts",
+      "line": 10,
+      "kind": "exported function",
+      "sourceSha256": "bec5def7babea554f5e68617f4985fa1a609ce97ab71130c3c6ef5e1ef026596",
+      "generatedFile": ".cache/v2622-node-execution-v2/entity-api/1/physics.mjs",
+      "generatedSha256": "90ed93ce85207bea370555849a4aadda60ed9388189575f791471a2110de2383",
+      "mapSha256": "a87f43670ac041415cd57334f1fabd5aa1cbb319d98e0a247a794f9af84c3e4e",
+      "entryCount": 3
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/store/colorPalettes.ts#paletteForMode",
+      "source": "src/store/colorPalettes.ts",
+      "line": 11,
+      "kind": "exported function",
+      "sourceSha256": "bec5def7babea554f5e68617f4985fa1a609ce97ab71130c3c6ef5e1ef026596",
+      "generatedFile": ".cache/v2622-node-execution-v2/entity-api/1/physics.mjs",
+      "generatedSha256": "90ed93ce85207bea370555849a4aadda60ed9388189575f791471a2110de2383",
+      "mapSha256": "a87f43670ac041415cd57334f1fabd5aa1cbb319d98e0a247a794f9af84c3e4e",
+      "entryCount": 3
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/store/preferences.ts#applyPreferences",
+      "source": "src/store/preferences.ts",
+      "line": 139,
+      "kind": "exported function",
+      "sourceSha256": "13795bd1ae90c3ceb3349b7ce26ee495781a99d84e30c383f6b21ea86a5e2c0c",
+      "generatedFile": ".cache/v2622-node-execution-v2/entity-api/1/physics.mjs",
+      "generatedSha256": "90ed93ce85207bea370555849a4aadda60ed9388189575f791471a2110de2383",
+      "mapSha256": "a87f43670ac041415cd57334f1fabd5aa1cbb319d98e0a247a794f9af84c3e4e",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/i18n.ts#t",
+      "source": "src/i18n.ts",
+      "line": 1559,
+      "kind": "exported function",
+      "sourceSha256": "2554102983c40ced3b712778cbb314cf95379cbac0a613b3d6e112f5ef865901",
+      "generatedFile": ".cache/v2622-node-execution-v2/entity-api/1/physics.mjs",
+      "generatedSha256": "90ed93ce85207bea370555849a4aadda60ed9388189575f791471a2110de2383",
+      "mapSha256": "a87f43670ac041415cd57334f1fabd5aa1cbb319d98e0a247a794f9af84c3e4e",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/projects/projectPreflight.ts#validateEntityMetadataValues",
+      "source": "src/projects/projectPreflight.ts",
+      "line": 5,
+      "kind": "exported function",
+      "sourceSha256": "c7b666a5143b9615808c33e9daa776f08caf158df41dbcce4e2682295e69590b",
+      "generatedFile": ".cache/v2622-node-execution-v2/entity-api/1/physics.mjs",
+      "generatedSha256": "90ed93ce85207bea370555849a4aadda60ed9388189575f791471a2110de2383",
+      "mapSha256": "a87f43670ac041415cd57334f1fabd5aa1cbb319d98e0a247a794f9af84c3e4e",
+      "entryCount": 21
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/World.ts#defaultCollisionMatrix",
+      "source": "src/world/World.ts",
+      "line": 35,
+      "kind": "exported function",
+      "sourceSha256": "c725437339ebdfeaff44918dea52767b0c3cf2817578dff72e5e97032886a73b",
+      "generatedFile": ".cache/v2622-node-execution-v2/entity-api/1/physics.mjs",
+      "generatedSha256": "90ed93ce85207bea370555849a4aadda60ed9388189575f791471a2110de2383",
+      "mapSha256": "a87f43670ac041415cd57334f1fabd5aa1cbb319d98e0a247a794f9af84c3e4e",
+      "entryCount": 2
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/World.ts#World.constructor",
+      "source": "src/world/World.ts",
+      "line": 379,
+      "kind": "public class operation",
+      "sourceSha256": "c725437339ebdfeaff44918dea52767b0c3cf2817578dff72e5e97032886a73b",
+      "generatedFile": ".cache/v2622-node-execution-v2/entity-api/1/physics.mjs",
+      "generatedSha256": "90ed93ce85207bea370555849a4aadda60ed9388189575f791471a2110de2383",
+      "mapSha256": "a87f43670ac041415cd57334f1fabd5aa1cbb319d98e0a247a794f9af84c3e4e",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/editor/sceneAuthoring.ts#defaultSceneAuthoringSettings",
+      "source": "src/editor/sceneAuthoring.ts",
+      "line": 78,
+      "kind": "exported function",
+      "sourceSha256": "cacd5234a09c4bad70d65ec4e0b4b39c2239c0eca53f8141cde27ea5fc602a31",
+      "generatedFile": ".cache/v2622-node-execution-v2/entity-api/1/physics.mjs",
+      "generatedSha256": "90ed93ce85207bea370555849a4aadda60ed9388189575f791471a2110de2383",
+      "mapSha256": "a87f43670ac041415cd57334f1fabd5aa1cbb319d98e0a247a794f9af84c3e4e",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/world/SceneManager.ts#SceneManager.constructor",
+      "source": "src/world/SceneManager.ts",
+      "line": 41,
+      "kind": "public class operation",
+      "sourceSha256": "bb21f38e41ca614bff9ce618d0471ec3d0fca919c29aade3140c429e446e53b8",
+      "generatedFile": ".cache/v2622-node-execution-v2/entity-api/1/physics.mjs",
+      "generatedSha256": "90ed93ce85207bea370555849a4aadda60ed9388189575f791471a2110de2383",
+      "mapSha256": "a87f43670ac041415cd57334f1fabd5aa1cbb319d98e0a247a794f9af84c3e4e",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/editor/commands.ts#CommandHistory.constructor",
+      "source": "src/editor/commands.ts",
+      "line": 130,
+      "kind": "public class operation",
+      "sourceSha256": "025738bd1c0147d706518f0e7c60626e41087fd72cb77d2a35cd1e470545f972",
+      "generatedFile": ".cache/v2622-node-execution-v2/entity-api/1/physics.mjs",
+      "generatedSha256": "90ed93ce85207bea370555849a4aadda60ed9388189575f791471a2110de2383",
+      "mapSha256": "a87f43670ac041415cd57334f1fabd5aa1cbb319d98e0a247a794f9af84c3e4e",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/editor/commands.ts#CommandHistory.lastClearReason",
+      "source": "src/editor/commands.ts",
+      "line": 142,
+      "kind": "getter",
+      "sourceSha256": "025738bd1c0147d706518f0e7c60626e41087fd72cb77d2a35cd1e470545f972",
+      "generatedFile": ".cache/v2622-node-execution-v2/entity-api/1/physics.mjs",
+      "generatedSha256": "90ed93ce85207bea370555849a4aadda60ed9388189575f791471a2110de2383",
+      "mapSha256": "a87f43670ac041415cd57334f1fabd5aa1cbb319d98e0a247a794f9af84c3e4e",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/input.ts#createInputBinding",
+      "source": "src/runtime/input.ts",
+      "line": 93,
+      "kind": "exported function",
+      "sourceSha256": "fad85ae749fdc2b0e378beff7d5b43ff7af6150efbfd8124700945281a42d6dc",
+      "generatedFile": ".cache/v2622-node-execution-v2/entity-api/1/physics.mjs",
+      "generatedSha256": "90ed93ce85207bea370555849a4aadda60ed9388189575f791471a2110de2383",
+      "mapSha256": "a87f43670ac041415cd57334f1fabd5aa1cbb319d98e0a247a794f9af84c3e4e",
+      "entryCount": 17
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/input.ts#defaultInputMap",
+      "source": "src/runtime/input.ts",
+      "line": 97,
+      "kind": "exported function",
+      "sourceSha256": "fad85ae749fdc2b0e378beff7d5b43ff7af6150efbfd8124700945281a42d6dc",
+      "generatedFile": ".cache/v2622-node-execution-v2/entity-api/1/physics.mjs",
+      "generatedSha256": "90ed93ce85207bea370555849a4aadda60ed9388189575f791471a2110de2383",
+      "mapSha256": "a87f43670ac041415cd57334f1fabd5aa1cbb319d98e0a247a794f9af84c3e4e",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/input.ts#createInputAction",
+      "source": "src/runtime/input.ts",
+      "line": 124,
+      "kind": "exported function",
+      "sourceSha256": "fad85ae749fdc2b0e378beff7d5b43ff7af6150efbfd8124700945281a42d6dc",
+      "generatedFile": ".cache/v2622-node-execution-v2/entity-api/1/physics.mjs",
+      "generatedSha256": "90ed93ce85207bea370555849a4aadda60ed9388189575f791471a2110de2383",
+      "mapSha256": "a87f43670ac041415cd57334f1fabd5aa1cbb319d98e0a247a794f9af84c3e4e",
+      "entryCount": 5
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/input.ts#normalizePenBindingCode",
+      "source": "src/runtime/input.ts",
+      "line": 136,
+      "kind": "exported function",
+      "sourceSha256": "fad85ae749fdc2b0e378beff7d5b43ff7af6150efbfd8124700945281a42d6dc",
+      "generatedFile": ".cache/v2622-node-execution-v2/entity-api/1/physics.mjs",
+      "generatedSha256": "90ed93ce85207bea370555849a4aadda60ed9388189575f791471a2110de2383",
+      "mapSha256": "a87f43670ac041415cd57334f1fabd5aa1cbb319d98e0a247a794f9af84c3e4e",
+      "entryCount": 17
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/audio.ts#defaultAudioSettings",
+      "source": "src/runtime/audio.ts",
+      "line": 120,
+      "kind": "exported function",
+      "sourceSha256": "d7942420a501d92638335fcb7d098e35807a56e3c6319e5a3de8c131a7c4ebeb",
+      "generatedFile": ".cache/v2622-node-execution-v2/entity-api/1/physics.mjs",
+      "generatedSha256": "90ed93ce85207bea370555849a4aadda60ed9388189575f791471a2110de2383",
+      "mapSha256": "a87f43670ac041415cd57334f1fabd5aa1cbb319d98e0a247a794f9af84c3e4e",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/renderer/outputQuality20.ts#normalizeAntiAliasing",
+      "source": "src/renderer/outputQuality20.ts",
+      "line": 2,
+      "kind": "exported function",
+      "sourceSha256": "d03ccbc43e269bb645131f784c3440d63a8bf4f24c1ace10e812e622c25465fa",
+      "generatedFile": ".cache/v2622-node-execution-v2/entity-api/1/physics.mjs",
+      "generatedSha256": "90ed93ce85207bea370555849a4aadda60ed9388189575f791471a2110de2383",
+      "mapSha256": "a87f43670ac041415cd57334f1fabd5aa1cbb319d98e0a247a794f9af84c3e4e",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/renderer/renderSettings.ts#normalizeTextureStreamingSettings",
+      "source": "src/renderer/renderSettings.ts",
+      "line": 80,
+      "kind": "exported function",
+      "sourceSha256": "90ae3c7ce879634f4a166e7155278a13e8d5b44add2437ac30253a1a237f8c6e",
+      "generatedFile": ".cache/v2622-node-execution-v2/entity-api/1/physics.mjs",
+      "generatedSha256": "90ed93ce85207bea370555849a4aadda60ed9388189575f791471a2110de2383",
+      "mapSha256": "a87f43670ac041415cd57334f1fabd5aa1cbb319d98e0a247a794f9af84c3e4e",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/renderer/renderSettings.ts#normalizeRenderingSettings",
+      "source": "src/renderer/renderSettings.ts",
+      "line": 106,
+      "kind": "exported function",
+      "sourceSha256": "90ae3c7ce879634f4a166e7155278a13e8d5b44add2437ac30253a1a237f8c6e",
+      "generatedFile": ".cache/v2622-node-execution-v2/entity-api/1/physics.mjs",
+      "generatedSha256": "90ed93ce85207bea370555849a4aadda60ed9388189575f791471a2110de2383",
+      "mapSha256": "a87f43670ac041415cd57334f1fabd5aa1cbb319d98e0a247a794f9af84c3e4e",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/exportTemplates.ts#compatibleExportTemplates",
+      "source": "src/runtime/exportTemplates.ts",
+      "line": 28,
+      "kind": "exported function",
+      "sourceSha256": "3cc4801a081c5afd8377289708e9358bd3b9c0033f5efaada290f6833491cead",
+      "generatedFile": ".cache/v2622-node-execution-v2/entity-api/1/physics.mjs",
+      "generatedSha256": "90ed93ce85207bea370555849a4aadda60ed9388189575f791471a2110de2383",
+      "mapSha256": "a87f43670ac041415cd57334f1fabd5aa1cbb319d98e0a247a794f9af84c3e4e",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/exportTemplates.ts#defaultExportTemplateId",
+      "source": "src/runtime/exportTemplates.ts",
+      "line": 32,
+      "kind": "exported function",
+      "sourceSha256": "3cc4801a081c5afd8377289708e9358bd3b9c0033f5efaada290f6833491cead",
+      "generatedFile": ".cache/v2622-node-execution-v2/entity-api/1/physics.mjs",
+      "generatedSha256": "90ed93ce85207bea370555849a4aadda60ed9388189575f791471a2110de2383",
+      "mapSha256": "a87f43670ac041415cd57334f1fabd5aa1cbb319d98e0a247a794f9af84c3e4e",
+      "entryCount": 1
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/runtime/uiAccessibility.ts#configureUiAccessibility",
+      "source": "src/runtime/uiAccessibility.ts",
+      "line": 12,
+      "kind": "exported function",
+      "sourceSha256": "65be63032f38824f647e172e9777d2cecdefdcc9a7606e5e429188d983349878",
+      "generatedFile": ".cache/v2622-node-execution-v2/entity-api/1/physics.mjs",
+      "generatedSha256": "90ed93ce85207bea370555849a4aadda60ed9388189575f791471a2110de2383",
+      "mapSha256": "a87f43670ac041415cd57334f1fabd5aa1cbb319d98e0a247a794f9af84c3e4e",
+      "entryCount": 21
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/store/physics.ts#serializeEntity",
+      "source": "src/store/physics.ts",
+      "line": 328,
+      "kind": "exported function",
+      "sourceSha256": "adcffdb2bfd8b52c8fba4f36276ce58df035535b82a8d01c78ef34c78a4fdf19",
+      "generatedFile": ".cache/v2622-node-execution-v2/entity-api/1/physics.mjs",
+      "generatedSha256": "90ed93ce85207bea370555849a4aadda60ed9388189575f791471a2110de2383",
+      "mapSha256": "a87f43670ac041415cd57334f1fabd5aa1cbb319d98e0a247a794f9af84c3e4e",
+      "entryCount": 91
+    },
+    {
+      "mappingVersion": 2,
+      "id": "src/store/physics.ts#createEntityFromData",
+      "source": "src/store/physics.ts",
+      "line": 1233,
+      "kind": "exported function",
+      "sourceSha256": "adcffdb2bfd8b52c8fba4f36276ce58df035535b82a8d01c78ef34c78a4fdf19",
+      "generatedFile": ".cache/v2622-node-execution-v2/entity-api/1/physics.mjs",
+      "generatedSha256": "90ed93ce85207bea370555849a4aadda60ed9388189575f791471a2110de2383",
+      "mapSha256": "a87f43670ac041415cd57334f1fabd5aa1cbb319d98e0a247a794f9af84c3e4e",
+      "entryCount": 21
+    }
+  ],
+  "tracingScope": "Positive V8 function entries during the complete passing programmer suite, including fixture setup. Not per-assertion isolation, exhaustive domain coverage or performance qualification.",
+  "nodeOperationCoverageCase": "entity-api complete suite including fixture setup",
+  "nodeOperationCoverageAssertion": {
+    "name": "entity-api complete suite including fixture setup",
+    "status": "passed"
+  },
+  "format": "nova-v26.22-entity-api",
+  "version": 1,
+  "release": "26.22",
+  "engineVersion": "26.22.0",
+  "expectedRelease": "26.22",
+  "development": true,
+  "qualifiedRelease": null,
+  "generatedAt": "2026-09-14T18:00:15.651Z",
+  "status": "passed",
+  "scope": "Direct public Entity forwarding, rejection and identity semantics. This does not qualify every raw component assignment or transient solver state.",
+  "checks": [
+    {
+      "name": "Entity authored aliases update the canonical component and survive serialization/hydration",
+      "status": "passed",
+      "covers": [
+        "src/world/Entity.ts#Entity.color",
+        "src/world/Entity.ts#Entity.transparency",
+        "src/world/Entity.ts#Entity.texture",
+        "src/world/Entity.ts#Entity.velocity",
+        "src/world/Entity.ts#Entity.angularVelocity",
+        "src/world/Entity.ts#Entity.linearDamping",
+        "src/world/Entity.ts#Entity.angularDamping",
+        "src/world/Entity.ts#Entity.density",
+        "src/world/Entity.ts#Entity.mass",
+        "src/world/Entity.ts#Entity.autoInertia",
+        "src/world/Entity.ts#Entity.inertia",
+        "src/world/Entity.ts#Entity.gravityScale",
+        "src/world/Entity.ts#Entity.force",
+        "src/world/Entity.ts#Entity.torque",
+        "src/world/Entity.ts#Entity.gravity",
+        "src/world/Entity.ts#Entity.acceleration",
+        "src/world/Entity.ts#Entity.restitution",
+        "src/world/Entity.ts#Entity.restitutionThreshold",
+        "src/world/Entity.ts#Entity.staticFriction",
+        "src/world/Entity.ts#Entity.dynamicFriction",
+        "src/world/Entity.ts#Entity.isSensor"
+      ]
+    },
+    {
+      "name": "Nonfinite entity alias writes reject before changing their canonical owner",
+      "status": "passed",
+      "covers": [
+        "src/world/Entity.ts#Entity.color",
+        "src/world/Entity.ts#Entity.transparency",
+        "src/world/Entity.ts#Entity.velocity",
+        "src/world/Entity.ts#Entity.angularVelocity",
+        "src/world/Entity.ts#Entity.linearDamping",
+        "src/world/Entity.ts#Entity.angularDamping",
+        "src/world/Entity.ts#Entity.density",
+        "src/world/Entity.ts#Entity.mass",
+        "src/world/Entity.ts#Entity.inertia",
+        "src/world/Entity.ts#Entity.gravityScale",
+        "src/world/Entity.ts#Entity.force",
+        "src/world/Entity.ts#Entity.torque",
+        "src/world/Entity.ts#Entity.gravity",
+        "src/world/Entity.ts#Entity.acceleration",
+        "src/world/Entity.ts#Entity.restitution",
+        "src/world/Entity.ts#Entity.restitutionThreshold",
+        "src/world/Entity.ts#Entity.staticFriction",
+        "src/world/Entity.ts#Entity.dynamicFriction"
+      ]
+    },
+    {
+      "name": "Body-mode aliases preserve unrelated modes and layer writes update all retained renderers",
+      "status": "passed",
+      "covers": [
+        "src/world/Entity.ts#Entity.isStatic",
+        "src/world/Entity.ts#Entity.isKinematic",
+        "src/world/Entity.ts#Entity.layer",
+        "src/world/Entity.ts#Entity.spriteRenderer",
+        "src/world/Entity.ts#Entity.textRenderer"
+      ]
+    },
+    {
+      "name": "Removed component records keep identity while live collider replacement and optional accessors stay correct",
+      "status": "passed",
+      "covers": [
+        "src/world/Entity.ts#Entity.components",
+        "src/world/Entity.ts#Entity.addComponent",
+        "src/world/Entity.ts#Entity.getComponent",
+        "src/world/Entity.ts#Entity.getCollider",
+        "src/world/Entity.ts#Entity.hasComponent",
+        "src/world/Entity.ts#Entity.removeComponent",
+        "src/world/Entity.ts#Entity.collider",
+        "src/world/Entity.ts#Entity.transform",
+        "src/world/Entity.ts#Entity.renderer",
+        "src/world/Entity.ts#Entity.rigidBody",
+        "src/world/Entity.ts#Entity.camera2D",
+        "src/world/Entity.ts#Entity.script2D"
+      ]
+    },
+    {
+      "name": "Boolean Entity aliases reject nonboolean values before modifying any component",
+      "status": "passed",
+      "covers": [
+        "src/world/Entity.ts#Entity.autoInertia",
+        "src/world/Entity.ts#Entity.isSensor",
+        "src/world/Entity.ts#Entity.isStatic",
+        "src/world/Entity.ts#Entity.isKinematic"
+      ]
+    },
+    {
+      "name": "Triangle vertices reject malformed and nonfinite coordinates before either component changes",
+      "status": "passed",
+      "covers": [
+        "src/world/TriangleEntity.ts#TriangleEntity.vertices"
+      ]
+    }
+  ]
+}

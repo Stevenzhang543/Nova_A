@@ -64,9 +64,10 @@
 import { computed, onMounted, ref } from 'vue'
 import { t } from '../i18n'
 import { conflictValue19, deliveryLabel19 } from '../editor/deliveryLabels19'
-import { beginHistoryTransaction, commitHistoryTransaction, cancelHistoryTransaction, getSceneJSON, loadProject } from '../store/physics'
+import { getSceneJSON, loadProject } from '../store/physics'
+import {applyReviewedProjectMerge} from '../editor/semanticMergeCommand'
 import { projectSessionState as project } from '../projects/projectSession'
-import { acquireBinaryAssetLock, acquireProjectLock, addOwnershipRule, addTeamChangeNote, addTeamTaskLink, createSemanticMergePlan, createTeamChangeList, downloadCiValidationTemplate, downloadCodeOwnersFile, downloadNovaIgnoreFile, downloadPreCommitHook, downloadProjectLock, finalizeSemanticMerge, incomingProjectSource, initializeGitRepository, openExternalDiff, openExternalMerge, persistTeamWorkflowSettings, refreshSourceStatus, releaseProjectLock, resolveSemanticMergeConflict, setIncomingProject, sourceDiffFor, teamWorkflowState as team } from '../runtime/teamWorkflow'
+import { acquireBinaryAssetLock, acquireProjectLock, addOwnershipRule, addTeamChangeNote, addTeamTaskLink, createSemanticMergePlan, createTeamChangeList, downloadCiValidationTemplate, downloadCodeOwnersFile, downloadNovaIgnoreFile, downloadPreCommitHook, downloadProjectLock, incomingProjectSource, initializeGitRepository, openExternalDiff, openExternalMerge, persistTeamWorkflowSettings, refreshSourceStatus, releaseProjectLock, resolveSemanticMergeConflict, setIncomingProject, sourceDiffFor, teamWorkflowState as team } from '../runtime/teamWorkflow'
 
 const lockOwner = ref('Whitelist')
 const incomingInput = ref<HTMLInputElement | null>(null)
@@ -102,15 +103,10 @@ function lockBinary(): void { if (acquireBinaryAssetLock(binaryPath.value, binar
 function createChangeList(): void { const list = createTeamChangeList(changeListName.value, changeListOwner.value, changes.value.map(change => change.id), getSceneJSON()); if (list) changeListName.value = '' }
 function chooseConflict(id: string, side: 'ours' | 'theirs'): void { try { resolveSemanticMergeConflict(id, side) } catch (error) { team.status = error instanceof Error ? error.message : String(error) } }
 function applySemanticMerge(): void {
-  let transaction = false
   try {
-    const source = finalizeSemanticMerge(getSceneJSON())
-    transaction = beginHistoryTransaction('Merge project')
-    if (!transaction) throw new Error(deliveryLabel19('editMode'))
-    if (!loadProject(source)) throw new Error('Merged project could not be loaded.')
-    commitHistoryTransaction(); transaction = false
+    applyReviewedProjectMerge()
     team.incomingSource = ''; team.incomingFileName = ''; team.semanticMerge = null; refresh()
-  } catch (error) { if (transaction) cancelHistoryTransaction(); team.status = error instanceof Error ? error.message : String(error) }
+  } catch (error) { team.status = error instanceof Error ? error.message : String(error) }
 }
 onMounted(refresh)
 </script>

@@ -1,3 +1,4 @@
+import {registerNodeBundle22,captureNodeBundle22} from './lib/nodeOperationTrace22.mjs'
 import assert from 'node:assert/strict'
 import { build } from 'vite'
 import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises'
@@ -11,7 +12,8 @@ const checks = []
 const check = (name, run) => { try { run(); checks.push({ name, status: 'passed' }) } catch (error) { checks.push({ name, status: 'failed', error: error.stack ?? error.message }) } }
 try {
   const entries = { sync:'visual/graphCodeSync', compiler:'visual/graphCompiler', syntax:'visual/graphSyntax', schema:'visual/graphSyntaxSchema', types:'visual/graphTypes', catalog:'visual/graphCatalog', api:'visual/graphSyntaxApi', signatures:'visual/rhaiApiSignatures' }
-  await build({ configFile:false, root, logLevel:'error', ssr:{noExternal:true}, build:{ssr:true,outDir:temporary,emptyOutDir:false,rollupOptions:{input:Object.fromEntries(Object.entries(entries).map(([name,path])=>[name,join(root,'src',path+'.ts')])),output:{entryFileNames:'[name].mjs',chunkFileNames:'[name]-[hash].mjs'}}} })
+  await build({ configFile:false, root, logLevel:'error', ssr:{noExternal:true}, build: { sourcemap:process.env.NOVA_AUDIT_NODE_OPERATION_COVERAGE==='1'?'hidden':false, ssr:true,outDir:temporary,emptyOutDir:false,rollupOptions:{input:Object.fromEntries(Object.entries(entries).map(([name,path])=>[name,join(root,'src',path+'.ts')])),output:{entryFileNames:'[name].mjs',chunkFileNames:'[name]-[hash].mjs'}}} })
+  registerNodeBundle22(temporary)
   const [sync,compiler,syntax,schema,types,catalog,api,signatures] = await Promise.all(Object.keys(entries).map(name=>import(pathToFileURL(join(temporary,name+'.mjs')).href)))
   const wasm = await import(pathToFileURL(join(root,'nova_core/pkg/nova_core.js')).href)
   await wasm.default({module_or_path:await readFile(join(root,'nova_core/pkg/nova_core_bg.wasm'))})
@@ -144,6 +146,6 @@ try {
   })
   await mkdir(join(root,'release-audits'),{recursive:true})
   const report={format:'nova-typed-graph-audit',version:1,release:'26.12',engineVersion:wasm.engine_version(),generatedAt:new Date().toISOString(),runtime:'actual WasmScriptRuntime',fixtures:rhaiCorpus.length,overloads:api.SYNTAX_API_NODE_DEFINITIONS.length,checks,status:checks.every(item=>item.status==='passed')?'passed':'failed'}
-  await writeFile(join(root,'release-audits/v26.12-typed-graphs.json'),JSON.stringify(report,null,2)+'\n')
+  await writeFile(process.argv.find(value=>value.startsWith('--report='))?.slice(9)??join(root,'release-audits/v26.12-typed-graphs.json'),JSON.stringify(report,null,2)+'\n')
   console.log(JSON.stringify(report,null,2));if(report.status!=='passed')process.exitCode=1
-}finally{await rm(temporary,{recursive:true,force:true})}
+}finally{await captureNodeBundle22(temporary); await rm(temporary,{recursive:true,force:true})}

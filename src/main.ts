@@ -7,8 +7,10 @@ import './assets/main.css'
 import './assets/editorReadability.css'
 import { installCrashReporter } from './runtime/crashReporter'
 import { reportFatalError } from './runtime/faultCenter'
+import { installExternalLinkGuard } from './runtime/externalLinks'
 
 installCrashReporter('Nova_A Editor')
+installExternalLinkGuard()
 const app = createApp(App)
 app.config.errorHandler = (error, _instance, info) => { reportFatalError(error, `Vue: ${info}`) }
 try { app.mount("#app") }

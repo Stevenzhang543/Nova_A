@@ -48,3 +48,6 @@ Desktop.ini
 
 /releases/
 /instructions.txt
+
+# User-provided engine reference; never part of Nova_A source packages.
+/godot-master/

@@ -324,14 +324,15 @@ export function cancelTileMapBake(): boolean {
 
 export async function requestTileMapBake(component: TileMap2D): Promise<typeof tileBakeState.result & { cancelled: boolean; artifactHash: string }> {
   cancelTileMapBake()
-  const controller = new AbortController(); tileBakeController = controller
   normalizeTileMap(component)
+  const controller = new AbortController(); tileBakeController = controller
   const chunksX = Math.ceil(component.width / component.chunkSize), chunksY = Math.ceil(component.height / component.chunkSize), totalChunks = chunksX * chunksY * component.layers.length
-  Object.assign(tileBakeState, { active: true, cancelled: false, progress: 0, processedChunks: 0, totalChunks, artifactHash: '', error: '', result: { collision: 0, navigation: 0, occluders: 0, chunks: totalChunks } })
+  const initialResult = { collision: 0, navigation: 0, occluders: 0, chunks: totalChunks }
+  Object.assign(tileBakeState, { active: true, cancelled: false, progress: 0, processedChunks: 0, totalChunks, artifactHash: '', error: '', result: initialResult })
   try {
     for (const layer of [...component.layers].sort((a, b) => a.id.localeCompare(b.id))) for (let chunkY = 0; chunkY < chunksY; chunkY++) for (let chunkX = 0; chunkX < chunksX; chunkX++) {
       await new Promise<void>(resolve => setTimeout(resolve, 0))
-      if (controller.signal.aborted) return { ...tileBakeState.result, cancelled: true, artifactHash: tileBakeState.artifactHash }
+      if (controller.signal.aborted) return { ...initialResult, cancelled: true, artifactHash: '' }
       // Reading each bounded chunk validates its deterministic runtime payload
       // without materializing a second full-map copy.
       readRuntimeTileChunk(component, layer.id, chunkX, chunkY)
@@ -342,12 +343,15 @@ export async function requestTileMapBake(component: TileMap2D): Promise<typeof t
     tileBakeState.progress = 1
     return { ...tileBakeState.result, cancelled: false, artifactHash: tileBakeState.artifactHash }
   } catch (error) {
-    tileBakeState.error = error instanceof Error ? error.message : String(error)
+    if (tileBakeController === controller) tileBakeState.error = error instanceof Error ? error.message : String(error)
     throw error
   } finally {
-    tileBakeState.cancelled = controller.signal.aborted
-    tileBakeState.active = false
-    if (tileBakeController === controller) tileBakeController = null
+    // Only the current request owns the visible progress and cancellation state.
+    if (tileBakeController === controller) {
+      tileBakeState.cancelled = controller.signal.aborted
+      tileBakeState.active = false
+      tileBakeController = null
+    }
   }
 }
 

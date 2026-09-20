@@ -12,7 +12,7 @@ export function releaseVersion(label) {
 export function excludedReleaseSource(path) {
   const normalized = String(path).replaceAll('\\', '/'), parts = normalized.toLowerCase().split('/'), first = parts[0], name = parts.at(-1)
   if (!normalized || normalized.startsWith('/') || parts.some(part => !part || part === '.' || part === '..') || /^[a-z]:/i.test(normalized)) return true
-  if (first.startsWith('stage') || ['.git', '.agents', '.codex', '.ssh', '.aws', '.azure', '.kube', '.pnpm-store', '.vscodecounter', '.vite', '.cache', '.turbo', '.vscode', '.idea', 'dist', 'dist-ssr', 'node_modules', 'release-audits', 'releases', 'target', 'coverage', 'playwright-report', 'test-results', 'logs'].includes(first)) return true
+  if (first.startsWith('stage') || first === 'godot-master' || ['.git', '.agents', '.codex', '.ssh', '.aws', '.azure', '.kube', '.pnpm-store', '.vscodecounter', '.vite', '.cache', '.turbo', '.vscode', '.idea', 'dist', 'dist-ssr', 'node_modules', 'release-audits', 'releases', 'target', 'coverage', 'playwright-report', 'test-results', 'logs'].includes(first)) return true
   if (parts.some(part => ['node_modules', '.git', '.cache', '.pnpm-store', '.vite', '.turbo', '.vscode', '.idea', 'coverage', 'playwright-report', 'test-results'].includes(part)) || /^(?:src-tauri|nova_core)\/target(?:\/|$)|^src-tauri\/gen(?:\/|$)|^nova_core\/pkg(?:\/|$)/i.test(normalized)) return true
   if (normalized.toLowerCase() === 'instructions.txt' || ['.ds_store', 'thumbs.db', 'desktop.ini', '.npmrc', '.pypirc', 'id_rsa', 'id_dsa', 'id_ecdsa', 'id_ed25519'].includes(name)) return true
   if (/^\.env(?:\..+)?$/.test(name) && name !== '.env.example') return true

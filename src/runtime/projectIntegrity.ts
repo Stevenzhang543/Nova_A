@@ -1,9 +1,12 @@
-import { reactive } from 'vue'
+import { reactive, toRaw } from 'vue'
+import { assertStudioDraftsSaved } from '../editor/studioSaveBoundary'
 import { canonicalProjectText, repairProjectDocument, validateProjectDocument, type ProjectRepairReport, type ProjectValidationReport } from '../projects/projectData'
 import { projectSessionState } from '../projects/projectSession'
-import { getSceneJSON, loadProject, pushHistory } from '../store/physics'
+import { getSceneJSON, loadProject, pushHistory, settlePendingDocumentEdits } from '../store/physics'
 import { downloadProjectBackup, storeUpgradeRollback } from './projectUpgrade'
 import { deterministicResave, refreshTransactionDiff } from './projectTransactions'
+
+const repairPreviews = new WeakMap<ProjectRepairReport, { source: string; output: string }>()
 
 export const projectIntegrityState = reactive({
   validation: null as ProjectValidationReport | null,
@@ -31,7 +34,8 @@ export function deterministicCurrentProjectResave(): { changed: boolean; checksu
 }
 
 export function previewCurrentProjectRepair(): ProjectRepairReport {
-  const report = repairProjectDocument(getSceneJSON())
+  const source = getSceneJSON(), report = repairProjectDocument(source)
+  repairPreviews.set(report, { source, output: canonicalProjectText(report.source) })
   projectIntegrityState.repairPreview = report
   projectIntegrityState.lastAction = 'repair-previewed'
   return report
@@ -46,7 +50,15 @@ export function backupCurrentProject(): void {
 
 export function applyCurrentProjectRepair(report = projectIntegrityState.repairPreview): boolean {
   if (!report) return false
-  const before = getSceneJSON()
+  try {
+    if (!settlePendingDocumentEdits()) { projectIntegrityState.lastAction = 'repair-pending-edits'; return false }
+    assertStudioDraftsSaved()
+  } catch { projectIntegrityState.lastAction = 'repair-pending-edits'; return false }
+  const before = getSceneJSON(), reviewed = repairPreviews.get(toRaw(report))
+  if (!reviewed || reviewed.source !== before || reviewed.output !== canonicalProjectText(report.source)) {
+    projectIntegrityState.lastAction = 'repair-preview-stale'
+    return false
+  }
   downloadProjectBackup(before, projectSessionState.name)
   storeUpgradeRollback(before, `${projectSessionState.name}.nova`)
   const repaired = canonicalProjectText(report.source)
@@ -56,6 +68,7 @@ export function applyCurrentProjectRepair(report = projectIntegrityState.repairP
     return false
   }
   pushHistory('Repair project')
+  repairPreviews.delete(toRaw(report))
   projectIntegrityState.repairPreview = null
   projectIntegrityState.validation = validateProjectDocument(getSceneJSON())
   projectIntegrityState.lastAction = 'repaired'

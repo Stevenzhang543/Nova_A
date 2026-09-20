@@ -1,0 +1,176 @@
+{
+  "format": "nova-v26.22-palette-user-audit",
+  "version": 1,
+  "release": "26.22",
+  "expectedRelease": "26.21",
+  "development": true,
+  "qualifiedRelease": null,
+  "generatedAt": "2026-09-13T02:40:52.824Z",
+  "status": "passed",
+  "checks": [
+    {
+      "name": "Every supplied palette uses exact semantic colors through visible Settings controls",
+      "status": "passed"
+    },
+    {
+      "name": "Palette text and primary-action color pairs meet the declared contrast budget",
+      "status": "passed"
+    },
+    {
+      "name": "High contrast and reduced motion remain user-selectable without losing palettes",
+      "status": "passed"
+    },
+    {
+      "name": "Each localized context-help button opens its actual bundled lesson",
+      "status": "passed"
+    },
+    {
+      "name": "Palette choices persist and light/dark switching remembers each selection",
+      "status": "passed"
+    },
+    {
+      "name": "Reset Settings restores both palette defaults",
+      "status": "passed"
+    }
+  ],
+  "observations": [
+    {
+      "name": "cloud-blue",
+      "palette": "cloud-blue",
+      "theme": "light",
+      "colors": [
+        "#f7f9fc",
+        "#ffffff",
+        "#4f6f8f",
+        "#8ea9b8",
+        "#7fa6a0",
+        "#263746"
+      ],
+      "motion": ".22s",
+      "reduced": "false"
+    },
+    {
+      "name": "meadow-cream",
+      "palette": "meadow-cream",
+      "theme": "light",
+      "colors": [
+        "#fbf7ea",
+        "#f1f3e7",
+        "#607a64",
+        "#a5b58a",
+        "#c9af78",
+        "#38463b"
+      ],
+      "motion": ".22s",
+      "reduced": "false"
+    },
+    {
+      "name": "blush-berry",
+      "palette": "blush-berry",
+      "theme": "light",
+      "colors": [
+        "#fff5f7",
+        "#f8e7ec",
+        "#9f5f75",
+        "#d7a6b5",
+        "#a799ba",
+        "#4a3941"
+      ],
+      "motion": ".22s",
+      "reduced": "false"
+    },
+    {
+      "name": "midnight-blue",
+      "palette": "midnight-blue",
+      "theme": "dark",
+      "colors": [
+        "#0f141a",
+        "#171e27",
+        "#527397",
+        "#3f586f",
+        "#6d8d8a",
+        "#d8e0e8"
+      ],
+      "motion": ".22s",
+      "reduced": "false"
+    },
+    {
+      "name": "night-garden",
+      "palette": "night-garden",
+      "theme": "dark",
+      "colors": [
+        "#171518",
+        "#211e23",
+        "#806f8d",
+        "#5f6d78",
+        "#738778",
+        "#ddd8df"
+      ],
+      "motion": ".22s",
+      "reduced": "false"
+    },
+    {
+      "name": "contrast-cloud-blue",
+      "body": 12.228295766734663,
+      "muted": 6.158425975839766,
+      "primaryAction": 5.24624533980007
+    },
+    {
+      "name": "contrast-meadow-cream",
+      "body": 8.880413744010346,
+      "muted": 4.891455272173013,
+      "primaryAction": 4.703044468464809
+    },
+    {
+      "name": "contrast-blush-berry",
+      "body": 9.02976554394675,
+      "muted": 5.006942113955439,
+      "primaryAction": 4.807758229979239
+    },
+    {
+      "name": "contrast-midnight-blue",
+      "body": 12.583357088767366,
+      "muted": 8.112928875225208,
+      "primaryAction": 7.203366596742542
+    },
+    {
+      "name": "contrast-night-garden",
+      "body": 11.738414194458118,
+      "muted": 7.647715725653077,
+      "primaryAction": 7.125001051341688
+    }
+  ],
+  "captures": [
+    "v26.22-palette-user-cloud-blue.png",
+    "v26.22-palette-user-meadow-cream.png",
+    "v26.22-palette-user-blush-berry.png",
+    "v26.22-palette-user-midnight-blue.png",
+    "v26.22-palette-user-night-garden.png",
+    "v26.22-palette-user-accessibility-controls.png",
+    "v26.22-palette-user-help-en.png",
+    "v26.22-palette-user-help-de.png",
+    "v26.22-palette-user-help-zh.png",
+    "v26.22-palette-user-palette-persisted.png"
+  ],
+  "consoleErrors": [],
+  "browser": {
+    "protocolVersion": "1.3",
+    "product": "Edg/147.0.3912.72",
+    "revision": "@d4380ba2b9dc3452fbccdc737e69d7f67a09122c",
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/147.0.0.0 Safari/537.36 Edg/147.0.0.0",
+    "jsVersion": "14.7.25.7"
+  },
+  "commandTimeoutMs": 30000,
+  "scope": "Development source overlay only, not release qualification. Recorded real Edge input and DOM observations against production dist. Headless software rendering and download/file-input fallback; physical assistive technology and native OS picker behavior are not measured.",
+  "regressionOrigin": "26.22",
+  "engineVersion": "26.21.0",
+  "buildEngineVersion": "26.21.0",
+  "qualificationTarget": "26.22",
+  "baselineVersion": "26.21.0",
+  "overlayVersion": "26.22.0",
+  "sourceRoots": [
+    "."
+  ],
+  "buildRoot": ".",
+  "evidenceRoot": "../release-audits"
+}

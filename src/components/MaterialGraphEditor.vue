@@ -19,15 +19,15 @@
         <template v-if="selectedNode">
           <strong>{{ nodeLabel(selectedNode.kind) }}</strong>
           <label>{{ t('name') }}<input v-model.trim="selectedNode.label" maxlength="80" @change="commit"></label>
-          <label>X<input v-model.number="selectedNode.position.x" type="number" step="10" @change="commit"></label>
-          <label>Y<input v-model.number="selectedNode.position.y" type="number" step="10" @change="commit"></label>
-          <label v-if="hasAmount">{{ panelControlLabel('amount') }}<input v-model.number="selectedNode.values.amount" type="number" min="0" max="1" step=".05" @change="commit"></label>
-          <label v-if="hasStrength">{{ t('strength') }}<input v-model.number="selectedNode.values.strength" type="number" min="0" max="32" step=".05" @change="commit"></label>
-          <label v-if="selectedNode.kind === 'Number'">{{ t('value') }}<input v-model.number="selectedNode.values.value" type="number" step=".05" @change="commit"></label>
+          <label>X<NumericExpressionInput :model-value="Number(selectedNode.position.x)" @update:model-value="selectedNode.position.x = $event" :resource-key="resourceKey + ':node:' + selectedNode.uuid + ':selectedNode.position.x'" :step="10" @change="commit" /></label>
+          <label>Y<NumericExpressionInput :model-value="Number(selectedNode.position.y)" @update:model-value="selectedNode.position.y = $event" :resource-key="resourceKey + ':node:' + selectedNode.uuid + ':selectedNode.position.y'" :step="10" @change="commit" /></label>
+          <label v-if="hasAmount">{{ panelControlLabel('amount') }}<NumericExpressionInput :model-value="Number(selectedNode.values.amount)" @update:model-value="selectedNode.values.amount = $event" :resource-key="resourceKey + ':node:' + selectedNode.uuid + ':selectedNode.values.amount'" :minimum="0" :maximum="1" :step=".05" @change="commit" /></label>
+          <label v-if="hasStrength">{{ t('strength') }}<NumericExpressionInput :model-value="Number(selectedNode.values.strength)" @update:model-value="selectedNode.values.strength = $event" :resource-key="resourceKey + ':node:' + selectedNode.uuid + ':selectedNode.values.strength'" :minimum="0" :maximum="32" :step=".05" @change="commit" /></label>
+          <label v-if="selectedNode.kind === 'Number'">{{ t('value') }}<NumericExpressionInput :model-value="Number(selectedNode.values.value)" @update:model-value="selectedNode.values.value = $event" :resource-key="resourceKey + ':node:' + selectedNode.uuid + ':selectedNode.values.value'" :step=".05" @change="commit" /></label>
           <label v-if="selectedNode.kind === 'Color' || selectedNode.kind === 'Outline'">{{ t('color') }}<input type="color" :value="nodeColor('color')" @input="setNodeColor('color',$event)"></label>
           <label v-if="selectedNode.kind === 'Gradient'">{{ t('startColor') }}<input type="color" :value="nodeColor('colorA')" @input="setNodeColor('colorA',$event)"></label>
           <label v-if="selectedNode.kind === 'Gradient'">{{ t('endColor') }}<input type="color" :value="nodeColor('colorB')" @input="setNodeColor('colorB',$event)"></label>
-          <label v-if="selectedNode.kind === 'Palette'">{{ t('paletteSteps') }}<input v-model.number="selectedNode.values.steps" type="number" min="2" max="64" step="1" @change="commit"></label>
+          <label v-if="selectedNode.kind === 'Palette'">{{ t('paletteSteps') }}<NumericExpressionInput :model-value="Number(selectedNode.values.steps)" @update:model-value="selectedNode.values.steps = $event" :resource-key="resourceKey + ':node:' + selectedNode.uuid + ':selectedNode.values.steps'" :minimum="2" :maximum="64" :step="1" @change="commit" /></label>
           <label v-if="selectedNode.kind === 'Dissolve'">{{ t('threshold') }}<input v-model.number="selectedNode.values.threshold" type="range" min="0" max="1" step=".01" @input="commit"></label>
           <label v-if="selectedNode.kind === 'Dissolve'">{{ t('softness') }}<input v-model.number="selectedNode.values.softness" type="range" min=".001" max="1" step=".01" @input="commit"></label>
           <label v-for="pin in selectedInputPins" :key="pin">{{ inputLabel(pin) }}
@@ -49,12 +49,13 @@
 </template>
 
 <script setup lang="ts">
+import NumericExpressionInput from './NumericExpressionInput.vue'
 import { computed, ref } from 'vue'
 import { t } from '../i18n'
 import { panelControlLabel } from '../editor/panelControlCopy'
 import { compileMaterialGraph, defaultMaterialGraph, materialCapabilityPreview, normalizeMaterialGraph, validateMaterialGraph, type MaterialGraphDocument, type MaterialGraphNodeKind, type MaterialGraphTarget, type MaterialLayer2D } from '../renderer/materialGraph'
 
-const props = defineProps<{ modelValue: MaterialGraphDocument; layers?: MaterialLayer2D[] }>()
+const props = withDefaults(defineProps<{ modelValue: MaterialGraphDocument; layers?: MaterialLayer2D[]; resourceKey?: string }>(),{resourceKey:'material-graph'})
 const emit = defineEmits<{ 'update:modelValue': [value: MaterialGraphDocument] }>()
 const search = ref(''), selectedUuid = ref(''), previewBackend = ref<'WebGL2' | 'Canvas2D'>('WebGL2')
 const kinds: MaterialGraphNodeKind[] = ['SpriteTexture', 'UITexture', 'LightColor', 'UV', 'Time', 'Color', 'Number', 'Gradient', 'Palette', 'Mask', 'Outline', 'Dissolve', 'Distortion', 'Multiply', 'Add', 'Blend']

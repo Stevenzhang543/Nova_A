@@ -120,6 +120,7 @@ export function refreshPluginContributions(): void {
 }
 
 export function setPluginSafeMode(enabled: boolean): void {
+  if (typeof enabled !== 'boolean') throw new TypeError('Plugin safe mode must be boolean')
   pluginState.safeMode = enabled
   if (typeof localStorage !== 'undefined') localStorage.setItem('nova-a-plugin-safe-mode', String(enabled))
   if (enabled) pluginRuntime.stop()
@@ -287,6 +288,7 @@ class PluginRuntime {
 
 export function attachPluginAsset(manifest: PluginManifest, uuid: string): PluginManifest { return { ...manifest, entryAsset: assetReference(uuid) } }
 export function setPluginPermission(pluginId: string, permission: PluginPermission, approved: boolean): boolean {
+  if (typeof approved !== 'boolean') return false
   const manifest=pluginState.manifests.find(item=>item.id===pluginId)
   if(!manifest||!manifest.permissions.includes(permission))return false
   manifest.approvedPermissions=approved?[...new Set([...manifest.approvedPermissions,permission])]:manifest.approvedPermissions.filter(item=>item!==permission)

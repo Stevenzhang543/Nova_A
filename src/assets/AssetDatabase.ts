@@ -267,6 +267,7 @@ async function recordImportedArtifact(file: File, settings: AssetImportSettings,
   if (assetType === 'image' && (!metadata.width || !metadata.height)) throw new Error('IMAGE_METADATA: The imported image could not be decoded.')
   const uuid = normalizeUuid(undefined)
   const record: AssetRecord = {
+    ...assetBookkeepingDefaults(),
     uuid, name: sanitizedName(file.name), path: uniquePath(requestedFolder || defaultFolder(assetType), file.name), assetType,
     mimeType: external?.mimeType || file.type || 'application/octet-stream', byteLength: file.size, source, sourceModified: file.lastModified, importedAt: Date.now(),
     width: metadata.width, height: metadata.height, duration: assetType === 'audio' ? await audioMetadata(source) : 0,
@@ -326,7 +327,7 @@ export function sliceSpriteSheet(record: AssetRecord): AssetRecord[] {
     paths.add(path.toLowerCase())
     const settings = JSON.parse(JSON.stringify(record.settings)) as AssetImportSettings
     settings.spriteRegion = null; settings.atlas = false; settings.spriteSheet.enabled = false
-    const child: AssetRecord = { uuid: normalizeUuid(undefined), name: path.slice(path.lastIndexOf('/') + 1), path, assetType: 'image', mimeType: 'image/png',
+    const child: AssetRecord = { ...assetBookkeepingDefaults(), uuid: normalizeUuid(undefined), name: path.slice(path.lastIndexOf('/') + 1), path, assetType: 'image', mimeType: 'image/png',
       source: '', byteLength: 0, sourceModified: 0, importedAt: Date.now(), width: 0, height: 0, duration: definition.durationMs / 1000, fontFamily: '',
       settings, contentGroup: record.contentGroup, editorOnly: record.editorOnly, tags: [...(record.tags ?? [])], pipeline: inlinePipeline(JSON.stringify(definition.sprite)) }
     applyDerivedSprite(child, definition.sprite); child.pipeline!.dependencies = [...new Set([record.uuid, definition.sprite.textureAsset.slice(8)])]
@@ -353,8 +354,10 @@ export function registerEmbeddedImage(source: string, name = 'Legacy texture'): 
   const existing = assetState.records.find(record => record.assetType === 'image' && record.source === source)
   if (existing) return existing
   const uuid = normalizeUuid(undefined)
+  const imagePath = uniquePath('Assets/Sprites/Imported', `${sanitizedName(name)}.png`)
   const record: AssetRecord = {
-    uuid, name: sanitizedName(name), path: uniquePath('Assets/Sprites/Imported', `${sanitizedName(name)}.png`),
+    ...assetBookkeepingDefaults(),
+    uuid, name: imagePath.slice(imagePath.lastIndexOf('/') + 1), path: imagePath,
     assetType: 'image', mimeType: source.slice(5, source.indexOf(';')) || 'image/png', byteLength: source.length,
     source, sourceModified: 0, importedAt: Date.now(), width: 0, height: 0, duration: 0, fontFamily: '',
     settings: defaultImportSettings(), pipeline: inlinePipeline(source)
@@ -364,6 +367,11 @@ export function registerEmbeddedImage(source: string, name = 'Legacy texture'): 
   void imageMetadata(source).then(size => { record.width = size.width; record.height = size.height; queueTextureAtlasRebuild() }).catch(error => { assetState.atlasError = error instanceof Error ? error.message : String(error) })
   assetState.generation++
   return record
+}
+
+/** Match hydration defaults at creation so the first Undo does not add metadata. */
+function assetBookkeepingDefaults(): Pick<AssetRecord, 'tags' | 'collectionIds' | 'contentGroup' | 'editorOnly' | 'sourceControlStatus' | 'thumbnailKey'> {
+  return { tags: [], collectionIds: [], contentGroup: 'main', editorOnly: false, sourceControlStatus: 'clean', thumbnailKey: '' }
 }
 
 function textDataUrl(source: string, mimeType: string): string {
@@ -381,6 +389,7 @@ export function createTextAsset(
   const safeName = sanitizedName(name).endsWith(extension) ? sanitizedName(name) : `${sanitizedName(name)}${extension}`
   const mimeType = assetType === 'script' ? 'text/x-rhai' : assetType === 'visualScript' ? 'application/x-nova-graph+json' : `application/x-nova-${assetType}`
   const record: AssetRecord = {
+    ...assetBookkeepingDefaults(),
     uuid,
     name: safeName,
     path: uniquePath(requestedFolder || defaultFolder(assetType), safeName),
@@ -428,7 +437,9 @@ export function readTextAsset(reference: string | null | undefined): string | nu
 export function updateTextAsset(uuid: string, source: string): boolean {
   const record = assetState.records.find(asset => asset.uuid === uuid)
   if (!record || record.path.startsWith('.nova/') || !['script', 'visualScript', 'eventSheet', 'objectBlueprint', 'prefab', 'scene', 'material', 'animation', 'controller', 'animationMask', 'rig', 'skin', 'timeline', 'tileset', 'atlas', 'shader', 'localization', 'uiTheme', 'behaviorTree', 'stateMachine', 'tilePalette', 'brushPreset', 'terrainRules', 'dataSchema', 'dataTable', 'replay', 'path', 'particleSystem', 'resource'].includes(record.assetType)) return false
-  record.source = textDataUrl(source, record.mimeType || 'text/plain')
+  const nextSource = textDataUrl(source, record.mimeType || 'text/plain')
+  if (record.source === nextSource) return true
+  record.source = nextSource
   record.byteLength = new TextEncoder().encode(source).byteLength
   record.sourceModified = Date.now()
   record.importedAt = Date.now()
@@ -524,6 +535,12 @@ function sourceFolder(path: unknown, type: AssetType): string {
   return separator > 0 ? normalizeFolder(path.slice(0, separator)) : defaultFolder(type)
 }
 
+function finiteAssetSetting(value: unknown, fallback: number): number {
+  if (value == null || value === '' || typeof value === 'boolean') return fallback
+  const number = Number(value)
+  return Number.isFinite(number) ? number : fallback
+}
+
 export function loadAssets(source: unknown, folderSource?: unknown, databaseSource?: unknown): void {
   for (const raw of Array.isArray(source) ? source : []) if (raw && typeof raw === 'object' && raw.derivedSprite !== undefined) { if (raw.assetType !== 'image') throw new Error('SPRITE_DERIVATION: Only image assets may carry derived sprite metadata.'); validateDerivedSprite(raw.derivedSprite) }
   assetSessionRevision++
@@ -563,7 +580,7 @@ export function loadAssets(source: unknown, folderSource?: unknown, databaseSour
     settings.textureProfile = ['General', 'PixelArt', 'UI', 'NormalMap'].includes(String(settings.textureProfile)) ? settings.textureProfile : 'General'
     settings.audioSettings.profile = ['SoundEffect', 'Music', 'Voice', 'Streaming'].includes(String(settings.audioSettings.profile)) ? settings.audioSettings.profile : 'SoundEffect'
     settings.audioSettings.codec = ['Original', 'PCM', 'Vorbis', 'MP3'].includes(String(settings.audioSettings.codec)) ? settings.audioSettings.codec : 'Original'
-    settings.audioSettings.quality = Math.min(1, Math.max(0, Number(settings.audioSettings.quality) || .8))
+    settings.audioSettings.quality = Math.min(1, Math.max(0, finiteAssetSetting(settings.audioSettings.quality, .8)))
     settings.audioSettings.trimStart = Math.max(0, Number(settings.audioSettings.trimStart) || 0)
     settings.audioSettings.trimEnd = Math.max(0, Number(settings.audioSettings.trimEnd) || 0)
     settings.audioSettings.preload = ['Preload', 'Metadata', 'None'].includes(String(settings.audioSettings.preload)) ? settings.audioSettings.preload : 'Auto'
@@ -585,7 +602,7 @@ export function loadAssets(source: unknown, folderSource?: unknown, databaseSour
     settings.spriteSheet.margin = Math.max(0, Math.trunc(Number(settings.spriteSheet.margin) || 0))
     settings.spriteSheet.spacing = Math.max(0, Math.trunc(Number(settings.spriteSheet.spacing) || 0))
     for (const side of ['left', 'top', 'right', 'bottom'] as const) settings.borders[side] = Math.max(0, Number(settings.borders[side]) || 0)
-    settings.audioSettings.targetPeakDb = Math.min(0, Math.max(-24, Number(settings.audioSettings.targetPeakDb) || -1))
+    settings.audioSettings.targetPeakDb = Math.min(0, Math.max(-24, finiteAssetSetting(settings.audioSettings.targetPeakDb, -1)))
     settings.audioSettings.loopStart = Math.max(0, Number(settings.audioSettings.loopStart) || 0)
     settings.audioSettings.loopEnd = Math.max(0, Number(settings.audioSettings.loopEnd) || 0)
     settings.audioSettings.loopRegions = (Array.isArray(settings.audioSettings.loopRegions) ? settings.audioSettings.loopRegions : []).slice(0, 64).map((region, index) => ({

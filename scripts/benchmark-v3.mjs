@@ -41,7 +41,8 @@ if (process.platform === 'win32') {
 if (physics.status === 0) result.measurements.physics = JSON.parse(physics.stdout.trim().split(/\r?\n/).at(-1))
 else result.exceptions.push({ metric: 'physics', reason: physics.stderr.trim().slice(0, 2_000), plan: 'Run the benchmark on a provisioned Rust release runner.' })
 
-const server = await createServer({ root, appType: 'custom', logLevel: 'silent', server: { middlewareMode: true } })
+// This one-shot benchmark loads fixed source; repository watching/HMR and dependency discovery add unrelated work.
+const server = await createServer({ root, configFile: false, appType: 'custom', logLevel: 'silent', server: { middlewareMode: true, watch: null, hmr: false }, optimizeDeps: { noDiscovery: true } })
 try {
   const { analyzeScript } = await server.ssrLoadModule('/src/editor/scriptLanguage.ts')
   const source = '@export let speed = 8.0;\nfn awake(){ print("ready"); }\nfn fixed_update(dt){ let x=input_axis("Move"); set_velocity(x*speed, rigid_body().velocity_y); }\nfn on_trigger_enter(other,px,py,nx,ny,rvx,rvy){ save_set("last",other); }'

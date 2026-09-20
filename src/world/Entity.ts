@@ -112,8 +112,14 @@ export abstract class Entity {
   }
 
   getCollider(includeRemoved = false): Collider2D | null {
-    for (const kind of ['BoxCollider2D', 'EllipseCollider2D', 'PolygonCollider2D'] as const) {
-      const collider = this.getComponent<Collider2D>(kind, includeRemoved)
+    const kinds = ['BoxCollider2D', 'EllipseCollider2D', 'PolygonCollider2D'] as const
+    // Removed records preserve authoring history; they must not shadow a replacement.
+    for (const kind of kinds) {
+      const collider = this.getComponent<Collider2D>(kind)
+      if (collider) return collider
+    }
+    if (includeRemoved) for (const kind of kinds) {
+      const collider = this.getComponent<Collider2D>(kind, true)
       if (collider) return collider
     }
     return null
@@ -171,6 +177,7 @@ export abstract class Entity {
     return this.spriteRenderer?.sortingLayer ?? this.textRenderer?.sortingLayer ?? this.renderer.sortingLayer
   }
   set layer(value: number) {
+    if (!Number.isFinite(value)) throw new RangeError('layer must be finite');
     this.renderer.sortingLayer = value
     const sprite = this.getComponent<SpriteRenderer2D>('SpriteRenderer2D', true)
     const text = this.getComponent<TextRenderer2D>('TextRenderer2D', true)
@@ -178,59 +185,75 @@ export abstract class Entity {
     if (text) text.sortingLayer = value
   }
   get color() { return this.renderer.color }
-  set color(value: { r: number; g: number; b: number }) { this.renderer.color = value }
+  set color(value: { r: number; g: number; b: number }) { if (!value || !Number.isFinite(value.r) || !Number.isFinite(value.g) || !Number.isFinite(value.b)) throw new RangeError('color must contain finite channels'); this.renderer.color = value }
   get transparency(): number { return this.renderer.opacity }
-  set transparency(value: number) { this.renderer.opacity = value }
+  set transparency(value: number) {
+    if (!Number.isFinite(value)) throw new RangeError('transparency must be finite'); this.renderer.opacity = value }
   get texture(): string | null { return this.renderer.texture }
   set texture(value: string | null) { this.renderer.texture = value }
   get textureImage(): HTMLImageElement | undefined { return this.renderer.textureImage }
   set textureImage(value: HTMLImageElement | undefined) { this.renderer.textureImage = value }
   get velocity(): Vec2 { return this.rigidBody.velocity }
-  set velocity(value: Vec2) { this.rigidBody.velocity = value }
+  set velocity(value: Vec2) { if (!value || !Number.isFinite(value.x) || !Number.isFinite(value.y)) throw new RangeError('velocity must contain finite coordinates'); this.rigidBody.velocity = value }
   get angularVelocity(): number { return this.rigidBody.angularVelocity }
-  set angularVelocity(value: number) { this.rigidBody.angularVelocity = value }
+  set angularVelocity(value: number) {
+    if (!Number.isFinite(value)) throw new RangeError('angularVelocity must be finite'); this.rigidBody.angularVelocity = value }
   get linearDamping(): number { return this.rigidBody.linearDamping }
-  set linearDamping(value: number) { this.rigidBody.linearDamping = value }
+  set linearDamping(value: number) {
+    if (!Number.isFinite(value)) throw new RangeError('linearDamping must be finite'); this.rigidBody.linearDamping = value }
   get angularDamping(): number { return this.rigidBody.angularDamping }
-  set angularDamping(value: number) { this.rigidBody.angularDamping = value }
+  set angularDamping(value: number) {
+    if (!Number.isFinite(value)) throw new RangeError('angularDamping must be finite'); this.rigidBody.angularDamping = value }
   get density(): number { return this.rigidBody.density }
-  set density(value: number) { this.rigidBody.density = value }
+  set density(value: number) {
+    if (!Number.isFinite(value)) throw new RangeError('density must be finite'); this.rigidBody.density = value }
   get mass(): number { return this.rigidBody.mass }
-  set mass(value: number) { this.rigidBody.mass = value }
+  set mass(value: number) {
+    if (!Number.isFinite(value)) throw new RangeError('mass must be finite'); this.rigidBody.mass = value }
   get autoInertia(): boolean { return this.rigidBody.autoInertia }
-  set autoInertia(value: boolean) { this.rigidBody.autoInertia = value }
+  set autoInertia(value: boolean) { if (typeof value !== 'boolean') throw new TypeError('autoInertia must be boolean'); this.rigidBody.autoInertia = value }
   get inertia(): number { return this.rigidBody.inertia }
-  set inertia(value: number) { this.rigidBody.inertia = value }
+  set inertia(value: number) {
+    if (!Number.isFinite(value)) throw new RangeError('inertia must be finite'); this.rigidBody.inertia = value }
   get gravityScale(): number { return this.rigidBody.gravityScale }
-  set gravityScale(value: number) { this.rigidBody.gravityScale = value }
+  set gravityScale(value: number) {
+    if (!Number.isFinite(value)) throw new RangeError('gravityScale must be finite'); this.rigidBody.gravityScale = value }
   get force(): Vec2 { return this.rigidBody.force }
-  set force(value: Vec2) { this.rigidBody.force = value }
+  set force(value: Vec2) { if (!value || !Number.isFinite(value.x) || !Number.isFinite(value.y)) throw new RangeError('force must contain finite coordinates'); this.rigidBody.force = value }
   get torque(): number { return this.rigidBody.torque }
-  set torque(value: number) { this.rigidBody.torque = value }
+  set torque(value: number) {
+    if (!Number.isFinite(value)) throw new RangeError('torque must be finite'); this.rigidBody.torque = value }
   get gravity(): number { return this.rigidBody.localGravity }
-  set gravity(value: number) { this.rigidBody.localGravity = value }
+  set gravity(value: number) {
+    if (!Number.isFinite(value)) throw new RangeError('gravity must be finite'); this.rigidBody.localGravity = value }
   get acceleration(): Vec2 { return this.rigidBody.acceleration }
-  set acceleration(value: Vec2) { this.rigidBody.acceleration = value }
+  set acceleration(value: Vec2) { if (!value || !Number.isFinite(value.x) || !Number.isFinite(value.y)) throw new RangeError('acceleration must contain finite coordinates'); this.rigidBody.acceleration = value }
   get restitution(): number { return this.collider.material.restitution }
-  set restitution(value: number) { this.collider.material.restitution = value }
+  set restitution(value: number) {
+    if (!Number.isFinite(value)) throw new RangeError('restitution must be finite'); this.collider.material.restitution = value }
   get restitutionThreshold(): number { return this.collider.material.restitutionThreshold }
-  set restitutionThreshold(value: number) { this.collider.material.restitutionThreshold = value }
+  set restitutionThreshold(value: number) {
+    if (!Number.isFinite(value)) throw new RangeError('restitutionThreshold must be finite'); this.collider.material.restitutionThreshold = value }
   get staticFriction(): number { return this.collider.material.staticFriction }
-  set staticFriction(value: number) { this.collider.material.staticFriction = value }
+  set staticFriction(value: number) {
+    if (!Number.isFinite(value)) throw new RangeError('staticFriction must be finite'); this.collider.material.staticFriction = value }
   get dynamicFriction(): number { return this.collider.material.dynamicFriction }
-  set dynamicFriction(value: number) { this.collider.material.dynamicFriction = value }
+  set dynamicFriction(value: number) {
+    if (!Number.isFinite(value)) throw new RangeError('dynamicFriction must be finite'); this.collider.material.dynamicFriction = value }
   get isSensor(): boolean { return this.collider.sensor }
-  set isSensor(value: boolean) { this.collider.sensor = value }
+  set isSensor(value: boolean) { if (typeof value !== 'boolean') throw new TypeError('isSensor must be boolean'); this.collider.sensor = value }
   get isStatic(): boolean { return this.rigidBody.bodyType === 'Static' }
-  set isStatic(value: boolean) { if (value) this.rigidBody.bodyType = 'Static'; else if (this.rigidBody.bodyType === 'Static') this.rigidBody.bodyType = 'Dynamic' }
+  set isStatic(value: boolean) { if (typeof value !== 'boolean') throw new TypeError('isStatic must be boolean'); if (value) this.rigidBody.bodyType = 'Static'; else if (this.rigidBody.bodyType === 'Static') this.rigidBody.bodyType = 'Dynamic' }
   get isKinematic(): boolean { return this.rigidBody.bodyType === 'Kinematic' }
-  set isKinematic(value: boolean) { if (value) this.rigidBody.bodyType = 'Kinematic'; else if (this.rigidBody.bodyType === 'Kinematic') this.rigidBody.bodyType = 'Dynamic' }
+  set isKinematic(value: boolean) { if (typeof value !== 'boolean') throw new TypeError('isKinematic must be boolean'); if (value) this.rigidBody.bodyType = 'Kinematic'; else if (this.rigidBody.bodyType === 'Kinematic') this.rigidBody.bodyType = 'Dynamic' }
   get contactCount(): number { return this.rigidBody.contactCount }
-  set contactCount(value: number) { this.rigidBody.contactCount = value }
+  set contactCount(value: number) {
+    if (!Number.isFinite(value)) throw new RangeError('contactCount must be finite'); this.rigidBody.contactCount = value }
   get contactNormal(): Vec2 { return this.rigidBody.contactNormal }
-  set contactNormal(value: Vec2) { this.rigidBody.contactNormal = value }
+  set contactNormal(value: Vec2) { if (!value || !Number.isFinite(value.x) || !Number.isFinite(value.y)) throw new RangeError('contactNormal must contain finite coordinates'); this.rigidBody.contactNormal = value }
   get penetrationDepth(): number { return this.rigidBody.penetrationDepth }
-  set penetrationDepth(value: number) { this.rigidBody.penetrationDepth = value }
+  set penetrationDepth(value: number) {
+    if (!Number.isFinite(value)) throw new RangeError('penetrationDepth must be finite'); this.rigidBody.penetrationDepth = value }
 
   installStandardComponents(renderer: ShapeRenderer2D, collider: Collider2D): void {
     this.addComponent(renderer as EntityComponent)
